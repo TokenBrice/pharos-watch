@@ -2,7 +2,7 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import type { StablecoinMeta } from "@shared/types/core";
-import { batchExecute, buildInClause } from "./db";
+import { batchExecute, runChunkedInRead } from "./db";
 import { cgHeaders, cgUrl } from "./coingecko";
 import { DEFILLAMA_COINS, USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
@@ -431,20 +431,27 @@ async function loadSupplyHistory(
   if (ids.length === 0) return new Map();
   const minDay = Math.min(...rows.map((row) => eventDay(row.timestamp))) - 2 * DAY_SECONDS;
   const maxDay = Math.max(...rows.map((row) => eventDay(row.timestamp))) + 2 * DAY_SECONDS;
-  const inClause = buildInClause(ids);
-  const history = await db
-    .prepare(
-      `SELECT stablecoin_id, snapshot_date, price, price_observed_at
+  // A bounded page can span up to MAX_HISTORICAL_MINT_PRICE_REPAIR_LIMIT coins;
+  // read in chunks so the IN clause plus the two day bounds stays within D1's
+  // 100-bound-parameter limit.
+  const historyRows = await runChunkedInRead(
+    ids,
+    (inClauseSql) => `SELECT stablecoin_id, snapshot_date, price, price_observed_at
        FROM supply_history
-       WHERE stablecoin_id IN (${inClause.sql})
+       WHERE stablecoin_id IN (${inClauseSql})
          AND snapshot_date >= ?
          AND snapshot_date <= ?
          AND price IS NOT NULL
        ORDER BY stablecoin_id ASC, snapshot_date ASC`,
-    )
-    .bind(...inClause.binds, minDay, maxDay)
-    .all<{ stablecoin_id: string; snapshot_date: number; price: number; price_observed_at: number | null }>();
-  return projectMintBurnPriceHistory(history.results ?? [], assessedAtSec ?? Math.floor(Date.now() / 1000));
+    async (whereSql, binds) => {
+      const result = await db
+        .prepare(whereSql)
+        .bind(...binds, minDay, maxDay)
+        .all<{ stablecoin_id: string; snapshot_date: number; price: number; price_observed_at: number | null }>();
+      return result.results ?? [];
+    },
+  );
+  return projectMintBurnPriceHistory(historyRows, assessedAtSec ?? Math.floor(Date.now() / 1000));
 }
 
 function contractCoinIds(meta: StablecoinMeta, chainIds: Set<string>): string[] {
@@ -790,7 +797,8 @@ export async function repairHistoricalMintBurnPrices(
                    price_repair_attempted_at = ?,
                    price_repair_run_id = ?,
                    price_repair_bookmark = ?
-               WHERE id = ? AND amount_usd IS NULL AND price_repair_status IS NULL`,
+               WHERE id = ? AND amount_usd IS NULL
+                 AND (price_repair_status IS NULL OR price_repair_status = 'irreducible')`,
             )
             .bind(
               disposition.reason,

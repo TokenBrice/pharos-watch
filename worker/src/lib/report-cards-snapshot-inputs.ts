@@ -29,7 +29,13 @@ import type { RedemptionBackstopEntry } from "@shared/types/redemption";
 import type { LiveReserveSnapshotProvenance } from "./live-reserves/store";
 import { parseJsonObject } from "./json-parse";
 import type { V9PublicationInputHealth } from "./safety-score-v9/publication-assessment";
-import { resolveDexDeploymentCensusMaxAgeSec } from "../cron/dex-liquidity/deployment-census-coverage";
+import {
+  parseProviderCount,
+  resolveDexDeploymentAttemptFence,
+  resolveDexDeploymentCensusMaxAgeSec,
+} from "../cron/dex-liquidity/deployment-census-coverage";
+import { classifyStoredDexCensusState } from "../cron/dex-discovery/census-state-machine";
+import { isCensusProviderSetSupersededByRegistry } from "@shared/lib/dex-deployment-coverage";
 
 export class ReportCardsSnapshotUnavailableError extends Error {
   constructor(message: string) {
@@ -82,6 +88,12 @@ interface DexDeploymentJoinDbRow {
   outcome: string | null;
   outcome_observed_at: number | null;
   chain_tvl_json: string | null;
+  reason: string | null;
+  observed_pool_count: number | null;
+  provider_set_json: string | null;
+  discovery_last_crawl_at: number | null;
+  deployment_last_attempt_at: number | null;
+  deployment_fence_attribution_at: number | null;
 }
 
 export interface DexDeploymentSupplyJoinRow {
@@ -89,6 +101,15 @@ export interface DexDeploymentSupplyJoinRow {
   contractAddress: string;
   outcome: DeploymentOutcome;
   observedAt?: number;
+  /** Persisted census attribution, present on rows loaded from the DEX census join. */
+  census?: {
+    reason: string;
+    observedPoolCount: number;
+    providerSetJson: string;
+    discoveryLastCrawlAt: number | null;
+    deploymentLastAttemptAt: number | null;
+    deploymentFenceAttributionAt: number | null;
+  };
 }
 
 export interface ReportCardsInputFreshnessEntry {
@@ -176,9 +197,14 @@ async function loadDexDeploymentSupplyJoin(db: D1Database): Promise<{
   const rows = await db
     .prepare(
       `SELECT dl.stablecoin_id, ddo.chain, ddo.contract_address, ddo.outcome,
-              ddo.observed_at AS outcome_observed_at, dl.chain_tvl_json
+              ddo.observed_at AS outcome_observed_at, dl.chain_tvl_json,
+              ddo.reason, ddo.observed_pool_count, ddo.provider_set_json,
+              ddo.last_attempt_at AS deployment_last_attempt_at,
+              dm.last_crawl_at AS discovery_last_crawl_at,
+              dm.deployment_fence_attribution_at
        FROM dex_liquidity dl
        LEFT JOIN dex_deployment_outcomes ddo ON ddo.stablecoin_id = dl.stablecoin_id
+       LEFT JOIN dex_discovery_meta dm ON dm.stablecoin_id = dl.stablecoin_id
        WHERE ${dexLiquidityPublishedRowFilter("dl")}`,
     )
     .all<DexDeploymentJoinDbRow>();
@@ -197,10 +223,58 @@ async function loadDexDeploymentSupplyJoin(db: D1Database): Promise<{
         contractAddress: row.contract_address,
         outcome: row.outcome,
         ...(row.outcome_observed_at != null ? { observedAt: row.outcome_observed_at } : {}),
+        ...(row.reason != null && row.observed_pool_count != null && row.provider_set_json != null
+          ? {
+              census: {
+                reason: row.reason,
+                observedPoolCount: row.observed_pool_count,
+                providerSetJson: row.provider_set_json,
+                discoveryLastCrawlAt: row.discovery_last_crawl_at,
+                deploymentLastAttemptAt: row.deployment_last_attempt_at,
+                deploymentFenceAttributionAt: row.deployment_fence_attribution_at,
+              },
+            }
+          : {}),
       },
     ]);
   }
   return { rowsById, chainTvlById };
+}
+
+/**
+ * Trust an outcome only when the owning census classifier admits it as current
+ * evidence for that outcome. Superseded, invalid and incomplete-attempt rows
+ * cannot manufacture verified-empty supply.
+ */
+function admitsStoredDeploymentOutcome(
+  row: DexDeploymentSupplyJoinRow,
+  options: { asOfSec: number; maxOutcomeAgeSec: number } | undefined,
+): boolean {
+  if (!row.census) return true;
+  if (!options || row.observedAt == null) return false;
+  const providerCount = parseProviderCount(row.census.providerSetJson);
+  if (providerCount === null) return false;
+  const state = classifyStoredDexCensusState({
+    outcome: row.outcome,
+    reason: row.census.reason,
+    observedPoolCount: row.census.observedPoolCount,
+    observedAt: row.observedAt,
+    discoveryLastCrawlAt: resolveDexDeploymentAttemptFence({
+      observed_at: row.observedAt,
+      discovery_last_crawl_at: row.census.discoveryLastCrawlAt,
+      deployment_last_attempt_at: row.census.deploymentLastAttemptAt,
+      deployment_fence_attribution_at: row.census.deploymentFenceAttributionAt,
+    }),
+    providerCount,
+    nowSec: options.asOfSec,
+    maxAgeSec: options.maxOutcomeAgeSec,
+    providerSetSuperseded:
+      isCensusProviderSetSupersededByRegistry(row.chain, row.contractAddress, providerCount),
+  });
+  return state.evidenceState === "current" &&
+    (state.disposition === "verified-no-pools" && row.outcome === "verified_no_pools" ||
+      state.disposition === "observed-pools" && row.outcome === "observed_pools" ||
+      state.disposition === "provider-outage" && row.outcome === "provider_inaccessible");
 }
 
 export function computeDexDeploymentSupplyCoverage(
@@ -251,11 +325,12 @@ export function computeDexDeploymentSupplyCoverage(
         : [];
     const freshMatching = matching.filter(
       (row) =>
-        !options ||
-        (row.observedAt != null &&
-          Number.isFinite(row.observedAt) &&
-          row.observedAt <= options.asOfSec &&
-          options.asOfSec - row.observedAt <= options.maxOutcomeAgeSec),
+        (!options ||
+          (row.observedAt != null &&
+            Number.isFinite(row.observedAt) &&
+            row.observedAt <= options.asOfSec &&
+            options.asOfSec - row.observedAt <= options.maxOutcomeAgeSec)) &&
+        admitsStoredDeploymentOutcome(row, options),
     );
     if (contracts.length !== 1 || freshMatching.length !== 1 || outcomes.length !== 1) {
       unknownSupplyUsd += supplyUsd;

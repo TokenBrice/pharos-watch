@@ -664,7 +664,9 @@ function targetIdentityBinds(candidate: DdrRepairCandidateRow): unknown[] {
   ];
 }
 
-function safeCurrentEventWhereSql(): string {
+function safeCurrentEventWhereSql(
+  linkCountComparison: "<" | "<=" = "<",
+): string {
   return `target.started_at > i.current_started_at
           AND (
             target.started_at - i.current_started_at <= ${DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC}
@@ -687,7 +689,7 @@ function safeCurrentEventWhereSql(): string {
             SELECT COUNT(*)
             FROM depeg_resolver_incident_event_links linked
             WHERE linked.incident_key = i.incident_key
-          ) < ${DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1}`;
+          ) ${linkCountComparison} ${DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1}`;
 }
 
 function noExistingTargetRepairWhereSql(): string {
@@ -916,7 +918,7 @@ async function executeDdrRepair(
              FROM depeg_events target
              JOIN depeg_events current_event ON current_event.id = i.current_event_id
                WHERE ${targetIdentityWhereSql()}
-               AND ${safeCurrentEventWhereSql()}
+               AND ${safeCurrentEventWhereSql("<=")}
                AND ${predecessorLineageWhereSql()}
                AND ${noPendingLockWhereSql()}
                AND EXISTS (

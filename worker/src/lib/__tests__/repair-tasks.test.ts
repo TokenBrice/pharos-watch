@@ -12,6 +12,7 @@ import {
   syncDdrRepairDebtTasks,
 } from "../repair-tasks";
 import { runCronSentinelSources } from "../../cron/cron-sentinel-result";
+import { DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 } from "../depeg-resolver-incident-store";
 
 const NOW = 1_775_900_000;
 
@@ -842,6 +843,126 @@ describe("repair tasks", () => {
       ).get("repair:ddr-repair-required-event:42")).toEqual({
         state: "deferred",
         next_attempt_at: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  // An incident holding one link below the cap admits one more adoption. The
+  // pointer UPDATE must judge the post-adoption count, or it rejects the link
+  // and revision its own batch just committed.
+  function seedFlapCapBoundaryFixture(db: SqliteD1, priorFlapMemberCount: number): void {
+    const incidentKey = "ddr2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const flapMembers = Array.from({ length: priorFlapMemberCount }, (_, index) => {
+      const eventId = 200 + index;
+      const startedAt = NOW - 6900 + index * 180;
+      return `
+        INSERT INTO depeg_events
+          (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+           started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+        VALUES
+          (${eventId}, 'cngn-compliant-naira', 'cNGN', 'peggedNGN', 'below', -150,
+           ${startedAt}, ${startedAt + 90}, 0.985, 0.985, 0.986, 1, 'live');
+        INSERT INTO depeg_resolver_incident_event_links
+          (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+        VALUES
+          ('${incidentKey}', ${eventId}, 'observed', NULL, ${startedAt + 90}, 'flap member');`;
+    }).join("\n");
+    db.sqlite.exec(`
+      INSERT INTO depeg_events
+        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps,
+         started_at, ended_at, start_price, peak_price, recovery_price, peg_reference, source)
+      VALUES
+        (40, 'cngn-compliant-naira', 'cNGN', 'peggedNGN', 'below', -150,
+         ${NOW - 7200}, ${NOW - 7100}, 0.985, 0.985, 0.986, 1, 'live'),
+        (41, 'cngn-compliant-naira', 'cNGN', 'peggedNGN', 'below', -150,
+         ${NOW - 1800}, ${NOW - 1200}, 0.985, 0.985, 0.986, 1, 'live'),
+        (42, 'cngn-compliant-naira', 'cNGN', 'peggedNGN', 'below', -150,
+         ${NOW - 600}, NULL, 0.985, 0.985, NULL, 1, 'live');
+      INSERT INTO depeg_resolver_incident_event_links
+        (incident_key, event_id, relation, repair_authorization_id, linked_at, note)
+      VALUES
+        ('${incidentKey}', 40, 'observed', NULL, ${NOW - 7000}, 'initial'),
+        ('${incidentKey}', 41, 'repair_replacement', NULL, ${NOW - 1100}, 'natural adoption');
+      ${flapMembers}
+      INSERT INTO depeg_resolver_incidents
+        (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+         first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
+         superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+      VALUES
+        ('${incidentKey}', 'cngn-compliant-naira', 'NGN', 'below', 40, 41,
+         ${NOW - 7200}, ${NOW - 1800}, 150, 'active', NULL, '${"a".repeat(64)}', ${NOW - 7000}, ${NOW - 1100});
+      INSERT INTO depeg_resolver_incident_revisions
+        (incident_key, previous_event_id, current_event_id, reason, repair_authorization_id, erratum_id, created_at, created_by)
+      VALUES
+        ('${incidentKey}', 40, 41, 'natural adoption', NULL, NULL, ${NOW - 1100}, 'fixture');
+      INSERT INTO worker_repair_tasks
+        (task_id, kind, subject_id, priority, state, attempt_count, payload_json, created_at, updated_at)
+      VALUES
+        ('repair:ddr-repair-required-event:42', 'ddr-repair-required-event', '42', 50, 'open', 0,
+         '{"eventId":42,"reason":"explicit repair required"}', ${NOW - 600}, ${NOW - 600});
+    `);
+  }
+
+  function readFlapCapState(db: SqliteD1) {
+    const incidentKey = "ddr2:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    return {
+      currentEventId: (db.sqlite.prepare(
+        "SELECT current_event_id FROM depeg_resolver_incidents WHERE incident_key = ?",
+      ).get(incidentKey) as { current_event_id: number } | undefined)?.current_event_id ?? null,
+      targetLinkRelation: (db.sqlite.prepare(
+        "SELECT relation FROM depeg_resolver_incident_event_links WHERE incident_key = ? AND event_id = 42",
+      ).get(incidentKey) as { relation: string } | undefined)?.relation ?? null,
+      linkCount: (db.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM depeg_resolver_incident_event_links WHERE incident_key = ?",
+      ).get(incidentKey) as { count: number }).count,
+      taskState: (db.sqlite.prepare(
+        "SELECT state FROM worker_repair_tasks WHERE task_id = 'repair:ddr-repair-required-event:42'",
+      ).get() as { state: string } | undefined)?.state ?? null,
+      taskLastError: (db.sqlite.prepare(
+        "SELECT last_error FROM worker_repair_tasks WHERE task_id = 'repair:ddr-repair-required-event:42'",
+      ).get() as { last_error: string | null } | undefined)?.last_error ?? null,
+    };
+  }
+
+  it("adopts the final legal flap link and closes the task instead of half-committing the repair", async () => {
+    const db = makeSqliteD1();
+    try {
+      seedFlapCapBoundaryFixture(db, DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 - 3);
+      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      const afterFirstRun = readFlapCapState(db);
+      await runWorkerRepairTaskRunner(db, { nowSec: NOW + DDR_REPAIR_RUNNER_BACKOFF_SEC_V1 + 1 });
+
+      expect({ afterFirstRun, afterBackoffRetry: readFlapCapState(db) }).toEqual({
+        afterFirstRun: {
+          currentEventId: 42, targetLinkRelation: "repair_replacement", linkCount: 30,
+          taskState: "closed", taskLastError: null,
+        },
+        afterBackoffRetry: {
+          currentEventId: 42, targetLinkRelation: "repair_replacement", linkCount: 30,
+          taskState: "closed", taskLastError: null,
+        },
+      });
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        claimed: 1, autoRepairCount: 1, closed: 1, deferred: 0, failed: 0,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  it("adopts an in-cap flap member and closes the task below the cap", async () => {
+    const db = makeSqliteD1();
+    try {
+      seedFlapCapBoundaryFixture(db, DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 - 4);
+      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
+      expect(readFlapCapState(db)).toEqual({
+        currentEventId: 42, targetLinkRelation: "repair_replacement", linkCount: 29,
+        taskState: "closed", taskLastError: null,
+      });
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        claimed: 1, autoRepairCount: 1, closed: 1, deferred: 0, failed: 0,
       });
     } finally {
       db.close();

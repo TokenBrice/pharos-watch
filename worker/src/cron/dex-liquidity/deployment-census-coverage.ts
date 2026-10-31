@@ -119,7 +119,7 @@ function increment(
   counts[reason] = (counts[reason] ?? 0) + amount;
 }
 
-function parseProviderCount(raw: string): number | null {
+export function parseProviderCount(raw: string): number | null {
   const parsed = tryParseJson(raw, "dex deployment census provider set");
   return Array.isArray(parsed) &&
     new Set(parsed).size === parsed.length &&
@@ -158,7 +158,7 @@ function buildCoverage(
  * Replay and unit fixtures that predate the additive fields already carry a
  * direct per-row fence in `discovery_last_crawl_at`.
  */
-function resolveDexDeploymentAttemptFence(
+export function resolveDexDeploymentAttemptFence(
   row: Pick<
     DexDeploymentCensusRow,
     | "observed_at"

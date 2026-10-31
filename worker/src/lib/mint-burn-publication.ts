@@ -68,13 +68,18 @@ export async function syncMintBurnPublicationPolicy(
     db.prepare(`DELETE FROM cache WHERE key >= ? AND key < ?
       AND COALESCE((SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1), '[]') != ?`)
       .bind(`${FLOW_CACHE_PREFIX}:`, `${FLOW_CACHE_PREFIX}:\uffff`, policy),
+    // A pause for a key that left the active roster and is no longer explicitly disabled
+    // can never be cleared by a scan, so drop it instead of withholding retained history.
     db.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
       VALUES (1, ?, (SELECT json_group_array(config_key) FROM (${pauseCandidatesSql})), ?)
       ON CONFLICT(id) DO UPDATE SET disabled_keys = excluded.disabled_keys, updated_at = excluded.updated_at,
         paused_keys = (SELECT json_group_array(value) FROM (
-          SELECT value FROM json_each(mint_burn_publication_policy.paused_keys)
+          SELECT value FROM json_each(mint_burn_publication_policy.paused_keys) AS prior
+          WHERE ? IS NULL
+            OR prior.value IN (SELECT value FROM json_each(?))
+            OR prior.value IN (SELECT value FROM json_each(?))
           UNION SELECT value FROM json_each(excluded.paused_keys)
-        ))`).bind(policy, paused, activeJson, activeJson, now),
+        ))`).bind(policy, paused, activeJson, activeJson, now, activeJson, activeJson, policy),
   ]);
 }
 

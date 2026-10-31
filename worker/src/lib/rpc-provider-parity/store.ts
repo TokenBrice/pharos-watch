@@ -955,7 +955,11 @@ export function mergeRpcParityRun(
   return { row, bytes, droppedOldest, reset };
 }
 
+export type RpcParityStoreReadState = "ok" | "missing" | "decode-failed" | "read-failed";
+
 export interface RpcParityStoreRead {
+  /** `read-failed` means the row may exist but could not be read; it is not `missing`. */
+  state: RpcParityStoreReadState;
   row: RpcParityStoreRow | null;
   updatedAtSec: number | null;
   error: string | null;
@@ -967,25 +971,27 @@ export async function readRpcParityStore(db: D1Database, signal?: AbortSignal): 
   try {
     cached = await getCache(db, RPC_PARITY_STORE_KEY, signal);
   } catch (error) {
-    return { row: null, updatedAtSec: null, error: toErrorMessage(error) };
+    return { state: "read-failed", row: null, updatedAtSec: null, error: toErrorMessage(error) };
   }
-  if (!cached) return { row: null, updatedAtSec: null, error: null };
+  if (!cached) return { state: "missing", row: null, updatedAtSec: null, error: null };
   const row = decodeRpcParityStoreRow(cached.value);
   if (!row) {
     return {
+      state: "decode-failed",
       row: null,
       updatedAtSec: cached.updatedAt,
       error: `unreadable ${RPC_PARITY_STORE_KEY} payload`,
     };
   }
-  return { row, updatedAtSec: cached.updatedAt, error: null };
+  return { state: "ok", row, updatedAtSec: cached.updatedAt, error: null };
 }
 
 export interface RpcParityStoreWrite {
   ok: boolean;
   published: boolean;
-  runs: number;
-  bytes: number;
+  /** Retained run count, or `null` when the existing window could not be read. */
+  runs: number | null;
+  bytes: number | null;
   droppedOldest: number;
   reset: boolean;
   error: string | null;
@@ -1002,7 +1008,21 @@ export async function recordRpcParityRun(
   signal?: AbortSignal,
 ): Promise<RpcParityStoreWrite> {
   const existing = await readRpcParityStore(db, signal);
+  if (existing.state === "read-failed") {
+    // An unreadable row is not an empty one: refuse to replace the retained window.
+    return {
+      ok: false,
+      published: false,
+      runs: null,
+      bytes: null,
+      droppedOldest: 0,
+      reset: false,
+      error: existing.error,
+    };
+  }
   const merged = mergeRpcParityRun(existing.row, run, { nowSec: run.atSec });
+  // Replacing an undecodable payload discards the previous window; name that reset.
+  const reset = merged.reset || existing.state === "decode-failed";
   try {
     await setCache(db, RPC_PARITY_STORE_KEY, encodeRpcParityStoreRow(merged.row), signal);
   } catch (error) {
@@ -1012,7 +1032,7 @@ export async function recordRpcParityRun(
       runs: merged.row.runs.length,
       bytes: merged.bytes,
       droppedOldest: merged.droppedOldest,
-      reset: merged.reset,
+      reset,
       error: toErrorMessage(error),
     };
   }
@@ -1023,7 +1043,7 @@ export async function recordRpcParityRun(
     runs: merged.row.runs.length,
     bytes: merged.bytes,
     droppedOldest: merged.droppedOldest,
-    reset: merged.reset,
+    reset,
     error: readError,
   };
 }

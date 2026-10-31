@@ -155,7 +155,7 @@ export async function syncRpcProviderParity(
     stage: "stored",
     itemsDone: probe.attempted,
     itemsTotal: probe.attempted,
-    message: `parity samples retained: ${write.runs} run(s)`,
+    message: `parity samples retained: ${write.runs ?? "unknown"} run(s)`,
   });
 
   const hasObservation = probe.attempted > 0 && probe.samples.length > 0;

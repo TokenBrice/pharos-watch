@@ -13,6 +13,19 @@ export interface SafetyScoresCardData {
   lastUpdated?: string;
 }
 
+/**
+ * A nonzero coverage shortfall never prints as a complete 100%, and a measured
+ * sliver never prints as the observed zero (ADR-34).
+ */
+function formatCoverageRatio(ratio: number | null): string {
+  if (ratio == null) return "—";
+  if (ratio === 0) return "0%";
+  if (ratio === 1) return "100%";
+  if (ratio < 0.001) return "<0.1%";
+  const rounded = (ratio * 100).toFixed(1);
+  return ratio < 1 && Number(rounded) >= 100 ? "<100%" : `${rounded}%`;
+}
+
 function PerformerList({
   title,
   accentColor,
@@ -132,7 +145,7 @@ export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <MetricLabel>COVERAGE</MetricLabel>
           <span style={{ fontSize: 56, fontWeight: 700 }}>
-            {data.coverageRatio == null ? "—" : `${(data.coverageRatio * 100).toFixed(0)}%`}
+            {formatCoverageRatio(data.coverageRatio)}
           </span>
           <span style={{ fontSize: 16, color: TEXT_SECONDARY }}>
             {data.totalCoins} active coins

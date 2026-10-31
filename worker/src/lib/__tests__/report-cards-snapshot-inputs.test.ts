@@ -1,5 +1,31 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { resolveDexDeploymentCensusMaxAgeSec } from "../../cron/dex-liquidity/deployment-census-coverage";
+import { classifyStoredDexCensusState } from "../../cron/dex-discovery/census-state-machine";
 import { computeDexDeploymentSupplyCoverage } from "../report-cards-snapshot-inputs";
+
+const mocks = vi.hoisted(() => ({
+  loadDexLiquiditySnapshot: vi.fn(),
+  loadRedemptionBackstopSnapshot: vi.fn(),
+  loadFreshIndependentLiveReserveMap: vi.fn(),
+}));
+
+vi.mock("../dex-liquidity", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../dex-liquidity")>()),
+  loadDexLiquiditySnapshot: mocks.loadDexLiquiditySnapshot,
+}));
+vi.mock("../redemption-backstops-store", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../redemption-backstops-store")>()),
+  loadRedemptionBackstopSnapshot: mocks.loadRedemptionBackstopSnapshot,
+}));
+vi.mock("../live-reserves/store", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../live-reserves/store")>()),
+  loadFreshIndependentLiveReserveMap: mocks.loadFreshIndependentLiveReserveMap,
+}));
+
+const { loadReportCardsSnapshotInputs } = await import("../report-cards-snapshot-inputs");
 
 function supplyPoint(current: number) {
   return {
@@ -231,5 +257,99 @@ describe("report-card DEX deployment supply join", () => {
     );
 
     expect(coverage?.unknownSupplyRatio).toBe(1);
+  });
+});
+
+describe("report-card deployment-supply join attempt fence", () => {
+  const NOW_SEC = 1_700_000_000;
+  const HOUR_SEC = 3_600;
+  const COIN_ID = "steakusdc-steakhouse";
+  const COIN_META = ACTIVE_META_BY_ID.get(COIN_ID)!;
+  const DEPLOYMENT = COIN_META.contracts![0]!;
+  const CENSUS_MAX_AGE_SEC = resolveDexDeploymentCensusMaxAgeSec([DEPLOYMENT]);
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1_000);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    mocks.loadDexLiquiditySnapshot.mockReset();
+    mocks.loadRedemptionBackstopSnapshot.mockReset().mockResolvedValue({
+      map: {},
+      latestUpdatedAt: NOW_SEC - 60,
+      runId: "redemption:test",
+      methodologyVersion: "redemption:test",
+      reserveInputAssessment: { state: "fresh", quarantined: {} },
+    });
+    mocks.loadFreshIndependentLiveReserveMap.mockReset()
+      .mockResolvedValue(Object.assign(new Map(), { provenanceById: new Map() }));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it("keeps a verified-empty outcome superseded by a later attributed attempt fence unknown", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      // A recrawl fenced this deployment at attemptFenceSec before network work,
+      // then aborted, so the stored empty outcome still carries its older clock.
+      const observedAtSec = NOW_SEC - HOUR_SEC;
+      const attemptFenceSec = NOW_SEC - 60;
+      sqlite.prepare(`INSERT INTO dex_liquidity (stablecoin_id, symbol, chain_tvl_json, updated_at)
+        VALUES (?, ?, ?, ?)`).run(COIN_ID, COIN_META.symbol, JSON.stringify({ [DEPLOYMENT.chain]: 0 }), NOW_SEC - 60);
+      sqlite.prepare(`INSERT INTO dex_deployment_outcomes
+          (stablecoin_id, chain, contract_address, outcome, provider_set_json, reason,
+           observed_pool_count, observed_at, last_attempt_at)
+        VALUES (?, ?, ?, 'verified_no_pools', ?, ?, 0, ?, ?)`).run(
+        COIN_ID, DEPLOYMENT.chain, DEPLOYMENT.address, JSON.stringify(["geckoterminal"]),
+        "A provider completed the direct-token query with no eligible pool", observedAtSec, attemptFenceSec,
+      );
+      sqlite.prepare(`INSERT INTO dex_discovery_meta
+          (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at, deployment_fence_attribution_at)
+        VALUES (?, 0, ?, NULL, ?)`).run(COIN_ID, attemptFenceSec, attemptFenceSec);
+
+      expect(classifyStoredDexCensusState({
+        outcome: "verified_no_pools",
+        reason: "A provider completed the direct-token query with no eligible pool",
+        observedPoolCount: 0,
+        observedAt: observedAtSec,
+        discoveryLastCrawlAt: attemptFenceSec,
+        providerCount: 1,
+        nowSec: NOW_SEC,
+        maxAgeSec: CENSUS_MAX_AGE_SEC,
+        providerSetSuperseded: false,
+      }).disposition).toBe("superseded");
+
+      mocks.loadDexLiquiditySnapshot.mockResolvedValue({
+        map: { [COIN_ID]: {} },
+        latestUpdatedAt: NOW_SEC - 60,
+      });
+      const asset = makeStablecoin({
+        id: COIN_ID,
+        circulating: { peggedUSD: 100 },
+        contracts: [DEPLOYMENT],
+        chainCirculating: { Ethereum: supplyPoint(100) },
+      });
+      const inputs = await loadReportCardsSnapshotInputs(db, {
+        preloadedStablecoinsCache: { kind: "ok", payload: { peggedAssets: [asset] }, updatedAt: NOW_SEC },
+      });
+
+      // Superseded evidence cannot manufacture verified-empty supply.
+      expect(inputs.dexLiquiditySnapshot.map[COIN_ID]).toMatchObject({
+        deploymentSupplyCoverage: {
+          totalSupplyUsd: 100,
+          observedSupplyUsd: 0,
+          verifiedNoPoolsSupplyUsd: 0,
+          verifiedNoPoolsSupplyRatio: 0,
+          unknownSupplyUsd: 100,
+          unknownSupplyRatio: 1,
+          unknownChains: ["ethereum"],
+        },
+      });
+    } finally {
+      sqlite.close();
+    }
   });
 });

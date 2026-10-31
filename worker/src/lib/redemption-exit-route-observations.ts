@@ -98,13 +98,16 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
     input.freshnessKind === "same-run-api";
   const observedAt = floorTimestampSec(input.evidenceObservedAt);
   const now = floorTimestampSec(input.now);
-  const freshClock = observedAt !== null && now !== null && observedAt <= now &&
-    now - observedAt <= LIVE_RESERVE_FRESHNESS_SEC;
+  // An evidence clock later than the run clock is not an observation time: the
+  // V9 fact builder rejects it, and publishing it would also fabricate a zero age.
+  const admittedObservedAt = observedAt !== null && now !== null && observedAt <= now ? observedAt : null;
+  const freshClock = admittedObservedAt !== null && now !== null &&
+    now - admittedObservedAt <= LIVE_RESERVE_FRESHNESS_SEC;
   const liveProxy = input.capacityKind === "live-queue" || input.capacityKind === "live-proxy-validated";
   if (liveProxy && input.sourceMode === "dynamic" && directFreshness && freshClock) {
     return {
       evidenceKind: input.freshnessKind === "same-run-onchain" ? "onchain-contract-state" : "live-reserve-state",
-      confidence: "high", capacityEvidenceTier: "live-queue-proxy", observedAt, supportsScoring: true,
+      confidence: "high", capacityEvidenceTier: "live-queue-proxy", observedAt: admittedObservedAt!, supportsScoring: true,
     };
   }
   if (liveDirect && input.sourceMode === "dynamic" && directFreshness) {
@@ -112,8 +115,19 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
       evidenceKind: input.freshnessKind === "same-run-onchain" ? "onchain-contract-state" : "live-reserve-state",
       confidence: "high",
       capacityEvidenceTier: freshClock ? "live-direct" : "unknown",
-      observedAt: floorTimestampSec(input.evidenceObservedAt) ?? 0,
+      observedAt: admittedObservedAt ?? 0,
       supportsScoring: freshClock,
+    };
+  }
+  // A live measurement without an admitted direct clock keeps live-reserve
+  // provenance; only documented-bound capacity may fall back to the review date.
+  if (liveDirect || liveProxy) {
+    return {
+      evidenceKind: "live-reserve-state",
+      confidence: "unknown",
+      capacityEvidenceTier: "unknown",
+      observedAt: admittedObservedAt ?? 0,
+      supportsScoring: false,
     };
   }
 
@@ -127,7 +141,7 @@ function resolveRouteEvidence(input: BuildRedemptionExitRouteObservationInput): 
       // The observation time is when the evidence was read, not when the
       // terms were reviewed: a same-run direct read carries its own
       // timestamp, and only evidence without one falls back to the review.
-      observedAt: (directFreshness ? floorTimestampSec(input.evidenceObservedAt) : null)
+      observedAt: (directFreshness ? admittedObservedAt : null)
         ?? reviewTimestamp,
       supportsScoring: true,
     };

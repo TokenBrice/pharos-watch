@@ -507,6 +507,51 @@ describe("stablecoin OG card data", () => {
       else expect(markup).not.toContain(">0%");
     });
 
+    it("does not round a one-asset coverage gap up to a complete-coverage claim", async () => {
+      // 624 expected assets with one genuinely unrated (NR) asset: coverage is
+      // rated/expectedCount = 623/624, so the headline may not print 100%.
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue({
+        kind: "v9",
+        snapshot: makeWorkerReportCardsV9Response({
+          lifecycle: "active",
+          asOfSec: nowSec - 60,
+          updatedAt: nowSec,
+          cards: [
+            ...Array.from({ length: 623 }, (_, index) => makeWorkerV9Card({ id: `rated-${index}`, score: 80 })),
+            makeWorkerV9Card({ id: "unrated-active-asset", score: null }),
+          ],
+        }),
+      });
+      await handleOg(makeOgDb([makeAsset({ id: "rated-0", symbol: "RATED" })]), "/api/og/safety-scores");
+
+      const calls = vi.mocked(satoriStandalone).mock.calls;
+      const element = calls[calls.length - 1][0] as React.ReactElement<{ data: SafetyScoresCardData }>;
+      expect(element.props.data.coverageRatio).toBeCloseTo(623 / 624, 6);
+      expect(element.props.data.totalCoins).toBe(624);
+      const markup = renderToStaticMarkup(element);
+      const distribution = markup.slice(markup.indexOf("GRADE DISTRIBUTION"), markup.indexOf("AVERAGE SCORE"));
+      expect(distribution).toContain(">NR<");
+      expect(markup).not.toContain(">100%<");
+      expect(markup).not.toContain(">100.0%<");
+      expect(markup).not.toContain("—");
+    });
+
+    it("does not round a measured sliver of safety coverage down to the observed zero", () => {
+      const markup = renderToStaticMarkup(<SafetyScoresCard data={{
+        gradeDistribution: { "A+": 0, A: 0, "A-": 0, "B+": 0, B: 2, "B-": 0, "C+": 0, C: 0, "C-": 0, D: 0, F: 0, NR: 498 },
+        pulseScore: 79.4,
+        coverageRatio: 2 / 500,
+        totalCoins: 500,
+        topPerformers: [{ symbol: "USDT", grade: "B", score: 81 }],
+        bottomPerformers: [{ symbol: "DAI", grade: "B", score: 78 }],
+        safetyModel: "v9",
+      }} />);
+      expect(markup).not.toContain(">0%<");
+      expect(markup).not.toContain(">0.0%<");
+      expect(markup).not.toContain("—");
+    });
+
     it("requires a fresh exactly adjacent snapshot pair for 24h price change", async () => {
       const db = mockD1([
         {
@@ -751,6 +796,42 @@ describe("chain OG route", () => {
   it("returns 404 for an id outside CHAIN_META", async () => {
     const res = await handleOg(mockD1([]), "/api/og/chain/not-a-chain");
     expect(res?.status).toBe(404);
+  });
+
+  it("names the stablecoins generation behind the headline supply", async () => {
+    // `sync-stablecoins` is two endpoint budgets stale while the safety
+    // publication is current; the headline supply is still this cache reading,
+    // so the card must name its market generation beside the safety stamp.
+    const marketUpdatedAt = nowSec - 2 * API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+    const safetyUpdatedAt = nowSec - 60;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue({
+      kind: "v9",
+      snapshot: makeWorkerReportCardsV9Response({
+        lifecycle: "active",
+        updatedAt: safetyUpdatedAt,
+        asOfSec: safetyUpdatedAt - 60,
+        cards: [makeWorkerV9Card({ id: "usdt-tether", score: 88, grade: "A+" })],
+      }),
+    });
+    const db = mockD1([{
+      match: "cache",
+      rows: [{ key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset()] }), updated_at: marketUpdatedAt }],
+    }]);
+    const satoriMock = vi.mocked(satoriStandalone);
+    satoriMock.mockClear();
+
+    const res = await handleOg(db, "/api/og/chain/ethereum");
+    expect(res?.status).toBe(200);
+
+    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
+      data: ChainCardData;
+    }>;
+    expect(element.type).toBe(ChainCard);
+    expect(element.props.data.totalUsd).toBe(50_000_000);
+    const marketStamp = `Market ${new Date(marketUpdatedAt * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+    expect(element.props.data.lastUpdated).toContain(marketStamp);
+    expect(renderToStaticMarkup(element)).toContain(marketStamp);
   });
 
 });
