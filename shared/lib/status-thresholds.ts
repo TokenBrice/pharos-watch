@@ -362,6 +362,15 @@ export const STATUS_PROBE_THRESHOLDS = {
   healthyMaxFailCount: 1,
   /** Max fail ratio tolerated for "degraded" classification (fraction of sample). */
   degradedMaxFailRatio: 0.1,
+  /**
+   * Consecutive failed observations of the same probe path (one per turn of its
+   * rotation bucket; every run for a fixed path) before that path floors its
+   * plane and the combined probe status at degraded. Two sweeps is the status
+   * campaign's twice-cadence grace: one failed sweep is a single-sample blip,
+   * the second is a persistent endpoint failure (90 minutes for a rotating
+   * deep path, 30 minutes for a fixed path). A pass resets the streak.
+   */
+  persistentFailSweeps: 2,
 } as const;
 
 // --- Price source confidence severity bands (UI visual indicators) ---

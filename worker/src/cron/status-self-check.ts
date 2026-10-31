@@ -20,8 +20,10 @@ import { loadStatusSupplements } from "../lib/status/supplements";
 import { route } from "../router";
 import {
   buildDiscrepancy,
+  getProbePathIdentity,
   reconcileStatusState,
   updateDiscrepancyObservation,
+  updateProbePathFailureStreaks,
   writeStatusProbeRun,
 } from "../lib/status-reliability";
 import { hasDivergence } from "../lib/status-discrepancy-view";
@@ -100,6 +102,7 @@ interface CollectedStatusSelfCheckProbes {
   probeBaseUrl: URL;
   probeMode: "internal-router" | "external-http";
   probeSelection: ReturnType<typeof selectStatusProbePathsForRun>;
+  probeCandidateIdentities: string[];
   internalProbes: ProbeResult[];
   externalProbes: ProbeResult[];
   probes: ProbeResult[];
@@ -675,10 +678,28 @@ async function collectStatusSelfCheckProbes(
   const probes: ProbeResult[] = [...internalProbes, ...externalProbes];
   const internalSummary = summarizeProbePlane(internalProbes);
   const externalSummary = summarizeProbePlane(externalProbes);
+  // Every endpoint this run could probe, not only the selected bucket: streaks
+  // for unselected paths must survive until their next sweep, while paths
+  // removed from the probe registry are pruned.
+  const probeCandidateIdentities = [...new Set([
+    ...CRITICAL_PROBE_PATHS.map((path) => getProbePathIdentity({
+      plane: "internal",
+      lane: "self-check",
+      origin: probeBaseUrl.origin,
+      path,
+    })),
+    ...buildExternalProductionProbeTargets(siteApiSharedSecret).map((target) => getProbePathIdentity({
+      plane: "external",
+      lane: target.lane,
+      origin: target.origin,
+      path: target.path,
+    })),
+  ])];
   return {
     probeBaseUrl,
     probeMode,
     probeSelection,
+    probeCandidateIdentities,
     internalProbes,
     externalProbes,
     probes,
@@ -720,6 +741,7 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     probeBaseUrl,
     probeMode,
     probeSelection,
+    probeCandidateIdentities,
     probes,
     internalSummary,
     externalSummary,
@@ -732,13 +754,58 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const assessedAt = Math.floor(Date.now() / 1000);
   const sampleCount = probes.length;
   const bootstrapMisses = probes.filter((probe) => probe.bootstrapMiss === true);
-  const { passCount, failCount, latencySummary, status: probeStatus, transportStatus, semanticStatus } = computeProbeStats(probes);
+  const {
+    passCount,
+    failCount,
+    latencySummary,
+    status: classifiedProbeStatus,
+    transportStatus,
+    semanticStatus,
+  } = computeProbeStats(probes);
   const hasProbeFailure = failCount > 0 || internalExternalDiscrepancy.hasDivergence;
   const slowestProbes = getSlowestProbes(probes);
   const p95LatencyMs = latencySummary.p95Ms;
+
+  // The rotation means a persistently failing deep path appears in only one run
+  // per full sweep, so aggregate fail caps never see it. Advance its own streak
+  // now, before publishing the probe row, and floor the owning plane and the
+  // combined probe status once that streak reaches the shared threshold.
+  await options.reportProgress?.({ stage: "probe-path-streaks" });
+  const failedOutputs = new Set<string>();
+  const pathFailureUpdate = await updateProbePathFailureStreaks(
+    db,
+    now,
+    probes.map((probe) => ({
+      plane: probe.plane,
+      lane: probe.lane,
+      origin: probe.origin,
+      path: probe.path,
+      failed: !probe.ok && !probe.error?.startsWith("reported-"),
+    })),
+    probeCandidateIdentities,
+    () => failedOutputs.add("status_discrepancy_state"),
+  );
+  const persistentProbeFailures = pathFailureUpdate.persistentFailures;
+  const probePathFailureEvidenceUnavailable = !pathFailureUpdate.persistenceSucceeded || persistentProbeFailures == null;
+  const floorPlaneStatus = (summary: StatusProbePlaneSummary | null, plane: ProbeResult["plane"]): StatusProbePlaneSummary | null => {
+    if (!summary) return summary;
+    return persistentProbeFailures?.some((failure) => failure.plane === plane)
+      ? { ...summary, status: summary.status === "unknown" ? "degraded" : maxProbeStatus(summary.status, "degraded") }
+      : summary;
+  };
+  const probeStatus = probePathFailureEvidenceUnavailable || persistentProbeFailures?.length
+    ? maxProbeStatus(classifiedProbeStatus, "degraded")
+    : classifiedProbeStatus;
+  const probePathFailureReasons = [...new Set([
+    ...(persistentProbeFailures ?? []).map((failure) => `probe-path-persistent-failure:${failure.lane}:${failure.path}`),
+    ...(probePathFailureEvidenceUnavailable ? ["probe-path-streak-unavailable"] : []),
+  ])];
+  const quality = probePathFailureReasons.length > 0
+    ? { degraded: true, reasons: probePathFailureReasons }
+    : null;
   const planes = {
-    internal: internalSummary,
-    external: externalSummary,
+    internal: floorPlaneStatus(internalSummary, "internal"),
+    external: floorPlaneStatus(externalSummary, "external"),
   };
   const probeRotation = {
     bucket: probeSelection.rotationBucket,
@@ -757,7 +824,6 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   } satisfies StatusProbeSummary;
 
   await options.reportProgress?.({ stage: "probe-persistence" });
-  const failedOutputs = new Set<string>();
   const probePersistenceSucceeded = await writeStatusProbeRun(db, now, {
     status: probeSummary.status,
     sampleCount: probeSummary.sampleCount,
@@ -779,6 +845,18 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       planes,
       internalExternalDiscrepancy,
       probeRotation,
+      persistentProbeFailures: persistentProbeFailures?.map(({ plane, lane, origin, path, failStreak, lastProbedAt }) => ({
+        plane,
+        lane,
+        origin,
+        path,
+        failStreak,
+        lastProbedAt,
+      })) ?? null,
+      probePathFailureStreakThreshold: STATUS_PROBE_THRESHOLDS.persistentFailSweeps,
+      ...(probePathFailureEvidenceUnavailable
+        ? { probePathFailureStreakUnavailableReason: "probe-path-streak-unavailable" }
+        : {}),
       probeBaseUrl: probeBaseUrl.origin,
       probeMode,
     },
@@ -856,6 +934,8 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       p95LatencyMs,
       latencySummary,
       probeStatus,
+      probePathFailureStreakPersistenceSucceeded: pathFailureUpdate.persistenceSucceeded,
+      ...(quality ? { quality } : {}),
       transportStatus,
       semanticStatus,
       rawOverallStatus: raw.rawOverallStatus,

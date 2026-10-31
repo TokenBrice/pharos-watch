@@ -52,6 +52,14 @@ const publicProbePaths = vi.hoisted(() => ["/api/health"]);
 const adminProbePaths = vi.hoisted(() => ["/api/status", "/api/status-history?limit=10"]);
 const routeMock = vi.fn();
 const writeStatusProbeRunMock = vi.fn(async () => true);
+const updateProbePathFailureStreaksMock = vi.fn(async () => ({
+  persistentFailures: [] as Array<Record<string, unknown>> | null,
+  persistenceSucceeded: true,
+}));
+const getProbePathIdentityMock = vi.fn(
+  (probe: { plane: string; lane: string; origin: string; path: string }) =>
+    `${probe.plane}|${probe.lane}|${probe.origin}|${probe.path}`,
+);
 const writeStatusRawSnapshotMock = vi.fn(async () => true);
 const writeStatusPublicHealthSnapshotMock = vi.fn(async () => true);
 const loadStatusSupplementsMock = vi.fn(async () => ({ sectionErrors: {} }));
@@ -97,10 +105,12 @@ vi.mock("../../router", () => ({
 }));
 vi.mock("../../lib/status-reliability", () => ({
   buildDiscrepancy: buildDiscrepancyMock,
+  getProbePathIdentity: getProbePathIdentityMock,
   STATUS_DISCREPANCY_ALERT_COOLDOWN_SEC: 1800,
   STATUS_DISCREPANCY_ALERT_STREAK: 2,
   reconcileStatusState: reconcileStatusStateMock,
   updateDiscrepancyObservation: updateDiscrepancyObservationMock,
+  updateProbePathFailureStreaks: updateProbePathFailureStreaksMock,
   writeStatusProbeRun: writeStatusProbeRunMock,
 }));
 const reconcilePublicStatusStateMock = vi.fn(async (_db: unknown, _now: number, health: HealthResponse) => ({
@@ -173,6 +183,7 @@ describe("runStatusSelfCheck", () => {
     publicProbePaths.splice(0, publicProbePaths.length, "/api/health");
     adminProbePaths.splice(0, adminProbePaths.length, "/api/status", "/api/status-history?limit=10");
     writeStatusProbeRunMock.mockResolvedValue(true);
+    updateProbePathFailureStreaksMock.mockResolvedValue({ persistentFailures: [], persistenceSucceeded: true });
     writeStatusRawSnapshotMock.mockResolvedValue(true);
     writeStatusPublicHealthSnapshotMock.mockResolvedValue(true);
     loadStatusSupplementsMock.mockResolvedValue({ sectionErrors: {} });
@@ -417,6 +428,7 @@ describe("runStatusSelfCheck", () => {
       "d1-table-growth",
       ...routeMock.mock.calls.map(([{ url }]) => `route-probe:${url.pathname}${url.search}`),
       "external-probes",
+      "probe-path-streaks",
       "probe-persistence",
       "raw-status",
       "status-supplements",
@@ -662,6 +674,87 @@ describe("runStatusSelfCheck", () => {
 
     expect(metadata.probeFailureStreak).toBe(3);
     expect(metadata.probeBaseUrl).toBe("https://staging.api.pharos.watch");
+  });
+
+  it("degrades the probe plane and names a path that fails across consecutive rotation sweeps", async () => {
+    const probePaths = ["/api/health", "/api/fixture-a", "/api/fixture-b", "/api/fixture-c"];
+    const nowSec = 1_777_000_000;
+    const selected = selectStatusProbePathsForRun(nowSec, [...probePaths, "/api/status-history?limit=10"]);
+    const unselectedPath = probePaths.find((path) => !selected.paths.includes(path));
+    if (!unselectedPath) throw new Error("fixture must leave one deep path unselected");
+    publicProbePaths.splice(0, publicProbePaths.length, ...probePaths);
+    vi.resetModules();
+    // Re-import to rebuild the module's cached probe cohort for this population.
+    const { runStatusSelfCheck: run } = await import("../status-self-check");
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+
+    const persistentFailure = {
+      plane: "internal" as const,
+      lane: "self-check",
+      origin: "https://api.pharos.watch",
+      path: unselectedPath,
+      failStreak: STATUS_PROBE_THRESHOLDS.persistentFailSweeps,
+      lastProbedAt: nowSec,
+    };
+    updateProbePathFailureStreaksMock.mockResolvedValueOnce({
+      persistentFailures: [persistentFailure],
+      persistenceSucceeded: true,
+    });
+
+    const result = await run({} as D1Database, { selfUrl: "https://api.pharos.watch" });
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      probeStatus?: string;
+      transportStatus?: string;
+      probePlanes?: { internal?: { status?: string } };
+      quality?: { degraded?: boolean; reasons?: string[] };
+    };
+
+    // The current run is clean; the carried per-path streak alone degrades the plane.
+    expect(result.status).toBe("ok");
+    expect(metadata.transportStatus).toBe("healthy");
+    expect(metadata.probeStatus).toBe("degraded");
+    expect(metadata.probePlanes?.internal?.status).toBe("degraded");
+    expect(metadata.quality).toEqual({
+      degraded: true,
+      reasons: [`probe-path-persistent-failure:self-check:${unselectedPath}`],
+    });
+    expect(writeStatusProbeRunMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Number),
+      expect.objectContaining({
+        status: "degraded",
+        details: expect.objectContaining({
+          persistentProbeFailures: [expect.objectContaining({
+            path: unselectedPath,
+            failStreak: STATUS_PROBE_THRESHOLDS.persistentFailSweeps,
+          })],
+          probePathFailureStreakThreshold: STATUS_PROBE_THRESHOLDS.persistentFailSweeps,
+        }),
+      }),
+      expect.any(Function),
+    );
+  });
+
+  it("degrades the combined probe plane when per-path streak evidence is unavailable", async () => {
+    updateProbePathFailureStreaksMock.mockImplementationOnce(async (...args: unknown[]) => {
+      (args[4] as (() => void) | undefined)?.();
+      return { persistentFailures: null, persistenceSucceeded: false };
+    });
+
+    const result = await runStatusSelfCheck({} as D1Database);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason?: string;
+      failedOutputs?: string[];
+      probeStatus?: string;
+      quality?: { reasons?: string[] };
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toBe("status-self-check-persistence-failed");
+    expect(metadata.failedOutputs).toContain("status_discrepancy_state");
+    expect(metadata.probeStatus).toBe("degraded");
+    expect(metadata.quality?.reasons).toContain("probe-path-streak-unavailable");
   });
 
   it("uses external health and internal deep probes for the default production origin when execution context is available", async () => {

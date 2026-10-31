@@ -24,6 +24,7 @@ import {
   STATUS_MISSING_PRICE_THRESHOLDS,
   STATUS_ONCHAIN_FRESH_WINDOW_SEC,
   STATUS_PRICE_CONFIDENCE_BANDS,
+  STATUS_PROBE_THRESHOLDS,
   STATUS_RESERVE_COMPOSITION_THRESHOLDS,
   STATUS_RESERVE_DRIFT_THRESHOLD_POINTS,
 } from "../status-thresholds";
@@ -33,6 +34,12 @@ import type { ActivePriceCoverageGap } from "../../types/status";
 it("keeps on-chain supply freshness at two Kinesis producer cycles", () => {
   expect(STATUS_ONCHAIN_FRESH_WINDOW_SEC).toBe(8 * 3600);
   expect(STATUS_ONCHAIN_FRESH_WINDOW_SEC).toBe(2 * CRON_INTERVALS["sync-kinesis-supply"]);
+});
+
+describe("probe persistence threshold", () => {
+  it("keeps the status campaign's twice-cadence grace at two consecutive path sweeps", () => {
+    expect(STATUS_PROBE_THRESHOLDS.persistentFailSweeps).toBe(2);
+  });
 });
 
 describe("missing-price duration bands", () => {
