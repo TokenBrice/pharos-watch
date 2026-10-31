@@ -214,6 +214,7 @@ export function describeRecoveryHold(
   data: Pick<StatusResponse, "state" | "crons" | "timestamp">,
 ): string | null {
   const { state } = data;
+  if (state == null) return null;
   if (STATUS_PRIORITY[state.currentStatus] <= STATUS_PRIORITY[state.rawStatus]) return null;
   const target = state.rawStatus === "healthy" ? "healthy" : "degraded";
   const needed = target === "healthy" ? state.thresholds.recoverToHealthy : state.thresholds.recoverToDegraded;

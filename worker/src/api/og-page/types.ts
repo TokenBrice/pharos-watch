@@ -4,34 +4,43 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 
 /**
  * Admission budget of a cron-backed card source: the same "fresh" ceiling the
- * owner endpoint publishes in `_meta.status` (endpoint budget × the cache's
- * fresh ratio), so a card shows its figure exactly while the page reads fresh
- * and drops to timeless once the page itself would warn. Never stricter than
- * two producer intervals, so a card does not flap between runs.
+ * owner endpoint publishes in `_meta.status` (its explicit fresh budget where it
+ * publishes one, else endpoint budget × the cache's fresh ratio), so a card shows
+ * its figure exactly while the page reads fresh and drops to timeless once the
+ * page itself would warn. Never stricter than two producer intervals, so a card
+ * does not flap between runs.
  */
 function admissionBudgetSec(
   producer: string,
   endpoint: keyof typeof API_FRESHNESS_MAX_AGE_SEC,
-  cacheKey?: string,
+  options: { cacheKey?: string; ownerFreshBudgetSec?: number } = {},
 ): number {
   const intervalSec = CRON_INTERVALS[producer];
   if (intervalSec == null) throw new Error(`Unknown OG source producer: ${producer}`);
-  const freshCeilingSec = API_FRESHNESS_MAX_AGE_SEC[endpoint] * getCacheRatioThresholds(cacheKey).degraded;
+  const freshCeilingSec = options.ownerFreshBudgetSec
+    ?? API_FRESHNESS_MAX_AGE_SEC[endpoint] * getCacheRatioThresholds(options.cacheKey).degraded;
   return Math.max(2 * intervalSec, freshCeilingSec);
 }
 
 export const OG_SOURCE_BUDGET_SEC = {
   stablecoins: admissionBudgetSec("sync-stablecoins", "stablecoins"),
-  chains: admissionBudgetSec("sync-stablecoins", "chains"),
+  // `/chains` publishes `CHAINS_FRESHNESS_MAX_AGE_SEC` (2× sync-stablecoins) as its explicit fresh budget.
+  chains: admissionBudgetSec("sync-stablecoins", "chains", {
+    ownerFreshBudgetSec: API_FRESHNESS_MAX_AGE_SEC.chains,
+  }),
   pegSummary: admissionBudgetSec("sync-stablecoins", "pegSummary"),
   stabilityIndex: admissionBudgetSec("stability-index", "stabilityIndex"),
   mintBurnFlows: admissionBudgetSec("sync-mint-burn", "mintBurnFlows"),
   dexLiquidity: admissionBudgetSec("sync-dex-liquidity", "dexLiquidity"),
-  yieldRankings: admissionBudgetSec("sync-yield-data", "yieldRankings", "yield-data"),
-  reportCards: admissionBudgetSec("compute-safety-score-v9", "reportCards"),
+  yieldRankings: admissionBudgetSec("sync-yield-data", "yieldRankings", { cacheKey: "yield-data" }),
+  // `/api/report-cards/v9` publishes the V9 consumer budget as its explicit fresh budget.
+  reportCards: admissionBudgetSec("compute-safety-score-v9", "reportCards", {
+    ownerFreshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+  }),
 } as const;
 
 /** A live figure read this run from its owner, with the generation that produced it. */

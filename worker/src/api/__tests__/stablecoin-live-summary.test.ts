@@ -186,6 +186,19 @@ describe("site-only stablecoin live summary", () => {
       freshBudgetSec: 4_800, degradedBudgetSec: 7_200, warning } });
   });
 
+  it("publishes the recomputed freshness verdict in the generic header too", async () => {
+    // Enrichment lowered the served clock from the 10-minute detail cache to the
+    // stalled canonical publication, but the detail's pre-enrichment header still
+    // says fresh. The response must name one verdict (R3/ADR-30).
+    vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({}, {
+      "X-Data-Updated-At": String(NOW - 7_201), "X-Data-Age": "7201", "X-Data-Freshness": "fresh",
+    }));
+    const response = await handleStablecoinLiveSummary(db, "usdt-tether", ctx);
+    const payload = await response.json() as { _meta: { status: string } };
+    expect(payload._meta.status).toBe("stale");
+    expect(response.headers.get("X-Data-Freshness")).toBe(payload._meta.status);
+  });
+
   it.each([null, "bad-clock", "0"])("does not manufacture a producer timestamp from %s", async (clock) => {
     const full = detailResponse({});
     if (clock === null) full.headers.delete("X-Data-Updated-At");

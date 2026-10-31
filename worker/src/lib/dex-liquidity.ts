@@ -64,6 +64,8 @@ type DexLiquiditySnapshot = Pick<DexLiquidityData, "liquidityScore" | "concentra
       | "trendworthy"
     >
   > & {
+    /** The row's own publication clock; per-coin readers stamp it (R6). */
+    updatedAt: number;
     deploymentCoverage?: {
       observedPools: number;
       verifiedNoPools: number;
@@ -350,6 +352,7 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
       concentrationHhi: row.concentration_hhi,
       poolCount: row.pool_count,
       chainCount: row.chain_count,
+      updatedAt: row.updated_at,
       ...evidence,
       ...exitRouteDetails,
     };

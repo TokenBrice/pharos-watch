@@ -59,7 +59,8 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
     ]);
 
     const discrepancy = buildDiscrepancy(state?.currentStatus ?? null, probe, now, streak,
-      stateIssues.length > 0 ? "status-unreadable" : "status-missing");
+      stateIssues.length > 0 ? "status-unreadable" : "status-missing",
+      probeIssues.length > 0 ? "probe-unreadable" : "probe-missing");
     const hasMore = transitionQueryFailed ? null : transitionRows.length > limit;
     const transitions = transitionRows.slice(0, limit);
     const reserveComposition = reserveOverviewResult.ok

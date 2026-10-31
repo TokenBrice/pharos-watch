@@ -196,10 +196,10 @@ describe("handleStatus", () => {
   });
 
   it.each([
-    [1801, "degraded", "heavy_scheduled_delivery_stalled"],
-    [2701, "stale", "heavy_scheduled_delivery_stalled"],
-    [null, "degraded", "heavy_scheduler_liveness_unavailable"],
-  ] as const)("folds live heavy delivery loss (%s) into admin snapshot status", async (age, status, code) => {
+    [1801, "degraded", "heavy_scheduled_delivery_stalled", 0.83],
+    [2701, "stale", "heavy_scheduled_delivery_stalled", 0.67],
+    [null, "degraded", "heavy_scheduler_liveness_unavailable", 0.83],
+  ] as const)("folds live heavy delivery loss (%s) into admin snapshot status", async (age, status, code, confidence) => {
     const now = Math.floor(Date.now() / 1000);
     const db = fixtureMockD1([
       { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [makeRawStatusSnapshotRow(now, 120)] },
@@ -217,6 +217,9 @@ describe("handleStatus", () => {
     expect(body.overallStatus).toBe(status);
     expect(body.causes.availability).toEqual(expect.arrayContaining([expect.objectContaining({ code, threshold: 1800 })]));
     expect(body.sectionErrors.schedulerLiveness?.code).toBe(age == null ? code : undefined);
+    // The cached assessment (0.95) was scored while availability read healthy;
+    // the live floor deducts the availability term so confidence matches the verdict.
+    expect(body.confidence).toBe(confidence);
   });
   it("recomputes a pre-heavy cached scheduler rather than trusting public-only evidence", async () => {
     const now = Math.floor(Date.now() / 1000);

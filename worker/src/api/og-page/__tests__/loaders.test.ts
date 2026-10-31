@@ -37,6 +37,7 @@ import { OG_PAGE_LOADERS } from "../index";
 import { OG_SOURCE_BUDGET_SEC } from "../types";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS, getCacheRatioThresholds } from "@shared/lib/status-thresholds";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../lib/safety-score-v9/consumer-freshness";
 
 const NOW = 1_790_000_000;
 const db = {} as D1Database;
@@ -60,6 +61,8 @@ describe("route-card admission budgets", () => {
     expect(OG_SOURCE_BUDGET_SEC.yieldRankings).toBe(
       Math.max(2 * CRON_INTERVALS["sync-yield-data"]!, API_FRESHNESS_MAX_AGE_SEC.yieldRankings * getCacheRatioThresholds("yield-data").degraded),
     );
+    // Sources that publish an explicit fresh budget adopt it instead of the 8x ratio.
+    expect(OG_SOURCE_BUDGET_SEC.reportCards).toBe(SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC);
   });
 });
 

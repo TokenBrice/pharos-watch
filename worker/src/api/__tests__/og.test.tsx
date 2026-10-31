@@ -1,6 +1,7 @@
 import { makeReportCardsV9PipelineGapCard, makeReportCardsV9PartialCard } from "@shared/test-utils/report-cards-v9";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { createElement } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 // Plain `satori` entry (Node build) — deliberately NOT the aliased
@@ -12,7 +13,7 @@ import satori from "satori";
 import satoriStandalone from "satori/standalone";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
-import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { makeAsset, makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
@@ -540,6 +541,36 @@ describe("stablecoin OG card data", () => {
       expect(data.change24h).toBeCloseTo(3.0303, 4);
     });
 
+    it("stamps the DEX liquidity generation that produced the LIQUIDITY score", async () => {
+      // sync-dex-liquidity stopped a month ago; the last published row is still served.
+      const liquidityAt = nowSec - 30 * 86_400;
+      const db = mockD1([
+        {
+          match: "cache",
+          rows: [
+            { key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT" })] }), updated_at: nowSec },
+            { key: "peg-analytics", value: JSON.stringify({ computedAtSec: nowSec, pegData: [{ id: "usdt-tether", pegScore: 99 }] }), updated_at: nowSec },
+          ],
+        },
+        { match: "dex_deployment_outcomes", rows: [] },
+        { match: "dex_liquidity", rows: [makeDexLiquidityRow({ updated_at: liquidityAt })] },
+        { match: "stress_signals", rows: [] },
+        { match: "supply_history", rows: [] },
+        { match: "depeg_events", rows: [] },
+        { match: "mint_burn_hourly", rows: [] },
+        { match: "mint_burn_scan_coverage", rows: [] },
+        { match: "FROM mint_burn_admission", rows: [] },
+        { match: "FROM mint_burn_publication_policy", rows: [] },
+        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+      ]);
+
+      const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
+      const stamp = new Date(liquidityAt * 1000).toISOString().slice(0, 16).replace("T", " ");
+      expect(data.liquidityScore).toBe(85);
+      // A fresh market/price read cannot make an old liquidity score undated.
+      expect(data.lastUpdated).toContain(`Liquidity ${stamp} UTC`);
+    });
+
     it.each([
       ["stale", nowSec - 2 * 86400, nowSec - 3 * 86400, 0.99],
       ["missing yesterday", nowSec - 3600, null, null],
@@ -600,15 +631,69 @@ describe("stablecoin OG card data", () => {
 describe("chain OG route", () => {
   const nowSec = Math.floor(Date.now() / 1000);
 
-  function makeChainOgDb(assets: ReturnType<typeof makeAsset>[]) {
+  function makeChainOgDb(assets: ReturnType<typeof makeAsset>[], marketUpdatedAt = nowSec) {
     const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
     return mockD1([
       {
         match: "cache",
-        rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: nowSec }],
+        rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: marketUpdatedAt }],
       },
     ]);
   }
+
+  function chainSafety(updatedAt: number) {
+    return {
+      kind: "v9" as const,
+      snapshot: makeWorkerReportCardsV9Response({
+        updatedAt,
+        asOfSec: updatedAt - 60,
+        cards: [makeWorkerV9Card({ id: "usdt-tether", score: 88, grade: "A+" })],
+      }),
+    };
+  }
+
+  async function renderedChainData(db: D1Database): Promise<ChainCardData> {
+    const satoriMock = vi.mocked(satoriStandalone);
+    satoriMock.mockClear();
+    const res = await handleOg(db, "/api/og/chain/ethereum");
+    expect(res?.status).toBe(200);
+    const element = satoriMock.mock.calls[satoriMock.mock.calls.length - 1]?.[0] as React.ReactElement<{
+      data: ChainCardData;
+    }>;
+    expect(element.type).toBe(ChainCard);
+    return element.props.data;
+  }
+
+  const ogStamp = (timestamp: number) =>
+    new Date(timestamp * 1000).toISOString().slice(0, 16).replace("T", " ");
+
+  it("stamps the market generation even when the Safety publication is degraded", async () => {
+    const marketUpdatedAt = nowSec - 300;
+    const staleSafetyAt = nowSec - 3 * 86_400;
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
+      .mockResolvedValue(chainSafety(staleSafetyAt));
+
+    const data = await renderedChainData(makeChainOgDb([makeAsset()], marketUpdatedAt));
+
+    // The headline supply figures are this request's market read; Safety only
+    // feeds Chain Health, so its degraded verdict cannot erase the supply stamp.
+    expect(data.totalUsd).toBe(50_000_000);
+    expect(data.lastUpdated).toContain(`Market ${ogStamp(marketUpdatedAt)} UTC`);
+    expect(data.lastUpdated).toContain("DEGRADED: V9 safety score unavailable");
+    expect(renderToStaticMarkup(createElement(ChainCard, { data })))
+      .toContain(`Market ${ogStamp(marketUpdatedAt)} UTC`);
+  });
+
+  it("names the market generation alongside a current Safety publication", async () => {
+    const marketUpdatedAt = nowSec - 1_800;
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
+      .mockResolvedValue(chainSafety(nowSec - 300));
+
+    const data = await renderedChainData(makeChainOgDb([makeAsset()], marketUpdatedAt));
+
+    expect(data.lastUpdated).toContain(`Market ${ogStamp(marketUpdatedAt)} UTC`);
+    expect(data.lastUpdated).toContain("V9 9.0");
+  });
 
   it("renders a figure-free degraded card when a known chain is absent from the aggregate", async () => {
     // Asset with no chain attribution → aggregateChains() emits no chains, so

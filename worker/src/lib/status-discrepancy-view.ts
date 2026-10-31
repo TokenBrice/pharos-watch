@@ -32,6 +32,7 @@ export function buildDiscrepancy(
   now: number,
   consecutiveDivergent: number | null,
   statusUnavailableReason: "status-missing" | "status-unreadable" = "status-missing",
+  probeUnavailableReason: "probe-missing" | "probe-unreadable" = "probe-missing",
 ): StatusDiscrepancy {
   if (overallStatus == null) {
     return {
@@ -46,15 +47,18 @@ export function buildDiscrepancy(
     };
   }
   if (probe.status === "unknown" || probe.timestamp == null) {
+    // A failed probe read is not an observed absence: its verdict and delta are
+    // unavailable, while a successful read with no row stays `probe-missing`.
+    const unreadable = probeUnavailableReason === "probe-unreadable";
     return {
       hasDivergence: false,
-      severityDelta: 0,
+      severityDelta: unreadable ? null : 0,
       statusSeverity: SEVERITY[overallStatus],
       probeSeverity: -1,
-      details: null,
+      details: unreadable ? "Probe comparison authority unavailable." : null,
       probeAgeSeconds: null,
       consecutiveDivergent,
-      discrepancyReason: "probe-missing",
+      discrepancyReason: probeUnavailableReason,
     };
   }
 

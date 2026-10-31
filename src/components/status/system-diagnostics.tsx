@@ -13,6 +13,8 @@ function discrepancyReasonLabel(reason: StatusDiscrepancyReason): string {
       return "probe disagrees";
     case "probe-missing":
       return "probe missing";
+    case "probe-unreadable":
+      return "probe unreadable";
     case "probe-invalid-timestamp":
       return "probe timestamp invalid";
     case "status-missing":
@@ -46,8 +48,8 @@ export function SystemDiagnostics({
   error,
   nowSeconds,
 }: SystemDiagnosticsProps) {
-  const evalAge = state.lastEvaluatedAt > 0 ? Math.max(0, nowSeconds - state.lastEvaluatedAt) : null;
-  const changedAge = state.lastChangedAt > 0 ? Math.max(0, nowSeconds - state.lastChangedAt) : null;
+  const evalAge = state != null && state.lastEvaluatedAt > 0 ? Math.max(0, nowSeconds - state.lastEvaluatedAt) : null;
+  const changedAge = state != null && state.lastChangedAt > 0 ? Math.max(0, nowSeconds - state.lastChangedAt) : null;
   const browserProbeAgeSeconds =
     browserProbe?.updatedAt != null ? Math.max(0, nowSeconds - browserProbe.updatedAt) : null;
 
@@ -58,7 +60,7 @@ export function SystemDiagnostics({
       <div className="min-w-0 border-y border-border/60 py-2">
         <div className="text-xs text-muted-foreground">State machine</div>
         <div className="font-mono text-sm">
-          {state.currentStatus} (raw: {state.rawStatus})
+          {state != null ? `${state.currentStatus} (raw: ${state.rawStatus})` : "unavailable"}
         </div>
         <div className="text-xs text-muted-foreground">
           evaluated {evalAge != null ? `${formatElapsedSeconds(evalAge)} ago` : "never"}
@@ -66,9 +68,11 @@ export function SystemDiagnostics({
         <div className="text-xs text-muted-foreground">
           changed {changedAge != null ? `${formatElapsedSeconds(changedAge)} ago` : "never"}
         </div>
-        <div className="mt-1 text-xs text-muted-foreground">
-          raw streak h/d/s {state.consecutiveRaw.healthy}/{state.consecutiveRaw.degraded}/{state.consecutiveRaw.stale}
-        </div>
+        {state != null && (
+          <div className="mt-1 text-xs text-muted-foreground">
+            raw streak h/d/s {state.consecutiveRaw.healthy}/{state.consecutiveRaw.degraded}/{state.consecutiveRaw.stale}
+          </div>
+        )}
         {error && (
           <div className="mt-2 text-xs text-state-warn">
             {error.code}: {error.message}

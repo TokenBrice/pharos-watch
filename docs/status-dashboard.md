@@ -235,9 +235,11 @@ The existing caller clock and freshness budgets still own age-band assessment.
 
 Raw status snapshots validate both cache and payload generation clocks, returning `unreadable`
 with a timestamp reason on invalid evidence. Persisted status-state reads return unavailable
-state/staleness and report `status_state_invalid_timestamp`. Invalid probes cannot establish
-divergence: discrepancy diagnostics expose `probe-invalid-timestamp` and a null age. These are
-timestamp-admission corrections, not changes to cadence, hysteresis, age budgets or alert policy.
+state/staleness and report `status_state_invalid_timestamp`; a failed or rejected read publishes
+`state: null` (never a fallback evaluated at the request clock) beside `staleness.isStale`.
+Invalid probes cannot establish divergence: discrepancy diagnostics expose `probe-invalid-timestamp`
+and a null age. These are timestamp-admission corrections, not changes to cadence, hysteresis, age
+budgets or alert policy.
 
 Canary PSI/DEWS checks use the named `CANARY_INCIDENT_MAX_AGE_SEC` four-hour incident
 policy, distinct from endpoint freshness and Telegram flow tolerated-context budgets.
@@ -544,9 +546,9 @@ At request time the admin advertises the worse of persisted `state.currentStatus
 
 Additional response fields:
 
-- `confidence`: normalized status confidence (0.1–1.0)
+- `confidence`: normalized status confidence (0.1–1.0), re-scored for the live scheduler floor so it matches the published availability verdict
 - `causes`: structured trigger list (`availability`, `dataQuality`, `overall`)
-- `state`: state-machine counters and thresholds
+- `state`: state-machine counters and thresholds; `null` when the persisted status-state read failed or its clock was rejected (named in `sectionErrors.statusState`)
 - `staleness`: freshness of status-system evaluations
 - `probe`: latest synthetic probe aggregate
 - `discrepancy`: divergence between effective status and synthetic probe status
@@ -847,7 +849,7 @@ Response includes:
 
 The incident-history workspace makes negative deployment-correlation statements when history data exists, the query has no error, and `hasMore === false`. This proves completeness, not freshness: cached data remains eligible during background refetch or after the query freshness window expires. Row-limited, failed-refetch retained, fallback, and indeterminate results keep correlation Unknown.
 
-Absent state authority yields `status-missing`; unreadable authority yields `status-unreadable` plus `sectionErrors.state`. Both discrepancy comparisons have null status severity/delta, never an invented healthy/in-sync verdict. Probe read issues are separately exposed in `sectionErrors.probe`.
+Absent state authority yields `status-missing`; unreadable authority yields `status-unreadable` plus `sectionErrors.state`. Both discrepancy comparisons have null status severity/delta, never an invented healthy/in-sync verdict. Probe read issues are separately exposed in `sectionErrors.probe` and yield `probe-unreadable` with a null delta; only a successful read with no probe row yields `probe-missing`.
 
 Delivery status is request-time evidence, but transition history is cron-sampled. A stall and recovery entirely between status observations cannot create invented historical transitions; the external monitor's issue/run is separate incident evidence.
 

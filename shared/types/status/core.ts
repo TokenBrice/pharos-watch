@@ -82,7 +82,7 @@ const StatusProbeComparisonSchema = z.object({
 });
 export type StatusProbeComparison = z.output<typeof StatusProbeComparisonSchema>;
 
-const STATUS_DISCREPANCY_REASON_VALUES = ["in-sync", "probe-stale", "probe-disagrees", "probe-missing", "probe-invalid-timestamp", "status-missing", "status-unreadable"] as const;
+const STATUS_DISCREPANCY_REASON_VALUES = ["in-sync", "probe-stale", "probe-disagrees", "probe-missing", "probe-unreadable", "probe-invalid-timestamp", "status-missing", "status-unreadable"] as const;
 export type StatusDiscrepancyReason = (typeof STATUS_DISCREPANCY_REASON_VALUES)[number];
 
 export const StatusDiscrepancySchema = z.object({
@@ -95,8 +95,8 @@ export const StatusDiscrepancySchema = z.object({
   consecutiveDivergent: z.number().nullable(),
   /**
    * Machine-readable classification so operator diagnostics can branch without
-   * parsing `details`. Disambiguates "probe never ran" vs "probe ran but
-   * disagrees" vs "probe is stale".
+   * parsing `details`. Disambiguates "probe never ran" vs "probe read failed"
+   * vs "probe ran but disagrees" vs "probe is stale".
    */
   discrepancyReason: z.enum(STATUS_DISCREPANCY_REASON_VALUES),
 });
