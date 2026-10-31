@@ -582,6 +582,8 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
   "qcad-stablecorp": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
+    holderEligibility: "unknown",
+    settlementModel: "days",
     costModel: fixedFee(
       0,
       "QCAD Token Terms and Conditions, Article 7, Section 7.1: QCDT and the Servicer do not currently charge any fees to an Authorized Participant on Purchase or to a Redeemer in connection with a Redemption. The OSC decision dated 2025-11-20 (representation 11) states the same. This is the issuer-side fee only; Section 7.2 leaves the redeemer's own banking fees and any Authorized Participant brokerage commission separate, and Section 7.3 requires 30 days notice before any fee is introduced",
@@ -719,6 +721,8 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     outputAssetType: "nav",
+    holderEligibility: "unknown",
+    settlementModel: "days",
     costModel: undisclosedReviewedFee(
       "The current VBILL page publishes a 0.2% total unitary fund fee, not an all-in redemption tariff. Securitize's 2026 broker schedule separately lists conversion, outgoing-wire and variable gas charges without establishing the complete exact fund-redemption deductions.",
     ),
@@ -785,6 +789,8 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_STABLECOIN_AUDIT_AT),
     outputAssetType: "nav",
+    holderEligibility: "unknown",
+    settlementModel: "days",
     costModel: undisclosedReviewedFee(
       "Anemoy materials describe subscriptions and redemptions in stablecoins; public materials reviewed do not publish one fixed JAAA redemption fee",
     ),

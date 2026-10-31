@@ -120,6 +120,26 @@ describe("component cost unavailable reasons", () => {
   });
 });
 
+describe("USSD BrandedCustodian fee", () => {
+  it("publishes the owner-settable redeemFee() as an unquantified formula cost", () => {
+    const config = getRedemptionBackstopConfig("ussd-sonic-labs")!;
+    const fields = resolveRedemptionStaticFields("ussd-sonic-labs", config, {
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      outputAssetQualityScore: 100,
+    });
+
+    expect(fields).toMatchObject({
+      feeBps: null,
+      feeConfidence: "formula",
+      feeModelKind: "formula",
+      costScore: 60,
+    });
+    expect(fields.costScenarioScores).toBeUndefined();
+  });
+});
+
 describe("V8 compatibility", () => {
   it("does not apply V9-only USDT route terms to legacy cost scenarios", () => {
     const config = getRedemptionBackstopConfig("usdt-tether")!;

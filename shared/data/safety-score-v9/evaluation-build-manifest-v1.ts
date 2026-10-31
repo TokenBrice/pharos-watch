@@ -330,7 +330,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/collateral-redeem.ts",
-      "sha256": "07b37e5f609930b7ca4865a4764bd25c775a08c2cf4a7d4479cc498c5890a143"
+      "sha256": "47624404b159d1d29fef72f9c24e3faccbc95249865f317bdf7a3ae8f82fe7bc"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/factory.ts",
@@ -346,7 +346,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/base-batches.ts",
-      "sha256": "f4fb2f18a6668a6fd00e04ded09048a8834e69f0fa33c499c94ee4c6fcdd2a5b"
+      "sha256": "d7d2daef496196ac5837658786b2e5c07aace5f4657a5ffcd5126c843f90d309"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/commodity.ts",
@@ -354,7 +354,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit.ts",
-      "sha256": "21ca8ff351c3decc420eac6e8b890af9087974e34d12e0f795cd2dad88824e1c"
+      "sha256": "9bba3dd7fb87808ab09b933be981c331e7fb47d8d1b2c26d35f556c3be274299"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/discovery.ts",
@@ -370,11 +370,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/non-usd-and-tokenized.ts",
-      "sha256": "d9e5d04af0d65f1ca98a07285c0bb005d0df0d82376de5c1ba72f3712a4ed33d"
+      "sha256": "b7bcb3a6668d44b854b5d7d4b2e411f249514d27568790e96382b3c596fe6265"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
-      "sha256": "ae558cf205f36924f03e8f167254fe10be073d92d5cb766f3fa96a2a239a25bb"
+      "sha256": "274d9cb8add787f25cb70cc4c110600dec381c1c70d63cbb12319c49f12cd420"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/shared.ts",
@@ -1447,7 +1447,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "a1f4116028dfce26ba05b81c5958734eff66c88b269f2dab5b24ddca8f9ba525"
+  "digest": "dad46c2ebd24b8f79c55d8e13b72e5937815109041e0b670fbe088f2d9ea743d"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

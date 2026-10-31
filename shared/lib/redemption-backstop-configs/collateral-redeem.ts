@@ -479,7 +479,10 @@ const COLLATERAL_REDEEM_REGISTRY_ENTRIES = [
       outputAssetType: "stable-single",
       outputAssets: ["frxusd-frax"],
       reviewedAt: REVIEWED_EXIT_CREDIT_AT,
-      costModel: fixedFee(0, "The verified Sonic BrandedCustodian returned redeemFee() = 0 at Sonic block 77432523."),
+      costModel: documentedVariableFee(
+        "The verified Sonic BrandedCustodian exposes an owner-settable redeemFee() that returned 0 at Sonic block 77432523 (reviewed 2026-08-12); the reviewed variable-fee formula requires a current read rather than a permanent zero bound. Gas and downstream frxUSD issuer costs are separate.",
+        "formula",
+      ),
       docs: [
         sourceRef("Sonic USSD docs", "https://docs.soniclabs.com/sonic/ussd", [
           "route",
