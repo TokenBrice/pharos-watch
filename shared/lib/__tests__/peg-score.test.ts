@@ -226,7 +226,7 @@ describe("computePegScore", () => {
       expect(result.spreadPenalty).toBeLessThanOrEqual(15);
     });
 
-    it("low-confidence half-weight changes spreadPenalty vs high-confidence same bps", () => {
+    it("confidence-weights the spread mean/variance so a downgrade lowers the penalty", () => {
       const eventsHigh = [
         { ...eventAtOffset(60, -200), provenance: { confidenceTier: "high" } },
         { ...eventAtOffset(30, -800), provenance: { confidenceTier: "high" } },
@@ -237,9 +237,21 @@ describe("computePegScore", () => {
       ];
       const high = computePegScore(eventsHigh as never, start, NOW);
       const low = computePegScore(eventsLow as never, start, NOW);
-      // Low-confidence weight=0.5 on first event shifts the weighted mean
-      // and reduces the effective stddev compared to both at full weight.
-      expect(high.spreadPenalty).not.toBe(low.spreadPenalty);
+      // Weights 1 and 1: mean 500, variance 90,000. Weights 0.5 and 1:
+      // mean 600, variance 80,000 — the weight sum divides both moments.
+      expect(high.spreadPenalty).toBeCloseTo(4.5, 10);
+      expect(low.spreadPenalty).toBeCloseTo((Math.sqrt(80_000) / 1000) * 15, 10);
+      expect(low.spreadPenalty).toBeLessThan(high.spreadPenalty);
+    });
+
+    it("does not invent dispersion between identical peaks when one row is low confidence", () => {
+      const events = [
+        { ...eventAtOffset(60, -800), provenance: { confidenceTier: "low" } },
+        { ...eventAtOffset(30, -800), provenance: { confidenceTier: "high" } },
+      ];
+      // The same -800 bps peak observed twice carries no spread, whatever the
+      // evidence weight; halving the magnitude would fabricate a 200 bps gap.
+      expect(computePegScore(events as never, start, NOW).spreadPenalty).toBe(0);
     });
 
     it("caps spreadPenalty at 15 for extreme variance", () => {

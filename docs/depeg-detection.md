@@ -509,7 +509,10 @@ Detection contributes eligible episodes, observed price intervals and audit prov
 - `false_positive` and `disputed` events are excluded. `no_data` remains eligible
   here but is excluded by DDR's separate policy. Unknown non-null verdicts fail
   closed; null legacy verdicts remain eligible. Low-confidence events retain
-  occupancy impact with half-weight severity/spread; quality counters expose this.
+  occupancy impact with half-weight severity; the spread uses confidence-weighted
+  mean and variance divided by the weight sum, so a half-weighted row keeps its
+  observed peak instead of shrinking into artificial dispersion. Quality counters
+  expose this.
 - `coinTrackingStart()` honors reviewed replay/continuous-live coverage first,
   otherwise launch date, then the earliest supply or durable valid-price anchor.
   Without these, the earliest event is the fallback; no anchor or events means NR.
