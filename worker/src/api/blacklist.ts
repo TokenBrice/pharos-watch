@@ -171,12 +171,17 @@ export const handleBlacklist = async (db: D1Database, url: URL): Promise<Respons
       maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.blacklist,
     },
     cacheControl: CACHE_PROFILES.producerBacked,
-    buildExtraBody: (events) => {
+    buildExtraBody: (events, _total, producerClock) => {
       const latestEvent = events.reduce<BlacklistEvent | null>(
         (latest, event) => (latest == null || event.timestamp > latest.timestamp ? event : latest),
         null,
       );
-      const latestTs = latestEvent?.timestamp ?? Math.floor(Date.now() / 1000);
+      // An observed page dates the envelope from its newest event. An empty page
+      // has only the confirmed producer output this read was dated against — the
+      // request clock is never an observation, and no clock at all means no
+      // methodology provenance to publish.
+      const latestTs = latestEvent?.timestamp ?? producerClock.timestamp;
+      if (latestTs == null) return {};
       const methodologyVersion = latestEvent?.methodologyVersion ?? getMethodologyVersionAt("blacklist-tracker", latestTs);
       const methodologyVersionLabel = toMethodologyVersionLabel(methodologyVersion);
 

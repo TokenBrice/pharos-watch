@@ -1,10 +1,10 @@
-import { errorResponse, jsonFreshResponse } from "../lib/api-response";
+import { errorResponse, jsonFreshResponse, jsonResponse } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { DigestForwardLookOutcome, DigestNextTrigger, DigestRiskSignal, DigestRiskTapeItem } from "@shared/types/digest";
 import { DigestArchiveCursorSchema, DigestSupplyCoverageSchema } from "@shared/types/digest";
 import { decodeJsonString } from "../lib/cache-json";
-import { NON_BLOCKED_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
+import { DIGEST_META_TYPE_SQL, NON_BLOCKED_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { logMalformedJsonPath } from "../lib/json-decode-observability";
 import { selectDigestRiskSignal } from "./digest-risk-summary";
 import { selectDigestIntelligence } from "./digest-intelligence-summary";
@@ -164,7 +164,7 @@ export const handleDigestArchive = async (db: D1Database, url?: URL): Promise<Re
          ${ARCHIVE_INPUT_SQL} AS input_data, digest_meta,
          ${completeHistory ? "COUNT(*) OVER () AS archive_total, MAX(rowid) OVER () AS archive_horizon," : ""}
          ROW_NUMBER() OVER (
-           PARTITION BY CASE WHEN json_extract(digest_meta, '$.type') = 'weekly' THEN 'weekly' ELSE 'daily' END
+           PARTITION BY CASE WHEN ${DIGEST_META_TYPE_SQL} = 'weekly' THEN 'weekly' ELSE 'daily' END
            ORDER BY generated_at ASC, rowid ASC
          ) AS edition_number
        FROM daily_digest WHERE (${NON_BLOCKED_DIGEST_SQL_FILTER})
@@ -255,7 +255,20 @@ export const handleDigestArchive = async (db: D1Database, url?: URL): Promise<Re
     .filter((d) => !d.isInternal)
     .map(({ isInternal: _isInternal, ...rest }) => rest);
 
-  const latestTs = publicDigests.length > 0 ? publicDigests[0].generatedAt : Math.floor(Date.now() / 1000);
+  const latestTs = publicDigests[0]?.generatedAt ?? null;
+
+  if (latestTs == null) {
+    // No served edition dates this read. Publish the documented unavailable
+    // clock instead of the request second, and keep it out of the edge cache.
+    return jsonResponse({ digests: publicDigests, ...(pagination ? { pagination } : {}) }, {
+      headers: {
+        "Cache-Control": CACHE_PROFILES.noStore,
+        "X-Data-Updated-At": "unknown",
+        "X-Data-Age": "unavailable",
+        Warning: '199 - "Digest archive has no published edition to date the response"',
+      },
+    });
+  }
 
   return jsonFreshResponse({ digests: publicDigests, ...(pagination ? { pagination } : {}) }, {
     cacheControl: CACHE_PROFILES.standard,

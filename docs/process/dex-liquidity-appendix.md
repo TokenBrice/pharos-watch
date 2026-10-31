@@ -669,7 +669,7 @@ API price admission is independent of endpoint liquidity age. `STAGED_POOL_PRICE
 
 Quarantine invalid coverage per asset/history point as `invalid-coverage-evidence`: null rating/class/confidence/evidence and false measured/trendworthy. Independent valid rows survive; bad points cannot emit route summaries or trend deltas. [API reference](../api-reference.md) owns full wire inventory.
 
-Trend readers use nearest positive confidence≥0.5 daily/weekly anchor with 12h/36h tolerance, **without** methodology-basis guard. A retained-TVL remeasurement can therefore appear as a trend for about seven days; digest/30-day stability guards do not fix that limitation.
+Trend readers use nearest positive confidence≥0.5 daily/weekly anchor with 12h/36h tolerance, **without** methodology-basis guard. A published `tvlChange24h`/`tvlChange7d` additionally requires the current row to be trendworthy; an unobserved zero-TVL placeholder publishes `null`, never a -100% collapse. A retained-TVL remeasurement can therefore appear as a trend for about seven days; digest/30-day stability guards do not fix that limitation.
 
 Global API warnings require producer degraded/error or dataset-wide drift. Coin warnings need matching major-cliff/watchlist flag and do not alone create global warning on an ok run; row warnings also compose freshness/advisory-read failure. Last-success language belongs to error advisory, not every degraded run.
 

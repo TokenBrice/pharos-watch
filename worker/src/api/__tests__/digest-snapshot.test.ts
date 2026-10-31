@@ -143,8 +143,8 @@ describe("handleDigestSnapshot", () => {
       }),
     };
     const db = mockD1([
-      { match: "json_extract(digest_meta, '$.type') = 'weekly'", rows: [], first: weeklyRow },
-      { match: "digest_meta IS NULL OR json_extract", rows: [], first: dailyRow },
+      { match: "json_extract(digest_meta, '$.type') END = 'weekly'", rows: [], first: weeklyRow },
+      { match: "digest_meta IS NULL OR CASE WHEN json_valid", rows: [], first: dailyRow },
       { match: "depeg_events", rows: [] },
       { match: "digest-snapshot:blacklist-summary", rows: [{ total_events: 0, valued_events: 0, known_amount_usd: null }] },
       { match: "blacklist_events", rows: [] },
@@ -295,6 +295,43 @@ describe("handleDigestSnapshot", () => {
     expect(body.blacklistEvents).toHaveLength(50);
     expect(body.blacklistEvents[0].address).toBe("address-51");
     expect(body.blacklistSummary).toEqual({ totalEvents: 52, knownAmountUsd: 500, valuedEvents: 50, unavailableAmountEvents: 2 });
+  });
+
+  it("counts one canonical blacklist log identity once in the full-day summary and sample", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse("2026-10-02T06:00:00Z"));
+    const day = Date.parse("2026-10-01T00:00:00Z") / 1000;
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)")
+      .run(day + 3600, JSON.stringify({ totalMcapUsd: 100e9 }));
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_usd_at_event, amount_status, explorer_tx_url, explorer_address_url, suppression_reason)
+      VALUES (?, 'USDC', 'ethereum', 'Ethereum', 'blacklist', ?, '0xfeed', ?, ?, ?, 'resolved', '', '', NULL)`);
+    // The same canonical log identity (chain_id + tx_hash + log index) written by
+    // two lanes with different id spellings: hex vs decimal log index. The shared
+    // public-event predicate folds these into a single event.
+    insert.run("ethereum-0xfeed-0xa", "0xaaa1", 21_000_001, day + 2 * 3600, 4e6);
+    insert.run("ethereum-0xfeed-10", "0xaaa1", 21_000_001, day + 2 * 3600, 4e6);
+    // Control: a distinct log on the same day must still be counted.
+    insert.run("ethereum-0xbeef-1", "0xbbb2", 21_000_002, day + 3 * 3600, 1e6);
+
+    const body = DigestSnapshotResponseSchema.parse(await readJsonResponse(
+      await handleDigestSnapshot(db, new URL("https://x/api/digest-snapshot?date=2026-10-01")), 200,
+    ));
+    expect({
+      totalEvents: body.blacklistSummary?.totalEvents,
+      knownAmountUsd: body.blacklistSummary?.knownAmountUsd,
+      valuedEvents: body.blacklistSummary?.valuedEvents,
+      unavailableAmountEvents: body.blacklistSummary?.unavailableAmountEvents,
+      sample: body.blacklistEvents.map((event) => [event.address, event.amountUsdAtEvent]),
+    }).toEqual({
+      totalEvents: 2,
+      knownAmountUsd: 5e6,
+      valuedEvents: 2,
+      unavailableAmountEvents: 0,
+      sample: [["0xbbb2", 1e6], ["0xaaa1", 4e6]],
+    });
   });
 
   it("withholds an open day's blacklist total and archive profile until the day closes", async () => {

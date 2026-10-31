@@ -343,6 +343,56 @@ describe("handleDigestArchive", () => {
     expect(res.headers.has("X-Data-Age")).toBe(true);
   });
 
+  it("serves an empty archive with an unavailable clock instead of the request second", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-22T12:00:00Z"));
+    // A fresh or restored database has an empty daily_digest table. There is no
+    // producer observation to date the read with, so the freshness clock is
+    // unavailable — never an age-0 generation at the request second.
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const res = await handleDigestArchive(db);
+      const body = await readJsonResponse(res, 200) as { digests: unknown[] };
+      expect(body.digests).toEqual([]);
+      expect(res.headers.get("X-Data-Updated-At")).toBe("unknown");
+      expect(res.headers.get("X-Data-Age")).toBe("unavailable");
+      expect(res.headers.get("Cache-Control")).toBe("no-store");
+    } finally {
+      sqlite.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([false, true])(
+    "keeps readable editions when one digest_meta is malformed (history=%s)",
+    async (completeHistory) => {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      try {
+        const insert = sqlite.prepare(
+          "INSERT INTO daily_digest (digest_text, digest_title, generated_at, input_data, digest_meta) VALUES (?, ?, ?, ?, ?)",
+        );
+        insert.run("Daily edition", "Daily edition", 1_760_000_000, "{}", '{"type":"daily"}');
+        // Not JSON at all: SQLite's json_extract() raises "malformed JSON" for
+        // this value, so an unguarded read would abort the whole statement.
+        insert.run("Unreadable metadata", "Unreadable metadata", 1_760_086_400, "{}", "{bad");
+        insert.run("Weekly edition", "Weekly edition", 1_760_172_800, "{}", '{"type":"weekly"}');
+        const url = new URL(`https://api.example.com/api/digest-archive${completeHistory ? "?history=all" : ""}`);
+        const body = DigestArchiveResponseSchema.parse(await readJsonResponse(await handleDigestArchive(db, url), 200));
+        const byTitle = new Map(body.digests.map((digest) => [digest.digestTitle, digest]));
+        // Readable editions survive regardless of the unparseable row.
+        expect(byTitle.get("Daily edition")).toMatchObject({ digestType: "daily", editionNumber: 1 });
+        expect(byTitle.get("Weekly edition")).toMatchObject({ digestType: "weekly", editionNumber: 1 });
+        // An unparseable row degrades to the conservative daily/pre-policy
+        // representation instead of guessing weekly or claiming style provenance.
+        expect(byTitle.get("Unreadable metadata")).toMatchObject({
+          digestType: "daily", editorialStyleVersion: "pre-policy",
+        });
+      } finally {
+        sqlite.close();
+      }
+    },
+  );
+
   it("hides internal sentinel rows without shifting edition numbers", async () => {
     const now = Math.floor(Date.now() / 1000);
     const weekly1 = makeDigestRow({

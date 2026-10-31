@@ -6,6 +6,7 @@ import { registerStablecoinParameterContract } from "../../test-helpers/__shared
 import { handleMintBurnEvents } from "../mint-burn-events";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
 import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-flows/aggregate";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
@@ -310,6 +311,49 @@ describe("handleMintBurnEvents", () => {
     const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether"));
     const age = Number(res.headers.get("X-Data-Age"));
     expect(age).toBeLessThan(120);
+  });
+
+  it("dates an extended-only coin from the extended lane, never the critical sibling", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const currentHour = Math.floor(now / 3600) * 3600;
+    const extendedOutputAt = now - 3 * 86400;
+    // PYUSD is configured only for the extended lane, so only that lane can
+    // insert its rows; its scan proof is three days old while the critical
+    // lane's proof is current.
+    const insertProof = sqlite.prepare(`INSERT INTO mint_burn_scan_coverage
+      (config_key, config_fingerprint, chain_id, from_block, to_block,
+       from_timestamp, to_timestamp, finality_tag, finalized_block, accepted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'finalized', ?, ?)`);
+    for (const config of MINT_BURN_CONFIGS.filter(isGrandfatheredMintBurnConfig)) {
+      const proofEnd = config.tier === "extended" ? currentHour - 3 * 86400 : currentHour;
+      const toBlock = config.startBlock + 1_000_000;
+      insertProof.run(
+        mintBurnConfigKey(config), mintBurnScanFingerprint(config), config.chain.chainId,
+        config.startBlock, toBlock, proofEnd - 90 * 86400, proofEnd, toBlock, proofEnd,
+      );
+    }
+    const event = makeMintBurnRow({
+      id: "pyusd-extended-only", stablecoin_id: "pyusd-paypal", symbol: "PYUSD", timestamp: extendedOutputAt,
+    });
+    sqlite.prepare(`INSERT INTO mint_burn_events (${Object.keys(event).join(",")})
+      VALUES (${Object.keys(event).map(() => "?").join(",")})`).run(...Object.values(event));
+    const insertRun = sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?,?,?,?,?,?)",
+    );
+    insertRun.run("sync-mint-burn", now - 60, 1_000, "ok", 2, "{}");
+    insertRun.run("sync-mint-burn-extended", extendedOutputAt, 1_000, "ok", 2, "{}");
+
+    const response = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=pyusd-paypal"));
+    const body = (await response.json()) as { events: Array<{ id: string }> };
+    expect(body.events.map((entry) => entry.id)).toEqual(["pyusd-extended-only"]);
+
+    // ADR-30/R3: the freshness verdict names the generation for the served rows.
+    const ageHeader = response.headers.get("X-Data-Age");
+    const age = ageHeader === "unavailable" ? Number.POSITIVE_INFINITY : Number(ageHeader);
+    expect(age).toBeGreaterThanOrEqual(3 * 86400 - 60);
+    expect(response.headers.get("Warning")).toMatch(/^110 /);
+    expect(response.headers.get("Cache-Control") ?? "").toContain("no-store");
   });
 });
 

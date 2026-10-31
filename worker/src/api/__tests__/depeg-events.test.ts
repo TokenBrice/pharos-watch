@@ -410,6 +410,50 @@ describe("handleDepegEvents", () => {
     })]);
   });
 
+  it("publishes the canonical incident's newer current event when the superseded alias tail is older", async () => {
+    const { sqlite, db } = fixtures.open();
+    const canonicalKey = `ddr2:${"a".repeat(32)}`;
+    const aliasKey = `ddr2:${"b".repeat(32)}`;
+    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
+       start_price, peg_reference, source)
+      VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', 635, ?, ?, ?, 1, 'live')`);
+    // Canonical incident: its first crossing closed, then a live tail adopted as
+    // the incident's current event after the duplicate was superseded.
+    insertEvent.run(90089, 1_780_671_044, 1_781_624_981, 0.9365);
+    insertEvent.run(90311, 1_781_635_000, null, 0.941);
+    // The superseded duplicate's own tail crossing, closed before that adopted tail.
+    insertEvent.run(90203, 1_781_632_159, 1_781_634_000, 0.94);
+    const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+      (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1781635000)`);
+    insertLink.run(canonicalKey, 90089);
+    insertLink.run(canonicalKey, 90311);
+    insertLink.run(aliasKey, 90203);
+    const insertIncident = sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+       first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
+       superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'apxusd-apyx', 'USD', 'below', ?, ?, ?, ?, 635, ?, ?, ?, 1781635000, 1781635000)`);
+    insertIncident.run(canonicalKey, 90089, 90311, 1_780_671_044, 1_781_635_000, "active", null, "a".repeat(64));
+    insertIncident.run(aliasKey, 90203, 90203, 1_781_632_159, 1_781_632_159, "superseded", canonicalKey, "b".repeat(64));
+
+    const active = DepegEventsResponseSchema.parse(await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx&active=true")),
+      200,
+    ));
+    const history = DepegEventsResponseSchema.parse(await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx")),
+      200,
+    ));
+    // The effective current fragment is the later one, so the open canonical
+    // tail must stay published and the closed alias fragment must not replace it.
+    expect(active.total).toBe(1);
+    expect(active.events).toEqual([expect.objectContaining({
+      id: 90311, startedAt: 1_780_671_044, endedAt: null,
+    })]);
+    expect(history.events.map(({ id, endedAt }) => ({ id, endedAt }))).toEqual([{ id: 90311, endedAt: null }]);
+  });
+
   it.each([0, 0.9893])("projects observed first-event price %s without replacing zero", async (startPrice) => {
     const currentRow = makeDepegRow({
       id: 90089,

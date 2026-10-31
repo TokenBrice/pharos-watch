@@ -4,6 +4,7 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeDexLiquidityRow } from "../../test-helpers/__shared/fixtures";
 import { handleDexLiquidity } from "../dex-liquidity";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { LIQUIDITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
 import { DexLiquidityMapSchema } from "@shared/types/market";
 
@@ -52,6 +53,62 @@ describe("handleDexLiquidity", () => {
       expect(body["usdt-tether"]).toMatchObject({
         tvlChange24h: day, tvlChange7d: week, liquidityScore: 80, totalVolume24hUsd: 123,
       });
+    } finally {
+      sqlite.close();
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("publishes no TVL trend for an unobserved zero-pool placeholder row", async () => {
+    const now = 1_790_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insertPublished = sqlite.prepare(
+        `INSERT INTO dex_liquidity
+           (stablecoin_id, symbol, total_tvl_usd, total_volume_24h_usd, total_volume_7d_usd,
+            pool_count, pair_count, chain_count, liquidity_score, effective_tvl_usd,
+            coverage_class, coverage_confidence, methodology_version, updated_at)
+         VALUES (?, ?, ?, 0, 0, 0, 0, 0, ?, ?, ?, ?, ?, ?)`,
+      );
+      // Producer placeholder: a tracked coin that retained no pool this
+      // publication stores TVL 0, no score and coverage_class 'unobserved'.
+      insertPublished.run("usdc-circle", "USDC", 0, null, 0, "unobserved", 0, LIQUIDITY_METHODOLOGY_VERSION, now);
+      // Control: a measured coin with the same history shape still trends.
+      insertPublished.run(
+        "usdt-tether", "USDT", 6_000_000_000, 90, 5_400_000_000,
+        "primary", 0.9, LIQUIDITY_METHODOLOGY_VERSION, now,
+      );
+      const insertHistory = sqlite.prepare(
+        `INSERT INTO dex_liquidity_history
+           (stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version)
+         VALUES (?, ?, ?, 'primary', 0.9, ?)`,
+      );
+      insertHistory.run("usdc-circle", 5_000_000_000, now - 86_400, LIQUIDITY_METHODOLOGY_VERSION);
+      insertHistory.run("usdc-circle", 4_800_000_000, now - 7 * 86_400, LIQUIDITY_METHODOLOGY_VERSION);
+      insertHistory.run("usdt-tether", 5_000_000_000, now - 86_400, LIQUIDITY_METHODOLOGY_VERSION);
+      insertHistory.run("usdt-tether", 4_000_000_000, now - 7 * 86_400, LIQUIDITY_METHODOLOGY_VERSION);
+
+      const body = await (await handleDexLiquidity(db)).json() as Record<string, {
+        totalTvlUsd: number;
+        liquidityEvidenceClass: string | null;
+        hasMeasuredLiquidityEvidence: boolean;
+        trendworthy: boolean;
+        tvlChange24h: number | null;
+        tvlChange7d: number | null;
+      }>;
+
+      expect(body["usdt-tether"]).toMatchObject({ tvlChange24h: 20, tvlChange7d: 50 });
+      expect(body["usdc-circle"]).toMatchObject({
+        totalTvlUsd: 0,
+        liquidityEvidenceClass: "unobserved",
+        hasMeasuredLiquidityEvidence: false,
+        trendworthy: false,
+      });
+      // A placeholder zero is not measured depth, so it cannot publish a 100%
+      // collapse beside trendworthy=false (ADR-28 R1, ADR-29 R2).
+      expect(body["usdc-circle"].tvlChange24h).toBeNull();
+      expect(body["usdc-circle"].tvlChange7d).toBeNull();
     } finally {
       sqlite.close();
       vi.restoreAllMocks();

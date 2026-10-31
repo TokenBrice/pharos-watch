@@ -260,8 +260,10 @@ export const handleDexLiquidity = async (
         : row.liquidity_score == null ? scoreDetails.liquidityScoreUnavailableReason : null,
       concentrationHhi: row.concentration_hhi,
       depthStability: row.depth_stability,
-      tvlChange24h: evidence != null && tvlChange24h != null ? Math.round(tvlChange24h * 100) / 100 : null,
-      tvlChange7d: evidence != null && tvlChange7d != null ? Math.round(tvlChange7d * 100) / 100 : null,
+      // A trend needs two trend-bearing observations: a zero-pool placeholder is
+      // unobserved depth, not a measured total loss.
+      tvlChange24h: evidence?.trendworthy === true && tvlChange24h != null ? Math.round(tvlChange24h * 100) / 100 : null,
+      tvlChange7d: evidence?.trendworthy === true && tvlChange7d != null ? Math.round(tvlChange7d * 100) / 100 : null,
       updatedAt: row.updated_at,
       dexPriceUpdatedAt: priceRow && Number.isFinite(priceRow.updated_at) && priceRow.updated_at >= 0
         ? priceRow.updated_at : null,

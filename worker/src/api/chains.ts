@@ -16,17 +16,13 @@ import {
   type ActiveSafetyScoreIndex,
 } from "../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../lib/safety-score-v9/consumer-freshness";
+import { assessSafetyScoreAcceptedEvidence } from "@shared/lib/safety-score-publication";
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
 import type { ChainsFreshnessMeta } from "@shared/types/chains";
 import type { ApiDependencyMeta as ChainsDependencyMeta } from "@pharos/contracts/api-meta";
 
 const CHAINS_FRESHNESS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.chains;
 const CHAINS_STALE_THRESHOLD_SEC = CHAINS_FRESHNESS_MAX_AGE_SEC * 2;
-
-function getDependencyAgeSeconds(updatedAt: number | null | undefined, nowSec: number): number | null {
-  if (updatedAt == null) return null;
-  return Math.max(0, nowSec - updatedAt);
-}
 
 function buildV9ExpectedDependencyMeta(
   activeSource: ActiveSafetyScoreIndex,
@@ -43,7 +39,16 @@ function buildV9ExpectedDependencyMeta(
     };
   }
   const updatedAt = activeSource.snapshot.updatedAt;
-  const ageSeconds = getDependencyAgeSeconds(updatedAt, nowSec);
+  // The canonical consumer verdict: zero future-skew allowance, so a
+  // future-dated accepted publication can never read as fresh. Its age is not
+  // clamped to zero — a future clock publishes no age at all.
+  const evidence = assessSafetyScoreAcceptedEvidence({
+    acceptedAtSec: updatedAt,
+    health: activeSource.snapshot.publicationHealth,
+    nowSec,
+    maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+  });
+  const ageSeconds = evidence.reason === "accepted-evidence-future" ? null : evidence.ageSec;
   if (activeSource.kind === "held") {
     return {
       updatedAt,
@@ -54,10 +59,17 @@ function buildV9ExpectedDependencyMeta(
       reason: "publication-held",
     };
   }
-  if (
-    ageSeconds !== null &&
-    ageSeconds > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC
-  ) {
+  if (evidence.reason === "accepted-evidence-future") {
+    return {
+      updatedAt,
+      ageSeconds,
+      freshBudgetSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+      generationId: activeSource.snapshot.safetyScoreIdentity.publicationGenerationId,
+      status: "stale",
+      reason: "future-timestamp",
+    };
+  }
+  if (!evidence.withinBudget) {
     return {
       updatedAt,
       ageSeconds,
