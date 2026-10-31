@@ -110,6 +110,8 @@ export interface DewsSourceState {
   blacklistSourceOk: boolean;
   prevSignals: Map<string, { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }>;
   prevSignalStaleIds: Set<string>;
+  /** The accepted-generation pointer was unreadable: previous evidence is unavailable, not absent. */
+  previousGenerationUnavailable: boolean;
   mintBurnMap: Map<string, MintBurnSnapshot>;
   mintBurnAgeSecById: Map<string, number>;
   mintBurnStaleIds: Set<string>;

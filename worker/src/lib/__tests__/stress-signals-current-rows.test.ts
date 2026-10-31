@@ -19,6 +19,7 @@ import {
 import { publishedPointer } from "./stress-signals-current-rows.test-support";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 import { loadDewsSourceState } from "../dews/source-state";
+import { computeAndStoreDEWS } from "../dews/service";
 
 const nowSec = 1_778_400_000;
 const signalsJson = JSON.stringify({ supply: { value: 10, available: true } });
@@ -745,7 +746,7 @@ describe("stress-signal current-row helpers", () => {
   });
 
   it.each(["read-failed", "future-clock"] as const)(
-    "reports the previous accepted generation as a source failure when the pointer is %s",
+    "reports the previous accepted generation as unavailable when the pointer is %s",
     async (state) => {
       const pointer = state === "future-clock"
         ? {
@@ -771,17 +772,77 @@ describe("stress-signal current-row helpers", () => {
         { match: "", rows: [], allowUnused: true },
       ]);
       const failures: string[] = [];
-      await loadDewsSourceState({
+      const loaded = await loadDewsSourceState({
         db,
         nowSec,
         registerSourceFailure: (source) => failures.push(source),
         registerMalformedPersistedInput: () => {},
       });
       // R2: an unreadable accepted-generation pointer must not read as "no
-      // previous generation" and publish unsmoothed values as `no-previous`.
-      expect(failures).toEqual(["stress-signals-latest"]);
+      // previous generation" (the previous reading is unavailable), but it is
+      // also not a failed read that holds the publication able to repair it.
+      expect(failures).toEqual([]);
+      expect(loaded.previousGenerationUnavailable).toBe(true);
     },
   );
+
+  it("publishes over an unreadable accepted-generation pointer instead of holding forever", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const clock = Math.floor(Date.now() / 1000);
+    const invalidAt = clock - 1800;
+    // coverageVersion 1 is not the supported pointer version: an unreadable
+    // previous generation must omit smoothing, never block the generation that
+    // would repair the pointer.
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      "dews:published-generation",
+      JSON.stringify({
+        updatedAt: invalidAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 1,
+      }),
+      invalidAt,
+    );
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      "stablecoins",
+      JSON.stringify({
+        peggedAssets: [{
+          id: "usdt-tether",
+          symbol: "USDT",
+          pegType: "peggedUSD",
+          price: 1,
+          priceConfidence: "high",
+          circulating: { peggedUSD: 100_000_000 },
+          circulatingPrevDay: { peggedUSD: 99_000_000 },
+          circulatingPrevWeek: { peggedUSD: 98_000_000 },
+        }],
+      }),
+      clock - 60,
+    );
+    sqlite.prepare(
+      `INSERT INTO dex_liquidity
+         (stablecoin_id, symbol, weighted_balance_ratio, avg_pool_stress, liquidity_score,
+          total_tvl_usd, updated_at, methodology_version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run("usdt-tether", "USDT", 0.8, 20, 80, 5_000_000, clock - 60, "3.2");
+    try {
+      const result = await computeAndStoreDEWS(db);
+      const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+      expect(result.itemCount).toBeGreaterThan(0);
+      expect(metadata.publicationPointerWritten).toBe(true);
+      expect(metadata.degradedSources).not.toContain("stress-signals-latest");
+      await expect(loadPublishedStressSignalGeneration(db, clock + 3600)).resolves.toMatchObject({ status: "ok" });
+      const pointer = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get("dews:published-generation") as { value: string };
+      expect(JSON.parse(pointer.value)).toMatchObject({ source: "compute-dews", coverageVersion: 2 });
+      const published = sqlite.prepare(
+        "SELECT signals_json FROM stress_signal_publication_rows WHERE stablecoin_id = ?",
+      ).get("usdt-tether") as { signals_json: string };
+      expect(JSON.parse(published.signals_json).signals.pool.smoothing).toBe("previous-unavailable");
+    } finally {
+      sqlite.close();
+    }
+  });
 
   it("keeps first-run bootstrap healthy when no accepted-generation pointer exists", async () => {
     const db = mockD1([

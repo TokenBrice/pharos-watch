@@ -14,6 +14,7 @@ import { resolveCronTimeoutBudget } from "../../cron-timeouts";
 import { decodeJsonString } from "../../cache-json";
 import { BLACKLIST_PUBLIC_EVENT_SQL, type BlacklistPersistedRow } from "../../blacklist/shared";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { logWorkerEventArgs } from "../../structured-log";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../dex-liquidity";
 import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../../dex-liquidity-response";
 import type { DexHistoryRow } from "../../dex-liquidity-response";
@@ -119,13 +120,25 @@ function isFreshAt(updatedAt: number | null | undefined, nowSec: number, maxAgeS
   ).state === "fresh";
 }
 
-async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<PreviousStressSignalRow[]> {
-  return loadPreviousStressSignalCurrentRows(ctx.db, ctx.nowSec, {
+async function loadPreviousStressSignalRows(ctx: HydrationContext): Promise<{
+  rows: PreviousStressSignalRow[];
+  generationUnavailableReason: string | null;
+}> {
+  let generationUnavailableReason: string | null = null;
+  const rows = await loadPreviousStressSignalCurrentRows(ctx.db, ctx.nowSec, {
     staleAfterSec: DEWS_PREVIOUS_SIGNAL_SMOOTHING_MAX_AGE_SEC,
+    // Smoothing is an optional self-produced input: an unreadable previous
+    // pointer withholds the previous reading, not this run's publication. The
+    // pointer is only rewritten by a publication, so holding here would never
+    // repair it (the same rule the PSI amplifier follows).
+    onGenerationUnavailable: (reason) => {
+      generationUnavailableReason = reason;
+    },
     onReadError: (error) => {
       ctx.registerSourceFailure("stress-signals-latest", error);
     },
   });
+  return { rows, generationUnavailableReason };
 }
 
 export interface DexLiquidityHydration {
@@ -449,6 +462,8 @@ export async function hydrateBlacklistEvents(ctx: HydrationContext): Promise<Bla
 export interface PreviousStressSignalsHydration {
   prevSignals: Map<string, { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }>;
   prevSignalStaleIds: Set<string>;
+  /** True when the accepted-generation pointer itself was unreadable or invalid. */
+  generationUnavailable: boolean;
   rowsRead: number;
 }
 
@@ -458,9 +473,18 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
     { signals: Record<string, { value: number; available?: boolean }>; computedAt: number; ageSec: number }
   >();
   const prevSignalStaleIds = new Set<string>();
+  let generationUnavailable = false;
   let prevSignalRowsRead = 0;
   try {
-    const prevRows = await loadPreviousStressSignalRows(ctx);
+    const { rows: prevRows, generationUnavailableReason } = await loadPreviousStressSignalRows(ctx);
+    if (generationUnavailableReason != null) {
+      generationUnavailable = true;
+      logWorkerEventArgs(
+        "lib",
+        "warn",
+        `[dews] Previous stress-signal generation unavailable: ${generationUnavailableReason}`,
+      );
+    }
     prevSignalRowsRead = prevRows.length;
     for (const row of prevRows) {
       const ageSec = getRowAgeSec(row.computed_at, ctx.nowSec);
@@ -489,7 +513,7 @@ export async function hydratePreviousStressSignals(ctx: HydrationContext): Promi
   } catch (error) {
     ctx.registerSourceFailure("stress-signals", error);
   }
-  return { prevSignals, prevSignalStaleIds, rowsRead: prevSignalRowsRead };
+  return { prevSignals, prevSignalStaleIds, generationUnavailable, rowsRead: prevSignalRowsRead };
 }
 
 export interface MintBurnHydration {

@@ -34,6 +34,14 @@ export interface PreviousStressSignalCurrentRow {
 interface CurrentRowsOptions {
   staleAfterSec: number;
   onReadError?: (error: unknown) => void;
+  /**
+   * The accepted-generation pointer is unreadable or invalid, so no rows are
+   * served. Consumers of optional previous evidence (DEWS smoothing)
+   * record this as unavailable evidence without treating it as a failed read
+   * that holds their own publication: only a later publication can rewrite the
+   * pointer, so a hold here would never repair it.
+   */
+  onGenerationUnavailable?: (reason: string) => void;
 }
 
 interface StressSignalCurrentRowsQueries {
@@ -284,7 +292,7 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
   const completedScope = await loadCompletedDewsScope(db, nowSec);
   if (completedScope.status === "missing") return [];
   if (completedScope.status === "unavailable") {
-    options.onReadError?.(new Error(`DEWS published generation unavailable: ${completedScope.reason}`));
+    options.onGenerationUnavailable?.(completedScope.reason);
     return [];
   }
   const { completedAt, expectedRowCount, stablecoinIdsDigest } = completedScope;
@@ -349,7 +357,7 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
   const completedScope = await loadCompletedDewsScope(db, nowSec);
   if (completedScope.status === "missing") return null;
   if (completedScope.status === "unavailable") {
-    options.onReadError?.(new Error(`DEWS published generation unavailable: ${completedScope.reason}`));
+    options.onGenerationUnavailable?.(completedScope.reason);
     return null;
   }
   const { completedAt } = completedScope;

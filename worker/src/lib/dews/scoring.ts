@@ -144,6 +144,11 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
     if (liqHist) liqHistCoverageCount++;
     const prevSnapshot = sourceState.prevSignals.get(meta.id);
     const prev = prevSnapshot?.signals;
+    // An unreadable accepted-generation pointer leaves the previous reading
+    // unavailable, not absent: the persisted unavailable envelope (`{value: 0,
+    // available: false}`) makes the pool signal report `previous-unavailable`
+    // instead of claiming `no-previous`.
+    const previousUnavailable = sourceState.previousGenerationUnavailable;
     const mintBurn = sourceState.mintBurnMap.get(meta.id);
     const mintBurnAgeSec = sourceState.mintBurnAgeSecById.get(meta.id) ?? null;
     const yieldSourceRisk = sourceState.yieldSourceRisk.get(meta.id) ?? null;
@@ -224,7 +229,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       yieldSourceRisk,
       yieldRankChangeAttribution,
       psiScore: sourceState.latestPsiScore,
-      prevPoolValue: prev?.pool?.value,
+      prevPoolValue: prev?.pool?.value ?? (previousUnavailable ? 0 : undefined),
       prevPoolAvailable: prev?.pool?.available === true,
       prevPoolComponentCoverage: numberValue((prev?.pool as { componentCoverage?: unknown } | undefined)?.componentCoverage),
       prevDivergValue: prev?.diverg?.value,
