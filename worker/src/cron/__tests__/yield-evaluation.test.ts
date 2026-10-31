@@ -13,8 +13,17 @@ import { buildHistoryKey } from "../yield-sync/history";
 import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
 import type { EvaluateYieldSourcesInput } from "../yield-sync/evaluation";
 import { compareCandidates } from "../yield-sync/evaluation";
+import {
+  buildYieldPublicationViews,
+  buildYieldRankingsPayloadFromEvaluatedSources,
+} from "../yield-sync/publication";
 import type { ResolvedYield } from "../yield-sync/types";
-import { baseEvaluationInput, FRESH_BENCHMARK_RECORD_DATE, resolvedYield } from "./yield-evaluation.test-support";
+import {
+  baseEvaluationInput,
+  FRESH_BENCHMARK_RECORD_DATE,
+  freshUsdBenchmark,
+  resolvedYield,
+} from "./yield-evaluation.test-support";
 
 
 function gbpBenchmark(observedAt: number, ageSeconds: number, rate = 4.5) {
@@ -936,11 +945,120 @@ describe("evaluateYieldSourcesCooperative", () => {
       benchmarkKey: "GBP",
       sourceFreshness: "fresh",
       benchmarkFreshness: "stale",
+      // A stale hurdle withholds PYS; it does not withdraw the fresh row.
+      rejected: false,
       scoreQualified: false,
       pharosYieldScore: null,
       pysNullReason: "benchmark-stale",
       warnings: expect.arrayContaining(["benchmark-stale"]),
     });
+  });
+
+  it("publishes a fresh row unscored when its native benchmark is stale", async () => {
+    const startSec = 1776729600;
+    const staleAgeSeconds = 49 * 60 * 60;
+    const input = baseEvaluationInput({
+      startSec,
+      resolved: [{
+        id: "tgbp-tokenised",
+        symbol: "TGBP",
+        yield: resolvedYield({ sourceKey: "defillama:tgbp:fresh", sourceObservedAt: startSec - 60 }),
+      }],
+      safetyScores: new Map([["tgbp-tokenised", { score: 75, grade: "B" }]]),
+    });
+    input.riskFreeRates.GBP = gbpBenchmark(startSec - staleAgeSeconds, staleAgeSeconds);
+
+    const result = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
+    const { viewsByCoinId } = buildYieldPublicationViews({
+      evaluatedSources: result.evaluatedSources,
+      bestSourceKeyByCoin: result.bestSourceKeyByCoin,
+      startSec,
+      dlPoolsMeta: {
+        mode: "dex-cache",
+        updatedAt: startSec,
+        ageSeconds: 0,
+        poolCount: 1,
+        fallbackMode: null,
+      },
+    });
+    expect(viewsByCoinId.get("tgbp-tokenised")?.selected.sourceKey).toBe("defillama:tgbp:fresh");
+    expect(result.evaluatedSources[0]).toMatchObject({ rejected: false, pharosYieldScore: null, pysNullReason: "benchmark-stale" });
+  });
+
+  it("publishes a fresh non-USD row unscored when the USD normalization reference is stale", async () => {
+    const startSec = 1776729600;
+    const staleAgeSeconds = 49 * 60 * 60;
+    const input = baseEvaluationInput({
+      startSec,
+      resolved: [{
+        id: "eurc-circle",
+        symbol: "EURC",
+        yield: resolvedYield({ sourceKey: "defillama:eurc-circle:main", sourceObservedAt: startSec - 60 }),
+      }],
+      safetyScores: new Map([["eurc-circle", { score: 75, grade: "B" }]]),
+    });
+    input.riskFreeRates.USD = { ...freshUsdBenchmark(startSec), ageSeconds: staleAgeSeconds };
+    input.riskFreeRates.EUR = {
+      ...withYieldBenchmarkStaticMeta("EUR", {
+        rate: 2.17,
+        recordDate: FRESH_BENCHMARK_RECORD_DATE,
+        fetchedAt: startSec,
+        ageSeconds: 0,
+        source: "ecb-estr-test",
+        isFallback: false,
+        fallbackMode: null,
+      }),
+      lastMarketRate: 2.17,
+      lastMarketRecordDate: FRESH_BENCHMARK_RECORD_DATE,
+      lastMarketFetchedAt: startSec,
+      lastMarketSource: "ecb-estr-test",
+    };
+
+    const result = await evaluateYieldSourcesCooperative(input, { yieldToEventLoop: () => Promise.resolve() });
+    const source = result.evaluatedSources[0];
+    expect(source).toMatchObject({
+      benchmarkKey: "EUR",
+      sourceFreshness: "fresh",
+      benchmarkFreshness: "healthy",
+      usdBenchmarkRate: null,
+      rejected: false,
+      pharosYieldScore: null,
+      pysNullReason: "benchmark-stale",
+    });
+    expect(source?.warnings).toContain("reference-benchmark-degraded");
+
+    const dlPoolsMeta = {
+      mode: "dex-cache" as const,
+      updatedAt: startSec,
+      ageSeconds: 0,
+      poolCount: 1,
+      fallbackMode: null,
+    };
+    const { viewsByCoinId, provenanceByKey } = buildYieldPublicationViews({
+      evaluatedSources: result.evaluatedSources,
+      bestSourceKeyByCoin: result.bestSourceKeyByCoin,
+      startSec,
+      dlPoolsMeta,
+    });
+    const payload = buildYieldRankingsPayloadFromEvaluatedSources({
+      evaluatedSources: result.evaluatedSources,
+      publicationViews: viewsByCoinId,
+      rankingProvenanceByKey: provenanceByKey,
+      riskFreeRate: input.riskFreeRates.USD.rate,
+      riskFreeRateMeta: input.riskFreeRates.USD,
+      riskFreeRateRegistry: input.riskFreeRates,
+      dlPoolsMeta,
+      safetySnapshot: { kind: "ok", coverageRatio: 1, coveredCount: 1, trackedCount: 1, reason: null },
+      medianApy: result.medianApy,
+      startSec,
+    });
+    expect(payload.rankings).toEqual([
+      expect.objectContaining({
+        id: "eurc-circle",
+        pharosYieldScore: null,
+        pysNullReason: "benchmark-stale",
+      }),
+    ]);
   });
 
   it("does not carry old scrvUSD trailing-delta history into the current-rate source", async () => {

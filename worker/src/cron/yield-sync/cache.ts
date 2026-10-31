@@ -511,7 +511,13 @@ function isValidDlPool(value: unknown): value is DlPool {
 export function filterValidDlPools(
   rows: unknown[],
   context: string,
-): { pools: DlPool[]; rejectedCount: number; rejectedExamples: string[]; envelopeRejectedCount: number } {
+): {
+  pools: DlPool[];
+  rejectedCount: number;
+  rejectedExamples: string[];
+  envelopeRejectedCount: number;
+  envelopeRejectedPoolIds: string[];
+} {
   const pools: DlPool[] = [];
   const rejected: unknown[] = [];
   for (const row of rows) {
@@ -552,6 +558,11 @@ export function filterValidDlPools(
     rejectedCount: rejected.length,
     rejectedExamples,
     envelopeRejectedCount: envelopeRejected.length,
+    // Envelope-rejected rows were read this run but are not publishable
+    // evidence. Consumers that treat an absent curated pin as a dead config
+    // need their ids to distinguish unavailable from missing (R2/R6).
+    envelopeRejectedPoolIds: envelopeRejected.flatMap((row) =>
+      isRecord(row) && typeof row.pool === "string" && row.pool.trim() !== "" ? [row.pool] : []),
   };
 }
 
@@ -572,11 +583,19 @@ export function parseDlStablecoinPoolsCache(
   raw: string,
   cacheUpdatedAt: number,
   nowSec = Math.floor(Date.now() / 1000),
-): { pools: DlPool[]; meta: YieldSourceInputMeta; envelopeRejectedCount: number } | null {
+): {
+  pools: DlPool[];
+  meta: YieldSourceInputMeta;
+  envelopeRejectedCount: number;
+  envelopeRejectedPoolIds: string[];
+} | null {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (isRecord(parsed) && Array.isArray(parsed.data)) {
-      const { pools, envelopeRejectedCount } = filterValidDlPools(parsed.data, "structured dl-stablecoin-pools cache");
+      const { pools, envelopeRejectedCount, envelopeRejectedPoolIds } = filterValidDlPools(
+        parsed.data,
+        "structured dl-stablecoin-pools cache",
+      );
       const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);
       if (updatedAt == null) {
         logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected DL pools cache with future updatedAt");
@@ -585,6 +604,7 @@ export function parseDlStablecoinPoolsCache(
       return {
         pools,
         envelopeRejectedCount,
+        envelopeRejectedPoolIds,
         meta: {
           mode: "dex-cache",
           updatedAt,
@@ -845,6 +865,8 @@ interface ParsedYieldSupplementalSourcesCache {
   updatedAt: number;
   ageSeconds: number;
   sourceCount: number;
+  /** Rows the stored snapshot listed that no longer pass read validation. */
+  rejectedCount: number;
 }
 
 function isResolvedYieldCandidate(value: unknown, nowSec: number): value is ResolvedYieldCandidate {
@@ -933,7 +955,7 @@ export function parseYieldSupplementalSourcesCache(
       return null;
     }
     if (isRecord(parsed) && Array.isArray(parsed.data)) {
-      const { candidates } = filterValidSupplementalCandidates(parsed.data, nowSec);
+      const { candidates, rejectedCount } = filterValidSupplementalCandidates(parsed.data, nowSec);
       const updatedAt = parseCachePayloadUpdatedAt(parsed.updatedAt, cacheUpdatedAt, nowSec);
       if (updatedAt == null) {
         logWorkerEventArgs("handler", "warn", "[yield-sync] Rejected supplemental sources cache with future updatedAt");
@@ -944,6 +966,7 @@ export function parseYieldSupplementalSourcesCache(
         updatedAt,
         ageSeconds: Math.max(0, nowSec - updatedAt),
         sourceCount: toNonNegativeInteger(parsed.sourceCount) || candidates.length,
+        rejectedCount,
       };
     }
   } catch (err) {

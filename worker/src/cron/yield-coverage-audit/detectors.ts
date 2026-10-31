@@ -107,6 +107,8 @@ interface IdentifyStaleAutoLendingOverrideOptions {
   stablecoinSupplyById?: Map<string, number>;
   stablecoinSupplyMapState?: "ok" | "missing" | "malformed";
   safetyScores?: Map<string, { score: number }>;
+  /** Provider rows read this run but rejected by the APY envelope. */
+  envelopeRejectedPoolIds?: ReadonlySet<string>;
 }
 
 /** Registry that pins a curated DeFiLlama yield surface for one asset (B20). */
@@ -138,6 +140,12 @@ export interface DeadCuratedPin {
 export interface IdentifyDeadCuratedPinsOptions {
   /** Stablecoin ids present in the latest published yield rankings cache. */
   publishedStablecoinIds?: ReadonlySet<string>;
+  /**
+   * Curated pools whose provider row was read this run but rejected by the APY
+   * envelope. Their absence from the accepted snapshot is unavailable evidence,
+   * not proof that the pin is dead (R2/R6).
+   */
+  unavailablePoolIds?: ReadonlySet<string>;
 }
 
 const AUTO_LENDING_AUDIT_REASON: Record<AutoLendingEligibilityReasonCode, string> = {
@@ -898,10 +906,12 @@ export function identifyStaleAutoLendingOverrides(
   const staleOverrides: StaleAutoLendingOverride[] = [];
   const stablecoinSupplyById = options.stablecoinSupplyById ?? new Map();
   const safetyScores = options.safetyScores;
+  const envelopeRejectedPoolIds = options.envelopeRejectedPoolIds;
 
   for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP).sort(([a], [b]) => a.localeCompare(b))) {
     const pool = poolById.get(poolId);
     if (!pool) {
+      if (envelopeRejectedPoolIds?.has(poolId)) continue;
       staleOverrides.push({
         stablecoinId,
         pool: poolId,
@@ -962,6 +972,7 @@ export function identifyDeadCuratedPins(
 ): DeadCuratedPin[] {
   const snapshotPoolIds = new Set(dlPools.map((pool) => pool.pool));
   const publishedStablecoinIds = options.publishedStablecoinIds;
+  const unavailablePoolIds = options.unavailablePoolIds;
   const classifyCoverage = (stablecoinId: string): DeadCuratedPin["coverage"] => {
     if (publishedStablecoinIds == null) return null;
     return publishedStablecoinIds.has(stablecoinId) ? "dead-config" : "coverage-outage";
@@ -969,7 +980,9 @@ export function identifyDeadCuratedPins(
   const pins: DeadCuratedPin[] = [];
 
   for (const [stablecoinId, poolId] of Object.entries(YIELD_POOL_MAP).sort(([a], [b]) => a.localeCompare(b))) {
-    if (snapshotPoolIds.has(poolId)) continue;
+    // A pin whose provider row was read but rejected by the APY envelope is
+    // unavailable this run, not absent from the provider (R2/R6).
+    if (snapshotPoolIds.has(poolId) || unavailablePoolIds?.has(poolId)) continue;
     pins.push({
       stablecoinId,
       registry: "native-pool",
@@ -1003,7 +1016,8 @@ export function identifyDeadCuratedPins(
   }
 
   for (const [stablecoinId, group] of Object.entries(YIELD_WEIGHTED_POOL_GROUPS)) {
-    const missingPoolIds = group.poolIds.filter((poolId) => !snapshotPoolIds.has(poolId));
+    const missingPoolIds = group.poolIds.filter((poolId) =>
+      !snapshotPoolIds.has(poolId) && !unavailablePoolIds?.has(poolId));
     if (missingPoolIds.length === 0) continue;
     pins.push({
       stablecoinId,

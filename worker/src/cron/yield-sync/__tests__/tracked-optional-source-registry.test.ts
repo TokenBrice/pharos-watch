@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { matchMarker, mockD1 } from "@shared/test-utils/mock-d1";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
-import { STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY, TRACKED_OPTIONAL_SOURCE_REGISTRY } from "../sources-optional";
+import {
+  STANDALONE_TRACKED_OPTIONAL_SOURCE_REGISTRY,
+  TRACKED_OPTIONAL_SOURCE_REGISTRY,
+  TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID,
+} from "../sources-optional";
 
 /**
  * Cohort-gated optional sources must resolve to an active yield-bearing coin or
@@ -38,5 +43,22 @@ describe("tracked optional source registry coverage", () => {
         activeYieldBearingIds.has(entry.stablecoinId) || entry.intendedDormant === undefined,
       ).toBe(true);
     }
+  });
+
+  it("isolates a D1 anchor-read failure in the Ondo USDY oracle entry", async () => {
+    const db = mockD1(
+      [matchMarker("yield-sync:nav-oracle-prior-anchor", [], { throwError: new Error("D1_ERROR: disk I/O error") })],
+      { assertMatchesUsed: true },
+    );
+    const onOutcome = vi.fn();
+    const entry = TRACKED_OPTIONAL_SOURCE_REGISTRY_BY_ID
+      .get("usdy-ondo-finance")
+      ?.find((candidate) => candidate.sourceKey === "protocol-api:ondo-usdy-oracle");
+    expect(entry).toBeDefined();
+
+    // A reader failure is one failed optional source, not a whole-run abort.
+    await expect(entry!.run({ db, startSec: 1_771_000_000, onOutcome })).resolves.toBeNull();
+    expect(onOutcome).toHaveBeenCalledTimes(1);
+    expect(onOutcome).toHaveBeenCalledWith({ label: "Ondo USDY oracle source", outcome: "failed" });
   });
 });

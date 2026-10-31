@@ -263,7 +263,7 @@ export async function loadYieldHistorySnapshots(
     const historyPairChunkSize = Math.max(
       1,
       Math.floor(
-        (D1_MAX_BOUND_PARAMETERS - resolvedIdInClause.binds.length - 1) / 2,
+        (D1_MAX_BOUND_PARAMETERS - resolvedIdInClause.binds.length - 2) / 2,
       ),
     );
     const historyPairChunks =
@@ -286,6 +286,7 @@ export async function loadYieldHistorySnapshots(
            FROM yield_history h
            WHERE h.stablecoin_id IN (${resolvedIdInClause.sql})
              AND h.recorded_at >= ?
+             AND h.recorded_at <= ?
              AND (h.publication_state IS NULL OR h.publication_state = 'published')
              AND (h.is_best = 1 ${requestedSourceClause})
            ORDER BY h.stablecoin_id ASC, h.recorded_at ASC`,
@@ -293,6 +294,7 @@ export async function loadYieldHistorySnapshots(
         .bind(
           ...resolvedIdInClause.binds,
           startSec - THIRTY_DAYS_SECONDS,
+          startSec,
           ...pairValues.binds,
         )
         .all<YieldHistorySnapshotRow>();

@@ -362,9 +362,16 @@ export function matchAllDlPools(
         const best = addressCandidates.reduce((a, b) => b.tvlUsd > a.tvlUsd ? b : a);
         found.push({ pool: best.pool, apy: best.apy, apyBase: best.apyBase, apyReward: best.apyReward, tvlUsd: best.tvlUsd });
       } else {
+        // With address evidence supplied, a no-evidence sibling is only a
+        // fallback when its chain has one exact-symbol candidate. Rejecting the
+        // corroborated pool for same-chain ambiguity must not admit the other
+        // same-symbol pool (docs: ambiguous fallback candidates are dropped).
         const symbolCandidates = baseCandidates.filter((pool) =>
           normalizeDexSymbol(pool.symbol) === sym
-          && (contractSet.size === 0 || !pool.underlyingTokens?.length),
+          && (contractSet.size === 0 || (
+            !pool.underlyingTokens?.length
+            && sameSymbolCounts.get(normalizeChainId(pool.chain ?? "") ?? "") === 1
+          )),
         );
         if (symbolCandidates.length === 1) {
           const candidate = symbolCandidates[0];

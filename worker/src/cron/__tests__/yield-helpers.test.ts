@@ -552,6 +552,43 @@ describe("matchAllDlPools", () => {
     });
     expect(result).toHaveLength(0);
   });
+
+  it("fails closed when same-chain same-symbol evidence is ambiguous in Layer 3", () => {
+    const trackedContract = "0x50bd66d59911f5e086ec87ae43c811e0d059dd11";
+    const pools = [
+      makeDlYieldPool({
+        pool: "sbold-holder-market",
+        chain: "Ethereum",
+        project: "k3-capital",
+        symbol: "sBOLD",
+        stablecoin: true,
+        tvlUsd: 12_000_000,
+        apy: 4.8,
+        apyBase: 4.8,
+        underlyingTokens: [trackedContract],
+      }),
+      makeDlYieldPool({
+        pool: "sbold-unattributed-venue",
+        chain: "Ethereum",
+        project: "test-lending",
+        symbol: "sBOLD",
+        stablecoin: true,
+        tvlUsd: 2_100_000,
+        apy: 7.3,
+        apyBase: 7.3,
+        underlyingTokens: null,
+      }),
+    ];
+
+    // The address-corroborated pool is rejected for same-chain ambiguity; the
+    // no-evidence sibling must not be adopted in its place.
+    const result = matchAllDlPools("sbold-k3-capital", "sBOLD", pools, {}, {}, {
+      chainFilter: new Set(["ethereum"]),
+      contractAddresses: ["0x50BD66D59911f5e086ec87ae43c811E0D059DD11"],
+    });
+
+    expect(result).toEqual([]);
+  });
 });
 
 describe("findBestLendingPool", () => {

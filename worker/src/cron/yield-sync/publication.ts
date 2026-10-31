@@ -338,7 +338,11 @@ export interface YieldRowsWriteStats {
   pysInputsNullCount: number;
 }
 
-export type YieldRowsWriteResult = CacheWriteResult & { publicationStats: YieldRowsWriteStats };
+export type YieldRowsWriteResult = CacheWriteResult & {
+  publicationStats: YieldRowsWriteStats;
+  /** The retried batch was already committed by a prior ambiguous attempt (R2). */
+  appliedByPriorAttempt: boolean;
+};
 
 // Fixed local identifiers only; build projections once, never per row or retry.
 const cacheFreshGuard = "(SELECT json_extract(value, '$.publication.generationId') FROM cache WHERE key = 'yield-rankings') = ?";
@@ -429,11 +433,16 @@ export async function publishYieldRowsAtomically(
     decisionAlternativeRowsJson.length,
   );
   const oversize = largestPayloadChars > YIELD_PUBLICATION_PAYLOAD_OVERSIZE_CHARS;
-  // The replay-evidence column is null exactly for rows whose safety evidence
-  // was unavailable, so its null rate is the run's evidence-loss signal. A
-  // skipped write persists nothing and reports zero for both counters.
+  // The replay-evidence column is null exactly for PYS-eligible rows whose
+  // safety evidence was unavailable, so its null rate is the run's evidence-loss
+  // signal. Anchor-only seeds are separate persistence inputs (excluded from
+  // measured coverage) and are never PYS-eligible. A skipped write persists
+  // nothing and reports zero for both counters.
+  let pysEvidenceRowCount = 0;
   let pysInputsPersistedCount = 0;
   for (const row of input.historyRows) {
+    if (row.observation_kind === "anchor-only") continue;
+    pysEvidenceRowCount += 1;
     if (row.pys_inputs_at_publish != null) pysInputsPersistedCount += 1;
   }
   const buildStats = (written: boolean): YieldRowsWriteStats => ({
@@ -445,7 +454,7 @@ export async function publishYieldRowsAtomically(
     largestPayloadChars,
     oversize,
     pysInputsPersistedCount: written ? pysInputsPersistedCount : 0,
-    pysInputsNullCount: written ? input.historyRows.length - pysInputsPersistedCount : 0,
+    pysInputsNullCount: written ? pysEvidenceRowCount - pysInputsPersistedCount : 0,
   });
   const buildStatements = (): D1PreparedStatement[] => [
     db
@@ -486,7 +495,19 @@ export async function publishYieldRowsAtomically(
   ];
 
   const results = await runWithOverloadRetry(() => db.batch(buildStatements()), 3, input.signal);
-  const written = Number(results[0]?.meta?.changes ?? 0) > 0;
+  let written = Number(results[0]?.meta?.changes ?? 0) > 0;
+  let appliedByPriorAttempt = false;
+  if (!written) {
+    // "Network connection lost" is transport-ambiguous: the batch may have
+    // committed before the retry replayed it. The replayed CAS then compares
+    // equal and reports zero changes. If D1 already serves this exact
+    // generation, the publication applied and must not be reported as skipped.
+    const published = parsePublishedYieldPublicationMetadata(await getCache(db, "yield-rankings"));
+    if (published?.generationId === input.generationId) {
+      written = true;
+      appliedByPriorAttempt = true;
+    }
+  }
   if (oversize) {
     logWorkerEvent({
       scope: "lib",
@@ -497,7 +518,12 @@ export async function publishYieldRowsAtomically(
       metadata: { generationId: input.generationId, written, largestPayloadChars },
     });
   }
-  return { written, skippedBecauseNewer: !written, publicationStats: buildStats(written) };
+  return {
+    written,
+    skippedBecauseNewer: !written,
+    appliedByPriorAttempt,
+    publicationStats: buildStats(written),
+  };
 }
 
 const MAX_PUBLIC_ALTERNATIVES = 2;
@@ -1751,6 +1777,7 @@ export async function persistEvaluatedYieldSources(
     historyRows.push({
       stablecoin_id: entry.id,
       source_key: seed.sourceKey,
+      observation_kind: "anchor-only",
       recorded_at: input.startSec,
       source_observed_at: seed.sourceObservedAt ?? null,
       is_best: 0,

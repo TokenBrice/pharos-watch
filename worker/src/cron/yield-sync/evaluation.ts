@@ -750,7 +750,11 @@ export function buildYieldSourceRisk(params: {
       ? { dependencyConcentration: existing.dependencyConcentration }
       : {}),
     ...optionalSourceRiskFields(existing),
-    investabilityFlags: existing.investabilityFlags ?? [],
+    // R1: only a producer that actually reported flags may publish the array;
+    // an absent array renders as "Unknown", whereas `[]` claims none exist.
+    ...(existing.investabilityFlags !== undefined
+      ? { investabilityFlags: existing.investabilityFlags }
+      : {}),
   };
 }
 
@@ -1289,8 +1293,9 @@ function evaluateYieldSourceGroup(
       warnings: freshnessWarnings,
       confidenceTier: getConfidenceTier(y),
       // Missing opportunity evidence withholds PYS but still leaves the observed APY publishable.
-      rejected: safetySnapshotUnavailable || sourceFreshness !== "fresh"
-        || benchmarkFreshness === "stale" || rowReferenceBenchmarkFreshness === "stale",
+      // A stale benchmark belongs to the PYS-null-reason ladder: it withholds
+      // the score, not the fresh observed row.
+      rejected: safetySnapshotUnavailable || sourceFreshness !== "fresh",
       usedLegacyHistory: historySelection.usedLegacyHistory,
       usedDefaultSafety,
       previousBestSourceKey,

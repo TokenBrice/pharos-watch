@@ -50,14 +50,21 @@ const MAX_DL_CACHE_AGE_SEC = STALE_THRESHOLD_MS / 1000;
 export async function loadDlStablecoinPools(
   db: D1Database,
   signal?: AbortSignal,
-): Promise<{ pools: DlPool[]; meta: YieldSourceInputMeta; envelopeRejectedCount?: number }> {
+): Promise<{
+  pools: DlPool[];
+  meta: YieldSourceInputMeta;
+  envelopeRejectedCount?: number;
+  envelopeRejectedPoolIds?: string[];
+}> {
   const nowSec = Math.floor(Date.now() / 1000);
   let dlPools: DlPool[] = [];
   let fallbackMode: string | null = null;
   // B12/SRC-SUPP-3: rows dropped by the APY envelope are a source-math signal,
   // not noise — the loader carries the count out on every path so the run
-  // metadata can publish it instead of losing it at the return.
+  // metadata can publish it instead of losing it at the return. The ids let
+  // pin-coverage consumers distinguish an unavailable row from an absent one.
   let envelopeRejectedCount = 0;
+  let envelopeRejectedPoolIds: string[] = [];
   const cachedPools = await getCache(db, "dl-stablecoin-pools");
   if (cachedPools) {
     const parsed = parseDlStablecoinPoolsCache(cachedPools.value, cachedPools.updatedAt, nowSec);
@@ -76,6 +83,7 @@ export async function loadDlStablecoinPools(
       } else {
         dlPools = parsed.pools.filter(isYieldRelevantDlPool);
         envelopeRejectedCount = parsed.envelopeRejectedCount;
+        envelopeRejectedPoolIds = parsed.envelopeRejectedPoolIds;
         const droppedNonRelevantCount = parsed.pools.length - dlPools.length;
         if (droppedNonRelevantCount > 0) {
           logWorkerEvent({
@@ -101,6 +109,7 @@ export async function loadDlStablecoinPools(
           return {
             pools: dlPools,
             envelopeRejectedCount,
+            envelopeRejectedPoolIds,
             meta: {
               ...parsed.meta,
               poolCount: dlPools.length,
@@ -141,6 +150,7 @@ export async function loadDlStablecoinPools(
           return {
             pools: [],
             envelopeRejectedCount,
+            envelopeRejectedPoolIds,
             meta: {
               mode: "unavailable",
               updatedAt: cachedPools?.updatedAt ?? null,
@@ -152,6 +162,7 @@ export async function loadDlStablecoinPools(
         }
         const validated = filterValidDlPools(body.data, "direct DeFiLlama yields fetch");
         envelopeRejectedCount = validated.envelopeRejectedCount;
+        envelopeRejectedPoolIds = validated.envelopeRejectedPoolIds;
         dlPools = validated.pools.filter(isYieldRelevantDlPool);
         if (dlPools.length === 0) {
           logWorkerEvent({
@@ -166,6 +177,7 @@ export async function loadDlStablecoinPools(
           return {
             pools: [],
             envelopeRejectedCount,
+            envelopeRejectedPoolIds,
             meta: {
               mode: "unavailable",
               updatedAt: cachedPools?.updatedAt ?? null,
@@ -179,6 +191,7 @@ export async function loadDlStablecoinPools(
         return {
           pools: dlPools,
           envelopeRejectedCount,
+          envelopeRejectedPoolIds,
           meta: {
             mode: "direct-fetch",
             updatedAt: nowSec,
@@ -209,6 +222,7 @@ export async function loadDlStablecoinPools(
   return {
     pools: dlPools,
     envelopeRejectedCount,
+    envelopeRejectedPoolIds,
     meta: {
       mode: "unavailable",
       updatedAt: cachedPools?.updatedAt ?? null,
