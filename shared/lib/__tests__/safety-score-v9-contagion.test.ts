@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { compileNativeV3FactSet, coreFixture, V9_CANDIDATE_POLICY_V1, AS_OF_SEC } from "./safety-score-v9-facts.fixture-support";
+import {
+  compileNativeV3FactSet, coreFixture, createV9FactGapV3, createV9FactStatus, publishedEvidence,
+  V9_CANDIDATE_POLICY_V1, AS_OF_SEC,
+} from "./safety-score-v9-facts.fixture-support";
 import { evaluateValidatedV9FactSet, evaluateValidatedV9FactSetForPublication, projectV9EffectiveBackingPillarScore } from "../safety-score-v9/evaluate-set";
 import { createV9ContagionScenarioEvaluator, evaluateV9ContagionScenario } from "../safety-score-v9/contagion";
 import { ContagionResultSchema, type ContagionShock } from "../../types/contagion";
@@ -12,6 +15,37 @@ function fixture() {
   return { compiled, input: { rawCompileInput, policy: V9_CANDIDATE_POLICY_V1, clock: AS_OF_SEC, publicationGenerationId: "fixture-publication" } };
 }
 const evaluate = (shocks: ContagionShock[]) => evaluateV9ContagionScenario(fixture().input, { id: "fixture-scenario", shocks });
+
+/** Alpha with a control gap whose evidence is partly unique to that gap and partly shared with a surviving gap. */
+function fixtureWithControlGapEvidence() {
+  const { input } = fixture();
+  const rawCompileInput = V9FactSetCoreV3Schema.parse(input.rawCompileInput);
+  const alpha = rawCompileInput.assets.find((asset) => asset.assetId === "alpha")!;
+  const gapOnlyEvidence = publishedEvidence("evidence:control-question");
+  const sharedEvidence = publishedEvidence("evidence:control-shared");
+  const controlGap = createV9FactGapV3({
+    gapId: "gap:control-question",
+    reasonCode: "scoped-control-question",
+    ownerDomain: "control",
+    policyRuleId: "control.mint.review",
+    observationState: "missing",
+    responsibility: "unresearched",
+    path: { kind: "deployment-control", deploymentKey: "deployment:ethereum", controlKey: "control:minter" },
+    message: "The mint control identity needs its reviewed deployment binding.",
+    evidenceRefIds: [gapOnlyEvidence.evidenceId, sharedEvidence.evidenceId],
+  });
+  alpha.evidence.push(gapOnlyEvidence, sharedEvidence);
+  alpha.gaps.push(controlGap);
+  const unsupportedGap = alpha.gaps.find((gap) => gap.gapId === "gap:unsupported-route")!;
+  unsupportedGap.evidenceRefIds = [...unsupportedGap.evidenceRefIds, sharedEvidence.evidenceId];
+  alpha.controlStatus = createV9FactStatus({
+    applicability: { state: "unresolved", policyRuleId: "control.mint.review", rationale: "Fixture control identity is unresolved.", gapId: controlGap.gapId },
+    observationState: "missing",
+    evidenceRefIds: [],
+    gapIds: [controlGap.gapId],
+  });
+  return { ...input, rawCompileInput };
+}
 
 describe("hypothetical V9 contagion reruns", () => {
   it("projects the same dependency-sensitive rows and digests without retaining full asset graphs", () => {
@@ -111,6 +145,23 @@ describe("hypothetical V9 contagion reruns", () => {
     expect(ContagionResultSchema.parse(result)).toMatchObject({ hypothetical: true, provenance: { origin: "scenario-assumptions" }, identity: { publicationGenerationId: "fixture-publication" } });
     expect(JSON.stringify(input.rawCompileInput)).toBe(before);
     expect(result.rows.find((row) => row.coinId === "gamma")!.changedDimensions).toContain(shock.kind === "depeg" ? "final" : "control");
+  });
+
+  it("retires evidence cited only by a retired control gap and keeps every still-cited row", () => {
+    const input = fixtureWithControlGapEvidence();
+    // Strict admission proves the augmented fixture is valid before any shock.
+    expect(() => evaluateV9ContagionScenario(input, { id: "control-baseline", shocks: [] })).not.toThrow();
+    // The control assumption retires the control gap. Admission then passes only
+    // when the gap-only row is gone and the surviving gap's row is kept: either
+    // leftover is rejected as unreferenced evidence or an unknown reference.
+    const result = evaluateV9ContagionScenario(input, {
+      id: "control-assumption",
+      shocks: [{ kind: "mint-control-compromise", assetId: "alpha" }],
+    });
+    expect(result.rows.find((row) => row.coinId === "alpha")).toMatchObject({
+      changedDimensions: expect.arrayContaining(["control"]),
+      failure: null,
+    });
   });
 
   it("isolates hypothetical evidence and controls from shared source and sibling arrays", () => {
