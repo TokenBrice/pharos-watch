@@ -4,8 +4,12 @@ import { PEG_CURRENCY_VALUES, type PegCurrency } from "@shared/types/core";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { PegSummaryResponseSchema, type StablecoinData } from "@shared/types/market";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
+import { loadTimelineOgPage } from "../og-page/timeline";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import * as currentPegObservations from "../../lib/current-peg-observations";
 
@@ -1181,5 +1185,71 @@ describe("handlePegSummary", () => {
     const res = await handlePegSummary(db);
     const body = (await readJsonResponse(res, 200)) as { coins: Array<{ id: string }> };
     expect(body.coins.some((coin) => coin.id === "usdt-tether")).toBe(true);
+  });
+});
+
+describe("active-depeg census scope", () => {
+  // 2026-04-27T00:30Z: `usr-resolv` is frozen as of that date and the deploy
+  // carrying the retirement has just landed, while the retained peg-analytics
+  // generation below was published ten minutes earlier by the previous deploy.
+  const CENSUS_NOW = 1_777_249_800;
+  const GENERATION = CENSUS_NOW - 600;
+
+  it("publishes one census when the retained generation still carries a retired coin's incident", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(CENSUS_NOW * 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const stablecoins = {
+        peggedAssets: [makeAsset({
+          id: "usdt-tether",
+          price: 0.9988,
+          priceObservedAt: GENERATION,
+          priceUpdatedAt: GENERATION,
+          circulating: { peggedUSD: 150_000_000_000 },
+        })],
+      };
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("stablecoins", JSON.stringify(stablecoins), GENERATION);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("peg-analytics", JSON.stringify({
+          computedAtSec: GENERATION,
+          depegEventsToday: 0,
+          depegEventsYesterday: 1,
+          pegData: [
+            makeCachedPegCoin({
+              id: "usdt-tether",
+              activeDepeg: true,
+              pegReference: { valueUsd: 1, source: "median", contributorCount: 5, asOf: GENERATION - 60 },
+            }),
+            // Still off peg when the issuer wound down; the event was never closed.
+            makeCachedPegCoin({
+              id: "usr-resolv",
+              symbol: "USR",
+              name: "Resolv USD",
+              currentDeviationBps: -4_200,
+              pegScore: 41,
+              worstDeviationBps: -4_200,
+              activeDepeg: true,
+              pegReference: { valueUsd: 1, source: "median", contributorCount: 5, asOf: GENERATION - 60 },
+            }),
+          ],
+        }), GENERATION);
+
+      const body = PegSummaryResponseSchema.parse(await readJsonResponse(await handlePegSummary(db), 200));
+
+      // One generation, one census: the retained row outside the active
+      // registry is history, not a second active detection.
+      expect(body.coins.some((coin) => coin.id === "usr-resolv")).toBe(false);
+      const census = selectActiveDepegCoins(body.coins, WORKER_ACTIVE_IDS).length;
+      expect(census).toBe(1);
+      expect(body.summary.activeDepegCount).toBe(census);
+
+      // The route card prints that same census figure over the same owner body.
+      const timeline = await loadTimelineOgPage(db, CENSUS_NOW);
+      expect(timeline).toMatchObject({ kind: "ok", hero: String(census) });
+    } finally {
+      sqlite.close();
+    }
   });
 });

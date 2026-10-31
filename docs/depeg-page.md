@@ -124,7 +124,7 @@ Reader-visible universes must be distinguished; `summary.*` is not one cohort:
 | --- | --- | --- |
 | Live-peg-status assets | `usePegSummary()` live aggregates, only where `currentBps !== null` | hero holding-peg split, median deviation, worst live move |
 | Peg-catalog assets | `usePegSummary()` `coins[]`, every returned row | control board rows and pagination, `trackedIds`, alert-queue scope, tracked ALERT+ count |
-| Confirmed active detections | `usePegSummary()` `summary.activeDepegCount`, non-NAV active rows regardless of `currentBps` | hero active count |
+| Confirmed active detections | `usePegSummary()` `summary.activeDepegCount`, non-NAV active-registry rows regardless of `currentBps` | hero active count |
 | DEWS-covered assets | `useStressSignals()` | radar marks, radar centre caption, legend band counts |
 | Resolver incidents / valid frozen forecasts | `useDepegResolver()` | worklist includes all explicit states; tier summary counts only valid frozen predictions |
 

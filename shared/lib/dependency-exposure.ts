@@ -59,9 +59,9 @@ function byDependent(edges: readonly ReportCardsV9DependencyEdge[]) {
   return groups;
 }
 function mappedShare(edges: readonly ReportCardsV9DependencyEdge[]): number {
-  if (edges.some(edge => edge.kind === "serial")) return 1;
+  const basketWeight = edges.reduce((sum, edge) => edge.kind === "basket" && edge.weight !== null ? sum + edge.weight : sum, 0);
   // Invalid published shares remain visible as invalid statistics, never silently capped.
-  return edges.reduce((sum, edge) => edge.weight === null ? sum : sum + edge.weight, 0);
+  return edges.some(edge => edge.kind === "serial") ? Math.max(1, basketWeight) : basketWeight;
 }
 function invalidBasket(edges: readonly ReportCardsV9DependencyEdge[]): boolean {
   return edges.reduce((sum, edge) => edge.kind === "basket" && edge.weight !== null ? sum + edge.weight : sum, 0) > 1.000001;
@@ -218,9 +218,13 @@ export function lookThroughShares(
   }
   for (let i = 0; i < ready.length; i++) {
     const id = ready[i], group = incoming.get(id) ?? [];
+    // Only a predecessor the roots actually reach contributes to this
+    // dependent's verdict; an outside malformed row is quarantined on its own,
+    // not against a healthy neighbour (ADR-35).
+    const reachedGroup = group.filter(edge => hops.has(edge.from));
     let serialTerm = 0, basketTerm = 0;
-    let unknown = group.some(edge => edgeShare(edge) === null);
-    let integrityFlag = invalidBasket(group) || unknown;
+    let unknown = reachedGroup.some(edge => edgeShare(edge) === null);
+    let integrityFlag = invalidBasket(reachedGroup) || unknown;
     for (const edge of group) {
       const upstream = values.get(edge.from);
       if (!upstream) continue;

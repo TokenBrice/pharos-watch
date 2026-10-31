@@ -1,9 +1,21 @@
+import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "./status-thresholds";
 import { isRecord } from "./type-guards";
 
 // Sequential cache reads keep full detail bodies out of the batch working set.
 // Ten compact entries, each <=128 KiB, also fit comfortably under the Pages proxy cap.
 export const DETAIL_SNAPSHOT_INPUT_ENTRY_MAX_BYTES = 128 * 1024;
 export const DETAIL_SNAPSHOT_SUPPLY_HISTORY_DAYS = 90;
+
+/** IMF-fixdate, the only HTTP `Date` production origins emit. */
+const HTTP_DATE_PATTERN = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), \d{2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{4} \d{2}:\d{2}:\d{2} GMT$/;
+
+/** Parse a legacy `Date` header strictly: IMF-fixdate only, no lenient calendar parses. */
+function parseHttpDate(value: string): number | null {
+  if (!HTTP_DATE_PATTERN.test(value)) return null;
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed) || new Date(parsed).toUTCString() !== value) return null;
+  return parsed;
+}
 
 /** Parse a nonnegative decimal Unix clock without regex backtracking. */
 export function parseDetailSnapshotSourceClock(value: string): number | null {
@@ -34,12 +46,13 @@ export function detailSnapshotSourceUpdatedAt(data: unknown, headers: Headers): 
     const seconds = parseDetailSnapshotSourceClock(absoluteSourceClock);
     return seconds === null ? null : seconds * 1000;
   }
-  const date = Date.parse(headers.get("Date") ?? "");
+  const date = parseHttpDate(headers.get("Date") ?? "");
   const sourceAge = headers.get("X-Data-Age");
   const edgeAge = headers.get("Age");
   const ageSeconds = sourceAge === null ? null : parseDetailSnapshotSourceClock(sourceAge);
   const edgeAgeSeconds = edgeAge === null ? null : parseDetailSnapshotSourceClock(edgeAge);
-  if (!Number.isFinite(date) || ageSeconds === null || edgeAgeSeconds === null) return null;
+  if (date === null || date > Date.now() + STATUS_ALLOWED_FUTURE_SKEW_SEC * 1000
+      || ageSeconds === null || edgeAgeSeconds === null) return null;
   // Cloudflare rewrites Date on cached responses; subtract both the origin's
   // source age and edge residence only when all legacy evidence is proven.
   return Math.max(0, date - edgeAgeSeconds * 1000 - ageSeconds * 1000);

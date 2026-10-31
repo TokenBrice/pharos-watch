@@ -100,7 +100,7 @@ export function findDigestSignalQuarantineBySymbol(
   );
 }
 
-const LIQUIDITY_COLLAPSE_PATTERN = /\b(?:collaps(?:e|ed|ing)|drain(?:ed|ing)?|fell|fall(?:ing)?|lost|shed)\b/i;
+const LIQUIDITY_COLLAPSE_PATTERN = /\b(?:collaps(?:e|es|ed|ing)|drain(?:s|ed|ing)?|fell|fall(?:s|ing)?|los(?:e|es|t)|sheds?)\b/i;
 
 /**
  * Symbol word-boundary matchers, built once at module load. The registry is

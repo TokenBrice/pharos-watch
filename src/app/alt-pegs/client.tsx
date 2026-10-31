@@ -184,7 +184,7 @@ export function AltPegsClient() {
 
       <PegRanking
         rows={snapshot.distributionRows}
-        partial={snapshot.altSupplyUnavailableCount > 0}
+        partial={snapshot.altSupplyUnavailableCount > 0 || snapshot.altSupplyPartialCount > 0}
         selectedPeg={selectedPeg}
         onSelect={setSelectedPeg}
       />

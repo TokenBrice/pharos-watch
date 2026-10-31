@@ -179,7 +179,7 @@ export function buildPegDiversityHero(peggedAssets: readonly StablecoinData[] | 
 
   const cohortRankByPeg = new Map<PegCurrency, number>();
   // Logo admission must not change the population supporting a complete-cohort rank.
-  if (snapshot.altSupplyUnavailableCount === 0) {
+  if (snapshot.altSupplyUnavailableCount === 0 && snapshot.altSupplyPartialCount === 0) {
     snapshot.pegs.forEach((cohort, index) => cohortRankByPeg.set(cohort.peg, index + 1));
   }
 

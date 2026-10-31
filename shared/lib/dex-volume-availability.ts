@@ -390,6 +390,11 @@ export function resolveVolumeActivityComponent(
   const emptyComplete = completeness === "complete" && availability24h.measuredPoolCount === 0 &&
     availability24h.missingPoolCount === 0 && availability24h.stalePoolCount === 0;
   const admittedVolumeUsd = availability24h.partialGrossUsd;
+  // Positive volume over no admitted TVL has no finite activity ratio: the
+  // denominator is absent, not zero, so the component stays unavailable.
+  if (admittedTvlUsd <= 0 && admittedVolumeUsd !== null && admittedVolumeUsd > 0) {
+    return { status: "unavailable", score: null, reason: "activity-completeness-unknown" };
+  }
   if (admittedVolumeUsd == null && !emptyComplete) {
     return { status: "unavailable", score: null, reason: "activity-completeness-unknown" };
   }

@@ -214,19 +214,6 @@
       "routeType": "one-hop"
     },
     {
-      "stablecoinId": "susds-sky",
-      "poolAddress": "0x00836Fe54625BE242BcFA286207795405ca4fD10",
-      "inputIndex": 1,
-      "outputIndex": 0,
-      "inputDecimals": 6,
-      "outputDecimals": 18,
-      "chain": "ethereum",
-      "hop": {
-        "viaStablecoinId": "usdt-tether"
-      },
-      "routeType": "one-hop"
-    },
-    {
       "stablecoinId": "usdx-axis",
       "poolAddress": "0xE521BA88837B2726E5343ccA91adA6f19F356C45",
       "inputIndex": 1,
@@ -279,19 +266,6 @@
       "routeType": "one-hop"
     },
     {
-      "stablecoinId": "usds-sky",
-      "poolAddress": "0xA632D59b9B804a956BfaA9b48Af3A1b74808FC1f",
-      "inputIndex": 0,
-      "outputIndex": 1,
-      "inputDecimals": 6,
-      "outputDecimals": 18,
-      "chain": "ethereum",
-      "hop": {
-        "viaStablecoinId": "pyusd-paypal"
-      },
-      "routeType": "one-hop"
-    },
-    {
       "stablecoinId": "apyusd-apyx",
       "poolAddress": "0xe41be7B340f7c2EDA4DA1e99b42Ee1b228b526b7",
       "inputIndex": 1,
@@ -318,20 +292,6 @@
       "routeType": "one-hop"
     },
     {
-      "stablecoinId": "dola-inverse-finance",
-      "poolAddress": "0x8b83c4aA949254895507D09365229BC3a8c7f710",
-      "inputIndex": 1,
-      "outputIndex": 0,
-      "inputDecimals": 18,
-      "outputDecimals": 18,
-      "chain": "ethereum",
-      "hop": {
-        "viaStablecoinId": "susds-sky"
-      },
-      "routeType": "chained-hop",
-      "maxHopDepth": 2
-    },
-    {
       "stablecoinId": "msusd-metronome",
       "poolAddress": "0x9A9e2e70919c75D80aAaA1D483c46CdBb8ac4d1b",
       "inputIndex": 0,
@@ -355,20 +315,6 @@
       "chain": "ethereum",
       "hop": {
         "viaStablecoinId": "frxusd-frax"
-      },
-      "routeType": "chained-hop",
-      "maxHopDepth": 2
-    },
-    {
-      "stablecoinId": "stusds-sky",
-      "poolAddress": "0x2C7C98A3b1582D83c43987202aEFf638312478aE",
-      "inputIndex": 0,
-      "outputIndex": 1,
-      "inputDecimals": 18,
-      "outputDecimals": 18,
-      "chain": "ethereum",
-      "hop": {
-        "viaStablecoinId": "usds-sky"
       },
       "routeType": "chained-hop",
       "maxHopDepth": 2
@@ -414,20 +360,6 @@
       },
       "routeType": "chained-hop",
       "maxHopDepth": 2
-    },
-    {
-      "stablecoinId": "susde-ethena",
-      "poolAddress": "0x744793B5110f6ca9cC7CDfe1CE16677c3Eb192ef",
-      "inputIndex": 0,
-      "outputIndex": 1,
-      "inputDecimals": 18,
-      "outputDecimals": 18,
-      "chain": "ethereum",
-      "hop": {
-        "viaStablecoinId": "dola-inverse-finance"
-      },
-      "routeType": "chained-hop",
-      "maxHopDepth": 3
     },
     {
       "stablecoinId": "trusd-tori",

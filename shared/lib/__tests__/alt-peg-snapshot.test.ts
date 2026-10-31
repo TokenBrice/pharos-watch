@@ -49,6 +49,37 @@ describe("buildNonUsdMarketSnapshot", () => {
     expect(snapshot.pegs.find((entry) => entry.peg === "EUR")).toMatchObject({ marketCap: 60, sharePct: null, supplyUnavailableCount: 1 });
   });
 
+  it("keeps a partial-chain remainder in the known subtotal but withholds every exact share", () => {
+    // A recorded ≤5% chain dropout (docs/supply-snapshot.md): EURC's amount is
+    // the observed remainder, not a complete supply observation.
+    const rows = complete({ "eurc-circle": 60, "paxg-paxos": 40 }).map((entry) =>
+      entry.id === "eurc-circle"
+        ? {
+            ...entry,
+            supplyChainGuard: {
+              reason: "supply-chain-dropout" as const,
+              status: "chains-unavailable" as const,
+              partialCoverage: true as const,
+              quarantinedSince: 1_792_800_000,
+              chains: [{
+                chainId: "tempo", chainLabel: "Tempo", listCurrentUsd: 0, baselineUsd: 1_653_927,
+                baselineObservedAt: 1_792_700_000, baselineSource: "seed" as const, resolution: "unavailable" as const,
+              }],
+            },
+          }
+        : entry);
+    const snapshot = buildNonUsdMarketSnapshot(rows);
+
+    expect(snapshot.altMarketCap).toBe(100);
+    expect(snapshot.altSupplyPartialCount).toBe(1);
+    expect(snapshot.altSupplyUnavailableCount).toBe(0);
+    const eur = snapshot.pegs.find((entry) => entry.peg === "EUR");
+    expect(eur).toMatchObject({ marketCap: 60, supplyPartialCount: 1, sharePct: null });
+    expect(snapshot.pegs.every((entry) => entry.sharePct === null)).toBe(true);
+    expect(snapshot.commoditySharePct).toBeNull();
+    expect(snapshot.nonCommoditySharePct).toBeNull();
+  });
+
   it("keeps an observed zero numeric", () => {
     const snapshot = buildNonUsdMarketSnapshot(complete({}));
     expect(snapshot.altMarketCap).toBe(0);

@@ -155,6 +155,32 @@ describe("buildPegDiversityHero", () => {
     }
   });
 
+  it("withholds every cohort rank when a core member is a partial-chain remainder", () => {
+    const assets = completeUniverse([
+      coin({ id: "eurc-circle", circulating: 100 }),
+      makeStablecoin({
+        id: "xaut-tether",
+        name: "XAUT",
+        symbol: "XAUT",
+        pegType: "peggedGOLD",
+        priceSource: "defillama",
+        circulating: { peggedGOLD: 200 },
+        supplyChainGuard: {
+          reason: "supply-chain-dropout",
+          status: "chains-unavailable",
+          partialCoverage: true,
+          quarantinedSince: 1_792_800_000,
+          chains: [{
+            chainId: "tempo", chainLabel: "Tempo", listCurrentUsd: 0, baselineUsd: 1_653_927,
+            baselineObservedAt: 1_792_700_000, baselineSource: "seed", resolution: "unavailable",
+          }],
+        },
+      }),
+    ]);
+    const hero = buildPegDiversityHero(assets);
+    expect([...hero.pegClusters, ...hero.shelfGroups].every((group) => group.rank === undefined)).toBe(true);
+  });
+
   it.each([undefined, []])("keeps absent or empty list responses empty: %j", (assets) => {
     expect(buildPegDiversityHero(assets)).toEqual({ pegClusters: [], shelfGroups: [] });
   });

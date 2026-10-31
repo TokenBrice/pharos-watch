@@ -10,6 +10,7 @@ import { classifyDepegLifecycle, type DepegLifecycleFlag } from "../../lib/depeg
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { compareFiniteDesc } from "@shared/lib/sort";
 import { getMintBurnPressureRejection, type DigestFlowSupplySnapshot } from "@shared/lib/digest-mint-burn-admission";
+import { classifySupplyCoverage, parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import { ACTIVE_DEPEG_PROMPT_LIMIT, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import {
   admitLiquidityShift,
@@ -526,12 +527,16 @@ export async function collectMintBurnFlows(
       try {
         const ids = buildInClause(confirmationCoins.map((coin) => coin.id));
         const rows = await ctx.db.prepare(
-          `SELECT stablecoin_id, snapshot_date, circulating_usd FROM supply_history WHERE stablecoin_id IN (${ids.sql}) AND snapshot_date IN (?, ?)`,
+          `SELECT stablecoin_id, snapshot_date, circulating_usd, supply_provenance FROM supply_history WHERE stablecoin_id IN (${ids.sql}) AND snapshot_date IN (?, ?)`,
         ).bind(...ids.binds, supplyEnd - DAY_SECONDS, supplyEnd)
-          .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number | null }>();
+          .all<{ stablecoin_id: string; snapshot_date: number; circulating_usd: number | null; supply_provenance: string | null }>();
         for (const row of rows.results ?? []) {
           const byDate = supplyById.get(row.stablecoin_id) ?? new Map<number, DigestFlowSupplySnapshot>();
-          byDate.set(row.snapshot_date, { snapshotDate: row.snapshot_date, circulatingUsd: row.circulating_usd });
+          byDate.set(row.snapshot_date, {
+            snapshotDate: row.snapshot_date,
+            circulatingUsd: row.circulating_usd,
+            coverage: classifySupplyCoverage(parseSupplyObservationProvenance(row.supply_provenance).provenance),
+          });
           supplyById.set(row.stablecoin_id, byDate);
         }
       } catch (error) {

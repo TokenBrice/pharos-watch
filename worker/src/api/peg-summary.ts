@@ -6,7 +6,7 @@ import { medianOfRounded } from "@shared/lib/peg-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { StablecoinData } from "@shared/types/market";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -182,6 +182,10 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   let totalTracked = 0;
 
   for (const meta of TRACKED_META_BY_ID.values()) {
+    // A retained analytics generation can still carry a row for a coin that has
+    // since left the active registry (retired/frozen). The published peg catalog
+    // and active-depeg census share the active registry, as the fresh compute does.
+    if (!WORKER_ACTIVE_IDS.has(meta.id)) continue;
     const isNavToken = meta.flags.navToken === true;
 
     const pegData = pegDataById.get(meta.id);
@@ -275,7 +279,9 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       spreadPenalty: pegData.spreadPenalty,
       eventCount: pegData.eventCount,
       worstDeviationBps: pegData.worstDeviationBps,
-      activeDepeg: pegData.activeDepeg,
+      // NAV tokens carry no peg, so a retained pre-reclassification row must
+      // not re-enter the active-depeg census through its cached flag.
+      activeDepeg: isNavToken ? false : pegData.activeDepeg,
       lastEventAt: pegData.lastEventAt,
       trackingSpanDays: pegData.trackingSpanDays,
       observationStartedAt: pegData.observationStartedAt ?? null,

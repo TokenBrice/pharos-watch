@@ -269,4 +269,43 @@ describe("exposure uncertainty and reach", () => {
     expect(result.rows[0].share).toBe(0.2);
     expect(result.rows[0].scoreUnknown).toBe(true);
   });
+
+  it("keeps a reached dependent's known share when an outside parent has a null basket weight", () => {
+    // "other" is not downstream of the root: its unknown-weight row is
+    // quarantined on its own and cannot nullify the root's measured 0.4.
+    const edges = [edge("root", "known", "basket", 0.4), edge("other", "known", "basket", null)];
+
+    const rows = lookThroughShares(["root"], edges);
+    expect(rows.get("known")).toEqual({ share: 0.4, minHop: 1, integrityFlag: false });
+
+    const result = exposureFootprint(["root"], edges, supply, opts);
+    expect(result.rows.find(row => row.id === "known")).toMatchObject({ share: 0.4, band: "material", exposureUsd: 40 });
+    expect(result.direct.knownUsd).toBe(40);
+    expect(result.direct.unknownShareEdgeCount).toBe(0);
+    expect(result.direct.integrityFlag).toBe(false);
+    expect(result.direct.complete).toBe(true);
+  });
+
+  it("publishes the greater basket term for a serial and excessive-basket dependent", () => {
+    // Serial-role dominance is per upstream; basket weights are allowed to sum
+    // above 1 and stay visible as an unclamped integrity finding (ADR-34).
+    const edges = [
+      edge("serial-parent", "dependent", "serial", null),
+      edge("basket-parent-a", "dependent", "basket", 0.7),
+      edge("basket-parent-b", "dependent", "basket", 0.6),
+    ];
+
+    const footprint = exposureFootprint(["serial-parent", "basket-parent-a", "basket-parent-b"], edges, supply, opts);
+    expect(footprint.direct.knownUsd).toBeCloseTo(130);
+    const total = mappedDependentSupply(edges, supply, opts);
+    expect(total.knownUsd).toBeCloseTo(130);
+    expect(total.integrityFlag).toBe(true);
+    expect(total.complete).toBe(false);
+
+    // Each hub row still publishes its own claim; only the per-dependent total combines them.
+    const hubs = buildDirectHubExposures(edges, supply, opts);
+    expect(hubs.find(hub => hub.hubId === "serial-parent")!.direct.knownUsd).toBe(100);
+    expect(hubs.find(hub => hub.hubId === "basket-parent-a")!.direct.knownUsd).toBe(70);
+    expect(hubs.find(hub => hub.hubId === "basket-parent-b")!.direct.knownUsd).toBe(60);
+  });
 });

@@ -102,6 +102,63 @@ describe("buildBlacklistActiveRecords", () => {
     expect(computeBlacklistActiveSummaryStats(records).activeFrozenTotal).toBe(0);
   });
 
+  it("does not hydrate a re-freeze after a destroy with the destroyed balance", () => {
+    const blacklist = makeEvent({ id: "1", timestamp: 10 });
+    const destroy = makeEvent({
+      id: "2", eventType: "destroy", txHash: "0xdestroy", blockNumber: 19_000_100, timestamp: 20,
+      amountNative: 100, amountUsdAtEvent: 100, amountSource: "event",
+    });
+    const refreeze = makeEvent({ id: "3", txHash: "0xrefreeze", blockNumber: 19_001_000, timestamp: 30, amountNative: null, amountUsdAtEvent: null });
+    // The retained ledger row is the destroy snapshot; a failed capture for the
+    // later freeze keeps its amount and source.
+    const balances = new Map([[buildBlacklistRecordIdentityKey(refreeze), makeSnapshot({
+      amountNative: 100, amountUsd: 100, status: "provider_failed", source: "destroy_event",
+      observedAt: 20, lastSuccessfulObservedAt: 20, lastAttemptedAt: 30,
+    })]]);
+
+    const records = buildBlacklistActiveRecords([blacklist, destroy, refreeze], balances);
+
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ blacklistedAt: 30, destroyedAt: null });
+    expect(records[0]?.frozenAmountUsd).toBeNull();
+    expect(computeBlacklistActiveSummaryStats(records)).toEqual({
+      activeAddressCount: 1, activeFrozenTotal: 0, activeAmountGapCount: 1, ambiguousOrderCount: 0,
+    });
+  });
+
+  it("does not hydrate a released and later re-frozen address with its destroyed balance", () => {
+    const events = [
+      makeEvent({ id: "1", timestamp: 10 }),
+      makeEvent({ id: "2", eventType: "destroy", txHash: "0xdestroy", blockNumber: 19_000_100, timestamp: 20 }),
+      makeEvent({ id: "3", eventType: "unblacklist", txHash: "0xrelease", blockNumber: 19_000_200, timestamp: 25 }),
+      makeEvent({ id: "4", txHash: "0xrefreeze", blockNumber: 19_001_000, timestamp: 30, amountNative: null, amountUsdAtEvent: null }),
+    ];
+    const balances = new Map([[buildBlacklistRecordIdentityKey(events[3]), makeSnapshot({
+      amountNative: 100, amountUsd: 100, status: "provider_failed", source: "destroy_event",
+      observedAt: 20, lastSuccessfulObservedAt: 20, lastAttemptedAt: 30,
+    })]]);
+
+    const records = buildBlacklistActiveRecords(events, balances);
+
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ blacklistedAt: 30, destroyedAt: null });
+    expect(records[0]?.frozenAmountUsd).toBeNull();
+  });
+
+  it("closes a legacy alias record on a scoped destroy without closing another contract", () => {
+    const legacy = makeEvent({ id: "legacy", configKey: null, contractAddress: null, timestamp: 10, amountNative: 400, amountUsdAtEvent: 400 });
+    const scoped = makeEvent({ id: "scoped", timestamp: 11, amountNative: 600, amountUsdAtEvent: 600 });
+    const other = makeEvent({ id: "other", configKey: "ethereum-other", contractAddress: "0xother", timestamp: 12, amountNative: 250, amountUsdAtEvent: 250 });
+    const destroy = makeEvent({ id: "destroy", eventType: "destroy", txHash: "0xdestroy", timestamp: 13 });
+
+    const records = buildBlacklistActiveRecords([legacy, scoped, other, destroy]);
+
+    expect(computeBlacklistActiveSummaryStats(records).activeFrozenTotal).toBe(250);
+    expect(records.filter((record) => record.destroyedAt == null)).toEqual([
+      expect.objectContaining({ key: buildBlacklistRecordIdentityKey(other) }),
+    ]);
+  });
+
   it("uses current balance snapshots for active Tron blacklist records", () => {
     const events = [
       makeEvent({

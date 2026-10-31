@@ -15,7 +15,7 @@ export const loadAltPegsOgPage: OgPageLoader = async (db, nowSec) => {
   const snapshot = buildNonUsdMarketSnapshot(stablecoins.payload.peggedAssets);
   if (snapshot.altMarketCap == null) return unavailable("figure-null");
   // The page publishes a partial total as a labelled known subtotal and withholds shares; the card mirrors both.
-  const partial = snapshot.altSupplyUnavailableCount > 0;
+  const partial = snapshot.altSupplyUnavailableCount > 0 || snapshot.altSupplyPartialCount > 0;
   const top = partial ? [] : snapshot.pegs.slice(0, 3);
   return {
     kind: "ok",
@@ -27,7 +27,7 @@ export const loadAltPegsOgPage: OgPageLoader = async (db, nowSec) => {
     budgetSec,
     generation: `stablecoins:${stablecoins.updatedAt}`,
     ...(partial
-      ? { stampNote: `Partial · ${snapshot.altSupplyObservedCount}/${snapshot.altCoinCount} non-USD coins observed` }
+      ? { stampNote: `Partial · ${snapshot.altSupplyObservedCount - snapshot.altSupplyPartialCount}/${snapshot.altCoinCount} non-USD coins observed` }
       : {}),
   };
 };

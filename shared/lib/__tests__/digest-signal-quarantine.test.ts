@@ -38,6 +38,18 @@ describe("digest signal quarantine", () => {
     )).toEqual([]);
   });
 
+  it("recognizes present-tense restatements of the retracted USDS collapse claim", () => {
+    const incidentWeek = { startAt: Date.parse("2026-08-18T00:00:00Z") / 1000, endAt: Date.parse("2026-08-24T23:59:59Z") / 1000 };
+    for (const copy of [
+      "USDS Liquidity Collapses as TVL Falls to $13.72M.",
+      "USDS liquidity drains to $13.72M.",
+      "USDS sheds $148M of liquidity, leaving $13.72M.",
+    ]) {
+      expect(findQuarantinedDigestSignalClaims(copy, "liquidity", incidentWeek).map((entry) => entry.stablecoinId))
+        .toEqual(["usds-sky"]);
+    }
+  });
+
   it("matches the USG flow incident on the edition clock only, at exact seconds", () => {
     const at = (edition: number, ingestion = edition) => findDigestSignalQuarantines("flow", { ingestion, edition });
     expect(at(USG_EDITION_AT).map((entry) => entry.stablecoinId)).toEqual(["usg-tangent"]);
