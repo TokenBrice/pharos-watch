@@ -62,6 +62,15 @@ export const DEPEG_DIRECTION_CLASSES = {
 } as const satisfies Record<DepegDirection, { pill: string; text: string }>;
 
 /**
+ * A reviewed dispute (or its false-positive resolution) badges the permanent
+ * archive row. Colour and label only: the pill's layout stays at the call site.
+ */
+export const DEPEG_AUDIT_DISPUTED_BADGE = {
+  label: "Disputed",
+  className: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400",
+} as const;
+
+/**
  * What the latest trusted observation says about an open confirmed incident.
  * An open lifecycle record is not proof the coin is off peg now, and an at-par
  * reading is not recovery until detection confirms it.
