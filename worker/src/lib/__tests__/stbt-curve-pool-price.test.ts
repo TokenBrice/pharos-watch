@@ -126,6 +126,16 @@ describe("STBT exact Curve metapool price", () => {
     })).resolves.toBeNull();
   });
 
+  it("routes every read through the Worker's configured chain RPCs before the public tail", async () => {
+    mockHealthyPool();
+    const chainRpcs: LivePriceContext["chainRpcs"] = new Map();
+    await fetchStbtCurvePoolPrice({ assetsById: new Map([["usdc-circle", trustedUsdc()]]), chainRpcs });
+    for (const mock of [fetchEvmBlockNumberMock, fetchEvmBlockTimestampMock, fetchEvmRpcBatchMock]) {
+      const call = mock.mock.calls[0] ?? [];
+      expect(call[call.length - 1]).toMatchObject({ chainRpcs });
+    }
+  });
+
   it("rejects a stale block before pool calls", async () => {
     fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1000) - 301);
 
