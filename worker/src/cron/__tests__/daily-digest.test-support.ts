@@ -346,7 +346,7 @@ function makeDailyDigestTables(): MockTableConfig[] {
         { stablecoin_id: "usdc-circle", snapshot_date: weekAgoTs, circulating_usd: 62_000_000 },
       ],
     },
-    empty("WHERE ended_at IS NOT NULL AND ended_at >= ?"),
+    empty("WHERE e.ended_at IS NOT NULL AND e.ended_at >= ?"),
   ];
 }
 

@@ -2184,13 +2184,6 @@
       "pegMechanism": "fiat-backed",
       "price": null,
       "priceSource": "missing",
-      "priceConfidence": null,
-      "priceUpdatedAt": null,
-      "priceObservedAt": null,
-      "priceObservedAtMode": null,
-      "priceSyncedAt": null,
-      "consensusSources": null,
-      "agreeSources": null,
       "supplySource": "defillama",
       "circulating": {
         "peggedUSD": 27627177.026717648
@@ -2272,13 +2265,6 @@
       "pegMechanism": "crypto-backed",
       "price": null,
       "priceSource": "missing",
-      "priceConfidence": null,
-      "priceUpdatedAt": null,
-      "priceObservedAt": null,
-      "priceObservedAtMode": null,
-      "priceSyncedAt": null,
-      "consensusSources": null,
-      "agreeSources": null,
       "supplySource": "defillama",
       "circulating": {
         "peggedUSD": 6062715.506706585
@@ -2324,13 +2310,6 @@
       "pegMechanism": "crypto-backed",
       "price": null,
       "priceSource": "missing",
-      "priceConfidence": null,
-      "priceUpdatedAt": null,
-      "priceObservedAt": null,
-      "priceObservedAtMode": null,
-      "priceSyncedAt": null,
-      "consensusSources": null,
-      "agreeSources": null,
       "supplySource": "defillama",
       "circulating": {
         "peggedUSD": 1178299.3616264453
@@ -2376,13 +2355,6 @@
       "pegMechanism": "crypto-backed",
       "price": null,
       "priceSource": "missing",
-      "priceConfidence": null,
-      "priceUpdatedAt": null,
-      "priceObservedAt": null,
-      "priceObservedAtMode": null,
-      "priceSyncedAt": null,
-      "consensusSources": null,
-      "agreeSources": null,
       "supplySource": "defillama",
       "circulating": {
         "peggedEUR": 22850.704405262222
