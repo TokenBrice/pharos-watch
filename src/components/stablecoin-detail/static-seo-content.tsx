@@ -37,7 +37,7 @@ import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary"
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import type { FaqItem } from "@/lib/faq";
 import { normalizeWhitespace } from "@/lib/page-metadata";
-import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
+import { getSnapshotSafetyAssessment, type SnapshotReleasePin } from "@/lib/safety-grade-snapshot";
 import { getCurrentRedemptionConfig } from "@/lib/redemption-review-currency";
 import { buildPegLandingUrl } from "@/lib/peg-landing";
 import {
@@ -243,7 +243,7 @@ function describeFreezeControl(coin: StablecoinMeta): string {
   }
 }
 
-function buildSafetyAnswer(coin: StablecoinMeta): string {
+function buildSafetyAnswer(coin: StablecoinMeta, release?: SnapshotReleasePin): string {
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
   const reserveEvidence = describeReserveEvidence(coin);
@@ -257,12 +257,12 @@ function buildSafetyAnswer(coin: StablecoinMeta): string {
     return `${coin.name} is not in Pharos's active universe. ${coin.listingStatusReview?.reason ?? "Its listing is retained only as a static catalog record."}`;
   }
 
-  const asOf = formatIsoDayLabel(PUBLIC_DATASET_CURRENT_DATE);
+  const asOf = formatIsoDayLabel(release?.snapshotDate ?? PUBLIC_DATASET_CURRENT_DATE);
   const coinFact = buildCoinSpecificRiskSentence(coin);
   const liveRead =
     "The grade moves as reserve, redemption, peg and control evidence changes; the live Safety Score on this page shows the current reading.";
 
-  const assessment = getSnapshotSafetyAssessment(coin.id);
+  const assessment = release ? (release.assessments[coin.id] ?? null) : getSnapshotSafetyAssessment(coin.id);
   if (!assessment) {
     return `As of ${asOf}, Pharos had not published a Safety Score grade for ${coin.symbol}, so this answer makes no overall safety call. ${coinFact} The live Safety Score on this page shows a grade once one is published.`;
   }
@@ -490,7 +490,7 @@ function buildAlertCommand(coin: StablecoinMeta): string {
  * live API at each Pages release) for the dated safety grade. No editorial claims beyond
  * those sources.
  */
-export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
+export function buildStablecoinFaqItems(coin: StablecoinMeta, release?: SnapshotReleasePin): FaqItem[] {
   const pegLabel = getProfilePegLabel(
     coin.flags,
     coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
@@ -535,7 +535,7 @@ export function buildStablecoinFaqItems(coin: StablecoinMeta): FaqItem[] {
 
   return [
     { question: identityQuestion, answer: /[.!?]$/.test(identityAnswer) ? identityAnswer : `${identityAnswer}.` },
-    { question: `Is ${coin.symbol} safe?`, answer: buildSafetyAnswer(coin) },
+    { question: `Is ${coin.symbol} safe?`, answer: buildSafetyAnswer(coin, release) },
     { question: `What backs ${coin.symbol}?`, answer: buildBackingAnswer(coin) },
     { question: `Can ${coin.symbol} be frozen or blacklisted?`, answer: freezeAnswer },
     ...(redemptionAnswer ? [{ question: `How do you redeem ${coin.symbol}?`, answer: redemptionAnswer }] : []),

@@ -342,7 +342,7 @@ Use the reviewed refresh-target inventory and canonical capture stamps owned by 
 
 ### Markdown Export Fixtures (`scripts/__tests__/fixtures/markdown/`)
 
-[`scripts/__tests__/generate-markdown-exports.test.ts`](../scripts/__tests__/generate-markdown-exports.test.ts) compares fixtures to live renderers. Use [`scripts/maintenance/refresh-markdown-export-fixtures.ts`](../scripts/maintenance/refresh-markdown-export-fixtures.ts) locally, never in CI. A refresh can absorb an unintended renderer change: inspect the output diff and commit snapshots with their generating source rather than hand-editing them.
+[`scripts/__tests__/generate-markdown-exports.test.ts`](../scripts/__tests__/generate-markdown-exports.test.ts) compares fixtures to live renderers. Use [`scripts/maintenance/refresh-markdown-export-fixtures.ts`](../scripts/maintenance/refresh-markdown-export-fixtures.ts) locally, never in CI. A refresh can absorb an unintended renderer change: inspect the output diff and commit snapshots with their generating source rather than hand-editing them. The refresh renders from the pinned fixture release in [`scripts/lib/markdown-fixture-release.ts`](../scripts/lib/markdown-fixture-release.ts), so it reproduces the committed bytes instead of tracking the generated mirror date.
 
 ### Shared Auth Helpers (`worker/src/test-helpers/__shared/auth.ts`)
 
