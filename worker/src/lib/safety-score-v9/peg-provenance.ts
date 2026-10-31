@@ -458,6 +458,30 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
     );
   }
 
+  // The input-corruption erratum (docs/runbooks/depeg-artifact-removal.md)
+  // quarantines a live event that had no replay provenance by recording only an
+  // excluding audit verdict. That is complete audit evidence, not partial
+  // provenance: the event classifies as audit-excluded and has no tier.
+  if (
+    event.source === "live" &&
+    (provenance.sourceKind == null || provenance.sourceKind === "live") &&
+    isPegScoreExcludedAuditVerdict(provenance.auditVerdict) &&
+    provenance.confidenceTier == null &&
+    provenance.pegScoreEligible !== true &&
+    provenance.updatedAt != null &&
+    provenance.updatedAt <= clockSec &&
+    provenance.replayRunId == null &&
+    provenance.replayVersion == null &&
+    provenance.sourcePriceProviders == null &&
+    provenance.quoteMode == null &&
+    provenance.pegReferenceSource == null &&
+    provenance.supplySource == null &&
+    provenance.confirmationPolicy == null &&
+    provenance.confirmationPointCount == null
+  ) {
+    return;
+  }
+
   if (
     provenance.confidenceTier == null ||
     provenance.auditVerdict == null ||

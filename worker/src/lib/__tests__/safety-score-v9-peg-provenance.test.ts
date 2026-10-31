@@ -157,6 +157,39 @@ describe("Safety Score V9 peg provenance", () => {
     ]);
   });
 
+  it("accepts the erratum's verdict-only quarantine of a live event as audit-excluded", () => {
+    // docs/runbooks/depeg-artifact-removal.md: the input-corruption erratum
+    // records only an excluding audit verdict on a live event that had no
+    // replay provenance (production 2026-10-30, CEUR 90775 and three others).
+    const quarantined = event({
+      id: 51,
+      startedAt: CLOCK_SEC - 10 * DAY_SEC,
+      peakDeviationBps: -900,
+      source: "live",
+      provenance: { sourceKind: "live", auditVerdict: "disputed", updatedAt: CLOCK_SEC - DAY_SEC },
+    });
+
+    const summary = build([quarantined]);
+
+    expect(summary.classes["audit-excluded"].eventCount).toBe(1);
+    expect(summary.legacyInclusive.result.scoredEventCount).toBe(0);
+  });
+
+  it.each([
+    { label: "a non-excluding verdict", source: "live" as const, auditVerdict: "confirmed" as const },
+    { label: "a backfill event", source: "backfill" as const, auditVerdict: "disputed" as const },
+  ])("still rejects verdict-only provenance on $label", ({ source, auditVerdict }) => {
+    const partial = event({
+      id: 52,
+      startedAt: CLOCK_SEC - 10 * DAY_SEC,
+      peakDeviationBps: -900,
+      source,
+      provenance: { sourceKind: source, auditVerdict, updatedAt: CLOCK_SEC - DAY_SEC },
+    });
+
+    expect(() => build([partial])).toThrow(/partial provenance/);
+  });
+
   it("canonicalizes event and provider ordering while content-binding material changes", () => {
     const first = event({
       id: 11,
