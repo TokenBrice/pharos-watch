@@ -2,6 +2,8 @@ import Link from "next/link";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { DEPEG_ARCHIVE_RETIRED_BADGE, DEPEG_AUDIT_DISPUTED_BADGE } from "@shared/lib/classification";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
+import { isRetiredFromCatalog } from "@shared/lib/stablecoin-lifecycle";
+import { TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import {
   DEPEG_EVENT_ENTRIES,
@@ -66,7 +68,7 @@ function ArchiveMonthGroups({
                     <span className="font-semibold text-foreground">
                       {event.symbol}
                     </span>
-                    {event.retired === true ? (
+                    {event.retired === true || isRetiredFromCatalog(event.stablecoinId, TRACKED_IDS) ? (
                       <span className={`${AUDIT_BADGE_CLASS} ${DEPEG_ARCHIVE_RETIRED_BADGE.className}`}>
                         {DEPEG_ARCHIVE_RETIRED_BADGE.label}
                       </span>

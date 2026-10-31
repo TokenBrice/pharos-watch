@@ -23,7 +23,7 @@ const { EVENTS } = vi.hoisted(() => {
       { ...base, id: 5, slug: "repaired-event", symbol: "RUSD", peakDeviationBps: 3_000, startedAt: 1_784_000_000, provenance: { auditVerdict: "repaired" as const } },
       { ...base, id: 6, slug: "legacy-event", symbol: "USDT", peakDeviationBps: 1_500, startedAt: 1_784_000_000, provenance: null },
       { ...base, id: 7, slug: "unattributed-event", symbol: "GYD", peakDeviationBps: 1_500, startedAt: 1_784_000_000 },
-      { ...base, id: 8, slug: "retired-event", stablecoinId: "bean-beanstalk", symbol: "BEAN", peakDeviationBps: 2_400, startedAt: 1_784_000_000, retired: true as const },
+      { ...base, id: 8, slug: "retired-event", stablecoinId: "bean-beanstalk", symbol: "BEAN", peakDeviationBps: 2_400, startedAt: 1_784_000_000 },
       { ...base, id: 9, slug: "catalog-event", symbol: "USDC", peakDeviationBps: 1_100, startedAt: 1_784_000_000 },
     ] satisfies readonly DepegEventEntry[],
   };
