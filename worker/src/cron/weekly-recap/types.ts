@@ -69,7 +69,10 @@ export interface WeeklyInputData {
   /** Scheduled half-open event periods, independent of available edition dates. */
   gradeTransitionPeriods?: { current: DigestEventPeriod; prior: DigestEventPeriod };
   safetyContext?: DigestSafetyContext;
+  /** Persisted provenance: sources degraded in either the current or prior window. */
   degradedSources?: string[];
+  /** Current-window degradation only; the prompt's "this week" claims use these. */
+  degradedSourcesThisWeek?: string[];
   dailyDigests: { date: string; title: string; text: string; inputData: DigestInputData }[];
   psiRange: {
     min: number;

@@ -890,10 +890,15 @@ export function buildWeeklyInputData(
     outcomeCounts.hit + outcomeCounts.missed + outcomeCounts.pending + outcomeCounts.expired + outcomeCounts.unavailable > 0
       ? outcomeCounts
       : null;
-  const degradedSources = [
+  // Only current-window reads can support a "this week" claim; prior-window
+  // degradation stays in the persisted union as provenance of the comparison.
+  const degradedSourcesThisWeek = [
     ...currentParsed.degradedSources,
-    ...prior.degradedSources,
     ...parsed.flatMap((day) => day.inputData.degradedSources ?? []),
+  ];
+  const degradedSources = [
+    ...degradedSourcesThisWeek,
+    ...prior.degradedSources,
     ...priorParsed.flatMap((day) => day.inputData.degradedSources ?? []),
   ];
 
@@ -904,6 +909,9 @@ export function buildWeeklyInputData(
     ...(gradeTransitionPeriods ? { gradeTransitionPeriods } : {}),
     ...(safetyContext ? { safetyContext } : {}),
     ...(degradedSources.length > 0 ? { degradedSources: [...new Set(degradedSources)] } : {}),
+    ...(degradedSourcesThisWeek.length > 0
+      ? { degradedSourcesThisWeek: [...new Set(degradedSourcesThisWeek)] }
+      : {}),
     dailyDigests: parsed,
     psiRange: {
       min: Math.min(...psiScores),
