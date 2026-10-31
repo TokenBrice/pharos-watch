@@ -460,16 +460,16 @@ function assertEventProvenance(event: CanonicalPegEvent, clockSec: number): void
 
   // The input-corruption erratum (docs/runbooks/depeg-artifact-removal.md)
   // quarantines a live event that had no replay provenance by recording only an
-  // excluding audit verdict. That is complete audit evidence, not partial
-  // provenance: the event classifies as audit-excluded and has no tier.
+  // excluding audit verdict; its public provenance is exactly
+  // `{"auditVerdict":"disputed"}`, with no clock. That is complete audit
+  // evidence, not partial provenance: the event classifies as audit-excluded.
   if (
     event.source === "live" &&
     (provenance.sourceKind == null || provenance.sourceKind === "live") &&
     isPegScoreExcludedAuditVerdict(provenance.auditVerdict) &&
     provenance.confidenceTier == null &&
     provenance.pegScoreEligible !== true &&
-    provenance.updatedAt != null &&
-    provenance.updatedAt <= clockSec &&
+    (provenance.updatedAt == null || provenance.updatedAt <= clockSec) &&
     provenance.replayRunId == null &&
     provenance.replayVersion == null &&
     provenance.sourcePriceProviders == null &&
