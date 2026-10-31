@@ -107,13 +107,21 @@ function assertNativeOpening({
   expectedBps,
   expectedReason,
   expectSeenEventIds = false,
+  dexCorroboration,
 }: {
   circulating: Record<string, number>;
   nativePrice: number;
   expectedBps: number;
   expectedReason: string;
   expectSeenEventIds?: boolean;
+  dexCorroboration?: { price: number; tvl: number };
 }) {
+  const protocolSources = dexCorroboration
+    ? [
+        { protocol: "curve", chain: "ethereum", sourceFamily: "curve", price: dexCorroboration.price, tvl: dexCorroboration.tvl, updatedAt: 1_750_000_000 - 60 },
+        { protocol: "uniswap-v3", chain: "ethereum", sourceFamily: "uniswap-v3", price: dexCorroboration.price, tvl: dexCorroboration.tvl, updatedAt: 1_750_000_000 - 60 },
+      ]
+    : undefined;
   const decision = decideDepegAsset({
     now: 1_750_000_000,
     asset: makeAsset({
@@ -129,6 +137,17 @@ function assertNativeOpening({
     pegRates: { peggedREAL: 0.191895 },
     pegRateSources: { peggedREAL: "median" },
     pegRateCounts: { peggedREAL: 3 },
+    dexRow: dexCorroboration
+      ? {
+          stablecoin_id: "brz-transfero",
+          dex_price_usd: dexCorroboration.price,
+          deviation_from_primary_bps: null,
+          source_pool_count: 2,
+          source_total_tvl: dexCorroboration.tvl,
+          updated_at: 1_750_000_000 - 60,
+        }
+      : undefined,
+    protocolSources,
     nativePegQuote: {
       stablecoinId: "brz-transfero",
       geckoId: "brz",
@@ -535,14 +554,93 @@ describe("decideDepegAsset", () => {
     });
   });
 
-  it("routes extreme native-peg openings to pending confirmation", () => {
+  it("routes extreme native-peg openings to pending confirmation when independent DEX protocols corroborate", () => {
     assertNativeOpening({
       circulating: { gnosis: 22_000_000 },
       nativePrice: 0.2,
       expectedBps: -8000,
       expectedReason: "confirmation-window+extreme-move+native-origin",
       expectSeenEventIds: true,
+      dexCorroboration: { price: 0.038379, tvl: 2_500_000 },
     });
+  });
+
+  it("withholds an uncorroborated extreme native-peg opening as unavailable evidence", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.191187,
+        priceSource: "coingecko",
+        priceUpdatedAt: 1_750_000_000 - 60,
+        pegType: "peggedREAL",
+        circulating: { gnosis: 22_000_000 },
+      }),
+      meta: brlMeta,
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.2,
+        updatedAt: 1_750_000_000 - 60,
+      },
+    });
+
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([{
+      level: "warn",
+      message: "[depeg] Withheld implausible BRL native quote for BRZ: reason=native-quote-extreme-move",
+    }]);
+  });
+
+  it("withholds an above-peg native quote instead of opening a pending row", () => {
+    const eurMeta: StablecoinMeta = {
+      id: "ceur-celo",
+      name: "Celo EUR",
+      symbol: "EURm",
+      flags: {
+        backing: "rwa-backed",
+        pegCurrency: "EUR",
+        governance: "centralized",
+        yieldBearing: false,
+        rwa: true,
+        navToken: false,
+      },
+      geckoId: "celo-euro",
+    };
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        id: "ceur-celo",
+        symbol: "EURm",
+        price: 1.16,
+        priceSource: "coingecko",
+        priceUpdatedAt: 1_750_000_000 - 60,
+        pegType: "peggedEUR",
+        circulating: { celo: 22_000_000 },
+      }),
+      meta: eurMeta,
+      pegRates: { peggedEUR: 1.16 },
+      pegRateSources: { peggedEUR: "fx" },
+      pegRateCounts: { peggedEUR: 4 },
+      nativePegQuote: {
+        stablecoinId: "ceur-celo",
+        geckoId: "celo-euro",
+        pegCurrency: "EUR",
+        price: 2.598389348610164,
+        updatedAt: 1_750_000_000 - 60,
+      },
+    });
+
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([{
+      level: "warn",
+      message: "[depeg] Withheld implausible EUR native quote for EURm: reason=native-quote-above-peg-reference-band",
+    }]);
   });
 
   it("keeps an existing event open when the native quote still supports it", () => {

@@ -23,6 +23,7 @@ import {
   classifyDirectionalSignal,
   deriveDepegSignal,
   pickMoreSevereBps,
+  signalsShareDirection,
   type DepegSignal,
 } from "@shared/lib/depeg-signals";
 import type {
@@ -30,6 +31,10 @@ import type {
   PendingDepegState,
 } from "../lib/depeg-pending";
 import { normalizeSupportedPegCurrency, type NativePegQuote } from "../lib/native-peg-quotes";
+import {
+  classifyNativeQuoteImplausibility,
+  type NativeQuoteImplausibility,
+} from "../lib/native-quote-plausibility";
 
 const CONFIRMATION_TIMESTAMP_FUTURE_SKEW_SEC = 5 * 60;
 const DEPEG_PENDING_EXTENDED_EXPIRY_SEC = DEPEG_PENDING_EXPIRY_SEC * 3;
@@ -125,6 +130,8 @@ export interface ConfirmationPlanReady {
   threshold: number;
   nativeSignal: DepegSignal | null;
   nativePegQuote: NativePegQuote | undefined;
+  /** Machine reason a native sample was withheld from this run's admission. */
+  nativeQuoteImplausibility: NativeQuoteImplausibility | null;
   nativeSourceKey: string;
   authoritativePrice: number | null;
   primaryStatus: DirectionalSignalStatus;
@@ -390,26 +397,16 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
 
   const threshold = getDepegThresholdBps(pegType ?? row.peg_type);
   const primaryTrust = asset ? classifyPrimaryDepegTrust(asset, now) : "unusable";
-  const nativeSignal = nativePegQuote ? deriveDepegSignal(nativePegQuote.price, 1) : null;
-  const nativeStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);
-  const nativePegRecovered = nativeStatus === "recover";
-  const nativePegStillDepegged = nativeStatus === "confirm";
+  const rawNativeSignal = nativePegQuote ? deriveDepegSignal(nativePegQuote.price, 1) : null;
+  const rawNativeStatus = classifyDirectionalSignal(rawNativeSignal, threshold, pendingState.direction);
   const confirmingSources: string[] = [];
   const opposingSources: string[] = [];
   const unavailableSources: string[] = [];
   const circuitOpenSources: string[] = [];
   const hardOpposingSources: string[] = [];
   const nativeSourceKey = buildNativeConfirmationKey(nativePegQuote?.pegCurrency ?? meta?.flags.pegCurrency);
-  if (nativeSignal != null && !isNativeOrigin) {
-    if (isOpposingConfirmationStatus(nativeStatus)) {
-      addSource(opposingSources, nativeSourceKey);
-      addSource(hardOpposingSources, nativeSourceKey);
-    }
-  } else if (nativeSignal == null && expectsNativePegQuote(meta)) {
-    addSource(unavailableSources, buildNativeConfirmationKey(meta?.flags.pegCurrency));
-  }
 
-  const authoritativePrice = isNativeOrigin
+  const authoritativePriceCandidate = isNativeOrigin
     ? nativePegQuote?.price ?? null
     : asset != null &&
         primaryTrust === "authoritative" &&
@@ -434,7 +431,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     independentPrimaryFamilies.size > 0
       ? asset.price / refreshedPegRef
       : null;
-  const primarySignalPrice = isNativeOrigin ? normalizedNativePrimaryPrice : authoritativePrice;
+  const primarySignalPrice = isNativeOrigin ? normalizedNativePrimaryPrice : authoritativePriceCandidate;
   const currentPrimarySignal =
     primarySignalPrice != null
       ? deriveDepegSignal(primarySignalPrice, pegReference)
@@ -456,6 +453,72 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
       [...independentPrimaryFamilies].sort().map((family) => `primary:${family}`),
     );
   }
+
+  // A stored native sample and this run's native quote both pass the same
+  // plausibility bound. An extreme sample may stand only when an independent
+  // family shows its own extreme move in the same direction.
+  const storedNativeImplausibility = isNativeOrigin
+    ? [
+        classifyNativeQuoteImplausibility({
+          price: pendingState.firstPrice,
+          stablecoinId: row.stablecoin_id,
+          pegType: row.peg_type,
+        }),
+        classifyNativeQuoteImplausibility({
+          price: pendingState.peakPrice,
+          stablecoinId: row.stablecoin_id,
+          pegType: row.peg_type,
+        }),
+      ].find((value) => value != null) ?? null
+    : null;
+  const freshNativeImplausibility = nativePegQuote
+    ? classifyNativeQuoteImplausibility({
+        price: nativePegQuote.price,
+        stablecoinId: row.stablecoin_id,
+        pegCurrency: nativePegQuote.pegCurrency,
+        pegType: row.peg_type,
+      })
+    : null;
+  const nativeImplausibilities = [storedNativeImplausibility, freshNativeImplausibility]
+    .filter((value): value is NativeQuoteImplausibility => value != null);
+  const independentNativeImplausibility =
+    normalizedNativePrimaryPrice != null
+      ? classifyNativeQuoteImplausibility({
+          price: normalizedNativePrimaryPrice,
+          stablecoinId: row.stablecoin_id,
+          pegType: row.peg_type,
+        })
+      : null;
+  const nativeQuoteCorroborated =
+    nativeImplausibilities.length > 0 &&
+    nativeImplausibilities.every((value) => value.corroborationCanAdmit) &&
+    independentNativeImplausibility?.corroborationCanAdmit === true &&
+    currentPrimarySignal != null &&
+    signalsShareDirection(currentPrimarySignal, pendingState.direction) &&
+    (rawNativeSignal == null || signalsShareDirection(rawNativeSignal, pendingState.direction));
+  const nativeQuoteImplausibility =
+    nativeImplausibilities.length > 0 && !nativeQuoteCorroborated
+      ? nativeImplausibilities.find((value) => !value.corroborationCanAdmit) ?? nativeImplausibilities[0]!
+      : null;
+  const nativeSignal = nativeQuoteImplausibility == null ? rawNativeSignal : null;
+  const admittedNativePegQuote = nativeQuoteImplausibility == null ? nativePegQuote : undefined;
+  const authoritativePrice = isNativeOrigin
+    ? admittedNativePegQuote?.price ?? null
+    : authoritativePriceCandidate;
+  const nativePegStillDepegged = nativeSignal != null && rawNativeStatus === "confirm";
+  const nativePegRecovered = nativeSignal != null && rawNativeStatus === "recover";
+
+  if (nativeQuoteImplausibility != null) {
+    addSource(unavailableSources, `${nativeSourceKey}:${nativeQuoteImplausibility.reason}`);
+  } else if (nativeSignal != null && !isNativeOrigin) {
+    if (isOpposingConfirmationStatus(rawNativeStatus)) {
+      addSource(opposingSources, nativeSourceKey);
+      addSource(hardOpposingSources, nativeSourceKey);
+    }
+  } else if (nativeSignal == null && expectsNativePegQuote(meta)) {
+    addSource(unavailableSources, buildNativeConfirmationKey(meta?.flags.pegCurrency));
+  }
+
   const temporalSameDirectionConfirmed =
     pendingState.lastSeenAt - pendingState.firstSeenAt >= DEPEG_PENDING_MIN_AGE_SEC &&
     now - pendingState.lastSeenAt <= DEPEG_PENDING_MIN_AGE_SEC &&
@@ -495,7 +558,7 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     };
   }
 
-  if (currentPrimaryStatus === "recover" && !nativePegStillDepegged) {
+  if (currentPrimaryStatus === "recover" && !nativePegStillDepegged && !(isNativeOrigin && nativeQuoteImplausibility != null)) {
     addSource(opposingSources, "primary:authoritative");
     logWorkerEventArgs("handler", "info",
       `[depeg-confirm] Cleared pending for ${row.symbol}: authoritative primary recovered to ${currentPrimarySignal?.absBps ?? "n/a"}bps`,
@@ -529,7 +592,8 @@ export function buildConfirmationPlan(input: ConfirmationPlanInput): Confirmatio
     pegReference,
     threshold,
     nativeSignal,
-    nativePegQuote,
+    nativePegQuote: admittedNativePegQuote,
+    nativeQuoteImplausibility,
     nativeSourceKey,
     authoritativePrice,
     primaryStatus: currentPrimaryStatus,

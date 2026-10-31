@@ -20,6 +20,10 @@ import {
   type DepegSignal,
 } from "@shared/lib/depeg-signals";
 import type { PendingDepegState } from "../lib/depeg-pending";
+import {
+  classifyNativeQuoteImplausibility,
+  type NativeQuoteImplausibility,
+} from "../lib/native-quote-plausibility";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { logWorkerEvent } from "../lib/structured-log";
 import { CoinGeckoSimplePriceEntrySchema, CoinGeckoSimplePriceSchema } from "../lib/upstream-schemas";
@@ -211,6 +215,7 @@ export async function collectConfirmationEvidence(
     threshold,
     nativeSignal,
     nativePegQuote: suppliedNativePegQuote,
+    nativeQuoteImplausibility: plannedNativeQuoteImplausibility,
     nativeSourceKey,
     dexPriceRows,
     dexPriceSources,
@@ -243,7 +248,21 @@ export async function collectConfirmationEvidence(
   const geckoId = meta?.geckoId;
   const isNativeOrigin = isNativeOriginPending(pendingState.reason);
   const nativePegQuote = isNativeQuoteForPending(row, suppliedNativePegQuote) ? suppliedNativePegQuote : undefined;
-  if (nativeSignal != null && nativePegQuote != null && !isNativeOrigin) {
+  const nativeQuoteImplausibility: NativeQuoteImplausibility | null =
+    plannedNativeQuoteImplausibility ??
+    (!isNativeOrigin && nativePegQuote
+      ? classifyNativeQuoteImplausibility({
+          price: nativePegQuote.price,
+          stablecoinId: row.stablecoin_id,
+          pegCurrency: nativePegQuote.pegCurrency,
+          pegType: row.peg_type,
+        })
+      : null);
+  if (nativeQuoteImplausibility != null) {
+    // A withheld sample is unavailable evidence, not a confirmer, opposer or
+    // recovery; the plan already recorded its machine-readable reason.
+    addSource(evidence.unavailableSources, `${nativeSourceKey}:${nativeQuoteImplausibility.reason}`);
+  } else if (nativeSignal != null && nativePegQuote != null && !isNativeOrigin) {
     evidence.offchainStatus = classifyDirectionalSignal(nativeSignal, threshold, pendingState.direction);
     evidence.offchainSourceKey = nativeSourceKey;
     if (evidence.offchainStatus === "confirm") {

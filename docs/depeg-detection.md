@@ -140,7 +140,7 @@ Both calls are in `worker/src/cron/sync-stablecoins/post-enrichment.ts` (invoked
 
 Each stage returns `completed` or a typed `held` result. Reaching `MAX_OPEN_DEPEG_EVENTS` in a bounded open-event read returns `held` with `depeg-open-event-limit-reached`; initial detection and confirmation holds leave event/pending mutations untouched, while the later orphan-cleanup guard skips only its own mutations. A hold is not a thrown error and does not increment `depegErrorCount`. On both main and fallback publication paths, it sets sync `status = "degraded"`, `metadata.reason` and `depegHeldReason` to that reason, and `depegPipelineSucceeded` / `capabilities.depegPipeline` to false. Stablecoin cache publication remains independent. DDR therefore defers forecast locks with `depeg-pipeline-unhealthy`, rather than treating a fulfilled capacity-limited stage as healthy.
 
-Detection also records an observation census of PSI-eligible, non-NAV assets, including historical members that supply a row: each is counted as observed, unavailable or below the supply floor, and every gap carries a reason. Unavailable supply is not observed zero, and a completed run does not prove complete coverage. The census is diagnostic and does not change detection, confirmation or event writes.
+Detection also records an observation census of PSI-eligible, non-NAV assets, including historical members that supply a row: each is counted as observed, unavailable or below the supply floor, and every gap carries a reason (`native-quote-implausible` for an open native-domain row whose native quote was withheld). Unavailable supply is not observed zero, and a completed run does not prove complete coverage. The census is diagnostic and does not change detection, confirmation or event writes.
 
 The API layer reuses this event dataset through `worker/src/lib/peg-analytics.ts` (`derivePegAnalyticsSnapshot()`), which builds shared `eventsByCoin` and `pegDataById` maps. The charts lane writes the producer-published `peg-analytics` D1 cache row every 30 minutes: the hourly, DEX-publication-triggered `prepare-safety-score-v9-input` job at `:16` (also the only writer of the exact V9 peg-provenance seed) and the same job's standalone refresh when it skips preparation at `:46`. `/api/peg-summary` accepts the analytics row for up to 30 minutes (one producer interval) and falls back to direct compute on a miss or stale/invalid row. `GET /api/report-cards/v9` reads only the separately accepted canonical V9 publication.
 
@@ -179,6 +179,7 @@ Validation gates (skip if any fail):
 - Non-USD fiat peg references use the live FX rate whenever it is available. A peer median is only a fallback when at least 3 live contributors remain; thin peer medians and empty live peer sets fail closed for that cycle
 - Floating `VAR`/`OTHER` pegs have no authoritative reference — their peer median is another coin's level, not a peg — so signal derivation fails closed and they cannot open or mutate live depeg state
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh native-currency quote before mutating live state; a native quote inside the recovery band or pointing the other way vetoes the derived USD/FX onset for that cycle, while a threshold-crossing native quote can initiate a pending candidate when the primary USD-vs-reference path is still inside threshold
+- Every live native-currency quote passes one plausibility bound against its own par (`classifyNativeQuoteImplausibility()` in `worker/src/lib/native-quote-plausibility.ts`, built on the primary price-validation reference band and `DEPEG_EXTREME_MOVE_BPS`). A quote outside that bound is withheld unless an independent source family (trusted DEX protocol groups in Stage 1, the normalized canonical family at confirmation) shows its own implausible move in the same direction. A withheld sample is unavailable evidence with a machine-readable reason: it cannot open a pending candidate, suppress the primary path, deepen a peak, or recover an event
 
 Primary-price trust gates:
 
@@ -260,6 +261,8 @@ Guards (delete pending + skip):
 Recovery checks run before the age gate. A fresh native quote strictly inside the full trigger threshold clears pending as `recovered`; authoritative primary recovery does likewise unless native evidence still confirms the pending direction. Ambiguous primary prices alone cannot clear a row. Native recovery evidence does not let a native-origin quote confirm its own promotion.
 
 Native-origin candidates keep their native quote as the event-price domain, but that quote cannot confirm itself. At confirmation time, Pharos normalizes the fresh canonical USD price through the authoritative FX reference and admits only source families outside CoinGecko. One such independent canonical family must agree with the native-domain direction and full threshold before promotion; an at-peg or opposite-direction normalized canonical reading rejects the candidate after the temporal window. Missing, stale, fallback, cached, or CoinGecko-only canonical evidence leaves the row pending rather than promoting it.
+
+A native quote, or a stored native-origin sample, that fails the same plausibility bound is recorded as unavailable evidence (`native:<currency>:<reason>`). It cannot confirm, oppose, promote, deepen or recover a candidate, and it suppresses this row's native confirmation read instead of opening a replacement fetch. An implausible stored sample cannot be closed as recovered from canonical pricing; an independent family must show its own implausible move in the same direction before an extreme native sample can stand.
 
 Age checks:
 
@@ -539,6 +542,7 @@ Detection contributes eligible episodes, observed price intervals and audit prov
 | DEX freshness | Prices > 75 min old ignored |
 | Orphaned events | Closed with `close_reason = 'orphan-tracking-removed'` and `recovery_price = NULL` when coin drops off tracking |
 | Non-USD threshold | 150bps accounts for FX noise and thin liquidity |
+| Implausible native-currency quote | Withheld as unavailable evidence (`native-quote-above-peg-reference-band`, `native-quote-extreme-move`, or `native-quote-invalid`); an independent family must show its own implausible move in the same direction to admit it. It never opens, confirms, deepens or recovers an event |
 
 ### Trusted-price coverage and unresolved legacy spans (6.31)
 

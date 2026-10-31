@@ -10,6 +10,7 @@ import {
   buildPendingReason,
   countDexProtocolCorroborations,
   dexPoolIndependentGroupKey,
+  dexProtocolGroupKey,
   markNativeOriginPending,
   rowPriceCoverage,
   type DepegRow,
@@ -17,6 +18,10 @@ import {
   type PendingDepegReason,
   type PendingDepegReasonFlag,
 } from "../../lib/depeg-helpers";
+import {
+  classifyNativeQuoteImplausibility,
+  type NativeQuoteImplausibility,
+} from "../../lib/native-quote-plausibility";
 import {
   classifyPrimaryDepegTrust,
   hasFreshMultiSourcePrimaryAgreement,
@@ -82,6 +87,8 @@ interface DecisionContext {
   nativeSignal: DepegSignal | null;
   nativePegPrice: number | null;
   nativePegCurrency: string | undefined;
+  /** Set when this run's native quote was withheld from admission. */
+  nativeQuoteImplausibility: NativeQuoteImplausibility | null;
 }
 
 const DEPEG_CONFIRMATION_SOFT_SUPPLY_THRESHOLD = DEPEG_CONFIRMATION_SUPPLY_THRESHOLD * 0.75;
@@ -304,6 +311,48 @@ function deriveDexEvidence(params: {
   };
 }
 
+/**
+ * An implausible native quote may still stand when independent DEX protocols
+ * show their own implausible move in the same direction. DEX prices are USD but
+ * deviations are scale-invariant against the admitted peg reference, so each
+ * source can be re-expressed in native units and classified by the same bound.
+ */
+function dexCorroboratesNativeImplausibleMove(params: {
+  input: DepegAssetDecisionInput;
+  pegRef: number;
+  direction: DepegDirection;
+  now: number;
+  stablecoinId: string;
+  pegType: string | undefined;
+}): boolean {
+  const { input, pegRef, direction, now, stablecoinId, pegType } = params;
+  if (input.dexRow == null || !isTrustedDexPriceRow(input.dexRow, now, "depeg")) return false;
+  const classifyNative = (price: number) =>
+    classifyNativeQuoteImplausibility({ price, stablecoinId, pegType });
+  const aggregateNativePrice = input.dexRow.dex_price_usd / pegRef;
+  const aggregateSignal = deriveDepegSignal(aggregateNativePrice, 1);
+  if (
+    classifyNative(aggregateNativePrice)?.corroborationCanAdmit !== true ||
+    aggregateSignal == null ||
+    !signalsShareDirection(aggregateSignal, direction)
+  ) {
+    return false;
+  }
+  const groups = new Set<string>();
+  for (const source of input.protocolSources ?? []) {
+    const nativePrice = source.price / pegRef;
+    const signal = deriveDepegSignal(nativePrice, 1);
+    if (
+      classifyNative(nativePrice)?.corroborationCanAdmit === true &&
+      signal != null &&
+      signalsShareDirection(signal, direction)
+    ) {
+      groups.add(dexProtocolGroupKey(source));
+    }
+  }
+  return groups.size >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
+}
+
 function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextDerivation {
   const { now, asset, meta, existing } = input;
   if (!meta) return { kind: "skip", decision: emptyDecision() };
@@ -388,7 +437,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   const rawAbsBps = primarySignal.absRawBps ?? absBps;
   const threshold = getDepegThresholdBps(asset.pegType);
   const recoveryThreshold = getDepegRecoveryThresholdBps(asset.pegType);
-  const nativeSignal = input.nativePegQuote ? deriveDepegSignal(input.nativePegQuote.price, 1) : null;
+  const rawNativeSignal = input.nativePegQuote ? deriveDepegSignal(input.nativePegQuote.price, 1) : null;
   const dexEvidence = deriveDexEvidence({ input, existing, now, pegRef, threshold, recoveryThreshold, direction });
   const {
     dexAbsBps,
@@ -405,6 +454,28 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     dexSupportsRecovery,
   } = dexEvidence;
   const sourceDepth = getPrimarySourceDepth(asset);
+  const nativeQuoteImplausibility = input.nativePegQuote
+    ? classifyNativeQuoteImplausibility({
+        price: input.nativePegQuote.price,
+        stablecoinId: trackedCoinId,
+        pegCurrency: meta.flags.pegCurrency,
+        pegType: asset.pegType,
+      })
+    : null;
+  const nativeQuoteCorroborated =
+    nativeQuoteImplausibility?.corroborationCanAdmit === true &&
+    rawNativeSignal != null &&
+    dexCorroboratesNativeImplausibleMove({
+      input,
+      pegRef,
+      direction: rawNativeSignal.direction,
+      now,
+      stablecoinId: trackedCoinId,
+      pegType: asset.pegType,
+    });
+  const withheldNativeQuote =
+    nativeQuoteImplausibility != null && !nativeQuoteCorroborated ? nativeQuoteImplausibility : null;
+  const nativeSignal = withheldNativeQuote == null ? rawNativeSignal : null;
   const tieredMarketCapRequiresConfirmation = requiresTieredMarketCapConfirmation({
     supply,
     sourceDepth,
@@ -453,8 +524,9 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       primarySupportsRecovery,
       pendingReason,
       nativeSignal,
-      nativePegPrice: input.nativePegQuote?.price ?? null,
+      nativePegPrice: nativeSignal == null ? null : input.nativePegQuote?.price ?? null,
       nativePegCurrency: input.nativePegQuote?.pegCurrency ?? meta.flags.pegCurrency,
+      nativeQuoteImplausibility: withheldNativeQuote,
     },
   };
 }
@@ -775,18 +847,31 @@ function withPriceCoverage(
   return decision;
 }
 
+function withheldNativeQuoteDiagnostic(ctx: DecisionContext): DepegDiagnostic | null {
+  if (ctx.nativeQuoteImplausibility == null) return null;
+  return withDiagnostic(
+    "warn",
+    `[depeg] Withheld implausible ${ctx.nativePegCurrency ?? "native"} native quote for ${ctx.asset.symbol}: ` +
+    `reason=${ctx.nativeQuoteImplausibility.reason}`,
+  );
+}
+
 export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDecision {
   const derived = deriveDecisionContext(input);
   if (derived.kind === "skip") return withPriceCoverage(derived.decision, input);
 
   const { ctx } = derived;
+  const withheldNativeDiagnostic = withheldNativeQuoteDiagnostic(ctx);
   if (input.existing && isNativePegEvent(input.existing) && ctx.nativeSignal == null) {
     return withPriceCoverage({
       trackedCoinId: ctx.trackedCoinId,
-      observation: { kind: "unavailable", reason: "native-quote-unavailable" },
+      observation: {
+        kind: "unavailable",
+        reason: ctx.nativeQuoteImplausibility != null ? "native-quote-implausible" : "native-quote-unavailable",
+      },
       seenEventIds: [input.existing.id],
       commands: [],
-      diagnostics: [],
+      diagnostics: withheldNativeDiagnostic ? [withheldNativeDiagnostic] : [],
     }, input);
   }
   // A usable context is an observation, not proof of recovery or of a trusted event.
@@ -797,7 +882,15 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
   const nativeVeto = input.existing != null && isNativePegEvent(input.existing)
     ? null
     : applyNativeQuoteVeto(ctx, input.existing);
-  if (nativeVeto) return withPriceCoverage({ ...nativeVeto, observation: observed }, input, ctx);
+  if (nativeVeto) {
+    return withPriceCoverage({
+      ...nativeVeto,
+      observation: observed,
+      diagnostics: withheldNativeDiagnostic
+        ? [withheldNativeDiagnostic, ...nativeVeto.diagnostics]
+        : nativeVeto.diagnostics,
+    }, input, ctx);
+  }
 
   const nativeOpening = input.existing ? null : decideNewNativePegDepeg(ctx);
   const existingSignal = input.existing && isNativePegEvent(input.existing)
@@ -824,7 +917,9 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
     observation: observed,
     seenEventIds: decision.seenEventIds,
     commands: decision.commands,
-    diagnostics: decision.diagnostics,
+    diagnostics: withheldNativeDiagnostic
+      ? [withheldNativeDiagnostic, ...decision.diagnostics]
+      : decision.diagnostics,
   }, input, ctx);
 }
 

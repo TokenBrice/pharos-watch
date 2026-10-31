@@ -24,7 +24,8 @@ export type DepegObservationGapReason =
   | "primary-unusable"
   | "supply-unavailable"
   | AuthoritativePegSignalRejectionReason
-  | "native-quote-unavailable";
+  | "native-quote-unavailable"
+  | "native-quote-implausible";
 
 export type DepegObservationOutcome =
   | { kind: "observed" }
