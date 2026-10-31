@@ -78,7 +78,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USDO has issuer-native deployments on Ethereum, Base, and BNB Smart Chain, with Chainlink CCIP BurnMintTokenPool 1.5.1 providing burn/mint transfer machinery across those native deployments and a provisional authored Plasma route. The Ethereum, Base, and BNB pools share issuer EOA owner 0x5eaff7af80488033bc845709806d5fae5291eb88; the Plasma pool has a separate owner and failure domain. CCIP token pools, peer/source-pool configuration, rate limits, and administrators are scored here rather than as native Mint Authority. The Plasma/Kaia identity remains unresolved, so the authored Plasma route is retained unchanged pending authoritative mapping.",
+    "summary": "USDO has issuer-native deployments on Ethereum, Base, BNB Smart Chain, and Kaia, with Chainlink CCIP BurnMintTokenPool 1.5.1 providing burn/mint transfer machinery across those native deployments and a provisional authored Plasma route. The Ethereum, Base, and BNB pools share issuer EOA owner 0x5eaff7af80488033bc845709806d5fae5291eb88; the Kaia pool is owned by a separate 3-of-4 Safe and the Plasma pool has a separate owner and failure domain. CCIP token pools, peer/source-pool configuration, rate limits, and administrators are scored here rather than as native Mint Authority. The Kaia USDO proxy 0x87e617c7484ade79fcd90db58beb82b057facb48 is the live issuer token; the issuer registry's Kaia V2 row 0xc59d97ffd10deec45aecb09011b193e7aeac3d6b names that proxy's UUPS implementation, not a second migrated token, and the Plasma deployment remains a distinct proxy with implementation 0x500d4882938020e939a5666c1b4200873da7efd3, so both routes are retained.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration FIX2-06",
     "confidence": "manual-review",
@@ -190,6 +190,51 @@
           {
             "label": "Chainlink USDO CCIP directory",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          }
+        ]
+      },
+      {
+        "id": "klaytn:0x87e617c7484ade79fcd90db58beb82b057facb48",
+        "destinationChain": "klaytn",
+        "contractAddress": "0x87e617c7484ade79fcd90db58beb82b057facb48",
+        "protocol": "USDO (OpenEden native issuance on Kaia)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Verified 2026-10-31: OpenEden's contract registry identifies this address as Kaia USDO with 18 decimals; KaiaScan indexes it as OpenEden Open Dollar/USDO with transfer history, and GeckoTerminal's Kaia token endpoint reports 106.316717542494 USDO total supply. The Chainlink CCIP API and directory map the Kaia BurnMint pool 0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018 to this exact token. At Kaia block 230340031 the proxy's EIP-1967 implementation was read as 0xc59d97ffd10deec45aecb09011b193e7aeac3d6b, the address named by the issuer GitHub registry's Kaia V2 row; direct calls to that implementation return an empty symbol, so it is not a second migrated token, and the live proxy remains 0x87e617c7484ade79fcd90db58beb82b057facb48. The local CCIP BurnMintTokenPool 1.5.1 remains bridge machinery reviewed in structured controls and does not change native issuance classification.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-31",
+        "sources": [
+          {
+            "label": "OpenEden USDO contract registry",
+            "url": "https://docs.openeden.com/usdo/developers/contracts"
+          },
+          {
+            "label": "Kaia USDO token, transfer history and 18 decimals",
+            "url": "https://kaiascan.io/token/0x87e617c7484ade79fcd90db58beb82b057facb48"
+          },
+          {
+            "label": "Kaia USDO live total supply (2026-10-31)",
+            "url": "https://api.geckoterminal.com/api/v2/networks/kaia/tokens/0x87e617c7484ade79fcd90db58beb82b057facb48"
+          },
+          {
+            "label": "Chainlink USDO CCIP token directory: Kaia token and BurnMint pool (2026-10-31)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          },
+          {
+            "label": "Chainlink CCIP token API: Kaia chain 8217 token 0x87e617..., pool 0x05f8..., 18 decimals (2026-10-31)",
+            "url": "https://docs.chain.link/api/ccip/v1/tokens?environment=mainnet&token_id=USDO"
+          },
+          {
+            "label": "OpenEden Kaia V2 registry row names the proxy's UUPS implementation",
+            "url": "https://raw.githubusercontent.com/OpenEdenHQ/openeden.usdoexpress.audit/main/deployed-addresses.md"
+          },
+          {
+            "label": "Kaia USDO proxy implementation read at block 230340031",
+            "url": "https://public-en.node.kaia.io"
           }
         ]
       },
@@ -384,6 +429,106 @@
           }
         ],
         "evidence": "At BNB block 116350256, pool 0x500d4882938020e939a5666c1b4200873da7efd3 reports owner 0x5eaff7af80488033bc845709806d5fae5291eb88, typeAndVersion USDO BurnMintTokenPool 1.5.1, and local token 0x302e52aff9815b9d1682473dbfb9c74f9b750aa8. The pool's MINTER_ROLE read at block 116351527 is a CCIP bridge role; it is not counted as native issuer authority."
+      },
+      {
+        "id": "usdo-kaia-ccip-pool",
+        "label": "USDO Kaia BurnMintTokenPool 1.5.1",
+        "routeRefs": [
+          "klaytn:0x87e617c7484ade79fcd90db58beb82b057facb48"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
+        "controllerChain": "klaytn",
+        "controllerAddress": "0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018",
+        "failureDomainKeys": [
+          "protocol:chainlink-ccip",
+          "contract:klaytn:0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018",
+          "router:klaytn:0x4eb2a60af37bc6bb05500f581c00e8ea3075f6e9"
+        ],
+        "authorityType": "contract",
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Kaia pool exposes CCIP supported-chain and remote-pool configuration; exact current per-lane remote mappings were not independently enumerated at the observation block.",
+          "rateLimits": "The CCIP pool exposes inbound and outbound rate-limit administration; the owner Safe can change the configured bridge bounds.",
+          "pausersAdminsUpgraders": "Pool owner() is the separate 3-of-4 Safe 0x19902b456e57224aecbe9ad8827cff50a05b73ae. The same token-level MINTER_ROLE is bridge-only here and does not create an independent native issuer path.",
+          "onchainAmountBounds": "Chainlink CCT burn/mint semantics validate the cross-chain message and source-pool path, then mint or release the destination amount against source burn/lock accounting; this is bridge machinery rather than independent native issuance."
+        },
+        "capDescription": "The pool performs CCIP burn/mint and exposes owner-controlled peer and rate-limit configuration; its token MINTER_ROLE is a conserved bridge return path.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "The separate 3-of-4 Safe owner can administer the CCIP pool and its rate limits; direct native minting is separately scoped to Mint Authority."
+        ],
+        "observedAt": "2026-10-21",
+        "observedBlock": 230340031,
+        "sources": [
+          {
+            "label": "Kaia USDO BurnMintTokenPool",
+            "url": "https://kaiascan.io/address/0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018"
+          },
+          {
+            "label": "Chainlink USDO CCIP directory: Kaia token and pool (2026-10-31)",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/USDO"
+          },
+          {
+            "label": "Kaia official JSON-RPC",
+            "url": "https://public-en.node.kaia.io"
+          },
+          {
+            "label": "Chainlink CCT overview",
+            "url": "https://docs.chain.link/ccip/concepts/cross-chain-token/overview"
+          }
+        ],
+        "evidence": "At Kaia block 226390775, directory-listed pool 0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018 returned getToken() = 0x87e617c7484ade79fcd90db58beb82b057facb48, typeAndVersion() = USDO BurnMintTokenPool 1.5.1, owner() = 0x19902b456e57224aecbe9ad8827cff50a05b73ae, and getRouter() = 0x4eb2a60af37bc6bb05500f581c00e8ea3075f6e9. Follow-up at block 230340031 (2026-10-21T00:34:18Z) confirms the owner is a 3-of-4 Safe, getRmnProxy() returns direct RMN 0x0a8b976cc612586b9b0c8e3a6690a599391b9f00, and isCursed() is false. Chainlink's CCIP API and directory still map Kaia to this pool and token on 2026-10-31. The pool's token MINTER_ROLE is a CCIP bridge role; it is not counted as native issuer authority."
+      },
+      {
+        "id": "usdo-kaia-ccip-pool-owner",
+        "label": "USDO Kaia BurnMintTokenPool owner Safe",
+        "routeRefs": [
+          "klaytn:0x87e617c7484ade79fcd90db58beb82b057facb48"
+        ],
+        "capabilities": [
+          "admin",
+          "rate-limit",
+          "peer-config"
+        ],
+        "controllerChain": "klaytn",
+        "controllerAddress": "0x19902b456e57224aecbe9ad8827cff50a05b73ae",
+        "failureDomainKeys": [
+          "safe:klaytn:0x19902b456e57224aecbe9ad8827cff50a05b73ae"
+        ],
+        "authorityType": "safe",
+        "threshold": 3,
+        "signerCount": 4,
+        "modulesOrGuardsStatus": "none-detected",
+        "routeChecks": {
+          "trustedPeerOrRemote": "The Kaia pool owner Safe can change supported-chain and remote-pool configuration; exact current per-lane mappings were not independently enumerated.",
+          "rateLimits": "The Kaia pool owner Safe can administer inbound and outbound CCIP rate-limit configuration and can widen or remove the configured bridge bounds.",
+          "pausersAdminsUpgraders": "At the follow-up pool read, owner() is the 3-of-4 Safe 0x19902b456e57224aecbe9ad8827cff50a05b73ae. This owner control is distinct from the pool contract that holds the token bridge mint/burn roles."
+        },
+        "capDescription": "The pool owner Safe administers bridge route configuration and rate limits; it is not the controller of the pool contract's token MINTER_ROLE.",
+        "canRaiseCap": "unknown",
+        "bypassSurfaces": [
+          "The separate owner Safe can change route configuration and rate limits but does not itself hold the token MINTER_ROLE."
+        ],
+        "observedAt": "2026-10-21",
+        "observedBlock": 230340031,
+        "sources": [
+          {
+            "label": "Kaia USDO BurnMintTokenPool",
+            "url": "https://kaiascan.io/address/0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018"
+          },
+          {
+            "label": "Exact Kaia owner Safe singleton verified source and runtime (retrieved 2026-10-21)",
+            "url": "https://sourcify.dev/server/v2/contract/8217/0xfb1bffc9d739b8d520daf37df666da4c687191ea?fields=all"
+          },
+          {
+            "label": "Kaia official JSON-RPC",
+            "url": "https://public-en.node.kaia.io"
+          }
+        ],
+        "evidence": "At Kaia block 230340031 (2026-10-21T00:34:18Z), pool 0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018 owner() returned 0x19902b456e57224aecbe9ad8827cff50a05b73ae, a 3-of-4 Safe whose singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea has a pinned runtime that exactly matches exact-chain Sourcify source. Module pagination is empty with a terminal sentinel and the source-defined guard slot is zero. This does not attest signer independence, custody, or complete downstream execution scope."
       },
       {
         "id": "usdo-plasma-ccip-pool",

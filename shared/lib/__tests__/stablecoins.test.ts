@@ -1057,6 +1057,34 @@ describe("suspended live reserve feeds", () => {
   });
 });
 
+describe("USDO Kaia deployment", () => {
+  it("keeps the live Kaia proxy under a reviewed native route and CCIP pool control", () => {
+    const routeId = "klaytn:0x87e617c7484ade79fcd90db58beb82b057facb48";
+    const coin = TRACKED_META_BY_ID.get("usdo-openeden");
+
+    expect(coin?.contracts).toContainEqual({
+      chain: "klaytn",
+      address: "0x87e617c7484ade79fcd90db58beb82b057facb48",
+      decimals: 18,
+    });
+    expect(coin?.bridgeRouteRisk?.routes?.find((route) => route.id === routeId)).toMatchObject({
+      destinationChain: "klaytn",
+      issuanceModel: "native-issuance",
+      routeClass: "native",
+      scope: "canonical",
+      reviewDisposition: "reviewed",
+    });
+    expect(
+      coin?.bridgeRouteRisk?.controls?.find(
+        (control) => control.controllerAddress?.toLowerCase() === "0x05f8b8bc8026ce0b75c36abb0e96b6bacccfb018",
+      ),
+    ).toMatchObject({
+      routeRefs: [routeId],
+      capabilities: ["bridge-mint", "bridge-burn"],
+    });
+  });
+});
+
 describe("RedCoin issuer-disclosure reconciliation", () => {
   const genius = hkdHsbcCompliance.genius;
 
