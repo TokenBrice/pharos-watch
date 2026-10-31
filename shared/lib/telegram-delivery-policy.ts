@@ -134,6 +134,12 @@ export function mergeTelegramDepegWorseningSteps(
   return Math.min(existing, additional);
 }
 
+/**
+ * Telegram's per-message character cap is 4096; we leave a small safety margin
+ * for the chunk-counter suffix and other appended metadata.
+ */
+export const TELEGRAM_MESSAGE_CHUNK_LIMIT = 4000;
+
 /** Cheap pre-format estimate of alert lines per delivered message chunk. */
 export const TELEGRAM_ALERTS_PER_MESSAGE_CHUNK_ESTIMATE = 16;
 

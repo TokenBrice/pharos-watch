@@ -183,7 +183,7 @@ Job states: `planning` → `ready` → `done` (or `cancelled`). Delivery states:
 - **Sweep** (`worker/src/cron/telegram/jobs/run-jobs.ts`): `sending` past its claim → `unknown` (`claim_expired`); `pending`/`retry` past `expires_at` → `expired`; `ready` jobs with no open rows → `onDone` → `done`.
 - **Capacity read model** (`worker/src/telegram/outbox/pending-capacity.ts`): counts open `telegram_deliveries` rows and feeds the watchdog, pulse, status and broadcast estimate.
 
-**Owned files.** `worker/src/telegram/delivery/{jobs,job-drain}.ts`, `worker/src/cron/telegram/jobs/`, `worker/src/telegram/outbox/pending-capacity.ts`, `shared/lib/telegram-delivery-policy.ts` (TTL, batch, backoff, priority).
+**Owned files.** `worker/src/telegram/delivery/{jobs,job-drain}.ts`, `worker/src/cron/telegram/jobs/`, `worker/src/telegram/outbox/pending-capacity.ts`, `shared/lib/telegram-delivery-policy.ts` (message chunk limit, TTL, batch, backoff, priority).
 
 **Allowed inbound dependencies.** Dispatch, admin Telegram routes, roll-up/batch job producers.
 

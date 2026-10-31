@@ -5,6 +5,7 @@ import {
 } from "@shared/lib/api-freshness";
 import { CRON_JOB_DEFINITIONS, type CronJobMeta } from "@shared/lib/cron-jobs";
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "@shared/lib/telegram-delivery-policy";
 import type { CacheStatus } from "@shared/types/status";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
@@ -13,7 +14,6 @@ import { chunkArray, D1_MAX_BOUND_PARAMETERS, runChunkedInFilter } from "../lib/
 import { buildCacheStatuses } from "../lib/api-freshness";
 import { getCache, setCache } from "../lib/db-cache";
 import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
-import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../telegram/common/constants";
 import {
   classifyFreshness,
   loadProducerFreshnessFacts,

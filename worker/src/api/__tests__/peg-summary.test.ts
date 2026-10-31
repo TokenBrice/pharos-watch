@@ -1243,7 +1243,9 @@ describe("active-depeg census scope", () => {
       expect(body.coins.some((coin) => coin.id === "usr-resolv")).toBe(false);
       const census = selectActiveDepegCoins(body.coins, WORKER_ACTIVE_IDS).length;
       expect(census).toBe(1);
-      expect(body.summary.activeDepegCount).toBe(census);
+      const { summary } = body;
+      if (summary === null) throw new Error("A served census response must carry a summary");
+      expect(summary.activeDepegCount).toBe(census);
 
       // The route card prints that same census figure over the same owner body.
       const timeline = await loadTimelineOgPage(db, CENSUS_NOW);

@@ -141,14 +141,7 @@ FX health admits its publication clock with canonical `assessFreshnessTimestamp`
 
 DEX `liquidityHealth.baselineReadFailures` retains named coverage-count, global-TVL, top-ten, cron-history, coverage-class, watchlist and per-coin read failures. Required guard-read failures hold the accepted generation with `required-baseline-read-failed`; successful empty bootstrap remains publishable. A failed top-ten read makes both current-on-prior-membership and previous top-ten totals null; failed coverage/history makes the prior coverage null, and failed global/history makes the value baseline null. Unread previous coverage classes are null, not an all-zero mix. The card renders unavailable prior evidence and the named reasons; optional class/drift failures do not add publication holds.
 
-Related extracted loaders:
-
-- `worker/src/lib/status/derived-data.ts`
-  - `getDatasetFreshness()`
-  - `getMintBurnReconciliation()`
-  - empty fallback builders for dataset freshness / reserve composition
-- `worker/src/lib/status/data-quality.ts`
-  - canonical stablecoins-cache / blacklist-gap / active-depeg / on-chain-supply quality aggregation
+Related extracted loaders have one inventory in the [cron implementation appendix](#extracted-status-loaders).
 
 `datasetFreshness.safetyGrades` describes the accepted **Safety Score publication**, including the
 original clock of a held publication, not daily grade history. `shared/lib/status-dataset-freshness.ts`
@@ -371,7 +364,7 @@ The critical `/api/mint-burn-flows` endpoint is fresh through 8h and degraded th
 Shared in-flight and scheduled-slot wire fields:
 
 - `crons[*].inFlight` exposes live `cron_run_progress` state (`stage`, `itemsDone`, `itemsTotal`, `message`, `updatedAt`, `stale`) for long-running leased jobs such as blacklist, mint/burn, DEX discovery, stablecoin price enrichment, and yield evaluation. The API suppresses orphaned progress rows once their matching lease is gone, so `running-stale` means "still leased but heartbeat stalled", not "some old progress row never got cleaned up". Suppressed rows and expired leases are available in `crons[*].staleArtifacts` for operator cleanup/readout.
-- `summary.scheduledSlotRunning`, `summary.scheduledSlotStaleCandidates`, and `summary.scheduledSlotOldestRunningAgeSec` expose running scheduled-slot rows. The detail query remains capped at 25 rows ordered by oldest heartbeat, but both `scheduledSlotRunning` and `scheduledSlotStaleCandidates` come from full-population SQL window aggregates rather than the capped page. Stale candidates have heartbeats at least ten minutes old, and the oldest-first page preserves the correct oldest running and stale ages; `budgetOnlySurface*` summary counters separately report missing, stale, or error telemetry for budget-only side work.
+- `summary.scheduledSlotRunning`, `summary.scheduledSlotStaleCandidates`, `summary.scheduledSlotOldestRunningAgeSec` and `budgetOnlySurface*` expose scheduled-slot and budget-only-side-work telemetry; the [cron implementation appendix](#scheduled-slot-status-wire-aggregates) owns their caps, stale age and aggregate reads.
 
 Per-job execution metadata (DEX stages, mint/burn lanes, live reserves, redemption backstops, status self-check) is in [Per-job cron metadata](#per-job-cron-metadata).
 
@@ -1056,3 +1049,16 @@ forensic consumers must treat null as unavailable and must not reinterpret histo
 - `status-self-check` records its monitoring, probe, computation, and publication phases. A distinct `route-probe:<path>` stage is persisted before each selected route so abandonment evidence identifies the last entered probe without progress coalescing hiding it; a phase alone does not identify the allocation responsible for a memory termination.
 - `sync-live-reserves` now emits structured metadata (`synced`, `failed`, `skipped`, `warningCount`, `coinsWithWarnings`, `coinsWithErrors`, `breakerKeys`) summarized in the cron card.
 - `sync-redemption-backstops` keeps market-implied route impairments visible through `availabilityDegraded` metadata and impaired rows, but those expected row-level availability states do not by themselves mark the cron run degraded. The capacity coverage floor (`unresolvedMissingCapacity` above `missingCapacityOkThreshold`) is published the same way, under `metadata.quality.reason = "capacity-coverage-floor"`; only unresolved routes, a stale liquidity feed, no active configured rows or post-write warnings degrade the run.
+
+### Scheduled-slot status wire aggregates
+
+- `summary.scheduledSlotRunning`, `summary.scheduledSlotStaleCandidates`, and `summary.scheduledSlotOldestRunningAgeSec` expose running scheduled-slot rows. The detail query remains capped at 25 rows ordered by oldest heartbeat, but both `scheduledSlotRunning` and `scheduledSlotStaleCandidates` come from full-population SQL window aggregates rather than the capped page. Stale candidates have heartbeats at least ten minutes old, and the oldest-first page preserves the correct oldest running and stale ages; `budgetOnlySurface*` summary counters separately report missing, stale, or error telemetry for budget-only side work.
+
+### Extracted status loaders
+
+- `worker/src/lib/status/derived-data.ts`
+  - `getDatasetFreshness()`
+  - `getMintBurnReconciliation()`
+  - empty fallback builders for dataset freshness / reserve composition
+- `worker/src/lib/status/data-quality.ts`
+  - canonical stablecoins-cache / blacklist-gap / active-depeg / on-chain-supply quality aggregation
