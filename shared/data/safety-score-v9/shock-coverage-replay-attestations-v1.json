@@ -6,7 +6,7 @@
     "version": "1",
     "mode": "offline-byte-identical"
   },
-  "attestedAt": "2026-10-30",
+  "attestedAt": "2026-10-31",
   "attestations": [
     {
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336-shock-coverage.json",
@@ -270,6 +270,14 @@
       "attestedAt": "2026-10-30",
       "exactReplayPassed": true,
       "callsConsumed": 224,
+      "codePinsConsumed": 92
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-10-31-block-53325100-shock-coverage.json",
+      "journalSha256": "c8b7ca99674cdf3f9b509a9eb6f7c80efad5f057d2cc204ddbb8a1d572091401",
+      "attestedAt": "2026-10-31",
+      "exactReplayPassed": true,
+      "callsConsumed": 221,
       "codePinsConsumed": 92
     },
     {
@@ -678,6 +686,14 @@
       "attestedAt": "2026-10-30",
       "exactReplayPassed": true,
       "callsConsumed": 713,
+      "codePinsConsumed": 56
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-10-31-block-26311905-shock-coverage.json",
+      "journalSha256": "62c8645a2d623015a554afb7d41543f451f0acd4382768ed2933641c68201be0",
+      "attestedAt": "2026-10-31",
+      "exactReplayPassed": true,
+      "callsConsumed": 707,
       "codePinsConsumed": 56
     },
     {
@@ -1108,6 +1124,14 @@
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json",
       "journalSha256": "a5ba73c2332d6e482aca123a16e93795d60101efd13f2aeb6baa53d6e4eee9c9",
       "attestedAt": "2026-10-30",
+      "exactReplayPassed": true,
+      "callsConsumed": 208,
+      "codePinsConsumed": 14
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-10-31-block-26311905-shock-coverage.json",
+      "journalSha256": "bbd6fb84d205e6109d1c9bb35e254f75385c9ff8acb9ae0a942447f97e728838",
+      "attestedAt": "2026-10-31",
       "exactReplayPassed": true,
       "callsConsumed": 208,
       "codePinsConsumed": 14
