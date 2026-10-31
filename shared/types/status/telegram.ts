@@ -161,7 +161,7 @@ const TelegramWatcherLifecycleSnapshotSchema = z.object({
   activePresetFollowers: z.number(),
   alertTypeOptIns: TelegramAlertTypeChatsSchema,
   quietHoursEnabledChats: z.number(),
-  pendingDeliveries: z.number(),
+  pendingDeliveries: z.number().nullable(),
 });
 
 export const TELEGRAM_DELIVERY_SLI_EVIDENCE_QUALITY_VALUES = ["complete", "partial", "empty"] as const;

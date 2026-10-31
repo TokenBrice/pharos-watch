@@ -553,7 +553,7 @@ Additional response fields:
 - `probe`: latest synthetic probe aggregate
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
-- `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
+- `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` only when a core Telegram read fails; optional slices degrade independently inside the block)
 - `datasetFreshness`: admitted confirmed output/publication clocks for operational domains, with optional per-dataset `unavailableReasons`; `DATASET_FRESHNESS_TARGETS` in `worker/src/lib/status/derived-data.ts` owns private read targets, while `shared/lib/status-dataset-freshness.ts` binds labels and producer cadence. The informational table retains its 2x-cadence grace basis and intentional 8x/12x on-time/aging/late bands; these are not overall-status or Safety methodology thresholds.
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
   A failed history read makes only the history-derived cron counts unavailable; see [Cron health model](#cron-health-model) for `cronHistoryUnavailableReason` and independent companion-read provenance.
@@ -739,6 +739,8 @@ Parsed dispatch suppression flags preserve three states: `true`, `false`, and `n
 The UI consumes the typed block and dispatch metadata; missing optional telemetry is Unknown, never zero. Live safety source states remain explicit while independent DEWS/depeg/launch fan-out continues.
 
 `GET /api/status.telegramBot` aggregates known/alert-enabled/deliverable chats; explicit and preset-implied follows, active preset followers and average explicit follows; six-family enablement and top-coin explicit/preset splits. Delivery fields include `pendingDeliveries`, `oldestPendingDeliveryAgeSec`, `pendingDeliveryBacklog` (`claimable`/`due`, `deferred`, `sending`, `executionUnknown`, `sentCleanup`, `expired`, `nearTtl`), `retryErrorClassCounts`, `customPreferenceChats`, `quietHoursEnabledChats`, `lifecycleSnapshot`, `quality`, `deliverySli`, and nonzero `presetQueryFailures`.
+
+A failed preset-implied ranking read leaves the remaining Telegram evidence published, returns an empty `topStablecoins`, and names `topStablecoins` in `quality.unavailableFields`. When the lifecycle pending-delivery count read fails, `lifecycleSnapshot.pendingDeliveries` is `null` and `pendingDeliveries` is named in `quality.unavailableFields`; neither is published as a measured zero.
 
 Recent sending stays separate. Active executionUnknown counts unexpired `unknown` delivery rows plus `sending` rows older than 15 minutes, with the oldest unknown age. Expired unknown rows remain evidence. `deliverySli` is a bounded 24h rollup over alert-family jobs and their delivery rows (broadcast and digest excluded; `suppressed_duplicate` counts as cancelled, with reason `duplicate_prior_delivery`; terminal failed/blocked/expired rows stand in for dead letters), with availability/quality/freshness: acceptance means Bot API accepted, not received/opened/read. Query failure returns availability/quality unavailable, freshness unknown and rollup null, never zeroes.
 

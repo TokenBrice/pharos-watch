@@ -9,6 +9,7 @@
 
 import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
+import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-cache-read";
 import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -254,6 +255,7 @@ export async function runYieldCoverageAudit(
     },
     poolMeta,
   });
+  throwIfAborted(signal);
 
   await reportAuditProgress("protocol-category-load", "Loading DeFiLlama protocol categories", 1, {
     providerFamilies: ["defillama-protocols"],
@@ -365,6 +367,7 @@ export async function runYieldCoverageAudit(
     safetySnapshotSource: safetySnapshot.source,
     safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
   });
+  throwIfAborted(signal);
   if (safetySnapshot.kind !== "ok" || safetySnapshot.safetyScoreIdentity == null) {
     const reason =
       safetySnapshot.reason ??
@@ -462,6 +465,7 @@ export async function runYieldCoverageAudit(
   });
 
   const reportedAt = Math.floor(nowMs / 1000);
+  throwIfAborted(signal);
   const {
     queue: operatorQueue,
     summary: operatorReviewSummary,
@@ -561,6 +565,7 @@ export async function runYieldCoverageAudit(
       operatorSuppressedItems: operatorQueue.suppressedItemCount,
     },
   });
+  throwIfAborted(signal);
   await setCache(db, "yield-coverage-audit", JSON.stringify(report));
   if (deadCuratedPins.length > 0) {
     await logCronEvent(db, {

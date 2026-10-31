@@ -552,6 +552,67 @@ describe("Telegram digest outbox", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("terminalizes an unreadable stored payload before opening a send claim", async () => {
+    const { sqlite, db } = fixtures.open();
+    await enqueueDaily(db);
+    // Rows are immutable delivery input and outlive deploys, so a stored
+    // edition can carry more success actions than the delivery reader admits.
+    const overBoundActions = Array.from({ length: 21 }, (_, index) => ({
+      key: `telegram:appendix-pointer-${index + 1}`,
+      value: `edition-${index + 1}`,
+    }));
+    sqlite
+      .prepare("UPDATE telegram_digest_outbox SET success_actions_json = ? WHERE edition_key = ?")
+      .run(JSON.stringify(overBoundActions), "daily:2026-07-10");
+    const fetchMock = mockFetch([], { requireMatch: true });
+
+    const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+
+    expect(result).toMatchObject({ outcome: "failed_permanent", chunksSent: 0, chunkCount: 0 });
+    expect(result.errorClass).toMatch(/^invalid_stored_payload:/);
+    expect(loadEdition(sqlite)).toMatchObject({
+      state: "failed_permanent",
+      attempts: 0,
+      delivery_owner: null,
+      delivery_generation: 0,
+      last_error_class: expect.stringMatching(/^invalid_stored_payload:/),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    vi.setSystemTime(new Date(Date.now() + (TELEGRAM_DIGEST_OUTBOX_CLAIM_TTL_SEC + 60) * 1_000));
+    const summary = await drainTelegramDigestOutbox(db, creds);
+    expect(summary).toMatchObject({
+      attempted: 0,
+      retainedExecutionUnknown: 0,
+      retainedFailedPermanent: 1,
+    });
+    expect(loadEdition(sqlite)).toMatchObject({ state: "failed_permanent" });
+
+    // A later run of the same edition reports the named terminal state instead
+    // of throwing while reading a payload it can never send.
+    const replay = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
+    expect(replay).toMatchObject({
+      outcome: "skipped",
+      state: "failed_permanent",
+      chunkCount: 1,
+      errorClass: expect.stringMatching(/^invalid_stored_payload:/),
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects more success actions than the delivery reader admits", async () => {
+    const { sqlite, db } = fixtures.open();
+    const overBoundActions = Array.from({ length: 21 }, (_, index) => ({
+      key: `telegram:appendix-pointer-${index + 1}`,
+      value: `edition-${index + 1}`,
+    }));
+
+    await expect(enqueueDaily(db, { successActions: overBoundActions }))
+      .rejects.toThrow("delivery limit");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_digest_outbox").get())
+      .toEqual({ count: 0 });
+  });
+
   it("does not let a stale accepted-chunk writer overwrite a newer owner generation", async () => {
     const { sqlite, db: baseDb } = fixtures.open();
     await enqueueDaily(baseDb);

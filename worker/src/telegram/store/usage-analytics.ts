@@ -40,7 +40,7 @@ export interface TelegramCurrentLifecycleSnapshot {
   activePresetFollowers: number;
   alertTypeOptIns: TelegramAlertTypeChats;
   quietHoursEnabledChats: number;
-  pendingDeliveries: number;
+  pendingDeliveries: number | null;
   unavailableFields?: string[];
 }
 
@@ -207,7 +207,7 @@ async function calculatePresetImpliedCoinFollows(
 
 async function loadPendingDeliveryCount(
   db: D1Database,
-): Promise<{ count: number; unavailableFields: string[] }> {
+): Promise<{ count: number | null; unavailableFields: string[] }> {
   try {
     const row = await db
       .prepare(
@@ -219,7 +219,7 @@ async function loadPendingDeliveryCount(
     return { count: coerceCount(row?.pending_count), unavailableFields: [] };
   } catch (err) {
     logWorkerEventArgs("lib", "warn", "[telegram-analytics] loadPendingDeliveryCount failed:", err);
-    return { count: 0, unavailableFields: ["pendingDeliveries"] };
+    return { count: null, unavailableFields: ["pendingDeliveries"] };
   }
 }
 
@@ -331,6 +331,7 @@ async function upsertTelegramLifecycleSnapshot(
     || snapshot.churnedWatchers == null
     || snapshot.reactivatedWatchers == null
     || snapshot.presetImpliedCoinFollows == null
+    || snapshot.pendingDeliveries == null
     || snapshot.unavailableFields?.includes("pendingDeliveries")
   ) {
     // The daily table has no availability marker: never persist a failed pending read as zero.
