@@ -19,14 +19,17 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
     compatibility_flags: production.compatibility_flags,
     tsconfig: "../../worker/tsconfig.json",
     rules: production.rules,
+    // Only the renderer alias: the catalog alias would change this graph's catalog source.
+    alias: { harfbuzzjs: resolve(root, "worker", production.alias?.harfbuzzjs ?? "missing-harfbuzzjs-alias") },
   }));
   writeFileSync(entry, `
     import { createElement } from "react";
-    import { renderPng } from ${JSON.stringify(resolve(root, "worker/src/api/og.tsx"))};
     import { CardFrame } from ${JSON.stringify(resolve(root, "worker/src/lib/og-templates/shared.tsx"))};
     import { RouteCard } from ${JSON.stringify(resolve(root, "worker/src/lib/og-templates/route-card.tsx"))};
     export default {
       async fetch(request) {
+        // Production loads the OG route lazily inside a request, after startup.
+        const { renderPng } = await import(${JSON.stringify(resolve(root, "worker/src/api/og.tsx"))});
         const element = new URL(request.url).pathname === "/route"
           ? createElement(RouteCard, {
               cardKey: "flows", variant: "live",
@@ -49,7 +52,7 @@ it("renders a PNG through the production Satori and resvg pipeline in workerd", 
     // third renders the route-card template through the same pipeline.
     for (const path of ["/", "/", "/route"]) {
       const response = await worker.fetch(path);
-      expect(response.status).toBe(200);
+      expect(response.status, await response.clone().text()).toBe(200);
       expect(response.headers.get("Content-Type")).toBe("image/png");
       const image = sharp(Buffer.from(await response.arrayBuffer()));
       expect(await image.metadata()).toMatchObject({ format: "png", width: 1200, height: 628 });

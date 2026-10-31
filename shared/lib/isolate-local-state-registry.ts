@@ -136,6 +136,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     durableTruth: "The bundled WASM modules are authoritative; the promise only coalesces initialization work.",
   },
   {
+    sourcePath: "worker/src/lib/og-harfbuzz.ts",
+    stateNames: ["freeRegistered"],
+    owner: "OG-image HarfBuzz loader",
+    kind: "coordination",
+    resetOrTtl: "Set once when hbjs registers its free() callback on this isolate's HarfBuzz instance; resets with the isolate.",
+    durableTruth: "The bundled harfbuzzjs module is authoritative; the flag only routes that one registration to HarfBuzz's exported free().",
+  },
+  {
     sourcePath: "worker/src/api/stablecoin-detail.ts",
     stateNames: ["detailRefreshesInFlight"],
     owner: "Stablecoin-detail refresh",

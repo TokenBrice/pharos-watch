@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { logWorkerEventArgs } from "../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 import { safetyScorePublicationIdentitiesShareScoringContract } from "@shared/lib/safety-score-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
@@ -39,7 +39,7 @@ import { sleep } from "../lib/abort";
 import { loadActiveSafetyScoreIndex, type ActiveSafetyScoreIndex, type SafetyScoreGradeSnapshot } from "../lib/safety-score-index";
 import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-benchmark-dependencies";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
-import { readYieldRankingsCoinCache, readYieldCoinCohort, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort } from "../lib/yield-rankings-coin-cache";
+import { readYieldRankingsCoinCache, readYieldCoinCohort, readYieldCoinCohortLease, claimYieldCoinCohort, publishYieldCoinCohort, releaseYieldCoinCohort } from "../lib/yield-rankings-coin-cache";
 import { getCache } from "../lib/db-cache";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
 import { YieldCoinCohortSchema, type YieldRankingsCoinResponse } from "@shared/types/yield";
@@ -896,7 +896,8 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
     let cohort = await readYieldCoinCohort(db, id, signature, now);
     if (cohort === null) {
       const owner = randomUUID();
-      if (!await claimYieldCoinCohort(db, signature, owner, now)) {
+      const claim = await claimYieldCoinCohort(db, signature, owner, now);
+      if (claim === null) {
         cohort = await readYieldCoinCohort(db, id, signature, Math.floor(Date.now() / 1000));
         if (cohort === null) {
           // The claimant may be a fast builder that publishes within its lease.
@@ -909,8 +910,45 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
             if (cohort !== null) break;
           }
         }
-        if (cohort === null) return yieldCoinUnavailable("yield-cohort-preparing", true);
+        if (cohort === null) {
+          // Diagnostic-only lease read: the exhaustion reason and holder are
+          // durable in logs, and a failed read never changes the 503.
+          let lease: { signature: string; owner: string; leaseUntil: number } | null = null;
+          try {
+            lease = await readYieldCoinCohortLease(db);
+          } catch {
+            // Owner and deadline stay unknown.
+          }
+          logWorkerEvent({
+            scope: "api",
+            level: "warn",
+            event: "yield-cohort-preparing",
+            route: "yield-rankings-coin",
+            status: 503,
+            message: "Yield coin cohort preparation still in progress",
+            metadata: {
+              stablecoinId: id,
+              reason: "yield-cohort-preparing",
+              signaturePrefix: signature.slice(0, 12),
+              // The single lease row may belong to another signature's build.
+              ...(lease ? {
+                leaseSignaturePrefix: lease.signature.slice(0, 12),
+                leaseOwner: lease.owner,
+                leaseUntil: lease.leaseUntil,
+              } : {}),
+            },
+          });
+          return yieldCoinUnavailable("yield-cohort-preparing", true);
+        }
       } else {
+        logWorkerEvent({
+          scope: "api",
+          level: "info",
+          event: "yield-cohort-lease-claimed",
+          route: "yield-rankings-coin",
+          message: "Claimed yield coin cohort preparation lease",
+          metadata: { stablecoinId: id, signaturePrefix: signature.slice(0, 12), leaseOwner: owner, leaseUntil: claim.leaseUntil },
+        });
         try {
           const fullCache = await getCache(db, "yield-rankings");
           if (!fullCache || fullCache.updatedAt !== cached.updatedAt) {

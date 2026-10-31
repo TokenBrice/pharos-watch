@@ -13,6 +13,7 @@ import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../lib/safety-score-v9/publicatio
 import { loadActiveSafetyScoreSource } from "../../lib/safety-score-active-source";
 import * as scoreIndex from "../../lib/safety-score-index";
 import { handleYieldRankings, handleYieldRankingsCoin } from "../yield-rankings-cache";
+import * as structuredLog from "../../lib/structured-log";
 import { handleSafetyGrades } from "../safety-grades";
 import { projectSafetyGrades } from "@shared/types/report-cards-v9";
 import * as opportunitySafety from "@shared/lib/yield-opportunity-risk";
@@ -344,6 +345,28 @@ describe("rankings score-index hydration", () => {
     expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(1);
   });
 
+  it("logs one bounded diagnostic when a request claims the cohort preparation lease", async () => {
+    const { db, sqlite } = await fixture();
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
+    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    const signature = readPublishedCohort(sqlite)!.signature;
+    expect(log).toHaveBeenCalledOnce();
+    expect(log).toHaveBeenCalledWith({
+      scope: "api",
+      level: "info",
+      event: "yield-cohort-lease-claimed",
+      route: "yield-rankings-coin",
+      message: "Claimed yield coin cohort preparation lease",
+      metadata: {
+        stablecoinId: "usdc-circle", signaturePrefix: signature.slice(0, 12), leaseOwner: expect.any(String), leaseUntil: NOW + 30,
+      },
+    });
+    // Warm reads never claim or re-log.
+    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    expect(log).toHaveBeenCalledOnce();
+  });
+
   it("bounds waiter reads and keeps retryable unavailability when the lease holder stalls", async () => {
     const { db, sqlite } = await fixture();
     const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
@@ -360,6 +383,66 @@ describe("rankings score-index hydration", () => {
     expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([250, 500]);
     // Initial read, immediate re-read, then one scoped read per bounded wait.
     expect(prepare.mock.calls.filter(([sql]) => sql.includes("json_extract(value, '$.signature') = ?"))).toHaveLength(4);
+  });
+
+  it("logs one preparing diagnostic naming the reason, signature prefix and lease holder", async () => {
+    const { db, sqlite } = await fixture();
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    const signature = readPublishedCohort(sqlite)!.signature;
+    replaceWithStalledLease(sqlite, signature);
+    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
+    const response = await settleWithFakeTimers(handleYieldRankingsCoin(db, url));
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ reason: "yield-cohort-preparing" });
+    expect(log).toHaveBeenCalledOnce();
+    expect(log).toHaveBeenCalledWith({
+      scope: "api",
+      level: "warn",
+      event: "yield-cohort-preparing",
+      route: "yield-rankings-coin",
+      status: 503,
+      message: "Yield coin cohort preparation still in progress",
+      metadata: {
+        stablecoinId: "usdc-circle",
+        reason: "yield-cohort-preparing",
+        signaturePrefix: signature.slice(0, 12),
+        leaseSignaturePrefix: signature.slice(0, 12),
+        leaseOwner: "other-owner",
+        leaseUntil: NOW + 30,
+      },
+    });
+  });
+
+  it("keeps the preparing 503 and still logs when the lease diagnostic read fails", async () => {
+    const { db, sqlite } = await fixture();
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    const signature = readPublishedCohort(sqlite)!.signature;
+    replaceWithStalledLease(sqlite, signature);
+    const failingDb = {
+      prepare: (sql: string) => {
+        if (sql.includes("json_type(value, '$.owner')")) throw new Error("lease read failed");
+        return db.prepare(sql);
+      },
+      batch: db.batch.bind(db),
+      exec: db.exec.bind(db),
+      dump: db.dump.bind(db),
+    } as unknown as D1Database;
+    const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
+    const response = await settleWithFakeTimers(handleYieldRankingsCoin(failingDb, url));
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("1");
+    expect(await response.json()).toMatchObject({ reason: "yield-cohort-preparing" });
+    expect(log).toHaveBeenCalledOnce();
+    expect(log).toHaveBeenCalledWith(expect.objectContaining({
+      event: "yield-cohort-preparing",
+      metadata: {
+        stablecoinId: "usdc-circle",
+        reason: "yield-cohort-preparing",
+        signaturePrefix: signature.slice(0, 12),
+      },
+    }));
   });
 
   it("never serves a different-signature cohort published while waiting", async () => {

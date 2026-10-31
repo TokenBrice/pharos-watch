@@ -36,8 +36,14 @@ export async function readYieldCoinCohort(db: D1Database, stablecoinId: string, 
 }
 
 /** A durable pre-build lease coalesces different cold coin URLs across isolates. */
-export async function claimYieldCoinCohort(db: D1Database, signature: string, owner: string, now: number): Promise<boolean> {
-  const value = JSON.stringify({ signature, owner, leaseUntil: now + 30 });
+export async function claimYieldCoinCohort(
+  db: D1Database,
+  signature: string,
+  owner: string,
+  now: number,
+): Promise<{ leaseUntil: number } | null> {
+  const leaseUntil = now + 30;
+  const value = JSON.stringify({ signature, owner, leaseUntil });
   const claimed = await db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
     WHERE NOT json_valid(cache.value) OR (
@@ -45,7 +51,24 @@ export async function claimYieldCoinCohort(db: D1Database, signature: string, ow
       AND (json_extract(cache.value, '$.signature') != ?
         OR COALESCE(json_extract(cache.value, '$.validUntil'), 0) <= ?))
     RETURNING key`).bind(COHORT_CACHE_KEY, value, now, now, signature, now).first<{ key: string }>();
-  return claimed !== null;
+  return claimed !== null ? { leaseUntil } : null;
+}
+
+/**
+ * Read only the active pre-build lease (never the published cohort) for
+ * diagnostics. A published cohort has no `owner`, so it is not transferred.
+ */
+export async function readYieldCoinCohortLease(
+  db: D1Database,
+): Promise<{ signature: string; owner: string; leaseUntil: number } | null> {
+  const row = await db.prepare(`SELECT value FROM cache WHERE key = ? AND json_valid(value)
+    AND json_type(value, '$.owner') = 'text' AND json_type(value, '$.leaseUntil') = 'integer'`)
+    .bind(COHORT_CACHE_KEY).first<{ value: string }>();
+  if (!row) return null;
+  const lease = JSON.parse(row.value) as { signature?: unknown; owner?: unknown; leaseUntil?: unknown };
+  return typeof lease.signature === "string" && typeof lease.owner === "string" && typeof lease.leaseUntil === "number"
+    ? { signature: lease.signature, owner: lease.owner, leaseUntil: lease.leaseUntil }
+    : null;
 }
 
 export async function publishYieldCoinCohort(db: D1Database, owner: string, cohort: YieldCoinCohort): Promise<void> {

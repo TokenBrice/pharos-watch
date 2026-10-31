@@ -433,4 +433,28 @@ describe("dependency-audit exceptions", () => {
       expect(() => verifyDependencyAuditDelta(undiciReport(), clean)).toThrow(`${advisory} affects undici`);
     });
   });
+
+  // GHSA-px8p-9vwx-vf98 is medium, below audit:deps' high floor, and Satori pins
+  // fflate@0.7.3 exactly; a workspace-scoped install can lock that copy nested.
+  it("locks a single fflate at or above the patched 0.7.5", () => {
+    const lock = JSON.parse(readFileSync(join(process.cwd(), "package-lock.json"), "utf8")) as {
+      packages: Record<string, { version?: string }>;
+    };
+    const fflate = Object.entries(lock.packages).filter(([path]) => /(?:^|\/)node_modules\/fflate$/.test(path));
+    expect(fflate.map(([path]) => path)).toEqual(["node_modules/fflate"]);
+    const [major, minor, patch] = (fflate[0]?.[1].version ?? "0.0.0").split(".").map(Number);
+    expect(major > 0 || minor > 7 || (minor === 7 && patch >= 5)).toBe(true);
+  });
+
+  // worker/src/lib/og-harfbuzz.ts imports harfbuzzjs internals from the Worker
+  // tree, so a copy nested under satori would split the HarfBuzz build in two.
+  it("locks satori's exact harfbuzzjs as the single hoisted copy", () => {
+    const lock = JSON.parse(readFileSync(join(process.cwd(), "package-lock.json"), "utf8")) as {
+      packages: Record<string, { version?: string; dependencies?: Record<string, string> }>;
+    };
+    expect(Object.keys(lock.packages).filter((path) => /(?:^|\/)node_modules\/harfbuzzjs$/.test(path)))
+      .toEqual(["node_modules/harfbuzzjs"]);
+    expect(lock.packages["node_modules/harfbuzzjs"]?.version)
+      .toBe(lock.packages["node_modules/satori"]?.dependencies?.harfbuzzjs);
+  });
 });
