@@ -138,6 +138,7 @@
     "worker/src/lib/authoritative-price-sources/protocol-par.ts": 100,
     "worker/src/lib/authoritative-price-sources/protocol-redeem-provider.ts": 100,
     "worker/src/lib/authoritative-price-sources/rate-cache.ts": 100,
+    "worker/src/lib/authoritative-price-sources/stbt-curve-pool.ts": 97,
     "worker/src/lib/authoritative-price-sources/susd-solayer.ts": 98.4,
     "worker/src/lib/authoritative-price-sources/swanusd-curve-pool.ts": 97,
     "worker/src/lib/authoritative-price-sources/usdaf-uniswap-v4.ts": 100,
