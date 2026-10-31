@@ -699,6 +699,28 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(missingAgain.acknowledgedGapIds).toEqual([]);
   });
 
+  it("retires the STBT gap review after the reviewed Curve exact-pool lane admits the market", () => {
+    const id = "stbt-matrixdock";
+    expect(STABLECOIN_PRICE_GAP_REVIEWS.some((review) => review.stablecoinId === id)).toBe(false);
+    const nowSec = Date.UTC(2026, 9, 31, 13) / 1000;
+    const resolved = resolveStablecoinPriceGapReviews([id], nowSec);
+    expect(resolved.activeById.size).toBe(0);
+    expect(resolved.expiredGapReviewIds).not.toContain(id);
+    expect(resolved.invalidGapReviewIds).not.toContain(id);
+    const coverage = evaluateStablecoinActivePriceCoverage(
+      [{ id, price: 0.9945 }],
+      [id],
+      { nowSec, priceGapReviews: [] },
+    );
+    expect(coverage).toMatchObject({
+      complete: true,
+      pricedActiveIds: [id],
+      missingActiveIds: [],
+      acknowledgedGapIds: [],
+      alertEligibleIds: [],
+    });
+  });
+
   it("renews the October 29 WUSD source review as a 30-day owner decision without retiring the lifecycle question", () => {
     const id = "wusd-worldwide";
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;

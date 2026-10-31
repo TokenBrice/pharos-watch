@@ -227,21 +227,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: Date.UTC(2026, 9, 31, 12, 37) / 1000,
     expiresAt: Date.UTC(2026, 10, 14, 12, 37) / 1000,
   },
-  {
-    stablecoinId: "stbt-matrixdock",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-31 12:37 UTC with fresh GETs after Pricing v6.64 rejected STBT's only admitted quote, a DefiLlama contract price of exactly 1 for Ethereum 0x530824da86689c9c17cdc2871ff29b058345b44a. Pharos tracks no CoinGecko or DefiLlama list id for STBT, and a CoinGecko search for STBT returns only unrelated STBTC assets. An observed market does exist: GeckoTerminal prices STBT at $0.98022 with $49,548 of 24h volume, led by Curve STBT/3Crv 0x892d701d94a43bdbcb5ea28891daca2fa22a690b ($407,738 reserves, $0.9802, $49,505 24h volume). No Pharos lane reads it: the inline GeckoTerminal probe is disabled at the Worker memory boundary, and the exact-contract DexScreener read returns only two Curve pairs below the $50K floor ($21,579 at $0.9922 and $93 at $0.9900). Keep STBT active and the price missing; all admission gates preserved. Owner ops decides by this review's expiry, 2026-11-14 12:37 UTC, whether to admit the Curve STBT/3Crv pool through a reviewed exact-pool adapter, which would publish a market price about 2% below par.",
-    sources: [
-      "https://coins.llama.fi/prices/current/ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a",
-      "https://api.coingecko.com/api/v3/search?query=STBT",
-      "https://api.geckoterminal.com/api/v2/simple/networks/eth/token_price/0x530824da86689c9c17cdc2871ff29b058345b44a?include_24hr_vol=true&include_total_reserve_in_usd=true",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x530824da86689c9c17cdc2871ff29b058345b44a/pools",
-      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x530824da86689c9c17cdc2871ff29b058345b44a",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 31, 12, 37) / 1000,
-    expiresAt: Date.UTC(2026, 10, 14, 12, 37) / 1000,
-  },
 ];
 
 /** Standing source-calendar review, separate from temporary gap acknowledgements.
