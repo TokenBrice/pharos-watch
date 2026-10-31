@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { getCronJobMeta } from "@shared/lib/cron-jobs";
+import { logCronRun } from "../../lib/cron-logger";
+import { loadProducerFreshnessFacts } from "../../lib/status/freshness-oracle";
+import { getCompletedSupplySnapshot } from "../../lib/supply-snapshot-completion";
 import {
   buildSupplySnapshotCompletionMarker,
   makeSupplySnapshotDb,
@@ -914,5 +918,63 @@ describe("snapshotSupply", () => {
       expect.stringContaining("INSERT OR REPLACE INTO supply_history"),
       expect.stringContaining("INSERT INTO cache"),
     ]));
+  });
+
+  it("binds the confirmed output clock to the served generation after a same-day price repair", async () => {
+    // Day D is sealed at 00:05 UTC; the same-day price repair runs at 08:00.
+    const sealedAt = Math.floor(Date.parse("2025-06-15T00:05:00Z") / 1000);
+    const repairAt = Math.floor(Date.parse("2025-06-15T08:00:00Z") / 1000);
+    const snapshotDate = Math.floor(Date.UTC(2025, 5, 15) / 1000);
+    const options = {
+      requiredActiveIds: DEFAULT_REQUIRED_IDS,
+      snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+    };
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const putCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      const payload = {
+        // A nominal par reference is not a price observation: the sealed row keeps price NULL.
+        peggedAssets: [
+          makeSnapshotAsset({
+            id: "usdt-tether", price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
+          }),
+          makeSnapshotAsset({ id: "usdc-circle", price: 0.999 }),
+        ],
+      };
+      putCache.run("stablecoins", JSON.stringify(payload), sealedAt);
+
+      vi.setSystemTime(sealedAt * 1000);
+      await logCronRun(db, "snapshot-supply", async () => snapshotSupply(db, undefined, {
+        ...options, nowSec: sealedAt,
+      }));
+      const sealed = await getCompletedSupplySnapshot(db);
+      expect(sealed?.updatedAt).toBe(sealedAt);
+
+      // At 08:00 the same coin has a real observed price, so only the price repair is permitted.
+      payload.peggedAssets[0] = makeSnapshotAsset({
+        id: "usdt-tether", price: 1.0003, priceSource: "binance",
+        priceObservedAt: repairAt - 60, priceObservedAtMode: "upstream",
+      });
+      putCache.run("stablecoins", JSON.stringify(payload), repairAt - 300);
+
+      vi.setSystemTime(repairAt * 1000);
+      const repaired = await logCronRun(db, "snapshot-supply", async () => snapshotSupply(db, undefined, {
+        ...options, nowSec: repairAt,
+      }));
+      expect(JSON.parse(String(repaired?.metadata))).toMatchObject({ reason: "repaired_missing_prices_today" });
+
+      // R3 (ADR-30): the persisted cron verdict names the generation the
+      // snapshot serves (the marker clock behind GET /api/supply-history),
+      // never the repair attempt that reused it.
+      const served = await getCompletedSupplySnapshot(db);
+      expect(served?.updatedAt).toBe(sealedAt);
+      const [fact] = await loadProducerFreshnessFacts(db, repairAt, [getCronJobMeta("snapshot-supply")!]);
+      expect(fact?.lastSuccessAt).toBe(served?.updatedAt);
+      expect(sqlite.prepare(
+        "SELECT price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?",
+      ).get("usdt-tether", snapshotDate)).toEqual({ price: 1.0003 });
+    } finally {
+      sqlite.close();
+    }
   });
 });

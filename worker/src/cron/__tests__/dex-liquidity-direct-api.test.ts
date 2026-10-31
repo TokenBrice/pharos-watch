@@ -1041,6 +1041,33 @@ describe("fetchOrcaPools", () => {
     expect(secondCallUrl).toContain("minTvl=10000");
   });
 
+  it("does not certify an exhaustive census from a full page with no readable next cursor", async () => {
+    const rows = Array.from({ length: 200 }, (_, index) => makeOrcaPool(`fullPage${index}`));
+    // A size=200 page followed by unreadable metadata is not proof that the
+    // inventory ended; only an explicit end or a short page completes a cycle.
+    mockFetch = createFetchMock([orcaRoute(null, [{ body: { data: rows, meta: {} } }])], {
+      requireMatch: true, strictUrl: true,
+    });
+    const { db, sqlite } = fixtures.open();
+
+    const result = await fetchOrcaPools(undefined, db);
+
+    expect(result.pools).toHaveLength(200);
+    expect(result.pagination).toMatchObject({ state: "partial", cycleCompleted: false });
+    expect(result.censusScope).toBe("bounded-sample");
+    expect(buildAuthoritativeStagedPoolConfirmationIndex([{
+      name: "Orca", circuitKey: "orca", normalizedProtocol: "orca", supportedChains: ["solana"],
+      censusScope: "exhaustive",
+      result, authoritativeExactPoolKeys: new Set(result.physicalPoolCensus?.exactPoolKeys ?? []),
+    }]).enforcedChainsByProtocol.has("orca")).toBe(false);
+
+    await acknowledgeDexSourcePagination(db, result.pendingPaginationUpdates ?? []);
+    const persisted = sqlite.prepare(
+      "SELECT cursor, completed_at FROM dex_source_pagination_state WHERE source_key = 'orca:solana'",
+    ).get() as { cursor: string | null; completed_at: number | null } | undefined;
+    expect(persisted?.completed_at ?? null).toBeNull();
+  });
+
   it("refreshes the Orca head before resuming a durable tail cursor", async () => {
     mockFetch = createFetchMock([
       orcaRoute(null, [{ body: { data: [makeOrcaPool("head")], meta: { cursor: { next: "fresh-head-tail" } } } }]),

@@ -473,6 +473,30 @@ describe("Curve CryptoSwap hash-bound kill-proof acquisition", () => {
     expect(result).toEqual({ ok: false, reason: "runtime-code-absent" });
     expect(isOperationalDexMeasuredFailure("runtime-code-absent")).toBe(false);
   });
+
+  it("keeps a dependency-address read outage operational", async () => {
+    const chainRpcs = buildChainRpcs("alchemy-test-key");
+    const config = chainRpcs.get("ethereum")!;
+    config.endpoints = config.endpoints.filter((endpoint) => endpoint.operator === "alchemy").slice(0, 1);
+    const fetchMock = vi.fn<typeof fetch>(async (_url, init) => {
+      const request = JSON.parse(String(init?.body)) as { method: string };
+      if (request.method === "eth_getCode") return response("0x6000");
+      return new Response("unavailable", { status: 503 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const result = await verifyCurveCryptoSwapDeployment({
+      policy,
+      blockNumber: ETHEREUM_BLOCK,
+      blockHash: HASH_A,
+      chainRpcs,
+    });
+
+    // A provider read failure is producer health; last-known-good may survive it.
+    expect(result).toEqual({ ok: false, reason: "dependency-code-unavailable" });
+    expect(isOperationalDexMeasuredFailure("dependency-code-unavailable")).toBe(true);
+  });
 });
 
 describe("Curve CryptoSwap token indices and ABI", () => {

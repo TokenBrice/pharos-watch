@@ -22,7 +22,7 @@ An event permalink may be outside ordinary filters. Resolve a loaded-feed miss t
 
 [API reference](./api-reference.md) and `worker/src/api/events.ts` own query/cursor/limit/HTTP details; route requests remain bounded. `useEvents()` is infinite-query; `useLatestEvents()` serves homepage lists and exact permalink lookups. No duplicated wire table belongs here.
 
-Freshness follows confirmed `project-tape` publication, not newest event time. TTL cannot exceed fresh runway; stale uses no-store/Warning 110. Missing/invalid producer history or failed freshness lookup uses no-store/Warning 199 plus named reason. Shared producer budgets/ratios own numeric windows.
+Freshness follows confirmed `project-tape` publication, not newest event time. A fully settled projection pass confirms publication even when it inserts no events; a failed class does not. TTL cannot exceed fresh runway; stale uses no-store/Warning 110. Missing/invalid producer history or failed freshness lookup uses no-store/Warning 199 plus named reason. Shared producer budgets/ratios own numeric windows.
 
 Read rows must pass JSON/object and `TapeEventSchema` validation. Invalid payload/wire rows are logged with `payload-json-invalid` or `wire-schema-invalid`, counted in droppedRows and excluded while valid peers publish; never coerce corrupt JSON into an empty payload. Static-catalog dates must round-trip as valid UTC month/day dates; missing/invalid values skip/log, never become publication-time events.
 

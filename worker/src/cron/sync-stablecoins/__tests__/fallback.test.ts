@@ -126,6 +126,7 @@ vi.mock("../post-enrichment", () => ({
   runSharedPriceCompletion: subPhaseMocks.runSharedPriceCompletion,
 }));
 vi.mock("../telegram-tracked-additions", () => ({
+  isFallbackBackedTrackedBaseline: () => false,
   queueTrackedAdditionsNotice: subPhaseMocks.queueTrackedAdditionsNotice,
 }));
 

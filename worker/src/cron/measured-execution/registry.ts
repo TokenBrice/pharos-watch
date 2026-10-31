@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/p4-exit-route-capability-policy";
 
 import type { ChainRpcConfig } from "../../lib/chain-registry";
-import { fetchEvmCodeAtBlock } from "../../lib/evm-rpc";
+import { fetchEvmCodeStatusAtBlock } from "../../lib/evm-rpc";
 import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
   type DexMeasuredExecutionRpcBudget,
@@ -282,13 +282,19 @@ export async function verifyDexMeasuredExecutionDeployment(input: {
   | { ok: true; codeHash: `0x${string}`; factoryCodeHash: `0x${string}` }
   | {
       ok: false;
-      reason: "code-unavailable" | "code-hash-mismatch" | "factory-code-unavailable" | "factory-code-hash-mismatch";
+      reason:
+        | "code-unavailable"
+        | "code-absent"
+        | "code-hash-mismatch"
+        | "factory-code-unavailable"
+        | "factory-code-absent"
+        | "factory-code-hash-mismatch";
     }
 > {
   if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.deployment.chain)) {
     return { ok: false, reason: "code-unavailable" };
   }
-  const code = await fetchEvmCodeAtBlock(input.deployment.chain, input.deployment.endpointAddress, input.blockNumber, {
+  const code = await fetchEvmCodeStatusAtBlock(input.deployment.chain, input.deployment.endpointAddress, input.blockNumber, {
     chainRpcs: input.chainRpcs,
     stateBlockHash: input.blockHash,
     signal: input.signal,
@@ -297,14 +303,17 @@ export async function verifyDexMeasuredExecutionDeployment(input: {
     ...(input.rpcBudget ? { beforeRequest: () => input.rpcBudget!.tryConsume() } : {}),
     maxRetries: 0,
   });
-  input.rpcBudget?.recordChainResult(input.deployment.chain, code != null);
-  if (code == null) return { ok: false, reason: "code-unavailable" };
-  const codeHash = keccak256(code).toLowerCase() as `0x${string}`;
+  // A successful `0x` read is positive evidence, not an RPC failure.
+  input.rpcBudget?.recordChainResult(input.deployment.chain, code.status !== "unavailable");
+  if (code.status !== "available") {
+    return { ok: false, reason: code.status === "absent" ? "code-absent" : "code-unavailable" };
+  }
+  const codeHash = keccak256(code.code).toLowerCase() as `0x${string}`;
   if (codeHash !== input.deployment.expectedCodeHash) return { ok: false, reason: "code-hash-mismatch" };
   if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.deployment.chain)) {
     return { ok: false, reason: "factory-code-unavailable" };
   }
-  const factoryCode = await fetchEvmCodeAtBlock(
+  const factoryCode = await fetchEvmCodeStatusAtBlock(
     input.deployment.chain,
     input.deployment.factoryAddress,
     input.blockNumber,
@@ -318,9 +327,11 @@ export async function verifyDexMeasuredExecutionDeployment(input: {
       maxRetries: 0,
     },
   );
-  input.rpcBudget?.recordChainResult(input.deployment.chain, factoryCode != null);
-  if (factoryCode == null) return { ok: false, reason: "factory-code-unavailable" };
-  const factoryCodeHash = keccak256(factoryCode).toLowerCase() as `0x${string}`;
+  input.rpcBudget?.recordChainResult(input.deployment.chain, factoryCode.status !== "unavailable");
+  if (factoryCode.status !== "available") {
+    return { ok: false, reason: factoryCode.status === "absent" ? "factory-code-absent" : "factory-code-unavailable" };
+  }
+  const factoryCodeHash = keccak256(factoryCode.code).toLowerCase() as `0x${string}`;
   if (factoryCodeHash !== input.deployment.expectedFactoryCodeHash) {
     return { ok: false, reason: "factory-code-hash-mismatch" };
   }

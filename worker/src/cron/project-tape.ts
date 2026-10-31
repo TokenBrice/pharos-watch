@@ -76,7 +76,12 @@ export async function projectTape(
   return {
     status: hasFailure ? "degraded" : "ok",
     itemCount: total,
-    productivity: { productive: total > 0 },
+    // A fully settled pass is a confirmed quiet observation even when no class
+    // inserted an event; only a failed class withholds the output clock.
+    productivity: {
+      productive: !hasFailure,
+      reason: hasFailure ? "tape-projector-failed" : "tape-projection-current",
+    },
     metadata: JSON.stringify({ reason: hasFailure ? "tape-projector-failed" : "tape-projection-completed", perClass, watermarkAdvanced: advancedAny, d1Cost: d1Cost.snapshot() }),
   };
 }

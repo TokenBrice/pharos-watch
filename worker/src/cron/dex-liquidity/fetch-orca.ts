@@ -39,6 +39,7 @@ const ORCA_RATE_LIMIT_BACKOFF_MS = 1_000;
 // inside its half-hourly slot rather than sleeping out a two-minute header.
 const ORCA_RATE_LIMIT_MAX_BACKOFF_MS = 15_000;
 const ORCA_PAGES_PER_RUN = 4;
+const ORCA_PAGE_SIZE = 200;
 const ORCA_SOURCE_KEY = "orca:solana";
 
 function buildOrcaPoolsUrl(cursor?: string | null): string {
@@ -46,7 +47,7 @@ function buildOrcaPoolsUrl(cursor?: string | null): string {
   url.searchParams.set("sortBy", "tvl");
   url.searchParams.set("sortDirection", "desc");
   url.searchParams.set("minTvl", String(DIRECT_API_POOL_MIN_TVL_USD));
-  url.searchParams.set("size", "200");
+  url.searchParams.set("size", String(ORCA_PAGE_SIZE));
   if (cursor) url.searchParams.set("next", cursor);
   return url.toString();
 }
@@ -98,6 +99,18 @@ function getOrcaNextCursor(meta: unknown): string | null {
   const cursor = meta.cursor;
   if (isDexApiRecord(cursor) && typeof cursor.next === "string") return cursor.next;
   return typeof meta.next === "string" ? meta.next : null;
+}
+
+/**
+ * An explicit `next: null` is the provider declaring the end of the
+ * inventory. A missing or malformed marker is unreadable metadata, not
+ * exhaustion: a full page with no readable cursor may still have a tail.
+ */
+function hasOrcaExplicitEnd(meta: unknown): boolean {
+  if (!isDexApiRecord(meta)) return false;
+  const cursor = meta.cursor;
+  if (isDexApiRecord(cursor) && "next" in cursor) return cursor.next == null;
+  return "next" in meta && meta.next == null;
 }
 
 export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Promise<PaginatedDexApiFetchResult> {
@@ -266,8 +279,18 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
       break;
     }
     if (nextCursor) seenCursors.add(nextCursor);
+    // A short page proves exhaustion; a full page only does so when the
+    // provider explicitly returned `next: null`. Without either, a full page
+    // is a bounded sample, never the end of the inventory.
+    const pageExhausted = json.data.length < ORCA_PAGE_SIZE || hasOrcaExplicitEnd(json.meta);
     if (page === 1) {
       refreshedHeadCursor = nextCursor;
+      if (!nextCursor && !pageExhausted) {
+        degraded = true;
+        errors.push(`page 1 returned a full page without a readable next cursor`);
+        resumeCursor = storedTailCursor;
+        break;
+      }
       resumeCursor = nextCursor ? (storedTailCursor ?? nextCursor) : null;
       url = resumeCursor ? buildOrcaPoolsUrl(resumeCursor) : null;
       if (!url) cycleCompleted = true;
@@ -275,6 +298,12 @@ export async function fetchOrcaPools(signal?: AbortSignal, db?: D1Database): Pro
     }
     resumeCursor = nextCursor;
     if (!nextCursor) {
+      if (!pageExhausted) {
+        degraded = true;
+        errors.push(`page ${page} returned a full page without a readable next cursor`);
+        resumeCursor = refreshedHeadCursor;
+        break;
+      }
       cycleCompleted = true;
       resumeCursor = refreshedHeadCursor;
       url = null;

@@ -122,7 +122,9 @@ export async function syncRpcProviderParity(
 
   const circuitOutcome = rpcParityCircuitOutcome(probe.attempted, probe.headOk);
   let circuitRecorded = false;
-  if (circuitOutcome !== "neutral") {
+  // A torn-down run's partial sample set is not provider evidence; only a
+  // completed run may close or advance the breaker.
+  if (circuitOutcome !== "neutral" && !probe.aborted) {
     try {
       await recordOutcome(db, CIRCUIT_SOURCE.DWELLIR_EVM, circuitOutcome === "success");
       circuitRecorded = true;

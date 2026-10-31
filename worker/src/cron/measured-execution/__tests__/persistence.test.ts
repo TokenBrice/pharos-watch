@@ -68,6 +68,12 @@ describe("measured execution publication", () => {
     expect(isOperationalDexMeasuredFailure("ng-kill-method-not-proven-absent")).toBe(false);
     expect(isOperationalDexMeasuredFailure("runtime-code-absent")).toBe(false);
     expect(isOperationalDexMeasuredFailure("registry-code-absent")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("pool-manager-code-absent")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("state-view-code-absent")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("quoter-code-absent")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("code-absent")).toBe(false);
+    expect(isOperationalDexMeasuredFailure("admission-coin-group-oversized")).toBe(true);
+    expect(isOperationalDexMeasuredFailure("dependency-code-unavailable")).toBe(true);
     expect(isOperationalDexMeasuredFailure("block-header-mismatch")).toBe(false);
     expect(isOperationalDexMeasuredFailure("block-hash-invalid")).toBe(false);
     expect(isOperationalDexMeasuredFailure("factory-code-absent")).toBe(false);
@@ -384,7 +390,7 @@ describe("measured execution last-known-good selection", () => {
       quoteGenerationId: "cutoff", resolution: "last-known-good",
     });
   });
-  it.each(["request-budget-exhausted", "block-header-unavailable", "ng-kill-probe-unavailable"])(
+  it.each(["request-budget-exhausted", "block-header-unavailable", "ng-kill-probe-unavailable", "admission-coin-group-oversized", "dependency-code-unavailable"])(
     "retains original source time across a latest %s operational failure", async (failureReason) => {
     const measuredTarget = fixtureTarget("ethereum");
     const historicalProfile = fixtureProfile(measuredTarget, {
@@ -434,6 +440,28 @@ describe("measured execution last-known-good selection", () => {
       latestOperationalFailureAt: 2_010,
     });
   });
+
+  it.each(["pool-manager-code-absent", "state-view-code-absent", "quoter-code-absent", "factory-code-absent"])(
+    "does not resurrect a measured profile after %s proves the runtime absent",
+    async (failureReason) => {
+      const measuredTarget = fixtureTarget("ethereum");
+      const historicalProfile = fixtureProfile(measuredTarget, {
+        targetGenerationId: "target-generation-lkg",
+        quoteGenerationId: "quote-generation-lkg",
+        quotedAt: 1_900,
+      });
+      const { db } = evidenceDb({
+        target: measuredTarget,
+        latest: { status: "failed", failureReason, profile: null },
+        historical: [{ target: measuredTarget, profile: historicalProfile }],
+      });
+
+      const entry = (await loadLatestPublishedDexMeasuredQuoteEvidence(db, 2_010))
+        ?.byTargetId.get(measuredTarget.targetId);
+
+      expect(entry).toMatchObject({ status: "failed", resolution: "latest", failureReason });
+    },
+  );
 
   it("logs an LKG enrichment read failure while returning current evidence", async () => {
     const measuredTarget = fixtureTarget("ethereum");

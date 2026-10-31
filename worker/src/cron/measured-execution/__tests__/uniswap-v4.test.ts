@@ -8,12 +8,12 @@ import {
 } from "viem/utils";
 
 const rpcMocks = vi.hoisted(() => ({
-  fetchEvmCodeAtBlock: vi.fn(),
+  fetchEvmCodeStatusAtBlock: vi.fn(),
   fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
 }));
 
 vi.mock("../../../lib/evm-rpc", () => ({
-  fetchEvmCodeAtBlock: rpcMocks.fetchEvmCodeAtBlock,
+  fetchEvmCodeStatusAtBlock: rpcMocks.fetchEvmCodeStatusAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock:
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock,
 }));
@@ -42,6 +42,7 @@ import {
   DEX_MEASURED_CAPACITY_NOTIONALS_USD,
 } from "@shared/types/measured-execution";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
+import { isOperationalDexMeasuredFailure } from "../evidence-reader";
 import { toMaturePublicProfile } from "./profile.test-support";
 
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -216,7 +217,7 @@ async function runV4ProofScenario({
 
 describe("hook-free Uniswap V4 measured execution", () => {
   beforeEach(() => {
-    rpcMocks.fetchEvmCodeAtBlock.mockReset();
+    rpcMocks.fetchEvmCodeStatusAtBlock.mockReset();
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockReset();
   });
 
@@ -230,7 +231,7 @@ describe("hook-free Uniswap V4 measured execution", () => {
 
   it("rejects a V4 deployment when pinned PoolManager code differs", async () => {
     const deployment = getUniswapV4Deployment("ethereum")!;
-    rpcMocks.fetchEvmCodeAtBlock.mockResolvedValue("0x00");
+    rpcMocks.fetchEvmCodeStatusAtBlock.mockResolvedValue({ status: "available", code: "0x00" });
 
     await expect(verifyUniswapV4Deployment({
       blockHash: `0x${"ab".repeat(32)}`,
@@ -241,10 +242,27 @@ describe("hook-free Uniswap V4 measured execution", () => {
       ok: false,
       reason: "pool-manager-code-hash-mismatch",
     });
-    expect(rpcMocks.fetchEvmCodeAtBlock).toHaveBeenCalledTimes(1);
-    expect(rpcMocks.fetchEvmCodeAtBlock.mock.calls[0]?.[3]).toMatchObject({
+    expect(rpcMocks.fetchEvmCodeStatusAtBlock).toHaveBeenCalledTimes(1);
+    expect(rpcMocks.fetchEvmCodeStatusAtBlock.mock.calls[0]?.[3]).toMatchObject({
       stateBlockHash: `0x${"ab".repeat(32)}`, maxRetries: 0,
     });
+  });
+
+  it("reports an absent PoolManager runtime as an integrity barrier, not an unavailable RPC", async () => {
+    const deployment = getUniswapV4Deployment("ethereum")!;
+    rpcMocks.fetchEvmCodeStatusAtBlock.mockResolvedValue({ status: "absent" });
+
+    const result = await verifyUniswapV4Deployment({
+      blockHash: `0x${"ab".repeat(32)}`,
+      deployment,
+      blockNumber: BLOCK,
+      chainRpcs: new Map(),
+    });
+
+    expect(result).toEqual({ ok: false, reason: "pool-manager-code-absent" });
+    // A successful `0x` read is deterministic evidence: last-known-good must
+    // not resurrect a measured profile for a vanished deployment.
+    expect(isOperationalDexMeasuredFailure(result.ok ? null : result.reason)).toBe(false);
   });
 
   it("builds only a reviewed exact hook-free PoolKey target", () => {

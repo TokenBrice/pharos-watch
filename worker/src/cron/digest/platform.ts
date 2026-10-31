@@ -105,7 +105,8 @@ interface InsertDigestRecordOptions {
   digestExtended: string | null;
   digestMeta: string | null;
   signal?: AbortSignal;
-  onInserted?: () => void;
+  /** Fired once the exact edition row is durably present (inserted or deduped). */
+  onStored?: () => void;
 }
 
 interface RunDigestChannelDeliveryOptions<TCreds> {
@@ -456,7 +457,7 @@ export async function insertDigestRecord(options: InsertDigestRecordOptions): Pr
   throwIfAborted(options.signal);
   const inputDataJson = JSON.stringify(options.inputData);
 
-  const result = await runWithOverloadRetry(() =>
+  await runWithOverloadRetry(() =>
     options.db
       .prepare(
         `INSERT INTO daily_digest (generated_at, digest_text, digest_title, input_data, digest_extended, digest_meta)
@@ -491,7 +492,11 @@ export async function insertDigestRecord(options: InsertDigestRecordOptions): Pr
     options.signal,
   );
   throwIfAborted(options.signal);
-  if ((result.meta?.changes ?? 0) > 0) options.onInserted?.();
+  // A successful statement always leaves the exact row present: `changes > 0`
+  // inserted it, and `changes === 0` means the NOT EXISTS guard matched an
+  // identical row (a first attempt that committed before a retriable error, or
+  // an already-stored edition). Both are durable publication facts.
+  options.onStored?.();
 }
 
 export function didDigestChannelDeliver(status: string): boolean {

@@ -3,6 +3,7 @@ import { fetchBalancerPools } from "../fetch-balancer";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { fetchDirectApiFixture } from "../../__tests__/dex-liquidity-direct-api.test-support";
 import { buildAuthoritativeStagedPoolConfirmationIndex } from "../orchestrator-phases/authoritative";
+import { convertToGtNewPools } from "../../../lib/dex-api-pool-shaping";
 
 function cleanPool() {
   return {
@@ -286,6 +287,35 @@ describe("fetchBalancerPools stable-math amp join", () => {
     expect(result.pools).toHaveLength(1);
     expect(result.pools[0]?.executionCapabilityGate).toBeUndefined();
     expect(result.pools[0]?.amp).toBeUndefined();
+  });
+
+  it("gates a weighted pool withheld from the enrichment sweep instead of authorizing its model", async () => {
+    const withheld = weightedPool();
+    // >$100M TVL with no measured volume fails the enrichment budget, so the
+    // pool is never submitted to the hook-free/reviewed-rate-provider sweep.
+    withheld.dynamicData.totalLiquidity = "150000000";
+    withheld.dynamicData.volume24h = "0.00";
+    mockFetch([{
+      match: "api-v3.balancer.fi",
+      matchBody: "poolGetPools",
+      body: { data: { poolGetPools: [withheld] } },
+    }], { requireMatch: true });
+
+    const result = await fetchBalancerPools();
+    expect(result.pools).toHaveLength(1);
+    expect(result.pools[0]?.executionCapabilityGate).toEqual({
+      family: "balancer-amm",
+      reason: "incomplete-exact-capture",
+    });
+
+    // The gate withholds the exact weighted-constant-mean model downstream.
+    const shaped = convertToGtNewPools(
+      result.pools,
+      new Map([["ethereum:0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "usdc-circle"]]),
+      new Map(),
+    ).get("usdc-circle")?.[0];
+    expect(shaped).toBeDefined();
+    expect(shaped?.ammExecutionModel).toBeUndefined();
   });
 
   it("sends raw Sonic vault ids to idIn while retaining chain-scoped admission", async () => {

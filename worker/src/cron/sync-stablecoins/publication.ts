@@ -36,7 +36,7 @@ import {
   type StablecoinsStalenessSummary,
 } from "./runtime";
 import { buildSyncMetadata, type CronResult, type PreviousStablecoinsCacheState } from "./shared";
-import { queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
+import { isFallbackBackedTrackedBaseline, queueTrackedAdditionsNotice } from "./telegram-tracked-additions";
 import type { PeggedAsset } from "./enrich-prices";
 import { persistChainDropoutState, type SupplyChainGuardResult } from "./chain-dropout-guard";
 
@@ -266,6 +266,7 @@ export async function runStablecoinsPostIntakePublication(
     });
   }
   const previousAssetIds = new Set(input.previousAssetsById.keys());
+  const previousBaselineFallbackBacked = isFallbackBackedTrackedBaseline(input.previousAssetsById.values());
   input.previousAssetsById.clear();
 
   if (labels.cacheValidationAbortStage) {
@@ -328,7 +329,7 @@ export async function runStablecoinsPostIntakePublication(
   if (priceCacheCommit) return priceCacheCommit;
   if (main) await recordOutcome(input.db, CIRCUIT_SOURCE.DL_STABLECOINS, true);
 
-  await queueTrackedAdditionsNotice(input.db, previousAssetIds, input.assets);
+  await queueTrackedAdditionsNotice(input.db, previousAssetIds, input.assets, { previousBaselineFallbackBacked });
   await reportStablecoinsStage(
     input.reportProgress,
     labels.depegProgressStage,

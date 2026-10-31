@@ -355,9 +355,11 @@ export async function resolveQuoterV2PoolBindings(input: {
         failedAttemptAccounting: "single-call",
         unattemptedResult: "failure-result",
       },
-      materializeTransportFailure: (request) => ({
+      materializeTransportFailure: (request, reason) => ({
         targetId: request.target.targetId,
-        failureReason: "factory-get-pool-failed",
+        // Transport/budget stops are operational; a decoded getPool failure
+        // below stays a deterministic `factory-get-pool-failed` barrier.
+        failureReason: reason ?? "quoter-rpc-unavailable",
       }),
       resolveResult: (request, result) => {
         const resolvedPool = result.success

@@ -1006,3 +1006,69 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(asset).toEqual(before);
   });
 });
+
+describe("carried gap-fill verdict", () => {
+  /** A prior publication the reconciliation admitted as `coingecko-gap-fill` (CG 130 vs DL 100). */
+  async function publishGapFilledRow(): Promise<PeggedAsset> {
+    const published = makeAsset();
+    mockCoinGeckoAt(130);
+    await reconcileTrackedSupplyGaps([published]);
+    expect(published.supplySource).toBe("coingecko-gap-fill");
+    return published;
+  }
+
+  it("does not list a carried prior packet as a rejected contribution when the chart request fails", async () => {
+    const published = await publishGapFilledRow();
+    const current = makeAsset();
+    mockCoinGeckoAt(130);
+    const healthyFetch = fetchTextWithRetryMock.getMockImplementation()!;
+    fetchTextWithRetryMock.mockImplementation((url: string) =>
+      url.includes("/market_chart")
+        ? { response: { ok: false, status: 429 }, body: "" }
+        : healthyFetch(url));
+
+    const result = await reconcileTrackedSupplyGaps(
+      [current],
+      undefined,
+      null,
+      undefined,
+      undefined,
+      new Map([[published.id, published]]),
+    );
+
+    // The published row is the previous CoinGecko packet (130), not the fresh DefiLlama 100.
+    expect(current.supplySource).toBe("coingecko-gap-fill");
+    expect(getCirculatingRawOrNull(current)).toBe(130);
+    expect(current.supplyRestored).toBe(true);
+    // DEC-01 "Rejection" means the DefiLlama row was left untouched. A history
+    // failure that republishes one prior packet is the documented "No decision"
+    // carry, so the same asset cannot also be reported as rejected.
+    expect(result.gapFillRejections).toEqual([]);
+  });
+
+  it("does not list a carried prior packet as a rejected contribution when a compared bucket is missing", async () => {
+    const published = await publishGapFilledRow();
+    const current = makeAsset();
+    const nowMs = Date.now();
+    // Current/day/week present, 30d point absent: the chart returns points but is incomplete.
+    mockCoinGeckoHistory([
+      [nowMs - (7 * DAY_MS), 80],
+      [nowMs - DAY_MS, 90],
+      [nowMs, 130],
+    ]);
+
+    const result = await reconcileTrackedSupplyGaps(
+      [current],
+      undefined,
+      null,
+      undefined,
+      undefined,
+      new Map([[published.id, published]]),
+    );
+
+    expect(current.supplySource).toBe("coingecko-gap-fill");
+    expect(getCirculatingRawOrNull(current)).toBe(130);
+    expect(current.supplyRestored).toBe(true);
+    expect(result.gapFillRejections).toEqual([]);
+  });
+});
