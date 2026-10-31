@@ -240,7 +240,7 @@ const HEALTHY_BENCHMARK_ROUTES: BenchmarkFetchRoutes = {
   ),
   "id=DFF": new Response("DATE,DFF\n2026-03-02,4.33\n", { status: 200 }),
   "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(
-    "observation_date,IUDZOS2\n2026-01-01,100\n2026-04-01,101\n",
+    "observation_date,IUDZOS2\n2026-03-26,100\n2026-06-24,101\n",
     { status: 200 },
   ),
   "bankofengland.co.uk": new Response(BOE_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET, { status: 200 }),

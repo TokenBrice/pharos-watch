@@ -950,6 +950,78 @@ describe("identifyCoverageGaps", () => {
     const stale = identifyStaleAutoLendingOverrides(pools, options);
     expect(stale).toContainEqual(expect.objectContaining(expected));
   });
+
+  it("does not report a below-safety-score verdict for an unrated card in an ok snapshot", () => {
+    const stablecoinId = "eurcv-societe-generale-forge";
+    const stale = identifyStaleAutoLendingOverrides(
+      [makeDlYieldPool({
+        pool: "d3b28212-a46b-4db8-8bb7-2c946b3cbe76",
+        project: "morpho-blue",
+        symbol: "STEAKEURCV",
+        tvlUsd: 2_000_000,
+      })],
+      {
+        stablecoinSupplyById: new Map([[stablecoinId, 1_000_000]]),
+        // Snapshot available, but this coin has no rated card.
+        safetyScores: new Map(),
+      },
+    );
+
+    expect(stale.find((entry) => entry.stablecoinId === stablecoinId)?.reasons)
+      .toEqual(["safety-score-unavailable"]);
+  });
+});
+
+describe("identifyDeadCuratedPins variant liveness", () => {
+  const stablecoinId = "ftusd-flying-tulip";
+  const wrapperAddress = YIELD_VARIANT_MAP[stablecoinId]!.variantAddress!;
+
+  it.each([
+    {
+      name: "contradictory underlying address evidence",
+      pools: [makeDlYieldPool({
+        pool: "ethereum-sftusd-contradictory",
+        project: "yo-protocol",
+        symbol: "sftUSD",
+        underlyingTokens: ["0x000000000000000000000000000000000000dead"],
+      })],
+    },
+    {
+      name: "same-symbol ambiguity",
+      pools: [
+        makeDlYieldPool({ pool: "ethereum-sftusd-first", project: "aave-v3", symbol: "sftUSD" }),
+        makeDlYieldPool({ pool: "ethereum-sftusd-second", project: "compound-v3", symbol: "sftUSD" }),
+      ],
+    },
+    {
+      name: "a yield-tokenization market",
+      pools: [makeDlYieldPool({
+        pool: "ethereum-pendle-sftusd",
+        project: "pendle-v2",
+        symbol: "sftUSD",
+        underlyingTokens: [wrapperAddress],
+      })],
+    },
+  ])("reports the variant pin as missing when $name leaves no runtime-resolvable pool", ({ pools }) => {
+    const pin = identifyDeadCuratedPins(pools).find(
+      (entry) => entry.registry === "variant-pool" && entry.stablecoinId === stablecoinId,
+    );
+    expect(pin).toMatchObject({ reasons: ["missing-pool"] });
+  });
+
+  it("clears the variant pin when the configured wrapper address resolves", () => {
+    const pools = [makeDlYieldPool({
+      pool: "ethereum-sftusd-wrapper",
+      project: "flying-tulip",
+      symbol: "sftUSD",
+      tvlUsd: 3_200_000,
+      underlyingTokens: [wrapperAddress],
+    })];
+
+    expect(identifyDeadCuratedPins(pools).find(
+      (entry) => entry.registry === "variant-pool" && entry.stablecoinId === stablecoinId,
+    )).toBeUndefined();
+  });
 });
 
 describe("identifyDeadCuratedPins", () => {

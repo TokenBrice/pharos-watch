@@ -175,6 +175,71 @@ function corroboratesUnderlyingSet(
  */
 const YIELD_TOKENIZATION_PROJECTS: Record<string, true> = { "pendle-v2": true, "spectra-v2": true };
 
+export interface VariantDlPoolCandidate {
+  pool: string;
+  symbol: string;
+  exposure: string;
+  underlyingTokens?: string[] | null;
+  chain?: string;
+  project?: string;
+}
+
+export interface VariantDlPoolSelection<T extends VariantDlPoolCandidate> {
+  selected: T | null;
+  /** Candidates left after the address/symbol/project gates; >1 is ambiguous. */
+  candidateCount: number;
+}
+
+/**
+ * Layer-2 variant gate shared by runtime matching and the coverage audit:
+ * single exposure, non-tokenization venue, normalized symbol equality, optional
+ * chain/project scoping, underlying-address corroboration when a pin address
+ * exists, and exactly one remaining candidate. `isExcluded` lets runtime drop a
+ * pool already claimed by the native layer (or reserved for another coin).
+ */
+export function selectVariantDlPool<T extends VariantDlPoolCandidate>(
+  variant: { variantSymbol: string; variantChain?: string; variantAddress?: string; variantProject?: string },
+  dlPools: readonly T[],
+  options?: { isExcluded?: (pool: T) => boolean },
+): VariantDlPoolSelection<T> {
+  const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
+  const variantChain = variant.variantChain ? normalizeChainId(variant.variantChain) : null;
+  const variantAddress = normalizeTokenAddress(variant.variantAddress ?? "");
+  const variantProject = (variant.variantProject ?? "").trim().toLowerCase();
+
+  const baseCandidates = dlPools.filter(
+    (pool) =>
+      pool.exposure === "single" &&
+      YIELD_TOKENIZATION_PROJECTS[(pool.project ?? "").trim().toLowerCase()] !== true &&
+      normalizeDexSymbol(pool.symbol) === variantSymbol &&
+      !(options?.isExcluded?.(pool) ?? false) &&
+      (!variantChain || normalizeChainId(pool.chain) === variantChain),
+  );
+
+  const addressCandidates = variantAddress
+    ? baseCandidates.filter((pool) => corroboratesUnderlyingSet(pool, new Set([variantAddress])))
+    : [];
+  const symbolCandidates = baseCandidates.filter((pool) => !variantAddress || !pool.underlyingTokens?.length);
+  const filterByProject = <C extends { project?: string }>(candidates: C[]): C[] =>
+    variantProject
+      ? candidates.filter((pool) => (pool.project ?? "").trim().toLowerCase() === variantProject)
+      : candidates;
+
+  const scopedAddressCandidates = filterByProject(addressCandidates);
+  const scopedSymbolCandidates = filterByProject(symbolCandidates);
+
+  let selectedVariantCandidates = symbolCandidates;
+  if (addressCandidates.length > 0) {
+    selectedVariantCandidates = variantProject ? scopedAddressCandidates : addressCandidates;
+  } else if (variantProject) {
+    selectedVariantCandidates = scopedSymbolCandidates;
+  }
+  return {
+    selected: selectedVariantCandidates.length === 1 ? selectedVariantCandidates[0]! : null,
+    candidateCount: selectedVariantCandidates.length,
+  };
+}
+
 /**
  * Returns ALL DL pools that are yield sources for the given coin.
  *
@@ -244,41 +309,11 @@ export function matchAllDlPools(
   // Layer 2: Variant map (wrapper/savings pool — stablecoin flag relaxed)
   const variant = variantMap[stablecoinId];
   if (variant) {
-    const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
-    const variantChain = variant.variantChain ? normalizeChainId(variant.variantChain) : null;
-    const variantAddress = normalizeTokenAddress(variant.variantAddress ?? "");
-    const variantProject = (variant.variantProject ?? "").trim().toLowerCase();
-
-    const baseCandidates = dlPools.filter(
-      (pool) =>
-        pool.exposure === "single" &&
-        YIELD_TOKENIZATION_PROJECTS[(pool.project ?? "").trim().toLowerCase()] !== true &&
-        normalizeDexSymbol(pool.symbol) === variantSymbol &&
-        !seenUuids.has(pool.pool) &&
-        !isReservedForAnotherCoin(pool.pool) &&
-        (!variantChain || normalizeChainId(pool.chain) === variantChain),
-    );
-
-    const addressCandidates = variantAddress
-      ? baseCandidates.filter((pool) => corroboratesUnderlyingSet(pool, new Set([variantAddress])))
-      : [];
-    const symbolCandidates = baseCandidates.filter((pool) => !variantAddress || !pool.underlyingTokens?.length);
-    const filterByProject = <T extends { project?: string }>(candidates: T[]): T[] =>
-      variantProject
-        ? candidates.filter((pool) => (pool.project ?? "").trim().toLowerCase() === variantProject)
-        : candidates;
-
-    const scopedAddressCandidates = filterByProject(addressCandidates);
-    const scopedSymbolCandidates = filterByProject(symbolCandidates);
-
-    let selectedVariantCandidates = symbolCandidates;
-    if (addressCandidates.length > 0) {
-      selectedVariantCandidates = variantProject ? scopedAddressCandidates : addressCandidates;
-    } else if (variantProject) {
-      selectedVariantCandidates = scopedSymbolCandidates;
-    }
-    if (selectedVariantCandidates.length === 1) {
-      const selected = selectedVariantCandidates[0];
+    const selection = selectVariantDlPool(variant, dlPools, {
+      isExcluded: (pool) => seenUuids.has(pool.pool) || isReservedForAnotherCoin(pool.pool),
+    });
+    if (selection.selected) {
+      const selected = selection.selected;
       found.push({
         pool: selected.pool,
         apy: selected.apy,
@@ -287,9 +322,9 @@ export function matchAllDlPools(
         tvlUsd: selected.tvlUsd,
       });
       seenUuids.add(selected.pool);
-    } else if (selectedVariantCandidates.length > 1) {
+    } else if (selection.candidateCount > 1) {
       logWorkerEventArgs("handler", "warn",
-        `[yield-sync] Ambiguous variant DL match for ${stablecoinId} (${variant.variantSymbol}) across ${selectedVariantCandidates.length} pools; skipping variant layer`,
+        `[yield-sync] Ambiguous variant DL match for ${stablecoinId} (${variant.variantSymbol}) across ${selection.candidateCount} pools; skipping variant layer`,
       );
     }
   }

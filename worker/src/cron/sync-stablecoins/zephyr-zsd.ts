@@ -72,6 +72,17 @@ function normalizeZephyrObservedAt(value: unknown, nowSec: number): number | nul
   return freshness.observedAt;
 }
 
+// Supply fields admit an explicit zero; `toPositiveFiniteNumber` is only for
+// prices, where zero is not a valid observation.
+function toNonNegativeFiniteNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+  return null;
+}
+
 function parseZephyrAssetStats(
   payload: unknown,
   supplyKey: string,
@@ -82,7 +93,9 @@ function parseZephyrAssetStats(
 ): ZephyrScannerAssetStats | null {
   if (!payload || typeof payload !== "object") return null;
   const record = payload as Record<string, unknown>;
-  const supply = toPositiveFiniteNumber(record[supplyKey]);
+  // An explicit numeric zero is an observed circulation (ADR-28); only a
+  // missing, negative or non-finite field is unavailable.
+  const supply = toNonNegativeFiniteNumber(record[supplyKey]);
   if (supply == null) return null;
 
   const rawReportedPrice = toPositiveFiniteNumber(record[priceKey]);
@@ -191,7 +204,9 @@ function buildZephyrPeggedAsset(
   const circulatingMcap = meta.id === ZEPHYR_ZSD_ASSET_ID
     ? stats.supply * priceForCirculatingMcap
     : stats.mcap;
-  if (!Number.isFinite(circulatingMcap) || circulatingMcap <= 0) return null;
+  // Zero is an admitted observation; only negative or non-finite valuation is
+  // unavailable (ADR-28).
+  if (!Number.isFinite(circulatingMcap) || circulatingMcap < 0) return null;
 
   const resolvedPrice = resolveZephyrPrice(stats, priceResolution, nowSec);
   return {
@@ -272,7 +287,7 @@ export async function fetchZephyrProtocolStats(signal?: AbortSignal): Promise<Ze
   try {
     const payload = JSON.parse(result.body);
     const stats = parseZephyrProtocolStats(payload);
-    if (!stats) logWorkerEventArgs("handler", "warn", "[zephyr-scanner] Live stats payload missing positive ZSD circulation");
+    if (!stats) logWorkerEventArgs("handler", "warn", "[zephyr-scanner] Live stats payload missing ZSD circulation");
     if (stats && !stats.zys) logWorkerEventArgs("handler", "warn", "[zephyr-scanner] Live stats payload missing positive ZYS circulation or price");
     return stats;
   } catch (err) {

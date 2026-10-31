@@ -565,6 +565,50 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
       .get(WATCHDOG_KEYS.zeroSendStreak)).toEqual({ value: state, updated_at: nowSec - 60 });
   });
 
+  it("preserves an active episode when the latest degraded run never completed detection", async () => {
+    const realCache = await vi.importActual<typeof DbCache>("../../../../lib/db-cache");
+    mockGetCache.mockImplementation(realCache.getCache);
+    mockSetCache.mockImplementation(realCache.setCache);
+    mockDeleteCache.mockImplementation(realCache.deleteCache);
+    const { sqlite, db } = fixtures.open();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const state = JSON.stringify({ streak: ZERO_SEND_STREAK_THRESHOLD, lastRunIdentity: "17" });
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(WATCHDOG_KEYS.zeroSendStreak, state, nowSec - 60);
+    // Exactly the shape dispatchTelegramAlerts persists after its
+    // alert-detection stage throws: zero-filled empty-result counts plus the
+    // planning failure that explains them.
+    sqlite.prepare("INSERT INTO cron_runs (id, job, started_at, duration_ms, status, metadata) VALUES (18, 'dispatch-telegram-alerts', ?, 0, 'degraded', ?)")
+      .run(nowSec, JSON.stringify({
+        eventsDetected: {
+          dews: 0, depeg: 0, depegTriggered: 0, depegResolved: 0, depegWorsening: 0,
+          safety: 0, launch: 0, reserve: 0, freeze: 0, suppressedMethodologyChanges: 0,
+        },
+        messagesSent: 0,
+        freezeTargetCount: 0,
+        authoritativePlanning: { sourceEventId: null, sourceEventFamilies: [], plannedTargetCount: 0 },
+        reason: "telegram-planning-failed",
+        reasons: ["telegram-planning-failed"],
+        deliveryV2: { planningErrors: ["alert-detection:d1"] },
+      }));
+
+    const result = await runTelegramDegradationWatchdog(db);
+    const meta = JSON.parse(result.metadata ?? "{}");
+
+    expect(meta.zeroSend).toMatchObject({
+      availability: "unknown",
+      reason: "planning-incomplete",
+      recovered: false,
+      triggered: true,
+      streak: ZERO_SEND_STREAK_THRESHOLD,
+      evaluated: false,
+    });
+    expect(meta.reason).toBe("dispatch-evidence-unavailable");
+    expect(result.status).toBe("degraded");
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .get(WATCHDOG_KEYS.zeroSendStreak)).toEqual({ value: state, updated_at: nowSec - 60 });
+  });
+
   it.each([0, 3])("distinguishes an empty dispatch ledger from failed evidence at streak %s", async (streak) => {
     const store = installCacheStore();
     const state = { value: JSON.stringify({ streak, lastRunIdentity: "17" }), updatedAt: 1 };

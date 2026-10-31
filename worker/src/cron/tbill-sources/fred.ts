@@ -10,8 +10,15 @@ import {
   parseRate,
 } from "./shared";
 import { deriveSoniaCompoundedRate } from "./boe";
+import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC } from "@shared/lib/yield-benchmark-freshness";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 
-const ST_LOUIS_FED_SONIA_MAX_OBSERVATION_AGE_DAYS = 140;
+// The latest mirrored observation is a market print, so it must satisfy the
+// same GBP record budget the consumer applies; otherwise a frozen FRED/ALFRED
+// mirror suppresses a current BoE observation and the run reports stale GBP
+// data as fetched now.
+const ST_LOUIS_FED_SONIA_MAX_OBSERVATION_AGE_DAYS =
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.GBP / DAY_SECONDS;
 const ST_LOUIS_FED_MAX_FUTURE_SKEW_DAYS = 1;
 // The graph edge returns HTTP 520 to generic and browser user agents from
 // Workers. A contact-bearing product UA is accepted by both FRED and ALFRED.
@@ -24,9 +31,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * future-dated row means the source or its clock is wrong; either way the caller
  * must fall through to the next provider (or the retained benchmark) instead of
  * stamping a stale observation as a fresh benchmark. Shared by every St. Louis
- * Fed loader: the SONIA Compounded Index mirrors
- * (140-day bound) and the DGS3MO/DFF series CSVs (the registry's per-key
- * observation bound).
+ * Fed loader: the SONIA Compounded Index mirrors (the shared GBP observation
+ * bound) and the DGS3MO/DFF series CSVs (the registry's per-key observation
+ * bound).
  */
 function isFredObservationCurrent(recordDate: string, maxObservationAgeDays: number): boolean {
   const timestampMs = parseIsoDateMs(recordDate);

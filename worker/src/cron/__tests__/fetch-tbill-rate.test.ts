@@ -55,7 +55,7 @@ import { logCronEvent } from "../../lib/cron-logger";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
 
 // ALFRED graph CSV uses the same observation shape with a date-stamped series column.
-const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2_20260625\n2026-01-01,100\n2026-04-01,101\n";
+const ALFRED_SONIA_COMPOUNDED_INDEX_CSV_SNIPPET = "observation_date,IUDZOS2_20260625\n2026-03-26,100\n2026-06-24,101\n";
 
 // FRED and NY Fed observations enforce the shared per-key five-day budget.
 // The shared routes ship static 2026-03 rows, so override them with fresh rows
@@ -136,6 +136,7 @@ describe("fetchTbillRate", () => {
         source: string;
         isFallback: boolean;
         fallbackMode: string | null;
+        recordDate: string | null;
       } | null>;
     };
   }
@@ -398,8 +399,53 @@ describe("fetchTbillRate", () => {
 
     expect(result.status).toBe("ok");
     expect(metadata.gbpSource).toBe("alfred-sonia-compounded-index");
-    expect(metadata.gbpRecordDate).toBe("2026-04-01");
+    expect(metadata.gbpRecordDate).toBe("2026-06-24");
     expect(metadata.gbpRate).toBeCloseTo(4.05556, 5);
+  });
+
+  it("falls through a frozen 36-day-old FRED SONIA mirror to the current ALFRED observation", async () => {
+    // The FRED mirror answers HTTP 200 with an unbounded historical CSV but has
+    // stopped updating; ALFRED's copy carries the current print.
+    mockTbillByUrl({
+      "fred.stlouisfed.org/graph/fredgraph.csv?id=IUDZOS2": new Response(
+        "observation_date,IUDZOS2\n2026-02-15,100\n2026-05-20,101\n",
+        { status: 200 },
+      ),
+      "alfred.stlouisfed.org/graph/alfredgraph.csv?id=IUDZOS2": new Response(
+        "observation_date,IUDZOS2_20260623\n2026-03-25,100\n2026-06-23,101\n",
+        { status: 200 },
+      ),
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("ok");
+    expect(metadata.gbpSource).toBe("alfred-sonia-compounded-index");
+    expect(metadata.gbpRecordDate).toBe("2026-06-23");
+    expect(metadata.fallbackMode).toBeNull();
+
+    const persisted = latestStructuredCachePayload();
+    expect(persisted.benchmarks.GBP).toMatchObject({
+      source: "alfred-sonia-compounded-index",
+      recordDate: "2026-06-23",
+      isFallback: false,
+      fallbackMode: null,
+    });
+
+    // The persisted print must satisfy the same shared GBP bound the consumer
+    // applies; a 36-day-old mirror print would classify stale there.
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rates: makeCacheRow(cacheWritePayload("risk_free_rates"), FROZEN_NOW.getTime() / 1000),
+    });
+    const loaded = await loadRiskFreeRateRegistryWithState(db);
+    expect(loaded.cacheState).toBe("valid");
+    const gbp = loaded.registry.GBP!;
+    expect(classifyYieldBenchmarkFreshness(gbp, {
+      recordDate: gbp.recordDate,
+      maxRecordAgeSec: YIELD_BENCHMARK_RECORD_MAX_AGE_SEC.GBP,
+      nowSec: FROZEN_NOW.getTime() / 1000,
+    })).toBe("healthy");
   });
 
   it("falls back to the BoE SONIA index when St. Louis Fed SONIA observations are future dated", async () => {
