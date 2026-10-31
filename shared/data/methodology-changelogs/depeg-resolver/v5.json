@@ -1,5 +1,20 @@
 [
   {
+    "version": "5.1",
+    "title": "Stage-1 contradiction fixes for supply coverage and live direction",
+    "date": "2026-10-31",
+    "effectiveAt": 1793404800,
+    "summary": "DDR v5.1 fixes two Stage 1 contradictions that could publish a No break signals verdict from unavailable supply evidence or a stale event direction. Stage 2, the sub-component versions and sealed predictions are unchanged.",
+    "impact": [
+      "K1 supply weaponization and K4 reflexive death-spiral use the seven-day supply-change proxy only when mint-surge coverage is explicitly `supply-history-proxy` or null (legacy unmarked); an explicit `unavailable` coverage marker stays unavailable and cannot stand in for the hourly proxy.",
+      "An `above`-direction event whose live signed deviation is itself a below-peg break deeper than 1,000 bps is evaluated by the below-peg kill signals and tier mapping. A stale stored direction can no longer publish No break signals for a live deep break that its own depth readout already uses.",
+      "The resolution rubric, duration model, incident grouping, support rules and reviewer versions are unchanged; these fixes move only the affected new assessments and forecasts, and sealed predictions keep their original content, hashes and version stamps.",
+      "Activation is 2026-10-31 00:00 UTC (1793404800); no Stage 1 replay is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "5.0",
     "title": "Evidence-class verdicts, competing-risk duration odds and reviewer v5",
     "date": "2026-10-25",

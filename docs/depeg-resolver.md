@@ -15,7 +15,7 @@ DDR is **not investment advice and not a credit rating.** A "Terminal evidence" 
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v5.0`<!-- GENERATED-END: methodology-version-depeg-resolver -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-resolver -->`v5.1`<!-- GENERATED-END: methodology-version-depeg-resolver -->
 - **Public changelog page:** `/methodology/depeg-resolver-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/depeg-resolver.ts`, with shared constants in `shared/lib/methodology-versions/constants.ts` and changelog entries in `shared/data/methodology-changelogs/depeg-resolver/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-resolver/`
@@ -27,6 +27,8 @@ The 2026-10-10 `v4.7` release admits only timed onset/current-deviation samples 
 **Release obligations recorded 2026-10-10:** for v4.7, fresh admitted producer observations and production resource evidence remain separate gates from fixed-clock replay, owner mover review and timestamp-evidenced recalibration; replay or calibration alone is not a production-health result.
 
 The 2026-10-25 `v5.0` release (rubric `resolution-rubric-v4`, duration `duration-landmark-v3`, support `support-rules-v3`, reviewer `ddr-reviewer-v5`) is score- and verdict-moving for new predictions: Stage 1 reads evidence classes and stops condemning coins on static exit thinness, Stage 2 publishes unconditional competing-risk recovery odds, new rows persist a raw decision-input snapshot, and DDRR grades calls against naive baselines. Frozen v2–v4 predictions keep their bytes, hashes, labels and methodology stamps; only DDRR's classification of their later outcomes can change (`terminal_at_lock`, overdue still-open rows). Evidence is in [Validation / Backtest Plan](#validation--backtest-plan-acceptance-gates).
+
+The 2026-10-31 `v5.1` release fixes two Stage 1 evidence contradictions without changing Stage 2, the sub-component versions or frozen rows. K1 and K4 use the seven-day supply-change proxy only when mint-surge coverage is explicitly `supply-history-proxy` or null (legacy unmarked); an explicit `unavailable` marker is unavailable evidence, not the hourly proxy. An `above`-direction event whose live signed deviation is itself a below-peg break deeper than 1,000 bps is evaluated by the below-peg kill signals and tier mapping, so a stale stored direction cannot publish No break signals for a live deep break. Activation is 2026-10-31 00:00 UTC; sealed predictions keep their original content, hashes and version stamps.
 
 Sub-component versions are surfaced in the API `_meta` for reproducibility: `resolutionRubricVersion` (`resolution-rubric-v4`), `durationModelVersion` (`duration-landmark-v3`), `incidentGroupingVersion` (`incident-group-v3`), `supportRulesVersion` (`support-rules-v3`), reviewer version (`ddr-reviewer-v5`), snapshot generation fields, public prediction IDs, immutable lock trigger/readiness metadata, and first-publication hashes. Version stamps live in `canonicalPredictionForHash`, so bumps affect **new** row hashes only; frozen rows keep their stored stamps.
 

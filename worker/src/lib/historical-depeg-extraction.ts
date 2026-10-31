@@ -15,6 +15,12 @@ import type { PricePoint } from "./historical-market-prices";
 
 export const BACKFILL_MIN_CONFIRM_POINTS = 2;
 const BACKFILL_PENDING_MAX_GAP_SEC = 6 * 3600;
+// A deeper sample only becomes the stored peak when another sample of the
+// same episode comes within this distance: one wick between par readings is
+// feed noise, not an observation the event should adopt (USDC 2018-10-04,
+// sUSD 2019-06-24).
+const PEAK_CORROBORATION_TOLERANCE_BPS = 1000;
+const PEAK_CORROBORATION_SAMPLE_WINDOW = 2;
 
 export interface SupplyPoint {
   date: string;
@@ -89,6 +95,25 @@ export function findNearestSupply(
   return nearest.supply;
 }
 
+/** True when a nearby sample of the same episode lands within tolerance of the candidate peak. */
+function isCorroboratedPeak(
+  prices: readonly PricePoint[],
+  index: number,
+  bps: number,
+  direction: string,
+  pegRef: number,
+): boolean {
+  for (let offset = -1; offset <= PEAK_CORROBORATION_SAMPLE_WINDOW; offset++) {
+    if (offset === 0) continue;
+    const neighbour = prices[index + offset];
+    if (!neighbour || neighbour.price <= 0) continue;
+    const signal = deriveDepegSignal(neighbour.price, pegRef);
+    if (!signal || signal.direction !== direction) continue;
+    if (Math.abs(signal.bps - bps) <= PEAK_CORROBORATION_TOLERANCE_BPS) return true;
+  }
+  return false;
+}
+
 export function extractDepegEvents(
   prices: PricePoint[],
   getPegRef: (timestamp: number) => number,
@@ -146,7 +171,8 @@ export function extractDepegEvents(
     pending = null;
   }
 
-  for (const point of prices) {
+  for (let index = 0; index < prices.length; index++) {
+    const point = prices[index]!;
     const { timestamp, price } = point;
     if (price <= 0) continue;
 
@@ -174,7 +200,7 @@ export function extractDepegEvents(
           events.push(current);
           current = null;
         } else {
-          if (absBps > Math.abs(current.peakDeviationBps)) {
+          if (absBps > Math.abs(current.peakDeviationBps) && isCorroboratedPeak(prices, index, bps, direction, pegRef)) {
             current.peakDeviationBps = bps;
             current.peakPrice = price;
           }
@@ -210,7 +236,7 @@ export function extractDepegEvents(
       } else {
         pending.count++;
         pending.lastTs = timestamp;
-        if (absBps > Math.abs(pending.peakBps)) {
+        if (absBps > Math.abs(pending.peakBps) && isCorroboratedPeak(prices, index, bps, direction, pegRef)) {
           pending.peakBps = bps;
           pending.peakPrice = price;
         }

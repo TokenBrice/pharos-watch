@@ -16,21 +16,21 @@ The runtime now uses three HTTP lanes:
 - `https://site-api.pharos.watch` requires `X-Pharos-Site-Proxy-Secret` for allowlisted `GET` reads and internal `GET /api/stablecoin-detail-snapshot-inputs`. The build-input read is denied through browser `/_site-data/*` and the public API host.
 - `/_site-data/*` is the same-origin Pages Functions proxy used by browsers on `pharos.watch`, `ops.pharos.watch`, `stablecoin-dashboard.pages.dev`, and subdomains of `stablecoin-dashboard.pages.dev`.
 
-Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is available as JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
+Static dataset exports are served from the public website, not from the Worker API, and do not require `X-API-Key`. The Stablecoin Cemetery export is JSON at `https://pharos.watch/datasets/stablecoin-cemetery.json` and CSV at `https://pharos.watch/datasets/stablecoin-cemetery.csv`.
 
-The same static lane serves `https://pharos.watch/datasets/<topic>/latest.{csv,json,ndjson}` and dated `/datasets/<topic>/<YYYY-MM-DD>.{csv,json,ndjson}` artifacts, retained for 90 days. Topic IDs are a never-break external contract owned by `PUBLIC_DATASET_TOPICS` in `shared/lib/api-endpoints/datasets.ts`. Each `latest` URL is a Pages `200` rewrite to the same-extension dated file; `https://pharos.watch/sheets/<topic>.csv` rewrites directly to dated CSV. Missing dated URLs mean no currently published artifact, including retention pruning—not an observed empty dataset or proof that no refresh ran. Shared current-snapshot freshness gates reject dates beyond two UTC dates; per-topic alias checks do not age-check each topic. These unauthenticated JSON-LD `DataDownload` URLs have extension-compatible content types, `Access-Control-Allow-Origin: *`, and cache policies from `public/_headers`. Generator/backdating mechanics belong to `scripts/maintenance/generate-public-datasets.ts`.
+The same static lane serves `https://pharos.watch/datasets/<topic>/latest.{csv,json,ndjson}` and dated `/datasets/<topic>/<YYYY-MM-DD>.{csv,json,ndjson}` artifacts, retained for 90 days. Topic IDs are a never-break external contract owned by `PUBLIC_DATASET_TOPICS` in `shared/lib/api-endpoints/datasets.ts`. Each `latest` URL is a Pages `200` rewrite to the same-extension dated file; `https://pharos.watch/sheets/<topic>.csv` rewrites directly to dated CSV. Missing dated URLs mean no published artifact, including retention pruning—not an observed empty dataset or proof no refresh ran. Shared current-snapshot freshness gates reject dates beyond two UTC dates; per-topic alias checks do not age-check each topic. These JSON-LD `DataDownload` URLs have extension-compatible content types, `Access-Control-Allow-Origin: *`, and cache policies from `public/_headers`. Generator/backdating mechanics belong to `scripts/maintenance/generate-public-datasets.ts`.
 
 The `depeg-history` topic is **retrospective windowed history**, not a historical point-in-time event-state sample. The dated filename selects the 90-day UTC event-start window ending on that date; peaks, recovery and closure fields come unchanged from the captured event ledger and may describe observations after the market snapshot. Its JSON/NDJSON metadata and CSV preamble report the ledger observation-end clock as `asOfISO`, the exact shard capture identity as `sourceGeneration`, the observation-start clock as `sourceObservationStartedAtISO`, and the separate market snapshot clock as `windowSnapshotAsOfISO`. Other topics retain the immutable market-envelope clock. A historical regeneration may change retrospective event rows and their capture provenance; it must not relabel later state as information known at the older market clock. Missing or mismatched ledger-capture provenance fails generation rather than inventing historical peaks or masking later recoveries.
 
 `scores-latest` additionally publishes an additive `_meta.displayProjection` contract and six appended row columns (`ratingStatus`, `safetyDisplay`, `dewsComputedAt`, `liquidityUpdatedAt`, `liquidityUnavailableReason`, `liquidityMethodologyVersion`). Existing columns and `_meta.asOfISO` keep their contract; `asOfISO` remains the collection clock, while the Safety publication clock is `displayProjection.safety.publishedAtSec` and each DEWS/liquidity source keeps its own `*At` field. Legacy exports omit the Safety object and set `safetyUnavailableReason: "legacy-source-metadata-unavailable"`; consumers must not infer held, current or quarantine state from the score. `displayProjection.version` is now 2: every v1 field keeps its bytes and the projection adds `openEvidence` (`{ semantics: "open-question-v1", totals: { questions, open, issuer, documentation, obligations } } | null`) copied from the accepted publication, plus `openEvidenceUnavailableReason` (`"safety-publication-unavailable" | "open-evidence-unavailable" | null`, null exactly when the counts are present). A missing Safety publication or a pre-cutover publication without the block publishes `openEvidence: null` with the matching reason, never three zero counts; the CSV preamble is unchanged.
 
-The static `depeg-history` dataset publishes each event's `id` as a string in JSON and NDJSON (and as text in CSV), preserving the established export contract. This differs from the numeric event IDs in the runtime depeg-events API and internal archive rows.
+The static `depeg-history` dataset publishes each event's `id` as a string in JSON and NDJSON (and as text in CSV), preserving the established export contract. This differs from the numeric event IDs in the runtime depeg-events API and internal archive rows. Rows append the ledger's `auditVerdict` (`null` when none); a reviewed dispute is never exported unmarked.
 
 Pharos code, data and data exports are [MIT-licensed](https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE). Editorial content, including profile prose, methodology and case studies, is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Third-party material retains its original terms. Editorial prose retains its license when included in a Markdown export. Dataset cards state the MIT license, the export's `_meta.asOfISO` and methodology label, and copy a citation that names the canonical Reference card and the dated JSON edition. The filename reflects publication; `asOfISO` preserves the observation clock; neither promises perpetual byte preservation.
 
-Public onboarding artifacts are served at `https://pharos.watch/openapi.json`, `https://pharos.watch/postman/pharos-api.postman_collection.json`, and `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files and replace the environment `apiKey` placeholder with a real `X-API-Key`. OpenAPI includes named Yield Intelligence ranking/history schemas; Postman includes best-source and source-key history examples. Both Postman variable lists declare `snapshotDate` (example `2026-10-25`, not evidence of availability): call `/api/snapshots/index` (API key required), then set `snapshotDate` to a returned `snapshots[].snapshotDate` before running either snapshot request. The integration/read catalogue is owned by `scripts/lib/public-api-artifact-catalog.ts`, not an inventory of every no-key route: it excludes admin routes, supporter-key claims, feedback, Telegram webhook/Mini App endpoints, and dynamic OG images. Request keys through `https://pharos.watch/api/`.
+Public onboarding artifacts are served at `https://pharos.watch/openapi.json`, `https://pharos.watch/postman/pharos-api.postman_collection.json`, and `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both files and replace the `apiKey` placeholder with a real `X-API-Key`. OpenAPI includes named Yield Intelligence ranking/history schemas; Postman includes best-source and source-key history examples. Both Postman variable lists declare `snapshotDate`: call `/api/snapshots/index` (API key required), then set `snapshotDate` to a returned `snapshots[].snapshotDate` before running either snapshot request. The integration/read catalogue is owned by `scripts/lib/public-api-artifact-catalog.ts`, not an inventory of every no-key route: it excludes admin routes, supporter-key claims, feedback, Telegram webhook/Mini App endpoints, and dynamic OG images. Request keys through `https://pharos.watch/api/`.
 
-Browser consumers use same-origin `/_site-data/*` via `src/lib/api.ts`; production Pages targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations and CI smoke target `https://api.pharos.watch` with `X-API-Key` for protected reads, including `/api/telegram-pulse`. Pages build-input syncs read allowlisted `GET` endpoints through `https://stablecoin-dashboard.pages.dev/_site-data/*` with an allowed site caller header and reject missing/invalid input. A release can retain failed producers' committed snapshots, but fails before build if all three fail or a failed public-dataset refresh cannot roll back cleanly.
+Browser consumers use same-origin `/_site-data/*` via `src/lib/api.ts`; production Pages targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations and CI smoke target `https://api.pharos.watch` with `X-API-Key` for protected reads, including `/api/telegram-pulse`. Pages build-input syncs read allowlisted `GET` endpoints through `https://stablecoin-dashboard.pages.dev/_site-data/*` with an allowed site caller header and reject missing/invalid input. A release can retain failed producers' committed snapshots, but fails before build if all three fail or a public-dataset refresh cannot roll back.
 
 Production Pages does not proxy public `/api/*` POST requests. `https://pharos.watch/api/` is the API access page: it presents the free grades feed, the supporter-key claim, and the partner-key contact. Its browser POST is the supporter-key claim, which goes cross-origin to `https://api.pharos.watch/api/donor-key-claims` with a normal CORS preflight for the JSON `POST` request.
 
@@ -642,7 +642,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.38"
+  "currentVersion": "6.39"
 }
 ```
 
@@ -680,7 +680,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.38"
+  "currentVersion": "6.39"
 }
 ```
 
@@ -1096,8 +1096,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.38",
-  "methodologyVersion": "6.38"
+  "currentVersion": "6.39",
+  "methodologyVersion": "6.39"
 }
 ```
 
