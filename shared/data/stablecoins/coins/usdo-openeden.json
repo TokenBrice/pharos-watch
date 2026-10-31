@@ -77,6 +77,11 @@
       "decimals": 18
     },
     {
+      "chain": "klaytn",
+      "address": "0x87e617c7484ade79fcd90db58beb82b057facb48",
+      "decimals": 18
+    },
+    {
       "chain": "plasma",
       "address": "0x87e617c7484ade79fcd90db58beb82b057facb48",
       "decimals": 18

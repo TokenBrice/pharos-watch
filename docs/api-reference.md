@@ -441,7 +441,7 @@ For all peg currencies, including USD, native `circulating` aliases normalize to
 
 `GET /api/mint-burn-flows` aggregate/per-coin `_meta` preserves the confirmed-output lookup verdict through cached fallbacks. Missing/failed lookup cannot substitute attempt/event-hour clocks for `sync.lastSuccessfulSyncAt`; unavailable metadata and headers retain their machine-readable reason.
 
-Aggregate FTQ also publishes `gauge.classificationReason` and independent `_meta.dependencies.flightToQuality` Safety Score evidence (`generationId`, original `updatedAt`, `ageSeconds`, `status`, `reason`, `freshBudgetSec`). Unavailable classification yields `flightToQuality: null` / `flightIntensity: null`, never inactive/zero. Fresh, cached and fallback paths re-admit the canonical index and expose the same advisory without renewing the flow clock; per-coin responses have no market-wide FTQ dependency. See [FTQ classification](./mint-burn-flows.md#registry-ownership) for the separate consumer budget and recovery semantics.
+Aggregate FTQ also publishes `gauge.classificationReason` and independent `_meta.dependencies.flightToQuality` Safety Score evidence (`generationId`, original `updatedAt`, `ageSeconds`, `status`, `reason`, `freshBudgetSec`). Unavailable classification yields `flightToQuality: null` / `flightIntensity: null`, never inactive/zero. A withheld verdict names its cause in `gauge.flightToQualityReason` (`valuation-incomplete`, `flow-window-unavailable`, `cohort-member-unpublished`) and lists the classified coins excluded because their whole flow is pending mint/burn admission in `gauge.flightToQualityExcludedIds`; both fields are absent on payloads produced before they existed. Fresh, cached and fallback paths re-admit the canonical index and expose the same advisory without renewing the flow clock; per-coin responses have no market-wide FTQ dependency. See [FTQ classification](./mint-burn-flows.md#registry-ownership) for the separate consumer budget and recovery semantics.
 
 `GET /api/stablecoin-summary/{stablecoinId}`: `supplyUsd` fields `current`, `prevDay`, `prevWeek`, `prevMonth`, `change1d`, `change7d`, `change30d` are `number | null`. Absent/empty/wholly invalid current peg buckets yield null `current` and `currentUnavailableReason: "supply-buckets-missing"`; observed supply, including `0`, clears the reason to null. Changes require observed current and historical values; missing current never implies a negative delta. `supplyByPegUsd` contains only finite buckets (`{}` if none). Assets absent from the stablecoins publication return `404`.
 `GET /api/dex-liquidity` and history publish nullable `totalVolume24hUsd`, `totalVolume7dUsd`, history `volume24h`, pool `volumeUsd1d` and `scoreComponents.volumeActivity`. [Measured volume availability (v6.9)](./dex-liquidity.md#measured-volume-availability) owns 72h admission, complete-only totals, availability-record fields, measured zero, global/legacy rows and the 50% activity/score coverage gate. Each `/api/dex-liquidity` row also carries optional `liquidityScoreUnavailableReason`: `null` when rated, otherwise the machine code of whoever nulled the score — `activity-coverage-below-floor`, `activity-missing`, `activity-stale`, `activity-completeness-unknown`, `no-retained-pools`, or `invalid-coverage-evidence` (publisher quarantine). Rows scored before the field existed publish `null`; consumers must not infer a cause. See [DEX Liquidity Score](./dex-liquidity.md#dex-liquidity-score).
@@ -642,7 +642,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.39"
+  "currentVersion": "6.40"
 }
 ```
 
@@ -680,7 +680,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.39"
+  "currentVersion": "6.40"
 }
 ```
 
@@ -957,10 +957,10 @@ Modeled issuer/protocol redemption routes and effective-exit scoring for configu
 {
   "coins": {},
   "methodology": {
-    "version": "4.52",
-    "versionLabel": "v4.52",
-    "currentVersion": "4.52",
-    "currentVersionLabel": "v4.52",
+    "version": "4.53",
+    "versionLabel": "v4.53",
+    "currentVersion": "4.53",
+    "currentVersionLabel": "v4.53",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -1019,7 +1019,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.52",
-  "methodologyVersion": "10.40"
+  "methodologyVersion": "10.41"
 }
 ```
 
@@ -1096,8 +1096,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.39",
-  "methodologyVersion": "6.39"
+  "currentVersion": "6.40",
+  "methodologyVersion": "6.40"
 }
 ```
 

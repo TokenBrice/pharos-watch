@@ -389,6 +389,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "brla-brla-digital": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
+    holderEligibility: "unknown",
+    settlementModel: "days",
     costModel: undisclosedReviewedFee(
       "Avenia (formerly BRLA Digital) documents 1:1 BRLA mint and redemption against BRL after KYC; public docs reviewed do not publish a fixed numeric redemption fee",
     ),
@@ -439,6 +441,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "xo-exodus": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
+    holderEligibility: "unknown",
+    settlementModel: "days",
     costModel: fixedFee(
       0,
       "MoonPay currently charges no fee for stablecoin redemption; bank, wallet, processing, network, ecosystem, or pass-through banking fees may still apply",

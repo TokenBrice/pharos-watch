@@ -278,6 +278,8 @@ export const BASE_OFFCHAIN_ISSUER_ENTRIES: RedemptionBackstopRegistryEntry[] = [
           ? {
               ...entry.config,
               capacityModel: { kind: "unquantified" as const },
+              holderEligibility: "unknown" as const,
+              settlementModel: "days" as const,
               v9RouteReviewTerms: WARS_BOUNDED_TERMS_GAP,
             }
           : entry.id === "eusd-telcoin"

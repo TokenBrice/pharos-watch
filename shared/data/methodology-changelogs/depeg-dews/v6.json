@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.40",
+    "title": "Lone-wick episodes withheld, weighted spread, one incident per family",
+    "date": "2026-10-31",
+    "effectiveAt": 1793491200,
+    "summary": "Backfill replay withholds an episode opened by a lone uncorroborated print, PegScore confidence-weights its spread, and the public depeg projection publishes one incident per DDR supersession family.",
+    "impact": [
+      "A backfill episode whose opening print is never corroborated by another sample of the same episode within 1,000 bps is withheld at close; extreme single-print crashes keep the existing single-point policy. v6.39 guarded only peak replacement, so a par-wick-par print could still publish as a depeg.",
+      "PegScore's spread penalty takes a confidence-weighted mean and variance divided by the weight sum, so a low-confidence row lowers, never raises, dispersion: two equal -800 bps peaks with one low-confidence row now score 0, not 3.",
+      "/api/depeg-events publishes one row per active canonical DDR incident: the effective current fragment across the canonical incident and its superseded aliases, counting every linked event. Superseded aliases no longer surface as extra public incidents or feed PegScore phantom rows; incident links stay append-only.",
+      "Live onset, confirmation, recovery and DEWS rules are unchanged. Activation is 2026-11-01 00:00 UTC (1793491200); the code deploys on 2026-10-31 and no backfill replay is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.39",
     "title": "Backfill peak corroboration and audited depeg-history export",
     "date": "2026-10-31",

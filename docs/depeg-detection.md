@@ -6,7 +6,7 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.39`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.40`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
@@ -326,7 +326,7 @@ Pending rows that pass the 45-minute base expiry but still have same-direction p
 
 ## Historical Backfill Validation
 
-Historical backfills in `worker/scripts/backfills/backfill-depegs.ts` consult the authoritative-provider registry before market history, but use a distinct episode policy: rounded absolute bps for triggers, a flat timestamp-valued $1B large-cap confirmation cutoff, and closure on the first sample inside the full trigger threshold. They do not inherit live tiered large-cap flags or the half-threshold/15-minute recovery window. A deeper sample replaces an open episode's peak only when another sample of the same episode is within 1,000 bps of it: a lone wick between par readings can still open a sub-$1B episode under the one-point policy, but it cannot become the published peak.
+Historical backfills in `worker/scripts/backfills/backfill-depegs.ts` consult the authoritative-provider registry before market history, but use a distinct episode policy: rounded absolute bps for triggers, a flat timestamp-valued $1B large-cap confirmation cutoff, and closure on the first sample inside the full trigger threshold. They do not inherit live tiered large-cap flags or the half-threshold/15-minute recovery window. A deeper sample replaces an open episode's peak only when another sample of the same episode is within 1,000 bps of it: a lone wick between par readings can still open a sub-$1B episode under the one-point policy, but it cannot become the published peak. An episode whose opening print is never corroborated (and is not extreme) is withheld at close instead of publishing that print as the peak; extreme single-point crashes keep their existing exemption.
 
 Backfill rewrites delete prior `source='backfill'` rows even when a trusted replay finds zero replacement events. Dry-runs preview that same removal scope through `removedBackfillEventCount`. For non-empty replacements, the delete and first insert chunk share one D1 `batch()` call (up to the D1 100-statement batch limit: delete + 99 inserts). Additional inserts are written in later chunks, so large replacements are bounded and restartable but not a single all-rows transaction.
 
@@ -454,7 +454,7 @@ Exact totals reuse one D1 summary (`cache['depeg-events:counts:v1']`) grouped by
 
 Each `pending` row's `expiresAt` is the base expiry, `firstSeenAt + DEPEG_PENDING_EXPIRY_SEC`. The confirmation cron keeps a row pending past it under the extended and severe limits (see the timing table), so `lastSeenAt` may legitimately exceed `expiresAt`; the shared contract requires only `lastSeenAt >= firstSeenAt` and `expiresAt > firstSeenAt`.
 
-When DDR has linked multiple raw rows into one active repaired incident, the endpoint returns the incident's current event row, excludes superseded source rows from the active projection, projects the public `startedAt` from the first linked row, and reports the number of linked rows in `constituentEventCount`. A superseded alias projected as its canonical incident counts both incidents' linked rows, including the published row. The first row's `startPrice`/`pegReference` are projected only when its quote domain (hydrated from `depeg_event_provenance.quote_mode`) matches the current row's; a cross-domain first row contributes the onset clock only, so the published price pair stays reproducible against the row's own peak. Unprojected rows use `constituentEventCount = 1`.
+When DDR has linked multiple raw rows into one logical incident, the endpoint returns one public row per incident: the effective current fragment, later by `current_started_at` then `current_event_id` across the canonical and its superseded aliases, projected to the canonical's `startedAt` and total linked `constituentEventCount`. Every other linked row is absorbed into that incident. The first row's `startPrice`/`pegReference` are projected only when its quote domain (hydrated from `depeg_event_provenance.quote_mode`) matches the published row's; a cross-domain first row contributes the onset clock only, so the published price pair stays reproducible against the row's own peak. Unprojected rows use `constituentEventCount = 1`.
 
 Public incident pages sort by effective `startedAt` descending, then numeric event `id` descending; offset selection, cursor comparisons/tokens, and the page's latest-event methodology `asOf` use that same projected onset rather than the current fragment's raw clock. Cursors use version 2; pre-cutover version-1 raw-onset tokens return `400` and callers must restart pagination. Canonical projection admission and event selection share one transactional D1 batch, together with count-summary population/read when requested. This also applies with `includeTotal=false`, so a pointer advance cannot mix an older projection with newer page membership or silently publish an unprojected fragment.
 
@@ -509,7 +509,10 @@ Detection contributes eligible episodes, observed price intervals and audit prov
 - `false_positive` and `disputed` events are excluded. `no_data` remains eligible
   here but is excluded by DDR's separate policy. Unknown non-null verdicts fail
   closed; null legacy verdicts remain eligible. Low-confidence events retain
-  occupancy impact with half-weight severity/spread; quality counters expose this.
+  occupancy impact with half-weight severity; the spread uses confidence-weighted
+  mean and variance divided by the weight sum, so a half-weighted row keeps its
+  observed peak instead of shrinking into artificial dispersion. Quality counters
+  expose this.
 - `coinTrackingStart()` honors reviewed replay/continuous-live coverage first,
   otherwise launch date, then the earliest supply or durable valid-price anchor.
   Without these, the earliest event is the fallback; no anchor or events means NR.

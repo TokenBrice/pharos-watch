@@ -247,6 +247,19 @@ function isMentoMarketClosed(nowSec: number): boolean {
     || (month === 0 && date === 1);
 }
 
+/** End of the reviewed MarketHoursBreaker closure containing `nowSec`, or null while open.
+ *  The checked calendar is the standing Mento FX source review above; callers defer
+ *  settlement to this instant rather than treating the scheduled closure as impairment. */
+export function resolveMentoFxMarketReopen(nowSec: number): number | null {
+  if (!Number.isFinite(nowSec) || nowSec < 0 || !isMentoMarketClosed(nowSec)) return null;
+  // Reviewed closure edges fall on UTC hour marks; walk to the first open hour.
+  let candidate = Math.floor(nowSec / 3_600) * 3_600 + 3_600;
+  for (let hours = 0; hours < 24 * 8; hours += 1, candidate += 3_600) {
+    if (!isMentoMarketClosed(candidate)) return candidate;
+  }
+  return null;
+}
+
 function mostRecentMentoClosureEnd(nowSec: number): number {
   const clock = new Date(nowSec * 1000);
   const year = clock.getUTCFullYear();

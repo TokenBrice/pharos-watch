@@ -1768,6 +1768,55 @@ describe("cause-aware Exit and max-feasible portfolios", () => {
     expect(measuredZero.reasons).toContain("no-viable-exit-path");
   });
 
+  it("treats a pipeline-gap A rail like a C/U gap when only immaterial DEX measurements remain", () => {
+    const missing = gap("A", "unavailable-rail");
+    const tiny = route({
+      routeKey: "dex:immaterial", lane: "dex", routeFamily: "dex-amm",
+      evidenceKind: "measured-executable-depth",
+      capacityCurve: route().capacityCurve.map((point) => ({
+        ...point, executableUsd: 1, completionRatio: 1 / point.requestedNotionalUsd,
+      })),
+    });
+    const unavailable = route({
+      routeKey: "redemption:unavailable", observationState: "missing", status: missing.status,
+      factorStatuses: { capacity: missing.status }, gaps: [missing.gap], capacityCurve: [],
+    });
+    const result = evaluate([tiny, unavailable]);
+    expect(result.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
+    expect(result.primaryRouteKey).toBeNull();
+    expect(result.supportedComponentKeys).toEqual([]);
+    expect(result.limitedEvidenceCauses).toEqual(["A"]);
+    expect(result.causeGapIds).toContain(missing.gap.gapId);
+    expect(result.reasons).toContain("missing-same-notional-route");
+    expect(result.reasons).not.toContain("no-viable-exit-path");
+    expect(result.routes.find((candidate) => candidate.routeKey === tiny.routeKey)).toMatchObject({
+      score: 0, capsApplied: ["immaterial-executable-capacity"],
+    });
+    // The inventory's own A pipeline gap reaches the same unknown verdict.
+    const census = gap("A", "unavailable-census");
+    const inventory = evaluateV9Exit({
+      circulatingUsd: 20_000_000, portfolioFactStatus: census.status,
+      gaps: [census.gap], routes: [tiny],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(inventory.score).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.exit.U);
+    expect(inventory.limitedEvidenceCauses).toEqual(["A"]);
+    expect(inventory.reasons).not.toContain("no-viable-exit-path");
+    // B stays outside the guard: it never turns an immaterial measurement into U50.
+    const uncurated = gap("B", "unavailable-rail");
+    const bOnly = evaluate([tiny, route({
+      routeKey: "redemption:unavailable", observationState: "missing", status: uncurated.status,
+      factorStatuses: { capacity: uncurated.status }, gaps: [uncurated.gap], capacityCurve: [],
+    })]);
+    expect(bOnly.score).toBe(0);
+    expect(bOnly.reasons).toContain("no-viable-exit-path");
+    const bInventory = evaluateV9Exit({
+      circulatingUsd: 20_000_000, portfolioFactStatus: uncurated.status,
+      gaps: [uncurated.gap], routes: [tiny],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(bInventory.score).toBe(0);
+    expect(bInventory.reasons).toContain("no-viable-exit-path");
+  });
+
   it.each(["C", "U"] as const)("does not turn a bounded %s empty census into measured exhaustion", (cause) => {
     const missing = gap(cause, "unavailable-census");
     const result = evaluateV9Exit({

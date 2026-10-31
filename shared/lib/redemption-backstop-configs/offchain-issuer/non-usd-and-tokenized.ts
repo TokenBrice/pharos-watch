@@ -190,6 +190,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "axcnh-anchorx": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    holderEligibility: "unknown",
+    settlementModel: "days",
     costModel: undisclosedReviewedFee(
       "Direct 1:1 AnchorX redemption for CNH; the Terms of Service reserve the right to implement fees and publish no all-in fee bound",
     ),
@@ -292,6 +294,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     ...reviewedIssuerApiExpansionSupplyFull,
     outputAssetType: "stable-basket",
     outputAssets: ["usdc-circle", "usdt-tether"],
+    holderEligibility: "unknown",
+    settlementModel: "days",
     costModel: undisclosedReviewedFee(
       "Juno documents quote-based MXNB conversions into USDC or USDT with pair-specific min/max limits, but it does not publish a fixed redemption or conversion fee schedule",
     ),
@@ -418,6 +422,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "sbc-brale": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    holderEligibility: "unknown",
+    settlementModel: "days",
     costModel: documentedVariableFee(
       "Brale publishes 0 bps on standard money movement and bank-payout usage fees of $0.25 per ACH, $2 per RTP and $20 per wire. Onchain transfers cost actual gas plus 20%. The Business User Agreement retains account-specific fees and discretionary pricing changes; no uniform all-in basis-point fee or maximum is established",
       "formula",

@@ -78,6 +78,7 @@
 | 0288     | `0288_mint_burn_admission.sql`                            | Add key-based publication admission with original proof provenance and durable disable/reactivation policy; no legacy proof seed or existing row changes. |
 | 0289     | `0289_dex_liquidity_challenger_pools.sql`                  | Add nullable `challenger_pools_json` to current and run rows so the legacy pool-challenger fallback reads the TVL-bounded projection, not the display-capped top-10 slice. |
 | 0290     | `0290_telegram_watcher_migration_suppression.sql`          | Guard the 0246 watcher transition triggers against a group→supergroup chat-id merge so a state move records no subscribe/churn events; no business-row rewrite. |
+| 0291     | `0291_status_probe_path_failure_streaks.sql`               | Add nullable per-path probe-failure streak JSON to `status_discrepancy_state`; the status self-check floors a plane after repeated failures of one rotating path. No row rewrite or backfill. |
 
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
@@ -528,6 +529,7 @@ Historical drops dated August 10 are not indefinitely recoverable through their 
 - `0261_native_dex_generations.sql`: apply before the native diagnostic Worker; older Workers ignore these additive tables/index/triggers and continue their existing isolated stores. Worker rollback leaves native generations intact. No legacy rows are imported, no score pointer is changed, and destructive schema cleanup remains a separately approved operation.
 - `0262_safety_score_publication_journal.sql`: apply before Worker activation; old Workers ignore the two new tables and indexes. Retain the pre-window Time Travel bookmark, migration ledger and deployed public/heavy versions. Worker rollback stops journaling without reversing accepted scores or deleting evidence; schema removal requires a separate cleanup rollout. Observe the first heavy accepted and held attempts and daily bounded prune.
 - `0268_telegram_planning_lookup_indexes.sql`: restore the prior Worker for a code rollback; keep the additive indexes. Drop them only in a later measured cleanup migration, never as part of a Worker rollback.
+- `0291_status_probe_path_failure_streaks.sql`: apply before the Worker that reads the column; older Workers ignore it and keep updating the live global counters on the same row. Worker rollback leaves the column and retained per-path streaks inert. No backfill: NULL means no per-path evidence yet. Dropping the column requires a separate coordinated cleanup rollout.
 
 ## Rollback Procedure
 

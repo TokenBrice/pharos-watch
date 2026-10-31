@@ -30,14 +30,11 @@ describe("mint/burn durable publication admission", () => {
     const { db } = fixtures.open();
     const legacy = MINT_BURN_CONFIGS.filter(isGrandfatheredMintBurnConfig);
     expect(legacy).toHaveLength(136);
-    // A checked-in `enabled: false` leg (bUSD0) stays grandfathered but is disabled, not admitted.
-    const enabledLegacy = legacy.filter((config) => config.enabled !== false);
-    expect(enabledLegacy).toHaveLength(135);
     const scope = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
-    expect(scope.configs).toEqual(enabledLegacy);
+    expect(scope.configs).toEqual(legacy);
     expect(scope.publication.legs.filter((leg) => leg.status === "admitted")
       .every((leg) => leg.reason === "legacy-grandfathered")).toBe(true);
-    expect(scope.watermark).toEqual(resolveMintBurnWatermark(end, enabledLegacy, new Map()));
+    expect(scope.watermark).toEqual(resolveMintBurnWatermark(end, legacy, new Map()));
   });
 
   it("requires 90 days of current-fingerprint proof, persists admission, and retains a stalled admitted leg", async () => {
@@ -62,7 +59,7 @@ describe("mint/burn durable publication admission", () => {
     const { publication } = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
     const compact = compactMintBurnPublication(publication);
     expect(compact).toMatchObject({ legsScope: "non-admitted", legCount: MINT_BURN_CONFIGS.length,
-      admittedCount: 135, pendingAdmissionCount: 2, disabledCount: 1 });
+      admittedCount: 136, pendingAdmissionCount: 2, disabledCount: 0 });
     expect(compact.legs).toEqual(publication.legs.filter((leg) => leg.status !== "admitted"));
     expect(new Set(compact.admittedPairs!.map((pair) => JSON.stringify(pair)))).toEqual(new Set(publication.legs
       .filter((leg) => leg.status === "admitted").map((leg) => JSON.stringify([leg.stablecoinId, leg.chainId]))));
@@ -247,8 +244,10 @@ describe("mint/burn durable publication admission", () => {
     await syncMintBurnPublicationPolicy(db, [], hourTs + 60, activeKeys);
     expect(sqlite.prepare("SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1").get())
       .toEqual({ disabled_keys: "[]" });
-    expect(sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get())
-      .toEqual({ paused_keys: "[]" });
+    // The key stays paused for its eventual re-admission, but a pause recorded while
+    // the coin is inactive never withholds its retained per-coin detail.
+    expect(JSON.parse(String((sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1")
+      .get() as { paused_keys: string }).paused_keys))).toContain(key);
 
     const response = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?stablecoin=${quarantined.stablecoinId}`));
     const body = MintBurnPerCoinResponseSchema.parse(await readJsonResponse(response, 200));
@@ -256,5 +255,42 @@ describe("mint/burn durable publication admission", () => {
     expect(body.mintCount).toBe(1);
     expect(body.mintVolumeUsd).toBe(1_000_000);
     expect(body.publication).toMatchObject({ admittedCount: 1, legs: [] });
+  });
+
+  it("pauses a grandfathered key that leaves the active roster so re-admission waits for proof", async () => {
+    const { db, sqlite } = fixtures.open();
+    const legacy = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdc-circle"
+      && entry.chain.chainId === "ethereum")!;
+    const legacyKey = mintBurnConfigKey(legacy);
+    const incumbentKey = mintBurnConfigKey(config);
+    const pausedKeys = () => JSON.parse(String((sqlite.prepare(
+      "SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get() as { paused_keys: string }).paused_keys));
+    expect(isGrandfatheredMintBurnConfig(legacy)).toBe(true);
+    await proof(db, 90);
+    expect((await readMintBurnWindowContext(db, end, [config])).configs).toEqual([config]);
+    // The frozen coin's legacy cursor sits far behind the incumbent watermark.
+    await upsertMintBurnSyncState(db, legacyKey, 100, "monotonic-max", {
+      configKey: legacyKey, configFingerprint: mintBurnScanFingerprint(legacy), chainId: legacy.chain.chainId,
+      fromBlock: 1, toBlock: 100, fromTimestamp: end - 400 * day, toTimestamp: end - 10 * day,
+      finalizedBlock: 100, acceptedAt: end + day,
+    });
+    // A scheduled run observes the coin outside the active roster.
+    await syncMintBurnPublicationPolicy(db, [], end + 60, [incumbentKey]);
+    // Re-admission keeps the pause, so the stale leg cannot hold the common watermark.
+    await syncMintBurnPublicationPolicy(db, [], end + 120, [incumbentKey, legacyKey]);
+    const scope = await readMintBurnWindowContext(db, end + 120, [config, legacy]);
+    expect(scope.publication.legs.find((leg) => leg.configKey === legacyKey))
+      .toMatchObject({ status: "pending-admission", reason: "reactivation-pending" });
+    expect(scope.configs).toEqual([config]);
+    expect(scope.watermark).toMatchObject({ timestamp: end, ageSec: 120, unavailableReason: null });
+    expect(pausedKeys()).toContain(legacyKey);
+    // A fresh catch-up proof resumes it without repeating the 90-day admission.
+    await upsertMintBurnSyncState(db, legacyKey, 200, "monotonic-max", {
+      configKey: legacyKey, configFingerprint: mintBurnScanFingerprint(legacy), chainId: legacy.chain.chainId,
+      fromBlock: 101, toBlock: 200, fromTimestamp: end - day, toTimestamp: end,
+      finalizedBlock: 200, acceptedAt: end + day,
+    });
+    expect((await readMintBurnWindowContext(db, end + 180, [config, legacy])).configs).toEqual([config, legacy]);
+    expect(pausedKeys()).not.toContain(legacyKey);
   });
 });

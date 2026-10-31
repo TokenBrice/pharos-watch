@@ -13,7 +13,7 @@ function deployment(index: number): ContractDeployment {
 function reviewedEmptyRow(target: ContractDeployment): DexDeploymentCensusRow {
   return {
     stablecoin_id: "synthetic-empty", chain: target.chain, contract_address: target.address,
-    outcome: "verified_no_pools", provider_set_json: JSON.stringify(["geckoterminal"]),
+    outcome: "verified_no_pools", provider_set_json: JSON.stringify(["osmosis-sqs"]),
     reason: "A provider completed the direct-token query with no eligible pool",
     observed_pool_count: 0, observed_at: NOW_SEC, discovery_last_crawl_at: NOW_SEC,
   };

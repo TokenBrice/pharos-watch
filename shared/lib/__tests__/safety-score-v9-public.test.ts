@@ -551,6 +551,19 @@ describe("Safety Score v9 public projection", () => {
     expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
   });
 
+  it("publishes an A pipeline cause on an included Exit pillar and prices it as unknown weight", () => {
+    const input = fixture("a-cause", { score: 50, grade: "C-", qualityScore: 50, pillars: { backing: 50, exit: 50, control: 50 } });
+    input.scoreInput.pillars.exit = makeV9Pillar(50, {
+      evidenceLevel: "limited", limitedEvidenceCauses: ["A"], causeGapIds: ["gap:exit"], supportedComponentKeys: [],
+    });
+    input.exit = { ...input.exit!, primaryRouteKey: null };
+    const { card } = projectSafetyScoreV9Card(input);
+    expect(card.pillars.exit.limitedEvidenceCauses).toEqual(["A"]);
+    expect(card.breakdowns?.exit.limitedEvidenceCauses).toEqual(["A"]);
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
+    expect(computeV9UnknownPricedWeightShare(card.breakdowns, card.scoreTrace.aggregation)).toBeCloseTo(0.35);
+  });
+
   it.each(["A", "B"] as const)("publishes the scorer's priced cause-%s A/B-excluded pillar through every card projection (#1674)", (cause) => {
     const scoreInput = makeV9ProductionScoreInput({
       assetId: "priced-excluded",

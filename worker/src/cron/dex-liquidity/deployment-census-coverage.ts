@@ -119,7 +119,7 @@ function increment(
   counts[reason] = (counts[reason] ?? 0) + amount;
 }
 
-export function parseProviderCount(raw: string): number | null {
+export function parseProviderSet(raw: string): string[] | null {
   const parsed = tryParseJson(raw, "dex deployment census provider set");
   return Array.isArray(parsed) &&
     new Set(parsed).size === parsed.length &&
@@ -128,7 +128,7 @@ export function parseProviderCount(raw: string): number | null {
         typeof provider === "string" &&
         DEX_DISCOVERY_PROVIDER_IDS.has(provider),
     )
-    ? parsed.length
+    ? parsed
     : null;
 }
 
@@ -285,11 +285,12 @@ export function classifyDexPlaceholderCoverage(params: {
         nowSec: params.nowSec,
         maxAgeSec,
       })) staleOutcomeCount++;
-      const providerCount = parseProviderCount(row.provider_set_json);
-      if (providerCount === null) {
+      const providerSet = parseProviderSet(row.provider_set_json);
+      if (providerSet === null) {
         invalidOutcomeCount++;
         continue;
       }
+      const providerCount = providerSet.length;
       const censusState = classifyStoredDexCensusState({
         outcome: row.outcome,
         reason: row.reason,
@@ -302,7 +303,7 @@ export function classifyDexPlaceholderCoverage(params: {
         providerSetSuperseded: isCensusProviderSetSupersededByRegistry(
           row.chain,
           row.contract_address,
-          providerCount,
+          providerSet,
         ),
       });
       switch (censusState.disposition) {

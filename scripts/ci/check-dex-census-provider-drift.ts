@@ -6,13 +6,14 @@
  *
  * A census row's `provider_set_json` is a snapshot of a registry fact. An empty
  * set means "no registered token-pool provider supported this chain when the row
- * was written". Once discovery coverage for that chain ships, the row keeps
- * asserting the old scope limit until the windowed crawl rotates back to that
- * deployment — days for a many-chain footprint. `classifyDexPlaceholderCoverage`
- * no longer publishes such a row as an unsupported method (it is superseded
- * evidence), but the contradicted row itself is still a stale artifact worth
- * surfacing: it is the signal that a newly registered provider has not yet been
- * exercised against a deployment.
+ * was written"; a non-empty set names providers that were registered for that
+ * identity then. Once discovery coverage for that chain ships (or the registry
+ * stops resolving a named provider for the identity), the row keeps asserting
+ * the old scope until the windowed crawl rotates back to that deployment — days
+ * for a many-chain footprint. `classifyDexPlaceholderCoverage` no longer
+ * publishes such a row as current evidence (it is superseded), but the
+ * contradicted row itself is still a stale artifact worth surfacing: it is the
+ * signal that a registry change has not yet been exercised against a deployment.
  *
  * The census lives in production D1, so this check reads a dump instead of the
  * database:
@@ -25,7 +26,10 @@
  */
 
 import { readFileSync } from "node:fs";
-import { getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
+import {
+  getDexDiscoveryProviders,
+  isCensusProviderSetSupersededByRegistry,
+} from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { isRecord } from "@shared/lib/type-guards";
@@ -41,8 +45,8 @@ import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const USAGE: string = `Usage: npm run check:dex-census-provider-drift -- --rows=<dump.json>
 
-Flags dex_deployment_outcomes rows that persist an empty provider set while
-getDexDiscoveryProviders() resolves at least one provider for the deployment.
+Flags dex_deployment_outcomes rows whose persisted provider set the live
+getDexDiscoveryProviders() registry no longer resolves for the deployment.
 
 Options:
       --rows   Path to a wrangler "d1 execute --json" dump (or a bare JSON array)
@@ -66,6 +70,7 @@ export interface DexCensusProviderDrift {
   outcome: string;
   reason: string;
   observedAt: number | null;
+  persistedProviders: readonly string[];
   liveProviders: readonly string[];
 }
 
@@ -125,10 +130,10 @@ function trackedDeploymentKeys(): Set<string> {
 }
 
 /**
- * A row drifts when it persists an empty provider set for a deployment the
- * registry covers today. Rows for deployments that are no longer tracked are
- * orphans that never reach a published census, so they are counted but never
- * reported.
+ * A row drifts when it persists a provider set the live registry no longer
+ * resolves for the deployment. Rows for deployments that are no longer tracked
+ * are orphans that never reach a published census, so they are counted but
+ * never reported.
  */
 export function findDexCensusProviderDrift(
   rows: readonly DexCensusProviderRow[],
@@ -140,9 +145,8 @@ export function findDexCensusProviderDrift(
     const key = `${row.stablecoinId}|${canonicalExitRouteAssetKey(row.chain, row.address)}`;
     if (!trackedKeys.has(key)) continue;
     trackedRowCount++;
-    if (row.persistedProviders == null || row.persistedProviders.length > 0) continue;
-    const liveProviders = getDexDiscoveryProviders(row.chain, row.address);
-    if (liveProviders.length === 0) continue;
+    if (row.persistedProviders == null) continue;
+    if (!isCensusProviderSetSupersededByRegistry(row.chain, row.address, row.persistedProviders)) continue;
     drift.push({
       stablecoinId: row.stablecoinId,
       chain: row.chain,
@@ -150,7 +154,8 @@ export function findDexCensusProviderDrift(
       outcome: row.outcome,
       reason: row.reason,
       observedAt: row.observedAt,
-      liveProviders,
+      persistedProviders: row.persistedProviders,
+      liveProviders: getDexDiscoveryProviders(row.chain, row.address),
     });
   }
   drift.sort(
@@ -162,7 +167,7 @@ export function findDexCensusProviderDrift(
 
 export function formatDrift(entry: DexCensusProviderDrift): string {
   const observed = entry.observedAt == null ? "unknown" : new Date(entry.observedAt * 1000).toISOString();
-  return `${entry.stablecoinId} ${entry.chain}:${entry.address} persists [] while the registry resolves [${entry.liveProviders.join(", ")}] (outcome=${entry.outcome}, observedAt=${observed})`;
+  return `${entry.stablecoinId} ${entry.chain}:${entry.address} persists [${entry.persistedProviders.join(", ")}] while the registry resolves [${entry.liveProviders.join(", ")}] (outcome=${entry.outcome}, observedAt=${observed})`;
 }
 
 export function runDexCensusProviderDriftCheck(

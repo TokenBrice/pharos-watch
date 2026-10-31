@@ -34,7 +34,8 @@ export function RedemptionBackstopMethodologySection() {
         Methodology v4.49 keeps fractional observed fees unrounded through the existing 10, 50 and 100 basis-point
         cost thresholds. Rejected payout identities cannot grant favorable live fees, openness, holder access
         or settlement. sBOLD needs readable collateral-health evidence for open status; Mento capacity needs
-        same-block execution predicates and a successful bounded quote. dEURO basket valuations retain the oldest
+        same-block execution predicates and a successful bounded quote; during the reviewed FX market-hours
+        closure a Mento route keeps its live measured bound and settles at the scheduled reopen. dEURO basket valuations retain the oldest
         complete member-price/FX clock, and physical commodity outputs require source-timed USD valuation distinct
         from fiat proceeds. These corrections can move route scores; weights and ladders are unchanged.
       </p>
@@ -75,7 +76,7 @@ export function RedemptionBackstopMethodologySection() {
           and capped at ${request.capUsd.toLocaleString()}. A measured zero-capacity route, or a positive route below
           both the 1% completion and $100,000 absolute breakpoints, receives a zero headline; missing capacity remains
           unrated; the same gate applies to the eventual-redeemability headline. Reviewed settlement terms are shared
-          with V10, favorable corrections retain the 365-day evidence expiry, and reserve-sync full-supply eventual
+          with V10, a review that withholds settlement takes multi-day settlement rather than a same-day default, favorable corrections retain the 365-day evidence expiry, and reserve-sync full-supply eventual
           capacity requires an explicit dated evidence opt-in. On-chain formula-rate probes pin their return-value decimal
           scale before fresh fees can enter scoring. Route-family ceilings, holder eligibility, delay, queue,
           minimum-redemption, severe-depeg, freshness, and evidence rules can only reduce or withhold the result. An open

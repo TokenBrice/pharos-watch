@@ -3,12 +3,18 @@ import { buildRedemptionBackstopRegistry, type RedemptionBackstopConfigManifestE
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
 import {
+  resolveDefaultHolderEligibility,
+  resolveRedemptionCostBpsAtNotional,
+  resolveRedemptionPercentageFeeBps,
+} from "@shared/lib/redemption-backstop-configs/shared";
+import {
   REDEMPTION_BACKSTOP_CONFIGS,
   getRedemptionBackstopConfig,
   resolveReviewedRedemptionSettlement,
 } from "@shared/lib/redemption-backstops";
 
 const entries = Object.entries(REDEMPTION_BACKSTOP_CONFIGS);
+const CLOCK_SEC = Date.UTC(2026, 9, 31) / 1_000;
 
 describe("redemption backstop config consistency", () => {
   it("uses every reviewed settlement override as the canonical public model", () => {
@@ -45,6 +51,42 @@ describe("redemption backstop config consistency", () => {
     };
     expect(resolveReviewedRedemptionSettlement(datedCompletionFixture, reviewClockSec - 1)).toBe("immediate");
     expect(resolveReviewedRedemptionSettlement(datedCompletionFixture, reviewClockSec + 86_400)).toBe("atomic");
+  });
+
+  it.each([
+    "wars-argentine-peso",
+    "qcad-stablecorp",
+    "vbill-vaneck",
+    "jaaa-janus-henderson-anemoy",
+    "axcnh-anchorx",
+    "mxnb-juno",
+    "sbc-brale",
+    "brla-brla-digital",
+    "xo-exodus",
+  ])("%s publishes its settlement-withheld review conservatively", (id) => {
+    const config = REDEMPTION_BACKSTOP_CONFIGS[id]!;
+    expect(config.v9RouteReviewTerms?.missingScoringFields).toContain("settlement");
+    expect(resolveReviewedRedemptionSettlement(config, CLOCK_SEC)).toBe("days");
+    expect(config.holderEligibility ?? resolveDefaultHolderEligibility(config)).toBe("unknown");
+  });
+
+  it("keeps withheld settlement reviews off every faster-than-days issuer default", () => {
+    const violations = entries
+      .filter(([, c]) =>
+        c.routeFamily === "offchain-issuer" &&
+        c.v9RouteReviewTerms?.settlementModel == null &&
+        c.v9RouteReviewTerms?.missingScoringFields?.includes("settlement") === true &&
+        c.settlementModel !== "days" &&
+        c.settlementModel !== "queued")
+      .map(([id]) => id);
+    expect(violations).toEqual([]);
+  });
+
+  it("does not publish USSD's owner-settable BrandedCustodian fee as a fixed zero", () => {
+    const config = REDEMPTION_BACKSTOP_CONFIGS["ussd-sonic-labs"]!;
+    expect(config.costModel).toMatchObject({ kind: "dynamic-or-unclear", confidence: "formula" });
+    expect(resolveRedemptionPercentageFeeBps(config.costModel)).toBeNull();
+    expect(resolveRedemptionCostBpsAtNotional(config.costModel, 1_000_000)).toBeNull();
   });
 
   it("algorithmic backing excludes offchain-issuer route", () => {

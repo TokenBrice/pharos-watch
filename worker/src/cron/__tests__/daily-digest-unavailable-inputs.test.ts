@@ -233,6 +233,7 @@ describe("digest publishes unavailable inputs as unavailable", () => {
   it.each([
     ["valuation-incomplete", "mint-burn-ftq-valuation-incomplete"],
     ["flow-window-unavailable", "mint-burn-ftq:flow-window-unavailable"],
+    ["cohort-member-unpublished", "mint-burn-ftq:cohort-member-unpublished"],
     ["v9-snapshot-unavailable", "mint-burn-ftq:v9-snapshot-unavailable"],
   ] as const)("cannot certify CALM from an unavailable flight-to-quality classification (%s)", (classificationReason, degradedSource) => {
     const input = dayInput({

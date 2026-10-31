@@ -46,16 +46,57 @@ describe("extractDepegEvents peak corroboration", () => {
     });
   });
 
-  it("still admits an opening single-sample event (the pinned one-point onset policy)", () => {
+  it("does not publish a lone onset wick between par readings as the peak", () => {
     const events = extractDepegEvents(
-      points([0.98, 1]),
+      points([1, 0.85, 1]),
+      () => 1,
+      "peggedUSD",
+      SUPPLY,
+    );
+
+    expect(events).toEqual([]);
+  });
+
+  it("does not publish an above-peg lone onset print between par readings", () => {
+    const events = extractDepegEvents(
+      points([1, 1.05, 1]),
+      () => 1,
+      "peggedUSD",
+      SUPPLY,
+    );
+
+    expect(events).toEqual([]);
+  });
+
+  it("does not publish a large-cap onset wick confirmed only by a near-par reading", () => {
+    const events = extractDepegEvents(
+      points([1, 0.85, 0.985, 1]),
+      () => 1,
+      "peggedUSD",
+      [{ ts: 1_000, supply: 2_000_000_000 }],
+    );
+
+    expect(events).toEqual([]);
+  });
+
+  it("publishes the first corroborated sample when the onset print is not corroborated", () => {
+    const events = extractDepegEvents(
+      points([0.85, 0.97, 0.96, 1]),
       () => 1,
       "peggedUSD",
       SUPPLY,
     );
 
     expect(events).toHaveLength(1);
-    expect(events[0]).toMatchObject({ startedAt: 1_000, peakPrice: 0.98 });
+    expect(events[0]).toMatchObject({
+      direction: "below",
+      startedAt: 1_000 + 3_600,
+      endedAt: 1_000 + 3 * 3_600,
+      startPrice: 0.97,
+      peakPrice: 0.96,
+      peakDeviationBps: -400,
+      recoveryPrice: 1,
+    });
   });
 
   it("does not absorb a wick that arrives while a large-cap event is pending confirmation", () => {

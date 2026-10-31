@@ -165,6 +165,12 @@ export function classifyStoredDexCensusState(
     if ((row.discoveryLastCrawlAt ?? 0) > row.observedAt) {
       return { attemptResult, evidenceState: "superseded", disposition: "superseded" };
     }
+    if (row.providerSetSuperseded) {
+      // The row was certified by a provider set the registry no longer resolves
+      // for this identity (for example an EVM-namespace scan of a Kava bank
+      // denom), so its empty result cannot stay a current known-empty claim.
+      return { attemptResult, evidenceState: "superseded", disposition: "superseded" };
+    }
     return { attemptResult, evidenceState, disposition: "verified-no-pools" };
   }
   if (row.outcome === "observed_pools") {

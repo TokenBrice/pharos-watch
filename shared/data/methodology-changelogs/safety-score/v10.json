@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.41",
+    "title": "Pipeline-gap rails block a no-viable-exit verdict",
+    "date": "2026-10-31",
+    "effectiveAt": 1793491200,
+    "summary": "When every scored route is immaterial, an applicable rail or inventory withheld by a pipeline gap (cause A) now makes Exit unknown, exactly like a C/U gap, instead of letting a submaterial measured route prove exhaustion. The A cause is published on the pillar and breakdown. Weights, thresholds, admission and every other Exit mapping are unchanged.",
+    "impact": [
+      "AM17 counts applicable A/C/U rail or inventory gaps. A producer outage that withholds a redemption rail can no longer turn a tiny measured DEX route into Exit 0 with no-viable-exit-path: at 03:17Z on 2026-10-31 USDD's quarantined PSM rail and a $13k pool published Exit 0 and a score of 18 for an hour, while the same missing rail as cause U an hour later gave Exit 50.",
+      "The published cause set carries A where the scorer priced it, and unknown-priced weight counts A at the U constant. B and D stay excluded; admitted measured zeros and evidenced empty censuses stay adverse.",
+      "Fixed-clock replay of capture 20261031T1008Z (clock 1793438205): 392 cards, no score or grade change. The rule binds only during producer outages; producer-side changes in the same release (Mento scheduled closures, withheld settlement terms, DEX census supersession, USDO Kaia) are not replay-visible and are attributed from the first live publications.",
+      "Activation is 2026-11-01 00:00 UTC (1793491200)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.40",
     "title": "Measured certificate confidence priced by certification class",
     "date": "2026-10-30",

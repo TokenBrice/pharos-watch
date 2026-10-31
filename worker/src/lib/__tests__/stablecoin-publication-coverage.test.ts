@@ -7,6 +7,7 @@ import {
   STABLECOIN_MARKET_HOURS_CALENDARS,
   resolveStablecoinScheduledPriceClosures,
   resolveStablecoinMarketHours,
+  resolveMentoFxMarketReopen,
   resolveStablecoinPriceGapReviews,
   classifyStablecoinPublicationGap,
   compactStablecoinActivePriceCoverage,
@@ -568,6 +569,20 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       expect(gap.scheduledClosure).toEqual(closed ? expect.objectContaining({ reason: "market-closed", owner: "ops" }) : null);
     }
     expect(assets.every((asset) => asset.price === null)).toBe(true);
+  });
+
+  it.each([
+    ["2026-10-30T20:59:00Z", null],
+    ["2026-10-30T21:00:00Z", "2026-11-01T23:00:00Z"],
+    ["2026-10-31T12:00:00Z", "2026-11-01T23:00:00Z"],
+    ["2026-11-01T22:59:00Z", "2026-11-01T23:00:00Z"],
+    ["2026-11-01T23:00:00Z", null],
+    ["2026-12-24T22:00:00Z", "2026-12-27T23:00:00Z"],
+    ["2027-01-01T12:00:00Z", "2027-01-03T23:00:00Z"],
+    ["2027-01-02T00:00:00Z", "2027-01-03T23:00:00Z"],
+  ] as const)("resolves the scheduled Mento FX reopen from %s to %s", (date, expected) => {
+    const reopen = resolveMentoFxMarketReopen(Date.parse(date) / 1_000);
+    expect(reopen).toBe(expected === null ? null : Date.parse(expected) / 1_000);
   });
 
   it.each(["2025-12-26T00:00:00Z", "2026-01-02T00:00:00Z"])("ends a holiday closure on the open weekday %s", (date) => {

@@ -6,6 +6,7 @@ import {
   buildDiscrepancy,
   getDiscrepancyStreak,
   getLatestStatusProbe,
+  getProbePathIdentity,
   getStatusStateSnapshot,
   listRecentStatusTransitions,
   reconcileStatusState,
@@ -13,6 +14,7 @@ import {
   STATUS_HYSTERESIS,
   STATUS_SYSTEM_FRESHNESS_SEC,
   updateDiscrepancyObservation,
+  updateProbePathFailureStreaks,
   writeStatusProbeRun,
 } from "../status-reliability";
 import {
@@ -624,6 +626,105 @@ describe("status-reliability", () => {
 
 
     expect(await getDiscrepancyStreak(db)).toBe(0);
+  });
+
+  it("advances per-path failure streaks across sweeps and resets on a passing probe", async () => {
+    const { db, sqlite } = makeStatefulDb();
+    const observation = {
+      plane: "internal" as const,
+      lane: "self-check",
+      origin: "https://api.pharos.watch",
+      path: "/api/mint-burn-flows",
+      failed: true,
+    };
+    const identity = getProbePathIdentity(observation);
+
+    expect(await updateProbePathFailureStreaks(db, 100, [observation], [identity])).toEqual({
+      persistentFailures: [],
+      persistenceSucceeded: true,
+    });
+    const second = await updateProbePathFailureStreaks(db, 2_800, [observation], [identity]);
+    expect(second.persistenceSucceeded).toBe(true);
+    expect(second.persistentFailures).toEqual([
+      expect.objectContaining({
+        path: "/api/mint-burn-flows",
+        failStreak: 2,
+        lastProbedAt: 2_800,
+      }),
+    ]);
+    const stored = sqlite
+      .prepare("SELECT probe_path_failure_streaks_json FROM status_discrepancy_state WHERE scope = 'global'")
+      .get() as { probe_path_failure_streaks_json: string | null };
+    expect(JSON.parse(stored.probe_path_failure_streaks_json!)).toMatchObject({
+      version: 1,
+      paths: { [identity]: { failStreak: 2, lastProbedAt: 2_800 } },
+    });
+
+    expect(await updateProbePathFailureStreaks(db, 5_500, [{ ...observation, failed: false }], [identity])).toEqual({
+      persistentFailures: [],
+      persistenceSucceeded: true,
+    });
+  });
+
+  it("keeps the per-path streak column when the divergence counters update", async () => {
+    const { db, sqlite } = makeStatefulDb();
+    const observation = {
+      plane: "external" as const,
+      lane: "public-api",
+      origin: "https://api.pharos.watch",
+      path: "/api/health",
+      failed: true,
+    };
+    const identity = getProbePathIdentity(observation);
+
+    await updateProbePathFailureStreaks(db, 100, [observation], [identity]);
+    await updateDiscrepancyObservation(db, 200, false, true);
+
+    const stored = sqlite
+      .prepare("SELECT probe_path_failure_streaks_json FROM status_discrepancy_state WHERE scope = 'global'")
+      .get() as { probe_path_failure_streaks_json: string | null };
+    expect(JSON.parse(stored.probe_path_failure_streaks_json!).paths[identity]).toMatchObject({ failStreak: 1 });
+  });
+
+  it("returns unavailable per-path streak evidence instead of zero after a failed read", async () => {
+    const { db } = makeStatefulDb({
+      failOnSql: "SELECT probe_path_failure_streaks_json",
+      failMessage: "streak read failed",
+    });
+    const observation = {
+      plane: "internal" as const,
+      lane: "self-check",
+      origin: "https://api.pharos.watch",
+      path: "/api/mint-burn-flows",
+      failed: true,
+    };
+
+    expect(await updateProbePathFailureStreaks(db, 100, [observation], [getProbePathIdentity(observation)])).toEqual({
+      persistentFailures: null,
+      persistenceSucceeded: false,
+    });
+  });
+
+  it("prunes per-path streaks for identities no longer in the probe registry", async () => {
+    const { db, sqlite } = makeStatefulDb();
+    const kept = {
+      plane: "internal" as const,
+      lane: "self-check",
+      origin: "https://api.pharos.watch",
+      path: "/api/current",
+      failed: true,
+    };
+    const removed = { ...kept, path: "/api/removed" };
+    const keptIdentity = getProbePathIdentity(kept);
+    const removedIdentity = getProbePathIdentity(removed);
+
+    await updateProbePathFailureStreaks(db, 100, [kept, removed], [keptIdentity, removedIdentity]);
+    await updateProbePathFailureStreaks(db, 2_800, [kept], [keptIdentity]);
+
+    const stored = sqlite
+      .prepare("SELECT probe_path_failure_streaks_json FROM status_discrepancy_state WHERE scope = 'global'")
+      .get() as { probe_path_failure_streaks_json: string | null };
+    expect(Object.keys(JSON.parse(stored.probe_path_failure_streaks_json!).paths)).toEqual([keptIdentity]);
   });
 
   it.each([true, false])("does not mutate durable counters after a failed required read (finding=%s)", async (finding) => {

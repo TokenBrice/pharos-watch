@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
+  buildFlightToQualityCohorts,
   computeFlowIntensity,
   computeGaugeScore,
   detectFlightToQuality,
   detectFlightToQualityFromValuedNets,
+  getFlightToQualityUnavailableReason,
   getGaugeBand,
   isGaugeBandRobustToWithheldWeight,
 } from "../mint-burn-scoring";
@@ -244,5 +246,81 @@ describe("detectFlightToQualityFromValuedNets", () => {
       safe: [{ knownNetUsd: null, valuation: complete }],
       risky: [{ knownNetUsd: -600_000_000, valuation: complete }],
     })).toBeNull();
+  });
+});
+
+describe("buildFlightToQualityCohorts", () => {
+  const complete = { mintCompleteness: "complete", burnCompleteness: "complete" } as const;
+  const flows = new Map([
+    ["usdc-circle", { knownNetUsd: 250_000_000, valuation: complete, window24hComplete: true }],
+    ["dai-makerdao", { knownNetUsd: -150_000_000, valuation: complete, window24hComplete: true }],
+  ]);
+  const classification = {
+    safeIds: new Set(["usdc-circle"]),
+    riskyIds: new Set(["dai-makerdao", "swanusd-swan"]),
+  };
+  // swanUSD's only configured leg has no durable admission proof, so its flow is
+  // outside the published scope: disclosed and excluded, never carried as a zero.
+  const pendingAdmission = {
+    legs: [
+      { stablecoinId: "usdc-circle", status: "admitted" as const },
+      { stablecoinId: "swanusd-swan", status: "pending-admission" as const },
+    ],
+  };
+
+  it("excludes a classified coin pending admission, discloses it, and keeps the verdict", () => {
+    const cohorts = buildFlightToQualityCohorts(classification, flows, pendingAdmission);
+    expect(cohorts.risky.map((coin) => coin.knownNetUsd)).toEqual([-150_000_000]);
+    expect(cohorts.excludedIds).toEqual(["swanusd-swan"]);
+    expect(cohorts.unpublishedIds).toEqual([]);
+    // The observed nets are decisive again: safe +$250M against risky -$150M.
+    expect(detectFlightToQualityFromValuedNets(cohorts)).toMatchObject({
+      active: true, intensity: 15, safeNet24h: 250_000_000, riskyNet24h: -150_000_000, exact: true,
+    });
+  });
+
+  it("keeps a classified coin with no published flow and no pending leg unbounded", () => {
+    const cohorts = buildFlightToQualityCohorts(classification, flows, null);
+    expect(cohorts.excludedIds).toEqual([]);
+    expect(cohorts.unpublishedIds).toEqual(["swanusd-swan"]);
+    expect(detectFlightToQualityFromValuedNets(cohorts)).toBeNull();
+  });
+
+  it("excludes only pending admission, keeping a kill-switched coin unbounded", () => {
+    const cohorts = buildFlightToQualityCohorts(classification, flows, {
+      legs: [{ stablecoinId: "swanusd-swan", status: "disabled" as const }],
+    });
+    expect(cohorts.excludedIds).toEqual([]);
+    expect(cohorts.unpublishedIds).toEqual(["swanusd-swan"]);
+    expect(detectFlightToQualityFromValuedNets(cohorts)).toBeNull();
+    expect(getFlightToQualityUnavailableReason(cohorts)).toBe("cohort-member-unpublished");
+  });
+});
+
+describe("getFlightToQualityUnavailableReason", () => {
+  const complete = { mintCompleteness: "complete", burnCompleteness: "complete" } as const;
+
+  it("names an incomplete scan window instead of valuation", () => {
+    expect(getFlightToQualityUnavailableReason({
+      safe: [{ knownNetUsd: null, valuation: complete, window24hComplete: false }],
+      risky: [{ knownNetUsd: -150_000_000, valuation: complete, window24hComplete: true }],
+      unpublishedIds: [],
+    })).toBe("flow-window-unavailable");
+  });
+
+  it("names a classified coin with no published flow", () => {
+    expect(getFlightToQualityUnavailableReason({
+      safe: [{ knownNetUsd: 250_000_000, valuation: complete, window24hComplete: true }],
+      risky: [{ knownNetUsd: null, valuation: complete, window24hComplete: null }],
+      unpublishedIds: ["swanusd-swan"],
+    })).toBe("cohort-member-unpublished");
+  });
+
+  it("keeps valuation as the cause when every cohort member is published", () => {
+    expect(getFlightToQualityUnavailableReason({
+      safe: [{ knownNetUsd: 250_000_000, valuation: { mintCompleteness: "partial", burnCompleteness: "complete" }, window24hComplete: true }],
+      risky: [{ knownNetUsd: -150_000_000, valuation: complete, window24hComplete: true }],
+      unpublishedIds: [],
+    })).toBe("valuation-incomplete");
   });
 });

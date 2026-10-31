@@ -168,6 +168,14 @@ describe("DEX census evidence state machine", () => {
     expect(isCurrentDexCensusStateComplete(state)).toBe(true);
   });
 
+  it("supersedes a verified-empty row whose provider set the registry no longer resolves", () => {
+    expect(classifyStoredDexCensusState(storedRow({
+      providerSetSuperseded: true,
+    }))).toEqual({
+      attemptResult: "verified_no_pools", evidenceState: "superseded", disposition: "superseded",
+    });
+  });
+
   it("supersedes inaccessible evidence when the provider set changes", () => {
     expect(classifyStoredDexCensusState(storedRow({
       outcome: "provider_inaccessible", reason: DEX_DISCOVERY_PROVIDER_OUTAGE_REASON,

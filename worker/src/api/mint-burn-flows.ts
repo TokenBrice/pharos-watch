@@ -10,6 +10,7 @@ import {
   buildFlightToQualityCohorts,
   computeGaugeScore,
   detectFlightToQualityFromValuedNets,
+  getFlightToQualityUnavailableReason,
   getGaugeBand,
   type ValuedNetFlow24h,
 } from "../lib/mint-burn-scoring";
@@ -126,6 +127,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     coins,
     gaugeInputs,
     flightToQuality,
+    flightToQualityReason,
+    flightToQualityExcludedIds,
     trackedMcapUsd,
     mcapUnavailableCoins,
     partialValuationInputs,
@@ -181,6 +184,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
       scoreScope: "admitted-coins",
       flightToQuality: flightToQuality?.active ?? null,
       flightIntensity: flightToQuality?.intensity ?? null,
+      flightToQualityReason,
+      flightToQualityExcludedIds,
       scanCoverage: gaugeScanCoverage,
       classificationSource: gradeClassification ? "safety-score-v9-publication" : "unavailable",
       safetyScoreIdentity: gradeClassification?.safetyScoreIdentity ?? null,
@@ -286,7 +291,10 @@ function applyAggregateFtqState(
     ...payload,
     gauge: {
       ...gauge,
-      ...(unavailable ? { flightToQuality: null, flightIntensity: null } : {}),
+      ...(unavailable ? {
+        flightToQuality: null, flightIntensity: null,
+        flightToQualityReason: null, flightToQualityExcludedIds: [],
+      } : {}),
       classificationSource: unavailable ? "unavailable" : "safety-score-v9-publication",
       classificationReason: reason,
       safetyScoreIdentity: unavailable ? null : source.classification?.safetyScoreIdentity ?? null,
@@ -325,15 +333,22 @@ async function reconcileCachedAggregateSafetyResponse(
         flowsById.set(coin.stablecoinId, {
           knownNetUsd: coin.netFlow24hUsd,
           valuation: resolveMintBurnValuation(coin.valuation?.window24h),
+          window24hComplete: coin.coverage?.windows?.window24h.complete ?? null,
         });
       }
-      const ftq = detectFlightToQualityFromValuedNets(
-        buildFlightToQualityCohorts(source.classification, flowsById),
+      // A malformed cached publication proves no admission scope: no coin is
+      // excluded and any unpublished classified coin keeps withholding the verdict.
+      const publication = MintBurnFlowsResponseSchema.shape.publication.safeParse(payload.publication);
+      const cohorts = buildFlightToQualityCohorts(
+        source.classification, flowsById, publication.success ? publication.data : null,
       );
+      const ftq = detectFlightToQualityFromValuedNets(cohorts);
       payload.gauge = {
         ...payload.gauge,
         flightToQuality: ftq?.active ?? null,
         flightIntensity: ftq?.intensity ?? null,
+        flightToQualityReason: ftq ? null : getFlightToQualityUnavailableReason(cohorts),
+        flightToQualityExcludedIds: cohorts.excludedIds,
       };
     }
   }

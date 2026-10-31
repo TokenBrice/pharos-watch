@@ -30,7 +30,7 @@ import type { LiveReserveSnapshotProvenance } from "./live-reserves/store";
 import { parseJsonObject } from "./json-parse";
 import type { V9PublicationInputHealth } from "./safety-score-v9/publication-assessment";
 import {
-  parseProviderCount,
+  parseProviderSet,
   resolveDexDeploymentAttemptFence,
   resolveDexDeploymentCensusMaxAgeSec,
 } from "../cron/dex-liquidity/deployment-census-coverage";
@@ -252,8 +252,8 @@ function admitsStoredDeploymentOutcome(
 ): boolean {
   if (!row.census) return true;
   if (!options || row.observedAt == null) return false;
-  const providerCount = parseProviderCount(row.census.providerSetJson);
-  if (providerCount === null) return false;
+  const providerSet = parseProviderSet(row.census.providerSetJson);
+  if (providerSet === null) return false;
   const state = classifyStoredDexCensusState({
     outcome: row.outcome,
     reason: row.census.reason,
@@ -265,11 +265,11 @@ function admitsStoredDeploymentOutcome(
       deployment_last_attempt_at: row.census.deploymentLastAttemptAt,
       deployment_fence_attribution_at: row.census.deploymentFenceAttributionAt,
     }),
-    providerCount,
+    providerCount: providerSet.length,
     nowSec: options.asOfSec,
     maxAgeSec: options.maxOutcomeAgeSec,
     providerSetSuperseded:
-      isCensusProviderSetSupersededByRegistry(row.chain, row.contractAddress, providerCount),
+      isCensusProviderSetSupersededByRegistry(row.chain, row.contractAddress, providerSet),
   });
   return state.evidenceState === "current" &&
     (state.disposition === "verified-no-pools" && row.outcome === "verified_no_pools" ||

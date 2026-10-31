@@ -499,6 +499,8 @@ export async function collectMintBurnFlows(
         valuation: coin.valuation24h,
         window24hComplete: coin.scanCoverage?.window24h.complete ?? null,
       })),
+      // The producer publication that decided which coins have a published flow.
+      gauge.publication,
     );
     if (ftqFlows.kind === "unavailable") {
       if (ftqFlows.reason === "valuation-incomplete") qualityReasons.push("mint-burn-ftq-valuation-incomplete");

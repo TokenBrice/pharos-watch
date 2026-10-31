@@ -373,7 +373,7 @@ describe("handleDepegEvents", () => {
       .getHistory()
       .find((entry) => entry.sql.includes("pharos:depeg-events:page"));
     expect(dataQuery?.sql).toContain("depeg_resolver_incident_event_links");
-    expect(dataQuery?.sql).toContain("links.event_id != incidents.current_event_id");
+    expect(dataQuery?.sql).toContain("links.event_id != COALESCE(effective_alias.current_event_id, canonical.current_event_id)");
   });
 
   it("counts a superseded alias's linked rows in the projected public incident", async () => {
@@ -448,6 +448,81 @@ describe("handleDepegEvents", () => {
     }).toEqual({ total: 1, events: [{ id: 91004, startedAt: 1_780_671_044, constituentEventCount: 4 }] });
   });
 
+  it("collapses every link of multiple superseded aliases into one canonical public incident", async () => {
+    const { sqlite, db } = fixtures.open();
+    const canonicalKey = `ddr2:${"a".repeat(32)}`;
+    const aliasKeys = [`ddr2:${"b".repeat(32)}`, `ddr2:${"c".repeat(32)}`];
+    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
+       start_price, peg_reference, source)
+      VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', 635, ?, ?, ?, 1, 'live')`);
+    insertEvent.run(101, 1_780_671_044, 1_781_000_000, 0.9365);
+    insertEvent.run(102, 1_781_000_001, null, 0.9391);
+    insertEvent.run(201, 1_782_000_000, 1_782_500_000, 0.9458);
+    insertEvent.run(301, 1_782_600_000, null, 0.9412);
+    const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+      (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1782600000)`);
+    for (const eventId of [101, 102]) insertLink.run(canonicalKey, eventId);
+    insertLink.run(aliasKeys[0], 201);
+    insertLink.run(aliasKeys[1], 301);
+    const insertIncident = sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+       first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
+       superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'apxusd-apyx', 'USD', 'below', ?, ?, ?, ?, 635, ?, ?, ?, 1782600000, 1782600000)`);
+    insertIncident.run(canonicalKey, 101, 102, 1_780_671_044, 1_781_000_001, "active", null, "a".repeat(64));
+    insertIncident.run(aliasKeys[0], 201, 201, 1_782_000_000, 1_782_000_000, "superseded", canonicalKey, "b".repeat(64));
+    insertIncident.run(aliasKeys[1], 301, 301, 1_782_600_000, 1_782_600_000, "superseded", canonicalKey, "c".repeat(64));
+
+    const body = await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx")),
+      200,
+    ) as { total: number; events: Array<{ id: number; startedAt: number; constituentEventCount: number }> };
+
+    // Two superseded aliases are one logical incident: the effective tail is
+    // published once and counts all four linked crossings, including the other alias's.
+    expect({
+      total: body.total,
+      events: body.events.map(({ id, startedAt, constituentEventCount }) => ({ id, startedAt, constituentEventCount })),
+    }).toEqual({ total: 1, events: [{ id: 301, startedAt: 1_780_671_044, constituentEventCount: 4 }] });
+  });
+
+  it("publishes a canonical incident's newer current event over an older superseded alias tail", async () => {
+    const { sqlite, db } = fixtures.open();
+    const canonicalKey = `ddr2:${"a".repeat(32)}`;
+    const aliasKey = `ddr2:${"b".repeat(32)}`;
+    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
+       start_price, peg_reference, source)
+      VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', 635, ?, ?, ?, 1, 'live')`);
+    insertEvent.run(101, 1_780_671_044, 1_781_000_000, 0.9365);
+    insertEvent.run(103, 1_782_000_000, 1_782_500_000, 0.9458);
+    insertEvent.run(104, 1_783_000_000, null, 0.9412);
+    const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+      (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1783000000)`);
+    for (const eventId of [101, 104]) insertLink.run(canonicalKey, eventId);
+    insertLink.run(aliasKey, 103);
+    const insertIncident = sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+       first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
+       superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'apxusd-apyx', 'USD', 'below', ?, ?, ?, ?, 635, ?, ?, ?, 1783000000, 1783000000)`);
+    insertIncident.run(canonicalKey, 101, 104, 1_780_671_044, 1_783_000_000, "active", null, "a".repeat(64));
+    insertIncident.run(aliasKey, 103, 103, 1_782_000_000, 1_782_000_000, "superseded", canonicalKey, "b".repeat(64));
+
+    const body = await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx&active=true")),
+      200,
+    ) as { total: number; events: Array<{ id: number; startedAt: number; endedAt: number | null; constituentEventCount: number }> };
+
+    // The effective current fragment is the later one, so the open canonical
+    // tail stays published and the superseded alias tail is absorbed into it.
+    expect({
+      total: body.total,
+      events: body.events.map(({ id, startedAt, endedAt, constituentEventCount }) => ({ id, startedAt, endedAt, constituentEventCount })),
+    }).toEqual({ total: 1, events: [{ id: 104, startedAt: 1_780_671_044, endedAt: null, constituentEventCount: 3 }] });
+  });
+
   it.each([0, 0.9893])("projects observed first-event price %s without replacing zero", async (startPrice) => {
     const currentRow = makeDepegRow({
       id: 90089,
@@ -458,7 +533,7 @@ describe("handleDepegEvents", () => {
     const db = mockD1([
       {
         match: "FROM depeg_resolver_incidents incidents",
-        matchBinds: ["apxusd-apyx", "apxusd-apyx"],
+        matchBinds: ["apxusd-apyx"],
         rows: [
           {
             current_event_id: 90089,

@@ -81,7 +81,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Noon documents Ethereum sUSN as the canonical ERC-4626 wrapper and lock chain: sUSN inventory is locked on Ethereum, destination representations mint on accepted messages, and return transfers burn the representation before Ethereum unlocks it. The zkSync, Sophon, Starknet and Sui deployments are bridge representations, while Ethereum bridge configuration, pause/correction, upgrade, mailbox/ISM, and destination owner controls are scored here separately from native deposit-gated issuance. Sol curation campaign 2026-10-11 (C08USN), issuer sources observed 2026-10-11T00:50:58Z: deprecated TAC sUSN 0x5ced7f73b76a555ccb372cc0f0137bec5665f81e is now included with an unresolved route disposition alongside the eight previously catalogued routes. Deprecated Sophon and TAC are not extinguished liabilities: TAC block 26795569 (2026-10-11T00:51:29Z), observed 2026-10-11T00:51:51.117Z at https://rpc.tac.build, returns 18 decimals and nonzero totalSupply 536396304678010128210 atomic sUSN. The documented Ethereum lock address is 0xe24a3dc889621612422a64e6388927901608b91d; independently authenticated historical message/pending accounting and the complete historical receipt/escrow perimeter remain prerequisites to an exhaustive economic partition. A lock-mint representation must not be enrolled as an independent liability or assigned a static supply share. This note does not renew existing observations; the 2026-10-29 rate-limit controls and fail-open detach paths are recorded below.",
+    "summary": "Noon documents Ethereum sUSN as the canonical ERC-4626 wrapper and lock chain: sUSN inventory is locked on Ethereum, destination Hyperlane representations mint on accepted messages, and return transfers burn the representation before Ethereum unlocks the original. The zkSync, Sophon, and Starknet deployments are bridge representations, while Ethereum bridge configuration, pause/correction, upgrade, mailbox/ISM, and destination owner controls are scored here separately from native deposit-gated issuance. Sol curation campaign 2026-10-11 (C08USN), issuer sources observed 2026-10-11T00:50:58Z: deprecated TAC sUSN 0x5ced7f73b76a555ccb372cc0f0137bec5665f81e is now included with an unresolved route disposition alongside the eight previously catalogued routes. Deprecated Sophon and TAC are not extinguished liabilities: TAC block 26795569 (2026-10-11T00:51:29Z), observed 2026-10-11T00:51:51.117Z at https://rpc.tac.build, returns 18 decimals and nonzero totalSupply 536396304678010128210 atomic sUSN. The documented Ethereum lock address is 0xe24a3dc889621612422a64e6388927901608b91d; independently authenticated historical message/pending accounting and the complete historical receipt/escrow perimeter remain prerequisites to an exhaustive economic partition. A lock-mint representation must not be enrolled as an independent liability or assigned a static supply share. This note does not renew existing observations; the 2026-10-29 rate-limit controls and fail-open detach paths are recorded below.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration; Claude Noon feedback re-review 2026-10-29 (DeepSeek lane B), rate-limit controls only",
     "confidence": "manual-review",
@@ -446,46 +446,6 @@
           {
             "label": "Current TAC implementation verified source and ABI, retrieved 2026-10-21",
             "url": "https://explorer.tac.build/api/v2/smart-contracts/0x6d1019bdbe1da163134aba821bbfc1ccaeb988a8"
-          }
-        ]
-      },
-      {
-        "id": "sui:0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN",
-        "sourceChain": "ethereum",
-        "destinationChain": "sui",
-        "canonicalChain": "ethereum",
-        "contractAddress": "0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN",
-        "protocol": "LayerZero V2 OFT (sUSN on Sui)",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "third-party",
-        "riskTier": "external-validated-network",
-        "semantics": "burn-mint",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Noon's MoveBit-reviewed sui-contract repository publishes this exact sUSN package and a separate OFT package 0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b; Suiscan shows the 6-decimal sUSN coin (about 1.7M supply), and the LayerZero OFT is the representation that mints/burns it. This is a bridged representation, not native Sui issuance; the OFT admin cap, peers, DVN configuration and rate limits were not read.",
-        "mappingVersion": "bridge-route-facts-v1",
-        "failureDomainKeys": [
-          "protocol:layerzero-oft-v2",
-          "contract:sui:0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN",
-          "contract:sui:0xa356ca2010fcdf44d6cecfcecf18b73c32188d361e39dff3a96ac8de0dec7b1b"
-        ],
-        "observedAt": "2026-10-30",
-        "sources": [
-          {
-            "label": "Noon sUSN Sui package deployment",
-            "url": "https://raw.githubusercontent.com/dclf-labs/sui-contract/main/susn/Published.toml"
-          },
-          {
-            "label": "Noon Sui OFT package deployment",
-            "url": "https://raw.githubusercontent.com/dclf-labs/sui-contract/main/oft/Published.toml"
-          },
-          {
-            "label": "sUSN coin on Suiscan",
-            "url": "https://suiscan.xyz/mainnet/coin/0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN"
-          },
-          {
-            "label": "CoinGecko staked-usn platform metadata",
-            "url": "https://api.coingecko.com/api/v3/coins/staked-usn?localization=false&tickers=false&community_data=false&developer_data=false"
           }
         ]
       }

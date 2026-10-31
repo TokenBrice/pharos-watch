@@ -30,6 +30,7 @@ import {
   fetchOnchainUint256,
 } from "./helpers";
 import { throwIfAborted } from "../../lib/abort";
+import { resolveMentoFxMarketReopen } from "../../lib/stablecoin-publication-coverage";
 import { getCachedRequest } from "./request";
 
 // --- Redemption telemetry ---------------------------------------------------
@@ -113,7 +114,7 @@ async function observeBrokerCapacity(
   self: string,
   output: string,
   options: MentoPoolCallOptions,
-): Promise<{ capacityUsd: number; closedReason?: string }> {
+): Promise<{ capacityUsd: number; closedReason?: string; settlementDelaySec?: number }> {
   if (BigInt(pool.pricingModule) === 0n || BigInt(pool.config.referenceRateFeedID) === 0n
     || pool.config.referenceRateResetFrequency <= 0n || pool.config.minimumReports <= 0n) {
     throw new Error("mento broker-pool: invalid pricing/oracle configuration");
@@ -177,9 +178,16 @@ async function observeBrokerCapacity(
   if (!provider || !permissions.values.allowed || g.mode !== 0n) {
     return { capacityUsd: 0, closedReason: "Broker provider, transfer permission or breaker closes execution" };
   }
-  if (g.expired || g.oracleCount < pool.config.minimumReports
+  const referenceRateNotExecutable = g.expired || g.oracleCount < pool.config.minimumReports
     || g.oracleTime > BigInt(options.observedBlock.timestamp)
-    || g.oracleTime <= BigInt(options.observedBlock.timestamp) - pool.config.referenceRateResetFrequency) {
+    || g.oracleTime <= BigInt(options.observedBlock.timestamp) - pool.config.referenceRateResetFrequency;
+  // The reviewed FX calendar is the only exception: a scheduled weekend/holiday
+  // closure is a delayed route, not zero capacity. Off-calendar stale/expired
+  // reference rates remain route impairment.
+  const scheduledReopenSec = referenceRateNotExecutable
+    ? resolveMentoFxMarketReopen(options.observedBlock.timestamp)
+    : null;
+  if (referenceRateNotExecutable && scheduledReopenSec == null) {
     return { capacityUsd: 0, closedReason: "Broker reference rate is not executable" };
   }
   let inputBound = brokerLimitHeadroom(g.inputConfig, g.inputState, options.observedBlock.timestamp, 1n, inputDecimals);
@@ -193,6 +201,18 @@ async function observeBrokerCapacity(
   if (inputBound == null && outputBound == null) throw new Error("mento broker-pool: no finite executable bound");
   if (inputBound === 0n || outputBound === 0n) {
     return { capacityUsd: 0, closedReason: "Broker trading headroom or spendable output is exhausted" };
+  }
+  if (scheduledReopenSec != null) {
+    // The oracle cannot quote a payout while closed, but the counter-asset
+    // spendable headroom is live state at the pinned block. Keep that measured
+    // bound and defer settlement; without it, fail closed as before.
+    if (outputBound == null) {
+      return { capacityUsd: 0, closedReason: "Broker reference rate is not executable" };
+    }
+    return {
+      capacityUsd: decimalNumberFromBigInt(outputBound, outputDecimals),
+      settlementDelaySec: scheduledReopenSec - options.observedBlock.timestamp,
+    };
   }
   const quote = async (method: "getAmountIn" | "getAmountOut", amount: bigint) => {
     const result = await fetchOnchainUint256({
@@ -233,6 +253,10 @@ const FPMM_TRADING_LIMITS_ABI = [
   { type: "int120" }, { type: "int120" }, { type: "uint8" },
   { type: "uint32" }, { type: "uint32" }, { type: "int96" }, { type: "int96" },
 ] as const;
+const FPMM_REBALANCING_ABI = [
+  { type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint256" },
+  { type: "bool" }, { type: "uint16" }, { type: "uint256" },
+] as const;
 
 function decodeFpmmReserves(raw: `0x${string}`) {
   if (!/^0x[0-9a-fA-F]{192}$/.test(raw)) throw new Error("malformed reserves");
@@ -242,6 +266,11 @@ function decodeFpmmReserves(raw: `0x${string}`) {
 function decodeFpmmTradingLimits(raw: `0x${string}`) {
   if (!/^0x[0-9a-fA-F]{448}$/.test(raw)) throw new Error("malformed trading limits");
   return decodeAbiParameters(FPMM_TRADING_LIMITS_ABI, raw);
+}
+
+function decodeFpmmRebalancing(raw: `0x${string}`) {
+  if (!/^0x[0-9a-fA-F]{448}$/.test(raw)) throw new Error("malformed rebalancing state");
+  return decodeAbiParameters(FPMM_REBALANCING_ABI, raw);
 }
 
 interface MentoPoolCallOptions {
@@ -387,6 +416,7 @@ async function fetchMentoBrokerPoolRedemption(
   let capacityUsd = 0;
   let maxFeeBps: number | null = null;
   let closedReason: string | undefined;
+  let settlementDelaySec = 0;
   for (const poolConfig of params.pools) {
     const selfAddress = poolConfig.selfTokenAddress.toLowerCase();
     const counterAddress = poolConfig.counterAsset.address.toLowerCase();
@@ -409,6 +439,7 @@ async function fetchMentoBrokerPoolRedemption(
     const observation = await observeBrokerCapacity(match.exchangeId, match.pool, selfAddress, counterAddress, callOptions);
     capacityUsd += observation.capacityUsd;
     closedReason ??= observation.closedReason;
+    settlementDelaySec = Math.max(settlementDelaySec, observation.settlementDelaySec ?? 0);
     const feeBps = mentoSpreadToFeeBps(match.pool.config.spread);
     maxFeeBps = maxFeeBps == null ? feeBps : Math.max(maxFeeBps, feeBps);
   }
@@ -428,7 +459,7 @@ async function fetchMentoBrokerPoolRedemption(
     routeStatusSource: "onchain",
     routeObserved: true,
     holderEligibility: "any-holder",
-    settlementDelaySec: 0,
+    settlementDelaySec,
     feeBps: maxFeeBps,
     ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
   });
@@ -519,8 +550,10 @@ async function fetchMentoFpmmPoolsRedemption(
   const quoteData = (amount: bigint) => `0xf140a35a${amount.toString(16).padStart(64, "0")}${word(self)}`;
   let capacityUsd = 0;
   let maxFeeBps = 0;
+  let settlementDelaySec = 0;
   // Sequential pools share one pinned block and the adapter's connection budget.
   for (const pool of params.pools) {
+    let scheduledReopenSec: number | null = null;
     const output = pool.counterAsset.address.toLowerCase();
     const outputDecimals = pool.counterAsset.decimals;
     if (output === self) throw new Error("mento fpmm-pools: token identity mismatch");
@@ -538,20 +571,23 @@ async function fetchMentoFpmmPoolsRedemption(
         uint256Observation({ label: "protocol", contract: pool.poolAddress, data: FPMM_PROTOCOL_FEE_SELECTOR }),
         customObservation({ label: "inputLimits", contract: pool.poolAddress, data: `0x6391f7db${word(self)}`, decode: decodeFpmmTradingLimits }),
         customObservation({ label: "outputLimits", contract: pool.poolAddress, data: `0x6391f7db${word(output)}`, decode: decodeFpmmTradingLimits }),
-        uint256Observation({ label: "unitQuote", contract: pool.poolAddress, data: quoteData(10n ** BigInt(params.selfDecimals + 6)) }),
+        uint256Observation({ label: "unitQuote", contract: pool.poolAddress, data: quoteData(10n ** BigInt(params.selfDecimals + 6)), optional: true }),
+        customObservation({ label: "rate", contract: pool.poolAddress, data: "0x93965ec9", decode: decodeFpmmRebalancing, optional: true }),
       ],
       read: async (calls) => {
         const rows = await fetchOnchainMulticall3({ chain: CELO_CHAIN, signal, ctx: plan.ctx, calls });
         // getAmountOut's oracle check rejects routine weekend/holiday closure.
-        // Preserve that measured rejection instead of reusing inventory.
+        // On the reviewed calendar that is a delayed route, not a zero; outside
+        // it, preserve the named market-closed rejection.
         const quoteFailure = rows?.find((row) => row.label === "unitQuote" && !row.success);
         if (quoteFailure?.returnData.toLowerCase() === "0xa407143a") {
-          throw new MentoFxMarketClosedError();
+          scheduledReopenSec = resolveMentoFxMarketReopen(plan.observedBlock.timestamp);
+          if (scheduledReopenSec == null) throw new MentoFxMarketClosedError();
         }
         return rows;
       },
     });
-    const { token0, token1, reserves, balance, inputBalance, decimals, inputDecimals, unitQuote, lp, protocol } = observation.values;
+    const { token0, token1, reserves, balance, inputBalance, decimals, inputDecimals, unitQuote, rate, lp, protocol } = observation.values;
     if (!((token0 === self && token1 === output) || (token0 === output && token1 === self))
       || decimals !== BigInt(outputDecimals) || inputDecimals !== BigInt(params.selfDecimals)) {
       throw new Error("mento fpmm-pools: token identity mismatch");
@@ -565,17 +601,36 @@ async function fetchMentoFpmmPoolsRedemption(
     }
     const inventoryBound = reserve > 0n ? reserve - 1n : 0n;
     const fee = lp + protocol;
-    if (unitQuote <= 0n || fee > 200n) throw new Error("mento fpmm-pools: invalid quote or fee");
-    // Empty verified output inventory is measured zero, not a failed quote.
-    // A positive inventory still requires a positive probe input and readable
-    // executable quote; rounding the input to zero is not an observation.
-    const amountIn = (inventoryBound * 10n ** BigInt(params.selfDecimals + 6)) / unitQuote;
-    if (inventoryBound > 0n && amountIn <= 0n) throw new Error("mento fpmm-pools: bounded quote failed");
-    const amountOut = inventoryBound === 0n ? 0n : await fetchOnchainUint256({
-      chain: CELO_CHAIN, signal, ctx: plan.ctx, contract: pool.poolAddress, data: quoteData(amountIn),
-    });
-    if (amountOut == null || amountOut < 0n || amountOut > inventoryBound) {
-      throw new Error("mento fpmm-pools: bounded quote failed");
+    if (fee > 200n) throw new Error("mento fpmm-pools: invalid quote or fee");
+    let amountIn: bigint;
+    let amountOut: bigint;
+    if (unitQuote == null) {
+      // The reviewed FX calendar closed the oracle quote. Use the pool's own
+      // stored rebalancing rate to re-check both trading-limit directions, keep
+      // the verified output inventory and defer settlement to the reopen.
+      if (scheduledReopenSec == null) throw new Error("mento fpmm-pools: bounded quote failed");
+      if (rate == null) throw new MentoFxMarketClosedError();
+      const [numerator, denominator] = rate;
+      const feeAdjusted = 10_000n - fee;
+      if (numerator <= 0n || denominator <= 0n || feeAdjusted <= 0n) throw new MentoFxMarketClosedError();
+      amountIn = (inventoryBound * numerator * 10_000n + denominator * feeAdjusted - 1n)
+        / (denominator * feeAdjusted);
+      amountOut = inventoryBound;
+      settlementDelaySec = Math.max(settlementDelaySec, scheduledReopenSec - plan.observedBlock.timestamp);
+    } else {
+      if (unitQuote <= 0n) throw new Error("mento fpmm-pools: invalid quote or fee");
+      // Empty verified output inventory is measured zero, not a failed quote.
+      // A positive inventory still requires a positive probe input and readable
+      // executable quote; rounding the input to zero is not an observation.
+      amountIn = (inventoryBound * 10n ** BigInt(params.selfDecimals + 6)) / unitQuote;
+      if (inventoryBound > 0n && amountIn <= 0n) throw new Error("mento fpmm-pools: bounded quote failed");
+      const quotedOutput = inventoryBound === 0n ? 0n : await fetchOnchainUint256({
+        chain: CELO_CHAIN, signal, ctx: plan.ctx, contract: pool.poolAddress, data: quoteData(amountIn),
+      });
+      if (quotedOutput == null || quotedOutput < 0n || quotedOutput > inventoryBound) {
+        throw new Error("mento fpmm-pools: bounded quote failed");
+      }
+      amountOut = quotedOutput;
     }
     for (const [label, amount, decimals] of [
       ["inputLimits", amountIn, params.selfDecimals],
@@ -601,7 +656,7 @@ async function fetchMentoFpmmPoolsRedemption(
     blockNumber: plan.observedBlock.number, sourceTimestamp: plan.observedBlock.timestamp,
     routeStatus: "open", routeStatusSource: "onchain", holderEligibility: "any-holder",
     routeObserved: true,
-    settlementDelaySec: 0, feeBps: maxFeeBps,
+    settlementDelaySec, feeBps: maxFeeBps,
     ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
   });
 }

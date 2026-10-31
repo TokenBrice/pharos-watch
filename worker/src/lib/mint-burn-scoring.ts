@@ -8,7 +8,11 @@
 import { clamp } from "@shared/lib/math";
 import { mintBurnSignedNetRange } from "@shared/lib/mint-burn-valuation";
 import { PRESSURE_SHIFT_MIN_BASELINE_DAYS } from "@shared/lib/mint-burn-signals";
-import type { MintBurnValuation } from "@shared/types/mint-burn";
+import type {
+  MintBurnFtqUnavailableReason,
+  MintBurnPublication,
+  MintBurnValuation,
+} from "@shared/types/mint-burn";
 
 // ---------------------------------------------------------------------------
 // Flow Intensity Score (FIS)
@@ -152,25 +156,79 @@ export interface ValuedNetFlow24h {
   /** Known-valuation 24h net; `null` when unpublished (treated as fully unbounded). */
   knownNetUsd: number | null;
   valuation: Pick<MintBurnValuation, "mintCompleteness" | "burnCompleteness">;
+  /**
+   * Whether the published 24h flow window itself is complete. `null`/absent when
+   * the publication carries no window evidence (legacy payload).
+   */
+  window24hComplete?: boolean | null;
+}
+
+/** The published leg statuses that decide whether a classified coin's flow is in scope. */
+export type FlightToQualityPublicationScope = {
+  legs: ReadonlyArray<Pick<MintBurnPublication["legs"][number], "stablecoinId" | "status">>;
+};
+
+export interface FlightToQualityCohorts {
+  safe: ValuedNetFlow24h[];
+  risky: ValuedNetFlow24h[];
+  /** Classified coins excluded because their whole flow is pending mint/burn admission. */
+  excludedIds: string[];
+  /** Classified coins still carried as unbounded members because they have no published flow. */
+  unpublishedIds: string[];
 }
 
 /**
- * Builds the safe/risky cohorts over the whole classified roster. A classified
- * coin with no published 24h net (pending admission, kill switch, or a missing
- * flow row) is carried as an unbounded member; dropping it would publish its
- * unknown flow as a measured zero and could prove an inactivity the omitted
- * flow cannot support (R1/R2).
+ * Builds the safe/risky cohorts over the classified roster. A classified coin whose
+ * whole flow is pending mint/burn admission is outside the published flow scope: it
+ * is excluded and its id disclosed, never published as a measured zero. Any other
+ * classified coin with no published 24h net (kill switch, missing flow row) is
+ * carried as an unbounded member; dropping it would let the omitted flow prove an
+ * inactivity it cannot support (R1/R2).
  */
 export function buildFlightToQualityCohorts(
   classification: { safeIds: ReadonlySet<string>; riskyIds: ReadonlySet<string> },
   flowsById: ReadonlyMap<string, ValuedNetFlow24h>,
-): { safe: ValuedNetFlow24h[]; risky: ValuedNetFlow24h[] } {
+  publication?: FlightToQualityPublicationScope | null,
+): FlightToQualityCohorts {
+  const pendingAdmissionIds = new Set<string>();
+  for (const leg of publication?.legs ?? []) {
+    if (leg.status === "pending-admission" && !flowsById.has(leg.stablecoinId)) {
+      pendingAdmissionIds.add(leg.stablecoinId);
+    }
+  }
   const unbounded = (): ValuedNetFlow24h => ({
     knownNetUsd: null,
     valuation: { mintCompleteness: "unknown", burnCompleteness: "unknown" },
+    window24hComplete: null,
   });
-  const cohort = (ids: ReadonlySet<string>) => [...ids].map((id) => flowsById.get(id) ?? unbounded());
-  return { safe: cohort(classification.safeIds), risky: cohort(classification.riskyIds) };
+  const excludedIds: string[] = [];
+  const unpublishedIds: string[] = [];
+  const cohort = (ids: ReadonlySet<string>) => [...ids].flatMap((id) => {
+    const flow = flowsById.get(id);
+    if (flow) return [flow];
+    if (pendingAdmissionIds.has(id)) {
+      excludedIds.push(id);
+      return [];
+    }
+    unpublishedIds.push(id);
+    return [unbounded()];
+  });
+  const cohorts = { safe: cohort(classification.safeIds), risky: cohort(classification.riskyIds) };
+  return { ...cohorts, excludedIds: excludedIds.sort(), unpublishedIds: unpublishedIds.sort() };
+}
+
+/**
+ * Names why the detector withheld a verdict (R4). A structural absence wins over
+ * scan completeness, which wins over valuation, so the published reason never
+ * claims valuation for a coin the flow scope could not publish at all.
+ */
+export function getFlightToQualityUnavailableReason(
+  cohorts: Pick<FlightToQualityCohorts, "safe" | "risky" | "unpublishedIds">,
+): MintBurnFtqUnavailableReason {
+  if (cohorts.unpublishedIds.length > 0) return "cohort-member-unpublished";
+  const windowIncomplete = [...cohorts.safe, ...cohorts.risky]
+    .some((coin) => coin.knownNetUsd === null && coin.window24hComplete !== true);
+  return windowIncomplete ? "flow-window-unavailable" : "valuation-incomplete";
 }
 
 /**

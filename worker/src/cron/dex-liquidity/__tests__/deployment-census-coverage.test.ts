@@ -454,6 +454,42 @@ describe("DEX placeholder deployment-census coverage", () => {
     });
   });
 
+  it("supersedes a verified-empty row persisted under a provider set the registry no longer resolves", () => {
+    // Before EVM-namespace providers were gated off Kava's native bank rail, an
+    // empty CoinGecko scan of the Kava EVM token space certified `usdx` as
+    // verified-empty. The row's provider snapshot no longer matches the live
+    // registry (curve + kava-swap), so it is superseded evidence awaiting a
+    // re-crawl, never a fresh known-empty deployment.
+    const address = "usdx";
+    const classification = classifyDexPlaceholderCoverage({
+      deployments: [deployment("kava", address)],
+      outcomeRows: [
+        outcome({
+          chain: "kava",
+          contract_address: address,
+          provider_set_json: JSON.stringify([
+            "coingecko",
+            "geckoterminal",
+            "dexscreener",
+            "curve",
+            "kava-swap",
+          ]),
+        }),
+      ],
+      nowSec: NOW_SEC,
+    });
+
+    expect(classification.state).toBe("discovery-deferral");
+    expect(classification.coverage.status).toBe("unknown");
+    expect(classification.census).toMatchObject({
+      verifiedNoPoolsCount: 0,
+      supersededOutcomeCount: 1,
+    });
+    expect(classification.coverage.unsupportedReasons).toEqual({
+      deploymentCensusSupersededOutcome: 1,
+    });
+  });
+
   it("never reports an unsupported method for a deployment the registry now covers", () => {
     // The exact Spiko shape: the Soroban row was written by the static
     // inaccessible pass minutes before Aquarius coverage shipped, and the

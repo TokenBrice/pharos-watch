@@ -5,32 +5,42 @@ import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { isMissingTableError } from "./db";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
+/**
+ * Later of a canonical incident's own current fragment and its superseded
+ * aliases' current fragments, by `current_started_at` then `current_event_id`
+ * (the `buildEffectiveIncidentByKey` recency rule). One public row per logical
+ * incident is this effective fragment; every other linked event is absorbed.
+ */
+function effectiveAliasJoinSql(canonical: string): string {
+  return `LEFT JOIN depeg_resolver_incidents effective_alias
+      ON effective_alias.incident_key = (
+           SELECT alias.incident_key
+             FROM depeg_resolver_incidents alias
+            WHERE alias.superseded_by_incident_key = ${canonical}.incident_key
+              AND alias.incident_state = 'superseded'
+              AND (alias.current_started_at > ${canonical}.current_started_at
+                OR (alias.current_started_at = ${canonical}.current_started_at
+                    AND alias.current_event_id > ${canonical}.current_event_id))
+            ORDER BY alias.current_started_at DESC, alias.current_event_id DESC
+            LIMIT 1)`;
+}
+
+function effectiveCurrentEventSql(canonical: string): string {
+  return `COALESCE(effective_alias.current_event_id, ${canonical}.current_event_id)`;
+}
+
+/** Incident links stay append-only; the projection only decides visibility. */
 export const EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL = `
   id NOT IN (
     SELECT links.event_id
       FROM depeg_resolver_incident_event_links links
-      JOIN depeg_resolver_incidents incidents
-        ON incidents.incident_key = links.incident_key
-     WHERE incidents.incident_state = 'active'
-       AND links.event_id != incidents.current_event_id
-    UNION
-    SELECT canonical.current_event_id
-      FROM depeg_resolver_incidents canonical
-      JOIN depeg_resolver_incidents alias
-        ON alias.superseded_by_incident_key = canonical.incident_key
-     WHERE canonical.incident_state = 'active'
-       AND alias.incident_state = 'superseded'
-       AND alias.current_event_id != canonical.current_event_id
-    UNION
-    SELECT links.event_id
-      FROM depeg_resolver_incident_event_links links
-      JOIN depeg_resolver_incidents alias
-        ON alias.incident_key = links.incident_key
+      JOIN depeg_resolver_incidents owner
+        ON owner.incident_key = links.incident_key
       JOIN depeg_resolver_incidents canonical
-        ON canonical.incident_key = alias.superseded_by_incident_key
-     WHERE alias.incident_state = 'superseded'
-       AND canonical.incident_state = 'active'
-       AND links.event_id != alias.current_event_id
+        ON canonical.incident_key = COALESCE(owner.superseded_by_incident_key, owner.incident_key)
+      ${effectiveAliasJoinSql("canonical")}
+     WHERE canonical.incident_state = 'active'
+       AND links.event_id != ${effectiveCurrentEventSql("canonical")}
   )
 `;
 
@@ -115,66 +125,50 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
 }
 
 function activeIncidentProjectionSql(stablecoinId: string | null): string {
-    const activeStablecoinFilter = stablecoinId ? " AND incidents.stablecoin_id = ?" : "";
-    const aliasStablecoinFilter = stablecoinId ? " AND alias_current_event.stablecoin_id = ?" : "";
+    const stablecoinFilter = stablecoinId ? " AND incidents.stablecoin_id = ?" : "";
+    const effectiveCurrentEvent = effectiveCurrentEventSql("incidents");
     return `SELECT
-          incidents.current_event_id,
+          ${effectiveCurrentEvent} AS current_event_id,
           incidents.first_started_at,
           first_event.start_price AS first_start_price,
           first_event.peg_reference AS first_peg_reference,
           first_event.source AS first_source,
           first_event.peg_type AS first_peg_type,
           first_provenance.quote_mode AS first_quote_mode,
-          COUNT(DISTINCT links.event_id) AS constituent_event_count,
+          COUNT(DISTINCT linked_event.id) AS constituent_event_count,
           CASE WHEN first_event.id IS NOT NULL AND current_event.id IS NOT NULL
+            AND canonical_current_event.id IS NOT NULL
             AND MAX(CASE WHEN links.event_id = incidents.first_event_id THEN 1 ELSE 0 END) = 1
             AND MAX(CASE WHEN links.event_id = incidents.current_event_id THEN 1 ELSE 0 END) = 1
-            AND COUNT(linked_event.id) = COUNT(links.event_id)
+            AND MAX(CASE WHEN links.event_id = ${effectiveCurrentEvent} THEN 1 ELSE 0 END) = 1
+            AND COUNT(CASE WHEN links.incident_key = incidents.incident_key THEN linked_event.id END)
+              = COUNT(CASE WHEN links.incident_key = incidents.incident_key THEN links.event_id END)
             THEN 1 ELSE 0 END AS references_valid
          FROM depeg_resolver_incidents incidents
          LEFT JOIN depeg_events first_event
            ON first_event.id = incidents.first_event_id
          LEFT JOIN depeg_event_provenance first_provenance
            ON first_provenance.event_id = first_event.id
+         ${effectiveAliasJoinSql("incidents")}
          LEFT JOIN depeg_events current_event
-           ON current_event.id = incidents.current_event_id
+           ON current_event.id = ${effectiveCurrentEvent}
+         LEFT JOIN depeg_events canonical_current_event
+           ON canonical_current_event.id = incidents.current_event_id
          LEFT JOIN depeg_resolver_incident_event_links links
            ON links.incident_key = incidents.incident_key
+           OR links.incident_key IN (
+                SELECT alias.incident_key
+                  FROM depeg_resolver_incidents alias
+                 WHERE alias.superseded_by_incident_key = incidents.incident_key
+                   AND alias.incident_state = 'superseded'
+              )
          LEFT JOIN depeg_events linked_event
            ON linked_event.id = links.event_id
-        WHERE incidents.incident_state = 'active'${activeStablecoinFilter}
-        GROUP BY incidents.incident_key, incidents.current_event_id, incidents.first_started_at,
+        WHERE incidents.incident_state = 'active'${stablecoinFilter}
+        GROUP BY incidents.incident_key, incidents.first_started_at,
                  first_event.start_price, first_event.peg_reference,
-                 first_event.source, first_event.peg_type, first_provenance.quote_mode
-       UNION ALL
-       SELECT
-          alias.current_event_id,
-          canonical.first_started_at,
-          first_event.start_price AS first_start_price,
-          first_event.peg_reference AS first_peg_reference,
-          first_event.source AS first_source,
-          first_event.peg_type AS first_peg_type,
-          first_provenance.quote_mode AS first_quote_mode,
-          COUNT(DISTINCT links.event_id) AS constituent_event_count,
-          1 AS references_valid
-         FROM depeg_resolver_incidents alias
-         JOIN depeg_resolver_incidents canonical
-           ON canonical.incident_key = alias.superseded_by_incident_key
-         JOIN depeg_events first_event
-           ON first_event.id = canonical.first_event_id
-         LEFT JOIN depeg_event_provenance first_provenance
-           ON first_provenance.event_id = first_event.id
-         JOIN depeg_events alias_current_event
-           ON alias_current_event.id = alias.current_event_id
-         LEFT JOIN depeg_resolver_incident_event_links links
-           ON links.incident_key IN (canonical.incident_key, alias.incident_key)
-        WHERE alias.incident_state = 'superseded'
-          AND canonical.incident_state = 'active'
-          AND alias.current_event_id != canonical.current_event_id
-          AND alias.current_event_id != canonical.first_event_id${aliasStablecoinFilter}
-        GROUP BY alias.current_event_id, canonical.first_started_at,
-                 first_event.start_price, first_event.peg_reference,
-                 first_event.source, first_event.peg_type, first_provenance.quote_mode`;
+                 first_event.source, first_event.peg_type, first_provenance.quote_mode,
+                 ${effectiveCurrentEvent}`;
 }
 
 /** Raw fragment clocks remain intact; public pagination uses the projected onset. */
@@ -189,7 +183,7 @@ export type PublicDepegRow = DepegRow & { effective_started_at: number };
 export function prepareActiveIncidentProjections(db: D1Database, stablecoinId: string | null): D1PreparedStatement {
   const stmt = db.prepare(`SELECT /* pharos:depeg-event-projection:active-incidents */ *
     FROM (${activeIncidentProjectionSql(stablecoinId)})`);
-  return stablecoinId ? stmt.bind(stablecoinId, stablecoinId) : stmt;
+  return stablecoinId ? stmt.bind(stablecoinId) : stmt;
 }
 
 export function decodeActiveIncidentProjections(

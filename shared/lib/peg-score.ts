@@ -50,7 +50,7 @@ export interface PegScoreResult {
   pegPct: number | null;
   /** Severity component (0-100) */
   severityScore: number;
-  /** Deviation spread penalty (0-15) — stddev of severity-weighted below-peg peak deviations */
+  /** Deviation spread penalty (0-15) — confidence-weighted stddev of below-peg peak deviations */
   spreadPenalty: number;
   /** Total depeg events */
   eventCount: number;
@@ -213,16 +213,23 @@ export function computePegScore(
 
   // --- Spread penalty (deviation variance proxy) ---
   // Only below-peg magnitudes enter the spread: premiums are not downside depegs.
+  // Confidence weights are observation weights, not scaled magnitudes: the
+  // weighted mean and variance both divide by the weight sum, so a half-weight
+  // row keeps its observed peak instead of shrinking into artificial dispersion.
   // stddev of |peakDeviationBps| scaled into 0-15 range.
   const belowPegEvents = scoringEvents.filter((e) => e.peakDeviationBps <= 0);
   let spreadPenalty = 0;
   if (belowPegEvents.length >= 2) {
-    const absBpsList = belowPegEvents.map((e) => {
-      const v = Math.abs(e.peakDeviationBps) * eventSeverityWeight(e);
-      return Number.isFinite(v) ? v : 0;
+    const observations = belowPegEvents.map((e) => {
+      const rawMag = Math.abs(e.peakDeviationBps);
+      return {
+        weight: eventSeverityWeight(e),
+        magnitude: Number.isFinite(rawMag) ? rawMag : 0,
+      };
     });
-    const mean = absBpsList.reduce((s, v) => s + v, 0) / absBpsList.length;
-    const variance = absBpsList.reduce((s, v) => s + (v - mean) ** 2, 0) / absBpsList.length;
+    const weightSum = observations.reduce((s, o) => s + o.weight, 0);
+    const mean = observations.reduce((s, o) => s + o.weight * o.magnitude, 0) / weightSum;
+    const variance = observations.reduce((s, o) => s + o.weight * (o.magnitude - mean) ** 2, 0) / weightSum;
     const stdDev = Math.sqrt(variance);
     spreadPenalty = Number.isFinite(stdDev)
       ? Math.min(SPREAD_PENALTY_MAX, (stdDev / SPREAD_STDDEV_SCALE) * SPREAD_PENALTY_MAX)

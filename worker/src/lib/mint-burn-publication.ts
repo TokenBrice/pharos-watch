@@ -59,17 +59,22 @@ export async function syncMintBurnPublicationPolicy(
   const policy = JSON.stringify([...disabled].sort());
   const active = activeKeys == null ? null : new Set([...activeKeys].filter((key) => !disabled.has(key)));
   const activeJson = active == null ? null : JSON.stringify([...active]);
-  // Inactive grandfathered keys retain historical detail reads unless explicitly disabled.
+  // Grandfathered keys have no admission row, so a key that leaves the active roster
+  // is paused explicitly and re-enters through the same reactivation catch-up.
+  const inactiveGrandfathered = active == null ? []
+    : [...grandfathered].filter((key) => !active.has(key));
   const paused = JSON.stringify([...disabled]);
   const pauseCandidatesSql = `SELECT value AS config_key FROM json_each(?)
     UNION SELECT config_key FROM mint_burn_admission
-      WHERE ? IS NOT NULL AND config_key NOT IN (SELECT value FROM json_each(?))`;
+      WHERE ? IS NOT NULL AND config_key NOT IN (SELECT value FROM json_each(?))
+    UNION SELECT value FROM json_each(?)`;
   await executeAtomicBatch(db, [
     db.prepare(`DELETE FROM cache WHERE key >= ? AND key < ?
       AND COALESCE((SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1), '[]') != ?`)
       .bind(`${FLOW_CACHE_PREFIX}:`, `${FLOW_CACHE_PREFIX}:\uffff`, policy),
-    // A pause for a key that left the active roster and is no longer explicitly disabled
-    // can never be cleared by a scan, so drop it instead of withholding retained history.
+    // A pause for a key that is gone from the active, admission and grandfathered
+    // rosters can never be cleared by a scan, so drop it instead of withholding
+    // retained history.
     db.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
       VALUES (1, ?, (SELECT json_group_array(config_key) FROM (${pauseCandidatesSql})), ?)
       ON CONFLICT(id) DO UPDATE SET disabled_keys = excluded.disabled_keys, updated_at = excluded.updated_at,
@@ -79,7 +84,8 @@ export async function syncMintBurnPublicationPolicy(
             OR prior.value IN (SELECT value FROM json_each(?))
             OR prior.value IN (SELECT value FROM json_each(?))
           UNION SELECT value FROM json_each(excluded.paused_keys)
-        ))`).bind(policy, paused, activeJson, activeJson, now, activeJson, activeJson, policy),
+        ))`).bind(policy, paused, activeJson, activeJson, JSON.stringify(inactiveGrandfathered),
+          now, activeJson, activeJson, policy),
   ]);
 }
 

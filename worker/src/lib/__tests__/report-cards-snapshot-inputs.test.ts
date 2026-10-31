@@ -352,4 +352,59 @@ describe("report-card deployment-supply join attempt fence", () => {
       sqlite.close();
     }
   });
+
+  it("withholds verified-empty supply for a row certified under a stale provider set", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      // A Kava native bank denom row persisted before EVM-namespace providers
+      // were gated off: its empty CoinGecko scan certified a scope it never
+      // covered, so it cannot count as verified-empty deployment supply.
+      const coinId = "usdx-kava";
+      const observedAtSec = NOW_SEC - 60;
+      const lastCrawlAtSec = NOW_SEC - 120;
+      sqlite.prepare(`INSERT INTO dex_liquidity (stablecoin_id, symbol, chain_tvl_json, updated_at)
+        VALUES (?, ?, ?, ?)`).run(coinId, "USDX", JSON.stringify({ kava: 0 }), NOW_SEC - 60);
+      sqlite.prepare(`INSERT INTO dex_deployment_outcomes
+          (stablecoin_id, chain, contract_address, outcome, provider_set_json, reason,
+           observed_pool_count, observed_at, last_attempt_at)
+        VALUES (?, 'kava', 'usdx', 'verified_no_pools', ?, ?, 0, ?, ?)`).run(
+        coinId,
+        JSON.stringify(["coingecko", "geckoterminal", "dexscreener", "curve", "kava-swap"]),
+        "A provider completed the direct-token query with no eligible pool",
+        observedAtSec,
+        observedAtSec,
+      );
+      sqlite.prepare(`INSERT INTO dex_discovery_meta
+          (stablecoin_id, consecutive_misses, last_crawl_at, last_hit_at, deployment_fence_attribution_at)
+        VALUES (?, 0, ?, NULL, ?)`).run(coinId, lastCrawlAtSec, lastCrawlAtSec);
+
+      mocks.loadDexLiquiditySnapshot.mockResolvedValue({
+        map: { [coinId]: {} },
+        latestUpdatedAt: NOW_SEC - 60,
+      });
+      const asset = makeStablecoin({
+        id: coinId,
+        circulating: { peggedUSD: 100 },
+        contracts: [{ chain: "kava", address: "usdx", decimals: 6 }],
+        chainCirculating: { Kava: supplyPoint(100) },
+      });
+      const inputs = await loadReportCardsSnapshotInputs(db, {
+        preloadedStablecoinsCache: { kind: "ok", payload: { peggedAssets: [asset] }, updatedAt: NOW_SEC },
+      });
+
+      expect(inputs.dexLiquiditySnapshot.map[coinId]).toMatchObject({
+        deploymentSupplyCoverage: {
+          totalSupplyUsd: 100,
+          verifiedNoPoolsSupplyUsd: 0,
+          verifiedNoPoolsSupplyRatio: 0,
+          unknownSupplyUsd: 100,
+          unknownSupplyRatio: 1,
+          // The Osmosis IBC deployment carries no chain supply in this fixture.
+          unknownChains: ["kava", "osmosis"],
+        },
+      });
+    } finally {
+      sqlite.close();
+    }
+  });
 });
