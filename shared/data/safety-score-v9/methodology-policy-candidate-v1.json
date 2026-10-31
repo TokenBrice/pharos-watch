@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.40",
+  "releaseVersion": "10.41",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },

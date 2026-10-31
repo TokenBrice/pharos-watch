@@ -8,7 +8,7 @@ Modeled redemption-route coverage for tracked stablecoins. This subsystem estima
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.52`<!-- GENERATED-END: methodology-version-redemption-backstop -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-redemption-backstop -->`v4.53`<!-- GENERATED-END: methodology-version-redemption-backstop -->
 - **Public methodology anchor:** `/methodology/#redemption-backstop-methodology`
 - **Canonical source files:** `shared/lib/redemption-backstops.ts`, `shared/lib/redemption-backstop-configs/*`, `shared/lib/exit-route-scoring.ts`, `shared/lib/redemption-backstop-scoring.ts`, `shared/lib/methodology-versions/registry.ts`
 - **Structured changelog:** `shared/data/methodology-changelogs/redemption-backstop/`

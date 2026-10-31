@@ -642,7 +642,7 @@ Historical and active depeg incidents with constituent threshold-crossing counts
 
 ```json
 {
-  "currentVersion": "6.39"
+  "currentVersion": "6.40"
 }
 ```
 
@@ -680,7 +680,7 @@ Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggr
 
 ```json
 {
-  "currentVersion": "6.39"
+  "currentVersion": "6.40"
 }
 ```
 
@@ -957,10 +957,10 @@ Modeled issuer/protocol redemption routes and effective-exit scoring for configu
 {
   "coins": {},
   "methodology": {
-    "version": "4.52",
-    "versionLabel": "v4.52",
-    "currentVersion": "4.52",
-    "currentVersionLabel": "v4.52",
+    "version": "4.53",
+    "versionLabel": "v4.53",
+    "currentVersion": "4.53",
+    "currentVersionLabel": "v4.53",
     "changelogPath": "/methodology/redemption-backstop-changelog/",
     "asOf": 0,
     "isCurrent": true,
@@ -1019,7 +1019,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.52",
-  "methodologyVersion": "10.40"
+  "methodologyVersion": "10.41"
 }
 ```
 
@@ -1096,8 +1096,8 @@ Freshness threshold: 1800 s.
 
 ```json
 {
-  "currentVersion": "6.39",
-  "methodologyVersion": "6.39"
+  "currentVersion": "6.40",
+  "methodologyVersion": "6.40"
 }
 ```
 

@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.32",
+    "title": "Pending-admission coins leave the FTQ cohorts; re-admitted legs catch up",
+    "date": "2026-10-31",
+    "effectiveAt": 1793491200,
+    "summary": "Flight-to-quality cohorts exclude coins whose mint/burn leg is pending admission and disclose them, and a re-admitted grandfathered leg waits in reactivation catch-up instead of holding the common watermark.",
+    "impact": [
+      "Classified coins whose publication leg is pending admission leave the safe, neutral and risky cohorts and are listed in gauge.flightToQualityExcludedIds, so one pending coin (swanUSD, admission expected about January 2027) no longer withholds the verdict for months.",
+      "A verdict that is still withheld names its cause in gauge.flightToQualityReason (cohort-member-unpublished, flow-window-unavailable or valuation-incomplete) instead of always reading valuation-incomplete.",
+      "Inactive grandfathered keys join the paused keys, so re-admitting a frozen coin resumes its leg through reactivation-pending catch-up rather than rejoining admitted with a stale cursor. bUSD0 is re-enabled on that path after its re-admission froze the watermark for about ten hours.",
+      "Thresholds, windows, valuation and the gauge formula are unchanged. Activation is 2026-11-01 00:00 UTC (1793491200)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.31",
     "title": "Admission-gated mint/burn scope and per-provider circuit attribution",
     "date": "2026-10-28",

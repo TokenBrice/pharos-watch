@@ -1,5 +1,20 @@
 [
   {
+    "version": "4.53",
+    "title": "Scheduled Mento closures as delayed routes; withheld settlement terms",
+    "date": "2026-10-31",
+    "effectiveAt": 1793491200,
+    "summary": "Mento FX collateral-redemption routes keep their live measured bound through the reviewed market-hours closure, routes whose review withholds settlement stop inheriting same-day terms, and USSD's settable fee is a formula fee.",
+    "impact": [
+      "Inside the reviewed Mento MarketHoursBreaker calendar (Friday 21:00 to Sunday 23:00 UTC and listed holidays), a closed FX market keeps the route's live trading-limit or counter-asset bound and publishes the scheduled reopen as settlementDelaySec, instead of impaired zero capacity. Outside the calendar, or without a live bound, the route stays impaired.",
+      "Nine offchain-issuer routes whose own review lists settlement as missing (QCAD, wARS, VBILL, JAAA, AxCNH, MXNB, SBC, BRLA, XO) take settlement days and unknown holder eligibility, like their corrected siblings, instead of the issuer base's same-day and verified-customer defaults.",
+      "USSD's owner-settable redeem fee is a documented variable formula fee (feeBps null) instead of a fixed 0 bps.",
+      "Weights, ladders and request sizing are unchanged. Activation is 2026-11-01 00:00 UTC (1793491200)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.52",
     "title": "Selected payout identity and impairment authority",
     "date": "2026-10-20",

@@ -342,7 +342,7 @@ export function MintBurnFlowMethodologySection() {
                     <li>
                       <span className="text-foreground">Safety cohorts</span> &mdash; safe is B- or above, neutral is C-/C/C+,
                       and risky is below C-. Classification is unavailable for inactive assets or when the canonical V10
-                      publication is missing, held, stale, invalid, or identity-incompatible
+                      publication is missing, held, stale, invalid, or identity-incompatible. Coins pending mint/burn admission leave the cohorts and are listed as excluded
                     </li>
                     <li>
                       <span className="text-foreground">Dual threshold</span> &mdash; active when risky coins have &gt;$100M
