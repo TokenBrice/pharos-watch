@@ -550,6 +550,169 @@ export const BACKFILL_REPLAY_SUPPRESSIONS: readonly BackfillReplaySuppression[] 
     ],
     reviewedAt: "2026-10-30",
   },
+  // 2026-10-31 #1802 held-row review (owner go). Windows are the stored
+  // episode union plus the runbook's ±2h edge-drift margin; the reviewed rows
+  // are deleted only after this registry deploys.
+  {
+    coinId: "usdc-circle",
+    direction: "below",
+    windowStart: 1_538_659_882, // 2018-10-04T13:31:22Z (cluster start − 2h)
+    windowEnd: 1_538_780_623, // 2018-10-05T23:03:43Z (cluster end + 2h)
+    reason:
+      "CoinGecko/DefiLlama USDC coverage-start series: the first 2018-10-04/05 hourly samples print 0.7859, 0.8964 and 0.8650 against a $1 peg for an eight-day-old 1:1 mint; the 0.7859 trough is a single sample bracketed by ~0.94-0.98, the daily series closes at 1.00624, and no 2018 USDC history records a sub-$0.88 print.",
+    evidenceUrls: [
+      "https://coins.llama.fi/prices/historical/1538685090/coingecko:usd-coin",
+      "https://coins.llama.fi/prices/historical/1538706690/coingecko:usd-coin",
+      "https://www.coingecko.com/en/coins/usd-coin",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  {
+    coinId: "usdc-circle",
+    direction: "above",
+    windowStart: 1_538_695_885, // 2018-10-04T23:31:25Z (cluster start − 2h)
+    windowEnd: 1_538_759_015, // 2018-10-05T17:03:35Z (cluster end + 2h)
+    reason:
+      "Same 2018-10-04/05 coverage-start feed oscillates 1.0100 -> 0.8964 -> 1.0735 -> 0.8650 within a day; the 1.0735 print is one unreconfirmed sample between two below-peg artifacts, the daily series stays near $1, and contemporaneous press records only a modest premium, not a 7.35% spike.",
+    evidenceUrls: [
+      "https://coins.llama.fi/prices/historical/1538703085/coingecko:usd-coin",
+      "https://coins.llama.fi/prices/historical/1538751815/coingecko:usd-coin",
+      "https://www.coingecko.com/en/coins/usd-coin",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  {
+    coinId: "usda-avalon",
+    direction: "below",
+    windowStart: 1_733_461_282, // 2024-12-06T05:01:22Z (stored start − 2h)
+    windowEnd: 1_733_479_308, // 2024-12-06T10:01:48Z (stored end + 2h)
+    reason:
+      "CoinGecko hourly single-sample artifact: USDA prints 0.753758 for one 60-minute sample on 2024-12-06 (startPrice == peakPrice) and recovers to 1.001046; CoinMarketCap's daily bar that day never traded below 1.000534 and Pharos's own daily series prints 1.00232, so no market recorded a 25% discount.",
+    evidenceUrls: [
+      "https://api.coinmarketcap.com/data-api/v3.1/cryptocurrency/historical?id=35368&convertId=2781&interval=1d&timeStart=1733270400&timeEnd=1733788800",
+      "https://coins.llama.fi/chart/ethereum:0x8a60e489004ca22d775c5f2c657598278d17d9c2?start=1733270400&span=7&period=1d",
+      "https://www.coingecko.com/en/coins/usda-2",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  // BRZ rows 89169, 89170, 89172 and 89173 (2023-02/03) stay: CoinMarketCap shows a real 7-23% premium
+  // in those windows, so they are real episodes with inflated peaks, not artifacts.
+  {
+    coinId: "brz-transfero",
+    direction: "below",
+    windowStart: 1_685_829_600, // 2023-06-03T22:00:00Z (stored start − 2h)
+    windowEnd: 1_686_448_800, // 2023-06-11T02:00:00Z (stored end + 2h)
+    reason:
+      "CoinGecko native-BRL backfill artifact: 0.4349 -> 0.0577 (-9423 bps) on 2023-06-04..11 while CoinMarketCap's daily low is 0.19183 USD and the implied 3.06 BRL/USD start is outside the 4.87-5.21 band; the row recovers to 0.9988.",
+    evidenceUrls: [
+      "https://api.coinmarketcap.com/data-api/v3.1/cryptocurrency/historical?id=4139&convertId=2781&interval=1d&timeStart=1675209600&timeEnd=1698796800",
+      "https://coins.llama.fi/prices/historical/1685836800/ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
+      "https://www.coingecko.com/en/coins/brz",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  {
+    coinId: "brz-transfero",
+    direction: "above",
+    windowStart: 1_692_050_400, // 2023-08-14T22:00:00Z (stored start − 2h)
+    windowEnd: 1_692_324_000, // 2023-08-18T02:00:00Z (stored end + 2h)
+    reason:
+      "CoinGecko native-BRL backfill artifact: the 1.2060 (+2060 bps) peak on 2023-08-15..16 is not present in CoinMarketCap's 0.20-0.21 USD range, and the provider series itself returns to 0.9882.",
+    evidenceUrls: [
+      "https://api.coinmarketcap.com/data-api/v3.1/cryptocurrency/historical?id=4139&convertId=2781&interval=1d&timeStart=1675209600&timeEnd=1698796800",
+      "https://coins.llama.fi/prices/historical/1692057600/ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
+      "https://www.coingecko.com/en/coins/brz",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  {
+    coinId: "brz-transfero",
+    direction: "above",
+    windowStart: 1_693_087_200, // 2023-08-26T22:00:00Z (stored start − 2h)
+    windowEnd: 1_694_311_200, // 2023-09-10T02:00:00Z (stored end + 2h)
+    reason:
+      "CoinGecko native-BRL backfill artifact: 1.5450 -> 1.7845 (+7845 bps) on 2023-08-27..09-10 while CoinMarketCap's daily bars stay at 0.2030-0.2043 USD; the 4.87 implied FX places the print in the BRL band but the premium has no venue support.",
+    evidenceUrls: [
+      "https://api.coinmarketcap.com/data-api/v3.1/cryptocurrency/historical?id=4139&convertId=2781&interval=1d&timeStart=1675209600&timeEnd=1698796800",
+      "https://coins.llama.fi/prices/historical/1693094400/ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
+      "https://www.coingecko.com/en/coins/brz",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  {
+    coinId: "brz-transfero",
+    direction: "above",
+    windowStart: 1_694_642_400, // 2023-09-13T22:00:00Z (stored start − 2h)
+    windowEnd: 1_695_348_000, // 2023-09-22T02:00:00Z (stored end + 2h)
+    reason:
+      "CoinGecko native-BRL backfill artifact: 1.1534 -> 1.3961 (+3961 bps) on 2023-09-14..22 while CoinMarketCap's 2023-09-20 bar is 0.20444-0.20499 USD; no economic-size trade printed at the stored premium.",
+    evidenceUrls: [
+      "https://api.coinmarketcap.com/data-api/v3.1/cryptocurrency/historical?id=4139&convertId=2781&interval=1d&timeStart=1675209600&timeEnd=1698796800",
+      "https://coins.llama.fi/prices/historical/1694649600/ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
+      "https://www.coingecko.com/en/coins/brz",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  {
+    coinId: "brz-transfero",
+    direction: "above",
+    windowStart: 1_696_284_000, // 2023-10-02T22:00:00Z (stored start − 2h)
+    windowEnd: 1_696_903_200, // 2023-10-10T02:00:00Z (stored end + 2h)
+    reason:
+      "CoinGecko native-BRL backfill artifact: 1.0577 -> 1.4952 (+4952 bps) on 2023-10-03..09 while CoinMarketCap's daily range is 0.192-0.198 USD every day and the row recovers to 0.9938.",
+    evidenceUrls: [
+      "https://api.coinmarketcap.com/data-api/v3.1/cryptocurrency/historical?id=4139&convertId=2781&interval=1d&timeStart=1675209600&timeEnd=1698796800",
+      "https://coins.llama.fi/prices/historical/1696291200/ethereum:0x01d33fd36ec67c6ada32cf36b31e88ee190b1839",
+      "https://www.coingecko.com/en/coins/brz",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  // cgUSD row 36826 (2024-05-05) is a real episode and is deliberately left out.
+  {
+    coinId: "cgusd-cygnus-finance",
+    direction: "below",
+    windowStart: 1_714_061_376, // 2024-04-25T16:09:36Z (stored start − 2h)
+    windowEnd: 1_714_090_165, // 2024-04-26T00:09:25Z (stored end + 2h)
+    reason:
+      "CoinGecko hourly dust-pool print: cgUSD's 0.784300 low on 2024-04-25 is a 4-hour quote from a Uniswap V2 pool with 1 LP and ~$0.027 reserve; the only nearby swap was 5.42 cgUSD an hour before the print, the daily close is 0.99512, and the token mints 1:1 for USDC.",
+    evidenceUrls: [
+      "https://coins.llama.fi/prices/historical/1714068576/base:0xca72827a3d211cfd8f6b00ac98824872b72cab49",
+      "https://base.blockscout.com/block/13637662",
+      "https://p.cash/en/coins/cygnus-finance-global-usd",
+      "https://lbank.info/price/cygnus-finance-global-usd/historical-data",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  {
+    coinId: "cgusd-cygnus-finance",
+    direction: "below",
+    windowStart: 1_759_158_200, // 2025-09-29T15:03:20Z (stored start − 2h)
+    windowEnd: 1_759_176_160, // 2025-09-29T20:02:40Z (stored end + 1h, capped before row 37214)
+    reason:
+      "CoinGecko hourly stale/dust-pool print: cgUSD's 0.724326 low on 2025-09-29 sits in a 16:29-17:29Z window with zero cgUSD transfers on Base; the same dust pool took a 0.000410 cgUSD swap 22 minutes before CoinGecko's all-time-low timestamp, the real Curve pool traded 0.9925-0.9927 that afternoon, and the daily close is 0.98917.",
+    evidenceUrls: [
+      "https://coins.llama.fi/prices/historical/1759165136/base:0xca72827a3d211cfd8f6b00ac98824872b72cab49",
+      "https://base.blockscout.com/block/36173204",
+      "https://base.blockscout.com/block/36187894",
+      "https://p.cash/en/coins/cygnus-finance-global-usd",
+    ],
+    reviewedAt: "2026-10-31",
+  },
+  {
+    coinId: "usdx-hex-trust",
+    direction: "below",
+    windowStart: 1_749_222_075, // 2025-06-06T15:01:15Z (stored start − 2h)
+    windowEnd: 1_749_272_471, // 2025-06-07T05:01:11Z (stored end + 2h)
+    reason:
+      "CoinGecko pool-only feed artifact: USDX's 0.5355 (-4645 bps) peak is four hourly samples (0.5409 -> 0.5355) from two Enosys V3 pools whose 24h volume was $172/$27 and are flagged stale/anomaly; no economic-size trade printed at the discount and the price snaps back to 0.9966 in the next sample.",
+    evidenceUrls: [
+      "https://coins.llama.fi/prices/historical/1749257945/coingecko:hex-trust-usdx",
+      "https://flare-explorer.flare.network/address/0x0319e3068d6597abb57d23a00bb3620549001b8d",
+      "https://flare-explorer.flare.network/address/0x081a6ff0621cae3bba91b73d786d2907e43da22a",
+      "https://www.coingecko.com/en/coins/hex-trust-usdx/tickers",
+    ],
+    reviewedAt: "2026-10-31",
+  },
 ];
 
 const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);
