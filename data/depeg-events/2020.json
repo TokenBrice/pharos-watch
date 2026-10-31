@@ -39,6 +39,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-31-up-73213"
@@ -149,6 +150,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-31-up-73212"
@@ -457,6 +459,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-29-up-73211"
@@ -655,6 +658,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-29-up-73210"
@@ -699,6 +703,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-29-up-73209"
@@ -941,6 +946,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-27-up-73208"
@@ -1007,6 +1013,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-27-up-73207"
@@ -1117,6 +1124,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-27-down"
@@ -1183,6 +1191,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-27-up-73205"
@@ -1205,6 +1214,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-27-up-73204"
@@ -1337,6 +1347,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-26"
@@ -1491,6 +1502,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-25-up-73202"
@@ -1557,6 +1569,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-25-up-73201"
@@ -1689,6 +1702,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-24-up-73200"
@@ -1711,6 +1725,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-24-up-73199"
@@ -1887,6 +1902,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-24-up-73198"
@@ -1997,6 +2013,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-23"
@@ -2305,6 +2322,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-22-up-73196"
@@ -2327,6 +2345,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-22-up-73195"
@@ -2415,6 +2434,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-21-up-73194"
@@ -2723,6 +2743,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-21-up-73193"
@@ -2833,6 +2854,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-21-up-73192"
@@ -2921,6 +2943,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-20-up-73191"
@@ -3009,6 +3032,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-20-up-73190"
@@ -3053,6 +3077,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-20-down"
@@ -3141,6 +3166,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-19-up-73188"
@@ -3229,6 +3255,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-19-down-73187"
@@ -3295,6 +3322,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-19-down-73186"
@@ -3383,6 +3411,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-19-up-73185"
@@ -3647,6 +3676,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-17-down"
@@ -3713,6 +3743,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-17-up-73183"
@@ -3845,6 +3876,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-17-up-73182"
@@ -3889,6 +3921,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-17-up-73181"
@@ -3933,6 +3966,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-17-up-73180"
@@ -3977,6 +4011,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-17-up-73179"
@@ -4043,6 +4078,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-16"
@@ -4329,6 +4365,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-15"
@@ -4549,6 +4586,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-14"
@@ -4659,6 +4697,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-13"
@@ -4967,6 +5006,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-10"
@@ -5121,6 +5161,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-09-up-73173"
@@ -5165,6 +5206,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-09-up-73172"
@@ -5363,6 +5405,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-08"
@@ -5605,6 +5648,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-07-up-73170"
@@ -5649,6 +5693,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-07-up-73169"
@@ -5671,6 +5716,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-06-up-73168"
@@ -5825,6 +5871,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-06-up-73167"
@@ -5891,6 +5938,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-05-up-73166"
@@ -5957,6 +6005,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-05-up-73165"
@@ -6155,6 +6204,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-03"
@@ -6243,6 +6293,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-02"
@@ -6463,6 +6514,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-01-down-73162"
@@ -6639,6 +6691,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-01-down-73161"
@@ -6661,6 +6714,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-12-01-up"
@@ -7475,6 +7529,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-27-up"
@@ -7607,6 +7662,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-27-down"
@@ -7915,6 +7971,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-26-down-73157"
@@ -8113,6 +8170,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-26-up"
@@ -8157,6 +8215,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-26-down-73155"
@@ -8245,6 +8304,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-26-down-73154"
@@ -8399,6 +8459,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-25-down"
@@ -8487,6 +8548,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-25-up"
@@ -8795,6 +8857,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-23"
@@ -8883,6 +8946,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-22-up-73150"
@@ -8993,6 +9057,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-22-up-73149"
@@ -9587,6 +9652,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-18-down-73148"
@@ -9609,6 +9675,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-18-down-73147"
@@ -9785,6 +9852,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-18-up"
@@ -10137,6 +10205,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-16"
@@ -10445,6 +10514,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-13"
@@ -10555,6 +10625,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-12-up-73143"
@@ -10599,6 +10670,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-12-up-73142"
@@ -11105,6 +11177,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-09"
@@ -12029,6 +12102,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-05-up-73140"
@@ -12117,6 +12191,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-05-up-73139"
@@ -12337,6 +12412,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-11-04"
@@ -13239,6 +13315,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-30"
@@ -13327,6 +13404,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-29"
@@ -13987,6 +14065,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-24"
@@ -14141,6 +14220,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-22"
@@ -14339,6 +14419,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-21"
@@ -14669,6 +14750,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-19"
@@ -16319,6 +16401,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-09-down-73131"
@@ -16363,6 +16446,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-09-up"
@@ -16451,6 +16535,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-09-down-73129"
@@ -16495,6 +16580,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-08"
@@ -17023,6 +17109,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2020-10-06"
