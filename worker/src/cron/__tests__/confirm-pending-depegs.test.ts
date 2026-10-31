@@ -28,6 +28,38 @@ const makeBinanceNoData = vi.hoisted((): (() => BinancePriceOutcome) => () => ({
   },
 }));
 
+const makeBinanceUpstreamError = vi.hoisted((): (() => BinancePriceOutcome) => () => ({
+  kind: "upstream-error",
+  reason: "HTTP 503",
+  value: {
+    prices: new Map<string, number>(),
+    diagnostics: [{
+      source: "binance",
+      stage: "primary",
+      endpoint: "data-api.binance.vision/api/v3/ticker/price",
+      status: 503,
+      ok: false,
+      success: false,
+    }],
+  },
+}));
+
+const makeBinancePartialBatch = vi.hoisted((): (() => BinancePriceOutcome) => () => ({
+  kind: "ok",
+  value: {
+    prices: new Map<string, number>([["USDC", 1]]),
+    diagnostics: [{
+      source: "binance",
+      stage: "primary",
+      endpoint: "data-api.binance.vision/api/v3/ticker/price",
+      status: 200,
+      ok: true,
+      success: true,
+      matchedCount: 1,
+    }],
+  },
+}));
+
 vi.mock("../../lib/cex-tickers", () => {
   const fetchBinancePricesDetailed = vi.fn(async () => makeBinanceNoData());
   return {
@@ -70,6 +102,34 @@ function insertOpenEvent(sqlite: DatabaseSync, stablecoinId: string, symbol: str
        started_at, start_price, peak_price, peg_reference, source
      ) VALUES (?, ?, 'peggedUSD', 'below', 100, ?, 0.99, 0.99, 1, 'live')`,
   ).run(stablecoinId, symbol, NOW_SEC - 3_600);
+}
+
+function insertPoolChallenger(sqlite: DatabaseSync, stablecoinId: string, price: number, tvlUsd: number): void {
+  sqlite.prepare(
+    `INSERT INTO dex_price_challenger_snapshots
+       (stablecoin_id, snapshot_at, published_at, has_rows, source_coverage_complete)
+     VALUES (?, ?, ?, 1, 1)`,
+  ).run(stablecoinId, NOW_SEC - 60, NOW_SEC - 60);
+  sqlite.prepare(
+    `INSERT INTO dex_price_challengers
+       (stablecoin_id, snapshot_at, pool_id, chain, protocol, source_family, price_usd, tvl_usd)
+     VALUES (?, ?, ?, 'Ethereum', 'curve', 'curve', ?, ?)`,
+  ).run(stablecoinId, NOW_SEC - 60, `${stablecoinId}:curve`, price, tvlUsd);
+}
+
+function makeLowConfidenceAsset(pending: ReturnType<typeof makePendingRow>, price: number) {
+  return makeAsset({
+    id: pending.stablecoin_id,
+    symbol: pending.symbol,
+    geckoId: "tether",
+    price,
+    priceSource: "coingecko",
+    priceConfidence: "low",
+    agreeSources: ["coingecko"],
+    priceObservedAt: NOW_SEC - 30,
+    priceUpdatedAt: NOW_SEC - 30,
+    priceSyncedAt: NOW_SEC - 30,
+  });
 }
 
 function lifecycle(sqlite: DatabaseSync, stablecoinId: string, pendingId: number) {
@@ -242,6 +302,68 @@ describe("confirmPendingDepegs", () => {
 
     expect(result.providerDiagnostics).toHaveLength(2);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending").get()).toEqual({ count: 1 });
+  });
+
+  it("records an empty Binance batch as an unavailable CEX source in the outcome ledger", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    const { sqlite, db } = openFixture();
+    const pending = makePendingRow({ id: 41 });
+    insertPending(sqlite, pending);
+    insertDexPrice(sqlite, pending.stablecoin_id, pending.symbol, 0.998, [
+      { price: 0.998, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+      { price: 0.997, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+    ]);
+    vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce(makeBinanceUpstreamError());
+
+    await confirmPendingDepegs(db, [makeLowConfidenceAsset(pending, 0.998)]);
+
+    const state = lifecycle(sqlite, pending.stablecoin_id, pending.id);
+    expect(state.pending).toBeUndefined();
+    expect(state.outcomes).toHaveLength(1);
+    expect(state.outcomes[0]).toMatchObject({ outcome: "rejected", final_decision_reason: "secondary-evidence-opposes" });
+    expect(String(state.outcomes[0]?.unavailable_sources).split("+")).toContain("cex:binance");
+  });
+
+  it("records a partial Binance batch missing the configured pair as unavailable", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    const { sqlite, db } = openFixture();
+    const pending = makePendingRow({ id: 43 });
+    insertPending(sqlite, pending);
+    insertDexPrice(sqlite, pending.stablecoin_id, pending.symbol, 0.998, [
+      { price: 0.998, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+      { price: 0.997, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
+    ]);
+    // USDC answered; the pending row's configured USDT pair did not.
+    vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce(makeBinancePartialBatch());
+
+    await confirmPendingDepegs(db, [makeLowConfidenceAsset(pending, 0.998)]);
+
+    const state = lifecycle(sqlite, pending.stablecoin_id, pending.id);
+    expect(state.outcomes).toHaveLength(1);
+    expect(String(state.outcomes[0]?.unavailable_sources).split("+")).toContain("cex:binance");
+    expect(String(state.outcomes[0]?.confirming_sources)).not.toContain("cex:binance");
+  });
+
+  it("does not expire a base-expired row while the Binance batch failed", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    const { sqlite, db } = openFixture();
+    const pending = makePendingRow({
+      id: 42,
+      first_seen_at: NOW_SEC - 3_600,
+      last_seen_at: NOW_SEC - 120,
+    });
+    insertPending(sqlite, pending);
+    insertDexPrice(sqlite, pending.stablecoin_id, pending.symbol, 0.978, [
+      { price: 0.978, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
+    ]);
+    insertPoolChallenger(sqlite, pending.stablecoin_id, 0.978, 3_000_000);
+    vi.mocked(fetchBinancePricesDetailed).mockResolvedValueOnce(makeBinanceUpstreamError());
+
+    await confirmPendingDepegs(db, [makeLowConfidenceAsset(pending, 0.978)]);
+
+    const state = lifecycle(sqlite, pending.stablecoin_id, pending.id);
+    expect(state.pending).toEqual({ id: pending.id });
+    expect(state.outcomes).toEqual([]);
   });
 
   it("keeps pending after a confirmation provider failure", async () => {

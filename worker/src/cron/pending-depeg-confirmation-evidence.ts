@@ -1,4 +1,5 @@
 import { DEPEG_DEX_PROTOCOL_CORROBORATION_MIN } from "@shared/lib/depeg-config";
+import { BINANCE_MARKETS } from "@shared/lib/pricing-provider-config";
 import { CIRCUIT_SOURCE, divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD, USER_AGENT } from "../lib/constants";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../lib/coingecko";
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
@@ -38,6 +39,8 @@ import {
 } from "./pending-depeg-confirmation";
 
 type DirectionalSignalStatus = ReturnType<typeof classifyDirectionalSignal>;
+
+const BINANCE_SYMBOLS = new Set(BINANCE_MARKETS.map((market) => market.symbol));
 
 type OffchainUnavailableReason =
   | "non-ok"
@@ -379,7 +382,8 @@ export async function collectConfirmationEvidence(
   } else if (cexPrices == null) {
     addSource(evidence.unavailableSources, "cex:binance");
   } else {
-    const cexPrice = cexPrices.get(row.symbol.toUpperCase());
+    const symbol = row.symbol.toUpperCase();
+    const cexPrice = cexPrices.get(symbol);
     if (cexPrice && cexPrice > 0) {
       const cexSignal = deriveDepegSignal(cexPrice, pegReference);
       evidence.cexStatus = classifyDirectionalSignal(cexSignal, threshold, pendingState.direction);
@@ -405,6 +409,10 @@ export async function collectConfirmationEvidence(
           thresholdBps: threshold,
         },
       });
+    } else if (BINANCE_SYMBOLS.has(symbol)) {
+      // The configured Binance pair was missing from a partial batch: the CEX
+      // family was unreadable for this row, not observed at zero.
+      addSource(evidence.unavailableSources, "cex:binance");
     }
   }
 

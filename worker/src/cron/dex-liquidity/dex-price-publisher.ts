@@ -279,7 +279,10 @@ export async function computeDexPrices({
         .bind(
           id,
           symbol,
-          Math.round(medianPrice * 1e6) / 1e6, // 6 decimal places
+          // Persist the admitted median at full precision: a fixed 1e-6
+          // quantization contradicts the deviation computed from this same
+          // value for low-unit pegs (R7).
+          medianPrice,
           plausibleObservations.length,
           Math.round(totalTvl),
           deviationBps,

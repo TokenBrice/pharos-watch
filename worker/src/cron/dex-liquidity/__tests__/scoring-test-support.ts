@@ -260,7 +260,7 @@ export const DEX_PRICE_SCENARIOS: readonly PriceScenario[] = [
       expectedRows: [makeExpectedPublicPriceRow({
         stablecoin_id: "krwq-iq",
         symbol: "KRWQ",
-        dex_price_usd: 0.000741,
+        dex_price_usd: 0.00074113379,
         source_pool_count: 1,
         source_total_tvl: 82_806,
         deviation_from_primary_bps: 0,

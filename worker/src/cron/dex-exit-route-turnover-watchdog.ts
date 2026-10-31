@@ -232,11 +232,14 @@ function evaluateCoinTurnover(
 function compareRouteSnapshots(previous: RouteSnapshot, current: RouteSnapshot): TurnoverEvaluation[] {
   const currentById = new Map(current.coins.map((coin) => [coin.stablecoinId, coin.routes]));
   return previous.coins
-    .map((coin) => evaluateCoinTurnover(
-      coin.stablecoinId,
-      coin.routes,
-      currentById.get(coin.stablecoinId) ?? [],
-    ))
+    .flatMap((coin) => {
+      const currentRoutes = currentById.get(coin.stablecoinId);
+      // A baseline coin with no row in the newest published generation was
+      // not observed (for example it left the active roster), not observed
+      // with zero routes (R1). Keep its baseline instead of alerting.
+      if (currentRoutes === undefined) return [];
+      return [evaluateCoinTurnover(coin.stablecoinId, coin.routes, currentRoutes)];
+    })
     .sort((left, right) =>
       right.jaccardDistance - left.jaccardDistance
       || right.evidenceKindChangedCount - left.evidenceKindChangedCount
@@ -386,14 +389,17 @@ export async function runDexExitRouteTurnoverWatchdog(
     // A candidate never survives its confirming comparison either way, so it
     // cannot linger.
     const heldCoinIds = new Set(heldCandidates.map((candidate) => candidate.stablecoinId));
-    const baselineCoins = [
-      ...comparable.coins
-        .filter((coin) => heldCoinIds.has(coin.stablecoinId))
-        .map((coin) => ({ stablecoinId: coin.stablecoinId, routes: coin.routes })),
-      ...current.coins
-        .filter((coin) => !heldCoinIds.has(coin.stablecoinId))
-        .map((coin) => ({ stablecoinId: coin.stablecoinId, routes: coin.routes })),
-    ].sort((left, right) => left.stablecoinId.localeCompare(right.stablecoinId));
+    // Unobserved baselines are retained: a coin absent from this generation
+    // keeps its last observed route set for when the roster returns it.
+    const baselineByCoin = new Map<string, RouteEvidence[]>(
+      comparable.coins.map((coin) => [coin.stablecoinId, coin.routes]),
+    );
+    for (const coin of current.coins) {
+      if (!heldCoinIds.has(coin.stablecoinId)) baselineByCoin.set(coin.stablecoinId, coin.routes);
+    }
+    const baselineCoins = [...baselineByCoin.entries()]
+      .map(([stablecoinId, routes]) => ({ stablecoinId, routes }))
+      .sort((left, right) => left.stablecoinId.localeCompare(right.stablecoinId));
     nextSnapshot = {
       schemaVersion: 1,
       generationId: current.generationId,

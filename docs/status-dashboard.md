@@ -375,7 +375,7 @@ Shared in-flight and scheduled-slot wire fields:
 
 Per-job execution metadata (DEX stages, mint/burn lanes, live reserves, redemption backstops, status self-check) is in [Per-job cron metadata](#per-job-cron-metadata).
 
-Demand-refreshed detail rows use `detail-write-failure:*` markers rather than a cron age budget. Recovery cleanup deletes only the exact scanned marker key, `updated_at`, and value while the current corresponding detail row still has a later write clock. A concurrent replacement, including a different value written in the same second, is retained for reassessment; `updated_at` alone is not a unique generation. Expired-marker pruning remains bounded independently of recovery cleanup.
+Demand-refreshed detail rows use `detail-write-failure:*` markers rather than a cron age budget. Recovery cleanup deletes only the exact scanned marker key, `updated_at`, and value while the current corresponding detail row still has a later write clock. A concurrent replacement, including a different value written in the same second, is retained for reassessment; `updated_at` alone is not a unique generation. An unresolved marker remains an active operator condition for its full retention window; it does not age out of the alert as recovered. Expired-marker pruning remains bounded independently of recovery cleanup.
 
 ## Resource-pressure evidence
 

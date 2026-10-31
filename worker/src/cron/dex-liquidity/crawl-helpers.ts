@@ -154,15 +154,23 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
       // No upstream quote clock is exposed by these paged pool adapters.
       const observedAt = Math.floor(Date.now() / 1000);
       const page = await config.fetchPools(token.address, token.sourceChain, config.signal);
-      config.onRequestResult?.(token, page.complete ? "success" : "degraded", page);
+      // A row the parser rejects is an identity/value the run could not read,
+      // not a policy-filtered pool: the page is not a completed census and may
+      // neither certify emptiness nor suppress the next fallback provider
+      // (R2/R6).
+      let unparsedRowCount = 0;
       for (const rawPool of page.rows) {
         let parsed: ParsedPool<number | null> | null = null;
         try {
           parsed = config.parsePool(rawPool, token.ourChain);
         } catch {
+          unparsedRowCount++;
           continue;
         }
-        if (!parsed) continue;
+        if (!parsed) {
+          unparsedRowCount++;
+          continue;
+        }
 
         if (!parsed.tvlUsd || parsed.tvlUsd < minTvlUsd || parsed.tvlUsd > 1e12) continue;
         if (isBlockedDexId(parsed.dexId)) continue;
@@ -230,6 +238,11 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
         poolList.push(newPool);
         config.newPools.set(token.stablecoinId, poolList);
       }
+      config.onRequestResult?.(
+        token,
+        page.complete && unparsedRowCount === 0 ? "success" : "degraded",
+        page,
+      );
     } catch (err) {
       if (config.signal?.aborted) throw err;
       config.onRequestResult?.(token, "failure");

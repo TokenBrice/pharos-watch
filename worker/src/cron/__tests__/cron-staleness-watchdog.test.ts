@@ -31,6 +31,7 @@ vi.mock("../../telegram/delivery/telegram", async (importOriginal) => ({
 
 import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
+import { WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import {
   CRON_STALENESS_ALERT_COOLDOWN_SEC,
@@ -267,6 +268,95 @@ describe("cron staleness watchdog", () => {
     expect(metadata.dependencyRecoveryChecks).toContainEqual(expect.objectContaining({ root: "dex-liquidity", dependent: "dews", state: "root-recovered-dependent-stale" }));
   });
 
+  it("does not claim the DEX-to-DEWS dependency caught up when the root regresses while DEWS is still stale", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    const db = fakeDb();
+
+    // Run 1: DEX liquidity fresh, DEWS stale -> the dependency finding is raised.
+    mockCacheStatus({ "dex-liquidity": 120, dews: 4_000 });
+    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    expect(JSON.parse(raised.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: expect.arrayContaining(["dependency:dex-liquidity->dews"]),
+      sent: true,
+    });
+
+    // Run 2 past the cooldown: DEX liquidity itself is stale while DEWS is
+    // still stale. The root regressed; the dependent never caught up.
+    vi.setSystemTime(new Date(Date.now() + CRON_STALENESS_ALERT_COOLDOWN_SEC * 1_000));
+    mockCacheStatus({ "dex-liquidity": 9_000, dews: 4_000 });
+    const regressed = await runCronStalenessWatchdog(db, undefined, options);
+    const metadata = JSON.parse(regressed.metadata ?? "{}") as {
+      dependencyRecoveryChecks?: Array<{ state: string }>;
+      alertTransitions: { recovered: string[] };
+    };
+
+    expect(metadata.dependencyRecoveryChecks).toContainEqual(expect.objectContaining({ state: "both-stale" }));
+    expect(metadata.alertTransitions.recovered).not.toContain("dependency:dex-liquidity->dews");
+    const calls = sendToChatMock.mock.calls;
+    expect(calls[calls.length - 1]?.[1] ?? "").not.toContain("Dependency caught up");
+  });
+
+  it("bounds a systemic detail-write alert below Telegram's message cap", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const failureRows = [...WORKER_READABLE_IDS].slice(0, 200).map((stablecoinId) => ({
+      key: `detail-write-failure:${stablecoinId}`,
+      value: JSON.stringify({ reason: "write-error", bytes: 48_000 }),
+      updated_at: Math.floor(Date.now() / 1000) - 60,
+    }));
+    const db = fakeDb(failureRows);
+    mockCacheStatus({});
+    loadPublicationHealthMock.mockResolvedValue({ status: "held", reasons: [{ code: "coverage-below-floor" }] });
+    sendToChatMock.mockImplementation(async (...args: unknown[]) => ({
+      ok: String(args[1] ?? "").length <= 4_096,
+    }));
+
+    const result = await runCronStalenessWatchdog(db, undefined, {
+      operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
+    });
+    const alerts = sendToChatMock.mock.calls.map((call) => String(call[1] ?? ""));
+    const alertText = alerts.join("\n");
+
+    expect(alerts.every((text) => text.length <= 4_096)).toBe(true);
+    expect(alertText).toContain("Detail cache write failures");
+    expect(alertText).toContain("Safety Score publication held");
+    expect(JSON.parse(result.metadata ?? "{}").alertTransitions).toMatchObject({ sent: true });
+    expect(result.status).toBe("ok");
+  });
+
+  it("does not report aged unresolved detail-write markers as recovered", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const startSec = Math.floor(Date.now() / 1000);
+    mockCacheStatus({});
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    // The last successful detail row predates the failed write; the coin is not
+    // requested again, so no later detail write can clear the marker.
+    insert.run("detail:usdt-tether", JSON.stringify({ price: 1 }), startSec - 600);
+    insert.run("detail-write-failure:usdt-tether", JSON.stringify({ reason: "value-too-large", bytes: 21_000_000 }), startSec);
+
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    expect(JSON.parse(raised.metadata ?? "{}").alertTransitions.stale).toContain("detail-write:usdt-tether");
+    expect(sendToChatMock.mock.calls[0]?.[1] ?? "").toContain("Detail cache write failures");
+
+    const fetchCountAfterRaise = sendToChatMock.mock.calls.length;
+    // 25h later the marker is past any short freshness window but still inside
+    // its retention, and no detail: row was rewritten.
+    vi.setSystemTime(new Date((startSec + 25 * 3_600) * 1_000));
+    const second = await runCronStalenessWatchdog(db, undefined, options);
+    const transitions = JSON.parse(second.metadata ?? "{}").alertTransitions as { recovered: string[] };
+
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").all("detail-write-failure:usdt-tether"))
+      .toEqual([{ key: "detail-write-failure:usdt-tether" }]);
+    expect(transitions.recovered).not.toContain("detail-write:usdt-tether");
+    expect(sendToChatMock.mock.calls.slice(fetchCountAfterRaise).map((call) => String(call[1] ?? "")).join("\n"))
+      .not.toContain("Detail cache writes recovered");
+  });
+
   it("alerts only on stale and recovery transitions", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
@@ -456,7 +546,11 @@ describe("cron staleness watchdog", () => {
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
     insert.run("detail-write-failure:old-coin", nowSec - 8 * 24 * 3600);
     insert.run("detail-write-failure:boundary-coin", nowSec - 7 * 24 * 3600);
-    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([]);
+    // Unresolved markers stay visible for the full retention window; only the
+    // marker past retention is pruned.
+    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([
+      { stablecoinId: "boundary-coin", reason: "unknown", bytes: null, ageSeconds: 7 * 24 * 3600 },
+    ]);
     expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([{ key: "detail-write-failure:boundary-coin" }]);
   });
 });

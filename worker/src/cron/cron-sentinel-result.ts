@@ -46,6 +46,12 @@ const SOURCE_INTERVAL_SEC: Record<CronSentinelRuleSource, number> = {
 const SOURCE_STATE_MAX_AGE_SEC = 48 * 60 * 60;
 const SOURCE_STATE_INTERVAL_MULTIPLIER = 2;
 
+// The duration watchdog publishes its cap-hit diagnostics as
+// metadata.durationDiagnostics[].{stageBreakdown,samples}[], one object level
+// deeper than the generic bound; without the extra depth every stage and
+// sample object collapses into the truncation placeholder.
+const SOURCE_METADATA_MAX_DEPTH: Partial<Record<CronSentinelRuleSource, number>> = { duration: 6 };
+
 function sourceStateMaxAgeSec(source: CronSentinelRuleSource): number {
   return Math.min(
     SOURCE_STATE_MAX_AGE_SEC,
@@ -147,7 +153,8 @@ export async function runCronSentinelSources(
     }
     if (result.status === "skipped_neutral" || result.status === "skipped_locked" || result.aborted) continue;
     const metadata = sanitizeBoundedMetadata(parseMetadata(result.metadata), {
-      maxStringChars: 500, maxStackChars: 500, maxKeys: 40, maxArrayItems: 40, maxDepth: 4,
+      maxStringChars: 500, maxStackChars: 500, maxKeys: 40, maxArrayItems: 40,
+      maxDepth: SOURCE_METADATA_MAX_DEPTH[source] ?? 4,
     });
     await setCacheIfNewer(db, `cron-sentinel:source:${source}`, JSON.stringify({
       status: result.status ?? "ok",

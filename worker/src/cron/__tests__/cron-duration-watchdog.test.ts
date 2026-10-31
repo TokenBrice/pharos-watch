@@ -3,6 +3,7 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { CRON_TIMEOUT_MS } from "../../lib/cron-timeouts";
 import { runCronDurationWatchdog } from "../cron-duration-watchdog";
+import { runCronSentinelSources } from "../cron-sentinel-result";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
@@ -263,6 +264,37 @@ describe("runCronDurationWatchdog", () => {
       })]),
       runtimeBreaching: [],
     });
+  });
+
+  it("publishes cap-hit stage breakdown and samples through the daily sentinel sanitizer", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const insert = sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES (?, ?, ?, ?, ?)",
+    );
+    for (let index = 0; index < 3; index++) {
+      insert.run("sync-stablecoins", NOW_SEC - 600 - index * 600, SYNC_TIMEOUT_MS, "ok", JSON.stringify({ stage: "prices" }));
+    }
+
+    const result = await runCronSentinelSources(
+      db,
+      "daily",
+      [{ source: "duration", run: () => runCronDurationWatchdog(db) }],
+      NOW_SEC,
+    );
+    const sourceMetadata = JSON.parse(String(result.metadata)).sources.duration.metadata;
+
+    expect(sourceMetadata.runtimeBreaching).toEqual(["sync-stablecoins"]);
+    expect(sourceMetadata.durationDiagnostics).toEqual([
+      expect.objectContaining({
+        job: "sync-stablecoins",
+        stageBreakdown: [
+          expect.objectContaining({ stage: "prices", runs: 3, avgMs: SYNC_TIMEOUT_MS, maxMs: SYNC_TIMEOUT_MS, capHits: 3 }),
+        ],
+        samples: expect.arrayContaining([
+          expect.objectContaining({ durationMs: SYNC_TIMEOUT_MS, status: "ok" }),
+        ]),
+      }),
+    ]);
   });
 
   it("keeps live reserve run-budget truncations as runtime pressure", async () => {

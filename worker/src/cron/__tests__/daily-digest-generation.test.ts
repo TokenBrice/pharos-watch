@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import type { CronProgressUpdate } from "../../lib/cron-logger";
 
@@ -34,6 +35,7 @@ import { prepareTelegramDigestAppendices } from "../../telegram/digest/digest-ap
 import { deliverTelegramDigestEdition, enqueueTelegramDigestEdition } from "../../telegram/outbox/digest-outbox";
 import { runTelegramDigestDeliveryWithPermit } from "../digest/telegram-transport";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../../lib/depeg-lifecycle";
 import { ANTHROPIC_OK_TEXT, getInsertDigestBinds, makeDailyDigestScenario, makeRefusalResponse, makeStreamResponse, styleGateModeTables, VALID_CAPTURE_MAP_SUMMARY, VALID_DAILY_EXTENDED, withClauseDash, type DailyDigestScenario } from "./daily-digest.test-support";
 import { publishedGaugePayload, publishedGaugeTable } from "./daily-digest.test-support";
 
@@ -320,6 +322,54 @@ describe("generateDailyDigest publication contract", () => {
     const degraded = await invoke(brokenDb); expect(degraded).toMatchObject({ itemCount: 1, status: "degraded" }); expect(degraded.metadata).toContain("active-depegs-query");
     vi.mocked(prepareTelegramDigestAppendices).mockRejectedValueOnce(new Error("appendix store down")); expect((await invoke()).itemCount).toBe(1); const recovered = await invoke(); expect(recovered.status, recovered.metadata).toBeUndefined();
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down")); vi.mocked(deliverTelegramDigestEdition).mockRejectedValueOnce(new Error("telegram down")); const social = await invoke(); expect(social).toMatchObject({ itemCount: 1, status: "degraded" }); expect(getInsertDigestBinds(scenario.db as MockD1Database)).toBeDefined();
+  });
+
+  it("retains the pending depeg lifecycle queue when the active-depeg read fails", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const { sqlite, db } = createLatestSchemaSqlite({
+      onAll: (sql) => {
+        if (sql.includes("FROM depeg_events e LEFT JOIN depeg_event_provenance")) throw new Error("D1 read failed");
+      },
+    });
+    try {
+      // A prior digest run flagged a stalled collapse; the owner has not
+      // reviewed it yet. This is the row the runbook reads.
+      const priorUpdatedAt = nowSec - 86_400;
+      const priorFlags = [{
+        stablecoinId: "usx-dforce", symbol: "USX", kind: "stalled-collapse",
+        currentBps: -6_200, ageDays: 27, mcapUsd: 12_000_000,
+      }];
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        DEPEG_LIFECYCLE_FLAGS_CACHE_KEY,
+        JSON.stringify({ updatedAt: priorUpdatedAt, flags: priorFlags }),
+        priorUpdatedAt,
+      );
+
+      const components = JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 });
+      const todayTs = nowSec - (nowSec % 86_400);
+      sqlite.prepare(
+        "INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)",
+      ).run(nowSec - 600, 91.2, "BEDROCK", components, "{}");
+      sqlite.prepare(
+        "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)",
+      ).run(todayTs, 89.5, "STEADY", components, "{}");
+
+      const result = await generateDailyDigest(db, "anthropic-key", null, false, null);
+      // The collector failure is non-fatal, so the run still publishes.
+      expect(result.itemCount).toBe(1);
+      expect(result.metadata).toContain("active-depegs-query");
+
+      const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+        .get(DEPEG_LIFECYCLE_FLAGS_CACHE_KEY) as { value: string; updated_at: number } | undefined;
+      expect(row).toBeDefined();
+      const persisted = JSON.parse(String(row!.value)) as { updatedAt?: number; flags?: unknown };
+      // R2: an unreadable active-depeg set may not be restated as a fresh
+      // "nothing is pending" observation.
+      expect(persisted).toEqual({ updatedAt: priorUpdatedAt, flags: priorFlags });
+      expect(row!.updated_at).toBe(priorUpdatedAt);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("isolates an editorially unsafe wrapper and preserves a literal cemetery appendix", async () => {

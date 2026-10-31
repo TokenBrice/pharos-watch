@@ -343,23 +343,27 @@ export async function generateDailyDigest(
   const telegramStatus = delivery.telegramStatus;
   // Persist owner-review lifecycle flags (stalled collapses / chronic shallow
   // pegs needing a manual freeze-or-close ruling). Best-effort: a cache write
-  // failure must not degrade an otherwise successful digest run.
-  try {
-    await setCache(
-      db,
-      DEPEG_LIFECYCLE_FLAGS_CACHE_KEY,
-      JSON.stringify({ updatedAt: now, flags: lifecycleFlags }),
-      signal,
-    );
-  } catch (err) {
-    logWorkerEvent({
-      scope: "lib",
-      level: "error",
-      event: "depeg_lifecycle_flags_persist_failed",
-      job: "daily-digest",
-      message: "Failed to persist depeg lifecycle flags",
-      error: err,
-    });
+  // failure must not degrade an otherwise successful digest run. A failed
+  // active-depeg read degrades to an empty flag list, so it must not replace
+  // the prior review queue with a fresh "nothing pending" observation.
+  if (!degradedReasons.includes("active-depegs-query")) {
+    try {
+      await setCache(
+        db,
+        DEPEG_LIFECYCLE_FLAGS_CACHE_KEY,
+        JSON.stringify({ updatedAt: now, flags: lifecycleFlags }),
+        signal,
+      );
+    } catch (err) {
+      logWorkerEvent({
+        scope: "lib",
+        level: "error",
+        event: "depeg_lifecycle_flags_persist_failed",
+        job: "daily-digest",
+        message: "Failed to persist depeg lifecycle flags",
+        error: err,
+      });
+    }
   }
   const lifecycleMetadata = lifecycleFlags.length > 0
     ? `, lifecycle-review: ${lifecycleFlags.map((flag) => `${flag.symbol}:${flag.kind}`).join("|")}`

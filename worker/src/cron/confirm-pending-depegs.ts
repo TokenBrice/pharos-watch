@@ -123,7 +123,9 @@ export async function confirmPendingDepegs(
       for (const diagnostic of diagnostics) {
         providerDiagnostics.push({ ...diagnostic, stage: "depeg-confirmation" });
       }
-      cexPrices = prices;
+      // An empty batch is a failed read, not an observed absence of CEX prices:
+      // keep the null branch so evidence and the expiry limit see it.
+      cexPrices = prices.size > 0 ? prices : null;
       await recordOutcomeSafe(db, CIRCUIT_SOURCE.BINANCE_PRICES, isSuccessfulOutcome(outcome));
     } catch (err) {
       if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
