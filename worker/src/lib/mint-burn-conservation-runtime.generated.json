@@ -1529,15 +1529,6 @@
       "invariant": "transfer-supply"
     },
     {
-      "chainId": "ethereum",
-      "stablecoinId": "zeusd-zoth",
-      "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
-      "decimals": 6,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
       "chainId": "tron",
       "stablecoinId": "usdt-tether",
       "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",

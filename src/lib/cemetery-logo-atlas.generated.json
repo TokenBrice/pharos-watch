@@ -1,6 +1,6 @@
 {
-  "version": 1,
-  "revision": "5362d4007709",
+  "version": 2,
+  "revision": "67898f18828a",
   "cellSize": 48,
   "columns": 16,
   "rows": 15,
@@ -298,128 +298,128 @@
         150
       ]
     },
-    "euroe-membrane": {
+    "euro3-3a-dao": {
       "color": [
         300,
         150
       ],
       "gray": [
         350,
+        150
+      ]
+    },
+    "euroe-membrane": {
+      "color": [
+        400,
+        150
+      ],
+      "gray": [
+        450,
         150
       ]
     },
     "eurr-stablr": {
       "color": [
-        400,
+        500,
         150
       ],
       "gray": [
-        450,
+        550,
         150
       ]
     },
     "eurt-euro-tether-2024-11": {
       "color": [
-        500,
+        600,
         150
       ],
       "gray": [
-        550,
+        650,
         150
       ]
     },
     "eusd-lybra-eusd-2024-06": {
       "color": [
-        600,
+        700,
         150
       ],
       "gray": [
-        650,
+        750,
         150
       ]
     },
     "fei-fei-usd-2022-08": {
       "color": [
-        700,
-        150
-      ],
-      "gray": [
-        750,
-        150
-      ]
-    },
-    "fiat-fiat-i-2023-07": {
-      "color": [
         0,
         200
       ],
       "gray": [
         50,
+        200
+      ]
+    },
+    "fiat-fiat-i-2023-07": {
+      "color": [
+        100,
+        200
+      ],
+      "gray": [
+        150,
         200
       ]
     },
     "flexusd-flexusd-2022-06": {
       "color": [
-        100,
+        200,
         200
       ],
       "gray": [
-        150,
+        250,
         200
       ]
     },
     "float-float-protocol-2025-07": {
       "color": [
-        200,
+        300,
         200
       ],
       "gray": [
-        250,
+        350,
         200
       ]
     },
     "fusd-fantom-usd-2022-06": {
       "color": [
-        300,
+        400,
         200
       ],
       "gray": [
-        350,
+        450,
         200
       ]
     },
     "grai-gravita-grai-2025-06": {
       "color": [
-        400,
+        500,
         200
       ],
       "gray": [
-        450,
+        550,
         200
       ]
     },
     "gyd-gyroscope-gyd-2026-02": {
       "color": [
-        500,
+        600,
         200
       ],
       "gray": [
-        550,
+        650,
         200
       ]
     },
     "gyen-gyen": {
       "color": [
-        600,
-        200
-      ],
-      "gray": [
-        650,
-        200
-      ]
-    },
-    "husd-husd-2022-10": {
-      "color": [
         700,
         200
       ],
@@ -428,668 +428,668 @@
         200
       ]
     },
-    "hyusd-high-yield-usd-2025-06": {
+    "home-homecoin": {
       "color": [
         0,
         250
       ],
       "gray": [
         50,
+        250
+      ]
+    },
+    "husd-husd-2022-10": {
+      "color": [
+        100,
+        250
+      ],
+      "gray": [
+        150,
+        250
+      ]
+    },
+    "hyusd-high-yield-usd-2025-06": {
+      "color": [
+        200,
+        250
+      ],
+      "gray": [
+        250,
         250
       ]
     },
     "ibeur-iron-bank-euro-2023-12": {
       "color": [
-        100,
+        300,
         250
       ],
       "gray": [
-        150,
+        350,
         250
       ]
     },
     "iron-iron-2021-06": {
       "color": [
-        200,
+        400,
         250
       ],
       "gray": [
-        250,
+        450,
         250
       ]
     },
     "ist-agoric": {
       "color": [
-        300,
+        500,
         250
       ],
       "gray": [
-        350,
+        550,
         250
       ]
     },
     "jpyc-jpyc-v1": {
       "color": [
-        400,
+        600,
         250
       ],
       "gray": [
-        450,
+        650,
         250
       ]
     },
     "krt-terrakrw-2022-05": {
       "color": [
-        500,
+        700,
         250
       ],
       "gray": [
-        550,
+        750,
         250
       ]
     },
     "l-bold-legacy-bold-2025-02": {
       "color": [
-        600,
-        250
-      ],
-      "gray": [
-        650,
-        250
-      ]
-    },
-    "lvlusd-level-usd-2025-10": {
-      "color": [
-        700,
-        250
-      ],
-      "gray": [
-        750,
-        250
-      ]
-    },
-    "mim-abracadabra": {
-      "color": [
         0,
         300
       ],
       "gray": [
         50,
+        300
+      ]
+    },
+    "lvlusd-level-usd-2025-10": {
+      "color": [
+        100,
+        300
+      ],
+      "gray": [
+        150,
+        300
+      ]
+    },
+    "mim-abracadabra": {
+      "color": [
+        200,
+        300
+      ],
+      "gray": [
+        250,
         300
       ]
     },
     "mkusd-prisma-mkusd-2024-11": {
       "color": [
-        100,
+        300,
         300
       ],
       "gray": [
-        150,
+        350,
         300
       ]
     },
     "mod-move-dollar-2025-06": {
       "color": [
-        200,
+        400,
         300
       ],
       "gray": [
-        250,
+        450,
         300
       ]
     },
     "msusd-main-street": {
       "color": [
-        300,
+        500,
         300
       ],
       "gray": [
-        350,
+        550,
         300
       ]
     },
     "msy-main-street": {
       "color": [
-        400,
+        600,
         300
       ],
       "gray": [
-        450,
+        650,
         300
       ]
     },
     "musd-mstable-usd-2023-04": {
       "color": [
-        500,
+        700,
         300
       ],
       "gray": [
-        550,
+        750,
         300
       ]
     },
     "must-mustang-2026-01": {
       "color": [
-        600,
-        300
-      ],
-      "gray": [
-        650,
-        300
-      ]
-    },
-    "note-note-2024-06": {
-      "color": [
-        700,
-        300
-      ],
-      "gray": [
-        750,
-        300
-      ]
-    },
-    "pai-parrot-usd-2023-07": {
-      "color": [
         0,
         350
       ],
       "gray": [
         50,
+        350
+      ]
+    },
+    "note-note-2024-06": {
+      "color": [
+        100,
+        350
+      ],
+      "gray": [
+        150,
+        350
+      ]
+    },
+    "pai-parrot-usd-2023-07": {
+      "color": [
+        200,
+        350
+      ],
+      "gray": [
+        250,
         350
       ]
     },
     "par-parallel-2024-09": {
       "color": [
-        100,
+        300,
         350
       ],
       "gray": [
-        150,
+        350,
         350
       ]
     },
     "peusd-lybra-peusd-2024-06": {
       "color": [
-        600,
+        700,
         150
       ],
       "gray": [
-        650,
+        750,
         150
       ]
     },
     "pinto-pinto-2025-10": {
       "color": [
-        200,
+        400,
         350
       ],
       "gray": [
-        250,
+        450,
         350
       ]
     },
     "pusd-jpeg-d-pusd-2024-06": {
       "color": [
-        300,
+        500,
         350
       ],
       "gray": [
-        350,
+        550,
         350
       ]
     },
     "pusd-palm-usd-2026-01": {
       "color": [
-        400,
+        600,
         350
       ],
       "gray": [
-        450,
+        650,
         350
       ]
     },
     "r-raft-r-2023-11": {
       "color": [
-        500,
+        700,
         350
       ],
       "gray": [
-        550,
+        750,
         350
       ]
     },
     "rai-rai-reflex-index-2024-02": {
       "color": [
-        600,
-        350
-      ],
-      "gray": [
-        650,
-        350
-      ]
-    },
-    "rsv-reserve-2023-03": {
-      "color": [
-        700,
-        350
-      ],
-      "gray": [
-        750,
-        350
-      ]
-    },
-    "sdusd-dtrinity": {
-      "color": [
         0,
         400
       ],
       "gray": [
         50,
+        400
+      ]
+    },
+    "rsv-reserve-2023-03": {
+      "color": [
+        100,
+        400
+      ],
+      "gray": [
+        150,
+        400
+      ]
+    },
+    "sdusd-dtrinity": {
+      "color": [
+        200,
+        400
+      ],
+      "gray": [
+        250,
         400
       ]
     },
     "seur-synthetix-seur-2024-07": {
       "color": [
-        100,
+        300,
         400
       ],
       "gray": [
-        150,
+        350,
         400
       ]
     },
     "silk-shade-protocol": {
       "color": [
-        200,
+        400,
         400
       ],
       "gray": [
-        250,
+        450,
         400
       ]
     },
     "star-preon-star-2024-06": {
       "color": [
-        300,
+        500,
         400
       ],
       "gray": [
-        350,
+        550,
         400
       ]
     },
     "susd-synthetix": {
       "color": [
-        400,
+        600,
         400
       ],
       "gray": [
-        450,
+        650,
         400
       ]
     },
     "syusd-synnax-stablecoin-2026-01": {
       "color": [
-        500,
+        700,
         400
       ],
       "gray": [
-        550,
+        750,
         400
       ]
     },
     "tor-tor-2023-07": {
       "color": [
-        600,
-        400
+        0,
+        450
       ],
       "gray": [
-        650,
-        400
+        50,
+        450
       ]
     },
     "ultra-prismalrt-ultra-2024-11": {
       "color": [
-        100,
+        300,
         300
       ],
       "gray": [
-        150,
+        350,
         300
       ]
     },
     "uno-nostra-uno-2024-07": {
       "color": [
-        700,
-        400
+        100,
+        450
       ],
       "gray": [
-        750,
-        400
+        150,
+        450
       ]
     },
     "usd-usd-2025-01": {
       "color": [
-        0,
+        200,
         450
       ],
       "gray": [
-        50,
+        250,
         450
       ]
     },
     "usda-angle-usda-2026-03": {
       "color": [
-        100,
+        300,
         450
       ],
       "gray": [
-        150,
+        350,
         450
       ]
     },
     "usdc-m-multichain-usdc-2023-07": {
       "color": [
-        200,
+        400,
         450
       ],
       "gray": [
-        250,
+        450,
         450
       ]
     },
     "usdh-native-markets": {
       "color": [
-        300,
+        500,
         450
       ],
       "gray": [
-        350,
+        550,
         450
       ]
     },
     "usdi-interest-protocol-2023-06": {
       "color": [
-        400,
+        600,
         450
       ],
       "gray": [
-        450,
+        650,
         450
       ]
     },
     "usdj-just-usdj-2025-08": {
       "color": [
-        500,
+        700,
         450
       ],
       "gray": [
-        550,
+        750,
         450
       ]
     },
     "usdk-orki": {
       "color": [
-        600,
-        450
-      ],
-      "gray": [
-        650,
-        450
-      ]
-    },
-    "usdk-usdk-2023-06": {
-      "color": [
-        700,
-        450
-      ],
-      "gray": [
-        750,
-        450
-      ]
-    },
-    "usdkg-gold-dollar": {
-      "color": [
         0,
         500
       ],
       "gray": [
         50,
+        500
+      ]
+    },
+    "usdk-usdk-2023-06": {
+      "color": [
+        100,
+        500
+      ],
+      "gray": [
+        150,
+        500
+      ]
+    },
+    "usdkg-gold-dollar": {
+      "color": [
+        200,
+        500
+      ],
+      "gray": [
+        250,
         500
       ]
     },
     "usdl-lift-dollar-2025-12": {
       "color": [
-        100,
+        300,
         500
       ],
       "gray": [
-        150,
+        350,
         500
       ]
     },
     "usdl-liquid-loans-usdl-2025-06": {
       "color": [
-        100,
+        300,
         500
       ],
       "gray": [
-        150,
+        350,
         500
       ]
     },
     "usdm-mountain-protocol-usdm-2025-08": {
       "color": [
-        200,
+        400,
         500
       ],
       "gray": [
-        250,
+        450,
         500
       ]
     },
     "usdn-neutrino-usd-2022-04": {
       "color": [
-        300,
+        500,
         500
       ],
       "gray": [
-        350,
+        550,
         500
       ]
     },
     "usdn-noble": {
       "color": [
-        400,
+        600,
         500
       ],
       "gray": [
-        450,
+        650,
         500
       ]
     },
     "usdp-usdp-stablecoin-2023-06": {
       "color": [
-        500,
+        700,
         500
       ],
       "gray": [
-        550,
+        750,
         500
       ]
     },
     "usdr-real-usd-2023-10": {
       "color": [
-        600,
-        500
-      ],
-      "gray": [
-        650,
-        500
-      ]
-    },
-    "usdr-stablr": {
-      "color": [
-        700,
-        500
-      ],
-      "gray": [
-        750,
-        500
-      ]
-    },
-    "usds-sperax-usd-2023-02": {
-      "color": [
         0,
         550
       ],
       "gray": [
         50,
+        550
+      ]
+    },
+    "usdr-stablr": {
+      "color": [
+        100,
+        550
+      ],
+      "gray": [
+        150,
+        550
+      ]
+    },
+    "usds-sperax-usd-2023-02": {
+      "color": [
+        200,
+        550
+      ],
+      "gray": [
+        250,
         550
       ]
     },
     "usds-spiceusd-2022-09": {
       "color": [
-        100,
+        300,
         550
       ],
       "gray": [
-        150,
+        350,
         550
       ]
     },
     "usdv-solomon": {
       "color": [
-        200,
+        400,
         550
       ],
       "gray": [
-        250,
+        450,
         550
       ]
     },
     "usdv-verified-usd-2024-12": {
       "color": [
-        300,
+        500,
         550
       ],
       "gray": [
-        350,
+        550,
         550
       ]
     },
     "usdx-kava-usdx-2022-06": {
       "color": [
-        400,
+        600,
         550
       ],
       "gray": [
-        450,
+        650,
         550
       ]
     },
     "usdx-stables-labs-usdx-2025-11": {
       "color": [
-        500,
+        700,
         550
       ],
       "gray": [
-        550,
+        750,
         550
       ]
     },
     "ush-hedge-usd-2024-06": {
       "color": [
-        600,
-        550
-      ],
-      "gray": [
-        650,
-        550
-      ]
-    },
-    "usn-usn-2022-10": {
-      "color": [
-        700,
-        550
-      ],
-      "gray": [
-        750,
-        550
-      ]
-    },
-    "usnbt-nubits-2018-03": {
-      "color": [
         0,
         600
       ],
       "gray": [
         50,
+        600
+      ]
+    },
+    "usn-usn-2022-10": {
+      "color": [
+        100,
+        600
+      ],
+      "gray": [
+        150,
+        600
+      ]
+    },
+    "usnbt-nubits-2018-03": {
+      "color": [
+        200,
+        600
+      ],
+      "gray": [
+        250,
         600
       ]
     },
     "usnd-nerite": {
       "color": [
-        100,
+        300,
         600
       ],
       "gray": [
-        150,
+        350,
         600
       ]
     },
     "usp-usp-stablecoin-2023-02": {
       "color": [
-        200,
+        400,
         600
       ],
       "gray": [
-        250,
+        450,
         600
       ]
     },
     "uspd-us-permissionless-dollar-2025-12": {
       "color": [
-        300,
+        500,
         600
       ],
       "gray": [
-        350,
+        550,
         600
       ]
     },
     "usr-resolv": {
       "color": [
-        400,
+        600,
         600
       ],
       "gray": [
-        450,
+        650,
         600
       ]
     },
     "ust-terrausd-2022-05": {
       "color": [
-        500,
-        600
-      ],
-      "gray": [
-        550,
-        600
-      ]
-    },
-    "usx-dforce": {
-      "color": [
-        600,
-        600
-      ],
-      "gray": [
-        650,
-        600
-      ]
-    },
-    "uxd-uxd-stablecoin-2024-08": {
-      "color": [
         700,
         600
       ],
@@ -1098,7 +1098,7 @@
         600
       ]
     },
-    "vai-vai-2021-09": {
+    "usx-dforce": {
       "color": [
         0,
         650
@@ -1108,7 +1108,7 @@
         650
       ]
     },
-    "vndc-jade-labs": {
+    "uxd-uxd-stablecoin-2024-08": {
       "color": [
         100,
         650
@@ -1118,7 +1118,7 @@
         650
       ]
     },
-    "volt-volt-protocol-2022-08": {
+    "vai-vai-2021-09": {
       "color": [
         200,
         650
@@ -1128,7 +1128,7 @@
         650
       ]
     },
-    "vst-vesta-stable-2023-09": {
+    "vndc-jade-labs": {
       "color": [
         300,
         650
@@ -1138,7 +1138,7 @@
         650
       ]
     },
-    "wemix-dollar-wemix": {
+    "volt-volt-protocol-2022-08": {
       "color": [
         400,
         650
@@ -1148,7 +1148,7 @@
         650
       ]
     },
-    "xai-silo-finance": {
+    "vst-vesta-stable-2023-09": {
       "color": [
         500,
         650
@@ -1158,7 +1158,7 @@
         650
       ]
     },
-    "xnk-kinka": {
+    "wemix-dollar-wemix": {
       "color": [
         600,
         650
@@ -1168,7 +1168,7 @@
         650
       ]
     },
-    "xtusd-xt": {
+    "xai-silo-finance": {
       "color": [
         700,
         650
@@ -1178,7 +1178,7 @@
         650
       ]
     },
-    "xusd-stream-finance-xusd-2025-11": {
+    "xnk-kinka": {
       "color": [
         0,
         700
@@ -1188,7 +1188,7 @@
         700
       ]
     },
-    "yu-yu-2025-11": {
+    "xtusd-xt": {
       "color": [
         100,
         700
@@ -1198,7 +1198,7 @@
         700
       ]
     },
-    "yusd-yusd-stablecoin-2023-12": {
+    "xusd-stream-finance-xusd-2025-11": {
       "color": [
         200,
         700
@@ -1208,13 +1208,53 @@
         700
       ]
     },
-    "zusd-gmo-zusd-2025-06": {
+    "yu-yu-2025-11": {
       "color": [
         300,
         700
       ],
       "gray": [
         350,
+        700
+      ]
+    },
+    "yusd-yusd-stablecoin-2023-12": {
+      "color": [
+        400,
+        700
+      ],
+      "gray": [
+        450,
+        700
+      ]
+    },
+    "zeusd-zoth": {
+      "color": [
+        500,
+        700
+      ],
+      "gray": [
+        550,
+        700
+      ]
+    },
+    "zkusd-goal3": {
+      "color": [
+        600,
+        700
+      ],
+      "gray": [
+        650,
+        700
+      ]
+    },
+    "zusd-gmo-zusd-2025-06": {
+      "color": [
+        700,
+        700
+      ],
+      "gray": [
+        750,
         700
       ]
     }

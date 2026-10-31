@@ -5,6 +5,18 @@
   "name": "HomeCoin",
   "symbol": "HOME",
   "oneLiner": "HOME is HomeCoin's dollar stablecoin backed by U.S. home-loan liens and property receivables, with foreclosure as the ultimate recovery path.",
+  "status": "frozen",
+  "frozenAt": "2026-10-31",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-10-31",
+    "recordedAt": "2026-10-31",
+    "epitaph": "HomeCoin's mortgage dollar went dark",
+    "obituary": "HomeCoin's issuer site returned HTTP 404 on 2026-10-31 after its last archived capture on 2026-07-25, and its documentation repository has had no commits since 2022-12-16. Supply was unchanged at about 6.07M HOME and the two known pools held roughly $15K and $12K.",
+    "peakMcap": 7233367,
+    "sourceUrl": "https://www.homecoin.finance/",
+    "sourceLabel": "HomeCoin issuer site (HTTP 404 as of 2026-10-31)"
+  },
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized-dependent",
@@ -51,23 +63,6 @@
   "yieldConfig": {
     "yieldSource": "HomeCoin home-loan payment distributions",
     "yieldType": "fee-sharing"
-  },
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "home-homecoin",
-    "display": {
-      "url": "https://www.homecoin.finance/",
-      "label": "HomeCoin"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    }
   },
   "notices": [
     {

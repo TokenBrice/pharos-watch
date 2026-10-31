@@ -178,18 +178,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceUrls: ["https://docs.frax.finance/"],
     allowedRouteFamilyIfProven: null,
   }),
-  reviewed({
-    id: "home-homecoin",
-    disposition: "hard-reject",
-    reasonCode: "documentation-insufficient",
-    blocker:
-      "HomeCoin's public site and repository do not provide current holder redemption mechanics, capacity, fees, or status.",
-    rationale: "A route cannot be inferred from the token's branding or reserve claims without executable terms.",
-    evidenceNeeded:
-      "Maintained official documentation and live contract or app evidence for a holder-exercisable exit.",
-    evidenceUrls: ["https://www.homecoin.finance/", "https://github.com/homecoin-finance/gitbook"],
-    allowedRouteFamilyIfProven: null,
-  }),
   reviewedOn("2026-10-07", {
     id: "isc-international-stable-currency",
     disposition: "needs-research",
@@ -386,35 +374,5 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     evidenceNeeded: "Binding issuer redemption terms, audited reserves, and a live operational exit.",
     evidenceUrls: ["https://uusd.ai/", "https://github.com/uusdai/uusd"],
     allowedRouteFamilyIfProven: null,
-  }),
-  reviewedOn("2026-10-01", {
-    id: "zeusd-zoth",
-    disposition: "hard-reject",
-    reasonCode: "borrower-repay-only",
-    blocker:
-      "The earlier 2026-08-12 source review found position-specific ZeDP repayment and a paused legacy V1 router, not secondary-holder redemption. The mechanics and ZeDP documentation endpoints returned HTTP 404 on 2026-10-01, so those historical facts are retained pending source recovery rather than asserted as newly observed state.",
-    rationale:
-      "CDP debt closure is position-specific and does not create a claim for secondary holders. V1 is additionally deprecated, so even the position route is not currently exercisable; the separate V2 contracts are a different deployment and cannot be substituted for the tracked asset.",
-    evidenceNeeded:
-      "Official ordinary-holder redemption mechanics with access, output, capacity, fee, and settlement evidence.",
-    evidenceUrls: [
-      "https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd",
-      "https://docs.zoth.io/zoth/products/zeusd-debt-position-zedp",
-      "https://docs.zoth.io/zoth/tech-center/contract-deployments",
-    ],
-    allowedRouteFamilyIfProven: null,
-  }),
-  reviewedOn("2026-10-07", {
-    id: "zkusd-goal3",
-    disposition: "needs-research",
-    reasonCode: "route-status-unverified",
-    blocker:
-      "The tracked ZKsync token remains identifiable, but maintained issuer links and holder-redemption terms remain unavailable. The 2026-10-07 explorer result is a generic shell and the portal lookup failed; these fetch outcomes do not prove that a route is absent.",
-    rationale:
-      "An ERC-20 identity alone is not a holder gateway, and failed source recovery does not refresh historical route state or quantify USDC capacity.",
-    evidenceNeeded:
-      "Maintained official docs or a live portal/API plus gateway contract, USDC capacity, fees, access, and settlement evidence.",
-    evidenceUrls: ["https://era.zksync.network/address/0xfc7e56298657b002b3e656400e746b7212912757"],
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
   }),
 ];

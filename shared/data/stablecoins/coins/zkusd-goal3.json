@@ -3,8 +3,20 @@
   "name": "zkUSD Dollar",
   "symbol": "zkUSD",
   "oneLiner": "Goal3 sunset the protocol and frontend in 2024; zkUSD is an issuer-controlled ZKsync token with no current reserve or redemption evidence.",
+  "status": "frozen",
+  "frozenAt": "2024-06-19",
   "windDownAnnouncedAt": "2024-06-19",
   "windDownSourceUrl": "https://web.archive.org/web/20240619172922/https://claim.goal3.xyz/",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2024-06-19",
+    "recordedAt": "2026-10-31",
+    "epitaph": "Goal3 sunset its dollar with the protocol",
+    "obituary": "Goal3 announced on 2024-06-19 that it was sunsetting the Goal3 Protocol and frontend, and told holders to redeem zkUSD for USDC as soon as possible. Supply has not changed since 2024-06-22 and the issuer's domains no longer resolve.",
+    "peakMcap": 1179712,
+    "sourceUrl": "https://web.archive.org/web/20240619172922/https://claim.goal3.xyz/",
+    "sourceLabel": "Goal3 sunset notice (archived 2024-06-19)"
+  },
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized"
