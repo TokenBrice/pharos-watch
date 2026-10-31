@@ -10,6 +10,7 @@ import {
   fetchJsonPostWithRetry,
   fetchJsonWithRetry,
   requireJsonInputFromConfig,
+  requireRecord,
   reserveDegradedWarning,
   slicesFromValues,
 } from "./helpers";
@@ -108,11 +109,32 @@ export function reconcileUsddItemizedCollateral(
 }
 
 /**
+ * One chain's body counts as read only when it carries the collateral book: an
+ * object `data` whose `items`, when present, is an array and which exposes an
+ * itemized list or a finite headline. A 200/`code:0` body with a missing or
+ * renamed payload is a failed read, never a chain holding no collateral.
+ */
+function requireUsddCollateralFeedData(
+  feed: UsddLatestCollateralResponse,
+): NonNullable<UsddLatestCollateralResponse["data"]> {
+  const data = requireRecord(feed.data, "usdd-data-platform: collateral feed missing data");
+  if (data.items !== undefined && !Array.isArray(data.items)) {
+    throw new Error("usdd-data-platform: collateral feed items is not an array");
+  }
+  if (data.items === undefined
+    && !(typeof data.totalCollateralValue === "number" && Number.isFinite(data.totalCollateralValue))) {
+    throw new Error("usdd-data-platform: collateral feed missing its collateral book");
+  }
+  return data as NonNullable<UsddLatestCollateralResponse["data"]>;
+}
+
+/**
  * Combine the issuer's per-chain latest-collateral feeds into the whole-coin
- * book. Every configured chain is required: a missing feed fails the read
- * rather than publishing the surviving chain as a whole-book composition. A
- * chain without a usable headline leaves the combined headline undefined so
- * neither reconciliation nor the history clock can borrow a partial total.
+ * book. Every configured chain is required: a missing or unreadable feed fails
+ * the read rather than publishing the surviving chains as a whole-book
+ * composition. A chain without a usable headline leaves the combined headline
+ * undefined so neither reconciliation nor the history clock can borrow a
+ * partial total.
  */
 export function mergeUsddCollateralFeeds(
   feeds: UsddLatestCollateralResponse[],
@@ -123,9 +145,10 @@ export function mergeUsddCollateralFeeds(
   let totalSupplyValue: number | undefined = 0;
   for (const feed of feeds) {
     assertSuccess(feed, "usdd latest collateral");
-    items.push(...(feed.data?.items ?? []));
-    const collateral = feed.data?.totalCollateralValue;
-    const supply = feed.data?.totalSupplyValue;
+    const data = requireUsddCollateralFeedData(feed);
+    items.push(...(data.items ?? []));
+    const collateral = data.totalCollateralValue;
+    const supply = data.totalSupplyValue;
     totalCollateralValue = totalCollateralValue != null
       && typeof collateral === "number" && Number.isFinite(collateral)
       ? totalCollateralValue + collateral
@@ -348,6 +371,32 @@ async function fetchUsddCollateralHistoryTimestamp(
   }
 }
 
+/**
+ * A history row dates only its own chain's headline totals, so the whole-coin
+ * book takes the oldest chain clock. The combined book and every chain must
+ * reconcile, and every chain must date exactly; otherwise it stays unverified.
+ */
+async function dateUsddCollateralBook(
+  feedUrls: readonly string[],
+  feeds: readonly UsddLatestCollateralResponse[],
+  latest: UsddLatestCollateralResponse,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<number | null> {
+  if (reconcileUsddItemizedCollateral(latest)?.reconciled !== true) return null;
+  if (feeds.some((feed) => reconcileUsddItemizedCollateral(feed)?.reconciled !== true)) return null;
+  // One read per chain, no wider than the collateral fan-out it follows.
+  const chainClocks = await Promise.all(
+    feeds.map((feed, index) => fetchUsddCollateralHistoryTimestamp(feedUrls[index]!, feed, signal, ctx)),
+  );
+  let oldestSec: number | null = null;
+  for (const sec of chainClocks) {
+    if (sec == null) return null;
+    oldestSec = oldestSec == null ? sec : Math.min(oldestSec, sec);
+  }
+  return oldestSec;
+}
+
 // Tron mainnet USDD v2 PSM-USDT. buyGem() burns USDD and settles the USDT leg
 // with gemJoin.exit(), so the GemJoin's own USDT balance — not the wider USDD
 // collateral feed, which counts TRX vaults and Smart Allocator positions — is
@@ -521,12 +570,7 @@ export async function fetchUsddDataPlatformReserves(
   const composition = adaptUsddLatestCollateral(latest);
   // Sequenced after the collateral fetch so the history join never widens
   // this adapter's peak connection count.
-  // The history row dates one chain's headline totals only. An aggregated
-  // whole-coin book therefore cannot borrow a per-chain history clock, and a
-  // single-feed book still needs its itemized total to reconcile first.
-  const historySourceTimestamp = feedUrls.length === 1 && reconcileUsddItemizedCollateral(latest)?.reconciled === true
-    ? await fetchUsddCollateralHistoryTimestamp(input.url, latest, signal, ctx)
-    : null;
+  const historySourceTimestamp = await dateUsddCollateralBook(feedUrls, feeds, latest, signal, ctx);
   const adapted: AdapterResult = historySourceTimestamp == null
     ? composition
     : {
@@ -536,7 +580,7 @@ export async function fetchUsddDataPlatformReserves(
         ...verifiedFreshnessMetadata(historySourceTimestamp),
         details: {
           freshnessSource: "collateral-history",
-          freshnessReason: "latest-collateral totals equal a collateral-history row; dated by its UTC+8 bucket start (statisticTime)",
+          freshnessReason: "each chain's latest-collateral totals equal its collateral-history row; dated by the oldest UTC+8 bucket start (statisticTime)",
         },
       },
     };

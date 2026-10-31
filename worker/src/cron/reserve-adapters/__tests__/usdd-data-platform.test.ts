@@ -223,21 +223,34 @@ describe("fetchUsddDataPlatformReserves", () => {
     })).rejects.toThrow("collateral item 0 lockedValue");
   });
 
+  const BSC_LATEST = "https://app-api.usdd.io/data-platform/latest-collateral?chain=bsc";
+  const BSC_HISTORY = historyUrl("bsc");
+  const chainFeeds = {
+    [ETHEREUM_LATEST]: collateralResponse([{ vaultType: "SA001-A", lockedValue: 200 }]),
+    [TRON_LATEST]: collateralResponse([
+      { vaultType: "TRX-A", lockedValue: 100 },
+      { vaultType: "SA001-A", lockedValue: 300 },
+    ]),
+    [BSC_LATEST]: collateralResponse([{ vaultType: "PSM-USDT-A", lockedValue: 50 }]),
+  };
+  const chainConfig = {
+    inputs: { primary: { kind: "http-json" as const, url: ETHEREUM_LATEST } },
+    params: { additionalCollateralUrls: [TRON_LATEST, BSC_LATEST] },
+  };
+  const chainRow = (collateralValue: number, statisticSec: number) => ({
+    code: 0,
+    data: { items: [{ collateralValue, totalSupplyValue: 1_000, statisticTime: statisticSec * 1000 }] },
+  });
+
   it("aggregates every configured chain feed into one whole-coin book", async () => {
-    const BSC_LATEST = "https://app-api.usdd.io/data-platform/latest-collateral?chain=bsc";
     const { result, network } = await runUsdd({
-      config: {
-        inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } },
-        params: { additionalCollateralUrls: [TRON_LATEST, BSC_LATEST] },
-      },
+      config: chainConfig,
       network: {
         json: {
-          [ETHEREUM_LATEST]: collateralResponse([{ vaultType: "SA001-A", lockedValue: 200 }]),
-          [TRON_LATEST]: collateralResponse([
-            { vaultType: "TRX-A", lockedValue: 100 },
-            { vaultType: "SA001-A", lockedValue: 300 },
-          ]),
-          [BSC_LATEST]: collateralResponse([{ vaultType: "PSM-USDT-A", lockedValue: 50 }]),
+          ...chainFeeds,
+          [ETHEREUM_HISTORY]: EMPTY_HISTORY,
+          [TRON_HISTORY]: EMPTY_HISTORY,
+          [BSC_HISTORY]: EMPTY_HISTORY,
         },
       },
       nowSec: NOW_SEC,
@@ -249,14 +262,50 @@ describe("fetchUsddDataPlatformReserves", () => {
       { sourceKey: "usdd-data-platform:psm-usdt", name: "USDT (PSM vaults)", pct: expect.closeTo(50 / 650 * 100, 8), risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({ vaultCount: 4, freshnessMode: "unverified" });
-    // An aggregated book cannot borrow one chain's history clock.
-    expect(network.fetchSpy.getHistory().map((request) => request.url)).toEqual([
-      ETHEREUM_LATEST, TRON_LATEST, BSC_LATEST,
-    ]);
+    // Each chain is joined only to its own history; no exact match keeps the book undated.
+    expect(network.fetchSpy.getHistory().map((request) => request.url).sort()).toEqual([
+      ETHEREUM_LATEST, TRON_LATEST, BSC_LATEST, ETHEREUM_HISTORY, TRON_HISTORY, BSC_HISTORY,
+    ].sort());
+  });
+
+  it("dates an aggregated book by its oldest chain clock", async () => {
+    const { result } = await runUsdd({
+      config: chainConfig,
+      network: {
+        json: {
+          ...chainFeeds,
+          [ETHEREUM_HISTORY]: chainRow(200, BUCKET_START_SEC),
+          [TRON_HISTORY]: chainRow(400, BUCKET_START_SEC - 86_400),
+          [BSC_HISTORY]: chainRow(50, BUCKET_START_SEC),
+        },
+      },
+      nowSec: NOW_SEC,
+    });
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: BUCKET_START_SEC - 86_400,
+      freshnessMode: "verified",
+      details: { freshnessSource: "collateral-history" },
+    });
+  });
+
+  it("keeps an aggregated book unverified when one chain cannot be dated", async () => {
+    const { result } = await runUsdd({
+      config: chainConfig,
+      network: {
+        json: {
+          ...chainFeeds,
+          [ETHEREUM_HISTORY]: chainRow(200, BUCKET_START_SEC),
+          [TRON_HISTORY]: chainRow(400, BUCKET_START_SEC),
+          [BSC_HISTORY]: { status: 503, body: "upstream down" },
+        },
+      },
+      nowSec: NOW_SEC,
+    });
+    expect(result.metadata?.sourceTimestamp).toBeUndefined();
+    expect(result.metadata?.freshnessMode).toBe("unverified");
   });
 
   it("fails closed instead of publishing a surviving chain as the whole book", async () => {
-    const BSC_LATEST = "https://app-api.usdd.io/data-platform/latest-collateral?chain=bsc";
     await expect(runUsdd({
       config: {
         inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } },
@@ -272,6 +321,31 @@ describe("fetchUsddDataPlatformReserves", () => {
       nowSec: NOW_SEC,
       validate: false,
     })).rejects.toThrow(/503/);
+  });
+
+  // A 200/{code:0} body without its collateral payload is a failed chain read,
+  // not a chain holding no collateral: merging the survivors would renormalize
+  // them into the whole-coin composition.
+  it.each([
+    { label: "no data envelope", payload: { code: 0 }, error: "collateral feed missing data" },
+    { label: "a renamed data body", payload: { code: 0, data: { vaults: [], total: 50 } }, error: "collateral feed missing its collateral book" },
+    { label: "a non-array items field", payload: { code: 0, data: { items: {} } }, error: "collateral feed items is not an array" },
+  ])("fails closed when a configured chain feed carries $label", async ({ payload, error }) => {
+    await expect(runUsdd({
+      config: {
+        inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } },
+        params: { additionalCollateralUrls: [TRON_LATEST, BSC_LATEST] },
+      },
+      network: {
+        json: {
+          [ETHEREUM_LATEST]: collateralResponse([{ vaultType: "SA001-A", lockedValue: 200 }]),
+          [TRON_LATEST]: payload,
+          [BSC_LATEST]: collateralResponse([{ vaultType: "PSM-USDT-A", lockedValue: 50 }]),
+        },
+      },
+      nowSec: NOW_SEC,
+      validate: false,
+    })).rejects.toThrow(error);
   });
 });
 
