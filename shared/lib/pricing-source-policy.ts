@@ -22,6 +22,41 @@ export function isObservedPrice(asset: {
 }
 
 /**
+ * Whether an admitted quote is a DefiLlama feed's exact-reference default with
+ * no corroborating source family. DefiLlama list/contract feeds publish a flat
+ * reference value for assets they cannot otherwise price; that value is a list
+ * default, not an observed market observation, unless another independent
+ * source family agrees.
+ */
+export function isUncorroboratedDefiLlamaReferenceQuote(input: {
+  price: number;
+  referencePrice: number | null | undefined;
+  sources: readonly (string | null | undefined)[] | string | null | undefined;
+}): boolean {
+  const referencePrice = input.referencePrice;
+  if (
+    referencePrice == null ||
+    !Number.isFinite(referencePrice) ||
+    referencePrice <= 0 ||
+    !Number.isFinite(input.price) ||
+    input.price !== referencePrice
+  ) {
+    return false;
+  }
+
+  const parts = normalizePricingSourceKeys(input.sources);
+  if (parts.length === 0) return false;
+
+  const families = new Set<string>();
+  for (const part of parts) {
+    const entry = getPricingSourceRegistryEntry(part);
+    if (!entry || !entry.isListAggregator) return false;
+    families.add(entry.depegSourceFamily);
+  }
+  return families.size === 1 && families.has("defillama");
+}
+
+/**
  * Single owner of the hard-tier membership question. Callers must not
  * re-enumerate the hard trust tiers; a future tier addition is decided here.
  */

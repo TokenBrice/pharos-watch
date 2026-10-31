@@ -169,6 +169,32 @@ describe("syncStablecoins", () => {
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), "defillama-stablecoins", true);
   });
 
+  it("publishes an uncorroborated exact-par DefiLlama quote as unavailable", async () => {
+    const data = makeDlResponse(60);
+    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 1, priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
+    const db = makeSyncDb();
+    const writes = trackCacheWrites(db);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFetchWithRetry(defaultSyncRoutes(data));
+    await syncStablecoins(db);
+    const asset = publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether");
+    expect(asset).toMatchObject({ price: null, priceSource: "missing" });
+    expect(warnSpy.mock.calls.some((call) => call.some((arg) =>
+      typeof arg === "string" && arg.includes("exact_par_list_price_requires_corroboration")))).toBe(true);
+  });
+
+  it("keeps a corroborated exact-par DefiLlama quote admitted", async () => {
+    const data = makeDlResponse(60);
+    const observedAt = Math.floor(Date.now() / 1000) - 60;
+    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 1, priceSource: "coingecko+defillama-list", priceConfidence: "high", priceObservedAt: observedAt, priceUpdatedAt: observedAt, consensusSources: ["coingecko", "defillama-list"], agreeSources: ["coingecko", "defillama-list"], circulating: { peggedUSD: 100_000_000 } });
+    const db = makeSyncDb();
+    const writes = trackCacheWrites(db);
+    mockFetchWithRetry(defaultSyncRoutes(data));
+    await syncStablecoins(db);
+    expect(publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether"))
+      .toMatchObject({ price: 1, priceSource: "coingecko+defillama-list", priceConfidence: "single-source" });
+  });
+
   it("returns immediately when the stablecoins CAS loses to a newer writer", async () => {
     const db = makeSyncDb([{ match: "INSERT INTO cache", rows: [], runMeta: { changes: 0 } }]);
     mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));
@@ -190,14 +216,14 @@ describe("syncStablecoins", () => {
 
   it("keeps a sane list price when a primary source reports a severe downside", async () => {
     const data = makeDlResponse(60);
-    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 1, priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
-    vi.mocked(fetchPrimaryPrices).mockResolvedValueOnce({ results: new Map([["usdt-tether", { price: 0.15, source: "coingecko", confidence: "single-source", dlPrice: 1, cgPrice: 0.15, candidateSources: ["coingecko"], agreeSources: ["coingecko"] }]]), stats: { attempted: 1, high: 0, singleSource: 1, cgOnly: 1, low: 0 } });
+    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", price: 0.9998, priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
+    vi.mocked(fetchPrimaryPrices).mockResolvedValueOnce({ results: new Map([["usdt-tether", { price: 0.15, source: "coingecko", confidence: "single-source", dlPrice: 0.9998, cgPrice: 0.15, candidateSources: ["coingecko"], agreeSources: ["coingecko"] }]]), stats: { attempted: 1, high: 0, singleSource: 1, cgOnly: 1, low: 0 } });
     const db = makeSyncDb();
     const writes = trackCacheWrites(db);
     mockFetchWithRetry(defaultSyncRoutes(data));
     await syncStablecoins(db);
     const asset = (JSON.parse(writes.find((write) => write.key === "stablecoins")!.value) as { peggedAssets: PeggedAsset[] }).peggedAssets.find((candidate) => candidate.id === "usdt-tether");
-    expect(asset).toMatchObject({ price: 1, priceSource: "defillama", priceConfidence: "single-source", consensusSources: ["defillama"], agreeSources: ["defillama"] });
+    expect(asset).toMatchObject({ price: 0.9998, priceSource: "defillama", priceConfidence: "single-source", consensusSources: ["defillama"], agreeSources: ["defillama"] });
   });
 
   it("preserves a trusted previous price across a weak temporal jump", async () => {
@@ -398,7 +424,7 @@ describe("syncStablecoins", () => {
     const previous = JSON.stringify({
       peggedAssets: data.peggedAssets.map((asset) => ({
         id: asset.id,
-        price: 1,
+        price: asset.price,
         priceSource: "defillama",
         priceConfidence: "single-source",
         priceUpdatedAt: now - 900,
@@ -427,7 +453,7 @@ describe("syncStablecoins", () => {
   it("blocks stale publication, aborts during the staleness check, and backfills supply history", async () => {
     const data = makeDlResponse(60);
     const now = Math.floor(Date.now() / 1000);
-    const previous = JSON.stringify({ peggedAssets: data.peggedAssets.map((asset) => ({ id: asset.id, price: 1, priceSource: "defillama", priceConfidence: "single-source", priceUpdatedAt: now, priceObservedAt: now, priceSyncedAt: now })) });
+    const previous = JSON.stringify({ peggedAssets: data.peggedAssets.map((asset) => ({ id: asset.id, price: asset.price, priceSource: "defillama", priceConfidence: "single-source", priceUpdatedAt: now, priceObservedAt: now, priceSyncedAt: now })) });
     const staleDb = makeSyncDb([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [{ value: previous, updated_at: now - 8 * 3600 }], first: { value: previous, updated_at: now - 8 * 3600 } }]);
     const staleWrites = trackCacheWrites(staleDb);
     mockFetchWithRetry(defaultSyncRoutes(data));

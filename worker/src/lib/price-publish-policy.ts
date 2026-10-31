@@ -3,7 +3,7 @@ import {
   getPricingSourceRegistryEntry,
   isPricingSourceSoftGuardrailExempt,
 } from "@shared/lib/pricing-source-registry";
-import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource } from "@shared/lib/pricing-source-policy";
+import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource, isUncorroboratedDefiLlamaReferenceQuote } from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getReferencePriceForContext, isFixedPegContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
@@ -254,6 +254,16 @@ function evaluatePriceForPublication(input: PublishablePriceInput): PricePublica
   };
   if (!decision.accepted) {
     return { ...base, accepted: false, reason: decision.reasonCode, gates: ["price-validation"] };
+  }
+
+  if (isUncorroboratedDefiLlamaReferenceQuote({
+    price: input.price,
+    referencePrice: base.referencePrice,
+    sources: input.agreeSources && input.agreeSources.length > 0
+      ? input.agreeSources
+      : sourceParts(input.source),
+  })) {
+    return { ...base, accepted: false, reason: "exact_par_list_price_requires_corroboration", gates: ["price-validation", "exact-par-list-corroboration"] };
   }
 
   if (!allowsSevereDownsidePublication(input)) {
