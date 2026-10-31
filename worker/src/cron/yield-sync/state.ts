@@ -369,10 +369,14 @@ async function loadYieldSupplementalCandidates(
       if (requiredFamily) degradedRequiredFamilyCaches += 1;
       continue;
     }
-    // The same row is `supplemental-malformed` on /status and cannot prove
-    // catch-up: a snapshot whose stored rows no longer pass read validation is
-    // unavailable evidence, not a clean family that merely lost some rows (R2).
-    if (parsedFamily.rejectedCount > 0 || parsedFamily.sourceCount !== parsedFamily.candidates.length) {
+    // A snapshot from which no stored row survives read validation is
+    // unavailable evidence, not a clean family that merely lost some rows
+    // (R2): the same row is `supplemental-malformed` on /status and cannot
+    // prove catch-up. Read validation quarantines rows individually, so a
+    // family that still has valid rows publishes those (R8).
+    const noSurvivingCandidate = parsedFamily.candidates.length === 0
+      && (parsedFamily.rejectedCount > 0 || parsedFamily.sourceCount > 0);
+    if (noSurvivingCandidate) {
       invalidFamilyCacheRows += 1;
       if (requiredFamily) degradedRequiredFamilyCaches += 1;
       continue;
