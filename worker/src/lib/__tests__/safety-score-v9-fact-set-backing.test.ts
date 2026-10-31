@@ -9,15 +9,16 @@ import {
   compileSafetyScoreV9FactSetFromFixedInput,
   compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension,
   materializeSafetyScoreV9FactSetExtension,
+  type SafetyScoreV9FactSetExtensionV2,
 } from "../safety-score-v9/fact-set";
-import { makeV9Extension, makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import { makeV9Extension, makeV9FixedInput, v9Status } from "../../test-helpers/v9-fixed-input";
 import { eligibleReserveMeta, mintMeta } from "./safety-score-v9-reserve-admission.test-support";
 import { buildSafetyScoreV9Candidate } from "../safety-score-v9/candidate";
 
 import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { normalizeFixedInput } from "../report-cards-fixed-input";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
-import { buildReserves } from "../safety-score-v9/fact-set-backing";
+import { buildReserves, reconcileCollateralDependencyMappings } from "../safety-score-v9/fact-set-backing";
 import { factBuilderContext } from "./safety-score-v9-fact-builders.test-support";
 
 import type { ReserveSlice } from "@shared/types/reserves";
@@ -204,6 +205,81 @@ describe("mechanism component evidence clocks and diagnostic history", () => {
     expect(reportEvidence).not.toHaveLength(0);
     expect(recovery.status.evidenceRefIds).toEqual(expect.arrayContaining(reportEvidence.map((row) => row.evidenceId)));
   });
+
+  it("rebinds each admitted scoped assurance fragment to its own evidence clock", () => {
+    const clockSec = NO_HISTORY_CLOCK_SEC;
+    const fixed = makeV9FixedInput({ assetId: ASSET_ID, clockSec, reserves: [] });
+    const extension = makeV9Extension({ clockSec, registryFingerprint: fixed.registryFingerprint });
+    const extensionAsset = extension.assets[0]!;
+    const review = extensionAsset.mechanismRiskReview!;
+    if (review.archetype !== "fiat-cash") throw new Error("Expected the fiat-cash mechanism fixture");
+    const mechanismStatus = (observationState: "known" | "bounded-unknown", evidenceRefIds: string[], gapIds: string[] = []) => ({
+      applicability: { state: "required" as const, policyRuleId: "v9.backing.mechanism-review", rationale: null, gapId: null },
+      observationState, evidenceRefIds, gapIds,
+    });
+    review.assuranceAndReconciliation = {
+      status: mechanismStatus("bounded-unknown", ["fixture:assurance-evidence"], ["fixture:assurance-gap"]),
+      quality: null,
+      failureDomains: [],
+      scopedAssessments: [
+        { scopeId: "fixture-trust", share: 0.25, quality: "strong", status: mechanismStatus("known", ["fixture:scoped-assurance"]) },
+        { scopeId: "fixture-remainder", share: 0.75, quality: null,
+          status: mechanismStatus("bounded-unknown", ["fixture:assurance-evidence"], ["fixture:assurance-gap"]) },
+      ],
+    };
+    extensionAsset.researchEvidence.push({
+      evidenceKey: "fixture-scoped-assurance", sourceId: "fixture-scoped-assurance",
+      observedAtSec: clockSec - 1, publishedAtSec: clockSec - 1, publishedBy: "issuer",
+      url: "https://example.com/scoped-assurance", contentSha256: "3".repeat(64),
+      confidence: "verified", maxAgeSec: 3600,
+    });
+    extensionAsset.componentEvidence.push({
+      componentKey: "reserve-scope:fixture-trust", evidenceKeys: ["fixture-scoped-assurance"],
+    });
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    const compiledReview = asset.mechanismRiskReview.review;
+    const assurance = compiledReview && "assuranceAndReconciliation" in compiledReview
+      ? compiledReview.assuranceAndReconciliation
+      : undefined;
+    if (assurance === undefined) throw new Error("Expected the compiled assurance component");
+    expect(assurance.quality).toBeNull();
+    expect(assurance.scopedAssessments).toMatchObject([
+      { scopeId: "fixture-trust", quality: "strong",
+        status: { observationState: "known", evidenceRefIds: [`${ASSET_ID}:research:fixture-scoped-assurance`] } },
+      { scopeId: "fixture-remainder", quality: null },
+    ]);
+    // The unassessed remainder inherits the parent's gap-bound status, never
+    // a fabricated known fragment.
+    expect(assurance.scopedAssessments![1]!.status).toEqual(assurance.status);
+  });
+
+  it("publishes expired mechanism-review history as a stale bounded gap", () => {
+    const clockSec = NO_HISTORY_CLOCK_SEC;
+    const fixed = makeV9FixedInput({ assetId: ASSET_ID, clockSec, reserves: [] });
+    const extension = makeV9Extension({ clockSec, registryFingerprint: fixed.registryFingerprint });
+    const extensionAsset = extension.assets[0]!;
+    extensionAsset.mechanismRiskReview = null;
+    extensionAsset.researchEvidence.push({
+      evidenceKey: "fixture-expired-mechanism-review", sourceId: "fixture-mechanism-review",
+      observedAtSec: clockSec - 100, publishedAtSec: clockSec - 100, publishedBy: "issuer",
+      url: "https://example.com/expired-mechanism-review", contentSha256: "2".repeat(64),
+      confidence: "verified", maxAgeSec: 50,
+    });
+    extensionAsset.componentEvidence.push({
+      componentKey: "mechanism-risk-review-history", evidenceKeys: ["fixture-expired-mechanism-review"],
+    });
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    expect(asset.mechanismRiskReview).toMatchObject({
+      review: null,
+      status: { observationState: "stale" },
+    });
+    const historyEvidence = asset.evidence.find((row) => row.evidenceId === `${ASSET_ID}:research:fixture-expired-mechanism-review`)!;
+    expect(historyEvidence.freshness.state).toBe("stale");
+    expect(asset.mechanismRiskReview.status.evidenceRefIds).toEqual([historyEvidence.evidenceId]);
+    expect(asset.gaps.find((row) => row.gapId === `${ASSET_ID}:gap:mechanism-risk-review`)).toMatchObject({
+      reasonCode: "bounded-mechanism-review", observationState: "stale",
+    });
+  });
 });
 
 describe("Safety Score v9 backing fact-set reserve history", () => {
@@ -263,6 +339,122 @@ describe("Safety Score v9 backing fact-set reserve history", () => {
     });
   });
 
+});
+
+describe("fail-closed reserve frame admission", () => {
+  function cashSlice(name: string, pct: number, extra: Partial<ReserveSlice> = {}): ReserveSlice {
+    return {
+      sourceKey: `fixture:${name.toLowerCase().replaceAll(" ", "-")}`, name, pct, risk: "very-low",
+      assetClass: "cash", issuerOrObligor: `issuer:${name.toLowerCase().replaceAll(" ", "-")}`,
+      liquidityHorizon: "immediate", maturityDaysMax: 0, ...extra,
+    };
+  }
+
+  function compileFailure(
+    reserves: ReserveSlice[],
+    mutate: (asset: SafetyScoreV9FactSetExtensionV2["assets"][number]) => void,
+    omitLiveReserve = false,
+  ) {
+    const fixed = makeV9FixedInput({
+      assetId: ASSET_ID, clockSec: NO_HISTORY_CLOCK_SEC, reserves, omitLiveReserve,
+    });
+    const extension = makeV9Extension({ clockSec: NO_HISTORY_CLOCK_SEC, registryFingerprint: fixed.registryFingerprint });
+    mutate(extension.assets[0]!);
+    const compiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    const gap = compiled.gaps.find((row) => row.gapId === `${ASSET_ID}:gap:asset-compilation`)!;
+    const evidence = compiled.evidence.find((row) => row.evidenceId === gap.evidenceRefIds[0])!;
+    return { compiled, gap, reason: evidence.rejection?.reason };
+  }
+
+  it("refuses not-applicable reserve applicability when a live frame was captured", () => {
+    const { compiled, gap, reason } = compileFailure([cashSlice("Cash", 100)], (asset) => {
+      asset.reserveApplicability = { state: "not-applicable", rationale: "Fixture claim without reserves." };
+    });
+    expect(compiled.reserveExposures).toEqual([]);
+    expect(gap.causeProof).toMatchObject({ cause: "A", rejectionCode: "fact-build-failed" });
+    expect(reason).toBe(`Reserve applicability for ${ASSET_ID} conflicts with captured reserve rows`);
+  });
+
+  it("refuses reviewed static rows that were never bound to research evidence", () => {
+    const { gap, reason } = compileFailure([], (asset) => {
+      asset.reviewedStaticReserveRows = {
+        rows: [cashSlice("Cash", 100)], evidenceClass: "independent", provenance: "audited-fallback",
+      };
+    }, true);
+    expect(gap.causeProof).toMatchObject({ cause: "A", rejectionCode: "fact-build-failed" });
+    expect(reason).toBe(`Reviewed static reserve admission has no bound evidence for ${ASSET_ID}`);
+  });
+
+  it("refuses two captured rows that share an exposure identity but disagree", () => {
+    const { gap, reason } = compileFailure(
+      [cashSlice("Cash", 50), cashSlice("Cash counterparty", 50, { sourceKey: "fixture:cash" })],
+      () => {},
+    );
+    expect(gap.causeProof).toMatchObject({ cause: "A", rejectionCode: "fact-build-failed" });
+    expect(reason).toMatch(new RegExp(`^Reserve exposure identity reserve:[a-f0-9]{24} is ambiguous for ${ASSET_ID}$`));
+  });
+
+  it("refuses a classification with no captured exposure", () => {
+    const unmatchedExposureKey = "reserve:000000000000000000000000";
+    const { gap, reason } = compileFailure([cashSlice("Cash", 100)], (asset) => {
+      asset.reserveClassifications = [{
+        exposureKey: unmatchedExposureKey, classificationKey: "fixture-unmatched",
+        assetClass: null, issuerOrObligorKey: null, riskFactors: [], liquidityHorizon: null,
+        maturityDaysMax: null, failureDomains: [],
+      }];
+    });
+    expect(gap.causeProof).toMatchObject({ cause: "A", rejectionCode: "fact-build-failed" });
+    expect(reason).toBe(`Reserve classifications do not match captured exposures for ${ASSET_ID}: ${unmatchedExposureKey}`);
+  });
+
+  it("names an omitted curated-reserve envelope as a method limit when no producer exists", () => {
+    const fixed = makeV9FixedInput({ assetId: ASSET_ID, clockSec: NO_HISTORY_CLOCK_SEC, omitLiveReserve: true });
+    const context = factBuilderContext(fixed, makeV9Extension({
+      clockSec: NO_HISTORY_CLOCK_SEC, registryFingerprint: fixed.registryFingerprint,
+    }));
+    const dependencies = {
+      source: "curated-reserve",
+      edges: [{ upstreamAssetId: "usdc-circle", weight: 1, economicRole: "basket-exposure" }],
+      status: v9Status("known", "v9.dependencies.edge-exposure"),
+      diagnostics: { graphState: "valid", issueCodes: [], sccMemberAssetIds: [] },
+    } as unknown as Parameters<typeof reconcileCollateralDependencyMappings>[1];
+    const result = reconcileCollateralDependencyMappings(context, dependencies, []);
+    expect(result.diagnostics).toMatchObject({
+      graphState: "unresolved",
+      issueCodes: ["collateral-edge-exposure-unmapped:usdc-circle"],
+    });
+    expect(result.status.observationState).toBe("bounded-unknown");
+    const gap = context.gaps.get(result.status.gapIds[0]!)!;
+    expect(gap).toMatchObject({
+      reasonCode: "unreviewed-dependency-relationships", observationState: "bounded-unknown",
+    });
+    // No producer is configured, so the omission is a method limit rather than
+    // a producer failure or a missing exact mapping.
+    expect(gap.message).toContain("no live-reserve adapter is configured for this asset");
+  });
+
+  it("reconciles an overfull frame against the residual when no exposure row can absorb it", () => {
+    const tail = cashSlice("Unclassified remainder", 100, {
+      unclassifiedResidual: true, residualReason: "insufficient-evidence",
+    });
+    const rows = [
+      cashSlice("Cash A", 0.05), cashSlice("Cash B", 0.05), cashSlice("Cash C", 0.05),
+      cashSlice("Cash D", 0.05), cashSlice("Cash E", 0.05), tail,
+    ];
+    const fixed = makeV9FixedInput({ assetId: ASSET_ID, clockSec: NO_HISTORY_CLOCK_SEC, reserves: rows });
+    const extension = makeV9Extension({ clockSec: NO_HISTORY_CLOCK_SEC, registryFingerprint: fixed.registryFingerprint });
+    extension.assets[0]!.reserveClassifications = [{
+      exposureKey: computeSafetyScoreV9ReserveExposureKey(tail), classificationKey: "fixture-unclassified-tail",
+      assetClass: null, issuerOrObligorKey: null, riskFactors: [], liquidityHorizon: null,
+      maturityDaysMax: null, failureDomains: [], unclassifiedResidual: true,
+    }];
+    const asset = compileSafetyScoreV9FactSetFromFixedInput(fixed, extension).assets[0]!;
+    expect(asset.reserveExposures).toHaveLength(5);
+    expect(asset.reserveResiduals).toMatchObject([{ residualId: computeSafetyScoreV9ReserveExposureKey(tail), weight: 0.9975 }]);
+    const wholeWeight = asset.reserveExposures.reduce((sum, row) => sum + row.weight, 0) +
+      asset.reserveResiduals.reduce((sum, row) => sum + row.weight, 0);
+    expect(wholeWeight).toBeCloseTo(1, 12);
+  });
 });
 
 describe("v10.01 cause compilation reserve proof boundaries", () => {

@@ -75,6 +75,22 @@ describe("diagnostic report scope monotonicity", () => {
   it("does not overwrite a current tbill recovery overlay merely because scope was authored", () => {
     expect(backing(scopedReport(), input(), "tbill", "usdtb-ethena")).toEqual(backing(report, input(), "tbill", "usdtb-ethena"));
   });
+  it("withholds a curated tbill recovery quality once an admitted report scope governs the asset", () => {
+    const assetId = "usyc-hashnote";
+    const review = (latestReport: ProofOfReservesLatestReport, fixedInput: SafetyScoreV9CompilerInput) =>
+      buildSafetyScoreV9MechanismReview(fixedInput, meta(latestReport, assetId), "tbill");
+    const unscoped = review(report, input());
+    if (unscoped?.archetype !== "tbill") throw new Error("Expected the curated usyc-hashnote tbill review");
+    expect(unscoped.lossRecoveryDesign).toMatchObject({ quality: "limited", status: { observationState: "known" } });
+    const scoped = review(withBookJoin(), {
+      ...input(partition),
+      safetyScoreV9SupplyAttributionById: { [assetId]: partition },
+    });
+    if (scoped?.archetype !== "tbill") throw new Error("Expected the scoped usyc-hashnote tbill review");
+    // Scoped assurance cannot carry a documented recovery design, so the
+    // admitted scope replaces the curated quality with the bounded fact.
+    expect(scoped.lossRecoveryDesign).toMatchObject({ quality: null, status: { observationState: "bounded-unknown" } });
+  });
   it.each(["no-book-join", "incomplete", "wrong-generation", "nonconserving-books"])("keeps %s partitions diagnostic", condition => {
     const value = condition === "no-book-join" ? scopedReport() : withBookJoin();
     const current = structuredClone(partition);

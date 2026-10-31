@@ -201,6 +201,47 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
       .toThrow(SafetyScoreV9ReplayLaneScreeningBudgetError);
   });
 
+  it("rejects a captured certificate whose subject is not its map key", () => {
+    const subject = "ethereum:0x1111111111111111111111111111111111111111";
+    const certificate = V9LaneIncidentCertificateSchema.parse({
+      schemaVersion: 1, certificateId: `lane-cert:${subject}`, evidenceClass: "explorer-events",
+      subjectDeploymentKey: "base:0x2222222222222222222222222222222222222222", fromBlock: 1, toBlock: 2,
+      toBlockHash: `0x${"1".repeat(64)}`, windowStartSec: 10, windowEndSec: 20, observedAtSec: 30,
+      screeningPolicyDigest: "c".repeat(64), logDigest: "d".repeat(64),
+      emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
+      screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
+      eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+    });
+    expect(() => buildSafetyScoreV9ReplayLaneScreening({
+      certificates: new Map([[subject, { screeningSetId: "set-1", certificate }]]),
+      descriptors: [],
+    })).toThrow(`Lane certificate ${certificate.certificateId} does not name ${subject}`);
+  });
+
+  it("refuses a canonical lane block over the byte budget on write and read", () => {
+    const subject = "ethereum:0x1111111111111111111111111111111111111111";
+    const oversized = V9LaneIncidentCertificateSchema.parse({
+      schemaVersion: 1, certificateId: `a${"a".repeat(3_300_000)}`, evidenceClass: "explorer-events",
+      subjectDeploymentKey: subject, fromBlock: 1, toBlock: 2, toBlockHash: `0x${"1".repeat(64)}`,
+      windowStartSec: 10, windowEndSec: 20, observedAtSec: 30, screeningPolicyDigest: "c".repeat(64),
+      logDigest: "d".repeat(64),
+      emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
+      screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
+      eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+    });
+    expect(() => buildSafetyScoreV9ReplayLaneScreening({
+      certificates: new Map([[subject, { screeningSetId: "set-1", certificate: oversized }]]),
+      descriptors: [],
+    })).toThrow(SafetyScoreV9ReplayLaneScreeningBudgetError);
+    const body = {
+      certificates: [{ deploymentKey: subject, screeningSetId: "set-1", certificate: oversized }],
+      descriptors: [],
+    };
+    expect(() => parseSafetyScoreV9ReplayLaneScreening({
+      digest: sha256Hex(stableJsonStringifyV1(body)), ...body,
+    })).toThrow(/Replay lane-screening capture exceeds its budget: \d+ canonical bytes/u);
+  });
+
   it.each([
     ["base input generation", { baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}` }],
     ["publication clock", { publishedAtSec: enriched.clockSec + 1 }],
