@@ -27,8 +27,11 @@ import {
 } from "../safety-score-v9/supply-attribution-contract";
 import {
   buildXautRepresentationGroupInventory,
+  buildXautTransparencySource,
   deriveXautRepresentationGroupSupplyAttribution,
+  XAUT_CANONICAL_ROUTE_ID,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
+  xautLockMintIdentityValidationError,
   xautRepresentationGroupAttributionValidationError,
 } from "../safety-score-v9/xaut-supply-attribution-contract";
 
@@ -589,6 +592,9 @@ describe("XAUT representation-group supply attribution contract", () => {
     ["inventory", attribution => ({
       attribution: { ...attribution, routeInventoryDigest: "0".repeat(64) },
     }), "route inventory mismatch"],
+    ["registry identity", () => ({
+      registryFingerprint: "b".repeat(64),
+    }), "registry identity mismatch"],
     ["observation freshness", attribution => ({
       clockSec: attribution.observedAtSec + XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC + 1,
     }), "observation time"],
@@ -687,5 +693,75 @@ describe("XAUT representation-group supply attribution contract", () => {
     expect(
       validationError({ ...baseline, observation: circulatingDrift }),
     ).toContain("does not reconcile");
+  });
+});
+
+describe("XAUT transparency source and route inventory fail closed", () => {
+  const meta = ACTIVE_META_BY_ID.get("xaut-tether")!;
+  const config = meta.liveReservesConfig!;
+  const originalConfig = structuredClone(config);
+  const routes = meta.bridgeRouteRisk!.routes!;
+  const originalRoutes = structuredClone(routes);
+  const IDENTITY_MISMATCH =
+    "XAUT disclosure, canonical token, treasury, or XAUt0 adapter identity mismatch";
+
+  afterEach(() => {
+    Object.assign(config, structuredClone(originalConfig));
+    routes.splice(0, routes.length, ...structuredClone(originalRoutes));
+  });
+
+  it("fails closed when the transparency adapter config is not the pinned XAUT source", () => {
+    const observation = xautObservation();
+    Object.assign(config.params!, { currencyIso: "usd" });
+    expect(buildXautTransparencySource()).toBeNull();
+    expect(xautLockMintIdentityValidationError(observation)).toBe(IDENTITY_MISMATCH);
+  });
+
+  it("fails closed when the transparency source URL is unparseable or not the exact pinned endpoint", () => {
+    const observation = xautObservation();
+    const primary = config.inputs.primary;
+    if (primary.kind !== "http-json") {
+      throw new Error("Expected the pinned http-json transparency source");
+    }
+    primary.url = "not-a-url";
+    expect(buildXautTransparencySource()).toBeNull();
+    expect(xautLockMintIdentityValidationError(observation)).toBe(IDENTITY_MISMATCH);
+
+    primary.url = "https://app.tether.to/transparency.json?network=mainnet";
+    expect(buildXautTransparencySource()).toBeNull();
+    expect(xautLockMintIdentityValidationError(observation)).toBe(IDENTITY_MISMATCH);
+  });
+
+  it("fails the representation-group inventory closed when its route shape drifts", () => {
+    const observation = xautObservation();
+    const canonicalRoute = routes.find((route) => route.id === XAUT_CANONICAL_ROUTE_ID)!;
+    Object.assign(canonicalRoute, { routeClass: "third-party" });
+    expect(buildXautRepresentationGroupInventory()).toBeNull();
+    expect(deriveXautRepresentationGroupSupplyAttribution({
+      aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+      registryFingerprint: REGISTRY_FINGERPRINT,
+      scoringClockSec: CLOCK_SEC,
+      observation,
+    })).toBeNull();
+
+    Object.assign(canonicalRoute, { routeClass: "native" });
+    const groupedRoute = routes.find((route) => route.representationId === "xaut0-omnichain")!;
+    Object.assign(groupedRoute, { routeClass: "native" });
+    expect(buildXautRepresentationGroupInventory()).toBeNull();
+  });
+
+  it("names a non-safe observation field as malformed rather than admitting it", () => {
+    expect(xautLockMintIdentityValidationError(corruptXautObservation(
+      xautObservation(), "blockNumber", Number.MAX_SAFE_INTEGER + 1,
+    ))).toBe("Malformed XAUT lock/mint observation");
+  });
+
+  it("refuses to allocate a representation group from a non-positive aggregate", () => {
+    expect(deriveXautRepresentationGroupSupplyAttribution({
+      aggregateSupplyUsd: 0,
+      registryFingerprint: REGISTRY_FINGERPRINT,
+      scoringClockSec: CLOCK_SEC,
+      observation: xautObservation(),
+    })).toBeNull();
   });
 });

@@ -197,6 +197,17 @@ describe("redemption rows quarantined for inadmissible consumed reserve evidence
     }
   });
 
+  it("refuses to resolve a quarantine against another asset or datum", () => {
+    const quarantine = quarantineEntry();
+    expect(() => resolveRedemptionReserveQuarantineCause({
+      assetId: "usdt-tether", scope: quarantine.verdict.scope, asOfSec: CLOCK_SEC, captured: quarantine,
+    })).toThrow("Redemption reserve quarantine verdict does not match its exact asset datum for usdt-tether");
+    const otherScope = { ...quarantine.verdict.scope, factorKey: "cost", requiredDatum: "cost" as const };
+    expect(() => resolveRedemptionReserveQuarantineCause({
+      assetId: ASSET, scope: otherScope, asOfSec: CLOCK_SEC, captured: quarantine,
+    })).toThrow(`Redemption reserve quarantine verdict does not match its exact asset datum for ${ASSET}`);
+  });
+
   it("keeps the producer failure when authored classifications conflict for the same datum", () => {
     const quarantine = quarantineEntry();
     const resolved = resolve(quarantine, [
