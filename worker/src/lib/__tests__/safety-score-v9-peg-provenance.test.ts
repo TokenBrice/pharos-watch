@@ -166,13 +166,33 @@ describe("Safety Score V9 peg provenance", () => {
       startedAt: CLOCK_SEC - 10 * DAY_SEC,
       peakDeviationBps: -900,
       source: "live",
+      // The production public provenance JSON of the quarantined rows.
+      provenance: JSON.parse('{"auditVerdict":"disputed"}') as NonNullable<DepegEvent["provenance"]>,
+    });
+    const dated = event({
+      id: 53,
+      startedAt: CLOCK_SEC - 9 * DAY_SEC,
+      peakDeviationBps: -700,
+      source: "live",
       provenance: { sourceKind: "live", auditVerdict: "disputed", updatedAt: CLOCK_SEC - DAY_SEC },
     });
 
-    const summary = build([quarantined]);
+    const summary = build([quarantined, dated]);
 
-    expect(summary.classes["audit-excluded"].eventCount).toBe(1);
+    expect(summary.classes["audit-excluded"].eventCount).toBe(2);
     expect(summary.legacyInclusive.result.scoredEventCount).toBe(0);
+  });
+
+  it("still rejects a verdict-only quarantine dated after the scoring clock", () => {
+    const future = event({
+      id: 54,
+      startedAt: CLOCK_SEC - 9 * DAY_SEC,
+      peakDeviationBps: -700,
+      source: "live",
+      provenance: { auditVerdict: "disputed", updatedAt: CLOCK_SEC + 1 },
+    });
+
+    expect(() => build([future])).toThrow(/partial provenance/);
   });
 
   it.each([
