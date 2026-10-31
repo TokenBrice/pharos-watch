@@ -42,6 +42,7 @@ function makePlan(overrides: Partial<ConfirmationPlanReady> = {}): ConfirmationP
     threshold: 100,
     nativeSignal: null,
     nativePegQuote: undefined,
+    nativeQuoteImplausibility: null,
     nativeSourceKey: "native:usd",
     authoritativePrice: 0.94,
     primaryStatus: "insufficient",
@@ -337,6 +338,131 @@ describe("evaluatePromotionDecision", () => {
       offchainPeakCandidate: { bps: -500, price: 0.95, quoteDomain: "usd" },
       confirmingSources: ["coingecko-confirm"],
     });
+
+    await settle(db, plan, evidence);
+
+    expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+      pending: { id: row.id },
+      events: [],
+      outcomes: [],
+    });
+  });
+});
+
+describe("evaluatePromotionDecision native quote plausibility bound", () => {
+  it("withholds an implausible above-peg native sample instead of confirming the cEUR unit error", async () => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({
+      id: 111,
+      stablecoin_id: "ceur-celo",
+      symbol: "EURm",
+      peg_type: "peggedEUR",
+      direction: "above",
+      first_seen_bps: 15_984,
+      first_price: 2.598389348610164,
+      last_seen_bps: 15_984,
+      last_price: 2.598389348610164,
+      peak_seen_bps: 15_984,
+      peak_price: 2.598389348610164,
+      peg_reference: 1,
+    });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row,
+      asset: makeAsset({ id: row.stablecoin_id, symbol: row.symbol, geckoId: "celo-euro", price: 1.16 }),
+      pegReference: 1,
+      authoritativePrice: 1.16,
+      nativeSignal: deriveDepegSignal(2.598389348610164, 1),
+      nativePegQuote: {
+        stablecoinId: row.stablecoin_id,
+        geckoId: "celo-euro",
+        pegCurrency: "EUR",
+        price: 2.598389348610164,
+        updatedAt: NOW_SEC - 30,
+      },
+      nativeSourceKey: "native:eur",
+      temporalSameDirectionConfirmed: true,
+    });
+
+    const evidence = await collectConfirmationEvidence({
+      ...plan,
+      db,
+      now: NOW_SEC,
+      coingeckoAllowed: false,
+      coingeckoApiKey: undefined,
+      signal: undefined,
+      cexAllowed: false,
+      cexPrices: null,
+      dexPriceRows: new Map(),
+      dexPriceSources: new Map(),
+      poolChallengers: new Map(),
+    });
+
+    expect(evidence.offchainStatus).toBe("insufficient");
+    expect(evidence.offchainPeakCandidate).toBeNull();
+    expect(evidence.confirmingSources).not.toContain("native:eur");
+    expect(evidence.unavailableSources).toContain("native:eur:native-quote-above-peg-reference-band");
+
+    await settle(db, plan, evidence);
+
+    expect(readLifecycle(sqlite, row.stablecoin_id, row.id)).toMatchObject({
+      pending: { id: row.id },
+      events: [],
+      outcomes: [],
+    });
+  });
+
+  it("does not let an implausible native quote reject a pending depeg", async () => {
+    const { sqlite, db } = openFixture();
+    const row = makePendingRow({
+      id: 112,
+      stablecoin_id: "ceur-celo",
+      symbol: "EURm",
+      peg_type: "peggedEUR",
+      direction: "above",
+      first_seen_bps: 300,
+      first_price: 1.03,
+      last_seen_bps: 300,
+      last_price: 1.03,
+      peg_reference: 1,
+    });
+    insertPending(sqlite, row);
+    const plan = makePlan({
+      row,
+      asset: makeAsset({ id: row.stablecoin_id, symbol: row.symbol, geckoId: "celo-euro", price: 1.16 }),
+      pegReference: 1,
+      authoritativePrice: 1.16,
+      nativeSignal: deriveDepegSignal(0.2, 1),
+      nativePegQuote: {
+        stablecoinId: row.stablecoin_id,
+        geckoId: "celo-euro",
+        pegCurrency: "EUR",
+        price: 0.2,
+        updatedAt: NOW_SEC - 30,
+      },
+      nativeSourceKey: "native:eur",
+      temporalSameDirectionConfirmed: true,
+    });
+
+    const evidence = await collectConfirmationEvidence({
+      ...plan,
+      db,
+      now: NOW_SEC,
+      coingeckoAllowed: false,
+      coingeckoApiKey: undefined,
+      signal: undefined,
+      cexAllowed: false,
+      cexPrices: null,
+      dexPriceRows: new Map(),
+      dexPriceSources: new Map(),
+      poolChallengers: new Map(),
+    });
+
+    expect(evidence.offchainStatus).toBe("insufficient");
+    expect(evidence.offchainPeakCandidate).toBeNull();
+    expect(evidence.opposingSources).not.toContain("native:eur");
+    expect(evidence.hardOpposingSources).not.toContain("native:eur");
+    expect(evidence.unavailableSources).toContain("native:eur:native-quote-extreme-move");
 
     await settle(db, plan, evidence);
 

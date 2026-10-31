@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.63`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.64`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -69,7 +69,7 @@ CoinMarketCap fallback is outside primary consensus. [Fallback enrichment](proce
 
 Fallback providers return explicit confidence and observation provenance with every recovered quote; publication never synthesizes missing confidence. Both intake paths reuse their initial authoritative overrides and replay snapshot for shared completion, retaining the later local-only dependency repair and nominal-reference settlement. Their discriminated publication context selects the existing path-specific labels and main-only DefiLlama circuit bookkeeping.
 
-The DefiLlama-list consensus input accepts only intake prices with an absent source or an explicit `defillama` / `defillama-list` origin, and still excludes `coingecko-fallback` supply rows. Supplemental contract quotes and other named price sources retain their own provenance and cannot be relabeled `defillama-list`, including when their supply comes from an on-chain read.
+The DefiLlama-list consensus input accepts only intake prices with an absent source or an explicit `defillama` / `defillama-list` origin, and still excludes `coingecko-fallback` supply rows. Supplemental contract quotes and other named price sources retain their own provenance and cannot be relabeled `defillama-list`, including when their supply comes from an on-chain read. An uncorroborated DefiLlama quote at exactly the peg reference is unavailable (`exact_par_list_price_requires_corroboration`).
 
 Tracked NAV classification is authoritative in both intake normalization and price-validation context: an omitted curated NAV flag means false, and a provider's `navToken: true` cannot bypass fixed-peg validation. Untracked rows retain their source classification.
 Outcome bookkeeping and shared DEX read-clock handling follow the [implementation details](process/pricing-pipeline-appendix.md#primary-collection-bookkeeping); required admission stays fail-closed.

@@ -18,7 +18,9 @@ export function makeDlResponse(assetCount: number): { peggedAssets: PeggedAsset[
       name: `Stablecoin ${i + 1}`,
       symbol: `SC${i + 1}`,
       geckoId: undefined,
-      price: 1,
+      // Near-par but not the exact reference: an exact-par DefiLlama-only quote
+      // is no longer admitted as an observed price (exact-par list guard).
+      price: 0.9998,
       priceSource: "defillama",
       priceConfidence: "high",
       supplySource: "defillama",

@@ -174,7 +174,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/depeg-audit.ts",
-      "sha256": "51cedd74061ec492d5d559129cde3caa5513dcb1a3b8e61ca4b1b2769ad540b9"
+      "sha256": "97127b06ad5ceebeaa709769e1128f8a360f6bce73b5afe2c687babe52a2759a"
     },
     {
       "path": "shared/lib/depeg-closure.ts",
@@ -294,7 +294,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/pricing-source-policy.ts",
-      "sha256": "2bb160a0f6f29807117e7dab1df7a1c4529334809134892f9aaecfc408114083"
+      "sha256": "fcb522dcd35ee25a97c8b391429fc9ceff1d2401c0a63162b9b5e06024b9b431"
     },
     {
       "path": "shared/lib/pricing-source-registry-aggregators.ts",
@@ -814,7 +814,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/depeg-audit.ts",
-      "sha256": "b9f67e197ea007461825dc9bada21d2bb710455ae6d841fbba2005c8cc9f098f"
+      "sha256": "65690e9b6659d2645f0fbf7f67b8820471296b6ad30108f6ef54b916d15b2680"
     },
     {
       "path": "shared/types/dependency-graph.ts",
@@ -1447,7 +1447,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-31-block-26311905-shock-coverage.json.gz"
     }
   ],
-  "digest": "9f7b2a34e87121846eb4f012d10fb1e7017598287991807cfdf00c8a7954cd5e"
+  "digest": "442288a531954fcda2423dfb93aee966f306b777ae8fab7a511bfc0089e02e01"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

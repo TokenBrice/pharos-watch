@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { deviationColorClass } from "@/lib/severity-colors";
+import { DEPEG_AUDIT_DISPUTED_BADGE } from "@shared/lib/classification";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { formatDeviationBps, formatIsoDate } from "@shared/lib/format";
 import {
   DEPEG_EVENT_ENTRIES,
@@ -11,6 +13,7 @@ import {
 } from "@/lib/depeg-event-config";
 
 const MIN_DEVIATION_PCT = (MIN_DEPEG_PAGE_DEVIATION_BPS / 100).toFixed(MIN_DEPEG_PAGE_DEVIATION_BPS % 100 === 0 ? 0 : 1);
+const AUDIT_BADGE_CLASS = "inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-3xs font-medium leading-none";
 
 function monthLabel(startedAt: number): string {
   return new Date(startedAt * 1000).toLocaleDateString("en-US", {
@@ -50,7 +53,7 @@ function ArchiveMonthGroups({
                 <li key={event.slug}>
                   <Link
                     href={`/depeg/${event.slug}/`}
-                    className="pharos-focus-ring flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-2.5 text-sm hover:bg-muted/40"
+                    className="pharos-focus-ring flex flex-wrap items-baseline gap-x-2 gap-y-1 px-4 py-2.5 text-sm hover:bg-muted/40 sm:gap-x-3"
                   >
                     <span className="pharos-numeric text-xs text-muted-foreground">
                       {formatIsoDate(event.startedAt)}
@@ -58,11 +61,16 @@ function ArchiveMonthGroups({
                     <span className="font-semibold text-foreground">
                       {event.symbol}
                     </span>
+                    {isDisputedAuditVerdict(event.provenance?.auditVerdict) ? (
+                      <span className={`${AUDIT_BADGE_CLASS} ${DEPEG_AUDIT_DISPUTED_BADGE.className}`}>
+                        {DEPEG_AUDIT_DISPUTED_BADGE.label}
+                      </span>
+                    ) : null}
                     <span className={`pharos-numeric text-xs ${deviationColorClass(peakBps)}`}>
                       {direction} {formatDeviationBps(peakBps)}
                     </span>
                     <span className="ml-auto text-xs text-muted-foreground hover:text-foreground">
-                      View page →
+                      <span className="hidden sm:inline">View page </span>→
                     </span>
                   </Link>
                 </li>

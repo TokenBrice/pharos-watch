@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.64",
+    "title": "Uncorroborated DefiLlama quotes at exactly the peg reference are rejected",
+    "date": "2026-10-31",
+    "effectiveAt": 1793491200,
+    "summary": "A DefiLlama list or contract quote exactly equal to the peg reference with no admitted source from another family is a flat default, not an observed price, so publication rejects it and the row stays unavailable.",
+    "impact": [
+      "Publication rejects such a quote as exact_par_list_price_requires_corroboration across primary, fallback and final validation; the contract lane shares the DefiLlama family and cannot corroborate the list.",
+      "A corroborated exact-reference quote is unchanged. At release this moves aid-gaib, stbt-matrixdock and untracked DefiLlama asset 432 from a single-source 1.0 to a missing price.",
+      "Thresholds, weights and the other admission gates are unchanged. Activation is 2026-11-01 00:00 UTC (1793491200)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.63",
     "title": "Retired the RedStone price lane",
     "date": "2026-10-30",

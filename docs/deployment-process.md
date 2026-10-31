@@ -84,6 +84,8 @@ Acceptance is not deployment success: correlate the exact activated public versi
 
 Validation behavior and the focused → owning Vitest → optional PR feedback → artifact diagnosis hierarchy are owned by [Testing: Commands](./testing.md#commands) and [smallest adequate checks](./testing.md#smallest-adequate-check-per-area).
 
+Local `npm run build` typechecks inside Next and can exhaust the default Node heap; the Pages release build skips that duplicate with `PHAROS_RELEASE_PR_TYPECHECKED=1` after separate typecheck lanes. Locally, either raise the heap (`NODE_OPTIONS=--max-old-space-size=8192 npm run build`) or run `npm run typecheck` and build with `PHAROS_RELEASE_PR_TYPECHECKED=1`.
+
 ## Yield History Cleanup Windows
 
 Release-integrated cleanup follows the [Yield writer-pause remediation procedure](./runbooks/yield-history-cleanup-writer-pause.md#remediation), including protection-first deployment, writer pause/lease proof, complete version-3 two-tier export, local restore rehearsal, bounded cleanup and next-cycle readback. Do not duplicate or bypass those mutation gates here.

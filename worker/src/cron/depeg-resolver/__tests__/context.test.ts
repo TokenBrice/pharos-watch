@@ -35,7 +35,9 @@ describe("DDR historical context", () => {
         await db.batch(mintBurnScanCoverageStatements(db, {
           configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config),
           chainId: config.chain.chainId, fromBlock: 1, toBlock: 2, fromTimestamp: end - 7 * 86400,
-          toTimestamp: end, finalizedBlock: 2, acceptedAt: NOW_SEC,
+          // A fresh frontier keeps the leg out of the post-admission stall gate; this
+          // test owns pending/disabled exclusion, not frontier freshness.
+          toTimestamp: NOW_SEC, finalizedBlock: 2, acceptedAt: NOW_SEC,
         }));
       }
       const insert = sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,

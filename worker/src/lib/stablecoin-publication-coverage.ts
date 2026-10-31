@@ -208,6 +208,39 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     ],
     reviewedAt: Date.UTC(2026, 9, 28, 9, 52) / 1000,
     expiresAt: Date.UTC(2026, 10, 4, 9, 52) / 1000,
+  },  {
+    stablecoinId: "aid-gaib",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-10-31 12:37 UTC with fresh GETs after Pricing v6.64 rejected AID's only admitted quote, a DefiLlama list price of exactly 1. DefiLlama coins also returns a flat 1 for both coingecko:gaib-aid and the Ethereum contract. CoinGecko gaib-aid reports $0.995393 with $90.47 of 24h volume, dated 2026-10-28 19:20:30 UTC (about 65 hours old), and its tickers are empty. Exact-contract DexScreener reads on Ethereum, Arbitrum, Base and BSC return no pairs. GeckoTerminal lists 20 Ethereum pools; the largest, Curve AID/USDC 0xbe739fe57b9862e9cf17835687e8c008cf8e121c, holds $1,423.29 with zero 24h volume, far below the unchanged $50K per-pool floor. No admissible market was found. Keep AID active and the price missing; all admission gates preserved. Owner ops establishes an admitted observed market or re-reviews by this review's expiry, 2026-11-14 12:37 UTC.",
+    sources: [
+      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
+      "https://coins.llama.fi/prices/current/coingecko:gaib-aid,ethereum:0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+      "https://api.coingecko.com/api/v3/simple/price?ids=gaib-aid&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.coingecko.com/api/v3/coins/gaib-aid/tickers",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+      "https://api.dexscreener.com/token-pairs/v1/arbitrum/0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+      "https://api.dexscreener.com/token-pairs/v1/base/0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+      "https://api.dexscreener.com/token-pairs/v1/bsc/0x18f52b3fb465118731d9e0d276d4eb3599d57596",
+      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x18f52b3fb465118731d9e0d276d4eb3599d57596/pools",
+    ],
+    reviewedAt: Date.UTC(2026, 9, 31, 12, 37) / 1000,
+    expiresAt: Date.UTC(2026, 10, 14, 12, 37) / 1000,
+  },
+  {
+    stablecoinId: "stbt-matrixdock",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-10-31 12:37 UTC with fresh GETs after Pricing v6.64 rejected STBT's only admitted quote, a DefiLlama contract price of exactly 1 for Ethereum 0x530824da86689c9c17cdc2871ff29b058345b44a. Pharos tracks no CoinGecko or DefiLlama list id for STBT, and a CoinGecko search for STBT returns only unrelated STBTC assets. An observed market does exist: GeckoTerminal prices STBT at $0.98022 with $49,548 of 24h volume, led by Curve STBT/3Crv 0x892d701d94a43bdbcb5ea28891daca2fa22a690b ($407,738 reserves, $0.9802, $49,505 24h volume). No Pharos lane reads it: the inline GeckoTerminal probe is disabled at the Worker memory boundary, and the exact-contract DexScreener read returns only two Curve pairs below the $50K floor ($21,579 at $0.9922 and $93 at $0.9900). Keep STBT active and the price missing; all admission gates preserved. Owner ops decides by this review's expiry, 2026-11-14 12:37 UTC, whether to admit the Curve STBT/3Crv pool through a reviewed exact-pool adapter, which would publish a market price about 2% below par.",
+    sources: [
+      "https://coins.llama.fi/prices/current/ethereum:0x530824da86689c9c17cdc2871ff29b058345b44a",
+      "https://api.coingecko.com/api/v3/search?query=STBT",
+      "https://api.geckoterminal.com/api/v2/simple/networks/eth/token_price/0x530824da86689c9c17cdc2871ff29b058345b44a?include_24hr_vol=true&include_total_reserve_in_usd=true",
+      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x530824da86689c9c17cdc2871ff29b058345b44a/pools",
+      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x530824da86689c9c17cdc2871ff29b058345b44a",
+    ],
+    reviewedAt: Date.UTC(2026, 9, 31, 12, 37) / 1000,
+    expiresAt: Date.UTC(2026, 10, 14, 12, 37) / 1000,
   },
 ];
 

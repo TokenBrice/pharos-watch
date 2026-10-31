@@ -262,6 +262,9 @@ Retained bodies without the additive field show “maturing unavailable,” not 
 - `DepegEventArchivePreview` on `/depeg/` shows the latest month of permanent event pages and links to
   `/depeg/archive/`.
 - `/depeg/archive/` is the complete server-rendered internal link hub for every permanent event page.
+  A row whose ledger provenance `auditVerdict` is `disputed` or `false_positive` carries a small
+  `Disputed` badge with no sub-text; every other verdict, and a legacy null provenance, stays unbadged.
+  `DISPUTED_AUDIT_VERDICTS` in `shared/types/depeg-audit.ts` owns that set.
 
 Indexability does not depend on the inline archive: `generateStaticParams()` in
 `src/app/depeg/[event]/page.tsx`, the per-event entries in `src/app/sitemap.ts`, and the archive

@@ -47,10 +47,14 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
     evidence.cexStatus === "confirm" ||
     evidence.poolStatus === "confirm";
   const isNativeOrigin = isNativeOriginPending(pendingState.reason);
+  // A native-origin candidate's event prices are native samples; a withheld
+  // sample cannot be promoted from any other family.
+  const nativeOriginSampleWithheld = isNativeOrigin && plan.nativeQuoteImplausibility != null;
   const hasSourceConfirmation =
-    primaryConfirmationSources.length >= (isNativeOrigin ? 1 : 2) ||
-    hasHardConfirmation ||
-    (evidence.offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence"));
+    !nativeOriginSampleWithheld &&
+    (primaryConfirmationSources.length >= (isNativeOrigin ? 1 : 2) ||
+      hasHardConfirmation ||
+      (evidence.offchainStatus === "confirm" && !parsePendingReason(pendingState.reason).has("low-confidence")));
   if (temporalSameDirectionConfirmed && hasSourceConfirmation) {
     const currentSignal =
       authoritativePrice != null

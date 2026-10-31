@@ -37,6 +37,7 @@ function input(overrides: Partial<ConfirmationEvidenceInput> = {}): Confirmation
     threshold: 100,
     nativeSignal: null,
     nativePegQuote: undefined,
+    nativeQuoteImplausibility: null,
     nativeSourceKey: "native:usd",
     authoritativePrice: 0.94,
     primaryStatus: "insufficient" as const,

@@ -251,6 +251,67 @@ describe("validatePublishedAssetPrice — candidatePrices as a separate argument
   });
 });
 
+describe("DefiLlama exact-reference defaults", () => {
+  it("rejects a sole DefiLlama list quote at exactly the peg reference", () => {
+    expect(validatePrimaryPriceCandidate({
+      price: 1, source: "defillama-list", confidence: "single-source",
+      agreeSources: ["defillama-list"], validationContext: USD_CONTEXT,
+    })).toMatchObject({ accepted: false, reason: "exact_par_list_price_requires_corroboration" });
+  });
+
+  it("rejects a retained sole DefiLlama list price at exactly the reference", () => {
+    expect(validatePublishedAssetPrice({
+      asset: { price: 1, priceSource: "defillama", priceConfidence: "single-source", agreeSources: ["defillama"] },
+      validationContext: USD_CONTEXT,
+    })).toMatchObject({ accepted: false, reason: "exact_par_list_price_requires_corroboration" });
+  });
+
+  it("rejects a sole DefiLlama contract quote at exactly the reference", () => {
+    expect(validateFallbackPriceCandidate({
+      price: 1, source: "defillama-contract", confidence: "fallback",
+      agreeSources: ["defillama-contract"], validationContext: USD_CONTEXT,
+    })).toMatchObject({ accepted: false, reason: "exact_par_list_price_requires_corroboration" });
+  });
+
+  it("admits an exact-reference quote corroborated by another source family", () => {
+    expect(validatePrimaryPriceCandidate({
+      price: 1, source: "coingecko+defillama-list", confidence: "high",
+      agreeSources: ["coingecko", "defillama-list"], validationContext: USD_CONTEXT,
+    }).accepted).toBe(true);
+  });
+
+  it("keeps non-reference DefiLlama list quotes admitted", () => {
+    expect(validatePrimaryPriceCandidate({
+      price: 0.999, source: "defillama-list", confidence: "single-source",
+      agreeSources: ["defillama-list"], validationContext: USD_CONTEXT,
+    }).accepted).toBe(true);
+  });
+
+  it("applies to the exact non-USD peg reference", () => {
+    const phpContext: PriceValidationContext = {
+      stablecoinId: "test-php",
+      pegCurrency: "PHP",
+      pegType: "peggedPHP",
+      pegClass: "fiat_fx",
+      navToken: false,
+      tracked: true,
+    };
+    const references = {
+      rates: { peggedPHP: 0.01755 },
+      type: "fresh" as const,
+      updatedAt: 1_800_000_000,
+    };
+    expect(validatePrimaryPriceCandidate({
+      price: 0.01755, source: "defillama-list", confidence: "single-source",
+      agreeSources: ["defillama-list"], validationContext: phpContext, validationReferences: references,
+    })).toMatchObject({ accepted: false, reason: "exact_par_list_price_requires_corroboration" });
+    expect(validatePrimaryPriceCandidate({
+      price: 0.0175, source: "defillama-list", confidence: "single-source",
+      agreeSources: ["defillama-list"], validationContext: phpContext, validationReferences: references,
+    }).accepted).toBe(true);
+  });
+});
+
 describe("validatePrimaryPriceCandidate — weak fallback fixed-peg depegs", () => {
   it("accepts a legacy exact-pool display route without granting depeg authority", () => {
     const decision = validatePrimaryPriceCandidate({

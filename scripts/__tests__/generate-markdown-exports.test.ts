@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { buildMethodologyChangelogMarkdown, buildMethodologyIndexMarkdown } from "../lib/methodology-to-markdown";
@@ -11,6 +11,7 @@ import {
   renderStablecoinDetail,
 } from "../lib/markdown-renderers";
 import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
+import { MARKDOWN_FIXTURE_RELEASE } from "../lib/markdown-fixture-release";
 import { buildStablecoinFaqItems } from "../../src/components/stablecoin-detail/static-seo-content";
 import { ContractDeployments } from "../../src/components/stablecoin-detail/contract-deployments";
 import { getCurrentRedemptionConfig } from "../../src/lib/redemption-review-currency";
@@ -26,16 +27,19 @@ import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 // The parity check reads the profile fold's text rows, not its chain logos.
 vi.mock("next/image", () => ({ default: () => null }));
 
-// Pin the release grade and date so the byte fixture does not move with each data refresh.
-vi.mock("../../src/lib/datasets/public-dataset-current", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../src/lib/datasets/public-dataset-current")>()),
-  PUBLIC_DATASET_CURRENT_DATE: "2026-10-22",
-}));
-vi.mock("../../src/lib/safety-grade-snapshot", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../../src/lib/safety-grade-snapshot")>()),
-  getSnapshotSafetyAssessment: (id: string) => (id === "usdt-tether" ? { grade: "A", score: 83, bucket: "safe" } : null),
-  formatSnapshotSafetyScoreLabel: (id: string) => (id === "usdt-tether" ? "Safety Score A (83/100) as of 2026-10-22" : null),
-}));
+const fixtureWrites = vi.hoisted(() => new Map<string, string>());
+
+// The refresh script overwrites its fixtures in place; capture the bytes so a
+// test can compare them without touching the checkout.
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    writeFileSync: (path: Parameters<typeof actual.writeFileSync>[0], body: string) => {
+      fixtureWrites.set(basename(String(path)), String(body));
+    },
+  };
+});
 
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -167,7 +171,7 @@ describe("stablecoin markdown", () => {
         updatedAt: "2026-09-01",
         claimTokens: [{ token: "grade", placeholder: "{{grade}}", source: "report-card.grade", factsAsOf: "2026-09-01" }],
       },
-    });
+    }, MARKDOWN_FIXTURE_RELEASE);
     expect(md).toContain(
       "## Overview\n\nUSDT held Safety Score A (83/100) as of 2026-10-22 in Pharos's scores-latest release dataset. "
       + "The current Safety Score and live assessment are available on the interactive page.",
@@ -327,7 +331,7 @@ describe("stablecoin markdown", () => {
   });
 
   it("hands off to dated public snapshots without the gated profile endpoint", () => {
-    const md = renderStablecoinDetail("usdt-tether", {});
+    const md = renderStablecoinDetail("usdt-tether", {}, MARKDOWN_FIXTURE_RELEASE);
     expect(md).toContain(
       [
         "## Public snapshots",
@@ -406,9 +410,18 @@ describe("authored Markdown export fixtures", () => {
   it.each([
     ["changelog-index.md", () => renderChangelogIndex()],
     ["methodology-index.md", () => buildMethodologyIndexMarkdown()],
-    ["stablecoin-usdt-tether.md", () => renderStablecoinDetail("usdt-tether")],
+    ["stablecoin-usdt-tether.md", () => renderStablecoinDetail("usdt-tether", undefined, MARKDOWN_FIXTURE_RELEASE)],
   ] as const)("preserves exported bytes for %s", (name, render) => {
     expect(render()).toBe(readFileSync(new URL(`./fixtures/markdown/${name}`, import.meta.url), "utf8"));
+  });
+
+  it("refreshes the committed bytes from the pinned release clock", async () => {
+    await import("../maintenance/refresh-markdown-export-fixtures");
+    for (const name of ["changelog-index.md", "methodology-index.md", "stablecoin-usdt-tether.md"]) {
+      expect(fixtureWrites.get(name)).toBe(
+        readFileSync(new URL(`./fixtures/markdown/${name}`, import.meta.url), "utf8"),
+      );
+    }
   });
 });
 

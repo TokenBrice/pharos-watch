@@ -108,6 +108,26 @@ export function mintBurnPublicationDisabled(
     ? "shared-bucket-disabled" : null;
 }
 
+/**
+ * R8/ADR-35: an admitted leg whose accepted frontier exceeds the shared publication
+ * freshness budget leaves the common watermark instead of freezing every coin. The
+ * caller pauses the returned keys; only the existing reactivation catch-up resumes them.
+ */
+export function selectMintBurnStalledFrontiers(
+  configs: readonly MintBurnContractConfig[],
+  segments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
+  legacy: ReadonlyMap<string, { end: number }>,
+  now: number, freshnessBudgetSec: number,
+): MintBurnContractConfig[] {
+  return configs.filter((config) => {
+    const key = mintBurnConfigKey(config);
+    const proof = (segments.get(key) ?? []).filter((row) => row.dirty_hour_ts == null);
+    const frontier = Math.max(legacy.get(key)?.end ?? 0, ...proof.map((row) => row.to_timestamp));
+    // Hour-aligned like the watermark, so a leg is quarantined exactly when it alone would stale it.
+    return frontier > 0 && now - Math.floor(frontier / 3600) * 3600 > freshnessBudgetSec;
+  });
+}
+
 export function resolveMintBurnPublication(
   configs: readonly MintBurnContractConfig[], rows: readonly MintBurnAdmissionRow[],
   disabledKeys: ReadonlySet<string>, segments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
@@ -194,6 +214,17 @@ export async function persistMintBurnResumptions(db: D1Database, keys: readonly 
   await executeAtomicBatch(db, [db.prepare(`UPDATE mint_burn_publication_policy SET paused_keys = (
     SELECT json_group_array(value) FROM json_each(paused_keys)
     WHERE value NOT IN (SELECT value FROM json_each(?))
+  ) WHERE id = 1 AND disabled_keys = ?`).bind(JSON.stringify(keys), policy)]);
+}
+
+/** A stalled admitted key joins the durable pause so proof alone cannot re-admit it. */
+export async function persistMintBurnQuarantines(db: D1Database, keys: readonly string[], policy: string) {
+  if (keys.length === 0) return;
+  await executeAtomicBatch(db, [db.prepare(`UPDATE mint_burn_publication_policy SET paused_keys = (
+    SELECT json_group_array(value) FROM (
+      SELECT value FROM json_each(paused_keys)
+      UNION SELECT value FROM json_each(?)
+    )
   ) WHERE id = 1 AND disabled_keys = ?`).bind(JSON.stringify(keys), policy)]);
 }
 

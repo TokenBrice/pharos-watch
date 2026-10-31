@@ -26,7 +26,7 @@ import {
 import { stripTermMarkup } from "../../src/lib/term-markup";
 import { PUBLIC_DATASET_CURRENT_DATE } from "../../src/lib/datasets/public-dataset-current";
 import { getCurrentRedemptionConfig } from "../../src/lib/redemption-review-currency";
-import { formatSnapshotSafetyScoreLabel } from "../../src/lib/safety-grade-snapshot";
+import { formatSnapshotSafetyScoreLabel, type SnapshotReleasePin } from "../../src/lib/safety-grade-snapshot";
 import { buildStablecoinFaqItems } from "../../src/components/stablecoin-detail/static-seo-content";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type {
@@ -150,6 +150,7 @@ function renderPublicSnapshotsSection(releaseDate: string): string {
 export function renderStablecoinDetail(
   id: string,
   summariesById: StablecoinAiSummariesById = summaries,
+  release?: SnapshotReleasePin,
 ): string {
   const coin = TRACKED_META_BY_ID.get(id);
   if (!coin) throw new Error(`Unknown stablecoin id: ${id}`);
@@ -177,7 +178,7 @@ export function renderStablecoinDetail(
 
   // Lead with the dated release grade (the same source as the profile FAQ).
   // Markdown never hydrates, so do not publish summary claims without live inputs.
-  const scoreLabel = isActiveStablecoinMeta(coin) ? formatSnapshotSafetyScoreLabel(id) : null;
+  const scoreLabel = isActiveStablecoinMeta(coin) ? formatSnapshotSafetyScoreLabel(id, release) : null;
   const gradeSentence = scoreLabel ? `${coin.symbol} held ${scoreLabel} in Pharos's scores-latest release dataset.` : null;
   const resolvedSummary = summary?.text && hasAvailableAiSummaryClaims(summary.text, summary.claimTokens)
     ? stripTermMarkup(resolveAiSummaryClaims(summary.text, summary.claimTokens).text)
@@ -209,7 +210,7 @@ export function renderStablecoinDetail(
     parts.push(
       [
         "## Quick answers",
-        ...buildStablecoinFaqItems(coin).map((item) => `### ${item.question}\n\n${item.answer}`),
+        ...buildStablecoinFaqItems(coin, release).map((item) => `### ${item.question}\n\n${item.answer}`),
       ].join("\n\n"),
     );
   }
@@ -242,7 +243,7 @@ export function renderStablecoinDetail(
       `## Listing Status\n\n${coin.listingStatusReview?.reason ?? "This record is outside Pharos's active universe."} Current live monitoring is disabled; the canonical profile remains available for historical reference.`,
     );
   } else {
-    parts.push(renderPublicSnapshotsSection(PUBLIC_DATASET_CURRENT_DATE));
+    parts.push(renderPublicSnapshotsSection(release?.snapshotDate ?? PUBLIC_DATASET_CURRENT_DATE));
   }
 
   return `${parts.join("\n\n")}\n`;

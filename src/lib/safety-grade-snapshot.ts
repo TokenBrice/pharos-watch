@@ -54,6 +54,16 @@ export interface SnapshotSafetyAssessment {
   bucket: Exclude<V9GradeRiskBucket, "unavailable">;
 }
 
+/**
+ * A pinned release view for deterministic static renders (the authored
+ * Markdown byte fixtures): the mirror date and per-coin snapshot grades to
+ * render instead of the generated current ones. Production renders omit it.
+ */
+export interface SnapshotReleasePin {
+  readonly snapshotDate: string;
+  readonly assessments: Readonly<Record<string, SnapshotSafetyAssessment>>;
+}
+
 const SCORES_LATEST_DATASET = PUBLIC_DATASET_CURRENT_EXPORTS["scores-latest"] as ScoresLatestDataset;
 
 function assertCurrentPublicDatasetFresh(
@@ -161,12 +171,18 @@ export function getScoresLatestSnapshotRow(stablecoinId: string): ScoresLatestSn
 /**
  * "Safety Score A (83/100) as of 2026-10-22": the dated grade from the same
  * scores-latest mirror and release date as the profile FAQ. Null when unrated.
+ * A release pin renders the fixture's fixed date and grades instead.
  */
-export function formatSnapshotSafetyScoreLabel(stablecoinId: string): string | null {
-  const assessment = getSnapshotSafetyAssessment(stablecoinId);
+export function formatSnapshotSafetyScoreLabel(
+  stablecoinId: string,
+  release?: SnapshotReleasePin,
+): string | null {
+  const assessment = release
+    ? (release.assessments[stablecoinId] ?? null)
+    : getSnapshotSafetyAssessment(stablecoinId);
   if (!assessment) return null;
   const score = assessment.score !== null ? ` (${assessment.score}/100)` : "";
-  return `Safety Score ${assessment.grade}${score} as of ${PUBLIC_DATASET_CURRENT_DATE}`;
+  return `Safety Score ${assessment.grade}${score} as of ${release?.snapshotDate ?? PUBLIC_DATASET_CURRENT_DATE}`;
 }
 
 // --- Bounded Safety Scores preview -----------------------------------------
