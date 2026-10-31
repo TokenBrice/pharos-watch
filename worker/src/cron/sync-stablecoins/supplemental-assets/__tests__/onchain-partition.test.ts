@@ -3,6 +3,7 @@ import { mockRegistry } from "../../../../test-helpers/cron";
 import type * as FetchRetry from "../../../../lib/fetch-retry";
 import type * as EvmRpc from "../../../../lib/evm-rpc";
 import type * as OnchainSupply from "../onchain-supply";
+import type * as OnchainSupplyProbe from "@shared/lib/onchain-supply-probe";
 import type { PeggedAsset } from "../../enrich-prices-shared";
 import type { CoinGeckoMcapData } from "../shared";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
@@ -63,6 +64,24 @@ vi.mock("../onchain-supply", async (importOriginal) => {
       mocks.partitionRead(args[0].id, args[6]);
       return actual.fetchOnChainSupplyPartition(...args);
     },
+  };
+});
+// Synthetic four-leg rosters isolate the partition stage's leg bound without
+// depending on a real asset's chain list or escrow policy.
+vi.mock("@shared/lib/onchain-supply-probe", async (importOriginal) => {
+  const actual = await importOriginal<typeof OnchainSupplyProbe>();
+  const fixtureChains = ["ethereum", "base", "arbitrum", "optimism"] as const;
+  return {
+    ...actual,
+    selectCuratedAggregateOnchainSupplyProbeContracts: (
+      meta: Parameters<typeof actual.selectCuratedAggregateOnchainSupplyProbeContracts>[0],
+    ) =>
+      meta.id.startsWith("leg-fixture-")
+        ? fixtureChains.map((chain, index) => ({
+          config: { chain },
+          contract: { chain, address: `0x${(index + 1).toString(16).padStart(40, "0")}`, decimals: 18 },
+        }))
+        : actual.selectCuratedAggregateOnchainSupplyProbeContracts(meta),
   };
 });
 
@@ -529,6 +548,56 @@ describe("CoinGecko on-chain share partitions", () => {
           reason: "deadline-exhausted", deadlineSkippedCount: 1, partitionCandidateCount: fixtureMetas.length, partitionStartOffset: offset,
         }),
       }));
+  });
+
+  it("completes four multi-leg candidates inside the budget at the four-read bound", async () => {
+    const fixtureChains = ["ethereum", "base", "arbitrum", "optimism"];
+    const metas = Array.from({ length: 4 }, (_unused, index) => ({
+      ...ftMeta,
+      id: `leg-fixture-${index}`,
+      geckoId: `leg-fixture-${index}`,
+      contracts: fixtureChains.map((chain, leg) => ({
+        chain,
+        address: `0x${(leg + 1).toString(16).padStart(40, "0")}`,
+        decimals: 18,
+      })),
+    }));
+    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
+    const legLatencyMs = 4_000;
+    let inFlight = 0;
+    let peakInFlight = 0;
+    mocks.read.mockImplementation(async (_chain, _meta, signal: AbortSignal) => {
+      inFlight++;
+      peakInFlight = Math.max(peakInFlight, inFlight);
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(resolve, legLatencyMs);
+          signal.addEventListener("abort", () => {
+            clearTimeout(timer);
+            reject(signal.reason);
+          }, { once: true });
+        });
+        return 25n * 10n ** 18n;
+      } finally {
+        inFlight--;
+      }
+    });
+    const report = vi.fn<(summary: OnchainPartitionSummary) => void>();
+    // Four legs per candidate: serial legs take 16 s per candidate, so the
+    // second candidate pair would exceed the 30 s budget; one probe leg then
+    // paired legs take 12 s per candidate.
+    const pending = fetchFiatCoinGeckoTokens(
+      Object.assign({}, ...metas.map((meta) => cgData(100, 1, meta))),
+      undefined, undefined, undefined, undefined, undefined, undefined, report,
+    );
+    await vi.advanceTimersByTimeAsync(ONCHAIN_PARTITION_STAGE_BUDGET_MS);
+    const assets = await pending;
+    expect(report).toHaveBeenLastCalledWith(expect.objectContaining({
+      candidates: metas.length, entered: metas.length, deadlineSkipped: 0, unreadable: 0,
+    }));
+    expect(peakInFlight).toBe(4); // Two candidate slots, two legs each.
+    expect(assets).toHaveLength(metas.length);
+    for (const asset of assets) expect(asset.chainPartition?.admission).toBe("entered");
   });
 
   it.each([false, true])("carries a deadline-skipped coin's shares only before expiry (expired %s)", async (expired) => {
