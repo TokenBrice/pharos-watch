@@ -498,20 +498,25 @@ export function getDexDiscoveryProviders(chain: string, address?: string): DexDi
  * Whether a persisted census provider set is contradicted by the live registry.
  *
  * A census row's provider set is a snapshot of a *registry* fact, not an
- * observation: an empty set means "no registered provider supported this chain
- * when the row was written". When discovery coverage for a chain is added, rows
- * written before it keep asserting an empty provider set until the crawl
- * rotation reaches that deployment again — for a windowed footprint that is
- * several runs. The registry, not the row, owns which providers exist, so a
- * contradicted row is superseded metadata awaiting a re-crawl rather than a
- * standing method limit.
+ * observation: every provider it names was registered for the deployment when
+ * the row was written, and an empty set means "no registered provider supported
+ * this chain then". When discovery coverage for a chain is added, rows written
+ * before it keep asserting an empty provider set until the crawl rotation
+ * reaches that deployment again — for a windowed footprint that is several
+ * runs. The registry, not the row, owns which providers exist, so a row naming
+ * a provider the registry no longer resolves (or naming none where coverage now
+ * exists) is superseded metadata awaiting a re-crawl rather than evidence about
+ * the deployment.
  */
 export function isCensusProviderSetSupersededByRegistry(
   chain: string,
   address: string | undefined,
-  persistedProviderCount: number,
+  persistedProviders: readonly string[],
 ): boolean {
-  return persistedProviderCount === 0 && getDexDiscoveryProviders(chain, address).length > 0;
+  const liveProviders = new Set<string>(getDexDiscoveryProviders(chain, address));
+  return persistedProviders.length === 0
+    ? liveProviders.size > 0
+    : persistedProviders.some((provider) => !liveProviders.has(provider));
 }
 
 export function getActiveDexCoverageWaiver(

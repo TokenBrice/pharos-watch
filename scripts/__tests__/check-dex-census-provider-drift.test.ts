@@ -48,6 +48,21 @@ describe("DEX census provider drift input admission", () => {
     }
   });
 
+  it("flags a persisted provider the live registry no longer resolves for the deployment", () => {
+    const tracked = new Set([`usdc-circle|ethereum:${censusRow.contract_address}`]);
+    const report = findDexCensusProviderDrift(extractCensusRows([
+      { ...censusRow, provider_set_json: '["horizon"]' },
+    ]), tracked);
+
+    expect(report).toMatchObject({ scannedRowCount: 1, trackedRowCount: 1 });
+    expect(report.drift).toHaveLength(1);
+    expect(report.drift[0]).toMatchObject({
+      persistedProviders: ["horizon"],
+      liveProviders: expect.arrayContaining(["curve"]),
+    });
+    expect(report.drift[0]?.liveProviders).not.toContain("horizon");
+  });
+
   it("reports zero-row CLI coverage but fails invalid input before emitting evaluation output", () => {
     const dir = mkdtempSync(join(tmpdir(), "dex-census-admission-"));
     const path = join(dir, "rows.json");

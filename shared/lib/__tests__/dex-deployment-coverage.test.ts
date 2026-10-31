@@ -103,7 +103,7 @@ describe("DEX deployment coverage ownership", () => {
     expect(deployment).toMatchObject({ address, decimals: 5 });
     expect(getDexDiscoveryProviders("stellar", address)).toEqual(["aquarius"]);
     expect(getDexDiscoveryProviders("stellar", `chfSAFO-${address}`)).toEqual(["aquarius"]);
-    expect(isCensusProviderSetSupersededByRegistry("stellar", address, 0)).toBe(true);
+    expect(isCensusProviderSetSupersededByRegistry("stellar", address, [])).toBe(true);
     expect(getDexDiscoveryProviders("ethereum", address)).not.toContain("aquarius");
   });
 
@@ -212,15 +212,29 @@ describe("DEX deployment coverage ownership", () => {
     expect(getHorizonDiscoveryAsset(soroban, "EURSPKCC")).toBeNull();
   });
 
-  it("treats an empty persisted provider set as superseded only where the registry now resolves a provider", () => {
+  it("supersedes persisted provider sets the live registry no longer resolves", () => {
     const soroban = "CDGSC6BA4TCAOVSFQCUEHDMOIIHYYVNYBT6YEARS4MX3ITAHUINVGQHX";
 
     // Pre-Aquarius Soroban row: the registry resolves a provider today.
-    expect(isCensusProviderSetSupersededByRegistry("stellar", soroban, 0)).toBe(true);
+    expect(isCensusProviderSetSupersededByRegistry("stellar", soroban, [])).toBe(true);
     // A chain that still has no registered provider stays a standing scope limit.
-    expect(isCensusProviderSetSupersededByRegistry("secret", "secret1unsupported", 0)).toBe(false);
-    // A row that recorded providers is never superseded by this rule.
-    expect(isCensusProviderSetSupersededByRegistry("stellar", soroban, 1)).toBe(false);
+    expect(isCensusProviderSetSupersededByRegistry("secret", "secret1unsupported", [])).toBe(false);
+    // A row whose recorded provider still resolves for the identity is current.
+    expect(isCensusProviderSetSupersededByRegistry("stellar", soroban, ["aquarius"])).toBe(false);
+    // A provider the registry no longer resolves for this identity is stale.
+    expect(isCensusProviderSetSupersededByRegistry("stellar", soroban, ["horizon"])).toBe(true);
+    // Kava's native bank denom lost its EVM-namespace providers, so a row
+    // certified by one of them cannot keep claiming a reviewed empty scope.
+    expect(
+      isCensusProviderSetSupersededByRegistry("kava", "usdx", [
+        "coingecko",
+        "geckoterminal",
+        "dexscreener",
+        "curve",
+        "kava-swap",
+      ]),
+    ).toBe(true);
+    expect(isCensusProviderSetSupersededByRegistry("kava", "usdx", ["curve", "kava-swap"])).toBe(false);
   });
 
   it("gives every exclusively inaccessible coin an owned, unexpired waiver", () => {

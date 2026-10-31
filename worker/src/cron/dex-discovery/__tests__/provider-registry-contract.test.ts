@@ -23,7 +23,7 @@ describe("discovery provider registry", () => {
     expect(getGeckoTerminalDiscoveryTarget("arc", address)).toEqual({ network: "arc", address });
     expect(getDexDiscoveryProviders("arc", address)).toEqual(["geckoterminal"]);
     expect(estimateDeploymentCrawlCostMs("arc", address)).toBe(2_800);
-    expect(isCensusProviderSetSupersededByRegistry("arc", address, 0)).toBe(true);
+    expect(isCensusProviderSetSupersededByRegistry("arc", address, [])).toBe(true);
   });
 
 });
