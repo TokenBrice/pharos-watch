@@ -394,6 +394,34 @@ describe("historical mint/burn price repair", () => {
     }
   });
 
+  it("recovers and rebuilds through a nonreturning operator D1 client", async () => {
+    const db = makeSqliteD1();
+    try {
+      const timestamp = 1_800_000_000;
+      insertEvent(db, { id: "event-1", stablecoinId: "usdt-tether", timestamp });
+      // The operator backfill facade rejects RETURNING writes in its batches.
+      const prepare = db.prepare.bind(db);
+      db.prepare = ((sql: string) => {
+        if (/\bRETURNING\b/i.test(sql)) throw new Error("backfill-d1-batch-requires-nonreturning-writes");
+        return prepare(sql);
+      }) as typeof db.prepare;
+      const result = await repairHistoricalMintBurnPrices(db, {
+        dryRun: false,
+        operatorRunId: "operator-run",
+        timeTravelBookmark: "operator-bookmark",
+        sourceLoader: availableLoader(0.997, timestamp - 60),
+        nowSec: timestamp + DAY,
+      });
+      expect(result).toMatchObject({
+        recovered: 1,
+        aggregateCoinsRebuilt: ["usdt-tether"],
+        aggregateVerificationPassed: true,
+      });
+    } finally {
+      db.close();
+    }
+  });
+
   it("resumes an interrupted pending-aggregate repair without refetching historical prices", async () => {
     const db = makeSqliteD1();
     try {
