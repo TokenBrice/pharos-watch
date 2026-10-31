@@ -149,6 +149,12 @@ function evaluatePreparedV9ContagionScenario(
     const { gaps, ...remainingFacts } = asset;
     collect(remainingFacts);
     asset.gaps = gaps.filter((gap) => references.has(gap.gapId));
+    // A retired gap can be an evidence row's only citation; strict admission
+    // rejects that orphan, so keep only rows a surviving fact, cause or gap cites.
+    references.clear();
+    const { evidence, ...citingFacts } = asset;
+    collect(citingFacts);
+    asset.evidence = evidence.filter((row) => references.has(row.evidenceId));
   }
   const failures = new Map<string, string>();
   // Projection-only shocks do not change any fact or its digest.

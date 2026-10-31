@@ -13,13 +13,13 @@ import {
 import {
   LANE_INCIDENT_CERTIFICATE_MAX_WINDOWS_PER_GROUP,
   laneIncidentCertificateCacheKey,
-  laneIncidentCertificateScreeningSetId,
   loadLaneIncidentCertificate,
   loadLaneIncidentCertificates,
   persistLaneIncidentCertificates,
   resolveLaneIncidentCertificateMaxAgeSec,
   type LaneIncidentCertificateRead,
 } from "../safety-score-v9/lane-incident-certificate-store";
+import { laneIncidentCertificateScreeningSetId } from "@shared/lib/safety-score-v9/lane-screening-derivation";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
