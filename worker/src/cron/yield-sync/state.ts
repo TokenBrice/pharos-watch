@@ -102,6 +102,7 @@ export async function getPriceDerivedApy(
          FROM supply_history
          WHERE stablecoin_id = ?
            AND price IS NOT NULL
+           AND price_observed_at IS NOT NULL
            AND snapshot_date BETWEEN ? AND ?
          ORDER BY snapshot_date ASC
          LIMIT 1`,
