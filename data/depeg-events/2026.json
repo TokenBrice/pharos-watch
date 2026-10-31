@@ -1,5 +1,38 @@
 [
   {
+    "id": 91034,
+    "stablecoinId": "usdf-falcon",
+    "symbol": "USDf",
+    "pegType": "peggedUSD",
+    "direction": "below",
+    "peakDeviationBps": -109,
+    "startedAt": 1793418780,
+    "endedAt": null,
+    "startPrice": 0.9897815795524163,
+    "peakPrice": 0.9891232061871509,
+    "recoveryPrice": null,
+    "pegReference": 1,
+    "source": "live",
+    "constituentEventCount": 1,
+    "confirmationSources": "temporal:15m+primary:coingecko+primary:protocol:curve",
+    "pendingReason": "confirmation-window+large-cap",
+    "closeReason": null,
+    "priceCoverage": {
+      "intervals": [
+        [
+          1793420237,
+          1793439966
+        ]
+      ],
+      "atParIntervals": [],
+      "lastObservationKind": "trusted-off-peg",
+      "lastTrustedObservationAt": 1793439966,
+      "gapStartedAt": null
+    },
+    "provenance": null,
+    "slug": "usdf-2026-10-31"
+  },
+  {
     "id": 90814,
     "stablecoinId": "xaut-tether",
     "symbol": "XAUT",
@@ -126,13 +159,57 @@
         ],
         [
           1793394080,
-          1793395907
+          1793399477
+        ],
+        [
+          1793401304,
+          1793403122
+        ],
+        [
+          1793404896,
+          1793406697
+        ],
+        [
+          1793408221,
+          1793410345
+        ],
+        [
+          1793412109,
+          1793413906
+        ],
+        [
+          1793415740,
+          1793417513
+        ],
+        [
+          1793418780,
+          1793421133
+        ],
+        [
+          1793422937,
+          1793424704
+        ],
+        [
+          1793426465,
+          1793428269
+        ],
+        [
+          1793430071,
+          1793431855
+        ],
+        [
+          1793433687,
+          1793435527
+        ],
+        [
+          1793437298,
+          1793439185
         ]
       ],
       "atParIntervals": [],
-      "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793395907,
-      "gapStartedAt": null
+      "lastObservationKind": "blind",
+      "lastTrustedObservationAt": 1793439185,
+      "gapStartedAt": 1793439966
     },
     "provenance": null,
     "slug": "lusd-2026-10-29"
@@ -181,11 +258,11 @@
     "symbol": "apxUSD",
     "pegType": "peggedUSD",
     "direction": "below",
-    "peakDeviationBps": -122,
+    "peakDeviationBps": -132,
     "startedAt": 1793244689,
     "endedAt": null,
     "startPrice": 0.9899094738906712,
-    "peakPrice": 0.9877582681852081,
+    "peakPrice": 0.9867882867640353,
     "recoveryPrice": null,
     "pegReference": 1,
     "source": "live",
@@ -197,12 +274,20 @@
       "intervals": [
         [
           1793368900,
-          1793395907
+          1793406697
+        ],
+        [
+          1793408221,
+          1793417513
+        ],
+        [
+          1793418780,
+          1793439966
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793395907,
+      "lastTrustedObservationAt": 1793439966,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -216,16 +301,16 @@
     "direction": "below",
     "peakDeviationBps": -217,
     "startedAt": 1792704668,
-    "endedAt": null,
+    "endedAt": 1793409400,
     "startPrice": 0.9860070491550751,
     "peakPrice": 0.9782724686028835,
-    "recoveryPrice": null,
+    "recoveryPrice": 1.0003010972648214,
     "pegReference": 1,
     "source": "live",
     "constituentEventCount": 1,
     "confirmationSources": "temporal:15m+pool:curve:cg_onchain+pool:curve:dl",
     "pendingReason": "confirmation-window+low-confidence",
-    "closeReason": null,
+    "closeReason": "recovered-primary",
     "priceCoverage": {
       "intervals": [
         [
@@ -233,9 +318,14 @@
           1792705601
         ]
       ],
-      "atParIntervals": [],
-      "lastObservationKind": "blind",
-      "lastTrustedObservationAt": 1792705601,
+      "atParIntervals": [
+        [
+          1793408221,
+          1793409400
+        ]
+      ],
+      "lastObservationKind": "trusted-at-par",
+      "lastTrustedObservationAt": 1793409400,
       "gapStartedAt": 1792706501
     },
     "provenance": null,
@@ -3454,11 +3544,24 @@
     "pendingReason": "confirmation-window+low-confidence",
     "closeReason": null,
     "priceCoverage": {
-      "intervals": [],
+      "intervals": [
+        [
+          1793408221,
+          1793417513
+        ],
+        [
+          1793418780,
+          1793432808
+        ],
+        [
+          1793436380,
+          1793439966
+        ]
+      ],
       "atParIntervals": [],
-      "lastObservationKind": "blind",
-      "lastTrustedObservationAt": null,
-      "gapStartedAt": 1791040635
+      "lastObservationKind": "trusted-off-peg",
+      "lastTrustedObservationAt": 1793439966,
+      "gapStartedAt": null
     },
     "provenance": null,
     "slug": "musd-2026-08-22"
@@ -3875,11 +3978,48 @@
     "pendingReason": "confirmation-window+low-confidence",
     "closeReason": null,
     "priceCoverage": {
-      "intervals": [],
+      "intervals": [
+        [
+          1793408221,
+          1793410345
+        ],
+        [
+          1793412109,
+          1793413906
+        ],
+        [
+          1793415740,
+          1793417513
+        ],
+        [
+          1793418780,
+          1793421133
+        ],
+        [
+          1793422937,
+          1793424704
+        ],
+        [
+          1793426465,
+          1793428269
+        ],
+        [
+          1793430071,
+          1793431855
+        ],
+        [
+          1793433687,
+          1793435527
+        ],
+        [
+          1793437298,
+          1793439185
+        ]
+      ],
       "atParIntervals": [],
       "lastObservationKind": "blind",
-      "lastTrustedObservationAt": null,
-      "gapStartedAt": 1791040635
+      "lastTrustedObservationAt": 1793439185,
+      "gapStartedAt": 1793439966
     },
     "provenance": null,
     "slug": "reusd-2026-08-06"
@@ -4480,12 +4620,20 @@
         ],
         [
           1793307733,
-          1793395907
+          1793406697
+        ],
+        [
+          1793408221,
+          1793417513
+        ],
+        [
+          1793418780,
+          1793439966
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793395907,
+      "lastTrustedObservationAt": 1793439966,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -4837,12 +4985,24 @@
         ],
         [
           1793395907,
-          1793395907
+          1793396851
+        ],
+        [
+          1793398604,
+          1793406697
+        ],
+        [
+          1793408221,
+          1793417513
+        ],
+        [
+          1793418780,
+          1793439966
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793395907,
+      "lastTrustedObservationAt": 1793439966,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -5458,12 +5618,24 @@
         ],
         [
           1793338265,
-          1793395907
+          1793402175
+        ],
+        [
+          1793403956,
+          1793406697
+        ],
+        [
+          1793408221,
+          1793417513
+        ],
+        [
+          1793418780,
+          1793439966
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793395907,
+      "lastTrustedObservationAt": 1793439966,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -6047,12 +6219,20 @@
         ],
         [
           1793288308,
-          1793395907
+          1793406697
+        ],
+        [
+          1793408221,
+          1793417513
+        ],
+        [
+          1793418780,
+          1793439966
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793395907,
+      "lastTrustedObservationAt": 1793439966,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -11441,13 +11621,57 @@
         ],
         [
           1793394080,
-          1793395907
+          1793399477
+        ],
+        [
+          1793401304,
+          1793403122
+        ],
+        [
+          1793404896,
+          1793406697
+        ],
+        [
+          1793408221,
+          1793410345
+        ],
+        [
+          1793412109,
+          1793413906
+        ],
+        [
+          1793415740,
+          1793417513
+        ],
+        [
+          1793418780,
+          1793421133
+        ],
+        [
+          1793422937,
+          1793424704
+        ],
+        [
+          1793426465,
+          1793428269
+        ],
+        [
+          1793430071,
+          1793431855
+        ],
+        [
+          1793433687,
+          1793435527
+        ],
+        [
+          1793437298,
+          1793439185
         ]
       ],
       "atParIntervals": [],
-      "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793395907,
-      "gapStartedAt": null
+      "lastObservationKind": "blind",
+      "lastTrustedObservationAt": 1793439185,
+      "gapStartedAt": 1793439966
     },
     "provenance": null,
     "slug": "alusd-2026-05-01-down-89786"
@@ -21865,28 +22089,6 @@
     "slug": "xaum-2026-03-19-up-87901"
   },
   {
-    "id": 87900,
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -4049,
-    "startedAt": 1773925231,
-    "endedAt": 1773963928,
-    "startPrice": 0.6028719917013058,
-    "peakPrice": 0.5950584418932542,
-    "recoveryPrice": 1.001,
-    "pegReference": 0.9993544999999999,
-    "source": "live",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "pusd-2026-03-19-down-87900"
-  },
-  {
     "id": 87896,
     "stablecoinId": "kag-kinesis",
     "symbol": "KAG",
@@ -21995,28 +22197,6 @@
     "priceCoverage": null,
     "provenance": null,
     "slug": "eure-2026-03-19-down-87888"
-  },
-  {
-    "id": 87892,
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -3975,
-    "startedAt": 1773916288,
-    "endedAt": 1773918987,
-    "startPrice": 0.6023276172701832,
-    "peakPrice": 0.6023276172701832,
-    "recoveryPrice": 1,
-    "pegReference": 0.9997846385212021,
-    "source": "live",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "pusd-2026-03-19-down-87892"
   },
   {
     "id": 87891,
@@ -22391,28 +22571,6 @@
     "priceCoverage": null,
     "provenance": null,
     "slug": "xaum-2026-03-19-up-87871"
-  },
-  {
-    "id": 87870,
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -3976,
-    "startedAt": 1773883908,
-    "endedAt": 1773911788,
-    "startPrice": 0.6134577258423317,
-    "peakPrice": 0.6023276172701832,
-    "recoveryPrice": 1.001,
-    "pegReference": 0.9997630693882522,
-    "source": "live",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "pusd-2026-03-19-down-87870"
   },
   {
     "id": 87865,
@@ -25583,28 +25741,6 @@
     "slug": "reusd-2026-03-17-down-87707"
   },
   {
-    "id": 87706,
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -3727,
-    "startedAt": 1773738966,
-    "endedAt": 1773875812,
-    "startPrice": 0.7006789562923335,
-    "peakPrice": 0.6272003064952175,
-    "recoveryPrice": 1.001,
-    "pegReference": 0.999822,
-    "source": "live",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "pusd-2026-03-17"
-  },
-  {
     "id": 87703,
     "stablecoinId": "usdb-blast",
     "symbol": "USDB",
@@ -26153,28 +26289,6 @@
     "priceCoverage": null,
     "provenance": null,
     "slug": "usdaf-2026-03-16-down-87676"
-  },
-  {
-    "id": 87675,
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -3133,
-    "startedAt": 1773689496,
-    "endedAt": 1773720967,
-    "startPrice": 0.6866463538195864,
-    "peakPrice": 0.6866463538195866,
-    "recoveryPrice": 1,
-    "pegReference": 0.99964,
-    "source": "live",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "pusd-2026-03-16"
   },
   {
     "id": 87674,

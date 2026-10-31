@@ -990,15 +990,6 @@
     "startedAt": 1773927056
   },
   {
-    "slug": "pusd-2026-03-19-down-87900",
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -4049,
-    "startedAt": 1773925231
-  },
-  {
     "slug": "gyd-2026-03-19-down-87895",
     "stablecoinId": "gyd-gyroscope",
     "symbol": "GYD",
@@ -1014,15 +1005,6 @@
     "pegType": "peggedUSD",
     "direction": "below",
     "peakDeviationBps": -1133,
-    "startedAt": 1773916288
-  },
-  {
-    "slug": "pusd-2026-03-19-down-87892",
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -3975,
     "startedAt": 1773916288
   },
   {
@@ -1051,15 +1033,6 @@
     "direction": "below",
     "peakDeviationBps": -1133,
     "startedAt": 1773903657
-  },
-  {
-    "slug": "pusd-2026-03-19-down-87870",
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -3976,
-    "startedAt": 1773883908
   },
   {
     "slug": "yusd-2026-03-18",
@@ -1125,15 +1098,6 @@
     "startedAt": 1773740766
   },
   {
-    "slug": "pusd-2026-03-17",
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -3727,
-    "startedAt": 1773738966
-  },
-  {
     "slug": "dusd-2026-03-17-down-87697",
     "stablecoinId": "dusd-dtrinity",
     "symbol": "dUSD",
@@ -1159,15 +1123,6 @@
     "direction": "above",
     "peakDeviationBps": 783,
     "startedAt": 1773718262
-  },
-  {
-    "slug": "pusd-2026-03-16",
-    "stablecoinId": "pusd-plume",
-    "symbol": "pUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -3133,
-    "startedAt": 1773689496
   },
   {
     "slug": "gyen-2026-03-15",

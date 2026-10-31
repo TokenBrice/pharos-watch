@@ -86262,28 +86262,6 @@
     "slug": "gusd-2021-05-04-down-40015"
   },
   {
-    "id": 88727,
-    "stablecoinId": "idrt-rupiah-token",
-    "symbol": "IDRT",
-    "pegType": "peggedIDR",
-    "direction": "below",
-    "peakDeviationBps": -3003,
-    "startedAt": 1620086400,
-    "endedAt": 1622073600,
-    "startPrice": 0.9805652194224617,
-    "peakPrice": 0.6997153246061205,
-    "recoveryPrice": 0.989051816018151,
-    "pegReference": 1,
-    "source": "backfill",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "idrt-2021-05-04"
-  },
-  {
     "id": 29065,
     "stablecoinId": "frax-frax",
     "symbol": "FRAX",

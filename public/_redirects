@@ -132,6 +132,20 @@
 /depeg/kau-2026-02-14/ /stablecoin/kau-kinesis/ 301
 /depeg/kau-2026-02-14 /stablecoin/kau-kinesis/ 301
 
+# Reviewed removal of Plume pUSD live-feed artifacts (2026-10-31): March 2026
+# feed churn with no economic trade at the stored deviation. The coin page
+# remains the canonical surface.
+/depeg/pusd-2026-03-16/ /stablecoin/pusd-plume/ 301
+/depeg/pusd-2026-03-16 /stablecoin/pusd-plume/ 301
+/depeg/pusd-2026-03-17/ /stablecoin/pusd-plume/ 301
+/depeg/pusd-2026-03-17 /stablecoin/pusd-plume/ 301
+/depeg/pusd-2026-03-19-down-87870/ /stablecoin/pusd-plume/ 301
+/depeg/pusd-2026-03-19-down-87870 /stablecoin/pusd-plume/ 301
+/depeg/pusd-2026-03-19-down-87892/ /stablecoin/pusd-plume/ 301
+/depeg/pusd-2026-03-19-down-87892 /stablecoin/pusd-plume/ 301
+/depeg/pusd-2026-03-19-down-87900/ /stablecoin/pusd-plume/ 301
+/depeg/pusd-2026-03-19-down-87900 /stablecoin/pusd-plume/ 301
+
 # MiCA tracker moved to Compliance; /compliance/ is canonical.
 /mica/ /compliance/ 301
 /mica /compliance/ 301
