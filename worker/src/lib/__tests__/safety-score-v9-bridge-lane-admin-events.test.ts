@@ -11,13 +11,15 @@ import type { ChainRpcConfig } from "../chain-registry";
 import * as evmRpc from "../evm-rpc";
 import {
   LANE_ADMIN_EVENT_MAX_LOG_PAGES,
-  LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
-  LANE_ADMIN_EVENT_TOPICS,
   screenLaneAdminEvents,
   screenLaneAdminEventsBatch,
   type LaneAdminEventEmitter,
   type LaneAdminEventScreeningTarget,
 } from "../safety-score-v9/bridge-lane-admin-events";
+import {
+  LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
+  LANE_ADMIN_EVENT_TOPICS,
+} from "@shared/lib/safety-score-v9/lane-screening-derivation";
 import { decodeEvmHexBytes } from "../safety-score-v9/supply-observation-primitives";
 import { makeChainRpcConfig, makeChainRpcs, registryRpcEndpoint } from "../../test-helpers/chain-rpc-fixtures.test-support";
 

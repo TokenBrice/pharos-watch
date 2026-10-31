@@ -20,7 +20,7 @@ import {
 } from "../sync-v9-lane-admin-events";
 
 import { persistLaneIncidentCertificates } from "../../lib/safety-score-v9/lane-incident-certificate-store";
-import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "../../lib/safety-score-v9/bridge-lane-admin-events";
+import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "@shared/lib/safety-score-v9/lane-screening-derivation";
 const mocks = vi.hoisted(() => ({ screen: vi.fn(), head: vi.fn() }));
 
 vi.mock("../../lib/safety-score-v9/bridge-lane-admin-events", async importOriginal => ({

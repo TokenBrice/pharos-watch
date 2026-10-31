@@ -1,6 +1,9 @@
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import { sha256Hex } from "@shared/lib/sha256";
+import {
+  laneIncidentCertificateScreeningSetId,
+  type LaneIncidentCertificateScreeningSetInput,
+} from "@shared/lib/safety-score-v9/lane-screening-derivation";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import {
@@ -61,17 +64,10 @@ export type LaneIncidentCertificateReadState =
   (typeof LANE_INCIDENT_CERTIFICATE_READ_STATES)[number];
 
 /**
- * Declared fields that identify a lane's screening set. The subject lane (OP-IR
- * 5b) and the sorted contributor control ids are part of the identity: an added
+ * Cache-key identity: the screening set (subject lane, sorted contributor
+ * control ids and emitter pins) plus the pinned window and block range. An added
  * contributor, emitter or pin starts a new chain and inherits nothing.
  */
-export interface LaneIncidentCertificateScreeningSetInput {
-  subjectDeploymentKey: string;
-  screeningPolicyDigest: string;
-  contributorControlIds: readonly string[];
-  emitters: readonly { address: string; expectedRuntimeCodeSha256: string }[];
-}
-
 export type LaneIncidentCertificateCacheKeyInput = LaneIncidentCertificateScreeningSetInput &
   Pick<
     V9LaneIncidentCertificate,
@@ -93,25 +89,6 @@ interface ParsedCertificateKey {
   windowEndSec: number;
   fromBlock: number;
   toBlock: number;
-}
-
-/**
- * Identity of one emitter set under one frozen screening policy. A new emitter
- * (or code pin) or a new topic list starts a fresh chain: certificates produced
- * under different screening policies never chain with each other (R3/R5).
- */
-export function laneIncidentCertificateScreeningSetId(
-  screeningSet: LaneIncidentCertificateScreeningSetInput,
-): string {
-  return sha256Hex(stableJsonStringifyV1({
-    domain: "safety-score-v9.lane-incident-certificate.screening-set.v2",
-    subjectDeploymentKey: screeningSet.subjectDeploymentKey,
-    screeningPolicyDigest: screeningSet.screeningPolicyDigest,
-    contributorControlIds: [...screeningSet.contributorControlIds].sort(compareText),
-    emitters: screeningSet.emitters
-      .map(({ address, expectedRuntimeCodeSha256 }) => ({ address, expectedRuntimeCodeSha256 }))
-      .sort((left, right) => compareText(left.address, right.address)),
-  }));
 }
 
 function padded(value: number): string {

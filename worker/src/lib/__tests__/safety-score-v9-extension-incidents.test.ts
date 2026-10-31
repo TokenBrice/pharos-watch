@@ -17,8 +17,10 @@ import {
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { expandReviewedRegistryReferences } from "@shared/lib/safety-score-v9/reviewed-registry";
-import { laneIncidentCertificateScreeningSetId } from "../safety-score-v9/lane-incident-certificate-store";
-import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "../safety-score-v9/bridge-lane-admin-events";
+import {
+  LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
+  laneIncidentCertificateScreeningSetId,
+} from "@shared/lib/safety-score-v9/lane-screening-derivation";
 import { localRegistrySnapshot, registrySnapshotFingerprint } from "../../../scripts/lib/safety-score-v9-registry";
 import { createReplayFixedInput } from "../../../scripts/__tests__/safety-score-v9-replay.test-support";
 import { normalizeFixedInput } from "../report-cards-fixed-input";

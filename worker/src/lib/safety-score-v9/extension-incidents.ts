@@ -29,8 +29,10 @@ import {
 } from "./extension-shared";
 import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
-import { laneIncidentCertificateScreeningSetId } from "./lane-incident-certificate-store";
-import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "./bridge-lane-admin-events";
+import {
+  LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
+  laneIncidentCertificateScreeningSetId,
+} from "@shared/lib/safety-score-v9/lane-screening-derivation";
 
 /**
  * Admitted review scopes: legacy digest, authored control, issuer surface and

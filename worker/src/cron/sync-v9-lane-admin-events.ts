@@ -14,15 +14,17 @@ import { fetchEvmBlockHeaderAtTag, type EvmBlockHeader } from "../lib/evm-rpc";
 import {
   LANE_ADMIN_EVENT_DEFAULT_LOG_PAGE_BLOCKS,
   LANE_ADMIN_EVENT_MAX_LOG_PAGES,
-  LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
   LaneScreeningDeadlineError,
   screenLaneAdminEvents,
   type LaneAdminEventEmitter,
   type LaneAdminEventScreeningTarget,
 } from "../lib/safety-score-v9/bridge-lane-admin-events";
 import {
-  loadLaneIncidentCertificates,
+  LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
   laneIncidentCertificateScreeningSetId,
+} from "@shared/lib/safety-score-v9/lane-screening-derivation";
+import {
+  loadLaneIncidentCertificates,
   persistLaneIncidentCertificates,
 } from "../lib/safety-score-v9/lane-incident-certificate-store";
 
