@@ -70,6 +70,8 @@ describe("permanent replay integrity", () => {
     expect(() => validateSafetyScoreV9ReplayIntegrity(artifact)).toThrow();
   });
 
+  // Reproduction recompiles the registry too, so both reproduction tests share
+  // that budget; under V8 coverage they exceed the 20 s default.
   it("retains, validates and reproduces the exact lane-screening provenance", () => {
     const fixedInput = createReplayFixedInput(v9TestClockSec());
     const laneScreening = buildSafetyScoreV9ReplayLaneScreening({
@@ -87,7 +89,7 @@ describe("permanent replay integrity", () => {
     expect(() => validateSafetyScoreV9ReplayIntegrity({
       ...artifact, laneScreening: { ...laneScreening, digest: "0".repeat(64) },
     })).toThrow("Replay lane screening digest mismatch");
-  });
+  }, 120_000);
 
   it("requires intended source, registry, clock and explicit enrichment for reproduction", () => {
     const artifact = fixture();
@@ -106,6 +108,6 @@ describe("permanent replay integrity", () => {
     expect(() => reproduceSafetyScoreV9Replay(artifact, { ...context, policyDigest: "a".repeat(64) })).toThrow("intended policy/build/clock");
     expect(() => reproduceSafetyScoreV9Replay(artifact, { ...context, transferMaterialityGeneration: undefined } as unknown as typeof context)).toThrow();
     expect(() => reproduceSafetyScoreV9Replay(artifact, { ...context, publishedAtSec: context.publishedAtSec + 1 })).toThrow("intended policy/build/clock");
-  });
+  }, 120_000);
 
 });
