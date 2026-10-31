@@ -1033,7 +1033,13 @@ function getNavTokenProfileIds() {
 
 /** Only real exported markup: RSC flight data and JSON-LD live in `<script>`. */
 function stripEmbeddedScripts(html) {
-  return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  // Repeat until stable so removing one block cannot leave a reassembled one.
+  let previous;
+  do {
+    previous = html;
+    html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, "");
+  } while (html !== previous);
+  return html;
 }
 
 /** Text of the exported markup including hidden panels, ignoring tags and hydration comments. */
