@@ -24,5 +24,5 @@ export const PlacedProjectTapeResultSchema = z.object({
   itemCount: z.number().int().nonnegative().optional(),
   metadata: z.string(),
   error: z.string().optional(),
-  productivity: z.object({ productive: z.boolean() }).strict().optional(),
+  productivity: z.object({ productive: z.boolean(), reason: z.string().optional() }).strict().optional(),
 }).strict();

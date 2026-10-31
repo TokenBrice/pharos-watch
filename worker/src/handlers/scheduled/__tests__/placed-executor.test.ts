@@ -22,7 +22,7 @@ import heavyWorker from "../../../index.heavy";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const SECRET = "test-internal-canary-secret";
-const realResult = { status: "ok" as const, itemCount: 7, productivity: { productive: true },
+const realResult = { status: "ok" as const, itemCount: 7, productivity: { productive: true, reason: "tape-projection-current" },
   metadata: JSON.stringify({ reason: "tape-projection-completed", perClass: { depeg: 7 } }) };
 
 function driver(fetch: Mock, flag = "on") {

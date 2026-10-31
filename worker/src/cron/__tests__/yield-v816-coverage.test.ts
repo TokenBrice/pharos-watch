@@ -101,4 +101,32 @@ describe("yield v8.16 coverage paths", () => {
       vi.useRealTimers();
     }
   });
+
+  it("anchors on the oldest clocked row when older in-window rows predate the price clock", async () => {
+    const nowSec = Date.UTC(2026, 9, 31, 12, 30) / 1000;
+    const todayLabel = startOfUtcDaySec(new Date(nowSec * 1000));
+    const clockedAnchorLabel = todayLabel - 20 * DAY_SECONDS;
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+    const sqlite = createLatestSchemaSqlite().sqlite;
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
+         VALUES (?, ?, 1_000_000, ?, ?)`,
+      );
+      // Pre-migration-0253 rows keep a NULL clock inside the 45-day window.
+      insert.run("fpi-frax", todayLabel - 40 * DAY_SECONDS, 0.998, null);
+      insert.run("fpi-frax", clockedAnchorLabel, 1.0, clockedAnchorLabel + 3600);
+      insert.run("fpi-frax", todayLabel, 1.0015, nowSec - 3600);
+
+      const result = await getPriceDerivedApy(createSqliteD1(sqlite), "fpi-frax");
+
+      expect(result).not.toBeNull();
+      expect(result?.comparisonAnchorObservedAt).toBe(clockedAnchorLabel + 3600);
+      expect(result?.sourceObservedAt).toBe(nowSec - 3600);
+    } finally {
+      sqlite.close();
+      vi.useRealTimers();
+    }
+  });
 });
