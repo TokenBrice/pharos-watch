@@ -78,15 +78,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "f01f14dd2843565a65be5d8a5dae4c1fa3bb9ac3456790ae1490c93da10f01ad"
+      "sha256": "900b932ccad3c0f44951d8399160b1afc6301d41aba9c417e9d4af5c6622d931"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "acf1e4145dda524635fd94d788e584478f32fa1f5033993b5c4ac02cbed7c388"
+      "sha256": "bb084a833fb98e031d228426c1f242db291e104699e075f7eb80b3cedbf608e6"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "fc73e49ac65d07c6db0891237d90183f4c9dace88948b4ad85dcbdb617eca6c2"
+      "sha256": "89c7bc08a8e8002dfbe76c87c24cbccb03c2e72bd43fe17dacedf05771a0dbad"
     },
     {
       "path": "shared/lib/abort-signals.ts",
@@ -98,7 +98,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/api-freshness.ts",
-      "sha256": "ff00fd24ab5f4eb18fe16e921bc55ae7012ad4e20dbb8aec3e80a7c3746d8c6d"
+      "sha256": "326394aa000ef39889f623c3d02526028c8e97f3d7b22f4077f623a6bd7a3aff"
     },
     {
       "path": "shared/lib/api-query-history.ts",
@@ -382,7 +382,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/psm-and-basket.ts",
-      "sha256": "404d37854629951163bcb4a2a721e9d1f38044594ba67009dbd9f4c030bc371b"
+      "sha256": "66416c3526c85e743499275f098d7982bcdab5fb3859a959454ffb104bdfbaa3"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem-nest-nav.ts",
@@ -390,7 +390,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/queue-redeem.ts",
-      "sha256": "208f0b0b5d7eb29dff544ce359a9d8ba87dd6de7845bb1a93ff35f979ec8fb02"
+      "sha256": "3306ec73ab6f613617acf519872d3e94fd4b3eff8d71247494f86f00c8cd29a4"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/review-dates.ts",
@@ -758,7 +758,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/status-thresholds.ts",
-      "sha256": "6d3f94ad9e1250183233f28c1643f77c75aeb2659884994e8bf42febbc6b7efc"
+      "sha256": "8f7ab2d84de58fe50c61fb05e83adac240e7f37d47ca2edba92771999c466be8"
     },
     {
       "path": "shared/lib/strongly-connected-components.ts",
@@ -846,7 +846,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/live-reserve-adapter-declarations.ts",
-      "sha256": "0b5bb043ac1387a80e274c8ab710ae379c6c8d1042f138c8925c27dc0303f70e"
+      "sha256": "e0202dcadbdec08f99a73fd25b29ea00fa134afef64bc0fee7f8a0191666b392"
     },
     {
       "path": "shared/types/live-reserve-adapter-policy.ts",
@@ -1102,7 +1102,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/api-freshness-age.ts",
-      "sha256": "0bfe59304c797aac8f80c6cbd23ac909b569c7d2bb2a946b1ccc2fa0dd3d42b3"
+      "sha256": "83da2fc0368b4c48feaf63f0d6f15650d6d73e155a6f1ef41f715af379980baa"
     },
     {
       "path": "worker/src/lib/bigint.ts",
@@ -1150,7 +1150,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/evm-rpc.ts",
-      "sha256": "fc56540a8ba9b400da7ee8af17458fa4a550a8c9c73f7cf6a069663a5125b121"
+      "sha256": "a1a2e15c50233e775f9f44370b44e25d2ece5ebf82e091178a1d6130e61c8ef6"
     },
     {
       "path": "worker/src/lib/evm-selectors.ts",
@@ -1182,7 +1182,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/live-reserves/store-overview.ts",
-      "sha256": "2efb2685c2e9520c8c4a5a154039d9da1d77eb4965c08b1e1bbb676fe3f1297a"
+      "sha256": "b8829706959532be0d670fd288138faee2345f76ba5f98cf78d11e2308ab4e27"
     },
     {
       "path": "worker/src/lib/live-reserves/store-read.ts",
@@ -1202,11 +1202,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/live-reserves/store-statements.ts",
-      "sha256": "a6c2be4ecc5333ef291392a2e3da5f26ef79ffdec49c21d49e8fe0de07f119c5"
+      "sha256": "54fa3f7ac4384fb38d34bbc54be0b0209ca764d6a7e47f6e48c3938ad60eb4cc"
     },
     {
       "path": "worker/src/lib/live-reserves/store-write.ts",
-      "sha256": "2bbe64901eba96f54481475f6c306327464f76fe9d995006638c03f410b212f0"
+      "sha256": "43ecd9b1c5a391734f42a5f9d9e76a5731f217480a749daaf306617728ebea17"
     },
     {
       "path": "worker/src/lib/live-reserves/store.ts",
@@ -1234,7 +1234,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/reserve-feed-reviews.ts",
-      "sha256": "5e3080db092d6b52dbbdf5f7839eb85921dc75412a25edeb356534d8ccea14b4"
+      "sha256": "aeb0d3fbfc8963ccfbdb6ef78cb74ae9c1d7abebb3e5ba8ce0d9d760fedd03cb"
     },
     {
       "path": "worker/src/lib/response-body.ts",
@@ -1447,7 +1447,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "7e6ed013a6c6d1d31944e84e9a8bc767f9c592cda207224f68132404add19ff6"
+  "digest": "e36461455850b1245e03a0ceb518ca70056b9c4dae50310e1cf316048cceafcf"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
