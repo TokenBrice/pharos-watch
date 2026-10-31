@@ -60,8 +60,10 @@ export function buildBulkConfirmMessage(
   count: number,
   alertTypes: readonly string[],
   coinSymbols: readonly string[],
+  depegStep?: DepegStepChoice,
 ): string {
-  const typesLine = action === "subscribe" ? `alert types ${escapeHtml(alertTypes.join(", ") || "all")}` : "all alert types";
+  const stepLine = depegStep === undefined ? "" : `; depeg step ${depegStep == null ? "off" : `${depegStep} bps`}`;
+  const typesLine = action === "subscribe" ? `alert types ${escapeHtml(alertTypes.join(", ") || "all")}${stepLine}` : "all alert types";
   const head = coinSymbols.slice(0, BULK_CONFIRM_PREVIEW_LIMIT);
   const more = coinSymbols.length - head.length;
   const preview = head.length > 0 ? `\n${escapeHtml(`${head.join(", ")}${more > 0 ? `, and ${more} more` : ""}`)}` : "";

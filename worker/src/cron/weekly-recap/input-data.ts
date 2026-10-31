@@ -355,6 +355,7 @@ function parseDailyRows(
       }
       parsed.push({
         date,
+        generatedAt: row.generated_at,
         title: quarantined.quarantines.length > 0 ? "" : row.digest_title ?? "Untitled",
         text: quarantined.quarantines.length > 0 ? "" : row.digest_text,
         inputData: quarantined.inputData,
@@ -444,6 +445,10 @@ function sanitizeSafetyForWeekly(
       return true;
     });
     if (inputData.gradeTransitions.length === 0) delete inputData.gradeTransitions;
+    // The Safety Map census is Safety-derived stock evidence: it may only enter
+    // the weekly prompt when its authored identity is comparable with the
+    // active publication, never attributed to the active Safety source.
+    if (!copyIsComparable) delete inputData.safetyMap;
     return {
       ...row,
       title: copyIsComparable ? row.title : "",
@@ -457,10 +462,39 @@ interface WeeklyTopSignals extends Omit<WeeklyInputData["weeklySignals"], "riskL
   allDepegObservations: WeeklyDepegSignal[];
 }
 
-function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
-  const weekWindowStartSec = parsed[0]?.date
+/**
+ * An active depeg is a standing condition only when its start predates the
+ * declared edition window. Legacy rows without `startedAt` fall back to the
+ * age persisted with that edition; with neither, freshness is unknown and the
+ * event is not demoted to carried-over.
+ */
+function depegStartedBeforeWindow(
+  depeg: DigestInputData["topDepegs"][number],
+  row: WeeklyParsedRow,
+  weekWindowStartSec: number,
+): boolean {
+  let estimatedStartSec: number | null = null;
+  if (depeg.startedAt != null) {
+    estimatedStartSec = depeg.startedAt;
+  } else if (depeg.ageHours != null) {
+    estimatedStartSec = row.generatedAt - depeg.ageHours * 3_600;
+  } else {
+    const standing = row.inputData.standingConditions?.find((entry) =>
+      depeg.stablecoinId != null ? entry.stablecoinId === depeg.stablecoinId : entry.symbol === depeg.symbol);
+    if (standing != null) estimatedStartSec = row.generatedAt - standing.ageDays * 86_400;
+  }
+  return estimatedStartSec != null && estimatedStartSec < weekWindowStartSec;
+}
+
+function collectWeeklyTopSignals(
+  parsed: WeeklyParsedRow[],
+  declaredWindowStartSec?: number,
+): WeeklyTopSignals {
+  // The declared window start is authoritative even when the first readable
+  // edition is missing; only standalone callers fall back to the first edition.
+  const weekWindowStartSec = declaredWindowStartSec ?? (parsed[0]?.date
     ? Math.floor(Date.parse(`${parsed[0].date}T00:00:00Z`) / 1000)
-    : 0;
+    : 0);
   const allDepegObservations = parsed.flatMap((d, index) => {
     const dailyCandidates = canonicalDailyCandidates(parsed, index);
     return [
@@ -478,7 +512,7 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
           ?? getDepegEditorialImpactScore(severityBps, depeg.mcapUsd);
         // An event that predates the week window is a standing condition the
         // reader has already seen in prior recaps, not fresh weekly news.
-        const carriedOver = depeg.startedAt != null && depeg.startedAt < weekWindowStartSec;
+        const carriedOver = depegStartedBeforeWindow(depeg, d, weekWindowStartSec);
         const severityScore = impactScore * (carriedOver ? 0.5 : 1);
         const eventIdentity = `${depeg.stablecoinId ?? depeg.symbol.toUpperCase()}:${depeg.startedAt ?? "active"}`;
         return {
@@ -797,6 +831,8 @@ export function buildWeeklyInputData(
   priorDailyRows: DailyDigestSourceRow[] = [],
   safetyContext?: DigestSafetyContext,
   gradeTransitionPeriods?: WeeklyInputData["gradeTransitionPeriods"],
+  /** Declared edition window, independent of which editions are readable. */
+  editionWindow?: DigestEventPeriod,
 ): WeeklyInputData | null {
   const currentParsed = parseDailyRows(currentDailyRows);
   const prior = parseDailyRows(priorDailyRows);
@@ -810,14 +846,17 @@ export function buildWeeklyInputData(
   const marketCoverageComplete = marketInputs.every((day) =>
     day.inputData.supplyCoverage?.complete === true && Number.isFinite(day.inputData.totalMcapUsd));
   const mcaps = marketCoverageComplete ? marketInputs.map((day) => day.inputData.totalMcapUsd) : [];
+  // A weekly change needs two comparable observations; one complete day has no
+  // comparison pair and is not a flat week.
+  const mcapRangeAvailable = marketCoverageComplete && mcaps.length >= 2;
   const gauges = parsed.map((d) => d.inputData.mintBurnFlows?.gaugeScore).filter((g): g is number => g != null);
 
   if (psiScores.length === 0) return null;
 
   const current = rollupDigestInputs(parsed.map((d) => d.inputData), undefined, gradeTransitionPeriods?.current);
-  const dominantBand = current.psiDominantBand!;
+  const dominantBand = current.psiObservationDays >= 3 ? current.psiDominantBand : null;
 
-  const { allDepegObservations, ...topSignalsResult } = collectWeeklyTopSignals(parsed);
+  const { allDepegObservations, ...topSignalsResult } = collectWeeklyTopSignals(parsed, editionWindow?.start);
   const {
     topDepegSignals,
     topSupplySignals,
@@ -869,16 +908,21 @@ export function buildWeeklyInputData(
     psiRange: {
       min: Math.min(...psiScores),
       max: Math.max(...psiScores),
-      start: psiScores[0],
-      end: psiScores[psiScores.length - 1],
+      start: parsed[0]?.inputData.stabilityIndex?.score ?? null,
+      end: parsed[parsed.length - 1]?.inputData.stabilityIndex?.score ?? null,
+      observationDays: current.psiObservationDays,
       dominantBand,
     },
     mcapRange: {
-      start: mcaps[0] ?? null,
-      end: mcaps[mcaps.length - 1] ?? null,
-      netChange: mcaps.length > 0 ? mcaps[mcaps.length - 1] - mcaps[0] : null,
-      pctChange: mcaps.length > 0 && mcaps[0] > 0 ? ((mcaps[mcaps.length - 1] - mcaps[0]) / mcaps[0]) * 100 : null,
-      ...(!marketCoverageComplete ? { unavailableReason: "supply-coverage-incomplete" } : {}),
+      start: mcapRangeAvailable ? mcaps[0] : null,
+      end: mcapRangeAvailable ? mcaps[mcaps.length - 1] : null,
+      netChange: mcapRangeAvailable ? mcaps[mcaps.length - 1] - mcaps[0] : null,
+      pctChange: mcapRangeAvailable && mcaps[0] > 0
+        ? ((mcaps[mcaps.length - 1] - mcaps[0]) / mcaps[0]) * 100
+        : null,
+      ...(!marketCoverageComplete
+        ? { unavailableReason: "supply-coverage-incomplete" }
+        : !mcapRangeAvailable ? { unavailableReason: "insufficient-market-observations" } : {}),
     },
     activeDepegObservationsThisWeek: current.activeDepegObs,
     uniqueDepegSignalsThisWeek: current.uniqueDepegSignals,

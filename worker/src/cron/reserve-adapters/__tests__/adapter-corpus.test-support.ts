@@ -40,9 +40,13 @@ export interface AdapterCorpusDrift {
   network: AdapterNetworkSpec;
   /**
    * `error`: the adapter must throw. `degraded`: it must publish with a
-   * degrading warning. Anything else is the E3 silent-constant defect class.
+   * degrading warning. `info`: an optional sidecar the adapter must not let
+   * blank the snapshot, so it publishes with an informational warning naming
+   * `warningCode`. Anything else is the E3 silent-constant defect class.
    */
-  outcome: "error" | "degraded";
+  outcome: "error" | "degraded" | "info";
+  /** Required when `outcome` is `info`: the warning code that names the omitted feed. */
+  warningCode?: string;
 }
 
 export interface AdapterCorpusCase {
@@ -360,6 +364,7 @@ const SKY_FIXTURE = {
 };
 const FALCON_FIXTURE = {
   snapshot_date: 1_757_000_000,
+  tvl: "95",
   usdf: {
     supply: "100",
     insurance_fund: "5",
@@ -511,6 +516,12 @@ const USDD_NOW_SEC = 1_774_281_600 + 3_600;
 const USDD_HISTORY_ENDPOINT = "https://app-api.usdd.io/data-platform/collateral-history?chain=tron"
   + `&startTime=${USDD_NOW_SEC * 1000 - 86_400_000}&endTime=${USDD_NOW_SEC * 1000}`;
 const USDD_TOTALS = { totalCollateralValue: 1_031_304_586.32, totalSupplyValue: 700_123_456.78 };
+const USDD_ADDITIONAL_FEEDS = {
+  "https://app-api.usdd.io/data-platform/latest-collateral?chain=eth":
+    { code: 0, data: { items: [], totalCollateralValue: 0, totalSupplyValue: 0 } },
+  "https://app-api.usdd.io/data-platform/latest-collateral?chain=bsc":
+    { code: 0, data: { items: [], totalCollateralValue: 0, totalSupplyValue: 0 } },
+};
 const USDD_LATEST_ITEMS = [
   { vaultType: "TRX-A", lockedValue: 201_173_223.24 },
   { vaultType: "TRX-B", lockedValue: 100_178_816.93 },
@@ -544,6 +555,7 @@ CORPUS_CASES["usdd-data-platform"] = {
   network: {
     json: {
       [USDD_LATEST_ENDPOINT]: { code: 0, data: { items: USDD_LATEST_ITEMS, ...USDD_TOTALS } },
+      ...USDD_ADDITIONAL_FEEDS,
       // The open bucket's statisticTime is its UTC+8 day start.
       [USDD_HISTORY_ENDPOINT]: { code: 0, data: { items: [{
         collateralValue: USDD_TOTALS.totalCollateralValue,
@@ -564,6 +576,7 @@ CORPUS_CASES["usdd-data-platform"] = {
               index === 2 ? { vaultType: row.vaultType, lockedValue: "108,374,409.00" } : row),
           },
         },
+        ...USDD_ADDITIONAL_FEEDS,
         [USDD_TRON_GRID_ENDPOINT]: respondToUsddTronGrid,
       },
     },

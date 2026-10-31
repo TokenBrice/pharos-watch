@@ -86,6 +86,26 @@ describe("adaptFraxBalanceSheet", () => {
     expect(result.slices.find((slice) => slice.name === "FRAX")).toMatchObject({ pct: 40 });
     expect(result.slices.find((slice) => slice.name === "FRAX")?.coinId).toBeUndefined();
     expect(result.slices.find((slice) => slice.name.startsWith("USDC"))?.coinId).toBe("usdc-circle");
+    // The subject coin's own 40% is not exit capacity; only the 60% USDC is.
+    expect(result.metadata?.redemption?.capacityUsd).toBe(60);
+  });
+
+  it("does not count the subject coin's own rows as redeemable capacity", () => {
+    const result = adaptFraxBalanceSheet(
+      {
+        totalAssets: 100,
+        assets: [
+          { tokenSymbol: "FRAX", totalValueUsd: 40, category: "asset:owned:usd" },
+          { tokenSymbol: "FRAX", totalValueUsd: 10, category: "asset:lent:frax" },
+          { tokenSymbol: "USDC", totalValueUsd: 30, category: "asset:owned:usd" },
+          { tokenSymbol: "USDS", totalValueUsd: 20, category: "asset:owned:usd" },
+        ],
+      },
+      "frax-frax",
+    );
+
+    expect(result.metadata?.redemption?.capacityUsd).toBe(50);
+    expect(result.metadata?.totalCollateralUsd).toBe(100);
   });
 
   it("includes verified freshness when asOfTimestamp is present", () => {

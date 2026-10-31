@@ -122,7 +122,7 @@ Supply and liquidity `componentCoverage` and nullable deltas survive current, sp
 
 ### S_price — Price Confidence Degradation
 
-Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, null price=100.
+Maps `priceConfidence` field: high=0, single-source=25, low=60, fallback=80, null price=100. The null-price maximum is live semantics; a reconstruction that never read price evidence (default `GET /api/backfill-dews`) tags the family unavailable instead of scoring it.
 A missing, blank or unrecognised `priceConfidence` is unvalidated evidence, not a high-confidence reading: it scores as the worst known tier (80) and the signal carries a `price-confidence-unmapped` warning.
 +15 transition bonus when confidence degrades from previous reading, capped at 100. The `high` → `single-source` reclassification is exempt: it is treated as a labelling change from the consensus honesty fix, not a real degradation, and adds no bonus.
 

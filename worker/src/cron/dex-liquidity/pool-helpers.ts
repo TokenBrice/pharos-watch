@@ -195,7 +195,8 @@ export function computeDurabilityScore(
  * TVL. Below the floor — or for a metric whose retained set was never
  * summarized — the component is unavailable and the composite NR
  * (`score: null`): no renormalization, no estimate for excluded pools. The
- * other components stay displayable.
+ * other components stay displayable. A metric with no retained pool or TVL is
+ * likewise NR (`no-retained-pools`), never rated from default components.
  */
 export function computeLiquidityScore(
   m: LiquidityMetrics,
@@ -236,9 +237,15 @@ export function computeLiquidityScore(
     durability: durabilityScore,
     pairDiversity: Math.min(100, m.poolCount * 5),
   });
+  // A metric that retained no pool (or no TVL) has no observable liquidity:
+  // the vacuous complete-zero volume window must not turn neutral durability
+  // defaults into a rated score. The components stay displayable; the score is NR.
+  const noRetainedPools = m.poolCount <= 0 || !(m.totalTvlUsd > 0);
   return {
-    score: composite.score,
-    unavailableReason: composite.status === "not-rated" ? composite.activityReason : null,
+    score: noRetainedPools ? null : composite.score,
+    unavailableReason: noRetainedPools
+      ? "no-retained-pools"
+      : composite.status === "not-rated" ? composite.activityReason : null,
     components: composite.components,
   };
 }

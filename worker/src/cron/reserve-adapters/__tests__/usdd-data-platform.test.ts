@@ -27,6 +27,14 @@ const EMPTY_HISTORY = { code: 0, data: { items: [] } };
 // Live-bucket statisticTime is the UTC+8 day start, in milliseconds.
 const BUCKET_START_SEC = 1_774_281_600 - 8 * 3_600;
 
+// Most cases exercise the single-feed behavior; clear the production
+// per-chain params unless the case supplies its own aggregation list.
+const runUsdd = (options: NonNullable<Parameters<typeof runAdapter>[2]>) =>
+  runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    ...options,
+    config: { params: {}, ...options.config },
+  });
+
 function collateralResponse(items: Array<{ vaultType: string; lockedValue: number }>) {
   const totalCollateralValue = items.reduce((sum, item) => sum + item.lockedValue, 0);
   return { code: 0, data: { items, totalCollateralValue, totalSupplyValue: 1_000 } };
@@ -168,11 +176,12 @@ describe("adaptUsddLatestCollateral", () => {
 
 describe("fetchUsddDataPlatformReserves", () => {
   it("fetches current collateral and same-chain collateral-history, staying unverified without an exact match", async () => {
-    const { result, network } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    const { result, network } = await runUsdd({
       config: {
         inputs: {
           primary: { kind: "http-json", url: ETHEREUM_LATEST },
         },
+        params: {},
       },
       network: {
         json: {
@@ -192,7 +201,7 @@ describe("fetchUsddDataPlatformReserves", () => {
   });
 
   it("fails closed when the provider drops the response status field", async () => {
-    await expect(runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    await expect(runUsdd({
       network: {
         json: {
           [TRON_LATEST]: { data: { items: [{ vaultType: "PSM-USDT-A", lockedValue: 100 }] } },
@@ -203,7 +212,7 @@ describe("fetchUsddDataPlatformReserves", () => {
     })).rejects.toThrow("returned code");
   });
   it("fails closed when a collateral row drops lockedValue", async () => {
-    await expect(runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    await expect(runUsdd({
       network: {
         json: {
           [TRON_LATEST]: { code: 0, data: { items: [{ vaultType: "PSM-USDT-A" }] } },
@@ -212,6 +221,57 @@ describe("fetchUsddDataPlatformReserves", () => {
       nowSec: NOW_SEC,
       validate: false,
     })).rejects.toThrow("collateral item 0 lockedValue");
+  });
+
+  it("aggregates every configured chain feed into one whole-coin book", async () => {
+    const BSC_LATEST = "https://app-api.usdd.io/data-platform/latest-collateral?chain=bsc";
+    const { result, network } = await runUsdd({
+      config: {
+        inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } },
+        params: { additionalCollateralUrls: [TRON_LATEST, BSC_LATEST] },
+      },
+      network: {
+        json: {
+          [ETHEREUM_LATEST]: collateralResponse([{ vaultType: "SA001-A", lockedValue: 200 }]),
+          [TRON_LATEST]: collateralResponse([
+            { vaultType: "TRX-A", lockedValue: 100 },
+            { vaultType: "SA001-A", lockedValue: 300 },
+          ]),
+          [BSC_LATEST]: collateralResponse([{ vaultType: "PSM-USDT-A", lockedValue: 50 }]),
+        },
+      },
+      nowSec: NOW_SEC,
+    });
+
+    expect(result.slices).toEqual([
+      { sourceKey: "usdd-data-platform:smart-allocator", name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: expect.closeTo(500 / 650 * 100, 8), risk: "medium" },
+      { sourceKey: "usdd-data-platform:trx", name: "TRX", pct: expect.closeTo(100 / 650 * 100, 8), risk: "high" },
+      { sourceKey: "usdd-data-platform:psm-usdt", name: "USDT (PSM vaults)", pct: expect.closeTo(50 / 650 * 100, 8), risk: "low", coinId: "usdt-tether", depType: "collateral" },
+    ]);
+    expect(result.metadata).toMatchObject({ vaultCount: 4, freshnessMode: "unverified" });
+    // An aggregated book cannot borrow one chain's history clock.
+    expect(network.fetchSpy.getHistory().map((request) => request.url)).toEqual([
+      ETHEREUM_LATEST, TRON_LATEST, BSC_LATEST,
+    ]);
+  });
+
+  it("fails closed instead of publishing a surviving chain as the whole book", async () => {
+    const BSC_LATEST = "https://app-api.usdd.io/data-platform/latest-collateral?chain=bsc";
+    await expect(runUsdd({
+      config: {
+        inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } },
+        params: { additionalCollateralUrls: [TRON_LATEST, BSC_LATEST] },
+      },
+      network: {
+        json: {
+          [ETHEREUM_LATEST]: collateralResponse([{ vaultType: "SA001-A", lockedValue: 200 }]),
+          [TRON_LATEST]: { status: 503, body: "upstream down" },
+          [BSC_LATEST]: collateralResponse([{ vaultType: "PSM-USDT-A", lockedValue: 50 }]),
+        },
+      },
+      nowSec: NOW_SEC,
+      validate: false,
+    })).rejects.toThrow(/503/);
   });
 });
 
@@ -254,8 +314,8 @@ describe("USDD collateral-history freshness join", () => {
   });
 
   it("publishes verified freshness when the history join matches", async () => {
-    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
-      config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } } },
+    const { result } = await runUsdd({
+      config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } }, params: {} },
       network: { json: { [ETHEREUM_LATEST]: latest, [ETHEREUM_HISTORY]: { code: 0, data: { items: [liveRow] } } } },
       nowSec: NOW_SEC,
     });
@@ -268,8 +328,8 @@ describe("USDD collateral-history freshness join", () => {
 
   it("withholds the history clock and degrades a truncated itemized book", async () => {
     const truncated = { ...latest, data: { ...latest.data, items: [{ vaultType: "PSM-USDT-A", lockedValue: 100 }] } };
-    const { result, network } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
-      config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } } },
+    const { result, network } = await runUsdd({
+      config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } }, params: {} },
       network: { json: { [ETHEREUM_LATEST]: truncated, [ETHEREUM_HISTORY]: { code: 0, data: { items: [liveRow] } } } },
       nowSec: NOW_SEC,
     });
@@ -290,7 +350,7 @@ describe("USDD collateral-history freshness join", () => {
     const { spec } = tronNetwork();
     const reconciled = { ...latest, data: { ...latest.data } };
     const startedAt = Date.now();
-    const { result, network } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    const { result, network } = await runUsdd({
       network: { ...spec, json: {
         ...spec.json,
         [TRON_LATEST]: reconciled,
@@ -308,8 +368,8 @@ describe("USDD collateral-history freshness join", () => {
   }, 15_000);
 
   it("keeps unverified freshness when collateral-history fails", async () => {
-    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
-      config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } } },
+    const { result } = await runUsdd({
+      config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } }, params: {} },
       network: { json: { [ETHEREUM_LATEST]: latest } },
       nowSec: NOW_SEC,
       allowUnmatched: true,
@@ -325,7 +385,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
       const base = DWELLIR_NATIVE_ENDPOINTS.find(endpoint => endpoint.network === "tron")!.baseUrl;
       const { spec } = tronNetwork();
       const words = defaultPsmWords();
-      const { result, network } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+      const { result, network } = await runUsdd({
         network: { ...spec, json: { ...spec.json, [`${base}/wallet/triggerconstantcontract`]: async (request: Request) => {
           expect(request.headers.get("X-Api-Key")).toBe("native-test-key-placeholder");
           expect(request.headers.get("TRON-PRO-API-KEY")).toBeNull();
@@ -360,7 +420,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
 
   it("publishes the GemJoin's USDT balance as live-direct PSM capacity", async () => {
     const { spec } = tronNetwork();
-    const { result, network } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    const { result, network } = await runUsdd({
       network: spec,
       nowSec: NOW_SEC,
     });
@@ -392,7 +452,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
 
   it("reads the balance of the address the PSM itself reports as its GemJoin", async () => {
     const { spec, calls } = tronNetwork();
-    await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    await runUsdd({
       network: spec,
       nowSec: NOW_SEC,
     });
@@ -408,7 +468,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
     const { spec } = tronNetwork({
       words: { ...defaultPsmWords(), "tout()": toWord(1_000_000_000_000_000n) },
     });
-    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    const { result } = await runUsdd({
       network: spec,
       nowSec: NOW_SEC,
     });
@@ -421,7 +481,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
     const { spec } = tronNetwork({
       words: { ...defaultPsmWords(), "balanceOf(address)": toWord(0n) },
     });
-    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    const { result } = await runUsdd({
       network: spec,
       nowSec: NOW_SEC,
     });
@@ -433,7 +493,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
     const { spec } = tronNetwork({
       words: { ...defaultPsmWords(), "buyEnabled()": toWord(0n) },
     });
-    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    const { result } = await runUsdd({
       network: spec,
       nowSec: NOW_SEC,
     });
@@ -448,7 +508,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
     const { spec } = tronNetwork({
       words: { ...defaultPsmWords(), "balanceOf(address)": null },
     });
-    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    const { result } = await runUsdd({
       network: spec,
       nowSec: NOW_SEC,
     });
@@ -465,7 +525,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
         "gemJoin()": "0000000000000000000000001111111111111111111111111111111111111111",
       },
     });
-    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    const { result } = await runUsdd({
       network: spec,
       nowSec: NOW_SEC,
     });
@@ -475,7 +535,7 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
 
   it("withholds redemption telemetry when the request throws", async () => {
     const { spec } = tronNetwork({ fail: true });
-    const { result } = await runAdapter("usdd-data-platform", "usdd-tron-dao-reserve", {
+    const { result } = await runUsdd({
       network: spec,
       nowSec: NOW_SEC,
     });

@@ -237,6 +237,20 @@ const YIELD_TOKEN_METADATA: ReadonlyArray<{
       risk: "low",
     },
   },
+  {
+    // Issuer-declared holdable asset of nOPAL (`targetComposition`). It is the
+    // tracked Nest Basis vault share (USCC + USTB), not BlackOpal private
+    // credit, so an unmatched fallback would misstate its class and obligor.
+    slug: "nest-basis-vault",
+    symbol: "nBASIS",
+    metadata: {
+      sourceKey: "nest-vault-positions:nbasis",
+      name: "Nest Basis vault (nBASIS)",
+      risk: "low",
+      coinId: "nbasis-nest",
+      depType: "collateral",
+    },
+  },
 ];
 
 function bucketLiquidToken(token: NestPositionToken): SliceValue {
@@ -370,6 +384,7 @@ export async function fetchNestVaultPositionsReserves(
   let claimableFeesUsd: number | null = null;
   let unrealizedDividendsUsd: number | null = null;
   let calculatedPriceUrl: string | null = null;
+  let navBasisSpreadUsd: number | null = null;
   if (pendingWithdrawalUsd > 0) {
     // The generic pending-withdrawals source key is safe only while every
     // positive receivable belongs to the reviewed underlying: OALS2T in
@@ -392,12 +407,13 @@ export async function fetchNestVaultPositionsReserves(
     calculatedPriceUrl = new URL("calculated-price", params.priceUrl).href;
     const calculated = await fetchJsonWithRetry<{ data?: {
       grossCalculatedNav?: unknown; calculatedNav?: unknown; claimableFees?: unknown;
-      unrealizedDividends?: unknown; claimableFeesAdjusted?: unknown; errors?: unknown;
+      unrealizedDividends?: unknown; claimableFeesAdjusted?: unknown; calculatedPrice?: unknown; errors?: unknown;
     } }>(calculatedPriceUrl, signal, 12_000, ctx);
     const data = calculated.data;
     grossNavUsd = parsePositiveNumericLike(data?.grossCalculatedNav);
     calculatedNavUsd = parsePositiveNumericLike(data?.calculatedNav);
     claimableFeesUsd = parseFiniteNumber(data?.claimableFees, { label: "Nest reconciliation claimable fees", min: 0 });
+    const calculatedPriceUsd = parsePositiveNumericLike(data?.calculatedPrice);
     // Nest includes accrued yield in NAV and exposes unrealizedDividends
     // separately from /positions. Require the explicit nonnegative amount,
     // including an observed zero; gross reconciliation admits it exactly once.
@@ -405,22 +421,26 @@ export async function fetchNestVaultPositionsReserves(
     const hasErrors = data?.errors !== undefined && (!Array.isArray(data.errors) || data.errors.length > 0);
     if (hasErrors || grossNavUsd == null || calculatedNavUsd == null
       || claimableFeesUsd == null || claimableFeesUsd < 0 || data?.claimableFeesAdjusted !== true
+      || calculatedPriceUsd == null || priceUsd == null
       || Math.abs(grossNavUsd - settledPositionUsd - pendingDepositUsd - pendingWithdrawalUsd - unrealizedDividendsUsd) > 0.01
       || Math.abs(grossNavUsd - claimableFeesUsd - calculatedNavUsd) > 0.01) {
       throw new Error("nest-vault-positions pending withdrawal NAV reconciliation failed");
     }
-    // The vault publishes NAV twice: `/price.nav`, and the net NAV rebuilt here
-    // from `/positions`. Accepting a reconciliation that contradicts the
-    // published NAV would suppress the published-NAV residual, report gross NAV
-    // as total reserves, and score coverage over a contradiction (R1), so it
-    // fails closed naming both values.
+    // `/price.nav` and `/calculated-price.calculatedNav` are the same vault on
+    // two published price bases: the last pushed accountant price and the live
+    // assetNav. Rescale the published NAV onto the calculated-price basis with
+    // each endpoint's own per-share price, so an accountant-price lag is a
+    // disclosed basis spread rather than a contradiction, while a genuine
+    // cross-source disagreement still fails closed naming both values (R1).
+    const navOnCalculatedBasisUsd = navUsd != null ? navUsd * (calculatedPriceUsd / priceUsd) : null;
+    navBasisSpreadUsd = navUsd != null ? Math.abs(calculatedNavUsd - navUsd) : null;
     if (
-      navUsd != null &&
-      Math.abs(calculatedNavUsd - navUsd) >
-        Math.max(NAV_RECONCILIATION_ABSOLUTE_TOLERANCE_USD, Math.abs(navUsd) * NAV_RECONCILIATION_RELATIVE_TOLERANCE)
+      navOnCalculatedBasisUsd != null &&
+      Math.abs(calculatedNavUsd - navOnCalculatedBasisUsd) >
+        Math.max(NAV_RECONCILIATION_ABSOLUTE_TOLERANCE_USD, Math.abs(navOnCalculatedBasisUsd) * NAV_RECONCILIATION_RELATIVE_TOLERANCE)
     ) {
       throw new Error(
-        `nest-vault-positions calculated NAV ${calculatedNavUsd} does not match the published NAV ${navUsd}`,
+        `nest-vault-positions calculated NAV ${calculatedNavUsd} does not match the published NAV ${navOnCalculatedBasisUsd} on the calculated-price basis (published ${navUsd})`,
       );
     }
   }
@@ -508,6 +528,7 @@ export async function fetchNestVaultPositionsReserves(
       totalReserveUsd,
       settledPositionUsd,
       ...(grossNavUsd != null ? { grossNavUsd, calculatedNavUsd, claimableFeesUsd, unrealizedDividendsUsd } : {}),
+      ...(navBasisSpreadUsd != null ? { navBasisSpreadUsd } : {}),
       ...(reconcilePending ? { pendingDepositUsd, pendingWithdrawalUsd } : {}),
       ...(navReconciliationResidualUsd != null ? { navReconciliationResidualUsd } : {}),
       unknownExposurePct,

@@ -83,6 +83,14 @@ export const REDEMPTION_BACKSTOP_POLICY_ENTRIES: readonly RedemptionBackstopPoli
     reviewedAt: "2026-10-03",
   },
   {
+    kind: "unused-live-redemption-telemetry",
+    stablecoinId: "usdcx-movement",
+    reason:
+      "The Ethereum xReserve balanceOfNativeCollateral(USDC, Movement domain 10005) read is collateral evidence, not a funded same-notional redeem receipt. Exact releasable capacity, all-source accounting and an elapsed completion bound are unresolved, so the reviewed unquantified route must not publish that escrow balance as redemption capacity.",
+    owner: POLICY_OWNER,
+    reviewedAt: "2026-10-30",
+  },
+  {
     kind: "unverified-freshness",
     stablecoinId: "frxusd-frax",
     reason: "Frax redemption telemetry is sourced from protocol reserve state but lacks a verified source timestamp.",

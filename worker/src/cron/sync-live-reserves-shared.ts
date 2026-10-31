@@ -257,6 +257,9 @@ export function classifyFailure(reason: string, lastError: string | null): Reser
   if (message.includes("invalid") || message.includes("malformed") || message.includes("must be an array")) return "schema-shape";
   if (message.includes("layout-changed")) return "parser-drift";
   if (message.includes("parse-failed") || message.includes("json parse failed")) return "parse-failure";
+  // A dated source outside the reviewed age/future bound is an evidence
+  // validation failure, not unknown parser drift.
+  if (message.includes("source-date-out-of-bounds")) return "validation";
   if (message.includes("d1 write timeout") || message.includes("sqlite") || message.includes("database")) return "storage-write";
   // Adapters render transport statuses as "http-502"; accept the hyphen/slash
   // forms as well as "HTTP 502" so transport outages are not "unknown".

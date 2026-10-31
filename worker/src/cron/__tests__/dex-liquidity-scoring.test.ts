@@ -726,6 +726,90 @@ describe("dex-liquidity scoring", () => {
     expect(result.diagnostics.fallbackCounters.retainedExclusionBlockedDex).toBe(1);
   });
 
+  it("publishes NR instead of a default-built score when every retained pool is excluded", async () => {
+    const scenarios: Array<{
+      name: string;
+      pool: PoolEntry;
+      expectExcluded: (result: Awaited<ReturnType<typeof computeStablecoinScores>>) => void;
+    }> = [
+      {
+        // A dormant $120M Curve pool: the provider reading aged past the DEC-19
+        // window, so the >$100M / <$50k retained floor drops it.
+        name: "aged large-pool reading under the volume floor",
+        pool: makePool({
+          poolId: "ethereum:0x3crv-dormant",
+          project: "curve",
+          chain: "Ethereum",
+          poolType: "curve-stableswap",
+          tvlUsd: 120_000_000,
+          volumeUsd1d: 20_000,
+          volumeReading: {
+            volume24hUsd: 20_000,
+            volume7dUsd: 140_000,
+            observedAtSec: SCORING_CLOCK_SEC - DEX_VOLUME_OBSERVATION_MAX_AGE_SEC - 3_600,
+          },
+        }),
+        expectExcluded: (result) => {
+          expect(result.diagnostics.fallbackCounters.retainedExclusionLargePoolLowVolume).toBe(1);
+          expect(result.diagnostics.deadPoolExclusions.poolCount).toBe(0);
+        },
+      },
+      {
+        // The v6.92 dead-pool floor: a trade-verified zero on a >=$1M pool whose
+        // counter-tokens are not tracked deployments.
+        name: "v6.92 dead-pool floor",
+        pool: makePool({
+          poolId: "ethereum:0xdead-3crv",
+          project: "curve",
+          chain: "Ethereum",
+          poolType: "curve-stableswap",
+          tvlUsd: 1_200_000,
+          volumeUsd1d: 0,
+          volumeReading: {
+            volume24hUsd: 0,
+            volume7dUsd: 0,
+            observedAtSec: SCORING_CLOCK_SEC - 60,
+            deadPoolSignature: true,
+          },
+        }),
+        expectExcluded: (result) => {
+          expect(result.diagnostics.deadPoolExclusions).toMatchObject({
+            reason: "dead-pool-zero-trade-untracked-counter",
+            poolCount: 1,
+            tvlUsd: 1_200_000,
+          });
+          expect(result.diagnostics.fallbackCounters.retainedExclusionLargePoolLowVolume).toBe(0);
+        },
+      },
+    ];
+
+    for (const { pool, expectExcluded } of scenarios) {
+      const metrics = initSourcePoolGraph("frax-frax", "FRAX");
+      metrics.pools = [pool];
+      const db = makeQueryDb([
+        { match: "FROM dex_liquidity_history", all: [] },
+        { match: "FROM surface_publication_generations", all: [] },
+      ]);
+      const result = await computeStablecoinScores(
+        db, new Map([["frax-frax", metrics]]), new Map(), undefined, SCORING_CLOCK_SEC,
+      );
+      expectExcluded(result);
+
+      // The coin is still scored as an empty market, not dropped before scoring.
+      const retained = result.scoredMetrics.get("frax-frax");
+      expect(retained).toBeDefined();
+      expect(retained!.totalTvlUsd).toBe(0);
+      expect(retained!.poolCount).toBe(0);
+
+      // Unobserved evidence carries a NULL LiquidityScore and a named reason.
+      const row = result.scores.get("frax-frax");
+      expect(row).toBeDefined();
+      expect(row!.coverageClass).toBe("unobserved");
+      expect(row!.score).toBeNull();
+      expect(row!.liquidityScoreUnavailableReason).toBe("no-retained-pools");
+    }
+  });
+
   it("gates activity on admitted-TVL coverage and publishes global observed volume with its coverage", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const pool = (poolId: string, tvlUsd: number, volumeUsd1d: number | null, ageSec: number | null): PoolEntry => ({

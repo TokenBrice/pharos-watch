@@ -78,7 +78,8 @@ export interface SignalResult {
 export interface DEWSInput {
   stablecoinId: string;
   mcapUsd: number;
-  pegType: string;
+  /** Null when the cache row omitted an admitted peg type (R1). */
+  pegType: string | null;
   // Supply velocity
   circulatingCurrent: number;
   circulatingPrevDay: number;
@@ -101,6 +102,12 @@ export interface DEWSInput {
   priceConfidence: string | null;
   prevPriceConfidence: string | null;
   price: number | null;
+  /**
+   * Historical reconstruction never reads a price. A `null` price otherwise
+   * carries live semantics (maximum concern), so callers that know the price
+   * family was not read must mark it unavailable instead of scoring it 100.
+   */
+  priceEvidenceUnavailable?: boolean;
   // Cross-source divergence
   pegRef: number;
   pegReferenceAvailable?: boolean;

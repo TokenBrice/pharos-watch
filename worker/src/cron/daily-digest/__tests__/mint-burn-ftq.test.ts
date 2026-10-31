@@ -60,6 +60,38 @@ describe("digest mint/burn flight-to-quality flows", () => {
     });
   });
 
+  it("withholds an inactive verdict while a classified coin has no published flow", async () => {
+    const snapshot = classify(["usdt-tether"], ["usdc-circle", "swanusd-swan"]);
+    // The omitted risky coin is unbounded, so the observed safe inflow past +$100M
+    // no longer proves inactivity: the verdict is unavailable, never inactive.
+    await expect(computeDigestMintBurnFtqFlows(db, [
+      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
+      { id: "usdc-circle", knownNetUsd: -20_000_000, valuation: COMPLETE, window24hComplete: true },
+    ])).resolves.toEqual({
+      kind: "unavailable",
+      active: false,
+      safeNet24h: 0,
+      riskyNet24h: 0,
+      reason: "valuation-incomplete",
+      safetyScoreIdentity: snapshot.safetyScoreIdentity,
+    });
+  });
+
+  it("keeps a proven-inactive verdict when the omitted cohort member cannot reach the threshold", async () => {
+    const snapshot = classify(["usdt-tether"], ["usdc-circle", "swanusd-swan"]);
+    // The safe bound is below +$100M, so no unbounded risky outflow can activate.
+    await expect(computeDigestMintBurnFtqFlows(db, [
+      { id: "usdt-tether", knownNetUsd: 10_000_000, valuation: COMPLETE, window24hComplete: true },
+      { id: "usdc-circle", knownNetUsd: -20_000_000, valuation: COMPLETE, window24hComplete: true },
+    ])).resolves.toEqual({
+      kind: "ok",
+      active: false,
+      safeNet24h: 10_000_000,
+      riskyNet24h: -20_000_000,
+      safetyScoreIdentity: snapshot.safetyScoreIdentity,
+    });
+  });
+
   it("degrades when a coin's 24h flow window is unavailable", async () => {
     classify(["usdt-tether"], ["usdc-circle"]);
     await expect(computeDigestMintBurnFtqFlows(db, [

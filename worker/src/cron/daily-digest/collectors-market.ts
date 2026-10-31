@@ -344,7 +344,7 @@ export async function collectSupplyVelocity(
           (sameDirection && velocityRatio < 0.4 && hasMaterialWeeklyMove)
         ) {
           const signal = directionReversed ? "reversed" : velocityRatio > 2.5 ? "accelerating" : "decelerating";
-          velocitySignals.push({ coin: coin.symbol, change1d, change7d, signal });
+          velocitySignals.push({ stablecoinId: coin.id, coin: coin.symbol, change1d, change7d, signal });
         }
       }
 

@@ -18,6 +18,7 @@ vi.mock("../../../lib/blacklist/tron-replay-provider", () => ({
   fetchTronBlockTransactionPositions: vi.fn(),
 }));
 import { fetchTronBlockTransactionPositions } from "../../../lib/blacklist/tron-replay-provider";
+import { fetchEvmTokenBalance } from "../../../lib/blacklist/balance-providers";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const circuits = { etherscanAllowed: true, tronGridAllowed: true };
@@ -50,6 +51,74 @@ describe("durable current snapshot reconciliation", () => {
     expect(sqlite.prepare("SELECT cursor_value FROM blacklist_sync_state WHERE config_key = ?").get(ethereumConfig.configKey))
       .toEqual({ cursor_value: row.block_number });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM cache WHERE key GLOB ?").get(`${CURRENT_BALANCE_DEBT_PREFIX}*`)).toEqual({ n: 0 });
+  });
+
+  it("keeps an emitted destroy snapshot when a deferred replay folds a later release", async () => {
+    const { sqlite, db } = fixtures.open();
+    const address = "0xfeed";
+    const freeze = makeCacheRow({
+      id: "ethereum-0xfee1-0",
+      address,
+      event_type: "blacklist",
+      amount_native: null,
+      amount_usd_at_event: null,
+      amount_source: "unavailable",
+      amount_status: "recoverable_pending",
+      tx_hash: "0xfee1",
+      block_number: 24_000_001,
+      timestamp: 1_760_000_000,
+      event_signature: "AddedBlackList(address)",
+    });
+    const destroy = {
+      ...freeze,
+      id: "ethereum-0xfee2-0",
+      event_type: "destroy" as const,
+      amount_native: 500,
+      amount_usd_at_event: 500,
+      amount_source: "event" as const,
+      amount_status: "resolved" as const,
+      tx_hash: "0xfee2",
+      block_number: 24_000_002,
+      timestamp: 1_760_000_100,
+      event_signature: "DestroyedBlackFunds(address,uint256)",
+    };
+    const release = {
+      ...freeze,
+      id: "ethereum-0xfee3-0",
+      event_type: "unblacklist" as const,
+      tx_hash: "0xfee3",
+      block_number: 24_000_003,
+      timestamp: 1_760_000_200,
+      event_signature: "RemovedBlackList(address)",
+    };
+    await insertBlacklistRows(db, [freeze, destroy, release]);
+
+    // The freeze capture for the blacklist row is budget-skipped, retaining its
+    // debt key; a later scan writes the emitted destroy snapshot, then the
+    // release arrives, and the maintenance tail replays the whole history.
+    const exhausted = context();
+    exhausted.runBudget.subrequestBudget.count = 100;
+    expect(await syncCurrentBalanceCacheForRows(db, ethereumConfig, [freeze], exhausted))
+      .toMatchObject({ skippedDueBudget: 1, budgetExhausted: true });
+    await syncCurrentBalanceCacheForRows(db, ethereumConfig, [destroy], context());
+    await syncCurrentBalanceCacheForRows(db, ethereumConfig, [release], context());
+    await reconcileCurrentBalanceDebt(db, context(), circuits);
+
+    // The release must not downgrade the newer destroy snapshot to the older
+    // blacklist row and overwrite its value with a post-wipe live balance.
+    expect(sqlite.prepare(
+      `SELECT amount_native, amount_usd, source, status, observed_at FROM blacklist_current_balances`,
+    ).get()).toMatchObject({
+      amount_native: 500,
+      amount_usd: 500,
+      source: "destroy_event",
+      status: "resolved",
+      observed_at: destroy.timestamp,
+    });
+    expect(vi.mocked(fetchEvmTokenBalance)).not.toHaveBeenCalled();
+    expect(computeBlacklistTrackedSummaryStats(await loadBlacklistCurrentBalanceMap(db)).trackedFrozenTotal).toBe(500);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM cache WHERE key GLOB ?").get(`${CURRENT_BALANCE_DEBT_PREFIX}*`))
+      .toEqual({ n: 0 });
   });
 
   it("captures a withheld Tron identity after transaction order recovery", async () => {

@@ -33,9 +33,12 @@ const ETHEREUM_FALLBACK_RPC_URL = getSecondaryFallbackRpcUrl("ethereum");
  *
  *   getContractValue() = underlying.balanceOf(cdo)          // unlent, if any
  *                      + strategyToken.balanceOf(cdo) * px  // the receivable
+ *                      - unclaimedFees                       // already fee-net
  *
  * so `getContractValue() - underlying.balanceOf(cdo)` is exactly the borrower
- * receivable, with no double counting. The receivable is a single-obligor
+ * receivable, with no double counting, and `getContractValue()` itself is the
+ * fee-net holder backing (the unclaimed protocol fee is already deducted
+ * upstream, between harvests). The receivable is a single-obligor
  * private-credit claim and is published WITHOUT a `coinId`: it is not the
  * deposit token, and linking it to one would present a loan book as that
  * token's reserves.
@@ -156,14 +159,14 @@ export function adaptIdleCdoEpochVariantSnapshot(
     snapshot.underlyingDecimals,
   );
 
-  // `getContractValue()` includes unclaimed protocol fees, which accrue between
-  // harvests and sit outside the tranche NAVs. Reconcile the NAV sum against the
-  // fee-exclusive contract value so a monotonically accruing fee balance cannot
-  // manufacture a permanent reconciliation degrade.
+  // `getContractValue()` already deducts `unclaimedFees` (IdleCDO.sol and the
+  // deployed IdleCDOCreditVault both subtract it), so it is the fee-net holder
+  // backing; subtracting the fee balance again would understate backing against
+  // the tranche NAVs. Keep the fee balance as provenance and reconcile the NAV
+  // sum against the contract value as read.
   const unclaimedFeesUsd = decimalNumberFromBigInt(snapshot.unclaimedFeesRaw, snapshot.underlyingDecimals);
-  const feeExclusiveContractValueUsd = contractValueUsd - unclaimedFeesUsd;
-  const navDrift = feeExclusiveContractValueUsd > 0
-    ? Math.abs(feeExclusiveContractValueUsd - navTotalUsd) / feeExclusiveContractValueUsd
+  const navDrift = contractValueUsd > 0
+    ? Math.abs(contractValueUsd - navTotalUsd) / contractValueUsd
     : 1;
   if (navDrift > NAV_RECONCILIATION_TOLERANCE) {
     warnings.push(reserveDegradedWarning(
@@ -257,16 +260,16 @@ export function adaptIdleCdoEpochVariantSnapshot(
         epochRunning: snapshot.epochRunning,
         juniorSubordinationUsd: decimalNumberFromBigInt(juniorNavRaw(snapshot), snapshot.underlyingDecimals),
         coverageScope: "whole-vault-tranche-nav",
-        compositionScope: "gross-vault-assets",
-        grossContractValueUsd: contractValueUsd,
+        compositionScope: "whole-vault-assets",
+        contractValueUsd,
         unclaimedFeesUsd,
-        holderBackingUsd: feeExclusiveContractValueUsd,
+        holderBackingUsd: contractValueUsd,
         holderLiabilitiesUsd: navTotalUsd,
         ...(params.sourceUrls ? { sourceUrls: [...params.sourceUrls] } : {}),
       }),
       supplyUsd: navTotalUsd,
-      totalReserveUsd: feeExclusiveContractValueUsd,
-      collateralizationRatio: feeExclusiveContractValueUsd / navTotalUsd,
+      totalReserveUsd: contractValueUsd,
+      collateralizationRatio: contractValueUsd / navTotalUsd,
     },
   };
 }

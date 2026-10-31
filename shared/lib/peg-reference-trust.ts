@@ -26,13 +26,17 @@ export function isAuthoritativeDepegPegReference(input: PegReferenceTrustInput):
     return input.pegRateAvailable ?? input.pegRateSource != null;
   }
 
-  if (!input.pegType || input.pegType === "peggedUSD") {
+  // Only an explicit USD identity anchors at 1 without a peg type. An absent
+  // peg type for any other currency is missing evidence, not a reference.
+  if (!input.pegType) {
+    return input.pegCurrency === "USD";
+  }
+  if (input.pegType === "peggedUSD") {
     return true;
   }
 
   const pegCurrency = input.pegCurrency ?? null;
   if (
-    pegCurrency == null ||
     pegCurrency === "USD" ||
     pegCurrency === "VAR" ||
     pegCurrency === "OTHER" ||

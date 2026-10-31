@@ -66,6 +66,15 @@ describe("Ondo USDY dated portfolio categories", () => {
     expect(() => adapt(source)).toThrow();
   });
 
+  it("classifies structural drift and parse failures instead of returning unknown", () => {
+    expect(() => adapt(html.replaceAll('\\"portfolio\\"', '\\"absent\\"'))).toThrow("layout-changed");
+    expect(() => adapt(html.replace('2094366235.88', 'invalid'))).toThrow("parse-failed");
+    expect(() => adapt(html.replace('8a072b79-7c71-472b-8093-0a9c3347fb8f', 'unknown'))).toThrow("layout-changed");
+    const portfolio = JSON.parse(extractEscapedJsonValueAfterKey(html, '\\"portfolio\\":', "test"));
+    portfolio.positions.push({ ...portfolio.positions[0], _id: "unknown", name: "Unknown category", value: 0 });
+    expect(() => adapt(JSON.stringify({ portfolio }).replaceAll('"', '\\"'))).toThrow("layout-changed");
+  });
+
   it("rejects missing categories and missing or duplicate reviewed keys", () => {
     const portfolio = JSON.parse(extractEscapedJsonValueAfterKey(html, '\\"portfolio\\":', "test"));
     portfolio.positions.pop();

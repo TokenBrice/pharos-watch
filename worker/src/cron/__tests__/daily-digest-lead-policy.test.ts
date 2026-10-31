@@ -7,6 +7,8 @@ import {
   type DigestSnapshotDate,
   type DigestSnapshotFixture,
 } from "../../test-helpers/__fixtures__/digest-snapshots";
+import { makeAsset } from "../../test-helpers/__shared/fixtures";
+import { makeCollectorCtx } from "./daily-digest.test-support";
 import { collectActiveDepegs } from "../daily-digest/collectors-market";
 import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
 import { buildCriticalDailyLeadRequirements } from "../daily-digest/critical-lead-requirements";
@@ -244,6 +246,92 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     expect(alphaPartner).toBeDefined();
     // usda-alpha-partner barely moved and is weeks old: no more perpetual "worsening".
     expect(alphaPartner?.novelty).not.toBe("worsening");
+  });
+
+  it("marks a stored peak as historical in the candidate and change-summary labels", () => {
+    const at = 1_788_000_000;
+    const data: DigestInputData = {
+      totalMcapUsd: 250_000_000_000,
+      mcap7dDelta: 1_000_000_000,
+      activeDepegCount: 1,
+      biggestSupplyChange: null,
+      stabilityIndex: null,
+      yesterdayIndex: null,
+      dataQuality: {
+        generatedAt: at, stablecoinsCacheUpdatedAt: at, stablecoinsCacheAgeSec: 0,
+        windows: {
+          blacklistActivity: { label: "rolling last 24h", start: at - 86_400, end: at },
+          mintBurnFlows: { label: "unavailable", start: null, end: null },
+          supplyVelocity: { label: "UTC snapshots", dates: [] },
+          psi: { label: "latest sample", sampleAt: null, dailySnapshotAt: null },
+        },
+      },
+      topDepegs: [{
+        stablecoinId: "usdt-tether", symbol: "USDT", bps: -3000, direction: "below",
+        mcapUsd: 1_500_000_000, startedAt: at - 10 * 3_600, ageHours: 10,
+        impactScore: 4500, peakBps: 3000, severityBasis: "peak-fallback", quoteMode: "usd",
+      }],
+    };
+    data.editorialCandidates = buildEditorialCandidates(data, null);
+    const candidate = data.editorialCandidates.find((entry) => entry.id === "depeg:usdt-tether:active");
+    expect(candidate?.suppressReason).toBeUndefined();
+    // The title is published verbatim as the reader-facing "What changed" label,
+    // so the stored peak must carry the same provenance as the prompt and tape.
+    expect(candidate?.title).toContain("stored peak");
+    expect(candidate?.title).not.toBe("USDT active 3000 bps below peg");
+    const label = buildChangeSummary(data, null).newSignals
+      .find((change) => change.id === "depeg:usdt-tether:active")?.label;
+    expect(label).toContain("stored peak");
+    // The same title repeats in later editions while the fallback persists.
+    const repeated = buildChangeSummary(data, { ...data, editorialCandidates: data.editorialCandidates })
+      .repeatedSignals.find((change) => change.id === "depeg:usdt-tether:active")?.label;
+    expect(repeated).toContain("stored peak");
+  });
+
+  it("pins the critical coin's own candidate when two coins share a symbol", async () => {
+    const at = Math.floor(Date.now() / 1000);
+    const ctx = makeCollectorCtx(mockD1([{
+      match: "FROM depeg_events",
+      rows: [
+        {
+          stablecoin_id: "usda-alpha-partner", symbol: "USDA", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: 5_120, started_at: at - 3 * 3_600,
+          peak_price: null, peg_reference: 1,
+        },
+        {
+          stablecoin_id: "usda-avalon", symbol: "USDA", peg_type: "peggedUSD",
+          direction: "below", peak_deviation_bps: 2_140, started_at: at - 61 * 3_600,
+          peak_price: null, peg_reference: 1,
+        },
+      ],
+    }]));
+    for (const asset of [
+      makeAsset({ id: "usda-alpha-partner", symbol: "USDA", price: 0.488, priceObservedAt: ctx.nowSec }),
+      makeAsset({ id: "usda-avalon", symbol: "USDA", price: 0.786, priceObservedAt: ctx.nowSec }),
+    ]) {
+      ctx.trackedStablecoinIds = new Set([...ctx.trackedStablecoinIds, asset.id]);
+      ctx.stablecoinAssetById.set(asset.id, asset);
+    }
+    ctx.mcapById.set("usda-alpha-partner", 22_400_000);
+    ctx.mcapById.set("usda-avalon", 104_000_000);
+
+    const collected = await collectActiveDepegs(ctx);
+    const input: DigestInputData = {
+      ...fixture.inputData,
+      activeDepegCount: collected.value.activeDepegCount,
+      topDepegs: collected.value.topDepegs,
+    };
+    input.editorialCandidates = buildEditorialCandidates(input, null);
+    // Artifact risk outranks impact, so the larger sub-critical coin's
+    // candidate precedes the critical one.
+    const depegCandidateIds = input.editorialCandidates
+      .filter((entry) => entry.kind === "depeg")
+      .map((entry) => entry.id);
+    expect(depegCandidateIds).toEqual(["depeg:usda-avalon:active", "depeg:usda-alpha-partner:active"]);
+
+    const [requirement] = buildCriticalDailyLeadRequirements(input) ?? [];
+    expect(requirement?.severity).toBe("hard");
+    expect(requirement?.candidateIds).toEqual(["depeg:usda-alpha-partner:active"]);
   });
 });
 

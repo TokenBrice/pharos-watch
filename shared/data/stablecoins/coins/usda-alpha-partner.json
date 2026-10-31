@@ -4,7 +4,7 @@
   "symbol": "USDA",
   "oneLiner": "USDA is Alpha Partners' BSC dollar token with claimed off-chain fiat backing; reserve assets, custodians and independent reports remain undisclosed.",
   "flags": {
-    "backing": "crypto-backed",
+    "backing": "rwa-backed",
     "governance": "centralized-dependent"
   },
   "collateral": "AlphaPartners' USDA article dated 2025-10-22 claims 1:1 off-chain fiat reserves regularly audited by independent third parties. It identifies no reserve assets, weights, custodians, auditor, report period or reconciliation cadence. The current AP U-Card website and GitBook do not supply those USDA-specific disclosures. Historical FDIC-protection marketing remains unsubstantiated; FDIC insurance does not cover stablecoins.",

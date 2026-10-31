@@ -16,12 +16,13 @@ import { StressSignalsAllResponseSchema } from "@shared/types/market";
 import { computeLiquiditySignal, computeSupplySignal } from "../../lib/dews/signal-families";
 import { decodeLegacyStressSignals } from "../../lib/dews/source-state/legacy-bridge";
 import { makeDewsInput } from "../../lib/__tests__/dews.test-support";
+import { projectDewsBandTransitions } from "../../lib/tape-projectors/dews";
 
-function buildDewsRow(stablecoinId: string, score = 12): DewsComputedRow {
+function buildDewsRow(stablecoinId: string, score = 12, band: "CALM" | "WARNING" = "CALM"): DewsComputedRow {
   return {
     stablecoinId,
     score,
-    band: "CALM",
+    band,
     signals: { supply: { value: 10, available: true, weight: 1 } },
     amplifiers: { psi: 1, contagion: 1 },
     baseScore: 12,
@@ -561,6 +562,49 @@ describe("persistDewsResults", () => {
           "SELECT state, failure_reason FROM surface_publication_generations WHERE generation_id = ?",
         ).get(`dews:${withheld}`),
       ).toEqual({ state: "rejected", failure_reason: "degraded-sources:dex-liquidity-freshness" });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("keeps an accepted band change in sparse history after a withheld generation", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const published = nowSec - 180;
+    const withheld = nowSec - 120;
+    const accepted = nowSec - 60;
+    const persist = (computedAt: number, score: number, band: "CALM" | "WARNING", degradedSources: string[]) =>
+      persistDewsResults({
+        db,
+        results: [buildDewsRow("usdt-tether", score, band)],
+        eligibleIds: new Set(["usdt-tether"]),
+        degradedSources,
+        nowSec: computedAt,
+      });
+    try {
+      await persist(published, 12, "CALM", []);
+      // The withheld run materializes stress_signals_latest with its rejected
+      // WARNING; the next accepted generation publishes the same WARNING.
+      await expect(persist(withheld, 62, "WARNING", ["dex-liquidity-freshness"]))
+        .resolves.toMatchObject({ publicationPointerWritten: false, publishedGeneration: null });
+      await expect(persist(accepted, 62, "WARNING", [])).resolves.toMatchObject({
+        publicationPointerWritten: true,
+        publishedGeneration: accepted,
+      });
+
+      // A published band change must leave a history row at its own generation;
+      // the public tape only joins published generations.
+      expect(sqlite.prepare(
+        "SELECT computed_at, score, band FROM stress_signals WHERE stablecoin_id = ? ORDER BY computed_at",
+      ).all("usdt-tether")).toEqual([
+        { computed_at: published, score: 12, band: "CALM" },
+        { computed_at: withheld, score: 62, band: "WARNING" },
+        { computed_at: accepted, score: 62, band: "WARNING" },
+      ]);
+      await expect(projectDewsBandTransitions(db)).resolves.toEqual({ projected: 1, advanced: accepted });
+      expect(sqlite.prepare("SELECT type, source_row_id FROM tape_events ORDER BY id").all()).toEqual([
+        { type: "dews.escalated", source_row_id: `usdt-tether:${accepted}:WARNING` },
+      ]);
     } finally {
       sqlite.close();
     }

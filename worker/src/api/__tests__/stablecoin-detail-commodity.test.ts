@@ -211,3 +211,58 @@ describe("fetchCommodityTokens", () => {
     }
   });
 });
+
+describe("commodity detail missing upstream history", () => {
+  it("serves the retained detail generation instead of an empty 200 when every provider read fails", async () => {
+    // DefiLlama chart, DefiLlama protocol and CoinGecko resolve non-OK/empty without
+    // throwing, and the coin has no admitted supply_history rows.
+    fetchJsonWithRetryMock.mockReset();
+    fetchJsonWithRetryMock.mockResolvedValue(null);
+    const now = Math.floor(Date.now() / 1000);
+    const cachedBody = JSON.stringify({
+      price: 2_501.5,
+      tokens: [{
+        date: now - 86_400,
+        totalCirculatingUSD: { peggedGOLD: 500_000_000 },
+        totalCirculating: { peggedGOLD: 200_000 },
+      }],
+    });
+    const db = mockD1([
+      { match: "FROM supply_history", rows: [] },
+      { match: "", rows: [], allowUnused: true },
+    ]);
+    const detail = createDetailResponseHelpers({
+      db, stablecoinId: config.stablecoinId, pegType: config.pegType,
+      cached: { value: cachedBody, updatedAt: now - 3_600 },
+      execCtx: { waitUntil: (promise: Promise<unknown>) => { pending.push(promise); } } as ExecutionContext,
+    });
+
+    const response = await handleCommodityDetail(config, detail);
+
+    // Missing history must try D1 supply history and the retained detail cache
+    // before an unavailable error; it must not publish an empty 200 history.
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(JSON.parse(cachedBody));
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - 3_600));
+    expect(response.headers.get("Warning")).toContain("stale");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("returns an unavailable error instead of an empty 200 when no retained cache exists", async () => {
+    fetchJsonWithRetryMock.mockReset();
+    fetchJsonWithRetryMock.mockResolvedValue(null);
+    const db = mockD1([
+      { match: "FROM supply_history", rows: [] },
+      { match: "", rows: [], allowUnused: true },
+    ]);
+    const detail = createDetailResponseHelpers({
+      db, stablecoinId: config.stablecoinId, pegType: config.pegType, cached: null,
+      execCtx: { waitUntil: (promise: Promise<unknown>) => { pending.push(promise); } } as ExecutionContext,
+    });
+
+    const response = await handleCommodityDetail(config, detail);
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({ error: "Historical detail data unavailable for stablecoin xaut-tether" });
+  });
+});

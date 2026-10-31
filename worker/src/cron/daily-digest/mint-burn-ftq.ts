@@ -1,5 +1,9 @@
 import { buildFlightToQualityClassificationFromV9Snapshot } from "../../lib/flight-to-quality-classification";
-import { detectFlightToQualityFromValuedNets, type ValuedNetFlow24h } from "../../lib/mint-burn-scoring";
+import {
+  buildFlightToQualityCohorts,
+  detectFlightToQualityFromValuedNets,
+  type ValuedNetFlow24h,
+} from "../../lib/mint-burn-scoring";
 import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
 
@@ -67,10 +71,11 @@ export async function computeDigestMintBurnFtqFlows(
   if (coinNets.some((coin) => coin.knownNetUsd === null && coin.window24hComplete !== true)) {
     return unavailable("flow-window-unavailable", gradeClassification.safetyScoreIdentity);
   }
-  const ftq = detectFlightToQualityFromValuedNets({
-    safe: coinNets.filter((coin) => gradeClassification.safeIds.has(coin.id)),
-    risky: coinNets.filter((coin) => gradeClassification.riskyIds.has(coin.id)),
-  });
+  const ftq = detectFlightToQualityFromValuedNets(
+    // A classified coin with no published flow is an unbounded cohort member, not a
+    // measured zero: its omission cannot prove the inactive verdict.
+    buildFlightToQualityCohorts(gradeClassification, new Map(coinNets.map((coin) => [coin.id, coin]))),
+  );
   if (!ftq) return unavailable("valuation-incomplete", gradeClassification.safetyScoreIdentity);
   return {
     kind: "ok",

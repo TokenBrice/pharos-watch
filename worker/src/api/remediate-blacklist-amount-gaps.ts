@@ -8,7 +8,7 @@ import {
   readBodyOrQueryStringParam,
 } from "../lib/api-params";
 import { parseOptionalRequestJsonObject } from "../lib/api-json-body";
-import { executeAtomicBatch } from "../lib/db";
+import { executeAtomicBatch, buildInClause } from "../lib/db";
 import { D1_BATCH_SIZE } from "../lib/constants";
 import {
   getBlacklistConfigByContract,
@@ -223,6 +223,8 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
     const updates: D1PreparedStatement[] = [];
     const outcomes: Array<"resolved" | "providerFailed" | "configMissing" | "configAmbiguous" | null> = [];
     const zeroAmounts: boolean[] = [];
+    // Event id per statement, so a CAS no-op can be checked against the committed state.
+    const statementEventIds: Array<string | null> = [];
     const attemptAt = Math.floor(Date.now() / 1000);
     let resolved = 0;
     let resolvedZero = 0;
@@ -245,6 +247,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
         const errorClass = candidate.kind === "ambiguous_config" ? "ambiguous_config" : "config_missing";
         outcomes.push(candidate.kind === "ambiguous_config" ? "configAmbiguous" : "configMissing");
         zeroAmounts.push(false);
+        statementEventIds.push(candidate.row.id);
         updates.push(
           buildBlacklistAmountAttemptUpdate(db, {
             eventId: candidate.row.id,
@@ -272,6 +275,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       if (recovery.amount == null) {
         outcomes.push("providerFailed");
         zeroAmounts.push(false);
+        statementEventIds.push(row.id);
         updates.push(
           buildBlacklistAmountAttemptUpdate(db, {
             eventId: row.id,
@@ -288,12 +292,14 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
           }));
           outcomes.push(null);
           zeroAmounts.push(false);
+          statementEventIds.push(null);
         }
         continue;
       }
 
       outcomes.push("resolved");
       zeroAmounts.push(recovery.amount === 0);
+      statementEventIds.push(row.id);
       updates.push(
         buildRecoveredBlacklistAmountPersistence(db, {
           eventId: row.id,
@@ -319,8 +325,36 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       // caches, with no retry path to finish the job. Write-mode candidates are capped at
       // D1_BATCH_SIZE above and the per-candidate statement guard keep this one transaction.
       const results = await executeAtomicBatch(db, updates, { returnResults: true });
+      // A retry after an ambiguous commit replays the same CAS-fenced statements against
+      // the committed state, so every row reports 0 changes. Recheck those rows against
+      // the attempt clock this run used: a prior ambiguous attempt that landed leaves it
+      // set, while a concurrent writer's CAS conflict leaves a different clock.
+      const replayCandidates = results
+        .map((result, index) => (Number(result.meta?.changes ?? 0) === 0 && outcomes[index] != null ? index : -1))
+        .filter((index) => index >= 0);
+      let landedByReplay = new Set<number>();
+      if (replayCandidates.length > 0) {
+        const eventIds = [
+          ...new Set(replayCandidates
+            .map((index) => statementEventIds[index])
+            .filter((id): id is string => id != null)),
+        ];
+        if (eventIds.length > 0) {
+          const clause = buildInClause(eventIds);
+          const committed = await db
+            .prepare(
+              `SELECT id FROM blacklist_events WHERE amount_last_attempted_at = ? AND id IN (${clause.sql})`,
+            )
+            .bind(attemptAt, ...clause.binds)
+            .all<{ id: string }>();
+          const committedIds = new Set((committed.results ?? []).map((row) => row.id));
+          landedByReplay = new Set(
+            replayCandidates.filter((index) => committedIds.has(statementEventIds[index]!)),
+          );
+        }
+      }
       for (const [index, result] of results.entries()) {
-        if (Number(result.meta?.changes ?? 0) === 0) continue;
+        if (Number(result.meta?.changes ?? 0) === 0 && !landedByReplay.has(index)) continue;
         switch (outcomes[index]) {
           case "resolved": resolved++; if (zeroAmounts[index]) resolvedZero++; break;
           case "providerFailed": providerFailed++; break;
@@ -329,6 +363,9 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
         }
       }
     }
+    // Counters include rows whose CAS-guarded write landed under an ambiguous retry,
+    // so a remediation invalidates the derived summary/gap-metric rows even when the
+    // replay itself reported 0 changes.
     const cacheInvalidation = resolved + providerFailed + configMissing + configAmbiguous > 0
       ? await invalidateBlacklistDerivedCaches(db)
       : { attempted: 0, deleted: 0, failed: 0 };

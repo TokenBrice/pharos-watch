@@ -97,8 +97,7 @@
         "https://developers.circle.com/xreserve/references/supported-blockchains-and-domains",
         "https://github.com/circlefin/evm-xreserve-contracts/blob/master/src/xReserve.sol"
       ],
-      "holderEligibility": "any-holder",
-      "settlementDelaySec": 0
+      "holderEligibility": "any-holder"
     }
   }
 }

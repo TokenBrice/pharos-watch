@@ -2,23 +2,41 @@
   "id": "pathusd-bridge",
   "reserves": [
     {
-      "name": "Short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash",
-      "pct": 100,
+      "sourceKey": "bridge-transparency:cash",
+      "name": "Cash",
+      "pct": 25.3267,
       "risk": "very-low",
-      "assetClass": "other",
+      "assetClass": "cash",
+      "issuerOrObligor": "Bridge-approved bank counterparties",
       "riskFactors": [
+        "credit",
+        "liquidity",
+        "custody",
         "counterparty",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "bridge-transparency:treasury",
+      "name": "Treasury",
+      "pct": 74.6733,
+      "risk": "very-low",
+      "assetClass": "treasury-bill",
+      "issuerOrObligor": "United States Treasury and U.S. government money-market funds (fund identities undisclosed)",
+      "riskFactors": [
+        "credit",
         "duration",
         "liquidity",
         "custody",
-        "concentration"
+        "counterparty"
       ],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "one-day"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-28",
-    "reviewer": "Grok phase1 reserve wave-8 2026-07-28",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "Pharos findings-curation renewal 2026-10-30 (FC-1)",
     "confidence": "probable",
     "sources": [
       {
@@ -48,23 +66,19 @@
       {
         "label": "Recheck retrieved 2026-10-20; API snapshot 2026-10-20T22:10:29Z: cash $8,363,732.36 plus treasury $45,628,742.64 totals $53,992,475.00, exceeding reported reserves $53,992,445.68 by $29.32; no instrument/provider census disclosed",
         "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
+      },
+      {
+        "label": "Bridge pathUSD public cash/treasury categories observed 2026-10-30T19:10:33Z: cash $18,535,004.42 plus treasury $54,648,585.55 totals $73,183,589.97 against reported reserve total $73,183,560.65; instrument-level treasury and provider mapping remain undisclosed",
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd"
       }
     ],
-    "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. The October 9, 2026 public API payload at 10:20:33Z reports cash of $19,161,280.75 and treasury of $52,096,485.21, totaling $71,257,765.96, versus reported total reserves of $71,257,752.29: a $13.67 discrepancy. Generic reserve-management documentation lists traditional and tokenized treasury partners but does not identify the instruments within pathUSD's treasury category or their shares. No composition weights are normalized over either conflicting denominator, no treasury-class or tracked-token allocation is assumed, and no liquidity bound is joined to unidentified reserve exposures. The existing composition and composition date remain unchanged; the current researched classification is supplied separately in the campaign fragment.",
-    "compositionBasis": "Bridge custom-stablecoin reserve policy; dated public cash/treasury amounts now available, with instrument-level mapping unresolved",
-    "compositionAsOf": "2026-07-28",
+    "rationale": "Tempo identifies pathUSD as issued by Bridge and backed one-for-one by USD-denominated reserves. The 2026-10-30T19:10:33Z public API observation reports the two reserve categories that Bridge publishes for pathUSD: cash $18,535,004.42 and treasury $54,648,585.55. They sum to $73,183,589.97, which is $29.32 (0.00004%) above the reported reserve total of $73,183,560.65, inside the bridge-transparency adapter's max($1, 0.01%) category-excess bound and consistent with the documented pathUSD rounding excess. The reviewed weights normalize the two categories over their own $73,183,589.97 total and are dated to that observation; the recorded $13.67 October 9 and $29.32 October 20 category sums show the same rounding-scale excess on earlier payloads. Generic reserve-management documentation lists traditional and tokenized treasury partners but does not identify the instruments within pathUSD's treasury category or their shares, so instrument identity, provider allocation and any repo or money-market suballocation remain undisclosed. The cash/treasury split moves intraday (issuer observations on 2026-10-30: 51.06%/48.94% at 12:10:33Z and 25.33%/74.67% at 19:10:33Z), so the reviewed weights are a dated observation, not a stable allocation, and no liquidity bound is joined to unidentified reserve exposures.",
+    "compositionBasis": "Bridge path_usd API cash and Treasury dollar amounts divided by their itemized $73,183,589.97 total; four-decimal percentage rounding",
+    "compositionAsOf": "2026-10-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "Cash and treasury category amounts are public, but the current instrument-level treasury split, pathUSD-specific provider allocation and $13.67 category-sum versus reserve-total discrepancy remain unresolved. Generic banking-hours and business-day liquidity terms do not certify identified pathUSD exposure rows or same-notional exit capacity.",
-    "knownUnknownExposurePct": 100,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Short-dated U.S. Treasuries, overnight Treasury repos, money market funds, and cash",
-        "pct": 100,
-        "disposition": "basket-needs-split",
-        "rationale": "Dated cash and treasury amounts are public. At October 9, 2026 10:20:33Z they exceed the stated reserve total by $13.67; treasury instrument identities and shares remain unspecified. The historical opaque basket is retained instead of inventing a reconciled current composition."
-      }
-    ]
+    "knownUnknownExposure": "The two published categories itemize pathUSD's whole reserve allocation at the 2026-10-30T19:10:33Z observation and exceed the reported reserve total by $29.32 (0.00004%), which is category rounding rather than an unallocated balance. The instrument-level treasury split, pathUSD-specific provider allocation, fund identities and any repo or money-market suballocation remain unresolved. Generic banking-hours and business-day liquidity terms do not certify identified pathUSD exposure rows or same-notional exit capacity.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
   },
   "custodyProfile": {
     "providers": [

@@ -364,7 +364,7 @@ export async function generateWeeklyRecap(
   const weeklyData = buildWeeklyInputData(currentRows, priorRows, safetyContext, {
     current: { start: todayTs - 7 * DAY_SECONDS, end: todayTs },
     prior: { start: todayTs - 14 * DAY_SECONDS, end: todayTs - 7 * DAY_SECONDS },
-  });
+  }, { start: weekBoundary, end: scheduledAtSec });
   if (!weeklyData) {
     await reportCronProgress(reportProgress, {
       stage: "input-unavailable",

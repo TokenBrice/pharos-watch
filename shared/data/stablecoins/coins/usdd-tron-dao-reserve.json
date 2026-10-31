@@ -70,12 +70,12 @@
       "primary": {
         "kind": "http-json",
         "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=tron"
-      },
-      "fallbacks": [
-        {
-          "kind": "http-json",
-          "url": "https://app-api.usdd.io/data-platform/latest-collateral?chain=eth"
-        }
+      }
+    },
+    "params": {
+      "additionalCollateralUrls": [
+        "https://app-api.usdd.io/data-platform/latest-collateral?chain=eth",
+        "https://app-api.usdd.io/data-platform/latest-collateral?chain=bsc"
       ]
     }
   },

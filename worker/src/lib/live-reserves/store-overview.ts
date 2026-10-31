@@ -222,6 +222,13 @@ function countCoinsByStatus(
 
     if (!record) {
       corruptCoins++;
+      if (uncertainWrite) writeTimeoutUncertain++;
+      // A consistent row proves a recorded success even when its payload is
+      // undecodable; the success clock is sync-state evidence, not the payload.
+      const successfulAt = syncState?.lastSuccessAt;
+      if (typeof successfulAt === "number" && Number.isFinite(successfulAt) && successfulAt > 0) {
+        lastSuccessAt = lastSuccessAt == null ? successfulAt : Math.max(lastSuccessAt, successfulAt);
+      }
       continue;
     }
 

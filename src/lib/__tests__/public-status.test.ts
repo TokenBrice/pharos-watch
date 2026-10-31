@@ -245,5 +245,20 @@ describe("getPublicMintBurnStatus — additional fixtures", () => {
     expect(at(10_801)).toBe("stale");
     expect(getPublicMintBurnStatus({ ...sync, lastSuccessfulSyncAt: null }, BASE_HEALTH.timestamp)).toBe("stale");
   });
+
+  it("rejects a success clock past the 60-second read allowance instead of clamping it to healthy", () => {
+    // docs/status-dashboard.md #timestamp-admission: a clock inside the
+    // inclusive allowance yields age zero; past it the clock is rejected
+    // evidence, never a clamped healthy age zero.
+    const sync = BASE_HEALTH.mintBurn.sync;
+    expect(getPublicMintBurnStatus(
+      { ...sync, lastSuccessfulSyncAt: BASE_HEALTH.timestamp + 60 },
+      BASE_HEALTH.timestamp,
+    )).toBe("healthy");
+    expect(getPublicMintBurnStatus(
+      { ...sync, lastSuccessfulSyncAt: BASE_HEALTH.timestamp + 90 },
+      BASE_HEALTH.timestamp,
+    )).not.toBe("healthy");
+  });
 });
 

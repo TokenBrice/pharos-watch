@@ -3,7 +3,7 @@ import { getCircuitScope } from "./circuit-sources";
 import { CRON_INTERVALS } from "./cron-jobs";
 import { DATA_SURFACE_DESCRIPTORS } from "./data-surface-descriptors";
 import { assessSafetyScoreAcceptedEvidence } from "./safety-score-publication";
-import { STATUS_PUBLIC_PRODUCER_GRACE_RATIOS } from "./status-thresholds";
+import { STATUS_ALLOWED_FUTURE_SKEW_SEC, STATUS_PUBLIC_PRODUCER_GRACE_RATIOS } from "./status-thresholds";
 import type { CacheStatus, CircuitRecord, HealthResponse, PublicComponentBudget, StatusHealthValue } from "../types/status";
 
 export type PublicStatusTone = StatusHealthValue;
@@ -74,11 +74,17 @@ export function maxPublicStatus(...statuses: PublicStatusTone[]): PublicStatusTo
 /**
  * Graded by the last successful sync's age only. A partial or failed latest run
  * is an operational notice: a failed run does not advance the success clock, so
- * a run of failures still surfaces through age.
+ * a run of failures still surfaces through age. A clock beyond the read-time
+ * future allowance is rejected evidence, never a clamped healthy age zero.
  */
-export function getPublicMintBurnStatus(sync: HealthResponse["mintBurn"]["sync"], now: number): PublicStatusTone {
+export function getPublicMintBurnStatus(
+  sync: HealthResponse["mintBurn"]["sync"],
+  now: number,
+  allowedFutureSkewSec = STATUS_ALLOWED_FUTURE_SKEW_SEC,
+): PublicStatusTone {
   if (sync.freshnessStatus == null || sync.criticalLaneHealthy == null) return "degraded";
-  if (sync.lastSuccessfulSyncAt == null) return "stale";
+  if (sync.lastSuccessfulSyncAt == null || !Number.isFinite(sync.lastSuccessfulSyncAt)) return "stale";
+  if (sync.lastSuccessfulSyncAt - now > allowedFutureSkewSec) return "degraded";
   return getProducerAgeStatus(Math.max(0, now - sync.lastSuccessfulSyncAt), PUBLIC_PRODUCER_INTERVAL_SEC.mintBurn);
 }
 

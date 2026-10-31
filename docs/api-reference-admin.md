@@ -366,7 +366,7 @@ Correcting the ledger is a two-step operator action. When removing or correcting
 
 `backfill-dews?mode=backtest-metrics` is the primary calibration path over stored daily history/curated anchors (precision/recall, false-positive days, false negatives, P50/P90 lead time, churn, transition stability and cohort metrics). Default reconstruction is diagnostic, not a complete live-signal/trust-gate replay; unevaluable events retain `predicted=null`, excluded/partial coverage and missing supply anchors rather than false negatives. `repair=refresh-current` republishes current rows under the live $1M DEX trust floor; `repair=prune-history` deletes bounded daily windows whose retained snapshots lack DEX trust metadata. GET allows backtests/read-only `dry-run=true` repair previews; mutations require POST and operator Access service-token authentication.
 
-Default `GET` reconstructs stored-event diagnostics. `events[].evaluation` reports availability (`available`, `partial`, `unavailable`), reasons and evaluated/expected pre-event days. Missing anchors stay unavailable. With no scored pre-event day, `predicted=null`; observed misses stay `false`. Summary `evaluableEvents` excludes these cases, `excludedEvents`/`partialEvents` disclose coverage, and `tpRate` uses only evaluable events (`null` if none); lead times cover detected events.
+Default `GET` reconstructs stored-event diagnostics. Price evidence is never read for historical days, so the price family is scored unavailable rather than as a live null-price maximum. `events[].evaluation` reports availability (`available`, `partial`, `unavailable`), reasons and evaluated/expected pre-event days. Missing anchors stay unavailable. With no scored pre-event day, `predicted=null`; observed misses stay `false`. Summary `evaluableEvents` excludes these cases, `excludedEvents`/`partialEvents` disclose coverage, and `tpRate` uses only evaluable events (`null` if none); lead times cover detected events.
 
 Use `GET /api/backfill-dews?mode=backtest-metrics` for the curated anchor fixture metrics described below. Use `GET /api/backfill-dews?repair=...&dry-run=true` for repair previews; mutating repair runs are `POST`-only.
 
@@ -723,6 +723,8 @@ Event-amount remediation hydrates chain RPC endpoints and uses the existing hist
   }
 }
 ```
+
+`applied.*` counts rows whose CAS-guarded write is persisted for this run, including an ambiguous-commit retry whose replayed statements report no changes; a non-zero applied count invalidates the blacklist-derived summary and gap-metric cache rows.
 
 ### `GET /api/admin-action-log`
 

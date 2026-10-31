@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { completeMintBurnRun, type CompleteMintBurnRunInput } from "../mint-burn/run-completion";
 import { createMintBurnConfigSummary, type MintBurnConfigSummary } from "../mint-burn/sync-config";
+import type { MintBurnCoverageRepairSummary } from "../mint-burn/repair-coverage";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { mintBurnPublicationMetadata } from "../mint-burn/publication-metadata";
 import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
@@ -164,6 +165,38 @@ describe("completeMintBurnRun", () => {
     expect(result.status).toBe("degraded");
     expect(result.metadata.reason).toBe("mint-burn-conservation-failure");
     expect(result.metadata.conservationFailures).toBe(1);
+  });
+
+  it("degrades when a bounded coverage replay verifies a conservation mismatch", async () => {
+    const input = buildRunInput();
+    input.phase.coverageRepairs = [{
+      key: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      conservationFailure: true,
+      conservationStatus: "mismatch",
+      conservationReason: "raw-transfer-supply-mismatch",
+      errors: 1,
+      repairReason: "scan-coverage-unproven",
+    } as unknown as MintBurnCoverageRepairSummary];
+
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("degraded");
+    expect(result.metadata).toMatchObject({
+      degradedSignal: true,
+      admittedConservationFailures: 1,
+      conservationFailures: 1,
+      reason: "mint-burn-conservation-failure",
+    });
+  });
+
+  it("does not publish another chain's finalized head as the legacy Ethereum chainHead", async () => {
+    const input = buildRunInput();
+    // Both admitted Ethereum endpoints failed; only Tron's finalized head was read.
+    input.chainHeads = new Map([["tron", 70_000_000]]);
+
+    const result = await completeMintBurnRun(input);
+
+    expect(result.metadata.chainHeads).toEqual({ tron: 70_000_000 });
+    expect(result.metadata.chainHead).toBeNull();
   });
 
   it.each(["extended", "critical"] as const)("keeps diagnostic-only header unavailability separate from %s collection health", async (lane) => {

@@ -130,14 +130,14 @@ describe("handleTelegramWebhook", () => {
     }
   });
 
-  it("asks a group actor to retry when the admin lookup fails instead of denying them", async () => {
+  it.each([502, 401, 403])("asks a group actor to retry when the admin lookup fails with %i instead of denying them", async (status) => {
     const handler = vi.fn<WebhookCommandHandler>().mockResolvedValue(undefined);
     const previousHandler = COMMAND_HANDLERS["/subscribe"];
     COMMAND_HANDLERS["/subscribe"] = handler;
     try {
       fetchSpy.mockImplementation(async (url) => (
         String(url).includes("getChatMember")
-          ? new Response("{}", { status: 502 })
+          ? new Response("{}", { status })
           : Response.json({ ok: true })
       ));
       const response = await handleTelegramWebhook(

@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON,
+} from "@shared/lib/dex-deployment-coverage";
+import {
   buildFailedCrawlDeploymentOutcomes,
   buildStaticInaccessibleDeploymentOutcomes,
   classifyDexDeploymentOutcomes,
   upsertDexDeploymentOutcomes,
 } from "../deployment-outcomes";
+import { classifyStoredDexCensusState } from "../census-state-machine";
+import { classifyDexPlaceholderCoverage } from "../../dex-liquidity/deployment-census-coverage";
 import type { StagedPool } from "../types";
 import { stagedPool } from "./discovery.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -63,6 +68,58 @@ describe("DEX deployment outcomes", () => {
     expect(outcome?.outcome).toBe(count > 0 ? "observed_pools" : "provider_inaccessible");
   });
 
+
+  it("keeps a degraded scope-limited census out of the provider-outage bucket", () => {
+    const deployment = { chain: "tezos", address: "KT1XRPEPXbZK25r3Htzp2o1x7xdMMmfocKNW", decimals: 12 };
+    const [outcome] = classifyDexDeploymentOutcomes({
+      stablecoinId: "uusd-youves",
+      deployments: [deployment],
+      pools: [],
+      providerChecks: [{ ...deployment, provider: "tezos", status: "degraded", observedPoolCount: 0 }],
+      nowSec: 100,
+    });
+
+    // The provider answered both pages; a scope limit is not a schema-degraded
+    // provider outage (R6 provenance).
+    expect(outcome).toMatchObject({
+      outcome: "provider_inaccessible",
+      reason: DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON,
+      observedPoolCount: 0,
+    });
+    expect(outcome!.reason).not.toMatch(/schema-degraded/);
+
+    const stored = classifyStoredDexCensusState({
+      outcome: outcome!.outcome,
+      reason: outcome!.reason,
+      observedPoolCount: outcome!.observedPoolCount,
+      observedAt: outcome!.observedAt,
+      discoveryLastCrawlAt: outcome!.observedAt,
+      providerCount: outcome!.providers.length,
+      nowSec: 100,
+      maxAgeSec: 172_800,
+      providerSetSuperseded: false,
+    });
+    expect(stored.attemptResult).toBe("provider_non_exhaustive");
+
+    const published = classifyDexPlaceholderCoverage({
+      deployments: [deployment],
+      outcomeRows: [{
+        stablecoin_id: outcome!.stablecoinId,
+        chain: outcome!.chain,
+        contract_address: outcome!.address,
+        outcome: outcome!.outcome,
+        provider_set_json: JSON.stringify(outcome!.providers),
+        reason: outcome!.reason,
+        observed_pool_count: outcome!.observedPoolCount,
+        observed_at: outcome!.observedAt,
+        discovery_last_crawl_at: outcome!.observedAt,
+      }],
+      nowSec: 100,
+    });
+    expect(published.state).toBe("discovery-deferral");
+    expect(published.coverage.unsupportedReasons.deploymentCensusProviderOutage).toBeUndefined();
+    expect(published.coverage.unsupportedReasons.deploymentCensusNonExhaustiveProvider).toBe(1);
+  });
 
   it("cannot certify deployment-wide absence from Curve-only empty evidence", () => {
     const providerChecks = [

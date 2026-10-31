@@ -989,6 +989,92 @@ describe("generateWeeklyRecap", () => {
     }
   });
 
+  it("keys carried-over depegs to the declared window when the first edition is missing", async () => {
+    // Monday 2026-03-30 08:10 slot: the declared current window is
+    // [Tue 2026-03-24 00:00, scheduledAt]. Tuesday's edition failed, so the six
+    // readable editions start Wednesday and are still above the five-row floor.
+    const scheduledAtSec = Math.floor(Date.UTC(2026, 2, 30, 8, 10, 0) / 1000);
+    const declaredWindowStartSec = Math.floor(Date.UTC(2026, 2, 24, 0, 0, 0) / 1000);
+    const editionBaseSec = Math.floor(Date.UTC(2026, 2, 25, 8, 5, 0) / 1000);
+    const depegStartedAt = declaredWindowStartSec + 3_600;
+    const leadSignalId = `weekly:depeg:pmusd-protocol:${depegStartedAt}`;
+    const template = buildDailyRows()[0]!;
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        "INSERT INTO daily_digest (generated_at, digest_title, digest_text, input_data) VALUES (?, ?, ?, ?)",
+      );
+      for (let index = 0; index < 6; index++) {
+        const input = JSON.parse(template.input_data);
+        input.activeDepegCount = index === 0 ? 1 : 0;
+        input.topDepegs = index === 0
+          ? [{
+              stablecoinId: "pmusd-protocol",
+              symbol: "PMUSD",
+              bps: -5284,
+              direction: "below",
+              mcapUsd: 65_000_000,
+              startedAt: depegStartedAt,
+              impactScore: 343.5,
+            }]
+          : [];
+        insert.run(editionBaseSec + index * 86_400, `Day ${index + 1}`, "Daily fixture.", JSON.stringify(input));
+      }
+      vi.mocked(fetchWithRetry).mockImplementation(async () => mockAnthropicStreamResponse(JSON.stringify({
+        title: "PMUSD Depeg Leads",
+        text: "PMUSD spent the week 5284 bps below peg on $65M while PSI stayed in BEDROCK.",
+        extended: [
+          "PMUSD opened the trailing edition window 5284 bps below its peg on $65M of supply and never recovered, so the weekly recap should treat it as the fresh critical event inside the declared window rather than a standing condition inherited from a prior recap. Tuesday's daily edition is missing, but the declared window still opened on Tuesday at midnight, and the readable Wednesday to Monday editions all show the same open event. That read gap must not demote a genuinely new critical.",
+          "PSI opened the trailing edition window at 90 and closed at 86, never leaving BEDROCK but losing four points across five daily notes. USDT stayed near 1.00 in every fixture row, which makes the week's story less about a broken peg and more about calm data refusing to become a headline. The recap should notice the drift without inventing a crisis.",
+          "The active depeg observations rose from 0 to 4 as the week progressed, but the recap input separates those observations from unique signals. That distinction matters because one persistent condition should not masquerade as five independent events just because it survived five daily snapshots. It is burden, not necessarily breadth.",
+          "Blacklist activity accumulated 10 fixture events while grade transitions appeared on alternating days, giving the model enough secondary texture without overwhelming the market-cap arc. The Bank Run Gauge climbed from 10 to 14, a mild range that supports watchfulness rather than panic. Weekly structure should tie those pieces together instead of stapling them into a list.",
+          "The weekly note should therefore synthesize the slow drift: PSI softened, enforcement kept tapping the glass, and supply rose by $4M from the first daily edition to the last. That is a complete recap, but it is still restrained enough for a market that mostly held together. A reader should leave with a coherent week, not seven smaller mornings, and should understand which signals were excluded because they were too small or too stale for a serious lead in public without drama today. Next week will decide whether the 10 observations consolidate into a durable trend or fade; if the gauge crosses 20, the recap flips from restrained to sharper.",
+        ].join("\n\n"),
+        meta: {
+          leadSignalId,
+          lead: "depeg",
+          tone: "forensic",
+          coins: ["PMUSD"],
+          usedCandidateIds: [leadSignalId],
+        },
+      })));
+
+      await generateWeeklyRecap(db, "anthropic-key", null, null, undefined, undefined, scheduledAtSec);
+
+      const persisted = sqlite
+        .prepare("SELECT input_data FROM daily_digest WHERE json_extract(digest_meta, '$.type') = 'weekly'")
+        .get() as { input_data: string } | undefined;
+      expect(persisted).toBeDefined();
+      const weeklyData = JSON.parse(persisted!.input_data) as {
+        weeklySignals: {
+          riskLeaderboard: Array<{
+            symbols: string[];
+            impactScore: number;
+            severityScore: number;
+            carriedOver?: boolean;
+            label: string;
+          }>;
+        };
+      };
+      const signal = weeklyData.weeklySignals.riskLeaderboard.find((entry) => entry.symbols.includes("PMUSD"));
+      expect(signal).toBeDefined();
+      // Started one hour after the declared window opened: new this week, not a
+      // standing condition, and full severity with no carried-over label.
+      expect(signal?.carriedOver ?? false).toBe(false);
+      expect(signal?.severityScore).toBe(signal?.impactScore);
+      expect(signal?.label).not.toContain("carried over");
+
+      const requestBody = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+        messages: Array<{ content: string }>;
+      };
+      const prompt = requestBody.messages[0]?.content ?? "";
+      expect(prompt).toContain("NEW THIS WEEK");
+      expect(prompt).not.toContain("STANDING CONDITIONS");
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("surfaces critical weekly depegs in the risk leaderboard and spike metrics", async () => {
     const rows = buildDailyRows();
     const criticalRowIndex = 2;

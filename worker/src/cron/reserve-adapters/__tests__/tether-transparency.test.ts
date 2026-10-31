@@ -188,14 +188,17 @@ describe("adaptTetherTransparency", () => {
     expect(solana?.quarantined).toBeCloseTo(3698541.306464, 3);
   });
 
-  it("selects the xaut entry, omits *Usd metadata fields, and still computes a dimensionless ratio", () => {
+  it("withholds the xaut ratio when total_assets equals total_liabilities", () => {
     const result = adaptTetherTransparency(TETHER_TRANSPARENCY_FIXTURE, XAUT_PARAMS);
 
     expect(result.slices).toEqual([
       { name: "Physical gold bars (LBMA Good Delivery, Swiss vaults)", pct: 100, risk: "very-low" },
     ]);
-    expect(result.warnings).toBeUndefined();
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 6);
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
+    expect(result.metadata?.ratioUnavailableReason).toBe("not-comparable");
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "tether-self-referential-ratio", effect: "info" }),
+    ]);
     expect(result.metadata).not.toHaveProperty("totalAssetsUsd");
     expect(result.metadata).not.toHaveProperty("totalLiabilitiesUsd");
     expect(result.metadata).not.toHaveProperty("shareholderEquityUsd");
@@ -268,7 +271,9 @@ describe("adaptTetherTransparency", () => {
       expect(result.metadata?.details).toMatchObject({
         chains: [{ quarantined: null, quarantinedReason: "missing" }, { quarantined: 5, quarantinedReason: null }],
       });
-      expect(result.warnings).toEqual([expect.objectContaining({ code: "quarantined-balance", effect: "info" })]);
+      expect(result.warnings).toEqual(expect.arrayContaining([
+        expect.objectContaining({ code: "quarantined-balance", effect: "info" }),
+      ]));
     });
   });
 

@@ -966,7 +966,7 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, true);
     expect(result.deploymentOutcomes[0]).toMatchObject({
       outcome: "provider_inaccessible",
-      reason: "A completed direct-token provider response was schema-degraded",
+      reason: "Provider census is not exhaustive for this chain",
     });
   });
 
@@ -1350,5 +1350,41 @@ describe("crawlCoin DexScreener hardening", () => {
         knownPoolIdKey("usdt-tether", "orderbook:kinesis:usdt-tether"),
       ]),
     );
+  });
+
+  it("does not certify a native-denom Kava deployment from EVM-namespace provider misses", async () => {
+    // usdx-kava's only Kava deployment is the Cosmos bank denom `usdx`. The
+    // CoinGecko/GeckoTerminal/DexScreener Kava networks are Kava EVM, so a
+    // successful empty lookup there is not a census of this token. Only the
+    // chain-native x/swap read can observe it; when that read fails the run is
+    // inaccessible, never verified_no_pools.
+    vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({
+      transportOk: true, schemaDegraded: false, complete: true, pools: [],
+    });
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValue({ ok: true, pairs: [] });
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async () => ({
+      response: new Response(null, { status: 200 }),
+      body: { tickers: [], data: { poolData: [] } },
+    }));
+    censusStageMocks.kavaSwap.mockResolvedValue({
+      providerChecks: [{
+        chain: "kava", address: "usdx", provider: "kava-swap",
+        status: "failure", retryable: true,
+      }],
+    });
+
+    const result = await crawlCoin(
+      createMockDb(),
+      "usdx-kava",
+      [{ kind: "native-denom", chain: "kava", address: "usdx", decimals: 6 }],
+      "test-key",
+      new Set(),
+    );
+
+    const row = result.deploymentOutcomes.find((outcome) => outcome.chain === "kava");
+    expect(row?.providers).toEqual(["curve", "kava-swap"]);
+    expect(row).toMatchObject({ outcome: "provider_inaccessible", observedPoolCount: 0 });
+    // The EVM-namespace provider must not be queried for the bank denom at all.
+    expect(vi.mocked(fetchCgTokenPoolsWithStatus)).not.toHaveBeenCalled();
   });
 });

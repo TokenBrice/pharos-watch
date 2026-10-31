@@ -18,12 +18,12 @@
     "provider": "Accountable",
     "attestorTier": "niche",
     "latestReport": {
-      "periodEnd": "2026-10-21",
-      "publishedAt": "2026-10-21",
+      "periodEnd": "2026-10-29",
+      "publishedAt": "2026-10-29",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
+      "reviewer": "Claude evidence renewal 2026-10-30 (D01-L4)",
       "confidence": "verified",
       "sources": [
         {

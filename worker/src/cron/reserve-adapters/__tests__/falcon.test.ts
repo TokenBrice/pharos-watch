@@ -7,9 +7,24 @@ import { expectValidAdapterOutput, runAdapter } from "./reserve-adapter.test-sup
 
 function falconPayload(
   assets: Array<{ label: string; [venue: string]: string | number }>,
-  { timestamp = 1773316982, supply = "100", insurance = "5" } = {},
+  { timestamp = 1773316982, supply = "100", insurance = "5", tvl }: {
+    timestamp?: number;
+    supply?: string;
+    insurance?: string;
+    tvl?: string | number;
+  } = {},
 ): FalconTransparencyResponse {
-  return { snapshot_date: timestamp, usdf: { supply, insurance_fund: insurance, breakdown: { assets } } };
+  const assetTotal = assets.reduce(
+    (sum, asset) => sum + Object.entries(asset)
+      .filter(([key]) => key !== "label")
+      .reduce((assetSum, [, value]) => assetSum + Number(value), 0),
+    0,
+  );
+  return {
+    snapshot_date: timestamp,
+    tvl: tvl ?? assetTotal,
+    usdf: { supply, insurance_fund: insurance, breakdown: { assets } },
+  };
 }
 const FALCON_URL = "https://api.falcon.finance/api/v1/transparency";
 /** Publication instant of the compact fixture payloads, used as their replay clock. */
@@ -66,6 +81,15 @@ describe("adaptFalconTransparency", () => {
     expect(() => adaptFalconTransparency(falconPayload([
       { label: "USDC", ceffu: "malformed", fireblocks: "100" },
     ]))).toThrow(/Falcon USDC venue values row 1 has invalid value: NaN/);
+  });
+
+  it("fails closed when the breakdown does not reconcile with the issuer tvl", () => {
+    const payload = falconPayload([{ label: "USDC", ceffu: "100" }], { tvl: "100.5" });
+    expect(() => adaptFalconTransparency(payload))
+      .toThrow(/does not reconcile with tvl/);
+    const missing = falconPayload([{ label: "USDC", ceffu: "100" }]);
+    delete missing.tvl;
+    expect(() => adaptFalconTransparency(missing)).toThrow(/missing or invalid tvl/);
   });
 
   it("degrades through the shared 5% unknown-exposure cap", () => {

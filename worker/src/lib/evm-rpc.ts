@@ -493,14 +493,14 @@ export type JsonRpcTransportOutcome =
   | { status: "response" | "http-error" | "rpc-error" | "invalid-envelope"; response: Response;
       body: unknown; rows: ReadonlyMap<number, JsonRpcEnvelope<unknown>>; invalidRows: number }
   | { status: "parse-error"; response: Response; error: unknown }
-  | { status: "transport-error"; error: unknown | null }
+  | { status: "transport-error"; error: unknown | null; responseReceived?: true }
   | { status: "control-error"; error: unknown };
 
 /**
  * One URL only: shared POST/auth, bounded intake and response identity checks.
  * Callers retain admission/metering, failover, diagnostics and partial recovery.
- * Text decoding preserves Alchemy's HTTP/non-JSON diagnostics; generic reads
- * retain the fetch helper's JSON parse/transport-failure semantics.
+ * Bodies are read as text first so an HTTP status survives a non-JSON error
+ * body; JSON decoding (and its parse error) happens only for OK responses.
  */
 export async function requestJsonRpcAtUrl(
   rpcUrl: string,
@@ -516,32 +516,55 @@ export async function requestJsonRpcAtUrl(
     if (attempted && !options.signal?.aborted) observer?.onOutcome(rpcUrl, outcome);
     return outcome;
   };
+  const received: { response: Response | null } = { response: null };
   try {
-    const fetched = await (options.responseMode === "text" ? fetchTextWithRetry : fetchJsonWithRetry<unknown>)(
+    const fetched = await fetchTextWithRetry(
       rpcUrl,
       { method: "POST", headers: buildJsonRpcHeaders(rpcUrl), signal: options.signal, body: JSON.stringify(payload) },
       options.maxRetries ?? 0,
       {
         timeoutMs: options.timeoutMs,
         deadlineMs: options.deadlineMs,
+        onResponse: (response) => {
+          received.response = response;
+        },
         beforeRequest: () => {
           if (observer?.beforeRequest(rpcUrl) === false || options.beforeRequest?.() === false) return false;
           attempted = true;
           return true;
         },
         retryMode: "network-only",
-        ...(options.responseMode === "text" ? { returnFinalResponse: true } : {}),
+        returnFinalResponse: true,
         ...(options.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }),
       },
     );
-    if (!fetched) return finish({ status: "transport-error", error: null });
-    let body = fetched.body;
-    if (options.responseMode === "text") {
-      try {
-        body = JSON.parse(body as string) as unknown;
-      } catch (error) {
-        return finish({ status: "parse-error", response: fetched.response, error });
+    if (!fetched) {
+      // The fetch helper returns null when the response body/deadline read
+      // failed after headers arrived. A non-OK status is still an HTTP error;
+      // an OK response marks a local body/deadline failure, not a no-response
+      // transport failure, so callers must not demote the provider for it.
+      if (received.response != null && !received.response.ok) {
+        return finish({
+          status: "http-error", response: received.response, body: null, rows: new Map(), invalidRows: 0,
+        });
       }
+      return finish({
+        status: "transport-error", error: null,
+        ...(received.response == null ? {} : { responseReceived: true as const }),
+      });
+    }
+    let body: unknown;
+    try {
+      body = JSON.parse(fetched.body) as unknown;
+    } catch (error) {
+      // A non-JSON error body cannot hide the HTTP status: classify by status,
+      // never as an unparseable success. OK bodies retain parse-error.
+      if (!fetched.response.ok) {
+        return finish({
+          status: "http-error", response: fetched.response, body: fetched.body, rows: new Map(), invalidRows: 0,
+        });
+      }
+      return finish({ status: "parse-error", response: fetched.response, error });
     }
     const batch = Array.isArray(payload);
     const expectedIds = new Set(batch ? payload.map(request => request.id) : [payload.id]);
@@ -621,8 +644,12 @@ async function fetchJsonRpcOutcome<T>(
       });
       if (result.status === "control-error" || result.status === "transport-error") {
         if (result.error != null) throw result.error;
-        demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
-        failures.push(`${rpcUrl}: ${describeRpcFailure(null, rpcUrl)}`);
+        const responseReceived = result.status === "transport-error" && result.responseReceived === true;
+        // Only a true no-response transport failure bans the run's Dwellir
+        // origin; a local body/deadline failure after headers is not a
+        // provider verdict (docs/worker-and-api-limits.md).
+        if (!responseReceived) demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+        failures.push(`${rpcUrl}: ${responseReceived ? "HTTP response body unreadable" : describeRpcFailure(null, rpcUrl)}`);
         continue;
       }
 

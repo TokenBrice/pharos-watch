@@ -20,7 +20,7 @@ describe("Curve authored configuration equivalence", () => {
   it("preserves every expanded post-A19 route and policy, including own optional keys and order", () => {
     const policies = [CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, CURVE_USD1_METAPOOL_POLICY,
       CURVE_NXUSD_METAPOOL_POLICY, ...CURVE_R3_METAPOOL_POLICIES];
-    expect(CURVE_POOL_CONFIGS).toHaveLength(38);
+    expect(CURVE_POOL_CONFIGS).toHaveLength(44);
     expect(policies).toHaveLength(13);
     // Strict equality distinguishes omitted optional keys from own undefined keys,
     // including nested hop, token role, rate-provider and base-pool descriptors.

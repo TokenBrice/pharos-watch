@@ -227,6 +227,19 @@
       "routeType": "one-hop"
     },
     {
+      "stablecoinId": "usdx-axis",
+      "poolAddress": "0xE521BA88837B2726E5343ccA91adA6f19F356C45",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "usdt-tether"
+      },
+      "routeType": "one-hop"
+    },
+    {
       "stablecoinId": "pmusd-precious-metals",
       "poolAddress": "0xEcb0F0d68C19BdAaDAEbE24f6752A4Db34e2c2cb",
       "inputIndex": 1,
@@ -288,6 +301,19 @@
       "chain": "ethereum",
       "hop": {
         "viaStablecoinId": "apxusd-apyx"
+      },
+      "routeType": "one-hop"
+    },
+    {
+      "stablecoinId": "reusd-resupply",
+      "poolAddress": "0xb0ef04ACE97d350E24Efa5139d2590D26a61A8Dc",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "fxusd-f-x-protocol"
       },
       "routeType": "one-hop"
     },
@@ -404,6 +430,48 @@
       "maxHopDepth": 3
     },
     {
+      "stablecoinId": "trusd-tori",
+      "poolAddress": "0xd1D954BC94c843815EC7b8119f2de00AF27Fa6Ff",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "frxusd-frax"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
+      "stablecoinId": "dusd-alto",
+      "poolAddress": "0x104d6a1b97A6CEf88D905d7b865A378d90BE932A",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "frxusd-frax"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
+      "stablecoinId": "scrvusd-curve",
+      "poolAddress": "0xc522A6606BBA746d7960404F22a3DB936B6F4F50",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "reusd-resupply"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
       "stablecoinId": "lusd-liquity",
       "poolAddress": "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
       "inputIndex": 2,
@@ -420,6 +488,16 @@
       "outputIndex": 0,
       "inputDecimals": 6,
       "outputDecimals": 2,
+      "chain": "ethereum",
+      "useUnderlying": true
+    },
+    {
+      "stablecoinId": "meusd-mezo",
+      "poolAddress": "0xB5571E76693ba60110B5811DD650FFefce1C955f",
+      "inputIndex": 1,
+      "outputIndex": 0,
+      "inputDecimals": 6,
+      "outputDecimals": 18,
       "chain": "ethereum",
       "useUnderlying": true
     }

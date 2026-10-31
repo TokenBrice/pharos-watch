@@ -203,13 +203,12 @@ describe("computeLiquidityScore", () => {
     expect(score).toBe(100);
   });
 
-  it("zero inputs (no circulatingUsd) → score 0", () => {
-    // effectiveTvl=0 → uses absolute fallback: 35*log10(1/700_000) → very negative → clamped to 0
-    // all other components also 0 → total = 0
+  it("zero inputs (no circulatingUsd) → NR with no retained pools", () => {
+    // effectiveTvl=0 and poolCount=0 is an unobserved market, not a rated zero.
     const m = initMetrics("test", "TEST");
     const { score, unavailableReason } = computeLiquidityScore(withCompleteVolume(m), 0);
-    expect(score).toBe(0);
-    expect(unavailableReason).toBeNull();
+    expect(score).toBeNull();
+    expect(unavailableReason).toBe("no-retained-pools");
   });
 
   it("names the volume-activity outcome that makes the composite NR", () => {

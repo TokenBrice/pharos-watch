@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { DatabaseSync } from "node:sqlite";
 import {
   buildTelegramDeliverySliStatus,
+  getTelegramBotStats,
   mapTelegramBotStats,
 } from "../status/telegram-bot-stats";
 import type { TelegramDeliverySliStatus } from "@shared/types/status";
@@ -318,6 +320,81 @@ describe("mapTelegramBotStats", () => {
       acceptanceDefinition: "telegram_bot_api_accepted_not_user_receipt",
       rollup,
     });
+  });
+});
+
+// The field contract (shared/types/status/telegram.ts) publishes `null` when the
+// weekly `telegram-inactive-cleanup` job has no successful run in the trailing
+// 7-day window; a zero count would claim a cleanup that ran and found nobody.
+describe("getTelegramBotStats inactive cleanup", () => {
+  const NOW = 1_775_890_000;
+  const ONE_DAY_SEC = 86_400;
+
+  function insertCleanupRun(
+    sqlite: DatabaseSync,
+    startedAt: number,
+    status: string,
+    itemCount: number | null,
+  ): void {
+    sqlite.prepare(
+      `INSERT INTO cron_runs (job, started_at, duration_ms, status, error, item_count, metadata, degraded_reason)
+       VALUES (?, ?, 250, ?, ?, ?, ?, ?)`,
+    ).run(
+      "telegram-inactive-cleanup",
+      startedAt,
+      status,
+      status === "error" ? "weekly cleanup write failed" : null,
+      itemCount,
+      JSON.stringify(status === "error" ? { reason: "source-failure" } : {}),
+      status === "error" ? "source-failure" : null,
+    );
+  }
+
+  function expectUnavailable(stats: Awaited<ReturnType<typeof getTelegramBotStats>>): void {
+    expect(stats.inactiveSubscribersCleanedThisWeek).toBeNull();
+    expect(stats.quality?.unavailableFields).toContain("inactiveSubscribersCleanedThisWeek");
+    expect(stats.quality?.status).toBe("partial");
+  }
+
+  it("publishes null on a fresh deploy where the cleanup has never run", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      expectUnavailable(await getTelegramBotStats(db, NOW));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("publishes null when every cleanup attempt in the window failed", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      for (let day = 1; day <= 6; day += 1) {
+        insertCleanupRun(sqlite, NOW - day * ONE_DAY_SEC, "error", null);
+      }
+
+      expectUnavailable(await getTelegramBotStats(db, NOW));
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("still sums successful runs in the window, excluding failed attempts", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      insertCleanupRun(sqlite, NOW - 3 * ONE_DAY_SEC, "ok", 4);
+      // The seven-day cache guard records a skip as a successful no-op pass.
+      insertCleanupRun(sqlite, NOW - 2 * ONE_DAY_SEC, "ok", 0);
+      insertCleanupRun(sqlite, NOW - ONE_DAY_SEC, "error", null);
+      // Outside the trailing window.
+      insertCleanupRun(sqlite, NOW - 30 * ONE_DAY_SEC, "ok", 9);
+
+      const stats = await getTelegramBotStats(db, NOW);
+
+      expect(stats.inactiveSubscribersCleanedThisWeek).toBe(4);
+      expect(stats.quality?.unavailableFields ?? []).not.toContain("inactiveSubscribersCleanedThisWeek");
+    } finally {
+      sqlite.close();
+    }
   });
 });
 

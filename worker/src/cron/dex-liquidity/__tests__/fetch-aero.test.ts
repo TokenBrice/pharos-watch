@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, parseAbiParameters } from "viem/utils";
+import type { EvmRpcOptions } from "../../../lib/evm-rpc";
 
 vi.mock("../../../lib/evm-rpc", () => ({
   fetchEvmBlockNumber: vi.fn(),
@@ -35,15 +36,15 @@ const chainAddressToId = new Map([
 const trackedStablecoinPrices = new Map([["usdc-circle", 1], ["usdt-tether", 0.999]]);
 const SYMBOLS: Record<string, string> = { [USDC]: "USDC", [USDT]: "USDT", [WETH]: "WETH", [OTHER]: "OTHER" };
 
-type Responder = (label: string, target: string) => `0x${string}` | null;
+type Responder = (label: string, target: string, options?: EvmRpcOptions) => `0x${string}` | null;
 
 function mockBase(respond: Responder) {
   vi.mocked(fetchEvmBlockNumber).mockImplementation(async (chain) => (chain === "base" ? 100 : null));
   vi.mocked(fetchEvmBlockHeader).mockResolvedValue({ number: 100, hash: "0xabc", timestamp: 1 } as never);
-  vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls) => calls.map((call) => {
+  vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls, _block, options) => calls.map((call) => {
     const returnData = call.label.endsWith("-symbol")
       ? string(SYMBOLS[call.target] ?? "")
-      : respond(call.label, call.target);
+      : respond(call.label, call.target, options);
     return { label: call.label, success: returnData != null, returnData: returnData ?? "0x" };
   }));
 }
@@ -64,7 +65,7 @@ describe("aeroBaseFeeBps", () => {
 describe("fetchAeroSlipstreamPools", () => {
   it("enumerates the CL factory, keeps tracked pools and buckets by the tick-spacing base fee", async () => {
     const pools = [CL_POOL, CL_UNTRACKED];
-    mockBase((label, target) => {
+    mockBase((label, target, options) => {
       if (label.startsWith("count-")) return uint(target === CL_FACTORY ? 2 : 0);
       if (target === CL_FACTORY && label.startsWith(`${CL_FACTORY}-`)) return address(pools[Number(label.split("-").pop())]!);
       if (label === `${CL_POOL}-token0`) return address(USDC);
@@ -80,7 +81,9 @@ describe("fetchAeroSlipstreamPools", () => {
       if (label.endsWith("-decimals")) return uint(6);
       if (label === "cl-0-token-0-balance") return uint(2_000_000n * 10n ** 6n);
       if (label === "cl-0-token-1-balance") return uint(1_000_000n * 10n ** 6n);
-      if (label === "fee-1") return encode("uint24", [100]);
+      // The confirmed capture serves 1bp; a numeric-tag read resolves a
+      // different (300bp) tier from the lagging backend.
+      if (label === "fee-1") return encode("uint24", [options?.stateBlockHash === "0xabc" ? 100 : 30_000]);
       return null;
     });
 
@@ -100,6 +103,11 @@ describe("fetchAeroSlipstreamPools", () => {
     expect(result.pools[0]!.tokens.map((token) => token.symbol)).toEqual(["USDC", "USDT"]);
     expect(result.pools[0]!.tokens.map((token) => token.priceUsd)).toEqual([undefined, undefined]);
     expect(result.pools[0]!.tvlUsd).toBeCloseTo(2_999_000, 0);
+    // The tier and symbol reads stay inside the capture's proven block view.
+    const pinnedReads = vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mock.calls.filter(([, calls]) =>
+      calls.some((call) => call.label === "fee-1" || call.label.endsWith("-symbol")));
+    expect(pinnedReads.length).toBeGreaterThan(0);
+    expect(pinnedReads.every(([, , , options]) => options?.stateBlockHash === "0xabc")).toBe(true);
     // Chains without a block are reported per chain, not hidden behind ok.
     expect(result.ok).toBe(true);
     expect(result.degraded).toBe(true);

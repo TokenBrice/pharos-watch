@@ -69,12 +69,18 @@ describe("DEX deployment coverage ownership", () => {
     expect(isIconBalancedDiscoveryDeployment("icon", iconAddress.toUpperCase())).toBe(true);
     expect(getDexDiscoveryProviders("icon", iconAddress.toUpperCase())).toEqual(["icon-balanced"]);
     expect(isKavaSwapDiscoveryDeployment("kava", " USDX ")).toBe(true);
+    // Kava's CoinGecko/GeckoTerminal/DexScreener networks are Kava EVM, so the
+    // native bank denom may only rest on the chain-native x/swap census and the
+    // supplemental Curve scan; an EVM deployment still resolves the EVM venues.
     expect(getDexDiscoveryProviders("kava", "usdx")).toEqual([
+      "curve",
+      "kava-swap",
+    ]);
+    expect(getDexDiscoveryProviders("kava", "0x1111111111111111111111111111111111111111")).toEqual([
       "coingecko",
       "geckoterminal",
       "dexscreener",
       "curve",
-      "kava-swap",
     ]);
   });
 

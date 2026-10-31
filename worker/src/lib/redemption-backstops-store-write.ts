@@ -298,7 +298,7 @@ function buildRunFailedUpdate(
               written_count = ?,
               metadata_json = ?
         WHERE run_id = ?
-          AND status = 'running'`,
+          AND status IN ('running', 'completed')`,
     )
     .bind(args.completedAt, args.writtenCount, JSON.stringify(args.metadata), args.runId);
 }
@@ -646,10 +646,6 @@ export async function upsertRedemptionBackstopSnapshots(
       throw new Error(`Redemption backstop run ${runId} wrote ${rowCount.rowCount}/${records.length} immutable rows`);
     }
 
-    writePhase = "history";
-    const historyStatements = records.map((record) => buildHistoryUpsert(db, record, snapshotDate, runId));
-    historyWrittenCount = await batchExecute(db, historyStatements, 80);
-
     const recordBounds = resolveRunBounds(records);
     const minUpdatedAt = rowCount.minUpdatedAt ?? recordBounds.minUpdatedAt;
     const maxUpdatedAt = rowCount.maxUpdatedAt ?? recordBounds.maxUpdatedAt;
@@ -677,6 +673,12 @@ export async function upsertRedemptionBackstopSnapshots(
     if ((completion.meta?.changes ?? 0) <= 0) {
       throw new Error(`Failed to mark redemption backstop run ${runId} completed`);
     }
+
+    // The daily close belongs to an admitted run only: a generation rejected
+    // after this point must not replace the day's previous close.
+    writePhase = "history";
+    const historyStatements = records.map((record) => buildHistoryUpsert(db, record, snapshotDate, runId));
+    historyWrittenCount = await batchExecute(db, historyStatements, 80);
 
     const warnings: string[] = [];
     writePhase = "retention";
@@ -734,6 +736,20 @@ export async function upsertRedemptionBackstopSnapshots(
   } catch (error) {
     if (runStarted) {
       const message = toErrorMessage(error);
+      if (writePhase === "history") {
+        // The daily close was written for a run that is not being admitted;
+        // remove this generation's rows before recording the failed manifest.
+        try {
+          await runWithOverloadRetry(() =>
+            db
+              .prepare("DELETE FROM redemption_backstop_history WHERE snapshot_run_id = ?")
+              .bind(runId)
+              .run(),
+          );
+        } catch {
+          // Preserve the original write failure; retention still prunes these rows.
+        }
+      }
       try {
         await runWithOverloadRetry(() =>
           buildRunFailedUpdate(db, {

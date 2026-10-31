@@ -90,6 +90,8 @@ function makeMintBurnAssessmentDb(
     publicationQueryError?: unknown;
     yieldSafetyError?: unknown;
     yieldSafetyIdentity?: SafetyScoreV9PublicationIdentity;
+    /** Overrides the readable `$.identity` extraction, e.g. a newer build's envelope. */
+    liveIdentityEnvelope?: Record<string, unknown> | null;
     yieldSafetyPublishedAt?: number | null;
     yieldPublishedAt?: number;
     yieldSafetyLiveReadError?: unknown;
@@ -158,6 +160,20 @@ function makeMintBurnAssessmentDb(
         }),
   };
 
+  const liveIdentityEnvelope = options.liveIdentityEnvelope !== undefined
+    ? options.liveIdentityEnvelope
+    : options.yieldSafetyIdentity ? {
+        candidateId: "fixture-candidate",
+        policyVersion: options.yieldSafetyIdentity.methodologyVersion,
+        publicationGenerationId: options.yieldSafetyIdentity.publicationGenerationId,
+        baseInputGenerationId: options.yieldSafetyIdentity.baseInputGenerationId,
+        factSetDigest: "d".repeat(64),
+        policyId: options.yieldSafetyIdentity.policyId,
+        policyDigest: options.yieldSafetyIdentity.policyDigest,
+        evaluationBuildDigest: options.yieldSafetyIdentity.evaluationBuildDigest,
+        resultDigest: "e".repeat(64),
+      } : null;
+
   return mockD1([
     { match: "AS last_any", rows: [], first: { observed_at: nowSec, last_any: nowSec - 30, reserve: nowSec - 30, telegram: nowSec - 30, digest: nowSec - 30, heavy: nowSec - 30 } },
     {
@@ -200,18 +216,8 @@ function makeMintBurnAssessmentDb(
       ...(options.yieldSafetyLiveReadError
         ? { throwError: options.yieldSafetyLiveReadError }
         : {
-            first: options.yieldSafetyIdentity ? {
-              publication_identity: JSON.stringify({
-                candidateId: "fixture-candidate",
-                policyVersion: options.yieldSafetyIdentity.methodologyVersion,
-                publicationGenerationId: options.yieldSafetyIdentity.publicationGenerationId,
-                baseInputGenerationId: options.yieldSafetyIdentity.baseInputGenerationId,
-                factSetDigest: "d".repeat(64),
-                policyId: options.yieldSafetyIdentity.policyId,
-                policyDigest: options.yieldSafetyIdentity.policyDigest,
-                evaluationBuildDigest: options.yieldSafetyIdentity.evaluationBuildDigest,
-                resultDigest: "e".repeat(64),
-              }),
+            first: liveIdentityEnvelope ? {
+              publication_identity: JSON.stringify(liveIdentityEnvelope),
             } : null,
           }),
     },
@@ -1122,6 +1128,43 @@ describe("assessPublicHealth independent yield-safety reads", () => {
     expect(result).toEqual(baseline);
     expect(result.yieldSafetyQueryFailed).toBe(false);
     expect(result.warnings.some((warning) => warning.startsWith("yield-safety-"))).toBe(false);
+  });
+
+  it.each([
+    ["a newer build's additive identity field", "additive"],
+    ["an envelope missing a required identity field", "partial"],
+  ])("does not turn an unreadable live safety identity (%s) into a healthy yield-safety claim", async (_case, kind) => {
+    const nowSec = 1_800_000_000;
+    const readableEnvelope = {
+      candidateId: "fixture-candidate",
+      policyVersion: identity.methodologyVersion,
+      publicationGenerationId: identity.publicationGenerationId,
+      baseInputGenerationId: identity.baseInputGenerationId,
+      factSetDigest: "d".repeat(64),
+      policyId: identity.policyId,
+      policyDigest: identity.policyDigest,
+      evaluationBuildDigest: identity.evaluationBuildDigest,
+      resultDigest: "e".repeat(64),
+    };
+    const envelope = kind === "additive"
+      ? { ...readableEnvelope, evaluationContractVersion: "v2" }
+      : (() => {
+          const { resultDigest: _omitted, ...partial } = readableEnvelope;
+          return partial;
+        })();
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+      yieldSafetyIdentity: identity,
+      liveIdentityEnvelope: envelope,
+    }), nowSec);
+    const response = buildPublicHealthResponse(result, nowSec);
+
+    // /api/yield-rankings resolves this same row pair as
+    // `safety-score-index-publication-mismatch` with no publish-time fallback,
+    // so health may not advertise that fallback or keep <yield> operational.
+    expect(result.warnings).not.toContain("yield-safety-publish-time-fallback:safety-snapshot-unavailable");
+    expect(result.warnings).toContain("yield-safety-availability-unknown");
+    expect(response.status).not.toBe("healthy");
+    expect(response.components?.find((component) => component.id === "yield")?.state).toBe("degraded");
   });
 
   it.each([false, true])("uses the original live safety deadline for current-compatible health and held fallback (held=%s)", async (held) => {

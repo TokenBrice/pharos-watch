@@ -81,8 +81,8 @@ export function buildWeeklyPrompt(
   const lines: string[] = [
     `Weekly recap: trailing daily editions from ${data.weekStartDate} to ${data.weekEndDate}`,
     "",
-    `PSI range: ${data.psiRange.min} to ${data.psiRange.max} (start: ${data.psiRange.start}, end: ${data.psiRange.end})`,
-    `Dominant band: ${data.psiRange.dominantBand}`,
+    `PSI range: ${data.psiRange.min} to ${data.psiRange.max} (start: ${data.psiRange.start ?? "unavailable"}, end: ${data.psiRange.end ?? "unavailable"}; ${data.psiRange.observationDays} of ${data.dailyDigests.length} editions observed)`,
+    `Dominant band: ${data.psiRange.dominantBand ?? "unavailable (fewer than 3 PSI observations)"}`,
     data.mcapRange.start == null || data.mcapRange.end == null
       ? `Market cap: N/A (${data.mcapRange.unavailableReason ?? "supply-coverage-incomplete"})`
       : `Market cap: ${formatCurrency(data.mcapRange.start)} -> ${formatCurrency(data.mcapRange.end)} (${data.mcapRange.pctChange == null ? "N/A" : `${data.mcapRange.pctChange >= 0 ? "+" : ""}${data.mcapRange.pctChange.toFixed(2)}%`})`,
@@ -96,6 +96,15 @@ export function buildWeeklyPrompt(
     const bounds = (period: typeof current) =>
       `[${new Date(period.start * 1000).toISOString()}, ${new Date(period.end * 1000).toISOString()})`;
     lines.push(`Organic transition event periods: current ${bounds(current)}; prior ${bounds(prior)}. Count each history identity once in its event period, not once per daily capture.`);
+  }
+
+  // A failed read is not an observed absence (ADR-29/R2); name what degraded so
+  // the model cannot turn missing evidence into a calm claim.
+  if (data.degradedSources?.length) {
+    lines.push(
+      "",
+      `Degraded inputs this week: ${data.degradedSources.join(", ")}. Do not treat a missing signal from these sources as an observed absence.`,
+    );
   }
 
   if (safetyContextAvailable) {
@@ -229,6 +238,10 @@ export function buildWeeklyPrompt(
       lines.push("  STANDING CONDITIONS (carried over from prior weeks; one line each at most, never the headline):");
       standingSignals.forEach(renderSignal);
     }
+  } else if (data.degradedSources?.length) {
+    lines.push(
+      "  Risk leaderboard unavailable: this week's inputs were degraded (see Degraded inputs), so the absence of ranked signals is unverified; do not describe the week as calm.",
+    );
   } else {
     lines.push("  No material risk signals reconstructed from daily inputs.");
   }

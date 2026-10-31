@@ -243,6 +243,36 @@ describe("generation-bound compact Safety Scores", () => {
     }
   });
 
+  it("does not re-anchor a previous generation as current when the accepted publication clock is ahead of the reader", async () => {
+    const { db, sqlite, publication } = await seed();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(140_000);
+    sqlite.exec("CREATE TRIGGER refuse_site BEFORE INSERT ON safety_score_site_fragments BEGIN SELECT RAISE(ABORT, 'site write failed'); END");
+    const next = makeWorkerSafetyScoreV9Publication({ publishedAtSec: 130, publicationGenerationId: "report-cards:v9:next" });
+    const persisted = await persistSafetyScoreV9Publication(db, { ...currentInput(next), deferPublicMaterialization: true });
+    await expect(materializeV9AcceptedPublication(db, persisted.acceptedMaterialization!)).rejects.toThrow();
+
+    // The accepted row's clock leads this reading isolate by 10 s (writer/reader
+    // skew). A future-dated clock is not a known lag within the one-cadence
+    // budget, so the previous generation is held rather than re-anchored.
+    vi.setSystemTime((next.publishedAtSec - 10) * 1000);
+    const response = await handleReportCardsV9(db);
+    const body = await response.json() as { publicationHealth: unknown };
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
+    expect(response.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(body.publicationHealth).toEqual({
+      ...currentInput(next).publicationHealth,
+      acceptedPublicationGenerationId: publication.publicationGenerationId,
+      acceptedAtSec: publication.publishedAtSec,
+      status: "held",
+      heldSinceSec: next.publishedAtSec,
+      reasons: [{ code: "v9-public-materialization-pending" }],
+    });
+  });
+
   it("keeps the selected generation when source cards change between fragment passes", async () => {
     const { db, sqlite, publication } = await seed();
     vi.useFakeTimers({ toFake: ["Date"] });

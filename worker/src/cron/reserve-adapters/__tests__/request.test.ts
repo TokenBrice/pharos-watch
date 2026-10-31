@@ -211,6 +211,7 @@ describe("adapter request cache", () => {
       [primaryUrl]: { status: 404, body: "unavailable" },
       [fallbackUrl]: {
         snapshot_date: 1_780_000_000,
+        tvl: "100",
         usdf: { supply: "100", insurance_fund: "0", breakdown: { assets: [{ label: "USDC", cash: "100" }] } },
       },
     } });

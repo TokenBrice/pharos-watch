@@ -169,25 +169,56 @@ describe("adaptIdleCdoEpochVariantSnapshot", () => {
     );
   });
 
-  it.each([0n, 20_000_000n])("keeps fee-exclusive whole-vault coverage reproducible with junior NAV %s", (navBbRaw) => {
+  it.each([0n, 20_000_000n])("keeps whole-vault coverage on the fee-net contract value with junior NAV %s", (navBbRaw) => {
     const basis = { navAaRaw: 100_000_000n - navBbRaw, navBbRaw, contractValueRaw: 100_000_000n };
     const baseline = adapt(basis);
     const result = adapt({ ...basis, contractValueRaw: 110_000_000n, unclaimedFeesRaw: 10_000_000n });
     expect(result.metadata).toMatchObject({
-      totalReserveUsd: 100,
+      totalReserveUsd: 110,
       supplyUsd: 100,
-      collateralizationRatio: 1,
+      collateralizationRatio: 1.1,
       details: {
         coverageScope: "whole-vault-tranche-nav",
-        compositionScope: "gross-vault-assets",
-        grossContractValueUsd: 110,
+        compositionScope: "whole-vault-assets",
+        contractValueUsd: 110,
         unclaimedFeesUsd: 10,
+        holderBackingUsd: 110,
+        holderLiabilitiesUsd: 100,
       },
     });
+    // getContractValue() is already fee-net, so the fee balance is provenance,
+    // never a second deduction; a gap against the tranche NAVs is real drift.
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({ code: "idle-cdo-nav-reconciliation-drift", effect: "degraded" }),
+    );
     expect(result.metadata?.collateralizationRatio).toBe(
       result.metadata!.totalReserveUsd! / result.metadata!.supplyUsd!,
     );
-    expect(result.metadata?.collateralizationRatio).toBe(baseline.metadata?.collateralizationRatio);
+    expect(result.metadata?.collateralizationRatio).toBeGreaterThan(baseline.metadata!.collateralizationRatio!);
+  });
+
+  it("replays the 2026-10-30 live read without deducting unclaimedFees twice", () => {
+    // FalconX credit vault: contractValueRaw == lastNAVAA to the wei while
+    // 19,742.726333 USDC of unclaimed fees are outstanding.
+    const result = adapt({
+      contractValueRaw: 131_977_942_544_654n,
+      navAaRaw: 131_977_942_544_654n,
+      navBbRaw: 0n,
+      unclaimedFeesRaw: 19_742_726_333n,
+    });
+
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 131_977_942.544654,
+      supplyUsd: 131_977_942.544654,
+      collateralizationRatio: 1,
+      details: {
+        contractValueRaw: "131977942544654",
+        unclaimedFeesRaw: "19742726333",
+        unclaimedFeesUsd: 19_742.726333,
+        holderBackingUsd: 131_977_942.544654,
+        holderLiabilitiesUsd: 131_977_942.544654,
+      },
+    });
     expect(result.warnings ?? []).not.toContainEqual(
       expect.objectContaining({ code: "idle-cdo-nav-reconciliation-drift" }),
     );

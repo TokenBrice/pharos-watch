@@ -60,7 +60,9 @@
         "On-chain Liquidity/Ethereum/ETH": "high",
         "On-chain Liquidity/Ethereum/AUSD": "high",
         "On-chain Liquidity/Base/ETH": "high",
-        "On-chain Liquidity/Base/USDC - Morpho": "medium"
+        "On-chain Liquidity/Base/USDC - Morpho": "medium",
+        "On-chain Liquidity/Monad": "high",
+        "On-chain Liquidity/Monad/AUSD - Morpho": "high"
       },
       "renameMap": {
         "Money Markets": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
@@ -72,7 +74,8 @@
         "On-chain Liquidity/Ethereum/ETH": "ETH held on Ethereum",
         "On-chain Liquidity/Ethereum/AUSD": "Unverified AUSD dust on Ethereum",
         "On-chain Liquidity/Base/ETH": "ETH held on Base",
-        "On-chain Liquidity/Base/USDC - Morpho": "Unverified USDC Morpho dust on Base"
+        "On-chain Liquidity/Base/USDC - Morpho": "Unverified USDC Morpho dust on Base",
+        "On-chain Liquidity/Monad/AUSD - Morpho": "Unverified AUSD Morpho position on Monad"
       },
       "sourceKeyMap": {
         "Money Markets": "accountable:tori:deployment:money-markets",
@@ -84,7 +87,8 @@
         "On-chain Liquidity/Ethereum/ETH": "accountable:tori:ethereum:eth",
         "On-chain Liquidity/Ethereum/AUSD": "accountable:tori:ethereum:ausd-unverified",
         "On-chain Liquidity/Base/ETH": "accountable:tori:base:eth",
-        "On-chain Liquidity/Base/USDC - Morpho": "accountable:tori:base:usdc-morpho-unverified"
+        "On-chain Liquidity/Base/USDC - Morpho": "accountable:tori:base:usdc-morpho-unverified",
+        "On-chain Liquidity/Monad/AUSD - Morpho": "accountable:tori:monad:ausd-morpho-unverified"
       },
       "coinIdMap": {
         "On-chain Liquidity/Ethereum/USDC - Morpho": "usdc-circle",

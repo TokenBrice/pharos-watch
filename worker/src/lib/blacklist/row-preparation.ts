@@ -55,7 +55,7 @@ function buildCurrentBalanceKey(row: BlacklistRow): string {
 export function buildCurrentBalanceSnapshotRows(rows: readonly BlacklistRow[]): BlacklistRow[] {
   const latestByAddress = new Map<
     string,
-    { latest: BlacklistRow; latestBlacklist: BlacklistRow | null }
+    { latest: BlacklistRow; latestBlacklist: BlacklistRow | null; latestDestroy: BlacklistRow | null }
   >();
   const orderedRows = unambiguousRows(rows).sort(compareBlacklistEvents);
 
@@ -65,15 +65,24 @@ export function buildCurrentBalanceSnapshotRows(rows: readonly BlacklistRow[]): 
     latestByAddress.set(key, {
       latest: row,
       latestBlacklist: row.event_type === "blacklist" ? row : existing?.latestBlacklist ?? null,
+      latestDestroy: row.event_type === "destroy" ? row : existing?.latestDestroy ?? null,
     });
   }
 
   const snapshotRows: BlacklistRow[] = [];
   const selectedIds = new Set<string>();
-  for (const { latest, latestBlacklist } of latestByAddress.values()) {
-    if (latest.event_type === "unblacklist" && latestBlacklist) {
-      snapshotRows.push(latestBlacklist);
-      selectedIds.add(latestBlacklist.id);
+  for (const { latest, latestBlacklist, latestDestroy } of latestByAddress.values()) {
+    if (latest.event_type === "unblacklist") {
+      // A release must not downgrade a newer emitted destroy snapshot to an
+      // older blacklist row, or a deferred live re-read would overwrite the
+      // historical seizure value (R2 retained best evidence).
+      const retained = latestBlacklist && latestDestroy
+        ? (compareBlacklistEvents(latestBlacklist, latestDestroy) >= 0 ? latestBlacklist : latestDestroy)
+        : latestBlacklist ?? latestDestroy;
+      if (retained) {
+        snapshotRows.push(retained);
+        selectedIds.add(retained.id);
+      }
     }
     if (!selectedIds.has(latest.id)) {
       snapshotRows.push(latest);

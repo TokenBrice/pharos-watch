@@ -234,7 +234,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
 
     if (mcap > 1_000_000) {
       const change7d = mcap - prevWeek;
-      supplyChanges7d.push({ coin: coin.symbol, change7d });
+      supplyChanges7d.push({ stablecoinId: coin.id, coin: coin.symbol, change7d });
       const absChange = Math.abs(change7d);
       if (absChange > biggestAbsChange) {
         biggestAbsChange = absChange;

@@ -1,4 +1,5 @@
 import * as circuitBreaker from "../../lib/circuit-breaker";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -715,6 +716,24 @@ describe("bounded DefiLlama contract batches", () => {
     const result = await runDlContractPasses(cohort(1), undefined);
     expect(result).toMatchObject({ resolved: 0, failures: [] });
     expect(result.diagnostics).toBeUndefined();
+  });
+
+  it("fails the pass and the DL_COINS circuit for a 200 envelope without a coins member", async () => {
+    const allowed = vi.spyOn(circuitBreaker, "shouldAttemptFetch").mockResolvedValue(true);
+    const outcome = vi.spyOn(circuitBreaker, "recordOutcome").mockResolvedValue({} as circuitBreaker.CircuitOutcomeRecord);
+    try {
+      installFetch(() => Response.json({ error: "unavailable" }));
+      const assets = cohort(1);
+      const result = await runDlContractPasses(assets, undefined, undefined, makeEnrichPricesDb([]));
+
+      // A malformed OK envelope is failure, not healthy empty coverage.
+      expect(result).toMatchObject({ resolved: 0, failures: ["dl-contracts"] });
+      expect(assets[0].price).toBeNull();
+      expect(outcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_COINS, false);
+    } finally {
+      allowed.mockRestore();
+      outcome.mockRestore();
+    }
   });
 
   it("does not count local budget exhaustion as a provider failure", async () => {

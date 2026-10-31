@@ -44,7 +44,7 @@ import { CIRCUIT_SOURCE } from "./constants";
 import { buildMintBurnSyncHealth } from "./mint-burn-health-config";
 import { logWorkerEvent } from "./structured-log";
 import { loadCachedD1CapacityAssessment } from "./status/d1-capacity-store";
-import { loadSafetyScoreV9PublicationIdentityEnvelope } from "./safety-score-v9/publication-store";
+import { loadSafetyScoreV9PublicationIdentityEnvelopeForHealth } from "./safety-score-v9/publication-store";
 import { loadSafetyScoreV9PublicationHealth } from "./safety-score-v9/publication-health";
 import {
   loadStablecoinCoverageHealth,
@@ -535,7 +535,7 @@ async function assessYieldSafetyAvailability(
           message: "Live yield safety identity unavailable.",
           reason: "yield-safety-live-identity-read-failed",
         },
-        () => loadSafetyScoreV9PublicationIdentityEnvelope(db),
+        () => loadSafetyScoreV9PublicationIdentityEnvelopeForHealth(db),
       ),
       publicationHealthRead,
     ]);

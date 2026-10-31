@@ -461,7 +461,9 @@ function parseMintBurnCronMetadata(
           }
         }
 
-        if (chainHead != null && chainHeads[ETHEREUM_CHAIN_ID] == null) {
+        // The legacy scalar is a cross-chain compatibility head; it is only
+        // Ethereum's head for payloads that predate the per-chain map.
+        if (rawChainHeads == null && chainHead != null && chainHeads[ETHEREUM_CHAIN_ID] == null) {
           chainHeads[ETHEREUM_CHAIN_ID] = chainHead;
         }
 

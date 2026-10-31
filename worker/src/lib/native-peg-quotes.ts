@@ -217,7 +217,6 @@ export async function fetchCurrentNativePegQuotes(
     return new Map();
   }
 
-  const nowSec = Math.floor(Date.now() / 1000);
   const quotes = new Map<string, NativePegQuote>();
 
   const groupedRequests = new Map<string, Array<{ stablecoinId: string; geckoId: string }>>();
@@ -282,6 +281,9 @@ export async function fetchCurrentNativePegQuotes(
             if (session) rememberNativePegBatch(session, vsCurrency, uniqueGeckoIds, outcomePromise);
           }
           const outcome = await outcomePromise;
+          // Freshness budgets are measured when this batch was read, not when
+          // the whole sequential fan-out started.
+          const nowSec = Math.floor(Date.now() / 1000);
 
           diagnostic.status = outcome.status;
           diagnostic.ok = outcome.ok;

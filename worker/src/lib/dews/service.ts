@@ -37,6 +37,7 @@ import type {
   PersistedJsonDecodeReason,
   SourceFailure,
 } from "./contracts";
+import { malformedInputDegradesRun } from "./malformed-input";
 
 /**
  * Main cron entry point: reads all signal sources from D1, computes DEWS for
@@ -108,7 +109,7 @@ async function computeAndStoreDEWSWithDb(
     degradesRun: boolean;
   }): void => {
     validationFailures++;
-    const degradesRun = options.degradesRun && (!options.stablecoinId || options.stablecoinId === "aggregate");
+    const degradesRun = malformedInputDegradesRun(options.degradesRun, options.stablecoinId);
     if (options.degradesRun) {
       malformedCoreInputRows++;
       if (eligibleIds.has(options.stablecoinId)) quarantinedStablecoinIds.add(options.stablecoinId);

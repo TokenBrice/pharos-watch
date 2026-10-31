@@ -160,10 +160,11 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
       registerMalformedPersistedInput,
     );
 
-    const pegType = normalizePegType(asset.pegType) ?? "peggedUSD";
-    const hasPegReference = pegType === "peggedUSD" || Object.prototype.hasOwnProperty.call(pegRates, pegType);
-    const pegRateSource = pegRateSources[pegType] ?? null;
-    const pegRateContributorCount = pegRateContributorCounts[pegType] ?? null;
+    const pegType = normalizePegType(asset.pegType) ?? null;
+    const hasPegReference = pegType != null
+      && (pegType === "peggedUSD" || Object.prototype.hasOwnProperty.call(pegRates, pegType));
+    const pegRateSource = pegType == null ? null : pegRateSources[pegType] ?? null;
+    const pegRateContributorCount = pegType == null ? null : pegRateContributorCounts[pegType] ?? null;
     const pegReferenceTrusted =
       hasPegReference &&
       isAuthoritativeDepegPegReference({
@@ -172,12 +173,16 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
         pegRateSource,
         pegRateContributorCount,
       });
-    const pegRef = pegReferenceTrusted ? getPegReference(pegType, pegRates, meta.commodityOunces) ?? 0 : 0;
-    const pegReferenceUnavailableReason = !hasPegReference
-      ? "peg-reference-missing"
-      : pegReferenceTrusted
-        ? null
-        : "peg-reference-untrusted";
+    const pegRef = pegReferenceTrusted && pegType != null
+      ? getPegReference(pegType, pegRates, meta.commodityOunces) ?? 0
+      : 0;
+    const pegReferenceUnavailableReason = pegType == null
+      ? "peg-type-unavailable"
+      : !hasPegReference
+        ? "peg-reference-missing"
+        : pegReferenceTrusted
+          ? null
+          : "peg-reference-untrusted";
     const input: DEWSInput = {
       stablecoinId: meta.id,
       mcapUsd: current,
@@ -254,7 +259,8 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   for (const { input, firstPass } of scored) {
     const bump =
       firstPass.band === "DANGER" ? CONTAGION_BUMP_DANGER : firstPass.band === "WARNING" ? CONTAGION_BUMP_WARNING : 1;
-    if (bump <= 1) continue;
+    // An unavailable peg type has no contagion cohort to amplify.
+    if (bump <= 1 || input.pegType == null) continue;
     const current = amplifiers.byPegType[input.pegType] ?? 1;
     if (bump > current) {
       amplifiers.byPegType[input.pegType] = Math.min(bump, CONTAGION_AMPLIFIER_CAP);
@@ -265,7 +271,7 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   // A first-pass DANGER/WARNING coin keeps its first-pass result (contagion = 1)
   // so it never amplifies itself.
   for (const { meta, input, firstPass } of scored) {
-    const contagion = amplifiers.byPegType[input.pegType] ?? 1;
+    const contagion = input.pegType == null ? 1 : amplifiers.byPegType[input.pegType] ?? 1;
     const applicable = contagion > 1 && firstPass.band !== "DANGER" && firstPass.band !== "WARNING";
     const finalResult = applicable ? computeDEWS({ ...input, contagionAmplifier: contagion }) : firstPass;
     if (!finalResult) {

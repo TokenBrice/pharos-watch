@@ -80,9 +80,10 @@ export async function resolveGroupAdminStatus(
   }
   if (!response.ok) {
     await cancelResponseBodyQuietly(response);
-    // A definitive Bot API refusal (e.g. the user is not a member) is a real
-    // answer; throttling and server errors are not.
-    return response.status === 429 || response.status >= 500 ? "unknown" : "not_admin";
+    // A user-specific refusal (400/404: not a member / user not found) is a
+    // real answer about the actor. Bot-side auth/permission failures (401/403)
+    // and throttling/server errors say nothing about the actor.
+    return response.status === 400 || response.status === 404 ? "not_admin" : "unknown";
   }
   try {
     const body = await readResponseJsonWithinLimitWithSignal<{ ok?: boolean; result?: { status?: string } }>(

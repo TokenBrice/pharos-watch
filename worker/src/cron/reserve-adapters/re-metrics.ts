@@ -273,6 +273,17 @@ export function adaptReMetrics(html: string): AdapterResult {
       else missingComponentTimestamp = true;
     }
   }
+  // A present-but-empty breakdowns object, or a set of chains whose rows all
+  // report no value, is a failed on-chain read — not a protocol holding nothing.
+  // Without this the off-chain slice alone would publish as a clean 100%
+  // composition with no fatal warning (R1/R2).
+  if (Object.keys(breakdowns).length === 0 || tokenValues.size === 0) {
+    incompleteComposition = true;
+    warnings.push(reserveFatalWarning(
+      "re-metrics-reserve-rows-unavailable",
+      "No valued on-chain reserve rows were read; composition withheld",
+    ));
+  }
   const stableRedeemableUsd = ["usdc", "usdt", "dai", "frax"]
     .reduce((sum, symbol) => sum + (tokenValues.get(symbol) ?? 0), 0);
 

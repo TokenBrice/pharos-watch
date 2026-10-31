@@ -276,6 +276,33 @@ describe("buildDexDeploymentCoverage", () => {
       expect(coverage?.deployments[0]?.waiver).toBeNull();
     }
   });
+  it.each([
+    ["truncated JSON", '["coingecko"'],
+    ["valid JSON of the wrong shape", '{"coingecko":1}'],
+    ["an unregistered provider identity", JSON.stringify(["bogus"])],
+  ])("drops a deployment whose persisted provider set is %s", (_label, providerSetJson) => {
+    const coverage = buildDexDeploymentCoverage([{
+      stablecoin_id: "usdt-tether",
+      chain: "ethereum",
+      contract_address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      outcome: "verified_no_pools" as const,
+      provider_set_json: providerSetJson,
+      reason: "verified empty",
+      observed_pool_count: 0,
+      observed_at: 100,
+      waiver_owner: null,
+      waiver_reason: null,
+      waiver_expires_at: null,
+    }], 150).get("usdt-tether");
+
+    // R1: unreadable provider evidence is not an affirmative empty provider
+    // list (what an unsupported chain publishes) nor a raw non-array value that
+    // rejects the whole /api/dex-liquidity map. The census classes the row
+    // invalid and excludes it; the API must not count it either.
+    expect(coverage?.deployments ?? []).toEqual([]);
+    expect(coverage?.verifiedNoPools ?? 0).toBe(0);
+  });
+
   it("keeps verified empty separate from inaccessible and expires waivers", () => {
     const rows = [
       // Registry-true deployments: rows keyed outside the current registry are

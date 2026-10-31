@@ -331,7 +331,10 @@ function hydrateYieldRankingsWithLiveSafety(
         const reason = pipelineGap ? "safety-snapshot-unavailable" as const : "report-card-grade-not-rated" as const;
         return {
           originalRow: row,
-          safetyChanged: false,
+          // A row published with a rating lost it when live hydration returned
+          // pipeline-gap/NR, so its movement is not an APY change. A row already
+          // published as NR did not change.
+          safetyChanged: row.safetyScore !== null && row.safetyGrade !== "NR",
           row: {
             ...row,
             safetyScore: null,

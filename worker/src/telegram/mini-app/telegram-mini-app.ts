@@ -277,23 +277,36 @@ async function validateOrResponse(
         // unauthenticated-write gate). The event is recorded once per expired
         // initData and event type, so the metric counts incidents rather than
         // client retries. The cooldown only gates telemetry: every retry still
-        // gets 401 `stale-auth` so the client can show the relaunch path.
-        const firstSighting = staleAuth
-          ? (await acquireTelegramCommandCooldown(db, {
-            chatId: staleAuth.userId,
-            commandKey: `mini-app:stale:${options.staleAuthEvent.eventType}:${staleAuth.initDataHash.slice(0, 16)}`,
-            nowSec: unixNow(),
-            cooldownSec: STALE_AUTH_TELEMETRY_DEDUPE_SEC,
-          })).allowed
-          : true;
-        if (firstSighting) {
-          await recordMiniAppEvent(db, {
-            eventType: options.staleAuthEvent.eventType,
-            auth: staleAuth,
-            actionDetail: options.staleAuthEvent.actionDetail,
-            outcome: err.code,
-            failureClass: err.code,
-            latencyMs: Date.now() - options.start,
+        // gets 401 `stale-auth` so the client can show the relaunch path. A
+        // failed telemetry write is best-effort and never replaces the verdict.
+        try {
+          const firstSighting = staleAuth
+            ? (await acquireTelegramCommandCooldown(db, {
+              chatId: staleAuth.userId,
+              commandKey: `mini-app:stale:${options.staleAuthEvent.eventType}:${staleAuth.initDataHash.slice(0, 16)}`,
+              nowSec: unixNow(),
+              cooldownSec: STALE_AUTH_TELEMETRY_DEDUPE_SEC,
+            })).allowed
+            : true;
+          if (firstSighting) {
+            await recordMiniAppEvent(db, {
+              eventType: options.staleAuthEvent.eventType,
+              auth: staleAuth,
+              actionDetail: options.staleAuthEvent.actionDetail,
+              outcome: err.code,
+              failureClass: err.code,
+              latencyMs: Date.now() - options.start,
+            });
+          }
+        } catch (telemetryError) {
+          logWorkerEvent({
+            scope: "api",
+            level: "warn",
+            event: "telegram_mini_app_stale_auth_telemetry_error",
+            route: "telegram-mini-app",
+            source: "telegram-mini-app",
+            message: "Failed to record stale-auth telemetry",
+            error: telemetryError,
           });
         }
       }

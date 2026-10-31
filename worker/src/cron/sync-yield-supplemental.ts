@@ -320,7 +320,8 @@ export async function syncYieldSupplemental(
     });
     const { candidates: dedupedFamilyCandidates, discardedValues } = dedupeCandidates(family.candidates);
     if (discardedValues.length > 0) {
-      sourceFamilySummaries[family.key].dedupeDiscardedValues = discardedValues;
+      const summary = sourceFamilySummaries[family.key];
+      if (summary) summary.dedupeDiscardedValues = discardedValues;
     }
     const familyCacheValue = buildYieldSupplementalFamilyCache(dedupedFamilyCandidates, startSec);
     const familyCacheResult = await setCacheIfNewer(

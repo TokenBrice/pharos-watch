@@ -5,6 +5,15 @@ const { fetchJsonWithRetryMock } = vi.hoisted(() => ({ fetchJsonWithRetryMock: v
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
   ...await importOriginal<typeof FetchRetryModule>(),
   fetchJsonWithRetry: fetchJsonWithRetryMock,
+  // evm-rpc reads bodies as text first; delegate to the same fixture and
+  // stringify its parsed body so existing mock implementations keep working.
+  fetchTextWithRetry: async (...args: unknown[]) => {
+    const result = await fetchJsonWithRetryMock(...args) as { body?: unknown } | null;
+    if (result && typeof result === "object" && "body" in result) {
+      return { ...result, body: typeof result.body === "string" ? result.body : JSON.stringify(result.body) };
+    }
+    return result;
+  },
 }));
 import { reserveDegradedWarning } from "../warnings";
 import { fetchOnchainUint256 } from "../onchain";

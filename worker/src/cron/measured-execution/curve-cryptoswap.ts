@@ -8,7 +8,7 @@ import {
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   fetchEvmCallHexAtBlock,
-  fetchEvmCodeAtBlock,
+  fetchEvmCodeStatusAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
@@ -262,6 +262,7 @@ export type CurveCryptoSwapEligibilityFailure =
   | "ng-kill-probe-unavailable"
   | "runtime-allowlist-incomplete"
   | "runtime-code-unavailable"
+  | "runtime-code-absent"
   | "runtime-code-hash-mismatch"
   | "dependency-code-unavailable"
   | "dependency-identity-mismatch"
@@ -410,11 +411,21 @@ export async function verifyCurveCryptoSwapDeployment(input: {
     ...(rpcBudget ? { beforeRequest: () => rpcBudget.tryConsume() } : {}),
     maxRetries: 0,
   };
-  const readCodeHash = async (address: `0x${string}`): Promise<`0x${string}` | null> => {
-    if (rpcBudget && !rpcBudget.canRequestChain(policy.chain)) return null;
-    const code = await fetchEvmCodeAtBlock(policy.chain, address, input.blockNumber, requestOptions);
-    rpcBudget?.recordChainResult(policy.chain, code != null);
-    return code == null ? null : (keccak256(code).toLowerCase() as `0x${string}`);
+  // Exact `0x` code is semantic absence, never an operational RPC failure:
+  // evidence-reader must not keep serving last-known-good for a destroyed pool.
+  const readCodeHash = async (
+    address: `0x${string}`,
+  ): Promise<
+    | { status: "available"; hash: `0x${string}` }
+    | { status: "absent" }
+    | { status: "unavailable" }
+  > => {
+    if (rpcBudget && !rpcBudget.canRequestChain(policy.chain)) return { status: "unavailable" };
+    const code = await fetchEvmCodeStatusAtBlock(policy.chain, address, input.blockNumber, requestOptions);
+    rpcBudget?.recordChainResult(policy.chain, code.status !== "unavailable");
+    if (code.status === "unavailable") return { status: "unavailable" };
+    if (code.status === "absent") return { status: "absent" };
+    return { status: "available", hash: keccak256(code.code).toLowerCase() as `0x${string}` };
   };
   const readAddress = async (address: `0x${string}`, functionName: "factory" | "MATH" | "views_implementation") => {
     if (rpcBudget && !rpcBudget.canRequestChain(policy.chain)) return null;
@@ -454,16 +465,25 @@ export async function verifyCurveCryptoSwapDeployment(input: {
     }
   };
 
-  const poolCodeHash = await readCodeHash(policy.poolAddress);
-  if (poolCodeHash == null) return { ok: false, reason: "runtime-code-unavailable" };
+  const poolCode = await readCodeHash(policy.poolAddress);
+  if (poolCode.status !== "available") {
+    return {
+      ok: false,
+      reason: poolCode.status === "absent" ? "runtime-code-absent" : "runtime-code-unavailable",
+    };
+  }
+  const poolCodeHash = poolCode.hash;
   const factoryAddress = await readAddress(policy.poolAddress, "factory");
   const mathAddress = await readAddress(policy.poolAddress, "MATH");
   if (factoryAddress == null || mathAddress == null) return { ok: false, reason: "dependency-code-unavailable" };
   const viewsAddress = await readAddress(factoryAddress, "views_implementation");
   if (viewsAddress == null) return { ok: false, reason: "dependency-code-unavailable" };
-  const factoryCodeHash = await readCodeHash(factoryAddress);
-  const viewsCodeHash = await readCodeHash(viewsAddress);
-  const mathCodeHash = await readCodeHash(mathAddress);
+  const factoryCode = await readCodeHash(factoryAddress);
+  const viewsCode = await readCodeHash(viewsAddress);
+  const mathCode = await readCodeHash(mathAddress);
+  const factoryCodeHash = factoryCode.status === "available" ? factoryCode.hash : null;
+  const viewsCodeHash = viewsCode.status === "available" ? viewsCode.hash : null;
+  const mathCodeHash = mathCode.status === "available" ? mathCode.hash : null;
   const onChainPoolTokenAddresses = [await readCoin(0), await readCoin(1)];
 
   if (rpcBudget && !rpcBudget.canRequestChain(policy.chain)) {

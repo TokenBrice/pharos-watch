@@ -17,8 +17,12 @@ export function mintBurnTapeEligibleSql(alias: string): string {
  * the amount/flow/burn fields differ (NULL-safe) or the source is ineligible.
  */
 export function mintBurnTapeClaimStaleSql(tape: string, src: string): string {
-  return `(json_extract(${tape}.payload_json, '$.amountUsd') IS NOT ${src}.amount_usd
-    OR json_extract(${tape}.payload_json, '$.flowType') IS NOT ${src}.flow_type
-    OR json_extract(${tape}.payload_json, '$.burnType') IS NOT ${src}.burn_type
+  // An unparsable stored payload compares as stale instead of raising
+  // "malformed JSON" and halting the whole class (the freeze projector's guard).
+  const payloadField = (path: string) =>
+    `CASE WHEN json_valid(${tape}.payload_json) THEN json_extract(${tape}.payload_json, '${path}') END`;
+  return `(${payloadField("$.amountUsd")} IS NOT ${src}.amount_usd
+    OR ${payloadField("$.flowType")} IS NOT ${src}.flow_type
+    OR ${payloadField("$.burnType")} IS NOT ${src}.burn_type
     OR NOT (${mintBurnTapeEligibleSql(src)}))`;
 }

@@ -392,6 +392,7 @@ Detects simultaneous outflows from risky stablecoins and inflows to safe havens.
 - **Activation:** `riskyNet24h < -$100M` AND `safeNet24h > +$100M`
 - **Intensity:** `min(100, |riskyNet24h| / $1B * 100)`
 - Safe/risky cohorts come from the report-card cache: `B-` or better is safe, `C+` through `C-` is neutral, and grades below `C-` are risky. If the complete identified report-card cache is unavailable, flight-to-quality classification is unavailable rather than falling back to hardcoded safe havens.
+- Cohorts cover the full classified roster, not only coins with a published 24h net. A classified coin whose flow is unpublished (pending admission, kill switch, or a missing row) contributes an unbounded unknown net, so activation its flow could cause withholds the verdict instead of proving inactivity.
 - On aggregate API reads, a changed publication identity triggers FTQ recomputation from the validated cached per-coin `netFlow24hUsd` values and current cohorts. This updates only the response's FTQ fields, classification identity, and classification warning; the cached flow data, producer timestamps, freshness headers, and database row are preserved. Missing, held, stale, or malformed Safety Score sources and invalid cached coin inputs still fail closed.
 
 ---

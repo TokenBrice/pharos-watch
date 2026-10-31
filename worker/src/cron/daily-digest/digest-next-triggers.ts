@@ -271,6 +271,7 @@ function supplyVelocityTrigger(
   const symbol = velocity.coin.toUpperCase();
   return withDetail({
     id: `trigger:supply-1d:${symbol.toLowerCase()}`,
+    ...(velocity.stablecoinId != null ? { stablecoinId: velocity.stablecoinId } : {}),
     label: `${symbol} 1d supply velocity`,
     metric: "supply-1d-usd",
     comparator: "abs-gte",
@@ -290,6 +291,7 @@ function weeklySupplyTrigger(
   const symbol = mover.symbol.toUpperCase();
   return withDetail({
     id: `trigger:supply-7d:${symbol.toLowerCase()}`,
+    stablecoinId: mover.id,
     label: `${symbol} weekly supply move`,
     metric: "supply-7d-usd",
     comparator: "abs-gte",
@@ -410,8 +412,17 @@ function depegOutcome(trigger: DigestNextTrigger, data: DigestInputData, thresho
   };
 }
 
+function supplyObservation<T extends { stablecoinId?: string; coin: string }>(
+  rows: readonly T[],
+  trigger: DigestNextTrigger,
+): T | undefined {
+  if (trigger.stablecoinId) return rows.find((row) => row.stablecoinId === trigger.stablecoinId);
+  const matches = rows.filter((row) => row.coin.toUpperCase() === trigger.symbol?.toUpperCase());
+  return matches.length === 1 ? matches[0] : undefined;
+}
+
 function supply1dOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
-  const velocity = (data.supplyVelocity ?? []).find((entry) => entry.coin.toUpperCase() === trigger.symbol?.toUpperCase());
+  const velocity = supplyObservation(data.supplyVelocity ?? [], trigger);
   if (!velocity) return { status: "unavailable" as const, detail: `${trigger.symbol} has no current supply-velocity observation.` };
   return {
     status: Math.abs(velocity.change1d) >= threshold ? "hit" as const : "missed" as const,
@@ -422,12 +433,15 @@ function supply1dOutcome(trigger: DigestNextTrigger, data: DigestInputData, thre
 function supply7dOutcome(trigger: DigestNextTrigger, data: DigestInputData, threshold: number) {
   const symbol = trigger.symbol?.toUpperCase();
   const biggestChange = data.biggestSupplyChange;
-  const biggestWeeklyChange = biggestChange && biggestChange.symbol.toUpperCase() === symbol
+  const biggestWeeklyChange = biggestChange
+    && (trigger.stablecoinId != null
+      ? biggestChange.id === trigger.stablecoinId
+      : biggestChange.symbol.toUpperCase() === symbol)
     ? { coin: biggestChange.symbol, change7d: biggestChange.changeUsd }
     : null;
-  const weeklyChange = (data.supplyChanges7d ?? []).find((entry) => entry.coin.toUpperCase() === symbol)
+  const weeklyChange = supplyObservation(data.supplyChanges7d ?? [], trigger)
     ?? biggestWeeklyChange
-    ?? (data.supplyVelocity ?? []).find((entry) => entry.coin.toUpperCase() === symbol);
+    ?? supplyObservation(data.supplyVelocity ?? [], trigger);
   if (!weeklyChange) return { status: "unavailable" as const, detail: `${trigger.symbol} has no current weekly supply observation.` };
   return {
     status: Math.abs(weeklyChange.change7d) >= threshold ? "hit" as const : "missed" as const,

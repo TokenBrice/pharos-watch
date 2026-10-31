@@ -109,7 +109,10 @@ const RAW_QUEUE_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConfig
     outputAssets: ["usdc-circle"],
     executionModel: "opaque",
     settlementModel: "queued",
-    capacityModel: { kind: "reserve-sync-metadata" },
+    // The reviewed note below keeps the xReserve escrow balance as collateral
+    // evidence only: it does not establish a funded instant/atomic exit, so the
+    // route stays unquantified rather than publishing that read as capacity.
+    capacityModel: { kind: "unquantified" },
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     costModel: {
       ...documentedVariableFee(

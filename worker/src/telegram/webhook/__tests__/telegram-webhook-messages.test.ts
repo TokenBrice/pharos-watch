@@ -134,6 +134,27 @@ describe("buildListMessage", () => {
     expect(msg).toContain("<b>Muted:</b> USDC");
     expect(msg).not.toContain("dai-makerdao");
   });
+
+  it("does not label a coin muted while its unmarked zeroes inherit global follows", () => {
+    // `/settings USDC dews off` on a dews-only follow: DEWS is marked off and
+    // every other family stays an unmarked zero. The chat's global depeg
+    // opt-in still routes USDC depeg alerts, so the card must not claim Muted.
+    const row = makeSubscriptionRow("usdc-circle", {
+      alert_dews: 0,
+      alert_dews_override: 1,
+      alert_depeg: 0,
+      alert_safety: 0,
+      alert_launch: 0,
+    });
+    const subscriber: SubscriberRow = {
+      alert_dews: 0, alert_depeg: 0, alert_safety: 0, alert_launch: 0,
+      global_alert_dews: 0, global_alert_depeg: 1, global_alert_safety: 0,
+      quiet_hours_enabled: 0, quiet_hours_start_utc: null, quiet_hours_end_utc: null,
+    };
+    const msg = list({ subscriber, subscriptions: [row] });
+    expect(msg).toContain("<b>Coins:</b> USDC (Inherits preset/global defaults; off: DEWS (overrides defaults))");
+    expect(msg).not.toContain("<b>Muted:</b>");
+  });
 });
 
 function baseStatus(overrides: Partial<StatusForCoin> = {}): StatusForCoin {

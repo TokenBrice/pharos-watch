@@ -461,7 +461,10 @@ export async function loadV9PublicMaterializedResponse(db: D1Database, represent
     let withinLagBudget = false;
     if (row.manifest == null) {
       const canonical = admitSelection(row);
-      withinLagBudget = Math.floor(Date.now() / 1000) - row.publication_updated_at <= V9_PUBLIC_MATERIALIZATION_LAG_BUDGET_SEC;
+      // A future-dated accepted clock is not a known lag: it fails closed to
+      // the held branch rather than re-anchoring the previous generation.
+      const lagSec = Math.floor(Date.now() / 1000) - row.publication_updated_at;
+      withinLagBudget = lagSec >= 0 && lagSec <= V9_PUBLIC_MATERIALIZATION_LAG_BUDGET_SEC;
       // Only selected whole generations are readable; heavy owns materialization.
       lagging = await selectLaggingRepresentation(db, canonical.identity.publicationGenerationId, row.publication_updated_at, representationKey);
       if (lagging === null) {

@@ -1,8 +1,9 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { describe, expect, it, vi } from "vitest";
-import { mockD1 } from "@shared/test-utils/mock-d1";
+import { matchMarker, mockD1 } from "@shared/test-utils/mock-d1";
 import { makeApiRequest, makeApiUrl, stubCryptoForAuth } from "../../test-helpers/__shared/auth";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import type { D1Database } from "@shared/types/cloudflare-runtime";
 
 vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: vi.fn(() => ({
@@ -21,7 +22,13 @@ vi.mock("../../lib/dews", () => ({
 }));
 
 vi.mock("../../lib/db-cache", () => ({
-  getCache: vi.fn(async () => JSON.stringify({ completedAt: 1 })),
+  getCache: vi.fn(async (db: D1Database, key: string) => {
+    const row = await db
+      .prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .bind(key)
+      .first<{ value: string; updated_at: number }>();
+    return row ? { value: row.value, updatedAt: row.updated_at } : null;
+  }),
 }));
 
 vi.mock("../../lib/stablecoins-cache", () => ({
@@ -129,6 +136,7 @@ import { computeDEWS } from "../../lib/dews";
 import type { DEWSResult } from "../../lib/dews";
 import { buildDewsScoringResult } from "../../lib/dews/scoring";
 import { computeAndStoreDEWS } from "../../lib/dews/service";
+import { loadDewsSourceState } from "../../lib/dews/source-state";
 import { handleBackfillDEWS } from "../backfill-dews";
 
 stubCryptoForAuth();
@@ -495,5 +503,143 @@ describe("handleBackfillDEWS", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("historical reconstruction evidence boundaries", () => {
+  it("does not turn unread historical price evidence into maximum price stress", async () => {
+    const { computeDEWS: realComputeDEWS } = await vi.importActual<typeof import("../../lib/dews")>(
+      "../../lib/dews",
+    );
+    vi.mocked(computeDEWS).mockImplementation(realComputeDEWS);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const eventDay = 20_000 * 86_400;
+    try {
+      sqlite.prepare(
+        `INSERT INTO depeg_events
+           (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference)
+         VALUES ('usdt-tether', 'USDT', 'peggedUSD', 'below', -150, ?, ?, 0.985, 1)`,
+      ).run(eventDay, eventDay + 3_600);
+
+      const insertSupply = sqlite.prepare(
+        "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES ('usdt-tether', ?, ?)",
+      );
+      for (let d = 0; d <= 7; d++) {
+        insertSupply.run(eventDay - d * 86_400, 100_000_000);
+      }
+
+      // A sustained 25% TVL drop: the current leg carries a score while the
+      // seven-day score leg is an explicit null, so only the TVL leg is readable.
+      const insertLiquidity = sqlite.prepare(
+        `INSERT INTO dex_liquidity_history
+           (stablecoin_id, snapshot_date, total_tvl_usd, liquidity_score, coverage_class, coverage_confidence, methodology_version)
+         VALUES ('usdt-tether', ?, ?, ?, 'primary', 0.9, '6.98')`,
+      );
+      for (let d = 8; d <= 14; d++) {
+        insertLiquidity.run(eventDay - d * 86_400, 1_000_000, null);
+      }
+      for (let d = 0; d <= 7; d++) {
+        insertLiquidity.run(eventDay - d * 86_400, 750_000, 80);
+      }
+
+      const response = await handleBackfillDEWS({ db, url: makeApiUrl("/api/backfill-dews"), trustedAdmin: true });
+      expect(response.status).toBe(200);
+      const body = await readJsonResponse<{
+        summary: { truePositives: number; tpRate: string | null; avgLeadTimeDays: number | null };
+        events: Array<{
+          predicted: boolean | null;
+          leadTimeDays: number | null;
+          preDepegScores: Array<{ daysBeforeDepeg: number; score: number; band: string }>;
+        }>;
+      }>(response, 200);
+      const event = body.events[0]!;
+
+      // Price evidence was not read from history (the response note names it
+      // unavailable), so it must not contribute the live null-price maximum of 100.
+      // The readable supply + liquidity evidence averages to 15 (CALM), not 38 (ALERT),
+      // and the unanchored earliest day has no verdict at all.
+      expect(event.predicted).toBe(false);
+      expect(event.leadTimeDays).toBeNull();
+      expect(event.preDepegScores.some((score) => score.daysBeforeDepeg === 7)).toBe(false);
+      expect(event.preDepegScores.every((score) => score.band === "CALM")).toBe(true);
+      const preDepegDays = event.preDepegScores.filter((score) => score.daysBeforeDepeg > 0);
+      expect(preDepegDays).toHaveLength(6);
+      for (const score of preDepegDays) {
+        expect(score.score).toBe(15);
+      }
+      expect(body.summary).toMatchObject({
+        truePositives: 0,
+        tpRate: "0%",
+        avgLeadTimeDays: null,
+      });
+    } finally {
+      sqlite.close();
+      vi.mocked(computeDEWS).mockImplementation(() => ({ score: 67, band: "WARNING", signals: {} } as DEWSResult));
+    }
+  });
+});
+
+describe("refresh preview malformed-input diagnostics", () => {
+  it("keeps a per-asset malformed core input non-degrading, matching execution metadata", async () => {
+    const { loadDewsSourceState: realLoadDewsSourceState } = await vi.importActual<
+      typeof import("../../lib/dews/source-state")
+    >("../../lib/dews/source-state");
+    vi.mocked(loadDewsSourceState).mockImplementationOnce(realLoadDewsSourceState);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const computedAt = nowSec - 900;
+    // A published stress-signals generation with one fresh row whose JSON cannot
+    // be decoded is the realistic input hydration quarantines with degradesRun: true.
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        matchBinds: ["dews:published-generation"],
+        rows: [{
+          key: "dews:published-generation",
+          value: JSON.stringify({ updatedAt: computedAt, source: "compute-dews", publishStatus: "published" }),
+          updated_at: computedAt,
+        }],
+      },
+      matchMarker("dews:previous-stress-latest", []),
+      matchMarker("dews:previous-stress-legacy", [{
+        stablecoin_id: "usdt-tether",
+        signals_json: "{bad-json",
+        band: "CALM",
+        computed_at: computedAt,
+      }]),
+    ]);
+    const request = makeApiRequest("/api/backfill-dews?repair=refresh-current&dry-run=true", { adminKey: "secret" });
+
+    const response = await handleBackfillDEWS({
+      db,
+      url: makeApiUrl(request.url),
+      trustedAdmin: true,
+      request,
+    });
+    const body = await readJsonResponse<{
+      preview: {
+        validationFailures: number;
+        malformedPersistedInputs: Array<{
+          source: string;
+          context: string;
+          stablecoinId: string;
+          updatedAt: number | null;
+          reason: string;
+          degradesRun: boolean;
+        }>;
+      };
+    }>(response, 200);
+
+    // docs/dews.md#edge-cases and computeAndStoreDEWS normalize asset-scoped core
+    // inputs to degradesRun: false; the asset is quarantined instead of holding the run.
+    expect(body.preview.validationFailures).toBe(1);
+    expect(body.preview.malformedPersistedInputs).toEqual([{
+      source: "stress_signals",
+      context: "stress_signals.signals_json",
+      stablecoinId: "usdt-tether",
+      updatedAt: computedAt,
+      reason: "json-parse-failed",
+      degradesRun: false,
+    }]);
+    db.assertAllMatchesUsed();
   });
 });

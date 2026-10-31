@@ -1,5 +1,6 @@
 import type { ReserveRisk, ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   buildRedemptionSnapshotMetadata,
@@ -104,6 +105,44 @@ export function reconcileUsddItemizedCollateral(
   }
   const toleranceUsd = USDD_RECONCILIATION_TOLERANCE_USD_PER_ROW * Math.max(1, items.length);
   return { itemizedUsd, headlineUsd, reconciled: Math.abs(itemizedUsd - headlineUsd) <= toleranceUsd };
+}
+
+/**
+ * Combine the issuer's per-chain latest-collateral feeds into the whole-coin
+ * book. Every configured chain is required: a missing feed fails the read
+ * rather than publishing the surviving chain as a whole-book composition. A
+ * chain without a usable headline leaves the combined headline undefined so
+ * neither reconciliation nor the history clock can borrow a partial total.
+ */
+export function mergeUsddCollateralFeeds(
+  feeds: UsddLatestCollateralResponse[],
+): UsddLatestCollateralResponse {
+  if (feeds.length === 0) throw new Error("usdd-data-platform: no collateral feeds configured");
+  const items: UsddCollateralItem[] = [];
+  let totalCollateralValue: number | undefined = 0;
+  let totalSupplyValue: number | undefined = 0;
+  for (const feed of feeds) {
+    assertSuccess(feed, "usdd latest collateral");
+    items.push(...(feed.data?.items ?? []));
+    const collateral = feed.data?.totalCollateralValue;
+    const supply = feed.data?.totalSupplyValue;
+    totalCollateralValue = totalCollateralValue != null
+      && typeof collateral === "number" && Number.isFinite(collateral)
+      ? totalCollateralValue + collateral
+      : undefined;
+    totalSupplyValue = totalSupplyValue != null
+      && typeof supply === "number" && Number.isFinite(supply)
+      ? totalSupplyValue + supply
+      : undefined;
+  }
+  return {
+    code: 0,
+    data: {
+      items,
+      ...(totalCollateralValue != null ? { totalCollateralValue } : {}),
+      ...(totalSupplyValue != null ? { totalSupplyValue } : {}),
+    },
+  };
 }
 
 export function adaptUsddLatestCollateral(
@@ -472,14 +511,20 @@ export async function fetchUsddDataPlatformReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInputFromConfig(config, "usdd-data-platform");
+  const params = parseLiveReserveAdapterParams("usdd-data-platform", config.params);
   const timeout = 12_000;
-  const latest = await fetchJsonWithRetry<UsddLatestCollateralResponse>(input.url, signal, timeout, ctx);
+  const feedUrls = [input.url, ...(params.additionalCollateralUrls ?? [])];
+  const feeds = await Promise.all(
+    feedUrls.map((url) => fetchJsonWithRetry<UsddLatestCollateralResponse>(url, signal, timeout, ctx)),
+  );
+  const latest = mergeUsddCollateralFeeds(feeds);
   const composition = adaptUsddLatestCollateral(latest);
   // Sequenced after the collateral fetch so the history join never widens
   // this adapter's peak connection count.
-  // The history row dates the headline totals only, so an itemized book that
-  // does not reconcile with them never borrows that clock.
-  const historySourceTimestamp = reconcileUsddItemizedCollateral(latest)?.reconciled === true
+  // The history row dates one chain's headline totals only. An aggregated
+  // whole-coin book therefore cannot borrow a per-chain history clock, and a
+  // single-feed book still needs its itemized total to reconcile first.
+  const historySourceTimestamp = feedUrls.length === 1 && reconcileUsddItemizedCollateral(latest)?.reconciled === true
     ? await fetchUsddCollateralHistoryTimestamp(input.url, latest, signal, ctx)
     : null;
   const adapted: AdapterResult = historySourceTimestamp == null

@@ -358,7 +358,9 @@ export async function runDeploymentSupplyCensusShadow(input: {
     }
     const deadlineMs = Math.min(
       Date.now() + DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET.wallTimeoutMs,
-      input.executionWindow.deadlineMs,
+      // The shadow lane must stop a publication reserve before the slot deadline:
+      // the journal append and generation write still have to run inside it.
+      input.executionWindow.deadlineMs - DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET.publicationReserveMs,
     );
     const generation = await observeSafetyScoreV9DeploymentSupplyCensusGeneration({
       fixedInput: {
@@ -581,7 +583,18 @@ export async function syncSafetyScoreV9SupplyAttribution(
     SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
   ]);
   const controlCache = caches.get(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY);
-  const control = controlCache ? parseSafetyScoreV9CaptureControl(controlCache.value) : null;
+  let control: ReturnType<typeof parseSafetyScoreV9CaptureControl> | null = null;
+  let captureControlStatus: "invalid" | null = null;
+  if (controlCache) {
+    try {
+      control = parseSafetyScoreV9CaptureControl(controlCache.value);
+    } catch {
+      // Settlement is bookkeeping bound to the exact capture tuple. A row that a
+      // newer schema or a rolled-back Worker cannot read is inert like an absent
+      // one, never a reason to withhold this run's attribution generation.
+      captureControlStatus = "invalid";
+    }
+  }
   const sourceCache = caches.get(
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_CACHE_KEY,
   );
@@ -846,6 +859,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       blockingRejectedCount: blockingRejectedAssetIds.length,
       blockingRejectedAssetIds,
       priorGenerationStatus,
+      ...(captureControlStatus === null ? {} : { captureControlStatus }),
       captureAdmission: { ...admission, assets: capture.admissionById ?? {} },
       bootstrapProgressAssetIds: progress,
       captureFailureReasonsById: capture.failureReasonById ?? {},

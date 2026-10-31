@@ -116,10 +116,13 @@ function addActiveDepegCandidates(
     const isCritical = isCriticalDepegRisk({ bps: severityBps, mcapUsd: depeg.mcapUsd });
     const age = depeg.ageHours != null ? `${depeg.ageHours}h old` : "age unknown";
     const severityDirection = severityBps >= 0 ? "above" : "below";
+    // A peak-fallback row has no live observation; its figure is historical
+    // context and the title feeds reader-facing change labels verbatim.
+    const basisNote = depeg.severityBasis === "peak-fallback" ? " (stored peak; live price unavailable)" : "";
     addCandidate(candidates, {
       id: activeDepegEditorialCandidateId(depeg),
       kind: "depeg",
-      title: `${depeg.symbol} active ${Math.abs(severityBps)} bps ${severityDirection} peg`,
+      title: `${depeg.symbol} active ${Math.abs(severityBps)} bps ${severityDirection} peg${basisNote}`,
       symbols: [depeg.symbol],
       impactScore,
       novelty: activeDepegNovelty(depeg, data, previousData),
@@ -314,19 +317,28 @@ function addDewsCandidates(candidates: DigestEditorialCandidate[], data: DigestI
 
 function addRiskCandidates(candidates: DigestEditorialCandidate[], data: DigestInputData): void {
   for (const transition of data.gradeTransitions ?? []) {
-    const scoreDelta = (transition.toScore ?? 0) - (transition.fromScore ?? 0);
-    const downgraded = scoreDelta < 0;
+    // A not-rated card publishes a null score. Treating that as a zero-point
+    // baseline fabricates the delta, direction and impact; without both scores
+    // the transition is a neutral grade change with no measured size.
+    const scoreDelta = transition.fromScore != null && transition.toScore != null
+      ? transition.toScore - transition.fromScore
+      : null;
+    const downgraded = scoreDelta != null ? scoreDelta < 0 : null;
     addCandidate(candidates, {
       id: candidateId("grade", [transition.symbol, transition.fromGrade, transition.toGrade]),
       kind: "grade",
-      title: `${transition.symbol} grade ${downgraded ? "fell" : "rose"} to ${transition.toGrade}`,
+      title: scoreDelta == null
+        ? `${transition.symbol} grade ${transition.fromGrade} -> ${transition.toGrade}`
+        : `${transition.symbol} grade ${downgraded ? "fell" : "rose"} to ${transition.toGrade}`,
       symbols: [transition.symbol],
-      impactScore: Math.abs(scoreDelta) * transition.mcapUsd / 1_000_000_000,
-      novelty: downgraded ? "worsening" : "improving",
+      impactScore: scoreDelta == null ? 0 : Math.abs(scoreDelta) * transition.mcapUsd / 1_000_000_000,
+      novelty: scoreDelta == null ? "structural" : downgraded ? "worsening" : "improving",
       confidence: confidenceForData(data.degradedSources, "grade"),
       artifactRisk: transition.mcapUsd < 20_000_000 ? "medium" : "low",
       headlineFacts: [
-        `${transition.fromGrade} (${transition.fromScore}) -> ${transition.toGrade} (${transition.toScore})`,
+        scoreDelta == null
+          ? `${transition.fromGrade} -> ${transition.toGrade} (no measured score baseline)`
+          : `${transition.fromGrade} (${transition.fromScore}) -> ${transition.toGrade} (${transition.toScore})`,
         `${formatCurrency(transition.mcapUsd)} market cap`,
       ],
       whyItMatters: "A report-card move summarizes a material change in the active model's reviewed safety evidence.",

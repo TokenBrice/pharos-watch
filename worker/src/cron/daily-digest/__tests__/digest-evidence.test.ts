@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import type { DigestInputData, DigestNextTrigger } from "@shared/types/digest";
+import { formatCurrency } from "@shared/lib/format";
+import type { DigestEditorialCandidate, DigestInputData, DigestNextTrigger } from "@shared/types/digest";
 import { collectActiveDepegs, collectResolvedDepegs } from "../collectors-market";
 import { collectDewsStress, collectYieldAnomalies } from "../collectors-risk";
 import { buildChangeSummary } from "../digest-change-summary";
@@ -98,5 +99,107 @@ describe("canonical comparable digest evidence", () => {
     const current = { ...input(200000), topDepegs: [], editorialCandidates: [] };
     expect(buildChangeSummary(current, previous, ctx.evidence).resolvedSignals).toEqual([]);
     expect(buildForwardLookOutcomes(current, previous, ctx.evidence)[0].status).toBe("unavailable");
+  });
+
+  it("evaluates a native-peg depeg under the six-hour event-native budget", async () => {
+    const NATIVE_QUOTE_AGE_SEC = 20 * 60;
+    const DAY_SECONDS = 86_400;
+    const now = Math.floor(Date.now() / 1000);
+    const collect = async (at: number, quote: number) => {
+      const ctx = makeCollectorCtx(mockD1([{
+        match: "FROM depeg_events",
+        rows: [{
+          stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR", source: "live",
+          direction: "below", peak_deviation_bps: -800, started_at: now - 3 * DAY_SECONDS,
+          start_price: 0.985, peak_price: 0.92, peg_reference: 1, quote_mode: "native-peg",
+          current_native_quote: JSON.stringify({ value: quote, observedAt: at - NATIVE_QUOTE_AGE_SEC, source: "coingecko" }),
+        }],
+      }]));
+      ctx.nowSec = at;
+      ctx.trackedStablecoinIds = new Set([...ctx.trackedStablecoinIds, "eurc-circle"]);
+      ctx.mcapById.set("eurc-circle", 250_000_000);
+      const collected = await collectActiveDepegs(ctx);
+      expect(collected.degradedReasons).toEqual([]);
+      return collected.value.topDepegs;
+    };
+
+    // The collector admitted the quote under the six-hour native policy and
+    // stamped it current; the same 20-minute-old observation must not be
+    // rejected by the USD-reference 600 s budget downstream.
+    const current = await collect(now, 0.92);
+    expect(current[0]).toMatchObject({
+      stablecoinId: "eurc-circle", quoteMode: "native-peg", severityBasis: "current",
+      currentBps: -800, priceObservedAt: now - NATIVE_QUOTE_AGE_SEC,
+    });
+    const armed = buildNextTriggers({ ...input(now), topDepegs: current })
+      .find((row) => row.metric === "depeg-bps");
+    expect(armed).toMatchObject({ stablecoinId: "eurc-circle", symbol: "EURC" });
+    expect(armed!.thresholdValue).toBeGreaterThan(800);
+
+    const previous = await collect(now - DAY_SECONDS, 0.925);
+    expect(previous[0]).toMatchObject({ severityBasis: "current", currentBps: -750 });
+    const outcomes = buildForwardLookOutcomes(
+      { ...input(now), topDepegs: current },
+      { ...input(now - DAY_SECONDS), topDepegs: previous, nextTriggers: [armed!] },
+    );
+    expect(outcomes[0]).toMatchObject({ status: "pending" });
+    expect(outcomes[0].detail).toContain("800 bps");
+  });
+
+  it("keeps supply-7d outcomes attached to the armed coin when symbols collide", () => {
+    const ALPHA_PARTNER = "usda-alpha-partner";
+    const YESTERDAY = 1_793_097_600;
+    const TODAY = YESTERDAY + 86_400;
+    const candidate: DigestEditorialCandidate = {
+      id: `market:${ALPHA_PARTNER}:weekly-supply`, kind: "market", title: "USDA is the largest weekly supply mover",
+      symbols: ["USDA"], impactScore: 30, novelty: "structural", confidence: "high", artifactRisk: "low",
+      headlineFacts: ["+$30.00M in 7d", "$83.37M current market cap"], whyItMatters: "Supply moved.",
+    };
+    const digestDay = (generatedAt: number, weekly: { avalon: number; alphaPartner: number; anzens: number }): DigestInputData => ({
+      ...input(generatedAt),
+      activeDepegCount: 0,
+      topDepegs: [],
+      biggestSupplyChange: { id: ALPHA_PARTNER, symbol: "USDA", name: "AP USDA", changeUsd: weekly.alphaPartner, currentMcap: 83_368_092 },
+      // Three core coins print USDA; payload order puts usda-avalon first.
+      supplyChanges7d: [
+        { stablecoinId: "usda-avalon", coin: "USDA", change7d: weekly.avalon },
+        { stablecoinId: ALPHA_PARTNER, coin: "USDA", change7d: weekly.alphaPartner },
+        { stablecoinId: "usda-anzens", coin: "USDA", change7d: weekly.anzens },
+      ],
+      editorialCandidates: [candidate],
+    });
+    const yesterday = digestDay(YESTERDAY, { avalon: 2_000_000, alphaPartner: 30_000_000, anzens: -500_000 });
+    const armed = buildNextTriggers(yesterday);
+    expect(armed.find((entry) => entry.metric === "supply-7d-usd")).toMatchObject({
+      symbol: "USDA", stablecoinId: ALPHA_PARTNER,
+    });
+
+    const today = digestDay(TODAY, { avalon: 1_200_000, alphaPartner: 45_000_000, anzens: -400_000 });
+    const outcome = buildForwardLookOutcomes(today, { ...yesterday, nextTriggers: armed })[0];
+    expect(outcome.status).toBe("hit");
+    expect(outcome.detail).toContain(formatCurrency(45_000_000, 0));
+  });
+
+  it("keeps supply-1d outcomes attached to the armed coin when symbols collide", () => {
+    const ALPHA_PARTNER = "usda-alpha-partner";
+    const AT = 1_793_184_000;
+    const day: DigestInputData = {
+      ...input(AT),
+      activeDepegCount: 0,
+      topDepegs: [],
+      biggestSupplyChange: null,
+      supplyVelocity: [
+        { stablecoinId: "usda-avalon", coin: "USDA", change1d: 2_000_000, change7d: 2_000_000, signal: "accelerating" },
+        { stablecoinId: ALPHA_PARTNER, coin: "USDA", change1d: 45_000_000, change7d: 45_000_000, signal: "accelerating" },
+      ],
+    };
+    const armed: DigestNextTrigger = {
+      id: "trigger:supply-1d:usda", stablecoinId: ALPHA_PARTNER, symbol: "USDA",
+      metric: "supply-1d-usd", comparator: "abs-gte", thresholdValue: 40_000_000,
+      thresholdLabel: "$40M 1d move", label: "USDA 1d supply velocity", rationale: "x", detail: "x",
+    };
+    const outcome = buildForwardLookOutcomes(day, { ...day, nextTriggers: [armed] })[0];
+    expect(outcome.status).toBe("hit");
+    expect(outcome.detail).toContain(formatCurrency(45_000_000, 0));
   });
 });

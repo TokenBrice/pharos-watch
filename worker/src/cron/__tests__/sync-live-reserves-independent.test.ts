@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { computeLiveReserveConfigFingerprint, LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
-import { CONFIGURED_COINS, type ConfiguredCoin } from "../sync-live-reserves-shared";
+import { breakerKeyForConfig, CONFIGURED_COINS, type ConfiguredCoin } from "../sync-live-reserves-shared";
 import type { LiveReserveSnapshotMetadata, ReserveSyncStatus } from "@shared/types/live-reserves";
 import type { ReserveAdapterDefinition } from "../reserve-adapters/index";
 import { syncReserveCoin } from "../sync-live-reserves-core";
-import { computeReserveCompositionOverview, loadFreshIndependentLiveReserveMap } from "../../lib/live-reserves/store";
+import { computeReserveCompositionOverview, loadFreshIndependentLiveReserveMap, loadReserveSyncStateMap } from "../../lib/live-reserves/store";
 import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 import { resolveScheduledSlotPolicy } from "../../lib/scheduled-slot-policy";
 import { buildDocumentedRedemptionTelemetry } from "../reserve-adapters/redemption";
+import { verifiedFreshnessMetadata } from "../reserve-adapters/freshness";
+import { runReservePostSyncWatchdog } from "../reserve-post-sync-watchdog";
 import {
   mockLiveReserveD1,
   recordOutcomeSafeMock,
@@ -865,6 +867,107 @@ describe("syncLiveReserves", () => {
       expect(outcome.resolved?.reserves).toEqual(fallbackSlices);
       expect(outcome.scoringReserves).toEqual(fallbackSlices);
       expect(outcome.state?.last_status).toBe("ok");
+    });
+  });
+
+  describe("attempt ledger provenance", () => {
+    // The independent source keeps republishing one as-of clock. By the second
+    // read that clock is past the adapter's 6h source budget, so both attempts
+    // settle degraded while still carrying verified provenance.
+    const coinId = "iusd-infinifi";
+    const sourceClockStallBudgetSec = 6 * 60 * 60;
+    const firstRunAtSec = 1_900_000_000;
+    const secondRunAtSec = firstRunAtSec + 4 * 60 * 60;
+    const frozenSourceTimestamp = firstRunAtSec - 7 * 60 * 60;
+
+    it("persists the verified source clock that the post-sync clock-stall alert reads", async () => {
+      vi.useFakeTimers();
+      try {
+        const coin = CONFIGURED_COINS.find((candidate) => candidate.id === coinId);
+        expect(coin?.liveReservesConfig).toBeDefined();
+        const configuredCoin = coin as ConfiguredCoin;
+        const config = configuredCoin.liveReservesConfig!;
+        const definition = LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter];
+        expect(definition.evidenceClass).toBe("independent");
+        expect((definition.validation as { maxSourceAgeSec?: number } | undefined)?.maxSourceAgeSec)
+          .toBe(sourceClockStallBudgetSec);
+
+        const adapter: ReserveAdapterDefinition = {
+          key: config.adapter,
+          fetch: vi.fn(),
+          sourceModel: definition.sourceModel,
+          evidenceClass: definition.evidenceClass,
+          sharedSourceMode: definition.sharedSourceMode,
+          redemptionTelemetry: definition.redemptionTelemetry,
+          validation: definition.validation,
+        };
+        const runAdapter = async () => ({
+          slices: [{ name: "Staked USD", pct: 100, risk: "low" as const }],
+          metadata: verifiedFreshnessMetadata(frozenSourceTimestamp),
+        });
+        const breakerKey = breakerKeyForConfig(config);
+        const { sqlite, db } = fixtures.open();
+
+        vi.setSystemTime(firstRunAtSec * 1_000);
+        const first = await syncReserveCoin({
+          db,
+          coin: configuredCoin,
+          signal: new AbortController().signal,
+          adapter,
+          runAdapter,
+          breakerCanFetch: new Map([[breakerKey, true]]),
+          previousState: null,
+          d1FinalizeTimeoutMs: 30_000,
+        });
+        expect(first.status).toBe("synced");
+        const firstState = (await loadReserveSyncStateMap(db, [coinId])).get(coinId) ?? null;
+        expect(firstState?.lastStatus).toBe("degraded");
+
+        vi.setSystemTime(secondRunAtSec * 1_000);
+        const second = await syncReserveCoin({
+          db,
+          coin: configuredCoin,
+          signal: new AbortController().signal,
+          adapter,
+          runAdapter,
+          breakerCanFetch: new Map([[breakerKey, true]]),
+          previousState: firstState,
+          d1FinalizeTimeoutMs: 30_000,
+        });
+        expect(second.status).toBe("synced");
+        expect((await loadReserveSyncStateMap(db, [coinId])).get(coinId)?.lastStatus).toBe("degraded");
+
+        // Both cycles were admitted successes, so the alert reader sees them as
+        // successful verified attempts carrying the same as-of clock.
+        expect(sqlite.prepare(
+          "SELECT status FROM reserve_sync_attempt_history WHERE stablecoin_id = ? ORDER BY attempted_at ASC",
+        ).all(coinId)).toEqual([{ status: "degraded" }, { status: "degraded" }]);
+
+        const watchdog = await runReservePostSyncWatchdog(db);
+        const metadata = JSON.parse(watchdog.metadata ?? "{}") as {
+          firedRuleIds: string[];
+          reserveAdapterAlert: {
+            raised: string[];
+            stalledSources: Array<{
+              stablecoinId: string;
+              sourceTimestamp: number;
+              sourceAgeSec: number;
+              sourceAgeBudgetSec: number;
+            }>;
+          } | null;
+        };
+
+        expect(metadata.reserveAdapterAlert?.stalledSources).toEqual([{
+          stablecoinId: coinId,
+          sourceTimestamp: frozenSourceTimestamp,
+          sourceAgeSec: secondRunAtSec - frozenSourceTimestamp,
+          sourceAgeBudgetSec: sourceClockStallBudgetSec,
+        }]);
+        expect(metadata.reserveAdapterAlert?.raised).toContain("reserve-source-clock-stalled");
+        expect(metadata.firedRuleIds).toContain("reserve-source-clock-stalled");
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 

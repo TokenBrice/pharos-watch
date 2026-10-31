@@ -566,15 +566,10 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
     unresolvedOutputDisposition: "reviewed-external",
     executionModel: "deterministic-basket",
     outputAssetType: "stable-basket",
-    capacityModel: {
-      kind: "reserve-sync-metadata",
-      requiredOutputAssetKeys: [
-        "susds-sky",
-        "asset:ethereum:0x0adc69041a2b086f8772acce2a754f410f211bed",
-        "asset:ethereum:0x27f2f159fe990ba83d57f39fd69661764bebf37a",
-        "asset:ethereum:0xbeef01735c132ada46aa9aa4c54623caa92a64cb",
-      ],
-    },
+    // The RToken's `redemptionAvailable()` throttle is a USD capacity bound over
+    // RToken units; it does not observe which receipt tokens the basket pays out,
+    // so requiring the unresolved receipt identities would discard every read.
+    capacityModel: { kind: "reserve-sync-metadata" },
     reviewedAt: REVIEWED_EXIT_CREDIT_AT,
     costModel: fixedFee(
       0,

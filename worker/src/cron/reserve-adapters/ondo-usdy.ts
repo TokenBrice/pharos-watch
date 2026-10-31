@@ -4,9 +4,10 @@ import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { StrictIsoDateSchema } from "@shared/types/safety-schema-primitives";
 import { DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/types/live-reserve-adapter-policy";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC, resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-freshness";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { AdapterContext, AdapterResult } from "./types";
 import { fetchTextWithRetry, verifiedFreshnessMetadata } from "./helpers";
-import { extractEscapedJsonValueAfterKey } from "./html";
+import { extractEscapedJsonValueAfterKey, htmlLayoutChangedError, htmlParseError } from "./html";
 
 const SOURCE_URL = "https://ondo.finance/usdy";
 const MAX_SOURCE_BYTES = 2_000_000;
@@ -35,11 +36,19 @@ export function adaptOndoUsdyPortfolio(
   scoringMaxSourceAgeSec?: number,
 ): AdapterResult {
   if (html.length > MAX_SOURCE_BYTES || html.split(PORTFOLIO_KEY).length !== 2) {
-    throw new Error("ondo-usdy: missing-ambiguous-or-oversized-portfolio");
+    throw htmlLayoutChangedError("ondo-usdy", "missing-ambiguous-or-oversized-portfolio");
   }
-  const portfolio = PortfolioSchema.parse(JSON.parse(
-    extractEscapedJsonValueAfterKey(html, PORTFOLIO_KEY, "ondo-usdy"),
-  ));
+  let portfolio: z.output<typeof PortfolioSchema>;
+  try {
+    portfolio = PortfolioSchema.parse(JSON.parse(
+      extractEscapedJsonValueAfterKey(html, PORTFOLIO_KEY, "ondo-usdy"),
+    ));
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw htmlLayoutChangedError("ondo-usdy", `portfolio shape changed: ${error.message}`);
+    }
+    throw htmlParseError("ondo-usdy", toErrorMessage(error));
+  }
   // The issuer gives a calendar date only; UTC start-of-day conservatively ages it.
   const sourceTimestamp = Date.parse(`${portfolio.asOfDate}T00:00:00Z`) / 1000;
   const freshness = resolveLiveReserveSourceAgeBudget(
@@ -48,21 +57,21 @@ export function adaptOndoUsdyPortfolio(
     DISCLOSURE_SOURCE_MAX_AGE_SEC,
   );
   if (sourceTimestamp > nowSec + MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC || nowSec - sourceTimestamp > freshness.sourceAgeBudgetSec) {
-    throw new Error("ondo-usdy: stale-or-future-source");
+    throw new Error("ondo-usdy: source-date-out-of-bounds: stale-or-future-source");
   }
   const seen = new Set<string>();
   const slices = portfolio.positions.map((row) => {
     const category = CATEGORIES[row._id];
     const reviewed = coin.reserves?.filter((slice) => slice.sourceKey === category?.sourceKey);
     if (!category || row.name !== category.name || seen.has(row._id) || reviewed?.length !== 1) {
-      throw new Error("ondo-usdy: duplicate-or-unreviewed-category");
+      throw htmlLayoutChangedError("ondo-usdy", "duplicate-or-unreviewed-category");
     }
     seen.add(row._id);
     return { ...reviewed[0], pct: row.value / portfolio.total * 100 };
   });
   const sum = portfolio.positions.reduce((total, row) => total + row.value, 0);
   if (!Number.isFinite(sum) || Math.abs(sum - portfolio.total) > 0.01) {
-    throw new Error("ondo-usdy: unreconciled-portfolio-total");
+    throw htmlLayoutChangedError("ondo-usdy", "unreconciled-portfolio-total");
   }
   return {
     slices: slices.filter((slice) => slice.pct > 0),

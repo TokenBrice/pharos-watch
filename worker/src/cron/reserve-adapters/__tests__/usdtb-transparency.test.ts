@@ -88,6 +88,19 @@ describe("custody inventory USDtb profile", () => {
     expect(() => adaptCustodyInventory("usdtb-transparency", { backingAssets: {}, supply: 1 })).toThrow("unreadable lastUpdatedAt");
   });
 
+  it("fails closed when the settlement-float field is missing or renamed", () => {
+    const missing = { ...USDTB_BACKING } as Partial<BackingAndSupplyPayload>;
+    delete missing.assetsInMotion;
+    expect(() => adaptCustodyInventory("usdtb-transparency", missing as BackingAndSupplyPayload))
+      .toThrow("payload missing assetsInMotion");
+    expect(() =>
+      adaptCustodyInventory("usdtb-transparency", {
+        ...USDTB_BACKING,
+        assetsInMotion: undefined,
+      }),
+    ).toThrow("payload missing assetsInMotion");
+  });
+
   it.each([
     [99.5, 0, 0.995, false],
     [99.49, 0, 0.9949, true],

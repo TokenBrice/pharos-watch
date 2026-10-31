@@ -218,6 +218,7 @@ export async function loadTelegramDeliverySliRollup(
             MIN(expires_at) AS nearest_expires_at
        FROM telegram_deliveries
       WHERE state IN ('pending', 'retry', 'sending')
+        AND kind NOT IN ('broadcast', 'digest')
         AND created_at >= ? AND created_at <= ?
       GROUP BY priority, age_bucket
       ORDER BY priority, oldest_created_at`,
@@ -232,6 +233,7 @@ export async function loadTelegramDeliverySliRollup(
        FROM telegram_deliveries
       WHERE state IN ('cancelled', 'retry')
         AND reason IN ('subscriber_missing', 'coin_snoozed', 'chat_snoozed')
+        AND kind NOT IN ('broadcast', 'digest')
         AND created_at >= ? AND created_at <= ?
       GROUP BY reason
       ORDER BY count DESC, reason
@@ -246,6 +248,7 @@ export async function loadTelegramDeliverySliRollup(
             COUNT(*) AS count
        FROM telegram_deliveries
       WHERE created_at >= ? AND created_at <= ?
+        AND kind NOT IN ('broadcast', 'digest')
         AND (reason IS NOT NULL OR error_class IS NOT NULL)
       GROUP BY 1
       ORDER BY count DESC, reason
@@ -260,6 +263,7 @@ export async function loadTelegramDeliverySliRollup(
             SUM(CASE WHEN done_at <= ? - 900 THEN 1 ELSE 0 END) AS older_than_15m_count
        FROM telegram_deliveries
       WHERE state = 'unknown'
+        AND kind NOT IN ('broadcast', 'digest')
         AND created_at >= ? AND created_at <= ?`,
     )
     .bind(nowSec, startsAt, nowSec)
@@ -270,7 +274,8 @@ export async function loadTelegramDeliverySliRollup(
     .prepare(
       `SELECT COUNT(*) AS count, SUM(attempts) AS total_attempts, MAX(done_at) AS latest_at
        FROM telegram_deliveries
-      WHERE state IN ('failed', 'blocked', 'expired') AND done_at >= ? AND done_at <= ?`,
+      WHERE state IN ('failed', 'blocked', 'expired') AND done_at >= ? AND done_at <= ?
+        AND kind NOT IN ('broadcast', 'digest')`,
     )
     .bind(startsAt, nowSec)
     .first<DeadLetterSummaryRow>();
@@ -279,6 +284,7 @@ export async function loadTelegramDeliverySliRollup(
       `SELECT COALESCE(NULLIF(reason, ''), 'unknown') AS reason, COUNT(*) AS count
        FROM telegram_deliveries
       WHERE state IN ('failed', 'blocked', 'expired') AND done_at >= ? AND done_at <= ?
+        AND kind NOT IN ('broadcast', 'digest')
       GROUP BY 1 ORDER BY count DESC, reason LIMIT ?`,
     )
     .bind(startsAt, nowSec, reasonQueryLimit)
@@ -288,6 +294,7 @@ export async function loadTelegramDeliverySliRollup(
       `SELECT COALESCE(NULLIF(error_class, ''), 'unknown') AS reason, COUNT(*) AS count
        FROM telegram_deliveries
       WHERE state IN ('failed', 'blocked', 'expired') AND done_at >= ? AND done_at <= ?
+        AND kind NOT IN ('broadcast', 'digest')
       GROUP BY 1 ORDER BY count DESC, reason LIMIT ?`,
     )
     .bind(startsAt, nowSec, reasonQueryLimit)

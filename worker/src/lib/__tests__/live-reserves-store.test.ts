@@ -19,6 +19,8 @@ import { getMaxSyncAge } from "../live-reserves/store-read";
 import { resolveReserveResult } from "../live-reserves/store-views";
 import { evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
+import { emptyReserveComposition } from "../status/derived-data";
+import { evaluateReserveCompositionStatus } from "../status/evaluation-rules";
 
 vi.mock("../live-reserves/store-shared", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../live-reserves/store-shared")>();
@@ -1324,6 +1326,64 @@ describe("live-reserves-store", () => {
     // Corrupt snapshot must not be counted as fresh even though the sync state
     // reports lastStatus=ok and age=0.
     expect(overview.freshCoins).toBe(emptyOverview.freshCoins);
+  });
+
+  it("keeps uncertain-write evidence and the success clock for a consistent but undecodable snapshot", async () => {
+    // 2026-10-30T12:00:00Z, inside the active reserve feed review window.
+    const now = 1_793_361_600;
+    const lastSuccessAt = now - 3_600;
+    const db = mockD1([
+      {
+        match: "reserve_composition",
+        rows: [
+          reserveCompositionRow({
+            // A slice linked to a coin that left the worker-tracked registry:
+            // consistent with its last success, but strict decoding rejects it.
+            slices: JSON.stringify([
+              { name: "USDC reserves", pct: 100, risk: "low", coinId: "retired-untracked-coin" },
+            ]),
+            fetched_at: lastSuccessAt,
+            attempt_id: "attempt-1",
+            metadata: JSON.stringify({ freshnessMode: "unverified" }),
+          }),
+        ],
+      },
+      {
+        match: "reserve_sync_state",
+        rows: [
+          reserveSyncRow({
+            last_attempted_at: now,
+            last_success_at: lastSuccessAt,
+            last_status: "error",
+            last_error: "D1 write timeout for iusd-infinifi",
+            // recordFailure keeps the previous success authority and records
+            // the finalize timeout as an uncertain write.
+            metadata: JSON.stringify({
+              reason: "storage-write-timeout",
+              failureCategory: "storage-write",
+              uncertainWrite: true,
+            }),
+            last_attempt_id: "attempt-2",
+            pending_attempt_id: null,
+            last_success_attempt_id: "attempt-1",
+          }),
+        ],
+      },
+    ]);
+
+    const overview = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+
+    expect(overview.corruptCoins).toBe(1);
+    // The latest attempt hit the write-timeout path, so the coin is uncertain
+    // even though its stored row could not be decoded.
+    expect(overview.writeTimeoutUncertain).toBe(1);
+    // The success clock is corroborated by the matching stored row; a failed
+    // decode must not turn a recorded success into "no successful live sync yet".
+    expect(overview.lastSuccessAt).toBe(lastSuccessAt);
+    expect(evaluateReserveCompositionStatus({
+      ...emptyReserveComposition(),
+      ...overview,
+    }).status).toBe("degraded");
   });
 
   it.each([

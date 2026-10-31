@@ -585,3 +585,45 @@ describe("handleRemediateBlacklistAmountGaps", () => {
   });
 
 });
+
+describe("handleRemediateBlacklistAmountGaps ambiguous commit", () => {
+  it("reports the committed repair and invalidates derived caches when the batch reply is lost", async () => {
+    const { db, sqlite } = sqliteFixtures.open();
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_status, amount_source, explorer_tx_url, explorer_address_url)
+      VALUES ('ambiguous-commit', 'USDT', 'avalanche', 'Avalanche', 'destroy', '${affectedAddress}',
+        '0xtx', 100, 1700000000, 'recoverable_pending', 'unavailable', '', '')`).run();
+    vi.mocked(fetchJsonWithRetry).mockResolvedValue(receiptResponse(25));
+
+    // The batch commits, then the transport reply is lost. The overload retry replays the
+    // same CAS-fenced statements against the committed state, so every replay is a no-op.
+    const batch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementationOnce(async (statements) => {
+      await batch(statements);
+      throw new Error("D1_ERROR: internal error; reference = injected-post-commit");
+    });
+
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db,
+      url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false"),
+      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+    });
+
+    // Precondition: the first attempt committed the repair to D1.
+    expect(sqlite.prepare(`SELECT amount_native, amount_status, amount_source
+      FROM blacklist_events WHERE id = 'ambiguous-commit'`).get()).toEqual({
+      amount_native: 25, amount_status: "resolved", amount_source: "event",
+    });
+
+    const body = await readJsonResponse(response, 200) as {
+      applied: { resolved: number; resolvedZero: number; providerFailed: number };
+      cacheInvalidation: { attempted: number; deleted: number; failed: number };
+    };
+    // The replayed rows are counted from their committed attempt clock, and the
+    // derived summary/gap-metric caches are invalidated even though every replay
+    // statement reported zero changes.
+    expect(body.applied).toMatchObject({ resolved: 1, resolvedZero: 0, providerFailed: 0 });
+    expect(body.cacheInvalidation.attempted).toBeGreaterThan(0);
+  });
+});

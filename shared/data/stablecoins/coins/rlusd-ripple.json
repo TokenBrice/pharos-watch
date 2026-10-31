@@ -22,17 +22,18 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "AICPA attestation standards",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-29",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-26",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos reserve research 2026-09-30 (August examination and rendered month-end composition table verified)",
+      "reviewer": "Pharos reserve research 2026-10-30 (September examination and rendered month-end composition table verified)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte RLUSD Reserves Report - August 2026",
-          "url": "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf"
+          "label": "Deloitte RLUSD Reserves Report - September 2026",
+          "url": "https://cdn.sanity.io/files/ior4a5y3/production/850ed07e8f0556b3b1c1d43eb2a0fc4ef6538ce1.pdf/RLUSD%20Attestation%20Report%20(Sep)_Final%20Signed.pdf"
         }
       ]
     }

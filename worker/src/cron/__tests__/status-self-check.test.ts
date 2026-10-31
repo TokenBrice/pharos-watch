@@ -203,6 +203,33 @@ describe("runStatusSelfCheck", () => {
     });
   });
 
+  it("grades producers with the post-probe assessment clock, not the run-start clock", async () => {
+    const runStartedAt = 1_777_000_000;
+    const assessedAt = runStartedAt + 120;
+    vi.useFakeTimers();
+    vi.setSystemTime(runStartedAt * 1000);
+    let advanced = false;
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
+      if (!advanced) {
+        advanced = true;
+        vi.setSystemTime(assessedAt * 1000);
+      }
+      return buildProbeResponse(input, "healthy", init);
+    });
+
+    await runStatusSelfCheck({} as D1Database);
+
+    expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), assessedAt);
+    expect(assessPublicHealthMock).toHaveBeenCalledWith(expect.anything(), assessedAt, expect.anything());
+    expect(writeStatusRawSnapshotMock).toHaveBeenCalledWith(expect.anything(), assessedAt, expect.anything(), expect.anything());
+    expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledWith(
+      expect.anything(), assessedAt, expect.anything(), expect.anything(), expect.anything(),
+    );
+    expect(updateDiscrepancyObservationMock).toHaveBeenCalledWith(
+      expect.anything(), assessedAt, expect.any(Boolean), expect.any(Boolean), expect.any(Function),
+    );
+  });
+
   it("keeps oversized HTTP health evidence a failed probe, not a healthy observation", async () => {
     fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) => {
       if (String(input).includes("/api/health")) {

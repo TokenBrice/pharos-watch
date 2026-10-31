@@ -250,6 +250,10 @@ export function safetyScoreSnapshotHeaders(
     ...headers,
     "X-Data-Freshness": "stale",
     "X-Data-Freshness-Reason": future ? "future-timestamp" : SAFETY_SCORE_PUBLICATION_AGE_REASON,
-    Warning: headers.Warning ?? `110 - "Safety Score publication is ${future ? "future-dated" : "stale"} (consumer budget ${SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC}s)"`,
+    // A future-dated publication at any skew is still a stale safety verdict;
+    // the generic 199 warning would hide it from freshness-warning consumers.
+    Warning: headers.Warning?.startsWith("110 - ")
+      ? headers.Warning
+      : `110 - "Safety Score publication is ${future ? "future-dated" : "stale"} (consumer budget ${SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC}s)"`,
   };
 }

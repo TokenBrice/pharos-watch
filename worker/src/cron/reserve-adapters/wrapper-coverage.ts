@@ -42,6 +42,7 @@ export function wrapperCoverageResult(args: {
     routeStatusSource: "onchain" | "static-config";
     routeStatusReason?: string;
     holderEligibility: "any-holder" | "whitelisted-primary";
+    outputAssetKeys?: readonly string[];
     sourceUrls?: string[];
   };
 }): AdapterResult {
@@ -78,6 +79,7 @@ export function wrapperCoverageResult(args: {
         ...(args.redemption.routeStatusReason ? { routeStatusReason: args.redemption.routeStatusReason } : {}),
         holderEligibility: args.redemption.holderEligibility,
         settlementDelaySec: 0,
+        ...(args.redemption.outputAssetKeys ? { outputAssetKeys: [...args.redemption.outputAssetKeys] } : {}),
         ...(args.redemption.sourceUrls ? { sourceUrls: args.redemption.sourceUrls } : {}),
       },
     },

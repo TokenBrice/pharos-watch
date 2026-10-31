@@ -295,6 +295,12 @@ export function computeLiquiditySignal(input: DEWSInput): SignalResult {
 export function computePriceSignal(input: DEWSInput): SignalResult {
   const { price, priceConfidence, prevPriceConfidence } = input;
 
+  // A reconstruction that never read price evidence must not inherit the live
+  // null-price maximum; unavailable is not zero and is not observed stress (R1/R2).
+  if (input.priceEvidenceUnavailable) {
+    return { value: 0, available: false, confidence: null, unavailableReason: "price-evidence-unavailable" };
+  }
+
   // No price at all = maximum concern. We deliberately return available:true
   // (not available:false) so the 100 stress points feed the DEWS score even
   // when there is no reading — here available:true means "this signal has a

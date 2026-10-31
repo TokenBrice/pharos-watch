@@ -71,7 +71,7 @@ export const handleSubscribe: WebhookCommandHandler = async (ctx, args) => {
   if (parsed.subscribeAll) {
     // Every tracked coin is a scope jump; ask once, statelessly.
     await ctx.replyToChatWithMarkup(
-      buildBulkConfirmMessage("subscribe", subscribableCoinCount(), [...parsed.alertTypes], []),
+      buildBulkConfirmMessage("subscribe", subscribableCoinCount(), [...parsed.alertTypes], [], depegStep),
       {
         replyMarkup: buildBulkConfirmReplyMarkup(
           { kind: "subscribe", alertTypes: parsed.alertTypes, depegStep },

@@ -80,6 +80,15 @@ describe("reserve feed review policy", () => {
       { warnings: [{ code: "new-failure", message: "new", severity: "warning", effect: "degraded" }] },
     ] satisfies Partial<ReserveSyncStateRecord>[]) expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
   });
+  it("does not acknowledge a review from unreadable or count-mismatched warning evidence", async () => {
+    expect(await matchReserveFeedReview(mockD1(), state(), now)).toEqual(review);
+    for (const overrides of [
+      { warningIntegrityIssue: { code: "invalid-warnings", message: "stored reserve warnings contain invalid JSON" } },
+      { warningCount: 1 },
+    ] satisfies Partial<ReserveSyncStateRecord>[]) {
+      expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
+    }
+  });
   it("keeps Yuzu's new review dated and short while naming the stale-timeline cause", async () => {
     expect(review.reviewedAt).toBe(Date.parse("2026-10-29T11:02:00Z") / 1000);
     expect(review.expiresAt).toBe(Date.parse("2026-11-05T11:02:00Z") / 1000);

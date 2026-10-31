@@ -15,7 +15,7 @@ import { ReportCardsV9DetailResponseSchema } from "@shared/types/report-cards-v9
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { V9_PUBLIC_READ_GRACE_SEC, V9_PUBLIC_FRAGMENT_MAX_BYTES } from "@shared/types/report-cards-v9-materialization";
-import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { makeReportCardsV9Response, makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput, persistAndMaterialize } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../../lib/safety-score-v9/publication-store";
 import { materializeV9AcceptedPublication, V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "../../lib/report-cards-v9-materialization";
@@ -26,7 +26,8 @@ import { handleReportCardsV9 } from "../report-cards-v9";
 import { getRouteMatch } from "../../routes/registry";
 import { handleReportCardsV9Table, handleReportCardsV9Detail } from "../report-cards-v9-projections";
 import * as publicationCodec from "../../lib/safety-score-v9/publication-codec";
-import { withRepresentationEtag } from "../../lib/api-response";
+import { safetyScoreSnapshotHeaders, withRepresentationEtag } from "../../lib/api-response";
+import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
 import { sha256HexFromUtf8Chunks } from "../../lib/hash";
 
 function instrumentReads(db: D1Database, delayMs = 0) {
@@ -354,6 +355,31 @@ describe("materialized V9 response", () => {
       expect(response.headers.get("X-Safety-Score-Generation")).toBe(publication.publicationGenerationId);
     }
 
+  });
+
+  it("emits the documented 110 warning for a future-dated publication beyond the generic skew allowance", () => {
+    const nowSec = 1_800_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+    const publication = makeReportCardsV9Response();
+    const updatedAt = nowSec + 120;
+    const headers = safetyScoreSnapshotHeaders({
+      updatedAt,
+      publicationHealth: {
+        ...publication.publicationHealth,
+        acceptedAtSec: updatedAt,
+        attemptedAtSec: updatedAt,
+      },
+    }, publication.safetyScoreIdentity.publicationGenerationId);
+
+    expect(headers["X-Safety-Score-Status"]).toBe("stale");
+    expect(headers["X-Data-Freshness"]).toBe("stale");
+    expect(headers["X-Data-Freshness-Reason"]).toBe("future-timestamp");
+    // docs/report-cards.md#api requires `Warning: 110` for a non-held
+    // publication that is future at any skew. The generic 199 is not a
+    // freshness verdict for endpoint probes.
+    expect(headers.Warning).toMatch(/^110 - /);
+    expect(isFreshnessWarningHeader(headers.Warning)).toBe(true);
   });
 
   it("uses the admitted representation without decoding a mutated canonical payload on hits", async () => {

@@ -243,6 +243,29 @@ describe("mint_burn projector", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM tape_events WHERE source_row_id = 'internal'").get()).toEqual({ n: 1 });
   });
 
+  it("still publishes newly eligible flows when one stored claim payload is not valid JSON", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
+       flow_type, tx_hash, block_number, explorer_tx_url)
+      VALUES (?, 'usdt-tether', 'USDT', 'ethereum', 'mint', 20000000, 20000000, ?,
+              'standard', '0xtest', 1, 'https://example.com')`);
+    insert.run("damaged-claim", SEC - 100);
+    expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 1, advanced: SEC - 100 });
+
+    // The read boundary models an unparsable stored payload as
+    // `payload-json-invalid`; one such row must not halt the rest of the class.
+    sqlite.prepare("UPDATE tape_events SET payload_json = 'not json' WHERE source_row_id = 'damaged-claim'").run();
+
+    insert.run("fresh-flow", SEC);
+    const result = await projectMintBurnLargeFlows(db);
+
+    expect(result.advanced).toBe(SEC);
+    expect(sqlite.prepare(
+      "SELECT type, coin_id, severity FROM tape_events WHERE source_row_id = 'fresh-flow'",
+    ).get()).toEqual({ type: "mint_burn.large_mint", coin_id: "usdt-tether", severity: "notice" });
+  });
+
   it("derives the same nonempty event identity independently of persistence", async () => {
     const first = mockTapeD1(withRows([makeFlow()])) as MockD1Database;
     const second = mockTapeD1(withRows([makeFlow()])) as MockD1Database;

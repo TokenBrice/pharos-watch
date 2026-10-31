@@ -92,8 +92,8 @@
     },
     "params": {
       "porFeedAddress": "0xaB5Dd7DD7669072a1Ef27c0ba241120A27A1aeC3",
-      "assetLabel": "Physical gold reserves (grams)",
-      "assetRisk": "very-low",
+      "assetLabel": "Kinesis-native KAU held in a segregated reserve wallet by KMS Labs S.A.",
+      "assetRisk": "medium",
       "reserveUnit": "XAU_G",
       "liabilityScope": {
         "basis": "not-comparable",

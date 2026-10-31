@@ -462,6 +462,34 @@ describe("handleTelegramMiniAppSession", () => {
     expect(historyMatches(db, "INSERT INTO telegram_usage_daily", {1:"mini_app_mutation_denied"})).toBe(false);
   });
 
+  it("returns 401 stale-auth even when the telemetry dedupe write fails", async () => {
+    const staleInitData = await signedInitData({
+      auth_date: String(NOW_SEC - 301),
+      chat_type: "private",
+      user: JSON.stringify({ id: 42, username: "alice" }),
+    });
+    const hashPrefix = new URLSearchParams(staleInitData).get("hash")!.slice(0, 16);
+    const cooldownKey = `telegram:command-cooldown:42:mini-app:stale:mini_app_mutation_denied:${hashPrefix}`;
+    const db = makeMiniAppDb([
+      {
+        // The stale-auth telemetry dedupe is a best-effort cache write; a
+        // transient D1 failure must not replace the auth verdict.
+        match: "INSERT INTO cache (key, value, updated_at)",
+        matchBinds: [cooldownKey, "1", NOW_SEC, NOW_SEC - 7 * 24 * 60 * 60],
+        rows: [],
+        throwError: new Error("D1 DB is overloaded. Requests queued for too long."),
+      },
+    ]);
+
+    const response = await handleTelegramMiniAppMutation(
+      db,
+      makeMiniAppRequest("/api/telegram-mini-app/mutate", { initData: staleInitData, operation: { kind: "clear-snooze" } }),
+      BOT_TOKEN,
+    );
+
+    expect(await readJsonResponse(response, 401)).toMatchObject({ code: "stale-auth" });
+  });
+
   it("does not interpret retired recap launch tokens as an action", async () => {
     const initData = await privateInitData(60, "recap_watchlist");
     const db = makeMiniAppDb(stateReadTables());

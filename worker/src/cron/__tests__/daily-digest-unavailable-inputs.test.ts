@@ -184,6 +184,93 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     });
     expect(classifyRegime(input)).toBe("WATCHFUL");
   });
+  it("cannot certify CALM from a partially withheld depeg census", async () => {
+    const nowSec = Math.floor(Date.now() / 1_000);
+    const ctx = makeCollectorCtx(mockD1([{
+      match: "FROM depeg_events", rows: [
+        // Sized but suppressed: a week-old depeg on a $5M coin.
+        { stablecoin_id: "dai-makerdao", symbol: "DAI", direction: "below", peak_deviation_bps: 900, started_at: nowSec - 200 * 3_600 },
+        // The same open census, but its circulating supply cannot be read.
+        { stablecoin_id: "usdc-circle", symbol: "USDC", direction: "below", peak_deviation_bps: 300, started_at: nowSec - 2 * 3_600 },
+      ],
+    }]));
+    ctx.mcapById.delete("usdc-circle");
+
+    const active = await collectActiveDepegs(ctx);
+    expect(active.value).toMatchObject({ activeDepegCount: 2 });
+    expect(active.value.topDepegs).toHaveLength(1);
+    expect(active.qualityReasons).toEqual(["active-depeg-supply-unavailable"]);
+    // input.ts folds qualityReasons into the persisted top-level degradedSources.
+    const input = dayInput({ ...active.value, degradedSources: [...(active.qualityReasons ?? [])] });
+    expect(classifyRegime(input)).toBe("WATCHFUL");
+    expect(buildUserPrompt(input)).toContain("Market regime: WATCHFUL");
+  });
+  it("cannot certify CALM when the eight-row display cap hides a fresh depeg", async () => {
+    const nowSec = Math.floor(Date.now() / 1_000);
+    const chronicRows = Array.from({ length: 8 }, (_, index) => ({
+      stablecoin_id: `chron-${index}`, symbol: `CHR${index}`, direction: "below" as const,
+      peak_deviation_bps: 900, started_at: nowSec - 200 * 3_600,
+    }));
+    const freshRow = {
+      stablecoin_id: "fresh-coin", symbol: "FRESH", direction: "below" as const,
+      peak_deviation_bps: 150, started_at: nowSec - 10 * 3_600,
+    };
+    const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: [...chronicRows, freshRow] }]));
+    for (const row of chronicRows) ctx.mcapById.set(row.stablecoin_id, 200_000_000);
+    ctx.mcapById.set(freshRow.stablecoin_id, 20_000_000);
+    ctx.trackedStablecoinIds = new Set([
+      ...ctx.trackedStablecoinIds,
+      ...chronicRows.map((row) => row.stablecoin_id),
+      freshRow.stablecoin_id,
+    ]);
+
+    const active = await collectActiveDepegs(ctx);
+    expect(active.value).toMatchObject({ activeDepegCount: 9 });
+    expect(active.value.topDepegs).toHaveLength(8);
+    expect(active.value.topDepegs.every((depeg) => depeg.suppressReason)).toBe(true);
+    expect(classifyRegime(dayInput({ ...active.value }))).toBe("WATCHFUL");
+  });
+  it.each([
+    ["valuation-incomplete", "mint-burn-ftq-valuation-incomplete"],
+    ["flow-window-unavailable", "mint-burn-ftq:flow-window-unavailable"],
+    ["v9-snapshot-unavailable", "mint-burn-ftq:v9-snapshot-unavailable"],
+  ] as const)("cannot certify CALM from an unavailable flight-to-quality classification (%s)", (classificationReason, degradedSource) => {
+    const input = dayInput({
+      mintBurnFlows: {
+        gaugeScore: 10,
+        gaugeBand: "NEUTRAL",
+        classificationSource: "unavailable",
+        classificationReason,
+        safetyScoreIdentity: null,
+        flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 },
+        topPressure: [],
+      },
+      degradedSources: [degradedSource],
+    });
+
+    expect(classifyRegime(input)).toBe("WATCHFUL");
+    const prompt = buildUserPrompt(input);
+    expect(prompt).toContain(`Flight-to-Quality: unavailable (${classificationReason})`);
+    expect(prompt).toContain("Market regime: WATCHFUL");
+    expect(prompt).not.toContain("Market regime: CALM");
+  });
+  it("reports an unobserved market-cap total as unavailable, not as a $0.00 subtotal", () => {
+    const input = dayInput({
+      totalMcapUsd: 0,
+      supplyCoverage: { complete: false, observedCount: 0, unavailableCount: 5 },
+      mcap7dDelta: null,
+      mcap7dDeltaCoverage: { coveredCoins: 0, totalCoins: 5, coveredMcapUsd: 0 },
+      degradedSources: ["supply-current-unavailable"],
+    });
+
+    // No observed core member means there is no known subtotal to quote; the
+    // archive and snapshot read boundaries already null this state (ADR-28/R1).
+    const totalLine = buildUserPrompt(input)
+      .split("\n")
+      .find((line) => /stablecoin market[- ]?cap/i.test(line)) ?? "";
+    expect(totalLine).not.toMatch(/\$0(?:\.00)?\b/);
+    expect(totalLine.toLowerCase()).toContain("unavailable");
+  });
 
   it("publishes null weekly totals below full daily coverage", () => {
     const day = dayInput({ activeDepegCount: 2, blacklistActivity: { eventCount: 1, totalAmountUsd: 5, topEvents: [] } });

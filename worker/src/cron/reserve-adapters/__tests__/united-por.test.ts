@@ -25,7 +25,7 @@ describe("adaptUnitedPorPayload", () => {
       freshnessMode: "verified",
       totalReserveUsd: 1038136298.86,
       supplyUsd: 1030959209.0,
-      details: { accountName: "United Stables", ripcord: false },
+      details: { accountName: "United Stables", ripcord: false, freshnessSource: "same-run-render-clock" },
     });
     const expectedRatio = 1038136298.86 / 1030959209.0;
     expect(result.metadata!.collateralizationRatio).toBeCloseTo(expectedRatio, 9);
@@ -146,17 +146,18 @@ describe("adaptUnitedPorPayload", () => {
       .toThrow("unexpected accountName (missing); expected United Stables");
   });
 
-  it("still parses a stale updatedAt into a verified but old sourceTimestamp", () => {
+  it("names the issuer serve clock as a render clock rather than a dated disclosure", () => {
     const stale: UnitedPorPayload = { ...UNITED_POR_PAYLOAD, updatedAt: "2026-06-01T08:00:00.000Z" };
 
     const result = adaptUnitedPorPayload(stale, SLICE);
 
-    // The adapter reports the real disclosure timestamp honestly; the cron's
-    // validation.maxSourceAgeSec policy (not the adapter) is what later marks
-    // a sync built from this snapshot as degraded once stale.
+    // `updatedAt` tracks the request instant, so the adapter reports it
+    // honestly as a same-run render clock; an older serve time does not become
+    // evidence that the reserve state was observed then.
     expect(result.metadata).toMatchObject({
       sourceTimestamp: Math.floor(Date.parse("2026-06-01T08:00:00.000Z") / 1000),
       freshnessMode: "verified",
+      details: { freshnessSource: "same-run-render-clock" },
     });
   });
 });

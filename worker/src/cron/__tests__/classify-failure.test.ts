@@ -59,6 +59,12 @@ const CASES: Case[] = [
   { name: "fatal-warning reason", reason: "fatal-warning", lastError: null, expected: "validation" },
   { name: "empty-slices reason", reason: "empty-slices", lastError: null, expected: "validation" },
   {
+    name: "adapter-exception + source date outside the reviewed bound",
+    reason: "adapter-exception",
+    lastError: "ondo-usdy: source-date-out-of-bounds: stale-or-future-source",
+    expected: "validation",
+  },
+  {
     name: "adapter-exception + invalid reserve output",
     reason: "adapter-exception",
     lastError: "Invalid reserve output from adapter XYZ",

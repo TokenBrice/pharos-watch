@@ -9,6 +9,7 @@ import {
   computeUnknownExposurePct,
   fetchJsonAdapterInput,
   freshnessMetadataFromTimestamp,
+  parseFiniteNumber,
   parseTimestampLikeToUnixSeconds,
   reserveInfoWarning,
 } from "./helpers";
@@ -21,6 +22,8 @@ interface FalconBreakdownAsset {
 
 export interface FalconTransparencyResponse {
   snapshot_date: number;
+  /** Issuer headline for the asset book; required for breakdown reconciliation. */
+  tvl?: string | number;
   usdf?: {
     supply: string;
     insurance_fund: string | number;
@@ -140,6 +143,20 @@ export function adaptFalconTransparency(payload: FalconTransparencyResponse): Ad
     isUnknown: (_asset, bucket) => bucket === "other",
     getUnknownKey: (asset) => asset.label,
   });
+
+  // A breakdown that does not add up to the issuer's own headline tvl is an
+  // incomplete read, not a clean composition: fail closed instead of
+  // normalizing whatever rows arrived to 100%.
+  const tvlUsd = parseFiniteNumber(payload.tvl, {
+    label: "Falcon transparency payload missing or invalid tvl",
+    min: 0,
+  });
+  const tvlToleranceUsd = Math.max(0.01, tvlUsd * 1e-9);
+  if (Math.abs(totalAssetUsd - tvlUsd) > tvlToleranceUsd) {
+    throw new Error(
+      `Falcon asset breakdown total ${totalAssetUsd.toFixed(2)} does not reconcile with tvl ${tvlUsd.toFixed(2)}`,
+    );
+  }
 
   const insuranceFundRaw = payload.usdf?.insurance_fund;
   const insuranceFund = typeof insuranceFundRaw === "number"

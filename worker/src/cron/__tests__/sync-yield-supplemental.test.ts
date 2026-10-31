@@ -159,6 +159,47 @@ describe("syncYieldSupplemental", () => {
       expect(JSON.parse(result.metadata!).degradedFamilies).toEqual([]);
     });
 
+    it("does not report un-run sibling families as failed with zero candidates", async () => {
+      const previousFamilyResults = Object.fromEntries(
+        SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [family, "published"]),
+      ) as Record<typeof SUPPLEMENTAL_SOURCE_FAMILY_KEYS[number], "published">;
+      vi.mocked(getCaches).mockResolvedValue(new Map([
+        [getYieldSupplementalRunOutcomeCacheKey(), {
+          value: buildYieldSupplementalRunOutcome(
+            previousFamilyResults,
+            ["aaveV3"],
+            now - 600,
+            { aaveV3: "usd-price-unavailable" },
+          ),
+          updatedAt: now - 600,
+        }],
+      ]));
+
+      const result = await syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, selected);
+      const metadata = JSON.parse(result.metadata ?? "{}") as {
+        sourceCoverage: {
+          supplementalSourceAccounting: { familyExecution: { familyCount: number } };
+          sourceFamilySummaries: Record<string, { status: string; degraded: boolean }>;
+          sourceFamilyCounts: Record<string, number>;
+          sourceFamilyInventoryCounts: Record<string, number>;
+        };
+      };
+      // The same run merges the untouched siblings' real statuses into the
+      // run-outcome row, so the run document must not contradict that row.
+      const outcome = JSON.parse(vi.mocked(setCache).mock.calls[0]![2]);
+      expect(outcome.familyCacheResults.beefy).toBe("published");
+      // The document itself says this invocation executed a single family.
+      expect(metadata.sourceCoverage.supplementalSourceAccounting.familyExecution.familyCount).toBe(1);
+      expect(metadata.sourceCoverage.sourceFamilySummaries.aaveV3).toMatchObject({ status: "ok" });
+      for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS.filter((key) => key !== "aaveV3")) {
+        // R1/R2: a family this invocation did not run is unmeasured, not a
+        // failed fetch with zero candidates.
+        expect(metadata.sourceCoverage.sourceFamilySummaries).not.toHaveProperty(family);
+        expect(metadata.sourceCoverage.sourceFamilyCounts).not.toHaveProperty(family);
+        expect(metadata.sourceCoverage.sourceFamilyInventoryCounts).not.toHaveProperty(family);
+      }
+    });
+
     it("does not renew Aave or sibling clocks before the family cadence is due", async () => {
       vi.mocked(getCaches).mockResolvedValue(new Map([[aaveKey, row(now - 14_399)]]));
       const result = await syncYieldSupplemental({} as D1Database, undefined, new Map(), undefined, selected);

@@ -147,6 +147,18 @@ export function adaptTetherTransparency(
   const shareholderEquityUsd = parseAmount(entry.shareholder_eq);
 
   const warnings: LiveReserveWarning[] = [];
+  // Tether ships identical total_assets/total_liabilities strings for some
+  // entries (xaut today), so their quotient is an identity, not a measured
+  // reserve ratio. Withhold it rather than publishing 1.0 as coverage.
+  const selfReferentialRatio = totalAssets === totalLiabilities;
+  if (selfReferentialRatio && params.currencyIso !== "mxnt") {
+    warnings.push(
+      reserveInfoWarning(
+        "tether-self-referential-ratio",
+        `Tether reports identical total_assets and total_liabilities for ${params.currencyIso.toUpperCase()}; its collateralization ratio is an identity, not a reserve measurement`,
+      ),
+    );
+  }
   const quarantinedChains = chainDetails.chains?.filter((chain) => chain.quarantined != null && chain.quarantined > 0) ?? [];
   if (quarantinedChains.length > 0) {
     warnings.push(
@@ -176,8 +188,11 @@ export function adaptTetherTransparency(
     metadata: {
       diag: { rawSumDeviation: calculateRawPercentageSumDeviation(slices.map((slice) => slice.pct)) },
       ...verifiedFreshnessMetadata(sourceTimestamp),
-      ...(params.currencyIso !== "mxnt"
+      ...(params.currencyIso !== "mxnt" && !selfReferentialRatio
         ? { collateralizationRatio: totalAssets / totalLiabilities }
+        : {}),
+      ...(params.currencyIso !== "mxnt" && selfReferentialRatio
+        ? { ratioUnavailableReason: "not-comparable" as const }
         : {}),
       ...(params.currencyIso === "usdt"
         ? {

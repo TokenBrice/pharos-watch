@@ -22,7 +22,10 @@ import {
   requireOnchainInput,
   reserveDegradedWarning,
 } from "./helpers";
-import { compositionPctFromRaw } from "./slice-math";
+import {
+  SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT,
+  compositionPctFromRaw,
+} from "./slice-math";
 import { hasDegradingWarnings } from "./validate";
 import { reserveInfoWarning } from "./warnings";
 import {
@@ -394,6 +397,22 @@ export async function fetchErc4626SingleAssetReserves(
   // also covers vaults whose accounting and burn path omit wallet balances.
   const excludesWalletCash = sliceConfig.walletCashAccounting?.mode === "excluded"
     || sliceConfig.redemptionLiquidity?.source === "morpho-vault-v1";
+  // A reviewed idle/deployed split cannot be published from a clamped share:
+  // when the wallet holds more than `totalAssets()` (donation, skim or stale
+  // NAV accounting) the split is unknown, and clamping would report the
+  // reviewed deployed leg as idle cash. Vaults without a reviewed split keep
+  // publishing the single reviewed category at `totalAssets()`.
+  const idleExcessRaw = idleUnderlyingBalanceRaw != null && !excludesWalletCash
+    && idleUnderlyingBalanceRaw > totalAssetsRaw
+    ? idleUnderlyingBalanceRaw - totalAssetsRaw
+    : 0n;
+  // The shared tolerance is a percentage; compare in basis points to stay exact.
+  const idleExcessToleranceBps = BigInt(SOURCE_TOTAL_RECONCILIATION_THRESHOLD_PCT * 100);
+  if (sliceConfig.deployedExposure && idleExcessRaw * 10_000n > totalAssetsRaw * idleExcessToleranceBps) {
+    throw new Error(
+      `erc4626-single-asset ${coin.id} underlying balance ${idleUnderlyingBalanceRaw} exceeds totalAssets ${totalAssetsRaw}`,
+    );
+  }
   const heldRaw = idleUnderlyingBalanceRaw == null || excludesWalletCash
     ? 0n
     : idleUnderlyingBalanceRaw < totalAssetsRaw ? idleUnderlyingBalanceRaw : totalAssetsRaw;

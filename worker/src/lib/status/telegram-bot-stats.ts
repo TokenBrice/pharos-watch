@@ -261,11 +261,15 @@ async function loadInactiveSubscribersCleanedThisWeek(db: D1Database, now: numbe
   const cutoff = now - INACTIVE_CLEANUP_WINDOW_SEC;
   const row = await db
     .prepare(
-      "SELECT COALESCE(SUM(item_count), 0) AS total FROM cron_runs WHERE job = ? AND status = 'ok' AND started_at >= ?",
+      "SELECT COUNT(*) AS runs, COALESCE(SUM(item_count), 0) AS total FROM cron_runs WHERE job = ? AND status = 'ok' AND started_at >= ?",
     )
     .bind(INACTIVE_CLEANUP_JOB, cutoff)
-    .first<{ total: number | string | null }>();
+    .first<{ runs: number | string | null; total: number | string | null }>();
   if (!row) return null;
+  const runs = Number(row.runs ?? 0);
+  // An aggregate always returns one row: "no successful run in the window" is
+  // run evidence, not a zero sum.
+  if (!Number.isFinite(runs) || runs <= 0) return null;
   const parsed = Number(row.total ?? 0);
   return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
 }
@@ -301,7 +305,7 @@ export function mapTelegramBotStats(input: {
     inactiveSubscribersCleanedThisWeek,
     lifecycleSnapshot,
   } = input;
-  const unavailableFields = input.unavailableFields ?? [];
+  const unavailableFields = [...(input.unavailableFields ?? [])];
   const telemetryErrors = input.telemetryErrors ?? {};
 
   const pendingCount = pendingCapacity
@@ -391,6 +395,11 @@ export function mapTelegramBotStats(input: {
 
   if (inactiveSubscribersCleanedThisWeek !== undefined) {
     stats.inactiveSubscribersCleanedThisWeek = inactiveSubscribersCleanedThisWeek;
+    // No successful cleanup run in the window is Unknown, not a zero count.
+    if (inactiveSubscribersCleanedThisWeek === null
+      && !unavailableFields.includes("inactiveSubscribersCleanedThisWeek")) {
+      unavailableFields.push("inactiveSubscribersCleanedThisWeek");
+    }
   }
 
   stats.quality =

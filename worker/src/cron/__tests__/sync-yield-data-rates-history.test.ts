@@ -75,16 +75,16 @@ describe("syncYieldData", () => {
       additionalTables: [
         {
           match:
-            "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+            "SELECT price, snapshot_date, price_observed_at FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
           matchBinds: ["100"],
           rows: [],
-          first: { price: 1.05, snapshot_date: nowSec },
+          first: { price: 1.05, snapshot_date: nowSec, price_observed_at: nowSec },
         },
         {
           match: "FROM supply_history",
           matchBinds: ["100", nowSec - 45 * 86400, nowSec - 7 * 86400],
           rows: [],
-          first: { price: 1.01, snapshot_date: nowSec - 30 * 86400 },
+          first: { price: 1.01, snapshot_date: nowSec - 30 * 86400, price_observed_at: nowSec - 30 * 86400 },
         },
       ],
     });
@@ -143,9 +143,10 @@ describe("syncYieldData", () => {
     const { db, sqlite } = sqliteFixtures.open();
     const actual = await vi.importActual<typeof YieldHelpers>("../yield-helpers");
     vi.spyOn(yieldHelpersModule, "computeApyFromPrice").mockImplementation(actual.computeApyFromPrice);
-    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)");
+    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES (?, ?, ?, ?, ?)");
     for (const [days, price] of [[0, 1.05], [10, 1.04], [30, 1.01], [46, 0.99], [6, 1.045]]) {
-      insert.run("100", nowSec - days * 86400, 1_000_000, price);
+      const snapshotDate = nowSec - days * 86400;
+      insert.run("100", snapshotDate, 1_000_000, price, snapshotDate);
     }
 
     installYieldCacheReader(vi.mocked(getCache), {
@@ -203,16 +204,16 @@ describe("syncYieldData", () => {
         },
         {
           match:
-            "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+            "SELECT price, snapshot_date, price_observed_at FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
           matchBinds: ["100"],
           rows: [],
-          first: { price: 1.05, snapshot_date: nowSec },
+          first: { price: 1.05, snapshot_date: nowSec, price_observed_at: nowSec },
         },
         {
           match: "FROM supply_history",
           matchBinds: ["100", nowSec - 45 * 86400, nowSec - 7 * 86400],
           rows: [],
-          first: { price: 1.01, snapshot_date: nowSec - 30 * 86400 },
+          first: { price: 1.01, snapshot_date: nowSec - 30 * 86400, price_observed_at: nowSec - 30 * 86400 },
         },
       ],
     });

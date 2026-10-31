@@ -18,6 +18,7 @@ import {
   makeOnchainCallers,
   notApplicableFreshnessMetadata,
   requireOnchainInput,
+  reserveInfoWarning,
   type OnchainCallers,
 } from "./helpers";
 import { reserveDegradedWarning } from "./warnings";
@@ -267,6 +268,19 @@ export async function fetchM0WrapperUnderlyingReserves(
         routeStatusReason ?? "Could not verify M0 SwapFacility redemption path status",
       )]
     : [];
+  // A single-deployment read is not the coin's cross-chain supply. Name the
+  // omitted catalog deployments instead of presenting the covered chain as the
+  // whole book; Solana cannot be read by this EVM adapter at all.
+  const coveredChains = new Set([input.chain, ...additionalDeployments.map((deployment) => deployment.chain)]);
+  const omittedDeploymentChains = Array.from(new Set(
+    (coin.contracts ?? []).map((contract) => contract.chain).filter((chain) => !coveredChains.has(chain)),
+  )).sort();
+  if (omittedDeploymentChains.length > 0) {
+    warnings.push(reserveInfoWarning(
+      "m0-wrapper-deployments-omitted",
+      `M0 wrapper supply covers ${Array.from(coveredChains).join(", ")} only; catalog deployments omitted: ${omittedDeploymentChains.join(", ")}`,
+    ));
+  }
   const sliceConfig = parseSliceConfig(params);
   return wrapperCoverageResult({
     coverage,
@@ -289,6 +303,7 @@ export async function fetchM0WrapperUnderlyingReserves(
       wrapperAddress,
       mTokenAddress,
       ...(additionalDeployments.length > 0 ? { deployments: deploymentBreakdown } : {}),
+      ...(omittedDeploymentChains.length > 0 ? { supplyCoverageComplete: false } : {}),
       ...(swapFacilityAddress ? { swapFacilityAddress } : {}),
       ...(swapFacilityPaused != null ? { swapFacilityPaused } : {}),
       ...(swapperCanRedeem != null ? { swapperCanRedeem } : {}),
@@ -298,6 +313,11 @@ export async function fetchM0WrapperUnderlyingReserves(
       routeStatusSource: params.mode === "m-extension" ? "onchain" : "static-config",
       ...(routeStatusReason ? { routeStatusReason } : {}),
       holderEligibility,
+      // In wrapped-m-token mode the measured redeemable balance is the wrapper's
+      // M holding, so the payout identity is the configured M slice.
+      ...(params.mode === "wrapped-m-token" && sliceConfig.coinId
+        ? { outputAssetKeys: [sliceConfig.coinId] }
+        : {}),
       ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
     },
   });

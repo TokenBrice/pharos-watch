@@ -76,8 +76,10 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   const coverageRatio = input.enabledConfigs.length > 0 ? phase.contractsProcessed / input.enabledConfigs.length : 1;
   const criticalCoverageRatio =
     input.criticalContractsEnabled > 0 ? phase.criticalContractsSatisfied / input.criticalContractsEnabled : 1;
-  const conservationFailures = phase.configBreakdown.filter((summary) => summary.conservationFailure).length;
-  const admittedConservationFailures = admittedBreakdown.filter((summary) => summary.conservationFailure).length;
+  const conservationFailures = [...phase.configBreakdown, ...(phase.coverageRepairs ?? [])]
+    .filter((summary) => summary.conservationFailure).length;
+  const admittedConservationFailures = [...admittedBreakdown, ...(phase.coverageRepairs ?? [])]
+    .filter((summary) => !isPending(summary.key) && summary.conservationFailure).length;
   const conservationUnavailable = phase.configBreakdown.filter((summary) => summary.conservationStatus === "unavailable").length;
   const scanCoverageUnproven = phase.configBreakdown.filter((summary) =>
     summary.advanceReason === "scan-coverage-unproven").length;
@@ -259,8 +261,9 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     }
   }
 
-  const compatibilityChainHead = input.chainHeads.get("ethereum")
-    ?? Math.max(0, ...input.chainHeads.values());
+  // Legacy compatibility field for rows written before per-chain `chainHeads`.
+  // Never substitute a sibling chain's head for Ethereum (ADR-30).
+  const compatibilityChainHead = input.chainHeads.get("ethereum") ?? null;
   const skippedReasonCounts: Record<string, number> = {};
   for (const summary of phase.configBreakdown) {
     if (summary.skippedReason) {

@@ -443,6 +443,36 @@ describe("Curve CryptoSwap hash-bound kill-proof acquisition", () => {
     })).resolves.toEqual({ ok: false, reason: "runtime-code-unavailable" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it("classifies an exact 0x pool runtime as semantic absence, not an operational read failure", async () => {
+    const chainRpcs = buildChainRpcs("alchemy-test-key");
+    const config = chainRpcs.get("ethereum")!;
+    config.endpoints = config.endpoints.filter((endpoint) => endpoint.operator === "alchemy").slice(0, 1);
+    const fetchMock = vi.fn<typeof fetch>(async (_url, init) => {
+      const request = JSON.parse(String(init?.body)) as {
+        method: string;
+        params: [string, { blockHash: string; requireCanonical: boolean }];
+      };
+      expect(request.method).toBe("eth_getCode");
+      expect(request.params[0]).toBe(TWOCRYPTO_POOL);
+      expect(request.params[1]).toEqual({ blockHash: HASH_A, requireCanonical: true });
+      return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "0x" }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const result = await verifyCurveCryptoSwapDeployment({
+      policy: { ...completePinnedPolicy(), transferSemanticsReviewed: true },
+      blockNumber: ETHEREUM_BLOCK,
+      blockHash: HASH_A,
+      chainRpcs,
+    });
+
+    // Exact `0x` code is semantic absence, never last-known-good; only an
+    // unavailable RPC is operational (docs/process/dex-liquidity-appendix.md).
+    expect(result).toEqual({ ok: false, reason: "runtime-code-absent" });
+    expect(isOperationalDexMeasuredFailure("runtime-code-absent")).toBe(false);
+  });
 });
 
 describe("Curve CryptoSwap token indices and ABI", () => {

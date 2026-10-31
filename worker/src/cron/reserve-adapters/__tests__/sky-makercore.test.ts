@@ -273,7 +273,7 @@ describe("adaptSkyModules", () => {
 });
 
 describe("resolveSkyImmediateRedeemableUsd", () => {
-  it("returns 0 when no stablecoins module exists", () => {
+  it("returns null when no stablecoins module exists", () => {
     const noStable: SkyGroupResult[] = [
       {
         group: "core",
@@ -283,7 +283,7 @@ describe("resolveSkyImmediateRedeemableUsd", () => {
         datetime: "2026-04-05T17:33:24",
       },
     ];
-    expect(resolveSkyImmediateRedeemableUsd(noStable)).toBe(0);
+    expect(resolveSkyImmediateRedeemableUsd(noStable)).toBeNull();
   });
 });
 
@@ -638,6 +638,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
 
   it.each(["", "-1", "NaN", "0x10"])("rejects unreadable group debt before normalizing the mix (%s)", async (debt) => {
     const groups: SkyGroupResult[] = [
+      { group: "stablecoins", group_name: "Stablecoins", debt: "1000", collateral: "1000", datetime: "2026-04-05T17:33:24" },
       { group: "spark", group_name: "Spark", debt: "900", collateral: "900", datetime: "2026-04-05T17:33:24" },
       { group: "new-module", group_name: "New Module", debt, collateral: "1000", datetime: "2026-04-05T17:33:24" },
     ];
@@ -645,8 +646,16 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     await expect(runSky(groups)).rejects.toThrow(/new-module\.debt/);
   });
 
+  it("rejects a census that drops the required stablecoins module", async () => {
+    await expect(runSky([
+      { group: "spark", group_name: "Spark", debt: "900", collateral: "1000", datetime: "2026-04-05T17:33:24" },
+      { group: "legacy-rwa", group_name: "Legacy RWA", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
+    ], { capacity: false })).rejects.toThrow(/incomplete-groups-census: missing required group\(s\) stablecoins/);
+  });
+
   it("publishes complete shared-book statistics for genuine zero and positive debt", async () => {
     const { result } = await runSky([
+      { group: "stablecoins", group_name: "Stablecoins", debt: "0", collateral: "0", datetime: "" },
       { group: "spark", group_name: "Spark", debt: "900", collateral: "1000", datetime: "2026-04-05T17:33:24" },
       { group: "new-module", group_name: "New Module", debt: "100", collateral: "100", datetime: "2026-04-05T17:33:24" },
       { group: "legacy-rwa", group_name: "Legacy RWA", debt: "0", collateral: "0", datetime: "" },
@@ -657,6 +666,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
       totalReserveUsd: 1100,
       collateralizationRatio: 1.1,
       unknownExposurePct: 10,
+      skyStablecoinsModuleCollateralUsd: 0,
     });
     expect(result.slices.find((slice) => slice.name === "Other modules")?.pct).toBe(10);
     expect(result.warnings?.some((warning) => warning.code === "source-timestamp-coverage-incomplete")).toBe(false);
