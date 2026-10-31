@@ -384,7 +384,13 @@ export async function buildNativeSafetyScoreV9Capture(
     if (!row) {
       const quarantine = dexLiquiditySnapshot.quarantined?.[coin.id];
       if (quarantine) {
-        dexQuarantinedAssetIds.push({ assetId: coin.id, reason: quarantine });
+        // The reader rejected the row's evidence, not the asset's identity. Keep
+        // an evidence-free row so the native input still covers the cohort and
+        // the compiler reads DEX evidence as unavailable, never zero (R1/R2, R8).
+        const methodologyVersion = quarantine.methodologyVersion?.trim();
+        if (methodologyVersion) dexMethodologyVersions.add(methodologyVersion);
+        dexQuarantinedAssetIds.push({ assetId: coin.id, reason: quarantine.reason });
+        dexLiqMap[coin.id] = { updatedAt: dexPublication.updatedAt };
         continue;
       }
       throw new Error(`Native V9 capture has no in-memory DEX row for ${coin.id}`);
