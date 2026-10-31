@@ -62,10 +62,16 @@ describe("public dataset citations", () => {
   });
 
   it("keeps the depeg capture clock out of the dated download path", () => {
-    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "depeg-history");
-    if (!descriptor) throw new Error("Missing depeg-history descriptor");
+    const committed = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "depeg-history");
+    if (!committed) throw new Error("Missing depeg-history descriptor");
+    // The committed capture and mirror can share a day; pin a capture clock on
+    // another day so the path assertion cannot pass or fail by coincidence.
+    const captureDate = "2020-01-02";
+    const descriptor: PublicDatasetDescriptor = {
+      ...committed,
+      export: { ...committed.export, _meta: { ...committed.export._meta, asOfISO: `${captureDate}T03:04:05.000Z` } },
+    };
     const meta = descriptor.export._meta;
-    const captureDate = meta.asOfISO!.slice(0, 10);
     expect(captureDate).not.toBe(PUBLIC_DATASET_CURRENT_DATE);
 
     const citation = buildPublicDatasetCitation(descriptor);
