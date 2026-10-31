@@ -54,7 +54,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("hourly");
     expect(Array.isArray(body.coins)).toBe(true);
     expect(body).not.toHaveProperty("stablecoinId");
-    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 134, pendingAdmissionCount: 2, disabledCount: 1 });
+    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 135, pendingAdmissionCount: 2 });
     expect(parsed.data?.publication?.legs.every((leg) => leg.status !== "admitted")).toBe(true);
     const cached = (db as MockD1Database).getHistory().find((entry) => entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === aggregateFlowCacheKey(24));
@@ -91,8 +91,9 @@ describe("handleMintBurnFlows contract tests", () => {
       VALUES ('historical', ?, ?, 'ethereum', 'mint', 1000000, 1000000, ?,
         'standard', '0xtest', 1, 'https://example.com')`).run(id, config.symbol, hour);
     await syncMintBurnPublicationPolicy(db, [], nowSec, ACTIVE_MINT_BURN_CONFIGS.map(mintBurnConfigKey));
-    expect(sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get())
-      .toEqual({ paused_keys: "[]" });
+    // The inactive key keeps a latent pause for its re-admission; retained detail still reads.
+    expect(JSON.parse(String((sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1")
+      .get() as { paused_keys: string }).paused_keys))).toContain(mintBurnConfigKey(config));
     const response = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?stablecoin=${id}`));
     const body = MintBurnPerCoinResponseSchema.parse(await readJsonResponse(response, 200));
     expect(body.stablecoinId).toBe(id);

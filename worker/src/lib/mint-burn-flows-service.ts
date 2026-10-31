@@ -17,6 +17,7 @@ import { logMalformedJsonPath } from "./json-decode-observability";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { CHAIN_META } from "@shared/types/chain-identity";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import {
   addMintBurnValuationTally,
   emptyMintBurnValuationTally,
@@ -102,7 +103,11 @@ export async function readMintBurnWindowContext(
   const policy = storedPolicy?.disabled_keys ?? "[]";
   const disabledKeys = decodeMintBurnDisabledKeys(policy);
   const pausedKeys = decodeMintBurnDisabledKeys(storedPolicy?.paused_keys ?? "[]");
-  const pausedPairs = new Set(configs.filter((config) => pausedKeys.has(mintBurnConfigKey(config))
+  // A pause recorded while a key sat outside the active roster is latent: it gates
+  // re-admission but not a quarantined coin's retained per-coin detail.
+  const scopedPausedKeys = new Set(configs.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId)
+    && pausedKeys.has(mintBurnConfigKey(config))).map(mintBurnConfigKey));
+  const pausedPairs = new Set(configs.filter((config) => scopedPausedKeys.has(mintBurnConfigKey(config))
     && mintBurnPreviouslyAdmitted(config, admissions)).map((config) => `${config.stablecoinId}|${config.chain.chainId}`));
   const existing = configs.filter((config) => !mintBurnPublicationDisabled(config, configs, admissions, disabledKeys)
     && !pausedPairs.has(`${config.stablecoinId}|${config.chain.chainId}`)
@@ -110,7 +115,7 @@ export async function readMintBurnWindowContext(
   const current = resolveMintBurnWatermark(nowSec, existing, segments, legacy);
   // A new leg must cover the incumbent window, so admission cannot move its frontier backwards.
   const scope = resolveMintBurnPublication(configs, admissions, disabledKeys, segments, nowSec,
-    current.unavailableReason == null ? current.timestamp! : end, MINT_BURN_WATERMARK_MAX_AGE_SEC, pausedKeys);
+    current.unavailableReason == null ? current.timestamp! : end, MINT_BURN_WATERMARK_MAX_AGE_SEC, scopedPausedKeys);
   if (scope.newAdmissions.length > 0) {
     // Scan coverage alone cannot stop an unpriced joining leg from nulling an incumbent's nets.
     const candidateKeys = new Set(scope.newAdmissions.map((row) => row.config_key));
