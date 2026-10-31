@@ -151,6 +151,36 @@ describe("supplemental family cache acceptance window", () => {
     });
   });
 
+  it("publishes a family's valid rows when another stored row fails read validation", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const morphoKey = getYieldSupplementalFamilyCacheKey("morpho");
+    const valid = morphoCandidate(nowSec - 60);
+    const malformed = { ...valid, yield: { ...valid.yield, currentApy: "6.1" } };
+
+    installYieldCacheReader(vi.mocked(getCache), {
+      ...freshRequiredFamilyRows(nowSec),
+      [morphoKey]: cacheRow(JSON.stringify({
+        version: 1,
+        updatedAt: nowSec,
+        source: "sync-yield-supplemental",
+        sourceCount: 2,
+        data: [valid, malformed],
+      }), nowSec),
+    });
+
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
+    // Read validation quarantines the malformed row only; the family's valid
+    // source still publishes (R8) and the run stays clean.
+    expect(state.supplementalCandidates).toEqual([valid]);
+    expect(state.supplementalMeta).toMatchObject({
+      mode: "cache",
+      fallbackMode: null,
+      sourceCount: 1,
+    });
+  });
+
   it("reports a stale cache when every required family missed its refresh slot", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);

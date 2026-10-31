@@ -238,26 +238,57 @@ describe("pinned multi-emitter lane screening", () => {
     expect(logCalls).toEqual([{ fromBlock: 900, toBlock: 909 }, { fromBlock: 910, toBlock: 919 }]);
   });
 
-  it("certifies the readable prefix instead of failing when the window needs more pages", async () => {
+  it("fails closed instead of certifying a partial prefix when the page budget is exhausted", async () => {
+    // A provider that refuses 10,000-block pages narrows the served span to
+    // 5,000, so a 216,000-block bootstrap cannot be read within 32 pages.
     const chainRpcs = new Map([[CHAIN, {
       ...makeChainRpcConfig({ chainId: CHAIN, rpcUrls: [`https://${CHAIN}.example`] }),
-      endpoints: [{ ...registryRpcEndpoint(`https://${CHAIN}.example`), maxLogBlockSpan: 1 }],
+      endpoints: [{ ...registryRpcEndpoint(`https://${CHAIN}.example`), maxLogBlockSpan: 10_000 }],
     }]]);
-    const { logCalls } = harness();
+    const fromBlock = 900;
+    const toBlock = fromBlock + 216_000 - 1;
+    const { logCalls } = harness({
+      finalizedNumber: toBlock,
+      logsOverride: ({ fromBlock: pageFrom, toBlock: pageTo }) => (pageTo - pageFrom + 1 > 5_000
+        ? { results: [undefined], errors: [{ index: 0, code: -32005, message: "block range is too wide" }] }
+        : { results: [[]], errors: [] }),
+    });
 
     const result = await screenLaneAdminEvents(
-      target([emitter(OAPP, ["Paused"])], { fromBlock: 900, toBlock: 900 + LANE_ADMIN_EVENT_MAX_LOG_PAGES }),
-      options(chainRpcs),
+      target([emitter(OAPP, ["Paused"])], { fromBlock, toBlock }),
+      options(chainRpcs, CLOCK + 300_000),
     );
 
-    // A 32-page budget reads 900..931; the certificate covers that prefix so
-    // the driver can chain the next window at 932 instead of retrying an
-    // unreadable planned range forever.
-    const certificate = admitted(result);
-    expect(certificate.fromBlock).toBe(900);
-    expect(certificate.toBlock).toBe(900 + LANE_ADMIN_EVENT_MAX_LOG_PAGES - 1);
+    expect(result).toMatchObject({ outcome: "failed", failureReason: "read-budget-exhausted" });
+    expect(result).not.toHaveProperty("certificate");
     expect(logCalls).toHaveLength(LANE_ADMIN_EVENT_MAX_LOG_PAGES);
-    expect(logCalls[0]).toEqual({ fromBlock: 900, toBlock: 900 });
+    expect(logCalls[logCalls.length - 1]).toEqual({ fromBlock: 150_900, toBlock: 155_899 });
+  });
+
+  it("certifies a complete read that spends the full page budget after a range refusal", async () => {
+    const chainRpcs = new Map([[CHAIN, {
+      ...makeChainRpcConfig({ chainId: CHAIN, rpcUrls: [`https://${CHAIN}.example`] }),
+      endpoints: [{ ...registryRpcEndpoint(`https://${CHAIN}.example`), maxLogBlockSpan: 10_000 }],
+    }]]);
+    const fromBlock = 900;
+    // One refused 10,000-block page plus 31 five-thousand-block pages is exactly
+    // the 32-page budget, yet it reads the whole planned window.
+    const toBlock = fromBlock + 31 * 5_000 - 1;
+    const { logCalls } = harness({
+      finalizedNumber: toBlock,
+      logsOverride: ({ fromBlock: pageFrom, toBlock: pageTo }) => (pageTo - pageFrom + 1 > 5_000
+        ? { results: [undefined], errors: [{ index: 0, code: -32005, message: "block range is too wide" }] }
+        : { results: [[]], errors: [] }),
+    });
+
+    const certificate = admitted(await screenLaneAdminEvents(
+      target([emitter(OAPP, ["Paused"])], { fromBlock, toBlock }),
+      options(chainRpcs, CLOCK + 300_000),
+    ));
+
+    expect(certificate.toBlock).toBe(toBlock);
+    expect(certificate.windowEndSec).toBe(headerAt(toBlock).timestamp);
+    expect(logCalls).toHaveLength(LANE_ADMIN_EVENT_MAX_LOG_PAGES);
   });
 
   it("uses the producer's admitted finalized head instead of a second finalized read", async () => {

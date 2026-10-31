@@ -392,7 +392,7 @@ Possible channel values include `"skipped: no-creds"` (Twitter), `"no-creds"` (T
 
 ### Data collection
 
-Reads the latest non-blocked, non-weekly edition per UTC date in two seven-day windows: current `[todayTs - 6d, scheduledAt]`, prior `[todayTs - 13d, todayTs - 6d)`, at most 14 rows. Future editions are excluded. Both windows share aggregation. Safety fields (including the dated Safety Map census) and authored copy enter the prompt only when comparable with the active weekly model/schema/methodology/policy/build. When an edition reports `degradedSources`, the prompt names them and does not describe an empty risk leaderboard as an absence of risk signals.
+Reads the latest non-blocked, non-weekly edition per UTC date in two seven-day windows: current `[todayTs - 6d, scheduledAt]`, prior `[todayTs - 13d, todayTs - 6d)`, at most 14 rows. Future editions are excluded. Both windows share aggregation. Safety fields (including the dated Safety Map census) and authored copy enter the prompt only when comparable with the active weekly model/schema/methodology/policy/build. When a current-window edition reports `degradedSources`, the prompt names them and does not describe an empty risk leaderboard as an absence of risk signals; prior-window degradation is persisted as provenance without labelling the current week.
 
 | Metric | Derivation |
 |--------|-----------|

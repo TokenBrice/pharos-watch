@@ -33,6 +33,7 @@ function createSourceState(): DewsSourceState {
     blacklistSourceOk: true,
     prevSignals: new Map(),
     prevSignalStaleIds: new Set(),
+    previousGenerationUnavailable: false,
     mintBurnMap: new Map(),
     mintBurnAgeSecById: new Map(),
     mintBurnStaleIds: new Set(),

@@ -18,6 +18,7 @@ function CoinEmblemInner({
   cohortCoinCount = 1,
   cohortMarketCap,
   cohortSupplyUnavailableCount = 0,
+  cohortSupplyPartialCount = 0,
   cohortSymbolPreview,
   cohortRank,
   hoverCardYPlacement = "auto",
@@ -29,6 +30,7 @@ function CoinEmblemInner({
   cohortCoinCount?: number;
   cohortMarketCap?: number | null;
   cohortSupplyUnavailableCount?: number;
+  cohortSupplyPartialCount?: number;
   cohortSymbolPreview?: string;
   cohortRank?: number;
   hoverCardYPlacement?: HoverCardYPlacement;
@@ -46,8 +48,10 @@ function CoinEmblemInner({
   const mcap = coin.marketCap !== null ? formatCompactUsd(coin.marketCap) : null;
   // Cohort figures use the ranking's one rounding.
   const cohortCap = cohortMarketCap != null ? formatCurrency(cohortMarketCap, 1) : null;
+  // An unavailable member or a partial-chain remainder leaves the subtotal incomplete, so no share is exact.
+  const cohortIncomplete = cohortSupplyUnavailableCount > 0 || cohortSupplyPartialCount > 0;
   const cohortShare =
-    cohortSupplyUnavailableCount === 0 && cohortMarketCap != null && cohortMarketCap > 0 && coin.marketCap !== null
+    !cohortIncomplete && cohortMarketCap != null && cohortMarketCap > 0 && coin.marketCap !== null
       ? formatPercentFromRatio(coin.marketCap / cohortMarketCap, 1)
       : null;
   const pegLabel = PEG_LABELS_SHORT[coin.pegCurrency] ?? coin.pegCurrency;
@@ -135,8 +139,12 @@ function CoinEmblemInner({
               <span className="coin-emblem__hover-card-value">{cohortShare ?? "n/a"}</span>
             </span>
             <span>
-              <span className="coin-emblem__hover-card-label">{cohortSupplyUnavailableCount > 0 ? "Known cohort subtotal" : "Cohort cap"}</span>
-              <span className="coin-emblem__hover-card-value">{cohortCap ?? "Unavailable"}{cohortSupplyUnavailableCount > 0 ? ` · ${cohortSupplyUnavailableCount} unavailable` : ""}</span>
+              <span className="coin-emblem__hover-card-label">{cohortIncomplete ? "Known cohort subtotal" : "Cohort cap"}</span>
+              <span className="coin-emblem__hover-card-value">
+                {cohortCap ?? "Unavailable"}
+                {cohortSupplyUnavailableCount > 0 ? ` · ${cohortSupplyUnavailableCount} unavailable` : ""}
+                {cohortSupplyPartialCount > 0 ? ` · ${cohortSupplyPartialCount} partial-chain remainder` : ""}
+              </span>
             </span>
             <span>
               <span className="coin-emblem__hover-card-label">Cohort size</span>

@@ -134,7 +134,7 @@ const TOPICS_BY_FAMILY = new Map<string, { family: V9LaneAdminEventFamily; signa
 
 /** Fallback `eth_getLogs` page span when the serving provider declares none. */
 export const LANE_ADMIN_EVENT_DEFAULT_LOG_PAGE_BLOCKS = 10_000;
-/** Hard per-lane request budget for log pages; exceeding it fails the lane closed. */
+/** Hard per-lane request budget for log pages; exceeding it fails the lane closed with no certificate. */
 export const LANE_ADMIN_EVENT_MAX_LOG_PAGES = 32;
 /** A page returning more matches than this is narrowed before it is trusted. */
 export const LANE_ADMIN_EVENT_MAX_EVENTS_PER_PAGE = 1_024;
@@ -436,11 +436,6 @@ export async function screenLaneAdminEvents(
   if (toHeader.timestamp > observedAtSec) {
     return failedResult(subjectDeploymentKey, "non-finalized-head", observedAtSec, "window-end-in-future");
   }
-  // The planned window end is a request, not a promise: providers may narrow
-  // the served log-page span, so an invocation certifies the readable prefix
-  // and the next chained window starts at the first unread block.
-  let certifiedToBlock = toBlock;
-  let certifiedToHeader = toHeader;
 
   const observedCodeHashes = new Map<string, string>();
   for (let index = 0; index < emitters.length; index += 1) {
@@ -480,30 +475,12 @@ export async function screenLaneAdminEvents(
   let pages = 0;
   let lastBlockNumber = -1;
   let lastLogIndex = -1;
-  while (cursor <= certifiedToBlock) {
+  while (cursor <= toBlock) {
     throwIfAborted(options.signal);
     if (pages >= LANE_ADMIN_EVENT_MAX_LOG_PAGES) {
-      const readableToBlock = cursor - 1;
-      if (readableToBlock < fromBlock) {
-        return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, `pages:${pages};from:${cursor}`);
-      }
-      const prefixRead = await readBatch(chainId, [{
-        method: "eth_getBlockByNumber",
-        params: [toBlockTag(readableToBlock), false],
-      }], { ...readOptions, observedHeadBlock: finalized.number });
-      if (!prefixRead) return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, "block-range-pin-unavailable");
-      const prefixHeader = parseBlockHeader(prefixRead.results[0], readableToBlock);
-      if (!prefixHeader || prefixHeader.timestamp > observedAtSec) {
-        return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, "malformed-block-header");
-      }
-      if (prefixHeader.timestamp < fromHeader.timestamp) {
-        return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, "window-clock-inversion");
-      }
-      certifiedToBlock = readableToBlock;
-      certifiedToHeader = prefixHeader;
-      break;
+      return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, `pages:${pages};from:${cursor}`);
     }
-    const end = Math.min(certifiedToBlock, cursor + pageSpan - 1);
+    const end = Math.min(toBlock, cursor + pageSpan - 1);
     pages += 1;
     const batch = await readBatch(chainId, [{
       method: "eth_getLogs",
@@ -564,11 +541,11 @@ export async function screenLaneAdminEvents(
     subjectDeploymentKey,
     screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
     fromBlock,
-    toBlock: certifiedToBlock,
+    toBlock,
     fromBlockHash: fromHeader.hash,
     fromBlockTimestamp: fromHeader.timestamp,
-    toBlockHash: certifiedToHeader.hash,
-    toBlockTimestamp: certifiedToHeader.timestamp,
+    toBlockHash: toHeader.hash,
+    toBlockTimestamp: toHeader.timestamp,
     finalizedHeadNumber: finalized.number,
     finalizedHeadHash: finalized.hash,
     emitters: emitters.map((emitter) => ({
@@ -591,14 +568,14 @@ export async function screenLaneAdminEvents(
 
   const certificate = V9LaneIncidentCertificateSchema.parse({
     schemaVersion: 1,
-    certificateId: `lane-cert:${chainId}:${emitters[0]!.address}:${fromBlock}-${certifiedToBlock}:${logDigest.slice(0, 12)}`,
+    certificateId: `lane-cert:${chainId}:${emitters[0]!.address}:${fromBlock}-${toBlock}:${logDigest.slice(0, 12)}`,
     evidenceClass: V9_LANE_SCREENING_EVIDENCE_CLASS,
     subjectDeploymentKey,
     fromBlock,
-    toBlock: certifiedToBlock,
-    toBlockHash: certifiedToHeader.hash,
+    toBlock,
+    toBlockHash: toHeader.hash,
     windowStartSec: fromHeader.timestamp,
-    windowEndSec: certifiedToHeader.timestamp,
+    windowEndSec: toHeader.timestamp,
     observedAtSec,
     screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
     logDigest,

@@ -78,6 +78,7 @@ async function reconcile(options: {
     // Only admitted configs reach reconciliation; post-gate additions stay pending until admitted.
     const admittedTron = (config: (typeof MINT_BURN_CONFIGS)[number]) => !!options.admittedTron && config.chain.chainId === "tron";
     expect(result.rows).toHaveLength(new Set(MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId)
+      && config.enabled !== false
       && (isGrandfatheredMintBurnConfig(config) || admittedTron(config))).map((config) => config.stablecoinId)).size);
   }
   return { ...result, rows: result.rows.filter((row) => row.stablecoinId === id) };

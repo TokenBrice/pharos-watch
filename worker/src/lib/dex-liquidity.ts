@@ -89,11 +89,20 @@ export type DexLiquidityRowQuarantineReason =
   | "invalid-coverage-evidence"
   | "invalid-exit-route-evidence";
 
+export interface DexLiquidityRowQuarantine {
+  reason: DexLiquidityRowQuarantineReason;
+  /**
+   * The rejected row's persisted producer version. Never scoring evidence, but
+   * the capture still proves the publication carries one DEX methodology.
+   */
+  methodologyVersion?: string;
+}
+
 export interface DexLiquidityLoadResult {
   map: DexLiquidityDbMap;
   latestUpdatedAt: number | null;
   /** Rejected published rows and their machine reason, so one asset cannot hold the cohort (R8). */
-  quarantined?: Record<string, DexLiquidityRowQuarantineReason>;
+  quarantined?: Record<string, DexLiquidityRowQuarantine>;
 }
 
 export interface DexLiquidityScoresLoadResult {
@@ -340,7 +349,11 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
     deploymentCoverageById.set(row.stablecoin_id, coverage);
   }
   let latestUpdatedAt: number | null = null;
-  const quarantined: Record<string, DexLiquidityRowQuarantineReason> = {};
+  const quarantined: Record<string, DexLiquidityRowQuarantine> = {};
+  const quarantineRow = (row: DexLiquidityRow, reason: DexLiquidityRowQuarantineReason) => {
+    const methodologyVersion = row.methodology_version?.trim();
+    quarantined[row.stablecoin_id] = methodologyVersion ? { reason, methodologyVersion } : { reason };
+  };
   for (const row of rows) {
     let evidence: NormalizedDexLiquidityEvidence;
     let exitRouteDetails: Pick<
@@ -351,14 +364,14 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
       evidence = normalizeDexLiquidityEvidence(row);
     } catch (error) {
       logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
-      quarantined[row.stablecoin_id] = "invalid-coverage-evidence";
+      quarantineRow(row, "invalid-coverage-evidence");
       continue;
     }
     try {
       exitRouteDetails = parseExitRouteDetails(row.score_components_json, row.stablecoin_id);
     } catch (error) {
       logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
-      quarantined[row.stablecoin_id] = "invalid-exit-route-evidence";
+      quarantineRow(row, "invalid-exit-route-evidence");
       continue;
     }
     const snapshot: DexLiquiditySnapshot = {

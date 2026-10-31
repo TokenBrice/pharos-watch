@@ -102,7 +102,7 @@ export async function collectHistoricalContext(
     const oldestDigest = await ctx.db
       .prepare(
         `SELECT MIN(generated_at) as oldest FROM daily_digest
-         WHERE ${NON_WEEKLY_DIGEST_SQL_FILTER}
+         WHERE (${NON_WEEKLY_DIGEST_SQL_FILTER})
            AND json_extract(input_data, '$.aggregateUniverse') = 'core-stablecoins-v1'`,
       )
       .first<{ oldest: number | null }>();

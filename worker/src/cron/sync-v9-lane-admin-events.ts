@@ -562,10 +562,8 @@ export async function syncV9LaneAdminEvents(
     const attempt: LaneScreeningAttempt = {
       subjectDeploymentKey: key,
       attemptedAtSec: nowSec,
-      // A narrowed page span certifies a readable prefix; the attempt names the
-      // range the certificate actually covers, not the planned request.
-      fromBlock: certificate.fromBlock,
-      toBlock: certificate.toBlock,
+      fromBlock: window.fromBlock,
+      toBlock: window.toBlock,
       outcome: "admitted",
       certificateId: certificate.certificateId,
       consecutiveFailures: 0,
@@ -575,8 +573,8 @@ export async function syncV9LaneAdminEvents(
     outcomes.push({
       subjectDeploymentKey: key,
       outcome: "admitted",
-      fromBlock: certificate.fromBlock,
-      toBlock: certificate.toBlock,
+      fromBlock: window.fromBlock,
+      toBlock: window.toBlock,
       certificateId: certificate.certificateId,
     });
   }

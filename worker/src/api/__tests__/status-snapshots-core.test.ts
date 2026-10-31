@@ -401,7 +401,8 @@ describe("handleStatus", () => {
     expect(conservationReads.length).toBeGreaterThan(0);
     expect(conservationReads.flatMap((entry) => entry.binds))
       .toEqual([...new Set(MINT_BURN_CONFIGS
-        .filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId) && isGrandfatheredMintBurnConfig(config))
+        .filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId) && config.enabled !== false
+          && isGrandfatheredMintBurnConfig(config))
         .map(mintBurnConservationCacheKey))]);
     const nonSupplementalBatchCacheReads = batchCacheReads.filter((entry) =>
       !entry.binds.every((bind) => typeof bind === "string" &&

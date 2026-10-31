@@ -99,11 +99,12 @@ export function buildWeeklyPrompt(
   }
 
   // A failed read is not an observed absence (ADR-29/R2); name what degraded so
-  // the model cannot turn missing evidence into a calm claim.
-  if (data.degradedSources?.length) {
+  // the model cannot turn missing evidence into a calm claim. Prior-window
+  // degradation is persisted provenance, not evidence about this week's reads.
+  if (data.degradedSourcesThisWeek?.length) {
     lines.push(
       "",
-      `Degraded inputs this week: ${data.degradedSources.join(", ")}. Do not treat a missing signal from these sources as an observed absence.`,
+      `Degraded inputs this week: ${data.degradedSourcesThisWeek.join(", ")}. Do not treat a missing signal from these sources as an observed absence.`,
     );
   }
 
@@ -238,7 +239,7 @@ export function buildWeeklyPrompt(
       lines.push("  STANDING CONDITIONS (carried over from prior weeks; one line each at most, never the headline):");
       standingSignals.forEach(renderSignal);
     }
-  } else if (data.degradedSources?.length) {
+  } else if (data.degradedSourcesThisWeek?.length) {
     lines.push(
       "  Risk leaderboard unavailable: this week's inputs were degraded (see Degraded inputs), so the absence of ranked signals is unverified; do not describe the week as calm.",
     );

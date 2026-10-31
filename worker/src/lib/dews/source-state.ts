@@ -98,6 +98,7 @@ export async function loadDewsSourceState(ctx: HydrationContext): Promise<DewsSo
     blacklistSourceOk: blacklist.result.blacklistSourceOk,
     prevSignals: previous.result.prevSignals,
     prevSignalStaleIds: previous.result.prevSignalStaleIds,
+    previousGenerationUnavailable: previous.result.generationUnavailable,
     mintBurnMap: mintBurn.result.mintBurnMap,
     mintBurnAgeSecById: mintBurn.result.mintBurnAgeSecById,
     mintBurnStaleIds: mintBurn.result.mintBurnStaleIds,

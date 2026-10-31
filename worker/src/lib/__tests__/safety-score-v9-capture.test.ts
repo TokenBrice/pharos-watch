@@ -9,21 +9,11 @@ import type * as SnapshotModule from "../report-cards-snapshot";
 const mocks = vi.hoisted(() => ({ inputs: vi.fn(), peg: vi.fn() }));
 vi.mock("../report-cards-snapshot-inputs", () => ({ loadReportCardsSnapshotInputs: mocks.inputs }));
 vi.mock("../peg-analytics", () => ({ derivePegAnalyticsSnapshot: mocks.peg }));
-vi.mock("@shared/lib/report-cards-fixed-input-identity", () => ({
-  computeReportCardsRegistryFingerprint: () => "a".repeat(64),
-  computeRedemptionPayloadFingerprint: () => "b".repeat(64),
-  projectReportCardsFixedInputMethodologyVersions: () => ({}),
-}));
 vi.mock("../peg-analytics-cache", () => ({ publishPegAnalyticsCache: vi.fn(async () => true) }));
 vi.mock("../report-card-evidence-journal-store", () => ({ loadReportCardEvidenceJournalByIdV1: vi.fn(async () => ({})) }));
 vi.mock("../collateral-drift", () => ({ summarizeCollateralDriftFromLiveReserveMap: () => ({ fallbackCoins: [] }) }));
 vi.mock("../report-cards-snapshot", async (original) => ({
-  ...(await original<typeof SnapshotModule>()), loadExactDexPublicationGeneration: vi.fn(async () => ({ generationId: "dex:test", updatedAt: 1790000000 })),
-}));
-// Isolate capture orchestration from the separately tested full-catalog normalizer.
-vi.mock("../safety-score-v9/native-input", () => ({
-  computeNativeDexLiquidityPayloadFingerprint: () => "c".repeat(64),
-  normalizeNativeV9Input: (value: unknown) => value,
+  ...(await original<typeof SnapshotModule>()), loadExactDexPublicationGeneration: vi.fn(async () => ({ generationId: "dex-liquidity-1790000000", updatedAt: 1790000000 })),
 }));
 import { buildNativeSafetyScoreV9Capture } from "../safety-score-v9/capture";
 import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension";
@@ -116,17 +106,36 @@ describe("V9 consumed reserve scoring-clock admission", () => {
       map: Object.fromEntries(ACTIVE_STABLECOINS
         .filter((coin) => coin.id !== "usdc-circle")
         .map((coin) => [coin.id, { methodologyVersion: "1.0" }])),
-      quarantined: { "usdc-circle": "invalid-coverage-evidence" },
+      quarantined: { "usdc-circle": { reason: "invalid-coverage-evidence", methodologyVersion: "1.0" } },
     };
     mocks.inputs.mockResolvedValue(loaded);
 
     const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
 
-    expect(Object.keys(input.dexLiqMap)).toHaveLength(ACTIVE_STABLECOINS.length - 1);
-    expect(input.dexLiqMap["usdc-circle"]).toBeUndefined();
-    expect(input.activeAssetIds).toContain("usdc-circle");
+    // The quarantined asset keeps an evidence-free row: the input still covers
+    // the cohort, and the exit compiler reads unavailable DEX evidence rather
+    // than an absent subject or a zero-liquidity market (R1/R2).
+    expect(Object.keys(input.dexLiqMap).sort()).toEqual(input.activeAssetIds);
+    expect(input.dexLiqMap["usdc-circle"]).toEqual({ updatedAt: RUN });
     expect(input.pipelineGapByAssetId?.["usdc-circle"]?.map(({ verdict }) =>
       verdict.proof.rejectionCode).join(" ")).toMatch(/dex|coverage/i);
+  });
+
+  it("still holds the cohort when a quarantined DEX row carries another methodology", async () => {
+    fixture(RUN + 1, RUN - 60);
+    const loaded = await mocks.inputs();
+    loaded.dexLiquiditySnapshot = {
+      latestUpdatedAt: RUN,
+      map: Object.fromEntries(ACTIVE_STABLECOINS
+        .filter((coin) => coin.id !== "usdc-circle")
+        .map((coin) => [coin.id, { methodologyVersion: "1.0" }])),
+      quarantined: { "usdc-circle": { reason: "invalid-coverage-evidence", methodologyVersion: "2.0" } },
+    };
+    mocks.inputs.mockResolvedValue(loaded);
+
+    // A rejected row's own version still participates in the single-methodology
+    // publication guard; a mixed publication is a producer-level defect.
+    await expect(buildNativeSafetyScoreV9Capture(mockD1())).rejects.toThrow(/spans 2 DEX methodologies/);
   });
 
   it("retains separately sealed Reservoir redemption evidence without upgrading undated composition", async () => {

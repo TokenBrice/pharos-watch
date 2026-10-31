@@ -124,13 +124,16 @@ describe("P0-18 daily digest data correctness", () => {
     // 2026-10-30T00:00:00Z: fixed "today" for the digest run.
     const TODAY = 1_793_318_400;
     const DAYS_SINCE_CUTOVER = (TODAY - CORE_UNIVERSE_CUTOVER) / DAY_SECONDS;
+    // Production daily rows never carry digest_meta.type (only weekly rows do),
+    // so the non-weekly filter must not swallow the core-universe predicate.
+    const DAILY_META = JSON.stringify({ editorialStyleVersion: 1, editorialStyleHash: "seed", styleGateMode: "enforce" });
     const insertDigest = (generatedAt: number, input: Record<string, unknown>) => {
       sqlite
         .prepare(
           `INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_title, digest_extended, digest_meta)
            VALUES (?, ?, ?, ?, ?, ?)`,
         )
-        .run(generatedAt, "seed edition", JSON.stringify(input), "Seed edition", "Seed extended", '{"type":"daily"}');
+        .run(generatedAt, "seed edition", JSON.stringify(input), "Seed edition", "Seed extended", DAILY_META);
     };
     try {
       // Enough archived PSI days for historicalContext to be admitted (>30).

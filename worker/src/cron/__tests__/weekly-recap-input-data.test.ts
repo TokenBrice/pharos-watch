@@ -1045,4 +1045,25 @@ describe("weekly recap empty risk leaderboard", () => {
     expect(weekly.weeklySignals.riskLeaderboard).toEqual([]);
     expect(buildWeeklyPrompt(weekly)).toContain("No material risk signals reconstructed from daily inputs.");
   });
+
+  it("does not label a fully observed current week degraded because the prior window degraded", () => {
+    // Prior-window degradation stays in the persisted provenance, but it is not
+    // evidence about what this week's editions observed (ADR-33/R6).
+    const prior = Array.from({ length: 7 }, (_, index) => ({
+      ...row(index, {
+        activeDepegCount: null,
+        depegSignalKeys: { active: null, resolved: [] },
+        degradedSources: ["active-depegs-query"],
+      }),
+      generated_at: START_SEC + (index - 7) * 86_400,
+    }));
+    const weekly = buildWeeklyInputData(quietWeek, prior)!;
+    expect(weekly.degradedSources).toContain("active-depegs-query");
+    expect(weekly.degradedSourcesThisWeek).toBeUndefined();
+    expect(weekly.weeklySignals.riskLeaderboard).toEqual([]);
+
+    const prompt = buildWeeklyPrompt(weekly);
+    expect(prompt).not.toContain("Degraded inputs this week");
+    expect(prompt).toContain("No material risk signals reconstructed from daily inputs.");
+  });
 });
