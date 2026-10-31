@@ -68,6 +68,9 @@ export const ONCHAIN_PARTITION_POLICY = {
   entry: { minRatio: 0.90, maxRatio: 1.10 },
   retain: { minRatio: 0.85, maxRatio: 1.15 },
 } as const;
+// Two legs per candidate; fiat-cg keeps token concurrency two, so the partition
+// stage stays within the sync-stablecoins four-connection slot declaration.
+export const ONCHAIN_PARTITION_LEG_CONCURRENCY = 2;
 
 type PartitionReadFailure = "legs-unreadable" | "partition-invalid";
 class OnchainSupplyValidationError extends Error {}
@@ -587,8 +590,12 @@ export async function fetchCuratedAggregateOnChainMcap(
   signal?: AbortSignal,
   dwellirNative?: DwellirNativeCapability,
   onFailure?: (reason: PartitionReadFailure) => void,
+  legConcurrency = 1,
 ): Promise<OnChainMcapResult | null> {
   throwIfAborted(signal);
+  if (!Number.isInteger(legConcurrency) || legConcurrency < 1) {
+    throw new RangeError("legConcurrency requires a positive integer");
+  }
   if (meta.id === SFRAX_STOCK_PERIMETER.assetId) return fetchSfraxStockSupply(meta, priceUsd, chainRpcs, signal);
   const holdReason = getOnchainSupplyHoldReason(meta.id);
   if (holdReason) {
@@ -611,40 +618,55 @@ export async function fetchCuratedAggregateOnChainMcap(
   const canonicalSupplyChain = CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id];
   let canonicalResult: ContractOnChainMcapResult | null = null;
   let representationMcap = 0;
-  for (const { config: curated, contract: supplyContract } of selectedContracts) {
+  // Read a bounded batch of legs before opening the next one; bodies drain
+  // inside each reader. The first leg stays alone so an unreadable roster
+  // still fails before spending a second read; later legs overlap in pairs
+  // within the slot's declared connection headroom.
+  let batchStart = 0;
+  while (batchStart < selectedContracts.length) {
     throwIfAborted(signal);
-
-    const result = await fetchOnChainSupplyForContract({
-      meta,
-      supplyContract,
-      priceUsd,
-      chainRpcs,
-      signal,
-      dwellirNative,
-      curated,
-      observedBlocks,
-      onFailure,
-    });
-    if (!result || result.supplySource !== "onchain-total-supply") {
-      return null;
-    }
-    observedAt = Math.min(observedAt, result.observedAt);
-
-    if (canonicalSupplyChain) {
-      if (result.chain === canonicalSupplyChain) {
-        canonicalResult = result;
-      } else {
-        representationMcap += result.mcap;
+    const batch = selectedContracts.slice(batchStart, batchStart + (batchStart === 0 ? 1 : legConcurrency));
+    batchStart += batch.length;
+    const batchFailures: Array<PartitionReadFailure | undefined> = [];
+    const batchResults = await Promise.all(batch.map(({ config: curated, contract: supplyContract }, index) =>
+      fetchOnChainSupplyForContract({
+        meta,
+        supplyContract,
+        priceUsd,
+        chainRpcs,
+        signal,
+        dwellirNative,
+        curated,
+        observedBlocks,
+        // Passing a wrapper unconditionally would switch the reader's
+        // preserve-observed-zero path even for callers without diagnostics.
+        onFailure: onFailure && ((reason) => { batchFailures[index] = reason; }),
+      })));
+    for (let index = 0; index < batchResults.length; index++) {
+      const result = batchResults[index];
+      if (!result || result.supplySource !== "onchain-total-supply") {
+        // Keep the first in-roster failure when a batch reads more than one leg.
+        if (!result) onFailure?.(batchFailures[index] ?? "partition-invalid");
+        return null;
       }
-    } else {
-      totalMcap += result.mcap;
-    }
+      observedAt = Math.min(observedAt, result.observedAt);
 
-    const existing = chainCirculating[result.chainLabel];
-    chainCirculating[result.chainLabel] = {
-      current: (existing?.current ?? 0) + result.mcap,
-      chainId: existing?.chainId ?? result.chain,
-    };
+      if (canonicalSupplyChain) {
+        if (result.chain === canonicalSupplyChain) {
+          canonicalResult = result;
+        } else {
+          representationMcap += result.mcap;
+        }
+      } else {
+        totalMcap += result.mcap;
+      }
+
+      const existing = chainCirculating[result.chainLabel];
+      chainCirculating[result.chainLabel] = {
+        current: (existing?.current ?? 0) + result.mcap,
+        chainId: existing?.chainId ?? result.chain,
+      };
+    }
   }
 
   if (canonicalSupplyChain) {
@@ -725,7 +747,8 @@ export async function fetchOnChainSupplyPartition(
   let failure: PartitionReadFailure = "partition-invalid";
   const onFailure = (reason: PartitionReadFailure) => { failure = reason; };
   const observation = selectCuratedAggregateOnchainSupplyProbeContracts(meta)
-    ? await fetchCuratedAggregateOnChainMcap(meta, priceUsd, chainRpcs, signal, dwellirNative, onFailure)
+    ? await fetchCuratedAggregateOnChainMcap(meta, priceUsd, chainRpcs, signal, dwellirNative, onFailure,
+      ONCHAIN_PARTITION_LEG_CONCURRENCY)
     : await fetchOnChainMcap(meta, priceUsd, chainRpcs, signal, dwellirNative, onFailure);
   throwIfAborted(signal);
   if (!observation) return { reason: failure, ratio: null };
