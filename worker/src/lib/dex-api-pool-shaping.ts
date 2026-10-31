@@ -522,7 +522,21 @@ function derivePoolBalanceMetrics(
     return null;
   }
 
-  const usdBalances = pool.tokens.map((token, index) => {
+  // A composable stable pool lists its own phantom BPT as a token. It is not a
+  // swap asset and its USD value is the pool's own NAV, so the balance evidence
+  // must describe the same notional scope as the contributing TVL.
+  const poolAddress = pool.poolAddress.trim().toLowerCase();
+  const poolOwnToken = (token: DexApiPool["tokens"][number]) =>
+    pool.source === "balancer" &&
+    pool.poolType === "balancer-stable" &&
+    poolAddress.length > 0 &&
+    token.address.trim().toLowerCase() === poolAddress;
+  const includedTokens = pool.tokens
+    .map((token, index) => ({ token, index }))
+    .filter(({ token }) => !poolOwnToken(token));
+  if (includedTokens.length < 2) return null;
+
+  const usdBalances = includedTokens.map(({ token, index }) => {
     const balance = pool.balances?.[index];
     if (!Number.isFinite(balance) || balance == null || balance < 0) return null;
 
@@ -557,12 +571,12 @@ function derivePoolBalanceMetrics(
   const totalUsd = measuredBalances.reduce((sum, value) => sum + value, 0);
   if (!Number.isFinite(totalUsd) || totalUsd <= 0) return null;
 
-  const rawWeights = pool.tokens.map((token) => {
+  const rawWeights = includedTokens.map(({ token }) => {
     const weight = token.weight;
     return weight != null && Number.isFinite(weight) && weight > 0 ? weight : 0;
   });
   const hasMeasuredWeights = rawWeights.every((weight) => weight > 0);
-  const normalizedWeights = hasMeasuredWeights ? rawWeights : new Array<number>(pool.tokens.length).fill(1);
+  const normalizedWeights = hasMeasuredWeights ? rawWeights : new Array<number>(includedTokens.length).fill(1);
   const totalWeight = normalizedWeights.reduce((sum, value) => sum + value, 0);
   if (!Number.isFinite(totalWeight) || totalWeight <= 0) return null;
 
@@ -579,7 +593,7 @@ function derivePoolBalanceMetrics(
   return {
     balanceRatio: minShare / maxShare,
     balanceDetails: measuredBalances.map((usdBalance, index) => {
-      const token = pool.tokens[index]!;
+      const token = includedTokens[index]!.token;
       return {
         symbol: getDisplayTokenSymbol(token),
         balancePct: Math.round((usdBalance / totalUsd) * 1000) / 10,

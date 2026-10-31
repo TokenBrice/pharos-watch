@@ -292,6 +292,17 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
     expect(result).toMatchObject({ complete: true, logs: [], scannedToBlock: 100 });
   });
 
+  it("rejects a 'No records found' body whose result is an error string", async () => {
+    mockFetch([{ match: () => true, body: { status: "0", message: "No records found", result: "rate limit exceeded" } }]);
+
+    const budget = createBudget(10);
+    const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget);
+
+    // A failed read is not an observed empty scan (ADR-29).
+    expect(result).toMatchObject({ complete: false, logs: [], scannedToBlock: -1 });
+    expect(result.failureReason).toEqual(expect.any(String));
+  });
+
   it("marks the scan incomplete when budget is exhausted", async () => {
     const budget = { count: 10, limit: 10 }; // Already exhausted
     const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget);

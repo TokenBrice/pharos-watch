@@ -12,6 +12,7 @@ import { decodeJsonString } from "./cache-json";
 import {
   deriveDepegSignal,
   signalCrossesThreshold,
+  signalIsWithinThreshold,
   type DepegDirection,
   type DepegSignal,
 } from "@shared/lib/depeg-signals";
@@ -250,7 +251,7 @@ export function collectDexProtocolCorroborations(
 
     const matches =
       mode === "recover"
-        ? signal.absBps < threshold
+        ? signalIsWithinThreshold(signal, threshold)
         : signalCrossesThreshold(signal, threshold) &&
           (mode === "confirm" ? signal.direction === direction : signal.direction !== direction);
     if (!matches) continue;
@@ -328,7 +329,10 @@ export async function loadDexPrices(
         updatedAt: row.updated_at,
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
-        normalize: (parsed) => Array.isArray(parsed)
+        normalize: (parsed) => Array.isArray(parsed) &&
+          // A null/primitive element is not a DexPoolSource and would throw in
+          // the per-source clock filter; quarantine the row instead (R8).
+          parsed.every((source) => source != null && typeof source === "object" && !Array.isArray(source))
           ? { ok: true, payload: parsed as DexPoolSource[] }
           : { ok: false, reason: "invalid-shape" },
       });

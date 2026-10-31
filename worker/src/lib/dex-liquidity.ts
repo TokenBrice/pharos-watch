@@ -85,9 +85,15 @@ export const DEX_LIQUIDITY_PUBLISHED_ROW_FILTER =
 
 export type DexLiquidityDbMap = Record<string, DexLiquiditySnapshot>;
 
+export type DexLiquidityRowQuarantineReason =
+  | "invalid-coverage-evidence"
+  | "invalid-exit-route-evidence";
+
 export interface DexLiquidityLoadResult {
   map: DexLiquidityDbMap;
   latestUpdatedAt: number | null;
+  /** Rejected published rows and their machine reason, so one asset cannot hold the cohort (R8). */
+  quarantined?: Record<string, DexLiquidityRowQuarantineReason>;
 }
 
 export interface DexLiquidityScoresLoadResult {
@@ -334,6 +340,7 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
     deploymentCoverageById.set(row.stablecoin_id, coverage);
   }
   let latestUpdatedAt: number | null = null;
+  const quarantined: Record<string, DexLiquidityRowQuarantineReason> = {};
   for (const row of rows) {
     let evidence: NormalizedDexLiquidityEvidence;
     let exitRouteDetails: Pick<
@@ -342,9 +349,16 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
     >;
     try {
       evidence = normalizeDexLiquidityEvidence(row);
+    } catch (error) {
+      logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
+      quarantined[row.stablecoin_id] = "invalid-coverage-evidence";
+      continue;
+    }
+    try {
       exitRouteDetails = parseExitRouteDetails(row.score_components_json, row.stablecoin_id);
     } catch (error) {
       logWorkerEventArgs("lib", "error", `[dex-liquidity] Quarantining malformed evidence row for ${row.stablecoin_id}:`, error);
+      quarantined[row.stablecoin_id] = "invalid-exit-route-evidence";
       continue;
     }
     const snapshot: DexLiquiditySnapshot = {
@@ -369,7 +383,9 @@ export async function loadDexLiquiditySnapshot(db: D1Database): Promise<DexLiqui
     if (map[stablecoinId]) map[stablecoinId].deploymentCoverage = deploymentCoverage;
   }
 
-  return { map, latestUpdatedAt };
+  return Object.keys(quarantined).length > 0
+    ? { map, latestUpdatedAt, quarantined }
+    : { map, latestUpdatedAt };
 }
 
 export async function loadDexLiquidityMap(db: D1Database): Promise<DexLiquidityDbMap> {

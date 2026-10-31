@@ -21,6 +21,16 @@ export const EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL = `
      WHERE canonical.incident_state = 'active'
        AND alias.incident_state = 'superseded'
        AND alias.current_event_id != canonical.current_event_id
+    UNION
+    SELECT links.event_id
+      FROM depeg_resolver_incident_event_links links
+      JOIN depeg_resolver_incidents alias
+        ON alias.incident_key = links.incident_key
+      JOIN depeg_resolver_incidents canonical
+        ON canonical.incident_key = alias.superseded_by_incident_key
+     WHERE alias.incident_state = 'superseded'
+       AND canonical.incident_state = 'active'
+       AND links.event_id != alias.current_event_id
   )
 `;
 

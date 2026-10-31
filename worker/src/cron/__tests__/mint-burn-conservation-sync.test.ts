@@ -7,7 +7,7 @@ import { parseMintBurnLogs } from "../../lib/mint-burn-pipeline/parse";
 import { classifyBridgeBurnRows } from "../../lib/mint-burn-pipeline/classification";
 import { persistMintBurnRows } from "../../lib/mint-burn-pipeline/persistence";
 import { completeMintBurnConservationAudit, conservationOnlyEventDefsFor, persistMintBurnConservation,
-  validateMintBurnParsedConservation, verifyPersistedMintBurnConservation,
+  readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation,
   type ConservationEventDef } from "../../lib/mint-burn-conservation";
 import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnConservationRecord } from "@shared/types/status";
@@ -27,10 +27,10 @@ vi.mock("../../lib/mint-burn-conservation", () => ({ getMintBurnConservationElig
   requiresReviewedSupplyBurnProof: () => false,
   conservationOnlyEventDefsFor: vi.fn(() => []),
   completeMintBurnConservationAudit: vi.fn(), persistMintBurnConservation: vi.fn(), validateMintBurnParsedConservation: vi.fn(),
-  verifyPersistedMintBurnConservation: vi.fn() }));
+  readMintBurnConservationRecords: vi.fn(), verifyPersistedMintBurnConservation: vi.fn() }));
 const config = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "gusd-gemini")!;
 const row = { id: "event", tx_hash: "tx", direction: "mint", amount: 10_000, block_number: 102, timestamp: 1100 } as MintBurnRow;
-const audit = { status: "ok", checkedAt: 1200 } as MintBurnConservationRecord;
+const audit = { key: "conservation-key", status: "ok", checkedAt: 1200 } as MintBurnConservationRecord;
 const conservationEventDef: ConservationEventDef = {
   signature: "DestroyedBlackFunds(address,uint256)",
   topicHash: `0x${"a".repeat(64)}`,
@@ -63,6 +63,7 @@ beforeEach(() => {
     txContextShortfalls: 0, deferredTxHashes: [] });
   vi.mocked(persistMintBurnRows).mockResolvedValue({ inserted: 1, ignored: 0, roundtripsDetected: 0 } as never);
   vi.mocked(completeMintBurnConservationAudit).mockReturnValue({ ...audit });
+  vi.mocked(persistMintBurnConservation).mockResolvedValue({ written: true });
   vi.mocked(verifyPersistedMintBurnConservation).mockResolvedValue("ok");
 });
 describe("conservation producer publication and cursor fences", () => {
@@ -70,6 +71,32 @@ describe("conservation producer publication and cursor fences", () => {
     expect((await run()).newLastBlock).toBe(102);
     expect(vi.mocked(persistMintBurnRows).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(persistMintBurnConservation).mock.invocationCallOrder[0]);
     expect(vi.mocked(verifyPersistedMintBurnConservation).mock.invocationCallOrder[0]).toBeLessThan(vi.mocked(persistMintBurnConservation).mock.invocationCallOrder[0]);
+  });
+  it("fences the cursor when a shorter passing audit cannot replace the stored mismatch", async () => {
+    // The guarded upsert kept an unresolved stored mismatch this clean pass does
+    // not cover: it is not a published pass and the cursor must not advance.
+    vi.mocked(persistMintBurnConservation).mockResolvedValue({ written: false });
+    vi.mocked(readMintBurnConservationRecords).mockResolvedValue(
+      new Map([["conservation-key", { status: "mismatch" }]]),
+    );
+
+    const result = await run();
+
+    expect(result.summary.conservationStatus).toBe("mismatch");
+    expect(result.summary.conservationReason).toBe("unresolved-stored-mismatch");
+    expect(result.summary.conservationFailure).toBe(true);
+    expect(result.newLastBlock).toBeNull();
+  });
+  it("publishes the durable pass when a superseded attempt's write is rejected", async () => {
+    vi.mocked(persistMintBurnConservation).mockResolvedValue({ written: false });
+    vi.mocked(readMintBurnConservationRecords).mockResolvedValue(
+      new Map([["conservation-key", { status: "ok" }]]),
+    );
+
+    const result = await run();
+
+    expect(result.summary.conservationStatus).toBe("ok");
+    expect(result.newLastBlock).toBe(102);
   });
   it("audits conservation-only emitter logs without adding public rows or config-event coverage", async () => {
     const conservationLog = {

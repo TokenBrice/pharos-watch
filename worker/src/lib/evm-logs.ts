@@ -271,8 +271,10 @@ export async function fetchEvmLogsForTopicWithCompleteness(
   });
 
   if (!json || json.status !== "1" || !Array.isArray(json.result)) {
-    if (json?.message === "No records found" && (!indexedTopic
-      || (json.status === "0" && Array.isArray(json.result) && json.result.length === 0))) {
+    // A "No records found" message cannot admit an error payload as a complete
+    // empty scan; the status/result shape must prove the empty observation.
+    if (json?.message === "No records found" && json.status === "0" &&
+      Array.isArray(json.result) && json.result.length === 0) {
       return { logs: [], complete: true, scannedToBlock: toBlock, calls, maxDepth: depth };
     }
     // API error — return incomplete so callers know the scan was not reliable.

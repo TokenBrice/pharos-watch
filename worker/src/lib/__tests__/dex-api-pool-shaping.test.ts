@@ -192,6 +192,24 @@ describe("Balancer stableswap execution model", () => {
     expect(model!.tokens[1]!.referencePriceUsd).toBeCloseTo(1, 12);
   });
 
+  it("excludes the pool's own phantom BPT from the published balance composition", () => {
+    const pricedBpt = stablePool({
+      tokens: stablePool().tokens.map((token, index) => index === 0 ? { ...token, priceUsd: 1.05 } : token),
+    });
+    const shaped = convertToGtNewPools([pricedBpt], chainAddressToId, symbolToChainScopedIds).get("usdc-circle")![0]!;
+
+    // The BPT is the pool's own LP token, not a swap asset: balance evidence must
+    // describe the same notional scope as the contributing TVL.
+    expect(shaped.measurement?.balanceMeasured).toBe(true);
+    expect(shaped.balanceDetails?.map((detail) => detail.symbol)).toEqual(["USDC", "WUSDX"]);
+    expect(shaped.balanceRatio).toBeCloseTo(0.8, 6);
+
+    const unpricedBpt = stablePool();
+    const measured = convertToGtNewPools([unpricedBpt], chainAddressToId, symbolToChainScopedIds).get("usdc-circle")![0]!;
+    expect(measured.measurement?.balanceMeasured).toBe(true);
+    expect(measured.balanceRatio).toBeCloseTo(0.8, 6);
+  });
+
   it("emits a P4-compatible gate for every reviewed Balancer model failure", () => {
     const cases: Array<{
       label: string;
