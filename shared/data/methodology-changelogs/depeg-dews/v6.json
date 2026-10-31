@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.41",
+    "title": "Implausible native-currency quotes are withheld from live admission",
+    "date": "2026-10-31",
+    "effectiveAt": 1793491200,
+    "summary": "Live detection and pending confirmation classify every native-currency quote against its own par, and a quote outside the peg reference band, or more than 50% from par without an independent same-direction family, is unavailable evidence rather than a depeg signal.",
+    "impact": [
+      "A native quote at or above the primary price-validation reference band (1.19x par for fiat pegs) is withheld as native-quote-above-peg-reference-band; one at least 5,000 bps from par is withheld as native-quote-extreme-move unless independent DEX protocol groups, or for a pending row an independent primary family, show their own move of that size in the same direction.",
+      "A withheld quote cannot open, confirm, veto or recover a depeg. Live detection reports the gap as native-quote-implausible; pending confirmation records it in unavailable_sources as native:<currency>:<reason>, and a native-origin candidate built on a withheld sample cannot promote.",
+      "This blocks the unit-error class behind the cEUR (2.598 EUR) and AxCNH (0.4717 CNH) archive rows. Existing rows are handled by reviewed errata; no backfill replay is claimed.",
+      "The USD primary path, thresholds, windows and DEWS weights are unchanged. Activation is 2026-11-01 00:00 UTC (1793491200)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.40",
     "title": "Lone-wick episodes withheld, weighted spread, one incident per family",
     "date": "2026-10-31",

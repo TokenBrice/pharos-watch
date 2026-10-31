@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.33",
+    "title": "A stalled admitted leg is quarantined instead of freezing every coin",
+    "date": "2026-10-31",
+    "effectiveAt": 1793491200,
+    "summary": "An admitted active-roster leg whose scan frontier passes the watermark freshness budget leaves the common watermark and resumes through reactivation catch-up, so the other coins keep publishing.",
+    "impact": [
+      "Once a leg's hour-aligned frontier is older than MINT_BURN_WATERMARK_MAX_AGE_SEC (8 hours), it is withheld as pending-admission / reactivation-pending, its key joins paused_keys, and it rejoins only after its current-fingerprint frontier is fresh and proves the incumbent closed hour, so the watermark never moves backwards.",
+      "Coin totals, gauge weights, flight-to-quality cohorts and downstream mint/burn inputs use the remaining admitted scope while the leg catches up; its outputs are unavailable, not zero.",
+      "A roster-wide stall is a producer outage, not a bad asset: nothing is quarantined and the watermark stays scan-watermark-stale. Stored event history keeps serving a quarantined or reactivating leg's rows with their explicit age.",
+      "Admission, thresholds, valuation and the gauge formula are unchanged. Activation is 2026-11-01 00:00 UTC (1793491200)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.32",
     "title": "Pending-admission coins leave the FTQ cohorts; re-admitted legs catch up",
     "date": "2026-10-31",
