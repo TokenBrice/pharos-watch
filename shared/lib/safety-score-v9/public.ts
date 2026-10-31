@@ -213,7 +213,7 @@ function pillarCauseFields(input: V9PublicCardProjectionInput, pillar: V9Quality
     causeGapIds: uniqueSorted(evaluation.causeGapIds),
     limitedEvidenceCauses: evaluation.aggregationDisposition === "included"
       ? uniqueSorted(evaluation.limitedEvidenceCauses.filter(
-          (cause): cause is "C" | "U" | "D" => cause === "C" || cause === "U" || cause === "D",
+          (cause): cause is "A" | "C" | "U" | "D" => cause === "A" || cause === "C" || cause === "U" || cause === "D",
         ))
       : [],
   };

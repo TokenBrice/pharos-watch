@@ -642,9 +642,9 @@ export function computeV9UnknownPricedWeightShare(
       const exit = breakdowns.exit;
       if (exit.primaryRoute !== null) {
         share += weight * exit.primaryRoute.components.reduce((sum, component) => sum + unknownWeight(component), 0);
-      } else if (exit.limitedEvidenceCauses?.some((cause) => cause === "C" || cause === "U")) {
+      } else if (exit.limitedEvidenceCauses?.some((cause) => cause === "A" || cause === "C" || cause === "U")) {
         // No-route covered-share Exit=(1-z)*50: verified pool-less supply is
-        // measured zero, not unknown-priced weight.
+        // measured zero, not unknown-priced weight. Pipeline-A gaps price at U.
         const cause = exit.limitedEvidenceCauses.includes("C") ? "C" : "U";
         share += weight * Math.min(1, (exit.evaluatedScore ?? 0) / methodologyPolicy.semantic.unknownQuality.exit[cause]);
       }

@@ -44,7 +44,7 @@ export const V9PartialEvidenceSchema = z.object({
 export const V9PillarCauseShape = {
   aggregationDisposition: V9PillarAggregationDispositionSchema.optional().describe("Defaults to included"), supportedComponentKeys: V9WitnessTextIdentityArraySchema,
   causeGapRefs: causeGapRefs().optional(),
-  limitedEvidenceCauses: canonicalTextArray().pipe(z.array(V9EvidenceCauseSchema.extract(["C", "U", "D"]))).optional().describe("Defaults to no limiting causes"),
+  limitedEvidenceCauses: canonicalTextArray().pipe(z.array(V9EvidenceCauseSchema.extract(["A", "C", "U", "D"]))).optional().describe("Defaults to no limiting causes"),
 };
 export const V9BreakdownCauseShape = {
   aggregationDisposition: V9PillarCauseShape.aggregationDisposition, causeGapRefs: causeGapRefs().optional(),

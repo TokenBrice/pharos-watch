@@ -193,11 +193,11 @@ export const SafetyScoreV9PillarSchema = z
     }
     if (pillar.aggregationDisposition === "excluded-a-b" &&
         ((pillar.causeGapRefs?.length ?? 0) === 0 || (pillar.limitedEvidenceCauses?.length ?? 0) > 0 || pillar.supportedComponentKeys.length > 0)) {
-      ctx.addIssue({ code: "custom", message: "Excluded pillars require A/B gaps, no scoreable support and no limiting C/U/D" });
+      ctx.addIssue({ code: "custom", message: "Excluded pillars require A/B gaps, no scoreable support and no limiting causes" });
     }
     if (pillar.aggregationDisposition === "unavailable" &&
         ((pillar.limitedEvidenceCauses?.length ?? 0) > 0 || pillar.supportedComponentKeys.length > 0)) {
-      ctx.addIssue({ code: "custom", message: "Unavailable pillars cannot claim scoreable support or limiting C/U/D" });
+      ctx.addIssue({ code: "custom", message: "Unavailable pillars cannot claim scoreable support or limiting causes" });
     }
   });
 

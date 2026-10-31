@@ -144,7 +144,7 @@ export interface V9ExitEvaluationResult {
   score: number | null;
   aggregationDisposition: "included" | "excluded-a-b";
   causeGapIds: readonly string[];
-  limitedEvidenceCauses: readonly ("C" | "U" | "D")[];
+  limitedEvidenceCauses: readonly ("A" | "C" | "U")[];
   supportedComponentKeys: readonly string[];
   stressRequest: V9ExitStressRequest | null;
   primaryRouteKey: string | null;
@@ -1083,7 +1083,7 @@ export function evaluateV9Exit(
   const pillarMetadata = {
     aggregationDisposition: "included" as "included" | "excluded-a-b",
     causeGapIds: inventoryCause.causeGapIds,
-    limitedEvidenceCauses: inventoryCause.causes.filter((cause): cause is "C" | "U" | "D" => cause === "C" || cause === "U" || cause === "D"),
+    limitedEvidenceCauses: inventoryCause.causes.filter((cause): cause is "A" | "C" | "U" => cause === "A" || cause === "C" || cause === "U"),
     supportedComponentKeys: [] as string[],
   };
   const stressRequest: V9ExitStressRequest = {
@@ -1136,16 +1136,17 @@ export function evaluateV9Exit(
   };
   const excludedGap = (trace: V9ExitRouteTrace) => excludedCause(trace).excluded;
   // A route-local materiality zero does not prove whole-asset exhaustion
-  // while another applicable rail or the inventory still has bounded gaps.
+  // while another applicable rail is unavailable for an A pipeline or C/U
+  // reason, or the inventory still carries such a gap.
   // Reuse the no-usable-route path, not a floor on an actual measured zero.
   if (evaluated.length > 0 &&
     evaluated.every((candidate) => candidate.trace.capsApplied.includes("immaterial-executable-capacity")) &&
-    (inventoryCause.cause === "C" || inventoryCause.cause === "U" ||
+    (inventoryCause.cause === "A" || inventoryCause.cause === "C" || inventoryCause.cause === "U" ||
       traces.some((trace, index) => {
         if (trace.included || trace.exclusionReason === null ||
           routes[index]!.applicability === "not-applicable" || routes[index]!.routeSuspension) return false;
         const causal = excludedCause(trace);
-        return !causal.excluded && causal.cause !== "D";
+        return causal.cause !== "D" && (!causal.excluded || causal.cause === "A");
       }))) {
     evaluated = [];
     pillarMetadata.supportedComponentKeys = [];
@@ -1174,7 +1175,7 @@ export function evaluateV9Exit(
       ...routes.filter((route, index) => route.applicability !== "not-applicable" && !excludedGap(traces[index]!))
         .flatMap((route) => resolveV9StatusCauses(Object.values(route.factorStatuses ?? {}), route.gaps).causes),
       ...(inventoryCause.cause === null && traces.every((trace) => excludedCause(trace).cause === null) ? ["U"] : []),
-    ]).filter((cause): cause is "C" | "U" => cause === "C" || cause === "U");
+    ]).filter((cause): cause is "A" | "C" | "U" => cause === "A" || cause === "C" || cause === "U");
     return {
       ...pillarMetadata,
       aggregationDisposition: pureExcludedInventory ? "excluded-a-b" : "included",
