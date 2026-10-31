@@ -8014,6 +8014,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-12-15"
@@ -10353,6 +10354,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-12-10"
@@ -10683,6 +10685,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-12-09"
@@ -12839,6 +12842,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-12-02"
@@ -16249,6 +16253,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-11-24"
@@ -17129,6 +17134,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-11-22"
@@ -17459,6 +17465,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-21-down-49310"
@@ -17525,6 +17532,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-21-down-49309"
@@ -18009,6 +18017,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-20"
@@ -18229,6 +18238,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-11-20"
@@ -18361,6 +18371,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-19"
@@ -19373,6 +19384,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-17"
@@ -20143,6 +20155,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-16"
@@ -20319,6 +20332,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "yu-2025-11-16"
@@ -21001,6 +21015,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-14-down-49304"
@@ -21177,6 +21192,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-14-up"
@@ -21331,6 +21347,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-14-down-49302"
@@ -21397,6 +21414,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-14-down-49301"
@@ -21876,6 +21894,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-13"
@@ -25217,6 +25236,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2025-11-05"
@@ -25861,6 +25881,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2025-11-04"
@@ -26279,6 +26300,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-04"
@@ -26719,6 +26741,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-11-03"
@@ -28259,6 +28282,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-10-31"
@@ -30779,6 +30803,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-10-27"
@@ -39637,6 +39662,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-10-13"
@@ -40578,6 +40604,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-10-11"
@@ -41480,6 +41507,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-10-11"
@@ -49378,28 +49406,6 @@
     "slug": "msusd-2025-09-29"
   },
   {
-    "id": 37213,
-    "stablecoinId": "cgusd-cygnus-finance",
-    "symbol": "cgUSD",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -2757,
-    "startedAt": 1759165400,
-    "endedAt": 1759172577,
-    "startPrice": 0.7243255672233808,
-    "peakPrice": 0.7243255672233808,
-    "recoveryPrice": 0.9907524077864953,
-    "pegReference": 1,
-    "source": "backfill",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "cgusd-2025-09-29-down-37213"
-  },
-  {
     "id": 47128,
     "stablecoinId": "mim-abracadabra",
     "symbol": "MIM",
@@ -49725,6 +49731,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-09-29"
@@ -51793,6 +51800,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-09-25"
@@ -54065,6 +54073,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-09-22"
@@ -54329,6 +54338,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "yu-2025-09-21"
@@ -55319,6 +55329,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-09-18-up-49294"
@@ -55429,6 +55440,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-09-18-up-49293"
@@ -55539,6 +55551,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-09-18"
@@ -57057,6 +57070,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "yu-2025-09-14"
@@ -58025,6 +58039,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-09-12"
@@ -58685,6 +58700,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-09-10"
@@ -65742,6 +65758,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-08-25"
@@ -70912,6 +70929,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-08-14"
@@ -72364,6 +72382,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-08-10"
@@ -73222,6 +73241,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-08-08"
@@ -73904,6 +73924,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-08-05"
@@ -75791,6 +75812,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-07-31"
@@ -81115,6 +81137,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-07-18"
@@ -82039,6 +82062,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-07-16"
@@ -84151,6 +84175,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-07-10"
@@ -84679,6 +84704,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-07-07"
@@ -85031,6 +85057,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-07-04"
@@ -86021,6 +86048,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-06-30"
@@ -89563,6 +89591,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-06-21"
@@ -92599,6 +92628,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-06-13"
@@ -93127,6 +93157,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-06-12"
@@ -94557,6 +94588,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-06-09"
@@ -95418,28 +95450,6 @@
     "priceCoverage": null,
     "provenance": null,
     "slug": "reusd-2025-06-06-down-37585"
-  },
-  {
-    "id": 41636,
-    "stablecoinId": "usdx-hex-trust",
-    "symbol": "USDX",
-    "pegType": "peggedUSD",
-    "direction": "below",
-    "peakDeviationBps": -4645,
-    "startedAt": 1749229275,
-    "endedAt": 1749265271,
-    "startPrice": 0.987989526888929,
-    "peakPrice": 0.5354734159656754,
-    "recoveryPrice": 0.9965926441851939,
-    "pegReference": 1,
-    "source": "backfill",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "usdx-2025-06-06"
   },
   {
     "id": 37194,
@@ -101020,6 +101030,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-05-24"
@@ -105945,6 +105956,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-05-16"
@@ -109494,6 +109506,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-05-11"
@@ -110396,6 +110409,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-05-09"
@@ -110638,6 +110652,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-05-09"
@@ -117391,6 +117406,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-04-23"
@@ -117997,6 +118013,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-04-22"
@@ -120033,6 +120050,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-04-16"
@@ -125886,6 +125904,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-04-05"
@@ -133686,6 +133705,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "vro-2025-03-03"
@@ -139054,6 +139074,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "mnee-2025-02-12"
@@ -148822,6 +148843,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-23"
@@ -150692,6 +150714,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-20-down"
@@ -151044,6 +151067,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-20-up"
@@ -151880,6 +151904,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-19"
@@ -153552,6 +153577,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-16-up"
@@ -153662,6 +153688,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-16-down"
@@ -154102,6 +154129,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-15"
@@ -155092,6 +155120,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-13"
@@ -156632,6 +156661,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-10"
@@ -158568,6 +158598,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2025-01-06"

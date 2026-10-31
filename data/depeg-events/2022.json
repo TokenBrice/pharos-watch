@@ -1799,6 +1799,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-16"
@@ -1953,6 +1954,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-15"
@@ -2085,6 +2087,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-14-down-76542"
@@ -2239,6 +2242,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-14-down-76541"
@@ -2283,6 +2287,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-14-down-76540"
@@ -2349,6 +2354,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-14-down-76539"
@@ -2635,6 +2641,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-13-down-76538"
@@ -2701,6 +2708,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-13-down-76537"
@@ -2723,6 +2731,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-13-down-76536"
@@ -2811,6 +2820,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-12-down-76535"
@@ -2855,6 +2865,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-12-down-76534"
@@ -2877,6 +2888,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-12-down-76533"
@@ -3119,6 +3131,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-10-down-76532"
@@ -3141,6 +3154,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-10-down-76531"
@@ -3493,6 +3507,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-08-down-76530"
@@ -3537,6 +3552,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-08-down-76529"
@@ -3647,6 +3663,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-07-down-76528"
@@ -3735,6 +3752,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-07-down-76527"
@@ -3889,6 +3907,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-06-down-76526"
@@ -3977,6 +3996,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-06-down-76525"
@@ -4021,6 +4041,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-05-down-76524"
@@ -4087,6 +4108,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-05-down-76523"
@@ -4373,6 +4395,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-03-down-76522"
@@ -4527,6 +4550,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-03-down-76521"
@@ -5011,6 +5035,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-01-down-76520"
@@ -5231,6 +5256,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-12-01-down-76519"
@@ -5407,6 +5433,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-30"
@@ -5605,6 +5632,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-29-down-76517"
@@ -5649,6 +5677,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2022-11-29"
@@ -5693,6 +5722,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-29-down-76516"
@@ -5825,6 +5855,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-28-down-76515"
@@ -5891,6 +5922,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-28-down-76514"
@@ -5957,6 +5989,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-28-down-76513"
@@ -6067,6 +6100,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-27"
@@ -6177,6 +6211,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-26"
@@ -6375,6 +6410,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-25-down-76510"
@@ -6463,6 +6499,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-25-down-76509"
@@ -6485,6 +6522,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-25-down-76508"
@@ -6617,6 +6655,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-24-down-76507"
@@ -6661,6 +6700,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-24-down-76506"
@@ -6683,6 +6723,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-24-down-76505"
@@ -6771,6 +6812,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-23-down-76504"
@@ -6903,6 +6945,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-23-down-76503"
@@ -7167,6 +7210,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-22-down-76502"
@@ -7211,6 +7255,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-22-down-76501"
@@ -7409,6 +7454,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-21-down-76500"
@@ -7475,6 +7521,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-21-down-76499"
@@ -7519,6 +7566,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-21-down-76498"
@@ -7607,6 +7655,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-21-down-76497"
@@ -7739,6 +7788,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-20-down-76496"
@@ -7805,6 +7855,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-20-down-76495"
@@ -7871,6 +7922,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-20-down-76494"
@@ -7937,6 +7989,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-19-down-76493"
@@ -7959,6 +8012,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-19-down-76492"
@@ -8179,6 +8233,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-18-down-76491"
@@ -8223,6 +8278,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-18-down-76490"
@@ -8267,6 +8323,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-17-down-76489"
@@ -8355,6 +8412,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-17-down-76488"
@@ -8421,6 +8479,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-16-down-76487"
@@ -8465,6 +8524,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-16-down-76486"
@@ -8707,6 +8767,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-15-down-76485"
@@ -8839,6 +8900,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-15-down-76484"
@@ -8905,6 +8967,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-15-down-76483"
@@ -9059,6 +9122,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-14-down-76482"
@@ -9213,6 +9277,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-14-down-76481"
@@ -9389,6 +9454,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-14-up"
@@ -9521,6 +9587,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-14-down-76479"
@@ -9631,6 +9698,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-13-down-76478"
@@ -9719,6 +9787,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-13-down-76477"
@@ -9807,6 +9876,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-12-down-76476"
@@ -9851,6 +9921,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-12-down-76475"
@@ -9895,6 +9966,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-12-down-76474"
@@ -9983,6 +10055,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-12-down-76473"
@@ -10005,6 +10078,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-12-down-76472"
@@ -10115,6 +10189,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-11-down-76471"
@@ -10137,6 +10212,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-11-down-76470"
@@ -10203,6 +10279,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-11-down-76469"
@@ -10291,6 +10368,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-11-down-76468"
@@ -10379,6 +10457,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-11-down-76467"
@@ -10401,6 +10480,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-11-down-76466"
@@ -10511,6 +10591,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-10-down-76465"
@@ -10775,6 +10856,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-10-down-76464"
@@ -10841,6 +10923,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-10-down-76463"
@@ -13459,6 +13542,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-11-02"
@@ -19509,6 +19593,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-10-02-down"
@@ -19531,6 +19616,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-10-02-up"
@@ -20059,6 +20145,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2022-09-30"
@@ -22941,6 +23028,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2022-09-20"
@@ -31851,6 +31939,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2022-08-31"
@@ -40277,6 +40366,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2022-08-06"
@@ -41025,6 +41115,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-08-03"
@@ -45315,6 +45406,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-19-down-76458"
@@ -45403,6 +45495,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-19-down-76457"
@@ -45623,6 +45716,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-19-down-76456"
@@ -45909,6 +46003,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-18-down-76455"
@@ -45931,6 +46026,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-18-down-76454"
@@ -46063,6 +46159,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-17-down-76453"
@@ -46085,6 +46182,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-17-down-76452"
@@ -46129,6 +46227,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-17-down-76451"
@@ -46173,6 +46272,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-17-down-76450"
@@ -46283,6 +46383,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-16-down-76449"
@@ -46371,6 +46472,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-16-down-76448"
@@ -46415,6 +46517,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-16-down-76447"
@@ -46437,6 +46540,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-16-down-76446"
@@ -46481,6 +46585,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-15-down-76445"
@@ -46525,6 +46630,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-15-down-76444"
@@ -46635,6 +46741,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-15-down-76443"
@@ -46701,6 +46808,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-15-down-76442"
@@ -46745,6 +46853,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-15-down-76441"
@@ -46789,6 +46898,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-15-down-76440"
@@ -46833,6 +46943,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-14-down-76439"
@@ -46899,6 +47010,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-14-down-76438"
@@ -46965,6 +47077,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-14-down-76437"
@@ -47185,6 +47298,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-14-down-76436"
@@ -47273,6 +47387,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-13-down-76435"
@@ -47493,6 +47608,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-13-down-76434"
@@ -47603,6 +47719,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-13-down-76433"
@@ -47735,6 +47852,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-13-down-76432"
@@ -47955,6 +48073,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-12"
@@ -48351,6 +48470,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-11-down-76430"
@@ -48461,6 +48581,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-11-down-76429"
@@ -48571,6 +48692,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-11-down-76428"
@@ -48659,6 +48781,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-11-down-76427"
@@ -48769,6 +48892,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-11-down-76426"
@@ -48879,6 +49003,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-10-down-76425"
@@ -49121,6 +49246,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-10-down-76424"
@@ -49231,6 +49357,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-10-down-76423"
@@ -49319,6 +49446,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-09-down-76422"
@@ -49473,6 +49601,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-09-down-76421"
@@ -49539,6 +49668,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-09-down-76420"
@@ -49583,6 +49713,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-09-down-76419"
@@ -49649,6 +49780,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-09-down-76418"
@@ -49715,6 +49847,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-09-down-76417"
@@ -49803,6 +49936,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-08-down-76416"
@@ -49825,6 +49959,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-08-down-76415"
@@ -49913,6 +50048,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-08-down-76414"
@@ -49979,6 +50115,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-08-down-76413"
@@ -50045,6 +50182,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-08-down-76412"
@@ -50067,6 +50205,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-08-down-76411"
@@ -50177,6 +50316,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-07-down-76410"
@@ -50221,6 +50361,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-07-down-76409"
@@ -50309,6 +50450,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-07-down-76408"
@@ -50419,6 +50561,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-07-down-76407"
@@ -50485,6 +50628,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-06-down-76406"
@@ -50551,6 +50695,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-06-down-76405"
@@ -50683,6 +50828,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-06-down-76404"
@@ -50837,6 +50983,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-05-down-76403"
@@ -50859,6 +51006,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-05-down-76402"
@@ -51035,6 +51183,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-04-down-76401"
@@ -51189,6 +51338,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-04-down-76400"
@@ -51409,6 +51559,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-03-down-76399"
@@ -51497,6 +51648,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-03-down-76398"
@@ -51563,6 +51715,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-03-up"
@@ -51607,6 +51760,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-03-down-76396"
@@ -51695,6 +51849,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-02-down-76395"
@@ -51827,6 +51982,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-02-down-76394"
@@ -51893,6 +52049,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-02-down-76393"
@@ -52069,6 +52226,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-01-down-76392"
@@ -52179,6 +52337,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-01-down-76391"
@@ -52223,6 +52382,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-01-down-76390"
@@ -52487,6 +52647,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-07-01-down-76389"
@@ -52597,6 +52758,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-30-down-76388"
@@ -52685,6 +52847,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-30-down-76387"
@@ -52905,6 +53068,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-30-down-76386"
@@ -54291,6 +54455,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-26"
@@ -54995,6 +55160,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-24-up-76384"
@@ -55105,6 +55271,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-24-up-76383"
@@ -55149,6 +55316,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-24-up-76382"
@@ -55171,6 +55339,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-24-up-76381"
@@ -55259,6 +55428,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-24-up-76380"
@@ -55325,6 +55495,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-24-up-76379"
@@ -55435,6 +55606,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-23-up-76378"
@@ -55457,6 +55629,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-23-up-76377"
@@ -55633,6 +55806,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-23-up-76376"
@@ -55655,6 +55829,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-23-up-76375"
@@ -55699,6 +55874,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-23-up-76374"
@@ -55765,6 +55941,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-23-up-76373"
@@ -55875,6 +56052,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-22"
@@ -56271,6 +56449,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-21-up-76371"
@@ -56381,6 +56560,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-21-up-76370"
@@ -56491,6 +56671,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-20-up-76369"
@@ -56601,6 +56782,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-20-up-76368"
@@ -56689,6 +56871,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-20-up-76367"
@@ -56799,6 +56982,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-20-up-76366"
@@ -56953,6 +57137,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-20-up-76365"
@@ -57041,6 +57226,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-19-up-76364"
@@ -57085,6 +57271,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-19-up-76363"
@@ -57173,6 +57360,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-19-up-76362"
@@ -57371,6 +57559,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-18"
@@ -57613,6 +57802,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-17-up-76360"
@@ -57679,6 +57869,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-17-up-76359"
@@ -57701,6 +57892,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-17-up-76358"
@@ -57767,6 +57959,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-17-up-76357"
@@ -57811,6 +58004,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-17-up-76356"
@@ -57855,6 +58049,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-17-up-76355"
@@ -57987,6 +58182,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-16-up-76354"
@@ -58053,6 +58249,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-16-up-76353"
@@ -58075,6 +58272,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-16-up-76352"
@@ -58141,6 +58339,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-16-up-76351"
@@ -58207,6 +58406,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-16-up-76350"
@@ -58251,6 +58451,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-16-up-76349"
@@ -58273,6 +58474,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-16-up-76348"
@@ -58339,6 +58541,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-16-up-76347"
@@ -58405,6 +58608,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-15-up-76346"
@@ -58493,6 +58697,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-15-up-76345"
@@ -58603,6 +58808,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-15-up-76344"
@@ -58735,6 +58941,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-15-up-76343"
@@ -58801,6 +59008,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-15-up-76342"
@@ -58845,6 +59053,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-14-up-76341"
@@ -58867,6 +59076,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-14-up-76340"
@@ -58911,6 +59121,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-14-up-76339"
@@ -58933,6 +59144,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-14-down"
@@ -58955,6 +59167,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-14-up-76337"
@@ -59043,6 +59256,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-14-up-76336"
@@ -59131,6 +59345,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-14-up-76335"
@@ -59571,6 +59786,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-13"
@@ -59615,6 +59831,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-12-down-76333"
@@ -59747,6 +59964,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-12-down-76332"
@@ -59879,6 +60097,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-11-down-76331"
@@ -59901,6 +60120,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-11-down-76330"
@@ -59967,6 +60187,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-11-down-76329"
@@ -60011,6 +60232,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-11-up"
@@ -60055,6 +60277,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-11-down-76327"
@@ -60077,6 +60300,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-11-down-76326"
@@ -60099,6 +60323,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-10-down-76325"
@@ -60121,6 +60346,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-10-down-76324"
@@ -60143,6 +60369,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-10-down-76323"
@@ -60165,6 +60392,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-10-down-76322"
@@ -60187,6 +60415,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-10-down-76321"
@@ -60231,6 +60460,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-10-down-76320"
@@ -60275,6 +60505,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-09-down-76319"
@@ -60341,6 +60572,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-09-down-76318"
@@ -60363,6 +60595,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-09-down-76317"
@@ -60407,6 +60640,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-09-down-76316"
@@ -60539,6 +60773,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-08-down-76315"
@@ -60561,6 +60796,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-08-down-76314"
@@ -60583,6 +60819,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-08-down-76313"
@@ -60605,6 +60842,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-08-down-76312"
@@ -60627,6 +60865,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-08-down-76311"
@@ -60671,6 +60910,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-08-down-76310"
@@ -60891,6 +61131,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-07-down-76309"
@@ -60913,6 +61154,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-07-down-76308"
@@ -60935,6 +61177,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-07-down-76307"
@@ -61001,6 +61244,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-07-down-76306"
@@ -61045,6 +61289,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-07-down-76305"
@@ -61133,6 +61378,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-06-down-76304"
@@ -61199,6 +61445,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-06-down-76303"
@@ -61331,6 +61578,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-05-down-76302"
@@ -61353,6 +61601,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-05-down-76301"
@@ -61419,6 +61668,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-05-down-76300"
@@ -61441,6 +61691,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-05-down-76299"
@@ -61595,6 +61846,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-04-down-76298"
@@ -61617,6 +61869,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-04-down-76297"
@@ -61661,6 +61914,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-04-down-76296"
@@ -61815,6 +62069,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-03-down-76295"
@@ -61859,6 +62114,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-03-down-76294"
@@ -61991,6 +62247,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-03-down-76293"
@@ -62057,6 +62314,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-02"
@@ -62233,6 +62491,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-01-down-76291"
@@ -62277,6 +62536,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-06-01-down-76290"
@@ -62343,6 +62603,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-31-down-76289"
@@ -62453,6 +62714,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-31-down-76288"
@@ -62497,6 +62759,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-31-down-76287"
@@ -62563,6 +62826,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-31-down-76286"
@@ -62585,6 +62849,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-31-down-76285"
@@ -62607,6 +62872,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-30-down-76284"
@@ -62651,6 +62917,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-30-down-76283"
@@ -62739,6 +63006,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-30-down-76282"
@@ -62805,6 +63073,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-30-down-76281"
@@ -62871,6 +63140,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-30-down-76280"
@@ -62937,6 +63207,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-29-down-76279"
@@ -62959,6 +63230,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-29-down-76278"
@@ -63069,6 +63341,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-28"
@@ -63135,6 +63408,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-27-down-76276"
@@ -63157,6 +63431,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-27-down-76275"
@@ -63201,6 +63476,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-27-down-76274"
@@ -63311,6 +63587,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-27-down-76273"
@@ -63355,6 +63632,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-26-down-76272"
@@ -63399,6 +63677,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-26-down-76271"
@@ -63465,6 +63744,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-26-down-76270"
@@ -63531,6 +63811,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-26-down-76269"
@@ -63729,6 +64010,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-24"
@@ -63993,6 +64275,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-20"
@@ -64191,6 +64474,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-19"
@@ -64301,6 +64585,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-18"
@@ -65093,6 +65378,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-12-down-76264"
@@ -65335,6 +65621,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-12-up"
@@ -65445,6 +65732,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-12-down-76262"
@@ -65577,6 +65865,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-11-up-76261"
@@ -65885,6 +66174,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-11-up-76260"
@@ -66215,6 +66505,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-10"
@@ -66413,6 +66704,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2022-05-09"
@@ -66963,6 +67255,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-05"
@@ -66985,6 +67278,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-04-up-76257"
@@ -67029,6 +67323,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-04-up-76256"
@@ -67051,6 +67346,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-04-up-76255"
@@ -67095,6 +67391,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-04-up-76254"
@@ -67117,6 +67414,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-04-up-76253"
@@ -67183,6 +67481,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-03"
@@ -67359,6 +67658,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-02-up-76251"
@@ -67403,6 +67703,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-02-up-76250"
@@ -67425,6 +67726,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-05-01"
@@ -68239,6 +68541,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-25"
@@ -68701,6 +69004,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-20"
@@ -68789,6 +69093,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-19-down-76246"
@@ -68811,6 +69116,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-19-down-76245"
@@ -68855,6 +69161,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-19-down-76244"
@@ -68877,6 +69184,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-19-down-76243"
@@ -68899,6 +69207,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-19-down-76242"
@@ -68943,6 +69252,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-19-down-76241"
@@ -68965,6 +69275,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-18-down-76240"
@@ -69031,6 +69342,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-18-down-76239"
@@ -69053,6 +69365,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-17"
@@ -69141,6 +69454,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-16"
@@ -69251,6 +69565,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-15-down-76236"
@@ -69273,6 +69588,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-15-down-76235"
@@ -69339,6 +69655,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-14-down-76234"
@@ -69361,6 +69678,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-14-down-76233"
@@ -69383,6 +69701,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-14-down-76232"
@@ -69405,6 +69724,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-14-down-76231"
@@ -69427,6 +69747,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-14-down-76230"
@@ -69449,6 +69770,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-14-down-76229"
@@ -69471,6 +69793,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-14-down-76228"
@@ -69559,6 +69882,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-13"
@@ -69603,6 +69927,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-12-down-76226"
@@ -69647,6 +69972,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-12-down-76225"
@@ -69713,6 +70039,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-11-down-76224"
@@ -69735,6 +70062,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-11-down-76223"
@@ -69779,6 +70107,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-11-down-76222"
@@ -69823,6 +70152,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-11-down-76221"
@@ -69911,6 +70241,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-10-down-76220"
@@ -69933,6 +70264,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-10-down-76219"
@@ -69955,6 +70287,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-09"
@@ -70043,6 +70376,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-08-down-76217"
@@ -70065,6 +70399,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-08-down-76216"
@@ -70087,6 +70422,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-08-down-76215"
@@ -70109,6 +70445,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-08-down-76214"
@@ -70131,6 +70468,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-07-down-76213"
@@ -70197,6 +70535,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-07-down-76212"
@@ -70219,6 +70558,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-07-down-76211"
@@ -70285,6 +70625,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-06-down-76210"
@@ -70307,6 +70648,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-06-down-76209"
@@ -70329,6 +70671,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-06-down-76208"
@@ -70373,6 +70716,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-06-down-76207"
@@ -70439,6 +70783,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-05-down-76206"
@@ -70461,6 +70806,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-05-down-76205"
@@ -70791,6 +71137,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-01-down-76204"
@@ -70813,6 +71160,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-04-01-down-76203"
@@ -70835,6 +71183,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-31-down-76202"
@@ -70879,6 +71228,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-31-down-76201"
@@ -71033,6 +71383,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-30"
@@ -71077,6 +71428,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-29"
@@ -71583,6 +71935,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-27"
@@ -72067,6 +72420,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-25"
@@ -72573,6 +72927,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-23-down-76196"
@@ -72661,6 +73016,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-23-down-76195"
@@ -72683,6 +73039,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-23-down-76194"
@@ -72881,6 +73238,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-21"
@@ -73035,6 +73393,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-20"
@@ -73365,6 +73724,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-18-down-76191"
@@ -73497,6 +73857,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-18-down-76190"
@@ -73541,6 +73902,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-17-down-76189"
@@ -73607,6 +73969,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-17-down-76188"
@@ -73695,6 +74058,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-17-down-76187"
@@ -73761,6 +74125,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-17-down-76186"
@@ -73805,6 +74170,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-17-down-76185"
@@ -73871,6 +74237,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-16-down-76184"
@@ -73937,6 +74304,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-16-down-76183"
@@ -73981,6 +74349,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-16-up"
@@ -74069,6 +74438,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-16-down-76181"
@@ -74179,6 +74549,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-16-down-76180"
@@ -74223,6 +74594,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-15-down-76179"
@@ -74267,6 +74639,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-15-down-76178"
@@ -74333,6 +74706,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-15-down-76177"
@@ -74377,6 +74751,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-15-down-76176"
@@ -74421,6 +74796,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-15-down-76175"
@@ -74509,6 +74885,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-14-down-76174"
@@ -74663,6 +75040,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-14-down-76173"
@@ -74685,6 +75063,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-14-down-76172"
@@ -74795,6 +75174,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-13-down-76171"
@@ -74905,6 +75285,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-13-down-76170"
@@ -75015,6 +75396,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-13-down-76169"
@@ -75081,6 +75463,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-13-down-76168"
@@ -75235,6 +75618,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-12-down-76167"
@@ -75279,6 +75663,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-12-down-76166"
@@ -75301,6 +75686,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-12-down-76165"
@@ -75323,6 +75709,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-12-down-76164"
@@ -75367,6 +75754,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-12-down-76163"
@@ -75411,6 +75799,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-11-down-76162"
@@ -75433,6 +75822,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-11-down-76161"
@@ -75587,6 +75977,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-11-down-76160"
@@ -75697,6 +76088,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-10-down-76159"
@@ -75763,6 +76155,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-10-down-76158"
@@ -76225,6 +76618,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2022-03-08"
@@ -76269,6 +76663,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-08-down-76157"
@@ -76335,6 +76730,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-08-down-76156"
@@ -76445,6 +76841,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-07"
@@ -76577,6 +76974,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "ust-2022-03-07"
@@ -76731,6 +77129,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-06-down-76154"
@@ -76863,6 +77262,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-06-down-76153"
@@ -76885,6 +77285,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-06-down-76152"
@@ -76973,6 +77374,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-05-down-76151"
@@ -76995,6 +77397,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-05-down-76150"
@@ -77391,6 +77794,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-04-down-76149"
@@ -77435,6 +77839,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-04-down-76148"
@@ -77501,6 +77906,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-04-down-76147"
@@ -77545,6 +77951,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-04-down-76146"
@@ -77611,6 +78018,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-04-down-76145"
@@ -77721,6 +78129,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-03-down-76144"
@@ -77787,6 +78196,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-03-03-down-76143"
@@ -78403,6 +78813,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-28-down-76142"
@@ -78557,6 +78968,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-28-down-76141"
@@ -78579,6 +78991,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-27-down-76140"
@@ -78931,6 +79344,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-27-down-76139"
@@ -79547,6 +79961,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-25"
@@ -79635,6 +80050,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-24-up"
@@ -79723,6 +80139,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-24-down"
@@ -79943,6 +80360,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-23-down-76135"
@@ -79987,6 +80405,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-23-down-76134"
@@ -80119,6 +80538,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-22-down-76133"
@@ -80163,6 +80583,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-22-down-76132"
@@ -80207,6 +80628,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-22-down-76131"
@@ -80251,6 +80673,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-22-down-76130"
@@ -80339,6 +80762,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-22-down-76129"
@@ -80493,6 +80917,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-21-down-76128"
@@ -80581,6 +81006,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-21-down-76127"
@@ -80625,6 +81051,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-21-down-76126"
@@ -80691,6 +81118,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-21-down-76125"
@@ -80735,6 +81163,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-21-down-76124"
@@ -80867,6 +81296,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-20-down-76123"
@@ -80955,6 +81385,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-20-down-76122"
@@ -81021,6 +81452,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-20-down-76121"
@@ -81131,6 +81563,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-20-down-76120"
@@ -81197,6 +81630,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-20-down-76119"
@@ -81263,6 +81697,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-19-down-76118"
@@ -81417,6 +81852,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-19-down-76117"
@@ -81505,6 +81941,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-19-down-76116"
@@ -81527,6 +81964,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-19-down-76115"
@@ -81615,6 +82053,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-18-down-76114"
@@ -81637,6 +82076,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-18-down-76113"
@@ -81681,6 +82121,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-18-down-76112"
@@ -81747,6 +82188,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-18-down-76111"
@@ -81791,6 +82233,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-18-down-76110"
@@ -81879,6 +82322,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-18-down-76109"
@@ -81901,6 +82345,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-18-down-76108"
@@ -81945,6 +82390,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-18-down-76107"
@@ -81989,6 +82435,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-17-down-76106"
@@ -82055,6 +82502,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-17-down-76105"
@@ -82209,6 +82657,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-16-down-76104"
@@ -82253,6 +82702,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-16-down-76103"
@@ -82297,6 +82747,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-16-down-76102"
@@ -82385,6 +82836,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-15-down-76101"
@@ -82451,6 +82903,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-15-down-76100"
@@ -82539,6 +82992,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-14-down-76099"
@@ -82627,6 +83081,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-14-down-76098"
@@ -82693,6 +83148,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-14-down-76097"
@@ -82715,6 +83171,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-14-down-76096"
@@ -82781,6 +83238,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-14-down-76095"
@@ -82847,6 +83305,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-13-down-76094"
@@ -82869,6 +83328,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-13-down-76093"
@@ -82891,6 +83351,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-13-down-76092"
@@ -82913,6 +83374,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-13-down-76091"
@@ -82957,6 +83419,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-13-down-76090"
@@ -83045,6 +83508,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-13-down-76089"
@@ -83067,6 +83531,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-13-down-76088"
@@ -83155,6 +83620,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-12-down-76087"
@@ -83331,6 +83797,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-12-down-76086"
@@ -83441,6 +83908,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-11"
@@ -83749,6 +84217,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-10-down-76084"
@@ -83881,6 +84350,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-10-down-76083"
@@ -84629,6 +85099,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-07"
@@ -85465,6 +85936,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-03-down-76081"
@@ -85597,6 +86069,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-03-down-76080"
@@ -85619,6 +86092,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-03-down-76079"
@@ -85641,6 +86115,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-03-down-76078"
@@ -85751,6 +86226,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-02-down-76077"
@@ -85817,6 +86293,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-02-down-76076"
@@ -85861,6 +86338,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-02-down-76075"
@@ -85927,6 +86405,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-02-down-76074"
@@ -85971,6 +86450,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-02-down-76073"
@@ -86147,6 +86627,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-02-01"
@@ -86389,6 +86870,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-31-down-76071"
@@ -86521,6 +87003,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-31-down-76070"
@@ -86653,6 +87136,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-31-down-76069"
@@ -86917,6 +87401,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-30-down-76068"
@@ -87027,6 +87512,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-30-down-76067"
@@ -87159,6 +87645,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-29-down-76066"
@@ -87181,6 +87668,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-29-down-76065"
@@ -87291,6 +87779,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-29-down-76064"
@@ -87577,6 +88066,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-28-down-76063"
@@ -87643,6 +88133,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-28-down-76062"
@@ -87687,6 +88178,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-28-down-76061"
@@ -87753,6 +88245,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-28-down-76060"
@@ -87951,6 +88444,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-27-down-76059"
@@ -88281,6 +88775,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-27-down-76058"
@@ -88369,6 +88864,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-27-down-76057"
@@ -88435,6 +88931,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-27-down-76056"
@@ -88545,6 +89042,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-27-down-76055"
@@ -88655,6 +89153,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-26-down-76054"
@@ -88809,6 +89308,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-26-down-76053"
@@ -89051,6 +89551,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-26-down-76052"
@@ -89271,6 +89772,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-26-down-76051"
@@ -89557,6 +90059,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-25-down-76050"
@@ -89733,6 +90236,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-25-down-76049"
@@ -89931,6 +90435,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-24-down-76048"
@@ -89997,6 +90502,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-24-down-76047"
@@ -90283,6 +90789,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-24-down-76046"
@@ -90349,6 +90856,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-24-down-76045"
@@ -90415,6 +90923,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-24-down-76044"
@@ -90459,6 +90968,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-23-down-76043"
@@ -90503,6 +91013,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-23-down-76042"
@@ -90591,6 +91102,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-23-down-76041"
@@ -90987,6 +91499,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-22-down-76040"
@@ -91075,6 +91588,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-22-down-76039"
@@ -91207,6 +91721,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-22-down-76038"
@@ -91669,6 +92184,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-21"
@@ -92021,6 +92537,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-20"
@@ -92615,6 +93132,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-18-down-76035"
@@ -92637,6 +93155,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-18-down-76034"
@@ -92923,6 +93442,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-17"
@@ -94507,6 +95027,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-12-up-76032"
@@ -94573,6 +95094,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-12-up-76031"
@@ -94969,6 +95491,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-11"
@@ -96157,6 +96680,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-08-down-76029"
@@ -96267,6 +96791,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-08-down-76028"
@@ -96465,6 +96990,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-08-down-76027"
@@ -96707,6 +97233,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-07-down-76026"
@@ -97147,6 +97674,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-07-down-76025"
@@ -97477,6 +98005,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-06-up-76024"
@@ -97543,6 +98072,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-06-up-76023"
@@ -97653,6 +98183,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-05-up"
@@ -98049,6 +98580,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-05-down-76021"
@@ -98115,6 +98647,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-05-down-76020"
@@ -98137,6 +98670,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-05-down-76019"
@@ -98203,6 +98737,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-05-down-76018"
@@ -98225,6 +98760,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-05-down-76017"
@@ -98269,6 +98805,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-04-down-76016"
@@ -98313,6 +98850,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-04-down-76015"
@@ -98401,6 +98939,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-04-down-76014"
@@ -98423,6 +98962,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-04-down-76013"
@@ -98489,6 +99029,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-04-down-76012"
@@ -98599,6 +99140,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-03-down-76011"
@@ -98643,6 +99185,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-03-down-76010"
@@ -98731,6 +99274,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-03-down-76009"
@@ -98841,6 +99385,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-02-down-76008"
@@ -98907,6 +99452,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-02-down-76007"
@@ -98951,6 +99497,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-02-down-76006"
@@ -98995,6 +99542,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-02-down-76005"
@@ -99105,6 +99653,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-02-down-76004"
@@ -99193,6 +99742,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-01-down-76003"
@@ -99259,6 +99809,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-01-down-76002"
@@ -99347,6 +99898,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-01-down-76001"
@@ -99413,6 +99965,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-01-down-76000"
@@ -99501,6 +100054,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "iron-2022-01-01-down-75999"

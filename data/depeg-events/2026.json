@@ -5,11 +5,11 @@
     "symbol": "USDf",
     "pegType": "peggedUSD",
     "direction": "below",
-    "peakDeviationBps": -109,
+    "peakDeviationBps": -111,
     "startedAt": 1793418780,
     "endedAt": null,
     "startPrice": 0.9897815795524163,
-    "peakPrice": 0.9891232061871509,
+    "peakPrice": 0.9889498625390923,
     "recoveryPrice": null,
     "pegReference": 1,
     "source": "live",
@@ -21,12 +21,12 @@
       "intervals": [
         [
           1793420237,
-          1793439966
+          1793465205
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793439966,
+      "lastTrustedObservationAt": 1793465205,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -40,16 +40,16 @@
     "direction": "above",
     "peakDeviationBps": 160,
     "startedAt": 1793379767,
-    "endedAt": null,
+    "endedAt": 1793454388,
     "startPrice": 3968.1082287455,
     "peakPrice": 3968.1082287455,
-    "recoveryPrice": null,
+    "recoveryPrice": 3874.120308574863,
     "pegReference": 3905.570022877781,
     "source": "live",
     "constituentEventCount": 1,
     "confirmationSources": "temporal:15m+pool:pancakeswap:cg_onchain",
     "pendingReason": "confirmation-window+large-cap+low-confidence",
-    "closeReason": null,
+    "closeReason": "recovered-primary",
     "priceCoverage": {
       "intervals": [
         [
@@ -57,9 +57,14 @@
           1793381480
         ]
       ],
-      "atParIntervals": [],
-      "lastObservationKind": "blind",
-      "lastTrustedObservationAt": 1793381480,
+      "atParIntervals": [
+        [
+          1793452609,
+          1793454388
+        ]
+      ],
+      "lastObservationKind": "trusted-at-par",
+      "lastTrustedObservationAt": 1793454388,
       "gapStartedAt": 1793382381
     },
     "provenance": null,
@@ -204,12 +209,32 @@
         [
           1793437298,
           1793439185
+        ],
+        [
+          1793440892,
+          1793442696
+        ],
+        [
+          1793444589,
+          1793444589
+        ],
+        [
+          1793446279,
+          1793446279
+        ],
+        [
+          1793460694,
+          1793462471
+        ],
+        [
+          1793464301,
+          1793464301
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "blind",
-      "lastTrustedObservationAt": 1793439185,
-      "gapStartedAt": 1793439966
+      "lastTrustedObservationAt": 1793464301,
+      "gapStartedAt": 1793465205
     },
     "provenance": null,
     "slug": "lusd-2026-10-29"
@@ -258,11 +283,11 @@
     "symbol": "apxUSD",
     "pegType": "peggedUSD",
     "direction": "below",
-    "peakDeviationBps": -132,
+    "peakDeviationBps": -153,
     "startedAt": 1793244689,
     "endedAt": null,
     "startPrice": 0.9899094738906712,
-    "peakPrice": 0.9867882867640353,
+    "peakPrice": 0.9847460952546145,
     "recoveryPrice": null,
     "pegReference": 1,
     "source": "live",
@@ -282,12 +307,12 @@
         ],
         [
           1793418780,
-          1793439966
+          1793465205
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793439966,
+      "lastTrustedObservationAt": 1793465205,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -3555,12 +3580,12 @@
         ],
         [
           1793436380,
-          1793439966
+          1793465205
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793439966,
+      "lastTrustedObservationAt": 1793465205,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -4014,12 +4039,40 @@
         [
           1793437298,
           1793439185
+        ],
+        [
+          1793440892,
+          1793442696
+        ],
+        [
+          1793444589,
+          1793446279
+        ],
+        [
+          1793448066,
+          1793449883
+        ],
+        [
+          1793451662,
+          1793453501
+        ],
+        [
+          1793455286,
+          1793457083
+        ],
+        [
+          1793458892,
+          1793460694
+        ],
+        [
+          1793462471,
+          1793464301
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "blind",
-      "lastTrustedObservationAt": 1793439185,
-      "gapStartedAt": 1793439966
+      "lastTrustedObservationAt": 1793464301,
+      "gapStartedAt": 1793465205
     },
     "provenance": null,
     "slug": "reusd-2026-08-06"
@@ -4153,7 +4206,9 @@
     "pendingReason": "confirmation-window+extreme-move+native-origin",
     "closeReason": "recovered-native",
     "priceCoverage": null,
-    "provenance": null,
+    "provenance": {
+      "auditVerdict": "disputed"
+    },
     "slug": "axcnh-2026-08-04"
   },
   {
@@ -4219,7 +4274,9 @@
     "pendingReason": "confirmation-window+native-origin",
     "closeReason": "recovered-native",
     "priceCoverage": null,
-    "provenance": null,
+    "provenance": {
+      "auditVerdict": "disputed"
+    },
     "slug": "eurq-2026-07-30"
   },
   {
@@ -4628,12 +4685,12 @@
         ],
         [
           1793418780,
-          1793439966
+          1793465205
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793439966,
+      "lastTrustedObservationAt": 1793465205,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -4997,12 +5054,12 @@
         ],
         [
           1793418780,
-          1793439966
+          1793465205
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793439966,
+      "lastTrustedObservationAt": 1793465205,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -5630,12 +5687,12 @@
         ],
         [
           1793418780,
-          1793439966
+          1793465205
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793439966,
+      "lastTrustedObservationAt": 1793465205,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -6227,12 +6284,12 @@
         ],
         [
           1793418780,
-          1793439966
+          1793465205
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "trusted-off-peg",
-      "lastTrustedObservationAt": 1793439966,
+      "lastTrustedObservationAt": 1793465205,
       "gapStartedAt": null
     },
     "provenance": null,
@@ -11666,12 +11723,40 @@
         [
           1793437298,
           1793439185
+        ],
+        [
+          1793440892,
+          1793442696
+        ],
+        [
+          1793444589,
+          1793446279
+        ],
+        [
+          1793448066,
+          1793449883
+        ],
+        [
+          1793451662,
+          1793453501
+        ],
+        [
+          1793455286,
+          1793457083
+        ],
+        [
+          1793458892,
+          1793460694
+        ],
+        [
+          1793462471,
+          1793464301
         ]
       ],
       "atParIntervals": [],
       "lastObservationKind": "blind",
-      "lastTrustedObservationAt": 1793439185,
-      "gapStartedAt": 1793439966
+      "lastTrustedObservationAt": 1793464301,
+      "gapStartedAt": 1793465205
     },
     "provenance": null,
     "slug": "alusd-2026-05-01-down-89786"
@@ -12552,6 +12637,7 @@
     "confirmationSources": "CoinGecko+DEX",
     "pendingReason": "extreme-move+low-confidence",
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-04-23"
@@ -14796,6 +14882,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "evausdt-2026-04-12"
@@ -15060,6 +15147,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-04-12"
@@ -15346,6 +15434,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-04-11"
@@ -15984,6 +16073,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-04-07"
@@ -16644,6 +16734,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-04-02"
@@ -17084,6 +17175,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-04-01"
@@ -17326,6 +17418,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-03-31"
@@ -18426,6 +18519,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "rai-2026-03-25"
@@ -19284,6 +19378,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-22-down-88037"
@@ -19444,6 +19539,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-22-down-88030"
@@ -19466,6 +19562,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-22-down-88029"
@@ -19488,6 +19585,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "veur-2026-03-22"
@@ -19532,6 +19630,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-22-down-88026"
@@ -19664,6 +19763,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-21"
@@ -20544,6 +20644,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87982"
@@ -20566,6 +20667,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-03-20-down-87981"
@@ -20591,28 +20693,6 @@
     "priceCoverage": null,
     "provenance": null,
     "slug": "a7a5-2026-03-20-up-87980"
-  },
-  {
-    "id": 87978,
-    "stablecoinId": "pusd-pleasing",
-    "symbol": "PUSD",
-    "pegType": "peggedUSD",
-    "direction": "above",
-    "peakDeviationBps": 349,
-    "startedAt": 1774027878,
-    "endedAt": 1774034183,
-    "startPrice": 1.027185870795235,
-    "peakPrice": 1.03471673317264,
-    "recoveryPrice": 0.93558,
-    "pegReference": 0.9997925054770931,
-    "source": "live",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "pusd-2026-03-20-up-87978"
   },
   {
     "id": 87977,
@@ -20654,6 +20734,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87976"
@@ -20698,6 +20779,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-03-20-down-87974"
@@ -20720,31 +20802,10 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87972"
-  },
-  {
-    "id": 87973,
-    "stablecoinId": "pusd-pleasing",
-    "symbol": "PUSD",
-    "pegType": "peggedUSD",
-    "direction": "above",
-    "peakDeviationBps": 349,
-    "startedAt": 1774024275,
-    "endedAt": 1774026970,
-    "startPrice": 1.03471673317264,
-    "peakPrice": 1.03471673317264,
-    "recoveryPrice": 0.936414,
-    "pegReference": 0.9997771627406735,
-    "source": "live",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "pusd-2026-03-20-up-87973"
   },
   {
     "id": 87971,
@@ -20764,6 +20825,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87971"
@@ -20808,6 +20870,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87969"
@@ -20852,6 +20915,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-03-20-down-87967"
@@ -20874,6 +20938,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87966"
@@ -21028,6 +21093,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87959"
@@ -21094,6 +21160,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87956"
@@ -21182,6 +21249,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87951"
@@ -21556,6 +21624,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-20-down-87933"
@@ -21798,6 +21867,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87920"
@@ -21820,6 +21890,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87917"
@@ -21864,6 +21935,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87915"
@@ -21886,6 +21958,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87913"
@@ -21908,6 +21981,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87909"
@@ -21952,6 +22026,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87906"
@@ -21996,6 +22071,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87904"
@@ -22018,6 +22094,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87902"
@@ -22150,6 +22227,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87895"
@@ -22216,6 +22294,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87891"
@@ -22326,6 +22405,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87883"
@@ -22414,6 +22494,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87879"
@@ -22436,6 +22517,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-03-19-down-87877"
@@ -48462,6 +48544,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "veur-2026-02-25"
@@ -52260,6 +52343,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "rubt-2026-02-19"
@@ -52810,6 +52894,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2026-02-18"
@@ -61726,6 +61811,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-02-06"
@@ -65103,6 +65189,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-02-03"
@@ -68010,6 +68097,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-01-31"
@@ -68242,6 +68330,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-01-31"
@@ -68567,6 +68656,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-01-30"
@@ -69847,6 +69937,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "pusd-2026-01-29"
@@ -78130,6 +78221,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-01-12"
@@ -78467,6 +78559,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-01-11-down-49316"
@@ -78511,6 +78604,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "gyd-2026-01-11-down-49315"
@@ -78973,6 +79067,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "mnee-2026-01-10"

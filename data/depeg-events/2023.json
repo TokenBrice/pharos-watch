@@ -4945,6 +4945,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-12-15"
@@ -10797,6 +10798,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-11-02"
@@ -11017,6 +11019,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-10-29"
@@ -11765,6 +11768,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-10-23"
@@ -11919,6 +11923,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-10-21"
@@ -13220,28 +13225,6 @@
     "priceCoverage": null,
     "provenance": null,
     "slug": "uusd-2023-10-05-down-60610"
-  },
-  {
-    "id": 89202,
-    "stablecoinId": "brz-transfero",
-    "symbol": "BRZ",
-    "pegType": "peggedBRL",
-    "direction": "above",
-    "peakDeviationBps": 4952,
-    "startedAt": 1696291200,
-    "endedAt": 1696896000,
-    "startPrice": 1.0576928333110807,
-    "peakPrice": 1.495185261921961,
-    "recoveryPrice": 0.9937769132761995,
-    "pegReference": 1,
-    "source": "backfill",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "brz-2023-10-03"
   },
   {
     "id": 49509,
@@ -15488,28 +15471,6 @@
     "slug": "uusd-2023-09-14-down-60579"
   },
   {
-    "id": 89199,
-    "stablecoinId": "brz-transfero",
-    "symbol": "BRZ",
-    "pegType": "peggedBRL",
-    "direction": "above",
-    "peakDeviationBps": 3961,
-    "startedAt": 1694649600,
-    "endedAt": 1695340800,
-    "startPrice": 1.1533803388720978,
-    "peakPrice": 1.3960558753464343,
-    "recoveryPrice": 0.993817054029831,
-    "pegReference": 1,
-    "source": "backfill",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "brz-2023-09-14"
-  },
-  {
     "id": 60578,
     "stablecoinId": "uusd-youves",
     "symbol": "UUSD",
@@ -17732,28 +17693,6 @@
     "slug": "gusd-2023-08-27"
   },
   {
-    "id": 89197,
-    "stablecoinId": "brz-transfero",
-    "symbol": "BRZ",
-    "pegType": "peggedBRL",
-    "direction": "above",
-    "peakDeviationBps": 7845,
-    "startedAt": 1693094400,
-    "endedAt": 1694304000,
-    "startPrice": 1.5450501319492072,
-    "peakPrice": 1.7845148982665364,
-    "recoveryPrice": 0.9737148664288998,
-    "pegReference": 1,
-    "source": "backfill",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "brz-2023-08-27"
-  },
-  {
     "id": 60555,
     "stablecoinId": "uusd-youves",
     "symbol": "UUSD",
@@ -17903,6 +17842,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-08-25"
@@ -20086,28 +20026,6 @@
     "slug": "uusd-2023-08-15-down-60535"
   },
   {
-    "id": 89196,
-    "stablecoinId": "brz-transfero",
-    "symbol": "BRZ",
-    "pegType": "peggedBRL",
-    "direction": "above",
-    "peakDeviationBps": 2060,
-    "startedAt": 1692057600,
-    "endedAt": 1692316800,
-    "startPrice": 1.090669697559089,
-    "peakPrice": 1.2060315231475427,
-    "recoveryPrice": 0.9882322415435819,
-    "pegReference": 1,
-    "source": "backfill",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "brz-2023-08-15"
-  },
-  {
     "id": 36458,
     "stablecoinId": "lisusd-lista",
     "symbol": "LISUSD",
@@ -20345,6 +20263,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-08-09"
@@ -21335,6 +21254,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-08-01"
@@ -21841,6 +21761,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-07-24"
@@ -22457,6 +22378,7 @@
     "confirmationSources": null,
     "pendingReason": null,
     "closeReason": null,
+    "retired": true,
     "priceCoverage": null,
     "provenance": null,
     "slug": "bean-2023-07-20"
@@ -26332,28 +26254,6 @@
     "priceCoverage": null,
     "provenance": null,
     "slug": "uusd-2023-06-04-down-60467"
-  },
-  {
-    "id": 89186,
-    "stablecoinId": "brz-transfero",
-    "symbol": "BRZ",
-    "pegType": "peggedBRL",
-    "direction": "below",
-    "peakDeviationBps": -9423,
-    "startedAt": 1685836800,
-    "endedAt": 1686441600,
-    "startPrice": 0.4348566069510269,
-    "peakPrice": 0.05766839241966884,
-    "recoveryPrice": 0.9987674915354913,
-    "pegReference": 1,
-    "source": "backfill",
-    "constituentEventCount": 1,
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "slug": "brz-2023-06-04"
   },
   {
     "id": 88991,
