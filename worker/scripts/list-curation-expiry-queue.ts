@@ -1061,7 +1061,8 @@ export function buildCurationExpiryReport(
 }
 
 function cell(value: string): string {
-  return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
+  // Escape backslashes first so an escaped pipe in the value cannot end the cell.
+  return value.replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
 
 /** Documented renewal lead time before an effective boundary (ImplDurability §3.2). */
