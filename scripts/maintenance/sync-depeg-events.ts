@@ -18,6 +18,7 @@ import {
   type DepegEventEntry,
 } from "@shared/types/market";
 import { formatIsoDate } from "@shared/lib/format";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { DdrResponseSchema, DdrV2BaseRowSchema, DdrV2LiveOverlaySchema } from "@shared/types/depeg-resolver";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -394,9 +395,14 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         seen.add(event.id);
         unique.push(event);
       }
-      if (expectedTotal !== undefined && unique.length !== expectedTotal) {
+      // The public total excludes reviewed disputed rows; the listing still
+      // carries them. Reconcile against the counted subset so a complete
+      // traversal is accepted while a missing counted event still fails.
+      const disputedListed = unique.filter((entry) => isDisputedAuditVerdict(entry.provenance?.auditVerdict)).length;
+      if (expectedTotal !== undefined && unique.length - disputedListed !== expectedTotal) {
+        const disputedNote = disputedListed > 0 ? ` (${disputedListed} reviewed-disputed)` : "";
         throw new SnapshotIntegrityError(
-          `Depeg pagination collected ${unique.length} unique events but the API reported ${expectedTotal}; refusing an incomplete ledger`,
+          `Depeg pagination collected ${unique.length} unique events${disputedNote} but the API reported ${expectedTotal}; refusing an incomplete ledger`,
         );
       }
 

@@ -23,6 +23,11 @@ function monthLabel(startedAt: number): string {
   });
 }
 
+/** Public event count: reviewed disputes stay listed but do not count. */
+function countRecordedEvents(events: readonly DepegEventEntry[]): number {
+  return events.filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict)).length;
+}
+
 /** Group newest-first entries into contiguous month buckets, preserving order. */
 function groupByMonth(events: readonly DepegEventEntry[]): Array<{ label: string; events: DepegEventEntry[] }> {
   const groups: Array<{ label: string; events: DepegEventEntry[] }> = [];
@@ -133,7 +138,7 @@ export function DepegEventArchivePreview() {
           Depeg history
         </h2>
         <p className="pharos-meta">
-          {latestGroup.events.length} events · {latestGroup.label}
+          {countRecordedEvents(latestGroup.events)} events · {latestGroup.label}
         </p>
       </header>
 

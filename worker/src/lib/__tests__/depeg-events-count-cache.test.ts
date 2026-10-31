@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import type { D1Database } from "@shared/types/cloudflare-runtime";
+import { DISPUTED_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { handleDepegEvents } from "../../api/depeg-events";
 import { EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL } from "../depeg-event-projection";
 import { DEPEG_EVENTS_COUNT_CACHE_KEY, prepareDepegEventsCountStatements } from "../depeg-events-count-cache";
+
+const DISPUTED_VERDICT_SQL = DISPUTED_AUDIT_VERDICTS.map((verdict) => `'${verdict}'`).join(", ");
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -20,6 +23,12 @@ function insertEvent({ sqlite }: Fixture, id: number, stablecoinId = "usdt-tethe
     (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference)
     VALUES (?, ?, 'USDT', 'peggedUSD', 'below', 200, ?, ?, 0.98, 1)`)
     .run(id, stablecoinId, 1_700_000_000 + id, endedAt);
+}
+
+function insertProvenance({ sqlite }: Fixture, eventId: number, auditVerdict: string | null) {
+  sqlite.prepare(`INSERT INTO depeg_event_provenance
+    (event_id, source_kind, audit_verdict, created_at, updated_at)
+    VALUES (?, 'live', ?, 1700000000, 1700000000)`).run(eventId, auditVerdict);
 }
 
 function insertLink({ sqlite }: Fixture, incidentKey: string, eventId: number) {
@@ -52,7 +61,9 @@ async function expectLegacyCounts(fixture: Fixture) {
       if (stablecoinId) conditions.push("stablecoin_id = ?");
       if (active) conditions.push("ended_at IS NULL");
       const expected = fixture.sqlite.prepare(`SELECT COUNT(*) AS total FROM depeg_events_with_provenance
-        WHERE ${conditions.join(" AND ")}`).get(...(stablecoinId ? [stablecoinId] : [])) as { total: number };
+        WHERE ${conditions.join(" AND ")}
+          AND (provenance_audit_verdict IS NULL OR provenance_audit_verdict NOT IN (${DISPUTED_VERDICT_SQL}))`)
+        .get(...(stablecoinId ? [stablecoinId] : [])) as { total: number };
       expect(await readCount(fixture, stablecoinId, active)).toBe(expected.total);
     }
   }
@@ -87,6 +98,39 @@ describe("depeg event count publication cache", () => {
       expect(body.totalExact).toBe(true);
       expect(cacheRow(fixture)).toEqual(cached);
     }
+  });
+
+  it("excludes disputed and false-positive provenance while null and unknown verdicts keep counting", async () => {
+    const fixture = fixtures.open();
+    for (const id of [1, 2, 3, 4, 5]) insertEvent(fixture, id);
+    insertProvenance(fixture, 1, "disputed");
+    insertProvenance(fixture, 2, "false_positive");
+    insertProvenance(fixture, 3, "confirmed");
+    insertProvenance(fixture, 4, null);
+    // Pre-vocabulary legacy rows are not rewritten; an unknown non-null verdict
+    // makes no claim and keeps counting (R2).
+    fixture.sqlite.exec("DROP TRIGGER trg_depeg_provenance_audit_verdict_insert_guard");
+    insertProvenance(fixture, 5, "legacy_unknown");
+    await expectLegacyCounts(fixture);
+    expect(await readCount(fixture)).toBe(3);
+    expect(await readCount(fixture, "usdt-tether")).toBe(3);
+    expect(await readCount(fixture, "usdt-tether", true)).toBe(3);
+  });
+
+  it("never serves a cached pre-change count after a verdict becomes disputed", async () => {
+    const fixture = fixtures.open();
+    insertEvent(fixture, 1);
+    insertEvent(fixture, 2);
+    insertProvenance(fixture, 2, "confirmed");
+    expect(await readCount(fixture)).toBe(2);
+    const cached = cacheRow(fixture);
+    expect(cached).toBeDefined();
+    fixture.sqlite.prepare("UPDATE depeg_event_provenance SET audit_verdict = 'disputed' WHERE event_id = 2").run();
+    // No invalidation trigger runs on provenance, so the persisted summary is
+    // still the pre-change generation; the public count must not repeat it.
+    expect(cacheRow(fixture)).toEqual(cached);
+    expect(await readCount(fixture)).toBe(1);
+    expect(await readCount(fixture, "usdt-tether")).toBe(1);
   });
 
   it("keeps an empty publication exact and invalidates on new events, closure, reclassification and deletes", async () => {

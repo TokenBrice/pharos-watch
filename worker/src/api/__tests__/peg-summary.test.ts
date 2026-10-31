@@ -83,6 +83,7 @@ function makeDepegEventRow(overrides: Partial<{
   source: "live" | "backfill";
   confirmation_sources: string | null;
   pending_reason: string | null;
+  provenance_audit_verdict: string | null;
 }> = {}) {
   return {
     id: 1,
@@ -100,6 +101,7 @@ function makeDepegEventRow(overrides: Partial<{
     source: "live" as const,
     confirmation_sources: null,
     pending_reason: null,
+    provenance_audit_verdict: null,
     ...overrides,
   };
 }
@@ -936,6 +938,8 @@ describe("handlePegSummary", () => {
           makeDepegEventRow({ id: 1, started_at: Math.max(todayStart, nowSec - 60) }),
           makeDepegEventRow({ id: 2, started_at: todayStart - 60 }),
           makeDepegEventRow({ id: 3, started_at: todayStart - 86_460 }),
+          makeDepegEventRow({ id: 4, started_at: Math.max(todayStart, nowSec - 30), provenance_audit_verdict: "disputed" }),
+          makeDepegEventRow({ id: 5, started_at: todayStart - 30, provenance_audit_verdict: "false_positive" }),
         ],
       },
       { match: "dex_prices", rows: [] },

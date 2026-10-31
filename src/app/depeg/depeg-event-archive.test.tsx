@@ -29,7 +29,7 @@ const { EVENTS } = vi.hoisted(() => {
 
 vi.mock("@/lib/depeg-event-page-data", () => ({ DEPEG_EVENT_ENTRIES: EVENTS }));
 
-import { DepegEventArchive } from "./depeg-event-archive";
+import { DepegEventArchive, DepegEventArchivePreview } from "./depeg-event-archive";
 
 function rowFor(html: string, slug: string): string {
   const row = html.split("<li>").find((chunk) => chunk.includes(`href="/depeg/${slug}"`));
@@ -51,6 +51,15 @@ describe("depeg event archive audit verdict badge", () => {
     const html = renderToStaticMarkup(<DepegEventArchive />);
     for (const slug of ["confirmed-event", "no-data-event", "repaired-event", "legacy-event", "unattributed-event"]) {
       expect(rowFor(html, slug)).not.toContain("Disputed");
+    }
+  });
+
+  it("counts only non-disputed events in the month preview while listing every badged row", () => {
+    const html = renderToStaticMarkup(<DepegEventArchivePreview />);
+    expect(html).toContain("5 events");
+    expect(html).toContain("Browse all 7 event pages");
+    for (const slug of ["disputed-event", "false-positive-event", "confirmed-event", "legacy-event"]) {
+      expect(rowFor(html, slug)).toBeDefined();
     }
   });
 

@@ -91,6 +91,33 @@ describe("canonical comparable digest evidence", () => {
     expect(buildForwardLookOutcomes(input(200000), previous, ctx.evidence)[0].status).toBe("unavailable");
   });
 
+  it("excludes reviewed disputes from active and resolved event counts while keeping the evidence rows", async () => {
+    const verdicts = ["disputed", "false_positive", "confirmed", null] as const;
+    const activeRows = verdicts.map((audit_verdict, index) => ({
+      stablecoin_id: `coin-${index}`, symbol: `C${index}`, direction: "below", peak_deviation_bps: -900,
+      started_at: 1, peg_reference: 1, peg_type: "peggedUSD", source: "live", audit_verdict,
+    }));
+    const activeCtx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: activeRows }]));
+    activeCtx.evidence = {};
+    activeCtx.trackedStablecoinIds = new Set(activeRows.map((row) => row.stablecoin_id));
+    activeCtx.mcapById = new Map(activeRows.map((row) => [row.stablecoin_id, 1e9]));
+    const active = await collectActiveDepegs(activeCtx);
+    expect(active.value.activeDepegCount).toBe(2);
+    expect(activeCtx.evidence.activeDepegs).toHaveLength(4);
+
+    const resolvedRows = verdicts.map((audit_verdict, index) => ({
+      stablecoin_id: `coin-${index}`, symbol: `C${index}`, direction: "below", peak_deviation_bps: -900,
+      started_at: 1, ended_at: 2, close_reason: "recovered-primary", recovery_price: 1, audit_verdict,
+    }));
+    const resolvedCtx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: resolvedRows }]));
+    resolvedCtx.evidence = {};
+    resolvedCtx.trackedStablecoinIds = new Set(resolvedRows.map((row) => row.stablecoin_id));
+    resolvedCtx.mcapById = new Map(resolvedRows.map((row) => [row.stablecoin_id, 1e9]));
+    const resolved = await collectResolvedDepegs(resolvedCtx);
+    expect(resolved.value.resolvedDepegCount).toBe(2);
+    expect(resolvedCtx.evidence.recoveredDepegs).toHaveLength(4);
+  });
+
   it("never resolves or scores an unavailable active-event query", async () => {
     const ctx = makeCollectorCtx(mockD1([{ match: "FROM depeg_events", rows: [], throwError: new Error("unavailable") }]));
     ctx.evidence = {};

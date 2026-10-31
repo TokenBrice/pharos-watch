@@ -11,6 +11,7 @@ import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -18,7 +19,10 @@ import {
 import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
 
-const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins: live peg deviations, early warnings, active incidents, recovery forecasts and ${DEPEG_EVENT_ENTRIES.length} recorded depeg events.`;
+const RECORDED_DEPEG_EVENT_COUNT = DEPEG_EVENT_ENTRIES
+  .filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict)).length;
+
+const depegDescription = `Track stablecoin depegs across ${ACTIVE_STABLECOIN_COUNT} coins: live peg deviations, early warnings, active incidents, recovery forecasts and ${RECORDED_DEPEG_EVENT_COUNT} recorded depeg events.`;
 
 const FAQ_ITEMS = [
   {

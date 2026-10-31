@@ -419,6 +419,28 @@ describe("sync-depeg-events", () => {
     expect(readFileSync(join(root, "data/depeg-events/metadata/capture.json"), "utf8")).toBe(originalCapture);
   });
 
+  it("accepts a total that excludes reviewed disputed rows the listing still carries", async () => {
+    const root = makeRoot();
+    const indexPath = join(root, "data/depeg-events/index.json");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+      events: [
+        event({ id: 1 }),
+        event({ id: 2, provenance: { auditVerdict: "disputed" } }),
+      ],
+      total: 1,
+      nextCursor: null,
+    })))));
+
+    await runDepegSync(["--api-url", "https://api.example.test", "--output", indexPath]);
+
+    const shard = JSON.parse(readFileSync(join(root, "data/depeg-events/2026.json"), "utf8")) as DepegEvent[];
+    expect(shard.map((entry) => entry.id).sort()).toEqual([1, 2]);
+    expect(readDepegLedgerCapture(join(root, "data/depeg-events"))).toMatchObject({
+      eventCount: 2,
+      apiTotal: 1,
+    });
+  });
+
   it("rejects a cursor-exhausted response whose unique event count disagrees with the API total", async () => {
     const root = makeRoot();
     const indexPath = join(root, "data/depeg-events/index.json");

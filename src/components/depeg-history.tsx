@@ -27,6 +27,7 @@ import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/s
 import { computePegStability } from "@/lib/peg-stability";
 import { cn } from "@/lib/utils";
 import { DEPEG_DIRECTION_CLASSES, DEPEG_LIVE_PING_CLASS } from "@shared/lib/classification";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import type { DepegEvent, PegSummaryCoin } from "@shared/types";
 
 function sortEvents(events: DepegEvent[]): DepegEvent[] {
@@ -114,12 +115,18 @@ export function DepegHistory({
   const recentOccupancyBasisId = useId();
   const pegCurrency = meta?.flags.pegCurrency ?? "USD";
   const events = data?.events ?? EMPTY_EVENTS;
+  // Reviewed disputes stay listed with their badge but are not public event
+  // counts. Every derived count uses this filtered set.
+  const countedEvents = useMemo(
+    () => events.filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict)),
+    [events],
+  );
   // The cursor API skips the exact count (includeTotal=false); its `total` is then a page
   // lower bound, so it is only a count once exact or once every page has loaded.
-  const knownTotal = data?.totalExact ? data.total : isFullyLoaded ? events.length : null;
-  const incidentCountLabel = knownTotal != null ? knownTotal.toLocaleString() : `${loadedCount.toLocaleString()}+`;
+  const knownTotal = data?.totalExact ? data.total : isFullyLoaded ? countedEvents.length : null;
+  const incidentCountLabel = knownTotal != null ? knownTotal.toLocaleString() : `${countedEvents.length.toLocaleString()}+`;
   const thresholdCrossings = isFullyLoaded
-    ? events.reduce((sum, event) => sum + (event.constituentEventCount ?? 1), 0)
+    ? countedEvents.reduce((sum, event) => sum + (event.constituentEventCount ?? 1), 0)
     : null;
   const sorted = useMemo(() => sortEvents(events), [events]);
   const metrics = isFullyLoaded ? computePegStability(sorted, observationStartedAt) : null;
@@ -134,7 +141,9 @@ export function DepegHistory({
   const visibleRows = isFolded ? sorted.slice(0, DEPEG_HISTORY_COLLAPSED_COUNT) : paginatedRows;
   // A capped traversal paginates what it loaded; the count it labels is the loaded count,
   // never the server-side total it never reached.
-  const paginationTotal = isFullyLoaded ? knownTotal ?? loadedCount : loadedCount;
+  // Pagination navigates the listed rows (disputed rows included), so its
+  // total stays the row count rather than the public event count.
+  const paginationTotal = isFullyLoaded ? events.length : loadedCount;
   const showPagination = (isFullyLoaded || isAutoLoadCapped) && sorted.length > 0 && !isFolded;
 
   // A loading read, or a failure with nothing admitted, does not own the
