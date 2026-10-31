@@ -28,11 +28,11 @@ updates:
       - dependency-name: "@vitest/coverage-v8"
         update-types:
           - "version-update:semver-major"
-      # Satori >=0.33 needs a reviewed Worker renderer migration.
-      # Reopen upgrades after the production OG runtime test passes.
+      # Satori >=0.34 needs a reviewed Worker renderer upgrade (HarfBuzz
+      # alias, yoga.wasm export). Reopen after the production OG runtime test passes.
       - dependency-name: "satori"
         versions:
-          - ">= 0.33.0"
+          - ">= 0.34.0"
     groups:
       vitest:
         patterns:
