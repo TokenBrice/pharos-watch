@@ -379,15 +379,17 @@ export async function collectConfirmationEvidence(
     addSource(evidence.unavailableSources, "dex:aggregate");
   }
 
+  const cexSymbol = row.symbol.toUpperCase();
   if (isNativeOrigin) {
     addSource(evidence.unavailableSources, "cex:usd-native-origin");
   } else if (!cexAllowed) {
     addSource(evidence.circuitOpenSources, "cex:binance");
   } else if (cexPrices == null) {
-    addSource(evidence.unavailableSources, "cex:binance");
+    // A failed or suppressed batch only leaves this row's CEX family unread
+    // when the batch would have covered the row's configured Binance pair.
+    if (BINANCE_SYMBOLS.has(cexSymbol)) addSource(evidence.unavailableSources, "cex:binance");
   } else {
-    const symbol = row.symbol.toUpperCase();
-    const cexPrice = cexPrices.get(symbol);
+    const cexPrice = cexPrices.get(cexSymbol);
     if (cexPrice && cexPrice > 0) {
       const cexSignal = deriveDepegSignal(cexPrice, pegReference);
       evidence.cexStatus = classifyDirectionalSignal(cexSignal, threshold, pendingState.direction);
@@ -413,7 +415,7 @@ export async function collectConfirmationEvidence(
           thresholdBps: threshold,
         },
       });
-    } else if (BINANCE_SYMBOLS.has(symbol)) {
+    } else if (BINANCE_SYMBOLS.has(cexSymbol)) {
       // The configured Binance pair was missing from a partial batch: the CEX
       // family was unreadable for this row, not observed at zero.
       addSource(evidence.unavailableSources, "cex:binance");
