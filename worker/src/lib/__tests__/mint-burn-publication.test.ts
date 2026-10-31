@@ -3,13 +3,13 @@ import * as hashing from "@shared/lib/sha256";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { MintBurnPerCoinResponseSchema } from "@shared/types/mint-burn";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
 import { ACTIVE_MINT_BURN_CONFIGS } from "../../api/mint-burn-flows/aggregate";
 import { handleMintBurnFlows } from "../../api/mint-burn-flows";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
-import { readMintBurnWindowContext, resolveMintBurnWatermark, finalizeMintBurnFlowResponse } from "../mint-burn-flows-service";
+import { MINT_BURN_WATERMARK_MAX_AGE_SEC, readMintBurnWindowContext, resolveMintBurnWatermark, finalizeMintBurnFlowResponse } from "../mint-burn-flows-service";
 import { compactMintBurnPublication, isGrandfatheredMintBurnConfig, mintBurnDisabledReason, syncMintBurnPublicationPolicy } from "../mint-burn-publication";
 import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
 
@@ -18,11 +18,14 @@ afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
 const end = Date.parse("2027-02-01T12:00:00Z") / 1000;
 const day = 86400;
 const config = makeMintBurnConfig();
-async function proof(db: D1Database, days: number, to = end, fromBlock = 1, toBlock = 100) {
-  await upsertMintBurnSyncState(db, mintBurnConfigKey(config), toBlock, "monotonic-max", {
-    configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
-    fromBlock, toBlock, fromTimestamp: to - days * day, toTimestamp: to, finalizedBlock: toBlock, acceptedAt: end + day,
+async function proofFor(db: D1Database, entry: MintBurnContractConfig, days: number, to = end, fromBlock = 1, toBlock = 100) {
+  await upsertMintBurnSyncState(db, mintBurnConfigKey(entry), toBlock, "monotonic-max", {
+    configKey: mintBurnConfigKey(entry), configFingerprint: mintBurnScanFingerprint(entry), chainId: entry.chain.chainId,
+    fromBlock, toBlock, fromTimestamp: to - days * day, toTimestamp: to, finalizedBlock: toBlock, acceptedAt: to + day,
   });
+}
+async function proof(db: D1Database, days: number, to = end, fromBlock = 1, toBlock = 100) {
+  await proofFor(db, config, days, to, fromBlock, toBlock);
 }
 
 describe("mint/burn durable publication admission", () => {
@@ -48,10 +51,43 @@ describe("mint/burn durable publication admission", () => {
     expect(scope.configs).toEqual([config]);
     expect(sqlite.prepare("SELECT baseline_to - baseline_from AS seconds FROM mint_burn_admission").get()).toEqual({ seconds: 90 * day });
     scope = await readMintBurnWindowContext(db, end + 10 * day, [config]);
+    // A roster-wide stall is a producer outage: no leg is quarantined and the verdict stays stale.
     expect(scope.configs).toEqual([config]);
     expect(scope.watermark.unavailableReason).toBe("scan-watermark-stale");
     const revised = { ...config, decimals: config.decimals + 1 };
     expect((await readMintBurnWindowContext(db, end + 60, [revised])).configs).toEqual([revised]);
+  });
+
+  it("quarantines a stalled admitted leg and resumes it only through reactivation catch-up", async () => {
+    const { db, sqlite } = fixtures.open();
+    const stalled = makeMintBurnConfig({
+      asset: { stablecoinId: "usdc-circle", symbol: "USDC",
+        contractAddress: "0x0000000000000000000000000000000000000002" },
+      chain: { chainId: "base", chainName: "Base", explorerUrl: "https://basescan.org", evmChainId: 8453 },
+    });
+    const freshKey = mintBurnConfigKey(config);
+    const stalledKey = mintBurnConfigKey(stalled);
+    const pausedKeys = () => JSON.parse(String((sqlite.prepare(
+      "SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get() as { paused_keys: string }).paused_keys));
+    await proof(db, 90);
+    await proofFor(db, stalled, 90);
+    expect((await readMintBurnWindowContext(db, end + 60, [config, stalled])).configs).toEqual([config, stalled]);
+    await syncMintBurnPublicationPolicy(db, [], end + 60, [freshKey, stalledKey]);
+    // Only the fresh leg keeps scanning; the other frontier falls past the shared budget.
+    const now = end + MINT_BURN_WATERMARK_MAX_AGE_SEC + 3600;
+    await proofFor(db, config, 1, now, 101, 200);
+    const gated = await readMintBurnWindowContext(db, now, [config, stalled]);
+    expect(gated.configs).toEqual([config]);
+    expect(gated.watermark).toMatchObject({ timestamp: now, unavailableReason: null });
+    expect(gated.publication.legs.find((leg) => leg.configKey === stalledKey))
+      .toMatchObject({ status: "pending-admission", reason: "reactivation-pending" });
+    // The quarantine is durable, so a fresher frontier alone cannot re-admit it.
+    expect(pausedKeys()).toContain(stalledKey);
+    await proofFor(db, stalled, 1, now - 3600, 101, 200);
+    expect((await readMintBurnWindowContext(db, now + 60, [config, stalled])).configs).toEqual([config]);
+    await proofFor(db, stalled, 1, now, 201, 300);
+    expect((await readMintBurnWindowContext(db, now + 120, [config, stalled])).configs).toEqual([config, stalled]);
+    expect(pausedKeys()).not.toContain(stalledKey);
   });
 
   it("compacts publication diagnostics while retaining exact admitted pairs and non-admitted reasons", async () => {

@@ -32,7 +32,8 @@ import { MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, r
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import {
-  decodeMintBurnDisabledKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, persistMintBurnAdmissions, persistMintBurnResumptions,
+  decodeMintBurnDisabledKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, selectMintBurnStalledFrontiers,
+  persistMintBurnAdmissions, persistMintBurnQuarantines, persistMintBurnResumptions,
   prepareMintBurnAdmissions, prepareMintBurnPublicationPolicy, resolveMintBurnPublication,
   type MintBurnAdmissionRow,
 } from "./mint-burn-publication";
@@ -112,10 +113,20 @@ export async function readMintBurnWindowContext(
   const existing = configs.filter((config) => !mintBurnPublicationDisabled(config, configs, admissions, disabledKeys)
     && !pausedPairs.has(`${config.stablecoinId}|${config.chain.chainId}`)
     && mintBurnPreviouslyAdmitted(config, admissions));
-  const current = resolveMintBurnWatermark(nowSec, existing, segments, legacy);
+  // R8 post-admission gate: a stalled admitted leg is quarantined below the common
+  // watermark and paused for reactivation catch-up instead of freezing every coin.
+  // Only active-roster coins join that watermark; retained detail for an inactive
+  // quarantined coin keeps its own frontier. A roster-wide stall is a producer outage,
+  // not a bad asset: it keeps the stale verdict and pauses nothing.
+  const active = existing.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId));
+  const stalled = selectMintBurnStalledFrontiers(active, segments, legacy, nowSec, MINT_BURN_WATERMARK_MAX_AGE_SEC);
+  const quarantineKeys = new Set(stalled.length < active.length ? stalled.map(mintBurnConfigKey) : []);
+  const current = resolveMintBurnWatermark(nowSec,
+    existing.filter((config) => !quarantineKeys.has(mintBurnConfigKey(config))), segments, legacy);
   // A new leg must cover the incumbent window, so admission cannot move its frontier backwards.
   const scope = resolveMintBurnPublication(configs, admissions, disabledKeys, segments, nowSec,
-    current.unavailableReason == null ? current.timestamp! : end, MINT_BURN_WATERMARK_MAX_AGE_SEC, scopedPausedKeys);
+    current.unavailableReason == null ? current.timestamp! : end, MINT_BURN_WATERMARK_MAX_AGE_SEC,
+    new Set([...scopedPausedKeys, ...quarantineKeys]));
   if (scope.newAdmissions.length > 0) {
     // Scan coverage alone cannot stop an unpriced joining leg from nulling an incumbent's nets.
     const candidateKeys = new Set(scope.newAdmissions.map((row) => row.config_key));
@@ -143,6 +154,7 @@ export async function readMintBurnWindowContext(
     }
   }
   await persistMintBurnAdmissions(db, scope.newAdmissions);
+  await persistMintBurnQuarantines(db, [...quarantineKeys], policy);
   await persistMintBurnResumptions(db, scope.resumedKeys, policy);
   return {
     watermark: resolveMintBurnWatermark(nowSec, scope.configs, segments, legacy),

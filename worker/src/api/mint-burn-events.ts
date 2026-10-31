@@ -10,6 +10,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getMintBurnConfigsForStablecoin, type MintBurnTier } from "../lib/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
+import { mintBurnConfigKey } from "../lib/mint-burn-pipeline/sync-state";
 import { ACTIVE_MINT_BURN_CONFIGS } from "./mint-burn-flows/aggregate";
 import { buildInClause } from "../lib/db";
 
@@ -74,7 +75,12 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
     const roster = ACTIVE_MINT_BURN_CONFIGS.some((config) => config.stablecoinId === stablecoinId)
       ? ACTIVE_MINT_BURN_CONFIGS : configs;
     const context = await readMintBurnWindowContext(db, Math.floor(Date.now() / 1000), roster);
-    const queryChainIds = [...new Set(context.configs.filter((config) => config.stablecoinId === stablecoinId
+    // Stored history keeps a stall-quarantined or reactivating leg's rows with their explicit
+    // age; only disabled and never-admitted legs stay out.
+    const reactivating = new Set(context.publication.legs
+      .filter((leg) => leg.reason === "reactivation-pending").map((leg) => leg.configKey));
+    const served = [...context.configs, ...roster.filter((config) => reactivating.has(mintBurnConfigKey(config)))];
+    const queryChainIds = [...new Set(served.filter((config) => config.stablecoinId === stablecoinId
       && (!chain || config.chain.chainId === chain)).map((config) => config.chain.chainId))];
     const chainInClause = queryChainIds.length > 0 ? buildInClause(queryChainIds) : { sql: "NULL", binds: [] };
 
