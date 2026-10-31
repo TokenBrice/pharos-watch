@@ -102,7 +102,11 @@ describe("parseSupplyData", () => {
     const converted = parseSupplyData(tokens, () => rate);
     expect(converted[0].supply).toBeCloseTo(native * rate);
     const events = extractDepegEvents(
-      [{ timestamp: 1_000, price: rate * 0.98 }, { timestamp: 2_000, price: rate }],
+      [
+        { timestamp: 1_000, price: rate * 0.98 },
+        { timestamp: 2_000, price: rate * 0.97 },
+        { timestamp: 3_000, price: rate },
+      ],
       () => rate,
       pegType,
       converted,
@@ -541,11 +545,12 @@ describe("extractDepegEvents", () => {
     expect(events).toEqual([]);
   });
 
-  it("starts immediately for small-cap assets", () => {
+  it("starts immediately for small-cap assets once the opening print is corroborated", () => {
     const events = extractDepegEvents(
       [
         { timestamp: 1_000, price: 0.98 },
-        { timestamp: 1_500, price: 1.0 },
+        { timestamp: 1_500, price: 0.97 },
+        { timestamp: 2_000, price: 1.0 },
       ],
       () => 1,
       "peggedUSD",
@@ -556,8 +561,9 @@ describe("extractDepegEvents", () => {
     expect(events[0]).toMatchObject({
       direction: "below",
       startedAt: 1_000,
-      endedAt: 1_500,
+      endedAt: 2_000,
       startPrice: 0.98,
+      peakPrice: 0.97,
       recoveryPrice: 1.0,
     });
   });
@@ -614,7 +620,11 @@ describe("extractDepegEvents", () => {
   });
 
   it("does not replace observed historical zero with a positive current fallback", () => {
-    const prices = [{ timestamp: 1_000, price: 0.98 }, { timestamp: 2_000, price: 1 }];
+    const prices = [
+      { timestamp: 1_000, price: 0.98 },
+      { timestamp: 1_500, price: 0.97 },
+      { timestamp: 2_000, price: 1 },
+    ];
     const options = { missingSupplyUsd: 2_000_000 };
     const observedZero = parseSupplyData([{ date: "1000", circulating: { peggedUSD: 0 } }]);
     expect(extractDepegEvents(prices, () => 1, "peggedUSD", observedZero, undefined, undefined, options)).toEqual([]);
