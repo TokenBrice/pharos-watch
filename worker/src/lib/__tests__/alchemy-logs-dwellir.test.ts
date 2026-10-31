@@ -59,6 +59,24 @@ describe("Dwellir raw log transport", () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  // `retainedBlocks` is a retained-block count, so the oldest retained block is
+  // `head - retainedBlocks + 1` (worker/src/lib/evm-rpc.ts). One block earlier is
+  // a pruned page that Dwellir's `-full` nodes answer with HTTP-200 `[]`; that is
+  // not evidence the range was read, so it must not become a complete scan.
+  it("refuses a retained-tail page that starts one block before the evm-rpc floor", async () => {
+    const retained = { ...endpoint, logsHistory: { retainedBlocks: 100 } };
+    const fetcher = vi.fn().mockResolvedValue(response([]));
+    vi.stubGlobal("fetch", fetcher);
+    expect(await fetchAlchemyLogs(endpoint.url, "0xabc", [], 900, 950, createBudget(20), undefined,
+      { endpoint: retained, headBlock: 1000 })).toMatchObject({
+      logs: [], complete: false, scannedToBlock: 899, calls: 0, failureReason: "log-history-unavailable",
+    });
+    expect(fetcher).not.toHaveBeenCalled();
+
+    expect(await fetchAlchemyLogs(endpoint.url, "0xabc", [], 901, 950, createBudget(20), undefined,
+      { endpoint: retained, headBlock: 1000 })).toMatchObject({ logs: [], complete: true, scannedToBlock: 950 });
+  });
+
   it("meters receipt batch members individually", async () => {
     const meter = vi.spyOn(credits, "recordDwellirCredits");
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("[]")));

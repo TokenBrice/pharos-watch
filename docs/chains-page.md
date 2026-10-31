@@ -28,7 +28,7 @@ Default table order is descending total supply; Supply sits beside Chain so phon
 
 ### Harbor
 
-`shared/lib/harbor-scene.ts` and `harbor-scene-geometry.ts` own pure scene/geometry; `src/components/harbor/` owns interaction. Containers are a fixed linear supply encoding; display sliver floors never reach labels. Full-list pooling includes all chains beyond visible capacity. Drawn supply conserves `chainAttributedTotalUsd + unattributedTotalUsd` within $1, including fractional cargo. An unattributed barge is hatched and unflagged; discrepancy copy handles over-attribution instead.
+`shared/lib/harbor-scene.ts` and `harbor-scene-geometry.ts` own pure scene/geometry; `src/components/harbor/` owns interaction. Containers are a fixed linear supply encoding; display sliver floors never reach labels. Full-list pooling includes all chains beyond visible capacity. Drawn supply conserves `chainAttributedTotalUsd + unattributedTotalUsd` within $1, including fractional cargo. An unattributed barge is hatched and unflagged; its accessible name reports this run's attribution gap ("not attributed to a chain row this run"), never a source-side claim that the supply has no chain. Discrepancy copy handles over-attribution instead.
 
 Conservation is unknown (`ok: null`, `expectedUsd: null`) when either required accounting total is unavailable. Keep observed vessels drawable, omit an unknown residual barge, and do not infer a global over-attribution ratio from missing totals.
 

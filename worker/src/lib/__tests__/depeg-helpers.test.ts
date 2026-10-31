@@ -8,6 +8,8 @@ import {
   type DepegRow,
 } from "../depeg-helpers";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { computePegScore } from "@shared/lib/peg-score";
+import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
 
 describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
   const baseDepegRow = {
@@ -36,12 +38,45 @@ describe("buildInsertDepegEventStmt + rowToDepegEvent provenance", () => {
         { ...baseDepegRow, price_coverage_json: malformed },
         { ...baseDepegRow, id: 2, price_coverage_json: '{"intervals":[[100,200]]}', last_trusted_price_at: 200 },
       ].map(rowToDepegEvent);
-      expect(events[0]!.priceCoverage).toBeNull();
+      expect(events[0]!.priceCoverage).toMatchObject({
+        intervals: [], atParIntervals: [], lastTrustedObservationAt: null, gapStartedAt: null,
+      });
       expect(events[1]!.priceCoverage?.intervals).toEqual([[100, 200]]);
       expect(rowPriceCoverage({ ...baseDepegRow, price_coverage_json: malformed })).toBeNull();
       expect(warn.mock.calls.map(([line]) => JSON.parse(String(line))).some((record) =>
         record.level === "warn" && record.metadata?.eventId === 1,
       )).toBe(true);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  // docs/depeg-detection.md: malformed stored coverage becomes unknown; only
+  // closed legacy/replay rows without a coverage column retain their recorded
+  // duration. Crediting an unread instrumented episode as observed off-peg time
+  // turns a failed read into a positive occupancy claim (R2).
+  it("keeps a closed instrumented row's unreadable coverage unknown instead of crediting its duration", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const startedAt = 1_790_000_000;
+    const endedAt = startedAt + 48 * 3600;
+    const row: DepegRow = {
+      ...baseDepegRow,
+      id: 7,
+      started_at: startedAt,
+      ended_at: endedAt,
+      price_coverage_json: JSON.stringify({ intervals: [[startedAt, endedAt]] }),
+      last_trusted_price_at: startedAt + 2 * 3600,
+    };
+    try {
+      const event = rowToDepegEvent(row);
+      expect(mergeDepegSeconds([event], startedAt, endedAt)).toBe(0);
+      expect(mergeUnknownDepegSeconds([event], startedAt, endedAt)).toBe(endedAt - startedAt);
+      expect(computePegScore([event], startedAt, endedAt).pegPct).toBeNull();
+
+      const legacy = rowToDepegEvent({
+        ...row, id: 8, price_coverage_json: null, last_trusted_price_at: null,
+      });
+      expect(mergeDepegSeconds([legacy], startedAt, endedAt)).toBe(endedAt - startedAt);
     } finally {
       warn.mockRestore();
     }

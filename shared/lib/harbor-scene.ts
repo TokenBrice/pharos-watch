@@ -9,6 +9,7 @@
  */
 import type { ChainSummary, ChainsResponse, HealthBand } from "../types/chains";
 import { CHAIN_HEALTH_LABELS, CHAIN_HEALTH_PENNANTS } from "./classification/chain-health";
+import { formatChainShare } from "./chain-share-format";
 import { formatCompactUsd, formatSignedPercent } from "./format";
 
 export const HARBOR_UNIT_USD = 1e9;
@@ -289,7 +290,7 @@ function harborWake(chain: Pick<HarborChainInput, "change7d" | "change7dPct">): 
 function chainAccessibleName(chain: HarborChainInput, flag: HarborFlag, wake: HarborWake): string {
   const shareLabel = chain.dominanceShare == null
     ? "global share unavailable"
-    : `${(chain.dominanceShare * 100).toFixed(1)}% of tracked supply`;
+    : `${formatChainShare(chain.dominanceShare)} of tracked supply`;
   const parts = [chain.name, formatCompactUsd(chain.totalUsd), shareLabel];
   parts.push(flag.kind === "band" ? `Chain Health ${flag.band}${flag.score == null ? "" : ` ${flag.score}`}` : "Chain Health not rated");
   if (wake.kind === "wake") parts.push(`7d ${formatSignedPercent(wake.pct, 2)}`);
@@ -353,7 +354,7 @@ function bargeVessel(
     label,
     accessibleName: kind === "tail"
       ? `${members.length} smaller ${members.length === 1 ? "chain" : "chains"} pooled, ${formatCompactUsd(totalUsd)} combined`
-      : `Unattributed supply DefiLlama does not assign to a chain, ${formatCompactUsd(totalUsd)}`,
+      : `Unattributed supply not attributed to a chain row this run, ${formatCompactUsd(totalUsd)}`,
     memberIds: members.map((chain) => chain.id),
     partialMemberIds: members.filter((chain) => (chain.unavailableSupplyObservationCount ?? 0) > 0).map((chain) => chain.id),
   };

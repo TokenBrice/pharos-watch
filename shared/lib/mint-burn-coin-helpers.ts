@@ -151,6 +151,22 @@ export interface MintBurnCoinsAggregate24h {
 
 /** Client-side 24h totals across coins; never coerces an unavailable net to 0. */
 export function aggregateCoinFlows24h(coins: readonly MintBurnCoinFlow[]): MintBurnCoinsAggregate24h {
+  // /flows passes `summaryData?.coins ?? []`; an empty cohort means no coin was
+  // read — missing evidence, not a complete observed zero.
+  if (coins.length === 0) {
+    return {
+      mintVolumeUsd: 0,
+      burnVolumeUsd: 0,
+      mintCompleteness: "unknown",
+      burnCompleteness: "unknown",
+      scanComplete: false,
+      unpricedMintEventCount: 0,
+      unpricedBurnEventCount: 0,
+      net: sumMintBurnSignedNets([]),
+      has24hActivity: null,
+      direction: null,
+    };
+  }
   let mintVolumeUsd = 0;
   let burnVolumeUsd = 0;
   let unpricedMintEventCount = 0;

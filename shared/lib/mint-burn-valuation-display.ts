@@ -35,6 +35,7 @@ const NET_UNAVAILABLE_NOTE = "Signed net unavailable: window evidence incomplete
 const PARTIAL_SUM_NOTE =
   "Partial valuation: a component has unpriced events; summed signed net unavailable";
 const SUM_UNAVAILABLE_NOTE = "Summed signed net unavailable: a component net is unavailable";
+const EMPTY_SUM_NOTE = "Summed signed net unavailable: no coin evidence";
 
 export function describeUnpricedEvents(counts: UnpricedCounts): string {
   return `${counts.unpricedMintEventCount} mint / ${counts.unpricedBurnEventCount} burn events unpriced`;
@@ -74,9 +75,11 @@ export function resolveMintBurnSignedNet(
  * Client-side sum of signed nets. Any unavailable component (null or partial) makes the
  * sum unavailable; `unknown` components keep the sum with the coverage-unknown marker.
  * When every unavailable component carries a bound of the same kind and no component is
- * coverage-unknown, the sum keeps that one-sided bound; otherwise it carries none.
+ * coverage-unknown, the sum keeps that one-sided bound; otherwise it carries none. No
+ * components at all is missing evidence, not an observed zero sum.
  */
 export function sumMintBurnSignedNets(parts: readonly MintBurnSignedNetView[]): MintBurnSignedNetView {
+  if (parts.length === 0) return { valueUsd: null, completeness: "unknown", note: EMPTY_SUM_NOTE };
   const completeness = combineMintBurnValuationCompleteness(...parts.map((part) => part.completeness));
   let total = 0;
   let lowerUsd = 0;

@@ -515,7 +515,9 @@ Detection contributes eligible episodes, observed price intervals and audit prov
   Without these, the earliest event is the fallback; no anchor or events means NR.
   An assumed age anchor does not prove earlier incident-free coverage.
 - Scoring uses the four-year clamp and requires seven known days after unknown
-  event spans are removed. Fully blind occupancy is null, never 100% at peg.
+  event spans are removed. Fully blind occupancy is null, never 100% at peg; a
+  tracking anchor at or after the scoring clock is blind, not a zero-length
+  perfect window.
 - The 90-day companion starts at the later of its window boundary or tracking
   anchor and reports observed days, incidents, threshold crossings, peg percentage
   and coverage limitation under the same audit exclusions.
@@ -539,7 +541,7 @@ Detection contributes eligible episodes, observed price intervals and audit prov
 
 ### Trusted-price coverage and unresolved legacy spans (6.31)
 
-Migration `0255_depeg_trusted_price_coverage.sql` adds nullable columns only; it records no historical observations. Detection persists trusted off-peg `intervals`, known `atParIntervals`, the latest trusted price clock, and `lastObservationKind` (`trusted-off-peg`, `trusted-at-par`, or `blind`). A trusted at-par observation advances the trusted clock but breaks off-peg continuity; `gapStartedAt` therefore marks a break in off-peg continuity, not necessarily blind time. Missing/unusable prices, unavailable supply/reference context, omitted assets, and gaps over 1200 seconds break observation continuity. State transitions and resumption start zero-length endpoints; only subsequent continuous observations in the same trusted state extend their intervals. Pending promotion starts evidence at confirmation, not inside unrecorded pending history. Malformed stored coverage warns with the row ID and becomes unknown; producer writes remain strictly validated. Unchanged omitted-asset blind coverage does not trigger another UPDATE.
+Migration `0255_depeg_trusted_price_coverage.sql` adds nullable columns only; it records no historical observations. Detection persists trusted off-peg `intervals`, known `atParIntervals`, the latest trusted price clock, and `lastObservationKind` (`trusted-off-peg`, `trusted-at-par`, or `blind`). A trusted at-par observation advances the trusted clock but breaks off-peg continuity; `gapStartedAt` therefore marks a break in off-peg continuity, not necessarily blind time. Missing/unusable prices, unavailable supply/reference context, omitted assets, and gaps over 1200 seconds break observation continuity. State transitions and resumption start zero-length endpoints; only subsequent continuous observations in the same trusted state extend their intervals. Pending promotion starts evidence at confirmation, not inside unrecorded pending history. Malformed stored coverage warns with the row ID and becomes an explicit empty coverage (unknown), so a closed instrumented row never falls back to its recorded episode duration; producer writes remain strictly validated. Unchanged omitted-asset blind coverage does not trigger another UPDATE.
 
 For pre-migration **open** events, the entire uninstrumented span is explicitly unknown. The first post-migration trusted observation does not backfill the preceding span. Closed legacy and historical replay rows retain their recorded episode durations; their internal price-gap boundaries remain unreconstructable. Instrumented rows retain coverage intervals when closed. Recovery time bounded by consecutive trusted at-par endpoints is known at-par time; unrecorded transition/recovery spans remain unknown rather than automatically off peg.
 

@@ -78,4 +78,27 @@ describe("PHAROSVILLE_API_CONTRACT", () => {
     expect(PHAROSVILLE_API_CONTRACT.stress.producerIntervalSec).toBe(CRON_INTERVALS["compute-dews"]);
     expect(PHAROSVILLE_API_CONTRACT.reportCards.producerIntervalSec).toBe(CRON_INTERVALS["compute-safety-score-v9"]);
   });
+
+  // /api/peg-summary publishes HTTP 200 retained analytics with a machine-readable
+  // `degradedReason`; the contract schema must not strip the only reason an
+  // external consumer can name the degradation with (R2/R4).
+  it("keeps the route's published degraded reason for external consumers", () => {
+    const payload = {
+      coins: [],
+      summary: null,
+      methodology: {
+        version: "6.38",
+        versionLabel: "v6.38",
+        currentVersion: "6.38",
+        currentVersionLabel: "v6.38",
+        changelogPath: "/methodology/depeg-changelog/",
+        asOf: 1_790_000_000,
+        isCurrent: true,
+      },
+      degradedReason: "dex-prices-read-failed",
+    };
+    expect(PHAROSVILLE_API_CONTRACT.pegSummary.schema.parse(payload)).toMatchObject({
+      degradedReason: "dex-prices-read-failed",
+    });
+  });
 });

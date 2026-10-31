@@ -457,6 +457,11 @@ export function rowPriceCoverage(row: DepegRow): DepegEvent["priceCoverage"] {
   });
   return parsed.success ? parsed.data : invalidRowPriceCoverage(row, "invalid-schema");
 }
+/** Stored coverage exists but no longer decodes: instrumented, and entirely unknown. */
+function unreadablePriceCoverage(): NonNullable<DepegEvent["priceCoverage"]> {
+  return { intervals: [], atParIntervals: [], lastTrustedObservationAt: null, gapStartedAt: null };
+}
+
 /** Convert a snake_case D1 row to a camelCase DepegEvent */
 export function rowToDepegEvent(row: DepegRow): DepegEvent {
   const direction = parseDepegDirection(row);
@@ -507,7 +512,11 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     confirmationSources: row.confirmation_sources ?? null,
     pendingReason: row.pending_reason ?? null,
     closeReason,
-    priceCoverage: rowPriceCoverage(row),
+    // A row that carries a coverage column but whose stored intervals no longer
+    // decode is instrumented and unread: an explicit empty coverage keeps it
+    // from falling back to its recorded episode duration as observed off-peg time.
+    priceCoverage: rowPriceCoverage(row)
+      ?? (row.price_coverage_json != null ? unreadablePriceCoverage() : null),
     provenance,
   };
 }

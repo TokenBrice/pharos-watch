@@ -14,6 +14,7 @@ import {
   type HarborSceneInput,
 } from "../harbor-scene";
 import { HARBOR_LIVE, scaleHarborInput as scale } from "./harbor-scene.test-support";
+import { formatChainShare } from "../chain-share-format";
 
 const LIVE = HARBOR_LIVE;
 
@@ -111,6 +112,29 @@ describe("buildHarborScene on the 2026-10-12 payload", () => {
     expect(scene.vessels.at(-1)?.id).toBe("harbor-unattributed");
   });
 
+  // A berth's accessible name is its only text for screen readers; the share
+  // must round through the page's single formatter (`docs/chains-page.md`), so a
+  // nonzero share below 0.05% is `<0.1%`, never "0.0% of tracked supply".
+  it("prints each berth's share through the shared formatter", () => {
+    for (const vessel of [...scene.ships, ...scene.craft]) {
+      const share = LIVE.chains.find((chain) => chain.id === vessel.id)?.dominanceShare ?? null;
+      if (share == null) continue;
+      expect(vessel.accessibleName).toContain(`${formatChainShare(share)} of tracked supply`);
+    }
+    const sonic = scene.craft.find((vessel) => vessel.id === "sonic")!;
+    expect(formatChainShare(LIVE.chains.find((c) => c.id === "sonic")!.dominanceShare)).toBe("<0.1%");
+    expect(sonic.accessibleName).toContain("<0.1% of tracked supply");
+    expect(sonic.accessibleName).not.toContain("0.0% of tracked supply");
+  });
+
+  // R6/R2: the residual is `globalTotalUsd - chainAttributedTotalUsd`, which also
+  // carries asset-chain rows this run could not read. The barge names the
+  // run-scoped attribution gap, never a source-side non-assignment claim.
+  it("describes the unattributed barge as a run-scoped attribution gap", () => {
+    expect(scene.unattributed?.accessibleName).not.toMatch(/does not assign/i);
+    expect(scene.unattributed?.accessibleName).toContain("not attributed to a chain row this run");
+  });
+
 });
 
 describe("buildHarborScene edge cases", () => {
@@ -121,6 +145,12 @@ describe("buildHarborScene edge cases", () => {
     expect(last.drawLength).toBe(SLIVER_FLOOR);
     expect(scene.ships[0].accessibleName).toContain("$3.01B");
     expect(scene.conservation.ok).toBe(true);
+  });
+
+  it("keeps an observed zero share at 0.0%, not the sub-0.1% floor", () => {
+    const scene = buildHarborScene(world([chain("a", 2e9)]));
+    expect(scene.ships[0].chain.dominanceShare).toBe(0);
+    expect(scene.ships[0].accessibleName).toContain("0.0% of tracked supply");
   });
 
   it("names the NR reason when report-card inputs are not fresh", () => {

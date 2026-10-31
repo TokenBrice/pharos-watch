@@ -183,4 +183,15 @@ describe("buildFlowPressureReceiptModel", () => {
         note: "Observed subtotal, lower bound: scan coverage incomplete" });
     }
   });
+
+  // An empty coin list is missing evidence (a failed or generationless summary
+  // read), not a complete observed zero: the receipt must not print Net 7d $0.00.
+  it("keeps the net row unavailable for an empty coin population", () => {
+    const model = buildFlowPressureReceiptModel({ coins: [] });
+    expect(model.rows.find((row) => row.id === "net-7d")).toMatchObject({
+      valueUsd: null, completeness: "unknown",
+    });
+    expect(model.leadersUnavailable).toBe(true);
+    expect(model.coverageSummary).toBe("Coverage metadata unavailable");
+  });
 });

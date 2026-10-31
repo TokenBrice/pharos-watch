@@ -473,8 +473,10 @@ export async function fetchAlchemyLogs(
     limit: Math.max(1, Math.floor(options?.maxSplitCalls ?? DEFAULT_LOG_SPLIT_MAX_CALLS)),
   };
   const endpoint = options?.endpoint;
+  // A retained-block count floors at `head - retainedBlocks + 1`, the same
+  // boundary evm-rpc.ts admits; one block earlier was silently a pruned page.
   if (endpoint?.logsHistory === "none" || (typeof endpoint?.logsHistory === "object"
-    && (options?.headBlock == null || fromBlock < options.headBlock - endpoint.logsHistory.retainedBlocks))) {
+    && (options?.headBlock == null || fromBlock < options.headBlock - endpoint.logsHistory.retainedBlocks + 1))) {
     return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 0, maxDepth: 0,
       failureReason: "log-history-unavailable" };
   }
