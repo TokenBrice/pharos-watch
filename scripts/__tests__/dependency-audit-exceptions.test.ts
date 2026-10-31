@@ -420,7 +420,7 @@ describe("dependency-audit exceptions", () => {
       const manifest = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
         overrides: Record<string, unknown>;
       };
-      expect(manifest.overrides["miniflare@5.20261012.1-beta"]).toEqual({ undici: "7.30.1" });
+      expect(manifest.overrides["miniflare@5.20261019.2-beta"]).toEqual({ undici: "7.30.1" });
     });
 
     it("fails full verification for an affected nested Undici", () => {
