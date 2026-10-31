@@ -8,6 +8,7 @@ export interface CohortSummary {
   coinCount: number;
   marketCap: number | null;
   supplyUnavailableCount: number;
+  supplyPartialCount: number;
   symbolPreview: string;
 }
 
@@ -16,6 +17,7 @@ export function summarizeCohort(coins: readonly PlacedCoin[], cohort: NonUsdPegE
     coinCount: cohort.coinCount,
     marketCap: cohort.marketCap,
     supplyUnavailableCount: cohort.supplyUnavailableCount,
+    supplyPartialCount: cohort.supplyPartialCount,
     symbolPreview: coins
       .slice(0, 3)
       .map((coin) => coin.symbol)
@@ -49,6 +51,7 @@ export function CohortCoinEmblems({
       cohortCoinCount={summary.coinCount}
       cohortMarketCap={summary.marketCap}
       cohortSupplyUnavailableCount={summary.supplyUnavailableCount}
+      cohortSupplyPartialCount={summary.supplyPartialCount}
       cohortSymbolPreview={summary.symbolPreview}
       cohortRank={cohortRank}
       hoverCardYPlacement={hoverCardYPlacement}

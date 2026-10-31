@@ -5,6 +5,7 @@ import { CoinEmblem } from "@/app/alt-pegs/fiat-world-atlas/coin-emblem";
 import { summarizeCohort } from "@/app/alt-pegs/fiat-world-atlas/cohort-coin-emblems";
 import { FiatEmblems } from "@/app/alt-pegs/fiat-world-atlas/fiat-emblems";
 import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
+import { coreNonUsdRows } from "@shared/test-utils/alt-peg-fixtures";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makePlacedCoin, renderAtlas } from "./atlas.test-support";
 
@@ -126,6 +127,43 @@ describe("CoinEmblem", () => {
     expect(screen.getByText("Known cohort subtotal").nextElementSibling?.textContent).toContain(`${unavailableCount} unavailable`);
     expect(screen.getByText("Cohort size").nextElementSibling?.textContent).toBe(`${eur.cohort.coinCount} coins`);
     expect(screen.getByRole("link").getAttribute("aria-label")).not.toMatch(/%|#\d/);
+  });
+
+  it("withholds the cohort share and the complete cap over a partial-chain remainder", () => {
+    // Every other core non-USD member observes a supply, so the only incomplete
+    // observation in the euro cohort is EURC's recorded partial-chain remainder.
+    const assets = coreNonUsdRows(
+      (id, marketCap) => makeStablecoin({
+        id,
+        circulating: marketCap === null ? {} : { usd: marketCap },
+        ...(id === sample.id ? {
+          supplyChainGuard: {
+            reason: "supply-chain-dropout" as const,
+            status: "chains-unavailable" as const,
+            partialCoverage: true as const,
+            quarantinedSince: 1_792_800_000,
+            chains: [{
+              chainId: "tempo", chainLabel: "Tempo", listCurrentUsd: 0, baselineUsd: 1_653_927,
+              baselineObservedAt: 1_792_700_000, baselineSource: "seed" as const, resolution: "unavailable" as const,
+            }],
+          },
+        } : {}),
+      }),
+      { [sample.id]: sample.marketCap!, "eurs-stasis": 40_000_000 },
+    );
+    const eur = buildPegDiversityHero(assets).pegClusters.find((group) => group.peg === "EUR")!;
+    const cohortCap = sample.marketCap! + 40_000_000;
+    expect(eur.cohort).toMatchObject({ marketCap: cohortCap, supplyUnavailableCount: 0, supplyPartialCount: 1 });
+
+    renderAtlas(<FiatEmblems clusters={[eur]} />);
+    const link = screen.getByRole("link", { name: /^EURC · / });
+    fireEvent.focus(link);
+    expect(screen.getByText("Cohort share").nextElementSibling?.textContent).toBe("n/a");
+    expect(screen.getByText("Known cohort subtotal").nextElementSibling?.textContent)
+      .toContain("1 partial-chain remainder");
+    expect(screen.queryByText("Cohort cap")).toBeNull();
+    expect(link.getAttribute("aria-label")).not.toContain("%");
+    expect(summarizeCohort(eur.coins, eur.cohort)).toMatchObject({ marketCap: cohortCap, supplyPartialCount: 1 });
   });
 
 });
