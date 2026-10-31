@@ -66,6 +66,30 @@ describe("DepegHistory provenance badges", () => {
     expect(screen.getByText("Recorded recovery").parentElement?.textContent).toContain("Depegged now");
   });
 
+  it("excludes disputed rows from incident and threshold-crossing counts while keeping them listed", () => {
+    const events = [
+      makeEvent({ id: 1, provenance: { auditVerdict: "disputed" }, constituentEventCount: 2 }),
+      makeEvent({ id: 2, provenance: { auditVerdict: "false_positive" }, constituentEventCount: 3 }),
+      makeEvent({ id: 3, provenance: { auditVerdict: "confirmed" }, constituentEventCount: 4 }),
+      makeEvent({ id: 4, provenance: { auditVerdict: "legacy_unknown" } as never, constituentEventCount: 5 }),
+    ];
+    mockEvents(events, { data: { events, total: 2, totalExact: false } });
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+    expect(screen.getByText("Incidents").parentElement?.textContent).toContain("2");
+    expect(screen.getByText("Threshold crossings").parentElement?.textContent).toContain("9");
+    expect(screen.getByTestId("stablecoin-depeg-history-table").querySelectorAll("tbody tr")).toHaveLength(4);
+  });
+
+  it("keeps a loaded-row lower bound honest when a disputed row is loaded first", () => {
+    const events = [
+      makeEvent({ id: 1, provenance: { auditVerdict: "disputed" } }),
+      makeEvent({ id: 2, provenance: { auditVerdict: "confirmed" } }),
+    ];
+    mockEvents(events, { data: { events, total: 2, totalExact: false }, isFullyLoaded: false, isAutoLoadCapped: true });
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+    expect(screen.getByText("Incidents").parentElement?.textContent).toContain("1+");
+  });
+
   it("never presents the cursor API's inexact page total as the incident count", () => {
     const events = [makeEvent(), makeEvent({ id: 2 })];
     // includeTotal=false: `total` is a page lower bound (LUSD showed "newest 1,000 of 101").

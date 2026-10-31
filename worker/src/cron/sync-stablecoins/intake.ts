@@ -1,6 +1,7 @@
 import { REGISTRY_BY_LLAMA_ID } from "@shared/lib/stablecoin-id-registry";
 import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import type { FrozenSnapshot } from "@shared/lib/stablecoins/frozen-snapshots";
+import { detectDefiLlamaListFillDefaultPrices } from "@shared/lib/pricing-source-policy";
 import { fetchTextWithRetry } from "../../lib/fetch-retry";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { CIRCUIT_SOURCE, DEFILLAMA_BASE, MIN_VALID_ASSET_COUNT } from "../../lib/constants";
@@ -358,11 +359,28 @@ export async function loadStablecoinsIntake(
   // or primitive provider row is quarantined per asset instead of crashing the whole run (DEC-03).
   const rowAdmission = admitPeggedAssetRows(rawPeggedAssets);
 
+  // A price the response repeats verbatim across many assets is DefiLlama's
+  // fill for rows it cannot price, not an observation of any one of them. The
+  // value set comes from this response (never a hardcoded constant) and is
+  // marked on every row that carries it, so publication can require
+  // independent corroboration.
+  const fillDefaultPrices = detectDefiLlamaListFillDefaultPrices(rowAdmission.rows);
+
   // Run the transformation pipeline on a local variable. The steps below
   // reassign `assets` rather than mutating the raw array, and nothing
   // references the raw array (or the payload wrapper) past this point, so both
   // become collectible as soon as validation/dedupe produce replacement arrays.
   let assets = mergeFrozenSnapshots(rowAdmission.rows, FROZEN_SNAPSHOTS);
+  if (fillDefaultPrices.size > 0) {
+    for (const asset of assets) {
+      const price = asset.price;
+      if (typeof price !== "number" || !fillDefaultPrices.has(price)) continue;
+      asset.priceListFillDefault = {
+        value: price,
+        upstreamSource: asset.priceSource ? asset.priceSource : null,
+      };
+    }
+  }
   const injectedFrozenSnapshots = assets.length - rowAdmission.rows.length;
   if (injectedFrozenSnapshots > 0) {
     logWorkerEvent({

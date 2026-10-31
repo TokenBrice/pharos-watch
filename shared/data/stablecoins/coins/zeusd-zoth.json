@@ -3,6 +3,18 @@
   "name": "Zoth ZeUSD",
   "symbol": "ZeUSD",
   "oneLiner": "ZeUSD is Zoth's deprecated V1 RWA-collateralized debt-position dollar token; its tracked router is paused and V2 is separate.",
+  "status": "frozen",
+  "frozenAt": "2026-10-31",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-10-31",
+    "recordedAt": "2026-10-31",
+    "epitaph": "Zoth retired its legacy dollar",
+    "obituary": "Zoth's legacy V1 ZeUSD router is paused, and by 2026-10-31 the token was no longer listed on zoth.io or the Zoth app while its documentation page returned 404. Supply has stayed unchanged with no mints or burns, and the only pool held about $87 with no trading.",
+    "peakMcap": 68300931,
+    "sourceUrl": "https://zoth.io/",
+    "sourceLabel": "Zoth product site (ZeUSD no longer listed)"
+  },
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -59,23 +71,6 @@
   ],
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "zeusd-zoth",
-    "display": {
-      "url": "https://zoth.io/",
-      "label": "Zoth Finance"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "notices": [
     {
       "type": "warning",

@@ -10,6 +10,7 @@ import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import { buildMaintenanceApiRequest } from "./maintenance-api";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 
 const DAY = 86400;
 const WEEK = 7 * DAY;
@@ -112,13 +113,14 @@ export function buildYieldSocial(data: YieldRankingsResponse, assets: readonly S
 
 export function buildStabilitySocial(events: readonly DepegEvent[], base: Base): DailySocialSnapshot {
   const start = base.asOf - WEEK;
-  const started = events.filter((event) => event.startedAt >= start && event.startedAt <= base.asOf);
-  const recovered = events.filter((event) => {
+  const countedEvents = events.filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict));
+  const started = countedEvents.filter((event) => event.startedAt >= start && event.startedAt <= base.asOf);
+  const recovered = countedEvents.filter((event) => {
     if (event.endedAt == null || event.endedAt < start || event.endedAt > base.asOf) return false;
     const closure = classifyDepegClosure(event);
     return closure === "recovered" || closure === "legacy_recovered";
   });
-  const ongoing = events.filter((event) => event.startedAt <= base.asOf && event.endedAt == null);
+  const ongoing = countedEvents.filter((event) => event.startedAt <= base.asOf && event.endedAt == null);
   return finish(base, { topic: "stability", title: "The weekly stability report", subtitle: "Confirmed incidents · trailing 7 days · all tracked assets", unit: "count",
     rows: [{ id: "started", name: "New incidents", value: started.length, context: "Confirmed incidents that began in the last seven days" },
       { id: "recovered", name: "Recoveries", value: recovered.length, context: "Incidents recorded as recovered in the last seven days" },
@@ -229,7 +231,8 @@ export async function captureDailySocial(topic: DailySocialTopic, edition: Daily
     const parsed = DepegEventsResponseSchema.parse(result.data);
     events.push(...parsed.events);
     if (!parsed.nextCursor) {
-      if (parsed.totalExact === false || events.length !== parsed.total || new Set(events.map((event) => event.id)).size !== events.length) throw new Error("Incomplete or changing depeg archive");
+      const countedEvents = events.filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict));
+      if (parsed.totalExact === false || countedEvents.length !== parsed.total || new Set(events.map((event) => event.id)).size !== events.length) throw new Error("Incomplete or changing depeg archive");
       return buildStabilitySocial(events, base);
     }
     if (cursors.has(parsed.nextCursor)) throw new Error("Repeated depeg cursor");

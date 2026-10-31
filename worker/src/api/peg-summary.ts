@@ -29,6 +29,7 @@ import {
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 
 function deriveDexDeviationBps(
   dexPriceUsd: number,
@@ -150,6 +151,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       depegEventsYesterday = 0;
       for (const event of pegAnalytics.allEvents) {
         if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
+        if (isDisputedAuditVerdict(event.provenance?.auditVerdict)) continue;
         if (event.startedAt >= todayStartSec) depegEventsToday += 1;
         else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
       }

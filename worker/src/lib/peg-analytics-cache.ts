@@ -5,6 +5,7 @@ import { recordJsonParseFailure } from "./api-cache-read";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import type { PegAnalyticsSnapshot } from "./peg-analytics";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -70,6 +71,7 @@ export async function publishPegAnalyticsCache(
   let depegEventsYesterday = 0;
   for (const event of pegAnalytics.allEvents ?? []) {
     if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
+    if (isDisputedAuditVerdict(event.provenance?.auditVerdict)) continue;
     if (event.startedAt >= todayStartSec) depegEventsToday += 1;
     else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
   }

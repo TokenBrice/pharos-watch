@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import { DepegEventStoredSnapshotSchema } from "@shared/types/market";
 import type { DepegEvent } from "@shared/types/market";
 import { computePegScore } from "@shared/lib/peg-score";
-import { DDR_INELIGIBLE_AUDIT_VERDICTS, PEG_SCORE_EXCLUDED_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
-import { isDdrIneligibleAuditVerdict, isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
-import { auditVerdictNotInSql } from "../depeg-audit";
+import { DISPUTED_AUDIT_VERDICTS, DDR_INELIGIBLE_AUDIT_VERDICTS, PEG_SCORE_EXCLUDED_AUDIT_VERDICTS } from "@shared/types/depeg-audit";
+import { isDdrIneligibleAuditVerdict, isDisputedAuditVerdict, isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
+import { auditVerdictNotInSql, notDisputedAuditVerdictSql } from "../depeg-audit";
 import { rowToDepegEvent, type DepegRow } from "../depeg-helpers";
 import { sealPredictionFixture, withSqliteD1 } from "./depeg-resolver-ddrv2-store.test-support";
 
@@ -44,6 +44,25 @@ describe("audit verdict eligibility", () => {
     const archived = DepegEventStoredSnapshotSchema.safeParse([{ ...archiveEvent, provenance: { auditVerdict: verdict } }]);
     expect(archived.success).toBe(verdict !== "future_unknown");
     if (archived.success) expect(archived.data[0].provenance?.auditVerdict).toBe(verdict);
+  });
+
+  it.each([
+    [null, true],
+    ["confirmed", true],
+    ["repaired", true],
+    ["no_data", true],
+    ["false_positive", false],
+    ["disputed", false],
+    ["future_unknown", true],
+  ] as const)("keeps the public event-count eligibility of %s at %s", (verdict, counts) => {
+    const publicCounts = DISPUTED_AUDIT_VERDICTS.every((disputed) => disputed !== verdict);
+    expect(!isDisputedAuditVerdict(verdict)).toBe(publicCounts);
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      const fragment = notDisputedAuditVerdictSql("verdict");
+      const row = sqlite.prepare(`SELECT ${fragment.sql} AS counts FROM (SELECT ? AS verdict)`).get(...fragment.binds, verdict);
+      expect(row?.counts).toBe(counts ? 1 : 0);
+    } finally { sqlite.close(); }
   });
 
   it.each(["json", "column"] as const)("rejects unknown database %s provenance instead of replacing it with null", (source) => {

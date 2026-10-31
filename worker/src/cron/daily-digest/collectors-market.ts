@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { getNativeEventPriceObservation, isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
@@ -75,7 +76,7 @@ export async function collectActiveDepegs(
       .prepare(
         `SELECT e.stablecoin_id, e.symbol, e.peg_type, e.source, e.direction, e.peak_deviation_bps,
                 e.started_at, e.start_price, e.peak_price, e.peg_reference, p.quote_mode,
-                nq.value AS current_native_quote
+                p.audit_verdict, nq.value AS current_native_quote
          FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
          LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
          WHERE e.ended_at IS NULL`,
@@ -86,6 +87,7 @@ export async function collectActiveDepegs(
         peg_type: string | null;
         source: string;
         quote_mode: string | null;
+        audit_verdict: string | null;
         start_price: number | null;
         current_native_quote: string | null;
         direction: "above" | "below";
@@ -103,7 +105,8 @@ export async function collectActiveDepegs(
       if (!ctx.trackedStablecoinIds.has(row.stablecoin_id) || FROZEN_IDS.has(row.stablecoin_id)) {
         return [];
       }
-      activeDepegCount++;
+      // Reviewed disputes stay in the evidence rows but are not public event counts.
+      if (!isDisputedAuditVerdict(row.audit_verdict)) activeDepegCount++;
       activeDepegSignalKeys.push(depegSignalKey({ stablecoinId: row.stablecoin_id, startedAt: row.started_at }, "active"));
       const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
       if (mcapUsd == null) {
@@ -374,11 +377,13 @@ export async function collectResolvedDepegs(
     const eligibleIds = [...ctx.trackedStablecoinIds];
     const resolvedRows = await ctx.db
       .prepare(
-        `SELECT symbol, direction, peak_deviation_bps, started_at, ended_at, stablecoin_id, close_reason, recovery_price
-         FROM depeg_events
-         WHERE ended_at IS NOT NULL AND ended_at >= ?
-           AND stablecoin_id IN (SELECT value FROM json_each(?))
-         ORDER BY ABS(peak_deviation_bps) DESC`,
+        `SELECT e.symbol, e.direction, e.peak_deviation_bps, e.started_at, e.ended_at,
+                e.stablecoin_id, e.close_reason, e.recovery_price, p.audit_verdict
+         FROM depeg_events e
+         LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+         WHERE e.ended_at IS NOT NULL AND e.ended_at >= ?
+           AND e.stablecoin_id IN (SELECT value FROM json_each(?))
+         ORDER BY ABS(e.peak_deviation_bps) DESC`,
       )
       .bind(cutoff24h, JSON.stringify(eligibleIds))
       .all<{
@@ -390,6 +395,7 @@ export async function collectResolvedDepegs(
         stablecoin_id: string;
         close_reason: string | null;
         recovery_price: number | null;
+        audit_verdict: string | null;
       }>();
     let supplyUnavailable = false;
 
@@ -398,6 +404,8 @@ export async function collectResolvedDepegs(
       const closure = classifyDepegClosure({ endedAt: row.ended_at, closeReason: row.close_reason, recoveryPrice: row.recovery_price });
       return closure === "recovered" || closure === "legacy_recovered";
     });
+    // Reviewed disputes stay in the evidence rows but are not public event counts.
+    const countedRecoveredRows = recoveredRows.filter((row) => !isDisputedAuditVerdict(row.audit_verdict));
     const recovered = recoveredRows.flatMap((row) => {
         const mcapUsd = ctx.mcapById.get(row.stablecoin_id);
         if (mcapUsd == null) {
@@ -424,7 +432,7 @@ export async function collectResolvedDepegs(
 
     return collectorResult(
       {
-        resolvedDepegCount: recoveredRows.length,
+        resolvedDepegCount: countedRecoveredRows.length,
         resolvedDepegSignalKeys: recoveredRows.map((row) => depegSignalKey({ stablecoinId: row.stablecoin_id, startedAt: row.started_at }, "resolved")),
         resolvedDepegs: candidates.length > 0 ? candidates : undefined,
       },

@@ -173,6 +173,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         supplyPerimeter: _ignoredSupplyPerimeter,
         supplyChainGuard: _ignoredSupplyChainGuard,
         priceDerivation: _ignoredPriceDerivation,
+        priceListFillDefault: _ignoredPriceListFillDefault,
         ...rest
       } = asset as PeggedAsset & { gecko_id?: unknown };
       const hasUsablePrice = typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;

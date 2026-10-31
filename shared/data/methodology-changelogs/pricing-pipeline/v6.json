@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.65",
+    "title": "DefiLlama per-response fill prices are rejected; STBT priced from its Curve pool",
+    "date": "2026-10-31",
+    "effectiveAt": 1793491200,
+    "summary": "A DefiLlama list price shared verbatim by five or more list assets in one response is a fill default, not an observation, and is rejected unless another family corroborates it; STBT gains a reviewed Curve STBT/3Crv quote.",
+    "impact": [
+      "Publication rejects such a quote as list_fill_default_requires_corroboration across primary, fallback and final validation, including rows labelled coingecko upstream that carry the fill. On 2026-10-31 the fill sat on about 90 list assets.",
+      "Following the per-coin review, five live coins without an admissible market (rwaUSDi, MOVEUSD, nUSD, FUSD, USDnr) move to a missing price, and four dead coins (zkUSD, EURO3, HOME, ZeUSD) are frozen.",
+      "stbt-matrixdock is priced through a missing-only curve-thin-onchain adapter for the reviewed Curve STBT/3Crv metapool (about 55 bps below par when reviewed) and its price-gap review is retired.",
+      "Thresholds and weights are unchanged. Activation is 2026-11-01 00:00 UTC (1793491200)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.64",
     "title": "Uncorroborated DefiLlama quotes at exactly the peg reference are rejected",
     "date": "2026-10-31",

@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { hasDepegAuthoritativeSource, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
+import {
+  detectDefiLlamaListFillDefaultPrices,
+  hasDepegAuthoritativeSource,
+  isReplaySafePriceSource,
+} from "@shared/lib/pricing-source-policy";
 import {
   validateFallbackPriceCandidate,
   validatePrimaryPriceCandidate,
@@ -308,6 +312,71 @@ describe("DefiLlama exact-reference defaults", () => {
     expect(validatePrimaryPriceCandidate({
       price: 0.0175, source: "defillama-list", confidence: "single-source",
       agreeSources: ["defillama-list"], validationContext: phpContext, validationReferences: references,
+    }).accepted).toBe(true);
+  });
+});
+
+describe("DefiLlama list fill defaults", () => {
+  const FILL_DEFAULT = 0.9990120985638516;
+  const LIST_FILL = { value: FILL_DEFAULT, upstreamSource: "defillama" };
+
+  it("flags a value repeated across five distinct list assets and not one shared by four", () => {
+    const distinctRows = (count: number, price: number) =>
+      Array.from({ length: count }, (_, index) => ({ id: `list-${index}`, price }));
+
+    expect(detectDefiLlamaListFillDefaultPrices(distinctRows(5, FILL_DEFAULT))).toEqual(new Set([FILL_DEFAULT]));
+    expect(detectDefiLlamaListFillDefaultPrices(distinctRows(4, 0.999520515794015)).size).toBe(0);
+  });
+
+  it("rejects a sole DefiLlama list quote at a per-response fill default", () => {
+    expect(validatePrimaryPriceCandidate({
+      price: FILL_DEFAULT, source: "defillama-list", confidence: "single-source",
+      agreeSources: ["defillama-list"], listFillDefault: LIST_FILL, validationContext: USD_CONTEXT,
+    })).toMatchObject({ accepted: false, reason: "list_fill_default_requires_corroboration" });
+  });
+
+  it("rejects a retained list-attributed quote stamped from the raw list", () => {
+    expect(validatePublishedAssetPrice({
+      asset: {
+        price: FILL_DEFAULT, priceSource: "defillama", priceConfidence: "single-source",
+        agreeSources: ["defillama"], priceListFillDefault: LIST_FILL,
+      },
+      validationContext: USD_CONTEXT,
+    })).toMatchObject({ accepted: false, reason: "list_fill_default_requires_corroboration" });
+  });
+
+  it("covers a fill default the list itself attributes to coingecko", () => {
+    expect(validatePublishedAssetPrice({
+      asset: {
+        price: FILL_DEFAULT, priceSource: "coingecko", priceConfidence: "single-source",
+        agreeSources: ["coingecko"],
+        priceListFillDefault: { value: FILL_DEFAULT, upstreamSource: "coingecko" },
+      },
+      validationContext: USD_CONTEXT,
+    })).toMatchObject({ accepted: false, reason: "list_fill_default_requires_corroboration" });
+  });
+
+  it("rejects a fill default offered by the DefiLlama contract fallback lane", () => {
+    expect(validateFallbackPriceCandidate({
+      price: FILL_DEFAULT, source: "defillama-contract", confidence: "fallback",
+      agreeSources: ["defillama-contract"], listFillDefault: LIST_FILL, validationContext: USD_CONTEXT,
+    })).toMatchObject({ accepted: false, reason: "list_fill_default_requires_corroboration" });
+  });
+
+  it("admits a fill-default value corroborated by another source family", () => {
+    expect(validatePublishedAssetPrice({
+      asset: {
+        price: FILL_DEFAULT, priceSource: "coingecko+defillama-list", priceConfidence: "high",
+        agreeSources: ["coingecko", "defillama-list"], priceListFillDefault: LIST_FILL,
+      },
+      validationContext: USD_CONTEXT,
+    }).accepted).toBe(true);
+  });
+
+  it("leaves the same value admitted when the response did not flag it", () => {
+    expect(validatePrimaryPriceCandidate({
+      price: FILL_DEFAULT, source: "defillama-list", confidence: "single-source",
+      agreeSources: ["defillama-list"], validationContext: USD_CONTEXT,
     }).accepted).toBe(true);
   });
 });

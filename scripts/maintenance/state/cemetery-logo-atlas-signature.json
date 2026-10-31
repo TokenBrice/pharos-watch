@@ -1,10 +1,10 @@
 {
   "generatedBy": "scripts/maintenance/build-cemetery-logo-atlas.ts",
-  "generatorVersion": 1,
+  "generatorVersion": 2,
   "cellSize": 48,
   "gutter": 2,
   "webp": {
-    "quality": 70,
+    "quality": 66,
     "alphaQuality": 80,
     "effort": 6
   },
@@ -13,10 +13,10 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "5362d40077095a0492775d510af0cd30c8ba5c518e03d131d70739dfdfbe0264",
+  "inputSha256": "67898f18828add001da65804756e014a2a642f30c3ffddf460920058add9f478",
   "image": {
-    "sha256": "da892f6a6ae6a4932698e93108704925588ec627544ed0f4f249f475b7ad4867",
-    "bytes": 148848,
+    "sha256": "f4935c94497a1f29629a801f76ecf802096a0eaac3d80adff96491d977ebad21",
+    "bytes": 148728,
     "width": 798,
     "height": 748
   },
@@ -157,6 +157,11 @@
       "kernel": "lanczos3"
     },
     {
+      "logo": "/logos/euro3-3a-dao.webp",
+      "sha256": "4d0235fd7831a4e2757f599ba34dcef6c99990116f9f6c961306f9a66716ecc9",
+      "kernel": "lanczos3"
+    },
+    {
       "logo": "/logos/98-euroe.png",
       "sha256": "5f9cc71980c4ca4d3067e9da375b12cbee9961062ca7b88c6aa2e97c5c7aaa5b",
       "kernel": "lanczos3"
@@ -214,6 +219,11 @@
     {
       "logo": "/logos/122-gyen.png",
       "sha256": "f8bd35941429c38b343913af3cca18403da37120074dca3f21439af6aea72d3f",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/home-homecoin.png",
+      "sha256": "e3ed35a789e907341f79182d00d56b7b4293c7c8c9f8a6897b3c731f921c9a46",
       "kernel": "lanczos3"
     },
     {
@@ -597,6 +607,16 @@
       "kernel": "lanczos3"
     },
     {
+      "logo": "/logos/225-zeusd.webp",
+      "sha256": "2613de9ca5ce145c4e0852cd5c8aabc988d135bdf1e677f6c1d66207bb695b2f",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/zkusd-goal3.png",
+      "sha256": "868e638acbca58c2fbe6ed8101240a21c2db54f2a0b0d668fb1ce2a50b6543cf",
+      "kernel": "lanczos3"
+    },
+    {
       "logo": "/logos/cemetery/zusd.png",
       "sha256": "72e6a322d73c76d303899701d154a90f738697318737156c31caaa8e03b66159",
       "kernel": "lanczos3"
@@ -720,6 +740,10 @@
       "logo": "/logos/cemetery/eura.png"
     },
     {
+      "id": "euro3-3a-dao",
+      "logo": "/logos/euro3-3a-dao.webp"
+    },
+    {
       "id": "euroe-membrane",
       "logo": "/logos/98-euroe.png"
     },
@@ -766,6 +790,10 @@
     {
       "id": "gyen-gyen",
       "logo": "/logos/122-gyen.png"
+    },
+    {
+      "id": "home-homecoin",
+      "logo": "/logos/home-homecoin.png"
     },
     {
       "id": "husd-husd-2022-10",
@@ -1082,6 +1110,14 @@
     {
       "id": "yusd-yusd-stablecoin-2023-12",
       "logo": "/logos/cemetery/yusd.png"
+    },
+    {
+      "id": "zeusd-zoth",
+      "logo": "/logos/225-zeusd.webp"
+    },
+    {
+      "id": "zkusd-goal3",
+      "logo": "/logos/zkusd-goal3.png"
     },
     {
       "id": "zusd-gmo-zusd-2025-06",

@@ -53,7 +53,7 @@ const GENERATED_BY = "scripts/maintenance/build-cemetery-logo-atlas.ts";
 const REFRESH_COMMAND = "npm run logos:cemetery-atlas";
 
 /** Bump when rendering or layout logic changes so the signature rotates. */
-export const ATLAS_GENERATOR_VERSION = 1;
+export const ATLAS_GENERATOR_VERSION = 2;
 
 /**
  * Cell edge in device pixels. The atlas serves logos drawn at ~12-40 CSS px
@@ -73,9 +73,13 @@ export const ATLAS_CELL_SIZE = 48;
  */
 export const ATLAS_CELL_GUTTER = 2;
 
-/** Measured at 48 px: q75/a100 142 KB, q70/a80 129 KB; the lower setting leaves headroom for new rows. */
+/**
+ * Measured at 48 px: q75/a100 142 KB, q70/a80 129 KB in the original cohort.
+ * The 2026-10-31 freeze batch took the atlas to 153.7 KB at q70, so q66 holds
+ * the 125-row atlas at 148.7 KB under the 150 KB budget.
+ */
 export const ATLAS_WEBP_OPTIONS = {
-  quality: 70,
+  quality: 66,
   alphaQuality: 80,
   effort: 6,
 } as const;

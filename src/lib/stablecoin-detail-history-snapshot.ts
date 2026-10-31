@@ -2,6 +2,7 @@ import type { StablecoinMeta } from "@shared/types";
 import type { DepegEventEntry } from "@shared/types/market";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
 import {
   readDepegLedgerCapture,
@@ -69,7 +70,7 @@ export interface StablecoinDetailHistorySnapshot {
   capturedFrom: number;
   capturedAt: number;
   methodologyVersion: string;
-  /** Full per-coin retained count, before the display slice. */
+  /** Full per-coin retained event count excluding reviewed disputes, before the display slice. */
   recordedCount: number;
   earliestStartedAt: number;
   latestStartedAt: number;
@@ -237,7 +238,7 @@ export function buildStablecoinDetailHistorySnapshot({
     capturedFrom: admittedLedger.observationStartedAt,
     capturedAt: admittedLedger.observedAt,
     methodologyVersion: admittedLedger.capture.methodologyVersionLabel,
-    recordedCount: coinEntries.length,
+    recordedCount: coinEntries.filter((entry) => !isDisputedAuditVerdict(entry.provenance?.auditVerdict)).length,
     earliestStartedAt: ordered[ordered.length - 1].startedAt,
     latestStartedAt: ordered[0].startedAt,
     coverage: HISTORY_SNAPSHOT_COVERAGE,

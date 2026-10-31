@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.42",
+    "title": "Public depeg counts exclude disputed rows; retired coins are marked",
+    "date": "2026-10-31",
+    "effectiveAt": 1793491200,
+    "summary": "Published depeg event counts exclude rows whose ledger verdict is disputed or false_positive, and rows for coins retired from the catalog stay public with a retired marker.",
+    "impact": [
+      "API totals, archive and history figures, the detail-page retained count, digest and OG counters and the social capture exclude rows in DISPUTED_AUDIT_VERDICTS; the rows stay listed with their Disputed badge, and a null or unknown verdict keeps counting. PegScore scoring and its eventCount diagnostic are unchanged.",
+      "Public depeg rows for ids no longer in the tracked catalog carry retired: true, the depeg-history datasets add a retired column, and the archive shows a Retired pill. No row is deleted or filtered.",
+      "Detection, thresholds and DEWS are unchanged. Activation is 2026-11-01 00:00 UTC (1793491200)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.41",
     "title": "Implausible native-currency quotes are withheld from live admission",
     "date": "2026-10-31",

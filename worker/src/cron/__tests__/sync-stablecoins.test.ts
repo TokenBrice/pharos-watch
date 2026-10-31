@@ -195,6 +195,58 @@ describe("syncStablecoins", () => {
       .toMatchObject({ price: 1, priceSource: "coingecko+defillama-list", priceConfidence: "single-source" });
   });
 
+  it("publishes an uncorroborated DefiLlama list fill default as unavailable", async () => {
+    const data = makeDlResponse(60);
+    const fillDefault = 0.9990120985638516;
+    for (let index = 0; index < 5; index += 1) {
+      Object.assign(data.peggedAssets[index], { price: fillDefault });
+    }
+    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
+    const db = makeSyncDb();
+    const writes = trackCacheWrites(db);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFetchWithRetry(defaultSyncRoutes(data));
+    await syncStablecoins(db);
+    const asset = publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether");
+    expect(asset).toMatchObject({ price: null, priceSource: "missing" });
+    expect(asset).not.toHaveProperty("priceListFillDefault");
+    expect(warnSpy.mock.calls.some((call) => call.some((arg) =>
+      typeof arg === "string" && arg.includes("list_fill_default_requires_corroboration")))).toBe(true);
+  });
+
+  it("covers a fill default the DefiLlama list attributes to coingecko", async () => {
+    const data = makeDlResponse(60);
+    const fillDefault = 0.9990120985638516;
+    for (let index = 0; index < 5; index += 1) {
+      Object.assign(data.peggedAssets[index], { price: fillDefault });
+    }
+    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", priceSource: "coingecko", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
+    const db = makeSyncDb();
+    const writes = trackCacheWrites(db);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockFetchWithRetry(defaultSyncRoutes(data));
+    await syncStablecoins(db);
+    expect(publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether"))
+      .toMatchObject({ price: null, priceSource: "missing" });
+    expect(warnSpy.mock.calls.some((call) => call.some((arg) =>
+      typeof arg === "string" && arg.includes("list_fill_default_requires_corroboration")))).toBe(true);
+  });
+
+  it("keeps a list value shared by only four wrapped variants admitted", async () => {
+    const data = makeDlResponse(60);
+    const sharedVariantPrice = 0.999520515794015;
+    for (let index = 0; index < 4; index += 1) {
+      Object.assign(data.peggedAssets[index], { price: sharedVariantPrice });
+    }
+    Object.assign(data.peggedAssets[0], { id: "usdt-tether", name: "Tether", symbol: "USDT", priceSource: "defillama", priceConfidence: "single-source", circulating: { peggedUSD: 100_000_000 } });
+    const db = makeSyncDb();
+    const writes = trackCacheWrites(db);
+    mockFetchWithRetry(defaultSyncRoutes(data));
+    await syncStablecoins(db);
+    expect(publishedAssets(writes).find((candidate) => candidate.id === "usdt-tether"))
+      .toMatchObject({ price: sharedVariantPrice, priceSource: "defillama", priceConfidence: "single-source" });
+  });
+
   it("returns immediately when the stablecoins CAS loses to a newer writer", async () => {
     const db = makeSyncDb([{ match: "INSERT INTO cache", rows: [], runMeta: { changes: 0 } }]);
     mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));

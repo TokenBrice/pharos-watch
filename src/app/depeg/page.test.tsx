@@ -2,8 +2,18 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
-import DepegPage from "./page";
+import DepegPage, { metadata } from "./page";
 
+const { EVENTS } = vi.hoisted(() => ({
+  EVENTS: [
+    { slug: "disputed", provenance: { auditVerdict: "disputed" } },
+    { slug: "false-positive", provenance: { auditVerdict: "false_positive" } },
+    { slug: "confirmed", provenance: { auditVerdict: "confirmed" } },
+    { slug: "legacy", provenance: null },
+  ],
+}));
+
+vi.mock("@/lib/depeg-event-page-data", () => ({ DEPEG_EVENT_ENTRIES: EVENTS }));
 vi.mock("./client", () => ({ DepegClient: () => <div>depeg client</div>, default: () => <div>depeg client</div> }));
 vi.mock("./depeg-event-archive", () => ({ DepegEventArchivePreview: () => null }));
 
@@ -22,6 +32,10 @@ describe("depeg FAQ pending confirmation", () => {
     expect(entry?.acceptedAnswer.text).toBe(ANSWER);
     expect(html).toContain(ANSWER.replace(/'/g, "&#x27;"));
     expect(html).not.toMatch(/opens events immediately|rejects the pending incident instead/);
+  });
+
+  it("describes only non-disputed recorded events in the route metadata", () => {
+    expect(metadata.description).toContain("2 recorded depeg events");
   });
 
   it("keeps the contextual help line consistent with the FAQ minimum", () => {

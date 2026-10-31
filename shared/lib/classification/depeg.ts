@@ -71,6 +71,16 @@ export const DEPEG_AUDIT_DISPUTED_BADGE = {
 } as const;
 
 /**
+ * A permanent archive row whose coin is absent from the tracked catalog keeps
+ * its history with a Retired badge. Colour and label only: the pill's layout
+ * stays at the call site.
+ */
+export const DEPEG_ARCHIVE_RETIRED_BADGE = {
+  label: "Retired",
+  className: "border-slate-500/30 bg-slate-500/10 text-slate-700 dark:text-slate-400",
+} as const;
+
+/**
  * What the latest trusted observation says about an open confirmed incident.
  * An open lifecycle record is not proof the coin is off peg now, and an at-par
  * reading is not recovery until detection confirms it.

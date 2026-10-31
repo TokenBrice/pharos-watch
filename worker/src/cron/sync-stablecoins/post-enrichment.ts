@@ -368,6 +368,7 @@ export async function runPostEnrichmentPricePipeline(
           validationContext: validationContexts.get(asset),
           validationReferences,
           previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+          listFillDefault: asset.priceListFillDefault ?? null,
         });
         if (!decision.accepted) {
           priceObservationEffectiveness.publication.policyRejected++;
@@ -410,6 +411,7 @@ export async function runPostEnrichmentPricePipeline(
         validationContext: validationContexts.get(asset),
         validationReferences,
         previousTrustedPrice: previousTrustedPrices?.get(asset.id) ?? null,
+        listFillDefault: asset.priceListFillDefault ?? null,
       });
       if (!decision.accepted) continue;
 

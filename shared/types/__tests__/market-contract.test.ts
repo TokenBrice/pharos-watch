@@ -138,6 +138,11 @@ describe("depeg chronology contract", () => {
     expect(DepegEventSchema.safeParse({ ...baseEvent, startedAt: -1 }).success).toBe(false);
   });
 
+  it("accepts the optional catalog-retirement marker without requiring it", () => {
+    expect(DepegEventSchema.parse({ ...baseEvent, retired: true }).retired).toBe(true);
+    expect(DepegEventSchema.parse(baseEvent)).not.toHaveProperty("retired");
+  });
+
   it("parses every current build-time archive row under the chronology contract", () => {
     const archiveDir = join("data", "depeg-events");
     expect(existsSync(archiveDir)).toBe(true);

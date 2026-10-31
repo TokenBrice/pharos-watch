@@ -300,7 +300,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "depeg-events",
     summary: "Depeg incidents",
-    description: "Historical and active depeg incidents with constituent threshold-crossing counts, filterable by asset, state, and review verdict. `total`/optional `totalExact` replace `counts`; sum `constituentEventCount` across pages for threshold-crossing totals. Audit verdicts (2026-09-28): confirmed/repaired/false_positive/disputed/no_data/null; unknowns rejected. v6.31 optional `priceCoverage`: off-peg `intervals` and `atParIntervals` ([startSec,endSec][]), nullable-second `lastTrustedObservationAt`/`gapStartedAt`, three-state `lastObservationKind`. Unrecorded spans are unknown. Open legacy null/absent coverage is unknown; closed legacy/replay durations are retained.",
+    description: "Historical and active depeg incidents with constituent threshold-crossing counts, filterable by asset, state, and review verdict. `total` excludes reviewed disputed/false_positive provenance rows while `events` still lists them; null or unknown verdicts count. `total`/optional `totalExact` replace `counts`; sum `constituentEventCount` across pages for threshold-crossing totals, excluding reviewed disputes. Audit verdicts (2026-09-28): confirmed/repaired/false_positive/disputed/no_data/null; unknowns rejected. v6.31 optional `priceCoverage`: off-peg `intervals` and `atParIntervals` ([startSec,endSec][]), nullable-second `lastTrustedObservationAt`/`gapStartedAt`, three-state `lastObservationKind`. Unrecorded spans are unknown. Open legacy null/absent coverage is unknown; closed legacy/replay durations are retained.",
     tags: ["Peg Monitoring"],
     responseSchema: "DepegEventsResponse",
     parameters: [

@@ -120,6 +120,23 @@ async function makeCaptureDir(entries: readonly DepegEventEntry[], captureOverri
 }
 
 describe("stablecoin detail history snapshot", () => {
+  it("counts only non-disputed archived incidents while still displaying the disputed rows", () => {
+    const entries = [
+      makeEntry({ id: 1, provenance: { auditVerdict: "disputed" } }),
+      makeEntry({ id: 2, provenance: { auditVerdict: "false_positive" } }),
+      makeEntry({ id: 3, provenance: { auditVerdict: "confirmed" } }),
+      makeEntry({ id: 4, provenance: null }),
+    ];
+    const snapshot = build(entries);
+
+    expect(snapshot).not.toBeNull();
+    expect(snapshot!.recordedCount).toBe(2);
+    expect(snapshot!.events.map((event) => event.id)).toEqual([4, 3, 2, 1]);
+    expect(snapshot!.events.map((event) => event.provenance?.auditVerdict)).toEqual([
+      undefined, "confirmed", "false_positive", "disputed",
+    ]);
+  });
+
   it("keeps the full per-coin ledger total while displaying the newest six", () => {
     const entries = Array.from({ length: 8 }, (_, index) => makeEntry({
       id: index + 1,

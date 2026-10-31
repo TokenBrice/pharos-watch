@@ -3,7 +3,13 @@ import {
   getPricingSourceRegistryEntry,
   isPricingSourceSoftGuardrailExempt,
 } from "@shared/lib/pricing-source-registry";
-import { FIXED_PEG_SEVERE_DOWNSIDE_RATIO, hasDepegAuthoritativeSource, isUncorroboratedDefiLlamaReferenceQuote } from "@shared/lib/pricing-source-policy";
+import {
+  FIXED_PEG_SEVERE_DOWNSIDE_RATIO,
+  hasDepegAuthoritativeSource,
+  isUncorroboratedDefiLlamaListFillQuote,
+  isUncorroboratedDefiLlamaReferenceQuote,
+  type DefiLlamaListFillDefaultQuote,
+} from "@shared/lib/pricing-source-policy";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
 import { getReferencePriceForContext, isFixedPegContext, isSevereFixedPegDownside, validatePriceCandidate, type PriceValidationContext, type PriceValidationDecision, type PriceValidationReferences } from "./price-validation";
 import type { PriceConfidence, PriceObservedAtMode } from "@shared/types/core";
@@ -43,6 +49,8 @@ export interface PublishablePriceInput {
   validationContext: PriceValidationContext;
   validationReferences?: PriceValidationReferences;
   previousTrustedPrice?: TrustedPriceReference | null;
+  /** Per-response DefiLlama list fill-default marker carried from intake. */
+  listFillDefault?: DefiLlamaListFillDefaultQuote | null;
 }
 
 export interface PriceAssetPublicationLike {
@@ -266,6 +274,16 @@ function evaluatePriceForPublication(input: PublishablePriceInput): PricePublica
     return { ...base, accepted: false, reason: "exact_par_list_price_requires_corroboration", gates: ["price-validation", "exact-par-list-corroboration"] };
   }
 
+  if (isUncorroboratedDefiLlamaListFillQuote({
+    price: input.price,
+    fillDefault: input.listFillDefault,
+    sources: input.agreeSources && input.agreeSources.length > 0
+      ? input.agreeSources
+      : sourceParts(input.source),
+  })) {
+    return { ...base, accepted: false, reason: "list_fill_default_requires_corroboration", gates: ["price-validation", "list-fill-default-corroboration"] };
+  }
+
   if (!allowsSevereDownsidePublication(input)) {
     return { ...base, accepted: false, reason: "severe_downside_requires_corroboration", gates: ["price-validation", "severe-downside-corroboration"] };
   }
@@ -312,6 +330,7 @@ export function validatePublishedAssetPrice(input: {
     priceSource?: string | null;
     priceConfidence?: PriceConfidence | null;
     agreeSources?: string[];
+    priceListFillDefault?: DefiLlamaListFillDefaultQuote | null;
   };
   candidatePrices?: Record<string, number>;
   validationContext: PriceValidationContext;
@@ -328,5 +347,6 @@ export function validatePublishedAssetPrice(input: {
     validationContext: input.validationContext,
     validationReferences: input.validationReferences,
     previousTrustedPrice: input.previousTrustedPrice,
+    listFillDefault: input.asset.priceListFillDefault ?? null,
   });
 }

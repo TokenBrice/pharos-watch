@@ -974,6 +974,37 @@ describe("depeg OG handler aggregation", () => {
     expect(markup).not.toContain("-5000 bps</span>");
   });
 
+  it("excludes reviewed disputes from the OG active, recovered and new-today counts", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const open = (stablecoin_id: string, symbol: string, audit_verdict: string | null) => ({
+      stablecoin_id, symbol, direction: "below", peak_deviation_bps: -500, peg_reference: 1,
+      peg_type: "peggedUSD", source: "live", started_at: now - 60, start_price: 0.995, audit_verdict,
+    });
+    const closed = (audit_verdict: string | null) => ({
+      ended_at: now - 60, close_reason: "recovered-primary", recovery_price: 1, audit_verdict,
+    });
+    const data = await captureDepegData(mockD1([
+      { match: "FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "stability_index_samples", rows: [], first: null },
+      { match: "stress_signals", rows: [] },
+      { match: "peak_deviation_bps", rows: [
+        open("usdt-tether", "USDT", "confirmed"),
+        open("usdc-circle", "USDC", "disputed"),
+        open("dai-makerdao", "DAI", "false_positive"),
+        open("usds-sky", "USDS", null),
+      ] },
+      { match: "ended_at IS NOT NULL", rows: [
+        closed("confirmed"), closed("disputed"), closed("false_positive"), closed(null),
+      ] },
+      { match: "started_at >", rows: [], first: { count: 2 } },
+    ]));
+
+    expect(data.activeDepegCount).toBe(2);
+    expect(data.activeDepegs.map((row) => row.symbol)).toEqual(["USDT", "USDS"]);
+    expect(data.recoveredToday).toBe(2);
+    expect(data.newToday).toBe(2);
+  });
+
   it("withholds the at-peg statistic and PSI when observations are absent instead of clamping cohorts", async () => {
     const db = mockD1([
       { match: "FROM cache WHERE key = ?", rows: [], first: null },

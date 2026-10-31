@@ -264,7 +264,12 @@ Retained bodies without the additive field show “maturing unavailable,” not 
 - `/depeg/archive/` is the complete server-rendered internal link hub for every permanent event page.
   A row whose ledger provenance `auditVerdict` is `disputed` or `false_positive` carries a small
   `Disputed` badge with no sub-text; every other verdict, and a legacy null provenance, stays unbadged.
-  `DISPUTED_AUDIT_VERDICTS` in `shared/types/depeg-audit.ts` owns that set.
+  `DISPUTED_AUDIT_VERDICTS` in `shared/types/depeg-audit.ts` owns that set. Public event counts — the archive
+  preview's month total, the route description's recorded-event total, the retained-ledger preview count, the
+  detail-history Incidents figure and its threshold-crossing total — exclude those disputed rows while keeping
+  them listed; a null or unknown verdict keeps counting (R2).
+  A row whose coin is absent from the tracked catalog carries a small `Retired` badge with no sub-text;
+  such rows stay listed as history (`DEPEG_ARCHIVE_RETIRED_BADGE` in `shared/lib/classification/depeg.ts`).
 
 Indexability does not depend on the inline archive: `generateStaticParams()` in
 `src/app/depeg/[event]/page.tsx`, the per-event entries in `src/app/sitemap.ts`, and the archive

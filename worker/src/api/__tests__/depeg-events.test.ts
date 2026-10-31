@@ -67,6 +67,25 @@ describe("handleDepegEvents", () => {
     expect(body.events).toHaveLength(1);
   });
 
+  it("marks a row whose coin left the catalog as retired and leaves catalog rows unmarked", async () => {
+    const db = mockD1([
+      { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
+      { match: "pharos:depeg-events:count", rows: [{ total: 2 }] },
+      {
+        match: "depeg_events",
+        rows: [
+          makeDepegRow({ id: 1, stablecoin_id: "bean-beanstalk", symbol: "BEAN" }),
+          makeDepegRow({ id: 2, stablecoin_id: "usdt-tether", symbol: "USDT" }),
+        ],
+      },
+    ]);
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
+    const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
+    const byId = new Map(body.events.map((event) => [event.id, event]));
+    expect(byId.get(1)?.retired).toBe(true);
+    expect(byId.get(2)).not.toHaveProperty("retired");
+  });
+
   function seedIncident(firstId: number, currentId: number, eventIds: number[], linkIds = [firstId, currentId]) {
     const { sqlite, db } = fixtures.open();
     const key = `ddr2:${"a".repeat(32)}`;

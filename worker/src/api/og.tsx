@@ -47,6 +47,8 @@ import { isSafetyScoreV9SnapshotFresh, SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } fr
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
+import { notDisputedAuditVerdictSql } from "../lib/depeg-audit";
 import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../lib/current-peg-observations";
 import { getDepegThresholdBps } from "../lib/constants";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
@@ -643,7 +645,7 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
       .first<{ score: number; band: string; stored_at: number }>(),
     loadStressSignalCurrentRows(db, now, { staleAfterSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC }),
     db.prepare(`SELECT e.stablecoin_id, e.symbol, e.direction, e.peak_deviation_bps, e.peg_reference,
-                       e.peg_type, e.source, e.started_at, e.start_price, p.quote_mode,
+                       e.peg_type, e.source, e.started_at, e.start_price, p.quote_mode, p.audit_verdict,
                        nq.value AS current_native_quote
                 FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
                 LEFT JOIN cache nq ON nq.key = '${NATIVE_EVENT_QUOTE_CACHE_PREFIX}' || e.id
@@ -651,12 +653,21 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
       .all<NativeEventPriceEvidence & {
         stablecoin_id: string; symbol: string; direction: "above" | "below";
         peak_deviation_bps: number; current_native_quote: string | null;
+        audit_verdict: string | null;
       }>(),
-    db.prepare(`SELECT ended_at, close_reason, recovery_price FROM depeg_events
-                WHERE ended_at IS NOT NULL AND ended_at > ?`)
-      .bind(oneDayAgo).all<{ ended_at: number; close_reason: string | null; recovery_price: number | null }>(),
-    db.prepare("SELECT COUNT(*) as count FROM depeg_events WHERE started_at > ?")
-      .bind(oneDayAgo).first<{ count: number }>(),
+    db.prepare(`SELECT e.ended_at, e.close_reason, e.recovery_price, p.audit_verdict
+                FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+                WHERE e.ended_at IS NOT NULL AND e.ended_at > ?`)
+      .bind(oneDayAgo).all<{
+        ended_at: number; close_reason: string | null; recovery_price: number | null; audit_verdict: string | null;
+      }>(),
+    (() => {
+      const newTodayAudit = notDisputedAuditVerdictSql("p.audit_verdict");
+      return db.prepare(`SELECT COUNT(*) as count
+                FROM depeg_events e LEFT JOIN depeg_event_provenance p ON p.event_id = e.id
+                WHERE e.started_at > ? AND ${newTodayAudit.sql}`)
+        .bind(oneDayAgo, ...newTodayAudit.binds).first<{ count: number }>();
+    })(),
   ]);
   const dewsDistribution = { danger: 0, alert: 0, warning: 0, watch: 0, normal: 0 };
   for (const row of stressRows.results ?? []) {
@@ -691,7 +702,7 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     if (observation.currentSignal && !signalCrossesThreshold(observation.currentSignal, getDepegThresholdBps(asset?.pegType))) coinsAtPeg++;
   }
   const eligibleEvents = (openEvents.results ?? []).filter((row) =>
-    ACTIVE_IDS.has(row.stablecoin_id) && !FROZEN_IDS.has(row.stablecoin_id));
+    ACTIVE_IDS.has(row.stablecoin_id) && !FROZEN_IDS.has(row.stablecoin_id) && !isDisputedAuditVerdict(row.audit_verdict));
   const openEventById = new Map<string, (typeof eligibleEvents)[number]>();
   for (const row of eligibleEvents) {
     const existing = openEventById.get(row.stablecoin_id);
@@ -726,6 +737,7 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     return Math.abs(b.deviationBps) - Math.abs(a.deviationBps);
   }).slice(0, 5);
   const recoveredToday = (closedEvents.results ?? []).filter((row) => {
+    if (isDisputedAuditVerdict(row.audit_verdict)) return false;
     const closure = classifyDepegClosure({ endedAt: row.ended_at, closeReason: row.close_reason, recoveryPrice: row.recovery_price });
     return closure === "recovered" || closure === "legacy_recovered";
   }).length;

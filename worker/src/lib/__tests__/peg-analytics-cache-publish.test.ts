@@ -24,7 +24,7 @@ const TODAY_START_SEC = Math.floor(NOW_SEC / DAY_SECONDS) * DAY_SECONDS;
 const pegRow = { id: "usdt-tether" } as unknown as PegSummaryCoin;
 
 function snapshot(
-  allEvents: Array<{ stablecoinId: string; startedAt: number }>,
+  allEvents: Array<{ stablecoinId: string; startedAt: number; provenance?: { auditVerdict: string } | null }>,
   nowSec = NOW_SEC,
 ) {
   return {
@@ -65,6 +65,10 @@ describe("publishPegAnalyticsCache", () => {
         { stablecoinId: "usdt-tether", startedAt: TODAY_START_SEC - DAY_SECONDS - 60 },
         // NAV tokens have no fixed peg and never enter the depeg counters.
         { stablecoinId: "scrvusd-curve", startedAt: TODAY_START_SEC + 60 },
+        // Reviewed disputes are not public event counts; a null verdict keeps counting.
+        { stablecoinId: "usdt-tether", startedAt: TODAY_START_SEC + 120, provenance: { auditVerdict: "disputed" } },
+        { stablecoinId: "usdt-tether", startedAt: TODAY_START_SEC - 120, provenance: { auditVerdict: "false_positive" } },
+        { stablecoinId: "usdt-tether", startedAt: TODAY_START_SEC + 180, provenance: null },
       ]),
     );
 
@@ -74,7 +78,7 @@ describe("publishPegAnalyticsCache", () => {
     expect(setCacheIfNewerMock.mock.calls[0]![3]).toBe(NOW_SEC);
     expect(JSON.parse(setCacheIfNewerMock.mock.calls[0]![2])).toEqual({
       computedAtSec: NOW_SEC,
-      depegEventsToday: 1,
+      depegEventsToday: 2,
       depegEventsYesterday: 1,
       pegData: [pegRow],
     });

@@ -438,6 +438,8 @@ Shared Depeg/DEWS v6.33 admits the nearest positive-TVL weekly DEX-history row w
 
 Shared Depeg/DEWS v6.34 keeps native/USD quote domains comparable, excludes rejected pool peaks and applies the opposing-group vote even to the single-$5M-pool exception. Historical floors use USD-valued supply and at-peg classification uses raw trigger precision. Trusted DEX-only divergence remains score-bearing; stale or invalid foundational stablecoins or retained PSI evidence holds accepted publication. Canonical projection failures withhold recomputation, complete eligible history underpins Worst Depeg, and historical diagnostics disclose unevaluable events and partial coverage. Input changes can move event histories and DEWS scores/bands; weights and numeric thresholds are unchanged.
 
+Shared Depeg/DEWS v6.42 excludes disputed and false-positive rows from published depeg event counts while keeping them listed with their badge, and marks rows for coins retired from the catalog instead of dropping them.
+
 Shared Depeg/DEWS v6.41 withholds a native-currency quote at or above its peg reference band, or 50% or more from par without an independent same-direction family, as unavailable evidence: it can no longer open, confirm, veto or recover a depeg.
 
 DEWS mint/burn inputs use complete 24-hour and 30-day windows at the published common closed-hour watermark, including explicitly admitted legacy pre-cutover windows with their weaker assurance. Both windows and dirty-hour checks share that end; original-window freshness and valuation gates remain. Restored evidence can change scores and bands in either direction without changing formulas or weights; unavailable evidence is never calm.

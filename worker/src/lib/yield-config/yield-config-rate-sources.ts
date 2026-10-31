@@ -229,12 +229,6 @@ const INTENTIONAL_GAP_REASONS_TYPED: Record<string, YieldAdapterLifecycleReason>
     nextReviewAt: "2026-09-12",
     note: "2026-08-12 review: the official Hive RPC exposes the protocol-set hbd_interest_rate through dynamic global properties, but Pharos has no reviewed Hive savings-rate adapter or freshness contract yet; keep uncovered until that reusable reader is implemented",
   },
-  "home-homecoin": {
-    code: "issuer-distributed-yield",
-    since: "2026-05-22",
-    nextReviewAt: "2026-10-09",
-    note: "2026-07-09 review: keep intentional gap for issuer-distributed home-loan payment yield; no public runtime APY feed is wired or confirmed for holder-rate resolution",
-  },
   "gusd-gate": {
     code: "off-chain-account-product",
     since: "2026-04-14",

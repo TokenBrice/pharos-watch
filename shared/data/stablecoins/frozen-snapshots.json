@@ -2171,5 +2171,233 @@
       "chainCirculating": {},
       "chains": []
     }
+  },
+  {
+    "id": "zeusd-zoth",
+    "capturedAt": "2026-10-31T15:29:39.254Z",
+    "peggedAssetRow": {
+      "id": "zeusd-zoth",
+      "name": "Zoth ZeUSD",
+      "symbol": "ZeUSD",
+      "geckoId": "zeusd",
+      "pegType": "peggedUSD",
+      "pegMechanism": "fiat-backed",
+      "price": null,
+      "priceSource": "missing",
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 27627177.026717648
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 27627177.026717648
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 27627177.026717648
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 27627177.026717648
+      },
+      "chainCirculating": {
+        "Metis": {
+          "current": 226724.2625149787,
+          "circulatingPrevDay": 226724.2625149787,
+          "circulatingPrevWeek": 226724.2625149787,
+          "circulatingPrevMonth": 226724.2625149787
+        },
+        "Ethereum": {
+          "current": 25378407.386007644,
+          "circulatingPrevDay": 25378407.386007644,
+          "circulatingPrevWeek": 25378407.386007644,
+          "circulatingPrevMonth": 25378407.386007644
+        },
+        "Manta": {
+          "current": 2021985.4650438991,
+          "circulatingPrevDay": 2021985.4650438991,
+          "circulatingPrevWeek": 2021985.4650438991,
+          "circulatingPrevMonth": 2021985.4650438991
+        },
+        "Avalanche": {
+          "current": 59.91315112995937,
+          "circulatingPrevDay": 59.91315112995937,
+          "circulatingPrevWeek": 59.91315112995937,
+          "circulatingPrevMonth": 59.91315112995937
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Manta",
+        "Metis",
+        "Avalanche"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+          "decimals": 6
+        },
+        {
+          "chain": "manta",
+          "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+          "decimals": 6
+        },
+        {
+          "chain": "metis",
+          "address": "0x2d3d1a6982840dd88bc2380fd557f8a9d5e27a77",
+          "decimals": 6
+        },
+        {
+          "chain": "avalanche",
+          "address": "0x7dc9748da8e762e569f9269f48f69a1a9f8ea761",
+          "decimals": 6
+        }
+      ]
+    }
+  },
+  {
+    "id": "home-homecoin",
+    "capturedAt": "2026-10-31T15:29:42.161Z",
+    "peggedAssetRow": {
+      "id": "home-homecoin",
+      "name": "HomeCoin",
+      "symbol": "HOME",
+      "geckoId": null,
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": null,
+      "priceSource": "missing",
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 6062715.506706585
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 6062715.506706585
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 6062715.506706585
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 6062715.506706585
+      },
+      "chainCirculating": {
+        "Ethereum": {
+          "current": 6062715.506706585,
+          "circulatingPrevDay": 6062715.506706585,
+          "circulatingPrevWeek": 6062715.506706585,
+          "circulatingPrevMonth": 6062715.506706585
+        }
+      },
+      "chains": [
+        "Ethereum"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xb8919522331c59f5c16bdfaa6a121a6e03a91f62",
+          "decimals": 6
+        }
+      ]
+    }
+  },
+  {
+    "id": "zkusd-goal3",
+    "capturedAt": "2026-10-31T15:29:42.888Z",
+    "peggedAssetRow": {
+      "id": "zkusd-goal3",
+      "name": "zkUSD Dollar",
+      "symbol": "zkUSD",
+      "geckoId": null,
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": null,
+      "priceSource": "missing",
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 1178299.3616264453
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 1178299.3616264453
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 1178299.3616264453
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 1178299.3616264453
+      },
+      "chainCirculating": {
+        "ZKsync Era": {
+          "current": 1178299.3616264453,
+          "circulatingPrevDay": 1178299.3616264453,
+          "circulatingPrevWeek": 1178299.3616264453,
+          "circulatingPrevMonth": 1178299.3616264453
+        }
+      },
+      "chains": [
+        "ZKsync Era"
+      ],
+      "contracts": [
+        {
+          "chain": "zksync",
+          "address": "0xfc7e56298657b002b3e656400e746b7212912757",
+          "decimals": 6
+        }
+      ]
+    }
+  },
+  {
+    "id": "euro3-3a-dao",
+    "capturedAt": "2026-10-31T15:29:43.698Z",
+    "peggedAssetRow": {
+      "id": "euro3-3a-dao",
+      "name": "EURO3",
+      "symbol": "EURO3",
+      "geckoId": null,
+      "pegType": "peggedEUR",
+      "pegMechanism": "crypto-backed",
+      "price": null,
+      "priceSource": "missing",
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedEUR": 22850.704405262222
+      },
+      "circulatingPrevDay": {
+        "peggedEUR": 22850.704405262222
+      },
+      "circulatingPrevWeek": {
+        "peggedEUR": 22850.704405262222
+      },
+      "circulatingPrevMonth": {
+        "peggedEUR": 22850.704405262222
+      },
+      "chainCirculating": {
+        "Linea": {
+          "current": 14385.67247899031,
+          "circulatingPrevDay": 14385.67247899031,
+          "circulatingPrevWeek": 14385.67247899031,
+          "circulatingPrevMonth": 14385.67247899031
+        },
+        "Polygon": {
+          "current": 8465.031926271911,
+          "circulatingPrevDay": 8465.031926271911,
+          "circulatingPrevWeek": 8465.031926271911,
+          "circulatingPrevMonth": 8465.031926271911
+        }
+      },
+      "chains": [
+        "Linea",
+        "Polygon"
+      ],
+      "contracts": [
+        {
+          "chain": "polygon",
+          "address": "0xa0e4c84693266a9d3bbef2f394b33712c76599ab",
+          "decimals": 18
+        },
+        {
+          "chain": "linea",
+          "address": "0x3f817b28da4940f018c6b5c0a11c555ebb1264f9",
+          "decimals": 18
+        }
+      ]
+    }
   }
 ]

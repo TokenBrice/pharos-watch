@@ -95,6 +95,42 @@ describe("daily social source arithmetic", () => {
     const result = buildStabilitySocial([event, { ...event, id: 2, closeReason: "coverage-lost-supply" }, { ...event, id: 3, startedAt: now - 30 * 86400, endedAt: null }], base);
     expect(result.rows.map((row) => row.value)).toEqual([2, 1, 1]);
   });
+  it("excludes reviewed disputes from the weekly incident counts", () => {
+    const event = { id: 1, startedAt: now - 86400, endedAt: now - 60, peakDeviationBps: 150, closeReason: "recovered-primary" } as DepegEvent;
+    const result = buildStabilitySocial([
+      event,
+      { ...event, id: 2, provenance: { auditVerdict: "disputed" } },
+      { ...event, id: 3, provenance: { auditVerdict: "false_positive" } },
+      { ...event, id: 4, provenance: { auditVerdict: "confirmed" } },
+      { ...event, id: 5, startedAt: now - 30 * 86400, endedAt: null, closeReason: null, provenance: null },
+    ], base);
+    expect(result.rows.map((row) => row.value)).toEqual([2, 2, 1]);
+  });
+
+  it("accepts an archive total that excludes disputed rows the listing carries", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "fixture");
+    try {
+      const depegEvent = {
+        id: 1, stablecoinId: "a", symbol: "A", pegType: "peggedUSD", direction: "below" as const,
+        peakDeviationBps: 150, startedAt: now - 86400, endedAt: now - 60, startPrice: 0.99,
+        peakPrice: 0.985, recoveryPrice: 1, pegReference: 1, source: "live" as const,
+        confirmationSources: null, pendingReason: null, closeReason: "recovered-primary", provenance: null,
+      };
+      const fetcher = vi.fn(async (url: string | URL | Request) => new Response(JSON.stringify(
+        String(url).includes("stablecoins")
+          ? { peggedAssets: [asset("a", 20e6, 10e6)], _meta: { updatedAt: now, status: "fresh" } }
+          : {
+              events: [depegEvent, { ...depegEvent, id: 2, provenance: { auditVerdict: "disputed" } }],
+              total: 1, totalExact: true, nextCursor: null,
+            },
+      ), { headers: { "x-data-age": "0" } }));
+      const result = await captureDailySocial("stability", base, now, fetcher);
+      expect(result.rows.map((row) => row.value)).toEqual([1, 1, 0]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it.each([
     ["recovered-primary", null, 1],
     ["recovered-dex", null, 1],
