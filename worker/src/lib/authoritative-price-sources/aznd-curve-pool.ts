@@ -75,7 +75,8 @@ export async function fetchAzndCurvePoolPrice(
   );
   if (!quoteParent) return null;
 
-  const rpcOptions = { signal, extraRpcUrls: getPublicFallbackRpcUrls(CHAIN) };
+  // Configured Worker RPCs first; public endpoints are only the fallback tail.
+  const rpcOptions = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls(CHAIN) };
   const blockNumber = await fetchEvmBlockNumber(CHAIN, rpcOptions);
   if (blockNumber == null) return null;
   const blockTimestamp = await fetchEvmBlockTimestamp(CHAIN, blockNumber, rpcOptions);

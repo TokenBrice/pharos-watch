@@ -99,7 +99,8 @@ export async function fetchSwanusdCurvePoolPrice(
   // it before spending the block and pool reads.
   if (Math.floor(Date.now() / 1000) - quoteParent.trustedParent.observedAt > MAX_BLOCK_AGE_SEC) return null;
 
-  const rpcOptions = { signal, extraRpcUrls: getPublicFallbackRpcUrls(CHAIN) };
+  // Configured Worker RPCs first; public endpoints are only the fallback tail.
+  const rpcOptions = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls(CHAIN) };
   const blockNumber = await fetchEvmBlockNumber(CHAIN, rpcOptions);
   if (blockNumber == null) return null;
   const blockTimestamp = await fetchEvmBlockTimestamp(CHAIN, blockNumber, rpcOptions);
