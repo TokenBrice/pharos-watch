@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { CANARY_INCIDENT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
@@ -319,6 +320,32 @@ describe("worker data invariant canaries", () => {
       status: "ok",
       metadata: { storedAt: NOW - 60, ageSec: 0 },
     });
+  });
+
+  it("rejects a future-dated PSI sample clock instead of publishing a clamped zero age", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(NOW * 1000));
+    const futureStoredAt = NOW + 3_600;
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(
+      `INSERT INTO stability_index_samples
+         (stored_at, score, band, components, input_snapshot, methodology_version)
+       VALUES (?, 82, 'STABLE', '{"trend":0}', '{}', 'v1')`,
+    ).run(futureStoredAt);
+
+    await runAndPersistCanaryChecks(db, { observedAt: NOW, mode: "status" });
+    const psi = (await loadCanaryStatus(db, NOW, "status")).checks["psi-latest-sample"];
+
+    expect(psi).toMatchObject({
+      status: "degraded",
+      metadata: {
+        storedAt: futureStoredAt,
+        ageSec: null,
+        timestampReason: "future-timestamp",
+        maxAgeSec: CANARY_INCIDENT_MAX_AGE_SEC.stabilityIndex,
+      },
+    });
+    expect(psi?.error).toBe("latest PSI sample clock rejected: future-timestamp");
   });
 
 

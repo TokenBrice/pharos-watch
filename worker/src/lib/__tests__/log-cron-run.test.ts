@@ -256,6 +256,51 @@ describe("logCronRun", () => {
       .toEqual([{ slot_started_at: 1_772_495_700 }]);
   });
 
+  it.each([[true], [false]])(
+    "retains a completed publication when the final scheduled-child owner rewrite fails (awaited report: %s)",
+    async (awaitCompletedReport) => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      let ownerWrites = 0;
+      const { sqlite, db } = createLatestSchemaSqlite({
+        onRun: (sql) => {
+          if (!/UPDATE\s+scheduled_child_attempts\s+SET\s+lease_owner/.test(sql)) return;
+          ownerWrites += 1;
+          // The lease-acquired report already persisted this owner, so the final
+          // rewrite is diagnostic only; its D1 failure must not relabel the run.
+          if (ownerWrites === 3) throw new Error("D1_ERROR: disk I/O error");
+        },
+      });
+      const identity = {
+        scheduleKey: "halfHourlyChartsOffset", slotStartedAt: 1000, job: "sync-dex-liquidity",
+        producerPath: "halfHourlyChartsOffset", producerKind: "scheduled-job" as const, invocationId: "producer",
+        attemptNo: 1, workerVersion: "worker",
+        executionFence: { scheduleKey: "halfHourlyChartsOffset", slotStartedAt: 1000, invocationId: "execution",
+          owner: "owner", generation: 1, workerRole: "public" as const },
+      };
+      sqlite.prepare(`INSERT INTO cron_slot_executions (slot_key,slot_started_at,state,execution_owner,
+        execution_generation,invocation_id,worker_version,started_at,updated_at,child_marker_version)
+        VALUES ('halfHourlyChartsOffset',1000,'running','owner',1,'execution','worker',1000,1000,1)`).run();
+
+      const result = await logCronRun(db, identity.job, async (_signal, report) => {
+        await report({ stage: "started", leaseOwner: "lease" });
+        await report({ stage: "lease-acquired", leaseOwner: "lease" });
+        const completed = report({ stage: "completed", leaseOwner: "lease" });
+        if (awaitCompletedReport) await completed;
+        else void completed.catch(() => undefined);
+        return { itemCount: 10, metadata: JSON.stringify({ published: true }) };
+      }, { producer: identity, executionFence: identity.executionFence });
+
+      expect(result).toMatchObject({ itemCount: 10 });
+      expect(sqlite.prepare(
+        "SELECT status, item_count, productive FROM cron_runs WHERE job = ?",
+      ).get(identity.job)).toEqual({ status: "ok", item_count: 10, productive: 1 });
+      expect(sqlite.prepare(
+        "SELECT outcome, productive, item_count FROM worker_producer_history WHERE job = ?",
+      ).get(identity.job)).toEqual({ outcome: "ok", productive: 1, item_count: 10 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cron_run_progress").get()).toEqual({ count: 0 });
+    },
+  );
+
   it("logs abandoned metadata when a timed-out job does not settle", async () => {
     vi.useFakeTimers();
     try {

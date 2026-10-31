@@ -66,7 +66,7 @@ describe("response body cancellation and byte boundaries", () => {
   it("accepts exact UTF-8 byte limits and rejects overflow despite fewer characters", async () => {
     const observe = vi.fn();
     await expect(readResponseTextWithinLimitWithSignal(new Response("éé"), 4, undefined, observe)).resolves.toBe("éé");
-    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 4, declaredBytes: null, outcome: "accepted" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 4, declaredBytes: null, limitBytes: 4, outcome: "accepted" });
     await expect(readResponseTextWithinLimitWithSignal(new Response("éé"), 3)).rejects.toMatchObject({
       name: "ResponseBodyTooLargeError", maxBytes: 3, observedBytes: 4,
     });
@@ -139,19 +139,19 @@ describe("readResponseTextWithinLimitWithSignal", () => {
     await expect(readResponseTextWithinLimitWithSignal(new Response("abcdef", {
       headers: { "Content-Length": "100" },
     }), 5, undefined, observe)).rejects.toMatchObject({ code: "resource-budget-exceeded" });
-    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 0, declaredBytes: 100, outcome: "rejected" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 0, declaredBytes: 100, limitBytes: 5, outcome: "rejected" });
     await expect(readResponseBytesWithinLimitWithSignal(new Response("abcdef", {
       headers: { "Content-Length": "1" },
     }), 5, undefined, observe)).rejects.toMatchObject({ observedBytes: 6 });
-    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 6, declaredBytes: 1, outcome: "rejected" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 6, declaredBytes: 1, limitBytes: 5, outcome: "rejected" });
   });
 
   it("reports intake before JSON decoding and unavailable body-less evidence", async () => {
     const observe = vi.fn();
     await expect(readResponseJsonWithinLimitWithSignal(new Response("{bad"), 4, undefined, observe)).rejects.toBeInstanceOf(SyntaxError);
-    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 4, declaredBytes: null, outcome: "accepted" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 4, declaredBytes: null, limitBytes: 4, outcome: "accepted" });
     await expect(readResponseJsonWithinLimitWithSignal(new Response(null), 20, undefined, observe)).rejects.toBeInstanceOf(SyntaxError);
-    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: null, declaredBytes: null, outcome: "rejected" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: null, declaredBytes: null, limitBytes: 20, outcome: "rejected" });
   });
 
   it("keeps native null bodies empty with unknown intake across transport modes", async () => {
@@ -159,8 +159,8 @@ describe("readResponseTextWithinLimitWithSignal", () => {
     await expect(readResponseBytesWithinLimitWithSignal(new Response(null), 0, undefined, observe)).resolves.toEqual(new Uint8Array(0));
     await expect(readResponseTextWithinLimitWithSignal(new Response(null), 0, undefined, observe)).resolves.toBe("");
     expect(observe.mock.calls.map(([evidence]) => evidence)).toEqual([
-      { intakeBytes: null, declaredBytes: null, outcome: "accepted" },
-      { intakeBytes: null, declaredBytes: null, outcome: "accepted" },
+      { intakeBytes: null, declaredBytes: null, limitBytes: 0, outcome: "accepted" },
+      { intakeBytes: null, declaredBytes: null, limitBytes: 0, outcome: "accepted" },
     ]);
     await expect(readResponseTextBoundedWithSignal(new Response(null), 0)).resolves.toBe("");
   });
@@ -174,9 +174,9 @@ describe("readResponseTextWithinLimitWithSignal", () => {
     await expect(readResponseTextWithinLimitWithSignal(new Response(null, {
       headers: { "Content-Length": "2" },
     }), 1, signal, observe)).rejects.toMatchObject({ name: "ResponseBodyTooLargeError" });
-    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 0, declaredBytes: 2, outcome: "rejected" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 0, declaredBytes: 2, limitBytes: 1, outcome: "rejected" });
     await expect(readResponseTextWithinLimitWithSignal(new Response(null), 0, signal, observe)).rejects.toBe(reason);
-    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: null, declaredBytes: null, outcome: "rejected" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: null, declaredBytes: null, limitBytes: 0, outcome: "rejected" });
     await expect(readResponseTextBoundedWithSignal(new Response(null), 0, signal)).rejects.toBe(reason);
   });
 
@@ -191,8 +191,8 @@ describe("readResponseTextWithinLimitWithSignal", () => {
         await expect(readResponseBytesWithinLimitWithSignal(response, 10, undefined, observe)).rejects.toBeInstanceOf(TypeError);
       }
       expect(observe.mock.calls.map(([evidence]) => evidence)).toEqual([
-        { intakeBytes: 0, declaredBytes: null, outcome: "rejected" },
-        { intakeBytes: 0, declaredBytes: null, outcome: "rejected" },
+        { intakeBytes: 0, declaredBytes: null, limitBytes: 10, outcome: "rejected" },
+        { intakeBytes: 0, declaredBytes: null, limitBytes: 10, outcome: "rejected" },
       ]);
     } finally {
       reader.releaseLock();
@@ -211,7 +211,7 @@ describe("readResponseTextWithinLimitWithSignal", () => {
     await vi.advanceTimersByTimeAsync(0);
     parent.abort(new Error("stop"));
     await rejection;
-    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 3, declaredBytes: null, outcome: "rejected" });
+    expect(observe).toHaveBeenLastCalledWith({ intakeBytes: 3, declaredBytes: null, limitBytes: 5, outcome: "rejected" });
   });
 
   it("caps timeout reads and cancels a stalled stream at the existing deadline", async () => {
@@ -300,11 +300,11 @@ it("preserves null-body, byte-stream and cancellation evidence in workerd", asyn
       emptyBytes: [], emptyText: "", jsonError: "SyntaxError", body: [0, 128, 255],
       originalReason: true, cancelled: true,
       observations: [
-        { intakeBytes: null, declaredBytes: null, outcome: "accepted" },
-        { intakeBytes: null, declaredBytes: null, outcome: "accepted" },
-        { intakeBytes: null, declaredBytes: null, outcome: "rejected" },
-        { intakeBytes: 3, declaredBytes: null, outcome: "accepted" },
-        { intakeBytes: 0, declaredBytes: null, outcome: "rejected" },
+        { intakeBytes: null, declaredBytes: null, limitBytes: 0, outcome: "accepted" },
+        { intakeBytes: null, declaredBytes: null, limitBytes: 0, outcome: "accepted" },
+        { intakeBytes: null, declaredBytes: null, limitBytes: 0, outcome: "rejected" },
+        { intakeBytes: 3, declaredBytes: null, limitBytes: 3, outcome: "accepted" },
+        { intakeBytes: 0, declaredBytes: null, limitBytes: 3, outcome: "rejected" },
       ],
     });
   } finally {

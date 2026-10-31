@@ -172,8 +172,29 @@ describe("blacklist-contracts shared metadata alignment", () => {
     }
 
     const deferred = getDeferredBlacklistCoverage();
-    expect(deferred).toHaveLength(10);
+    expect(deferred).toHaveLength(11);
     expect(manifest.filter((entry) => entry.status === "deferred")).toHaveLength(deferred.length);
+  });
+
+  it("names A7A5's material Tron deployment as explicitly deferred coverage", () => {
+    const tronDeployment = TRACKED_META_BY_ID.get("a7a5-old-vector")?.contracts?.find(
+      (contract) => contract.chain === "tron",
+    );
+    expect(tronDeployment?.address).toBe("TLeVfrdym8RoJreJ23dAGyfJDygRtiWKBZ");
+    expect(CONTRACT_CONFIGS.some(
+      (config) => config.stablecoinId === "a7a5-old-vector" && config.chain.chainId === "tron",
+    )).toBe(false);
+
+    // /api/blacklist-summary builds coverage.unsupportedDeferred from this manifest;
+    // a deployment absent from both it and CONTRACT_CONFIGS is presented as out of scope.
+    const manifest = buildBlacklistCoverageManifest(ACTIVE_STABLECOINS, CONTRACT_CONFIGS);
+    expect(manifest).toContainEqual(expect.objectContaining({
+      stablecoinId: "a7a5-old-vector",
+      symbol: "A7A5",
+      chainId: "tron",
+      status: "deferred",
+      reason: "deferred_tron_result_key_verification",
+    }));
   });
 
   it("represents every active direct-Yes assessment in the coverage manifest", () => {

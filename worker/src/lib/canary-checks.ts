@@ -135,7 +135,7 @@ const DEWS_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stressSignals;
 const GBP_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:gbp-retained-fallback-streak";
 const USD_BENCHMARK_FRESH_STREAK_CACHE_KEY = "fetch-tbill-rate:usd-fresh-streak";
 
-function isFreshAt(timestampSec: number | null, observedAt: number, maxAgeSec: number): boolean {
+function classifyCanaryFreshness(timestampSec: number | null, observedAt: number, maxAgeSec: number) {
   return classifyFreshness(
     {
       job: "canary-source",
@@ -151,7 +151,11 @@ function isFreshAt(timestampSec: number | null, observedAt: number, maxAgeSec: n
     observedAt,
     // The serial run's assessment clock can precede a publication read later in the run.
     { readAtSec: nowSec() },
-  ).state === "fresh";
+  );
+}
+
+function isFreshAt(timestampSec: number | null, observedAt: number, maxAgeSec: number): boolean {
+  return classifyCanaryFreshness(timestampSec, observedAt, maxAgeSec).state === "fresh";
 }
 
 function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
@@ -468,20 +472,26 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
     if (!row) {
       return degradedResult("no PSI stability_index_samples rows found", { maxAgeSec: PSI_MAX_AGE_SEC });
     }
-    const ageSec = Math.max(0, observedAt - row.stored_at);
+    const freshness = classifyCanaryFreshness(row.stored_at, observedAt, PSI_MAX_AGE_SEC);
     const metadata = {
       storedAt: row.stored_at,
-      ageSec,
+      ageSec: freshness.ageSec,
       maxAgeSec: PSI_MAX_AGE_SEC,
       score: row.score,
       band: row.band,
       methodologyVersion: row.methodology_version,
+      ...(freshness.timestampReason ? { timestampReason: freshness.timestampReason } : {}),
     };
     if (!isScoreInRange(row.score)) {
       return errorResult(`latest PSI score is out of range: ${String(row.score)}`, metadata);
     }
-    if (!isFreshAt(row.stored_at, observedAt, PSI_MAX_AGE_SEC)) {
-      return degradedResult(`latest PSI sample is ${ageSec}s old`, metadata);
+    if (freshness.state !== "fresh") {
+      return degradedResult(
+        freshness.timestampReason
+          ? `latest PSI sample clock rejected: ${freshness.timestampReason}`
+          : `latest PSI sample is ${freshness.ageSec}s old`,
+        metadata,
+      );
     }
     return okResult(metadata);
   } catch (error) {

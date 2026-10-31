@@ -5,16 +5,6 @@ import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { isMissingTableError } from "./db";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
-// Effective current source fragment of a supersession family: the later of the
-// canonical's and a superseded alias's current fragment, by `current_started_at`
-// then `current_event_id` — the recency rule buildEffectiveIncidentByKey uses.
-const ALIAS_FRAGMENT_IS_EFFECTIVE_SQL = `(alias.current_started_at > canonical.current_started_at
-        OR (alias.current_started_at = canonical.current_started_at
-            AND alias.current_event_id > canonical.current_event_id))`;
-const ALIAS_FRAGMENT_LOSES_SQL = `(alias.current_started_at < canonical.current_started_at
-        OR (alias.current_started_at = canonical.current_started_at
-            AND alias.current_event_id < canonical.current_event_id))`;
-
 export const EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL = `
   id NOT IN (
     SELECT links.event_id
@@ -31,16 +21,6 @@ export const EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL = `
      WHERE canonical.incident_state = 'active'
        AND alias.incident_state = 'superseded'
        AND alias.current_event_id != canonical.current_event_id
-       AND ${ALIAS_FRAGMENT_IS_EFFECTIVE_SQL}
-    UNION
-    SELECT alias.current_event_id
-      FROM depeg_resolver_incidents alias
-      JOIN depeg_resolver_incidents canonical
-        ON canonical.incident_key = alias.superseded_by_incident_key
-     WHERE alias.incident_state = 'superseded'
-       AND canonical.incident_state = 'active'
-       AND alias.current_event_id != canonical.current_event_id
-       AND ${ALIAS_FRAGMENT_LOSES_SQL}
   )
 `;
 
@@ -181,8 +161,7 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
         WHERE alias.incident_state = 'superseded'
           AND canonical.incident_state = 'active'
           AND alias.current_event_id != canonical.current_event_id
-          AND alias.current_event_id != canonical.first_event_id
-          AND ${ALIAS_FRAGMENT_IS_EFFECTIVE_SQL}${aliasStablecoinFilter}
+          AND alias.current_event_id != canonical.first_event_id${aliasStablecoinFilter}
         GROUP BY alias.current_event_id, canonical.first_started_at,
                  first_event.start_price, first_event.peg_reference,
                  first_event.source, first_event.peg_type, first_provenance.quote_mode`;

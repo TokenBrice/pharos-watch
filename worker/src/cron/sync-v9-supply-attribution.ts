@@ -737,12 +737,17 @@ export async function syncSafetyScoreV9SupplyAttribution(
       deferredAssetIds: admission.deferredAssetIds,
       onBodyRead: evidence => {
         resourcePressure.observedAt = Math.floor(Date.now() / 1_000);
+        resourcePressure.rejectedBodies ??= 0;
         if (evidence.intakeBytes !== null) {
           resourcePressure.intakeBytes = (resourcePressure.intakeBytes ?? 0) + evidence.intakeBytes;
           resourcePressure.intakeBasis = "actual-stream";
         }
-        resourcePressure.rejectedBodies = (resourcePressure.rejectedBodies ?? 0) + (evidence.outcome === "rejected" ? 1 : 0);
-        resourcePressure.guard = resourcePressure.rejectedBodies > 0 ? "resource-budget-exceeded" : "within-policy";
+        // Transport interruption is not evidence that the byte budget was exceeded.
+        if (evidence.outcome === "rejected"
+          && ((evidence.intakeBytes ?? 0) > evidence.limitBytes || (evidence.declaredBytes ?? 0) > evidence.limitBytes)) {
+          resourcePressure.rejectedBodies = (resourcePressure.rejectedBodies ?? 0) + 1;
+        }
+        resourcePressure.guard = (resourcePressure.rejectedBodies ?? 0) > 0 ? "resource-budget-exceeded" : "within-policy";
       },
     },
   );

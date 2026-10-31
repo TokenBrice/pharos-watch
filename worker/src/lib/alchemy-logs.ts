@@ -4,7 +4,7 @@ import { parseQuantityHex } from "./bigint";
 import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { batchExecute, buildInClause } from "./db";
-import { throwIfAborted } from "./abort";
+import { rethrowIfAborted, throwIfAborted } from "./abort";
 import { requestJsonRpcAtUrl } from "./evm-rpc";
 import { logWorkerEvent } from "./structured-log";
 import type { CacheRetentionPolicy } from "./db-cache";
@@ -289,6 +289,7 @@ export async function getAlchemyBlockNumber(
     if (!rpc.result || !rpc.result.startsWith("0x")) return null;
     return parseInt(rpc.result, 16);
   } catch (err) {
+    rethrowIfAborted(err, signal);
     logWorkerEvent({
       scope: "lib",
       level: "debug",
@@ -696,6 +697,7 @@ async function fetchAlchemyLogsRange(
       failureReason: right.failureReason,
     };
   } catch (e) {
+    rethrowIfAborted(e, signal);
     logWorkerEvent({
       scope: "lib",
       level: "warn",

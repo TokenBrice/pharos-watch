@@ -843,7 +843,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         .mockImplementation(async ({ onDiagnostic, onBodyRead: observeBody, signal, dwellirNative: observedNative }) => {
           expect(observedNative).toBe(dwellirNative);
           onDiagnostic?.(diagnostic);
-          observeBody?.({ intakeBytes: 32, declaredBytes: null, outcome: "accepted" });
+          observeBody?.({ intakeBytes: 32, declaredBytes: null, limitBytes: 256 * 1024, outcome: "accepted" });
           if (hardFailure) {
             for (let index = 0; index < 128; index++) {
               onDiagnostic?.({ ...diagnostic, persisted: false, authenticatedCursorAdvanced: false });
@@ -860,7 +860,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
       await vi.runAllTimersAsync();
       const capture = await pending;
       expect(onBodyRead).toHaveBeenCalledExactlyOnceWith({
-        intakeBytes: 32, declaredBytes: null, outcome: "accepted",
+        intakeBytes: 32, declaredBytes: null, limitBytes: 256 * 1024, outcome: "accepted",
       });
       expect(capture.journalRecords.find(record => record.assetId === "srusd-reservoir")?.diagnosticLeaf)
         .toMatchObject({ predicate: hardFailure ? "packet-reconciliation-failed" : "history-incomplete" });

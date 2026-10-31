@@ -335,6 +335,25 @@ describe("bounded reserve producer lease waiting", () => {
     expect(waiting).toHaveBeenCalledTimes(3);
   });
 
+  it("takes over at the captured deadline when the platform timer fires a millisecond late", async () => {
+    const fixture = admittedFixture();
+    seedBlocker(fixture);
+    // Real event-loop timers fire after the requested delay. The lease expires at
+    // now+30, so the wake at now+31.001 is the first eligible takeover second and
+    // must still attempt while the caller's admission budget holds.
+    const platformSetTimeout = globalThis.setTimeout;
+    vi.spyOn(globalThis, "setTimeout").mockImplementation(
+      ((handler: () => void, delayMs?: number) => platformSetTimeout(handler, (delayMs ?? 0) + 1)) as typeof setTimeout,
+    );
+    const work = vi.fn(async () => "published");
+    const pending = runCronWithLease(fixture.db, "sync-live-reserves", work, {
+      owner: "requester", acquisitionWait: { deadlineMs: Date.now() + 145000 },
+    });
+    await vi.advanceTimersByTimeAsync(32000);
+    expect(await pending).toMatchObject({ status: "ok", leaseOwner: "requester" });
+    expect(work).toHaveBeenCalledTimes(1);
+  });
+
   it("acquires on the next poll when a live blocker releases early", async () => {
     const fixture = admittedFixture();
     seedBlocker(fixture, "live-blocker", 900);

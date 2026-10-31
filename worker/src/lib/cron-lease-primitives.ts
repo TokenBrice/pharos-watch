@@ -317,7 +317,15 @@ export async function runCronWithLease<T>(
   for (;;) {
     assertSlotDeadline(opts?.deadline);
     if (opts?.abortSignal?.aborted) throw normalizeAbortError(opts.abortSignal.reason, new Error("Lease acquisition aborted"));
-    if (attempts > 0 && opts?.acquisitionWait && Date.now() > waitDeadlineMs) {
+    // The captured blocker deadline only schedules the strict-expiry takeover poll.
+    // Platform timers fire late, so a wake just past it must still attempt once while
+    // the caller's own admission budget holds; that budget remains absolute.
+    const admissionDeadlineMs = opts?.acquisitionWait?.deadlineMs;
+    const lateBlockerPoll = blockerDeadlineCaptured
+      && admissionDeadlineMs != null
+      && waitDeadlineMs < admissionDeadlineMs
+      && Date.now() <= admissionDeadlineMs;
+    if (attempts > 0 && opts?.acquisitionWait && Date.now() > waitDeadlineMs && !lateBlockerPoll) {
       blockedBy = await readCronLeaseBlocker(db, job);
       assertSlotDeadline(opts?.deadline);
       return skipped();

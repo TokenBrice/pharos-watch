@@ -41,7 +41,7 @@ const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEnt
   "adapterTelemetryProgress", "adapterFailureBudget", "cohortGrading",
   "publicationAbortCause", "publicationPhaseElapsedMs", "publicationSubphaseElapsedMs", "publicMaterialization", "publicationPhaseTimingBasis",
   "executorMode", "executorColo", "executorColoSource", "cfPlacement", "executorWorkerVersion", "executionGeneration",
-  "reserveQueue", "reserveQueueHandoff",
+  "reserveQueue", "reserveQueueHandoff", "capabilities",
 ].map((key) => [key, true]));
 // These are forensic-only cron copies. Active-price coverage is deliberately excluded:
 // the next producer and public-health reader reconstruct missing-asset streaks from it.
@@ -117,6 +117,17 @@ export function compactCronMetadataForPersistence(
   for (const key of BULKY_DIAGNOSTIC_KEYS) {
     if (!(key in retained)) continue;
     retained[key] = summarizeDiagnostic(retained[key]);
+  }
+  // The fallback producer repeats its diagnostics inside `enrichment`; that copy is
+  // not a consumer contract and must not force the consumer-key pass.
+  const enrichment = retained.enrichment;
+  if (enrichment && typeof enrichment === "object" && !Array.isArray(enrichment)) {
+    const nested = { ...(enrichment as Record<string, unknown>) };
+    for (const key of BULKY_DIAGNOSTIC_KEYS) {
+      if (!(key in nested)) continue;
+      nested[key] = summarizeDiagnostic(nested[key]);
+    }
+    retained.enrichment = nested;
   }
   compacted = JSON.stringify(retained);
   if (utf8Bytes(compacted) > budgetBytes) {
