@@ -199,8 +199,12 @@ function GaugeStatusChips({
           ) : null}
         </OpsStatusChip>
       ) : gauge?.flightToQuality === null ? (
-        <OpsStatusChip label="FTQ unavailable" reasonCodes={["valuation-incomplete"]}>
-          <p>Missing valuation could change the flight-to-quality verdict, so none is published.</p>
+        <OpsStatusChip label="FTQ unavailable" reasonCodes={[gauge.flightToQualityReason ?? "valuation-incomplete"]}>
+          <p>{gauge.flightToQualityReason === "cohort-member-unpublished"
+            ? "A graded coin has no published 24h flow, so the flight-to-quality verdict is withheld."
+            : gauge.flightToQualityReason === "flow-window-unavailable"
+              ? "An incomplete 24h scan window could change the flight-to-quality verdict, so none is published."
+              : "Missing valuation could change the flight-to-quality verdict, so none is published."}</p>
         </OpsStatusChip>
       ) : null}
       {/* Degraded reads (source advisories, failed refreshes, catch-up) are operator signal, not chips. */}

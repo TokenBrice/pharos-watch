@@ -213,7 +213,7 @@ describe("aggregate flight-to-quality cohorts", () => {
     vi.useRealTimers();
   });
 
-  it("withholds the inactive verdict while a graded risky coin has no admitted 24h flow", async () => {
+  it("publishes the observed verdict and discloses a pending-admission graded coin", async () => {
     expect(isGrandfatheredMintBurnConfig(ftqSafeConfig)).toBe(true);
     expect(isGrandfatheredMintBurnConfig(ftqRiskyConfig)).toBe(true);
     expect(isGrandfatheredMintBurnConfig(ftqUnadmittedConfig)).toBe(false);
@@ -276,8 +276,8 @@ describe("aggregate flight-to-quality cohorts", () => {
     expect(usdc.netFlow24hUsd).toBe(150_000_000);
     expect(dai.netFlow24hUsd).toBe(-20_000_000);
 
-    // Ground truth: the same observed nets cannot support an inactive verdict once
-    // the omitted graded coin is carried as an unbounded cohort member.
+    // Ground truth: carrying the pending-admission coin as an unbounded cohort
+    // member would withhold the verdict the observed nets already decide.
     expect(detectFlightToQualityFromValuedNets({
       safe: [{ knownNetUsd: 150_000_000, valuation: { mintCompleteness: "complete", burnCompleteness: "complete" } }],
       risky: [
@@ -286,7 +286,10 @@ describe("aggregate flight-to-quality cohorts", () => {
       ],
     })).toBeNull();
 
-    // The omitted risky coin's outflow is unknown, so activation cannot be ruled out.
-    expect(body.gauge.flightToQuality).toBeNull();
+    // The pending-admission coin is outside the published flow scope: excluded from
+    // the cohorts, disclosed by id, and the observed flows publish the verdict.
+    expect(body.gauge.flightToQuality).toBe(false);
+    expect(body.gauge.flightToQualityReason).toBeNull();
+    expect(body.gauge.flightToQualityExcludedIds).toEqual(["swanusd-swan"]);
   });
 });

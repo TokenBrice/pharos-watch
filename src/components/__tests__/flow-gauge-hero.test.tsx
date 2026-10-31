@@ -276,4 +276,21 @@ describe("FlowGaugeHero", () => {
     expect(screen.getByText("Missing valuation could change the flight-to-quality verdict, so none is published.")).toBeTruthy();
     expect(screen.queryByText(/Safety Score dependency budget/)).toBeNull();
   });
+
+  it("explains a withheld verdict with its published cause instead of assuming valuation", () => {
+    const { container } = render(
+      <FlowGaugeHero
+        gauge={gauge({ flightToQuality: null, flightIntensity: null,
+          classificationSource: "safety-score-v9-publication", classificationReason: null,
+          flightToQualityReason: "cohort-member-unpublished" })}
+        coins={coins}
+        sync={null}
+      />,
+    );
+    expect(container.querySelector('[data-reason-codes="cohort-member-unpublished"]')).toBeTruthy();
+    expect(container.querySelector('[data-reason-codes="valuation-incomplete"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /FTQ unavailable/ }));
+    expect(screen.getByText("A graded coin has no published 24h flow, so the flight-to-quality verdict is withheld.")).toBeTruthy();
+    expect(screen.queryByText(/Missing valuation could change/)).toBeNull();
+  });
 });

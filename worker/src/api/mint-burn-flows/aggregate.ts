@@ -28,9 +28,11 @@ import {
   computeFlowIntensity,
   FLOW_INTENSITY_MIN_DATA_DAYS,
   detectFlightToQualityFromValuedNets,
+  getFlightToQualityUnavailableReason,
   type FlightToQualityResult,
   type ValuedNetFlow24h,
 } from "../../lib/mint-burn-scoring";
+import type { MintBurnFtqUnavailableReason } from "@shared/types/mint-burn";
 import {
   MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL,
   MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
@@ -358,8 +360,12 @@ export function buildCoinSummaries(
 ): {
   coins: CoinFlowSummary[];
   gaugeInputs: Array<{ intensity: number | null; mcap: number }>;
-  /** `null` when classification is unavailable or missing valuation can alter the decision. */
+  /** `null` when classification is unavailable or the published flow scope cannot decide it. */
   flightToQuality: FlightToQualityResult | null;
+  /** Machine-readable cause of a withheld verdict; `null` when it is published. */
+  flightToQualityReason: MintBurnFtqUnavailableReason | null;
+  /** Classified coins excluded from the cohorts because their flow is pending admission. */
+  flightToQualityExcludedIds: string[];
   trackedMcapUsd: number;
   mcapUnavailableCoins: number;
   /** Weighted coins that could score but whose pressure was withheld for incomplete valuation. */
@@ -426,7 +432,11 @@ export function buildCoinSummaries(
     }
 
     if (gradeClassification) {
-      const flow = { knownNetUsd: has24hWindow ? knownNetFlow24h : null, valuation: valuation24h };
+      const flow = {
+        knownNetUsd: has24hWindow ? knownNetFlow24h : null,
+        valuation: valuation24h,
+        window24hComplete: has24hWindow,
+      };
       if (gradeClassification.safeIds.has(id) || gradeClassification.riskyIds.has(id)) {
         classifiedFlowsById.set(id, flow);
       }
@@ -490,16 +500,19 @@ export function buildCoinSummaries(
     });
   }
 
-  const flightToQuality = gradeClassification
-    ? detectFlightToQualityFromValuedNets(
-        buildFlightToQualityCohorts(gradeClassification, classifiedFlowsById),
-      )
+  // Pending-admission classified coins are outside the published flow scope: they are
+  // excluded from the cohorts and disclosed instead of withholding the verdict.
+  const cohorts = gradeClassification
+    ? buildFlightToQualityCohorts(gradeClassification, classifiedFlowsById, data.publication)
     : null;
+  const flightToQuality = cohorts ? detectFlightToQualityFromValuedNets(cohorts) : null;
 
   return {
     coins,
     gaugeInputs,
     flightToQuality,
+    flightToQualityReason: cohorts && !flightToQuality ? getFlightToQualityUnavailableReason(cohorts) : null,
+    flightToQualityExcludedIds: cohorts?.excludedIds ?? [],
     trackedMcapUsd,
     mcapUnavailableCoins,
     partialValuationInputs,

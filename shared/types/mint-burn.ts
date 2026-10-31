@@ -94,6 +94,17 @@ export const MintBurnPublicationSchema = z.object({
   })),
 });
 export type MintBurnPublication = z.infer<typeof MintBurnPublicationSchema>;
+/**
+ * Machine-readable cause of a withheld flight-to-quality verdict: missing valuation,
+ * an incomplete 24h scan window, or a classified coin with no published flow at all.
+ */
+export const MINT_BURN_FTQ_UNAVAILABLE_REASONS = [
+  "valuation-incomplete",
+  "flow-window-unavailable",
+  "cohort-member-unpublished",
+] as const;
+export type MintBurnFtqUnavailableReason = (typeof MINT_BURN_FTQ_UNAVAILABLE_REASONS)[number];
+
 const MintBurnGaugeSchema = z.object({
   score: SignedFlowIntensitySchema.nullable(),
   band: z.string().nullable(),
@@ -101,6 +112,13 @@ const MintBurnGaugeSchema = z.object({
   /** `null` when classification is unavailable or missing valuation can alter the conclusion. */
   flightToQuality: z.boolean().nullable(),
   flightIntensity: z.number().finite().nullable(),
+  /** Cause of a withheld verdict; absent on payloads produced before it was separated from valuation. */
+  flightToQualityReason: z.enum(MINT_BURN_FTQ_UNAVAILABLE_REASONS).nullable().optional(),
+  /**
+   * Classified coins excluded from the cohorts because their whole flow is pending
+   * mint/burn admission: outside the published flow scope, disclosed rather than zeroed.
+   */
+  flightToQualityExcludedIds: z.array(z.string()).optional(),
   /** Score is the observed admitted-member composite, not a full-roster claim. */
   scoreScope: z.literal("admitted-coins").optional(),
   scanCoverage: MintBurnScanWindowSchema.extend({

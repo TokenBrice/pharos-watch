@@ -2,6 +2,8 @@ import { buildFlightToQualityClassificationFromV9Snapshot } from "../../lib/flig
 import {
   buildFlightToQualityCohorts,
   detectFlightToQualityFromValuedNets,
+  getFlightToQualityUnavailableReason,
+  type FlightToQualityPublicationScope,
   type ValuedNetFlow24h,
 } from "../../lib/mint-burn-scoring";
 import { loadActiveSafetyScoreIndex } from "../../lib/safety-score-index";
@@ -9,11 +11,6 @@ import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-
 
 export interface DigestMintBurnCoinNet extends ValuedNetFlow24h {
   id: string;
-  /**
-   * Whether the published 24h flow window itself is complete. `null` when the
-   * publication carries no window evidence (legacy payload).
-   */
-  window24hComplete: boolean | null;
 }
 
 export type DigestMintBurnFtqFlows =
@@ -30,7 +27,7 @@ export type DigestMintBurnFtqFlows =
       active: false;
       safeNet24h: 0;
       riskyNet24h: 0;
-      /** Classification failure, or `valuation-incomplete` when missing valuation can alter FTQ. */
+      /** Classification failure, or why the published flow scope cannot decide FTQ. */
       reason: string;
       safetyScoreIdentity: SafetyScorePublicationIdentity | null;
     };
@@ -38,6 +35,7 @@ export type DigestMintBurnFtqFlows =
 export async function computeDigestMintBurnFtqFlows(
   db: D1Database,
   coinNets: DigestMintBurnCoinNet[],
+  publication: FlightToQualityPublicationScope | null,
 ): Promise<DigestMintBurnFtqFlows> {
   const unavailable = (reason: string, safetyScoreIdentity: SafetyScorePublicationIdentity | null) => ({
     kind: "unavailable" as const,
@@ -64,19 +62,22 @@ export async function computeDigestMintBurnFtqFlows(
   const gradeClassification = classification.classification;
   // A withheld net has two distinct causes. An incomplete 24h flow window means
   // the flow evidence itself is missing, which degrades the run; missing USD
-  // valuation is decided below by the bounded detector (or named
-  // `valuation-incomplete`). Window completeness is the publication's
-  // scan-coverage fact; a publication that does not carry it proves nothing,
-  // so the fail-closed degrade stays.
+  // valuation is decided below by the bounded detector. Window completeness is
+  // the publication's scan-coverage fact; a publication that does not carry it
+  // proves nothing, so the fail-closed degrade stays.
   if (coinNets.some((coin) => coin.knownNetUsd === null && coin.window24hComplete !== true)) {
     return unavailable("flow-window-unavailable", gradeClassification.safetyScoreIdentity);
   }
-  const ftq = detectFlightToQualityFromValuedNets(
-    // A classified coin with no published flow is an unbounded cohort member, not a
-    // measured zero: its omission cannot prove the inactive verdict.
-    buildFlightToQualityCohorts(gradeClassification, new Map(coinNets.map((coin) => [coin.id, coin]))),
+  const cohorts = buildFlightToQualityCohorts(
+    // A classified coin pending mint/burn admission is outside the published flow
+    // scope and is excluded with its id disclosed; any other unpublished one stays
+    // an unbounded cohort member, not a measured zero.
+    gradeClassification,
+    new Map(coinNets.map((coin) => [coin.id, coin])),
+    publication,
   );
-  if (!ftq) return unavailable("valuation-incomplete", gradeClassification.safetyScoreIdentity);
+  const ftq = detectFlightToQualityFromValuedNets(cohorts);
+  if (!ftq) return unavailable(getFlightToQualityUnavailableReason(cohorts), gradeClassification.safetyScoreIdentity);
   return {
     kind: "ok",
     active: ftq.active,

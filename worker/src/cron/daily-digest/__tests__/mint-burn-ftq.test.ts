@@ -22,6 +22,10 @@ const intensities = [
   { id: "usdt-tether", knownNetUsd: 40_000_000, valuation: COMPLETE, window24hComplete: true },
   { id: "usdc-circle", knownNetUsd: -50_000_000, valuation: COMPLETE, window24hComplete: true },
 ];
+// swanUSD's only configured leg has no durable admission proof: outside the published scope.
+const PENDING_ADMISSION = {
+  legs: [{ stablecoinId: "swanusd-swan", status: "pending-admission" as const }],
+};
 
 describe("digest mint/burn flight-to-quality flows", () => {
   beforeEach(() => {
@@ -50,7 +54,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     const snapshot = classify(["usdt-tether"], ["usdc-circle"]);
 
     await expect(
-      computeDigestMintBurnFtqFlows(db, intensities),
+      computeDigestMintBurnFtqFlows(db, intensities, null),
     ).resolves.toEqual({
       kind: "ok",
       active: false,
@@ -60,30 +64,45 @@ describe("digest mint/burn flight-to-quality flows", () => {
     });
   });
 
-  it("withholds an inactive verdict while a classified coin has no published flow", async () => {
+  it("publishes the verdict when the only unpublished classified coin is pending admission", async () => {
     const snapshot = classify(["usdt-tether"], ["usdc-circle", "swanusd-swan"]);
-    // The omitted risky coin is unbounded, so the observed safe inflow past +$100M
-    // no longer proves inactivity: the verdict is unavailable, never inactive.
+    // The pending-admission coin is outside the published flow scope: excluding
+    // it (and disclosing it) restores the observed, provably inactive verdict.
     await expect(computeDigestMintBurnFtqFlows(db, [
       { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
       { id: "usdc-circle", knownNetUsd: -20_000_000, valuation: COMPLETE, window24hComplete: true },
-    ])).resolves.toEqual({
-      kind: "unavailable",
+    ], PENDING_ADMISSION)).resolves.toEqual({
+      kind: "ok",
       active: false,
-      safeNet24h: 0,
-      riskyNet24h: 0,
-      reason: "valuation-incomplete",
+      safeNet24h: 150_000_000,
+      riskyNet24h: -20_000_000,
       safetyScoreIdentity: snapshot.safetyScoreIdentity,
     });
   });
 
-  it("keeps a proven-inactive verdict when the omitted cohort member cannot reach the threshold", async () => {
+  it("names the unpublished cohort member, not valuation, when no admission evidence excludes it", async () => {
     const snapshot = classify(["usdt-tether"], ["usdc-circle", "swanusd-swan"]);
-    // The safe bound is below +$100M, so no unbounded risky outflow can activate.
+    await expect(computeDigestMintBurnFtqFlows(db, [
+      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
+      { id: "usdc-circle", knownNetUsd: -150_000_000, valuation: COMPLETE, window24hComplete: true },
+    ], null)).resolves.toEqual({
+      kind: "unavailable",
+      active: false,
+      safeNet24h: 0,
+      riskyNet24h: 0,
+      reason: "cohort-member-unpublished",
+      safetyScoreIdentity: snapshot.safetyScoreIdentity,
+    });
+  });
+
+  it("keeps a proven-inactive verdict when an unbounded cohort member cannot reach the threshold", async () => {
+    const snapshot = classify(["usdt-tether"], ["usdc-circle", "swanusd-swan"]);
+    // Without admission evidence the omitted risky coin stays unbounded, but the
+    // safe bound is below +$100M, so no unbounded risky outflow can activate.
     await expect(computeDigestMintBurnFtqFlows(db, [
       { id: "usdt-tether", knownNetUsd: 10_000_000, valuation: COMPLETE, window24hComplete: true },
       { id: "usdc-circle", knownNetUsd: -20_000_000, valuation: COMPLETE, window24hComplete: true },
-    ])).resolves.toEqual({
+    ], null)).resolves.toEqual({
       kind: "ok",
       active: false,
       safeNet24h: 10_000_000,
@@ -97,7 +116,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     await expect(computeDigestMintBurnFtqFlows(db, [
       { id: "usdt-tether", knownNetUsd: null, valuation: COMPLETE, window24hComplete: false },
       { id: "usdc-circle", knownNetUsd: -150_000_000, valuation: COMPLETE, window24hComplete: true },
-    ])).resolves.toMatchObject({ kind: "unavailable", reason: "flow-window-unavailable" });
+    ], null)).resolves.toMatchObject({ kind: "unavailable", reason: "flow-window-unavailable" });
   });
 
   it("degrades when a withheld net comes from a publication with no window evidence", async () => {
@@ -105,7 +124,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     await expect(computeDigestMintBurnFtqFlows(db, [
       { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
       { id: "usdc-circle", knownNetUsd: null, valuation: COMPLETE, window24hComplete: null },
-    ])).resolves.toMatchObject({ kind: "unavailable", reason: "flow-window-unavailable" });
+    ], null)).resolves.toMatchObject({ kind: "unavailable", reason: "flow-window-unavailable" });
   });
 
   it("leaves a complete-window net withheld for missing valuation to the bounded detector", async () => {
@@ -115,7 +134,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     await expect(computeDigestMintBurnFtqFlows(db, [
       { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
       { id: "usdc-circle", knownNetUsd: null, valuation: { ...COMPLETE, mintCompleteness: "partial" }, window24hComplete: true },
-    ])).resolves.toEqual({
+    ], null)).resolves.toEqual({
       kind: "unavailable",
       active: false,
       safeNet24h: 0,
@@ -130,7 +149,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     await expect(computeDigestMintBurnFtqFlows(db, [
       { id: "usdt-tether", knownNetUsd: 10_000_000, valuation: COMPLETE, window24hComplete: true },
       { id: "usdc-circle", knownNetUsd: null, valuation: { ...COMPLETE, mintCompleteness: "partial" }, window24hComplete: true },
-    ])).resolves.toMatchObject({ kind: "ok", active: false });
+    ], null)).resolves.toMatchObject({ kind: "ok", active: false });
   });
 
   it("withholds FTQ when missing valuation could flip it", async () => {
@@ -140,7 +159,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     await expect(computeDigestMintBurnFtqFlows(db, [
       { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
       { id: "usdc-circle", knownNetUsd: -150_000_000, valuation: { ...COMPLETE, mintCompleteness: "partial" }, window24hComplete: true },
-    ])).resolves.toEqual({
+    ], null)).resolves.toEqual({
       kind: "unavailable",
       active: false,
       safeNet24h: 0,
@@ -155,7 +174,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     await expect(computeDigestMintBurnFtqFlows(db, [
       { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
       { id: "usdc-circle", knownNetUsd: 10_000_000, valuation: { ...COMPLETE, mintCompleteness: "partial" }, window24hComplete: true },
-    ])).resolves.toMatchObject({ kind: "ok", active: false });
+    ], null)).resolves.toMatchObject({ kind: "ok", active: false });
   });
 
   it("fails closed with zeroed flows when the canonical source is unavailable", async () => {
@@ -167,7 +186,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     });
 
     await expect(
-      computeDigestMintBurnFtqFlows(db, intensities),
+      computeDigestMintBurnFtqFlows(db, intensities, null),
     ).resolves.toEqual({
       kind: "unavailable",
       active: false,
@@ -196,7 +215,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     });
 
     await expect(
-      computeDigestMintBurnFtqFlows(db, intensities),
+      computeDigestMintBurnFtqFlows(db, intensities, null),
     ).resolves.toEqual({
       kind: "unavailable",
       active: false,
@@ -211,7 +230,7 @@ describe("digest mint/burn flight-to-quality flows", () => {
     mocks.loadActiveSafetyScoreIndex.mockRejectedValue(new Error("boom"));
 
     await expect(
-      computeDigestMintBurnFtqFlows(db, intensities),
+      computeDigestMintBurnFtqFlows(db, intensities, null),
     ).resolves.toEqual({
       kind: "unavailable",
       active: false,

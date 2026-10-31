@@ -556,6 +556,8 @@ describe("handleMintBurnFlows contract tests", () => {
       // unbounded cohort members: a recovered classification cannot prove inactivity.
       flightToQuality: null,
       flightIntensity: null,
+      flightToQualityReason: "cohort-member-unpublished",
+      flightToQualityExcludedIds: [],
       classificationSource: "safety-score-v9-publication",
       classificationReason: null,
       safetyScoreIdentity: snapshot.safetyScoreIdentity,

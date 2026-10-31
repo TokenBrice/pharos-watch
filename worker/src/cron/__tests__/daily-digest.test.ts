@@ -465,8 +465,10 @@ describe("market and risk collectors", () => {
       ...(coins[2].valuation as Record<string, unknown>),
       window24h: { completeness: "partial", mintCompleteness: "partial", burnCompleteness: "complete", unpricedMintEventCount: 1, unpricedBurnEventCount: 0 },
     };
+    // Every classified coin keeps a published net (the payload's fixture invariant),
+    // so the withheld verdict below is attributable to valuation or scan evidence.
     const withheld = (coin: Record<string, unknown>) => collectMintBurnFlows(ctxFor([publishedGaugeTable({
-      value: JSON.stringify(publishedGaugePayload({ coins: [coins[0], coins[1], coin] })),
+      value: JSON.stringify(publishedGaugePayload({ coins: [coins[0], coins[1], coin, coins[3]] })),
     })]));
     // PAXG is risky: an unpriced risky net could still reach the threshold, so a
     // complete 24h window keeps this a named valuation quality finding.
