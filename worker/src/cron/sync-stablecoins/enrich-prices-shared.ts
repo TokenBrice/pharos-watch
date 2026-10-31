@@ -1,5 +1,6 @@
 import type { ContractDeployment, NominalPriceReference, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
 import type { ChainPartitionProvenance, PriceDerivation, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyUnavailableReason } from "@shared/types/market";
+import type { DefiLlamaListFillDefaultQuote } from "@shared/lib/pricing-source-policy";
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
 import { stampPriceMetadata } from "./shared";
 
@@ -47,6 +48,8 @@ export interface PeggedAsset {
   priceUpdatedAt?: number | null;
   priceObservedAt?: number | null;
   priceObservedAtMode?: PriceObservedAtMode | null;
+  /** Transient intake marker: this list price is the response's fill default, not an observation. Cleared when a different quote is accepted. */
+  priceListFillDefault?: DefiLlamaListFillDefaultQuote;
   /** This run's nominal par reference (CR-43); separate from the observed price. */
   nominalPriceReference?: NominalPriceReference;
   /** Parent derivation of the current quote; stamped and cleared with that quote only. */

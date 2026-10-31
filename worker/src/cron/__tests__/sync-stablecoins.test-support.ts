@@ -20,7 +20,9 @@ export function makeDlResponse(assetCount: number): { peggedAssets: PeggedAsset[
       geckoId: undefined,
       // Near-par but not the exact reference: an exact-par DefiLlama-only quote
       // is no longer admitted as an observed price (exact-par list guard).
-      price: 0.9998,
+      // Prices are unique per row: a value repeated across the list is a
+      // per-response fill default and is rejected as an observation.
+      price: 0.9998 + i * 1e-6,
       priceSource: "defillama",
       priceConfidence: "high",
       supplySource: "defillama",

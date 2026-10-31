@@ -110,6 +110,8 @@ export function applyAcceptedPriceCandidate(input: AcceptedPriceCandidate): void
     input.sourceConfidenceProfile,
   );
   if (input.priceDerivation) input.asset.priceDerivation = input.priceDerivation;
+  // The marker describes the intake list quote, not this replacement quote.
+  delete input.asset.priceListFillDefault;
 }
 
 export function createValidationContextResolver(): ValidationContextResolver {
@@ -208,6 +210,7 @@ function applyPrimaryCandidate(input: ApplyPrimaryCandidateInput): string | null
     validationContext,
     validationReferences,
     previousTrustedPrice,
+    listFillDefault: asset.priceListFillDefault ?? null,
   });
   if (!decision.accepted) {
     return decision.reason;
@@ -484,6 +487,7 @@ function publishNominalPriceReference(asset: PeggedAsset, reference: NominalPric
   asset.agreeSources = [];
   asset.priceSourceConfidenceProfile = null;
   delete asset.priceDerivation;
+  delete asset.priceListFillDefault;
 }
 
 /**

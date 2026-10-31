@@ -44,7 +44,96 @@ export function isUncorroboratedDefiLlamaReferenceQuote(input: {
     return false;
   }
 
+  return isDefiLlamaFamilyListOnlyQuote(input.sources);
+}
+
+/**
+ * Distinct list assets that may legitimately share one verbatim price: wrapped
+ * and derivative variants (for example the four USDC wrappers observed at
+ * 0.999520515794015 on 2026-10-30). A value shared by more assets is the
+ * response-level fill DefiLlama uses for assets it cannot price.
+ */
+export const DEFILLAMA_LIST_FILL_DEFAULT_MIN_ASSET_COUNT = 5;
+
+/** The per-response fill-default status of one DefiLlama list row's price. */
+export interface DefiLlamaListFillDefaultQuote {
+  value: number;
+  /** The list row's own `priceSource` attribution; it is not independent corroboration. */
+  upstreamSource: string | null;
+}
+
+/**
+ * Prices a DefiLlama list response repeats verbatim across at least
+ * `DEFILLAMA_LIST_FILL_DEFAULT_MIN_ASSET_COUNT` distinct assets. Counting is per
+ * response, never a hardcoded constant, so a changed fill value is detected the
+ * same way.
+ */
+export function detectDefiLlamaListFillDefaultPrices(
+  rows: Iterable<{ id?: unknown; price?: unknown }>,
+): Set<number> {
+  const assetsByPrice = new Map<number, Set<string>>();
+  let anonymousRows = 0;
+  for (const row of rows) {
+    const price = row.price;
+    if (typeof price !== "number" || !Number.isFinite(price) || price <= 0) continue;
+    const rawId = row.id;
+    const assetKey =
+      typeof rawId === "string" || (typeof rawId === "number" && Number.isFinite(rawId))
+        ? String(rawId)
+        : `#anonymous-${anonymousRows++}`;
+    const assetKeys = assetsByPrice.get(price) ?? new Set<string>();
+    assetKeys.add(assetKey);
+    assetsByPrice.set(price, assetKeys);
+  }
+
+  const fillDefaultPrices = new Set<number>();
+  for (const [price, assetKeys] of assetsByPrice) {
+    if (assetKeys.size >= DEFILLAMA_LIST_FILL_DEFAULT_MIN_ASSET_COUNT) fillDefaultPrices.add(price);
+  }
+  return fillDefaultPrices;
+}
+
+/**
+ * Whether an admitted quote is this response's fill default with no
+ * corroborating source family. The list row's own attribution label names the
+ * read that produced the fill, so it cannot corroborate itself.
+ */
+export function isUncorroboratedDefiLlamaListFillQuote(input: {
+  price: number;
+  fillDefault: DefiLlamaListFillDefaultQuote | null | undefined;
+  sources: readonly (string | null | undefined)[] | string | null | undefined;
+}): boolean {
+  const fillDefault = input.fillDefault;
+  if (
+    fillDefault == null ||
+    !Number.isFinite(fillDefault.value) ||
+    fillDefault.value <= 0 ||
+    !Number.isFinite(input.price) ||
+    input.price !== fillDefault.value
+  ) {
+    return false;
+  }
+
   const parts = normalizePricingSourceKeys(input.sources);
+  if (parts.length === 0) return false;
+
+  const upstreamParts = new Set(normalizePricingSourceKeys(fillDefault.upstreamSource));
+  for (const part of parts) {
+    if (!isDefiLlamaFamilyListSourcePart(part) && !upstreamParts.has(part)) return false;
+  }
+  return true;
+}
+
+function isDefiLlamaFamilyListSourcePart(source: string): boolean {
+  const entry = getPricingSourceRegistryEntry(source);
+  return entry?.isListAggregator === true && entry.depegSourceFamily === "defillama";
+}
+
+/** All cited parts are DefiLlama-family list aggregators. */
+function isDefiLlamaFamilyListOnlyQuote(
+  sources: readonly (string | null | undefined)[] | string | null | undefined,
+): boolean {
+  const parts = normalizePricingSourceKeys(sources);
   if (parts.length === 0) return false;
 
   const families = new Set<string>();
