@@ -40,7 +40,13 @@ const limits = (decimals: number, bound = 500_000n * 10n ** 15n, flow = 0n) => e
   [{ type: "int120" }, { type: "int120" }, { type: "uint8" }, { type: "uint32" }, { type: "uint32" }, { type: "int96" }, { type: "int96" }],
   [bound, bound * 2n, decimals, 1, 1, flow, flow],
 );
+const rate = (numerator = 10n ** 12n, denominator = 1n) => encodeAbiParameters(
+  [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "uint256" }, { type: "bool" }, { type: "uint16" }, { type: "uint256" }],
+  [numerator, denominator, 0n, 0n, false, 0, 0n],
+);
 const observedBlock = { chain: "celo", number: 123, timestamp: 1789431241 };
+const fxWeekendBlock = { chain: "celo", number: 456, timestamp: Date.UTC(2026, 9, 31, 12) / 1_000 };
+const fxWeekendReopen = Date.UTC(2026, 10, 1, 23) / 1_000;
 function setupPlan() {
   vi.mocked(pinnedBlockPlan).mockImplementation(async ({ ctx }) => {
     const block = ctx?.observedBlock ?? observedBlock;
@@ -59,7 +65,7 @@ function setup(change: Partial<Record<string, `0x${string}` | null>> = {}, outpu
         index === 0 ? [1_000_000_000n, outputReserve, 1n] : [outputReserve, 1_000_000_000n, 1n],
       ),
       balance: uint(outputReserve), inputBalance: uint(1_000_000_000n), decimals: uint(6n), inputDecimals: uint(18n), lp: uint(1n), protocol: uint(1n),
-      inputLimits: limits(18), outputLimits: limits(6), unitQuote: uint(999800n * 10n ** 6n), ...change,
+      inputLimits: limits(18), outputLimits: limits(6), unitQuote: uint(999800n * 10n ** 6n), rate: rate(), ...change,
     };
     return calls.map(({ label }) => ({ label, success: data[label] != null, returnData: data[label] ?? "0x" }));
   });
@@ -107,8 +113,7 @@ describe("USDm V3 output pools", () => {
     setup(change);
     await expect(fetchMentoRedemptionMetadata(config, new AbortController().signal, undefined)).rejects.toThrow();
   });
-  it("names a measured FX market closure without emitting reserve-based capacity", async () => {
-    setup();
+  function failUnitQuoteWithFxMarketClosed() {
     const implementation = vi.mocked(fetchOnchainMulticall3).getMockImplementation()!;
     vi.mocked(fetchOnchainMulticall3).mockImplementation(async (options) => {
       const rows = await implementation(options);
@@ -116,9 +121,24 @@ describe("USDm V3 output pools", () => {
         ? { ...row, success: false, returnData: "0xa407143a" as const }
         : row) ?? null;
     });
+  }
+  it("names a measured FX market closure without emitting reserve-based capacity", async () => {
+    setup();
+    failUnitQuoteWithFxMarketClosed();
     await expect(fetchMentoRedemptionMetadata(config, new AbortController().signal, undefined))
       .rejects.toBeInstanceOf(MentoFxMarketClosedError);
     expect(fetchOnchainUint256).not.toHaveBeenCalled();
+  });
+  it("defers a reviewed FX-market-closed pool to the scheduled reopen with its measured output inventory", async () => {
+    setup();
+    failUnitQuoteWithFxMarketClosed();
+    const ctx: AdapterContext = { requestCache: new Map(), observedBlock: fxWeekendBlock };
+    const result = await fetchMentoRedemptionMetadata(config, new AbortController().signal, ctx);
+    expect(result.redemption).toMatchObject({
+      capacityUsd: 1999.999998, routeStatus: "open",
+      settlementDelaySec: fxWeekendReopen - fxWeekendBlock.timestamp,
+      blockNumber: fxWeekendBlock.number, sourceTimestamp: fxWeekendBlock.timestamp,
+    });
   });
 
   it("rejects a zero input reserve even when its balance matches", async () => {
@@ -266,9 +286,13 @@ describe("Mento Broker anchored inventory", () => {
       },
     }]);
   }
-  function setupBroker(capacity: bigint | null, change: Partial<Record<string, `0x${string}` | null>> = {}) {
+  function setupBroker(
+    capacity: bigint | null,
+    change: Partial<Record<string, `0x${string}` | null>> = {},
+    block = observedBlock,
+  ) {
     setupPlan();
-    const guards = brokerGuardFixture(exchangeId, self, pools[0].counterAsset.address, Number((capacity ?? 0n) / 10n ** 18n) || 100, observedBlock.timestamp);
+    const guards = brokerGuardFixture(exchangeId, self, pools[0].counterAsset.address, Number((capacity ?? 0n) / 10n ** 18n) || 100, block.timestamp);
     vi.mocked(fetchOnchainMulticall3).mockImplementation(async ({ calls }) => Promise.all(calls.map(async ({ label, contract, data }) => {
       const raw = label in change ? change[label] : await brokerFixtureResponse(guards, contract, data);
       return { label, success: raw != null, returnData: raw ?? "0x" };
@@ -327,6 +351,37 @@ describe("Mento Broker anchored inventory", () => {
     setupBroker(100n * 10n ** 18n);
     vi.mocked(fetchOnchainUint256).mockResolvedValue(null);
     await expect(fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined)).rejects.toThrow();
+  });
+
+  const measuredOutputConfig = encodeAbiParameters(
+    [{ type: "uint32" }, { type: "uint32" }, { type: "int48" }, { type: "int48" }, { type: "int48" }, { type: "uint8" }],
+    [0, 0, 0, 0, 50, 4],
+  );
+  it("defers a reviewed Broker FX closure to the scheduled reopen with measured output headroom", async () => {
+    setupBroker(100n * 10n ** 18n, {
+      oracleTime: uint(BigInt(fxWeekendBlock.timestamp - 7_200)),
+      outputConfig: measuredOutputConfig,
+    }, fxWeekendBlock);
+    const ctx: AdapterContext = { requestCache: new Map(), observedBlock: fxWeekendBlock };
+    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, ctx);
+    expect(result.redemption).toMatchObject({
+      capacityUsd: 50, routeStatus: "open",
+      settlementDelaySec: fxWeekendReopen - fxWeekendBlock.timestamp,
+      blockNumber: fxWeekendBlock.number, sourceTimestamp: fxWeekendBlock.timestamp,
+    });
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unexecutable Broker rate outside the reviewed closure impaired", async () => {
+    setupBroker(100n * 10n ** 18n, {
+      oracleTime: uint(BigInt(observedBlock.timestamp - 7_200)),
+      outputConfig: measuredOutputConfig,
+    });
+    const result = await fetchMentoRedemptionMetadata(broker, new AbortController().signal, undefined);
+    expect(result.redemption).toMatchObject({
+      capacityUsd: 0, routeStatus: "degraded", routeStatusReason: "Broker reference rate is not executable",
+    });
+    expect(fetchOnchainUint256).not.toHaveBeenCalled();
   });
 
   it("retains a successful zero quote separately from guard closure", async () => {
