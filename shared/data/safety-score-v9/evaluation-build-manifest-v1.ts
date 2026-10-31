@@ -278,7 +278,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/peg-score.ts",
-      "sha256": "5f491ed192fe37108fb22a11b6b4e3c4037e851bca044e3c70f317ac5520c6ff"
+      "sha256": "127c0a13f0c5737e4f8da763ecb5015d6878266859e57702f2c631167b67e329"
     },
     {
       "path": "shared/lib/peg-utils.ts",
@@ -462,7 +462,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/report-cards-v9-projections.ts",
-      "sha256": "ee413442895d6079d7329d26fc05e1b6ee0b21f684a5b8e50b8c2a48adb9cb91"
+      "sha256": "75af2cc05692519076dc5e20190782199d4ac9c1c1acc7c0f4fb36b4d828d8de"
     },
     {
       "path": "shared/lib/retry-after.ts",
@@ -1122,7 +1122,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/chain-registry.ts",
-      "sha256": "ef6e837e4fc37aa7c56e17755e7a15f125b24523b1c8526d9da2884762cb7492"
+      "sha256": "6cd4a0b7e79cb5ae5d319b35b838849591f732f16e3022f9f700dc0c07a35993"
     },
     {
       "path": "worker/src/lib/collections.ts",
@@ -1218,7 +1218,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/redemption-exit-route-observations.ts",
-      "sha256": "f2705427ea69a2851fd077139c5fde452ea67dbf45ff5fcbe0dda245be3173e9"
+      "sha256": "7788303065cf4b287c87aaba240baa4244b04922c95a633c77f93734532a45ab"
     },
     {
       "path": "worker/src/lib/report-cards-fixed-input-cache-codec.ts",
@@ -1238,7 +1238,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/response-body.ts",
-      "sha256": "5e599962b38360187a8d2ad2d2eddfa326d8b82a4a5d95159346b743f905e708"
+      "sha256": "04fd6ab4dce00aac0d1ff96b5ecc8b02771376450ae782ebde25b045223c0bc2"
     },
     {
       "path": "worker/src/lib/rpc-provider-budget.ts",
@@ -1254,7 +1254,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/bridge-lane-admin-events.ts",
-      "sha256": "481d0c4a177e975c76dd817bec4a2fe1b9c4ef4da677963275f8683dbe6da3a7"
+      "sha256": "863fda7983f5ce3eb52f9e38345a8b3d7861781216a753cdf45cac58ac3e1112"
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate.ts",
@@ -1447,7 +1447,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "dac08618017da3816fc6f0f9964d3da77b342310dc447960eba4c775bf4ad9c3"
+  "digest": "10e159ab1607a8eecd52d1879f25db9e4775b03a5d79cfa6f469f258fd5ae8d4"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
