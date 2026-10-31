@@ -315,6 +315,39 @@ describe("handleChains", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
   });
 
+  it("withholds health from a future-dated V9 publication at any skew", async () => {
+    const nowSec = 1_800_000_000;
+    const clock = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
+    try {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex")
+        .mockResolvedValue(activeV9({ updatedAt: nowSec + 900 }));
+      const db = mockD1([
+        stablecoinsCache([asset("usdc-circle", { Ethereum: { current: 100 } })], 60),
+      ]);
+      const response = await handleChains(db);
+      const body = await response.json() as {
+        chains: Array<{ healthScore: number | null; healthBand: string | null; healthFactors: { quality: number | null } }>;
+        _meta: { status: string; dependencies: { reportCards: { status: string; ageSeconds: number | null; reason?: string } } };
+      };
+      // The safety consumer has no future-skew allowance, so its scores never
+      // reach Chain Health and the dependency clock is not clamped to age 0.
+      expect(body.chains[0]?.healthFactors.quality).toBeNull();
+      expect(body.chains[0]?.healthScore).toBeNull();
+      expect(body.chains[0]?.healthBand).toBeNull();
+      expect(body._meta.dependencies.reportCards).toMatchObject({
+        status: "stale",
+        ageSeconds: null,
+        reason: "future-timestamp",
+        freshBudgetSec: 7_200,
+        generationId: "report-cards:v9:1",
+      });
+      expect(body._meta.status).not.toBe("fresh");
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it.each([
     [1_790, "fresh"], [1_800, "fresh"], [1_801, "degraded"],
     [3_600, "degraded"], [3_601, "stale"],

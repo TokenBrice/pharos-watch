@@ -120,6 +120,37 @@ describe("yield source-risk registry", () => {
     expect(unknownSplit.rewardShare).toBeNull();
   });
 
+  it("omits investabilityFlags when no producer reported them (R1)", () => {
+    const plainDefillama = buildYieldSourceRisk({
+      source: makeSource({ sourceKey: "defillama:pool-1", dataSource: "defillama", yieldType: "lending-vault" }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(plainDefillama.investabilityFlags).toBeUndefined();
+
+    const onchainWithoutFlags = buildYieldSourceRisk({
+      source: makeSource({
+        sourceRisk: { venueProtocol: "aave-v3", venueChain: "ethereum" },
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(onchainWithoutFlags.investabilityFlags).toBeUndefined();
+
+    const reportedFlags = ["listing-verified", "senior-protected-by-junior-coverage"];
+    const withFlags = buildYieldSourceRisk({
+      source: makeSource({
+        sourceKey: "protocol-api:royco-dawn:ethereum:0xmarket",
+        dataSource: "protocol-api",
+        yieldType: "structured-tranche",
+        sourceRisk: { venueProtocol: "royco-dawn", investabilityFlags: reportedFlags },
+      }),
+      provenance: { sourceAgeSeconds: 300 },
+      isBest: true,
+    });
+    expect(withFlags.investabilityFlags).toEqual(reportedFlags);
+  });
+
   it("resolves the wrapper venue of tracked variant children (A8)", () => {
     const resolved = buildYieldSourceRisk({
       source: makeSource({ id: "susds-sky", sourceKey: "onchain:susds-sky", dataSource: "onchain" }),

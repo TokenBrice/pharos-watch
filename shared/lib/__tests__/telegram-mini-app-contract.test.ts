@@ -111,6 +111,21 @@ describe("Telegram Mini App shared contract", () => {
     ).toBe(false);
   });
 
+  it("rejects a one-sided quiet-hours window that defaults into start === end", () => {
+    // An omitted counterpart keeps its default, so these would persist 7-7 and
+    // 22-22: enabled quiet hours that never suppress a delivery.
+    for (const operation of [
+      { kind: "set-quiet-hours", enabled: true, startHourUtc: 7 },
+      { kind: "set-quiet-hours", enabled: true, endHourUtc: 22 },
+    ]) {
+      expect(TelegramMiniAppOperationSchema.safeParse(operation).success).toBe(false);
+    }
+    expect(TelegramMiniAppOperationSchema.safeParse({ kind: "set-quiet-hours", enabled: true }).success).toBe(true);
+    expect(TelegramMiniAppOperationSchema.safeParse({
+      kind: "set-quiet-hours", enabled: true, startHourUtc: 22, endHourUtc: 7,
+    }).success).toBe(true);
+  });
+
   it("rejects retired recap operations at standalone and signed request boundaries", () => {
     for (const enabled of [true, false]) {
       const operation = { kind: "set-recap", enabled, deliveryHourLocal: 9 };

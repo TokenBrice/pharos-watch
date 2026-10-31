@@ -59,6 +59,7 @@ const IMPLEMENTATION_CODE = toHex("plasma-curve-stableswap-ng-blueprint");
 interface StateOverrides {
   poolCount?: bigint;
   coinsByIndex?: Record<number, readonly `0x${string}`[]>;
+  failedCoinsIndices?: number[];
   isMeta?: boolean;
   implementation?: `0x${string}`;
   storedRates?: bigint[];
@@ -109,6 +110,11 @@ function multicall(calls: readonly { label: string }[], overrides: StateOverride
     }
     const coins = call.label.match(/^pool-coins-(\d+)$/);
     if (coins) {
+      // A per-call revert inside the allowFailure aggregate: ordinary result
+      // shape for one unreadable pool, not a transport failure.
+      if (overrides.failedCoinsIndices?.includes(Number(coins[1]))) {
+        return { label: call.label, success: false, returnData: "0x" };
+      }
       return ok(
         call.label,
         encodeFunctionResult({
@@ -369,6 +375,24 @@ describe("Curve StableSwap-NG factory census capture", () => {
 
   it("refuses a truncated factory inventory", async () => {
     const deps = dependencies({ poolCount: BigInt(DEPLOYMENT.maxIndexedPools + 1) });
+    const pool = poolEntry();
+    await run(pool, deps);
+
+    expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.executionCapabilityGate).toEqual({
+      family: "curve-stableswap",
+      reason: "exact-pool-join-unresolved",
+    });
+  });
+
+  it("keeps the unresolved join when one of two matching pools has an unreadable coin list", async () => {
+    // Two indexed pools hold yzUSD; the retained row's pool reverts inside the
+    // allowFailure multicall while the decoy answers. Matching from the
+    // partial census would publish the decoy's state under the retained id.
+    const deps = dependencies({
+      coinsByIndex: { 0: [YZUSD, USDT0] },
+      failedCoinsIndices: [POOL_INDEX],
+    });
     const pool = poolEntry();
     await run(pool, deps);
 

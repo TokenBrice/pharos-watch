@@ -1089,10 +1089,18 @@ export async function verifyPersistedMintBurnConservation(db: D1Database, rows: 
   return "ok";
 }
 
-export async function persistMintBurnConservation(db: D1Database, record: MintBurnConservationRecord, signal?: AbortSignal): Promise<void> {
+/**
+ * The guarded upsert may intentionally retain a stored mismatch the new record
+ * does not cover. Callers must not treat a skipped write as a published verdict.
+ */
+export async function persistMintBurnConservation(
+  db: D1Database,
+  record: MintBurnConservationRecord,
+  signal?: AbortSignal,
+): Promise<{ written: boolean }> {
   throwIfAborted(signal);
   // Atomic monotonic write: an unavailable retry cannot erase an unresolved verified mismatch.
-  await runWithOverloadRetry(() => db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+  const result = await runWithOverloadRetry(() => db.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
     WHERE cache.updated_at <= excluded.updated_at AND NOT COALESCE((
       json_extract(CASE WHEN json_valid(cache.value) THEN cache.value ELSE '{}' END, '$.status') = 'mismatch'
@@ -1104,4 +1112,5 @@ export async function persistMintBurnConservation(db: D1Database, record: MintBu
     ), 0)`)
     .bind(record.key, JSON.stringify(record), record.checkedAt).run(), 3, signal);
   throwIfAborted(signal);
+  return { written: result.meta.changes > 0 };
 }

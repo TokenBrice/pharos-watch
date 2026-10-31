@@ -1074,6 +1074,8 @@ export const PegSummaryResponseSchema = z.object({
   coins: z.array(PegSummaryCoinSchema),
   summary: PegSummaryStatsSchema.nullable(),
   methodology: MethodologyEnvelopeSchema,
+  /** Present when the 200 body carries retained analytics or missing cross-checks; names the reason. */
+  degradedReason: z.string().min(1).optional(),
 });
 export type PegSummaryResponse = z.infer<typeof PegSummaryResponseSchema>;
 

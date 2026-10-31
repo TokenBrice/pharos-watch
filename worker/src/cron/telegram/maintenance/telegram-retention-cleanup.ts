@@ -1,8 +1,14 @@
-import { throwIfAborted } from "../../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../../lib/abort";
 import type { CronResult } from "../../../lib/cron-logger";
 import { createCronResult } from "../../../lib/cron-result";
-import { type CappedDeleteResult, type CappedPruneStatement, deleteCapped, deleteCappedGroup } from "../../shared/capped-delete";
+import {
+  type CappedDeleteResult,
+  type CappedPruneStatement,
+  deleteCapped,
+  runCappedPruneFamily,
+} from "../../shared/capped-delete";
 import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "../../../lib/bounded-prune";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import { TELEGRAM_RETENTION_WINDOWS } from "@shared/lib/retention-policy";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
@@ -196,6 +202,27 @@ function telegramRetentionStatement(step: TelegramRetentionDeleteStep): CappedPr
   };
 }
 
+/**
+ * Run one retention family to completion or failure without aborting its
+ * siblings: a D1 fault in one table degrades the cron and leaves the rest of
+ * the windows pruned (docs/telegram-architecture.md retention contract).
+ */
+async function runTelegramRetentionStep(
+  db: D1Database,
+  step: TelegramRetentionDeleteStep,
+  signal?: AbortSignal,
+): Promise<{ result: CappedDeleteResult; error: string | null }> {
+  const family = await runCappedPruneFamily({
+    db,
+    signal,
+    statements: { step: telegramRetentionStatement(step) },
+  });
+  return {
+    result: { pruned: family.changedRows, cappedAtLimit: family.cappedAtLimit },
+    error: family.error,
+  };
+}
+
 export async function runTelegramRetentionCleanup(
   db: D1Database,
   signal?: AbortSignal,
@@ -204,7 +231,14 @@ export async function runTelegramRetentionCleanup(
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
 
-  const processedUpdates = await pruneTelegramProcessedUpdatesCapped(db, nowSec, signal, options);
+  let processedUpdates: ProcessedUpdateDeleteResult | null = null;
+  let processedUpdatesError: string | null = null;
+  try {
+    processedUpdates = await pruneTelegramProcessedUpdatesCapped(db, nowSec, signal, options);
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    processedUpdatesError = toErrorMessage(error).slice(0, 500);
+  }
   throwIfAborted(signal);
 
   const alertAuditCutoff = nowSec - ALERT_AUDIT_RETENTION_SEC;
@@ -273,48 +307,68 @@ export async function runTelegramRetentionCleanup(
   ] as const satisfies readonly TelegramRetentionDeleteStep[];
 
   // Delivery rows drain (possibly over several batches) before the job step
-  // runs, so a job is only deleted once it owns no row. The remaining steps are
-  // independent and share that second batch.
-  const [deliveryRows] = await deleteCappedGroup(db, [telegramRetentionStatement(retentionDeleteSteps[0])], signal);
-  const rest = retentionDeleteSteps.slice(1);
-  const restResults = await deleteCappedGroup(db, rest.map(telegramRetentionStatement), signal);
-  const stepResults: Record<string, CappedDeleteResult> = { [retentionDeleteSteps[0].name]: deliveryRows };
-  rest.forEach((step, index) => { stepResults[step.name] = restResults[index]; });
+  // runs, so a job is only deleted once it owns no row. Each remaining family
+  // is isolated: one table's D1 failure must not abort the others.
+  const stepResults: Record<string, CappedDeleteResult> = {};
+  const retentionErrors: Array<{ family: string; error: string }> = [];
+  for (const step of retentionDeleteSteps) {
+    const { result, error } = await runTelegramRetentionStep(db, step, signal);
+    stepResults[step.name] = result;
+    if (error) retentionErrors.push({ family: step.name, error });
+  }
+  if (processedUpdatesError) {
+    retentionErrors.unshift({ family: "processedUpdates", error: processedUpdatesError });
+  }
 
-  const totalPruned = processedUpdates.pruned
+  const totalPruned = (processedUpdates?.pruned ?? 0)
     + retentionDeleteSteps.reduce((sum, step) => sum + stepResults[step.name].pruned, 0);
   const retentionDeleteCapped = retentionDeleteSteps.some((step) =>
     "countsTowardRunBudget" in step && step.countsTowardRunBudget && stepResults[step.name].cappedAtLimit);
   const cappedAtLimit = Object.fromEntries(Object.entries(stepResults).map(([key, result]) => [key, result.cappedAtLimit]));
+  const failedFamilies = retentionErrors.map((entry) => entry.family);
+  const reason = failedFamilies.length > 0
+    ? `retention-family-failed:${failedFamilies.join(",")}`
+    : "retention-completed";
 
   return createCronResult({
-    status: "ok",
+    status: failedFamilies.length > 0 ? "degraded" : "ok",
     itemCount: totalPruned,
     metadata: {
-      reason: "retention-completed",
-      processedUpdatesPruned: processedUpdates.pruned,
+      reason,
+      processedUpdatesPruned: processedUpdates?.pruned ?? null,
       ...Object.fromEntries(Object.entries(stepResults).map(([key, result]) => [`${key}Pruned`, result.pruned])),
       retentionTruncated: {
-        processedUpdates: processedUpdates.cappedAtLimit || processedUpdates.timeBudgetExhausted || processedUpdates.remainingBacklog.count > 0,
+        processedUpdates: processedUpdates
+          ? processedUpdates.cappedAtLimit || processedUpdates.timeBudgetExhausted || processedUpdates.remainingBacklog.count > 0
+          : null,
         ...cappedAtLimit,
       },
-      runBudgetTruncated: processedUpdates.remainingBacklog.count > 0 || retentionDeleteCapped,
+      runBudgetTruncated: processedUpdates == null
+        ? null
+        : processedUpdates.remainingBacklog.count > 0 || retentionDeleteCapped,
       deleteBatchLimit: RETENTION_DELETE_BATCH_LIMIT,
       highVolumeDeleteLimit: HIGH_VOLUME_RETENTION_DELETE_LIMIT,
-      processedUpdatePruneBudget: {
-        rowLimit: TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
-        batchLimit: TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
-        timeBudgetMs: processedUpdates.timeBudgetMs,
-        batches: processedUpdates.batches,
-        timeBudgetExhausted: processedUpdates.timeBudgetExhausted,
-      },
-      processedUpdatesRemainingBacklog: {
-        count: processedUpdates.remainingBacklog.count,
-        exact: processedUpdates.remainingBacklog.exact,
-        probeLimit: processedUpdates.remainingBacklog.probeLimit,
-      },
-      cappedAtLimit: { processedUpdates: processedUpdates.cappedAtLimit, ...cappedAtLimit },
+      processedUpdatePruneBudget: processedUpdates
+        ? {
+          rowLimit: TELEGRAM_PROCESSED_UPDATE_PRUNE_LIMIT,
+          batchLimit: TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
+          timeBudgetMs: processedUpdates.timeBudgetMs,
+          batches: processedUpdates.batches,
+          timeBudgetExhausted: processedUpdates.timeBudgetExhausted,
+        }
+        : null,
+      processedUpdatesRemainingBacklog: processedUpdates
+        ? {
+          count: processedUpdates.remainingBacklog.count,
+          exact: processedUpdates.remainingBacklog.exact,
+          probeLimit: processedUpdates.remainingBacklog.probeLimit,
+        }
+        : null,
+      cappedAtLimit: { processedUpdates: processedUpdates?.cappedAtLimit ?? null, ...cappedAtLimit },
       retentionDays: RETENTION_DAYS,
+      ...(retentionErrors.length > 0
+        ? { retentionErrors: retentionErrors.map((entry) => `${entry.family}: ${entry.error}`) }
+        : {}),
     },
   });
 }

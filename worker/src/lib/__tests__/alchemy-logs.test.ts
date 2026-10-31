@@ -136,6 +136,30 @@ describe("getAlchemyBlockNumber", () => {
     expect(result).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it("propagates caller cancellation instead of reporting an unread head", async () => {
+    const controller = new AbortController();
+    let markFetchStarted!: () => void;
+    const fetchStarted = new Promise<void>((resolve) => {
+      markFetchStarted = resolve;
+    });
+    fetchMock = mockFetch([
+      {
+        match: "https://eth-mainnet.g.alchemy.com/v2/key",
+        matchBody: "eth_blockNumber",
+        respond: async () => {
+          markFetchStarted();
+          return { stall: true };
+        },
+      },
+    ], { requireMatch: true });
+
+    const head = getAlchemyBlockNumber("https://eth-mainnet.g.alchemy.com/v2/key", createBudget(100), controller.signal);
+    await fetchStarted;
+    controller.abort(new Error("cron slot abandoned"));
+
+    await expect(head).rejects.toThrow("cron slot abandoned");
+  });
 });
 
 describe("single-URL JSON-RPC transport contracts", () => {
@@ -607,6 +631,40 @@ describe("fetchAlchemyLogs", () => {
       null,
       "0x0000000000000000000000000000000000000000000000000000000000000000",
     ]);
+  });
+
+  it("propagates caller cancellation instead of republishing it as an exception-shaped failed read", async () => {
+    const controller = new AbortController();
+    let markFetchStarted!: () => void;
+    const fetchStarted = new Promise<void>((resolve) => {
+      markFetchStarted = resolve;
+    });
+    fetchMock = mockFetch([
+      {
+        match: "https://eth-mainnet.g.alchemy.com/v2/key",
+        matchBody: "eth_getLogs",
+        respond: async () => {
+          markFetchStarted();
+          return { stall: true };
+        },
+      },
+    ], { requireMatch: true });
+
+    const run = fetchAlchemyLogs(
+      "https://eth-mainnet.g.alchemy.com/v2/key",
+      "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      [{ index: 0, value: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef" }],
+      22_000_000,
+      22_000_100,
+      createBudget(10),
+      controller.signal,
+    );
+
+    await fetchStarted;
+    controller.abort(new Error("cron slot abandoned"));
+
+    await expect(run).rejects.toThrow("cron slot abandoned");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

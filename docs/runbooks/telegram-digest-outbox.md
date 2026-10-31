@@ -30,6 +30,8 @@ or resent.
 
 An expired `sending` claim becomes `execution_unknown`. It is never returned to `pending` automatically.
 
+Stored payload validation runs before a claim opens: an unreadable payload chunk, success-action or safety-context payload becomes `failed_permanent` with an `invalid_stored_payload:` class and never enters `sending` or `execution_unknown`.
+
 Finalization commits the stored appendix cache writes and terminal `sent`
 transition in one atomic D1 batch. The outbox is the sole Telegram authority;
 historical weekly `digest_meta` delivery fields are inert and never synchronized.

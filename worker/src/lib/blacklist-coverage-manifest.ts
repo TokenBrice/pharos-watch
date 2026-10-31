@@ -44,6 +44,9 @@ const DEFERRED_BLACKLIST_COVERAGE_MANIFEST = [
   { symbol: "USDA", stablecoinId: "usda-avalon", chainId: "bsc", reason: "deferred_contract_creation_verification" },
   { symbol: "AEUR", stablecoinId: "aeur-anchored-coins", chainId: "bsc", reason: "deferred_contract_creation_verification" },
   { symbol: "JPYC", stablecoinId: "jpyc-jpyc", chainId: "avalanche", reason: "deferred_contract_creation_verification" },
+  // A7A5 is 98.75% on Tron and the tracked token emitted Blacklisted/DestroyedBlackFunds,
+  // but its Tron result-key and amount decoding still needs review.
+  { symbol: "A7A5", stablecoinId: "a7a5-old-vector", chainId: "tron", reason: "deferred_tron_result_key_verification" },
 ] as const satisfies ReadonlyArray<{
   symbol: BlacklistStablecoin;
   stablecoinId: string;

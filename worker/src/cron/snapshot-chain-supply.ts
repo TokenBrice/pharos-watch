@@ -71,11 +71,13 @@ export async function snapshotChainSupply(
     return createCronResult({ status: "degraded", itemCount: 0, metadata: { reason: preflight.reason } });
   }
   if (preflight.kind === "cache-stale") {
-    logWorkerEventArgs("handler", "warn", `[snapshot-chain-supply] Cache is ${preflight.cacheAgeSec}s old (>${CACHE_MAX_AGE_SEC}s), skipping`);
+    logWorkerEventArgs("handler", "warn", preflight.cacheAgeSec == null
+      ? `[snapshot-chain-supply] Cache generation clock unusable (${preflight.reason}), skipping`
+      : `[snapshot-chain-supply] Cache is ${preflight.cacheAgeSec}s old (>${CACHE_MAX_AGE_SEC}s), skipping`);
     return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: { reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec },
+      metadata: { reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec, cacheClockReason: preflight.reason },
     });
   }
 

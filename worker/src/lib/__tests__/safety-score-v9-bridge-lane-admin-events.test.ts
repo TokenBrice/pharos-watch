@@ -238,7 +238,7 @@ describe("pinned multi-emitter lane screening", () => {
     expect(logCalls).toEqual([{ fromBlock: 900, toBlock: 909 }, { fromBlock: 910, toBlock: 919 }]);
   });
 
-  it("reads every page and reports budget exhaustion when the window needs more pages", async () => {
+  it("certifies the readable prefix instead of failing when the window needs more pages", async () => {
     const chainRpcs = new Map([[CHAIN, {
       ...makeChainRpcConfig({ chainId: CHAIN, rpcUrls: [`https://${CHAIN}.example`] }),
       endpoints: [{ ...registryRpcEndpoint(`https://${CHAIN}.example`), maxLogBlockSpan: 1 }],
@@ -250,10 +250,28 @@ describe("pinned multi-emitter lane screening", () => {
       options(chainRpcs),
     );
 
-    expect(result).toMatchObject({ outcome: "failed", failureReason: "read-budget-exhausted" });
-    expect(result).not.toHaveProperty("certificate");
+    // A 32-page budget reads 900..931; the certificate covers that prefix so
+    // the driver can chain the next window at 932 instead of retrying an
+    // unreadable planned range forever.
+    const certificate = admitted(result);
+    expect(certificate.fromBlock).toBe(900);
+    expect(certificate.toBlock).toBe(900 + LANE_ADMIN_EVENT_MAX_LOG_PAGES - 1);
     expect(logCalls).toHaveLength(LANE_ADMIN_EVENT_MAX_LOG_PAGES);
     expect(logCalls[0]).toEqual({ fromBlock: 900, toBlock: 900 });
+  });
+
+  it("uses the producer's admitted finalized head instead of a second finalized read", async () => {
+    harness({ finalizedNumber: FINALIZED_NUMBER });
+    const lagging = { ...headerAt(FINALIZED_NUMBER - 3) };
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockResolvedValue(lagging);
+
+    const certificate = admitted(await screenLaneAdminEvents(
+      target([emitter(OAPP, ["Paused"])], { fromBlock: FINALIZED_NUMBER, toBlock: FINALIZED_NUMBER }),
+      { ...options(), finalizedHead: headerAt(FINALIZED_NUMBER) },
+    ));
+
+    expect(certificate.fromBlock).toBe(FINALIZED_NUMBER);
+    expect(certificate.toBlock).toBe(FINALIZED_NUMBER);
   });
 
   it("fails closed when the provider refuses the log range beyond the split budget", async () => {

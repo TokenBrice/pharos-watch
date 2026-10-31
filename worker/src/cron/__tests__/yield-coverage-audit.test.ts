@@ -59,6 +59,7 @@ import {
   runYieldCoverageAudit,
   summarizeAdapterLifecycle,
 } from "../yield-coverage-audit";
+import { AUTO_LENDING_POOL_MAP } from "../../lib/yield-config/yield-config-lending-protocols";
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
@@ -316,6 +317,125 @@ describe("runYieldCoverageAudit", () => {
     const result = await runYieldCoverageAudit(mockD1([{ match: "yield_coverage_review_dispositions", rows: [] }]));
     expect(result.status).toBe("ok");
     expect(mockSetCache).toHaveBeenCalledWith(expect.anything(), "yield-coverage-audit", expect.any(String));
+  });
+
+  it("does not report an envelope-rejected curated pin as a missing pool", async () => {
+    const pinnedCoin = "susde-ethena";
+    const pinnedPool = YIELD_POOL_MAP[pinnedCoin]!;
+    const pools: DlPool[] = [];
+    const seenPoolIds = new Set<string>();
+    for (const poolId of [...Object.values(YIELD_POOL_MAP), ...Object.values(AUTO_LENDING_POOL_MAP)]) {
+      if (poolId === pinnedPool || seenPoolIds.has(poolId)) continue;
+      seenPoolIds.add(poolId);
+      pools.push(lendingPool({ pool: poolId, project: "curated-lending", symbol: "PINNED", tvlUsd: 1_000_000 }));
+    }
+    for (const variant of Object.values(YIELD_VARIANT_MAP)) {
+      pools.push(makeDlYieldPool({
+        pool: `variant-${variant.variantSymbol}`,
+        chain: variant.variantChain ?? "Ethereum",
+        project: variant.variantProject ?? "variant-project",
+        symbol: variant.variantSymbol,
+      }));
+    }
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools,
+      envelopeRejectedCount: 1,
+      // The sUSDe pin was read but rejected above the 300% APY envelope.
+      envelopeRejectedPoolIds: [pinnedPool],
+      meta: { mode: "dex-cache", updatedAt: 1_774_526_300, ageSeconds: 100, poolCount: pools.length, fallbackMode: null },
+    });
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
+      if (key === "yield-rankings") {
+        return { value: JSON.stringify({ rankings: [{ id: pinnedCoin }] }), updatedAt: 1_774_526_300 };
+      }
+      if (key === "defillama-protocols") {
+        return { value: JSON.stringify({ protocols: [] }), updatedAt: 1_774_526_300 };
+      }
+      return null;
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
+
+    const result = await runYieldCoverageAudit(mockD1([{ match: "yield_coverage_review_dispositions", rows: [] }]));
+    expect(result.status).toBe("ok");
+
+    const cacheCall = mockSetCache.mock.calls.find((call) => call[1] === "yield-coverage-audit");
+    const report = JSON.parse(String(cacheCall?.[2])) as {
+      dlApyEnvelopeRejectedCount: number;
+      deadCuratedPins: Array<{
+        stablecoinId: string;
+        registry: string;
+        reasons: string[];
+      }>;
+    };
+    // A row read but rejected by the APY envelope is unavailable evidence, not
+    // proof that the curated pin disappeared (R2/R6).
+    expect(report.dlApyEnvelopeRejectedCount).toBe(1);
+    expect(report.deadCuratedPins.find(
+      (pin) => pin.registry === "native-pool"
+        && pin.stablecoinId === pinnedCoin
+        && pin.reasons.includes("missing-pool"),
+    )).toBeUndefined();
+  });
+
+  it("names the yield-rankings generation behind dead-pin coverage verdicts", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2027-09-27T00:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    const staleRankingsUpdatedAt = nowSec - 30 * 24 * 60 * 60;
+    const targetStablecoinId = "busd0-usual";
+    const targetPoolId = YIELD_POOL_MAP[targetStablecoinId]!;
+    const dlPools = Object.entries(YIELD_POOL_MAP)
+      .filter(([stablecoinId]) => stablecoinId !== targetStablecoinId)
+      .map(([, poolId]) => makeDlYieldPool({
+        pool: poolId,
+        project: "defillama-tracked-vault",
+        symbol: "vUSD",
+        tvlUsd: 1_000_000,
+      }));
+
+    mockLoadDlStablecoinPools.mockResolvedValue({
+      pools: dlPools,
+      meta: { mode: "dex-cache", updatedAt: nowSec - 600, ageSeconds: 600, poolCount: dlPools.length, fallbackMode: null },
+    });
+    mockGetCache.mockImplementation(async (_db, key) => {
+      if (key === "stablecoins") return { value: "[]", updatedAt: nowSec };
+      if (key === "defillama-protocols") return { value: "[]", updatedAt: nowSec };
+      if (key === "yield-rankings") {
+        return {
+          value: JSON.stringify({
+            updatedAt: staleRankingsUpdatedAt,
+            rankings: [{
+              id: targetStablecoinId,
+              sourceTvlUsd: 1_000_000,
+              sourceRisk: { venueProtocol: "usual" },
+              provenance: { sourceKey: "defillama:busd0-usual" },
+            }],
+          }),
+          updatedAt: staleRankingsUpdatedAt,
+        };
+      }
+      return null;
+    });
+    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
+
+    await runYieldCoverageAudit(mockD1([{ match: "yield_coverage_review_dispositions", rows: [] }]));
+
+    const auditWrite = mockSetCache.mock.calls.find((call) => call[1] === "yield-coverage-audit");
+    const report = JSON.parse(String(auditWrite?.[2])) as {
+      deadCuratedPins: Array<{ stablecoinId: string; pin: string; coverage: string | null }>;
+      rankingsMeta?: { updatedAt?: number; ageSeconds?: number };
+    };
+    expect(report.deadCuratedPins.find((pin) => pin.stablecoinId === targetStablecoinId)).toMatchObject({
+      pin: targetPoolId,
+      coverage: "dead-config",
+    });
+    // R6: the verdict must name the rankings cache clock it was classified
+    // against, so a month-old generation reads as stale, not as current cleanup.
+    expect(report.rankingsMeta).toMatchObject({
+      updatedAt: staleRankingsUpdatedAt,
+      ageSeconds: 30 * 24 * 60 * 60,
+    });
   });
 
   it.each([
@@ -949,6 +1069,78 @@ describe("identifyCoverageGaps", () => {
   ])("$name", ({ pools, options, expected }) => {
     const stale = identifyStaleAutoLendingOverrides(pools, options);
     expect(stale).toContainEqual(expect.objectContaining(expected));
+  });
+
+  it("does not report a below-safety-score verdict for an unrated card in an ok snapshot", () => {
+    const stablecoinId = "eurcv-societe-generale-forge";
+    const stale = identifyStaleAutoLendingOverrides(
+      [makeDlYieldPool({
+        pool: "d3b28212-a46b-4db8-8bb7-2c946b3cbe76",
+        project: "morpho-blue",
+        symbol: "STEAKEURCV",
+        tvlUsd: 2_000_000,
+      })],
+      {
+        stablecoinSupplyById: new Map([[stablecoinId, 1_000_000]]),
+        // Snapshot available, but this coin has no rated card.
+        safetyScores: new Map(),
+      },
+    );
+
+    expect(stale.find((entry) => entry.stablecoinId === stablecoinId)?.reasons)
+      .toEqual(["safety-score-unavailable"]);
+  });
+});
+
+describe("identifyDeadCuratedPins variant liveness", () => {
+  const stablecoinId = "ftusd-flying-tulip";
+  const wrapperAddress = YIELD_VARIANT_MAP[stablecoinId]!.variantAddress!;
+
+  it.each([
+    {
+      name: "contradictory underlying address evidence",
+      pools: [makeDlYieldPool({
+        pool: "ethereum-sftusd-contradictory",
+        project: "yo-protocol",
+        symbol: "sftUSD",
+        underlyingTokens: ["0x000000000000000000000000000000000000dead"],
+      })],
+    },
+    {
+      name: "same-symbol ambiguity",
+      pools: [
+        makeDlYieldPool({ pool: "ethereum-sftusd-first", project: "aave-v3", symbol: "sftUSD" }),
+        makeDlYieldPool({ pool: "ethereum-sftusd-second", project: "compound-v3", symbol: "sftUSD" }),
+      ],
+    },
+    {
+      name: "a yield-tokenization market",
+      pools: [makeDlYieldPool({
+        pool: "ethereum-pendle-sftusd",
+        project: "pendle-v2",
+        symbol: "sftUSD",
+        underlyingTokens: [wrapperAddress],
+      })],
+    },
+  ])("reports the variant pin as missing when $name leaves no runtime-resolvable pool", ({ pools }) => {
+    const pin = identifyDeadCuratedPins(pools).find(
+      (entry) => entry.registry === "variant-pool" && entry.stablecoinId === stablecoinId,
+    );
+    expect(pin).toMatchObject({ reasons: ["missing-pool"] });
+  });
+
+  it("clears the variant pin when the configured wrapper address resolves", () => {
+    const pools = [makeDlYieldPool({
+      pool: "ethereum-sftusd-wrapper",
+      project: "flying-tulip",
+      symbol: "sftUSD",
+      tvlUsd: 3_200_000,
+      underlyingTokens: [wrapperAddress],
+    })];
+
+    expect(identifyDeadCuratedPins(pools).find(
+      (entry) => entry.registry === "variant-pool" && entry.stablecoinId === stablecoinId,
+    )).toBeUndefined();
   });
 });
 

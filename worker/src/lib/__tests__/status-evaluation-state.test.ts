@@ -1,5 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { STATUS_BLACKLIST_THRESHOLDS, STATUS_MISSING_PRICE_THRESHOLDS, STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
+import { CRON_INTERVALS, getCronStatusImpact } from "@shared/lib/cron-jobs";
+import { computeRawStatus } from "../status-evaluation";
+import { buildStatusD1Scenario, cleanupStatusTest, makeCronRow } from "../../api/__tests__/status.test-support";
 import { getCircuitImpactStatus, getPublicProducerGraceBudget, getPublicSafetyScoreStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
 import type { StatusCause, StatusResponse } from "@shared/types/status";
@@ -1494,5 +1497,65 @@ describe("review expiry reminders", () => {
     expect(result.causes).toContainEqual(expect.objectContaining({
       code: "reserve_feed_reviews_expiring", severity: "info",
     }));
+  });
+});
+
+describe("status confidence with unreadable cron history", () => {
+  afterEach(cleanupStatusTest);
+
+  type StatusD1Overrides = NonNullable<
+    NonNullable<Parameters<typeof buildStatusD1Scenario>[0]>["overrides"]
+  >;
+
+  // Keep every non-cron lane healthy and observable so the only difference
+  // between the scenarios is whether the cron-history read succeeded.
+  function makeScenario(overrides: StatusD1Overrides) {
+    const now = Math.floor(Date.now() / 1000);
+    return buildStatusD1Scenario({
+      sections: ["sentinel", "live", "publication", "derived", "reserves", "statusState", "cronState"],
+      healthyLive: true,
+      overrides: [
+        { match: "WITH slot_lag", rows: [{ started_slots: 0, late_slots: 0, max_lag_sec: null }] },
+        { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
+        { match: "FROM status_transitions WHERE scope", rows: [], first: { cnt: 0 } },
+        { match: "FROM cache\n           WHERE key IN", rows: [] },
+        { match: "SELECT MAX(updated_at) as latest, COUNT(DISTINCT", rows: [], first: { latest: now - 60, tracked: 1 } },
+        { match: "HAVING latest_update <", rows: [], first: { cnt: 0 } },
+        { match: "SELECT stablecoin_id, SUM(supply) as total_supply", rows: [] },
+        ...overrides,
+      ],
+    });
+  }
+
+  it("does not score an unreadable cron history as zero unhealthy crons", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+
+    const watchJobs = Object.keys(CRON_INTERVALS)
+      .filter((job) => getCronStatusImpact(job) === "watch")
+      .slice(0, 7);
+    const readableRows = Object.keys(CRON_INTERVALS).map((job) =>
+      makeCronRow(job, watchJobs.includes(job) ? "error" : "ok", 30),
+    );
+
+    const readable = await computeRawStatus(
+      makeScenario([{ match: "UNION ALL", rows: readableRows }]),
+      now,
+    );
+    const unreadable = await computeRawStatus(
+      makeScenario([{ match: "UNION ALL", rows: [], throwError: new Error("D1 overload") }]),
+      now,
+    );
+
+    expect(readable.summary.unhealthyCrons).toBe(7);
+    expect(readable.summary.watchUnhealthyCrons).toBe(7);
+    expect(unreadable.summary.unhealthyCrons).toBeNull();
+    expect(unreadable.summary.cronHistoryUnavailableReason).toBe("cron-history-read-failed");
+
+    // R1 (docs/architecture.md#adr-28): an unreadable cron population is not
+    // zero unhealthy crons. The cron-health model publishes null counters on a
+    // failed history read, so the confidence score must not treat them as
+    // observed zeros and outrank the worst readable cron population.
+    expect(unreadable.confidence).toBeLessThanOrEqual(readable.confidence);
   });
 });

@@ -1117,8 +1117,8 @@ async function loadMidasMmevOracleAnchorRow(
 /**
  * Ordinary entry shape: the registry applies the shared per-source timeout
  * policy once here instead of repeating it in every descriptor. Entries that
- * must prepare D1 anchors before the timed region (Ondo, Midas) keep a
- * bespoke `run` that opens the timer only after that preparation.
+ * load a D1 anchor keep a bespoke `run` so the anchor read settles through the
+ * same timed/isolated wrapper rather than aborting the whole run.
  */
 function timedOptionalSourceEntry(
   stablecoinId: string,
@@ -1162,24 +1162,24 @@ export const TRACKED_OPTIONAL_SOURCE_REGISTRY: TrackedOptionalSourceEntry[] = [
   {
     stablecoinId: ONDO_USDY_ID,
     sourceKey: ONDO_USDY_ORACLE_SOURCE_KEY,
-    run: async (context) => {
-      const anchorRow = await loadOndoOracleAnchorRow(context.db, context.startSec);
-      const daysDelta = anchorRow ? (context.startSec - anchorRow.recorded_at) / DAY_SECONDS : 0;
-
-      return runTimedOptionalSource(
+    run: async (context) =>
+      runTimedOptionalSource(
         "Ondo USDY oracle source",
         context.signal,
-        (budgetSignal) => fetchOndoUsdyOracleSource(
-          anchorRow?.exchange_rate ?? null,
-          daysDelta,
-          anchorRow?.recorded_at ?? null,
-          budgetSignal,
-          context.chainRpcs,
-        ),
+        async (budgetSignal) => {
+          const anchorRow = await loadOndoOracleAnchorRow(context.db, context.startSec);
+          const daysDelta = anchorRow ? (context.startSec - anchorRow.recorded_at) / DAY_SECONDS : 0;
+          return fetchOndoUsdyOracleSource(
+            anchorRow?.exchange_rate ?? null,
+            daysDelta,
+            anchorRow?.recorded_at ?? null,
+            budgetSignal,
+            context.chainRpcs,
+          );
+        },
         null,
         context.onOutcome,
-      );
-    },
+      ),
   },
   {
     stablecoinId: MIDAS_MMEV_ID,

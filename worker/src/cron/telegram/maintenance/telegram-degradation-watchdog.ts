@@ -137,6 +137,22 @@ function hasMalformedDispatchCounts(value: unknown): boolean {
 }
 
 /**
+ * A planning-stage failure means detection never produced its counts; the
+ * zero-filled `eventsDetected`/`messagesSent` defaults must not be read as an
+ * observed empty run (ADR-29).
+ */
+function hasIncompletePlanning(value: unknown): boolean {
+  const record = readMetadataRecord(value);
+  if (!record) return false;
+  if (record.reason === "telegram-planning-failed") return true;
+  const reasons = record.reasons;
+  if (Array.isArray(reasons) && reasons.includes("telegram-planning-failed")) return true;
+  const delivery = readMetadataRecord(record.deliveryV2);
+  const planningErrors = delivery?.planningErrors;
+  return Array.isArray(planningErrors) && planningErrors.length > 0;
+}
+
+/**
  * Shared clear-episode logic: mark recovered and unconditionally delete the
  * episode state.
  */
@@ -181,6 +197,9 @@ async function readLatestDispatchMetadata(db: D1Database): Promise<DispatchMetad
     if (!metadata) return unknownDispatchEvidence("invalid-shape", runIdentity);
     if (hasMalformedDispatchCounts(parsed.value)) {
       return unknownDispatchEvidence("malformed-count", runIdentity);
+    }
+    if (hasIncompletePlanning(parsed.value)) {
+      return unknownDispatchEvidence("planning-incomplete", runIdentity);
     }
     return { availability: "available", value: { runIdentity, metadata } };
   } catch {

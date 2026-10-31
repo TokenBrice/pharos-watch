@@ -152,7 +152,7 @@ export function createRequestBodyObserver(ctx: AdapterContext | undefined, maxBy
         ? null : state.intakeBytes + evidence.intakeBytes;
       // Transport interruption is not evidence that the byte budget was exceeded.
       if (evidence.outcome === "rejected"
-        && ((evidence.intakeBytes ?? 0) > maxBytes || (evidence.declaredBytes ?? 0) > maxBytes)) {
+        && ((evidence.intakeBytes ?? 0) > evidence.limitBytes || (evidence.declaredBytes ?? 0) > evidence.limitBytes)) {
         state.rejectedBodies++;
       }
     },

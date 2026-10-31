@@ -155,8 +155,12 @@ function applyUniversalExclusions(
     return fail(row.id, "howey-uncertain");
   }
 
-  // Active depeg — scales with depegTolerance.
-  if (row.activeDepeg && row.currentDeviationBps != null) {
+  // Active depeg — scales with depegTolerance. A missing current deviation is
+  // not "within the ceiling": the event flag alone fails closed (R2).
+  if (row.activeDepeg) {
+    if (row.currentDeviationBps == null) {
+      return fail(row.id, "active-depeg", "hard", "Active depeg with current deviation unavailable");
+    }
     const ceiling = activeDepegThresholdBps(input.depegTolerance);
     if (Math.abs(row.currentDeviationBps) > ceiling) {
       return fail(row.id, "active-depeg");

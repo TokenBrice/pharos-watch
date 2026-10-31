@@ -361,7 +361,9 @@ async function readIndexedPools(input: {
   const indexed: IndexedPool[] = [];
   for (const { index, address } of addresses) {
     const coins = decodeEvmCaptureAddressArray(deployment.chain, coinResults.get(`pool-coins-${index}`));
-    if (!coins || coins.length < 2 || coins.length > MAX_POOL_COINS) continue;
+    // One unreadable coin list makes the inventory incomplete: matching from it
+    // could resolve the retained row to a different physical pool.
+    if (!coins || coins.length < 2 || coins.length > MAX_POOL_COINS) return null;
     indexed.push({ index, address, coins });
   }
   return indexed;

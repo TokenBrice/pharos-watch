@@ -243,6 +243,33 @@ describe("handleBlacklist", () => {
     expect(body.methodology.asOf).toBe(eventTs);
   });
 
+  it("dates an empty page's methodology envelope from the confirmed producer output, never the request clock", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-15T12:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    // sync-blacklist's last confirmed output; the quiet filtered read observed nothing.
+    const producerTs = now - 600;
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+      VALUES ('sync-blacklist', ?, 100, 'ok', ?)`)
+      .run(producerTs, JSON.stringify({ outputPublishedAt: producerTs }));
+
+    const res = await handleBlacklist(
+      db,
+      new URL("https://x/api/blacklist?stablecoin=AID&eventType=destroy"),
+    );
+    const body = await res.json() as {
+      events: unknown[];
+      methodology?: { asOf: number; isCurrent: boolean };
+    };
+
+    expect(body.events).toEqual([]);
+    expect(res.headers.get("X-Data-Updated-At")).toBe(String(producerTs));
+    // ADR-33/R6: the envelope's clock names the confirmed observation this read
+    // was dated against, not the request second.
+    expect(body.methodology?.asOf).toBe(producerTs);
+  });
+
 
   it("rejects oversized limit values instead of silently clamping them", async () => {
     const res = await handleBlacklist(mockD1([]), new URL("https://x/api/blacklist?limit=999999"));

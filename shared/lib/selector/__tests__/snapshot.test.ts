@@ -163,8 +163,8 @@ describe("selector snapshot contract", () => {
       }
     }
     // Captured from the pre-schema hand guards, not calculated by the new parser.
-    // Re-baselined when selector-v2.10/v2.11 joined the retained replay matrix.
-    expect(sha256Hex(JSON.stringify(sids))).toBe("4a07ecf749411896d548af780a929b99910f5c0fd9e3fc9314f3b962f15c6dd9");
+    // Re-baselined when selector-v2.10-v2.12 joined the retained replay matrix.
+    expect(sha256Hex(JSON.stringify(sids))).toBe("97065aa5942284692d31d7548dc7d0efd1f71237227203324e88b0fb8003523f");
   });
 
   it.each([12, 13])("runs the safety gate before projection at JSON depth %i", (depth) => {
@@ -306,6 +306,35 @@ describe("selector snapshot contract", () => {
       expect(validateVerifiedSelectorSnapshot(persisted).ok).toBe(true);
     },
   );
+
+  it("publishes the same live and frozen rank robustness for every recommendation", () => {
+    const identities = [
+      { id: "usdc-circle", symbol: "USDC", name: "USD Coin" },
+      { id: "usdt-tether", symbol: "USDT", name: "Tether USD" },
+      { id: "usds-sky", symbol: "USDS", name: "Sky Dollar" },
+      { id: "dai-makerdao", symbol: "DAI", name: "Dai" },
+      { id: "usde-ethena", symbol: "USDe", name: "Ethena USDe" },
+    ];
+    const rows = new Map(identities.map((identity, index) => [
+      identity.id,
+      makeMergedRowWithIdentity(identity, {
+        supplyUsd: 10_000_000_000 / (index + 1),
+        safetyScore: 90 - index * 2,
+        liquidityScore: 90 - index * 2,
+        dewsScore: 20 + index,
+      }),
+    ]));
+    const live = runSelector(makeInput({ profile: "trading" }), { rows }, {
+      ...FIXTURE_DATASET, datasetHash: "a".repeat(64),
+    });
+    expect(live.recommended.map((rec) => rec.id)).toEqual(["usdc-circle", "usdt-tether", "usds-sky"]);
+
+    // The frozen projection recomputes forward margins from the published
+    // rounded scores; the live run must use the same basis for every slot.
+    const frozen = createVerifiedSelectorSnapshot(live);
+    expect(frozen.recommended.map((rec) => rec.rankRobustness))
+      .toEqual(live.recommended.map((rec) => rec.rankRobustness));
+  });
 
   it("accepts a complete selector snapshot and computes a 32-hex sid", () => {
     const snapshot = expectValid(buildSelectorSnapshotOutput());

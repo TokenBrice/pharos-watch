@@ -1083,6 +1083,18 @@ describe("syncYieldData", () => {
 
     expect(result.itemCount).toBe(1);
     expect(getYieldRankingsCachePayload(db)).toBeDefined();
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      previousPublishedRankingCount?: number | null;
+      publishedRankingCountDelta?: number | null;
+      sourceCoverage?: {
+        previousPublishedRankingCount?: number | null;
+        publishedRankingCountDelta?: number | null;
+      };
+    };
+    // The valid replacement recovers the cache, but the unreadable prior
+    // generation stays unavailable: never "previously 0, now +1" (R1/R2).
+    expect(metadata.sourceCoverage?.previousPublishedRankingCount).toBeNull();
+    expect(metadata.sourceCoverage?.publishedRankingCountDelta).toBeNull();
   });
 
   it("publishes independent rows with a quality alarm when tracked coverage regresses", async () => {

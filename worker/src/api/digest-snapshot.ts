@@ -4,7 +4,8 @@ import type { DigestInputData } from "@shared/types/digest";
 import { DigestMcap7dDeltaCoverageSchema, DigestSupplyCoverageSchema } from "@shared/types/digest";
 import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { isRecord } from "@shared/lib/type-guards";
-import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
+import { DIGEST_META_TYPE_SQL, NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
+import { BLACKLIST_PUBLIC_EVENT_SQL } from "../lib/blacklist/shared";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 
@@ -84,7 +85,7 @@ export const handleDigestSnapshot = async (
   const dayOpen = dayEnd > nowSec;
 
   const targetFilter = isWeekly
-    ? "json_extract(digest_meta, '$.type') = 'weekly'"
+    ? `${DIGEST_META_TYPE_SQL} = 'weekly'`
     : NON_WEEKLY_DIGEST_SQL_FILTER;
 
   const targetRow = await db
@@ -195,14 +196,14 @@ export const handleDigestSnapshot = async (
     db.prepare(
       `SELECT stablecoin, chain_name, event_type, address, amount_native, amount_usd_at_event, amount_status, timestamp
        FROM blacklist_events
-       WHERE timestamp >= ? AND timestamp < ? AND suppression_reason IS NULL
+       WHERE timestamp >= ? AND timestamp < ? AND (${BLACKLIST_PUBLIC_EVENT_SQL})
        ORDER BY timestamp DESC LIMIT 50`,
     ).bind(dayStart, dayEnd),
     db.prepare(
       `SELECT /* digest-snapshot:blacklist-summary */ COUNT(*) AS total_events, COUNT(amount_usd_at_event) AS valued_events,
               SUM(amount_usd_at_event) AS known_amount_usd
        FROM blacklist_events
-       WHERE timestamp >= ? AND timestamp < ? AND suppression_reason IS NULL`,
+       WHERE timestamp >= ? AND timestamp < ? AND (${BLACKLIST_PUBLIC_EVENT_SQL})`,
     ).bind(dayStart, dayEnd),
   ]);
 

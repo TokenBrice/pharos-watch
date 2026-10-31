@@ -79,9 +79,11 @@ export interface LoadedDexMeasuredQuoteEvidence {
 }
 
 const OPERATIONAL_DEX_MEASURED_FAILURE_REASONS = new Set([
+  "admission-coin-group-oversized",
   "block-number-unavailable",
   "budget-deferred",
   "chain-circuit-open",
+  "dependency-code-unavailable",
   "block-header-unavailable",
   "block-timestamp-unavailable",
   "factory-code-unavailable",

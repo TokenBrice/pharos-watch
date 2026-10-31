@@ -433,3 +433,31 @@ describe("computeRecentPegStats", () => {
     expect(result).toMatchObject({ pegPct: 100, incidentCount: 0, thresholdCrossingCount: 0 });
   });
 });
+
+// A provider-skewed price observation is clamped to getFirstSeenDates' own
+// clock (worker/src/lib/db.ts), which can be later than peg-analytics' scoring
+// clock; curated pegScoreCoverage.startDate has no future bound. A non-positive
+// raw span proves no observed at-peg second, so it must never publish 100%.
+describe("computePegScore when the tracking anchor is at or after the scoring clock", () => {
+  const openDepeg = () => makeEvent({ startedAt: NOW - DAY, endedAt: null, peakDeviationBps: -9000 });
+
+  it.each([NOW, NOW + 30 * DAY])("does not invent at-peg occupancy for anchor %i", (anchor) => {
+    expect(computePegScore([openDepeg()], anchor, NOW)).toMatchObject({
+      pegScore: null,
+      pegPct: null,
+      eventCount: 1,
+      activeDepeg: true,
+      trackingSpanDays: 0,
+    });
+  });
+
+  it("publishes no occupancy for an empty history when the anchor equals the clock", () => {
+    expect(computePegScore([], NOW, NOW).pegPct).toBeNull();
+  });
+
+  it("agrees with the recent companion that the same anchor is unobserved", () => {
+    for (const anchor of [NOW, NOW + 30 * DAY]) {
+      expect(computeRecentPegStats([openDepeg()], anchor, NOW)).toBeNull();
+    }
+  });
+});

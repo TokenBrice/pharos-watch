@@ -17,7 +17,7 @@ import { loadYieldSyncState } from "../yield-sync/state";
 import { getSupplementalFamilyStaleThresholdSec } from "../yield-sync/family-registry";
 import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS, type SupplementalSourceFamilyKey } from "../yield-sync/family-registry";
 import type { ResolvedYieldCandidate } from "../yield-sync/types";
-import { morphoCandidate } from "./yield-candidate.test-support";
+import { morphoCandidate, supplementalCandidate } from "./yield-candidate.test-support";
 
 const HOUR_SEC = 3600;
 
@@ -102,6 +102,52 @@ describe("supplemental family cache acceptance window", () => {
       mode: "cache",
       fallbackMode: "partial-family-cache",
       sourceCount: 0,
+    });
+  });
+
+  it("excludes a required family whose stored rows all fail read validation", async () => {
+    const db = makeDb();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const morphoKey = getYieldSupplementalFamilyCacheKey("morpho");
+    const base = morphoCandidate(nowSec - 60);
+    // Stored sourceCount matches data.length, but neither row satisfies the
+    // read-time ResolvedYieldCandidate contract (numeric-string APY, then an
+    // APY above PYS_APY_SANITY_MAX).
+    const malformedRows = [
+      { ...base, yield: { ...base.yield, currentApy: "6.1" } },
+      {
+        ...base,
+        yield: {
+          ...base.yield,
+          sourceKey: "protocol-api:morpho-vault:ethereum:0xfeed",
+          currentApy: 500,
+          apyBase: 500,
+        },
+      },
+    ];
+    const siblingCandidate = supplementalCandidate("protocol-api:beefy:ethereum:0xbeef", nowSec - 120);
+    const rows = freshRequiredFamilyRows(nowSec);
+    rows[getYieldSupplementalFamilyCacheKey("beefy")] = supplementalFamilyCacheRow([siblingCandidate], nowSec);
+    rows[morphoKey] = cacheRow(JSON.stringify({
+      version: 1,
+      updatedAt: nowSec,
+      source: "sync-yield-supplemental",
+      sourceCount: malformedRows.length,
+      data: malformedRows,
+    }), nowSec);
+
+    installYieldCacheReader(vi.mocked(getCache), rows);
+
+    const state = await loadYieldSyncState({ db, startSec: nowSec, chainRpcs: new Map() });
+
+    // Only the sibling family's row survives. The same stored row is
+    // `supplemental-malformed` on /status and cannot prove catch-up, so the
+    // publisher must exclude it independently and say so (R2).
+    expect(state.supplementalCandidates).toEqual([siblingCandidate]);
+    expect(state.supplementalMeta).toMatchObject({
+      mode: "cache",
+      fallbackMode: "partial-family-cache",
+      unavailableRequiredFamilies: expect.arrayContaining(["morpho"]),
     });
   });
 

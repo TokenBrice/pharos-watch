@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ENGINE_VERSION, runSelector } from "../engine";
+import { tradingDewsCeiling, tradingPegScoreFloor } from "../exclusions";
 import { scoreRow } from "../scoring";
 import {
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
@@ -498,7 +499,7 @@ describe("runSelector — Yield happy path", () => {
     expect(out.recommended.map((rec) => rec.id)).toEqual(["valid-a", "valid-b", "valid-c"]);
     expect(out.recommended[2]?.rankRobustness).toEqual({
       label: "clear-margin",
-      scoreMargin: 12.9,
+      scoreMargin: 12.8,
     });
     expect(out.lowerRanked.map((row) => row.id)).not.toContain(phantom.id);
     expect(out.lowerRanked.map((row) => row.id)).toContain("valid-e");
@@ -730,6 +731,37 @@ describe("runSelector — universal properties", () => {
       expect(out.relaxedReasons, testCase.name).not.toContain(testCase.reason);
       expect(out.exclusionSummary.some((item) => item.reason === testCase.reason), testCase.name).toBe(true);
     }
+  });
+
+  it("does not relax the Trading peg floor past a non-relaxable DEWS ceiling", () => {
+    const base = buildFixtureData().rows.get("usdc-circle");
+    expect(base).toBeDefined();
+    const input = makeInput({ profile: "trading", depegTolerance: "tight", exitSpeed: "any" });
+    const makeRow = (id: string, overrides: Partial<MergedRow>): MergedRow => ({
+      ...base!,
+      id,
+      symbol: id.toUpperCase(),
+      name: id,
+      protocolSlug: id,
+      variantOf: null,
+      ...overrides,
+    });
+    const healthy = makeRow("usdt-tether", {});
+    // Tight Trading: the PegScore floor (80) fires before the DEWS ceiling
+    // (55 at exit speed "any"), masking the hard stress failure.
+    const belowPegAboveStress = makeRow("dai-makerdao", { pegScore: 60, dewsScore: 70 });
+    expect(belowPegAboveStress.pegScore!).toBeLessThan(tradingPegScoreFloor(input.depegTolerance));
+    expect(belowPegAboveStress.dewsScore!).toBeGreaterThan(tradingDewsCeiling(input.exitSpeed));
+
+    const out = runSelector(
+      input,
+      { rows: new Map([[healthy.id, healthy], [belowPegAboveStress.id, belowPegAboveStress]]) },
+      FIXTURE_DATASET,
+    );
+
+    expect(out.recommended.map((rec) => rec.id)).toEqual([healthy.id]);
+    expect(out.usedRelaxedFallback).toBe(false);
+    expect(out.relaxedReasons).toEqual([]);
   });
 
   it.each([

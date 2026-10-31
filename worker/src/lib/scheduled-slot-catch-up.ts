@@ -64,11 +64,17 @@ function classifyMissedSlot(row: DueSlotProbeRow): SlotCatchUpTrigger | null {
     ? "abandoned" : null;
 }
 
-/** The shared stale policy already lets any invocation reconcile this row. */
-function isStaleRunningSlot(row: DueSlotProbeRow, nowSec: number): boolean {
-  if (row.state !== "running" || row.updated_at == null || row.started_at == null) return false;
+/**
+ * The shared stale policy already lets any invocation reconcile a 'running' or
+ * 'reconciling' row past the silence bound; only a running row also carries the
+ * original-invocation wall-clock backstop ('reconciling' is owned by a fresh
+ * reconciler whose liveness `started_at` does not measure).
+ */
+function isStaleScheduledSlot(row: DueSlotProbeRow, nowSec: number): boolean {
+  if (row.updated_at == null) return false;
   const policy = resolveScheduledSlotPolicy(row.slot_key);
-  return row.updated_at <= nowSec - policy.slotSilenceSec || row.started_at <= nowSec - policy.hardDeadSec;
+  if (row.updated_at <= nowSec - policy.slotSilenceSec) return true;
+  return row.state === "running" && row.started_at != null && row.started_at <= nowSec - policy.hardDeadSec;
 }
 
 /** One-shot per lane and slot: the marker only ever moves forward. */
@@ -83,7 +89,23 @@ async function claimSlotCatchUpMarker(
       WHERE COALESCE(CASE WHEN json_valid(cache.value) THEN json_extract(cache.value, '$.slotStartedAt') END, 0)
         < json_extract(excluded.value, '$.slotStartedAt')`,
   ).bind(getSlotCatchUpCacheKey(scheduleKey), JSON.stringify(message), message.armedAt).run());
-  return (result.meta.changes ?? 0) === 1;
+  if ((result.meta.changes ?? 0) === 1) return true;
+  // A transport retry can replay a committed upsert and report zero changes.
+  // Read the row back and keep the claim only when the stored marker is ours.
+  const stored = await runWithOverloadRetry(() => db.prepare(
+    `SELECT CASE WHEN json_valid(value) THEN json_extract(value, '$.slotStartedAt') END AS slot_started_at,
+            CASE WHEN json_valid(value) THEN json_extract(value, '$.armedAt') END AS armed_at,
+            CASE WHEN json_valid(value) THEN json_extract(value, '$.armedByInvocationId') END AS armed_by_invocation_id
+       FROM cache WHERE key = ?`,
+  ).bind(getSlotCatchUpCacheKey(scheduleKey)).first<{
+    slot_started_at: number | null;
+    armed_at: number | null;
+    armed_by_invocation_id: string | null;
+  }>());
+  return stored != null
+    && stored.slot_started_at === message.slotStartedAt
+    && stored.armed_at === message.armedAt
+    && stored.armed_by_invocation_id === message.armedByInvocationId;
 }
 
 export interface SlotCatchUpArmOutcome {
@@ -120,7 +142,7 @@ export async function armDueSlotCatchUps(
     const slotStartedAt = row.slot_started_at;
     if (row.armed_slot_started_at != null && row.armed_slot_started_at >= slotStartedAt) continue;
     let trigger = classifyMissedSlot(row);
-    if (!trigger && input.reconcileStale && isStaleRunningSlot(row, nowSec)) {
+    if (!trigger && input.reconcileStale && isStaleScheduledSlot(row, nowSec)) {
       const sweep = await sweepStaleScheduledSlotExecutions(env.DB, {
         slotKey: scheduleKey, limit: 1, nowSec, signal: input.signal,
       });

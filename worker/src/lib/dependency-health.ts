@@ -74,39 +74,31 @@ function cacheQualityReason(cache: CacheStatus): string | null {
 }
 
 
-function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: string): DependencySignal {
-  if (!cache) {
-    return {
-      status: "unknown",
-      updatedAt: null,
-      ageSeconds: null,
-      maxAgeSec: null,
-      reason: "Cache freshness status unavailable.",
-    };
-  }
+/**
+ * The upstream-source band publishes its own clock. CacheStatus carries no
+ * source cadence budget, so the cache's availability budget is never applied
+ * to that clock (ADR-30/R3).
+ */
+function cacheSourceSignal(cache: CacheStatus, now: number): DependencySignal | null {
+  if (cache.sourceStatus !== "stale" && cache.sourceStatus !== "degraded") return null;
+  return {
+    status: cache.sourceStatus,
+    updatedAt: cache.sourceUpdatedAt ?? null,
+    ageSeconds: assessFreshnessTimestamp(now, cache.sourceUpdatedAt).ageSeconds,
+    maxAgeSec: null,
+    reason: cache.warning ?? (cache.sourceStatus === "stale"
+      ? "Upstream source data is stale."
+      : "Upstream source data is degraded."),
+  };
+}
 
-  const maxAgeSec = cache.maxAge;
-  const updatedAt = cache.publishedAt ?? null;
-  const ageSeconds = assessFreshnessTimestamp(now, updatedAt).ageSeconds;
-  const sourceAgeSeconds = assessFreshnessTimestamp(now, cache.sourceUpdatedAt).ageSeconds;
-  if (cache.sourceStatus === "stale") {
-    return {
-      status: "stale",
-      updatedAt: cache.sourceUpdatedAt ?? updatedAt,
-      ageSeconds: sourceAgeSeconds ?? ageSeconds,
-      maxAgeSec,
-      reason: cache.warning ?? "Upstream source data is stale.",
-    };
-  }
-  if (cache.sourceStatus === "degraded") {
-    return {
-      status: "degraded",
-      updatedAt: cache.sourceUpdatedAt ?? updatedAt,
-      ageSeconds: sourceAgeSeconds ?? ageSeconds,
-      maxAgeSec,
-      reason: cache.warning ?? "Upstream source data is degraded.",
-    };
-  }
+function cacheAgeSignal(
+  cache: CacheStatus,
+  cacheKey: string,
+  updatedAt: number | null,
+  ageSeconds: number | null,
+  maxAgeSec: number,
+): DependencySignal {
   if (ageSeconds == null) {
     return {
       status: "stale",
@@ -148,6 +140,32 @@ function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: stri
   };
 }
 
+function cacheSignal(cache: CacheStatus | undefined, now: number, cacheKey: string): DependencySignal {
+  if (!cache) {
+    return {
+      status: "unknown",
+      updatedAt: null,
+      ageSeconds: null,
+      maxAgeSec: null,
+      reason: "Cache freshness status unavailable.",
+    };
+  }
+
+  const updatedAt = cache.publishedAt ?? null;
+  const ageSignal = cacheAgeSignal(
+    cache,
+    cacheKey,
+    updatedAt,
+    assessFreshnessTimestamp(now, updatedAt).ageSeconds,
+    cache.maxAge,
+  );
+  const sourceSignal = cacheSourceSignal(cache, now);
+  if (!sourceSignal) return ageSignal;
+  // The cache's own age verdict is never downgraded by an upstream source band:
+  // a stale publication stays stale (ADR-29/R2, ADR-30/R3).
+  return STATUS_RANK[ageSignal.status] > STATUS_RANK[sourceSignal.status] ? ageSignal : sourceSignal;
+}
+
 function cronSignal(cron: CronStatus | undefined, now: number): DependencySignal {
   if (!cron) {
     return {
@@ -161,7 +179,7 @@ function cronSignal(cron: CronStatus | undefined, now: number): DependencySignal
 
   const latestRun = cron.runs[0] ?? null;
   const updatedAt = latestRun?.startedAt ?? cron.inFlight?.updatedAt ?? null;
-  const ageSeconds = updatedAt != null ? Math.max(0, now - updatedAt) : null;
+  const ageSeconds = assessFreshnessTimestamp(now, updatedAt).ageSeconds;
   const maxAgeSec = cron.expectedIntervalSec * 2;
   if (cron.telemetryUnknown) {
     return {
@@ -184,7 +202,9 @@ function cronSignal(cron: CronStatus | undefined, now: number): DependencySignal
     return {
       status: latestRun ? "degraded" : "stale",
       updatedAt: requiredRun?.startedAt ?? updatedAt,
-      ageSeconds: requiredRun ? Math.max(0, now - requiredRun.startedAt) : ageSeconds,
+      ageSeconds: requiredRun
+        ? assessFreshnessTimestamp(now, requiredRun.startedAt).ageSeconds
+        : ageSeconds,
       maxAgeSec,
       reason: latestRun ? reason : "No successful cron run recorded.",
     };
@@ -197,13 +217,6 @@ function cronSignal(cron: CronStatus | undefined, now: number): DependencySignal
     maxAgeSec,
     reason: null,
   };
-}
-
-function publicationTimestamp(surface: PublicationSurfaceHealth): number | null {
-  return surface.lastPublishedGeneration?.publishedAt
-    ?? surface.lastPublishedGeneration?.validatedAt
-    ?? surface.lastPublishedGeneration?.startedAt
-    ?? null;
 }
 
 function failedPublicationSurfaceSignal(
@@ -225,11 +238,23 @@ function failedPublicationSurfaceSignal(
 
 function publicationSignal(surface: PublicationSurfaceHealth | undefined, now: number): DependencySignal {
   const diagnostic = classifyPublicationDiagnostic(surface);
-  const publishedAt = surface ? publicationTimestamp(surface) : null;
-  return {
-    ...diagnostic,
-    ageSeconds: publishedAt != null ? Math.max(0, now - publishedAt) : null,
-  };
+  // Age the clock the verdict names, never a sibling generation's (ADR-30/R3).
+  const assessment = assessFreshnessTimestamp(now, diagnostic.updatedAt);
+  if (assessment.reason === null) {
+    return { ...diagnostic, ageSeconds: assessment.ageSeconds };
+  }
+  if (diagnostic.status === "healthy") {
+    // A rejected clock cannot certify a healthy verdict, and a clamped zero is
+    // not a measured age (ADR-29/R2, ADR-34/R7).
+    return {
+      status: "stale",
+      updatedAt: diagnostic.updatedAt,
+      ageSeconds: null,
+      maxAgeSec: diagnostic.maxAgeSec,
+      reason: `Publication timestamp rejected: ${assessment.reason}.`,
+    };
+  }
+  return { ...diagnostic, ageSeconds: null };
 }
 
 function signalForDefinition(

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
+import type { PeggedAsset } from "../sync-stablecoins/enrich-prices";
+import { mergeSupplementalLastKnownGood } from "../sync-stablecoins/shared";
 import {
   buildZephyrProtocolPeggedAsset,
   buildZephyrZsdPeggedAsset,
@@ -157,10 +159,18 @@ describe("parseZephyrZsdStats", () => {
     });
   });
 
-  it("rejects payloads without a positive official ZSD circulation", () => {
+  it("rejects payloads without an official ZSD circulation", () => {
     expect(parseZephyrZsdStats({ zsd_price: 1 })).toBeNull();
-    expect(parseZephyrZsdStats({ zsd_circ: 0, zsd_price: 1 })).toBeNull();
+    expect(parseZephyrZsdStats({ zsd_circ: -1, zsd_price: 1 })).toBeNull();
     expect(parseZephyrZsdStats(null)).toBeNull();
+  });
+
+  it("admits an explicit zero circulation as an observed supply", () => {
+    const nowSec = 1_790_000_060;
+    expect(parseZephyrZsdStats({ zsd_circ: 0, zsd_price: 1 }, nowSec)).toMatchObject({
+      supply: 0,
+      mcap: 0,
+    });
   });
 });
 
@@ -359,5 +369,45 @@ describe("buildZephyrProtocolPeggedAsset", () => {
       .toBe(ZEPHYR_ZSD_ASSET_ID);
     expect(buildZephyrProtocolPeggedAsset(makeZysMeta(), stats, null, 1_700_000_060)?.id)
       .toBe(ZEPHYR_ZYS_ASSET_ID);
+  });
+
+  it("publishes an observed zero circulation instead of falling through to a last-known-good restore", () => {
+    const nowSec = 1_790_000_060;
+    const scannerClock = nowSec - 60;
+    const stats = parseZephyrProtocolStats({
+      zsd_circ: 0,
+      zsd_price: 1,
+      block_timestamp: scannerClock,
+    }, nowSec)!;
+    const asset = buildZephyrProtocolPeggedAsset(makeZsdMeta(), stats, null, nowSec)!;
+
+    expect(asset).toMatchObject({
+      circulating: { peggedUSD: 0 },
+      supplySource: "zephyr-scanner",
+      supplyObservedAt: scannerClock,
+    });
+
+    // Intake admits an observed zero; only unavailable supply may restore the
+    // previous packet (shared.ts / ADR-28).
+    const previous = {
+      id: ZEPHYR_ZSD_ASSET_ID,
+      name: "Zephyr Stable Dollar",
+      symbol: "ZSD",
+      pegType: "peggedUSD",
+      price: 1,
+      supplySource: "zephyr-scanner",
+      supplyObservedAt: nowSec - 900,
+      circulating: { peggedUSD: 385_038.0963333748 },
+    } as PeggedAsset;
+    const merged = mergeSupplementalLastKnownGood(
+      [asset],
+      new Map([[ZEPHYR_ZSD_ASSET_ID, previous]]),
+      new Set(),
+      nowSec,
+    );
+
+    expect(merged.assets).toHaveLength(1);
+    expect(merged.assets[0]).toMatchObject({ circulating: { peggedUSD: 0 } });
+    expect(merged.assets[0]).not.toHaveProperty("supplyRestored");
   });
 });

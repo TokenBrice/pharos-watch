@@ -111,10 +111,6 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   priceRoute("usdq-quantoz", "0x5a8C7623FEe10542614e492c670a67e3DfE922F8", {
     outputDecimals: 6, hop: { viaStablecoinId: "usdt-tether" }, routeType: "one-hop",
   }),
-  // sUSDS/USDT (factory-stable-ng, ~$50.0M TVL)
-  priceRoute("susds-sky", "0x00836Fe54625BE242BcFA286207795405ca4fD10", {
-    hop: { viaStablecoinId: "usdt-tether" }, routeType: "one-hop",
-  }),
   // USDx/USDT (factory-stable-ng, ~$3.0M TVL; coins(0)=USDx 18dp, coins(1)=USDT 6dp)
   priceRoute("usdx-axis", "0xE521BA88837B2726E5343ccA91adA6f19F356C45", {
     hop: { viaStablecoinId: "usdt-tether" }, routeType: "one-hop",
@@ -133,10 +129,6 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   priceRoute("gho-aave", "0x635EF0056A597D13863B73825CcA297236578595", {
     inputDecimals: 18, hop: { viaStablecoinId: "crvusd-curve" }, routeType: "one-hop",
   }),
-  // PYUSD/USDS (factory-stable-ng, ~$100M TVL)
-  priceRoute("usds-sky", "0xA632D59b9B804a956BfaA9b48Af3A1b74808FC1f", {
-    inputIndex: 0, inputDecimals: 6, hop: { viaStablecoinId: "pyusd-paypal" }, routeType: "one-hop",
-  }),
   // apyUSD/apxUSD (factory-stable-ng, ~$14.9M TVL)
   priceRoute("apyusd-apyx", "0xe41be7B340f7c2EDA4DA1e99b42Ee1b228b526b7", {
     inputDecimals: 18, hop: { viaStablecoinId: "apxusd-apyx" }, routeType: "one-hop",
@@ -148,10 +140,6 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
 
   // ── Explicit chained-hop pools ──
 
-  // DOLA/sUSDS (factory-stable-ng, ~$5.6M TVL)
-  priceRoute("dola-inverse-finance", "0x8b83c4aA949254895507D09365229BC3a8c7f710", {
-    inputDecimals: 18, hop: { viaStablecoinId: "susds-sky" }, routeType: "chained-hop", maxHopDepth: 2,
-  }),
   // frxUSD/msUSD (factory-stable-ng, ~$14.3M TVL)
   priceRoute("msusd-metronome", "0x9A9e2e70919c75D80aAaA1D483c46CdBb8ac4d1b", {
     inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "frxusd-frax" },
@@ -160,11 +148,6 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   // sfrxUSD/frxUSD (factory-stable-ng, ~$11.8M TVL)
   priceRoute("sfrxusd-frax", "0xF292eB6c5dcb693Eaaf392D0562a01C3710E5978", {
     inputDecimals: 18, hop: { viaStablecoinId: "frxusd-frax" }, routeType: "chained-hop", maxHopDepth: 2,
-  }),
-  // USDS/stUSDS (factory-stable-ng, ~$7.2M TVL)
-  priceRoute("stusds-sky", "0x2C7C98A3b1582D83c43987202aEFf638312478aE", {
-    inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "usds-sky" },
-    routeType: "chained-hop", maxHopDepth: 2,
   }),
   // alUSD/frxUSD (factory-stable-ng, ~$4.3M TVL)
   priceRoute("alusd-alchemix", "0x17F9682c9cd1a448b31C0428F1D0783eD13a9Fa3", {
@@ -179,13 +162,6 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   priceRoute("usd3-3jane", "0x7BA89Bc658c07569cfa6d7947adAA80181a24568", {
     inputIndex: 0, inputDecimals: 18, outputDecimals: 6, hop: { viaStablecoinId: "frxusd-frax" },
     routeType: "chained-hop", maxHopDepth: 2,
-  }),
-  // DOLA/sUSDe (factory-stable-ng, ~$59M TVL). sUSDe is rate-bearing inside the
-  // pool, so raw get_dy is already DOLA per sUSDe; DOLA resolves through its
-  // reviewed DOLA -> sUSDS -> USDT chain rather than at par.
-  priceRoute("susde-ethena", "0x744793B5110f6ca9cC7CDfe1CE16677c3Eb192ef", {
-    inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "dola-inverse-finance" },
-    routeType: "chained-hop", maxHopDepth: 3,
   }),
   // frxUSD/trUSD (factory-stable-ng, ~$1.06M TVL; coins(0)=frxUSD 18dp, coins(1)=trUSD 18dp)
   priceRoute("trusd-tori", "0xd1D954BC94c843815EC7b8119f2de00AF27Fa6Ff", {

@@ -1,4 +1,3 @@
-import { normalizeChainId } from "@shared/types/chain-identity";
 import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import {
   findStaleVenueRiskScores,
@@ -10,11 +9,11 @@ import type {
   YieldCoverageAuditQueueItem,
   YieldCoverageAuditQueueItemKind,
 } from "@shared/types/status";
-import { normalizeDexSymbol } from "../../lib/dex-cron-constants";
 import { AUTO_LENDING_POOL_MAP, LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config-lending-protocols";
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
+import { selectVariantDlPool } from "../yield-helpers";
 import { resolveYieldSourceKeyRoute } from "../yield-sync/family-registry";
 import { explainDeterministicAutoLendingEligibility, type AutoLendingEligibilityReasonCode } from "../yield-sync/resolve";
 import type { DlPool } from "../yield-sync/types";
@@ -108,6 +107,8 @@ interface IdentifyStaleAutoLendingOverrideOptions {
   stablecoinSupplyById?: Map<string, number>;
   stablecoinSupplyMapState?: "ok" | "missing" | "malformed";
   safetyScores?: Map<string, { score: number }>;
+  /** Provider rows read this run but rejected by the APY envelope. */
+  envelopeRejectedPoolIds?: ReadonlySet<string>;
 }
 
 /** Registry that pins a curated DeFiLlama yield surface for one asset (B20). */
@@ -139,6 +140,12 @@ export interface DeadCuratedPin {
 export interface IdentifyDeadCuratedPinsOptions {
   /** Stablecoin ids present in the latest published yield rankings cache. */
   publishedStablecoinIds?: ReadonlySet<string>;
+  /**
+   * Curated pools whose provider row was read this run but rejected by the APY
+   * envelope. Their absence from the accepted snapshot is unavailable evidence,
+   * not proof that the pin is dead (R2/R6).
+   */
+  unavailablePoolIds?: ReadonlySet<string>;
 }
 
 const AUTO_LENDING_AUDIT_REASON: Record<AutoLendingEligibilityReasonCode, string> = {
@@ -152,6 +159,9 @@ const AUTO_LENDING_AUDIT_REASON: Record<AutoLendingEligibilityReasonCode, string
   "supply-map-unavailable": "supply-map-unavailable",
   "source-blocked": "blocked-source",
 };
+
+/** An ok snapshot can omit a coin's card entirely; that is unrated, not score 0. */
+const SAFETY_SCORE_UNAVAILABLE_AUDIT_REASON = "safety-score-unavailable";
 
 export interface CoverageGapPool {
   pool: string;
@@ -896,10 +906,12 @@ export function identifyStaleAutoLendingOverrides(
   const staleOverrides: StaleAutoLendingOverride[] = [];
   const stablecoinSupplyById = options.stablecoinSupplyById ?? new Map();
   const safetyScores = options.safetyScores;
+  const envelopeRejectedPoolIds = options.envelopeRejectedPoolIds;
 
   for (const [stablecoinId, poolId] of Object.entries(AUTO_LENDING_POOL_MAP).sort(([a], [b]) => a.localeCompare(b))) {
     const pool = poolById.get(poolId);
     if (!pool) {
+      if (envelopeRejectedPoolIds?.has(poolId)) continue;
       staleOverrides.push({
         stablecoinId,
         pool: poolId,
@@ -923,7 +935,13 @@ export function identifyStaleAutoLendingOverrides(
       stablecoinSupplyMapState: options.stablecoinSupplyMapState ?? (options.stablecoinSupplyById ? "ok" : "missing"),
     });
     if (verdict.eligible) continue;
-    const reasons = verdict.reasonCodes.map((reason) => AUTO_LENDING_AUDIT_REASON[reason]);
+    // The shared runtime predicate fails closed with score 0 when a coin has no
+    // rated card; the audit must name that as unavailable rather than below 50.
+    const safetyScoreUnavailable = safetyScores != null && !safetyScores.has(stablecoinId);
+    const reasons = verdict.reasonCodes.map((reason) =>
+      reason === "safety-score" && safetyScoreUnavailable
+        ? SAFETY_SCORE_UNAVAILABLE_AUDIT_REASON
+        : AUTO_LENDING_AUDIT_REASON[reason]);
 
     staleOverrides.push({
       stablecoinId,
@@ -954,6 +972,7 @@ export function identifyDeadCuratedPins(
 ): DeadCuratedPin[] {
   const snapshotPoolIds = new Set(dlPools.map((pool) => pool.pool));
   const publishedStablecoinIds = options.publishedStablecoinIds;
+  const unavailablePoolIds = options.unavailablePoolIds;
   const classifyCoverage = (stablecoinId: string): DeadCuratedPin["coverage"] => {
     if (publishedStablecoinIds == null) return null;
     return publishedStablecoinIds.has(stablecoinId) ? "dead-config" : "coverage-outage";
@@ -961,7 +980,9 @@ export function identifyDeadCuratedPins(
   const pins: DeadCuratedPin[] = [];
 
   for (const [stablecoinId, poolId] of Object.entries(YIELD_POOL_MAP).sort(([a], [b]) => a.localeCompare(b))) {
-    if (snapshotPoolIds.has(poolId)) continue;
+    // A pin whose provider row was read but rejected by the APY envelope is
+    // unavailable this run, not absent from the provider (R2/R6).
+    if (snapshotPoolIds.has(poolId) || unavailablePoolIds?.has(poolId)) continue;
     pins.push({
       stablecoinId,
       registry: "native-pool",
@@ -974,18 +995,13 @@ export function identifyDeadCuratedPins(
   }
 
   for (const [stablecoinId, variant] of Object.entries(YIELD_VARIANT_MAP).sort(([a], [b]) => a.localeCompare(b))) {
-    const variantSymbol = normalizeDexSymbol(variant.variantSymbol);
-    const variantChain = variant.variantChain ? normalizeChainId(variant.variantChain) : null;
-    const variantProject = variant.variantProject?.trim().toLowerCase() ?? "";
-    // Mirrors the runtime variant layer: single-exposure pools, optional chain
-    // and project scoping, normalized symbol equality. An address hit is a
-    // subset of the symbol candidates, so symbol resolution is the live gate.
-    const resolvesToPool = dlPools.some((pool) =>
-      pool.exposure === "single" &&
-      normalizeDexSymbol(pool.symbol) === variantSymbol &&
-      (!variantChain || normalizeChainId(pool.chain) === variantChain) &&
-      (!variantProject || pool.project.trim().toLowerCase() === variantProject));
-    if (resolvesToPool) continue;
+    // The variant pin is alive only when the runtime layer would resolve it:
+    // address/underlying corroboration, tokenization exclusion, chain/project
+    // scoping and an unambiguous candidate set.
+    const selection = selectVariantDlPool(variant, dlPools, {
+      isExcluded: (pool) => pool.pool === YIELD_POOL_MAP[stablecoinId],
+    });
+    if (selection.selected) continue;
     pins.push({
       stablecoinId,
       registry: "variant-pool",
@@ -1000,7 +1016,8 @@ export function identifyDeadCuratedPins(
   }
 
   for (const [stablecoinId, group] of Object.entries(YIELD_WEIGHTED_POOL_GROUPS)) {
-    const missingPoolIds = group.poolIds.filter((poolId) => !snapshotPoolIds.has(poolId));
+    const missingPoolIds = group.poolIds.filter((poolId) =>
+      !snapshotPoolIds.has(poolId) && !unavailablePoolIds?.has(poolId));
     if (missingPoolIds.length === 0) continue;
     pins.push({
       stablecoinId,

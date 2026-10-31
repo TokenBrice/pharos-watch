@@ -693,14 +693,36 @@ export function buildCronFreshnessHeaders(
 
 export async function getLatestSuccessfulCronTimestampResult(
   db: D1Database,
-  job: string,
+  job: string | readonly string[],
 ): Promise<CronTimestampLookupResult> {
+  const jobs = typeof job === "string" ? [job] : [...job];
   try {
+    if (jobs.length === 1) {
+      const row = await db
+        .prepare(`SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as started_at FROM cron_runs WHERE job = ?`)
+        .bind(jobs[0])
+        .first<{ started_at: number | null }>();
+      if (row?.started_at != null) {
+        return {
+          timestamp: row.started_at,
+          status: "ok",
+        };
+      }
+      return {
+        timestamp: null,
+        status: "missing",
+      };
+    }
+    // Several producer lanes can write one served row set; it is only as fresh
+    // as its oldest lane, and a lane without confirmed output fails closed.
     const row = await db
-      .prepare(`SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as started_at FROM cron_runs WHERE job = ?`)
-      .bind(job)
-      .first<{ started_at: number | null }>();
-    if (row?.started_at != null) {
+      .prepare(`SELECT COUNT(*) AS lane_count, MIN(COALESCE(output_at, 0)) AS started_at FROM (
+        SELECT job, MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) AS output_at
+          FROM cron_runs WHERE job IN (${jobs.map(() => "?").join(", ")}) GROUP BY job
+      )`)
+      .bind(...jobs)
+      .first<{ lane_count: number; started_at: number | null }>();
+    if (row?.lane_count === jobs.length && (row.started_at ?? 0) > 0) {
       return {
         timestamp: row.started_at,
         status: "ok",
@@ -711,7 +733,7 @@ export async function getLatestSuccessfulCronTimestampResult(
       status: "missing",
     };
   } catch (error) {
-    logWorkerEventArgs("lib", "warn", `[api-freshness] Failed to read latest successful cron timestamp for ${job}`, error);
+    logWorkerEventArgs("lib", "warn", `[api-freshness] Failed to read latest successful cron timestamp for ${jobs.join(", ")}`, error);
     return {
       timestamp: null,
       status: "lookup_failed",

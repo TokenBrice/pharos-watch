@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { encodeAbiParameters, parseAbiParameters } from "viem/utils";
 
 const rpcMocks = vi.hoisted(() => ({
-  fetchEvmCodeAtBlock: vi.fn(),
+  fetchEvmCodeStatusAtBlock: vi.fn(),
   fetchEvmMulticall3Aggregate3AtBlock: vi.fn(),
 }));
 
 vi.mock("../../../lib/evm-rpc", () => ({
-  fetchEvmCodeAtBlock: rpcMocks.fetchEvmCodeAtBlock,
+  fetchEvmCodeStatusAtBlock: rpcMocks.fetchEvmCodeStatusAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock: rpcMocks.fetchEvmMulticall3Aggregate3AtBlock,
 }));
 
@@ -37,6 +37,7 @@ import {
   DEX_MEASURED_EVM_REQUEST_TIMEOUT_MS,
 } from "../profiles";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-observation-assembly";
+import { isOperationalDexMeasuredFailure } from "../evidence-reader";
 import { toMaturePublicProfile } from "./profile.test-support";
 
 const DEMANDED_GRID_USD = [
@@ -188,7 +189,7 @@ function makeTarget(fixture: ReplayFixture): DexMeasuredExecutionTarget {
 
 describe("QuoterV2 pinned-block replay proofs", () => {
   beforeEach(() => {
-    rpcMocks.fetchEvmCodeAtBlock.mockReset();
+    rpcMocks.fetchEvmCodeStatusAtBlock.mockReset();
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockReset();
   });
 
@@ -197,7 +198,7 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       "uniswap-v3-quoter-v2",
       "ethereum",
     )!;
-    rpcMocks.fetchEvmCodeAtBlock.mockResolvedValue("0x00");
+    rpcMocks.fetchEvmCodeStatusAtBlock.mockResolvedValue({ status: "available", code: "0x00" });
 
     await expect(verifyDexMeasuredExecutionDeployment({
       blockHash: `0x${"ab".repeat(32)}`,
@@ -205,7 +206,45 @@ describe("QuoterV2 pinned-block replay proofs", () => {
       blockNumber: REPLAYS[0]!.blockNumber,
       chainRpcs: new Map(),
     })).resolves.toEqual({ ok: false, reason: "code-hash-mismatch" });
-    expect(rpcMocks.fetchEvmCodeAtBlock).toHaveBeenCalledTimes(1);
+    expect(rpcMocks.fetchEvmCodeStatusAtBlock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports an absent Quoter runtime as an integrity barrier", async () => {
+    const deployment = getDexMeasuredExecutionDeployment(
+      "uniswap-v3-quoter-v2",
+      "ethereum",
+    )!;
+    rpcMocks.fetchEvmCodeStatusAtBlock.mockResolvedValue({ status: "absent" });
+
+    await expect(verifyDexMeasuredExecutionDeployment({
+      blockHash: `0x${"ab".repeat(32)}`,
+      deployment,
+      blockNumber: REPLAYS[0]!.blockNumber,
+      chainRpcs: new Map(),
+    })).resolves.toEqual({ ok: false, reason: "code-absent" });
+  });
+
+  it("keeps a QuoterV2 factory-binding transport outage operational", async () => {
+    const fixture = REPLAYS[0]!;
+    const deployment = getDexMeasuredExecutionDeployment(fixture.adapterProfileId, fixture.chain)!;
+    rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValue(null);
+
+    const [outcome] = await resolveQuoterV2PoolBindings({
+      blockHash: `0x${"ab".repeat(32)}`,
+      requests: [{
+        target: makeTarget(fixture),
+        factoryAddress: deployment.factoryAddress,
+        factoryCodeHash: deployment.expectedFactoryCodeHash,
+      }],
+      blockNumber: fixture.blockNumber,
+      chainRpcs: new Map(),
+    });
+
+    // An unreadable factory lookup is producer health, not proof that the
+    // reviewed pool binding is wrong.
+    expect(outcome?.proof).toBeUndefined();
+    expect(outcome?.failureReason).toBe("quoter-rpc-unavailable");
+    expect(isOperationalDexMeasuredFailure(outcome?.failureReason)).toBe(true);
   });
 
   for (const fixture of REPLAYS) {

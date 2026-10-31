@@ -99,12 +99,17 @@ export function diffFrozenIds(current: ReadonlySet<string>, previous: ReadonlySe
   return added;
 }
 
-// Authored epitaphs are wrapper-owned copy, so the delivery-wrapper style gate
+// Appendix fields are wrapper-owned copy, so the delivery-wrapper style gate
 // scans them as hard findings. A forbidden dash would block Telegram delivery
 // and, because appendix snapshots only advance after a successful send, the
-// same appendix would re-render and re-block every edition until code changed.
+// same appendix would re-render and re-block every edition until the data or
+// code changed.
 function stripForbiddenDashes(value: string): string {
   return value.replace(/\s*[\u2012-\u2015]\s*/g, ", ");
+}
+
+function escapeAppendixText(value: string): string {
+  return escapeHtml(stripForbiddenDashes(value));
 }
 
 function buildFrozenAppendix(ids: Iterable<string>): string {
@@ -113,7 +118,7 @@ function buildFrozenAppendix(ids: Iterable<string>): string {
     const meta = FROZEN_META_BY_ID.get(id);
     if (!meta?.obituary) continue;
     lines.push(
-      `<code>${escapeHtml(meta.symbol)}</code> ${escapeHtml(meta.name)}: <i>${escapeHtml(stripForbiddenDashes(meta.obituary.epitaph))}</i>`,
+      `<code>${escapeAppendixText(meta.symbol)}</code> ${escapeAppendixText(meta.name)}: <i>${escapeAppendixText(meta.obituary.epitaph)}</i>`,
     );
   }
   return lines.join("\n");
@@ -165,11 +170,11 @@ function parseFooterIndex(raw: string | null): number {
 }
 
 function formatCemeteryCoin(coin: DeadStablecoin): string {
-  const header = `<code>${escapeHtml(coin.symbol)}</code> ${escapeHtml(coin.name)} (${escapeHtml(coin.deathDate)}; ${CAUSE_META[coin.causeOfDeath].label})`;
+  const header = `<code>${escapeAppendixText(coin.symbol)}</code> ${escapeAppendixText(coin.name)} (${escapeAppendixText(coin.deathDate)}; ${CAUSE_META[coin.causeOfDeath].label})`;
   const lines = [header];
 
   if (coin.epitaph) {
-    lines.push(`<i>${escapeHtml(stripForbiddenDashes(coin.epitaph))}</i>`);
+    lines.push(`<i>${escapeAppendixText(coin.epitaph)}</i>`);
   }
 
   if (typeof coin.peakMcap === "number" && Number.isFinite(coin.peakMcap)) {
@@ -180,14 +185,14 @@ function formatCemeteryCoin(coin: DeadStablecoin): string {
 }
 
 function formatTrackedCoin(coin: TrackedStablecoinMeta): string {
-  return `<code>${escapeHtml(coin.symbol)}</code> ${escapeHtml(coin.name)}`;
+  return `<code>${escapeAppendixText(coin.symbol)}</code> ${escapeAppendixText(coin.name)}`;
 }
 
 function buildCemeteryAppendix(coins: DeadStablecoin[], footer: string): string {
   return [
     "<b>New Cemetery Entries</b>",
     ...coins.map((coin) => `<blockquote expandable>${formatCemeteryCoin(coin)}</blockquote>`),
-    `<blockquote expandable><i>${escapeHtml(footer)}</i></blockquote>`,
+    `<blockquote expandable><i>${escapeAppendixText(footer)}</i></blockquote>`,
   ].join("\n\n");
 }
 

@@ -186,6 +186,29 @@ function parseStoredSafetyContext(raw: string): DigestSafetyContext {
   return context;
 }
 
+interface ParsedStoredEdition {
+  chunks: string[];
+  successActions: TelegramDigestSuccessAction[];
+  safetyContext: DigestSafetyContext;
+}
+
+/**
+ * Delivery input is immutable and may predate the current reader. Parse it
+ * before opening a send claim so a stored-format defect terminalizes as an
+ * input verdict instead of an ambiguous external effect.
+ */
+function parseStoredEdition(row: TelegramDigestOutboxRow): ParsedStoredEdition {
+  return {
+    chunks: parseStringArray(row.payload_chunks_json, "Telegram digest payload"),
+    successActions: parseSuccessActions(row.success_actions_json),
+    safetyContext: parseStoredSafetyContext(row.safety_context_json),
+  };
+}
+
+function invalidStoredPayloadClass(error: unknown): string {
+  return `invalid_stored_payload:${toErrorMessage(error).slice(0, 120)}`;
+}
+
 function createDeliveryOwner(): string {
   const cryptoObject = (globalThis as typeof globalThis & {
     crypto?: { randomUUID?: () => string };
@@ -230,6 +253,11 @@ export async function enqueueTelegramDigestEdition(
   signal?: AbortSignal,
 ): Promise<EnqueueTelegramDigestEditionResult> {
   throwIfAborted(signal);
+  if ((input.successActions?.length ?? 0) > TELEGRAM_DIGEST_OUTBOX_MAX_SUCCESS_ACTIONS) {
+    throw new Error(
+      `Telegram digest success actions exceed the ${TELEGRAM_DIGEST_OUTBOX_MAX_SUCCESS_ACTIONS} entry delivery limit`,
+    );
+  }
   const mapImageUrl = input.mapImageUrl ?? null;
   const mapDate = input.mapDate ?? null;
   if ((mapImageUrl == null) !== (mapDate == null)) {
@@ -337,16 +365,61 @@ async function reconcileStaleSending(db: D1Database, nowSec: number): Promise<nu
   return Number(result.meta?.changes ?? 0);
 }
 
+async function terminalizeUnclaimableEdition(
+  db: D1Database,
+  row: TelegramDigestOutboxRow,
+  nowSec: number,
+  errorClass: string,
+): Promise<boolean> {
+  const result = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `UPDATE telegram_digest_outbox
+            SET state = 'failed_permanent',
+                delivery_completed_at = ?,
+                delivery_claim_expires_at = NULL,
+                last_error_class = ?,
+                last_status_code = NULL,
+                updated_at = ?
+          WHERE edition_key = ?
+            AND state = 'pending'
+            AND delivery_generation = ?`,
+      )
+      .bind(nowSec, errorClass, nowSec, row.edition_key, row.delivery_generation)
+      .run(),
+  );
+  return Number(result.meta?.changes ?? 0) === 1;
+}
+
+type ClaimEditionResult =
+  | { kind: "claimed"; claim: TelegramDigestOutboxClaim }
+  | { kind: "not-claimable" }
+  | { kind: "invalid-stored-payload"; errorClass: string };
+
 async function claimEdition(
   db: D1Database,
   editionKey: string,
   nowSec: number,
   signal?: AbortSignal,
-): Promise<TelegramDigestOutboxClaim | null> {
+): Promise<ClaimEditionResult> {
   throwIfAborted(signal);
   const candidate = await loadEdition(db, editionKey);
-  if (!candidate || candidate.state !== "pending" || (candidate.next_attempt_at ?? 0) > nowSec) {
-    return null;
+  if (!candidate || candidate.state !== "pending") {
+    return { kind: "not-claimable" };
+  }
+  let parsed: ParsedStoredEdition;
+  try {
+    parsed = parseStoredEdition(candidate);
+  } catch (error) {
+    // The row is immutable delivery input, not an external effect. Classify an
+    // unreadable payload at the input boundary before any claim exists.
+    const errorClass = invalidStoredPayloadClass(error);
+    return await terminalizeUnclaimableEdition(db, candidate, nowSec, errorClass)
+      ? { kind: "invalid-stored-payload", errorClass }
+      : { kind: "not-claimable" };
+  }
+  if ((candidate.next_attempt_at ?? 0) > nowSec) {
+    return { kind: "not-claimable" };
   }
   const owner = createDeliveryOwner();
   const result = await runWithOverloadRetry(() =>
@@ -383,18 +456,19 @@ async function claimEdition(
     3,
     signal,
   );
-  if (Number(result.meta?.changes ?? 0) !== 1) return null;
+  if (Number(result.meta?.changes ?? 0) !== 1) return { kind: "not-claimable" };
   const row = await loadEdition(db, editionKey);
   if (!row || row.state !== "sending" || row.delivery_owner !== owner) {
     throw new Error(`Telegram digest outbox claim was not confirmed (${editionKey})`);
   }
   return {
-    row,
-    owner,
-    generation: Number(row.delivery_generation),
-    chunks: parseStringArray(row.payload_chunks_json, "Telegram digest payload"),
-    successActions: parseSuccessActions(row.success_actions_json),
-    safetyContext: parseStoredSafetyContext(row.safety_context_json),
+    kind: "claimed",
+    claim: {
+      row,
+      owner,
+      generation: Number(row.delivery_generation),
+      ...parsed,
+    },
   };
 }
 
@@ -786,22 +860,42 @@ export async function deliverTelegramDigestEdition(
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
   await reconcileStaleSending(db, nowSec);
-  const claim = await claimEdition(db, editionKey, nowSec, signal);
-  if (!claim) {
+  const claimResult = await claimEdition(db, editionKey, nowSec, signal);
+  if (claimResult.kind === "invalid-stored-payload") {
+    return {
+      editionKey,
+      state: "failed_permanent",
+      outcome: "failed_permanent",
+      chunksSent: 0,
+      nextChunkIndex: 0,
+      chunkCount: 0,
+      errorClass: claimResult.errorClass,
+      retryAfterSec: null,
+    };
+  }
+  if (claimResult.kind === "not-claimable") {
     const row = await loadEdition(db, editionKey);
     if (!row) throw new Error(`Telegram digest outbox edition is missing (${editionKey})`);
-    const chunks = parseStringArray(row.payload_chunks_json, "Telegram digest payload");
+    let chunkCount = 0;
+    try {
+      chunkCount = parseStringArray(row.payload_chunks_json, "Telegram digest payload").length;
+    } catch (error) {
+      // A terminal row may already carry an unreadable payload; report the
+      // stored state instead of throwing from a non-delivery path.
+      logWorkerEvent({ scope: "lib", level: "warn", event: "telegram_digest_stored_payload_invalid", message: "Stored Telegram digest edition payload cannot be read", error, metadata: { editionKey } });
+    }
     return {
       editionKey,
       state: row.state,
       outcome: "skipped",
       chunksSent: 0,
       nextChunkIndex: row.next_chunk_index,
-      chunkCount: chunks.length,
+      chunkCount,
       errorClass: row.last_error_class,
       retryAfterSec: null,
     };
   }
+  const claim = claimResult.claim;
 
   if (claim.row.target_chat_id !== creds.chatId) {
     await markPermanentFailure(db, claim, nowSec, "target_chat_mismatch", null);

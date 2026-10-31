@@ -534,6 +534,43 @@ describe("market and risk collectors", () => {
     }
   });
 
+  it("does not certify a partial-chain remainder as a complete 24h supply total", async () => {
+    const ctx = ctxFor([]);
+    const baseCoins = publishedGaugePayload().coins as Record<string, unknown>[];
+    const fdusd = { ...baseCoins[0], stablecoinId: "fdusd-first-digital", symbol: "FDUSD",
+      pressureShiftScore: 100, netFlow24hUsd: 38_000_000, gaugeWeightUsd: 150_000_000 };
+    const provenance = (partial: boolean) => JSON.stringify({
+      supplySource: "defillama",
+      supplyObservedAt: ctx.todayTs - 2 * 86400,
+      supplyChainGuard: partial ? {
+        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
+        quarantinedSince: ctx.todayTs - 9 * 86400,
+        chains: [{ chainId: "sui", chainLabel: "Sui", listCurrentUsd: 0, baselineUsd: 20_000_000,
+          baselineObservedAt: ctx.todayTs - 10 * 86400, baselineSource: "state", resolution: "unavailable" }],
+      } : null,
+    });
+    const collect = (previousPartial: boolean) => collectMintBurnFlows({ ...ctx, db: mockD1([
+      publishedGaugeTable({ value: JSON.stringify(publishedGaugePayload({
+        gauge: { score: -15.5, partialValuationInputs: 0, scoredMcapUsd: 67.7e9 },
+        window: { start: ctx.todayTs - 86400, end: ctx.todayTs, semantics: "closed-utc-hours" },
+        coins: [fdusd, ...baseCoins],
+      })) }),
+      { match: "FROM supply_history WHERE stablecoin_id IN", rows: [
+        // The previous row is the observed remainder after a 4%-of-total chain
+        // dropout; the +$20M apparent move is coverage recovery, not supply.
+        { stablecoin_id: "fdusd-first-digital", snapshot_date: ctx.todayTs - 86400, circulating_usd: 480_000_000, supply_provenance: provenance(previousPartial) },
+        { stablecoin_id: "fdusd-first-digital", snapshot_date: ctx.todayTs, circulating_usd: 500_000_000, supply_provenance: provenance(false) },
+      ] },
+    ]) });
+
+    // Same numbers and window: only the recorded coverage differs.
+    const control = await collect(false);
+    expect(control.value!.topPressure.map((coin) => coin.symbol)).toContain("FDUSD");
+    const result = await collect(true);
+    expect(result.value!.topPressure.map((coin) => coin.symbol)).not.toContain("FDUSD");
+    expect(result.qualityReasons).toContain("mint-burn-pressure-supply-unavailable");
+  });
+
   it("isolates a failed supply confirmation query from small pressure and the gauge", async () => {
     const ctx = ctxFor([]);
     const baseCoins = publishedGaugePayload().coins as Record<string, unknown>[];

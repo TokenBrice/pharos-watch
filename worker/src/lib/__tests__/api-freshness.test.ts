@@ -163,6 +163,25 @@ describe("getLatestSuccessfulCronTimestampResult", () => {
       status: "lookup_failed",
     });
   });
+
+  it("dates several producer lanes from their oldest confirmed output", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES (?, ?, 100, 'ok', ?)",
+      );
+      insert.run("sync-mint-burn", 1_700_000_600, JSON.stringify({ outputPublishedAt: 1_700_000_600 }));
+      insert.run("sync-mint-burn-extended", 1_700_000_000, JSON.stringify({ outputPublishedAt: 1_700_000_000 }));
+
+      await expect(getLatestSuccessfulCronTimestampResult(db, ["sync-mint-burn", "sync-mint-burn-extended"]))
+        .resolves.toEqual({ timestamp: 1_700_000_000, status: "ok" });
+      // A lane with no confirmed output fails the whole verdict closed.
+      await expect(getLatestSuccessfulCronTimestampResult(db, ["sync-mint-burn", "sync-blacklist"]))
+        .resolves.toEqual({ timestamp: null, status: "missing" });
+    } finally {
+      sqlite.close();
+    }
+  });
 });
 
 

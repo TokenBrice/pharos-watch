@@ -4,11 +4,13 @@
  */
 
 import {
-  DEFAULT_QUIET_END_HOUR,
-  DEFAULT_QUIET_START_HOUR,
   subscriberHasGlobal,
   type GlobalAlertType,
 } from "./telegram-webhook-settings-shared";
+import {
+  DEFAULT_QUIET_END_HOUR,
+  DEFAULT_QUIET_START_HOUR,
+} from "@shared/lib/telegram-mini-app-contract";
 import { executeAtomicBatch } from "../../lib/db";
 import { assertSubscribableCoin } from "../store/subscription-eligibility";
 import { loadSubscriberByChat, unixNow, upsertSubscriberRow } from "../store/subscribers";

@@ -249,6 +249,9 @@ async function buildTelegramPulseSnapshot(
     }
   }
   const qualityUnavailableFields = [...unavailableFields].sort();
+  const currentPendingDeliveries = unavailableFields.has("pendingDeliveries")
+    ? null
+    : currentSnapshot.pendingDeliveries;
 
   const pulse: TelegramPulse = {
     activeWatchers: currentSnapshot.activeWatchers,
@@ -274,9 +277,9 @@ async function buildTelegramPulseSnapshot(
     historySource: heavySections.historySource,
     topCoins: heavySections.topCoins,
     watcherHistory: heavySections.watcherHistory,
-    pendingDeliveries: unavailableFields.has("pendingDeliveries")
+    pendingDeliveries: currentPendingDeliveries == null
       ? null
-      : publicRequiredCount(currentSnapshot.pendingDeliveries, "pendingDeliveries", suppressedFields),
+      : publicRequiredCount(currentPendingDeliveries, "pendingDeliveries", suppressedFields),
     currentSnapshotAt: currentSnapshot.snapshotAt,
     lifecycleHistoryUpdatedAt: heavySections.lifecycleHistoryUpdatedAt,
     lifecycleHistoryEverySeconds: TELEGRAM_LIFECYCLE_HISTORY_SECONDS,

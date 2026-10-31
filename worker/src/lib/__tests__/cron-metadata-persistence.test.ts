@@ -33,6 +33,27 @@ describe("compactCronMetadataForPersistence", () => {
     expect(result.persistedBytes).toBeLessThanOrEqual(MAX_PERSISTED_CRON_METADATA_BYTES);
   });
 
+  it("keeps the consumer-read capabilities object across an over-budget fallback sync row", () => {
+    // A CoinGecko fallback sync repeats its provider diagnostics under
+    // `enrichment`, so the duplicated bulk alone exceeds the sync-stablecoins budget.
+    const providerDiagnostics = Array.from({ length: 1_200 }, (_, index) => ({
+      assetId: `asset-${index}`, adapter: "coinmarketcap", state: "attempted",
+      result: "failed", rejectionClass: "non-ok",
+    }));
+    const capabilities = { stablecoinsCache: true, depegPipeline: true };
+    const result = compactCronMetadataForPersistence(JSON.stringify({
+      capabilities,
+      enrichment: { totalMissing: 120, providerDiagnostics },
+      providerDiagnostics,
+    }), undefined, "sync-stablecoins");
+
+    expect(result.compacted).toBe(true);
+    const persisted = JSON.parse(result.metadata!);
+    expect(persisted.capabilities).toEqual(capabilities);
+    expect(persisted.enrichment.providerDiagnostics).toEqual({ count: providerDiagnostics.length });
+    expect(result.persistedBytes).toBeLessThanOrEqual(MAX_PERSISTED_CRON_METADATA_BYTES);
+  });
+
   it.each([null, 0])("retains scheduler-enriched measurement evidence (%s) through oversized compaction", (measurement) => {
     const measurements = {
       rowsRead: measurement, rowsWritten: measurement, rowsDropped: measurement, validationFailures: measurement,

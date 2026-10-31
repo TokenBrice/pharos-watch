@@ -30,6 +30,7 @@ export function createV9CaptureDexSnapshot(
     map: Object.fromEntries(Object.entries(legacy.dexLiqMap).map(([id, row]) => [id, {
       liquidityScore: row.liquidityScore, concentrationHhi: row.concentrationHhi,
       poolCount: row.poolCount, chainCount: row.chainCount,
+      updatedAt: observedAt,
       exitRouteObservations: row.exitRouteObservations,
       exitRouteObservationCoverage: row.exitRouteObservationCoverage,
       methodologyVersion: legacy.inputMethodologyVersions.dexLiquidity[0],

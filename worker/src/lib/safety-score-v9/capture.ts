@@ -39,6 +39,7 @@ import { compareCodeUnits } from "@shared/lib/compare";
 import { assessConsumedRedemptionReserves } from "../accepted-reserve-generation";
 import { logWorkerEvent } from "../structured-log";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
+import type { DexLiquidityRowQuarantineReason } from "../dex-liquidity";
 import { captureRedemptionReserveQuarantine } from "./redemption-reserve-quarantine";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { resolveLenderTokenIds, deriveLenderBookObservationIdentity, canonicalizeLenderBookObservation, supportsLenderBookObservation } from "@shared/lib/safety-score-v9/lender-book-registry";
@@ -47,6 +48,30 @@ import { LenderBookObservationSchema, LenderCollateralBackingSchema, type Lender
 import type { LiveReserveSnapshotProvenance } from "@shared/types/safety-score-v9-reserve-scope";
 import { loadSafetyScoreV9LenderCollateralState } from "./accepted-projection-readers";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./consumer-freshness";
+
+/**
+ * A published DEX row the snapshot reader quarantined stays in the cohort as a
+ * named technical gap; the other assets keep their capture (R8, ADR-35).
+ */
+function captureDexLiquidityQuarantine(args: {
+  assetId: string;
+  reason: DexLiquidityRowQuarantineReason;
+  generationId: string;
+  observedAtSec: number;
+  clockSec: number;
+}): PipelineGapByAssetId[string][number] {
+  return createRuntimeGapVerdict({
+    assetId: args.assetId,
+    scope: { pillar: "exit", componentKey: "exit-routes", factorKey: null,
+      routeKey: null, exposureId: null, requiredDatum: "exit-routes" },
+    sourceId: "report-cards-dex-liquidity-row-admission",
+    sourceGenerationId: args.generationId,
+    observedAtSec: args.observedAtSec, asOfSec: args.clockSec,
+    producerState: "producer-failed",
+    rejectionCode: `dex-liquidity-row-${args.reason}`,
+    reason: `The published DEX liquidity row failed reader admission: ${args.reason}.`,
+  });
+}
 
 /** Freeze actual failed attempts; a configured/missing row alone is not a failure proof. */
 export function captureReservePipelineGaps(
@@ -351,11 +376,19 @@ export async function buildNativeSafetyScoreV9Capture(
   }
 
   const dexLiqMap: Record<string, NativeDexLiquidityRow> = {};
+  const dexQuarantinedAssetIds: Array<{ assetId: string; reason: DexLiquidityRowQuarantineReason }> = [];
   const dexDeploymentSupplyCoverageById: NativeSafetyScoreV9Input["dexDeploymentSupplyCoverageById"] = {};
   const dexMethodologyVersions = new Set<string>();
   for (const coin of ACTIVE_STABLECOINS) {
     const row = dexLiquiditySnapshot.map[coin.id];
-    if (!row) throw new Error(`Native V9 capture has no in-memory DEX row for ${coin.id}`);
+    if (!row) {
+      const quarantine = dexLiquiditySnapshot.quarantined?.[coin.id];
+      if (quarantine) {
+        dexQuarantinedAssetIds.push({ assetId: coin.id, reason: quarantine });
+        continue;
+      }
+      throw new Error(`Native V9 capture has no in-memory DEX row for ${coin.id}`);
+    }
     const methodologyVersion = (row as typeof row & { methodologyVersion?: string }).methodologyVersion?.trim();
     if (!methodologyVersion) {
       throw new Error(`Native V9 capture has no persisted DEX methodology for ${coin.id}`);
@@ -390,6 +423,12 @@ export async function buildNativeSafetyScoreV9Capture(
   const activeAssetIds = ACTIVE_STABLECOINS.map((coin) => coin.id).sort();
   const reserveJournal = await loadReportCardEvidenceJournalByIdV1(db, activeAssetIds, clockSec);
   const pipelineGapByAssetId = captureReservePipelineGaps(reserveJournal, liveReserveMap, clockSec);
+  for (const { assetId, reason } of dexQuarantinedAssetIds) {
+    (pipelineGapByAssetId[assetId] ??= []).push(captureDexLiquidityQuarantine({
+      assetId, reason, generationId: dexPublication.generationId,
+      observedAtSec: Math.min(dexPublication.updatedAt, clockSec), clockSec,
+    }));
+  }
   if (!redemptionStale) {
     for (const [assetId, reason] of Object.entries(quarantined)) {
       const routeFamily = getRedemptionBackstopConfig(assetId)?.routeFamily;

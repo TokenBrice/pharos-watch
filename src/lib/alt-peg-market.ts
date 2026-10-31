@@ -21,6 +21,7 @@ export interface AltPegDistributionRow {
   sharePct: number | null;
   supplyObservedCount: number;
   supplyUnavailableCount: number;
+  supplyPartialCount: number;
   coinCount: number;
   leaderSymbol: string;
   leaderName: string;
@@ -80,6 +81,7 @@ export function buildAltPegSnapshot(peggedAssets?: StablecoinData[]): AltPegSnap
       sharePct: entry.sharePct,
       supplyObservedCount: entry.supplyObservedCount,
       supplyUnavailableCount: entry.supplyUnavailableCount,
+      supplyPartialCount: entry.supplyPartialCount,
       coinCount: entry.coinCount,
       leaderSymbol: entry.leader?.symbol ?? "",
       leaderName: entry.leader?.name ?? "",

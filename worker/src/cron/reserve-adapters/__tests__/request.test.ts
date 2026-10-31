@@ -700,11 +700,11 @@ describe("body intake attribution", () => {
   it("counts partial interruption without inventing a budget rejection", () => {
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
     const observer = createRequestBodyObserver(ctx, 4);
-    observer.onBodyRead({ intakeBytes: 2, declaredBytes: null, outcome: "rejected" });
+    observer.onBodyRead({ intakeBytes: 2, declaredBytes: null, limitBytes: 4, outcome: "rejected" });
     expect(getRequestResourceSnapshot(ctx, "abort")).toMatchObject({
       intakeBytes: 2, rejectedBodies: 0, guard: "within-policy",
     });
-    observer.onBodyRead({ intakeBytes: 5, declaredBytes: 1, outcome: "rejected" });
+    observer.onBodyRead({ intakeBytes: 5, declaredBytes: 1, limitBytes: 4, outcome: "rejected" });
     expect(getRequestResourceSnapshot(ctx, "overflow")).toMatchObject({
       intakeBytes: 7, rejectedBodies: 1, guard: "resource-budget-exceeded",
     });

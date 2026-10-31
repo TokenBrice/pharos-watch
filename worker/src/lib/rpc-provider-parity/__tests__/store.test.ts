@@ -2,6 +2,7 @@ import { gunzipSync } from "node:zlib";
 import { Buffer } from "node:buffer";
 import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import type { D1Database, D1PreparedStatement } from "@shared/types/cloudflare-runtime";
 import { getCache } from "../../db-cache";
 import { RPC_PARITY_TARGETS } from "../targets";
 import { rpcParityRotation } from "../../../cron/rpc-provider-parity/probe";
@@ -668,7 +669,7 @@ describe("rpc parity store wire form", () => {
 describe("rpc parity store persistence", () => {
   it("reports a missing row without an error", async () => {
     const { db } = fixtures.open();
-    await expect(readRpcParityStore(db)).resolves.toEqual({ row: null, updatedAtSec: null, error: null });
+    await expect(readRpcParityStore(db)).resolves.toEqual({ state: "missing", row: null, updatedAtSec: null, error: null });
   });
 
   it("writes and reads back a run", async () => {
@@ -695,5 +696,38 @@ describe("rpc parity store persistence", () => {
     expect(read.row).toBeNull();
     expect(read.updatedAtSec).toBe(NOW_SEC);
     expect(read.error).toContain(RPC_PARITY_STORE_KEY);
+  });
+
+  it("keeps the retained window when the store read fails transiently", async () => {
+    const { db } = fixtures.open();
+    const retainedAtSec = [NOW_SEC - 7_200, NOW_SEC - 3_600];
+    for (const atSec of retainedAtSec) {
+      await expect(recordRpcParityRun(db, fullParityRun(atSec))).resolves.toMatchObject({ ok: true });
+    }
+    // Only the cache SELECT fails (as a retriable D1 overload); the upsert
+    // would succeed. A failed read must not be treated as an empty window.
+    const unreadable = {
+      ...db,
+      prepare(sql: string) {
+        if (sql === "SELECT value, updated_at FROM cache WHERE key = ?") {
+          const failing = {
+            bind: () => failing,
+            first: async () => {
+              throw new Error("D1_ERROR: D1 DB is overloaded. Requests queued for too long.");
+            },
+          };
+          return failing as unknown as D1PreparedStatement;
+        }
+        return db.prepare(sql);
+      },
+    } as D1Database;
+
+    await expect(recordRpcParityRun(unreadable, fullParityRun(NOW_SEC))).resolves.toMatchObject({
+      ok: false, published: false, runs: null, reset: false,
+    });
+
+    const store = await readRpcParityStore(db);
+    expect(store.error).toBeNull();
+    expect(store.row?.runs.map((run) => run.atSec)).toEqual(expect.arrayContaining(retainedAtSec));
   });
 });

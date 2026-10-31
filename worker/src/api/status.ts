@@ -14,6 +14,7 @@ import { computeRawStatus, type RawStatusComputation } from "../lib/status-evalu
 import { loadCronHealth } from "../lib/status/cron-health";
 import { summarizeCronStatuses } from "../lib/status/cron-status-summary";
 import { applyCronHealthSectionErrors } from "../lib/status/evaluation-context";
+import { rescoreConfidenceForAvailability } from "../lib/status/evaluation-state";
 import { synthesizeOverallCauses } from "../lib/status/evaluation-causes";
 import {
   evaluateSafetyPublicationSizeCauses,
@@ -76,7 +77,7 @@ interface ResolvedRawStatus {
 
 async function loadProducerHeadStatuses(
   db: D1Database,
-): Promise<{ heads: ProducerHeadStatus[]; error: StatusSectionError | null }> {
+): Promise<{ heads: ProducerHeadStatus[] | null; error: StatusSectionError | null }> {
   try {
     const persisted = await loadProducerHeads(db);
     const byIdentity = new Map(persisted.map((head) => [
@@ -111,7 +112,9 @@ async function loadProducerHeadStatuses(
     };
   } catch {
     return {
-      heads: [],
+      // R2: a failed read is not an observed empty population; the schema makes
+      // `producerHeads` optional and `sectionErrors.producerHistory` names it.
+      heads: null,
       error: {
         code: "producer_history_read_failed",
         message: "Producer invocation and productivity history unavailable.",
@@ -218,12 +221,20 @@ async function resolveRawStatusForResponse(
     };
     delete sectionErrors.scheduledSlots;
     applyCronHealthSectionErrors(sectionErrors, cronHealth);
+    const availabilityStatus = maxStatus(snapshot.raw.availabilityStatus, scheduler.status);
     return {
       raw: {
         ...snapshot.raw,
         schedulerLiveness,
-        availabilityStatus: maxStatus(snapshot.raw.availabilityStatus, scheduler.status),
+        availabilityStatus,
         rawOverallStatus: maxStatus(snapshot.raw.rawOverallStatus, scheduler.status),
+        // The cached assessment was scored before this live floor; re-score its
+        // availability term so confidence matches the verdict it accompanies.
+        confidence: rescoreConfidenceForAvailability(
+          snapshot.raw.confidence,
+          snapshot.raw.availabilityStatus,
+          availabilityStatus,
+        ),
         crons: cronHealth.crons,
         causes: {
           availability: availabilityCauses,
@@ -295,21 +306,24 @@ export function handleStatus({
       // with `staleness.isStale` reflecting the lag. This removes the prior
       // race with the cron's own reconcile call. First-boot with empty table
       // returns a fallback state but does NOT persist — the next cron seeds.
-      const resolvedState = state ?? buildFallbackStatusState(raw.rawOverallStatus, now);
+      // A failed/rejected read is unavailable, never an evaluation at `now`.
+      const statusStateReadFailed = persistenceIssues.some((issue) => issue.operation === "read-status-snapshot");
+      const resolvedState = statusStateReadFailed
+        ? null
+        : state ?? buildFallbackStatusState(raw.rawOverallStatus, now);
       // Distinguish three cases:
       //  1. staleness present → use it (honest age reporting)
       //  2. state absent on cold boot, no persistence issue → isStale: false
       //  3. staleness query itself failed → surface isStale: true so clients
       //     don't trust the fallback as fresh. The specific DB error is also
       //     present in `sectionErrors.statusState`.
-      const statusStateReadFailed = persistenceIssues.some((issue) => issue.operation === "read-status-snapshot");
       const resolvedStaleness = staleness ?? {
         ageSeconds: statusStateReadFailed ? STATUS_SYSTEM_FRESHNESS_SEC + 1 : 0,
         maxAgeSec: STATUS_SYSTEM_FRESHNESS_SEC,
         isStale: statusStateReadFailed,
       };
 
-      const effectiveOverallStatus = maxStatus(resolvedState.currentStatus,
+      const effectiveOverallStatus = maxStatus(resolvedState?.currentStatus ?? raw.rawOverallStatus,
         schedulerLivenessImpactStatus(schedulerLiveness));
       const probeIssues: StatusPersistenceIssue[] = [];
       const discrepancyIssues: StatusPersistenceIssue[] = [];
@@ -349,7 +363,8 @@ export function handleStatus({
         ),
         ...evaluateSafetyPublicationSizeCauses(safetyPublicationSize),
       ];
-      const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak);
+      const discrepancy = buildDiscrepancy(effectiveOverallStatus, probe, now, discrepancyStreak,
+        "status-missing", probeIssues.length > 0 ? "probe-unreadable" : "probe-missing");
       const statusStateError = summarizeStatusPersistenceIssues(persistenceIssues);
       const snapshotErrorSection = statusSnapshotSectionError(snapshotFallbackReason, snapshotError);
       let dependencyHealth: StatusResponse["dependencyHealth"] = null;
@@ -427,7 +442,7 @@ export function handleStatus({
         providerCircuitHealth: supplements.providerCircuitHealth,
         canaries: supplements.canaries,
         telegramSummary: supplements.telegramSummary,
-        producerHeads: producerHistory.heads,
+        ...(producerHistory.heads ? { producerHeads: producerHistory.heads } : {}),
         priceSourceHealth: supplements.priceSourceHealth,
         coingeckoPriceDiff: supplements.coingeckoPriceDiff,
         d1Usage: supplements.d1Usage,

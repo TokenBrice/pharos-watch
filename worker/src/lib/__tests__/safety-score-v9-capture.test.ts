@@ -106,6 +106,29 @@ describe("V9 consumed reserve scoring-clock admission", () => {
     })]);
     expect(input.pipelineGapByAssetId?.[other.id]).toBeUndefined();
   });
+  it("keeps the unaffected cohort when a published DEX row is quarantined", async () => {
+    fixture(RUN + 1, RUN - 60);
+    const loaded = await mocks.inputs();
+    // The reader rejected usdc-circle's persisted row and named the reason; the
+    // rest of the publication is still admitted (R8/ADR-35).
+    loaded.dexLiquiditySnapshot = {
+      latestUpdatedAt: RUN,
+      map: Object.fromEntries(ACTIVE_STABLECOINS
+        .filter((coin) => coin.id !== "usdc-circle")
+        .map((coin) => [coin.id, { methodologyVersion: "1.0" }])),
+      quarantined: { "usdc-circle": "invalid-coverage-evidence" },
+    };
+    mocks.inputs.mockResolvedValue(loaded);
+
+    const { input } = await buildNativeSafetyScoreV9Capture(mockD1());
+
+    expect(Object.keys(input.dexLiqMap)).toHaveLength(ACTIVE_STABLECOINS.length - 1);
+    expect(input.dexLiqMap["usdc-circle"]).toBeUndefined();
+    expect(input.activeAssetIds).toContain("usdc-circle");
+    expect(input.pipelineGapByAssetId?.["usdc-circle"]?.map(({ verdict }) =>
+      verdict.proof.rejectionCode).join(" ")).toMatch(/dex|coverage/i);
+  });
+
   it("retains separately sealed Reservoir redemption evidence without upgrading undated composition", async () => {
     fixture(RUN + 1, RUN - 60);
     const loaded = await mocks.inputs();

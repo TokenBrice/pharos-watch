@@ -6,7 +6,7 @@ import { cgHeaders, cgSimplePricePath, cgUrl } from "./coingecko";
 import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { throwIfAborted } from "./abort";
-import { CoinGeckoSimplePriceSchema } from "./upstream-schemas";
+import { CoinGeckoSimplePriceEntrySchema, CoinGeckoSimplePriceSchema } from "./upstream-schemas";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 const PRIMARY_CG_BATCH_SIZE = 250;
@@ -54,9 +54,18 @@ export async function fetchCoingeckoSimplePrices(
         logWorkerEventArgs("lib", "warn", `[primary-prices] CG price API payload invalid: ${parsed.error.message}`);
         continue;
       }
-      const data = parsed.data;
-      for (const [gId, val] of Object.entries(data)) {
-        if (val?.usd == null || !(val.usd > 0)) continue;
+      let invalidEntries = 0;
+      let validEntries = 0;
+      for (const [gId, rawValue] of Object.entries(parsed.data)) {
+        const entry = CoinGeckoSimplePriceEntrySchema.safeParse(rawValue);
+        if (!entry.success) {
+          // R8: a malformed quote blocks only its own key; siblings continue.
+          invalidEntries++;
+          continue;
+        }
+        validEntries++;
+        const val = entry.data;
+        if (!(val.usd > 0)) continue;
         if (val.last_updated_at != null && (
           !Number.isFinite(val.last_updated_at) || val.last_updated_at <= 0
         )) continue;
@@ -78,6 +87,13 @@ export async function fetchCoingeckoSimplePrices(
           observedAt: upstreamObservedAt,
           observedAtMode: upstreamObservedAt != null ? "upstream" : null,
         });
+      }
+      if (invalidEntries > 0) {
+        // A nonempty batch with no valid row is a provider failure, not an
+        // observed empty cohort.
+        if (validEntries === 0) hadBatchFailure = true;
+        logWorkerEventArgs("lib", "warn",
+          `[primary-prices] Quarantined ${invalidEntries} malformed CoinGecko simple-price row(s), ${validEntries} valid`);
       }
     }
   } catch (err) {

@@ -122,7 +122,9 @@ export async function syncRpcProviderParity(
 
   const circuitOutcome = rpcParityCircuitOutcome(probe.attempted, probe.headOk);
   let circuitRecorded = false;
-  if (circuitOutcome !== "neutral") {
+  // A torn-down run's partial sample set is not provider evidence; only a
+  // completed run may close or advance the breaker.
+  if (circuitOutcome !== "neutral" && !probe.aborted) {
     try {
       await recordOutcome(db, CIRCUIT_SOURCE.DWELLIR_EVM, circuitOutcome === "success");
       circuitRecorded = true;
@@ -153,7 +155,7 @@ export async function syncRpcProviderParity(
     stage: "stored",
     itemsDone: probe.attempted,
     itemsTotal: probe.attempted,
-    message: `parity samples retained: ${write.runs} run(s)`,
+    message: `parity samples retained: ${write.runs ?? "unknown"} run(s)`,
   });
 
   const hasObservation = probe.attempted > 0 && probe.samples.length > 0;

@@ -307,6 +307,9 @@ export function mapTelegramBotStats(input: {
   } = input;
   const unavailableFields = [...(input.unavailableFields ?? [])];
   const telemetryErrors = input.telemetryErrors ?? {};
+  for (const field of lifecycleSnapshot?.unavailableFields ?? []) {
+    if (!unavailableFields.includes(field)) unavailableFields.push(field);
+  }
 
   const pendingCount = pendingCapacity
     ? pendingCapacity.active
@@ -457,7 +460,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     pendingDeliveries,
     pendingCapacityResult,
     retryErrorClassesResult,
-    topStablecoins,
+    topStablecoinsResult,
     presetQueryFailuresResult,
     inactiveCleanupResult,
     lifecycleSnapshotResult,
@@ -467,7 +470,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     loadTelegramPendingCount(db, TELEGRAM_PENDING_DELIVERIES_SQL),
     loadOptionalTelegramTelemetry(loadTelegramPendingCapacity(db, now)),
     loadOptionalTelegramTelemetry(loadTelegramRetryErrorClasses(db)),
-    loadTelegramTopStablecoins(db),
+    loadOptionalTelegramTelemetry(loadTelegramTopStablecoins(db)),
     loadOptionalTelegramTelemetry(loadPresetQueryFailureCount(db)),
     loadOptionalTelegramTelemetry(loadInactiveSubscribersCleanedThisWeek(db, now)),
     loadOptionalTelegramTelemetry(refreshTelegramLifecycleSnapshotIfStale(db, now)),
@@ -476,6 +479,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
   const optionalResults = {
     pendingDeliveryBacklog: pendingCapacityResult,
     retryErrorClassCounts: retryErrorClassesResult,
+    topStablecoins: topStablecoinsResult,
     presetQueryFailures: presetQueryFailuresResult,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult,
     lifecycleSnapshot: lifecycleSnapshotResult,
@@ -495,7 +499,7 @@ export async function getTelegramBotStats(db: D1Database, now: number): Promise<
     pendingDeliveries,
     pendingCapacity: pendingCapacityResult.value,
     retryErrorClasses: retryErrorClassesResult.value,
-    topStablecoins,
+    topStablecoins: topStablecoinsResult.value ?? [],
     presetQueryFailures: presetQueryFailuresResult.value ?? undefined,
     inactiveSubscribersCleanedThisWeek: inactiveCleanupResult.value,
     lifecycleSnapshot: lifecycleSnapshotResult.value,

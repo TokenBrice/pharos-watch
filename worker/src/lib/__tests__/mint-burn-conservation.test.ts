@@ -472,8 +472,10 @@ describe("raw token conservation", () => {
   it("atomically retains a mismatch through unavailable/older attempts until verified pass", async () => {
     const { db } = fixtures.open();
     const mismatch = completeMintBurnConservationAudit({ ...input(), boundary: ready(3n) });
-    await persistMintBurnConservation(db, mismatch);
-    await persistMintBurnConservation(db, { ...mismatch, status: "unavailable", checkedAt: 1200 });
+    expect(await persistMintBurnConservation(db, mismatch)).toEqual({ written: true });
+    // A rejected write is not a published verdict; callers must see it.
+    expect(await persistMintBurnConservation(db, { ...mismatch, status: "unavailable", checkedAt: 1200 }))
+      .toEqual({ written: false });
     const read = async () => (await readMintBurnConservationRecords(db, [config])).get(mintBurnConservationCacheKey(config));
     expect(await read()).toEqual(mismatch);
     await persistMintBurnConservation(db, { ...mismatch, status: "ok", checkedAt: 1000 });
@@ -485,7 +487,7 @@ describe("raw token conservation", () => {
     await persistMintBurnConservation(db, { ...mismatch, status: "ok", fromBlock: 103, toBlock: 104, checkedAt: 1203 });
     expect(await read()).toEqual(mismatch);
     const pass = { ...mismatch, status: "ok" as const, residualRaw: "0", checkedAt: 1201 };
-    await persistMintBurnConservation(db, pass);
+    expect(await persistMintBurnConservation(db, pass)).toEqual({ written: true });
     expect(await read()).toEqual(pass);
   });
   it.each(["broken", "{}", '{"status":"mismatch"}'])("repairs invalid cached JSON %s", async (value) => {

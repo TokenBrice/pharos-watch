@@ -592,6 +592,49 @@ describe("generateWeeklyRecap", () => {
     expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
   });
 
+  it("returns the neutral skip for a delivered week under production credential diagnostics", async () => {
+    const existingGeneratedAt = Math.floor(Date.UTC(2026, 2, 30, 12, 0, 0) / 1000);
+    const existing = {
+      generated_at: existingGeneratedAt,
+      digest_title: "Weekly Calm",
+      digest_text: "A stored weekly digest.",
+      digest_extended: VALID_WEEKLY_EXTENDED,
+      digest_meta: JSON.stringify({ type: "weekly" }),
+    };
+    const twitterLedgerValue = JSON.stringify({ state: "sent" });
+    const db = mockD1([
+      {
+        match: "SELECT generated_at, digest_title, digest_text, digest_extended, digest_meta",
+        rows: [existing],
+        first: existing,
+      },
+      { match: "SELECT value FROM cache WHERE key = ?", rows: [{ value: twitterLedgerValue }] },
+      { match: "SELECT state FROM telegram_digest_outbox", rows: [{ state: "sent" }] },
+    ]);
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      { apiKey: "key", apiSecret: "secret", accessToken: "token", accessTokenSecret: "token-secret" },
+      { botToken: "bot", chatId: "chat" },
+      undefined,
+      undefined,
+      undefined,
+      // Production shape: every credential is configured, so each missing list
+      // is an empty array rather than an omitted field.
+      { twitterMissing: [], telegramMissing: [] },
+    );
+
+    expect(result.status).toBe("skipped_neutral");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "weekly-recap-exists",
+      skipped: "weekly-recap-exists",
+      existingGeneratedAt,
+    });
+    expect(deliverTelegramDigestEdition).not.toHaveBeenCalled();
+    expect(enqueueTelegramDigestEdition).not.toHaveBeenCalled();
+  });
+
   it.each(["failed_permanent", "execution_unknown"])(
     "refuses an operator-terminal weekly outbox row despite stale delivered metadata (%s)", async (state) => {
     const existingGeneratedAt = Math.floor(Date.UTC(2026, 2, 30, 12, 0, 0) / 1000);
@@ -984,6 +1027,63 @@ describe("generateWeeklyRecap", () => {
         psi: { current: 91, prior: 84, delta: 7 },
         activeDepegObservations: { current: 77, prior: 28 },
       });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("generates the public recap when only an internal weekly sentinel exists on the edition day", async () => {
+    vi.setSystemTime(new Date("2026-03-30T08:10:00Z"));
+    const scheduledAtSec = Math.floor(Date.parse("2026-03-30T08:10:00Z") / 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO daily_digest (generated_at, digest_title, digest_text, input_data, digest_meta)
+         VALUES (?, ?, ?, ?, ?)`,
+      );
+      for (const row of buildDailyRows()) {
+        insert.run(row.generated_at, row.digest_title, row.digest_text, row.input_data, null);
+      }
+      // The documented operational sentinel artifact: a hidden weekly row on
+      // the scheduled edition day.
+      insert.run(
+        scheduledAtSec,
+        "__bluechip_replay_guard__",
+        "placeholder",
+        "{}",
+        JSON.stringify({ type: "weekly", internal: true }),
+      );
+      vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+      const result = await generateWeeklyRecap(
+        db,
+        "anthropic-key",
+        null,
+        null,
+        undefined,
+        undefined,
+        scheduledAtSec,
+      );
+
+      // The sentinel is not this week's published recap, so the run builds one
+      // instead of returning "weekly-recap-exists".
+      expect(result.status).toBeUndefined();
+      expect(result.itemCount).toBe(1);
+      const generated = sqlite.prepare(
+        `SELECT digest_title FROM daily_digest
+          WHERE generated_at = ?
+            AND json_extract(digest_meta, '$.type') = 'weekly'
+            AND (digest_meta IS NULL OR json_extract(digest_meta, '$.internal') IS NULL)
+          ORDER BY id DESC
+          LIMIT 1`,
+      ).get(scheduledAtSec) as { digest_title: string | null } | undefined;
+      expect(generated?.digest_title).toBe("Weekly Calm");
+
+      // A hidden placeholder is not a recent weekly angle either.
+      const request = JSON.parse(String(vi.mocked(fetchWithRetry).mock.calls[0]?.[1]?.body)) as {
+        messages: Array<{ content: string }>;
+      };
+      expect(request.messages[0]?.content).not.toContain("__bluechip_replay_guard__");
     } finally {
       sqlite.close();
     }

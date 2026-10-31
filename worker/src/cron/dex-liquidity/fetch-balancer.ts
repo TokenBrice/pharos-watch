@@ -529,6 +529,14 @@ export async function fetchBalancerPools(signal?: AbortSignal): Promise<DexApiFe
         parseStrictFiniteDecimal(pool.dynamicData.volume24h),
       );
       const shapedPool = shapeBalancerPool(pool, chain);
+      // The capability sweep is the only hook-free/reviewed-rate-provider
+      // review. A WEIGHTED pool withheld from it has no exact-capability
+      // evidence, so it keeps an explicit gate instead of an unqualified
+      // weighted-constant-mean model. Stable math is already gated downstream
+      // by its missing amp.
+      if (!retainForEnrichment && pool.type === "WEIGHTED" && shapedPool.executionCapabilityGate == null) {
+        shapedPool.executionCapabilityGate = balancerGate("incomplete-exact-capture");
+      }
       return {
         pool: shapedPool,
         ...(retainForEnrichment &&

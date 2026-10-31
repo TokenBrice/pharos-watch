@@ -577,6 +577,72 @@ describe("Safety Score v9 public projection", () => {
     expect(projectV9DetailNeighborhoodCard(card!).pillars!.exit).toEqual(priced);
   });
 
+  it("publishes a required-parent issuer-NR child without a table priced unknown", () => {
+    // The child is NR because its required parent is NR; it is not a technical
+    // pipeline gap. The scorer still prices its A/B-excluded Control pillar,
+    // but the table contract only carries that assumption on a rated card, so
+    // forwarding it would quarantine the valid NR card (R8/ADR-35).
+    const childId = "wrapper-child";
+    const scoreInput = makeV9ProductionScoreInput({
+      assetId: childId,
+      pillars: {
+        backing: makeV9Pillar(88),
+        exit: makeV9Pillar(86),
+        control: makeV9Pillar(null, {
+          aggregationDisposition: "excluded-a-b",
+          supportedComponentKeys: [],
+          causeGapIds: ["wrapper-child:gap:control-disable"],
+          excludedCauseGapIds: ["wrapper-child:gap:control-disable"],
+          excludedCauses: ["B"],
+          excludedComponentKeys: ["control:mint"],
+        }),
+      },
+      parent: {
+        required: true,
+        score: null,
+        ratingStatus: "not-rated",
+        propagatedReasons: [{
+          code: "critical-unresolved",
+          field: "parent",
+          message: "Required parent control identity is unresolved.",
+          cause: "D",
+        }],
+      },
+    });
+    const trace = scoreV9EvaluatedAsset(scoreInput, V9_CANDIDATE_POLICY_V1);
+    expect(trace.ratingStatus).toBe("not-rated");
+    expect(trace.aggregation?.pricedUnknownPillars).not.toEqual([]);
+
+    const projector = createSafetyScoreV9ResponseProjector();
+    projector.project({
+      trace, scoreInput, policy: V9_CANDIDATE_POLICY_V1, access,
+      dependencyInputs: {
+        assetId: childId,
+        serial: [{
+          upstreamAssetId: "root-token", score: null, blocked: false,
+          ratingStatus: "not-rated", limitedEvidenceCauses: ["D"],
+        }],
+        basket: [],
+        cycleBlocked: false,
+      },
+    });
+    const response = projector.finalize({
+      openEvidence: openEvidenceFixture(),
+      candidateId: "safety-score-v9:v1:issuer-nr-child",
+      policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:issuer-nr-child",
+      publishedAtSec: 1_001,
+      resultDigest: computeV9CompactResultDigest([projectCompactV9ScoreTrace(trace)]),
+    });
+
+    const card = response.cards.find(row => row.id === childId)!;
+    expect(card.ratingStatus).toBe("not-rated");
+    expect(response.completeness.notRatedIds).toContain(childId);
+    expect(response.completeness.pipelineGapIds).not.toContain(childId);
+    expect(projectV9TableCard(card).pillars.control)
+      .toEqual({ score: null, aggregationDisposition: "excluded-a-b" });
+  });
+
   it("names the representation of a card only one public projection rejects", () => {
     const { card } = projectSafetyScoreV9Card(fixture("alpha", { score: 91.8, grade: "A+" }));
     expect(() => assertV9PublicCardProjections(card)).not.toThrow();

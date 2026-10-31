@@ -37,15 +37,22 @@ interface Mover {
   pctChange: number;
 }
 
-function computeSupplyMovers(coins: readonly StablecoinData[], nowSec: number): {
+function computeSupplyMovers(coins: readonly StablecoinData[], payloadObservedAtSec: number): {
   ups: Mover[];
   downs: Mover[];
 } {
   const movers: Mover[] = [];
-  const internalFlowSinceSec = nowSec - REVIEWED_INTERNAL_FLOW_LOOKBACK_SEC;
   for (const c of coins) {
     if (!ACTIVE_STABLECOIN_ID_SET.has(c.id)) continue;
-    if (hasReviewedProtocolInternalFlowSince(c.id, internalFlowSinceSec)) continue;
+    // Anchor the comparison to the supply payload's own observation clock:
+    // `dataUpdatedAt` is browser receipt time and can lag the observed week by
+    // more than the daily-point slack (R6).
+    const observedAtSec = c.supplyObservedAt ?? payloadObservedAtSec;
+    if (hasReviewedProtocolInternalFlowSince(
+      c.id,
+      observedAtSec - REVIEWED_INTERNAL_FLOW_LOOKBACK_SEC,
+      observedAtSec,
+    )) continue;
     const current = getCirculatingRawOrNull(c);
     const prev = getPrevWeekRawOrNull(c);
     if (current === null || prev === null) continue;
@@ -72,9 +79,11 @@ export function SupplyMovesCard(): React.JSX.Element {
   const logoMap = logos ?? {};
 
   const { ups, downs } = useMemo(() => {
-    const nowSec = Math.floor(query.dataUpdatedAt / 1000);
-    return computeSupplyMovers(data?.peggedAssets ?? [], nowSec);
-  }, [data, query.dataUpdatedAt]);
+    // Prefer the payload generation clock over the browser receipt time; the
+    // latter only remains as a fallback for a legacy response without `_meta`.
+    const payloadObservedAtSec = query.meta?.updatedAt ?? Math.floor(query.dataUpdatedAt / 1000);
+    return computeSupplyMovers(data?.peggedAssets ?? [], payloadObservedAtSec);
+  }, [data, query.meta?.updatedAt, query.dataUpdatedAt]);
   const peak = useMemo<Mover | null>(() => {
     const top = ups[0];
     const bottom = downs[0];

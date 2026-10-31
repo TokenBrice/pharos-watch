@@ -33,6 +33,32 @@ function target(stablecoinId: string, chain: string): ContractDeployment {
   return { chain, address: addresses[stablecoinId]!, decimals: 6 };
 }
 
+/**
+ * A completed page whose rows lost the venue identity in the relationship
+ * envelope (partial/schema-change response). `parseGtPool` rejects every row
+ * because it cannot name the DEX, while the token legs and attributes are
+ * intact.
+ */
+function malformedGtPage(): GtPool[] {
+  return [1, 2, 3].map((index) => {
+    const pool = coinGeckoPool({
+      address: `0x${String(index).repeat(40)}`,
+      network: "eth",
+      baseToken: "0xabc",
+      quoteToken: "0xquote",
+      reserve: "75210",
+      volume: "18400",
+    });
+    return {
+      ...pool,
+      relationships: {
+        ...pool.relationships,
+        dex: index === 2 ? { data: { id: "", type: "dex" } } : { data: null },
+      },
+    } as unknown as GtPool;
+  });
+}
+
 describe("supplemental GeckoTerminal deployment discovery", () => {
   it.each([
     { tvl: null, price: "1", known: false, usable: false, poolCount: 0 },
@@ -62,6 +88,39 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
     expect(result.providerChecks).toEqual([
       expect.objectContaining({ status: "success", paginationComplete: true }),
     ]);
+  });
+
+  it("degrades a completed page whose rows cannot be parsed, so it cannot certify an empty census", async () => {
+    const deployment: ContractDeployment = { chain: "ethereum", address: "0xabc", decimals: 6 };
+    const stage = await crawlGeckoTerminalPoolsStage({
+      coinTargets: [deployment],
+      cgPriceObservationTargets: new Set(),
+      context: context("usdc-circle"),
+      dependencies: {
+        crawlTokenPools,
+        fetchGtTokenPools: vi.fn<typeof fetchGtTokenPools>(async () => ({
+          rows: malformedGtPage(),
+          complete: true,
+          cappedAtMaxPages: false,
+          failedAfterRows: null,
+        })),
+        sleepWithSignal: vi.fn<typeof sleepWithSignal>(async () => {}),
+      },
+    });
+
+    // A success + complete check would both suppress the DexScreener fallback
+    // and give GT exhaustive authority over the census.
+    expect(stage.providerChecks).toEqual([
+      expect.objectContaining({ provider: "geckoterminal", status: "degraded", paginationComplete: true }),
+    ]);
+    const [outcome] = classifyDexDeploymentOutcomes({
+      stablecoinId: "usdc-circle",
+      deployments: [deployment],
+      pools: [],
+      providerChecks: stage.providerChecks,
+      nowSec: 1_800_000_000,
+    });
+    expect(outcome).toMatchObject({ outcome: "provider_inaccessible", observedPoolCount: 0 });
   });
 
   it.each([true, false])(

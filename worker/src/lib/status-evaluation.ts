@@ -240,8 +240,9 @@ export async function computeRawStatus(
   const confidence = scoreStatusConfidence({
     availabilityStatus,
     dataQualityStatus,
-    unhealthyCrons,
-    degradedCrons: degradedCronRuns,
+    // R1: a failed cron-history read leaves both counters unknown, not zero.
+    unhealthyCrons: cronHistoryQueryFailed ? null : unhealthyCrons,
+    degradedCrons: cronHistoryQueryFailed ? null : degradedCronRuns,
     diagnosticIssueCount,
     missingPriceRatio,
     onchainMonitoringActive: hasActiveOnchainMonitor,

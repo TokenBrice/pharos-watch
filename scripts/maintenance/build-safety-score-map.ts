@@ -51,6 +51,7 @@ import { formatSafetyMapUsd as formatUsdCompact, formatScore } from "@shared/lib
 import { getDisplayedPsi, getDisplayedPsiBasis } from "@shared/lib/psi-view-model";
 import { PSI_HEX_COLORS, type ConditionBand } from "@shared/lib/classification";
 import { V9_GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
+import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "@shared/lib/status-thresholds";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/market";
 import type { DigestSafetyMapSummary } from "@shared/types/digest-safety-map-contract";
@@ -384,12 +385,13 @@ function readMapTransportFreshness(headers: Headers): MapTransportFreshness {
   const dateMs = Date.parse(sourceHeaders.Date ?? "");
   if (sourceHeaders.Date !== null && (!Number.isFinite(dateMs) || dateMs < 0)) return unavailable("invalid-date");
   const absoluteClock = sourceHeaders["X-Data-Updated-At"];
+  let reconstructedSec: number | null = null;
   if (absoluteClock === null) {
     // Date alone describes a response, not the source generation. Missing
     // source provenance must never become a request-time source clock.
     if (sourceHeaders.Date === null || sourceHeaders["X-Data-Age"] === null) return unavailable("missing-source-provenance");
-    const reconstructed = dateMs / 1000 - Number(sourceHeaders.Age ?? 0) - Number(sourceHeaders["X-Data-Age"]);
-    if (!Number.isFinite(reconstructed) || reconstructed < 0) return unavailable("invalid-source-clock");
+    reconstructedSec = dateMs / 1000 - Number(sourceHeaders.Age ?? 0) - Number(sourceHeaders["X-Data-Age"]);
+    if (!Number.isFinite(reconstructedSec) || reconstructedSec < 0) return unavailable("invalid-source-clock");
   }
   let clockHeaders = headers;
   if (absoluteClock === null && sourceHeaders.Age === null) {
@@ -399,6 +401,12 @@ function readMapTransportFreshness(headers: Headers): MapTransportFreshness {
     clockHeaders.set("Age", "0");
   }
   const sourceUpdatedAtMs = detailSnapshotSourceUpdatedAt(undefined, clockHeaders);
+  // A rejected future Date is still a named clock cause: the shared helper
+  // refuses to admit it, but the map must not report it as a malformed clock.
+  if (sourceUpdatedAtMs === null && reconstructedSec !== null
+      && reconstructedSec * 1000 > Date.now() + STATUS_ALLOWED_FUTURE_SKEW_SEC * 1000) {
+    return unavailable("future-source-clock");
+  }
   if (sourceUpdatedAtMs === null) return unavailable("invalid-source-clock");
   return {
     sourceHeaders,
@@ -416,6 +424,7 @@ function assessMapSupplyFreshness(transport: MapTransportFreshness, assessedAtSe
   const maxAgeSec = STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC;
   const staleWarning = transport.sourceHeaders.Warning !== null && isFreshnessWarningHeader(transport.sourceHeaders.Warning);
   const status = staleWarning ? "stale"
+    : transport.reason === "future-source-clock" ? "future"
     : ageSec === null ? "unavailable" : ageSec < 0 ? "future" : ageSec >= maxAgeSec ? "stale" : "fresh";
   const reason = staleWarning ? "stale-warning"
     : transport.reason ?? (status === "future" ? "future-source-clock" : status === "stale" ? "source-too-old" : null);

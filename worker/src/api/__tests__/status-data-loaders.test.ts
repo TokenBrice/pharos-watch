@@ -517,12 +517,77 @@ describe("handleStatus", () => {
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
     const body = (await readJsonResponse(res, 200)) as {
+      state: unknown;
+      staleness: { isStale: boolean; ageSeconds: number } | null;
       sectionErrors: Record<string, { code: string; message: string } | undefined>;
       discrepancy: { consecutiveDivergent: number | null };
     };
     expect(body.sectionErrors.statusState?.code).toBe("status_persistence_degraded");
     expect(body.sectionErrors.statusState?.message).toBe("Status persistence degraded.");
     expect(body.discrepancy.consecutiveDivergent).toBeNull();
+    // R2: a failed state read is unavailable, never an evaluation stamped at `now`.
+    expect(body.state).toBeNull();
+    expect(body.staleness?.isStale).toBe(true);
+  });
+
+  it("does not restamp a rejected future status_state clock as an evaluation now", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = buildStatusD1Scenario({
+      sections: ["sentinel", "live", "publication", "derived", "reserves", "statusState", "cronState"],
+      healthyLive: true,
+      overrides: [
+        {
+          match: "FROM status_state",
+          rows: [],
+          first: {
+            scope: "global", current_status: "stale", raw_status: "stale",
+            last_evaluated_at: now + 3_600, last_changed_at: now - 90,
+            consecutive_healthy: 0, consecutive_degraded: 0, consecutive_stale: 7,
+            confidence: 0.5, causes_json: "[]",
+          },
+        },
+        { match: "FROM status_transitions", rows: [] },
+      ],
+    });
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+
+    const body = (await readJsonResponse(res, 200)) as {
+      state: unknown;
+      staleness: { isStale: boolean; ageSeconds: number } | null;
+      sectionErrors: Record<string, { code: string } | undefined>;
+    };
+    expect(body.sectionErrors.statusState?.code).toBe("status_state_invalid_timestamp");
+    // R2: a rejected clock is unavailable, never an evaluation at request time.
+    expect(body.state).toBeNull();
+    expect(body.staleness).toMatchObject({ isStale: true });
+  });
+
+  it("does not publish an empty producerHeads population when history read fails", async () => {
+    const db = buildStatusD1Scenario({
+      sections: ["sentinel", "live", "publication", "derived", "reserves"],
+      healthyLive: true,
+      overrides: [
+        {
+          match: "FROM worker_producer_heads",
+          rows: [],
+          throwError: new Error("simulated D1 overload"),
+        },
+      ],
+    });
+
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const res = await handleStatus({ db, trustedAdmin: true, request });
+    const body = (await readJsonResponse(res, 200)) as {
+      producerHeads?: unknown[];
+      sectionErrors: { producerHistory?: { code: string } };
+    };
+
+    expect(body.sectionErrors.producerHistory?.code).toBe("producer_history_read_failed");
+    // A successful read always lists every canonical identity; `[]` can only mean
+    // the read failed, so the optional field is omitted, never an empty population.
+    expect(body).not.toHaveProperty("producerHeads");
   });
 
   it("uses writer timestamps for event-backed freshness rows", async () => {

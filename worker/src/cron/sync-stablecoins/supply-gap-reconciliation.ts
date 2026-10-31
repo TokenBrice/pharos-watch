@@ -855,8 +855,11 @@ export async function reconcileTrackedSupplyGaps(
       ? await fetchRecentDefiLlamaMarketCaps(candidate.llamaId, candidate.pegKey, signal)
       : await fetchRecentCoinGeckoMarketCaps(candidate.geckoId, signal, coingeckoApiKey);
     if (marketCaps.length === 0 && candidate.kind !== "zero-supply-collapse") {
-      gapFillRejections.push({ id: candidate.asset.id, reason: "history-incomplete", ratio: null });
-      carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id));
+      // A carried prior packet is the documented no-decision outcome, not a
+      // rejected contribution: the DefiLlama row was not kept.
+      if (!carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id))) {
+        gapFillRejections.push({ id: candidate.asset.id, reason: "history-incomplete", ratio: null });
+      }
       continue;
     }
 
@@ -901,8 +904,9 @@ export async function reconcileTrackedSupplyGaps(
     }
     if (candidate.kind === "missing-chain") {
       if (currentFromHistory == null) {
-        gapFillRejections.push({ id: candidate.asset.id, reason: "history-incomplete", ratio: null });
-        carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id));
+        if (!carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id))) {
+          gapFillRejections.push({ id: candidate.asset.id, reason: "history-incomplete", ratio: null });
+        }
         continue;
       }
       const observedAt = currentFromHistory.observedAt;
@@ -925,10 +929,11 @@ export async function reconcileTrackedSupplyGaps(
         });
       }
       if (application.reconciledCurrent == null) {
-        if (application.rejection) {
-          if (application.rejection === "history-incomplete") {
-            carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id));
-          }
+        // `history-incomplete` may republish one prior packet; when it does,
+        // the asset is a carry, not a rejected contribution.
+        const carried = application.rejection === "history-incomplete"
+          && carryForwardSupplyGapFill(candidate.asset, previousAssetsById?.get(candidate.asset.id));
+        if (application.rejection && !carried) {
           const dlCurrent = getCirculatingRawOrNull(candidate.asset);
           gapFillRejections.push({
             id: candidate.asset.id,

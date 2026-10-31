@@ -193,4 +193,18 @@ describe("readPublishedMintBurnGauge", () => {
     } });
     if (result.kind === "ok") expect(JSON.stringify(result.gauge.window)).toBe(JSON.stringify(window));
   });
+
+  it("does not admit a publication clocked beyond the read-time skew as fresh", async () => {
+    // A producer isolate running ahead, or a row written with a future syncStart,
+    // leaves updated_at ahead of the read clock; setCacheIfNewer cannot replace it
+    // until that clock passes. The reader must fail closed rather than pinning it.
+    const db = mockD1([{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: ["mint-burn-flows:v6:aggregate:24"],
+      rows: [],
+      first: { value: JSON.stringify(payload()), updated_at: NOW_SEC + 6 * 3600 },
+    }], { assertMatchesUsed: true });
+    await expect(readPublishedMintBurnGauge(db, NOW_SEC))
+      .resolves.toEqual({ kind: "unavailable", reason: "future-timestamp" });
+  });
 });

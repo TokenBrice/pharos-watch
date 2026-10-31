@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import { CLIENT_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeAsset } from "../../../test-helpers/__shared/fixtures";
+import { handleChains } from "../../chains";
 import { OG_PAGE_LOADERS } from "../index";
-import type { OgPageLoad } from "../types";
+import { ownerUrl, type OgPageLoad } from "../types";
 
 /**
  * Real owner handlers over the migrated D1 schema, read through the real
@@ -19,14 +21,25 @@ function seedCache(sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"]
   sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(key, JSON.stringify(value), updatedAt);
 }
 
-function seedStablecoins(sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"]) {
+function seedStablecoins(
+  sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"],
+  updatedAt = NOW - 60,
+) {
   seedCache(sqlite, "stablecoins", {
     peggedAssets: CLIENT_ACTIVE_STABLECOINS.map((meta) => makeAsset({
       id: meta.id, symbol: meta.symbol, name: meta.name, circulating: { peggedUSD: 1_000_000 },
       chainCirculating: { Ethereum: { current: 1_000_000, circulatingPrevDay: 1_000_000, circulatingPrevWeek: 1_000_000, circulatingPrevMonth: 1_000_000 } },
       chains: ["Ethereum"],
     })),
-  });
+  }, updatedAt);
+}
+
+/** The `_meta` `/chains` serves publicly for this database and clock. */
+async function loadOwnerChainsMeta(db: D1Database): Promise<{ status: string; freshBudgetSec: number }> {
+  const owner = await handleChains(db, ownerUrl(API_PATHS.chains()));
+  expect(owner.status).toBe(200);
+  const body = await owner.json() as { _meta: { status: string; freshBudgetSec: number } };
+  return body._meta;
 }
 
 function expectParsedByOwnerSchema(load: OgPageLoad) {
@@ -54,6 +67,27 @@ describe("route-card loaders over real owner bodies", () => {
       expectParsedByOwnerSchema(load);
       expect(load.kind, slug).toBe("ok");
     }
+  });
+
+  it("admits the /chains card for exactly the fresh ceiling /chains publishes", async () => {
+    seedStablecoins(fixture.sqlite);
+    const ownerMeta = await loadOwnerChainsMeta(fixture.db);
+    await expect(OG_PAGE_LOADERS.chains(fixture.db, NOW)).resolves.toMatchObject({
+      kind: "ok",
+      budgetSec: ownerMeta.freshBudgetSec,
+    });
+    // The owner's explicit fresh budget, not the 8x cached-endpoint ratio.
+    expect(ownerMeta.freshBudgetSec).toBe(1_800);
+  });
+
+  it("goes timeless once /chains itself publishes a stale verdict", async () => {
+    // Three missed sync-stablecoins runs: past /chains' 3,600 s degraded budget.
+    seedStablecoins(fixture.sqlite, NOW - 3_700);
+    expect((await loadOwnerChainsMeta(fixture.db)).status).toBe("stale");
+    await expect(OG_PAGE_LOADERS.chains(fixture.db, NOW)).resolves.toEqual({
+      kind: "unavailable",
+      reason: "stale-cache",
+    });
   });
 
   it("yield publishes from a real summary-projection body", async () => {

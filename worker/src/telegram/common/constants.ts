@@ -28,12 +28,6 @@ export const SNOOZE_SECONDS = {
 // ---------- Message chunking ----------
 
 /**
- * Telegram's per-message character cap is 4096; we leave a small safety margin
- * for the chunk-counter suffix and other appended metadata.
- */
-export const TELEGRAM_MESSAGE_CHUNK_LIMIT = 4000;
-
-/**
  * Stable version tag for the message chunking algorithm. Bump whenever the
  * splitting logic (boundaries, tag envelopes, ordering) changes in a way that would
  * alter the chunks produced from the same canonical body.
@@ -71,6 +65,7 @@ export {
   TELEGRAM_DISPATCH_SOFT_DEADLINE_MS,
   TELEGRAM_FORMAT_BUDGET_ALLOWANCE,
   TELEGRAM_MAX_MESSAGES_PER_RUN,
+  TELEGRAM_MESSAGE_CHUNK_LIMIT,
   TELEGRAM_PENDING_DRAIN_BUDGET,
 } from "@shared/lib/telegram-delivery-policy";
 

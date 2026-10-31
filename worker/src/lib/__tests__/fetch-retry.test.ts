@@ -123,8 +123,8 @@ describe("fetchWithRetry", () => {
     const result = await fetchJsonWithRetry("https://example.test", undefined, 1, { maxResponseBytes: 4, onBodyRead });
     expect(result?.body).toEqual({});
     expect(onBodyRead.mock.calls.map(([value]) => value)).toEqual([
-      { intakeBytes: 5, declaredBytes: null, outcome: "rejected" },
-      { intakeBytes: 2, declaredBytes: null, outcome: "accepted" },
+      { intakeBytes: 5, declaredBytes: null, limitBytes: 4, outcome: "rejected" },
+      { intakeBytes: 2, declaredBytes: null, limitBytes: 4, outcome: "accepted" },
     ]);
   });
 
@@ -690,8 +690,8 @@ describe("fetchWithRetry", () => {
       expect(result?.body).toEqual({ ok: true });
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(observe.mock.calls.map(([evidence]) => evidence)).toEqual([
-        { intakeBytes: null, declaredBytes: null, outcome: "rejected" },
-        { intakeBytes: 11, declaredBytes: null, outcome: "accepted" },
+        { intakeBytes: null, declaredBytes: null, limitBytes: 16 * 1024 * 1024, outcome: "rejected" },
+        { intakeBytes: 11, declaredBytes: null, limitBytes: 16 * 1024 * 1024, outcome: "accepted" },
       ]);
       expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({ errorName: "SyntaxError" }));
     } finally {

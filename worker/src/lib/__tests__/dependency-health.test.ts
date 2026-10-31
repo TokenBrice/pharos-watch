@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { CacheStatus, CronStatus, PublicationHealth } from "@shared/types/status";
 import { buildDependencyHealth } from "../dependency-health";
+import { buildFxCacheStatus, hydrateFxRateState } from "../fx-rate-state";
+import { fxRatesCacheRows } from "./fx-rate-state.test-support";
 
 const NOW = 1_775_900_000;
 
@@ -327,6 +329,95 @@ describe("buildDependencyHealth", () => {
       "safety-score-v9",
       "yield-rankings",
     ]);
+  });
+
+  it("keeps a stale fx-rates cache age stale when its upstream source is only degraded", () => {
+    const stalledForSec = 7 * 3_600;
+    const [ratesRow, metaRow] = fxRatesCacheRows(NOW - stalledForSec);
+    const state = hydrateFxRateState(
+      { value: ratesRow.value, updatedAt: ratesRow.updated_at },
+      { value: metaRow.value, updatedAt: metaRow.updated_at },
+    );
+    if (!state) throw new Error("FX fixture did not hydrate");
+    const { cacheStatus } = buildFxCacheStatus(state, 1_800, NOW);
+    const fx = buildDependencyHealth({
+      now: NOW,
+      // The same publication clock buildCacheStatuses publishes.
+      caches: { "fx-rates": { ...cacheStatus, publishedAt: state.usableSyncAt } },
+      crons: {},
+      publicationHealth: null,
+    }).dependencies["fx-rates"];
+
+    // 14x the availability budget must not be downgraded by the source band.
+    expect(fx.status).toBe("stale");
+  });
+
+  it("ages the pending-candidate clock its degraded verdict names", () => {
+    const health = buildDependencyHealth({
+      now: NOW,
+      caches: {},
+      crons: {},
+      publicationHealth: {
+        checkedAt: NOW,
+        surfaces: {
+          "dex-liquidity": {
+            surface: "dex-liquidity",
+            label: "DEX liquidity publication",
+            sourceOfTruth: "dex_liquidity_publication_generations",
+            lastPublishedGeneration: {
+              generationId: "dex-published", sourceState: "published", state: "published",
+              startedAt: NOW - 10_000, validatedAt: null, publishedAt: NOW - 60, failedAt: null,
+              candidateRows: 407, publishedRows: 407, expectedRows: 407, failureReason: null,
+            },
+            lastAttemptedGeneration: {
+              generationId: "dex-candidate", sourceState: "staged", state: "candidate",
+              startedAt: NOW - 9_000, validatedAt: null, publishedAt: null, failedAt: null,
+              candidateRows: 400, publishedRows: null, expectedRows: 407, failureReason: null,
+            },
+            lastFailureReason: null,
+            candidateAgeSec: 9_000,
+            dependencyWatermarks: null,
+          },
+        },
+      },
+    });
+
+    expect(health.dependencies["dex-liquidity"]).toMatchObject({
+      status: "degraded",
+      updatedAt: NOW - 9_000,
+      ageSeconds: 9_000,
+      maxAgeSec: 7_200,
+      reason: "Candidate generation has been pending for 9000s.",
+    });
+  });
+
+  it("does not publish a future-dated publication as healthy with a clamped zero age", () => {
+    const publishedAt = NOW + 600;
+    const generation = {
+      generationId: `psi:${publishedAt}`,
+      sourceState: "published", state: "published" as const,
+      startedAt: NOW - 240, validatedAt: publishedAt, publishedAt, failedAt: null,
+      candidateRows: 1, publishedRows: 1, expectedRows: 1, failureReason: null,
+    };
+    const psi = buildDependencyHealth({
+      now: NOW,
+      publicationHealth: {
+        checkedAt: NOW,
+        surfaces: {
+          psi: {
+            surface: "psi", label: "PSI samples", sourceOfTruth: "surface_publication_generations",
+            lastPublishedGeneration: generation, lastAttemptedGeneration: generation,
+            lastFailureReason: null, candidateAgeSec: null, dependencyWatermarks: null,
+          },
+        },
+      },
+      caches: {},
+      // A healthy producer heartbeat beside the rejected publication clock.
+      crons: { "stability-index": cron() },
+    }).dependencies.psi;
+
+    expect(psi.status).not.toBe("healthy");
+    expect(psi.ageSeconds).toBeNull();
   });
 
   it("keeps missing optional signals unknown without creating root-cause groups", () => {

@@ -1,6 +1,8 @@
 import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { fnv1a32Hex } from "@shared/lib/fnv1a";
 import {
+  DEFAULT_QUIET_END_HOUR,
+  DEFAULT_QUIET_START_HOUR,
   TELEGRAM_MINI_APP_CATALOG_VERSION,
   TELEGRAM_MINI_APP_CONTRACT_VERSION,
   type TelegramAlertType,
@@ -30,7 +32,6 @@ import {
 } from "../common/presets";
 import { SNOOZE_SECONDS } from "../common/constants";
 import { isValidIanaTimezone } from "../common/quiet-hours";
-import { DEFAULT_QUIET_END_HOUR, DEFAULT_QUIET_START_HOUR } from "../webhook/telegram-webhook-settings-shared";
 import { prepareCoinSettingStatements } from "../webhook/telegram-webhook-settings-mutations";
 import { buildDepegStepUpsert, buildDewsUpsert, buildSafetyUpsert, removeSubscriptions, type BuiltSubscriptionUpsert } from "../store/subscriptions";
 import { prepareSubscriberAndPresetPatchStatements } from "../store/presets";

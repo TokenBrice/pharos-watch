@@ -247,6 +247,10 @@ function relaxedFallbackReason(
   if (!RELAXED_FALLBACK_ALLOWED_REASONS.has(exclusion.reason)) return null;
   if (input.profile === "treasury") return null;
   if (applyInputDrivenExclusions(sourceRow, input) != null) return null;
+  // Relaxing the allowed gate must be the only way in: re-evaluate with that
+  // gate neutralised (the allowed reason is the PegScore floor) so a later
+  // non-relaxable profile gate cannot be masked by first-hit ordering.
+  if (evaluateExclusions({ ...row, pegScore: null }, input, sourceRow) != null) return null;
   return exclusion.reason;
 }
 

@@ -20,7 +20,7 @@ import { ratioToPercentage } from "@shared/lib/stats";
 import { derivePegRates } from "@shared/lib/peg-rates";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { resolveOrReject } from "../lib/api-params";
-import { loadDexLiquidityMap } from "../lib/dex-liquidity";
+import { loadDexLiquiditySnapshot } from "../lib/dex-liquidity";
 import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { ACTIVE_IDS, FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -411,7 +411,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   // active depeg, 7d flow, and 24h price change.
   const [
     stablecoinsPayload,
-    dexLiqMap,
+    dexLiqSnapshot,
     dewsRow,
     safetySource,
     sparklineRows,
@@ -423,7 +423,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       mode: "strict",
       contract: "published",
     }),
-    loadDexLiquidityMap(db),
+    loadDexLiquiditySnapshot(db),
     loadStressSignalCurrentRowForCoin(db, id, Math.floor(Date.now() / 1000), {
       staleAfterSec: STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC,
     }),
@@ -495,7 +495,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       metadata: { stablecoinId: id },
     });
   }
-  const liq = dexLiqMap[id];
+  const liq = dexLiqSnapshot.map[id];
   const variantLabel = meta?.variantKind ? getVariantDisplay(meta.variantKind).shortLabel : null;
   const variantParentSymbol = meta?.variantOf
     ? (TRACKED_META_BY_ID.get(meta.variantOf)?.symbol ?? meta.variantOf)
@@ -539,6 +539,9 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       price24hRow && change24h != null
         ? ogSourceAsOf("24h pair", price24hRow.current_date, now)
         : `24h price pair unavailable (${pricePairUnavailableReason})`,
+      // The LIQUIDITY cell is a DEX-liquidity generation with its own clock; a
+      // fresh price or market read cannot make it current (R3/R6).
+      ...(liq?.liquidityScore != null ? [ogSourceAsOf("Liquidity", liq.updatedAt, now)] : []),
       `Safety ${safetyPresentation.lastUpdated}${reportCardRow?.partialEvidence && reportCardRow.grade !== null ? " · Partial evidence: pipeline gap" : ""}`,
     ].join(" · "),
   };
@@ -866,6 +869,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
   if (!CHAIN_META[chainId]) {
     return ogErrorResponse("Unknown chain", 404);
   }
+  const now = Math.floor(Date.now() / 1000);
 
   const stablecoinsResult = await loadStablecoinsCache(db, {
     mode: "strict",
@@ -908,7 +912,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
     const png = await renderPng(
       <ChainUnavailableCard
         name={CHAIN_META[chainId].name}
-        lastUpdated={ogSourceAsOf("Market", stablecoinsResult.updatedAt, Math.floor(Date.now() / 1000))}
+        lastUpdated={ogSourceAsOf("Market", stablecoinsResult.updatedAt, now)}
       />,
     );
     return new Response(png, { headers: { ...safetyPresentation.headers, "X-Og-Status": "degraded", "X-Og-Reason": "chain-not-in-aggregate" } });
@@ -927,7 +931,12 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
       supplyUsd: coin.supplyUsd,
     })),
     safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
-    lastUpdated: safetyPresentation.lastUpdated,
+    // The headline figures are the market read; Safety only feeds Chain Health,
+    // so a stale/held publication must not replace the supply stamp (R3/R6).
+    lastUpdated: [
+      ogSourceAsOf("Market", stablecoinsResult.updatedAt, now),
+      `Safety ${safetyPresentation.lastUpdated}`,
+    ].join(" · "),
   };
 
   const png = await renderPng(<ChainCard data={data} />);

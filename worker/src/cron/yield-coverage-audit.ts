@@ -9,6 +9,7 @@
 
 import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
+import { throwIfAborted } from "../lib/abort";
 import { readCachedJson } from "../lib/api-cache-read";
 import { getCache, setCache } from "../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../lib/constants";
@@ -240,14 +241,21 @@ export async function runYieldCoverageAudit(
   await reportAuditProgress("pool-load", "Loading DeFiLlama stablecoin yield pools", 0, {
     providerFamilies: ["defillama-yields"],
   });
-  const { pools: dlPools, meta: poolMeta } = await loadDlStablecoinPools(db, signal);
+  const {
+    pools: dlPools,
+    meta: poolMeta,
+    envelopeRejectedCount: dlApyEnvelopeRejectedCount = 0,
+    envelopeRejectedPoolIds = [],
+  } = await loadDlStablecoinPools(db, signal);
   await reportAuditProgress("pool-load", "Loaded DeFiLlama stablecoin yield pools", 1, {
     providerFamilies: ["defillama-yields"],
     countTotals: {
       dlPools: dlPools.length,
+      dlApyEnvelopeRejectedCount,
     },
     poolMeta,
   });
+  throwIfAborted(signal);
 
   await reportAuditProgress("protocol-category-load", "Loading DeFiLlama protocol categories", 1, {
     providerFamilies: ["defillama-protocols"],
@@ -285,10 +293,11 @@ export async function runYieldCoverageAudit(
     ...Object.values(EXPLICIT_YIELD_SOURCE_POOL_MAP).flat().map((config) => config.poolId),
     ...Object.values(YIELD_WEIGHTED_POOL_GROUPS).flatMap((config) => config.poolIds),
   ]);
+  const rankingsCacheRow = await getCache(db, "yield-rankings");
   const rankingsCache = readCachedJson<unknown>(
     "yield-coverage-audit",
     "yield-rankings",
-    await getCache(db, "yield-rankings"),
+    rankingsCacheRow,
   );
   const validatedRankings = rankingsCache.status === "ok"
     ? YieldCoverageAuditRankingsSchema.safeParse(rankingsCache.data)
@@ -358,6 +367,7 @@ export async function runYieldCoverageAudit(
     safetySnapshotSource: safetySnapshot.source,
     safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
   });
+  throwIfAborted(signal);
   if (safetySnapshot.kind !== "ok" || safetySnapshot.safetyScoreIdentity == null) {
     const reason =
       safetySnapshot.reason ??
@@ -391,13 +401,16 @@ export async function runYieldCoverageAudit(
       metadata: { reason, stablecoinSupplyMapState: supplySnapshot.state },
     });
   }
+  const envelopeRejectedPoolIdSet = new Set(envelopeRejectedPoolIds);
   const staleAutoLendingOverrides = identifyStaleAutoLendingOverrides(dlPools, {
     stablecoinSupplyById,
     stablecoinSupplyMapState: supplySnapshot.state,
     safetyScores: safetySnapshot.scores,
+    envelopeRejectedPoolIds: envelopeRejectedPoolIdSet,
   });
   const deadCuratedPins = identifyDeadCuratedPins(dlPools, {
     publishedStablecoinIds: publishedYieldIds,
+    unavailablePoolIds: envelopeRejectedPoolIdSet,
   });
   const manifestById = new Map(YIELD_ADAPTER_MANIFEST.map((entry) => [entry.stablecoinId, entry]));
   const manifestMissingIds = ACTIVE_YIELD_BEARING_STABLECOINS
@@ -435,6 +448,7 @@ export async function runYieldCoverageAudit(
     })
     .map((coin) => coin.id);
   const nowMs = Date.now();
+  const rankingsUpdatedAt = rankingsCacheRow?.updatedAt ?? null;
   const lifecycleBuckets = summarizeAdapterLifecycle(
     ACTIVE_YIELD_BEARING_STABLECOINS.map((coin) => coin.id),
     YIELD_ADAPTER_LIFECYCLE,
@@ -451,6 +465,7 @@ export async function runYieldCoverageAudit(
   });
 
   const reportedAt = Math.floor(nowMs / 1000);
+  throwIfAborted(signal);
   const {
     queue: operatorQueue,
     summary: operatorReviewSummary,
@@ -476,6 +491,7 @@ export async function runYieldCoverageAudit(
   // metadata. The two payloads otherwise diverge deliberately.
   const auditCounts = {
     totalDlPools: dlPools.length,
+    dlApyEnvelopeRejectedCount,
     coveredPoolCount: coveredPools.size,
     manifestYieldBearingCount: YIELD_ADAPTER_MANIFEST.length,
     unmatchedHighTvlPoolCount: gaps.unmatchedHighTvlPools.length,
@@ -528,6 +544,13 @@ export async function runYieldCoverageAudit(
       strategyLabels: entry.strategies.map((strategy) => strategy.label),
     })),
     poolMeta,
+    // R6: the dead-pin coverage verdicts above were classified against this
+    // exact yield-rankings generation; name its clock so a stale cache reads as
+    // stale rather than as a current cleanup decision.
+    rankingsMeta: {
+      updatedAt: rankingsUpdatedAt,
+      ageSeconds: rankingsUpdatedAt == null ? null : Math.max(0, reportedAt - rankingsUpdatedAt),
+    },
     safetyScoreIdentity: safetySnapshot.safetyScoreIdentity,
   };
 
@@ -542,6 +565,7 @@ export async function runYieldCoverageAudit(
       operatorSuppressedItems: operatorQueue.suppressedItemCount,
     },
   });
+  throwIfAborted(signal);
   await setCache(db, "yield-coverage-audit", JSON.stringify(report));
   if (deadCuratedPins.length > 0) {
     await logCronEvent(db, {

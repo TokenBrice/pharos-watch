@@ -14,7 +14,7 @@ const TRACKED_STABLECOINS_MOCK = [
   {
     id: "usdx-example",
     symbol: "USDX",
-    name: "Example USD",
+    name: "Example \u2014 USD",
     status: "active",
     flags: { yieldBearing: false },
   },
@@ -47,7 +47,7 @@ vi.mock("@shared/lib/dead-stablecoins", () => ({
     },
     {
       id: "eura-angle-eura-2026-03",
-      name: "Angle EURA",
+      name: "Angle \u2014 EURA",
       symbol: "EURA",
       pegCurrency: "EUR",
       causeOfDeath: "abandoned",
@@ -196,8 +196,8 @@ describe("prepareTelegramDigestAppendices", () => {
       seededSnapshots: ["tracked:first-run", "frozen:first-run"],
     });
     expect(prepared.appendixHtml).toContain("<b>Tracking Changes</b>");
-    expect(prepared.appendixHtml).toContain("<blockquote expandable><code>USDX</code> Example USD</blockquote>");
-    expect(prepared.appendixHtml).toContain("<code>USDX</code> Example USD");
+    expect(prepared.appendixHtml).toContain("<blockquote expandable><code>USDX</code> Example, USD</blockquote>");
+    expect(prepared.appendixHtml).toContain("<code>USDX</code> Example, USD");
 
     expect(mockSetCache).toHaveBeenCalledTimes(1);
     expect(mockSetCache.mock.calls[0]).toEqual([
@@ -234,7 +234,7 @@ describe("prepareTelegramDigestAppendices", () => {
       trackedDetected: 1,
       trackedSymbols: ["USDX"],
     });
-    expect(prepared.appendixHtml).toContain("<code>USDX</code> Example USD");
+    expect(prepared.appendixHtml).toContain("<code>USDX</code> Example, USD");
     expect(mockSetCache).not.toHaveBeenCalled();
     expect(prepared.successActions).toEqual([
       {
@@ -266,16 +266,26 @@ describe("prepareTelegramDigestAppendices", () => {
       preLaunchSymbols: ["EURX"],
     });
     expect(prepared.appendixHtml).toContain("<b>New Cemetery Entries</b>");
-    expect(prepared.appendixHtml).toContain("<blockquote expandable><code>EURA</code> Angle EURA");
-    expect(prepared.appendixHtml).toContain("<code>EURA</code> Angle EURA (2026-03; Abandoned)");
+    expect(prepared.appendixHtml).toContain("<blockquote expandable><code>EURA</code> Angle, EURA");
+    expect(prepared.appendixHtml).toContain("<code>EURA</code> Angle, EURA (2026-03; Abandoned)");
     expect(prepared.appendixHtml).toContain("<i>DeFi&#39;s first Euro, last out</i>");
     expect(prepared.appendixHtml).toContain("Peak mcap: $200.00M");
     expect(prepared.appendixHtml).toContain(CEMETERY_FOOTERS[8]);
     expect(prepared.appendixHtml).toContain("<b>Tracking Changes</b>");
     expect(prepared.appendixHtml).toContain("Newly tracked stablecoins:");
-    expect(prepared.appendixHtml).toContain("<code>USDX</code> Example USD");
+    expect(prepared.appendixHtml).toContain("<code>USDX</code> Example, USD");
     expect(prepared.appendixHtml).toContain("Newly tracked pre-launch stablecoins:");
     expect(prepared.appendixHtml).toContain("<code>EURX</code> Example Euro");
+    // Curated names are wrapper copy too: a forbidden dash in a cemetery or
+    // tracked name must not re-block every edition through the hard gate.
+    expect(
+      scanTelegramDigestWrapper({
+        rendered: `Title\n\nBody\n\n${prepared.appendixHtml}`,
+        modelTitle: "Title",
+        modelExtended: "Body",
+        cemeteryAppendixHtml: prepared.appendixHtml,
+      }),
+    ).toEqual([]);
 
     expect(mockSetCache).toHaveBeenCalledTimes(1);
     expect(mockSetCache.mock.calls[0]).toEqual([
@@ -306,7 +316,7 @@ describe("prepareTelegramDigestAppendices", () => {
     mockCachedValues({
       "telegram:cemetery-snapshot": JSON.stringify([
         "PUSD|2026-01|palm usd",
-        "EURA|2026-03|angle eura",
+        "EURA|2026-03|angle \u2014 eura",
         "USDA|2026-03|angle usda",
       ]),
       "telegram:tracked-stablecoins-snapshot": JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
@@ -410,7 +420,7 @@ describe("prepareTelegramDigestAppendices", () => {
       trackedDetected: 0,
     });
     expect(prepared.appendixHtml).toBe(
-      "<b>Launched</b>\n\nNow live after pre-launch:\n\n<blockquote expandable><code>USDX</code> Example USD</blockquote>",
+      "<b>Launched</b>\n\nNow live after pre-launch:\n\n<blockquote expandable><code>USDX</code> Example, USD</blockquote>",
     );
     expect(mockSetCache).not.toHaveBeenCalled();
     expect(prepared.successActions).toEqual([

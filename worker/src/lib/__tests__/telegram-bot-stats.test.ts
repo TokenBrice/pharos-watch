@@ -8,6 +8,8 @@ import {
 import type { TelegramDeliverySliStatus } from "@shared/types/status";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import type { D1Database, D1PreparedStatement } from "@shared/types/cloudflare-runtime";
 import { loadTelegramPendingCapacity } from "../../telegram/outbox/pending-capacity";
 
 function unavailableDeliverySli(): TelegramDeliverySliStatus {
@@ -398,3 +400,115 @@ describe("getTelegramBotStats inactive cleanup", () => {
   });
 });
 
+describe("getTelegramBotStats lifecycle availability", () => {
+  const NOW_SEC = 1_771_833_600;
+  const PENDING_COUNT_SQL = "SELECT COUNT(*) AS pending_count";
+
+  const SUBSCRIBER_AGGREGATE_ROW = {
+    total_chats: 40,
+    alert_enabled_chats: 32,
+    deliverable_chats: 30,
+    subscribed_chats: 25,
+    empty_alert_chats: 2,
+    muted_chats_with_subscriptions: 3,
+    dews_chats: 20,
+    depeg_chats: 18,
+    safety_chats: 12,
+    launch_chats: 8,
+    reserve_chats: 6,
+    freeze_chats: 5,
+    all_types_chats: 4,
+    total_subscriptions: 55,
+    avg_subscriptions_per_subscribed_chat: 2.2,
+    last_subscriber_activity_at: NOW_SEC - 120,
+    custom_preference_chats: 4,
+    quiet_hours_enabled_chats: 6,
+    active_preset_followers: 5,
+    active_watchers: 40,
+    explicit_coin_follows: 55,
+    active_dews_opt_ins: 20,
+    active_depeg_opt_ins: 18,
+    active_safety_opt_ins: 12,
+    active_launch_opt_ins: 8,
+    active_reserve_opt_ins: 6,
+    active_freeze_opt_ins: 5,
+    active_all_types_opt_ins: 4,
+  };
+
+  const PENDING_CAPACITY_ROW = {
+    total: 9,
+    expired: 2,
+    due: 5,
+    deferred: 2,
+    near_ttl: 1,
+    oldest_pending_created_at: NOW_SEC - 600,
+    oldest_due_created_at: NOW_SEC - 540,
+    pending_sending: 0,
+    pending_execution_unknown: 0,
+    sent_cleanup: 0,
+    oldest_pending_execution_unknown_at: null,
+    fresh_sending: 0,
+    fresh_execution_unknown: 0,
+    oldest_fresh_execution_unknown_at: null,
+    fresh_uncertain_sample_count: 0,
+  };
+
+  function failSecondPendingCountRead(inner: MockD1Database): D1Database {
+    let pendingCountReads = 0;
+    return {
+      ...inner,
+      prepare(sql: string) {
+        const statement = inner.prepare(sql);
+        if (!sql.includes(PENDING_COUNT_SQL)) return statement;
+        pendingCountReads += 1;
+        if (pendingCountReads !== 2) return statement;
+        const fail = async () => {
+          throw new Error("D1_ERROR: pending delivery count read failed");
+        };
+        return { ...statement, first: fail, all: fail, run: fail } as D1PreparedStatement;
+      },
+    } as D1Database;
+  }
+
+  function makeTelegramStatusDb(): D1Database {
+    const inner = mockD1([
+      { match: "FROM telegram_subscribers s", rows: [SUBSCRIBER_AGGREGATE_ROW] },
+      { match: PENDING_COUNT_SQL, rows: [{ pending_count: 9 }] },
+      { match: "WITH p(now_sec, near_ttl_at, stale_before)", rows: [], first: PENDING_CAPACITY_ROW },
+      { match: "WHERE state = 'retry'", rows: [] },
+      { match: "FROM telegram_subscriptions", rows: [] },
+      { match: "FROM telegram_preset_subscriptions", rows: [] },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
+      { match: "FROM cron_runs WHERE job = ?", rows: [], first: { runs: 1, total: 0 } },
+      { match: "FROM telegram_watcher_lifecycle_events_daily", rows: [] },
+      { match: "SELECT snapshot_at FROM telegram_watcher_lifecycle_daily", rows: [], first: null },
+      { match: "WITH recent_jobs AS MATERIALIZED", rows: [], first: null },
+      { match: "families LIKE", rows: [], first: null },
+      { match: "GROUP BY priority, age_bucket", rows: [] },
+      { match: "SUM(COUNT(*)) OVER ()", rows: [] },
+      { match: "reason IS NOT NULL OR error_class IS NOT NULL", rows: [] },
+      { match: "older_than_15m_count", rows: [], first: null },
+      { match: "SUM(attempts) AS total_attempts", rows: [], first: null },
+      { match: "AS reason, COUNT(*) AS count", rows: [] },
+      { match: "COALESCE(NULLIF(error_class, ''), 'unknown') AS reason", rows: [] },
+    ]);
+    return failSecondPendingCountRead(inner);
+  }
+
+  it("marks a failed lifecycle pending-delivery read unavailable instead of publishing a measured zero", async () => {
+    const stats = await getTelegramBotStats(makeTelegramStatusDb(), NOW_SEC);
+
+    // The independent capacity read succeeded and reports a real backlog, so
+    // every other optional loader is available and the only missing evidence
+    // is the lifecycle snapshot's pending-delivery count.
+    expect(stats.pendingDeliveries).toBe(7);
+    expect(stats.lifecycleSnapshot?.pendingDeliveries).toBeNull();
+    // R1 (unavailable is not zero) and R4 (non-ok names a reason): the failed
+    // lifecycle read must name that field instead of publishing a measured zero
+    // with `status: "complete"`.
+    expect(stats.quality).toEqual({
+      status: "partial",
+      unavailableFields: ["pendingDeliveries"],
+    });
+  });
+});

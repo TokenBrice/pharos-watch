@@ -1,4 +1,5 @@
 import { DEPEG_DEX_PROTOCOL_CORROBORATION_MIN } from "@shared/lib/depeg-config";
+import { BINANCE_MARKETS } from "@shared/lib/pricing-provider-config";
 import { CIRCUIT_SOURCE, divergingProtocolGroupsOutvote, POOL_CHALLENGE_HIGH_TVL_USD, USER_AGENT } from "../lib/constants";
 import { cgHeaders, cgSimplePricePath, cgUrl } from "../lib/coingecko";
 import { recordOutcomeSafe } from "../lib/circuit-breaker";
@@ -21,7 +22,7 @@ import {
 import type { PendingDepegState } from "../lib/depeg-pending";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { logWorkerEvent } from "../lib/structured-log";
-import { CoinGeckoSimplePriceSchema } from "../lib/upstream-schemas";
+import { CoinGeckoSimplePriceEntrySchema, CoinGeckoSimplePriceSchema } from "../lib/upstream-schemas";
 import {
   addSource,
   addSources,
@@ -38,6 +39,8 @@ import {
 } from "./pending-depeg-confirmation";
 
 type DirectionalSignalStatus = ReturnType<typeof classifyDirectionalSignal>;
+
+const BINANCE_SYMBOLS = new Set(BINANCE_MARKETS.map((market) => market.symbol));
 
 type OffchainUnavailableReason =
   | "non-ok"
@@ -128,9 +131,13 @@ async function evaluateOffchainConfirmer(args: {
     }
 
     const parsed = CoinGeckoSimplePriceSchema.safeParse(offchainResult.body);
-    const coin = parsed.success ? parsed.data[geckoId] : undefined;
-    const offchainPrice = coin?.usd;
-    const observedAt = coin?.last_updated_at;
+    // The envelope is per-key: a malformed sibling quote must not hide this
+    // asset's entry, and a malformed own entry stays unavailable.
+    const entry = parsed.success
+      ? CoinGeckoSimplePriceEntrySchema.safeParse(parsed.data[geckoId])
+      : null;
+    const offchainPrice = entry?.success ? entry.data.usd : undefined;
+    const observedAt = entry?.success ? entry.data.last_updated_at : undefined;
 
     const timestampStatus = classifyConfirmationTimestamp(observedAt, now);
     if (offchainPrice && offchainPrice > 0 && timestampStatus === "fresh") {
@@ -379,7 +386,8 @@ export async function collectConfirmationEvidence(
   } else if (cexPrices == null) {
     addSource(evidence.unavailableSources, "cex:binance");
   } else {
-    const cexPrice = cexPrices.get(row.symbol.toUpperCase());
+    const symbol = row.symbol.toUpperCase();
+    const cexPrice = cexPrices.get(symbol);
     if (cexPrice && cexPrice > 0) {
       const cexSignal = deriveDepegSignal(cexPrice, pegReference);
       evidence.cexStatus = classifyDirectionalSignal(cexSignal, threshold, pendingState.direction);
@@ -405,6 +413,10 @@ export async function collectConfirmationEvidence(
           thresholdBps: threshold,
         },
       });
+    } else if (BINANCE_SYMBOLS.has(symbol)) {
+      // The configured Binance pair was missing from a partial batch: the CEX
+      // family was unreadable for this row, not observed at zero.
+      addSource(evidence.unavailableSources, "cex:binance");
     }
   }
 

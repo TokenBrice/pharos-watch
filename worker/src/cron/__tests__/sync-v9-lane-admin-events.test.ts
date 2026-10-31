@@ -373,6 +373,29 @@ describe("syncV9LaneAdminEvents", () => {
     expect(await certificateRows(db)).toBe(1);
   });
 
+  it("screens against the admitted finalized head and records the certificate's actual range", async () => {
+    const { db } = fixtures.open();
+    mocks.screen.mockResolvedValue(admitted(certificate(LANE, 9_001, 9_500)));
+
+    await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
+      descriptors: [descriptor()],
+      observedAtSec: NOW,
+    });
+
+    expect(mocks.screen).toHaveBeenCalledWith(
+      expect.objectContaining({ fromBlock: 9_001, toBlock: 10_000 }),
+      expect.objectContaining({ finalizedHead: HEADER }),
+    );
+    // A narrowed page span may certify only a prefix; the attempt names what
+    // the certificate covers so the next chained window starts at 9_501.
+    expect(await readAttempt(db)).toMatchObject({
+      outcome: "admitted",
+      fromBlock: 9_001,
+      toBlock: 9_500,
+      consecutiveFailures: 0,
+    });
+  });
+
   it("records a failure with its machine reason and never writes a certificate", async () => {
     const { db } = fixtures.open();
     mocks.screen.mockResolvedValue(failed(LANE, "pruned-range"));

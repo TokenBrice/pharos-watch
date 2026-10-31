@@ -1,5 +1,6 @@
 import { WORKER_TRACKED_META_BY_ID, WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
@@ -46,7 +47,12 @@ export function deriveCurrentPegObservationMap(options: {
 
     if (!meta.flags.navToken && asset && hasUsableCurrentPrice(asset)) {
       const pegType = normalizePegType(asset.pegType);
-      if (
+      // One authority for the peg unit: the curated registry currency decides
+      // whether the snapshot's pegType may anchor a same-unit reference.
+      const registryPegType = normalizePegType(pegTypeFromCurrency(meta.flags.pegCurrency));
+      if (registryPegType != null && registryPegType !== pegType) {
+        pegReferenceUnavailable = true;
+      } else if (
         !isAuthoritativeDepegPegReference({
           pegType,
           pegCurrency: meta.flags.pegCurrency,

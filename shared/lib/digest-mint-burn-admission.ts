@@ -1,4 +1,5 @@
 import { sumPegBucketsOrNull } from "./supply";
+import type { SupplyCoverage } from "./supply-provenance";
 import { DAY_SECONDS, HOUR_SECONDS } from "./time-constants";
 
 // Editorial circuit breaker: a quarter of tracked supply needs independent
@@ -11,6 +12,8 @@ export const MATERIAL_DIGEST_GAUGE_SHARE = 0.01;
 export interface DigestFlowSupplySnapshot {
   snapshotDate: number;
   circulatingUsd: number | null;
+  /** Chain coverage of the stored amount; omitted legacy rows have no recorded coverage. */
+  coverage?: SupplyCoverage;
 }
 
 /** Null means admitted; unavailable evidence never confirms a large flow. */
@@ -37,6 +40,9 @@ export function getMintBurnPressureRejection(input: {
   const before = previous.circulatingUsd == null ? null : sumPegBucketsOrNull({ usd: previous.circulatingUsd });
   const after = current.circulatingUsd == null ? null : sumPegBucketsOrNull({ usd: current.circulatingUsd });
   if (before == null || after == null) return "supply-unavailable";
+  // A recorded partial-chain remainder is an observed amount, not a complete
+  // daily total: a coverage recovery must not confirm a flow as a supply change.
+  if (previous.coverage === "partial" || current.coverage === "partial") return "supply-unavailable";
   const change = after - before;
   return Number.isFinite(net24hUsd) && change * Math.sign(net24hUsd) >= Math.abs(net24hUsd) * MIN_SUPPLY_CONFIRMATION_RATIO
     && change !== 0 ? null : "supply-unconfirmed";

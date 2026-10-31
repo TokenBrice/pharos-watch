@@ -175,7 +175,7 @@ const StatusResponseObjectSchema = z
       dataQuality: z.array(StatusCauseSchema),
       overall: z.array(StatusCauseSchema),
     }),
-    state: StatusStateInfoSchema,
+    state: StatusStateInfoSchema.nullable(),
     staleness: StatusStalenessSchema,
     probe: StatusProbeSummarySchema,
     discrepancy: StatusDiscrepancySchema,

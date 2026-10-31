@@ -8,7 +8,7 @@ import {
 import { buildPaginatedEventResponse } from "../lib/api-pagination";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
+import { getMintBurnConfigsForStablecoin, type MintBurnTier } from "../lib/mint-burn-contracts";
 import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
 import { ACTIVE_MINT_BURN_CONFIGS } from "./mint-burn-flows/aggregate";
 import { buildInClause } from "../lib/db";
@@ -16,6 +16,13 @@ import { buildInClause } from "../lib/db";
 const VALID_DIRECTIONS = new Set(["mint", "burn"]);
 const VALID_BURN_TYPES = new Set(["effective_burn", "bridge_burn", "review_required"]);
 const VALID_SCOPES = new Set(["all", "counted"]);
+
+// Each tier is scanned by exactly one cron lane (worker/src/cron/mint-burn/run.ts);
+// an extended-only coin's rows are never written by the critical lane.
+const MINT_BURN_TIER_JOB: Record<MintBurnTier, string> = {
+  critical: "sync-mint-burn",
+  extended: "sync-mint-burn-extended",
+};
 
 interface EventRow {
   id: string;
@@ -149,7 +156,9 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
         ],
       },
       freshness: {
-        producerJob: "sync-mint-burn",
+        producerJob: [...new Set(configs
+          .filter((config) => !chain || config.chain.chainId === chain)
+          .map((config) => MINT_BURN_TIER_JOB[config.tier ?? "critical"]))],
         maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.mintBurnEvents,
       },
       cacheControl: CACHE_PROFILES.producerBacked,

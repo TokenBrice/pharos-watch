@@ -327,11 +327,11 @@ export function buildYieldSyncMetadata(input: {
   resolvedYieldBearingCount: number;
   expectedYieldBearingCount: number;
   publishedYieldBearingCount: number;
-  previousPublishedYieldBearingCount: number;
+  previousPublishedYieldBearingCount: number | null;
   publishedOpportunityCount: number;
-  previousPublishedOpportunityCount: number;
+  previousPublishedOpportunityCount: number | null;
   publishedRankingCount: number;
-  previousPublishedRankingCount: number;
+  previousPublishedRankingCount: number | null;
   dlPoolsMeta: YieldSourceInputMeta;
   /** SRC-SUPP-3: DL pool rows dropped by the APY envelope during this run's load. */
   dlApyEnvelopeRejectedCount: number;
@@ -383,7 +383,9 @@ export function buildYieldSyncMetadata(input: {
       previousPublishedOpportunityCount: input.previousPublishedOpportunityCount,
       publishedRankingCount: input.publishedRankingCount,
       previousPublishedRankingCount: input.previousPublishedRankingCount,
-      publishedRankingCountDelta: input.publishedRankingCount - input.previousPublishedRankingCount,
+      publishedRankingCountDelta: input.previousPublishedRankingCount == null
+        ? null
+        : input.publishedRankingCount - input.previousPublishedRankingCount,
       dlPoolCount: input.dlPoolsMeta.poolCount,
       dlApyEnvelopeRejectedCount: input.dlApyEnvelopeRejectedCount,
       supplementalSourceMode: input.supplementalMeta.mode,
@@ -1146,11 +1148,11 @@ function countPreviewRankings(
 function buildPublishedCoverageRegressionResult(params: {
   reason: string;
   itemCount: number;
-  previousPublishedYieldBearingCount: number;
+  previousPublishedYieldBearingCount: number | null;
   currentPublishedYieldBearingCount: number;
-  previousPublishedOpportunityCount: number;
+  previousPublishedOpportunityCount: number | null;
   currentPublishedOpportunityCount: number;
-  previousPublishedRankingCount: number;
+  previousPublishedRankingCount: number | null;
   currentPublishedRankingCount: number;
   inputDiagnostics?: CronMetadataRecord;
 }): CronResult {
@@ -1165,7 +1167,9 @@ function buildPublishedCoverageRegressionResult(params: {
       currentPublishedOpportunityCount: params.currentPublishedOpportunityCount,
       previousPublishedRankingCount: params.previousPublishedRankingCount,
       currentPublishedRankingCount: params.currentPublishedRankingCount,
-      publishedRankingCountDelta: params.currentPublishedRankingCount - params.previousPublishedRankingCount,
+      publishedRankingCountDelta: params.previousPublishedRankingCount == null
+        ? null
+        : params.currentPublishedRankingCount - params.previousPublishedRankingCount,
       // A regression guard result replaces the run metadata, so without the
       // input diagnostics a collapsed count cannot be attributed to an empty
       // input from cron history alone.
@@ -1195,11 +1199,11 @@ export async function guardPublishedYieldCoverage(params: {
 }): Promise<{
   result: CronResult | null;
   qualityReasons: string[];
-  previousPublishedYieldBearingCount: number;
+  previousPublishedYieldBearingCount: number | null;
   currentPublishedYieldBearingCount: number;
-  previousPublishedOpportunityCount: number;
+  previousPublishedOpportunityCount: number | null;
   currentPublishedOpportunityCount: number;
-  previousPublishedRankingCount: number;
+  previousPublishedRankingCount: number | null;
   currentPublishedRankingCount: number;
 }> {
   const previousRankingsState = derivePreviousYieldRankingsCount(params.previousYieldPublicationSnapshot, {
@@ -1229,15 +1233,18 @@ export async function guardPublishedYieldCoverage(params: {
           ...(params.inputDiagnostics ? { inputDiagnostics: params.inputDiagnostics } : {}),
         },
       }),
-      previousPublishedYieldBearingCount: 0,
+      previousPublishedYieldBearingCount: null,
       currentPublishedYieldBearingCount,
-      previousPublishedOpportunityCount: 0,
+      previousPublishedOpportunityCount: null,
       currentPublishedOpportunityCount,
-      previousPublishedRankingCount: 0,
+      previousPublishedRankingCount: null,
       currentPublishedRankingCount,
     };
   }
 
+  // An unreadable prior generation is an unavailable observation, not a
+  // measured zero; recovery may still publish a valid replacement (R1/R2).
+  const previousCountsUnavailable = params.previousYieldPublicationSnapshot.malformed;
   const previousPublishedYieldBearingCount = previousRankingsState.count;
   const previousPublishedOpportunityCount = previousOpportunityState.count;
   const previousPublishedRankingCount = previousTotalState.count;
@@ -1278,19 +1285,22 @@ export async function guardPublishedYieldCoverage(params: {
     result: reason == null ? null : buildPublishedCoverageRegressionResult({
       reason,
       itemCount: currentPublishedRankingCount,
-      previousPublishedYieldBearingCount,
+      previousPublishedYieldBearingCount:
+        previousCountsUnavailable ? null : previousPublishedYieldBearingCount,
       currentPublishedYieldBearingCount,
-      previousPublishedOpportunityCount,
+      previousPublishedOpportunityCount:
+        previousCountsUnavailable ? null : previousPublishedOpportunityCount,
       currentPublishedOpportunityCount,
-      previousPublishedRankingCount,
+      previousPublishedRankingCount:
+        previousCountsUnavailable ? null : previousPublishedRankingCount,
       currentPublishedRankingCount,
       inputDiagnostics: params.inputDiagnostics,
     }),
-    previousPublishedYieldBearingCount,
+    previousPublishedYieldBearingCount: previousCountsUnavailable ? null : previousPublishedYieldBearingCount,
     currentPublishedYieldBearingCount,
-    previousPublishedOpportunityCount,
+    previousPublishedOpportunityCount: previousCountsUnavailable ? null : previousPublishedOpportunityCount,
     currentPublishedOpportunityCount,
-    previousPublishedRankingCount,
+    previousPublishedRankingCount: previousCountsUnavailable ? null : previousPublishedRankingCount,
     currentPublishedRankingCount,
   };
 }

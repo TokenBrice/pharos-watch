@@ -250,6 +250,56 @@ describe("rpc parity job", () => {
     expect(store.row?.runs[0].samples).toMatchObject([{ chainId: RPC_PARITY_TARGETS[0].chainId, headOk: true }]);
   });
 
+  it("leaves an open Dwellir circuit untouched when the job signal tears the run down", async () => {
+    const { db } = fixtures.open();
+    const openedAt = Math.floor(Date.now() / 1000) - 60;
+    await db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .bind(
+        `circuit:${CIRCUIT_SOURCE.DWELLIR_EVM}`,
+        JSON.stringify({
+          state: "open",
+          consecutiveFailures: 3,
+          lastFailureAt: openedAt,
+          lastSuccessAt: null,
+          openedAt,
+        }),
+        openedAt,
+      )
+      .run();
+
+    const controller = new AbortController();
+    await expect(syncRpcProviderParity(
+      db,
+      { DWELLIR_API_KEY: API_KEY },
+      controller.signal,
+      undefined,
+      {
+        probe: async () => {
+          // One rotated chain finished before the deploy eviction fired the job
+          // signal; the probe returns its partial samples marked aborted.
+          controller.abort();
+          return probeResult({
+            samples: [paritySample(RPC_PARITY_TARGETS[0].chainId)],
+            attempted: 1,
+            headOk: 1,
+            aborted: true,
+          });
+        },
+      },
+    )).rejects.toThrow();
+
+    // A torn-down run is not provider evidence: it must not close the breaker
+    // that admitted the provider on a full run's measured outcome.
+    const circuit = await getCircuitRecord(db, CIRCUIT_SOURCE.DWELLIR_EVM);
+    expect(circuit).toMatchObject({
+      state: "open",
+      consecutiveFailures: 3,
+      lastFailureAt: openedAt,
+      lastSuccessAt: null,
+      openedAt,
+    });
+  });
+
   it("keeps store degradation actionable despite a sampled deadline run", async () => {
     const { db } = fixtures.open();
     await db.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")

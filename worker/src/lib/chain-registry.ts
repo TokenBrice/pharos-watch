@@ -356,6 +356,16 @@ export function buildChainRpcs(
   for (const config of configs) {
     map.set(config.chainId, config);
   }
+  // Reviewed keyless archive routes are static inventory: an unrelated
+  // credential's absence must not delete them from the registry.
+  for (const [chainId, endpoints] of Object.entries(CCIP_ARCHIVE_PUBLIC_ENDPOINTS)) {
+    const existing = map.get(chainId);
+    if (existing) {
+      existing.endpoints = [...existing.endpoints, ...endpoints];
+    } else {
+      map.set(chainId, rpcConfig(chainId, "evm", [...endpoints]));
+    }
+  }
   if (alchemyApiKey) {
     for (const [chainId, slug] of Object.entries(CCIP_ARCHIVE_ALCHEMY_CHAINS)) {
       const endpoint: RpcEndpoint = {
@@ -366,7 +376,7 @@ export function buildChainRpcs(
       };
       const existing = map.get(chainId);
       map.set(chainId, rpcConfig(chainId, "evm", [
-        endpoint, ...(existing?.endpoints ?? []), ...(CCIP_ARCHIVE_PUBLIC_ENDPOINTS[chainId] ?? []),
+        endpoint, ...(existing?.endpoints ?? []),
       ]));
     }
   }

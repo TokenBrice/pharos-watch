@@ -463,7 +463,7 @@ export async function publishDigestEdition(
   const storedMeta = input.qualityGateStatus
     ? markDigestMetaBlocked(input.copy.meta)
     : input.copy.meta;
-  let inserted = false;
+  let stored = false;
   await insertDigestRecord({
     db: input.db,
     generatedAt: input.generatedAt,
@@ -473,7 +473,7 @@ export async function publishDigestEdition(
     digestExtended: input.copy.extended || null,
     digestMeta: storedMeta,
     signal: input.signal,
-    onInserted: () => { inserted = true; },
+    onStored: () => { stored = true; },
   });
   throwIfAborted(input.signal);
 
@@ -487,6 +487,6 @@ export async function publishDigestEdition(
     ...input,
     editionNumber,
   });
-  publication.outputPublishedAt = inserted && !input.qualityGateStatus ? input.generatedAt : null;
+  publication.outputPublishedAt = stored && !input.qualityGateStatus ? input.generatedAt : null;
   return publication;
 }

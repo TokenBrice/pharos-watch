@@ -5,6 +5,7 @@ import {
 } from "@shared/lib/api-freshness";
 import { CRON_JOB_DEFINITIONS, type CronJobMeta } from "@shared/lib/cron-jobs";
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
+import { TELEGRAM_MESSAGE_CHUNK_LIMIT } from "@shared/lib/telegram-delivery-policy";
 import type { CacheStatus } from "@shared/types/status";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { DETAIL_WRITE_FAILURE_KEY_PREFIX } from "../lib/constants";
@@ -77,8 +78,9 @@ export function deriveCronFreshnessProducers(
 // Markers written by the detail handler when a per-coin cache write fails or
 // exceeds the D1 value cap (see stablecoin-detail/shared.ts). Demand-refreshed
 // detail rows can't be age-monitored like cron lanes (an old row may just be
-// an unvisited coin), so the write failure itself is the staleness signal.
-const DETAIL_WRITE_FAILURE_FRESH_SEC = 24 * 3600;
+// an unvisited coin), so the write failure itself is the staleness signal. An
+// unresolved marker stays a failure until the recovery fence deletes it, not
+// until it merely ages out of a freshness window.
 const DETAIL_WRITE_FAILURE_RETENTION_SEC = 7 * 24 * 3600;
 /** Per-invocation delete budget for expired markers (hourly sentinel lane). */
 const DETAIL_WRITE_FAILURE_PRUNE_BUDGET = 500;
@@ -115,7 +117,7 @@ export async function loadDetailWriteFailures(
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare("SELECT key, value, updated_at FROM cache WHERE key LIKE ? AND updated_at >= ?")
-      .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_FRESH_SEC)
+      .bind(`${DETAIL_WRITE_FAILURE_KEY_PREFIX}%`, nowSec - DETAIL_WRITE_FAILURE_RETENTION_SEC)
       .all<{ key: string; value: string; updated_at: number }>(),
   );
 
@@ -366,6 +368,8 @@ export interface OperatorWatchCondition {
   /** Operator-facing detail; defaults to `id`. */
   label?: string;
   active: boolean;
+  /** This condition's evidence could not be read this run: keep its prior state. */
+  unknown?: boolean;
 }
 
 type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication";
@@ -376,6 +380,34 @@ const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; re
   dependency: { raised: "Dependency still stale after root recovery", recovered: "Dependency caught up" },
   "safety-publication": { raised: "Safety Score publication held", recovered: "Safety Score publication released" },
 };
+
+// At most eight section lines are emitted (four sections × raised/recovered).
+// Budget each line from the repo's conservative chunk limit so a systemic
+// detail-write cohort cannot exceed Telegram's sendMessage cap and block every
+// pending transition in the same message.
+const OPERATOR_ALERT_SECTION_LINES = 8;
+const OPERATOR_ALERT_SECTION_CHARS =
+  Math.floor(TELEGRAM_MESSAGE_CHUNK_LIMIT / OPERATOR_ALERT_SECTION_LINES) - 16;
+
+function boundedOperatorSection(title: string, labels: readonly string[]): string {
+  const prefix = `<b>${title}</b>: `;
+  const escaped = labels.map(escapeHtml);
+  const full = `${prefix}${escaped.join(", ")}`;
+  if (full.length <= OPERATOR_ALERT_SECTION_CHARS) return full;
+  const shown: string[] = [];
+  let length = prefix.length;
+  for (const label of escaped) {
+    const separator = shown.length > 0 ? ", " : "";
+    const hiddenAfter = escaped.length - shown.length - 1;
+    const suffix = hiddenAfter > 0 ? `, +${hiddenAfter} more` : "";
+    if (length + separator.length + label.length + suffix.length > OPERATOR_ALERT_SECTION_CHARS) break;
+    length += separator.length + label.length;
+    shown.push(label);
+  }
+  const hidden = escaped.length - shown.length;
+  const body = shown.join(", ");
+  return `${prefix}${body}${hidden > 0 ? `${body ? ", " : ""}+${hidden} more` : ""}`;
+}
 
 function conditionKey(condition: Pick<OperatorWatchCondition, "section" | "id">): string {
   return condition.section === "producer" ? condition.id : `${condition.section}:${condition.id}`;
@@ -437,6 +469,10 @@ async function alertOnFreshnessTransitions(params: {
     const key = conditionKey(condition);
     const current = condition.active ? "stale" : "ok";
     const prior = previous[key] ?? "ok";
+    if (condition.unknown) {
+      if (prior === "stale") next[key] = prior;
+      continue;
+    }
     // Only producers keep an explicit "ok"; other sections are a set of active keys.
     if (condition.section === "producer" || current === "stale") next[key] = current;
     if (prior === current) continue;
@@ -473,10 +509,10 @@ async function alertOnFreshnessTransitions(params: {
 
   const sections = (Object.keys(OPERATOR_SECTION_TITLES) as OperatorWatchSection[]).flatMap((section) => [
     raisedLines.has(section)
-      ? `<b>${OPERATOR_SECTION_TITLES[section].raised}</b>: ${raisedLines.get(section)!.map(escapeHtml).join(", ")}`
+      ? boundedOperatorSection(OPERATOR_SECTION_TITLES[section].raised, raisedLines.get(section)!)
       : null,
     recoveredLines.has(section)
-      ? `<b>${OPERATOR_SECTION_TITLES[section].recovered}</b>: ${recoveredLines.get(section)!.map(escapeHtml).join(", ")}`
+      ? boundedOperatorSection(OPERATOR_SECTION_TITLES[section].recovered, recoveredLines.get(section)!)
       : null,
   ]).filter((section): section is string => section != null);
   const delivery = await deliverOperatorAlert(
@@ -555,6 +591,9 @@ export async function runCronStalenessWatchdog(
         section: "dependency",
         id: `${check.root}->${check.dependent}`,
         active: check.state === "root-recovered-dependent-stale",
+        // A dependent still stale while its root regressed (or an unreadable
+        // observation pair) is not evidence that it caught up.
+        unknown: check.state === "both-stale" || check.state === "unknown",
       })),
       ...(safetyPublication.ok ? [{
         section: "safety-publication" as const,

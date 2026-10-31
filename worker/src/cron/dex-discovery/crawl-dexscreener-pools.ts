@@ -168,17 +168,25 @@ export async function crawlDexScreenerPoolsStage({
       }
       runState.successfulRequests++;
       let observedPoolCount = 0;
+      let unreadableLiquidityCount = 0;
 
       for (const pair of result.pairs) {
-        const tvl = pair.liquidity?.usd ?? 0;
-        if (tvl < 1_000) continue;
+        // An absent liquidity reading is unreadable evidence, not a measured
+        // sub-$1K pool: it degrades the check instead of certifying an empty
+        // census (deployment-outcomes exhaustive authority).
+        const liquidityUsd = pair.liquidity?.usd;
+        if (typeof liquidityUsd !== "number" || !Number.isFinite(liquidityUsd) || liquidityUsd < 0) {
+          unreadableLiquidityCount++;
+          continue;
+        }
+        if (liquidityUsd < 1_000) continue;
 
         // DEC-19: an absent or invalid 24h volume is no reading (null, stored
         // absent), never a fresh 0; an explicit 0 stays a measured zero.
         const rawVol24h: unknown = pair.volume?.h24;
         const vol24h = typeof rawVol24h === "number" && Number.isFinite(rawVol24h) && rawVol24h >= 0 ? rawVol24h : null;
-        if (!(vol24h != null && vol24h > 0) && tvl < 10_000) continue;
-        if (vol24h != null && tvl > 0 && vol24h / tvl > 50) continue;
+        if (!(vol24h != null && vol24h > 0) && liquidityUsd < 10_000) continue;
+        if (vol24h != null && liquidityUsd > 0 && vol24h / liquidityUsd > 50) continue;
 
         const poolAddress = canonicalExitRouteScopedId(chain, pair.pairAddress ?? "");
         const dexId = pair.dexId;
@@ -209,7 +217,7 @@ export async function crawlDexScreenerPoolsStage({
             protocol: normalizeProtocol(dexId),
             dexId,
             symbol: `${pair.baseToken.symbol ?? context.stablecoinId} / ${pair.quoteToken.symbol ?? "UNKNOWN"}`,
-            tvlUsd: tvl,
+            tvlUsd: liquidityUsd,
             volume24h: vol24h,
             qualityMultiplier: getGtDexQuality(dexId),
             poolType:
@@ -232,17 +240,18 @@ export async function crawlDexScreenerPoolsStage({
 
         if (
           priceUsd != null &&
-          tvl >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
+          liquidityUsd >= DEX_PRICE_OBSERVATION_MIN_TVL_USD &&
           isPlausibleDexObservationPrice(context.stablecoinId, priceUsd, context.references)
         ) {
           context.hasUsablePoolPrice = true;
         }
       }
+      const degraded = result.degraded === true || unreadableLiquidityCount > 0;
       providerChecks.push(makeDexDeploymentProviderCheck(
         { chain, address },
         "dexscreener",
-        result.degraded ? "degraded" : "success",
-        { observedPoolCount, ...(result.degraded ? { retryable: true } : {}) },
+        degraded ? "degraded" : "success",
+        { observedPoolCount, ...(degraded ? { retryable: true } : {}) },
       ));
     } catch (err) {
       if (context.signal?.aborted) throw err;

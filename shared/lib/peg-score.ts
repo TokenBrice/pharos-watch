@@ -168,11 +168,15 @@ export function computePegScore(
     return { ...NULL_PEG_SCORE_RESULT };
   }
 
-  const spanSec = Math.max(now - startSec, 1);
+  // A tracking anchor at or after the scoring clock proves no observed second:
+  // do not clamp the non-positive span to a pseudocount of one second. The event
+  // census still reports what was observed up to the clock.
+  const blindAnchor = startSec >= now;
+  const spanSec = Math.max(now - startSec, 0);
   const spanDays = spanSec / DAY_SECONDS;
   const coverageEvents = events.filter((event) => {
     const eventEndSec = event.endedAt ?? now;
-    return event.startedAt <= now && eventEndSec > startSec;
+    return event.startedAt <= now && (blindAnchor || eventEndSec > startSec);
   });
   const scoringEvents = coverageEvents.filter((event) => !isPegScoreExcludedAuditVerdict(event.provenance?.auditVerdict));
   const excludedEventCount = coverageEvents.length - scoringEvents.length;

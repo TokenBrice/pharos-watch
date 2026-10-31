@@ -1,5 +1,5 @@
 import type { MintBurnConservationRecord } from "@shared/types/status";
-import { completeMintBurnConservationAudit, conservationOnlyEventDefsFor, getMintBurnConservationEligibility, persistMintBurnConservation, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation, type ConservationBoundaryEvidence, type ConservationLogBatch } from "../../lib/mint-burn-conservation";
+import { completeMintBurnConservationAudit, conservationOnlyEventDefsFor, getMintBurnConservationEligibility, persistMintBurnConservation, readMintBurnConservationRecords, validateMintBurnParsedConservation, verifyPersistedMintBurnConservation, type ConservationBoundaryEvidence, type ConservationLogBatch } from "../../lib/mint-burn-conservation";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { withRpcRequestOperation } from "../../lib/rpc-request-observer";
 import type { AlchemyLogEntry, AlchemyTopicFilter } from "../../lib/alchemy-logs";
@@ -571,7 +571,24 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     }
   }
   if (conservationAudit && conservationAudit.status !== "mismatch") {
-    await persistMintBurnConservation(db, conservationAudit, signal);
+    const write = await persistMintBurnConservation(db, conservationAudit, signal);
+    if (!write.written) {
+      // The guarded upsert rejected this record; publish the durable verdict,
+      // not the unaccepted attempt. A stored mismatch this pass does not cover
+      // fences the cursor so the whole failing range is retried (R2, R4).
+      const stored = (await readMintBurnConservationRecords(db, [config])).get(conservationAudit.key) as
+        | { status?: unknown }
+        | undefined;
+      if (stored?.status === "mismatch") {
+        conservationFence = true;
+        if (conservationAudit.status === "ok") {
+          summary.conservationStatus = "mismatch";
+          summary.conservationReason = "unresolved-stored-mismatch";
+        }
+        summary.errors++;
+        summary.failedEventDefs.push(`conservation:${summary.conservationReason ?? "write-skipped"}`);
+      }
+    }
   }
   summary.rowsInserted += persistResult.inserted;
   summary.rowsIgnored += persistResult.ignored;

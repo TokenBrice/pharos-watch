@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { TELEGRAM_RETENTION_WINDOWS } from "@shared/lib/retention-policy";
 import {
   TELEGRAM_PROCESSED_UPDATE_PRUNE_BATCH_LIMIT,
   runTelegramRetentionCleanup,
@@ -14,6 +15,7 @@ const databases: DatabaseSync[] = [];
 
 afterEach(() => {
   while (databases.length > 0) databases.pop()?.close();
+  vi.useRealTimers();
 });
 
 function setupLatestSchema(): { sqlite: DatabaseSync; db: D1Database } {
@@ -320,5 +322,41 @@ describe("runTelegramRetentionCleanup", () => {
     expect(metadata.reEngagementWarningCachePruned).toBe(1);
     expect(metadata.retentionDays.shortLivedChatCache).toBe(7);
     expect(metadata.retentionDays.reEngagementWarningCache).toBe(30);
+  });
+
+  it("degrades with a reason and keeps pruning the other families when one table delete fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    // One table's delete fails at the D1 boundary (SQLITE_BUSY) while every
+    // other family is healthy.
+    const { sqlite, db } = createLatestSchemaSqlite({
+      onRun: (sql) => {
+        if (/delete\s+from\s+telegram_usage_daily\b/i.test(sql)) {
+          throw new Error("D1_ERROR: SQLITE_BUSY: database is locked");
+        }
+      },
+    });
+    databases.push(sqlite);
+
+    insertUsageDaily(sqlite, "2024-01-01");
+    sqlite.prepare("INSERT INTO telegram_chat_delivery_diagnostics (chat_id, updated_at) VALUES (?, ?)")
+      .run("-100123", NOW_SEC - TELEGRAM_RETENTION_WINDOWS.chatDiagnostics - DAY_SEC);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("telegram:re-engagement-warned:42", "1", NOW_SEC - TELEGRAM_RETENTION_WINDOWS.reEngagementWarningCache - DAY_SEC);
+
+    const result = await runTelegramRetentionCleanup(db);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      reason?: string;
+      retentionErrors?: string[];
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toMatch(/usageDaily/);
+    expect(metadata.retentionErrors).toEqual([expect.stringMatching(/^usageDaily: .*SQLITE_BUSY/)]);
+    // The failed family keeps its expired row (no optimistic success claim),
+    // while the remaining families still prune their expired rows.
+    expect(countRows(sqlite, "telegram_usage_daily")).toBe(1);
+    expect(countRows(sqlite, "telegram_chat_delivery_diagnostics")).toBe(0);
+    expect(countRows(sqlite, "cache")).toBe(0);
   });
 });

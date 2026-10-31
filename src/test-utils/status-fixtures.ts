@@ -533,7 +533,7 @@ export function makeDegradedPublicImpactStatusResponse(base = makeHealthyStatusR
       overall: [...base.causes.overall, cause],
     },
     state: {
-      ...base.state,
+      ...base.state!,
       currentStatus: "degraded",
       rawStatus: "degraded",
       lastChangedAt: base.timestamp - 300,
@@ -559,7 +559,7 @@ export function makeRecoveryHoldStatusResponse(base = makeHealthyStatusResponse(
     rawOverallStatus: "healthy",
     overallStatus: "degraded",
     state: {
-      ...base.state,
+      ...base.state!,
       currentStatus: "degraded",
       rawStatus: "healthy",
       lastChangedAt: base.timestamp - 90,
@@ -585,7 +585,7 @@ export function makeOperationalDependencyFailureStatusResponse(base: StatusRespo
       overall: [...base.causes.overall, cause],
     },
     state: {
-      ...base.state,
+      ...base.state!,
       currentStatus: "degraded",
       rawStatus: "degraded",
       lastChangedAt: base.timestamp - 180,
@@ -721,7 +721,7 @@ export function makeActionRecommendedStatusResponse(base = makeHealthyStatusResp
       missingPrices: 12,
     },
     state: {
-      ...base.state,
+      ...base.state!,
       currentStatus: "stale",
       rawStatus: "stale",
       lastChangedAt: base.timestamp - 240,

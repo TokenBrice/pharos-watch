@@ -487,8 +487,13 @@ describe("stablecoin detail snapshot generator", () => {
         { date: sourceClock - 3 * day, totalCirculatingUSD: { peggedUSD: 160 }, totalCirculating: { peggedUSD: 160 } },
       ] };
     const history = [{ date: sourceClock, circulatingUsd: 100, price: 1 }];
-    // Origin provenance also survives the one-second loss in legacy Date/age arithmetic.
-    const headers = new Headers({ Date: new Date((sourceClock + 1200 + Number(originClock)) * 1000).toUTCString(), Age: "1200", "X-Data-Age": "0" });
+    // Freeze the run clock: the legacy path now refuses an origin `Date` beyond
+    // the shared future-skew allowance, so the fixture header must be the edge
+    // receipt time of this run rather than a future instant.
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    // Origin provenance also survives the one-second loss in legacy Date/age arithmetic:
+    // edge receipt (`now`) minus edge residence (100 s) is the origin clock.
+    const headers = new Headers({ Date: new Date(now).toUTCString(), Age: "100", "X-Data-Age": "0" });
     if (originClock) headers.set("X-Data-Updated-At", String(sourceClock));
     const perCoinIds: string[] = [];
     const batches: string[][] = [];

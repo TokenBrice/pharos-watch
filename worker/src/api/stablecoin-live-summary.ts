@@ -52,6 +52,11 @@ export async function handleStablecoinLiveSummary(
     }
   }
   if (warning) meta.warning = warning;
+  // One verdict per response (R3): the generic freshness header names the same
+  // status and reason the body publishes, never the pre-enrichment detail clock.
+  headers.set("X-Data-Freshness", meta.status);
+  if ("reason" in meta && meta.reason) headers.set("X-Data-Freshness-Reason", meta.reason);
+  else headers.delete("X-Data-Freshness-Reason");
   return jsonResponse({ ...summary, _meta: meta }, {
     status: response.status,
     headers: Object.fromEntries(headers.entries()),

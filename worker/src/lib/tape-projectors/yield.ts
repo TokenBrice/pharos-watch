@@ -53,6 +53,14 @@ const SEVERE_WARNING_SIGNALS = new Set<string>([
  */
 const PYS_DROP_THRESHOLD = 10;
 
+/**
+ * A corrupt warning_signals streak is quarantined per row, but one coin must not
+ * spend the invocation's D1 query budget walking an arbitrarily long prefix
+ * (R8). After this many prior generations the baseline is unavailable and the
+ * first observed row re-establishes state without emitting a transition.
+ */
+const MAX_PRIOR_WARNING_SEEK_STEPS = 10;
+
 function coinSourceUrl(coinId: string): string {
   return `/stablecoin/${encodeURIComponent(coinId)}/yield/`;
 }
@@ -199,6 +207,7 @@ async function fetchPriorWarningSignals(
     for (const row of rows.results ?? []) {
       map.set(row.stablecoin_id, { status: "unavailable" });
       let candidate: YieldHistoryRow | null = row;
+      let seekSteps = 0;
       while (candidate) {
         const evidence = decodeWarningEvidence(candidate.warning_signals);
         if (evidence.status !== "unavailable") {
@@ -206,6 +215,8 @@ async function fetchPriorWarningSignals(
           break;
         }
         degradation.record(candidate, evidence.reason);
+        if (seekSteps >= MAX_PRIOR_WARNING_SEEK_STEPS) break;
+        seekSteps++;
         // Seek backwards only for corrupt observations, including same-time ties.
         // The same decoder owns seeding and walking; no SQL JSON approximation.
         candidate = await db.prepare(

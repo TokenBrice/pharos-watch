@@ -494,6 +494,9 @@ export async function syncV9LaneAdminEvents(
         timeoutMs,
         deadlineMs: options.deadlineMs,
         observedAtSec: nowSec,
+        // Reuse the head this driver pinned the window to instead of a second,
+        // possibly lagging `finalized` read.
+        finalizedHead,
       });
     } catch (error) {
       if (!(error instanceof LaneScreeningDeadlineError)) throw error;
@@ -559,8 +562,10 @@ export async function syncV9LaneAdminEvents(
     const attempt: LaneScreeningAttempt = {
       subjectDeploymentKey: key,
       attemptedAtSec: nowSec,
-      fromBlock: window.fromBlock,
-      toBlock: window.toBlock,
+      // A narrowed page span certifies a readable prefix; the attempt names the
+      // range the certificate actually covers, not the planned request.
+      fromBlock: certificate.fromBlock,
+      toBlock: certificate.toBlock,
       outcome: "admitted",
       certificateId: certificate.certificateId,
       consecutiveFailures: 0,
@@ -570,8 +575,8 @@ export async function syncV9LaneAdminEvents(
     outcomes.push({
       subjectDeploymentKey: key,
       outcome: "admitted",
-      fromBlock: window.fromBlock,
-      toBlock: window.toBlock,
+      fromBlock: certificate.fromBlock,
+      toBlock: certificate.toBlock,
       certificateId: certificate.certificateId,
     });
   }

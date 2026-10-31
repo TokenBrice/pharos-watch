@@ -20,11 +20,31 @@ describe("Curve authored configuration equivalence", () => {
   it("preserves every expanded post-A19 route and policy, including own optional keys and order", () => {
     const policies = [CURVE_DOLA_SUSDE_RATE_BEARING_POLICY, CURVE_USD1_METAPOOL_POLICY,
       CURVE_NXUSD_METAPOOL_POLICY, ...CURVE_R3_METAPOOL_POLICIES];
-    expect(CURVE_POOL_CONFIGS).toHaveLength(44);
+    expect(CURVE_POOL_CONFIGS).toHaveLength(39);
     expect(policies).toHaveLength(13);
     // Strict equality distinguishes omitted optional keys from own undefined keys,
     // including nested hop, token role, rate-provider and base-pool descriptors.
     expect({ routes: CURVE_POOL_CONFIGS, policies }).toStrictEqual(curveExpandedPostA19);
+  });
+});
+
+// The registry's admission rule is >$1M TVL (curve-pool-configs.ts header).
+// These are independent 2026-10-31 Curve UI measurements for the two drained
+// Spark reserve pools the registry used to route USDS and sUSDS through.
+const MEASURED_THIN_POOL_TVL_USD: ReadonlyMap<string, number> = new Map([
+  ["0xa632d59b9b804a956bfaa9b48af3a1b74808fc1f", 459.06], // PYUSD/USDS
+  ["0x00836fe54625be242bcfa286207795405ca4fd10", 1_225.99], // sUSDS/USDT
+]);
+
+describe("Curve pool registry depth", () => {
+  it("does not route through the measured sub-$1M Spark reserve pools", () => {
+    const belowFloor = CURVE_POOL_CONFIGS
+      .filter((config) => {
+        const tvlUsd = MEASURED_THIN_POOL_TVL_USD.get(config.poolAddress.toLowerCase());
+        return tvlUsd != null && tvlUsd < 1_000_000;
+      })
+      .map((config) => config.stablecoinId);
+    expect(belowFloor).toEqual([]);
   });
 });
 

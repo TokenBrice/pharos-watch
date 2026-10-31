@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import type { D1Database, D1PreparedStatement, D1Result } from "@shared/types/cloudflare-runtime";
+import { ACTIVE_YIELD_BEARING_STABLECOINS } from "@shared/lib/tracked-stablecoin-utils";
 import { YIELD_HISTORY_MAX_DAYS, YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { computePYS } from "@shared/lib/yield-scoring";
 import {
@@ -917,6 +919,119 @@ describe("publishYieldCoordinatorResults", () => {
       sourceRiskPenalty: snapshot.sourceRiskPenalty,
     });
     expect(replayed).toBe(published);
+  });
+
+  it("does not count anchor-only seeds as rows that lost their safety evidence", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const source = makeEvaluatedSource();
+    const seeds = ACTIVE_YIELD_BEARING_STABLECOINS.slice(0, 10).map((coin, index) => ({
+      id: coin.id,
+      symbol: coin.symbol,
+      yield: resolvedYield({
+        observationKind: "anchor-only",
+        dataSource: "onchain",
+        sourceKey: `onchain:${coin.id}`,
+        exchangeRate: 1 + index / 100,
+        currentApy: 0,
+        apyBase: null,
+        sourceTvlUsd: null,
+        sourceObservedAt: startSec,
+      }),
+    }));
+    try {
+      const result = await publishYieldCoordinatorResults({
+        db,
+        previewRankingsPayload: buildPayloadWithObservedAt(startSec),
+        evaluatedSources: [source],
+        anchorOnlySources: seeds,
+        publicationViews: makePublicationViews([source], new Map([[source.id, source.sourceKey]]), startSec),
+        startSec,
+        degradationReasons: [],
+        safetySnapshotHeld: false,
+        resolvedCount: 1,
+        rowsRejected: 0,
+        divergenceFlags: 0,
+        sourceSwitches: 0,
+        previousYieldPublicationSnapshot: { status: "missing", rankings: [], malformed: false },
+      });
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error(`publication failed: ${result.result.status}`);
+
+      // Anchor-only observations are separate persistence inputs, excluded
+      // from measured coverage (R1); their null PYS evidence is by design.
+      const nullEvidenceRows = sqlite
+        .prepare("SELECT stablecoin_id FROM yield_history WHERE pys_inputs_at_publish IS NULL ORDER BY stablecoin_id")
+        .all();
+      expect(nullEvidenceRows.map((row) => String(row.stablecoin_id)).sort())
+        .toEqual(seeds.map((seed) => seed.id).sort());
+      expect(result.publicationStats?.pysInputsPersistedCount).toBe(1);
+      expect(result.publicationStats?.pysInputsNullCount).toBe(0);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("reports the publication as applied when a retried batch already committed", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const startSec = Math.floor(FIXED_NOW.getTime() / 1000);
+    const source = makeEvaluatedSource({ id: "sdai-sky", symbol: "sDAI", sourceKey: "defillama:sdai-sky" });
+    const previewRankingsPayload = buildPayloadWithObservedAt(startSec, {
+      id: "sdai-sky",
+      symbol: "sDAI",
+      sourceKey: "defillama:sdai-sky",
+    });
+    const publicationViews = makePublicationViews(
+      [source],
+      new Map([[source.id, source.sourceKey]]),
+      startSec,
+    );
+    let batchAttempts = 0;
+    // The first publication batch commits, then its response is lost; the
+    // retry replays the same statements against the already-written rows.
+    const retryingDb = {
+      prepare: (query: string) => db.prepare(query),
+      batch: async <T = unknown>(statements: D1PreparedStatement[]): Promise<D1Result<T>[]> => {
+        batchAttempts += 1;
+        if (batchAttempts === 1) {
+          await db.batch(statements);
+          throw new Error("Network connection lost");
+        }
+        return db.batch<T>(statements);
+      },
+      exec: (query: string) => db.exec(query),
+      dump: () => db.dump(),
+    } as unknown as D1Database;
+
+    try {
+      const result = await publishYieldCoordinatorResults({
+        db: retryingDb,
+        previewRankingsPayload,
+        evaluatedSources: [source],
+        publicationViews,
+        startSec,
+        degradationReasons: [],
+        safetySnapshotHeld: false,
+        resolvedCount: 1,
+        rowsRejected: 0,
+        divergenceFlags: 0,
+        sourceSwitches: 0,
+        previousYieldPublicationSnapshot: { status: "missing", rankings: [], malformed: false },
+      });
+
+      expect(batchAttempts).toBeGreaterThanOrEqual(2);
+      expect(result.ok).toBe(true);
+      if (!result.ok) throw new Error("publication was blocked");
+
+      // D1 serves this run's generation, so the verdict must say applied too.
+      expect(sqlite.prepare("SELECT state FROM yield_publication_generations WHERE generation_id = ?")
+        .get(result.generationId)).toEqual({ state: "published" });
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM yield_data WHERE publication_generation_id = ?")
+        .get(result.generationId)).toEqual({ count: 1 });
+      expect(result).toMatchObject({ cacheWriteSkipped: false, skipReason: null });
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("classifies retention_reason as 'audit' when no switch, no anomalies, and no rejected higher-confidence source", async () => {

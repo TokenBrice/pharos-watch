@@ -6,7 +6,7 @@ vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
   fetchTextWithRetry: vi.fn(),
 }));
 
-import { fetchTextWithRetry } from "../../../lib/fetch-retry";
+import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, fetchTextWithRetry } from "../../../lib/fetch-retry";
 import { fetchDefiLlamaPrices } from "../defillama";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
@@ -77,7 +77,7 @@ describe("fetchDefiLlamaPrices", () => {
       const body = JSON.stringify({ coins: { "ethereum:0xabc": {
         price: 2, timestamp: Math.floor(Date.now() / 1000), confidence: 1,
       } } });
-      options?.onBodyRead?.({ intakeBytes: new TextEncoder().encode(body).byteLength, declaredBytes: null, outcome: "accepted" });
+      options?.onBodyRead?.({ intakeBytes: new TextEncoder().encode(body).byteLength, declaredBytes: null, limitBytes: DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, outcome: "accepted" });
       return { response: new Response(body), body };
     });
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };
@@ -96,7 +96,7 @@ describe("fetchDefiLlamaPrices", () => {
       const body = JSON.stringify({ coins: { "ethereum:0xabc": {
         price: 2, timestamp: Math.floor(Date.now() / 1000), confidence: 1,
       } } });
-      options?.onBodyRead?.({ intakeBytes: new TextEncoder().encode(body).byteLength, declaredBytes: null, outcome: "accepted" });
+      options?.onBodyRead?.({ intakeBytes: new TextEncoder().encode(body).byteLength, declaredBytes: null, limitBytes: DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES, outcome: "accepted" });
       return { response: new Response(body), body };
     });
     const ctx = { requestCache: new Map<string, Promise<unknown>>() };

@@ -25,7 +25,8 @@ function PegRankingRow({
   onSelect: (peg: PegCurrency | null) => void;
 }) {
   const coinLabel = `${row.coinCount} coin${row.coinCount === 1 ? "" : "s"}`;
-  const partialRow = row.supplyUnavailableCount > 0;
+  const partialRow = row.supplyUnavailableCount > 0 || row.supplyPartialCount > 0;
+  const fullyObservedCount = row.supplyObservedCount - row.supplyPartialCount;
   return (
     <li
       className={`relative ${ROW_GRID} px-3 py-2.5 transition-colors hover:bg-muted/40 md:px-4 ${selected ? "bg-muted/60" : ""}`}
@@ -57,7 +58,7 @@ function PegRankingRow({
         </span>
         {partialRow ? (
           <span className="block text-2xs text-muted-foreground">
-            {row.marketCap === null ? "supply unavailable" : `known · ${row.supplyObservedCount}/${row.coinCount} observed`}
+            {row.marketCap === null ? "supply unavailable" : `known · ${fullyObservedCount}/${row.coinCount} observed`}
           </span>
         ) : null}
         <span className="pharos-numeric block text-xs text-muted-foreground md:hidden">

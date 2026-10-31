@@ -266,7 +266,7 @@ describe("DEX exit-route turnover watchdog", () => {
     const coinRoutes = routes("route-a", "route-b", "route-c", "route-d");
 
     const blipDb = watchdogDb(
-      [],
+      [publishedRow("coin-a", [])],
       previousSnapshot([{ stablecoinId: "coin-a", routes: coinRoutes }]),
       CURRENT_GENERATION,
     );
@@ -475,7 +475,7 @@ describe("DEX exit-route turnover watchdog", () => {
 
   it.each([[["route-a"]], [["route-a", "route-b"]]])("treats a coin losing all %j routes as complete turnover only when sustained", async (lost) => {
     const firstDb = watchdogDb(
-      [],
+      [publishedRow("coin-a", [])],
       previousSnapshot([{ stablecoinId: "coin-a", routes: routes(...lost) }]),
       CURRENT_GENERATION,
     );
@@ -484,7 +484,7 @@ describe("DEX exit-route turnover watchdog", () => {
     expect(JSON.parse(String(first.metadata))).toMatchObject({ candidateCoinCount: 1 });
 
     const secondDb = watchdogDb(
-      [],
+      [publishedRow("coin-a", [])],
       lastSnapshotWrite(firstDb),
       SUSTAINED_GENERATION,
     );
@@ -499,6 +499,44 @@ describe("DEX exit-route turnover watchdog", () => {
       jaccardDistance: 1,
       removedRouteCount: lost.length,
     });
+  });
+
+  it("keeps the baseline and does not alert when a tracked coin leaves the active roster", async () => {
+    // persistScores writes run rows only for active ids, while a frozen or
+    // delisted coin's published dex_liquidity row stays served. Its absence
+    // from the newest generation is an unobserved coin, not zero observed
+    // routes.
+    const previous = previousSnapshot([
+      { stablecoinId: "coin-a", routes: routes("route-a1", "route-a2") },
+      { stablecoinId: "coin-x", routes: routes("route-x1", "route-x2", "route-x3") },
+    ]);
+    const rosterRows = [publishedRow("coin-a", routes("route-a1", "route-a2"))];
+
+    const firstDb = watchdogDb(rosterRows, previous, CURRENT_GENERATION);
+    const first = await runDexExitRouteTurnoverWatchdog(firstDb);
+    const firstMetadata = JSON.parse(String(first.metadata));
+
+    expect(firstMetadata).toMatchObject({
+      comparedCoinCount: 1,
+      changedCoinCount: 0,
+      alertingCoinCount: 0,
+      candidateCoinCount: 0,
+      worstOffenders: [],
+    });
+    const firstWrite = JSON.parse(lastSnapshotWrite(firstDb) ?? "{}");
+    expect(firstWrite.coins.find((coin: { stablecoinId: string }) => coin.stablecoinId === "coin-x").routes)
+      .toEqual([
+        { routeId: "route-x1", evidenceKind: "reserve-based-amm-simulation" },
+        { routeId: "route-x2", evidenceKind: "reserve-based-amm-simulation" },
+        { routeId: "route-x3", evidenceKind: "reserve-based-amm-simulation" },
+      ]);
+
+    const secondDb = watchdogDb(rosterRows, lastSnapshotWrite(firstDb), RECOVERY_GENERATION);
+    const second = await runDexExitRouteTurnoverWatchdog(secondDb);
+    const secondMetadata = JSON.parse(String(second.metadata));
+
+    expect(secondMetadata).toMatchObject({ alertingCoinCount: 0, worstOffenders: [] });
+    expect(JSON.parse(lastSnapshotWrite(secondDb) ?? "{}").pendingAlert).toBeUndefined();
   });
 
   it("skips a rerun against the same published generation without touching state", async () => {

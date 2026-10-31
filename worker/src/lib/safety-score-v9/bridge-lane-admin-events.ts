@@ -178,6 +178,13 @@ export interface LaneAdminEventScreeningOptions {
   deadlineMs?: number;
   /** Producer clock; must be at or after the pinned window end. */
   observedAtSec?: number;
+  /**
+   * Finalized head the producer already read for this chain. The driver plans
+   * the pinned range from it, so re-reading `finalized` here could pin the range
+   * against a lagging second observation; the caller's admitted head is the
+   * range authority for this invocation.
+   */
+  finalizedHead?: EvmBlockHeader;
 }
 
 /** Execution deferral, not an evidence failure or scoring reason. */
@@ -398,7 +405,7 @@ export async function screenLaneAdminEvents(
   if (!chain || chain.type !== "evm") return failedResult(subjectDeploymentKey, "unsupported-chain", observedAtSec, `chain:${chainId}`);
 
   throwIfAborted(options.signal);
-  const finalized = await fetchEvmBlockHeader(chainId, "finalized", {
+  const finalized = options.finalizedHead ?? await fetchEvmBlockHeader(chainId, "finalized", {
     ...readOptions, timeoutMs: requestTimeoutMs(readOptions),
   });
   throwIfDeadlineExhausted(options.deadlineMs);
@@ -429,6 +436,11 @@ export async function screenLaneAdminEvents(
   if (toHeader.timestamp > observedAtSec) {
     return failedResult(subjectDeploymentKey, "non-finalized-head", observedAtSec, "window-end-in-future");
   }
+  // The planned window end is a request, not a promise: providers may narrow
+  // the served log-page span, so an invocation certifies the readable prefix
+  // and the next chained window starts at the first unread block.
+  let certifiedToBlock = toBlock;
+  let certifiedToHeader = toHeader;
 
   const observedCodeHashes = new Map<string, string>();
   for (let index = 0; index < emitters.length; index += 1) {
@@ -468,13 +480,30 @@ export async function screenLaneAdminEvents(
   let pages = 0;
   let lastBlockNumber = -1;
   let lastLogIndex = -1;
-  let sawRangeRefusal = false;
-  while (cursor <= toBlock) {
+  while (cursor <= certifiedToBlock) {
     throwIfAborted(options.signal);
     if (pages >= LANE_ADMIN_EVENT_MAX_LOG_PAGES) {
-      return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, `pages:${pages};from:${cursor}`);
+      const readableToBlock = cursor - 1;
+      if (readableToBlock < fromBlock) {
+        return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, `pages:${pages};from:${cursor}`);
+      }
+      const prefixRead = await readBatch(chainId, [{
+        method: "eth_getBlockByNumber",
+        params: [toBlockTag(readableToBlock), false],
+      }], { ...readOptions, observedHeadBlock: finalized.number });
+      if (!prefixRead) return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, "block-range-pin-unavailable");
+      const prefixHeader = parseBlockHeader(prefixRead.results[0], readableToBlock);
+      if (!prefixHeader || prefixHeader.timestamp > observedAtSec) {
+        return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, "malformed-block-header");
+      }
+      if (prefixHeader.timestamp < fromHeader.timestamp) {
+        return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, "window-clock-inversion");
+      }
+      certifiedToBlock = readableToBlock;
+      certifiedToHeader = prefixHeader;
+      break;
     }
-    const end = Math.min(toBlock, cursor + pageSpan - 1);
+    const end = Math.min(certifiedToBlock, cursor + pageSpan - 1);
     pages += 1;
     const batch = await readBatch(chainId, [{
       method: "eth_getLogs",
@@ -486,7 +515,6 @@ export async function screenLaneAdminEvents(
     if (error) {
       const narrowable = end > cursor && pages < LANE_ADMIN_EVENT_MAX_LOG_PAGES;
       if ((error.code === -32005 || isRangeMessage(error.message)) && narrowable) {
-        sawRangeRefusal = true;
         pageSpan = Math.max(1, Math.floor(pageSpan / 2));
         continue;
       }
@@ -497,7 +525,6 @@ export async function screenLaneAdminEvents(
     if (!Array.isArray(raw)) return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, "malformed-log-result");
     if (raw.length > LANE_ADMIN_EVENT_MAX_EVENTS_PER_PAGE) {
       if (end > cursor && pages < LANE_ADMIN_EVENT_MAX_LOG_PAGES) {
-        sawRangeRefusal = true;
         pageSpan = Math.max(1, Math.floor(pageSpan / 2));
         continue;
       }
@@ -525,9 +552,6 @@ export async function screenLaneAdminEvents(
     }
     cursor = end + 1;
   }
-  if (sawRangeRefusal && logs.length === 0 && pages >= LANE_ADMIN_EVENT_MAX_LOG_PAGES) {
-    return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, "log-read-budget");
-  }
 
   throwIfDeadlineExhausted(options.deadlineMs);
   const eventCounts: Partial<Record<V9LaneAdminEventFamily, number>> = {};
@@ -540,11 +564,11 @@ export async function screenLaneAdminEvents(
     subjectDeploymentKey,
     screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
     fromBlock,
-    toBlock,
+    toBlock: certifiedToBlock,
     fromBlockHash: fromHeader.hash,
     fromBlockTimestamp: fromHeader.timestamp,
-    toBlockHash: toHeader.hash,
-    toBlockTimestamp: toHeader.timestamp,
+    toBlockHash: certifiedToHeader.hash,
+    toBlockTimestamp: certifiedToHeader.timestamp,
     finalizedHeadNumber: finalized.number,
     finalizedHeadHash: finalized.hash,
     emitters: emitters.map((emitter) => ({
@@ -567,14 +591,14 @@ export async function screenLaneAdminEvents(
 
   const certificate = V9LaneIncidentCertificateSchema.parse({
     schemaVersion: 1,
-    certificateId: `lane-cert:${chainId}:${emitters[0]!.address}:${fromBlock}-${toBlock}:${logDigest.slice(0, 12)}`,
+    certificateId: `lane-cert:${chainId}:${emitters[0]!.address}:${fromBlock}-${certifiedToBlock}:${logDigest.slice(0, 12)}`,
     evidenceClass: V9_LANE_SCREENING_EVIDENCE_CLASS,
     subjectDeploymentKey,
     fromBlock,
-    toBlock,
-    toBlockHash: toHeader.hash,
+    toBlock: certifiedToBlock,
+    toBlockHash: certifiedToHeader.hash,
     windowStartSec: fromHeader.timestamp,
-    windowEndSec: toHeader.timestamp,
+    windowEndSec: certifiedToHeader.timestamp,
     observedAtSec,
     screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
     logDigest,

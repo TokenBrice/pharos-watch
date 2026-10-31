@@ -60,6 +60,33 @@ describe("alt-pegs route card", () => {
     expect(load.stampNote).toBe(`Partial · ${rest.length}/${NON_USD_IDS.length} non-USD coins observed`);
   });
 
+  it("stamps a recorded partial-chain remainder as incomplete and withholds shares", async () => {
+    const [partial, ...rest] = NON_USD_IDS;
+    mocks.loadStablecoinsCache.mockResolvedValue(cache([
+      makeAsset({
+        id: partial!,
+        circulating: { peggedUSD: 10_000_000 },
+        supplyChainGuard: {
+          reason: "supply-chain-dropout",
+          status: "chains-unavailable",
+          partialCoverage: true,
+          quarantinedSince: NOW - 3_600,
+          chains: [{
+            chainId: "tempo", chainLabel: "Tempo", listCurrentUsd: 0, baselineUsd: 1_653_927,
+            baselineObservedAt: NOW - 7_200, baselineSource: "seed", resolution: "unavailable",
+          }],
+        },
+      }),
+      ...rest.map((id) => makeAsset({ id, circulating: { peggedUSD: 10_000_000 } })),
+    ]));
+    const load = await loadAltPegsOgPage(db, NOW);
+    if (load.kind !== "ok") throw new Error("expected a live card");
+    expect(load.context).toBe("known market cap subtotal of non-USD stablecoins");
+    expect(load.support).toEqual([]);
+    expect(load.visual).toBeUndefined();
+    expect(load.stampNote).toBe(`Partial · ${NON_USD_IDS.length - 1}/${NON_USD_IDS.length} non-USD coins observed`);
+  });
+
   it("treats a core non-USD coin missing from the cache as partial, never complete", async () => {
     const [omitted, ...rest] = NON_USD_IDS;
     mocks.loadStablecoinsCache.mockResolvedValue(cache(rest.map((id) => makeAsset({ id, circulating: { peggedUSD: 10_000_000 } }))));

@@ -45,6 +45,13 @@ describe("digest mint/burn admission", () => {
       .toBe("supply-unavailable");
   });
 
+  it("rejects confirmation from a recorded partial-chain remainder", () => {
+    expect(getMintBurnPressureRejection({ ...evidence,
+      previous: { ...evidence.previous, coverage: "partial" } })).toBe("supply-unavailable");
+    expect(getMintBurnPressureRejection({ ...evidence,
+      current: { ...evidence.current, coverage: "partial" } })).toBe("supply-unavailable");
+  });
+
   it.each([null, NaN, -1])("requires an observed supply weight: %s", (gaugeWeightUsd) => {
     expect(getMintBurnPressureRejection({ ...evidence, gaugeWeightUsd })).toBe("supply-weight-unavailable");
   });

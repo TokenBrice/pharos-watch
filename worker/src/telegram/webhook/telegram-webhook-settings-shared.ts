@@ -12,12 +12,6 @@ import {
 } from "@shared/types/status/telegram";
 
 
-/** Default UTC quiet-hours window used when the user toggles quiet hours on
- * without specifying a range. Mirrors the typical late-night window; users who
- * want a custom range can still call /mute <start>-<end>. */
-export const DEFAULT_QUIET_START_HOUR = 22;
-export const DEFAULT_QUIET_END_HOUR = 7;
-
 /** The chat-wide toggles are the live alert families, in order (launch is retired). */
 export const GLOBAL_ALERT_TYPES = TELEGRAM_LIVE_ALERT_TYPES;
 export type GlobalAlertType = TelegramLiveAlertType;

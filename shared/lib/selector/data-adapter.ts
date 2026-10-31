@@ -94,7 +94,9 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         ? "yield-opportunity"
         : "safety-score-v9";
     const bluechip = args.bluechipData?.[id];
-    const currentDeviationBps = peg?.currentDeviationBps ?? dex?.dexDeviationBps ?? null;
+    // `dexDeviationBps` is the DEX-vs-primary source disagreement, not the
+    // peg-domain deviation, so it cannot stand in for an unread peg deviation.
+    const currentDeviationBps = peg?.currentDeviationBps ?? null;
 
     const row: MergedRow = {
       id,
@@ -232,7 +234,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
         yieldProtocolSlug: row.yieldProtocolSlug,
         yieldVenueChain: row.yieldVenueChain,
         yieldObservationDays30d: row.yieldObservationDays30d,
-        yieldFreshnessAgeSec: row.yieldFreshness?.ageSeconds ?? null,
         effectiveTvlUsd: row.effectiveTvlUsd,
         concentrationHhi: row.concentrationHhi,
         // No pre-sort: canonicalizeForSid recursively sorts object
@@ -259,7 +260,6 @@ export function buildSelectorRows(args: BuildSelectorRowsArgs): BuildSelectorRow
             sourceDepthRatio: source.sourceDepthRatio,
             sourceSwitchCount30d: source.sourceSwitchCount30d,
             observationCount30d: source.observationCount30d,
-            freshnessAgeSec: source.freshness?.ageSeconds ?? null,
             isPrimary: source.isPrimary,
           }))
           .sort((a, b) => a.sourceKey.localeCompare(b.sourceKey)),
@@ -390,7 +390,11 @@ function freshnessFromRisk(
 
 function ageSecondsFromTimestamp(timestamp: number | null | undefined, now: number): number | null {
   if (timestamp == null || !Number.isFinite(timestamp)) return null;
-  return Math.max(0, Math.round(toUnixSeconds(now) - toUnixSeconds(timestamp)));
+  const ageSeconds = toUnixSeconds(now) - toUnixSeconds(timestamp);
+  // A producer clock ahead of the assessment clock is unknown freshness, not
+  // an observed age of zero (R1/R7; the yield lanes fail closed the same way).
+  if (!Number.isFinite(ageSeconds) || ageSeconds < 0) return null;
+  return Math.round(ageSeconds);
 }
 
 function toUnixSeconds(timestamp: number): number {

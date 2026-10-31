@@ -22,7 +22,7 @@ import {
 } from "./digest/platform";
 import { requestDigestCopy, resolveDigestLlmConfig } from "./digest/llm-request";
 import { reportCronProgress } from "../lib/cron-progress";
-import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
+import { NON_BLOCKED_DIGEST_SQL_FILTER, NON_INTERNAL_DIGEST_SQL_FILTER, NON_WEEKLY_DIGEST_SQL_FILTER } from "../lib/digest-sql-filters";
 import { buildRecentDigestMeta } from "./daily-digest/runtime-helpers";
 import { buildWeeklyInputData } from "./weekly-recap/input-data";
 import { WEEKLY_SYSTEM_PROMPT, buildWeeklyLeadRequirements, buildWeeklyPrompt } from "./weekly-recap/prompt";
@@ -118,6 +118,7 @@ export async function generateWeeklyRecap(
         WHERE generated_at >= ?
           AND generated_at < ?
           AND json_extract(digest_meta, '$.type') = 'weekly'
+          AND (${NON_INTERNAL_DIGEST_SQL_FILTER})
           AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
         ORDER BY generated_at DESC
         LIMIT 1`,
@@ -134,8 +135,12 @@ export async function generateWeeklyRecap(
       twitter: classifyDigestChannelStatus(twitterStatus ?? (twitterCreds ? "pending" : "skipped: no-creds")),
       telegram: classifyDigestChannelStatus(telegramStatus ?? "no-creds"),
     };
+    // Production diagnostics are always arrays (empty when every credential is
+    // configured), so an absent-or-empty list is the no-missing-credentials case.
+    const twitterMissing = credentialDiagnostics.twitterMissing ?? [];
+    const telegramMissing = credentialDiagnostics.telegramMissing ?? [];
     if (!hasNonDeliveringDisposition(dispositions)
-      && credentialDiagnostics.twitterMissing == null && credentialDiagnostics.telegramMissing == null) {
+      && twitterMissing.length === 0 && telegramMissing.length === 0) {
       await reportCronProgress(reportProgress, {
         stage: "skipped",
         message: "Skipping weekly recap because this week already exists",
@@ -255,6 +260,7 @@ export async function generateWeeklyRecap(
       `SELECT digest_title, digest_text, digest_meta
        FROM daily_digest
        WHERE json_extract(digest_meta, '$.type') = 'weekly'
+         AND (${NON_INTERNAL_DIGEST_SQL_FILTER})
          AND (${NON_BLOCKED_DIGEST_SQL_FILTER})
        ORDER BY generated_at DESC LIMIT 4`,
     )

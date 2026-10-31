@@ -1,15 +1,18 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { DatabaseSync } from "node:sqlite";
-import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   LEGACY_BEST_YIELD_SOURCE_KEY,
   YIELD_HISTORY_OWNERSHIP_HANDOFFS,
 } from "../../lib/yield-history-ownership-handoffs";
 import {
+  buildYieldHistoryEvaluationInputsCooperative,
   loadYieldHistorySnapshots,
   purgeYieldHistoryOwnershipHandoffs,
 } from "../yield-sync/history";
+import { evaluateYieldSourcesCooperative } from "../yield-sync/evaluation";
+import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
 import { cleanupFalseLinkedVariantSourceSwitches, drainDecisionRowsBeforeCutoff, drainRowsBeforeCutoff, pruneYieldTables } from "../yield-sync/history";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {
@@ -596,5 +599,68 @@ describe("pruneYieldTables retention", () => {
         .prepare("SELECT retention_reason, COUNT(*) AS count FROM yield_source_decisions GROUP BY retention_reason")
         .all(),
     ).toEqual([{ retention_reason: "trend", count: keeperCount }]);
+  });
+});
+
+describe("yield history observation clock admission", () => {
+  const START_SEC = 1_776_729_600;
+  const PRIOR_SOURCE = "defillama:coin-a:prior";
+  const CHALLENGER_SOURCE = "defillama:coin-a:challenger";
+
+  async function publishSwitchSeries(seedFutureObservation: boolean) {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO yield_history (
+           stablecoin_id, source_key, recorded_at, is_best, apy,
+           source_tvl_usd, data_source, yield_source, yield_type,
+           publication_state
+         ) VALUES ('coin-a', ?, ?, 1, ?, 1000000, 'defillama', ?, 'lending-vault', 'published')`,
+      );
+      // Durable prior era, then one challenger publication that this run extends
+      // into its second publication: the valid series publishes one switch.
+      insert.run(PRIOR_SOURCE, START_SEC - 3 * DAY_SECONDS, 5, "Prior source");
+      insert.run(PRIOR_SOURCE, START_SEC - 3 * DAY_SECONDS + HOUR_SECONDS, 5, "Prior source");
+      insert.run(CHALLENGER_SOURCE, START_SEC - DAY_SECONDS, 6, "Challenger source");
+      if (seedFutureObservation) {
+        // A skewed upstream clock (e.g. Zephyr's x-last-success-at) is a future
+        // observation, not an ordered sample; it must not enter the 30d window.
+        insert.run(PRIOR_SOURCE, START_SEC + DAY_SECONDS, 5, "Prior source");
+      }
+
+      const snapshots = await loadYieldHistorySnapshots(
+        db,
+        ["coin-a"],
+        START_SEC,
+        START_SEC - 7 * DAY_SECONDS,
+        {
+          sourceKeysByStablecoin: new Map([
+            ["coin-a", new Set([PRIOR_SOURCE, CHALLENGER_SOURCE])],
+          ]),
+        },
+      );
+      const historyInputs = await buildYieldHistoryEvaluationInputsCooperative(snapshots, {
+        yieldToEventLoop: () => Promise.resolve(),
+      });
+      const result = await evaluateYieldSourcesCooperative(baseEvaluationInput({
+        resolved: [
+          { id: "coin-a", symbol: "A", yield: resolvedYield({ sourceKey: PRIOR_SOURCE, currentApy: 5 }) },
+          { id: "coin-a", symbol: "A", yield: resolvedYield({ sourceKey: CHALLENGER_SOURCE, currentApy: 6 }) },
+        ],
+        ...historyInputs,
+      }), { yieldToEventLoop: () => Promise.resolve() });
+      return result.evaluatedSources.find((source) => source.sourceKey === CHALLENGER_SOURCE);
+    } finally {
+      sqlite.close();
+    }
+  }
+
+  it("does not let a future-dated best row reorder the source-switch series", async () => {
+    const withoutFutureObservation = await publishSwitchSeries(false);
+    const withFutureObservation = await publishSwitchSeries(true);
+
+    expect(withoutFutureObservation?.sourceSwitchCount30d).toBe(1);
+    expect(withFutureObservation?.sourceSwitchCount30d)
+      .toBe(withoutFutureObservation?.sourceSwitchCount30d);
   });
 });

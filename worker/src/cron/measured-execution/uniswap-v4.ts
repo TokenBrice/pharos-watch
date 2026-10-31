@@ -16,8 +16,9 @@ import {
 import { UNISWAP_V4_DEPLOYMENT, UNISWAP_V4_REVIEWED_DEPLOYMENTS, type ReviewedUniswapV4Deployment } from "@shared/lib/measured-execution-deployment-policies";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
-  fetchEvmCodeAtBlock,
+  fetchEvmCodeStatusAtBlock,
   fetchEvmMulticall3Aggregate3AtBlock,
+  type EvmCodeAtBlockResult,
   type EvmMulticall3Result,
 } from "../../lib/evm-rpc";
 import {
@@ -217,10 +218,13 @@ export async function verifyUniswapV4Deployment(input: {
       ok: false;
       reason:
         | "pool-manager-code-unavailable"
+        | "pool-manager-code-absent"
         | "pool-manager-code-hash-mismatch"
         | "state-view-code-unavailable"
+        | "state-view-code-absent"
         | "state-view-code-hash-mismatch"
         | "quoter-code-unavailable"
+        | "quoter-code-absent"
         | "quoter-code-hash-mismatch"
         | "runtime-binding-unavailable"
         | "runtime-binding-mismatch";
@@ -228,9 +232,11 @@ export async function verifyUniswapV4Deployment(input: {
 > {
   const fetchCode = async (
     address: `0x${string}`,
-  ): Promise<`0x${string}` | null> => {
-    if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.deployment.chain)) return null;
-    const code = await fetchEvmCodeAtBlock(
+  ): Promise<EvmCodeAtBlockResult> => {
+    if (input.rpcBudget && !input.rpcBudget.canRequestChain(input.deployment.chain)) {
+      return { status: "unavailable" };
+    }
+    const code = await fetchEvmCodeStatusAtBlock(
       input.deployment.chain,
       address,
       input.blockNumber,
@@ -244,25 +250,41 @@ export async function verifyUniswapV4Deployment(input: {
         maxRetries: 0,
       },
     );
-    input.rpcBudget?.recordChainResult(input.deployment.chain, code != null);
+    // A successful `0x` read is positive evidence, not an RPC failure.
+    input.rpcBudget?.recordChainResult(input.deployment.chain, code.status !== "unavailable");
     return code;
   };
 
   const poolManagerCode = await fetchCode(input.deployment.poolManagerAddress);
-  if (poolManagerCode == null) return { ok: false, reason: "pool-manager-code-unavailable" };
-  const poolManagerCodeHash = keccak256(poolManagerCode).toLowerCase() as `0x${string}`;
+  if (poolManagerCode.status !== "available") {
+    return {
+      ok: false,
+      reason: poolManagerCode.status === "absent" ? "pool-manager-code-absent" : "pool-manager-code-unavailable",
+    };
+  }
+  const poolManagerCodeHash = keccak256(poolManagerCode.code).toLowerCase() as `0x${string}`;
   if (poolManagerCodeHash !== input.deployment.expectedPoolManagerCodeHash) {
     return { ok: false, reason: "pool-manager-code-hash-mismatch" };
   }
   const stateViewCode = await fetchCode(input.deployment.stateViewAddress);
-  if (stateViewCode == null) return { ok: false, reason: "state-view-code-unavailable" };
-  const stateViewCodeHash = keccak256(stateViewCode).toLowerCase() as `0x${string}`;
+  if (stateViewCode.status !== "available") {
+    return {
+      ok: false,
+      reason: stateViewCode.status === "absent" ? "state-view-code-absent" : "state-view-code-unavailable",
+    };
+  }
+  const stateViewCodeHash = keccak256(stateViewCode.code).toLowerCase() as `0x${string}`;
   if (stateViewCodeHash !== input.deployment.expectedStateViewCodeHash) {
     return { ok: false, reason: "state-view-code-hash-mismatch" };
   }
   const quoterCode = await fetchCode(input.deployment.endpointAddress);
-  if (quoterCode == null) return { ok: false, reason: "quoter-code-unavailable" };
-  const quoterCodeHash = keccak256(quoterCode).toLowerCase() as `0x${string}`;
+  if (quoterCode.status !== "available") {
+    return {
+      ok: false,
+      reason: quoterCode.status === "absent" ? "quoter-code-absent" : "quoter-code-unavailable",
+    };
+  }
+  const quoterCodeHash = keccak256(quoterCode.code).toLowerCase() as `0x${string}`;
   if (quoterCodeHash !== input.deployment.expectedCodeHash) {
     return { ok: false, reason: "quoter-code-hash-mismatch" };
   }

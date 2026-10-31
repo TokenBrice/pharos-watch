@@ -64,6 +64,8 @@ function declaredResponseLength(response: Response): number | null {
 export type BodyReadObserver = (evidence: {
   intakeBytes: number | null;
   declaredBytes: number | null;
+  /** The cap enforced on this request; a rejection alone is not budget evidence. */
+  limitBytes: number;
   outcome: "accepted" | "rejected";
 }) => void;
 
@@ -79,7 +81,7 @@ async function readResponseByteStreamWithSignal(
   try {
     if (response.body === null) {
       if (signal?.aborted) throw responseBodyAbortReason(signal);
-      onBodyRead?.({ intakeBytes, declaredBytes, outcome: "accepted" });
+      onBodyRead?.({ intakeBytes, declaredBytes, limitBytes: maxBytes, outcome: "accepted" });
       return new Uint8Array(0);
     }
     // Fetch response bodies emit bytes; the Workers declaration leaves the
@@ -93,10 +95,10 @@ async function readResponseByteStreamWithSignal(
       createOverflowError: (limit, observedBytes) => new ResponseBodyTooLargeError(limit, observedBytes),
       onChunk: onBodyRead ? (byteLength) => { intakeBytes = (intakeBytes ?? 0) + byteLength; } : undefined,
     });
-    onBodyRead?.({ intakeBytes, declaredBytes, outcome: "accepted" });
+    onBodyRead?.({ intakeBytes, declaredBytes, limitBytes: maxBytes, outcome: "accepted" });
     return bytes;
   } catch (error) {
-    onBodyRead?.({ intakeBytes, declaredBytes, outcome: "rejected" });
+    onBodyRead?.({ intakeBytes, declaredBytes, limitBytes: maxBytes, outcome: "rejected" });
     throw error;
   }
 }
@@ -111,7 +113,7 @@ async function assertResponseWithinLimit(
   }
   const declaredBytes = declaredResponseLength(response);
   if (declaredBytes != null && declaredBytes > maxBytes) {
-    onBodyRead?.({ intakeBytes: 0, declaredBytes, outcome: "rejected" });
+    onBodyRead?.({ intakeBytes: 0, declaredBytes, limitBytes: maxBytes, outcome: "rejected" });
     await cancelResponseBodyQuietly(response);
     throw new ResponseBodyTooLargeError(maxBytes, declaredBytes);
   }

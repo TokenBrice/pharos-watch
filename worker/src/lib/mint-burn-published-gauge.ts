@@ -27,6 +27,7 @@ import {
   type MintBurnFlowsResponse,
 } from "@shared/types/mint-burn";
 import { getCache } from "./db-cache";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { aggregateFlowCacheKey } from "./mint-burn-flow-cache-keys";
 import { tryParseJson } from "./json-parse";
 
@@ -105,7 +106,7 @@ export interface PublishedMintBurnGauge {
 
 export type PublishedMintBurnGaugeResult =
   | { kind: "ok"; gauge: PublishedMintBurnGauge }
-  | { kind: "unavailable"; reason: "missing" | "malformed" | "expired" };
+  | { kind: "unavailable"; reason: "missing" | "malformed" | "expired" | "future-timestamp" };
 
 /** Optional non-negative weight: absent is `null`; present but invalid is a contract break (`false`). */
 function parseOptionalWeight(value: unknown): number | null | false {
@@ -234,7 +235,12 @@ export async function readPublishedMintBurnGauge(
 ): Promise<PublishedMintBurnGaugeResult> {
   const cached = await getCache(db, aggregateFlowCacheKey(PUBLISHED_GAUGE_WINDOW_HOURS));
   if (!cached) return { kind: "unavailable", reason: "missing" };
-  const ageSec = nowSec - cached.updatedAt;
+  // A producer clock ahead of the read clock cannot be verified as fresh: a future
+  // row also wins setCacheIfNewer, so admitting it would pin a skewed generation.
+  const cacheClock = assessFreshnessTimestamp(nowSec, cached.updatedAt);
+  if (cacheClock.reason === "future-timestamp") return { kind: "unavailable", reason: "future-timestamp" };
+  if (cacheClock.reason != null) return { kind: "unavailable", reason: "malformed" };
+  const ageSec = cacheClock.ageSeconds;
   if (ageSec > PUBLISHED_GAUGE_MAX_AGE_SEC) return { kind: "unavailable", reason: "expired" };
   const payload = tryParseJson(cached.value, { onFailure: () => undefined });
   const gauge = parsePublishedMintBurnGauge(
@@ -244,7 +250,10 @@ export async function readPublishedMintBurnGauge(
   );
   if (!gauge) return { kind: "unavailable", reason: "malformed" };
   const watermark = gauge.window?.watermark;
-  if (watermark && (watermark.timestamp == null || watermark.unavailableReason != null
-    || nowSec - watermark.timestamp > watermark.maxAgeSec)) return { kind: "unavailable", reason: "expired" };
+  const watermarkClock = watermark ? assessFreshnessTimestamp(nowSec, watermark.timestamp) : null;
+  if (watermark && (watermark.unavailableReason != null || watermarkClock!.reason != null
+    || (watermarkClock!.ageSeconds ?? Infinity) > watermark.maxAgeSec)) {
+    return { kind: "unavailable", reason: "expired" };
+  }
   return { kind: "ok", gauge };
 }

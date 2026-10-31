@@ -377,6 +377,6 @@ export function buildStatusDashboardData({ data, healthData, probes, probeLabel 
     overallTone,
     querySyncs: syncDetails,
     recommendedActions,
-    statusHoldingAge: Math.max(0, data.timestamp - data.state.lastChangedAt),
+    statusHoldingAge: data.state == null ? null : Math.max(0, data.timestamp - data.state.lastChangedAt),
   };
 }

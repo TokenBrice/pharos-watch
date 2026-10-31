@@ -368,6 +368,14 @@ async function loadYieldSupplementalCandidates(
       if (requiredFamily) degradedRequiredFamilyCaches += 1;
       continue;
     }
+    // The same row is `supplemental-malformed` on /status and cannot prove
+    // catch-up: a snapshot whose stored rows no longer pass read validation is
+    // unavailable evidence, not a clean family that merely lost some rows (R2).
+    if (parsedFamily.rejectedCount > 0 || parsedFamily.sourceCount !== parsedFamily.candidates.length) {
+      invalidFamilyCacheRows += 1;
+      if (requiredFamily) degradedRequiredFamilyCaches += 1;
+      continue;
+    }
     validFamilyKeys.add(family);
     familyCandidates.push(...parsedFamily.candidates);
     latestFamilyUpdatedAt = Math.max(latestFamilyUpdatedAt ?? 0, parsedFamily.updatedAt);

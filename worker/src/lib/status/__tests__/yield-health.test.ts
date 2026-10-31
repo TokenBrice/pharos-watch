@@ -7,6 +7,17 @@ import { YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safet
 import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import * as scoreIndex from "../../safety-score-index";
 import {
+  buildYieldSupplementalRunOutcome,
+  getYieldSupplementalFamilyCacheKey,
+  getYieldSupplementalRunOutcomeCacheKey,
+  supplementalFamilySnapshotHash,
+  type SupplementalFamilyCacheResult,
+} from "../../../cron/yield-sync/cache";
+import {
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  type SupplementalSourceFamilyKey,
+} from "../../../cron/yield-sync/family-registry";
+import {
   emptyYieldAudit,
   healthyYieldProvenance,
   liveShapeRankings,
@@ -711,6 +722,8 @@ describe("loadYieldHealthSummary", () => {
   it("degrades a family the run outcome retained even while its marker is fresh", async () => {
     // SRC-SUPP-1: the fetch failed this run and the snapshot was retained, which
     // the family row alone cannot show — its marker stays inside the fresh band.
+    const familyRows = supplementalFamilyRows(NOW - 3600);
+    const morphoRow = familyRows.find((row) => row.key.endsWith(":morpho"))!;
     const summary = await loadYieldHealthSummary(
       makeDb([
         yieldCacheRow("yield-rankings", NOW - 300, {
@@ -720,7 +733,7 @@ describe("loadYieldHealthSummary", () => {
             benchmark: { fetchedAt: NOW - 3600, ageSeconds: 3600, source: "tbill-cache", isFallback: false },
           },
         }),
-        ...supplementalFamilyRows(NOW - 3600),
+        ...familyRows,
         {
           key: "yield:supplemental-source-run:v1",
           updated_at: NOW - 60,
@@ -728,6 +741,9 @@ describe("loadYieldHealthSummary", () => {
             version: 1,
             checkedAt: NOW - 60,
             familyCacheResults: { morpho: "retained-previous", beefy: "published" },
+            familySnapshotHashes: {
+              morpho: supplementalFamilySnapshotHash({ value: morphoRow.value!, updatedAt: morphoRow.updated_at }),
+            },
             degradedFamilies: ["morpho"],
           }),
         },
@@ -754,12 +770,17 @@ describe("loadYieldHealthSummary", () => {
     ["pendle", "degraded", false],
     ["aaveV3", "degraded", true],
   ] as const)("keeps %s input quality separate from completed producer status", async (family, expectedStatus, degraded) => {
+    const familyRows = supplementalFamilyRows(NOW - 60);
+    const familyRow = familyRows.find((row) => row.key.endsWith(`:${family}`))!;
     const summary = await loadYieldHealthSummary(makeDb([
-      ...supplementalFamilyRows(NOW - 60),
+      ...familyRows,
       yieldCacheRow("yield:supplemental-source-run:v1", NOW - 30, {
         version: 1,
         checkedAt: NOW - 30,
         familyCacheResults: { [family]: "retained-previous" },
+        familySnapshotHashes: {
+          [family]: supplementalFamilySnapshotHash({ value: familyRow.value, updatedAt: familyRow.updated_at }),
+        },
         degradedFamilies: [family],
       }),
     ]), NOW, {
@@ -1168,5 +1189,122 @@ describe("loadYieldHealthSummary", () => {
     } finally {
       active.mockRestore();
     }
+  });
+});
+
+describe("yield benchmark and supplemental run-outcome evidence boundaries", () => {
+  function benchmarkMeta(key: string, source: string) {
+    return {
+      key,
+      label: `${key} benchmark`,
+      currency: key,
+      rate: 4,
+      recordDate: new Date(NOW * 1000).toISOString().slice(0, 10),
+      fetchedAt: NOW - 3600,
+      ageSeconds: 3600,
+      source,
+      isFallback: false,
+      fallbackMode: null,
+    };
+  }
+
+  it("does not attribute a previous run's degraded outcome to a replacement family row", async () => {
+    // Run N retained morpho and bound its outcome to the row it kept. Run N+1
+    // published a fresh morpho row but its outcome upsert failed, so the leftover
+    // outcome still names morpho bound to the superseded snapshot hash.
+    const retainedMorphoRow = yieldCacheRow(
+      getYieldSupplementalFamilyCacheKey("morpho"), NOW - 2 * 3600, supplementalPayload(NOW - 2 * 3600, 2));
+    const replacementMorphoRow = yieldCacheRow(
+      getYieldSupplementalFamilyCacheKey("morpho"), NOW - 120, supplementalPayload(NOW - 120, 3));
+    const siblingFamilyRows = SUPPLEMENTAL_SOURCE_FAMILY_KEYS
+      .filter((family) => family !== "morpho")
+      .map((family) => yieldCacheRow(
+        getYieldSupplementalFamilyCacheKey(family), NOW - 1800, supplementalPayload(NOW - 1800, 3)));
+    const familyCacheResults = Object.fromEntries(
+      SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [family, "published"]),
+    ) as Record<SupplementalSourceFamilyKey, SupplementalFamilyCacheResult>;
+    familyCacheResults.morpho = "retained-previous";
+
+    const summary = await loadYieldHealthSummary(
+      makeDb([
+        yieldCacheRow("yield-rankings", NOW - 300, {
+          rankings: [],
+          provenance: {
+            safetySnapshot: { coverageRatio: 1, coveredCount: 1, trackedCount: 1, reason: null },
+            benchmark: { fetchedAt: NOW - 3600, ageSeconds: 3600, source: "tbill-cache", isFallback: false },
+          },
+        }),
+        ...siblingFamilyRows,
+        replacementMorphoRow,
+        {
+          key: getYieldSupplementalRunOutcomeCacheKey(),
+          updated_at: NOW - 600,
+          value: buildYieldSupplementalRunOutcome(
+            familyCacheResults, ["morpho"], NOW - 600, { morpho: "fetch-failed" },
+            { morpho: supplementalFamilySnapshotHash({ value: retainedMorphoRow.value, updatedAt: retainedMorphoRow.updated_at }) }),
+        },
+        yieldCacheRow("yield-coverage-audit", NOW - 86400, emptyYieldAudit()),
+      ]),
+      NOW,
+      {},
+    );
+
+    // R6 (ADR-33): the outcome names a superseded morpho generation, so it must
+    // not mark the replacement row degraded/retained.
+    expect(summary.supplemental.families?.morpho).toMatchObject({
+      status: "healthy", retained: false, sourceCount: 3,
+    });
+    expect(summary.supplemental.degradedFamilies).toEqual([]);
+    expect(summary.supplemental.degradedFamilyCount).toBe(0);
+    expect(summary.supplemental.status).toBe("healthy");
+  });
+
+  it("does not claim registry keys were fetched but unused when the published rows are unreadable", async () => {
+    const summary = await loadYieldHealthSummary(makeDb([
+      yieldCacheRow("yield-rankings", NOW - 300, {
+        rankings: null,
+        benchmarks: { USD: benchmarkMeta("USD", "fred-dgs3mo") },
+      }),
+    ]), NOW, {});
+
+    // R2 (ADR-29): an unreadable ranking cohort cannot establish which keys
+    // published rows used, so no key may be asserted as fetched-but-unused.
+    expect(summary.rankingUnavailableReason).toBe("rankings-malformed");
+    expect(summary.benchmarkRegistry.status).toBe("unknown");
+    expect(summary.benchmarkRegistry.unusedBenchmarkKeys ?? []).toEqual([]);
+  });
+
+  it("lists only fetched registry entries as unused, never the empty registry slots", async () => {
+    // `publishBenchmarkRecordBounds` publishes all 13 registry keys; currencies
+    // without a feed stay explicit nulls and were never fetched.
+    const summary = await loadYieldHealthSummary(makeDb([
+      yieldCacheRow("yield-rankings", NOW - 300, {
+        updatedAt: NOW - 300,
+        rankings: [{ id: "usdc-circle", benchmarkKey: "USD" }],
+        benchmarks: {
+          USD: benchmarkMeta("USD", "fred-dgs3mo"),
+          GBP: benchmarkMeta("GBP", "boe-sonia"),
+          USD_EFFR: null,
+          EUR: null,
+          CHF: null,
+          JPY: null,
+          MXN: null,
+          BRL: null,
+          AUD: null,
+          CAD: null,
+          RUB: null,
+          TRY: null,
+          SGD: null,
+        },
+        provenance: {
+          safetySnapshot: { coverageRatio: 1, coveredCount: 1, trackedCount: 1, reason: null },
+          benchmark: benchmarkMeta("USD", "fred-dgs3mo"),
+        },
+      }),
+    ]), NOW, {});
+
+    expect(summary.benchmarkRegistry.status).toBe("healthy");
+    expect(summary.benchmarkRegistry.usedBenchmarkCount).toBe(1);
+    expect(summary.benchmarkRegistry.unusedBenchmarkKeys?.map((entry) => entry.key)).toEqual(["GBP"]);
   });
 });

@@ -12,6 +12,7 @@ import { decodeJsonString } from "./cache-json";
 import {
   deriveDepegSignal,
   signalCrossesThreshold,
+  signalIsWithinThreshold,
   type DepegDirection,
   type DepegSignal,
 } from "@shared/lib/depeg-signals";
@@ -250,7 +251,7 @@ export function collectDexProtocolCorroborations(
 
     const matches =
       mode === "recover"
-        ? signal.absBps < threshold
+        ? signalIsWithinThreshold(signal, threshold)
         : signalCrossesThreshold(signal, threshold) &&
           (mode === "confirm" ? signal.direction === direction : signal.direction !== direction);
     if (!matches) continue;
@@ -328,7 +329,10 @@ export async function loadDexPrices(
         updatedAt: row.updated_at,
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
-        normalize: (parsed) => Array.isArray(parsed)
+        normalize: (parsed) => Array.isArray(parsed) &&
+          // A null/primitive element is not a DexPoolSource and would throw in
+          // the per-source clock filter; quarantine the row instead (R8).
+          parsed.every((source) => source != null && typeof source === "object" && !Array.isArray(source))
           ? { ok: true, payload: parsed as DexPoolSource[] }
           : { ok: false, reason: "invalid-shape" },
       });
@@ -457,6 +461,11 @@ export function rowPriceCoverage(row: DepegRow): DepegEvent["priceCoverage"] {
   });
   return parsed.success ? parsed.data : invalidRowPriceCoverage(row, "invalid-schema");
 }
+/** Stored coverage exists but no longer decodes: instrumented, and entirely unknown. */
+function unreadablePriceCoverage(): NonNullable<DepegEvent["priceCoverage"]> {
+  return { intervals: [], atParIntervals: [], lastTrustedObservationAt: null, gapStartedAt: null };
+}
+
 /** Convert a snake_case D1 row to a camelCase DepegEvent */
 export function rowToDepegEvent(row: DepegRow): DepegEvent {
   const direction = parseDepegDirection(row);
@@ -507,7 +516,11 @@ export function rowToDepegEvent(row: DepegRow): DepegEvent {
     confirmationSources: row.confirmation_sources ?? null,
     pendingReason: row.pending_reason ?? null,
     closeReason,
-    priceCoverage: rowPriceCoverage(row),
+    // A row that carries a coverage column but whose stored intervals no longer
+    // decode is instrumented and unread: an explicit empty coverage keeps it
+    // from falling back to its recorded episode duration as observed off-peg time.
+    priceCoverage: rowPriceCoverage(row)
+      ?? (row.price_coverage_json != null ? unreadablePriceCoverage() : null),
     provenance,
   };
 }

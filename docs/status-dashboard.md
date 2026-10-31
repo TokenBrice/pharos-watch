@@ -141,14 +141,7 @@ FX health admits its publication clock with canonical `assessFreshnessTimestamp`
 
 DEX `liquidityHealth.baselineReadFailures` retains named coverage-count, global-TVL, top-ten, cron-history, coverage-class, watchlist and per-coin read failures. Required guard-read failures hold the accepted generation with `required-baseline-read-failed`; successful empty bootstrap remains publishable. A failed top-ten read makes both current-on-prior-membership and previous top-ten totals null; failed coverage/history makes the prior coverage null, and failed global/history makes the value baseline null. Unread previous coverage classes are null, not an all-zero mix. The card renders unavailable prior evidence and the named reasons; optional class/drift failures do not add publication holds.
 
-Related extracted loaders:
-
-- `worker/src/lib/status/derived-data.ts`
-  - `getDatasetFreshness()`
-  - `getMintBurnReconciliation()`
-  - empty fallback builders for dataset freshness / reserve composition
-- `worker/src/lib/status/data-quality.ts`
-  - canonical stablecoins-cache / blacklist-gap / active-depeg / on-chain-supply quality aggregation
+Related extracted loaders have one inventory in the [cron implementation appendix](#extracted-status-loaders).
 
 `datasetFreshness.safetyGrades` describes the accepted **Safety Score publication**, including the
 original clock of a held publication, not daily grade history. `shared/lib/status-dataset-freshness.ts`
@@ -235,9 +228,11 @@ The existing caller clock and freshness budgets still own age-band assessment.
 
 Raw status snapshots validate both cache and payload generation clocks, returning `unreadable`
 with a timestamp reason on invalid evidence. Persisted status-state reads return unavailable
-state/staleness and report `status_state_invalid_timestamp`. Invalid probes cannot establish
-divergence: discrepancy diagnostics expose `probe-invalid-timestamp` and a null age. These are
-timestamp-admission corrections, not changes to cadence, hysteresis, age budgets or alert policy.
+state/staleness and report `status_state_invalid_timestamp`; a failed or rejected read publishes
+`state: null` (never a fallback evaluated at the request clock) beside `staleness.isStale`.
+Invalid probes cannot establish divergence: discrepancy diagnostics expose `probe-invalid-timestamp`
+and a null age. These are timestamp-admission corrections, not changes to cadence, hysteresis, age
+budgets or alert policy.
 
 Canary PSI/DEWS checks use the named `CANARY_INCIDENT_MAX_AGE_SEC` four-hour incident
 policy, distinct from endpoint freshness and Telegram flow tolerated-context budgets.
@@ -336,7 +331,7 @@ Subject to a successful history read, cron availability is healthy when:
 - The job is **not** reported healthy when the cron-history query itself failed: `crons[*].healthy` is `null` with `crons[*].telemetryUnknown = true` and `crons[*].telemetryUnknownReason` naming the failed read, and the job is excluded from unhealthy/error counters rather than reported falsely unhealthy or falsely healthy, or
 - The job is a watch-tier bootstrap (`crons[*].bootstrap = true`): no required non-neutral attempt yet and at most one recorded run. Critical-tier jobs always require real availability evidence. The admin describes this as an initial admission window, without claiming a successful run
 
-History-derived wire summary counters are null on a failed history read, with `summary.cronHistoryUnavailableReason: "cron-history-read-failed"` and `sectionErrors.crons` carrying the same code. A successful empty history keeps numeric zero and an explicit null reason. The optional reason admits legacy rolling-deploy payloads; `summary.unavailableReason: "db-unavailable"` remains reserved for whole-DB loss. Lease, progress and running-slot aggregate measurements retain their own read outcomes: failed history alone never nulls independently observed companion counts.
+History-derived wire summary counters are null on a failed history read, with `summary.cronHistoryUnavailableReason: "cron-history-read-failed"` and `sectionErrors.crons` carrying the same code. A successful empty history keeps numeric zero and an explicit null reason. The optional reason admits legacy rolling-deploy payloads; `summary.unavailableReason: "db-unavailable"` remains reserved for whole-DB loss. Lease, progress and running-slot aggregate measurements retain their own read outcomes: failed history alone never nulls independently observed companion counts. Confidence scores an unreadable cron history as unknown evidence at the maximum unhealthy/degraded deduction, never as zero unhealthy crons.
 
 Optional lease, progress, slot-event and running-slot reads share failure normalization, but retain independent failure flags and structured event/source identities; required cron history keeps its separate unavailable boundary.
 
@@ -369,11 +364,11 @@ The critical `/api/mint-burn-flows` endpoint is fresh through 8h and degraded th
 Shared in-flight and scheduled-slot wire fields:
 
 - `crons[*].inFlight` exposes live `cron_run_progress` state (`stage`, `itemsDone`, `itemsTotal`, `message`, `updatedAt`, `stale`) for long-running leased jobs such as blacklist, mint/burn, DEX discovery, stablecoin price enrichment, and yield evaluation. The API suppresses orphaned progress rows once their matching lease is gone, so `running-stale` means "still leased but heartbeat stalled", not "some old progress row never got cleaned up". Suppressed rows and expired leases are available in `crons[*].staleArtifacts` for operator cleanup/readout.
-- `summary.scheduledSlotRunning`, `summary.scheduledSlotStaleCandidates`, and `summary.scheduledSlotOldestRunningAgeSec` expose running scheduled-slot rows. The detail query remains capped at 25 rows ordered by oldest heartbeat, but both `scheduledSlotRunning` and `scheduledSlotStaleCandidates` come from full-population SQL window aggregates rather than the capped page. Stale candidates have heartbeats at least ten minutes old, and the oldest-first page preserves the correct oldest running and stale ages; `budgetOnlySurface*` summary counters separately report missing, stale, or error telemetry for budget-only side work.
+- `summary.scheduledSlotRunning`, `summary.scheduledSlotStaleCandidates`, `summary.scheduledSlotOldestRunningAgeSec` and `budgetOnlySurface*` expose scheduled-slot and budget-only-side-work telemetry; the [cron implementation appendix](#scheduled-slot-status-wire-aggregates) owns their caps, stale age and aggregate reads.
 
 Per-job execution metadata (DEX stages, mint/burn lanes, live reserves, redemption backstops, status self-check) is in [Per-job cron metadata](#per-job-cron-metadata).
 
-Demand-refreshed detail rows use `detail-write-failure:*` markers rather than a cron age budget. Recovery cleanup deletes only the exact scanned marker key, `updated_at`, and value while the current corresponding detail row still has a later write clock. A concurrent replacement, including a different value written in the same second, is retained for reassessment; `updated_at` alone is not a unique generation. Expired-marker pruning remains bounded independently of recovery cleanup.
+Demand-refreshed detail rows use `detail-write-failure:*` markers rather than a cron age budget. Recovery cleanup deletes only the exact scanned marker key, `updated_at`, and value while the current corresponding detail row still has a later write clock. A concurrent replacement, including a different value written in the same second, is retained for reassessment; `updated_at` alone is not a unique generation. An unresolved marker remains an active operator condition for its full retention window; it does not age out of the alert as recovered. Expired-marker pruning remains bounded independently of recovery cleanup.
 
 ## Resource-pressure evidence
 
@@ -544,14 +539,14 @@ At request time the admin advertises the worse of persisted `state.currentStatus
 
 Additional response fields:
 
-- `confidence`: normalized status confidence (0.1–1.0)
+- `confidence`: normalized status confidence (0.1–1.0), re-scored for the live scheduler floor so it matches the published availability verdict
 - `causes`: structured trigger list (`availability`, `dataQuality`, `overall`)
-- `state`: state-machine counters and thresholds
+- `state`: state-machine counters and thresholds; `null` when the persisted status-state read failed or its clock was rejected (named in `sectionErrors.statusState`)
 - `staleness`: freshness of status-system evaluations
 - `probe`: latest synthetic probe aggregate
 - `discrepancy`: divergence between effective status and synthetic probe status
 - `timeline`: recent status transitions
-- `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` when Telegram tables are unavailable)
+- `telegramBot`: admin-only Telegram bot subscriber aggregates (`null` only when a core Telegram read fails; optional slices degrade independently inside the block)
 - `datasetFreshness`: admitted confirmed output/publication clocks for operational domains, with optional per-dataset `unavailableReasons`; `DATASET_FRESHNESS_TARGETS` in `worker/src/lib/status/derived-data.ts` owns private read targets, while `shared/lib/status-dataset-freshness.ts` binds labels and producer cadence. The informational table retains its 2x-cadence grace basis and intentional 8x/12x on-time/aging/late bands; these are not overall-status or Safety methodology thresholds.
 - `summary`: compact availability and diagnostics rollup (`unhealthyCrons`, `availabilityImpactingUnhealthyCrons`, `watchUnhealthyCrons`, `degradedCrons`, `cronErrors`, `availabilityImpactingCronErrors`, `availabilityImpactingConsecutiveCronErrors`, `staleCronArtifacts`, `expiredCronLeases`, `orphanedCronProgressRows`, `diagnosticIssueCount`, `worstCacheRatio`, `transitionsLast24h`)
   A failed history read makes only the history-derived cron counts unavailable; see [Cron health model](#cron-health-model) for `cronHistoryUnavailableReason` and independent companion-read provenance.
@@ -620,7 +615,7 @@ Availability escalation on cron errors follows a transient-vs-sustained split:
   Selected telemetry is admitted through the shared `LiquidityHealthSchema`, including explicit run identity and `metadata.failedSources`; incomplete or malformed evidence yields `liquidityHealth: null` plus `sectionErrors.liquidityHealth.code: "liquidity_health_extraction_failed"`. Values are not coerced or defaulted: complete observed zero/false telemetry stays valid, as do deliberately nullable prior baselines/classes with their named `baselineReadFailures`. A malformed section does not discard unrelated supplements.
 - `yieldHealth`: admin-only yield health summary sourced from existing cache rows and cron metadata (`yield-rankings`, `yield:supplemental-sources:v1:*`, `yield-coverage-audit`, and `sync-yield-data`). It reports ranking count/update age, previous-vs-current ranking-count delta, live-safety hydration coverage, per-family supplemental cache age, per-key benchmark registry health, coverage-audit age, source-risk field coverage, comparison-anchor freshness, latest cron status, a field-level status, status-impact class, and the yield runbook link. The retired legacy USD-only `benchmark` projection is no longer published.
 - `publicationHealth`: admin-only read-only publication generation summary for `dex-liquidity`, `yield-rankings`, `stablecoins`, `dews`, `psi`, and `safety-score-v9`. The V9 surface is derived from the canonical `report-cards:v9` publication and matching publication-health row; it does not consult the retired V8 compact cache.
-- `dependencyHealth`: admin-only derived dependency matrix built from existing `caches`, `crons`, and `publicationHealth` plus `shared/lib/data-dependency-registry.ts`. Cache-backed signals use the same override-aware availability ratio bands as public cache health, so `maxAge` remains a baseline rather than an immediate stale cutoff; producer-source degradation remains independently visible. It groups degraded/stale downstream symptoms under the most likely stale upstream dependency (for example DEX liquidity -> DEWS/report-card/redemption symptoms) without changing `availabilityStatus`, `dataQualityStatus`, or publication behavior.
+- `dependencyHealth`: admin-only derived dependency matrix built from existing `caches`, `crons`, and `publicationHealth` plus `shared/lib/data-dependency-registry.ts`. Cache-backed signals use the same override-aware availability ratio bands as public cache health, so `maxAge` remains a baseline rather than an immediate stale cutoff; producer-source degradation remains independently visible but never downgrades a stale cache-age verdict, and a source-clock signal publishes no cache budget. Publication and cron clocks use the same timestamp admission, so a rejected clock cannot produce a healthy row and publishes a null age. It groups degraded/stale downstream symptoms under the most likely stale upstream dependency (for example DEX liquidity -> DEWS/report-card/redemption symptoms) without changing `availabilityStatus`, `dataQualityStatus`, or publication behavior.
 - `canaries`: permanent admin-only diagnostics, selecting the latest structural row per active ID in the selected `status`/`alert` mode, not an atomic generation. `expectedCheckIds`, `presentCheckIds` and `missingCheckIds` name the nine-ID roster; `totalChecks` is the present count. Retired IDs are excluded. Only complete, fresh, valid-clock observations with known completed execution and clean findings are healthy. Per-check `executionStatus`/`executionFailureReason` separate measurement from severity; `completedCount`, `failedCount` and `unknownExecutionCount` preserve legacy unknowns. In `status`, severe completed findings stay severe in the ledger while cron reports `ok` plus quality; failed reads/cohorts/persistence remain non-ok. `off`/`shadow` expose empty/unknown evidence. The approved final policy is `off|status`; old-mode rejection remains gated on deployed-override inventory as documented in [Worker infrastructure](./worker-infrastructure.md). Checks cover DEX publication/global identity, blacklist identity, active coverage, PSI/DEWS, canonical accepted/held V9 and USD/GBP benchmarks using shared freshness authority. None supplies score/availability authority or condition-specific push escalation.
 - `worker_canary_runs` retention is 14 days; the current status reads only active check IDs and does not depend on older retained rows.
 - `coingeckoPriceDiff`: admin-only live CoinGecko comparison summary for active tracked assets with `geckoId`, including the compare count, mismatch count, threshold, and the flagged rows where the Pharos reported price is more than 5% away from a freshness-qualified CoinGecko spot quote
@@ -711,8 +706,8 @@ The [Yield Health threshold table](./runbooks/yield-health.md#threshold-table) o
 | --- | --- | --- |
 | `rankingCount`, `rankingUpdatedAt`, `rankingAgeSec`, `rankingStatus` | `cache["yield-rankings"]` payload + row clock; missing/malformed arrays or rows are `stale` with `rankingUnavailableReason`; validated empty arrays count as zero | Stale or missing rankings are public-critical; degraded rankings are watch-only |
 | `safetyCoverage` | Cached publisher `provenance.safetySnapshot`; missing provenance is `unknown`, not a live-hydration measurement | Admin-watch |
-| `supplemental` | Per-family `yield:supplemental-sources:v1:*` rows; missing/malformed envelopes are `unknown` with family `unavailableReason` and increment `missingFamilyCount`; validated empty families remain healthy | Admin-watch; optional source breadth |
-| `benchmarkRegistry` | Used ranking keys + benchmark provenance; missing/unknown used keys stay explicit; fetched-but-unused keys are diagnostic only | Admin-watch; benchmark feed quality remains distinct from proxy selection |
+| `supplemental` | Per-family `yield:supplemental-sources:v1:*` rows; missing/malformed envelopes are `unknown` with family `unavailableReason` and increment `missingFamilyCount`; validated empty families remain healthy; a run-outcome degraded family is honoured only when its stored snapshot hash binds the currently published family row | Admin-watch; optional source breadth |
+| `benchmarkRegistry` | Used ranking keys + benchmark provenance; missing/unknown used keys stay explicit; fetched-but-unused keys are diagnostic only (null registry slots were never fetched, and unreadable rankings make usage unavailable rather than empty) | Admin-watch; benchmark feed quality remains distinct from proxy selection |
 | `coverageAudit` | `cache["yield-coverage-audit"]` payload + row clock; missing/malformed detector evidence is `unknown`; complete zero counts/empty arrays remain valid | Admin-watch; queue is read-only |
 | `sourceRiskCoverage` | Selected and retained alternate `sourceRisk.*` evidence; missing/`unknown` venue tiers are evidence gaps, not high risk; empty eligible denominators are null | Admin-watch; evidence gaps do not make rankings stale |
 | `comparisonAnchorFreshness` | Publisher metadata `sourceCoverage.comparisonAnchorFreshness`; missing metadata is `unknown`; stale examples are bounded and may be truncated | Field-level admin-watch, excluded from the aggregate `yieldHealth.status`; no scoring/arbitration/publication change |
@@ -737,6 +732,8 @@ Parsed dispatch suppression flags preserve three states: `true`, `false`, and `n
 The UI consumes the typed block and dispatch metadata; missing optional telemetry is Unknown, never zero. Live safety source states remain explicit while independent DEWS/depeg/launch fan-out continues.
 
 `GET /api/status.telegramBot` aggregates known/alert-enabled/deliverable chats; explicit and preset-implied follows, active preset followers and average explicit follows; six-family enablement and top-coin explicit/preset splits. Delivery fields include `pendingDeliveries`, `oldestPendingDeliveryAgeSec`, `pendingDeliveryBacklog` (`claimable`/`due`, `deferred`, `sending`, `executionUnknown`, `sentCleanup`, `expired`, `nearTtl`), `retryErrorClassCounts`, `customPreferenceChats`, `quietHoursEnabledChats`, `lifecycleSnapshot`, `quality`, `deliverySli`, and nonzero `presetQueryFailures`.
+
+A failed preset-implied ranking read leaves the remaining Telegram evidence published, returns an empty `topStablecoins`, and names `topStablecoins` in `quality.unavailableFields`. When the lifecycle pending-delivery count read fails, `lifecycleSnapshot.pendingDeliveries` is `null` and `pendingDeliveries` is named in `quality.unavailableFields`; neither is published as a measured zero.
 
 Recent sending stays separate. Active executionUnknown counts unexpired `unknown` delivery rows plus `sending` rows older than 15 minutes, with the oldest unknown age. Expired unknown rows remain evidence. `deliverySli` is a bounded 24h rollup over alert-family jobs and their delivery rows (broadcast and digest excluded; `suppressed_duplicate` counts as cancelled, with reason `duplicate_prior_delivery`; terminal failed/blocked/expired rows stand in for dead letters), with availability/quality/freshness: acceptance means Bot API accepted, not received/opened/read. Query failure returns availability/quality unavailable, freshness unknown and rollup null, never zeroes.
 
@@ -847,7 +844,7 @@ Response includes:
 
 The incident-history workspace makes negative deployment-correlation statements when history data exists, the query has no error, and `hasMore === false`. This proves completeness, not freshness: cached data remains eligible during background refetch or after the query freshness window expires. Row-limited, failed-refetch retained, fallback, and indeterminate results keep correlation Unknown.
 
-Absent state authority yields `status-missing`; unreadable authority yields `status-unreadable` plus `sectionErrors.state`. Both discrepancy comparisons have null status severity/delta, never an invented healthy/in-sync verdict. Probe read issues are separately exposed in `sectionErrors.probe`.
+Absent state authority yields `status-missing`; unreadable authority yields `status-unreadable` plus `sectionErrors.state`. Both discrepancy comparisons have null status severity/delta, never an invented healthy/in-sync verdict. Probe read issues are separately exposed in `sectionErrors.probe` and yield `probe-unreadable` with a null delta; only a successful read with no probe row yields `probe-missing`.
 
 Delivery status is request-time evidence, but transition history is cron-sampled. A stall and recovery entirely between status observations cannot create invented historical transitions; the external monitor's issue/run is separate incident evidence.
 
@@ -1052,3 +1049,16 @@ forensic consumers must treat null as unavailable and must not reinterpret histo
 - `status-self-check` records its monitoring, probe, computation, and publication phases. A distinct `route-probe:<path>` stage is persisted before each selected route so abandonment evidence identifies the last entered probe without progress coalescing hiding it; a phase alone does not identify the allocation responsible for a memory termination.
 - `sync-live-reserves` now emits structured metadata (`synced`, `failed`, `skipped`, `warningCount`, `coinsWithWarnings`, `coinsWithErrors`, `breakerKeys`) summarized in the cron card.
 - `sync-redemption-backstops` keeps market-implied route impairments visible through `availabilityDegraded` metadata and impaired rows, but those expected row-level availability states do not by themselves mark the cron run degraded. The capacity coverage floor (`unresolvedMissingCapacity` above `missingCapacityOkThreshold`) is published the same way, under `metadata.quality.reason = "capacity-coverage-floor"`; only unresolved routes, a stale liquidity feed, no active configured rows or post-write warnings degrade the run.
+
+### Scheduled-slot status wire aggregates
+
+- `summary.scheduledSlotRunning`, `summary.scheduledSlotStaleCandidates`, and `summary.scheduledSlotOldestRunningAgeSec` expose running scheduled-slot rows. The detail query remains capped at 25 rows ordered by oldest heartbeat, but both `scheduledSlotRunning` and `scheduledSlotStaleCandidates` come from full-population SQL window aggregates rather than the capped page. Stale candidates have heartbeats at least ten minutes old, and the oldest-first page preserves the correct oldest running and stale ages; `budgetOnlySurface*` summary counters separately report missing, stale, or error telemetry for budget-only side work.
+
+### Extracted status loaders
+
+- `worker/src/lib/status/derived-data.ts`
+  - `getDatasetFreshness()`
+  - `getMintBurnReconciliation()`
+  - empty fallback builders for dataset freshness / reserve composition
+- `worker/src/lib/status/data-quality.ts`
+  - canonical stablecoins-cache / blacklist-gap / active-depeg / on-chain-supply quality aggregation

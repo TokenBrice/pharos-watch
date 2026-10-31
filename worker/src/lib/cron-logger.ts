@@ -491,9 +491,14 @@ export async function logCronRun(
       if (scheduledAttemptKey) {
         const owner = lastProgressLeaseOwner;
         progressWriteTail = progressWriteTail.then(async () => {
-          await runWithOverloadRetry(() => db.prepare(
-            `UPDATE ${scheduledIdentity ? childAttemptTable(scheduledIdentity.executionFence) : "scheduled_child_attempts"} SET lease_owner = ? WHERE attempt_key = ? AND terminal_token IS NULL AND lease_owner IS NOT ?`,
-          ).bind(owner, scheduledAttemptKey, owner).run());
+          try {
+            await runWithOverloadRetry(() => db.prepare(
+              `UPDATE ${scheduledIdentity ? childAttemptTable(scheduledIdentity.executionFence) : "scheduled_child_attempts"} SET lease_owner = ? WHERE attempt_key = ? AND terminal_token IS NULL AND lease_owner IS NOT ?`,
+            ).bind(owner, scheduledAttemptKey, owner).run());
+          } catch (err) {
+            // Diagnostic ownership evidence never turns a completed run into a failed one.
+            console.warn(`[db] Failed to record scheduled-child lease owner for ${job}:`, err);
+          }
         });
       }
     }
@@ -771,7 +776,12 @@ export async function logCronRun(
     throw e;
   } finally {
     if (timeoutHandle) clearTimeout(timeoutHandle);
-    await progressWriteTail;
+    try {
+      await progressWriteTail;
+    } catch (err) {
+      // A rejected diagnostic write must not skip progress cleanup or mask the result.
+      console.warn(`[db] Cron progress writes failed for ${job}:`, err);
+    }
     if (progressActivated) {
       try {
         await clearCronProgress(db, job, startSec, slotStartedAt, lastProgressWriteLeaseOwner);

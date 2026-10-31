@@ -121,6 +121,7 @@ describe("loadDexLiquiditySnapshot", () => {
           concentrationHhi: 0.2,
           poolCount: 4,
           chainCount: 2,
+          updatedAt: 123,
           coverageClass: "primary",
           coverageConfidence: 0.9,
           liquidityEvidenceClass: "measured",
@@ -208,6 +209,7 @@ describe("loadDexLiquiditySnapshot", () => {
       concentrationHhi: null,
       poolCount: 1,
       chainCount: 1,
+      updatedAt: 100,
       coverageClass: "legacy",
       coverageConfidence: 0.5,
       liquidityEvidenceClass: "observed_unmeasured",
@@ -269,6 +271,7 @@ describe("loadDexLiquiditySnapshot", () => {
     ]));
 
     expect(Object.keys(result.map)).toEqual(["valid"]);
+    expect(result.quarantined).toEqual({ "usdc-circle": "invalid-exit-route-evidence" });
     expect(consoleError).toHaveBeenCalledWith(
       expect.stringContaining("usdc-circle"),
     );
@@ -302,6 +305,13 @@ describe("loadDexLiquiditySnapshot", () => {
     );
 
     expect(Object.keys(result.map)).toEqual(["valid"]);
+    // The quarantine is named in the result so a consumer can isolate the asset
+    // instead of treating its absence as a fatal input error (R8).
+    expect(result.quarantined).toEqual({
+      "bad-class": "invalid-coverage-evidence",
+      "bad-confidence": "invalid-coverage-evidence",
+      incomplete: "invalid-coverage-evidence",
+    });
     expect(consoleError).toHaveBeenCalledTimes(3);
     expect(consoleError.mock.calls.map(([message]) => message)).toEqual([
       expect.stringContaining("bad-class"),

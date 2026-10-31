@@ -128,6 +128,25 @@ describe("summarizeDexVolumeWindow", () => {
     expect(resolveVolumeActivityComponent({ ...empty, measuredPoolCount: null }).status).toBe("unavailable");
     expect(resolveVolumeActivityComponent({ ...empty, admittedTvlUsd: undefined }).status).toBe("unavailable");
   });
+
+  it("keeps positive measured volume over zero admitted TVL unavailable, never measured zero activity", () => {
+    // A drained pool still reporting 24h flow: the window is complete, but the
+    // activity ratio has no denominator (R1, not an invented 0 or 100).
+    const { availability } = summarizeDexVolumeWindow(
+      [{ volumeUsd: 5_000, observedAtSec: AS_OF - 60, tvlUsd: 0 }],
+      "24h",
+      CLOCK,
+    );
+    expect(availability).toMatchObject({
+      completeness: "complete",
+      admittedTvlUsd: 0,
+      measuredPoolCount: 1,
+      partialGrossUsd: 5_000,
+    });
+    expect(resolveVolumeActivityComponent(availability)).toEqual({
+      status: "unavailable", score: null, reason: "activity-completeness-unknown",
+    });
+  });
 });
 
 describe("volume activity saturation example", () => {

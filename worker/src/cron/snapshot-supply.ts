@@ -177,7 +177,7 @@ export async function snapshotSupply(
     return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: { reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec },
+      metadata: { reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec, cacheClockReason: preflight.reason },
     });
   }
   const {
@@ -263,6 +263,9 @@ export async function snapshotSupply(
         itemCount: repairedPriceRows,
         metadata: {
           reason: repairedPriceRows > 0 ? "repaired_missing_prices_today" : "already_written_today",
+          // A price-only repair does not produce a new snapshot generation;
+          // the confirmed output clock stays on the served marker's write.
+          ...(repairedPriceRows > 0 ? { outputPublishedAt: lastWrite?.updatedAt ?? null } : {}),
           ...publicationGap,
           ...qualityFindings(),
           snapshotDate,

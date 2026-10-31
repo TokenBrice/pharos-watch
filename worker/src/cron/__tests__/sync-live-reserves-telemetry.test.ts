@@ -200,7 +200,7 @@ describe("syncLiveReserves adapter latency telemetry", () => {
           const requestKey = `telemetry-request-${adapterFetches}`;
           await getCachedRequest(requestKey, async () => {
             createRequestBodyObserver(ctx, 1024).onBodyRead({
-              intakeBytes: 64, declaredBytes: 64, outcome: "accepted",
+              intakeBytes: 64, declaredBytes: 64, limitBytes: 1024, outcome: "accepted",
             });
             await Promise.all([
               ctx!.ioLimiter!.run("first", async () => undefined),

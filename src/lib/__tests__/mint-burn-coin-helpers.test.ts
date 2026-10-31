@@ -286,6 +286,19 @@ describe("aggregateCoinFlows24h", () => {
     expect(aggregate.direction).toBe("inactive");
     expect(aggregate.net.valueUsd).toBe(0);
   });
+
+  // /flows passes `summaryData?.coins ?? []`; a failed or generationless summary
+  // read leaves no coin components at all. R1/R2 keep that missing evidence
+  // unavailable instead of publishing a complete observed zero.
+  it("publishes no complete zero, inactive direction or scan proof for an empty cohort", () => {
+    const aggregate = aggregateCoinFlows24h([]);
+    expect(aggregate.net).toMatchObject({ valueUsd: null, completeness: "unknown" });
+    expect(aggregate.has24hActivity).toBeNull();
+    expect(aggregate.direction).toBeNull();
+    expect(aggregate.scanComplete).toBe(false);
+    expect(aggregate.mintCompleteness).toBe("unknown");
+    expect(aggregate.burnCompleteness).toBe("unknown");
+  });
 });
 
 describe("nullable scan-window reader contract", () => {

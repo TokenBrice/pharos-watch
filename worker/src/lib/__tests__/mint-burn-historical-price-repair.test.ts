@@ -572,4 +572,88 @@ describe("historical mint/burn price repair", () => {
       db.close();
     }
   });
+
+  it("repairs a limit=500 page spanning 101 coins without exceeding D1's bound-parameter limit", async () => {
+    const db = makeSqliteD1();
+    const timestamp = 1_800_000_000;
+    const snapshotDate = Math.floor(timestamp / DAY) * DAY;
+    try {
+      const coinIds = [...TRACKED_META_BY_ID.values()]
+        .filter((meta) => meta.flags.pegCurrency === "USD")
+        .slice(0, 101)
+        .map((meta) => meta.id);
+      expect(coinIds).toHaveLength(101);
+      for (const [index, stablecoinId] of coinIds.entries()) {
+        insertEvent(db, { id: `wide-page-${index}`, stablecoinId, timestamp });
+        db.sqlite.prepare(`INSERT INTO supply_history
+          (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at)
+          VALUES (?, ?, 1000, 1, ?)`).run(stablecoinId, snapshotDate, timestamp - 60);
+      }
+      const sourceLoader: HistoricalMintPriceSourceLoader = { loadCoinGecko: vi.fn(), loadDefiLlama: vi.fn() };
+
+      const result = await repairHistoricalMintBurnPrices(db, {
+        dryRun: true, limit: 500, sourceLoader, nowSec: timestamp + DAY,
+      });
+
+      expect(result).toMatchObject({
+        limit: 500, selected: 101, recovered: 101, classifiedIrreducible: 0, deferredForRetry: 0,
+      });
+      expect(result.dispositions.every((entry) => entry.disposition === "recover"
+        && entry.price === 1 && entry.priceSource === "repair:supply-history-event-day")).toBe(true);
+      expect(sourceLoader.loadCoinGecko).not.toHaveBeenCalled();
+      expect(sourceLoader.loadDefiLlama).not.toHaveBeenCalled();
+    } finally {
+      db.close();
+    }
+  });
+
+  it("records a retry-irreducible attempt clock, run id, bookmark and reason on the re-opened row", async () => {
+    const db = makeSqliteD1();
+    const eventTimestamp = 1_800_000_000;
+    const priorAttemptAt = eventTimestamp - 5 * DAY;
+    try {
+      insertEvent(db, { id: "irreducible-head", stablecoinId: "usdt-tether", timestamp: eventTimestamp });
+      insertEvent(db, { id: "irreducible-next", stablecoinId: "usdt-tether", timestamp: eventTimestamp + 60 });
+      for (const [id, attemptedAt] of [["irreducible-head", priorAttemptAt], ["irreducible-next", priorAttemptAt + 60]] as const) {
+        db.sqlite.prepare(`UPDATE mint_burn_events
+          SET price_repair_status = 'irreducible',
+              price_repair_reason = 'no-valid-event-day-price:repair:coingecko-market-chart-event-day',
+              price_repair_attempted_at = ?, price_repair_run_id = 'prior-run', price_repair_bookmark = 'prior-bookmark'
+          WHERE id = ?`).run(attemptedAt, id);
+      }
+      const transientlyUnavailableLoader: HistoricalMintPriceSourceLoader = {
+        loadCoinGecko: async ({ startSec, endSec }) => ({
+          source: "repair:coingecko-market-chart-event-day:usdt",
+          status: "unavailable", points: [], detail: `http-503:${startSec}:${endSec}`,
+        }),
+        loadDefiLlama: async ({ source }) => ({ source, status: "unavailable", points: [], detail: "http-503" }),
+      };
+
+      const retry = await repairHistoricalMintBurnPrices(db, {
+        dryRun: false, limit: 1, retryIrreducible: true,
+        operatorRunId: "retry-run", timeTravelBookmark: "retry-bookmark",
+        sourceLoader: transientlyUnavailableLoader, nowSec: eventTimestamp + DAY,
+      });
+
+      expect(retry.dispositions[0]).toMatchObject({ eventId: "irreducible-head", disposition: "retry" });
+      expect(db.sqlite.prepare(`SELECT amount_usd, price_used, price_repair_status, price_repair_attempted_at,
+          price_repair_run_id, price_repair_bookmark, price_repair_reason
+        FROM mint_burn_events WHERE id = 'irreducible-head'`).get()).toMatchObject({
+        amount_usd: null,
+        price_used: null,
+        price_repair_attempted_at: eventTimestamp + DAY,
+        price_repair_run_id: "retry-run",
+        price_repair_bookmark: "retry-bookmark",
+        price_repair_reason: expect.stringContaining("event-day-source-temporarily-unavailable"),
+      });
+      const next = await repairHistoricalMintBurnPrices(db, {
+        dryRun: false, limit: 1, retryIrreducible: true,
+        operatorRunId: "retry-run-2", timeTravelBookmark: "retry-bookmark-2",
+        sourceLoader: transientlyUnavailableLoader, nowSec: eventTimestamp + DAY + 60,
+      });
+      expect(next.dispositions[0]?.eventId).toBe("irreducible-next");
+    } finally {
+      db.close();
+    }
+  });
 });

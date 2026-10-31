@@ -4,7 +4,7 @@ import { parseQuantityHex } from "./bigint";
 import type { SubrequestBudget } from "./evm-logs";
 import { budgetExhausted } from "./evm-logs";
 import { batchExecute, buildInClause } from "./db";
-import { throwIfAborted } from "./abort";
+import { rethrowIfAborted, throwIfAborted } from "./abort";
 import { requestJsonRpcAtUrl } from "./evm-rpc";
 import { logWorkerEvent } from "./structured-log";
 import type { CacheRetentionPolicy } from "./db-cache";
@@ -289,6 +289,7 @@ export async function getAlchemyBlockNumber(
     if (!rpc.result || !rpc.result.startsWith("0x")) return null;
     return parseInt(rpc.result, 16);
   } catch (err) {
+    rethrowIfAborted(err, signal);
     logWorkerEvent({
       scope: "lib",
       level: "debug",
@@ -473,8 +474,10 @@ export async function fetchAlchemyLogs(
     limit: Math.max(1, Math.floor(options?.maxSplitCalls ?? DEFAULT_LOG_SPLIT_MAX_CALLS)),
   };
   const endpoint = options?.endpoint;
+  // A retained-block count floors at `head - retainedBlocks + 1`, the same
+  // boundary evm-rpc.ts admits; one block earlier was silently a pruned page.
   if (endpoint?.logsHistory === "none" || (typeof endpoint?.logsHistory === "object"
-    && (options?.headBlock == null || fromBlock < options.headBlock - endpoint.logsHistory.retainedBlocks))) {
+    && (options?.headBlock == null || fromBlock < options.headBlock - endpoint.logsHistory.retainedBlocks + 1))) {
     return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 0, maxDepth: 0,
       failureReason: "log-history-unavailable" };
   }
@@ -694,6 +697,7 @@ async function fetchAlchemyLogsRange(
       failureReason: right.failureReason,
     };
   } catch (e) {
+    rethrowIfAborted(e, signal);
     logWorkerEvent({
       scope: "lib",
       level: "warn",

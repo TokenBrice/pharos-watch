@@ -47,6 +47,7 @@ vi.mock("../post-enrichment", async (importOriginal) => ({
 }));
 
 vi.mock("../telegram-tracked-additions", () => ({
+  isFallbackBackedTrackedBaseline: () => false,
   queueTrackedAdditionsNotice: fallbackMocks.queueTrackedAdditionsNotice,
 }));
 

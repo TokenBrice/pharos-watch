@@ -1,5 +1,9 @@
 import { buildPaginatedQuery, executeAtomicBatch } from "./db";
-import { buildCronFreshnessHeaders, getLatestSuccessfulCronTimestampResult } from "./api-freshness";
+import {
+  buildCronFreshnessHeaders,
+  getLatestSuccessfulCronTimestampResult,
+  type CronTimestampLookupResult,
+} from "./api-freshness";
 import {
   encodeJsonCursor,
   parseBooleanParam,
@@ -100,11 +104,17 @@ interface PaginatedEventResponseConfig<TRow, TEvent, TExtra extends Record<strin
   parsedPagination?: ParsedPagination;
   cursor?: PaginatedEventCursorConfig<TRow>;
   freshness: {
-    producerJob: string;
+    /** One job, or every lane that can produce the served rows. */
+    producerJob: string | readonly string[];
     maxAgeSec: number;
   };
   cacheControl: string;
-  buildExtraBody?: (events: TEvent[], total: number) => TExtra | Promise<TExtra>;
+  /**
+   * Extra body fields. `producerClock` is the confirmed-output lookup the
+   * freshness headers were built from, so a body can date itself against the
+   * served generation instead of the request clock.
+   */
+  buildExtraBody?: (events: TEvent[], total: number, producerClock: CronTimestampLookupResult) => TExtra | Promise<TExtra>;
 }
 
 interface ParsedPagination {
@@ -402,7 +412,7 @@ export async function buildPaginatedEventResponse<
   });
 
   const freshness = await getLatestSuccessfulCronTimestampResult(db, config.freshness.producerJob);
-  const extraBody = config.buildExtraBody ? await config.buildExtraBody(events, total) : {};
+  const extraBody = config.buildExtraBody ? await config.buildExtraBody(events, total, freshness) : {};
 
   return jsonFreshResponse(
     {

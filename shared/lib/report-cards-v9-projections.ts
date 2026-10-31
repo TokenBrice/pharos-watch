@@ -17,13 +17,22 @@ function resolvedDependencyGraph(snapshot: ReportCardsV9ProjectionSource): Repor
   })));
 }
 
+/** The table contract admits a priced unknown only on a rated card: it is a
+ * scoring assumption, and an issuer-NR card keeps its exclusion without one. */
+type PricedUnknownPillars = NonNullable<SafetyScoreV9CurrentCard["scoreTrace"]["aggregation"]>["pricedUnknownPillars"];
+function ratedPricedUnknownPillars(
+  card: Pick<SafetyScoreV9CurrentCard, "ratingStatus" | "scoreTrace">,
+): PricedUnknownPillars | undefined {
+  return card.ratingStatus === "rated" ? card.scoreTrace.aggregation?.pricedUnknownPillars : undefined;
+}
+
 export function projectV9TableCard(card: SafetyScoreV9CurrentCard): ReportCardsV9TableCard {
   const resolved = resolveV9PublicWitnessTexts(card);
   const component = resolved.breakdowns?.control.components.find(row => row.kind === "mint");
   return {
     id: resolved.id, score: resolved.score, grade: resolved.grade, ratingStatus: resolved.ratingStatus,
     partialEvidence: projectV9CompactPartialEvidence(resolved.partialEvidence),
-    pillars: projectV9EvidencePillars(resolved.pillars, resolved.scoreTrace.aggregation?.pricedUnknownPillars),
+    pillars: projectV9EvidencePillars(resolved.pillars, ratedPricedUnknownPillars(resolved)),
     evidence: { level: resolved.evidence.level },
     weakestPillar: resolved.weakestPillar, bindingCap: resolved.bindingCap,
     accessPosture: { freezeExposure: resolved.accessPosture.freezeExposure },
@@ -50,7 +59,7 @@ export function projectV9Table(snapshot: ReportCardsV9ProjectionSource): ReportC
 export function projectV9DetailNeighborhoodCard(card: SafetyScoreV9CurrentCard): ReportCardsV9DetailResponse["neighborhood"][number] {
   return {
     id: card.id, grade: card.grade, partialEvidence: projectV9CompactPartialEvidence(card.partialEvidence), sharedBookId: card.sharedBookId,
-    ratingStatus: card.ratingStatus, pillars: projectV9EvidencePillars(card.pillars, card.scoreTrace.aggregation?.pricedUnknownPillars),
+    ratingStatus: card.ratingStatus, pillars: projectV9EvidencePillars(card.pillars, ratedPricedUnknownPillars(card)),
   };
 }
 

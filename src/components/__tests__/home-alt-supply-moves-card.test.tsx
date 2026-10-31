@@ -163,6 +163,39 @@ describe("SupplyMovesCard", () => {
     expect(screen.getByRole("link", { name: peakName })).toBeTruthy();
   });
 
+  it("anchors the internal-flow window to the supply observation clock, not receipt time", () => {
+    const burnAtSec = 1_790_196_480;
+    const supplyObservedAt = burnAtSec + 7 * 86_400;
+    useStablecoinsMock.mockReturnValue({
+      data: {
+        peggedAssets: [
+          makeStablecoin({
+            id: "usdai-usd-ai", symbol: "USDAI", currentSupply: 218_267_235,
+            previousWeekSupply: 307_738_160, supplyObservedAt,
+          }),
+          makeStablecoin({ id: "usdc-circle", symbol: "USDC", currentSupply: 12_000_000, previousWeekSupply: 10_000_000 }),
+        ],
+      },
+      isLoading: false,
+      // The snapshot was received a day after it was observed. Receipt time is
+      // not the comparison clock, so the burn is still inside the window.
+      dataUpdatedAt: (burnAtSec + 8 * 86_400 + 1) * 1000,
+      meta: {
+        updatedAt: supplyObservedAt,
+        ageSeconds: 86_401,
+        status: "stale",
+        freshBudgetSec: 600,
+        degradedBudgetSec: 900,
+        assessedAt: burnAtSec + 8 * 86_400 + 1,
+      },
+    });
+
+    render(<SupplyMovesCard />);
+
+    expect(screen.queryByRole("link", { name: /USDAI/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +20.0%" })).toBeTruthy();
+  });
+
   it.each([
     ["all positive", [10, 20, 30]],
     ["all negative", [-10, -20, -30]],
@@ -215,11 +248,13 @@ function makeStablecoin({
   symbol,
   currentSupply,
   previousWeekSupply,
+  supplyObservedAt,
 }: {
   id: string;
   symbol: string;
   currentSupply: number;
   previousWeekSupply: number;
+  supplyObservedAt?: number;
 }): StablecoinData {
   return makeStablecoinFixture({
     id,
@@ -229,5 +264,6 @@ function makeStablecoin({
     priceConfidence: "high",
     circulating: { peggedUSD: currentSupply },
     circulatingPrevWeek: { peggedUSD: previousWeekSupply },
+    ...(supplyObservedAt == null ? {} : { supplyObservedAt }),
   });
 }

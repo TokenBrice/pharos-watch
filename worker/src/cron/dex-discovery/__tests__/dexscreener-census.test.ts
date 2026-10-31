@@ -71,6 +71,17 @@ describe("DexScreener census completeness", () => {
     expect(outcome).toMatchObject({ outcome: "observed_pools", observedPoolCount: 1 });
   });
 
+  it("degrades an unreadable liquidity reading instead of certifying the pair as a sub-$1K pool", async () => {
+    // The parser admits a well-formed pair without a liquidity reading
+    // (liquidity: null), so treating it as a measured zero would let an
+    // exhaustive DexScreener success certify verified_no_pools.
+    const { outcome, providerChecks } = await censusFor([pair({ liquidity: null })]);
+    expect(providerChecks).toEqual([
+      expect.objectContaining({ provider: "dexscreener", status: "degraded", observedPoolCount: 0 }),
+    ]);
+    expect(outcome).toMatchObject({ outcome: "provider_inaccessible", observedPoolCount: 0 });
+  });
+
   it.each([
     ["clean empty", []],
     ["low-TVL only", [pair()]],

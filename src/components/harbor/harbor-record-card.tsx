@@ -65,7 +65,7 @@ export function HarborRecordCard({ vessel, names, focusChainId, onClose, onShowI
           <dd>{bayReading(vessel.totalUsd)}</dd>
         </dl>
         {vessel.kind === "unattributed" ? (
-          <p className={styles.note}>Tracked supply DefiLlama does not assign to a chain. It is not part of any chain row.</p>
+          <p className={styles.note}>Tracked supply not attributed to a chain row this run. It is not part of any chain row.</p>
         ) : (
           <>
             <p className={styles.note}>Chains under $100M (and any beyond the berth caps) share one barge; the count and sum cover every one of them.</p>

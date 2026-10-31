@@ -12,6 +12,7 @@ import {
 } from "../redemption-exit-route-observations";
 import { makeSupplyFullRedemption } from "./redemption-backstops-store.test-support";
 import { buildRedemptionBackstopEntry } from "../redemption-backstop/sources";
+import { liveSnapshot } from "./redemption-backstop-sources.test-support";
 
 const config: RedemptionBackstopConfig = {
   routeFamily: "offchain-issuer",
@@ -1144,4 +1145,56 @@ describe("live queue/proxy capacity-method tier", () => {
       }
     },
   );
+
+  it.each([
+    { capacityConfidence: "documented-bound" as const, capacityKind: "documented-bound" as const },
+    { capacityConfidence: "live-direct" as const, capacityKind: "live-direct" as const },
+  ])("never publishes a $capacityKind observation clock later than the run clock", ({ capacityConfidence, capacityKind }) => {
+    const now = Date.UTC(2026, 9, 2, 12) / 1000;
+    const admitted = build({
+      capacityConfidence, capacityKind, freshnessKind: "same-run-onchain", evidenceObservedAt: now - 60, now,
+    })!;
+    expect(admitted).toMatchObject({ observedAt: now - 60, freshnessSeconds: 60 });
+
+    const future = build({
+      capacityConfidence, capacityKind, freshnessKind: "same-run-onchain", evidenceObservedAt: now + 300, now,
+    });
+    // Withholding a clock the producer cannot admit is fine; publishing it (and
+    // reporting a zero-second age) is not: V9 rejects observedAt > its asOf.
+    if (future !== null) {
+      expect(future.observedAt).toBeLessThanOrEqual(now);
+      expect(future.freshnessSeconds).toBe(now - future.observedAt);
+    }
+  });
+
+  it("keeps live-reserve provenance for live proxy capacity without an admitted evidence clock", async () => {
+    const assetId = "usdf-falcon";
+    const reviewedAt = Date.parse("2026-03-23T00:00:00.000Z") / 1_000;
+    const now = Date.UTC(2026, 9, 30, 12) / 1_000;
+    // Falcon's transparency adapter omits snapshot_date, so it emits live-queue
+    // capacity with freshnessKind 'unverified' and no evidence clock.
+    const snapshot = liveSnapshot(assetId, {
+      freshnessMode: "unverified",
+      details: {
+        freshnessSource: "issuer-api",
+        freshnessReason: "Falcon transparency payload did not expose a trustworthy snapshot timestamp",
+      },
+      redemption: {
+        capacityUsd: 10_000_000, capacityKind: "live-queue", freshnessKind: "unverified",
+        holderEligibility: "whitelisted-primary", settlementDelaySec: 7 * 86_400,
+        sourceUrls: ["https://api.falcon.finance/api/v1/transparency"],
+      },
+    }, {
+      fetchedAt: now - 300, source: "falcon", sourceModel: "dynamic-mix", evidenceClass: "independent",
+    });
+    const entry = await buildRedemptionBackstopEntry(
+      {} as D1Database, assetId, getRedemptionBackstopConfig(assetId)!, 100_000_000, null, now,
+      { reserveSnapshotMetadata: snapshot },
+    );
+    const observation = entry.capacityProfile?.exitRouteObservations?.[0];
+    expect(observation).toBeDefined();
+    expect(observation!.evidenceKind).not.toBe("documented-terms");
+    expect(observation!.observedAt).not.toBe(reviewedAt);
+    expect(observation!.observedAt).toBe(0);
+  });
 });

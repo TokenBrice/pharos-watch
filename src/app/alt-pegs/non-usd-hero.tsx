@@ -45,10 +45,10 @@ function MixBracket({ label, marketCap, sharePct, partial }: {
 /**
  * The cohort mix as one 100% bar: commodity pegs, then currency and index pegs,
  * each in rank order and its peg hue. Shares exist only when every non-USD coin
- * reports supply; otherwise the bar is hatched and says why, never empty.
+ * reports complete supply; otherwise the bar is hatched and says why, never empty.
  */
 function CohortMixBar({ snapshot }: { snapshot: AltPegSnapshot }) {
-  const partial = snapshot.altSupplyUnavailableCount > 0;
+  const partial = snapshot.altSupplyUnavailableCount > 0 || snapshot.altSupplyPartialCount > 0;
   const commodityRows = snapshot.distributionRows.filter((row) => row.group === "Commodity");
   const otherRows = snapshot.distributionRows.filter((row) => row.group !== "Commodity");
   const ordered: AltPegDistributionRow[] = [...commodityRows, ...otherRows];
@@ -113,11 +113,15 @@ function CohortMixBar({ snapshot }: { snapshot: AltPegSnapshot }) {
           <div
             className="flex h-3.5 w-full items-center justify-center rounded-sm border border-border bg-muted-foreground/25 bg-[image:repeating-linear-gradient(135deg,var(--color-card)_0_2px,transparent_2px_6px)]"
             role="img"
-            aria-label={`Cohort mix withheld: ${snapshot.altSupplyUnavailableCount} of ${snapshot.altCoinCount} non-USD coins have no supply observation`}
+            aria-label={`Cohort mix withheld: ${snapshot.altSupplyUnavailableCount} of ${snapshot.altCoinCount} non-USD coins have no supply observation${snapshot.altSupplyPartialCount > 0 ? ` and ${snapshot.altSupplyPartialCount} report only a partial-chain remainder` : ""}`}
           />
           <p className="text-xs text-muted-foreground">
             Mix withheld: <span className="pharos-numeric">{snapshot.altSupplyUnavailableCount}</span> of{" "}
-            <span className="pharos-numeric">{snapshot.altCoinCount}</span> coins have no supply observation, so no share is exact.
+            <span className="pharos-numeric">{snapshot.altCoinCount}</span> coins have no supply observation
+            {snapshot.altSupplyPartialCount > 0 ? (
+              <>, and <span className="pharos-numeric">{snapshot.altSupplyPartialCount}</span> report only a partial-chain remainder</>
+            ) : null}
+            , so no share is exact.
           </p>
           <div className="flex flex-wrap gap-x-6 gap-y-1">
             <MixBracket label="Commodities" marketCap={snapshot.commodityMarketCap} sharePct={null} partial />
@@ -139,7 +143,7 @@ export function NonUsdHero({
   /** Generation of the stablecoins list the beam was read from. */
   supplyAsOfSec: number | null;
 }) {
-  const partial = snapshot.altSupplyUnavailableCount > 0;
+  const partial = snapshot.altSupplyUnavailableCount > 0 || snapshot.altSupplyPartialCount > 0;
   const coreCount = UNIVERSES.core.count;
   const shareDetail = trendStats
     ? `as of ${formatChartDate(trendStats.latestDate * 1000, "short-year")}${trendStats.latestCoverageIncomplete ? " · partial coverage" : ""}`
@@ -152,11 +156,26 @@ export function NonUsdHero({
       beamLabel={partial ? "Non-USD stablecoin market cap · known subtotal, partial" : "Non-USD stablecoin market cap"}
       beamValue={formatCap(snapshot.altMarketCap)}
       status={partial ? (
-        <OpsStatusChip label="Partial supply" reasonCodes={["supply-unavailable"]}>
+        <OpsStatusChip
+          label="Partial supply"
+          reasonCodes={[
+            ...(snapshot.altSupplyUnavailableCount > 0 ? ["supply-unavailable"] : []),
+            ...(snapshot.altSupplyPartialCount > 0 ? ["supply-partial"] : []),
+          ]}
+        >
           <p>
-            <span className="pharos-numeric">{snapshot.altSupplyUnavailableCount}</span> of{" "}
-            <span className="pharos-numeric">{snapshot.altCoinCount}</span> core non-USD coins have no current supply observation.
-            The figure sums the <span className="pharos-numeric">{snapshot.altSupplyObservedCount}</span> that do; shares and the cohort mix are withheld.
+            {snapshot.altSupplyUnavailableCount > 0 ? (
+              <>
+                <span className="pharos-numeric">{snapshot.altSupplyUnavailableCount}</span> of{" "}
+                <span className="pharos-numeric">{snapshot.altCoinCount}</span> core non-USD coins have no current supply observation.
+              </>
+            ) : null}
+            {snapshot.altSupplyPartialCount > 0 ? (
+              <>
+                {" "}<span className="pharos-numeric">{snapshot.altSupplyPartialCount}</span> report only a partial-chain remainder.
+              </>
+            ) : null}
+            {" "}The figure sums the <span className="pharos-numeric">{snapshot.altSupplyObservedCount}</span> with a reported supply; shares and the cohort mix are withheld.
           </p>
           {supplyAsOfSec != null ? (
             <p className="text-muted-foreground">Stablecoin list as of {formatChartDate(supplyAsOfSec * 1000, "full")} UTC.</p>

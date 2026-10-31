@@ -12,6 +12,11 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../../lib/tape-projectors/types";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { observeMockD1Cost } from "../../lib/__tests__/d1-cost.test-support";
+import { getCronJobMeta } from "@shared/lib/cron-jobs";
+import { logCronRun, type CronResult } from "../../lib/cron-logger";
+import { loadCronHealth } from "../../lib/status/cron-health";
+import { loadProducerFreshnessFacts } from "../../lib/status/freshness-oracle";
+import { getLatestSuccessfulCronTimestampResult } from "../../lib/api-freshness";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
   fixtures.closeAll();
@@ -482,6 +487,51 @@ describe("projectTape", () => {
     } finally {
       entries.pop();
       warn.mockRestore();
+    }
+  });
+});
+
+describe("projectTape quiet publication", () => {
+  const NOW = 1_800_000_000;
+  const HALF_HOUR = 1_800;
+
+  it("confirms output for a settled pass that advances every class watermark without inserting events", async () => {
+    vi.useFakeTimers();
+    const jobs = TAPE_PROJECTOR_JOBS as unknown as Array<(typeof TAPE_PROJECTOR_JOBS)[number]>;
+    const original = [...jobs];
+    jobs.splice(0, jobs.length, ...original.map(({ name }) => ({
+      name,
+      run: async () => ({ projected: 0, advanced: Math.floor(Date.now() / 1000) - 60 }),
+    })));
+    try {
+      vi.setSystemTime(NOW * 1000);
+      const { db } = fixtures.open();
+      // A productive tick one interval before the quiet ticks established the
+      // last publication.
+      await logCronRun(db, "project-tape", async () => ({
+        status: "ok",
+        itemCount: 2,
+        metadata: JSON.stringify({ reason: "tape-projection-completed" }),
+      }));
+
+      // No event was inserted, but every class read its source and persisted an
+      // advanced watermark, so each pass is a confirmed quiet observation.
+      let quietResult: CronResult | void | null = null;
+      for (const offset of [HALF_HOUR, HALF_HOUR * 2, HALF_HOUR * 3]) {
+        vi.setSystemTime((NOW + offset) * 1000);
+        quietResult = await logCronRun(db, "project-tape", () => projectTape(db));
+      }
+      expect(quietResult).toMatchObject({ status: "ok", itemCount: 0 });
+
+      const lastTick = NOW + HALF_HOUR * 3;
+      await expect(getLatestSuccessfulCronTimestampResult(db, "project-tape"))
+        .resolves.toEqual({ timestamp: lastTick, status: "ok" });
+      const [fact] = await loadProducerFreshnessFacts(db, lastTick, [getCronJobMeta("project-tape")!]);
+      expect(fact?.lastSuccessAt).toBe(lastTick);
+      expect((await loadCronHealth(db, lastTick)).crons["project-tape"].healthy).toBe(true);
+    } finally {
+      jobs.splice(0, jobs.length, ...original);
+      vi.useRealTimers();
     }
   });
 });

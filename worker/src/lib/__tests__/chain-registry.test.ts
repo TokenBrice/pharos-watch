@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { selectCuratedAggregateOnchainSupplyProbeContracts } from "@shared/lib/onchain-supply-probe";
 import { DWELLIR_CHAINS, dwellirRpcUrl } from "@shared/lib/dwellir-chains";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
+import { makePorCoin } from "../../cron/reserve-adapters/__tests__/chainlink-por.test-support";
+import { aggregateMultichainErc20Supply } from "../../cron/reserve-adapters/multichain-supply";
 import {
   buildAlchemyRpcUrl,
   buildChainRpcs,
@@ -131,6 +133,34 @@ describe("buildChainRpcs", () => {
       url: "https://rpc.berachain.com", operator: "public", keyed: false,
       stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-06",
     });
+  });
+
+  it("retains the reviewed keyless Berachain archive route when the Alchemy key is absent", () => {
+    const keyless = buildChainRpcs().get("berachain");
+    expect(registryRpcUrls(keyless)).toEqual(["https://rpc.berachain.com"]);
+    expect(hasRegistryRpc(keyless)).toBe(true);
+
+    const admittedDwellir = buildChainRpcs(undefined, undefined, { dwellirApiKey: DWELLIR_KEY }).get("berachain")!;
+    expect(hasRegistryRpc(admittedDwellir)).toBe(true);
+    expect(primaryRpcUrl(admittedDwellir)).toMatch(/dwellir\.com/);
+    expect(registryRpcUrls(admittedDwellir)).toContain("https://rpc.berachain.com");
+  });
+
+  it("does not omit a Berachain reserve-supply leg as noRpc in a keyless Dwellir build", async () => {
+    const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: DWELLIR_KEY });
+    const coin = makePorCoin({
+      contracts: [
+        { chain: "ethereum", address: "0x0000000000000000000000000000000000000001", decimals: 6 },
+        { chain: "berachain", address: "0x0000000000000000000000000000000000000002", decimals: 18 },
+      ],
+    });
+    const supply = await aggregateMultichainErc20Supply({
+      coin, adapterKey: "keyless-berachain", signal: new AbortController().signal,
+      ctx: { chainRpcs }, readEvmSupply: vi.fn(async () => 1_000_000n),
+    });
+
+    expect(supply.omittedNoRpcChains).toEqual([]);
+    expect(supply.contributions.map((row) => row.chain)).toEqual(["ethereum", "berachain"]);
   });
 
 

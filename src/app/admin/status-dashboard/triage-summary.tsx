@@ -361,7 +361,9 @@ export function TriageSummary({
           <div className="mt-3 space-y-4 pb-3">
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs sm:grid-cols-3 xl:grid-cols-6">
               <ClockRow label="State evaluated">
-                <Timestamp epochSec={data.state.lastEvaluatedAt} />
+                {data.state != null
+                  ? <Timestamp epochSec={data.state.lastEvaluatedAt} />
+                  : <span className="text-muted-foreground">unavailable</span>}
               </ClockRow>
               <ClockRow label="Status payload">
                 <Timestamp epochSec={data.timestamp} />

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
+import { relativeBps } from "@shared/lib/depeg-signals";
 import { mergeStagedPools, type StagedPoolRow } from "../staging-merge";
 import { createKnownPoolIdentityIndex } from "../pool-identity";
 import { computeStablecoinScores } from "../scoring";
@@ -14,7 +15,7 @@ import { seedGeneration } from "../../measured-execution/__tests__/persistence.t
 import { makeV3Target } from "../../measured-execution/__tests__/measured-execution.test-support";
 import { computeDexPrices } from "../dex-price-publisher";
 import { seedPublishedDexGeneration } from "./scoring-test-support";
-import { makePool } from "./scoring-test-builders";
+import { makePool, makePricePoolMap } from "./scoring-test-builders";
 import { loadDexPrices } from "../../../lib/depeg-helpers";
 
 const SOURCE_CLOCK = 1_791_403_833;
@@ -229,5 +230,46 @@ describe("registry read-consumption clock", () => {
     expect(scored.diagnostics.measuredExecution.join.quoteGenerationId).toBe("quote-before-source");
     expect(scored.diagnostics.measuredExecution.join.targetGenerationId).toBe("target-before-source");
     expect(scored.globalAgg.totalVol24h).toBe(25_000);
+  });
+});
+
+describe("DEX price publication precision", () => {
+  it("persists the admitted low-unit peg median without contradicting the row's own deviation", async () => {
+    const nowSec = 1_800_000_000;
+    // IDR/USD is ~6.15e-5: fixed 1e-6 quantization would persist 0.000062
+    // (+81 bps) while the row's deviation says 0 bps.
+    const primaryPrice = 0.0000615;
+    const harness = seedPublishedDexGeneration({ nowSec });
+    openDatabases.push(harness.sqlite);
+    await computeDexPrices({
+      db: harness.db,
+      retainedPoolsByStablecoin: makePricePoolMap(
+        [0.000061, 0.0000615, 0.000062].map((price, index) => ({
+          stablecoinId: "idrx-idrx",
+          poolId: `polygon:idrx-usdc-${index}`,
+          project: "curve",
+          chain: "Polygon",
+          tvlUsd: 100_000,
+          price,
+          source: "dl",
+        })),
+      ),
+      nowSec,
+      generationId: harness.generationId,
+      primaryPrices: new Map([["idrx-idrx", primaryPrice]]),
+    });
+
+    const row = harness.sqlite
+      .prepare(
+        `SELECT dex_price_usd, deviation_from_primary_bps, primary_price_at_calc
+           FROM dex_prices WHERE stablecoin_id = 'idrx-idrx'`,
+      )
+      .get() as { dex_price_usd: number; deviation_from_primary_bps: number | null; primary_price_at_calc: number | null } | undefined;
+    expect(row, "an at-peg IDR row must publish").toBeDefined();
+    expect(relativeBps(row!.dex_price_usd, primaryPrice)?.absRawBps ?? Infinity).toBeLessThanOrEqual(1);
+    const storedDeviation = row!.deviation_from_primary_bps;
+    expect(storedDeviation).not.toBeNull();
+    const recomputedBps = relativeBps(row!.dex_price_usd, row!.primary_price_at_calc ?? primaryPrice)?.bps;
+    expect(Math.abs((recomputedBps ?? Infinity) - storedDeviation!)).toBeLessThanOrEqual(1);
   });
 });

@@ -125,7 +125,7 @@ describe("syncYieldData", () => {
     expect(rankingsPayload.provenance.benchmark.isFallback).toBe(true);
   });
 
-  it("defers publication when a stale retained benchmark disqualifies the only source", async () => {
+  it("publishes the only source unscored when its retained benchmark is stale", async () => {
     const db = makeDb();
     const nowSec = Math.floor(Date.now() / 1000);
 
@@ -147,15 +147,22 @@ describe("syncYieldData", () => {
 
     const result = await syncYieldData(db);
     const metadata = JSON.parse(result.metadata ?? "{}") as {
-      reason: string;
-      inputDiagnostics: { evaluatedSourceCount: number; rejectedSourceCount: number };
+      quality: { degraded: boolean; reasons: string[] };
+    };
+    const rankingsPayload = getYieldRankingsCachePayload(db) as {
+      rankings: Array<{ id: string; pharosYieldScore: number | null; pysNullReason: string | null }>;
     };
 
-    expect(result.status).toBe("degraded");
-    expect(metadata.reason).toBe("rankings-payload-shrunk");
-    expect(metadata.inputDiagnostics.evaluatedSourceCount).toBe(1);
-    expect(metadata.inputDiagnostics.rejectedSourceCount).toBe(1);
-    expect(getYieldRankingsCachePayload(db)).toBeUndefined();
+    // A stale hurdle withholds the PYS and names the retained benchmark as
+    // input quality; it does not withdraw the fresh observed row, so the run
+    // still publishes (see yield-evaluation: benchmark-stale keeps rejected false).
+    expect(result.status).toBe("ok");
+    expect(metadata.quality.degraded).toBe(true);
+    expect(metadata.quality.reasons).toContain("risk-free-rate:fred-api-error-retained");
+    expect(rankingsPayload.rankings).toHaveLength(1);
+    const [ranking] = rankingsPayload.rankings;
+    expect(ranking).toMatchObject({ pharosYieldScore: null, pysNullReason: "benchmark-stale" });
+    expect(findPublishedYieldRow(db, ranking.id, (row) => row.is_best === 1)?.pharos_yield_score).toBeNull();
   });
 
   it.each([

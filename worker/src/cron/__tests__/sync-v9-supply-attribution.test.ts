@@ -124,6 +124,59 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
     vi.useRealTimers();
   });
 
+  async function resourcePressureForBodyRead(evidence: {
+    intakeBytes: number | null;
+    declaredBytes: number | null;
+    limitBytes: number;
+    outcome: "accepted" | "rejected";
+  }) {
+    const { sqlite, db } = openDb();
+    try {
+      const source: SafetyScoreV9SupplyAttributionSource = {
+        schemaVersion: 1, kind: "safety-score-v9-supply-attribution-source",
+        baseInputGenerationId: `report-cards-input:v1:${"a".repeat(64)}`,
+        sourceGeneration: "report-cards:v8:resource-pressure-fixture",
+        registryFingerprint: "b".repeat(64), clockSec: Date.parse("2026-10-29T09:16:00Z") / 1_000,
+        activeAssetIds: [], aggregateCirculatingById: {}, chainCirculatingById: {}, navPriceById: {},
+      };
+      const nowSec = source.clockSec + 15 * 60;
+      vi.setSystemTime(nowSec * 1_000);
+      insertSourceInput(sqlite, source);
+      mocks.capture.mockImplementation(async (
+        _input: unknown, _rpcs: unknown, _signal: unknown, options: SafetyScoreV9SupplyAttributionCaptureOptions,
+      ) => {
+        options.onBodyRead?.(evidence);
+        return {
+          captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
+        };
+      });
+      const result = await syncSafetyScoreV9SupplyAttribution(db, new Map());
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(metadata.stage).toBe("published");
+      return metadata.resourcePressure;
+    } finally {
+      sqlite.close();
+    }
+  }
+
+  it("does not turn an under-cap transport interruption into a byte-budget verdict", async () => {
+    // A provider aborts mid-body after two streamed bytes; every economic-supply
+    // cap is orders of magnitude larger, so the read was not over its budget.
+    const pressure = await resourcePressureForBodyRead({
+      intakeBytes: 2, declaredBytes: null, limitBytes: ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances,
+      outcome: "rejected",
+    });
+    expect(pressure).toMatchObject({ intakeBytes: 2, rejectedBodies: 0, guard: "within-policy" });
+  });
+
+  it("still reports a rejected body whose declared length exceeded its own cap", async () => {
+    const limitBytes = ECONOMIC_SUPPLY_BODY_CAPS.xrplLedger;
+    const pressure = await resourcePressureForBodyRead({
+      intakeBytes: 0, declaredBytes: limitBytes + 1, limitBytes, outcome: "rejected",
+    });
+    expect(pressure).toMatchObject({ rejectedBodies: 1, guard: "resource-budget-exceeded" });
+  });
+
   it("returns the attribution status and screening journal before a mid-lane host guard deadline", async () => {
     const { sqlite, db } = openDb();
     try {
@@ -502,8 +555,8 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       mocks.capture.mockImplementation(async (
         _input: unknown, _rpcs: unknown, _signal: unknown, options: SafetyScoreV9SupplyAttributionCaptureOptions,
       ) => {
-        options.onBodyRead?.({ intakeBytes: 64, declaredBytes: 64, outcome: "accepted" });
-        options.onBodyRead?.({ intakeBytes: 128, declaredBytes: null, outcome: scenario.hard ? "rejected" : "accepted" });
+        options.onBodyRead?.({ intakeBytes: 64, declaredBytes: 64, limitBytes: ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances, outcome: "accepted" });
+        options.onBodyRead?.({ intakeBytes: 128, declaredBytes: null, limitBytes: ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances, outcome: scenario.hard ? "rejected" : "accepted" });
         return {
           captureClockSec: nowSec, expectedAssetIds: [assetId], attributionById: {},
           journalRecords: [journal], diagnosticsById: { [assetId]: diagnostics },
@@ -521,8 +574,10 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
         rejectedAssetIds: [assetId],
         blockingRejectedAssetIds: scenario.status === "ok" ? [] : [assetId],
         resourcePressure: {
+          // The rejected 128-byte read is a transport interruption under the
+          // 1 MiB cap, so it is not byte-budget evidence.
           bodyCapBytes: ECONOMIC_SUPPLY_BODY_CAPS.xrplGatewayBalances,
-          intakeBytes: 192, rejectedBodies: scenario.hard ? 1 : 0,
+          intakeBytes: 192, rejectedBodies: 0,
         },
       });
       const cached = sqlite.prepare("SELECT value FROM cache WHERE key = ?")

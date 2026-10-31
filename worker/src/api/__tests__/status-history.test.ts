@@ -167,6 +167,39 @@ describe("handleStatusHistoryRoute", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO status_discrepancy_state"))).toBe(false);
   });
 
+  it("does not publish a failed probe read as probe-missing with a zero delta", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const db = mockD1([
+      {
+        match: "FROM status_state",
+        rows: [],
+        first: {
+          scope: "global", current_status: "healthy", raw_status: "healthy",
+          last_evaluated_at: now - 10, last_changed_at: now - 100,
+          consecutive_healthy: 3, consecutive_degraded: 0, consecutive_stale: 0,
+          confidence: 0.99, causes_json: "[]",
+        },
+      },
+      // The probe authority is unreadable while the status authority reads fine.
+      { match: "FROM status_probe_runs", rows: [], first: null, throwError: new Error("probe unavailable") },
+      { match: "FROM status_discrepancy_state", rows: [], first: { consecutive_divergent: 0 } },
+      { match: "FROM status_transitions", rows: [] },
+    ]);
+    const res = await handleStatusHistoryRoute({
+      db, trustedAdmin: true, request: makeApiRequest("/api/status-history", { adminKey: "secret-key" }),
+    });
+    const body = await readJsonResponse(res, 200) as {
+      discrepancy: { hasDivergence: boolean; severityDelta: number | null; discrepancyReason: string };
+      sectionErrors: Record<string, { code: string }>;
+    };
+    // The failed read is disclosed as a section error...
+    expect(body.sectionErrors.probe?.code).toBe("status_probe_read_failed");
+    // ...so it must not become "the probe never ran" plus a numeric no-difference delta.
+    expect(body.discrepancy.discrepancyReason).toBe("probe-unreadable");
+    expect(body.discrepancy.severityDelta).toBeNull();
+    expect(body.discrepancy.hasDivergence).toBe(false);
+  });
+
   it.each([false, true])("keeps status comparison unavailable when authority is absent (read failure: %s)", async (failed) => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([

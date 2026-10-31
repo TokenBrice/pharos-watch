@@ -100,16 +100,6 @@ function findCurrentBalanceSnapshot(
   return undefined;
 }
 
-function findActiveRecordKey(
-  event: BlacklistEvent,
-  active: ReadonlyMap<string, BlacklistActiveRecord>,
-): string | null {
-  for (const key of buildBlacklistIdentityLookupKeys(event)) {
-    if (active.has(key)) return key;
-  }
-  return null;
-}
-
 function resolveBlacklistAmount(
   event: BlacklistEvent,
   currentBalances: ReadonlyMap<string, BlacklistCurrentBalanceSnapshot>,
@@ -117,7 +107,9 @@ function resolveBlacklistAmount(
   const currentBalance = findCurrentBalanceSnapshot(event, currentBalances);
 
   // A failed refresh retains the successful ledger value and its original clock.
-  if (currentBalance?.amountUsd != null) {
+  // A destroy snapshot records a burned or seized balance, never the account's
+  // balance at a later freeze; the upsert keeps its amount and source.
+  if (currentBalance?.amountUsd != null && currentBalance.source !== "destroy_event") {
     return { frozenAmountUsd: currentBalance.amountUsd };
   }
 
@@ -180,15 +172,18 @@ export function buildBlacklistActiveRecords(
     }
 
     if (event.eventType === "destroy") {
-      const existingKey = findActiveRecordKey(event, active);
-      const existing = existingKey ? active.get(existingKey) : undefined;
-      if (!existing) continue;
-      // The destroy event closes the record; destroyed rows are excluded from
-      // every frozen-amount surface, so their amount is left as recorded.
-      active.set(existingKey!, {
-        ...existing,
-        destroyedAt: event.timestamp,
-      });
+      // One destroy closes every alias identity of the account, mirroring the
+      // unblacklist branch; a sibling legacy/scoped record must not stay active.
+      for (const lookupKey of buildBlacklistIdentityLookupKeys(event)) {
+        const existing = active.get(lookupKey);
+        if (!existing) continue;
+        // The destroy event closes the record; destroyed rows are excluded from
+        // every frozen-amount surface, so their amount is left as recorded.
+        active.set(lookupKey, {
+          ...existing,
+          destroyedAt: event.timestamp,
+        });
+      }
       continue;
     }
 

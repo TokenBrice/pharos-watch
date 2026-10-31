@@ -13,6 +13,7 @@ const {
   checkDigestSafetyContextForDelivery,
   digestSafetyContextFromPersistedInput,
   digestSafetyContextFromSource,
+  findDigestSafetyClaimMarkers,
   findUnboundDigestSafetyClaimMarkers,
 } = await import("../digest-safety-context");
 
@@ -152,6 +153,20 @@ describe("digest Safety Score delivery context", () => {
     expect(findUnboundDigestSafetyClaimMarkers(undefined, {
       text: "Capital moved into safe havens while PSI held.",
     })).toEqual([]);
+  });
+
+  it("detects signed and transferred grade claims in symbol copy", () => {
+    // A sign is a non-word character, so the grade cannot be anchored with \b;
+    // A+/A- and bare A are ordinary published grades.
+    expect(findDigestSafetyClaimMarkers({ text: "USDT remains at A- while USDC holds an A+" }))
+      .toContain("symbol-grade");
+    expect(findDigestSafetyClaimMarkers({ text: "USDC slipped to B+." })).toContain("symbol-grade");
+    expect(findDigestSafetyClaimMarkers({ text: "USDT fell from A to B." })).toContain("symbol-grade");
+    expect(findUnboundDigestSafetyClaimMarkers({
+      status: "unavailable", expectedModel: "v9", identity: null, publishedAt: null,
+      reason: "v9-snapshot-unavailable",
+    }, { title: "Tier check", text: "USDT remains at A- while USDC holds an A+" }))
+      .toContain("symbol-grade");
   });
 
   it("recovers full identity from pre-context V8 digest provenance", () => {

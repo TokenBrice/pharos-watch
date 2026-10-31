@@ -60,10 +60,10 @@ describe("fetchCurveOnchainPrices", () => {
     mockEvmCall.mockClear();
     const candidate = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS);
     expect(baseline.kind).toBe("ok");
-    expect(baseline.value.prices.size).toBe(44);
+    expect(baseline.value.prices.size).toBe(baselineRoutes.length);
     expect(mockEvmCall.mock.calls).toStrictEqual(baselineCalls);
     expect(candidate).toStrictEqual(baseline);
-    expect([...candidate.value.observedAtByCoinId.values()]).toEqual(Array(44).fill(1_799_999_970));
+    expect([...candidate.value.observedAtByCoinId.values()]).toEqual(Array(baselineRoutes.length).fill(1_799_999_970));
   });
 
   it("includes verified Curve configs with explicit indices, decimals and USD dependencies", () => {
@@ -78,7 +78,6 @@ describe("fetchCurveOnchainPrices", () => {
       ["eusd-electronic-usd", "0x08BfA22bB3e024CDfEB3eca53c0cb93bF59c4147", 1, 0, 6, 18],
       ["fidd-fidelity", "0xE47E8Ced9D94AA43C922627782E29b41a93202AF", 1, 0, 6, 18],
       ["usdq-quantoz", "0x5a8C7623FEe10542614e492c670a67e3DfE922F8", 1, 0, 6, 6],
-      ["susds-sky", "0x00836Fe54625BE242BcFA286207795405ca4fD10", 1, 0, 6, 18],
     ] as const;
 
     for (const [stablecoinId, poolAddress, inputIndex, outputIndex, inputDecimals, outputDecimals] of expectedConfigs) {
@@ -88,7 +87,7 @@ describe("fetchCurveOnchainPrices", () => {
         outputIndex,
         inputDecimals,
         outputDecimals,
-        routeType: ["usat-tether", "usdq-quantoz", "susds-sky"].includes(stablecoinId) ? "one-hop" : "direct",
+        routeType: ["usat-tether", "usdq-quantoz"].includes(stablecoinId) ? "one-hop" : "direct",
       });
     }
   });
@@ -104,12 +103,6 @@ describe("fetchCurveOnchainPrices", () => {
           routeType: "one-hop",
         }),
         expect.objectContaining({
-          stablecoinId: "dola-inverse-finance",
-          hop: { viaStablecoinId: "susds-sky" },
-          routeType: "chained-hop",
-          maxHopDepth: 2,
-        }),
-        expect.objectContaining({
           stablecoinId: "msusd-metronome",
           hop: { viaStablecoinId: "frxusd-frax" },
           routeType: "chained-hop",
@@ -118,12 +111,6 @@ describe("fetchCurveOnchainPrices", () => {
         expect.objectContaining({
           stablecoinId: "sfrxusd-frax",
           hop: { viaStablecoinId: "frxusd-frax" },
-          routeType: "chained-hop",
-          maxHopDepth: 2,
-        }),
-        expect.objectContaining({
-          stablecoinId: "stusds-sky",
-          hop: { viaStablecoinId: "usds-sky" },
           routeType: "chained-hop",
           maxHopDepth: 2,
         }),
@@ -285,7 +272,7 @@ describe("fetchCurveOnchainPrices", () => {
     expect(outcome.value.hopDepthByCoinId.get("gho-aave")).toBe(1);
   });
 
-  it.each(["usat-tether", "usdq-quantoz", "susds-sky"])(
+  it.each(["usat-tether", "usdq-quantoz"])(
     "converts the authored %s USDT ratio to USD and preserves the older parent clock", async (id) => {
       vi.useFakeTimers();
       vi.setSystemTime(1_800_000_000_000);
@@ -306,7 +293,7 @@ describe("fetchCurveOnchainPrices", () => {
   it.each(["missing", "stale"] as const)("withholds USDT-reference quotes when USDT is %s", async (dependency) => {
     vi.useFakeTimers();
     vi.setSystemTime(1_800_000_000_000);
-    const targets = CURVE_POOL_CONFIGS.filter((config) => ["usat-tether", "usdq-quantoz", "susds-sky"].includes(config.stablecoinId));
+    const targets = CURVE_POOL_CONFIGS.filter((config) => ["usat-tether", "usdq-quantoz"].includes(config.stablecoinId));
     const usdt = { ...CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "usdt-tether")!, chain: "arbitrum" };
     mockBlockTimestamp.mockImplementation(async (chain) => chain === "arbitrum" ? 1_799_999_699 : 1_799_999_980);
     mockEvmCall.mockImplementation(async (_chain, address) => {
@@ -315,23 +302,6 @@ describe("fetchCurveOnchainPrices", () => {
     });
     const outcome = await fetchCurveOnchainPrices(dependency === "missing" ? targets : [...targets, usdt]);
     expect(outcome.value.prices.size).toBe(0);
-  });
-
-  it.each([1, 2])("admits the DOLA -> sUSDS -> USDT route only at explicit depth %s", async (maxHopDepth) => {
-    const usdt = CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "usdt-tether")!;
-    const susds = CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "susds-sky")!;
-    const dola = CURVE_POOL_CONFIGS.find((config) => config.stablecoinId === "dola-inverse-finance")!;
-    mockEvmCall.mockImplementation(async (_chain, address) => hexWord(
-      address === usdt.poolAddress ? 1_020_000n : 10n ** 18n,
-    ));
-    const outcome = await fetchCurveOnchainPrices([usdt, susds, maxHopDepth === 2 ? dola : { ...dola, maxHopDepth }]);
-    expect(outcome.value.prices.get("susds-sky")).toBeCloseTo(1 / 1.02, 8);
-    if (maxHopDepth === 2) {
-      expect(outcome.value.prices.get("dola-inverse-finance")).toBeCloseTo(1 / 1.02, 8);
-      expect(outcome.value.hopDepthByCoinId.get("dola-inverse-finance")).toBe(2);
-    } else {
-      expect(outcome.value.prices.has("dola-inverse-finance")).toBe(false);
-    }
   });
 
   it("pins each cross-chain hop and propagates the older dependency timestamp", async () => {
