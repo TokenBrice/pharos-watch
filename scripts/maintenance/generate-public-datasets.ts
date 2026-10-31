@@ -287,6 +287,8 @@ interface DepegHistoryRow {
   source: "live" | "backfill";
   /** Reviewed ledger verdict; null when the ledger recorded none. */
   auditVerdict: string | null;
+  /** True when the coin is absent from the tracked catalog; the event stays as history. */
+  retired: boolean;
 }
 
 const DEPEG_HISTORY_COLUMNS: DatasetColumn<DepegHistoryRow>[] = [
@@ -306,6 +308,8 @@ const DEPEG_HISTORY_COLUMNS: DatasetColumn<DepegHistoryRow>[] = [
   // A reviewed dispute must travel with the row: without it the export shows
   // an extreme depeg that the ledger has already quarantined (A7A5 2026-08-06).
   { header: "auditVerdict", accessor: (r) => r.auditVerdict },
+  // Rows for coins no longer in the tracked catalog stay exported, marked.
+  { header: "retired", accessor: (r) => r.retired },
 ];
 
 function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegHistoryRow[] {
@@ -328,6 +332,7 @@ function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegH
       pegReference: event.pegReference,
       source: event.source,
       auditVerdict: event.provenance?.auditVerdict ?? null,
+      retired: event.retired === true,
     }))
     .sort((a, b) => b.startedAtISO.localeCompare(a.startedAtISO) || a.id - b.id);
 }

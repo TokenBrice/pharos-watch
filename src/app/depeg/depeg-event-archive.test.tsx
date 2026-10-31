@@ -23,6 +23,8 @@ const { EVENTS } = vi.hoisted(() => {
       { ...base, id: 5, slug: "repaired-event", symbol: "RUSD", peakDeviationBps: 3_000, startedAt: 1_784_000_000, provenance: { auditVerdict: "repaired" as const } },
       { ...base, id: 6, slug: "legacy-event", symbol: "USDT", peakDeviationBps: 1_500, startedAt: 1_784_000_000, provenance: null },
       { ...base, id: 7, slug: "unattributed-event", symbol: "GYD", peakDeviationBps: 1_500, startedAt: 1_784_000_000 },
+      { ...base, id: 8, slug: "retired-event", stablecoinId: "bean-beanstalk", symbol: "BEAN", peakDeviationBps: 2_400, startedAt: 1_784_000_000, retired: true as const },
+      { ...base, id: 9, slug: "catalog-event", symbol: "USDC", peakDeviationBps: 1_100, startedAt: 1_784_000_000 },
     ] satisfies readonly DepegEventEntry[],
   };
 });
@@ -37,7 +39,7 @@ function rowFor(html: string, slug: string): string {
   return row!;
 }
 
-describe("depeg event archive audit verdict badge", () => {
+describe("depeg event archive badges", () => {
   it("badges disputed and false-positive events as Disputed, with no explanatory sub-text", () => {
     const html = renderToStaticMarkup(<DepegEventArchive />);
     for (const slug of ["disputed-event", "false-positive-event"]) {
@@ -56,17 +58,33 @@ describe("depeg event archive audit verdict badge", () => {
 
   it("counts only non-disputed events in the month preview while listing every badged row", () => {
     const html = renderToStaticMarkup(<DepegEventArchivePreview />);
-    expect(html).toContain("5 events");
-    expect(html).toContain("Browse all 7 event pages");
+    expect(html).toContain("7 events");
+    expect(html).toContain("Browse all 9 event pages");
     for (const slug of ["disputed-event", "false-positive-event", "confirmed-event", "legacy-event"]) {
       expect(rowFor(html, slug)).toBeDefined();
     }
   });
 
+  it("badges a coin retired from the catalog as Retired, with no explanatory sub-text", () => {
+    const row = rowFor(renderToStaticMarkup(<DepegEventArchive />), "retired-event");
+    expect(row).toContain(">Retired<");
+    expect(row).not.toMatch(/catalog|no longer/i);
+  });
+
+  it("leaves catalog coins without a Retired badge", () => {
+    const html = renderToStaticMarkup(<DepegEventArchive />);
+    for (const slug of ["confirmed-event", "catalog-event", "legacy-event"]) {
+      expect(rowFor(html, slug)).not.toContain("Retired");
+    }
+  });
+
   it("keeps a badged row on one line at 390px", () => {
-    const row = rowFor(renderToStaticMarkup(<DepegEventArchive />), "disputed-event");
-    // The badge is small and the trailing hint keeps only its arrow below sm.
-    expect(row).toContain("text-3xs");
-    expect(row).toContain('<span class="hidden sm:inline">View page </span>→');
+    const html = renderToStaticMarkup(<DepegEventArchive />);
+    for (const slug of ["disputed-event", "retired-event"]) {
+      const row = rowFor(html, slug);
+      // The badge is small and the trailing hint keeps only its arrow below sm.
+      expect(row).toContain("text-3xs");
+      expect(row).toContain('<span class="hidden sm:inline">View page </span>→');
+    }
   });
 });

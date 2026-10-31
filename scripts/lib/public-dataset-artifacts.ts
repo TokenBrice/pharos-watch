@@ -2,8 +2,8 @@ import { escapeCsvField } from "@shared/lib/csv";
 
 export type DatasetVariant = "csv" | "json" | "ndjson";
 
-/** Object values stay structured in JSON/NDJSON and are serialized as one JSON field in CSV. */
-type DatasetValue = string | number | null | Readonly<Record<string, unknown>>;
+/** Object values stay structured in JSON/NDJSON and are serialized as one JSON field in CSV; booleans stay native in JSON and render as `true`/`false` in CSV. */
+type DatasetValue = string | number | boolean | null | Readonly<Record<string, unknown>>;
 
 export interface DatasetColumn<T> {
   header: string;

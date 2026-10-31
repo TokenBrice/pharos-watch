@@ -268,6 +268,8 @@ Retained bodies without the additive field show “maturing unavailable,” not 
   preview's month total, the route description's recorded-event total, the retained-ledger preview count, the
   detail-history Incidents figure and its threshold-crossing total — exclude those disputed rows while keeping
   them listed; a null or unknown verdict keeps counting (R2).
+  A row whose coin is absent from the tracked catalog carries a small `Retired` badge with no sub-text;
+  such rows stay listed as history (`DEPEG_ARCHIVE_RETIRED_BADGE` in `shared/lib/classification/depeg.ts`).
 
 Indexability does not depend on the inline archive: `generateStaticParams()` in
 `src/app/depeg/[event]/page.tsx`, the per-event entries in `src/app/sitemap.ts`, and the archive

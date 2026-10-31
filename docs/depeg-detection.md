@@ -463,6 +463,8 @@ Public incident pages sort by effective `startedAt` descending, then numeric eve
 
 Rows may include a nullable `provenance` object with public replay/audit metadata (`sourceKind`, `replayRunId`, `replayVersion`, `sourcePriceProviders`, `quoteMode`, `pegReferenceSource`, `supplySource`, `confirmationPolicy`, `confirmationPointCount`, `confidenceTier`, `auditVerdict`, `pegScoreEligible`, `updatedAt`). Legacy rows return `provenance: null`.
 
+A row whose coin is absent from the tracked catalog carries `retired: true`; such rows stay public history and are never filtered out. The tracked registry is the only authority, so the marker follows catalog membership rather than a stored list. Archive shards written before the marker existed gain it from the same check when read, without rewriting the captured shard bytes.
+
 Cache: producer-backed profile (`s-maxage=300`, `max-age=60`, `stale-while-revalidate=300`). Freshness headers use the confirmed `sync-stablecoins` output timestamp with a 900s budget. Missing, unreadable, or invalid producer history returns `no-store` and unavailable freshness; event onset times are never a freshness fallback.
 
 ## Frontend

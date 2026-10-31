@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { isRetiredFromCatalog } from "@shared/lib/stablecoin-lifecycle";
+import { TRACKED_IDS } from "@shared/lib/stablecoins/registry";
 import {
   DepegDirectionSchema,
   DepegEventStoredSnapshotSchema,
@@ -102,7 +104,15 @@ export function readDepegEventSnapshot({ missing }: { missing: "empty" | "throw"
     throw new Error(`No yearly depeg event shards found under ${DEPEG_EVENT_DATA_DIR}.`);
   }
 
-  const entries = shardNames.flatMap((name) => readDepegEventShard(join(DEPEG_EVENT_DATA_DIR, name)));
+  const entries = shardNames
+    .flatMap((name) => readDepegEventShard(join(DEPEG_EVENT_DATA_DIR, name)))
+    .map((entry) => (
+      // Rows written before the API marker existed, or preserved by the sync,
+      // still read as retired when the coin has left the tracked catalog.
+      entry.retired === true || !isRetiredFromCatalog(entry.stablecoinId, TRACKED_IDS)
+        ? entry
+        : { ...entry, retired: true as const }
+    ));
   return entries.sort((a, b) => {
     if (b.startedAt !== a.startedAt) return b.startedAt - a.startedAt;
     return b.id - a.id;

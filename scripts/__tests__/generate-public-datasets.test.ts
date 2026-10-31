@@ -262,7 +262,7 @@ describe("generate-public-datasets", () => {
   it.each([
     {
       topic: "depeg-history",
-      header: "id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source,auditVerdict",
+      header: "id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source,auditVerdict,retired",
     },
     {
       topic: "scores-latest",
@@ -1021,6 +1021,20 @@ describe("generate-public-datasets", () => {
 
     expect(testExports.projectDepegHistory([disputed], "2026-05-16")[0]?.auditVerdict).toBe("disputed");
     expect(testExports.projectDepegHistory([makeEvent(null)], "2026-05-16")[0]?.auditVerdict).toBeNull();
+  });
+
+  it("carries catalog retirement into the depeg-history rows and export columns", () => {
+    const retired = { ...makeEvent(null), stablecoinId: "bean-beanstalk", symbol: "BEAN", retired: true as const };
+    expect(testExports.projectDepegHistory([retired], "2026-05-16")[0]?.retired).toBe(true);
+    expect(testExports.projectDepegHistory([makeEvent(null)], "2026-05-16")[0]?.retired).toBe(false);
+
+    const spec = testExports.buildTopicSpecs(makeEnvelope("2026-05-16"), [retired], "2026-05-16", {
+      depegCapture: makeCapture(1),
+    }).find((item) => item.topic === "depeg-history")!;
+    const artifacts = testExports.buildTopicArtifacts(spec, "2026-05-16T10:00:00.000Z");
+    expect(JSON.parse(artifacts.json).rows[0].retired).toBe(true);
+    expect(artifacts.csv.split("\n")[1]).toContain("retired");
+    expect(artifacts.csv).toContain(",true\n");
   });
 
   it("requires a source shard for the requested snapshot year", () => {

@@ -1,6 +1,8 @@
 import { logWorkerEventArgs } from "./structured-log";
 import type { DepegEvent } from "@shared/types/market";
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
+import { isRetiredFromCatalog } from "@shared/lib/stablecoin-lifecycle";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { isMissingTableError } from "./db";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -244,8 +246,11 @@ export function rowToPublicDepegEvent(
   row: DepegRow,
   projections: Map<number, ActiveIncidentProjection>,
 ): DepegEvent {
+  const retiredMarker = isRetiredFromCatalog(row.stablecoin_id, WORKER_TRACKED_META_BY_ID)
+    ? { retired: true as const }
+    : {};
   const projection = projections.get(row.id);
-  if (!projection) return { ...rowToDepegEvent(row), constituentEventCount: 1 };
+  if (!projection) return { ...rowToDepegEvent(row), constituentEventCount: 1, ...retiredMarker };
   // The onset clock is domain-free, but a first constituent's start price and
   // reference are not: publishing a native-domain onset against a USD-domain
   // peak (or the reverse) yields a pair whose implied deviation cannot be the
@@ -269,5 +274,6 @@ export function rowToPublicDepegEvent(
         : {}),
     }),
     constituentEventCount: projection.constituentEventCount,
+    ...retiredMarker,
   };
 }

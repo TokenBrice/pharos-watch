@@ -975,6 +975,8 @@ const DepegEventObjectSchema = z.object({
   confirmationSources: z.string().nullable().optional().default(null),
   pendingReason: z.string().nullable().optional().default(null),
   closeReason: DepegEventCloseReasonSchema.nullable().optional().default(null),
+  /** Present when the event's coin is absent from the tracked catalog; the row keeps its history as a retired coin. */
+  retired: z.boolean().optional(),
   priceCoverage: DepegPriceCoverageSchema.nullable().optional(),
   provenance: z
     .object({
