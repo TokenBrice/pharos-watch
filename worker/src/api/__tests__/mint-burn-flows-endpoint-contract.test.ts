@@ -54,7 +54,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("hourly");
     expect(Array.isArray(body.coins)).toBe(true);
     expect(body).not.toHaveProperty("stablecoinId");
-    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 135, pendingAdmissionCount: 2 });
+    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 134, pendingAdmissionCount: 2, disabledCount: 1 });
     expect(parsed.data?.publication?.legs.every((leg) => leg.status !== "admitted")).toBe(true);
     const cached = (db as MockD1Database).getHistory().find((entry) => entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === aggregateFlowCacheKey(24));

@@ -48,6 +48,7 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   stablecoinId: string;
   dustThreshold: number;
   bridgeDetection?: MintBurnBridgeDetectionConfig;
+  enabled?: boolean;
 }> = [
   { stablecoinId: "u-united-stables", dustThreshold: 10_000 },
   { stablecoinId: "a7a5-old-vector", dustThreshold: 10_000 },
@@ -87,7 +88,10 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "mxnb-juno", dustThreshold: 10_000 },
   { stablecoinId: "cjpy-yamato", dustThreshold: 10_000 },
   { stablecoinId: "stusds-sky", dustThreshold: 10_000 },
-  { stablecoinId: "busd0-usual", dustThreshold: 10_000 },
+  // Re-admitted 2026-10-30 from a freeze with its grandfathered scan cursor at
+  // 2026-08-26, which held the common flow watermark. Disabled so the policy pauses
+  // the key; re-enabling resumes through reactivation-pending catch-up.
+  { stablecoinId: "busd0-usual", dustThreshold: 10_000, enabled: false },
   { stablecoinId: "stkgho-umbrella-aave", dustThreshold: 10_000 },
   { stablecoinId: "stcusd-cap", dustThreshold: 10_000 },
   { stablecoinId: "sbold-k3-capital", dustThreshold: 10_000 },
@@ -495,11 +499,12 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
   // --- Top-50/100/150 supported expansion (Ethereum only) ---
   // Mechanical default-block entries live in EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.
   ...EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS.map(
-    ({ stablecoinId, dustThreshold, bridgeDetection }): MintBurnContractConfigSpec => ({
+    ({ stablecoinId, dustThreshold, bridgeDetection, enabled }): MintBurnContractConfigSpec => ({
       chain: ETHEREUM,
       stablecoinId,
       dustThreshold,
       bridgeDetection,
+      ...(enabled === false ? { enabled } : {}),
       startBlock: ETHEREUM_COVERAGE_FLOOR_BLOCK,
       tier: "extended",
       isDefaultStartBlock: true,

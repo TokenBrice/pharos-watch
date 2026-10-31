@@ -30,11 +30,14 @@ describe("mint/burn durable publication admission", () => {
     const { db } = fixtures.open();
     const legacy = MINT_BURN_CONFIGS.filter(isGrandfatheredMintBurnConfig);
     expect(legacy).toHaveLength(136);
+    // A checked-in `enabled: false` leg (bUSD0) stays grandfathered but is disabled, not admitted.
+    const enabledLegacy = legacy.filter((config) => config.enabled !== false);
+    expect(enabledLegacy).toHaveLength(135);
     const scope = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
-    expect(scope.configs).toEqual(legacy);
+    expect(scope.configs).toEqual(enabledLegacy);
     expect(scope.publication.legs.filter((leg) => leg.status === "admitted")
       .every((leg) => leg.reason === "legacy-grandfathered")).toBe(true);
-    expect(scope.watermark).toEqual(resolveMintBurnWatermark(end, legacy, new Map()));
+    expect(scope.watermark).toEqual(resolveMintBurnWatermark(end, enabledLegacy, new Map()));
   });
 
   it("requires 90 days of current-fingerprint proof, persists admission, and retains a stalled admitted leg", async () => {
@@ -59,7 +62,7 @@ describe("mint/burn durable publication admission", () => {
     const { publication } = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
     const compact = compactMintBurnPublication(publication);
     expect(compact).toMatchObject({ legsScope: "non-admitted", legCount: MINT_BURN_CONFIGS.length,
-      admittedCount: 136, pendingAdmissionCount: 2, disabledCount: 0 });
+      admittedCount: 135, pendingAdmissionCount: 2, disabledCount: 1 });
     expect(compact.legs).toEqual(publication.legs.filter((leg) => leg.status !== "admitted"));
     expect(new Set(compact.admittedPairs!.map((pair) => JSON.stringify(pair)))).toEqual(new Set(publication.legs
       .filter((leg) => leg.status === "admitted").map((leg) => JSON.stringify([leg.stablecoinId, leg.chainId]))));
