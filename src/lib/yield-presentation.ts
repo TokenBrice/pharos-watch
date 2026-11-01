@@ -23,8 +23,11 @@ const YIELD_CSV_COLUMNS = {
   pys: { header: "PYS", accessor: (row) => row.pharosYieldScore ?? "NR" },
   qualification: { header: "PYS qualification", accessor: resolveYieldScoreQualification },
   nullReason: { header: "PYS null reason", accessor: (row) => row.pysNullReason ?? "" },
-  safetyGrade: { header: "Safety grade", accessor: (row) => row.safetyGrade ?? "NR" },
-  safetyScore: { header: "Safety score", accessor: (row) => row.safetyScore ?? "NR" },
+  safetyGrade: { header: "Safety grade", accessor: (row) => row.safetyGrade ?? "unknown" },
+  safetyScore: {
+    header: "Safety score",
+    accessor: (row) => (row.safetyGrade === null ? "unknown" : row.safetyScore ?? "NR"),
+  },
   safetyProvenance: { header: "Safety provenance", accessor: (row) => row.provenance?.safetyProvenance ?? "unknown" },
   source: { header: "Yield source", accessor: (row) => row.yieldSource },
   type: { header: "Yield type", accessor: (row) => row.yieldType },

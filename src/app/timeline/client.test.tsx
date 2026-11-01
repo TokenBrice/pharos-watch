@@ -203,7 +203,10 @@ describe("TimelineClient", () => {
       if (reference) expect(classes, label).toEqual(reference);
       reference = classes;
       expect(document.querySelector('[aria-label="Filter by event type"]')!.outerHTML, label).toBe(shellFilters);
-      if (label === "partial") expect(screen.getByText("1 event")).toBeTruthy();
+      if (label === "partial") {
+        expect(screen.getByText("1 event")).toBeTruthy();
+        expect(screen.queryByText(/of 12,345 events/)).toBeNull();
+      }
       if (label === "success") expect(screen.getByText("1 event")).toBeTruthy();
       if (label === "empty") expect(screen.getByText("0 events")).toBeTruthy();
       cleanup();
@@ -640,6 +643,42 @@ describe("TimelineClient", () => {
       mockEvents([warning("w1", ["aging"]), makeTapeEvent({ id: "d1", title: "Depeg one" })], { total: 2 });
       render(<TimelineClient />);
       expect(screen.getByText(/^1 events?$/)).toBeTruthy();
+    });
+
+    it("never publishes a raw total that includes unloaded suppressed rows", () => {
+      const firstPageEvents = [
+        makeTapeEvent({ id: "d1", title: "Depeg one" }),
+        makeTapeEvent({ id: "d2", title: "Depeg two", coinId: "usdt-tether" }),
+      ];
+      const firstPage = {
+        data: { events: firstPageEvents, nextCursor: "cursor-2", droppedRows: 0, total: 1000 },
+        meta: null,
+      };
+      mockEvents(firstPageEvents, {
+        data: { events: firstPageEvents, nextCursor: "cursor-2" },
+        total: 1000,
+        hasNextPage: true,
+        pages: [firstPage],
+      });
+      const { rerender } = render(<TimelineClient />);
+      expect(screen.queryByText(/of 1,000 events/)).toBeNull();
+      expect(screen.queryByText(/remaining/)).toBeNull();
+
+      const hidden = [warning("w1", ["aging"])];
+      const secondPage = {
+        data: { events: hidden, nextCursor: null, droppedRows: 0, total: null },
+        meta: null,
+      };
+      const allEvents = [...firstPageEvents, ...hidden];
+      mockEvents(allEvents, {
+        data: { events: allEvents, nextCursor: null },
+        total: 1000,
+        hasNextPage: false,
+        pages: [firstPage, secondPage],
+      });
+      rerender(<TimelineClient />);
+      expect(screen.getByText("2 events")).toBeTruthy();
+      expect(screen.queryByText(/of 1,000 events/)).toBeNull();
     });
   });
 

@@ -92,11 +92,20 @@ export function resolveTargetlessDrift(
 export function buildLaunchVerdict(
   coin: Pick<StablecoinMeta, "launchPhase" | "expectedLaunchDate" | "dateHistory" | "milestones" | "announcedDate" | "launchDate">,
 ): string {
-  const count = coin.milestones?.length ?? 0;
+  const milestones = coin.milestones ?? [];
+  const announced = coin.announcedDate ? parseFuzzyRange(coin.announcedDate) : null;
+  // Registry milestones include pre-announcement precursors, so a count that
+  // says "since <announced>" only counts windows still open when it opened.
+  const counted = milestones.filter((milestone) => {
+    const range = parseFuzzyRange(milestone.date);
+    return !announced || range == null || range.end.getTime() > announced.start.getTime();
+  });
   const activity =
-    count === 0
-      ? "no activity logged yet"
-      : `${pluralize(count, "milestone")} logged${coin.announcedDate ? ` since ${formatFuzzyDate(coin.announcedDate)}` : ""}`;
+    counted.length === 0
+      ? coin.announcedDate && milestones.length > 0
+        ? `no milestones logged since ${formatFuzzyDate(coin.announcedDate)}`
+        : "no activity logged yet"
+      : `${pluralize(counted.length, "milestone")} logged${coin.announcedDate ? ` since ${formatFuzzyDate(coin.announcedDate)}` : ""}`;
   // Live coins have no target left to read against.
   if (isLaunchedAwaitingData(coin)) {
     return `Launched${coin.launchDate ? ` ${formatFuzzyDate(coin.launchDate)}` : ""}, awaiting admissible data; ${activity}.`;

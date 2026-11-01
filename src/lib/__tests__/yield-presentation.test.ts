@@ -10,6 +10,38 @@ describe("yield CSV projections", () => {
   const compareHeaders = ["ID", "Symbol", "Name", "APY 30d (%)", "PYS", "PYS qualification", "PYS null reason", "Safety grade", "Safety score", "Safety provenance", "Source", "Source posture", "Source risk score", "Venue risk tier", "Depth", "Stability (%)", "Benchmark", "TVL USD", "Warnings", "Provider URL"];
 
   it.each([
+    ["leaderboard", YIELD_LEADERBOARD_CSV_COLUMNS],
+    ["compare", YIELD_COMPARE_CSV_COLUMNS],
+  ] as const)("exports an unavailable safety card as unknown, never NR in the %s CSV", (_name, columns) => {
+    const row: YieldViewModelRow = {
+      ...makeYieldRanking({
+        pharosYieldScore: null,
+        pysNullReason: "safety-unrated",
+        safetyScore: null,
+        safetyGrade: null,
+        provenance: makeYieldProvenance({ safetyProvenance: "safety-snapshot-unavailable" }),
+      }),
+      peg: "USD", viewRank: 1, rankLabel: "#1", opportunity: "lending-opportunity",
+      sourceDepthLens: "moderate", sourcePosture: "clean", cohortPercentile: null,
+    };
+    const cells = Object.fromEntries(columns.map((column) => [column.header, column.accessor(row, 0)]));
+    expect(cells["Safety grade"]).toBe("unknown");
+    expect(cells["Safety score"]).toBe("unknown");
+    expect(cells["Safety provenance"]).toBe("safety-snapshot-unavailable");
+  });
+
+  it("keeps NR for a row published as not rated", () => {
+    const row: YieldViewModelRow = {
+      ...makeYieldRanking({ safetyScore: null, safetyGrade: "NR" }),
+      peg: "USD", viewRank: 1, rankLabel: "#1", opportunity: "lending-opportunity",
+      sourceDepthLens: "moderate", sourcePosture: "clean", cohortPercentile: null,
+    };
+    const cells = Object.fromEntries(YIELD_LEADERBOARD_CSV_COLUMNS.map((column) => [column.header, column.accessor(row, 0)]));
+    expect(cells["Safety grade"]).toBe("NR");
+    expect(cells["Safety score"]).toBe("NR");
+  });
+
+  it.each([
     ["scored", 50, "live-report-card", 5_000_000],
     ["NR", null, "live-report-card", 5_000_000],
     ["null TVL", 50, "live-report-card", null],

@@ -96,6 +96,39 @@ describe("verdict and history", () => {
     expect(formatPhaseLabel({})).toBe("Unphased");
   });
 
+  it("counts only milestones logged since the announcement period opened", () => {
+    expect(
+      buildLaunchVerdict({
+        launchPhase: "announced",
+        announcedDate: "2026-07-01",
+        milestones: [
+          { date: "2026-04-03", type: "regulatory", title: "A" },
+          { date: "2026-07-15", type: "announcement", title: "B" },
+        ],
+      }),
+    ).toBe("Announced phase, no target date; 1 milestone logged since Jul 1, 2026.");
+    // A month- or quarter-precision milestone keeps its whole window, so one
+    // that overlaps the announcement month is still in period.
+    expect(
+      buildLaunchVerdict({
+        launchPhase: "announced",
+        announcedDate: "2026-06-15",
+        milestones: [
+          { date: "2026-06", type: "regulatory", title: "A" },
+          { date: "2026-Q2", type: "partnership", title: "B" },
+          { date: "2026-Q1", type: "partnership", title: "C" },
+        ],
+      }),
+    ).toBe("Announced phase, no target date; 2 milestones logged since Jun 15, 2026.");
+    expect(
+      buildLaunchVerdict({
+        launchPhase: "announced",
+        announcedDate: "2026-07-01",
+        milestones: [{ date: "2026-Q2", type: "regulatory", title: "A" }],
+      }),
+    ).toBe("Announced phase, no target date; no milestones logged since Jul 1, 2026.");
+  });
+
   it("lists retired targets oldest first and milestones newest first", () => {
     expect(
       describeTargetHistory([{ date: "2026-Q4", setOn: "2026-06-01" }, { date: "2026-H2", setOn: "2026-02-01" }]).map((row) => row.target),
