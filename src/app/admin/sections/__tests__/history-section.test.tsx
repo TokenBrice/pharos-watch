@@ -124,6 +124,37 @@ describe("HistorySection", () => {
     expect(screen.getByText(/Pages transition correlation is Unknown/i)).toBeTruthy();
   });
 
+  it("ends retained history durations at the retained response clock and marks the newest row last known", () => {
+    const props = baseProps();
+    render(
+      <HistorySection
+        {...props}
+        nowSeconds={transition.at + 9_000}
+        historyObservedAt={transition.at + 3_600}
+        historyEvidence={{
+          source: "history",
+          state: "stale",
+          completeness: "complete",
+          message: "History refresh failed; showing retained history data. refresh failed",
+        }}
+      />,
+    );
+
+    expect(screen.getByText("Retained history evidence")).toBeTruthy();
+    expect(screen.getByText(/Last known state: 1h/)).toBeTruthy();
+    expect(screen.queryByText(/Current state/)).toBeNull();
+    expect(screen.getByText(/Held for 1h/)).toBeTruthy();
+    expect(screen.queryByText(/Held for 2h 30m/)).toBeNull();
+  });
+
+  it("keeps the current-state label when the history read is not retained", () => {
+    const props = baseProps();
+    render(<HistorySection {...props} nowSeconds={transition.at + 3_600} />);
+
+    expect(screen.getByText(/Current state: 1h/)).toBeTruthy();
+    expect(screen.queryByText(/Last known state/)).toBeNull();
+  });
+
   it("labels a failed history query as partial fallback and avoids negative deployment conclusions", () => {
     const props = baseProps();
     render(

@@ -45,15 +45,21 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
       : null;
   const blacklistUnknown =
     dq.blacklistGapStatus === "failed" || blacklistRatio == null || blacklistRecent == null || blacklistWindow == null;
-  const blacklistState = blacklistUnknown
-    ? "unknown"
-    : worstSeverity([
-        thresholdState(
+  // Public gap counts are a superset of the graded classification's, so this ratio can
+  // raise attention but cannot prove the internal Critical tier that the server owns.
+  const blacklistRatioState: PipelineSeverity =
+    blacklistRatio == null
+      ? "unknown"
+      : thresholdState(
           blacklistRatio,
           STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded,
           STATUS_BLACKLIST_THRESHOLDS.missingRatioStale,
           true,
-        ),
+        );
+  const blacklistState = blacklistUnknown
+    ? "unknown"
+    : worstSeverity([
+        blacklistRatioState === "critical" ? "watch" : blacklistRatioState,
         thresholdState(
           blacklistRecent,
           STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch,

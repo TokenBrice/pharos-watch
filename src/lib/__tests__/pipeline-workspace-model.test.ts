@@ -53,6 +53,20 @@ describe("pipeline quality model", () => {
     });
   });
 
+  it("caps the public blacklist gap ratio at Watch because only the server classification can prove Critical", () => {
+    const base = withReadyQuality();
+    const data = degraded(base, {
+      dataQuality: {
+        ...base.dataQuality,
+        blacklistMissingAmounts: 5,
+        blacklistMissingRatio: 0.05,
+        blacklistRecentMissingAmounts: 0,
+      },
+    });
+
+    expect(buildPipelineQualityModel(data).rows.find((row) => row.id === "blacklist-gaps")?.state).toBe("watch");
+  });
+
   it("keeps inactive on-chain ratio gates Unknown instead of reporting healthy zeroes", () => {
     const base = withReadyQuality();
     const data = degraded(base, {

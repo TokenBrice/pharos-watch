@@ -208,6 +208,26 @@ export function buildReliabilityWorkspaceModel(input: ReliabilityWorkspaceInput)
       affectedSurface: "Invariant canary",
     });
   });
+  const canaries = input.data.canaries;
+  const canaryAggregateKind = canaries ? healthKind(canaries.status) : null;
+  if (canaries && canaryAggregateKind) {
+    const missingCheckCount = canaries.missingCheckIds?.length ?? 0;
+    const counts = [
+      canaries.staleCount > 0 ? `${canaries.staleCount} stale` : null,
+      (canaries.failedCount ?? 0) > 0 ? `${canaries.failedCount} failed` : null,
+      (canaries.unknownExecutionCount ?? 0) > 0 ? `${canaries.unknownExecutionCount} unknown execution` : null,
+      missingCheckCount > 0 ? `${missingCheckCount} missing` : null,
+    ].filter((part): part is string => part != null);
+    addIssue(issues, {
+      id: "canary:aggregate",
+      mode: "dependencies",
+      label: "Invariant canaries",
+      kind: canaryAggregateKind,
+      rawCode: "canary_aggregate",
+      detail: `${canaries.okCount}/${canaries.totalChecks} checks ok${counts.length > 0 ? `; ${counts.join(", ")}` : ""}.`,
+      affectedSurface: "Invariant canary",
+    });
+  }
 
   if (input.requestSourceStats) {
     const timeouts = input.requestSourceStats.siteDelivery.pagesUpstreamTimeouts;
