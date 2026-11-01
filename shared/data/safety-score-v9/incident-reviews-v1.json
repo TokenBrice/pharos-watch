@@ -1965,6 +1965,142 @@
       }
     },
     {
+      "incidentId": "usdc-circle-bsc-token-hub-2022-10-06",
+      "assetId": "usdc-circle",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2022-10-06",
+      "resolvedAt": "2022-10-07",
+      "status": "resolved",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdc-circle:21da5663745d56f8c075"
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "resolved"
+      },
+      "reviewedAt": "2026-11-01",
+      "reviewer": "IR positive-row extension 2026-11-01 (OD-64, RV-IR-ISS section 3 candidate 8); event facts and source records re-used from usdt-tether-bsc-token-hub-2022-10-06",
+      "primarySources": [
+        {
+          "label": "BNB Chain ecosystem update of 2022-10-07: apology and response to the exploit, validator coordination and upgrade",
+          "url": "https://www.bnbchain.org/en/blog/bnb-chain-ecosystem-update",
+          "publishedAt": "2022-10-07"
+        },
+        {
+          "label": "BNB Chain (2022-10-11): the BSC Token Hub exploit effectively minted 2 million BNB (nearly $570 million); the loss is on BNB Chain and users were not affected",
+          "url": "https://www.bnbchain.org/en/blog/bnb-chain-a-decentralized-response",
+          "publishedAt": "2022-10-11"
+        }
+      ],
+      "finding": "The lane's mint path is the BSC Token Hub bridge, where forged IAVL+ inclusion proofs produced an unauthorized mint on 2022-10-06: the attacker submitted forged cross-chain transfers claiming 1,000,000 BNB lock events and 2 million BNB (nearly $570 million) was effectively minted and taken. BNB Chain states that 'the loss is on BNB Chain, users were not affected'. Exact subject: the compiled bridge fact for the Binance-Peg USDC representation on BSC (bridge-meta:usdc-circle:21da5663745d56f8c075; route bsc:0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d, 'Binance Bridge (Binance-Peg)'), whose mint path is the same Token Hub verification logic. No Binance-Peg USDC loss is reported and none is asserted; the row records that the compromised verification control sat on this lane's mint path. Resolved: BNB Chain's dated 2022-10-07 update documents the validator-coordinated pause and upgrade, and the 2022-10-11 statement describes the paused-then-resumed chain. The 730-day resolved-incident decay horizon has passed, so the row corrects the historical state rather than applying a current cap.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2022-10-11",
+        "summary": "BNB Chain's 2022-10-07 ecosystem update and 2022-10-11 response statement document the validator-coordinated pause, the software upgrade adopted by validators and the resumed chain; the forged-proof path is closed by that upgrade. No Binance-Peg USDC holder loss is claimed by either statement.",
+        "sources": [
+          {
+            "label": "BNB Chain ecosystem update (2022-10-07)",
+            "url": "https://www.bnbchain.org/en/blog/bnb-chain-ecosystem-update",
+            "publishedAt": "2022-10-07"
+          },
+          {
+            "label": "BNB Chain: A Decentralized Response (2022-10-11)",
+            "url": "https://www.bnbchain.org/en/blog/bnb-chain-a-decentralized-response",
+            "publishedAt": "2022-10-11"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "usdc-circle-gnosis-bridge-validator-compromise-2026-04",
+      "assetId": "usdc-circle",
+      "domain": "control",
+      "kind": "mint-control-failure",
+      "occurredAt": "2026-04-10",
+      "resolvedAt": "2026-06-25",
+      "status": "resolved",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdc-circle:62aebebfa29b8f17d0bb"
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "resolved"
+      },
+      "reviewedAt": "2026-11-01",
+      "reviewer": "IR positive-row extension 2026-11-01 (OD-64, RV-IR-ISS section 3 candidate 11, C-5); event facts and source records re-used from xdai-gnosis-bridge-validator-compromise-2026-04",
+      "primarySources": [
+        {
+          "label": "Gnosis Chain bridge governance decisions (living change log): 'One of CoW's developer's laptop is compromised and it has access to bridge validator instance' with the validator replacement implemented 2026-04-10; 'Due to the compromised github bot, attacker was able to access the private key of Hopr's bridge validator' with the replacement implemented 2026-06-25; further batch validator rotation implemented 2026-09-08",
+          "url": "https://docs.gnosischain.com/bridges/management/decisions",
+          "publishedAt": "2026-06-25"
+        }
+      ],
+      "finding": "Compromise of keys on this lane's own verification path. Gnosis Chain's public bridge change log records two disclosed compromises of bridge-validator key material: one CoW developer's laptop with access to CoW's bridge-validator instance was compromised, and the CoW validator address was replaced on the AMB and xDAI bridge contracts (implemented 2026-04-10); and a compromised GitHub bot gave an attacker the private key of Hopr's bridge validator, whose address was replaced on the same contracts (implemented 2026-06-25). Both were remediated by rotation, and a further batch rotation of CoW/Kleros validator addresses was implemented 2026-09-08. Date basis: the log's dated implementation entries. The log publishes no separate compromise timestamp and no loss, so occurredAt is the first dated record of the compromised validator being replaced and resolvedAt is the later rotation; no loss and no exposure share is asserted. Under the settled C-5 convention a disclosed compromise of a signer on the lane's own verification path is control-domain and prices through the resolved-incident history even when the threshold was never reached and the key was rotated. Exact subject: bridge-meta:usdc-circle:62aebebfa29b8f17d0bb, the compiled control of the Gnosis OmniBridge route gnosis:0xddafbb505ad214d7b80b1f830fccc89b60fb7a83; the rotation targets the AMB/xDAI validator contracts of the Gnosis bridge governance system that the OmniBridge route depends on.",
+      "remediation": {
+        "state": "verified",
+        "lastVerifiedAt": "2026-06-25",
+        "summary": "The governance change log records the replacement of the CoW bridge validator (2026-04-10) and the Hopr bridge validator (2026-06-25) on the AMB and xDAI bridge contracts, plus a further batch rotation (2026-09-08). It records no loss or drain from these compromises. Rotation is the dated remediation; it is not a claim that the whole bridge was re-audited.",
+        "sources": [
+          {
+            "label": "Gnosis Chain bridge governance decisions (validator rotations implemented 2026-04-10 and 2026-06-25)",
+            "url": "https://docs.gnosischain.com/bridges/management/decisions",
+            "publishedAt": "2026-06-25"
+          }
+        ]
+      }
+    },
+    {
+      "incidentId": "usdc-circle-orbit-bridge-2023-12-31",
+      "assetId": "usdc-circle",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2023-12-31",
+      "resolvedAt": null,
+      "status": "active",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:usdc-circle:b695778964913fe010fa"
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "active"
+      },
+      "reviewedAt": "2026-11-01",
+      "reviewer": "IR positive-row extension 2026-11-01 (OD-64, RV-IR-ISS section 3 candidate 10); event facts and source records re-used from dai-makerdao-orbit-bridge-2023-12-31",
+      "primarySources": [
+        {
+          "label": "Halborn (2024-01-08): Orbit Bridge hack of 2023-12-31, an estimated $82 million withdrawn from the protocol's wallets, believed to result from compromised private keys",
+          "url": "https://www.halborn.com/blog/post/explained-the-orbit-bridge-hack-december-2023",
+          "publishedAt": "2024-01-08"
+        }
+      ],
+      "finding": "Signer/private-key compromise on the Orbit Bridge rail that issues this Klaytn representation. On 2023-12-31, in the last hours of the year, an estimated $82 million was withdrawn from Orbit Bridge's wallets, which the analysis attributes to compromised private keys while noting other theories exist. Exact subject: the compiled bridge fact for the reviewed Orbit route (bridge-meta:usdc-circle:b695778964913fe010fa; route klaytn:0x754288077d0ff82af7a5317c7cb8c444d421d103, 'Orbit Bridge'). No USDC-specific loss figure and no exposure share is published, so none is asserted; the row records the failure of the lane's own signing control. Unresolved at reviewedAt: the cited source contains no reimbursement, relaunch or reserve-restoration statement.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2024-01-08",
+        "summary": "No dated reimbursement, relaunch or reserve-restoration statement appears in the cited analysis. The latest verification of the remediation state is the 2024-01-08 analysis, which records the theft and the compromised-key explanation only.",
+        "sources": [
+          {
+            "label": "Halborn analysis of the December 2023 Orbit Bridge hack (2024-01-08)",
+            "url": "https://www.halborn.com/blog/post/explained-the-orbit-bridge-hack-december-2023",
+            "publishedAt": "2024-01-08"
+          }
+        ]
+      }
+    },
+    {
       "incidentId": "usde-2025-10-10-binance-local-holder-exit-dislocation",
       "assetId": "usde-ethena",
       "domain": "peg",
@@ -25407,42 +25543,27 @@
       "scope": {
         "kind": "issuer-surface",
         "coveredRoutes": [
-          "abstract:0x84a71ccd554cc1b02749b35d22f684cc8ec987e1",
-          "apechain:0xf1815bd50389c46847f0bda824ec8da914045d14",
           "astar:0x6a2d262d56735dba19dd70682b39f6be9a931d98",
           "aurora:0xb12bfca5a55806aaf64e99521918a4bf0fc40802",
-          "berachain:0x549943e04f40284185054145c6e4e9568c1d3241",
           "bitlayer:0xf8c374ce88a3be3d374e8888349c7768b607c755",
           "bob:0xe75d0fb2c24a55ca1e3f96781a2bcc7bdba058f0",
           "boba:0x66a2a913e447d6b4bf33efbec43aaef87890fbbc",
           "bsquared:0xe544e8a38add9b1abf21922090445ba93f74b9e5",
           "cardano:1f3aec8bfe7ea4fe14c5f121e2a92e301afe414147860d557cac7e345553444378",
-          "citrea:0xe045e6c36cf77faa2cfb54466d71a3aef7bbe839",
-          "etherlink:0x796ea11fa2dd751ed01b53c372ffdb4aaa8f00f9",
-          "flare:0xfbda5f676cb37624f28265a144a48b0d6e87d3b6",
-          "flow:0xf1815bd50389c46847f0bda824ec8da914045d14",
-          "hemi:0xad11a8beb98bbf61dbb1aa0f6d6f2ecd87b35afa",
           "hyperliquid:0x6d1e7cde53ba9467b783cb7c530ce054",
           "immutable-zkevm:0x6de8acc0d406837030ce4dd28e7c08c5a96a30d2",
-          "iota-evm:0xfbda5f676cb37624f28265a144a48b0d6e87d3b6",
           "katana:0x203a662b0bd271a6ed5a60edfbd04bfce608fd36",
           "manta:0xb73603c5d87fa094b7314c74ace2e64d165016fb",
           "mantle:0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9",
           "mantra:0x5e76be0f4e09057d75140216f70fd4ce3365bb29",
           "metis:0xea32a96608495e54156ae48931a7c20f0dcc1a21",
           "mode:0xd988097fb8612cc24eec14542bc03424c656005f",
-          "movement:0x83121c9f9b0527d1f056e21a950d6bf3b9e9e2e8353d0e95ccea726713cbea39",
-          "nibiru:0x0829f361a05d993d5ceb035ca6df3446b060970b",
           "osmosis:ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
           "polygon-zkevm:0xa8ce8aee21bc2a48a5ef670afcc9274c7bbbc035",
           "pulsechain:0x15d38573d2feeb82e7ad5187ab8c1d52810b1f07",
-          "redbelly:0xe08ded898d7782b085cd240d7b234063696765ad",
-          "rootstock:0x74c9f2b00581f1b11aa7ff05aa9f608b7389de67",
           "scroll:0x06efdbff2a14a7c8e15944d1f4a48f9f95f663a4",
           "soneium:0xba9986d2381edf1da03b0b9c1f8b00dc4aacc369",
-          "stable:0x8a2b28364102bea189d99a475c494330ef2bdd0b",
           "stacks:SP120SBRBQJ00MCWS7TM5R8WJNTTKD5K0HFRC2CNE.usdcx",
-          "tempo:0x20c000000000000000000000b9537d11c60e8b50",
           "viction:0xcca4e6302510d555b654b3eab9c0fcb223bcfdf0",
           "xlayer:0x74b7f16337b8972027f6196a17a631ac6de26d22",
           "zircuit:0x3b952c8c9c44e8fe201e2b26f6b2200203214cff"
@@ -25590,7 +25711,12 @@
         "surface:6ff37adf4f150c85f2b6b6d1",
         "surface:a1d7dc048c35d911bd827e25",
         "surface:e081ab219a0550ea3422de38"
-      ]
+      ],
+      "retired": {
+        "reviewedAt": "2026-11-01",
+        "reviewer": "OD-61 LayerZero coverage correction 2026-11-01 (armada lead)",
+        "reason": "OD-61 (owner, 2026-11-01) applies RV-IR-ISS C-1: a lane blocked by an unexempted verifier-compromise exposure is not coverable. All 5 covered routes are LayerZero lanes (OAdapter/OFT/OBridge) under LayerZero's open verifier-compromise exposure with no point-in-time exemption, so this review covers nothing and susdai-usd-ai becomes a zero-review envelope. Retired, not deleted, to keep provenance."
+      }
     },
     {
       "reviewId": "usdso-somnia-issuer-surface-negative-2026-10-29",
@@ -25678,7 +25804,12 @@
         "surface:a2053d93917110449521566d",
         "surface:a59a8c9b3f58de6db2d5c32d",
         "surface:c5f316a3a1da9d13c06087a4"
-      ]
+      ],
+      "retired": {
+        "reviewedAt": "2026-11-01",
+        "reviewer": "OD-61 LayerZero coverage correction 2026-11-01 (armada lead)",
+        "reason": "OD-61 (owner, 2026-11-01) applies RV-IR-ISS C-1: a lane blocked by an unexempted verifier-compromise exposure is not coverable. Both covered routes are Veda BoringVault share mints behind the dual-use LayerZeroTeller, under LayerZero's open verifier-compromise exposure with no point-in-time exemption, so this review covers nothing and scusd-rings becomes a zero-review envelope. Retired, not deleted, to keep provenance."
+      }
     },
     {
       "reviewId": "pht-pht-issuer-surface-negative-2026-10-29",
