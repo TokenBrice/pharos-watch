@@ -11,7 +11,9 @@ const MAX_ITEMS = 50;
 function methodologyItems(): RssItem[] {
   const all = METHODOLOGY_CHANGELOG_REGISTRY.flatMap((source) => source.entries.map((entry) => ({ source, entry })));
   return all
-    .sort((a, b) => b.entry.effectiveAt - a.entry.effectiveAt)
+    // Items are published on their authored date, so the feed order must use
+    // the same clock; activation only breaks same-day ties.
+    .sort((a, b) => b.entry.date.localeCompare(a.entry.date) || b.entry.effectiveAt - a.entry.effectiveAt)
     .slice(0, MAX_ITEMS)
     .map(({ source, entry }) => {
       const impactHtml = entry.impact.length

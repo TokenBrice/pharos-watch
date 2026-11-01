@@ -31,8 +31,12 @@ describe("QueryErrorNotice", () => {
   });
 
 
-  it("renders unavailable notice only for the cache-not-populated 503", () => {
-    const err = new ApiFetchError("/api/data", 503, '{"error":"Data not yet available"}');
+  it.each([
+    "Data not yet available",
+    "Stablecoins data not yet available",
+    "Redemption backstop snapshot unavailable",
+  ])("renders the unavailable notice for the dataset-state 503 body %s", (error) => {
+    const err = new ApiFetchError("/api/data", 503, JSON.stringify({ error }));
     render(<QueryErrorNotice error={err} hasData={false} />);
     expect(screen.getByText("Waiting for first sync")).toBeTruthy();
   });

@@ -242,6 +242,24 @@ describe("applyFilters", () => {
       expected: ["usdc-circle", "dai-makerdao", "eurs-stasis"],
     },
     {
+      name: "keeps an inherited-archetype commodity variant in the unfiltered universe",
+      rows: [
+        makeRow({ id: "gold-variant", mechanism: "fiat-cash", mechanismIncluded: false }),
+        makeRow({ id: "cash", mechanism: "fiat-cash" }),
+      ],
+      filters: {},
+      expected: ["gold-variant", "cash"],
+    },
+    {
+      name: "excludes an inherited-archetype commodity variant from a mechanism filter",
+      rows: [
+        makeRow({ id: "gold-variant", mechanism: "fiat-cash", mechanismIncluded: false }),
+        makeRow({ id: "cash", mechanism: "fiat-cash" }),
+      ],
+      filters: { mechanisms: ["fiat-cash"] },
+      expected: ["cash"],
+    },
+    {
       name: "filters by type (multi-select)",
       rows: [
         makeRow({ id: "cefi", type: "centralized" }),

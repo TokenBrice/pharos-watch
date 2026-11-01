@@ -49,17 +49,21 @@ import type { TablePaginationProps } from "@/components/table-pagination";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // Curated classification is immutable for the lifetime of the client bundle.
-// The membership predicate keeps mechanism deep-links aligned with the
+// Commodity pegs that only inherit a parent's archetype stay in the tracked
+// universe; the membership predicate narrows mechanism deep-links to the
 // mechanism pages' archetype buckets.
 const SCREENABLE_COINS = CLIENT_TRACKED_STABLECOINS
   .filter((meta) => meta.status !== "quarantined" && meta.status !== "delisted")
-  .map((meta) => ({
-    meta,
-    mechanism: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
-    custodyModel: resolveCustodyModel(meta),
-    blacklistable: projectBlacklistable(meta.blacklistStatus),
-  }))
-  .filter(({ meta, mechanism }) => mechanism === null || isIncludedInArchetype(meta, mechanism));
+  .map((meta) => {
+    const mechanism = resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID);
+    return {
+      meta,
+      mechanism,
+      mechanismIncluded: isIncludedInArchetype(meta, mechanism),
+      custodyModel: resolveCustodyModel(meta),
+      blacklistable: projectBlacklistable(meta.blacklistStatus),
+    };
+  });
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },
@@ -217,7 +221,7 @@ export function ScreenerClient() {
     }
 
     const rows: ScreenerRow[] = [];
-    for (const { meta, mechanism, custodyModel, blacklistable } of SCREENABLE_COINS) {
+    for (const { meta, mechanism, mechanismIncluded, custodyModel, blacklistable } of SCREENABLE_COINS) {
       const safety = safetyById[meta.id] ?? null;
       const pegCoin = pegById.get(meta.id);
       const mintAuthorityScore = safetyPublicationAvailable
@@ -230,6 +234,7 @@ export function ScreenerClient() {
         lifecycle: meta.status ?? "active",
         type: meta.flags.governance,
         mechanism,
+        mechanismIncluded,
         peg: meta.flags.pegCurrency,
         supplyUsd: supplyById.get(meta.id) ?? null,
         pegScore: pegCoin?.pegScore ?? null,

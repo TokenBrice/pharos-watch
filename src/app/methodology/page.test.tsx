@@ -313,9 +313,10 @@ describe("MethodologyPage", () => {
     expect(owner).toContain("`confirm_required` direction changes keep the old-direction lifecycle open");
   });
 
-  it("separates estimated safety-unrated yield rows from opportunity-evidence-missing NR rows", () => {
+  it("separates per-coin unrated fallback PYS from an unavailable safety snapshot and opportunity-evidence-missing NR", () => {
     const text = methodologyDocument().querySelector("#yield-intelligence-methodology")!.textContent!.replace(/\s+/g, " ");
-    expect(text).toContain("Rows carrying `safety-unrated` remain estimated");
+    expect(text).toContain("Rows whose per-coin report card is unrated keep the 40/NR fallback and an estimated PYS with `safety-unrated`");
+    expect(text).toContain("an unavailable common safety snapshot publishes PYS NR with the same reason");
     expect(text).toContain("rows carrying `opportunity-evidence-missing` publish PYS NR");
     expect(text).not.toContain("`safety-unrated` or `opportunity-evidence-missing` remain estimated");
   });

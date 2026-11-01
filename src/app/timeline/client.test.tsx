@@ -693,7 +693,8 @@ describe("TimelineClient", () => {
 
     render(<TimelineClient />);
 
-    expect(screen.getByText("Showing 2 of 5 events")).toBeTruthy();
+    expect(screen.getByText("2 events")).toBeTruthy();
+    expect(screen.queryByText(/Showing 2 of 5 events/)).toBeNull();
     expect(screen.queryByText(/rows rejected/)).toBeNull();
   });
 

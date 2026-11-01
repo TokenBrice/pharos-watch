@@ -56,7 +56,7 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
           of {totalCap.complete ? "active" : "known"} market cap
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
-          {filteredCap.totalUsd == null ? "n/a" : formatCurrency(filteredCap.totalUsd)}{filteredCap.complete ? "" : " known market cap"} in the current result set.
+          {filteredCap.totalUsd == null ? "n/a" : formatCurrency(filteredCap.totalUsd)}{filteredCap.totalUsd != null && !filteredCap.complete ? " known market cap" : ""} in the current result set.
         </p>
       </div>
     </div>

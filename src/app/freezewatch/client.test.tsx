@@ -231,11 +231,13 @@ describe("FreezeWatchClient", () => {
 
   it("retains auxiliary summary facts without reader notices for failed refreshes", () => {
     const summary = makeSummary();
-    summary.totalEvents = 7;
+    // The headline comes from the ledger total, which can exceed the archived
+    // quarterly rows; keep the two figures distinct so the wiring is pinned.
+    summary.totalEvents = 9;
     summary.stats.perCoinQuarterlyEventTypes.USDC = [{ quarter: "Q1 '26", blacklist: 7, unblacklist: 0, destroy: 0 }];
     mocks.useBlacklistSummary.mockReturnValue(stubQuery({ data: summary, error: new Error("summary offline") }));
     render(<FreezeWatchClient />);
-    expect(screen.getByText("Events tracked").nextElementSibling?.textContent).toBe("7");
+    expect(screen.getByText("Events tracked").nextElementSibling?.textContent).toBe("9");
     expect(screen.getByRole("button", { name: "USDC Ethereum coverage supported" })).toBeTruthy();
     expect(screen.queryByText(/refresh failed/)).toBeNull();
   });

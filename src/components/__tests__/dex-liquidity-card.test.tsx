@@ -370,6 +370,13 @@ describe("DexLiquidityCard", () => {
       ]);
     });
 
+    it("renders sub-cent pool prices with the same magnitude-based precision as the header", () => {
+      const [pool] = makePools(1);
+      const { container } = renderCard({ poolCount: 1, pools: [{ ...pool!, price: 0.000061 }] });
+      expect(poolTables(container)[0]!.textContent).toContain("$0.000061");
+      expect(poolTables(container)[0]!.textContent).not.toContain("$0.0001");
+    });
+
     it("labels five displayed rows from the authoritative pool count rather than the sliced list", () => {
       const { container } = renderCard({ poolCount: 9 });
       expect(poolTables(container)[0]!.querySelectorAll("tbody tr")).toHaveLength(5);

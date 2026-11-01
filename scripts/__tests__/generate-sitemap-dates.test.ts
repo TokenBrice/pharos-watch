@@ -122,6 +122,8 @@ const BLOG_POST_PATHS = BLOG_POSTS.map((post) => `src/data/blog/posts/${post.slu
 const CHAIN_CONTENT_PATH = "src/app/chains/static-chain-content.ts";
 const PEG_TAXONOMY_PATH = "src/lib/peg-taxonomy.ts";
 const TAXONOMY_PAGE_PATH = "src/app/stablecoins/taxonomy-page.tsx";
+const ROOT_PAGE_PATH = "src/app/page.tsx";
+const LAYOUT_PATH = "src/app/layout.tsx";
 
 async function scannedHistoryFiles(): Promise<string[]> {
   const { execFileSync } = await vi.importActual<typeof import("node:child_process")>("node:child_process");
@@ -255,6 +257,20 @@ describe("generated sitemap dates are independent of checkout time", () => {
   it("gives the root route its own Git date", async () => {
     const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
     expect(baseline["/"]).toBe(BASE_COMMIT);
+
+    // A sibling src/app edit must not move the root; only page.tsx owns it.
+    const layoutEdit = await runGenerator({
+      gitLog: gitLogFor(files, [LAYOUT_PATH]),
+      mtime: "2026-10-27T09:00:00.000Z",
+    });
+    expect(layoutEdit["/"]).toBe(BASE_COMMIT);
+
+    const rootEdit = await runGenerator({
+      gitLog: gitLogFor(files, [ROOT_PAGE_PATH]),
+      mtime: "2026-10-27T09:00:00.000Z",
+    });
+    expect(rootEdit["/"]).toBe(LATER_COMMIT);
+    expect(changedRoutes(baseline, rootEdit)).toEqual(["/"]);
   });
 
   it("advances every indexable chain profile for a shared chain-content edit", async () => {

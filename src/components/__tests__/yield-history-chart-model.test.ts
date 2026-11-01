@@ -152,6 +152,37 @@ describe("yield history transformations", () => {
       .toEqual([[switchTs + 5 * TWO_HOURS, 8]]);
   });
 
+  it("bounds source-mode baselines by source identity, not the is_best flip flag", () => {
+    const DAY = 86_400_000;
+    const sourceKey = "source-s";
+    const availableSources = [{ sourceKey, yieldSource: "Source S" }];
+    const chart = (history: YieldHistoryPoint[]) => {
+      historyBySource.set(sourceKey, history);
+      return renderHook(() => useYieldHistoryChartModel({ ...chartProps, externalSourceKey: sourceKey, availableSources }));
+    };
+
+    // The source's own jump over its 30-day mean is annotated even though the
+    // row where it gains the is_best slot carries `sourceSwitch`.
+    const { result, rerender } = chart([
+      ...Array.from({ length: 30 }, (_, day) => point(BASE + day * DAY, 0.5, { sourceKey })),
+      point(BASE + 30 * DAY, 3, { sourceKey, sourceSwitch: true }),
+    ]);
+    expect(result.current.spikeAnnotations).toEqual([
+      { date: BASE + 30 * DAY, apy: 3, trailingAvg: 0.5, ratio: 6, windowDays: 30 },
+    ]);
+
+    // A post-flip dip is averaged with the source's own 30-day history, not a
+    // baseline restarted at the is_best flip.
+    historyBySource.set(sourceKey, [
+      ...Array.from({ length: 60 }, (_, day) => point(BASE + day * DAY, 5, { sourceKey })),
+      ...Array.from({ length: 6 }, (_, index) =>
+        point(BASE + (60 + index) * DAY, 1, { sourceKey, sourceSwitch: index === 0 })),
+      point(BASE + 67 * DAY, 2.2, { sourceKey }),
+    ]);
+    rerender();
+    expect(result.current.spikeAnnotations).toEqual([]);
+  });
+
   it("never labels a future-inclusive series mean as a trailing average", () => {
     const DAY = 86_400_000;
     historyBySource.set("best", [

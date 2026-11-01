@@ -371,7 +371,8 @@ export function YieldIntelligenceMethodologySection() {
                       legacy-partial; later points store versioned inputs for exact PYS recomputation
                     </li>
                     <li>
-                      Rows carrying `safety-unrated` remain estimated until the missing Safety evidence is reviewed;
+                      Rows whose per-coin report card is unrated keep the 40/NR fallback and an estimated PYS with
+                      `safety-unrated`; an unavailable common safety snapshot publishes PYS NR with the same reason;
                       rows carrying `opportunity-evidence-missing` publish PYS NR with no score until the missing
                       market-risk evidence is supplied; stale source and benchmark evidence remains PYS NR
                     </li>

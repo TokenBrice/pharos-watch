@@ -157,6 +157,8 @@ describe("feed routes smoke", () => {
       for (const pubDate of pubDates) {
         expect(Date.parse(pubDate)).toBeLessThanOrEqual(now);
       }
+      const pubDateMs = pubDates.map((pubDate) => Date.parse(pubDate));
+      expect(pubDateMs).toEqual([...pubDateMs].sort((left, right) => right - left));
       expect(Date.parse(lastBuildDate)).toBeLessThanOrEqual(now);
       expect(lastBuildDate).not.toBe(pubDates[0]);
 

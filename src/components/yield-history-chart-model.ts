@@ -56,16 +56,16 @@ function computeSpikeAnnotations(
   for (let i = 0; i < chartData.length; i++) {
     const point = chartData[i];
     if (!Number.isFinite(point.apy) || point.apy <= SPIKE_MIN_APY) continue;
-    // The first observation of a source run has no same-run baseline.
-    if (point.sourceSwitch) continue;
 
     const windowStart = point.date - SPIKE_WINDOW_MS;
     const trailingPoints: YieldHistoryChartPoint[] = [];
     for (let j = i - 1; j >= 0; j--) {
       const candidate = chartData[j];
+      // A source switch is a sourceKey change; `sourceSwitch` alone also marks
+      // an is_best flip for the same source in source mode, which is not a
+      // baseline boundary.
       if (candidate.sourceKey !== point.sourceKey) break;
       trailingPoints.unshift(candidate);
-      if (candidate.sourceSwitch) break;
     }
 
     const windowPoints = trailingPoints.filter((p) => p.date >= windowStart && Number.isFinite(p.apy));

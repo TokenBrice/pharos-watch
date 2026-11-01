@@ -126,13 +126,10 @@ export function getTelegramLaunchContext(): {
   const launchPlatform = hash.get("tgWebAppPlatform") ?? search.get("tgWebAppPlatform") ?? webApp?.platform ?? null;
   const hasUnsupportedTelegramHost = launchPlatform?.toLowerCase() === "unknown";
   // Loading telegram-web-app.js creates WebApp with platform="unknown" in every browser.
-  // Only Telegram-provided launch data on a supported host justifies the long SDK poll;
+  // A supported Telegram host justifies the long SDK poll even before `tgWebAppData`
+  // arrives, so a launch that never yields a payload keeps its own missing state;
   // the Worker remains authoritative for validating the data's signature.
-  const hasTelegramLaunchHint = Boolean(
-    launchData
-    && launchPlatform
-    && !hasUnsupportedTelegramHost,
-  );
+  const hasTelegramLaunchHint = Boolean(launchPlatform && !hasUnsupportedTelegramHost);
   return {
     webApp,
     initData: hasUnsupportedTelegramHost ? "" : webApp?.initData ?? "",

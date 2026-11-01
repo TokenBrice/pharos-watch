@@ -24,6 +24,15 @@ describe("getTelegramLaunchContext", () => {
     expect(launch.launchInitData).toBe(signed);
   });
 
+  it("keeps the missing-launch state reachable on a supported host without a payload", () => {
+    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
+
+    const launch = getTelegramLaunchContext();
+    expect(launch.hasTelegramLaunchHint).toBe(true);
+    expect(launch.initData).toBe("");
+    expect(launch.launchInitData).toBe("");
+  });
+
   it("keeps an unsupported host in preview without trusting URL launch data", () => {
     window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=unknown");
 

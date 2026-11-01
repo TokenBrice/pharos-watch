@@ -55,6 +55,14 @@ describe("CoverageLensSummary", () => {
     expect(screen.queryByText(/\$0|0%/)).toBeNull();
   });
 
+  it("does not attach a known-market-cap basis to an empty result set", () => {
+    const rows = [row("known", 100)];
+    render(<CoverageLensSummary rows={rows} filteredRows={[]} search="none" filter="all" />);
+    const summary = screen.getByText(/in the current result set/).textContent ?? "";
+    expect(summary).toContain("n/a");
+    expect(summary).not.toContain("known market cap");
+  });
+
   it("never rounds a nonzero share down to 0%", () => {
     const rows = [row("big", 60_000_000_000), row("tiny", 1_000_000)];
     render(<CoverageLensSummary rows={rows} filteredRows={[rows[1]]} search="tiny" filter="all" />);

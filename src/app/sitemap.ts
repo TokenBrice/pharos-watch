@@ -32,6 +32,7 @@ import {
 } from "@/lib/depeg-event-page-data";
 import { API_ACCESS_PAGE_PATH, PUBLIC_PRIMARY_ROUTE_PATHS, PUBLIC_REFERENCE_ROUTE_PATHS } from "@/lib/public-route-inventory";
 import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
+import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 
 export const dynamic = "force-static";
 
@@ -89,6 +90,12 @@ function fundingLastModified(): Date {
 function homeLastModified(): Date {
   const asOfMs = Date.parse(TOP_STABLECOINS_DATASET._meta.asOfISO);
   return new Date(Math.max(lastEdited("/").getTime(), Number.isFinite(asOfMs) ? asOfMs : 0));
+}
+
+/** /safety-scores/ bakes the dated scores-latest preview, not only its route shell. */
+function safetyScoresLastModified(): Date {
+  const publishedAtMs = (getSafetyScoresPreview()?.publishedAtSec ?? 0) * 1000;
+  return new Date(Math.max(lastEdited("/safety-scores/").getTime(), Number.isFinite(publishedAtMs) ? publishedAtMs : 0));
 }
 
 /** The digest hub lists the digest set; its own newest publication dates it. */
@@ -176,7 +183,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/liquidity/": ["daily", 0.8],
     "/upcoming/": ["daily", 0.6],
     "/digest/": ["daily", 0.6, digestIndexLastModified],
-    "/safety-scores/": ["daily", 0.8],
+    "/safety-scores/": ["daily", 0.8, safetyScoresLastModified],
     "/safety-scores/map/": ["daily", 0.6],
     "/stability-index/": ["daily", 0.8],
     "/dependency-map/": ["daily", 0.7],

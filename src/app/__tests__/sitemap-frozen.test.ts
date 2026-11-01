@@ -12,6 +12,7 @@ import { PEG_HUB_PAGES } from "@/lib/peg-taxonomy";
 import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
 import { DIGEST_ENTRIES } from "@/lib/digest-registry";
 import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
+import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 import sitemapDates from "@/generated/sitemap-dates.json";
 
 const entries = sitemap();
@@ -54,7 +55,6 @@ describe("sitemap", () => {
     for (const path of [
       "/liquidity/",
       "/yield/",
-      "/safety-scores/",
       "/safety-scores/map/",
       "/stability-index/",
       "/dependency-map/",
@@ -66,6 +66,17 @@ describe("sitemap", () => {
         new Date(dates[path] ?? dates["/"]),
       );
     }
+  });
+
+  it("dates the safety-scores hub by the preview it bakes", () => {
+    const preview = getSafetyScoresPreview();
+    expect(preview).not.toBeNull();
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/safety-scores/`)?.lastModified).toEqual(
+      new Date(Math.max(
+        new Date(sitemapDates["/safety-scores/"]).getTime(),
+        (preview?.publishedAtSec ?? 0) * 1000,
+      )),
+    );
   });
 
   it("dates the digest hub by its newest publication", () => {

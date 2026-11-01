@@ -243,6 +243,12 @@ export interface ScreenerRow {
   lifecycle: StablecoinStatus;
   /** Mechanism archetype from the slim client registry (may be undefined). */
   mechanism: MechanismArchetype | null;
+  /**
+   * Whether the coin itself belongs to its resolved archetype. A commodity peg
+   * that only inherits a parent's archetype stays in the universe; a mechanism
+   * filter excludes it, matching the mechanism pages.
+   */
+  mechanismIncluded?: boolean;
   /** Governance type from `StablecoinClientMeta.flags`. */
   type: GovernanceType;
   /** Peg currency from `StablecoinClientMeta.flags`. */
@@ -424,7 +430,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     if (!passesMinimum(row.liquidityScore, filters.liquidityScoreMin)) return false;
     if (custodyModelSet && !custodyModelSet.has(row.custodyModel)) return false;
     if (mechanismSet) {
-      if (!row.mechanism || !mechanismSet.has(row.mechanism)) return false;
+      if (!row.mechanism || row.mechanismIncluded === false || !mechanismSet.has(row.mechanism)) return false;
     }
     if (typeSet && !typeSet.has(row.type)) return false;
     if (pegSet && !pegSet.has(row.peg)) return false;
