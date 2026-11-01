@@ -40,7 +40,7 @@
     }
   ],
   "launchPhase": "auditing",
-  "launchPhaseDetail": "Built by the Reflexer team as a successor to RAI, combining Liquity's redemption floor and Stability Pool with a RAI-style controller pinned to $1. Docs and the introductory post went live 2026-07-21 and describe a finished mainnet deployment configuration for seven collateral branches, but no contract addresses are published (the deployed-addresses registry and the RDToken FAQ entry both read TBD), the core repository is private, and the audits reference page states external security audits are in progress with audit-targeted commits still to be tagged. RAI Dollar was selected for the Ethereum Foundation Audit Subsidy Program on 2026-08-04, with the team describing the subsidy as funding independent audits ahead of a public testnet and launch. A public Sepolia testnet is live; Pharos holds RD at auditing until audit reports or mainnet launch.",
+  "launchPhaseDetail": "Built by the Reflexer team as a successor to RAI, combining Liquity's redemption floor and Stability Pool with a RAI-style controller pinned to $1. Docs and the introductory post went live 2026-07-21 and describe a finished mainnet deployment configuration for seven collateral branches, but no contract addresses are published (the deployed-addresses registry and the RDToken FAQ entry both read TBD), the core repository is private, and the audits reference page states external security audits are in progress with audit-targeted commits still to be tagged. RAI Dollar was selected for the Ethereum Foundation Audit Subsidy Program on 2026-08-04, with the team describing the subsidy as funding independent audits ahead of a public testnet and launch. On 2026-10-21 the team announced a partnership with Pashov Audit Group to perform a security audit, which the site lists as underway. The same post named a targeted Q1 2027 launch, the basis for Pharos's expected launch date. The site states that a public Sepolia testnet is live; Pharos holds RD at auditing until audit reports or mainnet launch.",
   "milestones": [
     {
       "date": "2026-07-21",
@@ -55,6 +55,13 @@
       "title": "Selected for the Ethereum Foundation Audit Subsidy Program",
       "description": "The team said the subsidy will help fund independent security audits as it prepares for public testnet and launch. No audit reports have been published yet.",
       "sourceUrl": "https://x.com/rai_dollar/status/2084630432319263214"
+    },
+    {
+      "date": "2026-10-21",
+      "type": "audit",
+      "title": "Pashov Audit Group engaged to audit RAI Dollar",
+      "description": "RAI Dollar announced a partnership with Pashov Audit Group to perform a security audit of the immutable RAI Dollar lending protocol and said this brings it closer to its targeted Q1 2027 launch.",
+      "sourceUrl": "https://x.com/rai_dollar/status/2113003066123546845"
     }
   ],
   "featuredContent": [

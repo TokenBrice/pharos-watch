@@ -39,7 +39,7 @@
     }
   ],
   "launchPhase": "beta",
-  "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; Fiserv contract negotiations still ongoing (not yet signed). Roughrider will be the first white-label deployment on Fiserv's FIUSD platform (Solana); FIUSD itself slipped from end-2025 to July 2026 (Fiserv CEO, June 3 2026), and that July window passed with no go-live announcement and no mention of FIUSD in Fiserv's Q2 2026 results. As of September 13 2026 the Bank of North Dakota's Roughrider page still describes a not-yet-started beta test under a non-binding, zero-cost agreement with total investment to be determined. No source has announced a start, so Pharos widened the September 2026 expectation to the year on September 13 2026. On October 1 2026 Fiserv announced its digital asset platform live with Roughrider Coin as the first financial-institution use case (VersaBank USA issuer and custodian, Fireblocks infrastructure, Solana), and on October 5 Bank of North Dakota named Gate City Bank, First International Bank & Trust, Capital Credit Union and North Star Community Credit Union as pilot partners in a voluntary, permissioned bank-to-bank pilot with no end date; the coin is not available to the public",
+  "launchPhaseDetail": "IC unanimously approved bank-to-bank pilot March 25; risk rated low-to-moderate; 10 local banks interested; cost-neutral model; Fiserv contract negotiations still ongoing (not yet signed). Roughrider will be the first white-label deployment on Fiserv's FIUSD platform (Solana); FIUSD itself slipped from end-2025 to July 2026 (Fiserv CEO, June 3 2026), and that July window passed with no go-live announcement and no mention of FIUSD in Fiserv's Q2 2026 results. As of September 13 2026 the Bank of North Dakota's Roughrider page still describes a not-yet-started beta test under a non-binding, zero-cost agreement with total investment to be determined. No source has announced a start, so Pharos widened the September 2026 expectation to the year on September 13 2026. On October 1 2026 Fiserv announced its digital asset platform live with Roughrider Coin as the first financial-institution use case (VersaBank USA issuer and custodian, Fireblocks infrastructure, Solana), and on October 5 Bank of North Dakota named Gate City Bank, First International Bank & Trust, Capital Credit Union and North Star Community Credit Union as pilot partners in a voluntary, permissioned bank-to-bank pilot with no end date; the coin is not available to the public. The Bank of North Dakota's Roughrider page, updated October 23 2026, calls the coin a U.S. dollar-backed token deposit issued by VersaBank USA as a permissioned Solana asset with Token-2022 freeze and clawback controls. Tokens burn automatically on arrival in the receiving institution's wallet, a design the bank says keeps token balances low.",
   "featuredContent": [
     {
       "type": "tweet",
@@ -61,6 +61,13 @@
       "title": "North Dakota Moves Forward With Stablecoin as Local Banks Express Interest",
       "description": "Post-IC-vote deep dive: risk rated low-to-moderate, cost-neutral model, 10 banks interested, Fiserv contract entering finalization.",
       "source": "Route Fifty"
+    },
+    {
+      "type": "article",
+      "url": "https://bnd.nd.gov/bank-of-north-dakota-launches-roughrider-coin-credits-collaboration-and-controlled-innovation/",
+      "title": "Bank of North Dakota launches Roughrider Coin, credits collaboration and controlled innovation",
+      "description": "Bank of North Dakota's October 5 2026 launch release naming its four pilot partners and the Fiserv, VersaBank USA and Solana roles.",
+      "source": "Bank of North Dakota"
     }
   ],
   "custodyModel": "institutional-regulated",
@@ -89,7 +96,7 @@
       "date": "2025-10-08",
       "type": "partnership",
       "title": "Fiserv confirmed as technology and platform partner",
-      "sourceUrl": "https://investors.fiserv.com/news-events/news-release-details/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+      "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/bank-north-dakota-and-fiserv-partner-launch-roughrider-coin"
     },
     {
       "date": "2026-03-09",
@@ -117,7 +124,7 @@
       "type": "delay",
       "title": "September pilot window passes with no Roughrider start announced",
       "description": "The September 2026 bank-to-bank pilot timing reaffirmed at the March 25 Industrial Commission vote passed without a start announcement: the Bank of North Dakota Roughrider page was last modified February 17 2026 and still describes a not-yet-started beta under a non-binding, zero-cost agreement, the Fiserv contract conclusion was never announced, and the FIUSD platform it depends on has no confirmed go-live.",
-      "sourceUrl": "https://bnd.nd.gov/roughrider/"
+      "sourceUrl": "https://web.archive.org/web/20260915235214/https://bnd.nd.gov/roughrider/"
     },
     {
       "date": "2026-10-01",
@@ -132,6 +139,13 @@
       "title": "Bank of North Dakota names four pilot partners for Roughrider Coin",
       "description": "Bank of North Dakota announced a bank-to-bank pilot with Gate City Bank, First International Bank & Trust, Capital Credit Union and North Star Community Credit Union, naming Fiserv, VersaBank USA and Solana as technology partners. Participation is voluntary and limited to approved institutions, access expands in phases, and no end date is set; the coin is not available to the public or merchants.",
       "sourceUrl": "https://bnd.nd.gov/bank-of-north-dakota-launches-roughrider-coin-credits-collaboration-and-controlled-innovation/"
+    },
+    {
+      "date": "2026-10-23",
+      "type": "milestone",
+      "title": "Bank of North Dakota describes Roughrider Coin as a permissioned token deposit",
+      "description": "The Bank of North Dakota's Roughrider Coin page now describes the coin as a U.S. dollar-backed token deposit for bank-to-bank transactions, issued by VersaBank USA as a permissioned asset on Solana with freeze and clawback controls. Tokens are minted after funds reach a designated FBO account and burn automatically on arrival in the receiving institution's wallet, a design the bank says keeps token balances low.",
+      "sourceUrl": "https://bnd.nd.gov/roughrider/"
     }
   ]
 }

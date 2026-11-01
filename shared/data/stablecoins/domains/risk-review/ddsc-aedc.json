@@ -1,0 +1,19 @@
+{
+  "id": "ddsc-aedc",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "DDSC white paper, version 1.0 (October 2025)",
+        "url": "https://www.ddsc.ai/DDSC_Whitepaper.pdf"
+      },
+      {
+        "label": "DDSC token contract on the ADI Chain explorer",
+        "url": "https://explorer.adifoundation.ai/address/0x1211f0cfe66739433c1330e21f4951B80E813479"
+      }
+    ],
+    "evidence": "Issuer documentation and on-chain bytecode agree. The DDSC white paper describes an upgradeable ERC-20 with compliance hooks whose transfers pass on-chain blacklisting and freeze checks, states that any wallet added to the official blacklist by the issuer's Compliance function is prohibited from sending or receiving DDSC, and says transfers and redemptions may be delayed, refused, frozen or reversed where UAE law, sanctions, fraud prevention or binding orders require. On ADI Chain (chain ID 36900, not a Pharos-registered chain) DDSC is the ERC-1967 proxy 0x1211f0cfe66739433c1330e21f4951b80e813479, whose totalSupply of 48,280,499 DDSC at block 1853210 on 2026-11-01 matches the issuer's transparency feed. Its implementation 0x275c28f62025cbec4901c1b2d5a86e4e61c748c1 has no verified source, but its function dispatcher contains selectors matching freezeAccount(address), unfreezeAccount(address), isFrozen(address), pause(), unpause(), burnFrom(address,uint256), COMPLIANCE_ROLE() and the UUPS upgradeToAndCall entry point, and timelock() returns 0xc826188a5e59281b50d655df81435aed19c06dc0. Selector matches are by signature hash, not verified source.",
+    "reviewer": "Claude weekly pre-launch sweep",
+    "reviewedAt": "2026-11-01"
+  }
+}

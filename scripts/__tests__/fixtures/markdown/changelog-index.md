@@ -11,14 +11,16 @@ description: "Weekly release notes for Pharos."
 
 ## 2026-10-26 to 2026-11-01
 
-Safety Score counts each open question once, and /coverage/ publishes the three numbers behind each grade.
+Safety Score ships seven releases to 10.41, and partial-chain supply is no longer published as complete.
 
-- **Open-question counts**: /coverage/ now opens with three server-counted numbers: open questions, not disclosed by issuers, and documentation gaps. Each is counted once at its root asset, and an older publication reads as unavailable, never zero.
-- **Report-cards API 9**: The report-cards API gains an additive openEvidence block with the same three totals, owner and reason rows, the issuer review window and per-card rows. Scores, grades and evidence levels stay untouched.
-- **Documentation gaps**: A policy-owned documentation class now marks the open questions whose resolution cannot materially move a score, under six published reasons and two strict bars. Pricing, causes, caps and evidence levels stay byte-identical, and a card reads "limited · documentation gaps only" only when every limiting witness is documentation.
-- **Missing-data registry v3**: The curation registry gains documentation and issuer bands, keys its questions through the shared counting authority, and drops a supplement only when every obligation it carries is already a compiled task, so the worklist shows 72 supplements instead of 469 on the current capture.
-- **Scores dataset v2**: The scores dataset display projection carries the same totals with their semantics, plus a machine-readable reason when a generation predates them, so missing counts never read as zero.
-- **Plainer gap language**: A cause-A pillar gap now reads "data pipeline unavailable" rather than implying an issuer omission, and one shared vocabulary names all three buckets on the page and in its explanations.
+- **Safety Score 10.41**: Seven releases, 10.35 to 10.41. 10.37 separates documentation gaps that cannot move a score, /coverage/ publishes open-evidence counts, and a rail withheld by a pipeline gap no longer yields a no-viable-exit verdict.
+- **Pricing 6.65**: Eight releases. DefiLlama fill prices and uncorroborated quotes exactly at the peg are rejected, the RedStone lane is retired after its gateways shut, and Kraken and Coinbase books and Curve routes add second sources.
+- **Depeg detection 6.42**: Four releases. A lone uncorroborated print no longer opens a backfilled episode, each DDR family shows one public incident, and disputed rows leave counts. DDR 5.1 stops reading unavailable supply as no break.
+- **Partial-chain supply**: Supply history, datasets and the homepage keep each reading's partial-chain evidence, so a total missing chains is never shown as complete; 24h, 7d and market-cap changes are withheld on partial coverage.
+- **Mint/burn admission gate**: Mint/burn 6.31 to 6.33: new issuance legs publish only once their scan history covers the longest window, a stalled leg is quarantined alone, and USDT issuance on Tron is tracked through the gate.
+- **Catalog lifecycle**: Thirteen coins froze, including USDN after Noble's wind-down and dTRINITY's dUSD and sdUSD. swanUSD joined the active catalog and bUSD0 returned (388 active, from 395). EURXT, AEDZ, ZLUSD and DDSC joined /upcoming/.
+- **Compliance and crawlable evidence**: 101 MiCA and GENIUS rows were backfilled for 96 active coins, and the OCC's final GENIUS rule is recorded. Profiles and chain hubs list contract addresses in static HTML, and public datasets become citable.
+- **Fail-closed sweep**: A verified sweep fixed 142 fail-closed findings in Worker, cron, API, Telegram and shared code. Unavailable chain totals and portfolio exposure no longer show $0, and pages keep their data through refresh errors.
 
 <a id="week-2026-10-25"></a>
 <a id="2026-10-25"></a>
@@ -40,7 +42,7 @@ DDR v5 condemns a coin only on terminal evidence, and Safety Score ships twelve 
 ## Monthly archives
 
 - [November 2026](https://pharos.watch/changelog/archive/2026-11/)
-  - [2026-11-01: Safety Score counts each open question once, and /coverage/ publishes the three numbers behind each grade.](https://pharos.watch/changelog/archive/2026-11/#week-2026-11-01)
+  - [2026-11-01: Safety Score ships seven releases to 10.41, and partial-chain supply is no longer published as complete.](https://pharos.watch/changelog/archive/2026-11/#week-2026-11-01)
 - [October 2026](https://pharos.watch/changelog/archive/2026-10/)
   - [2026-10-25: DDR v5 condemns a coin only on terminal evidence, and Safety Score ships twelve releases to 10.34.](https://pharos.watch/changelog/archive/2026-10/#week-2026-10-25)
   - [2026-10-18: Safety Score reaches 10.22 with Morpho lender books as Backing, and the site adopts one product grammar.](https://pharos.watch/changelog/archive/2026-10/#week-2026-10-18)

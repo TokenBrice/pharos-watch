@@ -1,4 +1,52 @@
 {
+  "eurxt-caceis": {
+    "title": "A Euro Token on CACEIS Bank's Balance Sheet",
+    "text": "EURXT is the euro e-money token Crédit Agricole S.A. launched on July 1 2026, issued on Ethereum by CACEIS Bank S.A. under a MiCA white paper. Only professional clients of CACEIS Bank can buy it from the issuer, with a 10,000 EURXT minimum, yet any Ethereum address that is not blacklisted can hold and transfer it. On November 1 2026, however, one wallet held the entire supply, which has stood at 54,366,000 EURXT since September 25 2026. Crédit Agricole describes the reserve as cash on CACEIS Bank's balance sheet, but the white paper allows up to 70% in highly liquid financial instruments. No independent reserve {{term:attestation}}attestation{{/term}} had been located by November 1 2026, and stable-xt.io computes its reserve figure from the token's on-chain supply. A single-key wallet can blacklist a holder and seize its balance, a second can pause all transfers, and a third can replace the contract logic, whose deployed source is unverified. Pharos lists EURXT pre-launch because no admitted source prices it. Under the white paper, holders are unsecured creditors of CACEIS Bank, with par {{term:redemption}}redemption{{/term}} and no issuer fee from 9:00 to 17:00 on French bank business days, after KYC if they are not its clients.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
+  },
+  "aedz-zand": {
+    "title": "Zand Trust's Dirham Payment Token",
+    "text": "AEDZ is the dirham payment token of Zand Trust, a wholly owned Zand Bank subsidiary licensed by the Central Bank of the UAE, issued on Ethereum and Solana. Exactly 1 billion of the roughly 1.006 billion AEDZ on chain on November 1 2026 sat in eleven wallets, each funded by one transfer on September 30 or October 7 2026 and unmoved since. The issuer counts those balances as circulating, and its daily feed showed 1.01 billion AEDZ against AED 1.01 billion of reserves on October 30 2026. AJMS LG's {{term:attestation}}attestation{{/term}} as of October 1 2026 found AED 806.33 million of reserves against 806.30 million AEDZ, mostly term deposits. Pharos lists AEDZ pre-launch because no source prices it, no DEX pool exists and no admitted path sums supply across both chains, though the issuer says it is available on partner exchanges. On Ethereum one admin address has held every role since deployment and can freeze wallets, force transfers, burn from any holder and replace the implementation. Onboarded institutions {{term:redemption}}redeem{{/term}} 1:1 through Zand Bank's corporate banking platform, paying a fee of 10 bps or AED 200, whichever is higher.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
+  },
+  "ddsc-aedc": {
+    "title": "A Licensed Dirham Token on ADI Chain",
+    "text": "DDSC is a dirham payment token licensed by the Central Bank of the UAE and issued on ADI Chain, a zk-rollup Layer 2 that settles to Ethereum. Its October 2025 white paper named the issuer AEDC Stable Coin L.L.C., owned 34% by Sirius Investment Holding and 33% each by IHC Capital Holding and 1968B SPV. The DDSC site now names AEDC Stable Coin Network and Distribution L.L.C. as the licensed issuer. Authorized Distribution Partners, not the issuer, onboard holders after KYC/KYB checks and process 1:1 issuance and {{term:redemption}}redemption{{/term}} to UAE bank accounts. By November 1 2026 the contract had minted 345.7 million DDSC and burned 297.5 million, leaving 48,280,499 across 87 addresses. The white paper commits 100% AED cash in segregated escrow at qualified banks it does not name. The issuer's feed reported reserves equal to supply on November 1 2026 and names Crowe as attestor, but posts no {{term:attestation}}attestation{{/term}} report. Under the white paper, transfers can be frozen or reversed where law, sanctions or fraud prevention require, and the implementation, whose source is unverified, carries freeze, pause and upgrade selectors. As long as DDSC lives on ADI Chain, which is outside Pharos's chain registry, its deployment and supply cannot enter Pharos runtime data.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
+  },
+  "zlusd-zelle": {
+    "title": "Zelle's Dollar Token, Issued by Anchorage",
+    "text": "ZelleUSD is the dollar stablecoin that Early Warning Services, operator of the Zelle network, unveiled on June 11 2026 in a release that named no issuer, chain or launch date. The Solana mint identifies Anchorage Digital Bank N.A. as issuer. All 30 mint transactions were signed by the key that also mints the Anchorage-issued USDPT and USDGO, and the token metadata, hosted by Anchorage, names the bank as issuer for Zelle. Supply was 137,650.11 ZLUSD across 14 funded wallets on November 1 2026. No source prices it and no DEX pool exists, so Pharos lists it pre-launch. The permanent delegate, also the mint authority, signed all nine burns from holder accounts without the owners' signatures, 20,612 ZLUSD in total, and can burn or move any holder's balance. A freeze authority has frozen the accounts of five specific wallets, none since thawed, and a pause authority can halt transfers. Anchorage's covered stablecoin terms back every stablecoin the bank issues with one aggregate reserve in a South Dakota express trust. The announcement and token metadata disclose no ZLUSD reserve composition, custodian or {{term:attestation}}attestation{{/term}}. The terms let ZLUSD move to addresses outside Anchorage's client base, but the bank issues to and {{term:redemption}}redeems{{/term}} from its own clients only.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
+  },
+  "dotusd-polkadot": {
+    "title": "Polkadot's OpenGov Dollar, Minted Against USDT",
+    "text": "dotUSD is a dollar stablecoin created by Polkadot OpenGov referendum 1944 and live on Asset Hub since October 8 2026. The Polkadot Community Foundation's proposal asked the Treasury to seed a DOT/dotUSD pool with $2.5 million of DOT and $2.5 million of USDT minted into dotUSD. In this first phase, dotUSD can be minted and redeemed one-to-one only against USDT, through a capped {{term:psm}}peg stability module{{/term}}; DOT-collateral vaults are left to a later phase. The DOT in the pool is swap liquidity, not collateral. On October 26 the Polkadot Technical Fellowship disclosed a cross-consensus messaging (XCM) bug that had removed about 4.06 million dotUSD from the recorded supply while the tokens stayed in the pool. Arbitrage against the resulting imbalance cost the Treasury's liquidity position an estimated $1.3 million. Referendum 1961 recalculated the recorded supply from existing balances on October 30, without changing any holder's balance. Asset Hub showed 4.21 million dotUSD across 60 accounts on November 1 2026. Pharos tracks it pre-launch because no admitted source prices it: CoinGecko's dotusd preview carries a null price and DefiLlama has no listing. Until DOT-collateral vaults ship, the declared backing is entirely USDT, so dotUSD inherits Tether's issuer controls.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
+  },
+  "usdrf-realfi": {
+    "title": "RealFi's Tranched Credit Dollar on Cardano",
+    "text": "USDrf is RealFi's dollar token on Cardano, launched on mainnet on October 1 2026 alongside sUSDrf, its junior staked token. Supply was 5.40 million USDrf on November 1 2026. The backing is an off-chain book of Treasury bills, money market funds, floating-rate credit, CLO ETFs and private credit. RealFi publishes allocation ranges, which describe strategy rather than verified current holdings. Protocol first-loss reserves and sUSDrf absorb losses before USDrf does. Pharos classes that mechanism as a credit fund, which places USDrf among stable-value investments rather than in the core stablecoin totals. Direct minting and {{term:redemption}}redemption{{/term}} are limited to whitelisted institutions under an Institutional Minting Agreement, through a human-approved first-in, first-out queue with daily and monthly limits. RealFi's docs name TxPipe, Anastasia Labs and Halborn as auditors and HT Digital as reserve {{term:attestation}}attestation{{/term}} provider, but none of their reports had been published by November 1. Pharos tracks it pre-launch because no admitted source prices it: CoinGecko's realfi-usdrf preview has a null price, and DefiLlama's quote is a generic fallback shared by 90 assets rather than a market price. Holders outside the institutional whitelist have no direct redemption; they exit by selling on decentralized exchanges.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
+  },
   "swanusd-swan": {
     "title": "An anonymous wstETH CDP on Monolith",
     "text": "swanUSD is SwanDAO's dollar stablecoin, minted against wstETH in a single Monolith Lender built by the Inverse Finance team. No legal entity, jurisdiction, team page or terms of service is published, and the only risk disclosure is Monolith's protocol-level risks page rather than an issuer statement. Governance is nominally a DAO, but one 3-of-6 Safe holds 80% of sSWAN votes, manages the Lender, and owns the entire Curve pool LP position. Borrowers post wstETH at an 85% collateral factor. Interest-free debt can be redeemed against at the oracle price less 1.75%; paid debt pays a variable rate, and sSwanUSD stakers receive half of that interest. A USDS peg-stability reserve held as sUSDS mints and burns 1:1, caps sells at its balance, and stops buying at the 2030 immutability deadline. Published audits cover the core contracts but not the DAO stack, the exact deployed bytecode's audit scope is not established, and swanUSD's own contracts sit outside Monolith's live bounty. Exit depth rests on one thin Curve pool and a PSM reserve that shrinks with every sell.",
@@ -94,8 +142,11 @@
   },
   "czkc-czkc": {
     "title": "Czech koruna reserve design in testing",
-    "text": "CZKC a.s. describes a Czech koruna token fully backed by CZK reserves, with rCZKC representing those reserves on-chain. The developer book offers testnet guidance and plans Ethereum, Arbitrum and Gnosis, but leaves production entrypoints and implementations unpublished. CzechInvest named CZKC in its February 2026 sandbox testing cohort; that selection is not MiCA authorization. Pharos records the project as pre-launch without inventing an announcement or launch date. Production identity, binding redemption terms and independent reserve assurance remain unresolved.",
-    "updatedAt": "2026-10-02"
+    "text": "CZKC a.s. describes a Czech koruna token fully backed by CZK reserves, with rCZKC representing those reserves on-chain. The developer book offers testnet guidance and plans Ethereum, Arbitrum and Gnosis, but leaves production entrypoints and implementations unpublished. CzechInvest named CZKC in its February 2026 sandbox testing cohort; that selection is not MiCA authorization. CZKC was first presented publicly in June 2023, and no commercial launch date has been confirmed. Production identity, binding redemption terms and independent reserve assurance remain unresolved.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
   },
   "earnusd-lido": {
     "title": "Mellow strategies with conditional USDC exits",
@@ -147,8 +198,11 @@
   },
   "gbp-vvtx": {
     "title": "Sterling payments programme on a proprietary chain",
-    "text": "VVTX Limited proposes a fully reserved, 1:1 GBP stablecoin alongside a custodial wallet and planned debit card on a proprietary UK Layer-1. The FCA selected VVTX for stablecoin sandbox testing in February 2026, and the issuer continues to invite a waitlist. GBP-VVTX is Pharos's descriptive display label because no official token ticker is published. Technical chain identifiers, production contracts and direct holder-redemption terms are undisclosed. Neither card spending nor sandbox selection proves public token circulation, final authorization or an executable par exit.",
-    "updatedAt": "2026-10-02"
+    "text": "VVTX Limited proposes a fully reserved, 1:1 GBP stablecoin alongside a custodial wallet and planned debit card on a proprietary UK Layer-1. The FCA selected VVTX for stablecoin sandbox testing in February 2026, and the issuer continues to invite a waitlist. AF Payments Limited, an FCA-authorized e-money institution, has controlled VVTX Limited since August 5 2026, holding 75% or more of its shares and voting rights. Two AF Payments directors joined VVTX's board that day. GBP-VVTX is Pharos's descriptive display label because no official token ticker is published. Technical chain identifiers, production contracts and direct holder-redemption terms are undisclosed. Neither card spending, sandbox selection nor a regulated parent proves public token circulation, final authorization or an executable par exit.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
   },
   "gbpa-agant": {
     "title": "Business-only direct sterling redemption",
@@ -598,9 +652,12 @@
     "factsAsOf": "2026-10-15"
   },
   "usdvb-versabank": {
-    "title": "VersaBank’s conditional dollar deposit-token pilot",
-    "text": "VersaBank USA announced an internal USDVB pilot on August 26, 2025, and on October 15, 2026 announced a commercial phase under the VUSD brand, naming no chain or date. Each token represents one U.S. dollar deposited with the bank, with issuance and redemption through VersaVault. This exposes holders to a bank deposit rather than a separately segregated stablecoin reserve trust. The September 2026 filing still seeks regulatory confirmation of deposit-insurance eligibility and the ability to pay interest. Commercial launch, ordinary external-holder rights and official deployments must be established before active admission.",
-    "updatedAt": "2026-10-18"
+    "title": "VersaBank's Tokenized Dollar Deposit",
+    "text": "VUSD is the commercial name for VersaBank USA's tokenized dollar deposit, piloted internally as USDVB from August 2025. Each token represents one U.S. dollar deposited with the bank, with issuance and {{term:redemption}}redemption{{/term}} through VersaVault. This exposes holders to a bank deposit rather than a separately segregated stablecoin reserve trust. VersaBank's October 15 2026 release announcing the commercial phase calls VUSD interest-paying and FDIC insurance-eligible, the two features its September 2026 filing had asked regulators to confirm. The release says the phase is in full compliance with U.S. federal banking regulations but names no regulator decision, chain or launch date. It also says VersaBank's technology can freeze, seize and burn tokenized deposits that regulators deem illegal. Since October 1 2026 VersaBank USA has served as issuer of the Bank of North Dakota's Roughrider Coin on Fiserv's digital asset platform, responsible for minting, burning, custody and reserve management. VersaBank's announcement of that role did not mention VUSD or USDVB. The bank plans exchange listings as soon as feasible, but transfer and redemption rights for ordinary external holders, including minimums, fees, timing and capacity, remain unpublished.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
   },
   "usdx-axis": {
     "title": "Venue-held hedges with restricted primary access",
@@ -612,11 +669,11 @@
   },
   "ustx-tx": {
     "title": "Brale-issued dollar for tx settlement",
-    "text": "tx launched USTX on October 20, 2026 as a native settlement asset for tokenized stocks, ETFs and other real-world assets, with Brale as issuer. Users mint it on the tx chain against USDC deposited from Ethereum, Solana, Base or Polygon, and Brale states 1:1 backing in US dollar reserves. Brale's program-level policy describes segregated reserves, daily reconciliation and monthly independent attestations, held in short Treasury bills, government money market funds and bank deposits, but none of that is yet tied to USTX-specific allocations or a retrieved reserve report. No native asset address, decimals or supply figure has been published. Brale supports administrative token restrictions generally, but the controls enabled for USTX remain unverified. USTX is live, yet Pharos keeps it pre-launch until the native asset and an identity-bound price and circulating-supply path can be verified.",
-    "updatedAt": "2026-10-25",
+    "text": "tx launched USTX on October 20, 2026 as a native settlement asset for tokenized stocks, ETFs and other real-world assets, with Brale as issuer. Users mint it on the tx chain against USDC deposited from Ethereum, Solana, Base or Polygon, and Brale states 1:1 backing in US dollar reserves. Brale's program-level policy describes segregated reserves, daily reconciliation and monthly independent attestations, held in short Treasury bills, government money market funds and bank deposits, but none of that is yet tied to USTX-specific allocations or a retrieved reserve report. Brale has published no asset details, but the chain shows that USTX was created on October 8 2026, with 6 decimals and clawback enabled. An issuer-owned extension contract can also pause transfers and blacklist addresses. Supply was 4,833 USTX across 55 holder addresses on November 1 2026. USTX is live and verifiable on its own chain, yet Pharos keeps it pre-launch: the tx chain is not one Pharos supports, and no price listing or USTX {{term:redemption}}redemption{{/term}} terms have been published.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-25"
+    "factsAsOf": "2026-11-01"
   },
   "weur-aplauz": {
     "title": "Aplauz euro token awaiting verified circulation",
@@ -2978,11 +3035,11 @@
   },
   "gelt-tether": {
     "title": "Georgia's Lari, Tether's Rails",
-    "text": "GEL₮ is Tether's pre-launch Georgian Lari stablecoin, announced on May 25, 2026 alongside the Government of Georgia and framed by Tether as the country's official stablecoin. The framing is the story: a government placing its national currency on a private issuer's digital rails, while the National Bank of Georgia runs a separate digital-lari pilot. The legal scaffolding is real. NBG Order No. 52/04 lets licensed issuers mint Lari-pegged tokens with prior NBG consent, 100% reserves, full redemption rights and a GEL 500,000 capital floor, and was built for compatibility with the US GENIUS Act. Everything an assessment needs is still blank: no chains, no contracts, no reserve {{term:attestation}}attestation{{/term}}, no named {{term:custody}}custodian{{/term}}, no launch date, and no milestone recorded since the announcement. The prime minister and the central bank's president have both endorsed it, but Pharos cannot yet price the Lari peg. Until reserve disclosures appear, the 'official' label describes political sponsorship rather than how the tokens will be backed.",
-    "updatedAt": "2026-10-19",
+    "text": "GEL₮ is Tether's pre-launch Georgian Lari stablecoin, announced on May 25, 2026 alongside the Government of Georgia and framed by Tether as the country's official stablecoin. The framing is the story: a government placing its national currency on a private issuer's digital rails, while the National Bank of Georgia runs a separate digital-lari pilot. The legal scaffolding is real. NBG Order No. 52/04 lets licensed issuers mint Lari-pegged tokens with prior NBG consent, 100% reserves, full redemption rights and a GEL 500,000 capital floor, and was built for compatibility with the US GENIUS Act. Everything an assessment needs is still blank: no chains, no contracts, no reserve {{term:attestation}}attestation{{/term}}, no named {{term:custody}}custodian{{/term}}, no launch date, and no milestone recorded since the announcement. The prime minister and the central bank's governor have both endorsed it, but Pharos cannot yet price the Lari peg. Until reserve disclosures appear, the 'official' label describes political sponsorship rather than how the tokens will be backed.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "eur-qivalis": {
     "title": "Thirty-Seven Banks, One Euro",
@@ -2994,11 +3051,11 @@
   },
   "pusd-polaris": {
     "title": "Pre-Launch pETH CDP Dollar With Earn Pool Yield",
-    "text": "USDp (formerly pUSD) is Polaris's pre-launch Liquity-style {{term:cdp}}CDP{{/term}} stablecoin on Ethereum, minted against pETH collateral at a 115% minimum collateral ratio. Polaris's documentation describes an immutable core with no admin privileges and no freeze or blacklist function. A bounded Stewardship role still sits above it: Stewardship can change interest rate splits and flow recipients and replace faulty oracle feeds, and the docs do not say who holds it or whether a timelock applies. The {{term:yield-bearing}}yield-bearing{{/term}} angle comes from inside the protocol. USDp deposited in the Earn Pool absorbs liquidations and earns a share of minter interest plus pETH liquidation gains, so each liquidation converts part of a deposit's dollars into ETH exposure. Holder yield therefore tracks borrowing demand and liquidation activity rather than Treasury rates. A public testnet runs on Sepolia, the app is labelled Alpha, and Polaris's docs say no production addresses, audit status or launch status can be inferred from testnet values. Polaris's former roadmap placed professional audits ahead, and a $1M angel round reported in September 2026 came without a mainnet date. Until mainnet contracts and audits exist, USDp's design claims cannot be checked against deployed code.",
-    "updatedAt": "2026-10-19",
+    "text": "USDp (formerly pUSD) is Polaris's pre-launch Liquity-style {{term:cdp}}CDP{{/term}} stablecoin on Ethereum, minted against pETH collateral at a 115% minimum collateral ratio. Polaris's documentation describes an immutable core with no admin privileges and no freeze or blacklist function. A bounded Stewardship role still sits above it: Stewardship can change interest rate splits and flow recipients and replace faulty oracle feeds, and its decisions run through sPOLAR (formerly vePOLAR) stakers with no timelock disclosed. The {{term:yield-bearing}}yield-bearing{{/term}} angle comes from inside the protocol. USDp deposited in the Earn Pool absorbs liquidations and earns a share of minter interest plus pETH liquidation gains, so each liquidation converts part of a deposit's dollars into ETH exposure. Holder yield therefore tracks borrowing demand and liquidation activity rather than Treasury rates. A public testnet runs on Sepolia, the app is labelled Alpha, and Polaris's docs say no production addresses, audit status or launch status can be inferred from testnet values. Polaris's former roadmap placed professional audits ahead, and a $1M angel round reported in September 2026 came without a mainnet date. Until mainnet contracts and audits exist, USDp's design claims cannot be checked against deployed code.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "pgold-polaris": {
     "title": "Synthetic Gold Minted Against pETH",
@@ -3018,11 +3075,11 @@
   },
   "klarnausd-klarna": {
     "title": "KlarnaUSD testnet stablecoin on Tempo",
-    "text": "Klarna's planned USD stablecoin is built on Stripe's Bridge Open Issuance infrastructure for the Tempo L1, and it remains on Tempo's testnet. The November 2025 announcement targeted a mainnet launch in 2026 and cited a base of 114 million customers and $112B in annual GMV; no launch date has followed. Tempo's mainnet went live on March 18, 2026 with a Machine Payments Protocol aimed at AI-agent payments and launch partners including Anthropic, Mastercard, Visa and Revolut; Klarna was not among them. World Liberty Financial's USD1 became Tempo's first native stablecoin on May 8. The regulatory groundwork is further along than the product: Bridge received a conditional OCC national bank trust charter in February 2026 that would let it {{term:custody}}custody{{/term}} crypto assets, issue stablecoins and manage reserves as a federally regulated entity. Reserve composition, {{term:attestation}}attestation{{/term}} and {{term:redemption}}redemption{{/term}} terms remain unpublished pending mainnet. Since the announcement, Klarna's Q1 and Q2 2026 earnings, Stripe Sessions 2026 partner announcements and Bridge's live issuer list have all omitted KlarnaUSD.",
-    "updatedAt": "2026-10-19",
+    "text": "Klarna's planned USD stablecoin is built on Stripe's Bridge Open Issuance infrastructure for the Tempo L1, and it remains on Tempo's testnet. The November 2025 announcement targeted a mainnet launch in 2026 and cited a base of 114 million customers and $118 billion in annual GMV; no launch date has followed. Tempo's mainnet went live on March 18, 2026 with a Machine Payments Protocol aimed at AI-agent payments and launch partners including Anthropic, Mastercard, Visa and Revolut; Klarna was not among them. World Liberty Financial's USD1 became Tempo's first native stablecoin on May 8. The regulatory groundwork is further along than the product: Bridge received a conditional OCC national bank trust charter in February 2026 that would let it {{term:custody}}custody{{/term}} crypto assets, issue stablecoins and manage reserves as a federally regulated entity. Reserve composition, {{term:attestation}}attestation{{/term}} and {{term:redemption}}redemption{{/term}} terms remain unpublished pending mainnet. Since the announcement, Klarna's Q1 and Q2 2026 earnings, Stripe Sessions 2026 partner announcements and Bridge's live issuer list have all omitted KlarnaUSD.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "trusd-tori": {
     "title": "Tori's Delta-Neutral Synthetic Dollar",
@@ -4402,11 +4459,11 @@
   },
   "hkdap-anchorpoint": {
     "title": "Anchorpoint's HKMA-Licensed HKD Stablecoin",
-    "text": "HKDAP is Anchorpoint's HKD stablecoin, issued under an HKMA stablecoin issuer licence effective April 10 2026 and live on Ethereum since August 12 in a beta open only to institutions, corporate clients and professional investors. OSL and HashKey distributed it first; within two weeks Standard Chartered became the first bank distributor, followed by Finloop, Yunfeng Financial and a Bank of East Asia memorandum. Payment Asia and later Finloop with QFPay HK reported live payment transactions, without disclosing amounts. The float roughly doubled in the month to September 27, to 1,006,890 HKDAP across ten holder addresses, still under US$130,000. No accepted source returns a price for it, which keeps the coin outside Pharos runtime coverage. Anchorpoint's transparency hub publishes weekly unaudited reserve and circulation figures; independent {{term:attestation}}attestation{{/term}} is promised only after full launch. BlockSec's August 14 review of the deployed contract found that the KYC proof is discarded, so any proof, including an empty string, passes. A single key can mint, burn, pause or freeze, two keys control all upgrades and roles, and no timelock guards any of those powers. Build artifacts point to a pre-production deployment. The durable constraint is that contract: until it is upgraded or replaced, the licensed token runs on code carrying those findings.",
-    "updatedAt": "2026-10-19",
+    "text": "HKDAP is Anchorpoint's HKD stablecoin, issued under an HKMA stablecoin issuer licence effective April 10 2026. Standard Chartered Trustee (Hong Kong) Limited holds its HKD reserve assets on trust for holders. It has been live on Ethereum since August 12, when Anchorpoint's own release opened Beta Access through authorised distributors for institutions, corporate clients and professional investors. Supply reached 103.1 million HKDAP across 14 holder addresses on November 1 2026, roughly a hundred times the late-September float. About 87.0 million of that was minted on October 30. The same day Anchorpoint announced exploratory partnerships with Mastercard and Visa, starting with settlement options for card issuers, but gave no launch date or volumes. No accepted source returns a price for HKDAP, which keeps the coin outside Pharos runtime coverage. Anchorpoint's unaudited weekly figures for October 30 show reserves slightly above circulation; independent {{term:attestation}}attestation{{/term}} is promised only after full launch. BlockSec's August 14 review of the deployed contract found that the KYC proof is discarded, so any proof, including an empty string, passes. A single key can mint, burn, pause or freeze, two keys control all upgrades and roles, and no timelock guards any of those powers. Build artifacts point to a pre-production deployment. The durable constraint is that contract: until it is upgraded or replaced, the licensed token runs on code carrying those findings.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "hkd-hsbc": {
     "title": "HSBC's PayMe-Bound HKD Stablecoin",
@@ -4418,19 +4475,19 @@
   },
   "okrw-hashed": {
     "title": "The Native Won of Hashed's Maroo L1",
-    "text": "OKRW is the planned Korean Won stablecoin of Maroo, the Layer 1 that Hashed Open Finance built specifically to host it, where it doubles as the network's native fee token. Maroo is presented as the first sovereign L1 purpose-built for KRW stablecoins, with a dual-track design: regulated activity passes pre-approval and compliance checks, while open-path activity stays permissionless. The testnet went live in May 2026 with OKRW as its native token, and mainnet is targeted before the end of 2026. The design promises 1:1 Korean Won fiat reserves, but Pharos holds no reserve attestation, holder terms or redemption route for it yet, so there is nothing to score. The durable constraint is that the token's credibility will rest on reserve and redemption terms that are not yet public.",
-    "updatedAt": "2026-10-19",
+    "text": "OKRW is the planned Korean Won stablecoin of Maroo, the Layer 1 that Hashed Open Finance built specifically to host it, where it doubles as the network's native fee token. Maroo is presented as the first sovereign L1 purpose-built for KRW stablecoins, with a dual-track design: regulated activity passes pre-approval and compliance checks, while open-path activity stays permissionless. The testnet went live in May 2026 with OKRW as its native token, and mainnet is targeted before the end of 2026. The design specifies a KRW peg, but the issuer and reserve arrangements are not yet decided and no redemption terms are published, so there is nothing to score. The durable constraint is that the token's credibility will rest on reserve and redemption terms that are not yet public.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "arc-anq": {
     "title": "A Rupee Stablecoin Without a Green Light",
-    "text": "ARC is Anq's proposed Indian rupee stablecoin, announced with Polygon in November 2025 as India's first regulated INR token and designed for a 1:1 peg backed by cash, fixed deposits and Indian government securities. The design keeps the token inside India's regulated payments perimeter: issuance runs through business accounts, transfers are whitelisted, and Uniswap v4 whitelisting carries the compliance check onto a public chain. It is pitched as a two-tier complement to the RBI's digital rupee and as a brake on USD liquidity outflow. The tentative January 2026 debut passed with no RBI confirmation and no live supply. In July 2026 the RBI told a Parliamentary Standing Committee that it favors barring banks and regulated entities from private stablecoins, rupee-backed ones included. With no source supporting a 2026 launch, Pharos removed the launch expectation in September 2026. The architecture is settled on paper; ARC's constraint is whether the RBI will let a private rupee stablecoin operate beside its CBDC.",
-    "updatedAt": "2026-10-19",
+    "text": "ARC is Anq's proposed Indian rupee stablecoin, built with Polygon and designed for a 1:1 peg backed by cash, fixed deposits and Indian government securities. A November 2025 CoinDesk report citing unnamed sources described it as India's first regulated INR token. The design keeps the token inside India's regulated payments perimeter: issuance runs through business accounts, transfers are whitelisted, and Uniswap v4 whitelisting carries the compliance check onto a public chain. It is pitched as a two-tier complement to the RBI's digital rupee and as a brake on USD liquidity outflow. The tentative January 2026 debut passed with no RBI confirmation and no live supply. In July 2026 the RBI told a Parliamentary Standing Committee that it favors barring banks and regulated entities from private stablecoins, rupee-backed ones included. With no source supporting a 2026 launch, Pharos removed the launch expectation in September 2026. The architecture is settled on paper; ARC's constraint is whether the RBI will let a private rupee stablecoin operate beside its CBDC.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "brl-b3": {
     "title": "B3's Settlement Real, Still in Testing",
@@ -5377,12 +5434,12 @@
     "factsAsOf": "2026-10-19"
   },
   "rusd-revolut": {
-    "title": "Revolut Dollar Precedent From EURR",
-    "text": "Revolut's USD stablecoin remains unconfirmed, and the clearest evidence about its likely shape comes from the August 2026 launch of its euro sibling. Revolut Digital Assets Europe received a MiCA CASP licence from CySEC in October 2025, and Revolut operates a Lithuanian EMI that earlier reporting treated as its future e-money-token issuer. When EURR shipped on August 26, the issuer of record was instead Bridge Building S.A., the Luxembourg entity of Stripe-owned Bridge, with Revolut Digital Assets Europe authorised through CySEC. The nearest live precedent for a Revolut dollar token is therefore a third-party issuer relationship rather than in-house issuance. On September 2 2026 the OCC conditionally approved Revolut Bank US, N.A., with opening targeted for the first half of 2027. The decision records that the bank plans to offer Revolut-branded stablecoins through a third party, will not be the issuer, and will not manage reserves. Pharos moved the expected launch to 2027 on the strength of that timeline. Ticker, chain selection, issuer entity, and reserve disclosure model all remain unannounced, so {{term:redemption}}redemption{{/term}} terms for a USD token cannot yet be assessed.",
-    "updatedAt": "2026-10-19",
+    "title": "A Revolut-Branded Dollar With Bridge as Issuer",
+    "text": "Revolut's EEA crypto terms of September 15 2026 name USDR, beside the live euro EURR, as one of two Revolut-branded e-money tokens. They make Bridge Building S.A., Stripe-owned Bridge's e-money institution in Luxembourg, the sole legal issuer, with exclusive financial liability for the reserves. Revolut Digital Assets Europe, authorised by CySEC, acts only as offeror. A holder's {{term:redemption}}redemption{{/term}} right runs directly against Bridge, at par and free of charge. On September 2 2026 the OCC conditionally approved Revolut Bank US, N.A., with opening targeted for the first half of 2027. The decision records that the bank plans to offer Revolut-branded stablecoins through a third party, will not be the issuer, and will not manage reserves. Pharos moved the expected launch to 2027 on the strength of that timeline. Reserve composition, custodians and safeguarding arrangements for USDR are unpublished. ESMA's register listed a white paper for EURR but none for USDR on October 30 2026, and no USDR contract, chain or launch date had been published. Under Revolut's own terms, no Revolut e-money token is offered before its white paper is published.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "brl-itau": {
     "title": "Brazil's Biggest Private Bank, Still Undecided",
@@ -5962,11 +6019,11 @@
   },
   "tgld-tenbin": {
     "title": "Synthetic Gold Debt-Note",
-    "text": "tGLD is Tenbin's tokenized gold note, but unlike PAXG or XAUT it holds no vaulted metal. Each token is a Tenbin AssetCo (BVI) debt-note representing the U.S.-dollar value of one troy ounce of gold, collateralized by USDC and hedged with CME gold futures rather than allocated bullion. Mint and {{term:redemption}}redemption{{/term}} are KYC-gated through a Controller and a backend signer that holds the on-chain minter role, and redemptions settle in a USD stablecoin instead of physical metal. It went live on Ethereum mainnet in February 2026, after a $7M Galaxy Ventures-led seed and four security audits, and remains in private beta. The float was about 140 tGLD on September 27 2026, up from roughly 54 in June. Public trading is thin: a dormant Uniswap V4 pool, plus 1inch routing since September in which Tenbin itself quotes liquidity against USDC. In May 2026 Tenbin moved cross-chain messaging from LayerZero to Chainlink CCIP. A second audit round from Zellic and Verilog followed in August, and the remediation work led to a v1.5.1 release and a bug bounty in mid-September. The docs still describe the proof-of-reserves framework as coming soon. Pharos lists tGLD as pre-launch until its public price feed shows enough continuity to clear the gold pricing-freshness gate.",
-    "updatedAt": "2026-10-19",
+    "text": "tGLD is Tenbin's tokenized gold note, but unlike PAXG or XAUT it holds no vaulted metal. Each token is a Tenbin AssetCo (BVI) debt-note representing the U.S.-dollar value of one troy ounce of gold, collateralized by USDC and hedged with CME gold futures. Off-chain, the USDC sits with Ripple Prime (formerly Hidden Road), the prime broker Tenbin's docs name as custodian. Mint and {{term:redemption}}redemption{{/term}} are KYC-gated through a Controller and a backend signer that holds the on-chain minter role, and redemptions settle in a USD stablecoin instead of physical metal. It went live on Ethereum mainnet in February 2026 after four security audits and remains in private beta. The float was about 140 tGLD on September 27 2026, up from roughly 54 in June. Public trading is thin: a dormant Uniswap V4 pool, plus 1inch routing since September in which Tenbin itself quotes liquidity against USDC. Pharos lists it pre-launch because its gold data path needs a fresh CoinGecko market cap, which was 54 hours stale on October 25 2026. Since September 15 a Chainlink Proof of Reserve feed on Base has published an enclave-computed figure for Tenbin's off-chain reserves. It reports one total across all Tenbin assets, and no independent attestation of tGLD's own reserves has been published.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "ejpy-jbfd": {
     "title": "Japan Open Chain's Trust-Type Yen",
@@ -5986,11 +6043,11 @@
   },
   "bils-bitsofgold": {
     "title": "Israel's First Regulated Shekel",
-    "text": "BILS is the first shekel stablecoin to clear an Israeli regulator. Bits of Gold, a Tel Aviv crypto broker and custodian, spent two years in a sandbox before the Capital Market, Insurance and Savings Authority approved a limited launch on April 28, 2026. The approval conditions are concrete: 1:1 New Israeli Shekel backing in segregated bank accounts inside Israel with foreign custody excluded, an Ernst & Young audit, Fireblocks issuance infrastructure, and QEDIT zero-knowledge privacy, all on Solana via token extensions. The regulator also required a deliberately gradual, small-scale rollout. Bits of Gold announced in July 2026 that the pilot was complete and BILS was moving to wide distribution, but the on-chain record has not followed. As of late September the published Solana mint still held a flat 100,000 BILS with no mint activity since August 6, while the issuer's transparency page claimed 1.1M in circulation and listed its Q3 2026 Ernst & Young report as pending. Pharos also tracks the peg as OTHER until shekel support exists, so BILS stays in pre-launch. The approval sits under the CMISA rulebook; Israel's broader Stablecoin Law is still in draft. Until the published contract reconciles with the issuer's circulation figure, the approval is better documented than the token.",
-    "updatedAt": "2026-10-19",
+    "text": "BILS is the first shekel stablecoin to clear an Israeli regulator. Bits of Gold, a Tel Aviv crypto broker and custodian, spent two years in a sandbox before the Capital Market, Insurance and Savings Authority approved a limited launch on April 28, 2026. The approval conditions are concrete: 1:1 New Israeli Shekel backing in segregated bank accounts inside Israel with foreign custody excluded, an Ernst & Young audit, Fireblocks issuance infrastructure, and QEDIT zero-knowledge privacy, all on Solana via token extensions. The regulator also required a deliberately gradual, small-scale rollout. Bits of Gold announced in July 2026 that the pilot was complete and BILS was moving to wide distribution, but the on-chain record has not followed. The published Solana mint still held 100,000 BILS on November 1, 2026, unchanged since August 6. The issuer's transparency page shows the same 100K ILS in circulation and 105K ILS in reserves, with its Q3 2026 Ernst & Young report listed as pending. Pharos also tracks the peg as OTHER until shekel support exists, so BILS stays in pre-launch. The approval sits under the CMISA rulebook; Israel's broader Stablecoin Law is still in draft. Until the Ernst & Young report is published, the approval is better documented than the token.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "autousd-auto-finance": {
     "title": "An Autopool Dollar Wrapper",

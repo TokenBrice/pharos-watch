@@ -1,0 +1,152 @@
+{
+  "id": "aedz-zand",
+  "name": "Zand AED",
+  "symbol": "AEDZ",
+  "oneLiner": "AEDZ is Zand Trust's CBUAE-licensed dirham stablecoin on Ethereum and Solana, issued on-chain since December 2025 but not yet priced by any source.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "AED",
+    "governance": "centralized"
+  },
+  "collateral": "Zand Trust reports AEDZ as fully backed by AED cash and cash equivalents held separately from its own funds for the benefit of holders, with its parent Zand Bank as banking and custody provider. AJMS LG's ISAE 3000 attestation as of October 1 2026 reported AED 806.33M of eligible reserves against 806.30M AEDZ: AED 690M term deposits, AED 104.55M CBUAE Monetary Bills and AED 11.78M cash. The issuer's daily feed showed AED 1.01B of reserves against 1.01B AEDZ on October 30 2026.",
+  "pegMechanism": "CBUAE-licensed Dirham Payment Token issued by Zand Trust L.L.C S.O.C, a wholly owned Zand Bank subsidiary, as a CMTAT v3 ERC-20 on Ethereum and a Token-2022 mint on Solana. Onboarded government, financial, corporate, VASP and market-maker clients mint at no fee and redeem 1:1 through Zand Bank's corporate banking platform for 10 bps or AED 200, whichever is higher. The issuer says AEDZ is also available on partner exchanges.",
+  "mechanismArchetype": "fiat-cash",
+  "geckoId": "zand-aed",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0xfc347c996bd66c1d92e2045c80b413ef3fc84a90",
+      "decimals": 6
+    },
+    {
+      "chain": "solana",
+      "address": "BMrgsEdrqfP4EAhiRbK5fFkq8xgQrqDAcZrv8R2pG4zG",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://zandtrust.com/en"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://zandtrust.com/en/transparency"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/Official_Zand"
+    },
+    {
+      "label": "Announcement",
+      "url": "https://www.zand.ae/en/news/zand-launches-uaes-first-aed-backed-stablecoin-on-public-blockchain"
+    },
+    {
+      "label": "Reserve attestation (September 2026)",
+      "url": "https://zandtrust.com/pdf/audit/september-2026.pdf"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Arab Emirates",
+    "regulator": "Central Bank of the UAE (CBUAE)",
+    "license": "Payment token issuer licence under the Payment Token Services Regulation (Circular No. 2/2024)"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2025-11-17",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "AEDZ is publicly issued on Ethereum and Solana. Pharos tracks it pre-launch because no source returns a price and no admitted supply path covers both deployments. Zand Bank announced on November 17 2025 that the Central Bank of the UAE had approved it to launch Zand AED, issued by its wholly owned subsidiary Zand Trust L.L.C S.O.C. Zand Trust states that it is licensed under the Payment Token Services Regulation, and Taurus says it supplies the issuance and wallet technology. The Ethereum contract, a CMTAT v3 token behind an upgradeable proxy, was deployed on November 26 2025 and first minted on December 9 2025, and the Solana Token-2022 mint followed on January 19 2026. Zand Trust's transparency page lists both deployments with 6 decimals. Onboarded institutions mint and redeem through Zand Bank's corporate platform, and the issuer says AEDZ is also available on partner exchanges. On November 1 2026 supply was 509,523,397.48 AEDZ on Ethereum and 496,776,867 AEDZ on Solana, 1,006,300,264.48 in total. Exactly 1,000,000,000 AEDZ of that sits in eleven wallets, five on Ethereum and six on Solana, that each received a single transfer on September 30 or October 7 2026 and have not moved it. The issuer counts these balances as circulating: its October 1 2026 attestation matched the full on-chain supply, and its daily feed showed 1.01 billion AEDZ on October 30 2026. The wallets that receive every mint hold about 2 million AEDZ. CoinGecko's zand-aed is a preview listing with no price, market cap or tickers, DefiLlama does not track AEDZ, and no DEX pool exists.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.zand.ae/en/news/zand-launches-uaes-first-aed-backed-stablecoin-on-public-blockchain",
+      "title": "Zand Launches UAE’s First AED-Backed Stablecoin on Public Blockchain",
+      "description": "Zand Bank's announcement of CBUAE approval for Zand AED, issued by Zand Trust and backed one to one by AED reserves in segregated accounts.",
+      "source": "Zand"
+    },
+    {
+      "type": "blog",
+      "url": "https://www.taurushq.com/blog/zand-to-launch-the-uaes-first-regulated-aed-stablecoin-on-public-blockchain-with-taurus-tokenization-and-wallet-technology/",
+      "title": "Zand to Launch the UAE’s First Regulated AED Stablecoin on Public Blockchain with Taurus Tokenization and Wallet Technology",
+      "description": "Taurus describes its role: Taurus-CAPITAL for issuance lifecycle and Taurus-PROTECT for custody of the underlying assets.",
+      "source": "Taurus"
+    },
+    {
+      "type": "article",
+      "url": "https://zandtrust.com/en/transparency",
+      "title": "AEDZ transparency: circulation, reserves and supported blockchains",
+      "description": "Zand Trust's daily circulation and reserve figures, monthly attestation reports and the official Ethereum and Solana contract addresses.",
+      "source": "Zand Trust"
+    },
+    {
+      "type": "article",
+      "url": "https://zandtrust.com/pdf/audit/september-2026.pdf",
+      "title": "AEDZ reserve assets report and independent practitioner's report, September 2026",
+      "description": "AJMS LG's ISAE 3000 attestation of AEDZ supply and reserves as of October 1 2026, with the reserve composition by asset type.",
+      "source": "AJMS LG for Zand Trust"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-11-17",
+      "type": "regulatory",
+      "title": "CBUAE approves Zand to launch the Zand AED stablecoin",
+      "description": "Zand Bank announces that the Central Bank of the UAE has approved it to launch Zand AED, a multi-chain AED-backed stablecoin on public blockchains issued by its wholly owned subsidiary Zand Trust and backed one to one by AED reserves held in segregated, regulated accounts.",
+      "sourceUrl": "https://www.zand.ae/en/news/zand-launches-uaes-first-aed-backed-stablecoin-on-public-blockchain"
+    },
+    {
+      "date": "2025-11-26",
+      "type": "milestone",
+      "title": "AEDZ token contract deployed on Ethereum mainnet",
+      "description": "An upgradeable proxy over a CMTAT v3.0.0 implementation is deployed at block 23884215 with name Zand AED, symbol AEDZ and 6 decimals.",
+      "sourceUrl": "https://etherscan.io/tx/0x3ad85122e200ac50141255732a4aff0da1f54a3640d7dacb7b62d5ae08b2c2cd"
+    },
+    {
+      "date": "2025-12-09",
+      "type": "milestone",
+      "title": "First AEDZ minted on Ethereum mainnet",
+      "description": "The issuer mints 250 AEDZ at block 23973895, the first issuance on the contract that Zand Trust's transparency page lists as its Ethereum deployment. Mints stay small until a 4,000,000 AEDZ mint on January 26 2026.",
+      "sourceUrl": "https://etherscan.io/tx/0xa86853ec0289d4bac8202b10f4e7708efc1f218e82b4a45dd045d3a557aa2475"
+    },
+    {
+      "date": "2026-01-21",
+      "type": "milestone",
+      "title": "First AEDZ minted on Solana as a Token-2022 asset",
+      "description": "The Solana mint, created on January 19 2026 with on-chain metadata name Zand AED and symbol AEDZ, issues its first 100 AEDZ. A 200,000,000 AEDZ lot follows on February 3 2026.",
+      "sourceUrl": "https://solscan.io/tx/2iKPiDxD67BYYGZUxwgeNkqUMDW9x2V9oWxWmVKLxBrWwpL4CsxikKkUz5qkCt6dTfRisXLYTNVVrN5w89W4ApAo"
+    },
+    {
+      "date": "2026-02-10",
+      "type": "partnership",
+      "title": "Zand and Ripple partner on AEDZ and RLUSD initiatives",
+      "description": "The partnership will explore RLUSD support in Zand's regulated digital asset custody, direct liquidity between AEDZ and RLUSD, and issuance of AEDZ on the XRP Ledger. Zand Trust's supported-blockchain list still names only Ethereum and Solana.",
+      "sourceUrl": "https://www.zand.ae/en/news/zand-and-ripple-in-strategic-partnership-to-power-digital-economy-with-stablecoin-and-blockchain-innovations"
+    },
+    {
+      "date": "2026-08-25",
+      "type": "partnership",
+      "title": "Zand adds USDC support alongside its dirham stablecoin",
+      "description": "Zand announces support for Circle's USDC so that eligible businesses can use both USDC and the Zand Dirham stablecoin for payments, settlement, treasury operations, trading and cross-border transactions.",
+      "sourceUrl": "https://www.zand.ae/en/news/zand-expands-stablecoin-access-and-adoption-in-global-markets-with-usdc"
+    },
+    {
+      "date": "2026-10-01",
+      "type": "audit",
+      "title": "AJMS LG attests AEDZ reserves as of October 1 2026",
+      "description": "Under ISAE 3000 (Revised), AJMS LG Management Consulting concludes that management's reserve assertions are fairly stated: AED 806,328,717.78 of eligible reserves against 806,300,260.48 AEDZ in circulation (416,273,390.48 on Ethereum and 390,026,870 on Solana), held as AED 690,000,000 in term deposits, AED 104,546,598.20 in CBUAE Monetary Bills and AED 11,782,119.58 in cash. The report is dated October 5 2026.",
+      "sourceUrl": "https://zandtrust.com/pdf/audit/september-2026.pdf"
+    },
+    {
+      "date": "2026-10-30",
+      "type": "milestone",
+      "title": "Zand Trust reports 1.01 billion AEDZ in circulation",
+      "description": "The issuer's daily transparency feed shows 1.01 billion AEDZ in circulation against AED 1.01 billion of reserves, split into AED 0.85 billion cash and AED 0.16 billion UAE Monetary Bills. On-chain supply on November 1 2026 was 1,006,300,264.48 AEDZ, of which exactly 1,000,000,000 sat in eleven wallets that each received one transfer on September 30 or October 7 2026.",
+      "sourceUrl": "https://zandtrust.com/en/transparency"
+    }
+  ],
+  "launchDate": "2025-12-09",
+  "listingStatusReview": {
+    "changedAt": "2026-11-01",
+    "reason": "Missing lanes: price and supply. CoinGecko's zand-aed is a preview listing with no price, market cap or tickers, DefiLlama does not track AEDZ and no DEX pool exists. Supply is readable on Ethereum and Solana, but no admitted path sums both deployments.",
+    "reviewBy": "2026-12-31"
+  }
+}

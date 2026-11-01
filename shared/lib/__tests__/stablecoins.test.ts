@@ -25,7 +25,7 @@ import {
 } from "../stablecoins/schema";
 
 const EURR_PRE_LAUNCH_ID = "eurr-revolut";
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 491;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 495;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -120,6 +120,7 @@ describe("tracked stablecoin metadata", () => {
       "krw1-bdacs",
       "rusd-revolut",
       EURR_PRE_LAUNCH_ID,
+      "eurxt-caceis",
       "weur-aplauz",
       "plnq-quantoz",
       "czkc-czkc",
@@ -132,6 +133,8 @@ describe("tracked stablecoin metadata", () => {
       "thgold-theo",
       "ejpy-jbfd",
       "aed-rakbank",
+      "aedz-zand",
+      "ddsc-aedc",
       "bils-bitsofgold",
       "kusd-kerne",
       "rd-rai-dollar",
@@ -144,6 +147,7 @@ describe("tracked stablecoin metadata", () => {
       "jpydf-deltaforesight",
       "dotusd-polkadot",
       "usdrf-realfi",
+      "zlusd-zelle",
     ]);
   });
 

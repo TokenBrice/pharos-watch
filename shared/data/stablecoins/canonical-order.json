@@ -449,6 +449,7 @@
   "krw1-bdacs",
   "rusd-revolut",
   "eurr-revolut",
+  "eurxt-caceis",
   "weur-aplauz",
   "plnq-quantoz",
   "czkc-czkc",
@@ -477,6 +478,8 @@
   "thgold-theo",
   "ejpy-jbfd",
   "aed-rakbank",
+  "aedz-zand",
+  "ddsc-aedc",
   "bils-bitsofgold",
   "kusd-kerne",
   "rd-rai-dollar",
@@ -489,5 +492,6 @@
   "jpydf-deltaforesight",
   "swanusd-swan",
   "dotusd-polkadot",
-  "usdrf-realfi"
+  "usdrf-realfi",
+  "zlusd-zelle"
 ]

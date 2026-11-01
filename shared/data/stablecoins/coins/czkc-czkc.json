@@ -26,15 +26,46 @@
   "jurisdiction": {
     "country": "Czech Republic"
   },
+  "announcedDate": "2023-06-22",
   "launchPhase": "testnet",
-  "launchPhaseDetail": "CZKC a.s., company number 19989971, invites public testnet use and describes CZK-backed tokens. Developer documentation lists Ethereum, Arbitrum and Gnosis but marks all production and public-testnet addresses to be published. CzechInvest named CZKC among 21 sandbox testing projects on 3 February 2026; participation is not MiCA authorization. The original product announcement date and a confirmed commercial launch date remain unverified.",
+  "launchPhaseDetail": "CZKC a.s., company number 19989971, invites public testnet use and describes CZK-backed tokens. Its about page says WBTCB, a Czech crypto-trading holding company, stands behind CZKC. Martin Stránský first presented CZKC publicly in E15's KryptoSpace podcast of 22 June 2023. Developer documentation lists Ethereum, Arbitrum and Gnosis but marks all production and public-testnet addresses to be published. CzechInvest named CZKC among 21 sandbox testing projects on 3 February 2026; participation is not MiCA authorization. On 22 June 2026 the Czech National Bank reported that no entity in the Czech Republic had yet obtained an e-money institution licence to issue koruna-pegged e-money tokens. A confirmed commercial launch date remains unverified.",
   "milestones": [
+    {
+      "date": "2023-06-22",
+      "type": "announcement",
+      "title": "World BTC owner Martin Stránský presents the CZKC koruna stablecoin",
+      "description": "Martin Stránský, owner of the World BTC group, presented CZKC on E15's KryptoSpace podcast as a koruna stablecoin issued only against matching koruna reserves. He said the code was practically finished, an external audit was planned and the Czech National Bank required an e-money institution licence.",
+      "sourceUrl": "https://www.e15.cz/podcasty/kryptospace/koruna-je-poprve-na-blockchainu-stoji-za-ni-cesky-kryptomatador-a-chce-vybrat-miliardu-1398977"
+    },
+    {
+      "date": "2023-12-14",
+      "type": "regulatory",
+      "title": "Founder says CZKC will seek a full e-money licence",
+      "description": "Martin Stránský told Forbes Czech Republic that about a month earlier he had decided to seek a full e-money institution licence from the Czech National Bank, rather than a small-scale licence capped at five million euros. He said the team aimed to file the application in the first third of December 2023 and could, with luck, obtain the licence within six months.",
+      "sourceUrl": "https://forbes.cz/koruna-miri-na-blockchain-cesky-stablecoin-vyresi-velky-problem-rika-stransky/"
+    },
     {
       "date": "2026-02-03",
       "type": "regulatory",
       "title": "CzechInvest names CZKC in sandbox testing cohort",
       "sourceUrl": "https://czechinvest.gov.cz/en/Homepage/News/February-2026/Czechia%E2%80%99s-first-regulatory-sandbox-commences-testing-phase-for-21-fintech-projects",
       "description": "Dated programme milestone, not an inferred first token announcement or issuance authorization."
+    },
+    {
+      "date": "2026-06-22",
+      "type": "regulatory",
+      "title": "Czech National Bank reports no koruna e-money token licence yet",
+      "description": "The Czech National Bank's spring 2026 Financial Stability Report states that no entity in the Czech Republic has yet obtained an e-money institution licence authorising issuance of koruna-pegged e-money tokens. The report does not name CZKC.",
+      "sourceUrl": "https://www.cnb.cz/export/sites/cnb/cs/financni-stabilita/.galleries/zpravy_fs/fs_2026_jaro/zfs_jaro_2026.pdf"
+    }
+  ],
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.e15.cz/podcasty/kryptospace/koruna-je-poprve-na-blockchainu-stoji-za-ni-cesky-kryptomatador-a-chce-vybrat-miliardu-1398977",
+      "title": "Koruna je poprvé na blockchainu. Stojí za ní český kryptomatador a chce vybrat miliardu",
+      "description": "E15 KryptoSpace episode in which Martin Stránský presents CZKC and its licensing path with the Czech National Bank.",
+      "source": "E15"
     }
   ],
   "flags": {

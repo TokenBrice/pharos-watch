@@ -450,6 +450,7 @@
     "krw1-bdacs": "core-stablecoin",
     "rusd-revolut": "core-stablecoin",
     "eurr-revolut": "core-stablecoin",
+    "eurxt-caceis": "core-stablecoin",
     "weur-aplauz": "core-stablecoin",
     "plnq-quantoz": "core-stablecoin",
     "czkc-czkc": "core-stablecoin",
@@ -478,6 +479,8 @@
     "tgld-tenbin": "core-stablecoin",
     "ejpy-jbfd": "core-stablecoin",
     "aed-rakbank": "core-stablecoin",
+    "aedz-zand": "core-stablecoin",
+    "ddsc-aedc": "core-stablecoin",
     "bils-bitsofgold": "core-stablecoin",
     "kusd-kerne": "core-stablecoin",
     "ousd-open-standard": "core-stablecoin",
@@ -493,6 +496,7 @@
     "jpydf-deltaforesight": "core-stablecoin",
     "swanusd-swan": "core-stablecoin",
     "dotusd-polkadot": "core-stablecoin",
-    "usdrf-realfi": "stable-value-investment"
+    "usdrf-realfi": "stable-value-investment",
+    "zlusd-zelle": "core-stablecoin"
   }
 }

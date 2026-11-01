@@ -1,7 +1,7 @@
 {
   "id": "ustx-tx",
   "blacklistabilityReview": {
-    "reviewedStatus": "possible",
+    "reviewedStatus": true,
     "sources": [
       {
         "label": "Reviewed primary evidence",
@@ -10,10 +10,14 @@
       {
         "label": "Reviewed primary evidence",
         "url": "https://www.linkedin.com/feed/update/urn:li:ugcPost:7508604753505964033/"
+      },
+      {
+        "label": "USTX token creation on the tx chain",
+        "url": "https://www.mintscan.io/coreum/tx/6E65ABA38826BB5594A5D0F3709532CDF4D877E90B1F48BE52B89D416A4CBFD7"
       }
     ],
-    "evidence": "Brale explicitly supports denylist/freeze/clawback for token programs. Its security page reports multi-party issuer-key control and threshold signing, SOC 2 Type II, annual AML/BSA audits and annual penetration testing. These are issuer-reported program-level controls, not a retrieved USTX-specific audit. USTX-specific enabled implementation, role holders and signing threshold are not disclosed; capability expectation only.",
-    "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-03"
+    "evidence": "On-chain review on 2026-11-01: USTX was created on the tx chain (coreum-mainnet-1) on 2026-10-08 as denom uustx-core1rfxrg75fzuq5hgnnymjgsxj70d9w9cs8xuza7x with the minting, IBC, clawback and extension features enabled and no native freezing feature. Clawback lets the issuer remove tokens from any holder account. The issuer account administers extension contract core1nnkvfudwyr9ng6l20vegp6gahxtwy6l5fyewg64ql6l6jlk0tp8q97atnx, which can pause transfers and blacklist addresses; on 2026-11-01 it reported paused false, an empty blacklist and no seizures. Brale's security page separately describes denylist, freeze and clawback support and multi-party issuer-key control for its token programs; USTX-specific role holders and signing thresholds are not disclosed.",
+    "reviewer": "Claude weekly pre-launch sweep",
+    "reviewedAt": "2026-11-01"
   }
 }

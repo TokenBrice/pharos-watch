@@ -25,9 +25,14 @@
   "governanceQuality": "regulated-entity",
   "status": "pre-launch",
   "announcedDate": "2026-05",
-  "expectedLaunchDate": "2026",
+  "dateHistory": [
+    {
+      "date": "2026",
+      "setOn": "2026-11-01"
+    }
+  ],
   "launchPhase": "testnet",
-  "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies and Keypair. BTQ's Q1 2026 filing reports the precursor Finger pilot completed 1,477 production transactions at 100% success with 200+ post-quantum wallets, and names iM Bank as its lead commercial conversion candidate. A real token (iMKRW) has now been issued and transacted on Kaia across two closed pilots: the OpenAsset full-lifecycle PoC (May 2026) and the Coocon/Beatoz payment-ecosystem PoC (July 2026). Pharos marks the phase testnet; these are private pilots, not a public testnet. In June 2026 iM Bank joined the Korea-EU Pangea project testing KRW-EUR stablecoin exchange with Shinhan, K Bank, Qivalis, Swift, and Chainlink. Commercialization remains gated on Korean stablecoin legislation, which had not been introduced as a unified bill as of September 2026, and the production symbol/ticker is not yet confirmed",
+  "launchPhaseDetail": "South Korea's first bank-led KRW stablecoin proof-of-concept; built by iM Bank and Finger on the Kaia blockchain; features quantum-resistant (PQC) security via BTQ Technologies and Keypair. BTQ's Q1 2026 filing reports the precursor Finger pilot completed 1,477 production transactions at 100% success with 200+ post-quantum wallets, and names iM Bank as its lead commercial conversion candidate. A real token (iMKRW) has now been issued and transacted on Kaia across two closed pilots: the OpenAsset full-lifecycle PoC (May 2026) and the Coocon/Beatoz payment-ecosystem PoC (July 2026). Pharos marks the phase testnet; these are private pilots, not a public testnet. In June 2026 iM Bank joined the Korea-EU Pangea project testing KRW-EUR stablecoin exchange with Shinhan, K Bank, Qivalis, Swift, and Chainlink. Commercialization remains gated on Korean stablecoin legislation, which had not been introduced as a unified bill as of September 2026, and the production symbol/ticker is not yet confirmed. iM Bank has announced no launch date, and issuance awaits the Digital Asset Basic Act.",
   "featuredContent": [
     {
       "type": "article",
@@ -39,7 +44,14 @@
   ],
   "milestones": [
     {
-      "date": "2026-05-07",
+      "date": "2026-04-28",
+      "type": "announcement",
+      "title": "iM Bank signs won stablecoin agreement with Finger and Validator",
+      "description": "iM Bank signed a memorandum of understanding with fintech firm Finger and blockchain firm Validator to build bank-led won stablecoin issuance and distribution infrastructure, starting with a proof of concept that reconciles bank deposits against on-chain issuance in real time. iM Bank is to hold and certify the reserves, Finger to link existing financial systems, and Validator to handle global infrastructure and distribution.",
+      "sourceUrl": "https://www.ajunews.com/view/20260428103857101"
+    },
+    {
+      "date": "2026-05-06",
       "type": "announcement",
       "title": "iM Bank and Finger announce first bank-led KRW stablecoin PoC on Kaia",
       "description": "Pilot features quantum-resistant security via BTQ Technologies' post-quantum cryptography stack.",

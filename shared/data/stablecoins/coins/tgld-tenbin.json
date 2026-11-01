@@ -9,7 +9,7 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "Synthetic gold exposure, not vaulted bullion: each token represents the USD value of one troy ounce of gold at the LBMA PM spot price. Backed by USDC held on-chain and at prime broker Hidden Road, with gold price exposure obtained via CME gold futures. Issued as a Tenbin AssetCo (BVI) SPC debt-note (a UCC Article 12 controllable electronic record)",
+  "collateral": "Synthetic gold exposure, not vaulted bullion: each token represents the USD value of one troy ounce of gold at the LBMA PM spot price. Backed by USDC held on-chain and at prime broker Ripple Prime (formerly Hidden Road), with gold price exposure obtained via CME gold futures. Issued as a Tenbin AssetCo (BVI) SPC debt-note (a UCC Article 12 controllable electronic record)",
   "pegMechanism": "KYC-gated mint and redemption through a Controller that processes off-chain signed orders; a Tenbin backend signer holds the on-chain minter role. Redemption pays the gold-denominated value in a USD stablecoin, not physical metal. On-chain pricing uses a Chainlink tGLD/USD blended price feed",
   "mechanismArchetype": "synthetic-delta-neutral",
   "commodityOunces": 1,
@@ -55,8 +55,8 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Synthetic gold debt-note, no published proof-of-reserves",
-      "message": "tGLD is not vaulted physical gold. Each token is a Tenbin AssetCo (BVI) debt-note backed by USDC reserves with gold exposure hedged via CME futures, redeemable only in a USD stablecoin under KYC. No independent proof-of-reserves attestation is published, and public on-chain liquidity is currently minimal."
+      "title": "Synthetic gold debt-note, no tGLD-specific reserve attestation",
+      "message": "tGLD is not vaulted physical gold. Each token is a Tenbin AssetCo (BVI) debt-note backed by USDC reserves with gold exposure hedged via CME futures, redeemable only in a USD stablecoin under KYC. No independent attestation of tGLD's own reserves is published; since September 15 2026 a Chainlink Proof of Reserve feed has reported one off-chain reserve total across all Tenbin assets. Public on-chain liquidity is currently minimal."
     }
   ],
   "status": "pre-launch",
@@ -68,7 +68,7 @@
     }
   ],
   "launchPhase": "launched",
-  "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10, with KYC-gated mint and redemption (about $597K market cap, 139.74 tGLD, 72 holders on September 27 2026, up from ~54 tGLD and ~36 holders in June). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only on-chain pool is a dormant Uniswap V4 tGLD/USDC pool; since September 9 2026 1inch has also routed tGLD swaps against USDC quotes supplied by Tenbin itself. CoinGecko's tenbin-gold price ($4,272.46, $597,027 market cap, 139.74 circulating) updated same-day on September 27 2026 on $2.20 of 24-hour volume, so the feed is currently fresh while trading remains near zero; the 14-day price history endpoint returns no points, so freshness continuity is unproven and the gold price-freshness gate has not been re-run. On October 25 2026 CoinGecko's market cap was 54 hours old, so its supply lane fails freshness; live tracking begins once that lane is fresh. A staked variant stGLD (ERC-4626) exists, and sibling FX tokens tBRL and tMXN are now listed as Ethereum mainnet deployments in the Tenbin docs; in May 2026 Tenbin deprecated LayerZero following internal security audits and migrated tGLD (and the FX siblings) exclusively to Chainlink CCIP. Q3 2026 audit reports from Zellic and Verilog were published to the contracts repository on August 26 2026; remediation fixes landed through August 31, v1.5.1 and bug-bounty information followed on September 14, and the docs still describe the proof-of-reserves framework as coming soon.",
+  "launchPhaseDetail": "Live on Ethereum mainnet since 2026-02-10, with KYC-gated mint and redemption (about $597K market cap, 139.74 tGLD, 72 holders on September 27 2026, up from ~54 tGLD and ~36 holders in June). tGLD is a synthetic gold debt-note from Tenbin AssetCo (BVI) SPC: USDC-collateralized with gold exposure hedged via CME futures, KYC-gated mint/redeem, redeemable in USD stablecoin (no physical metal). Its only on-chain pool is a dormant Uniswap V4 tGLD/USDC pool; since September 9 2026 1inch has also routed tGLD swaps against USDC quotes supplied by Tenbin itself. CoinGecko's tenbin-gold price ($4,272.46, $597,027 market cap, 139.74 circulating) updated same-day on September 27 2026 on $2.20 of 24-hour volume, so the feed is currently fresh while trading remains near zero; the 14-day price history endpoint returns no points, so freshness continuity is unproven and the gold price-freshness gate has not been re-run. On October 25 2026 CoinGecko's market cap was 54 hours old, so its supply lane fails freshness; live tracking begins once that lane is fresh. A staked variant stGLD (ERC-4626) exists, and sibling FX tokens tBRL and tMXN are now listed as Ethereum mainnet deployments in the Tenbin docs; in May 2026 Tenbin deprecated LayerZero following internal security audits and migrated tGLD (and the FX siblings) exclusively to Chainlink CCIP. Q3 2026 audit reports from Zellic and Verilog were published to the contracts repository on August 26 2026; remediation fixes landed through August 31, and v1.5.1 and bug-bounty information followed on September 14. Since September 15 2026 a Chainlink Proof of Reserve feed on Base has published Tenbin's attested off-chain reserve figure, a single total across all Tenbin assets, and the docs name Ripple Prime (formerly Hidden Road) as digital asset custodian.",
   "featuredContent": [
     {
       "type": "article",
@@ -139,6 +139,13 @@
       "title": "Tenbin ships v1.5.1 and a bug bounty after landing audit remediations",
       "description": "Following the August 3 audit publications, Tenbin landed Verilog remediation fixes from August 21 to 31, including P0 and P1 severity items, then tagged v1.5.1 and added bug-bounty information on September 14. The beta float is unchanged at 139.74 tGLD with 72 holders on September 27, and CoinGecko's tenbin-gold price updated same-day on $2.20 of 24-hour volume.",
       "sourceUrl": "https://github.com/tenbinlabs/tenbin-contracts"
+    },
+    {
+      "date": "2026-09-15",
+      "type": "milestone",
+      "title": "Tenbin publishes off-chain reserves through a Chainlink Proof of Reserve feed",
+      "description": "Tenbin's documentation describes an attested snapshot of off-chain reserves held at Ripple Prime, computed inside a Google Cloud Confidential Space enclave and published on Base through Chainlink's Tenbin Aggregated Off-Chain Reserves feed (0x7b1C8C60c05913aF3Aa21BaE3B32A02Ab4f39Bd3). The feed's first round is dated September 15 2026 and covers all Tenbin assets together. On-chain vault collateral is excluded from the figure because it can be read directly on Ethereum.",
+      "sourceUrl": "https://docs.tenbinlabs.xyz/hedging-and-risk/proof-of-reserves"
     }
   ]
 }
