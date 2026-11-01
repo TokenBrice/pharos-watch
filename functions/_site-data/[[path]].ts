@@ -12,6 +12,7 @@ import {
 } from "../lib/proxy-utils";
 import { isRequestSourceAttributionDisabled, recordSiteDataRequest } from "../lib/request-attribution";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
+import { isSiteDataRateLimited } from "../lib/site-data-rate-limit";
 import { resolveSiteApiOrigin, validatePagesSiteDataProxyEnv, type SiteDataProxyEnv } from "../lib/site-api-env";
 import { withNoindex } from "../lib/noindex";
 import {
@@ -130,6 +131,11 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
       return requestedPath ? resolveSiteDataUpstreamPath(requestedPath) : null;
     },
     rejectUpstreamPath: (_context, upstreamPath) => (upstreamPath ? null : jsonError(404, "Not found")),
+    // Only admitted reads are metered, so path/method rejections stay unmetered.
+    beforeFetch: async ({ request, env }) =>
+      (await isSiteDataRateLimited(request, env))
+        ? jsonError(429, "Too many requests", { "Retry-After": "60" })
+        : null,
     buildUpstreamRequest: ({ request, env }, upstreamPath) => {
       const upstreamHeaders = buildUpstreamHeaders(request, env);
 

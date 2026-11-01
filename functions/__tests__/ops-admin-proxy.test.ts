@@ -223,6 +223,41 @@ describe("ops admin proxy", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it.each(["cross-site", "same-site"])(
+    "returns 403 before proxying GET requests with Sec-Fetch-Site: %s",
+    async (secFetchSite) => {
+      const fetchSpy = mockFetch([], { requireMatch: true });
+
+      const response = await onRequest(
+        adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/backfill-dews", {
+          headers: { "Sec-Fetch-Site": secFetchSite },
+        })),
+      );
+
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: "Forbidden" });
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+      expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["same-origin", "none"])(
+    "proxies GET requests with Sec-Fetch-Site: %s",
+    async (secFetchSite) => {
+      const fetchSpy = opsApi.json("/api/status", { ok: true });
+
+      const response = await onRequest(
+        adminContext(makeAuthedRequest("https://ops.pharos.watch/api/admin/status", {
+          headers: { "Sec-Fetch-Site": secFetchSite },
+        })),
+      );
+
+      expect(response.status).toBe(200);
+      expect(fetchSpy.getHistory()).toHaveLength(1);
+    },
+  );
+
   it.each([
     "file:///x",
     "data:text/plain,ops",
