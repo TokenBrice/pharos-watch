@@ -128,6 +128,7 @@ export function buildDetailPegPriceSnapshot(
   id: string,
   coin: StablecoinMeta,
   pegSummaryData?: PegSummaryResponse,
+  summaryData?: StablecoinLiveSummary,
 ): DetailPegPriceSnapshot {
   const isNavToken = coin.flags.navToken ?? false;
   const pegScoreResult = pegSummaryData?.coins.find((candidate) => candidate.id === id) ?? null;
@@ -140,8 +141,11 @@ export function buildDetailPegPriceSnapshot(
     deviationBps,
     pegReferenceUnavailable: !isNavToken && pegScoreResult?.pegReferenceUnavailable === true,
     pegScoreResult,
-    consensusSources: pegScoreResult?.consensusSources ?? [],
-    agreeSources: pegScoreResult?.agreeSources ?? [],
+    // The active-only peg summary omits frozen archives. Fall back to the
+    // admitted summary's own provenance only when no peg row was read, so a
+    // present row's empty source lists remain an honest empty result.
+    consensusSources: pegScoreResult ? (pegScoreResult.consensusSources ?? []) : (summaryData?.consensusSources ?? []),
+    agreeSources: pegScoreResult ? (pegScoreResult.agreeSources ?? []) : (summaryData?.agreeSources ?? []),
     dexPriceCheck: pegScoreResult?.dexPriceCheck ?? null,
   };
 }

@@ -1,5 +1,6 @@
 import type { FaqItem } from "@/lib/faq";
 import type { TelegramLiveAlertType } from "@shared/types/status";
+import { ACTIVE_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import { TELEGRAM_ALERT_FAMILIES } from "@shared/lib/telegram-alert-families";
 import {
   TELEGRAM_COMMAND_REFERENCE,
@@ -21,6 +22,9 @@ export const LIVE_FREEZE_MIN_LABEL = `$${TELEGRAM_ALERT_POLICY.freeze.realtimeMi
 
 export const TELEGRAM_PAGE_DESCRIPTION =
   "PharosWatchBot sends stablecoin depeg and risk alerts to Telegram. Quiet by default, with one daily message for smaller changes.";
+
+export const TELEGRAM_COVERAGE_SENTENCE =
+  `Stablecoin risk alerts in your Telegram chat, free for all ${ACTIVE_STABLECOIN_COUNT.toLocaleString("en-US")} active stablecoins. Five alert types watch every peg. Urgent moves arrive live; smaller ones wait for one daily message.`;
 
 export const TELEGRAM_ACTIONS = [
   {
@@ -201,7 +205,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
       "Presets are ready-made coin lists such as USD Top 25. Following one keeps up with the market: when a coin joins or leaves the list, your alerts follow. Add one from the Mini App or send /subscribe usd-top25.",
   },
   {
-    question: "Can I follow every tracked stablecoin at once?",
+    question: "Can I follow every active stablecoin at once?",
     answer:
       "Yes. Send /subscribe depeg all, or turn on All stablecoins in the Mini App. Market-wide safety and reserve changes are grouped into the daily Changes message so the whole market does not page you.",
   },

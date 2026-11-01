@@ -37,6 +37,7 @@ import { resolveCustodyModel } from "@shared/lib/report-card-policy";
 import {
   resolveMintAuthorityScoreDisplay,
 } from "@/lib/mint-authority-display";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { MINT_AUTHORITY_SCORE_FILTER_CONFIG, MINT_AUTHORITY_STATUS_CONFIG } from "@shared/lib/classification";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRawOrNull, getPrevMonthRawOrNull } from "@shared/lib/supply";
@@ -96,7 +97,9 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "mint_authority_score", accessor: (row) => row.mintAuthorityScore ?? "" },
   {
     header: "mint_authority_score_band",
-    accessor: (row) => MINT_AUTHORITY_SCORE_FILTER_CONFIG[row.mintAuthorityScoreBand].label,
+    accessor: (row) => row.mintAuthorityScoreBand === null
+      ? null
+      : MINT_AUTHORITY_SCORE_FILTER_CONFIG[row.mintAuthorityScoreBand].label,
   },
 ];
 
@@ -195,6 +198,9 @@ export function ScreenerClient() {
     () => safetyProjection?.status === "available" ? safetyProjection.value : {},
     [safetyProjection],
   );
+  // A missing/inadmissible report-cards publication is not the same claim as
+  // an admitted card with no published mint posture (which stays "nr").
+  const safetyPublicationAvailable = safetyProjection?.status === "available";
 
   // Build only after a primary dataset is available, including retained data.
   // Optional score reads preserve unknown values until their sources arrive.
@@ -214,7 +220,9 @@ export function ScreenerClient() {
     for (const { meta, mechanism, custodyModel, blacklistable } of SCREENABLE_COINS) {
       const safety = safetyById[meta.id] ?? null;
       const pegCoin = pegById.get(meta.id);
-      const mintAuthorityScore = resolveMintAuthorityScoreDisplay(safety?.mint);
+      const mintAuthorityScore = safetyPublicationAvailable
+        ? resolveMintAuthorityScoreDisplay(safety?.mint)
+        : null;
       rows.push({
         id: meta.id,
         name: meta.name,
@@ -249,18 +257,18 @@ export function ScreenerClient() {
         custodyModel,
         blacklistable,
         mintAuthority: meta.mintAuthorityStatus ?? "unknown",
-        mintAuthorityScore: mintAuthorityScore.score,
-        mintAuthorityScoreBand: mintAuthorityScore.bandKey,
-        mintAuthorityScoreLabel: mintAuthorityScore.scoreLabel,
-        mintAuthorityScoreBandLabel: mintAuthorityScore.bandLabel,
-        mintAuthorityScoreBadgeClassName: mintAuthorityScore.badgeClassName,
-        mintAuthorityScoreDetail: mintAuthorityScore.detail,
+        mintAuthorityScore: mintAuthorityScore?.score ?? null,
+        mintAuthorityScoreBand: mintAuthorityScore?.bandKey ?? null,
+        mintAuthorityScoreLabel: mintAuthorityScore?.scoreLabel ?? null,
+        mintAuthorityScoreBandLabel: mintAuthorityScore?.bandLabel ?? null,
+        mintAuthorityScoreBadgeClassName: mintAuthorityScore?.badgeClassName ?? null,
+        mintAuthorityScoreDetail: mintAuthorityScore?.detail ?? null,
         pegDeviationSeries: unobservedPriceIds.has(meta.id) ? undefined : buildPegDeviationSeries(pegCoin),
         supplySeries: supplySeriesById.get(meta.id),
       });
     }
     return rows;
-  }, [stablecoinsData, pegById, safetyById, stressData, dexData]);
+  }, [stablecoinsData, pegById, safetyById, safetyPublicationAvailable, stressData, dexData]);
 
   const scoreFilterDataState = resolveScreenerFilterDataState(filters, {
     dews: { loading: isStressLoading, hasData: stressData != null, error: stressError },
@@ -389,7 +397,9 @@ export function ScreenerClient() {
             // 9.1: the mint columns are the published V9 mint component, so
             // they are stamped with the safety-score identity. The retired
             // standalone mint-authority lane no longer produces this value.
-            methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"} (mint control columns included); mixed-source export, as-of oldest producer generation when all known`}
+            methodologyLabel={safetyPublicationAvailable && reportData
+              ? `safety-score ${toMethodologyVersionLabel(reportData.safetyScoreIdentity.methodologyVersion)} (mint control columns included); mixed-source export, as-of oldest producer generation when all known`
+              : "safety-score columns unavailable this run; mixed-source export, as-of oldest producer generation when all known"}
             triggerLabel={dataState === "loading" ? "Loading" : "Export"}
             triggerClassName="min-w-24"
             disabled={dataState !== "ready"}

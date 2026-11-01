@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { InstrumentPanel } from "./instrument-panel";
 import { useTelegramPulse } from "@/hooks/api-hooks";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
@@ -14,12 +14,22 @@ vi.mock("@/hooks/api-hooks", () => ({
   useTelegramPulse: vi.fn(),
 }));
 
+// The lifecycle data contract is UTC; run this suite west of UTC so a
+// viewer-local tick would visibly name the previous day.
+const originalTimezone = vi.hoisted(() => {
+  const original = process.env.TZ;
+  process.env.TZ = "America/New_York";
+  return original;
+});
+
+const chartMock = vi.hoisted(() => ({ ready: false }));
+
 vi.mock("@/hooks/use-chart-container-ready", () => ({
   useChartContainerReady: () => ({
     ref: vi.fn(),
-    ready: false,
-    width: 0,
-    height: 0,
+    ready: chartMock.ready,
+    width: 720,
+    height: 260,
   }),
 }));
 
@@ -92,6 +102,11 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.useRealTimers();
+  chartMock.ready = false;
+});
+
+afterAll(() => {
+  process.env.TZ = originalTimezone;
 });
 
 function beam(): string | null {
@@ -263,6 +278,26 @@ describe("InstrumentPanel", () => {
     render(<InstrumentPanel />);
     expect(screen.getByText("1,842 active watchers")).toBeTruthy();
     expect(screen.queryByText("Showing an older snapshot") !== null).toBe(notice);
+  });
+
+  it("labels daily lifecycle ticks with the same UTC day as the tooltip and payload", () => {
+    chartMock.ready = true;
+    const history = [
+      { date: "2026-10-24", offsetDays: 0 },
+      { date: "2026-10-31", offsetDays: 7 },
+    ].map(({ date, offsetDays }) => ({
+      date,
+      timestamp: Date.parse("2026-10-24T00:00:00Z") + offsetDays * 86_400_000,
+      snapshotAt: Date.parse("2026-10-24T00:05:00Z") / 1000 + offsetDays * 86_400,
+      newWatchers: 10,
+      activeWatchers: 1800 + offsetDays,
+    }));
+    mockPulse({ ...pulse, watcherHistory: history });
+    const { container } = render(<InstrumentPanel />);
+
+    const ticks = [...container.querySelectorAll("text")].map((node) => node.textContent);
+    expect(ticks).toContain("Oct 31");
+    expect(ticks).not.toContain("Oct 30");
   });
 
   it("renders a loading state and an honest unavailable state", () => {

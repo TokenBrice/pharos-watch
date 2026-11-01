@@ -9,6 +9,12 @@ export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS: string[] = [
   "shared/data/stablecoins/domains/**",
   "src/app/**",
   "src/lib/case-studies/**",
+  "src/lib/chain-indexing.ts",
+  "src/lib/peg-hub-content.ts",
+  "src/lib/peg-landing.ts",
+  "src/lib/peg-taxonomy.ts",
+  "src/lib/stablecoin-taxonomy-urls.ts",
+  "src/lib/stablecoin-taxonomy.ts",
   "src/data/blog/**",
   // Case-study schema: a shared Article dependency of every case-study page.
   "shared/types/editorial-content.ts",

@@ -28,6 +28,7 @@ let stabilityState: {
 
 const refetch = vi.fn();
 const fullHistoryQuery = vi.fn();
+let cachedFullHistoryData: typeof stabilityState.data;
 
 vi.mock("@/hooks/api-hooks", () => ({
   useStabilityIndexDetail: () => ({
@@ -36,17 +37,21 @@ vi.mock("@/hooks/api-hooks", () => ({
   }),
   useStabilityIndexFullHistory: (options?: { enabled?: boolean }) => {
     fullHistoryQuery(options);
-    return {
-      ...stabilityState,
-      // A disabled full-history query never carries the detail query's error.
-      error: options?.enabled === false ? null : stabilityState.error,
-      data: options?.enabled === false || !stabilityState.data ? undefined : {
+    if (options?.enabled !== false && stabilityState.data) {
+      cachedFullHistoryData = {
         ...stabilityState.data,
         history: [
           ...stabilityState.data.history,
           { date: 1_600_000_000, score: 30, band: "CRISIS" },
         ],
-      },
+      };
+    }
+    return {
+      ...stabilityState,
+      // A disabled full-history query never carries the detail query's error.
+      error: options?.enabled === false ? null : stabilityState.error,
+      // Query-core keeps serving a disabled query's cached entry.
+      data: cachedFullHistoryData,
       refetch,
     };
   },
@@ -176,6 +181,8 @@ describe("StabilityIndexClient", () => {
     expect(screen.getByText("score-chart-4")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Recent history" }));
     expect(fullHistoryQuery).toHaveBeenLastCalledWith({ enabled: false });
+    expect(screen.getByText("score-chart-3")).toBeTruthy();
+    expect(screen.queryByText("score-chart-4")).toBeNull();
   });
 
   it("renders the authoritative streak instead of recounting bounded history", () => {
@@ -194,6 +201,7 @@ describe("StabilityIndexClient", () => {
   beforeEach(() => {
     refetch.mockReset();
     fullHistoryQuery.mockReset();
+    cachedFullHistoryData = undefined;
     stabilityState = {
       data: {
         current: {

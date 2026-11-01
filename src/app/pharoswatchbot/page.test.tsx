@@ -5,9 +5,11 @@ import {
   TELEGRAM_ALERT_EXAMPLES,
   TELEGRAM_COMMAND_GROUPS,
   TELEGRAM_COMMAND_REFERENCE_TIPS,
+  TELEGRAM_COVERAGE_SENTENCE,
   TELEGRAM_FAQ,
   TELEGRAM_PAGE_DESCRIPTION,
 } from "./telegram-content";
+import { ACTIVE_STABLECOIN_COUNT, TRACKED_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
 import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
 import {
@@ -65,6 +67,17 @@ describe("PharosWatchBotPage", () => {
     expect(copy).toMatch(/Fewer like this/);
     expect(copy).toContain(`at most ${TELEGRAM_ALERT_POLICY.chatCap.maxRealtimeMessages} live alerts a day`);
     expect(copy).toContain(`${String(TELEGRAM_ALERT_POLICY.rollup.localHour).padStart(2, "0")}:00`);
+  });
+
+  it("scopes alert coverage to the active alerting universe", () => {
+    expect(TELEGRAM_COVERAGE_SENTENCE).toContain(
+      `${ACTIVE_STABLECOIN_COUNT.toLocaleString("en-US")} active stablecoins`,
+    );
+    expect(TELEGRAM_COVERAGE_SENTENCE).not.toContain(
+      `${TRACKED_STABLECOIN_COUNT.toLocaleString("en-US")} tracked stablecoins`,
+    );
+    expect(TELEGRAM_FAQ.some((item) => item.question === "Can I follow every active stablecoin at once?")).toBe(true);
+    expect(TELEGRAM_FAQ.some((item) => /every tracked stablecoin/i.test(item.question))).toBe(false);
   });
 
   it("emits SoftwareApplication markup and no retired HowTo node", () => {

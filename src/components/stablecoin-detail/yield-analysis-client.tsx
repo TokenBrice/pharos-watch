@@ -44,7 +44,8 @@ import {
 import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
 import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { BACKING_LABELS, GOVERNANCE_LABELS, getProfilePegLabel, YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import type { YieldHistoryPoint } from "@shared/types";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
@@ -127,10 +128,10 @@ function buildYieldCompareHref(currentId: string, peerIds: readonly string[]): s
   return `/yield/?compare=${encodeURIComponent(ids.join(","))}`;
 }
 
-function formatPeerCohortLabel(model: YieldPeerRailModel): string {
+function formatPeerCohortLabel(model: YieldPeerRailModel, staticCoin: StablecoinStaticMeta): string {
   const yieldTypeLabel = YIELD_TYPE_LABELS[model.currentYieldType] ?? model.currentYieldType;
   if (model.cohortKind === "same-peg") {
-    const pegLabel = model.currentPeg ? (PEG_LABELS_SHORT[model.currentPeg] ?? model.currentPeg) : "same-peg";
+    const pegLabel = getProfilePegLabel(staticCoin.flags, staticCoin.pegReferenceSymbol);
     return `${pegLabel} peg peers by PYS rank`;
   }
   if (model.cohortKind === "same-yield-type-safety") {
@@ -147,7 +148,7 @@ function formatPeerSelectionNote(model: YieldPeerRailModel): string {
   return `${windowLabel} · ${model.cohortSize} row${model.cohortSize === 1 ? "" : "s"} in cohort`;
 }
 
-function YieldPeerRail({ model, currentId }: { model: YieldPeerRailModel; currentId: string }) {
+function YieldPeerRail({ model, currentId, staticCoin }: { model: YieldPeerRailModel; currentId: string; staticCoin: StablecoinStaticMeta }) {
   const compareSetHref = buildYieldCompareHref(
     currentId,
     model.items.map((item) => item.row.id),
@@ -162,7 +163,7 @@ function YieldPeerRail({ model, currentId }: { model: YieldPeerRailModel; curren
             Nearby yield context
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {formatPeerCohortLabel(model)} · {formatPeerSelectionNote(model)}
+            {formatPeerCohortLabel(model, staticCoin)} · {formatPeerSelectionNote(model)}
           </p>
         </div>
         <Link
@@ -254,7 +255,7 @@ function StablecoinYieldDetailHeader({
               <p className="text-sm text-muted-foreground">
                 {GOVERNANCE_LABELS[staticCoin.flags.governance] ?? staticCoin.flags.governance} ·{" "}
                 {BACKING_LABELS[staticCoin.flags.backing] ?? staticCoin.flags.backing} ·{" "}
-                {PEG_LABELS_SHORT[staticCoin.flags.pegCurrency] ?? staticCoin.flags.pegCurrency}
+                {getProfilePegLabel(staticCoin.flags, staticCoin.pegReferenceSymbol)}
               </p>
               <p className="max-w-2xl text-sm text-muted-foreground">
                 Source comparison, warning signals timeline, and source-switch history for {staticCoin.symbol}.
@@ -409,7 +410,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   }, [id]);
 
   const coin = TRACKED_META_BY_ID.get(id);
-  const shouldHaveYieldData = coin?.flags.yieldBearing ?? false;
+  const shouldHaveYieldData = coin ? hasStaticYieldWorkbench(coin) : false;
   const sourcesParam = getParam("sources");
   const requestedSourceKeys = useMemo(
     () =>
@@ -556,7 +557,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
 
   return (
     <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} model={readyModel}>
-      {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} /> : null}
+      {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} staticCoin={staticCoin} /> : null}
 
       <YieldSourceRiskCard
         sourceLabel={readyModel.sourceExplorer.selectedSource.displayLabel}

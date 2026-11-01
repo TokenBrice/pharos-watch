@@ -4,6 +4,9 @@ import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources"
 import { collectStablecoinDetailDates, STABLECOIN_DETAIL_CONTENT_REVISED_AT } from "../lib/sitemap-detail-dates";
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
 import { BLOG_POSTS } from "../../src/data/blog";
+import { getIndexableChainIds } from "../../src/lib/chain-indexing";
+import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "../../src/lib/peg-landing";
+import { ALL_STABLECOIN_TAXONOMY_PAGES } from "../../src/lib/stablecoin-taxonomy";
 
 const generator = vi.hoisted(() => ({
   gitLog: "",
@@ -116,12 +119,21 @@ const STUDY_PATH = "src/lib/case-studies/usdc-svb-2023.json";
 const BLOG_INDEX_PATH = "src/data/blog/index.ts";
 const BLOG_RENDERER_PATH = "src/app/blog/[slug]/page.tsx";
 const BLOG_POST_PATHS = BLOG_POSTS.map((post) => `src/data/blog/posts/${post.slug}.md`);
+const CHAIN_CONTENT_PATH = "src/app/chains/static-chain-content.ts";
+const PEG_TAXONOMY_PATH = "src/lib/peg-taxonomy.ts";
+const TAXONOMY_PAGE_PATH = "src/app/stablecoins/taxonomy-page.tsx";
 
 async function scannedHistoryFiles(): Promise<string[]> {
   const { execFileSync } = await vi.importActual<typeof import("node:child_process")>("node:child_process");
   const scanPaths = [
     "src/app",
     "src/lib/case-studies",
+    "src/lib/chain-indexing.ts",
+    "src/lib/peg-hub-content.ts",
+    "src/lib/peg-landing.ts",
+    "src/lib/peg-taxonomy.ts",
+    "src/lib/stablecoin-taxonomy-urls.ts",
+    "src/lib/stablecoin-taxonomy.ts",
     "src/data/blog",
     SCHEMA_PATH,
     "shared/data/stablecoins/coins",
@@ -238,5 +250,40 @@ describe("generated sitemap dates are independent of checkout time", () => {
     expect(changedRoutes(baseline, rendererEdit).sort()).toEqual(
       BLOG_POSTS.map((post) => `/blog/${post.slug}/`).sort(),
     );
+  });
+
+  it("gives the root route its own Git date", async () => {
+    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
+    expect(baseline["/"]).toBe(BASE_COMMIT);
+  });
+
+  it("advances every indexable chain profile for a shared chain-content edit", async () => {
+    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
+    const edited = await runGenerator({ gitLog: gitLogFor(files, [CHAIN_CONTENT_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
+    const changed = changedRoutes(baseline, edited);
+
+    expect(changed.sort()).toEqual(
+      getIndexableChainIds().map((chainId) => `/chains/${chainId}/`).sort(),
+    );
+    expect(changed.every((route) => edited[route] === LATER_COMMIT)).toBe(true);
+  });
+
+  it("advances every peg hub for a shared peg-taxonomy edit", async () => {
+    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
+    const edited = await runGenerator({ gitLog: gitLogFor(files, [PEG_TAXONOMY_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
+    const expected = PEG_HUB_PEGS
+      .map((peg) => PEG_HUB_SLUGS[peg])
+      .filter((slug): slug is string => Boolean(slug))
+      .map((slug) => `/stablecoins/${slug}/`);
+
+    expect(changedRoutes(baseline, edited).sort()).toEqual(expected.sort());
+  });
+
+  it("advances every taxonomy cohort page for a shared taxonomy-renderer edit", async () => {
+    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
+    const edited = await runGenerator({ gitLog: gitLogFor(files, [TAXONOMY_PAGE_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
+    const expected = ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => page.href);
+
+    expect(changedRoutes(baseline, edited).sort()).toEqual(expected.sort());
   });
 });

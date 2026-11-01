@@ -7,6 +7,7 @@ import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fix
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import type { ScreenerRow } from "@/lib/screener-filters";
 import type { CsvColumn } from "@/lib/exports/csv";
+import { escapeCsvField } from "@shared/lib/csv";
 
 import { ScreenerClient } from "./client";
 
@@ -342,6 +343,43 @@ describe("ScreenerClient freshness notices", () => {
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
       asOfISO: "unknown", sourceGenerations: { ...expected, "report-cards": null }, disabled: false,
     });
+  });
+
+  it("exports an unknown mint band, not NR, when the report-card publication is unavailable", () => {
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    mocks.useReportCardsV9.mockReturnValue({ data: undefined, isLoading: false, error: new Error("offline"), dataUpdatedAt: 0, meta: null, refetch });
+    render(<ScreenerClient />);
+    const props = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as {
+      data: ScreenerRow[];
+      columns: CsvColumn<ScreenerRow>[];
+      disabled: boolean;
+    };
+
+    expect(props.disabled).toBe(false);
+    expect(props.data.length).toBeGreaterThan(0);
+    expect(props.data.every((row) => row.mintAuthorityScoreBand === null)).toBe(true);
+    const bandColumn = props.columns.find((column) => column.header === "mint_authority_score_band")!;
+    expect(bandColumn.accessor(props.data[0], 0)).toBeNull();
+    expect(escapeCsvField(bandColumn.accessor(props.data[0], 0))).toBe("");
+  });
+
+  it("stamps the export with the admitted publication's prefixed methodology label", () => {
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    render(<ScreenerClient />);
+    const props = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as { methodologyLabel: string };
+
+    expect(props.methodologyLabel).toContain("safety-score v9.0");
+    expect(props.methodologyLabel).not.toContain("safety-score 9.0");
+  });
+
+  it("does not claim a methodology for safety columns this run did not read", () => {
+    mocks.useStablecoins.mockReturnValue({ data: { peggedAssets: [makeStablecoin()] }, isLoading: false, error: null, dataUpdatedAt: 1, meta: null, refetch });
+    mocks.useReportCardsV9.mockReturnValue({ data: undefined, isLoading: false, error: new Error("offline"), dataUpdatedAt: 0, meta: null, refetch });
+    render(<ScreenerClient />);
+    const props = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as { methodologyLabel: string };
+
+    expect(props.methodologyLabel).toContain("safety-score columns unavailable this run");
+    expect(props.methodologyLabel).not.toMatch(/safety-score v9\b/);
   });
 
   it("keeps an inadmissible report publication unavailable rather than treating it as issuer NR", () => {

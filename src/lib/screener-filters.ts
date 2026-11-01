@@ -280,12 +280,12 @@ export interface ScreenerRow {
   mintAuthority: MintAuthorityStatusKind;
   /** Published Safety V9 mint-control component (0-100). null = not rated. */
   mintAuthorityScore: number | null;
-  /** Score band bucket, or "nr" when unrated. */
-  mintAuthorityScoreBand: MintAuthorityScoreFilterValue;
-  mintAuthorityScoreLabel: string;
-  mintAuthorityScoreBandLabel: string;
-  mintAuthorityScoreBadgeClassName: string;
-  mintAuthorityScoreDetail: string;
+  /** Score band bucket; null when the report-cards publication is unavailable. */
+  mintAuthorityScoreBand: MintAuthorityScoreFilterValue | null;
+  mintAuthorityScoreLabel: string | null;
+  mintAuthorityScoreBandLabel: string | null;
+  mintAuthorityScoreBadgeClassName: string | null;
+  mintAuthorityScoreDetail: string | null;
   /** Two-point [worst, current] peg deviations for the desktop peg-range sparkline; not a 30-day history. */
   pegDeviationSeries?: ReadonlyArray<number | null>;
   /** Compact supply samples for the desktop 30d supply sparkline. */
@@ -434,7 +434,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     }
     if (mintAuthoritySet && !mintAuthoritySet.has(row.mintAuthority)) return false;
     if (!passesMinimum(row.mintAuthorityScore, filters.mintAuthorityScoreMin)) return false;
-    if (mintAuthorityScoreSet && !mintAuthorityScoreSet.has(row.mintAuthorityScoreBand)) return false;
+    if (mintAuthorityScoreSet && (row.mintAuthorityScoreBand === null || !mintAuthorityScoreSet.has(row.mintAuthorityScoreBand))) return false;
     return true;
   });
 }

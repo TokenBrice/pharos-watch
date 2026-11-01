@@ -400,7 +400,10 @@ function ScreenerMobileCard({ row, logo }: { row: ScreenerRow; logo?: string }) 
         <div className="pharos-inset px-3 py-2">
           <p className="text-muted-foreground">Mint authority</p>
           <p className="mt-0.5 font-medium text-foreground">
-            {row.mintAuthorityScoreLabel} / {MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}
+            {row.mintAuthorityScoreLabel ?? "—"}
+            {row.mintAuthorityScoreLabel !== null
+              ? ` / ${MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel}`
+              : null}
           </p>
         </div>
       </div>

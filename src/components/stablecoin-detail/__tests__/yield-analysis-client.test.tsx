@@ -222,6 +222,11 @@ describe("YieldAnalysisClient", () => {
         "This stablecoin doesn't currently have yield data tracked. The protocol may not expose a yield-bearing pool, or the source is not on the curated allowlist.",
     },
     {
+      id: "u-united-stables",
+      coin: staticCoin("u-united-stables", "United Stables", "U", false),
+      expected: "Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet.",
+    },
+    {
       id: "buck-buck-assets",
       coin: staticCoin("buck-buck-assets", "Buck", "BUCK", true),
       expected: "This stablecoin is frozen — historical yield data is no longer being refreshed.",
@@ -244,6 +249,33 @@ describe("YieldAnalysisClient", () => {
 
     expect(screen.getByRole("link", { name: `Back to ${coin.symbol} detail` })).toBeTruthy();
     await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
+  });
+
+  it("labels NAV tokens with their reference asset instead of the fixed-peg short label", () => {
+    setRankingsQuery();
+    render(
+      <YieldAnalysisClient
+        id="xgld-unitas"
+        staticCoin={{
+          id: "xgld-unitas",
+          name: "xGLD",
+          symbol: "xGLD",
+          pegReferenceSymbol: "XAUT",
+          flags: {
+            backing: "crypto-backed",
+            pegCurrency: "VAR",
+            governance: "centralized",
+            yieldBearing: true,
+            rwa: true,
+            navToken: true,
+          },
+        }}
+      />,
+    );
+
+    const header = screen.getByRole("heading", { name: "xGLD" }).closest("section")!;
+    expect(header.textContent).toContain("XAUT-denominated NAV");
+    expect(header.textContent).not.toContain("CPI");
   });
 
   it("renders the query error in the shared frame", () => {

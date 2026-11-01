@@ -269,8 +269,8 @@ export function ReportCardsV9Client({ initialPreview = null }: { initialPreview?
     [stablecoinsQuery.data?.peggedAssets],
   );
   const pegTypeMap = useMemo(
-    () => buildSafetyPegTypeMap(stablecoinsQuery.data?.peggedAssets),
-    [stablecoinsQuery.data?.peggedAssets],
+    () => buildSafetyPegTypeMap(cards),
+    [cards],
   );
   const gradeCounts = useMemo(() => buildV9GradeCounts(cards), [cards]);
   const totalCards = cards.length;

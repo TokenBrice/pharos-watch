@@ -5,6 +5,7 @@ import { NUMERIC_INPUT_STATES } from "@shared/test-utils/boundary-contract-vecto
 import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
 import {
   buildSafetyMcapMap,
+  buildSafetyPegTypeMap,
   buildV9GradeCounts,
   buildV9HeadlineStats,
   buildV9PillarAverages,
@@ -136,6 +137,20 @@ describe("Safety Scores V9 view model", () => {
       label: "Supply in A/B", value: "Unavailable", detail: "$0.00",
     });
   });
+  it("derives peg buckets from the client registry instead of the optional stablecoins read", () => {
+    const realCards = [
+      makeV9Card({ id: "usdc-circle" }),
+      makeV9Card({ id: "xaut-tether" }),
+    ].map(projectV9TableCard);
+    const pegTypeMap = buildSafetyPegTypeMap(realCards);
+
+    expect(pegTypeMap.get("usdc-circle")).toBe("peggedUSD");
+    expect(pegTypeMap.get("xaut-tether")).toBe("peggedGOLD");
+    const options = { gradeFilter: "all" as const, sortKey: "overall" as const, mcapMap: new Map<string, number | null>() };
+    expect(filterAndSortV9Cards(realCards, { ...options, pegFilter: "usd", pegTypeMap }).map((card) => card.id)).toEqual(["usdc-circle"]);
+    expect(filterAndSortV9Cards(realCards, { ...options, pegFilter: "commodities", pegTypeMap }).map((card) => card.id)).toEqual(["xaut-tether"]);
+  });
+
   it("separates Pipeline gap from NR and keeps partial ratings ranked without filling missing pillars", () => {
     const gap = makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" });
     const partial = makeReportCardsV9PartialCard("exit", "B", { id: "partial", score: 75 });
