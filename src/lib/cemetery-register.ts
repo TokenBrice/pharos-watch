@@ -17,6 +17,7 @@ import { buildExplorerUrl } from "@shared/lib/explorer";
 import type { PegCurrency } from "@shared/types/core";
 import type { MechanismArchetype } from "@shared/types/stablecoin-taxonomy";
 import { CASE_STUDY_CLIENT_BY_CEMETERY_ID } from "@/lib/case-study-client-index";
+import { formatCemeteryPeg } from "@/components/cemetery/cemetery-register-model";
 import {
   CEMETERY_PEAK_BUCKET_LABELS,
   CEMETERY_RECORD_FILTER_LABELS,
@@ -111,7 +112,7 @@ export function buildRegisterFilterOptions(
   stats: Pick<CemeteryStats, "total" | "causes" | "years" | "mechanisms" | "trackedCount" | "curatedCount" | "peakBuckets">,
   rows: readonly CemeteryRegisterRow[],
 ): RegisterFilterOptions {
-  const pegCounts = new Map<string, number>();
+  const pegCounts = new Map<PegCurrency, number>();
   for (const row of rows) pegCounts.set(row.pegCurrency, (pegCounts.get(row.pegCurrency) ?? 0) + 1);
 
   return {
@@ -124,7 +125,7 @@ export function buildRegisterFilterOptions(
         .reverse(),
       peg: [...pegCounts]
         .sort(([a, countA], [b, countB]) => countB - countA || (a < b ? -1 : a > b ? 1 : 0))
-        .map(([peg, count]) => ({ value: peg, label: peg, count })),
+        .map(([peg, count]) => ({ value: peg, label: formatCemeteryPeg(peg), count })),
       mechanism: stats.mechanisms.counts.map(({ archetype, count }) => ({
         value: archetype,
         label: MECHANISM_ARCHETYPE_SHORT_LABELS[archetype],

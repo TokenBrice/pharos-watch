@@ -96,9 +96,9 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
 
   // The server total counts suppressed rows too, so a visible total is only
   // known once the raw traversal is complete.
-  const visibleTotal: number | null = suppressedCount === 0
-    ? events.total
-    : events.hasNextPage ? null : visibleEvents.length;
+  const visibleTotal: number | null = events.hasNextPage
+    ? null
+    : suppressedCount === 0 ? events.total : visibleEvents.length;
 
   return {
     events,

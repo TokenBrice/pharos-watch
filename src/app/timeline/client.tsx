@@ -177,9 +177,11 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetchNextPageError,
     meta,
     dataUpdatedAt,
   } = feed.events;
+  const hasData = feed.events.pages?.[0] != null;
 
   const interactions = useTimelineFeedInteractions({
     filterSignature: feedController.filterSignature,
@@ -190,6 +192,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    nextPageError: isFetchNextPageError,
   });
 
   const handleClearFilters = useCallback(() => {
@@ -263,6 +266,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         error={error}
         nowMs={nowMs}
         lastEventTs={lastEventTs}
+        hasData={hasData}
         phosphor={phosphorActive}
         showPhosphorToggle={phosphorToggleVisible}
         onTogglePhosphor={togglePhosphor}
@@ -281,7 +285,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         logos={logos}
         nowMs={nowMs}
         rawEvents={rawEvents}
-        hasData={feed.events.pages?.[0] != null}
+        hasData={hasData}
         visibleEvents={feed.visibleEvents}
         openIncidents={feed.openIncidents}
         activeStatus={feed.activeStatus}

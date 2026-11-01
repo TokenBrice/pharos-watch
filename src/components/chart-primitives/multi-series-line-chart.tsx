@@ -126,7 +126,8 @@ export function MultiSeriesLineChart<D extends { ts: number }>({
                 stroke={item.color}
                 strokeWidth={lineStrokeWidth}
                 dot={false}
-                connectNulls
+                /* An omitted observation is a gap, never an interpolated segment. */
+                connectNulls={false}
               />
             ))}
           </LineChart>

@@ -12,6 +12,8 @@ interface UseTimelineFeedInteractionsArgs {
   fetchNextPage: () => Promise<unknown>;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
+  /** A rejected next-page request stays user-retried; the sentinel must not loop it. */
+  nextPageError: boolean;
 }
 export function useTimelineFeedInteractions({
   filterSignature,
@@ -22,6 +24,7 @@ export function useTimelineFeedInteractions({
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
+  nextPageError,
 }: UseTimelineFeedInteractionsArgs) {
   const [autoLoadState, setAutoLoadState] = useState<{ filterSignature: string; enabled: boolean } | null>(null);
   const autoLoadEnabled =
@@ -97,7 +100,7 @@ export function useTimelineFeedInteractions({
     const obs = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          if (entry.isIntersecting && hasNextPage && !isFetchingNextPage && !nextPageError) {
             void fetchNextPage();
           }
         }
@@ -106,7 +109,7 @@ export function useTimelineFeedInteractions({
     );
     obs.observe(node);
     return () => obs.disconnect();
-  }, [autoLoadEnabled, fetchNextPage, hasNextPage, isFetchingNextPage]);
+  }, [autoLoadEnabled, fetchNextPage, hasNextPage, isFetchingNextPage, nextPageError]);
 
   const handleLoadMore = useCallback(() => {
     setAutoLoadState({ filterSignature, enabled: true });

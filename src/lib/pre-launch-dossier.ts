@@ -1,6 +1,6 @@
 import { formatUtcDayLabel } from "@shared/lib/format";
 import type { DateHistoryEntry, LaunchMilestone, StablecoinMeta } from "@shared/types";
-import { LAUNCH_PHASE_LABELS } from "@shared/lib/classification/pre-launch";
+import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
 import {
   dateScore,
   formatFuzzyDate,
@@ -60,7 +60,7 @@ export function parseFuzzyRange(raw: string): FuzzyRange | null {
 }
 
 export function formatPhaseLabel(coin: Pick<StablecoinMeta, "launchPhase">): string {
-  return coin.launchPhase ? LAUNCH_PHASE_LABELS[coin.launchPhase] : "Unphased";
+  return coin.launchPhase ? LAUNCH_PHASE_LABELS[coin.launchPhase] : PRE_LAUNCH_UNPHASED_LABEL;
 }
 
 export function pluralize(count: number, singular: string, plural = `${singular}s`): string {

@@ -73,6 +73,9 @@ export const LAUNCH_PHASE_LABELS = {
   launched: "Launched – awaiting data",
 } as const satisfies Record<LaunchPhase, string>;
 
+/** A pre-launch coin whose launch phase has not been assigned. */
+export const PRE_LAUNCH_UNPHASED_LABEL = "Unphased";
+
 export const MILESTONE_TYPE_LABELS = {
   announcement: "Announcement",
   milestone: "Milestone",

@@ -100,14 +100,18 @@ interface SummaryBandProps {
   error: Error | null;
   nowMs: number;
   lastEventTs: number | null;
+  /** An admitted response page, even an empty one, is observed data; a missing one has no count. */
+  hasData: boolean;
   phosphor: boolean;
   showPhosphorToggle: boolean;
   onTogglePhosphor: () => void;
 }
 
-export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, meta, error, nowMs, lastEventTs, phosphor, showPhosphorToggle, onTogglePhosphor }: SummaryBandProps) {
+export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, severityLabel, dataUpdatedAt, meta, error, nowMs, lastEventTs, hasData, phosphor, showPhosphorToggle, onTogglePhosphor }: SummaryBandProps) {
   const showsPartial = totalCount != null && totalCount > loadedCount;
-  const countNode = showsPartial ? (
+  const countNode = !hasData ? (
+    <span aria-hidden="true" className="inline-block h-3 w-40 max-w-full animate-pulse rounded-md bg-accent align-middle" />
+  ) : showsPartial ? (
     <span className="font-semibold text-foreground">
       Showing {loadedCount.toLocaleString()} of {totalCount!.toLocaleString()} events
     </span>

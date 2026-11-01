@@ -154,7 +154,7 @@ export function TimelineFeed({
           <div>
             <EventSkeleton />
           </div>
-        ) : visibleEvents.length === 0 && !(hasNextPage && rawEvents.length > 0) ? (
+        ) : !hasData ? null : visibleEvents.length === 0 && !(hasNextPage && rawEvents.length > 0) ? (
           <div>
             <EmptyState
               onClearAll={emptyStateFallback.apply}
