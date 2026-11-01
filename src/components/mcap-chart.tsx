@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Area, ReferenceDot } from "recharts";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
@@ -54,46 +54,66 @@ export function McapChart({
 
 function ExpandableHistoryMcapChart(props: McapChartProps) {
   const [localRange, setLocalRange] = useState<TimeRangeOption>("all");
-  const range = props.controlledRange ?? localRange;
-  const needsFullHistory = range === "1y" || range === "all";
+  const requestedRange = props.controlledRange ?? localRange;
+  const needsFullHistory = requestedRange === "1y" || requestedRange === "all";
   const fullHistoryQuery = useSupplyHistory(
     props.stablecoinId,
-    range === "all" ? "all" : 365,
+    requestedRange === "all" ? "all" : 365,
     { enabled: needsFullHistory },
   );
   const hasExpandedHistory = needsFullHistory && fullHistoryQuery.data.length > 0;
+  // A wide selection is not a painted window until its own observations land
+  // (R7): the plotted 90-day seed is the active window, while the requested
+  // range stays in state so the pill moves once wider data arrives.
+  const seedPlotted = needsFullHistory && !hasExpandedHistory;
+  const range: TimeRangeOption = seedPlotted ? "90d" : requestedRange;
   const data = hasExpandedHistory ? fullHistoryQuery.data : props.data;
-  const requestedRange = range === "all" ? "All" : "1Y";
-  // A pressed wide range is not a painted window until its own read lands (R7):
-  // the seed stays visible with the coverage verdict the detail section uses.
-  const historyStatus = !needsFullHistory || hasExpandedHistory
-    ? null
-    : fullHistoryQuery.error ? `${requestedRange} history could not be loaded. Requested coverage is not confirmed.`
-      : fullHistoryQuery.isLoading || fullHistoryQuery.isFetching ? `Loading ${requestedRange} history. Requested coverage is not yet confirmed.`
-        : `No observations returned for ${requestedRange} history. Requested coverage is unavailable.`;
-  const historyNotice = historyStatus ? (
-    <div role="status" aria-label="Market history coverage" aria-live="polite" className="text-xs leading-relaxed text-muted-foreground">
-      <p>
-        {historyStatus}{" "}
-        {props.data.length > 0 ? "Only the available 90-day window is shown." : "No observations are available to show."}
-      </p>
-    </div>
-  ) : null;
+  const setRequestedRange = props.controlledRange ? props.onControlledRangeChange : setLocalRange;
+  const wideReadUnavailable = useRef(false);
+  const retryingWideRead = useRef(false);
+
+  useEffect(() => {
+    if (fullHistoryQuery.isFetching || fullHistoryQuery.isLoading) {
+      retryingWideRead.current = false;
+      return;
+    }
+    if (!needsFullHistory || retryingWideRead.current) return;
+    if (fullHistoryQuery.data.length === 0) {
+      wideReadUnavailable.current = true;
+      setRequestedRange?.("90d");
+    } else {
+      wideReadUnavailable.current = false;
+    }
+  }, [
+    fullHistoryQuery.data.length,
+    fullHistoryQuery.isFetching,
+    fullHistoryQuery.isLoading,
+    needsFullHistory,
+    setRequestedRange,
+  ]);
+
+  const handleRangeChange = (next: TimeRangeOption) => {
+    if (next === "1y" || next === "all") {
+      if (wideReadUnavailable.current) {
+        wideReadUnavailable.current = false;
+        retryingWideRead.current = true;
+        void fullHistoryQuery.refetch();
+      }
+      setRequestedRange?.(next);
+      return;
+    }
+    retryingWideRead.current = false;
+    setRequestedRange?.(next);
+  };
 
   return (
     <McapChartBody
       {...props}
       data={data}
-      historyNotice={historyNotice}
       controlledRange={range}
-      onControlledRangeChange={props.controlledRange ? props.onControlledRangeChange : setLocalRange}
+      onControlledRangeChange={handleRangeChange}
     />
   );
-}
-
-interface McapChartBodyProps extends McapChartProps {
-  /** The expansion read's own coverage verdict, rendered with the chart header. */
-  historyNotice?: ReactNode;
 }
 
 function McapChartBody({
@@ -102,8 +122,7 @@ function McapChartBody({
   onControlledRangeChange,
   cardClassName,
   embedded = false,
-  historyNotice,
-}: McapChartBodyProps) {
+}: McapChartProps) {
   const mcapGradientId = useSvgId("mcap");
   // Log toggle persisted across visits; gated to `range === "all"` + no active brush.
   const [logScale, setLogScale] = usePreference<boolean>("pharos-chart-log-scale", false);
@@ -204,7 +223,6 @@ function McapChartBody({
             ) : null}
           </div>
         ) : null}
-        {historyNotice}
       </div>
       <div className="flex min-w-0 max-w-full items-center gap-2">
         <ChartScaleToggle

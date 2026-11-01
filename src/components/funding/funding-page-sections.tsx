@@ -66,6 +66,13 @@ function formatUsdWhole(value: number): string {
   return `$${formatDecimal(value, 0, 0)}`;
 }
 
+/** Donor-wall receipts: an unpriced donation is not zero, and sub-dollar gifts keep cents. */
+function formatDonationUsd(value: number): string {
+  if (value === 0) return "—";
+  if (value < 1) return `$${formatDecimal(value, 2, 2)}`;
+  return formatUsdWhole(value);
+}
+
 /* ------------------------------------------------------------------ KPI row */
 
 interface KpiLabel {
@@ -388,7 +395,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
                   <li key={`${d.chain}-${d.tx_hash}`} className="flex items-baseline justify-between gap-3">
                     <span className="flex-1 truncate font-mono text-xs">{displayText}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
-                      <span className="pharos-numeric">{formatUsdWhole(d.usd_at_receipt)}</span>{" "}
+                      <span className="pharos-numeric">{formatDonationUsd(d.usd_at_receipt)}</span>{" "}
                       {explorerUrl ? (
                         <a
                           href={explorerUrl}

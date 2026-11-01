@@ -301,11 +301,15 @@ export function getYieldSourceRiskDrivers(params: {
     });
   }
 
-  if (params.sourceChanged || (sourceSwitchCount30d !== null && sourceSwitchCount30d > 0)) {
+  const changedInLatestSnapshot = params.sourceChanged === true;
+  const changedInTrailingMonth = sourceSwitchCount30d !== null && sourceSwitchCount30d > 0;
+  if (changedInLatestSnapshot || changedInTrailingMonth) {
     drivers.push({
       key: "source-changed",
       label: "source changed",
-      description: "Selected source changed versus the prior published snapshot.",
+      description: changedInLatestSnapshot
+        ? "Selected source changed versus the prior published snapshot."
+        : "Selected source changed within the last 30 days.",
     });
   }
 

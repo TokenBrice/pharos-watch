@@ -127,44 +127,49 @@ it("expands standalone charts with a bounded annual key and an uncapped retained
   client.clear();
 });
 
-it("discloses that a wide range still paints the 90-day seed when its expansion read fails", async () => {
-  vi.stubGlobal("fetch", vi.fn(async () => {
+it("highlights the 90-day seed after a wide expansion read fails, without a notice", async () => {
+  const fetchMock = vi.fn(async () => {
     throw new TypeError("Failed to fetch");
-  }));
+  });
+  vi.stubGlobal("fetch", fetchMock);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const { unmount } = render(
     <QueryClientProvider client={client}>
-      <McapChart data={data} stablecoinId="usdt-tether" controlledRange="all" expandHistoryOnWideRange />
+      <McapChart
+        data={data}
+        stablecoinId="usdt-tether"
+        controlledRange="all"
+        onControlledRangeChange={vi.fn()}
+        expandHistoryOnWideRange
+      />
     </QueryClientProvider>,
   );
-  // The polling query retries twice before it settles; this is the first failure state.
-  await waitFor(() => {
-    expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(
-      "All history could not be loaded. Requested coverage is not confirmed.",
-    );
-  }, { timeout: 8_000 });
-  expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(
-    "Only the available 90-day window is shown.",
-  );
+  // The polling query retries twice before it settles.
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3), { timeout: 8_000 });
+  expect(screen.queryByRole("status", { name: "Market history coverage" })).toBeNull();
+  expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
   expect(screen.getByRole("figure", { name: "Market cap chart showing 3 data points" })).toBeTruthy();
   unmount();
   client.clear();
 });
 
-it("qualifies a wide range while its expansion read is still loading", async () => {
+it("highlights the 90-day seed while a wide expansion read is still loading", async () => {
   vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const { unmount } = render(
     <QueryClientProvider client={client}>
-      <McapChart data={data} stablecoinId="usdt-tether" controlledRange="1y" expandHistoryOnWideRange />
+      <McapChart
+        data={data}
+        stablecoinId="usdt-tether"
+        controlledRange="1y"
+        onControlledRangeChange={vi.fn()}
+        expandHistoryOnWideRange
+      />
     </QueryClientProvider>,
   );
-  expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(
-    "Loading 1Y history. Requested coverage is not yet confirmed.",
-  );
-  expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(
-    "Only the available 90-day window is shown.",
-  );
+  expect(screen.queryByRole("status", { name: "Market history coverage" })).toBeNull();
+  expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByRole("button", { name: "1Y" }).getAttribute("aria-pressed")).toBe("false");
   unmount();
   client.clear();
 });

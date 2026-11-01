@@ -119,6 +119,23 @@ describe("yield source risk UI helpers", () => {
     expect(formatYieldSourceRiskDriverSummary([])).toBe("No source-risk drivers shown.");
   });
 
+  it("describes a count-only source switch by its trailing-30-day window", () => {
+    const [countOnly] = getYieldSourceRiskDrivers({ sourceRisk: { sourceSwitchCount30d: 1 } });
+    expect(countOnly).toMatchObject({
+      key: "source-changed",
+      description: "Selected source changed within the last 30 days.",
+    });
+
+    const [latest] = getYieldSourceRiskDrivers({
+      sourceRisk: { sourceSwitchCount30d: 2 },
+      sourceChanged: true,
+    });
+    expect(latest).toMatchObject({
+      key: "source-changed",
+      description: "Selected source changed versus the prior published snapshot.",
+    });
+  });
+
   it("classifies source depth only when TVL and supply-relative depth are present", () => {
     expect(classifyYieldSourceDepth({ sourceRisk: { sourceDepthRatio: 0.02 }, sourceTvlUsd: 10_000_000 })).toBe("deep");
     expect(classifyYieldSourceDepth({ sourceRisk: { sourceDepthRatio: 0.005 }, sourceTvlUsd: 10_000_000 })).toBe("moderate");
