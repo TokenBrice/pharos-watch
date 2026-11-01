@@ -98,7 +98,11 @@ jobs:
       # Read-only pre-deploy counts for the delayed data-regression workflow.
       # A read failure is recorded as unknown in the artifact; it never blocks
       # the deployment (R2: unavailable is not a regression and not a pass).
+      # Both steps are non-blocking evidence so a baseline-only failure cannot
+      # make "Re-run failed jobs" repeat the production deploy; the delayed
+      # check reports a missing/unreadable artifact as unknown.
       - name: Capture pre-deploy data baseline
+        continue-on-error: true
         env:
           WORKER_DEPLOY_REQUIRED: ${{ needs.plan.outputs.worker_required }}
           PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
@@ -114,6 +118,7 @@ jobs:
               --capture "$RUNNER_TEMP/post-deploy-data-baseline.json"
           fi
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        continue-on-error: true
         with:
           name: post-deploy-data-baseline
           path: ${{ runner.temp }}/post-deploy-data-baseline.json
@@ -124,8 +129,9 @@ jobs:
     needs:
       - plan
       - data-baseline
-    # Ordering only: a baseline capture failure must not block the release.
-    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.worker_required == 'true' }}
+    # Ordering only: a baseline capture failure must not block the release; a
+    # cancelled run must still suppress the production deploy.
+    if: ${{ !cancelled() && needs.plan.result == 'success' && needs.plan.outputs.worker_required == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:

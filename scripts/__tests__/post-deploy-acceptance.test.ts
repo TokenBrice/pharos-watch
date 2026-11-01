@@ -76,6 +76,18 @@ describe("post-deploy route sweep", () => {
     expect(result.detail).toContain(`${POST_DEPLOY_ROUTE_SWEEP_PATHS.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length}`);
   });
 
+  it("records a 429 as unknown, neither a pass nor a release failure", () => {
+    const probes = POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({
+      path,
+      status: path === "/api/telegram-pulse" ? 429 : 200,
+    }));
+    const result = summarizePostDeployRouteSweep(probes);
+    expect(result.outcome).toBe("pending");
+    expect(result.failures).toEqual([{ path: "/api/telegram-pulse", status: 429, reason: "rate-limited" }]);
+    expect(result.detail).toContain("rate-limited");
+    expect(result.detail).not.toContain("routes failed");
+  });
+
   it("fails a 5xx, an auth rejection, a transport failure and a route that never ran", () => {
     const probes: { path: string; status: number; error?: string }[] =
       POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({ path, status: 200 }));

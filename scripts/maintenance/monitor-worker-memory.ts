@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -6,6 +7,7 @@ import { z } from "zod";
 import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, SCHEDULED_TASK_DESCRIPTORS } from "../../shared/lib/scheduled-runner-registry";
 import { getCronSlotStartedAtForTrigger } from "../../shared/lib/cron-jobs";
 import { assertCliUsage, parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
+import { parseAssignments } from "../lib/wrangler-toml.mjs";
 import { buildScheduledInvocationQuery } from "./cron-delivery.mjs";
 
 export const WORKER_MEMORY_TELEMETRY_POLICY = {
@@ -15,16 +17,33 @@ export const WORKER_MEMORY_TELEMETRY_POLICY = {
   collectionDeadlineSec: 360, requestTimeoutSec: 30, minRequestSpacingMs: 1000,
   cpuMatchToleranceUsExclusive: 2,
 } as const;
+/** Cloudflare's Cron CPU-class ceilings; the configured Worker cpu_ms can only lower them. */
+const PLATFORM_CPU_CLASS_LIMIT_US = { "sub-hourly": 30_000_000, "hourly-or-longer": 900_000_000 } as const;
+const WORKER_CPU_LIMIT_CONFIGS = ["../../worker/wrangler.toml", "../../worker/wrangler.heavy.toml"] as const;
+function readConfiguredCpuLimitUs(): number {
+  return Math.min(...WORKER_CPU_LIMIT_CONFIGS.map((path) => {
+    const url = new URL(path, import.meta.url);
+    const raw = parseAssignments(readFileSync(url, "utf8"))
+      .find((assignment) => assignment.section === "limits" && assignment.key === "cpu_ms")?.value;
+    if (!raw || !/^\d+$/.test(raw)) throw new Error(`Missing numeric [limits] cpu_ms in ${url.pathname}.`);
+    return Number(raw) * 1000;
+  }));
+}
+const configuredCpuLimitUs = readConfiguredCpuLimitUs();
 /**
- * One authority for platform resource limits and the headroom threshold. CPU
- * classes are Cloudflare's Cron limits (30 s below a one-hour interval, 15 min
- * hourly-or-longer; docs/worker-and-api-limits.md#per-job-resource-evidence);
- * the isolate memory limit is 128 MiB per isolate.
+ * One authority for resource limits and the headroom threshold. CPU classes are
+ * Cloudflare's Cron ceilings (30 s below a one-hour interval, 15 min
+ * hourly-or-longer; docs/worker-and-api-limits.md#per-job-resource-evidence),
+ * bounded by the lower configured `[limits] cpu_ms`; the isolate memory limit
+ * is 128 MiB per isolate.
  */
 export const WORKER_CAPACITY_POLICY = {
   warnRatio: 0.70,
   minSamples: 20,
-  cpuLimitUs: { "sub-hourly": 30_000_000, "hourly-or-longer": 900_000_000 },
+  cpuLimitUs: {
+    "sub-hourly": Math.min(PLATFORM_CPU_CLASS_LIMIT_US["sub-hourly"], configuredCpuLimitUs),
+    "hourly-or-longer": Math.min(PLATFORM_CPU_CLASS_LIMIT_US["hourly-or-longer"], configuredCpuLimitUs),
+  },
   memoryLimitBytes: 128 * 1048576,
 } as const;
 const TARGETS = { heavy: "stablecoin-heavy", public: "stablecoin-api" } as const;
@@ -345,8 +364,9 @@ export function buildCapacityHeadroom(input: {
       const p99Ratio = limitUs === null ? null : p99Us / limitUs;
       const exceededCpu = rows.filter((row) => row.status === "exceededCpu").length;
       const status: CapacityStatus = !source.complete || limitUs === null ? "unavailable"
-        : exceededCpu > 0 || p99Ratio! > policy.warnRatio ? "warn"
-          : sorted.length < policy.minSamples ? "insufficient-samples" : "ok";
+        : exceededCpu > 0 ? "warn"
+          : sorted.length < policy.minSamples ? "insufficient-samples"
+            : p99Ratio! > policy.warnRatio ? "warn" : "ok";
       triggers.push({ workerRole: source.workerRole, cron, cpuClass, limitUs, samples: sorted.length,
         p50Us: nearestRank(sorted, 0.5), p99Us, maxUs: sorted[sorted.length - 1]!, exceededCpu, p99Ratio, status,
         reason: status === "warn" ? (exceededCpu > 0 ? "cpu-exceeded-cpu-observed" : "cpu-p99-over-warn-threshold")
@@ -355,18 +375,21 @@ export function buildCapacityHeadroom(input: {
     }
   }
   const memory: CapacityMemory[] = (["heavy", "public"] as const).map((workerRole) => {
-    const days = input.roleDays.filter((day) => day.workerRole === workerRole && day.queryComplete)
+    const roleDays = input.roleDays.filter((day) => day.workerRole === workerRole);
+    const incomplete = roleDays.some((day) => !day.queryComplete);
+    const days = roleDays.filter((day) => day.queryComplete)
       .flatMap((day) => day.rows.flatMap((row) => row.quantiles.memoryUsageBytesP99 === null ? [] : [{
         dayUtc: day.from.slice(0, 10), from: day.from, to: day.to, status: row.dimensions.status, requests: row.sum.requests, p99Bytes: row.quantiles.memoryUsageBytesP99,
       }]));
     const p99Bytes = days.length ? Math.max(...days.map((day) => day.p99Bytes)) : null;
     const p99Ratio = p99Bytes === null ? null : p99Bytes / policy.memoryLimitBytes;
+    const warn = p99Ratio !== null && p99Ratio > policy.warnRatio;
     return { workerRole, basis: "max-of-cloudflare-sampled-role-day-p99", limitBytes: policy.memoryLimitBytes, days, p99Bytes, p99Ratio,
-      status: p99Bytes === null ? "unavailable" : p99Ratio! > policy.warnRatio ? "warn" : "ok",
-      reason: p99Bytes === null ? "memory-p99-unavailable" : p99Ratio! > policy.warnRatio ? "memory-p99-over-warn-threshold" : null };
+      status: warn ? "warn" : incomplete || p99Bytes === null ? "unavailable" : "ok",
+      reason: warn ? "memory-p99-over-warn-threshold" : incomplete ? "role-day-source-incomplete" : p99Bytes === null ? "memory-p99-unavailable" : null };
   });
   const rows = [...triggers, ...memory];
-  return { status: rows.some((row) => row.status === "warn") ? "warn" : rows.some((row) => row.status === "unavailable") ? "unavailable" : "ok",
+  return { status: rows.some((row) => row.status === "warn") ? "warn" : rows.some((row) => row.status !== "ok") ? "unavailable" : "ok",
     warnRatio: policy.warnRatio, minSamples: policy.minSamples, limits: { cpuUs: policy.cpuLimitUs, memoryBytes: policy.memoryLimitBytes },
     triggers, memory, reasons: [...new Set(rows.flatMap((row) => row.reason === null ? [] : [row.reason]))] };
 }
@@ -380,7 +403,7 @@ export function renderCapacityMarkdown(capacity: CapacityHeadroom, window: Worke
   const mib = (bytes: number | null) => bytes === null ? "unavailable" : (bytes / 1048576).toFixed(2);
   const ratio = (value: number | null) => value === null ? "unavailable" : `${(value * 100).toFixed(1)}%`;
   const lines = ["## Worker capacity headroom", "",
-    `Verdict: **${capacity.status}**. Warn above ${(capacity.warnRatio * 100).toFixed(0)}% of a platform limit or on any \`exceededCpu\` outcome; CPU classes are 30 s below a one-hour interval and 15 min hourly-or-longer; the isolate memory limit is 128 MiB.`,
+    `Verdict: **${capacity.status}**. Warn above ${(capacity.warnRatio * 100).toFixed(0)}% of a platform limit with at least ${capacity.minSamples} samples, or on any \`exceededCpu\` outcome; effective CPU limits are ${Math.round(capacity.limits.cpuUs["sub-hourly"] / 1e6)} s below a one-hour interval and ${Math.round(capacity.limits.cpuUs["hourly-or-longer"] / 1e6)} s hourly-or-longer (Cloudflare classes bounded by configured \`cpu_ms\`); the isolate memory limit is 128 MiB.`,
     `Window (${window.mode}): ${window.from} ≤ scheduled invocation < ${window.to}. Triggers below ${capacity.minSamples} samples report their observed values without a headroom verdict.`,
     `Reasons: ${capacity.reasons.join(", ") || "none"}.`, "",
     "| Role | Cron trigger | CPU class | N | p50 s | p99 s | Max s | Limit s | p99 / limit | exceededCpu | Verdict |",

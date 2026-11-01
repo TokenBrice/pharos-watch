@@ -321,12 +321,16 @@ describe("capacity headroom against platform limits", () => {
   it.each(["0 * * *", "61 * * * *", "*/5 25 * * *", "0-* * * * *", "every hour"])("leaves unparseable expressions unknown (%s)", (expression) => {
     expect(classifyCronCpuClass(expression)).toBeNull();
   });
+  it("bounds the CPU class limits by the configured Worker cpu_ms", () => {
+    expect(WORKER_CAPACITY_POLICY.cpuLimitUs["sub-hourly"]).toBe(30_000_000);
+    expect(WORKER_CAPACITY_POLICY.cpuLimitUs["hourly-or-longer"]).toBe(300_000_000);
+  });
   it("warns strictly above 70% of the class limit", () => {
     const at = (cpuTimeUs: number) => headroom(scheduledRows("*/5 * * * *", 100, cpuTimeUs)).triggers[0]!;
     expect(at(21_000_000)).toMatchObject({ cpuClass: "sub-hourly", limitUs: 30_000_000, samples: 100, status: "ok", reason: null });
     expect(at(21_000_001)).toMatchObject({ status: "warn", reason: "cpu-p99-over-warn-threshold" });
-    expect(headroom(scheduledRows("16 * * * *", 100, 631_000_000)).triggers[0]).toMatchObject({
-      cpuClass: "hourly-or-longer", limitUs: 900_000_000, p99Ratio: 631_000_000 / 900_000_000, status: "warn",
+    expect(headroom(scheduledRows("16 * * * *", 100, 210_000_001)).triggers[0]).toMatchObject({
+      cpuClass: "hourly-or-longer", limitUs: 300_000_000, p99Ratio: 210_000_001 / 300_000_000, status: "warn",
     });
   });
   it("warns on an exceededCpu outcome below the p99 threshold", () => {
@@ -337,6 +341,16 @@ describe("capacity headroom against platform limits", () => {
     expect(headroom(scheduledRows("0 8 * * *", 3, 500_000)).triggers[0]).toMatchObject({
       samples: 3, p99Us: 500_000, status: "insufficient-samples", reason: "insufficient-samples",
     });
+    expect(headroom(scheduledRows("0 8 * * *", 1, 240_000_000)).triggers[0]).toMatchObject({
+      samples: 1, p99Ratio: 240_000_000 / 300_000_000, status: "insufficient-samples", reason: "insufficient-samples",
+    });
+    expect(headroom(scheduledRows("0 8 * * *", 1, 1_000_000, "exceededCpu")).triggers[0]).toMatchObject({
+      samples: 1, exceededCpu: 1, status: "warn", reason: "cpu-exceeded-cpu-observed",
+    });
+  });
+  it("never reports an aggregate ok while a trigger has no headroom verdict", () => {
+    expect(headroom(scheduledRows("55 */2 * * *", 12, 1_000_000)).status).toBe("unavailable");
+    expect(headroom(scheduledRows("0 8 * * *", 20, 1_000_000)).status).toBe("ok");
   });
   it("never reports ok for partial or unclassifiable CPU evidence", () => {
     expect(headroom(scheduledRows("16 * * * *", 50, 1_000_000), false).triggers[0]).toMatchObject({ samples: 50, status: "unavailable", reason: "scheduled-source-incomplete" });
@@ -353,6 +367,30 @@ describe("capacity headroom against platform limits", () => {
     expect(memory(null)).toMatchObject({ p99Bytes: null, p99Ratio: null, status: "unavailable", reason: "memory-p99-unavailable" });
     expect(memory(90 * 1048576, false)).toMatchObject({ p99Bytes: null, status: "unavailable" });
     expect(memory(90 * 1048576).basis).toBe("max-of-cloudflare-sampled-role-day-p99");
+  });
+  it("keeps memory unavailable when one expected role/day read failed", () => {
+    const capacity = buildCapacityHeadroom({
+      roleDays: [
+        { ...roleDay("heavy", null, false), from: "2026-10-13T00:00:00Z", to: "2026-10-14T00:00:00Z" },
+        roleDay("heavy", 1048576),
+        roleDay("public", 1048576),
+      ],
+      scheduled: [],
+    });
+    expect(capacity.memory[0]).toMatchObject({
+      p99Bytes: 1048576, status: "unavailable", reason: "role-day-source-incomplete",
+    });
+  });
+  it("keeps a warning visible when a sibling role/day read failed", () => {
+    const capacity = buildCapacityHeadroom({
+      roleDays: [
+        { ...roleDay("heavy", null, false), from: "2026-10-13T00:00:00Z", to: "2026-10-14T00:00:00Z" },
+        roleDay("heavy", 90 * 1048576),
+        roleDay("public", 1048576),
+      ],
+      scheduled: [],
+    });
+    expect(capacity.memory[0]).toMatchObject({ status: "warn", reason: "memory-p99-over-warn-threshold" });
   });
   it("renders unavailable evidence instead of a zero statistic", () => {
     const markdown = renderCapacityMarkdown(buildCapacityHeadroom({

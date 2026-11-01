@@ -27,10 +27,17 @@ concurrency:
 
 jobs:
   data-regression:
+    # Only a completed push/workflow_dispatch run from this repository's main may
+    # feed its baseline artifact into this issues:write job; fork PR runs are excluded.
     if: >-
       ${{
         github.event_name == 'workflow_dispatch'
-        || github.event.workflow_run.conclusion != 'cancelled'
+        || (
+          github.event.workflow_run.conclusion != 'cancelled'
+          && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+          && github.event.workflow_run.head_repository.full_name == github.repository
+          && github.event.workflow_run.head_branch == 'main'
+        )
       }}
     runs-on: ubuntu-latest
     timeout-minutes: 100
@@ -148,6 +155,27 @@ jobs:
           issue_number=$(gh issue list --state open --search 'in:title "Post-deploy data regression"' --json number,title --jq '[.[] | select(.title == "Post-deploy data regression")][0].number // empty')
           if [ -n "${issue_number}" ]; then
             gh issue close "${issue_number}" --comment "Recovered: the delayed post-deploy data check passed again (${RUN_URL})."
+          fi
+      - name: Fail on unreadable evidence
+        if: ${{ always() }}
+        env:
+          DATA_REGRESSION_OUTCOME: ${{ steps.data-regression.outcome }}
+          BASELINE_AVAILABLE: ${{ steps.baseline-available.outputs.available }}
+          REPORT_PATH: ${{ runner.temp }}/post-deploy-data/report.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A real regression already failed the compare step and owns its incident.
+          if [ "${DATA_REGRESSION_OUTCOME}" = "failure" ]; then exit 0; fi
+          if [ "${BASELINE_AVAILABLE}" != "true" ]; then
+            echo "::error::No pre-deploy data baseline artifact; the delayed check is unknown, not healthy."
+            exit 1
+          fi
+          outcome=$(jq -r '.outcome // "unknown"' "${REPORT_PATH}" 2>/dev/null || echo unknown)
+          if [ "${outcome}" != "passed" ] && [ "${outcome}" != "skipped" ]; then
+            reason=$(jq -r '.reason // "unknown"' "${REPORT_PATH}" 2>/dev/null || echo unknown)
+            echo "::error::Delayed check evidence is ${outcome}, not healthy (${reason})."
+            exit 1
           fi
       - name: Fail on data regression
         if: steps.data-regression.outcome == 'failure'

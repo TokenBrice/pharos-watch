@@ -40,7 +40,8 @@ export interface PostDeployAcceptanceDependencies {
 
 /**
  * Bounded GET sweep: at most four in flight, ten seconds each, and no new
- * request after the 105-second deadline. Routes that never ran are reported as
+ * request after the 105-second deadline. A single 5xx is retried once inside
+ * the deadline; a persistent 5xx fails. Routes that never ran are reported as
  * `sweep-not-run`, never as healthy.
  */
 async function collectRouteSweepProbes(
@@ -66,18 +67,25 @@ async function collectRouteSweepProbes(
         results[index] = { path, status: 0, error: "sweep-deadline-exceeded" };
         continue;
       }
+      let retriedAfter5xx = false;
       try {
-        const response = await fetchJson(probeArgs, path);
+        let response = await fetchJson(probeArgs, path);
+        if (response.status >= 500 && response.status <= 599 && Date.now() < deadlineAt) {
+          retriedAfter5xx = true;
+          response = await fetchJson(probeArgs, path);
+        }
         results[index] = {
           path,
           status: response.status,
           ...(response.error ? { error: response.error } : {}),
+          ...(retriedAfter5xx ? { retriedAfter5xx: true } : {}),
         };
       } catch (error) {
         results[index] = {
           path,
           status: 0,
           error: error instanceof Error ? error.message : String(error),
+          ...(retriedAfter5xx ? { retriedAfter5xx: true } : {}),
         };
       }
     }

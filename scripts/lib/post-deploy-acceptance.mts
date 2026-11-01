@@ -60,12 +60,18 @@ export interface PostDeployRouteProbe {
   path: string;
   status: number;
   error?: string;
+  retriedAfter5xx?: boolean;
 }
 
+/**
+ * `http-5xx`, transport and auth failures fail acceptance. `rate-limited`
+ * (429) is unknown evidence: it neither passes nor fails the release by itself.
+ */
 export type PostDeployRouteSweepFailureReason =
   | "http-5xx"
   | "transport-error"
   | "auth-rejected"
+  | "rate-limited"
   | "sweep-not-run";
 
 export interface PostDeployRouteSweepFailure {
@@ -84,6 +90,9 @@ export function classifyPostDeployRouteProbe(probe: PostDeployRouteProbe): PostD
   }
   if (probe.status === 401 || probe.status === 403) {
     return { path: probe.path, status: probe.status, reason: "auth-rejected" };
+  }
+  if (probe.status === 429) {
+    return { path: probe.path, status: probe.status, reason: "rate-limited" };
   }
   if (probe.status >= 500 && probe.status <= 599) {
     return { path: probe.path, status: probe.status, reason: "http-5xx" };
@@ -109,13 +118,19 @@ export function summarizePostDeployRouteSweep(probes: readonly PostDeployRoutePr
       failures.push({ path, status: 0, reason: "sweep-not-run" });
     }
   }
+  const hardFailures = failures.filter((failure) => failure.reason !== "rate-limited");
+  const retried = probes.filter((probe) => probe.retriedAfter5xx).length;
+  const retryNote = retried > 0 ? ` (${retried} route${retried === 1 ? "" : "s"} retried once after a 5xx)` : "";
+  const listed = failures.slice(0, 8)
+    .map((failure) => `${failure.path} (${failure.reason}, HTTP ${failure.status})`).join("; ")
+    + (failures.length > 8 ? `; +${failures.length - 8} more` : "");
   const detail = failures.length === 0
-    ? `${probes.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length} public GET routes answered without a 5xx.`
-    : `${failures.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length} public GET routes failed: `
-      + failures.slice(0, 8).map((failure) => `${failure.path} (${failure.reason}, HTTP ${failure.status})`).join("; ")
-      + (failures.length > 8 ? `; +${failures.length - 8} more` : "");
+    ? `${probes.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length} public GET routes answered without a persistent 5xx${retryNote}.`
+    : hardFailures.length > 0
+      ? `${failures.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length} public GET routes failed or were unverified${retryNote}: ${listed}`
+      : `${failures.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length} public GET routes were rate-limited (unknown, not failed)${retryNote}: ${listed}`;
   return {
-    outcome: failures.length > 0 ? "failed" : "passed",
+    outcome: hardFailures.length > 0 ? "failed" : failures.length > 0 ? "pending" : "passed",
     failures,
     detail,
   };
@@ -165,7 +180,7 @@ export function selectPostDeployProbes({
       id: "worker-route-sweep",
       kind: "smoke",
       surface: "worker",
-      description: "GET every public status-probe route once; any 5xx fails the release.",
+      description: "GET every public status-probe route once (one 5xx retry); a persistent 5xx fails the release; a 429 is unknown.",
     });
   }
 
