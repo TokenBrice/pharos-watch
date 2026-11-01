@@ -53,7 +53,7 @@ const DEPENDENCY_PRESETS: Record<DependencyCoverageKind, CoverageStatusPreset> =
     tone: "slate",
     available: false,
     sortRank: 0,
-    detail: "Dependency evidence exists, but no live dependency-map edge was resolved.",
+    detail: "No live dependency-map edge was resolved.",
     spokenLabel: "Unmapped dependency gap",
   },
 };
@@ -119,7 +119,7 @@ const DEPENDENCY_LEGEND: readonly CoverageLegendItem[] = [
   },
   {
     term: "Gap",
-    description: "Dependency evidence exists, but no live dependency-map edge was resolved.",
+    description: "No live dependency-map edge was resolved.",
     kinds: ["unmapped-gap"],
   },
 ] as const;

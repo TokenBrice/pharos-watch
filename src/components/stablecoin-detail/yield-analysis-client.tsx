@@ -457,6 +457,11 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   );
 
   const warningEvents = useMemo(() => deriveWarningEvents(historyQuery.data?.history ?? []), [historyQuery.data]);
+  // Unreadable persisted warnings are unknown, not clean: no fetched point can prove an all-clear.
+  const unreadableWarningPoints = useMemo(
+    () => (historyQuery.data?.history ?? []).filter((point) => point.warningSignalsStatus === "unreadable").length,
+    [historyQuery.data],
+  );
 
   const sourceSwitchEvents = useMemo(
     () => deriveSourceSwitchEvents(historyQuery.data?.history ?? []),
@@ -480,9 +485,9 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
 
   const apyChangeAttribution = useMemo(
     () =>
-      ranking
+      ranking && historyQuery.data
         ? classifyApyChange({
-            history: historyQuery.data?.history ?? [],
+            history: historyQuery.data.history,
             decisionLedger: ranking.decisionLedger ?? null,
             yieldStability: ranking.yieldStability ?? null,
           })
@@ -556,7 +561,6 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
 
   if (!readyModel || !ranking) return null;
 
-  const sourceSwitchCount30d = ranking.sourceRisk?.sourceSwitchCount30d ?? null;
   const currentWarningSignals = readyModel.warningSignals;
 
   return (
@@ -577,7 +581,17 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         warningSignals={ranking.warningSignals}
       />
 
-      {apyChangeAttribution ? <YieldChangeAttributionCard attribution={apyChangeAttribution} /> : null}
+      {apyChangeAttribution ? (
+        <YieldChangeAttributionCard attribution={apyChangeAttribution} />
+      ) : historyQuery.isLoading ? (
+        <Skeleton className="h-[120px] w-full rounded-xl" />
+      ) : historyQuery.error ? (
+        <QueryErrorNotice
+          error={historyQuery.error instanceof Error ? historyQuery.error : null}
+          hasData={false}
+          onRetry={() => { void historyQuery.refetch(); }}
+        />
+      ) : null}
 
       <Card id="source-comparison" className="pharos-card-shell scroll-mt-24">
         <CardHeader className="pb-2">
@@ -628,10 +642,12 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
             />
           ) : warningEvents.length === 0 ? (
             currentWarningSignals.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No warning signals recorded in the fetched 90-day history (only the last 30 days are hourly, so
-                signals that resolved between daily snapshots may not appear).
-              </p>
+              unreadableWarningPoints === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No warning signals recorded in the fetched 90-day history (only the last 30 days are hourly, so
+                  signals that resolved between daily snapshots may not appear).
+                </p>
+              ) : null
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
@@ -707,7 +723,6 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
               <p>
                 No source switches recorded in the fetched 90-day best-source history (only the last 30 days are
                 hourly, so switches that started and ended between daily snapshots may not appear).
-                {sourceSwitchCount30d != null ? ` (30-day switch count: ${sourceSwitchCount30d}.)` : ""}
               </p>
               {readyModel.sourceExplorer.sourceSwitch.changed ? (
                 <p>
@@ -717,38 +732,31 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
               ) : null}
             </div>
           ) : (
-            <>
-              {sourceSwitchCount30d != null ? (
-                <p className="text-xs text-muted-foreground">
-                  {sourceSwitchCount30d} source switch{sourceSwitchCount30d === 1 ? "" : "es"} in the past 30 days.
-                </p>
-              ) : null}
-              <ul className="space-y-2">
-                {sourceSwitchEvents.map((event) => (
-                  <li
-                    key={`${event.timestamp}-${event.toSourceKey ?? "switch"}`}
-                    className="flex items-start gap-3 rounded-lg border border-state-info-solid/25 bg-state-info-solid/5 px-3 py-2"
-                  >
-                    <ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-state-info-bright" />
-                    <div className="min-w-0 flex-1 text-sm text-state-info-strong">
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <span className="font-medium">
-                          {event.fromSourceLabel
-                            ? `${event.fromSourceLabel} → ${event.toSourceLabel ?? "—"}`
-                            : `Switched to ${event.toSourceLabel ?? "—"}`}
-                        </span>
-                        <span className="pharos-numeric text-xs text-state-info-bright">
-                          {formatChartDate(event.timestamp, "with-time")}
-                        </span>
-                      </div>
-                      <p className="text-xs text-state-info-bright">
-                        APY at switch: <span className="pharos-numeric">{formatPercent(event.apy)}</span>
-                      </p>
+            <ul className="space-y-2">
+              {sourceSwitchEvents.map((event) => (
+                <li
+                  key={`${event.timestamp}-${event.toSourceKey ?? "switch"}`}
+                  className="flex items-start gap-3 rounded-lg border border-state-info-solid/25 bg-state-info-solid/5 px-3 py-2"
+                >
+                  <ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-state-info-bright" />
+                  <div className="min-w-0 flex-1 text-sm text-state-info-strong">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <span className="font-medium">
+                        {event.fromSourceLabel
+                          ? `${event.fromSourceLabel} → ${event.toSourceLabel ?? "—"}`
+                          : `Switched to ${event.toSourceLabel ?? "—"}`}
+                      </span>
+                      <span className="pharos-numeric text-xs text-state-info-bright">
+                        {formatChartDate(event.timestamp, "with-time")}
+                      </span>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </>
+                    <p className="text-xs text-state-info-bright">
+                      APY at switch: <span className="pharos-numeric">{formatPercent(event.apy)}</span>
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>

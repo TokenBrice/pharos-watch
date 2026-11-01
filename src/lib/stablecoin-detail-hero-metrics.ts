@@ -75,6 +75,8 @@ function buildPegScoreEventLine(
   recordedDepegEventCount: number | null,
 ): string | null {
   if (!pegScoreResult) return null;
+  // A coverage-limited event count is unmeasured, not an observed zero (R1).
+  if (pegScoreResult.depegEventCoverageLimited === true) return null;
   const scoreWindowCount = pegScoreResult.eventCount;
   const totalRecorded = recordedDepegEventCount;
   if (totalRecorded == null || totalRecorded === scoreWindowCount) {

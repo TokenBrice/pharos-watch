@@ -157,7 +157,9 @@ describe("stablecoin detail hero view-model builder", () => {
     const pegMetric = hero.tertiaryMetrics.find((metric) => metric.key === "peg-score");
     expect(pegMetric?.display).toMatchObject({
       value: "45",
-      sub: "2 incidents",
+      // Coverage-limited history: no incident count is published, so the
+      // sub-line falls back to the at-peg reading.
+      sub: "99.4% at peg",
     });
     expect(pegMetric?.accentClass).toBe("border-l-2 border-l-red-500");
 
@@ -210,6 +212,30 @@ describe("stablecoin detail hero view-model builder", () => {
       outcomeLabel: "Survived",
       outcomeChipClass: "border-emerald-500/40 text-emerald-700 dark:text-emerald-400",
     });
+  });
+
+  it("does not publish a zero incident count for coverage-limited peg evidence", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const pegDisplay = (hero: ReturnType<typeof buildDetailHero>) =>
+      hero.tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display;
+
+    const limited = buildDetailHero({
+      coin,
+      pegScoreResult: makePegSummaryCoin({
+        id: coin.id, symbol: coin.symbol, pegScore: 100, pegPct: 100,
+        eventCount: 0, trackingSpanDays: 365, depegEventCoverageLimited: true,
+      }),
+    });
+    expect(pegDisplay(limited).sub).toBe("100.0% at peg");
+    expect(pegDisplay(limited).sub).not.toContain("incidents");
+
+    const observed = buildDetailHero({
+      coin,
+      pegScoreResult: makePegSummaryCoin({
+        id: coin.id, symbol: coin.symbol, pegScore: 100, pegPct: 100, eventCount: 0, trackingSpanDays: 365,
+      }),
+    });
+    expect(pegDisplay(observed).sub).toBe("0 incidents");
   });
 
   it("derives unavailable peg score and upstream freeze states", () => {
@@ -568,6 +594,16 @@ describe("stablecoin detail hero view-model builder", () => {
     const item = buildPassportHero(input).passportItems.find((item) => item.key === key);
     expect(item).toMatchObject(expected);
     if (unstyled) expect(item?.valueClass).toBeUndefined();
+  });
+
+  it("omits the Chains fact for a coin with no curated contract record", () => {
+    const coin = TRACKED_META_BY_ID.get("hbd-hive")!;
+    expect(coin.contracts).toBeUndefined();
+
+    const hero = buildDetailHero({ coin });
+
+    expect(hero.passportItems.some((item) => item.key === "chains")).toBe(false);
+    expect(hero.passportItems.every((item) => !/Deployed on 0 chains/.test(item.ariaLabel))).toBe(true);
   });
 
   it("frames frozen MiCA authorization as historical", () => {

@@ -222,7 +222,7 @@ NAV presentation does not consume the asset's peg-score, active-depeg, deviation
 `buildHeroPassportItems` in `src/lib/stablecoin-detail-passport.ts` owns vocabulary and resolved destinations. Facts must remain source-qualified:
 
 - Record uses the observed peg-score incident count only when coverage is usable; zero recorded is not an all-clear and is omitted for NAV or limited coverage.
-- Chains counts unique curated contract chains, not live chain coverage.
+- Chains counts unique curated contract chains, not live chain coverage, and is omitted when no curated contract record exists.
 - Freeze prefers reviewed power, then supported tracker usage, then the tracker filter; reviewed power and observed usage are different claims.
 - MiCA on frozen records is explicitly historical. GENIUS states a pathway against `GENIUS_REGIME_STATE.effectiveDate`, never a present-day license, and omits unknown/not-applicable states.
 - Jurisdiction/attestor facts use curated regime/PoR evidence; unavailable facts do not invent destinations. The launch date is shown once, in the hero header, not in the strip. The Attestor value keeps the short tier when one exists, and its accessible name always carries the resolved report engagement beside the tier (`Reserve report: Examination; Regional CPA`), so a compact tier cannot hide an examination or imply an audit.

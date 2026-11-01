@@ -4,6 +4,7 @@ import { useMemo, type ReactNode } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight } from "lucide-react";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
@@ -18,7 +19,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { cn } from "@/lib/utils";
-import { formatDataHealthWarning } from "@/lib/data-health";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { useYieldHistory } from "@/hooks/api-hooks";
 import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
@@ -90,9 +90,9 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   const rankingForAttribution = view.status === "ready" ? view.ranking : null;
   const attribution = useMemo(
     () =>
-      rankingForAttribution
+      rankingForAttribution && historyQuery.data
         ? classifyApyChange({
-            history: historyQuery.data?.history ?? [],
+            history: historyQuery.data.history,
             decisionLedger: rankingForAttribution.decisionLedger ?? null,
             yieldStability: rankingForAttribution.yieldStability ?? null,
           })
@@ -196,11 +196,15 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
   return (
     <YieldDetailSectionFrame headerEnd={headerEnd}>
       <QueryErrorNotice error={view.refreshError} hasData />
-      {view.apiWarning ? (
-        <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
-          {formatDataHealthWarning(view.apiWarning)}
-        </div>
-      ) : null}
+      <StaleDataBanner
+        queries={[{
+          preset: "yieldRankings",
+          dataUpdatedAt: view.dataUpdatedAt,
+          error: view.refreshError,
+          hasData: true,
+          meta: view.apiMeta,
+        }]}
+      />
       <div className="space-y-3">
         <div className="space-y-1 text-xs">
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -340,7 +344,17 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
              active warnings, the chart, and the three stat tiles stay above ── */}
       <ModuleDisclosure label="Yield diagnostics">
       <div className="mt-3 space-y-4">
-      {attribution ? <p className="text-sm text-muted-foreground">{attribution.headline}</p> : null}
+      {attribution ? (
+        <p className="text-sm text-muted-foreground">{attribution.headline}</p>
+      ) : historyQuery.isLoading ? (
+        <Skeleton className="h-10 w-full rounded-lg" />
+      ) : historyQuery.error ? (
+        <QueryErrorNotice
+          error={historyQuery.error instanceof Error ? historyQuery.error : null}
+          hasData={false}
+          onRetry={() => { void historyQuery.refetch(); }}
+        />
+      ) : null}
 
       <YieldRankMovementCard attribution={ranking.rankChangeAttribution} />
 

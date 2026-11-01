@@ -326,6 +326,22 @@ describe("buildCoverageMatrixModel", () => {
     expect(status.detail).toContain("unreviewed-dependency-relationships");
   });
 
+  it("does not claim dependency evidence for an asset absent from the publication", () => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      reportCards: makeReportCardsV9Response({
+        cards: [makeV9Card({ id: "usdc-circle", score: 90 })],
+      }),
+      activeStablecoins: [
+        trackedMeta("usdc-circle"),
+        { ...trackedMeta("usdt-tether"), hasAuthoredDependencyEvidence: false },
+      ],
+    }));
+    const status = model.rows.find((row) => row.id === "usdt-tether")!.statuses.dependency;
+    expect(status.kind).toBe("unmapped-gap");
+    expect(status.detail).toBe("No live dependency-map edge was resolved.");
+    expect(status.detail).not.toContain("Dependency evidence exists");
+  });
+
   it("selects widest/narrowest/mostConcentrated features consistently with featureSummaries", () => {
     const model = buildCoverageMatrixModel(
       makeMatrixInput({

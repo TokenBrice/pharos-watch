@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { formatDdrDirection, formatDdrReason, getMissingReasons } from "@/components/depeg-resolver-row-card-model";
+import { formatDdrDirection, formatDdrReason, formatUtcTimestamp, getMissingReasons } from "@/components/depeg-resolver-row-card-model";
 import type { DdrPublicPredictionState, DdrV2ResponseRow } from "@shared/types/depeg-resolver";
 import { CoinLockup, LiveFacts, LockMetadataStrip, StageLabel } from "@/components/depeg-resolver-row-card-shared";
 import { DDR_REVIEW_TONE_CLASSES } from "@shared/lib/classification";
@@ -56,6 +56,7 @@ export function StateOnlyCard({
   const missingReasons = getMissingReasons(row);
   const originalOutcome =
     row.kind === "invalidated_prediction" && row.originalKind === "no_call" ? "no-call" : "published prediction";
+  const latestErratum = row.prediction.latestErratum ?? row.prediction.errataHistory[0] ?? null;
 
   return (
     <div className="pharos-card-shell gap-0 overflow-hidden p-4 sm:p-5">
@@ -124,7 +125,11 @@ export function StateOnlyCard({
                 <span className="text-foreground">{originalOutcome}</span>
               </p>
               <p>
-                Latest erratum: <span className="text-foreground">details unavailable</span>
+                Latest erratum:{" "}
+                <span className="text-foreground">
+                  {latestErratum ? latestErratum.operatorNote : "details unavailable"}
+                </span>
+                {latestErratum ? ` · Recorded ${formatUtcTimestamp(latestErratum.createdAt)}` : ""}
               </p>
             </div>
           </details>

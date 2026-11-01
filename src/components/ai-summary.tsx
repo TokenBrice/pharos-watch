@@ -6,7 +6,6 @@ import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title
 import { TermText } from "@/components/term-text";
 import type { AiSummaryClaimValues, StablecoinAiSummary } from "@shared/types";
 import {
-  AI_SUMMARY_UNAVAILABLE_NOTICE,
   hasAvailableAiSummaryClaims,
   resolveAiSummaryClaims,
 } from "@shared/lib/ai-summary-claims";
@@ -33,11 +32,10 @@ export function AiSummary({
     { authoredBy, model, reviewedBy, reviewedAt, factsAsOf },
     { dateFormat: "iso" },
   );
-  // A claim without its input is withheld, never rendered as "N/A".
-  const resolved = hasAvailableAiSummaryClaims(text, claimTokens, claimValues)
-    ? resolveAiSummaryClaims(text, claimTokens, claimValues)
-    : { text: AI_SUMMARY_UNAVAILABLE_NOTICE, factsAsOf: [] };
-  const claimsDateline = resolved.factsAsOf.map(formatAiSummaryIsoDate).join(", ");
+  // A claim without its input is withheld, never rendered as "N/A"; this card
+  // is already the live dossier, so there is no other page to point readers to.
+  if (!hasAvailableAiSummaryClaims(text, claimTokens, claimValues)) return null;
+  const resolved = resolveAiSummaryClaims(text, claimTokens, claimValues);
 
   return (
     <Card>
@@ -48,11 +46,6 @@ export function AiSummary({
         <AiSummaryProse textLength={resolved.text.length}>
           <TermText text={resolved.text} />
         </AiSummaryProse>
-        {claimsDateline ? (
-          <p className="mt-3 inline-flex rounded-full border border-border/60 bg-muted/30 px-2.5 py-0.5 text-xs text-muted-foreground">
-            Claims as of {claimsDateline}
-          </p>
-        ) : null}
         {/* Provenance footer: one sentence-case line (dateline + disclosure),
             the policy link at the far edge, in the dossier footer grammar. */}
         <div className="mt-4 flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1.5 border-t border-border/40 pt-3 text-xs leading-relaxed text-muted-foreground">
