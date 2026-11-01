@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { API_KEY_TIER_VALUES, type ApiKeySummary } from "@pharos/contracts/api-keys";
 import {
+  buildApiKeyInventorySummary,
   buildApiKeyInventoryView,
   buildEditableKeyState,
   buildUpdateApiKeyPayload,
@@ -181,5 +182,13 @@ describe("API key inventory workbench model", () => {
       pageWasCorrected: true,
       pageSizeWasCorrected: true,
     });
+  });
+});
+
+describe("buildApiKeyInventorySummary", () => {
+  it("labels the expired tile by expiry date instead of a rotation instruction", () => {
+    const tiles = buildApiKeyInventorySummary(makeLargeApiKeyInventory().keys, NOW_SECONDS);
+
+    expect(tiles.find((tile) => tile.label === "Expired")).toMatchObject({ detail: "past their expiry date" });
   });
 });

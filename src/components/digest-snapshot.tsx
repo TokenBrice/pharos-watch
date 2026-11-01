@@ -96,6 +96,9 @@ function DigestSafetyMapCard({ inputData }: { inputData: DigestSnapshotInputData
   const outerMcapUsd = outerTiers.reduce((sum, tier) => sum + tier.mcapUsd, 0);
   const aSharePct = ((aTier.mcapUsd / summary.totalMcapUsd) * 100).toFixed(1);
   const outerSharePct = ((outerMcapUsd / summary.totalMcapUsd) * 100).toFixed(1);
+  // Tier mcap and shares are computed over the known-supply subtotal; only a
+  // complete coverage capture covers every graded coin.
+  const supplyLabel = summary.supplyCoverage?.complete ? "Total mapped supply" : "Known mapped supply";
   const mapDateLabel = formatDigestDateLabel(map.manifest.date, "long");
   const freshnessLabel = map.freshness === "current"
     ? `Dated ${mapDateLabel} map`
@@ -132,7 +135,7 @@ function DigestSafetyMapCard({ inputData }: { inputData: DigestSnapshotInputData
             {freshnessLabel}
           </p>
           <div className="space-y-1.5 text-sm text-foreground/90">
-            <p>Mapped supply: <span className="font-medium">{formatCurrency(summary.totalMcapUsd, 1)}</span> across {summary.gradedCount} coins</p>
+            <p>{supplyLabel}: <span className="font-medium">{formatCurrency(summary.totalMcapUsd, 1)}</span> across {summary.gradedCount} coins</p>
             <p>A tier: <span className="font-medium">{aTier.count} coins</span> · {aSharePct}%</p>
             <p>C/D/F tiers: <span className="font-medium">{outerCount} coins</span> · {outerSharePct}%</p>
           </div>
@@ -608,13 +611,20 @@ function DigestSnapshotContent({ date }: { date: string }) {
         )}
 
         {/* 10. Resolved Depegs */}
-        {inputData.resolvedDepegs && inputData.resolvedDepegs.length > 0 && (
+        {((inputData.resolvedDepegCount != null && inputData.resolvedDepegCount > 0)
+          || (inputData.resolvedDepegs?.length ?? 0) > 0) && (
           <SnapshotCard
             title="Resolved Depegs"
             icon={<CheckCircle className="h-4 w-4" aria-hidden="true" />}
           >
-            <ul className="space-y-0.5">
-              {inputData.resolvedDepegs.map((r) => (
+            {inputData.resolvedDepegCount != null ? (
+              <p className="text-sm text-foreground/90">
+                <span className="font-medium">{inputData.resolvedDepegCount}</span>{" "}
+                depeg{inputData.resolvedDepegCount !== 1 ? "s" : ""} resolved in the last 24 hours
+              </p>
+            ) : null}
+            {(inputData.resolvedDepegs?.length ?? 0) > 0 && <ul className="space-y-0.5">
+              {inputData.resolvedDepegs!.map((r) => (
                 <li key={`${r.symbol}-${r.peakBps}`} className="text-xs text-foreground/90">
                   <span className="font-medium">{r.symbol}</span>{" "}
                   recovered from {r.peakBps.toLocaleString("en-US")} bps after {r.durationHours}h{" "}
@@ -623,7 +633,7 @@ function DigestSnapshotContent({ date }: { date: string }) {
                   </span>
                 </li>
               ))}
-            </ul>
+            </ul>}
           </SnapshotCard>
         )}
       </div>

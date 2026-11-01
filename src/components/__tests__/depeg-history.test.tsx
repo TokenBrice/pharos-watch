@@ -283,6 +283,16 @@ describe("DepegHistory coverage anchor", () => {
       else process.env.TZ = originalTz;
     }
   });
+
+  it("publishes no second incident total beside the panel's own dispute-filtered count", () => {
+    mockEvents([makeEvent({ provenance: { auditVerdict: "disputed" } })]);
+    render(<DepegHistory stablecoinId="usdc-circle" historyCoverage={{
+      startedAt: Date.UTC(2026, 1, 11) / 1000, source: "asset-age", status: "assumed",
+    }} />);
+    const anchor = screen.getByText(/Score coverage:/).textContent ?? "";
+    expect(anchor).toContain("since Feb 11, 2026");
+    expect(anchor).not.toMatch(/incident/i);
+  });
 });
 
 describe("DepegHistory embedded preview handoff", () => {

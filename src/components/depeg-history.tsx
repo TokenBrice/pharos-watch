@@ -77,7 +77,6 @@ export function DepegHistory({
   depegEventCoverageLimited = false,
   historyCoverage = null,
   recent90d = null,
-  scoreWindowIncidentCount = null,
   embeddedPreview = false,
   onDisplayStateChange,
 }: {
@@ -87,8 +86,6 @@ export function DepegHistory({
   depegEventCoverageLimited?: boolean;
   historyCoverage?: PegSummaryCoin["historyCoverage"];
   recent90d?: PegSummaryCoin["recent90d"];
-  /** Peg-summary `eventCount`: incidents inside the score coverage window, the figure the hero cites. */
-  scoreWindowIncidentCount?: number | null;
   /**
    * C1: the route shell already owns a retained-ledger preview. While this
    * module has nothing admitted to show, suppress its duplicate skeleton or
@@ -297,14 +294,7 @@ export function DepegHistory({
       {historyCoverage ? (
         <p className="text-xs text-muted-foreground">
           Score coverage: {historyCoverage.status === "verified" ? "replay-verified" : "age-anchored"} since{" "}
-          <span className="font-mono">{formatUtcDayLabel(new Date(historyCoverage.startedAt * 1000))}</span>
-          {scoreWindowIncidentCount != null ? (
-            <>
-              , with <span className="font-mono">{scoreWindowIncidentCount.toLocaleString()}</span>{" "}
-              {scoreWindowIncidentCount === 1 ? "incident" : "incidents"} in that window
-            </>
-          ) : null}
-          .
+          <span className="font-mono">{formatUtcDayLabel(new Date(historyCoverage.startedAt * 1000))}</span>.
         </p>
       ) : null}
       {isAutoLoadCapped ? (

@@ -462,8 +462,11 @@ function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
 
 export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
   if (coin.status === "frozen") {
+    // `frozenAt` can predate Pharos (an issuer's historical freeze date), so the
+    // description claims no tracking window; the page itself still shows the date.
+    const identity = hasRedundantName(coin) ? coin.name : `${coin.name} (${coin.symbol})`;
     const description = composeDescription([
-      `Historical data and obituary for ${coin.name} (${coin.symbol}), a now-defunct stablecoin tracked by Pharos through ${coin.frozenAt ?? "freeze date"}.`,
+      `Historical data and obituary for ${identity}, a now-defunct stablecoin.`,
       coin.obituary?.epitaph,
     ], PROFILE_DESCRIPTION_MAX_LENGTH);
     return buildPageMetadata({

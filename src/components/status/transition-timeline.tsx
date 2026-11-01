@@ -126,7 +126,7 @@ function IncidentList({ episodes, nowSeconds }: { episodes: readonly IncidentEpi
                   : `${episode.ongoing ? "Held for" : "Lasted"} ${formatElapsedSeconds(episode.durationSec)}`}
               </span>
               <span className="min-w-0 break-words font-mono text-muted-foreground">
-                {episode.causeCodes.join(", ") || "No persisted causes"}
+                {episode.causeCodes == null ? "—" : episode.causeCodes.join(", ") || "No persisted causes"}
               </span>
             </div>
             <div className="shrink-0 text-muted-foreground">

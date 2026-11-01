@@ -10,6 +10,7 @@ import {
 } from "@/lib/analytics-dataset-json-ld";
 import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
 import { PUBLIC_DATASET_CURRENT_DATE, PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_INTERVAL = /^\d{4}-\d{2}[-\d]{0,3}\/\d{4}-\d{2}[-\d]{0,3}$/;
@@ -53,6 +54,26 @@ describe("flagship Dataset JSON-LD", () => {
     expect(descriptor.description.includes("audit verdict")).toBe(fields.includes("auditVerdict"));
     expect(buildDepegHistoryDescription(["id", "source", "auditVerdict"])).toContain("audit verdict");
     expect(buildDepegHistoryDescription(["id", "source"])).not.toContain("audit verdict");
+  });
+
+  it("names the top-stablecoins population the export actually carries", () => {
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "top-stablecoins")!;
+    const outsideRegistry = descriptor.export.rows.filter((row) => !TRACKED_META_BY_ID.has(String(row.id)));
+    expect(outsideRegistry.length).toBeGreaterThan(0);
+    expect(descriptor.description).not.toContain("of tracked stablecoins");
+    expect(descriptor.description).toContain("outside the tracked catalog");
+  });
+
+  it("advertises only score metrics the scores-latest export populates", () => {
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "scores-latest")!;
+    const populated = new Set(
+      Object.keys(descriptor.export.rows[0] ?? {}).filter((field) =>
+        descriptor.export.rows.some((row) => row[field] != null),
+      ),
+    );
+    expect(populated).not.toContain("pegScore");
+    expect(descriptor.description.toLowerCase()).not.toContain("pegscore");
+    expect(descriptor.keywords).not.toContain("PegScore");
   });
 
   it("names the top-stablecoins export's actual final CSV column", () => {

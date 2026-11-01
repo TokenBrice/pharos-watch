@@ -29,7 +29,6 @@ const depegProps = {
   depegEventCoverageLimited: false,
   historyCoverage: null,
   recent90d: null,
-  scoreWindowIncidentCount: null,
 };
 
 const preview = <div data-testid="depeg-preview">Latest 6 of 248 archived incidents</div>;

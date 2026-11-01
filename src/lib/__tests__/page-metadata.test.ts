@@ -207,6 +207,27 @@ describe("inactive profile metadata", () => {
   });
 });
 
+describe("frozen profile metadata", () => {
+  it("claims no Pharos tracking window and never repeats a name as its own symbol", () => {
+    for (const coin of TRACKED_STABLECOINS.filter((candidate) => candidate.status === "frozen")) {
+      const description = descriptionOf(coin);
+      expect(description, coin.id).not.toContain("tracked by Pharos through");
+      expect(description, coin.id).not.toContain("freeze date");
+      expect(description, coin.id).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+      if (coin.name.trim().toLowerCase() === coin.symbol.trim().toLowerCase()) {
+        expect(description, coin.id).not.toContain(`${coin.name} (${coin.symbol})`);
+      }
+    }
+  });
+
+  it("drops the redundant parenthetical and keeps the epitaph", () => {
+    const coin = TRACKED_META_BY_ID.get("usdkg-gold-dollar")!;
+    expect(descriptionOf(coin)).toBe(
+      `Historical data and obituary for USDKG, a now-defunct stablecoin. ${coin.obituary?.epitaph}`,
+    );
+  });
+});
+
 describe("tracked profile metadata invariants", () => {
   it("keeps every profile within the snippet budgets, in whole sentences, with no grade in the title", () => {
     for (const coin of TRACKED_STABLECOINS) {

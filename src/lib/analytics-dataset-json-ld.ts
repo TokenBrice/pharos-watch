@@ -44,7 +44,7 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
     slug: "top-stablecoins",
     name: "Pharos Top Stablecoins Dataset",
     description:
-      "Public snapshot of tracked stablecoins with peg type, peg mechanism, price, circulating USD supply, chain count, and chain coverage. The supplyUnavailableReason column explains unavailable supply without shifting existing columns, and supplyProvenance is the final CSV column.",
+      "Public snapshot of the stablecoin list, including rows outside the tracked catalog, with peg type, peg mechanism, price, circulating USD supply, chain count, and chain coverage. The supplyUnavailableReason column explains unavailable supply without shifting existing columns, and supplyProvenance is the final CSV column.",
     keywords: ["stablecoin market cap", "stablecoin supply", "stablecoin chains", "stablecoin dataset"],
     export: PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as PublicDatasetExport,
   },
@@ -52,8 +52,8 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
     slug: "scores-latest",
     name: "Pharos Latest Stablecoin Scores Dataset",
     description:
-      "Public snapshot of latest PegScore, Safety Score, DEWS, LiquidityScore, grade, and coverage-class values for tracked stablecoins.",
-    keywords: ["stablecoin safety scores", "PegScore", "DEWS", "LiquidityScore", "stablecoin risk data"],
+      "Public snapshot of latest Safety Score, DEWS, LiquidityScore, grade, and coverage-class values for tracked stablecoins.",
+    keywords: ["stablecoin safety scores", "DEWS", "LiquidityScore", "stablecoin risk data"],
     export: PUBLIC_DATASET_CURRENT_EXPORTS["scores-latest"] as PublicDatasetExport,
   },
   {
