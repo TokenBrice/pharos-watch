@@ -267,4 +267,30 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect(recovered.reserveAdapterAlert?.recovered).toEqual(["reserve-adapter-failure-sustained"]);
     expect(recovered.firedRuleIds).not.toContain("reserve-adapter-failure-sustained");
   });
+
+  it("degrades the reserve source with machine reasons while an adapter alert is active", async () => {
+    const result = await runReservePostSyncWatchdog(historyDb([
+      historyRow(NOW, "error"), historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error"),
+    ]));
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toBe("reserve-adapter-alert-raised");
+    expect(metadata.degradedReasons).toContain("reserve-adapter-alert-raised");
+    expect(metadata.quality).toEqual({
+      reason: "reserve-adapter-alert-raised",
+      reasons: ["reserve-adapter-failure-sustained:iusd-infinifi"],
+    });
+    expect(metadata.activeAdapterAlertReasons).toEqual(["reserve-adapter-failure-sustained:iusd-infinifi"]);
+  });
+
+  it("keeps an acknowledged adapter failure out of the status cause", async () => {
+    mocks.acknowledged.mockResolvedValue(new Set([COIN]));
+    const result = await runReservePostSyncWatchdog(historyDb([
+      historyRow(NOW, "error"), historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error"),
+    ]));
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.status).toBe("ok");
+    expect(metadata.quality).toBeUndefined();
+    expect(metadata.activeAdapterAlertReasons).toEqual([]);
+  });
 });

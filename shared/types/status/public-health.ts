@@ -190,8 +190,38 @@ export const SchedulerLivenessSchema = z.object({
     status: z.enum(["healthy", "degraded", "stale", "unavailable"]),
     unavailableReason: z.string().nullable(),
   }),
+  /**
+   * Registry-derived expected-vs-observed starts for every slot plan whose 3x
+   * cadence fits slot-start retention. Additive: older Workers omit it.
+   */
+  expectedLanes: z.array(z.object({
+    scheduleKey: z.string(),
+    lastStartedAt: z.number().finite().nullable(),
+    ageSeconds: z.number().finite().nonnegative().nullable(),
+    warningAfterSec: z.number().positive(),
+    staleAfterSec: z.number().positive(),
+    status: z.enum(["healthy", "degraded", "stale", "unavailable"]),
+    unavailableReason: z.string().nullable(),
+  })).optional(),
 });
 export type SchedulerLiveness = z.output<typeof SchedulerLivenessSchema>;
+
+/**
+ * Operator alert delivery receipt projected onto public health so an external
+ * monitor can prove the Telegram operator channel still evaluates and delivers.
+ */
+export const OperatorAlertHealthSchema = z.object({
+  status: z.enum(["healthy", "stale", "unavailable"]),
+  operatorConfigured: z.boolean().nullable(),
+  lastDeliveredAt: z.number().finite().nullable(),
+  pendingSince: z.number().finite().nullable(),
+  pendingAgeSec: z.number().finite().nonnegative().nullable(),
+  maxPendingSec: z.number().positive(),
+  pendingProducers: z.array(z.string()),
+  reason: z.string().nullable(),
+  unavailableReason: z.string().nullable(),
+});
+export type OperatorAlertHealth = z.output<typeof OperatorAlertHealthSchema>;
 
 export const HealthResponseSchema = z.object({
   status: StatusHealthValueSchema,
@@ -231,6 +261,7 @@ export const HealthResponseSchema = z.object({
   safetyScorePublication: V9PublicationHealthSchema.nullable().optional(),
   safetyScorePublicationUnavailableReason: z.string().nullable().optional(),
   schedulerLiveness: SchedulerLivenessSchema.optional(),
+  operatorAlerts: OperatorAlertHealthSchema.optional(),
   telegramSummary: TelegramHealthSummarySchema.nullable().optional(),
   /**
    * Reader-facing verdict. `status` stays the worst raw input (compatibility);

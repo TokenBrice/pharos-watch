@@ -10,6 +10,7 @@ import {
   NON_INTERNAL_DIGEST_SQL_FILTER,
   NON_WEEKLY_DIGEST_SQL_FILTER,
 } from "../lib/digest-sql-filters";
+import { recordOperatorAlertReceipt } from "../lib/status/operator-alert-health";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
 import { SAFETY_MAP_READY_AFTER_SEC } from "./safety-map-producer-kick";
 
@@ -402,14 +403,28 @@ export async function runDigestPublicationWatchdog(
     await setCache(db, DIGEST_WATCHDOG_STATE_KEY, nextState, signal);
   }
 
+  const pendingTransition = (stale.length > 0 || recovered.length > 0) && !transitions.sent;
+  const credentialsMissing = pendingTransition && options.operatorTelegramCreds == null;
+  await recordOperatorAlertReceipt(db, "digest", {
+    nowSec,
+    operatorConfigured: options.operatorTelegramCreds != null,
+    pending: pendingTransition,
+    delivered: transitions.sent,
+    reason: transitions.sent ? null
+      : alertDeliveryFailed ? "operator-alert-delivery-failed"
+        : credentialsMissing ? "operator-alert-credentials-missing"
+          : transitions.cooldown ? "operator-alert-cooldown" : null,
+  }, signal);
+
   const blockingStale = observations.filter((observation) => (
     !observation.advisory && observation.state === "stale"
   ));
   return {
-    status: alertDeliveryFailed ? "degraded" : "ok",
+    status: alertDeliveryFailed || credentialsMissing ? "degraded" : "ok",
     itemCount: blockingStale.length,
     metadata: JSON.stringify({
-      ...(alertDeliveryFailed ? { reason: "operator-alert-delivery-failed" } : {}),
+      ...(alertDeliveryFailed ? { reason: "operator-alert-delivery-failed" }
+        : credentialsMissing ? { reason: "operator-alert-credentials-missing" } : {}),
       ...(blockingStale.length > 0 ? { quality: { reason: "digest-publication-findings" } } : {}),
       firedRuleIds: observations.filter((observation) => observation.state === "stale").map((observation) => observation.condition),
       date,

@@ -21,7 +21,11 @@ import {
 } from "../lib/status/freshness-oracle";
 import { rethrowIfAborted } from "../lib/abort";
 import { loadSafetyScoreV9PublicationHealth } from "../lib/safety-score-v9/publication-health";
+import type { WorkerCanaryMode } from "../lib/worker-canary-mode";
+import { recordOperatorAlertReceipt } from "../lib/status/operator-alert-health";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
+import { loadCanaryOperatorWatch } from "./operator-watch-canary";
+import { loadProbeOperatorWatch } from "./operator-watch-probe";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
 // prune-cron-history deletes cron_runs rows older than one week. A producer
@@ -372,20 +376,22 @@ export interface OperatorWatchCondition {
   unknown?: boolean;
 }
 
-type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication";
+type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "canary" | "probe";
 
 const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; recovered: string }> = {
   producer: { raised: "Stale producers", recovered: "Recovered producers" },
   "detail-write": { raised: "Detail cache write failures", recovered: "Detail cache writes recovered" },
   dependency: { raised: "Dependency still stale after root recovery", recovered: "Dependency caught up" },
   "safety-publication": { raised: "Safety Score publication held", recovered: "Safety Score publication released" },
+  canary: { raised: "Canary findings raised", recovered: "Canary findings recovered" },
+  probe: { raised: "Probe paths persistently failing", recovered: "Probe paths recovered" },
 };
 
-// At most eight section lines are emitted (four sections × raised/recovered).
+// At most twelve section lines are emitted (six sections × raised/recovered).
 // Budget each line from the repo's conservative chunk limit so a systemic
 // detail-write cohort cannot exceed Telegram's sendMessage cap and block every
 // pending transition in the same message.
-const OPERATOR_ALERT_SECTION_LINES = 8;
+const OPERATOR_ALERT_SECTION_LINES = 12;
 const OPERATOR_ALERT_SECTION_CHARS =
   Math.floor(TELEGRAM_MESSAGE_CHUNK_LIMIT / OPERATOR_ALERT_SECTION_LINES) - 16;
 
@@ -440,6 +446,8 @@ export interface CronStalenessWatchdogOptions {
    * channel creds. Null suppresses delivery and leaves transitions pending.
    */
   operatorTelegramCreds?: TelegramCreds | null;
+  /** Selects the active canary cohort for the operator transition set. */
+  workerCanaryMode?: WorkerCanaryMode;
 }
 
 async function alertOnFreshnessTransitions(params: {
@@ -450,7 +458,15 @@ async function alertOnFreshnessTransitions(params: {
   nowSec: number;
   operatorTelegramCreds: TelegramCreds | null;
   signal?: AbortSignal;
-}): Promise<{ stale: string[]; recovered: string[]; sent: boolean; cooldown: boolean; deliveryFailed?: boolean }> {
+}): Promise<{
+  stale: string[];
+  recovered: string[];
+  sent: boolean;
+  cooldown: boolean;
+  deliveryFailed?: boolean;
+  /** A transition exists but no operator chat is configured; nothing was sent. */
+  credentialsMissing?: boolean;
+}> {
   const [stateCache, alertCache] = await Promise.all([
     getCache(params.db, WATCHDOG_STATE_KEY, params.signal),
     getCache(params.db, WATCHDOG_ALERT_KEY, params.signal),
@@ -504,7 +520,7 @@ async function alertOnFreshnessTransitions(params: {
   const lastAlertAt = Number(alertCache?.value);
   const cooldown = Number.isFinite(lastAlertAt) && params.nowSec - lastAlertAt < CRON_STALENESS_ALERT_COOLDOWN_SEC;
   if (cooldown || !params.operatorTelegramCreds) {
-    return { stale, recovered, sent: false, cooldown };
+    return { stale, recovered, sent: false, cooldown, credentialsMissing: !params.operatorTelegramCreds };
   }
 
   const sections = (Object.keys(OPERATOR_SECTION_TITLES) as OperatorWatchSection[]).flatMap((section) => [
@@ -564,15 +580,24 @@ export async function runCronStalenessWatchdog(
     throw signal.reason instanceof Error ? signal.reason : new Error("cron staleness watchdog aborted");
   }
 
-  const detailWriteFailures = await loadDetailWriteFailures(db, nowSec);
-  const safetyPublication = await loadSafetyScoreV9PublicationHealth(db, signal).then(
-    (health) => ({ ok: true as const, health }),
-    (error: unknown) => {
-      rethrowIfAborted(error, signal);
-      return { ok: false as const };
-    },
-  );
+  const [detailWriteFailures, safetyPublication, canaryWatch, probeWatch] = await Promise.all([
+    loadDetailWriteFailures(db, nowSec),
+    loadSafetyScoreV9PublicationHealth(db, signal).then(
+      (health) => ({ ok: true as const, health }),
+      (error: unknown) => {
+        rethrowIfAborted(error, signal);
+        return { ok: false as const };
+      },
+    ),
+    loadCanaryOperatorWatch(db, nowSec, options.workerCanaryMode),
+    loadProbeOperatorWatch(db, nowSec),
+  ]);
   const safetyPublicationHeld = safetyPublication.ok && safetyPublication.health?.status === "held";
+  const unknownSections: OperatorWatchSection[] = [
+    ...(safetyPublication.ok ? [] : ["safety-publication" as const]),
+    ...(canaryWatch.unknown ? ["canary" as const] : []),
+    ...(probeWatch.unknown ? ["probe" as const] : []),
+  ];
   const alertTransitions = await alertOnFreshnessTransitions({
     db,
     conditions: [
@@ -603,8 +628,20 @@ export async function runCronStalenessWatchdog(
           : "v9",
         active: safetyPublicationHeld,
       }] : []),
+      ...canaryWatch.conditions.map((condition): OperatorWatchCondition => ({
+        section: "canary",
+        id: condition.id,
+        ...(condition.label ? { label: condition.label } : {}),
+        active: condition.active,
+      })),
+      ...probeWatch.conditions.map((condition): OperatorWatchCondition => ({
+        section: "probe",
+        id: condition.id,
+        ...(condition.label ? { label: condition.label } : {}),
+        active: condition.active,
+      })),
     ],
-    unknownSections: safetyPublication.ok ? [] : ["safety-publication"],
+    unknownSections,
     nowSec,
     operatorTelegramCreds: options.operatorTelegramCreds ?? null,
     signal,
@@ -612,14 +649,31 @@ export async function runCronStalenessWatchdog(
   const qualityReasons = [
     ...(stale.length > 0 ? ["producer-output-stale"] : []),
     ...(detailWriteFailures.length > 0 ? ["detail-cache-write-failed"] : []),
+    ...(canaryWatch.conditions.some((condition) => condition.active) ? ["canary-finding-active"] : []),
+    ...(probeWatch.conditions.some((condition) => condition.active) ? ["probe-path-persistent-failure"] : []),
   ];
+  const pendingTransition = (alertTransitions.stale.length > 0 || alertTransitions.recovered.length > 0)
+    && !alertTransitions.sent;
+  const alertReceipt = await recordOperatorAlertReceipt(db, "freshness", {
+    nowSec,
+    operatorConfigured: options.operatorTelegramCreds != null,
+    pending: pendingTransition,
+    delivered: alertTransitions.sent,
+    reason: alertTransitions.sent ? null
+      : alertTransitions.deliveryFailed ? "operator-alert-delivery-failed"
+        : alertTransitions.credentialsMissing ? "operator-alert-credentials-missing"
+          : alertTransitions.cooldown ? "operator-alert-cooldown" : null,
+  }, signal);
+  const operatorAlertDegraded = alertTransitions.deliveryFailed
+    || (pendingTransition && alertTransitions.credentialsMissing === true);
 
   return {
-    status: status.failures.length > 0 || alertTransitions.deliveryFailed ? "degraded" : "ok",
+    status: status.failures.length > 0 || operatorAlertDegraded ? "degraded" : "ok",
     itemCount: stale.length + detailWriteFailures.length,
     metadata: JSON.stringify({
       ...(status.failures.length > 0 ? { reason: "freshness-evidence-read-failed" }
-        : alertTransitions.deliveryFailed ? { reason: "operator-alert-delivery-failed" } : {}),
+        : alertTransitions.deliveryFailed ? { reason: "operator-alert-delivery-failed" }
+          : operatorAlertDegraded ? { reason: "operator-alert-credentials-missing" } : {}),
       ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
       firedRuleIds: [
         ...(stale.length > 0 ? ["producer-stale"] : []),
@@ -627,7 +681,12 @@ export async function runCronStalenessWatchdog(
         ...(dependencyRecoveryChecks.some((check) => check.state === "root-recovered-dependent-stale")
           ? ["dependency-recovery-lag"] : []),
         ...(safetyPublicationHeld ? ["safety-publication-held"] : []),
+        ...(canaryWatch.conditions.some((condition) => condition.active) ? ["canary-finding"] : []),
+        ...(probeWatch.conditions.some((condition) => condition.active) ? ["probe-path-persistent-failure"] : []),
       ],
+      canaryWatch: { active: canaryWatch.conditions.length, unknown: canaryWatch.unknown },
+      probeWatch: { active: probeWatch.conditions.length, unknown: probeWatch.unknown },
+      alerting: alertReceipt,
       checkedProducers: watchedObservations.map((observation) => observation.producerJob),
       stale,
       detailWriteFailures,

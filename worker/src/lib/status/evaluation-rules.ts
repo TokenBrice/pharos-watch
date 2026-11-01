@@ -542,6 +542,26 @@ export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["sch
       { metric: "heavySchedulerDeliveryAgeSeconds", value: heavy.ageSeconds ?? undefined, threshold: heavy.warningAfterSec },
     ));
   }
+  // Registry-derived lanes own their own budgets; the aggregate and heavy roles
+  // above already report their keys, so only independent lanes add a cause.
+  const coveredLanes = new Set([
+    ...scheduler.lanes.map((lane) => lane.scheduleKey),
+    ...(heavy.scheduleKey ? [heavy.scheduleKey] : []),
+  ]);
+  // Unreadable lane evidence is named by the external delivery monitor and by
+  // the aggregate unavailable cause; only an aged lane adds a status cause.
+  const laneFailures = (scheduler.expectedLanes ?? []).filter((lane) =>
+    (lane.status === "degraded" || lane.status === "stale") && !coveredLanes.has(lane.scheduleKey));
+  if (laneFailures.length > 0) {
+    const evidence = laneFailures.map((lane) =>
+      `${lane.scheduleKey} (${lane.status} ${lane.ageSeconds ?? "?"}s; warn >${lane.warningAfterSec}s / stale >${lane.staleAfterSec}s)`,
+    ).join(", ");
+    causes.push(makeCause(
+      "availability", "expected_scheduled_lane_unhealthy", "info",
+      `${laneFailures.length} scheduled slot lane(s) lack a start inside their delivery budget: ${evidence}.`,
+      { metric: "unhealthyExpectedLanes", value: laneFailures.length, threshold: 1 },
+    ));
+  }
   return { status, causes };
 }
 

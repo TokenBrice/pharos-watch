@@ -5,6 +5,8 @@ const DAY = 86_400;
 export const WORKER_CANARY_RUN_RETENTION_SEC = 14 * DAY;
 /** Oldest cron run clock retained by housekeeping and offline gap diagnostics. */
 export const CRON_RUNS_RETENTION_SEC = 7 * DAY;
+/** Oldest slot-start evidence retained; per-lane delivery budgets must fit this window. */
+export const CRON_SLOT_EXECUTIONS_RETENTION_SEC = 14 * DAY;
 
 /** Limits are injected from worker/src/lib/bounded-prune.ts, never duplicated here. */
 export interface RetentionLimits {
@@ -78,7 +80,7 @@ export function cronHistoryRetentionPolicies(
     }),
     selectorSnapshotDailyQuota: policy("selector_snapshot_daily_quota", "quota_date", 2 * DAY, { clockFormat: "utc-date" }),
     blockTimestampCache: policy("block_timestamp_cache", "updated_at", 14 * DAY),
-    slotExecutions: policy("cron_slot_executions", "slot_started_at", 14 * DAY),
+    slotExecutions: policy("cron_slot_executions", "slot_started_at", CRON_SLOT_EXECUTIONS_RETENTION_SEC),
     reserveContinuationExecutions: policy("reserve_continuation_executions", "finished_at", 14 * DAY, {
       predicate: "state = 'finished'", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
     }),

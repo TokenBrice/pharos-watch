@@ -703,8 +703,19 @@ describe("external scheduler delivery monitor", () => {
         lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
           scheduleKey, lastStartedAt: now - 30,
         })),
-        heavy: { status: "healthy", scheduleKey: "v9SupplyAttributionOffset", lastStartedAt: now - 30,
+        heavy: { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30,
           ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
+        expectedLanes: ["statusSelfCheckOffset", "daily0300Utc"].map((scheduleKey) => ({
+          scheduleKey, lastStartedAt: now - 30, ageSeconds: 30,
+          warningAfterSec: scheduleKey === "statusSelfCheckOffset" ? 1800 : 172_800,
+          staleAfterSec: scheduleKey === "statusSelfCheckOffset" ? 2700 : 259_200,
+          status: "healthy", unavailableReason: null,
+        })),
+      },
+      operatorAlerts: {
+        status: "healthy", operatorConfigured: true, lastDeliveredAt: now - 600,
+        pendingSince: null, pendingAgeSec: null, maxPendingSec: 86_400,
+        pendingProducers: [], reason: null, unavailableReason: null,
       },
       ...overrides,
     };
@@ -726,7 +737,34 @@ describe("external scheduler delivery monitor", () => {
       lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
         scheduleKey, lastStartedAt: now - 30,
       })),
-      heavy: { status, scheduleKey: "v9SupplyAttributionOffset", warningAfterSec: 1800, staleAfterSec: 2700 },
+      heavy: { status, scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), warningAfterSec: 1800, staleAfterSec: 2700 },
+      expectedLanes: ["statusSelfCheckOffset"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: now - 30, ageSeconds: 30,
+        warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null,
+      })),
+    } }).status).toBe(1);
+  });
+  it("fails on an aged registry lane or a stale operator channel", () => {
+    const now = Math.floor(Date.now() / 1000);
+    expect(runMonitor({ schedulerLiveness: {
+      status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30,
+      ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: now - 30,
+      })),
+      heavy: { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30,
+        ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
+      expectedLanes: [
+        { scheduleKey: "statusSelfCheckOffset", lastStartedAt: now - 30, ageSeconds: 30,
+          warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null },
+        { scheduleKey: "daily0300Utc", lastStartedAt: now - 259_201, ageSeconds: 259_201,
+          warningAfterSec: 172_800, staleAfterSec: 259_200, status: "stale", unavailableReason: null },
+      ],
+    } }).status).toBe(1);
+    expect(runMonitor({ operatorAlerts: {
+      status: "stale", operatorConfigured: false, lastDeliveredAt: null,
+      pendingSince: now - 86_401, pendingAgeSec: 86_401, maxPendingSec: 86_400,
+      pendingProducers: ["freshness"], reason: "operator-alert-delivery-pending", unavailableReason: null,
     } }).status).toBe(1);
   });
 });

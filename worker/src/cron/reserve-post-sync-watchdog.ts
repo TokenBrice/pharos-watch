@@ -342,6 +342,7 @@ export async function runReservePostSyncWatchdog(
     recordCronFailure("reserve-post-sync-watchdog", error, { metadata: { stage: "reserve-sync-state" } });
   }
 
+  let activeAlertReasons: string[] = [];
   let adapterAlert: {
     assessedAt: number;
     failedSources: ReserveAdapterAlertEvaluation["failedSources"];
@@ -374,10 +375,20 @@ export async function runReservePostSyncWatchdog(
       });
       await setCache(db, RESERVE_ALERT_STATE_KEY, JSON.stringify(evaluation.state), signal);
       const activeRuleIds = new Set<ReserveAdapterAlertRuleId>();
-      for (const state of Object.values(evaluation.state.coins)) {
-        if (state.failureRaised) activeRuleIds.add("reserve-adapter-failure-sustained");
-        if (state.clockRaised) activeRuleIds.add("reserve-source-clock-stalled");
+      const alertReasons: string[] = [];
+      for (const [coinId, state] of Object.entries(evaluation.state.coins)) {
+        if (state.failureRaised) {
+          activeRuleIds.add("reserve-adapter-failure-sustained");
+          alertReasons.push(`reserve-adapter-failure-sustained:${coinId}`);
+        }
+        if (state.clockRaised) {
+          activeRuleIds.add("reserve-source-clock-stalled");
+          alertReasons.push(`reserve-source-clock-stalled:${coinId}`);
+        }
       }
+      // Reserve findings stay off Telegram (ADR-42), so the active transition
+      // must instead degrade this source's status with a machine-readable reason.
+      activeAlertReasons = alertReasons;
       for (const ruleId of activeRuleIds) {
         if (!firedRuleIds.includes(ruleId)) firedRuleIds.push(ruleId);
       }
@@ -399,10 +410,15 @@ export async function runReservePostSyncWatchdog(
     recordCronFailure("reserve-post-sync-watchdog", error, { metadata: { stage: "reserve-adapter-alerts" } });
   }
 
+  if (activeAlertReasons.length > 0) degradedReasons.push("reserve-adapter-alert-raised");
   return {
     status: degradedReasons.length > 0 ? "degraded" : "ok",
     itemCount: driftCoinCount + persistentlyStaleIndependentCoinCount,
     metadata: JSON.stringify({
+      ...(degradedReasons.length > 0 ? { reason: degradedReasons[0] } : {}),
+      ...(activeAlertReasons.length > 0
+        ? { quality: { reason: "reserve-adapter-alert-raised", reasons: activeAlertReasons } }
+        : {}),
       degradedReasons,
       driftCoinCount,
       fallbackCoinCount,
@@ -411,6 +427,7 @@ export async function runReservePostSyncWatchdog(
       maxPersistentlyStaleAgeSec,
       syncDegradedCoinCount,
       reserveAdapterAlert: adapterAlert,
+      activeAdapterAlertReasons: activeAlertReasons,
       reserveAdapterAlertThresholds: STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS,
       firedRuleIds: [...new Set(firedRuleIds)],
     }),

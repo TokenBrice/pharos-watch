@@ -6,6 +6,8 @@
 
 `heavy_scheduled_delivery_stalled` independently checks `schedulerLiveness.heavy`: the fastest lane owned by `worker: "heavy"` in `shared/lib/scheduled-runner-registry.ts`; see the [canonical cron table](../worker-infrastructure.md#cron-scheduling) for its logical cadence, physical aliases and slot identity. Strictly more than 1800 seconds (two missed 15-minute slots) warns; strictly more than 2700 seconds is stale. `heavy_scheduler_liveness_unavailable` means absent, invalid, or unreadable heavy start evidence, not zero age or healthy delivery. Both budgets come from `STATUS_HEAVY_SCHEDULER_LIVENESS_THRESHOLDS` in `shared/lib/status-thresholds.ts`. Healthy public starts cannot clear a heavy delivery failure; both roles contribute to public health and admin availability.
 
+`schedulerLiveness.expectedLanes` covers every slot plan whose 3x cadence fits `CRON_SLOT_EXECUTIONS_RETENTION_SEC` (warn at 2x, stale at 3x; the monthly audit is excluded). The hourly external monitor fails and upserts this incident on any non-healthy expected lane, so a never-delivered daily/4-hourly slot cannot stay silent behind a watch-tier info cause. `schedulerLiveness.operatorAlerts` carries the operator-alert receipt (`operatorConfigured`, `pendingSince`, `pendingAgeSec`, 24h budget); the same monitor fails when the channel is unconfigured, pending past budget, unreadable, or a producer stops writing receipts.
+
 For platform evidence, provide `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN` (the generic name wins when both are set) in the environment with Cloudflare Analytics read permission for the account. Never print the token or scrape Wrangler OAuth files. Optional `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_WORKER_NAME` select another explicit target. The D1 source uses ordinary Wrangler auth and a read-only SELECT.
 
 ```bash
@@ -25,7 +27,7 @@ For numeric memory and OOM attribution, use [`npm run ops:worker-memory`](./cron
 
 ## Triage and lost slots
 
-1. Read public health and admin live status. Retain `observedAt`, `lastAnyStartedAt`, `lastFiveMinuteStartedAt`, public lane clocks, `heavy.scheduleKey` / `heavy.lastStartedAt`, each role's age/budgets/status and unavailable reason.
+1. Read public health and admin live status. Retain `observedAt`, `lastAnyStartedAt`, `lastFiveMinuteStartedAt`, public lane clocks, `heavy.scheduleKey` / `heavy.lastStartedAt`, every `expectedLanes` entry with its age/budget/status/unavailable reason, and `operatorAlerts`.
    `lastAnyStartedAt` is permanent investigative context subject to clock validity, never the public short-cadence or heavy freshness clock. An unrelated lane start cannot conceal delivery stalls; a malformed/future overall clock makes evidence unavailable.
 2. Use approved read-only D1 SELECT access: `SELECT slot_key, MAX(started_at) AS last_start FROM cron_slot_executions GROUP BY slot_key`. Use actual `started_at`, not scheduled time, leases, heartbeats or child completion.
 3. Correlate platform scheduled invocations, deployed Worker version, recent rollout and Cloudflare incident evidence. Separate delivery absence from a delivered slot whose child crashed or held publication.

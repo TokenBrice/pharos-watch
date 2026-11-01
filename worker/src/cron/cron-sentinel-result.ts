@@ -77,13 +77,29 @@ function worstStatus(results: readonly CronResult[]): CronResult["status"] {
   return "ok";
 }
 
+/** An explicitly disabled repair runner is not a dead source when its marker ages out. */
+function isExplicitlyDisabledSource(source: CronSentinelRuleSource, result: CronResult): boolean {
+  if (source !== "repair-debt") return false;
+  const metadata = parseMetadata(result.metadata);
+  return metadata != null && typeof metadata === "object"
+    && "enabled" in metadata && (metadata as { enabled?: unknown }).enabled === false;
+}
+
 function buildCronSentinelResult(
   mode: CronSentinelMode,
   sourceResults: readonly CronSentinelSourceResult[],
 ): CronResult {
   const currentSources = sourceResults.filter(({ state }) => state === "current");
   const results = currentSources.map(({ result }) => result);
-  const status = worstStatus(results);
+  const currentStatus = worstStatus(results);
+  // Losing a source's retained evidence past its 2x budget is a producer stop,
+  // not a neutral omission: every mode reconciles all sources, so the 15-minute
+  // status invocation names it on /status and in run metadata.
+  const expiredSources = sourceResults.filter(({ source, state, result }) =>
+    state === "expired" && !isExplicitlyDisabledSource(source, result));
+  const status = currentStatus === "error" || currentStatus === "degraded"
+    ? currentStatus
+    : expiredSources.length > 0 ? "degraded" : currentStatus;
   const sourceStatuses = Object.fromEntries(
     sourceResults.map(({ source, result, state }) => [source, state === "current" ? result.status ?? "ok" : state]),
   );
@@ -93,6 +109,7 @@ function buildCronSentinelResult(
       ? [[source, metadata.quality] as const]
       : [];
   });
+  const expiredReasons = expiredSources.map(({ source }) => `source-state-expired:${source}`);
   // One job id multiplexes four watchdog sets, so the row names the mode and
   // the source that produced the worst status instead of collapsing them.
   const attributedSource = status === "ok" || status === undefined
@@ -106,9 +123,16 @@ function buildCronSentinelResult(
       sourceStatuses,
       ...(attributedSource
         ? { reason: `${mode}:${attributedSource}:${status}` }
-        : status === "skipped_neutral" ? { reason: `${mode}:no-current-source-evidence` } : {}),
-      ...(qualitySources.length > 0
-        ? { quality: { reason: "sentinel-source-findings", sources: Object.fromEntries(qualitySources) } }
+        : expiredReasons.length > 0 ? { reason: expiredReasons[0] }
+          : status === "skipped_neutral" ? { reason: `${mode}:no-current-source-evidence` } : {}),
+      ...(qualitySources.length > 0 || expiredReasons.length > 0
+        ? {
+            quality: {
+              reason: expiredReasons.length > 0 ? "sentinel-source-expired" : "sentinel-source-findings",
+              ...(qualitySources.length > 0 ? { sources: Object.fromEntries(qualitySources) } : {}),
+              ...(expiredReasons.length > 0 ? { reasons: expiredReasons } : {}),
+            },
+          }
         : {}),
       ruleIds: Object.fromEntries(
         sourceResults.map(({ source }) => [source, CRON_SENTINEL_RULE_IDS[source]]),

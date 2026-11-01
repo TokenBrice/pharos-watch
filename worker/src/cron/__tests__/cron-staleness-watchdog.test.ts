@@ -33,6 +33,7 @@ import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
+import { ACTIVE_CANARY_CHECK_IDS } from "../../lib/canary-checks";
 import {
   CRON_STALENESS_ALERT_COOLDOWN_SEC,
   deriveCronFreshnessProducers,
@@ -47,7 +48,16 @@ interface FakeFailureRow {
   updated_at: number;
 }
 
-function fakeDb(failureRows: FakeFailureRow[] = [], producerPublishedAt?: number): D1Database {
+interface FakeOperatorWatchRows {
+  canaryRows?: Array<Record<string, unknown>>;
+  probeRow?: Record<string, unknown> | null;
+}
+
+function fakeDb(
+  failureRows: FakeFailureRow[] = [],
+  producerPublishedAt?: number,
+  operatorWatch: FakeOperatorWatchRows = {},
+): D1Database {
   const cacheRows = new Map<string, { value: string; updated_at: number }>();
   return {
     prepare: (sql: string) => ({
@@ -56,6 +66,7 @@ function fakeDb(failureRows: FakeFailureRow[] = [], producerPublishedAt?: number
           if (sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ?")) {
             return cacheRows.get(args[0] as string) ?? null;
           }
+          if (sql.includes("FROM status_probe_runs")) return operatorWatch.probeRow ?? null;
           return null;
         },
         run: async () => {
@@ -81,6 +92,9 @@ function fakeDb(failureRows: FakeFailureRow[] = [], producerPublishedAt?: number
           }
           if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
             return { results: [] };
+          }
+          if (sql.includes("FROM worker_canary_runs")) {
+            return { results: operatorWatch.canaryRows ?? [] };
           }
           return { results: failureRows.filter((row) => row.updated_at >= (args[1] as number)) };
         },
@@ -459,7 +473,9 @@ describe("cron staleness watchdog", () => {
 
   it("degrades when detail cache writes are failing", async () => {
     mockCacheStatus({ stablecoins: 0 });
-    const result = await runCronStalenessWatchdog(fakeDb([{ key: "detail-write-failure:usdt-tether", value: JSON.stringify({ reason: "value-too-large", bytes: 21_000_000 }), updated_at: Math.floor(Date.now() / 1000) - 60 }]));
+    const result = await runCronStalenessWatchdog(fakeDb([{ key: "detail-write-failure:usdt-tether", value: JSON.stringify({ reason: "value-too-large", bytes: 21_000_000 }), updated_at: Math.floor(Date.now() / 1000) - 60 }]), undefined, {
+      operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
+    });
     const metadata = JSON.parse(result.metadata ?? "{}") as { detailWriteFailures: Array<{ stablecoinId: string }> };
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("detail-cache-write-failed");
@@ -552,5 +568,77 @@ describe("cron staleness watchdog", () => {
       { stablecoinId: "boundary-coin", reason: "unknown", bytes: null, ageSeconds: 7 * 24 * 3600 },
     ]);
     expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([{ key: "detail-write-failure:boundary-coin" }]);
+  });
+
+  it("alerts on a canary finding transition and recovers it once the cohort is clean", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    const canaryRows = (failingCheckId: string | null) => ACTIVE_CANARY_CHECK_IDS.map((checkId) => ({
+      check_id: checkId,
+      status: checkId === failingCheckId ? "error" : "ok",
+      severity: checkId === failingCheckId ? "error" : "info",
+      observed_at: now,
+      duration_ms: 1,
+      metadata_json: JSON.stringify({ executionStatus: "completed" }),
+      error: null,
+    }));
+    const watch = {
+      canaryRows: canaryRows("stablecoins-cache-active-count"),
+      probeRow: { created_at: now, details_json: JSON.stringify({ persistentProbeFailures: [] }) },
+    };
+    const db = fakeDb([], undefined, watch);
+    mockCacheStatus({});
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" }, workerCanaryMode: "status" as const };
+
+    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Canary findings raised");
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("stablecoins-cache-active-count");
+    expect(JSON.parse(raised.metadata ?? "{}").firedRuleIds).toContain("canary-finding");
+    expect(JSON.parse(raised.metadata ?? "{}").canaryWatch).toMatchObject({ active: 1, unknown: false });
+
+    // A sustained finding is not re-alerted.
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+
+    watch.canaryRows = canaryRows(null);
+    vi.setSystemTime(new Date((now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1) * 1_000));
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Canary findings recovered");
+  });
+
+  it("alerts on a persistently failing probe path and keeps its prior state when evidence is unreadable", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    const watch: FakeOperatorWatchRows = {
+      canaryRows: [],
+      probeRow: {
+        created_at: now,
+        details_json: JSON.stringify({
+          persistentProbeFailures: [{
+            plane: "external", lane: "external", origin: "https://api.pharos.watch",
+            path: "/api/mint-burn-flows", failStreak: 2, lastProbedAt: now,
+          }],
+        }),
+      },
+    };
+    const db = fakeDb([], undefined, watch);
+    mockCacheStatus({});
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Probe paths persistently failing");
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("/api/mint-burn-flows");
+
+    // Unreadable probe evidence is unknown: it must not report a recovery.
+    vi.setSystemTime(new Date((now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1) * 1_000));
+    watch.probeRow = null;
+    const unknown = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(unknown.metadata ?? "{}").probeWatch).toMatchObject({ unknown: true });
   });
 });

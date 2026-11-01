@@ -43,8 +43,33 @@ jobs:
           }
           const keys = new Set(s.lanes.map(l => l.scheduleKey));
           if (!['fiveMinuteReserveRecovery', 'fiveMinuteTelegramAlerts', 'digestTriggerPoll'].every(k => keys.has(k))) throw new Error('Scheduler lanes missing');
+          const lanes = s.expectedLanes;
+          if (!Array.isArray(lanes) || lanes.length === 0
+              || !lanes.every(l => typeof l.scheduleKey === 'string'
+                && ['healthy', 'degraded', 'stale', 'unavailable'].includes(l.status)
+                && Number.isFinite(l.warningAfterSec) && Number.isFinite(l.staleAfterSec)
+                && (l.ageSeconds === null || Number.isFinite(l.ageSeconds)))) {
+            throw new Error('Expected lane schema invalid');
+          }
+          if (!lanes.some(l => l.scheduleKey === 'statusSelfCheckOffset')) throw new Error('Status self-check lane missing');
           if (s.status !== 'healthy' || h.status !== 'healthy' || health.warnings.some(w =>
               ['scheduled_delivery_stalled', 'scheduler_liveness_unavailable', 'heavy_scheduled_delivery_stalled', 'heavy_scheduler_liveness_unavailable'].includes(w))) throw new Error('Scheduler delivery stalled or unavailable');
+          const unhealthyLanes = lanes.filter(l => l.status !== 'healthy');
+          if (unhealthyLanes.length > 0) {
+            throw new Error(`Scheduled lane delivery unhealthy: ${unhealthyLanes.map(l =>
+              `${l.scheduleKey}:${l.status}:${l.ageSeconds ?? l.unavailableReason ?? 'unknown'} (warn >${l.warningAfterSec}s, stale >${l.staleAfterSec}s)`).join(', ')}`);
+          }
+          const oa = health.operatorAlerts;
+          if (!oa || !['healthy', 'stale', 'unavailable'].includes(oa.status)
+              || (oa.operatorConfigured !== null && typeof oa.operatorConfigured !== 'boolean')
+              || !Number.isFinite(oa.maxPendingSec)
+              || (oa.pendingSince !== null && !Number.isFinite(oa.pendingSince))
+              || !Array.isArray(oa.pendingProducers)) {
+            throw new Error('Operator alert receipt schema invalid');
+          }
+          if (oa.status !== 'healthy') {
+            throw new Error(`Operator alert channel ${oa.status}: ${oa.reason ?? oa.unavailableReason ?? 'unknown'} (pending ${oa.pendingProducers.join(',') || 'none'} ${oa.pendingAgeSec ?? 'n/a'}s > ${oa.maxPendingSec}s)`);
+          }
           if (![s.lastAnyStartedAt, s.lastFiveMinuteStartedAt, s.ageSeconds].every(Number.isFinite)
               || s.ageSeconds < 0 || s.ageSeconds > s.warningAfterSec || s.lastFiveMinuteStartedAt > s.observedAt
               || Math.abs(Date.now() / 1000 - s.observedAt) > 120) throw new Error('Scheduler evidence invalid or not live');

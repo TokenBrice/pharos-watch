@@ -1,4 +1,5 @@
 import { CRON_INTERVALS } from "./cron-jobs";
+import { CRON_SCHEDULE_CADENCES } from "./cron-cadences";
 import type { ActivePriceCoverageGap, ActivePriceCoverageHealth, StablecoinPublicationHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
 import type { z } from "zod";
 import type { FreshnessStatusSchema } from "@pharos/contracts/api-meta";
@@ -482,6 +483,30 @@ export const STATUS_HEAVY_SCHEDULER_LIVENESS_THRESHOLDS = {
   warningAfterSec: 1800,
   staleAfterSec: 2700,
 } as const;
+
+/**
+ * Per-lane delivery budgets for every scheduled slot plan whose 3x cadence
+ * fits `cron_slot_executions` retention: warn after two missed intervals,
+ * stale after three. The 15-minute status self-check and heavy lanes resolve
+ * to the same 1800/2700 budgets.
+ */
+export function getScheduledLaneLivenessThresholds(intervalSec: number): {
+  warningAfterSec: number;
+  staleAfterSec: number;
+} {
+  return { warningAfterSec: intervalSec * 2, staleAfterSec: intervalSec * 3 };
+}
+
+/**
+ * Operator alert delivery budget: a transition left pending (missing
+ * credentials, cooldown, or a failed send) longer than this is an alerting
+ * outage, not a transient suppression.
+ */
+export const STATUS_OPERATOR_ALERT_PENDING_MAX_SEC = 24 * 3600;
+
+/** Operator probe evidence older than three status-lane intervals cannot prove a persistent path failure. */
+export const STATUS_PROBE_OPERATOR_MAX_EVIDENCE_AGE_SEC =
+  CRON_SCHEDULE_CADENCES.statusSelfCheckOffset.intervalSec * 3;
 
 /** Reserve-sync fields the score-input hold predicate needs; structurally compatible with `StatusResponse["reserveComposition"]`. */
 export interface ReserveScoreInputHoldInput {

@@ -388,13 +388,24 @@ describe("digest publication watchdog", () => {
     });
     expect(sendToChatMock).not.toHaveBeenCalled();
     expect(db.cache.has("digest-publication-watchdog:state:v1")).toBe(false);
-    expect(result.status).toBe("ok");
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("operator-alert-credentials-missing");
+    expect(JSON.parse(db.cache.get("operator-alert:receipt:digest:v1")!.value)).toMatchObject({
+      operatorConfigured: false,
+      pendingSince: at("2026-08-31T08:31:00Z"),
+      reason: "operator-alert-credentials-missing",
+    });
 
     const retry = await runDigestPublicationWatchdog(db, at("2026-08-31T08:32:00Z"), {
       operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
     });
     expect(JSON.parse(retry.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: ["daily-row"], sent: true,
+    });
+    expect(JSON.parse(db.cache.get("operator-alert:receipt:digest:v1")!.value)).toMatchObject({
+      operatorConfigured: true,
+      pendingSince: null,
+      lastDeliveredAt: at("2026-08-31T08:32:00Z"),
     });
   });
 });
