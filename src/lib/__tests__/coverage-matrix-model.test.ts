@@ -92,6 +92,15 @@ describe("buildCoverageMatrixModel", () => {
     expect(unavailable.featureSummaries.find((summary) => summary.feature.key === "safety")).toMatchObject({
       availableCount: 0, totalCount: 0, coveragePct: null, mcapSharePct: null,
     });
+    expect(unavailable.featureSummaries.find((summary) => summary.feature.key === "reserves")).toMatchObject({
+      availableCount: 0,
+      totalCount: 0,
+      coveragePct: null,
+      marketCapComplete: false,
+      breakdown: expect.arrayContaining([
+        { key: "data-unavailable", label: "data n/a", count: ids.length },
+      ]),
+    });
   });
 
   it("joins compliance profiles onto compact registry rows and aggregates assessed coverage", () => {

@@ -125,7 +125,9 @@ function InstrumentRow({
   const prefetch = usePrefetchStablecoin();
   const occupancyBasisId = useId();
   const coin = row.coin;
-  const absDev = Math.abs(coin.currentDeviationBps ?? 0);
+  const deviationClass = coin.currentDeviationBps == null
+    ? "text-muted-foreground"
+    : deviationColorClass(Math.abs(coin.currentDeviationBps));
   const trackingSpan = formatTrackingSpanDays(coin.trackingSpanDays);
   const pegHealthValue =
     coin.pegScore !== null ? (
@@ -133,12 +135,13 @@ function InstrumentRow({
     ) : (
       <span className="text-muted-foreground">NR</span>
     );
-  const eventAge =
-    row.pendingIncident?.ageSec != null
-      ? formatElapsedSeconds(row.pendingIncident.ageSec)
-      : coin.lastEventAt != null
-        ? `${formatElapsedSeconds(Math.max(0, nowSeconds - coin.lastEventAt))} ago`
-        : "clear";
+  // The response's pending ageSec is request-frozen; derive from firstSeenAt
+  // so the row follows the same display clock as the last-event age.
+  const eventAge = row.pendingIncident
+    ? formatElapsedSeconds(Math.max(0, nowSeconds - row.pendingIncident.firstSeenAt))
+    : coin.lastEventAt != null
+      ? `${formatElapsedSeconds(Math.max(0, nowSeconds - coin.lastEventAt))} ago`
+      : "clear";
   return (
     <button
       type="button"
@@ -178,7 +181,7 @@ function InstrumentRow({
           className="col-span-2 lg:col-span-1"
           label="Deviation"
           value={
-            <span className={cn(deviationColorClass(absDev))}>
+            <span className={cn(deviationClass)}>
               {coin.currentDeviationBps != null ? `${coin.currentDeviationBps > 0 ? "+" : ""}${coin.currentDeviationBps} bps` : "—"}
             </span>
           }

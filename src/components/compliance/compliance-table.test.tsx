@@ -177,6 +177,23 @@ describe("ComplianceTable lazy GENIUS evidence", () => {
     expect(fixtures.loadDetail).toHaveBeenCalledTimes(1);
   });
 
+  it("lists every checked source without truncating the evidence review", async () => {
+    const sourcesChecked = Array.from({ length: 13 }, (_, index) => `Source ${index + 1}`);
+    fixtures.loadDetail.mockResolvedValue({
+      ...detail,
+      genius: {
+        ...detail.genius,
+        negativeEvidenceReview: { ...detail.genius.negativeEvidenceReview, sourcesChecked },
+      },
+    });
+    renderTable("fold-sources");
+    fireEvent.click(screen.getByRole("button", { name: "Expand details for FIX" }));
+
+    const heading = await screen.findByText("Sources checked");
+    const items = heading.parentElement!.querySelectorAll("li");
+    expect(Array.from(items, (item) => item.textContent)).toEqual(sourcesChecked);
+  });
+
   it("shows a clear retryable failure without delaying summary columns", async () => {
     fixtures.loadDetail.mockRejectedValueOnce(new Error("Chunk import failed")).mockResolvedValueOnce(detail);
     renderTable("fold-retry");

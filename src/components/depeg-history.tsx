@@ -20,7 +20,7 @@ import {
 } from "@/components/stablecoin-detail/section-title-class";
 import { RelatedIncidentsRail } from "@/components/related-incidents-rail";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
-import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency, formatPegOccupancy } from "@shared/lib/format";
+import { formatDuration, formatNativePrice, formatEventDate, formatBps, formatCurrency, formatPegOccupancy, formatUtcDayLabel } from "@shared/lib/format";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { CLIENT_TRACKED_STABLECOINS as TRACKED_STABLECOINS } from "@shared/lib/stablecoins/client-registry";
@@ -105,8 +105,10 @@ export function DepegHistory({
     refetch,
     isFetchingNextPage,
     loadedCount,
+    hasLoadedAllPages,
     isFullyLoaded,
     isAutoLoadCapped,
+    hasNextPage,
   } = useInfiniteDepegEvents({
     stablecoinId,
     autoLoadAll: true,
@@ -123,7 +125,7 @@ export function DepegHistory({
   );
   // The cursor API skips the exact count (includeTotal=false); its `total` is then a page
   // lower bound, so it is only a count once exact or once every page has loaded.
-  const knownTotal = data?.totalExact ? data.total : isFullyLoaded ? countedEvents.length : null;
+  const knownTotal = data?.totalExact ? data.total : hasLoadedAllPages ? countedEvents.length : null;
   const incidentCountLabel = knownTotal != null ? knownTotal.toLocaleString() : `${countedEvents.length.toLocaleString()}+`;
   const thresholdCrossings = isFullyLoaded
     ? countedEvents.reduce((sum, event) => sum + (event.constituentEventCount ?? 1), 0)
@@ -134,7 +136,8 @@ export function DepegHistory({
   const [showAllIncidents, setShowAllIncidents] = useState(false);
   const { effectivePage, totalPages, paginatedRows, rangeStart, rangeEnd, onPreviousPage, onNextPage } =
     useTablePagination(sorted, { pageSize: DEPEG_HISTORY_PAGE_SIZE });
-  const isHydratingFullHistory = !isAutoLoadCapped && !isFullyLoaded;
+  const isHydratingFullHistory = !isAutoLoadCapped && !hasLoadedAllPages &&
+    (hasNextPage === true || isFetchingNextPage);
   const isCollapsible = sorted.length > DEPEG_HISTORY_COLLAPSED_COUNT;
   const isFolded = isCollapsible && !showAllIncidents;
   // Folded always shows the newest incidents, whichever page the reader left open.
@@ -143,8 +146,8 @@ export function DepegHistory({
   // never the server-side total it never reached.
   // Pagination navigates the listed rows (disputed rows included), so its
   // total stays the row count rather than the public event count.
-  const paginationTotal = isFullyLoaded ? events.length : loadedCount;
-  const showPagination = (isFullyLoaded || isAutoLoadCapped) && sorted.length > 0 && !isFolded;
+  const paginationTotal = hasLoadedAllPages ? events.length : loadedCount;
+  const showPagination = (hasLoadedAllPages || isAutoLoadCapped) && sorted.length > 0 && !isFolded;
 
   // A loading read, or a failure with nothing admitted, does not own the
   // panel: the shell's dated ledger preview stays visible. A successfully
@@ -294,7 +297,7 @@ export function DepegHistory({
       {historyCoverage ? (
         <p className="text-xs text-muted-foreground">
           Score coverage: {historyCoverage.status === "verified" ? "replay-verified" : "age-anchored"} since{" "}
-          <span className="font-mono">{formatEventDate(historyCoverage.startedAt)}</span>
+          <span className="font-mono">{formatUtcDayLabel(new Date(historyCoverage.startedAt * 1000))}</span>
           {scoreWindowIncidentCount != null ? (
             <>
               , with <span className="font-mono">{scoreWindowIncidentCount.toLocaleString()}</span>{" "}

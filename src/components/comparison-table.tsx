@@ -24,7 +24,9 @@ import {
 import { GENIUS_STATUS_SHORT_LABELS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { getPegReference } from "@shared/lib/peg-rates";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
+import { getVariantAccessibleLabel } from "@shared/lib/variant-display";
 import { projectTopDriver } from "@shared/lib/safety-score-v9/public";
 import {
   getCirculatingRawOrNull,
@@ -48,6 +50,7 @@ import { resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
+import { stablecoinLabel } from "@/lib/stablecoin-label";
 import { bluechipObservationText } from "@/lib/bluechip";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 import {
@@ -168,7 +171,29 @@ function dependencySummary(coin: ComparisonCoinEntry): ReactNode {
     ...card.dependencies.basket.map((item) => item.upstreamAssetId),
   ];
   if (dependencies.length === 0) return "No scored dependency";
-  return dependencies.slice(0, 3).join(", ") + (dependencies.length > 3 ? ` +${dependencies.length - 3}` : "");
+  const labels = dependencies.map((id) =>
+    CLIENT_TRACKED_META_BY_ID.has(id) ? stablecoinLabel({ id, symbol: id }) : "Untracked asset"
+  );
+  return labels.slice(0, 3).join(", ") + (labels.length > 3 ? ` +${labels.length - 3}` : "");
+}
+
+function variantSummary(coin: ComparisonCoinEntry): ReactNode {
+  if (!coin.meta.variantOf) return "Base asset";
+  const parent = CLIENT_TRACKED_META_BY_ID.get(coin.meta.variantOf);
+  const label = coin.meta.variantKind ? getVariantAccessibleLabel(coin.meta.variantKind) : "Variant";
+  return parent
+    ? `${label} of ${parent.name} (${parent.symbol})`
+    : `${label} of an untracked asset`;
+}
+
+function bindingCapSummary(coin: ComparisonCoinEntry): ReactNode {
+  const card = coin.safetyCard;
+  if (!card) return NULL_VALUE;
+  // A null cap on a non-rated card means "not assessed", not "no binding cap".
+  if (card.ratingStatus !== "rated") return NULL_VALUE;
+  return card.bindingCap
+    ? `${humanizeSafetyScoreV9Value(card.bindingCap.kind)} · ${card.bindingCap.limit}`
+    : "None";
 }
 
 function blacklistLabel(coin: ComparisonCoinEntry): string {
@@ -252,7 +277,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
         { key: "exit-pillar", label: "Exit pillar", numeric: true, render: (coin) => formatScore100(coin.safetyCard?.pillars.exit.score) },
         { key: "control-pillar", label: "Control pillar", numeric: true, render: (coin) => formatScore100(coin.safetyCard?.pillars.control.score) },
         { key: "weakest-pillar", label: "Weakest pillar", render: (coin) => coin.safetyCard?.weakestPillar ? `${humanizeSafetyScoreV9Value(coin.safetyCard.weakestPillar.pillar)} · ${formatScore(coin.safetyCard.weakestPillar.score, { trimInteger: true })}` : NULL_VALUE },
-        { key: "binding-cap", label: "Binding cap", render: (coin) => coin.safetyCard ? (coin.safetyCard.bindingCap ? `${humanizeSafetyScoreV9Value(coin.safetyCard.bindingCap.kind)} · ${coin.safetyCard.bindingCap.limit}` : "None") : NULL_VALUE },
+        { key: "binding-cap", label: "Binding cap", render: bindingCapSummary },
         { key: "evidence", label: "Evidence", render: (coin) => coin.safetyCard ? `${humanizeSafetyScoreV9Value(coin.safetyCard.evidence.level)} · ${coin.safetyCard.evidence.freshness === "unknown" ? "Freshness not assessed" : humanizeSafetyScoreV9Value(coin.safetyCard.evidence.freshness)}` : NULL_VALUE },
         {
           key: "top-driver",
@@ -335,7 +360,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
         { key: "custody", label: "Custody model", render: (coin) => coin.meta.custodyModel ? CUSTODY_MODEL_LABELS[coin.meta.custodyModel] : NULL_VALUE },
         { key: "mint-authority", label: "Mint authority", render: (coin) => resolveMintAuthorityStatus(coin.meta.mintAuthoritySummary).spokenLabel },
         { key: "blacklist", label: "Freeze capability", render: blacklistLabel },
-        { key: "variant", label: "Variant relationship", render: (coin) => coin.meta.variantOf ? `${humanizeSafetyScoreV9Value(coin.meta.variantKind ?? "variant")} of ${coin.meta.variantOf}` : "Base asset" },
+        { key: "variant", label: "Variant relationship", render: variantSummary },
         { key: "mica", label: "MiCA", render: (coin) => coin.meta.mica ? `${MICA_STATUS_BADGE_STYLES[coin.meta.mica.status].label}${coin.meta.mica.tokenType ? ` · ${coin.meta.mica.tokenType}` : ""}` : "Not researched" },
         { key: "genius", label: "GENIUS pathway", render: (coin) => coin.meta.genius ? GENIUS_STATUS_SHORT_LABELS[coin.meta.genius.authorizationStatus] : "Not researched" },
       ],

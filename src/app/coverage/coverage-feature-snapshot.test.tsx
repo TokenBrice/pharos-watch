@@ -123,6 +123,24 @@ describe("CoverageFeatureSnapshotRow", () => {
     expect(screen.getByText("of known cap")).toBeTruthy();
   });
 
+  it("renders a report-cards outage as a data n/a reserve segment, not a coverage gap", () => {
+    const base = {
+      coin: makeStablecoinMeta(), marketCapUsd: 100, hasPegCoverage: true,
+      safetyScore: null, safetyRatingStatus: "not-rated" as const, dexCoverageClass: null,
+      hasYieldCoverage: false, flowCoverageStatus: null, dataAvailability: { reserves: false },
+    };
+    const feature = COVERAGE_FEATURES.find((entry) => entry.key === "reserves")!;
+    const summary = buildCoverageFeatureSummary(feature, [
+      buildCoverageRow({ ...base }),
+      buildCoverageRow({ ...base, coin: makeStablecoinMeta({ id: "second" }) }),
+    ]);
+    const { container } = render(<CoverageFeatureSnapshotRow summary={summary} />);
+
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Reserve view coverage: data n/a 2");
+    expect(container.textContent).toContain("of known cap");
+    expect(container.textContent).not.toContain("not covered");
+  });
+
   it("renders cap skew unavailable without naming a feature when no share is observed", () => {
     render(<CoverageFeatureSnapshotCard
       featureSummaries={[]}

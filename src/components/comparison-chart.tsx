@@ -93,6 +93,13 @@ export function ComparisonChart({
     return formatChartDate(ts, "compact");
   }, [activeRange]);
 
+  // A multi-year window repeats month/day labels, so readouts carry the year.
+  const formatLabelDate = useCallback((ts: number) => (
+    activeRange === "7d" || activeRange === "30d"
+      ? formatChartDate(ts, "short")
+      : formatChartDate(ts, "short-year")
+  ), [activeRange]);
+
   const defaultFormat = (v: number) => v.toLocaleString();
   const valueFormatter = formatValue ?? defaultFormat;
   const activeFormatter = normalized
@@ -153,8 +160,8 @@ export function ComparisonChart({
               xTickFormatter={formatTimestamp}
               yTickFormatter={activeTickFormatter}
               valueFormatter={activeFormatter}
-              tooltipLabelFormatter={(timestamp) => formatChartDate(timestamp, "short")}
-              tableDateFormatter={(timestamp) => formatChartDate(timestamp, "short")}
+              tooltipLabelFormatter={formatLabelDate}
+              tableDateFormatter={formatLabelDate}
               tableCaption={(rows, truncated, total) => truncated
                 ? `${title} comparison — most recent ${rows.length} of ${total} data points`
                 : `${title} comparison — ${total} data points`}

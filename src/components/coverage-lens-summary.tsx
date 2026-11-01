@@ -13,13 +13,21 @@ interface CoverageLensSummaryProps {
 }
 
 export function CoverageLensSummary({ rows, filteredRows, search, filter }: CoverageLensSummaryProps) {
-  const { filteredCap, totalCap, filteredMcapSharePct, lensSummary } = useMemo(() => {
+  const { filteredCap, totalCap, filteredMcapShareLabel, lensSummary } = useMemo(() => {
     const totalCap = summarizeCoverageMarketCap(rows);
     const filteredCap = summarizeCoverageMarketCap(filteredRows);
     const filteredMcapSharePct = totalCap.totalUsd != null && totalCap.totalUsd > 0 &&
       (filteredCap.totalUsd != null || filteredRows.length === 0)
       ? ((filteredCap.totalUsd ?? 0) / totalCap.totalUsd) * 100
       : null;
+    // A nonzero share never rounds to 0%, and a partial universe never reads 100%.
+    const filteredMcapShareLabel = filteredMcapSharePct == null
+      ? "n/a"
+      : filteredMcapSharePct > 0 && filteredMcapSharePct < 1
+        ? "<1%"
+        : filteredMcapSharePct > 99 && filteredMcapSharePct < 100
+          ? ">99%"
+          : `${Math.round(filteredMcapSharePct)}%`;
     const activeFilterLabel = FILTER_OPTIONS.find((option) => option.key === filter)?.label ?? "All";
     const trimmedSearch = search.trim();
     const lensSummary = trimmedSearch
@@ -28,7 +36,7 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
         ? `Filter lens: ${activeFilterLabel}`
         : "Full active universe";
 
-    return { filteredCap, totalCap, filteredMcapSharePct, lensSummary };
+    return { filteredCap, totalCap, filteredMcapShareLabel, lensSummary };
   }, [filter, filteredRows, rows, search]);
 
   return (
@@ -44,7 +52,7 @@ export function CoverageLensSummary({ rows, filteredRows, search, filter }: Cove
       <div className="pharos-inset px-4 py-3">
         <p className="pharos-label">Market share in view</p>
         <p className="mt-1 text-sm text-foreground">
-          <span className="pharos-numeric">{filteredMcapSharePct == null ? "n/a" : `${filteredMcapSharePct.toFixed(0)}%`}</span>{" "}
+          <span className="pharos-numeric">{filteredMcapShareLabel}</span>{" "}
           of {totalCap.complete ? "active" : "known"} market cap
         </p>
         <p className="mt-1 text-xs text-muted-foreground">

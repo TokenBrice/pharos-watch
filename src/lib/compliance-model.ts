@@ -103,6 +103,8 @@ export interface ComplianceFilters {
 export interface ComplianceViewModel {
   rows: ComplianceRow[];
   watchRows: ComplianceRow[];
+  /** Rows in the selected regime before status, token-type, peg, or search filtering. */
+  regimeTotal: number;
   totalTracked: number;
   isGeniusEffective: boolean;
 }
@@ -437,10 +439,15 @@ export function buildComplianceViewModel(filters: ComplianceFilters): Compliance
 
   const rows = all.rows.filter((row) => matchesFilters(row, filters, q)).sort(sortComplianceRows);
   const watchRows = all.watchRows.filter((row) => matchesFilters(row, filters, q)).sort(sortComplianceRows);
+  const regimeRows = filters.regime === "all"
+    ? all.rows.length + all.watchRows.length
+    : all.rows.filter((row) => row.regime === filters.regime).length +
+      all.watchRows.filter((row) => row.regime === filters.regime).length;
 
   return {
     rows,
     watchRows,
+    regimeTotal: regimeRows,
     totalTracked: all.rows.length + all.watchRows.length,
     isGeniusEffective: all.geniusEffective,
   };

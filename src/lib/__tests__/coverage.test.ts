@@ -213,6 +213,19 @@ describe("coverage helpers", () => {
     expect(dexCoverageFeature.resolve("primary").label).toBe("Primary");
     expect(dexCoverageFeature.resolve("fallback").label).toBe("Fallback");
     expect(dexCoverageFeature.resolve("unobserved").available).toBe(false);
+    // A missing class is an outage, never an ordinary not-covered gap.
+    expect(dexCoverageFeature.resolve(null).kind).toBe("data-unavailable");
+    expect(dexCoverageFeature.resolve(null).available).toBe(false);
+  });
+
+  it("keeps a missing DEX coverage class out of the covered and uncovered denominators", () => {
+    const unobserved = makeCoverageRow(["unobserved", "UNOBS"], { dexCoverageClass: "unobserved" });
+    const missing = makeCoverageRow(["missing", "MISS"], { dexCoverageClass: null });
+
+    const summary = buildCoverageFeatureSummary(coverageFeature("dex"), [unobserved, missing]);
+
+    expect(summary).toMatchObject({ availableCount: 0, totalCount: 1, coveragePct: 0 });
+    expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 1 });
   });
 
   it("maps reserve sync coverage into live, curated-validated, proof, curated, or estimated states", () => {
@@ -903,7 +916,30 @@ describe("coverage helpers", () => {
       { key: "proof", label: "proof", count: 1 },
       { key: "curated", label: "curated", count: 1 },
       { key: "estimated", label: "estimated", count: 0 },
+      { key: "data-unavailable", label: "data n/a", count: 0 },
     ]);
+  });
+
+  it("keeps a failed report-cards read in the reserve data-unavailable bucket", () => {
+    const rows = [
+      makeCoverageRow(["live", "LIVE"], {
+        coin: makeCoin({ liveReservesConfig: LIVE_RESERVE_CONFIGS.live }),
+        liveReserveFresh: true,
+        dataAvailability: { reserves: false },
+      }),
+      makeCoverageRow(["curated", "CUR"], { dataAvailability: { reserves: false } }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(coverageFeature("reserves"), rows);
+
+    expect(summary).toMatchObject({
+      availableCount: 0,
+      totalCount: 0,
+      coveragePct: null,
+      marketCapComplete: false,
+    });
+    expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 2 });
+    expect(summary.breakdown.filter((item) => item.key !== "data-unavailable" && item.count > 0)).toEqual([]);
   });
 
   it("breaks down redemption coverage by route family", () => {

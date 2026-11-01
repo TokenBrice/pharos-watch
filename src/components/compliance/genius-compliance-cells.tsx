@@ -99,7 +99,7 @@ export function GeniusReviewDetails({ evidence: row }: { evidence: GeniusComplia
         <div className="space-y-1">
           <p className="font-medium text-foreground">Sources checked</p>
           <ul className="list-inside list-disc space-y-0.5">
-            {row.negativeEvidenceSourcesChecked.slice(0, 5).map((source) => (
+            {row.negativeEvidenceSourcesChecked.map((source) => (
               <li key={source}>{source}</li>
             ))}
           </ul>
