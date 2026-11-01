@@ -17,7 +17,7 @@ import * as coverage from "../../../lib/stablecoin-publication-coverage";
 import { STABLECOIN_PRICE_GAP_REVIEWS } from "../../../lib/stablecoin-publication-coverage";
 import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, loadPriceCorroborationObservations } from "../price-corroboration-observations";
 import type { PeggedAsset } from "../enrich-prices-shared";
-import { planDexRefresh, runPriceDexRefresh } from "../price-dex-refresh";
+import { nextDexRefreshCursor, planDexRefresh, runPriceDexRefresh } from "../price-dex-refresh";
 import { makePeggedAsset } from "./_fixtures";
 import * as shortLived from "../price-short-lived-refresh";
 
@@ -28,6 +28,15 @@ const observation = (observedAt: number, price = 0.99) => ({ ...target, source: 
 const published = () => makePeggedAsset({ id, symbol: "USDaf", price: null });
 const allUnpriced = () =>
   new Map([...ACTIVE_META_BY_ID.values()].map((meta) => [meta.id, makePeggedAsset({ id: meta.id, symbol: meta.symbol, price: null })]))
+// Already-refreshed rows whose first deployment sorts before Solana, so a
+// missing Solana row falls behind the refresh batches without the missing-first tier.
+const ethereumDexPricedRows = (count: number) => [...ACTIVE_META_BY_ID.values()]
+  .filter((meta) => dex.buildDexScreenerTargets({ id: meta.id, name: meta.name, symbol: meta.symbol })[0]?.chain === "ethereum")
+  .slice(0, count)
+  .map((meta) => makePeggedAsset({
+    id: meta.id, symbol: meta.symbol, price: 1, priceSource: "dexscreener-exact",
+    priceObservedAt: now, priceObservedAtMode: "local_fetch", priceConfidence: "fallback",
+  }));
 const fixtures = createLatestSchemaFixtureTracker();
 let db: D1Database;
 beforeEach(() => {
@@ -132,8 +141,76 @@ describe("DEX refresh continuity", () => {
       makePeggedAsset({ id: "usdt-tether", price: null }),
     ];
     const plan = planDexRefresh(rows, [], 0, new Set(["wusd-worldwide", "pht-pht"]));
-    expect(plan.cohort.map((row) => row.id)).toEqual(["pht-pht", "usdt-tether"]);
+    expect(plan.cohort.map((row) => row.id)).toEqual(["usdt-tether", "pht-pht"]);
     expect(plan.acknowledgedGapsSkipped).toBe(1);
+  });
+
+  it("batches missing-price rows ahead of already DEX-priced refreshes under budget overflow", () => {
+    // Seven full Ethereum refresh batches (the old slot window) sit ahead of a
+    // missing Solana row in payload order. A rejected primary quote must still
+    // be scheduled: eligibility alone is not recovery if the batch budget is
+    // consumed by cosmetic refreshes.
+    const rows = [...ethereumDexPricedRows(7 * 30), makePeggedAsset({ id: "moveusd-cfx", symbol: "MOVEUSD", price: null })];
+    const plan = planDexRefresh(rows, [], 0);
+    expect(plan.allBatchCount).toBeGreaterThan(7);
+    expect(plan.batches).toHaveLength(7);
+    expect(plan.missingBatchCount).toBe(1);
+    expect(plan.rotationTier).toBe("refresh");
+    expect(plan.batches[0].map(({ entry }) => entry.asset.id)).toEqual(["moveusd-cfx"]);
+  });
+
+  it("rotates inside the missing tier while it overflows the slot budget", () => {
+    const assets = [...ACTIVE_META_BY_ID.values()].map((meta) => makePeggedAsset({ id: meta.id, symbol: meta.symbol, price: null }));
+    const first = planDexRefresh(assets, [], 0);
+    expect(first.rotationTier).toBe("missing");
+    const next = planDexRefresh(assets, [], nextDexRefreshCursor(first, first.batches.length));
+    expect(next.batches[0][0].entry.asset.id).not.toBe(first.batches[0][0].entry.asset.id);
+    expect(next.missingBatchCount).toBe(next.allBatchCount);
+  });
+
+  it("advances the refresh cursor only past the missing batches it scheduled", () => {
+    const plan = planDexRefresh(
+      [...ethereumDexPricedRows(7 * 30), makePeggedAsset({ id: "moveusd-cfx", symbol: "MOVEUSD", price: null })],
+      [],
+      0,
+    );
+    // A 429 before the missing batch is reached must not skip it next slot.
+    expect(nextDexRefreshCursor(plan, 0)).toBe(0);
+    // Every missing batch plus three refreshes advances three refresh batches.
+    expect(nextDexRefreshCursor(plan, plan.missingBatchCount + 3)).toBe(3);
+  });
+
+  it("probes a missing-price row in the same slot as already-priced refreshes", async () => {
+    prepareRefresh().mockRestore();
+    const priced = ethereumDexPricedRows(7 * 30);
+    const missing = makePeggedAsset({ id: "moveusd-cfx", symbol: "MOVEUSD", price: null });
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({
+      previousAssetsById: new Map([...priced, missing].map((asset) => [asset.id, asset])),
+      cacheState: { state: "ok" },
+    });
+    vi.spyOn(dexscreener, "fetchDsTokenPoolsWithStatus").mockImplementation(async (chain, addresses) => ({
+      ok: true,
+      status: 200,
+      pairs: chain === "solana" && String(addresses).includes("3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm")
+        ? [{
+            chainId: "solana", dexId: "orca", pairAddress: "63DFX4pkJkDs4LV5s1x1Z1658rkx8yvt7MY9XXGsBMUh",
+            baseToken: { address: "3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm", name: "MoveUSD", symbol: "MOVEUSD" },
+            quoteToken: { address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", name: "USD Coin", symbol: "USDC" },
+            priceNative: "0.9993", priceUsd: "0.9993",
+            liquidity: { usd: 103_088.44, base: 5_117, quote: 97_974 },
+            volume: { h24: 0.18 }, pairCreatedAt: 1_713_827_704_000,
+          }]
+        : [],
+    } as never));
+
+    const summary = await runPriceDexRefresh({ db, syncStartSec: now });
+
+    expect(summary).toMatchObject({ attemptedBatches: 7, resolved: 1 });
+    const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
+    expect(state.observations).toEqual([
+      expect.objectContaining({ id: "moveusd-cfx", source: "dexscreener-exact", price: 0.9993 }),
+    ]);
+    expect(state.cursor).toBe(6);
   });
 
   it("bounds batches and advances fairly under overflow", () => {

@@ -125,11 +125,32 @@ async function readState(db: D1Database, signal?: AbortSignal): Promise<RefreshS
   return result;
 }
 
+export type DexRefreshRotationTier = "missing" | "refresh";
+
+function buildChainBatches(entries: Iterable<DexScreenerBatchTarget>): DexScreenerBatchTarget[][] {
+  const chainGroups = new Map<string, DexScreenerBatchTarget[]>();
+  for (const entry of entries) {
+    const group = chainGroups.get(entry.target.chain) ?? [];
+    group.push(entry);
+    chainGroups.set(entry.target.chain, group);
+  }
+  const batches: DexScreenerBatchTarget[][] = [];
+  for (const [, targets] of [...chainGroups].sort(([a], [b]) => a.localeCompare(b))) {
+    for (let i = 0; i < targets.length; i += BATCH_SIZE) batches.push(targets.slice(i, i + BATCH_SIZE));
+  }
+  return batches;
+}
+
 /**
  * `reviewedGapIds` are missing-price assets under a valid price-gap review
  * (reviewed as having no admissible market). The narrow refresh skips them;
  * the hourly corroboration passes still probe them, so a returning market is
  * still discovered.
+ *
+ * An asset whose only primary quote was rejected only becomes missing in the
+ * published cache on the following slot. Missing rows are therefore batched
+ * before already-`dexscreener-exact`-priced refreshes: a rejected quote must
+ * never wait behind a cosmetic refresh for its next probe.
  */
 export function planDexRefresh(
   assets: PeggedAsset[],
@@ -146,21 +167,27 @@ export function planDexRefresh(
       targetsById.set(hint.id, hint);
     }
   }
+  const missing: PeggedAsset[] = [];
+  const refresh: PeggedAsset[] = [];
   let acknowledgedGapsSkipped = 0;
-  const cohort = assets.filter((asset) => {
-    if (!ACTIVE_META_BY_ID.has(asset.id)) return false;
-    if (splitCompositePriceSource(asset.priceSource ?? "").includes("dexscreener-exact")) return true;
-    if (hasPublishableCurrentPrice(asset)) return false;
+  for (const asset of assets) {
+    if (!ACTIVE_META_BY_ID.has(asset.id)) continue;
+    if (splitCompositePriceSource(asset.priceSource ?? "").includes("dexscreener-exact")) {
+      refresh.push({ ...asset });
+      continue;
+    }
+    if (hasPublishableCurrentPrice(asset)) continue;
     if (reviewedGapIds.has(asset.id)) {
       acknowledgedGapsSkipped++;
-      return false;
+      continue;
     }
-    return true;
-  }).map((asset) => ({ ...asset }));
+    missing.push({ ...asset });
+  }
+  const cohort = [...missing, ...refresh];
   applyTrackedAssetOverrides(cohort);
-  const chainGroups = new Map<string, DexScreenerBatchTarget[]>();
   let unsupportedAssets = 0;
   const hintedIds = new Set<string>();
+  const entriesByTier: Record<DexRefreshRotationTier, DexScreenerBatchTarget[]> = { missing: [], refresh: [] };
   for (const [index, asset] of cohort.entries()) {
     // Only reviewed active deployments may validate a persisted hint.
     const meta = ACTIVE_META_BY_ID.get(asset.id)!;
@@ -173,17 +200,61 @@ export function planDexRefresh(
       targetsById.set(asset.id, hint);
       hintedIds.add(asset.id);
     }
-    const group = chainGroups.get(target.chain) ?? [];
-    group.push({ entry: { asset, index, exactTargets: [target], missingGenerations: 0 }, target });
-    chainGroups.set(target.chain, group);
+    entriesByTier[index < missing.length ? "missing" : "refresh"].push({
+      entry: { asset, index, exactTargets: [target], missingGenerations: 0 },
+      target,
+    });
   }
-  const allBatches: DexScreenerBatchTarget[][] = [];
-  for (const [, targets] of [...chainGroups].sort(([a], [b]) => a.localeCompare(b))) {
-    for (let i = 0; i < targets.length; i += BATCH_SIZE) allBatches.push(targets.slice(i, i + BATCH_SIZE));
+  const missingBatches = buildChainBatches(entriesByTier.missing);
+  const refreshBatches = buildChainBatches(entriesByTier.refresh);
+  let start: number;
+  let rotationTier: DexRefreshRotationTier = "missing";
+  let batches: DexScreenerBatchTarget[][];
+  if (missingBatches.length >= MAX_BATCHES) {
+    // Missing rows alone overflow the slot: rotate inside that tier so no
+    // already-priced refresh can displace a missing row.
+    start = cursor % missingBatches.length;
+    batches = Array.from({ length: MAX_BATCHES }, (_, i) => missingBatches[(start + i) % missingBatches.length]!);
+  } else {
+    // Every missing batch runs first; the remaining budget rotates refreshes.
+    rotationTier = "refresh";
+    start = refreshBatches.length > 0 ? cursor % refreshBatches.length : 0;
+    const refreshCapacity = Math.min(MAX_BATCHES - missingBatches.length, refreshBatches.length);
+    batches = [
+      ...missingBatches,
+      ...Array.from({ length: refreshCapacity }, (_, i) => refreshBatches[(start + i) % refreshBatches.length]!),
+    ];
   }
-  const start = allBatches.length > MAX_BATCHES ? cursor % allBatches.length : 0;
-  const batches = Array.from({ length: Math.min(MAX_BATCHES, allBatches.length) }, (_, i) => allBatches[(start + i) % allBatches.length]!);
-  return { cohort, targetsById, hintedIds, batches, allBatchCount: allBatches.length, unsupportedAssets, acknowledgedGapsSkipped, start };
+  return {
+    cohort,
+    targetsById,
+    hintedIds,
+    batches,
+    allBatchCount: missingBatches.length + refreshBatches.length,
+    missingBatchCount: missingBatches.length,
+    unsupportedAssets,
+    acknowledgedGapsSkipped,
+    start,
+    rotationTier,
+  };
+}
+
+/**
+ * Next persisted rotation cursor. While the missing tier overflows the slot it
+ * rotates on its own; once every missing batch is scheduled, the cursor only
+ * advances across the refresh batches.
+ */
+export function nextDexRefreshCursor(
+  plan: Pick<ReturnType<typeof planDexRefresh>, "rotationTier" | "start" | "missingBatchCount" | "allBatchCount">,
+  attemptedBatches: number,
+): number {
+  if (plan.rotationTier === "missing") {
+    return plan.missingBatchCount > 0 ? (plan.start + attemptedBatches) % plan.missingBatchCount : 0;
+  }
+  const refreshBatchCount = plan.allBatchCount - plan.missingBatchCount;
+  if (refreshBatchCount <= 0) return 0;
+  const refreshAttempted = Math.max(0, attemptedBatches - plan.missingBatchCount);
+  return (plan.start + refreshAttempted) % refreshBatchCount;
 }
 
 async function runAddressRefresh(params: {
@@ -402,8 +473,7 @@ export async function runPriceDexRefresh(params: {
     targets: [...plan.targetsById.values()],
     // Hints outlive the slots that produced them but never a delisting.
     addressTargets: [...addressTargets.values()].filter((target) => previousAssetsById.has(target.id)),
-    cursor: plan.allBatchCount
-      ? (plan.start + summary.attemptedBatches) % plan.allBatchCount : 0,
+    cursor: nextDexRefreshCursor(plan, summary.attemptedBatches),
   } satisfies RefreshState), params.syncStartSec, params.signal);
   summary.cacheWritten = written.written;
   summary.addressRefresh = address.summary;

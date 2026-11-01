@@ -276,7 +276,6 @@ export const BRIDGE_ROUTE_PROVIDER_KEY_VALUES = [
   "axelar",
   "circle-cctp",
 ] as const;
-export type BridgeRouteProviderKey = (typeof BRIDGE_ROUTE_PROVIDER_KEY_VALUES)[number];
 
 /** Provider-owned verification surfaces a provider review or lane certificate may address. */
 export const BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES = [
@@ -287,7 +286,6 @@ export const BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES = [
   "endpoint",
   "attestation-set",
 ] as const;
-export type BridgeRouteProviderSurface = (typeof BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES)[number];
 
 const BridgeRouteProtocolEvidenceSchema = /* @__PURE__ */ (() => z
   .object({

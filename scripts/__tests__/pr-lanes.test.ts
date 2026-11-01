@@ -32,10 +32,10 @@ describe("PR lane manifest", () => {
   it("is the workflow matrix source of truth", () => {
     expect(PR_LANES.map((lane) => lane.id)).toEqual([
       "preflight",
-      "static-compile",
+      "v9-resource",
       "static-guards",
       "tests",
-      "v9-resource",
+      "static-compile",
       "pages-artifact",
       "gate",
     ]);
@@ -88,7 +88,10 @@ describe("PR lane manifest", () => {
     expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
       { lane: "v9-resource", timeout: 8 },
     ]);
-    expect(matrix.slice(0, 2).map((entry) => entry.lane)).toEqual(["static-compile", "static-guards"]);
+    // max-parallel: 10 starts matrix jobs in order. The resource lane must be
+    // inside the first ten; the shortest lane absorbs the queued slot.
+    expect(matrix.slice(0, 2).map((entry) => entry.lane)).toEqual(["v9-resource", "static-guards"]);
+    expect(matrix.at(-1)).toEqual({ lane: "static-compile", timeout: 20 });
     expect(matrix.map((entry) => entry.lane)).not.toContain("docs");
     expect(matrix).toHaveLength(testShards + 3);
     expect(buildPrWorkflowMatrix({ ...classifyChangedFiles(["README.md", "src/app/page.tsx"]), testShards }).include

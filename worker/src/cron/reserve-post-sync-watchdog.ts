@@ -26,7 +26,7 @@ const CURATED_FALLBACK_WARNING_COUNT_THRESHOLD = 5;
 
 const RESERVE_ALERT_STATE_KEY = "reserve-post-sync-watchdog:adapter-alerts:v1";
 /** Bounded newest-attempt scan: covers the sustain count, a success between stalls, plus margin. */
-export const RESERVE_ALERT_ATTEMPT_SCAN_LIMIT = Math.max(
+const RESERVE_ALERT_ATTEMPT_SCAN_LIMIT = Math.max(
   STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS.failureSustainedCycles,
   STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS.sourceClockStalledCycles,
 ) + 2;

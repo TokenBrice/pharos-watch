@@ -53,11 +53,6 @@ const CANONICAL_UNSIGNED_INTEGER = /^(0|[1-9][0-9]*)$/;
 const SOLANA_BLOCKHASH = /^[1-9A-HJ-NP-Za-km-z]{32,64}$/;
 const MOVE_ADDRESS = /^0x[0-9a-f]{1,64}$/;
 
-export type DeploymentSupplyCensusNonEvmReadKind = Extract<
-  V9DeploymentSupplyCensusRow["readKind"],
-  "solana-mint" | "move-fa-supply"
->;
-
 /**
  * The single chain-family dispatch for the census. `null` means no reviewed
  * reader exists; the caller records `census-rejected:read-unavailable` for

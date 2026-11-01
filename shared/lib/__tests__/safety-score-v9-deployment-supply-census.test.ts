@@ -6,6 +6,7 @@ import {
   V9DeploymentSupplyCensusRejectionCodeSchema,
   deploymentSupplyCensusRejectionCode,
   type SafetyScoreV9DeploymentSupplyCensus,
+  type V9DeploymentSupplyCensusRejectionCode,
   type V9DeploymentSupplyCensusRow,
 } from "@shared/types/safety-score-v9-deployment-supply-census";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
@@ -13,6 +14,16 @@ import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
 const CLOCK_SEC = 1_793_294_244;
 const SUPPLY = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
 const CENSUS = SUPPLY.deploymentSupplyCensus;
+
+type EvmHeaderPin = Extract<V9DeploymentSupplyCensusRow["pin"], { kind: "evm-header" }>;
+
+function evmPin(
+  pin: V9DeploymentSupplyCensusRow["pin"],
+  overrides: Partial<EvmHeaderPin> = {},
+): EvmHeaderPin {
+  if (pin.kind !== "evm-header") throw new Error("Fixture pin is not an EVM header");
+  return { ...pin, ...overrides };
+}
 
 function evmRow(overrides: Partial<V9DeploymentSupplyCensusRow> = {}): V9DeploymentSupplyCensusRow {
   return {
@@ -199,7 +210,7 @@ describe("deployment supply census packet", () => {
     const reminted = evmRow({
       routeId: "ethereum:0x0000000000000000000000000000000000000003",
       tokenAddress: "0x0000000000000000000000000000000000000003",
-      pin: { ...row.pin, blockHash: `0x${"e".repeat(64)}` },
+      pin: evmPin(row.pin, { blockHash: `0x${"e".repeat(64)}` }),
     });
     reject(packet({ deployments: [row, reminted] }));
   });
@@ -221,7 +232,7 @@ describe("deployment supply census packet", () => {
     reject(packet({
       deployments: [
         first,
-        { ...second, pin: { ...second.pin, blockNumber: 26_000_001 } },
+        { ...second, pin: evmPin(second.pin, { blockNumber: 26_000_001 }) },
       ],
     }));
   });
@@ -248,7 +259,7 @@ describe("deployment supply census packet", () => {
     expect(deploymentSupplyCensusRejectionCode("conservation-breach")).toBe("census-rejected:conservation-breach");
     expect(V9DeploymentSupplyCensusRejectionCodeSchema.safeParse("census-rejected:conservation-breach").success).toBe(true);
     expect(V9DeploymentSupplyCensusRejectionCodeSchema.safeParse("conservation-breach").success).toBe(false);
-    reject(packet({ rejected: [{ routeId: null, code: "conservation-breach" }] }));
+    reject(packet({ rejected: [{ routeId: null, code: "conservation-breach" as V9DeploymentSupplyCensusRejectionCode }] }));
     reject(packet({
       rejected: [{ routeId: evmRow().routeId, code: "census-rejected:missing-code-hash" }],
     }));

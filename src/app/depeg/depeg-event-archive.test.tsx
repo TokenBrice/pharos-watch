@@ -13,6 +13,10 @@ const { EVENTS } = vi.hoisted(() => {
     recoveryPrice: 1,
     pegReference: 1,
     source: "live" as const,
+    confirmationSources: null,
+    pendingReason: null,
+    closeReason: null,
+    provenance: null,
   };
   return {
     EVENTS: [

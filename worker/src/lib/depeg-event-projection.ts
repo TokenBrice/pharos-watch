@@ -13,10 +13,8 @@ import { toErrorMessage } from "@shared/lib/error-utils";
  * (the `buildEffectiveIncidentByKey` recency rule). One public row per logical
  * incident is this effective fragment; every other linked event is absorbed.
  */
-function effectiveAliasJoinSql(canonical: string): string {
-  return `LEFT JOIN depeg_resolver_incidents effective_alias
-      ON effective_alias.incident_key = (
-           SELECT alias.incident_key
+function effectiveAliasIncidentKeySql(canonical: string): string {
+  return `(SELECT alias.incident_key
              FROM depeg_resolver_incidents alias
             WHERE alias.superseded_by_incident_key = ${canonical}.incident_key
               AND alias.incident_state = 'superseded'
@@ -25,6 +23,11 @@ function effectiveAliasJoinSql(canonical: string): string {
                     AND alias.current_event_id > ${canonical}.current_event_id))
             ORDER BY alias.current_started_at DESC, alias.current_event_id DESC
             LIMIT 1)`;
+}
+
+function effectiveAliasJoinSql(canonical: string): string {
+  return `LEFT JOIN depeg_resolver_incidents effective_alias
+      ON effective_alias.incident_key = ${effectiveAliasIncidentKeySql(canonical)}`;
 }
 
 function effectiveCurrentEventSql(canonical: string): string {
@@ -173,11 +176,28 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
                  ${effectiveCurrentEvent}`;
 }
 
-/** Raw fragment clocks remain intact; public pagination uses the projected onset. */
+/**
+ * Raw fragment clocks remain intact; public pagination uses the projected onset.
+ * A projection row is keyed by its effective fragment's `current_event_id`, and
+ * an incident's current event is one linked event (links are unique per event),
+ * so the fragment is recoverable from the page row's own id. Resolving it as one
+ * correlated lookup keeps the page's reads proportional to the scanned events
+ * instead of cross-joining them with the whole materialized projection.
+ */
 export const PUBLIC_DEPEG_EVENTS_SQL = `(
-  SELECT events.*, COALESCE(projection.first_started_at, events.started_at) AS effective_started_at
+  SELECT events.*, COALESCE((
+        SELECT canonical.first_started_at
+          FROM depeg_resolver_incidents owner
+          JOIN depeg_resolver_incidents canonical
+            ON canonical.incident_key = CASE
+                 WHEN owner.incident_state = 'active' THEN owner.incident_key
+                 ELSE COALESCE(owner.superseded_by_incident_key, owner.incident_key)
+               END
+         WHERE owner.current_event_id = events.id
+           AND canonical.incident_state = 'active'
+           AND COALESCE(${effectiveAliasIncidentKeySql("canonical")}, canonical.incident_key) = owner.incident_key
+      ), events.started_at) AS effective_started_at
     FROM depeg_events_with_provenance events
-    LEFT JOIN (${activeIncidentProjectionSql(null)}) projection ON projection.current_event_id = events.id
 )`;
 
 export type PublicDepegRow = DepegRow & { effective_started_at: number };

@@ -161,20 +161,27 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     command("webpack-export", "npx", ["--no-install", "next", "build", "--webpack"]);
     command("postbuild", "npm", ["run", "postbuild"]);
     command("pages-release-artifact-gates", "npm", ["run", "check:pages-release"]);
-    const lighthouseFailures: string[] = [];
-    for (const route of ["/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/"]) {
-      try {
-        command(`lighthouse ${route}`, "npm", ["run", "lighthouse:static", "--", "--route", route,
-          "--threshold", process.env.PHAROS_LIGHTHOUSE_THRESHOLD ?? "70", "--output-dir", ".tmp/lighthouse"]);
-      } catch (error) {
-        lighthouseFailures.push(String(error));
+    // Lighthouse is an explicit opt-in so the PR lane stays off the critical
+    // path; nightly sets PHAROS_LIGHTHOUSE_ENFORCE (0 = advisory, 1 = blocking).
+    const lighthouseEnforcement = process.env.PHAROS_LIGHTHOUSE_ENFORCE;
+    if (lighthouseEnforcement === undefined) {
+      report("- Lighthouse: skipped; this lane did not opt in (nightly sets PHAROS_LIGHTHOUSE_ENFORCE).");
+    } else {
+      const lighthouseFailures: string[] = [];
+      for (const route of ["/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/"]) {
+        try {
+          command(`lighthouse ${route}`, "npm", ["run", "lighthouse:static", "--", "--route", route,
+            "--threshold", process.env.PHAROS_LIGHTHOUSE_THRESHOLD ?? "70", "--output-dir", ".tmp/lighthouse"]);
+        } catch (error) {
+          lighthouseFailures.push(String(error));
+        }
       }
-    }
-    report(`- Lighthouse (${process.env.PHAROS_LIGHTHOUSE_ENFORCE === "1" ? "blocking" : "advisory"}): ${
-      lighthouseFailures.length ? lighthouseFailures.join("; ") : "all routes met the score threshold"
-    }. Static-export scores do not measure production CSP/proxy or live-data readiness.`);
-    if (process.env.PHAROS_LIGHTHOUSE_ENFORCE === "1" && lighthouseFailures.length) {
-      throw new Error(lighthouseFailures.join("; "));
+      report(`- Lighthouse (${lighthouseEnforcement === "1" ? "blocking" : "advisory"}): ${
+        lighthouseFailures.length ? lighthouseFailures.join("; ") : "all routes met the score threshold"
+      }. Static-export scores do not measure production CSP/proxy or live-data readiness.`);
+      if (lighthouseEnforcement === "1" && lighthouseFailures.length) {
+        throw new Error(lighthouseFailures.join("; "));
+      }
     }
     return result;
   } finally {

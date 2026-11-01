@@ -113,7 +113,8 @@ export default function StablecoinsHubPage() {
             {PROFILE_GROUPS.map((group) => (
               <details key={group.label} className="rounded-lg border border-border/60 bg-muted/20">
                 <summary className="pharos-focus-ring cursor-pointer px-4 py-3 text-sm font-medium">
-                  {group.label} · <span className="pharos-numeric">{group.coins.length}</span> profiles
+                  {group.label} · <span className="pharos-numeric">{group.coins.length}</span>{" "}
+                  {group.coins.length === 1 ? "profile" : "profiles"}
                 </summary>
                 <ul className="border-t border-border/40 px-4 py-2">
                   {group.coins.map((coin) => (

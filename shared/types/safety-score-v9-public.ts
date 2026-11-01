@@ -525,11 +525,6 @@ export const SafetyScoreV9CompletenessSchema = z
  */
 export type {
   V9OpenEvidence,
-  V9OpenEvidenceByCard,
-  V9OpenEvidenceTotals,
-  V9OpenQuestionBucket,
-  V9OpenQuestionScopeKind,
-  V9QuestionKey,
 } from "./safety-score-v9-open-evidence";
 export type {
   SafetyScoreV9CurrentResponse,

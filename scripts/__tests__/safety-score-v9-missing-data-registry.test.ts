@@ -248,6 +248,7 @@ function generateCertifiedProjectionFixture() {
     message: "Reviewed DEX pools do not all carry score-eligible exact route observations.",
     causeProof: resolved.causeProof,
     causeScope: scope,
+    responsibility: resolved.responsibility,
   });
   asset.gaps.push(gap);
   const knownEvidence = new Set(asset.evidence.map((reference) => reference.evidenceId));
@@ -715,6 +716,7 @@ function controlQuestionEntry(args: {
     reasonCode: "missing-mint-authority",
     cause: args.cause,
     documentation: args.documentation,
+    queueKey: "a".repeat(64),
     causeScope: {
       pillar: "control",
       componentKey: "control:issuer:demo",
@@ -781,6 +783,7 @@ describe("Safety Score v9 documentation band", () => {
       reasonCode: "material-reserve-slice-unstructured",
       cause: "U",
       documentation: RESERVE_DUST,
+      queueKey: "b".repeat(64),
       causeScope: {
         pillar: "backing",
         componentKey: "reserve-exposure",

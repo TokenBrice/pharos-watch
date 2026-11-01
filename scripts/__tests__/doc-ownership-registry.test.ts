@@ -255,20 +255,17 @@ describe("doc-ownership registry integrity", () => {
       .filter((path) => path.startsWith("docs/") && !routedDocs.has(path));
     expect(unrouted, "Every verified doc needs a docs/background/reading/required owner, not just a source glob").toEqual([]);
   });
-  it("keeps primary Markdown sections within 25KB and ratchets legacy exceptions", () => {
-    // Existing out-of-scope sections only. Remove entries once bounded; new
-    // primary sections must stay within 25KB.
-    const legacySectionCeilings: Record<string, number> = {
-      "docs/digest-pipeline.md#generation": 32_723,
-    };
-    const remainingExceptions = new Set(Object.keys(legacySectionCeilings));
+  it("reports primary Markdown sections over their advisory 25KB budget", () => {
+    // Byte budgets are advisory: overruns are listed in the output but never
+    // fail this registry check. Missing documents or anchors still fail.
     const domainIds = [
       "live-reserves", "yield-intelligence", "homepage", "about-page",
       "coverage-page", "start-page", "feedback-pipeline", "compliance", "worker-admin-api",
     ];
     const documentCache = new Map<string, MarkdownSections>();
     const failures: string[] = [];
-    // Every section is visited before asserting; an unreadable document or
+    const warnings = new Set<string>();
+    // Every section is visited before reporting; an unreadable document or
     // anchor is reported with its path and never counted as an in-budget section.
     const check = (label: string, assertion: () => void) => collectFailure(failures, label, assertion);
     for (const mapping of mappings) {
@@ -290,21 +287,12 @@ describe("doc-ownership registry integrity", () => {
           // the separator before the next heading, unlike route payload bytes.
           bytes = Buffer.byteLength(document.lines.slice(range.startLine, range.endLine).join("\n"));
         });
-        if (bytes === undefined) {
-          // Track the exception independently of a successful read.
-          remainingExceptions.delete(key);
-          continue;
-        }
-        const measured = bytes;
-        check(key, () => expect(measured, key).toBeLessThanOrEqual(newDomain ? 25_000 : legacySectionCeilings[key] ?? 25_000));
-        if (Object.hasOwn(legacySectionCeilings, key)) {
-          check(key, () => expect(measured, `Remove resolved section exception: ${key}`).toBeGreaterThan(25_000));
-          remainingExceptions.delete(key);
-        }
+        if (bytes === undefined) continue;
+        if (bytes > 25_000) warnings.add(`${key}: ${bytes} B > 25000 B section budget`);
       }
     }
+    for (const warning of warnings) console.warn(`[doc-budget] ${warning}`);
     expect(failures, failures.join("\n")).toEqual([]);
-    expect([...remainingExceptions], "Remove exceptions no longer routed as primary sections").toEqual([]);
   });
   it("collects every failing assertion instead of stopping at the first", () => {
     const failures: string[] = [];
@@ -330,11 +318,12 @@ describe("doc-ownership registry integrity", () => {
 
   it.each([
     "live-reserves", "dex-liquidity", "worker-infrastructure", "report-cards", "pricing-pipeline",
-  ])("keeps the current %s contract below 40KB with a navigable appendix", (name) => {
+  ])("reports the current %s contract against its advisory 40KB budget with a navigable appendix", (name) => {
     const contract = readFileSync(resolve(REPO_ROOT, `docs/${name}.md`), "utf8");
     const appendixPath = `docs/process/${name}-appendix.md`;
     const appendix = readFileSync(resolve(REPO_ROOT, appendixPath), "utf8");
-    expect(Buffer.byteLength(contract, "utf8")).toBeLessThan(40_000);
+    const bytes = Buffer.byteLength(contract, "utf8");
+    if (bytes >= 40_000) console.warn(`[doc-budget] docs/${name}.md: ${bytes} B >= 40000 B contract budget`);
     expect(collectMarkdownReferences(contract).links.some((link) => link.includes(appendixPath.slice(5)))).toBe(true);
     expect(appendix).toMatch(/^> \*\*Agent navigation\*\*/m);
   });

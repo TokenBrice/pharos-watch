@@ -27,6 +27,7 @@ function datum(assetId: string, controlKey: string, factorKey: string): V9FactGa
     path: { kind: "local-component", componentKey },
     message: "Fixture documentation datum.",
     causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
+    responsibility: "unresearched",
     causeScope: {
       pillar: "control", componentKey, factorKey, routeKey: null, exposureId: null, requiredDatum: componentKey,
     },

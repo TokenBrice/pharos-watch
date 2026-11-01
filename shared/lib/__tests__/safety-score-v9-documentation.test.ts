@@ -11,12 +11,13 @@ import {
 } from "../safety-score-v9/documentation";
 import { V9_CANDIDATE_POLICY_V1, loadV9MethodologyPolicy } from "../safety-score-v9/policy";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
-import type { V9EvidenceCauseProof } from "../../types/safety-score-v9-causes";
+import { v9EvidenceResponsibilityForCauseProof, type V9EvidenceCauseProof } from "../../types/safety-score-v9-causes";
 import type { V9MethodologyPolicy } from "../../types/safety-score-v9";
 import type {
   V9AssetFactsV3,
   V9DeploymentControlFactV2,
   V9FactGapV3,
+  V9ReserveExposureFactV2,
   V9TypedFactPath,
 } from "../../types/safety-score-v9-facts";
 import { compileNativeV3FactSet, coreFixture } from "./safety-score-v9-facts.fixture-support";
@@ -66,6 +67,7 @@ function gap(overrides: {
     path,
     message: "Fixture documentation datum.",
     causeProof,
+    responsibility: v9EvidenceResponsibilityForCauseProof(causeProof),
     ...(overrides.componentKey === undefined ? {} : {
       causeScope: {
         pillar: "control",
@@ -111,6 +113,31 @@ function asset(overrides: Partial<V9DocumentationAssetFacts> = {}): V9Documentat
     exitRoutes: [],
     ...overrides,
   };
+}
+
+function reserveExposure(weight: number): V9ReserveExposureFactV2[] {
+  return [{
+    exposureKey: "reserve:row",
+    classificationKey: "class:reserve-row",
+    sourceGenerationId: "research:documentation-fixture",
+    provenance: "curated",
+    evidenceClass: "static-validated",
+    status: {
+      applicability: { state: "required", policyRuleId: "reserve.row", rationale: null, gapId: null },
+      observationState: "known",
+      evidenceRefIds: [],
+      gapIds: [],
+    },
+    name: "Fixture reserve row",
+    weight,
+    trackedAssetId: null,
+    assetClass: "cash",
+    issuerOrObligorKey: null,
+    riskFactors: [],
+    liquidityHorizon: "immediate",
+    maturityDaysMax: null,
+    failureDomains: [{ kind: "reserve-issuer", key: "issuer:fixture" }],
+  }];
 }
 
 function mintReview(overrides: { reconciliation?: string; supervision?: string }) {
@@ -311,12 +338,11 @@ describe("Safety Score v9 documentation classifier", () => {
       reasonCode: "material-reserve-slice-unstructured",
       path: { kind: "collateral-exposure", exposureKey: "reserve:row" },
     });
-    const exposure = (weight: number) => [{ exposureKey: "reserve:row", weight }];
-    const inside = asset({ gaps: [dust], reserveExposures: exposure(0.00009999) });
+    const inside = asset({ gaps: [dust], reserveExposures: reserveExposure(0.00009999) });
     const classification = classifyV9DocumentationGap(POLICY, inside, dust);
     expect(classification?.reason).toBe("reserve-dust");
     expect(classification?.threshold).toEqual({ kind: "reserve-book-share", value: 0.0001 });
-    expect(classifyV9DocumentationGap(POLICY, asset({ gaps: [dust], reserveExposures: exposure(0.0001) }), dust)).toBeNull();
+    expect(classifyV9DocumentationGap(POLICY, asset({ gaps: [dust], reserveExposures: reserveExposure(0.0001) }), dust)).toBeNull();
     expect(classifyV9DocumentationGap(POLICY, asset({ gaps: [dust], reserveExposures: [] }), dust)).toBeNull();
   });
 
@@ -333,13 +359,13 @@ describe("Safety Score v9 documentation classifier", () => {
       path: { kind: "collateral-exposure", exposureKey: "reserve:row" },
       causeProof: { cause: "D", adverseFactId: "adverse:fixture", evidenceRefIds: ["evidence:doc"] },
     });
-    const facts = asset({ gaps: [partial, dust], reserveExposures: [{ exposureKey: "reserve:row", weight: 0.000001 }] });
+    const facts = asset({ gaps: [partial, dust], reserveExposures: reserveExposure(0.000001) });
     expect(classifyV9DocumentationGap(POLICY, facts, partial)).toBeNull();
     expect(classifyV9DocumentationGap(POLICY, facts, dust)).toBeNull();
   });
 
   it("classifies nothing when the policy block is absent and exposes the same result through both helpers", () => {
-    const raw: V9MethodologyPolicy = structuredClone(candidatePolicyAsset);
+    const raw = structuredClone(candidatePolicyAsset) as unknown as V9MethodologyPolicy;
     delete raw.semantic.evidence.documentation;
     const withoutBlock = loadV9MethodologyPolicy(raw);
     const custody = gap({

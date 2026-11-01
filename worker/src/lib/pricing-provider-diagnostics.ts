@@ -45,7 +45,8 @@ export type PricingProviderRejectionReason =
   | "stale"
   | "timeout"
   | "unsupported-quote"
-  | "upstream-error";
+  | "upstream-error"
+  | "wide-spread";
 
 export type PricingAssetAttemptState = "attempted" | "skipped";
 

@@ -219,6 +219,24 @@ export function getPeakDeviationBps(row: DdrV2ResponseRow): number | null {
   return row.kind === "prediction" ? row.frozen.sourceRow.peakDeviationBps : row.live.peakDeviationBps;
 }
 
+/**
+ * Reader-facing live peak. The stored event peak updates on its own sweep, so
+ * an open incident can print deeper than its stored peak between updates; the
+ * live facts line must never show a peak shallower than the current deviation
+ * it sits beside. Closed incidents keep the stored peak (their current
+ * deviation may post-date the event).
+ */
+export function getDisplayedLivePeakDeviationBps(row: DdrV2ResponseRow): number | null {
+  const peak = row.live.peakDeviationBps;
+  const current = row.live.currentDeviationBps;
+  if (peak == null) return current;
+  if (current == null || row.live.eventState !== "active") return peak;
+  const directionSign = row.direction === "below" ? -1 : 1;
+  if (Math.sign(current) !== directionSign) return peak;
+  if (peak !== 0 && Math.sign(peak) !== directionSign) return peak;
+  return Math.abs(current) > Math.abs(peak) ? current : peak;
+}
+
 export function getCurrentDeviationBps(row: DdrV2ResponseRow): number | null {
   return row.kind === "prediction" ? row.frozen.sourceRow.currentDeviationBps : row.live.currentDeviationBps;
 }

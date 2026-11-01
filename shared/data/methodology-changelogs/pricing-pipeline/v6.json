@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.66",
+    "title": "Wide CEX bid/ask spreads are rejected",
+    "date": "2026-11-01",
+    "effectiveAt": 1793577600,
+    "summary": "A CEX two-sided book wider than 100 bps of its midpoint, or crossed, no longer contributes a quote: the midpoint is not a price, so the symbol is rejected without a last-trade fallback while a missing book side keeps the existing fallback.",
+    "impact": [
+      "Kraken, Bitstamp and Coinbase quotes share one 100-bps spread gate. The 2026-11-01 review measured every configured book at most about 33 bps, so healthy NAV, gold and non-USD pairs stay admitted; the production USD1 Kraken book (about 445 bps, published at $0.97775) is now rejected.",
+      "Each rejected symbol increments a `wide-spread` rejection count in that provider's diagnostics. A missing bid or ask, or a single-sided quote, still falls back to the last trade.",
+      "Consensus clustering, trust tiers, weights and the other admission gates are unchanged. Activation is 2026-11-02 00:00 UTC (1793577600)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.65",
     "title": "DefiLlama per-response fill prices are rejected; STBT priced from its Curve pool",
     "date": "2026-10-31",

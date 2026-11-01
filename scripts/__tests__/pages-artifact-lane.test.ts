@@ -109,7 +109,7 @@ describe("Pages artifact input profile", () => {
     }
   });
 
-  it.each(["0", "1"])("audits all five routes and makes Lighthouse failure advisory unless enforcement is enabled (%s)", async (enforce) => {
+  it.each(["0", "1"])("audits all five routes when explicitly opted in and keeps Lighthouse failure advisory unless enforcement is enabled (%s)", async (enforce) => {
     const root = mkdtempSync(join(tmpdir(), "pharos-pages-lighthouse-"));
     try {
       dataFixture(root);
@@ -127,6 +127,21 @@ describe("Pages artifact input profile", () => {
         "/", "/stablecoin/usdc-circle/", "/depeg/", "/safety-scores/", "/stablecoins/",
       ]);
       expect(probes[0][1]).toContain("75");
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("skips Lighthouse unless this lane opts in", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-lighthouse-skip-"));
+    try {
+      dataFixture(root);
+      vi.stubEnv("PHAROS_LIGHTHOUSE_ENFORCE", undefined);
+      spawn.mockReset();
+      spawn.mockReturnValue({ status: 0, signal: null });
+      await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).resolves.toMatchObject({ dataStatus: "degraded-data" });
+      expect(spawn.mock.calls.filter((call) => call[1].includes("lighthouse:static"))).toEqual([]);
     } finally {
       vi.unstubAllEnvs();
       rmSync(root, { recursive: true, force: true });

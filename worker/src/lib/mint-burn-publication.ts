@@ -8,7 +8,7 @@ import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import { batchExecute, executeAtomicBatch } from "./db";
 
 /** netFlow90dUsd is the longest published aggregate. */
-export const MINT_BURN_ADMISSION_BASELINE_SEC = 90 * DAY_SECONDS;
+const MINT_BURN_ADMISSION_BASELINE_SEC = 90 * DAY_SECONDS;
 // Immutable pre-admission roster, not a claim that legacy history is durable-v2.
 const grandfathered = new Set(grandfatheredConfigKeys);
 

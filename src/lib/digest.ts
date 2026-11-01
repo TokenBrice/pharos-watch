@@ -24,6 +24,21 @@ export const EDITORIAL_META_STYLE: React.CSSProperties = {
   fontFamily: "'Courier New', Courier, monospace",
 };
 
+/** UTC month key ("YYYY-MM") for a digest timestamp; the archive filter and month counts share it. */
+export function digestMonthKey(epochSeconds: number): string {
+  return new Date(epochSeconds * 1000).toISOString().slice(0, 7);
+}
+
+/** Long "Month YYYY" label for a UTC digest month key. */
+export function formatDigestMonthLabel(key: string): string {
+  const [year, month] = key.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1)).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 /**
  * Format a digest date string ("YYYY-MM-DD" or "YYYY-MM-DD-weekly") into a
  * localized label, with the month rendered in the requested style.

@@ -769,7 +769,6 @@ export const V9IncidentCoverageSchema = z
     contributorControlIds: canonicalArrayBy(CanonicalTextSchema, (controlId) => controlId, 1, "contributor control id"),
   })
   .strict();
-export type V9IncidentCoverage = z.output<typeof V9IncidentCoverageSchema>;
 
 const V1005ProcessReasonSchema = z.enum([
   "process-certificate-unavailable", "authority-census-incomplete", "execution-scope-unreviewed",
@@ -1243,7 +1242,7 @@ const V9DeploymentSupplyCensusDiagnosticV1Schema = z
   })
   .strict();
 
-export const V9LaneIncidentClosureFailureSchema = z.object({
+const V9LaneIncidentClosureFailureSchema = z.object({
   deploymentRouteKey: DeploymentIdSchema,
   providerKey: CanonicalKeySchema,
   code: z.literal("provider-incident-disclosures-unreadable"),

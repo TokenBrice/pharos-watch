@@ -31,6 +31,8 @@
 export const SCANNER_BLIND_SPOT_MODULES: Record<string, string> = {
   "shared/lib/pharosville-api-contract.ts":
     "External consumer contract: the standalone PharosVille app (docs/architecture.md) validates against these schemas, so no local production importer is expected; local references are tests and deploy path-filter metadata.",
+  "worker/src/lib/og-harfbuzz.ts":
+    "Wrangler's [alias] table maps the external `harfbuzzjs` specifier to this module; its only importer is satori inside node_modules, so no local static import edge exists.",
 };
 
 /** Exports whose only consumers are invisible to the static scan. */

@@ -14,8 +14,6 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { formatProseList, formatShortDate } from "@shared/lib/format";
 import { formatV9ReasonCodeLabel } from "./safety-score-reason-code-labels";
 
-export { formatV9ReasonCodeLabel } from "./safety-score-reason-code-labels";
-
 /**
  * Documentation-reason labels are policy-owned (`semantic.evidence.documentation`
  * `reasons[].publicLabel`) so the classification and its public wording ship

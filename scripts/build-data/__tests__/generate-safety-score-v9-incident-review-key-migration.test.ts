@@ -70,7 +70,8 @@ describe("incident review key migration", () => {
     const generated = buildIncidentReviewKeyMigration(ROOT);
     const authored = reviews.negativeReviews.filter((review) =>
       review.scope.kind === "control" && review.scope.controlKey === undefined && review.retired === undefined);
-    const retired = reviews.negativeReviews.filter((review) => review.retired !== undefined);
+    const retired = reviews.negativeReviews.filter((review) =>
+      review.retired !== undefined && review.scope.kind !== "issuer-surface" && review.scope.kind !== "provider");
     const adjudicatedRetirements = retired.filter((review) => typeof review.scope.controlKey === "string");
     const authoredRetirements = retired.filter((review) => typeof review.scope.controlKey !== "string");
     const legacyDigests = reviews.negativeReviews.filter((review) =>

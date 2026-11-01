@@ -295,6 +295,34 @@ describe("stablecoin detail view-model builder", () => {
     }
   });
 
+  it("ages an unverified reserve feed from its fetch clock instead of calling it unpopulated", () => {
+    const now = 1_790_000_000_000;
+    const nowSec = now / 1000;
+    const fetchedAt = nowSec - 60;
+    const params = makeBuildStablecoinDetailViewModelParams({ supplemental: { reserves: {
+      enabled: true,
+      dataUpdatedAt: now,
+      live: {
+        mode: "live", reserves: [{ name: "Bank deposits", pct: 100, risk: "medium" }], estimated: false, liveAt: fetchedAt,
+        sync: {
+          enabled: true, status: "ok", stale: false, bootstrap: false,
+          freshness: {
+            stale: false, staleReasons: [], assessedAt: fetchedAt, fetchedAt, attemptId: "cngn-attempt",
+            fetchAgeSec: 0, fetchBudgetSec: 48 * 3600, freshnessMode: "unverified",
+            sourceFreshnessInvalid: false, sourceTimestamp: null, sourceAgeSec: null,
+            sourceAgeBudgetSec: null, sourceAgeBudgetCap: null,
+          },
+        },
+      },
+    } } });
+    const query = buildDetailStaleQueries(params.queries, params.supplemental, "il-compliant-naira")
+      .find((entry) => entry.label === "Live Reserves")!;
+    expect(query).toMatchObject({ hasData: true, dataUpdatedAt: fetchedAt * 1000, meta: { updatedAt: fetchedAt } });
+    const health = deriveDataHealth({ ...query, label: "Live Reserves", staleTime: query.staleTime! }, now);
+    expect(health.state).toBe("fresh");
+    expect(isPublicWarning(health)).toBe(false);
+  });
+
   it("selects the first public (12x) reserve expiry, not the first 1x budget, and warns on it", () => {
     const now = 1_790_000_000_000;
     const nowSec = now / 1000;

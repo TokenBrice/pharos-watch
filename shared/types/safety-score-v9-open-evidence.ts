@@ -18,16 +18,15 @@ import { isUniqueSorted, RESPONSIBILITIES } from "./safety-score-v9-public-facts
 export const V9_OPEN_EVIDENCE_SEMANTICS = "open-question-v1" as const;
 
 /** The three disjoint published question buckets; they sum to `totals.questions`. */
-export const V9_OPEN_QUESTION_BUCKETS = ["documentation", "issuer", "open"] as const;
+const V9_OPEN_QUESTION_BUCKETS = ["documentation", "issuer", "open"] as const;
 export const V9OpenQuestionBucketSchema = z.enum(V9_OPEN_QUESTION_BUCKETS);
 export type V9OpenQuestionBucket = z.infer<typeof V9OpenQuestionBucketSchema>;
 
 /** Scope kinds a question key dispatches on. */
-export const V9_OPEN_QUESTION_SCOPE_KINDS = [
+const V9_OPEN_QUESTION_SCOPE_KINDS = [
   "route", "control", "reserve-exposure", "component", "peg", "dependency", "path",
 ] as const;
-export const V9OpenQuestionScopeKindSchema = z.enum(V9_OPEN_QUESTION_SCOPE_KINDS);
-export type V9OpenQuestionScopeKind = z.infer<typeof V9OpenQuestionScopeKindSchema>;
+const V9OpenQuestionScopeKindSchema = z.enum(V9_OPEN_QUESTION_SCOPE_KINDS);
 
 /**
  * Open-question identity `<rootAssetId>|<scopeKind>|<scopeIdentity>`, derived at

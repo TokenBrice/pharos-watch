@@ -59,9 +59,9 @@ describe("check-mode artifact selection", () => {
       "case-study-client-index", "llms-txt", "changelog-registry",
     ];
     expect(registry.filter((artifact) => artifact.ciDriftCheck === false).map((artifact) => artifact.id).sort())
-      .toEqual([...projections].sort());
+      .toEqual([...projections, "safety-score-v9-evaluation-build"].sort());
     expect(selectCheckableArtifactIds([...projections, "runbook-index", "safety-score-v9-evaluation-build"]))
-      .toEqual(["runbook-index", "safety-score-v9-evaluation-build"]);
+      .toEqual(["runbook-index"]);
     for (const id of projections) {
       expect(registry.find((artifact) => artifact.id === id)).toMatchObject({ bootstrap: true, checkable: true });
       expect(selectGeneratedArtifacts({ check: true, only: [id] }).map((artifact) => artifact.id)).toContain(id);

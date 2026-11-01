@@ -330,6 +330,37 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.value.observedAtBySymbol.get("XSGD")).toBe(expectedSec);
   });
 
+  it("rejects a wide product book without falling back to its last trade", async () => {
+    mockFetch([
+      {
+        match: "/products/USDT-USD/ticker",
+        body: {
+          bid: "0.9600",
+          ask: "1.0400",
+          price: "0.9998",
+          time: "2026-11-01T17:11:27.444478317Z",
+        },
+      },
+      { match: () => true, body: {}, status: 404 },
+    ], { requireMatch: true });
+
+    const outcome = await fetchCoinbasePrices(["USDT"]);
+
+    expect(outcome.kind).toBe("no-data");
+    expect(outcome.value.prices.has("USDT")).toBe(false);
+    expect(outcome.value.diagnostics).toEqual([
+      {
+        source: "coinbase",
+        stage: "primary",
+        endpoint: "api.exchange.coinbase.com/products/{product}/ticker",
+        status: null,
+        ok: true,
+        success: false,
+        rejectionReasonCounts: { "wide-spread": 1 },
+      },
+    ]);
+  });
+
   it("cancels failed product responses and returns upstream-error outcome", async () => {
     const cancel = vi.fn(async () => undefined);
     const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 404 });
@@ -444,12 +475,75 @@ describe("fetchKrakenPrices", () => {
 
     const outcome = await fetchKrakenPrices(["USDT", "USDC", "DAI", "TGBP", "MXNB"]);
     expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("USDT")).toBeCloseTo(1.0002, 4);
-    expect(outcome.value.get("USDC")).toBeCloseTo(0.9998, 4);
-    expect(outcome.value.get("DAI")).toBeCloseTo(1.0, 4);
-    expect(outcome.value.get("TGBP")).toBeCloseTo(1.35365, 5);
-    expect(outcome.value.get("MXNB")).toBeCloseTo(0.0566, 8);
-    expect(outcome.value.has("BTC")).toBe(false);
+    expect(outcome.value.prices.get("USDT")).toBeCloseTo(1.0002, 4);
+    expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.9998, 4);
+    expect(outcome.value.prices.get("DAI")).toBeCloseTo(1.0, 4);
+    expect(outcome.value.prices.get("TGBP")).toBeCloseTo(1.35365, 5);
+    expect(outcome.value.prices.get("MXNB")).toBeCloseTo(0.0566, 8);
+    expect(outcome.value.prices.has("BTC")).toBe(false);
+  });
+
+  it("rejects a wide two-sided book without falling back to its last trade", async () => {
+    mockFetch([{
+      match: () => true,
+      body: {
+        error: [],
+        result: {
+          // Production 2026-11-01: USD1's thin Kraken book quoted a ~4.5% spread.
+          USD1USD: { a: ["0.99950000"], b: ["0.95600000"], c: ["0.99950000"] },
+          USDCUSD: { a: ["0.99970000"], b: ["0.99960000"], c: ["0.99970000"] },
+        },
+      },
+    }]);
+
+    const outcome = await fetchKrakenPrices(["USD1", "USDC"]);
+
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.prices.has("USD1")).toBe(false);
+    expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.99965, 8);
+    expect(outcome.value.diagnostics).toEqual([
+      {
+        source: "kraken",
+        stage: "primary",
+        endpoint: "api.kraken.com/0/public/Ticker",
+        status: 200,
+        ok: true,
+        success: true,
+        rejectionReasonCounts: { "wide-spread": 1 },
+      },
+    ]);
+  });
+
+  it("rejects a crossed book (ask below bid) like a wide one", async () => {
+    mockFetch([{
+      match: () => true,
+      body: { error: [], result: { USDCUSD: { a: ["0.99000000"], b: ["1.01000000"], c: ["1.00000000"] } } },
+    }]);
+
+    const outcome = await fetchKrakenPrices(["USDC"]);
+
+    expect(outcome.value.prices.has("USDC")).toBe(false);
+    expect(outcome.value.diagnostics[0]?.rejectionReasonCounts).toEqual({ "wide-spread": 1 });
+  });
+
+  it("keeps the last-trade fallback when only one book side is present", async () => {
+    mockFetch([{
+      match: () => true,
+      body: {
+        error: [],
+        result: {
+          USDCUSD: { a: ["1.00010000"], c: ["0.99990000"] },
+          USDTUSD: { b: ["0.99970000"], c: ["0.99980000"] },
+        },
+      },
+    }]);
+
+    const outcome = await fetchKrakenPrices(["USDC", "USDT"]);
+
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.9999, 8);
+    expect(outcome.value.prices.get("USDT")).toBeCloseTo(0.9998, 8);
+    expect(outcome.value.diagnostics).toEqual([]);
   });
 
   it("requests the exact SoFiUSD market and prefers its bid/ask midpoint", async () => {
@@ -473,8 +567,8 @@ describe("fetchKrakenPrices", () => {
     expect(KRAKEN_KNOWN_SYMBOLS).toContain("SOFID");
     expect(requestedUrls).toEqual(["https://api.kraken.com/0/public/Ticker?pair=SOFIDUSD"]);
     expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("SOFID")).toBeCloseTo(0.999775, 8);
-    expect(outcome.value.size).toBe(1);
+    expect(outcome.value.prices.get("SOFID")).toBeCloseTo(0.999775, 8);
+    expect(outcome.value.prices.size).toBe(1);
   });
 
   it("requests the exact Tether Gold market and prefers its bid/ask midpoint", async () => {
@@ -498,8 +592,8 @@ describe("fetchKrakenPrices", () => {
     expect(KRAKEN_KNOWN_SYMBOLS).toContain("XAUT");
     expect(requestedUrls).toEqual(["https://api.kraken.com/0/public/Ticker?pair=XAUTUSD"]);
     expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("XAUT")).toBeCloseTo(3906.05, 8);
-    expect(outcome.value.size).toBe(1);
+    expect(outcome.value.prices.get("XAUT")).toBeCloseTo(3906.05, 8);
+    expect(outcome.value.prices.size).toBe(1);
   });
 
   it("requests the reviewed CASH and USDGO markets and prefers their bid/ask midpoints", async () => {
@@ -527,9 +621,9 @@ describe("fetchKrakenPrices", () => {
       "https://api.kraken.com/0/public/Ticker?pair=CASHUSD,USDGOUSD",
     ]);
     expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("CASH")).toBeCloseTo(0.99985, 8);
-    expect(outcome.value.get("USDGO")).toBeCloseTo(0.99997, 8);
-    expect(outcome.value.size).toBe(2);
+    expect(outcome.value.prices.get("CASH")).toBeCloseTo(0.99985, 8);
+    expect(outcome.value.prices.get("USDGO")).toBeCloseTo(0.99997, 8);
+    expect(outcome.value.prices.size).toBe(2);
   });
 
   it("requests the 2026-10-30 reviewed Kraken books and prefers their bid/ask midpoints", async () => {
@@ -566,15 +660,15 @@ describe("fetchKrakenPrices", () => {
       ].join(",")}`,
     ]);
     expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("AUDX")).toBeCloseTo(0.70345, 8);
-    expect(outcome.value.get("BRL1")).toBeCloseTo(0.18263, 8);
-    expect(outcome.value.get("EUROP")).toBeCloseTo(1.11515, 8);
-    expect(outcome.value.get("QCAD")).toBeCloseTo(0.71475, 8);
-    expect(outcome.value.get("USDPT")).toBeCloseTo(0.999995, 8);
-    expect(outcome.value.get("USDSM")).toBeCloseTo(1.0, 8);
-    expect(outcome.value.get("USDSUI")).toBeCloseTo(1.000295, 8);
-    expect(outcome.value.get("ZCHF")).toBeCloseTo(1.210695, 8);
-    expect(outcome.value.size).toBe(8);
+    expect(outcome.value.prices.get("AUDX")).toBeCloseTo(0.70345, 8);
+    expect(outcome.value.prices.get("BRL1")).toBeCloseTo(0.18263, 8);
+    expect(outcome.value.prices.get("EUROP")).toBeCloseTo(1.11515, 8);
+    expect(outcome.value.prices.get("QCAD")).toBeCloseTo(0.71475, 8);
+    expect(outcome.value.prices.get("USDPT")).toBeCloseTo(0.999995, 8);
+    expect(outcome.value.prices.get("USDSM")).toBeCloseTo(1.0, 8);
+    expect(outcome.value.prices.get("USDSUI")).toBeCloseTo(1.000295, 8);
+    expect(outcome.value.prices.get("ZCHF")).toBeCloseTo(1.210695, 8);
+    expect(outcome.value.prices.size).toBe(8);
   });
 
   it("requests Wyoming FRNT's exact USD book and uses its bid/ask instead of the last trade", async () => {
@@ -597,8 +691,8 @@ describe("fetchKrakenPrices", () => {
     expect(KRAKEN_KNOWN_SYMBOLS).toContain("FRNT");
     expect(requestedUrls).toEqual(["https://api.kraken.com/0/public/Ticker?pair=FRNTUSD"]);
     expect(outcome.kind).toBe("ok");
-    expect(outcome.value.get("FRNT")).toBeCloseTo(0.9992, 8);
-    expect(outcome.value.size).toBe(1);
+    expect(outcome.value.prices.get("FRNT")).toBeCloseTo(0.9992, 8);
+    expect(outcome.value.prices.size).toBe(1);
   });
 
   it("returns upstream-error outcome when Kraken returns an API error", async () => {
@@ -606,7 +700,7 @@ describe("fetchKrakenPrices", () => {
 
     const outcome = await fetchKrakenPrices(["USDT"]);
     expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.size).toBe(0);
+    expect(outcome.value.prices.size).toBe(0);
     expect(outcome).toMatchObject({ reason: "EGeneral:Temporary lockout" });
   });
 
@@ -621,7 +715,7 @@ describe("fetchKrakenPrices", () => {
     const outcome = await fetchKrakenPrices(["USDT"]);
 
     expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.size).toBe(0);
+    expect(outcome.value.prices.size).toBe(0);
     expect(cancel).toHaveBeenCalledTimes(2);
   });
 
@@ -692,6 +786,40 @@ describe("fetchBitstampPrices", () => {
     expect(outcome.kind).toBe("ok");
     expect(outcome.value.prices.has("PYUSD")).toBe(false);
     expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.99968, 5);
+  });
+
+  it("rejects a wide two-sided book without falling back to its last trade", async () => {
+    mockFetch([{
+      match: () => true,
+      body: [
+        {
+          pair: "USDT/USD", market: "USDT/USD", bid: "0.9600", ask: "1.0400",
+          last: "1.0001", timestamp: "1776439395",
+        },
+        {
+          pair: "USDC/USD", market: "USDC/USD", bid: "0.99965", ask: "0.99971",
+          last: "0.99968", timestamp: "1776439400",
+        },
+      ],
+    }]);
+
+    const outcome = await fetchBitstampPrices();
+
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.prices.has("USDT")).toBe(false);
+    expect(outcome.value.observedAtBySymbol.has("USDT")).toBe(false);
+    expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.99968, 5);
+    expect(outcome.value.diagnostics).toEqual([
+      {
+        source: "bitstamp",
+        stage: "primary",
+        endpoint: "www.bitstamp.net/api/v2/ticker/",
+        status: 200,
+        ok: true,
+        success: true,
+        rejectionReasonCounts: { "wide-spread": 1 },
+      },
+    ]);
   });
 
   it("returns upstream-error when HTTP request fails", async () => {

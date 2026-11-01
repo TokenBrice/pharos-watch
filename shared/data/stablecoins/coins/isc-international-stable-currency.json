@@ -32,7 +32,7 @@
     ]
   },
   "llamaId": "186",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "international-stable-currency",
   "links": [
     {

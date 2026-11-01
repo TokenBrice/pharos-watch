@@ -6,6 +6,13 @@ import { normalizePricingSourceKeys } from "./pricing-sources";
 export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
 
 /**
+ * Maximum relative bid/ask spread (basis points of the midpoint) for a CEX
+ * two-sided book to contribute a quote. A wider book is not a price, and its
+ * last trade is no better evidence.
+ */
+export const CEX_MAX_BID_ASK_SPREAD_BPS = 100;
+
+/**
  * Whether provenance permits treating a price as observed. Callers still validate
  * the value and freshness; absent legacy modes retain their existing semantics.
  */
@@ -53,7 +60,7 @@ export function isUncorroboratedDefiLlamaReferenceQuote(input: {
  * 0.999520515794015 on 2026-10-30). A value shared by more assets is the
  * response-level fill DefiLlama uses for assets it cannot price.
  */
-export const DEFILLAMA_LIST_FILL_DEFAULT_MIN_ASSET_COUNT = 5;
+const DEFILLAMA_LIST_FILL_DEFAULT_MIN_ASSET_COUNT = 5;
 
 /** The per-response fill-default status of one DefiLlama list row's price. */
 export interface DefiLlamaListFillDefaultQuote {
