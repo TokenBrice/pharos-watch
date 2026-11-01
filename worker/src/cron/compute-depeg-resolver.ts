@@ -366,14 +366,17 @@ export async function computeDepegResolver(
     lineage,
     nowSec,
   });
-  if (publication.attempted && !publication.ok) {
+  const publicationFailed = publication.attempted && !publication.ok;
+  if (publicationFailed) {
     publicSnapshot._meta.degraded = true;
     publicSnapshot._meta.degradedReason = `publication-retry-pending:${publication.error ?? "manifest-write-failed"}`;
   }
   await writeDepegResolverSnapshot(db, publicSnapshot);
   const reviewArtifacts = await persistDepegResolverReviewArtifacts(db, diagnosticSnapshot, storeContracts, options.signal);
+  const reviewMetadata = reviewArtifactMetadata(reviewArtifacts);
 
   return {
+    ...(publicationFailed ? { status: "degraded" as const } : {}),
     itemCount: rows.length,
     metadata: JSON.stringify({
       ddrRunId: options.ddrRunId,
@@ -384,7 +387,7 @@ export async function computeDepegResolver(
       v2PreLockIncidentsClosed,
       assessmentWriteCount: reviewArtifacts.assessmentWriteCount,
       reviewRows: reviewArtifacts.reviewRows,
-      ...reviewArtifactMetadata(reviewArtifacts),
+      ...reviewMetadata,
       incidentCount: lineage?.incidentCount ?? null,
       quarantinedCoins: lineage?.quarantinedCoins ?? null,
       v2PolicyUniverseEvents: policyUniverseEventCount,
@@ -399,6 +402,18 @@ export async function computeDepegResolver(
       v2PublicationSucceeded,
       v2PublicationError,
       v2ErrataLoadError,
+      // A failed manifest write leaves the public snapshot on the previous
+      // generation: the run is incomplete work, and its output clock must not
+      // advance until the snapshot is actually published.
+      ...(publicationFailed ? {
+        outputPublishedAt: null,
+        reason: "ddr-publication-failed",
+        quality: {
+          reason: "ddr-publication-failed",
+          ...(reviewMetadata.quality ? { reasons: [reviewMetadata.quality.reason] } : {}),
+          detail: publication.error ?? null,
+        },
+      } : {}),
     }),
   };
 }

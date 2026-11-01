@@ -23,7 +23,11 @@ describe("cron sentinel persisted source state", () => {
         [{ source: "freshness", run: async () => ({ status: "ok" }) }],
         200_000,
       );
-      expect(expired.status).toBe("ok");
+      expect(expired.status).toBe("degraded");
+      expect(JSON.parse(expired.metadata!).reason).toBe("source-state-expired:growth");
+      expect(JSON.parse(expired.metadata!).quality).toMatchObject({
+        reason: "sentinel-source-expired", reasons: ["source-state-expired:growth"],
+      });
       expect(JSON.parse(expired.metadata!).sources.growth).toMatchObject({
         status: "expired", lastStatus: "degraded", observedAt: 100, maxAgeSec: 172_800,
       });
@@ -41,7 +45,7 @@ describe("cron sentinel persisted source state", () => {
     ["repair-debt", 172_800],
     ["turnover", 7_200],
     ["reserve-post-sync", 28_800],
-  ] as const)("retains %s expiry diagnostics without aggregate impact", async (source, budget) => {
+  ] as const)("escalates %s expiry to a degraded sentinel with a machine reason", async (source, budget) => {
     const { db, sqlite } = createLatestSchemaSqlite();
     const observedAt = 1_800_000_000;
     const other: CronSentinelRuleSource = source === "freshness" ? "digest-publication" : "freshness";
@@ -53,7 +57,11 @@ describe("cron sentinel persisted source state", () => {
       ], at);
       expect((await assess(observedAt + budget)).status).toBe("error");
       const expired = await assess(observedAt + budget + 1);
-      expect(expired.status).toBe("ok");
+      expect(expired.status).toBe("degraded");
+      expect(JSON.parse(expired.metadata!).reason).toBe(`source-state-expired:${source}`);
+      expect(JSON.parse(expired.metadata!).quality).toMatchObject({
+        reason: "sentinel-source-expired", reasons: [`source-state-expired:${source}`],
+      });
       expect(JSON.parse(expired.metadata!).sources[source]).toMatchObject({
         status: "expired", lastStatus: "error", observedAt, maxAgeSec: budget,
         reason: "source-state-expired",
@@ -88,7 +96,10 @@ describe("cron sentinel persisted source state", () => {
       expect(metadata.quality.sources.growth).toEqual({ reason: "row-count-threshold" });
       const expired = await runCronSentinelSources(db, "status", [
         { source: "freshness", run: async () => ({ status: "ok" }) },
+        // Keep growth current so only the explicitly disabled repair source ages out.
+        { source: "growth", run: async () => ({ status: "ok" }) },
       ], 172_901);
+      expect(expired.status).toBe("ok");
       expect(JSON.parse(expired.metadata!).quality).toBeUndefined();
       expect(JSON.parse(expired.metadata!).sourceStatuses["repair-debt"]).toBe("expired");
     } finally {

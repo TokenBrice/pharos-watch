@@ -450,6 +450,10 @@ export async function generateWeeklyRecap(
   if (digestCopy.usedRawTextFallback) degradedReasons.push("raw-text-fallback");
   if (safetyContext.status === "unavailable") degradedReasons.push("safety-context-unavailable");
   if (safetyCopyIssues.length > 0) degradedReasons.push("unbound-safety-copy");
+  // A week built from degraded daily inputs is not a fully observed week.
+  for (const source of weeklyData.degradedSourcesThisWeek ?? []) {
+    if (!degradedReasons.includes(source)) degradedReasons.push(source);
+  }
   await reportDigestGenerationComplete(
     reportProgress,
     "weekly recap",

@@ -16,6 +16,7 @@ function breakdown(order: readonly string[], attempted: ReadonlySet<string>) {
     key,
     attempted: attempted.has(key),
     skippedReason: attempted.has(key) ? null : "extended-deferred-under-pressure",
+    advancedTo: attempted.has(key) ? 1 : null,
   }));
 }
 
@@ -150,6 +151,8 @@ describe("mint/burn per-config attempt state", () => {
       lastCompletedAt: null,
       incompleteConfigs: keys.length,
       providerDeferredConfigs: 0,
+      stuckConfigs: [],
+      stuckConfigCount: 0,
     });
   });
 
@@ -294,6 +297,42 @@ describe("mint/burn per-config attempt state", () => {
       incompleteConfigs: 1,
       coverageCycleSec: null,
     });
+  });
+
+  it("flags a config whose attempted scans never advance and clears it on progress", async () => {
+    const roster = ["config-0", "config-1"];
+    let persisted: string | null = null;
+    const run = async (nowSec: number, advancedTo: number | null) => {
+      const db = mockD1(persisted ? [cachedRow(EXTENDED_CACHE_KEY, persisted, nowSec)] : []);
+      const result = await updateMintBurnAttemptState({
+        db,
+        jobName: EXTENDED_JOB,
+        lane: "extended",
+        enabledConfigKeys: roster,
+        configBreakdown: roster.map((key) => ({
+          key,
+          attempted: key === "config-0",
+          skippedReason: key === "config-0" ? null : "extended-deferred-under-pressure",
+          advancedTo: key === "config-0" ? advancedTo : null,
+        })),
+        activeProviderDeferrals: new Map(),
+        nowSec,
+      });
+      persisted = persistedState(db, EXTENDED_CACHE_KEY);
+      return result;
+    };
+
+    const first = await run(1_000_000, null);
+    expect(first.coverageCycle).toMatchObject({ stuckConfigs: [], stuckConfigCount: 0 });
+
+    const second = await run(1_000_000 + INTERVAL_SEC, null);
+    expect(second.coverageCycle).toMatchObject({
+      stuckConfigs: ["config-0"],
+      stuckConfigCount: 1,
+    });
+
+    const recovered = await run(1_000_000 + 2 * INTERVAL_SEC, 500);
+    expect(recovered.coverageCycle).toMatchObject({ stuckConfigs: [], stuckConfigCount: 0 });
   });
 
   it("carries no cycle verdict for the critical lane", async () => {

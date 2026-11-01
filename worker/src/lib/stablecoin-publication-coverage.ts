@@ -17,6 +17,20 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 export const ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS = 2;
 
+/**
+ * Priced-cohort collapse at the producer (2026-11-01). Breadth grading is
+ * downstream and slow: a run that loses a tenth of its priced active cohort
+ * against the previous generation publishes as `ok` while `/status` stays green
+ * below the 5% breadth share for two generations. `sync-stablecoins` therefore
+ * degrades such a run with `stablecoin-price-coverage-collapse`. The baseline
+ * floor keeps a two-asset cohort from turning one miss into a named collapse;
+ * an empty priced cohort degrades regardless of baseline.
+ */
+export const STABLECOIN_ACTIVE_PRICE_COVERAGE_COLLAPSE = {
+  relativeDrop: 0.1,
+  minBaselinePricedCount: 10,
+} as const;
+
 const MAX_VALID_DATE_SECONDS = 8_640_000_000_000;
 
 const ACTIVE_STABLECOIN_SYMBOL_BY_ID = new Map(
@@ -88,6 +102,9 @@ export type StablecoinActivePriceCoverage = {
 export interface PreviousStablecoinActivePriceCoverage {
   missingActiveIds: string[];
   missingActiveAssets: MissingActivePriceDetail[];
+  /** Prior generation's priced and expected active counts; null when unreadable. */
+  pricedActiveCount?: number | null;
+  expectedActiveCount?: number | null;
   observedAt?: number | null;
   unavailableReason?: "previous-coverage-read-failed" | "previous-coverage-malformed";
 }
@@ -790,7 +807,14 @@ function parsePreviousCoverageMetadata(metadataJson: string): PreviousStablecoin
       .map((stablecoinId) => detailsById.get(stablecoinId))
       .filter((detail): detail is MissingActivePriceDetail => detail != null);
     if (missingActiveAssets.length !== missingActiveIds.length) return null;
-    return { missingActiveIds, missingActiveAssets };
+    return {
+      missingActiveIds,
+      missingActiveAssets,
+      // Persisted coverage is schema-admitted above; the priced cohort is the
+      // collapse baseline the next run compares against.
+      expectedActiveCount: numberValue(coverage.expectedActiveCount),
+      pricedActiveCount: numberValue(coverage.pricedActiveCount),
+    };
   } catch {
     return null;
   }

@@ -106,6 +106,8 @@ For direct APIs, balance health is no longer uniformly neutral. Balancer, Raydiu
 
 Publication guards require readable prior coverage count, global TVL, top-ten membership/TVL and cron-history evidence. A failed required read retains the accepted generation and its original clock with `required-baseline-read-failed`; it never supplies an empty baseline to disable a guard. Successful empty reads still permit bootstrap. Affected totals/classes remain unavailable in diagnostics. Coverage-class counts, watchlist and per-coin drift reads are independently tagged optional telemetry, not additional publication gates.
 
+Two consecutive productive runs sharing one pre-event baseline also compare per-chain retained TVL and per-source-family retained pool counts. A cohort below 90% of its baseline is reported as `chain-tvl-drop:<chain>` / `source-family-drop:<family>` in `quality.reasons` and sets `quality.degraded`, which the sentinel-backed cache-quality verdict converts into a public-health floor. Unlike the other drift series these never rebaseline, so a lasting chain or source loss stays reported until recovery.
+
 ### Pool Stress Index (0-100)
 
 Per-pool stress metric: `35x(1-balanceRatio) + 25x(1-organicFraction) + 20xImmaturityPenalty + 20x(1-pairQuality)`. TVL-weighted average stored as `avg_pool_stress`.
@@ -167,7 +169,7 @@ Base-yield share is base APY / total APY, TVL-weighted over measured evidence an
 
 Census authority belongs to a successfully completed, exhaustive same-run query, not a provider's advertised chains or a missing next-page marker. Capped/failed queries retain observed pools but cannot certify no pools; supplemental venue indexes cannot prove chain-wide absence. The [source/scope contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/dex-liquidity-appendix.md#discovery-cron) owns provider routing and resumable-window mechanics.
 
-Discovery remains bounded cron-native continuation. Missing rows receive census maintenance, not measured-zero status; provider observations and exact-route admission retain independent clocks and proof gates. [Discovery and source-stage boundaries](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/dex-liquidity-appendix.md#discovery-and-source-stage-boundaries) owns provider-specific quarantine, reviewed coverage, continuation, fair enrichment and capture/valuation details.
+Discovery remains bounded cron-native continuation. Missing rows receive census maintenance, not measured-zero status; provider observations and exact-route admission retain independent clocks and proof gates. A deployment that was certified `observed_pools` and is then certified `verified_no_pools` is a census flip; two or more flips attributed to one provider in a single run add `dex-discovery-census-collapse:<provider>` to `quality.reasons` and degrade the run, while a failed prior-outcome read reports `censusFlipReadFailed` rather than a clean count. [Discovery and source-stage boundaries](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/dex-liquidity-appendix.md#discovery-and-source-stage-boundaries) owns provider-specific quarantine, reviewed coverage, continuation, fair enrichment and capture/valuation details.
 
 ## DEX Price Cross-Validation
 

@@ -43,14 +43,20 @@ function workerHealth({
   return { latencyMs: 8, ok, payload, status, url: HEALTH_URL };
 }
 
+function routeResponse(path: string, status = 200): ProbeResponse {
+  return { latencyMs: 3, ok: status >= 200 && status < 300, payload: null, status, url: `${WORKER_API_URL}${path}` };
+}
+
 function dependencies({
   shell = pagesRelease(),
   health = workerHealth() as ProbeResponse | null,
+  routes = {} as Record<string, ProbeResponse>,
 } = {}) {
   const probes: Record<string, ProbeResponse> = health ? { health } : {};
   return {
     collectWorkerProbes: vi.fn(async () => probes),
-    fetchJson: vi.fn(async () => shell),
+    fetchJson: vi.fn(async (_args: unknown, path: string) =>
+      path === "/__pharos_release.json" ? shell : routes[path] ?? routeResponse(path)),
   } satisfies PostDeployAcceptanceDependencies;
 }
 
@@ -69,6 +75,7 @@ describe("runPostDeployAcceptance", () => {
       expectedPagesCommit: RELEASE_COMMIT,
       expectedWorkerVersion: WORKER_VERSION,
       observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
     });
 
     expect(run.acceptance.outcome).toBe("passed");
@@ -76,6 +83,7 @@ describe("runPostDeployAcceptance", () => {
     expect(run.probes.map((probe) => [probe.id, probe.surface, probe.outcome])).toEqual([
       ["pages-shell", "pages", "passed"],
       ["worker-health", "worker", "passed"],
+      ["worker-route-sweep", "worker", "passed"],
     ]);
     expect(run.summary).toContain(`| pages-shell | pages | passed | GET ${RELEASE_URL} returned 200; release commit ${RELEASE_COMMIT}. |`);
     expect(run.summary).toContain(`| worker-health | worker | passed | GET ${HEALTH_URL} returned 200 (healthy); active version ${WORKER_VERSION}. |`);
@@ -95,18 +103,23 @@ describe("runPostDeployAcceptance", () => {
     expect(run.acceptance.outcome).toBe("passed");
   });
 
-  it("probes only the public Worker health endpoint for a Worker-only release", async () => {
+  it("probes Worker health and sweeps public routes with the CI key for a Worker-only release", async () => {
     const deps = dependencies();
     const run = await runPostDeployAcceptance({
       ...deps,
       workerDeployed: true,
       expectedWorkerVersion: WORKER_VERSION,
       observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
     });
 
     expect(deps.collectWorkerProbes).toHaveBeenCalledWith({ apiUrl: WORKER_API_URL }, { includeHealth: true });
-    expect(deps.fetchJson).not.toHaveBeenCalled();
-    expect(run.probes.map((probe) => probe.id)).toEqual(["worker-health"]);
+    expect(deps.fetchJson).toHaveBeenCalledWith(
+      { apiUrl: WORKER_API_URL, apiKey: "ci-key", timeoutMs: 10_000, noCache: true },
+      "/api/stablecoins",
+    );
+    expect(run.probes.map((probe) => probe.id)).toEqual(["worker-health", "worker-route-sweep"]);
+    expect(deps.fetchJson.mock.calls).toHaveLength(39);
   });
 
   it("fails a healthy Worker when the active deployment version is stale", async () => {
@@ -170,6 +183,7 @@ describe("runPostDeployAcceptance", () => {
       workerDeployed: true,
       expectedWorkerVersion: WORKER_VERSION,
       observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
     });
 
     expect(run.probes[0]).toMatchObject({
@@ -185,6 +199,7 @@ describe("runPostDeployAcceptance", () => {
       workerDeployed: true,
       expectedWorkerVersion: WORKER_VERSION,
       observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
     });
 
     expect(run.probes[0]).toMatchObject({
@@ -205,6 +220,7 @@ describe("runPostDeployAcceptance", () => {
       workerDeployed: true,
       expectedWorkerVersion: WORKER_VERSION,
       observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
     });
 
     expect(run.probes[0]).toMatchObject({
@@ -224,12 +240,13 @@ describe("runPostDeployAcceptance", () => {
       observedWorkerVersion: WORKER_VERSION,
       expectedHeavyWorkerVersion: "heavy-version",
       observedHeavyWorkerVersion: "heavy-version",
+      apiKey: "ci-key",
     });
     expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "operational" });
     expect(run.exitCode).toBe(1);
     for (const warning of warnings) expect(run.summary).toContain(warning);
     expect(run.acceptance.reason).toContain("activated; operational acceptance failed:");
-    expect(run.probes.map((probe) => probe.id)).toEqual(["pages-shell", "worker-health"]);
+    expect(run.probes.map((probe) => probe.id)).toEqual(["pages-shell", "worker-health", "worker-route-sweep"]);
   });
 
   it("classifies a heavy identity mismatch as deployment failure even if health is stale", async () => {
@@ -244,7 +261,106 @@ describe("runPostDeployAcceptance", () => {
     expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "deployment" });
     expect(run.acceptance.reason).toContain("heavy worker active version");
     expect(run.exitCode).toBe(1);
-    expect(run.probes).toHaveLength(1);
+    expect(run.probes.map((probe) => probe.id)).toEqual(["worker-health", "worker-route-sweep"]);
+  });
+
+  it("fails acceptance as operational when a swept public route returns 5xx", async () => {
+    const run = await runPostDeployAcceptance({
+      ...dependencies({ routes: { "/api/depeg-events": routeResponse("/api/depeg-events", 503) } }),
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
+    });
+
+    expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "operational" });
+    expect(run.acceptance.reason).toContain("/api/depeg-events");
+    expect(run.acceptance.reason).toContain("http-5xx");
+    expect(run.summary).toContain("| worker-route-sweep | worker | failed |");
+    expect(run.exitCode).toBe(1);
+  });
+
+  it("retries a single 5xx once before passing the route sweep", async () => {
+    const deps = dependencies();
+    let attempts = 0;
+    deps.fetchJson.mockImplementation(async (_args: unknown, path: string) => {
+      if (path !== "/api/depeg-events") return routeResponse(path);
+      attempts += 1;
+      return routeResponse(path, attempts === 1 ? 503 : 200);
+    });
+    const run = await runPostDeployAcceptance({
+      ...deps,
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
+    });
+
+    expect(attempts).toBe(2);
+    expect(run.probes.find((probe) => probe.id === "worker-route-sweep")).toMatchObject({ outcome: "passed" });
+    expect(run.acceptance.outcome).toBe("passed");
+    expect(run.exitCode).toBe(0);
+  });
+
+  it("fails when a 5xx persists after one retry", async () => {
+    const deps = dependencies();
+    let attempts = 0;
+    deps.fetchJson.mockImplementation(async (_args: unknown, path: string) => {
+      if (path !== "/api/depeg-events") return routeResponse(path);
+      attempts += 1;
+      return routeResponse(path, 503);
+    });
+    const run = await runPostDeployAcceptance({
+      ...deps,
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
+    });
+
+    expect(attempts).toBe(2);
+    expect(run.probes.find((probe) => probe.id === "worker-route-sweep")).toMatchObject({ outcome: "failed" });
+    expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "operational" });
+    expect(run.acceptance.reason).toContain("http-5xx");
+    expect(run.exitCode).toBe(1);
+  });
+
+  it("keeps a rate-limited route unknown instead of passing or failing the release", async () => {
+    const deps = dependencies();
+    let attempts = 0;
+    deps.fetchJson.mockImplementation(async (_args: unknown, path: string) => {
+      if (path !== "/api/depeg-events") return routeResponse(path);
+      attempts += 1;
+      return routeResponse(path, 429);
+    });
+    const run = await runPostDeployAcceptance({
+      ...deps,
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+      apiKey: "ci-key",
+    });
+
+    expect(attempts).toBe(1);
+    expect(run.probes.find((probe) => probe.id === "worker-route-sweep")).toMatchObject({ outcome: "pending" });
+    expect(run.acceptance.outcome).toBe("pending");
+    expect(run.exitCode).toBe(0);
+    expect(run.summary).toContain("rate-limited");
+  });
+
+  it("fails the route sweep when the CI API key is missing instead of treating anonymous 401s as healthy", async () => {
+    const deps = dependencies();
+    const run = await runPostDeployAcceptance({
+      ...deps,
+      workerDeployed: true,
+      expectedWorkerVersion: WORKER_VERSION,
+      observedWorkerVersion: WORKER_VERSION,
+    });
+
+    expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "operational" });
+    expect(run.acceptance.reason).toContain("missing PHAROS_API_KEY");
+    expect(deps.fetchJson).not.toHaveBeenCalled();
+    expect(run.exitCode).toBe(1);
   });
 });
 
@@ -263,6 +379,7 @@ describe("run-post-deploy-acceptance CLI", () => {
         WORKER_DEPLOYED: "true",
         EXPECTED_WORKER_VERSION: expected,
         OBSERVED_WORKER_VERSION: observed,
+        PHAROS_API_KEY: "ci-key",
       },
       dependencies(),
     );
@@ -285,7 +402,7 @@ describe("run-post-deploy-acceptance CLI", () => {
 
     const exitCode = await runPostDeployAcceptanceCli(
       { GITHUB_OUTPUT: outputPath, GITHUB_STEP_SUMMARY: summaryPath, NODE_ENV: "test", PAGES_DEPLOYED: "false", WORKER_DEPLOYED: "true",
-        EXPECTED_WORKER_VERSION: WORKER_VERSION, OBSERVED_WORKER_VERSION: WORKER_VERSION },
+        EXPECTED_WORKER_VERSION: WORKER_VERSION, OBSERVED_WORKER_VERSION: WORKER_VERSION, PHAROS_API_KEY: "ci-key" },
       dependencies({ health: workerHealth({ ok: false, payload: null, status: 502 }) }),
     );
 

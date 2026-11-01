@@ -187,6 +187,26 @@ describe("syncFxRates", () => {
     });
   });
 
+  it.each(["EUR", "GBP"])("rejects a Frankfurter payload based on %s instead of USD", async (base) => {
+    mockFetch([{ match: "api.frankfurter.dev", body: { base, date: "2025-06-15", rates: { EUR: 0.92 } } }]);
+    // Inverting a non-USD base would shift every major by the base's own rate
+    // and still pass the range guard, so the payload is invalid evidence.
+    expect(await loadFrankfurterPayload(["EUR"])).toMatchObject({ ok: false, kind: "invalid-payload" });
+  });
+
+  it("rejects a Frankfurter payload with no base field", async () => {
+    mockFetch([{ match: "api.frankfurter.dev", body: { date: "2025-06-15", rates: { EUR: 0.92 } } }]);
+    expect(await loadFrankfurterPayload(["EUR"])).toMatchObject({ ok: false, kind: "invalid-payload" });
+  });
+
+  it("accepts a USD-based Frankfurter payload", async () => {
+    mockFetch([{ match: "api.frankfurter.dev", body: { base: "USD", date: "2025-06-15", rates: { EUR: 0.92 } } }]);
+    expect(await loadFrankfurterPayload(["EUR"])).toMatchObject({
+      ok: true,
+      data: { date: "2025-06-15", rates: { EUR: 0.92 } },
+    });
+  });
+
   it("rejects ExchangeRate-API's future raw epoch", async () => {
     mockFetch([{ match: "open.er-api.com", body: {
       result: "success", time_last_update_unix: Date.now() / 1000 + 301, rates: { EUR: 0.92 },

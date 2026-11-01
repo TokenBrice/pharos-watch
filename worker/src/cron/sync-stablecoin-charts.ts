@@ -13,6 +13,10 @@ import {
   sampleHistoricalDatePoints,
 } from "../lib/stablecoin-charts-payload";
 import {
+  assessStablecoinChartContinuity,
+  STABLECOIN_CHART_CONTINUITY_THRESHOLDS,
+} from "../lib/stablecoin-charts-continuity";
+import {
   mergeStructuralSupplementalHistoryIntoCharts,
   STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS,
   type SupplyHistoryChartRow,
@@ -288,6 +292,69 @@ async function runStablecoinChartsPublication(
     });
   }
 
+  // Continuity guard: the cache key holds the last published history, so a
+  // truncated upstream response is detectable without a second table. A failed
+  // baseline read fails closed; an absent/corrupt baseline is reported as such
+  // and cannot mask a truncation because there is no history to preserve.
+  let previousCache: Awaited<ReturnType<typeof getCache>>;
+  try {
+    previousCache = await getCache(db, "stablecoin-charts");
+  } catch (error) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      level: "error",
+      event: "chart-history-baseline-read-failed",
+      message: "Could not read the previous chart payload; preserving the cache",
+      error,
+    });
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: { reason: "chart-history-baseline-read-failed" },
+    });
+  }
+  const parsedPrevious = previousCache ? parseJson(previousCache.value) : null;
+  const previousPayload = parsedPrevious?.ok
+    ? normalizeStablecoinChartPoints(parsedPrevious.value)
+    : null;
+  const continuityBaseline = !previousCache ? "missing" : previousPayload == null ? "invalid" : "present";
+  const continuityFindings = previousPayload == null
+    ? []
+    : assessStablecoinChartContinuity(previousPayload, payload);
+  if (continuityFindings.length > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoin-charts",
+      level: "warn",
+      event: "chart-history-truncated",
+      message: "Chart history continuity check failed; preserving existing cache",
+      metadata: {
+        findings: continuityFindings.slice(0, 10),
+        previousPoints: previousPayload?.length ?? 0,
+        nextPoints: payload.length,
+      },
+    });
+    return createCronResult({
+      status: "degraded",
+      itemCount: 0,
+      metadata: {
+        reason: "chart-history-truncated",
+        quality: {
+          reason: "chart-history-truncated",
+          codes: [...new Set(continuityFindings.map((finding) => finding.code))],
+        },
+        previousPoints: previousPayload?.length ?? 0,
+        nextPoints: payload.length,
+        previousOldestDate: previousPayload?.[0]?.date ?? null,
+        nextOldestDate: payload[0]?.date ?? null,
+        minPointShare: STABLECOIN_CHART_CONTINUITY_THRESHOLDS.minPointShare,
+        continuityFindings: continuityFindings.slice(0, 20).map((finding) =>
+          [finding.code, finding.previous, finding.next, finding.bucket ?? null] as const),
+      },
+    });
+  }
+
   const cacheResult = await setCacheIfNewer(
     db,
     "stablecoin-charts",
@@ -340,6 +407,7 @@ async function runStablecoinChartsPublication(
       fxFixes: fixes,
       supplementalHistoryChunks,
       supplementalHistoryMaxBindCount,
+      continuityBaseline,
       cacheKey: "stablecoin-charts",
       syncStartSec,
       cacheWriteMode: cacheResult.written ? "published" : "skipped-newer",

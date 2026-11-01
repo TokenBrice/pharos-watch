@@ -85,6 +85,7 @@ describe("dex liquidity cron metadata", () => {
     expect(getCronQualityReasons(metadata)).toEqual(reasons);
     expect(metadata.rowsWritten).toBe(300);
     expect(metadata.persistence).toMatchObject({ skipped: false, historicalSnapshotWriteFailed: false });
+    expect((metadata.quality as { degraded?: boolean }).degraded).toBeUndefined();
 
     const compacted = compactCronMetadataForPersistence(JSON.stringify({
       ...metadata, oversizedDiagnostic: "x".repeat(MAX_PERSISTED_CRON_METADATA_BYTES),
@@ -98,6 +99,16 @@ describe("dex liquidity cron metadata", () => {
     Object.assign(params.scoreState.analysis.sourceCoverage, { qualityDriftSeverity: "none", qualityDriftFlags: [] });
     params.sourceState.fallbackSignals = ["gecko"];
     expect(buildDexLiquidityCronMetadata(params)).not.toHaveProperty("quality");
+  });
+
+  it("degrades the quality verdict only for a confirmed cohort drop", () => {
+    const params = metadataParams();
+    Object.assign(params.scoreState.analysis.sourceCoverage, {
+      qualityDriftFlags: ["chain-tvl-drop:ethereum"],
+      cohortDriftFlags: ["chain-tvl-drop:ethereum"],
+    });
+    const metadata = buildDexLiquidityCronMetadata(params);
+    expect(metadata.quality).toEqual({ degraded: true, reasons: ["chain-tvl-drop:ethereum"] });
   });
 
   it("reports partial-source warnings even without confirmed drift or a failed source", () => {

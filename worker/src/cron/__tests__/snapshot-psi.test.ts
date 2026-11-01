@@ -77,6 +77,9 @@ describe("snapshotPsiDaily", () => {
       avgScore: 87.4,
       band: "STEADY",
       sampleCount: 96,
+      expectedSampleCount: 48,
+      minimumSampleCount: 39,
+      sampleCoverageComplete: true,
     });
     expect(stored).toMatchObject({
       computed_at: computedAt,
@@ -171,8 +174,33 @@ describe("snapshotPsiDaily", () => {
     expect(JSON.parse(row.components)).toEqual({ severity: null, breadth: 0, stressBreadth: 4, trend: 3 });
     expect(JSON.parse(row.input_snapshot)).toMatchObject({
       sampleCount: 2,
+      expectedSampleCount: 48,
+      minimumSampleCount: 39,
       componentSampleCounts: { severity: 0, breadth: 2, stressBreadth: 1, trend: 2 },
     });
+  });
+
+  it("records a machine-readable coverage finding for a partial day", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const computedAt = yesterdayMidnightFrom(Date.now());
+    for (let index = 0; index < 10; index++) {
+      seedSample(sqlite, computedAt + index * 1_800, 80);
+    }
+
+    const result = await snapshotPsiDaily(db);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      sampleCount: 10,
+      expectedSampleCount: 48,
+      minimumSampleCount: 39,
+      sampleCoverageComplete: false,
+      quality: {
+        reason: "psi-daily-sample-coverage",
+        reasons: ["psi-daily-sample-coverage"],
+      },
+    });
+    // The partial day is still a valid average over observed samples and is
+    // published; coverage is disclosed, not turned into a missing day.
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM stability_index").get()).toEqual({ count: 1 });
   });
 
   it("preserves the existing daily row when a source read fails", async () => {

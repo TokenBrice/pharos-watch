@@ -1,12 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { DexExitEvidenceKind } from "@shared/types/market";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
+  DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY,
   DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD,
   DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY,
   runDexExitRouteTurnoverWatchdog,
 } from "../../dex-exit-route-turnover-watchdog";
+
+const sendToChatMock = vi.hoisted(() => vi.fn(async (..._args: unknown[]) => ({ ok: true })));
+vi.mock("../../../telegram/delivery/telegram", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../telegram/delivery/telegram")>()),
+  sendToChat: sendToChatMock,
+}));
 
 const CURRENT_GENERATION = "dex-liquidity-current";
 const PREVIOUS_GENERATION = "dex-liquidity-previous";
@@ -103,7 +110,7 @@ function watchdogDb(
   currentRows: Record<string, unknown>[],
   previousValue: string | null,
   generationId: string = CURRENT_GENERATION,
-  options: { allowUnusedWrite?: boolean } = {},
+  options: { allowUnusedWrite?: boolean; alertStateValue?: string | null } = {},
 ) {
   return mockD1([
     {
@@ -123,6 +130,13 @@ function watchdogDb(
       first: previousValue === null ? null : { value: previousValue, updated_at: 1_000 },
     },
     {
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      matchBinds: [DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY],
+      rows: [],
+      first: options.alertStateValue == null ? null : { value: options.alertStateValue, updated_at: 1_000 },
+      allowUnused: true,
+    },
+    {
       match: "INSERT INTO cache",
       rows: [],
       runMeta: { changes: 1 },
@@ -138,6 +152,10 @@ function lastSnapshotWrite(db: { getHistory: () => Array<{ sql: string; binds: u
 }
 
 describe("DEX exit-route turnover watchdog", () => {
+  beforeEach(() => {
+    sendToChatMock.mockClear();
+    sendToChatMock.mockResolvedValue({ ok: true });
+  });
   it("stays healthy when the published route set does not turn over", async () => {
     const coinRoutes = routes("route-a", "route-b");
     const result = await runDexExitRouteTurnoverWatchdog(watchdogDb(
@@ -343,6 +361,114 @@ describe("DEX exit-route turnover watchdog", () => {
     expect(thirdMetadata.quality).toBeUndefined();
     expect(secondMetadata.quality).toEqual({ reason: "dex-route-turnover-threshold" });
     expect(JSON.parse(lastSnapshotWrite(thirdDb) ?? "{}").pendingAlert).toBeUndefined();
+  });
+
+  it("pages the operator once per sustained turnover episode", async () => {
+    const creds = { botToken: "bot-token", chatId: "ops-chat" };
+    const firstDb = watchdogDb(
+      [publishedRow("coin-a", routes("route-a"))],
+      previousSnapshot([{ stablecoinId: "coin-a", routes: routes("route-a", "route-b", "route-c", "route-d") }]),
+      CURRENT_GENERATION,
+    );
+    await runDexExitRouteTurnoverWatchdog(firstDb, undefined, { operatorTelegramCreds: creds });
+    expect(sendToChatMock).not.toHaveBeenCalled();
+
+    const secondDb = watchdogDb(
+      [publishedRow("coin-a", routes("route-a"))],
+      lastSnapshotWrite(firstDb),
+      SUSTAINED_GENERATION,
+    );
+    const second = await runDexExitRouteTurnoverWatchdog(secondDb, undefined, { operatorTelegramCreds: creds });
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(String(sendToChatMock.mock.calls[0]?.[1])).toContain("sync-dex-liquidity");
+    expect(String(sendToChatMock.mock.calls[0]?.[1])).toContain(SUSTAINED_GENERATION);
+    expect(JSON.parse(String(second.metadata)).operatorAlert).toEqual({
+      episodeActive: true, sent: true, deliveryFailed: false,
+    });
+
+    const thirdDb = watchdogDb(
+      [publishedRow("coin-a", [])],
+      lastSnapshotWrite(secondDb),
+      AFTER_GENERATION,
+      {
+        alertStateValue: JSON.stringify({
+          active: true,
+          generationId: SUSTAINED_GENERATION,
+          sentAtSec: 2_000,
+        }),
+      },
+    );
+    const third = await runDexExitRouteTurnoverWatchdog(thirdDb, undefined, { operatorTelegramCreds: creds });
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(String(third.metadata))).toMatchObject({
+      alertingCoinCount: 0,
+      operatorAlert: { episodeActive: false, sent: false },
+    });
+
+    // Re-observing the delivered generation never re-pages.
+    const rerunDb = watchdogDb(
+      [publishedRow("coin-a", routes("route-a"))],
+      lastSnapshotWrite(secondDb),
+      SUSTAINED_GENERATION,
+      {
+        alertStateValue: JSON.stringify({
+          active: true,
+          generationId: SUSTAINED_GENERATION,
+          sentAtSec: 2_000,
+        }),
+        allowUnusedWrite: true,
+      },
+    );
+    const rerun = await runDexExitRouteTurnoverWatchdog(rerunDb, undefined, { operatorTelegramCreds: creds });
+    expect(rerun.status).toBe("skipped_neutral");
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+
+    // A later confirmed episode pages again.
+    const laterDb = watchdogDb(
+      [publishedRow("coin-a", [])],
+      lastSnapshotWrite(thirdDb),
+      "dex-liquidity-later",
+    );
+    const later = await runDexExitRouteTurnoverWatchdog(laterDb, undefined, { operatorTelegramCreds: creds });
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(later.metadata)).operatorAlert).toMatchObject({
+      episodeActive: true,
+      sent: true,
+    });
+  });
+
+  it("keeps the alert pending and degrades when operator delivery fails", async () => {
+    const creds = { botToken: "bot-token", chatId: "ops-chat" };
+    const firstDb = watchdogDb(
+      [publishedRow("coin-a", routes("route-a"))],
+      previousSnapshot([{ stablecoinId: "coin-a", routes: routes("route-a", "route-b", "route-c", "route-d") }]),
+      CURRENT_GENERATION,
+    );
+    await runDexExitRouteTurnoverWatchdog(firstDb);
+    const secondDb = watchdogDb(
+      [publishedRow("coin-a", routes("route-a"))],
+      lastSnapshotWrite(firstDb),
+      SUSTAINED_GENERATION,
+    );
+    sendToChatMock.mockResolvedValueOnce({ ok: false });
+    const failed = await runDexExitRouteTurnoverWatchdog(secondDb, undefined, { operatorTelegramCreds: creds });
+    expect(failed.status).toBe("degraded");
+    expect(JSON.parse(String(failed.metadata))).toMatchObject({
+      reason: "operator-alert-delivery-failed",
+      operatorAlert: { episodeActive: true, sent: false, deliveryFailed: true },
+    });
+
+    // Re-observing the same generation retries the pending episode.
+    const retryDb = watchdogDb(
+      [publishedRow("coin-a", routes("route-a"))],
+      lastSnapshotWrite(secondDb),
+      SUSTAINED_GENERATION,
+    );
+    const retried = await runDexExitRouteTurnoverWatchdog(retryDb, undefined, { operatorTelegramCreds: creds });
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(String(retried.metadata)).operatorAlert).toEqual({
+      episodeActive: true, sent: true, deliveryFailed: false,
+    });
   });
 
   it("does not alert on single-route flaps of tiny route sets, even a lone route briefly vanishing", async () => {

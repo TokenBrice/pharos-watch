@@ -5,6 +5,7 @@ import type { CanaryStatus, CanaryExecutionStatus, CanaryRunSeverity, CanaryRunS
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
 import { classifyStablecoinPublicationGap, evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
+import { checkSupplyHistoryDailyCoverage } from "./canary-checks-supply";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "./abort";
@@ -16,7 +17,28 @@ import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../cron/yield-sync/benchmarks";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 import { loadActiveSafetyScoreCohort } from "./safety-score-active-source";
 import { classifyFreshness } from "./status/freshness-oracle";
+import {
+  checkDdrEligibleUnsealed,
+  checkDepegDetectionCensus,
+  checkDepegDexSuppression,
+  checkDepegOpenCoverage,
+  checkDepegPendingConfirmation,
+} from "./canary-checks-depeg";
+import { checkBlacklistRosterCoverage, checkMintBurnPublicationCoverage } from "./canary-checks-mintburn";
+import {
+  boundedText,
+  degradedResult,
+  errorResult,
+  failedResult,
+  okResult,
+  skippedResult,
+  unavailableResult,
+} from "./canary-check-results";
+import { classifyPsiUniverseCoverage } from "@shared/lib/psi-policy";
+import { checkTapeClassLiveness } from "./canary-checks-tape";
+import { checkPublicDatasetSnapshotCompleteness } from "./canary-checks-public-dataset";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
+import { PRICING_CANARY_CHECKS } from "./canary-checks-pricing";
 
 export {
   normalizeWorkerCanaryMode,
@@ -89,6 +111,60 @@ interface PsiLatestRow {
   score: number;
   band: string;
   methodology_version: string;
+  input_snapshot: string | null;
+}
+
+type PsiUniverseCoverageRead =
+  | { kind: "absent" }
+  | { kind: "invalid" }
+  | {
+      kind: "ok";
+      expected: number;
+      present: number;
+      admittedSupply: number;
+      missingFromCacheIds: string[];
+      supplyUnavailableIds: string[];
+      trendUnavailableIds: string[];
+    };
+
+function readPsiUniverseCoverage(raw: string | null): PsiUniverseCoverageRead {
+  if (raw == null || raw.length === 0) return { kind: "absent" };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { kind: "invalid" };
+  }
+  if (parsed == null || typeof parsed !== "object" || !("universeCoverage" in parsed)) {
+    return { kind: "absent" };
+  }
+  const coverage = (parsed as { universeCoverage?: unknown }).universeCoverage;
+  if (coverage == null || typeof coverage !== "object") return { kind: "invalid" };
+  const record = coverage as Record<string, unknown>;
+  const expected = record.expected;
+  const present = record.present;
+  const admittedSupply = record.admittedSupply;
+  const isStringArray = (value: unknown): value is string[] =>
+    Array.isArray(value) && value.every((entry) => typeof entry === "string");
+  if (
+    !Number.isSafeInteger(expected) || (expected as number) < 0
+    || !Number.isSafeInteger(present) || (present as number) < 0
+    || !Number.isSafeInteger(admittedSupply) || (admittedSupply as number) < 0
+    || !isStringArray(record.missingFromCacheIds)
+    || !isStringArray(record.supplyUnavailableIds)
+    || !isStringArray(record.trendUnavailableIds)
+  ) {
+    return { kind: "invalid" };
+  }
+  return {
+    kind: "ok",
+    expected: expected as number,
+    present: present as number,
+    admittedSupply: admittedSupply as number,
+    missingFromCacheIds: record.missingFromCacheIds,
+    supplyUnavailableIds: record.supplyUnavailableIds,
+    trendUnavailableIds: record.trendUnavailableIds,
+  };
 }
 
 interface WorkerCanaryRunRow {
@@ -101,12 +177,12 @@ interface WorkerCanaryRunRow {
   error: string | null;
 }
 
-interface CanaryCheckContext {
+export interface CanaryCheckContext {
   latestPublishedDexGeneration?: Promise<DexPublishedGenerationRow | null>;
   latestDexCurrentSummary?: Promise<DexLatestGenerationSummaryRow>;
 }
 
-type CanaryCheckDefinition = {
+export type CanaryCheckDefinition = {
   checkId: string;
   label: string;
   description: string;
@@ -128,7 +204,6 @@ const CANARY_SEVERITY_ORDER: Record<CanaryRunSeverity, number> = {
 };
 
 const MAX_CANARY_METADATA_JSON_CHARS = 4_000;
-const MAX_CANARY_ERROR_CHARS = 800;
 const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
 const PSI_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stabilityIndex;
 const DEWS_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stressSignals;
@@ -156,34 +231,6 @@ function classifyCanaryFreshness(timestampSec: number | null, observedAt: number
 
 function isFreshAt(timestampSec: number | null, observedAt: number, maxAgeSec: number): boolean {
   return classifyCanaryFreshness(timestampSec, observedAt, maxAgeSec).state === "fresh";
-}
-
-function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
-  return value.length <= maxChars ? value : `${value.slice(0, maxChars)}...`;
-}
-
-function okResult(metadata?: Record<string, unknown>) {
-  return { status: "ok" as const, severity: "info" as const, executionStatus: "completed" as const, executionFailureReason: null, metadata };
-}
-
-function degradedResult(error: string, metadata?: Record<string, unknown>) {
-  return { status: "degraded" as const, severity: "warning" as const, executionStatus: "completed" as const, executionFailureReason: null, error, metadata };
-}
-
-function errorResult(error: string, metadata?: Record<string, unknown>) {
-  return { status: "error" as const, severity: "error" as const, executionStatus: "completed" as const, executionFailureReason: null, error, metadata };
-}
-
-function skippedResult(reason: string, metadata?: Record<string, unknown>) {
-  return { status: "skipped" as const, severity: "info" as const, executionStatus: "completed" as const, executionFailureReason: null, error: reason, metadata };
-}
-
-function failedResult(reason: string, metadata?: Record<string, unknown>) {
-  return { ...errorResult(reason, metadata), executionStatus: "failed" as const, executionFailureReason: reason };
-}
-
-function unavailableResult(error: unknown) {
-  return failedResult("canary-source-unavailable", { error: boundedText(toErrorMessage(error)) });
 }
 
 function isFiniteScore(value: unknown): value is number {
@@ -462,7 +509,7 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
     const row = await runWithOverloadRetry(() =>
       db
         .prepare(
-          `SELECT stored_at, score, band, methodology_version
+          `SELECT stored_at, score, band, methodology_version, input_snapshot
              FROM stability_index_samples
             ORDER BY stored_at DESC
             LIMIT 1`,
@@ -472,6 +519,25 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
     if (!row) {
       return degradedResult("no PSI stability_index_samples rows found", { maxAgeSec: PSI_MAX_AGE_SEC });
     }
+    const coverageRead = readPsiUniverseCoverage(row.input_snapshot);
+    const coverage = coverageRead.kind === "ok"
+      ? {
+          // Coverage is a core-universe claim: supply-unavailable members are
+          // their own finding, and `present` may still include historical ids
+          // persisted by older producers, so classify on the missing core list.
+          status: classifyPsiUniverseCoverage(
+            coverageRead.expected,
+            coverageRead.expected - coverageRead.missingFromCacheIds.length,
+          ),
+          expected: coverageRead.expected,
+          present: coverageRead.present,
+          admittedSupply: coverageRead.admittedSupply,
+          missingFromCacheCount: coverageRead.missingFromCacheIds.length,
+          missingFromCacheIds: coverageRead.missingFromCacheIds.slice(0, 20),
+          supplyUnavailableCount: coverageRead.supplyUnavailableIds.length,
+          trendUnavailableCount: coverageRead.trendUnavailableIds.length,
+        }
+      : null;
     const freshness = classifyCanaryFreshness(row.stored_at, observedAt, PSI_MAX_AGE_SEC);
     const metadata = {
       storedAt: row.stored_at,
@@ -480,6 +546,8 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
       score: row.score,
       band: row.band,
       methodologyVersion: row.methodology_version,
+      universeCoverage: coverage,
+      ...(coverageRead.kind === "invalid" ? { universeCoverageReason: "input-snapshot-invalid" } : {}),
       ...(freshness.timestampReason ? { timestampReason: freshness.timestampReason } : {}),
     };
     if (!isScoreInRange(row.score)) {
@@ -490,6 +558,23 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
         freshness.timestampReason
           ? `latest PSI sample clock rejected: ${freshness.timestampReason}`
           : `latest PSI sample is ${freshness.ageSec}s old`,
+        metadata,
+      );
+    }
+    if (coverageRead.kind === "invalid") {
+      return degradedResult("latest PSI sample input snapshot is unreadable", metadata);
+    }
+    if (coverage?.status === "error") {
+      return errorResult(
+        `PSI universe coverage ${coverage.admittedSupply}/${coverage.expected} admitted ` +
+          `(${coverage.expected - coverage.admittedSupply} missing)`,
+        metadata,
+      );
+    }
+    if (coverage?.status === "degraded") {
+      return degradedResult(
+        `PSI universe coverage ${coverage.admittedSupply}/${coverage.expected} admitted ` +
+          `(${coverage.expected - coverage.admittedSupply} missing)`,
         metadata,
       );
     }
@@ -725,6 +810,12 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     run: checkStablecoinsCacheActiveCount,
   },
   {
+    checkId: "supply-history-daily-coverage",
+    label: "Supply history daily coverage",
+    description: "Today's supply_history rows match the completion marker's written proof; non-restored active supply unavailable for under 1% is routine, up to 10% warns, beyond that is an error.",
+    run: checkSupplyHistoryDailyCoverage,
+  },
+  {
     checkId: "psi-latest-sample",
     label: "PSI latest sample",
     description: "The latest PSI sample exists, is fresh, and has a finite score in the 0-100 range.",
@@ -754,6 +845,61 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     description: "USD T-bill benchmark is direct, current, and has been published fresh in two consecutive generations.",
     run: checkUsdBenchmarkCurrent,
   },
+  {
+    checkId: "depeg-detection-census",
+    label: "Depeg detection census",
+    description: "The depeg ledger advances with a completed observation census covering at least 95% of eligible assets in two consecutive runs.",
+    run: checkDepegDetectionCensus,
+  },
+  {
+    checkId: "depeg-pending-confirmation-stall",
+    label: "Depeg pending confirmation",
+    description: "Candidate promotions and expiries keep moving: no extreme move expires unconfirmed and no candidate outlives every dynamic expiry limit.",
+    run: checkDepegPendingConfirmation,
+  },
+  {
+    checkId: "depeg-open-coverage",
+    label: "Depeg open-event price coverage",
+    description: "Every open depeg event keeps a trusted price observation inside the shared continuous-coverage gap budget.",
+    run: checkDepegOpenCoverage,
+  },
+  {
+    checkId: "depeg-dex-suppression-divergence",
+    label: "Depeg DEX suppression divergence",
+    description: "No USD-pegged asset has its primary price beyond the trigger while DEX corroboration inside the recovery band suppresses the onset.",
+    run: checkDepegDexSuppression,
+  },
+  {
+    checkId: "ddr-eligible-unsealed",
+    label: "DDR eligible incidents sealed",
+    description: "Every active policy-universe incident eligible for a prediction, not health-deferred or quarantined for repair, carries a sealed public prediction within one producer run.",
+    run: checkDdrEligibleUnsealed,
+  },
+  {
+    checkId: "mint-burn-publication-coverage",
+    label: "Mint/burn publication coverage",
+    description: "The published aggregate carries its admitted roster, a gauge, a fresh common watermark, and no quarantined legs.",
+    run: checkMintBurnPublicationCoverage,
+  },
+  {
+    checkId: "blacklist-roster-coverage",
+    label: "Blacklist roster coverage",
+    description: "The published blacklist summary retains its event population, current-balance rows, and supported config roster.",
+    run: checkBlacklistRosterCoverage,
+  },
+  {
+    checkId: "tape-class-liveness",
+    label: "Tape class liveness",
+    description: "Snapshot-backed tape projector cursors keep up with moving source clocks inside the 90-minute lag budget.",
+    run: checkTapeClassLiveness,
+  },
+  {
+    checkId: "public-dataset-snapshot-completeness",
+    label: "Public dataset snapshot completeness",
+    description: "The newest sealed public snapshot carries nonempty stablecoin and DEWS sections, complete liquidity rows and in-budget generation clocks.",
+    run: checkPublicDatasetSnapshotCompleteness,
+  },
+  ...PRICING_CANARY_CHECKS,
 ] as const;
 export const ACTIVE_CANARY_CHECK_IDS: readonly string[] = CANARY_CHECKS.map((definition) => definition.checkId);
 
@@ -952,26 +1098,30 @@ export async function loadCanaryStatus(
   mode: WorkerCanaryMode = "off",
 ): Promise<CanaryStatus> {
   if (mode === "off" || mode === "shadow") return emptyCanaryStatus(now);
-  const activeCheckIdPlaceholders = ACTIVE_CANARY_CHECK_IDS.map(() => "?").join(", ");
+  const activeCheckIds = ACTIVE_CANARY_CHECK_IDS.map(() => "(?)").join(", ");
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT r.check_id, r.status, r.severity, r.observed_at, r.duration_ms, r.metadata_json, r.error
-           FROM worker_canary_runs r
-           INNER JOIN (
-             SELECT check_id, MAX(observed_at) AS observed_at
-               FROM worker_canary_runs
-              WHERE mode = ?
-                AND check_id IN (${activeCheckIdPlaceholders})
-              GROUP BY check_id
+        // One correlated MAX and one index seek per active check. The previous
+        // `GROUP BY check_id` aggregate scanned every retained run of every
+        // active check, and the staleness watchdog now reads this every 15
+        // minutes. CROSS JOIN pins `latest` as the outer 21-row loop; the
+        // (mode, check_id, observed_at) index then serves one seek per check.
+        `WITH active(check_id) AS (VALUES ${activeCheckIds})
+         SELECT r.check_id, r.status, r.severity, r.observed_at, r.duration_ms, r.metadata_json, r.error
+           FROM (
+             SELECT active.check_id,
+                    (SELECT MAX(newest.observed_at) FROM worker_canary_runs newest
+                      WHERE newest.mode = ? AND newest.check_id = active.check_id) AS observed_at
+               FROM active
            ) latest
-             ON latest.check_id = r.check_id
-            AND latest.observed_at = r.observed_at
+           CROSS JOIN worker_canary_runs r
           WHERE r.mode = ?
-            AND r.check_id IN (${activeCheckIdPlaceholders})
+            AND r.check_id = latest.check_id
+            AND r.observed_at = latest.observed_at
           ORDER BY r.check_id ASC`,
       )
-      .bind(mode, ...ACTIVE_CANARY_CHECK_IDS, mode, ...ACTIVE_CANARY_CHECK_IDS)
+      .bind(...ACTIVE_CANARY_CHECK_IDS, mode, mode)
       .all<WorkerCanaryRunRow>(),
   );
 

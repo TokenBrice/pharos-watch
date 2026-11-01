@@ -86,6 +86,7 @@ import {
   loadPublishedScoreBearingDexRoutes,
   hasAdapterOwnedDexSourceHeader,
   isDexMeasuredExecutionTargetInLane,
+  isDexMeasuredExecutionTargetScoreEligible,
   resolveMeasuredExecutionCronStatus, resolveTargetDeployment, summarizeMeasuredExecutionQuoteFailures,
   type TargetDeployment,
 } from "./admission";
@@ -993,6 +994,31 @@ async function syncDexMeasuredExecutionLane(
     }
   });
 
+  // Per-chain score-eligible output. A target that was not observed this run
+  // (policy-excluded or a quarantined empty pool) leaves both numerator and
+  // denominator, so a starved chain is one that should have measured and did
+  // not. The freshness sentinel compares two consecutive generations.
+  const chains: Record<string, {
+    scoreEligibleTargets: number;
+    measured: number;
+    failed: number;
+    deferred: number;
+  }> = {};
+  for (const outcome of outcomes) {
+    if (outcome.observedThisRun === false) continue;
+    if (!isDexMeasuredExecutionTargetScoreEligible(outcome.target)) continue;
+    const summary = chains[outcome.target.chain] ??= {
+      scoreEligibleTargets: 0,
+      measured: 0,
+      failed: 0,
+      deferred: 0,
+    };
+    summary.scoreEligibleTargets += 1;
+    if (outcome.status === "measured") summary.measured += 1;
+    else if (outcome.failureReason === "budget-deferred") summary.deferred += 1;
+    else summary.failed += 1;
+  }
+
   await reportProgress?.({
     stage: "quote-publication",
     message: "Publishing measured DEX execution quotes",
@@ -1107,6 +1133,7 @@ async function syncDexMeasuredExecutionLane(
       : {}),
     openChainCircuits: rpcBudget.openChains,
     retention,
+    chains,
     failuresByReason: outcomes.reduce<Record<string, number>>((counts, outcome) => {
       if (outcome.status === "failed") {
         const reason = outcome.failureReason ?? "unknown";

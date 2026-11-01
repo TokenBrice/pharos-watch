@@ -1,0 +1,184 @@
+name: Post-deploy data regression
+
+# The regression classes this watches (a producer reporting ok while publishing
+# empty/partial data) only appear after the first producer cycle, so this is a
+# separate read-only workflow rather than part of the short deploy job. It
+# consumes the pre-deploy baseline artifact captured by Deploy to Cloudflare.
+on:
+  # Reviewed exception: the job below runs only for main-branch push or dispatch
+  # deploys from this repository, so fork-controlled runs never reach secrets.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
+    workflows: ["Deploy to Cloudflare"]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      deploy_run_id:
+        description: Completed "Deploy to Cloudflare" run id to compare against.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# One delayed check per deploy run: GitHub keeps only the newest pending run in
+# a concurrency group, and a rapid second deploy must not discard the first
+# deployment's regression evidence.
+concurrency:
+  group: post-deploy-data-regression-${{ github.event.workflow_run.id || inputs.deploy_run_id }}
+  cancel-in-progress: false
+
+jobs:
+  data-regression:
+    # Only a completed push/workflow_dispatch run from this repository's main may
+    # feed its baseline artifact into this issues:write job; fork PR runs are excluded.
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch'
+        || (
+          github.event.workflow_run.conclusion != 'cancelled'
+          && (github.event.workflow_run.event == 'push' || github.event.workflow_run.event == 'workflow_dispatch')
+          && github.event.workflow_run.head_repository.full_name == github.repository
+          && github.event.workflow_run.head_branch == 'main'
+        )
+      }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    permissions:
+      actions: read
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+        with:
+          node-version: "24.16.0"
+          cache-npm: "false"
+          install-deps: "false"
+          bootstrap-generated: "false"
+      - id: deploy-run
+        name: Resolve deploy run id
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          INPUT_RUN_ID: ${{ inputs.deploy_run_id }}
+        run: |
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            run_id="${INPUT_RUN_ID}"
+          else
+            run_id="${WORKFLOW_RUN_ID}"
+          fi
+          if [[ ! "${run_id}" =~ ^[1-9][0-9]*$ ]]; then
+            echo "::error::No Deploy to Cloudflare run id is available."
+            exit 1
+          fi
+          echo "run-id=${run_id}" >> "$GITHUB_OUTPUT"
+      - id: baseline
+        name: Download pre-deploy baseline
+        continue-on-error: true
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: post-deploy-data-baseline
+          run-id: ${{ steps.deploy-run.outputs.run-id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/post-deploy-data
+      - id: baseline-available
+        name: Check baseline artifact
+        shell: bash
+        env:
+          BASELINE_PATH: ${{ runner.temp }}/post-deploy-data/post-deploy-data-baseline.json
+        run: |
+          if [ -f "${BASELINE_PATH}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No pre-deploy data baseline artifact; reporting the delayed check as unknown, not healthy."
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+      - id: data-regression
+        name: Compare data volume after the first producer cycle
+        if: steps.baseline-available.outputs.available == 'true'
+        continue-on-error: true
+        env:
+          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
+          BASELINE_PATH: ${{ runner.temp }}/post-deploy-data/post-deploy-data-baseline.json
+          REPORT_PATH: ${{ runner.temp }}/post-deploy-data/report.json
+          ISSUE_BODY_PATH: ${{ runner.temp }}/post-deploy-data/issue.md
+        run: >-
+          node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/check-post-deploy-data-regression.ts
+          --compare "${BASELINE_PATH}" --report "${REPORT_PATH}" --issue-body "${ISSUE_BODY_PATH}"
+      - name: Upsert data-regression incident
+        if: steps.data-regression.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          DEPLOY_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ steps.deploy-run.outputs.run-id }}
+          ISSUE_BODY_PATH: ${{ runner.temp }}/post-deploy-data/issue.md
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$RUNNER_TEMP/post-deploy-data/incident.md"
+          if [ -f "${ISSUE_BODY_PATH}" ]; then
+            cp "${ISSUE_BODY_PATH}" "${body}"
+          else
+            printf '%s\n' \
+              'The delayed post-deploy data regression check failed before it could write its report.' \
+              'Inspect the workflow log before assuming the data is healthy.' > "${body}"
+          fi
+          {
+            echo ""
+            echo "- Delayed check run: ${RUN_URL}"
+            echo "- Deploy run: ${DEPLOY_RUN_URL}"
+            echo "- Runbook: https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/deployment-process.md#operational-acceptance"
+          } >> "${body}"
+          issue_number=$(gh issue list --state open --search 'in:title "Post-deploy data regression"' --json number,title --jq '[.[] | select(.title == "Post-deploy data regression")][0].number // empty')
+          if [ -n "${issue_number}" ]; then
+            gh issue edit "${issue_number}" --body-file "${body}"
+          else
+            gh issue create --title "Post-deploy data regression" --body-file "${body}"
+          fi
+      - name: Close recovered data-regression incident
+        if: steps.data-regression.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPORT_PATH: ${{ runner.temp }}/post-deploy-data/report.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          outcome=$(jq -r '.outcome // "unknown"' "${REPORT_PATH}" 2>/dev/null || echo unknown)
+          if [ "${outcome}" != "passed" ]; then
+            echo "Outcome ${outcome}; leaving any open incident in place."
+            exit 0
+          fi
+          issue_number=$(gh issue list --state open --search 'in:title "Post-deploy data regression"' --json number,title --jq '[.[] | select(.title == "Post-deploy data regression")][0].number // empty')
+          if [ -n "${issue_number}" ]; then
+            gh issue close "${issue_number}" --comment "Recovered: the delayed post-deploy data check passed again (${RUN_URL})."
+          fi
+      - name: Fail on unreadable evidence
+        if: ${{ always() }}
+        env:
+          DATA_REGRESSION_OUTCOME: ${{ steps.data-regression.outcome }}
+          BASELINE_AVAILABLE: ${{ steps.baseline-available.outputs.available }}
+          REPORT_PATH: ${{ runner.temp }}/post-deploy-data/report.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A real regression already failed the compare step and owns its incident.
+          if [ "${DATA_REGRESSION_OUTCOME}" = "failure" ]; then exit 0; fi
+          if [ "${BASELINE_AVAILABLE}" != "true" ]; then
+            echo "::error::No pre-deploy data baseline artifact; the delayed check is unknown, not healthy."
+            exit 1
+          fi
+          outcome=$(jq -r '.outcome // "unknown"' "${REPORT_PATH}" 2>/dev/null || echo unknown)
+          if [ "${outcome}" != "passed" ] && [ "${outcome}" != "skipped" ]; then
+            reason=$(jq -r '.reason // "unknown"' "${REPORT_PATH}" 2>/dev/null || echo unknown)
+            echo "::error::Delayed check evidence is ${outcome}, not healthy (${reason})."
+            exit 1
+          fi
+      - name: Fail on data regression
+        if: steps.data-regression.outcome == 'failure'
+        run: exit 1

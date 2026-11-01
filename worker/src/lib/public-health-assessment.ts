@@ -51,8 +51,9 @@ import {
   unknownActivePriceCoverageHealth,
   unknownStablecoinPublicationHealth,
 } from "./stablecoin-publication-health";
-import type { SchedulerLiveness } from "@shared/types/status/public-health";
+import type { OperatorAlertHealth, SchedulerLiveness } from "@shared/types/status/public-health";
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus as getSchedulerLivenessImpactStatus, schedulerLivenessWarnings } from "./status/scheduler-liveness";
+import { loadOperatorAlertHealth } from "./status/operator-alert-health";
 import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "./cron-output";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
@@ -145,6 +146,8 @@ export interface PublicHealthAssessment {
   activePriceCoverageImpactStatus: HealthResponse["status"];
   schedulerLiveness: SchedulerLiveness;
   schedulerLivenessImpactStatus: HealthResponse["status"];
+  /** Operator-alert channel receipt; additive because older snapshots omit it. */
+  operatorAlerts?: OperatorAlertHealth;
 }
 
 /** Current-read completeness, independent of semantic service health. */
@@ -193,7 +196,11 @@ export function buildPublicHealthResponse(
     ? undefined
     : getBlacklistGapStatus({ missingRatio: assessment.blacklistMetrics.totalEvents > 0
       ? assessment.blacklistMetrics.classificationMissingAmounts / assessment.blacklistMetrics.totalEvents : 0 });
-  return { ...body, ...projectPublicStatus(body, undefined, blacklistImpactStatus) };
+  return {
+    ...body,
+    ...(assessment.operatorAlerts ? { operatorAlerts: assessment.operatorAlerts } : {}),
+    ...projectPublicStatus(body, undefined, blacklistImpactStatus),
+  };
 }
 
 function publicHealthErrorMessage(kind: "blacklist" | "db" | "mint-burn"): string {
@@ -591,7 +598,10 @@ export async function assessPublicHealth(
 ): Promise<PublicHealthAssessment> {
   const logPrefix = options?.logPrefix ?? "health";
   const warnings: string[] = [];
-  const schedulerLiveness = options?.schedulerLiveness ?? await loadSchedulerLiveness(db, now);
+  const [schedulerLiveness, operatorAlerts] = await Promise.all([
+    options?.schedulerLiveness ?? loadSchedulerLiveness(db, now),
+    loadOperatorAlertHealth(db, now),
+  ]);
   const schedulerLivenessImpactStatus = getSchedulerLivenessImpactStatus(schedulerLiveness);
   warnings.push(...schedulerLivenessWarnings(schedulerLiveness));
 
@@ -644,6 +654,7 @@ export async function assessPublicHealth(
       activePriceCoverageImpactStatus: "healthy",
       schedulerLiveness,
       schedulerLivenessImpactStatus,
+      operatorAlerts,
     };
   }
 
@@ -929,5 +940,6 @@ export async function assessPublicHealth(
     activePriceCoverageImpactStatus,
     schedulerLiveness,
     schedulerLivenessImpactStatus,
+    operatorAlerts,
   };
 }

@@ -21,7 +21,22 @@ import {
 } from "../lib/status/freshness-oracle";
 import { rethrowIfAborted } from "../lib/abort";
 import { loadSafetyScoreV9PublicationHealth } from "../lib/safety-score-v9/publication-health";
+import type { WorkerCanaryMode } from "../lib/worker-canary-mode";
+import { recordOperatorAlertReceipt } from "../lib/status/operator-alert-health";
+import {
+  buildSupplyIntegrityConditions,
+  compactSupplyIntegrityReport,
+  confirmSupplyIntegrityConditions,
+  loadSupplyIntegrityReport,
+} from "../lib/supply-integrity";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
+import { loadCanaryOperatorWatch } from "./operator-watch-canary";
+import { loadProbeOperatorWatch } from "./operator-watch-probe";
+import { buildPricingOperatorConditions, pricingOperatorRuleIds } from "./operator-watch-pricing";
+import { loadBlacklistConfigWatchConditions } from "./operator-watch-blacklist";
+import { loadMintBurnStuckConfigWatchConditions } from "./operator-watch-mintburn";
+import { loadDexYieldWatchConditions } from "./operator-watch-dex-yield";
+import { loadPsiDailyCoverage } from "./operator-watch-psi-daily";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
 // prune-cron-history deletes cron_runs rows older than one week. A producer
@@ -39,7 +54,18 @@ export interface ProducerFreshnessLane {
   cacheKey: string | null;
   producerIntervalSec: number;
   thresholdSec: number;
+  /**
+   * A control-plane job excluded from consumer-publication lanes whose newest
+   * completed run (rather than a consumer output clock) proves liveness.
+   */
+  livenessOnly?: boolean;
 }
+
+/**
+ * Control-plane producers with no consumer freshness surface but whose total
+ * silence removes user-facing or operator-facing delivery work.
+ */
+const LIVENESS_ONLY_PRODUCERS = new Set(["dispatch-telegram-alerts"]);
 
 export function deriveCronFreshnessProducers(
   definitions: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS,
@@ -51,7 +77,8 @@ export function deriveCronFreshnessProducers(
   );
 
   return definitions.flatMap((definition): ProducerFreshnessLane[] => {
-    if (definition.freshnessSurface === "none") return [];
+    const livenessOnly = LIVENESS_ONLY_PRODUCERS.has(definition.job);
+    if (definition.freshnessSurface === "none" && !livenessOnly) return [];
     const cacheLane = cacheLaneByProducer.get(definition.job);
     if (cacheLane) {
       return [{
@@ -63,14 +90,19 @@ export function deriveCronFreshnessProducers(
       }];
     }
     if (definition.intervalSec * 3 > CRON_RUNS_RETENTION_SEC) return [];
+    // Registry producers without an existing lane budget tolerate two missed
+    // runs and become stale at 3x their canonical producer interval. A
+    // liveness-only control-plane job publishes no consumer output, so one
+    // missed invocation is the reviewed budget and the alert names it.
+    const thresholdSec = livenessOnly ? definition.intervalSec * 2 : definition.intervalSec * 3;
+    if (thresholdSec > CRON_RUNS_RETENTION_SEC) return [];
     return [{
       producerJob: definition.job,
       laneKey: null,
       cacheKey: null,
       producerIntervalSec: definition.intervalSec,
-      // Registry producers without an existing lane budget tolerate two missed
-      // runs and become stale at 3x their canonical producer interval.
-      thresholdSec: definition.intervalSec * 3,
+      thresholdSec,
+      ...(livenessOnly ? { livenessOnly } : {}),
     }];
   });
 }
@@ -217,6 +249,7 @@ export interface CronStalenessObservation {
   endpointThresholdSec: number;
   availabilityThresholdSec: number;
   availabilityImpacting: boolean;
+  livenessOnly?: boolean;
 }
 
 function isAgeStale(ageSeconds: number | null, thresholdSec: number): boolean {
@@ -252,18 +285,27 @@ function buildCronObservation(
   fact: ProducerFreshnessFact | undefined,
   nowSec: number,
 ): CronStalenessObservation {
+  const lastSuccessAt = producer.livenessOnly
+    ? fact?.lastLivenessAt ?? null
+    : fact?.lastSuccessAt ?? null;
   const classification = classifyFreshness(
-    fact ?? {
-      job: producer.producerJob,
-      lastSuccessAt: null,
-      lastRunAt: null,
-      expectedIntervalSec: producer.producerIntervalSec,
-      lastStatus: null,
-    },
     {
-      watchAt: { multiplier: 2 },
-      staleAt: { multiplier: 3 },
+      job: producer.producerJob,
+      lastSuccessAt,
+      lastLivenessAt: lastSuccessAt,
+      lastRunAt: fact?.lastRunAt ?? null,
+      expectedIntervalSec: producer.producerIntervalSec,
+      lastStatus: fact?.lastStatus ?? null,
     },
+    producer.livenessOnly
+      ? {
+          watchAt: { absoluteSec: producer.producerIntervalSec },
+          staleAt: { absoluteSec: producer.thresholdSec },
+        }
+      : {
+          watchAt: { multiplier: 2 },
+          staleAt: { multiplier: 3 },
+        },
     nowSec,
   );
   const ageSeconds = classification.ageSec;
@@ -272,7 +314,7 @@ function buildCronObservation(
     cacheKey: producer.cacheKey,
     producerJob: producer.producerJob,
     ageSeconds,
-    publishedAt: fact?.lastSuccessAt ?? null,
+    publishedAt: lastSuccessAt,
     generationId: null,
     assessedAt: nowSec,
     thresholdSec: producer.thresholdSec,
@@ -280,6 +322,7 @@ function buildCronObservation(
     endpointThresholdSec: producer.thresholdSec,
     availabilityThresholdSec: producer.thresholdSec,
     availabilityImpacting: classification.state === "stale",
+    ...(producer.livenessOnly ? { livenessOnly: true } : {}),
   };
 }
 
@@ -372,35 +415,68 @@ export interface OperatorWatchCondition {
   unknown?: boolean;
 }
 
-type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication";
+export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "supply" | "canary" | "probe" | "fx-rates" | "daily-lane" | "producer-quality" | "psi-daily-coverage" | "blacklist-config" | "mint-burn-config";
 
 const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; recovered: string }> = {
   producer: { raised: "Stale producers", recovered: "Recovered producers" },
   "detail-write": { raised: "Detail cache write failures", recovered: "Detail cache writes recovered" },
   dependency: { raised: "Dependency still stale after root recovery", recovered: "Dependency caught up" },
   "safety-publication": { raised: "Safety Score publication held", recovered: "Safety Score publication released" },
+  supply: { raised: "Supply integrity findings", recovered: "Supply integrity recovered" },
+  canary: { raised: "Canary findings raised", recovered: "Canary findings recovered" },
+  probe: { raised: "Probe paths persistently failing", recovered: "Probe paths recovered" },
+  "fx-rates": { raised: "FX rate publication degraded", recovered: "FX rate publication recovered" },
+  "daily-lane": { raised: "Daily pricing lanes incomplete", recovered: "Daily pricing lanes complete" },
+  "producer-quality": { raised: "Producer quality regressions", recovered: "Producer quality recovered" },
+  "psi-daily-coverage": { raised: "Daily PSI sample coverage low", recovered: "Daily PSI sample coverage restored" },
+  "blacklist-config": { raised: "Stale blacklist configs", recovered: "Blacklist configs recovered" },
+  "mint-burn-config": { raised: "Stuck mint/burn configs", recovered: "Mint/burn configs recovered" },
 };
 
-// At most eight section lines are emitted (four sections × raised/recovered).
-// Budget each line from the repo's conservative chunk limit so a systemic
-// detail-write cohort cannot exceed Telegram's sendMessage cap and block every
-// pending transition in the same message.
-const OPERATOR_ALERT_SECTION_LINES = 8;
-const OPERATOR_ALERT_SECTION_CHARS =
-  Math.floor(TELEGRAM_MESSAGE_CHUNK_LIMIT / OPERATOR_ALERT_SECTION_LINES) - 16;
+const OPERATOR_ALERT_HEADER = "<b>Pharos freshness watchdog</b>\n\n";
 
-function boundedOperatorSection(title: string, labels: readonly string[]): string {
+// Every section can raise and recover in one message, so at most two lines per
+// section (raised/recovered) are emitted. Budget each emitted line from the
+// repo's conservative chunk limit so a systemic detail-write cohort cannot
+// exceed Telegram's sendMessage cap and block every pending transition in the
+// same message, while a quiet message keeps its labels readable.
+function operatorSectionCharBudget(lineCount: number): number {
+  const lines = Math.max(1, lineCount);
+  return Math.floor((TELEGRAM_MESSAGE_CHUNK_LIMIT - OPERATOR_ALERT_HEADER.length - lines) / lines) - 8;
+}
+
+function truncateLabelForBudget(label: string, maxChars: number): string | null {
+  if (maxChars <= 1) return null;
+  let end = label.length;
+  while (end > 0 && escapeHtml(label.slice(0, end)).length > maxChars - 1) end -= 1;
+  if (end < label.length && /[\uD800-\uDBFF]/.test(label[end - 1] ?? "")) end -= 1;
+  if (end === 0) return null;
+  return `${escapeHtml(label.slice(0, end).trimEnd())}…`;
+}
+
+function boundedOperatorSection(title: string, labels: readonly string[], budgetChars: number): string {
   const prefix = `<b>${title}</b>: `;
   const escaped = labels.map(escapeHtml);
   const full = `${prefix}${escaped.join(", ")}`;
-  if (full.length <= OPERATOR_ALERT_SECTION_CHARS) return full;
+  if (full.length <= budgetChars) return full;
   const shown: string[] = [];
   let length = prefix.length;
-  for (const label of escaped) {
+  for (const [index, label] of escaped.entries()) {
     const separator = shown.length > 0 ? ", " : "";
     const hiddenAfter = escaped.length - shown.length - 1;
     const suffix = hiddenAfter > 0 ? `, +${hiddenAfter} more` : "";
-    if (length + separator.length + label.length + suffix.length > OPERATOR_ALERT_SECTION_CHARS) break;
+    const available = budgetChars - length - separator.length - suffix.length;
+    if (available <= 0) break;
+    if (label.length > available) {
+      // A section must still name its first finding: trim one oversized label
+      // to the remaining budget instead of delivering only `+N more`.
+      if (shown.length > 0) break;
+      const truncated = truncateLabelForBudget(labels[index], available);
+      if (truncated == null) break;
+      shown.push(truncated);
+      length += separator.length + truncated.length;
+      continue;
+    }
     length += separator.length + label.length;
     shown.push(label);
   }
@@ -440,6 +516,8 @@ export interface CronStalenessWatchdogOptions {
    * channel creds. Null suppresses delivery and leaves transitions pending.
    */
   operatorTelegramCreds?: TelegramCreds | null;
+  /** Selects the active canary cohort for the operator transition set. */
+  workerCanaryMode?: WorkerCanaryMode;
 }
 
 async function alertOnFreshnessTransitions(params: {
@@ -450,13 +528,23 @@ async function alertOnFreshnessTransitions(params: {
   nowSec: number;
   operatorTelegramCreds: TelegramCreds | null;
   signal?: AbortSignal;
-}): Promise<{ stale: string[]; recovered: string[]; sent: boolean; cooldown: boolean; deliveryFailed?: boolean }> {
+}): Promise<{
+  stale: string[];
+  recovered: string[];
+  sent: boolean;
+  cooldown: boolean;
+  deliveryFailed?: boolean;
+  /** A transition exists but no operator chat is configured; nothing was sent. */
+  credentialsMissing?: boolean;
+}> {
   const [stateCache, alertCache] = await Promise.all([
     getCache(params.db, WATCHDOG_STATE_KEY, params.signal),
     getCache(params.db, WATCHDOG_ALERT_KEY, params.signal),
   ]);
   const previous = parseProducerFreshnessState(stateCache?.value);
   const next: ProducerFreshnessState = {};
+  /** Conditions evaluated this run; an absent key is the recovery signal. */
+  const seen = new Set<string>();
   const stale: string[] = [];
   const recovered: string[] = [];
   const raisedLines = new Map<OperatorWatchSection, string[]>();
@@ -467,6 +555,7 @@ async function alertOnFreshnessTransitions(params: {
 
   for (const condition of params.conditions) {
     const key = conditionKey(condition);
+    seen.add(key);
     const current = condition.active ? "stale" : "ok";
     const prior = previous[key] ?? "ok";
     if (condition.unknown) {
@@ -487,7 +576,7 @@ async function alertOnFreshnessTransitions(params: {
   const unknown = new Set(params.unknownSections ?? []);
   for (const [key, prior] of Object.entries(previous)) {
     const section = sectionOfKey(key);
-    if (section === "producer" || key in next) continue;
+    if (section === "producer" || seen.has(key)) continue;
     if (unknown.has(section)) {
       next[key] = prior;
       continue;
@@ -504,20 +593,23 @@ async function alertOnFreshnessTransitions(params: {
   const lastAlertAt = Number(alertCache?.value);
   const cooldown = Number.isFinite(lastAlertAt) && params.nowSec - lastAlertAt < CRON_STALENESS_ALERT_COOLDOWN_SEC;
   if (cooldown || !params.operatorTelegramCreds) {
-    return { stale, recovered, sent: false, cooldown };
+    return { stale, recovered, sent: false, cooldown, credentialsMissing: !params.operatorTelegramCreds };
   }
 
-  const sections = (Object.keys(OPERATOR_SECTION_TITLES) as OperatorWatchSection[]).flatMap((section) => [
+  const sectionEntries = (Object.keys(OPERATOR_SECTION_TITLES) as OperatorWatchSection[]).flatMap((section) => [
     raisedLines.has(section)
-      ? boundedOperatorSection(OPERATOR_SECTION_TITLES[section].raised, raisedLines.get(section)!)
+      ? { title: OPERATOR_SECTION_TITLES[section].raised, labels: raisedLines.get(section)! }
       : null,
     recoveredLines.has(section)
-      ? boundedOperatorSection(OPERATOR_SECTION_TITLES[section].recovered, recoveredLines.get(section)!)
+      ? { title: OPERATOR_SECTION_TITLES[section].recovered, labels: recoveredLines.get(section)! }
       : null,
-  ]).filter((section): section is string => section != null);
+  ]).filter((entry): entry is { title: string; labels: string[] } => entry != null);
+  const sectionBudget = operatorSectionCharBudget(sectionEntries.length);
+  const sections = sectionEntries.map((entry) =>
+    boundedOperatorSection(entry.title, entry.labels, sectionBudget));
   const delivery = await deliverOperatorAlert(
     params.operatorTelegramCreds,
-    `<b>Pharos freshness watchdog</b>\n\n${sections.join("\n")}`,
+    `${OPERATOR_ALERT_HEADER}${sections.join("\n")}`,
     params.signal,
   );
   if (!delivery.ok) {
@@ -564,21 +656,77 @@ export async function runCronStalenessWatchdog(
     throw signal.reason instanceof Error ? signal.reason : new Error("cron staleness watchdog aborted");
   }
 
-  const detailWriteFailures = await loadDetailWriteFailures(db, nowSec);
-  const safetyPublication = await loadSafetyScoreV9PublicationHealth(db, signal).then(
-    (health) => ({ ok: true as const, health }),
+  const [detailWriteFailures, safetyPublication, canaryWatch, probeWatch] = await Promise.all([
+    loadDetailWriteFailures(db, nowSec),
+    loadSafetyScoreV9PublicationHealth(db, signal).then(
+      (health) => ({ ok: true as const, health }),
+      (error: unknown) => {
+        rethrowIfAborted(error, signal);
+        return { ok: false as const };
+      },
+    ),
+    loadCanaryOperatorWatch(db, nowSec, options.workerCanaryMode),
+    loadProbeOperatorWatch(db, nowSec),
+  ]);
+  const safetyPublicationHeld = safetyPublication.ok && safetyPublication.health?.status === "held";
+  const supplyWatch = await (async () => {
+    const report = await loadSupplyIntegrityReport(db, nowSec, { signal });
+    const conditions = await confirmSupplyIntegrityConditions(
+      db,
+      buildSupplyIntegrityConditions(report),
+      { signal },
+    );
+    return { ok: true as const, report, conditions };
+  })().then(
+    (watch) => watch,
     (error: unknown) => {
       rethrowIfAborted(error, signal);
-      return { ok: false as const };
+      return { ok: false as const, report: null, conditions: [] };
     },
   );
-  const safetyPublicationHeld = safetyPublication.ok && safetyPublication.health?.status === "held";
+  const dexYieldWatch = await loadDexYieldWatchConditions(db, nowSec, signal).catch((error: unknown) => {
+    rethrowIfAborted(error, signal);
+    return null;
+  });
+  const psiDailyCoverage = await loadPsiDailyCoverage(db, nowSec, signal);
+  const psiDailyCoverageEvaluated =
+    psiDailyCoverage.status === "ok" || psiDailyCoverage.status === "shortfall";
+  const [blacklistConfigWatch, mintBurnStuckWatch] = await Promise.all([
+    loadBlacklistConfigWatchConditions(db, nowSec, signal),
+    loadMintBurnStuckConfigWatchConditions(db, signal),
+  ]);
+  const unknownSections: OperatorWatchSection[] = [
+    ...(safetyPublication.ok ? [] : ["safety-publication" as const]),
+    ...(supplyWatch.ok ? [] : ["supply" as const]),
+    ...(canaryWatch.unknown ? ["canary" as const] : []),
+    ...(probeWatch.unknown ? ["probe" as const] : []),
+    ...(dexYieldWatch == null ? ["producer-quality" as const] : []),
+    ...(psiDailyCoverageEvaluated ? [] : ["psi-daily-coverage" as const]),
+    ...(blacklistConfigWatch.readFailed ? ["blacklist-config" as const] : []),
+    ...(mintBurnStuckWatch.readFailed ? ["mint-burn-config" as const] : []),
+  ];
+  const pricingConditions = await buildPricingOperatorConditions(
+    db,
+    { caches: status.caches, nowSec },
+    signal,
+  );
+  const blacklistConfigStale = blacklistConfigWatch.conditions.some((condition) => condition.active);
+  const mintBurnConfigStuck = mintBurnStuckWatch.conditions.some((condition) => condition.active);
+  const producerQualityConditions = dexYieldWatch?.conditions ?? [];
+  const producerQualityActive = producerQualityConditions.filter((condition) => condition.active);
   const alertTransitions = await alertOnFreshnessTransitions({
     db,
     conditions: [
       ...watchedObservations.map((observation): OperatorWatchCondition => ({
         section: "producer",
         id: observation.producerJob,
+        ...(observation.livenessOnly
+          ? {
+              label: `${observation.producerJob} (last completed run ` +
+                `${observation.ageSeconds == null ? "unavailable" : `${observation.ageSeconds}s`}; ` +
+                `budget ${observation.thresholdSec}s)`,
+            }
+          : {}),
         active: isStale(observation),
       })),
       ...detailWriteFailures.map((failure): OperatorWatchCondition => ({
@@ -603,23 +751,89 @@ export async function runCronStalenessWatchdog(
           : "v9",
         active: safetyPublicationHeld,
       }] : []),
+      ...canaryWatch.conditions.map((condition): OperatorWatchCondition => ({
+        section: "canary",
+        id: condition.id,
+        ...(condition.label ? { label: condition.label } : {}),
+        active: condition.active,
+        unknown: condition.unknown,
+      })),
+      ...probeWatch.conditions.map((condition): OperatorWatchCondition => ({
+        section: "probe",
+        id: condition.id,
+        ...(condition.label ? { label: condition.label } : {}),
+        active: condition.active,
+      })),
+      ...pricingConditions,
+      ...(psiDailyCoverageEvaluated ? [{
+        section: "psi-daily-coverage" as const,
+        id: "daily",
+        label: `daily PSI ${psiDailyCoverage.sampleCount}/${psiDailyCoverage.expectedSampleCount} samples ` +
+          `(floor ${psiDailyCoverage.minimumSampleCount})`,
+        active: psiDailyCoverage.status === "shortfall",
+      }] : []),
+      ...supplyWatch.conditions.map((condition): OperatorWatchCondition => ({
+        section: "supply",
+        id: condition.id,
+        label: condition.label,
+        active: condition.active,
+        unknown: condition.unknown,
+      })),
+      ...blacklistConfigWatch.conditions,
+      ...mintBurnStuckWatch.conditions,
+      ...producerQualityConditions,
     ],
-    unknownSections: safetyPublication.ok ? [] : ["safety-publication"],
+    unknownSections,
     nowSec,
     operatorTelegramCreds: options.operatorTelegramCreds ?? null,
     signal,
   });
+  const activeSupplyConditions = supplyWatch.conditions.filter((condition) => condition.active);
   const qualityReasons = [
     ...(stale.length > 0 ? ["producer-output-stale"] : []),
     ...(detailWriteFailures.length > 0 ? ["detail-cache-write-failed"] : []),
+    ...(canaryWatch.conditions.some((condition) => condition.active) ? ["canary-finding-active"] : []),
+    ...(probeWatch.conditions.some((condition) => condition.active) ? ["probe-path-persistent-failure"] : []),
+    ...(activeSupplyConditions.length > 0 ? ["supply-integrity-findings"] : []),
+    ...(blacklistConfigStale ? ["blacklist-config-stale"] : []),
+    ...(mintBurnConfigStuck ? ["mint-burn-config-stuck"] : []),
+    ...(blacklistConfigWatch.readFailed ? ["blacklist-config-watch-unavailable"] : []),
+    ...(mintBurnStuckWatch.readFailed ? ["mint-burn-config-watch-unavailable"] : []),
+    ...(producerQualityActive.length > 0 ? ["producer-quality-regression"] : []),
+    ...(psiDailyCoverage.status === "shortfall" ? ["psi-daily-sample-coverage"] : []),
   ];
+  const pendingTransition = (alertTransitions.stale.length > 0 || alertTransitions.recovered.length > 0)
+    && !alertTransitions.sent;
+  const alertReceipt = await recordOperatorAlertReceipt(db, "freshness", {
+    nowSec,
+    operatorConfigured: options.operatorTelegramCreds != null,
+    pending: pendingTransition,
+    delivered: alertTransitions.sent,
+    reason: alertTransitions.sent ? null
+      : alertTransitions.deliveryFailed ? "operator-alert-delivery-failed"
+        : alertTransitions.credentialsMissing ? "operator-alert-credentials-missing"
+          : alertTransitions.cooldown ? "operator-alert-cooldown" : null,
+  }, signal);
+  const operatorAlertDegraded = alertTransitions.deliveryFailed
+    || (pendingTransition && alertTransitions.credentialsMissing === true);
+  const perConfigActiveCount =
+    blacklistConfigWatch.conditions.filter((condition) => condition.active).length
+    + mintBurnStuckWatch.conditions.filter((condition) => condition.active).length;
 
   return {
-    status: status.failures.length > 0 || alertTransitions.deliveryFailed ? "degraded" : "ok",
-    itemCount: stale.length + detailWriteFailures.length,
+    // Completed observations with confirmed findings are ok + metadata.quality
+    // (ADR-31); only failed evidence reads or alert delivery degrade the run.
+    status: status.failures.length > 0 || operatorAlertDegraded || !supplyWatch.ok
+      ? "degraded"
+      : "ok",
+    itemCount: stale.length + detailWriteFailures.length + activeSupplyConditions.length
+      + perConfigActiveCount + producerQualityActive.length
+      + (psiDailyCoverage.status === "shortfall" ? 1 : 0),
     metadata: JSON.stringify({
       ...(status.failures.length > 0 ? { reason: "freshness-evidence-read-failed" }
-        : alertTransitions.deliveryFailed ? { reason: "operator-alert-delivery-failed" } : {}),
+        : !supplyWatch.ok ? { reason: "supply-integrity-read-failed" }
+          : alertTransitions.deliveryFailed ? { reason: "operator-alert-delivery-failed" }
+            : operatorAlertDegraded ? { reason: "operator-alert-credentials-missing" } : {}),
       ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
       firedRuleIds: [
         ...(stale.length > 0 ? ["producer-stale"] : []),
@@ -627,10 +841,36 @@ export async function runCronStalenessWatchdog(
         ...(dependencyRecoveryChecks.some((check) => check.state === "root-recovered-dependent-stale")
           ? ["dependency-recovery-lag"] : []),
         ...(safetyPublicationHeld ? ["safety-publication-held"] : []),
+        ...(canaryWatch.conditions.some((condition) => condition.active) ? ["canary-finding"] : []),
+        ...(probeWatch.conditions.some((condition) => condition.active) ? ["probe-path-persistent-failure"] : []),
+        ...pricingOperatorRuleIds(pricingConditions),
+        ...activeSupplyConditions.map((condition) => `supply-${condition.id}`),
+        ...(blacklistConfigStale ? ["blacklist-config-stale"] : []),
+        ...(mintBurnConfigStuck ? ["mint-burn-config-stuck"] : []),
+        ...producerQualityActive.map((condition) => condition.id),
+        ...(psiDailyCoverage.status === "shortfall" ? ["psi-daily-coverage"] : []),
       ],
+      canaryWatch: { active: canaryWatch.conditions.filter((condition) => condition.active).length, unknown: canaryWatch.unknown },
+      probeWatch: { active: probeWatch.conditions.length, unknown: probeWatch.unknown },
+      alerting: alertReceipt,
       checkedProducers: watchedObservations.map((observation) => observation.producerJob),
+      psiDailyCoverage,
       stale,
       detailWriteFailures,
+      supplyIntegrity: supplyWatch.ok && supplyWatch.report
+        ? {
+            ...compactSupplyIntegrityReport(supplyWatch.report),
+            conditions: supplyWatch.conditions.map((condition) => ({
+              id: condition.id,
+              active: condition.active,
+              unknown: condition.unknown,
+              signature: condition.signature.slice(0, 200),
+            })),
+          }
+        : { status: "unknown", reason: "supply-integrity-read-failed" },
+      blacklistConfigWatch,
+      mintBurnStuckWatch,
+      producerQuality: producerQualityConditions,
       alertTransitions,
       dependencyRecoveryChecks,
       warnings: status.warnings,

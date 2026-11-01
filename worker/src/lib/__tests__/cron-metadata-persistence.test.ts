@@ -110,6 +110,22 @@ describe("compactCronMetadataForPersistence", () => {
     expect(result.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
   });
 
+  it("preserves measured-execution per-chain evidence through sync-cl-exit-depth compaction", () => {
+    const chains = {
+      base: { scoreEligibleTargets: 4, measured: 0, failed: 4, deferred: 0 },
+      ethereum: { scoreEligibleTargets: 9, measured: 9, failed: 0, deferred: 0 },
+    };
+    const result = compactCronMetadataForPersistence(JSON.stringify({
+      lane: "active",
+      chains,
+      failuresByReason: Object.fromEntries(
+        Array.from({ length: 1_000 }, (_, index) => [`reason-${index}`, "x".repeat(40)]),
+      ),
+    }), undefined, "sync-cl-exit-depth");
+    expect(result.compacted).toBe(true);
+    expect(JSON.parse(result.metadata!).chains).toEqual(chains);
+  });
+
   it("preserves mxLedger scalars as top-level keys through oversized compaction", () => {
     const chunk = "A".repeat(240);
     const metadata = JSON.stringify({

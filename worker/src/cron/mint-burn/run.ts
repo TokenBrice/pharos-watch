@@ -360,6 +360,10 @@ export class MintBurnRun {
       completion.metadata.reason = "mint-burn-hourly-recalc-failed";
     }
     completion.metadata.recalcFailed = recalcFailed;
+    // Hourly materialization did not commit, so the in-memory scan advance is
+    // not published flow evidence. Withhold the confirmed-output clock instead
+    // of renewing it and let the existing producer-staleness alert escalate.
+    if (recalcFailed && lane !== "extended") completion.metadata.outputPublishedAt = null;
     completion.metadata.pendingMaterialization = {
       failedCount: pendingMaterializationFailures.length,
       failures: pendingMaterializationFailures.slice(0, 12),

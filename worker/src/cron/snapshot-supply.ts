@@ -150,6 +150,10 @@ export async function snapshotSupply(
         ]);
       }
 
+      const unavailableActiveIds = [...requiredActiveIdSet]
+        .filter((id) => cachedIds.has(id) && !validSnapshotIds.has(id) && !restoredSnapshotIds.has(id))
+        .sort();
+
       return {
         accountedIds: new Set([...validSnapshotIds, ...restoredSnapshotIds]),
         context: {
@@ -158,6 +162,7 @@ export async function snapshotSupply(
           restoredOnlyIds: [...restoredSnapshotIds]
             .filter((id) => requiredActiveIdSet.has(id) && !nonRestoredSnapshotIds.has(id))
             .sort(),
+          unavailableActiveIds,
           snapshotRows,
           validSnapshotIds,
         },
@@ -183,7 +188,7 @@ export async function snapshotSupply(
   const {
     cache: stablecoinsCache,
     cacheAgeSec: cacheAge,
-    context: { cachedIds, requiredActiveIdSet, restoredOnlyIds, snapshotRows, validSnapshotIds },
+    context: { cachedIds, requiredActiveIdSet, restoredOnlyIds, snapshotRows, unavailableActiveIds, validSnapshotIds },
     coverageExpectation,
     lastWrite,
     nowSec,
@@ -325,6 +330,7 @@ export async function snapshotSupply(
             publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
           ownedRowIds: snapshotRows.map(([stablecoinId]) => stablecoinId),
           missingActiveIds: publicationCoverage.missingActiveIds,
+          unavailableActiveIds,
         }),
         generationId: crypto.randomUUID(),
         writtenRows: snapshotRows.length,

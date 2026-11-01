@@ -437,6 +437,9 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     }]), review.expiresAt);
     expect(prior.status).toBe("ok");
     if (prior.status !== "ok") throw new Error("Expected readable compact continuity");
+    // The parsed generation carries the priced-cohort baseline the producer's
+    // collapse rule compares against.
+    expect(prior.coverage).toMatchObject({ expectedActiveCount: 1, pricedActiveCount: 0 });
     const next = evaluateStablecoinActivePriceCoverage(
       [{ id: review.stablecoinId, price: null }], [review.stablecoinId],
       { previousCoverage: prior.coverage, nowSec: review.expiresAt },

@@ -80,6 +80,7 @@
 | 0290     | `0290_telegram_watcher_migration_suppression.sql`          | Guard the 0246 watcher transition triggers against a group→supergroup chat-id merge so a state move records no subscribe/churn events; no business-row rewrite. |
 | 0291     | `0291_status_probe_path_failure_streaks.sql`               | Add nullable per-path probe-failure streak JSON to `status_discrepancy_state`; the status self-check floors a plane after repeated failures of one rotating path. No row rewrite or backfill. |
 | 0292     | `0292_depeg_event_effective_onset_lookup_indexes.sql`       | Add the current-event and superseded-alias access paths that let the public depeg page resolve each event's effective incident onset with per-row index lookups instead of a materialized-projection cross-product; no row mutation. |
+| 0293     | `0293_depeg_pending_outcomes_outcome_time_index.sql`        | Add the outcome/clock access path for the pending-confirmation canary's recent `unconfirmed-severe` count; no row mutation. |
 
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
@@ -532,6 +533,7 @@ Historical drops dated August 10 are not indefinitely recoverable through their 
 - `0268_telegram_planning_lookup_indexes.sql`: restore the prior Worker for a code rollback; keep the additive indexes. Drop them only in a later measured cleanup migration, never as part of a Worker rollback.
 - `0291_status_probe_path_failure_streaks.sql`: apply before the Worker that reads the column; older Workers ignore it and keep updating the live global counters on the same row. Worker rollback leaves the column and retained per-path streaks inert. No backfill: NULL means no per-path evidence yet. Dropping the column requires a separate coordinated cleanup rollout.
 - `0292_depeg_event_effective_onset_lookup_indexes.sql`: apply before the Worker whose public depeg page resolves the effective onset per event row; older Workers ignore both indexes and keep serving from the already-materialized projection. Worker rollback leaves the additive indexes installed and inert. Drop them only in a later measured cleanup migration, never as part of a Worker rollback.
+- `0293_depeg_pending_outcomes_outcome_time_index.sql`: apply before the Worker whose pending-confirmation canary counts recent `unconfirmed-severe` outcomes; older Workers ignore the additive index and keep serving from the existing paths. Worker rollback leaves it installed and inert. Drop it only in a later measured cleanup migration, never as part of a Worker rollback.
 
 ## Rollback Procedure
 

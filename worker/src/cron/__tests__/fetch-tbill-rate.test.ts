@@ -123,7 +123,40 @@ describe("fetchTbillRate", () => {
       fallbackMode: string | null;
       isFallback: boolean;
       recordDate: string | null;
+      lastMarketRate?: number | null;
+      lastRejectedMarketRate?: number | null;
+      lastRejectedMarketFetchedAt?: number | null;
     };
+  }
+
+  function installBaselineUsdCache() {
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rate: {
+        value: JSON.stringify({
+          rate: 3.72,
+          recordDate: "2026-03-07",
+          fetchedAt: 1773100800,
+          source: "fred-dgs3mo",
+          isFallback: false,
+          fallbackMode: null,
+        }),
+        updatedAt: 1773100800,
+      },
+    });
+  }
+
+  function installWrittenBenchmarkCache() {
+    const read = (key: string) => {
+      const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(key) as
+        | { value: string; updated_at: number }
+        | undefined;
+      expect(row).toBeDefined();
+      return { value: row!.value, updatedAt: row!.updated_at };
+    };
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rate: read("risk_free_rate"),
+      risk_free_rates: read("risk_free_rates"),
+    });
   }
 
   function latestStructuredCachePayload() {
@@ -1317,6 +1350,171 @@ describe("fetchTbillRate", () => {
       lastMarketRate: 3.91,
       lastMarketSource: "fred-dgs3mo",
     });
+  });
+
+  it("rejects a published-rate unit drift and retains the previous USD observation", async () => {
+    const driftedSnippet = TREASURY_XML_SNIPPET.replaceAll("3.72", "0.43").replaceAll("3.71", "0.43");
+    mockTbillByUrl({
+      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},0.43\n`, { status: 200 }),
+      "home.treasury.gov": new Response(driftedSnippet, { status: 200 }),
+    });
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rate: {
+        value: JSON.stringify({
+          rate: 3.72,
+          recordDate: "2026-03-07",
+          fetchedAt: 1773100800,
+          source: "fred-dgs3mo",
+          isFallback: false,
+          fallbackMode: null,
+        }),
+        updatedAt: 1773100800,
+      },
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("degraded");
+    expect(String(metadata.fallbackMode)).toContain("usd:usd-rate-out-of-band-retained");
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.72,
+      source: "fred-dgs3mo",
+      fallbackMode: "usd-rate-out-of-band-retained",
+      isFallback: true,
+    });
+    expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({
+      eventType: "benchmark-rate-out-of-band",
+      metadata: expect.objectContaining({ key: "USD", rate: 0.43, previousMarketRate: 3.72 }),
+    }));
+  });
+
+  it("accepts a persistent genuine level shift on the second consecutive observation", async () => {
+    const shiftedSnippet = TREASURY_XML_SNIPPET.replaceAll("3.71", "2.4").replaceAll("3.72", "2.4");
+    mockTbillByUrl({
+      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},2.4\n`, { status: 200 }),
+      "home.treasury.gov": new Response(shiftedSnippet, { status: 200 }),
+    });
+    installBaselineUsdCache();
+
+    const first = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    expect(first.status).toBe("degraded");
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.72,
+      fallbackMode: "usd-rate-out-of-band-retained",
+      isFallback: true,
+      lastRejectedMarketRate: 2.4,
+    });
+
+    installWrittenBenchmarkCache();
+    const second = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(second.metadata ?? "{}") as Record<string, unknown>;
+    expect(second.status).toBe("ok");
+    expect(metadata.benchmarkRateConfirmations).toEqual([
+      expect.objectContaining({
+        key: "USD",
+        rate: 2.4,
+        previousMarketRate: 3.72,
+        previousRejectedMarketRate: 2.4,
+      }),
+    ]);
+    expect(metadata.quality).toEqual({
+      reason: "benchmark-rate-level-shift-confirmed",
+      confirmedKeys: ["USD"],
+    });
+    expect(latestCachePayload()).toMatchObject({
+      rate: 2.4,
+      source: "fred-dgs3mo",
+      isFallback: false,
+      lastRejectedMarketRate: null,
+    });
+  });
+
+  it("rejects a one-off level spike and recovers on the next inside-band observation", async () => {
+    const shiftedSnippet = TREASURY_XML_SNIPPET.replaceAll("3.71", "2.4").replaceAll("3.72", "2.4");
+    mockTbillByUrl({
+      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},2.4\n`, { status: 200 }),
+      "home.treasury.gov": new Response(shiftedSnippet, { status: 200 }),
+    });
+    installBaselineUsdCache();
+
+    const spike = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    expect(spike.status).toBe("degraded");
+    expect(latestCachePayload().lastRejectedMarketRate).toBe(2.4);
+
+    installWrittenBenchmarkCache();
+    mockTbillByUrl({});
+    const recovered = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(recovered.metadata ?? "{}") as Record<string, unknown>;
+    expect(recovered.status).toBe("ok");
+    expect(metadata.benchmarkRateConfirmations).toBeUndefined();
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.72,
+      isFallback: false,
+      lastRejectedMarketRate: null,
+    });
+  });
+
+  it("keeps a persistent 100x unit drift rejected instead of confirming it", async () => {
+    const driftedSnippet = TREASURY_XML_SNIPPET.replaceAll("3.72", "0.43").replaceAll("3.71", "0.43");
+    mockTbillByUrl({
+      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},0.43\n`, { status: 200 }),
+      "home.treasury.gov": new Response(driftedSnippet, { status: 200 }),
+    });
+    installBaselineUsdCache();
+
+    const first = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    expect(first.status).toBe("degraded");
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.72,
+      isFallback: true,
+      lastRejectedMarketRate: 0.43,
+    });
+
+    installWrittenBenchmarkCache();
+    const second = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(second.metadata ?? "{}") as Record<string, unknown>;
+    expect(second.status).toBe("degraded");
+    expect(metadata.benchmarkRateConfirmations).toBeUndefined();
+    expect(String(metadata.fallbackMode)).toContain("usd:usd-rate-out-of-band-retained");
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.72,
+      isFallback: true,
+      lastRejectedMarketRate: 0.43,
+    });
+  });
+
+  it("falls through to the independent Treasury feed when FRED drifts out of band", async () => {
+    mockTbillByUrl({
+      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},0.43\n`, { status: 200 }),
+      "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
+    });
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rate: {
+        value: JSON.stringify({
+          rate: 3.72,
+          recordDate: "2026-03-07",
+          fetchedAt: 1773100800,
+          source: "fred-dgs3mo",
+          isFallback: false,
+          fallbackMode: null,
+        }),
+        updatedAt: 1773100800,
+      },
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(String(metadata.fallbackMode)).not.toContain("usd-rate-out-of-band");
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.72,
+      source: "treasury-yield-xml",
+      isFallback: false,
+    });
+    expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({
+      eventType: "benchmark-rate-out-of-band",
+    }));
   });
 });
 

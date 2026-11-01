@@ -16,7 +16,7 @@ The thresholds live in `shared/lib/status-thresholds.ts`. Internal classificatio
 
 1. **Admin page → Debug sync state:** GET `/api/debug-sync-state` (Actions section: under Complete action catalog → Inspect, or in Recommended now while a blacklist gap cause is active). Shows last processed block per `config_key` (one row per contract/config, sorted by `config_key`).
 2. **Config-level lag:** compare `config_key` rows, not only chain names. Same-symbol/same-chain deployments can have separate contract/config cursors, and new freeze-ledger snapshots are contract/config scoped.
-3. **Stuck chain:** look for a `last_block` that has not advanced for many hours relative to network tip. Remember Tron `last_block` is a millisecond timestamp.
+3. **Stuck chain:** look for a `last_block` that has not advanced for many hours relative to network tip. Remember Tron `last_block` is a millisecond timestamp. The freshness watchdog independently raises `blacklist-config-stale` for any config whose `last_succeeded_at` is null, older than two six-hourly producer intervals (12h), or ahead of the watchdog clock, naming the config in the operator Telegram and in `cron_runs.metadata.quality`.
 4. **Circuit-open skips:** inspect recent `sync-blacklist` `cron_runs.metadata` for `apiErrorConfigs`, `apiErrorClasses`, budget exhaustion, or circuit-open source skips before resetting cursors.
 5. **Upstream RPC health:** if a specific config is stuck, check the relevant provider lane for that chain/config (Dwellir/dRPC/chain RPC/Etherscan/TronGrid).
 
@@ -456,7 +456,7 @@ Canonical event rows retain these amount-source meanings:
 
 `derived` is written by confirmed Tron transfer-replay recovery, not by initial event ingestion. Eligible unresolved rows enter the durable repair queue. Legacy derived-zero rows receive bounded recovery attempts before becoming permanently unavailable. `legacy_migration` records historical amount provenance only; it does not indicate a remaining identity repair.
 
-`data-invariant-canary` reports an error if either event or balance rows lack both `config_key` and `contract_address`. `syncBlacklist()` does not rescan or rewrite that legacy identity set; investigate any non-zero count as an invariant failure.
+`data-invariant-canary` reports an error if either event or balance rows lack both `config_key` and `contract_address`. `syncBlacklist()` does not rescan or rewrite that legacy identity set; investigate any non-zero count as an invariant failure. Its `blacklist-roster-coverage` check also compares the published summary's event population, current-balance row count and supported config count with a seven-day high-water baseline; unreadable snapshot evidence is a failed observation, never a healthy one.
 
 ### Freeze Ledger
 

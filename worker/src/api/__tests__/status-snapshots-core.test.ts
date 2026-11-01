@@ -1,6 +1,7 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { StatusResponseSchema } from "@shared/types/status";
 import { handleStatusCronDetailRoute } from "../status-cron-detail";
 import { registerUnauthorizedEndpointContract } from "../../test-helpers/__shared/endpoint-contracts";
@@ -315,6 +316,48 @@ describe("handleStatus", () => {
     expect(degradedCause?.message).toContain("1 cron job(s) have fresh degraded terminal attempts reporting incomplete required work.");
     expect(degradedCause?.message).not.toContain("output quality warnings");
     expect(body.causes.overall.find((cause) => cause.code === "degraded_cron_warning")?.value).toBe(1);
+  });
+
+  it("drops a cached expected-lane cause the live scheduler observation no longer supports", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const snapshotLaneCause = {
+      code: "expected_scheduled_lane_unhealthy",
+      layer: "availability",
+      severity: "info",
+      message: "1 scheduled slot lane(s) lack a start inside their delivery budget: daily0300Utc (stale 259201s; warn >172800s / stale >259200s).",
+      metric: "unhealthyExpectedLanes",
+      value: 1,
+      threshold: 1,
+    };
+    const laneStarts = Object.fromEntries(
+      Object.keys(SCHEDULED_SLOT_PLANS).map((scheduleKey) => [scheduleKey, now - 30]),
+    );
+    const db = fixtureMockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: [STATUS_RAW_SNAPSHOT_CACHE_KEY], rows: [
+        makeRawStatusSnapshotRow(now, 120, {
+          causes: {
+            availability: [snapshotLaneCause],
+            dataQuality: [],
+            overall: [snapshotLaneCause],
+          },
+        }),
+      ] },
+      { match: "AS last_any", rows: [], first: {
+        observed_at: now,
+        last_any: now - 30, reserve: now - 30, telegram: now - 30, digest: now - 30, heavy: now - 30,
+        lanes: JSON.stringify(laneStarts),
+      } },
+      { match: "cron_runs", rows: Object.keys(CRON_INTERVALS).map((job) => makeCronRow(job, "ok", 60)) },
+    ]);
+
+    const res = await handleStatus({ db, trustedAdmin: true,
+      request: fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" }) });
+    const body = StatusResponseSchema.parse(await readJsonResponse(res, 200));
+
+    // The live read has every expected lane inside its budget; the cached
+    // cause must not survive beside healthy live evidence (R5).
+    expect(body.schedulerLiveness?.expectedLanes?.every((lane) => lane.status === "healthy")).toBe(true);
+    expect(body.causes.availability.some((cause) => cause.code === "expected_scheduled_lane_unhealthy")).toBe(false);
   });
 
   it.each([false, true])("keeps ok quality findings out of degraded counts (live refresh: %s)", async (live) => {

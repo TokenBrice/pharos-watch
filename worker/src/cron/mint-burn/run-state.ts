@@ -159,11 +159,20 @@ const EXTENDED_PASS_INTERVALS = 4;
 export const MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC =
   EXTENDED_PASS_INTERVALS * CRON_SCHEDULE_CADENCES.halfHourlyMintBurnExtended.intervalSec;
 
+/**
+ * An attempted config that failed to advance its frontier this many times is
+ * stuck: repeated attempts without progress cannot be explained by rotation.
+ */
+export const MINT_BURN_EXTENDED_STUCK_STREAK = 2;
+const STUCK_CONFIG_SAMPLE_LIMIT = 8;
+
 interface MintBurnAttemptStateEntry {
   firstObservedAt: number;
   lastAttemptedAt: number | null;
   lastDisposition: string;
   providerDeferredUntil: number | null;
+  /** Consecutive attempted scans that did not advance; absent on legacy state. */
+  consecutiveIncomplete?: number;
 }
 
 /**
@@ -200,6 +209,9 @@ export interface MintBurnCoverageCycleSummary {
   lastCompletedAt: number | null;
   incompleteConfigs: number;
   providerDeferredConfigs: number;
+  /** Configs whose repeated attempts did not advance their frontier (bounded sample). */
+  stuckConfigs: string[];
+  stuckConfigCount: number;
 }
 
 export interface MintBurnAttemptCoverageSummary {
@@ -259,6 +271,8 @@ export async function updateMintBurnAttemptState(input: {
     key: string;
     attempted: boolean;
     skippedReason: string | null;
+    /** Absent means the caller did not supply progress evidence; do not infer failure. */
+    advancedTo?: number | null;
   }>;
   activeProviderDeferrals: ReadonlyMap<string, number>;
   nowSec: number;
@@ -310,6 +324,14 @@ export async function updateMintBurnAttemptState(input: {
       entry.lastAttemptedAt = input.nowSec;
       entry.providerDeferredUntil = null;
       entry.lastDisposition = summary.attempted ? "attempted" : "up-to-date";
+      if (summary.attempted && summary.advancedTo !== undefined) {
+        entry.consecutiveIncomplete = summary.advancedTo == null
+          ? (entry.consecutiveIncomplete ?? 0) + 1
+          : 0;
+      } else if (!summary.attempted && summary.skippedReason === "up-to-date") {
+        // A proven up-to-date cursor is positive freshness evidence.
+        entry.consecutiveIncomplete = 0;
+      }
     } else if (summary.skippedReason === "deferred" && providerDeferredUntil != null) {
       providerDeferredThisRun++;
       entry.providerDeferredUntil = providerDeferredUntil;
@@ -364,6 +386,9 @@ export async function updateMintBurnAttemptState(input: {
 
     const cycleElapsedSec = Math.max(0, input.nowSec - cycle.startedAt);
     const stalled = incompleteConfigs > 0 && cycleElapsedSec > MINT_BURN_EXTENDED_COVERAGE_WINDOW_SEC;
+    const stuckConfigs = input.enabledConfigKeys
+      .filter((key) => (state.entries[key]?.consecutiveIncomplete ?? 0) >= MINT_BURN_EXTENDED_STUCK_STREAK)
+      .sort();
     coverageCycle = {
       status: stalled
         ? "stalled"
@@ -376,6 +401,8 @@ export async function updateMintBurnAttemptState(input: {
       lastCompletedAt: cycle.lastCompletedAt,
       incompleteConfigs,
       providerDeferredConfigs,
+      stuckConfigs: stuckConfigs.slice(0, STUCK_CONFIG_SAMPLE_LIMIT),
+      stuckConfigCount: stuckConfigs.length,
     };
   }
 

@@ -29,6 +29,7 @@ import { publishPegAnalyticsCache } from "../../lib/peg-analytics-cache";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import type { StablecoinData } from "@shared/types/market";
 import { runCronSentinel } from "../../cron/cron-sentinel";
+import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import { syncStablecoinCharts } from "../../cron/sync-stablecoin-charts";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { parseObjectMetadata } from "../../lib/json-metadata";
@@ -251,7 +252,11 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
             }),
           });
         }
-        return runCronSentinel(runtime.db, { mode: "turnover", signal });
+        return runCronSentinel(runtime.db, {
+          mode: "turnover",
+          signal,
+          operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),
+        });
       },
       "prepare-safety-score-v9-input": async (signal) => {
         const publication = dexPublication;

@@ -29,7 +29,7 @@ const MAX_NESTED_SCALARS = 24;
 const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEntries([
   "reason", "reasons", "degradedReason", "degradedReasons", "quality", "outputPublishedAt",
   "mode", "stale", "sources", "sourceStatuses", "resourcePressure", "retentionTruncated", "d1Cost", "truncated",
-  "sourceCoverage", "fallbackMode", "publication", "active", "chainHeads", "criticalCoverage", "extendedCoverage",
+  "sourceCoverage", "fallbackMode", "publication", "active", "chains", "chainHeads", "criticalCoverage", "extendedCoverage",
   "laggingConfigs", "breakerKeys", "coinsWithWarnings", "coinsWithErrors", "failedCoins", "failedSources",
   "tierBreakdown", "apiErrorClasses", "artifactCleanup", "invalidSupplyIds", "missingActiveIds", "missingFromCache",
   "pendingBacklog", "safetySource", "zeroSend", "runtimeBreaching", "slotAbandonmentBreaching",

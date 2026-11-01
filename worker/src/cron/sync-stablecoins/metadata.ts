@@ -28,6 +28,7 @@ import type {
 } from "../../lib/pricing-provider-diagnostics";
 import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
 import {
+  STABLECOIN_ACTIVE_PRICE_COVERAGE_COLLAPSE,
   classifyStablecoinPublicationGap,
   compactStablecoinActivePriceCoverage,
   evaluateStablecoinActivePriceCoverage,
@@ -570,7 +571,11 @@ export function buildStablecoinsSyncResult(input: {
   });
   const supplyQuarantined = (input.supplyChainGuard?.quarantinedAssetIds.length ?? 0) > 0
     || (input.supplyChainGuard?.unavailableAssetIds.length ?? 0) > 0;
-  const degradedReason = resolveSyncDegradedReason(input, publicationGap);
+  const degradedReason = resolveSyncDegradedReason({
+    ...input,
+    activePriceCoverage,
+    previousPricedActiveCount: input.previousActivePriceCoverage?.pricedActiveCount ?? null,
+  }, publicationGap);
   const status: CronResult["status"] = degradedReason ? "degraded" : "ok";
 
   const metadata: Record<string, unknown> = {
@@ -741,6 +746,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
   cacheKey: string;
   syncStartSec: number;
   activePriceCoverage: StablecoinActivePriceCoverage;
+  previousActivePriceCoverage?: PreviousStablecoinActivePriceCoverage | null;
 }): CronResult {
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     input.assets.map((asset) => String(asset.id)),
@@ -756,7 +762,10 @@ export function buildFallbackStablecoinsSyncResult(input: {
     authoritativeOverrideStats: input.authoritativeOverrideStats,
   }));
 
-  const degradedReason = resolveSyncDegradedReason(input, publicationGap);
+  const degradedReason = resolveSyncDegradedReason({
+    ...input,
+    previousPricedActiveCount: input.previousActivePriceCoverage?.pricedActiveCount ?? null,
+  }, publicationGap);
   const depegObservation = depegObservationQuality(input);
   const preferredNativeSupply = preferredNativeSupplyQuality(input.assets);
   const qualityReasons = [...(degradedReason ? [degradedReason] : []), ...depegObservation.reasons,
@@ -839,14 +848,42 @@ function publicationGapDegradesRun(gap: StablecoinPublicationGapBand): boolean {
   return gap === "elevated" || gap === "systemic";
 }
 
+/**
+ * A zero priced active cohort, or a material relative drop against the last
+ * published priced cohort, is a producer failure even when publication and
+ * breadth grading stay healthy. Absent baseline evidence (first run, unreadable
+ * prior metadata) leaves only the zero-cohort verdict.
+ */
+function pricedCohortCollapsed(
+  coverage: Pick<StablecoinActivePriceCoverage, "pricedActiveCount" | "expectedActiveCount">,
+  previousPricedActiveCount: number | null | undefined,
+): boolean {
+  if (coverage.expectedActiveCount <= 0) return false;
+  if (coverage.pricedActiveCount <= 0) return true;
+  return previousPricedActiveCount != null
+    && previousPricedActiveCount >= STABLECOIN_ACTIVE_PRICE_COVERAGE_COLLAPSE.minBaselinePricedCount
+    && coverage.pricedActiveCount
+      <= previousPricedActiveCount * (1 - STABLECOIN_ACTIVE_PRICE_COVERAGE_COLLAPSE.relativeDrop);
+}
+
 // One machine-readable driver per degraded run, in the precedence the run's
 // top-level `reason` has always used (a depeg hold outranks a publication gap).
 function resolveSyncDegradedReason(
-  input: { depegHeldReason?: DepegHoldReason; depegErrorCount: number; stalenessCheckFailed: boolean },
+  input: {
+    depegHeldReason?: DepegHoldReason;
+    depegErrorCount: number;
+    stalenessCheckFailed: boolean;
+    activePriceCoverage?: Pick<StablecoinActivePriceCoverage, "pricedActiveCount" | "expectedActiveCount"> | null;
+    previousPricedActiveCount?: number | null;
+  },
   publicationGap: StablecoinPublicationGapBand,
 ): string | null {
   if (input.depegHeldReason) return input.depegHeldReason;
   if (publicationGapDegradesRun(publicationGap)) return `stablecoin-publication-gap-${publicationGap}`;
+  if (input.activePriceCoverage
+    && pricedCohortCollapsed(input.activePriceCoverage, input.previousPricedActiveCount)) {
+    return "stablecoin-price-coverage-collapse";
+  }
   if (input.depegErrorCount > 0) return "depeg-pipeline-errors";
   if (input.stalenessCheckFailed) return "price-staleness-check-failed";
   return null;

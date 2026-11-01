@@ -3,7 +3,7 @@ import { createMockD1Preset, findD1HistoryEntry, type MockD1Database } from "@sh
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { parseBluechipRatingsCache } from "../../lib/bluechip-cache";
+import { parseBluechipRatingsCache, readBluechipRatingsCache } from "../../lib/bluechip-cache";
 import { BLUECHIP_SLUG_MAP } from "@shared/lib/bluechip-slugs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { bluechipResponse } from "./sync-bluechip.test-support";
@@ -107,7 +107,12 @@ describe("syncBluechip", () => {
   });
   it("retains valid cached ratings when one record is invalid", () => {
     const valid = makeUnreportedBluechipRating();
-    expect(parseBluechipRatingsCache(JSON.stringify({ valid, invalid: null }), "sync-bluechip:test-cache")).toEqual({ valid });
+    const raw = JSON.stringify({ valid, invalid: null });
+    expect(parseBluechipRatingsCache(raw, "sync-bluechip:test-cache")).toEqual({ valid });
+    expect(readBluechipRatingsCache(raw, "sync-bluechip:test-cache")).toEqual({
+      ratings: { valid },
+      droppedIds: ["invalid"],
+    });
   });
 
 

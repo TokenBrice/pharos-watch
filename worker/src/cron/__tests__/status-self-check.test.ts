@@ -124,7 +124,8 @@ vi.mock("../../lib/public-health-assessment", async (importOriginal) => ({
   ...(await importOriginal<typeof PublicHealthModule>()),
   assessPublicHealth: assessPublicHealthMock,
 }));
-vi.mock("@shared/lib/api-endpoints", () => ({
+vi.mock("@shared/lib/api-endpoints", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@shared/lib/api-endpoints")>()),
   getProbePaths: (group: "public" | "admin" | "manual") => {
     if (group === "public") return publicProbePaths;
     if (group === "admin") return adminProbePaths;
@@ -372,6 +373,48 @@ describe("runStatusSelfCheck", () => {
       transportStatus: "stale", semanticStatus: "degraded",
       reason: "probe-execution-failed",
     });
+  });
+
+  it("keeps a failed payload contract out of the health semantic verdict", async () => {
+    publicProbePaths.push("/api/redemption-backstops");
+    routeMock.mockImplementation(async ({ url }: { url: URL }) => {
+      if (url.pathname === "/api/redemption-backstops") {
+        return new Response(JSON.stringify({
+          coins: {
+            "usdc-circle": { resolutionState: "resolved" },
+            "usdt-tether": { resolutionState: "failed" },
+          },
+        }), { status: 200, headers: { "content-type": "application/json", "X-Data-Age": "60" } });
+      }
+      return buildProbeResponse(url);
+    });
+
+    const result = await runStatusSelfCheck({} as D1Database, { ctx: makeExecutionContext().ctx });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    // Only `/api/health` owns `semanticStatus`; one unresolved redemption row
+    // waits for its per-path failure streak instead of degrading the plane.
+    expect(metadata.semanticStatus).toBe("healthy");
+    expect(metadata.probePlanes.internal.status).toBe("healthy");
+    expect(metadata.internalExternalDiscrepancy.reason).toBe("in-sync");
+  });
+
+  it("does not publish a semantic claim from a payload contract alone", async () => {
+    publicProbePaths.push("/api/redemption-backstops");
+    routeMock.mockImplementation(async ({ url }: { url: URL }) => {
+      if (url.pathname === "/api/redemption-backstops") {
+        return new Response(JSON.stringify({
+          coins: { "usdc-circle": { resolutionState: "resolved" } },
+        }), { status: 200, headers: { "content-type": "application/json", "X-Data-Age": "60" } });
+      }
+      return buildProbeResponse(url, "healthy", undefined, { status: 503 });
+    });
+    fetchMock.mockImplementation(async (input: unknown, init?: RequestInit) =>
+      buildProbeResponse(input, "healthy", init, { status: 503 }));
+
+    const result = await runStatusSelfCheck({} as D1Database, { ctx: makeExecutionContext().ctx });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.semanticStatus).toBeNull();
+    expect(metadata.semanticStatusReason).toBe("probe-semantic-evidence-unavailable");
   });
 
   it.each([

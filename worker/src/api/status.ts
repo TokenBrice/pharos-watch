@@ -21,6 +21,7 @@ import {
   evaluateSchedulerLiveness,
   mergeD1QuotaCauses,
   rebuildCronDerivedAvailabilityCauses,
+  SCHEDULER_LIVENESS_AVAILABILITY_CAUSE_CODES,
 } from "../lib/status/evaluation-rules";
 import { loadSafetyPublicationSize } from "../lib/status/safety-publication-size";
 import { buildStatusSummary } from "../lib/status/summary";
@@ -196,10 +197,12 @@ async function resolveRawStatusForResponse(
     // re-derived from the same live cron-health read that replaces `crons`
     // and rebuilds `summary` below; otherwise one response can show a cached
     // cause count next to a live summary count that disagrees with it (R5).
+    // Every scheduler-liveness cause is likewise replaced by the live
+    // observation, so a recovered lane cannot leave its cached copy behind.
     const scheduler = evaluateSchedulerLiveness(schedulerLiveness);
+    const schedulerCauseCodes: readonly string[] = SCHEDULER_LIVENESS_AVAILABILITY_CAUSE_CODES;
     const availabilityCauses = [...rebuildCronDerivedAvailabilityCauses(snapshot.raw.causes.availability.filter((cause) =>
-      cause.code !== "scheduled_delivery_stalled" && cause.code !== "scheduler_liveness_unavailable"
-      && cause.code !== "heavy_scheduled_delivery_stalled" && cause.code !== "heavy_scheduler_liveness_unavailable"), {
+      !schedulerCauseCodes.includes(cause.code)), {
       degradedCronRuns: cronHealth.degradedCronRuns,
       cronErrorCount: cronHealth.cronErrorCount,
       availabilityImpactingCronErrors: cronHealth.availabilityImpactingCronErrors,

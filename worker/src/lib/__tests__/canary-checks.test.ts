@@ -14,7 +14,20 @@ import {
   runCanaryChecks,
 } from "../canary-checks";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
+import { checkTapeClassLiveness } from "../canary-checks-tape";
+import { PRICING_CANARY_CHECKS } from "../canary-checks-pricing";
+import { tapeProjectorCursorKey } from "../tape-event-store";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
+import {
+  buildSupplySnapshotCompletionMarker,
+  buildSupplySnapshotCoverageExpectation,
+} from "../supply-snapshot-completion";
+import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
+import {
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+} from "../blacklist-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -24,12 +37,113 @@ const EXPECTED_CANARY_CHECK_IDS = [
   "dex-liquidity-global-row",
   "blacklist-null-identity",
   "stablecoins-cache-active-count",
+  "supply-history-daily-coverage",
   "psi-latest-sample",
   "dews-latest-signal",
   "safety-score-v9-publication",
   "yield-gbp-benchmark-current",
   "yield-usd-benchmark-current",
+  "depeg-detection-census",
+  "depeg-pending-confirmation-stall",
+  "depeg-open-coverage",
+  "depeg-dex-suppression-divergence",
+  "ddr-eligible-unsealed",
+  "mint-burn-publication-coverage",
+  "blacklist-roster-coverage",
+  "tape-class-liveness",
+  "public-dataset-snapshot-completeness",
+  "stablecoins-active-price-coverage",
+  "depeg-observation-coverage",
 ];
+
+const HEALTHY_CENSUS = {
+  scope: "psi-non-nav-before-supply-floor",
+  evaluatedAt: NOW - 120,
+  eligibleCount: 100,
+  observedCount: 98,
+  unavailableCount: 2,
+  belowFloorCount: 0,
+  reasonCounts: { "asset-absent": 2 },
+};
+
+function depegCensusRuns() {
+  return [
+    {
+      started_at: NOW - 60,
+      census_json: JSON.stringify(HEALTHY_CENSUS),
+      pipeline_succeeded: 1,
+      unavailable_reason: null,
+    },
+    {
+      started_at: NOW - 960,
+      census_json: JSON.stringify({ ...HEALTHY_CENSUS, unavailableCount: 0, reasonCounts: {} }),
+      pipeline_succeeded: 1,
+      unavailable_reason: null,
+    },
+  ];
+}
+
+function stablecoinsRunRows(options: {
+  pricedActiveCount?: number;
+  missingPriceCount?: number;
+  unavailableCount?: number;
+  reasonCounts?: Record<string, number>;
+  includeCoverage?: boolean;
+  includeCensus?: boolean;
+  startedAt?: number;
+} = {}) {
+  const expectedActiveCount = ACTIVE_IDS.size;
+  const pricedActiveCount = options.pricedActiveCount ?? expectedActiveCount;
+  const missingPriceCount = options.missingPriceCount ?? 0;
+  const unavailableCount = options.unavailableCount ?? 0;
+  return [
+    {
+      started_at: options.startedAt ?? NOW - 60,
+      status: "ok",
+      metadata: JSON.stringify({
+        cacheWriteMode: "published",
+        ...(options.includeCoverage === false ? {} : {
+          activePriceCoverage: {
+            complete: missingPriceCount === 0,
+            expectedActiveCount,
+            pricedActiveCount,
+            missingPriceCount,
+            nominalReferenceCount: 0,
+          },
+        }),
+        ...(options.includeCensus === false ? {} : {
+          quality: {
+            depegObservation: {
+              scope: "psi-non-nav-before-supply-floor",
+              evaluatedAt: NOW - 120,
+              eligibleCount: expectedActiveCount,
+              observedCount: expectedActiveCount - unavailableCount,
+              unavailableCount,
+              belowFloorCount: 0,
+              reasonCounts: options.reasonCounts ?? {},
+            },
+          },
+        }),
+      }),
+    },
+  ];
+}
+
+/** Fixtures for the depeg canaries: a completed census and no stalled candidates. */
+function depegCanaryFixtures() {
+  return [
+    { match: "pharos:depeg-census-runs", rows: depegCensusRuns() },
+    {
+      match: "pharos:depeg-pending-confirmation-canary",
+      first: { severe_recent: 0, stalled_count: 0, pending_count: 0, oldest_first_seen: null },
+      rows: [],
+    },
+    { match: "pharos:depeg-pending-aged-candidates", rows: [] },
+    { match: "pharos:ddr-eligible-unsealed-canary", rows: [] },
+    { match: "pharos:depeg-open-coverage-canary", rows: [] },
+    { match: "pharos:depeg-dex-suppression-canary", rows: [] },
+  ];
+}
 
 function activeV9(options: { held?: boolean; updatedAt?: number } = {}) {
   const updatedAt = options.updatedAt ?? NOW - 60;
@@ -81,6 +195,27 @@ function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
     circulating: { peggedUSD: 1_000_000 },
   }));
   return JSON.stringify({ peggedAssets: assets });
+}
+
+function supplyCompletionRow(nowSec = NOW) {
+  const ids = [...ACTIVE_IDS];
+  const snapshotDate = startOfUtcDaySec(new Date(nowSec * 1000));
+  return {
+    key: "snapshot-supply:last-write",
+    value: JSON.stringify({
+      ...buildSupplySnapshotCompletionMarker({
+        snapshotDate,
+        coverage: buildSupplySnapshotCoverageExpectation(ids, []),
+        accountedActiveCount: ids.length,
+        ownedRowIds: ids,
+        missingActiveIds: [],
+        unavailableActiveIds: [],
+      }),
+      writtenRows: ids.length,
+    }),
+    updatedAt: nowSec - 60,
+    updated_at: nowSec - 60,
+  };
 }
 
 function gbpCanaryCacheRows(options: {
@@ -167,6 +302,84 @@ function dewsPointerRow(rows: ReturnType<typeof dewsRows>, computedAt = NOW - 60
   };
 }
 
+function mintBurnPublicationCacheRow(overrides: {
+  admittedCount?: number;
+  legCount?: number;
+  score?: number | null;
+  watermarkAgeSec?: number;
+  admittedPairs?: Array<[string, string]>;
+  coinIds?: string[];
+  pendingLegs?: Array<{ configKey: string; reason: string }>;
+} = {}) {
+  const admittedPairs = overrides.admittedPairs ?? [["usdt-tether", "ethereum"], ["usdc-circle", "ethereum"]];
+  const admittedCount = overrides.admittedCount ?? admittedPairs.length;
+  return {
+    key: aggregateFlowCacheKey(24),
+    value: JSON.stringify({
+      publication: {
+        evaluatedAt: NOW - 60,
+        requiredBaselineSec: 90 * 86400,
+        freshnessBudgetSec: 8 * 3600,
+        legsScope: "non-admitted",
+        legCount: overrides.legCount ?? Math.max(admittedCount, admittedPairs.length),
+        admittedCount,
+        pendingAdmissionCount: 0,
+        disabledCount: 0,
+        admittedPairs,
+        legs: (overrides.pendingLegs ?? []).map((leg) => ({
+          configKey: leg.configKey,
+          status: "pending-admission",
+          reason: leg.reason,
+        })),
+      },
+      gauge: { score: overrides.score === undefined ? 42 : overrides.score },
+      coins: (overrides.coinIds ?? [...new Set(admittedPairs.map(([id]) => id))])
+        .map((stablecoinId) => ({ stablecoinId })),
+      window: {
+        start: NOW - 24 * 3600,
+        end: NOW - 3600,
+        semantics: "closed-utc-hours",
+        watermark: {
+          timestamp: NOW - (overrides.watermarkAgeSec ?? 3600),
+          ageSec: overrides.watermarkAgeSec ?? 3600,
+          maxAgeSec: 8 * 3600,
+          unavailableReason: null,
+        },
+      },
+    }),
+    updatedAt: NOW - 60,
+    updated_at: NOW - 60,
+  };
+}
+
+function blacklistRosterCacheRow(overrides: {
+  totalEvents?: number;
+  balanceRows?: number;
+  supportedConfigs?: number;
+  behindConfigs?: unknown[];
+} = {}) {
+  return {
+    key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+    value: JSON.stringify({
+      version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+      materializedAt: NOW - 60,
+      freshnessTs: NOW - 60,
+      payload: {
+        totalEvents: overrides.totalEvents ?? 12_345,
+        freezeLedgerMeta: { totalRows: overrides.balanceRows ?? 42 },
+        coverage: { counts: { supportedConfigs: overrides.supportedConfigs ?? 51 } },
+        refresh: { observedAt: NOW - 60, behindConfigs: overrides.behindConfigs ?? [] },
+      },
+    }),
+    updatedAt: NOW - 60,
+    updated_at: NOW - 60,
+  };
+}
+
+function canaryPublicationCacheRows() {
+  return [mintBurnPublicationCacheRow(), blacklistRosterCacheRow()];
+}
+
 function healthyD1(
   dex: {
     rowCount?: number;
@@ -181,6 +394,31 @@ function healthyD1(
     gbpFreshRuns?: number;
     gbpFallback?: boolean;
     usdRecordDateMissing?: boolean;
+    psiInputSnapshot?: string;
+    tape?: {
+      cursors?: Record<string, number>;
+      clocks?: Partial<{
+        psi_at: number;
+        dews_at: number;
+        score_legacy_at: number;
+        score_v2_at: number;
+        yield_history_at: number;
+        yield_decisions_at: number;
+      }>;
+    };
+    publicDataset?: {
+      snapshot?: { snapshot_date: string; byte_size: number | null; created_at: number } | null;
+      evidence?: Partial<{
+        started_at: number;
+        stablecoin_count: number | null;
+        dews_count: number | null;
+        liquidity_count: number | null;
+        dews_computed_at: number | null;
+        compressed_size: number | null;
+        dex_published_row_count: number | null;
+        sealed_dex_row_count: number | null;
+      }> | null;
+    };
   } = {},
 ) {
   const rowCount = dex.rowCount ?? 408;
@@ -245,7 +483,67 @@ function healthyD1(
           fallback: dex.gbpFallback,
           usdRecordDateMissing: dex.usdRecordDateMissing,
         }),
+        supplyCompletionRow(),
+        ...canaryPublicationCacheRows(),
       ],
+    },
+    {
+      match: "SELECT COUNT(*) AS count FROM supply_history WHERE snapshot_date = ?",
+      first: { count: [...ACTIVE_IDS].length },
+      rows: [],
+    },
+    {
+      match: "FROM cache WHERE key IN",
+      rows: [
+        "psi.band_changed",
+        "dews.escalated",
+        "dews.deescalated",
+        "score.upgraded",
+        "score.downgraded",
+        "yield.warning_emitted",
+        "yield.pys_dropped",
+      ].map((eventClass) => ({
+        key: `tape-projector:cursor:${eventClass}`,
+        value: String(dex.tape?.cursors?.[eventClass] ?? NOW - 120),
+        updated_at: NOW - 120,
+      })),
+    },
+    {
+      match: "canary:tape-class-liveness",
+      first: {
+        psi_at: NOW - 60,
+        dews_at: NOW - 60,
+        score_legacy_at: NOW - 60,
+        score_v2_at: NOW - 60,
+        yield_history_at: NOW - 60,
+        yield_decisions_at: NOW - 60,
+        ...dex.tape?.clocks,
+      },
+      rows: [],
+    },
+    {
+      match: "pharos:canary:public-dataset-snapshot",
+      first: dex.publicDataset?.snapshot === undefined
+        ? { snapshot_date: "2026-03-05", byte_size: 4_096, created_at: NOW - 3_600 }
+        : dex.publicDataset.snapshot,
+      rows: [],
+    },
+    {
+      match: "pharos:canary:public-dataset-publication",
+      first: dex.publicDataset?.evidence === null
+        ? null
+        : {
+            started_at: NOW - 3_600,
+            stablecoin_count: 200,
+            dews_count: 20,
+            liquidity_count: 408,
+            dews_computed_at: NOW - 4_000,
+            compressed_size: 4_096,
+            dex_published_row_count: 408,
+            sealed_dex_row_count: 408,
+            ...dex.publicDataset?.evidence,
+          },
+      rows: [],
     },
     {
       match: "FROM stability_index_samples",
@@ -254,6 +552,16 @@ function healthyD1(
         score: 82,
         band: "STABLE",
         methodology_version: "v1",
+        input_snapshot: dex.psiInputSnapshot ?? JSON.stringify({
+          universeCoverage: {
+            expected: 200,
+            present: 200,
+            admittedSupply: 200,
+            missingFromCacheIds: [],
+            supplyUnavailableIds: [],
+            trendUnavailableIds: [],
+          },
+        }),
       },
       rows: [],
     },
@@ -263,7 +571,17 @@ function healthyD1(
       rows: publishedDewsRows,
     },
     {
+      match: "canary-stablecoins-pricing-runs",
+      matchBinds: [2],
+      rows: stablecoinsRunRows(),
+    },
+    {
       match: "INSERT INTO worker_canary_runs",
+      rows: [],
+    },
+    ...depegCanaryFixtures(),
+    {
+      match: "INSERT INTO cache",
       rows: [],
     },
   ]);
@@ -284,9 +602,9 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 9,
+      totalChecks: 21,
 
-      okCount: 9,
+      okCount: 21,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
@@ -348,6 +666,230 @@ describe("worker data invariant canaries", () => {
     expect(psi?.error).toBe("latest PSI sample clock rejected: future-timestamp");
   });
 
+
+  it.each([
+    [200, 197, "degraded"],
+    [200, 170, "error"],
+    [200, 199, "ok"],
+  ])("classifies PSI universe coverage %i expected / %i admitted as %s", async (expected, admitted, status) => {
+    const summary = await runCanaryChecks(healthyD1({
+      psiInputSnapshot: JSON.stringify({
+        universeCoverage: {
+          expected,
+          present: admitted,
+          admittedSupply: admitted,
+          missingFromCacheIds: Array.from({ length: expected - admitted }, (_, index) => `missing-${index}`),
+          supplyUnavailableIds: [],
+          trendUnavailableIds: [],
+        },
+      }),
+    }), { observedAt: NOW, mode: "status" });
+    const psi = summary.results.find((result) => result.checkId === "psi-latest-sample");
+    expect(psi).toMatchObject({
+      status,
+      metadata: {
+        universeCoverage: {
+          status,
+          expected,
+          admittedSupply: admitted,
+        },
+      },
+    });
+  });
+
+  it("degrades when the persisted PSI input snapshot is unreadable", async () => {
+    const summary = await runCanaryChecks(healthyD1({ psiInputSnapshot: "not-json" }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    expect(summary.results.find((result) => result.checkId === "psi-latest-sample")).toMatchObject({
+      status: "degraded",
+      error: "latest PSI sample input snapshot is unreadable",
+      metadata: { universeCoverage: null, universeCoverageReason: "input-snapshot-invalid" },
+    });
+  });
+
+  it("flags a snapshot tape class whose cursor lags a moving source clock", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      tape: { cursors: { "psi.band_changed": NOW - 6_000 } },
+    }), { observedAt: NOW, mode: "status" });
+    const tape = summary.results.find((result) => result.checkId === "tape-class-liveness");
+    expect(tape).toMatchObject({
+      status: "degraded",
+      error: expect.stringContaining("psi.band_changed (5940s)"),
+      metadata: { lagBudgetSec: 5_400, evaluatedCount: 7 },
+    });
+  });
+
+  it("skips tape liveness when every source clock is stale", async () => {
+    const stale = NOW - 200_000;
+    const summary = await runCanaryChecks(healthyD1({
+      tape: {
+        clocks: {
+          psi_at: stale,
+          dews_at: stale,
+          score_legacy_at: stale,
+          score_v2_at: stale,
+          yield_history_at: stale,
+          yield_decisions_at: stale,
+        },
+      },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "tape-class-liveness")).toMatchObject({
+      status: "skipped",
+      error: "tape-source-stale",
+      metadata: { evaluatedCount: 0 },
+    });
+  });
+
+  it("clocks score tape classes from organic history rows only", async () => {
+    const { sqlite, db } = fixtures.open();
+    const organicAt = NOW - 10_000;
+    const insertV2 = sqlite.prepare(
+      `INSERT INTO safety_score_history_v2
+         (history_id, stablecoin_id, recorded_at, model, methodology_version, policy_id,
+          policy_digest, evaluation_build_digest, base_input_generation_id,
+          model_publication_generation_id, transition_kind, grade, score, prev_grade, created_at)
+       VALUES (?, 'usdt-tether', ?, 'v9', 'v9', 'psi-policy', ?, ?, ?, 'generation-1', ?, 'A', 90, ?, 1)`,
+    );
+    const buildDigest = "d".repeat(64);
+    const baseInput = `report-cards-input:v1:${"a".repeat(64)}`;
+    insertV2.run("organic-1", organicAt, "p".repeat(64), buildDigest, baseInput, "organic-grade-change", "B+");
+    insertV2.run("boundary-1", NOW, "p".repeat(64), buildDigest, baseInput, "methodology-boundary-baseline", null);
+    const insertCursor = sqlite.prepare(
+      "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+    );
+    for (const eventClass of ["score.upgraded", "score.downgraded"]) {
+      insertCursor.run(tapeProjectorCursorKey(eventClass), String(organicAt), organicAt);
+    }
+
+    const result = await checkTapeClassLiveness(db, NOW, {});
+    expect(result).toMatchObject({
+      status: "ok",
+      metadata: {
+        classes: expect.arrayContaining([
+          expect.objectContaining({
+            eventClass: "score.upgraded",
+            sourceMax: organicAt,
+            lagSec: 0,
+            evaluated: true,
+            reason: null,
+          }),
+          expect.objectContaining({
+            eventClass: "score.downgraded",
+            sourceMax: organicAt,
+            lagSec: 0,
+            evaluated: true,
+            reason: null,
+          }),
+        ]),
+      },
+    });
+  });
+
+  it("flags an empty sealed public-dataset section even when the run reports success", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: { evidence: { stablecoin_count: 0 } },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "error",
+        error: "sealed public snapshot has an empty stablecoins section",
+        metadata: { snapshotDate: "2026-03-05", stablecoinCount: 0 },
+      });
+  });
+
+  it("flags a sealed liquidity section smaller than the published generation", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: { evidence: { liquidity_count: 3 } },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "degraded",
+        error: "sealed liquidity section has 3 rows for a 408-row published generation",
+      });
+  });
+
+  it("compares the sealed liquidity section with its own sealed generation, not a later one", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: {
+        evidence: { liquidity_count: 408, dex_published_row_count: 500, sealed_dex_row_count: 408 },
+      },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "ok",
+        metadata: { liquidityCount: 408, sealedDexPublicationRowCount: 408 },
+      });
+  });
+
+  it("falls back to the live DEX generation for a sealed row written before the count was recorded", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: {
+        evidence: { liquidity_count: 408, dex_published_row_count: 500, sealed_dex_row_count: null },
+      },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "degraded",
+        error: "sealed liquidity section has 408 rows for a 500-row published generation",
+      });
+  });
+
+  it("flags a sealed DEWS generation that exceeded its consumer budget", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: { evidence: { dews_computed_at: NOW - 10_000 } },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "degraded",
+        error: "sealed DEWS generation exceeded its 3600s consumer budget (6400s)",
+      });
+  });
+
+  it("keeps a legacy sealed row unknown when its publication metadata is outside retention", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: { evidence: null },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "skipped",
+        error: "public-snapshot-publication-metadata-unavailable",
+      });
+  });
+
+  it("reads the newest sealed snapshot's persisted publication counts against SQLite", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(
+      `INSERT INTO public_snapshots
+         (snapshot_date, payload_gz, methodology_versions, content_hash, byte_size, created_at)
+       VALUES (?, ?, '{}', 'hash', 4096, ?)`,
+    ).run("2026-03-05", new Uint8Array([1, 2]), NOW - 3_600);
+    sqlite.prepare(
+      `INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata)
+       VALUES ('snapshot-public-dataset', ?, 1000, 'ok', 1, ?)`,
+    ).run(NOW - 3_600, JSON.stringify({
+      snapshotDate: "2026-03-05",
+      stablecoinCount: 200,
+      dewsCount: 20,
+      liquidityCount: 408,
+      dewsComputedAt: NOW - 4_000,
+      compressedSize: 4_096,
+    }));
+
+    const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "ok",
+        metadata: {
+          snapshotDate: "2026-03-05",
+          stablecoinCount: 200,
+          dewsCount: 20,
+          liquidityCount: 408,
+          publicationStartedAt: NOW - 3_600,
+        },
+      });
+  });
 
   it("flags a seeded null-identity blacklist row", async () => {
     vi.useFakeTimers();
@@ -788,7 +1330,60 @@ describe("worker data invariant canaries", () => {
           { key: "stablecoins", value: stablecoinsPayload(1), updatedAt: NOW - 60, updated_at: NOW - 60 },
           dewsPointerRow(unhealthyDewsRows),
           ...gbpCanaryCacheRows(),
+          supplyCompletionRow(),
+          ...canaryPublicationCacheRows(),
         ],
+      },
+      {
+        match: "SELECT COUNT(*) AS count FROM supply_history WHERE snapshot_date = ?",
+        first: { count: [...ACTIVE_IDS].length },
+        rows: [],
+      },
+      {
+        match: "FROM cache WHERE key IN",
+        rows: [
+          "psi.band_changed",
+          "dews.escalated",
+          "dews.deescalated",
+          "score.upgraded",
+          "score.downgraded",
+          "yield.warning_emitted",
+          "yield.pys_dropped",
+        ].map((eventClass) => ({
+          key: `tape-projector:cursor:${eventClass}`,
+          value: String(NOW - 120),
+          updated_at: NOW - 120,
+        })),
+      },
+      {
+        match: "canary:tape-class-liveness",
+        first: {
+          psi_at: NOW - 60,
+          dews_at: NOW - 60,
+          score_legacy_at: NOW - 60,
+          score_v2_at: NOW - 60,
+          yield_history_at: NOW - 60,
+          yield_decisions_at: NOW - 60,
+        },
+        rows: [],
+      },
+      {
+        match: "pharos:canary:public-dataset-snapshot",
+        first: { snapshot_date: "2026-03-05", byte_size: 4_096, created_at: NOW - 3_600 },
+        rows: [],
+      },
+      {
+        match: "pharos:canary:public-dataset-publication",
+        first: {
+          started_at: NOW - 3_600,
+          stablecoin_count: 200,
+          dews_count: 20,
+          liquidity_count: 408,
+          dews_computed_at: NOW - 4_000,
+          compressed_size: 4_096,
+          dex_published_row_count: 408,
+        },
+        rows: [],
       },
       {
         match: "FROM stability_index_samples",
@@ -804,6 +1399,16 @@ describe("worker data invariant canaries", () => {
         match: "pharos:stress-signals:published-exact",
         matchBinds: [NOW - 60],
         rows: unhealthyDewsRows,
+      },
+      ...depegCanaryFixtures(),
+      {
+        match: "canary-stablecoins-pricing-runs",
+        matchBinds: [2],
+        rows: stablecoinsRunRows(),
+      },
+      {
+        match: "INSERT INTO cache",
+        rows: [],
       },
     ]);
 
@@ -890,6 +1495,18 @@ describe("worker data invariant canaries", () => {
     expect(await loadCanaryStatus(db, NOW, "status")).toMatchObject({ status: "degraded", missingCheckIds: [first] });
   });
 
+  it("resolves the latest row per active check with a bounded index seek", async () => {
+    const db = mockD1([{ match: "WITH active(check_id)", rows: [] }]);
+    await loadCanaryStatus(db, NOW, "status");
+    const query = db.getHistory()[0];
+    // The GROUP BY form scanned every retained run of every active check, and
+    // the staleness watchdog now reads this on every 15-minute run.
+    expect(query.sql).not.toContain("GROUP BY");
+    expect(query.sql).toContain("CROSS JOIN worker_canary_runs r");
+    expect(query.binds.slice(0, EXPECTED_CANARY_CHECK_IDS.length)).toEqual(EXPECTED_CANARY_CHECK_IDS);
+    expect(query.binds).toHaveLength(EXPECTED_CANARY_CHECK_IDS.length + 2);
+  });
+
   it("rejects materially future observation clocks without discarding hard findings", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
@@ -953,7 +1570,32 @@ describe("worker data invariant canaries", () => {
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
           ...gbpCanaryCacheRows(),
+          supplyCompletionRow(),
+          ...canaryPublicationCacheRows(),
         ],
+      },
+      {
+        match: "SELECT COUNT(*) AS count FROM supply_history WHERE snapshot_date = ?",
+        first: { count: [...ACTIVE_IDS].length },
+        rows: [],
+      },
+      {
+        match: "pharos:canary:public-dataset-snapshot",
+        first: { snapshot_date: "2026-03-05", byte_size: 4_096, created_at: NOW - 3_600 },
+        rows: [],
+      },
+      {
+        match: "pharos:canary:public-dataset-publication",
+        first: {
+          started_at: NOW - 3_600,
+          stablecoin_count: 200,
+          dews_count: 20,
+          liquidity_count: 408,
+          dews_computed_at: NOW - 4_000,
+          compressed_size: 4_096,
+          dex_published_row_count: 408,
+        },
+        rows: [],
       },
       {
         match: "FROM stability_index_samples",
@@ -970,14 +1612,228 @@ describe("worker data invariant canaries", () => {
         throwError: new Error("D1_ERROR: no such table: stress_signals"),
         rows: [],
       },
+      ...depegCanaryFixtures().map((fixture) => ({
+        ...fixture,
+        throwError: new Error("D1_ERROR: no such table: depeg canary source"),
+        rows: [],
+      })),
+      {
+        match: "INSERT INTO cache",
+        rows: [],
+      },
     ]);
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
-    expect(summary.errorCount).toBe(4);
+    // The depeg and pricing checks read cron_runs and depeg tables, which this fixture also omits.
+    // The mint/burn and blacklist checks read the healthy cache rows above, so the union keeps
+    // the original error total and adds two healthy observations.
+    // tape-class-liveness fails on the omitted stability-index source clock above, while the
+    // public-dataset check reads the two rows supplied here: the union adds one error and one ok.
+    expect(summary.errorCount).toBe(12);
     expect(summary.skippedCount).toBe(0);
     expect(summary.degradedCount).toBe(1);
-    expect(summary.okCount).toBe(4);
+    expect(summary.okCount).toBe(8);
     expect(summary.worstStatus).toBe("error");
+  });
+});
+
+describe("pricing canaries", () => {
+  function pricingDb(rows: Record<string, unknown>[], publishedRows?: Record<string, unknown>[]) {
+    return mockD1([
+      { match: "canary-stablecoins-pricing-runs", matchBinds: [2], rows },
+      ...(publishedRows
+        ? [{ match: "canary-stablecoins-published-runs", rows: publishedRows }]
+        : []),
+    ]);
+  }
+
+  async function runPricingCheck(
+    checkId: string,
+    rows: Record<string, unknown>[],
+    publishedRows?: Record<string, unknown>[],
+  ) {
+    const summary = await runCanaryChecks(pricingDb(rows, publishedRows), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    return summary.results.find((result) => result.checkId === checkId);
+  }
+
+  it("registers and runs the pricing roster's own definitions", async () => {
+    expect(PRICING_CANARY_CHECKS.map((check) => check.checkId)).toEqual([
+      "stablecoins-active-price-coverage",
+      "depeg-observation-coverage",
+    ]);
+    for (const check of PRICING_CANARY_CHECKS) {
+      expect(await runPricingCheck(check.checkId, stablecoinsRunRows())).toMatchObject({ status: "ok" });
+    }
+  });
+
+  it("grades the published priced cohort against the shared breadth share", async () => {
+    const healthy = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows());
+    expect(healthy).toMatchObject({
+      status: "ok",
+      severity: "info",
+      metadata: { pricedActiveCount: ACTIVE_IDS.size, expectedActiveCount: ACTIVE_IDS.size },
+    });
+
+    const breadth = Math.ceil(ACTIVE_IDS.size * 0.05);
+    const degraded = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows({
+      pricedActiveCount: ACTIVE_IDS.size - breadth,
+      missingPriceCount: breadth,
+    }));
+    expect(degraded).toMatchObject({ status: "degraded", severity: "warning" });
+    expect(degraded?.error).toContain(`${breadth}/${ACTIVE_IDS.size} active assets are unpriced`);
+
+    const empty = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows({
+      pricedActiveCount: 0,
+      missingPriceCount: ACTIVE_IDS.size,
+    }));
+    expect(empty).toMatchObject({ status: "error", severity: "error" });
+  });
+
+  it("fails closed when the run does not report priced coverage", async () => {
+    const check = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows({
+      includeCoverage: false,
+    }));
+    expect(check).toMatchObject({
+      status: "error",
+      executionStatus: "failed",
+      executionFailureReason: "active-price-coverage-unreported",
+    });
+  });
+
+  it("does not treat an aged producer row as current priced coverage", async () => {
+    const check = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows({
+      startedAt: NOW - 3_600,
+    }));
+    expect(check).toMatchObject({
+      status: "error",
+      executionStatus: "failed",
+      executionFailureReason: "sync-stablecoins-run-stale",
+      metadata: { runAgeSec: 3_600, maxAgeSec: 1_800 },
+    });
+  });
+
+  it("degrades when the depeg observation cohort shrinks against the previous generation", async () => {
+    const stable = await runPricingCheck("depeg-observation-coverage", stablecoinsRunRows());
+    expect(stable).toMatchObject({
+      status: "ok",
+      metadata: { observedCount: ACTIVE_IDS.size, unavailableCount: 0 },
+    });
+
+    const escalated = await runPricingCheck("depeg-observation-coverage", [
+      ...stablecoinsRunRows({
+        unavailableCount: 5,
+        reasonCounts: { "primary-unusable": 2, "non-authoritative-reference": 3 },
+      }),
+      ...stablecoinsRunRows({ unavailableCount: 2, reasonCounts: { "primary-unusable": 2 }, startedAt: NOW - 960 }),
+    ]);
+    expect(escalated).toMatchObject({ status: "degraded", severity: "warning" });
+    expect(escalated?.error).toContain("unavailable 2 -> 5");
+    expect(escalated?.error).toContain("non-authoritative-reference+3");
+    expect(escalated?.metadata).toMatchObject({
+      baselineAvailable: true,
+      unavailableDelta: 3,
+      reasonDelta: { "non-authoritative-reference": 3 },
+    });
+  });
+
+  it("keeps a stable depeg census ok without inventing a baseline", async () => {
+    const single = await runPricingCheck("depeg-observation-coverage", stablecoinsRunRows({ unavailableCount: 2 }));
+    expect(single).toMatchObject({ status: "ok", metadata: { baselineAvailable: false, unavailableCount: 2 } });
+  });
+
+  it("grades the last published generation when newer attempts did not publish", async () => {
+    const publication = stablecoinsRunRows({ startedAt: NOW - 960 })[0]!;
+    const skipped = {
+      started_at: NOW - 60,
+      status: "skipped_locked",
+      metadata: JSON.stringify({ reason: "lease-locked" }),
+    };
+    const abandoned = {
+      started_at: NOW - 300,
+      status: "error",
+      metadata: JSON.stringify({
+        reason: "stale-slot-reconciled",
+        failureCategory: "platform-abandoned",
+        childDisposition: "abandoned",
+      }),
+    };
+
+    for (const checkId of ["stablecoins-active-price-coverage", "depeg-observation-coverage"]) {
+      const check = await runPricingCheck(checkId, [skipped, abandoned], [publication]);
+      expect(check).toMatchObject({
+        status: "ok",
+        metadata: { runStartedAt: NOW - 960, runStatus: "ok", runAgeSec: 960 },
+      });
+    }
+  });
+
+  it("fails closed when no generation published inside the producer budget", async () => {
+    const skipped = {
+      started_at: NOW - 60,
+      status: "skipped_locked",
+      metadata: JSON.stringify({ reason: "lease-locked" }),
+    };
+    const check = await runPricingCheck("stablecoins-active-price-coverage", [skipped], []);
+    expect(check).toMatchObject({
+      status: "error",
+      executionStatus: "failed",
+      executionFailureReason: "sync-stablecoins-run-unavailable",
+      metadata: { runStartedAt: NOW - 60, runStatus: "skipped_locked", runAgeSec: 60 },
+    });
+  });
+
+  it("compares against the previous published census, not a newer skipped attempt", async () => {
+    const current = stablecoinsRunRows({
+      unavailableCount: 2,
+      reasonCounts: { "primary-unusable": 2 },
+      startedAt: NOW - 60,
+    })[0]!;
+    const skipped = {
+      started_at: NOW - 120,
+      status: "skipped_locked",
+      metadata: JSON.stringify({ reason: "lease-locked" }),
+    };
+    const previous = stablecoinsRunRows({ startedAt: NOW - 960 })[0]!;
+
+    const check = await runPricingCheck(
+      "depeg-observation-coverage",
+      [current, skipped],
+      [current, previous],
+    );
+    expect(check).toMatchObject({
+      status: "degraded",
+      metadata: { baselineAvailable: true, unavailableDelta: 2, runStartedAt: NOW - 60 },
+    });
+  });
+
+  it("reports a held or failed depeg stage instead of healthy coverage", async () => {
+    const held = await runPricingCheck("depeg-observation-coverage", [{
+      started_at: NOW - 60,
+      status: "degraded",
+      metadata: JSON.stringify({
+        cacheWriteMode: "published",
+        activePriceCoverage: { expectedActiveCount: ACTIVE_IDS.size, pricedActiveCount: ACTIVE_IDS.size, missingPriceCount: 0 },
+        quality: {
+          reason: "depeg-open-event-limit-reached",
+          depegObservation: null,
+          depegObservationUnavailableReason: "depeg-open-event-limit-reached",
+        },
+      }),
+    }]);
+    expect(held).toMatchObject({ status: "degraded", severity: "warning" });
+    expect(held?.error).toContain("depeg-open-event-limit-reached");
+
+    const unreported = await runPricingCheck("depeg-observation-coverage", stablecoinsRunRows({
+      includeCensus: false,
+    }));
+    expect(unreported).toMatchObject({
+      status: "error",
+      executionStatus: "failed",
+      executionFailureReason: "depeg-observation-unreported",
+    });
   });
 });
