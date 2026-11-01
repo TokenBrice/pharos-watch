@@ -74,6 +74,10 @@ const amountMatrix: Array<{ event: BlacklistEvent; expected: string }> = [
     expected: "0.00000123 PAXG",
   },
   {
+    event: { ...event, id: "zero-resolved", amountNative: 0, amountUsdAtEvent: null, amountSource: "historical_balance", amountStatus: "resolved" },
+    expected: "0 USDT",
+  },
+  {
     event: { ...event, id: "zero-unknown", amountNative: 0, amountUsdAtEvent: null, amountSource: "unavailable", amountStatus: "provider_failed" },
     expected: "provider failed",
   },

@@ -89,6 +89,31 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.getByText(`30-day APY: ${apy30d.toFixed(2)}%`)).toBeTruthy();
   });
 
+  it("marks the current APY inside the 30-day range, not the 30-day mean", () => {
+    renderBoard({
+      ...baseRow,
+      currentApy: 9.8,
+      apy30d: 4.3,
+      apyMin30d: 4,
+      apyMax30d: 9.9,
+    });
+    const marker = screen.getByRole("img", { name: "30 day APY range 4.0% to 9.9%, current 9.8%" });
+    const dot = marker.querySelectorAll("div")[1]!;
+    expect(Number.parseFloat(dot.style.left)).toBeCloseTo(((9.8 - 4) / (9.9 - 4)) * 100, 6);
+  });
+
+  it("places the range marker at the low edge after an APY collapse", () => {
+    renderBoard({
+      ...baseRow,
+      currentApy: 4,
+      apy30d: 9,
+      apyMin30d: 4,
+      apyMax30d: 9.9,
+    });
+    const marker = screen.getByRole("img", { name: "30 day APY range 4.0% to 9.9%, current 4.0%" });
+    expect(Number.parseFloat(marker.querySelectorAll("div")[1]!.style.left)).toBe(0);
+  });
+
   it.each(rowRenderers)("routes dynamically covered USDC to the honest fallback on %s", (_name, renderRow) => {
     renderRow({ ...baseRow, id: "usdc-circle", symbol: "USDC" });
     expect(screen.getByRole("link", { name: "View yield opportunities for USDC" }).getAttribute("href"))

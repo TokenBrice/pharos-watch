@@ -443,7 +443,7 @@ function YieldInstrumentRowBase({
           <MetricLabel>30d Range</MetricLabel>
           <div className="mt-1">
             {row.apyMin30d !== null && row.apyMax30d !== null ? (
-              <ApyRangeBar apy30d={row.apy30d} min={row.apyMin30d} max={row.apyMax30d} />
+              <ApyRangeBar currentApy={row.currentApy} min={row.apyMin30d} max={row.apyMax30d} />
             ) : (
               <span className="text-xs text-muted-foreground">{"—"}</span>
             )}

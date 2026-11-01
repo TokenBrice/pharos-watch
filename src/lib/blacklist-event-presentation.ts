@@ -44,7 +44,12 @@ function getBlacklistAmountStatusLabel(event: BlacklistEvent): string {
 
 export function formatBlacklistAmountOrStatus(event: BlacklistEvent): string {
   if (event.amountUsdAtEvent != null) return formatCurrency(event.amountUsdAtEvent);
-  if (event.amountNative != null && !(event.amountNative === 0 && event.eventType !== "destroy")) {
+  // A resolved zero is a proven observation, not a missing amount; only an
+  // unresolved zero falls through to the status word.
+  if (
+    event.amountNative != null &&
+    (event.amountNative !== 0 || event.eventType === "destroy" || event.amountStatus === "resolved")
+  ) {
     return `${formatBlacklistNativeAmount(event)} ${event.stablecoin}`;
   }
   return getBlacklistAmountStatusLabel(event);

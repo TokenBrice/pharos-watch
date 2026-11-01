@@ -1,13 +1,11 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { YieldLeaderboardControls } from "@/components/yield-leaderboard-controls";
 import { makeYieldProvenance, makeYieldRanking } from "@shared/test-utils/yield-ranking-fixtures";
 import { buildYieldViewModel, prepareYieldUniverse } from "@/lib/yield-view-model";
-
-const STORAGE_KEY = "pharos-watchlist-v1";
 
 const rows = [
   makeYieldRanking({
@@ -33,11 +31,6 @@ const rows = [
   }),
 ];
 
-beforeEach(() => {
-  window.localStorage.clear();
-});
-
-
 function buildModel(params: Parameters<typeof buildYieldViewModel>[1] = {}, watchlistIds?: ReadonlySet<string>) {
   return buildYieldViewModel(prepareYieldUniverse(rows, watchlistIds ?? null), params);
 }
@@ -47,6 +40,7 @@ describe("YieldLeaderboardControls", () => {
     render(
       <YieldLeaderboardControls
         viewModel={buildModel()}
+        hasExplicitFilterParams={false}
         onFilterChange={vi.fn()}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}
@@ -57,12 +51,12 @@ describe("YieldLeaderboardControls", () => {
   });
 
   it("shows the watchlist count and toggles the filter when clicked", () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(["usdc-circle", "usdt-tether"]));
     const onFilterChange = vi.fn();
 
     render(
       <YieldLeaderboardControls
         viewModel={buildModel({}, new Set(["usdc-circle", "usdt-tether"]))}
+        hasExplicitFilterParams={false}
         onFilterChange={onFilterChange}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}
@@ -79,38 +73,80 @@ describe("YieldLeaderboardControls", () => {
     expect(onFilterChange).toHaveBeenCalledWith("watchlist", "only");
   });
 
-  it("shows a watchlist attention inbox chip and toggles its composite filter", () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(["usdc-circle", "usdt-tether"]));
-    const onFilterChange = vi.fn();
+  it("counts only watched coins that have a published yield row", () => {
+    const watchlistIds = new Set(["usdc-circle", "not-ranked-coin"]);
 
     render(
       <YieldLeaderboardControls
-        viewModel={buildModel({}, new Set(["usdc-circle", "usdt-tether"]))}
-        onFilterChange={onFilterChange}
+        viewModel={buildModel({}, watchlistIds)}
+        hasExplicitFilterParams={false}
+        onFilterChange={vi.fn()}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}
       />,
     );
 
+    expect(screen.getByRole("button", { name: /^Watching1$/ }).textContent).toContain("1");
+  });
+
+  it("does not render the Watching chip when no watched coin has a yield row", () => {
+    render(
+      <YieldLeaderboardControls
+        viewModel={buildModel({}, new Set(["not-ranked-coin"]))}
+        hasExplicitFilterParams={false}
+        onFilterChange={vi.fn()}
+        onClearFilters={vi.fn()}
+        onApplyPreset={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: /^Watching\d+$/ })).toBeNull();
+  });
+
+  it("counts and applies the watchlist-attention preset so its chip cannot open an empty view", () => {
+    const watchlistIds = new Set(["usdt-tether"]);
+    const onApplyPreset = vi.fn();
+
+    render(
+      <YieldLeaderboardControls
+        viewModel={buildModel({}, watchlistIds)}
+        hasExplicitFilterParams={false}
+        onFilterChange={vi.fn()}
+        onClearFilters={vi.fn()}
+        onApplyPreset={onApplyPreset}
+      />,
+    );
+
+    const presetRows = buildYieldViewModel(
+      prepareYieldUniverse(rows, watchlistIds),
+      { attention: "watchlist", warnings: "all" },
+    ).visibleRows.length;
+    const attentionOnlyRows = buildYieldViewModel(
+      prepareYieldUniverse(rows, watchlistIds),
+      { attention: "watchlist" },
+    ).visibleRows.length;
+    expect(presetRows).toBe(1);
+    expect(attentionOnlyRows).toBe(0);
+
     const chip = screen.getByRole("button", { name: /^Needs attention\d+$/ });
-    expect(chip.textContent).toContain("2");
+    expect(chip.textContent).toContain(String(presetRows));
     expect(chip.getAttribute("data-active")).toBe("false");
     expect(chip.getAttribute("aria-pressed")).toBe("false");
 
     fireEvent.click(chip);
-    expect(onFilterChange).toHaveBeenCalledWith("attention", "watchlist");
+    expect(onApplyPreset).toHaveBeenCalledWith("watchlist-warnings");
   });
 
-  it("renders the attention inbox chip as active and toggles back to all", () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(["usdc-circle"]));
-    const onFilterChange = vi.fn();
+  it("renders the attention preset chip as active and clears it through the same preset", () => {
+    const onApplyPreset = vi.fn();
 
     render(
       <YieldLeaderboardControls
         viewModel={buildModel({ attention: "watchlist", risk: "any" }, new Set(["usdc-circle"]))}
-        onFilterChange={onFilterChange}
+        hasExplicitFilterParams
+        onFilterChange={vi.fn()}
         onClearFilters={vi.fn()}
-        onApplyPreset={vi.fn()}
+        onApplyPreset={onApplyPreset}
       />,
     );
 
@@ -120,16 +156,16 @@ describe("YieldLeaderboardControls", () => {
     expect(screen.getByText("Starred rows with warnings or source changes")).toBeTruthy();
 
     fireEvent.click(chip);
-    expect(onFilterChange).toHaveBeenCalledWith("attention", "all");
+    expect(onApplyPreset).toHaveBeenCalledWith("watchlist-warnings");
   });
 
   it("renders the Watching chip as active and toggles back to all when already filtering", () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(["usdc-circle"]));
     const onFilterChange = vi.fn();
 
     render(
       <YieldLeaderboardControls
         viewModel={buildModel({ watchlist: "only" }, new Set(["usdc-circle"]))}
+        hasExplicitFilterParams
         onFilterChange={onFilterChange}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}
@@ -143,6 +179,40 @@ describe("YieldLeaderboardControls", () => {
 
     fireEvent.click(chip);
     expect(onFilterChange).toHaveBeenCalledWith("watchlist", "all");
+  });
+
+  it("hides Reset on the implicit landing band while keeping the active filter pills", () => {
+    render(
+      <YieldLeaderboardControls
+        viewModel={buildModel()}
+        hasExplicitFilterParams={false}
+        onFilterChange={vi.fn()}
+        onClearFilters={vi.fn()}
+        onApplyPreset={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Filters (2 active)")).toBeTruthy();
+    expect(screen.getByText("No warnings")).toBeTruthy();
+    expect(screen.getByText("50+ safety")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
+  });
+
+  it("renders Reset for an explicit URL filter and clears it", () => {
+    const onClearFilters = vi.fn();
+
+    render(
+      <YieldLeaderboardControls
+        viewModel={buildModel({ risk: "any", minSafety: "80" })}
+        hasExplicitFilterParams
+        onFilterChange={vi.fn()}
+        onClearFilters={onClearFilters}
+        onApplyPreset={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(onClearFilters).toHaveBeenCalledOnce();
   });
 
   describe("yield-type cohort tab strip", () => {
@@ -194,6 +264,7 @@ describe("YieldLeaderboardControls", () => {
       render(
         <YieldLeaderboardControls
           viewModel={buildCohortModel()}
+          hasExplicitFilterParams={false}
           onFilterChange={onFilterChange}
           onClearFilters={vi.fn()}
           onApplyPreset={vi.fn()}
@@ -213,12 +284,12 @@ describe("YieldLeaderboardControls", () => {
   });
 
   it("clears the watchlist filter from the active-filter pill", () => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(["usdc-circle"]));
     const onFilterChange = vi.fn();
 
     render(
       <YieldLeaderboardControls
         viewModel={buildModel({ watchlist: "only" }, new Set(["usdc-circle"]))}
+        hasExplicitFilterParams
         onFilterChange={onFilterChange}
         onClearFilters={vi.fn()}
         onApplyPreset={vi.fn()}

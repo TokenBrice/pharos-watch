@@ -66,10 +66,6 @@ export const content: ArchetypeContent = {
       note: "Securitize Tokenized AAA CLO Fund. Senior-most CLO tranches managed by Securitize Capital; comparable risk-return profile to JAAA, different transfer-agent stack.",
     },
     {
-      coinId: "mapollo-midas",
-      note: "Midas tokenized exposure to Apollo's diversified credit mandate. Permissionless secondary market; underlying redemption inherits the Apollo fund's quarterly gate.",
-    },
-    {
       coinId: "mf-one-midas",
       note: "Midas mF-ONE, wrapped exposure to Fasanara's private-credit fund. Multi-strategy short-duration private credit with monthly NAV.",
     },
@@ -92,7 +88,7 @@ export const content: ArchetypeContent = {
     {
       id: "multi-strategy-structured-credit",
       title: "Multi-strategy and structured credit vaults",
-      body: "The Midas family (mAPOLLO, mF-ONE, mGLOBAL, mRe7YIELD, mMEV, mHYPER) wraps fund-managed mandates with monthly or quarterly redemption schedules. The Tradable PC-series (PC0000031, PC0000033, PC0000089, PC0000101) tokenizes specific structured-finance receivables (rent financing, post-settlement legal financing) outside the diversified-fund template.",
+      body: "The Midas family (mF-ONE, mGLOBAL, mRe7YIELD, mMEV, mHYPER) wraps fund-managed mandates with monthly or quarterly redemption schedules. The Tradable PC-series (PC0000031, PC0000033, PC0000089, PC0000101) tokenizes specific structured-finance receivables (rent financing, post-settlement legal financing) outside the diversified-fund template.",
     },
   ],
   whatToWatch: [

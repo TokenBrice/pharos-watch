@@ -298,6 +298,7 @@ export function CompareClient() {
     selectedIds,
     flowHours,
     radarCohort,
+    range,
   });
 
   const { handleDownload, handleTwitterShare, handleWebShare, shareLoading, toast } = useCompareShareActions({

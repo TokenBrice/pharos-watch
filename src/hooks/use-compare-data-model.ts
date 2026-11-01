@@ -13,8 +13,10 @@ import {
 } from "@/hooks/api-hooks";
 import { useQuerySlice } from "@/hooks/use-query-slice";
 import { supplyHistoryQueryOptions, useStablecoins } from "@/hooks/use-stablecoins";
+import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
 import { mintBurnFlowsCoinQueryOptions, useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
 import { COMPARE_COLORS } from "@/lib/compare-config";
+import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { buildPegSummaryCoinMap } from "@/lib/stablecoin-lookups";
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
@@ -40,6 +42,8 @@ interface UseCompareDataModelOptions {
   selectedIds: string[];
   flowHours: 24 | 168 | 720;
   radarCohort: CompareRadarCohort;
+  /** Chart range; the supply-history read must cover it so "All" is not truncated. */
+  range: TimeRangeOption;
 }
 
 function toFreshnessQuery(
@@ -61,6 +65,7 @@ export function useCompareDataModel({
   selectedIds,
   flowHours,
   radarCohort,
+  range,
 }: UseCompareDataModelOptions) {
   const [clientDetailsById, setClientDetailsById] = useState<ReadonlyMap<string, StablecoinClientDetailMeta>>(
     new Map(),
@@ -180,8 +185,10 @@ export function useCompareDataModel({
     };
   }, [listData]);
 
+  const supplyHistoryWindow =
+    range === "all" ? "all" : range === "1y" ? 365 : STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS;
   const detailQueries = useQueries({
-    queries: selectedIds.map((id) => supplyHistoryQueryOptions(id)),
+    queries: selectedIds.map((id) => supplyHistoryQueryOptions(id, supplyHistoryWindow)),
   });
 
   const flowCoinQueries = useQueries({

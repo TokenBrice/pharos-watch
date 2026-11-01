@@ -157,6 +157,15 @@ describe("Compliance model", () => {
     expect(totalTracked).toBe(6);
   });
 
+  it("scopes the tracked denominator to the selected regime", () => {
+    expect(viewModel({ regime: "mica" }).regimeTotal).toBe(3);
+    expect(viewModel({ regime: "genius" }).regimeTotal).toBe(3);
+
+    const filtered = viewModel({ regime: "mica", status: "authorized" });
+    expect(filtered.rows.map((row) => row.id)).toEqual(["euro-emt"]);
+    expect(filtered.regimeTotal).toBe(3);
+  });
+
   it("promotes active GENIUS rows into the main table once the regime is effective", () => {
     fixtures.isGeniusRegimeEffective.mockReturnValue(true);
 

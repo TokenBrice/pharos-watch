@@ -82,15 +82,23 @@ describe("yield history transformations", () => {
       ]);
   });
 
-  it("uses the trailing thirty-day window and includes equality at the spike ratio threshold", () => {
+  it("uses the trailing thirty-day window and requires a strict spike ratio", () => {
     historyBySource.set("best", [
       point(BASE, 0.5),
       ...[31, 32, 33].map((day) => point(BASE + day * 86_400_000, 4)),
       point(BASE + 34 * 86_400_000, 8),
     ]);
     const { result, rerender } = renderHook(() => useYieldHistoryChartModel(chartProps));
+    // Exactly 2× is not a spike: the worker's `yield-spike` signal needs > 2×.
+    expect(result.current.spikeAnnotations).toEqual([]);
+    historyBySource.set("best", [
+      point(BASE, 0.5),
+      ...[31, 32, 33].map((day) => point(BASE + day * 86_400_000, 4)),
+      point(BASE + 34 * 86_400_000, 8.01),
+    ]);
+    rerender();
     expect(result.current.spikeAnnotations).toEqual([
-      { date: BASE + 34 * 86_400_000, apy: 8, trailingAvg: 4, ratio: 2, windowDays: 3 },
+      { date: BASE + 34 * 86_400_000, apy: 8.01, trailingAvg: 4, ratio: 8.01 / 4, windowDays: 3 },
     ]);
     historyBySource.set("best", [
       ...[0, 1, 2].map((day) => point(BASE + day * 86_400_000, 0.5)),
@@ -168,6 +176,73 @@ describe("yield history transformations", () => {
     ]);
     rerender();
     expect(result.current.spikeAnnotations).toEqual([]);
+  });
+
+  it("averages every observed APY in the window, including an observed zero", () => {
+    const DAY = 86_400_000;
+    historyBySource.set("best", [
+      ...Array.from({ length: 16 }, (_, day) => point(BASE + day * DAY, 2.5)),
+      ...Array.from({ length: 14 }, (_, index) => point(BASE + (16 + index) * DAY, 0)),
+      point(BASE + 30 * DAY, 5),
+    ]);
+    const { result } = renderHook(() => useYieldHistoryChartModel(chartProps));
+
+    expect(result.current.spikeAnnotations).toEqual([
+      { date: BASE + 30 * DAY, apy: 5, trailingAvg: 40 / 30, ratio: 5 / (40 / 30), windowDays: 30 },
+    ]);
+    // The positive-only mean would have printed 2.50% and a 2.0× multiplier.
+    expect(result.current.spikeAnnotations[0]!.trailingAvg).toBeLessThan(2.5);
+  });
+
+  it("includes negative observations in the trailing average", () => {
+    const DAY = 86_400_000;
+    historyBySource.set("best", [
+      ...Array.from({ length: 16 }, (_, day) => point(BASE + day * DAY, 2.5)),
+      ...Array.from({ length: 14 }, (_, index) => point(BASE + (16 + index) * DAY, -0.5)),
+      point(BASE + 30 * DAY, 5),
+    ]);
+    const { result } = renderHook(() => useYieldHistoryChartModel(chartProps));
+
+    expect(result.current.spikeAnnotations).toEqual([
+      { date: BASE + 30 * DAY, apy: 5, trailingAvg: (40 - 7) / 30, ratio: 5 / ((40 - 7) / 30), windowDays: 30 },
+    ]);
+  });
+
+  it("annotates a window mean whose observed zeros push the ratio over the threshold", () => {
+    const DAY = 86_400_000;
+    historyBySource.set("best", [
+      ...Array.from({ length: 20 }, (_, day) => point(BASE + day * DAY, 3)),
+      ...Array.from({ length: 10 }, (_, index) => point(BASE + (20 + index) * DAY, 0)),
+      point(BASE + 30 * DAY, 5.5),
+    ]);
+    const { result } = renderHook(() => useYieldHistoryChartModel(chartProps));
+
+    // Positive-only mean is 3.00% (ratio 1.83); the full window is 2.00% (2.75×).
+    expect(result.current.spikeAnnotations).toEqual([
+      { date: BASE + 30 * DAY, apy: 5.5, trailingAvg: 2, ratio: 2.75, windowDays: 30 },
+    ]);
+  });
+
+  it("does not average a stitched best-mode source switch into a yield spike", () => {
+    const DAY = 86_400_000;
+    const previousSource = Array.from({ length: 20 }, (_, day) =>
+      point(BASE + day * DAY, 3, { sourceKey: "a", sourceSwitch: false }));
+    historyBySource.set("best", [
+      ...previousSource,
+      point(BASE + 20 * DAY, 8, { sourceKey: "b", sourceSwitch: true }),
+    ]);
+    const { result, rerender } = renderHook(() => useYieldHistoryChartModel(chartProps));
+    expect(result.current.spikeAnnotations).toEqual([]);
+
+    // The same jump inside one source is still a spike.
+    historyBySource.set("best", [
+      ...previousSource,
+      point(BASE + 20 * DAY, 8, { sourceKey: "a", sourceSwitch: false }),
+    ]);
+    rerender();
+    expect(result.current.spikeAnnotations).toEqual([
+      { date: BASE + 20 * DAY, apy: 8, trailingAvg: 3, ratio: 8 / 3, windowDays: 20 },
+    ]);
   });
 
 });

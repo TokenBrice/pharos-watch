@@ -288,6 +288,9 @@ export function buildCommsWorkbenchModel(input: {
   const safetySourceState = readMetadataString(metadata?.safetyAlertSourceState);
   const reserveAlertsSuppressed = readOptionalBoolean(metadata?.reserveAlertsSuppressed);
   const reserveSourceState = readMetadataString(metadata?.reserveAlertSourceState);
+  // A skipped run returns `ok` from the runner, but skipping transport work
+  // (for example an open circuit) is not a completed dispatch.
+  const latestSkip = readMetadataString(metadata?.skipped) ?? lastDispatch?.skippedReason ?? null;
   const suppressionReasons: string[] = [];
   if (safetyAlertsSuppressed === true) {
     suppressionReasons.push(`Safety alerts are suppressed because their source input is ${safetySourceState ?? "unknown"}.`);
@@ -309,6 +312,7 @@ export function buildCommsWorkbenchModel(input: {
     backlogAssessment === "attention" ||
     rateLimited === true ||
     (retryTotal ?? 0) > 0 ||
+    latestSkip != null ||
     suppressionReasons.length > 0
   ) {
     health = "degraded";
@@ -319,9 +323,11 @@ export function buildCommsWorkbenchModel(input: {
           ? "Telegram rate limiting affected the latest dispatch."
           : (retryTotal ?? 0) > 0
             ? "The latest dispatch queued delivery retries."
-            : suppressionReasons.length > 0
-              ? suppressionReasons.join(" ")
-              : "The latest dispatch reported a degraded outcome.";
+            : latestSkip != null
+              ? `The latest dispatch skipped delivery because ${latestSkip} was reported.`
+              : suppressionReasons.length > 0
+                ? suppressionReasons.join(" ")
+                : "The latest dispatch reported a degraded outcome.";
   } else if (
     !telegramBot ||
     !lastDispatch ||
@@ -409,7 +415,7 @@ export function buildCommsWorkbenchModel(input: {
         durationMs: lastDispatch?.durationMs ?? null,
         itemCount: lastDispatch?.itemCount ?? null,
         error: lastDispatch?.error ?? null,
-        skipped: readMetadataString(metadata?.skipped) ?? lastDispatch?.skippedReason ?? null,
+        skipped: latestSkip,
         subscribersNotified: readOptionalNumber(metadata?.subscribersNotified),
         messagesSent: readOptionalNumber(metadata?.messagesSent),
         pendingAttempted: readOptionalNumber(metadata?.pendingAttempted),

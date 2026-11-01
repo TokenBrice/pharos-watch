@@ -193,6 +193,18 @@ describe("YieldClient", () => {
     expect(searchParamsMock.get("yieldType")).toBe("lending-opportunity");
   });
 
+  it("hides Reset on the paramless landing view and shows it once a filter param exists", () => {
+    render(<YieldClient />);
+    expect(screen.getByText("No warnings")).toBeTruthy();
+    expect(screen.getByText("50+ safety")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Reset" })).toBeNull();
+
+    cleanup();
+    searchParamsMock.set("minSafety", "80");
+    render(<YieldClient />);
+    expect(screen.getByRole("button", { name: "Reset" })).toBeTruthy();
+  });
+
   it("resolves comparison rows independently of the current filters", () => {
     searchParamsMock.set("q", "zzzz-no-match");
 

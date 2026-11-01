@@ -28,9 +28,9 @@ const SOURCE_KEY_SUFFIX_LENGTH = 12;
  *                         staying sensitive to multi-week anomalies.
  *   SPIKE_MIN_APY       — absolute floor of 2 % APY; below this the ratio is noisy and a
  *                         "2×" jump carries no actionable information.
- *   SPIKE_RATIO_THRESHOLD — a point is flagged when its APY is ≥2× the trailing mean,
- *                           matching the same 2× threshold used by the server-side
- *                           `detectWarningSignals` function.
+ *   SPIKE_RATIO_THRESHOLD — a point is flagged only when its APY is strictly above 2× the
+ *                           trailing mean, matching the server-side `detectWarningSignals`
+ *                           comparison.
  * A "trailing" mean only covers the current source's run: a best-source switch changes
  * what is measured, not how much the coin pays. Observed zero and negative APY are real
  * observations and stay in the mean; the ratio is skipped when that mean is non-positive
@@ -75,7 +75,7 @@ function computeSpikeAnnotations(
     if (avg <= 0) continue;
 
     const ratio = point.apy / avg;
-    if (ratio >= SPIKE_RATIO_THRESHOLD) {
+    if (ratio > SPIKE_RATIO_THRESHOLD) {
       // The trailing window is bounded by the fetched range, so a 7d view
       // averages ~7 days — label the span actually used, not "30d" (E22).
       const spanStartTs = windowPoints[0]!.date;
