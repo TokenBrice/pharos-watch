@@ -233,6 +233,8 @@ describe("fetchM0Reserves", () => {
           "https://protocol-api.m0.org/graphql": (request: Request) => {
             expect(request.method).toBe("POST");
             expect(request.headers.get("authorization")).toBe("ApiKey test-key");
+            // The keyed POST never follows a redirect to another origin.
+            expect(request.redirect).toBe("manual");
             return SAMPLE_PAYLOAD;
           },
         },

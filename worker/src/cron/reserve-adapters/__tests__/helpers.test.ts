@@ -18,6 +18,7 @@ import {
   buildRedemptionSnapshotMetadata,
   buildBucketSlices,
   buildUnknownExposureWarning,
+  collectPdfAnchors,
   computeUnknownExposurePct,
   decimalStringFromBigInt,
   fetchDefiLlamaPrices,
@@ -683,6 +684,40 @@ describe("source timestamp summaries", () => {
       ...summarizeSourceTimestamps(values),
       untimestampedCount: 2,
     });
+  });
+});
+
+describe("collectPdfAnchors", () => {
+  it("keeps anchor precedence over data-gated buttons across quote styles", () => {
+    const html = [
+      '<button data-gated-url="https://cdn.example/gated.pdf" data-gated-asset="Gated report"></button>',
+      '<a class="report" href="/one.pdf">One <b>report</b></a>',
+      "<a href='/two.pdf'>Two</a>",
+      "<a href=/three.pdf>Three</a>",
+      '<a name="no-href">No href</a>',
+    ].join("\n");
+
+    expect(collectPdfAnchors(html)).toEqual([
+      { href: "/one.pdf", text: "One report" },
+      { href: "/two.pdf", text: "Two" },
+      { href: "/three.pdf", text: "Three" },
+      { href: "https://cdn.example/gated.pdf", text: "Gated report" },
+    ]);
+  });
+
+  it("bounds adversarial anchor-dense pages instead of scanning quadratically", () => {
+    const started = performance.now();
+    // Unterminated `<a` tokens made the old lazy-tail regex scan to end-of-input
+    // for every start: 256 KiB of this shape measured ~18 s on Node 24.
+    expect(collectPdfAnchors("<a ".repeat((256 * 1024) / 3))).toEqual([]);
+    // Every anchor is missing its closing tag: bounded tag slices, no match.
+    expect(collectPdfAnchors("<a href=x>".repeat((128 * 1024) / 10))).toEqual([]);
+    expect(performance.now() - started).toBeLessThan(3_000);
+  });
+
+  it("fails closed past the anchor candidate bound", () => {
+    expect(() => collectPdfAnchors('<a href="/report.pdf">report</a>'.repeat(5_001)))
+      .toThrow("pdf-anchor-scan: parse-failed: index page exceeds 5000 anchor candidates");
   });
 });
 

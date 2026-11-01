@@ -31,6 +31,10 @@ interface FetchWithRetryOptions {
   maxRetryDelayMs?: number;
   /** Applies only when this helper consumes a JSON, text, or binary response body. */
   maxResponseBytes?: number;
+  /** Runs on a final response before its body is consumed; throw to reject it.
+   *  Used by reserved-host readers to refuse a redirect target before intake.
+   *  A rejection is handled like a transport failure by the retry loop. */
+  validateResponse?: (response: Response) => void;
   waitOnPassthrough429?: boolean;
   /** Retry only thrown transport failures; return the first HTTP response. */
   retryMode?: "default" | "network-only";
@@ -269,6 +273,7 @@ async function fetchWithRetryInternal<TResult>(
       });
       const readFinalResponse = async (response: Response): Promise<Response | FetchWithRetryBodyResult<TResult>> => {
         if (!readBody) return response;
+        options?.validateResponse?.(response);
         const body = await readBody(response, perRequestTimeout.signal, maxResponseBytes);
         if (options?.deadlineMs != null && Date.now() >= options.deadlineMs) {
           throw new DOMException("fetch deadline exceeded", "TimeoutError");
@@ -287,6 +292,7 @@ async function fetchWithRetryInternal<TResult>(
         if (passthroughStatuses.has(res.status)) {
           const passthroughDelayMs = res.status === 429 ? getRetryDelayMs(res, i, maxRetryDelayMs) : null;
           if (passthroughDelayMs != null && options?.waitOnPassthrough429 !== false) {
+            options?.validateResponse?.(res);
             if (readBody) {
               const body = await readBody(res, perRequestTimeout.signal, maxResponseBytes);
               perRequestTimeout.dispose();

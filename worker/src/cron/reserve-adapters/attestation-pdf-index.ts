@@ -25,6 +25,9 @@ const ADAPTER_NAME = "attestation-pdf-index";
 const COMPOSITION_MODE = "configured-static-slices";
 const COMPOSITION_NOTE =
   "Configured reviewed composition; the PDF index validates report identity and date, not the PDF body or reserve composition.";
+// Reviewed issuer indexes run under 300 KB; bound the anchor parser's input far
+// below the shared 16 MiB transport default.
+const MAX_INDEX_BYTES = 1024 * 1024;
 const NEUTRAL_FIRST_HTML_HOSTS = new Set(["schuman.io", "www.schuman.io"]);
 
 function shouldUseNeutralHtmlHeadersFirst(url: string): boolean {
@@ -49,7 +52,10 @@ async function fetchAttestationIndexHtml(
   ctx?: AdapterContext,
 ): Promise<string> {
   if (shouldUseNeutralHtmlHeadersFirst(inputUrl)) {
-    return fetchTextWithRetry(inputUrl, signal, 15_000, ctx, { headers: buildNeutralHtmlHeaders() });
+    return fetchTextWithRetry(inputUrl, signal, 15_000, ctx, {
+      headers: buildNeutralHtmlHeaders(),
+      maxResponseBytes: MAX_INDEX_BYTES,
+    });
   }
 
   return fetchWithBrowserFallback(
@@ -57,6 +63,7 @@ async function fetchAttestationIndexHtml(
     inputUrl,
     (headers) => fetchTextWithRetry(inputUrl, signal, 15_000, ctx, {
       headers: { ...Object.fromEntries(new Headers(headers).entries()), Accept: HTML_ACCEPT_HEADER },
+      maxResponseBytes: MAX_INDEX_BYTES,
     }),
     signal,
   );

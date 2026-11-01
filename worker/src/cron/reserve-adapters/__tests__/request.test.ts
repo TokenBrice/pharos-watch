@@ -3,7 +3,7 @@ import { installAdapterNetwork } from "./reserve-adapter.test-support";
 import { createAdapterIoLimiter } from "../concurrency";
 import { createReserveAdapterRunner } from "../../reserve-adapter-runner";
 import { createAdapterLatencyCollector } from "../../sync-live-reserves-core";
-import { CONFIGURED_COINS } from "../../sync-live-reserves-shared";
+import { CONFIGURED_COINS, classifyFailure } from "../../sync-live-reserves-shared";
 import { getReserveAdapter } from "../index";
 import {
   ADAPTER_USER_AGENT,
@@ -13,6 +13,7 @@ import {
   fetchJsonWithRetry,
   fetchBinaryResponseWithRetry,
   fetchWithBrowserFallback,
+  fetchTextResponseWithRetry,
   fetchTextWithRetry,
   getCachedRequest,
   getRequestResourceSnapshot,
@@ -344,9 +345,41 @@ describe("adapter request cache", () => {
 
     expect(error).toBeInstanceOf(Error);
     expect((error as Error).message).toContain("HTTP 200, text/html; final URL https://issuer.example/?token=[redacted]");
-    expect((error as Error).message).toContain("body starts with: <!DOCTYPE html>");
+    expect((error as Error).message).toContain("JSON parse failed");
+    // The message is persisted as public reserve `sync.lastError`: never quote
+    // upstream body text, and keep the parse-failure classification token.
+    expect((error as Error).message).not.toContain("<!DOCTYPE html>");
+    expect((error as Error).message).not.toContain("Issuer homepage");
+    expect(classifyFailure("adapter-exception", (error as Error).message)).toBe("parse-failure");
     expect((error as Error).message).not.toContain("redirect-secret");
     expect((error as Error).message).not.toContain("request-secret");
+  });
+
+  it("rejects an unreviewed response URL before its body is consumed", async () => {
+    const response = new Response(new TextEncoder().encode("private upstream body"), { status: 200 });
+    Object.defineProperty(response, "url", { value: "https://unreviewed.example/index" });
+    vi.stubGlobal("fetch", vi.fn(async () => response));
+
+    await expect(fetchTextResponseWithRetry(
+      "https://issuer.example/index", new AbortController().signal, 1_000, undefined,
+      {
+        maxRetries: 0,
+        validateResponse: (res) => {
+          if (new URL(res.url).hostname !== "issuer.example") throw new Error("unreviewed response host");
+        },
+      },
+    )).rejects.toThrow("unreviewed response host");
+    expect(response.bodyUsed).toBe(false);
+  });
+
+  it("lets text readers opt into manual redirects", async () => {
+    const network = installAdapterNetwork({
+      html: { "https://issuer.example/index": (request) => ({ body: request.redirect }) },
+    });
+    await expect(fetchTextWithRetry(
+      "https://issuer.example/index", new AbortController().signal, 1_000, undefined, { redirect: "manual" },
+    )).resolves.toBe("manual");
+    expect(network.requests).toEqual([{ url: "https://issuer.example/index", method: "GET" }]);
   });
 
   it("cancels binary error bodies and reports only the host and status", async () => {

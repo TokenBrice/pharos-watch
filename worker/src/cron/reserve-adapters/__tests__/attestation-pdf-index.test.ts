@@ -565,4 +565,19 @@ describe("fetchAttestationPdfIndexReserves", () => {
     )).rejects.toThrow("layout-changed");
     expect(network.requests).toEqual([{ url, method: "GET" }]);
   });
+
+  it("rejects an oversized index page instead of parsing it", async () => {
+    const url = "https://issuer.example/transparency/index.html";
+    installAdapterNetwork({
+      html: {
+        [url]: { body: "x".repeat(1024 * 1024 + 1), headers: { "content-type": "text/html" } },
+      },
+    });
+
+    await expect(fetchAttestationPdfIndexReserves(
+      {} as StablecoinMeta,
+      buildConfig(url),
+      new AbortController().signal,
+    )).rejects.toThrow("Response body exceeded 1048576 bytes");
+  });
 });

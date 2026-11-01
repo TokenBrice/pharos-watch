@@ -283,6 +283,27 @@ describe("independent-assurance manifest framework", () => {
       ).rejects.toThrow("PDF byte length");
     },
   );
+  it("rejects an unreviewed index redirect before reading its body", async () => {
+    const fetchMock = installFetch({ indexFinalUrl: "https://unreviewed.example/index" });
+    await expect(verify()).rejects.toThrow(/index response host .* is not in the reviewed allowlist/);
+    expect(((await fetchMock.mock.results[0]!.value) as Response).bodyUsed).toBe(false);
+  });
+
+  it("rejects an unreviewed PDF redirect before reading its body", async () => {
+    const fetchMock = installFetch({ pdfFinalUrl: "https://unreviewed.example/report.pdf" });
+    await expect(verify()).rejects.toThrow(/PDF response host .* is not in the reviewed allowlist/);
+    expect(((await fetchMock.mock.results[1]!.value) as Response).bodyUsed).toBe(false);
+  });
+
+  it("rejects an oversized index page before parsing it", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => responseWithFinalUrl(
+      "x".repeat(1024 * 1024 + 1),
+      { headers: { "content-type": "text/html" } },
+      "https://www.audxtoken.com/transparency",
+    )));
+    await expect(verify()).rejects.toThrow("Response body exceeded 1048576 bytes");
+  });
+
   it.each(assuranceFenceCases())(
     "$adapter validates pinned bytes and publishes the reviewed product's measured assets",
     async (testCase) => {

@@ -540,6 +540,12 @@ export async function verifyPaxosDiscovery(
   const mainResponse = await fetchTextResponseWithRetry(mainUrl.href, signal, 10_000, ctx, {
     maxRetries: 0,
     maxResponseBytes: 1024 * 1024,
+    validateResponse: (res) => {
+      const finalUrl = res.url || mainUrl.href;
+      if (finalUrl !== mainUrl.href) {
+        throw new PaxosDiscoveryError("main-module-response-drifted", `main module redirected to ${finalUrl}`);
+      }
+    },
   });
   if (mainResponse.finalUrl !== mainUrl.href) {
     throw new PaxosDiscoveryError("main-module-response-drifted", `main module redirected to ${mainResponse.finalUrl}`);
@@ -566,6 +572,12 @@ export async function verifyPaxosDiscovery(
     // Product page modules embed the full month archive across locales and run
     // 250-670 KB today (USDP is the largest), so cap above that headroom.
     maxResponseBytes: 2 * 1024 * 1024,
+    validateResponse: (res) => {
+      const finalUrl = res.url || pageModuleUrl;
+      if (finalUrl !== pageModuleUrl) {
+        throw new PaxosDiscoveryError("page-module-response-drifted", `page module redirected to ${finalUrl}`);
+      }
+    },
   });
   if (pageResponse.finalUrl !== pageModuleUrl) {
     throw new PaxosDiscoveryError("page-module-response-drifted", `page module redirected to ${pageResponse.finalUrl}`);
