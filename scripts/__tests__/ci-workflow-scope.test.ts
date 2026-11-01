@@ -198,8 +198,9 @@ describe("CI workflow scope", () => {
       step.run === "npm run test:v9-resource")).toHaveLength(1);
     expect(weekly.jobs["v9-resource"]).toBeUndefined();
     expect(readRepoFile(".github/workflows/weekly-validation.yml")).not.toContain("npm run test:v9-resource");
+    expect(nightly.jobs["full-tests"].strategy.matrix.shard).toEqual([1, 2, 3, 4]);
     expect(nightly.jobs["full-tests"].steps.some((step: { run?: string }) =>
-      step.run === "npm test -- --shard=${{ matrix.shard }}/2")).toBe(true);
+      step.run === "npm test -- --shard=${{ matrix.shard }}/4")).toBe(true);
   });
 
   it("runs CodeQL weekly on Monday and manual dispatch, not pushes", () => {

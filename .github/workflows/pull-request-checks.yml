@@ -164,7 +164,9 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-  # Peak fan-out: validation 10 + Pages 1 + secrets 1 = 12.
+  # Peak fan-out: validation 10 + Pages 1 + secrets 1 = 12. Matrix order puts
+  # v9-resource first and static-compile last, so the eleventh validation job
+  # is the shortest lane.
   pages-artifact:
     name: Pages artifact
     needs: prepare

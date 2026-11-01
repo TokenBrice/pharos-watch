@@ -57,11 +57,17 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
       { id: "gitleaks", program: "node", args: ["--disable-warning=MODULE_TYPELESS_PACKAGE_JSON", "scripts/ci/run-gitleaks.ts", "--range"] },
     ],
   },
+  // buildPrWorkflowMatrix emits lanes in declaration order and the workflow
+  // caps validation at max-parallel: 10. Keep v9-resource inside that first
+  // ten and static-compile last, so an eleven-job selection (eight test
+  // shards) queues only the shortest lane instead of the slow resource lane.
   {
-    id: "static-compile",
-    selector: "code",
-    timeoutMinutes: 20,
-    commands: [{ id: "pr-static-compile", program: "npm", args: ["run", "check:pr:static", "--", "--group=compile"] }],
+    id: "v9-resource",
+    selector: "v9-resource",
+    // Faithful setup/live/natural/correctness smoke: 101s; contagion wall policy: 90s.
+    // Eight minutes allows CI setup, bundling and scheduling headroom without a 35-minute hang.
+    timeoutMinutes: 8,
+    commands: [{ id: "v9-resource", program: "npm", args: ["run", "test:v9-resource"] }],
   },
   {
     id: "static-guards",
@@ -77,12 +83,10 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
     commands: [{ id: "pr-tests", program: "npm", args: ["run", "test:pr", "--"] }],
   },
   {
-    id: "v9-resource",
-    selector: "v9-resource",
-    // Faithful setup/live/natural/correctness smoke: 101s; contagion wall policy: 90s.
-    // Eight minutes allows CI setup, bundling and scheduling headroom without a 35-minute hang.
-    timeoutMinutes: 8,
-    commands: [{ id: "v9-resource", program: "npm", args: ["run", "test:v9-resource"] }],
+    id: "static-compile",
+    selector: "code",
+    timeoutMinutes: 20,
+    commands: [{ id: "pr-static-compile", program: "npm", args: ["run", "check:pr:static", "--", "--group=compile"] }],
   },
   {
     id: "pages-artifact",

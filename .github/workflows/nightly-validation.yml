@@ -94,13 +94,13 @@ jobs:
           fi
 
   full-tests:
-    name: Full test suite (${{ matrix.shard }}/2)
+    name: Full test suite (${{ matrix.shard }}/4)
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -109,7 +109,7 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-      - run: npm test -- --shard=${{ matrix.shard }}/2
+      - run: npm test -- --shard=${{ matrix.shard }}/4
 
   v9-resource:
     name: V9 resource budget
