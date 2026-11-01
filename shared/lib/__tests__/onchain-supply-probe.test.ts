@@ -10,6 +10,7 @@ import {
   hasRuntimeOnchainSupplyPath,
   isZephyrScannerSupplyId,
   onchainSupplyProbeFamily,
+  prefersOnChainSupplyMcap,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSingleOnchainSupplyProbeContract,
   supportsOnchainSupplyProbe,
@@ -158,6 +159,33 @@ describe("curated on-chain supply paths", () => {
         ...meta, contracts: meta.contracts!.filter((contract) => contract !== missing),
       })).toBeNull();
     }
+  });
+
+  it("selects PAXG's reviewed issuer-native Base leg and rejects an omitted catalog deployment", () => {
+    const meta = TRACKED_META_BY_ID.get("paxg-paxos")!;
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    expect(selected?.map(({ contract }) => contract.chain)).toEqual(["ethereum", "solana", "base"]);
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]).toBeUndefined();
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts({
+      ...meta, contracts: meta.contracts!.filter(({ chain }) => chain !== "base"),
+    })).toBeNull();
+  });
+
+  it("reallocates sUSDe's reviewed Monad OFT representation out of the canonical escrow residual", () => {
+    const meta = TRACKED_META_BY_ID.get("susde-ethena")!;
+    const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    expect(selected?.find(({ contract }) => contract.chain === "monad")?.contract.address)
+      .toBe("0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2");
+    expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[meta.id]).toBe("ethereum");
+    expect(CURATED_AGGREGATE_ESCROW_RESIDUALS[meta.id]?.escrowAddress)
+      .toBe("0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2");
+  });
+
+  it("prefers USYC's complete four-chain native stock over a contradicted CoinGecko cap", () => {
+    const meta = TRACKED_META_BY_ID.get("usyc-hashnote")!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(true);
+    expect(selectCuratedAggregateOnchainSupplyProbeContracts(meta)?.map(({ contract }) => contract.chain))
+      .toEqual(["ethereum", "bsc", "solana", "arc"]);
   });
 
   it.each(["ylds-figure", "sfrxusd-frax"])(
