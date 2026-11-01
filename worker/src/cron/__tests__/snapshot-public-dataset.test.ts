@@ -142,7 +142,11 @@ function publishedDewsPointer(rows = STRESS_ROWS) {
   };
 }
 
-function buildDb(dexRows: readonly Record<string, unknown>[] = DEX_ROWS, insertChanges = 1): MockD1Database {
+function buildDb(
+  dexRows: readonly Record<string, unknown>[] = DEX_ROWS,
+  insertChanges = 1,
+  dexGeneration: { current_row_count: number } | null = null,
+): MockD1Database {
   return mockD1([
     publishedDewsPointer(),
     snapshotCacheRows([
@@ -151,7 +155,8 @@ function buildDb(dexRows: readonly Record<string, unknown>[] = DEX_ROWS, insertC
     ]),
     { match: "FROM stability_index", rows: [], first: PSI_ROW },
     { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
-    { match: "FROM dex_liquidity", rows: [...dexRows] },
+    { match: "pharos:snapshot-public-dataset:published-dex-generation", rows: dexGeneration ? [dexGeneration] : [], first: dexGeneration },
+    { match: "SELECT stablecoin_id, total_tvl_usd", rows: [...dexRows] },
     { match: "INSERT OR IGNORE INTO public_snapshots", rows: [], runMeta: { changes: insertChanges } },
   ]);
 }
@@ -237,7 +242,7 @@ describe("snapshotPublicDataset", () => {
         ...PSI_ROW, computed_at: slotDayStartedAtSec - 86_400,
       } },
       { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
-      { match: "FROM dex_liquidity", rows: [...DEX_ROWS] },
+      { match: "SELECT stablecoin_id, total_tvl_usd", rows: [...DEX_ROWS] },
       { match: "INSERT OR IGNORE INTO public_snapshots", rows: [], runMeta: { changes: 1 } },
     ]);
 
@@ -637,7 +642,7 @@ describe("snapshotPublicDataset", () => {
       ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: [] },
-      { match: "FROM dex_liquidity", rows: [] },
+      { match: "SELECT stablecoin_id, total_tvl_usd", rows: [] },
       { match: "INSERT OR IGNORE INTO public_snapshots", rows: [] },
     ]);
 
@@ -659,7 +664,7 @@ describe("snapshotPublicDataset", () => {
       ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "pharos:stress-signals:published-exact", rows: [STRESS_ROWS[1]!] },
-      { match: "FROM dex_liquidity", rows: DEX_ROWS },
+      { match: "SELECT stablecoin_id, total_tvl_usd", rows: DEX_ROWS },
     ]);
 
     const result = await snapshotPublicDataset(db);
@@ -687,7 +692,7 @@ describe("snapshotPublicDataset", () => {
       ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: [], throwError: new Error("D1 read failed") },
-      { match: "FROM dex_liquidity", rows: DEX_ROWS },
+      { match: "SELECT stablecoin_id, total_tvl_usd", rows: DEX_ROWS },
     ]);
 
     const result = await snapshotPublicDataset(db);
@@ -710,7 +715,7 @@ describe("snapshotPublicDataset", () => {
       ]),
       { match: "FROM stability_index", rows: [], first: PSI_ROW },
       { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
-      { match: "FROM dex_liquidity", rows: [], throwError: new Error("D1 liquidity read failed") },
+      { match: "SELECT stablecoin_id, total_tvl_usd", rows: [], throwError: new Error("D1 liquidity read failed") },
     ]);
 
     const result = await snapshotPublicDataset(db);
@@ -722,5 +727,56 @@ describe("snapshotPublicDataset", () => {
       failedSections: [{ section: "liquidity", error: "D1 liquidity read failed" }],
     });
     expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("does not seal a day whose liquidity export is smaller than the published generation", async () => {
+    const db = buildDb(DEX_ROWS, 1, { current_row_count: 2 });
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "public_snapshot_section_incomplete",
+      snapshotDate: ISO_DATE,
+      incompleteSections: [{ section: "liquidity", reason: "liquidity-rows:1/2" }],
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("does not seal a day whose DEWS generation is past its consumer budget", async () => {
+    const staleDewsRows = STRESS_ROWS.map((row) => ({ ...row, computed_at: NOW_SEC - 4_000 }));
+    const db = mockD1([
+      publishedDewsPointer(staleDewsRows),
+      snapshotCacheRows([
+        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      ]),
+      { match: "FROM stability_index", rows: [], first: PSI_ROW },
+      { match: "FROM stress_signal_publication_rows", rows: staleDewsRows },
+      { match: "pharos:snapshot-public-dataset:published-dex-generation", rows: [], first: null },
+      { match: "SELECT stablecoin_id, total_tvl_usd", rows: [...DEX_ROWS] },
+    ]);
+
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      reason: "public_snapshot_section_incomplete",
+      incompleteSections: [{ section: "dews", reason: "dews-generation-stale:4000s>3600s" }],
+    });
+    expect(getInsertBinds(db)).toBeUndefined();
+  });
+
+  it("records the generation clocks that made the sealed sections complete", async () => {
+    const db = buildDb(DEX_ROWS, 1, { current_row_count: 1 });
+    const result = await snapshotPublicDataset(db);
+
+    expect(result.status).toBeUndefined();
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      dewsComputedAt: NOW_SEC - 600,
+      dexPublicationRowCount: 1,
+      dewsCount: 2,
+      liquidityCount: 1,
+    });
+    expect(getInsertBinds(db)).toBeDefined();
   });
 });

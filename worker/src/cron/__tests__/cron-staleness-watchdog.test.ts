@@ -58,6 +58,7 @@ interface FakeFailureRow {
 interface FakeOperatorWatchRows {
   canaryRows?: Array<Record<string, unknown>>;
   probeRow?: Record<string, unknown> | null;
+  psiDailyRow?: { computed_at: number; input_snapshot: string } | null;
 }
 
 function defaultBlacklistSyncState(nowSec: number) {
@@ -129,6 +130,7 @@ function fakeDb(
         return { results: (args as string[]).map((job) => ({
           job,
           last_success_at: producerPublishedAt ?? started_at,
+          last_liveness_at: producerPublishedAt ?? started_at,
           last_run_at: started_at,
           last_status: "ok",
         })) };
@@ -150,6 +152,7 @@ function fakeDb(
           return { results: (args as string[]).map((job) => ({
             job,
             last_success_at: producerPublishedAt ?? started_at,
+            last_liveness_at: producerPublishedAt ?? started_at,
             last_run_at: started_at,
             last_status: "ok",
           })) };
@@ -190,6 +193,9 @@ function fakeDb(
               return cacheRows.get(args[0] as string) ?? null;
             }
             if (sql.includes("FROM status_probe_runs")) return operatorWatch.probeRow ?? null;
+            if (sql.startsWith("SELECT computed_at, input_snapshot FROM stability_index")) {
+              return operatorWatch.psiDailyRow ?? null;
+            }
             return null;
           },
           all: () => all(args),
@@ -315,6 +321,63 @@ describe("cron staleness watchdog", () => {
     expect(metadata.checkedProducers.includes(job)).toBe(false);
     expect(metadata.stale.some((observation: { producerJob: string }) => observation.producerJob === job)).toBe(false);
     expect(metadata.checkedProducers).toContain("compute-safety-score-v9");
+  });
+
+  it("treats a stalled dispatch-telegram-alerts run as a stale control-plane producer", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    mockCacheStatus({});
+    const nowSec = Math.floor(Date.now() / 1000);
+    const result = await runCronStalenessWatchdog(fakeDb([], nowSec - 700), undefined, {
+      operatorTelegramCreds: { botToken: "bot", chatId: "ops" },
+    });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.stale).toContainEqual(expect.objectContaining({
+      producerJob: "dispatch-telegram-alerts",
+      livenessOnly: true,
+      thresholdSec: 600,
+      ageSeconds: 700,
+    }));
+    expect(sendToChatMock.mock.calls[0]?.[1] ?? "")
+      .toContain("dispatch-telegram-alerts (last completed run 700s; budget 600s)");
+    expect(metadata.firedRuleIds).toContain("producer-stale");
+  });
+
+  it("raises and clears the daily PSI sample-coverage condition", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T12:00:00Z"));
+    mockCacheStatus({});
+    const dailyRow = {
+      computed_at: Math.floor(Date.parse("2026-08-21T00:00:00Z") / 1000),
+      input_snapshot: JSON.stringify({ sampleCount: 10 }),
+    };
+    const db = fakeDb([], undefined, { psiDailyRow: dailyRow });
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
+    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    const raisedMetadata = JSON.parse(raised.metadata ?? "{}");
+    expect(raisedMetadata.psiDailyCoverage).toMatchObject({
+      status: "shortfall",
+      sampleCount: 10,
+      expectedSampleCount: 48,
+      minimumSampleCount: 39,
+    });
+    expect(raisedMetadata.firedRuleIds).toContain("psi-daily-coverage");
+    expect(raisedMetadata.quality.reasons).toContain("psi-daily-sample-coverage");
+    expect(sendToChatMock.mock.calls[0]?.[1] ?? "")
+      .toContain("Daily PSI sample coverage low</b>: daily PSI 10/48 samples (floor 39)");
+
+    // Same condition on the next evaluation is not a new transition.
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+
+    dailyRow.input_snapshot = JSON.stringify({ sampleCount: 48 });
+    vi.setSystemTime(new Date(Date.now() + CRON_STALENESS_ALERT_COOLDOWN_SEC * 1_000));
+    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions.recovered)
+      .toContain("psi-daily-coverage:daily");
+    expect(sendToChatMock.mock.calls[1]?.[1] ?? "")
+      .toContain("Daily PSI sample coverage restored</b>: daily");
   });
 
   it("retains assessed cache and cron generation clocks with the watchdog budgets", async () => {
@@ -620,6 +683,9 @@ describe("cron staleness watchdog", () => {
         || definition.job === "sync-stablecoin-charts") continue;
       runs.run(definition.job, nowSec - 600, JSON.stringify({ published: true }));
     }
+    // The control-plane liveness lane needs a completed dispatch run; the
+    // freshnessSurface:none filter above omits it from the generic seed.
+    runs.run("dispatch-telegram-alerts", nowSec - 60, JSON.stringify({ published: true }));
     for (const startedAt of [nowSec - 900, nowSec - 1_800]) {
       runs.run("sync-stablecoins", startedAt, JSON.stringify({
         priceSourceHealth: {

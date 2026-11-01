@@ -13,6 +13,7 @@ vi.mock("../../telegram/delivery/telegram", async (importOriginal) => ({
 import {
   runDigestPublicationWatchdog,
 } from "../digest-publication-watchdog";
+import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "../digest-input-quality";
 
 const DATE = "2026-08-31";
 const fixtures = createLatestSchemaFixtureTracker();
@@ -33,6 +34,8 @@ interface FixtureOptions {
   twitterState?: string;
   /** Defaults to `twitterState` so a healthy fixture stays healthy on Mondays. */
   weeklyTwitterState?: string;
+  dailyCriticalSources?: string[];
+  weeklyCriticalSources?: string[];
 }
 
 function fakeDb(options: FixtureOptions = {}): D1Database & {
@@ -62,6 +65,8 @@ function fakeDb(options: FixtureOptions = {}): D1Database & {
     weeklyRow: options.weeklyRow ?? true,
     dailyTelegram: options.dailyTelegram ?? "sent",
     weeklyTelegram: options.weeklyTelegram ?? "sent",
+    dailyCriticalSources: options.dailyCriticalSources ?? [],
+    weeklyCriticalSources: options.weeklyCriticalSources ?? [],
   };
 
   const db = {
@@ -73,7 +78,19 @@ function fakeDb(options: FixtureOptions = {}): D1Database & {
             async first<T>() {
               if (sql.includes("FROM daily_digest")) {
                 const isWeekly = sql.includes("json_extract(digest_meta, '$.type') = 'weekly'");
-                if ((isWeekly ? fixture.weeklyRow : fixture.dailyRow) && sql.includes("SELECT 1 AS present")) {
+                const present = isWeekly ? fixture.weeklyRow : fixture.dailyRow;
+                if (!present) return null;
+                if (sql.includes("critical_sources")) {
+                  const sources = (isWeekly
+                    ? fixture.weeklyCriticalSources
+                    : fixture.dailyCriticalSources
+                  ).filter((source) => (REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES as readonly string[]).includes(source));
+                  return {
+                    sources_type: "array",
+                    critical_sources: JSON.stringify(sources),
+                  } as T;
+                }
+                if (sql.includes("SELECT 1 AS present")) {
                   return { present: 1 } as T;
                 }
                 return null;
@@ -106,6 +123,8 @@ function fakeDb(options: FixtureOptions = {}): D1Database & {
       if (next.weeklyRow != null) fixture.weeklyRow = next.weeklyRow;
       if (next.dailyTelegram != null) fixture.dailyTelegram = next.dailyTelegram;
       if (next.weeklyTelegram != null) fixture.weeklyTelegram = next.weeklyTelegram;
+      if (next.dailyCriticalSources != null) fixture.dailyCriticalSources = next.dailyCriticalSources;
+      if (next.weeklyCriticalSources != null) fixture.weeklyCriticalSources = next.weeklyCriticalSources;
     },
   };
   return db as unknown as D1Database & {
@@ -166,6 +185,74 @@ describe("digest publication watchdog", () => {
     expect(JSON.parse(result.metadata ?? "{}").quality).toEqual({ reason: "digest-publication-findings" });
     expect(JSON.parse(result.metadata ?? "{}").firedRuleIds).toContain("daily-row");
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("publishes a machine-readable condition when a regime-critical collector was degraded", async () => {
+    const result = await runDigestPublicationWatchdog(
+      fakeDb({
+        dailyCriticalSources: ["active-depegs-query", "yield-anomalies-query"],
+        twitterState: JSON.stringify({ state: "sent" }),
+      }),
+      at("2026-08-31T08:31:00Z"),
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.conditions["daily-inputs"]).toMatchObject({
+      state: "stale",
+      detail: "degraded: active-depegs-query",
+      advisory: false,
+    });
+    expect(metadata.firedRuleIds).toContain("daily-inputs");
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(sendToChatMock.mock.calls[0]?.[1] ?? "")
+      .toContain("daily input completeness (degraded: active-depegs-query)");
+  });
+
+  it("ignores non-regime degraded collector keys", async () => {
+    const result = await runDigestPublicationWatchdog(
+      fakeDb({ dailyCriticalSources: ["yield-anomalies-query"], twitterState: JSON.stringify({ state: "sent" }) }),
+      at("2026-08-31T08:31:00Z"),
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    expect(JSON.parse(result.metadata ?? "{}").conditions["daily-inputs"]).toMatchObject({
+      state: "ok",
+      detail: "no regime-critical degraded source",
+    });
+    expect(sendToChatMock).not.toHaveBeenCalled();
+  });
+
+  it("checks weekly input completeness against degradedSourcesThisWeek", async () => {
+    const result = await runDigestPublicationWatchdog(
+      fakeDb({
+        weeklyCriticalSources: ["safety-canonical-snapshot"],
+        twitterState: JSON.stringify({ state: "sent" }),
+      }),
+      at("2026-08-31T08:36:00Z"),
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    const conditions = JSON.parse(result.metadata ?? "{}").conditions;
+    expect(conditions["weekly-inputs"]).toMatchObject({
+      state: "stale",
+      detail: "degraded: safety-canonical-snapshot",
+    });
+    expect(String(sendToChatMock.mock.calls[0]?.[1])).toContain("weekly input completeness");
+  });
+
+  it("reads degraded sources from persisted input_data against SQLite", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = at(`${DATE}T09:00:00Z`);
+    sqlite.prepare(
+      "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, 'digest', ?, ?)",
+    ).run(
+      now,
+      JSON.stringify({ dataQuality: { degradedSources: ["active-depegs-query"] } }),
+      JSON.stringify({ type: "daily" }),
+    );
+    const metadata = JSON.parse((await runDigestPublicationWatchdog(db, now)).metadata ?? "{}");
+    expect(metadata.conditions["daily-inputs"]).toMatchObject({
+      state: "stale",
+      detail: "degraded: active-depegs-query",
+    });
   });
 
   it("alerts when the Telegram edition is not sent", async () => {

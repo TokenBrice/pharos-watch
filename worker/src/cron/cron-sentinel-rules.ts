@@ -37,8 +37,9 @@ export type CronSentinelRuleSource =
  *   `measured-execution-chain-coverage` (a chain with score-eligible targets
  *   published no measured quote for two generations).
  * - `digest-publication`: `daily-row`, `daily-telegram`, `daily-twitter`,
- *   `weekly-row`, `weekly-telegram`, `weekly-twitter` (edition missing after
- *   its due time) and `map-producer-lag` (Safety Score map manifest missing).
+ *   `daily-inputs` (a regime-critical collector was degraded in the edition),
+ *   `weekly-row`, `weekly-telegram`, `weekly-twitter`, `weekly-inputs` and
+ *   `map-producer-lag` (Safety Score map manifest missing).
  * - `duration`: `duration-average` (7-day average reaches 80% of timeout),
  *   `duration-cap-hits`, `duration-budget-truncations` and `slot-abandonment`
  *   (three recent occurrences).
@@ -84,9 +85,11 @@ export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly str
     "daily-row",
     "daily-telegram",
     "daily-twitter",
+    "daily-inputs",
     "weekly-row",
     "weekly-telegram",
     "weekly-twitter",
+    "weekly-inputs",
     "map-producer-lag",
   ],
   duration: [

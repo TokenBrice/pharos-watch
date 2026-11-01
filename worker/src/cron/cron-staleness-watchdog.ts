@@ -36,6 +36,7 @@ import { buildPricingOperatorConditions, pricingOperatorRuleIds } from "./operat
 import { loadBlacklistConfigWatchConditions } from "./operator-watch-blacklist";
 import { loadMintBurnStuckConfigWatchConditions } from "./operator-watch-mintburn";
 import { loadDexYieldWatchConditions } from "./operator-watch-dex-yield";
+import { loadPsiDailyCoverage } from "./operator-watch-psi-daily";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
 // prune-cron-history deletes cron_runs rows older than one week. A producer
@@ -53,7 +54,18 @@ export interface ProducerFreshnessLane {
   cacheKey: string | null;
   producerIntervalSec: number;
   thresholdSec: number;
+  /**
+   * A control-plane job excluded from consumer-publication lanes whose newest
+   * completed run (rather than a consumer output clock) proves liveness.
+   */
+  livenessOnly?: boolean;
 }
+
+/**
+ * Control-plane producers with no consumer freshness surface but whose total
+ * silence removes user-facing or operator-facing delivery work.
+ */
+const LIVENESS_ONLY_PRODUCERS = new Set(["dispatch-telegram-alerts"]);
 
 export function deriveCronFreshnessProducers(
   definitions: readonly CronJobMeta[] = CRON_JOB_DEFINITIONS,
@@ -65,7 +77,8 @@ export function deriveCronFreshnessProducers(
   );
 
   return definitions.flatMap((definition): ProducerFreshnessLane[] => {
-    if (definition.freshnessSurface === "none") return [];
+    const livenessOnly = LIVENESS_ONLY_PRODUCERS.has(definition.job);
+    if (definition.freshnessSurface === "none" && !livenessOnly) return [];
     const cacheLane = cacheLaneByProducer.get(definition.job);
     if (cacheLane) {
       return [{
@@ -77,14 +90,19 @@ export function deriveCronFreshnessProducers(
       }];
     }
     if (definition.intervalSec * 3 > CRON_RUNS_RETENTION_SEC) return [];
+    // Registry producers without an existing lane budget tolerate two missed
+    // runs and become stale at 3x their canonical producer interval. A
+    // liveness-only control-plane job publishes no consumer output, so one
+    // missed invocation is the reviewed budget and the alert names it.
+    const thresholdSec = livenessOnly ? definition.intervalSec * 2 : definition.intervalSec * 3;
+    if (thresholdSec > CRON_RUNS_RETENTION_SEC) return [];
     return [{
       producerJob: definition.job,
       laneKey: null,
       cacheKey: null,
       producerIntervalSec: definition.intervalSec,
-      // Registry producers without an existing lane budget tolerate two missed
-      // runs and become stale at 3x their canonical producer interval.
-      thresholdSec: definition.intervalSec * 3,
+      thresholdSec,
+      ...(livenessOnly ? { livenessOnly } : {}),
     }];
   });
 }
@@ -231,6 +249,7 @@ export interface CronStalenessObservation {
   endpointThresholdSec: number;
   availabilityThresholdSec: number;
   availabilityImpacting: boolean;
+  livenessOnly?: boolean;
 }
 
 function isAgeStale(ageSeconds: number | null, thresholdSec: number): boolean {
@@ -266,18 +285,27 @@ function buildCronObservation(
   fact: ProducerFreshnessFact | undefined,
   nowSec: number,
 ): CronStalenessObservation {
+  const lastSuccessAt = producer.livenessOnly
+    ? fact?.lastLivenessAt ?? null
+    : fact?.lastSuccessAt ?? null;
   const classification = classifyFreshness(
-    fact ?? {
-      job: producer.producerJob,
-      lastSuccessAt: null,
-      lastRunAt: null,
-      expectedIntervalSec: producer.producerIntervalSec,
-      lastStatus: null,
-    },
     {
-      watchAt: { multiplier: 2 },
-      staleAt: { multiplier: 3 },
+      job: producer.producerJob,
+      lastSuccessAt,
+      lastLivenessAt: lastSuccessAt,
+      lastRunAt: fact?.lastRunAt ?? null,
+      expectedIntervalSec: producer.producerIntervalSec,
+      lastStatus: fact?.lastStatus ?? null,
     },
+    producer.livenessOnly
+      ? {
+          watchAt: { absoluteSec: producer.producerIntervalSec },
+          staleAt: { absoluteSec: producer.thresholdSec },
+        }
+      : {
+          watchAt: { multiplier: 2 },
+          staleAt: { multiplier: 3 },
+        },
     nowSec,
   );
   const ageSeconds = classification.ageSec;
@@ -286,7 +314,7 @@ function buildCronObservation(
     cacheKey: producer.cacheKey,
     producerJob: producer.producerJob,
     ageSeconds,
-    publishedAt: fact?.lastSuccessAt ?? null,
+    publishedAt: lastSuccessAt,
     generationId: null,
     assessedAt: nowSec,
     thresholdSec: producer.thresholdSec,
@@ -294,6 +322,7 @@ function buildCronObservation(
     endpointThresholdSec: producer.thresholdSec,
     availabilityThresholdSec: producer.thresholdSec,
     availabilityImpacting: classification.state === "stale",
+    ...(producer.livenessOnly ? { livenessOnly: true } : {}),
   };
 }
 
@@ -386,7 +415,7 @@ export interface OperatorWatchCondition {
   unknown?: boolean;
 }
 
-export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "supply" | "canary" | "probe" | "fx-rates" | "daily-lane" | "producer-quality";
+export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "supply" | "canary" | "probe" | "fx-rates" | "daily-lane" | "producer-quality" | "psi-daily-coverage";
 
 const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; recovered: string }> = {
   producer: { raised: "Stale producers", recovered: "Recovered producers" },
@@ -399,6 +428,7 @@ const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; re
   "fx-rates": { raised: "FX rate publication degraded", recovered: "FX rate publication recovered" },
   "daily-lane": { raised: "Daily pricing lanes incomplete", recovered: "Daily pricing lanes complete" },
   "producer-quality": { raised: "Producer quality regressions", recovered: "Producer quality recovered" },
+  "psi-daily-coverage": { raised: "Daily PSI sample coverage low", recovered: "Daily PSI sample coverage restored" },
 };
 
 // Every section can raise and recover in one message: at most two lines per
@@ -626,12 +656,16 @@ export async function runCronStalenessWatchdog(
     rethrowIfAborted(error, signal);
     return null;
   });
+  const psiDailyCoverage = await loadPsiDailyCoverage(db, nowSec, signal);
+  const psiDailyCoverageEvaluated =
+    psiDailyCoverage.status === "ok" || psiDailyCoverage.status === "shortfall";
   const unknownSections: OperatorWatchSection[] = [
     ...(safetyPublication.ok ? [] : ["safety-publication" as const]),
     ...(supplyWatch.ok ? [] : ["supply" as const]),
     ...(canaryWatch.unknown ? ["canary" as const] : []),
     ...(probeWatch.unknown ? ["probe" as const] : []),
     ...(dexYieldWatch == null ? ["producer-quality" as const] : []),
+    ...(psiDailyCoverageEvaluated ? [] : ["psi-daily-coverage" as const]),
   ];
   const pricingConditions = await buildPricingOperatorConditions(
     db,
@@ -652,6 +686,13 @@ export async function runCronStalenessWatchdog(
       ...watchedObservations.map((observation): OperatorWatchCondition => ({
         section: "producer",
         id: observation.producerJob,
+        ...(observation.livenessOnly
+          ? {
+              label: `${observation.producerJob} (last completed run ` +
+                `${observation.ageSeconds == null ? "unavailable" : `${observation.ageSeconds}s`}; ` +
+                `budget ${observation.thresholdSec}s)`,
+            }
+          : {}),
         active: isStale(observation),
       })),
       ...detailWriteFailures.map((failure): OperatorWatchCondition => ({
@@ -689,6 +730,13 @@ export async function runCronStalenessWatchdog(
         active: condition.active,
       })),
       ...pricingConditions,
+      ...(psiDailyCoverageEvaluated ? [{
+        section: "psi-daily-coverage" as const,
+        id: "daily",
+        label: `daily PSI ${psiDailyCoverage.sampleCount}/${psiDailyCoverage.expectedSampleCount} samples ` +
+          `(floor ${psiDailyCoverage.minimumSampleCount})`,
+        active: psiDailyCoverage.status === "shortfall",
+      }] : []),
       ...supplyWatch.conditions.map((condition): OperatorWatchCondition => ({
         section: "supply",
         id: condition.id,
@@ -717,6 +765,7 @@ export async function runCronStalenessWatchdog(
     ...(blacklistConfigWatch.readFailed ? ["blacklist-config-watch-unavailable"] : []),
     ...(mintBurnStuckWatch.readFailed ? ["mint-burn-config-watch-unavailable"] : []),
     ...(producerQualityActive.length > 0 ? ["producer-quality-regression"] : []),
+    ...(psiDailyCoverage.status === "shortfall" ? ["psi-daily-sample-coverage"] : []),
   ];
   const pendingTransition = (alertTransitions.stale.length > 0 || alertTransitions.recovered.length > 0)
     && !alertTransitions.sent;
@@ -742,7 +791,8 @@ export async function runCronStalenessWatchdog(
       ? "degraded"
       : "ok",
     itemCount: stale.length + detailWriteFailures.length + activeSupplyConditions.length
-      + perConfigActiveCount + producerQualityActive.length,
+      + perConfigActiveCount + producerQualityActive.length
+      + (psiDailyCoverage.status === "shortfall" ? 1 : 0),
     metadata: JSON.stringify({
       ...(status.failures.length > 0 ? { reason: "freshness-evidence-read-failed" }
         : !supplyWatch.ok ? { reason: "supply-integrity-read-failed" }
@@ -762,11 +812,13 @@ export async function runCronStalenessWatchdog(
         ...(blacklistConfigStale ? ["blacklist-config-stale"] : []),
         ...(mintBurnConfigStuck ? ["mint-burn-config-stuck"] : []),
         ...producerQualityActive.map((condition) => condition.id),
+        ...(psiDailyCoverage.status === "shortfall" ? ["psi-daily-coverage"] : []),
       ],
       canaryWatch: { active: canaryWatch.conditions.length, unknown: canaryWatch.unknown },
       probeWatch: { active: probeWatch.conditions.length, unknown: probeWatch.unknown },
       alerting: alertReceipt,
       checkedProducers: watchedObservations.map((observation) => observation.producerJob),
+      psiDailyCoverage,
       stale,
       detailWriteFailures,
       supplyIntegrity: supplyWatch.ok && supplyWatch.report

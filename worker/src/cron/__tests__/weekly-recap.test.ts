@@ -362,6 +362,26 @@ describe("generateWeeklyRecap", () => {
     expect(weeklySystem).not.toMatch(/[\u2012-\u2015]/);
   });
 
+  it("reports degraded weekly inputs instead of a clean status", async () => {
+    const rows = buildDailyRows();
+    rows[2].input_data = JSON.stringify({
+      ...JSON.parse(rows[2].input_data),
+      degradedSources: ["safety-canonical-snapshot"],
+    });
+    const db = mockD1(makeTables({ dailyRows: rows }));
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      null,
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("safety-canonical-snapshot");
+  });
+
   it("keeps weekly enforce independent from daily shadow and blocks the unresolved raw finding", async () => {
     const violatedExtended = VALID_WEEKLY_EXTENDED.replace("synthesize the slow drift:", "synthesize the slow drift —");
     const db = mockD1(makeTables({

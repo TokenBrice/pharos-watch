@@ -313,12 +313,14 @@ describe("snapshotSafetyGradeHistory", () => {
     const result = await snapshotSafetyGradeHistory(db);
 
     expect(result.itemCount).toBe(0);
+    expect(result.productivity).toEqual({ productive: true, reason: "grade-history-complete" });
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       skipped: 2,
       changed: 0,
       identityBoundaryBaselines: 0,
       suppressedIdentityTransitions: 0,
       v2RowsWritten: 0,
+      outputPublishedAt: expect.any(Number),
     });
   });
 

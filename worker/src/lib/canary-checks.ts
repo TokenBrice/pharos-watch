@@ -25,6 +25,18 @@ import {
   checkDepegPendingConfirmation,
 } from "./canary-checks-depeg";
 import { checkBlacklistRosterCoverage, checkMintBurnPublicationCoverage } from "./canary-checks-mintburn";
+import {
+  boundedText,
+  degradedResult,
+  errorResult,
+  failedResult,
+  okResult,
+  skippedResult,
+  unavailableResult,
+} from "./canary-check-results";
+import { classifyPsiUniverseCoverage } from "@shared/lib/psi-policy";
+import { checkTapeClassLiveness } from "./canary-checks-tape";
+import { checkPublicDatasetSnapshotCompleteness } from "./canary-checks-public-dataset";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
 import { PRICING_CANARY_CHECKS } from "./canary-checks-pricing";
 
@@ -99,6 +111,60 @@ interface PsiLatestRow {
   score: number;
   band: string;
   methodology_version: string;
+  input_snapshot: string | null;
+}
+
+type PsiUniverseCoverageRead =
+  | { kind: "absent" }
+  | { kind: "invalid" }
+  | {
+      kind: "ok";
+      expected: number;
+      present: number;
+      admittedSupply: number;
+      missingFromCacheIds: string[];
+      supplyUnavailableIds: string[];
+      trendUnavailableIds: string[];
+    };
+
+function readPsiUniverseCoverage(raw: string | null): PsiUniverseCoverageRead {
+  if (raw == null || raw.length === 0) return { kind: "absent" };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { kind: "invalid" };
+  }
+  if (parsed == null || typeof parsed !== "object" || !("universeCoverage" in parsed)) {
+    return { kind: "absent" };
+  }
+  const coverage = (parsed as { universeCoverage?: unknown }).universeCoverage;
+  if (coverage == null || typeof coverage !== "object") return { kind: "invalid" };
+  const record = coverage as Record<string, unknown>;
+  const expected = record.expected;
+  const present = record.present;
+  const admittedSupply = record.admittedSupply;
+  const isStringArray = (value: unknown): value is string[] =>
+    Array.isArray(value) && value.every((entry) => typeof entry === "string");
+  if (
+    !Number.isSafeInteger(expected) || (expected as number) < 0
+    || !Number.isSafeInteger(present) || (present as number) < 0
+    || !Number.isSafeInteger(admittedSupply) || (admittedSupply as number) < 0
+    || !isStringArray(record.missingFromCacheIds)
+    || !isStringArray(record.supplyUnavailableIds)
+    || !isStringArray(record.trendUnavailableIds)
+  ) {
+    return { kind: "invalid" };
+  }
+  return {
+    kind: "ok",
+    expected: expected as number,
+    present: present as number,
+    admittedSupply: admittedSupply as number,
+    missingFromCacheIds: record.missingFromCacheIds,
+    supplyUnavailableIds: record.supplyUnavailableIds,
+    trendUnavailableIds: record.trendUnavailableIds,
+  };
 }
 
 interface WorkerCanaryRunRow {
@@ -138,7 +204,6 @@ const CANARY_SEVERITY_ORDER: Record<CanaryRunSeverity, number> = {
 };
 
 const MAX_CANARY_METADATA_JSON_CHARS = 4_000;
-const MAX_CANARY_ERROR_CHARS = 800;
 const CANARY_STATUS_MAX_AGE_SEC = 2 * 3600;
 const PSI_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stabilityIndex;
 const DEWS_MAX_AGE_SEC = CANARY_INCIDENT_MAX_AGE_SEC.stressSignals;
@@ -166,34 +231,6 @@ function classifyCanaryFreshness(timestampSec: number | null, observedAt: number
 
 function isFreshAt(timestampSec: number | null, observedAt: number, maxAgeSec: number): boolean {
   return classifyCanaryFreshness(timestampSec, observedAt, maxAgeSec).state === "fresh";
-}
-
-function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
-  return value.length <= maxChars ? value : `${value.slice(0, maxChars)}...`;
-}
-
-function okResult(metadata?: Record<string, unknown>) {
-  return { status: "ok" as const, severity: "info" as const, executionStatus: "completed" as const, executionFailureReason: null, metadata };
-}
-
-function degradedResult(error: string, metadata?: Record<string, unknown>) {
-  return { status: "degraded" as const, severity: "warning" as const, executionStatus: "completed" as const, executionFailureReason: null, error, metadata };
-}
-
-function errorResult(error: string, metadata?: Record<string, unknown>) {
-  return { status: "error" as const, severity: "error" as const, executionStatus: "completed" as const, executionFailureReason: null, error, metadata };
-}
-
-function skippedResult(reason: string, metadata?: Record<string, unknown>) {
-  return { status: "skipped" as const, severity: "info" as const, executionStatus: "completed" as const, executionFailureReason: null, error: reason, metadata };
-}
-
-function failedResult(reason: string, metadata?: Record<string, unknown>) {
-  return { ...errorResult(reason, metadata), executionStatus: "failed" as const, executionFailureReason: reason };
-}
-
-function unavailableResult(error: unknown) {
-  return failedResult("canary-source-unavailable", { error: boundedText(toErrorMessage(error)) });
 }
 
 function isFiniteScore(value: unknown): value is number {
@@ -472,7 +509,7 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
     const row = await runWithOverloadRetry(() =>
       db
         .prepare(
-          `SELECT stored_at, score, band, methodology_version
+          `SELECT stored_at, score, band, methodology_version, input_snapshot
              FROM stability_index_samples
             ORDER BY stored_at DESC
             LIMIT 1`,
@@ -482,6 +519,19 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
     if (!row) {
       return degradedResult("no PSI stability_index_samples rows found", { maxAgeSec: PSI_MAX_AGE_SEC });
     }
+    const coverageRead = readPsiUniverseCoverage(row.input_snapshot);
+    const coverage = coverageRead.kind === "ok"
+      ? {
+          status: classifyPsiUniverseCoverage(coverageRead.expected, coverageRead.admittedSupply),
+          expected: coverageRead.expected,
+          present: coverageRead.present,
+          admittedSupply: coverageRead.admittedSupply,
+          missingFromCacheCount: coverageRead.missingFromCacheIds.length,
+          missingFromCacheIds: coverageRead.missingFromCacheIds.slice(0, 20),
+          supplyUnavailableCount: coverageRead.supplyUnavailableIds.length,
+          trendUnavailableCount: coverageRead.trendUnavailableIds.length,
+        }
+      : null;
     const freshness = classifyCanaryFreshness(row.stored_at, observedAt, PSI_MAX_AGE_SEC);
     const metadata = {
       storedAt: row.stored_at,
@@ -490,6 +540,8 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
       score: row.score,
       band: row.band,
       methodologyVersion: row.methodology_version,
+      universeCoverage: coverage,
+      ...(coverageRead.kind === "invalid" ? { universeCoverageReason: "input-snapshot-invalid" } : {}),
       ...(freshness.timestampReason ? { timestampReason: freshness.timestampReason } : {}),
     };
     if (!isScoreInRange(row.score)) {
@@ -500,6 +552,23 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
         freshness.timestampReason
           ? `latest PSI sample clock rejected: ${freshness.timestampReason}`
           : `latest PSI sample is ${freshness.ageSec}s old`,
+        metadata,
+      );
+    }
+    if (coverageRead.kind === "invalid") {
+      return degradedResult("latest PSI sample input snapshot is unreadable", metadata);
+    }
+    if (coverage?.status === "error") {
+      return errorResult(
+        `PSI universe coverage ${coverage.admittedSupply}/${coverage.expected} admitted ` +
+          `(${coverage.expected - coverage.admittedSupply} missing)`,
+        metadata,
+      );
+    }
+    if (coverage?.status === "degraded") {
+      return degradedResult(
+        `PSI universe coverage ${coverage.admittedSupply}/${coverage.expected} admitted ` +
+          `(${coverage.expected - coverage.admittedSupply} missing)`,
         metadata,
       );
     }
@@ -811,6 +880,18 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     label: "Blacklist roster coverage",
     description: "The published blacklist summary retains its event population, current-balance rows, and supported config roster.",
     run: checkBlacklistRosterCoverage,
+  },
+  {
+    checkId: "tape-class-liveness",
+    label: "Tape class liveness",
+    description: "Snapshot-backed tape projector cursors keep up with moving source clocks inside the 90-minute lag budget.",
+    run: checkTapeClassLiveness,
+  },
+  {
+    checkId: "public-dataset-snapshot-completeness",
+    label: "Public dataset snapshot completeness",
+    description: "The newest sealed public snapshot carries nonempty stablecoin and DEWS sections, complete liquidity rows and in-budget generation clocks.",
+    run: checkPublicDatasetSnapshotCompleteness,
   },
   ...PRICING_CANARY_CHECKS,
 ] as const;

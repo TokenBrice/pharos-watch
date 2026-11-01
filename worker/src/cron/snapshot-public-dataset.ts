@@ -39,6 +39,7 @@ import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { DEWS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { safeErrorMessage, stripSensitive } from "../lib/safe-error-message";
@@ -106,6 +107,15 @@ interface ExistingSnapshotRow {
 interface SnapshotSectionReadFailure {
   section: "dews" | "liquidity";
   error: string;
+}
+
+interface SnapshotSectionFinding {
+  section: "dews" | "liquidity";
+  reason: string;
+}
+
+interface PublishedDexGenerationRow {
+  current_row_count: number | null;
 }
 
 interface SnapshotPublicDatasetOptions {
@@ -413,6 +423,63 @@ export async function snapshotPublicDataset(
     };
   }
 
+  // Fail closed before the write-once insert: a successful read is not proof
+  // that the section is complete. A stale DEWS generation or fewer liquidity
+  // rows than the published generation would seal a partial day that the
+  // quarter-hourly catch-up can never repair.
+  const sectionFindings: SnapshotSectionFinding[] = [];
+  const publishedDewsComputedAt = publishedDews.status === "ok" ? publishedDews.computedAt : null;
+  if (publishedDews.status === "ok") {
+    const dewsAgeSec = nowSec - publishedDews.computedAt;
+    if (dewsAgeSec > DEWS_GENERATION_CONSUMER_MAX_AGE_SEC) {
+      sectionFindings.push({
+        section: "dews",
+        reason: `dews-generation-stale:${dewsAgeSec}s>${DEWS_GENERATION_CONSUMER_MAX_AGE_SEC}s`,
+      });
+    }
+  }
+  let publishedDexGeneration: PublishedDexGenerationRow | null = null;
+  try {
+    publishedDexGeneration = await runWithOverloadRetry(
+      () => db
+        .prepare(
+          `SELECT /* pharos:snapshot-public-dataset:published-dex-generation */
+                  current_row_count
+             FROM dex_liquidity_publication_generations
+            WHERE state = 'published'
+            ORDER BY COALESCE(published_at, started_at) DESC, started_at DESC
+            LIMIT 1`,
+        )
+        .first<PublishedDexGenerationRow>(),
+      3,
+      signal,
+    );
+    throwIfAborted(signal);
+  } catch (err) {
+    rethrowIfAborted(err, signal);
+    sectionFindings.push({ section: "liquidity", reason: "liquidity-generation-read-failed" });
+  }
+  if (
+    publishedDexGeneration?.current_row_count != null
+    && publishedDexGeneration.current_row_count > dexRows.length
+  ) {
+    sectionFindings.push({
+      section: "liquidity",
+      reason: `liquidity-rows:${dexRows.length}/${publishedDexGeneration.current_row_count}`,
+    });
+  }
+  if (sectionFindings.length > 0) {
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({
+        reason: "public_snapshot_section_incomplete",
+        snapshotDate,
+        incompleteSections: sectionFindings,
+      }),
+    };
+  }
+
   const methodologyVersions = buildMethodologyVersions(
     safetyScoreIdentity.methodologyVersion,
     latestPersistedLiquidityMethodology(dexRows),
@@ -622,7 +689,9 @@ export async function snapshotPublicDataset(
         }
         : {}),
       dewsCount: stressRows.length,
+      dewsComputedAt: publishedDewsComputedAt,
       liquidityCount: dexRows.length,
+      dexPublicationRowCount: publishedDexGeneration?.current_row_count ?? null,
     },
   });
 }

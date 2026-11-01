@@ -47,6 +47,8 @@ const EXPECTED_CANARY_CHECK_IDS = [
   "ddr-eligible-unsealed",
   "mint-burn-publication-coverage",
   "blacklist-roster-coverage",
+  "tape-class-liveness",
+  "public-dataset-snapshot-completeness",
   "stablecoins-active-price-coverage",
   "depeg-observation-coverage",
 ];
@@ -388,6 +390,29 @@ function healthyD1(
     gbpFreshRuns?: number;
     gbpFallback?: boolean;
     usdRecordDateMissing?: boolean;
+    psiInputSnapshot?: string;
+    tape?: {
+      cursors?: Record<string, number>;
+      clocks?: Partial<{
+        psi_at: number;
+        dews_at: number;
+        score_at: number;
+        yield_history_at: number;
+        yield_decisions_at: number;
+      }>;
+    };
+    publicDataset?: {
+      snapshot?: { snapshot_date: string; byte_size: number | null; created_at: number } | null;
+      evidence?: Partial<{
+        started_at: number;
+        stablecoin_count: number | null;
+        dews_count: number | null;
+        liquidity_count: number | null;
+        dews_computed_at: number | null;
+        compressed_size: number | null;
+        dex_published_row_count: number | null;
+      }> | null;
+    };
   } = {},
 ) {
   const rowCount = dex.rowCount ?? 408;
@@ -462,12 +487,73 @@ function healthyD1(
       rows: [],
     },
     {
+      match: "FROM cache WHERE key IN",
+      rows: [
+        "psi.band_changed",
+        "dews.escalated",
+        "dews.deescalated",
+        "score.upgraded",
+        "score.downgraded",
+        "yield.warning_emitted",
+        "yield.pys_dropped",
+      ].map((eventClass) => ({
+        key: `tape-projector:cursor:${eventClass}`,
+        value: String(dex.tape?.cursors?.[eventClass] ?? NOW - 120),
+        updated_at: NOW - 120,
+      })),
+    },
+    {
+      match: "canary:tape-class-liveness",
+      first: {
+        psi_at: NOW - 60,
+        dews_at: NOW - 60,
+        score_at: NOW - 60,
+        yield_history_at: NOW - 60,
+        yield_decisions_at: NOW - 60,
+        ...dex.tape?.clocks,
+      },
+      rows: [],
+    },
+    {
+      match: "pharos:canary:public-dataset-snapshot",
+      first: dex.publicDataset?.snapshot === undefined
+        ? { snapshot_date: "2026-03-05", byte_size: 4_096, created_at: NOW - 3_600 }
+        : dex.publicDataset.snapshot,
+      rows: [],
+    },
+    {
+      match: "pharos:canary:public-dataset-publication",
+      first: dex.publicDataset?.evidence === null
+        ? null
+        : {
+            started_at: NOW - 3_600,
+            stablecoin_count: 200,
+            dews_count: 20,
+            liquidity_count: 408,
+            dews_computed_at: NOW - 4_000,
+            compressed_size: 4_096,
+            dex_published_row_count: 408,
+            ...dex.publicDataset?.evidence,
+          },
+      rows: [],
+    },
+    {
       match: "FROM stability_index_samples",
       first: {
         stored_at: NOW - 60,
         score: 82,
         band: "STABLE",
         methodology_version: "v1",
+        input_snapshot: dex.psiInputSnapshot ?? JSON.stringify({
+          universeCoverage: {
+            expected: 200,
+            present: 200,
+            admittedSupply: 200,
+            missingFromCacheIds: [],
+            supplyUnavailableIds: [],
+            trendUnavailableIds: [],
+          },
+        }),
       },
       rows: [],
     },
@@ -508,9 +594,9 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 19,
+      totalChecks: 21,
 
-      okCount: 19,
+      okCount: 21,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
@@ -572,6 +658,158 @@ describe("worker data invariant canaries", () => {
     expect(psi?.error).toBe("latest PSI sample clock rejected: future-timestamp");
   });
 
+
+  it.each([
+    [200, 197, "degraded"],
+    [200, 170, "error"],
+    [200, 199, "ok"],
+  ])("classifies PSI universe coverage %i expected / %i admitted as %s", async (expected, admitted, status) => {
+    const summary = await runCanaryChecks(healthyD1({
+      psiInputSnapshot: JSON.stringify({
+        universeCoverage: {
+          expected,
+          present: admitted,
+          admittedSupply: admitted,
+          missingFromCacheIds: [],
+          supplyUnavailableIds: [],
+          trendUnavailableIds: [],
+        },
+      }),
+    }), { observedAt: NOW, mode: "status" });
+    const psi = summary.results.find((result) => result.checkId === "psi-latest-sample");
+    expect(psi).toMatchObject({
+      status,
+      metadata: {
+        universeCoverage: {
+          status,
+          expected,
+          admittedSupply: admitted,
+        },
+      },
+    });
+  });
+
+  it("degrades when the persisted PSI input snapshot is unreadable", async () => {
+    const summary = await runCanaryChecks(healthyD1({ psiInputSnapshot: "not-json" }), {
+      observedAt: NOW,
+      mode: "status",
+    });
+    expect(summary.results.find((result) => result.checkId === "psi-latest-sample")).toMatchObject({
+      status: "degraded",
+      error: "latest PSI sample input snapshot is unreadable",
+      metadata: { universeCoverage: null, universeCoverageReason: "input-snapshot-invalid" },
+    });
+  });
+
+  it("flags a snapshot tape class whose cursor lags a moving source clock", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      tape: { cursors: { "psi.band_changed": NOW - 6_000 } },
+    }), { observedAt: NOW, mode: "status" });
+    const tape = summary.results.find((result) => result.checkId === "tape-class-liveness");
+    expect(tape).toMatchObject({
+      status: "degraded",
+      error: expect.stringContaining("psi.band_changed (5940s)"),
+      metadata: { lagBudgetSec: 5_400, evaluatedCount: 7 },
+    });
+  });
+
+  it("skips tape liveness when every source clock is stale", async () => {
+    const stale = NOW - 200_000;
+    const summary = await runCanaryChecks(healthyD1({
+      tape: {
+        clocks: {
+          psi_at: stale,
+          dews_at: stale,
+          score_at: stale,
+          yield_history_at: stale,
+          yield_decisions_at: stale,
+        },
+      },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "tape-class-liveness")).toMatchObject({
+      status: "skipped",
+      error: "tape-source-stale",
+      metadata: { evaluatedCount: 0 },
+    });
+  });
+
+  it("flags an empty sealed public-dataset section even when the run reports success", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: { evidence: { stablecoin_count: 0 } },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "error",
+        error: "sealed public snapshot has an empty stablecoins section",
+        metadata: { snapshotDate: "2026-03-05", stablecoinCount: 0 },
+      });
+  });
+
+  it("flags a sealed liquidity section smaller than the published generation", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: { evidence: { liquidity_count: 3 } },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "degraded",
+        error: "sealed liquidity section has 3 rows for a 408-row published generation",
+      });
+  });
+
+  it("flags a sealed DEWS generation that exceeded its consumer budget", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: { evidence: { dews_computed_at: NOW - 10_000 } },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "degraded",
+        error: "sealed DEWS generation exceeded its 3600s consumer budget (6400s)",
+      });
+  });
+
+  it("keeps a legacy sealed row unknown when its publication metadata is outside retention", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: { evidence: null },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "skipped",
+        error: "public-snapshot-publication-metadata-unavailable",
+      });
+  });
+
+  it("reads the newest sealed snapshot's persisted publication counts against SQLite", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(
+      `INSERT INTO public_snapshots
+         (snapshot_date, payload_gz, methodology_versions, content_hash, byte_size, created_at)
+       VALUES (?, ?, '{}', 'hash', 4096, ?)`,
+    ).run("2026-03-05", new Uint8Array([1, 2]), NOW - 3_600);
+    sqlite.prepare(
+      `INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata)
+       VALUES ('snapshot-public-dataset', ?, 1000, 'ok', 1, ?)`,
+    ).run(NOW - 3_600, JSON.stringify({
+      snapshotDate: "2026-03-05",
+      stablecoinCount: 200,
+      dewsCount: 20,
+      liquidityCount: 408,
+      dewsComputedAt: NOW - 4_000,
+      compressedSize: 4_096,
+    }));
+
+    const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "ok",
+        metadata: {
+          snapshotDate: "2026-03-05",
+          stablecoinCount: 200,
+          dewsCount: 20,
+          liquidityCount: 408,
+          publicationStartedAt: NOW - 3_600,
+        },
+      });
+  });
 
   it("flags a seeded null-identity blacklist row", async () => {
     vi.useFakeTimers();
@@ -1022,6 +1260,51 @@ describe("worker data invariant canaries", () => {
         rows: [],
       },
       {
+        match: "FROM cache WHERE key IN",
+        rows: [
+          "psi.band_changed",
+          "dews.escalated",
+          "dews.deescalated",
+          "score.upgraded",
+          "score.downgraded",
+          "yield.warning_emitted",
+          "yield.pys_dropped",
+        ].map((eventClass) => ({
+          key: `tape-projector:cursor:${eventClass}`,
+          value: String(NOW - 120),
+          updated_at: NOW - 120,
+        })),
+      },
+      {
+        match: "canary:tape-class-liveness",
+        first: {
+          psi_at: NOW - 60,
+          dews_at: NOW - 60,
+          score_at: NOW - 60,
+          yield_history_at: NOW - 60,
+          yield_decisions_at: NOW - 60,
+        },
+        rows: [],
+      },
+      {
+        match: "pharos:canary:public-dataset-snapshot",
+        first: { snapshot_date: "2026-03-05", byte_size: 4_096, created_at: NOW - 3_600 },
+        rows: [],
+      },
+      {
+        match: "pharos:canary:public-dataset-publication",
+        first: {
+          started_at: NOW - 3_600,
+          stablecoin_count: 200,
+          dews_count: 20,
+          liquidity_count: 408,
+          dews_computed_at: NOW - 4_000,
+          compressed_size: 4_096,
+          dex_published_row_count: 408,
+        },
+        rows: [],
+      },
+      {
         match: "FROM stability_index_samples",
         first: {
           stored_at: NOW - 20_000,
@@ -1204,6 +1487,24 @@ describe("worker data invariant canaries", () => {
         rows: [],
       },
       {
+        match: "pharos:canary:public-dataset-snapshot",
+        first: { snapshot_date: "2026-03-05", byte_size: 4_096, created_at: NOW - 3_600 },
+        rows: [],
+      },
+      {
+        match: "pharos:canary:public-dataset-publication",
+        first: {
+          started_at: NOW - 3_600,
+          stablecoin_count: 200,
+          dews_count: 20,
+          liquidity_count: 408,
+          dews_computed_at: NOW - 4_000,
+          compressed_size: 4_096,
+          dex_published_row_count: 408,
+        },
+        rows: [],
+      },
+      {
         match: "FROM stability_index_samples",
         throwError: new Error("D1_ERROR: no such table: stability_index_samples"),
         rows: [],
@@ -1234,10 +1535,12 @@ describe("worker data invariant canaries", () => {
     // The depeg and pricing checks read cron_runs and depeg tables, which this fixture also omits.
     // The mint/burn and blacklist checks read the healthy cache rows above, so the union keeps
     // the original error total and adds two healthy observations.
-    expect(summary.errorCount).toBe(11);
+    // tape-class-liveness fails on the omitted stability-index source clock above, while the
+    // public-dataset check reads the two rows supplied here: the union adds one error and one ok.
+    expect(summary.errorCount).toBe(12);
     expect(summary.skippedCount).toBe(0);
     expect(summary.degradedCount).toBe(1);
-    expect(summary.okCount).toBe(7);
+    expect(summary.okCount).toBe(8);
     expect(summary.worstStatus).toBe("error");
   });
 });

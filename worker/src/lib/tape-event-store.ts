@@ -12,12 +12,17 @@ export function tapeProjectorCursorKey(eventClass: string): string {
   return `${WATERMARK_KEY_PREFIX}${eventClass}`;
 }
 
+/** Parse a persisted projector watermark. 0 = no rows yet. */
+export function parseProjectorWatermark(value: string | null | undefined): number {
+  if (value == null) return 0;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
 /** Read per-class watermark (numeric source-row marker). 0 = no rows yet. */
 export async function getProjectorWatermark(db: D1Database, eventClass: string): Promise<number> {
   const row = await getCache(db, tapeProjectorCursorKey(eventClass));
-  if (!row) return 0;
-  const parsed = Number(row.value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  return parseProjectorWatermark(row?.value);
 }
 
 /** Write per-class watermark. */

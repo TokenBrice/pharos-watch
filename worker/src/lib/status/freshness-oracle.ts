@@ -15,6 +15,8 @@ export interface FreshnessPolicy {
 export interface ProducerFreshnessFact {
   job: string;
   lastSuccessAt: number | null;
+  /** Newest `started_at` of a completed (non-`not_started`) run. */
+  lastLivenessAt?: number | null;
   lastRunAt: number | null;
   expectedIntervalSec: number;
   lastStatus: string | null;
@@ -32,6 +34,7 @@ export interface FreshnessClassification {
 interface ProducerFreshnessRow {
   job: string;
   last_success_at: number | null;
+  last_liveness_at: number | null;
   last_run_at: number;
   last_status: string;
 }
@@ -94,13 +97,22 @@ export async function loadProducerFreshnessFacts(
         `SELECT job,
                 started_at AS last_run_at,
                 status AS last_status,
-                last_success_at
+                last_success_at,
+                last_liveness_at
            FROM (
              SELECT job,
                     started_at,
                     status,
                     MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL})
                       OVER (PARTITION BY job) AS last_success_at,
+                    MAX(CASE
+                      WHEN status IN ('ok', 'degraded')
+                       AND COALESCE(json_extract(
+                         CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END,
+                         '$.childDisposition'
+                       ), '') != 'not_started'
+                      THEN started_at END)
+                      OVER (PARTITION BY job) AS last_liveness_at,
                     ROW_NUMBER() OVER (
                       PARTITION BY job
                       ORDER BY started_at DESC, id DESC
@@ -119,6 +131,7 @@ export async function loadProducerFreshnessFacts(
     return {
       job: definition.job,
       lastSuccessAt: row?.last_success_at ?? null,
+      lastLivenessAt: row?.last_liveness_at ?? null,
       lastRunAt: row?.last_run_at ?? null,
       expectedIntervalSec: definition.intervalSec,
       lastStatus: row?.last_status ?? null,
