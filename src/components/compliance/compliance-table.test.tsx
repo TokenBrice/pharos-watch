@@ -97,6 +97,22 @@ describe("ComplianceTable mounted folds", () => {
     expect(fixtures.loadDetail).toHaveBeenCalledExactlyOnceWith("fold-mounted");
   });
 
+  it("prints the recorded reserve-disclosure verdict in words instead of a bare Disclosure", () => {
+    const absent = { ...geniusRow("disclosure-gap"), reserveDisclosurePresent: false, redemptionPolicyPresent: true };
+    const unrecorded = { ...geniusRow("disclosure-unrecorded"), reserveDisclosurePresent: undefined };
+    render(
+      <ComplianceTable
+        rows={[absent, unrecorded]} regime="genius" logos={undefined} tableId="test-compliance-state"
+        testId="compliance-table" ariaLabel="GENIUS compliance" forceCollapsedBandsOpen
+      />,
+    );
+    const gapFold = document.getElementById("test-compliance-state-genius-disclosure-gap-details") as HTMLElement;
+    const unrecordedFold = document.getElementById("test-compliance-state-genius-disclosure-unrecorded-details") as HTMLElement;
+    expect(within(gapFold).getByText("Not found")).toBeTruthy();
+    expect(within(gapFold).queryByText("Disclosure")).toBeNull();
+    expect(within(unrecordedFold).getByText("Not recorded")).toBeTruthy();
+  });
+
   it("leaves default-collapsed bands unmounted until the band is expanded", () => {
     renderTable("fold-band", { forceCollapsedBandsOpen: false });
 

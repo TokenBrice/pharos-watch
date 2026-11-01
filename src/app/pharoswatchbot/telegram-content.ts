@@ -110,7 +110,7 @@ export const MINI_APP_SCREENSHOTS = [
 const ALERT_EXAMPLE_PRESENTATION: Record<TelegramLiveAlertType, { tagline: string }> = {
   dews: {
     tagline:
-      "DEWS, the Depeg Early Warning System, scores stress before a peg breaks. Sent live when a coin holds a worse stress level for about an hour; calmer readings go in the daily Changes message.",
+      "DEWS, the Depeg Early Warning System, scores stress before a peg breaks. Sent live for coins you follow when a coin holds a worse stress level for about an hour; calmer readings, and market-wide DEWS under All stablecoins, go in the daily Changes message.",
   },
   depeg: {
     tagline:
@@ -122,7 +122,7 @@ const ALERT_EXAMPLE_PRESENTATION: Record<TelegramLiveAlertType, { tagline: strin
   },
   reserve: {
     tagline:
-      "Tells you when the live reserve data for a coin stops matching its last reviewed mix. Only for coins with live reserve tracking, and it arrives in the daily Changes message.",
+      "Tells you when the live reserve data for a coin stops matching its last reviewed mix. Only for coins with live reserve tracking, and it is sent live when first detected.",
   },
   freeze: {
     tagline:
@@ -182,7 +182,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "What alerts does Pharos send on Telegram?",
     answer:
-      `Live alerts cover depegs and recoveries, rising DEWS stress, severe safety-grade downgrades, and freezes or destroys of ${LIVE_FREEZE_MIN_LABEL} or more. Smaller safety moves and reserve changes are grouped into one daily Changes message at ${DAILY_CHANGES_TIME} your time, sent only when something changed. Smaller freezes come in ${FREEZE_BATCH_LABEL}.`,
+      `Live alerts cover depegs and recoveries, rising DEWS stress, severe safety-grade downgrades, reserve drift, and freezes or destroys of ${LIVE_FREEZE_MIN_LABEL} or more. Smaller safety moves are grouped into one daily Changes message at ${DAILY_CHANGES_TIME} your time, sent only when something changed. Smaller freezes come in ${FREEZE_BATCH_LABEL}.`,
   },
   {
     question: "How many messages will I get?",
@@ -207,7 +207,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "Can I follow every active stablecoin at once?",
     answer:
-      "Yes. Send /subscribe depeg all, or turn on All stablecoins in the Mini App. Market-wide safety and reserve changes are grouped into the daily Changes message so the whole market does not page you.",
+      "Yes. Send /subscribe depeg all, or turn on All stablecoins in the Mini App. Market-wide safety and DEWS changes are grouped into the daily Changes message so the whole market does not page you.",
   },
   {
     question: "Can I rely on it as an emergency pager?",

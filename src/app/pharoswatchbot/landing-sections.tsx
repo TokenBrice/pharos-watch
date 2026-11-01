@@ -118,7 +118,7 @@ const ALERT_CONTROLS: readonly { icon: LucideIcon; title: string; detail: string
   {
     icon: CalendarClock,
     title: "One daily Changes message",
-    detail: `Smaller grade moves and reserve changes, together at ${DAILY_CHANGES_TIME} your time. Nothing changed, no message.`,
+    detail: `Smaller grade moves, together at ${DAILY_CHANGES_TIME} your time. Nothing changed, no message.`,
   },
   {
     icon: Gauge,

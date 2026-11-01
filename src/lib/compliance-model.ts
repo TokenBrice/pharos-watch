@@ -81,7 +81,8 @@ export interface GeniusComplianceRow extends BaseComplianceRow {
   enforcementStatus?: GeniusEnforcementStatus;
   daspOfferSaleStatus?: GeniusDaspOfferSaleStatus;
   hasAnyDisclosure: boolean;
-  reserveDisclosurePresent: boolean;
+  /** Tri-state: undefined is no record, never a reviewed absence. */
+  reserveDisclosurePresent?: boolean;
   reserveDisclosureUrl?: string;
   redemptionPolicyPresent: boolean;
   monthlyAttestationPresent: boolean;
@@ -251,10 +252,9 @@ function buildGeniusRow(
       genius.reserveDisclosurePresent ||
         genius.reserveDisclosureUrl ||
         genius.redemptionPolicyPresent ||
-        genius.monthlyAttestationPresent ||
-        reserveReportNote,
+        genius.monthlyAttestationPresent,
     ),
-    reserveDisclosurePresent: genius.reserveDisclosurePresent ?? false,
+    reserveDisclosurePresent: genius.reserveDisclosurePresent,
     reserveDisclosureUrl: genius.reserveDisclosureUrl,
     redemptionPolicyPresent: genius.redemptionPolicyPresent ?? false,
     monthlyAttestationPresent: genius.monthlyAttestationPresent ?? false,

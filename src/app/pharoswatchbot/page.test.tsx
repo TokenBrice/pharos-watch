@@ -13,6 +13,11 @@ import { ACTIVE_STABLECOIN_COUNT, TRACKED_STABLECOIN_COUNT } from "@/lib/stablec
 import { buildTelegramPageJsonLd } from "./telegram-json-ld";
 import { TELEGRAM_ALERT_POLICY } from "@shared/lib/telegram-delivery-policy";
 import {
+  TELEGRAM_ALERT_FAMILIES,
+  TELEGRAM_ALERT_FAMILY_SHORT_LABELS,
+} from "@shared/lib/telegram-alert-families";
+import type { TelegramAlertType } from "@shared/types/status";
+import {
   PHAROSWATCHBOT_BOT_URL,
   RECOMMENDED_SETUP_COMMAND,
   RECOMMENDED_SETUP_DEEP_LINK,
@@ -67,6 +72,37 @@ describe("PharosWatchBotPage", () => {
     expect(copy).toMatch(/Fewer like this/);
     expect(copy).toContain(`at most ${TELEGRAM_ALERT_POLICY.chatCap.maxRealtimeMessages} live alerts a day`);
     expect(copy).toContain(`${String(TELEGRAM_ALERT_POLICY.rollup.localHour).padStart(2, "0")}:00`);
+  });
+
+  it("scopes market-wide roll-up copy to the policy's roll-up-only families", () => {
+    const answer = TELEGRAM_FAQ.find(
+      (item) => item.question === "Can I follow every active stablecoin at once?",
+    )!.answer;
+    const groupedClause = answer.match(/Market-wide [^.]*grouped into the daily Changes message/i)?.[0].toLowerCase() ?? "";
+    const rollupOnly = TELEGRAM_ALERT_POLICY.rollupOnlyGlobalFamilies as readonly TelegramAlertType[];
+    expect(groupedClause).not.toBe("");
+    for (const family of rollupOnly) {
+      expect(groupedClause).toContain(TELEGRAM_ALERT_FAMILY_SHORT_LABELS[family].toLowerCase());
+    }
+    for (const { key } of TELEGRAM_ALERT_FAMILIES) {
+      if (rollupOnly.includes(key)) continue;
+      expect(groupedClause).not.toContain(TELEGRAM_ALERT_FAMILY_SHORT_LABELS[key].toLowerCase());
+    }
+  });
+
+  it("keeps live families out of the daily Changes copy and names the global DEWS case", () => {
+    const taglineFor = (key: string) => TELEGRAM_ALERT_EXAMPLES.find((example) => example.key === key)!.tagline;
+    // Reserve drift routes live to direct and global followers.
+    expect(taglineFor("reserve")).toMatch(/sent live/i);
+    expect(taglineFor("reserve")).not.toMatch(/daily Changes message/);
+    const alertsAnswer = TELEGRAM_FAQ.find(
+      (item) => item.question === "What alerts does Pharos send on Telegram?",
+    )!.answer;
+    expect(alertsAnswer).toMatch(/Live alerts cover[^.]*reserve drift/i);
+    expect(alertsAnswer).not.toMatch(/reserve changes are grouped/);
+    // A roll-up-only family's live tagline must still name the global opt-in.
+    expect(taglineFor("dews")).toMatch(/Sent live/);
+    expect(taglineFor("dews")).toMatch(/All stablecoins/);
   });
 
   it("scopes alert coverage to the active alerting universe", () => {

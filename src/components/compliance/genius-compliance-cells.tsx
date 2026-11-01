@@ -7,6 +7,7 @@ import {
 } from "@shared/lib/genius";
 import type { ComplianceRow } from "@/lib/compliance-model";
 import type { GeniusComplianceEvidence } from "@/lib/compliance-evidence";
+import { DISCLOSURE_STATE_LABELS, reviewedState } from "@/lib/regulatory-standing";
 import { ComplianceStatusBadge, EmptyCell } from "./compliance-row-primitives";
 
 type GeniusComplianceRow = Extract<ComplianceRow, { regime: "genius" }>;
@@ -65,7 +66,7 @@ export function GeniusReserveCell({ row }: { row: GeniusComplianceRow }) {
   if (!row.hasAnyDisclosure) return <EmptyCell />;
   const content = (
     <>
-      {row.reserveDisclosurePresent ? "Reserve disclosure" : "Disclosure"}
+      {DISCLOSURE_STATE_LABELS[reviewedState(row.reserveDisclosurePresent)]}
       {row.reserveReportNote ? <span className="block text-xs text-muted-foreground">{row.reserveReportNote}</span> : null}
       {row.redemptionPolicyPresent ? <span className="block text-xs text-muted-foreground">Redemption policy</span> : null}
       {row.monthlyAttestationPresent ? (

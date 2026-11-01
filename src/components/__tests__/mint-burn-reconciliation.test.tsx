@@ -62,12 +62,54 @@ describe("MintBurnReconciliationCard", () => {
     summary.rows[0]!.conservation = [record()];
     render(<MintBurnReconciliationCard summary={summary} />);
     expect(group().getByText("Verified")).toBeTruthy();
-    expect(group().getByText("Audit coverage: All configured contracts verified")).toBeTruthy();
+    expect(group().getByText("Audit coverage: All supported contracts verified")).toBeTruthy();
     expect(group().getAllByText("1.234567890123456789")).toHaveLength(2);
     expect(group().getByText("Supply checkpoints 100–200")).toBeTruthy();
     expect(group().getByText("Residual (SYM0)")).toBeTruthy();
     expect(screen.getByText(/This is not a 24-hour audit/)).toBeTruthy();
     expect(group().getByText("Matched")).toBeTruthy();
+  });
+
+  it("keeps a published ok row verified when one admitted leg is unsupported", () => {
+    const summary = makeSummary();
+    summary.conservationVersion = 1;
+    summary.rows[0]!.status = "ok";
+    summary.rows[0]!.conservation = [
+      record(),
+      record({
+        key: "base-token",
+        chainId: "base",
+        address: "0x2222222222222222222222222222222222222222",
+        decimals: 6,
+        status: "unsupported",
+        reason: "unverified-implementation-source",
+      }),
+    ];
+    render(<MintBurnReconciliationCard summary={summary} />);
+    expect(group().getByText("Verified")).toBeTruthy();
+    expect(group().getByText("Unsupported")).toBeTruthy();
+    expect(group().getByText("unverified-implementation-source")).toBeTruthy();
+    expect(screen.getByText("Verified assets").parentElement!.textContent).toContain("1");
+    expect(screen.getByText("Unverified assets").parentElement!.textContent).toContain("0");
+  });
+
+  it("labels raw-share conservation fields as shares, never as token amounts", () => {
+    const summary = makeSummary();
+    summary.conservationVersion = 1;
+    summary.rows[0]!.status = "ok";
+    summary.rows[0]!.conservation = [
+      record({
+        units: "raw-shares",
+        mintRaw: "833333333333333333333333",
+        burnRaw: "0",
+        supplyDeltaRaw: "833333333333333333333333",
+        residualRaw: "0",
+      }),
+    ];
+    render(<MintBurnReconciliationCard summary={summary} />);
+    expect(group().getByText("Minted (SYM0 shares)")).toBeTruthy();
+    expect(group().queryByText("Minted (SYM0)")).toBeNull();
+    expect(group().getByText("Residual (SYM0 shares)")).toBeTruthy();
   });
 
   it("reserves critical for matched-block mismatches and does not round a one-wei residual away", () => {
