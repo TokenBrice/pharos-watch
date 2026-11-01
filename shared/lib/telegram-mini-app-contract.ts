@@ -318,6 +318,7 @@ export const TelegramMiniAppCatalogSchema = z
           symbol: z.string(),
           name: z.string(),
           peg: z.string().nullable().optional(),
+          pegLabel: z.string().optional(),
           status: z.string().nullable().optional(),
           rank: z.number().int().positive().optional(),
           variant: z.boolean().optional(),

@@ -13,7 +13,11 @@ const PARENT = coin("par", {
     { name: "Cash", pct: 60, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate", issuerOrObligor: "Banks" },
     { name: "BTC", pct: 40, risk: "high", assetClass: "cryptoasset", liquidityHorizon: "one-day" },
   ],
-  reserveReview: { reviewedAt: "2026-09-30" },
+  reserveReview: {
+    reviewedAt: "2026-09-30",
+    compositionAsOf: "2026-09-15",
+    sources: [{ label: "Parent reserve report", url: "https://example.com/parent-reserves" }],
+  },
 });
 const UNCLASSIFIED_PARENT = coin("raw", {
   symbol: "RAW",
@@ -55,7 +59,13 @@ describe("projectReserveLookThroughClientSummary", () => {
   );
   it("joins a single wrapper slice to its parent's reviewed slices, dated by the parent's review", () => {
     const summary = projectReserveLookThroughClientSummary(wrapperOf("par"), PARENTS);
-    expect(summary).toMatchObject({ parentId: "par", parentSymbol: "PAR", parentReviewedAt: "2026-09-30" });
+    expect(summary).toMatchObject({
+      parentId: "par",
+      parentSymbol: "PAR",
+      parentReviewedAt: "2026-09-30",
+      parentCompositionAsOf: "2026-09-15",
+      parentSources: [{ label: "Parent reserve report", url: "https://example.com/parent-reserves" }],
+    });
     expect(summary!.slices.map((slice) => [slice.name, slice.pct, slice.risk])).toEqual([
       ["Cash", 60, "very-low"],
       ["BTC", 40, "high"],
@@ -69,6 +79,8 @@ describe("projectReserveLookThroughClientSummary", () => {
       { name: "Strategy basket", pct: 100, risk: "medium", obligor: "Strategy desk", assetClassLabel: null },
     ]);
     expect(summary!.parentReviewedAt).toBeNull();
+    expect(summary!.parentCompositionAsOf).toBeNull();
+    expect(summary!.parentSources).toEqual([]);
   });
 
   it("draws a provenance-only parent's slices from its curated basket", () => {

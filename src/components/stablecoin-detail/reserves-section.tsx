@@ -529,20 +529,28 @@ export function ReservesSection({
   const baselineNote = isLiveFeed ? null : (footnote?.text ?? null);
 
   const sources: EvidenceFooterSource[] = [];
-  for (const source of [...(qualitySummary?.sources ?? []), ...(footnote?.references ?? [])]) {
+  for (const source of [
+    ...(qualitySummary?.sources ?? []),
+    ...(lookThroughView?.parent.parentSources ?? []),
+    ...(footnote?.references ?? []),
+  ]) {
     if (!sources.some((existing) => existing.url === source.url)) sources.push({ label: source.label, url: source.url });
   }
   const basisSource = qualitySummary?.sources[0];
   // The "Live reserve feed" fold already opens on the dated stamp; it is
   // repeated here only when that fold is absent.
   const foldedLiveStamp = keepsOneDate && isLiveFeed && !showLiveFeed ? (footnote?.text ?? null) : null;
-  const lookThroughDates = lookThroughView
+  const parent = lookThroughView?.parent ?? null;
+  const parentBasisDate = parent?.parentCompositionAsOf
+    ? `as of ${parent.parentCompositionAsOf}${parent.parentReviewedAt ? `, reviewed ${parent.parentReviewedAt}` : ""}`
+    : parent?.parentReviewedAt
+      ? `reviewed ${parent.parentReviewedAt}`
+      : null;
+  const lookThroughDates = parent && parentBasisDate
     ? [
-        lookThroughView.parent.parentReviewedAt
-          ? `${lookThroughView.parent.parentSymbol} reserves reviewed ${lookThroughView.parent.parentReviewedAt}${
-            reviewedAt ? `; the review date below covers ${coin.symbol}'s own basis` : ""
-          }.`
-          : null,
+        `${parent.parentSymbol} reserves ${parentBasisDate}${
+          reviewedAt ? `; the review date below covers ${coin.symbol}'s own basis` : ""
+        }.`,
         qualitySummary?.asOf
           ? `${coin.symbol} basis as of ${qualitySummary.asOf}${basisSource ? `, per ${reportName(basisSource.label)}` : ""}.`
           : null,

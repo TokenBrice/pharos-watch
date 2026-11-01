@@ -238,6 +238,26 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(pegDisplay(observed).sub).toBe("0 incidents");
   });
 
+  it("marks a numeric peg score under 30 tracking days as early, never as amber", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const pegDisplay = (trackingSpanDays: number) =>
+      buildDetailHero({
+        coin,
+        pegScoreResult: makePegSummaryCoin({
+          id: coin.id, symbol: coin.symbol, pegScore: 100, pegPct: 100, eventCount: 0, trackingSpanDays,
+        }),
+      }).tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display;
+
+    expect(pegDisplay(10)).toMatchObject({
+      value: "100",
+      sub: "Early score · 10d tracked",
+      color: "text-muted-foreground",
+    });
+    expect(pegDisplay(10).sub).not.toContain("incidents");
+    expect(pegDisplay(29).sub).toBe("Early score · 29d tracked");
+    expect(pegDisplay(30).sub).toBe("0 incidents");
+  });
+
   it("derives unavailable peg score and upstream freeze states", () => {
     const coin = TRACKED_META_BY_ID.get("dai-makerdao");
     expect(coin).toBeDefined();

@@ -304,8 +304,8 @@ describe("DepegResolverModule", () => {
   });
 
   describe("calibration lineage caption", () => {
-    const lineage = (incidentCount: number, coinCount: number) => ({
-      trainingWindow: { start: 1, end: 2 }, eventCount: 99_999, incidentCount, coinCount, quarantinedCoins: 0,
+    const lineage = (incidentCount: number, coinCount: number, quarantinedCoins = 0) => ({
+      trainingWindow: { start: 1, end: 2 }, eventCount: 99_999, incidentCount, coinCount, quarantinedCoins,
     });
 
     it.each([[8_466, 41, "8,466"], [0, 0, "0"]] as const)("states %s producer historical incidents", (incidents, coins, shown) => {
@@ -315,6 +315,19 @@ describe("DepegResolverModule", () => {
       expect(caption.textContent).toBe(`Calibrated on ${shown} historical incidents · ${coins} coins`);
       expect(screen.queryByText(/recovered\s+incidents/)).toBeNull();
     });
+
+    it.each([[1, "1 coin excluded"], [3, "3 coins excluded"]] as const)(
+      "names %i quarantined coins outside the calibration corpus",
+      (quarantinedCoins, suffix) => {
+        render(<DepegResolverModule data={response({
+          _meta: { ...meta, lineage: lineage(8_466, 41, quarantinedCoins) },
+          rows: [row],
+        })} />);
+        expect(screen.getByText(/^Calibrated on/).textContent).toBe(
+          `Calibrated on 8,466 historical incidents · 41 coins · ${suffix}`,
+        );
+      },
+    );
 
     it("omits the caption without lineage", () => {
       render(<DepegResolverModule data={response({ rows: [row] })} />);

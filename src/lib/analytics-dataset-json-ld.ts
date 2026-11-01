@@ -70,7 +70,7 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
     slug: "peg-mechanism-distribution",
     name: "Pharos Peg Mechanism Distribution Dataset",
     description:
-      "Public market-structure export summarizing stablecoin counts by mechanism archetype, peg reference, and jurisdiction.",
+      "Public market-structure export summarizing stablecoin counts by mechanism archetype, variant parent (pegReferenceId), and jurisdiction.",
     keywords: ["stablecoin mechanisms", "peg mechanism distribution", "stablecoin market structure"],
     export: PUBLIC_DATASET_CURRENT_EXPORTS["peg-mechanism-distribution"] as PublicDatasetExport,
   },

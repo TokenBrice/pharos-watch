@@ -292,6 +292,8 @@ describe("ReservesSection", () => {
       parentId: "par-coin",
       parentSymbol: "PAR",
       parentReviewedAt: "2026-09-30",
+      parentCompositionAsOf: "2026-09-15",
+      parentSources: [{ label: "Parent reserve report", url: "https://example.com/parent-reserves" }],
       slices: [
         { key: "cash:0", name: "Liquid cash strategy basket", pct: 70, risk: "medium", obligor: null, assetClassLabel: "Cash" },
         { key: "btc:1", name: "BTC collateral", pct: 30, risk: "high", obligor: null, assetClassLabel: null },
@@ -322,6 +324,26 @@ describe("ReservesSection", () => {
       const verdict = screen.getByText(/^Via PAR: 2 reviewed slices/);
       expect(verdict.textContent).toContain("Liquid cash strategy basket");
       expect(verdict.textContent).toContain("70%");
+    });
+
+    it("folds the parent's as-of date and sources into the existing provenance line", () => {
+      const { container } = renderSection({ qualitySummary: WRAPPER_SUMMARY, lookThrough: LOOK_THROUGH });
+      const provenance = Array.from(container.querySelectorAll("details"))
+        .find((fold) => fold.querySelector(`a[href="${LOOK_THROUGH.parentSources[0]!.url}"]`));
+      expect(provenance).toBeDefined();
+      expect(provenance!.open).toBe(false);
+      expect(provenance!.textContent).toContain("PAR reserves as of 2026-09-15, reviewed 2026-09-30");
+      expect(container.textContent?.split("PAR reserves as of").length).toBe(2);
+    });
+
+    it("dedupes a parent source already cited by the wrapper", () => {
+      const { container } = renderSection({
+        qualitySummary: WRAPPER_SUMMARY,
+        lookThrough: { ...LOOK_THROUGH, parentSources: [...LOOK_THROUGH.parentSources, ...WRAPPER_SUMMARY.sources] },
+      });
+      const provenance = Array.from(container.querySelectorAll("details"))
+        .find((fold) => fold.querySelector(`a[href="${WRAPPER_SUMMARY.sources[0]!.url}"]`));
+      expect(provenance!.querySelectorAll(`a[href="${WRAPPER_SUMMARY.sources[0]!.url}"]`)).toHaveLength(1);
     });
 
     it("never prints a wrapper's single-slice chip or liquidity facts over the parent basket", () => {

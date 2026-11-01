@@ -4,6 +4,7 @@ import type {
   StressSignalEntry,
   YieldRanking,
 } from "@shared/types";
+import { PEG_SCORE_EARLY_MAX_DAYS } from "@shared/lib/peg-score";
 import { DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCurrency, formatIsoDate, formatSignedPercent } from "@shared/lib/format";
 import {
@@ -100,10 +101,13 @@ export function buildPegScoreDisplay(
 
   if (isNavToken) return { value: "NAV", sub: "Token", color: HERO_MUTED_CLASS };
   if (pegScoreResult?.pegScore != null) {
+    const early = pegScoreResult.trackingSpanDays < PEG_SCORE_EARLY_MAX_DAYS;
     return {
       value: String(pegScoreResult.pegScore),
-      sub: pegScoreEventLine ?? (pegScoreResult.pegPct == null ? "Peg coverage unavailable" : `${pegScoreResult.pegPct.toFixed(1)}% at peg`),
-      color: pegScoreColor(pegScoreResult.pegScore),
+      sub: early
+        ? `Early score · ${pegScoreResult.trackingSpanDays}d tracked`
+        : (pegScoreEventLine ?? (pegScoreResult.pegPct == null ? "Peg coverage unavailable" : `${pegScoreResult.pegPct.toFixed(1)}% at peg`)),
+      color: early ? HERO_MUTED_CLASS : pegScoreColor(pegScoreResult.pegScore),
     };
   }
   if (tooNewForPegScore) {

@@ -429,12 +429,14 @@ function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
 
   if (coin.status === "pre-launch") {
     const latestMilestone = getLatestDatedMilestoneDate(coin);
+    const launchedAwaitingData = isLaunchedAwaitingData(coin);
     return composeDescription([
       body,
-      latestMilestone ? `Latest milestone: ${formatDayLabel(latestMilestone)}.` : null,
-      isLaunchedAwaitingData(coin)
+      launchedAwaitingData
         ? (coin.launchDate ? `Launched ${formatFuzzyDate(coin.launchDate)}; not yet tracked.` : "Launched; not yet tracked.")
-        : coin.expectedLaunchDate ? `Target: ${formatFuzzyDate(coin.expectedLaunchDate)}.` : null,
+        : null,
+      latestMilestone ? `Latest milestone: ${formatDayLabel(latestMilestone)}.` : null,
+      !launchedAwaitingData && coin.expectedLaunchDate ? `Target: ${formatFuzzyDate(coin.expectedLaunchDate)}.` : null,
     ], PROFILE_DESCRIPTION_MAX_LENGTH);
   }
 

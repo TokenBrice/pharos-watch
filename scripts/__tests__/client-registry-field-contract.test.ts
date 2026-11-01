@@ -209,6 +209,27 @@ describe("client registry field contract", () => {
       .toEqual([["base", false], ["wrapper", true], ["yield", true]]);
   });
 
+  it("labels NAV-token catalog entries with the site hero peg label", ({ onTestFinished }) => {
+    const fixtureDir = mkdtempSync(join(tmpdir(), "pharos-mini-app-catalog-nav-"));
+    onTestFinished(() => rmSync(fixtureDir, { recursive: true, force: true }));
+    const canonicalOrderJsonPath = join(fixtureDir, "canonical-order.json");
+    writeFileSync(canonicalOrderJsonPath, JSON.stringify(["usde", "susde", "fpi", "usdc"]));
+
+    const { searchableCoins } = buildTelegramMiniAppCatalogOutput({
+      sourceCoins: [
+        { id: "usde", symbol: "USDe", name: "Ethena USDe", flags: { pegCurrency: "USD", navToken: true } },
+        { id: "susde", symbol: "sUSDe", name: "Staked USDe", pegReferenceId: "usde", flags: { pegCurrency: "USD", navToken: true } },
+        { id: "fpi", symbol: "FPI", name: "Frax Price Index", flags: { pegCurrency: "VAR", navToken: true } },
+        { id: "usdc", symbol: "USDC", name: "USD Coin", flags: { pegCurrency: "USD", navToken: false } },
+      ],
+      canonicalOrderJsonPath,
+    });
+
+    expect(searchableCoins.map((entry: { stablecoinId: string; pegLabel?: string }) => [entry.stablecoinId, entry.pegLabel]))
+      .toEqual([["usde", "USD NAV"], ["susde", "USDe NAV"], ["fpi", "VAR NAV"], ["usdc", undefined]]);
+    expect(searchableCoins[3]).not.toHaveProperty("pegLabel");
+  });
+
   it("projects only the mint-authority coverage summary and excludes detail evidence", () => {
     const coin = {
       id: "minted-usd",

@@ -255,6 +255,19 @@ describe("Telegram Mini App shared contract", () => {
     }
   });
 
+  it("accepts an optional NAV peg label on catalog coins", () => {
+    expect(TelegramMiniAppCatalogSchema.safeParse({
+      ...TELEGRAM_MINI_APP_CATALOG,
+      searchableCoins: [{
+        stablecoinId: "susde-ethena",
+        symbol: "sUSDe",
+        name: "Ethena Staked USDe",
+        peg: "USD",
+        pegLabel: "USDe NAV",
+      }],
+    }).success).toBe(true);
+  });
+
   it("rejects unknown preset ids at catalog and mutable-state boundaries", () => {
     expect(TelegramMiniAppCatalogSchema.safeParse({
       ...TELEGRAM_MINI_APP_CATALOG,

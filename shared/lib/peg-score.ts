@@ -4,6 +4,8 @@ import { mergeDepegSeconds, mergeUnknownDepegSeconds, hasCurrentTrustedDepegObse
 import { DAY_SECONDS } from "./time-constants";
 
 export const PEG_SCORE_LOOKBACK_SEC = Math.ceil(4 * 365.25 * DAY_SECONDS);
+/** Hero Peg Scores below this tracking span are marked early. */
+export const PEG_SCORE_EARLY_MAX_DAYS = 30;
 const RECENT_PEG_WINDOW_DAYS = 90;
 const LOW_CONFIDENCE_WEIGHT = 0.5;
 const MAGNITUDE_FLOOR_DIVISOR = 2000;
