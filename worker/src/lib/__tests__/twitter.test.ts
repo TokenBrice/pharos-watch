@@ -38,6 +38,18 @@ describe("twitter helpers", () => {
     expect(longWord.endsWith("…")).toBe(true);
   });
 
+  it("skips prose-word and single-letter tickers unless metadata names them", () => {
+    expect(buildTweetText("", "The U.S. dollar peg held while USDT drifted.")).toBe(
+      "The U.S. dollar peg held while $USDT drifted.",
+    );
+    expect(buildTweetText("", "money-market funds held cash-like.")).toBe(
+      "money-market funds held cash-like.",
+    );
+    expect(buildTweetText("", "CASH led gains.", null, null, { coins: ["CASH"] })).toBe(
+      "$CASH led gains.",
+    );
+  });
+
   it("keeps the complete map hook inside the 270-character boundary", () => {
     const hook = "See the map.";
     const result = buildTweetText(

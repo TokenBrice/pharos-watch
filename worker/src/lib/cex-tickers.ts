@@ -553,6 +553,7 @@ export async function fetchCoinbasePrices(
     COINBASE_PRODUCT_FETCH_CONCURRENCY,
     async (product) => {
       transportAttempts++;
+      let responseStatus: number | null = null;
       try {
         const result = await fetchJsonWithRetry<{ bid?: string; ask?: string; price?: string; time?: string }>(
           `${CEX_PROVIDER_AUDIT_CONFIG.coinbase.metadataUrl}/${product.productId}/ticker`,
@@ -561,10 +562,21 @@ export async function fetchCoinbasePrices(
             headers: { Accept: "application/json", "User-Agent": USER_AGENT },
           },
           CEX_REQUEST_RETRIES,
-          { timeoutMs: CEX_REQUEST_TIMEOUT_MS },
+          {
+            timeoutMs: CEX_REQUEST_TIMEOUT_MS,
+            onResponse: (response) => { responseStatus = response.status; },
+          },
         );
         if (!result?.response.ok) {
           transportFailures++;
+          value.diagnostics.push({
+            source: "coinbase",
+            stage: "primary",
+            endpoint: COINBASE_TICKER_ENDPOINT,
+            status: result?.response.status ?? responseStatus,
+            ok: false,
+            success: false,
+          });
           return;
         }
 
@@ -588,6 +600,16 @@ export async function fetchCoinbasePrices(
         if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
         logWorkerEvent({ scope: "lib", level: "warn", event: "cex_coinbase_fetch_failed", message: "Coinbase ticker fetch failed", provider: "coinbase", error: err, metadata: { productId: product.productId } });
         transportFailures++;
+        value.diagnostics.push({
+          source: "coinbase",
+          stage: "primary",
+          endpoint: COINBASE_TICKER_ENDPOINT,
+          status: null,
+          ok: false,
+          success: false,
+          errorClass: errorClassFor(err),
+          errorMessage: errorMessageFor(err),
+        });
       }
     },
   );

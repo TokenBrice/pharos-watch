@@ -72,10 +72,10 @@ function makeAsset(overrides: Partial<PeggedAsset> = {}): PeggedAsset {
   });
 }
 
-function nativeQuote() {
+function nativeQuote(updatedAt = 1_700_000_000) {
   return new Map([["eurc-circle", {
     stablecoinId: "eurc-circle", pegCurrency: "EUR", nativePrice: 1,
-    priceUsd: 1.08, updatedAt: 1_700_000_000, referencePriceUsd: 1.08, referenceType: "fresh",
+    priceUsd: 1.08, updatedAt, referencePriceUsd: 1.08, referenceType: "fresh",
   }]]);
 }
 
@@ -352,6 +352,32 @@ describe("runPostEnrichmentPricePipeline", () => {
     expect(asset.price).toBe(1.1);
     expect(asset.priceSource).toBe("binance+kraken");
     expect(asset.priceConfidence).toBe("high");
+  });
+
+  it("does not fill from a native-implied quote past the lane's registry budget", async () => {
+    const asset = makeAsset({ price: null, priceSource: undefined, priceConfidence: null });
+    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote(1_700_000_050 - 1_200));
+
+    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
+
+    expect(isAbortResult(result)).toBe(false);
+    if (isAbortResult(result)) throw new Error("unexpected abort result");
+    expect(result.nativePegFillCount).toBe(0);
+    expect(result.nativePegCorrectionCount).toBe(0);
+    expect(asset.price).toBeNull();
+  });
+
+  it("does not let an older native-implied quote displace a fresher incumbent", async () => {
+    const asset = makeAsset({ price: 1.12, priceObservedAt: 1_700_000_040 });
+    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote(1_700_000_000));
+
+    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
+
+    expect(isAbortResult(result)).toBe(false);
+    if (isAbortResult(result)) throw new Error("unexpected abort result");
+    expect(result.nativePegCorrectionCount).toBe(0);
+    expect(asset.price).toBe(1.12);
+    expect(asset.priceSource).toBe("coingecko");
   });
 
   it("replaces high-confidence mixed-source output when only one hard source disagrees with native pricing", async () => {

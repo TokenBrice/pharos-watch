@@ -6,7 +6,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
  *
  * Extracted to eliminate code duplication (Q-002, Q-011, CC-001).
  */
-import { isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
+import { getPricingSourceRegistryEntry, isPricingSourceSoftGuardrailExempt } from "@shared/lib/pricing-source-registry";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { pricesAgreeWithinBps } from "../../lib/price-divergence";
 import { loadPriceCorroborationObservations, type PriceObservationEffectiveness } from "./price-corroboration-observations";
@@ -201,6 +201,8 @@ export async function runPostEnrichmentPricePipeline(
   let rejectedCount = 0;
   let nativePegCorrectionCount = 0;
   let nativePegFillCount = 0;
+  const nativePegMaxTrustedAgeSec =
+    getPricingSourceRegistryEntry(COINGECKO_NATIVE_IMPLIED_SOURCE)?.maxTrustedAgeSec ?? null;
   for (const asset of assets) {
     const nativePegImpliedUsd = nativePegImpliedUsdQuotes.get(asset.id);
     const currentHasPrice = asset.price != null && typeof asset.price === "number";
@@ -212,6 +214,16 @@ export async function runPostEnrichmentPricePipeline(
 
     const tryApplyNativePegImpliedPrice = (reason: "fill" | "correction"): boolean => {
       if (nativePegImpliedUsd == null) return false;
+      // The lane's own registry budget is the admission gate; the shared fetch
+      // uses the wider depeg budget for its different consumers.
+      if (nativePegMaxTrustedAgeSec == null
+        || input.syncStartSec - nativePegImpliedUsd.updatedAt > nativePegMaxTrustedAgeSec) {
+        logWorkerEventArgs("handler", "warn",
+          `[sync-stablecoins] Skipped native-peg ${reason} for ${asset.symbol} (id=${asset.id}): ` +
+          `quote is ${input.syncStartSec - nativePegImpliedUsd.updatedAt}s old, budget ${nativePegMaxTrustedAgeSec ?? "unknown"}s`,
+        );
+        return false;
+      }
       const nativeDecision = validatePublishedAssetPrice({
         asset: {
           price: nativePegImpliedUsd.priceUsd,
@@ -267,6 +279,7 @@ export async function runPostEnrichmentPricePipeline(
     } else if (
       !currentHasStrongBypassAuthority &&
       nativePegImpliedUsd != null &&
+      nativePegImpliedUsd.updatedAt >= (asset.priceObservedAt ?? asset.priceUpdatedAt ?? 0) &&
       nativePegDivergenceBps != null &&
       nativePegDivergenceBps > NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS
     ) {

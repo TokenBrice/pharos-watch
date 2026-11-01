@@ -101,7 +101,8 @@ export const FrankfurterTimeSeriesSchema = z.object({
 });
 
 // --- Secondary FX (fawazahmed0 currency-api) day response (Q252) ---
+// A 200 body without `usd` is an unusable read, never a confirmed empty day.
 export const SecondaryFxResponseSchema = z.object({
   date: z.string().optional(),
-  usd: z.record(z.string(), z.number()).optional(),
+  usd: z.record(z.string(), z.number()),
 }).passthrough();

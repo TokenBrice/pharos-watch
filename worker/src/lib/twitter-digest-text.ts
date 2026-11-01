@@ -3,6 +3,10 @@ import { logWorkerEventArgs } from "./structured-log";
 
 const TRACKED_CASHTAG_SYMBOLS = [...new Set(ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.symbol))]
   .sort((left, right) => right.length - left.length);
+// Symbols that are ordinary prose unless the edition metadata names them:
+// single letters match abbreviations ("U.S.") and dictionary words match
+// compounds ("cash-like", "money-market"). Only the subject-aware path may tag them.
+const AMBIGUOUS_CASHTAG_SYMBOLS = new Set(["U", "M", "CASH", "MONEY", "BOLD", "DOC", "MAI", "AID", "BUCK"]);
 const ESCAPED_TRACKED_CASHTAG_SYMBOLS = TRACKED_CASHTAG_SYMBOLS
   .map((symbol) => {
     let escaped = "";
@@ -88,7 +92,8 @@ function injectCashtags(text: string, digestMetadata?: unknown): string {
   const preferredIndex = preferred
     .map((symbol) => matches.findIndex((match) => match.symbol.toUpperCase() === symbol.toUpperCase()))
     .find((index) => index >= 0);
-  const selectedIndex = preferredIndex ?? 0;
+  const selectedIndex = preferredIndex
+    ?? matches.findIndex((match) => !AMBIGUOUS_CASHTAG_SYMBOLS.has(match.symbol.toUpperCase()));
   let output = "";
   let cursor = 0;
   matches.forEach((match, index) => {

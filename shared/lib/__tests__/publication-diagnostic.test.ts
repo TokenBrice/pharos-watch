@@ -28,4 +28,20 @@ describe("publication diagnostic", () => {
     expect(classifyPublicationDiagnostic(value)).toMatchObject({ status: "degraded", maxAgeSec: STATUS_PUBLICATION_PENDING_MAX_AGE_SEC });
     expect(classifyPublicationDiagnostic(undefined).status).toBe("unknown");
   });
+  it("fails closed on a same-clock rejection and a rejected candidate clock", () => {
+    const value = surface();
+    value.lastAttemptedGeneration = {
+      ...value.lastPublishedGeneration!, generationId: "attempt", state: "rejected", startedAt: 100, failureReason: "held-input",
+    };
+    expect(classifyPublicationDiagnostic(value)).toMatchObject({ status: "degraded", reason: "held-input" });
+
+    value.lastAttemptedGeneration = { ...value.lastPublishedGeneration!, generationId: "future-candidate", state: "candidate", startedAt: 200 };
+    value.candidateAgeSec = null;
+    value.lastFailureReason = "candidate-clock-future-timestamp";
+    expect(classifyPublicationDiagnostic(value)).toMatchObject({
+      status: "degraded",
+      reason: "candidate-clock-future-timestamp",
+      updatedAt: null,
+    });
+  });
 });

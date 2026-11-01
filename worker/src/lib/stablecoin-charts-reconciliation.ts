@@ -17,6 +17,13 @@ export interface SupplyHistoryChartRow {
 }
 
 const DEFILLAMA_CHART_ABSENT_LEGACY_IDS = new Set(["brz-transfero"]);
+// DefiLlama charts these assets under its own stablecoin ids even though the
+// registry entry carries no `llamaId`; an overlay would add them to DefiLlama's
+// already-populated bucket twice. Reviewed exclusions, not inferred identities.
+const DEFILLAMA_CHART_PRESENT_WITHOUT_LLAMA_ID = new Set([
+  // DefiLlama stablecoin id 430, peggedUSD chart rows.
+  "sofid-sofi",
+]);
 
 
 function pegTypeFromCurrency(pegCurrency: string): string | null {
@@ -35,6 +42,7 @@ export const STRUCTURAL_SUPPLEMENTAL_CHART_CONFIGS: StructuralSupplementalChartC
       meta.detailProvider
       && meta.detailProvider !== "defillama"
       && (!meta.llamaId || DEFILLAMA_CHART_ABSENT_LEGACY_IDS.has(meta.id))
+      && !DEFILLAMA_CHART_PRESENT_WITHOUT_LLAMA_ID.has(meta.id)
     )
     .flatMap((meta) => {
       const pegType = pegTypeFromCurrency(meta.flags.pegCurrency);

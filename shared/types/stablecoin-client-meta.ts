@@ -185,6 +185,8 @@ export type StablecoinClientListMeta = Pick<StablecoinMeta, (typeof STABLECOIN_C
   mintAuthorityStatus?: ClientMintAuthorityStatus;
   mintAuthoritySummary?: MintAuthorityCoverageSummary;
   liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
+  /** Curated reserve slices exist; presence only, the slices stay in the detail projection. */
+  hasCuratedReserves?: boolean;
   /** Compact yield taxonomy badge; source-specific yield configuration stays in detail. */
   yieldType?: NonNullable<StablecoinMeta["yieldConfig"]>["yieldType"];
 };

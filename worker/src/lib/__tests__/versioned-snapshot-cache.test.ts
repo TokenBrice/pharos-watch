@@ -6,7 +6,7 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
-type Reason = "missing" | "parse" | "payload" | "envelope" | "generation" | "methodology";
+type Reason = "missing" | "clock" | "parse" | "payload" | "envelope" | "generation" | "methodology";
 interface Payload { computedAt: number }
 
 const options: VersionedSnapshotCacheOptions<Payload, Reason> = {
@@ -30,6 +30,7 @@ const options: VersionedSnapshotCacheOptions<Payload, Reason> = {
   },
   reasons: {
     missingCache: "missing",
+    cacheClockRejected: () => "clock",
     jsonParseFailed: "parse",
     invalidPayload: "payload",
     invalidEnvelope: "envelope",
@@ -92,6 +93,23 @@ describe("versioned snapshot cache policy", () => {
     await expect(loadVersionedSnapshotCache(db, {
       ...options, validatePayload: () => ({ reason: "payload" }),
     })).resolves.toEqual({ kind: "error", reason: "payload", updatedAt: 123 });
+  });
+
+  it("reports a present row with a rejected future clock instead of a missing cache", async () => {
+    const { db, sqlite } = fixtures.open();
+    const future = Math.floor(Date.now() / 1000) + 3_600;
+    sqlite.prepare("INSERT INTO cache VALUES (?, ?, ?)").run(
+      options.cacheKey,
+      JSON.stringify({ generation: 2, methodologyVersion: "v1", payload: { computedAt: 500 } }),
+      future,
+    );
+
+    await expect(loadVersionedSnapshotCache(db, options)).resolves.toEqual({
+      kind: "error",
+      reason: "clock",
+      updatedAt: future,
+    });
+    expect(sqlite.prepare("SELECT value FROM cache").get()).toBeDefined();
   });
 
   it("leaves the accepted cache untouched when schema or payload validation rejects a write", async () => {

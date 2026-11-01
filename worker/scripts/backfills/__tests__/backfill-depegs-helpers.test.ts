@@ -440,6 +440,31 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
+  it("retries a 200 secondary FX day without a usd map instead of caching it as empty", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchSpy = mockFetch([
+      { match: "cdn.jsdelivr.net", body: { date: "2025-06-14" } },
+    ], { requireMatch: true });
+    const db = mockD1([
+      {
+        match: "SELECT value, updated_at FROM cache WHERE key = ?",
+        matchBinds: ["fx-history-secondary:2025"],
+        rows: [],
+        first: null,
+      },
+      { match: "INSERT INTO cache", rows: [] },
+    ]);
+
+    await expect(
+      fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14"),
+    ).resolves.toEqual({ KES: [] });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache"))).toBe(false);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("secondary FX validation failed"));
+
+    await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("skips a non-JSON 200 secondary FX day instead of aborting the run", async () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     const response = new Response("<html>upstream error</html>", { status: 200 });
