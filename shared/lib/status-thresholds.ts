@@ -1,5 +1,7 @@
 import { CRON_INTERVALS } from "./cron-jobs";
 import { CRON_SCHEDULE_CADENCES } from "./cron-cadences";
+import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "./depeg-closure";
+import { DEPEG_PENDING_EXPIRY_SEC } from "./depeg-config";
 import type { ActivePriceCoverageGap, ActivePriceCoverageHealth, StablecoinPublicationHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
 import type { z } from "zod";
 import type { FreshnessStatusSchema } from "@pharos/contracts/api-meta";
@@ -542,6 +544,34 @@ export function hasReserveScoreInputHold(reserve: ReserveScoreInputHoldInput): b
     || reserve.authoritativeFreshCoverageRatio < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedAuthoritativeCoverageRatio
   );
 }
+
+// --- Depeg detection coverage (canary cohort) ---
+/**
+ * A depeg run can complete while evaluating almost nothing: the observation
+ * census counts eligible/observed/unavailable assets per run, but the run
+ * itself stays `ok`. These bounds turn material loss into a per-run canary
+ * verdict instead of a diagnostic only a human opening cron detail would see.
+ */
+export const STATUS_DEPEG_DETECTION_THRESHOLDS = {
+  /** Unavailable eligible share above which two consecutive censuses degrade. */
+  unavailableShareMax: 0.05,
+  /** The census clock may miss one producer interval; two missed runs degrade. */
+  ledgerMaxAgeIntervals: 2,
+  /** A candidate older than the base confirmation window is unresolved, not merely slow. */
+  pendingExtendedMaxAgeSec: DEPEG_PENDING_EXPIRY_SEC,
+  /** A candidate older than every dynamic expiry limit proves confirmation never processed it. */
+  pendingStalledMaxAgeSec: DEPEG_PENDING_EXPIRY_SEC * 4,
+  /** An extreme move expired without a public event stays a finding for one day. */
+  unconfirmedSevereLookbackSec: 24 * 3600,
+  /** Shared observation-gap budget: an open event blind past this has no trusted price. */
+  openEventBlindMaxAgeSec: DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC,
+  /** A newly eligible DDR incident may wait one producer run for its seal. */
+  ddrUnsealedGraceIntervals: 2,
+  /** An incident eligible this long without a public prediction escalates to error. */
+  ddrUnsealedMaxAgeSec: 6 * 3600,
+  /** Fresh DEX-suppressed primary deviations at or above this count escalate to error. */
+  dexSuppressionErrorCount: 10,
+} as const;
 
 // --- Yield health summary ---
 /**

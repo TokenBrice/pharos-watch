@@ -17,6 +17,11 @@ import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
 import { STATUS_DATASET_FRESHNESS } from "@shared/lib/status-dataset-freshness";
 import type { DatasetFreshnessKey } from "@shared/types/status/core";
 import { assessFreshnessTimestamp } from "../api-freshness-age";
+import {
+  DEPEG_CENSUS_PRODUCER_JOB,
+  latestDepegLedgerRun,
+  loadDepegCensusRuns,
+} from "../depeg-ledger-clock";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
   return {
@@ -56,6 +61,9 @@ type DatasetFreshnessTarget =
       type: "dews-publication";
     }
   | {
+      type: "depeg-ledger";
+    }
+  | {
       type: "report-card-publication";
     };
 
@@ -71,7 +79,9 @@ const DATASET_FRESHNESS_TARGETS: Record<DatasetFreshnessKey, DatasetFreshnessTar
     column: "updated_at",
     where: "is_best = 1 AND (publication_generation_id IS NULL OR publication_state = 'published')",
   },
-  depegs: { type: "cron", jobs: STATUS_DATASET_FRESHNESS.depegs.owners },
+  // The depeg ledger's clock is detection output, not the stablecoins cache that
+  // is published even when the detection pass fails or is held.
+  depegs: { type: "depeg-ledger" },
   dews: { type: "dews-publication" },
   digest: { type: "table", table: "daily_digest", column: "generated_at" },
 };
@@ -147,6 +157,23 @@ async function getLastSuccessfulCronRun(db: D1Database, jobs: readonly string[])
 async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now: number): Promise<number | null> {
   if (target.type === "cron") {
     return getLastSuccessfulCronRun(db, target.jobs);
+  }
+  if (target.type === "depeg-ledger") {
+    try {
+      const runs = await loadDepegCensusRuns(db);
+      return latestDepegLedgerRun(runs)?.runStartedAt ?? null;
+    } catch (err) {
+      logWorkerEvent({
+        scope: "status",
+        level: "warn",
+        event: "depeg_ledger_freshness_unavailable",
+        route: "status",
+        source: DEPEG_CENSUS_PRODUCER_JOB,
+        message: "Failed to read the completed depeg detection census for dataset freshness",
+        error: err,
+      });
+      return null;
+    }
   }
   if (target.type === "dews-publication") {
     const published = await readDewsPublishedGenerationResult(db, now);

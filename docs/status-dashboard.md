@@ -258,7 +258,7 @@ V9's neutral pre-compile `v9-capture-already-accepted` requires a successful `cu
 
 The [persistence appendix](#cron-metadata-persistence-budget) owns write-time byte budgets and diagnostic compaction. Consumer fields/counters retain their shape and unavailable values; persistence limits never drop evidence or prevent terminal accounting.
 
-`sync-stablecoins` stores the [depeg census](./depeg-detection.md#cron-scheduling) as `quality.depegObservation`; unavailable inputs add `depeg-observation-incomplete`, leaving execution status unchanged. If detection stops before the census, it is null; `quality.depegObservationUnavailableReason` names why.
+`sync-stablecoins` stores the [depeg census](./depeg-detection.md#cron-scheduling) as `quality.depegObservation`; unavailable inputs add `depeg-observation-incomplete`, leaving execution status unchanged. If detection stops before the census, it is null; `quality.depegObservationUnavailableReason` names why. The depeg canary cohort reads that persisted evidence: `depeg-detection-census` degrades after two consecutive censuses above a 5% unavailable share or when the newest completed census misses two producer intervals, and adds named findings for stalled pending confirmation (any candidate past the base window; error past every dynamic limit or on an `unconfirmed-severe` expiry), open events blind past the 1,200-second coverage budget, and a USD-pegged DEX recovery-band onset suppression with no candidate or event. Their thresholds live in `STATUS_DEPEG_DETECTION_THRESHOLDS`.
 
 
 
@@ -630,7 +630,7 @@ For event-backed domains, `datasetFreshness` follows confirmed writer output rat
 
 - `blacklist`: confirmed `sync-blacklist` output, not `MAX(blacklist_events.timestamp)`
 - `mintBurn`: confirmed critical/extended mint-burn output, not `MAX(mint_burn_events.timestamp)`
-- `depegs`: confirmed `sync-stablecoins` output, not `MAX(depeg_events.started_at)`
+- `depegs`: the newest `sync-stablecoins` run whose `capabilities.depegPipeline` is true and whose [census](./depeg-detection.md#cron-scheduling) is present, not the stablecoins cache publication (which is renewed even when detection is held or fails) and not `MAX(depeg_events.started_at)`
 
 The `dex_pricing_bridge_stale` diagnostic compares the `dex-liquidity` dataset publication age with its descriptor's endpoint budget (14,400 seconds; the exact boundary remains eligible). Its `dexLiquidityAgeSeconds` metric does not measure individual `dex_prices` observations, whose independent trust window remains 4,500 seconds.
 

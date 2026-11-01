@@ -29,7 +29,55 @@ const EXPECTED_CANARY_CHECK_IDS = [
   "safety-score-v9-publication",
   "yield-gbp-benchmark-current",
   "yield-usd-benchmark-current",
+  "depeg-detection-census",
+  "depeg-pending-confirmation-stall",
+  "depeg-open-coverage",
+  "depeg-dex-suppression-divergence",
+  "ddr-eligible-unsealed",
 ];
+
+const HEALTHY_CENSUS = {
+  scope: "psi-non-nav-before-supply-floor",
+  evaluatedAt: NOW - 120,
+  eligibleCount: 100,
+  observedCount: 98,
+  unavailableCount: 2,
+  belowFloorCount: 0,
+  reasonCounts: { "asset-absent": 2 },
+};
+
+function depegCensusRuns() {
+  return [
+    {
+      started_at: NOW - 60,
+      census_json: JSON.stringify(HEALTHY_CENSUS),
+      pipeline_succeeded: 1,
+      unavailable_reason: null,
+    },
+    {
+      started_at: NOW - 960,
+      census_json: JSON.stringify({ ...HEALTHY_CENSUS, unavailableCount: 0, reasonCounts: {} }),
+      pipeline_succeeded: 1,
+      unavailable_reason: null,
+    },
+  ];
+}
+
+/** Fixtures for the depeg canaries: a completed census and no stalled candidates. */
+function depegCanaryFixtures() {
+  return [
+    { match: "pharos:depeg-census-runs", rows: depegCensusRuns() },
+    {
+      match: "pharos:depeg-pending-confirmation-canary",
+      first: { severe_recent: 0, stalled_count: 0, pending_count: 0, oldest_first_seen: null },
+      rows: [],
+    },
+    { match: "pharos:depeg-pending-aged-candidates", rows: [] },
+    { match: "pharos:ddr-eligible-unsealed-canary", rows: [] },
+    { match: "pharos:depeg-open-coverage-canary", rows: [] },
+    { match: "pharos:depeg-dex-suppression-canary", rows: [] },
+  ];
+}
 
 function activeV9(options: { held?: boolean; updatedAt?: number } = {}) {
   const updatedAt = options.updatedAt ?? NOW - 60;
@@ -266,6 +314,7 @@ function healthyD1(
       match: "INSERT INTO worker_canary_runs",
       rows: [],
     },
+    ...depegCanaryFixtures(),
   ]);
 }
 
@@ -284,9 +333,9 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 9,
+      totalChecks: 14,
 
-      okCount: 9,
+      okCount: 14,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
@@ -805,6 +854,7 @@ describe("worker data invariant canaries", () => {
         matchBinds: [NOW - 60],
         rows: unhealthyDewsRows,
       },
+      ...depegCanaryFixtures(),
     ]);
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "shadow" });
@@ -970,11 +1020,16 @@ describe("worker data invariant canaries", () => {
         throwError: new Error("D1_ERROR: no such table: stress_signals"),
         rows: [],
       },
+      ...depegCanaryFixtures().map((fixture) => ({
+        ...fixture,
+        throwError: new Error("D1_ERROR: no such table: depeg canary source"),
+        rows: [],
+      })),
     ]);
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
-    expect(summary.errorCount).toBe(4);
+    expect(summary.errorCount).toBe(9);
     expect(summary.skippedCount).toBe(0);
     expect(summary.degradedCount).toBe(1);
     expect(summary.okCount).toBe(4);

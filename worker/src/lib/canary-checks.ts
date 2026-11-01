@@ -16,6 +16,13 @@ import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "../cron/yield-sync/benchmarks";
 import { loadPublishedStressSignalGeneration } from "./stress-signals-current-rows";
 import { loadActiveSafetyScoreCohort } from "./safety-score-active-source";
 import { classifyFreshness } from "./status/freshness-oracle";
+import {
+  checkDdrEligibleUnsealed,
+  checkDepegDetectionCensus,
+  checkDepegDexSuppression,
+  checkDepegOpenCoverage,
+  checkDepegPendingConfirmation,
+} from "./canary-checks-depeg";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
 
 export {
@@ -753,6 +760,36 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     label: "Yield USD benchmark current",
     description: "USD T-bill benchmark is direct, current, and has been published fresh in two consecutive generations.",
     run: checkUsdBenchmarkCurrent,
+  },
+  {
+    checkId: "depeg-detection-census",
+    label: "Depeg detection census",
+    description: "The depeg ledger advances with a completed observation census covering at least 95% of eligible assets in two consecutive runs.",
+    run: checkDepegDetectionCensus,
+  },
+  {
+    checkId: "depeg-pending-confirmation-stall",
+    label: "Depeg pending confirmation",
+    description: "Candidate promotions and expiries keep moving: no extreme move expires unconfirmed and no candidate outlives every dynamic expiry limit.",
+    run: checkDepegPendingConfirmation,
+  },
+  {
+    checkId: "depeg-open-coverage",
+    label: "Depeg open-event price coverage",
+    description: "Every open depeg event keeps a trusted price observation inside the shared continuous-coverage gap budget.",
+    run: checkDepegOpenCoverage,
+  },
+  {
+    checkId: "depeg-dex-suppression-divergence",
+    label: "Depeg DEX suppression divergence",
+    description: "No USD-pegged asset has its primary price beyond the trigger while DEX corroboration inside the recovery band suppresses the onset.",
+    run: checkDepegDexSuppression,
+  },
+  {
+    checkId: "ddr-eligible-unsealed",
+    label: "DDR eligible incidents sealed",
+    description: "Every active policy-universe incident eligible for a prediction carries a sealed public prediction within one producer run.",
+    run: checkDdrEligibleUnsealed,
   },
 ] as const;
 export const ACTIVE_CANARY_CHECK_IDS: readonly string[] = CANARY_CHECKS.map((definition) => definition.checkId);
