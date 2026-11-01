@@ -563,8 +563,8 @@ describe("incident review key CLI", () => {
 
   it("fails with findings and rejects unknown arguments", () => {
     const dir = fixtureRoot({ reviews: [{ ...(laneReview() as Record<string, unknown>), assetId: "beta-fixture" }], rows: [] });
-    const stdout = { write: vi.fn(() => true) };
-    const stderr = { write: vi.fn(() => true) };
+    const stdout = { write: vi.fn<(line: string) => unknown>() };
+    const stderr = { write: vi.fn<(line: string) => unknown>() };
     expect(runIncidentReviewKeyCheck([], dir, stdout, stderr)).toBe(1);
     expect(stdout.write.mock.calls.map(([line]) => String(line)).join("")).toContain("[unknown-asset]");
     expect(runIncidentReviewKeyCheck(["--strict"], dir, stdout, stderr)).toBe(2);

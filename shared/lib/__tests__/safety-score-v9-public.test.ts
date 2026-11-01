@@ -996,7 +996,7 @@ describe("Safety Score v9 public projection", () => {
     input.trace.unresolvedFacts = [{
       code: "unresolved-control-identity", path: "control:critical", reason: "Critical datum.",
       critical: true, responsibility: "unresearched", sourceGapId: gapId,
-      cause: "U", causeGapIds: [gapId], scoringDisposition: "diagnostic",
+      cause: "U", causeGapIds: [gapId], scoringDisposition: "not-applicable",
     }];
     input.documentationGapIds = new Map([
       [gapId, { reason: "no-scoring-path", policyRef: "semantic.evidence.documentation.reasons.no-scoring-path", threshold: null }],

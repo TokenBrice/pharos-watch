@@ -554,21 +554,19 @@ export type V9DocumentationThresholdKind = z.infer<typeof V9DocumentationThresho
  * bar so the classifier reads the value instead of restating it. A bar
  * documents a share strictly below it.
  */
-export const V9DocumentationThresholdSchema = z
+const V9DocumentationThresholdSchema = z
   .object({
     sharePctKey: z.enum(["documentationImmaterialSharePct", "reserveDustBookSharePct"]),
   })
   .strict();
-export type V9DocumentationThreshold = z.infer<typeof V9DocumentationThresholdSchema>;
 
-export const V9DocumentationReasonPolicySchema = z
+const V9DocumentationReasonPolicySchema = z
   .object({
     reason: V9DocumentationReasonSchema,
     publicLabel: z.string().min(1),
     threshold: V9DocumentationThresholdSchema.nullable(),
   })
   .strict();
-export type V9DocumentationReasonPolicy = z.infer<typeof V9DocumentationReasonPolicySchema>;
 
 /**
  * The percent key each reason's bar comes from; `null` reasons are bounded by
@@ -586,7 +584,7 @@ const V9_DOCUMENTATION_THRESHOLD_SHARE_PCT_KEY: Readonly<
   "reserve-dust": "reserveDustBookSharePct",
 };
 
-export const V9DocumentationPolicySchema = z
+const V9DocumentationPolicySchema = z
   .object({
     // Classifier precedence: the first matching reason wins.
     reasonOrder: z.array(V9DocumentationReasonSchema).length(V9DocumentationReasonSchema.options.length),
@@ -688,7 +686,7 @@ export const V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID = "report-cards-chain-circulatin
  * and census bounds stay at the documented default-plus-carry ceiling, and no
  * lane may raise it (S-13, S-14).
  */
-export const V9ChainSupplyMaxAgeBySourcePolicySchema = z
+const V9ChainSupplyMaxAgeBySourcePolicySchema = z
   .strictObject({
     defaultMaxAgeSec: z.number().int().positive(),
     carryForwardExtraSec: z.number().int().nonnegative(),
@@ -714,9 +712,6 @@ export const V9ChainSupplyMaxAgeBySourcePolicySchema = z
       }
     }
   });
-export type V9ChainSupplyMaxAgeBySourcePolicy = z.output<
-  typeof V9ChainSupplyMaxAgeBySourcePolicySchema
->;
 
 const V9BackingSignalRuleSchema = z
   .object({

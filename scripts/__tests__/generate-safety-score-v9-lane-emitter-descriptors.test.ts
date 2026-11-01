@@ -8,6 +8,7 @@ import {
   LANE_EMITTER_MINIMUM_LOOKBACK_BLOCKS,
   loadLaneScreeningEmitterInventory,
   type LaneControlRecord,
+  type LaneEmitterDescriptorsArtifact,
   type LaneEmitterInputs,
   type LaneScreeningEmitterInventory,
 } from "../build-data/generate-safety-score-v9-lane-emitter-descriptors";
@@ -237,10 +238,7 @@ describe("lane screening emitter inventory loader", () => {
   });
 
   it("keeps the committed descriptor artifact in step with the reviewed inventory", () => {
-    const artifact = JSON.parse(readFileSync(ARTIFACT_PATH, "utf8")) as {
-      summary: { lanes: number; covered: number; inventory: { pilotLanes: number; uncoveredEvents: string[] } };
-      pilot: unknown[];
-    };
+    const artifact = JSON.parse(readFileSync(ARTIFACT_PATH, "utf8")) as LaneEmitterDescriptorsArtifact;
     expect(artifact.summary.lanes).toBe(543);
     expect(artifact.summary.inventory.pilotLanes).toBe(5);
     expect(artifact.pilot).toHaveLength(5);

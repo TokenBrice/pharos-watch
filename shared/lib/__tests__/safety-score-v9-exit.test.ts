@@ -319,7 +319,15 @@ describe("exact physical rail precedence", () => {
     expect(result.routes.find((entry) => entry.routeKey === "redemption:issuer")!.score).toBeNull();
   });
 
-  it.each([
+  it.each<{
+    name: string;
+    measured: number;
+    claimed: number;
+    ask: number;
+    supersedes: boolean;
+    certification?: "exact-complete" | "exact-lower-bound";
+    stale?: boolean;
+  }>([
     { name: "arcusdc-sized sub-ask receipt", measured: 4_250_000, claimed: 12_580_000, ask: 25_000_000, supersedes: false },
     { name: "senrlusdv2-sized full-ask receipt", measured: 20_730_000, claimed: 44_590_000, ask: 20_730_000, supersedes: true },
     { name: "one dollar below modeled capacity", measured: 4_250_000, claimed: 4_250_001, ask: 25_000_000, supersedes: false },

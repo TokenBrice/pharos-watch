@@ -60,7 +60,7 @@ export function isUncorroboratedDefiLlamaReferenceQuote(input: {
  * 0.999520515794015 on 2026-10-30). A value shared by more assets is the
  * response-level fill DefiLlama uses for assets it cannot price.
  */
-export const DEFILLAMA_LIST_FILL_DEFAULT_MIN_ASSET_COUNT = 5;
+const DEFILLAMA_LIST_FILL_DEFAULT_MIN_ASSET_COUNT = 5;
 
 /** The per-response fill-default status of one DefiLlama list row's price. */
 export interface DefiLlamaListFillDefaultQuote {

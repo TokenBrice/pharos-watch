@@ -339,7 +339,7 @@ export function isV9DocumentationGapEntry(entry: V9EvidenceGapQueueEntryV3): boo
 }
 
 /** The issuer researched-terminal band: dated rechecks, not open work. */
-export function isV9ResearchedTerminalEntry(entry: V9EvidenceGapQueueEntryV3): boolean {
+function isV9ResearchedTerminalEntry(entry: V9EvidenceGapQueueEntryV3): boolean {
   return entry.reviewState !== null;
 }
 

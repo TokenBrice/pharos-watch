@@ -129,8 +129,8 @@ describe("DEX measured execution contract", () => {
     const nowSec = 10_000;
     const quoted = target(nowSec);
     const current = target(nowSec, {
-      tokenIn: { ...quoted.tokenIn, symbol: quoted.tokenIn.trackedAssetId },
-      tokenOut: { ...quoted.tokenOut, symbol: quoted.tokenOut.trackedAssetId },
+      tokenIn: { ...quoted.tokenIn, symbol: quoted.tokenIn.trackedAssetId! },
+      tokenOut: { ...quoted.tokenOut, symbol: quoted.tokenOut.trackedAssetId! },
     });
     expect(current.tokenIn.symbol).not.toBe(quoted.tokenIn.symbol);
     expect(validateDexMeasuredExecutionProfile(validationInput(profile(nowSec, quoted), nowSec, {

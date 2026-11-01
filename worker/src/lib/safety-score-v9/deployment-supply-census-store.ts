@@ -41,7 +41,7 @@ export const SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_GENERATION_CACHE_KEY =
   "safety-score-v9:deployment-supply-census-generation:v1";
 
 /** Stored-generation cap; the whole cohort shares this one cache row. */
-export const SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_GENERATION_MAX_BYTES = 1_024 * 1_024;
+const SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_GENERATION_MAX_BYTES = 1_024 * 1_024;
 
 const supplyAttributionPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
 

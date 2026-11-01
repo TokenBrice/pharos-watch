@@ -52,17 +52,6 @@ const KEY_READ_RETRY_ATTEMPTS = 3;
  */
 export const LANE_INCIDENT_CERTIFICATE_MAX_WINDOWS_PER_GROUP = 4;
 
-export const LANE_INCIDENT_CERTIFICATE_READ_STATES = [
-  "current",
-  "expired",
-  "coverage-gap",
-  "future-window",
-  "missing",
-  "malformed-row",
-] as const;
-export type LaneIncidentCertificateReadState =
-  (typeof LANE_INCIDENT_CERTIFICATE_READ_STATES)[number];
-
 /**
  * Cache-key identity: the screening set (subject lane, sorted contributor
  * control ids and emitter pins) plus the pinned window and block range. An added

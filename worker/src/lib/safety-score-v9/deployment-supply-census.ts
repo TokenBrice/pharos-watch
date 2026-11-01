@@ -354,7 +354,7 @@ function buildRoster(
 }
 
 /** The assembly refuses the 65th deployment; the cohort must never spend a slot on it. */
-export const DEPLOYMENT_SUPPLY_CENSUS_PER_ASSET_CAP = CENSUS_POLICY.maxDeploymentsPerAsset;
+const DEPLOYMENT_SUPPLY_CENSUS_PER_ASSET_CAP = CENSUS_POLICY.maxDeploymentsPerAsset;
 
 /** One asset's census target: how many open null-share deployments the census could close. */
 export interface DeploymentSupplyCensusTarget {
@@ -386,7 +386,7 @@ export interface DeploymentSupplyCensusTarget {
  * The estimate deliberately charges the full pin bracket even though a
  * chain's pin is shared by every selected asset on it.
  */
-export const DEPLOYMENT_SUPPLY_CENSUS_REQUEST_ESTIMATE = Object.freeze({
+const DEPLOYMENT_SUPPLY_CENSUS_REQUEST_ESTIMATE = Object.freeze({
   pinProbesPerChain: 32,
   perAssetSlack: 2,
 });
