@@ -302,9 +302,12 @@ export async function fillMissingSupplyHistory(
   for (const asset of assets) {
     throwIfAborted(signal);
     // These producers own one coherent packet, including deliberately unavailable history.
+    // A carried packet keeps its original generation: a newer D1 row must not become the
+    // baseline of an older headline as if the two shared an observation clock (B2/R1).
     // Provenance remains authoritative even if the source label is absent on a retained packet.
     if (
       asset.supplyGapFill != null
+      || asset.supplyRestored === true
       || asset.supplySource === "coingecko-gap-fill"
       || asset.supplySource === "defillama-history-gap-fill"
       || asset.supplySource === "onchain-total-supply"
