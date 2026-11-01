@@ -267,7 +267,7 @@ Admin-only counts projection for the Triage workspace. Returns aggregate credent
 
 ### `GET /api/api-keys/audit-log`
 
-Admin-only API key lifecycle audit log. Returns recent create/update/deactivate/rotate audit entries from `api_key_audit_log`.
+Admin-only API key lifecycle audit log. Returns recent create/update/deactivate/rotate audit entries from `api_key_audit_log`. The credential write is the commit point: a failed audit insert is logged as `api_key_audit_write_failed` and never turns a committed mutation into an unknown outcome.
 
 **Query params:**
 

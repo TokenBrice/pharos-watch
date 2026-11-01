@@ -72,6 +72,8 @@ export interface BlacklistScanResult {
   nextCursor: number | null;
   apiError: boolean;
   incomplete: boolean;
+  /** Local budget/deadline admission stopped the scan before provider evidence. */
+  localBudgetStop?: boolean;
   usedRpcLogs: boolean;
   scannedToCursor: number | null;
   safeHead: number | null;

@@ -536,6 +536,8 @@ describe("handleDepegResolver", () => {
     const body = (await readJsonResponse(res, 200)) as DdrResponse;
 
     expect(body._meta.basePayloadHash).toBeNull();
+    expect(body._meta.degraded).toBe(false);
+    expect(body._meta.degradedReason).toBeNull();
     expect(body._meta.readOverlay.degradedLockDeferralIncidentKeys).toContain("ddr2:22222222222222222222222222222222");
     expect(body.rows[0].kind).toBe("pending");
     if (body.rows[0].kind !== "pending") throw new Error("expected pending row");

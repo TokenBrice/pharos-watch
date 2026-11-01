@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { StablecoinChartResponseSchema } from "@shared/types/market";
-import { normalizeStablecoinChartBuckets, normalizeStablecoinChartPoints } from "../stablecoin-charts-payload";
+import { normalizeStablecoinChartBuckets, normalizeStablecoinChartDateSeconds, normalizeStablecoinChartPoints } from "../stablecoin-charts-payload";
 
 describe("stablecoin chart bucket availability", () => {
   it("preserves malformed observations as null through normalization and the public schema", () => {
@@ -24,6 +24,15 @@ describe("stablecoin chart bucket availability", () => {
     expect(normalizeStablecoinChartBuckets({})).toBeNull();
     expect(normalizeStablecoinChartBuckets(undefined)).toBeNull();
     expect(StablecoinChartResponseSchema.safeParse([{ date: 100, totalCirculatingUSD: { invalid: -1 } }]).success).toBe(false);
+  });
+
+  it("reads epoch-millisecond dates as seconds and rejects dates past the future-skew allowance", () => {
+    const nowSec = 1_780_000_000;
+    expect(normalizeStablecoinChartDateSeconds(nowSec * 1000)).toBe(nowSec);
+    expect(normalizeStablecoinChartDateSeconds(String(nowSec))).toBe(nowSec);
+    expect(normalizeStablecoinChartDateSeconds(nowSec + 60, nowSec)).toBe(nowSec + 60);
+    expect(normalizeStablecoinChartDateSeconds(nowSec + 61, nowSec)).toBeNull();
+    expect(normalizeStablecoinChartDateSeconds(nowSec + 400 * 86_400, nowSec)).toBeNull();
   });
 
   it("preserves each point's provider census without importing buckets from another era", () => {

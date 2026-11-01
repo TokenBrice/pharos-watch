@@ -161,7 +161,7 @@ async function runStablecoinChartsPublication(
   let invalidDateCount = 0;
   let invalidBucketCount = 0;
   let normalizedRaw: NormalizedRawChartPoint[] = raw.flatMap((point) => {
-    const date = normalizeStablecoinChartDateSeconds(point?.date);
+    const date = normalizeStablecoinChartDateSeconds(point?.date, syncStartSec);
     if (date == null) {
       invalidDateCount++;
       return [];

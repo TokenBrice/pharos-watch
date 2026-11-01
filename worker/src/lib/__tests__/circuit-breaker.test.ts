@@ -7,6 +7,7 @@ import {
   recordOutcome,
   recoverBreakerOnNoCandidate,
   getCircuitStates,
+  getCircuitRecordsForSources,
   listActiveCircuitSources,
   filterInactiveCircuitStates,
   mapCronStatusToCircuitOutcome,
@@ -111,14 +112,12 @@ describe("circuit-breaker", () => {
       expect(record.openedAt).toBe(1000);
     });
 
-    it("returns default for malformed JSON", async () => {
+    it("fails closed for malformed JSON instead of inventing a closed record", async () => {
       const db = mockD1([{
         match: "cache",
         rows: [{ key: "circuit:test", value: "not-json", updated_at: 100 }],
       }]);
-      const record = await getCircuitRecord(db, "test");
-      expect(record.state).toBe("closed");
-      expect(record.consecutiveFailures).toBe(0);
+      await expect(getCircuitRecord(db, "test")).rejects.toThrow("Invalid circuit record for test");
     });
 
     it.each(["consecutiveFailures", "lastFailureAt", "lastSuccessAt", "openedAt"])(
@@ -130,7 +129,7 @@ describe("circuit-breaker", () => {
           match: "cache",
           rows: [{ key: "circuit:overflow", value: stored, updated_at: 100 }],
         }]);
-        expect(await getCircuitRecord(db, "overflow")).toEqual(makeRecord());
+        await expect(getCircuitRecord(db, "overflow")).rejects.toThrow("Invalid circuit record for overflow");
         expect(await getCircuitStates(db)).toEqual({});
       },
     );
@@ -339,11 +338,11 @@ describe("circuit-breaker", () => {
 
   });
 
-  describe("malformed Dwellir outcome repair", () => {
+  describe("malformed outcome repair", () => {
     it.each(["not-json", JSON.stringify({ state: "unknown" })])("denies admission then repairs success for %s", async (value) => {
       const { db, sqlite } = fixtures.open();
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:dwellir-evm", value, 100);
-      await expect(shouldAttemptFetch(db, "dwellir-evm")).rejects.toThrow("Invalid dwellir-evm circuit record");
+      await expect(shouldAttemptFetch(db, "dwellir-evm")).rejects.toThrow("Invalid circuit record for dwellir-evm");
       await recordOutcome(db, "dwellir-evm", true);
       expect(await getCircuitRecord(db, "dwellir-evm")).toEqual(makeRecord({ lastSuccessAt: Math.floor(Date.now() / 1000) }));
       expect(await shouldAttemptFetch(db, "dwellir-evm")).toBe(true);
@@ -357,10 +356,42 @@ describe("circuit-breaker", () => {
       expect(await shouldAttemptFetch(db, "dwellir-evm")).toBe(false);
     });
 
-    it("keeps other circuits' malformed-record default unchanged", async () => {
-      const db = mockD1([{ match: "cache", rows: [{ key: "circuit:src", value: "not-json", updated_at: 100 }] }]);
-      expect(await shouldAttemptFetch(db, "src")).toBe(true);
-      expect((await recordOutcome(db, "src", false)).after).toMatchObject({ state: "closed", consecutiveFailures: 1 });
+    it("applies the same fail-closed repair to every source", async () => {
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:coingecko-prices", "not-json", 100);
+      await expect(shouldAttemptFetch(db, "coingecko-prices")).rejects.toThrow("Invalid circuit record for coingecko-prices");
+      expect((await recordOutcome(db, "coingecko-prices", false)).after).toMatchObject({ state: "open", consecutiveFailures: 1 });
+      expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
+    });
+
+    it("denies a future-dated open record and repairs it without erasing the outage", async () => {
+      const { db, sqlite } = fixtures.open();
+      const now = Math.floor(Date.now() / 1000);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "circuit:coingecko-prices",
+        JSON.stringify(makeRecord({ state: "open", consecutiveFailures: 3, lastFailureAt: now - 60, openedAt: now - 60 })),
+        now + 120,
+      );
+      await expect(shouldAttemptFetch(db, "coingecko-prices")).rejects.toThrow("Invalid circuit record for coingecko-prices");
+      expect((await recordOutcome(db, "coingecko-prices", false)).after).toMatchObject({
+        state: "open",
+        consecutiveFailures: 1,
+        lastFailureAt: now,
+      });
+      expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
+    });
+
+    it("labels a future-dated row invalid instead of publishing its stored state", async () => {
+      const { db, sqlite } = fixtures.open();
+      const now = Math.floor(Date.now() / 1000);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        "circuit:coingecko-prices",
+        JSON.stringify(makeRecord({ state: "open", consecutiveFailures: 3, lastFailureAt: now - 60, openedAt: now - 60 })),
+        now + 120,
+      );
+      const result = await getCircuitRecordsForSources(db, ["coingecko-prices"]);
+      expect(result.records).toEqual({});
+      expect(result.invalidSources).toEqual(["coingecko-prices"]);
     });
   });
 

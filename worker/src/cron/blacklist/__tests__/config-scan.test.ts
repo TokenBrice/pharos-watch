@@ -462,6 +462,21 @@ describe("Tron native scan admission", () => {
     expect(mocks.fetchTronEventsIncremental).toHaveBeenCalledOnce();
   });
 
+  it("leaves the TronGrid circuit untouched when local admission truncates the event scan", async () => {
+    const state = makeState(TRON_CONFIG);
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    mocks.fetchTronEventsIncremental.mockResolvedValue({
+      ...result, usedRpcLogs: false, tronRpc: undefined,
+      incomplete: true, apiError: false, scannedToTimestamp: null,
+      coveredTopicCount: 0, localBudgetStop: true,
+    });
+
+    const summary = await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson: vi.fn(), isNetworkEnabled: () => false } });
+
+    expect(mocks.recordOutcomeSafe).not.toHaveBeenCalled();
+    expect(summary).toMatchObject({ apiErrors: 0, runtimeBudgetHit: true, coverageOutcomeCounts: { incomplete: 1 } });
+  });
+
   it("records an observed TronGrid failure even when the scan ends on a neutral request budget limit", async () => {
     mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [makeState(TRON_CONFIG)], zeroCursorConfigs: [] });
     mocks.fetchTronEventsWithRpc.mockResolvedValue({ ...result, incomplete: true, apiError: false, safeHead: 300,

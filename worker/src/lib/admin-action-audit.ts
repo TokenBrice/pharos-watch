@@ -7,8 +7,8 @@ export interface AdminActionLogEntry {
   details?: Record<string, unknown>;
   /** Secret-free opaque intent identity used to suppress duplicate canonical audit rows. */
   intentKey?: string;
-  /** Originals replace replay placeholders; replays only fill a missing row. */
-  intentWriteMode?: "authoritative" | "insert-if-missing";
+  /** Originals replace replay placeholders; replays only fill a missing row; headerless re-executions may replace only a failed row. */
+  intentWriteMode?: "authoritative" | "insert-if-missing" | "replace-failed";
   /** Caller may override; default pulled from CF Access header, falling back to "internal". */
   actor?: string;
 }
@@ -60,9 +60,21 @@ export async function logAdminAction(db: D1Database, entry: AdminActionLogEntry,
                http_status = excluded.http_status,
                details_json = excluded.details_json
              WHERE COALESCE(json_extract(admin_action_audit.details_json, '$.idempotentReplay'), 0) = 1`
-          : `INSERT OR IGNORE INTO admin_action_audit
-               (created_at, actor, action, target, result, http_status, details_json, intent_key)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+          : entry.intentWriteMode === "replace-failed"
+            ? `INSERT INTO admin_action_audit
+                 (created_at, actor, action, target, result, http_status, details_json, intent_key)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+               ON CONFLICT(action, intent_key) WHERE intent_key IS NOT NULL DO UPDATE SET
+                 created_at = excluded.created_at,
+                 actor = excluded.actor,
+                 target = excluded.target,
+                 result = excluded.result,
+                 http_status = excluded.http_status,
+                 details_json = excluded.details_json
+               WHERE admin_action_audit.result = 'error' AND excluded.result = 'ok'`
+            : `INSERT OR IGNORE INTO admin_action_audit
+                 (created_at, actor, action, target, result, http_status, details_json, intent_key)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
       const result = await db
         .prepare(sql)
         .bind(...values)

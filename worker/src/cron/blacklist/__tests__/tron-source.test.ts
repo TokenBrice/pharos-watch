@@ -277,6 +277,85 @@ describe("fetchTronEventsIncremental cursor safety", () => {
     expect(result.incomplete).toBe(true);
   });
 
+  it("treats a local deadline admission denial as incomplete, not a provider error", async () => {
+    const baseConfig = findConfig("usdt-tether");
+    const config: ContractEventConfig = { ...baseConfig, events: [baseConfig.events[0]!] };
+    const fetchMock = mockFetch([{
+      match: "api.trongrid.io/v1/contracts/",
+      body: { success: true, data: [], meta: {} },
+    }], { requireMatch: true });
+    const budget = makeRunBudget();
+    const deadlineLimiter: RateLimitedFetch = (fn) => {
+      budget.deadlineMs = Date.now() - 1;
+      return fn();
+    };
+
+    const result = await fetchTronEventsIncremental(config, null, 0, budget, deadlineLimiter);
+
+    expect(result).toMatchObject({
+      apiError: false,
+      incomplete: true,
+      scannedToTimestamp: null,
+      coveredTopicCount: 0,
+      providerCalls: 0,
+      localBudgetStop: true,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not blame TronGrid when a healthy page arrives after the scan deadline", async () => {
+    const baseConfig = findConfig("usdt-tether");
+    const config: ContractEventConfig = { ...baseConfig, events: [baseConfig.events[0]!] };
+    const realNow = Date.now.bind(Date);
+    let advanced = false;
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => realNow() + (advanced ? 120_000 : 0));
+    const fetchMock = mockFetch([{
+      match: "api.trongrid.io/v1/contracts/",
+      respond: () => {
+        advanced = true;
+        return { body: { success: true, data: [], meta: {} }, status: 200 };
+      },
+    }], { requireMatch: true });
+
+    try {
+      const result = await fetchTronEventsIncremental(config, null, 0, makeRunBudget(), noopLimiter);
+      expect(result).toMatchObject({
+        apiError: false,
+        incomplete: true,
+        scannedToTimestamp: null,
+        providerCalls: 1,
+        localBudgetStop: true,
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
+  it("fails closed when the cursor is ahead of the clock-derived safe head", async () => {
+    const baseConfig = findConfig("usdt-tether");
+    const config: ContractEventConfig = { ...baseConfig, events: [baseConfig.events[0]!] };
+    const fetchMock = mockFetch([{
+      match: "api.trongrid.io/v1/contracts/",
+      body: { success: true, data: [], meta: {} },
+    }], { requireMatch: true });
+
+    const result = await fetchTronEventsIncremental(
+      config, null, Date.now() - 60_000, makeRunBudget(), noopLimiter,
+    );
+
+    expect(result).toMatchObject({
+      apiError: true,
+      incomplete: true,
+      scannedToTimestamp: null,
+      coveredTopicCount: 0,
+      providerCalls: 0,
+      coverageOutcome: "cursor_ahead",
+      failureSamples: ["cursor-ahead"],
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("marks the scan incomplete when pagination is truncated by the subrequest budget", async () => {
     const baseConfig = findConfig("usdt-tether");
     const firstEvent = baseConfig.events[0];

@@ -7,7 +7,7 @@ import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { decimalNumberFromBigInt } from "../../lib/bigint";
 import { FetchRequestNotStartedError, throwIfAborted } from "../../lib/abort";
-import { buildBlacklistRow, type BlacklistRow, type TronScanTelemetry } from "../../lib/blacklist/shared";
+import { buildBlacklistRow, type BlacklistRow, type BlacklistScanCoverageOutcome, type TronScanTelemetry } from "../../lib/blacklist/shared";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { canonicalTronAddress } from "@shared/lib/tron-address";
@@ -39,12 +39,15 @@ export interface FetchTronEventsIncrementalResult {
   safeHead: number;
   incomplete: boolean;
   apiError: boolean;
+  /** Local budget/deadline admission stopped the scan before provider evidence. */
+  localBudgetStop?: boolean;
   topicCount: number;
   coveredTopicCount: number;
   providerCalls: number;
   usedRpcLogs?: boolean;
   maxSplitDepth?: number;
   failureSamples?: string[];
+  coverageOutcome?: BlacklistScanCoverageOutcome;
   tronRpc?: TronScanTelemetry;
 }
 
@@ -153,9 +156,28 @@ export async function fetchTronEventsIncremental(
   let coverageCeiling: number | null = null;
   let incomplete = false;
   let apiError = false;
+  let localBudgetStop = false;
   let coveredTopicCount = 0;
   let providerCalls = 0;
-  const safeHead = Math.min(safeHeadCeilingMs ?? Infinity, Math.max(lastTimestampMs, Date.now() - TRON_INDEXING_SAFETY_MS));
+  const clockSafeHead = Math.min(safeHeadCeilingMs ?? Infinity, Date.now() - TRON_INDEXING_SAFETY_MS);
+  if (lastTimestampMs > clockSafeHead) {
+    // A cursor ahead of the clock-derived head cannot be scanned. Sibling
+    // sources fail closed here instead of certifying a zero-width covered range.
+    return {
+      rows: [],
+      maxBlock: lastTimestampMs,
+      scannedToTimestamp: null,
+      safeHead: clockSafeHead,
+      incomplete: true,
+      apiError: true,
+      topicCount: config.events.length,
+      coveredTopicCount: 0,
+      providerCalls: 0,
+      failureSamples: ["cursor-ahead"],
+      coverageOutcome: "cursor_ahead",
+    };
+  }
+  const safeHead = clockSafeHead;
   const headers: Record<string, string> = {};
   if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
 
@@ -163,10 +185,12 @@ export async function fetchTronEventsIncremental(
     throwIfAborted(signal);
     if (blacklistRuntimeBudgetReached(runBudget)) {
       incomplete = true;
+      localBudgetStop = true;
       break;
     }
     if (blacklistSubrequestBudgetReached(runBudget)) {
       incomplete = true;
+      localBudgetStop = true;
       break;
     }
 
@@ -184,10 +208,12 @@ export async function fetchTronEventsIncremental(
       throwIfAborted(signal);
       if (blacklistRuntimeBudgetReached(runBudget)) {
         incomplete = true;
+        localBudgetStop = true;
         break;
       }
       if (blacklistSubrequestBudgetReached(runBudget)) {
         incomplete = true;
+        localBudgetStop = true;
         break;
       }
       if (pageCount >= MAX_TRON_PAGES_PER_EVENT || seenUrls.has(url)) {
@@ -212,9 +238,15 @@ export async function fetchTronEventsIncremental(
       seenUrls.add(url);
       pageCount++;
 
+      let admissionDeniedAttempts: number | null = null;
+      let lastResponseOk = false;
       const json: TronEventsResponse | null = await rateLimit(async () => {
         const result = await fetchJsonWithRetry<unknown>(url!, { headers, signal }, 2, {
           deadlineMs: runBudget.deadlineMs,
+          returnFinalResponse: true,
+          onResponse: (response) => {
+            lastResponseOk = response.ok;
+          },
           beforeRequest: () => {
             if (blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)) return false;
             runBudget.subrequestBudget.count++;
@@ -222,7 +254,10 @@ export async function fetchTronEventsIncremental(
             return true;
           },
         }).catch((error: unknown) => {
-          if (error instanceof FetchRequestNotStartedError) return null;
+          if (error instanceof FetchRequestNotStartedError) {
+            admissionDeniedAttempts = error.attemptsStarted;
+            return null;
+          }
           throw error;
         });
         if (!result) return null;
@@ -240,6 +275,13 @@ export async function fetchTronEventsIncremental(
       });
 
       if (!json?.success || !Array.isArray(json.data)) {
+        // A bare admission denial, or a healthy page whose body read outlived the
+        // deadline, is local budget exhaustion, not TronGrid evidence.
+        if (admissionDeniedAttempts != null && (admissionDeniedAttempts === 0 || lastResponseOk)) {
+          localBudgetStop = true;
+          incomplete = true;
+          break;
+        }
         apiError = true;
         incomplete = true;
         break;
@@ -326,6 +368,7 @@ export async function fetchTronEventsIncremental(
     safeHead,
     incomplete: incomplete || coverageCeiling != null,
     apiError,
+    ...(localBudgetStop ? { localBudgetStop: true } : {}),
     topicCount: config.events.length,
     coveredTopicCount,
     providerCalls,

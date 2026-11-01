@@ -12,6 +12,7 @@ import {
   type CacheRetentionPolicy,
 } from "./db-cache";
 import { CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC } from "@shared/lib/ops-limits";
+import { assessFreshnessTimestamp } from "./api-freshness-age";
 import { CIRCUIT_SOURCE } from "./constants";
 import { WORKER_ACTIVE_LIVE_RESERVE_CIRCUIT_SOURCES } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CircuitRecordSchema, type CircuitRecord as SharedCircuitRecord } from "@shared/types/status";
@@ -97,14 +98,14 @@ function circuitRecordPolicy(source: string): CachePolicy<CircuitRecord> {
   };
 }
 
-class InvalidDwellirCircuitRecordError extends Error {}
+class InvalidCircuitRecordError extends Error {}
 
 async function readCircuitRecordFromDb(db: D1Database, source: string): Promise<CircuitRecord> {
   const cached = await readCacheWithPolicy(db, circuitRecordPolicy(source));
-  // A missing record intentionally permits first boot. Corrupt Dwellir state
-  // must not masquerade as that missing/closed record and admit metered reads.
-  if (source === "dwellir-evm" && cached.state === "invalid") {
-    throw new InvalidDwellirCircuitRecordError("Invalid dwellir-evm circuit record");
+  // A missing record intentionally permits first boot. Corrupt state must not
+  // masquerade as that missing/closed record and admit reads.
+  if (cached.state === "invalid") {
+    throw new InvalidCircuitRecordError(`Invalid circuit record for ${source}`);
   }
   return cached.state === "fresh" || cached.state === "stale"
     ? cloneCircuitRecord(cached.value)
@@ -170,7 +171,8 @@ export async function getCircuitRecordsForSources(
     for (const source of chunk) {
       const row = cached.get(cacheKey(source));
       if (!row) continue;
-      const parsed = circuitRecordPolicy(source).decode(row.value);
+      const timestamp = assessFreshnessTimestamp(Math.floor(Date.now() / 1000), row.updatedAt);
+      const parsed = timestamp.reason == null ? circuitRecordPolicy(source).decode(row.value) : null;
       if (parsed) records[source] = cloneCircuitRecord(parsed);
       else invalidSources.push(source);
     }
@@ -239,7 +241,7 @@ export async function recordOutcome(
   try {
     record = await getCircuitRecord(db, source);
   } catch (error) {
-    if (!(error instanceof InvalidDwellirCircuitRecordError)) throw error;
+    if (!(error instanceof InvalidCircuitRecordError)) throw error;
     // Admission still rejects malformed state; only a new measured outcome
     // repairs it. A failed repair must reopen rather than admit fresh reads.
     record = { ...DEFAULT_RECORD, state: "half-open" };

@@ -86,7 +86,7 @@ export const DATA_DEPENDENCY_REGISTRY = [
     publicationSurface: "yield-rankings",
     impactLayer: "availability",
     criticality: DATA_SURFACE_DESCRIPTORS.yieldRankings.dependencyCriticality,
-    dependsOn: ["dex-liquidity"],
+    dependsOn: ["dex-liquidity", "safety-score-v9"],
     consumers: ["yield-intelligence", "report-cards", "api:yield"],
     runbookPath: null,
   },

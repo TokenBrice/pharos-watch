@@ -348,18 +348,25 @@ export async function runReservePostSyncWatchdog(
     }
 
     const reservePublishedAt = Math.floor(Date.now() / 1000);
-    const previousReserveSource = await getCache(db, SNAPSHOT_KEYS.reserve);
-    const reserveSourceEnvelope = buildAlertReserveSourceEnvelope(
-      drift.driftCoins.map((entry) => entry.id),
-      previousReserveSource,
-      {
-        nowSec: reservePublishedAt,
-        producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
-        observedIds: drift.observedIds,
-        unavailableIds: drift.fallbackCoins,
-      },
-    );
-    await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
+    // An empty observed census cannot certify a complete no-drift set. Leave
+    // the previous envelope in place so it ages into `stale` (suppressing
+    // reserve alerts) instead of publishing an `ok` source state.
+    if (drift.observedIds.length > 0 || drift.fallbackCoins.length === 0) {
+      const previousReserveSource = await getCache(db, SNAPSHOT_KEYS.reserve);
+      const reserveSourceEnvelope = buildAlertReserveSourceEnvelope(
+        drift.driftCoins.map((entry) => entry.id),
+        previousReserveSource,
+        {
+          nowSec: reservePublishedAt,
+          producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+          observedIds: drift.observedIds,
+          unavailableIds: drift.fallbackCoins,
+        },
+      );
+      await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
+    } else {
+      degradedReasons.push("reserve-drift-census-empty");
+    }
 
     maxSyncAgeSec = await getMaxSyncAge(
       db,

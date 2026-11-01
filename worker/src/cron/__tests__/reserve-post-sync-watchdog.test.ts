@@ -35,6 +35,7 @@ import {
   type ReserveAdapterAlertAttempt,
   type ReserveAdapterAlertState,
 } from "../reserve-post-sync-watchdog";
+import { SNAPSHOT_KEYS } from "../telegram/sources/telegram-alert-snapshots";
 
 const COIN = "iusd-infinifi";
 const NOW = 1_000_000;
@@ -365,6 +366,18 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
       } | null;
     };
   }
+
+  it("does not publish an ok reserve source envelope for an empty observed census", async () => {
+    mocks.drift.mockResolvedValue({
+      driftCoins: [], fallbackCoins: [COIN], observedIds: [], liveReserveMap: new Map(),
+    });
+
+    const result = await runReservePostSyncWatchdog(historyDb([]));
+    const metadata = JSON.parse(result.metadata ?? "{}") as { degradedReasons: string[] };
+
+    expect(cache.has(SNAPSHOT_KEYS.reserve)).toBe(false);
+    expect(metadata.degradedReasons).toContain("reserve-drift-census-empty");
+  });
 
   it("fires once at the third cycle and recovers once when a cycle succeeds", async () => {
     const second = await readAlert([historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error")]);

@@ -214,6 +214,25 @@ describe("syncStablecoinCharts", () => {
     expect(typeof cached[0]?.date).toBe("number");
   });
 
+  it("drops future-dated points and reads epoch-millisecond dates as seconds", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const points = makeRawChartPoints(120, nowSec);
+    points[118] = { ...points[118]!, date: nowSec * 1000 };
+    points[119] = { ...points[119]!, date: nowSec + 400 * 86_400 };
+    mockFetch([{ match: "stablecoincharts/all", body: points }]);
+
+    const db = mockD1([{ match: "FROM supply_history", rows: [] }]);
+    const result = await syncStablecoinCharts(db);
+
+    expect(result.status).toBeUndefined();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ invalidDateCount: 1 });
+    const insert = getCacheInsert(db as MockD1Database);
+    const cached = normalizeStablecoinChartPoints(JSON.parse(String(insert?.binds[1])));
+    expect(cached).not.toBeNull();
+    expect(cached!.every((point) => point.date <= nowSec + 60)).toBe(true);
+    expect(cached!.some((point) => point.date === nowSec)).toBe(true);
+  });
+
   it("merges structural supplemental supply-history overlays into the cached chart payload", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     mockFetch([

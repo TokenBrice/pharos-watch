@@ -30,10 +30,6 @@ export const NON_USD_NON_COMMODITY_PEG_TAGS = pegFilterTagsWhere(
   (peg) => peg !== "USD" && !isCommodityPeg(peg),
 );
 
-export const OTHER_PEG_TAGS = pegFilterTagsWhere(
-  (peg) => peg !== "USD" && peg !== "EUR" && peg !== "GOLD",
-);
-
 export function pegCurrencyToFilterTag(peg: PegCurrency): FilterTag {
   return PEG_METADATA[peg].filterTag;
 }
