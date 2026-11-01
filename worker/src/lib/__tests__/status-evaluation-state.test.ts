@@ -5,7 +5,7 @@ import { computeRawStatus } from "../status-evaluation";
 import { buildStatusD1Scenario, cleanupStatusTest, makeCronRow } from "../../api/__tests__/status.test-support";
 import { getCircuitImpactStatus, getPublicProducerGraceBudget, getPublicSafetyScoreStatus, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PRODUCER_INTERVAL_SEC } from "@shared/lib/public-health";
 import { transitionHasPublicImpact } from "@shared/lib/status-public-impact";
-import type { StatusCause, StatusResponse } from "@shared/types/status";
+import type { CronRunDetail, StatusCause, StatusResponse } from "@shared/types/status";
 import type { ReserveFeedReview } from "@shared/types/live-reserves";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { makePublicHealth } from "./public-health.test-support";
@@ -19,6 +19,7 @@ import {
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
   evaluateReserveCompositionStatus,
+  readRedemptionCapacityCoverage,
   type AvailabilityEvaluationInput,
   type DataQualityEvaluationInput,
 } from "../status/evaluation-rules";
@@ -87,6 +88,7 @@ function makeDataQualityEvaluationInput(
     reserveCompositionQueryFailed: false,
     reserveComposition: makeReserveComposition(),
     reserveCompositionStatus: "healthy",
+    redemptionCapacityCoverage: null,
     activePriceCoverageImpactStatus: "healthy",
     ...overrides,
   };
@@ -808,6 +810,64 @@ describe("status cause text", () => {
     }));
     expect(result.causes.some((entry) => entry.code === "reserve_sync_query_failed")).toBe(true);
     expect(result.causes.some((entry) => entry.code === "reserve_cohort_slo_exceeded")).toBe(false);
+  });
+
+  it("reads redemption coverage from the latest executed generation and stays unknown otherwise", () => {
+    const runs: Array<Pick<CronRunDetail, "startedAt" | "status" | "metadata">> = [
+      {
+        startedAt: 300, status: "error",
+        metadata: { unresolvedMissingCapacity: 6, missingCapacityOkThreshold: 1, activeConfigured: 90 },
+      },
+      {
+        startedAt: 200, status: "ok",
+        metadata: { unresolvedMissingCapacity: 0, missingCapacityOkThreshold: 1, activeConfigured: 90 },
+      },
+    ];
+    expect(readRedemptionCapacityCoverage(runs)).toEqual({
+      startedAt: 300,
+      unresolvedMissingCapacity: 6,
+      missingCapacityOkThreshold: 1,
+      activeConfigured: 90,
+    });
+    // A failed run without coverage fields proves nothing (R2), and an older
+    // clean generation must not stand in for the one actually served.
+    expect(readRedemptionCapacityCoverage([
+      { startedAt: 300, status: "error", metadata: { reason: "stablecoins-cache:invalid-supply-generation" } },
+      { startedAt: 200, status: "ok", metadata: { unresolvedMissingCapacity: 0, missingCapacityOkThreshold: 1 } },
+    ])).toBeNull();
+    expect(readRedemptionCapacityCoverage([
+      { startedAt: 300, status: "skipped_neutral", metadata: {} },
+      { startedAt: 200, status: "ok", metadata: { unresolvedMissingCapacity: 3, missingCapacityOkThreshold: 1 } },
+    ])).toMatchObject({ startedAt: 200, unresolvedMissingCapacity: 3 });
+    expect(readRedemptionCapacityCoverage(undefined)).toBeNull();
+  });
+
+  it("raises the redemption capacity coverage cause only above the published run budget", () => {
+    const coverage = (unresolvedMissingCapacity: number) => ({
+      startedAt: 1_700_000_000,
+      unresolvedMissingCapacity,
+      missingCapacityOkThreshold: 2,
+      activeConfigured: 120,
+    });
+    const atBudget = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      redemptionCapacityCoverage: coverage(2),
+    }));
+    expect(atBudget.causes.some((entry) => entry.code === "redemption_capacity_coverage_floor")).toBe(false);
+
+    const overBudget = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      redemptionCapacityCoverage: coverage(3),
+    }));
+    const cause = overBudget.causes.find((entry) => entry.code === "redemption_capacity_coverage_floor");
+    expect(cause).toMatchObject({
+      layer: "data-quality",
+      severity: "warning",
+      metric: "redemptionUnresolvedMissingCapacity",
+      value: 3,
+      threshold: 2,
+      subjects: ["sync-redemption-backstops"],
+    });
+    expect(cause?.message).toContain("sync-redemption-backstops run at 2023-11-14T22:13:20.000Z");
+    expect(cause?.message).toContain("across 120 active configured route(s)");
   });
 
   it("emits a distinct warning cause for DDR repair debt", () => {

@@ -996,4 +996,48 @@ describe("cron staleness watchdog", () => {
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
     expect(JSON.parse(unknown.metadata ?? "{}").probeWatch).toMatchObject({ unknown: true });
   });
+
+  it("keeps reserve and redemption probe-path failures out of the Telegram probe watch", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    const persistentFailure = (path: string) => ({
+      plane: "external", lane: "external", origin: "https://api.pharos.watch",
+      path, failStreak: 2, lastProbedAt: now,
+    });
+    const watch: FakeOperatorWatchRows = {
+      canaryRows: [],
+      probeRow: {
+        created_at: now,
+        details_json: JSON.stringify({
+          persistentProbeFailures: [
+            persistentFailure("/api/stablecoin-reserves/iusd-infinifi"),
+            persistentFailure("/api/redemption-backstops"),
+          ],
+        }),
+      },
+    };
+    const db = fakeDb([], undefined, watch);
+    mockCacheStatus({});
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
+    // Reserve/redemption findings are status-level only (ADR-42): they stay on
+    // /status and never become an operator Telegram condition.
+    const quiet = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).not.toHaveBeenCalled();
+    const quietMetadata = JSON.parse(quiet.metadata ?? "{}");
+    expect(quietMetadata.probeWatch).toEqual({ active: 0, unknown: false });
+    expect(quietMetadata.firedRuleIds).not.toContain("probe-path-persistent-failure");
+
+    // The exclusion is path-scoped: an ordinary probe path at the same streak still pages.
+    watch.probeRow = {
+      created_at: now,
+      details_json: JSON.stringify({
+        persistentProbeFailures: [persistentFailure("/api/mint-burn-flows")],
+      }),
+    };
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("/api/mint-burn-flows");
+  });
 });

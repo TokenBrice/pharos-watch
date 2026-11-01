@@ -3,6 +3,7 @@ import {
   STATUS_PROBE_THRESHOLDS,
 } from "@shared/lib/status-thresholds";
 import type { OperatorWatchEvidenceCondition } from "./operator-watch-types";
+import { hasStatusProbePayloadContract } from "./status-probe-contracts";
 
 export interface ProbeOperatorWatchEvidence {
   conditions: OperatorWatchEvidenceCondition[];
@@ -52,6 +53,10 @@ export async function loadProbeOperatorWatch(
         || typeof failure.failStreak !== "number" || failure.failStreak < STATUS_PROBE_THRESHOLDS.persistentFailSweeps) {
         continue;
       }
+      // Reserve and redemption findings are status-level only (ADR-42): their
+      // payload-contract probes still floor `/status`, but a persistent failure
+      // must never create an operator Telegram condition.
+      if (hasStatusProbePayloadContract(failure.path)) continue;
       conditions.push({
         id: `${failure.lane}:${failure.path}`,
         label: `${failure.lane}:${failure.path} (${failure.failStreak} failed sweeps >= ${STATUS_PROBE_THRESHOLDS.persistentFailSweeps}; observed ${row.created_at})`,

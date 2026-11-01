@@ -19,6 +19,7 @@ import {
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
   evaluateReserveCompositionStatus,
+  readRedemptionCapacityCoverage,
   withRunbook,
 } from "./status/evaluation-rules";
 import { loadCronHealth } from "./status/cron-health";
@@ -232,6 +233,9 @@ export async function computeRawStatus(
     supplyIntegrityAssessment: assessSupplyIntegrityQuality(supplyIntegrity),
     reserveCompositionQueryFailed,
     reserveComposition,
+    redemptionCapacityCoverage: readRedemptionCapacityCoverage(
+      crons["sync-redemption-backstops"]?.runs,
+    ),
   });
 
   const availabilityStatus = availabilityEvaluation.status;

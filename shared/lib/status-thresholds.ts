@@ -473,6 +473,16 @@ export function isReserveDriftThresholdExceeded(delta: number): boolean {
   return delta > STATUS_RESERVE_DRIFT_THRESHOLD_POINTS;
 }
 
+/**
+ * Snapshot-to-snapshot structural diff budget for every fresh admitted live
+ * composition, independent of the curated drift subset. A finding needs either
+ * a changed slice/source-key census or a per-slice share vector whose
+ * total-variation distance exceeds `shareDriftPoints` (percentage points).
+ */
+export const STATUS_RESERVE_COMPOSITION_CENSUS_THRESHOLDS = {
+  shareDriftPoints: 10,
+} as const;
+
 // --- Reserve sync coverage thresholds ---
 export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
   degradedFreshCoverageRatio: 0.75,
@@ -494,6 +504,9 @@ export const RESERVE_FEED_REVIEW_MAX_AGE_SEC = 14 * 24 * 3600;
  *   stall is judged. The age of that frozen clock is then compared with the
  *   coin/adapter source-age budget from `resolveLiveReserveSourceAgeBudget`,
  *   never with a second copy of that budget.
+ * - A consecutive `degraded` streak reuses `failureSustainedCycles` for
+ *   `reserve-score-ineligible-sustained`: the published snapshot is a success
+ *   clock but is not admitted to scoring, so it needs its own streak.
  * Both alerts are transition-only: raise once at the threshold, recover once
  * when the condition clears. A matching `reserve-feed-reviews` acknowledgement
  * suppresses a new raise for the exact failure only.

@@ -16,7 +16,7 @@ import { getPublicProducerGraceBudget, PUBLIC_CIRCUIT_IMPACT_QUORUM, PUBLIC_PROD
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { D1_QUOTA_THRESHOLDS } from "@shared/lib/d1-capacity";
 import { formatPercentFromRatio } from "@shared/lib/format";
-import type { DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
+import type { CronRunDetail, DataQuality, D1QuotaAssessment, D1QuotaMetric, StatusCause, StatusResponse } from "@shared/types/status";
 import type { StatusHealthValue } from "@shared/types/status/core";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { maxStatus, SEVERITY } from "../status-reliability-shared";
@@ -142,6 +142,44 @@ export interface AvailabilityEvaluationInput {
   scheduledDeliveryLag?: ScheduledDeliveryLagSummary;
 }
 
+/**
+ * Latest executed redemption-backstop coverage verdict. Capacity shortfalls
+ * stay quality metadata on the producer run (the run publishes every row it
+ * could resolve), so the status cause must read that run instead of inferring
+ * coverage from the endpoint's renewed freshness clock. A generation without
+ * those fields returns null (unknown), never a healthy zero.
+ */
+export interface RedemptionCapacityCoverageEvidence {
+  /** Producer run start clock: the generation this verdict applies to. */
+  startedAt: number;
+  unresolvedMissingCapacity: number;
+  missingCapacityOkThreshold: number;
+  activeConfigured: number | null;
+}
+
+export function readRedemptionCapacityCoverage(
+  runs: readonly Pick<CronRunDetail, "startedAt" | "status" | "metadata">[] | undefined,
+): RedemptionCapacityCoverageEvidence | null {
+  // The newest executed generation is the one the endpoint serves, even when
+  // that run failed: its placeholder rows still carry a coverage verdict.
+  const run = runs?.find((entry) =>
+    entry.status === "ok" || entry.status === "degraded" || entry.status === "error");
+  const metadata = run?.metadata;
+  if (!run || !metadata) return null;
+  const threshold = metadata.missingCapacityOkThreshold;
+  const unresolved = metadata.unresolvedMissingCapacity;
+  if (typeof threshold !== "number" || !Number.isFinite(threshold)
+    || typeof unresolved !== "number" || !Number.isFinite(unresolved)) return null;
+  const activeConfigured = typeof metadata.activeConfigured === "number"
+    && Number.isFinite(metadata.activeConfigured) ? metadata.activeConfigured : null;
+  return {
+    startedAt: run.startedAt,
+    unresolvedMissingCapacity: unresolved,
+    missingCapacityOkThreshold: threshold,
+    activeConfigured,
+  };
+}
+
 export interface DataQualityEvaluationInput {
   nowSec: number;
   dataQuality: DataQuality;
@@ -158,6 +196,7 @@ export interface DataQualityEvaluationInput {
   reserveComposition: StatusResponse["reserveComposition"];
   /** Value, carry and daily-snapshot integrity; omitted only by legacy fixtures. */
   supplyIntegrityAssessment?: SupplyIntegrityAssessment;
+  redemptionCapacityCoverage: RedemptionCapacityCoverageEvidence | null;
 }
 
 function ruleResult(status: StatusHealthValue, causes: StatusCause[] = []): Partial<StatusRuleEvaluation> | null {
@@ -832,6 +871,25 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput
         },
       ));
     }
+  }
+  const redemption = input.redemptionCapacityCoverage;
+  if (redemption && redemption.unresolvedMissingCapacity > redemption.missingCapacityOkThreshold) {
+    causes.push(makeCause(
+      "data-quality",
+      "redemption_capacity_coverage_floor",
+      "warning",
+      `sync-redemption-backstops run at ${new Date(redemption.startedAt * 1000).toISOString()} published `
+        + `${redemption.unresolvedMissingCapacity} unresolved missing-capacity route(s) above its `
+        + `${redemption.missingCapacityOkThreshold} budget`
+        + (redemption.activeConfigured != null ? ` across ${redemption.activeConfigured} active configured route(s)` : "")
+        + ". Failed routes keep placeholder rows, so the endpoint's renewed freshness clock does not prove coverage.",
+      {
+        metric: "redemptionUnresolvedMissingCapacity",
+        value: redemption.unresolvedMissingCapacity,
+        threshold: redemption.missingCapacityOkThreshold,
+        subjects: ["sync-redemption-backstops"],
+      },
+    ));
   }
   return ruleResult("healthy", causes);
 }

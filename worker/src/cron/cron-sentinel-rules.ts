@@ -49,11 +49,15 @@ export type CronSentinelRuleSource =
  *   `reserve-persistent-stale-warning`, `reserve-drift-cache-age`,
  *   `reserve-persistent-stale`, `reserve-sync-degraded` (a configured coin's
  *   latest reserve sync is `degraded` or `error`),
- *   `reserve-adapter-failure-sustained` (three consecutive failed cycles) and
+ *   `reserve-adapter-failure-sustained` (three consecutive failed cycles),
+ *   `reserve-score-ineligible-sustained` (three consecutive `degraded`
+ *   successes whose snapshots never reach scoring) and
  *   `reserve-source-clock-stalled` (successful verified attempts whose source
- *   clock is not advancing inside its source-age budget). Those two are
- *   transition-only and send no Telegram: they stay on `/status` and in this
- *   run metadata.
+ *   clock is not advancing inside its source-age budget),
+ *   plus `reserve-composition-census-drift` (a fresh composition's slice census
+ *   or share vector changed beyond its budget). The adapter rules are
+ *   transition-only; none of these findings sends Telegram: they stay on
+ *   `/status`, `metadata.quality` and this run metadata.
  * - `growth`: `mint-burn-row-growth` (event rows reach 2,300,000) and
  *   `mint-burn-activity-collapse` (an enabled leg with a 30-day baseline records
  *   no counted event for a full week).
@@ -107,7 +111,9 @@ export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly str
     "reserve-persistent-stale",
     "reserve-sync-degraded",
     "reserve-adapter-failure-sustained",
+    "reserve-score-ineligible-sustained",
     "reserve-source-clock-stalled",
+    "reserve-composition-census-drift",
   ],
   growth: ["mint-burn-row-growth", "mint-burn-activity-collapse"],
   "repair-debt": ["repair-debt-due", "repair-debt-stale-claim"],

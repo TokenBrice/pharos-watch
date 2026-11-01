@@ -9,6 +9,7 @@ import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../lib/fetch-retry";
 
 import { getProbePaths } from "@shared/lib/api-endpoints";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
+import { evaluateStatusProbePayload, hasStatusProbePayloadContract } from "./status-probe-contracts";
 import type { StatusProbeComparison, StatusProbePlaneSummary, StatusProbeSummary } from "@shared/types/status";
 import type { StatusHealthValue } from "@shared/types/status/core";
 import { computeRawStatus } from "../lib/status-evaluation";
@@ -346,13 +347,20 @@ async function evaluateProbeResponse(
   response: Response,
 ): Promise<Pick<ProbeResult, "ok" | "error" | "semanticStatus">> {
   const httpOk = response.status >= 200 && response.status < 300;
-  if (path !== HEALTH_PROBE_PATH || !httpOk) {
+  const payloadContract = hasStatusProbePayloadContract(path);
+  if ((!payloadContract && path !== HEALTH_PROBE_PATH) || !httpOk) {
     await cancelResponseBodyQuietly(response);
     return { ok: httpOk };
   }
 
   try {
-    const payload = await readResponseJsonWithinLimitWithSignal<{ status?: unknown }>(response, DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES);
+    const payload = await readResponseJsonWithinLimitWithSignal<Record<string, unknown>>(
+      response,
+      DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES,
+    );
+    if (payloadContract) {
+      return evaluateStatusProbePayload(path, response.headers, payload);
+    }
     if (payload.status === "healthy") {
       return {
         ok: true,

@@ -124,7 +124,8 @@ vi.mock("../../lib/public-health-assessment", async (importOriginal) => ({
   ...(await importOriginal<typeof PublicHealthModule>()),
   assessPublicHealth: assessPublicHealthMock,
 }));
-vi.mock("@shared/lib/api-endpoints", () => ({
+vi.mock("@shared/lib/api-endpoints", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@shared/lib/api-endpoints")>()),
   getProbePaths: (group: "public" | "admin" | "manual") => {
     if (group === "public") return publicProbePaths;
     if (group === "admin") return adminProbePaths;
