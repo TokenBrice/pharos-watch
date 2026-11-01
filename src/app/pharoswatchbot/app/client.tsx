@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TELEGRAM_BOT_URL } from "@shared/lib/telegram-bot-registration";
-import { isPausedSentinel, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
+import { isPausedSentinel, isTelegramBlockedFailureClass, isTelegramSnoozeActive } from "@shared/lib/telegram-delivery-policy";
 import type { MiniAppPrimaryAction, MiniAppScreenProps, TelegramMiniAppState } from "./types";
 import { useTelegramMainButton } from "./use-telegram-main-button";
 import { useTelegramBridge } from "./use-telegram-bridge";
@@ -274,7 +274,7 @@ export function PharosWatchBotMiniAppClient() {
     if (!canMutate || !state) return null;
     if (screen.name === "home" && !newUser) {
       const failure = state.health.recentFailureClass;
-      if ((failure === "blocked" || failure === "forbidden") && handleOpenChat) {
+      if (isTelegramBlockedFailureClass(failure) && handleOpenChat) {
         return { text: "Open chat with PharosWatchBot", onClick: handleOpenChat };
       }
       if (isTelegramSnoozeActive(state.subscriber.snoozeUntilTs, nowSec)) {

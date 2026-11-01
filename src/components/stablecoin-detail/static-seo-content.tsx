@@ -348,10 +348,19 @@ function formatBpsAsPercent(bps: number): string {
 }
 
 function describeRedemptionFee(config: RedemptionBackstopConfig): string | null {
-  const cost = config.costModel;
+  // The v9 route terms carry extra terms of the same reviewed schedule; a
+  // percentage ceiling alone would publish a minimum or component as absent.
+  const cost = { ...config.costModel, ...config.v9RouteCostTerms };
   const min = cost.kind === "fee-bps" ? cost.feeBps : cost.feeBpsMin;
   const max = cost.feeBpsMax ?? (cost.kind === "fee-bps" ? cost.feeBps : undefined);
   const suffix = config.outputAssetType === "physical-commodity-delivery" ? ", before delivery and third-party costs" : "";
+  const hasFixedTerms = (cost.minFeeUsd ?? 0) > 0
+    || (cost.gasOrBridgeCostUsd ?? 0) > 0
+    || (cost.feeComponents?.length ?? 0) > 0;
+  if (max !== undefined && hasFixedTerms) {
+    const description = cost.feeDescription?.trim();
+    return description ? `The reviewed redemption fee: ${description}${suffix}.` : null;
+  }
   if (max === 0) return `The reviewed terms charge no percentage redemption fee${suffix}.`;
   if (max !== undefined && (min === undefined || min === max)) {
     return min === undefined
@@ -396,6 +405,11 @@ function describeRedemptionOutput(coin: StablecoinMeta, config: RedemptionBackst
     const listed = outputSymbols.slice(0, 3);
     const rest = outputSymbols.length - listed.length;
     return `for ${formatProseList(rest > 0 ? [...listed, `${rest} other assets`] : listed)}${minimum}`;
+  }
+  // An unresolved payout is recorded as such; the coarse output type is not a
+  // reviewed identification of the asset the holder receives.
+  if (config.unresolvedOutputAssetKeys?.length) {
+    return `for an unresolved output asset${minimum}`;
   }
   switch (config.outputAssetType) {
     case "stable-single":

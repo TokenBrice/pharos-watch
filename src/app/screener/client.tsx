@@ -32,6 +32,7 @@ import {
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { getResolvedBlacklistStatusLabel } from "@shared/lib/blacklist-status";
 import { isIncludedInArchetype } from "@shared/lib/stablecoins/mechanism-membership";
 import { resolveCustodyModel } from "@shared/lib/report-card-policy";
 import {
@@ -93,7 +94,9 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "safety_weakest_pillar", accessor: (row) => row.safetyWeakestPillar ?? "" },
   { header: "safety_binding_cap", accessor: (row) => row.safetyBindingCapReason ?? "" },
   { header: "custody_model", accessor: (row) => row.custodyModel },
-  { header: "blacklistable", accessor: (row) => row.blacklistable ?? "" },
+  // The reviewed label keeps "Upstream" for inherited exposure; the filter
+  // vocabulary stays the legacy three-bucket projection.
+  { header: "blacklistable", accessor: (row) => getResolvedBlacklistStatusLabel(row.id) ?? "" },
   {
     header: "mint_authority",
     accessor: (row) => MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel,

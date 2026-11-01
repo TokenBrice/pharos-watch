@@ -209,6 +209,29 @@ describe("ScreenerClient freshness notices", () => {
     expect(exported.data.at(-1)?.id).toBe(table.rows.at(-1)?.id);
   });
 
+  it("exports the reviewed blacklistable label, inherited upstream exposure included", () => {
+    mocks.useStablecoins.mockReturnValue({
+      data: { peggedAssets: [makeStablecoin()] },
+      isLoading: false,
+      error: null,
+      dataUpdatedAt: 1_700_000_000,
+      meta: null,
+      refetch,
+    });
+    render(<ScreenerClient />);
+    const exported = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as {
+      data: ScreenerRow[];
+      columns: CsvColumn<ScreenerRow>[];
+    };
+    const column = exported.columns.find((entry) => entry.header === "blacklistable")!;
+    const cell = (id: string) => column.accessor(exported.data.find((row) => row.id === id)!, 0);
+
+    expect(cell("steakusdt-steakhouse")).toBe("Upstream");
+    expect(cell("usdc-circle")).toBe("Yes");
+    expect(cell("susdt-spark")).toBe("Possible");
+    expect(cell("usdu-unitas")).toBe("No");
+  });
+
 
   it.each([true, false])("withholds counts and export without primary data (loading=%s)", (isLoading) => {
     mocks.useStablecoins.mockReturnValue({

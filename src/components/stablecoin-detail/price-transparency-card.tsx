@@ -595,7 +595,7 @@ export function PriceTransparencyCard({
           )}
         </div>
 
-        <EvidenceFooter topic="pegScore" />
+        <EvidenceFooter topic="priceTransparency" />
     </DetailModuleCard>
   );
 }

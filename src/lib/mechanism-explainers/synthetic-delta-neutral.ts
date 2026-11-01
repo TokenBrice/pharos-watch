@@ -89,7 +89,7 @@ export const content: ArchetypeContent = {
     },
   ],
   whatToWatch: [
-    "DEWS on the Depeg Tracker. Synthetic-delta-neutral tokens have full Depeg Early Warning System coverage; Pool Balance Drift, Liquidity Erosion, and Mint/Burn Flow signals fire early when an unwind begins.",
+    "DEWS on the Depeg Tracker. DEWS covers the peg-tracking members of this archetype and skips NAV-accruing wrappers such as sUSDe, which show N/A · NAV; Pool Balance Drift, Liquidity Erosion, and Mint/Burn Flow signals fire early when an unwind begins.",
     "Live Reserve panel on the USDe coin page and equivalents. It shows the live mix of stablecoins, BTC, ETH/LST, and the CEX venue distribution of the short legs.",
     "Custody and venue posture on the report card. CEX-based strategies and fully on-chain lending strategies have different control, oracle, and failure domains.",
     "Redemption Backstop cooldown and holder eligibility. Most synthetic dollars enforce a multi-day cooldown; the backstop card surfaces the settlement delay and the verified-customer holder eligibility tier.",

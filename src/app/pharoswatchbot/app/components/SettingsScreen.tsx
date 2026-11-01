@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Home, Send } from "lucide-react";
+import { isTelegramBlockedFailureClass } from "@shared/lib/telegram-delivery-policy";
 import { formatAgo, formatHour } from "../format";
 import type { MiniAppScreenProps } from "../types";
 import { ListRow, ListSection, SelectRow, Switch } from "./List";
@@ -38,8 +39,9 @@ function availableTimezones(): readonly string[] {
 
 function failureText(failureClass: string | null): string | null {
   if (!failureClass) return null;
-  if (failureClass === "blocked" || failureClass === "forbidden") return "Telegram is refusing our messages. Send any message to PharosWatchBot to turn delivery back on.";
-  return "The last delivery failed. Alerts retry automatically.";
+  if (isTelegramBlockedFailureClass(failureClass)) return "Telegram is refusing our messages. Send any message to PharosWatchBot to turn delivery back on.";
+  // Any other class may be permanent, so no retry is promised.
+  return "The last delivery failed.";
 }
 
 export interface SettingsScreenProps extends MiniAppScreenProps {

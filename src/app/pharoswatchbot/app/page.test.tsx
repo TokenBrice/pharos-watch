@@ -596,10 +596,10 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.queryByRole("group", { name: "Resume alerts" })).toBeNull();
   });
 
-  it("puts the recovery action in the MainButton for blocked delivery", async () => {
+  it.each(["blocked", "chat_not_found"])("puts the recovery action in the MainButton for %s delivery", async (failureClass) => {
     const main = nativeButton();
     const openTelegramLink = vi.fn();
-    await renderReadyMiniApp({ state: makeMiniAppState({ health: { recentFailureClass: "blocked" } }), launch: { MainButton: main, openTelegramLink } });
+    await renderReadyMiniApp({ state: makeMiniAppState({ health: { recentFailureClass: failureClass } }), launch: { MainButton: main, openTelegramLink } });
     expect(screen.getByRole("heading", { name: "Telegram stopped delivering alerts" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Alerts on" })).toBeNull();
     await waitFor(() => expect(main.text).toBe("Open chat with PharosWatchBot"));

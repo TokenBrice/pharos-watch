@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { getActiveByArchetype } from "@shared/lib/stablecoins/by-mechanism";
 import { resolveMechanismArchetype } from "@shared/lib/classification/resolve-mechanism-archetype";
 import { ARCHETYPE_CONTENT } from "@/lib/mechanism-explainers";
 
@@ -35,5 +36,24 @@ describe("mechanism explainer representative coins", () => {
     expect(note).toBeTruthy();
     expect(note).not.toMatch(/mostly BUIDL|FedFund/i);
     expect(note).toContain("OUSGInstantManager");
+  });
+});
+
+describe("mechanism explainer DEWS coverage claims", () => {
+  it("never claims full DEWS coverage for an archetype whose NAV wrappers it skips", () => {
+    const navMembers = getActiveByArchetype("synthetic-delta-neutral").filter((coin) => coin.flags.navToken);
+    expect(navMembers.length).toBeGreaterThan(0);
+    const dewsBullets = ARCHETYPE_CONTENT["synthetic-delta-neutral"].whatToWatch.filter((bullet) => /DEWS/.test(bullet));
+    expect(dewsBullets.length).toBeGreaterThan(0);
+    for (const bullet of dewsBullets) {
+      expect(bullet).not.toMatch(/full/i);
+      expect(bullet).toMatch(/NAV/);
+    }
+  });
+
+  it.each(MECHANISM_ARCHETYPE_VALUES)("states no full DEWS coverage claim in %s", (archetype) => {
+    for (const bullet of ARCHETYPE_CONTENT[archetype].whatToWatch.filter((entry) => /DEWS/.test(entry))) {
+      expect(bullet).not.toMatch(/full[^.]*coverage/i);
+    }
   });
 });

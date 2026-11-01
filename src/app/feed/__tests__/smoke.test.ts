@@ -2,6 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
 
 interface RssRouteModule {
   GET: () => Promise<Response>;
@@ -217,13 +218,15 @@ describe("feed routes smoke", () => {
       Array.from({ length: 100 }, (_, rank) => `pharos:depeg-event:scx-event-${String(100 - rank).padStart(3, "0")}`),
     );
     expect(items.map((item) => item.guid)).not.toContain("pharos:depeg-event:scx-event-000");
-    // Newest (i=100, below, resolved) and runner-up (i=99, above, active)
-    // carry direction, magnitude, and resolution status.
+    // Newest (i=100, below, resolved) and runner-up (i=99, above, still open)
+    // carry direction, the recorded peak, and the shared closure vocabulary;
+    // an open record never reads as a current price level.
     expect(items[0]!.link).toBe("https://pharos.watch/depeg/scx-event-100/");
     expect(items[0]!.title).toBe("SCX depeg -700 bps");
-    expect(items[0]!.description).toBe("Resolved below peg by 700 bps starting 2027-01-15.");
+    expect(items[0]!.description).toBe("Resolved; peaked at 700 bps below peg starting 2027-01-15.");
     expect(items[1]!.title).toBe("SCX depeg +699 bps");
-    expect(items[1]!.description).toBe("Active above peg by 699 bps starting 2027-01-15.");
+    expect(items[1]!.description).toBe(`${DEPEG_CLOSURE_LABELS.open}; peaked at 699 bps above peg starting 2027-01-15.`);
+    expect(items.every((item) => !item.description.includes("Active"))).toBe(true);
     // Sub-threshold events link to the stablecoin history anchor instead.
     expect(items[99]!.guid).toBe("pharos:depeg-event:scx-event-001");
     expect(items[99]!.link).toContain("usdc-circle");
@@ -268,7 +271,7 @@ describe("feed routes smoke", () => {
       { closeReason: "superseded-direction", recoveryPrice: null, status: "Closed", detail: "direction change" },
       { closeReason: "orphan-tracking-removed", recoveryPrice: null, status: "Closed", detail: "removed from tracking" },
       { closeReason: null, recoveryPrice: null, status: "Closed", detail: "unknown terminal state" },
-      { closeReason: null, recoveryPrice: null, endedAt: null, status: "Active" },
+      { closeReason: null, recoveryPrice: null, endedAt: null, status: DEPEG_CLOSURE_LABELS.open },
     ];
     writeShard(JSON.stringify(cases.map(({ status: _status, detail: _detail, ...closure }, index) =>
       makeDepegEvent({ id: index + 1, slug: `closure-${index}`, ...closure }),

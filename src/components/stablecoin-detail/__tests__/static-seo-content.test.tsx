@@ -315,6 +315,40 @@ describe("StablecoinDetailSeoContent", () => {
       expect(items[1].answer).toContain("direct redemption is limited to customers the issuer has verified");
     });
 
+    it("publishes the authored schedule instead of a bare percentage ceiling", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = {
+        ...reviewedRoute,
+        outputAssetType: "stable-single",
+        physicalCommodityDelivery: undefined,
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "0.10% with a $1,000 minimum", feeBpsMax: 10 },
+        v9RouteCostTerms: { minFeeUsd: 1_000 },
+        v9RouteReviewTerms: { minRedeemUsd: 100_000 },
+      };
+      const answer = buildStablecoinFaqItems(coin).find((item) => item.question === "How do you redeem TSTD?")?.answer;
+
+      expect(answer).toContain("The reviewed redemption fee: 0.10% with a $1,000 minimum.");
+      expect(answer).not.toContain("at most 0.1%");
+    });
+
+    it("does not invent a payout asset the review left unresolved", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = {
+        ...reviewedRoute,
+        outputAssetType: "bluechip-collateral",
+        outputAssets: undefined,
+        physicalCommodityDelivery: undefined,
+        unresolvedOutputAssetKeys: ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"],
+        unresolvedOutputDisposition: "reviewed-external",
+      };
+      const answer = buildStablecoinFaqItems(coin).find((item) => item.question === "How do you redeem TSTD?")?.answer;
+
+      expect(answer).toContain("can redeem TSTD for an unresolved output asset");
+      expect(answer).not.toContain("blue-chip crypto collateral");
+    });
+
     it("omits the answer once the review is older than the reviewed-evidence budget", () => {
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(new Date("2028-01-01T00:00:00Z"));

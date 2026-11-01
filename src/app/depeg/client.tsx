@@ -179,10 +179,14 @@ export function DepegClient() {
     [resolverData],
   );
 
+  // The worker answers an unreadable DEWS publication with an empty `signals`
+  // map and `updatedAt: 0`; that is an absent read, not a calm measurement.
+  const dewsAvailable = (dewsData?.updatedAt ?? 0) > 0;
+
   // Coins at ALERT+ on DEWS, scoped to the peg-catalog ids the route tracks.
   const dewsAlertCount = useMemo(() => {
     const signals = dewsData?.signals;
-    if (!signals || !trackedIds) return null;
+    if (!dewsAvailable || !signals || !trackedIds) return null;
     let count = 0;
     for (const [id, entry] of Object.entries(signals)) {
       if (trackedIds && !trackedIds.has(id)) continue;
@@ -190,7 +194,7 @@ export function DepegClient() {
       if ((THREAT_BAND_ORDER[entry.band] ?? 0) >= THREAT_BAND_ORDER.ALERT) count += 1;
     }
     return count;
-  }, [dewsData, trackedIds]);
+  }, [dewsAvailable, dewsData, trackedIds]);
 
   const handleRowClick = useCallback((id: string) => {
     router.push(buildStablecoinUrl(id));
@@ -220,7 +224,7 @@ export function DepegClient() {
   ]);
   const freshnessQueries: StaleQuery[] = [
     { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
-    { preset: "stressSignals", ...selectDewsHealthClock(dewsData, dewsMeta), error: dewsError, hasData: !!dewsData?.signals },
+    { preset: "stressSignals", ...selectDewsHealthClock(dewsData, dewsMeta), error: dewsError, hasData: dewsAvailable },
     { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: eventsData != null, meta: eventsMeta },
   ];
   if (resolverEnabled) {
@@ -282,9 +286,11 @@ export function DepegClient() {
         review={resolverReviewerEnabled ? resolverReviewData?.summary ?? null : null}
         logos={logos}
         alertQueue={
-          <SectionErrorBoundary name="dews-alert-feed">
-            <DEWSAlertFeed signals={dewsData?.signals} logos={logos} allowedIds={trackedIds} embedded />
-          </SectionErrorBoundary>
+          dewsAvailable ? (
+            <SectionErrorBoundary name="dews-alert-feed">
+              <DEWSAlertFeed signals={dewsData?.signals} logos={logos} allowedIds={trackedIds} embedded />
+            </SectionErrorBoundary>
+          ) : null
         }
       />
 
@@ -295,23 +301,27 @@ export function DepegClient() {
         </SectionErrorBoundary>
       ) : null}
 
-      {/* The universe workbench: filters, sorts, exact per-coin values. */}
-      <SectionErrorBoundary name="depeg-table">
-        <DepegControlBoard
-          rows={tableRows}
-          logos={logos}
-          pegFilter={pegFilter}
-          typeFilter={typeFilter}
-          searchQuery={searchQuery}
-          onPegFilterChange={setPegFilter}
-          onTypeFilterChange={setTypeFilter}
-          onSearchChange={setSearchQuery}
-          onClearFilters={clearBoardFilters}
-          onRowClick={handleRowClick}
-          nowSeconds={nowSeconds}
-          eventFloorCount={eventFloorCount}
-        />
-      </SectionErrorBoundary>
+      {/* The universe workbench: filters, sorts, exact per-coin values. Every row
+          comes from the peg summary, so an absent read hides the board instead
+          of rendering a manufactured empty catalog. */}
+      {pegData != null ? (
+        <SectionErrorBoundary name="depeg-table">
+          <DepegControlBoard
+            rows={tableRows}
+            logos={logos}
+            pegFilter={pegFilter}
+            typeFilter={typeFilter}
+            searchQuery={searchQuery}
+            onPegFilterChange={setPegFilter}
+            onTypeFilterChange={setTypeFilter}
+            onSearchChange={setSearchQuery}
+            onClearFilters={clearBoardFilters}
+            onRowClick={handleRowClick}
+            nowSeconds={nowSeconds}
+            eventFloorCount={eventFloorCount}
+          />
+        </SectionErrorBoundary>
+      ) : null}
 
       {/* Model accountability: audit evidence, after the board the reader acts on;
           the hero's track-record figure links here. */}
@@ -328,23 +338,26 @@ export function DepegClient() {
       ) : null}
 
       {/* History handoff. The permanent archive preview and FAQ follow as server
-          content from page.tsx. */}
-      <SectionErrorBoundary name="depeg-feed">
-        <DepegFeed
-          title="Recent resolved detections"
-          events={recentClosedEvents}
-          logos={logos}
-          emptyMessage="No confirmed depeg history in this view."
-        />
-        <div className="mt-2 flex justify-end">
-          <Link
-            href="/timeline/?type=depeg.*"
-            className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
-          >
-            Open the full Timeline stream →
-          </Link>
-        </div>
-      </SectionErrorBoundary>
+          content from page.tsx. An absent first page hides the card instead of
+          claiming a settled empty history. */}
+      {eventsData != null ? (
+        <SectionErrorBoundary name="depeg-feed">
+          <DepegFeed
+            title="Recent resolved detections"
+            events={recentClosedEvents}
+            logos={logos}
+            emptyMessage="No confirmed depeg history in this view."
+          />
+          <div className="mt-2 flex justify-end">
+            <Link
+              href="/timeline/?type=depeg.*"
+              className="pharos-focus-ring text-xs text-muted-foreground hover:text-foreground"
+            >
+              Open the full Timeline stream →
+            </Link>
+          </div>
+        </SectionErrorBoundary>
+      ) : null}
 
     </div>
   );
