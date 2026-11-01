@@ -353,7 +353,7 @@ export function YieldScatterPlot({
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const rawData = useMemo(() => {
     return rankings
-      .filter((r) => r.safetyScore !== null)
+      .filter((r) => r.safetyScore !== null && !(r.provenance?.usedDefaultSafety || r.provenance?.safetyProvenance === "default-safety"))
       .map((r) => {
         // E5: one resolution per row — a missing row rate resolves from the
         // registry by the row's benchmark key before the chart-wide USD frame,
@@ -510,7 +510,7 @@ export function YieldScatterPlot({
   const unscoredNote =
     droppedUnscoredCount > 0 ? (
       <span>
-        {droppedUnscoredCount} row{droppedUnscoredCount === 1 ? "" : "s"} without a safety score not shown
+        {droppedUnscoredCount} row{droppedUnscoredCount === 1 ? "" : "s"} without a measured safety score not shown
       </span>
     ) : null;
 
@@ -539,7 +539,7 @@ export function YieldScatterPlot({
               : "pharos-chart-stage h-[600px] overflow-hidden p-2 sm:h-[850px] sm:p-4"
         }
         role="figure"
-        aria-label={`Yield vs row safety scatter plot with ${data.length} yield-source rows plotted, including ${apyAxis.clippedCount} on the upper rail and ${apyAxis.floorClippedCount} on the lower rail.${droppedUnscoredCount > 0 ? ` ${droppedUnscoredCount} row${droppedUnscoredCount === 1 ? "" : "s"} without a safety score not shown.` : ""}${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
+        aria-label={`Yield vs row safety scatter plot with ${data.length} yield-source rows plotted, including ${apyAxis.clippedCount} on the upper rail and ${apyAxis.floorClippedCount} on the lower rail.${droppedUnscoredCount > 0 ? ` ${droppedUnscoredCount} row${droppedUnscoredCount === 1 ? "" : "s"} without a measured safety score not shown.` : ""}${usesDefaultBenchmarkFrame ? " The background benchmark frame uses the default USD benchmark for mixed views." : ""}${compact ? " Compressed mini-map." : ""} Use the leaderboard for accessible row actions.`}
       >
         <div ref={chartContainerRef} className="h-full w-full">
           {isChartReady ? (

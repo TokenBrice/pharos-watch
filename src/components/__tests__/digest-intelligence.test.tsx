@@ -15,6 +15,8 @@ describe("DigestIntelligencePanel", () => {
     expect(html).toContain("MSUSD 5,070 bps");
     expect(html).toContain("pmUSD d124 -4,953 bps");
     expect(html).toContain("Missed: USTB weekly supply move");
+    expect(html).toContain("Previous edition&#x27;s checks");
+    expect(html).not.toContain("Yesterday");
     expect(html).not.toMatch(/uppercase|tracking-/);
   });
 

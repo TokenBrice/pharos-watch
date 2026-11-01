@@ -7,7 +7,10 @@ import type {
 import { formatV9PresentationUsd as compactUsd } from "@shared/lib/format";
 import { formatWholeUnitDurationSeconds } from "@shared/lib/relative-time";
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-public-causes";
-import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
+import {
+  humanizeSafetyScoreV9FactorLabel,
+  humanizeSafetyScoreV9Value,
+} from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 import { describeExitRouteVenue, describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 import { resolveControlComponentRoles } from "@/lib/pillar-evidence-strips";
 import type { ControlComponentRole } from "@shared/lib/classification";
@@ -228,7 +231,7 @@ function backingGroups(
       detail: component.wholeAssetWeight === null ? null : `${percentLabel(component.wholeAssetWeight ?? resolveV9EffectiveScoringWeight(component))} of whole asset`,
       children: (component.factors ?? []).map((factor) => makeRow({
         key: factor.componentKey,
-        label: humanizeSafetyScoreV9Value(factor.componentKey),
+        label: humanizeSafetyScoreV9FactorLabel(factor.componentKey),
         score: factor.score,
         weight: resolveV9EffectiveScoringWeight(factor),
         status: causeLabel(factor.cause),

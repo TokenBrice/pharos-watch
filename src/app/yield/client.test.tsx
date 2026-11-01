@@ -416,9 +416,9 @@ describe("YieldClient", () => {
     // E13: ...labelled as the chart-wide USD frame in mixed views.
     expect(screen.getByText("(USD frame)")).toBeTruthy();
     // E17: null-safety rows are annotated, not silently dropped.
-    expect(screen.getByText(/1 row without a safety score not shown/)).toBeTruthy();
+    expect(screen.getByText(/1 row without a measured safety score not shown/)).toBeTruthy();
     const figure = screen.getByRole("figure");
-    expect(figure.getAttribute("aria-label")).toContain("1 row without a safety score not shown");
+    expect(figure.getAttribute("aria-label")).toContain("1 row without a measured safety score not shown");
   });
 
   it("keeps the build-static adapter manifest out of live freshness aggregation", () => {

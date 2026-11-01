@@ -25,6 +25,8 @@ interface MethodologyChangelogPageProps {
   children?: React.ReactNode;
   footerContent?: React.ReactNode;
   jsonLdIdentifier?: PharosUrnJsonLdIdentifier;
+  /** A major-version shard: its newest entry is not the changelog's current release. */
+  archiveShard?: boolean;
   history?: {
     archivePath: (version: string) => string;
     anchorId: (version: string) => string;
@@ -42,11 +44,12 @@ export function MethodologyChangelogPage({
   children,
   footerContent,
   jsonLdIdentifier,
+  archiveShard = false,
   history,
 }: MethodologyChangelogPageProps) {
   const derivedSections = [
     { id: "overview", label: "Overview" },
-    { id: "latest-updates", label: "Latest" },
+    ...(archiveShard ? [] : [{ id: "latest-updates", label: "Latest" }]),
     ...(history ? [{ id: "earlier-versions", label: "Earlier versions" }] : entries.map((entry) => ({
       id: methodologyChangelogEntryId(entry.version),
       label: toMethodologyVersionLabel(entry.version),
@@ -131,7 +134,7 @@ export function MethodologyChangelogPage({
       />
       {children ?? (
         <>
-          {latestEntry && (
+          {latestEntry && !archiveShard && (
             <section
               id="latest-updates"
               className="pharos-card-shell scroll-mt-28 px-5 py-5 sm:px-6"

@@ -33,6 +33,26 @@ describe("stablecoin V9 safety presentation", () => {
     ]);
   });
 
+  it("renders reserve factor keys as readable fact labels", () => {
+    const card = makeV9Card();
+    card.breakdowns!.backing.components[0].factors = [
+      { componentKey: "reserve:reserve:69c2888ec8ecf49001af1889:assetClass", score: 90, normalizedWeight: 0.4,
+        effectiveScoringWeight: 0.4, cause: null, causeGapRefs: [], scoringDisposition: "included" },
+      { componentKey: "reserve:reserve:69c2888ec8ecf49001af1889:liquidity:covered", score: 88, normalizedWeight: 0.3,
+        effectiveScoringWeight: 0.3, cause: null, causeGapRefs: [], scoringDisposition: "included" },
+      { componentKey: "reserve:reserve:69c2888ec8ecf49001af1889:liquidity:uncovered", score: 86, normalizedWeight: 0.3,
+        effectiveScoringWeight: 0.3, cause: null, causeGapRefs: [], scoringDisposition: "included" },
+    ];
+    const children = buildStablecoinSafetyScoreV9Presentation(card)
+      .pillars[0].breakdown!.groups[0].rows[0].children;
+    expect(children.map((child) => [child.key, child.label])).toEqual([
+      ["reserve:reserve:69c2888ec8ecf49001af1889:assetClass", "Asset class"],
+      ["reserve:reserve:69c2888ec8ecf49001af1889:liquidity:covered", "Liquidity (covered)"],
+      ["reserve:reserve:69c2888ec8ecf49001af1889:liquidity:uncovered", "Liquidity (uncovered)"],
+    ]);
+    expect(JSON.stringify(children.map((child) => child.label))).not.toMatch(/:|69c2888e/u);
+  });
+
   it("labels U breakdown factors Unresolved without changing their cause", () => {
     const card = makeV9Card();
     card.breakdowns!.backing.components[0].factors = [
@@ -324,6 +344,7 @@ describe("stablecoin V9 safety presentation", () => {
         value: "10m / 74 bps observed / 200 bps bound",
       },
       { key: "selected-route-scope", label: "Chain / pool", value: "tron / pool-1" },
+      { key: "confidence-capacityMethod", label: "Confidence — Capacity method", value: "1x" },
     ]));
     // The producer emits control components alphabetically: the limiting row
     // must lead regardless of producer order, then the diagnostics cheapest
