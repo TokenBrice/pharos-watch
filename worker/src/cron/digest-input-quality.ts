@@ -17,10 +17,11 @@ export const REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES = [
   "psi-contributors-query",
   "psi-contributors-stale",
   // Stablecoins supply. A non-ok cache fails the digest closed before an
-  // edition is published, so only these recorded reasons can reach a row.
+  // edition is published, so a stale cache is the recorded supply failure.
+  // `supply-current-unavailable` / `supply-prev-week-baseline` mark a partial
+  // core cohort, which every edition since 2026-10-27 records; they stay
+  // degraded-source metadata rather than a standing operator condition.
   "stablecoins-cache-stale",
-  "supply-current-unavailable",
-  "supply-prev-week-baseline",
   // Safety Score
   "safety-canonical-snapshot",
   "source-load-failed",

@@ -678,7 +678,7 @@ describe("market and risk collectors", () => {
     const { inputData } = await buildDailyDigestInput(makeDailyDigestScenario().db);
     expect(inputData.mcap7dDelta).toBeNull();
   });
-  it("treats a stale cache and a partial core supply cohort as regime-critical", async () => {
+  it("pages a stale cache but keeps a partial core supply cohort as metadata", async () => {
     const scenario = makeDailyDigestScenario();
     const nowSec = Math.floor(Date.now() / 1000);
     const source = scenario.sourcePayload as {
@@ -695,13 +695,12 @@ describe("market and risk collectors", () => {
     expect(recorded).toContain("stablecoins-cache-stale");
     expect(recorded).toContain("supply-current-unavailable");
     expect(recorded).toContain("supply-prev-week-baseline");
-    const supplySources = recorded.filter(
-      (source) => source.startsWith("supply-") || source === "stablecoins-cache-stale",
-    );
-    expect(supplySources).not.toHaveLength(0);
-    for (const source of supplySources) {
-      expect(REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES as readonly string[]).toContain(source);
-    }
+    const critical = REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES as readonly string[];
+    expect(critical).toContain("stablecoins-cache-stale");
+    // A partial core cohort is recorded by every edition; it stays metadata,
+    // not a standing operator condition.
+    expect(critical).not.toContain("supply-current-unavailable");
+    expect(critical).not.toContain("supply-prev-week-baseline");
   });
   it("never restates flow claims that missing valuation could alter", async () => {
     const partialMint = {
