@@ -10,6 +10,7 @@ import {
   type DepegEventEntry,
 } from "@/lib/depeg-event-page-data";
 import {
+  DEPEG_ARCHIVE_EPOCH_DATE,
   MIN_DEPEG_PAGE_DEVIATION_BPS,
   getPeakDeviationMagnitudeBps,
 } from "@/lib/depeg-event-config";
@@ -117,7 +118,7 @@ export function DepegEventArchive() {
         </p>
       </header>
       <p className="pharos-meta">
-        Confirmed events at {MIN_DEVIATION_PCT}% deviation or worse.
+        Confirmed events at {MIN_DEVIATION_PCT}% deviation or worse since {DEPEG_ARCHIVE_EPOCH_DATE}, plus pinned earlier incidents.
       </p>
 
       <ArchiveMonthGroups groups={groups} />

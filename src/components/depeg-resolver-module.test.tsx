@@ -448,6 +448,32 @@ describe("DepegResolverModule", () => {
     expect(Boolean(screen.queryByText(/most comparable breaks still recovered/))).toBe(version === "5.0");
   });
 
+  it("does not print the no-break blurb on an above-peg recovery_likely row with kill signals", () => {
+    const abovePegRow = makePredictionRow(
+      makeSourceRow({
+        direction: "above",
+        peakDeviationBps: 1_500,
+        currentDeviationBps: 900,
+        resolution: {
+          tier: "recovery_likely",
+          factors: [
+            {
+              code: "K2_backing_impairment",
+              kind: "kill",
+              severity: "severe",
+              label: "Depends on a frozen/dead collateral asset",
+            },
+          ],
+        },
+      }),
+    );
+    render(<DepegResolverModule data={response({ rows: [abovePegRow] })} />);
+
+    expect(screen.getByText("No break signals")).toBeTruthy();
+    expect(screen.queryByText(/No kill signal fired/)).toBeNull();
+    expect(screen.getByText("Will it recover?").parentElement?.textContent).toContain("1 kill signal · 0 anchors");
+  });
+
   it("leads a v5 duration with horizon odds and keeps unreached quantiles absent", () => {
     const horizon = (h: "6h" | "24h" | "7d" | "30d", state: "benchmarked" | "not_informative", probability: number | null) => ({
       horizon: h, state, probability, probabilityDisplay: null, probabilityInterval: null,

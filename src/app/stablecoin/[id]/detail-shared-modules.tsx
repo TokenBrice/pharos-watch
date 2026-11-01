@@ -349,7 +349,9 @@ export function buildDetailSharedModules({
     failureDomains,
     controlPosture: buildControlPostureView(coin, viewModel.variantParent),
     regulatoryStanding,
-    regulatoryNotReviewed: regulatoryStanding === null && !frozen,
+    // A curated profile that resolves to no reader-facing regime (a reviewed
+    // out-of-scope GENIUS record) is not "not reviewed".
+    regulatoryNotReviewed: regulatoryStanding === null && !coin.genius && !coin.mica && !frozen,
     dewsPlaceholder,
     evidenceIndex,
   };

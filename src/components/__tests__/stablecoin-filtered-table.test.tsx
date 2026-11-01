@@ -66,6 +66,12 @@ it.each([
   expect(screen.getByTestId("saved-table").textContent).toContain('"grade":"B+"');
 });
 
+it("marks a failed stablecoins read as unavailable for the shared table", () => {
+  mocks.stablecoins.mockReturnValue({ ...query(undefined), error: new Error("HTTP 503") });
+  render(<StablecoinFilteredTable activeFilters={["rwa-backed"]} />);
+  expect(screen.getByTestId("saved-table").textContent).toContain('"unavailable":true');
+});
+
 it("shows neither held publication nor a failed refresh over saved ratings", () => {
   const saved = mocks.ratings();
   mocks.ratings.mockReturnValue({ ...saved, error: new Error("HTTP 502"), data: {

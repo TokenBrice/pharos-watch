@@ -149,6 +149,17 @@ describe("StablecoinTable", () => {
     expect(screen.getByText("No stablecoins match your filters")).toBeTruthy();
   });
 
+  it("reads a failed stablecoins read as unreachable data instead of an empty market", () => {
+    const { rerender } = render(
+      <StablecoinTable data={undefined} isLoading={false} activeFilters={[]} unavailable />,
+    );
+    expect(screen.queryByText("No stablecoin data available")).toBeNull();
+    expect(screen.getByText("We couldn't reach the data.")).toBeTruthy();
+
+    rerender(<StablecoinTable data={[]} isLoading={false} activeFilters={[]} />);
+    expect(screen.getByText("No stablecoin data available")).toBeTruthy();
+  });
+
   it("threads supplied source generations through the table model into the CSV preamble", () => {
     render(<StablecoinTable
       data={[coin]} isLoading={false} activeFilters={[]}

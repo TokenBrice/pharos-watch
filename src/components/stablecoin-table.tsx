@@ -25,6 +25,8 @@ interface StablecoinTableProps {
   data: StablecoinData[] | undefined;
   isLoading: boolean;
   activeFilters: readonly FilterTag[];
+  /** True when the stablecoins read failed and retained nothing. */
+  unavailable?: boolean;
   eligibleIds?: ReadonlySet<string>;
   toolbarActions?: ReactNode;
   filterPanel?: ReactNode;
@@ -54,6 +56,7 @@ export function StablecoinTable({
   data,
   isLoading,
   activeFilters,
+  unavailable,
   eligibleIds,
   toolbarActions,
   filterPanel,
@@ -229,6 +232,7 @@ export function StablecoinTable({
       searchQuery={searchQuery}
       activeFilters={activeFilters}
       data={data}
+      unavailable={unavailable}
       onClearFilters={onClearFilters}
       onClearSearch={onClearSearch}
     />

@@ -16,6 +16,8 @@ interface StablecoinTableEmptyStateProps {
   searchQuery?: string;
   activeFilters: readonly FilterTag[];
   data?: StablecoinData[];
+  /** True when the stablecoins read failed and retained nothing. */
+  unavailable?: boolean;
   logos?: Record<string, string>;
   onClearSearch?: () => void;
   onClearFilters?: () => void;
@@ -25,6 +27,7 @@ export function StablecoinTableEmptyState({
   searchQuery,
   activeFilters,
   data,
+  unavailable = false,
   logos,
   onClearSearch,
   onClearFilters,
@@ -34,25 +37,32 @@ export function StablecoinTableEmptyState({
   // An absent payload is an unavailable read, never an empty result: it
   // outranks the search/filter branches and suppresses their clear actions.
   const noData = data === undefined;
-  const kind: EmptyStateKind = noData
-    ? "no-data"
-    : searchQuery
-      ? "no-results"
-      : activeFilters.length > 0
-        ? "no-matches"
-        : "no-data";
-  const title = noData
-    ? "No stablecoin data available"
-    : searchQuery
-      ? `No results for "${searchQuery}"`
-      : activeFilters.length > 0
-        ? "No stablecoins match your filters"
-        : "No stablecoin data available";
-  const description = noData
-    ? "Check back soon — we're constantly monitoring the market."
-    : activeFilters.length > 0 || searchQuery
-      ? "Try adjusting your filters or clearing them to see the full tracked universe."
-      : "Check back soon — we're constantly monitoring the market.";
+  const unavailableRead = unavailable && noData;
+  const kind: EmptyStateKind = unavailableRead
+    ? "network-error"
+    : noData
+      ? "no-data"
+      : searchQuery
+        ? "no-results"
+        : activeFilters.length > 0
+          ? "no-matches"
+          : "no-data";
+  const title = unavailableRead
+    ? undefined
+    : noData
+      ? "No stablecoin data available"
+      : searchQuery
+        ? `No results for "${searchQuery}"`
+        : activeFilters.length > 0
+          ? "No stablecoins match your filters"
+          : "No stablecoin data available";
+  const description = unavailableRead
+    ? undefined
+    : noData
+      ? "Check back soon — we're constantly monitoring the market."
+      : activeFilters.length > 0 || searchQuery
+        ? "Try adjusting your filters or clearing them to see the full tracked universe."
+        : "Check back soon — we're constantly monitoring the market.";
   const showActions = !noData && (!!searchQuery || activeFilters.length > 0);
   return (
     <TableRow>

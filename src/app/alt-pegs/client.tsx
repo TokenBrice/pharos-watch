@@ -214,6 +214,7 @@ export function AltPegsClient() {
         <AltPegStablecoinTable
           data={stablecoinsQuery.data?.peggedAssets}
           isLoading={stablecoinsQuery.isLoading}
+          unavailable={Boolean(stablecoinsQuery.error)}
           pegRows={snapshot.distributionRows}
           selectedPeg={selectedPeg}
           onSelectPeg={setSelectedPeg}
