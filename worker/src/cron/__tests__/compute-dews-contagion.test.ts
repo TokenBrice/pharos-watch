@@ -76,23 +76,29 @@ var fixtures: CoinFixture[] = [];
 // eslint-disable-next-line no-var
 var psiScore: number | null = null;
 
-vi.mock("@shared/lib/psi-eligible", () => ({
-  get PSI_ELIGIBLE_STABLECOINS() {
-    return (fixtures ?? []).map((fixture) => ({
-      id: fixture.id,
-      symbol: fixture.symbol,
-      flags: { navToken: false },
-    }));
-  },
-  get PSI_ELIGIBLE_META_BY_ID() {
-    return new Map(
-      (fixtures ?? []).map((fixture) => [
-        fixture.id,
-        { id: fixture.id, symbol: fixture.symbol, flags: { navToken: false } },
-      ]),
-    );
-  },
-}));
+vi.mock("@shared/lib/psi-eligible", () => {
+  const metaFor = (fixture: CoinFixture) => ({
+    id: fixture.id,
+    symbol: fixture.symbol,
+    flags: { navToken: false },
+  });
+  // Mirror the real module: the DEWS cohort is the PSI universe less NAV tokens.
+  const dewsEligibleCoins = () => (fixtures ?? []).map(metaFor).filter((coin) => coin.flags?.navToken !== true);
+  return {
+    get PSI_ELIGIBLE_STABLECOINS() {
+      return (fixtures ?? []).map(metaFor);
+    },
+    get PSI_ELIGIBLE_META_BY_ID() {
+      return new Map((fixtures ?? []).map((fixture) => [fixture.id, metaFor(fixture)]));
+    },
+    get DEWS_ELIGIBLE_STABLECOINS() {
+      return dewsEligibleCoins();
+    },
+    get DEWS_ELIGIBLE_IDS() {
+      return new Set(dewsEligibleCoins().map((coin) => coin.id));
+    },
+  };
+});
 
 vi.mock("@shared/lib/peg-rates", () => ({
   derivePegRates: vi.fn(() => ({ rates: { peggedUSD: 1, peggedEUR: 1.08 } })),

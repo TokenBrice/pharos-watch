@@ -68,7 +68,7 @@ export function joinIncidentEvidence(deliveries, children, deployments, publicat
 }
 
 /**
- * @param {{ outDir?: string, database?: string, remote?: boolean }} args
+ * @param {{ outDir?: string, archiveDir?: string, database?: string, remote?: boolean }} args
  * @param {{ env?: Record<string, string | undefined>, now?: Date, query?: (sql: string) => Array<Record<string, unknown>>, fetchImpl?: typeof fetch, deliveryReader?: (input: Record<string, unknown>) => Promise<unknown> }} [options]
  */
 export async function captureWorkerIncidentBundle(args, { env = process.env, now = new Date(), query, fetchImpl = fetch, deliveryReader = readCronDelivery } = {}) {

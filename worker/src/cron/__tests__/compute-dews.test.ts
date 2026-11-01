@@ -18,7 +18,14 @@ vi.mock("@shared/lib/psi-eligible", () => {
     { id: "usd1-world-liberty-financial", symbol: "USD1", flags: { navToken: false, pegCurrency: "USD" } },
     { id: "eurc-euro-coin", symbol: "EURC", flags: { navToken: false, pegCurrency: "EUR" } },
   ];
-  return { PSI_ELIGIBLE_STABLECOINS: coins, PSI_ELIGIBLE_META_BY_ID: new Map(coins.map((coin) => [coin.id, coin])) };
+  // Mirror the real module: the DEWS cohort is the PSI universe less NAV tokens.
+  const dewsCoins = coins.filter((coin) => coin.flags?.navToken !== true);
+  return {
+    PSI_ELIGIBLE_STABLECOINS: coins,
+    PSI_ELIGIBLE_META_BY_ID: new Map(coins.map((coin) => [coin.id, coin])),
+    DEWS_ELIGIBLE_STABLECOINS: dewsCoins,
+    DEWS_ELIGIBLE_IDS: new Set(dewsCoins.map((coin) => coin.id)),
+  };
 });
 
 vi.mock("@shared/lib/peg-rates", () => ({
