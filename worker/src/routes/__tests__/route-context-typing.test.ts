@@ -107,7 +107,7 @@ describe("route context typing", () => {
       trustedAdmin: false,
       routeDependencies: ["feedbackEnv"] as const,
     });
-    expect(feedbackCtx.feedbackEnv).toEqual({
+    expect(feedbackCtx.feedbackEnv).toMatchObject({
       GITHUB_PAT: "ghp_demo",
       FEEDBACK_IP_SALT: "salt",
     });

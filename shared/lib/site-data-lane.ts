@@ -9,6 +9,11 @@ import {
 export const SITE_DATA_PATH_PREFIX = "/_site-data";
 export const SITE_DATA_ALLOWED_METHOD = "GET";
 export const SITE_DATA_PROXY_SECRET_HEADER = "X-Pharos-Site-Proxy-Secret";
+/**
+ * Client IP forwarded by the Pages proxy. The Worker trusts it only after the
+ * site-proxy secret is validated, so a direct caller cannot choose its bucket.
+ */
+export const SITE_DATA_CLIENT_IP_HEADER = "X-Pharos-Client-IP";
 
 export interface SiteDataUiOriginEnv {
   SITE_ORIGIN?: string;

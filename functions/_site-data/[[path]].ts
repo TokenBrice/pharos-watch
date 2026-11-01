@@ -1,6 +1,7 @@
 import { resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
 import {
   SITE_DATA_ALLOWED_METHOD,
+  SITE_DATA_CLIENT_IP_HEADER,
   SITE_DATA_PROXY_SECRET_HEADER,
   isSiteDataAllowedMethod,
   resolveSiteDataUpstreamPath,
@@ -65,6 +66,10 @@ function buildUpstreamHeaders(request: Request, env: SiteDataProxyEnv): Headers 
   const secret = env.SITE_API_SHARED_SECRET?.trim() ?? "";
   return buildUpstreamHeadersShared(request, FORWARDED_REQUEST_HEADERS, {
     [SITE_DATA_PROXY_SECRET_HEADER]: secret,
+    // The edge sets CF-Connecting-IP and strips client-supplied copies. Forward
+    // it so the Worker can key site-lane limits per reader instead of collapsing
+    // every caller into one shared bucket.
+    [SITE_DATA_CLIENT_IP_HEADER]: request.headers.get("CF-Connecting-IP") ?? "unknown",
   });
 }
 

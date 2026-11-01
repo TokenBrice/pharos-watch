@@ -120,6 +120,26 @@ describe("evaluateAccessGate", () => {
     },
   );
 
+  it("limits site-data public status history on the Pages-forwarded client IP", async () => {
+    const env = makeEnv();
+    const limit = vi.fn().mockResolvedValue({ success: false });
+    env.SAFETY_GRADES_RATE_LIMIT = { limit };
+    const request = new Request("https://site-api.pharos.watch/api/public-status-history?window=7d", {
+      headers: {
+        "X-Pharos-Site-Proxy-Secret": "site-secret",
+        "X-Pharos-Client-IP": "203.0.113.9",
+        "CF-Connecting-IP": "192.0.2.9",
+      },
+    });
+
+    const denied = await evaluateAccessGate(request, new URL(request.url), env);
+
+    expect(denied.response?.status).toBe(429);
+    expect(denied.response?.headers.get("Retry-After")).toBe("60");
+    expect(limit).toHaveBeenCalledWith({ key: "203.0.113.9" });
+    expect(apiKeyMocks.authenticateApiKey).not.toHaveBeenCalled();
+  });
+
   it("preserves Access-authenticated ops-api admin routing", async () => {
     verifyAccessJwt.mockResolvedValueOnce(true);
     const request = new Request("https://ops-api.pharos.watch/api/status", {

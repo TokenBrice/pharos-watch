@@ -197,6 +197,18 @@ describe("site-data proxy", () => {
     expect(cachePut).not.toHaveBeenCalled();
   });
 
+  it("forwards the edge-verified client IP for site-lane rate limiting", async () => {
+    const fetchSpy = siteApi.json("/api/public-status-history?window=7d", { ok: true });
+
+    const response = await onRequest(siteDataContext(new Request(
+      "https://pharos.watch/_site-data/public-status-history?window=7d",
+      { headers: { Origin: "https://pharos.watch", "CF-Connecting-IP": "203.0.113.9" } },
+    )));
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy.getHistory()[0]?.headers["x-pharos-client-ip"]).toBe("203.0.113.9");
+  });
+
   it("uses the service binding with canonical host, secret, query and attribution without resetting clocks", async () => {
     const networkFetch = mockFetch([], { requireMatch: true });
     const upstreamHeaders = {

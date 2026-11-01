@@ -3,6 +3,7 @@ import { API_KEY_DEPENDENCY_RETRY_AFTER_SEC } from "@shared/lib/ops-limits";
 import { OPS_API_HOSTNAME, SITE_API_HOSTNAME } from "@shared/lib/runtime-origins";
 import {
   SITE_DATA_ALLOWED_METHOD,
+  SITE_DATA_CLIENT_IP_HEADER,
   isSiteDataAllowedApiPath,
   isSiteDataAllowedMethod,
 } from "@shared/lib/site-data-lane";
@@ -128,11 +129,20 @@ export function handleMaintenanceMode(request: Request, env: Env): Response | nu
   );
 }
 
-async function limitAnonymousPublicationRead(request: Request, env: Env): Promise<Response | null> {
+async function limitAnonymousPublicationRead(
+  request: Request,
+  env: Env,
+  options: { siteProxy?: boolean } = {},
+): Promise<Response | null> {
+  // The Pages proxy forwards the edge-verified client IP after the shared
+  // secret authenticates the lane; direct callers cannot reach this branch.
+  const key = options.siteProxy
+    ? request.headers.get(SITE_DATA_CLIENT_IP_HEADER)?.trim()
+      || request.headers.get("CF-Connecting-IP")
+      || "unknown"
+    : request.headers.get("CF-Connecting-IP") ?? "unknown";
   try {
-    const result = await env.SAFETY_GRADES_RATE_LIMIT.limit({
-      key: request.headers.get("CF-Connecting-IP") ?? "unknown",
-    });
+    const result = await env.SAFETY_GRADES_RATE_LIMIT.limit({ key });
     return result.success ? null : errorResponse(429, "Too many requests", { retryAfterSec: 60 });
   } catch {
     return publicApiUnavailableResponse();
@@ -156,9 +166,11 @@ export async function evaluateAccessGate(
     apiKey: null,
     requestLane: "site-api",
     // Pages is a public caller of this otherwise credentialed lane. Limit its
-    // uncached scenarios too, using the Worker-visible source bucket.
+    // uncached scenarios and the live public-health assessment behind the
+    // status history, using the Pages-forwarded source bucket.
     response: url.pathname === API_PATHS.dependencyScenarios()
-      ? await limitAnonymousPublicationRead(request, env) : null,
+      || url.pathname === API_PATHS.publicStatusHistory()
+      ? await limitAnonymousPublicationRead(request, env, { siteProxy: true }) : null,
   });
 
   const isPreviewRequest = isWorkerPreviewRequest(request);

@@ -133,10 +133,15 @@ function makeRawRequest(body: BodyInit, headers: Record<string, string> = {}): R
   });
 }
 
+function makeRateLimiter(success = true): RateLimit {
+  return { limit: vi.fn(async () => ({ success })) } as unknown as RateLimit;
+}
+
 function makeEnv(overrides: Partial<FeedbackEnv> = {}): FeedbackEnv {
   return {
     GITHUB_PAT: overrides.GITHUB_PAT ?? "ghp_test_token",
     FEEDBACK_IP_SALT: overrides.FEEDBACK_IP_SALT ?? "test-salt",
+    FEEDBACK_PREAUTH_RATE_LIMIT: overrides.FEEDBACK_PREAUTH_RATE_LIMIT ?? makeRateLimiter(),
   };
 }
 
@@ -273,17 +278,53 @@ describe("handleFeedback", () => {
 
   it("returns 503 when FEEDBACK_IP_SALT is not configured", async () => {
     const db = mockD1([]);
-    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), { GITHUB_PAT: "ghp_test_token" });
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), {
+      GITHUB_PAT: "ghp_test_token",
+      FEEDBACK_PREAUTH_RATE_LIMIT: makeRateLimiter(),
+    });
 
     const body = (await readJsonResponse(res, 503)) as { error: string };
     expect(body.error).toMatch(/misconfigured/i);
+  });
+
+  it("rejects an exhausted pre-auth allowance before body or idempotency D1 work", async () => {
+    const db = mockD1([]);
+    const limiter = makeRateLimiter(false);
+    const res = await handleFeedback(
+      db,
+      makeRequest(makeFeedbackBody()),
+      makeEnv({ FEEDBACK_PREAUTH_RATE_LIMIT: limiter }),
+    );
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get("Retry-After")).toBe("60");
+    await expect(res.json()).resolves.toEqual({ error: "Too many submissions. Please wait a few minutes." });
+    expect(limiter.limit).toHaveBeenCalledWith({ key: "1.2.3.4" });
+    expect(db.getHistory()).toHaveLength(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails closed without a pre-auth rate-limit binding", async () => {
+    const db = mockD1([]);
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody()), {
+      GITHUB_PAT: "ghp_test_token",
+      FEEDBACK_IP_SALT: "test-salt",
+    });
+
+    expect(res.status).toBe(503);
+    expect(res.headers.get("Retry-After")).toBe("60");
+    expect(db.getHistory()).toHaveLength(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("retries the same key after pre-execution configuration recovers", async () => {
     const { sqlite, db } = createDurableFeedbackDb();
     queueFetch(new Response(JSON.stringify({ id: 11, number: 52 }), { status: 201 }));
 
-    const unavailable = await handleFeedback(db, makeRequest(makeFeedbackBody()), { FEEDBACK_IP_SALT: "test-salt" });
+    const unavailable = await handleFeedback(db, makeRequest(makeFeedbackBody()), {
+      FEEDBACK_IP_SALT: "test-salt",
+      FEEDBACK_PREAUTH_RATE_LIMIT: makeRateLimiter(),
+    });
     expect(unavailable.status).toBe(503);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM admin_idempotency_keys").get()).toEqual({ count: 0 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM feedback_rate_limit").get()).toEqual({ count: 0 });
@@ -344,6 +385,41 @@ describe("handleFeedback", () => {
     const issuePayload = JSON.parse(String(init?.body)) as { body: string };
     const reported = issuePayload.body.match(/\*\*Peg deviation:\*\* (-?[\d.]+)%/);
     expect(Number(reported?.[1])).toBe(deviation);
+  });
+
+  it("canonicalizes a client-supplied name from the attached stablecoin ID", async () => {
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    queueFetch(new Response(JSON.stringify({ id: 12, number: 53 }), { status: 201 }));
+
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({
+      type: "data-correction",
+      stablecoinId: "usdc-circle",
+      stablecoinName: "Tether USD",
+      description: "The peg deviation shown for this asset is wrong.",
+    })), makeEnv());
+
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const issuePayload = JSON.parse(String(init?.body)) as { title: string; body: string };
+    expect(issuePayload.title).toContain("[Data Correction] USD Coin: ");
+    expect(issuePayload.body).toContain("**Stablecoin:** USD Coin (usdc-circle)");
+    expect(issuePayload.body).not.toContain("Tether USD");
+  });
+
+  it("keeps an ID-less chain label unchanged", async () => {
+    const db = mockD1([{ match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } }]);
+    queueFetch(new Response(JSON.stringify({ id: 13, number: 54 }), { status: 201 }));
+
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({
+      type: "data-correction",
+      stablecoinName: "Ethereum",
+      description: "The chain health panel shows the wrong status for this chain.",
+    })), makeEnv());
+
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const issuePayload = JSON.parse(String(init?.body)) as { title: string };
+    expect(issuePayload.title).toContain("[Data Correction] Ethereum: ");
   });
 
   it("releases quota and terminally replays a confirmed GitHub rejection", async () => {

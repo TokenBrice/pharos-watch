@@ -137,7 +137,13 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "SAFETY_GRADES_RATE_LIMIT",
     valueType: "RateLimit",
-    description: "Cloudflare per-source rate limiter for public safety grades, dependency graph, and uncached dependency scenarios, checked before reads.",
+    description: "Cloudflare per-source rate limiter for public safety grades, dependency graph, dependency scenarios, and site-data public status history, checked before reads.",
+    runtimes: { worker: { status: "required" } },
+  },
+  {
+    key: "FEEDBACK_PREAUTH_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare per-IP rate limiter for feedback submissions, checked before the request body and idempotency bookkeeping.",
     runtimes: { worker: { status: "required" } },
   },
   {

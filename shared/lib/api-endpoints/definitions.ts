@@ -103,6 +103,11 @@ export interface EndpointDefinition {
    * this unset so meaningful dimensions stay in the cache key.
    */
   cacheKeyIgnoresQuery?: boolean;
+  /**
+   * Query parameters that participate in the edge-cache identity. The handler
+   * must read only these names; repeated or unknown parameters are ignored.
+   */
+  cacheKeyQueryParams?: readonly string[];
   /** Optional Pages ops-admin proxy timeout override for slow admin endpoints. */
   opsProxyTimeoutMs?: number;
   /** Optional semantic parser kind for status-page probes. */
@@ -339,6 +344,9 @@ const BASE_ENDPOINT_DEFINITIONS = [
     probeGroup: "public",
     // Probe a smaller detail canary than USDT to avoid oversized-history false negatives.
     probePath: API_PATHS.stablecoinDetail("pyusd-paypal"),
+    // The handler consumes only the path parameter; unknown query parameters
+    // must not create fresh provider-refresh cache keys.
+    cacheKeyIgnoresQuery: true,
   }),
   publicGet({
     key: "stablecoin-live-summary",
@@ -346,6 +354,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
     routeDependencies: ["coingeckoApiKey"],
     publicApiAccess: "site-only",
     strictContract: true,
+    cacheKeyIgnoresQuery: true,
   }),
   publicGet({
     key: "stablecoin-detail-snapshot-inputs",
@@ -405,6 +414,9 @@ const BASE_ENDPOINT_DEFINITIONS = [
     key: "public-status-history",
     path: API_PATHS.publicStatusHistory(),
     probeGroup: "public",
+    // The handler reads only these two names; keep junk parameters out of the
+    // cache identity so each one cannot force a fresh public-health assessment.
+    cacheKeyQueryParams: ["limit", "window"],
   }),
   publicGet({
     key: "blacklist",
@@ -468,6 +480,9 @@ const BASE_ENDPOINT_DEFINITIONS = [
     path: API_PATHS.dexLiquidityHistoryBase(),
     probeGroup: "public",
     probePath: API_PATHS.dexLiquidityHistoryProbe("usdt-tether"),
+    // Multi-megabyte executable-route evidence stays on the keyed public API;
+    // the frontend reads the evidence-free chart-history route instead.
+    siteDataAccess: "denied",
   }),
   publicGet({
     key: "dex-liquidity-chart-history",
@@ -946,6 +961,10 @@ export function isCacheBypassPath(path: string): boolean {
 
 export function isCacheKeyQueryFreePath(path: string): boolean {
   return QUERY_FREE_CACHE_KEY_PATHS.has(path);
+}
+
+export function getEndpointCacheKeyQueryParams(path: string): readonly string[] | null {
+  return ENDPOINT_DEFINITION_BY_PATH.get(path)?.cacheKeyQueryParams ?? null;
 }
 
 export function getEndpointDefinition(path: string): EndpointDefinition | undefined {

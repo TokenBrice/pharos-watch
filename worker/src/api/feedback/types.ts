@@ -26,6 +26,7 @@ export type VerifiedLabel = "verified: confirmed" | "verified: unconfirmed" | "v
 export interface FeedbackEnv {
   GITHUB_PAT?: string;
   FEEDBACK_IP_SALT?: string;
+  FEEDBACK_PREAUTH_RATE_LIMIT?: RateLimit;
 }
 
 export interface VerificationResult {
