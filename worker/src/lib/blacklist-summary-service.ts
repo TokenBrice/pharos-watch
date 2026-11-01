@@ -48,6 +48,8 @@ import {
 import { claimCadenceBucket, failCadenceBucket } from "./cadence-bucket";
 import { reconcileBlacklistIdentities } from "./blacklist/identity-reconciliation";
 import { BLACKLIST_PUBLIC_EVENT_SQL } from "./blacklist/shared";
+import { loadBlacklistConfigStates } from "../cron/blacklist/sync-support";
+import { getOldestBlacklistSuccessAt } from "../cron/blacklist/state";
 
 type BlacklistSummaryPayload = BlacklistSummaryResponse &
   Required<Pick<BlacklistSummaryResponse, "coverage" | "freezeLedgerMeta" | "dataQuality" | "methodology">> & {
@@ -258,7 +260,13 @@ function buildFreezeLedgerMeta(
 
   for (const snapshot of currentBalances.values()) {
     const category = sourceCategory(snapshot.source);
-    const freshness = classifyLedgerFreshness(snapshot.observedAt, now);
+    // A failed first read has no successful clock: observed_at is the attempt
+    // time, not evidence the ledger row was observed.
+    const observedAt = snapshot.lastSuccessfulObservedAt
+      ?? (snapshot.status === "resolved" && (snapshot.amountNative != null || snapshot.amountUsd != null)
+        ? snapshot.observedAt
+        : null);
+    const freshness = classifyLedgerFreshness(observedAt, now);
     incrementCount(statusDistribution, snapshot.status);
     incrementCount(sourceDistribution, snapshot.source);
     sourceCategoryCounts[category]++;
@@ -270,8 +278,10 @@ function buildFreezeLedgerMeta(
     if (snapshot.lastErrorClass) incrementCount(lastErrorClassDistribution, snapshot.lastErrorClass);
     if (snapshot.configKey || snapshot.contractAddress) scopedRows++;
     else legacyRows++;
-    oldestObservedAt = oldestObservedAt == null ? snapshot.observedAt : Math.min(oldestObservedAt, snapshot.observedAt);
-    newestObservedAt = newestObservedAt == null ? snapshot.observedAt : Math.max(newestObservedAt, snapshot.observedAt);
+    if (observedAt != null) {
+      oldestObservedAt = oldestObservedAt == null ? observedAt : Math.min(oldestObservedAt, observedAt);
+      newestObservedAt = newestObservedAt == null ? observedAt : Math.max(newestObservedAt, observedAt);
+    }
   }
 
   return {
@@ -801,7 +811,9 @@ async function materializeBlacklistSummaryForRequest(
     });
     if (claim.kind === "claimed") {
       try {
-        return await buildAndWriteBlacklistSummarySnapshot(db, now);
+        const { configStates } = await loadBlacklistConfigStates(db);
+        const { oldestSuccessAt } = getOldestBlacklistSuccessAt(configStates);
+        return await buildAndWriteBlacklistSummarySnapshot(db, now, oldestSuccessAt);
       } finally {
         await failCadenceBucket(db, claim.claim, now).catch(() => false);
       }

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
-import { PSI_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
+import { DEWS_ELIGIBLE_STABLECOINS } from "@shared/lib/psi-eligible";
 import { getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -115,11 +115,9 @@ export function buildDewsScoringResult(options: BuildDewsScoringResultOptions): 
   let insufficientDataCount = 0;
   const noCurrentSupplyIds: string[] = [];
 
-  const scored: Array<{ meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number]; input: DEWSInput; firstPass: DEWSResult }> =
+  const scored: Array<{ meta: (typeof DEWS_ELIGIBLE_STABLECOINS)[number]; input: DEWSInput; firstPass: DEWSResult }> =
     [];
-  for (const meta of PSI_ELIGIBLE_STABLECOINS) {
-    if (meta.flags?.navToken) continue;
-
+  for (const meta of DEWS_ELIGIBLE_STABLECOINS) {
     const asset = assetById.get(meta.id);
     if (!asset) continue;
 

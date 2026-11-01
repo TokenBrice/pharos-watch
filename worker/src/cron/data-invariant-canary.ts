@@ -104,7 +104,7 @@ export async function runDataInvariantCanary(
       skippedCount: summary.skippedCount,
       worstStatus: summary.worstStatus,
       worstSeverity: summary.worstSeverity,
-      reason: incomplete || executionFailed ? findingReason : "canary-checks-completed",
+      reason: operationalStatus !== "ok" ? findingReason : "canary-checks-completed",
       ...(operationalStatus === "ok" && observedStatus !== "ok"
         ? {
             quality: {

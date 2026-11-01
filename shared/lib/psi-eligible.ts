@@ -17,6 +17,11 @@ export const PSI_ELIGIBLE_META_BY_ID: ReadonlyMap<string, StablecoinMeta> = new 
 ]);
 export const PSI_ELIGIBLE_STABLECOINS: readonly StablecoinMeta[] = [...ACTIVE_STABLECOINS, ...PSI_HISTORICAL_ASSETS];
 
+/** DEWS scores the monitoring universe except NAV tokens, which are not pegged. */
+export const DEWS_ELIGIBLE_STABLECOINS: readonly StablecoinMeta[] =
+  PSI_ELIGIBLE_STABLECOINS.filter((coin) => coin.flags?.navToken !== true);
+export const DEWS_ELIGIBLE_IDS: ReadonlySet<string> = new Set(DEWS_ELIGIBLE_STABLECOINS.map((coin) => coin.id));
+
 /** Monetary aggregate used only by PSI computation and replay. */
 export const CORE_PSI_ELIGIBLE_IDS: ReadonlySet<string> = new Set([...CORE_AGGREGATE_ACTIVE_IDS, ...PSI_HISTORICAL_IDS]);
 export const CORE_PSI_ELIGIBLE_META_BY_ID: ReadonlyMap<string, StablecoinMeta> = new Map([

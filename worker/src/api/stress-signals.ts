@@ -3,6 +3,7 @@ import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { safeJsonParse } from "../lib/api-cache-read";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
+import { logWorkerEventArgs } from "../lib/structured-log";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
@@ -18,6 +19,7 @@ import {
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { WORKER_ACTIVE_IDS as ACTIVE_IDS, WORKER_READABLE_IDS as READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { DEWS_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
 
 import type {
@@ -33,6 +35,9 @@ interface AggregateCoverage {
 
 const STRESS_SIGNALS_MAX_AGE_SEC = API_FRESHNESS_MAX_AGE_SEC.stressSignals;
 const STRESS_SIGNALS_LATEST_FALLBACK_AGE_SEC = STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC;
+const DEWS_SCOREABLE_ACTIVE_IDS: ReadonlySet<string> = new Set(
+  [...ACTIVE_IDS].filter((stablecoinId) => DEWS_ELIGIBLE_IDS.has(stablecoinId)),
+);
 
 function classifyStressSignalAge(
   computedAt: number,
@@ -66,11 +71,13 @@ function buildAggregateCoverage(input: {
   computedCount: number;
   missingCount: number;
   malformedRows: number;
+  readFailure: StressSignalDataReason | null;
 }): AggregateCoverage {
   const reasons: StressSignalDataReason[] = [];
 
+  if (input.readFailure) reasons.push(input.readFailure);
   if (input.rawRows === 0) {
-    reasons.push("no-current-rows");
+    if (!input.readFailure) reasons.push("no-current-rows");
   } else if (input.readableRows === 0) {
     reasons.push("no-readable-current-rows");
   } else if (input.computedCount === 0 && input.malformedRows > 0) {
@@ -114,8 +121,17 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
       // Single coin: latest valid row + daily history. computeDEWS() can return
       // null for insufficient data; those runs skip writes, so this naturally
       // serves the last valid cached value.
+      let readFailure: StressSignalDataReason | null = null;
       const latest = await loadStressSignalCurrentRowForCoin(db, canonicalId, nowSec, {
         staleAfterSec: STRESS_SIGNALS_LATEST_FALLBACK_AGE_SEC,
+        onGenerationUnavailable: (reason) => {
+          readFailure = "publication-pointer-unavailable";
+          logWorkerEventArgs("api", "warn", "[stress-signals] Published generation pointer unavailable:", reason);
+        },
+        onReadError: (error) => {
+          readFailure = "current-rows-read-failed";
+          logWorkerEventArgs("api", "warn", "[stress-signals] Current row read failed:", error);
+        },
       });
 
       const cutoff = nowSec - days * DAY_SECONDS;
@@ -146,12 +162,16 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
       const currentUnwrapped = unwrapStressSignalsEnvelope(currentParsed);
       if (latest && currentUnwrapped == null) malformedRows++;
       const currentReasons: StressSignalDataReason[] = [];
+      if (readFailure) currentReasons.push(readFailure);
       if (!latest) {
-        currentReasons.push("single-coin-current-row-missing", "computed-count-zero");
+        if (!readFailure) currentReasons.push("single-coin-current-row-missing");
+        currentReasons.push("computed-count-zero");
       } else if (currentUnwrapped == null) {
         currentReasons.push("current-row-malformed", "computed-count-zero");
       }
-      const currentStatus: StressSignalDataStatus = currentUnwrapped == null ? "unavailable" : "ok";
+      const currentStatus: StressSignalDataStatus = currentUnwrapped == null
+        ? "unavailable"
+        : readFailure != null ? "degraded" : "ok";
 
       const historyRows = history.results.map((r) => {
         const parsed = safeJsonParse<Record<string, unknown> | null>(
@@ -218,8 +238,17 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
     }
 
     // All coins: latest valid row per coin.
+    let readFailure: StressSignalDataReason | null = null;
     const rows = await loadStressSignalCurrentRows(db, nowSec, {
       staleAfterSec: STRESS_SIGNALS_LATEST_FALLBACK_AGE_SEC,
+      onGenerationUnavailable: (reason) => {
+        readFailure = "publication-pointer-unavailable";
+        logWorkerEventArgs("api", "warn", "[stress-signals] Published generation pointer unavailable:", reason);
+      },
+      onReadError: (error) => {
+        readFailure = "current-rows-read-failed";
+        logWorkerEventArgs("api", "warn", "[stress-signals] Current row read failed:", error);
+      },
     });
 
     const signals: Record<string, object> = {};
@@ -237,7 +266,7 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
       methodologyVersion: string;
     }> = [];
     for (const row of rows.results) {
-      if (!ACTIVE_IDS.has(row.stablecoin_id)) {
+      if (!DEWS_SCOREABLE_ACTIVE_IDS.has(row.stablecoin_id)) {
         continue;
       }
       readableRows.add(row.stablecoin_id);
@@ -283,7 +312,7 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
       };
     }
 
-    const eligibleCount = ACTIVE_IDS.size;
+    const eligibleCount = DEWS_SCOREABLE_ACTIVE_IDS.size;
     const computedCount = validRows.length;
     const missingCount = Math.max(0, eligibleCount - readableRows.size);
     const coverageRatio = eligibleCount > 0 ? Number((computedCount / eligibleCount).toFixed(4)) : 0;
@@ -293,6 +322,7 @@ export const handleStressSignals = async (db: D1Database, url: URL): Promise<Res
       computedCount,
       missingCount,
       malformedRows,
+      readFailure,
     });
 
     const asOf = updatedAt > 0 ? updatedAt : 0;

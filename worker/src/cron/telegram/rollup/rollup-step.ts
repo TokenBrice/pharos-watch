@@ -377,7 +377,13 @@ export async function runDailyRollup(db: D1Database, nowSec: number): Promise<Te
       lastRollupLocalDate: row.last_rollup_local_date,
     }, nowSec);
     if (localDate == null) continue;
-    due.push({ row, localDate, sinceSec: row.last_rollup_at ?? nowSec - TELEGRAM_ALERT_POLICY.rollup.firstWindowSec });
+    // A marker older than change-log retention describes a window whose earlier
+    // changes were pruned, so start from the first-roll-up window instead.
+    const sinceSec = row.last_rollup_at != null
+      && nowSec - row.last_rollup_at <= TELEGRAM_ALERT_POLICY.rollup.changeLogRetentionSec
+      ? row.last_rollup_at
+      : nowSec - TELEGRAM_ALERT_POLICY.rollup.firstWindowSec;
+    due.push({ row, localDate, sinceSec });
   }
   result.dueChats = due.length;
   const batch = due.slice(0, ROLLUP_MAX_CHATS_PER_RUN);

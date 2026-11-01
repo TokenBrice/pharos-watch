@@ -115,6 +115,24 @@ describe("daily roll-up", () => {
     }
   });
 
+  it("does not report a window pruned by a pause longer than change-log retention", async () => {
+    const { sqlite, db, subscriber, follow, deliveries, state } = fixture();
+    try {
+      subscriber.run("1", null, 0, null, null, 0, 0);
+      follow.run("1", "usdx", 1, 0);
+      sqlite.prepare("INSERT INTO telegram_rollup_state VALUES ('1', '2026-10-10', ?)")
+        .run(DAY1_0905Z - 10 * 86_400);
+      // The A- -> B leg was pruned; only the retained B -> A- leg remains.
+      await recordTelegramChangeLog(db, [safety("usdx", "B", "A-", DAY1_0905Z - 1.5 * 86_400)]);
+
+      expect(await runDailyRollup(db, DAY1_0905Z)).toMatchObject({ sentChats: 0, emptyChats: 1 });
+      expect(deliveries()).toEqual([]);
+      expect(state("1")).toMatchObject({ last_rollup_at: DAY1_0905Z });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("skips paused chats and gates the scan to one per 15-minute bucket", async () => {
     const { sqlite, db, subscriber } = fixture();
     try {

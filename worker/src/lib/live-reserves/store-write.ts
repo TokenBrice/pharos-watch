@@ -30,6 +30,7 @@ import {
   buildReserveCompositionHistoryInsertStatement,
   buildReserveCompositionFinalizeSuccessStatement,
   buildReserveSuccessAuthoritativeReadbackStatement,
+  buildReserveSyncAttemptFinalizationReadbackStatement,
   buildReserveSyncAttemptHistoryInsertStatement,
   buildReserveSyncAttemptStartStatement,
   buildReserveSyncFinalizeAttemptStatement,
@@ -240,22 +241,33 @@ export async function finalizeReserveSyncAttempt(
   if (Date.now() > deadlineMs) throw new Error("Reserve attempt finalization deadline expired");
   const config = WORKER_TRACKED_META_BY_ID.get(syncState.stablecoinId)?.liveReservesConfig;
   const configFingerprint = syncState.configFingerprint ?? (config ? computeLiveReserveConfigFingerprint(config) : null);
-  const [finalizeResult] = await executeAtomicBatch(db, [
-    buildReserveSyncFinalizeAttemptStatement(db, { ...syncState, configFingerprint }, deadlineMs),
-    buildReserveSyncAttemptHistoryInsertStatement(db, {
-      stablecoinId: syncState.stablecoinId,
-      attemptedAt: syncState.lastAttemptedAt ?? Math.floor(Date.now() / 1000),
-      adapterKey: syncState.adapterKey,
-      breakerKey: syncState.breakerKey,
-      status: syncState.lastStatus,
-      warningCount: syncState.warningCount,
-      warnings: syncState.warnings,
-      lastError: syncState.lastError,
-      metadata: syncState.metadata,
-      attemptId: syncState.lastAttemptId ?? null,
-    }),
-  ], { returnResults: true });
-  return { finalized: (finalizeResult.meta.changes ?? 0) > 0 };
+  const authoritativeReadback = () => runWithOverloadRetry(() =>
+    buildReserveSyncAttemptFinalizationReadbackStatement(db, syncState).first<{ finalized: number }>(),
+  );
+  let finalized = false;
+  try {
+    const [finalizeResult] = await executeAtomicBatch(db, [
+      buildReserveSyncFinalizeAttemptStatement(db, { ...syncState, configFingerprint }, deadlineMs),
+      buildReserveSyncAttemptHistoryInsertStatement(db, {
+        stablecoinId: syncState.stablecoinId,
+        attemptedAt: syncState.lastAttemptedAt ?? Math.floor(Date.now() / 1000),
+        adapterKey: syncState.adapterKey,
+        breakerKey: syncState.breakerKey,
+        status: syncState.lastStatus,
+        warningCount: syncState.warningCount,
+        warnings: syncState.warnings,
+        lastError: syncState.lastError,
+        metadata: syncState.metadata,
+        attemptId: syncState.lastAttemptId ?? null,
+      }),
+    ], { returnResults: true });
+    finalized = (finalizeResult.meta.changes ?? 0) > 0;
+  } catch (error) {
+    if ((await authoritativeReadback().catch(() => null))?.finalized === 1) return { finalized: true };
+    throw error;
+  }
+  if (!finalized && (await authoritativeReadback())?.finalized === 1) finalized = true;
+  return { finalized };
 }
 
 async function loadStringColumn(

@@ -70,6 +70,7 @@ function makeBlacklistSummaryFallbackTables() {
     { match: "blacklist-gap-source-distribution", rows: [] },
     { match: "blacklist-gap-metrics-cache-write", rows: [] },
     { match: "blacklist-reconciliation-status-latest", rows: [], first: null },
+    { match: "FROM blacklist_sync_state", rows: [] },
     { match: "cron_runs", rows: [], first: null },
     { match: "blacklist-summary-snapshot-write", rows: [] },
   ];
