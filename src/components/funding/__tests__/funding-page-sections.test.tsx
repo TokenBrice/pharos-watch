@@ -112,7 +112,7 @@ describe("DonorList", () => {
       tx_hash: `0x${index.toString(16).padStart(4, "0")}`,
       block_timestamp: now - index * 60,
       from_address: `0x${index % 10}`,
-      display: null,
+      display: `donor-${index % 10}`,
       kind: "community",
       asset_symbol: "ETH",
       token_address: null,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SafetyScoreV9CurrentCard, V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
+import type { V9PublicationHoldReason } from "@shared/types/report-cards-v9";
 import { COVERAGE_GAP_OWNER_SWATCH_CLASSES } from "@shared/lib/classification";
 import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "@shared/types/safety-score-v9-vocabulary";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -432,7 +433,7 @@ describe("describeDataCoverageHoldCauses", () => {
       reasonCode: "missing-applicable-peg", path: "reserves", effect: "pipeline-gap",
     },
     { code: "assessment-failed", detail: "internal validator detail" },
-  ] as const)("names a reader-facing cause for a $code hold", (reason) => {
+  ] as readonly V9PublicationHoldReason[])("names a reader-facing cause for a $code hold", (reason) => {
     const causes = describeDataCoverageHoldCauses([reason]);
     expect(causes.length).toBeGreaterThan(0);
     expect(causes.join(" ")).not.toContain(reason.code);

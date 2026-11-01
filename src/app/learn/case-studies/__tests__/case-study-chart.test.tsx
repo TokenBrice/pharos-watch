@@ -9,7 +9,7 @@ import { getCaseStudyChartDays } from "@/lib/case-study-event-window";
 const mocks = vi.hoisted(() => ({
   useSupplyHistory: vi.fn(() => ({
     data: [{ date: 1_700_000_000, circulatingUsd: 1_000_000, price: 0.99 }],
-    error: null,
+    error: null as Error | null,
     isLoading: false,
   })),
   pegDeviationChart: vi.fn(),

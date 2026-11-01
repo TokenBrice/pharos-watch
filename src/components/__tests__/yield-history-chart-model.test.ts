@@ -195,7 +195,7 @@ describe("yield history transformations", () => {
     expect(result.current.spikeAnnotations.some((spike) => spike.date === BASE + 60 * DAY)).toBe(false);
     for (const spike of result.current.spikeAnnotations) {
       const points = historyBySource.get("best")!.filter(
-        (entry) => entry.date < spike.date && entry.date >= spike.date - spike.windowDays * DAY,
+        (entry) => Number(entry.date) < spike.date && Number(entry.date) >= spike.date - spike.windowDays * DAY,
       );
       const expected = points.reduce((sum, entry) => sum + entry.apy, 0) / points.length;
       expect(spike.trailingAvg).toBeCloseTo(expected, 10);
