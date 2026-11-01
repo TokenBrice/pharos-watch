@@ -33,6 +33,8 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 interface FlowChartProps {
   hourly: MintBurnHourlyBucket[];
   isLoading: boolean;
+  /** Published closed-hour window; absent on pre-cutover payloads. */
+  publishedWindow?: { start: number; end: number };
 }
 
 interface ChartDatum {
@@ -123,6 +125,7 @@ interface AggregatedBucket {
 function aggregateBuckets(
   sorted: MintBurnHourlyBucket[],
   bucketSeconds: number,
+  publishedWindow?: { start: number; end: number },
 ): AggregatedBucket[] {
   if (sorted.length === 0) return [];
   const byBucket = new Map<
@@ -147,20 +150,24 @@ function aggregateBuckets(
   const result: AggregatedBucket[] = [];
   for (let bucketTs = startBucket; bucketTs <= endBucket; bucketTs += bucketSeconds) {
     const entry = byBucket.get(bucketTs);
+    // A bucket only partly inside the published window has observed subtotals, not a full period.
+    const coveredSeconds = publishedWindow
+      ? Math.min(bucketTs + bucketSeconds, publishedWindow.end) - Math.max(bucketTs, publishedWindow.start)
+      : bucketSeconds;
     result.push({
       ts: bucketTs * 1000,
       mint: entry?.mint ?? null,
       burn: entry?.burn ?? null,
       net: entry?.net ?? null,
       valuation: entry?.valuation ?? null,
-      scanComplete: entry?.scanComplete ?? false,
+      scanComplete: (entry?.scanComplete ?? false) && coveredSeconds >= bucketSeconds,
       isInterpolated: entry == null,
     });
   }
   return result;
 }
 
-export function FlowChart({ hourly, isLoading }: FlowChartProps) {
+export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps) {
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const prefersReducedMotion = usePrefersReducedMotion();
   const entranceMs = useMotionDurationMs();
@@ -195,7 +202,8 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   const chartData = useMemo<ChartDatum[]>(() => {
     if (hourly.length === 0) return [];
     const sorted = [...hourly].sort((a, b) => a.hourTs - b.hourTs);
-    const buckets = aggregateBuckets(sorted, bucketSeconds);
+    // Only the 30d daily re-bucketing can straddle the published window's edges.
+    const buckets = aggregateBuckets(sorted, bucketSeconds, useDailyBuckets ? publishedWindow : undefined);
 
     // 7-bucket trailing window for rolling-net band. Window scales with cadence
     // so the daily view shows a 7-day band; hourly view shows a 7-hour band.
@@ -233,7 +241,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
       });
     }
     return result;
-  }, [hourly, bucketSeconds]);
+  }, [hourly, bucketSeconds, useDailyBuckets, publishedWindow]);
 
   const hasInterpolated = useMemo(() => chartData.some((d) => d.isInterpolated), [chartData]);
   const partialBuckets = useMemo(

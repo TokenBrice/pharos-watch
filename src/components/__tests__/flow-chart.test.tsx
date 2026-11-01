@@ -184,6 +184,67 @@ describe("FlowChart", () => {
     expect(tooltipMarkup()).toContain("Nov 1, 2026, 12:00 AM");
   });
 
+  it("qualifies only the 30d window's partial edge days as observed subtotals", () => {
+    const windowStart = Date.UTC(2026, 9, 2, 16) / 1000;
+    const windowEnd = windowStart + 30 * 86_400;
+    render(
+      <FlowChart
+        isLoading={false}
+        publishedWindow={{ start: windowStart, end: windowEnd }}
+        hourly={[
+          { hourTs: windowStart, mintVolumeUsd: 10, burnVolumeUsd: 0, netFlowUsd: 10, valuation: "complete" },
+          { hourTs: windowStart + 2 * 86_400, mintVolumeUsd: 20, burnVolumeUsd: 0, netFlowUsd: 20, valuation: "complete" },
+          { hourTs: windowEnd - 3_600, mintVolumeUsd: 30, burnVolumeUsd: 0, netFlowUsd: 30, valuation: "complete" },
+        ]}
+      />,
+    );
+
+    expect(chartState.data).toHaveLength(31);
+    expect(chartState.data[0]).toMatchObject({
+      ts: Date.UTC(2026, 9, 2),
+      mint: 10,
+      net: 10,
+      scanComplete: false,
+    });
+    expect(chartState.data[2]).toMatchObject({ mint: 20, net: 20, scanComplete: true });
+    expect(chartState.data[30]).toMatchObject({
+      ts: Date.UTC(2026, 10, 1),
+      mint: 30,
+      net: 30,
+      scanComplete: false,
+    });
+
+    const firstRow = screen.getAllByRole("row")[1];
+    expect(within(firstRow).getAllByRole("rowheader").map((cell) => cell.textContent)).toEqual(["Oct 2, 00:00"]);
+    expect(within(firstRow).getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
+      "≥ $10",
+      "≥ $0",
+      "$10",
+      "$10",
+      "Complete",
+      "Observed subtotals",
+    ]);
+    const lastRow = screen.getAllByRole("row").at(-1)!;
+    expect(within(lastRow).getAllByRole("cell")[5].textContent).toBe("Observed subtotals");
+  });
+
+  it("leaves daily edge buckets complete without a published window", () => {
+    const windowStart = Date.UTC(2026, 9, 2, 16) / 1000;
+    const windowEnd = windowStart + 30 * 86_400;
+    render(
+      <FlowChart
+        isLoading={false}
+        hourly={[
+          { hourTs: windowStart, mintVolumeUsd: 10, burnVolumeUsd: 0, netFlowUsd: 10 },
+          { hourTs: windowEnd - 3_600, mintVolumeUsd: 30, burnVolumeUsd: 0, netFlowUsd: 30 },
+        ]}
+      />,
+    );
+
+    expect(chartState.data[0]).toMatchObject({ net: 10, scanComplete: true });
+    expect(chartState.data.at(-1)).toMatchObject({ net: 30, scanComplete: true });
+  });
+
   it("renders daily bucket labels in UTC regardless of the viewer timezone", () => {
     const dayTs = Date.UTC(2026, 9, 1) / 1000;
     render(<FlowChart isLoading={false} hourly={[
