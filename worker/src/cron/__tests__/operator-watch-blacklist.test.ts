@@ -33,9 +33,9 @@ describe("blacklist config watch conditions", () => {
     const result = await loadBlacklistConfigWatchConditions(db, NOW);
 
     expect(result.readFailed).toBe(false);
-    expect(result.conditions.find((condition) => condition.id === `sync-blacklist:${config.configKey}`))
+    expect(result.conditions.find((condition) => condition.id === config.configKey))
       .toMatchObject({
-        section: "producer",
+        section: "blacklist-config",
         active: true,
         label: expect.stringContaining(config.stablecoin),
       });
@@ -49,7 +49,7 @@ describe("blacklist config watch conditions", () => {
 
     const result = await loadBlacklistConfigWatchConditions(db, NOW);
 
-    expect(result.conditions.find((condition) => condition.id === `sync-blacklist:${config.configKey}`))
+    expect(result.conditions.find((condition) => condition.id === config.configKey))
       .toMatchObject({ active: false });
   });
 
@@ -61,10 +61,25 @@ describe("blacklist config watch conditions", () => {
 
     const result = await loadBlacklistConfigWatchConditions(db, NOW);
 
-    expect(result.conditions.find((condition) => condition.id === `sync-blacklist:${config.configKey}`))
+    expect(result.conditions.find((condition) => condition.id === config.configKey))
       .toMatchObject({
         active: true,
         label: expect.stringContaining("never succeeded"),
+      });
+  });
+
+  it("does not treat a future last-success clock as fresh evidence", async () => {
+    const db = mockD1([{
+      match: "FROM blacklist_sync_state",
+      rows: [syncStateRow(NOW + 10 * 86_400, NOW - 60)],
+    }]);
+
+    const result = await loadBlacklistConfigWatchConditions(db, NOW);
+
+    expect(result.conditions.find((condition) => condition.id === config.configKey))
+      .toMatchObject({
+        active: true,
+        label: expect.stringContaining("in the future"),
       });
   });
 

@@ -415,7 +415,7 @@ export interface OperatorWatchCondition {
   unknown?: boolean;
 }
 
-export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "supply" | "canary" | "probe" | "fx-rates" | "daily-lane" | "producer-quality" | "psi-daily-coverage";
+export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "supply" | "canary" | "probe" | "fx-rates" | "daily-lane" | "producer-quality" | "psi-daily-coverage" | "blacklist-config" | "mint-burn-config";
 
 const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; recovered: string }> = {
   producer: { raised: "Stale producers", recovered: "Recovered producers" },
@@ -429,28 +429,34 @@ const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; re
   "daily-lane": { raised: "Daily pricing lanes incomplete", recovered: "Daily pricing lanes complete" },
   "producer-quality": { raised: "Producer quality regressions", recovered: "Producer quality recovered" },
   "psi-daily-coverage": { raised: "Daily PSI sample coverage low", recovered: "Daily PSI sample coverage restored" },
+  "blacklist-config": { raised: "Stale blacklist configs", recovered: "Blacklist configs recovered" },
+  "mint-burn-config": { raised: "Stuck mint/burn configs", recovered: "Mint/burn configs recovered" },
 };
 
-// Every section can raise and recover in one message: at most two lines per
-// section (raised/recovered). Budget each line from the repo's conservative
-// chunk limit so a systemic detail-write cohort cannot exceed Telegram's
-// sendMessage cap and block every pending transition in the same message.
-const OPERATOR_ALERT_SECTION_LINES = Object.keys(OPERATOR_SECTION_TITLES).length * 2;
-const OPERATOR_ALERT_SECTION_CHARS =
-  Math.floor(TELEGRAM_MESSAGE_CHUNK_LIMIT / OPERATOR_ALERT_SECTION_LINES) - 16;
+const OPERATOR_ALERT_HEADER = "<b>Pharos freshness watchdog</b>\n\n";
 
-function boundedOperatorSection(title: string, labels: readonly string[]): string {
+// Every section can raise and recover in one message, so at most two lines per
+// section (raised/recovered) are emitted. Budget each emitted line from the
+// repo's conservative chunk limit so a systemic detail-write cohort cannot
+// exceed Telegram's sendMessage cap and block every pending transition in the
+// same message, while a quiet message keeps its labels readable.
+function operatorSectionCharBudget(lineCount: number): number {
+  const lines = Math.max(1, lineCount);
+  return Math.floor((TELEGRAM_MESSAGE_CHUNK_LIMIT - OPERATOR_ALERT_HEADER.length - lines) / lines) - 8;
+}
+
+function boundedOperatorSection(title: string, labels: readonly string[], budgetChars: number): string {
   const prefix = `<b>${title}</b>: `;
   const escaped = labels.map(escapeHtml);
   const full = `${prefix}${escaped.join(", ")}`;
-  if (full.length <= OPERATOR_ALERT_SECTION_CHARS) return full;
+  if (full.length <= budgetChars) return full;
   const shown: string[] = [];
   let length = prefix.length;
   for (const label of escaped) {
     const separator = shown.length > 0 ? ", " : "";
     const hiddenAfter = escaped.length - shown.length - 1;
     const suffix = hiddenAfter > 0 ? `, +${hiddenAfter} more` : "";
-    if (length + separator.length + label.length + suffix.length > OPERATOR_ALERT_SECTION_CHARS) break;
+    if (length + separator.length + label.length + suffix.length > budgetChars) break;
     length += separator.length + label.length;
     shown.push(label);
   }
@@ -517,6 +523,8 @@ async function alertOnFreshnessTransitions(params: {
   ]);
   const previous = parseProducerFreshnessState(stateCache?.value);
   const next: ProducerFreshnessState = {};
+  /** Conditions evaluated this run; an absent key is the recovery signal. */
+  const seen = new Set<string>();
   const stale: string[] = [];
   const recovered: string[] = [];
   const raisedLines = new Map<OperatorWatchSection, string[]>();
@@ -527,6 +535,7 @@ async function alertOnFreshnessTransitions(params: {
 
   for (const condition of params.conditions) {
     const key = conditionKey(condition);
+    seen.add(key);
     const current = condition.active ? "stale" : "ok";
     const prior = previous[key] ?? "ok";
     if (condition.unknown) {
@@ -547,7 +556,7 @@ async function alertOnFreshnessTransitions(params: {
   const unknown = new Set(params.unknownSections ?? []);
   for (const [key, prior] of Object.entries(previous)) {
     const section = sectionOfKey(key);
-    if (section === "producer" || key in next) continue;
+    if (section === "producer" || seen.has(key)) continue;
     if (unknown.has(section)) {
       next[key] = prior;
       continue;
@@ -567,17 +576,20 @@ async function alertOnFreshnessTransitions(params: {
     return { stale, recovered, sent: false, cooldown, credentialsMissing: !params.operatorTelegramCreds };
   }
 
-  const sections = (Object.keys(OPERATOR_SECTION_TITLES) as OperatorWatchSection[]).flatMap((section) => [
+  const sectionEntries = (Object.keys(OPERATOR_SECTION_TITLES) as OperatorWatchSection[]).flatMap((section) => [
     raisedLines.has(section)
-      ? boundedOperatorSection(OPERATOR_SECTION_TITLES[section].raised, raisedLines.get(section)!)
+      ? { title: OPERATOR_SECTION_TITLES[section].raised, labels: raisedLines.get(section)! }
       : null,
     recoveredLines.has(section)
-      ? boundedOperatorSection(OPERATOR_SECTION_TITLES[section].recovered, recoveredLines.get(section)!)
+      ? { title: OPERATOR_SECTION_TITLES[section].recovered, labels: recoveredLines.get(section)! }
       : null,
-  ]).filter((section): section is string => section != null);
+  ]).filter((entry): entry is { title: string; labels: string[] } => entry != null);
+  const sectionBudget = operatorSectionCharBudget(sectionEntries.length);
+  const sections = sectionEntries.map((entry) =>
+    boundedOperatorSection(entry.title, entry.labels, sectionBudget));
   const delivery = await deliverOperatorAlert(
     params.operatorTelegramCreds,
-    `<b>Pharos freshness watchdog</b>\n\n${sections.join("\n")}`,
+    `${OPERATOR_ALERT_HEADER}${sections.join("\n")}`,
     params.signal,
   );
   if (!delivery.ok) {
@@ -659,6 +671,10 @@ export async function runCronStalenessWatchdog(
   const psiDailyCoverage = await loadPsiDailyCoverage(db, nowSec, signal);
   const psiDailyCoverageEvaluated =
     psiDailyCoverage.status === "ok" || psiDailyCoverage.status === "shortfall";
+  const [blacklistConfigWatch, mintBurnStuckWatch] = await Promise.all([
+    loadBlacklistConfigWatchConditions(db, nowSec, signal),
+    loadMintBurnStuckConfigWatchConditions(db, signal),
+  ]);
   const unknownSections: OperatorWatchSection[] = [
     ...(safetyPublication.ok ? [] : ["safety-publication" as const]),
     ...(supplyWatch.ok ? [] : ["supply" as const]),
@@ -666,16 +682,14 @@ export async function runCronStalenessWatchdog(
     ...(probeWatch.unknown ? ["probe" as const] : []),
     ...(dexYieldWatch == null ? ["producer-quality" as const] : []),
     ...(psiDailyCoverageEvaluated ? [] : ["psi-daily-coverage" as const]),
+    ...(blacklistConfigWatch.readFailed ? ["blacklist-config" as const] : []),
+    ...(mintBurnStuckWatch.readFailed ? ["mint-burn-config" as const] : []),
   ];
   const pricingConditions = await buildPricingOperatorConditions(
     db,
     { caches: status.caches, nowSec },
     signal,
   );
-  const [blacklistConfigWatch, mintBurnStuckWatch] = await Promise.all([
-    loadBlacklistConfigWatchConditions(db, nowSec, signal),
-    loadMintBurnStuckConfigWatchConditions(db, signal),
-  ]);
   const blacklistConfigStale = blacklistConfigWatch.conditions.some((condition) => condition.active);
   const mintBurnConfigStuck = mintBurnStuckWatch.conditions.some((condition) => condition.active);
   const producerQualityConditions = dexYieldWatch?.conditions ?? [];

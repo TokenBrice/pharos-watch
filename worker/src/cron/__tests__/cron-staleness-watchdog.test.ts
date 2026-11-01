@@ -35,6 +35,8 @@ import { WORKER_ACTIVE_IDS, WORKER_READABLE_IDS } from "@shared/lib/stablecoins/
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { ACTIVE_CANARY_CHECK_IDS } from "../../lib/canary-checks";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import {
   CRON_STALENESS_ALERT_COOLDOWN_SEC,
   deriveCronFreshnessProducers,
@@ -59,6 +61,7 @@ interface FakeOperatorWatchRows {
   canaryRows?: Array<Record<string, unknown>>;
   probeRow?: Record<string, unknown> | null;
   psiDailyRow?: { computed_at: number; input_snapshot: string } | null;
+  blacklistReadError?: boolean;
 }
 
 function defaultBlacklistSyncState(nowSec: number) {
@@ -158,6 +161,7 @@ function fakeDb(
           })) };
         }
         if (sql.includes("FROM blacklist_sync_state")) {
+          if (operatorWatch.blacklistReadError) throw new Error("D1 unavailable");
           return {
             results: blacklistSyncState ?? defaultBlacklistSyncState(Math.floor(Date.now() / 1000)),
           };
@@ -272,7 +276,7 @@ describe("cron staleness watchdog", () => {
 
     const raised = await runCronStalenessWatchdog(db, undefined, options);
     expect(sendToChatMock).toHaveBeenCalledTimes(1);
-    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Stale producers");
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Stale blacklist configs");
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain(config.stablecoin);
     expect(JSON.parse(raised.metadata ?? "{}").firedRuleIds).toContain("blacklist-config-stale");
     expect(JSON.parse(raised.metadata ?? "{}").quality.reasons).toContain("blacklist-config-stale");
@@ -282,11 +286,91 @@ describe("cron staleness watchdog", () => {
     for (const state of states) state.last_succeeded_at = recoveredAt - 60;
     const recovered = await runCronStalenessWatchdog(db, undefined, options);
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
-    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Recovered producers");
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Blacklist configs recovered");
     expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions).toMatchObject({
-      recovered: [`sync-blacklist:${config.configKey}`],
+      recovered: [`blacklist-config:${config.configKey}`],
       sent: true,
     });
+  });
+
+  it("holds a stale blacklist config through a failed watch read and recovers it once", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    const config = CONTRACT_CONFIGS.find((candidate) => WORKER_ACTIVE_IDS.has(candidate.stablecoinId))!;
+    const states = defaultBlacklistSyncState(now);
+    for (const state of states) {
+      if (state.config_key === config.configKey) state.last_succeeded_at = now - 12 * 3600 - 1;
+    }
+    const operatorWatch: FakeOperatorWatchRows = {};
+    const db = fakeDb([], undefined, operatorWatch, states);
+    mockCacheStatus({});
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
+    operatorWatch.blacklistReadError = true;
+    const blind = await runCronStalenessWatchdog(db, undefined, options);
+    const blindMetadata = JSON.parse(blind.metadata ?? "{}");
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(blindMetadata.alertTransitions.recovered).toEqual([]);
+    expect(blindMetadata.quality.reasons).toContain("blacklist-config-watch-unavailable");
+
+    operatorWatch.blacklistReadError = false;
+    for (const state of states) state.last_succeeded_at = Math.floor(Date.now() / 1000) - 60;
+    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions).toMatchObject({
+      recovered: [`blacklist-config:${config.configKey}`],
+      sent: true,
+    });
+  });
+
+  it("reports a stuck mint/burn config recovering once it advances again", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    mockCacheStatus({});
+    const { sqlite, db } = openFixture();
+    const config = MINT_BURN_CONFIGS.find(
+      (candidate) => candidate.enabled !== false && WORKER_ACTIVE_IDS.has(candidate.stablecoinId),
+    )!;
+    const configKey = mintBurnConfigKey(config);
+    const stateKey = "mint-burn:attempt-state:sync-mint-burn-extended";
+    const attemptState = (consecutiveIncomplete: number) => {
+      const now = Math.floor(Date.now() / 1000);
+      return JSON.stringify({
+        version: 1,
+        updatedAt: now - 60,
+        entries: {
+          [configKey]: {
+            firstObservedAt: now - 86_400,
+            lastAttemptedAt: now - 60,
+            lastDisposition: "attempted",
+            providerDeferredUntil: null,
+            consecutiveIncomplete,
+          },
+        },
+      });
+    };
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(stateKey, attemptState(2), Math.floor(Date.now() / 1000) - 60);
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
+    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock.mock.calls[0]?.[1] ?? "").toContain("Stuck mint/burn configs");
+    expect(JSON.parse(raised.metadata ?? "{}").alertTransitions.stale)
+      .toContain(`mint-burn-config:${configKey}`);
+
+    vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
+    sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?")
+      .run(attemptState(0), Math.floor(Date.now() / 1000) - 60, stateKey);
+    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1] ?? "").toContain("Mint/burn configs recovered");
+    expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions.recovered)
+      .toContain(`mint-burn-config:${configKey}`);
   });
 
   it("alerts a held Safety Score publication and keeps it pending while the health read fails", async () => {
@@ -500,11 +584,10 @@ describe("cron staleness watchdog", () => {
     const text = String(sendToChatMock.mock.calls[0]?.[1] ?? "");
     expect(text).toContain("FX rate publication degraded");
     expect(text).toContain("peggedEUR business-daily reference is 2 publishes behind");
-    // The section registry now carries ten sections (twenty raised/recovered
-    // lines), so the derived per-line budget bounds the second FX label as
-    // `+N more`; both FX rules still fire and are asserted below.
+    // The per-line budget derives from the lines actually emitted, so this
+    // short message keeps both FX labels; the cap guard covers the systemic case.
     expect(text).toContain("<b>FX rate publication degraded</b>: source stale: ");
-    expect(text).toContain("+1 more");
+    expect(text).toContain("cached fallback (3 consecutive runs)");
     expect(text).toContain("Daily pricing lanes incomplete");
     expect(JSON.parse(raised.metadata ?? "{}").alertTransitions).toMatchObject({
       stale: expect.arrayContaining(["fx-rates:source-stale", "fx-rates:cached-fallback"]),

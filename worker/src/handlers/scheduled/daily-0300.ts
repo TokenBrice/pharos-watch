@@ -31,6 +31,8 @@ function buildDaily0300SlotGroups(runtime: ScheduledRuntimeContext) {
       "cron-sentinel": (signal) => runDailyCronSentinel(runtime.db, {
         nowSec: Math.floor(Date.now() / 1_000),
         repairRunnerEnabled: ddrRepairTaskRunner.enabled,
+        mintBurnDisabledIds: runtime.mintBurnDisabledIds,
+        mintBurnDisabledSymbols: runtime.mintBurnDisabledSymbols,
         signal,
       }),
       "prune-status-probe-runs": (signal) => runPruneStatusProbeRuns(runtime.db, signal),

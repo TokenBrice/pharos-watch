@@ -219,6 +219,42 @@ describe("mint/burn publication coverage canary", () => {
     });
   });
 
+  it("keeps the high-water observation clock while the admitted roster does not grow", async () => {
+    const db = dbFor([
+      {
+        key: MINT_BURN_PUBLICATION_BASELINE_KEY,
+        value: { admittedCount: 2, observedAt: NOW - 3 * 3600 },
+      },
+      { key: aggregateFlowCacheKey(24), value: mintBurnPayload() },
+    ]);
+
+    await checkMintBurnPublicationCoverage(db, NOW);
+
+    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache")
+      && entry.binds[0] === MINT_BURN_PUBLICATION_BASELINE_KEY);
+    expect(JSON.parse(String(write?.binds[1]))).toEqual({ admittedCount: 2, observedAt: NOW - 3 * 3600 });
+  });
+
+  it("lets a high-water baseline expire after seven days without a new high", async () => {
+    const result = await checkMintBurnPublicationCoverage(
+      dbFor([
+        {
+          key: MINT_BURN_PUBLICATION_BASELINE_KEY,
+          value: { admittedCount: 10, observedAt: NOW - 8 * 86_400 },
+        },
+        {
+          key: aggregateFlowCacheKey(24),
+          value: mintBurnPayload({
+            admittedPairs: [["usdt-tether", "ethereum"]],
+            coinIds: ["usdt-tether"],
+          }),
+        },
+      ]),
+      NOW,
+    );
+    expect(result).toMatchObject({ status: "ok" });
+  });
+
   it("reports a failed baseline read instead of a healthy result", async () => {
     const db = mockD1([
       cacheRow(aggregateFlowCacheKey(24), mintBurnPayload()),
@@ -299,5 +335,21 @@ describe("blacklist roster coverage canary", () => {
       executionStatus: "failed",
       executionFailureReason: "blacklist-summary-snapshot-unavailable",
     });
+  });
+
+  it("keeps the high-water observation clock while the event population does not grow", async () => {
+    const db = dbFor([
+      {
+        key: BLACKLIST_ROSTER_BASELINE_KEY,
+        value: { totalEvents: 12_345, observedAt: NOW - 3 * 3600 },
+      },
+      { key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, value: blacklistSnapshot() },
+    ]);
+
+    await checkBlacklistRosterCoverage(db, NOW);
+
+    const write = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO cache")
+      && entry.binds[0] === BLACKLIST_ROSTER_BASELINE_KEY);
+    expect(JSON.parse(String(write?.binds[1]))).toEqual({ totalEvents: 12_345, observedAt: NOW - 3 * 3600 });
   });
 });

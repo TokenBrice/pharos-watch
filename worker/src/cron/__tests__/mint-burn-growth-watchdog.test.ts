@@ -103,6 +103,31 @@ describe("runMintBurnGrowthWatchdog", () => {
     });
   });
 
+  it("does not report a runtime-disabled leg as collapsed", async () => {
+    const db = mockD1(
+      [
+        rowCountTable(100_000),
+        activityTable([{
+          stablecoin_id: activeConfig.stablecoinId,
+          chain_id: activeConfig.chain.chainId,
+          recent_events: 0,
+          baseline_events: MINT_BURN_ACTIVITY_MIN_BASELINE_EVENTS,
+        }]),
+      ],
+      { strictSql: false },
+    );
+
+    const result = await runMintBurnGrowthWatchdog(db, undefined, {
+      disabledIds: [activeConfig.stablecoinId],
+    });
+
+    expect(result.status).toBeUndefined();
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      activityCollapse: [],
+      firedRuleIds: [],
+    });
+  });
+
   it("degrades instead of reporting healthy when the activity baseline read fails", async () => {
     const db = mockD1(
       [

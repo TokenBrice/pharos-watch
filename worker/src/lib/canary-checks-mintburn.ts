@@ -245,7 +245,10 @@ export async function checkMintBurnPublicationCoverage(
       );
     }
     const nextHighWater = Math.max(baseline?.count ?? 0, admittedCount);
-    if (!await writeBaseline(db, MINT_BURN_PUBLICATION_BASELINE_KEY, "admittedCount", nextHighWater, observedAt)) {
+    // Renew the clock only when the high-water mark advances so the baseline
+    // still expires after BASELINE_MAX_AGE_SEC instead of vetoing the roster forever.
+    const highWaterObservedAt = baseline && nextHighWater === baseline.count ? baseline.observedAt : observedAt;
+    if (!await writeBaseline(db, MINT_BURN_PUBLICATION_BASELINE_KEY, "admittedCount", nextHighWater, highWaterObservedAt)) {
       return failedResult("mint-burn-publication-baseline-persist-failed", metadata);
     }
 
@@ -312,7 +315,8 @@ export async function checkBlacklistRosterCoverage(
       );
     }
     const nextHighWater = Math.max(baseline?.count ?? 0, totalEvents);
-    if (!await writeBaseline(db, BLACKLIST_ROSTER_BASELINE_KEY, "totalEvents", nextHighWater, observedAt)) {
+    const highWaterObservedAt = baseline && nextHighWater === baseline.count ? baseline.observedAt : observedAt;
+    if (!await writeBaseline(db, BLACKLIST_ROSTER_BASELINE_KEY, "totalEvents", nextHighWater, highWaterObservedAt)) {
       return failedResult("blacklist-roster-baseline-persist-failed", metadata);
     }
 

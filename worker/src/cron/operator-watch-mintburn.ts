@@ -44,8 +44,10 @@ export async function loadMintBurnStuckConfigWatchConditions(
       if (typeof streak !== "number" || !Number.isSafeInteger(streak)
         || streak < MINT_BURN_EXTENDED_STUCK_STREAK) continue;
       conditions.push({
-        section: "producer",
-        id: `sync-mint-burn-extended:${configKey}`,
+        // Only stuck configs have a condition, so this cohort needs its own
+        // section: an absent key is reported as recovered, not silently dropped.
+        section: "mint-burn-config",
+        id: configKey,
         label: `${labels.get(configKey) ?? "unknown mint/burn config"} (${configKey}, ${streak} incomplete attempts)`,
         active: true,
       });

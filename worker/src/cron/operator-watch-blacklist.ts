@@ -1,4 +1,5 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import type { OperatorWatchCondition } from "./cron-staleness-watchdog";
 import { loadBlacklistConfigStates } from "./blacklist/sync-support";
 
@@ -26,16 +27,20 @@ export async function loadBlacklistConfigWatchConditions(
       readFailed: false,
       conditions: configStates.map((state): OperatorWatchCondition => {
         const lastSucceededAt = state.lastSucceededAt;
-        const ageSec = lastSucceededAt == null ? null : Math.max(0, nowSec - lastSucceededAt);
+        const clock = assessFreshnessTimestamp(nowSec, lastSucceededAt);
+        const ageSec = clock.ageSeconds;
+        // A clock ahead of the watchdog proves no age, so it cannot claim fresh.
+        const futureClock = clock.reason === "future-timestamp";
+        const name = `${state.config.stablecoin} ${state.config.chain.chainName}`;
         return {
-          section: "producer",
-          // Bare producer ids are unique; the prefix keeps this cohort distinct
-          // from the job-name conditions in the same alert section.
-          id: `sync-blacklist:${state.configKey}`,
+          section: "blacklist-config",
+          id: state.configKey,
           label: lastSucceededAt == null
-            ? `${state.config.stablecoin} ${state.config.chain.chainName} never succeeded (${state.configKey})`
-            : `${state.config.stablecoin} ${state.config.chain.chainName} last succeeded ${Math.floor(ageSec! / 3600)}h ago (${state.configKey})`,
-          active: lastSucceededAt == null || ageSec! > BLACKLIST_CONFIG_STALE_AGE_SEC,
+            ? `${name} never succeeded (${state.configKey})`
+            : futureClock
+              ? `${name} last success clock is in the future (${state.configKey})`
+              : `${name} last succeeded ${Math.floor(ageSec! / 3600)}h ago (${state.configKey})`,
+          active: lastSucceededAt == null || futureClock || ageSec! > BLACKLIST_CONFIG_STALE_AGE_SEC,
         };
       }),
     };

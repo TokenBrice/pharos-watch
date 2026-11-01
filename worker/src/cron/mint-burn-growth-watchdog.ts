@@ -4,6 +4,8 @@ import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
+import { mintBurnDisabledReason } from "../lib/mint-burn-publication";
+import { normalizeDisabledConfigIdSet, normalizeDisabledSymbolSet } from "./mint-burn/run-state";
 
 /**
  * `mint_burn_events` normally turns over through the critical producer's
@@ -31,9 +33,18 @@ interface MintBurnActivityRow {
   baseline_events: number | null;
 }
 
-function activeMintBurnPairs(): { keys: Set<string>; json: string } {
+export interface MintBurnGrowthWatchdogOptions {
+  /** Runtime disable switch; the same authority the producer scans with. */
+  disabledIds?: readonly string[];
+  disabledSymbols?: readonly string[];
+}
+
+function activeMintBurnPairs(
+  disabledIds: ReadonlySet<string>,
+  disabledSymbols: ReadonlySet<string>,
+): { keys: Set<string>; json: string } {
   const pairs = includeActiveTrackedIds(
-    MINT_BURN_CONFIGS.filter((config) => config.enabled !== false),
+    MINT_BURN_CONFIGS.filter((config) => mintBurnDisabledReason(config, disabledIds, disabledSymbols) == null),
     (config) => config.stablecoinId,
   ).map((config) => [config.stablecoinId, config.chain.chainId] as [string, string]);
   return {
@@ -45,10 +56,12 @@ function activeMintBurnPairs(): { keys: Set<string>; json: string } {
 async function loadCollapsedLegs(
   db: D1Database,
   nowSec: number,
+  disabledIds: ReadonlySet<string>,
+  disabledSymbols: ReadonlySet<string>,
   signal?: AbortSignal,
 ): Promise<{ legs: Array<{ stablecoinId: string; chainId: string; baselineEvents: number }>; failed: boolean }> {
   try {
-    const activePairs = activeMintBurnPairs();
+    const activePairs = activeMintBurnPairs(disabledIds, disabledSymbols);
     const rows = await db
       .prepare(
         `/* pharos:mint-burn-activity-collapse */
@@ -96,6 +109,7 @@ async function loadCollapsedLegs(
 export async function runMintBurnGrowthWatchdog(
   db: D1Database,
   signal?: AbortSignal,
+  options: MintBurnGrowthWatchdogOptions = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const row = await db
@@ -106,7 +120,13 @@ export async function runMintBurnGrowthWatchdog(
     throw new Error("Mint/burn growth watchdog row count unavailable");
   }
   const rowCount = row.rowCount;
-  const activity = await loadCollapsedLegs(db, Math.floor(Date.now() / 1000), signal);
+  const activity = await loadCollapsedLegs(
+    db,
+    Math.floor(Date.now() / 1000),
+    normalizeDisabledConfigIdSet(options.disabledIds),
+    normalizeDisabledSymbolSet(options.disabledSymbols),
+    signal,
+  );
   const metadata = {
     rowCount,
     thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD,

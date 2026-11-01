@@ -46,8 +46,9 @@ describe("mint/burn stuck config watch conditions", () => {
 
     expect(result.readFailed).toBe(false);
     expect(result.conditions).toEqual([{
-      section: "producer",
-      id: `sync-mint-burn-extended:${configKey}`,
+      // A dedicated section lets the absent condition report a recovery.
+      section: "mint-burn-config",
+      id: configKey,
       label: expect.stringContaining("2 incomplete attempts"),
       active: true,
     }]);
