@@ -311,7 +311,11 @@ describe("evaluatePromotionDecision", () => {
     const state = readLifecycle(sqlite, row.stablecoin_id, row.id);
     expect(state.pending).toBeUndefined();
     expect(state.events[0]).toMatchObject({ peak_deviation_bps: -242, peak_price: 0.9758, confirmation_sources: "temporal:15m+primary:oracle:pyth", pending_reason: "large-cap+native-origin" });
-    expect(state.outcomes[0]).toMatchObject({ outcome: "promoted", final_decision_reason: "confirmed-by:temporal:15m+primary:oracle:pyth" });
+    expect(state.outcomes[0]).toMatchObject({
+      outcome: "promoted",
+      confirming_sources: "primary:oracle:pyth",
+      final_decision_reason: "confirmed-by:temporal:15m+primary:oracle:pyth",
+    });
   });
 
   it("rejects the EURm native-origin spike when fresh independent USD/FX pricing remains at peg", async () => {

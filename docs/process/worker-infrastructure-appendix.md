@@ -126,7 +126,7 @@ Donor claims spend their dedicated native allowance before bounded body/SIWE wor
 - Pages `functions/_site-data/[[path]].ts` writes selected same-origin delivery observations into `site_data_request_samples`, not the legacy delivery table.
 - Low-value route/source attribution writes can be paused with `REQUEST_SOURCE_ATTRIBUTION_DISABLED=true`
 - Per-key public API load writes can be paused separately with `API_KEY_REQUEST_ATTRIBUTION_DISABLED=true`
-- Worker route/source, per-key and Pages counters still use the existing 10ms/50-entry request-owned buffer and unchanged retry behavior; isolate eviction and failed persistence mean capture is best-effort, not an exact arrival ledger.
+- Worker route/source, per-key and Pages counters still use the existing 10ms/50-entry request-owned buffer; a batch failure whose outcome is unknown (transport loss) is dropped instead of replayed, so capture can lose rather than duplicate selected observations; isolate eviction and failed persistence mean capture is best-effort, not an exact arrival ledger.
 - Worker counters cover attributed non-admin API traffic, including registered mutations and authenticated unknown paths, and exclude `/api/telegram-webhook`; Pages counters cover the GET-only site-data proxy
 - worker load is stored by:
   - `lane`: `public-api` or `site-api`
@@ -844,7 +844,7 @@ Pricing emitted provenance is not necessarily circuit identity: `shared/lib/pric
 
 The baseline migration owns the generic `cache` schema; [`worker/migrations/MANIFEST.md`](../../worker/migrations/MANIFEST.md) owns lineage. Feature docs and writers own key inventories. Do not infer a publication contract from a cache key's presence.
 
-`worker/src/lib/db-cache.ts` owns access helpers. Generic writes use `INSERT ... ON CONFLICT(key) DO UPDATE`, avoiding delete/reinsert primary-key index churn. Default `prepareCacheUpsert()` / `setCache()` / `setCachesAt()` writes remain unconditional, including an older or equal incoming timestamp; unchanged payloads still advance their supplied freshness clock. `setCacheIfAbsent()` preserves the first durable clock; `setCacheIfNewer()` admits **equal-clock** replacement/retry (`existing.updated_at <= runClock`) and rejects only older clocks. It is not body/generation identity. `getCaches()` deduplicates ≤100 unique keys into one query/snapshot and rejects larger requests instead of internally chunking.
+`worker/src/lib/db-cache.ts` owns access helpers. Generic writes use `INSERT ... ON CONFLICT(key) DO UPDATE`, avoiding delete/reinsert primary-key index churn. Default `prepareCacheUpsert()` / `setCache()` / `setCachesAt()` writes remain unconditional, including an older or equal incoming timestamp; unchanged payloads still advance their supplied freshness clock. `setCacheIfAbsent()` preserves the first durable clock; `setCacheIfNewer()` admits **equal-clock** replacement/retry (`existing.updated_at <= runClock`) and rejects only older clocks. It is not body/generation identity. `shouldSkipFreshCache()` admits only timestamps that pass freshness-timestamp assessment and drops a rejected future-dated row so the producer can republish it. `getCaches()` deduplicates ≤100 unique keys into one query/snapshot and rejects larger requests instead of internally chunking.
 
 ### Current-row write accounting
 

@@ -43,7 +43,8 @@ function selectTopDepeg(input: DailyDigestLike, date?: string | null): DigestRis
   // whichever entry the sort happened to visit first.
   const top = input.topDepegs
     .filter((depeg) => (
-      Number.isFinite(depegSignalBps(depeg))
+      isRecord(depeg)
+      && Number.isFinite(depegSignalBps(depeg))
       && Number.isFinite(depeg.mcapUsd)
       && typeof depeg.symbol === "string"
       && depeg.symbol.length > 0

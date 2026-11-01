@@ -502,6 +502,18 @@ describe("syncBluechip", () => {
     }
   });
 
+  it("refreshes instead of trusting a future-dated cache clock", async () => {
+    const { db, sqlite } = fixtures.open();
+    const futureAt = Math.floor(Date.now() / 1000) + 86_400;
+    sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)").run("bluechip-ratings", "{}", futureAt);
+    const fetch = mockFetch([{ match: () => true, body: { data: [{ grade: "A" }] } }]);
+    const result = await syncBluechip(db);
+    expect(JSON.parse(result.metadata ?? "{}")).not.toMatchObject({ reason: "cache-fresh" });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(sqlite.prepare("SELECT updated_at FROM cache WHERE key = 'bluechip-ratings'").get())
+      .toEqual({ updated_at: Math.floor(Date.now() / 1000) });
+  });
+
   it("preserves cache without HTTP when the circuit is open", async () => {
     const { db, sqlite } = fixtures.open();
     sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)").run("bluechip-ratings", "{}", 1);

@@ -388,19 +388,19 @@ With controls, the legacy diagnostic precision ratio is detected incident anchor
 
 ```json
 {
-  "detectionRate": 0.75,
+  "detectionRate": 0.5,
   "precision": null,
   "precisionUnavailableReason": "no-observed-negative-control-exposure",
   "falsePositiveDays": null,
-  "evaluableAnchors": 4,
+  "evaluableAnchors": 2,
   "excludedAnchors": 0,
   "leadTimeDaysP50": 4,
   "leadTimeDaysP90": 11,
   "granularity": "daily",
   "perAnchor": [
     {
-      "stablecoinId": "usdc-circle",
-      "onsetAt": 1679400000,
+      "stablecoinId": "uty-xsy",
+      "onsetAt": 1775963092,
       "detected": true,
       "leadTimeDays": 2,
       "firstAlertBand": "WARNING",

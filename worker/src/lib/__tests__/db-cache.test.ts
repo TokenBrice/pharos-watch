@@ -3,7 +3,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import {
   getCache, getPriceCache, prepareCacheUpsert, readCacheWithPolicy, savePriceCache,
-  setCacheIfAbsent, setCacheIfNewer, setCachesAt, type CachePolicy,
+  setCacheIfAbsent, setCacheIfNewer, setCachesAt, shouldSkipFreshCache, type CachePolicy,
 } from "../db-cache";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -257,6 +257,42 @@ describe("readCacheWithPolicy", () => {
     expect(decode).not.toHaveBeenCalled();
   });
 
+});
+
+describe("shouldSkipFreshCache", () => {
+  const NOW_SEC = 1_700_000_000;
+
+  it("rejects a future-dated clock instead of treating it as fresh", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    try {
+      const { sqlite, db } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("bluechip-ratings", "{}", NOW_SEC + 86_400);
+      expect(await shouldSkipFreshCache(db, "bluechip-ratings", 6 * 3600)).toBe(false);
+      // The if-newer producer write would keep rejecting a poisoned clock, so
+      // the rejected row is dropped rather than left to absorb the refresh.
+      expect(await getCache(db, "bluechip-ratings")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the configured budget for an admitted clock", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    try {
+      const { sqlite, db } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("bluechip-ratings", "{}", NOW_SEC - 6 * 3600 + 1);
+      expect(await shouldSkipFreshCache(db, "bluechip-ratings", 6 * 3600)).toBe(true);
+      sqlite.prepare("UPDATE cache SET updated_at = ? WHERE key = ?")
+        .run(NOW_SEC - 6 * 3600, "bluechip-ratings");
+      expect(await shouldSkipFreshCache(db, "bluechip-ratings", 6 * 3600)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("savePriceCache", () => {

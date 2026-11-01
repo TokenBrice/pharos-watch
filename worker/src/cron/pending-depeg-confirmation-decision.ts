@@ -90,6 +90,11 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
         ? evidence.poolConfirmations.map((confirmation) => buildPoolConfirmationKey(confirmation.pool))
         : [],
     );
+    // The outcome ledger records the same agreeing families as the event and
+    // its decision reason, including the primary families that admitted it.
+    const outcomeEvidence = primaryConfirmationSources.length === 0
+      ? evidence
+      : { ...evidence, confirmingSources: [...evidence.confirmingSources, ...primaryConfirmationSources] };
     const event: DepegEvent = {
       id: 0,
       stablecoinId: row.stablecoin_id,
@@ -123,7 +128,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
         outcomeState,
         "promoted",
         now,
-        evidence,
+        outcomeEvidence,
         `confirmed-by:${confirmedBy || "unknown"}`,
       ),
       buildDeletePendingStmt(db, row),

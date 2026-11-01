@@ -372,6 +372,49 @@ describe("generateDailyDigest publication contract", () => {
     }
   });
 
+  it("retains the pending depeg lifecycle queue when the stablecoins cache is stale", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const priorUpdatedAt = nowSec - 86_400;
+      const priorFlags = [{
+        stablecoinId: "usdt-tether", symbol: "USDT", kind: "stalled-collapse",
+        currentBps: -6_200, ageDays: 27, mcapUsd: 12_000_000,
+      }];
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+        DEPEG_LIFECYCLE_FLAGS_CACHE_KEY,
+        JSON.stringify({ updatedAt: priorUpdatedAt, flags: priorFlags }),
+        priorUpdatedAt,
+      );
+      const components = JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 });
+      const todayTs = nowSec - (nowSec % 86_400);
+      sqlite.prepare(
+        "INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)",
+      ).run(nowSec - 600, 91.2, "BEDROCK", components, "{}");
+      sqlite.prepare(
+        "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)",
+      ).run(todayTs, 89.5, "STEADY", components, "{}");
+      // A missed quarter-hourly sync: the cached price is outside the 600 s
+      // public budget, so no open event has a live deviation.
+      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+        ...scenario.sourcePayload,
+        updatedAt: nowSec - 3_600,
+      } as typeof scenario.sourcePayload);
+
+      const result = await generateDailyDigest(db, "anthropic-key", null, false, null);
+      expect(result.itemCount).toBe(1);
+      expect(result.metadata).toContain("stablecoins-cache-stale");
+
+      const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+        .get(DEPEG_LIFECYCLE_FLAGS_CACHE_KEY) as { value: string; updated_at: number } | undefined;
+      expect(row).toBeDefined();
+      expect(JSON.parse(String(row!.value))).toEqual({ updatedAt: priorUpdatedAt, flags: priorFlags });
+      expect(row!.updated_at).toBe(priorUpdatedAt);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("isolates an editorially unsafe wrapper and preserves a literal cemetery appendix", async () => {
     vi.mocked(prepareTelegramDigestAppendices).mockResolvedValueOnce({ ...scenario.deliveryMocks.appendices, appendixHtml: "This wrapper is safe.", metadata: { ...scenario.deliveryMocks.appendices.metadata, hasAppendix: true, trackedDetected: 1 } });
     const wrapped = await invoke(scenario.db, false, CREDS, TG); const wrappedMeta = JSON.parse(String(wrapped.metadata));

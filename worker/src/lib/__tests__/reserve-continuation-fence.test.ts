@@ -55,6 +55,24 @@ describe("reserve Queue exact checkpoint and execution authority", () => {
       .run(ACCEPTED_RESERVE_GENERATION_KEY, JSON.stringify(seal), NOW);
     expect((await claimReserveContinuation(f.db, tail, f.options))?.checkpoint.nextItemKey).toBeNull();
   });
+  it("recognizes its own committed claim after an ambiguous batch response", async () => {
+    const { db, sqlite, message, options } = await setup();
+    const originalBatch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementationOnce(async (statements) => {
+      await originalBatch(statements as never);
+      throw new Error("Network connection lost");
+    });
+    const claim = await claimReserveContinuation(db, message, options);
+    expect(claim?.fence.deliveryId).toBe("delivery-one");
+    expect(claim?.checkpoint).toMatchObject({
+      state: "recovering",
+      invocationId: options.owner,
+      recoveryOwner: options.owner,
+    });
+    expect(claim?.checkpoint.recoveryLeaseUntil).toBeGreaterThanOrEqual(NOW);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_continuation_executions").get()).toEqual({ count: 1 });
+  });
+
   it("claims atomically, deduplicates delivery/frontier and preserves the original root", async () => {
     const { db, sqlite, message, options } = await setup();
     const claim = await claimReserveContinuation(db, message, options);
