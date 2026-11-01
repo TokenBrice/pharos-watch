@@ -13,10 +13,11 @@ const title = String(metadata.title);
 const description = String(metadata.description);
 
 describe("Cemetery route metadata", () => {
-  it("names the documented archive instead of claiming a complete failure census", () => {
+  it("names the documented archive and dates the failures, not the documentation", () => {
     expect(title).toContain(`${stats.total} Documented`);
-    expect(description).toContain(`${stats.total} failed or discontinued stablecoins documented by Pharos`);
-    expect(description).toContain(`since ${stats.firstYear}`);
+    expect(description).toContain(`${stats.total} failed or discontinued stablecoins since ${stats.firstYear}`);
+    expect(description).toContain("documented by Pharos");
+    expect(description).not.toContain("documented by Pharos since");
     expect(description.startsWith(`${stats.total} dead stablecoins since`)).toBe(false);
   });
 

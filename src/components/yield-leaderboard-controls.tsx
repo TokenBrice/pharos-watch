@@ -153,6 +153,9 @@ export function YieldLeaderboardControls({
   const attentionCount = attentionPreset?.count ?? 0;
   const attentionActive = attentionPreset?.active ?? false;
   const showWatching = watchlistCount > 0 || watchlistActive;
+  // The gated icon chip above already applies this preset; rendering the preset
+  // chip too would put two identical controls in the same views row.
+  const visiblePresets = presets.filter((preset) => preset.key !== "watchlist-warnings");
 
   const activeFilterSummaries = getActiveFilterSummaries(viewModel);
   const activeFilterCount = activeFilterSummaries.length;
@@ -295,7 +298,7 @@ export function YieldLeaderboardControls({
             />
           </>
         ) : null}
-        {presets.map((preset) => (
+        {visiblePresets.map((preset) => (
           <ChipButton
             key={preset.key}
             label={preset.label}

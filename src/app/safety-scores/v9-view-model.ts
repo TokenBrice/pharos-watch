@@ -105,8 +105,12 @@ export function buildSafetyPegTypeMap(
   if (!cards) return new Map();
   return new Map(
     cards.flatMap((card) => {
-      const pegType = pegTypeFromCurrency(CLIENT_TRACKED_META_BY_ID.get(card.id)?.flags.pegCurrency);
-      return pegType ? [[card.id, pegType]] : [];
+      const pegCurrency = CLIENT_TRACKED_META_BY_ID.get(card.id)?.flags.pegCurrency;
+      if (!pegCurrency) return [];
+      // Variable and OTHER pegs have no canonical DefiLlama type. Keep their
+      // registry peg bucket so every non-"all" filter still sees them.
+      const pegType = pegTypeFromCurrency(pegCurrency) ?? `pegged${pegCurrency}`;
+      return [[card.id, pegType]];
     }),
   );
 }

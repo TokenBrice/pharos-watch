@@ -100,6 +100,25 @@ describe("projectReserveQualityClientSummary", () => {
     expect(formatReserveQualityPct(100)).toBe("100%");
   });
 
+  it("ignores float-summation dust at the full-basket boundary", () => {
+    const wholeLiquid = projectReserveQualityClientSummary(coinWith([
+      { name: "Cash", pct: 24.3, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
+      { name: "T-bills", pct: 64.6, risk: "very-low", assetClass: "treasury-bill", liquidityHorizon: "one-day" },
+      { name: "Deposits", pct: 11.1, risk: "low", assetClass: "bank-deposit", liquidityHorizon: "one-day" },
+    ]))!;
+    expect(wholeLiquid.liquidWithinOneDayPct).toBe(100);
+    expect(wholeLiquid.lede).toBe("3 reviewed reserve slices — 100% convertible within one day.");
+    expect(wholeLiquid.chipLabel).toBe("Highly liquid");
+
+    const wholeUnknown = projectReserveQualityClientSummary(coinWith([
+      { name: "Cash", pct: 24.3, risk: "very-low", assetClass: "cash", liquidityHorizon: "unknown" },
+      { name: "T-bills", pct: 64.6, risk: "very-low", assetClass: "treasury-bill", liquidityHorizon: "unknown" },
+      { name: "Deposits", pct: 11.1, risk: "low", assetClass: "bank-deposit", liquidityHorizon: "unknown" },
+    ]))!;
+    expect(wholeUnknown.unknownHorizonPct).toBe(100);
+    expect(wholeUnknown.lede).toBe("3 reviewed reserve slices — no published exit timeline for any of the basket.");
+  });
+
   it("returns null without reserves", () => {
     expect(projectReserveQualityClientSummary(coinWith(undefined))).toBeNull();
     expect(projectReserveQualityClientSummary(coinWith([]))).toBeNull();

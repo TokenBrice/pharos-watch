@@ -78,6 +78,11 @@ const amountMatrix: Array<{ event: BlacklistEvent; expected: string }> = [
     expected: "0 USDT",
   },
   {
+    // A legacy derived zero is still queued for replay proof; it is not a measurement.
+    event: { ...event, id: "zero-derived", amountNative: 0, amountUsdAtEvent: null, amountSource: "derived", amountStatus: "resolved" },
+    expected: "resolved",
+  },
+  {
     event: { ...event, id: "zero-unknown", amountNative: 0, amountUsdAtEvent: null, amountSource: "unavailable", amountStatus: "provider_failed" },
     expected: "provider failed",
   },

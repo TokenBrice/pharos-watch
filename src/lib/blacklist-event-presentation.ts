@@ -45,10 +45,14 @@ function getBlacklistAmountStatusLabel(event: BlacklistEvent): string {
 export function formatBlacklistAmountOrStatus(event: BlacklistEvent): string {
   if (event.amountUsdAtEvent != null) return formatCurrency(event.amountUsdAtEvent);
   // A resolved zero is a proven observation, not a missing amount; only an
-  // unresolved zero falls through to the status word.
+  // unresolved zero falls through to the status word. A legacy `derived` zero
+  // stays unresolved until Tron replay provenance proves it, and that
+  // provenance is not part of the public event, so it never reads as a number.
   if (
     event.amountNative != null &&
-    (event.amountNative !== 0 || event.eventType === "destroy" || event.amountStatus === "resolved")
+    (event.amountNative !== 0 ||
+      event.eventType === "destroy" ||
+      (event.amountStatus === "resolved" && event.amountSource !== "derived"))
   ) {
     return `${formatBlacklistNativeAmount(event)} ${event.stablecoin}`;
   }

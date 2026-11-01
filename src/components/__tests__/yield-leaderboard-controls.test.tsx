@@ -132,6 +132,8 @@ describe("YieldLeaderboardControls", () => {
     expect(chip.textContent).toContain(String(presetRows));
     expect(chip.getAttribute("data-active")).toBe("false");
     expect(chip.getAttribute("aria-pressed")).toBe("false");
+    // The preset strip must not repeat the same action under its longer label.
+    expect(screen.queryByRole("button", { name: /^Watching needs attention\d+$/ })).toBeNull();
 
     fireEvent.click(chip);
     expect(onApplyPreset).toHaveBeenCalledWith("watchlist-warnings");

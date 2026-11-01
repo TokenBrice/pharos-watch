@@ -71,6 +71,7 @@ function computeLiquidityStats(
   let fallbackCoverage = 0;
   let tvlForChange = 0;
   let totalPrevTvl = 0;
+  let hasNonInvertibleBaseline = false;
   let totalBalance = 0;
   let balanceWeight = 0;
   let totalOrganic = 0;
@@ -94,6 +95,10 @@ function computeLiquidityStats(
       if (prevTvl != null && Number.isFinite(prevTvl)) {
         tvlForChange += liq.totalTvlUsd;
         totalPrevTvl += prevTvl;
+      } else {
+        // Publishing the aggregate over the surviving members would claim a
+        // market move the observed collapse contradicts.
+        hasNonInvertibleBaseline = true;
       }
     }
     if (liq.weightedBalanceRatio != null && liq.balanceMeasuredTvlUsd != null) {
@@ -108,7 +113,10 @@ function computeLiquidityStats(
     }
   }
 
-  const agg7dChange = totalPrevTvl > 0 ? ((tvlForChange - totalPrevTvl) / totalPrevTvl) * 100 : null;
+  const agg7dChange =
+    !hasNonInvertibleBaseline && totalPrevTvl > 0
+      ? ((tvlForChange - totalPrevTvl) / totalPrevTvl) * 100
+      : null;
 
   return {
     totalTvl,

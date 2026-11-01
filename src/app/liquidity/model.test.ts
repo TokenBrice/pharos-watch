@@ -112,14 +112,15 @@ describe("liquidity page model", () => {
     });
   });
 
-  it("keeps a collapsed -100% coin's non-invertible prior value out of the aggregate", () => {
+  it("withholds the aggregate when a collapsed coin's prior value is non-invertible", () => {
     const [collapsed, growing] = ACTIVE_STABLECOINS;
-    const finiteOnly = buildLiquidityViewModel({
+    const withCollapse = buildLiquidityViewModel({
       [DEX_GLOBAL_KEY]: makeLiquidity({ totalTvlUsd: 999, totalVolume24hUsd: 111 }),
       [collapsed.id]: makeLiquidity({ totalTvlUsd: 10_000, tvlChange7d: -100 }),
       [growing.id]: makeLiquidity({ totalTvlUsd: 200, tvlChange7d: 100 }),
     }, "all", "");
-    expect(finiteOnly.summaryStats?.agg7dChange).toBe(100);
+    // Dropping the collapsed member would publish +100% over the survivors.
+    expect(withCollapse.summaryStats?.agg7dChange).toBeNull();
 
     const collapsedOnly = buildLiquidityViewModel({
       [collapsed.id]: makeLiquidity({ totalTvlUsd: 10_000, tvlChange7d: -100 }),

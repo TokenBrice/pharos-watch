@@ -251,8 +251,13 @@ describe("YieldAnalysisClient", () => {
     await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
   });
 
-  it("labels NAV tokens with their reference asset instead of the fixed-peg short label", () => {
-    setRankingsQuery();
+  it("labels NAV tokens with their reference asset but keeps the peer cohort on its own peg", () => {
+    setRankingsQuery({
+      data: makeResponse([
+        makeRanking({ id: "xgld-unitas", symbol: "xGLD", name: "xGLD" }),
+        makeRanking({ id: "fpi-frax", symbol: "FPI", name: "Frax Price Index" }),
+      ]),
+    });
     render(
       <YieldAnalysisClient
         id="xgld-unitas"
@@ -276,6 +281,10 @@ describe("YieldAnalysisClient", () => {
     const header = screen.getByRole("heading", { name: "xGLD" }).closest("section")!;
     expect(header.textContent).toContain("XAUT-denominated NAV");
     expect(header.textContent).not.toContain("CPI");
+
+    const peerRail = screen.getByRole("heading", { name: "Nearby yield context" }).closest("section")!;
+    expect(peerRail.textContent).toContain("CPI peg peers by PYS rank");
+    expect(peerRail.textContent).not.toContain("XAUT-denominated NAV peg peers");
   });
 
   it("renders the query error in the shared frame", () => {

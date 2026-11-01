@@ -44,7 +44,7 @@ import {
 import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
 import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
-import { BACKING_LABELS, GOVERNANCE_LABELS, getProfilePegLabel, YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, getProfilePegLabel, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import type { YieldHistoryPoint } from "@shared/types";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
@@ -131,7 +131,11 @@ function buildYieldCompareHref(currentId: string, peerIds: readonly string[]): s
 function formatPeerCohortLabel(model: YieldPeerRailModel, staticCoin: StablecoinStaticMeta): string {
   const yieldTypeLabel = YIELD_TYPE_LABELS[model.currentYieldType] ?? model.currentYieldType;
   if (model.cohortKind === "same-peg") {
-    const pegLabel = getProfilePegLabel(staticCoin.flags, staticCoin.pegReferenceSymbol);
+    // The cohort is selected by the registry peg currency, not by a NAV
+    // token's resolved reference asset, so the label names that same bucket.
+    const pegLabel = model.currentPeg
+      ? PEG_LABELS_SHORT[model.currentPeg] ?? model.currentPeg
+      : PEG_LABELS_SHORT[staticCoin.flags.pegCurrency] ?? staticCoin.flags.pegCurrency;
     return `${pegLabel} peg peers by PYS rank`;
   }
   if (model.cohortKind === "same-yield-type-safety") {

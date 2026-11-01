@@ -33,7 +33,7 @@ const cemeteryCauseTally = CEMETERY_STATS.causes
   .filter(({ count }) => count > 0)
   .map(({ cause, count }) => `${CAUSE_META[cause].label} ${count}`)
   .join(", ");
-const cemeteryMetadataDescription = `${CEMETERY_STATS.total} failed or discontinued stablecoins documented by Pharos since ${CEMETERY_STATS.firstYear}, by cause: ${cemeteryCauseTally}.`;
+const cemeteryMetadataDescription = `${CEMETERY_STATS.total} failed or discontinued stablecoins since ${CEMETERY_STATS.firstYear}, documented by Pharos, by cause: ${cemeteryCauseTally}.`;
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Stablecoin Cemetery: ${CEMETERY_STATS.total} Documented Coin Deaths`,

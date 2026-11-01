@@ -13,8 +13,8 @@ import { formatYieldApyDelta } from "@/lib/yield-presentation";
 import { ALT_SOURCE_INITIAL_COUNT } from "@/components/yield-detail-section-model";
 import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
-  YIELD_SOURCE_DEPTH_DEFINITIONS,
   formatYieldSourceRiskCompact,
+  getYieldSourceDepthDisplay,
 } from "@/lib/yield-source-risk";
 import type { YieldSourceExplorerAlternate } from "@/lib/yield-source-explorer-model";
 
@@ -110,6 +110,11 @@ export function YieldDetailSectionAltSources({
           const confidence = source.confidenceTier
             ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null
             : null;
+          const depthDisplay = getYieldSourceDepthDisplay({
+            depthLens: source.depthLens,
+            yieldType: source.yieldType,
+            sourceTvlUsd: source.sourceTvlUsd,
+          });
           return (
             <li
               key={source.sourceKey}
@@ -141,16 +146,18 @@ export function YieldDetailSectionAltSources({
                       {YIELD_TYPE_LABELS[source.yieldType] ?? source.yieldType}
                     </Badge>
                     <span className="font-mono text-2xs tabular-nums text-muted-foreground">
-                      TVL {source.sourceTvlUsd !== null ? formatCurrency(source.sourceTvlUsd) : "—"}
+                      TVL {source.sourceTvlUsd !== null
+                        ? formatCurrency(source.sourceTvlUsd)
+                        : depthDisplay.isNativeUnmeasured ? "Native" : "—"}
                     </span>
                     {confidence ? (
                       <span className="text-2xs text-muted-foreground">{confidence}</span>
                     ) : null}
                     <span
                       className="text-2xs text-muted-foreground"
-                      title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}
+                      title={depthDisplay.description}
                     >
-                      {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
+                      {depthDisplay.phrase}
                     </span>
                     <span className="font-mono text-2xs tabular-nums text-muted-foreground">
                       Risk {formatYieldSourceRiskCompact(source.sourceRisk)}
@@ -265,6 +272,11 @@ export function YieldDetailSectionAltSources({
             const confidence = source.confidenceTier
               ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[source.confidenceTier]?.label ?? null
               : null;
+            const depthDisplay = getYieldSourceDepthDisplay({
+              depthLens: source.depthLens,
+              yieldType: source.yieldType,
+              sourceTvlUsd: source.sourceTvlUsd,
+            });
             return (
               <TableRow
                 key={source.sourceKey}
@@ -286,8 +298,8 @@ export function YieldDetailSectionAltSources({
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-3xs text-muted-foreground">
                     {confidence ? <span>{confidence}</span> : null}
-                    <span title={YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].description}>
-                      {YIELD_SOURCE_DEPTH_DEFINITIONS[source.depthLens].label} depth
+                    <span title={depthDisplay.description}>
+                      {depthDisplay.phrase}
                     </span>
                     {source.rejectionHint ? (
                       <span title={source.rejectionHint.description}>Reason {source.rejectionHint.label}</span>
@@ -319,7 +331,9 @@ export function YieldDetailSectionAltSources({
                   {formatYieldSourceRiskCompact(source.sourceRisk)}
                 </TableCell>
                 <TableCell className="px-0 py-2 text-right font-mono tabular-nums text-muted-foreground">
-                  {source.sourceTvlUsd !== null ? formatCurrency(source.sourceTvlUsd) : "—"}
+                  {source.sourceTvlUsd !== null
+                    ? formatCurrency(source.sourceTvlUsd)
+                    : depthDisplay.isNativeUnmeasured ? "Native" : "—"}
                 </TableCell>
                 <TableCell className="px-0 py-2 text-center">
                   <button

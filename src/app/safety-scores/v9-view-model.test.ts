@@ -141,14 +141,23 @@ describe("Safety Scores V9 view model", () => {
     const realCards = [
       makeV9Card({ id: "usdc-circle" }),
       makeV9Card({ id: "xaut-tether" }),
+      makeV9Card({ id: "fpi-frax" }),
+      makeV9Card({ id: "gelt-tether" }),
     ].map(projectV9TableCard);
     const pegTypeMap = buildSafetyPegTypeMap(realCards);
 
     expect(pegTypeMap.get("usdc-circle")).toBe("peggedUSD");
     expect(pegTypeMap.get("xaut-tether")).toBe("peggedGOLD");
+    // Variable and OTHER pegs have no canonical type but still carry a filter bucket.
+    expect(pegTypeMap.get("fpi-frax")).toBe("peggedVAR");
+    expect(pegTypeMap.get("gelt-tether")).toBe("peggedOTHER");
     const options = { gradeFilter: "all" as const, sortKey: "overall" as const, mcapMap: new Map<string, number | null>() };
     expect(filterAndSortV9Cards(realCards, { ...options, pegFilter: "usd", pegTypeMap }).map((card) => card.id)).toEqual(["usdc-circle"]);
     expect(filterAndSortV9Cards(realCards, { ...options, pegFilter: "commodities", pegTypeMap }).map((card) => card.id)).toEqual(["xaut-tether"]);
+    expect(filterAndSortV9Cards(realCards, { ...options, pegFilter: "fiat-non-usd", pegTypeMap }).map((card) => card.id).sort()).toEqual([
+      "fpi-frax",
+      "gelt-tether",
+    ]);
   });
 
   it("separates Pipeline gap from NR and keeps partial ratings ranked without filling missing pillars", () => {

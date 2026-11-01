@@ -74,8 +74,9 @@ describe("MultiSeriesLineChart", () => {
     expect(rows[1].textContent).toBe("Date 1$10$20");
     // Beta has no ts=2 point: the missing series cell renders an em dash.
     expect(rows[2].textContent).toBe("Date 2$12—");
-    // An omitted observation breaks the drawn line rather than being interpolated.
-    expect(lineProps.map((props) => props.connectNulls)).toEqual([false, false]);
+    // Rows are union-merged across series, so a missing key is another series'
+    // timestamp, not an observation gap; each line connects its own samples.
+    expect(lineProps.map((props) => props.connectNulls)).toEqual([true, true]);
   });
 
   it("renders the explicit data override instead of merged series data", () => {

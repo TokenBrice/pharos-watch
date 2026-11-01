@@ -8,7 +8,12 @@ import type { ReserveCompositionSlice } from "@/components/stablecoin-detail/res
 import { RESERVE_TREEMAP_LABEL_COLOR } from "@/lib/chart-colors";
 import type { ReserveRisk } from "@shared/types";
 import { RESERVE_RISK_PRESENTATION } from "@shared/lib/classification/reserve-risk";
-import { ReserveRiskSwatch, formatReserveRiskTier, formatReserveSharePct } from "@/components/reserve-risk-swatch";
+import {
+  ReserveRiskSwatch,
+  formatReserveRiskTier,
+  formatReserveSharePct,
+  isWholeReserveShare,
+} from "@/components/reserve-risk-swatch";
 
 // Only the actual multi-slice chart loads Recharts; bars and the accessible
 // composition figure remain synchronous, including while this chunk loads.
@@ -114,7 +119,7 @@ function DominantSliceBar({
  * unreviewed, never drawn as filled.
  */
 function SingleSliceBar({ slice }: { slice: ReserveCompositionSlice }) {
-  const isWhole = slice.pct >= 100;
+  const isWhole = isWholeReserveShare(slice.pct);
   const ink = isWhole ? RESERVE_TREEMAP_LABEL_COLOR : "var(--color-foreground)";
   const label = (
     <>
@@ -192,8 +197,7 @@ export function ReserveTreemap({ slices, subject, labelLimit = Infinity }: Reser
   if (!top) return null;
   const totalPct = data.reduce((sum, slice) => sum + slice.pct, 0);
   // Summing authored decimal shares can leave machine-roundoff dust below 100%.
-  const remainderPct = 100 - totalPct;
-  const unreviewedPct = remainderPct > Number.EPSILON * 100 * data.length ? remainderPct : 0;
+  const unreviewedPct = isWholeReserveShare(totalPct) ? 0 : Math.max(0, 100 - totalPct);
   const remainderLabel = unreviewedPct > 0 ? `, Unreviewed remainder ${formatReserveSharePct(unreviewedPct)}` : "";
 
   if (data.length === 1) {

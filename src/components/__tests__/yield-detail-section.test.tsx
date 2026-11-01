@@ -266,6 +266,20 @@ describe("YieldDetailSection", () => {
     expect(screen.queryByRole("button", { name: /Show .* more source/ })).toBeNull();
   });
 
+  it("reads a native alternate with no venue TVL as Native, not unknown or a dash", () => {
+    mockRankings([makeRanking({
+      altSources: [altSource("native-holder", "Native holder", 3, 3, null)],
+    })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    const table = screen.getByTestId("yield-detail-alt-sources-table");
+    const row = within(table).getByRole("link", { name: "Native holder" }).closest("tr")!;
+    expect(within(row).getByText("Native · depth n/a")).toBeTruthy();
+    // The lending-vault badge and the TVL cell both read Native; neither is a dash.
+    expect(within(row).getAllByText("Native", { exact: true })).toHaveLength(2);
+    expect(within(row).queryByText("—")).toBeNull();
+    expect(within(row).queryByText("Unknown depth")).toBeNull();
+  });
+
   it("does not infer a missing chain for a published venue", () => {
     mockRankings([makeRanking({ sourceRole: "external-opportunity", sourceRisk: { venueProtocol: "Published venue" } })]);
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);

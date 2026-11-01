@@ -10,7 +10,7 @@ This document covers two frontend-only feature surfaces that are not backed by d
 
 ## Stablecoin Cemetery (`/cemetery`)
 
-The route title and description count from `buildCemeteryStats(CEMETERY_ENTRIES)` (total, first death year and per-cause tally with `CAUSE_META` labels), the same stats the hero and cause strip render.
+The route title and description count from `buildCemeteryStats(CEMETERY_ENTRIES)` (total and per-cause tally with `CAUSE_META` labels; the description dates the failure window from the first death year), the same stats the hero and cause strip render.
 
 `src/app/cemetery/page.tsx` owns the static shell. `shared/lib/cemetery-merged.ts` supplies data; `src/lib/cemetery-stats.ts`, `cemetery-register.ts` and `cemetery-selection.ts` own projections/navigation. `src/components/cemetery/` owns rendering and interaction.
 
