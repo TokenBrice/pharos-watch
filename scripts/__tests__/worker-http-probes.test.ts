@@ -26,6 +26,29 @@ describe("worker HTTP probes", () => {
     expect(accessHeaders({ ...args, cfAccessClientSecret: "" })).toEqual({});
   });
 
+  it("adds the public API key only when configured", () => {
+    expect(accessHeaders({ apiUrl: "https://api.example.test" })).toEqual({});
+    expect(accessHeaders({ apiUrl: "https://api.example.test", apiKey: "key-1" })).toEqual({
+      "X-API-Key": "key-1",
+    });
+    expect(accessHeaders({ apiUrl: "https://api.example.test", noCache: true })).toEqual({
+      "Cache-Control": "no-cache",
+    });
+  });
+
+  it("reads the producer clock header when the route publishes one", async () => {
+    mockFetch([{
+      match: "https://api.example.test/api/stablecoins",
+      body: { peggedAssets: [] },
+      headers: { "X-Data-Updated-At": "1799999000" },
+    }], { requireMatch: true });
+    await expect(fetchJsonProbe(args, "/api/stablecoins")).resolves.toMatchObject({
+      status: 200,
+      ok: true,
+      updatedAt: 1_799_999_000,
+    });
+  });
+
 
   it("returns bounded text payloads and network errors without throwing", async () => {
     const text = "not-json:".repeat(150);

@@ -78,9 +78,54 @@ jobs:
             node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/classify-deploy-changes.ts >> "$GITHUB_OUTPUT"
           fi
 
-  deploy-worker:
+  data-baseline:
     needs: plan
-    if: ${{ needs.plan.outputs.worker_required == 'true' }}
+    if: ${{ needs.plan.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+        with:
+          node-version: "24.16.0"
+          cache-npm: "false"
+          install-deps: "false"
+          bootstrap-generated: "false"
+      # Read-only pre-deploy counts for the delayed data-regression workflow.
+      # A read failure is recorded as unknown in the artifact; it never blocks
+      # the deployment (R2: unavailable is not a regression and not a pass).
+      - name: Capture pre-deploy data baseline
+        env:
+          WORKER_DEPLOY_REQUIRED: ${{ needs.plan.outputs.worker_required }}
+          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
+        run: |
+          if [ "${WORKER_DEPLOY_REQUIRED}" = "true" ] && [ -z "${PHAROS_API_KEY:-}" ]; then
+            echo "::warning::PHAROS_API_KEY is unavailable; the delayed data regression baseline will report unknown counts."
+          fi
+          if [ "${WORKER_DEPLOY_REQUIRED}" != "true" ]; then
+            node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/check-post-deploy-data-regression.ts \
+              --capture "$RUNNER_TEMP/post-deploy-data-baseline.json" --skip-reason worker-not-required
+          else
+            node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/check-post-deploy-data-regression.ts \
+              --capture "$RUNNER_TEMP/post-deploy-data-baseline.json"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: post-deploy-data-baseline
+          path: ${{ runner.temp }}/post-deploy-data-baseline.json
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy-worker:
+    needs:
+      - plan
+      - data-baseline
+    # Ordering only: a baseline capture failure must not block the release.
+    if: ${{ always() && needs.plan.result == 'success' && needs.plan.outputs.worker_required == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
@@ -228,7 +273,7 @@ jobs:
         )
       }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     permissions:
       contents: read
     steps:
@@ -265,4 +310,5 @@ jobs:
           OBSERVED_WORKER_VERSION: ${{ steps.verify-worker-identity.outputs.worker_version }}
           EXPECTED_HEAVY_WORKER_VERSION: ${{ needs.deploy-worker.outputs.heavy_worker_version }}
           OBSERVED_HEAVY_WORKER_VERSION: ${{ steps.verify-heavy-identity.outputs.worker_version }}
+          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
         run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ci/run-post-deploy-acceptance.ts

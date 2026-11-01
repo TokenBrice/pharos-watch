@@ -377,7 +377,7 @@ describe("CI workflow scope", () => {
       id?: string; uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string>;
     }>;
 
-    expect(deploy.jobs["deploy-worker"].needs).toBe("plan");
+    expect(deploy.jobs["deploy-worker"].needs).toEqual(["plan", "data-baseline"]);
     expect(deploy.jobs["pages-prepare"].needs).toBe("plan");
     expect(deploy.jobs["pages-prepare"].uses).toBe("$/.github/workflows/pages-prepare.yml");
     expect(deploy.jobs["pages-prepare"].if).toBe("${{ needs.plan.outputs.pages_required == 'true' }}");
@@ -557,7 +557,49 @@ describe("CI workflow scope", () => {
       OBSERVED_WORKER_VERSION: "${{ steps.verify-worker-identity.outputs.worker_version }}",
       EXPECTED_HEAVY_WORKER_VERSION: "${{ needs.deploy-worker.outputs.heavy_worker_version }}",
       OBSERVED_HEAVY_WORKER_VERSION: "${{ steps.verify-heavy-identity.outputs.worker_version }}",
+      PHAROS_API_KEY: "${{ secrets.PHAROS_API_KEY }}",
     });
+  });
+
+  it("captures a pre-deploy data baseline and keeps the delayed volume check in a separate workflow_run", () => {
+    const deploy = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as {
+      jobs: Record<string, {
+        needs?: string | string[];
+        permissions?: Record<string, string>;
+        steps: Array<{ name?: string; run?: string; uses?: string; env?: Record<string, string>; with?: Record<string, unknown> }>;
+      }>;
+    };
+    const baseline = deploy.jobs["data-baseline"];
+    expect(baseline.needs).toBe("plan");
+    expect(baseline.permissions).toEqual({ contents: "read" });
+    const capture = baseline.steps.find((step) => step.run?.includes("check-post-deploy-data-regression.ts"));
+    expect(capture?.run).toContain("--capture");
+    expect(capture?.env).toMatchObject({ PHAROS_API_KEY: "${{ secrets.PHAROS_API_KEY }}" });
+    const upload = baseline.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    expect(upload?.with).toMatchObject({ name: "post-deploy-data-baseline", "if-no-files-found": "error" });
+    expect(deploy.jobs["deploy-worker"].needs).toEqual(["plan", "data-baseline"]);
+
+    const delayed = parseYaml(readRepoFile(".github/workflows/post-deploy-data-regression.yml")) as {
+      on: { workflow_run: { workflows: string[]; types: string[] } };
+      jobs: Record<string, {
+        permissions?: Record<string, string>;
+        steps: Array<{ name?: string; run?: string; uses?: string; if?: string; with?: Record<string, unknown> }>;
+      }>;
+    };
+    expect(delayed.on.workflow_run).toEqual({ workflows: ["Deploy to Cloudflare"], types: ["completed"] });
+    const job = delayed.jobs["data-regression"];
+    expect(job.permissions).toEqual({ actions: "read", contents: "read", issues: "write" });
+    const download = job.steps.find((step) => step.uses?.startsWith("actions/download-artifact@"));
+    expect(download?.with).toMatchObject({
+      name: "post-deploy-data-baseline",
+      "run-id": "${{ steps.deploy-run.outputs.run-id }}",
+      "github-token": "${{ github.token }}",
+    });
+    for (const step of job.steps) {
+      if (step.run) expect(step.run).not.toContain("${{");
+    }
+    expect(job.steps.find((step) => step.name === "Fail on data regression")?.if)
+      .toBe("steps.data-regression.outcome == 'failure'");
   });
 
   it("keeps the curation expiry sweep process-only with sentinel verdicts and by-week renewal views", () => {
