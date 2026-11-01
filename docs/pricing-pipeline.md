@@ -107,7 +107,7 @@ Both exact-address callers share one enabled predicate, a flat target list and a
 
 Kraken's curated `SOFIDUSD`, `FRNTUSD`, `CASHUSD` and `USDGOUSD` books supply those assets' hard-market quotes; the 2026-10-30 review added the `ZCHFUSD`, `USDSMUSD`, `USDSUIUSD`, `USDPTUSD`, `EUROPUSD`, `QCADUSD`, `AUDXUSD` and `BRL1USD` books for the coins those CoinGecko ticker sets name. Coinbase's `XSGD-USDC` FX-stablecoin book adds XSGD on the reviewed USDC-at-par precedent, and its last-trade clock rejects sparse prints. SoFiUSD has no nominal-par override; admitted consensus uses ordinary validation. Midpoints keep local-fetch clocks and never become single-source depeg authority; absent or stale quotes stay unavailable, never par, and registration alone is not a published observation. A two-sided CEX book wider than 100 bps of its midpoint, or crossed, rejects that symbol outright, with no last-trade replacement; a missing side keeps the last-trade fallback. [Kraken exact markets](process/pricing-pipeline-appendix.md#provider-specific-normalization) own identity joins and failure detail.
 
-USDY uses `detailProvider: "coingecko"` so its supplemental lane admits a fresh CoinGecko price and market cap without a live DefiLlama row; an admitted row's primary supply still wins. USYC, reUSD, USP and USD3 (on-chain roster supply) follow it after DefiLlama's 2026-10-14 delisting.
+USDY uses `detailProvider: "coingecko"` so its supplemental lane admits a fresh CoinGecko price and market cap without a live DefiLlama row; an admitted row's primary supply still wins. USYC, reUSD, USP and USD3 (on-chain roster supply) follow it after DefiLlama's 2026-10-14 delisting, and ISC follows after its 2026-11-01 list removal.
 
 ### Nominal-reference recovery boundary
 
