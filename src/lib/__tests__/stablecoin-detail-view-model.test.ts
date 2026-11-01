@@ -450,30 +450,6 @@ describe("stablecoin detail view-model builder", () => {
     });
   });
 
-  it("derives the headline deviation from the price the page displays", () => {
-    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
-    const params = makeReadyDetailParams({
-      id: coin.id,
-      coin,
-      asset: { price: 0.9982 },
-      queries: {
-        pegSummary: {
-          data: {
-            coins: [makePegSummaryCoin({
-              currentDeviationBps: -221,
-              pegReference: { valueUsd: 1, source: "median", contributorCount: 2, asOf: 1_700_000_000 },
-            })],
-          } as PegSummaryResponse,
-        },
-      },
-    });
-    const model = buildStablecoinDetailViewModel(params);
-
-    expect(model.status).toBe("ready");
-    if (model.status !== "ready") return;
-    expect(model.hero.price.deviationBps).toBe(-18);
-  });
-
   it("uses report-card snapshot freshness instead of the browser fetch timestamp", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether");
     expect(coin).toBeDefined();

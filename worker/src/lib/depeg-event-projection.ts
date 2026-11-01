@@ -189,7 +189,10 @@ export const PUBLIC_DEPEG_EVENTS_SQL = `(
         SELECT canonical.first_started_at
           FROM depeg_resolver_incidents owner
           JOIN depeg_resolver_incidents canonical
-            ON canonical.incident_key = COALESCE(owner.superseded_by_incident_key, owner.incident_key)
+            ON canonical.incident_key = CASE
+                 WHEN owner.incident_state = 'active' THEN owner.incident_key
+                 ELSE COALESCE(owner.superseded_by_incident_key, owner.incident_key)
+               END
          WHERE owner.current_event_id = events.id
            AND canonical.incident_state = 'active'
            AND COALESCE(${effectiveAliasIncidentKeySql("canonical")}, canonical.incident_key) = owner.incident_key

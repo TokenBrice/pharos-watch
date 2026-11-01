@@ -97,6 +97,7 @@ const MERGED_D = incidentKey("1");
 const CANONICAL_E = incidentKey("2");
 const ALIAS_F = incidentKey("3");
 const ALIAS_G = incidentKey("4");
+const ACTIVE_POINTING_H = incidentKey("5");
 const DISPUTED_VERDICT_SQL = DISPUTED_AUDIT_VERDICTS.map((verdict) => `'${verdict}'`).join(", ");
 
 type Fixture = { sqlite: DatabaseSync; db: ReturnType<typeof createSqliteD1> };
@@ -179,6 +180,8 @@ function seed(): Fixture {
     // Nested supersession: E <- F <- G, where only E's direct alias F is effective.
     [19, BASE + 130], [20, BASE + 140], [21, BASE + 150], [22, BASE + 160],
     [23, BASE + 170], [24, BASE + 180],
+    // An active incident that still carries a superseded-by pointer.
+    [25, BASE + 190], [26, BASE + 200],
   ];
   for (const [id, startedAt, options] of events) insertEvent(fixture, id, startedAt, options);
   insertProvenance(fixture, 13, "disputed");
@@ -227,6 +230,12 @@ function seed(): Fixture {
   insertIncident(fixture, {
     key: ALIAS_G, state: "superseded", supersededBy: ALIAS_F,
     firstEventId: 23, currentEventId: 24, firstStartedAt: BASE + 170, currentStartedAt: BASE + 180,
+  });
+  // No writer produces this today, but nothing forbids it: an active incident
+  // pointing at another incident is still its own projected canonical.
+  insertIncident(fixture, {
+    key: ACTIVE_POINTING_H, supersededBy: MERGED_D,
+    firstEventId: 25, currentEventId: 26, firstStartedAt: BASE + 190, currentStartedAt: BASE + 200,
   });
   return fixture;
 }
@@ -361,9 +370,10 @@ describe("public depeg page effective onset", () => {
     }
     // ALIAS_A3 is the effective fragment of canonical A, CANONICAL_B and
     // CANONICAL_C keep their own fragments, and ALIAS_F is the effective
-    // fragment of canonical E; G's and D's events stay unprojected.
-    expect([...load.projections.keys()].sort((a, b) => a - b)).toEqual([6, 9, 10, 22]);
-    expect(projectedRows).toBe(4);
+    // fragment of canonical E; G's and D's events stay unprojected. The active
+    // H keeps its own fragment despite its superseded-by pointer.
+    expect([...load.projections.keys()].sort((a, b) => a - b)).toEqual([6, 9, 10, 22, 26]);
+    expect(projectedRows).toBe(5);
   });
 
   it("resolves the effective fragment with indexed per-row lookups instead of a per-row projection scan", async () => {

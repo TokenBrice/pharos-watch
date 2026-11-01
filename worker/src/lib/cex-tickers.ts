@@ -35,7 +35,7 @@ const CEX_REQUEST_RETRIES = 1;
 const COINBASE_PRODUCT_FETCH_CONCURRENCY = 1;
 const KRAKEN_TICKER_ENDPOINT = "api.kraken.com/0/public/Ticker";
 const BITSTAMP_TICKER_ENDPOINT = "www.bitstamp.net/api/v2/ticker/";
-const COINBASE_TICKER_ENDPOINT = "api.exchange.coinbase.com/products";
+const COINBASE_TICKER_ENDPOINT = "api.exchange.coinbase.com/products/{product}/ticker";
 const BINANCE_TICKER_URLS = [
   "https://data-api.binance.vision/api/v3/ticker/price",
   "https://api.binance.com/api/v3/ticker/price",
@@ -147,7 +147,8 @@ function midpointFromBidAsk(
   const midpoint = (parsedBid + parsedAsk) / 2;
   return {
     midpoint,
-    wideSpread: ((parsedAsk - parsedBid) / midpoint) * 10_000 > CEX_MAX_BID_ASK_SPREAD_BPS,
+    // A crossed book (ask below bid) is as unusable as a wide one.
+    wideSpread: parsedAsk < parsedBid || ((parsedAsk - parsedBid) / midpoint) * 10_000 > CEX_MAX_BID_ASK_SPREAD_BPS,
   };
 }
 

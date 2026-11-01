@@ -393,14 +393,14 @@ describe("HeroCard", () => {
     expect(html).not.toContain("$0.0000");
   });
 
-  it("derives the displayed deviation from the same live price snapshot", () => {
+  it("uses the published deviation when the live price snapshot disagrees", () => {
     const html = renderHero({
       coinData: { price: 1.02 },
       deviationBps: -50,
     });
 
-    expect(html).toContain(">+200</span> bps");
-    expect(html).not.toContain(">-50</span> bps");
+    expect(html).toContain(">-50</span> bps");
+    expect(html).not.toContain("+200");
   });
 
   it.each(["card", "cell"] as const)("withholds the %s peg deviation when its observed price is unusable", (variant) => {

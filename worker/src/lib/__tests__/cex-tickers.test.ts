@@ -352,7 +352,7 @@ describe("fetchCoinbasePrices", () => {
       {
         source: "coinbase",
         stage: "primary",
-        endpoint: "api.exchange.coinbase.com/products",
+        endpoint: "api.exchange.coinbase.com/products/{product}/ticker",
         status: null,
         ok: true,
         success: false,
@@ -512,6 +512,18 @@ describe("fetchKrakenPrices", () => {
         rejectionReasonCounts: { "wide-spread": 1 },
       },
     ]);
+  });
+
+  it("rejects a crossed book (ask below bid) like a wide one", async () => {
+    mockFetch([{
+      match: () => true,
+      body: { error: [], result: { USDCUSD: { a: ["0.99000000"], b: ["1.01000000"], c: ["1.00000000"] } } },
+    }]);
+
+    const outcome = await fetchKrakenPrices(["USDC"]);
+
+    expect(outcome.value.prices.has("USDC")).toBe(false);
+    expect(outcome.value.diagnostics[0]?.rejectionReasonCounts).toEqual({ "wide-spread": 1 });
   });
 
   it("keeps the last-trade fallback when only one book side is present", async () => {

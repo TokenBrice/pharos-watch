@@ -299,25 +299,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: Date.UTC(2026, 10, 1, 17, 21) / 1000,
     expiresAt: Date.UTC(2026, 10, 15, 17, 21) / 1000,
   },
-  {
-    stablecoinId: "sbold-k3-capital",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-11-01 17:21 UTC with fresh GETs: CoinGecko sbold-by-k3-capital returns no price, DefiLlama coins returns no quote for coingecko:sbold-by-k3-capital or the Ethereum contract, and exact Ethereum DexScreener and GeckoTerminal reads are empty, so no market exists. The only admitted lane is the protocol-redeem NAV route, which reads convertToAssets(1e18) and multiplies by a trusted BOLD price. BOLD is fresh: CoinGecko liquity-bold-2 reports $0.996864 at 17:14 UTC and DefiLlama's Ethereum BOLD contract reports $0.99675 at 16:53 UTC. The NAV lane last published sBOLD at 16:15:48 UTC and has now missed two generations, so it is failing intermittently while its parent stays fresh; the vault's three-pool totalAssets() read runs under the shared 2.5-second candidate timeout. Keep sBOLD active and the price missing; all admission gates preserved. Owner ops confirms a reliable NAV read or re-reviews by this review's expiry, 2026-11-15 17:21 UTC.",
-    sources: [
-      "https://api.pharos.watch/api/health",
-      "https://api.coingecko.com/api/v3/simple/price?ids=sbold-by-k3-capital&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/sbold-by-k3-capital",
-      "https://coins.llama.fi/prices/current/ethereum:0x50bd66d59911f5e086ec87ae43c811e0d059dd11,coingecko:sbold-by-k3-capital",
-      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x50bd66d59911f5e086ec87ae43c811e0d059dd11",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x50bd66d59911f5e086ec87ae43c811e0d059dd11/pools",
-      "https://api.coingecko.com/api/v3/simple/price?ids=liquity-bold-2&vs_currencies=usd&include_last_updated_at=true",
-      "https://coins.llama.fi/prices/current/ethereum:0x6440f144b7e50d6a8439336510312d2f54beb01d",
-      "https://www.liquity.org/blog/sbold---the-on-chain-defi-savings-account",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 1, 17, 21) / 1000,
-    expiresAt: Date.UTC(2026, 10, 15, 17, 21) / 1000,
-  },
 ];
 
 /** Standing source-calendar review, separate from temporary gap acknowledgements.
