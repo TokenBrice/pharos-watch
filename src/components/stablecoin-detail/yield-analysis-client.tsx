@@ -581,17 +581,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         warningSignals={ranking.warningSignals}
       />
 
-      {apyChangeAttribution ? (
-        <YieldChangeAttributionCard attribution={apyChangeAttribution} />
-      ) : historyQuery.isLoading ? (
-        <Skeleton className="h-[120px] w-full rounded-xl" />
-      ) : historyQuery.error ? (
-        <QueryErrorNotice
-          error={historyQuery.error instanceof Error ? historyQuery.error : null}
-          hasData={false}
-          onRetry={() => { void historyQuery.refetch(); }}
-        />
-      ) : null}
+      {apyChangeAttribution ? <YieldChangeAttributionCard attribution={apyChangeAttribution} /> : null}
 
       <Card id="source-comparison" className="pharos-card-shell scroll-mt-24">
         <CardHeader className="pb-2">

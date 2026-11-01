@@ -268,7 +268,7 @@ describe("YieldDetailSection", () => {
     });
     rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
     expect(screen.queryByText(/Not enough data to attribute/)).toBeNull();
-    expect(screen.getByText("history failed")).toBeTruthy();
+    expect(screen.queryByText("history failed")).toBeNull();
   });
 
   it("gates price appreciation explanation on the published calculation mode", () => {

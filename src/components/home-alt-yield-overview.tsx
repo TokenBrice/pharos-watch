@@ -233,6 +233,7 @@ function LeaderRow({
             safetyScore={row.safetyScore}
             safetySrLabel={`Yield safety ${row.safetyGrade ?? "unrated"}${row.provenance?.usedDefaultSafety ? " (default safety)" : ""}`}
             opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+            usedDefaultSafety={row.provenance?.usedDefaultSafety === true}
             compact
           />
         </span>

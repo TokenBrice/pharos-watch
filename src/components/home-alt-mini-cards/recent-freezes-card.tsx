@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
-import { useMinuteClockSec } from "@/hooks/use-minute-clock-sec";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildBlacklistStatusBuckets } from "@shared/lib/blacklist-status-buckets";
 import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/freezable-summary";
@@ -43,14 +42,13 @@ function buildRecentRows(
     amountUsdAtEvent: number | null;
   }>,
   nowSeconds: number,
-  windowSeconds: number,
   resolveId: (symbol: string) => string,
 ): RecentFreezeEvent[] {
-  const cutoff = nowSeconds - windowSeconds;
+  const cutoff7d = nowSeconds - 7 * DAY_SECONDS;
   const recent: RecentFreezeEvent[] = [];
   for (const ev of events) {
     if (ev.eventType !== "blacklist" && ev.eventType !== "destroy") continue;
-    if (ev.timestamp < cutoff) continue;
+    if (ev.timestamp < cutoff7d) continue;
     // Only surface recent rows that carry a known USD amount — events with a
     // null amountUsdAtEvent (older events where price/balance couldn't be
     // reconstructed) look broken in a discovery list.
@@ -113,25 +111,15 @@ export function RecentFreezesCard(): React.JSX.Element {
   const logos = logosById;
   const logoMap = useMemo(() => logos ?? {}, [logos]);
   const [windowKey, setWindowKey] = useState<WindowKey>("24h");
-  const nowSec = useMinuteClockSec();
 
   const recent = useMemo(() => {
     if (!eventsQuery.data) return [];
-    // Ages follow the viewer's clock, not the query's receipt time, which
-    // freezes between the 12h polls. Receipt time only fills the pre-mount gap.
-    const refSec = nowSec > 0
-      ? nowSec
-      : eventsQuery.dataUpdatedAt
-        ? Math.floor(eventsQuery.dataUpdatedAt / 1000)
-        : // eslint-disable-next-line react-hooks/purity -- transient fallback before the mounted clock ticks and before TanStack reports dataUpdatedAt
-          Math.floor(Date.now() / 1000);
-    return buildRecentRows(
-      eventsQuery.data.events,
-      refSec,
-      windowKey === "24h" ? DAY_SECONDS : 7 * DAY_SECONDS,
-      (sym) => symbolToId(sym, logoMap),
-    );
-  }, [eventsQuery.data, eventsQuery.dataUpdatedAt, logoMap, nowSec, windowKey]);
+    const refSec = eventsQuery.dataUpdatedAt
+      ? Math.floor(eventsQuery.dataUpdatedAt / 1000)
+      : // eslint-disable-next-line react-hooks/purity -- Date.now() only used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result is bounded by the query's refetchInterval.
+        Math.floor(Date.now() / 1000);
+    return buildRecentRows(eventsQuery.data.events, refSec, (sym) => symbolToId(sym, logoMap));
+  }, [eventsQuery.data, eventsQuery.dataUpdatedAt, logoMap]);
 
   const isLoading = eventsQuery.isLoading || summaryQuery.isLoading;
   const state = resolveQueryViewState({

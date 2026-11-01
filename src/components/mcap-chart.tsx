@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { Area, ReferenceDot } from "recharts";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
@@ -63,37 +63,15 @@ function ExpandableHistoryMcapChart(props: McapChartProps) {
   );
   const hasExpandedHistory = needsFullHistory && fullHistoryQuery.data.length > 0;
   const data = hasExpandedHistory ? fullHistoryQuery.data : props.data;
-  const requestedRange = range === "all" ? "All" : "1Y";
-  // A pressed wide range is not a painted window until its own read lands (R7):
-  // the seed stays visible with the coverage verdict the detail section uses.
-  const historyStatus = !needsFullHistory || hasExpandedHistory
-    ? null
-    : fullHistoryQuery.error ? `${requestedRange} history could not be loaded. Requested coverage is not confirmed.`
-      : fullHistoryQuery.isLoading || fullHistoryQuery.isFetching ? `Loading ${requestedRange} history. Requested coverage is not yet confirmed.`
-        : `No observations returned for ${requestedRange} history. Requested coverage is unavailable.`;
-  const historyNotice = historyStatus ? (
-    <div role="status" aria-label="Market history coverage" aria-live="polite" className="text-xs leading-relaxed text-muted-foreground">
-      <p>
-        {historyStatus}{" "}
-        {props.data.length > 0 ? "Only the available 90-day window is shown." : "No observations are available to show."}
-      </p>
-    </div>
-  ) : null;
 
   return (
     <McapChartBody
       {...props}
       data={data}
-      historyNotice={historyNotice}
       controlledRange={range}
       onControlledRangeChange={props.controlledRange ? props.onControlledRangeChange : setLocalRange}
     />
   );
-}
-
-interface McapChartBodyProps extends McapChartProps {
-  /** The expansion read's own coverage verdict, rendered with the chart header. */
-  historyNotice?: ReactNode;
 }
 
 function McapChartBody({
@@ -102,8 +80,7 @@ function McapChartBody({
   onControlledRangeChange,
   cardClassName,
   embedded = false,
-  historyNotice,
-}: McapChartBodyProps) {
+}: McapChartProps) {
   const mcapGradientId = useSvgId("mcap");
   // Log toggle persisted across visits; gated to `range === "all"` + no active brush.
   const [logScale, setLogScale] = usePreference<boolean>("pharos-chart-log-scale", false);
@@ -204,7 +181,6 @@ function McapChartBody({
             ) : null}
           </div>
         ) : null}
-        {historyNotice}
       </div>
       <div className="flex min-w-0 max-w-full items-center gap-2">
         <ChartScaleToggle

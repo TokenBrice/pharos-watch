@@ -268,7 +268,7 @@ describe("MethodologyPage", () => {
     expect(text).not.toContain("~32%+->100");
   });
 
-  it("states the actual PegScore coverage disclosure instead of a retired early-score label", () => {
+  it("states the PegScore tracking gate without a retired early-score label", () => {
     const root = methodologyDocument();
     const faq = [...root.querySelectorAll('script[type="application/ld+json"]')]
       .map((script) => JSON.parse(script.textContent!))
@@ -276,12 +276,12 @@ describe("MethodologyPage", () => {
       .find((value) => value["@type"] === "FAQPage");
     const entry = faq?.mainEntity.find((item: { name: string }) => item.name === "How is the Pharos peg score calculated?");
     expect(entry?.acceptedAnswer.text).not.toMatch(/early/i);
-    expect(entry?.acceptedAnswer.text).toContain("historyCoverage");
+    expect(entry?.acceptedAnswer.text).not.toContain("historyCoverage");
     expect(DEFINITIONS.pegScore.detail).not.toMatch(/early/i);
     expect(DEFINITIONS.pegScore.long).not.toMatch(/early/i);
     const technical = root.querySelector("#pegscore-dews-methodology")!.textContent!.replace(/\s+/g, " ");
     expect(technical).not.toMatch(/Early score/);
-    expect(technical).toContain("Score coverage");
+    expect(technical).not.toContain("historyCoverage");
   });
 
   it("states the leg-quarantine rule instead of keeping a stalled mint/burn leg in scope", () => {

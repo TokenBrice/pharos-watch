@@ -34,13 +34,12 @@ const forecast = {
   live: { currentDeviationBps: -45, peakDeviationBps: -300, stale: false, degradedReason: null },
 };
 
-function setSources({ rows = [forecast], stale = false, resolverError = null, reviewerError = null, unavailable = false, horizonHitRates = [] }: {
+function setSources({ rows = [forecast], stale = false, resolverError = null, reviewerError = null, unavailable = false }: {
   rows?: typeof forecast[];
   stale?: boolean;
   resolverError?: Error | null;
   reviewerError?: Error | null;
   unavailable?: boolean;
-  horizonHitRates?: Array<{ horizon: "6h" | "24h" | "7d" | "30d"; scored: number; hits: number; misses: number; hitRate: number | null }>;
 } = {}) {
   const meta = { computedAt: COMPUTED_AT, degraded: stale, degradedReason: stale ? "stale-cache" : null };
   useDepegResolverSurfacesMock.mockReturnValue({
@@ -54,7 +53,7 @@ function setSources({ rows = [forecast], stale = false, resolverError = null, re
         _meta: { ...meta, computedAt: COMPUTED_AT - 60 },
         summary: { headlineScope: "current_policy", headline: { recoveryLikelihoodScoredCount: 10,
           recoveryLikelihoodCorrectCount: 8, recoveryLikelihoodAccuracyPct: 0.8, baselineRecoverableCorrectCount: 9,
-          lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates },
+          lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] },
         byPredictionPolicy: [
           { segmentKind: "prediction_policy", predictionMethodologyVersion: "3.04", predictionPolicyVersion: "sticky-24h-v1",
             metrics: { recoveryLikelihoodScoredCount: 4 } },
@@ -68,18 +67,6 @@ function setSources({ rows = [forecast], stale = false, resolverError = null, re
 }
 
 describe("HomeAltDdrOverview", () => {
-  it("labels the per-horizon bars as the resolved-within-horizon share", () => {
-    setSources({
-      horizonHitRates: [
-        { horizon: "6h", scored: 2, hits: 2, misses: 0, hitRate: 1 },
-        { horizon: "30d", scored: 3, hits: 0, misses: 3, hitRate: 0 },
-      ],
-    });
-    render(<HomeAltDdrOverview />);
-    expect(screen.getByText("Resolved within horizon")).toBeTruthy();
-    expect(screen.queryByText("Accuracy by horizon")).toBeNull();
-  });
-
   it("keeps invalidated, pending, and no-call states visible without live verdicts or durations", () => {
     const frozen = {
       resolution: { tier: "recovery_likely", factors: [] },
@@ -160,34 +147,6 @@ describe("HomeAltDdrOverview", () => {
     render(<HomeAltDdrOverview />);
     const symbols = screen.getAllByText(/^(LOCKDEEP|UNKNOWN|LIVEDEEP)$/).map((node) => node.textContent);
     expect(symbols).toEqual(["LIVEDEEP", "LOCKDEEP", "UNKNOWN"]);
-  });
-
-  it.each([
-    ["still loading", { data: undefined, error: null }],
-    ["degraded", {
-      data: { _meta: { computedAt: COMPUTED_AT, degraded: true, degradedReason: "secondary-overlay-unavailable" }, rows: [] },
-      error: null,
-    }],
-  ])("keeps the header count on the graded cohort while the resolver is %s", (_case, resolver) => {
-    useDepegResolverSurfacesMock.mockReturnValue({
-      resolverEnabled: true, resolverReviewerEnabled: true,
-      resolver: { ...resolver, dataUpdatedAt: COMPUTED_AT * 1000, refetch: refetchResolver },
-      resolverReview: {
-        data: {
-          _meta: { computedAt: COMPUTED_AT, degraded: false, degradedReason: null },
-          summary: { headlineScope: "current_policy", headline: { recoveryLikelihoodScoredCount: 8,
-            recoveryLikelihoodCorrectCount: 6, recoveryLikelihoodAccuracyPct: 0.75, baselineRecoverableCorrectCount: 7,
-            lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] },
-          byPredictionPolicy: [] },
-        },
-        error: null, dataUpdatedAt: COMPUTED_AT * 1000, refetch: refetchReviewer,
-      },
-    });
-    render(<HomeAltDdrOverview />);
-    expect(screen.getByText("75.0%")).toBeTruthy();
-    expect(screen.getByText("Recovery calls correct: 6/8")).toBeTruthy();
-    expect(screen.getByText("graded").textContent).toBe("8 graded");
-    expect(screen.queryByText("12 graded")).toBeNull();
   });
 
   it("shows the promoted accuracy with its call fraction and no sub-text under the figure", () => {

@@ -4,7 +4,6 @@ import { useCallback } from "react";
 import { TableCell, TableRow } from "@/components/table";
 import { DataTableEmptyRow, DataTableLoadingRows, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { MobileSortPanel, MobileSortPills } from "@/components/mobile-sort-pills";
-import { QueryStateNotice } from "@/components/query-state-notice";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -41,7 +40,6 @@ interface BlacklistTableProps {
   isLoading: boolean;
   /** The ledger read failed. Without retained rows this is unavailable, never an empty result. */
   error?: unknown | null;
-  onRetry?: () => void;
   page: number;
   pageSize: number;
   sortKey: BlacklistSortKey;
@@ -71,7 +69,6 @@ export function BlacklistTable({
   events,
   isLoading,
   error = null,
-  onRetry,
   page,
   pageSize,
   sortKey,
@@ -140,6 +137,7 @@ export function BlacklistTable({
 
   // A failed ledger read with no retained rows is unavailable, not an empty match set (R2).
   const viewState = resolveQueryViewState({ hasData: events.length > 0, isLoading, error });
+  if (viewState === "unavailable") return null;
 
   return (
     <TooltipProvider delayDuration={220}>
@@ -167,9 +165,7 @@ export function BlacklistTable({
             className="mt-3 flex flex-wrap gap-2"
           />
         </MobileSortPanel>
-        {viewState === "unavailable" ? (
-          <QueryStateNotice state="unavailable" label="Freeze ledger data" onRetry={onRetry} />
-        ) : events.length === 0 ? (
+        {events.length === 0 ? (
           <div className="pharos-empty-note py-8 text-center">
             No freeze events match your filters.
           </div>
@@ -215,11 +211,7 @@ export function BlacklistTable({
           {events.map((evt, index) => (
             <BlacklistEventRow key={evt.id} event={evt} rank={(page - 1) * pageSize + index + 1} />
           ))}
-          {viewState === "unavailable" ? (
-            <DataTableEmptyRow colSpan={BLACKLIST_COLUMNS.length}>
-              <QueryStateNotice state="unavailable" label="Freeze ledger data" onRetry={onRetry} />
-            </DataTableEmptyRow>
-          ) : events.length === 0 && (
+          {events.length === 0 && (
             <DataTableEmptyRow colSpan={BLACKLIST_COLUMNS.length}>
               No freeze events match your filters.
             </DataTableEmptyRow>

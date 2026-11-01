@@ -33,7 +33,7 @@ const FAQ_ITEMS = [
   {
     question: "How is the peg score calculated?",
     answer:
-      "The peg score (0–100) combines two equally weighted components: peg percentage (the share of tracked history spent at peg) and severity score (100 minus per-event penalties based on peak deviation magnitude, duration, and recency). An active depeg penalty of up to 50 points and a spread penalty of up to 15 points are subtracted. The score returns null for coins with fewer than 7 days of tracking history; the coverage start, source and verification status are published as historyCoverage.",
+      "The peg score (0–100) combines two equally weighted components: peg percentage (the share of tracked history spent at peg) and severity score (100 minus per-event penalties based on peak deviation magnitude, duration, and recency). An active depeg penalty of up to 50 points and a spread penalty of up to 15 points are subtracted. The score returns null for coins with fewer than 7 days of tracking history.",
   },
   {
     question: "What counts as a depeg event on Pharos?",

@@ -299,7 +299,7 @@ function ForecastZone({
 function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] }) {
   return (
     <div className="flex flex-1 flex-col gap-2">
-      <p className="pharos-label">Resolved within horizon</p>
+      <p className="pharos-label">Accuracy by horizon</p>
       <div className="flex flex-1 items-stretch gap-2">
         {rates.map((r) => {
           const pct = Math.round(r.hitRate * 100);
@@ -419,8 +419,7 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
   const stat = ddrUsable
     ? { value: items.filter((item) => item.tier != null).length, label: "published forecasts" }
     // R1: no usable reviewer headline is an unavailable count, never zero graded.
-    // The graded cohort is the accuracy denominator, not the all-time locked ledger.
-    : { value: headline?.recoveryLikelihoodScoredCount ?? null, label: "graded" };
+    : { value: headline?.lockedPredictionCount ?? null, label: "graded" };
 
   const forecastSpan = resolverReviewerEnabled ? "lg:col-span-3" : "lg:col-span-5";
   const trackSpan = resolverEnabled ? "lg:col-span-2" : "lg:col-span-5";

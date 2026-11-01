@@ -275,9 +275,9 @@ export const DEFINITIONS = {
     label: "Peg Score",
     short: "Historical 0-100 peg-behavior score built from time-at-peg, event severity, and active-depeg penalties.",
     detail:
-      "Requires at least 7 tracking days; the coverage start, source and verification status are published as historyCoverage. NAV tokens return NR because they are not meant to hold a fixed price.",
+      "Requires at least 7 tracking days. NAV tokens return NR because they are not meant to hold a fixed price.",
     long:
-      "A 0-100 score for a stablecoin's historical peg behavior, combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. It needs at least 7 days of tracking; the coverage start, source and verification status are published as historyCoverage and shown as 'Score coverage' in depeg history. NAV tokens return NR because they are not meant to hold a fixed price. Peg Score enters the Safety Score as a multiplier.",
+      "A 0-100 score for a stablecoin's historical peg behavior, combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. It needs at least 7 days of tracking. NAV tokens return NR because they are not meant to hold a fixed price. Peg Score enters the Safety Score as a multiplier.",
     listed: true,
     seeAlso: ["depeg", "dews", "safetyScore"],
     ...PEG,

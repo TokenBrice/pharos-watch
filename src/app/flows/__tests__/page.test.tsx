@@ -123,7 +123,7 @@ describe("FlowsClient", () => {
     expect(screen.queryByText("Failed to load this dataset")).toBeNull();
   });
 
-  it("reports a failed 24h summary read instead of a zero-coin hero and an empty table", () => {
+  it("hides the 24h hero and table on a failed summary read instead of a zero-coin pass", () => {
     useMintBurnFlowsMock.mockImplementation((hours: number) => {
       if (hours === 24) {
         return makeQueryResult({
@@ -137,7 +137,7 @@ describe("FlowsClient", () => {
 
     render(<FlowsClient faqItems={[]} />);
 
-    expect(screen.getByText("Waiting for first sync")).toBeTruthy();
+    expect(screen.queryByText("Waiting for first sync")).toBeNull();
     expect(flowGaugeHeroMock).not.toHaveBeenCalled();
     expect(flowTableMock).not.toHaveBeenCalled();
   });
