@@ -342,7 +342,9 @@ describe("YieldInstrumentBoard — Why this PYS strip", () => {
     expect(strip.textContent).toContain("B+");
     expect(strip.textContent).toContain("Source risk");
     expect(strip.textContent).toContain("1.02×");
-    expect(strip.textContent).toContain("Neutral");
+    // A resolved penalty above 1× is not neutral even with no projected driver.
+    expect(strip.textContent).not.toContain("Neutral");
+    expect(strip.textContent).toContain("—");
   });
 
   it.each(rowRenderers)("hides null PYS but keeps history on %s", (_surface, renderRow) => {

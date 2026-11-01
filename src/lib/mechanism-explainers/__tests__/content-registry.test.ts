@@ -14,4 +14,12 @@ describe("mechanism explainer representative coins", () => {
       expect(resolveMechanismArchetype(meta!, TRACKED_META_BY_ID), entry.coinId).toBe(archetype);
     }
   });
+
+  it("backs every credit-fund example's quarterly redemption claim with its own reviewed mechanism", () => {
+    for (const entry of ARCHETYPE_CONTENT["rwa-credit-fund"].representativeCoins) {
+      if (!/quarterly/i.test(entry.note)) continue;
+      const mechanism = (TRACKED_META_BY_ID.get(entry.coinId)?.pegMechanism ?? "").toLowerCase();
+      expect(mechanism, entry.coinId).toContain("quarter");
+    }
+  });
 });

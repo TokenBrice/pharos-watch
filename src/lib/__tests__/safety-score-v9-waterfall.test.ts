@@ -114,6 +114,36 @@ describe("buildScoreWaterfall", () => {
     expect(steps.at(-1)?.kind).toBe("published");
   });
 
+  it("keeps the three-pillar caption when only a subcomponent carries partial evidence", () => {
+    const base = makeV9Card();
+    const card = {
+      ...base,
+      partialEvidence: {
+        reasonCode: "partial-evidence-pipeline-gap",
+        excludedPillars: [],
+        excludedComponentKeys: ["redemption:reviewed:cost"],
+        causeGapRefs: [2],
+        causes: ["B"],
+      },
+      scoreTrace: {
+        ...base.scoreTrace,
+        stages: {
+          ...base.scoreTrace.stages,
+          aggregatedQualityScore: 69,
+          pegMultiplier: 1,
+          baseAssetScore: 69,
+          deploymentAdjustmentPoints: 0,
+          deploymentAdjustedScore: 69,
+          preCapScore: 69,
+          publishedScore: 69,
+        },
+      },
+    } as SafetyScoreV9CurrentCard;
+    const quality = buildScoreWaterfall(card).find((step) => step.key === "quality");
+    expect(quality?.detail).toContain("Backing, Exit, and Control");
+    expect(quality?.detail).not.toContain("renormalized");
+  });
+
   it("returns nothing when the asset is not rated", () => {
     expect(buildScoreWaterfall(cardWithStages({ aggregatedQualityScore: null, publishedScore: null }))).toEqual([]);
   });

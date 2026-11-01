@@ -218,10 +218,16 @@ function buildUsedStation(stats: BlacklistSummaryResponse["stats"], symbol: stri
     });
     spoken.push(`${count} ${addresses === 1 ? "address" : "addresses"} frozen`);
   }
-  if ((frozenUsd != null && frozenUsd > 0) || (stats.valuationCoverage?.perCoinFrozen[symbol]?.knownCount ?? 0) > 0 || stats.valuationCoverage?.perCoinFrozen[symbol]?.unavailableCount) {
+  if (
+    addresses !== 0
+    && ((frozenUsd != null && frozenUsd > 0) || (stats.valuationCoverage?.perCoinFrozen[symbol]?.knownCount ?? 0) > 0 || stats.valuationCoverage?.perCoinFrozen[symbol]?.unavailableCount)
+  ) {
     const amount = formatBlacklistValuation(frozenUsd, stats.valuationCoverage?.perCoinFrozen[symbol], formatCompactUsdShort);
-    chips.push({ key: "frozen", tone: "terminal", content: <><Figure>{amount}</Figure> frozen</> });
-    spoken.push(`${amount} frozen`);
+    // This total sums every retained freeze-ledger snapshot, released addresses
+    // included, so it carries the Activity card's ledger qualifier rather than a
+    // present-tense holding claim.
+    chips.push({ key: "frozen", tone: "terminal", content: <><Figure>{amount}</Figure>{" frozen (persistent freeze-ledger)"}</> });
+    spoken.push(`${amount} frozen (persistent freeze-ledger)`);
   }
   if ((destroyedUsd != null && destroyedUsd > 0) || (stats.valuationCoverage?.perCoinDestroyed[symbol]?.knownCount ?? 0) > 0 || stats.valuationCoverage?.perCoinDestroyed[symbol]?.unavailableCount) {
     const amount = formatBlacklistValuation(destroyedUsd, stats.valuationCoverage?.perCoinDestroyed[symbol], formatCompactUsdShort);
@@ -230,8 +236,8 @@ function buildUsedStation(stats: BlacklistSummaryResponse["stats"], symbol: stri
   }
 
   if (chips.length === 0) {
-    // Events exist but nothing is held or destroyed now: every freeze was released.
-    if (events != null && events > 0 && addresses === 0 && frozenUsd === 0) {
+    // Events exist but no address is net-frozen now: every freeze was released.
+    if (events != null && events > 0 && addresses === 0) {
       return {
         key: "used",
         label: "Used",

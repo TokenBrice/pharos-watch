@@ -89,7 +89,9 @@ const COHORT_LINES: readonly CohortLine[] = [
   { key: "usdc", label: "USDC", color: USDC_BLUE },
   { key: "sky", label: "USDS + DAI", color: CHART_ORANGE },
   { key: "others", label: "Others", color: CHART_PALETTE[1] },
-  { key: "nonUsd", label: "Non-USD share", color: CHART_SLATE_STRONG, dashArray: "4 4" },
+  // The plotted series is a USD level on the chart's currency scale; the share
+  // is a different number and lives only in the cohort list.
+  { key: "nonUsd", label: "Non-USD market cap", color: CHART_SLATE_STRONG, dashArray: "4 4" },
 ];
 
 /**

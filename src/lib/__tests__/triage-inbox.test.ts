@@ -52,6 +52,11 @@ describe("buildTriageInbox", () => {
     expect(buildTriageHeadline(inbox, { state: "stale", staleLabels: ["Public health"], missingLabels: [] }).verdict).toBe(
       "unavailable",
     );
+    // Partial evidence that includes a never-loaded required source is not an
+    // answerable read, even with no stale label.
+    expect(
+      buildTriageHeadline(inbox, { state: "partial", staleLabels: [], missingLabels: ["Public health"] }),
+    ).toEqual({ verdict: "unavailable", text: "Cannot answer: Public health unavailable. Showing the last good read." });
   });
 
   it.each([

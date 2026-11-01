@@ -442,6 +442,23 @@ describe("PharosWatchBotMiniAppPage", () => {
     });
     expect(screen.getByRole("switch", { name: switchName("USDC Safety Score") }).getAttribute("aria-checked")).toBe("false");
     expect(screen.getByText("Can't check USD Top 25 coverage right now")).toBeTruthy();
+    // Unreadable coverage is neither on nor off, so the switch cannot be toggled
+    // into a positive claim of either kind.
+    expect(screen.getByRole("switch", { name: switchName("USDC Safety Score") }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("shows unreadable coin coverage as a missing value, never as Off", async () => {
+    const state = makeMiniAppState({
+      subscriber: { globalAlerts: { dews: false, depeg: false } },
+      subscriptions: [],
+      presets: [top25({ safety: true }, null)],
+      catalog: rankedCatalog,
+    });
+    await renderReadyMiniApp({ state, launch: { initDataUnsafe: { start_param: "coin_usdt-tether" } } });
+    expect(screen.getByText("Can't check USD Top 25 coverage right now")).toBeTruthy();
+    const safetyRow = screen.getByText("Safety Score").closest("div")!;
+    expect(safetyRow.textContent).toContain("—");
+    expect(safetyRow.textContent).not.toContain("Off");
   });
 
   it("claims neither coverage nor a mute when a followed preset's members are unreadable", async () => {

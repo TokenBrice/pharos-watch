@@ -334,6 +334,7 @@ export function useFreezeWatchPageController() {
     summary,
     summaryLoading,
     summaryError,
+    pageError,
     error,
     freshnessQueries,
     sourceGenerations: { stablecoins: stablecoinsMeta?.updatedAt, reportCards: reportCardsMeta?.updatedAt },

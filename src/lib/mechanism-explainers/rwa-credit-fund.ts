@@ -4,9 +4,9 @@ export const content: ArchetypeContent = {
   archetype: "rwa-credit-fund",
   headline: "Tokenize a private credit fund share",
   subtitle:
-    "Regulated funds hold private credit, CLO tranches, or other non-Treasury debt; the token is a fund share whose NAV reflects credit losses and quarterly redemption gates.",
+    "Regulated funds hold private credit, CLO tranches, or other non-Treasury debt; the token is a fund share whose NAV reflects credit losses and redemption gates.",
   lead: [
-    "A tokenized credit fund token is a legal share in a regulated private-credit vehicle, not a money-market fund, not a Treasury bill fund. The underlying portfolio holds senior secured loans, CLO tranches, or other non-government debt instruments with meaningfully higher yield, meaningfully higher credit risk, and a redemption rail that is gated by design. Subscriptions are restricted to qualified purchasers or accredited investors via a transfer agent; redemption requests are queued and honored at the next NAV date, subject to a quarterly or monthly window and a fund-level redemption cap.",
+    "A tokenized credit fund token is a legal share in a regulated private-credit vehicle, not a money-market fund, not a Treasury bill fund. The underlying portfolio holds senior secured loans, CLO tranches, or other non-government debt instruments with meaningfully higher yield, meaningfully higher credit risk, and a redemption rail that is gated by design. Subscriptions are restricted to qualified purchasers or accredited investors via a transfer agent; redemption requests are queued and honored at the next NAV date, subject to the fund's published redemption window and a fund-level redemption cap.",
     "The token sits between tokenized Treasuries and private equity on the risk spectrum. Yield is real and roughly 200 to 500 bps above the Treasury rate in normal market conditions. The cost of that spread is credit-default risk inside the portfolio, valuation opacity at the fund-administrator level, and a redemption gate that is the structural feature, not the emergency response.",
   ],
   howItWorks: [
@@ -59,7 +59,7 @@ export const content: ArchetypeContent = {
     },
     {
       coinId: "hlscope-hamilton-lane",
-      note: "Hamilton Lane Senior Credit Opportunities Securitize Fund. Senior secured direct lending; quarterly redemption; institutional accreditation required.",
+      note: "Hamilton Lane Senior Credit Opportunities Securitize Fund. Senior secured direct lending; redemption on demand at the on-chain daily NAV; institutional accreditation required.",
     },
     {
       coinId: "stac-securitize",

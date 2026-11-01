@@ -100,11 +100,12 @@ const amountMatrix: Array<{ event: BlacklistEvent; expected: string }> = [
   },
 ];
 
-function renderTable(events: BlacklistEvent[] = [event]) {
+function renderTable(events: BlacklistEvent[] = [event], error: unknown | null = null) {
   return render(
     <BlacklistTable
       events={events}
       isLoading={false}
+      error={error}
       page={1}
       pageSize={50}
       sortKey="date"
@@ -115,6 +116,18 @@ function renderTable(events: BlacklistEvent[] = [event]) {
 }
 
 describe("BlacklistTable", () => {
+  it("reports a failed ledger read as unavailable instead of an empty match set", () => {
+    renderTable([], new Error("ledger read failed"));
+    expect(screen.queryByText("No freeze events match your filters.")).toBeNull();
+    // Both containers carry the notice.
+    expect(screen.getAllByText("Freeze ledger data is temporarily unavailable. No status claim is being made.")).toHaveLength(2);
+  });
+
+  it("keeps the empty match copy for a settled empty read", () => {
+    renderTable([]);
+    expect(screen.getAllByText("No freeze events match your filters.")).toHaveLength(2);
+    expect(screen.queryByText(/Freeze ledger data is temporarily unavailable/)).toBeNull();
+  });
   it("renders amount provenance and unresolved status badges", () => {
     renderTable();
 

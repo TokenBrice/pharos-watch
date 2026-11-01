@@ -184,6 +184,22 @@ describe("FreezeSeizureModule", () => {
     expect(rail().textContent).not.toMatch(/\b0\b/);
   });
 
+  it("labels the retained-ledger total as that ledger, not a present-tense holding", () => {
+    usageResult(statsFor("USDT", { events: 2, addresses: 1, frozen: 100, destroyed: 0 }));
+    renderModule();
+    const text = rail().textContent ?? "";
+    expect(text).toMatch(/frozen \(persistent freeze-ledger\)/);
+    expect(rail().getAttribute("aria-label")).toContain("persistent freeze-ledger");
+  });
+
+  it("reads a fully released ledger as no active freezes rather than a frozen total", () => {
+    usageResult(statsFor("USDT", { events: 2, addresses: 0, frozen: 100, destroyed: 0 }));
+    renderModule();
+    const text = rail().textContent ?? "";
+    expect(text).toContain("No active freezes");
+    expect(text).not.toMatch(/frozen \(persistent freeze-ledger\)/);
+  });
+
   it("states a watched coin with no recorded event in words, not as zero", () => {
     usageResult(statsFor("USDT", { events: 0, addresses: 0, frozen: 0, destroyed: 0 }));
     renderModule();

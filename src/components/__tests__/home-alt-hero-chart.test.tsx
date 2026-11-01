@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { HomeAltHeroChart } from "@/components/home-alt-hero-chart";
 
@@ -49,7 +49,7 @@ describe("HomeAltHeroChart", () => {
         "USDC",
         "USDS + DAI",
         "Others",
-        "Non-USD share",
+        "Non-USD market cap",
       ]),
     );
   });
@@ -67,7 +67,12 @@ describe("HomeAltHeroChart", () => {
     const readout = screen.getByRole("tooltip");
     expect(readout.textContent).toContain("Jun 1, 2026");
     expect(readout.textContent).toContain("Total market cap");
-    expect(readout.textContent).toContain("Non-USD share");
+    // The dashed series is a USD level: its readout carries the currency value,
+    // never a share of the total.
+    expect(readout.textContent).toContain("Non-USD market cap");
+    expect(readout.textContent).not.toMatch(/Non-USD share/);
+    const nonUsdRow = within(readout).getByText("Non-USD market cap").closest("div");
+    expect(nonUsdRow?.querySelector("dd")?.textContent).toBe("$5.00");
     // Crosshair marker per plotted series at the hovered date.
     expect(container.querySelectorAll("circle")).toHaveLength(6);
 

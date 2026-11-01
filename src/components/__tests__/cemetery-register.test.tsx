@@ -216,6 +216,13 @@ describe("CemeteryRegister", () => {
     expect(mainRowIds().slice(-2)).toEqual(["coin-5", "coin-28"]);
   });
 
+  it("counts filtered matches against the register total without claiming the total matched", () => {
+    window.history.replaceState(null, "", "/cemetery/?cause=regulatory");
+    render(<Harness />);
+    expect(screen.getByText("Showing 1 matching of 30 records")).toBeDefined();
+    expect(screen.queryByText("Showing 1 of 30 matching")).toBeNull();
+  });
+
   it("prints the shared peg label instead of the raw peg enum", () => {
     const entries: CemeteryEntry[] = [
       { ...fixture(0), id: "peg-var", pegCurrency: "VAR" },

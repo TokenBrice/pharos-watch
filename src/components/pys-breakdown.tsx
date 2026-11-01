@@ -373,9 +373,13 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
           </span>
         </div>
         {sourceRiskDrivers.length === 0 ? (
-          <div className="text-2xs text-muted-foreground" aria-label="Source risk neutral">
-            <span aria-hidden="true">{"✓"} Source risk neutral</span>
-          </div>
+          // A resolved penalty above 1× is not neutral even when no projected
+          // driver explains it (the 6h age term and the sub-2.5 venue band).
+          sourceRiskPenalty <= 1 ? (
+            <div className="text-2xs text-muted-foreground" aria-label="Source risk neutral">
+              <span aria-hidden="true">{"✓"} Source risk neutral</span>
+            </div>
+          ) : null
         ) : (
           <div
             className="flex flex-wrap gap-1"
@@ -403,7 +407,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
       <div className="space-y-0.5">
         <div
           className="flex items-baseline justify-between gap-3"
-          aria-label={`Divided by safety penalty ${adjustedRiskPenalty.toFixed(1)} times${safetyDelta !== null ? ` (${formatSignedPysDelta(safetyDelta)})` : ""}`}
+          aria-label={`Divided by safety penalty ${adjustedRiskPenalty.toFixed(2)} times${safetyDelta !== null ? ` (${formatSignedPysDelta(safetyDelta)})` : ""}`}
         >
           <span aria-hidden="true" className="flex items-center gap-1 text-muted-foreground">
             <span>{"÷"} safety penalty</span>
@@ -418,7 +422,7 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
             ) : null}
           </span>
           <span aria-hidden="true" className="flex items-baseline gap-1.5">
-            <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(1)}{"×"}</span>
+            <span className="font-mono tabular-nums">{adjustedRiskPenalty.toFixed(2)}{"×"}</span>
             {safetyDelta !== null ? (
               <span className="font-mono text-3xs tabular-nums text-muted-foreground/80">
                 ({formatSignedPysDelta(safetyDelta)})
@@ -462,9 +466,9 @@ function PysBreakdownBody(props: Omit<PysBreakdownProps, "pysNullReason">) {
 
       <div
         className="flex items-baseline justify-between gap-3"
-        aria-label={`Pharos Yield Score ${formatScore(score)} out of 100`}
+        aria-label={`Pharos Yield Score ${formatScore(score)} out of 100${scalingFactor !== 1 ? ` (× ${scalingFactor} scaling factor)` : ""}`}
       >
-        <span aria-hidden="true" className="font-medium text-foreground">PYS</span>
+        <span aria-hidden="true" className="font-medium text-foreground">{scalingFactor !== 1 ? `× ${scalingFactor} → PYS` : "PYS"}</span>
         <span
           aria-hidden="true"
           className={cn("font-mono text-sm font-semibold tabular-nums", toneClass)}

@@ -76,6 +76,7 @@ export default function FreezeWatchClient() {
     summaryLoading,
     summaryError,
     error,
+    pageError,
     freshnessQueries,
     sourceGenerations,
     stablecoins,
@@ -291,6 +292,8 @@ export default function FreezeWatchClient() {
           <BlacklistTable
             events={events}
             isLoading={pageLoading}
+            error={pageError}
+            onRetry={() => { void refetchPage(); }}
             page={clampedPage}
             pageSize={pageSize}
             sortKey={sortKey}
