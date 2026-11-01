@@ -363,6 +363,7 @@ export const DexLiquidityCronMetadataSchema = z.object({
         stablecoinId: z.string(),
         chain: z.string(),
         poolId: z.string(),
+        poolAddress: z.string(),
         sourcePriceSpreadRatio: z.number(),
       }),
     )

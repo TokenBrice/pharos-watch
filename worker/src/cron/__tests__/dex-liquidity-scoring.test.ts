@@ -1191,6 +1191,58 @@ describe("dex-liquidity scoring", () => {
     });
   });
 
+  it("moves a plain-NG admission diagnostic into cron diagnostics and off every scored pool", async () => {
+    const nowSec = 1_700_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
+    const metrics = initSourcePoolGraph("usdc-circle", "USDC");
+    const diagnostic = {
+      stablecoinId: "usdc-circle",
+      chain: "ethereum",
+      poolId: "ethereum:0x0000000000000000000000000000000000000020",
+      poolAddress: "0x0000000000000000000000000000000000000020",
+      sourcePriceSpreadRatio: 1.03,
+    };
+    metrics.pools = [{
+      poolId: diagnostic.poolId,
+      project: "curve",
+      chain: "Ethereum",
+      tvlUsd: 2_000_000,
+      symbol: "USDC-USDT",
+      volumeUsd1d: 100_000,
+      volumeUsd7d: 700_000,
+      poolType: "curve-stableswap",
+      source: "dl",
+      extra: {
+        ammExecutionModel: {
+          source: "curve",
+          invariant: "stableswap",
+          trackedTokenIndex: 0,
+          feeRate: 0.0004,
+          amplification: 200,
+          capture: {
+            blockNumber: 18_500_000,
+            blockHash: `0x${"cd".repeat(32)}`,
+            blockTimestamp: nowSec - 30,
+            sourceGenerationId: "plain-ng-admission",
+          },
+          tokens: curveExecutionModel().tokens,
+        },
+        measurement: { balanceMeasured: true },
+        curveStableswapPlainAdmissionDiagnostic: diagnostic,
+      },
+    }];
+
+    const result = await computeStablecoinScores(db, new Map([["usdc-circle", metrics]]), new Map());
+
+    expect(result.diagnostics.curveStableswapPlainAdmissions).toEqual([diagnostic]);
+    expect(result.diagnostics.curveStableswapPlainAdmissionsOmitted).toBe(0);
+    const retained = result.retainedPoolsByStablecoin.get("usdc-circle") ?? [];
+    expect(retained.length).toBeGreaterThan(0);
+    expect(retained.some((pool) => pool.extra?.curveStableswapPlainAdmissionDiagnostic !== undefined)).toBe(false);
+    expect(JSON.stringify([...result.scoredMetrics.values()])).not.toContain("curveStableswapPlainAdmissionDiagnostic");
+  });
+
   it("leaves retained Solana and Tron pools ungated as shaped evidence after the native-lane removal", async () => {
     const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: [] }]);
     const metrics = initSourcePoolGraph("usdt-tether", "USDT");

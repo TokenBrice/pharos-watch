@@ -178,7 +178,7 @@ export function LiquidityPoolMatchingDetails() {
         <p>
           Address-grade plain Curve StableSwap-NG pools can publish a route model only after fresh same-block state
           verifies `get_balances`, stored rates, amplification, ordered coins, and static fee state. On-chain stored
-          rates decide the shape: a non-base rate scales both balances and references, while a base-only array proves
+          rates decide the shape: a non-base rate scales both balances and references, while a base-only array shows
           the pool is plain and is admitted unscaled (rate factor 1). The source-stage 1% price-spread test is only a
           proxy, so a wider spread on an admitted plain pool is reported as a diagnostic instead of withholding the
           route. Curve deducts its captured static fee after the full-input invariant. Stale, unpinnable,

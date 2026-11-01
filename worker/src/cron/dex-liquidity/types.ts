@@ -137,13 +137,15 @@ export interface CurveStableswapRateInputExecutionCandidate {
 
 /**
  * Internal evidence that the source-stage price-spread proxy was overridden by
- * a base-only on-chain `stored_rates()` capture, which proves the NG pool is
+ * a base-only on-chain `stored_rates()` capture, which shows the NG pool is
  * plain. Consumed into cron metadata during scoring and never published.
  */
 export interface CurveStableswapPlainAdmissionDiagnostic {
   stablecoinId: string;
   chain: string;
   poolId: string;
+  /** The Curve pool address whose state was captured on chain. */
+  poolAddress: string;
   /** max(source reference price) / min(source reference price). */
   sourcePriceSpreadRatio: number;
 }

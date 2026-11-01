@@ -47,7 +47,7 @@ export const CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC = 10 * 60;
  * invariant on rate-scaled balances the pools endpoint does not expose, and
  * modeling them on raw balances overstated on-chain `get_dy` by 6-24% in live
  * probes. For StableSwap-NG the authoritative answer is `stored_rates()`: a
- * base-only array proves the pool is plain, so this bound remains a
+ * base-only array shows the pool is plain, so this bound remains a
  * source-stage proxy and a non-withholding diagnostic, not a refusal.
  */
 export const CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD = 1.01;
@@ -378,7 +378,7 @@ async function enrichChain(input: {
           delete extra.executionCapabilityGate;
           extra.ammExecutionModel = built.model;
           extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
-          // A base-only stored_rates() capture proves the NG pool is plain. The
+          // A base-only stored_rates() capture shows the NG pool is plain. The
           // source-stage spread that produced the rate-bearing gate is then
           // non-withholding evidence, recorded for cron metadata only.
           const spreadRatio = built.plain
@@ -389,6 +389,7 @@ async function enrichChain(input: {
               stablecoinId: reference.stablecoinId,
               chain: input.chain,
               poolId: reference.pool.poolId,
+              poolAddress: reference.candidate.poolAddress,
               sourcePriceSpreadRatio: spreadRatio,
             };
           }
@@ -405,7 +406,7 @@ async function enrichChain(input: {
  * balances, stored rates, amplification, fee state (priced at its off-balance
  * maximum), and coin order at one fresh, confirmed block. `stored_rates()`
  * decides the shape: a non-base rate scales the model, while a base-only array
- * proves a plain pool and admits the same exact model unscaled. Every failure
+ * shows a plain pool and admits the same exact model unscaled. Every failure
  * keeps the original rate-bearing gate; a source-stage price spread on an
  * admitted plain pool remains a diagnostic.
  */

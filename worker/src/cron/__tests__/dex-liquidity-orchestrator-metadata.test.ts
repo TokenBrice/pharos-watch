@@ -112,6 +112,7 @@ describe("dex liquidity cron metadata", () => {
       stablecoinId: "eurs-stasis",
       chain: "ethereum",
       poolId: "ethereum:0x48edff046ebf41c6ee1895e06f3dc1629db563d4",
+      poolAddress: "0x48edff046ebf41c6ee1895e06f3dc1629db563d4",
       sourcePriceSpreadRatio: 1.066,
     }];
     params.scoreState.diagnostics.curveStableswapPlainAdmissionsOmitted = 0;

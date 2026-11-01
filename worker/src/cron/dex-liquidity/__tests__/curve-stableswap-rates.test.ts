@@ -39,6 +39,7 @@ const candidate: CurveStableswapRateInputExecutionCandidate = {
 };
 
 function stateResults(calls: readonly { label: string }[], overrides: {
+  balances?: bigint[];
   rates?: bigint[];
   fee?: bigint;
   offpegFeeMultiplier?: bigint;
@@ -56,7 +57,7 @@ function stateResults(calls: readonly { label: string }[], overrides: {
         returnData: encodeFunctionResult({
           abi: POOL_ABI,
           functionName: "get_balances",
-          result: PINNED_BALANCES,
+          result: overrides.balances ?? PINNED_BALANCES,
         }),
       };
     }
@@ -134,6 +135,7 @@ function metrics(pool = poolEntry()) {
 function dependencies(input: {
   header?: { timestamp: number; hash: `0x${string}` };
   confirmedHeader?: { timestamp: number; hash: `0x${string}` };
+  balances?: bigint[];
   rates?: bigint[];
   fee?: bigint;
   offpegFeeMultiplier?: bigint;
@@ -159,6 +161,7 @@ function dependencies(input: {
       input.multicallFails
         ? null
         : stateResults(calls, {
+            balances: input.balances,
             rates: input.rates,
             fee: input.fee,
             offpegFeeMultiplier: input.offpegFeeMultiplier,
@@ -275,8 +278,52 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
       stablecoinId: "frxusd-frax",
       chain: "ethereum",
       poolId: `ethereum:${POOL}`,
+      poolAddress: POOL,
     });
     expect(diagnostic?.sourcePriceSpreadRatio).toBeCloseTo(1.2036598809520127, 12);
+  });
+
+  it("admits a mixed-decimal base-only pool unscaled (EURC/EURS/EURQ shape: 6/2/6)", async () => {
+    const eurc = "0x00000000000000000000000000000000000e0c06" as const;
+    const eurs = "0x00000000000000000000000000000000000e0502" as const;
+    const eurq = "0x00000000000000000000000000000000000e0a06" as const;
+    const pool = poolEntry({
+      curveStableswapRateInputExecutionCandidate: {
+        poolAddress: POOL,
+        coins: [
+          { address: eurc, symbol: "EURC", decimals: 6, referencePriceUsd: 1.1166 },
+          { address: eurs, symbol: "EURS", decimals: 2, referencePriceUsd: 1.1488 },
+          { address: eurq, symbol: "EURQ", decimals: 6, referencePriceUsd: 1.0775 },
+        ],
+      },
+    });
+    const metric = initSourcePoolGraph("eurs-stasis", "EURS");
+    metric.pools.push(pool);
+    const state = dependencies({
+      balances: [4_000_000_000_000n, 300_000_000n, 5_000_000_000_000n],
+      // Base rates are 10^(36 - decimals): the pool is plain.
+      rates: [10n ** 30n, 10n ** 34n, 10n ** 30n],
+      coinAddresses: [eurc, eurs, eurq],
+    });
+    await enrichCurveStableswapRateInputExecutionModels({
+      sourceGenerationId: "dex-stage:fixture",
+      metrics: new Map([[metric.stablecoinId, metric]]),
+      chainAddressToId: new Map([[`ethereum:${eurs}`, "eurs-stasis"]]),
+      chainRpcs: new Map([["ethereum", {} as never]]),
+      nowSec: BLOCK_TIMESTAMP + 60,
+      dependencies: state as never,
+    });
+
+    expect(pool.extra?.executionCapabilityGate).toBeUndefined();
+    const model = pool.extra?.ammExecutionModel;
+    expect(model?.trackedTokenIndex).toBe(1);
+    expect(model?.tokens.map((token) => token.balance)).toEqual([4_000_000, 3_000_000, 5_000_000]);
+    expect(model?.tokens.map((token) => token.referencePriceUsd)).toEqual([1.1166, 1.1488, 1.0775]);
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toMatchObject({
+      stablecoinId: "eurs-stasis",
+      poolAddress: POOL,
+    });
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic?.sourcePriceSpreadRatio).toBeCloseTo(1.1488 / 1.0775, 12);
   });
 
   it("prices a dynamic off-peg pool at its off-balance maximum fee", async () => {
