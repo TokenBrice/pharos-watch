@@ -15,6 +15,7 @@ import {
 } from "../canary-checks";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 import { checkTapeClassLiveness } from "../canary-checks-tape";
+import { PRICING_CANARY_CHECKS } from "../canary-checks-pricing";
 import { tapeProjectorCursorKey } from "../tape-event-store";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
@@ -1658,6 +1659,16 @@ describe("pricing canaries", () => {
     });
     return summary.results.find((result) => result.checkId === checkId);
   }
+
+  it("registers and runs the pricing roster's own definitions", async () => {
+    expect(PRICING_CANARY_CHECKS.map((check) => check.checkId)).toEqual([
+      "stablecoins-active-price-coverage",
+      "depeg-observation-coverage",
+    ]);
+    for (const check of PRICING_CANARY_CHECKS) {
+      expect(await runPricingCheck(check.checkId, stablecoinsRunRows())).toMatchObject({ status: "ok" });
+    }
+  });
 
   it("grades the published priced cohort against the shared breadth share", async () => {
     const healthy = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows());
