@@ -15,6 +15,11 @@ import {
 } from "../canary-checks";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
+import {
+  buildSupplySnapshotCompletionMarker,
+  buildSupplySnapshotCoverageExpectation,
+} from "../supply-snapshot-completion";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -24,6 +29,7 @@ const EXPECTED_CANARY_CHECK_IDS = [
   "dex-liquidity-global-row",
   "blacklist-null-identity",
   "stablecoins-cache-active-count",
+  "supply-history-daily-coverage",
   "psi-latest-sample",
   "dews-latest-signal",
   "safety-score-v9-publication",
@@ -176,6 +182,27 @@ function stablecoinsPayload(activeCount = ACTIVE_IDS.size) {
     circulating: { peggedUSD: 1_000_000 },
   }));
   return JSON.stringify({ peggedAssets: assets });
+}
+
+function supplyCompletionRow(nowSec = NOW) {
+  const ids = [...ACTIVE_IDS];
+  const snapshotDate = startOfUtcDaySec(new Date(nowSec * 1000));
+  return {
+    key: "snapshot-supply:last-write",
+    value: JSON.stringify({
+      ...buildSupplySnapshotCompletionMarker({
+        snapshotDate,
+        coverage: buildSupplySnapshotCoverageExpectation(ids, []),
+        accountedActiveCount: ids.length,
+        ownedRowIds: ids,
+        missingActiveIds: [],
+        unavailableActiveIds: [],
+      }),
+      writtenRows: ids.length,
+    }),
+    updatedAt: nowSec - 60,
+    updated_at: nowSec - 60,
+  };
 }
 
 function gbpCanaryCacheRows(options: {
@@ -340,7 +367,13 @@ function healthyD1(
           fallback: dex.gbpFallback,
           usdRecordDateMissing: dex.usdRecordDateMissing,
         }),
+        supplyCompletionRow(),
       ],
+    },
+    {
+      match: "SELECT COUNT(*) AS count FROM supply_history WHERE snapshot_date = ?",
+      first: { count: [...ACTIVE_IDS].length },
+      rows: [],
     },
     {
       match: "FROM stability_index_samples",
@@ -385,9 +418,9 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 16,
+      totalChecks: 17,
 
-      okCount: 16,
+      okCount: 17,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
@@ -889,7 +922,13 @@ describe("worker data invariant canaries", () => {
           { key: "stablecoins", value: stablecoinsPayload(1), updatedAt: NOW - 60, updated_at: NOW - 60 },
           dewsPointerRow(unhealthyDewsRows),
           ...gbpCanaryCacheRows(),
+          supplyCompletionRow(),
         ],
+      },
+      {
+        match: "SELECT COUNT(*) AS count FROM supply_history WHERE snapshot_date = ?",
+        first: { count: [...ACTIVE_IDS].length },
+        rows: [],
       },
       {
         match: "FROM stability_index_samples",
@@ -1060,7 +1099,13 @@ describe("worker data invariant canaries", () => {
         rows: [
           { key: "stablecoins", value: stablecoinsPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
           ...gbpCanaryCacheRows(),
+          supplyCompletionRow(),
         ],
+      },
+      {
+        match: "SELECT COUNT(*) AS count FROM supply_history WHERE snapshot_date = ?",
+        first: { count: [...ACTIVE_IDS].length },
+        rows: [],
       },
       {
         match: "FROM stability_index_samples",
@@ -1090,7 +1135,7 @@ describe("worker data invariant canaries", () => {
     expect(summary.errorCount).toBe(11);
     expect(summary.skippedCount).toBe(0);
     expect(summary.degradedCount).toBe(1);
-    expect(summary.okCount).toBe(4);
+    expect(summary.okCount).toBe(5);
     expect(summary.worstStatus).toBe("error");
   });
 });

@@ -231,6 +231,37 @@ export function getActivePriceCoverageBreadthStatus(
     ? "degraded" : "healthy";
 }
 
+// --- Supply value integrity thresholds ---
+/**
+ * Generation-over-generation supply invariant (2026-11-01 detection campaign).
+ * The current cached `circulating` value is compared with the last available
+ * daily `supply_history` row. Rows whose provenance names a carry or repair
+ * (`supplyRestored`, `supplyGapFill`, a chain guard, or a source switch) are
+ * excluded from the comparison, never counted as observed drift. Ratios are
+ * current/previous; the aggregate is the same comparable cohort's total.
+ * Individual static-supply assets legitimately repeat, so the frozen signal
+ * grades only an unchanged cohort aggregate (whole-feed freeze).
+ */
+export const STATUS_SUPPLY_VALUE_THRESHOLDS = {
+  perAssetRatioFloor: 0.5,
+  perAssetRatioCeiling: 2,
+  aggregateRatioFloor: 0.9,
+  aggregateRatioCeiling: 1.1,
+  aggregateFrozenTolerance: 1e-9,
+  /** Lookback that still finds a prior row when snapshot-supply missed several days. */
+  historyWindowDays: 7,
+  /** Below this comparable sample the aggregate ratios are not representative. */
+  minComparableAssets: 10,
+  /** A whole-feed freeze needs most of the active cohort in the comparable sample. */
+  frozenMinComparableShare: 0.5,
+  /** A carried value is a documented fallback; two missed daily observations make it an operator finding. */
+  carryStaleAfterSec: 2 * 24 * 3600,
+  /** Share of the active cohort for supply carry and two-generation availability findings. */
+  activeSupplyShareThreshold: 0.01,
+  /** Grace after UTC midnight before a missing daily snapshot counts as overdue. */
+  snapshotDueGraceSec: 30 * 60,
+} as const;
+
 /** Producer evidence window for an absent row's retained market cap. The cap is
  * diagnostic payload only; since 2026-10-21 no status verdict reads it. */
 export const STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC = 30 * 24 * 3600;

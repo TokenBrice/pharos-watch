@@ -23,6 +23,12 @@ import { rethrowIfAborted } from "../lib/abort";
 import { loadSafetyScoreV9PublicationHealth } from "../lib/safety-score-v9/publication-health";
 import type { WorkerCanaryMode } from "../lib/worker-canary-mode";
 import { recordOperatorAlertReceipt } from "../lib/status/operator-alert-health";
+import {
+  buildSupplyIntegrityConditions,
+  compactSupplyIntegrityReport,
+  confirmSupplyIntegrityConditions,
+  loadSupplyIntegrityReport,
+} from "../lib/supply-integrity";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
 import { loadCanaryOperatorWatch } from "./operator-watch-canary";
 import { loadProbeOperatorWatch } from "./operator-watch-probe";
@@ -377,22 +383,24 @@ export interface OperatorWatchCondition {
   unknown?: boolean;
 }
 
-export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "canary" | "probe" | "fx-rates" | "daily-lane";
+export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "supply" | "canary" | "probe" | "fx-rates" | "daily-lane";
 
 const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; recovered: string }> = {
   producer: { raised: "Stale producers", recovered: "Recovered producers" },
   "detail-write": { raised: "Detail cache write failures", recovered: "Detail cache writes recovered" },
   dependency: { raised: "Dependency still stale after root recovery", recovered: "Dependency caught up" },
   "safety-publication": { raised: "Safety Score publication held", recovered: "Safety Score publication released" },
+  supply: { raised: "Supply integrity findings", recovered: "Supply integrity recovered" },
   canary: { raised: "Canary findings raised", recovered: "Canary findings recovered" },
   probe: { raised: "Probe paths persistently failing", recovered: "Probe paths recovered" },
   "fx-rates": { raised: "FX rate publication degraded", recovered: "FX rate publication recovered" },
   "daily-lane": { raised: "Daily pricing lanes incomplete", recovered: "Daily pricing lanes complete" },
 };
 
-// Every section can raise and recover in one message. Budget each line from the
-// repo's conservative chunk limit so a systemic detail-write cohort cannot
-// exceed Telegram's sendMessage cap and block every pending transition.
+// Every section can raise and recover in one message: at most two lines per
+// section (raised/recovered). Budget each line from the repo's conservative
+// chunk limit so a systemic detail-write cohort cannot exceed Telegram's
+// sendMessage cap and block every pending transition in the same message.
 const OPERATOR_ALERT_SECTION_LINES = Object.keys(OPERATOR_SECTION_TITLES).length * 2;
 const OPERATOR_ALERT_SECTION_CHARS =
   Math.floor(TELEGRAM_MESSAGE_CHUNK_LIMIT / OPERATOR_ALERT_SECTION_LINES) - 16;
@@ -595,8 +603,24 @@ export async function runCronStalenessWatchdog(
     loadProbeOperatorWatch(db, nowSec),
   ]);
   const safetyPublicationHeld = safetyPublication.ok && safetyPublication.health?.status === "held";
+  const supplyWatch = await (async () => {
+    const report = await loadSupplyIntegrityReport(db, nowSec, { signal });
+    const conditions = await confirmSupplyIntegrityConditions(
+      db,
+      buildSupplyIntegrityConditions(report),
+      { signal },
+    );
+    return { ok: true as const, report, conditions };
+  })().then(
+    (watch) => watch,
+    (error: unknown) => {
+      rethrowIfAborted(error, signal);
+      return { ok: false as const, report: null, conditions: [] };
+    },
+  );
   const unknownSections: OperatorWatchSection[] = [
     ...(safetyPublication.ok ? [] : ["safety-publication" as const]),
+    ...(supplyWatch.ok ? [] : ["supply" as const]),
     ...(canaryWatch.unknown ? ["canary" as const] : []),
     ...(probeWatch.unknown ? ["probe" as const] : []),
   ];
@@ -648,17 +672,26 @@ export async function runCronStalenessWatchdog(
         active: condition.active,
       })),
       ...pricingConditions,
+      ...supplyWatch.conditions.map((condition): OperatorWatchCondition => ({
+        section: "supply",
+        id: condition.id,
+        label: condition.label,
+        active: condition.active,
+        unknown: condition.unknown,
+      })),
     ],
     unknownSections,
     nowSec,
     operatorTelegramCreds: options.operatorTelegramCreds ?? null,
     signal,
   });
+  const activeSupplyConditions = supplyWatch.conditions.filter((condition) => condition.active);
   const qualityReasons = [
     ...(stale.length > 0 ? ["producer-output-stale"] : []),
     ...(detailWriteFailures.length > 0 ? ["detail-cache-write-failed"] : []),
     ...(canaryWatch.conditions.some((condition) => condition.active) ? ["canary-finding-active"] : []),
     ...(probeWatch.conditions.some((condition) => condition.active) ? ["probe-path-persistent-failure"] : []),
+    ...(activeSupplyConditions.length > 0 ? ["supply-integrity-findings"] : []),
   ];
   const pendingTransition = (alertTransitions.stale.length > 0 || alertTransitions.recovered.length > 0)
     && !alertTransitions.sent;
@@ -676,12 +709,16 @@ export async function runCronStalenessWatchdog(
     || (pendingTransition && alertTransitions.credentialsMissing === true);
 
   return {
-    status: status.failures.length > 0 || operatorAlertDegraded ? "degraded" : "ok",
-    itemCount: stale.length + detailWriteFailures.length,
+    status: status.failures.length > 0 || operatorAlertDegraded || !supplyWatch.ok
+      || activeSupplyConditions.length > 0
+      ? "degraded"
+      : "ok",
+    itemCount: stale.length + detailWriteFailures.length + activeSupplyConditions.length,
     metadata: JSON.stringify({
       ...(status.failures.length > 0 ? { reason: "freshness-evidence-read-failed" }
-        : alertTransitions.deliveryFailed ? { reason: "operator-alert-delivery-failed" }
-          : operatorAlertDegraded ? { reason: "operator-alert-credentials-missing" } : {}),
+        : !supplyWatch.ok ? { reason: "supply-integrity-read-failed" }
+          : alertTransitions.deliveryFailed ? { reason: "operator-alert-delivery-failed" }
+            : operatorAlertDegraded ? { reason: "operator-alert-credentials-missing" } : {}),
       ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
       firedRuleIds: [
         ...(stale.length > 0 ? ["producer-stale"] : []),
@@ -692,6 +729,7 @@ export async function runCronStalenessWatchdog(
         ...(canaryWatch.conditions.some((condition) => condition.active) ? ["canary-finding"] : []),
         ...(probeWatch.conditions.some((condition) => condition.active) ? ["probe-path-persistent-failure"] : []),
         ...pricingOperatorRuleIds(pricingConditions),
+        ...activeSupplyConditions.map((condition) => `supply-${condition.id}`),
       ],
       canaryWatch: { active: canaryWatch.conditions.length, unknown: canaryWatch.unknown },
       probeWatch: { active: probeWatch.conditions.length, unknown: probeWatch.unknown },
@@ -699,6 +737,17 @@ export async function runCronStalenessWatchdog(
       checkedProducers: watchedObservations.map((observation) => observation.producerJob),
       stale,
       detailWriteFailures,
+      supplyIntegrity: supplyWatch.ok && supplyWatch.report
+        ? {
+            ...compactSupplyIntegrityReport(supplyWatch.report),
+            conditions: supplyWatch.conditions.map((condition) => ({
+              id: condition.id,
+              active: condition.active,
+              unknown: condition.unknown,
+              signature: condition.signature.slice(0, 200),
+            })),
+          }
+        : { status: "unknown", reason: "supply-integrity-read-failed" },
       alertTransitions,
       dependencyRecoveryChecks,
       warnings: status.warnings,

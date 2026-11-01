@@ -5,6 +5,7 @@ import type { CanaryStatus, CanaryExecutionStatus, CanaryRunSeverity, CanaryRunS
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./safety-score-v9/consumer-freshness";
 import { loadStablecoinsCache, hasUsableStablecoinsPayload } from "./stablecoins-cache";
 import { classifyStablecoinPublicationGap, evaluateStablecoinPublicationCoverage } from "./stablecoin-publication-coverage";
+import { checkSupplyHistoryDailyCoverage } from "./canary-checks-supply";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { throwIfAborted } from "./abort";
@@ -731,6 +732,12 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     label: "Stablecoins cache active count",
     description: "The stablecoins cache omits under 1% of active registry assets (waived assets count as present); up to 10% warns, beyond that is an error.",
     run: checkStablecoinsCacheActiveCount,
+  },
+  {
+    checkId: "supply-history-daily-coverage",
+    label: "Supply history daily coverage",
+    description: "Today's supply_history rows match the completion marker's written proof; non-restored active supply unavailable for under 1% is routine, up to 10% warns, beyond that is an error.",
+    run: checkSupplyHistoryDailyCoverage,
   },
   {
     checkId: "psi-latest-sample",

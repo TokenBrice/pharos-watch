@@ -21,6 +21,7 @@ import type { StatusHealthValue } from "@shared/types/status/core";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 import { maxStatus, SEVERITY } from "../status-reliability-shared";
 import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
+import type { SupplyIntegrityAssessment } from "./supply-integrity-quality";
 import { SCHEDULED_DELIVERY_LAG_SIGNAL, type CronFindingJobs, type ScheduledDeliveryLagSummary } from "./cron-health";
 import { getSourceFailureMessage } from "./section-errors";
 import { SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO, SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES, type SafetyPublicationSizeObservation } from "./safety-publication-size";
@@ -155,6 +156,8 @@ export interface DataQualityEvaluationInput {
   activePriceCoverage: PublicHealthAssessment["activePriceCoverage"];
   onchainAssessmentCauses: StatusCause[];
   reserveComposition: StatusResponse["reserveComposition"];
+  /** Value, carry and daily-snapshot integrity; omitted only by legacy fixtures. */
+  supplyIntegrityAssessment?: SupplyIntegrityAssessment;
 }
 
 function ruleResult(status: StatusHealthValue, causes: StatusCause[] = []): Partial<StatusRuleEvaluation> | null {
@@ -1020,6 +1023,14 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
       const causes = input.onchainAssessmentCauses.map(withRunbook);
       return status === "healthy" && causes.length === 0 ? null : { status, causes };
   },
+  (input) => {
+      const assessment = input.supplyIntegrityAssessment;
+      if (!assessment) return null;
+      const causes = assessment.causes.map(withRunbook);
+      return assessment.status === "healthy" && causes.length === 0
+        ? null
+        : { status: assessment.status, causes };
+  },
   evaluateReserveOperationalDiagnostics,
   (input) => {
     const reserve = input.reserveComposition;
@@ -1116,6 +1127,13 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   onchain_integrity_degraded: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   onchain_integrity_stale: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   onchain_monitor_unavailable: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
+  supply_value_drift: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_carry_stale: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_availability_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_snapshot_overdue: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_snapshot_partial: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_integrity_unknown: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  chart_history_truncated: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   d1_capacity_watch: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
   d1_capacity_warning: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,
   d1_capacity_critical: `${RUNBOOK_BASE}/db-connectivity.md#capacity-signals`,

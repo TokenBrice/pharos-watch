@@ -41,6 +41,12 @@ import {
   loadDetailWriteFailures,
   runCronStalenessWatchdog,
 } from "../cron-staleness-watchdog";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { startOfUtcDaySec } from "@shared/lib/time-buckets";
+import {
+  buildSupplySnapshotCompletionMarker,
+  buildSupplySnapshotCoverageExpectation,
+} from "../../lib/supply-snapshot-completion";
 
 interface FakeFailureRow {
   key: string;
@@ -95,6 +101,14 @@ function fakeDb(
           }
           if (sql.includes("FROM worker_canary_runs")) {
             return { results: operatorWatch.canaryRows ?? [] };
+          }
+          if (sql.includes("supply-integrity-previous-rows") || sql.includes("FROM supply_history")) {
+            return { results: [] };
+          }
+          if (sql.includes("FROM cron_runs")) {
+            // No sync-stablecoins/charts run evidence: the supply dimensions
+            // stay unknown rather than claiming healthy values.
+            return { results: [] };
           }
           return { results: failureRows.filter((row) => row.updated_at >= (args[1] as number)) };
         },
@@ -431,6 +445,98 @@ describe("cron staleness watchdog", () => {
     expect(transitions.recovered).not.toContain("detail-write:usdt-tether");
     expect(sendToChatMock.mock.calls.slice(fetchCountAfterRaise).map((call) => String(call[1] ?? "")).join("\n"))
       .not.toContain("Detail cache writes recovered");
+  });
+
+  it("alerts a confirmed overdue supply snapshot and its recovery", async () => {
+    vi.useFakeTimers();
+    const nowSec = startOfUtcDaySec(new Date("2026-08-22T00:00:00Z")) + 3_600;
+    vi.setSystemTime(nowSec * 1_000);
+    mockCacheStatus({});
+    const { sqlite, db } = fixtures.open();
+    const today = startOfUtcDaySec(new Date(nowSec * 1000));
+    const yesterday = today - 86_400;
+    const ids = [...ACTIVE_IDS].slice(0, 12);
+    const marker = {
+      ...buildSupplySnapshotCompletionMarker({
+        snapshotDate: yesterday,
+        coverage: buildSupplySnapshotCoverageExpectation(ids, []),
+        accountedActiveCount: ids.length,
+        ownedRowIds: ids,
+        missingActiveIds: [],
+        unavailableActiveIds: [],
+      }),
+      writtenRows: ids.length,
+    };
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("snapshot-supply:last-write", JSON.stringify(marker), nowSec - 3_600);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      "stablecoins",
+      JSON.stringify({
+        peggedAssets: ids.map((id) => ({
+          id, symbol: id.slice(0, 4).toUpperCase(), name: id, price: 1,
+          supplySource: "defillama", supplyObservedAt: nowSec - 3_600,
+          circulating: { peggedUSD: 101 },
+        })),
+      }),
+      nowSec - 60,
+    );
+    const history = sqlite.prepare(
+      "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, supply_provenance) VALUES (?, ?, ?, ?)",
+    );
+    for (const id of ids) {
+      history.run(id, yesterday, 100, JSON.stringify({
+        supplySource: "defillama",
+        supplyObservedAt: yesterday,
+        supplyChainGuard: null,
+      }));
+    }
+    const runs = sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, 1, 'ok', 1, ?)",
+    );
+    for (const definition of CRON_JOB_DEFINITIONS) {
+      if (definition.freshnessSurface === "none"
+        || definition.job === "sync-stablecoins"
+        || definition.job === "sync-stablecoin-charts") continue;
+      runs.run(definition.job, nowSec - 600, JSON.stringify({ published: true }));
+    }
+    for (const startedAt of [nowSec - 900, nowSec - 1_800]) {
+      runs.run("sync-stablecoins", startedAt, JSON.stringify({
+        priceSourceHealth: {
+          active: { supplyCoverage: { complete: true, observedCount: ids.length, unavailableCount: 0 } },
+        },
+      }));
+    }
+    runs.run("sync-stablecoin-charts", nowSec - 600, JSON.stringify({ reason: "published" }));
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).not.toHaveBeenCalled();
+
+    const confirmed = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Supply integrity findings");
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("snapshot overdue");
+    expect(JSON.parse(confirmed.metadata ?? "{}").firedRuleIds).toContain("supply-snapshot-overdue");
+
+    const currentMarker = {
+      ...buildSupplySnapshotCompletionMarker({
+        snapshotDate: today,
+        coverage: buildSupplySnapshotCoverageExpectation(ids, []),
+        accountedActiveCount: ids.length,
+        ownedRowIds: ids,
+        missingActiveIds: [],
+        unavailableActiveIds: [],
+      }),
+      writtenRows: ids.length,
+    };
+    sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?")
+      .run(JSON.stringify(currentMarker), nowSec + 60, "snapshot-supply:last-write");
+    for (const id of ids) history.run(id, today, 101, null);
+    vi.setSystemTime((nowSec + 3_600) * 1_000);
+    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Supply integrity recovered");
+    expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions.recovered).toContain("supply:snapshot-overdue");
   });
 
   it("alerts only on stale and recovery transitions", async () => {
