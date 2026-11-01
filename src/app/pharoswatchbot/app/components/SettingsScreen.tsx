@@ -173,8 +173,12 @@ export function SettingsScreen({
       </ListSection>
 
       <ListSection title="Delivery" footer={failure ?? undefined}>
-        <ListRow title="Last alert delivered" value={formatAgo(state.health.lastSuccessfulDeliveryAt, nowSec)} />
-        <ListRow title="Last reply from the bot" value={formatAgo(state.health.lastSuccessfulReplyAt, nowSec)} />
+        {state.health.lastSuccessfulDeliveryAt != null ? (
+          <ListRow title="Last alert delivered" value={formatAgo(state.health.lastSuccessfulDeliveryAt, nowSec)} />
+        ) : null}
+        {state.health.lastSuccessfulReplyAt != null ? (
+          <ListRow title="Last reply from the bot" value={formatAgo(state.health.lastSuccessfulReplyAt, nowSec)} />
+        ) : null}
         {state.health.queuedAlerts > 0 ? (
           <ListRow title="Waiting to send" value={<span className="pharos-numeric">{state.health.queuedAlerts}</span>} />
         ) : null}

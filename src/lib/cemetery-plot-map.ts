@@ -386,14 +386,15 @@ export interface PlotSignpost {
 
 export interface PlotCypress {
   year: number;
-  count: number;
+  /** Null for a year with no recorded death (bare planting bed), never zero. */
+  count: number | null;
   i: number;
   j: number;
   /** 0 for a year with no recorded death (bare planting bed). */
   height: number;
   foot: PlotPoint;
   top: PlotPoint;
-  /** "2022 · 14 deaths". */
+  /** "2022 · 14 deaths", or "2019 · none recorded". */
   label: string;
 }
 
@@ -1040,14 +1041,15 @@ function buildDesktop(
   const maxYear = Math.max(...countByYear.values());
   const cypress: PlotCypress[] = [];
   for (let y = base.firstYear; y <= base.lastYear; y++) {
-    const n = countByYear.get(y) ?? 0;
+    // A year with no record stays unavailable, not zero: the bare bed says "none recorded".
+    const n = countByYear.get(y) ?? null;
     const B = blocks.find((b) => b.years.includes(y))!;
     // In a multi-year strip, years run newest (west) → oldest (east) like the blocks.
     const k = B.years.length - 1 - B.years.indexOf(y);
     const i = hundredths(B.years.length > 1 ? B.i0 + ((k + 0.5) / B.years.length) * (B.i1 - B.i0) : (B.i0 + B.i1) / 2) / 100;
     const height = n ? hundredths(0.35 + (1.05 * n) / maxYear) / 100 : 0;
     const tree = cypressGeometry(proj, i, frame.jVerge, height);
-    cypress.push({ year: y, count: n, i, j: frame.jVerge, height, foot: roundPoint(P(i, frame.jVerge, 0)), top: roundPoint(tree.top), label: `${y} · ${n} ${n === 1 ? "death" : "deaths"}` });
+    cypress.push({ year: y, count: n, i, j: frame.jVerge, height, foot: roundPoint(P(i, frame.jVerge, 0)), top: roundPoint(tree.top), label: n === null ? `${y} · none recorded` : `${y} · ${n} ${n === 1 ? "death" : "deaths"}` });
   }
 
   for (const b of blocks) {

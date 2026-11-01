@@ -76,13 +76,24 @@ describe("CemeteryKeyFacts", () => {
 
     const median = within(cellFor("Median peak"));
     expect(median.getByText("$48.8M")).toBeTruthy();
-    expect(median.getByText("Half of the recorded deaths peaked below this. 5 peaked at $1B or more.")).toBeTruthy();
+    expect(median.getByText("Half of the 103 records with a recorded peak peaked below this. 5 peaked at $1B or more.")).toBeTruthy();
 
     const tracked = within(cellFor("Tracked before death"));
     expect(tracked.getByText("24")).toBeTruthy();
     expect(
       tracked.getByRole("link", { name: "Show the 24 tracked-archive records in the register" }).getAttribute("href"),
     ).toBe("/cemetery/?record=tracked#register");
+  });
+
+  it("names the recorded-peak cohort behind the median, not the whole death population", () => {
+    const stats = buildCemeteryStats([
+      { id: "a", name: "Coin A", symbol: "AAA", causeOfDeath: "abandoned", deathDate: "2026-08-27", peakMcap: 1e6, pegCurrency: "USD" },
+      { id: "b", name: "Coin B", symbol: "BBB", causeOfDeath: "regulatory", deathDate: "2024-03", peakMcap: 2e6, pegCurrency: "USD" },
+      { id: "c", name: "Coin C", symbol: "CCC", causeOfDeath: "abandoned", deathDate: "2025-01", peakMcap: undefined, pegCurrency: "USD" },
+    ]);
+    render(<CemeteryKeyFacts stats={stats} datasetMeta={DATASET_META} />);
+    expect(screen.getByText("Half of the 2 records with a recorded peak peaked below this. 0 peaked at $1B or more.")).toBeTruthy();
+    expect(screen.queryByText(/Half of the recorded deaths/)).toBeNull();
   });
 
   it("hides the top-two cell when fewer than two peaks are recorded", () => {

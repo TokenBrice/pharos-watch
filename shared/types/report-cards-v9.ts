@@ -77,6 +77,12 @@ export const V9PublicationHoldReasonSchema = z.discriminatedUnion("code", [
 ]);
 export type V9PublicationHoldReason = z.infer<typeof V9PublicationHoldReasonSchema>;
 
+/**
+ * Producer-side cap on `publicationHealth.reasons`, one row per affected asset.
+ * Consumers must read a full list as a lower bound, never as the whole census.
+ */
+export const V9_PUBLICATION_HOLD_REASON_LIMIT = 24;
+
 export const V9PublicationHealthSchema = z
   .object({
     schemaVersion: z.literal(2),
@@ -85,7 +91,7 @@ export const V9PublicationHealthSchema = z
     acceptedAtSec: z.number().int().nonnegative().nullable(),
     attemptedAtSec: z.number().int().nonnegative(),
     heldSinceSec: z.number().int().nonnegative().nullable(),
-    reasons: z.array(V9PublicationHoldReasonSchema).max(24),
+    reasons: z.array(V9PublicationHoldReasonSchema).max(V9_PUBLICATION_HOLD_REASON_LIMIT),
   })
   .strict()
   .superRefine((health, ctx) => {

@@ -159,6 +159,28 @@ describe("buildCemeteryPlotMap: weathering depends only on asOf", () => {
   });
 });
 
+describe("buildCemeteryPlotMap: year cypress", () => {
+  it("leaves a year with no record unavailable instead of zero deaths", () => {
+    const map = buildCemeteryPlotMap([
+      row("abandoned", "2018-05-01", { id: "y2018" }),
+      row("abandoned", "2021-03-01", { id: "y2021" }),
+    ], { preset: "desktop" });
+    expect(map.cypress.find((c) => c.year === 2019)).toMatchObject({
+      count: null,
+      height: 0,
+      label: "2019 · none recorded",
+    });
+    expect(map.cypress.find((c) => c.year === 2021)).toMatchObject({
+      count: 1,
+      label: "2021 · 1 death",
+    });
+    for (const cypress of desktop.cypress.filter((c) => c.year === 2019 || c.year === 2020)) {
+      expect(cypress.count).toBeNull();
+      expect(cypress.label).toBe(`${cypress.year} · none recorded`);
+    }
+  });
+});
+
 describe("buildCemeteryPlotMap: year blocks", () => {
   it("puts every real grave inside its own year's block and nowhere else", () => {
     for (const b of desktop.blocks) {

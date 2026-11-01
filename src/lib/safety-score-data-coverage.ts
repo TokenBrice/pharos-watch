@@ -1,6 +1,7 @@
-import type {
-  ReportCardsV9CurrentResponse,
-  V9PublicationHoldReason,
+import {
+  V9_PUBLICATION_HOLD_REASON_LIMIT,
+  type ReportCardsV9CurrentResponse,
+  type V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
 import {
@@ -179,8 +180,11 @@ export function describeDataCoverageHoldCauses(
     ),
   ].sort();
   if (producerAssetIds.length > 0) {
+    // The producer caps this list at one row per affected asset, so a full list
+    // cannot prove the census is complete.
+    const bounded = reasons.length >= V9_PUBLICATION_HOLD_REASON_LIMIT;
     causes.push(
-      `${producerAssetIds.length} ${producerAssetIds.length === 1 ? "asset" : "assets"} (${assetListLabel(producerAssetIds)}) rely on a data feed that did not deliver.`,
+      `${bounded ? "At least " : ""}${producerAssetIds.length} ${producerAssetIds.length === 1 ? "asset" : "assets"} (${assetListLabel(producerAssetIds)}) rely on a data feed that did not deliver.`,
     );
   }
   for (const reason of reasons) {

@@ -217,6 +217,24 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
   },
 ];
 
+/** Filters a risk budget replaces; the rest of the view is preserved. */
+export const RISK_BUDGET_FILTER_KEYS: readonly (keyof YieldViewModelFilters)[] = [
+  "minSafety",
+  "depth",
+  "sourcePosture",
+  "sourceConfidence",
+  "warnings",
+];
+
+/** True when every risk-budget axis equals the band's overrides (or the default). */
+export function filtersMatchRiskBudget(filters: YieldViewModelFilters, spec: YieldRiskBudgetSpec): boolean {
+  for (const key of RISK_BUDGET_FILTER_KEYS) {
+    const target = (spec.overrides as Record<string, unknown>)[key] ?? DEFAULT_FILTERS[key];
+    if (filters[key] !== target) return false;
+  }
+  return true;
+}
+
 export const YIELD_PRESET_SPECS: readonly YieldPresetSpec[] = [
   {
     key: "treasury-grade",

@@ -299,7 +299,7 @@ function ForecastZone({
 function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] }) {
   return (
     <div className="flex flex-1 flex-col gap-2">
-      <p className="pharos-label">Accuracy by horizon</p>
+      <p className="pharos-label">Resolved within horizon</p>
       <div className="flex flex-1 items-stretch gap-2">
         {rates.map((r) => {
           const pct = Math.round(r.hitRate * 100);

@@ -4,6 +4,7 @@ import { DEPEG_EVENT_DATA_DIR, readDepegEventPageEntries } from "@/lib/depeg-eve
 import {
   buildSameDayDirectionCollisionSlugs,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
+  formatEventTimestamp,
 } from "@/lib/depeg-event-display";
 
 export type { DepegEventEntry } from "@shared/types/market";
@@ -32,6 +33,23 @@ export const NOINDEX_DEPEG_EVENT_SLUGS: ReadonlySet<string> = buildNoindexDepegE
 export const INDEXABLE_DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = DEPEG_EVENT_ENTRIES.filter(
   (event) => !NOINDEX_DEPEG_EVENT_SLUGS.has(event.slug),
 );
+
+/**
+ * The coin's newest permanent depeg event pages. The label carries the UTC start
+ * time, because a coin can open several events in one month.
+ */
+export function buildExploreDepegEventLinks(
+  coinId: string,
+  symbol: string,
+  limit = 5,
+): Array<{ href: string; label: string }> {
+  return DEPEG_EVENT_ENTRIES.filter((event) => event.stablecoinId === coinId)
+    .slice(0, limit)
+    .map((event) => ({
+      href: `/depeg/${event.slug}/`,
+      label: `${symbol} depeg ${formatEventTimestamp(event.startedAt, true)}`,
+    }));
+}
 
 export const COLLIDING_DEPEG_EVENT_SLUGS: ReadonlySet<string> =
   buildSameDayDirectionCollisionSlugs(DEPEG_EVENT_ENTRIES);

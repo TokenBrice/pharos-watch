@@ -769,6 +769,17 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it("omits delivery clocks the state did not observe instead of claiming 'Not yet'", async () => {
+    renderMiniApp({
+      state: makeMiniAppState({ health: { lastSuccessfulDeliveryAt: null, lastSuccessfulReplyAt: null } }),
+      launch: { initDataUnsafe: { start_param: "settings" } },
+    });
+    await waitFor(() => expect(screen.getByText("Delivery")).toBeTruthy());
+    expect(screen.queryByText("Last alert delivered")).toBeNull();
+    expect(screen.queryByText("Last reply from the bot")).toBeNull();
+    expect(screen.queryByText("Not yet")).toBeNull();
+  });
+
   it("restores snooze choices and detaches the native MainButton exactly at expiry without a POST", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(1_800_000_000_000);

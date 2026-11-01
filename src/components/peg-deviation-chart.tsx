@@ -109,6 +109,7 @@ export function PegDeviationChart({
     range,
     setRange,
     visibleData,
+    filteredData,
   } = frame;
 
   // Apply EWMA smoothing at long ranges where daily ticks compress into static.
@@ -130,10 +131,12 @@ export function PegDeviationChart({
   const yAxis = useMemo(() => computePegYAxis(visibleData.map((d) => d.price)), [visibleData]);
   const formatPriceTick = useMemo(() => makePriceTickFormatter(yAxis.step), [yAxis.step]);
 
-  // Header readout: current price + signed bps + named band.
+  // Header readout: current price + signed bps + named band. The header describes
+  // the controlled range's latest observation, not the brushed window, so a brush
+  // drag cannot turn an old print into the "current" one.
   const readout = useMemo(() => {
-    if (visibleData.length === 0) return null;
-    const last = visibleData[visibleData.length - 1];
+    if (filteredData.length === 0) return null;
+    const last = filteredData[filteredData.length - 1];
     const bps = Math.round((last.price - 1) * 10_000);
     const band = classifyDeviation(bps);
     const sign = bps > 0 ? "+" : "";
@@ -145,8 +148,15 @@ export function PegDeviationChart({
       bandCssColor: band.cssColor,
       bandSvgColor: band.svgColor,
       isInBand: band.label === "in-band",
-      ts: last.ts,
     };
+  }, [filteredData]);
+
+  // The dot marks the last observation inside the brushed window.
+  const dot = useMemo(() => {
+    if (visibleData.length === 0) return null;
+    const last = visibleData[visibleData.length - 1];
+    const bps = Math.round((last.price - 1) * 10_000);
+    return { ts: last.ts, price: last.price, svgColor: classifyDeviation(bps).svgColor };
   }, [visibleData]);
 
   if (pegCurrency !== "USD") {
@@ -261,15 +271,16 @@ export function PegDeviationChart({
               dot={false}
               isAnimationActive={false}
               connectNulls
+              tooltipType="none"
             />
           ) : null}
 
-          {readout ? (
+          {dot ? (
             <ReferenceDot
-              x={readout.ts}
-              y={readout.price}
+              x={dot.ts}
+              y={dot.price}
               r={3.5}
-              fill={readout.bandSvgColor}
+              fill={dot.svgColor}
               stroke="var(--color-background)"
               strokeWidth={1.5}
               ifOverflow="extendDomain"

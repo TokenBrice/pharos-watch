@@ -85,7 +85,7 @@ function buildCells(stats: CemeteryStats): FactCell[] {
     detail:
       medianPeak.value === null
         ? "No record has a recorded peak market cap."
-        : `Half of the recorded deaths peaked below this. ${atLeastOneBillionCount} peaked at ${CEMETERY_PEAK_BUCKET_LABELS["1b-plus"]}.`,
+        : `Half of the ${medianPeak.knownCount} records with a recorded peak peaked below this. ${atLeastOneBillionCount} peaked at ${CEMETERY_PEAK_BUCKET_LABELS["1b-plus"]}.`,
   });
 
   const recordsNoun = trackedCount === 1 ? "record" : "records";

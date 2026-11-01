@@ -10,6 +10,7 @@ import {
   describeIssuerReview,
 } from "@/lib/safety-score-data-coverage";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { V9_PUBLICATION_HOLD_REASON_LIMIT } from "@shared/types/report-cards-v9";
 
 const REVIEWED_AT_SEC = Date.parse("2026-10-03T00:00:00Z") / 1000;
 const EARLIER_REVIEWED_AT_SEC = Date.parse("2026-09-28T00:00:00Z") / 1000;
@@ -441,5 +442,25 @@ describe("describeDataCoverageHoldCauses", () => {
     expect(describeDataCoverageHoldCauses([{ code: "v9-public-materialization-pending" }])).toEqual([
       "The newest accepted ratings publication has not finished publishing, so the previous snapshot is shown.",
     ]);
+  });
+
+  it("qualifies a producer-asset sentence as a lower bound at the reason cap", () => {
+    const producerReason = (assetId: string) => ({
+      code: "producer-failed-pipeline-gap" as const,
+      assetId,
+      source: "reason" as const,
+      reasonCode: "missing-pillar-evidence" as const,
+      path: "asset-compilation",
+      effect: "pipeline-gap" as const,
+    });
+    const capped = Array.from({ length: V9_PUBLICATION_HOLD_REASON_LIMIT }, (_, index) =>
+      producerReason(`asset-${String(index).padStart(2, "0")}`),
+    );
+    const [bounded] = describeDataCoverageHoldCauses(capped);
+    expect(bounded).toMatch(/^At least 24 assets \(/);
+    expect(bounded).toContain("rely on a data feed that did not deliver.");
+
+    const [belowCap] = describeDataCoverageHoldCauses(capped.slice(0, 23));
+    expect(belowCap).toMatch(/^23 assets \(/);
   });
 });

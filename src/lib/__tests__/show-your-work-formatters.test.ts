@@ -1,4 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
+import {
+  EVIDENCE_STRESS_THRESHOLD,
+  SEVERE_ISSUER_CONTROL_THRESHOLD,
+  WATCH_MAX_SCORE,
+} from "@shared/lib/dews-config";
 import {
   formatChainHealth,
   formatDews,
@@ -136,6 +142,24 @@ describe("show-your-work formatters", () => {
     expect(table.formula).not.toContain("max(per-signal stress");
   });
 
+  it("states the DEWS evidence-quality WATCH cap in the formula", () => {
+    const table = formatDews({
+      score: WATCH_MAX_SCORE,
+      band: "WATCH",
+      signals: {
+        supply: { value: 80, available: true },
+        flow: { value: 60, available: true },
+        price: { value: 100, available: true },
+        pool: { value: 0, available: false },
+      },
+      computedAt: 0,
+      methodologyVersion: "v6.29",
+    });
+    expect(table.formula).toContain(`capped to ${WATCH_MAX_SCORE} (WATCH)`);
+    expect(table.formula).toContain(`≥${EVIDENCE_STRESS_THRESHOLD}`);
+    expect(table.formula).toContain(`Blacklist Activity is ≥${SEVERE_ISSUER_CONTROL_THRESHOLD}`);
+  });
+
   it("discloses a pool signal reweighted over readable components", () => {
     const poolValue = (pool: { value: number; available: boolean; componentCoverage?: number }) =>
       formatDews({ score: 42, band: "ALERT", signals: { pool }, computedAt: 0, methodologyVersion: "v6.29" })
@@ -185,8 +209,64 @@ describe("show-your-work formatters", () => {
       methodologyVersion: "v3.3",
     });
     expect(table.topic).toBe("psi");
-    expect(table.rows.find((r) => r.label === "Composite score")?.value).toBe("88.0");
+    expect(table.rows.find((r) => r.label === "Composite score (raw instant)")?.value).toBe("88.0");
+    expect(table.rows.find((r) => r.label === "Band (raw instant)")?.value).toBe("STEADY");
     expect(table.rows.find((r) => r.label === "Severity penalty")?.value).toBe("5.0");
+  });
+
+  it("names the displayed PSI basis the page headline uses", () => {
+    const table = formatPsi({
+      score: 88.4,
+      band: "STEADY",
+      avg24h: 74,
+      avg24hBand: "TREMOR",
+      components: { severity: 5, breadth: 3, stressBreadth: 2, trend: 1 },
+      computedAt: 0,
+      methodologyVersion: "v3.3",
+    });
+    expect(table.rows.find((r) => r.label === "Composite score (rolling 24h avg)")?.value).toBe("74.0");
+    expect(table.rows.find((r) => r.label === "Band (rolling 24h avg)")?.value).toBe("TREMOR");
+    expect(table.rows.some((r) => r.label === "Composite score")).toBe(false);
+  });
+
+  it("ranks PSI contributors by computed impact and reports that total", () => {
+    const table = formatPsi({
+      score: 60,
+      band: "TREMOR",
+      components: { severity: 5, breadth: 3, stressBreadth: 2, trend: 1 },
+      contributors: [
+        { id: "eurc-circle", symbol: "EURC", bps: -30, mcapUsd: 2e8, ageDays: 1, factor: 1 },
+        { id: "usdt-tether", symbol: "USDT", bps: -25, mcapUsd: 1e11, ageDays: 1, factor: 1 },
+      ],
+      totalMcapUsd: 2e11,
+      computedAt: 0,
+      methodologyVersion: "v3.3",
+    });
+    const contributorRows = table.rows.filter((r) => r.label.startsWith("Top contributor"));
+    expect(contributorRows.map((r) => r.label)).toEqual([
+      "Top contributor · USDT",
+      "Top contributor · EURC",
+    ]);
+    for (const [index, contributor] of [
+      { bps: -25, mcapUsd: 1e11 },
+      { bps: -30, mcapUsd: 2e8 },
+    ].entries()) {
+      const total = computePsiDepegContribution({ ...contributor, totalMcapUsd: 2e11, factor: 1 }).total;
+      expect(contributorRows[index].contribution).toBe(total.toFixed(2));
+    }
+    expect(contributorRows[0].contribution).not.toBe("1.00");
+  });
+
+  it("omits PSI contributor rows when the payload has no aggregate market cap", () => {
+    const table = formatPsi({
+      score: 60,
+      band: "TREMOR",
+      components: { severity: 5, breadth: 3, stressBreadth: 2, trend: 1 },
+      contributors: [{ id: "usdt-tether", symbol: "USDT", bps: -25, mcapUsd: 1e11, ageDays: 1, factor: 1 }],
+      computedAt: 0,
+      methodologyVersion: "v3.3",
+    });
+    expect(table.rows.some((r) => r.label.startsWith("Top contributor"))).toBe(false);
   });
 
   it("formats redemption sub-scores", () => {
