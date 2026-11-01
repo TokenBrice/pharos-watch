@@ -45,6 +45,18 @@ export async function reconcileReserveContinuations(db: D1Database, signal: Abor
       WHERE delivery_id = ? AND terminal_token IS NULL`).bind(row.delivery_id).all<ScheduledChildAttemptRow>();
     for (const child of children.results) {
       signal.throwIfAborted();
+      // The durable terminal time is the child's last progress heartbeat (or
+      // the queue event's last heartbeat), never the reconciliation clock.
+      const leaseOwner = child.lease_owner;
+      const progress = leaseOwner
+        ? await runWithOverloadRetry(() => db.prepare(
+            "SELECT updated_at FROM cron_run_progress WHERE job = ? AND lease_owner = ?",
+          ).bind(child.job, leaseOwner).first<{ updated_at: number }>())
+        : null;
+      const startedAt = child.started_at ?? now;
+      const lastActivity = Math.max(startedAt, Math.min(now, progress?.updated_at ?? row.updated_at));
+      const activeDurationMs = Math.max(0, lastActivity - startedAt) * 1000;
+      const reconciliationDelayMs = Math.max(0, now - lastActivity) * 1000;
       await writeScheduledChildTerminal(db, {
         identity: { scheduleKey: child.schedule_key, slotStartedAt: child.slot_started_at, job: child.job,
           producerPath: child.producer_path, producerKind: child.producer_kind, invocationId: child.invocation_id,
@@ -54,11 +66,13 @@ export async function reconcileReserveContinuations(db: D1Database, signal: Abor
             invocationId: child.execution_invocation_id, owner: child.execution_owner,
             generation: child.execution_generation, workerRole: "public" } },
         source: "synthetic", reconciler: { owner, generation, state: "reconciling" },
-        startedAt: child.started_at ?? now, completedAt: now, durationMs: Math.max(0, now - (child.started_at ?? now)) * 1000,
+        startedAt, completedAt: lastActivity, durationMs: activeDurationMs,
         status: "error", degradedReason: "reserve-queue-platform-abandoned", disposition: "abandoned",
         producerOutcome: "abandoned", error: "Reserve Queue event ended without terminal accounting",
         metadata: JSON.stringify({ reason: "reserve-queue-platform-abandoned", deliveryId: row.delivery_id,
-          sourceInvocationId: row.invocation_id, reconciledAt: now }),
+          sourceInvocationId: row.invocation_id, reconciledAt: now,
+          progressUpdatedAt: lastActivity, activeDurationMs,
+          durationBasis: "last-durable-activity-lower-bound", reconciliationDelayMs }),
       });
       // Exact dead-owner cleanup only; a late/new lease or progress row survives.
       await db.batch([

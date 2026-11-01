@@ -22,7 +22,7 @@ Use trusted `CF-Connecting-IP`, falling back to unknown, never client-controlled
 
 ### Auto-verification
 
-Only a data correction with valid attached stablecoin can verify. Read normalized stablecoins cache, nullable USD supply, price, cached peg type/reference and producer age. `verification.ts` owns arithmetic and shared threshold/reference helpers; DefiLlama list supply is already USD. Missing supply is explicitly unavailable, not zero; a finite observed zero remains measured. Commodity normalization uses reviewed metadata, and rate source is disclosed.
+Only a data correction with valid attached stablecoin can verify. Read normalized stablecoins cache, nullable USD supply, price, cached peg type/reference and producer age. `verification.ts` owns arithmetic and shared threshold/reference helpers; DefiLlama list supply is already USD. Missing supply is explicitly unavailable, not zero; a finite observed zero remains measured. Commodity normalization uses reviewed metadata, and rate source is disclosed. NAV tokens have no fixed peg and are never compared to one. A cached peg unit that disagrees with the curated registry currency, or a derived reference that fails the shared peg-reference authority gate, reports `N/A` instead of a deviation.
 
 - `verified: confirmed`: a positive cached price is at/beyond the shared depeg threshold. This confirms observed deviation, not that the user's asserted correction is proven true.
 - `verified: unconfirmed`: missing/nonpositive price, missing reference or deviation below threshold; never proof the report is wrong.

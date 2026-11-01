@@ -130,6 +130,11 @@ describe("getGaugeBand", () => {
     expect(getGaugeBand(39.999999)).toBe("HEALTHY");
     expect(getGaugeBand(69.999999)).toBe("CONFIDENT");
   });
+
+  it("classifies finite out-of-range dust through the documented band table", () => {
+    expect(getGaugeBand(-100.00000000000001)).toBe("CRISIS");
+    expect(getGaugeBand(100.00000000000001)).toBe("SURGE");
+  });
 });
 
 describe("computeGaugeScore", () => {
@@ -161,6 +166,16 @@ describe("computeGaugeScore", () => {
     expect(computeGaugeScore([])).toBeNull();
     expect(computeGaugeScore([{ intensity: null, mcap: 1e9 }])).toBeNull();
     expect(computeGaugeScore([{ intensity: 0, mcap: 1e9 }])).toBe(0);
+  });
+
+  it("keeps an all-floor cohort in the CRISIS band despite floating-point dust", () => {
+    const score = computeGaugeScore([
+      { intensity: -100, mcap: 81_342_260_539.53171 },
+      { intensity: -100, mcap: 88_757_351_636.8866 },
+    ]);
+    expect(score).toBeGreaterThanOrEqual(-100);
+    expect(score).toBeLessThanOrEqual(100);
+    expect(getGaugeBand(score!)).toBe("CRISIS");
   });
 
   it("counts only valid intensities that carry a positive admitted weight", () => {

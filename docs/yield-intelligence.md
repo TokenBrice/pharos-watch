@@ -223,7 +223,7 @@ Midas mMEV reads the issuer-listed Ethereum NAV oracle's `decimals()` and Chainl
 
 The Re Protocol adapter reads the official daily price feed's `reUSD` series and publishes its latest APY and NAV as `protocol-api:re-protocol-reusd`. Observations must have a positive NAV, an APY within the accepted envelope, and a UTC date no older than three days. The source belongs directly to `reusd-re-protocol`; the separate junior `reUSDe` Insurance Alpha product is not treated as a yield variant of reUSD. Historical rows written under the misattributed `protocol-api:re-protocol-reusde` key are suppressed and purged through the yield-history ownership-handoff safeguards.
 
-Zephyr publishes its one-day effective APY only for `zys-zephyr-protocol`, not base ZSD. Cron and backfill share the upstream hourly observation bucket as history identity; retries cannot add samples. Publication generation fencing remains independent. Hashnote excludes non-finite/nonpositive timestamps and reports beyond five-minute future skew before choosing either NAV endpoint.
+Zephyr publishes its one-day effective APY only for `zys-zephyr-protocol`, not base ZSD. Cron and backfill share the upstream hourly observation bucket as history identity; retries cannot add samples. Observation clocks beyond five-minute future skew are rejected before bucketing. Publication generation fencing remains independent. Hashnote excludes non-finite/nonpositive timestamps and reports beyond five-minute future skew before choosing either NAV endpoint.
 
 Historical vaults.fyi rows retain curated-observation classification, venue/chain attribution, and existing source links; the retired collector confers no first-party evidence status.
 

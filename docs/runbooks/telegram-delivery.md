@@ -94,7 +94,7 @@ There is no preset-only re-fire and no hand-enqueue after a job expires.
         https://ops-api.pharos.watch/api/admin-telegram-broadcast
    ```
 
-   Dry-run and live requests preflight `messageHtml` before target selection; unsupported or unbalanced Telegram HTML returns `422` with an error position. Review every chunk of the preview. In the operator panel, live send stays disabled until a successful preview covers the exact current message and audience; **Retry same intent** replays the original body and idempotency key only.
+   Dry-run and live requests preflight `messageHtml` before target selection; unsupported or unbalanced Telegram HTML returns `422` with an error position, and a body that cannot be split into Telegram-sized chunks (no rendered text, or a tag envelope larger than one chunk) returns `422` with `reason: "message-not-splittable"`. Review every chunk of the preview. In the operator panel, live send stays disabled until a successful preview covers the exact current message and audience; **Retry same intent** replays the original body and idempotency key only.
 3. **Estimate.** Proceed only when `deliveryEstimate.hasMaterialTtlReserve` is true (at least 15 minutes of reserve inside the 45-minute TTL). Live requests return `409` otherwise; nothing bypasses it.
 4. **Scope.** Prefer `deliverable-watchers`. Use `global-subscribers` only for global-alert policy notices and `all` only when intentionally targeting every subscriber row.
 5. **Live send** with a stable idempotency key and a private operator `canaryChatId`. Every chunk goes to the canary silently first; a failed canary returns `fleetEnqueued: 0` and records no job. The canary chat is excluded from fan-out.

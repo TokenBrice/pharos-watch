@@ -422,6 +422,81 @@ describe("handleFeedback", () => {
     expect(issuePayload.title).toContain("[Data Correction] Ethereum: ");
   });
 
+  it("does not compare a NAV token price against a fixed-peg reference", async () => {
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "cache", rows: [], first: {
+        value: JSON.stringify({
+          peggedAssets: [{
+            id: "usyc-hashnote", symbol: "USYC", price: 1.1422, pegType: "peggedUSD",
+            circulating: { peggedUSD: 5_000_000 },
+          }],
+        }),
+        updated_at: Math.floor(Date.now() / 1000) - 60,
+      } },
+    ]);
+    queueFetch(new Response(JSON.stringify({ id: 6, number: 47 }), { status: 201 }));
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({
+      type: "data-correction", stablecoinId: "usyc-hashnote", stablecoinName: "USYC",
+      description: "The reported peg deviation appears incorrect.",
+    })), makeEnv());
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const issuePayload = JSON.parse(String(init?.body)) as { body: string; labels: string[] };
+    expect(issuePayload.labels).not.toContain("verified: confirmed");
+    expect(issuePayload.body).toContain("**Peg deviation:** N/A");
+  });
+
+  it("withholds a thin peer-median reference from auto-verification", async () => {
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "cache", rows: [], first: {
+        value: JSON.stringify({
+          peggedAssets: [
+            { id: "eurc-circle", symbol: "EURC", price: 1.0, pegType: "peggedEUR", circulating: { peggedEUR: 5_000_000 } },
+            { id: "eurs-stasis", symbol: "EURS", price: 1.04, pegType: "peggedEUR", circulating: { peggedEUR: 5_000_000 } },
+          ],
+        }),
+        updated_at: Math.floor(Date.now() / 1000) - 60,
+      } },
+    ]);
+    queueFetch(new Response(JSON.stringify({ id: 7, number: 48 }), { status: 201 }));
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({
+      type: "data-correction", stablecoinId: "eurs-stasis", stablecoinName: "EURS",
+      description: "The reported peg deviation appears incorrect.",
+    })), makeEnv());
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const issuePayload = JSON.parse(String(init?.body)) as { body: string; labels: string[] };
+    expect(issuePayload.labels).not.toContain("verified: confirmed");
+    expect(issuePayload.body).toContain("**Peg deviation:** N/A");
+  });
+
+  it("withholds a reference whose unit disagrees with the curated registry peg", async () => {
+    const db = mockD1([
+      { match: "feedback_rate_limit", rows: [], runMeta: { changes: 1 } },
+      { match: "cache", rows: [], first: {
+        value: JSON.stringify({
+          peggedAssets: [{
+            id: "xaut-tether", symbol: "XAUT", price: 5000, pegType: "peggedUSD",
+            circulating: { peggedUSD: 5_000_000 },
+          }],
+        }),
+        updated_at: Math.floor(Date.now() / 1000) - 60,
+      } },
+    ]);
+    queueFetch(new Response(JSON.stringify({ id: 8, number: 49 }), { status: 201 }));
+    const res = await handleFeedback(db, makeRequest(makeFeedbackBody({
+      type: "data-correction", stablecoinId: "xaut-tether", stablecoinName: "XAUT",
+      description: "The reported peg deviation appears incorrect.",
+    })), makeEnv());
+    expect(res.status).toBe(200);
+    const [, init] = fetchSpy.mock.calls[0]!;
+    const issuePayload = JSON.parse(String(init?.body)) as { body: string; labels: string[] };
+    expect(issuePayload.labels).not.toContain("verified: confirmed");
+    expect(issuePayload.body).toContain("**Peg deviation:** N/A");
+  });
+
   it("releases quota and terminally replays a confirmed GitHub rejection", async () => {
     const { sqlite, db } = createDurableFeedbackDb();
 

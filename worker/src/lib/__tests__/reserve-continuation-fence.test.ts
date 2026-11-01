@@ -160,6 +160,31 @@ describe("reserve Queue exact checkpoint and execution authority", () => {
     expect(sqlite.prepare("SELECT status,producer_kind FROM cron_runs").get()).toEqual({ status: "error", producer_kind: "queue-recovery" });
   });
 
+  it("dates a synthetic abandoned child from its last durable activity", async () => {
+    const { db, sqlite, message, options } = await setup();
+    const claim = (await claimReserveContinuation(db, message, options))!;
+    const identity: ScheduledChildIdentity = { scheduleKey: message.scheduleKey, slotStartedAt: ROOT,
+      job: "sync-live-reserves", producerPath: message.scheduleKey, producerKind: "queue-recovery", invocationId: options.owner,
+      workerVersion: "test", attemptNo: 1, executionFence: claim.fence };
+    await markScheduledChildStarted(db, identity, NOW, "child-lease");
+    sqlite.prepare("UPDATE reserve_continuation_child_attempts SET started_at = ?").run(NOW - 1000);
+    sqlite.prepare(`INSERT INTO cron_run_progress (job, started_at, updated_at, lease_owner, slot_started_at)
+      VALUES ('sync-live-reserves', ?, ?, 'child-lease', ?)`).run(NOW - 1000, NOW - 300, ROOT);
+    sqlite.exec(`UPDATE reserve_continuation_executions SET updated_at=${NOW - 130}, deadline_ms=${(NOW - 2000) * 1000}`);
+
+    expect(await reconcileReserveContinuations(db, new AbortController().signal)).toBe(1);
+
+    const run = sqlite.prepare("SELECT duration_ms, metadata FROM cron_runs WHERE job = 'sync-live-reserves'")
+      .get() as { duration_ms: number; metadata: string };
+    expect(run.duration_ms).toBe(700_000);
+    expect(JSON.parse(run.metadata)).toMatchObject({
+      progressUpdatedAt: NOW - 300,
+      activeDurationMs: 700_000,
+      durationBasis: "last-durable-activity-lower-bound",
+      reconciliationDelayMs: 300_000,
+    });
+  });
+
   it("starts the absolute deadline before any claim read", async () => {
     const { db, message, options } = await setup();
     const prepare = vi.spyOn(db, "prepare");

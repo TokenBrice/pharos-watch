@@ -107,7 +107,9 @@ export function computeGaugeScore(
   }
 
   if (totalMcap === 0) return null;
-  return weightedSum / totalMcap;
+  // The mean of bounded inputs is in the domain; only float dust can leave it.
+  // Keep the published composite on the documented [-100, 100] interval.
+  return clamp(weightedSum / totalMcap, -100, 100);
 }
 
 // ---------------------------------------------------------------------------

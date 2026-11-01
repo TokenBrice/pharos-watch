@@ -266,6 +266,29 @@ describe("runCronDurationWatchdog", () => {
     });
   });
 
+  it("excludes reserve-queue synthetic abandonment rows from runtime statistics", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, error, metadata) VALUES ('sync-live-reserves', ?, ?, ?, ?, ?)");
+    for (let index = 0; index < 20; index++) insert.run(NOW_SEC - index * 60, 1000, "ok", null, null);
+    for (let index = 0; index < 3; index++) {
+      insert.run(
+        NOW_SEC - 30 - index,
+        LIVE_RESERVES_TIMEOUT_MS + 230_000,
+        "error",
+        "Reserve Queue event ended without terminal accounting",
+        JSON.stringify({ reason: "reserve-queue-platform-abandoned", schedulerTerminalSource: "synthetic" }),
+      );
+    }
+
+    const result = await runCronDurationWatchdog(db);
+    const metadata = JSON.parse(String(result.metadata));
+
+    expect(metadata.stats.find((row: { job: string }) => row.job === "sync-live-reserves")).toMatchObject({
+      runs: 20, avgMs: 1000, maxMs: 1000, capHits: 0, recentCapHits: 0,
+    });
+    expect(metadata.runtimeBreaching).not.toContain("sync-live-reserves");
+  });
+
   it("publishes cap-hit stage breakdown and samples through the daily sentinel sanitizer", async () => {
     const { sqlite, db } = sqliteFixtures.open();
     const insert = sqlite.prepare(
