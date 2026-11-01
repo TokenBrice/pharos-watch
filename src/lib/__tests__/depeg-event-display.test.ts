@@ -80,6 +80,30 @@ describe("depeg event search title and description", () => {
     );
     expect(buildDepegEventDescription(usdc, true, null)).toMatch(/^USDC fell 12\.1% below its peg at 03:00 UTC on March 11, 2023\./);
   });
+
+  it("qualifies a disputed audit verdict without dropping the measured deviation", async () => {
+    const slug = "a7a5-2026-08-06";
+    const event = DEPEG_EVENT_ENTRIES.find((entry) => entry.slug === slug)!;
+    expect(event.provenance?.auditVerdict).toBe("disputed");
+
+    expect(buildDepegEventTitle(event, false)).toBe("A7A5 Depeg, August 6, 2026: 8197.8% Above Peg (Disputed)");
+    expect(buildDepegEventDescription(event, false)).toContain("rose 8197.8% above its peg (Disputed)");
+    expect(buildDepegEventSynopsis(event)).toContain("8197.8% (Disputed)");
+    const metadata = await generateMetadata({ params: Promise.resolve({ event: slug }) });
+    expect(metadata.description).toContain("(Disputed)");
+  });
+
+  it("qualifies exactly the disputed archive events", () => {
+    for (const event of DEPEG_EVENT_ENTRIES) {
+      const disputed = event.provenance?.auditVerdict === "disputed" || event.provenance?.auditVerdict === "false_positive";
+      const texts = [
+        buildDepegEventTitle(event, false),
+        buildDepegEventDescription(event, false),
+        buildDepegEventSynopsis(event),
+      ];
+      for (const text of texts) expect(text.includes("(Disputed)"), event.slug).toBe(disputed);
+    }
+  });
 });
 
 describe("depeg closure presentation", () => {

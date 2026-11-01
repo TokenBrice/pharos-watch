@@ -116,7 +116,7 @@ Coin rows and Coin detail show, per live family, what will actually reach the ch
 - **On**: the coin's own row enables the family.
 - **On via PRESET / All stablecoins**: no own flag, and a followed preset whose `memberIds` include the coin (DEWS, depeg and safety only) or the matching All stablecoins family covers it.
 - **Muted**: the family is off with its override marker set while a preset or All stablecoins is known to cover it.
-- **Can't be checked**: a covering preset's `memberIds` is `null`; the client claims neither coverage nor a mute of it, and coin rows say "X can't be checked" rather than "No alerts".
+- **Can't be checked**: a covering preset's `memberIds` is `null`; the client claims neither coverage nor a mute of it, coin rows say "X can't be checked" rather than "No alerts", and the family's switch stays unchecked and disabled.
 - **Off**: nothing covers it.
 
 Coin detail renders On and On via as switched on. Turning an inherited family off sends `alertTypes: { family: false }`, which writes the override marker and mutes it for that coin only; per-coin tuning pickers appear only for families the coin enables itself. Following and unfollowing a preset changes `telegram_preset_subscriptions` plus the subscriber row's activity and preference-generation markers in `telegram_subscribers`; direct/local coin rows in `telegram_subscriptions` remain unchanged.

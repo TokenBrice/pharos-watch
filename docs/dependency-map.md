@@ -215,7 +215,7 @@ Dragging holds the position snapshot until pointerup/cancel, when pinned coordin
 
 - uses edges touching the current asset with published endpoints to decide whether to show the stage and populate Used by, but passes the full published edge set and all published cards to the graph so full-graph hub tiers and exposure remain consistent;
 - lazy-loads the graph with `next/dynamic` (`ssr: false`) behind a loading placeholder;
-- passes `focusCoinId`, `minimalChrome`, and a 500-node cap, which drops the header controls and renders only the focus coin's own neighborhood, ringed around it;
+- passes `focusCoinId`, `minimalChrome`, and a 500-node cap, which drops the header controls and renders only the focus coin's own neighborhood, ringed around it. The focused inspection rail omits the **Direct dependent exposure** metric: the detail response carries only the incident-and-dependent-input closure, so it cannot date full-graph exposure;
 - scales nodes up and shows ticker labels when the neighborhood is small: 1.5x at ≤10 visible nodes, 2x at ≤5. `MAX_RASTER_LOGO_RADIUS = 46` in `contagion-graph-svg.tsx` caps the drawn raster image radius; `.svg` logos are exempt. Logos come from static `logosById`, with no minimum raster-source resolution guarantee;
 - takes the wider column (`3fr`) when it shares the row with the variant-relationship card or collateral-usage list (`2fr`), and returns `null` when no context disclosure has a row, there is no graph, no supplemental context, and no source error.
 
@@ -230,4 +230,4 @@ The four context disclosures use published data:
 
 Absent role or coverage lists mean not published for this generation, including older retained payloads; empty lists mean no corresponding rows were published. The disclosures render, even without a drawn neighborhood, only when at least one has a row: a direct dependent, an upstream link, a scored role, or a coverage row. Absent and empty lists alone never keep the section visible; a variant card or collateral-usage list still renders without the empty disclosures.
 
-The section links to `/dependency-map/?focus=<coinId>`. Its market-cap map also retains nulls. On either query error it shows a shared retry notice and can retain published neighborhood data; unlike the map-route client, it does not discard cached market caps on a market-cap query error.
+The section links to `/dependency-map/?focus=<coinId>`. Its market-cap map also retains nulls. A report-card read failure with no retained data shows the shared retry notice; a supply-only failure keeps the drawn graph and its `mcap n/a` rows. Unlike the map-route client, it does not discard cached market caps on a market-cap query error.

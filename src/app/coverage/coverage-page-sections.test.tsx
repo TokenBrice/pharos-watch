@@ -111,6 +111,13 @@ describe("CoverageMatrixCard", () => {
     ).toBeNull();
   });
 
+  it("labels the matrix clock as the browser fetch time, not a served generation", () => {
+    const { container } = render(<CoverageMatrixCard {...makeMatrixModel()} />);
+
+    expect(container.textContent).toMatch(/Fetched \d/);
+    expect(container.textContent).not.toMatch(/Updated \d/);
+  });
+
   it("pages long results 20 at a time with an honest count and a URL page", () => {
     window.history.replaceState(null, "", "/coverage/");
     const rows = Array.from({ length: 30 }, (_value, index) => makeCoverageRow(index + 1));

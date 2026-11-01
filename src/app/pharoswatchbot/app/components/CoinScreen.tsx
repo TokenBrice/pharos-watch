@@ -115,13 +115,14 @@ export function CoinScreen({ state, nowSec, canEdit, busy, pendingOperation, onM
                   subtitle={subtitle}
                   className="min-h-[3.25rem]"
                   // An unfollowed coin is read-only: a switch here would silently follow it.
-                  value={subscription ? undefined : isCoverageActive(entry) ? "On" : "Off"}
+                  // An unreadable preset membership is neither on nor off (R1/R2).
+                  value={subscription ? undefined : entry.kind === "unknown" ? undefined : isCoverageActive(entry) ? "On" : "Off"}
                   trailing={subscription ? (
                     <Switch
                       label={`${symbol} ${ALERT_LABELS[type]}`}
                       description={subtitle}
                       checked={isCoverageActive(entry)}
-                      disabled={controlsDisabled}
+                      disabled={controlsDisabled || entry.kind === "unknown"}
                       loading={pendingFamily(type)}
                       onChange={(next) => setCoin({ alertTypes: { [type]: next } })}
                     />

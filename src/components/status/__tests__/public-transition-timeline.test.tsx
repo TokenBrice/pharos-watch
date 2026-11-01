@@ -42,4 +42,18 @@ describe("PublicIncidentList", () => {
     expect(screen.getByText("Showing the latest 1 status changes; older changes in this window were not loaded.")).toBeTruthy();
   });
 
+  it("labels a legacy incident still open at the cutover as handed off, not resolved", () => {
+    const transitions: PublicStatusTransition[] = [
+      { id: 1, at: NOW - 2 * 86_400, source: "legacy", from: "healthy", to: "degraded", transitionType: "degrade",
+        reason: "raw-degraded-consecutive-threshold" },
+    ];
+    const { container } = render(
+      <PublicIncidentList transitions={transitions} nowSec={NOW} historyDays={30} hasMore={false} publicHistoryStartedAt={NOW} />,
+    );
+
+    expect(screen.queryByText(/Resolved/)).toBeNull();
+    expect(screen.getByText(/Handed off to the component log/)).toBeTruthy();
+    expect(container.querySelector(`time[datetime="${new Date(NOW * 1000).toISOString()}"]`)).not.toBeNull();
+  });
+
 });

@@ -136,6 +136,17 @@ describe("PegStabilityCard", () => {
     expect(card.textContent).not.toContain("Reviewed ");
   });
 
+  it("describes an rwa-credit-fund coin as a fund portfolio, never a credit portfolio", () => {
+    const { container } = render(
+      <PegStabilityCard meta={coin({ mechanismArchetype: "rwa-credit-fund" })} isWrapper={false} />,
+    );
+    const text = within(mechanismModule(container)).getByRole("figure").textContent ?? "";
+    expect(text).toContain("Fund portfolio");
+    expect(text).toContain("value tracks fund NAV");
+    // Tokenized fund shares and bullion trackers use this archetype too.
+    expect(text).not.toMatch(/private credit|credit portfolio|credit losses|CLO/i);
+  });
+
   it("never names another coin's incident in a coin's stress line", () => {
     const usdt = render(
       <PegStabilityCard

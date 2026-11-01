@@ -6,6 +6,7 @@ import {
   sortStablecoins,
   filterStablecoins,
   prioritizePinnedStablecoins,
+  resolveDisplayedNativePrice,
   type StablecoinTableSortKey,
 } from "@/components/stablecoin-table-logic";
 import { buildV9SafetyTableMap, type V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
@@ -484,6 +485,36 @@ describe("sortStablecoins", () => {
   ])("$name", ({ rows, sort, sources, expected }) => {
     const result = sortStablecoins({ filtered: rows, sort, effectiveSortKey: sort.key, ...sources });
     expect(result.map((coin) => coin.id)).toEqual(expected);
+  });
+
+  it("sorts the Price column in the peg quantity the cell prints", () => {
+    const usd = makeCoin("usdc-circle", "USD Coin", { price: 0.99 });
+    const brl = makeCoin("brl1-brl1", "BRL1", { price: 0.18 });
+    const noReference = makeCoin("brla-brla-digital", "BRLA", { price: 0.18 });
+    const pegScores = new Map([
+      ["usdc-circle", makePegSummaryCoin({ id: "usdc-circle", pegCurrency: "USD", pegReference: { valueUsd: 1, source: "median", contributorCount: 5, asOf: 1_700_000_000 } })],
+      ["brl1-brl1", makePegSummaryCoin({ id: "brl1-brl1", pegCurrency: "BRL", pegReference: { valueUsd: 0.18, source: "median", contributorCount: 5, asOf: 1_700_000_000 } })],
+    ]);
+
+    // The cell prints R$1.0000, $0.9900 and "—"; the order must match those units.
+    const sorted = sortStablecoins({
+      filtered: [usd, brl, noReference],
+      sort: sortDesc("price"),
+      effectiveSortKey: "price",
+      pegScores,
+    });
+    expect(sorted.map((coin) => coin.id)).toEqual(["brl1-brl1", "usdc-circle", "brla-brla-digital"]);
+    expect(resolveDisplayedNativePrice(brl, pegScores.get("brl1-brl1"), pegScores)).toEqual({
+      value: 1,
+      currency: "BRL",
+      reference: 0.18,
+    });
+    expect(resolveDisplayedNativePrice(usd, pegScores.get("usdc-circle"), pegScores)).toEqual({
+      value: 0.99,
+      currency: "USD",
+      reference: 1,
+    });
+    expect(resolveDisplayedNativePrice(noReference, undefined, pegScores)).toBeNull();
   });
 
   it("treats missing Worker deviations as absent peg signals", () => {

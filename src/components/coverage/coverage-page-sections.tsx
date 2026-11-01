@@ -330,7 +330,7 @@ export function CoverageMatrixCard(
             <p className="pharos-label">Coverage matrix</p>
             {model.dataUpdatedAt ? (
               <span className="text-xs text-muted-foreground">
-                Updated {new Date(model.dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                Fetched {new Date(model.dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
             ) : null}
           </div>

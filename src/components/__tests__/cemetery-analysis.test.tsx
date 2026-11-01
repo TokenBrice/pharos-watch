@@ -57,6 +57,9 @@ describe("CemeteryAnalysis", () => {
 
   it("renders a visible data table per chart with one row per year and per cause", () => {
     const { container } = renderAnalysis();
+    expect(
+      screen.getByText("Bars count records by death year. The row under the axis is the median recorded peak market cap of that year's deaths."),
+    ).toBeTruthy();
     const [yearTable, peakTable] = tables(container);
     expect(tables(container)).toHaveLength(2);
     for (const table of [yearTable, peakTable]) expect(table.closest("details")?.querySelector("summary")?.textContent).toBe("Data table");

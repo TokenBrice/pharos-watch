@@ -167,7 +167,12 @@ function GutterStubs({
   maxWeightUsd: number | null;
   plotHeightPx: number;
 }) {
-  const drawn = stubs.filter((stub) => stub.weightUsd == null || stub.weightUsd > 0).slice(0, MAX_GUTTER_STUBS);
+  // On a weighted stage a null weight has no height to draw: it stays in the
+  // counted stubs and the table, but never gets the collapsed-stage fallback
+  // height beside real weight-scaled ticks.
+  const drawn = stubs
+    .filter((stub) => (maxWeightUsd == null ? stub.weightUsd == null || stub.weightUsd > 0 : stub.weightUsd != null && stub.weightUsd > 0))
+    .slice(0, MAX_GUTTER_STUBS);
   const labelled = drawn[0]?.weightUsd != null ? drawn[0] : null;
   const step = 100 / (MAX_GUTTER_STUBS + 1);
   return (

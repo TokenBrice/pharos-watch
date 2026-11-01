@@ -444,6 +444,29 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.getByText("Can't check USD Top 25 coverage right now")).toBeTruthy();
   });
 
+  it("claims neither coverage nor a mute when a followed preset's members are unreadable", async () => {
+    const state = makeMiniAppState({
+      subscriber: { globalAlerts: { dews: false, depeg: false, safety: false } },
+      presets: [top25({ dews: true }, null)],
+      catalog: rankedCatalog,
+    });
+    await renderReadyMiniApp({ state, launch: { initDataUnsafe: { start_param: "coin_usdt-tether" } } });
+    const subtitle = screen.getByText("Can't check USD Top 25 coverage right now");
+    const row = subtitle.closest<HTMLElement>("div.relative")!;
+    expect(within(row).queryByText("Off")).toBeNull();
+    expect(within(row).queryByText("On")).toBeNull();
+    expect(screen.queryAllByRole("switch")).toHaveLength(0);
+
+    cleanup();
+    await renderReadyMiniApp({
+      state: makeMiniAppState({ presets: [top25({ safety: true }, null)], catalog: rankedCatalog }),
+      launch: { initDataUnsafe: { start_param: "coin_usdc-circle" } },
+    });
+    const safety = screen.getByRole("switch", { name: switchName("USDC Safety Score") });
+    expect(safety.getAttribute("aria-checked")).toBe("false");
+    expect(safety).toHaveProperty("disabled", true);
+  });
+
   it("follows an unfollowed coin from the MainButton and leaves unknown coins untouched", async () => {
     const main = nativeButton();
     const fetchMock = await renderReadyMiniApp({ state: makeMiniAppState({ catalog: rankedCatalog }), launch: { MainButton: main, initDataUnsafe: { start_param: "coin_usdt-tether" } } });

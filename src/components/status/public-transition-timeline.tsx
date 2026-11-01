@@ -32,12 +32,15 @@ function IncidentTimes({
   startedAt,
   startKnown,
   resolvedAt,
+  handedOff = false,
   nowSec,
   liveRecovered = false,
 }: {
   startedAt: number;
   startKnown: boolean;
   resolvedAt: number | null;
+  /** The operator log stopped at the cutover; the component log carries on from `resolvedAt`. */
+  handedOff?: boolean;
   nowSec: number;
   /** The live verdict is operational before the next persisted check records the recovery. */
   liveRecovered?: boolean;
@@ -50,7 +53,9 @@ function IncidentTimes({
       </span>
       <span>
         {resolvedAt != null
-          ? <>Resolved <Timestamp epochSec={resolvedAt} nowSec={nowSec} /></>
+          ? handedOff
+            ? <>Handed off to the component log <Timestamp epochSec={resolvedAt} nowSec={nowSec} /></>
+            : <>Resolved <Timestamp epochSec={resolvedAt} nowSec={nowSec} /></>
           : liveRecovered ? "Recovered; the next check records the end time" : "Ongoing"}
       </span>
       <span className="pharos-numeric">

@@ -114,7 +114,7 @@ function buildCells(stats: CemeteryStats): FactCell[] {
 /** Four neutral figures under the hero; each fact here has no other home on the page. */
 export function CemeteryKeyFacts({ stats, datasetMeta }: CemeteryKeyFactsProps) {
   const cells = buildCells(stats);
-  // `updatedAt` is the latest record's `recordedAt`, when a record was last added; the checksum identifies the revision.
+  // `updatedAt` is the latest record's `recordedAt`, when a record was last added; the source checksum identifies the curated inputs the export was built from.
   const rail = [
     stats.updatedAt ? `Latest record added ${formatRecordedAt(stats.updatedAt)}` : null,
     `Latest recorded death ${stats.asOf.label}`,
@@ -150,7 +150,7 @@ export function CemeteryKeyFacts({ stats, datasetMeta }: CemeteryKeyFactsProps) 
             </Fragment>
           ))}
           <span className="whitespace-nowrap">
-            checksum <span className="normal-case">{datasetMeta.sourceChecksumShort}</span>
+            source checksum <span className="normal-case">{datasetMeta.sourceChecksumShort}</span>
           </span>
         </p>
       </div>

@@ -275,13 +275,13 @@ const RWA_CREDIT_COIN_CONFIG: ThreeStepConfig = {
   accentColor: "var(--mechanism-rwa-credit-fund)",
   stressFootnote: "stress: NAV markdown / redemption gate",
   ariaLabel: (symbol) =>
-    `Investor cash funds a credit portfolio; ${symbol} value tracks credit performance, and redemptions follow the issuer's terms.`,
+    `Investor cash funds the issuer's portfolio; ${symbol} value tracks fund performance, and redemptions follow the issuer's terms.`,
   description: (symbol) =>
-    `Investors subscribe or deposit cash; the issuer deploys it into private credit or structured debt with real default risk and limited liquidity; ${symbol} value reflects credit performance, with redemption timing and gates set by the issuer's terms.`,
+    `Investors subscribe or deposit cash; the issuer deploys it into the fund's portfolio, whose marks drive NAV and carry market and liquidity risk; ${symbol} value reflects fund performance, with redemption timing and gates set by the issuer's terms.`,
   defaultSteps: (symbol) => [
     { label: "Investor cash", subtitle: "subscribed or deposited" },
-    { label: "Credit portfolio", subtitle: "default and liquidity risk" },
-    { label: `${symbol} issued`, subtitle: "value tracks credit losses" },
+    { label: "Fund portfolio", subtitle: "marked to fund NAV" },
+    { label: `${symbol} issued`, subtitle: "value tracks fund NAV" },
   ],
   returnArrow: {
     fromX: 500,
