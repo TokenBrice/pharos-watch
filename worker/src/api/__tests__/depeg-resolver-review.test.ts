@@ -252,7 +252,9 @@ describe("handleDepegResolverReview", () => {
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(body._meta.degraded).toBe(true);
-    expect(body._meta.degradedReason).toBe("cache-timestamp-invalid");
+    // The rejected cache clock is named with the shared freshness vocabulary
+    // (future- vs invalid-timestamp), never collapsed into "missing-cache".
+    expect(body._meta.degradedReason).toBe("future-timestamp");
     expect(body.rows).toEqual([]);
   });
 

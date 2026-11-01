@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
+import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
 import { loadStatusSupplements } from "../../lib/status/supplements";
 
 const NOW = 1_775_910_000;
@@ -30,6 +32,12 @@ function stablecoinPayload(count = 2): string {
 
 describe("loadStatusSupplements", () => {
   it("returns partial publication health and a section error when one surface fails", async () => {
+    // Publication health also reads the V9 Safety Score cohort; keep that
+    // surface healthy so yield-rankings is the scenario's only failure.
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort").mockResolvedValue({
+      kind: "v9",
+      snapshot: makeWorkerReportCardsV9Response({ asOfSec: NOW - 60, updatedAt: NOW - 30 }),
+    });
     const updatedAt = NOW - 90;
     const db = mockD1([
       {

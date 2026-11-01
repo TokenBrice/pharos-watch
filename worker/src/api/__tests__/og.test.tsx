@@ -234,6 +234,39 @@ describe("stablecoin OG card data", () => {
   describe("peg-analytics cache hits", () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
+    /**
+     * A peg-analytics row satisfies the published peg-summary coin shape, not
+     * merely `{ id, pegScore }`: the cache read validates every field the
+     * peg-summary route copies verbatim.
+     */
+    function makePegAnalyticsCoin(
+      id: string,
+      symbol: string,
+      pegScore: number,
+      overrides: Record<string, unknown> = {},
+    ) {
+      return {
+        id,
+        symbol,
+        name: id,
+        pegType: "peggedUSD",
+        pegCurrency: "USD",
+        governance: "centralized",
+        currentDeviationBps: 0,
+        pegScore,
+        pegPct: 99.9,
+        severityScore: 7,
+        spreadPenalty: 2,
+        eventCount: 1,
+        worstDeviationBps: -120,
+        activeDepeg: false,
+        lastEventAt: nowSec - 86_400,
+        trackingSpanDays: 400,
+        methodologyVersion: "6.08",
+        ...overrides,
+      };
+    }
+
     function makeOgDb(assets: ReturnType<typeof makeAsset>[], reportCardCache?: unknown) {
       const stablecoinsValue = JSON.stringify({ peggedAssets: assets });
       // Nav-inclusive payload, mirroring what the report-cards pass publishes.
@@ -242,8 +275,8 @@ describe("stablecoin OG card data", () => {
         depegEventsToday: 0,
         depegEventsYesterday: 0,
         pegData: [
-          { id: "fpi-frax", pegScore: 87 },
-          { id: "usdt-tether", pegScore: 99 },
+          makePegAnalyticsCoin("fpi-frax", "FPI", 87, { name: "Frax Price Index", pegType: "peggedVAR", pegCurrency: "VAR" }),
+          makePegAnalyticsCoin("usdt-tether", "USDT", 99, { name: "Tether" }),
         ],
       });
       return mockD1([
