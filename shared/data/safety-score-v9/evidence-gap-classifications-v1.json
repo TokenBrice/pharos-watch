@@ -61869,8 +61869,8 @@
       "reviewedAt": "2026-10-30T11:46:00Z",
       "reviewer": "RS2-048 shard review (2026-10-30)",
       "sourcesRefs": [
-        "source:rs2048-cscbusdc-base-collateral-identity",
-        "source:rs2048-cscbusdc-cbdoge-por"
+        "source:f4eeaf5ed7e7f392203e2fcc",
+        "source:df2b424bf309a5931a0210e0"
       ]
     },
     {
@@ -61889,8 +61889,8 @@
       "reviewedAt": "2026-10-30T11:46:00Z",
       "reviewer": "RS2-048 shard review (2026-10-30)",
       "sourcesRefs": [
-        "source:rs2048-cscbusdc-base-collateral-identity",
-        "source:rs2048-cscbusdc-cbltc-por"
+        "source:f4eeaf5ed7e7f392203e2fcc",
+        "source:df567cb91fd3c0c6d1f98656"
       ]
     }
   ],
@@ -91464,7 +91464,7 @@
       }
     },
     {
-      "id": "source:rs2048-cscbusdc-base-collateral-identity",
+      "id": "source:f4eeaf5ed7e7f392203e2fcc",
       "value": {
         "url": "https://mainnet.base.org",
         "observedAt": "2026-10-30T11:01:31Z",
@@ -91475,7 +91475,7 @@
       }
     },
     {
-      "id": "source:rs2048-cscbusdc-cbdoge-por",
+      "id": "source:df2b424bf309a5931a0210e0",
       "value": {
         "url": "https://www.coinbase.com/cbdoge/proof-of-reserves",
         "observedAt": "2026-10-30T11:07:00Z",
@@ -91486,7 +91486,7 @@
       }
     },
     {
-      "id": "source:rs2048-cscbusdc-cbltc-por",
+      "id": "source:df567cb91fd3c0c6d1f98656",
       "value": {
         "url": "https://www.coinbase.com/cbltc/proof-of-reserves",
         "observedAt": "2026-10-30T11:07:30Z",
