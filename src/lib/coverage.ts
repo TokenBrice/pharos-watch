@@ -63,6 +63,8 @@ interface BuildCoverageRowInput {
   hasPegCoverage: boolean;
   consensusSources?: string[];
   priceConfidence?: string;
+  /** True when the peg-summary row publishes no usable current market price. */
+  currentPriceUnavailable?: boolean;
   safetyScore: number | null | undefined;
   safetyRatingStatus: SafetyScoreV9CurrentCard["ratingStatus"] | null | undefined;
   safetyReasonCodes?: readonly string[];
@@ -88,18 +90,22 @@ export function buildCoverageFeatureSummary(
   // `data-unavailable` rows are neither covered nor uncovered: they leave the
   // count and cap denominators entirely and surface through their own
   // breakdown bucket. The raw scoped total stays visible in that bucket.
+  // A feature's denominatorFilter may narrow the known population further.
   const knownRows = scopedRows.filter((row) => row.statuses[feature.key].kind !== DATA_UNAVAILABLE_KIND);
-  const availableRows = knownRows.filter((row) => row.statuses[feature.key].available);
+  const denominatorRows = feature.denominatorFilter
+    ? knownRows.filter((row) => feature.denominatorFilter!(row))
+    : knownRows;
+  const availableRows = denominatorRows.filter((row) => row.statuses[feature.key].available);
   const primaryRows = feature.headlineFilter
-    ? knownRows.filter((row) => feature.headlineFilter!(row))
+    ? denominatorRows.filter((row) => feature.headlineFilter!(row))
     : feature.headlineKinds?.length
-      ? knownRows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
+      ? denominatorRows.filter((row) => feature.headlineKinds?.includes(row.statuses[feature.key].kind))
       : availableRows;
   const coveredCap = summarizeCoverageMarketCap(primaryRows);
-  const scopedCap = summarizeCoverageMarketCap(knownRows);
+  const scopedCap = summarizeCoverageMarketCap(denominatorRows);
   const breakdownMap = new Map<string, number>();
   const coveragePct =
-    knownRows.length > 0 ? (primaryRows.length / knownRows.length) * 100 : scopedRows.length > 0 ? null : 0;
+    denominatorRows.length > 0 ? (primaryRows.length / denominatorRows.length) * 100 : scopedRows.length > 0 ? null : 0;
 
   for (const row of scopedRows) {
     const kind = row.statuses[feature.key].kind;
@@ -109,7 +115,7 @@ export function buildCoverageFeatureSummary(
   return {
     feature,
     availableCount: primaryRows.length,
-    totalCount: knownRows.length,
+    totalCount: denominatorRows.length,
     coveragePct,
     coveredMcapUsd: coveredCap.totalUsd,
     marketCapObservedCount: scopedCap.observedCount,
@@ -179,6 +185,7 @@ export function buildCoverageRow({
   hasPegCoverage,
   consensusSources,
   priceConfidence,
+  currentPriceUnavailable,
   safetyScore,
   safetyRatingStatus,
   safetyReasonCodes,
@@ -194,7 +201,7 @@ export function buildCoverageRow({
 }: BuildCoverageRowInput): CoverageRow {
   const hasData = (key: CoverageFeatureKey) => dataAvailability?.[key] !== false;
   const statuses = {
-    price: modules.price.resolve(coin, hasPegCoverage, consensusSources, priceConfidence, hasData("price")),
+    price: modules.price.resolve(coin, hasPegCoverage, consensusSources, priceConfidence, currentPriceUnavailable, hasData("price")),
     safety: modules.safety.resolve(safetyScore, safetyRatingStatus, hasData("safety"), safetyReasonCodes),
     dex: modules.dex.resolve(dexCoverageClass, hasData("dex")),
     reserves: modules.reserves.resolve(coin, liveReserveFresh, hasData("reserves")),

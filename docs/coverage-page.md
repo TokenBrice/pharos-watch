@@ -33,7 +33,7 @@ Count and market-cap denominators name the full active or feature-eligible popul
 
 - Reserve headline counts score-grade live inputs, not every detail reserve view.
 - Redemption headline counts strong modeled coverage; heuristic, resolved-unscored, configured-unrated and impaired rows remain in breakdowns without being counted as strong.
-- Price headline requires at least three observed consensus sources; a matrix Tracked row may have fewer.
+- Price headline requires at least three observed consensus sources. Its count and market-cap denominators admit Tracked rows with a known `sourceCount` plus Missing rows as zero sources, excluding NAV price-only and Data n/a rows, the same population as the Source-target tile.
 - Freezable coverage includes every reviewed exposure state across the active universe, not just live event tracking.
 
 Source-depth tiles/filters share observed `sourceCount` with row detail. Market-source/authoritative-override categories remain distinct. Override-only data does not create a market-source card. Input-coverage explanations name the actual missing-data owner (issuer reporting cadence, for example), not a generic Pharos delay; a held publication replaces counts with hold context.
@@ -58,7 +58,7 @@ Shared mobile/table coin identities use market-cap availability, not positivity:
 
 ## UX Contract
 
-Search/filter/sort/page use URL state; defaults are omitted and lens changes reset page one. Default sorting is descending live cap. The strict Reserves lens matches score-grade live only, not proof/curated validation. Shared paginated table/cards must show the same eligible set and full filtered count; cards expose remaining statuses through accessible expansion. The active lens and cap share describe that set, not visible page rows.
+Search/filter/sort/page use URL state; defaults are omitted and lens changes reset page one. Default sorting is descending live cap. The strict Reserves lens matches score-grade live only, not proof/curated validation. The FreezeWatch chip keeps the `blacklist` filter key and its live event-tracker predicate. Shared paginated table/cards must show the same eligible set and full filtered count; cards expose remaining statuses through accessible expansion. The active lens and cap share describe that set, not visible page rows.
 
 Shared freshness notices cover every contributing live family without discarding structural coverage when optional queries fail. Retained liquidity distinguishes producer-refresh failure from source/quality warnings; older snapshot notices take precedence. Advisory detail may explain reasons without dumping machine flags into banner text. Stablecoins-source unavailability shows the error card and withholds the matrix rather than inventing cap weights.
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { COVERAGE_FEATURES, type CoverageFeatureKey, type CoverageRow, type CoverageStatus } from "@/lib/coverage";
-import type { CoverageFilterKey } from "@/lib/coverage-page-config";
+import { getFilterGroups, type CoverageFilterKey } from "@/lib/coverage-page-config";
 import { filterCoverageRows, matchesCoverageFilter, sortCoverageRows } from "@/lib/coverage-filtering";
 
 // The full-coverage filters are defined against the shipped feature registry.
@@ -121,6 +121,14 @@ const filterRows: CoverageRow[] = [
 ];
 
 describe("coverage filtering", () => {
+
+  it("labels the live event-tracker chip FreezeWatch while keeping its URL filter key", () => {
+    const chip = getFilterGroups()
+      .flat()
+      .find((option) => option.key === "blacklist");
+
+    expect(chip).toMatchObject({ key: "blacklist", group: "feature", label: "FreezeWatch" });
+  });
 
   it("orders most/least-headline by headline count even when coverage and market cap disagree", () => {
     const conflict = [

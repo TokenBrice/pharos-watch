@@ -209,6 +209,60 @@ describe("coverage helpers", () => {
     expect(status.available).toBe(true);
   });
 
+  it("renders an explicit current-price failure as Missing instead of Tracked", () => {
+    const status = priceCoverageFeature.resolve(
+      makeCoin(),
+      true,
+      ["coingecko", "defillama", "pyth"],
+      "high",
+      true,
+    );
+
+    expect(status).toMatchObject({
+      kind: "missing",
+      label: "Missing",
+      available: false,
+      detail: "No observed market price is available for this asset.",
+    });
+    expect(status.sourceCount).toBeUndefined();
+  });
+
+  it("passes current-price unavailability through the coverage row builder", () => {
+    const row = makeCoverageRow(["unpriced", "UNP"], {
+      consensusSources: ["coingecko", "defillama", "pyth"],
+      currentPriceUnavailable: true,
+    });
+
+    expect(row.statuses.price).toMatchObject({
+      kind: "missing",
+      available: false,
+      detail: "No observed market price is available for this asset.",
+    });
+    expect(row.statuses.price.sourceCount).toBeUndefined();
+  });
+
+  it("renders an explicitly unavailable NAV price as Missing instead of price-only", () => {
+    const status = priceCoverageFeature.resolve(
+      makeCoin({
+        flags: {
+          backing: "rwa-backed",
+          governance: "centralized",
+          pegCurrency: "USD",
+          yieldBearing: true,
+          rwa: true,
+          navToken: true,
+        },
+      }),
+      true,
+      ["coingecko", "defillama", "pyth"],
+      "high",
+      true,
+    );
+
+    expect(status).toMatchObject({ kind: "missing", available: false });
+    expect(status.sourceCount).toBeUndefined();
+  });
+
   it("maps DEX coverage classes into user-facing labels", () => {
     expect(dexCoverageFeature.resolve("primary").label).toBe("Primary");
     expect(dexCoverageFeature.resolve("fallback").label).toBe("Fallback");
@@ -630,11 +684,12 @@ describe("coverage helpers", () => {
 
     const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows);
 
-    // headlineFilter requires sourceCount >= 3; only the tracked three-source row passes.
+    // The price denominator admits only observed source depth: the NAV
+    // price-only row leaves the count and cap denominators.
     expect(summary.availableCount).toBe(1);
-    expect(summary.totalCount).toBe(2);
-    expect(summary.coveragePct).toBe(50);
-    expect(summary.mcapSharePct).toBe(80);
+    expect(summary.totalCount).toBe(1);
+    expect(summary.coveragePct).toBe(100);
+    expect(summary.mcapSharePct).toBe(100);
     expect(summary.breakdown).toEqual([
       { key: "tracked", label: "tracked", count: 1 },
       { key: "price-only", label: "price-only", count: 1 },
@@ -642,6 +697,43 @@ describe("coverage helpers", () => {
       { key: "sources-3-4", label: "3-4:", count: 1 },
       { key: "sources-1-2", label: "0-2:", count: 0 },
     ]);
+  });
+
+  it("uses one observed-depth population for the Price count and cap denominators", () => {
+    const rows = [
+      makeCoverageRow(["three", "THR"], { marketCapUsd: 500, consensusSources: ["a", "b", "c"] }),
+      makeCoverageRow(["one", "ONE"], { marketCapUsd: 300, consensusSources: ["a"] }),
+      makeCoverageRow(["missing", "MIS"], { marketCapUsd: 100, hasPegCoverage: false }),
+      makeCoverageRow(["unknown", "UNK"], { marketCapUsd: 1_000, hasPegCoverage: true }),
+      makeCoverageRow(["nav", "NAV"], {
+        marketCapUsd: 5_000,
+        coin: makeCoin({
+          flags: {
+            backing: "rwa-backed",
+            governance: "centralized",
+            pegCurrency: "USD",
+            yieldBearing: false,
+            rwa: true,
+            navToken: true,
+          },
+        }),
+      }),
+      makeCoverageRow(["dark", "DRK"], { marketCapUsd: 7_000, dataAvailability: { price: false } }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows);
+
+    expect(summary).toMatchObject({
+      availableCount: 1,
+      totalCount: 3,
+      coveredMcapUsd: 500,
+      marketCapObservedCount: 3,
+      marketCapComplete: true,
+      mcapSharePct: (500 / 900) * 100,
+    });
+    expect(summary.coveragePct).toBeCloseTo(100 / 3, 10);
+    expect(summary.breakdown).toContainEqual({ key: "price-only", label: "price-only", count: 1 });
+    expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 1 });
   });
 
   it("preserves unavailable subtotals and explicit-zero cap observations", () => {

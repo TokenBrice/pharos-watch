@@ -543,4 +543,71 @@ describe("buildCoverageMatrixModel", () => {
       atTargetMcapPct: null,
     });
   });
+
+  it("publishes the same Price denominator in the snapshot row and source-depth tile", () => {
+    const ids = ["usdc-circle", "dai-makerdao", "usdt-tether", "lusd-liquity", "susdt-spark"];
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      activeStablecoins: ids.map(trackedMeta),
+      stablecoins: {
+        peggedAssets: [
+          { id: "usdc-circle", circulating: { peggedUSD: 500 } },
+          { id: "dai-makerdao", circulating: { peggedUSD: 300 } },
+          { id: "usdt-tether", circulating: { peggedUSD: 1_000 } },
+          { id: "lusd-liquity", circulating: { peggedUSD: 100 } },
+          { id: "susdt-spark", circulating: { peggedUSD: 5_000 } },
+        ],
+      },
+      pegSummary: {
+        coins: [
+          { id: "usdc-circle", consensusSources: ["a", "b", "c"] },
+          { id: "dai-makerdao", consensusSources: ["a"] },
+          { id: "usdt-tether" },
+        ],
+      },
+    }));
+
+    const priceSummary = model.featureSummaries.find((summary) => summary.feature.key === "price");
+    expect(priceSummary).toMatchObject({
+      availableCount: 1,
+      totalCount: 3,
+      mcapSharePct: (500 / 900) * 100,
+    });
+    expect(priceSummary?.coveragePct).toBeCloseTo(100 / 3, 10);
+    expect(model.sourceDepthProgress).toMatchObject({
+      totalCount: 3,
+      atTargetCount: 1,
+      belowTargetCount: 2,
+      marketCapComplete: true,
+      atTargetMcapPct: (500 / 900) * 100,
+    });
+  });
+
+  it("treats a flagged current-price failure as uncovered at zero source depth", () => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      activeStablecoins: [trackedMeta("usdc-circle")],
+      stablecoins: { peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 100 } }] },
+      pegSummary: {
+        coins: [{ id: "usdc-circle", consensusSources: ["a", "b", "c"], currentPriceUnavailable: true }],
+      },
+    }));
+
+    expect(model.rows[0].statuses.price).toMatchObject({
+      kind: "missing",
+      available: false,
+      detail: "No observed market price is available for this asset.",
+    });
+    expect(model.rows[0].statuses.price.sourceCount).toBeUndefined();
+    expect(model.sourceDepthProgress).toMatchObject({
+      totalCount: 1,
+      atTargetCount: 0,
+      belowTargetCount: 1,
+      atTargetPct: 0,
+      atTargetMcapPct: 0,
+    });
+    expect(model.featureSummaries.find((summary) => summary.feature.key === "price")).toMatchObject({
+      availableCount: 0,
+      totalCount: 1,
+      coveragePct: 0,
+    });
+  });
 });

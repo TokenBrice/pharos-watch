@@ -28,6 +28,8 @@ export interface CoverageFeatureDefinition {
   scopeFilter?: (row: CoverageRow) => boolean;
   headlineKinds?: readonly string[];
   headlineFilter?: (row: CoverageRow) => boolean;
+  /** Population admitted to this feature's count and cap denominators (default: every known row). */
+  denominatorFilter?: (row: CoverageRow) => boolean;
   headlineCountLabel?: string;
   headlineCoverageLabel?: (coveragePct: number) => string;
   headlineShareLabel?: string;

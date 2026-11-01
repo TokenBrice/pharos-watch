@@ -26,6 +26,7 @@ import {
   type CoverageFeatureSummary,
 } from "@/lib/coverage";
 import { buildV9DependencyCoverageFacts } from "@/lib/dependency-coverage-facts";
+import { countsTowardPriceDepth } from "@/lib/coverage/price";
 
 // Compliance evidence lives outside the compact client list, in the same
 // generated projection consumed by /compliance/.
@@ -178,6 +179,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       hasPegCoverage: pegIds.has(coin.id),
       consensusSources: pegCoin?.consensusSources,
       priceConfidence: pegCoin?.priceConfidence ?? undefined,
+      currentPriceUnavailable: pegCoin?.currentPriceUnavailable === true,
       safetyScore: reportCard?.score ?? null,
       safetyRatingStatus: reportCard?.ratingStatus,
       safetyReasonCodes: reportCard?.reasonCodes,
@@ -208,10 +210,10 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
 
   for (const row of rows) {
     const priceStatus = row.statuses.price;
-    if (priceStatus.kind === "data-unavailable" || priceStatus.kind === "price-only" || priceStatus.sourceCount == null) continue;
+    if (!countsTowardPriceDepth(row)) continue;
 
     totalCount++;
-    const sourceCount = priceStatus.sourceCount;
+    const sourceCount = priceStatus.sourceCount ?? 0;
     if (row.marketCapAvailable) {
       sourceDepthMcapObservedCount++;
       sourceDepthMcapUsd += row.marketCapUsd;
