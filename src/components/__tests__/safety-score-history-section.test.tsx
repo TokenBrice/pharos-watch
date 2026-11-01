@@ -269,4 +269,69 @@ describe("SafetyScoreHistorySection", () => {
     expect(stale).toContain("Showing an older snapshot");
     expect(stale).toContain("Legacy history");
   });
+
+  it("renders a rated-to-NR change as a status move, not a downgrade", () => {
+    useSafetyScoreHistoryMock.mockReturnValue(LEGACY_B);
+    useSafetyScoreHistoryV2Mock.mockReturnValue({
+      data: { schemaVersion: 2, history: [{
+        date: 1_741_500_000, grade: "NR", score: null, prevGrade: "B", prevScore: 74,
+        transitionKind: "grade-change", safetyScoreIdentity: makeV9Identity("9.30", "nr-down"),
+      }] },
+      meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" },
+      isLoading: false, error: null,
+    });
+    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    expect(html).toContain("B to NR");
+    expect(html).not.toContain("Downgraded from B");
+  });
+
+  it("renders an NR-to-rated change as a status move, not an upgrade", () => {
+    useSafetyScoreHistoryMock.mockReturnValue({
+      data: [{ date: 1_741_000_000, grade: "NR", score: null, prevGrade: null, prevScore: null, methodologyVersion: "6.0" }],
+      meta: { updatedAt: NOW_SEC - 7_200, ageSeconds: 7_200, status: "fresh" },
+      isLoading: false,
+      error: null,
+    });
+    useSafetyScoreHistoryV2Mock.mockReturnValue({
+      data: { schemaVersion: 2, history: [{
+        date: 1_741_500_000, grade: "B", score: 74, prevGrade: "NR", prevScore: null,
+        transitionKind: "grade-change", safetyScoreIdentity: makeV9Identity("9.30", "nr-up"),
+      }] },
+      meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" },
+      isLoading: false, error: null,
+    });
+    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    expect(html).toContain("NR to B");
+    expect(html).not.toContain("Upgraded from NR");
+  });
+
+  it("names no best or lowest grade when every observation is NR", () => {
+    useSafetyScoreHistoryMock.mockReturnValue({
+      data: [{ date: 1_741_000_000, grade: "NR", score: null, prevGrade: null, prevScore: null, methodologyVersion: "6.0" }],
+      meta: { updatedAt: NOW_SEC - 7_200, ageSeconds: 7_200, status: "fresh" },
+      isLoading: false,
+      error: null,
+    });
+    const html = renderToStaticMarkup(<SafetyScoreHistorySection stablecoinId="usdt-tether" />);
+    expect(html).not.toContain("Best grade");
+    expect(html).not.toContain("Lowest grade");
+  });
+
+  it("ends the streak and the open segment at the last observation when the asset has no current grade", () => {
+    useSafetyScoreHistoryMock.mockReturnValue({ ...LEGACY_B, meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" } });
+    useSafetyScoreHistoryV2Mock.mockReturnValue({
+      data: V2_ROWS,
+      meta: { updatedAt: NOW_SEC - 60, ageSeconds: 60, status: "fresh" },
+      isLoading: false,
+      error: null,
+    });
+    const html = renderToStaticMarkup(
+      <SafetyScoreHistorySection stablecoinId="xmd-metal-dollar" currentlyRated={false} />,
+    );
+    // The job-wide grade-history clock cannot carry a pipeline-gap asset's last grade forward.
+    expect(html).not.toContain("Streak as of");
+    const timeline = /aria-label="Grade timeline: ([^"]*)"/.exec(html)?.[1];
+    expect(timeline).toBeDefined();
+    expect(timeline).not.toContain("B+");
+  });
 });

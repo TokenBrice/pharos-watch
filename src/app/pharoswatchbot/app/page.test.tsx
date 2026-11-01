@@ -255,6 +255,11 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(isMiniAppErrorCode(null)).toBe(false);
     expect(miniAppErrorMessage(new MiniAppRequestError(429, "rate-limited", 12), "mutation"))
       .toBe("Too many changes in a row. Wait a few seconds, then try again.");
+    // Post-commit-capable failures never assert that nothing persisted.
+    expect(miniAppErrorMessage(new MiniAppRequestError(500, "internal"), "mutation"))
+      .toBe("Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.");
+    expect(miniAppErrorMessage(new TypeError("Failed to fetch"), "mutation"))
+      .toBe("Change not confirmed. Check the list before retrying.");
     expect(isMiniAppErrorCode("stale-recap-preference")).toBe(false);
   });
 
@@ -741,11 +746,11 @@ describe("PharosWatchBotMiniAppPage", () => {
     await renderReadyMiniApp({ fetchImpl: fetchMock });
     fireEvent.click(screen.getByRole("button", { name: /^All stablecoins/ }));
     fireEvent.click(screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") }));
-    await waitFor(() => expect(screen.getByText("Something went wrong. Nothing was saved; try again.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.")).toBeTruthy());
     expectMutationRequest(fetchMock, { kind: "set-global", alertType: "safety", enabled: true });
     expect(screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") }).getAttribute("aria-checked")).toBe("false");
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    expect(screen.queryByText("Something went wrong. Nothing was saved; try again.")).toBeNull();
+    expect(screen.queryByText("Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.")).toBeNull();
   });
 
   it.each<[string, number | null, string | null]>([

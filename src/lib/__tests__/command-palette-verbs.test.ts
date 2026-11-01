@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parsePaletteInput } from "@/lib/command-palette-verbs";
+import { COMMAND_PALETTE_STABLECOINS } from "@/lib/command-palette-search-data";
 import { SCREENER_URL_SCHEMA } from "@/lib/screener-filters";
 import { decodeState } from "@/lib/url-state";
 
@@ -77,4 +78,42 @@ describe("parsePaletteInput", () => {
       expect(parsed.error).toBeTruthy();
     },
   );
+});
+
+const SUPPRESSED_STATUSES = new Set(["frozen", "quarantined", "delisted"]);
+const SUPPRESSED_IDS = COMMAND_PALETTE_STABLECOINS
+  .filter(([, , , status]) => SUPPRESSED_STATUSES.has(status ?? ""))
+  .map(([id]) => id ?? "");
+
+describe("palette verb coin resolution", () => {
+  it.each(SUPPRESSED_IDS)("resolves a suppressed coin's exact id to that coin: %s", (id) => {
+    const unpin = parsePaletteInput(`unpin ${id}`);
+    expect(unpin.kind === "unpin" && unpin.resolvedCoinId).toBe(id);
+    const pin = parsePaletteInput(`pin ${id}`);
+    // Exact ids are unique, so the verb either names this coin or refuses.
+    expect(pin.kind === "pin" && (pin.resolvedCoinId === id || pin.resolvedCoinId === null)).toBe(true);
+  });
+
+  it("never resolves a ticker several coins own to one of them by suppression order", () => {
+    const owners = new Map<string, Set<string>>();
+    for (const [id, , symbol] of COMMAND_PALETTE_STABLECOINS) {
+      const ticker = symbol.toLowerCase();
+      owners.set(ticker, (owners.get(ticker) ?? new Set()).add(id));
+    }
+    const ambiguous = [...owners.entries()].filter(([, ids]) => ids.size > 1);
+    expect(ambiguous.length).toBeGreaterThan(0);
+    for (const [ticker, ids] of ambiguous) {
+      const parsed = parsePaletteInput(`pin ${ticker}`);
+      if (parsed.kind !== "pin") throw new Error("expected pin");
+      expect(parsed.resolvedCoinId === null || ids.has(parsed.resolvedCoinId), ticker).toBe(true);
+    }
+    const usdh = parsePaletteInput("pin usdh");
+    // Native Markets' USDH is frozen; the live namesakes must not absorb the verb.
+    expect(usdh.kind === "pin" && usdh.resolvedCoinId).toBeNull();
+  });
+
+  it("keeps a uniquely owned ticker resolvable", () => {
+    const parsed = parsePaletteInput("pin usdc");
+    expect(parsed.kind === "pin" && parsed.resolvedCoinId).toBe("usdc-circle");
+  });
 });

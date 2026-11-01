@@ -59,7 +59,7 @@ export const content: ArchetypeContent = {
     },
     {
       coinId: "ousg-ondo-finance",
-      note: "NAV-accreting share class for U.S. Qualified Purchasers. Reserves are mostly BUIDL with a smaller BlackRock FedFund and USDC liquidity float. Instant T+0 mint/redeem against USDC via OUSGInstantManager; whitelisted transfer only.",
+      note: "NAV-accreting share class for U.S. Qualified Purchasers. Instant T+0 mint/redeem against USDC via OUSGInstantManager; whitelisted transfer only.",
     },
     {
       coinId: "usdtb-ethena",

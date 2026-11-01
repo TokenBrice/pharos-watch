@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { AboutPageContent } from "@/components/about/about-page-content";
+import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 
 vi.mock("next/link", async () => {
   // Vitest hoists mock factories; import the shared mock inside its factory.
@@ -34,6 +36,21 @@ describe("About structured-data documentation links", () => {
         url: "https://pharos.watch/api/reference/",
       }),
     ]));
+  });
+});
+
+describe("About coverage copy", () => {
+  it("claims no per-symbol scan count and counts only unlaunched rows as upcoming", () => {
+    const html = renderToStaticMarkup(<AboutPageContent />);
+    expect(html).toContain("freeze monitoring across tracked stablecoins");
+    expect(html).not.toContain("freeze monitoring across 34 stablecoins");
+
+    const upcoming = PRE_LAUNCH_STABLECOINS.filter((coin) => !isLaunchedAwaitingData(coin)).length;
+    expect(upcoming).toBeLessThan(PRE_LAUNCH_STABLECOINS.length);
+    expect(html).toContain(`${upcoming} upcoming launches`);
+    expect(html).toContain(`${upcoming} upcoming stablecoins`);
+    expect(html).not.toContain(`${PRE_LAUNCH_STABLECOINS.length} upcoming launches`);
+    expect(html).not.toContain(`${PRE_LAUNCH_STABLECOINS.length} upcoming stablecoins`);
   });
 });
 

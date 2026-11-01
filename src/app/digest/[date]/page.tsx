@@ -197,7 +197,6 @@ function renderDigestDetail(digest: DigestContentEntry) {
         citation={{
           title: `${digest.title} (${formatted})`,
           canonicalUrl: `${SITE_URL}/digest/${digest.date}/`,
-          accessedDate: digest.date,
         }}
       />
     </div>

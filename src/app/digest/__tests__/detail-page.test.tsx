@@ -8,10 +8,13 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/components/breadcrumb-json-ld", () => ({ BreadcrumbJsonLd: () => null }));
 vi.mock("@/components/digest-snapshot", () => ({ DigestSnapshot: () => null }));
-const colophonVersions = vi.hoisted(() => [] as Array<string | undefined>);
+const colophonProps = vi.hoisted(() => [] as Array<{
+  methodologyVersion?: string;
+  citation?: { title: string; canonicalUrl: string; accessedDate?: string };
+}>);
 vi.mock("@/components/editorial-colophon", () => ({
-  EditorialColophon: (props: { methodologyVersion?: string }) => {
-    colophonVersions.push(props.methodologyVersion);
+  EditorialColophon: (props: { methodologyVersion?: string; citation?: { title: string; canonicalUrl: string; accessedDate?: string } }) => {
+    colophonProps.push(props);
     return null;
   },
 }));
@@ -92,11 +95,24 @@ describe("digest detail model credit", () => {
 
 describe("digest detail methodology version", () => {
   it("labels each archived edition with the methodology in force at publication", async () => {
-    colophonVersions.length = 0;
+    colophonProps.length = 0;
 
     await renderDigest("2026-10-17");
     await renderDigest("2026-02-25");
 
-    expect(colophonVersions).toEqual(["v10.21", "v1.0"]);
+    expect(colophonProps.map((props) => props.methodologyVersion)).toEqual(["v10.21", "v1.0"]);
+  });
+});
+
+describe("digest detail citation", () => {
+  it("never reports the edition slug as an access date", async () => {
+    colophonProps.length = 0;
+
+    await renderDigest("2026-02-25");
+
+    expect(colophonProps[0]?.citation).toEqual({
+      title: "Legacy edition (2026-02-25)",
+      canonicalUrl: "https://pharos.watch/digest/2026-02-25/",
+    });
   });
 });

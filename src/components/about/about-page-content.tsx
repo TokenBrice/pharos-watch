@@ -10,7 +10,8 @@ import { JsonLdScript } from "@/components/json-ld-script";
 import { formatLongDate } from "@shared/lib/format";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { API_REFERENCE_URL } from "@shared/lib/public-api-contract";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { cn } from "@/lib/utils";
 import { safeJsonLd } from "@/lib/json-ld";
 import {
@@ -345,10 +346,12 @@ function AboutFeatureSection({
 }
 
 export function AboutPageContent() {
+  // Launched rows are live, not upcoming: /upcoming/ excludes them from its count.
+  const upcomingStablecoinCount = PRE_LAUNCH_STABLECOINS.filter((coin) => !isLaunchedAwaitingData(coin)).length;
   const trackedFeatures = getTrackedFeatures({
     activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT,
     deadStablecoins: DEAD_STABLECOIN_COUNT,
-    preLaunchStablecoins: PRE_LAUNCH_STABLECOIN_COUNT,
+    preLaunchStablecoins: upcomingStablecoinCount,
   });
   const faqItems = getAboutFaqItems({
     activeStablecoins: CORE_AGGREGATE_STABLECOIN_COUNT,
@@ -441,9 +444,9 @@ export function AboutPageContent() {
           <p>
             Pharos tracks {CORE_AGGREGATE_STABLECOIN_COUNT} core stablecoins and cash equivalents, plus{" "}
             {ACTIVE_VARIANT_STABLECOIN_COUNT} variants, {ACTIVE_STABLE_VALUE_INVESTMENT_COUNT} stable-value investments,{" "}
-            {PRE_LAUNCH_STABLECOIN_COUNT} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the core
+            {upcomingStablecoinCount} upcoming launches, and {DEAD_STABLECOIN_COUNT} dead ones, then scores the core
             universe with honest governance classification, transitive dependency scoring, and live reserve composition
-            where available. Real-time depeg detection, freeze monitoring across {BLACKLIST_STABLECOINS.length} stablecoins,
+            where available. Real-time depeg detection, freeze monitoring across tracked stablecoins,
             and a 30-minute ecosystem-wide stability index surface stress as it builds, before it reaches the
             headlines.
           </p>

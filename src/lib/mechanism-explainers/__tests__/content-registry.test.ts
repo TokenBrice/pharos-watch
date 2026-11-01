@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -21,5 +23,17 @@ describe("mechanism explainer representative coins", () => {
       const mechanism = (TRACKED_META_BY_ID.get(entry.coinId)?.pegMechanism ?? "").toLowerCase();
       expect(mechanism, entry.coinId).toContain("quarter");
     }
+  });
+
+  it("keeps the OUSG note clear of the reserve mix its reviewed composition contradicts", () => {
+    const note = ARCHETYPE_CONTENT.tbill.representativeCoins.find((entry) => entry.coinId === "ousg-ondo-finance")?.note;
+    const { reserves } = JSON.parse(
+      readFileSync(resolve(process.cwd(), "shared/data/stablecoins/domains/reserves/ousg-ondo-finance.json"), "utf8"),
+    ) as { reserves: Array<{ name: string; pct: number }> };
+    // State Street's sweep (≈47%) leads BUIDL (≈32%), and no FedFund holding exists.
+    expect([...reserves].sort((left, right) => right.pct - left.pct)[0]?.name).toContain("State Street");
+    expect(note).toBeTruthy();
+    expect(note).not.toMatch(/mostly BUIDL|FedFund/i);
+    expect(note).toContain("OUSGInstantManager");
   });
 });
