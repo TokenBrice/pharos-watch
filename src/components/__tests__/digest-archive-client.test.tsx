@@ -38,6 +38,8 @@ vi.mock("@/components/query-error-notice", () => ({
 }));
 
 vi.mock("@/lib/digest", () => ({
+  digestMonthKey: (ts: number) => new Date(ts * 1000).toISOString().slice(0, 7),
+  formatDigestMonthLabel: (key: string) => key,
   buildDigestTriggerRecord: () => ({
     total: 0,
     hit: 0,
@@ -210,6 +212,26 @@ describe("DigestArchiveClient UTC dates", () => {
     const link = screen.getByRole("link", { name: /Archived digest/i });
     expect(link.getAttribute("href")).toBe("/digest/2026-08-30");
     expect(link.textContent).toContain("AUG 30");
+  });
+});
+
+describe("DigestArchiveClient month default", () => {
+  it("defaults to the newest month that still has archive rows after the lead is removed", () => {
+    const leadAt = Date.parse("2026-11-01T00:30:00Z") / 1000;
+    const archivedAt = Date.parse("2026-10-31T00:30:00Z") / 1000;
+    useDigestArchiveMock.mockReturnValue({
+      data: { digests: [digest(leadAt, "Lead edition"), digest(archivedAt, "Archived edition")] },
+      isLoading: false, dataUpdatedAt: 0, error: null, refetch: vi.fn(), meta: null,
+    });
+    useUrlFiltersMock.mockReturnValue({
+      searchParams: new URLSearchParams(), setParam: vi.fn(), replaceParams: vi.fn(),
+    });
+
+    render(<DigestArchiveClient initialLead={{ ...leadEdition, date: "2026-11-01", generatedAt: leadAt, title: "Lead edition" }} />);
+
+    expect(screen.getByText("Showing 1 archive entry.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Archived edition/ }).getAttribute("href")).toBe("/digest/2026-10-31");
+    expect(screen.queryByText("No digests match these filters.")).toBeNull();
   });
 });
 

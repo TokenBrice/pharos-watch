@@ -14,8 +14,10 @@ import { formatBps, formatCurrency, formatLongDate } from "@shared/lib/format";
 import type { DigestArchiveEntry, DigestContentEntry, DigestRiskSignal } from "@shared/types";
 import {
   buildDigestTriggerRecord,
+  digestMonthKey,
   EDITORIAL_BODY_STYLE,
   EDITORIAL_META_STYLE,
+  formatDigestMonthLabel,
   formatDigestTriggerRate,
   parseDigestParagraph,
   splitDigestParagraphs,
@@ -33,16 +35,6 @@ function tsToDateSlug(ts: number): string {
 function toDigestSlug(ts: number, digestType: "daily" | "weekly"): string {
   const date = tsToDateSlug(ts);
   return digestType === "weekly" ? `${date}-weekly` : date;
-}
-
-function tsToMonthKey(ts: number): string {
-  return new Date(ts * 1000).toISOString().slice(0, 7);
-}
-
-function formatMonthLabel(key: string): string {
-  const [y, m] = key.split("-");
-  const date = new Date(Date.UTC(Number(y), Number(m) - 1));
-  return date.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function formatWireDate(ts: number): string {
@@ -92,7 +84,7 @@ function filterDigestArchiveEntries(
       return false;
     }
     if (options.view !== "all" && (isWeekly ? "weekly" : "daily") !== options.view) return false;
-    if (options.month && tsToMonthKey(entry.generatedAt) !== options.month) return false;
+    if (options.month && digestMonthKey(entry.generatedAt) !== options.month) return false;
     if (query) {
       const haystack = [entry.digestTitle, entry.digestText, entry.digestExtended]
         .filter((value): value is string => Boolean(value))
@@ -330,10 +322,10 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
     const seen = new Set<string>();
     const options: { key: string; label: string }[] = [];
     for (const d of data.digests) {
-      const key = tsToMonthKey(d.generatedAt);
+      const key = digestMonthKey(d.generatedAt);
       if (!seen.has(key)) {
         seen.add(key);
-        options.push({ key, label: formatMonthLabel(key) });
+        options.push({ key, label: formatDigestMonthLabel(key) });
       }
     }
     return options;
@@ -342,9 +334,24 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
   const activeView = normalizeDigestArchiveView(searchParams.get("view"));
   const searchQuery = searchParams.get("q") ?? "";
   const requestedMonth = searchParams.get("month");
+  // Everything except the month filter, so a selected month always has a row
+  // unless the reader explicitly chose an empty one.
+  const matchingEntries = useMemo(
+    () => filterDigestArchiveEntries(data?.digests ?? [], {
+      view: activeView,
+      month: null,
+      query: searchQuery,
+      latestDailySlug,
+    }),
+    [data, activeView, latestDailySlug, searchQuery],
+  );
+  const defaultMonth = useMemo(
+    () => matchingEntries[0] ? digestMonthKey(matchingEntries[0].generatedAt) : monthOptions[0]?.key ?? null,
+    [matchingEntries, monthOptions],
+  );
   const activeMonth = requestedMonth && monthOptions.some((month) => month.key === requestedMonth)
     ? requestedMonth
-    : monthOptions[0]?.key ?? null;
+    : defaultMonth;
 
   // Latest weekly recap (if any)
   const latestWeekly = useMemo(() => {
@@ -352,13 +359,10 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
   }, [data]);
 
   const wireDigests = useMemo(
-    () => filterDigestArchiveEntries(data?.digests ?? [], {
-      view: activeView,
-      month: activeMonth,
-      query: searchQuery,
-      latestDailySlug,
-    }),
-    [data, activeMonth, activeView, latestDailySlug, searchQuery],
+    () => activeMonth
+      ? matchingEntries.filter((entry) => digestMonthKey(entry.generatedAt) === activeMonth)
+      : matchingEntries,
+    [matchingEntries, activeMonth],
   );
 
   const triggerRecord = useMemo(() => buildDigestTriggerRecord(data?.digests ?? []), [data]);

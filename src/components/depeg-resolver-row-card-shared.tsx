@@ -14,6 +14,7 @@ import {
   formatDurationSec,
   formatUtcTimestamp,
   getDuration,
+  getDisplayedLivePeakDeviationBps,
   getLockMetadata,
   isCumulativeIncidence,
   isDdrInfrastructureReason,
@@ -81,7 +82,7 @@ export function CoinLockup({
 export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
   const { live } = row;
   const ageSec = live.ageSec;
-  const peakDeviationBps = live.peakDeviationBps;
+  const peakDeviationBps = getDisplayedLivePeakDeviationBps(row);
   const currentDeviationBps = live.currentDeviationBps;
   const status = live.eventState;
 

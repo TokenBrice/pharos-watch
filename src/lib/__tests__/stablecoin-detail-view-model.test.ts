@@ -295,6 +295,34 @@ describe("stablecoin detail view-model builder", () => {
     }
   });
 
+  it("ages an unverified reserve feed from its fetch clock instead of calling it unpopulated", () => {
+    const now = 1_790_000_000_000;
+    const nowSec = now / 1000;
+    const fetchedAt = nowSec - 60;
+    const params = makeBuildStablecoinDetailViewModelParams({ supplemental: { reserves: {
+      enabled: true,
+      dataUpdatedAt: now,
+      live: {
+        mode: "live", reserves: [{ name: "Bank deposits", pct: 100, risk: "medium" }], estimated: false, liveAt: fetchedAt,
+        sync: {
+          enabled: true, status: "ok", stale: false, bootstrap: false,
+          freshness: {
+            stale: false, staleReasons: [], assessedAt: fetchedAt, fetchedAt, attemptId: "cngn-attempt",
+            fetchAgeSec: 0, fetchBudgetSec: 48 * 3600, freshnessMode: "unverified",
+            sourceFreshnessInvalid: false, sourceTimestamp: null, sourceAgeSec: null,
+            sourceAgeBudgetSec: null, sourceAgeBudgetCap: null,
+          },
+        },
+      },
+    } } });
+    const query = buildDetailStaleQueries(params.queries, params.supplemental, "il-compliant-naira")
+      .find((entry) => entry.label === "Live Reserves")!;
+    expect(query).toMatchObject({ hasData: true, dataUpdatedAt: fetchedAt * 1000, meta: { updatedAt: fetchedAt } });
+    const health = deriveDataHealth({ ...query, label: "Live Reserves", staleTime: query.staleTime! }, now);
+    expect(health.state).toBe("fresh");
+    expect(isPublicWarning(health)).toBe(false);
+  });
+
   it("selects the first public (12x) reserve expiry, not the first 1x budget, and warns on it", () => {
     const now = 1_790_000_000_000;
     const nowSec = now / 1000;
@@ -420,6 +448,30 @@ describe("stablecoin detail view-model builder", () => {
       deviationBps: currentDeviationBps,
       pegReferenceUnavailable,
     });
+  });
+
+  it("derives the headline deviation from the price the page displays", () => {
+    const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
+    const params = makeReadyDetailParams({
+      id: coin.id,
+      coin,
+      asset: { price: 0.9982 },
+      queries: {
+        pegSummary: {
+          data: {
+            coins: [makePegSummaryCoin({
+              currentDeviationBps: -221,
+              pegReference: { valueUsd: 1, source: "median", contributorCount: 2, asOf: 1_700_000_000 },
+            })],
+          } as PegSummaryResponse,
+        },
+      },
+    });
+    const model = buildStablecoinDetailViewModel(params);
+
+    expect(model.status).toBe("ready");
+    if (model.status !== "ready") return;
+    expect(model.hero.price.deviationBps).toBe(-18);
   });
 
   it("uses report-card snapshot freshness instead of the browser fetch timestamp", () => {

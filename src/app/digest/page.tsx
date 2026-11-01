@@ -9,6 +9,7 @@ import { DigestColophon } from "@/components/digest-colophon";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata } from "@/lib/page-metadata";
+import { digestMonthKey, formatDigestMonthLabel } from "@/lib/digest";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { DIGEST_ENTRIES, LATEST_DAILY_DIGEST } from "@/lib/digest-registry";
 
@@ -23,7 +24,7 @@ export const metadata: Metadata = buildPageMetadata({
 export default function DigestArchivePage() {
   const months = new Map<string, (typeof DIGEST_ENTRIES)[number][]>();
   for (const entry of DIGEST_ENTRIES) {
-    const month = entry.date.slice(0, 7);
+    const month = digestMonthKey(entry.generatedAt);
     const entries = months.get(month) ?? [];
     entries.push(entry);
     months.set(month, entries);
@@ -77,8 +78,8 @@ export default function DigestArchivePage() {
         {Array.from(months, ([month, entries]) => (
           <details key={month} className="rounded-lg border border-border px-4">
             <summary className="pharos-focus-ring cursor-pointer py-3 text-sm font-medium">
-              {new Date(`${month}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}
-              <span className="ml-2 text-muted-foreground">({entries.length} editions)</span>
+              {formatDigestMonthLabel(month)}
+              <span className="ml-2 text-muted-foreground">({entries.length} {entries.length === 1 ? "edition" : "editions"})</span>
             </summary>
             <ul className="space-y-3 pb-4 text-sm">
               {entries.map((entry) => (

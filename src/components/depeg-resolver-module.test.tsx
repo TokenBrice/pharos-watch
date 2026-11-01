@@ -5,6 +5,7 @@ import { render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
 import { compareResolverUrgency, summarizeResolverBook } from "@/components/depeg-resolver-book-summary";
+import { getDisplayedLivePeakDeviationBps } from "@/components/depeg-resolver-row-card-model";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   DdrV2ResponseRowSchema,
@@ -623,6 +624,33 @@ describe("DepegResolverModule", () => {
     expect(screen.queryByText("published prediction")).toBeNull();
   });
 
+  it("shows the live peak at least as deep as the current deviation on an open incident", () => {
+    const source = makeSourceRow({ peakDeviationBps: -129, currentDeviationBps: -742 });
+    render(<StablecoinDepegResolverRows
+      stablecoinId="lusd-liquity"
+      data={response({ rows: [makePredictionRow(source, { peakDeviationBps: -129, currentDeviationBps: -742 })] })}
+    />);
+
+    const liveFacts = screen.getByText("Live incident").parentElement;
+    expect(liveFacts?.textContent).toContain("Peak -742 bps");
+    expect(liveFacts?.textContent).toContain("Now -742 bps");
+  });
+
+});
+
+describe("displayed live peak", () => {
+  it.each([
+    ["active and deeper", "active", "below", -129, -742, -742],
+    ["active but shallower", "active", "below", -320, -180, -320],
+    ["closed", "closed_pending_review", "below", -129, -742, -129],
+    ["opposite direction", "active", "below", -129, 742, -129],
+  ] as const)("%s", (_label, eventState, direction, peakDeviationBps, currentDeviationBps, expected) => {
+    const row = makePredictionRow(
+      makeSourceRow({ direction, peakDeviationBps, currentDeviationBps }),
+      { eventState, peakDeviationBps, currentDeviationBps },
+    );
+    expect(getDisplayedLivePeakDeviationBps(row)).toBe(expected);
+  });
 });
 
 describe("StablecoinDepegResolverRows", () => {

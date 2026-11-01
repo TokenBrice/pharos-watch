@@ -158,17 +158,19 @@ export function ContagionSnapshot({
         {detailCard ? <DependencyContextDetails card={detailCard} context={dependencyContext} marketCapAsOf={marketCapAsOf} /> : null}
         <div className={layoutClass}>
           {hasContagion ? (
-            <LazySection placeholder={<DependencyGraphPlaceholder />}>
-              <ContagionGraph
-                cards={cards}
-                dependencyEdges={rc?.dependencyGraph.edges ?? []}
-                mcapMap={mcapMap}
-                logos={logos}
-                focusCoinId={stablecoinId}
-                minimalChrome
-                maxNodes={DETAIL_NODE_LIMIT}
-              />
-            </LazySection>
+            <div className="min-w-0">
+              <LazySection placeholder={<DependencyGraphPlaceholder />}>
+                <ContagionGraph
+                  cards={cards}
+                  dependencyEdges={rc?.dependencyGraph.edges ?? []}
+                  mcapMap={mcapMap}
+                  logos={logos}
+                  focusCoinId={stablecoinId}
+                  minimalChrome
+                  maxNodes={DETAIL_NODE_LIMIT}
+                />
+              </LazySection>
+            </div>
           ) : null}
           {hasRightColumn ? rightColumn : null}
         </div>

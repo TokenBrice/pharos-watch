@@ -3,6 +3,8 @@ import type { DetailQuote } from "@/lib/stablecoin-detail-view-model-types";
 import { CASE_STUDY_OUTCOME_CHIPS, CASE_STUDY_OUTCOME_LABELS } from "@/lib/case-study-outcomes";
 import { CASE_STUDY_CLIENT_BY_COIN_ID } from "@/lib/case-study-client-index";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
+import { deriveDepegSignal } from "@shared/lib/depeg-signals";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { buildComparePrefillUrl, getPrimaryStaticComparisonLinkForCoin } from "@/lib/compare-links";
 import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
@@ -312,6 +314,36 @@ function buildSignalRailItems(
   ];
 }
 
+/**
+ * The headline pairs one price with the deviation that price implies. The
+ * peg-summary deviation can come from a different observation than the live
+ * summary's displayed price, so derive the reader-facing bps from the shown
+ * price whenever both it and the peg reference are observed.
+ */
+export function resolveHeadlineDeviationBps(
+  coinData: Pick<DetailQuote, "price" | "priceSource" | "priceObservedAtMode">,
+  pegRef: number | null,
+  publishedDeviationBps: number | null,
+  pegReferenceUnavailable: boolean,
+  isNavToken: boolean,
+): number | null {
+  const price = coinData.price;
+  if (
+    isNavToken
+    || pegReferenceUnavailable
+    || !isObservedPrice(coinData)
+    || price == null
+    || !Number.isFinite(price)
+    || price <= 0
+    || pegRef == null
+    || !Number.isFinite(pegRef)
+    || pegRef <= 0
+  ) {
+    return publishedDeviationBps;
+  }
+  return deriveDepegSignal(price, pegRef)?.bps ?? publishedDeviationBps;
+}
+
 export function buildStablecoinDetailHeroViewModel({
   coin,
   coinData,
@@ -384,6 +416,13 @@ export function buildStablecoinDetailHeroViewModel({
   } : null;
   // A partial-coverage current supply (K-031) is not comparable with the prior day.
   const safePrevDay = coinData.supplyExcludedChains?.length ? null : posOrNull(prevDay);
+  const headlineDeviationBps = resolveHeadlineDeviationBps(
+    coinData,
+    pegRef,
+    deviationBps,
+    pegReferenceUnavailable,
+    isNavToken,
+  );
 
   return {
     coin,
@@ -403,10 +442,10 @@ export function buildStablecoinDetailHeroViewModel({
     },
     price: {
       pegRef,
-      deviationBps,
+      deviationBps: headlineDeviationBps,
       pegReferenceUnavailable,
       isNavToken,
-      limitedDepegCoverageNote: buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, deviationBps),
+      limitedDepegCoverageNote: buildLimitedDepegCoverageNote(coinData, isNavToken, pegScoreResult, headlineDeviationBps),
     },
     market: {
       mcap,
