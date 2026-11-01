@@ -756,6 +756,7 @@ export async function runCronStalenessWatchdog(
         id: condition.id,
         ...(condition.label ? { label: condition.label } : {}),
         active: condition.active,
+        unknown: condition.unknown,
       })),
       ...probeWatch.conditions.map((condition): OperatorWatchCondition => ({
         section: "probe",
@@ -849,7 +850,7 @@ export async function runCronStalenessWatchdog(
         ...producerQualityActive.map((condition) => condition.id),
         ...(psiDailyCoverage.status === "shortfall" ? ["psi-daily-coverage"] : []),
       ],
-      canaryWatch: { active: canaryWatch.conditions.length, unknown: canaryWatch.unknown },
+      canaryWatch: { active: canaryWatch.conditions.filter((condition) => condition.active).length, unknown: canaryWatch.unknown },
       probeWatch: { active: probeWatch.conditions.length, unknown: probeWatch.unknown },
       alerting: alertReceipt,
       checkedProducers: watchedObservations.map((observation) => observation.producerJob),

@@ -33,9 +33,13 @@ export type CronSentinelRuleSource =
  *   advancing its frontier), `yield-data-coverage` (two consecutive yield
  *   publications below the pre-event coverage baseline),
  *   `yield-supplemental-family-degraded` (a required supplemental family is
- *   retained, including count-drop holds) and
+ *   retained, including count-drop holds),
  *   `measured-execution-chain-coverage` (a chain with score-eligible targets
- *   published no measured quote for two generations).
+ *   published no measured quote for two generations), `canary-finding` (a
+ *   completed canary check reports an `error` finding), `psi-daily-coverage`
+ *   (the daily PSI aggregate is below its sample-coverage floor) and
+ *   `probe-path-persistent-failure` (a probe path reached its persistent-failure
+ *   streak).
  * - `digest-publication`: `daily-row`, `daily-telegram`, `daily-twitter`,
  *   `daily-inputs` (a regime-critical collector was degraded in the edition),
  *   `weekly-row`, `weekly-telegram`, `weekly-twitter`, `weekly-inputs` and
@@ -84,6 +88,9 @@ export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly str
     "yield-data-coverage",
     "yield-supplemental-family-degraded",
     "measured-execution-chain-coverage",
+    "canary-finding",
+    "psi-daily-coverage",
+    "probe-path-persistent-failure",
   ],
   "digest-publication": [
     "daily-row",

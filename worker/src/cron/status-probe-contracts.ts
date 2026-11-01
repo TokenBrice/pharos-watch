@@ -19,6 +19,25 @@ export function hasStatusProbePayloadContract(path: string): boolean {
   return path === REDEMPTION_BACKSTOPS_PATH || path.startsWith(STABLECOIN_RESERVES_PREFIX);
 }
 
+/**
+ * ADR-42: reserve, live-reserve and redemption findings stay on `/status` and
+ * cron metadata and never become operator Telegram conditions. Those planes
+ * are identified by their endpoint naming rule — including admin probes such
+ * as `/api/reserve-attempt-history` — so a newly added path cannot escape an
+ * enumeration of today's few endpoints.
+ */
+const STATUS_LEVEL_ONLY_PATH_PREFIXES = [
+  "/api/reserve-",
+  "/api/stablecoin-reserves/",
+  "/api/redemption-",
+] as const;
+
+export function isStatusLevelOnlyProbePath(path: string): boolean {
+  const queryStart = path.indexOf("?");
+  const pathname = queryStart === -1 ? path : path.slice(0, queryStart);
+  return STATUS_LEVEL_ONLY_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }

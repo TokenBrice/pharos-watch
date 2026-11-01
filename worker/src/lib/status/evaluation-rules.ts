@@ -557,6 +557,19 @@ export function rebuildCronDerivedAvailabilityCauses(
   ];
 }
 
+/**
+ * Availability causes owned by the live scheduler-liveness read. `/api/status`
+ * replaces, never merges, the cached copies so one response cannot publish
+ * stale lane evidence beside the live observation (R5: one authority).
+ */
+export const SCHEDULER_LIVENESS_AVAILABILITY_CAUSE_CODES = [
+  "scheduler_liveness_unavailable",
+  "scheduled_delivery_stalled",
+  "heavy_scheduler_liveness_unavailable",
+  "heavy_scheduled_delivery_stalled",
+  "expected_scheduled_lane_unhealthy",
+] as const;
+
 export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["schedulerLiveness"]): StatusRuleEvaluation {
   const causes: StatusCause[] = [];
   let status: StatusHealthValue = "healthy";
@@ -584,10 +597,11 @@ export function evaluateSchedulerLiveness(scheduler: PublicHealthAssessment["sch
       { metric: "heavySchedulerDeliveryAgeSeconds", value: heavy.ageSeconds ?? undefined, threshold: heavy.warningAfterSec },
     ));
   }
-  // Registry-derived lanes own their own budgets; the aggregate and heavy roles
-  // above already report their keys, so only independent lanes add a cause.
+  // Registry-derived lanes own their own budgets. The aggregate follows the
+  // most recent lane start, so it only names a public lane when it is itself
+  // reporting; otherwise a lone stalled lane would leave no cause at all.
   const coveredLanes = new Set([
-    ...scheduler.lanes.map((lane) => lane.scheduleKey),
+    ...(scheduler.status === "healthy" ? [] : scheduler.lanes.map((lane) => lane.scheduleKey)),
     ...(heavy.scheduleKey ? [heavy.scheduleKey] : []),
   ]);
   // Unreadable lane evidence is named by the external delivery monitor and by

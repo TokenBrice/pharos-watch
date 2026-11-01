@@ -825,6 +825,41 @@ describe("external scheduler delivery monitor", () => {
       pendingProducers: ["freshness"], reason: "operator-alert-delivery-pending", unavailableReason: null,
     } }).status).toBe(1);
   });
+  it("warns on a degraded lane inside its stale budget instead of opening an incident", () => {
+    const now = Math.floor(Date.now() / 1000);
+    const result = runMonitor({ schedulerLiveness: {
+      status: "healthy", observedAt: now, lastAnyStartedAt: now - 30, lastFiveMinuteStartedAt: now - 30,
+      ageSeconds: 30, warningAfterSec: 600, staleAfterSec: 1200,
+      lanes: ["fiveMinuteReserveRecovery", "fiveMinuteTelegramAlerts", "digestTriggerPoll"].map((scheduleKey) => ({
+        scheduleKey, lastStartedAt: now - 30,
+      })),
+      heavy: { status: "healthy", scheduleKey: ["v9", "SupplyAttributionOffset"].join(""), lastStartedAt: now - 30,
+        ageSeconds: 30, warningAfterSec: 1800, staleAfterSec: 2700, unavailableReason: null },
+      expectedLanes: [
+        { scheduleKey: "statusSelfCheckOffset", lastStartedAt: now - 30, ageSeconds: 30,
+          warningAfterSec: 1800, staleAfterSec: 2700, status: "healthy", unavailableReason: null },
+        // Two missed 5-minute deliveries: inside the lane's own 3x stale budget.
+        { scheduleKey: "fiveMinuteTelegramAlerts", lastStartedAt: now - 601, ageSeconds: 601,
+          warningAfterSec: 600, staleAfterSec: 900, status: "degraded", unavailableReason: null },
+      ],
+    } });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Scheduled lane delivery degraded");
+  });
+  it("treats an absent operator receipt as unknown instead of opening an incident", () => {
+    // A public-health snapshot written before the receipt shipped can omit it
+    // for up to one snapshot interval; that is not an unconfigured channel.
+    const result = runMonitor({ operatorAlerts: undefined });
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Operator alert receipt absent");
+  });
+  it("closes the delivery incident on a passing run", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/cron-liveness.yml"));
+    const steps = workflow.jobs.delivery.steps as Array<{ name?: string; if?: string; run?: string }>;
+    const close = steps.find((step) => step.name === "Close recovered delivery incident");
+    expect(close?.if).toBe("steps.health.outcome == 'success'");
+    expect(close?.run).toContain("gh issue close");
+  });
 });
 
 describe("Cloudflare deployment credential scope", () => {

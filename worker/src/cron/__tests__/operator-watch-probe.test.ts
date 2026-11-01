@@ -35,11 +35,13 @@ describe("loadProbeOperatorWatch", () => {
     })]);
   });
 
-  it("keeps reserve and redemption payload-contract paths status-level only", async () => {
+  it("keeps every reserve, live-reserve and redemption probe path status-level only", async () => {
     const evidence = await loadProbeOperatorWatch(probeDb({
       persistentProbeFailures: [
         persistentFailure("/api/stablecoin-reserves/iusd-infinifi"),
+        persistentFailure("/api/reserve-attempt-history?coin=usdc-circle&limit=10"),
         persistentFailure("/api/redemption-backstops"),
+        persistentFailure("/api/redemption-backstop-coin?stablecoin=usdc-circle"),
         persistentFailure("/api/mint-burn-flows"),
       ],
     }), NOW);

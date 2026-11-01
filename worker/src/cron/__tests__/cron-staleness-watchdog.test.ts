@@ -1171,6 +1171,52 @@ describe("cron staleness watchdog", () => {
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Canary findings recovered");
   });
 
+  it("holds a canary finding when its measurement fails instead of reporting recovery", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    const failingCheckId = "stablecoins-cache-active-count";
+    const canaryRows = (execution: "completed" | "failed") => ACTIVE_CANARY_CHECK_IDS.map((checkId) => ({
+      check_id: checkId,
+      status: checkId === failingCheckId ? "error" : "ok",
+      severity: checkId === failingCheckId ? "error" : "info",
+      observed_at: now,
+      duration_ms: 1,
+      metadata_json: JSON.stringify(checkId === failingCheckId
+        ? { executionStatus: execution, executionFailureReason: execution === "failed" ? "canary-source-unavailable" : null }
+        : { executionStatus: "completed" }),
+      error: checkId === failingCheckId ? "aggregate read failed" : null,
+    }));
+    const watch = {
+      canaryRows: canaryRows("completed"),
+      probeRow: { created_at: now, details_json: JSON.stringify({ persistentProbeFailures: [] }) },
+    };
+    const db = fakeDb([], undefined, watch);
+    mockCacheStatus({});
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" }, workerCanaryMode: "status" as const };
+
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+
+    // A failed measurement is unreadable evidence: no page, no recovery claim.
+    vi.setSystemTime(new Date((now + CRON_STALENESS_ALERT_COOLDOWN_SEC + 1) * 1_000));
+    watch.canaryRows = canaryRows("failed");
+    const held = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(held.metadata ?? "{}").canaryWatch).toMatchObject({ active: 0 });
+    expect(JSON.parse(held.metadata ?? "{}").firedRuleIds).not.toContain("canary-finding");
+
+    // The held state still recovers once the check measures clean.
+    watch.canaryRows = ACTIVE_CANARY_CHECK_IDS.map((checkId) => ({
+      check_id: checkId, status: "ok", severity: "info", observed_at: now, duration_ms: 1,
+      metadata_json: JSON.stringify({ executionStatus: "completed" }), error: null,
+    }));
+    vi.setSystemTime(new Date((now + 2 * (CRON_STALENESS_ALERT_COOLDOWN_SEC + 1)) * 1_000));
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Canary findings recovered");
+  });
+
   it("alerts on a persistently failing probe path and keeps its prior state when evidence is unreadable", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
@@ -1219,6 +1265,7 @@ describe("cron staleness watchdog", () => {
         details_json: JSON.stringify({
           persistentProbeFailures: [
             persistentFailure("/api/stablecoin-reserves/iusd-infinifi"),
+            persistentFailure("/api/reserve-attempt-history?coin=usdc-circle&limit=10"),
             persistentFailure("/api/redemption-backstops"),
           ],
         }),

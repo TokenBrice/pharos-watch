@@ -1098,26 +1098,30 @@ export async function loadCanaryStatus(
   mode: WorkerCanaryMode = "off",
 ): Promise<CanaryStatus> {
   if (mode === "off" || mode === "shadow") return emptyCanaryStatus(now);
-  const activeCheckIdPlaceholders = ACTIVE_CANARY_CHECK_IDS.map(() => "?").join(", ");
+  const activeCheckIds = ACTIVE_CANARY_CHECK_IDS.map(() => "(?)").join(", ");
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
-        `SELECT r.check_id, r.status, r.severity, r.observed_at, r.duration_ms, r.metadata_json, r.error
-           FROM worker_canary_runs r
-           INNER JOIN (
-             SELECT check_id, MAX(observed_at) AS observed_at
-               FROM worker_canary_runs
-              WHERE mode = ?
-                AND check_id IN (${activeCheckIdPlaceholders})
-              GROUP BY check_id
+        // One correlated MAX and one index seek per active check. The previous
+        // `GROUP BY check_id` aggregate scanned every retained run of every
+        // active check, and the staleness watchdog now reads this every 15
+        // minutes. CROSS JOIN pins `latest` as the outer 21-row loop; the
+        // (mode, check_id, observed_at) index then serves one seek per check.
+        `WITH active(check_id) AS (VALUES ${activeCheckIds})
+         SELECT r.check_id, r.status, r.severity, r.observed_at, r.duration_ms, r.metadata_json, r.error
+           FROM (
+             SELECT active.check_id,
+                    (SELECT MAX(newest.observed_at) FROM worker_canary_runs newest
+                      WHERE newest.mode = ? AND newest.check_id = active.check_id) AS observed_at
+               FROM active
            ) latest
-             ON latest.check_id = r.check_id
-            AND latest.observed_at = r.observed_at
+           CROSS JOIN worker_canary_runs r
           WHERE r.mode = ?
-            AND r.check_id IN (${activeCheckIdPlaceholders})
+            AND r.check_id = latest.check_id
+            AND r.observed_at = latest.observed_at
           ORDER BY r.check_id ASC`,
       )
-      .bind(mode, ...ACTIVE_CANARY_CHECK_IDS, mode, ...ACTIVE_CANARY_CHECK_IDS)
+      .bind(...ACTIVE_CANARY_CHECK_IDS, mode, mode)
       .all<WorkerCanaryRunRow>(),
   );
 

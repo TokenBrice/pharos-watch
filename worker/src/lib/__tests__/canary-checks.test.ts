@@ -1494,6 +1494,18 @@ describe("worker data invariant canaries", () => {
     expect(await loadCanaryStatus(db, NOW, "status")).toMatchObject({ status: "degraded", missingCheckIds: [first] });
   });
 
+  it("resolves the latest row per active check with a bounded index seek", async () => {
+    const db = mockD1([{ match: "WITH active(check_id)", rows: [] }]);
+    await loadCanaryStatus(db, NOW, "status");
+    const query = db.getHistory()[0];
+    // The GROUP BY form scanned every retained run of every active check, and
+    // the staleness watchdog now reads this on every 15-minute run.
+    expect(query.sql).not.toContain("GROUP BY");
+    expect(query.sql).toContain("CROSS JOIN worker_canary_runs r");
+    expect(query.binds.slice(0, EXPECTED_CANARY_CHECK_IDS.length)).toEqual(EXPECTED_CANARY_CHECK_IDS);
+    expect(query.binds).toHaveLength(EXPECTED_CANARY_CHECK_IDS.length + 2);
+  });
+
   it("rejects materially future observation clocks without discarding hard findings", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));

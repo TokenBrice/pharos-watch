@@ -54,20 +54,32 @@ jobs:
           if (!lanes.some(l => l.scheduleKey === 'statusSelfCheckOffset')) throw new Error('Status self-check lane missing');
           if (s.status !== 'healthy' || h.status !== 'healthy' || health.warnings.some(w =>
               ['scheduled_delivery_stalled', 'scheduler_liveness_unavailable', 'heavy_scheduled_delivery_stalled', 'heavy_scheduler_liveness_unavailable'].includes(w))) throw new Error('Scheduler delivery stalled or unavailable');
-          const unhealthyLanes = lanes.filter(l => l.status !== 'healthy');
-          if (unhealthyLanes.length > 0) {
-            throw new Error(`Scheduled lane delivery unhealthy: ${unhealthyLanes.map(l =>
-              `${l.scheduleKey}:${l.status}:${l.ageSeconds ?? l.unavailableReason ?? 'unknown'} (warn >${l.warningAfterSec}s, stale >${l.staleAfterSec}s)`).join(', ')}`);
+          const laneEvidence = l =>
+            `${l.scheduleKey}:${l.status}:${l.ageSeconds ?? l.unavailableReason ?? 'unknown'} (warn >${l.warningAfterSec}s, stale >${l.staleAfterSec}s)`;
+          // Two missed deliveries stay operational (producer grace rule): a lane
+          // inside its 3x stale budget is a warning, and only the lane's own
+          // stale band (getScheduledLaneLivenessThresholds) opens an incident.
+          const degradedLanes = lanes.filter(l => l.status === 'degraded');
+          if (degradedLanes.length > 0) {
+            console.log(`::warning::Scheduled lane delivery degraded: ${degradedLanes.map(laneEvidence).join(', ')}`);
+          }
+          const failedLanes = lanes.filter(l => l.status === 'stale' || l.status === 'unavailable');
+          if (failedLanes.length > 0) {
+            throw new Error(`Scheduled lane delivery stale or unavailable: ${failedLanes.map(laneEvidence).join(', ')}`);
           }
           const oa = health.operatorAlerts;
-          if (!oa || !['healthy', 'stale', 'unavailable'].includes(oa.status)
+          if (oa === undefined) {
+            // An up-to-30-minute public-health snapshot written before this
+            // receipt shipped can omit the field. That is unknown evidence,
+            // not an unconfigured channel: warn instead of paging.
+            console.log('::warning::Operator alert receipt absent from the served health snapshot; treating the channel as unknown.');
+          } else if (!oa || !['healthy', 'stale', 'unavailable'].includes(oa.status)
               || (oa.operatorConfigured !== null && typeof oa.operatorConfigured !== 'boolean')
               || !Number.isFinite(oa.maxPendingSec)
               || (oa.pendingSince !== null && !Number.isFinite(oa.pendingSince))
               || !Array.isArray(oa.pendingProducers)) {
             throw new Error('Operator alert receipt schema invalid');
-          }
-          if (oa.status !== 'healthy') {
+          } else if (oa.status !== 'healthy') {
             throw new Error(`Operator alert channel ${oa.status}: ${oa.reason ?? oa.unavailableReason ?? 'unknown'} (pending ${oa.pendingProducers.join(',') || 'none'} ${oa.pendingAgeSec ?? 'n/a'}s > ${oa.maxPendingSec}s)`);
           }
           if (![s.lastAnyStartedAt, s.lastFiveMinuteStartedAt, s.ageSeconds].every(Number.isFinite)
@@ -97,6 +109,19 @@ jobs:
             gh issue edit "$issue_number" --body-file "$body"
           else
             gh issue create --title 'Scheduled delivery incident' --body-file "$body"
+          fi
+      - name: Close recovered delivery incident
+        if: steps.health.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          issue_number=$(gh issue list --state open --search 'in:title "Scheduled delivery incident"' --json number,title --jq '[.[] | select(.title == "Scheduled delivery incident")][0].number // empty')
+          if [ -n "$issue_number" ]; then
+            gh issue close "$issue_number" --reason completed \
+              --comment "Recovered: the external scheduled-delivery monitor passed again (https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
           fi
       - name: Fail on unavailable or stalled delivery
         if: steps.health.outcome == 'failure'

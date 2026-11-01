@@ -3,6 +3,7 @@ import { API_PATHS } from "@shared/lib/api-endpoints";
 import {
   evaluateStatusProbePayload,
   hasStatusProbePayloadContract,
+  isStatusLevelOnlyProbePath,
 } from "../status-probe-contracts";
 
 const RESERVES_PATH = API_PATHS.stablecoinReserves("iusd-infinifi");
@@ -27,6 +28,22 @@ describe("status probe payload contracts", () => {
     expect(hasStatusProbePayloadContract("/api/health")).toBe(false);
     expect(hasStatusProbePayloadContract("/api/stablecoins")).toBe(false);
   });
+
+  it.each([
+    API_PATHS.stablecoinReserves("iusd-infinifi"),
+    API_PATHS.reserveAttemptHistory({ coin: "usdc-circle", limit: 10 }),
+    API_PATHS.redemptionBackstops(),
+    API_PATHS.redemptionBackstopCoin("usdc-circle"),
+    "/api/reserve-attempt-history?coin=usdc-circle&limit=10",
+  ])("keeps %s status-level only", (path) => {
+    expect(isStatusLevelOnlyProbePath(path)).toBe(true);
+  });
+
+  it.each(["/api/health", "/api/stablecoins", "/api/stablecoin-live-summary/usdc-circle", "/api/mint-burn-flows"])(
+    "does not suppress %s", (path) => {
+      expect(isStatusLevelOnlyProbePath(path)).toBe(false);
+    },
+  );
 
   it("passes a live, clean reserve payload", () => {
     expect(evaluateStatusProbePayload(RESERVES_PATH, new Headers(), liveReserves())).toEqual({ ok: true });

@@ -54,7 +54,7 @@ function initialExpectedLanes(unavailableReason: string): ExpectedLaneObservatio
   }));
 }
 
-/** Parse the bounded JSON map of `slot_key -> MAX(started_at)`; a malformed map proves nothing. */
+/** Parse the bounded JSON map of `slot_key -> MAX(started_at)`; a null lane clock recorded no start. */
 function parseLaneStarts(value: unknown): Map<string, number> | null {
   if (typeof value !== "string") return null;
   try {
@@ -62,6 +62,7 @@ function parseLaneStarts(value: unknown): Map<string, number> | null {
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
     const starts = new Map<string, number>();
     for (const [scheduleKey, clock] of Object.entries(parsed as Record<string, unknown>)) {
+      if (clock === null) continue;
       // Per-lane clock validity is graded by observeExpectedLanes; only a
       // non-numeric or non-finite map is unreadable evidence.
       if (typeof clock !== "number" || !Number.isFinite(clock)) return null;
@@ -117,6 +118,9 @@ export async function loadSchedulerLiveness(db: D1Database, now: number): Promis
   };
   try {
     const laneKeys = EXPECTED_LIVENESS_PLANS.map((plan) => plan.scheduleKey);
+    // One correlated MAX per lane keeps every lookup an index seek; a
+    // `GROUP BY slot_key` aggregate scans every retained row of each group on
+    // this public/15-minute path.
     const row = await db.prepare(`SELECT
       (SELECT unixepoch()) AS observed_at,
       (SELECT MAX(started_at) FROM cron_slot_executions) AS last_any,
@@ -125,10 +129,10 @@ export async function loadSchedulerLiveness(db: D1Database, now: number): Promis
       (SELECT MAX(started_at) FROM cron_slot_executions WHERE slot_key = ?) AS digest,
       (SELECT MAX(started_at) FROM cron_slot_executions WHERE slot_key = ?) AS heavy,
       (SELECT json_group_object(slot_key, last_started_at) FROM (
-         SELECT slot_key, MAX(started_at) AS last_started_at
-           FROM cron_slot_executions
-          WHERE slot_key IN (${laneKeys.map(() => "?").join(", ")})
-          GROUP BY slot_key
+         WITH lane(slot_key) AS (VALUES ${laneKeys.map(() => "(?)").join(", ")})
+         SELECT lane.slot_key AS slot_key,
+                (SELECT MAX(started_at) FROM cron_slot_executions WHERE slot_key = lane.slot_key) AS last_started_at
+           FROM lane
        )) AS lanes`)
       .bind(...SCHEDULER_LIVENESS_LANES, observation.heavy.scheduleKey, ...laneKeys)
       .first<SlotStarts>();

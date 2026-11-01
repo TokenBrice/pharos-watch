@@ -83,6 +83,20 @@ describe("runCronSentinel", () => {
     expect(mocks.freshness).not.toHaveBeenCalled();
     expect(mocks.duration).not.toHaveBeenCalled();
   });
+  it("keeps the freshness canary, PSI and probe rule ids in the sentinel metadata", async () => {
+    mocks.freshness.mockResolvedValueOnce({
+      status: "degraded",
+      itemCount: 3,
+      metadata: JSON.stringify({
+        firedRuleIds: ["canary-finding", "probe-path-persistent-failure", "psi-daily-coverage"],
+      }),
+    });
+    const result = await runCronSentinel(emptyDb(), { mode: "status", nowSec: 300 });
+    const metadata = JSON.parse(result.metadata ?? "{}") as { firedRuleIds?: Record<string, string[]> };
+    expect(metadata.firedRuleIds?.freshness).toEqual([
+      "canary-finding", "probe-path-persistent-failure", "psi-daily-coverage",
+    ]);
+  });
   it("lifts a reserve source quality finding into the sentinel run summary", async () => {
     mocks.reserve.mockResolvedValueOnce({
       status: "ok",
