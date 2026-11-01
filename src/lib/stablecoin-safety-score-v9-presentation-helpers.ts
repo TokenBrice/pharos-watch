@@ -15,33 +15,10 @@ export function humanizeSafetyScoreV9Value(value: string): string {
   const explicit = explicitLabels[value];
   if (explicit) return explicit;
   return value
-    .replace(/([a-z0-9])([A-Z])/gu, "$1 $2")
-    .split(/[-\s]+/u)
+    .split("-")
     .filter(Boolean)
-    .map((part, index) => {
-      if (index === 0) return `${part.charAt(0).toUpperCase()}${part.slice(1)}`;
-      // A camelCase hump becomes a sentence-case word; acronyms keep their case.
-      return /^[A-Z][a-z]+$/u.test(part) ? part.toLowerCase() : part;
-    })
+    .map((part, index) => index === 0 ? `${part.charAt(0).toUpperCase()}${part.slice(1)}` : part)
     .join(" ");
-}
-
-/**
- * Factor keys carry their producer path (`reserve:<exposureKey>:assetClass`,
- * `mechanism:<componentKey>:factor:<factKey>`) and a covered/uncovered split.
- * Only the fact itself belongs in the reader-facing label.
- */
-export function humanizeSafetyScoreV9FactorLabel(componentKey: string): string {
-  const mechanism = componentKey.match(/^mechanism:.+:factor:([^:]+)$/u);
-  if (mechanism) return humanizeSafetyScoreV9Value(mechanism[1]);
-  const splitSuffix = componentKey.match(/^(.+):(covered|uncovered)$/u);
-  const baseKey = splitSuffix ? splitSuffix[1] : componentKey;
-  const reserve = baseKey.match(/^reserve:.+:([^:]+)$/u);
-  if (reserve) {
-    const label = humanizeSafetyScoreV9Value(reserve[1]);
-    return splitSuffix ? `${label} (${splitSuffix[2]})` : label;
-  }
-  return humanizeSafetyScoreV9Value(componentKey);
 }
 
 /** Round long measured fractions for display and preserve first occurrence order. */

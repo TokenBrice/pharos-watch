@@ -99,15 +99,6 @@ function TransitionIndicator({ point }: { point: DisplayHistoryPoint }) {
     return <span className="text-xs text-muted-foreground">Initial grade</span>;
   }
 
-  // NR is a status, not a rank: a rated↔not-rated move is never an upgrade or downgrade.
-  if (point.grade === "NR" || point.prevGrade === "NR") {
-    return (
-      <span className="text-xs text-muted-foreground">
-        {point.prevGrade} to {point.grade}
-      </span>
-    );
-  }
-
   const prev = gradeRank(point.prevGrade);
   const curr = gradeRank(point.grade);
 

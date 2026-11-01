@@ -480,24 +480,6 @@ type RouteScoreComponents = Record<(typeof SCORE_COMPONENT_ROWS)[number]["item"]
 
 /** Route inputs, in the order the score reads them; unavailable is "–", never 0. */
 function routeInputRows(entry: RedemptionBackstopEntry, viewModel: RouteInputLabels) {
-  // The Capacity component scores the scoring capacity, which a documented
-  // daily limit can hold below the immediate buffer. When it binds, list the
-  // published figure the component actually reads; the immediate amount is
-  // already in the capacity summary.
-  const capacityProfile = entry.capacityProfile;
-  const capacityRows: { label: string; value: string }[] =
-    capacityProfile?.scoringHorizon === "daily" && capacityProfile.scoringUsd != null
-      ? [{ label: "Scoring capacity", value: formatV9PresentationUsd(capacityProfile.scoringUsd) }]
-      : [
-          {
-            label: "Immediate capacity",
-            value: entry.immediateCapacityUsd != null ? formatV9PresentationUsd(entry.immediateCapacityUsd) : "–",
-          },
-          {
-            label: "Immediate capacity ratio",
-            value: entry.immediateCapacityRatio != null ? formatPercent(entry.immediateCapacityRatio * 100, 1) : "–",
-          },
-        ];
   return [
     { label: "Route family", value: viewModel.routeFamilyLabel },
     { label: "Access model", value: viewModel.accessLabel },
@@ -505,7 +487,14 @@ function routeInputRows(entry: RedemptionBackstopEntry, viewModel: RouteInputLab
     { label: "Execution model", value: humanizeSafetyScoreV9Value(entry.executionModel) },
     { label: "Output", value: viewModel.outputAssetLabel },
     { label: "Capacity confidence", value: humanizeSafetyScoreV9Value(entry.capacityConfidence) },
-    ...capacityRows,
+    {
+      label: "Immediate capacity",
+      value: entry.immediateCapacityUsd != null ? formatV9PresentationUsd(entry.immediateCapacityUsd) : "–",
+    },
+    {
+      label: "Immediate capacity ratio",
+      value: entry.immediateCapacityRatio != null ? formatPercent(entry.immediateCapacityRatio * 100, 1) : "–",
+    },
     { label: "Fee", value: entry.feeBps != null ? `${entry.feeBps} bps` : "–" },
   ];
 }

@@ -284,6 +284,9 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
           label: "Top driver",
           render: (coin) => {
             if (!coin.safetyCard) return NULL_VALUE;
+            // A pipeline gap is technical unavailability, not a withheld verdict;
+            // it has no score-bearing driver to project.
+            if (coin.safetyCard.ratingStatus === "pipeline-gap") return NULL_VALUE;
             const driver = projectTopDriver(coin.safetyCard);
             return driver ? (
               <SafetyScoreTopDriver driver={driver} coinId={coin.id} subjectLabel={coin.symbol} />

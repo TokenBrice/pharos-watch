@@ -284,13 +284,6 @@ describe("MethodologyPage", () => {
     expect(technical).toContain("Score coverage");
   });
 
-  it("describes the frozen archive without a fabricated all-F report card", () => {
-    const text = methodologyDocument().querySelector("#lifecycle-phases-methodology")!.textContent!.replace(/\s+/g, " ");
-    expect(text).not.toMatch(/all-F/i);
-    expect(text).toContain("Frozen · not scored");
-    expect(text).toContain("No current report card is rendered");
-  });
-
   it("states the leg-quarantine rule instead of keeping a stalled mint/burn leg in scope", () => {
     const text = methodologyDocument().querySelector("#mint-burn-flow-methodology")!.textContent!.replace(/\s+/g, " ");
     expect(text).toContain("quarantined from the common watermark");
@@ -315,7 +308,7 @@ describe("MethodologyPage", () => {
 
   it("separates per-coin unrated fallback PYS from an unavailable safety snapshot and opportunity-evidence-missing NR", () => {
     const text = methodologyDocument().querySelector("#yield-intelligence-methodology")!.textContent!.replace(/\s+/g, " ");
-    expect(text).toContain("Rows whose per-coin report card is unrated keep the 40/NR fallback and an estimated PYS with `safety-unrated`");
+    expect(text).toContain("Rows whose per-coin report card is unrated keep the 40/NR fallback and publish null PYS with `safety-unrated`");
     expect(text).toContain("an unavailable common safety snapshot publishes PYS NR with the same reason");
     expect(text).toContain("rows carrying `opportunity-evidence-missing` publish PYS NR");
     expect(text).not.toContain("`safety-unrated` or `opportunity-evidence-missing` remain estimated");

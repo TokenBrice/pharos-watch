@@ -45,7 +45,6 @@ import { asset as backingAsset, exposure, knownStatus } from "./safety-score-v9-
 import { V9_PUBLIC_REPRESENTATION_VERSION } from "../../types/report-cards-v9-materialization";
 import { createV9PublicCardShardViewFactory } from "../safety-score-v9/public-card-shard";
 import { stableJsonStringifyV1 } from "../stable-json";
-import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 const DIGESTS = {
   policy: "a".repeat(64),
@@ -1574,10 +1573,6 @@ describe("Safety Score v9 public projection", () => {
       reason: "Backing is missing.",
       evidenceFreshness: "current",
     });
-  });
-
-  it("does not project a pipeline-gap card as a withheld score", () => {
-    expect(projectTopDriver(makeReportCardsV9PipelineGapCard())).toBeNull();
   });
 
   it.each(["backing", "exit"] as const)("uses the existing %s pillar reason without borrowing another pillar", (pillar) => {

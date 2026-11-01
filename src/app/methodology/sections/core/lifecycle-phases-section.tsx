@@ -69,9 +69,8 @@ export function LifecyclePhasesMethodologySection() {
           <Link href="/cemetery/" className={METHODOLOGY_LINK_CLASS}>
             cemetery
           </Link>
-          {" "}with an &quot;archived data available&quot; link to the preserved detail page. No current
-          report card is rendered: the risk rail reads &quot;Frozen · not scored&quot;, no new grade is
-          computed, and the historical record stays available in the cemetery and the dated datasets.
+          {" "}with an &quot;archived data available&quot; link to the preserved detail page. The
+          report card shows an all-F stub matching the existing dead-stablecoin pattern.
         </p>
       </div>
       <MethodologyFacts
