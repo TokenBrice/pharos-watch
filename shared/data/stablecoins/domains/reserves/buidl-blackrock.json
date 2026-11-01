@@ -30,12 +30,20 @@
         "url": "https://forum.arbitrum.foundation/t/securitize-markets-buidl-step-application/23652"
       },
       {
-        "label": "Chronicle BUIDL Proof of Asset daily holdings dashboard (source timestamp 2026-08-27T06:16:23Z)",
-        "url": "https://chroniclelabs.org/dashboard/proof-of-asset/blackrock-buidl"
+        "label": "Chronicle Proof of Asset consolidated dashboard (former per-asset route returned HTTP 404 on 2026-11-01; retained snapshot source timestamp 2026-08-27T06:16:23Z)",
+        "url": "https://chroniclelabs.org/dashboard/proofofassets"
+      },
+      {
+        "label": "ChainCatcher report citing Bloomberg: BUIDL AUM approximately $2.3 billion (2026-10-19)",
+        "url": "https://www.chaincatcher.com/en/article/2297230"
+      },
+      {
+        "label": "DefiLlama BUIDL supply series (2026-08-27 $2,793,670,061; 2026-11-01 $2,007,537,545)",
+        "url": "https://stablecoins.llama.fi/stablecoincharts/all?stablecoin=173"
       }
     ],
-    "rationale": "The BUIDL live-reserve producer is the single-asset chronicle-nav adapter: it reads the Chronicle Proof-of-Asset VAO consumer 0x2d6db2116aD7a6e203E72C8DCCfFf23f5315b0Dd via readWithAge() and publishes one fund-share exposure at 100%. At Ethereum block 26095798, readWithAge() reconfirmed NAV 1.00e18 and an oracle update timestamp matching 2026-10-01T00:22:23Z. The historical 2026-08-27T06:16:23Z holdings snapshot is retained: five tri-party repo positions totaling $2.1355 billion and thirteen U.S. Treasury bills totaling $644.290777 million, against $2,779,790,777 aggregate portfolio market value, with the latest Treasury maturity 2026-11-12. The current dashboard explicitly states that Chronicle performs technical verification checks and does not attest to, audit, or guarantee underlying records or assets; the earlier 'independently verified holdings' wording overstated that assurance. This correction does not re-date the historical composition.",
-    "compositionBasis": "Chronicle Proof of Asset NAV captured by the production chronicle-nav single-asset adapter (one 100% fund-share exposure), with the reviewed look-through position summary above",
+    "rationale": "The BUIDL live-reserve producer is the single-asset chronicle-nav adapter: it reads the Chronicle Proof-of-Asset VAO consumer 0x2d6db2116aD7a6e203E72C8DCCfFf23f5315b0Dd via readWithAge() and publishes one fund-share exposure at 100%. At Ethereum block 26095798, readWithAge() reconfirmed NAV 1.00e18 and an oracle update timestamp matching 2026-10-01T00:22:23Z. The historical 2026-08-27T06:16:23Z holdings snapshot is retained: five tri-party repo positions totaling $2.1355 billion and thirteen U.S. Treasury bills totaling $644.290777 million, against $2,779,790,777 aggregate portfolio market value, with the latest Treasury maturity 2026-11-12. The current dashboard explicitly states that Chronicle performs technical verification checks and does not attest to, audit, or guarantee underlying records or assets; the earlier 'independently verified holdings' wording overstated that assurance. This correction does not re-date the historical composition. Rechecked 2026-11-01: the fund is no longer at the snapshot's scale. DefiLlama BUIDL supply was $2,007,537,545 on 2026-11-01 versus $2,793,670,061 on 2026-08-27, and issuer AUM was approximately $2.3 billion on 2026-10-19 (Bloomberg via ChainCatcher), so the $2,779,790,777 look-through is a historical position-level snapshot rather than current portfolio size; no newer position-level breakdown is publicly retrievable. The former per-asset Chronicle dashboard route returned HTTP 404 on 2026-11-01; the consolidated Proof of Asset dashboard is linked instead.",
+    "compositionBasis": "Historical 2026-08-27 Chronicle Proof of Asset position snapshot paired with the production chronicle-nav single-asset adapter (one 100% fund-share exposure); the dollar look-through is not current portfolio size",
     "compositionAsOf": "2026-08-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No unidentified position remains in the dated holdings table; the live adapter itself publishes only the aggregate fund-share NAV, not position-level composition. The public sources still do not disclose a token-holder loss waterfall or the confidential offering memorandum; Pharos does not turn the displayed gross market value and outstanding-share figures into a contractual collateralization ratio.",
