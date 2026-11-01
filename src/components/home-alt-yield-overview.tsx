@@ -168,7 +168,7 @@ function StatStrip({
         </span>
       </div>
       <div className="flex flex-col gap-1 px-3 py-3">
-        <span className="pharos-label">Median APY</span>
+        <span className="pharos-label">TVL-weighted median APY</span>
         <span className="pharos-numeric text-lg font-semibold text-foreground sm:text-xl">
           {medianApy === null ? <span className="text-muted-foreground">—</span> : formatPercent(medianApy)}
         </span>
@@ -211,7 +211,7 @@ function LeaderRow({
         <span className="pharos-numeric text-xs text-muted-foreground">{rank}</span>
         <span className="flex min-w-0 items-center gap-1.5">
           <CoinCell logoSrc={logoSrc} />
-          <span className="truncate font-mono text-xs uppercase tracking-tight text-foreground">{row.symbol}</span>
+          <span className="truncate font-mono text-xs tracking-tight text-foreground">{row.symbol}</span>
         </span>
         <span aria-hidden="true" className="hidden h-1.5 overflow-hidden rounded-full bg-muted/60 sm:block">
           {row.pharosYieldScore === null ? null : (

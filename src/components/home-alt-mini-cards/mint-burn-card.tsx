@@ -117,7 +117,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
                       className="pharos-focus-ring -mx-1 grid min-h-6 grid-cols-[1.125rem_minmax(0,1fr)_auto] items-center gap-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50"
                     >
                       <CoinCell logoSrc={logoSrc} size="compact" />
-                      <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
+                      <span className="truncate tracking-tight text-foreground">{row.symbol}</span>
                       <FlowSignedNetValue
                         net={row.net}
                         format={formatSignedCompactUsd}

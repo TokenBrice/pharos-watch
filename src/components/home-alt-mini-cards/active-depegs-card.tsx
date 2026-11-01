@@ -152,7 +152,7 @@ function DepegRow({
       >
         <CoinCell logoSrc={logoSrc} />
         <span className="flex min-w-0 items-baseline gap-1.5">
-          <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
+          <span className="truncate tracking-tight text-foreground">{row.symbol}</span>
           <span className="sr-only">{`, ${OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence]}`}</span>
           <span aria-hidden="true" className="text-muted-foreground/40">
             ·

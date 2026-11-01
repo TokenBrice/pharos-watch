@@ -218,7 +218,7 @@ export function RecentFreezesCard(): React.JSX.Element {
                 className="grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-2 py-1 pharos-numeric"
               >
                 <CoinCell logoSrc={logoSrc} />
-                <span className="truncate uppercase tracking-tight text-foreground">{ev.symbol}</span>
+                <span className="truncate tracking-tight text-foreground">{ev.symbol}</span>
                 <span className="flex items-baseline gap-1.5">
                   <span className="font-semibold pharos-numeric text-state-danger">
                     {ev.amountUsdAtEvent && ev.amountUsdAtEvent > 0 ? formatFreezeRowUsd(ev.amountUsdAtEvent) : "—"}
