@@ -25,8 +25,9 @@ import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price
 
 interface PriceTransparencyCardProps {
   coinData: Pick<DetailQuote, "price" | "priceSource" | "priceConfidence" | "priceUpdatedAt" | "priceObservedAtMode" | "nominalPriceReference" | "pegType">;
-  consensusSources: string[];
-  agreeSources: string[];
+  /** Null when neither the peg row nor the admitted summary was read: unread provenance, not zero sources. */
+  consensusSources: string[] | null;
+  agreeSources: string[] | null;
   dexPriceCheck: PegSummaryCoin["dexPriceCheck"];
 }
 
@@ -343,19 +344,24 @@ export function PriceTransparencyCard({
     </p>
   ) : null;
   const isProtocolRedeem = observed && isPricingSourceProtocolOverride(coinData.priceSource);
+  // Unread provenance cannot say a source was unused: withhold the source grid
+  // and the depth target instead of publishing an absent read as zero sources.
+  const sourceProvenanceUnread = consensusSources == null || agreeSources == null;
+  const knownConsensusSources = consensusSources ?? [];
+  const knownAgreeSources = agreeSources ?? [];
 
   // If the DEX Price Check has data, dex-promoted is available even if it wasn't
   // included in the consensus sources (the consensus pipeline uses a stricter
   // freshness threshold than the UI display tier).
   const effectiveConsensusSources = !observed ? [] :
-    dexPriceCheck && !consensusSources.includes("dex-promoted")
-      ? [...consensusSources, "dex-promoted"]
-      : consensusSources;
+    dexPriceCheck && !knownConsensusSources.includes("dex-promoted")
+      ? [...knownConsensusSources, "dex-promoted"]
+      : knownConsensusSources;
 
   // Group sources by status
-  const sources: SourceInfo[] = PRICE_TRANSPARENCY_SOURCE_KEYS.map((key) => ({
+  const sources: SourceInfo[] = sourceProvenanceUnread ? [] : PRICE_TRANSPARENCY_SOURCE_KEYS.map((key) => ({
     key,
-    status: resolvePriceTransparencySourceStatus(key, observed ? agreeSources : [], effectiveConsensusSources, isProtocolRedeem),
+    status: resolvePriceTransparencySourceStatus(key, observed ? knownAgreeSources : [], effectiveConsensusSources, isProtocolRedeem),
     label: getPricingSourceLabel(key),
   }));
 
@@ -379,8 +385,9 @@ export function PriceTransparencyCard({
   // The two trees used to spell these independently, which is exactly how the
   // DEX-agreement pill drifted to two opacity pairs and the source-depth pill
   // acquired a one-off `amber-500/32`.
-  const sourceDepthTone =
-    sourceDepthCount >= 3
+  const sourceDepthTone = sourceProvenanceUnread
+    ? SEVERITY_TONE_CLASS.neutral.pill
+    : sourceDepthCount >= 3
       ? SEVERITY_TONE_CLASS.ok.pill
       : sourceDepthCount === 2
         ? SEVERITY_TONE_CLASS.watch.pill
@@ -395,7 +402,9 @@ export function PriceTransparencyCard({
   const rawConfidenceLabel = hasNoPrice ? "no consensus" : (coinData.priceConfidence ?? "—");
   // Sentence case: multi-word values never render as caps (three-register rule).
   const confidenceLabel = rawConfidenceLabel.charAt(0).toUpperCase() + rawConfidenceLabel.slice(1);
-  const sourceDepthLabel = `Sources ${formatSourceDepthTargetLabel(sourceDepthCount)}`;
+  const sourceDepthLabel = sourceProvenanceUnread
+    ? "Sources —"
+    : `Sources ${formatSourceDepthTargetLabel(sourceDepthCount)}`;
 
   if (compact) {
     const updatedAtLabel = hydrated && !hasNoPrice ? formatCompactUpdatedAt(coinData.priceUpdatedAt) : null;
@@ -463,23 +472,25 @@ export function PriceTransparencyCard({
           </div>
         ) : null}
 
-        <div className="border-t border-border/50 px-4 py-4">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-medium text-muted-foreground">Sources</p>
-            {/* Compact-only slot: the full card reveals the no-data sources
-                inline behind "Show N more sources" instead. */}
-            <SourcesModal
-              sources={sources}
-              includeProtocolRedeem={isProtocolRedeem}
-              updatedAtLabel={hydrated && !hasNoPrice && coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
-            />
+        {sourceProvenanceUnread ? null : (
+          <div className="border-t border-border/50 px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-medium text-muted-foreground">Sources</p>
+              {/* Compact-only slot: the full card reveals the no-data sources
+                  inline behind "Show N more sources" instead. */}
+              <SourcesModal
+                sources={sources}
+                includeProtocolRedeem={isProtocolRedeem}
+                updatedAtLabel={hydrated && !hasNoPrice && coinData.priceUpdatedAt != null ? timeAgo(coinData.priceUpdatedAt) : null}
+              />
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5">
+              {displayedSources.map((source) => (
+                <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} compact />
+              ))}
+            </div>
           </div>
-          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5">
-            {displayedSources.map((source) => (
-              <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} compact />
-            ))}
-          </div>
-        </div>
+        )}
       </RailCard>
     );
   }
@@ -517,7 +528,7 @@ export function PriceTransparencyCard({
             </Badge>
           </div>
           <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
-            {!hasNoPrice && (
+            {!hasNoPrice && !sourceProvenanceUnread && (
               <span className="inline-flex items-center gap-1">
                 <span className={cn("inline-block h-1.5 w-1.5 rounded-full", PRICE_SOURCE_STATUS_CLASSES.used.dot)} />
                 {usedSources.length} used
@@ -566,34 +577,36 @@ export function PriceTransparencyCard({
             Widely-listed coins carry 15+ used sources, so the grid opens capped
             at INLINE_SOURCE_CAP chips; the toggle reveals the rest plus the
             no-data sources it always owned. */}
-        <div className="space-y-2">
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleInlineSources.map((source) => (
-              <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
-            ))}
-
-            {/* Expandable No-Data Sources (full card only; the rail exposes
-                them through the Sources modal instead) */}
-            {showAll &&
-              noDataSources.map((source) => (
+        {sourceProvenanceUnread ? null : (
+          <div className="space-y-2">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {visibleInlineSources.map((source) => (
                 <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
               ))}
-          </div>
 
-          {hiddenSourceCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowAll(!showAll)}
-              className="pharos-focus-ring flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/60 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
-            >
-              <ChevronDown
-                aria-hidden="true"
-                className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-180")}
-              />
-              {showAll ? "Show fewer sources" : `Show ${hiddenSourceCount} more sources`}
-            </button>
-          )}
-        </div>
+              {/* Expandable No-Data Sources (full card only; the rail exposes
+                  them through the Sources modal instead) */}
+              {showAll &&
+                noDataSources.map((source) => (
+                  <SourceChip key={source.key} sourceKey={source.key} label={source.label} status={source.status} />
+                ))}
+            </div>
+
+            {hiddenSourceCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAll(!showAll)}
+                className="pharos-focus-ring flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-border/60 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground"
+              >
+                <ChevronDown
+                  aria-hidden="true"
+                  className={cn("h-3.5 w-3.5 transition-transform", showAll && "rotate-180")}
+                />
+                {showAll ? "Show fewer sources" : `Show ${hiddenSourceCount} more sources`}
+              </button>
+            )}
+          </div>
+        )}
 
         <EvidenceFooter topic="priceTransparency" />
     </DetailModuleCard>

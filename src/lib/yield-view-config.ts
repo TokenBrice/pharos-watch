@@ -203,7 +203,7 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
   {
     key: "opportunistic",
     label: "Opportunistic",
-    description: "C- safety, all source postures, hide warnings",
+    description: `safety ${YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic}+, all source postures, hide warnings`,
     overrides: {
       minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic,
       warnings: "hide",

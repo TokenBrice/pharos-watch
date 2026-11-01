@@ -1,5 +1,6 @@
 import type { DepegEvent } from "@shared/types/market";
-import { formatDeviationBps, formatIsoDate, formatLongDate } from "@shared/lib/format";
+import { formatDeviationBps, formatIsoDate, formatLongDate, formatNativePrice } from "@shared/lib/format";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
 import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
@@ -58,11 +59,28 @@ export function formatEventTimestamp(seconds: number, includeTime: boolean): str
   return includeTime ? `${date} at ${formatEventUtcTime(seconds)}` : date;
 }
 
-export function formatEventPrice(value: number | null): string | null {
+/**
+ * A recorded USD price rendered in the peg's own unit. Non-USD fiat pegs are
+ * converted through the event's peg reference; USD, commodity and variable
+ * pegs keep the USD amount, labeled as such by the shared formatter.
+ */
+export function formatEventPrice(
+  value: number | null,
+  pegType?: string,
+  pegReference?: number | null,
+): string | null {
   if (value == null || !Number.isFinite(value)) return null;
-  if (value < 0.01) return `$${value.toFixed(6)}`;
-  if (value < 1) return `$${value.toFixed(4)}`;
-  return `$${value.toFixed(2)}`;
+  const taxonomy = getPegTaxonomyByType(pegType);
+  const nativeValue = taxonomy != null
+    && taxonomy.nativePriceUsesUsdSymbol !== true
+    && pegReference != null
+    && Number.isFinite(pegReference)
+    && pegReference > 0
+    ? value / pegReference
+    : value;
+  const abs = Math.abs(nativeValue);
+  const decimals = abs < 0.01 ? 6 : abs < 1 ? 4 : 2;
+  return formatNativePrice(value, taxonomy?.currency ?? "USD", pegReference ?? null, decimals);
 }
 
 export function depegDirectionLabel(direction: "above" | "below"): string {

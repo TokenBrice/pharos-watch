@@ -256,10 +256,10 @@ describe("SelectorClient — state machine", () => {
 
     fireEvent.click(screen.getByLabelText(/Same day/i));
     expect(window.location.search).toContain("step=6");
-    expect(screen.queryByText(/tracked USD stablecoins/)).toBeNull();
+    expect(screen.queryByText(/in scope USD stablecoins/i)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /See my shortlist/i }));
-    expect(await screen.findByText(/tracked USD stablecoins/i)).toBeTruthy();
+    expect(await screen.findByText(/in scope USD stablecoins/i)).toBeTruthy();
   });
 
   it("keeps mobile answer handlers local until the sticky CTA commits results", async () => {
@@ -283,10 +283,10 @@ describe("SelectorClient — state machine", () => {
     fireEvent.click(screen.getByLabelText(/Same day/i));
 
     expect(window.location.search).toContain("step=2");
-    expect(screen.queryByText(/tracked USD stablecoins/)).toBeNull();
+    expect(screen.queryByText(/in scope USD stablecoins/i)).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: /See my shortlist/i }));
-    expect(await screen.findByText(/tracked USD stablecoins/i)).toBeTruthy();
+    expect(await screen.findByText(/in scope USD stablecoins/i)).toBeTruthy();
   });
 
   it("blocks Trading share links when per-input staleness exceeds its cadence-aware limit", async () => {

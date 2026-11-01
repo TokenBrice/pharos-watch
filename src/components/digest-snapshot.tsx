@@ -97,8 +97,11 @@ function DigestSafetyMapCard({ inputData }: { inputData: DigestSnapshotInputData
   const aSharePct = ((aTier.mcapUsd / summary.totalMcapUsd) * 100).toFixed(1);
   const outerSharePct = ((outerMcapUsd / summary.totalMcapUsd) * 100).toFixed(1);
   // Tier mcap and shares are computed over the known-supply subtotal; only a
-  // complete coverage capture covers every graded coin.
-  const supplyLabel = summary.supplyCoverage?.complete ? "Total mapped supply" : "Known mapped supply";
+  // complete coverage capture covers every graded coin. Legacy captures with
+  // no coverage block keep the neutral label rather than claim either bound.
+  const supplyLabel = summary.supplyCoverage == null
+    ? "Mapped supply"
+    : summary.supplyCoverage.complete ? "Total mapped supply" : "Known mapped supply";
   const mapDateLabel = formatDigestDateLabel(map.manifest.date, "long");
   const freshnessLabel = map.freshness === "current"
     ? `Dated ${mapDateLabel} map`

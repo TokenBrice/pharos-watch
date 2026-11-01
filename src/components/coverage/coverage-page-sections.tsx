@@ -314,7 +314,7 @@ export function CoverageMatrixCard(
     | "hasActiveFilters"
     | "resetFilters"
     | "unavailableFeatures"
-    | "dataUpdatedAt"
+    | "dataAsOfMs"
   >,
 ) {
   const filterGroups = getFilterGroups();
@@ -328,9 +328,9 @@ export function CoverageMatrixCard(
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="pharos-label">Coverage matrix</p>
-            {model.dataUpdatedAt ? (
+            {model.dataAsOfMs ? (
               <span className="text-xs text-muted-foreground">
-                Fetched {new Date(model.dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                Updated {new Date(model.dataAsOfMs).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
             ) : null}
           </div>

@@ -204,7 +204,7 @@ describe("TimelineClient", () => {
       reference = classes;
       expect(document.querySelector('[aria-label="Filter by event type"]')!.outerHTML, label).toBe(shellFilters);
       if (label === "partial") {
-        expect(screen.getByText("1 event")).toBeTruthy();
+        expect(screen.getByText("Showing 1 event")).toBeTruthy();
         expect(screen.queryByText(/of 12,345 events/)).toBeNull();
       }
       if (label === "success") expect(screen.getByText("1 event")).toBeTruthy();
@@ -615,7 +615,7 @@ describe("TimelineClient", () => {
     // The server COUNT includes rows the reader projection can suppress, so it
     // is not a visible total until every raw page has been admitted.
     expect(screen.queryByText(/of 1,247 events/)).toBeNull();
-    expect(screen.getByText("2 events")).toBeTruthy();
+    expect(screen.getByText("Showing 2 events")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
     expect(screen.queryByText(/remaining/)).toBeNull();
   });

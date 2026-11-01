@@ -49,7 +49,7 @@ function makeMatrixInput({ activeStablecoins, errors, ...payloads }: MatrixInput
           data: error ? undefined : (payloads[key] ?? DEFAULT_PAYLOADS[key]),
           dataUpdatedAt: 7,
           error,
-          meta: null,
+          meta: { updatedAt: 7, ageSeconds: 0, status: "fresh" as const },
         },
       ];
     }),
@@ -188,7 +188,7 @@ describe("buildCoverageMatrixModel", () => {
     expect(model.unavailableFeatures).toEqual([]);
     expect(model.isInitialDataLoading).toBe(false);
     expect(model.isStablecoinDataUnavailable).toBe(false);
-    expect(model.dataUpdatedAt).toBe(7);
+    expect(model.dataAsOfMs).toBe(7_000);
     expect(model.staleQueries.every((query) => query.hasData)).toBe(true);
   });
 

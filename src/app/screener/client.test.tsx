@@ -183,7 +183,7 @@ describe("ScreenerClient freshness notices", () => {
       dataUpdatedAt: 1_700_000_000, meta: null, refetch,
     });
     view.rerender(<ScreenerClient />);
-    const readyCount = view.getByText(/tracked/).closest("p");
+    const readyCount = view.getByText(/screenable coins/).closest("p");
     expect(readyCount?.classList.contains("min-h-12")).toBe(true);
     expect(readyCount?.classList.contains("lg:min-h-8")).toBe(true);
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({
@@ -239,7 +239,7 @@ describe("ScreenerClient freshness notices", () => {
       dataUpdatedAt: 0, meta: null, refetch,
     });
     const view = render(<ScreenerClient />);
-    expect(view.queryByText(/tracked/)).toBeNull();
+    expect(view.queryByText(/screenable coins/)).toBeNull();
     expect(view.getByText(isLoading ? "Loading screener inputs…" : "Screener counts unavailable.")).toBeTruthy();
     expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0].dataState).toBe(isLoading ? "loading" : "unavailable");
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ data: [], disabled: true });
@@ -285,7 +285,7 @@ describe("ScreenerClient freshness notices", () => {
     hook.mockReturnValue({ data: undefined, isLoading: false, error: new Error("offline"), dataUpdatedAt: 0, meta: null, refetch });
     view.rerender(<ScreenerClient />);
     expect(view.getByText("Screener counts unavailable.")).toBeTruthy();
-    expect(view.queryByText(/tracked/)).toBeNull();
+    expect(view.queryByText(/screenable coins/)).toBeNull();
     expect(mocks.ScreenerTable.mock.calls.at(-1)?.[0]).toMatchObject({ dataState: "unavailable", rows: [] });
     expect(mocks.TableExportMenu.mock.calls.at(-1)?.[0]).toMatchObject({ disabled: true, data: [] });
 

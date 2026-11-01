@@ -68,7 +68,6 @@ export function DetailHistoryExploreSections({
             depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
             historyCoverage={viewModel.pegScoreResult?.historyCoverage ?? null}
             recent90d={viewModel.pegScoreResult?.recent90d ?? null}
-            scoreWindowIncidentCount={viewModel.pegScoreResult?.eventCount ?? null}
           />
         ) : (
           <LazySection minHeight={390}>
@@ -82,7 +81,6 @@ export function DetailHistoryExploreSections({
               depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
               historyCoverage={viewModel.pegScoreResult?.historyCoverage ?? null}
               recent90d={viewModel.pegScoreResult?.recent90d ?? null}
-              scoreWindowIncidentCount={viewModel.pegScoreResult?.eventCount ?? null}
             />
           </LazySection>
         )}

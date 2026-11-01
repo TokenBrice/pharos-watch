@@ -182,7 +182,7 @@ export const TELEGRAM_FAQ: FaqItem[] = [
   {
     question: "What alerts does Pharos send on Telegram?",
     answer:
-      `Live alerts cover depegs and recoveries, rising DEWS stress, severe safety-grade downgrades, reserve drift, and freezes or destroys of ${LIVE_FREEZE_MIN_LABEL} or more. Smaller safety moves are grouped into one daily Changes message at ${DAILY_CHANGES_TIME} your time, sent only when something changed. Smaller freezes come in ${FREEZE_BATCH_LABEL}.`,
+      `Live alerts cover depegs and recoveries, rising DEWS stress, severe safety-grade downgrades, reserve drift, and freezes or destroys of ${LIVE_FREEZE_MIN_LABEL} or more. Smaller safety moves are grouped into one daily Changes message at ${DAILY_CHANGES_TIME} UTC unless you set a time zone, sent only when something changed. Smaller freezes come in ${FREEZE_BATCH_LABEL}.`,
   },
   {
     question: "How many messages will I get?",

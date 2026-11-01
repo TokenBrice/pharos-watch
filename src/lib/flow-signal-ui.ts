@@ -116,7 +116,7 @@ export function buildFlowSummaryNarrative(
   pressureState: PressureShiftState,
 ): string {
   if (direction === null) {
-    return "Net direction unavailable: unpriced events leave the 24h net unproven.";
+    return "Direction unavailable.";
   }
   if (direction === "inactive") {
     return "No current activity; pressure shift is NR.";
@@ -124,12 +124,12 @@ export function buildFlowSummaryNarrative(
 
   if (pressureState === "nr") {
     if (direction === "burning") {
-      return "Burning now; pressure shift is NR until enough history accumulates.";
+      return "Burning now; pressure shift is NR.";
     }
     if (direction === "minting") {
-      return "Minting now; pressure shift is NR until enough history accumulates.";
+      return "Minting now; pressure shift is NR.";
     }
-    return "Flows are flat; pressure shift is NR until enough history accumulates.";
+    return "Flows are flat; pressure shift is NR.";
   }
 
   if (direction === "burning" && pressureState === "improving") {

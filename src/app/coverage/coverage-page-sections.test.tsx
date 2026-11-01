@@ -69,7 +69,7 @@ function makeMatrixModel(overrides: Partial<CoverageMatrixModel> = {}): Coverage
     hasActiveFilters: false,
     resetFilters: () => {},
     unavailableFeatures: [],
-    dataUpdatedAt: 1_700_000_000_000,
+    dataAsOfMs: 1_700_000_000_000,
     ...overrides,
   };
 }
@@ -111,11 +111,11 @@ describe("CoverageMatrixCard", () => {
     ).toBeNull();
   });
 
-  it("labels the matrix clock as the browser fetch time, not a served generation", () => {
+  it("labels the matrix clock from the oldest contributing producer generation", () => {
     const { container } = render(<CoverageMatrixCard {...makeMatrixModel()} />);
 
-    expect(container.textContent).toMatch(/Fetched \d/);
-    expect(container.textContent).not.toMatch(/Updated \d/);
+    expect(container.textContent).toMatch(/Updated \d/);
+    expect(container.textContent).not.toMatch(/Fetched \d/);
   });
 
   it("pages long results 20 at a time with an honest count and a URL page", () => {
@@ -237,10 +237,9 @@ describe("CoverageSafetyScoreDataCard", () => {
       <CoverageSafetyScoreDataCard safetyScoreDataCoverage={safetyScoreDataCoverage} />,
     );
 
-    expect(container.textContent).toContain("Open-question counts are unavailable for this publication.");
+    expect(container.textContent).toContain("Open-question counts are unavailable for this publication, not zero.");
     expect(container.textContent).toContain("Evidence obligations");
     expect(container.textContent).toContain("Unavailable for this publication");
-    expect(container.textContent).toContain("They are unavailable, not zero.");
     expect(container.textContent).not.toMatch(/0 open questions/);
   });
 });
