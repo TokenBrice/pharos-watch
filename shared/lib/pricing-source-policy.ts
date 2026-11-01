@@ -6,6 +6,13 @@ import { normalizePricingSourceKeys } from "./pricing-sources";
 export const FIXED_PEG_SEVERE_DOWNSIDE_RATIO = 0.5;
 
 /**
+ * Maximum relative bid/ask spread (basis points of the midpoint) for a CEX
+ * two-sided book to contribute a quote. A wider book is not a price, and its
+ * last trade is no better evidence.
+ */
+export const CEX_MAX_BID_ASK_SPREAD_BPS = 100;
+
+/**
  * Whether provenance permits treating a price as observed. Callers still validate
  * the value and freshness; absent legacy modes retain their existing semantics.
  */

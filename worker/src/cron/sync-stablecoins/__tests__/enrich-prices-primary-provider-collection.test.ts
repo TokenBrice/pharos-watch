@@ -369,6 +369,15 @@ describe("critical publication provider collection", () => {
       value: {
         prices: new Map([["USDT", 1.0004]]),
         observedAtBySymbol: new Map([["USDT", 1_700_000_000]]),
+        diagnostics: [{
+          source: "coinbase",
+          stage: "primary",
+          endpoint: "api.exchange.coinbase.com/products",
+          status: null,
+          ok: true,
+          success: true,
+          rejectionReasonCounts: { "wide-spread": 1 },
+        }],
       },
     });
 
@@ -376,6 +385,10 @@ describe("critical publication provider collection", () => {
 
     expect(result.quoteMaps.coinbasePrices.get("USDT")).toBe(1.0004);
     expect(result.quoteMaps.coinbaseObservedAtBySymbol.get("USDT")).toBe(1_700_000_000);
+    expect(result.providerDiagnostics).toContainEqual(expect.objectContaining({
+      source: "coinbase",
+      rejectionReasonCounts: { "wide-spread": 1 },
+    }));
   });
 
   it("collects Curve pool quotes with their per-coin observation clocks", async () => {

@@ -486,10 +486,11 @@ export async function collectPrimaryProviderQuotes(params: {
       if (sourceAllowed.kraken && krakenSymbols.length > 0) {
         await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.KRAKEN_PRICES, "Kraken ticker", async () => {
           const outcome = await fetchKrakenPrices(krakenSymbols, signal);
-          for (const [symbol, price] of outcome.value) {
+          providerDiagnostics.push(...outcome.value.diagnostics);
+          for (const [symbol, price] of outcome.value.prices) {
             krakenPrices.set(symbol, price);
           }
-          if (outcome.value.size > 0) {
+          if (outcome.value.prices.size > 0) {
             krakenObservedAt = Math.floor(Date.now() / 1000);
           }
           return isSuccessfulOutcome(outcome);
@@ -499,6 +500,7 @@ export async function collectPrimaryProviderQuotes(params: {
       if (sourceAllowed.bitstamp && shouldFetchBitstamp) {
         await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.BITSTAMP_PRICES, "Bitstamp ticker", async () => {
           const outcome = await fetchBitstampPrices(signal);
+          providerDiagnostics.push(...outcome.value.diagnostics);
           for (const [symbol, price] of outcome.value.prices) {
             bitstampPrices.set(symbol, price);
           }
@@ -512,6 +514,7 @@ export async function collectPrimaryProviderQuotes(params: {
       if (sourceAllowed.coinbase && coinbaseSymbols.length > 0) {
         await runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.COINBASE_PRICES, "Coinbase ticker", async () => {
           const outcome = await fetchCoinbasePrices(coinbaseSymbols, signal);
+          providerDiagnostics.push(...outcome.value.diagnostics);
           for (const [symbol, price] of outcome.value.prices) {
             coinbasePrices.set(symbol, price);
           }

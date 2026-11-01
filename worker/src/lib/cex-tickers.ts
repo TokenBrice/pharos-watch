@@ -10,6 +10,7 @@ import {
   COINBASE_PRODUCTS,
   KRAKEN_MARKETS,
 } from "@shared/lib/pricing-provider-config";
+import { CEX_MAX_BID_ASK_SPREAD_BPS } from "@shared/lib/pricing-source-policy";
 import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
 import { mapWithConcurrency } from "./concurrency";
@@ -19,6 +20,7 @@ import {
   errorMessageFor,
   responseSnippet,
   type PricingProviderAttemptDiagnostic,
+  type PricingProviderRejectionReason,
 } from "./pricing-provider-diagnostics";
 import type { FetcherOutcome } from "./fetcher-result";
 import {
@@ -31,6 +33,9 @@ import { logWorkerEvent } from "./structured-log";
 const CEX_REQUEST_TIMEOUT_MS = 10_000;
 const CEX_REQUEST_RETRIES = 1;
 const COINBASE_PRODUCT_FETCH_CONCURRENCY = 1;
+const KRAKEN_TICKER_ENDPOINT = "api.kraken.com/0/public/Ticker";
+const BITSTAMP_TICKER_ENDPOINT = "www.bitstamp.net/api/v2/ticker/";
+const COINBASE_TICKER_ENDPOINT = "api.exchange.coinbase.com/products";
 const BINANCE_TICKER_URLS = [
   "https://data-api.binance.vision/api/v3/ticker/price",
   "https://api.binance.com/api/v3/ticker/price",
@@ -133,13 +138,31 @@ function isBinanceProviderBlocked(diagnostics: readonly PricingProviderAttemptDi
 function midpointFromBidAsk(
   bid: string | number | null | undefined,
   ask: string | number | null | undefined,
-): number | null {
+): { midpoint: number; wideSpread: boolean } | null {
   const parsedBid = parseCexPrice(bid);
   const parsedAsk = parseCexPrice(ask);
   if (parsedBid == null || parsedAsk == null) {
     return null;
   }
-  return (parsedBid + parsedAsk) / 2;
+  const midpoint = (parsedBid + parsedAsk) / 2;
+  return {
+    midpoint,
+    wideSpread: ((parsedAsk - parsedBid) / midpoint) * 10_000 > CEX_MAX_BID_ASK_SPREAD_BPS,
+  };
+}
+
+function incrementRejectionReason(
+  counts: Partial<Record<PricingProviderRejectionReason, number>> | undefined,
+  reason: PricingProviderRejectionReason,
+): void {
+  if (!counts) return;
+  counts[reason] = (counts[reason] ?? 0) + 1;
+}
+
+interface TickerRowOptions<T> {
+  observedAtBySymbol?: Map<string, number>;
+  getObservedAt?: (row: T) => number | null;
+  rejectionReasonCounts?: Partial<Record<PricingProviderRejectionReason, number>>;
 }
 
 function applyTickerRows<T>(
@@ -149,18 +172,22 @@ function applyTickerRows<T>(
   getBid: (row: T) => string | number | null | undefined,
   getAsk: (row: T) => string | number | null | undefined,
   getLastTrade: (row: T) => string | number | null | undefined,
-  observedAtBySymbol?: Map<string, number>,
-  getObservedAt?: (row: T) => number | null,
+  options: TickerRowOptions<T> = {},
 ): void {
   for (const row of rows) {
     const symbol = resolveSymbol(row);
     if (!symbol) continue;
 
-    const midpoint = midpointFromBidAsk(getBid(row), getAsk(row));
+    const quote = midpointFromBidAsk(getBid(row), getAsk(row));
+    if (quote?.wideSpread) {
+      incrementRejectionReason(options.rejectionReasonCounts, "wide-spread");
+      continue;
+    }
     const lastTrade = parseCexPrice(getLastTrade(row));
-    const price = midpoint ?? lastTrade;
+    const price = quote?.midpoint ?? lastTrade;
     if (price != null) {
       results.set(symbol, price);
+      const { observedAtBySymbol, getObservedAt } = options;
       if (observedAtBySymbol && getObservedAt) {
         const observedAt = getObservedAt(row);
         if (observedAt != null) {
@@ -169,6 +196,24 @@ function applyTickerRows<T>(
       }
     }
   }
+}
+
+function wideSpreadDiagnostic(
+  source: "kraken" | "bitstamp" | "coinbase",
+  endpoint: string,
+  rejectionCount: number,
+  success: boolean,
+  status: number | null,
+): PricingProviderAttemptDiagnostic {
+  return {
+    source,
+    stage: "primary",
+    endpoint,
+    status,
+    ok: true,
+    success,
+    rejectionReasonCounts: { "wide-spread": rejectionCount },
+  };
 }
 
 function parseBitstampTimestamp(value: string | number | null | undefined): number | null {
@@ -188,7 +233,7 @@ function parseCoinbaseTime(value: string | null | undefined): number | null {
 async function fetchCexJson<T>(
   url: string,
   signal?: AbortSignal,
-): Promise<{ payload: T | null; transportOk: boolean }> {
+): Promise<{ payload: T | null; transportOk: boolean; status: number | null }> {
   const result = await fetchJsonWithRetry<T>(
     url,
     {
@@ -199,9 +244,9 @@ async function fetchCexJson<T>(
     { timeoutMs: CEX_REQUEST_TIMEOUT_MS },
   );
   if (!result?.response.ok) {
-    return { payload: null, transportOk: false };
+    return { payload: null, transportOk: false, status: result?.response.status ?? null };
   }
-  return { payload: result.body, transportOk: true };
+  return { payload: result.body, transportOk: true, status: result.response.status };
 }
 
 async function fetchBinanceTickerUrl(
@@ -380,58 +425,71 @@ export function fetchBinancePricesForRun(
   return session.outcome;
 }
 
+export interface CexTickerBatch {
+  prices: Map<string, number>;
+  observedAtBySymbol: Map<string, number>;
+  diagnostics: PricingProviderAttemptDiagnostic[];
+}
+
 export async function fetchKrakenPrices(
   symbols: string[],
   signal?: AbortSignal,
-): Promise<FetcherOutcome<Map<string, number>>> {
-  const results = new Map<string, number>();
+): Promise<FetcherOutcome<CexTickerBatch>> {
+  const prices = new Map<string, number>();
+  const observedAtBySymbol = new Map<string, number>();
+  const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
+  const value: CexTickerBatch = { prices, observedAtBySymbol, diagnostics: [] };
   const requestedPairs = KRAKEN_MARKETS.filter((market) => symbols.includes(market.symbol)).map(
     (market) => market.requestPair,
   );
-  if (requestedPairs.length === 0) return { kind: "no-data", value: results };
+  if (requestedPairs.length === 0) return { kind: "no-data", value };
 
   try {
-    const { payload, transportOk } = await fetchCexJson<{
+    const { payload, transportOk, status } = await fetchCexJson<{
       error?: string[];
       result?: Record<string, { a?: string[]; b?: string[]; c?: string[] }>;
     }>(`https://api.kraken.com/0/public/Ticker?pair=${requestedPairs.join(",")}`, signal);
     if (!transportOk || !payload) {
-      return { kind: "upstream-error", value: results, reason: "Kraken ticker HTTP error" };
+      return { kind: "upstream-error", value, reason: "Kraken ticker HTTP error" };
     }
     if (Array.isArray(payload.error) && payload.error.length > 0) {
       logWorkerEvent({ scope: "lib", level: "warn", event: "cex_kraken_api_error", message: "Kraken ticker API returned an error", provider: "kraken", metadata: { errors: payload.error } });
-      return { kind: "upstream-error", value: results, reason: payload.error.join("; ") };
+      return { kind: "upstream-error", value, reason: payload.error.join("; ") };
     }
 
     applyTickerRows(
       Object.entries(payload.result ?? {}),
-      results,
+      prices,
       ([responseKey]) => KRAKEN_RESPONSE_KEY_TO_SYMBOL.get(responseKey),
       ([, market]) => market.b?.[0],
       ([, market]) => market.a?.[0],
       ([, market]) => market.c?.[0],
+      { rejectionReasonCounts },
     );
+
+    const rejectionCount = rejectionReasonCounts["wide-spread"] ?? 0;
+    if (rejectionCount > 0) {
+      value.diagnostics.push(
+        wideSpreadDiagnostic("kraken", KRAKEN_TICKER_ENDPOINT, rejectionCount, prices.size > 0, status),
+      );
+    }
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     logWorkerEvent({ scope: "lib", level: "warn", event: "cex_kraken_fetch_failed", message: "Kraken ticker fetch failed", provider: "kraken", error: err });
-    return { kind: "upstream-error", value: results, reason: errorMessageFor(err) };
+    return { kind: "upstream-error", value, reason: errorMessageFor(err) };
   }
 
-  return results.size > 0 ? { kind: "ok", value: results } : { kind: "no-data", value: results };
-}
-
-export interface CexTickerBatch {
-  prices: Map<string, number>;
-  observedAtBySymbol: Map<string, number>;
+  return prices.size > 0 ? { kind: "ok", value } : { kind: "no-data", value };
 }
 
 export async function fetchBitstampPrices(signal?: AbortSignal): Promise<FetcherOutcome<CexTickerBatch>> {
   const prices = new Map<string, number>();
   const observedAtBySymbol = new Map<string, number>();
-  const value: CexTickerBatch = { prices, observedAtBySymbol };
+  const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
+  const value: CexTickerBatch = { prices, observedAtBySymbol, diagnostics: [] };
 
   try {
-    const { payload: tickers, transportOk } = await fetchCexJson<
+    const { payload: tickers, transportOk, status } = await fetchCexJson<
       Array<{
         pair?: string;
         market?: string;
@@ -455,9 +513,19 @@ export async function fetchBitstampPrices(signal?: AbortSignal): Promise<Fetcher
       (ticker) => ticker.bid,
       (ticker) => ticker.ask,
       (ticker) => ticker.last,
-      observedAtBySymbol,
-      (ticker) => parseBitstampTimestamp(ticker.timestamp),
+      {
+        observedAtBySymbol,
+        getObservedAt: (ticker) => parseBitstampTimestamp(ticker.timestamp),
+        rejectionReasonCounts,
+      },
     );
+
+    const rejectionCount = rejectionReasonCounts["wide-spread"] ?? 0;
+    if (rejectionCount > 0) {
+      value.diagnostics.push(
+        wideSpreadDiagnostic("bitstamp", BITSTAMP_TICKER_ENDPOINT, rejectionCount, prices.size > 0, status),
+      );
+    }
   } catch (err) {
     if (signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
     logWorkerEvent({ scope: "lib", level: "warn", event: "cex_bitstamp_fetch_failed", message: "Bitstamp ticker fetch failed", provider: "bitstamp", error: err });
@@ -473,7 +541,8 @@ export async function fetchCoinbasePrices(
 ): Promise<FetcherOutcome<CexTickerBatch>> {
   const prices = new Map<string, number>();
   const observedAtBySymbol = new Map<string, number>();
-  const value: CexTickerBatch = { prices, observedAtBySymbol };
+  const rejectionReasonCounts: Partial<Record<PricingProviderRejectionReason, number>> = {};
+  const value: CexTickerBatch = { prices, observedAtBySymbol, diagnostics: [] };
   const requestedProducts = COINBASE_PRODUCTS.filter((product) => symbols.includes(product.symbol));
   let transportFailures = 0;
   let transportAttempts = 0;
@@ -499,9 +568,13 @@ export async function fetchCoinbasePrices(
         }
 
         const payload = result.body;
-        const midpoint = midpointFromBidAsk(payload.bid, payload.ask);
+        const quote = midpointFromBidAsk(payload.bid, payload.ask);
+        if (quote?.wideSpread) {
+          incrementRejectionReason(rejectionReasonCounts, "wide-spread");
+          return;
+        }
         const lastTrade = parseCexPrice(payload.price);
-        const price = midpoint ?? lastTrade;
+        const price = quote?.midpoint ?? lastTrade;
         if (price != null) {
           const symbol = COINBASE_PRODUCT_TO_SYMBOL.get(product.productId) ?? product.symbol;
           prices.set(symbol, price);
@@ -520,6 +593,12 @@ export async function fetchCoinbasePrices(
 
   if (transportAttempts > 0 && transportFailures === transportAttempts) {
     return { kind: "upstream-error", value, reason: "all Coinbase product requests failed" };
+  }
+  const rejectionCount = rejectionReasonCounts["wide-spread"] ?? 0;
+  if (rejectionCount > 0) {
+    value.diagnostics.push(
+      wideSpreadDiagnostic("coinbase", COINBASE_TICKER_ENDPOINT, rejectionCount, prices.size > 0, null),
+    );
   }
   if (prices.size === 0) {
     return { kind: "no-data", value };
