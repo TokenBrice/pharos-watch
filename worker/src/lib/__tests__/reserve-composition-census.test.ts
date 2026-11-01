@@ -86,15 +86,28 @@ describe("reserve composition census", () => {
   });
 
   it("parses only well-formed retained state", () => {
-    expect(parseReserveCompositionCensusState(null)).toEqual({ version: 1, coins: {} });
-    expect(parseReserveCompositionCensusState("not-json")).toEqual({ version: 1, coins: {} });
+    expect(parseReserveCompositionCensusState(null)).toEqual({ state: { version: 1, coins: {} }, issue: null });
     expect(parseReserveCompositionCensusState(JSON.stringify({ coins: {
       [COIN]: { census: ["T-bills"], shares: { "T-bills": 100 } },
-      bad: { census: [], shares: {} },
-      worse: { census: ["x"], shares: { x: "nope" } },
     } }))).toEqual({
-      version: 1,
-      coins: { [COIN]: { census: ["T-bills"], shares: { "T-bills": 100 } } },
+      state: { version: 1, coins: { [COIN]: { census: ["T-bills"], shares: { "T-bills": 100 } } } },
+      issue: null,
     });
+  });
+
+  it("reports unreadable or self-inconsistent retained state as unknown, never an empty baseline", () => {
+    expect(parseReserveCompositionCensusState("not-json")).toEqual({ state: null, issue: "invalid-json" });
+    // A census identity without a share (or the reverse) would fabricate an
+    // added/removed slice on the next diff.
+    expect(parseReserveCompositionCensusState(JSON.stringify({ coins: {
+      [COIN]: { census: ["T-bills"], shares: {} },
+    } }))).toEqual({ state: null, issue: "invalid-state" });
+    expect(parseReserveCompositionCensusState(JSON.stringify({ coins: {
+      [COIN]: { census: ["T-bills"], shares: ["T-bills"] },
+    } }))).toEqual({ state: null, issue: "invalid-state" });
+    expect(parseReserveCompositionCensusState(JSON.stringify({ coins: {
+      [COIN]: { census: [], shares: {} },
+      bad: { census: ["x"], shares: { x: "nope" } },
+    } }))).toEqual({ state: null, issue: "invalid-state" });
   });
 });

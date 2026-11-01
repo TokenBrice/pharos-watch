@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   maxAge: vi.fn(),
   states: vi.fn(),
   acknowledged: vi.fn(),
+  scoringEvidence: vi.fn(),
 }));
 const cache = vi.hoisted(() => new Map<string, string>());
 
@@ -15,6 +16,7 @@ vi.mock("../../lib/live-reserves/store", () => ({
   computeReserveCompositionOverview: mocks.overview,
   getMaxSyncAge: mocks.maxAge,
   loadReserveSyncStateMap: mocks.states,
+  loadPublishedReserveScoringEvidence: mocks.scoringEvidence,
 }));
 vi.mock("../../lib/reserve-feed-reviews", () => ({
   resolveAcknowledgedReserveFeedIds: mocks.acknowledged,
@@ -55,6 +57,7 @@ function evaluate(
     budget?: number;
     nowSec?: number;
     scoreIneligible?: boolean;
+    scoreIneligibleUnknown?: boolean;
   } = {},
 ) {
   return evaluateReserveAdapterAlerts({
@@ -62,6 +65,7 @@ function evaluate(
     attemptsByCoin: new Map([[COIN, attempts]]),
     sourceAgeBudgetByCoin: new Map([[COIN, options.budget ?? 7_200]]),
     scoreIneligibleCoinIds: new Set(options.scoreIneligible === false ? [] : [COIN]),
+    scoreIneligibleUnknownCoinIds: new Set(options.scoreIneligibleUnknown ? [COIN] : []),
     acknowledgedCoinIds: new Set(options.acknowledged ?? []),
     previous: options.prior ?? { version: 1, coins: {} },
   });
@@ -205,9 +209,44 @@ describe("evaluateReserveAdapterAlerts", () => {
     expect(three.state.coins[COIN]).toMatchObject({ scoreIneligibleRaised: true });
 
     const recovered = evaluate([attempt({ attemptedAt: NOW + 14_400, status: "ok", failureCategory: null })],
-      { prior: three.state });
+      { prior: three.state, scoreIneligible: false });
     expect(recovered.recovered).toEqual(["reserve-score-ineligible-sustained"]);
     expect(recovered.scoreIneligibleSources).toEqual([]);
+  });
+
+  it("does not count a degraded attempt that wrote no snapshot toward the streak", () => {
+    // A withheld fallback records `degraded` with a failure category and leaves
+    // the retained snapshot untouched; it is not a degraded success.
+    const withheld = (attemptedAt: number) =>
+      attempt({ attemptedAt, status: "degraded", failureCategory: "upstream-http" });
+    const result = evaluate([withheld(NOW), withheld(NOW - 14_400), withheld(NOW - 28_800)]);
+    expect(result.raised).toEqual([]);
+    expect(result.scoreIneligibleSources).toEqual([]);
+    expect(result.state.coins[COIN] ?? null).toBeNull();
+  });
+
+  it("holds a raised score-ineligible alert while an interrupted streak still publishes ineligible evidence", () => {
+    const prior: ReserveAdapterAlertState = {
+      version: 1,
+      coins: { [COIN]: { failureRaised: false, scoreIneligibleRaised: true, clockRaised: false } },
+    };
+    const result = evaluate([attempt({ attemptedAt: NOW, status: "error" })], { prior });
+    expect(result.raised).toEqual([]);
+    expect(result.recovered).toEqual([]);
+    expect(result.state.coins[COIN]?.scoreIneligibleRaised).toBe(true);
+  });
+
+  it("holds a raised score-ineligible alert while the published evidence is unreadable", () => {
+    const prior: ReserveAdapterAlertState = {
+      version: 1,
+      coins: { [COIN]: { failureRaised: false, scoreIneligibleRaised: true, clockRaised: false } },
+    };
+    const result = evaluate([attempt({ attemptedAt: NOW, status: "ok", failureCategory: null })],
+      { prior, scoreIneligible: false, scoreIneligibleUnknown: true });
+    expect(result.raised).toEqual([]);
+    expect(result.recovered).toEqual([]);
+    expect(result.state.coins[COIN]?.scoreIneligibleRaised).toBe(true);
+    expect(result.scoreIneligibleUnknownSources).toEqual([{ stablecoinId: COIN, heldRaised: true }]);
   });
 
   it("does not call a degraded success score-ineligible without a scoring-degraded warning", () => {
@@ -254,6 +293,10 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     mocks.maxAge.mockResolvedValue(0);
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "error" }]]));
     mocks.acknowledged.mockResolvedValue(new Set<string>());
+    mocks.scoringEvidence.mockResolvedValue({
+      scoreIneligibleIds: new Set<string>(),
+      unknownIds: new Set<string>(),
+    });
   });
 
   function historyDb(rows: Array<Record<string, unknown>>): D1Database {
@@ -267,7 +310,8 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
       stablecoin_id: COIN,
       attempted_at: attemptedAt,
       status,
-      failure_category: status === "skipped" ? "circuit-open" : "upstream-http",
+      // Only failures carry a failure category; a degraded success wrote a snapshot.
+      failure_category: status === "skipped" ? "circuit-open" : status === "error" ? "upstream-http" : null,
       source_timestamp: null,
       freshness_mode: null,
     };
@@ -277,6 +321,8 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     const result = await runReservePostSyncWatchdog(historyDb(rows));
     return JSON.parse(result.metadata ?? "{}") as {
       firedRuleIds: string[];
+      degradedReasons: string[];
+      activeAdapterAlertReasons: string[];
       quality?: { reason?: string; reasons: string[] };
       compositionCensus: { observedCoins: number; findings: Array<Record<string, unknown>> } | null;
       reserveAdapterAlert: {
@@ -284,6 +330,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
         recovered: string[];
         failedSources: Array<{ stablecoinId: string; failedCycles: number }>;
         scoreIneligibleSources: Array<{ stablecoinId: string; degradedCycles: number }>;
+        scoreIneligibleUnknownSources: Array<{ stablecoinId: string; heldRaised: boolean }>;
       } | null;
     };
   }
@@ -349,10 +396,11 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect(clean.firedRuleIds).toEqual([]);
     expect(clean.quality).toBeUndefined();
 
-    mocks.states.mockResolvedValue(new Map([[COIN, {
-      lastStatus: "degraded",
-      warnings: [{ code: "undated-portfolio", effect: "degraded" }],
-    }]]));
+    mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded" }]]));
+    mocks.scoringEvidence.mockResolvedValue({
+      scoreIneligibleIds: new Set([COIN]),
+      unknownIds: new Set<string>(),
+    });
     const failing = await readAlert([
       historyRow(NOW, "degraded"), historyRow(NOW - 14_400, "degraded"), historyRow(NOW - 28_800, "degraded"),
     ]);
@@ -363,7 +411,51 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
       "reserve-sync-degraded",
       "reserve-score-ineligible-sustained",
     ]));
-    expect(failing.quality?.reasons).toEqual(failing.firedRuleIds);
+    // The active transition is named per coin, so the bare rule id is not repeated.
+    expect(failing.quality?.reasons).toEqual([
+      "reserve-score-ineligible-sustained:iusd-infinifi",
+      "reserve-sync-degraded",
+    ]);
+    expect(failing.activeAdapterAlertReasons).toEqual(["reserve-score-ineligible-sustained:iusd-infinifi"]);
+  });
+
+  it("does not charge a degraded attempt that wrote no snapshot as a degraded success", async () => {
+    mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded" }]]));
+    mocks.scoringEvidence.mockResolvedValue({
+      scoreIneligibleIds: new Set([COIN]),
+      unknownIds: new Set<string>(),
+    });
+    const withheld = (attemptedAt: number) => ({
+      ...historyRow(attemptedAt, "degraded"),
+      failure_category: "upstream-http",
+    });
+    const result = await readAlert([withheld(NOW), withheld(NOW - 14_400), withheld(NOW - 28_800)]);
+    expect(result.reserveAdapterAlert?.raised).toEqual([]);
+    expect(result.reserveAdapterAlert?.scoreIneligibleSources).toEqual([]);
+  });
+
+  it("holds a raised score-ineligible alert when the published snapshot becomes unreadable", async () => {
+    mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded" }]]));
+    mocks.scoringEvidence.mockResolvedValue({
+      scoreIneligibleIds: new Set([COIN]),
+      unknownIds: new Set<string>(),
+    });
+    const raised = await readAlert([
+      historyRow(NOW, "degraded"), historyRow(NOW - 14_400, "degraded"), historyRow(NOW - 28_800, "degraded"),
+    ]);
+    expect(raised.reserveAdapterAlert?.raised).toEqual(["reserve-score-ineligible-sustained"]);
+
+    mocks.scoringEvidence.mockResolvedValue({
+      scoreIneligibleIds: new Set<string>(),
+      unknownIds: new Set([COIN]),
+    });
+    const held = await readAlert([historyRow(NOW + 14_400, "error")]);
+    expect(held.reserveAdapterAlert?.recovered).toEqual([]);
+    expect(held.reserveAdapterAlert?.scoreIneligibleUnknownSources).toEqual([
+      { stablecoinId: COIN, heldRaised: true },
+    ]);
+    expect(held.firedRuleIds).toContain("reserve-score-ineligible-sustained");
+    expect(held.degradedReasons).toContain("reserve-score-ineligible-evidence-unknown");
   });
 
   it("raises the census rule when a published composition changes shape", async () => {
@@ -391,5 +483,26 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     })]);
     expect(second.firedRuleIds).toContain("reserve-composition-census-drift");
     expect(second.quality?.reasons).toContain("reserve-composition-census-drift");
+  });
+
+  it("reports an unreadable retained census instead of silently reseeding a clean baseline", async () => {
+    mocks.states.mockResolvedValue(new Map());
+    const slices = (names: Array<[string, number]>) =>
+      names.map(([name, pct]) => ({ name, pct, risk: "low" as const }));
+    mocks.drift.mockResolvedValue({
+      driftCoins: [], fallbackCoins: [], observedIds: [],
+      liveReserveMap: new Map([[COIN, slices([["T-bills", 60], ["Custody cash", 40]])]]),
+    });
+    cache.set("reserve-post-sync-watchdog:composition-census:v1", "{not-json");
+
+    const corrupt = await readAlert([]);
+    expect(corrupt.degradedReasons).toContain("composition-census-state-unreadable");
+    expect(corrupt.compositionCensus).toBeNull();
+    expect(corrupt.firedRuleIds).not.toContain("reserve-composition-census-drift");
+
+    // The reseeded baseline serves the next run; this run published no verdict.
+    const next = await readAlert([]);
+    expect(next.compositionCensus).toEqual({ observedCoins: 1, findings: [] });
+    expect(next.degradedReasons).not.toContain("composition-census-state-unreadable");
   });
 });

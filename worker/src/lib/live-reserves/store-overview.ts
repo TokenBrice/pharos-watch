@@ -8,6 +8,7 @@ import {
   getConfiguredLiveReserveCoins,
   LIVE_RESERVE_FRESHNESS_SEC,
   PERSISTENTLY_STALE_INDEPENDENT_THRESHOLD_SEC,
+  selectScoringDegradedWarnings,
   type AuthoritativeReserveSnapshot,
   type LiveReserveScoringMap,
   type ReserveCompositionRow,
@@ -421,6 +422,54 @@ export async function computeReserveCompositionOverview(
     invalidFeedReviewIds: reviews.invalidIds,
     unacknowledgedPersistentlyStaleIndependentCoins: healthCounts.persistentlyStaleIndependentCoins,
   };
+}
+
+export interface PublishedReserveScoringEvidence {
+  /** Published snapshot warnings the coin's scoring policy does not excuse. */
+  scoreIneligibleIds: Set<string>;
+  /** A configured independent adapter publishes no decodable, consistent snapshot. */
+  unknownIds: Set<string>;
+}
+
+/**
+ * Score ineligibility of the published composition, not of the latest attempt:
+ * a withheld fallback or a failed attempt writes no snapshot and says nothing
+ * about the retained one. A row that cannot be decoded leaves the verdict
+ * unknown rather than admitting the coin.
+ */
+export async function loadPublishedReserveScoringEvidence(
+  db: D1Database,
+  syncById: ReadonlyMap<string, ReserveSyncStateRecord>,
+  stablecoinIds: readonly string[],
+): Promise<PublishedReserveScoringEvidence> {
+  const scopedIds = new Set(stablecoinIds);
+  const compositionById = await loadReserveCompositionRowMap(db, [...scopedIds]);
+  const evidence: PublishedReserveScoringEvidence = {
+    scoreIneligibleIds: new Set(),
+    unknownIds: new Set(),
+  };
+  for (const coin of getConfiguredLiveReserveCoins()) {
+    if (!scopedIds.has(coin.id)) continue;
+    const config = coin.liveReservesConfig;
+    const adapter = getLiveReserveAdapterDefinition(config.adapter);
+    if (adapter?.evidenceClass !== "independent") continue;
+    const syncState = syncById.get(coin.id) ?? null;
+    const row = compositionById.get(coin.id);
+    const record = row && hasConsistentSnapshotState(syncState, {
+      fetchedAt: row.fetched_at,
+      attemptId: row.attempt_id ?? null,
+    })
+      ? parseReserveCompositionRow(row, syncState).record
+      : null;
+    if (!record) {
+      evidence.unknownIds.add(coin.id);
+      continue;
+    }
+    if (selectScoringDegradedWarnings(record.warnings, config).length > 0) {
+      evidence.scoreIneligibleIds.add(coin.id);
+    }
+  }
+  return evidence;
 }
 
 async function loadFreshAuthoritativeReserveSnapshots(

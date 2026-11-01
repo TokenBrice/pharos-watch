@@ -94,34 +94,55 @@ export function evaluateReserveCompositionCensus(
 function parseSnapshot(value: unknown): ReserveCompositionCensusSnapshot | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
-  if (!Array.isArray(record.census) || !record.shares || typeof record.shares !== "object") return null;
+  if (!Array.isArray(record.census)) return null;
+  if (!record.shares || typeof record.shares !== "object" || Array.isArray(record.shares)) return null;
   const census = record.census.filter((identity): identity is string => typeof identity === "string").sort();
   if (census.length === 0 || census.length !== record.census.length) return null;
+  if (new Set(census).size !== census.length) return null;
+  const shareEntries = Object.entries(record.shares as Record<string, unknown>);
+  // The census and the share vector are one observation: an identity present in
+  // only one of them would fabricate an added or removed slice on the next diff.
+  if (shareEntries.length !== census.length) return null;
   const shares: Record<string, number> = {};
-  for (const [identity, share] of Object.entries(record.shares as Record<string, unknown>)) {
+  for (const [identity, share] of shareEntries) {
     if (typeof share !== "number" || !Number.isFinite(share) || share < 0) return null;
     shares[identity] = share;
   }
+  if (!census.every((identity) => identity in shares)) return null;
   return { census, shares };
 }
 
+export type ReserveCompositionCensusStateParse =
+  | { state: ReserveCompositionCensusState; issue: null }
+  | { state: null; issue: "invalid-json" | "invalid-state" };
+
+/**
+ * Decode the retained baseline. Unreadable state is unknown, never an empty
+ * baseline: the caller must not diff against or publish it as a clean
+ * first-seen observation.
+ */
 export function parseReserveCompositionCensusState(
   value: string | null | undefined,
-): ReserveCompositionCensusState {
-  if (!value) return { version: 1, coins: {} };
+): ReserveCompositionCensusStateParse {
+  if (!value) return { state: { version: 1, coins: {} }, issue: null };
+  let parsed: unknown;
   try {
-    const parsed = JSON.parse(value) as { coins?: unknown };
-    if (!parsed || typeof parsed !== "object" || !parsed.coins || typeof parsed.coins !== "object") {
-      return { version: 1, coins: {} };
-    }
-    const coins: Record<string, ReserveCompositionCensusSnapshot> = {};
-    for (const [stablecoinId, entry] of Object.entries(parsed.coins as Record<string, unknown>)) {
-      if (Object.keys(coins).length >= MAX_CENSUS_COINS) break;
-      const snapshot = parseSnapshot(entry);
-      if (snapshot) coins[stablecoinId] = snapshot;
-    }
-    return { version: 1, coins };
+    parsed = JSON.parse(value);
   } catch {
-    return { version: 1, coins: {} };
+    return { state: null, issue: "invalid-json" };
   }
+  if (!parsed || typeof parsed !== "object") return { state: null, issue: "invalid-state" };
+  const coinsValue = (parsed as { coins?: unknown }).coins;
+  if (!coinsValue || typeof coinsValue !== "object" || Array.isArray(coinsValue)) {
+    return { state: null, issue: "invalid-state" };
+  }
+  const entries = Object.entries(coinsValue as Record<string, unknown>);
+  if (entries.length > MAX_CENSUS_COINS) return { state: null, issue: "invalid-state" };
+  const coins: Record<string, ReserveCompositionCensusSnapshot> = {};
+  for (const [stablecoinId, entry] of entries) {
+    const snapshot = parseSnapshot(entry);
+    if (!snapshot) return { state: null, issue: "invalid-state" };
+    coins[stablecoinId] = snapshot;
+  }
+  return { state: { version: 1, coins }, issue: null };
 }
