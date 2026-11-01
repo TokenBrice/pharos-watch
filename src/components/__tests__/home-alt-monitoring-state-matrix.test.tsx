@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { ComponentType } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeAltRankingsSection } from "@/components/home-alt-rankings-section";
@@ -345,6 +345,41 @@ describe("PegHealthCard median availability", () => {
 });
 
 describe("RecentFreezesCard authoritative totals", () => {
+  it("scopes the recent rows to the selected window instead of a fixed seven days", () => {
+    const nowSec = Math.floor(UPDATED_AT / 1000);
+    useBlacklistEventsPageMock.mockReturnValue(queryFor("ready", {
+      events: [{
+        amountUsdAtEvent: 2_100_000,
+        eventType: "blacklist",
+        id: "older-freeze",
+        stablecoin: "USDT",
+        stablecoinId: "usdt-tether",
+        timestamp: nowSec - 3 * 86_400,
+      }],
+    }, { events: [] }));
+    useBlacklistSummaryMock.mockReturnValue(queryFor("ready", {
+      stats: {
+        recentFreezeCount24h: 0,
+        recentFreezeCount7d: 1,
+        recentFreezeAmount24hUsd: 0,
+        recentFreezeAmount7dUsd: 2_100_000,
+        valuationCoverage: {
+          recent24h: { knownCount: 0, unavailableCount: 0 },
+          recent7d: { knownCount: 1, unavailableCount: 0 },
+        },
+      },
+    }, freezeSummaryEmpty));
+    useStablecoinsMock.mockReturnValue(queryFor("ready", stablecoinReady, { peggedAssets: [] }));
+
+    render(<RecentFreezesCard />);
+    expect(screen.getByText("0 freezes")).toBeTruthy();
+    expect(screen.queryByRole("list", { name: "Latest valued freezes, newest first" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "7d" }));
+    const list = screen.getByRole("list", { name: "Latest valued freezes, newest first" });
+    expect(within(list).getByText("$2M")).toBeTruthy();
+  });
+
   it("labels the row order and never rounds a sub-dollar freeze to $0", () => {
     const nowSec = Math.floor(UPDATED_AT / 1000);
     useBlacklistEventsPageMock.mockReturnValue(queryFor("ready", {

@@ -13,7 +13,7 @@ import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-sc
 import { makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { buildV9RadarDataset } from "@/components/radar-chart-v9";
-import type { MintBurnCoinFlow, MintBurnPerCoinResponse, StablecoinData } from "@shared/types";
+import type { MintBurnCoinFlow, MintBurnPerCoinResponse, StablecoinData, SupplyHistoryPoint } from "@shared/types";
 import type { StablecoinMeta } from "@shared/types/core";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
@@ -303,6 +303,68 @@ describe("deriveSupplySeries", () => {
     expect(result[0].data[0].value).toBe(1_000_000);
     expect(result[0].data[1].ts).toBe(1700086400 * 1000);
   });
+
+  it("omits a partial-chain remainder instead of plotting it as whole-asset market cap", () => {
+    const history: SupplyHistoryPoint[] = [
+      { date: 1700000000, circulatingUsd: 1_000_000, price: 1.0, supplyProvenance: null },
+      {
+        date: 1700086400,
+        circulatingUsd: 960_000,
+        price: 1.0,
+        supplyProvenance: {
+          supplySource: null,
+          supplyObservedAt: null,
+          supplyChainGuard: {
+            reason: "supply-chain-dropout",
+            status: "chains-unavailable",
+            partialCoverage: true,
+            chains: [{
+              chainLabel: "HyperEVM",
+              listCurrentUsd: null,
+              baselineUsd: 40_000,
+              baselineObservedAt: 1_699_000_000,
+              baselineSource: "seed",
+              resolution: "unavailable",
+            }],
+          },
+        },
+      },
+      { date: 1700172800, circulatingUsd: 1_010_000, price: 1.0, supplyProvenance: null },
+    ];
+    const result = deriveSupplySeries({
+      selectedIds: ["frxusd-frax"],
+      histories: [history],
+      metaMap: new Map([["frxusd-frax", { name: "Frax USD" }]]),
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0].data.map((point) => point.value)).toEqual([1_000_000, 1_010_000]);
+  });
+
+  it("drops a series whose every recorded point is a partial-chain remainder", () => {
+    const partialProvenance: NonNullable<SupplyHistoryPoint["supplyProvenance"]> = {
+      supplySource: null,
+      supplyObservedAt: null,
+      supplyChainGuard: {
+        reason: "supply-chain-dropout",
+        status: "chains-unavailable",
+        partialCoverage: true,
+        chains: [{
+          chainLabel: "HyperEVM",
+          listCurrentUsd: null,
+          baselineUsd: 40_000,
+          baselineObservedAt: 1_699_000_000,
+          baselineSource: "seed",
+          resolution: "unavailable",
+        }],
+      },
+    };
+    const result = deriveSupplySeries({
+      selectedIds: ["frxusd-frax"],
+      histories: [[{ date: 1700000000, circulatingUsd: 960_000, price: 1.0, supplyProvenance: partialProvenance }]],
+      metaMap: new Map(),
+    });
+    expect(result).toEqual([]);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -368,6 +430,25 @@ describe("deriveFlowSeries", () => {
     expect(series.unavailableHours).toBe(2);
     // The legacy hour without `valuation` stays plotted but is counted as coverage unknown.
     expect(series.unknownCoverageHours).toBe(1);
+  });
+
+  it("counts a scan-uncovered hour as unavailable without attributing it to valuation", () => {
+    const detail = makeFlowDetail({
+      hourly: [
+        { hourTs: 1700000000, netFlowUsd: 10, mintVolumeUsd: 10, burnVolumeUsd: 0, valuation: "complete",
+          scanCoverage: { complete: true, unavailableReason: null } },
+        { hourTs: 1700003600, netFlowUsd: null, mintVolumeUsd: 5, burnVolumeUsd: 0, valuation: "complete",
+          scanCoverage: { complete: false, unavailableReason: "scan-coverage-incomplete" } },
+      ],
+    });
+    const [series] = deriveFlowSeries({
+      selectedIds: ["usdc"],
+      flowDetails: [detail],
+      metaMap: new Map([["usdc", { symbol: "USDC" }]]),
+    });
+    expect(series.data).toEqual([{ ts: 1700000000 * 1000, netFlowUsd: 10 }]);
+    expect(series.unavailableHours).toBe(1);
+    expect(series.unknownCoverageHours).toBe(0);
   });
 });
 

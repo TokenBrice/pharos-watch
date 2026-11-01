@@ -183,7 +183,7 @@ export function buildGaugeVerdict(
   band: GaugeBand | "unsettled" | null,
   drivers: { down: readonly { symbol: string }[]; up: readonly { symbol: string }[] },
 ): string {
-  if (band == null) return "No weighted coin has the history and fully valued 24h flow needed to score.";
+  if (band == null) return "The Bank Run Gauge is not rated this window.";
   const down = drivers.down.map((tick) => tick.symbol);
   const up = drivers.up.map((tick) => tick.symbol);
   const pulls = [

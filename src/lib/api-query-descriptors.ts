@@ -259,7 +259,9 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
   digestArchive: defineApiQuery(
     {
       queryKey: ["digest-archive"] as const,
-      path: API_PATHS.digestArchive(),
+      // Complete history: the default page is capped at 365 rows with no total,
+      // which cannot support a whole-archive trigger record.
+      path: `${API_PATHS.digestArchive()}?history=all`,
       producerIntervalMs: CRON_DAILY_DIGEST,
     },
     "meta",

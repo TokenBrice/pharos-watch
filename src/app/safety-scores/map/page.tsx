@@ -93,8 +93,7 @@ export default function SafetyScoreMapPage() {
           </h2>
           <p className="text-sm leading-relaxed text-foreground/88 sm:text-[0.95rem]">
             The poster is rebuilt and republished every day from the same Safety Score data the rest
-            of the site reads, so the copy above is always the current census rather than a
-            hand-updated snapshot. The date it was rendered from is stamped beside the title —
+            of the site reads. The date it was rendered from is stamped beside the title —
             trust that stamp over the day you happen to be looking at it, and re-download rather than
             reusing an old file when the date matters.
           </p>

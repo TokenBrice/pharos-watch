@@ -121,7 +121,9 @@ describe("buildGaugeVerdict", () => {
   });
 
   it("never claims a direction without a score", () => {
-    expect(buildGaugeVerdict(null, { down: [], up: [] })).not.toMatch(/pressure is|issuance is/i);
+    const verdict = buildGaugeVerdict(null, { down: [], up: [] });
+    expect(verdict).toBe("The Bank Run Gauge is not rated this window.");
+    expect(verdict).not.toMatch(/pressure is|issuance is|history|fully valued/i);
     expect(buildGaugeVerdict("NEUTRAL", { down: [], up: [] })).toBe("Weighted pressure is in line with the 30-day norm.");
   });
 

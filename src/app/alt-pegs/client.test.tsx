@@ -5,7 +5,7 @@ import { hydrateRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AltPegsClient } from "@/app/alt-pegs/client";
-import { makeAltPegCoin } from "@shared/test-utils/stablecoin";
+import { makeAltPegCoin, makeStablecoin } from "@shared/test-utils/stablecoin";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { CORE_NON_USD_IDS, coreNonUsdRows } from "@shared/test-utils/alt-peg-fixtures";
 
@@ -367,6 +367,35 @@ describe("AltPegsClient", () => {
     expect(chip.getAttribute("data-reason-codes")).toBe("supply-unavailable");
     expect(screen.getByText(/known · \d+\/\d+ observed/)).toBeTruthy();
     expect(screen.getByTestId("cohort-mix").textContent).toContain("Mix withheld");
+  });
+
+  it("keeps a partial-chain remainder in the observed row count", () => {
+    const assets = completeNonUsd({});
+    const index = assets.findIndex((asset) => asset.id === "xsgd-straitsx");
+    assets[index] = makeStablecoin({
+      ...assets[index],
+      circulating: { peggedSGD: 100_000_000 },
+      supplyChainGuard: {
+        reason: "supply-chain-dropout",
+        status: "chains-unavailable",
+        partialCoverage: true,
+        chains: [{
+          chainLabel: "Polygon",
+          listCurrentUsd: 0,
+          baselineUsd: 2_000_000,
+          baselineObservedAt: 1_792_700_000,
+          baselineSource: "state",
+          resolution: "unavailable",
+        }],
+      },
+    });
+    useStablecoinsMock.mockReturnValue({
+      ...useStablecoinsMock(),
+      data: { peggedAssets: [makeAltPegCoin("usdc-circle", 100_000_000), ...assets] },
+    });
+    render(<AltPegsClient />);
+    expect(screen.getByText("known · 1/1 observed")).toBeTruthy();
+    expect(screen.queryByText("known · 0/1 observed")).toBeNull();
   });
 
   it("orders hero, atlas, ranking, then the coin table", () => {

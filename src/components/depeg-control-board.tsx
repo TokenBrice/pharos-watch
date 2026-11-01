@@ -19,6 +19,7 @@ import {
   metricTone,
 } from "@/components/depeg-board-model";
 import { DeviationBar, LinearGauge, EventLoadMeter } from "@/components/depeg-board-primitives";
+import { QueryStateNotice } from "@/components/query-state-notice";
 import type { PegCurrency, GovernanceType } from "@shared/types";
 import { GOVERNANCE_FILTER_OPTIONS, OPEN_INCIDENT_EVIDENCE_LABELS, PEG_FILTER_OPTIONS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import { formatCurrency, formatElapsedSeconds, formatPegOccupancy, formatTrackingSpanDays } from "@shared/lib/format";
@@ -37,8 +38,8 @@ interface DepegControlBoardProps {
   onClearFilters: () => void;
   onRowClick: (id: string) => void;
   nowSeconds: number;
-  /** Assets whose event history is too short to score, shown as scope context. */
-  eventFloorCount?: number;
+  /** False when the peg catalog read returned no body, so counts cannot be claimed. */
+  catalogAvailable?: boolean;
 }
 
 const BOARD_PAGE_SIZE = 12;
@@ -239,11 +240,15 @@ export function DepegControlBoard({
   onClearFilters,
   onRowClick,
   nowSeconds,
-  eventFloorCount,
+  catalogAvailable = true,
 }: DepegControlBoardProps) {
   const warningCount = rows.filter((row) => row.coin.activeDepeg || row.pendingIncident ||
     (row.dews != null && isThreatBand(row.dews.band) && THREAT_BAND_ORDER[row.dews.band] >= THREAT_BAND_ORDER.ALERT)).length;
+  // Below the live-event supply floor, event history is not scored. Count only
+  // the rows in view so this figure shares the attention count's universe.
+  const eventFloorCount = rows.filter((row) => row.coin.depegEventCoverageLimited).length;
   const filtersActive = pegFilter !== "all" || typeFilter !== "all" || searchQuery.length > 0;
+  const catalogUnavailable = !catalogAvailable && rows.length === 0 && !filtersActive;
 
   const {
     sortKey,
@@ -274,7 +279,9 @@ export function DepegControlBoard({
           <h2 className="pharos-section-title mt-1">Peg control board</h2>
         </div>
         <p className="pharos-meta">
-          <span className="pharos-numeric font-semibold text-foreground">{warningCount}</span>{" "}
+          <span className="pharos-numeric font-semibold text-foreground">
+            {catalogAvailable ? warningCount : "—"}
+          </span>{" "}
           {filtersActive ? "filtered coins need attention" : "need attention"}
           {eventFloorCount ? (
             <>
@@ -366,19 +373,25 @@ export function DepegControlBoard({
           </div>
           <div className="divide-y divide-border/55">
             {paginatedRows.length === 0 ? (
-              <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-                <p>No stablecoins match these filters.</p>
-                {filtersActive ? (
-                  <button
-                    type="button"
-                    onClick={onClearFilters}
-                    className="pharos-focus-ring pharos-control-pill mt-3 gap-1.5"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                    Clear filters
-                  </button>
-                ) : null}
-              </div>
+              catalogUnavailable ? (
+                <div className="px-3 py-4">
+                  <QueryStateNotice state="unavailable" label="Peg catalog" />
+                </div>
+              ) : (
+                <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+                  <p>No stablecoins match these filters.</p>
+                  {filtersActive ? (
+                    <button
+                      type="button"
+                      onClick={onClearFilters}
+                      className="pharos-focus-ring pharos-control-pill mt-3 gap-1.5"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                      Clear filters
+                    </button>
+                  ) : null}
+                </div>
+              )
             ) : (
               paginatedRows.map((row, index) => (
                 <InstrumentRow

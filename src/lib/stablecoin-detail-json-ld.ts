@@ -1,4 +1,4 @@
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, getProfilePegLabel } from "@shared/lib/classification";
+import { BACKING_LABELS, GOVERNANCE_LABELS, LAUNCH_PHASE_LABELS, PEG_LABELS_SHORT, getProfilePegLabel } from "@shared/lib/classification";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import type { StablecoinMeta } from "@shared/types";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -96,13 +96,17 @@ function absoluteSiteUrl(pathOrUrl: string | undefined): string | undefined {
 /**
  * Profile BreadcrumbList: Home, the coin's peg hub (or the Stablecoins index
  * when no hub is built), then the coin. Google shows the middle crumb on the
- * desktop result URL line. Pre-launch profiles sit under Upcoming.
+ * desktop result URL line. Pre-launch profiles sit under Upcoming; a launched
+ * profile still awaiting data names its published phase instead.
  */
 export function buildStablecoinBreadcrumbItems(coin: StablecoinMeta): BreadcrumbItem[] {
   const pegHubUrl = buildPegLandingUrl(coin.flags.pegCurrency);
   const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
   const middle: BreadcrumbItem = coin.status === "pre-launch"
-    ? { name: "Upcoming", url: "/upcoming/" }
+    ? {
+        name: isLaunchedAwaitingData(coin) ? LAUNCH_PHASE_LABELS.launched : "Upcoming",
+        url: "/upcoming/",
+      }
     : pegHubUrl
       ? { name: `${pegLabel} Stablecoins`, url: pegHubUrl }
       : { name: "Stablecoins", url: "/stablecoins/" };

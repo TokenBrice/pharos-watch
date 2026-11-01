@@ -277,4 +277,37 @@ describe("DepegControlBoard", () => {
     expect(within(rows[0]).getByText("CLEAR")).toBeTruthy();
   });
 
+  it("counts below-floor rows in the same filtered universe as the attention figure", () => {
+    const goldFloor = makeRow({
+      id: "gold-floor",
+      symbol: "GOLDF",
+      pegCurrency: "GOLD",
+      depegEventCoverageLimited: true,
+      activeDepeg: false,
+      currentDeviationBps: 0,
+    }, null);
+
+    renderBoard([goldFloor], { pegFilter: "GOLD" });
+
+    expect(screen.getByText(/need attention/).textContent).toBe(
+      "0 filtered coins need attention · 1 below the event-history floor",
+    );
+  });
+
+  it("renders the catalog unavailable state instead of an empty-filter claim", () => {
+    const view = renderBoard([], { catalogAvailable: false });
+
+    expect(screen.queryByText("No stablecoins match these filters.")).toBeNull();
+    expect(screen.getByText(/Peg catalog is temporarily unavailable/)).toBeTruthy();
+    expect(screen.getByText(/need attention/).textContent).toBe("— need attention");
+    view.unmount();
+
+    renderBoard([], { catalogAvailable: true });
+    expect(screen.getByText("No stablecoins match these filters.")).toBeTruthy();
+
+    cleanupFrontendTest();
+    renderBoard([], { catalogAvailable: false, searchQuery: "xyz" });
+    expect(screen.getByText("No stablecoins match these filters.")).toBeTruthy();
+  });
+
 });
