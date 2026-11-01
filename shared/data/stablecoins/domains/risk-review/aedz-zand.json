@@ -1,0 +1,27 @@
+{
+  "id": "aedz-zand",
+  "blacklistabilityReview": {
+    "reviewedStatus": true,
+    "sources": [
+      {
+        "label": "AEDZ implementation contract (Ethereum, Etherscan-verified CMTAT v3.0.0)",
+        "url": "https://etherscan.io/address/0xbc1f98332802d3ee9ef0742243f172ec5e49b6ca#code"
+      },
+      {
+        "label": "AEDZ token contract (Ethereum)",
+        "url": "https://etherscan.io/address/0xfc347c996bd66c1d92e2045c80b413ef3fc84a90"
+      },
+      {
+        "label": "AEDZ mint (Solana)",
+        "url": "https://solscan.io/token/BMrgsEdrqfP4EAhiRbK5fFkq8xgQrqDAcZrv8R2pG4zG"
+      },
+      {
+        "label": "Zand Trust risk disclosure",
+        "url": "https://zandtrust.com/en/risk-disclosure"
+      }
+    ],
+    "evidence": "Verified on-chain on 2026-11-01 rather than inferred. Ethereum: AEDZ at 0xfc347c996bd66c1d92e2045c80b413ef3fc84a90 is an OpenZeppelin TransparentUpgradeableProxy whose implementation 0xbc1f98332802d3ee9ef0742243f172ec5e49b6ca is Etherscan-verified CMTATUpgradeable version 3.0.0. Its role-gated functions include setAddressFrozen and batchSetAddressFrozen, freezePartialTokens, forcedTransfer, burn(address,uint256) from any holder, pause and deactivateContract, and CMTAT's hasRole override grants every role to the default admin. DEFAULT_ADMIN_ROLE has been held since deployment by 0x92876a78d8c114fb48444dc8319972fdfff0a8ee, which also owns ProxyAdmin 0xd29a724d182b81322dcc3b004814e4b71c59213e and can therefore replace the implementation. No rule engine is set (ruleEngine is the zero address), so transfers are otherwise unrestricted. The admin froze 0x379fad8b15c870d421f8ffff8cb082d46a9eee65 at block 23983583 and unfroze it at block 23983684 on 2025-12-10 (AddressFrozen events). Solana: mint BMrgsEdrqfP4EAhiRbK5fFkq8xgQrqDAcZrv8R2pG4zG is a Token-2022 mint whose freeze authority, mint authority and metadata update authority are all the single system-owned key GZ3pK7p4ZWjJ8QQgwhE3XjDiRhpEzYA9vgTxvWPJ4JvQ; it carries only metadata-pointer and token-metadata extensions, with no permanent delegate, pausable or default-account-state extension. Zand Trust's risk disclosure reserves the right to freeze AEDZ temporarily or permanently at its sole discretion or as directed by the CBUAE or other UAE authorities.",
+    "reviewer": "Claude weekly pre-launch sweep",
+    "reviewedAt": "2026-11-01"
+  }
+}

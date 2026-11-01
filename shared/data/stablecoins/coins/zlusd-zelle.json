@@ -1,0 +1,93 @@
+{
+  "id": "zlusd-zelle",
+  "name": "ZelleUSD",
+  "symbol": "ZLUSD",
+  "oneLiner": "ZLUSD is Zelle's dollar stablecoin, issued on Solana by Anchorage Digital Bank since June 2026; Early Warning plans it for future international payments.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized"
+  },
+  "collateral": "Early Warning describes ZLUSD as U.S. dollar-backed, and the issuer's token metadata says it is redeemable 1:1 for U.S. dollars. Anchorage Digital Bank's covered stablecoin terms commit a reserve whose aggregate market value at each business-day close is at least equal to all outstanding ADB-issued stablecoins, held in a South Dakota express trust with ADB as trustee. The announcement and token metadata disclose no ZLUSD reserve composition, custodian or attestation.",
+  "pegMechanism": "Issuer-managed 1:1 USD redemption. Anchorage Digital Bank N.A. is sole issuer and obligor; under its covered stablecoin terms it issues to and redeems from ADB clients only, at par net of fees, and does not redeem from non-client holders. Single Solana Token-2022 mint whose mint, freeze, pause and permanent-delegate authorities are Anchorage keys.",
+  "mechanismArchetype": "fiat-cash",
+  "geckoId": "zelleusd",
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "7NNkMtGACBbwJdMRYD2KchTKm2xBwnsb4bT7YSfRUWZ4",
+      "decimals": 6
+    }
+  ],
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.zelle.com"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/zelle"
+    },
+    {
+      "label": "Announcement",
+      "url": "https://www.earlywarning.com/press-release/zelle-heads-india-unveils-zelleusd-stablecoin-other-markets"
+    },
+    {
+      "label": "Issuer covered stablecoin terms",
+      "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United States",
+    "regulator": "OCC",
+    "license": "Federal Bank Charter"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2026-06-11",
+  "launchPhase": "launched",
+  "launchPhaseDetail": "ZLUSD is live on Solana. Pharos tracks it pre-launch because no admissible source prices it. Early Warning Services, the operator of the Zelle network, unveiled ZelleUSD (ZLUSD) on June 11 2026 as its proprietary U.S. dollar-backed stablecoin and said it will support future international payments in other markets, alongside a Zelle remittance corridor to India expected before the end of 2026. The release named no issuer, chain or launch date. The issuer is Anchorage Digital Bank N.A.: the Solana Token-2022 mint 7NNkMtGACBbwJdMRYD2KchTKm2xBwnsb4bT7YSfRUWZ4 (6 decimals) was created on June 10 2026 with metadata on Anchorage's static host, and all 30 of its mint transactions were signed by C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt, the mint authority of the Anchorage-issued USDPT and USDGO mints that Western Union and OSL publish. The first tokens were minted on June 18 2026 under the placeholder name USDXDEV. On July 10 the metadata was renamed ZLUSD and now states that ZLUSD is issued for Zelle by Anchorage Digital Bank NA and is redeemable 1:1 for U.S. dollars. Ledger Insights reported on June 12 that the stablecoin was live and that Zelle app support would follow by the end of the year. No transfer-hook program is set and new token accounts open unfrozen, so transfers are not allowlisted. Holders have transferred tokens between wallets, and the freeze authority has frozen the accounts of five specific wallets. Anchorage's covered stablecoin terms limit issuance and redemption to ADB clients but allow on-chain transfers to other addresses, barring transfers that violate sanctions or other law. At slot 464063902 on November 1 2026, supply was 137,650.11 ZLUSD across 14 funded wallets, after 158,262.11 minted and 20,612 burned. CoinGecko's zelleusd entry is a preview listing for this mint with no price or market cap, DefiLlama does not list ZLUSD, and no DEX pool exists for the mint.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.earlywarning.com/press-release/zelle-heads-india-unveils-zelleusd-stablecoin-other-markets",
+      "title": "Zelle Heads to India, Unveils ZelleUSD Stablecoin For Other Markets",
+      "description": "Early Warning's June 11 2026 announcement of ZelleUSD and of a Zelle remittance corridor to India.",
+      "source": "Early Warning Services"
+    },
+    {
+      "type": "article",
+      "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms",
+      "title": "Anchorage Digital Bank, N.A. Covered Stablecoin Terms",
+      "description": "Issuance and redemption eligibility, reserve trust, transfer rights and freeze powers for every stablecoin series Anchorage Digital Bank issues.",
+      "source": "Anchorage Digital"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2026-06-11",
+      "type": "announcement",
+      "title": "Early Warning unveils ZelleUSD alongside a Zelle corridor to India",
+      "description": "Early Warning Services, operator of the Zelle network, unveiled ZelleUSD (ZLUSD) as its proprietary U.S. dollar-backed stablecoin to support future international payments in other markets. It also named India as the first country where U.S. consumers can send money abroad with Zelle, with initial availability expected before the end of 2026. The release named no issuer, chain or launch date for ZLUSD.",
+      "sourceUrl": "https://www.earlywarning.com/press-release/zelle-heads-india-unveils-zelleusd-stablecoin-other-markets"
+    },
+    {
+      "date": "2026-06-18",
+      "type": "milestone",
+      "title": "Anchorage Digital Bank mints the first ZLUSD on Solana",
+      "description": "Mint authority C2QJ4HKLWzWRNprAmKoyd6YqXouVHFZuLKujdqtF4ZDt, which also mints the Anchorage-issued USDPT and USDGO, minted 1.33 tokens on mint 7NNkMtGACBbwJdMRYD2KchTKm2xBwnsb4bT7YSfRUWZ4. The mint had been created on June 10 under the placeholder name USDXDEV, and these tokens remain part of ZLUSD supply.",
+      "sourceUrl": "https://solscan.io/tx/4zJTGGDS4ipetzCJMu6mz9UFy9KdFCqEcTutzepkX3qYgiAwKunygZo42o3U6cA4yJ7DWmJo9brGetVUABwRCYMp"
+    },
+    {
+      "date": "2026-07-10",
+      "type": "milestone",
+      "title": "Solana mint renamed ZLUSD with Anchorage-hosted issuer metadata",
+      "description": "The token metadata changed from USDXDEV to ZLUSD and now points to Anchorage's static host, which describes ZLUSD as a dollar-pegged stablecoin issued for Zelle by Anchorage Digital Bank NA and redeemable 1:1 for U.S. dollars.",
+      "sourceUrl": "https://solscan.io/tx/SiXNq2aTDTsnYEVQEZHJn8fYXvpypKTGRmFwzYE1tQNk98UXxMjfM6rpGdRSAhrywJeqN8H64NKktEna1A8LLu5"
+    }
+  ],
+  "launchDate": "2026-06-18",
+  "listingStatusReview": {
+    "changedAt": "2026-11-01",
+    "reason": "Missing lane: price. CoinGecko zelleusd is a preview listing with null price and market cap, DefiLlama does not list ZLUSD, and no DEX pool exists for the Solana mint. Supply is observable on-chain at 137,650 ZLUSD, below the $5M review threshold.",
+    "reviewBy": "2026-12-31"
+  }
+}

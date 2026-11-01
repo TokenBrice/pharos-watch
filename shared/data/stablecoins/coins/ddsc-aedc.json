@@ -1,0 +1,111 @@
+{
+  "id": "ddsc-aedc",
+  "name": "DDSC",
+  "symbol": "DDSC",
+  "oneLiner": "DDSC is a CBUAE-licensed dirham payment token developed by IHC, FAB and Sirius and issued on ADI Chain, an institutional Layer 2, since February 2026.",
+  "flags": {
+    "backing": "rwa-backed",
+    "pegCurrency": "AED",
+    "governance": "centralized"
+  },
+  "collateral": "The DDSC white paper (version 1.0, October 2025) commits 100% AED cash in segregated escrow accounts at qualified banks, ring-fenced from operating funds and reconciled daily against supply; custodian banks are not named. The issuer's transparency feed reported AED 48,280,499 of reserves against 48,280,499 DDSC on November 1 2026 and names Crowe as reserve attestor; no attestation report is posted on the page.",
+  "pegMechanism": "CBUAE-licensed Dirham Payment Token issued by AEDC Stable Coin Network and Distribution L.L.C. as an upgradeable ERC-20 on ADI Chain, an EVM zk-rollup Layer 2 that settles to Ethereum. Authorized Distribution Partners onboard holders after KYC/KYB checks and process 1:1 AED issuance and redemption to UAE bank accounts; the issuer does not serve end users directly. Mints and burns run through an on-chain StableVault treasury.",
+  "mechanismArchetype": "fiat-cash",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://www.ddsc.ai/"
+    },
+    {
+      "label": "Transparency",
+      "url": "https://www.ddsc.ai/transparency"
+    },
+    {
+      "label": "White paper",
+      "url": "https://www.ddsc.ai/DDSC_Whitepaper.pdf"
+    },
+    {
+      "label": "Twitter",
+      "url": "https://x.com/DDSCAI"
+    },
+    {
+      "label": "Announcement",
+      "url": "https://apigateway.adx.ae/adx/cdn/1.0/content/download/4695179"
+    }
+  ],
+  "jurisdiction": {
+    "country": "United Arab Emirates",
+    "regulator": "Central Bank of the UAE (CBUAE)",
+    "license": "Stored Value Facilities licence 05.01.01.018.2026.01 and Payment Token Services licence 09.01.01.004.2026.01"
+  },
+  "status": "pre-launch",
+  "announcedDate": "2025-04-28",
+  "launchPhaseDetail": "DDSC is issued on ADI Chain mainnet, but ADI Chain is not in Pharos's chain registry, so Pharos records no launch phase and its deployment and supply cannot enter runtime data. IHC, ADQ and First Abu Dhabi Bank announced a CBUAE-regulated dirham stablecoin on the ADI blockchain on April 28 2025, then to be issued by FAB. The October 2025 white paper names the issuer AEDC Stable Coin L.L.C., owned by Sirius Investment Holding (34%), IHC Capital Holding (33%) and 1968B SPV (33%), and records CBUAE in-principle approval on September 1 2025. The DDSC site now names AEDC Stable Coin Network and Distribution L.L.C. as the licensed issuer, holding Stored Value Facilities licence 05.01.01.018.2026.01 and Payment Token Services licence 09.01.01.004.2026.01. The CBUAE approved DDSC to go live on February 11 2026, and the ADI Chain explorer shows the first mint on February 16 2026 at token contract 0x1211f0cfe66739433c1330e21f4951b80e813479 (6 decimals). Authorized Distribution Partners onboard holders after KYC/KYB checks. IHC reported an AED 110 million DDSC transaction on May 21 2026, and a CBUAE no-objection certificate of July 3 2026 allows DDSC on selected VARA-regulated exchanges once its requirements are met; no platform was named. On November 1 2026 on-chain supply was 48,280,499 DDSC across 87 addresses, matching the issuer's transparency feed, which shows 657 DDSC in the issuance vault; the contract had minted 345,731,009 DDSC and burned 297,450,510 since February 2026. DDSC has no CoinGecko or DefiLlama listing. Its white paper calls it the Digital Dirham StableCoin, a separate instrument from the CBUAE's Digital Dirham CBDC.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://apigateway.adx.ae/adx/cdn/1.0/content/download/4695179",
+      "title": "IHC, Sirius and FAB Receive Central Bank Approval to Launch UAE Dirham-Backed Stablecoin DDSC on ADI Chain",
+      "description": "The February 11 2026 joint release announcing CBUAE approval for DDSC to go live on ADI Chain for institutional payment, settlement, treasury and trade use.",
+      "source": "IHC"
+    },
+    {
+      "type": "article",
+      "url": "https://www.ddsc.ai/DDSC_Whitepaper.pdf",
+      "title": "DDSC white paper, version 1.0 (October 2025)",
+      "description": "Issuer identity and shareholders, reserve and escrow terms, distribution model, holder rights, and the blacklist and freeze controls.",
+      "source": "AEDC Stable Coin"
+    },
+    {
+      "type": "article",
+      "url": "https://apigateway.adx.ae/adx/cdn/1.0/content/download/5093906",
+      "title": "DDSC Receives Central Bank Approval to Partner with Selected VARA-Regulated Exchange Platforms",
+      "description": "The July 3 2026 release on the CBUAE no-objection certificate for selected VARA-regulated exchanges, reporting more than AED 150 million transacted.",
+      "source": "IHC"
+    }
+  ],
+  "milestones": [
+    {
+      "date": "2025-04-28",
+      "type": "announcement",
+      "title": "IHC, ADQ and FAB announce a dirham-backed stablecoin on ADI blockchain",
+      "description": "The joint release says the stablecoin will be fully regulated by the CBUAE, issued by First Abu Dhabi Bank subject to regulatory approval, and run on the ADI blockchain developed by the ADI Foundation, for consumers, businesses and institutions.",
+      "sourceUrl": "https://apigateway.adx.ae/adx/cdn/1.0/content/download/4351293"
+    },
+    {
+      "date": "2025-09-01",
+      "type": "regulatory",
+      "title": "CBUAE grants the DDSC issuer in-principle payment token approval",
+      "description": "The DDSC white paper (version 1.0, October 2025) states that AEDC Stable Coin L.L.C. secured in-principle approval as a payment token issuer under the Payment Token Services Regulation, approval number CB UAE/BIS-L/2025/4821, dated September 1 2025.",
+      "sourceUrl": "https://www.ddsc.ai/DDSC_Whitepaper.pdf"
+    },
+    {
+      "date": "2026-02-11",
+      "type": "regulatory",
+      "title": "CBUAE approves DDSC to go live on ADI Chain",
+      "description": "IHC, Sirius International Holding and First Abu Dhabi Bank announce that the Central Bank of the UAE has approved DDSC to go live on ADI Chain, an institutional Layer 2 developed by the ADI Foundation, for payments, settlement, treasury and trade flows, and say DDSC is expected to be made available to FAB customers through approved platforms.",
+      "sourceUrl": "https://apigateway.adx.ae/adx/cdn/1.0/content/download/4695179"
+    },
+    {
+      "date": "2026-02-16",
+      "type": "milestone",
+      "title": "First DDSC minted on ADI Chain mainnet",
+      "description": "The ADI Chain explorer records a first mint of 999 DDSC to the issuance vault on token contract 0x1211f0cfe66739433c1330e21f4951b80e813479. A 110,175,000 DDSC mint followed on April 14 2026.",
+      "sourceUrl": "https://explorer.adifoundation.ai/tx/0xfac26b44bb288e7f827c44d883e9d3fdd336873b7ee4bd07d7df3149b945371f"
+    },
+    {
+      "date": "2026-05-21",
+      "type": "milestone",
+      "title": "IHC executes an AED 110 million DDSC transaction on ADI Chain",
+      "description": "IHC reports executing an AED 110 million (about USD 30 million) transaction using DDSC on ADI Chain and says the initiative has moved from development into live deployment.",
+      "sourceUrl": "https://apigateway.adx.ae/adx/cdn/1.0/content/download/4940842"
+    },
+    {
+      "date": "2026-07-03",
+      "type": "regulatory",
+      "title": "CBUAE grants DDSC a no-objection certificate for VARA-regulated exchanges",
+      "description": "The Central Bank of the UAE issues a no-objection certificate allowing DDSC to go live on selected VARA-regulated exchange platforms, subject to meeting its requirements, to extend DDSC beyond institutional settlement to retail, merchant and business payments. IHC reports more than AED 150 million transacted since launch; no platform is named.",
+      "sourceUrl": "https://apigateway.adx.ae/adx/cdn/1.0/content/download/5093906"
+    }
+  ]
+}

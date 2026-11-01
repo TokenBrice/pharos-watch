@@ -695,6 +695,10 @@
     "32": "/logos/compact/aed-rakbank.webp",
     "100": "/logos/compact/aed-rakbank-100.webp"
   },
+  "/logos/aedz-zand.png": {
+    "32": "/logos/compact/aedz-zand.webp",
+    "100": "/logos/compact/aedz-zand-100.webp"
+  },
   "/logos/arc-anq.png": {
     "32": "/logos/compact/arc-anq.webp",
     "100": "/logos/compact/arc-anq-100.webp"
@@ -995,6 +999,10 @@
     "32": "/logos/compact/cusdo-openeden.webp",
     "100": "/logos/compact/cusdo-openeden-100.webp"
   },
+  "/logos/ddsc-aedc.png": {
+    "32": "/logos/compact/ddsc-aedc.webp",
+    "100": "/logos/compact/ddsc-aedc-100.webp"
+  },
   "/logos/dusd-alto.png": {
     "32": "/logos/compact/dusd-alto.webp",
     "100": "/logos/compact/dusd-alto-100.webp"
@@ -1042,6 +1050,10 @@
   "/logos/eurw-newrails.jpg": {
     "32": "/logos/compact/eurw-newrails.webp",
     "100": "/logos/compact/eurw-newrails-100.webp"
+  },
+  "/logos/eurxt-caceis.png": {
+    "32": "/logos/compact/eurxt-caceis.webp",
+    "100": "/logos/compact/eurxt-caceis-100.webp"
   },
   "/logos/eusd-telcoin.png": {
     "32": "/logos/compact/eusd-telcoin.webp",
@@ -1722,6 +1734,10 @@
   "/logos/zkusd-goal3.png": {
     "32": "/logos/compact/zkusd-goal3.webp",
     "100": "/logos/compact/zkusd-goal3-100.webp"
+  },
+  "/logos/zlusd-zelle.png": {
+    "32": "/logos/compact/zlusd-zelle.webp",
+    "100": "/logos/compact/zlusd-zelle-100.webp"
   },
   "/logos/zsd-zephyr-protocol.png": {
     "32": "/logos/compact/zsd-zephyr-protocol.webp",
