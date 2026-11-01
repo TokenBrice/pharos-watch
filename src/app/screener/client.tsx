@@ -32,6 +32,7 @@ import {
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { isIncludedInArchetype } from "@shared/lib/stablecoins/mechanism-membership";
 import { resolveCustodyModel } from "@shared/lib/report-card-policy";
 import {
   resolveMintAuthorityScoreDisplay,
@@ -47,6 +48,8 @@ import type { TablePaginationProps } from "@/components/table-pagination";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // Curated classification is immutable for the lifetime of the client bundle.
+// The membership predicate keeps mechanism deep-links aligned with the
+// mechanism pages' archetype buckets.
 const SCREENABLE_COINS = CLIENT_TRACKED_STABLECOINS
   .filter((meta) => meta.status !== "quarantined" && meta.status !== "delisted")
   .map((meta) => ({
@@ -54,7 +57,8 @@ const SCREENABLE_COINS = CLIENT_TRACKED_STABLECOINS
     mechanism: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
     custodyModel: resolveCustodyModel(meta),
     blacklistable: projectBlacklistable(meta.blacklistStatus),
-  }));
+  }))
+  .filter(({ meta, mechanism }) => mechanism === null || isIncludedInArchetype(meta, mechanism));
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },

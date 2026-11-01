@@ -135,12 +135,8 @@ export function useFreezeWatchPageController() {
     [],
   );
 
-  const selectedChainName = useMemo(
-    () => summary?.chains.find((chain) => chain.id === chainFilter)?.name ?? "all",
-    [summary?.chains, chainFilter],
-  );
   const pageSize = PAGE_SIZE;
-  const ledgerKey = JSON.stringify([stablecoinFilter, selectedChainName, eventTypeFilter, searchQuery, sortKey, sortDirection]);
+  const ledgerKey = JSON.stringify([stablecoinFilter, chainFilter, eventTypeFilter, searchQuery, sortKey, sortDirection]);
   const [navigation, setNavigation] = useState<{ key: string; cursors: Array<string | undefined>; index: number }>(
     () => ({ key: ledgerKey, cursors: [undefined], index: 0 }),
   );
@@ -160,7 +156,7 @@ export function useFreezeWatchPageController() {
     meta: pageMeta,
   } = useBlacklistEventsPage({
     stablecoin: stablecoinFilter,
-    chainName: selectedChainName,
+    chainId: chainFilter === "all" ? undefined : chainFilter,
     eventType: eventTypeFilter,
     query: searchQuery,
     sortBy: sortKey,

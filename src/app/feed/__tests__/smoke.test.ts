@@ -75,7 +75,7 @@ function writeShard(raw: string) {
   writeFileSync(join(fixtureRoot!, "data/depeg-events/2023.json"), raw, "utf8");
 }
 
-function parseItems(xml: string): Array<{ title: string; link: string; guid: string; description: string }> {
+function parseItems(xml: string): Array<{ title: string; link: string; guid: string; description: string; pubDate: string }> {
   const text = (body: string, tag: string) => {
     // Same element slice as `<tag[^>]*>([\s\S]*?)</tag>`: skip attributes to
     // the opening tag's `>`, then take plain text to the first close tag.
@@ -94,7 +94,12 @@ function parseItems(xml: string): Array<{ title: string; link: string; guid: str
     link: text(body!, "link"),
     guid: text(body!, "guid"),
     description: text(body!, "description"),
+    pubDate: text(body!, "pubDate"),
   }));
+}
+
+function parseLastBuildDate(xml: string): string {
+  return xml.match(/<lastBuildDate>([^<]*)<\/lastBuildDate>/)?.[1] ?? "";
 }
 
 afterEach(() => {
@@ -134,6 +139,31 @@ describe("feed routes smoke", () => {
       expect(xml).toContain(`<title>${title}</title>`);
       if (guidPrefix) expect(xml).toContain(guidPrefix);
       if (expectItems) expect(xml).toContain("<item>");
+    }
+  });
+
+  it("methodology feed dates entries on their authored date and never advertises a future build time", async () => {
+    vi.useFakeTimers();
+    const now = Date.UTC(2026, 10, 1, 12); // 2026-11-01T12:00:00Z, before the newest activation
+    vi.setSystemTime(now);
+    try {
+      const loaded = await loadRoutes();
+      const xml = await (await loaded.methodology.GET()).text();
+      const items = parseItems(xml);
+      const lastBuildDate = parseLastBuildDate(xml);
+      const pubDates = items.map((item) => item.pubDate);
+
+      expect(pubDates.length).toBeGreaterThan(0);
+      for (const pubDate of pubDates) {
+        expect(Date.parse(pubDate)).toBeLessThanOrEqual(now);
+      }
+      expect(Date.parse(lastBuildDate)).toBeLessThanOrEqual(now);
+      expect(lastBuildDate).not.toBe(pubDates[0]);
+
+      const v1040 = xml.match(/<item>[\s\S]*?<title>Safety Score v10\.40[\s\S]*?<\/item>/)?.[0];
+      expect(v1040).toContain("<pubDate>Fri, 30 Oct 2026 00:00:00 GMT</pubDate>");
+    } finally {
+      vi.useRealTimers();
     }
   });
 
@@ -196,6 +226,33 @@ describe("feed routes smoke", () => {
     expect(items[99]!.guid).toBe("pharos:depeg-event:scx-event-001");
     expect(items[99]!.link).toContain("usdc-circle");
     expect(items[99]!.link.endsWith("#depeg-history")).toBe(true);
+  });
+
+  it("depeg feed quarantines disputed audit verdicts without consuming feed slots", async () => {
+    const mod = await fixtureRouteModule();
+    const epochBase = 1_800_000_000;
+    const confirmed = Array.from({ length: 101 }, (_, i) =>
+      makeDepegEvent({
+        id: i,
+        slug: `confirmed-${String(i).padStart(3, "0")}`,
+        startedAt: epochBase + i * 60,
+        endedAt: epochBase + i * 60 + 3_600,
+      }),
+    );
+    const disputed = makeDepegEvent({
+      id: 999,
+      slug: "disputed-newest",
+      startedAt: epochBase + 10_000,
+      endedAt: epochBase + 13_600,
+      provenance: { auditVerdict: "disputed" },
+    });
+    writeShard(JSON.stringify([...confirmed, disputed]));
+
+    const items = parseItems(await (await mod.GET()).text());
+
+    expect(items).toHaveLength(100);
+    expect(items.map((item) => item.guid)).not.toContain("pharos:depeg-event:disputed-newest");
+    expect(items[0]!.guid).toBe("pharos:depeg-event:confirmed-100");
   });
 
   it("depeg feed reserves resolved status for recovered closures", async () => {

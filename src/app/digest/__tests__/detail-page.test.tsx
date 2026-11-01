@@ -8,7 +8,13 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/components/breadcrumb-json-ld", () => ({ BreadcrumbJsonLd: () => null }));
 vi.mock("@/components/digest-snapshot", () => ({ DigestSnapshot: () => null }));
-vi.mock("@/components/editorial-colophon", () => ({ EditorialColophon: () => null }));
+const colophonVersions = vi.hoisted(() => [] as Array<string | undefined>);
+vi.mock("@/components/editorial-colophon", () => ({
+  EditorialColophon: (props: { methodologyVersion?: string }) => {
+    colophonVersions.push(props.methodologyVersion);
+    return null;
+  },
+}));
 vi.mock("@/components/preferred-source-prompt", () => ({ PreferredSourcePrompt: () => null }));
 vi.mock("@/components/json-ld-script", () => ({ JsonLdScript: () => null }));
 vi.mock("@/components/editorial-masthead", () => ({
@@ -34,21 +40,21 @@ vi.mock("@/lib/page-metadata", () => ({
 vi.mock("@/lib/digest-registry", () => {
   const entries = [
     {
-      date: "2026-07-01",
+      date: "2026-10-17",
       title: "With model metadata",
       text: "Summary",
       extended: "Extended",
-      generatedAt: 1_000,
+      generatedAt: 1_792_224_322,
       digestType: "daily",
       editionNumber: 1,
       llm: { servedModel: "claude-sonnet-5" },
     },
     {
-      date: "2026-06-30",
+      date: "2026-02-25",
       title: "Legacy edition",
       text: "Summary",
       extended: "Extended",
-      generatedAt: 999,
+      generatedAt: 1_772_021_621,
       digestType: "daily",
       editionNumber: 0,
     },
@@ -72,14 +78,25 @@ async function renderDigest(date: string): Promise<string> {
 
 describe("digest detail model credit", () => {
   it("renders the persisted served model label", async () => {
-    const html = await renderDigest("2026-07-01");
+    const html = await renderDigest("2026-10-17");
 
     expect(html).toContain("Claude Sonnet 5");
   });
 
   it("renders the not-recorded fallback for legacy editions", async () => {
-    const html = await renderDigest("2026-06-30");
+    const html = await renderDigest("2026-02-25");
 
     expect(html).toContain("Model not recorded");
+  });
+});
+
+describe("digest detail methodology version", () => {
+  it("labels each archived edition with the methodology in force at publication", async () => {
+    colophonVersions.length = 0;
+
+    await renderDigest("2026-10-17");
+    await renderDigest("2026-02-25");
+
+    expect(colophonVersions).toEqual(["v10.21", "v1.0"]);
   });
 });

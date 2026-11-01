@@ -7,6 +7,7 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { DepegEventEntry } from "@shared/types/market";
 import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
 
 export const dynamic = "force-static";
@@ -26,8 +27,11 @@ const CLOSURE_STATUS: Record<DepegClosureClassification, string> = {
 };
 
 function depegItems(events: readonly DepegEventEntry[]): RssItem[] {
-  const staticPageSlugs = new Set(selectStaticDepegEventPages(events).map((event) => event.slug));
-  return events
+  // Reviewed disputes are quarantined from syndication and from the item
+  // budget, matching the archive badge and the recorded-event count.
+  const confirmed = events.filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict));
+  const staticPageSlugs = new Set(selectStaticDepegEventPages(confirmed).map((event) => event.slug));
+  return confirmed
     .slice()
     .sort((a, b) => b.startedAt - a.startedAt)
     .slice(0, MAX_ITEMS)

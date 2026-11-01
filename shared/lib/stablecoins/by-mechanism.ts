@@ -1,7 +1,7 @@
 import type { MechanismArchetype, StablecoinMeta, StablecoinStatus } from "../../types";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../types/core";
 import { resolveMechanismArchetype } from "../classification/resolve-mechanism-archetype";
-import { isCommodityPeg } from "../filter-tags";
+import { isIncludedInArchetype } from "./mechanism-membership";
 import {
   ACTIVE_STABLECOINS,
   ACTIVE_META_BY_ID,
@@ -21,14 +21,10 @@ interface LifecycleFilterOptions {
   pools?: LifecyclePools;
 }
 
-function isIncludedInArchetype(coin: StablecoinMeta, archetype: MechanismArchetype | null): boolean {
-  return !isCommodityPeg(coin.flags.pegCurrency) || archetype === "commodity-claim";
-}
-
 /**
  * Count active coins per mechanism archetype using the inheritance resolver.
- * Commodity pegs participate only in their explicit commodity-claim family;
- * coins with a null effective archetype are excluded.
+ * Coins with a null effective archetype are excluded; commodity membership is
+ * governed by `isIncludedInArchetype`.
  *
  * `coins` and `registry` default to the live active registry; they are exposed
  * to allow tests to verify the commodity-exclusion filter against fixtures.
@@ -52,8 +48,8 @@ export function countActiveByArchetype(
 }
 
 /**
- * Return active coins for a given archetype, admitting commodity pegs only
- * into the explicit commodity-claim family.
+ * Return active coins for a given archetype, applying the shared commodity
+ * membership rule.
  * When a supply map is provided, coins are sorted by supply descending;
  * otherwise they are returned in canonical order.
  *

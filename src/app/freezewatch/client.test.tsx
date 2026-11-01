@@ -157,7 +157,7 @@ describe("FreezeWatchClient", () => {
     expect(new URLSearchParams(currentSearch).get("stablecoin")).toBe("USDC");
     expect(new URLSearchParams(currentSearch).get("chain")).toBe("ethereum");
     expect(mocks.useBlacklistEventsPage).toHaveBeenLastCalledWith(expect.objectContaining({
-      stablecoin: "USDC", chainName: "Ethereum", cursor: undefined,
+      stablecoin: "USDC", chainId: "ethereum", cursor: undefined,
     }));
   });
 

@@ -102,7 +102,7 @@ These same-origin Pages surfaces are **not** Worker API routes. Bindings/admissi
 ### Static feed route handlers
 
 `src/app/feed/**/route.ts` owns static RSS/XML feeds from checked-in/generated inputs; sitemap and `npm run seo:check` cover HTML only. Feed links use native `<a>`, not `Link` (no RSC payload).
-Depeg RSS uses `classifyDepegClosure`: only recovered events (including legacy) say `Resolved`; other terminal classes name tracking closure, not recovery.
+Depeg RSS uses `classifyDepegClosure`: only recovered events (including legacy) say `Resolved`; other terminal classes name tracking closure, not recovery. Reviewed-disputed rows are quarantined before the item budget. Methodology RSS dates items by the authored `date` (the changelog page's clock) and carries an explicit build-time `lastBuildDate`, never a later activation timestamp.
 
 ---
 

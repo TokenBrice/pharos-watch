@@ -6,10 +6,12 @@ import {
   getCoinsByLifecycleStatus,
 } from "../by-mechanism";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../../types/core";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS, FROZEN_STABLECOINS, PRE_LAUNCH_STABLECOINS, TRACKED_META_BY_ID } from "../registry";
+import { resolveMechanismArchetype } from "../../classification/resolve-mechanism-archetype";
 import { makeCatalogCoin, NON_RWA_STABLECOIN_FLAGS } from "./test-support";
 
 describe("countActiveByArchetype", () => {
-  it("keeps commodity pegs excluded from non-commodity archetypes", () => {
+  it("admits explicitly classified commodity pegs but not inherited family membership", () => {
     const goldCoin = makeCatalogCoin({
       id: "gold-fixture",
       name: "Gold Fixture",
@@ -19,9 +21,16 @@ describe("countActiveByArchetype", () => {
         pegCurrency: "GOLD",
         rwa: true,
       },
+      mechanismArchetype: "rwa-credit-fund",
+    });
+    const usdParent = makeCatalogCoin({
+      id: "usd-parent",
+      name: "USD Parent",
+      symbol: "USD-P",
+      flags: NON_RWA_STABLECOIN_FLAGS,
       mechanismArchetype: "fiat-cash",
     });
-    const silverCoin = makeCatalogCoin({
+    const inheritedSilver = makeCatalogCoin({
       id: "silver-fixture",
       name: "Silver Fixture",
       symbol: "SILVER-FX",
@@ -30,45 +39,45 @@ describe("countActiveByArchetype", () => {
         pegCurrency: "SILVER",
         rwa: true,
       },
-      mechanismArchetype: "rwa-credit-fund",
-    });
-    const usdCoin = makeCatalogCoin({
-      id: "usd-fixture",
-      name: "USD Fixture",
-      symbol: "USD-FX",
-      flags: NON_RWA_STABLECOIN_FLAGS,
-      mechanismArchetype: "fiat-cash",
+      variantOf: "usd-parent",
     });
 
-    const fixtures = [goldCoin, silverCoin, usdCoin];
+    const fixtures = [goldCoin, usdParent, inheritedSilver];
     const registry = new Map(fixtures.map((c) => [c.id, c]));
     const counts = countActiveByArchetype(fixtures, registry);
 
-    // Only the USD coin should be counted.
+    expect(counts["rwa-credit-fund"]).toBe(1);
     expect(counts["fiat-cash"]).toBe(1);
-    expect(counts["rwa-credit-fund"]).toBe(0);
+    expect(counts["commodity-claim"]).toBe(0);
 
-    // Sanity: the same fixtures with the commodity filter removed would
-    // yield fiat-cash=2 + rwa-credit-fund=1. We can't disable the filter
-    // from outside, but we can verify the commodity IDs don't appear in
-    // any archetype bucket via getActiveByArchetype.
     const fiatCoins = getActiveByArchetype("fiat-cash", undefined, fixtures, registry);
+    expect(fiatCoins.map((c) => c.id)).toEqual(["usd-parent"]);
     const rwaCoins = getActiveByArchetype("rwa-credit-fund", undefined, fixtures, registry);
-    expect(fiatCoins.map((c) => c.id)).toEqual(["usd-fixture"]);
-    expect(rwaCoins.map((c) => c.id)).toEqual([]);
+    expect(rwaCoins.map((c) => c.id)).toEqual(["gold-fixture"]);
   });
 
-  it("includes the live commodity-claim family without adding commodities to other buckets", () => {
+  it("counts every active coin that resolves to an archetype", () => {
+    const classified = ACTIVE_STABLECOINS.filter(
+      (coin) => resolveMechanismArchetype(coin, ACTIVE_META_BY_ID) !== null,
+    );
+    const counted = MECHANISM_ARCHETYPE_VALUES.reduce(
+      (total, archetype) => total + countActiveByArchetype()[archetype],
+      0,
+    );
+
+    expect(counted).toBe(classified.length);
+  });
+
+  it("includes the live commodity-claim family and only explicit commodity classifications elsewhere", () => {
     const commodityClaims = getActiveByArchetype("commodity-claim");
     expect(commodityClaims.map((coin) => coin.id)).toEqual(expect.arrayContaining(["xaut-tether", "paxg-paxos", "kag-kinesis"]));
     expect(countActiveByArchetype()["commodity-claim"]).toBe(commodityClaims.length);
-    const archetypes: MechanismArchetype[] = [...MECHANISM_ARCHETYPE_VALUES];
-    for (const archetype of archetypes) {
+    expect(getActiveByArchetype("rwa-credit-fund").map((coin) => coin.id)).toContain("gldy-streamex");
+    for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
       if (archetype === "commodity-claim") continue;
-      const coins = getActiveByArchetype(archetype);
-      for (const coin of coins) {
-        expect(coin.flags.pegCurrency).not.toBe("GOLD");
-        expect(coin.flags.pegCurrency).not.toBe("SILVER");
+      for (const coin of getActiveByArchetype(archetype)) {
+        if (coin.flags.pegCurrency !== "GOLD" && coin.flags.pegCurrency !== "SILVER") continue;
+        expect(coin.mechanismArchetype, `${coin.id} in ${archetype}`).toBe(archetype);
       }
     }
   });
@@ -112,7 +121,7 @@ describe("getCoinsByLifecycleStatus", () => {
     pools.quarantined.push(
       makeLifecycleCoin("wrong-archetype", "algorithmic"),
       makeCatalogCoin({
-        id: "commodity", mechanismArchetype: "fiat-cash",
+        id: "commodity", variantOf: "quarantined", variantKind: "savings-passthrough",
         flags: { ...NON_RWA_STABLECOIN_FLAGS, pegCurrency: "GOLD", rwa: true },
       }),
     );
@@ -122,6 +131,28 @@ describe("getCoinsByLifecycleStatus", () => {
         .toEqual([status]);
     }
     expect(getCoinsByLifecycleStatus("fiat-cash", "dead" as "active", { pools, registry })).toEqual([]);
+  });
+
+  it("matches the screener's resolved universe across lifecycles", () => {
+    const pools = {
+      active: ACTIVE_STABLECOINS,
+      "pre-launch": PRE_LAUNCH_STABLECOINS,
+      frozen: FROZEN_STABLECOINS,
+    } as const;
+    for (const [status, pool] of Object.entries(pools) as Array<
+      [keyof typeof pools, readonly StablecoinMeta[]]
+    >) {
+      for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
+        expect(
+          getCoinsByLifecycleStatus(archetype, status).map((coin) => coin.id),
+          `${status}/${archetype}`,
+        ).toEqual(
+          pool
+            .filter((coin) => resolveMechanismArchetype(coin, TRACKED_META_BY_ID) === archetype)
+            .map((coin) => coin.id),
+        );
+      }
+    }
   });
 
   it("resolves variants against the full tracked registry across lifecycle buckets", () => {

@@ -22,7 +22,8 @@ export function blacklistSummaryCatchUp(refresh: BlacklistSummaryRefresh | undef
 
 export interface FetchBlacklistEventsParams {
   stablecoin?: BlacklistStablecoin | "all";
-  chainName?: string | "all";
+  /** Canonical chain id; filters without depending on the summary's chain-name map. */
+  chainId?: string;
   eventType?: BlacklistEventType | "all";
   query?: string;
   sortBy?: BlacklistSortKey;
@@ -36,7 +37,7 @@ export interface FetchBlacklistEventsParams {
 export function buildBlacklistEventsPath(params: FetchBlacklistEventsParams): string {
   return API_PATHS.blacklist({
     stablecoin: params.stablecoin && params.stablecoin !== "all" ? params.stablecoin : undefined,
-    chain: params.chainName && params.chainName !== "all" ? params.chainName : undefined,
+    chainId: params.chainId,
     eventType: params.eventType && params.eventType !== "all" ? params.eventType : undefined,
     q: params.query?.trim() ? params.query.trim() : undefined,
     sortBy: params.sortBy,
