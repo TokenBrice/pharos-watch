@@ -8,7 +8,7 @@ import { PoolSourceLabel, TvlTrendChart } from "@/components/dex-liquidity-card-
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatUsdPriceAdaptive } from "@shared/lib/format";
 
 /** The market-breakdown fold defers only the TVL chart until first open. */
 function openMarketBreakdown(container: HTMLElement) {
@@ -201,6 +201,17 @@ describe("DexLiquidityCard", () => {
       expect(screen.getByText(label).parentElement?.textContent).toBe(`Concentration: ${label}(${percent})`);
     },
   );
+
+  it.each([0.0000553, 0.0000499])("renders sub-cent DEX-implied price %s with adaptive precision", (dexPriceUsd) => {
+    useDexLiquidityMock.mockReturnValue({
+      data: { "usdc-circle": makeDexLiquidityData({ poolCount: 1, totalTvlUsd: 1_000_000, liquidityScore: 76, dexPriceUsd, dexDeviationBps: 0 }) },
+      isLoading: false,
+    });
+    const { container } = render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+    openMarketBreakdown(container);
+    const price = screen.getByText("DEX-implied price").parentElement!.querySelector("span.text-lg")!;
+    expect(price.textContent).toBe(`$${formatUsdPriceAdaptive(dexPriceUsd)}`);
+  });
 
   it.each([0, 100_000])("renders invalid coverage as unavailable even with TVL %s", (totalTvlUsd) => {
     useDexLiquidityMock.mockReturnValue({
@@ -422,6 +433,13 @@ describe("DexLiquidityCard", () => {
       expect(renderWindows([...pools])).toEqual([
         { value: "—", detail },
         { value: "—", detail },
+      ]);
+    });
+
+    it("suppresses a zero partial lower bound in favour of the completeness label", () => {
+      expect(renderWindows([fresh(0), fresh(null)])).toEqual([
+        { value: "—", detail: "Partial coverage" },
+        { value: "—", detail: "Partial coverage" },
       ]);
     });
 

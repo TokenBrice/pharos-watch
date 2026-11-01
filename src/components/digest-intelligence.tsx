@@ -55,7 +55,7 @@ function StandingConditionsStrip({ conditions }: { conditions: DigestStandingCon
         <span key={condition.stablecoinId ?? condition.symbol}>
           {index > 0 && " · "}
           {condition.symbol} d{condition.ageDays}
-          {condition.currentBps != null && ` ${Math.abs(condition.currentBps).toLocaleString()} bps`}
+          {condition.currentBps != null && ` ${condition.currentBps > 0 ? "+" : ""}${condition.currentBps.toLocaleString("en-US")} bps`}
         </span>
       ))}
     </p>

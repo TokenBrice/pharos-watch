@@ -231,6 +231,7 @@ describe("FreezeWatchClient", () => {
 
   it("retains auxiliary summary facts without reader notices for failed refreshes", () => {
     const summary = makeSummary();
+    summary.totalEvents = 7;
     summary.stats.perCoinQuarterlyEventTypes.USDC = [{ quarter: "Q1 '26", blacklist: 7, unblacklist: 0, destroy: 0 }];
     mocks.useBlacklistSummary.mockReturnValue(stubQuery({ data: summary, error: new Error("summary offline") }));
     render(<FreezeWatchClient />);

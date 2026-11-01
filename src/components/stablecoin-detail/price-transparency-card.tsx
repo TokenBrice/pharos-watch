@@ -19,7 +19,7 @@ import { PRICE_TRANSPARENCY_SOURCE_KEYS, getPricingSourceLabel } from "@shared/l
 import { isPricingSourceProtocolOverride } from "@shared/lib/pricing-source-registry";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { CONFIDENCE_LEVEL_COLORS, ORACLE_BRAND_SWATCH_CLASSES, PRICE_SOURCE_STATUS_CLASSES } from "@shared/lib/classification";
-import { formatCurrency, timeAgo } from "@shared/lib/format";
+import { formatCurrency, formatUsdPriceAdaptive, timeAgo } from "@shared/lib/format";
 import { normalizePegType } from "@shared/lib/peg-rates";
 import { resolvePriceTransparencySourceStatus, type SourceStatus } from "./price-transparency-status";
 
@@ -47,8 +47,8 @@ function formatSourceDepthTargetLabel(sourceCount: number): string {
  * 12% gap beside the hero.
  */
 function formatUsdPrice(price: number, pegType: string): string {
-  const fixed = price.toFixed(4);
-  return normalizePegType(pegType) === "peggedUSD" ? `$${fixed}` : `USD ${fixed}`;
+  const formatted = formatUsdPriceAdaptive(price);
+  return normalizePegType(pegType) === "peggedUSD" ? `$${formatted}` : `USD ${formatted}`;
 }
 
 function formatCompactUpdatedAt(epochSec: number | null | undefined): string | null {

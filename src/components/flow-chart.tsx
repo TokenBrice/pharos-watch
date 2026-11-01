@@ -291,7 +291,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   const formatXAxisTick = useCallback(
     (ts: number) => {
       if (rangeHours <= 48) {
-        return new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+        return new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
       }
       if (rangeHours <= 8 * DAY_HOURS) {
         return formatChartDate(ts, "with-time");
@@ -504,12 +504,8 @@ function FlowTooltip({
   if (!active || !payload || !label) return null;
 
   const datum = payload[0]?.payload;
-  const time = new Date(label).toLocaleString(
-    "en-US",
-    useDailyBuckets
-      ? { month: "short", day: "numeric", year: "numeric" }
-      : { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true },
-  );
+  // Buckets are closed UTC hours; the viewer's timezone must not move the date.
+  const time = formatChartDate(label, useDailyBuckets ? "short-year" : "full");
 
   return (
     <PharosChartTooltip active={active}>

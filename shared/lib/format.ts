@@ -177,6 +177,19 @@ export function formatPrice(price: number | null | undefined, symbol = "$", deci
 }
 
 /**
+ * USD price with magnitude-based precision: four decimals at a cent and above,
+ * six below a cent, eight below $0.0001. Non-USD fiat pegs live far below
+ * $0.01, where a fixed four decimals rounds a real price to $0.0001 or $0.0000.
+ */
+export function formatUsdPriceAdaptive(value: number | null | undefined): string {
+  if (!isFiniteNumber(value)) return "N/A";
+  const abs = Math.abs(value);
+  const decimals = abs >= 0.01 ? 4 : abs >= 0.0001 ? 6 : 8;
+  const fixed = value.toFixed(decimals);
+  return abs < 0.01 ? trimTrailingZeros(fixed) : fixed;
+}
+
+/**
  * Format a USD price in the peg's native unit (e.g. gold ounces for XAUT).
  *
  * Null/unusable `pegRef` contract: fall back to the observed USD price with an

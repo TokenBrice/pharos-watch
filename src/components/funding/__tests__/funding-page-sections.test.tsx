@@ -105,4 +105,23 @@ describe("DonorList", () => {
     render(<DonorList donations={[]} lastUpdatedAt={now} />);
     expect(screen.getByText(/No community donations yet/)).toBeTruthy();
   });
+
+  it("counts the footer cap in donation rows, not supporters", () => {
+    const donations: Donation[] = Array.from({ length: 25 }, (_, index) => ({
+      chain: "ethereum",
+      tx_hash: `0x${index.toString(16).padStart(4, "0")}`,
+      block_timestamp: now - index * 60,
+      from_address: `0x${index % 10}`,
+      display: null,
+      kind: "community",
+      asset_symbol: "ETH",
+      token_address: null,
+      amount_decimal: 0.01,
+      usd_at_receipt: 1,
+      price_note: "coingecko-historical-2026-04-18",
+    }));
+    render(<DonorList donations={donations} lastUpdatedAt={now} />);
+    expect(screen.getByText(/Showing most recent 20 of 25 donations\./)).toBeTruthy();
+    expect(screen.queryByText(/Showing most recent 20 of 25 supporters/)).toBeNull();
+  });
 });

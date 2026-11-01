@@ -348,6 +348,7 @@ export default function FreezeWatchClient() {
         <InterventionSeismograph
           stats={summary?.stats}
           chart={summary?.chart}
+          totalEvents={summary?.totalEvents}
           isLoading={summaryLoading}
           error={summaryError}
           onRetry={() => void refetchSummary()}

@@ -28,6 +28,7 @@ import {
   formatBps,
   formatEventDate,
   formatNativePrice,
+  formatUsdPriceAdaptive,
   pegCurrencySymbol,
   formatPercentChange,
   formatSupply,
@@ -536,6 +537,26 @@ describe("formatNativePrice", () => {
     expect(formatNativePrice(25, "SILVER", 25)).toBe("$25.0000");
     expect(formatNativePrice(1.0, "VAR", 1)).toBe("$1.0000");
     expect(formatNativePrice(1.0, "OTHER", 1)).toBe("$1.0000");
+  });
+});
+
+describe("formatUsdPriceAdaptive", () => {
+  it("keeps sub-cent USD prices from rounding to a wrong display", () => {
+    expect(formatUsdPriceAdaptive(0.0000553)).toBe("0.0000553");
+    expect(formatUsdPriceAdaptive(0.0000499)).toBe("0.0000499");
+    expect(formatUsdPriceAdaptive(0.0003159)).toBe("0.000316");
+    expect(formatUsdPriceAdaptive(0.0010367)).toBe("0.001037");
+  });
+
+  it("keeps the established four-decimal display at and above a cent", () => {
+    expect(formatUsdPriceAdaptive(1.0002)).toBe("1.0002");
+    expect(formatUsdPriceAdaptive(0.089)).toBe("0.0890");
+  });
+
+  it("returns N/A for nullish or invalid values", () => {
+    expect(formatUsdPriceAdaptive(null)).toBe("N/A");
+    expect(formatUsdPriceAdaptive(undefined)).toBe("N/A");
+    expect(formatUsdPriceAdaptive(NaN)).toBe("N/A");
   });
 });
 
