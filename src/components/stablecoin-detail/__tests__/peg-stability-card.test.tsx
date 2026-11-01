@@ -147,6 +147,33 @@ describe("PegStabilityCard", () => {
     expect(text).not.toMatch(/private credit|credit portfolio|credit losses|CLO/i);
   });
 
+  it("withholds the bank rail from a crypto-backed fiat-cash coin", () => {
+    const { container } = render(
+      <PegStabilityCard meta={coin({ mechanismArchetype: "fiat-cash" })} isWrapper={false} />,
+    );
+    const text = within(mechanismModule(container)).getByRole("figure").textContent ?? "";
+    expect(text).toContain("Crypto collateral");
+    expect(text).not.toMatch(/bank transfer|KYC|custodied 1:1|eligible holders redeem|banking-rail/i);
+  });
+
+  it("keeps the bank rail on an rwa-backed fiat-cash coin", () => {
+    const { container } = render(
+      <PegStabilityCard
+        meta={coin({
+          mechanismArchetype: "fiat-cash",
+          flags: {
+            backing: "rwa-backed",
+            governance: "decentralized",
+          } as StablecoinDetailCoinMeta["flags"],
+        })}
+        isWrapper={false}
+      />,
+    );
+    const text = within(mechanismModule(container)).getByRole("figure").textContent ?? "";
+    expect(text).toMatch(/bank transfer/i);
+    expect(text).toMatch(/eligible holders redeem/i);
+  });
+
   it("never names another coin's incident in a coin's stress line", () => {
     const usdt = render(
       <PegStabilityCard

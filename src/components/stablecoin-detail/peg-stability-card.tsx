@@ -202,6 +202,7 @@ export function PegStabilityCard({
           {
             navToken: meta.flags?.navToken === true,
             liquidationEngine: deriveLiquidationEngine(mechanismBacking, meta.oracleRiskSummary?.role),
+            backing: meta.flags?.backing ?? null,
           },
           getCoinOverride(meta.id),
         )

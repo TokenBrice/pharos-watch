@@ -41,10 +41,10 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
     steps: [
       { label: "Collateral deposit", subtitle: "mostly stables + loans" },
       { label: "Mostly Liquid Cash", subtitle: "minority perp-hedged" },
-      { label: "USDe minted", subtitle: "lending + funding yield" },
+      { label: "USDe minted", subtitle: "yield to sUSDe stakers" },
     ],
     ariaLabel:
-      "Collateral is held mostly as Liquid Cash, with the crypto remainder hedged by equal short perp positions; lending income and the funding rate paid by perp longs become the yield on USDe.",
+      "Collateral is held mostly as Liquid Cash, with the crypto remainder hedged by equal short perp positions; lending income and the funding rate paid by perp longs flow to sUSDe stakers as yield.",
     description:
       "Users deposit collateral; the protocol holds most of it as Liquid Cash (stablecoins, DeFi and institutional lending, tokenized funds) and hedges the remaining crypto with equal-size short perpetual futures positions; lending income and funding flow to sUSDe stakers as yield.",
   },

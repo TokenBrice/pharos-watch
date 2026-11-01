@@ -6,6 +6,8 @@ import {
   nestVariants,
 } from "@shared/lib/stablecoins/by-mechanism";
 import { DEAD_STABLECOINS } from "@shared/lib/dead-stablecoins";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { isQuarantinedStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-diagrams";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -163,9 +165,14 @@ function RepresentativeCoins({
 }: {
   coins: ArchetypeContent["representativeCoins"];
 }) {
+  // Quarantined coins leave the listing immediately; frozen examples remain.
+  const listed = coins.filter((coin) => {
+    const meta = TRACKED_META_BY_ID.get(coin.coinId);
+    return !meta || !isQuarantinedStablecoinMeta(meta);
+  });
   return (
     <RelatedCoinsList
-      coins={coins}
+      coins={listed}
       kicker="Tracked examples"
       heading="Tracked coins using this design"
     />

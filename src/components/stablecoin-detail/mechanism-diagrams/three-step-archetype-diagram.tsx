@@ -265,6 +265,55 @@ const CDP_RESERVE_CONFIG: ThreeStepConfig = {
 };
 
 /**
+ * The `algorithmic` family default draws the historical pure mint/burn design
+ * (UST), but tracked members are a mixed set: AMO-managed units, conversion
+ * systems and collateralized issuers. A coin page therefore claims neither a
+ * governance-token burn nor the absence of reserve backing, and its return
+ * path is the ordinary arbitrage stabiliser rather than a collapse.
+ */
+const ALGORITHMIC_COIN_CONFIG: ThreeStepConfig = {
+  accentColor: "var(--mechanism-algorithmic)",
+  stressFootnote: "stress: target pressure / arbitrage incentive failure",
+  ariaLabel: (symbol) =>
+    `An algorithmic mint/burn module issues ${symbol} and adjusts supply to defend its target through arbitrage incentives.`,
+  description: (symbol) =>
+    `An algorithmic mint/burn module issues ${symbol} and adjusts supply to defend its target through arbitrage incentives; supply follows the module's rules.`,
+  defaultSteps: (symbol) => [
+    { label: "Algorithmic issuance", subtitle: "mint and burn by rule" },
+    { label: "Mint/burn AMO", subtitle: "defends target via arbitrage" },
+    { label: `${symbol} minted`, subtitle: "supply set by rule" },
+  ],
+  returnArrow: {
+    fromX: 500,
+    toX: 75,
+    topY: 90,
+    peakY: 140,
+    label: "arbitrage",
+    strokeWidth: 1.2,
+  },
+};
+
+/**
+ * The `fiat-cash` family default describes an issuer's bank rail, but a
+ * crypto-backed member has no customer bank transfer, fiat custody or issuer
+ * redemption to describe. Those claims, their redeem loop and the
+ * banking-rail stress are withheld; the collateral and supply shape remains.
+ */
+const FIAT_CASH_CRYPTO_CONFIG: ThreeStepConfig = {
+  accentColor: "var(--mechanism-fiat-cash)",
+  stressFootnote: "stress: collateral or liquidity shock",
+  ariaLabel: (symbol) =>
+    `Crypto collateral is posted with the protocol; the protocol mints ${symbol} against that collateral.`,
+  description: (symbol) =>
+    `Users post crypto collateral with the protocol; the protocol mints ${symbol} against that collateral and manages supply and liquidity under its own rules.`,
+  defaultSteps: (symbol) => [
+    { label: "Crypto collateral", subtitle: "posted with the protocol" },
+    { label: "Supply module", subtitle: "mint and burn by rule" },
+    { label: `${symbol} minted`, subtitle: "against posted collateral" },
+  ],
+};
+
+/**
  * The `rwa-credit-fund` family default describes the archetype ("quarterly
  * redemption gates"), but members range from quarterly fund windows to FIFO
  * queues served as liquidity allows (syrupUSDC) and weekly processing. A coin
@@ -307,6 +356,8 @@ export function resolveThreeStepConfig(
   if (archetype === "tbill" && facts.navToken === false) return TBILL_PAR_REDEMPTION_CONFIG;
   if (archetype === "cdp" && facts.liquidationEngine === false) return CDP_RESERVE_CONFIG;
   if (archetype === "rwa-credit-fund") return RWA_CREDIT_COIN_CONFIG;
+  if (archetype === "algorithmic") return ALGORITHMIC_COIN_CONFIG;
+  if (archetype === "fiat-cash" && facts.backing === "crypto-backed") return FIAT_CASH_CRYPTO_CONFIG;
   return THREE_STEP_ARCHETYPE_CONFIG[archetype];
 }
 
