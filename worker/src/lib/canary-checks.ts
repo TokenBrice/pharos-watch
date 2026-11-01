@@ -24,6 +24,7 @@ import {
   checkDepegPendingConfirmation,
 } from "./canary-checks-depeg";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
+import { PRICING_CANARY_CHECKS } from "./canary-checks-pricing";
 
 export {
   normalizeWorkerCanaryMode,
@@ -108,12 +109,12 @@ interface WorkerCanaryRunRow {
   error: string | null;
 }
 
-interface CanaryCheckContext {
+export interface CanaryCheckContext {
   latestPublishedDexGeneration?: Promise<DexPublishedGenerationRow | null>;
   latestDexCurrentSummary?: Promise<DexLatestGenerationSummaryRow>;
 }
 
-type CanaryCheckDefinition = {
+export type CanaryCheckDefinition = {
   checkId: string;
   label: string;
   description: string;
@@ -791,6 +792,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     description: "Every active policy-universe incident eligible for a prediction carries a sealed public prediction within one producer run.",
     run: checkDdrEligibleUnsealed,
   },
+  ...PRICING_CANARY_CHECKS,
 ] as const;
 export const ACTIVE_CANARY_CHECK_IDS: readonly string[] = CANARY_CHECKS.map((definition) => definition.checkId);
 

@@ -5,6 +5,7 @@ import {
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
   benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,
+  isYieldBenchmarkRatePlausible,
 } from "@shared/lib/yield-benchmark-freshness";
 
 const NOW_SEC = Date.UTC(2026, 8, 12, 12, 0, 0) / 1000;
@@ -56,5 +57,25 @@ describe("benchmarkRecordAgeSeconds", () => {
     expect(benchmarkRecordAgeSeconds("not-a-date", NOW_SEC)).toBeNull();
     expect(benchmarkRecordAgeSeconds(null, NOW_SEC)).toBeNull();
     expect(benchmarkRecordAgeSeconds("2026-09-10", NOW_SEC)).toBe(2 * DAY_SECONDS + 12 * 3600);
+  });
+});
+
+describe("isYieldBenchmarkRatePlausible", () => {
+  it("rejects a unit-scale drift even inside the provider's broad range", () => {
+    expect(isYieldBenchmarkRatePlausible("USD", 0.43, 4.3)).toBe(false);
+    expect(isYieldBenchmarkRatePlausible("TRY", 4, 40)).toBe(false);
+    expect(isYieldBenchmarkRatePlausible("EUR", 0.9, 1.9)).toBe(false);
+  });
+
+  it("admits ordinary moves inside each key's band", () => {
+    expect(isYieldBenchmarkRatePlausible("USD", 3.72, 4.33)).toBe(true);
+    expect(isYieldBenchmarkRatePlausible("TRY", 42, 40)).toBe(true);
+    expect(isYieldBenchmarkRatePlausible("CHF", -0.05, -0.02)).toBe(true);
+  });
+
+  it("cannot grade without a finite previous market observation", () => {
+    expect(isYieldBenchmarkRatePlausible("USD", 3.72, null)).toBe(true);
+    expect(isYieldBenchmarkRatePlausible("USD", 3.72, 0)).toBe(true);
+    expect(isYieldBenchmarkRatePlausible("USD", Number.NaN, 3.72)).toBe(false);
   });
 });

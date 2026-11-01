@@ -91,8 +91,10 @@ export const CoinGeckoCoinDetailSchema = z.object({
   }).optional(),
 });
 // --- Frankfurter FX rates (Q11) ---
+// The historical reader also inverts every quote as USD-per-unit, so only a
+// USD-based series is admissible evidence.
 export const FrankfurterTimeSeriesSchema = z.object({
-  base: z.string(),
+  base: z.literal("USD"),
   start_date: z.string(),
   end_date: z.string(),
   rates: z.record(z.string(), z.record(z.string(), z.number())),

@@ -10,7 +10,12 @@ import {
   serializeRiskFreeRatesCache,
 } from "./yield-sync/cache";
 import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./yield-sync/benchmarks";
-import { YIELD_BENCHMARK_RECORD_MAX_AGE_SEC, benchmarkRecordAgeSeconds, classifyYieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
+import {
+  YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  benchmarkRecordAgeSeconds,
+  classifyYieldBenchmarkFreshness,
+  isYieldBenchmarkRatePlausible,
+} from "@shared/lib/yield-benchmark-freshness";
 import { throwIfAborted } from "../lib/abort";
 import { loadRiskFreeRateRegistryWithState } from "./yield-sync/state";
 import { isRecord, numberValue } from "@shared/lib/type-guards";
@@ -56,6 +61,30 @@ const USD_EFFR_FRED_MAX_OBSERVATION_AGE_DAYS = YIELD_BENCHMARK_RECORD_MAX_AGE_SE
 // Series whose next print lands after the following business day's 08:00 UTC
 // fetch; see resolveBenchmarkRefreshNeed.
 const REFRESH_AHEAD_BENCHMARK_KEYS: readonly YieldBenchmarkKey[] = ["USD", "USD_EFFR", "GBP"];
+
+/**
+ * A rejected market rate is a metadata/status finding, not a transport failure:
+ * the descriptor's fallbackMode names it, the run degrades, and the benchmark
+ * canaries fail. The event keeps the rejected and retained values inspectable.
+ */
+async function recordBenchmarkRateOutOfBand(
+  db: D1Database,
+  key: YieldBenchmarkKey,
+  rate: number,
+  previousMarketRate: number | null,
+): Promise<void> {
+  try {
+    await logCronEvent(db, {
+      job: "fetch-tbill-rate",
+      eventType: "benchmark-rate-out-of-band",
+      severity: "warning",
+      message: `${key} market rate ${rate} moved outside the plausibility band`,
+      metadata: { key, rate, previousMarketRate },
+    });
+  } catch {
+    // Diagnostic only; the publication decision already failed closed.
+  }
+}
 
 function benchmarkCircuitKey(key: string): string {
   return `${TREASURY_CIRCUIT_PREFIX}${key}`;
@@ -744,9 +773,16 @@ async function resolveBenchmarkProvider(params: {
   }
 
   const outcome = await provider.fetch({ signal });
-  const parsed = outcome && "result" in outcome ? outcome.result : outcome;
+  const fetched = outcome && "result" in outcome ? outcome.result : outcome;
   const responseDiagnostics = outcome?.responseDiagnostics;
+  const previousMarketRate = previous[provider.key]?.lastMarketRate ?? null;
+  const rateRejected = fetched != null && !isYieldBenchmarkRatePlausible(provider.key, fetched.rate, previousMarketRate);
+  const parsed = rateRejected ? null : fetched;
+  if (rateRejected && fetched) {
+    await recordBenchmarkRateOutOfBand(db, provider.key, fetched.rate, previousMarketRate);
+  }
   await recordOutcome(db, circuitSource, parsed != null);
+  const rejectionMode = `${provider.key.toLowerCase()}-rate-out-of-band`;
   const meta = parsed
     ? buildResolvedBenchmark({
         key: provider.key,
@@ -755,13 +791,13 @@ async function resolveBenchmarkProvider(params: {
         fetchedAt,
         source: parsed.source ?? provider.source,
       })
-    : buildRetainedBenchmark(previous[provider.key] ?? null, provider.fallbackMode);
+    : buildRetainedBenchmark(previous[provider.key] ?? null, rateRejected ? rejectionMode : provider.fallbackMode);
 
   return {
     key: provider.key,
     parsed,
     meta,
-    failureMode: parsed ? null : (meta?.fallbackMode ?? provider.fallbackMode),
+    failureMode: parsed ? null : (meta?.fallbackMode ?? (rateRejected ? rejectionMode : provider.fallbackMode)),
     ...(responseDiagnostics ? { responseDiagnostics } : {}),
   };
 }
@@ -785,7 +821,13 @@ async function resolveMxnBenchmarkProvider(params: {
       failureMode: meta?.fallbackMode ?? "circuit-open",
     };
   }
-  const banxicoParsed = token ? await tryBanxicoCetes(token, signal) : null;
+  const banxicoFetched = token ? await tryBanxicoCetes(token, signal) : null;
+  const banxicoRateRejected = banxicoFetched != null
+    && !isYieldBenchmarkRatePlausible("MXN", banxicoFetched.rate, previous.MXN?.lastMarketRate ?? null);
+  const banxicoParsed = banxicoRateRejected ? null : banxicoFetched;
+  if (banxicoRateRejected && banxicoFetched) {
+    await recordBenchmarkRateOutOfBand(db, "MXN", banxicoFetched.rate, previous.MXN?.lastMarketRate ?? null);
+  }
   if (banxicoParsed) {
     await recordOutcome(db, circuitSource, true);
     return {
@@ -802,7 +844,9 @@ async function resolveMxnBenchmarkProvider(params: {
     };
   }
 
-  const baseFallbackMode = token ? "banxico-cetes-failed" : "banxico-token-missing";
+  const baseFallbackMode = token
+    ? (banxicoRateRejected ? "mxn-rate-out-of-band" : "banxico-cetes-failed")
+    : "banxico-token-missing";
   if (token) await recordOutcome(db, circuitSource, false);
   const meta = buildRetainedBenchmark(previous.MXN, baseFallbackMode);
   return {
@@ -921,10 +965,28 @@ export async function fetchTbillRate(
 
   const usdCircuitSource = benchmarkCircuitKey("USD");
   const usdAllowed = await shouldAttemptFetch(db, usdCircuitSource);
-  const usdFred = usdAllowed ? await tryFredCsv(FRED_TBILL_CSV_URL, signal, USD_FRED_MAX_OBSERVATION_AGE_DAYS) : null;
-  const usdParsed = usdFred ?? (usdAllowed ? await tryTreasuryXml(signal) : null);
+  const usdPreviousMarketRate = previous.USD?.lastMarketRate ?? null;
+  const usdFredFetched = usdAllowed ? await tryFredCsv(FRED_TBILL_CSV_URL, signal, USD_FRED_MAX_OBSERVATION_AGE_DAYS) : null;
+  const usdFredRejected = usdFredFetched != null
+    && !isYieldBenchmarkRatePlausible("USD", usdFredFetched.rate, usdPreviousMarketRate);
+  if (usdFredRejected && usdFredFetched) {
+    await recordBenchmarkRateOutOfBand(db, "USD", usdFredFetched.rate, usdPreviousMarketRate);
+  }
+  const usdFred = usdFredRejected ? null : usdFredFetched;
+  // A FRED value outside the plausibility band falls through to the independent
+  // Treasury feed, which must pass the same band: unit or definition drift at
+  // one publisher cannot publish a "current" USD benchmark.
+  const usdTreasuryFetched = usdAllowed && !usdFred ? await tryTreasuryXml(signal) : null;
+  const usdParsed = usdFred
+    ?? (usdTreasuryFetched != null && isYieldBenchmarkRatePlausible("USD", usdTreasuryFetched.rate, usdPreviousMarketRate)
+      ? usdTreasuryFetched
+      : null);
   const usdSource = usdFred ? "fred-dgs3mo" : usdParsed ? "treasury-yield-xml" : null;
-  const usdFallbackMode = usdAllowed ? "all-sources-failed" : "circuit-open";
+  const usdFallbackMode = !usdAllowed
+    ? "circuit-open"
+    : usdFredRejected || (usdTreasuryFetched != null && usdParsed == null)
+      ? "usd-rate-out-of-band"
+      : "all-sources-failed";
   const usdMeta =
     usdParsed && usdSource
       ? buildResolvedBenchmark({

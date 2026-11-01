@@ -1318,6 +1318,76 @@ describe("fetchTbillRate", () => {
       lastMarketSource: "fred-dgs3mo",
     });
   });
+
+  it("rejects a published-rate unit drift and retains the previous USD observation", async () => {
+    const driftedSnippet = TREASURY_XML_SNIPPET.replaceAll("3.72", "0.43").replaceAll("3.71", "0.43");
+    mockTbillByUrl({
+      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},0.43\n`, { status: 200 }),
+      "home.treasury.gov": new Response(driftedSnippet, { status: 200 }),
+    });
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rate: {
+        value: JSON.stringify({
+          rate: 3.72,
+          recordDate: "2026-03-07",
+          fetchedAt: 1773100800,
+          source: "fred-dgs3mo",
+          isFallback: false,
+          fallbackMode: null,
+        }),
+        updatedAt: 1773100800,
+      },
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(result.status).toBe("degraded");
+    expect(String(metadata.fallbackMode)).toContain("usd:usd-rate-out-of-band-retained");
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.72,
+      source: "fred-dgs3mo",
+      fallbackMode: "usd-rate-out-of-band-retained",
+      isFallback: true,
+    });
+    expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({
+      eventType: "benchmark-rate-out-of-band",
+      metadata: expect.objectContaining({ key: "USD", rate: 0.43, previousMarketRate: 3.72 }),
+    }));
+  });
+
+  it("falls through to the independent Treasury feed when FRED drifts out of band", async () => {
+    mockTbillByUrl({
+      "id=DGS3MO": new Response(`DATE,DGS3MO\n${FRESH_FRED_OBSERVATION_DATE},0.43\n`, { status: 200 }),
+      "home.treasury.gov": new Response(TREASURY_XML_SNIPPET, { status: 200 }),
+    });
+    installCacheByKey(vi.mocked(getCache), {
+      risk_free_rate: {
+        value: JSON.stringify({
+          rate: 3.72,
+          recordDate: "2026-03-07",
+          fetchedAt: 1773100800,
+          source: "fred-dgs3mo",
+          isFallback: false,
+          fallbackMode: null,
+        }),
+        updatedAt: 1773100800,
+      },
+    });
+
+    const result = await fetchTbillRate(db, undefined, BANXICO_TEST_ENV);
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+
+    expect(String(metadata.fallbackMode)).not.toContain("usd-rate-out-of-band");
+    expect(latestCachePayload()).toMatchObject({
+      rate: 3.72,
+      source: "treasury-yield-xml",
+      isFallback: false,
+    });
+    expect(logCronEvent).toHaveBeenCalledWith(db, expect.objectContaining({
+      eventType: "benchmark-rate-out-of-band",
+    }));
+  });
 });
 
 

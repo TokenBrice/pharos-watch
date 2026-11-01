@@ -34,6 +34,8 @@ const EXPECTED_CANARY_CHECK_IDS = [
   "depeg-open-coverage",
   "depeg-dex-suppression-divergence",
   "ddr-eligible-unsealed",
+  "stablecoins-active-price-coverage",
+  "depeg-observation-coverage",
 ];
 
 const HEALTHY_CENSUS = {
@@ -59,6 +61,51 @@ function depegCensusRuns() {
       census_json: JSON.stringify({ ...HEALTHY_CENSUS, unavailableCount: 0, reasonCounts: {} }),
       pipeline_succeeded: 1,
       unavailable_reason: null,
+    },
+  ];
+}
+
+function stablecoinsRunRows(options: {
+  pricedActiveCount?: number;
+  missingPriceCount?: number;
+  unavailableCount?: number;
+  reasonCounts?: Record<string, number>;
+  includeCoverage?: boolean;
+  includeCensus?: boolean;
+  startedAt?: number;
+} = {}) {
+  const expectedActiveCount = ACTIVE_IDS.size;
+  const pricedActiveCount = options.pricedActiveCount ?? expectedActiveCount;
+  const missingPriceCount = options.missingPriceCount ?? 0;
+  const unavailableCount = options.unavailableCount ?? 0;
+  return [
+    {
+      started_at: options.startedAt ?? NOW - 60,
+      status: "ok",
+      metadata: JSON.stringify({
+        ...(options.includeCoverage === false ? {} : {
+          activePriceCoverage: {
+            complete: missingPriceCount === 0,
+            expectedActiveCount,
+            pricedActiveCount,
+            missingPriceCount,
+            nominalReferenceCount: 0,
+          },
+        }),
+        ...(options.includeCensus === false ? {} : {
+          quality: {
+            depegObservation: {
+              scope: "psi-non-nav-before-supply-floor",
+              evaluatedAt: NOW - 120,
+              eligibleCount: expectedActiveCount,
+              observedCount: expectedActiveCount - unavailableCount,
+              unavailableCount,
+              belowFloorCount: 0,
+              reasonCounts: options.reasonCounts ?? {},
+            },
+          },
+        }),
+      }),
     },
   ];
 }
@@ -311,6 +358,11 @@ function healthyD1(
       rows: publishedDewsRows,
     },
     {
+      match: "canary-stablecoins-pricing-runs",
+      matchBinds: [2],
+      rows: stablecoinsRunRows(),
+    },
+    {
       match: "INSERT INTO worker_canary_runs",
       rows: [],
     },
@@ -333,9 +385,9 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 14,
+      totalChecks: 16,
 
-      okCount: 14,
+      okCount: 16,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
@@ -855,6 +907,11 @@ describe("worker data invariant canaries", () => {
         rows: unhealthyDewsRows,
       },
       ...depegCanaryFixtures(),
+      {
+        match: "canary-stablecoins-pricing-runs",
+        matchBinds: [2],
+        rows: stablecoinsRunRows(),
+      },
     ]);
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "shadow" });
@@ -1029,10 +1086,123 @@ describe("worker data invariant canaries", () => {
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
-    expect(summary.errorCount).toBe(9);
+    // The depeg and pricing checks read cron_runs and depeg tables, which this fixture also omits.
+    expect(summary.errorCount).toBe(11);
     expect(summary.skippedCount).toBe(0);
     expect(summary.degradedCount).toBe(1);
     expect(summary.okCount).toBe(4);
     expect(summary.worstStatus).toBe("error");
+  });
+});
+
+describe("pricing canaries", () => {
+  function pricingDb(rows: Record<string, unknown>[]) {
+    return mockD1([{ match: "canary-stablecoins-pricing-runs", matchBinds: [2], rows }]);
+  }
+
+  async function runPricingCheck(checkId: string, rows: Record<string, unknown>[]) {
+    const summary = await runCanaryChecks(pricingDb(rows), { observedAt: NOW, mode: "status" });
+    return summary.results.find((result) => result.checkId === checkId);
+  }
+
+  it("grades the published priced cohort against the shared breadth share", async () => {
+    const healthy = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows());
+    expect(healthy).toMatchObject({
+      status: "ok",
+      severity: "info",
+      metadata: { pricedActiveCount: ACTIVE_IDS.size, expectedActiveCount: ACTIVE_IDS.size },
+    });
+
+    const breadth = Math.ceil(ACTIVE_IDS.size * 0.05);
+    const degraded = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows({
+      pricedActiveCount: ACTIVE_IDS.size - breadth,
+      missingPriceCount: breadth,
+    }));
+    expect(degraded).toMatchObject({ status: "degraded", severity: "warning" });
+    expect(degraded?.error).toContain(`${breadth}/${ACTIVE_IDS.size} active assets are unpriced`);
+
+    const empty = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows({
+      pricedActiveCount: 0,
+      missingPriceCount: ACTIVE_IDS.size,
+    }));
+    expect(empty).toMatchObject({ status: "error", severity: "error" });
+  });
+
+  it("fails closed when the run does not report priced coverage", async () => {
+    const check = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows({
+      includeCoverage: false,
+    }));
+    expect(check).toMatchObject({
+      status: "error",
+      executionStatus: "failed",
+      executionFailureReason: "active-price-coverage-unreported",
+    });
+  });
+
+  it("does not treat an aged producer row as current priced coverage", async () => {
+    const check = await runPricingCheck("stablecoins-active-price-coverage", stablecoinsRunRows({
+      startedAt: NOW - 3_600,
+    }));
+    expect(check).toMatchObject({
+      status: "error",
+      executionStatus: "failed",
+      executionFailureReason: "sync-stablecoins-run-stale",
+      metadata: { runAgeSec: 3_600, maxAgeSec: 1_800 },
+    });
+  });
+
+  it("degrades when the depeg observation cohort shrinks against the previous generation", async () => {
+    const stable = await runPricingCheck("depeg-observation-coverage", stablecoinsRunRows());
+    expect(stable).toMatchObject({
+      status: "ok",
+      metadata: { observedCount: ACTIVE_IDS.size, unavailableCount: 0 },
+    });
+
+    const escalated = await runPricingCheck("depeg-observation-coverage", [
+      ...stablecoinsRunRows({
+        unavailableCount: 5,
+        reasonCounts: { "primary-unusable": 2, "non-authoritative-reference": 3 },
+      }),
+      ...stablecoinsRunRows({ unavailableCount: 2, reasonCounts: { "primary-unusable": 2 }, startedAt: NOW - 960 }),
+    ]);
+    expect(escalated).toMatchObject({ status: "degraded", severity: "warning" });
+    expect(escalated?.error).toContain("unavailable 2 -> 5");
+    expect(escalated?.error).toContain("non-authoritative-reference+3");
+    expect(escalated?.metadata).toMatchObject({
+      baselineAvailable: true,
+      unavailableDelta: 3,
+      reasonDelta: { "non-authoritative-reference": 3 },
+    });
+  });
+
+  it("keeps a stable depeg census ok without inventing a baseline", async () => {
+    const single = await runPricingCheck("depeg-observation-coverage", stablecoinsRunRows({ unavailableCount: 2 }));
+    expect(single).toMatchObject({ status: "ok", metadata: { baselineAvailable: false, unavailableCount: 2 } });
+  });
+
+  it("reports a held or failed depeg stage instead of healthy coverage", async () => {
+    const held = await runPricingCheck("depeg-observation-coverage", [{
+      started_at: NOW - 60,
+      status: "degraded",
+      metadata: JSON.stringify({
+        activePriceCoverage: { expectedActiveCount: ACTIVE_IDS.size, pricedActiveCount: ACTIVE_IDS.size, missingPriceCount: 0 },
+        quality: {
+          reason: "depeg-open-event-limit-reached",
+          depegObservation: null,
+          depegObservationUnavailableReason: "depeg-open-event-limit-reached",
+        },
+      }),
+    }]);
+    expect(held).toMatchObject({ status: "degraded", severity: "warning" });
+    expect(held?.error).toContain("depeg-open-event-limit-reached");
+
+    const unreported = await runPricingCheck("depeg-observation-coverage", stablecoinsRunRows({
+      includeCensus: false,
+    }));
+    expect(unreported).toMatchObject({
+      status: "error",
+      executionStatus: "failed",
+      executionFailureReason: "depeg-observation-unreported",
+    });
   });
 });

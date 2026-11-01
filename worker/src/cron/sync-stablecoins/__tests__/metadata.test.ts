@@ -913,3 +913,73 @@ describe("stablecoins pricing metadata", () => {
     )).toBe(true);
   });
 });
+
+describe("priced-cohort collapse", () => {
+  function pricedAssets(unpricedCount: number): PeggedAsset[] {
+    const unpriced = new Set(ACTIVE_STABLECOINS.slice(0, unpricedCount).map((coin) => coin.id));
+    return ACTIVE_STABLECOINS.map((coin) => ({
+      id: coin.id,
+      name: coin.name,
+      symbol: coin.symbol,
+      price: unpriced.has(coin.id) ? null : 1,
+      priceSource: unpriced.has(coin.id) ? "missing" : "defillama-list",
+      priceConfidence: "single-source" as const,
+      circulating: { peggedUSD: 1 },
+    })) as PeggedAsset[];
+  }
+
+  const previousFullCohort = {
+    missingActiveIds: [],
+    missingActiveAssets: [],
+    pricedActiveCount: ACTIVE_STABLECOINS.length,
+    expectedActiveCount: ACTIVE_STABLECOINS.length,
+  };
+
+  it("degrades a run whose priced cohort drops materially against the previous generation", async () => {
+    const assets = pricedAssets(40);
+    const result = buildStablecoinsSyncResult({
+      ...syncInput(assets),
+      previousActivePriceCoverage: previousFullCohort,
+    });
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "stablecoin-price-coverage-collapse",
+      quality: { reason: "stablecoin-price-coverage-collapse" },
+    });
+
+    const recovered = buildStablecoinsSyncResult({
+      ...syncInput(pricedAssets(4)),
+      previousActivePriceCoverage: previousFullCohort,
+    });
+    expect(recovered.status).toBe("ok");
+  });
+
+  it("only degrades against the previous generation when it is material", async () => {
+    const assets = pricedAssets(4);
+    const result = buildStablecoinsSyncResult({
+      ...syncInput(assets),
+      previousActivePriceCoverage: {
+        ...previousFullCohort,
+        pricedActiveCount: 8,
+      },
+    });
+    expect(result.status).toBe("ok");
+  });
+
+  it("degrades a zero priced cohort even without a previous baseline", async () => {
+    const result = buildStablecoinsSyncResult(syncInput(pricedAssets(ACTIVE_STABLECOINS.length)));
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "stablecoin-price-coverage-collapse",
+    });
+  });
+
+  it("keeps an ordinary single-generation gap out of the run status", async () => {
+    const result = buildStablecoinsSyncResult({
+      ...syncInput(pricedAssets(1)),
+      previousActivePriceCoverage: previousFullCohort,
+    });
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBeUndefined();
+  });
+});

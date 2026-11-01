@@ -39,6 +39,66 @@ export const YIELD_BENCHMARK_RECORD_MAX_AGE_SEC: Record<YieldBenchmarkKey, numbe
 };
 
 /**
+ * Per-key bound on a newly fetched market rate's relative move against the last
+ * published market observation. The provider range guard only rejects values
+ * outside a broad band (-10..20, 100 for TRY/RUB), so a publisher that changes
+ * units or column meaning while staying in range (4.3 -> 0.43) would otherwise
+ * publish as a current benchmark. High-rate keys (policy rates that can move by
+ * whole points) get a wider band; the unit-scale window below still catches a
+ * silent 10x/0.1x rescale for every key.
+ */
+const YIELD_BENCHMARK_MAX_RELATIVE_CHANGE: Record<YieldBenchmarkKey, number> = {
+  USD: 0.3,
+  USD_EFFR: 0.3,
+  EUR: 0.3,
+  CHF: 0.3,
+  GBP: 0.3,
+  JPY: 0.3,
+  CAD: 0.3,
+  AUD: 0.3,
+  SGD: 0.3,
+  MXN: 1,
+  BRL: 1,
+  RUB: 1,
+  TRY: 1,
+};
+
+/** Ratios only a unit change produces, whatever the key's own band. */
+const UNIT_SCALE_RATIO_MIN = 0.05;
+const UNIT_SCALE_RATIO_MAX = 0.2;
+const UNIT_SCALE_RATIO_INVERSE_MIN = 5;
+const UNIT_SCALE_RATIO_INVERSE_MAX = 20;
+/**
+ * Absolute move (percentage points) below which no relative band applies:
+ * near-zero policy benchmarks (CHF SAR3MC, EUR €STR) produce huge ratios from
+ * economically tiny moves.
+ */
+const RATE_ABSOLUTE_MOVE_FLOOR = 0.25;
+
+/**
+ * Whether a freshly parsed market rate may replace the published benchmark.
+ * Without a prior market observation there is no local baseline; the provider's
+ * own range guard remains the only value check. A rejected rate keeps the
+ * previous retained value and names `<key>-rate-out-of-band` in run metadata.
+ */
+export function isYieldBenchmarkRatePlausible(
+  key: YieldBenchmarkKey,
+  rate: number,
+  previousMarketRate: number | null | undefined,
+): boolean {
+  // Policy benchmarks may legitimately publish zero or negative observations.
+  if (!Number.isFinite(rate)) return false;
+  if (previousMarketRate == null || !Number.isFinite(previousMarketRate) || previousMarketRate === 0) return true;
+  if (Math.abs(rate - previousMarketRate) <= RATE_ABSOLUTE_MOVE_FLOOR) return true;
+  const ratio = rate / previousMarketRate;
+  if ((ratio >= UNIT_SCALE_RATIO_MIN && ratio <= UNIT_SCALE_RATIO_MAX)
+    || (ratio >= UNIT_SCALE_RATIO_INVERSE_MIN && ratio <= UNIT_SCALE_RATIO_INVERSE_MAX)) {
+    return false;
+  }
+  return Math.abs(ratio - 1) <= YIELD_BENCHMARK_MAX_RELATIVE_CHANGE[key];
+}
+
+/**
  * Age of a benchmark's own observation at `nowSec`. `null` when the entry
  * carries no parseable observation date. Small clock skew is tolerated, but a
  * farther-future observation returns a negative age so callers fail closed.

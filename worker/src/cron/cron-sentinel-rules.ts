@@ -18,7 +18,12 @@ export type CronSentinelRuleSource =
  * - `freshness`: `producer-stale` (producer age exceeds its consumer policy),
  *   `detail-write-failure` (a fresh detail cache write-failure marker exists),
  *   `dependency-recovery-lag` (DEX liquidity recovered but DEWS is still stale),
- *   `safety-publication-held` (the Safety Score publication is held).
+ *   `safety-publication-held` (the Safety Score publication is held),
+ *   `fx-source-stale` (the FX cache's worst per-peg source is stale),
+ *   `fx-cached-fallback` (FX rates are republished from cache),
+ *   `daily-lane-completion` (a daily cache lane missed its slot) and
+ *   `bluechip-coverage` (a mapped Bluechip constituent is past its observation
+ *   budget).
  * - `digest-publication`: `daily-row`, `daily-telegram`, `daily-twitter`,
  *   `weekly-row`, `weekly-telegram`, `weekly-twitter` (edition missing after
  *   its due time) and `map-producer-lag` (Safety Score map manifest missing).
@@ -40,7 +45,16 @@ export type CronSentinelRuleSource =
  * - `repair-debt`: `repair-debt-due`, `repair-debt-stale-claim`.
  */
 export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly string[]> = {
-  freshness: ["producer-stale", "detail-write-failure", "dependency-recovery-lag", "safety-publication-held"],
+  freshness: [
+    "producer-stale",
+    "detail-write-failure",
+    "dependency-recovery-lag",
+    "safety-publication-held",
+    "fx-source-stale",
+    "fx-cached-fallback",
+    "daily-lane-completion",
+    "bluechip-coverage",
+  ],
   "digest-publication": [
     "daily-row",
     "daily-telegram",

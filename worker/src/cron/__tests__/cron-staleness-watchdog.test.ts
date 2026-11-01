@@ -275,6 +275,68 @@ describe("cron staleness watchdog", () => {
     expect(evaluateCronStaleness({ stablecoins: { ageSeconds } }, ["stablecoins"])).toEqual([]);
   });
 
+  it("alerts FX publication degradation and a missed daily slot, then reports recovery", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T12:00:00Z"));
+    const slotStart = Date.UTC(2026, 7, 22, 8, 0, 0) / 1000;
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    const db = fakeDb();
+    const baseCaches = {
+      stablecoins: { ageSeconds: 0 },
+      "dex-liquidity": { ageSeconds: 0 },
+      "yield-data": { ageSeconds: 0 },
+      dews: { ageSeconds: 0 },
+      "stablecoin-charts": { ageSeconds: 0 },
+    };
+    buildCacheStatusesMock.mockResolvedValue({
+      caches: {
+        ...baseCaches,
+        "fx-rates": {
+          ageSeconds: 60,
+          publishedAt: Math.floor(Date.now() / 1000) - 60,
+          mode: "cached-fallback",
+          sourceStatus: "stale",
+          consecutiveFallbackRuns: 3,
+          warning: "peggedEUR business-daily reference is 2 publishes behind",
+        },
+        "usds-status": { ageSeconds: 1_000, publishedAt: slotStart - 86_400 },
+        "bluechip-ratings": { ageSeconds: 1_000, publishedAt: slotStart + 300 },
+      },
+      warnings: [], failures: [], diagnostics: [],
+    });
+
+    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    const text = String(sendToChatMock.mock.calls[0]?.[1] ?? "");
+    expect(text).toContain("FX rate publication degraded");
+    expect(text).toContain("peggedEUR business-daily reference is 2 publishes behind");
+    expect(text).toContain("cached fallback (3 consecutive runs)");
+    expect(text).toContain("Daily pricing lanes incomplete");
+    expect(JSON.parse(raised.metadata ?? "{}").firedRuleIds).toEqual(expect.arrayContaining([
+      "fx-source-stale", "fx-cached-fallback", "daily-lane-completion",
+    ]));
+
+    vi.setSystemTime(new Date(Date.now() + CRON_STALENESS_ALERT_COOLDOWN_SEC * 1_000));
+    buildCacheStatusesMock.mockResolvedValue({
+      caches: {
+        ...baseCaches,
+        "fx-rates": {
+          ageSeconds: 60,
+          publishedAt: Math.floor(Date.now() / 1000) - 60,
+          mode: "live",
+          sourceStatus: "fresh",
+          consecutiveFallbackRuns: 0,
+        },
+        "usds-status": { ageSeconds: 60, publishedAt: slotStart + 60 },
+        "bluechip-ratings": { ageSeconds: 60, publishedAt: slotStart + 300 },
+      },
+      warnings: [], failures: [], diagnostics: [],
+    });
+    await runCronStalenessWatchdog(db, undefined, options);
+    const recoveryText = String(sendToChatMock.mock.calls[1]?.[1] ?? "");
+    expect(recoveryText).toContain("FX rate publication recovered");
+    expect(recoveryText).toContain("Daily pricing lanes complete");
+  });
+
   it("reports DEX-to-DEWS dependency recovery state", async () => {
     mockCacheStatus({ "dex-liquidity": 120, dews: 4_000 });
     const result = await runCronStalenessWatchdog(fakeDb());

@@ -26,6 +26,7 @@ import { recordOperatorAlertReceipt } from "../lib/status/operator-alert-health"
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
 import { loadCanaryOperatorWatch } from "./operator-watch-canary";
 import { loadProbeOperatorWatch } from "./operator-watch-probe";
+import { buildPricingOperatorConditions, pricingOperatorRuleIds } from "./operator-watch-pricing";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
 // prune-cron-history deletes cron_runs rows older than one week. A producer
@@ -376,7 +377,7 @@ export interface OperatorWatchCondition {
   unknown?: boolean;
 }
 
-type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "canary" | "probe";
+export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "canary" | "probe" | "fx-rates" | "daily-lane";
 
 const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; recovered: string }> = {
   producer: { raised: "Stale producers", recovered: "Recovered producers" },
@@ -385,13 +386,14 @@ const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; re
   "safety-publication": { raised: "Safety Score publication held", recovered: "Safety Score publication released" },
   canary: { raised: "Canary findings raised", recovered: "Canary findings recovered" },
   probe: { raised: "Probe paths persistently failing", recovered: "Probe paths recovered" },
+  "fx-rates": { raised: "FX rate publication degraded", recovered: "FX rate publication recovered" },
+  "daily-lane": { raised: "Daily pricing lanes incomplete", recovered: "Daily pricing lanes complete" },
 };
 
-// At most twelve section lines are emitted (six sections × raised/recovered).
-// Budget each line from the repo's conservative chunk limit so a systemic
-// detail-write cohort cannot exceed Telegram's sendMessage cap and block every
-// pending transition in the same message.
-const OPERATOR_ALERT_SECTION_LINES = 12;
+// Every section can raise and recover in one message. Budget each line from the
+// repo's conservative chunk limit so a systemic detail-write cohort cannot
+// exceed Telegram's sendMessage cap and block every pending transition.
+const OPERATOR_ALERT_SECTION_LINES = Object.keys(OPERATOR_SECTION_TITLES).length * 2;
 const OPERATOR_ALERT_SECTION_CHARS =
   Math.floor(TELEGRAM_MESSAGE_CHUNK_LIMIT / OPERATOR_ALERT_SECTION_LINES) - 16;
 
@@ -598,6 +600,11 @@ export async function runCronStalenessWatchdog(
     ...(canaryWatch.unknown ? ["canary" as const] : []),
     ...(probeWatch.unknown ? ["probe" as const] : []),
   ];
+  const pricingConditions = await buildPricingOperatorConditions(
+    db,
+    { caches: status.caches, nowSec },
+    signal,
+  );
   const alertTransitions = await alertOnFreshnessTransitions({
     db,
     conditions: [
@@ -640,6 +647,7 @@ export async function runCronStalenessWatchdog(
         ...(condition.label ? { label: condition.label } : {}),
         active: condition.active,
       })),
+      ...pricingConditions,
     ],
     unknownSections,
     nowSec,
@@ -683,6 +691,7 @@ export async function runCronStalenessWatchdog(
         ...(safetyPublicationHeld ? ["safety-publication-held"] : []),
         ...(canaryWatch.conditions.some((condition) => condition.active) ? ["canary-finding"] : []),
         ...(probeWatch.conditions.some((condition) => condition.active) ? ["probe-path-persistent-failure"] : []),
+        ...pricingOperatorRuleIds(pricingConditions),
       ],
       canaryWatch: { active: canaryWatch.conditions.length, unknown: canaryWatch.unknown },
       probeWatch: { active: probeWatch.conditions.length, unknown: probeWatch.unknown },
