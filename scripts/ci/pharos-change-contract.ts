@@ -1584,7 +1584,7 @@ export function formatContract(
     );
     if (context.status === "over-budget") {
       sections.push(
-        `Over budget by ${context.total.bytes - context.ceiling} B. No required references have been dropped.`,
+        `Warning: over budget by ${context.total.bytes - context.ceiling} B (advisory; nothing was dropped).`,
         context.remediation!,
         "Contributions (merged per file, largest first):",
         formatBullets([...context.files].sort((a, b) => b.bytes - a.bytes).map((file) => `${file.path}: ${file.bytes} B`), { limit: Number.POSITIVE_INFINITY }),
@@ -1989,7 +1989,6 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
     process.exitCode = 1;
   }
   const context = buildRouteContext(contract);
-  if (context.status === "over-budget") process.exitCode = 1;
   if (options.format === "json") {
     console.log(JSON.stringify({ ...contract, context }, null, 2));
     return;

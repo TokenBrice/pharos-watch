@@ -162,7 +162,8 @@ jobs:
         run: npm run check:pages-artifact
         env:
           PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
-          # Advisory for two weeks; ratchet from measured p50 before enabling.
+          # Presence opts this job into the audit; the PR lane omits it.
+          # Advisory for two weeks; ratchet from measured p50 before switching to "1".
           PHAROS_LIGHTHOUSE_THRESHOLD: "70"
           PHAROS_LIGHTHOUSE_ENFORCE: "0"
       - name: Retain Lighthouse reports

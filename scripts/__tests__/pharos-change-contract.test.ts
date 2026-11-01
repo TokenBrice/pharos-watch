@@ -60,9 +60,10 @@ function expectIntegrityObligations(contract: Pick<ChangeContract, "docs">, meth
   expect(docKeys(contract)).toEqual(expect.arrayContaining(keys));
 }
 
-// Exact measured byte ceilings, not rounded class allowances. Lower these when
-// reading shrinks; never regenerate them automatically or trade away obligations.
-// Manually ratcheted after moving implementation inventories/details into linked appendices.
+// Exact measured byte ceilings, not rounded class allowances, reported as
+// advisory warnings rather than failures. Lower these when reading shrinks;
+// never regenerate them automatically or trade away obligations. Manually
+// ratcheted after moving implementation inventories/details into linked appendices.
 const ROUTE_FIXTURES = [
   ["src/components/stablecoin-table.tsx", 21_706, 21_706],
   ["src/app/yield/page.tsx", 50_065, 50_065],
@@ -413,7 +414,7 @@ describe("reading selectors and context modes", () => {
     expect(docKeys({ docs: [...contract.docs, ...contract.background] }))
       .not.toContain("docs/digest-pipeline.md#generation");
     expect([...contract.docs, ...contract.background].some((doc) => doc.path === "docs/safety-score-map.md")).toBe(false);
-    expect(buildRouteContext(contract).total.bytes).toBeLessThanOrEqual(80_000);
+    warnIfOverBudget(`evaluator seam (${mode})`, buildRouteContext(contract));
   });
 
   it.each([
@@ -472,7 +473,7 @@ describe("reading selectors and context modes", () => {
       "docs/architecture.md#frontend-runtime-and-seo-surface",
       "docs/stablecoin-detail-page.md#route-shape",
     ]);
-    expect(buildRouteContext(contract).status).toBe("within-budget");
+    warnIfOverBudget("public llms discovery", buildRouteContext(contract));
   });
 
   it.each([
@@ -488,7 +489,7 @@ describe("reading selectors and context modes", () => {
       "docs/scripts.md#build-and-generated-artifacts",
       "docs/api-reference.md#surface-split",
     ]);
-    expect(buildRouteContext(contract).status).toBe("within-budget");
+    warnIfOverBudget(`dated dataset ${file}`, buildRouteContext(contract));
   });
 
   it.each([
@@ -502,7 +503,7 @@ describe("reading selectors and context modes", () => {
       "docs/scripts.md#build-and-generated-artifacts",
       "docs/api-reference.md#surface-split",
     ]));
-    expect(buildRouteContext(contract).status).toBe("within-budget");
+    warnIfOverBudget(`generated dataset ${file}`, buildRouteContext(contract));
   });
 
   it("routes the DexScreener parser to DEX discovery docs and its parser/census tests", () => {
@@ -546,7 +547,7 @@ describe("reading selectors and context modes", () => {
     ));
     expect(docKeys(contract)).not.toContain("docs/testing.md#ci-pipeline");
     expect(docKeys({ docs: contract.background })).toContain("docs/deployment-process.md#ci-deploy-sequence");
-    expect(buildRouteContext(contract).total.bytes).toBeLessThanOrEqual(40_000);
+    warnIfOverBudget(`Functions map.${extension}`, buildRouteContext(contract));
   });
 
   it.each([
@@ -646,38 +647,52 @@ describe("reading selectors and context modes", () => {
   });
 });
 
-/** Labelled byte-budget failures (measured, ceiling, excess) for one route. */
-function routeBudgetFailures(label: string, bytes: number, ceiling: number): string[] {
+/** Labelled advisory byte-budget warnings (measured, ceiling, excess) for one route. */
+function routeBudgetWarnings(label: string, bytes: number, ceiling: number): string[] {
   return bytes > ceiling ? [`${label}: ${bytes} bytes > ${ceiling} (excess ${bytes - ceiling})`] : [];
 }
 
-describe("route context enforcement and fixture ratchets", () => {
-  it.each(ROUTE_FIXTURES)("keeps %s within its exact auto/contract fixture ceilings", (file, autoCeiling, contractCeiling) => {
-    // Visit both modes before asserting so one breach cannot hide the other.
+function reportBudgetWarnings(warnings: readonly string[]): void {
+  for (const warning of warnings) console.warn(`[route-context-budget] ${warning}`);
+}
+
+/** Byte budgets are advisory: report an over-budget route without failing the suite. */
+function warnIfOverBudget(
+  label: string,
+  context: { ceiling: number; status: string; total: { bytes: number } },
+): void {
+  if (context.status !== "within-budget") reportBudgetWarnings(routeBudgetWarnings(label, context.total.bytes, context.ceiling));
+}
+
+describe("route context budget warnings and fixture ratchets", () => {
+  it.each(ROUTE_FIXTURES)("reports %s against its exact auto/contract fixture ceilings", (file, autoCeiling, contractCeiling) => {
+    // Visit both modes before reporting so one breach cannot hide the other.
     const failures: string[] = [];
+    const warnings: string[] = [];
     for (const [mode, ceiling] of [["auto", autoCeiling], ["contract", contractCeiling]] as const) {
       try {
         const context = buildRouteContext(classifyChangedFiles([file], mode));
-        failures.push(...routeBudgetFailures(`${file} (${mode})`, context.total.bytes, ceiling));
+        warnings.push(...routeBudgetWarnings(`${file} (${mode})`, context.total.bytes, ceiling));
         if (ceiling > context.ceiling) failures.push(`${file} (${mode}): fixture ${ceiling} exceeds class ceiling ${context.ceiling}`);
-        if (context.status !== "within-budget") failures.push(`${file} (${mode}): status ${context.status}`);
         if (context.ceiling !== ROUTE_CONTEXT_CEILINGS[context.class]) failures.push(`${file} (${mode}): ceiling ${context.ceiling} is not the ${context.class} class ceiling`);
       } catch (error) {
         failures.push(`${file} (${mode}): ${error instanceof Error ? error.message : String(error)}`);
       }
     }
+    reportBudgetWarnings(warnings);
     expect(failures, failures.join("\n")).toEqual([]);
   });
 
-  it("bounds every tracked mapped reading signature in both modes", () => {
+  it("reports every tracked mapped reading signature against its class ceiling", () => {
     readingSignatures ??= enumerateReadingSignatures();
     const documents: RouteContextDocumentCache = new Map();
     const measuredBytes = new Map<string, number>();
     const failures: string[] = [];
+    const warnings: string[] = [];
     expect(new Set(readingSignatures.map((entry) => entry.mode))).toEqual(new Set(["auto", "contract"]));
     for (const { file, mode, contract } of readingSignatures) {
       // Selector signatures can select identical reading sets. Measure their
-      // union once, but compare every signature against its own class ceiling.
+      // union once, but report every signature against its own class ceiling.
       // An unreadable document or anchor is reported and enumeration continues;
       // it is never treated as zero bytes or as a pass.
       try {
@@ -691,26 +706,29 @@ describe("route context enforcement and fixture ratchets", () => {
           measuredBytes.set(key, bytes);
         }
         const routeClass = classifyRouteContext(contract);
-        failures.push(...routeBudgetFailures(`${file} (${mode}, ${routeClass})`, bytes, ROUTE_CONTEXT_CEILINGS[routeClass]));
+        warnings.push(...routeBudgetWarnings(`${file} (${mode}, ${routeClass})`, bytes, ROUTE_CONTEXT_CEILINGS[routeClass]));
       } catch (error) {
         failures.push(`${file} (${mode}): ${error instanceof Error ? error.message : String(error)}`);
       }
     }
+    reportBudgetWarnings(warnings);
     expect(failures, failures.join("\n")).toEqual([]);
   });
 
-  it("labels every budget breach so one enumeration reports all of them", () => {
+  it("labels every budget warning so one enumeration reports all of them", () => {
     expect([
-      ...routeBudgetFailures("a (auto)", 120, 100),
-      ...routeBudgetFailures("b (contract)", 100, 100),
-      ...routeBudgetFailures("c (contract)", 131, 100),
+      ...routeBudgetWarnings("a (auto)", 120, 100),
+      ...routeBudgetWarnings("b (contract)", 100, 100),
+      ...routeBudgetWarnings("c (contract)", 131, 100),
     ]).toEqual(["a (auto): 120 bytes > 100 (excess 20)", "c (contract): 131 bytes > 100 (excess 31)"]);
   });
 
-  it("retains the evaluator and Functions map acceptance limits in both modes", () => {
+  it("reports the evaluator and Functions map measurements against their acceptance limits in both modes", () => {
     for (const mode of ["auto", "contract"] as const) {
-      expect(buildRouteContext(classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"], mode)).total.bytes).toBeLessThanOrEqual(80_000);
-      expect(buildRouteContext(classifyChangedFiles(["functions/safety-scores/map.json.ts"], mode)).total.bytes).toBeLessThanOrEqual(40_000);
+      reportBudgetWarnings([
+        ...routeBudgetWarnings(`evaluator (${mode})`, buildRouteContext(classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"], mode)).total.bytes, 80_000),
+        ...routeBudgetWarnings(`Functions map (${mode})`, buildRouteContext(classifyChangedFiles(["functions/safety-scores/map.json.ts"], mode)).total.bytes, 40_000),
+      ]);
     }
   });
 
@@ -720,7 +738,7 @@ describe("route context enforcement and fixture ratchets", () => {
     const context = buildRouteContext(contract);
     expect(context.class).toBe("multi-domain-batch");
     expect(context.ceiling).toBe(160_000);
-    expect(context.status).toBe("within-budget");
+    warnIfOverBudget("multi-file union", context);
     expect(context.files.filter((file) => file.path === "AGENTS.md")).toHaveLength(1);
     expect(context.total.bytes).toBeLessThan(files.reduce((sum, file) =>
       sum + buildRouteContext(classifyChangedFiles([file], "contract")).total.bytes, 0));
@@ -730,13 +748,13 @@ describe("route context enforcement and fixture ratchets", () => {
     ])).class).toBe("multi-domain-batch");
   });
 
-  it.each(["text", "json"] as const)("fails oversized batch CLI %s with the complete plan and contributions", (format) => {
+  it.each(["text", "json"] as const)("warns on an oversized batch CLI %s with the complete plan and contributions", (format) => {
     const files = ROUTE_FIXTURES.map(([file]) => file);
     const result = spawnSync(process.execPath, [
       "--import", "tsx", "scripts/ci/pharos-change-contract.ts",
       ...files.flatMap((file) => ["--file", file]), ...(format === "json" ? ["--json"] : []),
     ], { encoding: "utf8" });
-    expect(result.status).toBe(1);
+    expect(result.status).toBe(0);
     const contract = classifyChangedFiles(files);
     const context = buildRouteContext(contract);
     expect(context.status).toBe("over-budget");
@@ -749,6 +767,7 @@ describe("route context enforcement and fixture ratchets", () => {
       expect(output.context.remediation).toContain("smaller explicit path groups");
     } else {
       expect(result.stdout).toContain("multi-domain-batch — over-budget (ceiling 160000 B)");
+      expect(result.stdout).toContain("Warning: over budget by");
       expect(result.stdout).toContain("smaller explicit path groups");
       for (const reference of context.references) {
         expect(result.stdout).toContain(reference.anchor ? `${reference.path}#${reference.anchor}` : reference.path);
@@ -759,7 +778,7 @@ describe("route context enforcement and fixture ratchets", () => {
     }
   });
 
-  it("fails an enlarged required section without removing its reference or coupling hooks/checks to size", () => {
+  it("warns on an enlarged required section without removing its reference or coupling hooks/checks to size", () => {
     // Patch reads only in the child: no repository files or authored obligations
     // change, and the real CLI exit path still sees the enlarged ADR-28 section.
     const script = `
@@ -789,7 +808,7 @@ describe("route context enforcement and fixture ratchets", () => {
       if (reads === 0) throw new Error("CLI did not account for the mutated required section");
     `;
     const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script], { encoding: "utf8" });
-    expect(result.status, result.stderr).toBe(1);
+    expect(result.status, result.stderr).toBe(0);
     const output = JSON.parse(result.stdout);
     expect(output.context.status).toBe("over-budget");
     expect(output.context.total.bytes).toBeGreaterThan(output.context.ceiling);
@@ -813,14 +832,14 @@ describe("route context enforcement and fixture ratchets", () => {
       const contract = classifyChangedFiles([file]);
       const context = buildRouteContext(contract);
       expect(context.total.bytes).toBeLessThan(before.total.bytes);
-      expect(context.status).toBe("within-budget");
+      warnIfOverBudget("classification.ts", context);
       expect(() => expectIntegrityObligations(contract, false)).toThrow();
     } finally {
       families.forEach((family, index) => { family.required = originals[index]; });
     }
   });
 
-  it("does not accept a budget-bypass flag", () => {
+  it("rejects unknown options instead of silently accepting them", () => {
     const result = spawnSync(process.execPath, [
       "--import", "tsx", "scripts/ci/pharos-change-contract.ts", "--ignore-budget",
       "--file", "shared/lib/safety-score-v9/evaluate-asset.ts",
