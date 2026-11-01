@@ -320,15 +320,24 @@ import { mergeStagedPools } from "../dex-liquidity/staging-merge";
 import * as registryPersistence from "../dex-discovery/persistence";
 import { readDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 
+/**
+ * Cache reads must miss. `getCache()` maps any row-shaped answer to a record;
+ * a fabricated `{ cnt: 0 }` row is a malformed circuit record, and corrupt
+ * breaker state fails closed instead of admitting the read.
+ */
+function firstRowFor(sql: string) {
+  return async () => (sql.includes("FROM cache") ? null : { cnt: 0 });
+}
+
 const db = makeNoopD1({
-  prepare: () => ({
+  prepare: (sql: string) => ({
     bind: () => ({
       all: async () => ({ results: [] }),
-      first: async () => ({ cnt: 0 }),
+      first: firstRowFor(sql),
       run: async () => ({ success: true, meta: {} }),
     }),
     all: async () => ({ results: [] }),
-    first: async () => ({ cnt: 0 }),
+    first: firstRowFor(sql),
     run: async () => ({ success: true, meta: {} }),
   }),
   batch: async () => [],
@@ -345,11 +354,11 @@ function strictStubOrThrow(sql: string) {
     return {
       bind: () => ({
         all: async () => ({ results: [] }),
-        first: async () => ({ cnt: 0 }),
+        first: firstRowFor(sql),
         run: async () => ({ success: true, meta: {} }),
       }),
       all: async () => ({ results: [] }),
-      first: async () => ({ cnt: 0 }),
+      first: firstRowFor(sql),
       run: async () => ({ success: true, meta: {} }),
     };
   }

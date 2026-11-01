@@ -3,6 +3,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { loadReserveNavSupplyPrice } from "../reserve-nav-price";
 import { LIVE_RESERVE_FRESHNESS_SEC } from "../live-reserves/store-shared";
 import { collectPrimaryProviderQuotes, type PrimaryPricePlan } from "../../cron/sync-stablecoins/enrich-prices-primary-provider-collection";
@@ -74,8 +75,20 @@ async function assertBothConsumers(h: NavConsumerInputs, admitted: boolean) {
   }
   if (h.meta.detailProvider === "coingecko") {
     const supplemental = await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined, h.db);
-    expect(supplemental.some((asset) => asset.id === h.meta.id)).toBe(admitted);
-    if (admitted) expect(supplemental.find((asset) => asset.id === h.meta.id)?.circulating).toEqual({ peggedUSD: 1_230 });
+    const row = supplemental.find((asset) => asset.id === h.meta.id);
+    if (admitted) {
+      expect(row?.circulating).toEqual({ peggedUSD: 1_230 });
+    } else if (prefersOnChainSupplyMcap(h.meta)) {
+      // Preferred native supply (USYC since 2026-11-01) retains the row but
+      // withholds the book: an unbound NAV snapshot may never become its supply
+      // or its price.
+      expect(row).toMatchObject({ circulating: {}, supplySource: "onchain-supply-withheld" });
+      expect(row?.price).toBeNull();
+      expect(row?.supplyObservedAt).toBeUndefined();
+      expect(row?.supplyRestored).toBeUndefined();
+    } else {
+      expect(row).toBeUndefined();
+    }
   }
 }
 
