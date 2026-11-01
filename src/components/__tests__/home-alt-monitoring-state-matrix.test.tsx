@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import type { ComponentType } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { HomeAltRankingsSection } from "@/components/home-alt-rankings-section";
@@ -82,7 +82,7 @@ vi.mock("@/lib/stablecoin-static-data", async (importOriginal) => ({
 }));
 vi.mock("@/components/homepage-client-view-model", () => ({
   buildHomepageCriticalViewModel: ({ stablecoinsData }: { stablecoinsData?: { peggedAssets?: unknown[] } }) => ({
-    filteredRowCount: stablecoinsData?.peggedAssets?.length ?? 0,
+    filteredRowCount: stablecoinsData ? stablecoinsData.peggedAssets?.length ?? 0 : null,
     pegScores: new Map(),
   }),
   buildHomepageOptionalViewModel: () => ({ reportCardMap: {} }),
@@ -475,5 +475,62 @@ describe("MintBurnCard activity and valuation", () => {
     for (const other of ["No 24h activity", "Balanced 24h mint / burn activity", "Net flows unavailable"]) {
       if (other !== expected) expect(screen.queryByText(other)).toBeNull();
     }
+  });
+});
+
+describe("MintBurnCard gauge band settlement", () => {
+  function configureGauge(gauge: Record<string, unknown>) {
+    useMintBurnFlowsMock.mockReturnValue(queryFor("ready", {
+      coins: [makeMintBurnFlowCoin()],
+      gauge,
+    }, flowEmpty));
+  }
+
+  it("withholds a band that withheld weight leaves unsettled", () => {
+    configureGauge({
+      band: "NEUTRAL",
+      score: 8,
+      partialValuationInputs: 1,
+      scoredMcapUsd: 95_000_000_000,
+      partialValuationMcapUsd: 5_000_000_000,
+    });
+
+    render(<MintBurnCard />);
+
+    expect(screen.queryByText("Neutral")).toBeNull();
+    expect(screen.getByText("—")).toBeTruthy();
+    expect(screen.getByText(/\+8/)).toBeTruthy();
+  });
+
+  it("prints the published band while withheld weight cannot change it", () => {
+    configureGauge({
+      band: "NEUTRAL",
+      score: 8,
+      partialValuationInputs: 1,
+      scoredMcapUsd: 99_000_000_000,
+      partialValuationMcapUsd: 1_000_000_000,
+    });
+
+    render(<MintBurnCard />);
+
+    expect(screen.getByText("Neutral")).toBeTruthy();
+  });
+});
+
+describe("RecentFreezesCard age basis", () => {
+  it("advances row ages on the viewer clock while the retained payload stays unchanged", () => {
+    useBlacklistEventsPageMock.mockReturnValue(queryFor("ready", {
+      events: [{ ...freezesReady.events[0]!, timestamp: UPDATED_AT / 1000 - 3_600 }],
+    }, { events: [] }));
+    useBlacklistSummaryMock.mockReturnValue(queryFor("ready", freezeSummaryReady, freezeSummaryEmpty));
+    useStablecoinsMock.mockReturnValue(queryFor("ready", stablecoinReady, { peggedAssets: [] }));
+
+    render(<RecentFreezesCard />);
+    expect(screen.getByText("1h")).toBeTruthy();
+
+    act(() => { vi.advanceTimersByTime(4 * 60 * 60 * 1000); });
+
+    expect(screen.getByText("5h")).toBeTruthy();
+    expect(screen.queryByText("1h")).toBeNull();
   });
 });

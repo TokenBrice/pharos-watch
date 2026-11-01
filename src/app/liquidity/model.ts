@@ -87,9 +87,14 @@ function computeLiquidityStats(
       if (liq.coverageClass === "fallback") fallbackCoverage++;
     }
     if (liq.tvlChange7d != null && liq.totalTvlUsd > 0) {
-      const prevTvl = liq.totalTvlUsd / (1 + liq.tvlChange7d / 100);
-      tvlForChange += liq.totalTvlUsd;
-      totalPrevTvl += prevTvl;
+      // A published -100.00% (any >99.996% collapse) has no invertible prior
+      // value; adding Infinity would turn the whole aggregate into NaN.
+      const denominator = 1 + liq.tvlChange7d / 100;
+      const prevTvl = denominator > 0 ? liq.totalTvlUsd / denominator : null;
+      if (prevTvl != null && Number.isFinite(prevTvl)) {
+        tvlForChange += liq.totalTvlUsd;
+        totalPrevTvl += prevTvl;
+      }
     }
     if (liq.weightedBalanceRatio != null && liq.balanceMeasuredTvlUsd != null) {
       const measuredTvl = liq.balanceMeasuredTvlUsd;
@@ -118,7 +123,7 @@ function computeLiquidityStats(
     highConfidenceCoverage,
     fallbackCoverage,
     totalTracked: ACTIVE_STABLECOINS.length,
-    agg7dChange: agg7dChange != null ? Math.round(agg7dChange * 10) / 10 : null,
+    agg7dChange: agg7dChange != null && Number.isFinite(agg7dChange) ? Math.round(agg7dChange * 10) / 10 : null,
     avgBalance: balanceWeight > 0 ? Math.round((totalBalance / balanceWeight) * 100) : null,
     avgOrganic: organicWeight > 0 ? Math.round((totalOrganic / organicWeight) * 100) : null,
   };

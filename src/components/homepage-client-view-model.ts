@@ -26,11 +26,10 @@ export function buildHomepageCriticalViewModel(args: {
     pegSummaryCoins: args.pegSummaryData?.coins,
   });
   const trackedIds = buildTrackedIdSet(args.filters.activeFilters, args.reportCardMap, args.eligibleIds);
-  const filteredRowCount = filterStablecoins(
-    args.stablecoinsData?.peggedAssets,
-    trackedIds,
-    args.filters.searchQuery,
-  ).length;
+  // Unavailable is not zero: without a successful payload there is no census.
+  const filteredRowCount = args.stablecoinsData
+    ? filterStablecoins(args.stablecoinsData.peggedAssets, trackedIds, args.filters.searchQuery).length
+    : null;
 
   return {
     pegScores: tableInputs.pegScores,

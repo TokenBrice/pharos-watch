@@ -188,6 +188,23 @@ export class ApiFetchError extends Error {
   }
 }
 
+/**
+ * Whether a failed read is the cache-passthrough "not populated yet" 503 — the
+ * only 503 that says anything about dataset state. Maintenance, rate-limit and
+ * malformed-cache 503s are transport failures and must not claim emptiness.
+ */
+export function isDatasetNotPopulatedError(error: unknown): boolean {
+  if (!(error instanceof ApiFetchError) || error.status !== 503 || !error.bodyText) return false;
+  try {
+    const body: unknown = JSON.parse(error.bodyText);
+    return typeof body === "object" && body !== null && !Array.isArray(body) &&
+      typeof (body as { error?: unknown }).error === "string" &&
+      /^data not yet available$/i.test((body as { error: string }).error.trim());
+  } catch {
+    return false;
+  }
+}
+
 function getBodyWarning(data: unknown): string | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     return null;

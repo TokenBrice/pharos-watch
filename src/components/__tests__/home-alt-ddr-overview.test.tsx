@@ -149,6 +149,34 @@ describe("HomeAltDdrOverview", () => {
     expect(symbols).toEqual(["LIVEDEEP", "LOCKDEEP", "UNKNOWN"]);
   });
 
+  it.each([
+    ["still loading", { data: undefined, error: null }],
+    ["degraded", {
+      data: { _meta: { computedAt: COMPUTED_AT, degraded: true, degradedReason: "secondary-overlay-unavailable" }, rows: [] },
+      error: null,
+    }],
+  ])("keeps the header count on the graded cohort while the resolver is %s", (_case, resolver) => {
+    useDepegResolverSurfacesMock.mockReturnValue({
+      resolverEnabled: true, resolverReviewerEnabled: true,
+      resolver: { ...resolver, dataUpdatedAt: COMPUTED_AT * 1000, refetch: refetchResolver },
+      resolverReview: {
+        data: {
+          _meta: { computedAt: COMPUTED_AT, degraded: false, degradedReason: null },
+          summary: { headlineScope: "current_policy", headline: { recoveryLikelihoodScoredCount: 8,
+            recoveryLikelihoodCorrectCount: 6, recoveryLikelihoodAccuracyPct: 0.75, baselineRecoverableCorrectCount: 7,
+            lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] },
+          byPredictionPolicy: [] },
+        },
+        error: null, dataUpdatedAt: COMPUTED_AT * 1000, refetch: refetchReviewer,
+      },
+    });
+    render(<HomeAltDdrOverview />);
+    expect(screen.getByText("75.0%")).toBeTruthy();
+    expect(screen.getByText("Recovery calls correct: 6/8")).toBeTruthy();
+    expect(screen.getByText("graded").textContent).toBe("8 graded");
+    expect(screen.queryByText("12 graded")).toBeNull();
+  });
+
   it("shows the promoted accuracy with its call fraction and no sub-text under the figure", () => {
     setSources();
     render(<HomeAltDdrOverview />);

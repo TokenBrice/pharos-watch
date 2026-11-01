@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import { useBlacklistEventsPage, useBlacklistSummary } from "@/hooks/use-blacklist-events";
+import { useMinuteClockSec } from "@/hooks/use-minute-clock-sec";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 import { buildBlacklistStatusBuckets } from "@shared/lib/blacklist-status-buckets";
 import { computeFreezableSummary, formatShare } from "@shared/lib/freezewatch/freezable-summary";
@@ -111,15 +112,20 @@ export function RecentFreezesCard(): React.JSX.Element {
   const logos = logosById;
   const logoMap = useMemo(() => logos ?? {}, [logos]);
   const [windowKey, setWindowKey] = useState<WindowKey>("24h");
+  const nowSec = useMinuteClockSec();
 
   const recent = useMemo(() => {
     if (!eventsQuery.data) return [];
-    const refSec = eventsQuery.dataUpdatedAt
-      ? Math.floor(eventsQuery.dataUpdatedAt / 1000)
-      : // eslint-disable-next-line react-hooks/purity -- Date.now() only used as a transient fallback before TanStack Query reports dataUpdatedAt; visible result is bounded by the query's refetchInterval.
-        Math.floor(Date.now() / 1000);
+    // Ages follow the viewer's clock, not the query's receipt time, which
+    // freezes between the 12h polls. Receipt time only fills the pre-mount gap.
+    const refSec = nowSec > 0
+      ? nowSec
+      : eventsQuery.dataUpdatedAt
+        ? Math.floor(eventsQuery.dataUpdatedAt / 1000)
+        : // eslint-disable-next-line react-hooks/purity -- transient fallback before the mounted clock ticks and before TanStack reports dataUpdatedAt
+          Math.floor(Date.now() / 1000);
     return buildRecentRows(eventsQuery.data.events, refSec, (sym) => symbolToId(sym, logoMap));
-  }, [eventsQuery.data, eventsQuery.dataUpdatedAt, logoMap]);
+  }, [eventsQuery.data, eventsQuery.dataUpdatedAt, logoMap, nowSec]);
 
   const isLoading = eventsQuery.isLoading || summaryQuery.isLoading;
   const state = resolveQueryViewState({

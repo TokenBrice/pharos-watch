@@ -419,7 +419,8 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
   const stat = ddrUsable
     ? { value: items.filter((item) => item.tier != null).length, label: "published forecasts" }
     // R1: no usable reviewer headline is an unavailable count, never zero graded.
-    : { value: headline?.lockedPredictionCount ?? null, label: "graded" };
+    // The graded cohort is the accuracy denominator, not the all-time locked ledger.
+    : { value: headline?.recoveryLikelihoodScoredCount ?? null, label: "graded" };
 
   const forecastSpan = resolverReviewerEnabled ? "lg:col-span-3" : "lg:col-span-5";
   const trackSpan = resolverEnabled ? "lg:col-span-2" : "lg:col-span-5";

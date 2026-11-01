@@ -31,10 +31,22 @@ describe("QueryErrorNotice", () => {
   });
 
 
-  it("renders unavailable notice for 503 ApiFetchError", () => {
-    const err = new ApiFetchError("/api/data", 503, null);
+  it("renders unavailable notice only for the cache-not-populated 503", () => {
+    const err = new ApiFetchError("/api/data", 503, '{"error":"Data not yet available"}');
     render(<QueryErrorNotice error={err} hasData={false} />);
     expect(screen.getByText("Waiting for first sync")).toBeTruthy();
+  });
+
+  it.each([
+    ["maintenance", '{"error":"maintenance","message":"Pharos is undergoing a brief maintenance. Please retry in a few minutes."}'],
+    ["malformed cache", '{"error":"Cached stablecoins payload is malformed"}'],
+    ["transport shed", '{"error":"Public API temporarily unavailable"}'],
+    ["bodyless 503", null],
+  ])("does not claim an unpopulated dataset for a %s 503", (_case, bodyText) => {
+    render(<QueryErrorNotice error={new ApiFetchError("/api/data", 503, bodyText)} hasData={false} />);
+    expect(screen.getByText("Failed to load this dataset")).toBeTruthy();
+    expect(screen.queryByText("Waiting for first sync")).toBeNull();
+    expect(screen.queryByText(/has not populated yet/)).toBeNull();
   });
 
 });

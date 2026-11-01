@@ -13,7 +13,9 @@ import { resolveQueryViewState } from "@/lib/query-view-state";
 import { inferHas24hActivity, resolveCoinNetFlow } from "@shared/lib/mint-burn-coin-helpers";
 import { sumMintBurnSignedNets, type MintBurnSignedNetView } from "@shared/lib/mint-burn-valuation-display";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
-import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { DIRECTION_TONE_CLASSES, GAUGE_BAND_LABELS } from "@shared/lib/classification";
+import { assessGaugeBandSettlement } from "@shared/lib/mint-burn-gauge-bands";
+import { resolvePublishedGaugeBand } from "@shared/lib/mint-burn-signals";
 
 interface Mover {
   id: string;
@@ -46,6 +48,11 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
   }, [data?.coins]);
 
   const gauge = data?.gauge;
+  // Withheld weight can move the full-cohort score across a band edge; only a
+  // settled band may be printed, as on /flows/.
+  const band = gauge && assessGaugeBandSettlement(gauge).settled
+    ? resolvePublishedGaugeBand(gauge.band, gauge.score)
+    : null;
   const state = resolveQueryViewState({
     hasData: data !== undefined,
     isLoading,
@@ -68,7 +75,7 @@ export function MintBurnCard({ embedded = false }: { embedded?: boolean } = {}):
               <Skeleton className="h-9 w-32" />
             ) : gauge ? (
               <div className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                {gauge.band ? gauge.band.charAt(0) + gauge.band.slice(1).toLowerCase() : "—"}
+                {band ? GAUGE_BAND_LABELS[band] : "—"}
               </div>
             ) : null}
             <p className="pharos-meta pharos-numeric mt-1.5">

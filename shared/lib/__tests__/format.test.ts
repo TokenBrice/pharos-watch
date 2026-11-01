@@ -7,6 +7,7 @@ import {
   formatChartDate,
   formatChartPercent,
   formatPercent,
+  formatCoverageRatio,
   formatPegOccupancy,
   formatPercentFromRatio,
   formatPrice,
@@ -91,6 +92,22 @@ describe("formatPercent", () => {
   it("returns dash for non-finite values", () => {
     expect(formatPercent(Infinity)).toBe("-");
     expect(formatPercent(NaN)).toBe("-");
+  });
+});
+
+describe("formatCoverageRatio", () => {
+  it.each([
+    [1, "100.0%"],
+    [0.99996, "<100%"],
+    [0.999, "99.9%"],
+    [0.9, "90.0%"],
+    [0, "0.0%"],
+  ])("formats coverage ratio %s as %s", (value, expected) => {
+    expect(formatCoverageRatio(value)).toBe(expected);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])("preserves unavailable coverage %s", (value) => {
+    expect(formatCoverageRatio(value)).toBe("-");
   });
 });
 

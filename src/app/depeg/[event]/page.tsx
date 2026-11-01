@@ -12,6 +12,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { formatDeviationBps, formatIsoTimestamp } from "@shared/lib/format";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
@@ -323,7 +324,7 @@ export default async function DepegEventPage(
 
       <RelatedIncidentsRail
         excludeEventId={event.slug}
-        pegCurrency={event.pegType}
+        pegCurrency={getPegTaxonomyByType(event.pegType)?.currency}
         riskArchetype={coin ? resolveMechanismArchetype(coin, TRACKED_META_BY_ID) ?? undefined : undefined}
         startedAt={event.startedAt}
       />

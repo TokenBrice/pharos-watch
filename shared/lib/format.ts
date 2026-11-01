@@ -453,6 +453,13 @@ export function formatPegOccupancy(value: number | null | undefined, decimals = 
   return value < 100 && Number(rounded) === 100 ? "<100%" : `${rounded}%`;
 }
 
+/** Keep a sub-1 coverage ratio distinguishable from exact full coverage at display precision. */
+export function formatCoverageRatio(ratio: number | null | undefined, decimals = 1): string {
+  if (!isFiniteNumber(ratio)) return "-";
+  const rounded = (ratio * 100).toFixed(decimals);
+  return ratio < 1 && Number(rounded) === 100 ? "<100%" : `${rounded}%`;
+}
+
 /** Format a signed percentage-point value (0-100 scale) with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
 export function formatSignedPercent(value: number | null | undefined, decimals = 2, nullFallback = "-"): string {
   if (!isFiniteNumber(value)) return nullFallback;

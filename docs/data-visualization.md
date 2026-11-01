@@ -154,7 +154,7 @@ The global regime bar uses the `stabilityIndex` data-health preset, producer met
 
 The non-USD share chart labels its latest sample date separately from coverage start and HTTP receipt time. Its cohort amounts and shares are non-null producer observations (an observed empty cohort is zero); absent overall history remains unavailable. Server freshness metadata feeds the existing Alt Pegs page stale-data banner even when a stalled snapshot is returned over successful HTTP.
 
-At-peg occupancy labels use `formatPegOccupancy` from `shared/lib/format.ts`: a non-perfect value that rounds to 100 at the displayed precision is `<100%`, while exactly 100 keeps the normal perfect-record label. This applies to the depeg control board, detail history and comparison table; raw statistics and exports are unchanged.
+At-peg occupancy labels use `formatPegOccupancy` from `shared/lib/format.ts`: a non-perfect value that rounds to 100 at the displayed precision is `<100%`, while exactly 100 keeps the normal perfect-record label. This applies to the depeg control board, detail history and comparison table; raw statistics and exports are unchanged. The same rule applies to the non-USD share chart's value-coverage ratios via `formatCoverageRatio`: a partial shortfall never reads as 100%.
 
 Detail price and market-cap charts preserve their series, time-range controls, brushing, crosshairs and accessible data tables. The annotation markers, legends, density strip and their exclusive browser Tape reads are retired. The curated annotation corpus and human review/intake history remain editorial evidence, without a live chart-overlay consumer.
 
