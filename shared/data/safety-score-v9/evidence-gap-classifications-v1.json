@@ -28770,40 +28770,6 @@
       "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
     },
     {
-      "id": "uw-safo-spiko-usd-2590fd6631fe41db",
-      "assetId": "safo-spiko-usd",
-      "scope": {
-        "componentKey": "control:mint-meta:safo-spiko-usd:5f5aa4706e1ca4febbae",
-        "exposureId": null,
-        "factorKey": "keyCustody",
-        "pillar": "control",
-        "requiredDatum": "keyCustody",
-        "routeKey": null
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-05T12:28:34Z",
-      "reviewer": "Unknown-resolver wave 4 2026-10-05 (K02)",
-      "sourcesRefs": [
-        "source:8fa9ce8e1cd8449426617096",
-        "source:27c837638d21d68356fa984c",
-        "source:8661f9bfc3e75de3215f201f"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:d91451b459d54c81cd6b26e3",
-        "surface:1861eb7c8c4d423030e59946",
-        "surface:fe38ed3633a79a00d3662529",
-        "surface:c9abcf63711370b6668d0a18",
-        "surface:61d1087013cb90c67c70f261",
-        "surface:63da303f26badeeaad8ec37c",
-        "surface:8c28b0b0f02c92e6914c7973",
-        "surface:ad549bfc71cfb21ed15e7194",
-        "surface:80e63bd4934ad597d1273863",
-        "surface:55124076e7f9db83db33a6ec"
-      ],
-      "rationale": "Exact custody, human/organizational independence and configured signing policy for current Ethereum native initiators/approvers and Solana initiator/upgrader are not disclosed. Issuer/provider disclose relayer DFNS and wallet-policy capability; 2023 audit describes privileged multisigs/hardware wallets without current address bindings. Prospectus/AMF materials concern shareholder register and fund-asset custody. No attestation binds each identified controller to MPC/HSM or independent operators. Address/quorum observability does not reveal off-chain key custody. Keep typed questions."
-    },
-    {
       "id": "uw-safo-spiko-usd-ecd77636a5e7d945",
       "assetId": "safo-spiko-usd",
       "scope": {
