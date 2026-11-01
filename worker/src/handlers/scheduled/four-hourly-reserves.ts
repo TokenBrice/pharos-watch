@@ -33,7 +33,7 @@ import {
 import type { ScheduledCheckpointIdentity } from "../../lib/scheduled-checkpoint-primitives";
 import { createLeaseOwner } from "../../lib/cron-lease-primitives";
 import { getReserveProducerPriority } from "../../lib/reserve-producer-priority";
-import { LIVE_RESERVE_CONTINUATION_BUDGETS, resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";
+import { LIVE_RESERVE_CONTINUATION_BUDGETS, LIVE_RESERVE_PRODUCER_BUDGETS, resolveLiveReserveSyncBudgetConfig } from "../../cron/sync-live-reserves-config";
 
 const SLOT_LABEL = "four-hourly reserve sync slot";
 
@@ -106,7 +106,9 @@ function buildReserveSyncSlotGroups(
             // An exhausted recovery checkpoint needs only its consumers, not
             // the complete reserve-adapter graph retained beside their inputs.
             const { syncLiveReserves } = await import("../../cron/sync-live-reserves");
-            const slice = resolveLiveReserveSyncBudgetConfig(runtime.recoveryCheckpoint ? LIVE_RESERVE_CONTINUATION_BUDGETS : undefined);
+            const slice = resolveLiveReserveSyncBudgetConfig(
+              runtime.recoveryCheckpoint ? LIVE_RESERVE_CONTINUATION_BUDGETS : LIVE_RESERVE_PRODUCER_BUDGETS,
+            );
             const runBudgetMs = Math.max(1, Math.min(slice.runBudgetMs,
               runtime.deadline.remainingMs() - slice.d1FinalizeTimeoutMs - slice.finalizationMarginMs));
             return syncLiveReserves(

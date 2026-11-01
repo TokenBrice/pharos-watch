@@ -9,7 +9,13 @@ import {
   type ConfiguredCoin,
   type LiveReserveCohortGrading,
 } from "../sync-live-reserves-shared";
-import { LIVE_RESERVE_CONTINUATION_BUDGETS, resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
+import {
+  LIVE_RESERVE_CONTINUATION_BUDGETS,
+  LIVE_RESERVE_PRODUCER_BUDGETS,
+  LIVE_RESERVE_PRODUCER_WORK_BUDGET_RATIO,
+  LIVE_RESERVE_SLICE_COST,
+  resolveLiveReserveSyncBudgetConfig,
+} from "../sync-live-reserves-config";
 import {
   checkpointIdentity,
   checkpointTable,
@@ -349,6 +355,65 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       .toHaveLength(slowTail ? 0 : 1);
     expect(db.getHistory().some((entry) => entry.binds.includes("run-budget-exhausted"))).toBe(false);
     if (!slowTail) expect(nowMs - startedMs).toBeCloseTo(223_203, 1);
+  });
+
+  it("yields the producer slice at 60% of its run budget and leaves the suffix on the frontier", async () => {
+    mockAdapterRegistry(async () => ({
+      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+    }));
+    // Reset modules above installs this test's adapter registry before import.
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const identity = checkpointIdentity(1, "producer-headroom");
+    const db = mockD1([checkpointTable({
+      attemptNo: 1, invocationId: identity.invocationId, state: "running",
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id, itemsDone: 0,
+    })]);
+    const budget = resolveLiveReserveSyncBudgetConfig(LIVE_RESERVE_PRODUCER_BUDGETS);
+    const startedMs = nowMs;
+    const batch = db.batch.bind(db);
+    vi.spyOn(db, "batch").mockImplementation(async (statements) => {
+      if (statements.some((statement) => (statement as MockPreparedStatement).sql.includes("INSERT INTO reserve_sync_state"))) {
+        nowMs += LIVE_RESERVE_SLICE_COST.wallMsPerCoin;
+      }
+      return batch(statements);
+    });
+
+    const result = await syncLiveReserves(
+      db,
+      new AbortController().signal,
+      {},
+      undefined,
+      LIVE_RESERVE_PRODUCER_BUDGETS,
+      identity,
+    );
+
+    // Admission stops once the observed 1.47s coin no longer fits before the
+    // work horizon plus the unchanged 55-second attempt floor.
+    const attempted = Math.floor((budget.workBudgetMs - budget.minimumAttemptBudgetMs) / LIVE_RESERVE_SLICE_COST.wallMsPerCoin) + 1;
+    expect(attempted).toBeLessThan(SYNC_ORDERED_CONFIGURED_COINS.length);
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      budgetMs: budget.runBudgetMs,
+      workBudgetMs: budget.workBudgetMs,
+      attemptedCoins: attempted,
+      cohortItemsDoneAfterRun: attempted,
+      deferredCoins: SYNC_ORDERED_CONFIGURED_COINS.length - attempted,
+      nextCursorStablecoinId: SYNC_ORDERED_CONFIGURED_COINS[attempted]!.id,
+      continuationPending: true,
+      runBudgetTruncated: false,
+    });
+    expect(nowMs - startedMs).toBe(attempted * LIVE_RESERVE_SLICE_COST.wallMsPerCoin);
+    // The whole slice, including its finalization tail, stays inside 60% of the
+    // run budget: the other 40% is headroom for cohort growth.
+    expect(nowMs - startedMs + budget.d1FinalizeTimeoutMs + budget.finalizationMarginMs)
+      .toBeLessThanOrEqual(Math.floor(budget.runBudgetMs * LIVE_RESERVE_PRODUCER_WORK_BUDGET_RATIO));
+    const boundary = db.getHistory().find((entry) =>
+      entry.sql.includes("UPDATE worker_scheduled_checkpoints") && entry.sql.includes("current_item_key = NULL"));
+    expect(boundary?.binds.slice(0, 2)).toEqual([SYNC_ORDERED_CONFIGURED_COINS[attempted]!.id, attempted]);
+    // Untouched coins keep their prior health instead of a fabricated skip.
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("last_status = 'skipped'") || entry.binds.includes("run-budget-exhausted"))).toBe(false);
+    expect(sealAcceptedReserveGeneration).not.toHaveBeenCalled();
   });
 
   it("defers coin 126 even with the full 300-second wall allowance remaining", async () => {

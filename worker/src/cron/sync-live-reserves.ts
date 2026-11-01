@@ -176,13 +176,18 @@ async function runReserveCoinQueue(args: {
   for (const [index, coin] of args.orderedCoins.entries()) {
     throwIfAborted(args.signal);
     const globalIndex = args.startIndex + index;
-    const budgetRemaining = args.budgetConfig.runBudgetMs - (Date.now() - args.runStartedMs);
+    const elapsedMs = Date.now() - args.runStartedMs;
+    const budgetRemaining = args.budgetConfig.runBudgetMs - elapsedMs;
+    // A slice that reserves admission headroom (the four-hourly producer) stops
+    // here, leaving its untouched suffix on the checkpoint frontier.
+    const workRemaining = args.budgetConfig.workBudgetMs - elapsedMs;
     const observedMsPerCoin = counts.attemptedCoins > 0
       ? (Date.now() - queueStartedMs) / counts.attemptedCoins
       : 0;
     const admissionMarginMs = Math.max(args.budgetConfig.minimumAttemptBudgetMs, observedMsPerCoin * 2
       + args.budgetConfig.d1FinalizeTimeoutMs + args.budgetConfig.finalizationMarginMs);
-    if (budgetRemaining < admissionMarginMs || counts.attemptedCoins >= args.budgetConfig.maxCoinsPerSlice) {
+    if (budgetRemaining < admissionMarginMs || workRemaining < admissionMarginMs
+      || counts.attemptedCoins >= args.budgetConfig.maxCoinsPerSlice) {
       logWorkerEventArgs("handler", "warn",
         `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
       );
@@ -282,7 +287,10 @@ async function runReserveCoinQueue(args: {
         args.runAdapter(attemptCoin, attemptConfig, adapter, (deadlineMs ?? Infinity) - args.budgetConfig.d1FinalizeTimeoutMs),
       previousState: args.syncStates.get(coin.id) ?? null,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
-      deadlineMs: args.runStartedMs + args.budgetConfig.runBudgetMs - args.budgetConfig.finalizationMarginMs,
+      deadlineMs: args.runStartedMs + Math.min(
+        args.budgetConfig.runBudgetMs - args.budgetConfig.finalizationMarginMs,
+        args.budgetConfig.workBudgetMs,
+      ),
       checkpoint: args.checkpoint,
       stageTimings: phaseTimings.stages,
       checkpointProgress: args.checkpoint ? {

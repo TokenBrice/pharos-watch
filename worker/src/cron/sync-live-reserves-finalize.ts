@@ -468,6 +468,7 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       cursorTailFailedAt: args.deferredTail.cursorTailFailedAt,
       runBudgetTruncationCount: args.deferredTail.runBudgetTruncationCount,
       budgetMs: args.budgetConfig.runBudgetMs,
+      workBudgetMs: args.budgetConfig.workBudgetMs,
       maxCoinsPerSlice: args.budgetConfig.maxCoinsPerSlice,
       adapterTimeoutMs: args.budgetConfig.adapterTimeoutMs,
       d1FinalizeTimeoutMs: args.budgetConfig.d1FinalizeTimeoutMs,
