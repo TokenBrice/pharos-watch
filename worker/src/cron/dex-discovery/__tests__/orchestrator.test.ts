@@ -1,15 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import {
+  DEX_DISCOVERY_BOUNDED_CRAWL_REASON,
+  DEX_DISCOVERY_FAILED_CRAWL_REASON,
+} from "@shared/lib/dex-deployment-coverage";
 import type { ContractDeployment } from "@shared/types/core";
 import type { DiscoveryMeta } from "../types";
-import { DISCOVERY_TIERS } from "../types";
+import { DISCOVERY_TIERS, STAGED_POOL_FRESH_HOURS } from "../types";
 import { getTrackedContracts } from "../../dex-liquidity/pool-helpers";
+import {
+  DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
+  type DexDeploymentCensusRow,
+} from "../../dex-liquidity/deployment-census-coverage";
 import {
   compareDiscoveryMeta,
   computeEffectiveTier,
+  DEX_DISCOVERY_OUTCOME_REVISIT_SEC,
+  DEX_DISCOVERY_VERIFIED_EMPTY_REVISIT_SEC,
   hasRemappedUnsupportedCensusRow,
   hasVerifiedEmptyCensus,
   isDiscoveryEvidenceRefreshDue,
+  selectDueDiscoveryDeployments,
 } from "../orchestrator";
 
 const nowSec = 1710000000;
@@ -291,6 +302,164 @@ describe("verified-empty census cadence (ODR-B1a)", () => {
     };
     expect(computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec, false)).toBe("skip");
     expect(computeEffectiveTier("coin-91", 0, 0, meta, 84, nowSec, true)).toBe("t3");
+  });
+});
+
+describe("verified-empty revisit interval", () => {
+  const target: ContractDeployment = {
+    chain: "ethereum",
+    address: "0x1111111111111111111111111111111111111111",
+    decimals: 18,
+  };
+
+  it("revisits a census-complete footprint at the census bound instead of the 18h sweep target", () => {
+    expect(DEX_DISCOVERY_VERIFIED_EMPTY_REVISIT_SEC).toBe(
+      DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC - CRON_INTERVALS["sync-dex-discovery"],
+    );
+    const meta: DiscoveryMeta = {
+      stablecoinId: "coin-a",
+      consecutiveMisses: 12,
+      lastCrawlAt: nowSec - DEX_DISCOVERY_VERIFIED_EMPTY_REVISIT_SEC + 1,
+      lastHitAt: null,
+    };
+    // The ordinary 18h sweep target is already past.
+    expect(isDiscoveryEvidenceRefreshDue([target], meta, nowSec)).toBe(true);
+    // A verified-empty census waits for its own bound minus one tick.
+    expect(isDiscoveryEvidenceRefreshDue([target], meta, nowSec, true)).toBe(false);
+    expect(
+      isDiscoveryEvidenceRefreshDue([target], meta, nowSec + 1, true),
+    ).toBe(true);
+    // An unfinished census keeps the aggressive maintenance cadence.
+    expect(isDiscoveryEvidenceRefreshDue([target], meta, nowSec, false)).toBe(true);
+  });
+
+  it("keeps every revisit bound inside the published census freshness floor", () => {
+    expect(DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools).toBeLessThan(
+      DEX_DISCOVERY_VERIFIED_EMPTY_REVISIT_SEC,
+    );
+    expect(DEX_DISCOVERY_VERIFIED_EMPTY_REVISIT_SEC).toBeLessThan(DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC);
+    expect(DEX_DISCOVERY_OUTCOME_REVISIT_SEC.observedPools).toBe(STAGED_POOL_FRESH_HOURS * 3600);
+    expect(DEX_DISCOVERY_OUTCOME_REVISIT_SEC.observedPools).toBeLessThan(DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC);
+  });
+});
+
+describe("deployment-grain due filter", () => {
+  const current: ContractDeployment = {
+    chain: "ethereum",
+    address: "0x1111111111111111111111111111111111111111",
+    decimals: 18,
+  };
+  const second: ContractDeployment = {
+    chain: "ethereum",
+    address: "0x2222222222222222222222222222222222222222",
+    decimals: 18,
+  };
+
+  function storedRow(overrides: Partial<DexDeploymentCensusRow> = {}): DexDeploymentCensusRow {
+    return {
+      stablecoin_id: "coin-a",
+      chain: "ethereum",
+      contract_address: current.address,
+      outcome: "verified_no_pools",
+      provider_set_json: '["coingecko"]',
+      reason: "A provider completed the direct-token query with no eligible pool",
+      observed_pool_count: 0,
+      observed_at: nowSec - 3_600,
+      discovery_last_crawl_at: nowSec - 3_600,
+      deployment_last_attempt_at: nowSec - 3_600,
+      deployment_fence_attribution_at: nowSec - 3_600,
+      ...overrides,
+    };
+  }
+
+  it("skips a verified-empty deployment until its revisit bound", () => {
+    expect(selectDueDiscoveryDeployments({
+      targets: [current], rows: [storedRow()], nowSec,
+    })).toEqual({ due: [], current: [current] });
+    expect(selectDueDiscoveryDeployments({
+      targets: [current],
+      rows: [storedRow({
+        observed_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools,
+        discovery_last_crawl_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools,
+        deployment_last_attempt_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools,
+        deployment_fence_attribution_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools,
+      })],
+      nowSec,
+    })).toEqual({ due: [], current: [current] });
+    // One second past the bound the deployment is due again.
+    expect(selectDueDiscoveryDeployments({
+      targets: [current],
+      rows: [storedRow({
+        observed_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools - 1,
+        discovery_last_crawl_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools - 1,
+        deployment_last_attempt_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools - 1,
+        deployment_fence_attribution_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools - 1,
+      })],
+      nowSec,
+    })).toEqual({ due: [current], current: [] });
+  });
+
+  it("keeps an observed-pools deployment only inside the staged-pool freshness window", () => {
+    const observed = storedRow({
+      outcome: "observed_pools",
+      reason: "At least one eligible direct-token pool was observed",
+      observed_pool_count: 2,
+      observed_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.observedPools,
+      discovery_last_crawl_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.observedPools,
+      deployment_last_attempt_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.observedPools,
+      deployment_fence_attribution_at: nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.observedPools,
+    });
+    expect(selectDueDiscoveryDeployments({ targets: [current], rows: [observed], nowSec }))
+      .toEqual({ due: [], current: [current] });
+    const older = nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.observedPools - 1;
+    expect(selectDueDiscoveryDeployments({
+      targets: [current],
+      rows: [{
+        ...observed,
+        observed_at: older,
+        discovery_last_crawl_at: older,
+        deployment_last_attempt_at: older,
+        deployment_fence_attribution_at: older,
+      }],
+      nowSec,
+    })).toEqual({ due: [current], current: [] });
+  });
+
+  it("re-reads an outcome superseded by a newer attempt instead of trusting its old empty answer", () => {
+    expect(selectDueDiscoveryDeployments({
+      targets: [current],
+      rows: [storedRow({
+        discovery_last_crawl_at: nowSec - 60,
+        deployment_last_attempt_at: nowSec - 60,
+        deployment_fence_attribution_at: nowSec - 60,
+      })],
+      nowSec,
+    })).toEqual({ due: [current], current: [] });
+  });
+
+  it("keeps an interrupted attempt and a provider-set change due", () => {
+    for (const reason of [DEX_DISCOVERY_BOUNDED_CRAWL_REASON, DEX_DISCOVERY_FAILED_CRAWL_REASON]) {
+      expect(selectDueDiscoveryDeployments({
+        targets: [current],
+        rows: [storedRow({ outcome: "provider_inaccessible", reason })],
+        nowSec,
+      })).toEqual({ due: [current], current: [] });
+    }
+    // Naming a provider the registry no longer resolves for this deployment
+    // makes the row superseded metadata, not a current census answer.
+    expect(selectDueDiscoveryDeployments({
+      targets: [current],
+      rows: [storedRow({ provider_set_json: '["aquarius"]' })],
+      nowSec,
+    })).toEqual({ due: [current], current: [] });
+  });
+
+  it("keeps only the deployments without a complete current row due", () => {
+    expect(selectDueDiscoveryDeployments({
+      targets: [current, second],
+      rows: [storedRow()],
+      nowSec,
+    })).toEqual({ due: [second], current: [current] });
   });
 });
 

@@ -2,12 +2,24 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import { recordCronFailure, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { rethrowIfAborted, throwIfAborted, yieldToEventLoop } from "../../lib/abort";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { isCensusProviderSetSupersededByRegistry } from "@shared/lib/dex-deployment-coverage";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import type { ContractDeployment } from "@shared/types/core";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { loadPriceValidationReferences } from "../../lib/price-validation";
 import type { DiscoveryCrawlTier, DiscoveryMeta, DiscoveryRunCheckpoint } from "./types";
-import { DISCOVERY_TIERS } from "./types";
+import { DISCOVERY_TIERS, STAGED_POOL_FRESH_HOURS } from "./types";
+import {
+  DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC,
+  parseProviderSet,
+  resolveDexDeploymentAttemptFence,
+  type DexDeploymentCensusRow,
+} from "../dex-liquidity/deployment-census-coverage";
+import {
+  classifyStoredDexCensusState,
+  isCurrentDexCensusStateComplete,
+} from "./census-state-machine";
 import { crawlCoin } from "./crawl-sources";
 import {
   createDexScreenerDiscoveryRunState,
@@ -17,6 +29,7 @@ import {
   cleanupStaging,
   incrementRunSeq,
   readDiscoveryCensusSummaries,
+  readDiscoveryDeploymentOutcomes,
   readDiscoveryMeta,
   readDiscoveryRunCheckpoint,
   readDiscoveryTargetCursors,
@@ -272,19 +285,120 @@ function discoveryTierPriority(tier: Exclude<EffectiveTier, "skip">): number {
   }
 }
 
-/** Refresh discovery evidence inside its lifetime, with an 18h sweep target.
- * Existing windows and the run deadline remain hard bounds; oversized footprints
- * get every existing tick rather than extending the evidence freshness window.
+/**
+ * Maintenance sweep target for an ordinary footprint, divided over its real
+ * deployment-window count and rounded down to discovery ticks.
+ */
+const DISCOVERY_SWEEP_TARGET_SEC = 18 * 3600;
+
+/**
+ * Coin-level revisit interval for a census-complete verified-empty footprint:
+ * the publication census floor minus one discovery tick. Such a footprint has
+ * nothing left to observe, so re-reading it on the 18h sweep target only
+ * re-buys the same empty answer inside the bound it is already published
+ * against. Skipping the crawl re-stamps nothing: every untouched deployment
+ * keeps its stored observation clock.
+ */
+export const DEX_DISCOVERY_VERIFIED_EMPTY_REVISIT_SEC =
+  DEX_DEPLOYMENT_CENSUS_MAX_AGE_SEC - CRON_INTERVALS["sync-dex-discovery"];
+
+/**
+ * Per-deployment revisit bounds for a complete stored outcome. Both sit inside
+ * the publication census floor, so a skipped row is still current when it is
+ * eventually re-read; the verified-empty bound is two ticks inside it, one tick
+ * inside the coin-level interval above, so a single-window footprint is
+ * admitted with its whole footprint already due. An observed row uses the
+ * staged-pool freshness window, the age at which its reading stops carrying
+ * full weight.
+ */
+export const DEX_DISCOVERY_OUTCOME_REVISIT_SEC = {
+  verifiedNoPools: DEX_DISCOVERY_VERIFIED_EMPTY_REVISIT_SEC - CRON_INTERVALS["sync-dex-discovery"],
+  observedPools: STAGED_POOL_FRESH_HOURS * 3600,
+} as const;
+
+/** Refresh discovery evidence inside its lifetime with an 18h sweep target for
+ * ordinary footprints, or the census revisit bound for a census-complete
+ * verified-empty footprint. Existing windows and the run deadline remain hard
+ * bounds; oversized footprints get every existing tick rather than extending
+ * the evidence freshness window.
  */
 export function isDiscoveryEvidenceRefreshDue(
   targets: readonly ContractDeployment[],
   meta: DiscoveryMeta | undefined,
   nowSec: number,
+  censusVerifiedEmpty = false,
 ): boolean {
   const windows = Math.max(1, estimateDiscoverySweepWindowCount(targets));
   const tick = CRON_INTERVALS["sync-dex-discovery"];
-  const interval = Math.max(tick, Math.floor((18 * 3600) / windows / tick) * tick);
+  const targetSec = censusVerifiedEmpty
+    ? DEX_DISCOVERY_VERIFIED_EMPTY_REVISIT_SEC
+    : DISCOVERY_SWEEP_TARGET_SEC;
+  const interval = Math.max(tick, Math.floor(targetSec / windows / tick) * tick);
   return meta == null || nowSec - meta.lastCrawlAt >= interval;
+}
+
+/**
+ * Is this stored row still a complete, current census answer for its
+ * deployment? Anything incomplete, stale, superseded or unreadable is not, and
+ * an attempt cut short by a rate limit or the coin budget is always due.
+ */
+function isStoredDexDeploymentCurrent(row: DexDeploymentCensusRow, nowSec: number): boolean {
+  const maxAgeSec = row.outcome === "verified_no_pools"
+    ? DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools
+    : row.outcome === "observed_pools"
+      ? DEX_DISCOVERY_OUTCOME_REVISIT_SEC.observedPools
+      : null;
+  const providerSet = parseProviderSet(row.provider_set_json);
+  if (maxAgeSec == null || providerSet == null) return false;
+  return isCurrentDexCensusStateComplete(classifyStoredDexCensusState({
+    outcome: row.outcome,
+    reason: row.reason,
+    observedPoolCount: row.observed_pool_count,
+    observedAt: row.observed_at,
+    discoveryLastCrawlAt: resolveDexDeploymentAttemptFence(row),
+    providerCount: providerSet.length,
+    nowSec,
+    maxAgeSec,
+    providerSetSuperseded: isCensusProviderSetSupersededByRegistry(
+      row.chain,
+      row.contract_address,
+      providerSet,
+    ),
+  }));
+}
+
+/**
+ * Split a coin's footprint into deployments this run must re-read and
+ * deployments whose stored outcome is complete and still current. Re-reading a
+ * current row spends provider pacing to learn what is already persisted, so a
+ * footprint that was fully answered recently is not crawled again until a row
+ * passes its revisit bound.
+ */
+export function selectDueDiscoveryDeployments(params: {
+  targets: readonly ContractDeployment[];
+  rows: readonly DexDeploymentCensusRow[];
+  nowSec: number;
+}): { due: ContractDeployment[]; current: ContractDeployment[] } {
+  const rowsByKey = new Map<string, DexDeploymentCensusRow[]>();
+  for (const row of params.rows) {
+    const key = canonicalExitRouteAssetKey(row.chain, row.contract_address);
+    const rows = rowsByKey.get(key) ?? [];
+    rows.push(row);
+    rowsByKey.set(key, rows);
+  }
+  const due: ContractDeployment[] = [];
+  const current: ContractDeployment[] = [];
+  for (const target of params.targets) {
+    const rows = rowsByKey.get(canonicalExitRouteAssetKey(target.chain, target.address)) ?? [];
+    // A duplicated row is invalid evidence, so it cannot certify the deployment.
+    const row = rows.length === 1 ? rows[0]! : null;
+    if (row != null && isStoredDexDeploymentCurrent(row, params.nowSec)) {
+      current.push(target);
+    } else {
+      due.push(target);
+    }
+  }
+  return { due, current };
 }
 
 async function readLiquidityCoverage(db: D1Database): Promise<Map<string, DiscoveryCoverage>> {
@@ -339,6 +453,11 @@ export async function syncDexDiscovery(
   let censusCadenceHolds = 0;
   let windowedCoins = 0;
   let windowedDeploymentsDeferred = 0;
+  // Deployments (and coins) left uncrawled because their stored census answer
+  // is still complete and current. Observability for the due filter: the run is
+  // supposed to get cheaper, not to skip unanswered scope.
+  let outcomeCurrentCoins = 0;
+  let outcomeCurrentDeployments = 0;
   let targetCursors = new Map<string, string>();
   let targetCursorsChanged = false;
   let resumedFromCheckpoint = false;
@@ -380,6 +499,8 @@ export async function syncDexDiscovery(
     deploymentOutcomesWritten,
     windowedCoins,
     windowedDeploymentsDeferred,
+    outcomeCurrentCoins,
+    outcomeCurrentDeployments,
     stalePoolRefresh,
     persistenceFailedCoins: [...persistenceFailedCoins],
     persistenceFailures: [...persistenceFailures],
@@ -449,6 +570,16 @@ export async function syncDexDiscovery(
     const liquidityCoverage = await readLiquidityCoverage(db);
     const metaById = await readDiscoveryMeta(db, signal);
     const censusById = await readDiscoveryCensusSummaries(db, signal);
+    const outcomeRowsById = new Map<string, DexDeploymentCensusRow[]>();
+    for (const row of await readDiscoveryDeploymentOutcomes(
+      db,
+      nowSec - DEX_DISCOVERY_OUTCOME_REVISIT_SEC.verifiedNoPools,
+      signal,
+    )) {
+      const rows = outcomeRowsById.get(row.stablecoin_id) ?? [];
+      rows.push(row);
+      outcomeRowsById.set(row.stablecoin_id, rows);
+    }
     targetCursors = await readDiscoveryTargetCursors(db, signal);
     const checkpoint = await readDiscoveryRunCheckpoint(db, signal);
     resumedFromCheckpoint = checkpoint != null;
@@ -485,7 +616,7 @@ export async function syncDexDiscovery(
         ((coverage?.poolCount ?? 0) === 0 && targets.some((target) =>
           getDexDiscoveryProviders(target.chain, target.address).length > 0)) ||
         hasRemappedUnsupportedCensusRow(targets, censusById.get(coin.id))) &&
-          isDiscoveryEvidenceRefreshDue(targets, metaById.get(coin.id), nowSec),
+          isDiscoveryEvidenceRefreshDue(targets, metaById.get(coin.id), nowSec, censusVerifiedEmpty),
       );
 
       if (tier === "skip") {
@@ -493,11 +624,26 @@ export async function syncDexDiscovery(
         continue;
       }
 
+      // Only deployments whose stored outcome is incomplete, stale or
+      // superseded are re-read. The fence, the crawl and the outcome write all
+      // receive this filtered list, so a current row keeps its original clock.
+      const dueSelection = selectDueDiscoveryDeployments({
+        targets,
+        rows: outcomeRowsById.get(coin.id) ?? [],
+        nowSec,
+      });
+      if (dueSelection.due.length === 0 && dueSelection.current.length > 0) {
+        tierBreakdown.skipped += 1;
+        outcomeCurrentCoins += 1;
+        outcomeCurrentDeployments += dueSelection.current.length;
+        continue;
+      }
+      outcomeCurrentDeployments += dueSelection.current.length;
       tierBreakdown[tier] += 1;
       eligibleCoins.push({
         stablecoinId: coin.id,
         tier,
-        targets,
+        targets: dueSelection.due,
         meta: metaById.get(coin.id),
       });
     }

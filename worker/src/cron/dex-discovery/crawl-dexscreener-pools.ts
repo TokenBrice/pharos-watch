@@ -70,10 +70,14 @@ export async function finalizeDexScreenerDiscoveryRun(
   dependencies = defaultDexScreenerPoolsStageDependencies,
 ): Promise<void> {
   if (runState.outcomeRecorded || runState.attemptedRequests === 0) return;
+  // A hard refusal poisons the whole run even when earlier requests succeeded:
+  // the provider refused us, so a success count is no longer evidence that it
+  // is healthy. Recording those successes let intermittent 429/1015 traffic heal
+  // the circuit forever, so the run kept paying the pacing delay per target.
   await dependencies.recordOutcome(
     db,
     DEXSCREENER_LIQUIDITY_CIRCUIT,
-    runState.successfulRequests > 0,
+    runState.successfulRequests > 0 && runState.hardRefusal == null,
   );
   runState.outcomeRecorded = true;
 }
@@ -147,9 +151,8 @@ export async function crawlDexScreenerPoolsStage({
             },
           });
           try {
-            // Finalize immediately so a zero-success refusal protects the
-            // overlapping scoring fallback. Earlier successful requests still
-            // prove provider reachability and heal the aggregate circuit.
+            // Finalize immediately so the refusal is recorded before the next
+            // coin crawl and cannot be healed by this run's earlier successes.
             await finalizeDexScreenerDiscoveryRun(db, runState, dependencies);
           } catch (err) {
             logWorkerEvent({

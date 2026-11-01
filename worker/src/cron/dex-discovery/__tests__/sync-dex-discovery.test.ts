@@ -80,6 +80,7 @@ vi.mock("../persistence", () => ({
   cleanupStaging: vi.fn(async () => {}),
   incrementRunSeq: vi.fn(async () => 1),
   readDiscoveryCensusSummaries: vi.fn(async () => new Map()),
+  readDiscoveryDeploymentOutcomes: vi.fn(async () => []),
   readDiscoveryMeta: vi.fn(async () => new Map()),
   readDiscoveryRunCheckpoint: vi.fn(async () => null),
   readDiscoveryTargetCursors: vi.fn(async () => new Map()),
@@ -103,6 +104,7 @@ import {
 import {
   cleanupStaging,
   incrementRunSeq,
+  readDiscoveryDeploymentOutcomes,
   readDiscoveryMeta,
   readDiscoveryRunCheckpoint,
   readDiscoveryTargetCursors,
@@ -293,6 +295,7 @@ describe("syncDexDiscovery", () => {
     vi.clearAllMocks();
     vi.mocked(loadPriceValidationReferences).mockResolvedValue(mockValidationReferences);
     vi.mocked(readDiscoveryMeta).mockResolvedValue(new Map());
+    vi.mocked(readDiscoveryDeploymentOutcomes).mockResolvedValue([]);
     vi.mocked(readDiscoveryTargetCursors).mockResolvedValue(new Map());
     vi.mocked(readDiscoveryRunCheckpoint).mockResolvedValue(null);
     vi.mocked(writeDiscoveryRunCheckpoint).mockResolvedValue();
@@ -309,6 +312,55 @@ describe("syncDexDiscovery", () => {
       deploymentOutcomes: [],
       checkedDeploymentKeys: [],
     });
+  });
+
+  function storedOutcome(observedAt: number) {
+    return {
+      stablecoin_id: "coin-a",
+      chain: "ethereum",
+      contract_address: "0xaaa",
+      outcome: "verified_no_pools" as const,
+      provider_set_json: '["coingecko"]',
+      reason: "A provider completed the direct-token query with no eligible pool",
+      observed_pool_count: 0,
+      observed_at: observedAt,
+      discovery_last_crawl_at: observedAt,
+      deployment_last_attempt_at: observedAt,
+      deployment_fence_attribution_at: observedAt,
+    };
+  }
+
+  it("skips a coin whose stored deployment outcomes are all complete and current", async () => {
+    vi.mocked(readDiscoveryDeploymentOutcomes).mockResolvedValue([
+      storedOutcome(Math.floor(Date.now() / 1000) - 3_600),
+    ]);
+
+    const result = await syncDexDiscovery(db, null);
+
+    expect(crawlCoin).not.toHaveBeenCalled();
+    expect(recordDiscoveryAttemptFence).not.toHaveBeenCalled();
+    expect(updateDiscoveryMeta).not.toHaveBeenCalled();
+    expect(readDiscoveryDeploymentOutcomes).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      coinsCrawled: 0,
+      outcomeCurrentCoins: 1,
+      outcomeCurrentDeployments: 1,
+      tierBreakdown: { t1: 0 },
+    });
+  });
+
+  it("crawls a coin whose stored deployment outcome is past its revisit bound", async () => {
+    vi.mocked(readDiscoveryDeploymentOutcomes).mockResolvedValue([
+      storedOutcome(Math.floor(Date.now() / 1000) - 37 * 3_600),
+    ]);
+
+    const result = await syncDexDiscovery(db, null);
+
+    expect(vi.mocked(crawlCoin)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(crawlCoin).mock.calls[0]?.[2]).toEqual([
+      { chain: "ethereum", address: "0xaaa", decimals: 18 },
+    ]);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ coinsCrawled: 1, outcomeCurrentDeployments: 0 });
   });
 
   it("returns the discovery contract metadata without legacy telemetry fields", async () => {
