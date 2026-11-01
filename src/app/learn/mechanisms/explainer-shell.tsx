@@ -167,7 +167,7 @@ function RepresentativeCoins({
     <RelatedCoinsList
       coins={coins}
       kicker="Tracked examples"
-      heading="Live coins using this design"
+      heading="Tracked coins using this design"
     />
   );
 }

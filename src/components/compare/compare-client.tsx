@@ -328,9 +328,11 @@ export function CompareClient() {
     () => buildCompareSelectionInsights({ selectedIds, selectedCoins, comparisonCoins }),
     [comparisonCoins, selectedCoins, selectedIds],
   );
+  // A producer clock ahead of the reader's leaves no computable age: print no
+  // claim rather than a clamped zero.
   const flowUpdatedMinutes =
-    flowUpdatedAt && nowSeconds != null
-      ? Math.max(0, Math.round((nowSeconds - flowUpdatedAt) / 60))
+    flowUpdatedAt != null && nowSeconds != null && nowSeconds >= flowUpdatedAt
+      ? Math.round((nowSeconds - flowUpdatedAt) / 60)
       : null;
 
   // Render selector slots (filled slots + empty slots up to MAX_COINS)

@@ -162,12 +162,6 @@ export function DepegClient() {
     () => new Set((pegData?.coins ?? []).filter((coin) => coin.activeDepeg).map((coin) => coin.id)),
     [pegData],
   );
-  // Methodology eligibility, not a data fault: it belongs beside the board that
-  // lists these assets, not in the hero.
-  const eventFloorCount = useMemo(
-    () => pegData?.coins?.filter((coin) => coin.depegEventCoverageLimited).length ?? 0,
-    [pegData],
-  );
   const recentClosedEvents = useMemo(
     () => (eventsData?.events ?? []).filter((event) => event.endedAt !== null),
     [eventsData],
@@ -318,7 +312,6 @@ export function DepegClient() {
             onClearFilters={clearBoardFilters}
             onRowClick={handleRowClick}
             nowSeconds={nowSeconds}
-            eventFloorCount={eventFloorCount}
           />
         </SectionErrorBoundary>
       ) : null}

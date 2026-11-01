@@ -43,13 +43,14 @@ function buildRecentRows(
     amountUsdAtEvent: number | null;
   }>,
   nowSeconds: number,
+  windowSeconds: number,
   resolveId: (symbol: string) => string,
 ): RecentFreezeEvent[] {
-  const cutoff7d = nowSeconds - 7 * DAY_SECONDS;
+  const cutoff = nowSeconds - windowSeconds;
   const recent: RecentFreezeEvent[] = [];
   for (const ev of events) {
     if (ev.eventType !== "blacklist" && ev.eventType !== "destroy") continue;
-    if (ev.timestamp < cutoff7d) continue;
+    if (ev.timestamp < cutoff) continue;
     // Only surface recent rows that carry a known USD amount — events with a
     // null amountUsdAtEvent (older events where price/balance couldn't be
     // reconstructed) look broken in a discovery list.
@@ -124,8 +125,13 @@ export function RecentFreezesCard(): React.JSX.Element {
         ? Math.floor(eventsQuery.dataUpdatedAt / 1000)
         : // eslint-disable-next-line react-hooks/purity -- transient fallback before the mounted clock ticks and before TanStack reports dataUpdatedAt
           Math.floor(Date.now() / 1000);
-    return buildRecentRows(eventsQuery.data.events, refSec, (sym) => symbolToId(sym, logoMap));
-  }, [eventsQuery.data, eventsQuery.dataUpdatedAt, logoMap, nowSec]);
+    return buildRecentRows(
+      eventsQuery.data.events,
+      refSec,
+      windowKey === "24h" ? DAY_SECONDS : 7 * DAY_SECONDS,
+      (sym) => symbolToId(sym, logoMap),
+    );
+  }, [eventsQuery.data, eventsQuery.dataUpdatedAt, logoMap, nowSec, windowKey]);
 
   const isLoading = eventsQuery.isLoading || summaryQuery.isLoading;
   const state = resolveQueryViewState({
