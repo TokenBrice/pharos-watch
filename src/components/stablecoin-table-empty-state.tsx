@@ -31,21 +31,29 @@ export function StablecoinTableEmptyState({
 }: StablecoinTableEmptyStateProps) {
   // Map the local state (search vs filters vs cold-start) onto the canonical
   // EmptyStateKind enum so this surface stops shipping bespoke copy.
-  const kind: EmptyStateKind = searchQuery
-    ? "no-results"
-    : activeFilters.length > 0
-      ? "no-matches"
-      : "no-data";
-  const title = searchQuery
-    ? `No results for "${searchQuery}"`
-    : activeFilters.length > 0
-      ? "No stablecoins match your filters"
-      : "No stablecoin data available";
-  const description =
-    activeFilters.length > 0 || searchQuery
+  // An absent payload is an unavailable read, never an empty result: it
+  // outranks the search/filter branches and suppresses their clear actions.
+  const noData = data === undefined;
+  const kind: EmptyStateKind = noData
+    ? "no-data"
+    : searchQuery
+      ? "no-results"
+      : activeFilters.length > 0
+        ? "no-matches"
+        : "no-data";
+  const title = noData
+    ? "No stablecoin data available"
+    : searchQuery
+      ? `No results for "${searchQuery}"`
+      : activeFilters.length > 0
+        ? "No stablecoins match your filters"
+        : "No stablecoin data available";
+  const description = noData
+    ? "Check back soon — we're constantly monitoring the market."
+    : activeFilters.length > 0 || searchQuery
       ? "Try adjusting your filters or clearing them to see the full tracked universe."
       : "Check back soon — we're constantly monitoring the market.";
-  const showActions = !!searchQuery || activeFilters.length > 0;
+  const showActions = !noData && (!!searchQuery || activeFilters.length > 0);
   return (
     <TableRow>
       <TableCell colSpan={99} className="py-10">

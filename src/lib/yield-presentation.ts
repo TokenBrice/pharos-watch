@@ -10,6 +10,7 @@ import type {
   YieldScoreQualification,
 } from "@shared/types";
 import { YIELD_RANK_CHANGE_DRIVER_LABELS } from "@/lib/yield-source-presentation";
+import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import type { CsvColumn } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { formatYieldRatioPercent, resolveYieldScoreQualification } from "@/lib/yield-constants";
@@ -34,7 +35,10 @@ const YIELD_CSV_COLUMNS = {
   age: { header: "Source age seconds", accessor: (row) => row.sourceRisk?.sourceAgeSeconds ?? "unknown" },
   venue: { header: "Venue risk tier", accessor: (row) => row.sourceRisk?.venueRiskTier ?? "unknown" },
   completeness: { header: "Evidence completeness (%)", accessor: (row) => formatYieldRatioPercent(row.provenance?.evidenceCompleteness) },
-  benchmark: { header: "Benchmark", accessor: (row) => row.benchmarkLabel ?? "unknown" },
+  benchmark: {
+    header: "Benchmark",
+    accessor: (row) => (row.benchmarkLabel ? getYieldBenchmarkDisplayLabel(row) : "unknown"),
+  },
   tvl: { header: "TVL USD", accessor: (row) => row.sourceTvlUsd ?? "unknown" },
   stability: { header: "Stability (%)", accessor: (row) => formatYieldRatioPercent(row.yieldStability) },
   warnings: { header: "Warnings", accessor: (row) => row.warningSignals.join(" | ") },

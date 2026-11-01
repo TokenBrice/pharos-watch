@@ -131,6 +131,8 @@ export interface CommsWorkbenchModel {
       explicitSubscribers: number | null;
       presetImpliedSubscribers: number | null;
     }>;
+    /** `false` when the ranking read failed, so an empty list is not a measured zero. */
+    topStablecoinsAvailable: boolean;
     lifecycle: {
       available: boolean;
       stale: boolean | null;
@@ -471,6 +473,8 @@ export function buildCommsWorkbenchModel(input: {
           explicitSubscribers: coin.explicitSubscribers ?? null,
           presetImpliedSubscribers: coin.presetImpliedSubscribers ?? null,
         })) ?? [],
+      topStablecoinsAvailable:
+        telegramBot != null && !hasUnavailableField(unavailableFields, "topStablecoins"),
       lifecycle: {
         available: lifecycle != null,
         stale: lifecycleAgeSec == null ? null : lifecycleAgeSec > TELEGRAM_LIFECYCLE_SNAPSHOT_REFRESH_SECONDS * 2,

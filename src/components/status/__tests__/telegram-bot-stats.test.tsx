@@ -227,4 +227,39 @@ describe("TelegramBotStats", () => {
     const lifecycle = screen.getByText("Lifecycle and secondary telemetry");
     expect(lifecycle.closest("details")).toBeTruthy();
   });
+
+  it("does not read a failed coin-ranking query as zero saved subscriptions", () => {
+    const bot = telegramBot();
+    renderWorkbench({
+      bot: {
+        ...bot,
+        topStablecoins: [],
+        quality: {
+          status: "partial",
+          unavailableFields: ["topStablecoins"],
+          errors: { topStablecoins: "D1 unavailable" },
+        },
+      },
+    });
+
+    expect(screen.queryByText("No saved coin subscriptions.")).toBeNull();
+    expect(screen.getByText("Coin subscription coverage is Unknown.")).toBeTruthy();
+  });
+
+  it("keeps measured coin rankings visible alongside an unrelated partial field", () => {
+    const bot = telegramBot();
+    renderWorkbench({
+      bot: {
+        ...bot,
+        quality: {
+          status: "partial",
+          unavailableFields: ["pendingDeliveryBacklog"],
+          errors: { pendingDeliveryBacklog: "D1 unavailable" },
+        },
+      },
+    });
+
+    expect(screen.getByText("LONG")).toBeTruthy();
+    expect(screen.queryByText("Coin subscription coverage is Unknown.")).toBeNull();
+  });
 });

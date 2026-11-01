@@ -138,6 +138,17 @@ describe("StablecoinTable", () => {
     expect(screen.queryByText(/deltas reflect supply expansion and contraction/)).toBeNull();
   });
 
+  it("reads a missing stablecoins payload as unavailable instead of an empty filter result", () => {
+    const { rerender } = render(
+      <StablecoinTable data={undefined} isLoading={false} activeFilters={["usd-peg"]} />,
+    );
+    expect(screen.queryByText("No stablecoins match your filters")).toBeNull();
+    expect(screen.getByText("No stablecoin data available")).toBeTruthy();
+
+    rerender(<StablecoinTable data={[]} isLoading={false} activeFilters={["usd-peg"]} />);
+    expect(screen.getByText("No stablecoins match your filters")).toBeTruthy();
+  });
+
   it("threads supplied source generations through the table model into the CSV preamble", () => {
     render(<StablecoinTable
       data={[coin]} isLoading={false} activeFilters={[]}

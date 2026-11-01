@@ -509,7 +509,7 @@ function AudienceCoverage({ model }: { model: CommsWorkbenchModel }) {
           <h3 id="audience-top-coins-title" className="text-sm font-semibold text-foreground">
             Top subscribed coins
           </h3>
-          {model.quality.status === "unknown" ? (
+          {model.quality.status === "unknown" || !audience.topStablecoinsAvailable ? (
             <p className="mt-2 text-sm text-muted-foreground">Coin subscription coverage is Unknown.</p>
           ) : audience.topStablecoins.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">No saved coin subscriptions.</p>
