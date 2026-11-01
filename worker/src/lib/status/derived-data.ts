@@ -19,8 +19,7 @@ import type { DatasetFreshnessKey } from "@shared/types/status/core";
 import { assessFreshnessTimestamp } from "../api-freshness-age";
 import {
   DEPEG_CENSUS_PRODUCER_JOB,
-  latestDepegLedgerRun,
-  loadDepegCensusRuns,
+  loadLatestDepegLedgerRunAt,
 } from "../depeg-ledger-clock";
 
 export function emptyDatasetFreshness(): StatusResponse["datasetFreshness"] {
@@ -160,8 +159,7 @@ async function getLastUpdate(db: D1Database, target: DatasetFreshnessTarget, now
   }
   if (target.type === "depeg-ledger") {
     try {
-      const runs = await loadDepegCensusRuns(db);
-      return latestDepegLedgerRun(runs)?.runStartedAt ?? null;
+      return await loadLatestDepegLedgerRunAt(db);
     } catch (err) {
       logWorkerEvent({
         scope: "status",

@@ -13,8 +13,13 @@ import {
 } from "./constants";
 import {
   collectDexProtocolCorroborations,
+  isExtremeMovePending,
   type DexPoolSource,
 } from "./depeg-helpers";
+import {
+  DDR_REPAIR_TASK_ACTIVE_STATE_SQL,
+  DDR_REPAIR_TASK_KIND,
+} from "./repair-tasks";
 import {
   DEPEG_CENSUS_PRODUCER_JOB,
   latestDepegLedgerRun,
@@ -129,58 +134,63 @@ export async function checkDepegDetectionCensus(db: D1Database, observedAt: numb
 
 interface PendingConfirmationSummaryRow {
   severe_recent: number | null;
-  stalled_count: number | null;
-  pending_count: number | null;
-  oldest_first_seen: number | null;
 }
 
 interface PendingConfirmationRow {
   stablecoin_id: string;
   first_seen_at: number;
+  reason: string | null;
 }
 
 /**
  * Pending candidates are deleted with an outcome and never create a
- * `depeg_events` row, so an expired extreme move or a row that outlives every
- * dynamic expiry limit is the only evidence that the confirmation stage
- * stopped promoting. Both are terminal states, not a per-run blip.
+ * `depeg_events` row, so an expired extreme move or a row that outlives the
+ * dynamic expiry limit for its reason is the only evidence that the
+ * confirmation stage stopped promoting. Base-window counts stay metadata: a
+ * candidate may legitimately wait for the extended or severe limit.
  */
 export async function checkDepegPendingConfirmation(db: D1Database, observedAt: number) {
   try {
-    const baseExpirySec = STATUS_DEPEG_DETECTION_THRESHOLDS.pendingExtendedMaxAgeSec;
-    const stalledBefore = observedAt - STATUS_DEPEG_DETECTION_THRESHOLDS.pendingStalledMaxAgeSec;
+    const baseExpirySec = STATUS_DEPEG_DETECTION_THRESHOLDS.pendingBaseMaxAgeSec;
+    const extendedExpirySec = STATUS_DEPEG_DETECTION_THRESHOLDS.pendingExtendedMaxAgeSec;
+    const severeExpirySec = STATUS_DEPEG_DETECTION_THRESHOLDS.pendingSevereMaxAgeSec;
+    const stalledGraceSec =
+      CRON_INTERVALS["sync-stablecoins"] * STATUS_DEPEG_DETECTION_THRESHOLDS.pendingStalledGraceIntervals;
     const summary = await runWithOverloadRetry(() =>
       db
         .prepare(
           `SELECT /* pharos:depeg-pending-confirmation-canary */
              (SELECT COUNT(*) FROM depeg_pending_outcomes
-               WHERE outcome = 'unconfirmed-severe' AND outcome_at >= ?) AS severe_recent,
-             (SELECT COUNT(*) FROM depeg_pending WHERE first_seen_at <= ?) AS stalled_count,
-             (SELECT COUNT(*) FROM depeg_pending) AS pending_count,
-             (SELECT MIN(first_seen_at) FROM depeg_pending) AS oldest_first_seen`,
+               WHERE outcome = 'unconfirmed-severe' AND outcome_at >= ?) AS severe_recent`,
         )
-        .bind(observedAt - STATUS_DEPEG_DETECTION_THRESHOLDS.unconfirmedSevereLookbackSec, stalledBefore)
+        .bind(observedAt - STATUS_DEPEG_DETECTION_THRESHOLDS.unconfirmedSevereLookbackSec)
         .first<PendingConfirmationSummaryRow>(),
     );
-    if (
-      !summary
-      || !Number.isInteger(summary.severe_recent) || !Number.isInteger(summary.stalled_count)
-      || !Number.isInteger(summary.pending_count)
-    ) {
+    if (!summary || !Number.isInteger(summary.severe_recent)) {
       return failedFinding("depeg-pending-aggregate-unavailable");
     }
-    const pendingCount = Number(summary.pending_count);
-    const oldestFirstSeen = summary.oldest_first_seen == null ? null : Number(summary.oldest_first_seen);
-    const olderThanBase = await loadPendingOlderThan(db, observedAt - baseExpirySec);
+    const pending = await loadPendingCandidates(db);
+    const olderThanBase = pending.filter((row) => row.first_seen_at <= observedAt - baseExpirySec);
+    // A non-extreme candidate cannot outlive the extended limit; an extreme
+    // move gets the severe limit. One producer interval of grace keeps the
+    // run that may still keep the row from being reported before the next run
+    // can expire it.
+    const stalled = pending.filter((row) => {
+      const limitSec = isExtremeMovePending(row.reason) ? severeExpirySec : extendedExpirySec;
+      return row.first_seen_at < observedAt - limitSec - stalledGraceSec;
+    });
+    const oldestFirstSeen = pending[0]?.first_seen_at ?? null;
     const metadata = {
-      pendingCount,
+      pendingCount: pending.length,
       oldestPendingAgeSec: oldestFirstSeen == null ? null : Math.max(0, observedAt - oldestFirstSeen),
       olderThanBaseExpiryCount: olderThanBase.length,
-      stalledExpiredCount: Number(summary.stalled_count),
+      stalledExpiredCount: stalled.length,
       unconfirmedSevereRecent: Number(summary.severe_recent),
       unconfirmedSevereLookbackSec: STATUS_DEPEG_DETECTION_THRESHOLDS.unconfirmedSevereLookbackSec,
       baseExpirySec,
-      stalledExpirySec: STATUS_DEPEG_DETECTION_THRESHOLDS.pendingStalledMaxAgeSec,
+      extendedExpirySec,
+      severeExpirySec,
+      stalledGraceSec,
       pending: olderThanBase.slice(0, 10).map((row) => ({
         stablecoinId: row.stablecoin_id,
         ageSec: Math.max(0, observedAt - row.first_seen_at),
@@ -193,15 +203,9 @@ export async function checkDepegPendingConfirmation(db: D1Database, observedAt: 
         metadata,
       );
     }
-    if (Number(summary.stalled_count) > 0) {
+    if (stalled.length > 0) {
       return errorFinding(
-        `${summary.stalled_count} depeg candidate(s) outlived every dynamic expiry limit`,
-        metadata,
-      );
-    }
-    if (olderThanBase.length > 0) {
-      return degradedFinding(
-        `${olderThanBase.length} depeg candidate(s) remain unresolved past the base confirmation window`,
+        `${stalled.length} depeg candidate(s) outlived every dynamic expiry limit`,
         metadata,
       );
     }
@@ -211,19 +215,15 @@ export async function checkDepegPendingConfirmation(db: D1Database, observedAt: 
   }
 }
 
-async function loadPendingOlderThan(db: D1Database, beforeSec: number): Promise<PendingConfirmationRow[]> {
-  if (!Number.isFinite(beforeSec)) return [];
+async function loadPendingCandidates(db: D1Database): Promise<PendingConfirmationRow[]> {
   const rows = await runWithOverloadRetry(() =>
     db
       .prepare(
         `SELECT /* pharos:depeg-pending-aged-candidates */
-           stablecoin_id, first_seen_at
+           stablecoin_id, first_seen_at, reason
          FROM depeg_pending
-         WHERE first_seen_at <= ?
-         ORDER BY first_seen_at ASC
-         LIMIT 20`,
+         ORDER BY first_seen_at ASC`,
       )
-      .bind(beforeSec)
       .all<PendingConfirmationRow>(),
   );
   return rows.results ?? [];
@@ -232,6 +232,7 @@ async function loadPendingOlderThan(db: D1Database, beforeSec: number): Promise<
 interface DdrUnsealedRow {
   incident_key: string;
   eligible_at: number;
+  total_count: number | null;
 }
 
 /**
@@ -239,6 +240,8 @@ interface DdrUnsealedRow {
  * Reading lock state (not run metadata) catches every cause of a missed seal —
  * a failed promotion-clock read, a crash between seal and publication, or a
  * future regression — and the grace window keeps one transient run quiet.
+ * Health deferrals and quarantined events are excluded: each is an intentional
+ * non-seal owned by the run's own degraded/quarantine alert.
  */
 export async function checkDdrEligibleUnsealed(db: D1Database, observedAt: number) {
   try {
@@ -247,7 +250,7 @@ export async function checkDdrEligibleUnsealed(db: D1Database, observedAt: numbe
       db
         .prepare(
           `SELECT /* pharos:ddr-eligible-unsealed-canary */
-             ls.incident_key, ls.eligible_at
+             ls.incident_key, ls.eligible_at, COUNT(*) OVER () AS total_count
            FROM depeg_resolver_prediction_lock_state ls
            JOIN depeg_resolver_incidents i ON i.incident_key = ls.incident_key
            JOIN depeg_resolver_incident_policy_membership m ON m.incident_key = i.incident_key
@@ -256,19 +259,30 @@ export async function checkDdrEligibleUnsealed(db: D1Database, observedAt: numbe
            WHERE i.incident_state = 'active'
              AND m.policy_universe_included = 1
              AND e.ended_at IS NULL
+             AND ls.last_state != 'lock_deferred'
              AND ls.eligible_at <= ?
              AND p.id IS NULL
+             AND NOT EXISTS (
+               SELECT 1 FROM worker_repair_tasks
+               WHERE kind = ?
+                 AND subject_id = CAST(e.id AS TEXT)
+                 AND ${DDR_REPAIR_TASK_ACTIVE_STATE_SQL}
+             )
            ORDER BY ls.eligible_at ASC
            LIMIT 50`,
         )
-        .bind(observedAt - graceSec)
+        .bind(observedAt - graceSec, DDR_REPAIR_TASK_KIND)
         .all<DdrUnsealedRow>(),
     );
     const unsealed = rows.results ?? [];
+    const unsealedCount = unsealed.length === 0 ? 0 : unsealed[0].total_count;
+    if (unsealedCount == null || !Number.isInteger(unsealedCount)) {
+      return failedFinding("ddr-unsealed-aggregate-unavailable");
+    }
     const oldestEligibleAt = unsealed[0]?.eligible_at ?? null;
     const oldestAgeSec = oldestEligibleAt == null ? null : Math.max(0, observedAt - oldestEligibleAt);
     const metadata = {
-      unsealedCount: unsealed.length,
+      unsealedCount,
       oldestEligibleAt,
       oldestAgeSec,
       graceSec,
@@ -278,14 +292,14 @@ export async function checkDdrEligibleUnsealed(db: D1Database, observedAt: numbe
         ageSec: Math.max(0, observedAt - row.eligible_at),
       })),
     };
-    if (unsealed.length === 0) return okFinding(metadata);
+    if (unsealedCount === 0) return okFinding(metadata);
     if (oldestAgeSec != null && oldestAgeSec > STATUS_DEPEG_DETECTION_THRESHOLDS.ddrUnsealedMaxAgeSec) {
       return errorFinding(
-        `${unsealed.length} eligible DDR incident(s) unsealed; oldest ${oldestAgeSec}s past eligibility`,
+        `${unsealedCount} eligible DDR incident(s) unsealed; oldest ${oldestAgeSec}s past eligibility`,
         metadata,
       );
     }
-    return degradedFinding(`${unsealed.length} eligible DDR incident(s) have no sealed prediction`, metadata);
+    return degradedFinding(`${unsealedCount} eligible DDR incident(s) have no sealed prediction`, metadata);
   } catch (error) {
     return unavailableFinding(error);
   }
@@ -297,13 +311,16 @@ interface BlindOpenEventRow {
   symbol: string;
   last_trusted_price_at: number | null;
   price_coverage_gap_started_at: number | null;
+  total_count: number | null;
 }
 
 /**
  * An open event whose trusted price stopped advancing stays open with a frozen
  * clock and is only labelled "unconfirmed" on the coin page. The persisted
  * coverage clock names the stuck leg inline, without waiting for a whole-run
- * census loss.
+ * census loss. `gapStartedAt` breaks off-peg continuity and is preserved by a
+ * later at-par observation, so the effective blind clock is the newer of the
+ * two columns rather than the gap alone.
  */
 export async function checkDepegOpenCoverage(db: D1Database, observedAt: number) {
   try {
@@ -312,22 +329,25 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
       db
         .prepare(
           `SELECT /* pharos:depeg-open-coverage-canary */
-             id, stablecoin_id, symbol, last_trusted_price_at, price_coverage_gap_started_at
+             id, stablecoin_id, symbol, last_trusted_price_at, price_coverage_gap_started_at,
+             COUNT(*) OVER () AS total_count
            FROM depeg_events
            WHERE ended_at IS NULL
-             AND (
-               (price_coverage_gap_started_at IS NOT NULL AND price_coverage_gap_started_at < ?)
-               OR (last_trusted_price_at IS NOT NULL AND last_trusted_price_at < ?)
-             )
-           ORDER BY price_coverage_gap_started_at ASC
+             AND (last_trusted_price_at IS NOT NULL OR price_coverage_gap_started_at IS NOT NULL)
+             AND MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) < ?
+           ORDER BY MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) ASC
            LIMIT 25`,
         )
-        .bind(blindBefore, blindBefore)
+        .bind(blindBefore)
         .all<BlindOpenEventRow>(),
     );
     const blind = rows.results ?? [];
+    const blindEventCount = blind.length === 0 ? 0 : blind[0].total_count;
+    if (blindEventCount == null || !Number.isInteger(blindEventCount)) {
+      return failedFinding("depeg-open-coverage-aggregate-unavailable");
+    }
     const metadata = {
-      blindEventCount: blind.length,
+      blindEventCount,
       blindMaxAgeSec: STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec,
       events: blind.slice(0, 10).map((row) => {
         const clock = Math.max(row.last_trusted_price_at ?? 0, row.price_coverage_gap_started_at ?? 0);
@@ -339,9 +359,9 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
         };
       }),
     };
-    if (blind.length === 0) return okFinding(metadata);
+    if (blindEventCount === 0) return okFinding(metadata);
     return degradedFinding(
-      `${blind.length} open depeg event(s) have no trusted price observation within ${STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec}s: ` +
+      `${blindEventCount} open depeg event(s) have no trusted price observation within ${STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec}s: ` +
         blind.slice(0, 5).map((row) => `${row.symbol}(${row.stablecoin_id})`).join(", "),
       metadata,
     );
@@ -357,7 +377,10 @@ interface DexSuppressionCandidateRow {
   deviation_from_primary_bps: number | null;
   source_total_tvl: number;
   price_sources_json: string | null;
+  candidate_count: number | null;
 }
+
+const DEX_SUPPRESSION_CANDIDATE_LIMIT = 50;
 
 /**
  * Mirrors the onset-suppression predicate for USD pegs: the primary is beyond
@@ -375,7 +398,8 @@ export async function checkDepegDexSuppression(db: D1Database, observedAt: numbe
         .prepare(
           `SELECT /* pharos:depeg-dex-suppression-canary */
              stablecoin_id, dex_price_usd, primary_price_at_calc,
-             deviation_from_primary_bps, source_total_tvl, price_sources_json
+             deviation_from_primary_bps, source_total_tvl, price_sources_json,
+             COUNT(*) OVER () AS candidate_count
            FROM dex_prices
            WHERE updated_at >= ?
              AND source_total_tvl >= ?
@@ -392,12 +416,21 @@ export async function checkDepegDexSuppression(db: D1Database, observedAt: numbe
                WHERE p.stablecoin_id = dex_prices.stablecoin_id
              )
            ORDER BY ABS(primary_price_at_calc - 1) DESC
-           LIMIT 50`,
+           LIMIT ${DEX_SUPPRESSION_CANDIDATE_LIMIT}`,
         )
         .bind(observedAt - DEX_FRESHNESS_SEC, DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD, recoveryBps, thresholdBps)
         .all<DexSuppressionCandidateRow>(),
     );
-    const suppressed = (rows.results ?? []).flatMap((row) => {
+    const candidates = rows.results ?? [];
+    const candidateCount = candidates.length === 0 ? 0 : candidates[0].candidate_count;
+    if (candidateCount == null || !Number.isInteger(candidateCount)) {
+      return failedFinding("depeg-dex-suppression-aggregate-unavailable");
+    }
+    // The protocol-group predicate is JS policy; a saturated candidate scan
+    // makes the published suppressed count a lower bound, which the finding
+    // names instead of reporting it as a full population (ADR-34).
+    const suppressedCountIsLowerBound = candidateCount > candidates.length;
+    const suppressed = candidates.flatMap((row) => {
       const meta = PSI_ELIGIBLE_META_BY_ID.get(row.stablecoin_id);
       // USD pegs anchor at 1, so the suppression predicate is computable here;
       // non-USD references need the run's FX-annotated peg table.
@@ -414,8 +447,14 @@ export async function checkDepegDexSuppression(db: D1Database, observedAt: numbe
         sourceTotalTvlUsd: Math.round(row.source_total_tvl),
       }];
     });
+    const suppressedLabel = suppressedCountIsLowerBound
+      ? `at least ${suppressed.length}`
+      : `${suppressed.length}`;
     const metadata = {
       suppressedCount: suppressed.length,
+      suppressedCountIsLowerBound,
+      candidateCount,
+      candidateLimit: DEX_SUPPRESSION_CANDIDATE_LIMIT,
       thresholdBps,
       recoveryBps,
       minTvlUsd: DEX_PRICE_CHECK_DEPEG_MIN_TVL_USD,
@@ -425,12 +464,13 @@ export async function checkDepegDexSuppression(db: D1Database, observedAt: numbe
     if (suppressed.length === 0) return okFinding(metadata);
     if (suppressed.length >= STATUS_DEPEG_DETECTION_THRESHOLDS.dexSuppressionErrorCount) {
       return errorFinding(
-        `${suppressed.length} USD-pegged assets have a DEX-recovery onset suppression with no pending candidate or open event`,
+        `${suppressedLabel} USD-pegged assets have a DEX-recovery onset suppression with no pending candidate or open event`,
         metadata,
       );
     }
     return degradedFinding(
-      `DEX price recovery band suppressed a new depeg onset for ${suppressed.map((row) => row.stablecoinId).join(", ")}`,
+      `DEX price recovery band suppressed a new depeg onset for ${suppressed.map((row) => row.stablecoinId).join(", ")}` +
+        (suppressedCountIsLowerBound ? " (candidate scan capped)" : ""),
       metadata,
     );
   } catch (error) {

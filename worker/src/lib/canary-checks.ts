@@ -872,7 +872,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "ddr-eligible-unsealed",
     label: "DDR eligible incidents sealed",
-    description: "Every active policy-universe incident eligible for a prediction carries a sealed public prediction within one producer run.",
+    description: "Every active policy-universe incident eligible for a prediction, not health-deferred or quarantined for repair, carries a sealed public prediction within one producer run.",
     run: checkDdrEligibleUnsealed,
   },
   {

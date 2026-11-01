@@ -1,7 +1,7 @@
 import { CRON_INTERVALS } from "./cron-jobs";
 import { CRON_SCHEDULE_CADENCES } from "./cron-cadences";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "./depeg-closure";
-import { DEPEG_PENDING_EXPIRY_SEC } from "./depeg-config";
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_EXTENDED_EXPIRY_SEC, DEPEG_PENDING_SEVERE_EXPIRY_SEC } from "./depeg-config";
 import type { ActivePriceCoverageGap, ActivePriceCoverageHealth, StablecoinPublicationHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
 import type { z } from "zod";
 import type { FreshnessStatusSchema } from "@pharos/contracts/api-meta";
@@ -603,10 +603,14 @@ export const STATUS_DEPEG_DETECTION_THRESHOLDS = {
   unavailableShareMax: 0.05,
   /** The census clock may miss one producer interval; two missed runs degrade. */
   ledgerMaxAgeIntervals: 2,
-  /** A candidate older than the base confirmation window is unresolved, not merely slow. */
-  pendingExtendedMaxAgeSec: DEPEG_PENDING_EXPIRY_SEC,
-  /** A candidate older than every dynamic expiry limit proves confirmation never processed it. */
-  pendingStalledMaxAgeSec: DEPEG_PENDING_EXPIRY_SEC * 4,
+  /** Watch-level count: a candidate past the base window may still be legitimately extended. */
+  pendingBaseMaxAgeSec: DEPEG_PENDING_EXPIRY_SEC,
+  /** Same-direction primary evidence or an unavailable confirmer can extend a candidate to this limit. */
+  pendingExtendedMaxAgeSec: DEPEG_PENDING_EXTENDED_EXPIRY_SEC,
+  /** An extreme move can stay pending to this final dynamic limit. */
+  pendingSevereMaxAgeSec: DEPEG_PENDING_SEVERE_EXPIRY_SEC,
+  /** One producer interval after a row's limit, so the keep run is not paged before the next run expires it. */
+  pendingStalledGraceIntervals: 1,
   /** An extreme move expired without a public event stays a finding for one day. */
   unconfirmedSevereLookbackSec: 24 * 3600,
   /** Shared observation-gap budget: an open event blind past this has no trusted price. */
