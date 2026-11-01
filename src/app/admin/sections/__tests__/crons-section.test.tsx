@@ -220,6 +220,22 @@ describe("CronsSection", () => {
     expect(within(detail).queryByText(/not measured on this runtime/i)).toBeNull();
   });
 
+  it("prints one copyable tail command per Worker lane the job runs on", () => {
+    renderCrons({
+      groups: [makeGroup([["cron-sentinel", makeCronStatus({ healthy: false, runs: [] })]])],
+    });
+
+    const actions = within(screen.getByRole("complementary", { name: /Details for/ })).getByRole("region", {
+      name: "Actions",
+    });
+    expect(
+      within(actions).getByText("wrangler tail stablecoin-api --format pretty --search cron-sentinel"),
+    ).toBeTruthy();
+    expect(
+      within(actions).getByText("wrangler tail stablecoin-heavy --format pretty --search cron-sentinel"),
+    ).toBeTruthy();
+  });
+
   it("surfaces running lease, stale artifacts, and orphaned progress evidence", () => {
     const cron = makeCronStatus({
       healthy: false,

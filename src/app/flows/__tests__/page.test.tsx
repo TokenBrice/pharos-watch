@@ -4,10 +4,12 @@ import type { ReactNode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MintBurnFlowsResponse } from "@shared/types";
+import { ApiFetchError } from "@/lib/api";
 import { makeMintBurnFlowCoin } from "@/test-utils/mint-burn-fixtures";
 
 const useMintBurnFlowsMock = vi.hoisted(() => vi.fn());
 const flowGaugeHeroMock = vi.hoisted(() => vi.fn(() => null));
+const flowTableMock = vi.hoisted(() => vi.fn(() => null));
 
 vi.mock("@/hooks/use-mint-burn-flows", () => ({
   useMintBurnFlows: useMintBurnFlowsMock,
@@ -24,7 +26,7 @@ vi.mock("@/components/feature-page-shell", () => ({
   ),
 }));
 vi.mock("@/components/flow-chart", () => ({ FlowChart: () => null }));
-vi.mock("@/components/flow-table", () => ({ FlowTable: () => null }));
+vi.mock("@/components/flow-table", () => ({ FlowTable: flowTableMock }));
 vi.mock("@/components/flow-gauge-hero", () => ({ FlowGaugeHero: flowGaugeHeroMock }));
 vi.mock("@/components/faq-section", () => ({ FaqSection: () => null }));
 vi.mock("@/components/control-pill-toggle", () => ({
@@ -119,5 +121,24 @@ describe("FlowsClient", () => {
 
     expect(screen.queryByText("Refresh delayed")).toBeNull();
     expect(screen.queryByText("Failed to load this dataset")).toBeNull();
+  });
+
+  it("reports a failed 24h summary read instead of a zero-coin hero and an empty table", () => {
+    useMintBurnFlowsMock.mockImplementation((hours: number) => {
+      if (hours === 24) {
+        return makeQueryResult({
+          data: undefined,
+          dataUpdatedAt: 0,
+          error: new ApiFetchError("/api/mint-burn-flows", 503, JSON.stringify({ error: "data not yet available" })),
+        });
+      }
+      return makeQueryResult();
+    });
+
+    render(<FlowsClient faqItems={[]} />);
+
+    expect(screen.getByText("Waiting for first sync")).toBeTruthy();
+    expect(flowGaugeHeroMock).not.toHaveBeenCalled();
+    expect(flowTableMock).not.toHaveBeenCalled();
   });
 });

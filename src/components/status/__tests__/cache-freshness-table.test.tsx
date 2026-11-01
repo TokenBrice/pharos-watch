@@ -23,7 +23,8 @@ describe("CacheFreshnessTable", () => {
 
     render(<CacheFreshnessTable caches={{ "dex-liquidity": dexCache }} />);
 
-    expect(screen.getByText(/Each lane is Delayed past/i)).toBeTruthy();
+    expect(screen.getByText(/By default, each lane is Delayed past/i)).toBeTruthy();
+    expect(screen.getByText(/that lane's Delayed multiple of that basis/i)).toBeTruthy();
     expect(screen.getByText("1 healthy cache").className).toContain("min-h-11");
     // Collapsed healthy detail is not mounted until the operator opens it.
     expect(screen.queryByTestId("cache-freshness-healthy-table")).toBeNull();
@@ -42,6 +43,44 @@ describe("CacheFreshnessTable", () => {
     expect(
       within(row as HTMLTableRowElement).getByText("Endpoint warning target. · Availability budget."),
     ).toBeTruthy();
+  });
+
+  it("lists a fresh cached-fallback lane as degraded, not as a healthy cache", () => {
+    const fxCache: CacheStatus = {
+      ageSeconds: 60,
+      maxAge: 1_800,
+      healthy: true,
+      mode: "cached-fallback",
+      consecutiveFallbackRuns: 3,
+    };
+
+    render(<CacheFreshnessTable caches={{ "fx-rates": fxCache }} />);
+
+    expect(screen.queryByText(/healthy cache/)).toBeNull();
+    const table = screen.getByTestId("cache-freshness-unhealthy-table");
+    const row = within(table).getByText("fx-rates").closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLTableRowElement).getByText("Degraded")).toBeTruthy();
+    expect(within(row as HTMLTableRowElement).getByText("3 fallback run(s)")).toBeTruthy();
+  });
+
+  it("lists a fresh quality-degraded lane as degraded and names the reason in the note", () => {
+    const yieldCache: CacheStatus = {
+      ageSeconds: 60,
+      maxAge: 7_200,
+      healthy: true,
+      degraded: true,
+      degradedReason: "safety-snapshot-coverage",
+    };
+
+    render(<CacheFreshnessTable caches={{ "yield-data": yieldCache }} />);
+
+    expect(screen.queryByText(/healthy cache/)).toBeNull();
+    const table = screen.getByTestId("cache-freshness-unhealthy-table");
+    const row = within(table).getByText("yield-data").closest("tr");
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLTableRowElement).getByText("Degraded")).toBeTruthy();
+    expect(within(row as HTMLTableRowElement).getByText("safety-snapshot-coverage")).toBeTruthy();
   });
 
   it("uses the yield-data override for its band and threshold labels", () => {

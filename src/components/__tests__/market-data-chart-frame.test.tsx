@@ -127,6 +127,48 @@ it("expands standalone charts with a bounded annual key and an uncapped retained
   client.clear();
 });
 
+it("discloses that a wide range still paints the 90-day seed when its expansion read fails", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => {
+    throw new TypeError("Failed to fetch");
+  }));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const { unmount } = render(
+    <QueryClientProvider client={client}>
+      <McapChart data={data} stablecoinId="usdt-tether" controlledRange="all" expandHistoryOnWideRange />
+    </QueryClientProvider>,
+  );
+  // The polling query retries twice before it settles; this is the first failure state.
+  await waitFor(() => {
+    expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(
+      "All history could not be loaded. Requested coverage is not confirmed.",
+    );
+  }, { timeout: 8_000 });
+  expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(
+    "Only the available 90-day window is shown.",
+  );
+  expect(screen.getByRole("figure", { name: "Market cap chart showing 3 data points" })).toBeTruthy();
+  unmount();
+  client.clear();
+});
+
+it("qualifies a wide range while its expansion read is still loading", async () => {
+  vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const { unmount } = render(
+    <QueryClientProvider client={client}>
+      <McapChart data={data} stablecoinId="usdt-tether" controlledRange="1y" expandHistoryOnWideRange />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(
+    "Loading 1Y history. Requested coverage is not yet confirmed.",
+  );
+  expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(
+    "Only the available 90-day window is shown.",
+  );
+  unmount();
+  client.clear();
+});
+
 it("uses its own range controls to switch an uncontrolled expandable chart from All to 1Y", async () => {
   const all = [{ date: Date.UTC(2017, 0, 1) / 1000, circulatingUsd: 10_000, price: 1 }, ...data];
   const requests: string[] = [];

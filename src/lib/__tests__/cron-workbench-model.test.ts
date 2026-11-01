@@ -9,6 +9,7 @@ import {
   getCronNextExpected,
   getCronNextRunAt,
   getCronRunbooks,
+  getCronTailCommands,
   formatCronRunStatus,
   formatCronRunTiming,
   type CronWorkbenchFilters,
@@ -594,4 +595,18 @@ describe("cron operator verdict", () => {
     expect(getCronNextExpected(makeCron({ runs: [], telemetryUnknown: true }), start).label).toBe("Unknown");
   });
 
+});
+
+describe("getCronTailCommands", () => {
+  it.each([
+    ["sync-blacklist", ["stablecoin-api"]],
+    ["sync-dex-liquidity", ["stablecoin-heavy"]],
+    ["sync-stablecoin-charts", ["stablecoin-heavy"]],
+    ["cron-sentinel", ["stablecoin-api", "stablecoin-heavy"]],
+    ["price-corroboration", ["stablecoin-api"]],
+  ])("tails %s on its scheduled lane(s)", (job, scripts) => {
+    expect(getCronTailCommands(job)).toEqual(
+      scripts.map((script) => `wrangler tail ${script} --format pretty --search ${job}`),
+    );
+  });
 });

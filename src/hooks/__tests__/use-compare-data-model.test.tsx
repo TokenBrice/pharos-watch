@@ -341,6 +341,17 @@ describe("useCompareDataModel", () => {
       .toMatchObject({ error, hasData: true, dataUpdatedAt: 1_700_000_010_000, meta });
   });
 
+  it("stamps the flow generation from the producer meta, not the newest bucket start", () => {
+    useMintBurnFlowsMock.mockReturnValue(makeQueryResult({
+      data: { coins: [], updatedAt: 1_699_990_000 },
+      meta: { updatedAt: 1_699_997_000, ageSeconds: 10, status: "fresh" },
+    }));
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg", range: "all",
+    }));
+    expect(result.current.flowUpdatedAt).toBe(1_699_997_000);
+  });
+
   it("reports one failed flow history while preserving another history and retrying both", () => {
     const error = new Error("USDC history failed");
     const histories = [

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
+import { QueryErrorNotice } from "@/components/query-error-notice";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import type { StaleQuery } from "@/components/stale-data-banner";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -123,7 +124,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
   const chartUpdatedAt = isChartFromSummary ? summaryUpdatedAt : chartQueryUpdatedAt;
   const isWeeklyLoading = isWeeklyFromChart ? isChartLoading : isWeeklyQueryLoading;
 
-  const gauge = summaryData?.gauge;
+  const gauge = summaryData?.gauge ?? null;
   const coins = summaryData?.coins ?? [];
   const hourly = chartData?.hourly ?? [];
   const weeklyHourly = (isWeeklyFromChart ? chartData?.hourly : weeklyData?.hourly) ?? [];
@@ -185,18 +186,28 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         showFreshnessBanner={showDataHealthBanner}
       />
 
-      <FlowGaugeHero
-        gauge={gauge ?? null}
-        coins={coins}
-        sync={sync}
-        window={summaryData?.window}
-        dataHealth={dataHealth}
-        isLoading={isSummaryLoading}
-      />
+      {summaryData == null && !isSummaryLoading ? (
+        // The 24h aggregate owns the hero and the table: a missing payload is a
+        // failed read, never a zero-coin pass. The page-level notice reports it
+        // when nothing else loaded; with the chart in hand that notice is silent,
+        // so the failed 24h read is reported where its modules would have rendered.
+        chartData ? <QueryErrorNotice error={summaryError} onRetry={() => void refetchSummary()} /> : null
+      ) : (
+        <>
+          <FlowGaugeHero
+            gauge={gauge}
+            coins={coins}
+            sync={sync}
+            window={summaryData?.window}
+            dataHealth={dataHealth}
+            isLoading={isSummaryLoading}
+          />
 
-      <section id="data" tabIndex={-1} aria-label="Per-coin flows">
-        <FlowTable coins={coins} isLoading={isSummaryLoading} />
-      </section>
+          <section id="data" tabIndex={-1} aria-label="Per-coin flows">
+            <FlowTable coins={coins} isLoading={isSummaryLoading} />
+          </section>
+        </>
+      )}
 
       <section aria-labelledby="chart-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">

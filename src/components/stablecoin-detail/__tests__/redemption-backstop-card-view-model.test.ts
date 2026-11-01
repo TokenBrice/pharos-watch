@@ -113,7 +113,7 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     expect(telemetryValue(viewModel, "Horizon")).toBe("daily");
     expect(telemetryValue(viewModel, "Scoring capacity")).toBe("$1.5M");
     expect(telemetryValue(viewModel, "Eventual capacity")).toBe("$30.0M");
-    expect(telemetryValue(viewModel, "Queued capacity")).toBe("$12.0M");
+    expect(telemetryValue(viewModel, "Queued capacity")).toBeUndefined();
     expect(telemetryValue(viewModel, "Modeled exit")).toBe("$2.0M");
     expect(telemetryValue(viewModel, "Eventual score")).toBe("88/100");
     expect(telemetryValue(viewModel, "Capacity evidence")).toBe("live direct bounded");
@@ -140,12 +140,38 @@ describe("buildRedemptionBackstopCardViewModel", () => {
     );
 
     expect(viewModel.capacitySummary).toMatchObject({
-      title: "Queued Capacity",
+      title: "Immediate Capacity",
       headline: "$750.0K",
     });
     expect(viewModel.capacitySummary.detail).toContain("Reviewed documented redemption bound.");
-    expect(viewModel.capacitySummary.detail).toContain("Current modeled capacity is queue-limited.");
+    expect(viewModel.capacitySummary.detail).toContain("Current modeled immediate redeemable capacity.");
     expect(telemetryValue(viewModel, "Modeled exit")).toBe("$2.5M");
+  });
+
+  it("does not title a live-queue route as queue-bounded capacity or repeat the queue amount", () => {
+    const viewModel = buildRedemptionBackstopCardViewModel(entry({
+      capacitySemantics: "immediate-bounded",
+      capacityConfidence: "live-proxy",
+      capacityKind: "live-queue",
+      immediateCapacityUsd: 12_399_245.851019,
+      immediateCapacityRatio: null,
+      queueDepthUsd: 0,
+      capacityProfile: {
+        immediateUsd: 12_399_245.851019,
+        queuedUsd: 0,
+        scoringUsd: 12_399_245.851019,
+        scoringHorizon: "queued",
+        capacityProfileConfidence: "live-proxy",
+      },
+    }));
+
+    expect(viewModel.capacitySummary).toMatchObject({
+      title: "Immediate Capacity",
+      headline: "$12.4M",
+    });
+    expect(viewModel.capacitySummary.detail).toContain("Current modeled immediate redeemable capacity.");
+    expect(telemetryValue(viewModel, "Queued capacity")).toBeUndefined();
+    expect(telemetryValue(viewModel, "Queue depth")).toBe("$0.0");
   });
 
   it.each([

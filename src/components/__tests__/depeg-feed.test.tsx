@@ -43,6 +43,13 @@ describe("DepegFeed", () => {
     expect(screen.getByText("No confirmed active depeg incidents.")).toBeTruthy();
   });
 
+  it("does not claim an observed empty history when the read is unavailable", () => {
+    render(<DepegFeed events={[]} emptyMessage="No confirmed depeg history in this view." unavailable />);
+
+    expect(screen.queryByText("No confirmed depeg history in this view.")).toBeNull();
+    expect(screen.getByText(/Resolved depeg history is temporarily unavailable/i)).toBeTruthy();
+  });
+
   it("reflects the current events set after the feed updates (seen-id scope follows events)", () => {
     const { rerender } = render(
       <DepegFeed events={[makeEvent({ id: 1, symbol: "ALPHA" })]} />,

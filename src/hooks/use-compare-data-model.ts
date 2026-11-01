@@ -335,7 +335,9 @@ export function useCompareDataModel({
     flowErrorNotice,
     flowScopeLabel: flowData?.scope?.label ?? "Configured issuance chains",
     flowSeries,
-    flowUpdatedAt: flowData?.updatedAt ?? null,
+    // The producer's own generation clock (R3), not the newest closed-hour
+    // bucket start carried in the body.
+    flowUpdatedAt: flow.meta?.updatedAt ?? null,
     freshnessQueries,
     globalError,
     handleRetry,
