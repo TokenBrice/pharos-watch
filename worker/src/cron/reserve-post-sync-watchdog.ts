@@ -6,14 +6,21 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { LiveReserveAdapterValidationPolicy } from "@shared/types/live-reserve-core";
 import { buildAlertReserveSourceEnvelope } from "../lib/alert-reserve-source-cache";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
-import { checkCollateralDrift } from "../lib/collateral-drift";
+import { checkCollateralDrift, type CollateralDriftCheckResult } from "../lib/collateral-drift";
 import type { CronResult } from "../lib/cron-logger";
 import { recordCronFailure } from "../lib/cron-logger";
 import { buildInClause, chunkArray, D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../lib/db";
 import { getCache, setCache } from "../lib/db-cache";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
-import { computeReserveCompositionOverview, getMaxSyncAge, loadReserveSyncStateMap } from "../lib/live-reserves/store";
-import { LIVE_RESERVE_FRESHNESS_SEC, type ReserveSyncStateRecord } from "../lib/live-reserves/store-shared";
+import { computeReserveCompositionOverview, getMaxSyncAge, loadPublishedReserveScoringEvidence, loadReserveSyncStateMap } from "../lib/live-reserves/store";
+import {
+  evaluateReserveCompositionCensus,
+  parseReserveCompositionCensusState,
+} from "../lib/live-reserves/reserve-composition-census";
+import {
+  LIVE_RESERVE_FRESHNESS_SEC,
+  type ReserveSyncStateRecord,
+} from "../lib/live-reserves/store-shared";
 import { resolveAcknowledgedReserveFeedIds } from "../lib/reserve-feed-reviews";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { SYNC_ORDERED_CONFIGURED_COINS } from "./sync-live-reserves-shared";
@@ -25,6 +32,7 @@ const PERSISTENTLY_STALE_WARNING_MAX_AGE_SEC = 21 * DAY_SECONDS;
 const CURATED_FALLBACK_WARNING_COUNT_THRESHOLD = 5;
 
 const RESERVE_ALERT_STATE_KEY = "reserve-post-sync-watchdog:adapter-alerts:v1";
+const RESERVE_CENSUS_STATE_KEY = "reserve-post-sync-watchdog:composition-census:v1";
 /** Bounded newest-attempt scan: covers the sustain count, a success between stalls, plus margin. */
 const RESERVE_ALERT_ATTEMPT_SCAN_LIMIT = Math.max(
   STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS.failureSustainedCycles,
@@ -33,6 +41,7 @@ const RESERVE_ALERT_ATTEMPT_SCAN_LIMIT = Math.max(
 
 export type ReserveAdapterAlertRuleId =
   | "reserve-adapter-failure-sustained"
+  | "reserve-score-ineligible-sustained"
   | "reserve-source-clock-stalled";
 
 export interface ReserveAdapterAlertAttempt {
@@ -45,6 +54,7 @@ export interface ReserveAdapterAlertAttempt {
 
 interface ReserveAdapterAlertCoinState {
   failureRaised: boolean;
+  scoreIneligibleRaised: boolean;
   clockRaised: boolean;
 }
 
@@ -58,6 +68,9 @@ export interface ReserveAdapterAlertEvaluation {
   raised: ReserveAdapterAlertRuleId[];
   recovered: ReserveAdapterAlertRuleId[];
   failedSources: Array<{ stablecoinId: string; failedCycles: number }>;
+  scoreIneligibleSources: Array<{ stablecoinId: string; degradedCycles: number }>;
+  /** Unreadable published scoring evidence that suppressed a verdict; `heldRaised` marks a held prior raise. */
+  scoreIneligibleUnknownSources: Array<{ stablecoinId: string; heldRaised: boolean }>;
   stalledSources: Array<{
     stablecoinId: string;
     sourceTimestamp: number;
@@ -71,12 +84,18 @@ export interface ReserveAdapterAlertEvaluation {
  * crosses its threshold and recovers once when it clears; a matching feed
  * review suppresses a new raise for that exact failure but never reports a
  * recovery. Failed evidence stays failed: a circuit skip withholds an attempt,
- * so it continues the streak, while a budget deferral does not.
+ * so it continues the streak, while a budget deferral does not. Unreadable
+ * published score evidence holds its prior verdict instead of raising or
+ * recovering.
  */
 export function evaluateReserveAdapterAlerts(params: {
   nowSec: number;
   attemptsByCoin: ReadonlyMap<string, readonly ReserveAdapterAlertAttempt[]>;
   sourceAgeBudgetByCoin: ReadonlyMap<string, number>;
+  /** Coins whose published warnings keep the snapshot out of scoring; status alone is not proof. */
+  scoreIneligibleCoinIds: ReadonlySet<string>;
+  /** Coins whose published composition could not be decoded or attributed; the verdict is unknown. */
+  scoreIneligibleUnknownCoinIds: ReadonlySet<string>;
   acknowledgedCoinIds: ReadonlySet<string>;
   previous: ReserveAdapterAlertState;
 }): ReserveAdapterAlertEvaluation {
@@ -84,13 +103,16 @@ export function evaluateReserveAdapterAlerts(params: {
   const raised = new Set<ReserveAdapterAlertRuleId>();
   const recovered = new Set<ReserveAdapterAlertRuleId>();
   const failedSources: ReserveAdapterAlertEvaluation["failedSources"] = [];
+  const scoreIneligibleSources: ReserveAdapterAlertEvaluation["scoreIneligibleSources"] = [];
+  const scoreIneligibleUnknownSources: ReserveAdapterAlertEvaluation["scoreIneligibleUnknownSources"] = [];
   const stalledSources: ReserveAdapterAlertEvaluation["stalledSources"] = [];
 
   for (const coinId of new Set([
     ...params.attemptsByCoin.keys(),
     ...Object.keys(params.previous.coins),
   ])) {
-    const prior = params.previous.coins[coinId] ?? { failureRaised: false, clockRaised: false };
+    const prior = params.previous.coins[coinId]
+      ?? { failureRaised: false, scoreIneligibleRaised: false, clockRaised: false };
     const attempts = [...(params.attemptsByCoin.get(coinId) ?? [])]
       .sort((left, right) => right.attemptedAt - left.attemptedAt);
 
@@ -102,6 +124,23 @@ export function evaluateReserveAdapterAlerts(params: {
     }
     const failureCondition =
       failedCycles >= STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS.failureSustainedCycles;
+
+    // A degraded success still advances the success clock, but a non-allowlisted
+    // degraded warning keeps its snapshot out of scoring, so it needs a streak
+    // of its own rather than the 14-day stale gate (keyed on lastSuccessAt and
+    // therefore unreachable here). Only snapshot-writing successes count: a
+    // degraded *failure* (withheld fallback, stale source) records a failure
+    // category and leaves the published snapshot untouched.
+    let degradedCycles = 0;
+    for (const attempt of attempts) {
+      if (attempt.status !== "degraded" || attempt.failureCategory != null) break;
+      degradedCycles++;
+    }
+    const scoreIneligibleUnknown = params.scoreIneligibleUnknownCoinIds.has(coinId);
+    const scoreIneligibleEvidence = params.scoreIneligibleCoinIds.has(coinId);
+    const scoreIneligibleCondition = scoreIneligibleEvidence
+      && (degradedCycles >= STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS.failureSustainedCycles
+        || prior.scoreIneligibleRaised);
 
     const successful = attempts.filter((attempt) =>
       attempt.status === "ok" || attempt.status === "degraded");
@@ -126,14 +165,33 @@ export function evaluateReserveAdapterAlerts(params: {
 
     const acknowledged = params.acknowledgedCoinIds.has(coinId);
     const failureRaised = failureCondition && (prior.failureRaised || !acknowledged);
+    // Unreadable published evidence neither raises nor reports recovery: it
+    // holds whatever the prior run concluded.
+    const scoreIneligibleRaised = scoreIneligibleUnknown
+      ? prior.scoreIneligibleRaised
+      : scoreIneligibleCondition && (prior.scoreIneligibleRaised || !acknowledged);
     const clockRaised = clockCondition && (prior.clockRaised || !acknowledged);
     if (failureRaised && !prior.failureRaised) raised.add("reserve-adapter-failure-sustained");
+    if (scoreIneligibleRaised && !prior.scoreIneligibleRaised) {
+      raised.add("reserve-score-ineligible-sustained");
+    }
     if (clockRaised && !prior.clockRaised) raised.add("reserve-source-clock-stalled");
     // Recovery follows the evidence clearing, never an acknowledgement.
     if (prior.failureRaised && !failureCondition) recovered.add("reserve-adapter-failure-sustained");
+    if (prior.scoreIneligibleRaised && !scoreIneligibleUnknown && !scoreIneligibleEvidence) {
+      recovered.add("reserve-score-ineligible-sustained");
+    }
     if (prior.clockRaised && !clockCondition) recovered.add("reserve-source-clock-stalled");
 
     if (failureCondition) failedSources.push({ stablecoinId: coinId, failedCycles });
+    if (scoreIneligibleCondition) {
+      scoreIneligibleSources.push({ stablecoinId: coinId, degradedCycles });
+    }
+    if (scoreIneligibleUnknown
+      && (prior.scoreIneligibleRaised
+        || degradedCycles >= STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS.failureSustainedCycles)) {
+      scoreIneligibleUnknownSources.push({ stablecoinId: coinId, heldRaised: prior.scoreIneligibleRaised });
+    }
     if (clockCondition && latestSourceTimestamp != null && sourceAgeBudgetSec != null) {
       stalledSources.push({
         stablecoinId: coinId,
@@ -142,7 +200,9 @@ export function evaluateReserveAdapterAlerts(params: {
         sourceAgeBudgetSec,
       });
     }
-    if (failureRaised || clockRaised) coins[coinId] = { failureRaised, clockRaised };
+    if (failureRaised || scoreIneligibleRaised || clockRaised) {
+      coins[coinId] = { failureRaised, scoreIneligibleRaised, clockRaised };
+    }
   }
 
   return {
@@ -150,6 +210,8 @@ export function evaluateReserveAdapterAlerts(params: {
     raised: [...raised],
     recovered: [...recovered],
     failedSources,
+    scoreIneligibleSources,
+    scoreIneligibleUnknownSources,
     stalledSources,
   };
 }
@@ -164,10 +226,12 @@ function parseReserveAdapterAlertState(value: string | null | undefined): Reserv
     const coins: Record<string, ReserveAdapterAlertCoinState> = {};
     for (const [coinId, entry] of Object.entries(parsed.coins as Record<string, unknown>)) {
       if (!entry || typeof entry !== "object") continue;
-      const { failureRaised, clockRaised } = entry as Record<string, unknown>;
+      const { failureRaised, scoreIneligibleRaised, clockRaised } = entry as Record<string, unknown>;
       if (typeof failureRaised !== "boolean" || typeof clockRaised !== "boolean") continue;
-      if (!failureRaised && !clockRaised) continue;
-      coins[coinId] = { failureRaised, clockRaised };
+      // Older state entries predate the score-ineligible rule; absent means not raised.
+      const scoreRaised = typeof scoreIneligibleRaised === "boolean" && scoreIneligibleRaised;
+      if (!failureRaised && !scoreRaised && !clockRaised) continue;
+      coins[coinId] = { failureRaised, scoreIneligibleRaised: scoreRaised, clockRaised };
     }
     return { version: 1, coins };
   } catch {
@@ -256,11 +320,13 @@ export async function runReservePostSyncWatchdog(
   let maxSyncAgeSec: number | null = null;
   let persistentlyStaleIndependentCoinCount = 0;
   let maxPersistentlyStaleAgeSec = 0;
+  let liveReserveMap: CollateralDriftCheckResult["liveReserveMap"] | null = null;
 
   try {
     throwIfAborted(signal);
     const drift = await checkCollateralDrift(db);
     throwIfAborted(signal);
+    liveReserveMap = drift.liveReserveMap;
     driftCoinCount = drift.driftCoins.length;
     fallbackCoinCount = drift.fallbackCoins.length;
     if (drift.driftCoins.length > 0) {
@@ -299,6 +365,46 @@ export async function runReservePostSyncWatchdog(
     rethrowIfAborted(error, signal);
     degradedReasons.push("drift-cache-age-check-failed");
     recordCronFailure("reserve-post-sync-watchdog", error, { metadata: { stage: "drift-cache-age" } });
+  }
+
+  let compositionCensus: {
+    observedCoins: number;
+    findings: ReturnType<typeof evaluateReserveCompositionCensus>["findings"];
+  } | null = null;
+  try {
+    throwIfAborted(signal);
+    // A failed drift read already staged its own degraded reason; never turn
+    // the missing comparison map into an empty, healthy census observation.
+    if (liveReserveMap) {
+      const previousCensus = parseReserveCompositionCensusState(
+        (await getCache(db, RESERVE_CENSUS_STATE_KEY, signal))?.value,
+      );
+      throwIfAborted(signal);
+      const evaluation = evaluateReserveCompositionCensus(
+        liveReserveMap,
+        previousCensus.state ?? { version: 1, coins: {} },
+      );
+      await setCache(db, RESERVE_CENSUS_STATE_KEY, JSON.stringify(evaluation.state), signal);
+      if (previousCensus.issue) {
+        // Nothing can be diffed against unreadable state, so this run publishes
+        // no census verdict; the fresh baseline only serves the next run.
+        logWorkerEventArgs("handler", "warn", `[live-reserves] Composition census baseline unreadable (${previousCensus.issue}); reseeding it`);
+        degradedReasons.push("composition-census-state-unreadable");
+      } else {
+        compositionCensus = { observedCoins: evaluation.observedCoins, findings: evaluation.findings };
+        if (evaluation.findings.length > 0) {
+          const summary = evaluation.findings
+            .map((entry) => `${entry.stablecoinId}: ${entry.added.length} added, ${entry.removed.length} removed, share Δ${entry.shareDriftPct}pt`)
+            .join("\n");
+          logWorkerEventArgs("handler", "warn", `[live-reserves] Composition census drift detected:\n${summary}`);
+          firedRuleIds.push("reserve-composition-census-drift");
+        }
+      }
+    }
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    degradedReasons.push("composition-census-diff-failed");
+    recordCronFailure("reserve-post-sync-watchdog", error, { metadata: { stage: "composition-census" } });
   }
 
   try {
@@ -342,9 +448,12 @@ export async function runReservePostSyncWatchdog(
     recordCronFailure("reserve-post-sync-watchdog", error, { metadata: { stage: "reserve-sync-state" } });
   }
 
+  let activeAlertReasons: string[] = [];
   let adapterAlert: {
     assessedAt: number;
     failedSources: ReserveAdapterAlertEvaluation["failedSources"];
+    scoreIneligibleSources: ReserveAdapterAlertEvaluation["scoreIneligibleSources"];
+    scoreIneligibleUnknownSources: ReserveAdapterAlertEvaluation["scoreIneligibleUnknownSources"];
     stalledSources: ReserveAdapterAlertEvaluation["stalledSources"];
     acknowledgedCoinIds: string[];
     raised: ReserveAdapterAlertRuleId[];
@@ -360,33 +469,56 @@ export async function runReservePostSyncWatchdog(
         (await getCache(db, RESERVE_ALERT_STATE_KEY, signal))?.value,
       );
       throwIfAborted(signal);
-      const [attemptsByCoin, acknowledgedCoinIds] = await Promise.all([
+      const [attemptsByCoin, acknowledgedCoinIds, scoringEvidence] = await Promise.all([
         loadReserveAdapterAlertAttempts(db, [...reserveSyncById.keys()]),
         resolveAcknowledgedReserveFeedIds(db, reserveSyncById.values(), nowSec),
+        loadPublishedReserveScoringEvidence(db, reserveSyncById, [...reserveSyncById.keys()]),
       ]);
       throwIfAborted(signal);
       const evaluation = evaluateReserveAdapterAlerts({
         nowSec,
         attemptsByCoin,
         sourceAgeBudgetByCoin: resolveReserveAdapterSourceAgeBudgets(),
+        scoreIneligibleCoinIds: scoringEvidence.scoreIneligibleIds,
+        scoreIneligibleUnknownCoinIds: scoringEvidence.unknownIds,
         acknowledgedCoinIds,
         previous: previousState,
       });
       await setCache(db, RESERVE_ALERT_STATE_KEY, JSON.stringify(evaluation.state), signal);
       const activeRuleIds = new Set<ReserveAdapterAlertRuleId>();
-      for (const state of Object.values(evaluation.state.coins)) {
-        if (state.failureRaised) activeRuleIds.add("reserve-adapter-failure-sustained");
-        if (state.clockRaised) activeRuleIds.add("reserve-source-clock-stalled");
+      const alertReasons: string[] = [];
+      for (const [coinId, state] of Object.entries(evaluation.state.coins)) {
+        if (state.failureRaised) {
+          activeRuleIds.add("reserve-adapter-failure-sustained");
+          alertReasons.push(`reserve-adapter-failure-sustained:${coinId}`);
+        }
+        if (state.scoreIneligibleRaised) {
+          activeRuleIds.add("reserve-score-ineligible-sustained");
+          alertReasons.push(`reserve-score-ineligible-sustained:${coinId}`);
+        }
+        if (state.clockRaised) {
+          activeRuleIds.add("reserve-source-clock-stalled");
+          alertReasons.push(`reserve-source-clock-stalled:${coinId}`);
+        }
       }
+      if (evaluation.scoreIneligibleUnknownSources.length > 0) {
+        degradedReasons.push("reserve-score-ineligible-evidence-unknown");
+      }
+      // Reserve findings stay off Telegram (ADR-42), so the active transition
+      // must instead degrade this source's status with a machine-readable reason.
+      activeAlertReasons = alertReasons;
       for (const ruleId of activeRuleIds) {
         if (!firedRuleIds.includes(ruleId)) firedRuleIds.push(ruleId);
       }
-      if (evaluation.failedSources.length > 0 || evaluation.stalledSources.length > 0) {
-        logWorkerEventArgs("handler", "warn", `[live-reserves] Reserve adapter alerts: ${evaluation.failedSources.length} sustained failure(s), ${evaluation.stalledSources.length} stalled source clock(s)`);
+      if (evaluation.failedSources.length > 0 || evaluation.scoreIneligibleSources.length > 0
+        || evaluation.stalledSources.length > 0) {
+        logWorkerEventArgs("handler", "warn", `[live-reserves] Reserve adapter alerts: ${evaluation.failedSources.length} sustained failure(s), ${evaluation.scoreIneligibleSources.length} score-ineligible feed(s), ${evaluation.stalledSources.length} stalled source clock(s)`);
       }
       adapterAlert = {
         assessedAt: nowSec,
         failedSources: evaluation.failedSources,
+        scoreIneligibleSources: evaluation.scoreIneligibleSources,
+        scoreIneligibleUnknownSources: evaluation.scoreIneligibleUnknownSources,
         stalledSources: evaluation.stalledSources,
         acknowledgedCoinIds: [...acknowledgedCoinIds].sort(),
         raised: evaluation.raised,
@@ -399,10 +531,21 @@ export async function runReservePostSyncWatchdog(
     recordCronFailure("reserve-post-sync-watchdog", error, { metadata: { stage: "reserve-adapter-alerts" } });
   }
 
+  if (activeAlertReasons.length > 0) degradedReasons.push("reserve-adapter-alert-raised");
+  const activeRuleIds = [...new Set(firedRuleIds)];
+  // One quality object carries both findings: the per-coin adapter transitions
+  // with their machine reason, plus every fired rule id. A rule already named
+  // per coin is not repeated as a bare id.
+  const qualityReasons = [
+    ...activeAlertReasons,
+    ...activeRuleIds.filter((ruleId) =>
+      !activeAlertReasons.some((reason) => reason.startsWith(`${ruleId}:`))),
+  ];
   return {
     status: degradedReasons.length > 0 ? "degraded" : "ok",
     itemCount: driftCoinCount + persistentlyStaleIndependentCoinCount,
     metadata: JSON.stringify({
+      ...(degradedReasons.length > 0 ? { reason: degradedReasons[0] } : {}),
       degradedReasons,
       driftCoinCount,
       fallbackCoinCount,
@@ -410,9 +553,21 @@ export async function runReservePostSyncWatchdog(
       persistentlyStaleIndependentCoinCount,
       maxPersistentlyStaleAgeSec,
       syncDegradedCoinCount,
+      compositionCensus,
       reserveAdapterAlert: adapterAlert,
+      activeAdapterAlertReasons: activeAlertReasons,
       reserveAdapterAlertThresholds: STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS,
-      firedRuleIds: [...new Set(firedRuleIds)],
+      firedRuleIds: activeRuleIds,
+      // Operator findings, not run outcomes: the sentinel lifts this into
+      // `metadata.quality.sources` and the default `/api/status` run summary.
+      ...(qualityReasons.length > 0
+        ? {
+            quality: {
+              ...(activeAlertReasons.length > 0 ? { reason: "reserve-adapter-alert-raised" } : {}),
+              reasons: qualityReasons,
+            },
+          }
+        : {}),
     }),
   };
 }

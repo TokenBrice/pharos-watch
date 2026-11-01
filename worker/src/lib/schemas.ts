@@ -259,6 +259,7 @@ export const DexLiquidityCronMetadataSchema = z.object({
         })
         .optional(),
       qualityDriftFlags: z.array(z.string()).optional(),
+      cohortDriftFlags: z.array(z.string()).optional(),
       qualityDriftSeverity: z.enum(["none", "medium", "high"]).optional(),
       qualityDriftMetrics: z
         .object({

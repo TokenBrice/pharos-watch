@@ -23,6 +23,21 @@ const DEFAULT_MINT_BURN_ALERT_COOLDOWN_SEC = SECONDS_PER_HOUR;
 export const MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC =
   API_FRESHNESS_MAX_AGE_SEC.mintBurnFlows;
 
+/**
+ * A `finalized` header older than this is a cached or lagging provider head,
+ * not current finality evidence. Ethereum finality trails ~13 minutes; rollup
+ * `finalized` tags (Base, Arbitrum) wait for L1 finality of their batches and
+ * routinely trail by longer, so they get a wider bound.
+ */
+const MINT_BURN_FINALIZED_HEAD_MAX_AGE_SEC_BY_CHAIN: Readonly<Record<string, number>> = {
+  ethereum: 30 * 60,
+};
+const MINT_BURN_FINALIZED_HEAD_DEFAULT_MAX_AGE_SEC = 2 * SECONDS_PER_HOUR;
+
+export function mintBurnFinalizedHeadMaxAgeSec(chainId: string): number {
+  return MINT_BURN_FINALIZED_HEAD_MAX_AGE_SEC_BY_CHAIN[chainId] ?? MINT_BURN_FINALIZED_HEAD_DEFAULT_MAX_AGE_SEC;
+}
+
 export interface MintBurnFreshnessConfig {
   majorSymbols: string[];
   staleWarnSec: number;

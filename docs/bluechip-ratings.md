@@ -24,6 +24,7 @@ Coverage is defined explicitly in `shared/lib/bluechip-slugs.ts`; do not copy it
 - Only coins present in both systems are fetched.
 - The daily sync applies `includeActiveTrackedIds()`, so only explicitly active mapped assets are fetched. Previously observed rows remain available as labelled retained records, never renewed by a sibling's successful fetch.
 - Missing, 404, empty-data and no-grade responses are unresolved observations, not authoritative deletion or unrating. No rating is synthesized for an unseen asset.
+- Operator coverage: the freshness sentinel's `daily-lane` section raises `bluechip-coverage` when any active mapped constituent is missing or past `BLUECHIP_OBSERVATION_MAX_AGE_SEC` (48 hours), naming up to five IDs and their reasons. A successful partial refresh keeps the cache clock advancing, so this condition is the only push for a slug that stops renewing while its siblings succeed; an absent or unusable cache row is `unknown` (the producer-stale rule owns absence) and readers see no warning (ADR-42).
 
 ---
 

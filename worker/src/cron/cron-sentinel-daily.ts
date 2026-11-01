@@ -9,10 +9,18 @@ export async function runDailyCronSentinel(
     nowSec: number;
     repairRunnerEnabled?: boolean;
     signal?: AbortSignal;
+    mintBurnDisabledIds?: readonly string[];
+    mintBurnDisabledSymbols?: readonly string[];
   },
 ) {
   return runCronSentinelSources(db, "daily", [
-    { source: "growth", run: () => runMintBurnGrowthWatchdog(db, options.signal) },
+    {
+      source: "growth",
+      run: () => runMintBurnGrowthWatchdog(db, options.signal, {
+        disabledIds: options.mintBurnDisabledIds,
+        disabledSymbols: options.mintBurnDisabledSymbols,
+      }),
+    },
     { source: "duration", run: () => runCronDurationWatchdog(db, options.signal) },
     {
       source: "repair-debt",

@@ -1,4 +1,7 @@
 import { CRON_INTERVALS } from "./cron-jobs";
+import { CRON_SCHEDULE_CADENCES } from "./cron-cadences";
+import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "./depeg-closure";
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_EXTENDED_EXPIRY_SEC, DEPEG_PENDING_SEVERE_EXPIRY_SEC } from "./depeg-config";
 import type { ActivePriceCoverageGap, ActivePriceCoverageHealth, StablecoinPublicationHealth, PublicationSurfaceHealth, StatusHealthOrUnknown, StatusHealthValue } from "../types/status";
 import type { z } from "zod";
 import type { FreshnessStatusSchema } from "@pharos/contracts/api-meta";
@@ -228,6 +231,37 @@ export function getActivePriceCoverageBreadthStatus(
     ? "degraded" : "healthy";
 }
 
+// --- Supply value integrity thresholds ---
+/**
+ * Generation-over-generation supply invariant (2026-11-01 detection campaign).
+ * The current cached `circulating` value is compared with the last available
+ * daily `supply_history` row. Rows whose provenance names a carry or repair
+ * (`supplyRestored`, `supplyGapFill`, a chain guard, or a source switch) are
+ * excluded from the comparison, never counted as observed drift. Ratios are
+ * current/previous; the aggregate is the same comparable cohort's total.
+ * Individual static-supply assets legitimately repeat, so the frozen signal
+ * grades only an unchanged cohort aggregate (whole-feed freeze).
+ */
+export const STATUS_SUPPLY_VALUE_THRESHOLDS = {
+  perAssetRatioFloor: 0.5,
+  perAssetRatioCeiling: 2,
+  aggregateRatioFloor: 0.9,
+  aggregateRatioCeiling: 1.1,
+  aggregateFrozenTolerance: 1e-9,
+  /** Lookback that still finds a prior row when snapshot-supply missed several days. */
+  historyWindowDays: 7,
+  /** Below this comparable sample the aggregate ratios are not representative. */
+  minComparableAssets: 10,
+  /** A whole-feed freeze needs most of the active cohort in the comparable sample. */
+  frozenMinComparableShare: 0.5,
+  /** A carried value is a documented fallback; two missed daily observations make it an operator finding. */
+  carryStaleAfterSec: 2 * 24 * 3600,
+  /** Share of the active cohort for supply carry and two-generation availability findings. */
+  activeSupplyShareThreshold: 0.01,
+  /** Grace after UTC midnight before a missing daily snapshot counts as overdue. */
+  snapshotDueGraceSec: 30 * 60,
+} as const;
+
 /** Producer evidence window for an absent row's retained market cap. The cap is
  * diagnostic payload only; since 2026-10-21 no status verdict reads it. */
 export const STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC = 30 * 24 * 3600;
@@ -439,6 +473,16 @@ export function isReserveDriftThresholdExceeded(delta: number): boolean {
   return delta > STATUS_RESERVE_DRIFT_THRESHOLD_POINTS;
 }
 
+/**
+ * Snapshot-to-snapshot structural diff budget for every fresh admitted live
+ * composition, independent of the curated drift subset. A finding needs either
+ * a changed slice/source-key census or a per-slice share vector whose
+ * total-variation distance exceeds `shareDriftPoints` (percentage points).
+ */
+export const STATUS_RESERVE_COMPOSITION_CENSUS_THRESHOLDS = {
+  shareDriftPoints: 10,
+} as const;
+
 // --- Reserve sync coverage thresholds ---
 export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
   degradedFreshCoverageRatio: 0.75,
@@ -460,6 +504,11 @@ export const RESERVE_FEED_REVIEW_MAX_AGE_SEC = 14 * 24 * 3600;
  *   stall is judged. The age of that frozen clock is then compared with the
  *   coin/adapter source-age budget from `resolveLiveReserveSourceAgeBudget`,
  *   never with a second copy of that budget.
+ * - A consecutive snapshot-writing `degraded` success streak reuses
+ *   `failureSustainedCycles` for `reserve-score-ineligible-sustained`: the
+ *   published snapshot is a success clock but is not admitted to scoring, so it
+ *   needs its own streak. A degraded attempt that wrote no snapshot does not
+ *   count.
  * Both alerts are transition-only: raise once at the threshold, recover once
  * when the condition clears. A matching `reserve-feed-reviews` acknowledgement
  * suppresses a new raise for the exact failure only.
@@ -482,6 +531,30 @@ export const STATUS_HEAVY_SCHEDULER_LIVENESS_THRESHOLDS = {
   warningAfterSec: 1800,
   staleAfterSec: 2700,
 } as const;
+
+/**
+ * Per-lane delivery budgets for every scheduled slot plan whose 3x cadence
+ * fits `cron_slot_executions` retention: warn after two missed intervals,
+ * stale after three. The 15-minute status self-check and heavy lanes resolve
+ * to the same 1800/2700 budgets.
+ */
+export function getScheduledLaneLivenessThresholds(intervalSec: number): {
+  warningAfterSec: number;
+  staleAfterSec: number;
+} {
+  return { warningAfterSec: intervalSec * 2, staleAfterSec: intervalSec * 3 };
+}
+
+/**
+ * Operator alert delivery budget: a transition left pending (missing
+ * credentials, cooldown, or a failed send) longer than this is an alerting
+ * outage, not a transient suppression.
+ */
+export const STATUS_OPERATOR_ALERT_PENDING_MAX_SEC = 24 * 3600;
+
+/** Operator probe evidence older than three status-lane intervals cannot prove a persistent path failure. */
+export const STATUS_PROBE_OPERATOR_MAX_EVIDENCE_AGE_SEC =
+  CRON_SCHEDULE_CADENCES.statusSelfCheckOffset.intervalSec * 3;
 
 /** Reserve-sync fields the score-input hold predicate needs; structurally compatible with `StatusResponse["reserveComposition"]`. */
 export interface ReserveScoreInputHoldInput {
@@ -518,6 +591,38 @@ export function hasReserveScoreInputHold(reserve: ReserveScoreInputHoldInput): b
   );
 }
 
+// --- Depeg detection coverage (canary cohort) ---
+/**
+ * A depeg run can complete while evaluating almost nothing: the observation
+ * census counts eligible/observed/unavailable assets per run, but the run
+ * itself stays `ok`. These bounds turn material loss into a per-run canary
+ * verdict instead of a diagnostic only a human opening cron detail would see.
+ */
+export const STATUS_DEPEG_DETECTION_THRESHOLDS = {
+  /** Unavailable eligible share above which two consecutive censuses degrade. */
+  unavailableShareMax: 0.05,
+  /** The census clock may miss one producer interval; two missed runs degrade. */
+  ledgerMaxAgeIntervals: 2,
+  /** Watch-level count: a candidate past the base window may still be legitimately extended. */
+  pendingBaseMaxAgeSec: DEPEG_PENDING_EXPIRY_SEC,
+  /** Same-direction primary evidence or an unavailable confirmer can extend a candidate to this limit. */
+  pendingExtendedMaxAgeSec: DEPEG_PENDING_EXTENDED_EXPIRY_SEC,
+  /** An extreme move can stay pending to this final dynamic limit. */
+  pendingSevereMaxAgeSec: DEPEG_PENDING_SEVERE_EXPIRY_SEC,
+  /** One producer interval after a row's limit, so the keep run is not paged before the next run expires it. */
+  pendingStalledGraceIntervals: 1,
+  /** An extreme move expired without a public event stays a finding for one day. */
+  unconfirmedSevereLookbackSec: 24 * 3600,
+  /** Shared observation-gap budget: an open event blind past this has no trusted price. */
+  openEventBlindMaxAgeSec: DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC,
+  /** A newly eligible DDR incident may wait one producer run for its seal. */
+  ddrUnsealedGraceIntervals: 2,
+  /** An incident eligible this long without a public prediction escalates to error. */
+  ddrUnsealedMaxAgeSec: 6 * 3600,
+  /** Fresh DEX-suppressed primary deviations at or above this count escalate to error. */
+  dexSuppressionErrorCount: 10,
+} as const;
+
 // --- Yield health summary ---
 /**
  * Hard benchmark scoring TTL: a benchmark whose *fetch* age exceeds this bound
@@ -535,6 +640,19 @@ export const STATUS_YIELD_HEALTH_THRESHOLDS = {
   benchmarkMaxAgeSec: YIELD_BENCHMARK_SCORE_TTL_SEC,
   coverageAuditMaxAgeSec: 45 * 24 * 3600,
   sourceRiskCoverageRatio: 0.75,
+} as const;
+
+/**
+ * Operator coverage watch for `sync-yield-data` (ADR-42: operators, not
+ * readers). A published cohort below the 90% budget of its persisted pre-event
+ * baseline for two consecutive generations is a quality regression; `ok` runs
+ * still publish the reduced cohort, so only a separate comparison can see it.
+ * `minBaselineCount` mirrors the producer guard's minimum cohort: a handful of
+ * opportunity rows is not a coverage claim.
+ */
+export const STATUS_YIELD_DATA_COVERAGE_WATCH = {
+  dropRatio: 0.9,
+  minBaselineCount: 10,
 } as const;
 
 // --- Telegram lifecycle snapshot cadence ---

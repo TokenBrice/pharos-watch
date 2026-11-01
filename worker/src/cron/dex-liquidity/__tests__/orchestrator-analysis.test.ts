@@ -482,7 +482,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         first: { cnt: 159 },
       },
       {
-        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
         rows: [],
         first: { total_tvl_usd: 12_703_104_619, updated_at: 1_776_323_404 },
       },
@@ -543,7 +543,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         first: { cnt: 255 },
       },
       {
-        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
         rows: [],
         first: { total_tvl_usd: 6_020_380_715, updated_at: 1_784_146_228 },
       },
@@ -630,7 +630,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
           first: { cnt: 1 },
         },
         {
-          match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+          match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
           rows: [],
           first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
         },
@@ -706,7 +706,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         first: { cnt: 1 },
       },
       {
-        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
         rows: [],
         first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
       },
@@ -781,7 +781,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         first: { cnt: 159 },
       },
       {
-        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
         rows: [],
         first: { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
       },
@@ -830,7 +830,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         first: { cnt: 288 },
       },
       {
-        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
         rows: [],
         first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
       },
@@ -891,7 +891,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         first: { cnt: 165 },
       },
       {
-        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
         rows: [],
         first: { total_tvl_usd: 6_000_000_000, updated_at: 1_777_556_412 },
       },
@@ -937,7 +937,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         first: { cnt: 274 },
       },
       {
-        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
         rows: [],
         first: { total_tvl_usd: 7_000_000_000, updated_at: 1_781_889_009 },
       },
@@ -1000,7 +1000,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
         first: { cnt: 159 },
       },
       {
-        match: "SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
         rows: [],
         first: { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
       },

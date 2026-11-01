@@ -20,6 +20,11 @@ export interface CollateralDriftResult {
   observedIds: string[];
 }
 
+export interface CollateralDriftCheckResult extends CollateralDriftResult {
+  /** Fresh admitted compositions already loaded for the drift comparison; reused by the census diff. */
+  liveReserveMap: ReadonlyMap<string, readonly ReserveSlice[]>;
+}
+
 type CollateralDriftCoin = Pick<StablecoinMeta, "id" | "liveReservesConfig">
   & { reserves?: readonly Pick<ReserveSlice, "pct" | "risk">[] };
 
@@ -61,7 +66,7 @@ export function summarizeCollateralDriftFromLiveReserveMap(
  * Load fresh live reserves and compare comparable multi-slice live mixes with curated reserve metadata.
  * Returns coins with score drift above the shared reserve-drift threshold and coins that fell back to curated.
  */
-export async function checkCollateralDrift(db: D1Database): Promise<CollateralDriftResult> {
+export async function checkCollateralDrift(db: D1Database): Promise<CollateralDriftCheckResult> {
   const liveReserveMap = await loadFreshIndependentLiveReserveMap(db);
-  return summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
+  return { ...summarizeCollateralDriftFromLiveReserveMap(liveReserveMap), liveReserveMap };
 }

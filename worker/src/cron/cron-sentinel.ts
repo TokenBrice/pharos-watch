@@ -1,5 +1,6 @@
 import type { TelegramCreds } from "../telegram/delivery/telegram";
 import type { CronResult } from "../lib/cron-logger";
+import type { WorkerCanaryMode } from "../lib/worker-canary-mode";
 import { runCronStalenessWatchdog } from "./cron-staleness-watchdog";
 import { runDigestPublicationWatchdog } from "./digest-publication-watchdog";
 import { runDexExitRouteTurnoverWatchdog } from "./dex-exit-route-turnover-watchdog";
@@ -13,6 +14,8 @@ export interface CronSentinelOptions {
   mode: CronSentinelDispatchMode;
   nowSec?: number;
   operatorTelegramCreds?: TelegramCreds | null;
+  /** Active canary cohort read by the status-mode freshness watchdog. */
+  workerCanaryMode?: WorkerCanaryMode;
   signal?: AbortSignal;
 }
 
@@ -27,6 +30,7 @@ export async function runCronSentinel(
       source: "freshness",
       run: () => runCronStalenessWatchdog(db, options.signal, {
         operatorTelegramCreds: options.operatorTelegramCreds ?? null,
+        workerCanaryMode: options.workerCanaryMode,
       }),
     });
     sources.push({
@@ -41,7 +45,9 @@ export async function runCronSentinel(
   } else if (options.mode === "turnover") {
     sources.push({
       source: "turnover",
-      run: () => runDexExitRouteTurnoverWatchdog(db, options.signal),
+      run: () => runDexExitRouteTurnoverWatchdog(db, options.signal, {
+        operatorTelegramCreds: options.operatorTelegramCreds ?? null,
+      }),
     });
   } else {
     sources.push({

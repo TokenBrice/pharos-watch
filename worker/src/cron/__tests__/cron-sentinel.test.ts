@@ -27,6 +27,7 @@ vi.mock("../../lib/db-cache", () => ({
   }),
 }));
 
+import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
 import { runCronSentinel } from "../cron-sentinel";
 import { runDailyCronSentinel } from "../cron-sentinel-daily";
 
@@ -82,6 +83,42 @@ describe("runCronSentinel", () => {
     expect(mocks.freshness).not.toHaveBeenCalled();
     expect(mocks.duration).not.toHaveBeenCalled();
   });
+  it("keeps the freshness canary, PSI and probe rule ids in the sentinel metadata", async () => {
+    mocks.freshness.mockResolvedValueOnce({
+      status: "degraded",
+      itemCount: 3,
+      metadata: JSON.stringify({
+        firedRuleIds: ["canary-finding", "probe-path-persistent-failure", "psi-daily-coverage"],
+      }),
+    });
+    const result = await runCronSentinel(emptyDb(), { mode: "status", nowSec: 300 });
+    const metadata = JSON.parse(result.metadata ?? "{}") as { firedRuleIds?: Record<string, string[]> };
+    expect(metadata.firedRuleIds?.freshness).toEqual([
+      "canary-finding", "probe-path-persistent-failure", "psi-daily-coverage",
+    ]);
+  });
+  it("lifts a reserve source quality finding into the sentinel run summary", async () => {
+    mocks.reserve.mockResolvedValueOnce({
+      status: "ok",
+      itemCount: 1,
+      metadata: JSON.stringify({
+        firedRuleIds: ["reserve-score-ineligible-sustained"],
+        quality: { reasons: ["reserve-score-ineligible-sustained"] },
+      }),
+    });
+    const result = await runCronSentinel(emptyDb(), { mode: "reserve-post-sync", nowSec: 500 });
+    expect(result.status).toBe("ok");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.quality).toEqual({
+      reason: "sentinel-source-findings",
+      sources: { "reserve-post-sync": { reasons: ["reserve-score-ineligible-sustained"] } },
+    });
+    expect(getCronQualityReasons(metadata)).toEqual([
+      "sentinel-source-findings",
+      "reserve-post-sync:reserve-score-ineligible-sustained",
+    ]);
+  });
+
   it("persists thrown source errors and rejects an older successful overwrite", async () => {
     const db = emptyDb();
     mocks.reserve.mockRejectedValueOnce(new Error("reserve evaluation failed"));

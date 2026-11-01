@@ -10,7 +10,9 @@ import {
   NON_INTERNAL_DIGEST_SQL_FILTER,
   NON_WEEKLY_DIGEST_SQL_FILTER,
 } from "../lib/digest-sql-filters";
+import { recordOperatorAlertReceipt } from "../lib/status/operator-alert-health";
 import { deliverOperatorAlert } from "./cron-sentinel-rules";
+import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "./digest-input-quality";
 import { SAFETY_MAP_READY_AFTER_SEC } from "./safety-map-producer-kick";
 
 const DIGEST_WATCHDOG_STATE_KEY = "digest-publication-watchdog:state:v1";
@@ -29,9 +31,11 @@ const DIGEST_PUBLICATION_CONDITIONS = [
   "daily-row",
   "daily-telegram",
   "daily-twitter",
+  "daily-inputs",
   "weekly-row",
   "weekly-telegram",
   "weekly-twitter",
+  "weekly-inputs",
   "map-producer-lag",
 ] as const;
 
@@ -120,9 +124,11 @@ function conditionLabel(condition: DigestPublicationCondition): string {
     case "daily-row": return "daily digest row";
     case "daily-telegram": return "daily Telegram edition";
     case "daily-twitter": return "daily Twitter edition";
+    case "daily-inputs": return "daily input completeness";
     case "weekly-row": return "weekly recap row";
     case "weekly-telegram": return "weekly Telegram edition";
     case "weekly-twitter": return "weekly Twitter edition";
+    case "weekly-inputs": return "weekly input completeness";
     case "map-producer-lag": return "Safety Score map producer";
   }
 }
@@ -179,6 +185,49 @@ async function readTwitterLedgerDelivered(
   }
 }
 
+/**
+ * Read the regime-critical degraded sources recorded on the newest published
+ * edition of one kind. Returns null when the due row does not exist, so the
+ * row-presence condition keeps ownership of that failure.
+ */
+async function readCriticalDegradedSources(
+  db: D1Database,
+  jsonPath: "$.dataQuality.degradedSources" | "$.degradedSourcesThisWeek",
+  editionFilterSql: string,
+  startSec: number,
+  nowSec: number,
+  signal?: AbortSignal,
+): Promise<string[] | null> {
+  const placeholders = REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES.map(() => "?").join(", ");
+  const row = await readFirst<{ sources_type: string | null; critical_sources: string | null }>(
+    db,
+    `SELECT
+       CASE WHEN json_valid(input_data)
+         THEN json_type(input_data, '${jsonPath}')
+       END AS sources_type,
+       CASE WHEN json_valid(input_data) AND json_type(input_data, '${jsonPath}') = 'array'
+         THEN (SELECT json_group_array(value)
+                 FROM json_each(json_extract(input_data, '${jsonPath}'))
+                WHERE value IN (${placeholders}))
+       END AS critical_sources
+       FROM daily_digest
+      WHERE generated_at >= ? AND generated_at <= ?
+        AND (${editionFilterSql})
+      ORDER BY generated_at DESC, id DESC
+      LIMIT 1`,
+    [...REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES, startSec, nowSec],
+    signal,
+  );
+  if (!row) return null;
+  if (row.sources_type !== "array" || row.critical_sources == null) return [];
+  try {
+    const parsed = JSON.parse(row.critical_sources) as unknown;
+    return Array.isArray(parsed) ? parsed.filter((source): source is string => typeof source === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 async function readPublicationObservations(
   db: D1Database,
   date: string,
@@ -216,6 +265,15 @@ async function readPublicationObservations(
       signal,
     );
     const twitterSent = await readTwitterLedgerDelivered(db, `daily-digest:twitter-sent:${date}`, signal);
+    const criticalInputs = await readCriticalDegradedSources(
+      db,
+      "$.dataQuality.degradedSources",
+      // Each filter is an OR chain; parenthesise them so AND cannot rebind across them.
+      `(${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})`,
+      dayStartSec,
+      nowSec,
+      signal,
+    );
     observations.push(
       {
         condition: "daily-row",
@@ -233,6 +291,16 @@ async function readPublicationObservations(
         condition: "daily-twitter",
         state: twitterSent ? "ok" : "stale",
         detail: twitterSent ? "sent" : "ledger not delivered",
+        advisory: false,
+      },
+      {
+        condition: "daily-inputs",
+        state: criticalInputs && criticalInputs.length > 0 ? "stale" : "ok",
+        detail: criticalInputs == null
+          ? "no published row to inspect"
+          : criticalInputs.length > 0
+            ? `degraded: ${criticalInputs.join(", ")}`
+            : "no regime-critical degraded source",
         advisory: false,
       },
     );
@@ -262,6 +330,14 @@ async function readPublicationObservations(
       `weekly-recap:twitter-sent:${weeklyDate}`,
       signal,
     );
+    const weeklyCriticalInputs = await readCriticalDegradedSources(
+      db,
+      "$.degradedSourcesThisWeek",
+      `json_extract(digest_meta, '$.type') = 'weekly' AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})`,
+      weekStartSec,
+      nowSec,
+      signal,
+    );
     observations.push(
       {
         condition: "weekly-row",
@@ -279,6 +355,16 @@ async function readPublicationObservations(
         condition: "weekly-twitter",
         state: weeklyTwitterSent ? "ok" : "stale",
         detail: weeklyTwitterSent ? "sent" : "ledger not delivered",
+        advisory: false,
+      },
+      {
+        condition: "weekly-inputs",
+        state: weeklyCriticalInputs && weeklyCriticalInputs.length > 0 ? "stale" : "ok",
+        detail: weeklyCriticalInputs == null
+          ? "no published row to inspect"
+          : weeklyCriticalInputs.length > 0
+            ? `degraded: ${weeklyCriticalInputs.join(", ")}`
+            : "no regime-critical degraded source",
         advisory: false,
       },
     );
@@ -402,14 +488,28 @@ export async function runDigestPublicationWatchdog(
     await setCache(db, DIGEST_WATCHDOG_STATE_KEY, nextState, signal);
   }
 
+  const pendingTransition = (stale.length > 0 || recovered.length > 0) && !transitions.sent;
+  const credentialsMissing = pendingTransition && options.operatorTelegramCreds == null;
+  await recordOperatorAlertReceipt(db, "digest", {
+    nowSec,
+    operatorConfigured: options.operatorTelegramCreds != null,
+    pending: pendingTransition,
+    delivered: transitions.sent,
+    reason: transitions.sent ? null
+      : alertDeliveryFailed ? "operator-alert-delivery-failed"
+        : credentialsMissing ? "operator-alert-credentials-missing"
+          : transitions.cooldown ? "operator-alert-cooldown" : null,
+  }, signal);
+
   const blockingStale = observations.filter((observation) => (
     !observation.advisory && observation.state === "stale"
   ));
   return {
-    status: alertDeliveryFailed ? "degraded" : "ok",
+    status: alertDeliveryFailed || credentialsMissing ? "degraded" : "ok",
     itemCount: blockingStale.length,
     metadata: JSON.stringify({
-      ...(alertDeliveryFailed ? { reason: "operator-alert-delivery-failed" } : {}),
+      ...(alertDeliveryFailed ? { reason: "operator-alert-delivery-failed" }
+        : credentialsMissing ? { reason: "operator-alert-credentials-missing" } : {}),
       ...(blockingStale.length > 0 ? { quality: { reason: "digest-publication-findings" } } : {}),
       firedRuleIds: observations.filter((observation) => observation.state === "stale").map((observation) => observation.condition),
       date,

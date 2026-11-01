@@ -9,6 +9,7 @@ import { buildStatusD1Scenario, cleanupStatusTest } from "./status.test-support"
 import { STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY } from "../../lib/status/public-health-snapshot";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { HealthResponse } from "@shared/types/status";
+import { HealthResponseSchema } from "@shared/types/status/public-health";
 import { loadStablecoinsPublicationContinuity } from "../../cron/sync-stablecoins/publication";
 import { buildStablecoinsSyncResult } from "../../cron/sync-stablecoins/metadata";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
@@ -316,7 +317,8 @@ describe("handleHealth", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(Date.now());
     const now = Math.floor(Date.now() / 1000);
-    const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
+    // Producer-side contract: the frontend reader parses this exact schema.
+    const publicHealth = HealthResponseSchema.parse(await (await handleHealth(makeHealthyHealthDb(now))).json());
     expect(publicHealth.status).toBe("healthy");
     expect(publicHealth.caches["fx-rates"].healthy).toBe(true);
     expect(publicHealth.activePriceCoverage).toMatchObject({ status: "complete" });

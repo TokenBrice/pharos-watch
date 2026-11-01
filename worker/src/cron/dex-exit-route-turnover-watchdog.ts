@@ -12,8 +12,16 @@ import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { parseJson } from "../lib/json-parse";
 import { logWorkerEvent } from "../lib/structured-log";
+import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
+import { deliverOperatorAlert } from "./cron-sentinel-rules";
 
 export const DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY = "dex-exit-route-turnover-watchdog:snapshot:v1";
+/**
+ * One alert per alert episode. The snapshot keeps `pendingAlert` while the
+ * condition persists, so the episode flag (committed only after a successful
+ * send) is what separates "already paged" from "still pending delivery".
+ */
+export const DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY = "dex-exit-route-turnover-watchdog:alert:v1";
 
 /**
  * Alert at 0.5 Jaccard distance: for two equally sized route sets this means
@@ -66,6 +74,12 @@ const PendingTurnoverAlertSchema = z.object({
     .max(MAX_WORST_OFFENDERS),
 }).strict();
 
+const TurnoverAlertStateSchema = z.object({
+  active: z.boolean(),
+  generationId: z.string().min(1).nullable(),
+  sentAtSec: z.number().int().nonnegative().nullable(),
+}).strict();
+
 const RouteSnapshotSchema = z.object({
   schemaVersion: z.literal(1),
   generationId: z.string().min(1),
@@ -97,6 +111,12 @@ type RouteEvidence = z.infer<typeof RouteEvidenceSchema>;
 type RouteSnapshot = z.infer<typeof RouteSnapshotSchema>;
 type PendingTurnoverAlert = z.infer<typeof PendingTurnoverAlertSchema>;
 type TurnoverCandidate = z.infer<typeof TurnoverCandidateSchema>;
+type TurnoverAlertState = z.infer<typeof TurnoverAlertStateSchema>;
+
+export interface DexExitRouteTurnoverWatchdogOptions {
+  /** Operator chat; absent credentials leave the alert pending for the next run. */
+  operatorTelegramCreds?: TelegramCreds | null;
+}
 
 interface PublishedGenerationRow {
   generation_id: string;
@@ -260,11 +280,35 @@ function meetsAlertCriteria(evaluation: TurnoverEvaluation): boolean {
     && evaluation.removedRouteCount >= DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES;
 }
 
+function parseAlertState(value: string | null | undefined): TurnoverAlertState {
+  if (!value) return { active: false, generationId: null, sentAtSec: null };
+  const parsed = parseJson(value);
+  if (!parsed.ok) return { active: false, generationId: null, sentAtSec: null };
+  const state = TurnoverAlertStateSchema.safeParse(parsed.value);
+  return state.success ? state.data : { active: false, generationId: null, sentAtSec: null };
+}
+
+function buildTurnoverAlertMessage(alert: PendingTurnoverAlert): string {
+  const offenders = alert.worstOffenders
+    .map((offender) => `${offender.stablecoinId} (${offender.jaccardDistance.toFixed(2)})`)
+    .join(", ");
+  return [
+    "<b>Pharos DEX exit-route turnover</b>",
+    "",
+    "Producer: sync-dex-liquidity",
+    `Published generation: ${escapeHtml(alert.generationId)}`,
+    `Budget: Jaccard >= ${DEX_EXIT_ROUTE_TURNOVER_ALERT_THRESHOLD} with >= ${DEX_EXIT_ROUTE_TURNOVER_MIN_CHANGED_ROUTES} removed routes, sustained 2 published generations`,
+    `Coins: ${escapeHtml(offenders)}`,
+  ].join("\n");
+}
+
 export async function runDexExitRouteTurnoverWatchdog(
   db: D1Database,
   signal?: AbortSignal,
+  options: DexExitRouteTurnoverWatchdogOptions = {},
 ): Promise<CronResult> {
   throwIfAborted(signal);
+  const nowSec = Math.floor(Date.now() / 1000);
   const generation = await db
     .prepare(
       `SELECT generation_id, published_at
@@ -295,7 +339,10 @@ export async function runDexExitRouteTurnoverWatchdog(
     .all<PublishedRouteRow>();
   throwIfAborted(signal);
   const current = buildRouteSnapshot(generation.generation_id, publishedRows.results ?? []);
-  const previousCache = await getCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, signal);
+  const [previousCache, alertStateCache] = await Promise.all([
+    getCache(db, DEX_EXIT_ROUTE_TURNOVER_SNAPSHOT_CACHE_KEY, signal),
+    getCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, signal),
+  ]);
   throwIfAborted(signal);
 
   const previous = previousCache === null
@@ -312,17 +359,41 @@ export async function runDexExitRouteTurnoverWatchdog(
     });
   }
   const comparable = previous !== null && !("invalidReason" in previous) ? previous : null;
+  let alertState = parseAlertState(alertStateCache?.value);
+  let alertSent = false;
+  let alertDeliveryFailed = false;
+  const sendPendingAlert = async (alert: PendingTurnoverAlert | null): Promise<void> => {
+    if (!alert || alertState.active || options.operatorTelegramCreds == null) return;
+    const delivery = await deliverOperatorAlert(
+      options.operatorTelegramCreds,
+      buildTurnoverAlertMessage(alert),
+      signal,
+    );
+    if (!delivery.ok) {
+      alertDeliveryFailed = true;
+      return;
+    }
+    alertSent = true;
+    alertState = { active: true, generationId: alert.generationId, sentAtSec: nowSec };
+    await setCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, JSON.stringify(alertState), signal);
+  };
+  // A failed send or a cooldown-style retry keeps the episode pending even when
+  // this run observes the same published generation and skips comparison.
+  await sendPendingAlert(comparable?.pendingAlert ?? null);
 
   // The sustain window counts published generations, not watchdog runs: a
   // rerun that still sees the last compared generation must not confirm or
   // clear candidate state against the same observation twice.
   if (comparable !== null && comparable.generationId === current.generationId) {
     return createCronResult({
-      status: "skipped_neutral",
+      status: alertDeliveryFailed ? "degraded" : "skipped_neutral",
       itemCount: 0,
       metadata: {
-        reason: "no-new-published-dex-generation",
+        reason: alertDeliveryFailed ? "operator-alert-delivery-failed" : "no-new-published-dex-generation",
         currentGenerationId: current.generationId,
+        ...(alertSent || alertDeliveryFailed
+          ? { operatorAlert: { episodeActive: true, sent: alertSent, deliveryFailed: alertDeliveryFailed } }
+          : {}),
       },
     });
   }
@@ -419,6 +490,11 @@ export async function runDexExitRouteTurnoverWatchdog(
             jaccardDistance: evaluation.jaccardDistance,
           })),
         };
+    await sendPendingAlert(pendingAlert ?? null);
+    if (pendingAlert == null && alertState.active) {
+      alertState = { active: false, generationId: null, sentAtSec: null };
+      await setCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, JSON.stringify(alertState), signal);
+    }
     const metadata = JSON.stringify({
       currentGenerationId: current.generationId,
       previousGenerationId: comparable.generationId,
@@ -437,10 +513,16 @@ export async function runDexExitRouteTurnoverWatchdog(
       worstOffenders: alerting.slice(0, MAX_WORST_OFFENDERS),
       carriedPendingAlert: carriedAlert,
       pendingAlertCleared: carriedAlert !== null && alerting.length === 0,
+      operatorAlert: {
+        episodeActive: pendingAlert != null,
+        sent: alertSent,
+        deliveryFailed: alertDeliveryFailed,
+      },
+      ...(alertDeliveryFailed ? { reason: "operator-alert-delivery-failed" } : {}),
       ...(pendingAlert ? { quality: { reason: "dex-route-turnover-threshold" } } : {}),
       firedRuleIds: pendingAlert ? ["dex-route-turnover"] : [],
     });
-    result = { status: "ok", itemCount: evaluations.length, metadata };
+    result = { status: alertDeliveryFailed ? "degraded" : "ok", itemCount: evaluations.length, metadata };
   }
 
   await setCache(

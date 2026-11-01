@@ -37,6 +37,12 @@ export interface SupplySnapshotCompletionMarkerInput {
   accountedActiveCount: number;
   ownedRowIds: readonly string[];
   missingActiveIds?: readonly string[];
+  /**
+   * Active IDs present in the source cache whose current supply was not an
+   * admitted observation and was not a documented carry. They are bounded
+   * evidence for the completion canary, never a zero supply row.
+   */
+  unavailableActiveIds?: readonly string[];
 }
 
 export interface SupplySnapshotCompletionOptions {
@@ -84,8 +90,12 @@ export interface CompletedSupplySnapshot {
   updatedAt: number;
   exactCoverageVerified: boolean;
   coverageIdentityVerified: boolean;
+  expectedActiveCount: number | null;
+  accountedActiveCount: number | null;
   missingActiveIds: string[] | null;
   ownedRowIds: string[] | null;
+  /** Null when the marker predates this evidence field (unknown, not empty). */
+  unavailableActiveIds: string[] | null;
   chainObservationAdmissionVerified: boolean;
   chainObservationProgressVerified: boolean;
 }
@@ -184,6 +194,9 @@ export function buildSupplySnapshotCompletionMarker(
     coverageDigest: input.coverage.coverageDigest,
     ownedRowIds: [...new Set(input.ownedRowIds)].sort(),
     missingActiveIds: [...new Set(input.missingActiveIds ?? [])].sort(),
+    ...(input.unavailableActiveIds !== undefined
+      ? { unavailableActiveIds: [...new Set(input.unavailableActiveIds)].sort() }
+      : {}),
   };
 }
 
@@ -262,6 +275,7 @@ export async function getCompletedSupplySnapshot(
       coverageDigest?: unknown;
       ownedRowIds?: unknown;
       missingActiveIds?: unknown;
+      unavailableActiveIds?: unknown;
       writtenRows?: unknown;
       chainObservationAdmissionVersion?: unknown;
       chainObservationProgressVersion?: unknown;
@@ -270,6 +284,11 @@ export async function getCompletedSupplySnapshot(
     const missingActiveIds = parsed.missingActiveIds === undefined
       ? []
       : parseCanonicalOwnedRowIds(parsed.missingActiveIds);
+    // Legacy markers predate this field; absence stays unknown, never an empty
+    // "nothing unavailable" claim.
+    const unavailableActiveIds = parsed.unavailableActiveIds === undefined
+      ? null
+      : parseCanonicalOwnedRowIds(parsed.unavailableActiveIds);
     // Keep v2's exact-coverage claim intact for rollback readers. Partial v2
     // markers add a truthful missing-ID proof, never count equality.
     const structurallyValid = parsed.coverageVersion === SUPPLY_SNAPSHOT_COVERAGE_VERSION
@@ -296,8 +315,11 @@ export async function getCompletedSupplySnapshot(
           exactCoverageVerified: structurallyValid && matchesExpectedCoverage
             && parsed.accountedActiveCount === parsed.expectedActiveCount,
           coverageIdentityVerified: structurallyValid && matchesExpectedCoverage,
+          expectedActiveCount: structurallyValid ? parsed.expectedActiveCount as number : null,
+          accountedActiveCount: structurallyValid ? parsed.accountedActiveCount as number : null,
           missingActiveIds: structurallyValid ? missingActiveIds : null,
           ownedRowIds: structurallyValid ? ownedRowIds : null,
+          unavailableActiveIds: structurallyValid ? unavailableActiveIds : null,
           chainObservationAdmissionVerified: parsed.chainObservationAdmissionVersion === 1,
           chainObservationProgressVerified: parsed.chainObservationProgressVersion === 1,
         }

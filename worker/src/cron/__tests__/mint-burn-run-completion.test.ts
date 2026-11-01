@@ -479,6 +479,8 @@ describe("completeMintBurnRun", () => {
       lastCompletedAt: null,
       incompleteConfigs: 89,
       providerDeferredConfigs: 0,
+      stuckConfigs: [],
+      stuckConfigCount: 0,
     };
     const result = await completeMintBurnRun(input);
     expect(result.status).toBe("ok");
@@ -501,6 +503,8 @@ describe("completeMintBurnRun", () => {
       lastCompletedAt: 1_790_000_000,
       incompleteConfigs: 89,
       providerDeferredConfigs: 0,
+      stuckConfigs: [],
+      stuckConfigCount: 0,
     };
     const result = await completeMintBurnRun(input);
     expect(result.status).toBe("ok");
@@ -518,6 +522,8 @@ describe("completeMintBurnRun", () => {
       lastCompletedAt: 1_790_000_000,
       incompleteConfigs: 88,
       providerDeferredConfigs: 0,
+      stuckConfigs: [],
+      stuckConfigCount: 0,
     };
     const result = await completeMintBurnRun(input);
     expect(result.status).toBe("degraded");
@@ -542,6 +548,8 @@ describe("completeMintBurnRun", () => {
       lastCompletedAt: null,
       incompleteConfigs: 89,
       providerDeferredConfigs: 0,
+      stuckConfigs: [],
+      stuckConfigCount: 0,
     };
     const result = await completeMintBurnRun(input);
     expect(result.status).toBe("degraded");

@@ -13,6 +13,7 @@ import { classifyDexPlaceholderCoverage } from "../../dex-liquidity/deployment-c
 import type { StagedPool } from "../types";
 import { stagedPool } from "./discovery.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import { makeMeasuredProfile } from "@shared/test-utils/measured-execution.test-support";
 const fixtures = createLatestSchemaFixtureTracker();
@@ -466,5 +467,46 @@ describe("DEX deployment outcomes", () => {
       { stablecoin_id: "test", chain: "solana", contract_address: "MintCase", observed_at: 100 },
       { stablecoin_id: "test", chain: "solana", contract_address: "alreadylowercase", observed_at: 100 },
     ]);
+  });
+
+  it("reports a census flip only when a previously non-empty deployment is certified empty", async () => {
+    const { sqlite, db } = fixtures.open();
+    const flippedAddress = "0x0000000000000000000000000000000000000002";
+    const alreadyEmptyAddress = "0x0000000000000000000000000000000000000003";
+    sqlite.exec(`INSERT INTO dex_deployment_outcomes
+      (stablecoin_id, chain, contract_address, outcome, reason, observed_at)
+      VALUES ('test', 'ethereum', '${flippedAddress}', 'observed_pools', 'prior', 50),
+             ('test', 'ethereum', '${alreadyEmptyAddress}', 'verified_no_pools', 'prior-empty', 50)`);
+    const diagnostics = { censusFlips: [], censusFlipReadFailed: false };
+
+    await upsertDexDeploymentOutcomes(db, [
+      { ...outcomeWrite({ chain: "ethereum", address: flippedAddress }), outcome: "verified_no_pools", observedPoolCount: 0 },
+      { ...outcomeWrite({ chain: "ethereum", address: alreadyEmptyAddress }), outcome: "verified_no_pools", observedPoolCount: 0 },
+    ], undefined, diagnostics);
+
+    expect(diagnostics.censusFlipReadFailed).toBe(false);
+    expect(diagnostics.censusFlips).toEqual([{
+      stablecoinId: "test",
+      chain: "ethereum",
+      address: flippedAddress,
+      providers: ["coingecko"],
+    }]);
+  });
+
+  it("keeps publishing when the prior-outcome read fails, reporting unknown flips", async () => {
+    const db = mockD1([
+      { match: "FROM dex_deployment_outcomes", rows: [], throwError: new Error("d1 down") },
+      { match: "INSERT INTO dex_deployment_outcomes", rows: [], runMeta: { changes: 1 } },
+    ]);
+    const diagnostics = { censusFlips: [], censusFlipReadFailed: false };
+    await expect(upsertDexDeploymentOutcomes(db, [
+      {
+        ...outcomeWrite({ chain: "ethereum", address: DEPLOYMENT.address }),
+        outcome: "verified_no_pools",
+        observedPoolCount: 0,
+      },
+    ], undefined, diagnostics)).resolves.toBe(1);
+    expect(diagnostics.censusFlips).toEqual([]);
+    expect(diagnostics.censusFlipReadFailed).toBe(true);
   });
 });

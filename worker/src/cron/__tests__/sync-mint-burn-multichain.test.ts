@@ -414,6 +414,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
     vi.mocked(recalcAffectedHours).mockRejectedValue(new Error("required materialization failed"));
     const result = await syncMintBurn(db, "alchemy-key", { disabledConfigIds: ["usdai-usd-ai"] });
     expect(JSON.parse(result.metadata).recalcFailed).toBe(true);
+    expect(JSON.parse(result.metadata).outputPublishedAt).toBeNull();
     expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(key))
       .toEqual({ last_block: 21_999_999 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 0 });

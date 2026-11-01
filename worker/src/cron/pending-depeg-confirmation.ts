@@ -1,4 +1,10 @@
-import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_MIN_AGE_SEC, DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import {
+  DEPEG_PENDING_EXPIRY_SEC,
+  DEPEG_PENDING_EXTENDED_EXPIRY_SEC,
+  DEPEG_PENDING_MIN_AGE_SEC,
+  DEPEG_PENDING_SEVERE_EXPIRY_SEC,
+  DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
+} from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { PegAssetBase } from "@shared/types/core";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -37,8 +43,6 @@ import {
 } from "../lib/native-quote-plausibility";
 
 const CONFIRMATION_TIMESTAMP_FUTURE_SKEW_SEC = 5 * 60;
-const DEPEG_PENDING_EXTENDED_EXPIRY_SEC = DEPEG_PENDING_EXPIRY_SEC * 3;
-const DEPEG_PENDING_SEVERE_EXPIRY_SEC = DEPEG_PENDING_EXPIRY_SEC * 4;
 
 export type DirectionalSignalStatus = ReturnType<typeof classifyDirectionalSignal>;
 export type ConfirmationTimestampStatus = "fresh" | "missing" | "invalid" | "future" | "stale";

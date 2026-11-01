@@ -14,6 +14,7 @@ import {
 import {
   computeReserveCompositionOverview,
   loadFreshIndependentLiveReserveMap,
+  loadPublishedReserveScoringEvidence,
 } from "../live-reserves/store-overview";
 import { getMaxSyncAge } from "../live-reserves/store-read";
 import { resolveReserveResult } from "../live-reserves/store-views";
@@ -649,6 +650,50 @@ describe("live-reserves-store", () => {
     const overview = await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
     expect(overview.errorCoins).toBeGreaterThanOrEqual(1);
     expect(overview.staleCoins).toBe(0);
+  });
+
+  it("judges published scoring ineligibility from the composition's own warnings", async () => {
+    const attemptId = "attempt-published";
+    const syncById = new Map([["iusd-infinifi", reserveSyncStateInput(attemptId, {
+      // A withheld fallback records this on the sync row but writes no snapshot.
+      warnings: [{
+        code: "fallback-withheld-score-grade-retained", message: "withheld", severity: "warning", effect: "degraded",
+      }],
+      warningCount: 1,
+    })]]);
+    const published = (warnings?: string) => reserveCompositionRow({
+      attempt_id: attemptId,
+      ...(warnings ? { warnings, warning_count: 1 } : {}),
+    });
+
+    const ineligible = await loadPublishedReserveScoringEvidence(
+      mockD1([{
+        match: "reserve_composition",
+        rows: [published(JSON.stringify([{
+          code: "undated-portfolio", message: "Undated portfolio", severity: "warning", effect: "degraded",
+        }]))],
+      }]),
+      syncById,
+      ["iusd-infinifi"],
+    );
+    expect([...ineligible.scoreIneligibleIds]).toEqual(["iusd-infinifi"]);
+    expect([...ineligible.unknownIds]).toEqual([]);
+
+    const retained = await loadPublishedReserveScoringEvidence(
+      mockD1([{ match: "reserve_composition", rows: [published()] }]),
+      syncById,
+      ["iusd-infinifi"],
+    );
+    expect([...retained.scoreIneligibleIds]).toEqual([]);
+    expect([...retained.unknownIds]).toEqual([]);
+
+    const unreadable = await loadPublishedReserveScoringEvidence(
+      mockD1([{ match: "reserve_composition", rows: [published("{not-json")] }]),
+      syncById,
+      ["iusd-infinifi"],
+    );
+    expect([...unreadable.scoreIneligibleIds]).toEqual([]);
+    expect([...unreadable.unknownIds]).toEqual(["iusd-infinifi"]);
   });
 
   it("includes lastError in sync view when sync state has an error", async () => {

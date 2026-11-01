@@ -3,6 +3,8 @@ import type { CronStatusDetail, StatusCause, StatusResponse } from "@shared/type
 import { assessPublicHealth, capturePublicHealthRead, getPublicHealthEvidenceReadFailures, type PublicHealthReadResult } from "./public-health-assessment";
 import { emptyDatasetFreshness } from "./status/derived-data";
 import { getDataQuality } from "./status/data-quality";
+import { loadSupplyIntegrityReport } from "./supply-integrity";
+import { assessSupplyIntegrityQuality } from "./status/supply-integrity-quality";
 import {
   applyCronHealthSectionErrors,
   countStatusDiagnosticIssues,
@@ -17,6 +19,7 @@ import {
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
   evaluateReserveCompositionStatus,
+  readRedemptionCapacityCoverage,
   withRunbook,
 } from "./status/evaluation-rules";
 import { loadCronHealth } from "./status/cron-health";
@@ -127,7 +130,7 @@ export async function computeRawStatus(
   // Independent status loads run in parallel. The repo's six-request outbound
   // budget applies to fetch phases, not these D1 reads; none is scheduled via
   // waitUntil.
-  const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplements, transitionsLast24h] = await Promise.all([
+  const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplyIntegrity, supplements, transitionsLast24h] = await Promise.all([
     loadCronHealth(db, now, { readNow: Math.floor(Date.now() / 1000) }),
     loadBudgetOnlySurfaceStatuses(db, now),
     getDataQuality(db, now, {
@@ -135,6 +138,7 @@ export async function computeRawStatus(
       stablecoinPublication: publicHealth.stablecoinPublication,
       activePriceCoverage: publicHealth.activePriceCoverage,
     }),
+    loadSupplyIntegrityReport(db, now).catch(() => null),
     loadSupplementalStatusSections(db, now),
     countRecentStatusTransitions(db, now),
   ]);
@@ -226,8 +230,12 @@ export async function computeRawStatus(
     repairRunnerAutoRepairCount: publicHealth.repairRunnerAutoRepairCount,
     activePriceCoverage: publicHealth.activePriceCoverage,
     onchainAssessmentCauses: onchainAssessment.causes,
+    supplyIntegrityAssessment: assessSupplyIntegrityQuality(supplyIntegrity),
     reserveCompositionQueryFailed,
     reserveComposition,
+    redemptionCapacityCoverage: readRedemptionCapacityCoverage(
+      crons["sync-redemption-backstops"]?.runs,
+    ),
   });
 
   const availabilityStatus = availabilityEvaluation.status;

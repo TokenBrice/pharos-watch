@@ -14,6 +14,8 @@ import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { loadPublishedStressSignalGeneration } from "../lib/stress-signals-current-rows";
 import { canonicalizePsiStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
+import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
+import { classifyPsiUniverseCoverage } from "@shared/lib/psi-policy";
 import { throwIfAborted } from "../lib/abort";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
@@ -68,6 +70,29 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     mcapById.set(coin.id, mcap);
     symbolById.set(coin.id, coin.symbol);
   }
+
+  const coreTrackedIds = new Set(
+    tracked.filter((coin) => CORE_AGGREGATE_ACTIVE_IDS.has(coin.id)).map((coin) => coin.id),
+  );
+  const coreSupplyUnavailableCount = supplyUnavailableIds
+    .filter((id) => CORE_AGGREGATE_ACTIVE_IDS.has(id))
+    .length;
+  const universeCoverage = {
+    expected: CORE_AGGREGATE_ACTIVE_IDS.size,
+    // Coverage measures the core aggregate cohort only; PSI-historical assets
+    // are outside the denominator and supply availability is its own component.
+    present: coreTrackedIds.size,
+    admittedSupply: coreTrackedIds.size - coreSupplyUnavailableCount,
+    missingFromCacheIds: [...CORE_AGGREGATE_ACTIVE_IDS]
+      .filter((id) => !coreTrackedIds.has(id))
+      .sort(),
+    supplyUnavailableIds,
+    trendUnavailableIds,
+  };
+  const universeCoverageStatus = classifyPsiUniverseCoverage(
+    universeCoverage.expected,
+    universeCoverage.present,
+  );
 
   const mcap7dChangePct = Number.isFinite(pairedPrevWeek) && pairedPrevWeek > 0 && Number.isFinite(pairedMcapUsd)
     ? ((pairedMcapUsd - pairedPrevWeek) / pairedPrevWeek) * 100
@@ -283,6 +308,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     ...(openDepegsWithoutPrice > 0 ? ["open-depeg-no-price"] : []),
     ...(supplyUnavailableIds.length > 0 ? ["supply-unavailable"] : []),
     ...(trendUnavailableIds.length > 0 ? ["trend-inputs-unavailable"] : []),
+    ...(universeCoverageStatus !== "ok" ? ["universe-coverage"] : []),
   ];
 
   const result = computeStabilityIndex({ depegs, totalMcapUsd, mcap7dChangePct, dewsStressBreadth });
@@ -334,6 +360,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         degradedComponents,
         supplyUnavailableIds,
         trendUnavailableIds,
+        universeCoverage: {
+          ...universeCoverage,
+          status: universeCoverageStatus,
+        },
         contributors,
         methodologyVersion: PSI_METHODOLOGY_VERSION,
       }),
@@ -375,6 +405,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       trendUnavailableIds,
       supplyUnavailableCount: supplyUnavailableIds.length,
       trendUnavailableCount: trendUnavailableIds.length,
+      universeCoverage: {
+        ...universeCoverage,
+        status: universeCoverageStatus,
+      },
       aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
       score: result.score,
       band: result.band,

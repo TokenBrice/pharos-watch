@@ -111,6 +111,7 @@ index	idx_depeg_event_provenance_run
 index	idx_depeg_open
 index	idx_depeg_open_started_id
 index	idx_depeg_pending_coin
+index	idx_depeg_pending_outcomes_outcome_time
 index	idx_depeg_pending_outcomes_pending_id
 index	idx_depeg_pending_outcomes_stablecoin_time
 index	idx_depeg_pending_outcomes_training_identity

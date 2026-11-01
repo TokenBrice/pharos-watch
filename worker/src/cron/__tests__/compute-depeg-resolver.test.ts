@@ -729,8 +729,14 @@ describe("computeDepegResolver", () => {
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
     expect(payload._meta.degradedReason).toContain("publication-retry-pending:");
+    expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
       v2PublicationAttempted: true, v2PublicationSucceeded: false,
+      // A carried snapshot is not this run's publication output: the confirmed
+      // clock stays frozen so the freshness watchdog pages the failed write.
+      outputPublishedAt: null,
+      reason: "ddr-publication-failed",
+      quality: { reason: "ddr-publication-failed" },
     });
   });
 

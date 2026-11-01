@@ -282,6 +282,12 @@ describe("runFourHourlyReserveSyncSlot", () => {
     });
 
     expect(syncLiveReserves).toHaveBeenCalledTimes(1);
+    // The producer slice opts into the 60%-of-run-budget admission horizon.
+    expect(syncLiveReserves).toHaveBeenCalledWith(
+      expect.anything(), expect.anything(), expect.anything(), expect.anything(),
+      expect.objectContaining({ runBudgetMs: 540_000, workBudgetMs: 289_000 }),
+      expect.anything(),
+    );
     expect(syncRedemptionBackstops).not.toHaveBeenCalled();
     expect(syncKinesisSupply).toHaveBeenCalledTimes(1);
     // The watchdog validates the live-reserve generation this slot was supposed

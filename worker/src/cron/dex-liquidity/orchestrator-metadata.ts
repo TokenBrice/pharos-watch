@@ -95,11 +95,18 @@ export function buildDexLiquidityCronMetadata(params: {
     ...(scoreState.analysis.sourceCoverage.qualityDriftFlags ?? []),
     ...getDexLiquiditySourceQualityReasons(sourceState),
   ])];
+  // Confirmed cohort drops (chain TVL / source-family pool retention) keep the
+  // run's execution status unchanged but mark the input-quality verdict
+  // degraded, so the sentinel-backed cache-health floor and /status see it
+  // instead of leaving it as an admin-only Watch chip.
+  const cohortDriftDegraded = (scoreState.analysis.sourceCoverage.cohortDriftFlags ?? []).length > 0;
   return {
     ...(persistence.skippedReason === "required-baseline-read-failed"
       ? { reason: "required-baseline-read-failed" }
       : params.degradedReason != null ? { reason: params.degradedReason } : {}),
-    ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
+    ...(qualityReasons.length > 0
+      ? { quality: { ...(cohortDriftDegraded ? { degraded: true } : {}), reasons: qualityReasons } }
+      : {}),
     rowsRead: sourceState.primaryRawPoolCount,
     rowsWritten: persistence.skipped || persistence.skippedReason === "liquidity-cadence-reuse"
       ? 0 : scoreState.scoreResults.size,

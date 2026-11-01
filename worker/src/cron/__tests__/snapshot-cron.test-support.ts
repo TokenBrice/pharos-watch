@@ -193,5 +193,12 @@ export function makePsiSnapshotDb(input: MockTableConfig[] = []): MockD1Database
 }
 
 export function makePublicDatasetDb(tables: MockTableConfig[] = []): MockD1Database {
-  return mockD1([...tables, { match: "FROM public_snapshots WHERE snapshot_date", rows: [], first: null }]);
+  return mockD1([
+    ...tables,
+    // Keep the published-generation read distinct from the DEX row fixture:
+    // the DEX row filter embeds a `FROM dex_liquidity_publication_generations`
+    // subquery, so substring matching on the table name cannot distinguish them.
+    { match: "pharos:snapshot-public-dataset:published-dex-generation", rows: [], first: null },
+    { match: "FROM public_snapshots WHERE snapshot_date", rows: [], first: null },
+  ]);
 }

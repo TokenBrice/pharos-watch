@@ -76,6 +76,7 @@ type FallbackMetadataInput = Omit<
   | "cacheKey"
   | "syncStartSec"
   | "activePriceCoverage"
+  | "previousActivePriceCoverage"
 >;
 
 interface StablecoinsPublicationLabels {
@@ -373,7 +374,10 @@ export async function runStablecoinsPostIntakePublication(
         depegPipelineSucceeded: !depegResult.depegHeldReason && depegResult.depegErrorCount === 0,
         previousActivePriceCoverage: input.previousActivePriceCoverage,
       })
-    : buildFallbackStablecoinsSyncResult({ ...input.metadata.input, ...completion });
+    : buildFallbackStablecoinsSyncResult({
+        ...input.metadata.input, ...completion,
+        previousActivePriceCoverage: input.previousActivePriceCoverage,
+      });
 
   await reportStablecoinsStage(input.reportProgress, "complete", labels.completeMessage, {
     itemsDone: input.assets.length,

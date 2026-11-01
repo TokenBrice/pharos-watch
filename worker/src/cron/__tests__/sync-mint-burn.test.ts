@@ -1206,6 +1206,7 @@ describe("syncMintBurn", () => {
     expect(vi.mocked(recalcAffectedHours)).toHaveBeenCalledTimes(1);
     expect(result.status).toBe("degraded");
     expect(meta.recalcFailed).toBe(true);
+    expect(meta.outputPublishedAt).toBeNull();
     expect(typeof meta.recalcError).toBe("string");
     expect(meta.recalcError).toContain("D1 timeout during hourly recalc");
   });

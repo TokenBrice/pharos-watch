@@ -15,6 +15,8 @@ import { persistActiveNativeEventQuotes, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from 
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
 import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../../lib/stability-index";
 import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
+import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
+import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -242,7 +244,7 @@ describe("computeAndStoreStabilityIndex", () => {
       await computeAndStoreStabilityIndex(db);
       const missing = readInsertedInputSnapshot(db);
       expect(missing.contributors).toEqual([]);
-      expect(missing.degradedComponents).toEqual(["open-depeg-no-price"]);
+      expect(missing.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
       expect(missing.openDepegsWithoutPrice).toBe(1);
     }
   });
@@ -269,7 +271,7 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(result.itemCount).toBe(1);
     expect(JSON.parse(result.metadata ?? "{}").reason).toBe("psi-sample-published");
     expect(readInsertedInputSnapshot(db).contributors).toEqual([expect.objectContaining({ id, bps: -200 })]);
-    expect(readInsertedInputSnapshot(db).degradedComponents).toEqual([]);
+    expect(readInsertedInputSnapshot(db).degradedComponents).toEqual(["universe-coverage"]);
 
     await persistActiveNativeEventQuotes(db, new Map([[id, {
       stablecoinId: id, geckoId: "compliant-naira", pegCurrency: "NGN",
@@ -307,10 +309,10 @@ describe("computeAndStoreStabilityIndex", () => {
       }
       const result = await computeAndStoreStabilityIndex(db);
       expect(result.status).toBe("ok");
-      expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toEqual(["open-depeg-no-price"]);
+      expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
       const snapshot = readInsertedInputSnapshot(db);
       expect(snapshot.contributors).toEqual([]);
-      expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);
+      expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
       expect(snapshot.openDepegsWithoutPrice).toBe(1);
     },
   );
@@ -748,9 +750,9 @@ describe("computeAndStoreStabilityIndex", () => {
     const result = await computeAndStoreStabilityIndex(db);
     const snapshot = readInsertedInputSnapshot(db);
     expect(result.status).toBe("ok");
-    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toEqual(["open-depeg-no-price"]);
+    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
     expect(snapshot.openDepegsWithoutPrice).toBe(1);
-    expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);
+    expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
     expect(snapshot.contributors).toEqual([]);
   });
 
@@ -779,8 +781,111 @@ describe("computeAndStoreStabilityIndex", () => {
       expect(result.status).toBe("ok");
       expect(snapshot.contributors).toEqual([]);
       expect(snapshot.openDepegsWithoutPrice).toBe(1);
-      expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);
+      expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
     }
+  });
+
+  it("persists the PSI universe coverage and names a shortfall", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: { peggedAssets: [makeStabilityAsset()] },
+      updatedAt: nowSec,
+    });
+    const db = makeDb();
+    const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db) as {
+      universeCoverage: {
+        expected: number;
+        present: number;
+        admittedSupply: number;
+        status: string;
+        missingFromCacheIds: string[];
+      };
+    };
+    const expected = snapshot.universeCoverage.expected;
+    expect(expected).toBeGreaterThan(1);
+    expect(snapshot.universeCoverage).toMatchObject({
+      present: 1,
+      admittedSupply: 1,
+      status: "error",
+    });
+    expect(snapshot.universeCoverage.missingFromCacheIds).not.toContain("usdt-tether");
+    expect(snapshot.universeCoverage.missingFromCacheIds).toHaveLength(expected - 1);
+    expect(JSON.parse(result.metadata ?? "{}").universeCoverage).toMatchObject({
+      expected,
+      admittedSupply: 1,
+      status: "error",
+    });
+    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("universe-coverage");
+  });
+
+  it("classifies universe coverage without netting PSI-historical assets against missing core members", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const coreIds = [...CORE_AGGREGATE_ACTIVE_IDS];
+    const missing = new Set(coreIds.slice(0, 4));
+    const peggedAssets = coreIds
+      .filter((id) => !missing.has(id))
+      .map((id) => makeStabilityAsset({ id, symbol: id.slice(0, 6) }));
+    for (const id of PSI_HISTORICAL_IDS) {
+      peggedAssets.push(makeStabilityAsset({ id, symbol: id.slice(0, 6) }));
+    }
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: { peggedAssets },
+      updatedAt: nowSec,
+    });
+    const db = makeDb();
+    const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db) as {
+      universeCoverage: {
+        expected: number;
+        present: number;
+        status: string;
+        missingFromCacheIds: string[];
+      };
+    };
+    expect(snapshot.universeCoverage.missingFromCacheIds).toHaveLength(4);
+    expect(snapshot.universeCoverage).toMatchObject({
+      expected: coreIds.length,
+      present: coreIds.length - 4,
+      status: "degraded",
+    });
+    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("universe-coverage");
+  });
+
+  it("keeps an unreadable core supply out of the universe-coverage finding", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const coreIds = [...CORE_AGGREGATE_ACTIVE_IDS];
+    const noSupply = new Set(coreIds.filter((id) => id !== "usdt-tether").slice(0, 4));
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: {
+        peggedAssets: coreIds.map((id) => makeStabilityAsset({
+          id,
+          symbol: id.slice(0, 6),
+          ...(noSupply.has(id) ? { circulating: {} } : {}),
+        })),
+      },
+      updatedAt: nowSec,
+    });
+    const db = makeDb();
+    const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db) as {
+      universeCoverage: {
+        present: number;
+        admittedSupply: number;
+        status: string;
+      };
+    };
+    expect(snapshot.universeCoverage).toMatchObject({
+      present: coreIds.length,
+      admittedSupply: coreIds.length - 4,
+      status: "ok",
+    });
+    const reasons = JSON.parse(result.metadata ?? "{}").quality.reasons;
+    expect(reasons).toContain("supply-unavailable");
+    expect(reasons).not.toContain("universe-coverage");
   });
 
   it("publishes ok with explicit input quality when an open depeg has no usable price", async () => {
@@ -823,10 +928,10 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(result.status).toBe("ok");
     expect(result.itemCount).toBe(1);
     expect(metadata.reason).toBe("psi-sample-published");
-    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toEqual(["open-depeg-no-price"]);
+    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toEqual(["open-depeg-no-price", "universe-coverage"]);
     expect(metadata.openDepegsWithoutPrice).toBe(1);
-    expect(metadata.degradedComponents).toEqual(["open-depeg-no-price"]);
-    expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price"]);
+    expect(metadata.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
+    expect(snapshot.degradedComponents).toEqual(["open-depeg-no-price", "universe-coverage"]);
     expect(persistedSampleCount(db)).toBe(1);
   });
 

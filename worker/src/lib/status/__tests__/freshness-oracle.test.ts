@@ -75,7 +75,7 @@ describe("loadProducerFreshnessFacts", () => {
       last_status: "error",
     }] }));
     const bind = vi.fn(() => ({ all }));
-    const prepare = vi.fn(() => ({ bind }));
+    const prepare = vi.fn((_sql: string) => ({ bind }));
     const db = { prepare } as unknown as D1Database;
     const facts = await loadProducerFreshnessFacts(db, NOW, [
       {
@@ -91,14 +91,15 @@ describe("loadProducerFreshnessFacts", () => {
     ]);
 
     expect(prepare).toHaveBeenCalledTimes(1);
+    expect(prepare.mock.calls[0]?.[0]).toContain("last_liveness_at");
     expect(all).toHaveBeenCalledTimes(1);
     expect(facts).toEqual([
       {
-        job: "alpha", lastSuccessAt: NOW - 10, lastRunAt: NOW - 5,
+        job: "alpha", lastSuccessAt: NOW - 10, lastLivenessAt: null, lastRunAt: NOW - 5,
         expectedIntervalSec: 60, lastStatus: "error",
       },
       {
-        job: "beta", lastSuccessAt: null, lastRunAt: null,
+        job: "beta", lastSuccessAt: null, lastLivenessAt: null, lastRunAt: null,
         expectedIntervalSec: 120, lastStatus: null,
       },
     ]);

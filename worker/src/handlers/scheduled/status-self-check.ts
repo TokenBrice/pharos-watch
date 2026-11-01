@@ -46,6 +46,7 @@ export function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext)
         mode: "status",
         nowSec: Math.floor(Date.now() / 1_000),
         operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),
+        workerCanaryMode: normalizeWorkerCanaryMode(runtime.env.WORKER_CANARY_MODE),
         signal,
       }),
     },

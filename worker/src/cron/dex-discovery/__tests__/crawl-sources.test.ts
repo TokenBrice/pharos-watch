@@ -471,7 +471,7 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
-  it("records DexScreener discovery success when a hard refusal follows a successful request", async () => {
+  it("records DexScreener discovery failure when a hard refusal follows a successful request", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.mocked(fetchDsTokenPairsWithStatus)
       .mockResolvedValueOnce({ ok: true, pairs: [] })
@@ -512,7 +512,8 @@ describe("crawlCoin DexScreener hardening", () => {
 
     expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(2);
     expect(recordOutcome).toHaveBeenCalledTimes(1);
-    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, true);
+    // The refusal poisons the run: an earlier success is not evidence of health.
+    expect(recordOutcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, false);
     expect(runState).toMatchObject({
       attemptedRequests: 2,
       successfulRequests: 1,

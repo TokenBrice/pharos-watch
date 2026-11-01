@@ -336,6 +336,26 @@ const db = makeNoopD1({
   dump: async () => new ArrayBuffer(0),
 });
 
+/** A guard fixture that silently answers an unmodelled query hides SQL drift. */
+function strictStubOrThrow(sql: string) {
+  // Cache reads/writes are incidental to these guard fixtures; keep the
+  // original permissive double for them so an unmodelled guard query still
+  // fails loudly.
+  if (sql.includes("FROM cache") || sql.includes("INTO cache")) {
+    return {
+      bind: () => ({
+        all: async () => ({ results: [] }),
+        first: async () => ({ cnt: 0 }),
+        run: async () => ({ success: true, meta: {} }),
+      }),
+      all: async () => ({ results: [] }),
+      first: async () => ({ cnt: 0 }),
+      run: async () => ({ success: true, meta: {} }),
+    };
+  }
+  throw new Error(`Unexpected D1 query in sync-dex-liquidity test: ${sql}`);
+}
+
 /** Drive the scheduled composition: the stage producer followed by its consumer. */
 async function runDexLiquidityScoringCycle(
   database: D1Database,
@@ -708,7 +728,7 @@ describe("dex liquidity scoring stage cycle", () => {
         if (sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
           return { bind: () => ({ first: async () => ({ cnt: 165 }) }) };
         }
-        if (sql.includes("SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
+        if (sql.includes("SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
           return { first: async () => ({ total_tvl_usd: 6_000_000_000, updated_at: 1_777_556_412 }) };
         }
         if (sql.includes("GROUP BY coverage_class")) {
@@ -717,22 +737,16 @@ describe("dex liquidity scoring stage cycle", () => {
         if (sql.includes("ORDER BY total_tvl_usd DESC")) {
           return { bind: () => ({ all: async () => ({ results: [{ stablecoin_id: "usdt-tether", total_tvl_usd: 4_000_000_000 }] }) }) };
         }
+        if (sql.includes("SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json")) {
+          return { bind: () => ({ all: async () => ({ results: [] }) }) };
+        }
         if (sql.includes("FROM cron_runs")) {
           return { all: async () => ({ results: [] }) };
         }
         if (sql.includes("WHERE stablecoin_id IN")) {
           return { bind: () => ({ all: async () => ({ results: [] }) }) };
         }
-        return {
-          bind: () => ({
-            all: async () => ({ results: [] }),
-            first: async () => ({ cnt: 0 }),
-            run: async () => ({ success: true, meta: {} }),
-          }),
-          all: async () => ({ results: [] }),
-          first: async () => ({ cnt: 0 }),
-          run: async () => ({ success: true, meta: {} }),
-        };
+        return strictStubOrThrow(sql);
       },
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),
@@ -778,13 +792,35 @@ describe("dex liquidity scoring stage cycle", () => {
       if (rejection === "persistence") vi.mocked(persistScores).mockRejectedValueOnce(new Error("liquidity publication failed"));
       const guardDb = makeNoopD1({
         prepare(sql: string) {
-          if (rejection === "coverage" && sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
-            return { bind: () => ({ first: async () => ({ cnt: 100 }) }) };
+          if (sql.includes("SELECT coverage_class, COUNT(*) as cnt")) {
+            return { bind: () => ({ all: async () => ({ results: [] }) }) };
           }
-          if (rejection === "value" && sql.includes("SELECT total_tvl_usd, updated_at FROM dex_liquidity")) {
-            return { first: async () => ({ total_tvl_usd: 1_000_000_000, updated_at: 1_777_556_412 }) };
+          if (sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
+            return { bind: () => ({ first: async () => ({ cnt: rejection === "coverage" ? 100 : 0 }) }) };
           }
-          return db.prepare(sql);
+          if (sql.includes("SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
+            return {
+              first: async () => rejection === "value"
+                ? { total_tvl_usd: 1_000_000_000, updated_at: 1_777_556_412 }
+                : { total_tvl_usd: null, updated_at: null },
+            };
+          }
+          if (sql.includes("GROUP BY coverage_class")) {
+            return { bind: () => ({ all: async () => ({ results: [] }) }) };
+          }
+          if (sql.includes("ORDER BY total_tvl_usd DESC")) {
+            return { bind: () => ({ all: async () => ({ results: [] }) }) };
+          }
+          if (sql.includes("FROM cron_runs")) {
+            return { all: async () => ({ results: [] }) };
+          }
+          if (sql.includes("WHERE stablecoin_id IN")) {
+            return { bind: () => ({ all: async () => ({ results: [] }) }) };
+          }
+          if (sql.includes("SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json")) {
+            return { bind: () => ({ all: async () => ({ results: [] }) }) };
+          }
+          return strictStubOrThrow(sql);
         },
       });
       if (rejection === "critical-source") {
@@ -1440,7 +1476,7 @@ describe("dex liquidity scoring stage cycle", () => {
         if (sql.includes("COUNT(*) as cnt FROM dex_liquidity")) {
           return { bind: () => ({ first: async () => ({ cnt: 5 }) }) };
         }
-        if (sql.includes("SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
+        if (sql.includes("SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'")) {
           return { first: async () => ({ total_tvl_usd: 100 }) };
         }
         if (sql.includes("GROUP BY coverage_class")) {
@@ -1448,6 +1484,9 @@ describe("dex liquidity scoring stage cycle", () => {
         }
         if (sql.includes("ORDER BY total_tvl_usd DESC")) {
           return { bind: () => ({ all: async () => ({ results: [{ stablecoin_id: "usdc-circle", total_tvl_usd: 100 }] }) }) };
+        }
+        if (sql.includes("SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json")) {
+          return { bind: () => ({ all: async () => ({ results: [] }) }) };
         }
         if (sql.includes("SELECT started_at, status, metadata") && sql.includes("cron_runs")) {
           return {
@@ -1497,16 +1536,7 @@ describe("dex liquidity scoring stage cycle", () => {
             }),
           };
         }
-        return {
-          bind: () => ({
-            all: async () => ({ results: [] }),
-            first: async () => ({ cnt: 0 }),
-            run: async () => ({ success: true, meta: {} }),
-          }),
-          all: async () => ({ results: [] }),
-          first: async () => ({ cnt: 0 }),
-          run: async () => ({ success: true, meta: {} }),
-        };
+        return strictStubOrThrow(sql);
       },
       batch: async () => [],
       exec: async () => ({ count: 0, duration: 0 }),

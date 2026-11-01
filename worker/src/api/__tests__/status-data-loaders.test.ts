@@ -622,10 +622,23 @@ describe("handleStatus", () => {
         first: { latest: mintBurnWriterAt },
       },
       {
-        match: "SELECT MAX(CASE",
-        matchBinds: ["sync-stablecoins"],
-        rows: [],
-        first: { latest: depegWriterAt },
+        match: "pharos:depeg-census-runs",
+        rows: [
+          {
+            started_at: depegWriterAt,
+            census_json: JSON.stringify({
+              scope: "psi-non-nav-before-supply-floor",
+              evaluatedAt: depegWriterAt,
+              eligibleCount: 10,
+              observedCount: 10,
+              unavailableCount: 0,
+              belowFloorCount: 0,
+              reasonCounts: {},
+            }),
+            pipeline_succeeded: 1,
+            unavailable_reason: null,
+          },
+        ],
       },
       { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
       { match: "blacklist_events", rows: [], first: { total: 10_000, missing: 0, missing_recent: 0 } },
