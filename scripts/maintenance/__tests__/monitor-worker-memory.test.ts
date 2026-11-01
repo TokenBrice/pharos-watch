@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it, vi } from "vitest";
-import { collectWorkerMemory, evaluateMemoryObservation, joinScheduledMemory, parseWorkerMemoryArgs, renderWorkerMemoryMarkdown, writeWorkerMemoryReport } from "../monitor-worker-memory";
+import { buildCapacityHeadroom, classifyCronCpuClass, collectWorkerMemory, evaluateMemoryObservation, joinScheduledMemory, parseWorkerMemoryArgs, renderCapacityMarkdown, renderWorkerMemoryMarkdown, WORKER_CAPACITY_POLICY, writeWorkerMemoryReport } from "../monitor-worker-memory";
 import fixtures from "./fixtures/worker-memory/october-kills.json";
 
 const from = "2026-10-14T00:00:00Z";
@@ -46,13 +46,23 @@ async function capture(rows: unknown[], scheduledRows: unknown[] = [scheduled], 
   }) });
 }
 
-function runWorkflowVerdict(name: string, runnerTemp: string, collectOutcome: "success" | "failure") {
+function workflowStepScript(name: string) {
   const workflow = parseYaml(readFileSync(".github/workflows/worker-memory-monitor.yml", "utf8"));
   const run = workflow.jobs.memory.steps.find((step: { name?: string }) => step.name === name).run as string;
   const script = run.match(/<<'NODE'\n([\s\S]*?)\nNODE(?:\n|$)/)?.[1];
   if (!script) throw new Error(`Missing Node verdict script: ${name}`);
-  return spawnSync(process.execPath, ["--input-type=module", "-e", script], {
+  return script;
+}
+
+function runWorkflowVerdict(name: string, runnerTemp: string, collectOutcome: "success" | "failure") {
+  return spawnSync(process.execPath, ["--input-type=module", "-e", workflowStepScript(name)], {
     env: { ...process.env, RUNNER_TEMP: runnerTemp, COLLECT_OUTCOME: collectOutcome }, encoding: "utf8",
+  });
+}
+
+function runWorkflowDecision(name: string, runnerTemp: string, env: Record<string, string>) {
+  return spawnSync(process.execPath, ["--input-type=module", "-e", workflowStepScript(name)], {
+    env: { ...process.env, RUNNER_TEMP: runnerTemp, ...env }, encoding: "utf8",
   });
 }
 
@@ -273,6 +283,116 @@ describe("bounded Analytics collection and unavailable evidence", () => {
   });
 });
 
+function scheduledRows(cron: string, count: number, cpuTimeUs: number, status = "success") {
+  return Array.from({ length: count }, (_, index) => ({
+    ...scheduled, cron, cpuTimeUs, status,
+    datetime: new Date(Date.parse(from) + index * 60_000).toISOString(),
+    scheduledDatetime: new Date(Date.parse(from) + index * 60_000).toISOString(),
+  }));
+}
+function roleDay(workerRole: "heavy" | "public", memoryP99: number | null, queryComplete = true) {
+  return {
+    workerRole, from, to, basis: "Cloudflare-sampled-role-day-quantiles" as const, queryComplete,
+    rows: [{
+      dimensions: { date: "2026-10-14", scriptName: workerRole === "heavy" ? "stablecoin-heavy" : "stablecoin-api", status: "success" },
+      sum: { requests: 12, subrequests: 3 }, avg: { sampleInterval: 1 },
+      quantiles: { cpuTimeP50: null, durationP50: null, memoryUsageBytesP50: null, memoryUsageBytesP90: null, memoryUsageBytesP99: memoryP99, memoryUsageBytesP999: null },
+    }],
+  };
+}
+const memoryOk = () => [roleDay("heavy", 1048576), roleDay("public", 1048576)];
+function headroom(rows: ReturnType<typeof scheduledRows>, complete = true, roleDays = memoryOk()) {
+  return buildCapacityHeadroom({ roleDays, scheduled: [{ workerRole: "heavy", rows, complete }] });
+}
+const reportWindow = { from, to, fromInclusive: true as const, toExclusive: true as const, mode: "default" as const };
+
+describe("capacity headroom against platform limits", () => {
+  it.each([
+    ["*/5 * * * *", "sub-hourly"],
+    ["26,56 * * * *", "sub-hourly"],
+    ["2,7,12,17,22,27,32,37,42,47,52,57 * * * *", "sub-hourly"],
+    ["0 * * * *", "hourly-or-longer"],
+    ["3 */6 * * *", "hourly-or-longer"],
+    ["0 8 * * *", "hourly-or-longer"],
+    ["0 6 1 * *", "hourly-or-longer"],
+  ])("derives the Cloudflare CPU class from %s", (expression, expected) => {
+    expect(classifyCronCpuClass(expression)).toBe(expected);
+  });
+  it.each(["0 * * *", "61 * * * *", "*/5 25 * * *", "0-* * * * *", "every hour"])("leaves unparseable expressions unknown (%s)", (expression) => {
+    expect(classifyCronCpuClass(expression)).toBeNull();
+  });
+  it("warns strictly above 70% of the class limit", () => {
+    const at = (cpuTimeUs: number) => headroom(scheduledRows("*/5 * * * *", 100, cpuTimeUs)).triggers[0]!;
+    expect(at(21_000_000)).toMatchObject({ cpuClass: "sub-hourly", limitUs: 30_000_000, samples: 100, status: "ok", reason: null });
+    expect(at(21_000_001)).toMatchObject({ status: "warn", reason: "cpu-p99-over-warn-threshold" });
+    expect(headroom(scheduledRows("16 * * * *", 100, 631_000_000)).triggers[0]).toMatchObject({
+      cpuClass: "hourly-or-longer", limitUs: 900_000_000, p99Ratio: 631_000_000 / 900_000_000, status: "warn",
+    });
+  });
+  it("warns on an exceededCpu outcome below the p99 threshold", () => {
+    const rows = [...scheduledRows("16 * * * *", 100, 1_000_000), ...scheduledRows("16 * * * *", 1, 2_000_000, "exceededCpu")];
+    expect(headroom(rows).triggers[0]).toMatchObject({ samples: 101, exceededCpu: 1, status: "warn", reason: "cpu-exceeded-cpu-observed" });
+  });
+  it("reports small-N triggers without a headroom verdict", () => {
+    expect(headroom(scheduledRows("0 8 * * *", 3, 500_000)).triggers[0]).toMatchObject({
+      samples: 3, p99Us: 500_000, status: "insufficient-samples", reason: "insufficient-samples",
+    });
+  });
+  it("never reports ok for partial or unclassifiable CPU evidence", () => {
+    expect(headroom(scheduledRows("16 * * * *", 50, 1_000_000), false).triggers[0]).toMatchObject({ samples: 50, status: "unavailable", reason: "scheduled-source-incomplete" });
+    expect(headroom([]).triggers[0]).toMatchObject({ samples: 0, p99Us: null, status: "unavailable", reason: "scheduled-rows-absent" });
+    expect(headroom(scheduledRows("every hour", 50, 1000)).triggers[0]).toMatchObject({ cpuClass: null, limitUs: null, p99Ratio: null, status: "unavailable", reason: "cpu-class-unknown" });
+  });
+  it("compares the highest sampled role/day memory p99 with the isolate limit", () => {
+    const memory = (memoryP99: number | null, queryComplete = true) => buildCapacityHeadroom({
+      roleDays: [roleDay("heavy", memoryP99, queryComplete), roleDay("public", null)], scheduled: [],
+    }).memory[0]!;
+    expect(memory(1048576)).toMatchObject({ p99Bytes: 1048576, limitBytes: WORKER_CAPACITY_POLICY.memoryLimitBytes, status: "ok", reason: null });
+    expect(memory(Math.floor(0.7 * WORKER_CAPACITY_POLICY.memoryLimitBytes))).toMatchObject({ status: "ok" });
+    expect(memory(90 * 1048576)).toMatchObject({ status: "warn", reason: "memory-p99-over-warn-threshold" });
+    expect(memory(null)).toMatchObject({ p99Bytes: null, p99Ratio: null, status: "unavailable", reason: "memory-p99-unavailable" });
+    expect(memory(90 * 1048576, false)).toMatchObject({ p99Bytes: null, status: "unavailable" });
+    expect(memory(90 * 1048576).basis).toBe("max-of-cloudflare-sampled-role-day-p99");
+  });
+  it("renders unavailable evidence instead of a zero statistic", () => {
+    const markdown = renderCapacityMarkdown(buildCapacityHeadroom({
+      roleDays: [roleDay("heavy", null), roleDay("public", null)],
+      scheduled: [{ workerRole: "heavy", rows: [], complete: false }],
+    }), reportWindow);
+    expect(markdown).toContain("| Role | Cron trigger |");
+    expect(markdown).toContain("| heavy | all triggers | unknown | 0 | unavailable | unavailable | unavailable | unavailable | unavailable | 0 | unavailable (scheduled-source-incomplete) |");
+    expect(markdown).not.toContain("0.00");
+  });
+  it("retains the capacity verdict and its summary with the other evidence files", async () => {
+    const report = await capture([adaptive()]);
+    expect(report.outputFiles).toContain("capacity.md");
+    expect(report.capacity.triggers.map((row) => row.cron)).toContain("16 * * * *");
+    expect(renderWorkerMemoryMarkdown(report)).toContain(`Capacity headroom: **${report.capacity.status}**`);
+    const dir = await mkdtemp(join(tmpdir(), "worker-memory-capacity-"));
+    try {
+      await writeWorkerMemoryReport(report, dir);
+      const summary = await readFile(join(dir, "capacity.md"), "utf8");
+      expect(summary).toContain("## Worker capacity headroom");
+      expect(summary).toContain("| heavy | 16 * * * * | hourly-or-longer |");
+      expect(JSON.parse(await readFile(join(dir, "report.json"), "utf8")).capacity).toEqual(report.capacity);
+    } finally { await rm(dir, { recursive: true, force: true }); }
+  });
+  it.each(["warn", "ok", "unavailable"] as const)("maps a %s verdict onto the issue decision", async (status) => {
+    const report = await capture([adaptive()]);
+    report.capacity.status = status;
+    report.window = { ...report.window, mode: "default" };
+    const root = await mkdtemp(join(tmpdir(), "worker-memory-capacity-verdict-"));
+    try {
+      await writeWorkerMemoryReport(report, join(root, "worker-memory"));
+      expect(runWorkflowDecision("Capacity headroom", root, { EVENT_NAME: "schedule" }).stdout).toBe(status);
+      expect(runWorkflowDecision("Capacity headroom", root, { EVENT_NAME: "workflow_dispatch" }).stdout).toBe("report-only");
+      report.window = { ...report.window, mode: "explicit" };
+      await writeWorkerMemoryReport(report, join(root, "worker-memory"));
+      expect(runWorkflowDecision("Capacity headroom", root, { EVENT_NAME: "schedule" }).stdout).toBe("report-only");
+    } finally { await rm(root, { recursive: true, force: true }); }
+  });
+});
+
 describe("memory operator and evidence-retaining workflow", () => {
   it("exits 1 after retaining reports on runtime unavailability and exits 2 for usage", async () => {
     const dir = await mkdtemp(join(tmpdir(), "worker-memory-cli-"));
@@ -330,14 +450,21 @@ describe("memory operator and evidence-retaining workflow", () => {
     const steps = workflow.jobs.memory.steps;
     const collection = steps.findIndex((step: { id?: string }) => step.id === "collect");
     const upload = steps.findIndex((step: { uses?: string }) => step.uses?.startsWith("actions/upload-artifact@"));
+    const capacity = steps.findIndex((step: { name?: string }) => step.name === "Capacity headroom");
     const heavy = steps.findIndex((step: { name?: string }) => step.name === "Heavy kill observed");
     const incomplete = steps.findIndex((step: { name?: string }) => step.name === "Collection incomplete");
     expect(steps[collection]["continue-on-error"]).toBe(true);
     expect(upload).toBeGreaterThan(collection);
-    expect(heavy).toBeGreaterThan(upload);
+    expect(capacity).toBeGreaterThan(upload);
+    expect(heavy).toBeGreaterThan(capacity);
     expect(incomplete).toBeGreaterThan(heavy);
-    for (const index of [upload, heavy, incomplete]) expect(steps[index].if).toContain("always()");
+    for (const index of [upload, capacity, heavy, incomplete]) expect(steps[index].if).toContain("always()");
     expect(steps[upload].with["retention-days"]).toBe(30);
+    expect(steps[upload].with.path).toContain("capacity.md");
+    expect(steps[capacity].env?.EVENT_NAME).toBe("${{ github.event_name }}");
+    expect(steps[capacity].run).toContain(">> \"$GITHUB_STEP_SUMMARY\"");
+    expect(workflow.jobs.memory.permissions).toMatchObject({ contents: "read", issues: "write" });
+    expect(workflow.permissions.issues).toBeUndefined();
     for (const [index, step] of steps.entries()) if (index !== collection) expect(step.env?.CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN).toBeUndefined();
     expect(workflow.jobs.memory.if).toContain("refs/heads/main");
     expect(workflow.concurrency["cancel-in-progress"]).toBe(false);

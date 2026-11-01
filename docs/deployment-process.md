@@ -131,7 +131,7 @@ The protected PR gate already owns root typing; post-merge build skips only Next
 
 ### Independent production monitors
 
-Read-only monitors do not enter production-mutation concurrency or replace acceptance. [Production Canaries](../.github/workflows/production-canaries.yml) owns authenticated API/OG, Pages assets and HTTPS transport checks; [Worker Memory Monitor](../.github/workflows/worker-memory-monitor.yml) owns sampled memory and independently filtered kills, whose attribution belongs to [memory triage](./runbooks/cron-slot-abandonment.md#first-checks). Scheduled delivery is best effort, not continuous/hourly observation proof. [Dependency scenarios](./runbooks/dependency-network.md#offline-scenario-workflow) independently publishes modeled artifacts without deploying code or adding cron work. Workflow failures use the [incident runbook](./runbooks/workflow-incidents.md).
+Read-only monitors do not enter production-mutation concurrency or replace acceptance. [Production Canaries](../.github/workflows/production-canaries.yml) owns authenticated API/OG, Pages assets and HTTPS transport checks; [Worker Memory Monitor](../.github/workflows/worker-memory-monitor.yml) owns sampled memory, independently filtered kills and the capacity-headroom verdict, whose attribution belongs to [memory triage](./runbooks/cron-slot-abandonment.md#first-checks). Scheduled delivery is best effort, not continuous/hourly observation proof. [Dependency scenarios](./runbooks/dependency-network.md#offline-scenario-workflow) independently publishes modeled artifacts without deploying code or adding cron work. Workflow failures use the [incident runbook](./runbooks/workflow-incidents.md).
 
 ## Operational Acceptance
 

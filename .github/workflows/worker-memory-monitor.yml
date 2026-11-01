@@ -26,6 +26,10 @@ jobs:
   memory:
     name: Collect Worker memory evidence
     if: ${{ github.ref == 'refs/heads/main' }}
+    permissions:
+      contents: read
+      actions: read
+      issues: write # Capacity headroom upsert/close only; no other job mutates issues.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -68,11 +72,62 @@ jobs:
           path: |
             ${{ runner.temp }}/worker-memory/report.json
             ${{ runner.temp }}/worker-memory/report.md
+            ${{ runner.temp }}/worker-memory/capacity.md
             ${{ runner.temp }}/worker-memory/samples.ndjson
             ${{ runner.temp }}/worker-memory/exceeded-memory.ndjson
             ${{ runner.temp }}/worker-memory/queries.json
           if-no-files-found: error
           retention-days: 30
+      - name: Capacity headroom
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/worker-memory"
+          if [[ ! -f "$root/capacity.md" || ! -f "$root/report.json" ]]; then
+            echo "Capacity evidence unavailable; the collection verdict owns this failure."
+            exit 0
+          fi
+          cat "$root/capacity.md" >> "$GITHUB_STEP_SUMMARY"
+          decision="$(node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const report = JSON.parse(readFileSync(`${process.env.RUNNER_TEMP}/worker-memory/report.json`, 'utf8'));
+          const status = report?.capacity?.status;
+          const reportOnly = process.env.EVENT_NAME !== 'schedule' || report?.window?.mode !== 'default';
+          process.stdout.write(!['ok', 'warn', 'unavailable'].includes(status) ? 'unknown' : reportOnly ? 'report-only' : status);
+          NODE
+          )"
+          issue_number() {
+            gh issue list --state open --search 'in:title "Worker capacity headroom"' --json number,title --jq '[.[] | select(.title == "Worker capacity headroom")][0].number // empty'
+          }
+          case "$decision" in
+            warn)
+              body="$RUNNER_TEMP/worker-capacity-issue.md"
+              {
+                echo 'The daily capacity headroom check crossed its warning threshold.'
+                echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+                echo
+                cat "$root/capacity.md"
+              } > "$body"
+              number="$(issue_number)"
+              if [[ -n "$number" ]]; then gh issue edit "$number" --body-file "$body"
+              else gh issue create --title 'Worker capacity headroom' --body-file "$body"
+              fi
+              ;;
+            ok)
+              number="$(issue_number)"
+              if [[ -n "$number" ]]; then
+                gh issue close "$number" --reason completed --comment "Capacity headroom cleared in run https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+              fi
+              ;;
+            *)
+              echo "Capacity verdict: $decision; no issue mutation."
+              ;;
+          esac
       - name: Heavy kill observed
         if: ${{ always() }}
         shell: bash
@@ -105,7 +160,7 @@ jobs:
             const report = JSON.parse(readFileSync(`${root}/report.json`, 'utf8'));
             const verdict = report.verdict;
             if (report.schemaVersion !== 1 || typeof verdict?.heavyKillObserved !== 'boolean' || typeof verdict?.collectionIncomplete !== 'boolean' || typeof verdict?.freshnessFailed !== 'boolean' || ![0, 1].includes(verdict.exitCode)
-                || !['report.json', 'report.md', 'samples.ndjson', 'exceeded-memory.ndjson', 'queries.json'].every(file => existsSync(`${root}/${file}`))) throw new Error();
+                || !['report.json', 'report.md', 'capacity.md', 'samples.ndjson', 'exceeded-memory.ndjson', 'queries.json'].every(file => existsSync(`${root}/${file}`))) throw new Error();
             if (verdict.collectionIncomplete || process.env.COLLECT_OUTCOME !== (verdict.exitCode === 0 ? 'success' : 'failure')) {
               console.error('::error::collection-incomplete; inspect retained source coverage and machine reasons');
               process.exitCode = 1;
