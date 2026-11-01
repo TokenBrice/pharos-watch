@@ -37,6 +37,7 @@ import {
   buildFailedCrawlDeploymentOutcomes,
   buildStaticInaccessibleDeploymentOutcomes,
   upsertDexDeploymentOutcomes,
+  type DexDeploymentOutcomeWriteDiagnostics,
 } from "./deployment-outcomes";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { logWorkerEvent } from "../../lib/structured-log";
@@ -69,6 +70,12 @@ interface DiscoveryCandidate {
 // unfinished cohort, leaving ample distance from the 780s child wrapper.
 export const DEX_DISCOVERY_RUN_BUDGET_MS = 9 * 60_000;
 export const DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS = 20_000;
+/**
+ * Two deployments certified non-empty and then certified empty by the same
+ * provider in one run is provider-level drift, not two pools closing. A single
+ * flip stays an ordinary census change.
+ */
+export const DEX_DISCOVERY_CENSUS_COLLAPSE_MIN_FLIPS = 2;
 
 function summarizeDiscoveryError(err: unknown): string {
   if (err instanceof Error) {
@@ -340,6 +347,19 @@ export async function syncDexDiscovery(
   const completedCandidates = new Set<string>();
   const allUnresolvedChains = new Set<string>();
   const poolsBySource: Record<string, number> = {};
+  const censusDiagnostics: DexDeploymentOutcomeWriteDiagnostics = {
+    censusFlips: [],
+    censusFlipReadFailed: false,
+  };
+  const countCensusFlipsByProvider = (): Record<string, number> => {
+    const counts: Record<string, number> = {};
+    for (const flip of censusDiagnostics.censusFlips) {
+      for (const provider of new Set(flip.providers)) {
+        counts[provider] = (counts[provider] ?? 0) + 1;
+      }
+    }
+    return counts;
+  };
   let stalePoolRefresh: StalePoolRefreshSummary | null = null;
   const dexScreenerRunState = createDexScreenerDiscoveryRunState();
   const buildRunMetadata = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
@@ -363,6 +383,10 @@ export async function syncDexDiscovery(
     stalePoolRefresh,
     persistenceFailedCoins: [...persistenceFailedCoins],
     persistenceFailures: [...persistenceFailures],
+    censusFlipCount: censusDiagnostics.censusFlips.length,
+    censusFlipProviderCounts: countCensusFlipsByProvider(),
+    censusFlipReadFailed: censusDiagnostics.censusFlipReadFailed,
+    censusFlipExamples: censusDiagnostics.censusFlips.slice(0, 10),
     dexscreener: {
       attemptedRequests: dexScreenerRunState.attemptedRequests,
       successfulRequests: dexScreenerRunState.successfulRequests,
@@ -616,7 +640,12 @@ export async function syncDexDiscovery(
 
         try {
           stagedRowsChanged += await upsertStagedPools(db, result.pools, signal);
-          const outcomesWritten = await upsertDexDeploymentOutcomes(db, result.deploymentOutcomes, signal);
+          const outcomesWritten = await upsertDexDeploymentOutcomes(
+            db,
+            result.deploymentOutcomes,
+            signal,
+            censusDiagnostics,
+          );
           deploymentOutcomesWritten += outcomesWritten;
           if (result.deploymentOutcomes.some((outcome) =>
             outcome.outcome === "observed_pools" || outcome.outcome === "verified_no_pools")) {
@@ -744,15 +773,24 @@ export async function syncDexDiscovery(
       ...(failedCoins.some((id) => !persistenceFailedCoins.has(id)) ? ["dex-discovery-coins-failed"] : []),
       ...(budgetExhausted && budgetMadeProgress ? ["dex-discovery-budget-exhausted"] : []),
     ];
+    const censusCollapseProviders = Object.entries(countCensusFlipsByProvider())
+      .filter(([, count]) => count >= DEX_DISCOVERY_CENSUS_COLLAPSE_MIN_FLIPS)
+      .map(([provider]) => provider)
+      .sort();
+    for (const provider of censusCollapseProviders) {
+      qualityReasons.push(`dex-discovery-census-collapse:${provider}`);
+    }
+    const censusCollapseReason = censusCollapseProviders.length > 0 ? "dex-discovery-census-collapse" : null;
     return {
-      status: reason ? "degraded" : "ok",
+      status: reason || censusCollapseReason ? "degraded" : "ok",
       itemCount: coinsCrawled,
       metadata: JSON.stringify(buildRunMetadata({
         outputPublishedAt: stagedRowsChanged > 0 || observedDeploymentOutcomesWritten > 0 || (stalePoolRefresh?.rowsWritten ?? 0) > 0
           ? nowSec
           : null,
-        ...(reason ? { reason } : {}),
+        ...(reason || censusCollapseReason ? { reason: reason ?? censusCollapseReason } : {}),
         ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
+        censusCollapseProviders,
         finalizationTailBudgetMs: DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS,
         failedCoins,
         failedCoinErrors: Object.keys(failedCoinErrors).length > 0 ? failedCoinErrors : undefined,

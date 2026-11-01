@@ -105,6 +105,43 @@ function fakeDb(
   blacklistSyncState?: unknown[],
 ): D1Database {
   const cacheRows = new Map<string, { value: string; updated_at: number }>();
+  const statement = (sql: string, args: unknown[]) => ({
+    first: async () => {
+      if (sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ?")) {
+        return cacheRows.get(args[0] as string) ?? null;
+      }
+      return null;
+    },
+    run: async () => {
+      if (sql.startsWith("INSERT INTO cache")) {
+        cacheRows.set(args[0] as string, { value: args[1] as string, updated_at: args[2] as number });
+      } else if (sql.startsWith("DELETE")) {
+        const cutoff = args[1] as number;
+        for (let i = failureRows.length - 1; i >= 0; i -= 1) {
+          if (failureRows[i].updated_at < cutoff) failureRows.splice(i, 1);
+        }
+      }
+      return { meta: { changes: 0 } };
+    },
+    all: async () => {
+      if (sql.includes("ROW_NUMBER() OVER")) {
+        const started_at = Math.floor(Date.now() / 1000);
+        return { results: (args as string[]).map((job) => ({
+          job,
+          last_success_at: producerPublishedAt ?? started_at,
+          last_run_at: started_at,
+          last_status: "ok",
+        })) };
+      }
+      if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
+        return { results: [] };
+      }
+      if (sql.includes("'sync-yield-data'") || sql.includes("'sync-cl-exit-depth'")) {
+        return { results: [] };
+      }
+      return { results: failureRows.filter((row) => row.updated_at >= (args[1] as number)) };
+    },
+  });
   return {
     prepare: (sql: string) => {
       const all = async (args: unknown[]) => {
@@ -131,6 +168,11 @@ function fakeDb(
         if (sql.includes("supply-integrity-previous-rows") || sql.includes("FROM supply_history")) {
           return { results: [] };
         }
+        if (sql.includes("'sync-yield-data'") || sql.includes("'sync-cl-exit-depth'")) {
+          // No yield/measured-execution generations: the producer-quality
+          // section stays unknown rather than claiming healthy coverage.
+          return { results: [] };
+        }
         if (sql.includes("FROM cron_runs")) {
           // No sync-stablecoins/charts run evidence: the supply dimensions
           // stay unknown rather than claiming healthy values.
@@ -139,25 +181,16 @@ function fakeDb(
         return { results: failureRows.filter((row) => row.updated_at >= (args[1] as number)) };
       };
       return {
+        ...statement(sql, []),
         all: () => all([]),
         bind: (...args: unknown[]) => ({
+          ...statement(sql, args),
           first: async () => {
             if (sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ?")) {
               return cacheRows.get(args[0] as string) ?? null;
             }
             if (sql.includes("FROM status_probe_runs")) return operatorWatch.probeRow ?? null;
             return null;
-          },
-          run: async () => {
-            if (sql.startsWith("INSERT INTO cache")) {
-              cacheRows.set(args[0] as string, { value: args[1] as string, updated_at: args[2] as number });
-            } else if (sql.startsWith("DELETE")) {
-              const cutoff = args[1] as number;
-              for (let i = failureRows.length - 1; i >= 0; i -= 1) {
-                if (failureRows[i].updated_at < cutoff) failureRows.splice(i, 1);
-              }
-            }
-            return { meta: { changes: 0 } };
           },
           all: () => all(args),
         }),
@@ -404,8 +437,15 @@ describe("cron staleness watchdog", () => {
     const text = String(sendToChatMock.mock.calls[0]?.[1] ?? "");
     expect(text).toContain("FX rate publication degraded");
     expect(text).toContain("peggedEUR business-daily reference is 2 publishes behind");
-    expect(text).toContain("cached fallback (3 consecutive runs)");
+    // The section registry now carries ten sections (twenty raised/recovered
+    // lines), so the derived per-line budget bounds the second FX label as
+    // `+N more`; both FX rules still fire and are asserted below.
+    expect(text).toContain("<b>FX rate publication degraded</b>: source stale: ");
+    expect(text).toContain("+1 more");
     expect(text).toContain("Daily pricing lanes incomplete");
+    expect(JSON.parse(raised.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: expect.arrayContaining(["fx-rates:source-stale", "fx-rates:cached-fallback"]),
+    });
     expect(JSON.parse(raised.metadata ?? "{}").firedRuleIds).toEqual(expect.arrayContaining([
       "fx-source-stale", "fx-cached-fallback", "daily-lane-completion",
     ]));

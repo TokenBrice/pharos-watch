@@ -28,9 +28,14 @@ export type CronSentinelRuleSource =
  *   `supply-snapshot-partial`, `supply-charts-history` (two-run confirmed
  *   findings on cached supply values, carry, the daily snapshot, and
  *   chart-history continuity), `blacklist-config-stale` (a blacklist config has
- *   not reached its safe head for two six-hourly producer intervals), and
+ *   not reached its safe head for two six-hourly producer intervals),
  *   `mint-burn-config-stuck` (an extended-lane config attempted twice without
- *   advancing its frontier).
+ *   advancing its frontier), `yield-data-coverage` (two consecutive yield
+ *   publications below the pre-event coverage baseline),
+ *   `yield-supplemental-family-degraded` (a required supplemental family is
+ *   retained, including count-drop holds) and
+ *   `measured-execution-chain-coverage` (a chain with score-eligible targets
+ *   published no measured quote for two generations).
  * - `digest-publication`: `daily-row`, `daily-telegram`, `daily-twitter`,
  *   `weekly-row`, `weekly-telegram`, `weekly-twitter` (edition missing after
  *   its due time) and `map-producer-lag` (Safety Score map manifest missing).
@@ -71,6 +76,9 @@ export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly str
     "supply-charts-history",
     "blacklist-config-stale",
     "mint-burn-config-stuck",
+    "yield-data-coverage",
+    "yield-supplemental-family-degraded",
+    "measured-execution-chain-coverage",
   ],
   "digest-publication": [
     "daily-row",

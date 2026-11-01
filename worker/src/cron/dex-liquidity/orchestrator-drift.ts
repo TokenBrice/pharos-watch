@@ -34,6 +34,8 @@ export type PreviousDexLiquiditySummary = {
   priceObservationCoins: number;
   measuredBalanceCoveragePct: number;
   weakCoverageCoins: number;
+  /** Retained pool count per source family; null when the row predates the field. */
+  retainedPoolCountBySourceFamily: Record<string, number> | null;
 };
 
 /**
@@ -69,12 +71,17 @@ function pctDelta(current: number, previous: number): number | null {
 
 export function readPreviousDexLiquiditySummary(parsed: DexLiquidityCronMetadata | null): PreviousDexLiquiditySummary | null {
   if (!parsed) return null;
+  const retainedPoolCountBySourceFamily = parsed.sourceCoverage.retainedPoolCountBySourceFamily;
   return {
     stagedPoolsMerged: parsed.stagedPoolsMerged ?? 0,
     stagedPoolsSkipped: parsed.stagedPoolsSkipped ?? 0,
     priceObservationCoins: parsed.sourceCoverage.priceObservationCoins ?? 0,
     measuredBalanceCoveragePct: parsed.sourceCoverage.measuredBalanceCoveragePct ?? 0,
     weakCoverageCoins: parsed.sourceCoverage.weakCoverageCoins ?? 0,
+    retainedPoolCountBySourceFamily:
+      retainedPoolCountBySourceFamily && Object.keys(retainedPoolCountBySourceFamily).length > 0
+        ? retainedPoolCountBySourceFamily
+        : null,
   };
 }
 
@@ -99,6 +106,20 @@ const MAJOR_TVL_CLIFF_RATIO = 0.6;
 /** Prior TVL below this is dust oscillation, not a cliff worth flagging. */
 const MAJOR_TVL_CLIFF_MIN_PREVIOUS_USD = 5_000_000;
 
+/**
+ * Per-chain TVL and per-source-family pool retention are the cohorts the
+ * aggregate guards cannot resolve. A confirmed >10% shrink against the
+ * pre-event baseline is reported as `chain-tvl-drop:<chain>` /
+ * `source-family-drop:<family>` and is the only drift series that does not
+ * rebaseline after `DRIFT_REBASELINE_RUNS`: a lasting chain or source loss is
+ * exactly the condition an operator must resolve, not a new accepted level.
+ */
+const COHORT_DROP_RATIO = 0.1;
+const COHORT_CHAIN_MIN_PREVIOUS_TVL_USD = 1_000_000;
+const COHORT_SOURCE_FAMILY_MIN_PREVIOUS_POOLS = 5;
+const CHAIN_TVL_DROP_FLAG_PREFIX = "chain-tvl-drop:";
+const SOURCE_FAMILY_DROP_FLAG_PREFIX = "source-family-drop:";
+
 const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";
 
 export interface DexLiquidityDriftWatchlistDelta {
@@ -121,6 +142,12 @@ export interface DexLiquidityMajorTvlCliff {
 
 export interface DexLiquidityDriftSummary {
   qualityDriftFlags: string[];
+  /**
+   * Confirmed per-chain/per-source-family cohort drops. They also appear in
+   * `qualityDriftFlags`; this list is what marks the run's quality verdict
+   * degraded so the sentinel-backed cache-health floor can see it.
+   */
+  cohortDriftFlags: string[];
   qualityDriftCandidates: DexLiquidityDriftCandidate[];
   qualityDriftRebaselined: DexLiquidityDriftRebaseline[];
   qualityDriftSeverity: "none" | "medium" | "high";
@@ -185,10 +212,17 @@ export function computeDexLiquidityDriftSummary(params: {
    * remains available after a cliff is rebaselined and its candidate is dropped.
    */
   previousMajorTvlById: Map<string, number>;
+  /** Previous published generation's per-chain TVL; omitted/unknown skips the comparison. */
+  previousChainTvl?: Record<string, number> | null;
+  currentChainTvl?: Record<string, number>;
+  /** Previous retained pool count per source family; omitted/unknown skips the comparison. */
+  previousSourceFamilyPools?: Record<string, number> | null;
+  currentSourceFamilyPools?: Record<string, number>;
 }): DexLiquidityDriftSummary {
   const previousCandidatesByFlag = new Map(params.previousCandidates.map((candidate) => [candidate.flag, candidate]));
   const candidates: DexLiquidityDriftCandidate[] = [];
   const qualityDriftFlags: string[] = [];
+  const cohortDriftFlags: string[] = [];
   const qualityDriftRebaselined: DexLiquidityDriftRebaseline[] = [];
 
   const confirmCondition = (
@@ -212,6 +246,25 @@ export function computeDexLiquidityDriftSummary(params: {
     candidates.push(candidate);
     if (advanced.consecutiveRuns >= DRIFT_CONFIRMATION_RUNS) qualityDriftFlags.push(flag);
     return candidate;
+  };
+
+  /**
+   * Cohort series share the confirmation window but never rebaseline: a lasting
+   * chain or source-family loss must keep the finding visible until recovery.
+   */
+  const confirmCohortCondition = (
+    flag: string,
+    naturalBaseline: number,
+    observedValue: number,
+    conditionHolds: (baselineValue: number) => boolean,
+  ): void => {
+    const advanced = advanceDriftCandidate(previousCandidatesByFlag.get(flag), naturalBaseline, conditionHolds);
+    if (!advanced) return;
+    candidates.push({ flag, ...advanced, observedValue });
+    if (advanced.consecutiveRuns >= DRIFT_CONFIRMATION_RUNS) {
+      qualityDriftFlags.push(flag);
+      cohortDriftFlags.push(flag);
+    }
   };
 
   const watchlistDeltas = DRIFT_WATCHLIST.map((stablecoinId) => {
@@ -332,6 +385,38 @@ export function computeDexLiquidityDriftSummary(params: {
     );
   }
 
+  if (
+    params.previousChainTvl != null && params.currentChainTvl != null
+    && Object.keys(params.currentChainTvl).length > 0
+  ) {
+    for (const [chain, previousTvl] of Object.entries(params.previousChainTvl)) {
+      if (!Number.isFinite(previousTvl) || previousTvl < COHORT_CHAIN_MIN_PREVIOUS_TVL_USD) continue;
+      const currentTvl = params.currentChainTvl[chain] ?? 0;
+      confirmCohortCondition(
+        `${CHAIN_TVL_DROP_FLAG_PREFIX}${chain}`,
+        previousTvl,
+        currentTvl,
+        (baselineValue) => currentTvl < baselineValue * (1 - COHORT_DROP_RATIO),
+      );
+    }
+  }
+
+  if (
+    params.previousSourceFamilyPools != null && params.currentSourceFamilyPools != null
+    && Object.keys(params.currentSourceFamilyPools).length > 0
+  ) {
+    for (const [family, previousPools] of Object.entries(params.previousSourceFamilyPools)) {
+      if (!Number.isFinite(previousPools) || previousPools < COHORT_SOURCE_FAMILY_MIN_PREVIOUS_POOLS) continue;
+      const currentPools = params.currentSourceFamilyPools[family] ?? 0;
+      confirmCohortCondition(
+        `${SOURCE_FAMILY_DROP_FLAG_PREFIX}${family}`,
+        previousPools,
+        currentPools,
+        (baselineValue) => currentPools < baselineValue * (1 - COHORT_DROP_RATIO),
+      );
+    }
+  }
+
   const qualityDriftSeverity: DexLiquidityDriftSummary["qualityDriftSeverity"] =
     qualityDriftFlags.length === 0
       ? "none"
@@ -339,13 +424,16 @@ export function computeDexLiquidityDriftSummary(params: {
             (flag) =>
               flag === "measured-balance-drop" ||
               flag.startsWith("watchlist-pool-drop:") ||
-              flag.startsWith(MAJOR_TVL_CLIFF_FLAG_PREFIX),
+              flag.startsWith(MAJOR_TVL_CLIFF_FLAG_PREFIX) ||
+              flag.startsWith(CHAIN_TVL_DROP_FLAG_PREFIX) ||
+              flag.startsWith(SOURCE_FAMILY_DROP_FLAG_PREFIX),
           )
         ? "high"
         : "medium";
 
   return {
     qualityDriftFlags,
+    cohortDriftFlags,
     qualityDriftCandidates: candidates,
     qualityDriftRebaselined,
     qualityDriftSeverity,

@@ -3,11 +3,32 @@ import { getCaches, setCache, setCacheIfNewer } from "../lib/db-cache";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import type { CronProgressReporter, CronResult } from "../lib/cron-logger";
 import { reportCronProgress } from "../lib/cron-progress";
+import {
+  SUPPLEMENTAL_FAMILY_COUNT_DROP_ACCEPT_RUNS,
+  SUPPLEMENTAL_FAMILY_COUNT_DROP_CONFIRM_RUNS,
+  SUPPLEMENTAL_FAMILY_COUNT_DROP_RATIO,
+} from "../lib/yield-ranking-helpers";
 import { normalizeTokenAddress } from "./dex-liquidity/token-resolution";
-import { buildYieldSupplementalFamilyCache, buildYieldSupplementalRunOutcome, getYieldSupplementalFamilyCacheKey, getYieldSupplementalRunOutcomeCacheKey, type SupplementalFamilyCacheResult, parseYieldSupplementalSourcesCache, supplementalFamilySnapshotHash } from "./yield-sync/cache";
+import {
+  buildYieldSupplementalCountDropState,
+  buildYieldSupplementalFamilyCache,
+  buildYieldSupplementalRunOutcome,
+  getYieldSupplementalCountDropStateCacheKey,
+  getYieldSupplementalFamilyCacheKey,
+  getYieldSupplementalRunOutcomeCacheKey,
+  parseYieldSupplementalCountDropState,
+  parseYieldSupplementalSourcesCache,
+  supplementalFamilySnapshotHash,
+  type SupplementalFamilyCacheResult,
+  type YieldSupplementalCountDropStateEntry,
+} from "./yield-sync/cache";
 import { parseYieldSupplementalRunOutcomeDetailed } from "./yield-sync/cache";
 import { loadSupplementalSourceFamilies, type SupplementalDedupeDiscardedValue } from "./yield-sync/sources-supplemental";
-import { SUPPLEMENTAL_SOURCE_FAMILY_KEYS, type SupplementalSourceFamilyKey } from "./yield-sync/family-registry";
+import {
+  getSupplementalFamilyStaleThresholdSec,
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  type SupplementalSourceFamilyKey,
+} from "./yield-sync/family-registry";
 import type { ResolvedYieldCandidate } from "./yield-sync/types";
 
 /** B27: bounded audit trail for values collapsed by the intra-family dedupe. */
@@ -198,17 +219,30 @@ export async function syncYieldSupplemental(
     });
   };
 
-  const retainedFamilyRows = await getCaches(db,
-    families.map((family) => getYieldSupplementalFamilyCacheKey(family))).catch((error) => {
-      if (signal?.aborted) throw error;
-      logWorkerEventArgs("handler", "warn", "[yield-supplemental] Snapshot identity unavailable; retained outcomes remain unknown", error);
-      return null;
-    });
+  const retainedFamilyRows = await getCaches(db, [
+    ...families.map((family) => getYieldSupplementalFamilyCacheKey(family)),
+    getYieldSupplementalCountDropStateCacheKey(),
+  ]).catch((error) => {
+    if (signal?.aborted) throw error;
+    logWorkerEventArgs("handler", "warn", "[yield-supplemental] Snapshot identity unavailable; retained outcomes remain unknown", error);
+    return null;
+  });
   signal?.throwIfAborted();
   const familySnapshotHashes: Partial<Record<SupplementalSourceFamilyKey, string>> = retainedFamilyRows
     ? Object.fromEntries(families.map((family) => [
       family, supplementalFamilySnapshotHash(retainedFamilyRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null),
     ])) : {};
+  const previousCountDropState = parseYieldSupplementalCountDropState(
+    retainedFamilyRows?.get(getYieldSupplementalCountDropStateCacheKey())?.value,
+  );
+  const previousFamilyCounts = new Map<SupplementalSourceFamilyKey, number>();
+  if (retainedFamilyRows) {
+    for (const family of families) {
+      const row = retainedFamilyRows.get(getYieldSupplementalFamilyCacheKey(family));
+      const parsed = row ? parseYieldSupplementalSourcesCache(row.value, row.updatedAt, startSec) : null;
+      if (parsed) previousFamilyCounts.set(family, parsed.candidates.length);
+    }
+  }
 
   await reportSupplementalProgress("source-family-fetch", "Fetching supplemental yield source families", {
     itemsDone: 0,
@@ -283,6 +317,18 @@ export async function syncYieldSupplemental(
     >;
   const degradedFamilies: SupplementalSourceFamilyKey[] = [];
   const degradedFamilyReasons: Record<string, string> = {};
+  const nextCountDropState: Partial<Record<SupplementalSourceFamilyKey, YieldSupplementalCountDropStateEntry>> = {
+    ...previousCountDropState.families,
+  };
+  const familyCountDrops: Record<string, {
+    baseline: number;
+    previousCount: number;
+    candidateCount: number;
+    strikes: number;
+    consistentRuns: number;
+    retained: boolean;
+    accepted: boolean;
+  }> = {};
   let supplementalCandidatesWritten = 0;
 
   for (const family of familyResults) {
@@ -323,6 +369,59 @@ export async function syncYieldSupplemental(
       const summary = sourceFamilySummaries[family.key];
       if (summary) summary.dedupeDiscardedValues = discardedValues;
     }
+    const previousFamilyCount = previousFamilyCounts.get(family.key);
+    const previousDropState = previousCountDropState.families[family.key];
+    const countDropBaseline = previousDropState?.baseline ?? previousFamilyCount;
+    const countDrop = countDropBaseline != null && countDropBaseline > 0
+      && dedupedFamilyCandidates.length < Math.ceil(countDropBaseline * SUPPLEMENTAL_FAMILY_COUNT_DROP_RATIO);
+    if (countDrop && countDropBaseline != null) {
+      // A 200 response with fewer rows than the family last published is a
+      // collapsed read, not a new level. Retain through the confirmation
+      // window only: a retained row is never re-stamped, and it is never served
+      // past the family's own freshness budget. After that the smaller
+      // snapshot publishes with its real clock while the run stays degraded.
+      const strikes = (previousDropState?.strikes ?? 0) + 1;
+      const consistentAtNewLevel = previousFamilyCount != null
+        && dedupedFamilyCandidates.length >= Math.ceil(previousFamilyCount * SUPPLEMENTAL_FAMILY_COUNT_DROP_RATIO);
+      const consistentRuns = consistentAtNewLevel ? (previousDropState?.consistentRuns ?? 0) + 1 : 0;
+      const retainedUpdatedAt = retainedFamilyRows?.get(getYieldSupplementalFamilyCacheKey(family.key))?.updatedAt ?? null;
+      const retainedWithinBudget = retainedUpdatedAt == null
+        || startSec - retainedUpdatedAt < getSupplementalFamilyStaleThresholdSec(family.key);
+      const accepted = consistentRuns >= SUPPLEMENTAL_FAMILY_COUNT_DROP_ACCEPT_RUNS;
+      const retained = !accepted
+        && strikes <= SUPPLEMENTAL_FAMILY_COUNT_DROP_CONFIRM_RUNS
+        && retainedWithinBudget
+        && previousFamilyCount != null;
+      familyCountDrops[family.key] = {
+        baseline: countDropBaseline,
+        previousCount: previousFamilyCount ?? 0,
+        candidateCount: dedupedFamilyCandidates.length,
+        strikes,
+        consistentRuns,
+        retained,
+        accepted,
+      };
+      if (accepted) {
+        delete nextCountDropState[family.key];
+      } else {
+        nextCountDropState[family.key] = {
+          baseline: countDropBaseline,
+          strikes,
+          consistentRuns,
+        };
+        if (!retained || strikes >= SUPPLEMENTAL_FAMILY_COUNT_DROP_CONFIRM_RUNS) {
+          degradedFamilies.push(family.key);
+          degradedFamilyReasons[family.key] = "family-count-drop";
+        }
+        if (retained) {
+          familyCacheResults[family.key] = "retained-previous";
+          continue;
+        }
+      }
+    } else if (previousDropState) {
+      // Back at (or above) the accepted level: the drop is over.
+      delete nextCountDropState[family.key];
+    }
     const familyCacheValue = buildYieldSupplementalFamilyCache(dedupedFamilyCandidates, startSec);
     const familyCacheResult = await setCacheIfNewer(
       db,
@@ -343,6 +442,15 @@ export async function syncYieldSupplemental(
       supplementalCandidatesWritten += dedupedFamilyCandidates.length;
       familySnapshotHashes[family.key] = supplementalFamilySnapshotHash({ value: familyCacheValue, updatedAt: startSec });
     }
+  }
+  // The previous outcome row is only read for partial runs (their merge must
+  // not erase sibling diagnostics), so count-drop strikes live in their own row.
+  const previousCountDropStateValue =
+    retainedFamilyRows?.get(getYieldSupplementalCountDropStateCacheKey())?.value ?? null;
+  const nextCountDropStateValue = buildYieldSupplementalCountDropState(nextCountDropState, startSec);
+  if (nextCountDropStateValue !== previousCountDropStateValue
+    && (Object.keys(nextCountDropState).length > 0 || previousCountDropStateValue != null)) {
+    await setCache(db, getYieldSupplementalCountDropStateCacheKey(), nextCountDropStateValue, signal);
   }
   // B1/B16: publish the per-family outcome so the next publication can name the
   // families whose snapshot was retained.
@@ -407,8 +515,14 @@ export async function syncYieldSupplemental(
     familyCacheResults,
     degradedFamilies,
     degradedFamilyReasons,
+    ...(Object.keys(familyCountDrops).length > 0 ? { familyCountDrops } : {}),
     reason: degradedFamilies.length > 0
-      ? degradedFamilies.map((family) => degradedFamilyReasons[family] ?? `family-degraded:${family}`).join(",")
+      ? degradedFamilies.map((family) => {
+          const familyReason = degradedFamilyReasons[family];
+          return familyReason === "family-count-drop"
+            ? `family-count-drop:${family}`
+            : familyReason ?? `family-degraded:${family}`;
+        }).join(",")
       : emptySnapshot ? "empty-snapshot" : null,
     syncStartSec: startSec,
   });

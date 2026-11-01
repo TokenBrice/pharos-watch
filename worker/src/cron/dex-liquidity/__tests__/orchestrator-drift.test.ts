@@ -299,6 +299,7 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
         priceObservationCoins: 0,
         measuredBalanceCoveragePct: 0,
         weakCoverageCoins: 0,
+        retainedPoolCountBySourceFamily: null,
       },
       previousCandidates,
       priceObservations: new Map(),
@@ -357,5 +358,98 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
     expect(merged(500, summary.qualityDriftCandidates, 623).qualityDriftCandidates).toEqual([
       { flag: "staged-merge-drop", consecutiveRuns: 1, baselineValue: 623, observedValue: 500 },
     ]);
+  });
+});
+
+describe("computeDexLiquidityDriftSummary cohort drops", () => {
+  function cohort(input: {
+    previousCandidates?: DexLiquidityDriftCandidate[];
+    previousChainTvl?: Record<string, number> | null;
+    currentChainTvl?: Record<string, number>;
+    previousSourceFamilyPools?: Record<string, number> | null;
+    currentSourceFamilyPools?: Record<string, number>;
+  }): DexLiquidityDriftSummary {
+    return computeDexLiquidityDriftSummary({
+      previousSummary: null,
+      previousCandidates: input.previousCandidates ?? [],
+      priceObservations: new Map(),
+      stagedMergedCount: 0,
+      stagedSkippedCount: 0,
+      weakCoverageCoinsBeforeFallback: 0,
+      measuredBalanceCoveragePct: 1,
+      watchlistPreviousById: new Map(),
+      scoreResults: new Map(),
+      previousMajorTvlById: new Map(),
+      previousChainTvl: input.previousChainTvl,
+      currentChainTvl: input.currentChainTvl,
+      previousSourceFamilyPools: input.previousSourceFamilyPools,
+      currentSourceFamilyPools: input.currentSourceFamilyPools,
+    });
+  }
+
+  it("confirms a chain TVL drop on the second run against the pre-event baseline", () => {
+    const first = cohort({
+      previousChainTvl: { ethereum: 10_000_000 },
+      currentChainTvl: { ethereum: 8_000_000 },
+    });
+    expect(first.cohortDriftFlags).toEqual([]);
+    expect(first.qualityDriftCandidates).toEqual([
+      { flag: "chain-tvl-drop:ethereum", consecutiveRuns: 1, baselineValue: 10_000_000, observedValue: 8_000_000 },
+    ]);
+
+    const confirmed = cohort({
+      previousCandidates: first.qualityDriftCandidates,
+      previousChainTvl: { ethereum: 8_000_000 },
+      currentChainTvl: { ethereum: 7_800_000 },
+    });
+    expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:ethereum"]);
+    expect(confirmed.cohortDriftFlags).toEqual(["chain-tvl-drop:ethereum"]);
+    expect(confirmed.qualityDriftSeverity).toBe("high");
+  });
+
+  it("keeps a lasting chain loss flagged instead of rebaselining it", () => {
+    const first = cohort({
+      previousChainTvl: { base: 5_000_000 },
+      currentChainTvl: { base: 3_000_000 },
+    });
+    let previousCandidates = first.qualityDriftCandidates;
+    let summary = first;
+    for (let run = 1; run <= DRIFT_REBASELINE_RUNS + 2; run += 1) {
+      summary = cohort({
+        previousCandidates,
+        previousChainTvl: { base: 3_000_000 },
+        currentChainTvl: { base: 3_000_000 },
+      });
+      expect(summary.cohortDriftFlags).toEqual(["chain-tvl-drop:base"]);
+      previousCandidates = summary.qualityDriftCandidates;
+    }
+    expect(summary.qualityDriftRebaselined).toEqual([]);
+  });
+
+  it("confirms a source-family pool-count drop and ignores sub-material cohorts", () => {
+    const first = cohort({
+      previousSourceFamilyPools: { gecko_terminal: 40, dl: 3 },
+      currentSourceFamilyPools: { gecko_terminal: 20, dl: 0 },
+    });
+    expect(first.qualityDriftCandidates).toEqual([
+      { flag: "source-family-drop:gecko_terminal", consecutiveRuns: 1, baselineValue: 40, observedValue: 20 },
+    ]);
+    const confirmed = cohort({
+      previousCandidates: first.qualityDriftCandidates,
+      previousSourceFamilyPools: { gecko_terminal: 20, dl: 3 },
+      currentSourceFamilyPools: { gecko_terminal: 18, dl: 0 },
+    });
+    expect(confirmed.cohortDriftFlags).toEqual(["source-family-drop:gecko_terminal"]);
+  });
+
+  it("skips the comparison when prior evidence is unavailable", () => {
+    const summary = cohort({
+      previousChainTvl: null,
+      currentChainTvl: { ethereum: 1 },
+      previousSourceFamilyPools: null,
+      currentSourceFamilyPools: {},
+    });
+    expect(summary.qualityDriftCandidates).toEqual([]);
+    expect(summary.cohortDriftFlags).toEqual([]);
   });
 });

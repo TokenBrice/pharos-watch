@@ -23,6 +23,23 @@ export const PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC = PENDLE_SUPPLEMENTAL_FETCH_C
 export const PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS = PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS * 2;
 export const SLOW_NAV_SOURCE_STALE_THRESHOLD_MS = 3 * DAY_MS;
 /**
+ * A supplemental family's post-dedupe candidate count below this share of its
+ * last accepted count is a count-drop strike. The first strike retains the
+ * published family row; the second consecutive strike names the family
+ * degraded. Retention never outlives the family's own freshness budget: once
+ * the confirmation window closes (or the retained row would read stale) the
+ * smaller snapshot publishes with its real clock while the family stays
+ * degraded. A family whose previous published count is zero has no baseline.
+ */
+export const SUPPLEMENTAL_FAMILY_COUNT_DROP_RATIO = 0.5;
+export const SUPPLEMENTAL_FAMILY_COUNT_DROP_CONFIRM_RUNS = 2;
+/**
+ * Consecutive runs holding the new lower level before it is accepted as the
+ * new baseline. Until then the run stays degraded and the operator watch stays
+ * raised; a recovery to the old level clears it immediately.
+ */
+export const SUPPLEMENTAL_FAMILY_COUNT_DROP_ACCEPT_RUNS = 6;
+/**
  * Freshness tiers are anchored on the cadence at which each source class
  * actually receives a new observation (B21; measured on the live payload
  * 2026-09-12, n=157):

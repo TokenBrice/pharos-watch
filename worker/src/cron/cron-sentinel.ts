@@ -45,7 +45,9 @@ export async function runCronSentinel(
   } else if (options.mode === "turnover") {
     sources.push({
       source: "turnover",
-      run: () => runDexExitRouteTurnoverWatchdog(db, options.signal),
+      run: () => runDexExitRouteTurnoverWatchdog(db, options.signal, {
+        operatorTelegramCreds: options.operatorTelegramCreds ?? null,
+      }),
     });
   } else {
     sources.push({

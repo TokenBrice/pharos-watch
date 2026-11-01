@@ -35,6 +35,7 @@ import { loadProbeOperatorWatch } from "./operator-watch-probe";
 import { buildPricingOperatorConditions, pricingOperatorRuleIds } from "./operator-watch-pricing";
 import { loadBlacklistConfigWatchConditions } from "./operator-watch-blacklist";
 import { loadMintBurnStuckConfigWatchConditions } from "./operator-watch-mintburn";
+import { loadDexYieldWatchConditions } from "./operator-watch-dex-yield";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
 // prune-cron-history deletes cron_runs rows older than one week. A producer
@@ -385,7 +386,7 @@ export interface OperatorWatchCondition {
   unknown?: boolean;
 }
 
-export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "supply" | "canary" | "probe" | "fx-rates" | "daily-lane";
+export type OperatorWatchSection = "producer" | "detail-write" | "dependency" | "safety-publication" | "supply" | "canary" | "probe" | "fx-rates" | "daily-lane" | "producer-quality";
 
 const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; recovered: string }> = {
   producer: { raised: "Stale producers", recovered: "Recovered producers" },
@@ -397,6 +398,7 @@ const OPERATOR_SECTION_TITLES: Record<OperatorWatchSection, { raised: string; re
   probe: { raised: "Probe paths persistently failing", recovered: "Probe paths recovered" },
   "fx-rates": { raised: "FX rate publication degraded", recovered: "FX rate publication recovered" },
   "daily-lane": { raised: "Daily pricing lanes incomplete", recovered: "Daily pricing lanes complete" },
+  "producer-quality": { raised: "Producer quality regressions", recovered: "Producer quality recovered" },
 };
 
 // Every section can raise and recover in one message: at most two lines per
@@ -620,11 +622,16 @@ export async function runCronStalenessWatchdog(
       return { ok: false as const, report: null, conditions: [] };
     },
   );
+  const dexYieldWatch = await loadDexYieldWatchConditions(db, nowSec, signal).catch((error: unknown) => {
+    rethrowIfAborted(error, signal);
+    return null;
+  });
   const unknownSections: OperatorWatchSection[] = [
     ...(safetyPublication.ok ? [] : ["safety-publication" as const]),
     ...(supplyWatch.ok ? [] : ["supply" as const]),
     ...(canaryWatch.unknown ? ["canary" as const] : []),
     ...(probeWatch.unknown ? ["probe" as const] : []),
+    ...(dexYieldWatch == null ? ["producer-quality" as const] : []),
   ];
   const pricingConditions = await buildPricingOperatorConditions(
     db,
@@ -637,6 +644,8 @@ export async function runCronStalenessWatchdog(
   ]);
   const blacklistConfigStale = blacklistConfigWatch.conditions.some((condition) => condition.active);
   const mintBurnConfigStuck = mintBurnStuckWatch.conditions.some((condition) => condition.active);
+  const producerQualityConditions = dexYieldWatch?.conditions ?? [];
+  const producerQualityActive = producerQualityConditions.filter((condition) => condition.active);
   const alertTransitions = await alertOnFreshnessTransitions({
     db,
     conditions: [
@@ -689,6 +698,7 @@ export async function runCronStalenessWatchdog(
       })),
       ...blacklistConfigWatch.conditions,
       ...mintBurnStuckWatch.conditions,
+      ...producerQualityConditions,
     ],
     unknownSections,
     nowSec,
@@ -706,6 +716,7 @@ export async function runCronStalenessWatchdog(
     ...(mintBurnConfigStuck ? ["mint-burn-config-stuck"] : []),
     ...(blacklistConfigWatch.readFailed ? ["blacklist-config-watch-unavailable"] : []),
     ...(mintBurnStuckWatch.readFailed ? ["mint-burn-config-watch-unavailable"] : []),
+    ...(producerQualityActive.length > 0 ? ["producer-quality-regression"] : []),
   ];
   const pendingTransition = (alertTransitions.stale.length > 0 || alertTransitions.recovered.length > 0)
     && !alertTransitions.sent;
@@ -730,7 +741,8 @@ export async function runCronStalenessWatchdog(
       || activeSupplyConditions.length > 0
       ? "degraded"
       : "ok",
-    itemCount: stale.length + detailWriteFailures.length + activeSupplyConditions.length + perConfigActiveCount,
+    itemCount: stale.length + detailWriteFailures.length + activeSupplyConditions.length
+      + perConfigActiveCount + producerQualityActive.length,
     metadata: JSON.stringify({
       ...(status.failures.length > 0 ? { reason: "freshness-evidence-read-failed" }
         : !supplyWatch.ok ? { reason: "supply-integrity-read-failed" }
@@ -749,6 +761,7 @@ export async function runCronStalenessWatchdog(
         ...activeSupplyConditions.map((condition) => `supply-${condition.id}`),
         ...(blacklistConfigStale ? ["blacklist-config-stale"] : []),
         ...(mintBurnConfigStuck ? ["mint-burn-config-stuck"] : []),
+        ...producerQualityActive.map((condition) => condition.id),
       ],
       canaryWatch: { active: canaryWatch.conditions.length, unknown: canaryWatch.unknown },
       probeWatch: { active: probeWatch.conditions.length, unknown: probeWatch.unknown },
@@ -769,6 +782,7 @@ export async function runCronStalenessWatchdog(
         : { status: "unknown", reason: "supply-integrity-read-failed" },
       blacklistConfigWatch,
       mintBurnStuckWatch,
+      producerQuality: producerQualityConditions,
       alertTransitions,
       dependencyRecoveryChecks,
       warnings: status.warnings,

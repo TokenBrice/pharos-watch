@@ -623,6 +623,19 @@ export const STATUS_YIELD_HEALTH_THRESHOLDS = {
   sourceRiskCoverageRatio: 0.75,
 } as const;
 
+/**
+ * Operator coverage watch for `sync-yield-data` (ADR-42: operators, not
+ * readers). A published cohort below the 90% budget of its persisted pre-event
+ * baseline for two consecutive generations is a quality regression; `ok` runs
+ * still publish the reduced cohort, so only a separate comparison can see it.
+ * `minBaselineCount` mirrors the producer guard's minimum cohort: a handful of
+ * opportunity rows is not a coverage claim.
+ */
+export const STATUS_YIELD_DATA_COVERAGE_WATCH = {
+  dropRatio: 0.9,
+  minBaselineCount: 10,
+} as const;
+
 // --- Telegram lifecycle snapshot cadence ---
 /**
  * Worker cadence (seconds) for refreshing the Telegram current-lifecycle snapshot.

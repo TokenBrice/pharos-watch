@@ -764,6 +764,87 @@ export function supplementalFamilySnapshotHash(row: { value: string; updatedAt: 
   return sha256Hex(row == null ? "missing" : JSON.stringify([row.updatedAt, row.value]));
 }
 
+const YIELD_SUPPLEMENTAL_COUNT_DROP_STATE_KEY = "yield:supplemental-source-count-drops:v1";
+
+/**
+ * Per-family count-drop state. Kept beside the family rows instead of inside
+ * the run outcome because the scheduled full-family run intentionally does not
+ * read the outcome row (a failed sibling-outcome read must never abort it).
+ * `baseline` is the last accepted (pre-drop) count, `strikes` counts consecutive
+ * dropping runs and `consistentRuns` counts consecutive runs that hold the new
+ * lower level after the retention window, until it is accepted as the baseline.
+ */
+export interface YieldSupplementalCountDropStateEntry {
+  baseline: number;
+  strikes: number;
+  consistentRuns: number;
+}
+
+export interface YieldSupplementalCountDropState {
+  families: Partial<Record<SupplementalSourceFamilyKey, YieldSupplementalCountDropStateEntry>>;
+}
+
+export function getYieldSupplementalCountDropStateCacheKey(): string {
+  return YIELD_SUPPLEMENTAL_COUNT_DROP_STATE_KEY;
+}
+
+export function buildYieldSupplementalCountDropState(
+  families: Partial<Record<SupplementalSourceFamilyKey, YieldSupplementalCountDropStateEntry>>,
+  checkedAt = Math.floor(Date.now() / 1000),
+): string {
+  return JSON.stringify({
+    version: YIELD_SUPPLEMENTAL_SOURCES_CACHE_VERSION,
+    checkedAt,
+    families: Object.fromEntries(
+      SUPPLEMENTAL_SOURCE_FAMILY_KEYS.flatMap((family) => {
+        const entry = families[family];
+        if (
+          entry == null
+          || !Number.isSafeInteger(entry.baseline) || entry.baseline <= 0
+          || !Number.isSafeInteger(entry.strikes) || entry.strikes < 0
+          || !Number.isSafeInteger(entry.consistentRuns) || entry.consistentRuns < 0
+        ) {
+          return [];
+        }
+        return [[family, entry] as const];
+      }),
+    ),
+  });
+}
+
+/** Missing or malformed state reads as "no drop": detection restarts, it never invents recovery. */
+export function parseYieldSupplementalCountDropState(
+  raw: string | null | undefined,
+): YieldSupplementalCountDropState {
+  if (!raw) return { families: {} };
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed) || parsed.version !== YIELD_SUPPLEMENTAL_SOURCES_CACHE_VERSION || !isRecord(parsed.families)) {
+      return { families: {} };
+    }
+    const families: Partial<Record<SupplementalSourceFamilyKey, YieldSupplementalCountDropStateEntry>> = {};
+    for (const family of SUPPLEMENTAL_SOURCE_FAMILY_KEYS) {
+      const entry = parsed.families[family];
+      if (!isRecord(entry)) continue;
+      if (
+        !Number.isSafeInteger(entry.baseline) || (entry.baseline as number) <= 0
+        || !Number.isSafeInteger(entry.strikes) || (entry.strikes as number) < 0
+        || !Number.isSafeInteger(entry.consistentRuns) || (entry.consistentRuns as number) < 0
+      ) {
+        continue;
+      }
+      families[family] = {
+        baseline: entry.baseline as number,
+        strikes: entry.strikes as number,
+        consistentRuns: entry.consistentRuns as number,
+      };
+    }
+    return { families };
+  } catch {
+    return { families: {} };
+  }
+}
+
 /** PENDLE-RL: machine-readable cause recorded when the unkeyed quota backoff degrades the family. */
 export const PENDLE_RATE_LIMIT_BACKOFF_REASON = "pendle-rate-limited-backoff";
 

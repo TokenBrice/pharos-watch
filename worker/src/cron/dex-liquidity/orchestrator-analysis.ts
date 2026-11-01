@@ -149,6 +149,21 @@ function parsePreviousCronRows(
   return parsedRows;
 }
 
+/** `chain_tvl_json` is written by persistence; malformed/absent history skips the cohort comparison. */
+function parsePreviousChainTvl(value: string | null | undefined): Record<string, number> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (parsed == null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const entries = Object.entries(parsed as Record<string, unknown>);
+    if (entries.length === 0) return null;
+    if (!entries.every(([, tvl]) => typeof tvl === "number" && Number.isFinite(tvl) && tvl >= 0)) return null;
+    return Object.fromEntries(entries) as Record<string, number>;
+  } catch {
+    return null;
+  }
+}
+
 /** Trailing window (productive published runs) used for the coverage/value guard baselines. */
 const GUARD_BASELINE_RUNS = 6;
 
@@ -361,9 +376,9 @@ export async function analyzeDexLiquidityPostScoring(params: {
       .first<{ cnt: number }>(),
     params.db
       .prepare(
-        `SELECT total_tvl_usd, updated_at FROM dex_liquidity WHERE stablecoin_id = '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
+        `SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__' AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
       )
-      .first<{ total_tvl_usd: number | null; updated_at: number | null }>(),
+      .first<{ total_tvl_usd: number | null; chain_tvl_json: string | null; updated_at: number | null }>(),
     params.db
       .prepare(
         `SELECT coverage_class, COUNT(*) as cnt
@@ -728,6 +743,10 @@ export async function analyzeDexLiquidityPostScoring(params: {
       [...(previousTopCoverageRows ?? []), ...(previousCoinTvlRows ?? [])]
         .map((row) => [row.stablecoin_id, row.total_tvl_usd]),
     ),
+    previousChainTvl: parsePreviousChainTvl(previousGlobalRow?.chain_tvl_json),
+    currentChainTvl: params.globalAgg.chainTvl,
+    previousSourceFamilyPools: previousDriftBaseline.summary?.retainedPoolCountBySourceFamily ?? null,
+    currentSourceFamilyPools: retainedPoolCountBySourceFamily,
   });
 
   return {
@@ -802,6 +821,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       globalProtocolOverCapUsd: params.diagnostics.globalProtocolOverCapUsd,
       protocolTvlQuarantine: { ...params.diagnostics.protocolTvlQuarantine },
       qualityDriftFlags: driftSummary.qualityDriftFlags,
+      cohortDriftFlags: driftSummary.cohortDriftFlags,
       qualityDriftCandidates: driftSummary.qualityDriftCandidates,
       qualityDriftRebaselined: driftSummary.qualityDriftRebaselined,
       qualityDriftSeverity: driftSummary.qualityDriftSeverity,

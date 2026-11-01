@@ -33,6 +33,27 @@ export interface DexDeploymentOutcomeWrite {
   observedAt: number;
 }
 
+/** A deployment that was certified non-empty and is now certified empty. */
+export interface DexDeploymentCensusFlip {
+  stablecoinId: string;
+  chain: string;
+  address: string;
+  providers: string[];
+}
+
+export interface DexDeploymentOutcomeWriteDiagnostics {
+  censusFlips: DexDeploymentCensusFlip[];
+  /** The prior-outcome read failed: flips are unknown, not absent (R2). */
+  censusFlipReadFailed: boolean;
+}
+
+interface PriorDeploymentOutcomeRow {
+  stablecoin_id: string;
+  chain: string;
+  contract_address: string;
+  outcome: DexDeploymentOutcome;
+}
+
 const UPSERT_OUTCOME_SQL = `INSERT INTO dex_deployment_outcomes
   (stablecoin_id, chain, contract_address, outcome, provider_set_json, reason,
    observed_pool_count, observed_at, waiver_owner, waiver_reason, waiver_expires_at)
@@ -217,12 +238,58 @@ export function buildFailedCrawlDeploymentOutcomes(params: {
   });
 }
 
+/**
+ * A completed-empty answer only certifies emptiness when the deployment was not
+ * just observed with pools. The prior read is scoped to the coins in this batch
+ * (one indexed statement per upsert call); its failure leaves flips unknown so
+ * the producer still publishes, never claiming a clean census.
+ */
+async function collectDeploymentCensusFlips(
+  db: D1Database,
+  outcomes: readonly DexDeploymentOutcomeWrite[],
+  diagnostics: DexDeploymentOutcomeWriteDiagnostics,
+): Promise<void> {
+  if (!outcomes.some((outcome) => outcome.outcome === "verified_no_pools")) return;
+  const stablecoinIds = [...new Set(outcomes.map((outcome) => outcome.stablecoinId))];
+  try {
+    const rows = await db
+      .prepare(
+        `SELECT stablecoin_id, chain, contract_address, outcome
+           FROM dex_deployment_outcomes
+          WHERE stablecoin_id IN (${stablecoinIds.map(() => "?").join(", ")})`,
+      )
+      .bind(...stablecoinIds)
+      .all<PriorDeploymentOutcomeRow>();
+    const priorOutcomeByKey = new Map(
+      (rows.results ?? []).map((row) => [
+        `${row.stablecoin_id}|${row.chain}|${row.contract_address}`,
+        row.outcome,
+      ]),
+    );
+    for (const outcome of outcomes) {
+      if (outcome.outcome !== "verified_no_pools") continue;
+      const address = canonicalExitRouteScopedId(outcome.chain, outcome.address);
+      if (priorOutcomeByKey.get(`${outcome.stablecoinId}|${outcome.chain}|${address}`) !== "observed_pools") continue;
+      diagnostics.censusFlips.push({
+        stablecoinId: outcome.stablecoinId,
+        chain: outcome.chain,
+        address,
+        providers: outcome.providers,
+      });
+    }
+  } catch {
+    diagnostics.censusFlipReadFailed = true;
+  }
+}
+
 export async function upsertDexDeploymentOutcomes(
   db: D1Database,
   outcomes: readonly DexDeploymentOutcomeWrite[],
   signal?: AbortSignal,
+  diagnostics?: DexDeploymentOutcomeWriteDiagnostics,
 ): Promise<number> {
   if (outcomes.length === 0) return 0;
+  if (diagnostics) await collectDeploymentCensusFlips(db, outcomes, diagnostics);
   const statements = outcomes.flatMap((outcome) => {
     const waiver = getActiveDexCoverageWaiver(outcome.stablecoinId, outcome.chain, outcome.observedAt);
     const address = canonicalExitRouteScopedId(outcome.chain, outcome.address);

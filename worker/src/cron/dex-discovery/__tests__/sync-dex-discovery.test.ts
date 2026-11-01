@@ -158,6 +158,48 @@ describe("syncDexDiscovery", () => {
     }));
   });
 
+  it("degrades and names the provider when two deployments flip to verified-empty", async () => {
+    const nowSec = 1_700_000_000;
+    vi.mocked(crawlCoin).mockResolvedValueOnce({
+      pools: [],
+      unresolvedChains: [],
+      checkedDeploymentKeys: [],
+      deploymentOutcomes: [
+        {
+          stablecoinId: "coin-a", chain: "ethereum", address: "0xaaa", outcome: "verified_no_pools",
+          providers: ["coingecko"], reason: "empty", observedPoolCount: 0, observedAt: nowSec,
+        },
+        {
+          stablecoinId: "coin-a", chain: "ethereum", address: "0xbbb", outcome: "verified_no_pools",
+          providers: ["coingecko"], reason: "empty", observedPoolCount: 0, observedAt: nowSec,
+        },
+      ],
+    });
+    // The first upsert is the static-inaccessible batch; the crawl batch
+    // carries the diagnostics collector.
+    vi.mocked(upsertDexDeploymentOutcomes)
+      .mockImplementationOnce(async (_db, rows) => rows.length)
+      .mockImplementationOnce(async (_db, rows, _signal, diagnostics) => {
+        for (const row of rows) {
+          diagnostics?.censusFlips.push({
+            stablecoinId: row.stablecoinId,
+            chain: row.chain,
+            address: row.address,
+            providers: row.providers,
+          });
+        }
+        return rows.length;
+      });
+
+    const result = await syncDexDiscovery(db, null);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toBe("dex-discovery-census-collapse");
+    expect(metadata.quality.reasons).toContain("dex-discovery-census-collapse:coingecko");
+    expect(metadata.censusFlipProviderCounts).toEqual({ coingecko: 2 });
+  });
+
   it("prioritizes due supplemental refresh even when the weekly cohort is ineligible", async () => {
     const refreshDb = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [
       { stablecoin_id: "coin-b", pool_count: 20, chain_count: 4, has_supplemental_coverage: 1 },
@@ -491,6 +533,7 @@ describe("syncDexDiscovery", () => {
       db,
       [expect.objectContaining({ outcome: "observed_pools", observedAt: 1_700_000_000 })],
       undefined,
+      expect.anything(),
     );
     expect(updateDiscoveryMeta).not.toHaveBeenCalled();
 
@@ -538,7 +581,7 @@ describe("syncDexDiscovery", () => {
       const result = await syncDexDiscovery(db, null);
 
       expect(result.status).toBe("degraded");
-      expect(upsertDexDeploymentOutcomes).toHaveBeenLastCalledWith(db, [row], undefined);
+      expect(upsertDexDeploymentOutcomes).toHaveBeenLastCalledWith(db, [row], undefined, expect.anything());
       expect(updateDiscoveryMeta).not.toHaveBeenCalled();
       expect(cleanupStaging).not.toHaveBeenCalled();
       expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({

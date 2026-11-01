@@ -366,6 +366,7 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
       mode: "turnover",
       signal: expect.any(AbortSignal),
+      operatorTelegramCreds: null,
     });
   });
 
@@ -399,6 +400,7 @@ describe("half-hourly charts scheduling", () => {
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
       mode: "turnover",
       signal: expect.any(AbortSignal),
+      operatorTelegramCreds: null,
     });
   });
 
