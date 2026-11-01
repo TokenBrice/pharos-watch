@@ -389,14 +389,18 @@ describe("syncYieldSupplemental", () => {
       expect(result.status).toBeUndefined();
     });
 
-    it("still fetches when the lane-state read fails", async () => {
+    it("fails closed when the retained family baseline cannot be read", async () => {
       vi.mocked(getCaches).mockRejectedValueOnce(new Error("d1 unavailable"));
       vi.mocked(fetchMorphoVaultSources).mockResolvedValue(healthyFamilyFetch([beefyCandidate()]));
 
       const result = await syncYieldSupplemental({} as D1Database);
 
-      expect(fetchPendleMarketSources).toHaveBeenCalledTimes(1);
-      expect(result.status).toBeUndefined();
+      expect(fetchPendleMarketSources).not.toHaveBeenCalled();
+      expect(setCacheIfNewer).not.toHaveBeenCalled();
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        reason: "retained-family-state-unavailable",
+      });
     });
 
     it("degrades with the machine-readable reason while the stale retained row waits out an active backoff", async () => {

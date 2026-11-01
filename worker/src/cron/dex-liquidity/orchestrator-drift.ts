@@ -267,6 +267,32 @@ export function computeDexLiquidityDriftSummary(params: {
     }
   };
 
+  /**
+   * Cohorts come from the previous published generation plus any carried
+   * candidate. A cohort that already collapsed below the materiality floor (or
+   * vanished from the published map) is invisible there, so its carried
+   * pre-event baseline is the one the floor must admit.
+   */
+  const cohortBaselines = (
+    previous: Record<string, number> | null | undefined,
+    flagPrefix: string,
+    minBaseline: number,
+  ): Map<string, number> => {
+    const baselines = new Map<string, number>();
+    for (const [key, value] of Object.entries(previous ?? {})) {
+      if (!Number.isFinite(value) || value < minBaseline) continue;
+      baselines.set(key, value);
+    }
+    for (const candidate of params.previousCandidates) {
+      if (!candidate.flag.startsWith(flagPrefix)) continue;
+      const key = candidate.flag.slice(flagPrefix.length);
+      if (key.length === 0 || !Number.isFinite(candidate.baselineValue)) continue;
+      if (candidate.baselineValue < minBaseline) continue;
+      if (!baselines.has(key)) baselines.set(key, candidate.baselineValue);
+    }
+    return baselines;
+  };
+
   const watchlistDeltas = DRIFT_WATCHLIST.map((stablecoinId) => {
     const previous = params.watchlistPreviousById.get(stablecoinId);
     const currentScore = params.scoreResults.get(stablecoinId);
@@ -385,32 +411,32 @@ export function computeDexLiquidityDriftSummary(params: {
     );
   }
 
-  if (
-    params.previousChainTvl != null && params.currentChainTvl != null
-    && Object.keys(params.currentChainTvl).length > 0
-  ) {
-    for (const [chain, previousTvl] of Object.entries(params.previousChainTvl)) {
-      if (!Number.isFinite(previousTvl) || previousTvl < COHORT_CHAIN_MIN_PREVIOUS_TVL_USD) continue;
+  if (params.currentChainTvl != null && Object.keys(params.currentChainTvl).length > 0) {
+    for (const [chain, baseline] of cohortBaselines(
+      params.previousChainTvl,
+      CHAIN_TVL_DROP_FLAG_PREFIX,
+      COHORT_CHAIN_MIN_PREVIOUS_TVL_USD,
+    )) {
       const currentTvl = params.currentChainTvl[chain] ?? 0;
       confirmCohortCondition(
         `${CHAIN_TVL_DROP_FLAG_PREFIX}${chain}`,
-        previousTvl,
+        baseline,
         currentTvl,
         (baselineValue) => currentTvl < baselineValue * (1 - COHORT_DROP_RATIO),
       );
     }
   }
 
-  if (
-    params.previousSourceFamilyPools != null && params.currentSourceFamilyPools != null
-    && Object.keys(params.currentSourceFamilyPools).length > 0
-  ) {
-    for (const [family, previousPools] of Object.entries(params.previousSourceFamilyPools)) {
-      if (!Number.isFinite(previousPools) || previousPools < COHORT_SOURCE_FAMILY_MIN_PREVIOUS_POOLS) continue;
+  if (params.currentSourceFamilyPools != null && Object.keys(params.currentSourceFamilyPools).length > 0) {
+    for (const [family, baseline] of cohortBaselines(
+      params.previousSourceFamilyPools,
+      SOURCE_FAMILY_DROP_FLAG_PREFIX,
+      COHORT_SOURCE_FAMILY_MIN_PREVIOUS_POOLS,
+    )) {
       const currentPools = params.currentSourceFamilyPools[family] ?? 0;
       confirmCohortCondition(
         `${SOURCE_FAMILY_DROP_FLAG_PREFIX}${family}`,
-        previousPools,
+        baseline,
         currentPools,
         (baselineValue) => currentPools < baselineValue * (1 - COHORT_DROP_RATIO),
       );

@@ -228,6 +228,18 @@ export async function syncYieldSupplemental(
     return null;
   });
   signal?.throwIfAborted();
+  if (retainedFamilyRows == null) {
+    // The retained family rows are this run's only count-drop baseline. A failed
+    // read cannot mean "no drop": publishing would overwrite a collapsed
+    // snapshot as the new baseline and hide the loss from the next run.
+    const reason = "retained-family-state-unavailable";
+    return {
+      status: "degraded",
+      itemCount: 0,
+      metadata: JSON.stringify({ reason, syncStartSec: startSec }),
+      productivity: { productive: false, reason },
+    };
+  }
   const familySnapshotHashes: Partial<Record<SupplementalSourceFamilyKey, string>> = retainedFamilyRows
     ? Object.fromEntries(families.map((family) => [
       family, supplementalFamilySnapshotHash(retainedFamilyRows.get(getYieldSupplementalFamilyCacheKey(family)) ?? null),

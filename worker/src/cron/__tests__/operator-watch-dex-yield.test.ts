@@ -28,7 +28,16 @@ function fakeDb(options: {
   const allFor = async (sql: string) => {
     if (options.failQuery && sql.includes(options.failQuery)) throw new Error("d1 down");
     if (sql.includes("'sync-yield-data'")) return { results: options.yieldRuns ?? [] };
-    if (sql.includes("'sync-cl-exit-depth'")) return { results: options.measuredRuns ?? [] };
+    if (sql.includes("'sync-cl-exit-depth'")) {
+      const rows = options.measuredRuns ?? [];
+      // The production query keeps only active-lane generations; apply the same
+      // predicate only when the query actually asks for the lane.
+      return {
+        results: sql.includes("$.lane")
+          ? rows.filter((row) => (row as { lane?: string }).lane !== "shadow")
+          : rows,
+      };
+    }
     return { results: [] };
   };
   const runFor = async (sql: string, args: unknown[]) => {
@@ -59,6 +68,7 @@ function yieldRow(counts: {
   tracked?: number | null;
   opportunity?: number | null;
   reasons?: string[];
+  metadataValid?: number;
 }) {
   return {
     started_at: 1_700_000_000,
@@ -66,6 +76,7 @@ function yieldRow(counts: {
     published_tracked_count: counts.tracked ?? 200,
     published_opportunity_count: counts.opportunity ?? 40,
     quality_reasons: counts.reasons ? JSON.stringify(counts.reasons) : null,
+    metadata_valid: counts.metadataValid ?? 1,
   };
 }
 
@@ -143,7 +154,23 @@ describe("dex/yield operator watch", () => {
       .toBe(true);
     // A sibling detector whose own read succeeded keeps its own evidence.
     expect(result.conditions.find((condition) => condition.id === "measured-execution-chain-coverage"))
-      .toMatchObject({ active: false });
+      .toMatchObject({ active: false, unknown: true });
+  });
+
+  it("reports the supplemental family unknown when no successful yield generation exists", async () => {
+    const { db } = fakeDb({ yieldRuns: [] });
+    const result = await loadYieldDataCoverageWatch(db, 1_700_000_000);
+    expect(result.conditions.find((condition) => condition.id === "yield-supplemental-family-degraded"))
+      .toMatchObject({ active: false, unknown: true });
+  });
+
+  it("reports the supplemental family unknown when the latest metadata is unreadable", async () => {
+    const { db } = fakeDb({
+      yieldRuns: [{ ...yieldRow({ rankings: 90 }), metadata_valid: 0 }],
+    });
+    const result = await loadYieldDataCoverageWatch(db, 1_700_000_000);
+    expect(result.conditions.find((condition) => condition.id === "yield-supplemental-family-degraded"))
+      .toMatchObject({ active: false, unknown: true });
   });
 
   it("flags a chain with score-eligible targets and no measured quote across two generations", async () => {
@@ -171,6 +198,36 @@ describe("dex/yield operator watch", () => {
     expect(result.conditions[0]).toMatchObject({ active: false });
   });
 
+  it("does not flag chains whose targets were budget-deferred at production scale", async () => {
+    const deferredChains = Object.fromEntries(
+      ["base", "ethereum", "arbitrum", "polygon", "bsc", "optimism"].map((chain) => [
+        chain,
+        { scoreEligibleTargets: 60, measured: 0, failed: 0, deferred: 60 },
+      ]),
+    );
+    const { db } = fakeDb({
+      measuredRuns: [
+        { started_at: 2, lane: "active", chains_json: JSON.stringify(deferredChains) },
+        { started_at: 1, lane: "active", chains_json: JSON.stringify(deferredChains) },
+      ],
+    });
+    const result = await loadMeasuredExecutionChainWatch(db);
+    expect(result.conditions[0]).toMatchObject({ active: false });
+    expect(result.conditions[0].unknown).toBeUndefined();
+  });
+
+  it("does not flag a chain whose zero is partly explained by budget deferrals", async () => {
+    const chains = { base: { scoreEligibleTargets: 10, measured: 0, failed: 2, deferred: 8 } };
+    const { db } = fakeDb({
+      measuredRuns: [
+        { started_at: 2, lane: "active", chains_json: JSON.stringify(chains) },
+        { started_at: 1, lane: "active", chains_json: JSON.stringify(chains) },
+      ],
+    });
+    const result = await loadMeasuredExecutionChainWatch(db);
+    expect(result.conditions[0]).toMatchObject({ active: false });
+  });
+
   it("reports unknown when chain evidence is missing from a generation", async () => {
     const { db } = fakeDb({
       measuredRuns: [
@@ -180,5 +237,39 @@ describe("dex/yield operator watch", () => {
     });
     const result = await loadMeasuredExecutionChainWatch(db);
     expect(result.conditions[0]).toMatchObject({ active: false, unknown: true });
+  });
+
+  it("reports unknown when a generation carries no chain evidence", async () => {
+    const { db } = fakeDb({
+      measuredRuns: [
+        { started_at: 2, chains_json: "{}" },
+        { started_at: 1, chains_json: "{}" },
+      ],
+    });
+    const result = await loadMeasuredExecutionChainWatch(db);
+    expect(result.conditions[0]).toMatchObject({ active: false, unknown: true });
+  });
+
+  it("reports unknown until two active generations exist", async () => {
+    const chains = { base: { scoreEligibleTargets: 4, measured: 2, failed: 2, deferred: 0 } };
+    const { db } = fakeDb({
+      measuredRuns: [{ started_at: 1, lane: "active", chains_json: JSON.stringify(chains) }],
+    });
+    const result = await loadMeasuredExecutionChainWatch(db);
+    expect(result.conditions[0]).toMatchObject({ active: false, unknown: true });
+  });
+
+  it("pairs active generations instead of the daily shadow generation", async () => {
+    const starved = { base: { scoreEligibleTargets: 4, measured: 0, failed: 4, deferred: 0 } };
+    const { db } = fakeDb({
+      measuredRuns: [
+        { started_at: 3, lane: "shadow", chains_json: "{}" },
+        { started_at: 2, lane: "active", chains_json: JSON.stringify(starved) },
+        { started_at: 1, lane: "active", chains_json: JSON.stringify(starved) },
+      ],
+    });
+    const result = await loadMeasuredExecutionChainWatch(db);
+    expect(result.conditions[0]).toMatchObject({ active: true });
+    expect(result.conditions[0].label).toContain("base 0/4");
   });
 });

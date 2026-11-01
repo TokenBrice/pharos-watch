@@ -442,6 +442,64 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     expect(confirmed.cohortDriftFlags).toEqual(["source-family-drop:gecko_terminal"]);
   });
 
+  it("confirms a chain loss that collapses below the materiality floor after the first run", () => {
+    const first = cohort({
+      previousChainTvl: { base: 5_000_000 },
+      currentChainTvl: { base: 500_000 },
+    });
+    expect(first.qualityDriftCandidates).toEqual([
+      { flag: "chain-tvl-drop:base", consecutiveRuns: 1, baselineValue: 5_000_000, observedValue: 500_000 },
+    ]);
+
+    const confirmed = cohort({
+      previousCandidates: first.qualityDriftCandidates,
+      previousChainTvl: { base: 500_000 },
+      currentChainTvl: { base: 500_000 },
+    });
+    expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:base"]);
+    expect(confirmed.cohortDriftFlags).toEqual(["chain-tvl-drop:base"]);
+  });
+
+  it("keeps a carried chain candidate when the chain vanishes from the published map", () => {
+    const first = cohort({
+      previousChainTvl: { base: 5_000_000, ethereum: 20_000_000 },
+      currentChainTvl: { base: 500_000, ethereum: 20_000_000 },
+    });
+    const confirmed = cohort({
+      previousCandidates: first.qualityDriftCandidates,
+      previousChainTvl: { ethereum: 20_000_000 },
+      currentChainTvl: { ethereum: 20_000_000 },
+    });
+    expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:base"]);
+  });
+
+  it("keeps a carried chain candidate when the previous published map is unavailable", () => {
+    const first = cohort({
+      previousChainTvl: { base: 5_000_000 },
+      currentChainTvl: { base: 500_000 },
+    });
+    const confirmed = cohort({
+      previousCandidates: first.qualityDriftCandidates,
+      previousChainTvl: null,
+      currentChainTvl: { base: 500_000 },
+    });
+    expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:base"]);
+  });
+
+  it("confirms a source-family collapse that falls below the materiality floor after the first run", () => {
+    const first = cohort({
+      previousSourceFamilyPools: { gecko_terminal: 40, dl: 3 },
+      currentSourceFamilyPools: { gecko_terminal: 3, dl: 0 },
+    });
+    const confirmed = cohort({
+      previousCandidates: first.qualityDriftCandidates,
+      previousSourceFamilyPools: { gecko_terminal: 3, dl: 0 },
+      currentSourceFamilyPools: { gecko_terminal: 3, dl: 0 },
+    });
+    expect(confirmed.qualityDriftFlags).toEqual(["source-family-drop:gecko_terminal"]);
+    expect(confirmed.cohortDriftFlags).toEqual(["source-family-drop:gecko_terminal"]);
+  });
+
   it("skips the comparison when prior evidence is unavailable", () => {
     const summary = cohort({
       previousChainTvl: null,

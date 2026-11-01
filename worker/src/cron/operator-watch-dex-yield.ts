@@ -37,6 +37,7 @@ interface YieldCoverageRow {
   published_tracked_count: number | null;
   published_opportunity_count: number | null;
   quality_reasons: string | null;
+  metadata_valid: number | null;
 }
 
 const YIELD_COVERAGE_SERIES = [
@@ -129,7 +130,8 @@ export async function loadYieldDataCoverageWatch(
                       CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.sourceCoverage.publishedRankingCount') END AS published_ranking_count,
                       CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.sourceCoverage.publishedYieldBearingCount') END AS published_tracked_count,
                       CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.sourceCoverage.publishedOpportunityCount') END AS published_opportunity_count,
-                      CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.quality.reasons') END AS quality_reasons
+                      CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.quality.reasons') END AS quality_reasons,
+                      CASE WHEN json_valid(metadata) THEN 1 ELSE 0 END AS metadata_valid
                  FROM cron_runs
                 WHERE job = 'sync-yield-data' AND status = 'ok'
                 ORDER BY started_at DESC, id DESC
@@ -153,9 +155,8 @@ export async function loadYieldDataCoverageWatch(
   const degradedFamilies = (familyReasons ?? [])
     .filter((reason) => reason.startsWith("yield-supplemental:family-degraded:"))
     .map((reason) => reason.slice("yield-supplemental:family-degraded:".length));
-  const familyCondition: DexYieldWatchCondition = !latest
-    ? { section: "producer-quality", id: "yield-supplemental-family-degraded", active: false }
-    : familyReasons == null
+  const familyCondition: DexYieldWatchCondition =
+    latest == null || latest.metadata_valid !== 1 || familyReasons == null
       ? unknownFamilies()
       : {
           section: "producer-quality",
@@ -279,6 +280,10 @@ export async function loadMeasuredExecutionChainWatch(
                     CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.chains') END AS chains_json
                FROM cron_runs
               WHERE job = 'sync-cl-exit-depth' AND status IN ('ok', 'degraded')
+                AND COALESCE(
+                      CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.lane') END,
+                      'active'
+                    ) <> 'shadow'
               ORDER BY started_at DESC, id DESC
               LIMIT 2`,
           )
@@ -295,11 +300,17 @@ export async function loadMeasuredExecutionChainWatch(
   const latest = rows[0] ?? null;
   const previous = rows[1] ?? null;
   if (latest == null || previous == null) {
-    return condition({ id: "measured-execution-chain-coverage", active: false });
+    return condition({ id: "measured-execution-chain-coverage", active: false, unknown: true });
   }
   const latestChains = parseMeasuredExecutionChains(latest.chains_json);
   const previousChains = parseMeasuredExecutionChains(previous.chains_json);
-  if (latestChains == null || previousChains == null) {
+  // An empty map means no score-eligible target was observed, so the pair
+  // cannot establish starvation. Treat absent evidence as unknown, never as a
+  // healthy generation.
+  if (
+    latestChains == null || previousChains == null
+    || Object.keys(latestChains).length === 0 || Object.keys(previousChains).length === 0
+  ) {
     return condition({ id: "measured-execution-chain-coverage", active: false, unknown: true });
   }
   const starved: string[] = [];
@@ -307,6 +318,11 @@ export async function loadMeasuredExecutionChainWatch(
     const prior = previousChains[chain];
     if (!prior) continue;
     if (current.scoreEligibleTargets === 0 || prior.scoreEligibleTargets === 0) continue;
+    // Budget deferrals are the producer's designed admission rotation, not
+    // starvation. The pair proves starvation only when both generations
+    // attempted every score-eligible target and none measured.
+    if (current.deferred > 0 || prior.deferred > 0) continue;
+    if (current.failed === 0 || prior.failed === 0) continue;
     if (current.measured > 0 || prior.measured > 0) continue;
     starved.push(`${chain} 0/${current.scoreEligibleTargets}`);
   }

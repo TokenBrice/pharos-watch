@@ -2,6 +2,7 @@
 
 Triggered by:
 - `sync-yield-supplemental` returning `degraded` with `fallbackMode: "empty-snapshot"`
+- `sync-yield-supplemental` returning `degraded` with `reason: "retained-family-state-unavailable"` after the retained family/count-drop read failed; the run publishes nothing
 - `sync-yield-data` metadata `sourceCoverage.supplementalSourceMode` is `unavailable` or `stale-cache`
 - Optional family rows disappear; `SUPPLEMENTAL_SOURCE_FAMILY_KEYS` owns the current family roster
 - The run-outcome row `yield:supplemental-source-run:v1` names `degradedFamilies`; publication findings appear in `metadata.quality`
