@@ -331,10 +331,14 @@ function refineCardBase(
   const hasExcludedCauses = (card.partialEvidence?.causes.length ?? 0) > 0;
   // A/B exclusions can affect a subcomponent, constraint, or parent while
   // leaving every pillar usable; they do not require a whole-pillar exclusion.
+  // Every published A/B cause names its causal gaps (R4). The component
+  // inventory stays optional: a mixed-cause status on a component that remains
+  // scored, a pillar-level status gap that owns no component, and an unscored
+  // Exit admission or confidence factor all exclude A/B evidence without a
+  // priced component, and the model never manufactures one.
   if ((hasExcludedAB && !hasExcludedCauses) ||
-      (hasExcludedCauses && ((card.partialEvidence?.causeGapRefs.length ?? 0) === 0 ||
-        (card.partialEvidence?.excludedComponentKeys.length ?? 0) === 0))) {
-    ctx.addIssue({ code: "custom", path: ["partialEvidence", "causes"], message: "A/B exclusions require partial-evidence causes, component keys, and gap references" });
+      (hasExcludedCauses && (card.partialEvidence?.causeGapRefs.length ?? 0) === 0)) {
+    ctx.addIssue({ code: "custom", path: ["partialEvidence", "causes"], message: "A/B exclusions require partial-evidence causes and gap references" });
   }
   if (excludedPillars.some((pillar) => card.pillars[pillar].causeGapRefs?.some((ref) => !card.partialEvidence?.causeGapRefs.includes(ref)))) {
     ctx.addIssue({ code: "custom", path: ["partialEvidence"], message: "Excluded pillar gaps must remain visible in partial evidence" });

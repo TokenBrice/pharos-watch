@@ -18,7 +18,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
-      "sha256": "21c2f76858233f7bf46028903c22ea4269fc66ef859ad335c4e3b384e5858e59"
+      "sha256": "b478a1e2b0b51f0cc07a70b6ba3c052c94518a979bbb506dc8d1a8b81bacfc69"
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
@@ -26,11 +26,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/incident-reviews-v1.json",
-      "sha256": "192afd0cb9f91fa2c36071ada653843c490fe2fd1962b38e15b382c4d258a157"
+      "sha256": "12dcc36d4b6b8edb58f0adf36bc17f465379bdc83b49aad94ae105b9e18da46f"
     },
     {
       "path": "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
-      "sha256": "53351151d2157b8600215dac8458a05b5875ebc8e92cce3b94902408956e162a"
+      "sha256": "860e1371d372f8a7492ac06252343ade13c9d200dc9cb739be93b60b48da5d54"
     },
     {
       "path": "shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json",
@@ -1010,7 +1010,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-public.ts",
-      "sha256": "8fa2aa74fc7f616d4c91e6e1d201af8ab88929b5d26abd03d99cdb1a2d135a1b"
+      "sha256": "a2a4063eb298c78bc3fff2431e74955583a595cfcbc99c2ad18b70d8d17e01b6"
     },
     {
       "path": "shared/types/safety-score-v9-publication-response.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-31-block-26311905-shock-coverage.json.gz"
     }
   ],
-  "digest": "fe093c4fc92b5a1613ab052a7e0b57a730aa034151e1010c10e74ec18525c187"
+  "digest": "be96d721e5438f2ee94b11a10fda6630e43143906e56eb263931e67bf4a75461"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

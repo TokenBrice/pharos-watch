@@ -1118,6 +1118,24 @@ describe("Safety Score v9 public projection", () => {
     expect(card.breakdowns?.control.components[0]?.score).toBe(94);
     expect(SafetyScoreV9CurrentCardSchema.safeParse({ ...card, grade: "NR" }).success).toBe(false);
   });
+  it("projects an A/B exclusion that owns no priced component", () => {
+    const input = fixture("b-awaiting-curation", { score: 70, grade: "B" });
+    input.trace.partialEvidence = {
+      reasonCode: "partial-evidence-pipeline-gap",
+      excludedPillars: [],
+      excludedComponentKeys: [],
+      causeGapIds: ["control:gap:economic-control:oracle"],
+      causes: ["B"],
+    };
+    input.reasonCodes = ["partial-evidence-pipeline-gap"];
+    const { card } = projectSafetyScoreV9Card(input);
+    expect(card.partialEvidence).toMatchObject({
+      excludedPillars: [], excludedComponentKeys: [], causes: ["B"],
+    });
+    expect(card.partialEvidence?.causeGapRefs).toHaveLength(1);
+    expect(card.ratingStatus).toBe("rated");
+    expect(SafetyScoreV9CurrentCardSchema.safeParse(card).success).toBe(true);
+  });
   it.each([false, true])("projects unavailable pillars with optional diagnostic gaps (%s)", (withDiagnostic) => {
     const input = fixture("unavailable", {
       score: null, grade: null, pillars: { backing: null, exit: null, control: 94 },

@@ -29,7 +29,7 @@ describe("reviewed registry provenance identity", () => {
     const eagerIncidents = buildIncidentRuntime(V9AuthoredIncidentRegistryEnvelopeSchema.parse(incidents));
     expect(SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST).toBe(eagerIncidents.digest);
     // Deliberate incident curation rotates this independent full-file pin.
-    expect(eagerIncidents.digest).toBe("b85a678276f342b7473c195cd80c425d1dcc3fb669a04f64e7a6ff6843cc79c8");
+    expect(eagerIncidents.digest).toBe("a24d0a87016868611d9728fbe3ceb7fd9d45fae7d56f7b535dd742b737a983c7");
     expect(SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.mechanism-review-overlays.v1", overlays: SafetyScoreV9MechanismReviewOverlayFileSchema.parse(mechanism) })));
     expect(computeSafetyScoreV9ReviewedTransferFactsDigest()).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.reviewed-transfer-overlays.v1", schemaVersion: 1, reviews: SafetyScoreV9ReviewedTransferFileSchema.parse(transfer).reviews.sort((a, b) => compareText(a.assetId, b.assetId)) })));
   });
@@ -56,7 +56,7 @@ describe("reviewed registry provenance identity", () => {
     });
     expect(V9EvidenceGapClassificationsV1Schema.parse(expanded).entries).toHaveLength(gaps.entries.length);
     // Full authored-registry identity pin; deliberate curation rotates this snapshot.
-    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("83f44d22d252bfd5ab8851dd5c8e1ad479c5c9df438844d9f12c8f383c4e7c60");
+    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("d2e13516a6da3cdae213e06cd274d3938f138f8eddf293441a3101e29cf2fcc3");
     expect(V9EvidenceGapClassificationsV1Schema.safeParse(gaps).success).toBe(false);
   });
 
