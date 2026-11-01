@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.99",
+    "title": "Plain Curve StableSwap-NG pools admitted from on-chain stored rates",
+    "date": "2026-11-01",
+    "effectiveAt": 1793491200,
+    "summary": "Curve StableSwap-NG pools whose source token USD references spread beyond the 1% source-stage bound are no longer refused as rate-bearing by that proxy alone. A fresh same-block stored_rates() capture now decides: base-only rates prove the pool is plain and admit the same exact on-chain reserve model with rate factor 1, while a non-base rate keeps the existing rate-scaled model.",
+    "impact": [
+      "A base-only stored_rates() array is on-chain proof that the NG pool is plain; balances and USD references stay unscaled and the captured static/off-peg fee bound is unchanged. Previously these pools cleared the internal candidate but retained curve-stableswap:rate-bearing-inputs and contributed no measured exit route (for example eurs-stasis's EURC/EURS/EURQ factory-stable-ng pool).",
+      "The source-stage 1% per-coin price-spread gate is now only a proxy for non-NG shapes. An admitted plain NG pool whose source references still spread wider records an internal, non-withholding cron diagnostic with the observed ratio; it is not an executionCapabilityGate, unsupportedReason, or public pool field.",
+      "Non-base-rate NG pools behave exactly as before: stored rates scale balances and inversely scale references. Missing, stale, invalid, order-drifted, hash-drifted, incompatible-layout, or identity-failing captures still clear the candidate and retain the rate-bearing gate; legacy, metapool, CryptoSwap and score-facing measured pools are unchanged.",
+      "This is route-only Safety Score V9 evidence: aggregate liquidity, price consensus, visible pools, target publication, and V8 liquidity scoring formulas are unchanged. No public API or OpenAPI schema changes."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.98",
     "title": "Aero venue coverage after the Aerodrome/Velodrome merger",
     "date": "2026-10-23",

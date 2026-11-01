@@ -136,6 +136,19 @@ export interface CurveStableswapRateInputExecutionCandidate {
 }
 
 /**
+ * Internal evidence that the source-stage price-spread proxy was overridden by
+ * a base-only on-chain `stored_rates()` capture, which proves the NG pool is
+ * plain. Consumed into cron metadata during scoring and never published.
+ */
+export interface CurveStableswapPlainAdmissionDiagnostic {
+  stablecoinId: string;
+  chain: string;
+  poolId: string;
+  /** max(source reference price) / min(source reference price). */
+  sourcePriceSpreadRatio: number;
+}
+
+/**
  * A pool's raw provider volume readings and the clock they were observed at
  * (DEC-19). Never decayed or coerced: a missing reading stays null. Window
  * summaries classify it (measured / stale / missing) against the run clock.
@@ -224,6 +237,8 @@ export interface PoolEntry {
     evmV2ExecutionCandidate?: EvmV2ExecutionCandidate;
     /** Internal Curve NG rate-input candidate; consumed before scoring and never published. */
     curveStableswapRateInputExecutionCandidate?: CurveStableswapRateInputExecutionCandidate;
+    /** Internal plain-NG admission evidence; consumed into cron metadata before scoring and never published. */
+    curveStableswapPlainAdmissionDiagnostic?: CurveStableswapPlainAdmissionDiagnostic;
     /** Internal all-retained target descriptor; stripped before top-pool publication. */
     measuredExecutionTarget?: DexMeasuredExecutionTarget;
     /** Internal multi-direction packet for reviewed pools; stripped before publication. */

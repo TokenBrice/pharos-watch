@@ -6,7 +6,7 @@ import {
   hasMaterialPoolRejections,
 } from "./process-pools";
 import type { PoolProcessingRejection } from "./process-pool-types";
-import type { LiquidityFallbackCounters } from "./types";
+import type { CurveStableswapPlainAdmissionDiagnostic, LiquidityFallbackCounters } from "./types";
 import type { MeasuredTargetFunnel } from "./route-telemetry";
 import type { DexLiquidityScoringSourceState, DexLiquidityPoolState } from "./scoring-stage-contract";
 
@@ -74,6 +74,8 @@ export function buildDexLiquidityCronMetadata(params: {
       fallbackCounters: LiquidityFallbackCounters;
       deadPoolExclusions: DeadPoolExclusionSummary;
       measuredTargetFunnel?: MeasuredTargetFunnel;
+      curveStableswapPlainAdmissions?: CurveStableswapPlainAdmissionDiagnostic[];
+      curveStableswapPlainAdmissionsOmitted?: number;
     };
   };
   persistenceState: {
@@ -145,6 +147,12 @@ export function buildDexLiquidityCronMetadata(params: {
     retainedDeadPoolExclusions: scoreState.diagnostics.deadPoolExclusions,
     deadPoolUnindexedChainSkips: poolState.deadPoolUnindexedChainSkips ?? {},
     measuredTargetFunnel: scoreState.diagnostics.measuredTargetFunnel,
+    ...(scoreState.diagnostics.curveStableswapPlainAdmissions?.length
+      ? {
+          curveStableswapPlainAdmissions: scoreState.diagnostics.curveStableswapPlainAdmissions,
+          curveStableswapPlainAdmissionsOmitted: scoreState.diagnostics.curveStableswapPlainAdmissionsOmitted ?? 0,
+        }
+      : {}),
     exitRouteSelection: persistence.exitRouteSelection,
     exitRouteContinuity: persistence.exitRouteContinuity,
     persistence: {

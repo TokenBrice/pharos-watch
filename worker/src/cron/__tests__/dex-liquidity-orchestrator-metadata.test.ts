@@ -106,6 +106,22 @@ describe("dex liquidity cron metadata", () => {
     expect(getCronQualityReasons(buildDexLiquidityCronMetadata(params))).toEqual(["direct-api-source-warnings"]);
   });
 
+  it("publishes plain-NG admissions as non-withholding internal diagnostics", () => {
+    const params = metadataParams();
+    params.scoreState.diagnostics.curveStableswapPlainAdmissions = [{
+      stablecoinId: "eurs-stasis",
+      chain: "ethereum",
+      poolId: "ethereum:0x48edff046ebf41c6ee1895e06f3dc1629db563d4",
+      sourcePriceSpreadRatio: 1.066,
+    }];
+    params.scoreState.diagnostics.curveStableswapPlainAdmissionsOmitted = 0;
+
+    const metadata = buildDexLiquidityCronMetadata(params);
+    expect(metadata.curveStableswapPlainAdmissions).toEqual(params.scoreState.diagnostics.curveStableswapPlainAdmissions);
+    expect(metadata.curveStableswapPlainAdmissionsOmitted).toBe(0);
+    expect(metadata).not.toHaveProperty("quality");
+  });
+
   it("aggregates rejection groups and applies aggregate TVL materiality", () => {
     const params = metadataParams();
     params.poolState.poolRejections = [

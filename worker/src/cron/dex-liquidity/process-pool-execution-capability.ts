@@ -28,7 +28,10 @@ import {
 } from "../measured-execution/curve-stableswap-ng";
 import { buildCurveCompositeMeasuredExecutionTarget } from "../measured-execution/curve-composite";
 import { buildEvmV2ExecutionCandidate } from "./constant-product-v2";
-import { CURVE_STABLESWAP_FEE_BOUND } from "./curve-stableswap-rates";
+import {
+  CURVE_STABLESWAP_FEE_BOUND,
+  CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD,
+} from "./curve-stableswap-rates";
 import { parsePoolSymbols } from "./pool-helpers";
 import type {
   PoolExecutionCapability,
@@ -184,15 +187,6 @@ export function applyRegisteredExecutionTargetOutput(
  * Curve pool whose complete per-coin capture survived shaping. Returns null
  * whenever any identity, balance, or tracked-token requirement fails.
  */
-/**
- * StableSwap math assumes pool units exchange near 1:1. Rate-bearing pools
- * (sUSDe, sfrxUSD, stUSDS legs) run the invariant on rate-scaled balances the
- * Curve pools endpoint does not expose; modeling them on raw balances
- * overstated on-chain get_dy by 6-24% in live probes. A persistent per-coin
- * USD price spread is the observable signature of such a pool, so any spread
- * beyond this bound fails closed to shaped TVL evidence.
- */
-const CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD = 1.01;
 const ACTIVE_CURVE_CRYPTOSWAP_MAX_TVL_RELATIVE_DRIFT = 0.005;
 
 export function verifyCurveExecutionCoins(input: {
@@ -306,6 +300,8 @@ export function buildCurveStableswapExecutionCapability(
       gate: { family: "curve-stableswap", reason: "incomplete-exact-capture" },
     };
   }
+  // Source-stage proxy only. StableSwap-NG candidates are adjudicated by the
+  // on-chain stored_rates() capture in curve-stableswap-rates.ts.
   if (maxPrice / minPrice > CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD) {
     const rateInputCandidate = buildCurveStableswapRateInputExecutionCandidate(curveData);
     return {

@@ -34,12 +34,23 @@ import type {
 
 /**
  * Fallback fee for legacy source-only Curve models where the pools endpoint
- * lacks pool-specific fee state. Rate-bearing NG admission captures fee state
- * instead of treating this as a per-pool bound.
+ * lacks pool-specific fee state. Curve NG admission captures fee state instead
+ * of treating this as a per-pool bound.
  */
 export const CURVE_STABLESWAP_FEE_BOUND = 0.001;
 /** A source-stage capture must reflect the current head, not a reusable quote profile. */
 export const CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC = 10 * 60;
+/**
+ * Source-stage per-coin USD price spread above which a Curve pool must be read
+ * on chain before it can be admitted. StableSwap math assumes pool units
+ * exchange near 1:1; rate-bearing pools (sUSDe, sfrxUSD, stUSDS legs) run the
+ * invariant on rate-scaled balances the pools endpoint does not expose, and
+ * modeling them on raw balances overstated on-chain `get_dy` by 6-24% in live
+ * probes. For StableSwap-NG the authoritative answer is `stored_rates()`: a
+ * base-only array proves the pool is plain, so this bound remains a
+ * source-stage proxy and a non-withholding diagnostic, not a refusal.
+ */
+export const CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD = 1.01;
 
 const CURVE_STABLESWAP_NG_ABI = parseAbi([
   "function get_balances() view returns (uint256[])",
@@ -93,6 +104,7 @@ function isRateBearingGate(pool: PoolEntry): boolean {
 function clearCandidate(reference: CandidateReference): void {
   if (!reference.pool.extra) return;
   delete reference.pool.extra.curveStableswapRateInputExecutionCandidate;
+  delete reference.pool.extra.curveStableswapPlainAdmissionDiagnostic;
 }
 
 function clearProbe(probe: CurveRateProbe): void {
@@ -158,13 +170,19 @@ function rateFactor(rate: bigint, decimals: number): number | null {
   return Number.isFinite(factor) && factor > 0 ? factor : null;
 }
 
+function sourcePriceSpreadRatio(candidate: CurveStableswapRateInputExecutionCandidate): number | null {
+  const prices = candidate.coins.map((coin) => coin.referencePriceUsd);
+  if (prices.some((price) => !Number.isFinite(price) || price <= 0)) return null;
+  return Math.max(...prices) / Math.min(...prices);
+}
+
 function buildRateAwareExecutionModel(input: {
   chain: string;
   stablecoinId: string;
   candidate: CurveStableswapRateInputExecutionCandidate;
   state: CurveRatePoolState;
   chainAddressToId: SymbolLookups["chainAddressToId"];
-}): DexAmmExecutionModel | null {
+}): { model: DexAmmExecutionModel; plain: boolean } | null {
   const { candidate, state } = input;
   const tokenCount = candidate.coins.length;
   if (tokenCount < 2 || tokenCount > 8) return null;
@@ -212,7 +230,7 @@ function buildRateAwareExecutionModel(input: {
       ...(trackedAssetId ? { trackedAssetId } : {}),
     };
   });
-  if (!hasNonBaseRate || tokens.some((token) => token == null)) return null;
+  if (tokens.some((token) => token == null)) return null;
 
   const exactTokens = tokens as NonNullable<typeof tokens[number]>[];
   const trackedIndexes = exactTokens
@@ -223,12 +241,15 @@ function buildRateAwareExecutionModel(input: {
   if (new Set(identities).size !== identities.length) return null;
 
   return {
-    source: "curve",
-    invariant: "stableswap",
-    trackedTokenIndex: trackedIndexes[0]!,
-    feeRate,
-    amplification,
-    tokens: exactTokens,
+    model: {
+      source: "curve",
+      invariant: "stableswap",
+      trackedTokenIndex: trackedIndexes[0]!,
+      feeRate,
+      amplification,
+      tokens: exactTokens,
+    },
+    plain: !hasNonBaseRate,
   };
 }
 
@@ -340,23 +361,37 @@ async function enrichChain(input: {
           continue;
         }
         for (const reference of probe.references) {
-          const model = buildRateAwareExecutionModel({
+          const built = buildRateAwareExecutionModel({
             chain: input.chain,
             stablecoinId: reference.stablecoinId,
             candidate: reference.candidate,
             state,
             chainAddressToId: input.chainAddressToId,
           });
-          if (!model) {
+          if (!built) {
             clearCandidate(reference);
             continue;
           }
-          model.capture = capture;
+          built.model.capture = capture;
           const extra = { ...(reference.pool.extra ?? {}) };
           delete extra.curveStableswapRateInputExecutionCandidate;
           delete extra.executionCapabilityGate;
-          extra.ammExecutionModel = model;
+          extra.ammExecutionModel = built.model;
           extra.measurement = { ...(extra.measurement ?? {}), balanceMeasured: true };
+          // A base-only stored_rates() capture proves the NG pool is plain. The
+          // source-stage spread that produced the rate-bearing gate is then
+          // non-withholding evidence, recorded for cron metadata only.
+          const spreadRatio = built.plain
+            ? sourcePriceSpreadRatio(reference.candidate)
+            : null;
+          if (spreadRatio != null && spreadRatio > CURVE_STABLESWAP_MAX_COIN_PRICE_SPREAD) {
+            extra.curveStableswapPlainAdmissionDiagnostic = {
+              stablecoinId: reference.stablecoinId,
+              chain: input.chain,
+              poolId: reference.pool.poolId,
+              sourcePriceSpreadRatio: spreadRatio,
+            };
+          }
           reference.pool.extra = extra;
         }
       }
@@ -367,9 +402,12 @@ async function enrichChain(input: {
 
 /**
  * Replace eligible Curve StableSwap-NG rate-bearing gates only after reading
- * balances, rate multipliers, amplification, fee state (priced at its
- * off-balance maximum), and coin order at one fresh, confirmed block. Every
- * failure keeps the original rate-bearing gate.
+ * balances, stored rates, amplification, fee state (priced at its off-balance
+ * maximum), and coin order at one fresh, confirmed block. `stored_rates()`
+ * decides the shape: a non-base rate scales the model, while a base-only array
+ * proves a plain pool and admits the same exact model unscaled. Every failure
+ * keeps the original rate-bearing gate; a source-stage price spread on an
+ * admitted plain pool remains a diagnostic.
  */
 export async function enrichCurveStableswapRateInputExecutionModels(input: {
   metrics: Map<string, SourcePoolGraph>;
