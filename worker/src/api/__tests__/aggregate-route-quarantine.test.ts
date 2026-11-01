@@ -2,9 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
+import { routeContextFactory } from "../../test-helpers/__shared/routes";
 import { makeDepegRow } from "../../test-helpers/__shared/fixtures";
 import { handleDepegEvents } from "../depeg-events";
 import { handleStablecoins } from "../cache-handlers";
+import { route } from "../../router";
 import { validateAndWriteStablecoinsCache } from "../../cron/sync-stablecoins/cache-publication";
 import { makePeggedAsset } from "../../cron/sync-stablecoins/__tests__/_fixtures";
 import { getResponseReadyCacheKey } from "../../lib/api-cache-read";
@@ -43,12 +45,18 @@ describe("/api/depeg-events single-row admission", () => {
     { field: "direction", overrides: { direction: "sideways" }, expected: /Invalid direction "sideways"/ },
     { field: "source", overrides: { source: "replay" }, expected: /Invalid source "replay"/ },
     { field: "close_reason", overrides: { close_reason: "not-a-close-reason" }, expected: /Invalid close_reason/ },
-  ])("fails the whole response instead of skipping one unreadable $field row", async ({ overrides, expected }) => {
+  ])("fails the public route instead of publishing an empty cohort for one unreadable $field row", async ({ overrides, expected }) => {
     // No partial publish: a row whose stored semantics cannot be classified is
     // not served as a best-effort event (never invent direction/source/closure).
     const badRow: Record<string, unknown> = { ...makeDepegRow({ id: 2 }), ...overrides };
     const db = dbWithRows([makeDepegRow({ id: 1 }), badRow]);
-    await expect(handleDepegEvents(db, new URL("https://x/api/depeg-events"))).rejects.toThrow(expected);
+    const url = new URL("https://x/api/depeg-events");
+    const publicResponse = await route(routeContextFactory({ db })({ url }));
+    expect(publicResponse).not.toBeNull();
+    expect(await readJsonResponse(publicResponse!, 500)).toEqual({ error: "Internal Server Error" });
+    // Secondary: the unreadable row is the handler's own refusal, not an
+    // unrelated failure the error boundary happened to catch.
+    await expect(handleDepegEvents(db, url)).rejects.toThrow(expected);
   });
 
   it("keeps a row whose stored coverage JSON no longer decodes, with explicit empty coverage", async () => {

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ApiMetaEnvelopeSchema } from "@pharos/contracts/api-meta";
@@ -6,6 +7,7 @@ import { BluechipRatingsMapSchema } from "@shared/types/bluechip";
 import { ChainsResponseSchema } from "@shared/types/chains";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import { ReportCardsV9AcceptedResponseSchema, ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
+import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9-current";
 import { handleBluechipRatings, handleStablecoins } from "../cache-handlers";
 import { handleChains } from "../chains";
 import { handleReportCardsV9 } from "../report-cards-v9";
@@ -168,6 +170,17 @@ describe("GET /api/report-cards/v9 readers", () => {
   it("serves a materialized publication the Pages and Pharosville readers accept", async () => {
     const { db } = fixtures.open();
     const publication = makeWorkerSafetyScoreV9Publication();
+    publication.pillarFreshness = {
+      dexMaxAgeSec: 5,
+      dexObservedAtSec: publication.cards.map(() => publication.asOfSec - 6),
+    };
+    publication.sourceGenerations.dex = "captured-dex-generation";
+    for (const card of publication.cards) {
+      card.pillars.backing.freshness = "unknown";
+      card.pillars.exit.freshness = "stale";
+      card.pillars.control.freshness = "unknown";
+      card.evidence.freshness = "stale";
+    }
     await persistAndMaterialize(db, currentInput(publication));
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(publication.publishedAtSec * 1000);
@@ -180,12 +193,16 @@ describe("GET /api/report-cards/v9 readers", () => {
     // `pillarFreshness` metadata for older strict clients.
     expectParses(ReportCardsV9ReaderResponseSchema, legacyBody, "Pages report-cards reader");
     expectParses(ReportCardsV9AcceptedResponseSchema, legacyBody, "Pharosville report-cards reader");
+    const oldStrictClientSchema = z.strictObject(ReportCardsV9CurrentResponseSchema.shape).omit({ pillarFreshness: true });
+    expect(oldStrictClientSchema.safeParse(legacyBody).success).toBe(true);
     expect(legacyBody).not.toHaveProperty("pillarFreshness");
 
     const operands = await handleReportCardsV9(db, new URL("https://x/api/report-cards/v9?freshness=operands"));
     expect(operands.status).toBe(200);
-    const operandsBody: unknown = JSON.parse(await operands.text());
+    const operandsBody = JSON.parse(await operands.text()) as { pillarFreshness: unknown };
     expectParses(ReportCardsV9ReaderResponseSchema, operandsBody, "Pages report-cards reader (operands)");
     expectParses(ReportCardsV9AcceptedResponseSchema, operandsBody, "Pharosville report-cards reader (operands)");
+    expect(operandsBody.pillarFreshness).toEqual(publication.pillarFreshness);
+    expect(oldStrictClientSchema.safeParse(operandsBody).success).toBe(false);
   });
 });
