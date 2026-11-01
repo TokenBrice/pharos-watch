@@ -142,8 +142,11 @@
   },
   "czkc-czkc": {
     "title": "Czech koruna reserve design in testing",
-    "text": "CZKC a.s. describes a Czech koruna token fully backed by CZK reserves, with rCZKC representing those reserves on-chain. The developer book offers testnet guidance and plans Ethereum, Arbitrum and Gnosis, but leaves production entrypoints and implementations unpublished. CzechInvest named CZKC in its February 2026 sandbox testing cohort; that selection is not MiCA authorization. Pharos records the project as pre-launch without inventing an announcement or launch date. Production identity, binding redemption terms and independent reserve assurance remain unresolved.",
-    "updatedAt": "2026-10-02"
+    "text": "CZKC a.s. describes a Czech koruna token fully backed by CZK reserves, with rCZKC representing those reserves on-chain. The developer book offers testnet guidance and plans Ethereum, Arbitrum and Gnosis, but leaves production entrypoints and implementations unpublished. CzechInvest named CZKC in its February 2026 sandbox testing cohort; that selection is not MiCA authorization. CZKC was first presented publicly in June 2023, and no commercial launch date has been confirmed. Production identity, binding redemption terms and independent reserve assurance remain unresolved.",
+    "updatedAt": "2026-11-01",
+    "authoredBy": "ai",
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-11-01"
   },
   "earnusd-lido": {
     "title": "Mellow strategies with conditional USDC exits",
@@ -4480,11 +4483,11 @@
   },
   "arc-anq": {
     "title": "A Rupee Stablecoin Without a Green Light",
-    "text": "ARC is Anq's proposed Indian rupee stablecoin, announced with Polygon in November 2025 as India's first regulated INR token and designed for a 1:1 peg backed by cash, fixed deposits and Indian government securities. The design keeps the token inside India's regulated payments perimeter: issuance runs through business accounts, transfers are whitelisted, and Uniswap v4 whitelisting carries the compliance check onto a public chain. It is pitched as a two-tier complement to the RBI's digital rupee and as a brake on USD liquidity outflow. The tentative January 2026 debut passed with no RBI confirmation and no live supply. In July 2026 the RBI told a Parliamentary Standing Committee that it favors barring banks and regulated entities from private stablecoins, rupee-backed ones included. With no source supporting a 2026 launch, Pharos removed the launch expectation in September 2026. The architecture is settled on paper; ARC's constraint is whether the RBI will let a private rupee stablecoin operate beside its CBDC.",
-    "updatedAt": "2026-10-19",
+    "text": "ARC is Anq's proposed Indian rupee stablecoin, built with Polygon and designed for a 1:1 peg backed by cash, fixed deposits and Indian government securities. A November 2025 CoinDesk report citing unnamed sources described it as India's first regulated INR token. The design keeps the token inside India's regulated payments perimeter: issuance runs through business accounts, transfers are whitelisted, and Uniswap v4 whitelisting carries the compliance check onto a public chain. It is pitched as a two-tier complement to the RBI's digital rupee and as a brake on USD liquidity outflow. The tentative January 2026 debut passed with no RBI confirmation and no live supply. In July 2026 the RBI told a Parliamentary Standing Committee that it favors barring banks and regulated entities from private stablecoins, rupee-backed ones included. With no source supporting a 2026 launch, Pharos removed the launch expectation in September 2026. The architecture is settled on paper; ARC's constraint is whether the RBI will let a private rupee stablecoin operate beside its CBDC.",
+    "updatedAt": "2026-11-01",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "factsAsOf": "2026-11-01"
   },
   "brl-b3": {
     "title": "B3's Settlement Real, Still in Testing",
