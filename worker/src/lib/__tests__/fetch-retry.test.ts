@@ -235,6 +235,25 @@ describe("fetchWithRetry", () => {
     expect(sleepWithSignalMock).toHaveBeenCalledWith(1000, undefined);
   });
 
+  it("clamps an HTTP retry wait to the deadline budget", async () => {
+    mockFetch([{
+      match: () => true,
+      outcomes: [
+        { body: { error: "slow down" }, status: 429, headers: { "Retry-After": "60" } },
+        { body: { ok: true } },
+      ],
+    }]);
+
+    const result = await fetchJsonWithRetry("https://example.com/token", undefined, 1, {
+      deadlineMs: Date.now() + 5_000,
+    });
+
+    expect(result?.body).toEqual({ ok: true });
+    expect(sleepWithSignalMock).toHaveBeenCalledTimes(1);
+    const [delay] = sleepWithSignalMock.mock.calls[0];
+    expect(delay).toBeLessThanOrEqual(5_000);
+  });
+
   it("honors Retry-After on 503 responses before succeeding", async () => {
     const fetchMock = mockFetch([{
       match: () => true,

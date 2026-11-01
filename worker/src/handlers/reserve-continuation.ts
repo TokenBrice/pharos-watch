@@ -53,11 +53,17 @@ export async function handleReserveContinuationBatch(
         if (!claim) return;
         const fence = claim.fence;
         const heartbeatAttempts = new Set<Promise<void>>();
+        let heartbeatFailures = 0;
+        let workSettled = false;
         const heartbeat = setInterval(() => {
           const attempt = heartbeatReserveContinuation(env.DB, fence).then((owned) => {
-            if (!owned) controller.abort(new Error("reserve-queue-ownership-lost"));
+            heartbeatFailures = 0;
+            if (!owned && !workSettled) controller.abort(new Error("reserve-queue-ownership-lost"));
           }).catch((error: unknown) => {
-            controller.abort(error);
+            // Tolerate one consecutive read fault like the cron lease heartbeat;
+            // a settled producer is never rewritten by a late heartbeat.
+            heartbeatFailures += 1;
+            if (heartbeatFailures >= 2 && !workSettled) controller.abort(error);
           }).finally(() => heartbeatAttempts.delete(attempt));
           heartbeatAttempts.add(attempt);
         }, 30_000);
@@ -80,10 +86,12 @@ export async function handleReserveContinuationBatch(
             observer: true, platformDeadlineMs: deadline.platformDeadlineMs + SCHEDULED_SLOT_CONTROLLED_ERROR_RESERVE_MS,
           });
           workDrained = outcome.status !== "aborted" || outcome.settled;
+          workSettled = true;
           if (outcome.status !== "fulfilled") throw outcome.status === "rejected" ? outcome.error : outcome.reason;
           summary = outcome.value;
           pending = summary.reserveContinuation;
         } finally {
+          workSettled = true;
           clearInterval(heartbeat);
           await Promise.allSettled(heartbeatAttempts);
         }

@@ -74,6 +74,12 @@ function jitterDelayMs(delayMs: number): number {
   return Math.max(0, Math.round(delayMs * (0.5 + Math.random() * 0.5)));
 }
 
+/** The deadline covers retry and passthrough backoff, so a wait never runs past it. */
+function capDelayToDeadline(delayMs: number, deadlineMs: number | undefined): number {
+  if (deadlineMs == null) return delayMs;
+  return Math.max(0, Math.min(delayMs, deadlineMs - Date.now()));
+}
+
 function fetchErrorMetadata(error: unknown): Record<string, unknown> {
   if (!error || typeof error !== "object") return {};
   const value = error as { maxBytes?: unknown; observedBytes?: unknown };
@@ -297,13 +303,13 @@ async function fetchWithRetryInternal<TResult>(
               const body = await readBody(res, perRequestTimeout.signal, maxResponseBytes);
               perRequestTimeout.dispose();
               logWorkerEvent({ scope: "lib", level: "warn", event: "fetch_retry_passthrough_rate_limited", message: "Fetch rate-limited before passthrough", status: res.status, metadata: { url: logUrl, delayMs: passthroughDelayMs } });
-              await sleepWithSignal(passthroughDelayMs, signal);
+              await sleepWithSignal(capDelayToDeadline(passthroughDelayMs, options?.deadlineMs), signal);
               return { response: res, body };
             }
             const body = await readResponseTextWithinLimitWithSignal(res, maxResponseBytes, perRequestTimeout.signal, options?.onBodyRead);
             perRequestTimeout.dispose();
             logWorkerEvent({ scope: "lib", level: "warn", event: "fetch_retry_passthrough_rate_limited", message: "Fetch rate-limited before passthrough", status: res.status, metadata: { url: logUrl, delayMs: passthroughDelayMs } });
-            await sleepWithSignal(passthroughDelayMs, signal);
+            await sleepWithSignal(capDelayToDeadline(passthroughDelayMs, options?.deadlineMs), signal);
             return new Response(body, {
               status: res.status,
               statusText: res.statusText,
@@ -321,7 +327,7 @@ async function fetchWithRetryInternal<TResult>(
           logWorkerEvent({ scope: "lib", level: "warn", event: "fetch_retry_http_retry_scheduled", message: `Fetch ${label}; retry scheduled`, status: res.status, metadata: { url: logUrl, delayMs: retryDelayMs, attempt: i + 1, maxAttempts: maxRetries + 1 } });
           await cancelResponseBodyQuietly(res);
           perRequestTimeout.dispose();
-          await sleepWithSignal(retryDelayMs, signal);
+          await sleepWithSignal(capDelayToDeadline(retryDelayMs, options?.deadlineMs), signal);
           continue;
         }
         logWorkerEvent({ scope: "lib", level: "warn", event: "fetch_retry_http_error", message: "Fetch returned an HTTP error", status: res.status, metadata: { url: logUrl, attempt: i + 1, maxAttempts: maxRetries + 1 } });
@@ -348,7 +354,7 @@ async function fetchWithRetryInternal<TResult>(
     }
     if (i < maxRetries) {
       const delayMs = jitterDelayMs(1000 * 2 ** i);
-      await sleepWithSignal(options?.deadlineMs == null ? delayMs : Math.max(0, Math.min(delayMs, options.deadlineMs - Date.now())), signal);
+      await sleepWithSignal(capDelayToDeadline(delayMs, options?.deadlineMs), signal);
     }
   }
   return null;

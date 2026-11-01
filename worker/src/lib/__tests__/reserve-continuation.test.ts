@@ -11,6 +11,11 @@ import { createSlotDeadline } from "../cron-timeouts";
 import { sealAcceptedReserveGeneration } from "../accepted-reserve-generation";
 
 vi.mock("../../handlers/scheduled/four-hourly-reserves", () => ({ runFourHourlyReserveSyncSlot: vi.fn() }));
+const heartbeatMock = vi.hoisted(() => vi.fn());
+vi.mock("../reserve-continuation-fence", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../reserve-continuation-fence")>()),
+  heartbeatReserveContinuation: heartbeatMock,
+}));
 const fixtures = createLatestSchemaFixtureTracker();
 const ROOT = 1_728_000_660;
 const NOW = 1_728_003_600;
@@ -38,8 +43,13 @@ async function setup() {
   return { ...fixture, env, ctx, pending, message, delivery, batch, send };
 }
 
-beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue(NOW * 1000); vi.mocked(runFourHourlyReserveSyncSlot).mockReset(); });
-afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
+beforeEach(() => {
+  vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
+  vi.mocked(runFourHourlyReserveSyncSlot).mockReset();
+  heartbeatMock.mockReset();
+  heartbeatMock.mockResolvedValue(true);
+});
+afterEach(() => { fixtures.closeAll(); vi.useRealTimers(); vi.restoreAllMocks(); });
 
 describe("reserve Queue delivery semantics", () => {
   it("delivers an exhausted sealed cohort as a fresh tail, with no producer frontier", async () => {
@@ -86,6 +96,34 @@ describe("reserve Queue delivery semantics", () => {
     expect(f.send).toHaveBeenCalledOnce();
     expect(f.sqlite.prepare("SELECT json_extract(metadata,'$.reserveQueue.phase') AS phase FROM cron_runs").get()).toEqual({ phase: "reserve" });
     expect(f.sqlite.prepare("SELECT COUNT(*) AS count FROM cron_slot_executions").get()).toEqual({ count: 1 });
+  });
+
+  it("keeps a completed slice successful when one heartbeat read fails", async () => {
+    const f = await setup();
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1000);
+    let releaseProducer!: () => void;
+    const producerGate = new Promise<void>((resolve) => { releaseProducer = resolve; });
+    vi.mocked(runFourHourlyReserveSyncSlot).mockImplementationOnce(async (runtime) => {
+      await producerGate;
+      await continueLiveReserveCheckpoint(f.db, runtime.recoveryCheckpoint!);
+      return {
+        ...buildScheduledSlotSummary([]),
+        reserveContinuation: { ...f.message, sourceInvocationId: runtime.invocationId! },
+      };
+    });
+    heartbeatMock.mockRejectedValueOnce(new Error("d1 overload blip"));
+
+    const work = handleReserveContinuationBatch(f.batch, f.env, f.ctx, NOW * 1000);
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(heartbeatMock).toHaveBeenCalledTimes(1);
+    releaseProducer();
+    await work;
+
+    expect(f.delivery.ack).toHaveBeenCalledOnce();
+    expect(f.delivery.retry).not.toHaveBeenCalled();
+    expect(f.send).toHaveBeenCalledOnce();
+    expect(f.sqlite.prepare("SELECT result_status FROM reserve_continuation_executions").get()).toEqual({ result_status: "ok" });
   });
 
   it("acks duplicates without running adapters or falling through to config recovery", async () => {

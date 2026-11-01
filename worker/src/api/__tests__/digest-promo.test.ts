@@ -71,6 +71,25 @@ describe("handleDigestPromo", () => {
     expect(response.headers.get("X-Data-Age")).not.toBeNull();
   });
 
+  it("keeps the archive's row identity when editions share a generated_at second", async () => {
+    const { db, insert } = createDigestDatabase();
+    const start = 1_700_000_000;
+    for (let edition = 1; edition <= 400; edition += 1) {
+      insert.run(`Daily ${edition}`, `Title ${edition}`, start + Math.floor((edition - 1) / 2), null, null);
+    }
+
+    const promo = DigestPromoResponseSchema.parse(await (await handleDigestPromo(db)).json());
+    const archive = await (await handleDigestArchive(db)).json() as {
+      digests: { digestTitle: string; editionNumber: number }[];
+    };
+
+    expect(promo.latest).toMatchObject({ digestTitle: "Title 400", excerpt: "Daily 400", editionNumber: 400 });
+    expect(archive.digests[0]).toMatchObject({ digestTitle: "Title 400", editionNumber: 400 });
+    expect(promo.previousEditions).toContainEqual(
+      expect.objectContaining({ digestTitle: "Title 399", editionNumber: 399 }),
+    );
+  });
+
   it("retains internal numbering gaps without exposing internal or blocked titles", async () => {
     const { db, insert } = createDigestDatabase();
     insert.run("First", "First", 1, null, null);

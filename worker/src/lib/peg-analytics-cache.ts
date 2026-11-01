@@ -26,6 +26,38 @@ export interface PegAnalyticsCachePayload {
   /** Nav-token-inclusive; consumers filter as needed. */
   pegData: PegSummaryCoin[];
 }
+
+export interface PegEventDayCounts {
+  todayStartSec: number;
+  today: number;
+  yesterday: number;
+}
+
+/**
+ * One authority for the "today"/"yesterday" UTC-day counters, shared by the
+ * publish path and read-time re-bucketing.
+ */
+export function countPegEventDays(
+  events: Iterable<{
+    stablecoinId: string;
+    startedAt: number;
+    provenance?: { auditVerdict?: string | null } | null;
+  }>,
+  nowSec: number,
+): PegEventDayCounts {
+  const todayStartSec = bucketUnixSecondsToUtcDay(nowSec);
+  const yesterdayStartSec = todayStartSec - DAY_SECONDS;
+  let today = 0;
+  let yesterday = 0;
+  for (const event of events) {
+    if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
+    if (isDisputedAuditVerdict(event.provenance?.auditVerdict)) continue;
+    if (event.startedAt >= todayStartSec) today += 1;
+    else if (event.startedAt >= yesterdayStartSec) yesterday += 1;
+  }
+  return { todayStartSec, today, yesterday };
+}
+
 type PegAnalyticsCacheFailureReason =
   | "missing-cache"
   | "stale-cache"
@@ -98,21 +130,12 @@ export async function publishPegAnalyticsCache(
   db: D1Database,
   pegAnalytics: Pick<PegAnalyticsSnapshot, "nowSec" | "allEvents" | "pegDataById">,
 ): Promise<boolean> {
-  const todayStartSec = bucketUnixSecondsToUtcDay(pegAnalytics.nowSec);
-  const yesterdayStartSec = todayStartSec - DAY_SECONDS;
-  let depegEventsToday = 0;
-  let depegEventsYesterday = 0;
-  for (const event of pegAnalytics.allEvents ?? []) {
-    if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
-    if (isDisputedAuditVerdict(event.provenance?.auditVerdict)) continue;
-    if (event.startedAt >= todayStartSec) depegEventsToday += 1;
-    else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
-  }
+  const { today, yesterday } = countPegEventDays(pegAnalytics.allEvents ?? [], pegAnalytics.nowSec);
   try {
     const result = await writePegAnalyticsCache(db, {
       computedAtSec: pegAnalytics.nowSec,
-      depegEventsToday,
-      depegEventsYesterday,
+      depegEventsToday: today,
+      depegEventsYesterday: yesterday,
       pegData: [...pegAnalytics.pegDataById.values()],
     });
     return result.written;

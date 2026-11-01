@@ -737,6 +737,73 @@ describe("handlePegSummary", () => {
     });
   });
 
+  it("measures the DEX cross-check and at-peg threshold against the live peg unit, not an older cached pegType", async () => {
+    const price = 1.08 * (1 + 120 / 10_000);
+    const asset = makeAsset({
+      id: "eurc-circle",
+      name: "EURC",
+      symbol: "EURC",
+      pegType: "peggedEUR",
+      price,
+      priceObservedAt: nowSec,
+      priceUpdatedAt: nowSec,
+      circulating: { peggedEUR: 100_000_000 },
+    });
+    const stablecoinsValue = JSON.stringify({ peggedAssets: [asset], fxFallbackRates: { peggedEUR: 1.08 } });
+    const pegAnalyticsValue = JSON.stringify({
+      computedAtSec: sameDayCachedAt(60),
+      depegEventsToday: 0,
+      depegEventsYesterday: 0,
+      pegData: [makeCachedPegCoin({
+        id: "eurc-circle",
+        name: "EURC",
+        symbol: "EURC",
+        pegCurrency: "EUR",
+        pegType: "peggedUSD",
+        currentDeviationBps: null,
+        pegReference: null,
+        pegReferenceUnavailable: true,
+      })],
+    });
+    const db = mockD1([
+      {
+        match: "cache",
+        matchBinds: ["stablecoins"],
+        rows: [{ key: "stablecoins", value: stablecoinsValue, updated_at: nowSec }],
+        first: { key: "stablecoins", value: stablecoinsValue, updated_at: nowSec },
+      },
+      {
+        match: "cache",
+        matchBinds: ["peg-analytics"],
+        rows: [{ key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec }],
+        first: { key: "peg-analytics", value: pegAnalyticsValue, updated_at: nowSec },
+      },
+      {
+        match: "dex_prices",
+        rows: [{
+          stablecoin_id: "eurc-circle",
+          dex_price_usd: price,
+          deviation_from_primary_bps: null,
+          source_pool_count: 3,
+          source_total_tvl: 5_000_000,
+          updated_at: nowSec - 60,
+        }],
+      },
+    ]);
+
+    const body = await readJsonResponse(await handlePegSummary(db), 200) as {
+      coins: PegSummaryCoin[];
+      summary: { coinsAtPeg: number };
+    };
+    const coin = body.coins.find((entry) => entry.id === "eurc-circle");
+    expect(coin?.pegType).toBe("peggedEUR");
+    expect(coin?.currentDeviationBps).toBe(120);
+    expect(coin?.dexPriceCheck).toMatchObject({ dexDeviationBps: 120, agrees: true });
+    // 120 bps is inside the non-USD band; the cached USD label would have
+    // selected the 100 bps USD band and dropped the row from coinsAtPeg.
+    expect(body.summary.coinsAtPeg).toBe(1);
+  });
+
   it("includes navToken coins with peg signals withheld", async () => {
     const db = makePegSummaryDb([
       makeAsset({

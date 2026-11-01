@@ -117,6 +117,37 @@ describe("evaluateReserveAdapterAlerts", () => {
     expect(afterRecovery.recovered).toEqual([]);
   });
 
+  it("keeps a rule raised while any coin still fails and reports no rule-level recovery", () => {
+    const other = "usdc-circle";
+    const prior: ReserveAdapterAlertState = {
+      version: 1,
+      coins: {
+        [COIN]: { failureRaised: true, scoreIneligibleRaised: false, clockRaised: false },
+        [other]: { failureRaised: true, scoreIneligibleRaised: false, clockRaised: false },
+      },
+    };
+    const result = evaluateReserveAdapterAlerts({
+      nowSec: NOW,
+      attemptsByCoin: new Map([
+        [COIN, [attempt({ attemptedAt: NOW, status: "ok", failureCategory: null })]],
+        [other, [
+          attempt({ attemptedAt: NOW }),
+          attempt({ attemptedAt: NOW - 14_400 }),
+          attempt({ attemptedAt: NOW - 28_800 }),
+        ]],
+      ]),
+      sourceAgeBudgetByCoin: new Map([[COIN, 7_200], [other, 7_200]]),
+      scoreIneligibleCoinIds: new Set(),
+      scoreIneligibleUnknownCoinIds: new Set(),
+      acknowledgedCoinIds: new Set(),
+      previous: prior,
+    });
+    expect(result.raised).toEqual([]);
+    expect(result.recovered).toEqual([]);
+    expect(result.state.coins[other]?.failureRaised).toBe(true);
+    expect(result.state.coins[COIN]).toBeUndefined();
+  });
+
   it.each([
     ["error", "upstream-http"],
     ["skipped", "circuit-open"],
