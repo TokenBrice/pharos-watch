@@ -186,9 +186,9 @@ function buildSimpleReview(
     }
     const hasEvidence = residualFamily || (field === "physicalRedemption" ? false
       : field === "custodyContinuity" ? custody
-      : field === "durationAndLiquidity" ? reserves || (fixedInput.liveReserveMap[meta.id] ?? []).some(
-        slice => slice.maturityDaysMax != null || slice.liquidityHorizon != null,
-      ) : reserves || meta.proofOfReserves !== undefined);
+      // Any live reserve slice already makes `reserves` true.
+      : field === "durationAndLiquidity" ? reserves
+      : reserves || meta.proofOfReserves !== undefined);
     review[field] = boundedFact(key, hasEvidence);
   }
   return residualFamily ? V9MechanismRiskReviewSchema.parse(review) : review as V9SimpleReview;
@@ -563,13 +563,13 @@ export function getSafetyScoreV9MechanismExitFacts(
   }
   if (overlay.profileReview === undefined) return [];
   const projection = projectV9MechanismProfile(overlay.profileReview);
+  // Every mechanism profile projects exactly one exit fact.
   return Object.entries(projection.exitFacts)
     .map(([factKey, fact]) => ({
       factKey: kebabCase(factKey) as "physical-redemption" | "protocol-redemption",
       disposition: fact.disposition,
       quality: fact.disposition === "supported" ? fact.quality : null,
-    }))
-    .sort((left, right) => compareText(left.factKey, right.factKey));
+    }));
 }
 
 /**

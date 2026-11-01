@@ -3,7 +3,7 @@ import { roundTo } from "@shared/lib/math";
 import { buildP4DexExitRouteObservations } from "@shared/lib/p4-exit-route-capacity";
 import type { ExitRouteObservation, ExitRouteObservationCoverage } from "@shared/types/market";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import type { LiquidityFallbackCounters, LiquidityMetrics, SourcePoolGraph, FullScoreResult, GlobalAgg } from "./types";
+import type { CurveStableswapPlainAdmissionDiagnostic, LiquidityFallbackCounters, LiquidityMetrics, SourcePoolGraph, FullScoreResult, GlobalAgg } from "./types";
 import type { DexMeasuredExecutionTarget } from "@shared/types/measured-execution";
 import { isCurveCompositeAdapterProfileId, matchesCurveCompositeTarget } from "@shared/lib/curve-composite-policies";
 import { buildMeasuredPoolDirectionKey } from "../measured-execution/inventory";
@@ -29,7 +29,7 @@ import { applyDexRouteObservationBounds, collectDexRoutePackingOmissions, select
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, DEX_PRICE_STAGE_RETENTION_GENERATIONS_PER_RUN, computeSeriesStability, loadConfidentHistoryStability, loadCurrentDexScoringGenerationId, pruneExpiredDexPriceStages } from "./dex-scoring-stage-store";
 import { computeDexPrices, type DexPricePersistenceDiagnostics } from "./dex-price-publisher";
 import { canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
-import { getMeasuredTargetFunnelGroup, incrementReason, measuredPoolProfileIds, summarizeMeasuredTargetFunnel, type DexRouteRemovalEvidence, type MeasuredTargetFunnel, type MeasuredTargetFunnelGroup } from "./route-telemetry";
+import { boundTelemetryEntries, getMeasuredTargetFunnelGroup, incrementReason, measuredPoolProfileIds, summarizeMeasuredTargetFunnel, type DexRouteRemovalEvidence, type MeasuredTargetFunnel, type MeasuredTargetFunnelGroup } from "./route-telemetry";
 import type { DexLiquidityProtocolTvlQuarantine } from "../../lib/schemas";
 
 export {
@@ -56,6 +56,9 @@ interface ScoreDiagnostics {
   fallbackCounters: LiquidityFallbackCounters;
   /** Pools excluded by the v6.92 dead-pool floor (reason, count, TVL, top coins). */
   deadPoolExclusions: DeadPoolExclusionSummary;
+  /** Internal plain-NG admissions that overrode the source-stage price-spread proxy. */
+  curveStableswapPlainAdmissions: CurveStableswapPlainAdmissionDiagnostic[];
+  curveStableswapPlainAdmissionsOmitted: number;
   routeSelection: DexRouteSelectionDiagnostic[];
   measuredTargetFunnel: MeasuredTargetFunnel;
   routeRemovalEvidence: Map<string, DexRouteRemovalEvidence>;
@@ -205,6 +208,7 @@ export async function computeStablecoinScores(
   const candidatePoolsByStablecoin = new Map<string, LiquidityMetrics["topPools"]>();
   const p4OnlyRetainedPools = new Map<string, LiquidityMetrics["topPools"]>();
   const deadPoolExclusionsByStablecoin: Array<{ stablecoinId: string } & DeadPoolExclusionTally> = [];
+  const curveStableswapPlainAdmissions: CurveStableswapPlainAdmissionDiagnostic[] = [];
 
   // Nothing mutates metrics' key set across either pass (value-level updates
   // only), so direct iteration visits identical entries in insertion order.
@@ -217,6 +221,11 @@ export async function computeStablecoinScores(
     const candidatePools = m.pools;
     candidatePoolsByStablecoin.set(id, candidatePools);
     for (const pool of candidatePools) {
+      const plainAdmission = pool.extra?.curveStableswapPlainAdmissionDiagnostic;
+      if (plainAdmission) {
+        curveStableswapPlainAdmissions.push(plainAdmission);
+        delete pool.extra!.curveStableswapPlainAdmissionDiagnostic;
+      }
       for (const profile of measuredPoolProfileIds(pool)) {
         const group = getMeasuredTargetFunnelGroup(targetFunnelGroups, profile, pool.chain);
         group.candidates++;
@@ -579,6 +588,7 @@ export async function computeStablecoinScores(
     chainTvl: globalChainTvl,
   };
 
+  const boundedPlainAdmissions = boundTelemetryEntries(curveStableswapPlainAdmissions, 32, 8_192);
   return {
     scores: results,
     scoredMetrics,
@@ -591,6 +601,8 @@ export async function computeStablecoinScores(
       globalProtocolOverCapUsd: Math.round(globalProtocolOverCapUsd),
       fallbackCounters,
       deadPoolExclusions: summarizeDeadPoolExclusions(deadPoolExclusionsByStablecoin),
+      curveStableswapPlainAdmissions: boundedPlainAdmissions,
+      curveStableswapPlainAdmissionsOmitted: curveStableswapPlainAdmissions.length - boundedPlainAdmissions.length,
       routeSelection: routeSelectionDiagnostics,
       measuredTargetFunnel: summarizeMeasuredTargetFunnel(targetFunnelGroups),
       routeRemovalEvidence,

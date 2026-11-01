@@ -760,7 +760,11 @@ function admitDeploymentSupplyCensus(
     return rejected();
   }
   if (!packet.conservation.rosterComplete) {
-    reject("roster-incomplete");
+    // R5: a producer without an aggregate denominator already named that read;
+    // it is not also a roster gap.
+    const denominatorUnread = packet.rejected.some((rejection) =>
+      rejection.routeId === null && rejection.code === deploymentSupplyCensusRejectionCode("read-unavailable"));
+    if (!denominatorUnread) reject("roster-incomplete");
     return rejected();
   }
   if (!packet.conservation.conserved) {

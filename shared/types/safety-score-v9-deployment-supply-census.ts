@@ -39,7 +39,8 @@ export const V9DeploymentSupplyCensusRejectionReasonSchema = z.enum([
   "conservation-breach",
   // The route is not a reviewed bridge route with a token address.
   "route-unreviewed",
-  // No admitted read kind exists for this chain family.
+  // A required read is unavailable: no admitted read kind for the chain family,
+  // a failed read, or no usable aggregate supply denominator.
   "read-unavailable",
   // The pinned header/slot/ledger is absent.
   "missing-block-pin",

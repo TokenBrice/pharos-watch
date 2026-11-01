@@ -344,6 +344,18 @@ describe("deployment supply census admission", () => {
     ]);
   });
 
+  it("keeps the producer's unavailable denominator read as the only reason", () => {
+    const { review: result, censusDiagnostics } = review(packet({
+      deployments: [],
+      conservation: { ...packet().conservation, rosterComplete: false, conserved: false },
+      rejected: [{ routeId: null, code: "census-rejected:read-unavailable" }],
+    }));
+    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(censusDiagnostics).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:read-unavailable" },
+    ]);
+  });
+
   it("keeps conservation-breach for a packet bounded against another denominator", () => {
     const { review: result, censusDiagnostics } = review(packet({
       conservation: { ...packet().conservation, aggregateSupplyUsd: AGGREGATE_USD * 2 },

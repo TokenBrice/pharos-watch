@@ -357,6 +357,19 @@ export const DexLiquidityCronMetadataSchema = z.object({
     uniV3CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
     uniswapV4CandidateCarryForward: DexUniV3CandidateCarryForwardSchema.optional(),
   }).optional(),
+  curveStableswapPlainAdmissions: z
+    .array(
+      z.object({
+        stablecoinId: z.string(),
+        chain: z.string(),
+        poolId: z.string(),
+        poolAddress: z.string(),
+        sourcePriceSpreadRatio: z.number(),
+      }),
+    )
+    .max(32)
+    .optional(),
+  curveStableswapPlainAdmissionsOmitted: z.number().int().nonnegative().optional(),
   exitRouteSelection: z.object({
     baselineAvailable: z.boolean(),
     baselineUnavailableReason: z.string().nullable(),

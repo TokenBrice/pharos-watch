@@ -448,8 +448,8 @@ export async function observeDeploymentSupplyCensusEvm(
   }
   if (!Number.isFinite(input.aggregateSupplyUsd) || input.aggregateSupplyUsd <= 0) {
     // Without the audited aggregate there is no share denominator; a row
-    // without a share is not census evidence.
-    return { rows: [], rejected: [rejection(null, "roster-incomplete")] };
+    // without a share is not census evidence. An unavailable read (R5).
+    return { rows: [], rejected: [rejection(null, "read-unavailable")] };
   }
   if (input.targets.length === 0) return { rows: [], rejected: [] };
 

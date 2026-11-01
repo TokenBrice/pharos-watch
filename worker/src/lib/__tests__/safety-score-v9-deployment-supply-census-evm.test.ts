@@ -429,6 +429,15 @@ describe("deployment supply census EVM rows", () => {
     ]);
   });
 
+  it.each([0, Number.NaN, Number.POSITIVE_INFINITY])("names an unusable aggregate denominator (%s) as an unavailable read", async (aggregateSupplyUsd) => {
+    const { dependencies } = evmDependencies();
+    const census = await readCensus({ targets: [target("ethereum:0x01")], aggregateSupplyUsd }, dependencies);
+    expect(census).toEqual({
+      rows: [],
+      rejected: [{ routeId: null, code: "census-rejected:read-unavailable" }],
+    });
+  });
+
   it("rejects a duplicated route key as an inconsistent roster", async () => {
     const { dependencies } = evmDependencies();
     const census = await readCensus({

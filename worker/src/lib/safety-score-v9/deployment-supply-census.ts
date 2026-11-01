@@ -738,8 +738,9 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
       continue;
     }
     if (aggregateSupplyUsd === null || aggregateSupplyUsd <= 0) {
-      // Without the audited aggregate there is no share denominator.
-      addRejection(accumulator.rejected, null, "roster-incomplete");
+      // Without the audited aggregate there is no share denominator: an
+      // unavailable read, the same reason the consumer names (R5).
+      addRejection(accumulator.rejected, null, "read-unavailable");
       continue;
     }
     if (accumulator.rejected.size === 0) rosterDeployments += roster.entries.length;

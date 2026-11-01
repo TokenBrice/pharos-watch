@@ -5,7 +5,7 @@
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.98`<!-- GENERATED-END: methodology-version-liquidity-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-liquidity-score -->`v6.99`<!-- GENERATED-END: methodology-version-liquidity-score -->
 - **TVL-basis breaks:** a liquidity release that changes how retained TVL is measured (not just weighting or volume admission) must also append its version to `LIQUIDITY_TVL_BASIS_BREAK_VERSIONS` in `shared/lib/dex-liquidity-evidence.ts`, which is append-only. The 30-day stability series never mix epochs across a listed break (see Basis homogeneity under Durability Sub-Component Weights); the source owns the current break list.
 - **TVL trend comparability:** public 24-hour/7-day changes and DEWS/DDR TVL evidence compare the stored current and historical `methodology_version` through `liquidityTvlBasisEpoch`. Cross-epoch baselines are skipped, not interpreted as market moves; same-epoch minor releases remain comparable. Explicit legacy identities belong to epoch 0, but an omitted version projection cannot establish comparability. This is TVL-measurement identity, not exact liquidity-score formula identity, and does not suppress independently available scores or volume.
 
