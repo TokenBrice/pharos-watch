@@ -15,6 +15,8 @@ import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
 import { buildAlchemyUrl } from "../alchemy-logs";
 type Call = { id: number; method: string; params: unknown[] };
 const word = (value: number) => `0x${value.toString(16).padStart(64, "0")}`;
+const RECENT_TIMESTAMP = Math.floor(Date.now() / 1000) - 60;
+const RECENT_TIMESTAMP_HEX = `0x${RECENT_TIMESTAMP.toString(16)}`;
 const unavailable = { error: { code: -32602, message: "provider unavailable" } };
 function logRange(call: Call): { fromBlock: string; toBlock: string } {
   const range = call.params[0];
@@ -132,7 +134,7 @@ describe("mint/burn ordered RPC fallback", () => {
         return { result: `0x${(url === endpoints[0].url ? 50_000 : fallbackHead).toString(16)}` };
       }
       if (call.method === "eth_getBlockByNumber" && url === endpoints[1].url) {
-        return { result: { number: call.params[0], timestamp: "0x400", hash: word(12) } };
+        return { result: { number: call.params[0], timestamp: RECENT_TIMESTAMP_HEX, hash: word(12) } };
       }
       // This provider would silently accept a future toBlock and return empty logs.
       return url === endpoints[0].url ? unavailable : { result: [] };
@@ -140,7 +142,7 @@ describe("mint/burn ordered RPC fallback", () => {
     const config = MINT_BURN_CONFIGS.find((config) => config.chain.chainId === chain)!;
     const input = {
       db: mockD1([{ match: "INSERT INTO cache", rows: [] }]), config, key: `${chain}-fixture`, tier: "critical" as const, fromBlock: 1, scanTo: 50_000,
-      chainHead: 50_000, rpcEndpoints: endpoints, configBudgetLimit: 60, runTimestamp: 1100,
+      chainHead: 50_000, rpcEndpoints: endpoints, configBudgetLimit: 60, runTimestamp: RECENT_TIMESTAMP + 60,
       priceContext: { priceObservations: new Map(), priceHistory: new Map() }, chainTimestampCache: new Map(),
       txContextCache: new Map(), affectedHours: new Map(),
     };
@@ -154,7 +156,7 @@ describe("mint/burn ordered RPC fallback", () => {
     // A fully re-scanned range ending at that head can advance with real headers.
     const retry = await syncMintBurnConfig({ ...input, scanTo: fallbackHead });
     expect(retry.newLastBlock).toBe(fallbackHead);
-    expect(retry.scanCoverage).toMatchObject({ fromBlock: 1, toBlock: fallbackHead, fromTimestamp: 1024, toTimestamp: 1024 });
+    expect(retry.scanCoverage).toMatchObject({ fromBlock: 1, toBlock: fallbackHead, fromTimestamp: RECENT_TIMESTAMP, toTimestamp: RECENT_TIMESTAMP });
     const fallbackPages = fetcher.mock.calls.filter(([url]) => url === endpoints[1].url)
       .map(([, options]) => JSON.parse(String(options.body)) as Call).filter((call) => call.method === "eth_getLogs");
     expect(fallbackPages.every((call) => Number(logRange(call).toBlock) <= fallbackHead)).toBe(true);
@@ -188,10 +190,10 @@ describe("mint/burn ordered RPC fallback", () => {
     const meter = vi.spyOn(credits, "recordDwellirCredits");
     recorder((url, call) => {
       if (url === endpoints[0].url) return unavailable;
-      return { result: call.method === "eth_blockNumber" ? "0x66" : { number: "0x66", timestamp: "0x400", hash: word(12) } };
+      return { result: call.method === "eth_blockNumber" ? "0x66" : { number: "0x66", timestamp: RECENT_TIMESTAMP_HEX, hash: word(12) } };
     });
     expect(await getMintBurnFinalizedHead("base", endpoints, createBudget(20))).toMatchObject({ number: 102 });
-    expect(await resolveMintBurnBlockTimestamps(endpoints, [102], createBudget(20), { blockHashes: new Map([[102, word(12)]]) })).toEqual(new Map([[102, 1024]]));
+    expect(await resolveMintBurnBlockTimestamps(endpoints, [102], createBudget(20), { blockHashes: new Map([[102, word(12)]]) })).toEqual(new Map([[102, RECENT_TIMESTAMP]]));
     expect(await resolveMintBurnBlockTimestamps(endpoints, [102], createBudget(20), { blockHashes: new Map([[102, word(13)]]) })).toEqual(new Map());
     expect(meter).toHaveBeenCalled();
   });
@@ -308,17 +310,26 @@ describe("mint/burn ordered RPC fallback", () => {
     ("uses %s's validated finalized header, not its raw tip or a common block margin", async (chain) => {
       const endpoints = admitted(chain);
       const fetcher = recorder((_url, call) => ({ result: call.method === "eth_blockNumber" ? "0xffff"
-        : { number: "0x1234", timestamp: "0x400", hash: word(12) } }));
+        : { number: "0x1234", timestamp: RECENT_TIMESTAMP_HEX, hash: word(12) } }));
       expect(await getMintBurnFinalizedHead(chain, endpoints, createBudget(20))).toEqual({
-        number: 4660, timestamp: 1024, hash: word(12),
+        number: 4660, timestamp: RECENT_TIMESTAMP, hash: word(12),
       });
       const calls = fetcher.mock.calls.map(([, options]) => JSON.parse(String(options.body)) as Call);
       expect(calls.every(call => call.method === "eth_getBlockByNumber" && call.params[0] === "finalized")).toBe(true);
     });
 
+  it("rejects a finalized header older than the mint/burn finality budget", async () => {
+    const staleTimestamp = Math.floor(Date.now() / 1000) - 31 * 60;
+    const fetcher = recorder(() => ({
+      result: { number: "0x66", timestamp: `0x${staleTimestamp.toString(16)}`, hash: word(12) },
+    }));
+    expect(await getMintBurnFinalizedHead("base", admitted(), createBudget(20))).toBeNull();
+    expect(fetcher).toHaveBeenCalled();
+  });
+
   it("skips finalizedTagUnsupported endpoints and uses only a supported admitted fallback", async () => {
     const endpoints = admitted().map((endpoint, index) => index === 0 ? { ...endpoint, finalizedTagUnsupported: true } : endpoint);
-    const fetcher = recorder(() => ({ result: { number: "0x66", timestamp: "0x400", hash: word(12) } }));
+    const fetcher = recorder(() => ({ result: { number: "0x66", timestamp: RECENT_TIMESTAMP_HEX, hash: word(12) } }));
     expect(await getMintBurnFinalizedHead("base", endpoints, createBudget(20))).toMatchObject({ number: 102 });
     expect(fetcher.mock.calls.map(([url]) => url)).toEqual([endpoints[1]!.url]);
     fetcher.mockClear();

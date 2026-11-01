@@ -24,6 +24,7 @@ import {
   checkDepegOpenCoverage,
   checkDepegPendingConfirmation,
 } from "./canary-checks-depeg";
+import { checkBlacklistRosterCoverage, checkMintBurnPublicationCoverage } from "./canary-checks-mintburn";
 import type { WorkerCanaryMode } from "./worker-canary-mode";
 import { PRICING_CANARY_CHECKS } from "./canary-checks-pricing";
 
@@ -798,6 +799,18 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
     label: "DDR eligible incidents sealed",
     description: "Every active policy-universe incident eligible for a prediction carries a sealed public prediction within one producer run.",
     run: checkDdrEligibleUnsealed,
+  },
+  {
+    checkId: "mint-burn-publication-coverage",
+    label: "Mint/burn publication coverage",
+    description: "The published aggregate carries its admitted roster, a gauge, a fresh common watermark, and no quarantined legs.",
+    run: checkMintBurnPublicationCoverage,
+  },
+  {
+    checkId: "blacklist-roster-coverage",
+    label: "Blacklist roster coverage",
+    description: "The published blacklist summary retains its event population, current-balance rows, and supported config roster.",
+    run: checkBlacklistRosterCoverage,
   },
   ...PRICING_CANARY_CHECKS,
 ] as const;

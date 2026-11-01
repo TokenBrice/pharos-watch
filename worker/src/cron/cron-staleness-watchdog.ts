@@ -33,6 +33,8 @@ import { deliverOperatorAlert } from "./cron-sentinel-rules";
 import { loadCanaryOperatorWatch } from "./operator-watch-canary";
 import { loadProbeOperatorWatch } from "./operator-watch-probe";
 import { buildPricingOperatorConditions, pricingOperatorRuleIds } from "./operator-watch-pricing";
+import { loadBlacklistConfigWatchConditions } from "./operator-watch-blacklist";
+import { loadMintBurnStuckConfigWatchConditions } from "./operator-watch-mintburn";
 
 // Registry-derived lanes prove freshness from cron_runs MAX(started_at), and
 // prune-cron-history deletes cron_runs rows older than one week. A producer
@@ -629,6 +631,12 @@ export async function runCronStalenessWatchdog(
     { caches: status.caches, nowSec },
     signal,
   );
+  const [blacklistConfigWatch, mintBurnStuckWatch] = await Promise.all([
+    loadBlacklistConfigWatchConditions(db, nowSec, signal),
+    loadMintBurnStuckConfigWatchConditions(db, signal),
+  ]);
+  const blacklistConfigStale = blacklistConfigWatch.conditions.some((condition) => condition.active);
+  const mintBurnConfigStuck = mintBurnStuckWatch.conditions.some((condition) => condition.active);
   const alertTransitions = await alertOnFreshnessTransitions({
     db,
     conditions: [
@@ -679,6 +687,8 @@ export async function runCronStalenessWatchdog(
         active: condition.active,
         unknown: condition.unknown,
       })),
+      ...blacklistConfigWatch.conditions,
+      ...mintBurnStuckWatch.conditions,
     ],
     unknownSections,
     nowSec,
@@ -692,6 +702,10 @@ export async function runCronStalenessWatchdog(
     ...(canaryWatch.conditions.some((condition) => condition.active) ? ["canary-finding-active"] : []),
     ...(probeWatch.conditions.some((condition) => condition.active) ? ["probe-path-persistent-failure"] : []),
     ...(activeSupplyConditions.length > 0 ? ["supply-integrity-findings"] : []),
+    ...(blacklistConfigStale ? ["blacklist-config-stale"] : []),
+    ...(mintBurnConfigStuck ? ["mint-burn-config-stuck"] : []),
+    ...(blacklistConfigWatch.readFailed ? ["blacklist-config-watch-unavailable"] : []),
+    ...(mintBurnStuckWatch.readFailed ? ["mint-burn-config-watch-unavailable"] : []),
   ];
   const pendingTransition = (alertTransitions.stale.length > 0 || alertTransitions.recovered.length > 0)
     && !alertTransitions.sent;
@@ -707,13 +721,16 @@ export async function runCronStalenessWatchdog(
   }, signal);
   const operatorAlertDegraded = alertTransitions.deliveryFailed
     || (pendingTransition && alertTransitions.credentialsMissing === true);
+  const perConfigActiveCount =
+    blacklistConfigWatch.conditions.filter((condition) => condition.active).length
+    + mintBurnStuckWatch.conditions.filter((condition) => condition.active).length;
 
   return {
     status: status.failures.length > 0 || operatorAlertDegraded || !supplyWatch.ok
       || activeSupplyConditions.length > 0
       ? "degraded"
       : "ok",
-    itemCount: stale.length + detailWriteFailures.length + activeSupplyConditions.length,
+    itemCount: stale.length + detailWriteFailures.length + activeSupplyConditions.length + perConfigActiveCount,
     metadata: JSON.stringify({
       ...(status.failures.length > 0 ? { reason: "freshness-evidence-read-failed" }
         : !supplyWatch.ok ? { reason: "supply-integrity-read-failed" }
@@ -730,6 +747,8 @@ export async function runCronStalenessWatchdog(
         ...(probeWatch.conditions.some((condition) => condition.active) ? ["probe-path-persistent-failure"] : []),
         ...pricingOperatorRuleIds(pricingConditions),
         ...activeSupplyConditions.map((condition) => `supply-${condition.id}`),
+        ...(blacklistConfigStale ? ["blacklist-config-stale"] : []),
+        ...(mintBurnConfigStuck ? ["mint-burn-config-stuck"] : []),
       ],
       canaryWatch: { active: canaryWatch.conditions.length, unknown: canaryWatch.unknown },
       probeWatch: { active: probeWatch.conditions.length, unknown: probeWatch.unknown },
@@ -748,6 +767,8 @@ export async function runCronStalenessWatchdog(
             })),
           }
         : { status: "unknown", reason: "supply-integrity-read-failed" },
+      blacklistConfigWatch,
+      mintBurnStuckWatch,
       alertTransitions,
       dependencyRecoveryChecks,
       warnings: status.warnings,

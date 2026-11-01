@@ -31,9 +31,10 @@ vi.mock("../../telegram/delivery/telegram", async (importOriginal) => ({
 
 import { CRON_JOB_DEFINITIONS } from "@shared/lib/cron-jobs";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
-import { WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { WORKER_ACTIVE_IDS, WORKER_READABLE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { CRON_RUNS_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { ACTIVE_CANARY_CHECK_IDS } from "../../lib/canary-checks";
+import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import {
   CRON_STALENESS_ALERT_COOLDOWN_SEC,
   deriveCronFreshnessProducers,
@@ -59,61 +60,109 @@ interface FakeOperatorWatchRows {
   probeRow?: Record<string, unknown> | null;
 }
 
+function defaultBlacklistSyncState(nowSec: number) {
+  return CONTRACT_CONFIGS
+    .filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId))
+    .map((config) => ({
+      config_key: config.configKey,
+      last_block: 1,
+      cursor_value: null,
+      attempt_generation: 1,
+      last_attempted_at: nowSec - 60,
+      last_succeeded_at: nowSec - 60,
+      last_skipped_at: null,
+      last_failed_at: null,
+      consecutive_skips: 0,
+      consecutive_failures: 0,
+      last_outcome: "attempted",
+    }));
+}
+
+/** Latest-schema fixtures start with an empty blacklist state table; seed a healthy roster. */
+function openFixture() {
+  const opened = fixtures.open();
+  const insert = opened.sqlite.prepare(
+    `INSERT INTO blacklist_sync_state (config_key, last_block, last_attempted_at, last_succeeded_at, last_outcome)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(config_key) DO UPDATE SET
+       last_attempted_at = excluded.last_attempted_at,
+       last_succeeded_at = excluded.last_succeeded_at,
+       last_outcome = excluded.last_outcome`,
+  );
+  const rows = new Map(
+    defaultBlacklistSyncState(Math.floor(Date.now() / 1000)).map((row) => [row.config_key, row]),
+  );
+  for (const row of rows.values()) {
+    insert.run(row.config_key, row.last_block, row.last_attempted_at, row.last_succeeded_at, row.last_outcome);
+  }
+  return opened;
+}
+
 function fakeDb(
   failureRows: FakeFailureRow[] = [],
   producerPublishedAt?: number,
   operatorWatch: FakeOperatorWatchRows = {},
+  blacklistSyncState?: unknown[],
 ): D1Database {
   const cacheRows = new Map<string, { value: string; updated_at: number }>();
   return {
-    prepare: (sql: string) => ({
-      bind: (...args: unknown[]) => ({
-        first: async () => {
-          if (sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ?")) {
-            return cacheRows.get(args[0] as string) ?? null;
-          }
-          if (sql.includes("FROM status_probe_runs")) return operatorWatch.probeRow ?? null;
-          return null;
-        },
-        run: async () => {
-          if (sql.startsWith("INSERT INTO cache")) {
-            cacheRows.set(args[0] as string, { value: args[1] as string, updated_at: args[2] as number });
-          } else if (sql.startsWith("DELETE")) {
-            const cutoff = args[1] as number;
-            for (let i = failureRows.length - 1; i >= 0; i -= 1) {
-              if (failureRows[i].updated_at < cutoff) failureRows.splice(i, 1);
+    prepare: (sql: string) => {
+      const all = async (args: unknown[]) => {
+        if (sql.includes("ROW_NUMBER() OVER")) {
+          const started_at = Math.floor(Date.now() / 1000);
+          return { results: (args as string[]).map((job) => ({
+            job,
+            last_success_at: producerPublishedAt ?? started_at,
+            last_run_at: started_at,
+            last_status: "ok",
+          })) };
+        }
+        if (sql.includes("FROM blacklist_sync_state")) {
+          return {
+            results: blacklistSyncState ?? defaultBlacklistSyncState(Math.floor(Date.now() / 1000)),
+          };
+        }
+        if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
+          return { results: [] };
+        }
+        if (sql.includes("FROM worker_canary_runs")) {
+          return { results: operatorWatch.canaryRows ?? [] };
+        }
+        if (sql.includes("supply-integrity-previous-rows") || sql.includes("FROM supply_history")) {
+          return { results: [] };
+        }
+        if (sql.includes("FROM cron_runs")) {
+          // No sync-stablecoins/charts run evidence: the supply dimensions
+          // stay unknown rather than claiming healthy values.
+          return { results: [] };
+        }
+        return { results: failureRows.filter((row) => row.updated_at >= (args[1] as number)) };
+      };
+      return {
+        all: () => all([]),
+        bind: (...args: unknown[]) => ({
+          first: async () => {
+            if (sql.startsWith("SELECT value, updated_at FROM cache WHERE key = ?")) {
+              return cacheRows.get(args[0] as string) ?? null;
             }
-          }
-          return { meta: { changes: 0 } };
-        },
-        all: async () => {
-          if (sql.includes("ROW_NUMBER() OVER")) {
-            const started_at = Math.floor(Date.now() / 1000);
-            return { results: (args as string[]).map((job) => ({
-              job,
-              last_success_at: producerPublishedAt ?? started_at,
-              last_run_at: started_at,
-              last_status: "ok",
-            })) };
-          }
-          if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
-            return { results: [] };
-          }
-          if (sql.includes("FROM worker_canary_runs")) {
-            return { results: operatorWatch.canaryRows ?? [] };
-          }
-          if (sql.includes("supply-integrity-previous-rows") || sql.includes("FROM supply_history")) {
-            return { results: [] };
-          }
-          if (sql.includes("FROM cron_runs")) {
-            // No sync-stablecoins/charts run evidence: the supply dimensions
-            // stay unknown rather than claiming healthy values.
-            return { results: [] };
-          }
-          return { results: failureRows.filter((row) => row.updated_at >= (args[1] as number)) };
-        },
-      }),
-    }),
+            if (sql.includes("FROM status_probe_runs")) return operatorWatch.probeRow ?? null;
+            return null;
+          },
+          run: async () => {
+            if (sql.startsWith("INSERT INTO cache")) {
+              cacheRows.set(args[0] as string, { value: args[1] as string, updated_at: args[2] as number });
+            } else if (sql.startsWith("DELETE")) {
+              const cutoff = args[1] as number;
+              for (let i = failureRows.length - 1; i >= 0; i -= 1) {
+                if (failureRows[i].updated_at < cutoff) failureRows.splice(i, 1);
+              }
+            }
+            return { meta: { changes: 0 } };
+          },
+          all: () => all(args),
+        }),
+      };
+    },
   } as unknown as D1Database;
 }
 
@@ -166,6 +215,38 @@ describe("cron staleness watchdog", () => {
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Detail cache writes recovered</b>: usdt-tether");
     expect(JSON.parse(recovery.metadata ?? "{}").alertTransitions).toMatchObject({
       recovered: ["detail-write:usdt-tether"], sent: true,
+    });
+  });
+
+  it("alerts a blacklist config that has not succeeded for two producer intervals", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
+    const now = Math.floor(Date.now() / 1000);
+    const config = CONTRACT_CONFIGS.find((candidate) => WORKER_ACTIVE_IDS.has(candidate.stablecoinId))!;
+    const states = defaultBlacklistSyncState(now);
+    for (const state of states) {
+      if (state.config_key === config.configKey) state.last_succeeded_at = now - 12 * 3600 - 1;
+    }
+    const db = fakeDb([], undefined, {}, states);
+    mockCacheStatus({});
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
+    const raised = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Stale producers");
+    expect(sendToChatMock.mock.calls[0]?.[1]).toContain(config.stablecoin);
+    expect(JSON.parse(raised.metadata ?? "{}").firedRuleIds).toContain("blacklist-config-stale");
+    expect(JSON.parse(raised.metadata ?? "{}").quality.reasons).toContain("blacklist-config-stale");
+
+    vi.setSystemTime(new Date("2026-08-22T01:00:00Z"));
+    const recoveredAt = Math.floor(Date.now() / 1000);
+    for (const state of states) state.last_succeeded_at = recoveredAt - 60;
+    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Recovered producers");
+    expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions).toMatchObject({
+      recovered: [`sync-blacklist:${config.configKey}`],
+      sent: true,
     });
   });
 
@@ -421,7 +502,7 @@ describe("cron staleness watchdog", () => {
     vi.setSystemTime(new Date("2026-08-22T00:00:00Z"));
     const startSec = Math.floor(Date.now() / 1000);
     mockCacheStatus({});
-    const { sqlite, db } = fixtures.open();
+    const { sqlite, db } = openFixture();
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
     // The last successful detail row predates the failed write; the coin is not
     // requested again, so no later detail write can clear the marker.
@@ -452,7 +533,7 @@ describe("cron staleness watchdog", () => {
     const nowSec = startOfUtcDaySec(new Date("2026-08-22T00:00:00Z")) + 3_600;
     vi.setSystemTime(nowSec * 1_000);
     mockCacheStatus({});
-    const { sqlite, db } = fixtures.open();
+    const { sqlite, db } = openFixture();
     const today = startOfUtcDaySec(new Date(nowSec * 1000));
     const yesterday = today - 86_400;
     const ids = [...ACTIVE_IDS].slice(0, 12);
@@ -652,7 +733,7 @@ describe("cron staleness watchdog", () => {
 
   it("treats a marker as recovered when the detail row was rewritten after it", async () => {
     const nowSec = 1_790_000_000;
-    const { sqlite, db } = fixtures.open();
+    const { sqlite, db } = openFixture();
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
     for (let index = 0; index < 101; index += 1) {
       insert.run(`detail-write-failure:coin-${index}`, nowSec - 600);
@@ -665,7 +746,7 @@ describe("cron staleness watchdog", () => {
 
   it("keeps markers whose detail row predates the failure", async () => {
     const nowSec = 1_790_000_000;
-    const { sqlite, db } = fixtures.open();
+    const { sqlite, db } = openFixture();
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
       .run("detail-write-failure:usdt-tether", '{"reason":"write-error","bytes":500}', nowSec - 60);
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)")
@@ -684,7 +765,7 @@ describe("cron staleness watchdog", () => {
     const nowSec = 1_790_000_000;
     const key = "detail-write-failure:usdt-tether";
     const replacement = '{"reason":"value-too-large","bytes":21000000}';
-    const { sqlite } = fixtures.open();
+    const { sqlite } = openFixture();
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)")
       .run(key, nowSec - 600);
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)")
@@ -709,7 +790,7 @@ describe("cron staleness watchdog", () => {
 
   it("retains a scanned marker when its recovery evidence disappears before cleanup", async () => {
     const nowSec = 1_790_000_000;
-    const { sqlite } = fixtures.open();
+    const { sqlite } = openFixture();
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
     insert.run("detail-write-failure:usdt-tether", nowSec - 600);
     insert.run("detail:usdt-tether", nowSec - 60);
@@ -726,7 +807,7 @@ describe("cron staleness watchdog", () => {
 
   it("prunes expired detail write-failure markers", async () => {
     const nowSec = 1_750_000_000;
-    const { sqlite, db } = fixtures.open();
+    const { sqlite, db } = openFixture();
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
     insert.run("detail-write-failure:old-coin", nowSec - 8 * 24 * 3600);
     insert.run("detail-write-failure:boundary-coin", nowSec - 7 * 24 * 3600);

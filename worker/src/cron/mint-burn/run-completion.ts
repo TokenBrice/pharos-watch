@@ -97,9 +97,10 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   // 39–44 of 129 configs per run is healthy while the pass is still inside the
   // window. `cycle-in-progress` (no completed pass yet) stays neutral.
   const coverageCycleStalled = input.coverageCycle?.status === "stalled";
+  const coverageCycleStuck = (input.coverageCycle?.stuckConfigCount ?? 0) > 0;
   const degradedSignal = admittedScanCoverageUnproven > 0 || admittedFinalityUnavailableChains.length > 0 || admittedConservationFailures > 0 || (
     input.lane === "extended"
-      ? admittedApiErrors > 1 || coverageCycleStalled
+      ? admittedApiErrors > 1 || coverageCycleStalled || coverageCycleStuck
       : criticalCoverageRatio < 1 || admittedApiErrors > 1);
   const degradedStreak = degradedSignal ? input.runState.degradedStreak + 1 : 0;
 
@@ -120,6 +121,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       admittedConservationFailures > 0
       || admittedFinalityUnavailableChains.length > 0
       || coverageCycleStalled
+      || coverageCycleStuck
       || input.attemptCoverage.persistenceFailed
       || input.runDrilldown.persistenceFailed
     )
@@ -327,6 +329,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       reason: admittedConservationFailures > 0 ? "mint-burn-conservation-failure"
         : admittedFinalityUnavailableChains.length > 0 ? "finality-head-unavailable"
         : coverageCycleStalled ? "mint-burn-coverage-cycle-stalled"
+        : coverageCycleStuck ? "mint-burn-config-stuck"
         : runStatePersistenceFailed || input.attemptCoverage.persistenceFailed || input.runDrilldown.persistenceFailed
           ? "mint-burn-state-persistence-failed"
           : nullPriceBacklogError != null ? "mint-burn-null-price-backlog-unavailable"

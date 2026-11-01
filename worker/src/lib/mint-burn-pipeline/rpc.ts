@@ -5,6 +5,7 @@ import { throwIfAborted } from "../abort";
 import { budgetExhausted, type SubrequestBudget } from "../evm-logs";
 import { fetchEvmBlockHeader, type EvmBlockHeader } from "../evm-rpc";
 import { TronRpcError, type TronJsonRpcReader } from "../tron-jsonrpc";
+import { mintBurnFinalizedHeadMaxAgeSec } from "../mint-burn-health-config";
 
 export function mintBurnAlchemyEndpoint(url: string): RpcEndpoint {
   return { url, operator: "alchemy", keyed: true, position: "registry", stateHistory: "archive", logsHistory: "full" };
@@ -39,6 +40,10 @@ export async function getMintBurnFinalizedHead(chainId: string, endpoints: reado
     signal,
     deadlineMs,
     maxRetries: 0,
+    // A provider serving a cached finalized tag must not certify `up-to-date`.
+    // Rejection leaves the chain without a head, so the existing finality
+    // coverage path degrades the run instead of treating the range as empty.
+    minTimestampSec: Math.floor(Date.now() / 1000) - mintBurnFinalizedHeadMaxAgeSec(chainId),
     beforeRequest: () => {
       throwIfAborted(signal);
       if (budgetExhausted(budget)) return false;

@@ -27,7 +27,10 @@ export type CronSentinelRuleSource =
  *   `supply-availability`, `supply-carry`, `supply-snapshot-overdue`,
  *   `supply-snapshot-partial`, `supply-charts-history` (two-run confirmed
  *   findings on cached supply values, carry, the daily snapshot, and
- *   chart-history continuity).
+ *   chart-history continuity), `blacklist-config-stale` (a blacklist config has
+ *   not reached its safe head for two six-hourly producer intervals), and
+ *   `mint-burn-config-stuck` (an extended-lane config attempted twice without
+ *   advancing its frontier).
  * - `digest-publication`: `daily-row`, `daily-telegram`, `daily-twitter`,
  *   `weekly-row`, `weekly-telegram`, `weekly-twitter` (edition missing after
  *   its due time) and `map-producer-lag` (Safety Score map manifest missing).
@@ -45,7 +48,9 @@ export type CronSentinelRuleSource =
  *   clock is not advancing inside its source-age budget). Those two are
  *   transition-only and send no Telegram: they stay on `/status` and in this
  *   run metadata.
- * - `growth`: `mint-burn-row-growth` (event rows reach 2,300,000).
+ * - `growth`: `mint-burn-row-growth` (event rows reach 2,300,000) and
+ *   `mint-burn-activity-collapse` (an enabled leg with a 30-day baseline records
+ *   no counted event for a full week).
  * - `repair-debt`: `repair-debt-due`, `repair-debt-stale-claim`.
  */
 export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly string[]> = {
@@ -64,6 +69,8 @@ export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly str
     "supply-snapshot-overdue",
     "supply-snapshot-partial",
     "supply-charts-history",
+    "blacklist-config-stale",
+    "mint-burn-config-stuck",
   ],
   "digest-publication": [
     "daily-row",
@@ -91,7 +98,7 @@ export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly str
     "reserve-adapter-failure-sustained",
     "reserve-source-clock-stalled",
   ],
-  growth: ["mint-burn-row-growth"],
+  growth: ["mint-burn-row-growth", "mint-burn-activity-collapse"],
   "repair-debt": ["repair-debt-due", "repair-debt-stale-claim"],
 };
 

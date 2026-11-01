@@ -20,6 +20,11 @@ import {
   buildSupplySnapshotCompletionMarker,
   buildSupplySnapshotCoverageExpectation,
 } from "../supply-snapshot-completion";
+import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
+import {
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+  BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+} from "../blacklist-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -40,6 +45,8 @@ const EXPECTED_CANARY_CHECK_IDS = [
   "depeg-open-coverage",
   "depeg-dex-suppression-divergence",
   "ddr-eligible-unsealed",
+  "mint-burn-publication-coverage",
+  "blacklist-roster-coverage",
   "stablecoins-active-price-coverage",
   "depeg-observation-coverage",
 ];
@@ -289,6 +296,84 @@ function dewsPointerRow(rows: ReturnType<typeof dewsRows>, computedAt = NOW - 60
   };
 }
 
+function mintBurnPublicationCacheRow(overrides: {
+  admittedCount?: number;
+  legCount?: number;
+  score?: number | null;
+  watermarkAgeSec?: number;
+  admittedPairs?: Array<[string, string]>;
+  coinIds?: string[];
+  pendingLegs?: Array<{ configKey: string; reason: string }>;
+} = {}) {
+  const admittedPairs = overrides.admittedPairs ?? [["usdt-tether", "ethereum"], ["usdc-circle", "ethereum"]];
+  const admittedCount = overrides.admittedCount ?? admittedPairs.length;
+  return {
+    key: aggregateFlowCacheKey(24),
+    value: JSON.stringify({
+      publication: {
+        evaluatedAt: NOW - 60,
+        requiredBaselineSec: 90 * 86400,
+        freshnessBudgetSec: 8 * 3600,
+        legsScope: "non-admitted",
+        legCount: overrides.legCount ?? Math.max(admittedCount, admittedPairs.length),
+        admittedCount,
+        pendingAdmissionCount: 0,
+        disabledCount: 0,
+        admittedPairs,
+        legs: (overrides.pendingLegs ?? []).map((leg) => ({
+          configKey: leg.configKey,
+          status: "pending-admission",
+          reason: leg.reason,
+        })),
+      },
+      gauge: { score: overrides.score === undefined ? 42 : overrides.score },
+      coins: (overrides.coinIds ?? [...new Set(admittedPairs.map(([id]) => id))])
+        .map((stablecoinId) => ({ stablecoinId })),
+      window: {
+        start: NOW - 24 * 3600,
+        end: NOW - 3600,
+        semantics: "closed-utc-hours",
+        watermark: {
+          timestamp: NOW - (overrides.watermarkAgeSec ?? 3600),
+          ageSec: overrides.watermarkAgeSec ?? 3600,
+          maxAgeSec: 8 * 3600,
+          unavailableReason: null,
+        },
+      },
+    }),
+    updatedAt: NOW - 60,
+    updated_at: NOW - 60,
+  };
+}
+
+function blacklistRosterCacheRow(overrides: {
+  totalEvents?: number;
+  balanceRows?: number;
+  supportedConfigs?: number;
+  behindConfigs?: unknown[];
+} = {}) {
+  return {
+    key: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY,
+    value: JSON.stringify({
+      version: BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION,
+      materializedAt: NOW - 60,
+      freshnessTs: NOW - 60,
+      payload: {
+        totalEvents: overrides.totalEvents ?? 12_345,
+        freezeLedgerMeta: { totalRows: overrides.balanceRows ?? 42 },
+        coverage: { counts: { supportedConfigs: overrides.supportedConfigs ?? 51 } },
+        refresh: { observedAt: NOW - 60, behindConfigs: overrides.behindConfigs ?? [] },
+      },
+    }),
+    updatedAt: NOW - 60,
+    updated_at: NOW - 60,
+  };
+}
+
+function canaryPublicationCacheRows() {
+  return [mintBurnPublicationCacheRow(), blacklistRosterCacheRow()];
+}
+
 function healthyD1(
   dex: {
     rowCount?: number;
@@ -368,6 +453,7 @@ function healthyD1(
           usdRecordDateMissing: dex.usdRecordDateMissing,
         }),
         supplyCompletionRow(),
+        ...canaryPublicationCacheRows(),
       ],
     },
     {
@@ -400,6 +486,10 @@ function healthyD1(
       rows: [],
     },
     ...depegCanaryFixtures(),
+    {
+      match: "INSERT INTO cache",
+      rows: [],
+    },
   ]);
 }
 
@@ -418,9 +508,9 @@ describe("worker data invariant canaries", () => {
 
     expect(summary).toMatchObject({
       mode: "status",
-      totalChecks: 17,
+      totalChecks: 19,
 
-      okCount: 17,
+      okCount: 19,
       degradedCount: 0,
       errorCount: 0,
       skippedCount: 0,
@@ -923,6 +1013,7 @@ describe("worker data invariant canaries", () => {
           dewsPointerRow(unhealthyDewsRows),
           ...gbpCanaryCacheRows(),
           supplyCompletionRow(),
+          ...canaryPublicationCacheRows(),
         ],
       },
       {
@@ -950,6 +1041,10 @@ describe("worker data invariant canaries", () => {
         match: "canary-stablecoins-pricing-runs",
         matchBinds: [2],
         rows: stablecoinsRunRows(),
+      },
+      {
+        match: "INSERT INTO cache",
+        rows: [],
       },
     ]);
 
@@ -1100,6 +1195,7 @@ describe("worker data invariant canaries", () => {
           { key: "stablecoins", value: stablecoinsPayload(), updatedAt: NOW - 60, updated_at: NOW - 60 },
           ...gbpCanaryCacheRows(),
           supplyCompletionRow(),
+          ...canaryPublicationCacheRows(),
         ],
       },
       {
@@ -1127,15 +1223,21 @@ describe("worker data invariant canaries", () => {
         throwError: new Error("D1_ERROR: no such table: depeg canary source"),
         rows: [],
       })),
+      {
+        match: "INSERT INTO cache",
+        rows: [],
+      },
     ]);
 
     const summary = await runCanaryChecks(db, { observedAt: NOW, mode: "status" });
 
     // The depeg and pricing checks read cron_runs and depeg tables, which this fixture also omits.
+    // The mint/burn and blacklist checks read the healthy cache rows above, so the union keeps
+    // the original error total and adds two healthy observations.
     expect(summary.errorCount).toBe(11);
     expect(summary.skippedCount).toBe(0);
     expect(summary.degradedCount).toBe(1);
-    expect(summary.okCount).toBe(5);
+    expect(summary.okCount).toBe(7);
     expect(summary.worstStatus).toBe("error");
   });
 });
