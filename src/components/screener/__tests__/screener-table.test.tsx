@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ScreenerTable } from "@/components/screener/screener-table";
+import { PEG_SCORE_HEADER_TITLE } from "@/lib/definitions";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
@@ -131,6 +132,17 @@ describe("ScreenerTable desktop table", () => {
     await waitFor(() => {
       expect(screen.getByLabelText("Safety grade B+, score 82")).toBeTruthy();
     });
+  });
+
+  it("states the Peg Score's real tracking window in the header tooltip", async () => {
+    installViewportMatchMedia(1400);
+
+    render(<ScreenerTable rows={[row]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />);
+
+    await waitFor(() => expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy());
+    const title = screen.getByText("Peg Score").closest("th")?.getAttribute("title");
+    expect(title).toBe(PEG_SCORE_HEADER_TITLE);
+    expect(title).not.toMatch(/over 30 days/i);
   });
 
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {

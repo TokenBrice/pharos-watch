@@ -417,4 +417,29 @@ describe("describeDataCoverageHoldCauses", () => {
     expect(causes.join(" ")).not.toContain("floor-a");
   });
 
+  it.each([
+    { code: "dex-stale" },
+    { code: "dex-unavailable" },
+    { code: "redemption-stale" },
+    { code: "redemption-unavailable" },
+    { code: "live-reserves-unavailable" },
+    { code: "live-reserves-coverage-below-floor" },
+    { code: "v9-public-materialization-pending" },
+    { code: "coverage-floor-failed", floorIds: ["floor-a"] },
+    {
+      code: "producer-failed-pipeline-gap", assetId: "usdc-circle", source: "reason",
+      reasonCode: "missing-applicable-peg", path: "reserves", effect: "pipeline-gap",
+    },
+    { code: "assessment-failed", detail: "internal validator detail" },
+  ] as const)("names a reader-facing cause for a $code hold", (reason) => {
+    const causes = describeDataCoverageHoldCauses([reason]);
+    expect(causes.length).toBeGreaterThan(0);
+    expect(causes.join(" ")).not.toContain(reason.code);
+  });
+
+  it("explains a materialization-pending hold that keeps the previous snapshot", () => {
+    expect(describeDataCoverageHoldCauses([{ code: "v9-public-materialization-pending" }])).toEqual([
+      "The newest accepted ratings publication has not finished publishing, so the previous snapshot is shown.",
+    ]);
+  });
 });

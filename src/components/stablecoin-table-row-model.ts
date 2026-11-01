@@ -11,6 +11,7 @@ import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/sta
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
+import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import type { DexLiquidityTableMap, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { TableDensity } from "@/hooks/use-table-density";
 
@@ -40,6 +41,11 @@ export function buildStablecoinTableRowModel({
   // NAV tokens have no peg reference, but their observed price is still shown,
   // converted to the peg currency (USD fallback inside formatNativePrice).
   const priceRef = meta?.flags.navToken ? getNavPriceReference(meta.flags.pegCurrency, pegScores) : pegRef;
+  const priceCurrency = meta?.flags.pegCurrency ?? "USD";
+  // A USD-symbol peg needs no reference to print its observed price; other
+  // currencies fail closed when the reference is absent (the cell IS the
+  // native conversion).
+  const priceNeedsReference = getPegTaxonomyByCurrency(priceCurrency)?.nativePriceUsesUsdSymbol !== true;
   const currentDeviationBps = !isObservedPrice(coin) || pegSummary?.pegReferenceUnavailable === true
     ? null
     : pegSummary?.currentDeviationBps ?? null;
@@ -78,9 +84,9 @@ export function buildStablecoinTableRowModel({
     pegRef,
     pegDeviationBps: currentDeviationBps,
     absPegDeviationBps,
-    priceCell: !isObservedPrice(coin) || (pegRef == null && !meta?.flags.navToken)
+    priceCell: !isObservedPrice(coin) || (pegRef == null && !meta?.flags.navToken && priceNeedsReference)
       ? "—"
-      : formatNativePrice(coin.price, meta?.flags.pegCurrency ?? "USD", priceRef),
+      : formatNativePrice(coin.price, priceCurrency, priceRef),
     pegDeviationColorClass: absPegDeviationBps === null
       ? "text-muted-foreground"
       : deviationColorClass(absPegDeviationBps),

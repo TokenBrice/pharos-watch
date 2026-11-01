@@ -94,6 +94,12 @@ describe("projectReserveQualityClientSummary", () => {
     expect(summary?.asOf).toBe("2026-06-30");
   });
 
+  it("keeps a near-whole share short of 100% at display precision", () => {
+    expect(formatReserveQualityPct(99.99757415980419)).toBe("<100%");
+    expect(formatReserveQualityPct(99.96)).toBe("<100%");
+    expect(formatReserveQualityPct(100)).toBe("100%");
+  });
+
   it("returns null without reserves", () => {
     expect(projectReserveQualityClientSummary(coinWith(undefined))).toBeNull();
     expect(projectReserveQualityClientSummary(coinWith([]))).toBeNull();

@@ -141,10 +141,12 @@ const CHIP_TONES = {
   watch: SEVERITY_TONE_CLASS.watch.pill,
 } as const;
 
-/** Rounds to at most 1 decimal and trims trailing zeros, e.g. 12.56 -> "12.6%", 71 -> "71%". */
+/** Rounds to at most 1 decimal and trims trailing zeros, e.g. 12.56 -> "12.6%", 71 -> "71%".
+ *  A non-whole share that would round to 100 prints "<100%" instead of overstating the whole. */
 export function formatReserveQualityPct(value: number): string {
   if (value > 0 && value < 0.1) return "<0.1%";
-  return `${Number(value.toFixed(1))}%`;
+  const rounded = Number(value.toFixed(1));
+  return value < 100 && rounded >= 100 ? "<100%" : `${rounded}%`;
 }
 
 interface ChipVerdict {

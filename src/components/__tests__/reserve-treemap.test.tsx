@@ -109,6 +109,18 @@ describe("ReserveTreemap", () => {
       .toContain("Unreviewed remainder &lt;0.01%");
   });
 
+  it("keeps a near-whole share short of 100% so visible shares never sum above the whole", () => {
+    const html = render([
+      SLICE("apxUSD yield vault shares", 99.99757415980419, "high"),
+      SLICE("Vested apxUSD yield recognized by apyUSD", 0.0024258401958068463, "high"),
+    ]);
+    expect(html).toContain("apxUSD yield vault shares &lt;100%");
+    expect(html).not.toContain("· 100%");
+    // The remaining 0.0024% stays visible as positive dust, not zero.
+    expect(render([SLICE("Bills", 99.999, "very-low"), SLICE("Loans", 0.0005, "high")]))
+      .toContain("Bills &lt;100%");
+  });
+
   it("draws a basket led by a slice at or above 90% as a bar and still labels every other share", () => {
     const html = render([SLICE("USDe staking vault shares", 92, "medium"), SLICE("Cash buffer", 8, "very-low")]);
     expect(html).toContain("USDe staking vault shares");

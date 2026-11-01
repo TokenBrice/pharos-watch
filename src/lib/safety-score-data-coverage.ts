@@ -192,6 +192,9 @@ export function describeDataCoverageHoldCauses(
     if (reason.code === "live-reserves-coverage-below-floor") {
       causes.push("Live reserve coverage is below the publication floor.");
     }
+    if (reason.code === "v9-public-materialization-pending") {
+      causes.push("The newest accepted ratings publication has not finished publishing, so the previous snapshot is shown.");
+    }
     if (reason.code === "assessment-failed") causes.push("The latest ratings update could not be verified.");
     if (reason.code === "coverage-floor-failed") {
       causes.push(

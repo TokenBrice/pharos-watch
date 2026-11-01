@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import type { QueryKey } from "@tanstack/react-query";
 import { MethodologyHint } from "@/components/methodology-hint";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+import { PEG_SCORE_HEADER_TITLE } from "@/lib/definitions";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { TableHead, TableHeader, TableRow } from "@/components/table";
 import { Button } from "@/components/ui/button";
@@ -22,10 +24,10 @@ export const STABLECOIN_FRAME_SHARED = {
 } as const;
 
 export const STABLECOIN_TABLE_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
-  ["stablecoins"],
-  ["peg-summary"],
-  ["report-cards"],
-  ["dex-liquidity"],
+  FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.queryKey,
+  FRONTEND_API_QUERY_DESCRIPTORS.pegSummary.queryKey,
+  FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.queryKey,
+  FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityTable.queryKey,
 ];
 
 export const OVERSCAN = 32;
@@ -148,7 +150,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     headerAdornment: <MethodologyHint topic="pegScore" />,
     sortKey: "stability",
     className: "w-[156px] text-right",
-    title: "Peg Stability Score (0-100): measures peg-holding consistency over 30 days",
+    title: PEG_SCORE_HEADER_TITLE,
   },
   {
     id: "liquidity",

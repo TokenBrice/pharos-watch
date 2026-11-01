@@ -18,6 +18,8 @@ import { useSortColumnEvent } from "@/hooks/use-sort-column-event";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { buildLiveCompareUrl } from "@/lib/compare-links";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+import { PEG_SCORE_HEADER_TITLE } from "@/lib/definitions";
 import { EmptyStateIllustration } from "@/components/empty-state-illustration";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
@@ -43,12 +45,12 @@ import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-
 // M1: keys feeding the screener table's visible data (supply, peg, DEWS,
 // liquidity, safety grade). A background refetch of any of these surfaces the
 // RefreshingBar while the prior rows stay visible (keepPreviousData).
-const SCREENER_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
-  ["stablecoins"],
-  ["peg-summary"],
-  ["report-cards"],
-  ["stress-signals"],
-  ["dex-liquidity-table"],
+export const SCREENER_REFRESH_QUERY_KEYS: readonly QueryKey[] = [
+  FRONTEND_API_QUERY_DESCRIPTORS.stablecoins.queryKey,
+  FRONTEND_API_QUERY_DESCRIPTORS.pegSummary.queryKey,
+  FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.queryKey,
+  FRONTEND_API_QUERY_DESCRIPTORS.stressSignals.queryKey,
+  FRONTEND_API_QUERY_DESCRIPTORS.dexLiquidityTable.queryKey,
 ];
 
 function getRowPegDeviationSeries(row: ScreenerRow): ReadonlyArray<number | null> {
@@ -67,7 +69,7 @@ const COLUMNS: readonly DataTableColumn<ScreenerSortKey>[] = [
     label: "Peg Score",
     sortKey: "pegScore",
     className: "text-right",
-    title: "Peg Stability Score (0-100): peg-holding consistency over 30 days",
+    title: PEG_SCORE_HEADER_TITLE,
   },
   {
     id: "dewsScore",

@@ -17,7 +17,10 @@ export function ReserveRiskSwatch({ risk }: { risk: ReserveRisk }) {
 export function formatReserveRiskTier(risk: ReserveRisk): string {
   return `${RESERVE_RISK_PRESENTATION[risk].shortLabel} risk`;
 }
-/** Reserve shares are display-rounded to two decimals; positive dust stays visible. */
+/** Reserve shares are display-rounded to two decimals; positive dust stays visible,
+ *  and a share short of the whole never rounds up into a claim of 100%. */
 export function formatReserveSharePct(pct: number): string {
-  return pct > 0 && pct < 0.01 ? "<0.01%" : `${formatDecimal(pct, 0, 2)}%`;
+  if (pct > 0 && pct < 0.01) return "<0.01%";
+  const rounded = formatDecimal(pct, 0, 2);
+  return pct < 100 && Number(rounded.replaceAll(",", "")) >= 100 ? "<100%" : `${rounded}%`;
 }

@@ -130,6 +130,17 @@ describe("ComparisonTable", () => {
     expect(html).not.toMatch(/\bbest\b/i);
   });
 
+  it("keeps a pipeline-gap card out of the withheld top-driver chip", () => {
+    const coin = makeCoin("xmd", "XMD");
+    coin.safetyCard = makeReportCardsV9PipelineGapCard();
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    expect(html).toContain("Pipeline gap — no Safety Score published");
+    expect(html).not.toContain("Score withheld");
+    const driverRow = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*Top driver(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
+    expect(driverRow).toContain("No comparable data available");
+    expect(driverRow).not.toContain("Required evidence is withheld");
+  });
+
   it("labels unwired evidence freshness honestly in both evidence and driver rows", () => {
     const coin = makeCoin("test", "TST");
     coin.safetyCard = {

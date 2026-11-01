@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildTrackedIdSet,
   exportStablecoinsCsv,
+  getSupplyChangePercent,
   sortStablecoins,
   filterStablecoins,
   prioritizePinnedStablecoins,
@@ -77,8 +78,11 @@ describe("stablecoin export provenance", () => {
     exportStablecoinsCsv(rows, new Map([["zero", 1], ["unknown", 2]]), new Map(), {}, {}, { stablecoins: sourceTime, pegSummary: sourceTime - 60, reportCards: null });
     const [exported, columns, , preamble] = downloadCsvMock.mock.calls[0] as [StablecoinData[], CsvColumn<StablecoinData>[], string, ExportPreamble];
     expect(exported).toBe(rows);
-    expect(preamble.asOfISO).toBe("2026-09-01T12:00:00.000Z");
+    // An unknown participating clock withholds the scalar as-of instead of
+    // letting the stablecoins generation date the whole export.
+    expect(preamble.asOfISO).toBe("unknown");
     const header = formatPreambleCsv(preamble);
+    expect(header).toContain("stablecoins=2026-09-01T12:00:00.000Z");
     expect(header).toContain("pegSummary=2026-09-01T11:59:00.000Z");
     expect(header).toContain("dexLiquidity=unknown");
     expect(header).toContain("reportCards=unknown");
@@ -87,6 +91,69 @@ describe("stablecoin export provenance", () => {
     expect(supply.accessor(rows[1], 1)).toBeNull();
     exportStablecoinsCsv(rows, new Map([["zero", 1], ["unknown", 2]]));
     expect(downloadCsvMock.mock.calls[1][3].asOfISO).toBe("unknown");
+  });
+
+  it("names every participating source and dates the export by the oldest known generation", () => {
+    downloadCsvMock.mockReset();
+    const rows = [makeCoin("usdc", "USDC")];
+    const sourceTime = Date.parse("2026-09-01T12:00:00Z") / 1000;
+    exportStablecoinsCsv(rows, new Map([["usdc", 1]]), new Map(), {}, {}, {
+      stablecoins: sourceTime,
+      pegSummary: sourceTime - 60,
+      dexLiquidity: sourceTime - 30,
+      reportCards: sourceTime - 3600,
+    });
+
+    const preamble = downloadCsvMock.mock.calls[0][3] as ExportPreamble;
+    expect(preamble.asOfISO).toBe("2026-09-01T11:00:00.000Z");
+    expect(preamble.sourceGenerations).toEqual({
+      stablecoins: "2026-09-01T12:00:00.000Z",
+      pegSummary: "2026-09-01T11:59:00.000Z",
+      dexLiquidity: "2026-09-01T11:59:30.000Z",
+      reportCards: "2026-09-01T11:00:00.000Z",
+    });
+  });
+
+  it("keeps a never-read source visible as an unknown generation and withholds the scalar as-of", () => {
+    downloadCsvMock.mockReset();
+    const rows = [makeCoin("usdc", "USDC")];
+    const sourceTime = Date.parse("2026-09-01T12:00:00Z") / 1000;
+    exportStablecoinsCsv(rows, new Map([["usdc", 1]]), new Map(), undefined, undefined, {
+      stablecoins: sourceTime,
+      pegSummary: sourceTime - 60,
+    });
+
+    const preamble = downloadCsvMock.mock.calls[0][3] as ExportPreamble;
+    expect(preamble.asOfISO).toBe("unknown");
+    expect(preamble.sourceGenerations).toEqual({
+      stablecoins: "2026-09-01T12:00:00.000Z",
+      pegSummary: "2026-09-01T11:59:00.000Z",
+      dexLiquidity: null,
+      reportCards: null,
+    });
+    expect(formatPreambleCsv(preamble)).toContain("reportCards=unknown");
+  });
+});
+
+describe("carried supply consumers", () => {
+  it("withholds a restored row's change from the cell, sort and CSV instead of dating a stale observation as 24h", () => {
+    downloadCsvMock.mockReset();
+    const restored = makeCoin("restored", "Restored", {
+      circulating: { peggedUSD: 100_000_000 },
+      circulatingPrevDay: { peggedUSD: 95_000_000 },
+      circulatingPrevWeek: { peggedUSD: 90_000_000 },
+      supplyRestored: true,
+      supplyObservedAt: Math.floor(Date.now() / 1000) - 3 * 86_400,
+    });
+
+    expect(getSupplyChangePercent(restored, 95_000_000)).toBeNull();
+    expect(sortStablecoins({
+      filtered: [restored, makeCoin("fresh", "Fresh")], sort: sortDesc("change24h"), effectiveSortKey: "change24h",
+    }).map((coin) => coin.id)).toEqual(["fresh", "restored"]);
+
+    exportStablecoinsCsv([restored], new Map([["restored", 1]]));
+    const [, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[], string];
+    expect(columns.find((column) => column.header === "24h Change (%)")!.accessor(restored, 0)).toBeNull();
   });
 });
 
@@ -359,6 +426,30 @@ describe("sortStablecoins", () => {
       sort: sortDesc("grade"),
       sources: { reportCards: safetyTableRows([makeV9Card({ id: "hasGrade", score: 70 })]) },
       expected: ["hasGrade", "noGrade"],
+    },
+    {
+      name: "orders descending by the published letter grade, not the raw score held under it",
+      rows: [makeCoin("held", "Held"), makeCoin("raw", "Raw")],
+      sort: sortDesc("grade"),
+      sources: {
+        reportCards: safetyTableRows([
+          makeV9Card({ id: "held", score: 62, grade: "B", gradeHold: { rawGrade: "C+", heldFromGenerationId: "generation-1" } }),
+          makeV9Card({ id: "raw", score: 69, grade: "B-" }),
+        ]),
+      },
+      expected: ["held", "raw"],
+    },
+    {
+      name: "reverses the published letter grade order ascending",
+      rows: [makeCoin("held", "Held"), makeCoin("raw", "Raw")],
+      sort: sortAsc("grade"),
+      sources: {
+        reportCards: safetyTableRows([
+          makeV9Card({ id: "held", score: 62, grade: "B", gradeHold: { rawGrade: "C+", heldFromGenerationId: "generation-1" } }),
+          makeV9Card({ id: "raw", score: 69, grade: "B-" }),
+        ]),
+      },
+      expected: ["raw", "held"],
     },
     {
       name: "sorts by 24h supply change descending",

@@ -652,6 +652,9 @@ export const DEFINITIONS = {
   },
 } as const satisfies Record<string, Definition>;
 
+/** One header tooltip for the Peg Score column on every stablecoin table. */
+export const PEG_SCORE_HEADER_TITLE = `${DEFINITIONS.pegScore.label}: ${DEFINITIONS.pegScore.short}`;
+
 export type DefinitionKey = keyof typeof DEFINITIONS;
 
 type Defs = typeof DEFINITIONS;
