@@ -112,7 +112,7 @@ describe("ScreenerTable desktop table", () => {
 
   it.each([
     { cause: "C" as const, score: 35, reason: "undisclosed by issuer" },
-    { cause: "U" as const, score: 50, reason: "not yet researched" },
+    { cause: "U" as const, score: 50, reason: "unresolved" },
   ])("renders $cause priced unknowns with cause-specific text", async ({ cause, score, reason }) => {
     installViewportMatchMedia(1400);
     const partial: ScreenerRow = {

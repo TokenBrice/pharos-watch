@@ -23,8 +23,8 @@ describe("show-your-work formatters", () => {
     card.scoreTrace.aggregation!.pricedUnknownPillars = [{ pillar: "exit", cause: "U", score: 50, causeGapRefs: [] }];
     card.partialEvidence = { reasonCode: "partial-evidence-pipeline-gap", excludedPillars: ["exit"], causes: [], excludedComponentKeys: [], causeGapRefs: [] };
     const table = formatReportCardV9(card, "10.29");
-    expect(table.rows.find(row => row.label === "Exit pillar")?.value).toBe("Unknown — not yet researched · assumed 50/100");
-    expect(table.rows.find(row => row.label === "Evidence coverage")?.value).toBe("Exit not yet researched (assumed 50)");
+    expect(table.rows.find(row => row.label === "Exit pillar")?.value).toBe("Unknown — unresolved · assumed 50/100");
+    expect(table.rows.find(row => row.label === "Evidence coverage")?.value).toBe("Exit unresolved (assumed 50)");
   });
   it("formats V9 score stages without routing through V8 raw inputs", () => {
     const card = makeV9Card({

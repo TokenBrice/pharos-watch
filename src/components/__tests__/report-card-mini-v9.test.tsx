@@ -73,11 +73,11 @@ describe("ReportCardMiniV9 viewport radar", () => {
     const html = renderToStaticMarkup(<ReportCardMiniV9 card={partial} identity={identity} />);
     expect(html).toContain("Exit unknown");
     expect(html).toContain("Exit has no usable evidence; the score uses an assumed value in its place.");
-    expect(html).not.toMatch(/assumed \d|pipeline gap|not yet researched|undisclosed by issuer|Pillar radar unavailable/);
+    expect(html).not.toMatch(/assumed \d|pipeline gap|unresolved|undisclosed by issuer|Pillar radar unavailable/);
   });
 
   it.each([
-    ["exit", "U", 50, "Exit not yet researched", "Exit is not yet researched; the score assumes 50/100 until it is."],
+    ["exit", "U", 50, "Exit unresolved", "Exit is unresolved; the score assumes 50/100 until it is."],
     ["backing", "C", 35, "Backing undisclosed by issuer", "The issuer does not disclose Backing evidence; the score assumes 35/100 in its place."],
   ] as const)("labels a priced-unknown %s pillar by its %s cause", (pillar, cause, score, label, summary) => {
     const priced = projectV9TableCard(makeV9Card({ id: "usdt-tether", pillars: makeV9Pillars({ backing: 60, exit: 60, control: 60 }) }));

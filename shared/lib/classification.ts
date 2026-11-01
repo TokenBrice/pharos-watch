@@ -431,11 +431,11 @@ export const SAFETY_EVIDENCE_BADGE_CLASSES = {
 /**
  * Why a Safety Score pillar or component is missing from a card, by evidence
  * cause. C and U are priced as unknowns in the score; A and B are left out.
- * Only A is a data-pipeline unavailability, never "not yet researched".
+ * Only A is a data-pipeline unavailability, never an unresolved question.
  */
 export const SAFETY_SCORE_GAP_CAUSE_LABELS = {
   C: "undisclosed by issuer",
-  U: "not yet researched",
+  U: "unresolved",
   A: "data pipeline unavailable",
   B: "awaiting curation",
 } as const;
