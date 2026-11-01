@@ -61694,6 +61694,204 @@
         "surface:8ab73a6af318441ef0d1483f"
       ],
       "rationale": "The aggregate control inventory remains bounded only because each identified controller's complete execution closure and address-bound custody are unpublished. Steakhouse publishes the owner-Safe quorum, the 7-day market-onboarding timelock, the Aragon DAO Guardian veto and the Supervisor v2 contract class, and its page for this exact vault names only the vault address. Pinned Base reads at block 53284370 confirm the controller runtimes, versions and thresholds are unchanged (Safe 1.4.1 at 3 and 5, Safe 1.3.0 at 1, two codeless accounts, two EIP-7702 accounts, two contract runtimes). Existing immutable-core, delegation, asset-backed issuance and prior adverse facts are preserved; no new native mint/upgrade path, custody conclusion or incident absence is inferred."
+    },
+    {
+      "id": "rs2008-autousd-oracle-profile-public-20261030",
+      "assetId": "autousd-auto-finance",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:oracle",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "economic-control:oracle"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-30T11:02:57Z",
+      "reviewer": "RS2-008 research sprint 2026-10-30 (IDRX, GUSD, USDP, AutoUSD control identity)",
+      "sourcesRefs": [
+        "source:957686a0bfd9eff178be949d"
+      ]
+    },
+    {
+      "id": "rs2030-v9g-60f04c8a656c7d54",
+      "assetId": "iusd-initia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:iusd-initia:54ec166c0f5c3c031878",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "control:bridge-meta:iusd-initia:54ec166c0f5c3c031878"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-30T11:04:02Z",
+      "reviewer": "RS2-030 control-identity and reserve research 2026-10-30",
+      "sourcesRefs": [
+        "source:a12eb9e4021a97d0ac4f42d0",
+        "source:7932de7ffbb1b2d6d6c5c297",
+        "source:f8d8de0102b5c5e72e05b3a4",
+        "source:44b63cfc812f9e4fe7a67a0b",
+        "source:73dd2c660e72e6006dacacf5"
+      ]
+    },
+    {
+      "id": "rs2030-v9g-14bb0f4251b9a2ee",
+      "assetId": "iusd-initia",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "deployment-controls",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "deployment-controls"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-30T11:04:02Z",
+      "reviewer": "RS2-030 control-identity and reserve research 2026-10-30",
+      "sourcesRefs": [
+        "source:a12eb9e4021a97d0ac4f42d0",
+        "source:7932de7ffbb1b2d6d6c5c297",
+        "source:f8d8de0102b5c5e72e05b3a4",
+        "source:44b63cfc812f9e4fe7a67a0b"
+      ]
+    },
+    {
+      "id": "rs2-010-v9g-e65d4318b950d45b",
+      "assetId": "slvon-ondo",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:slvon-ondo:e3832d5b78815b0a9c35",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "control:bridge-meta:slvon-ondo:e3832d5b78815b0a9c35"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-30T11:02:00Z",
+      "reviewer": "RS2-010 research shard 2026-10-30",
+      "sourcesRefs": [
+        "source:2017c4c7d3b561b8647f33e1",
+        "source:5dc4efeaf63ab873ed7da3fa",
+        "source:a4ebc85d6663ca7314f36273",
+        "source:4e7e042caf2da78674ee201f"
+      ]
+    },
+    {
+      "id": "rs2-010-v9g-cd23912cc5c73231",
+      "assetId": "iauon-ondo",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:bridge-meta:iauon-ondo:a63827c3e04bcf2190a6",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "control:bridge-meta:iauon-ondo:a63827c3e04bcf2190a6"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-30T11:02:00Z",
+      "reviewer": "RS2-010 research shard 2026-10-30",
+      "sourcesRefs": [
+        "source:2017c4c7d3b561b8647f33e1",
+        "source:5dc4efeaf63ab873ed7da3fa",
+        "source:a4ebc85d6663ca7314f36273",
+        "source:4e7e042caf2da78674ee201f"
+      ]
+    },
+    {
+      "id": "rs2-041-usdu-unitas-minting-execution-scope-20261030",
+      "assetId": "usdu-unitas",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "control:mint-meta:usdu-unitas:712d4d5f93a323f3c6da",
+        "factorKey": "executionScope",
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "executionScope"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-30T11:03:47Z",
+      "reviewer": "RS2-041 shard research (usdu-unitas UnitasMintingV2 execution scope)",
+      "sourcesRefs": [
+        "source:32e17a53a0a74c250d5e584b",
+        "source:c6d30bcd64089bb61c6810c7"
+      ]
+    },
+    {
+      "id": "rs2-002-usdt-tether-deployment-controls-20261030",
+      "assetId": "usdt-tether",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "deployment-controls",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "deployment-controls"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-30T11:04:21Z",
+      "reviewer": "RS2-002 research sprint 2026-10-30",
+      "sourcesRefs": [
+        "source:7651efe85eef79ec1e0872ee",
+        "source:ef2559482249442f37ece712",
+        "source:6dd6934b19e2d5360a846dc8",
+        "source:c4d3977b20c6646c48193e6e",
+        "source:a7b9237d1fbfeba9842872a4"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e014884c108933a7177bef5f",
+        "surface:9d007526aaa738d67b1b00a7",
+        "surface:54e7139a797dea994566e875",
+        "surface:3fdf95e08d38a3a91f0fbaa1"
+      ],
+      "rationale": "Tether's reviewed issuer surfaces publish token contract addresses per supported protocol, a unilateral freeze power, daily circulation/reserve transparency, and an express disclaimer that third-party wrapped or bridged tokens are not Tether Tokens and are not redeemable with Tether. They publish no controller identities, signer sets, approval thresholds, timelocks, minter lists, token-level caps, economic-loss scope or per-deployment materiality for the issuer-native deployments, and no controller inventory or approval semantics for the third-party representation routes (USDT0 LayerZero OFTs, Binance-Peg, legacy Multichain, Gnosis OmniBridge, canonical rollup bridges and Stargate). Existing pinned third-party route controllers and the reviewed route tiers are preserved unchanged; no safe-authority, zero-incident, bounded-loss or complete-execution-reach conclusion is inferred."
+    },
+    {
+      "id": "rs2-048-cscbusdc-clearstar-collateral-cbdoge-20261030",
+      "assetId": "cscbusdc-clearstar",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "lender-collateral:base:0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb:0x73527ddd796e6d4f48387adaae36f6f3d49d606d7f2a15eb0c931416a58875d8:0x812b71c33ae5eafebae967c5670e37eca3cab0ac",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "collateral-quality"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-30T11:46:00Z",
+      "reviewer": "RS2-048 shard review (2026-10-30)",
+      "sourcesRefs": [
+        "source:rs2048-cscbusdc-base-collateral-identity",
+        "source:rs2048-cscbusdc-cbdoge-por"
+      ]
+    },
+    {
+      "id": "rs2-048-cscbusdc-clearstar-collateral-cbltc-20261030",
+      "assetId": "cscbusdc-clearstar",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "lender-collateral:base:0xbbbbbbbbbb9cc5e90e3b3af64bdaf62c37eeffcb:0x9125d0fa03c3137166df68bcc72283477830de2a4a5536512374c573ad4583c3:0x812b71c33ae5eafebae967c5670e37eca3cab0ac",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "collateral-quality"
+      },
+      "cause": "B",
+      "assertion": "required-data-public",
+      "reviewedAt": "2026-10-30T11:46:00Z",
+      "reviewer": "RS2-048 shard review (2026-10-30)",
+      "sourcesRefs": [
+        "source:rs2048-cscbusdc-base-collateral-identity",
+        "source:rs2048-cscbusdc-cbltc-por"
+      ]
     }
   ],
   "sourceObservations": [
@@ -91230,6 +91428,72 @@
         "location": "Base block 53284370, hash 0x84651d589f8d650185967c482af8a6c750ac0b317e03e2f40dc3e0d63e89c0a6, timestamp 2026-10-30T11:01:27Z",
         "excerpt": "eth_getCode(0x827e8607\u2026)=Safe proxy runtime, VERSION()=1.4.1, getThreshold()=3; eth_getCode(0x0a0e559b\u2026)=Safe proxy runtime, VERSION()=1.4.1, getThreshold()=5; eth_getCode(0x0000aeb7\u2026)=Safe proxy runtime, VERSION()=1.3.0, getThreshold()=1; eth_getCode(0xfeed46c1\u2026)=0x; eth_getCode(0x9e0fddda\u2026)=0x; eth_getCode(0xfc580f2a\u2026)=eth_getCode(0xbbf1ad10\u2026)=0xef0100beef1d6cf4f7bd10c1f2cd45864a7ce53888beef; eth_getCode(0x1be9b8c4\u2026)=EIP-1967 proxy runtime; eth_getCode(0xaed282b8\u2026)=distinct allocator runtime.",
         "assertion": "At this pin the authored controller set still resolves to two Safe 1.4.1 proxies, one Safe 1.3.0 proxy, two codeless accounts, two EIP-7702 accounts delegating to 0xbeef1d6c\u2026, and two contract runtimes. The read establishes runtime identity and thresholds only; it does not establish delegated-code contents, Safe guard/fallback/delegate configuration, pending-change paths or signer custody."
+      }
+    },
+    {
+      "id": "source:957686a0bfd9eff178be949d",
+      "value": {
+        "url": "https://docs.auto.finance/developer-docs/contracts-overview/autopool-eth-contracts-overview/autopool-contracts-and-systems/pricing",
+        "observedAt": "2026-10-30T10:58:00Z",
+        "datumAsOf": null,
+        "location": "Pricing > Types of Prices / Architecture",
+        "excerpt": "These are prices that are calculated/queried from off-chain sources. This includes sources such as Chainlink, Redstone, and Tellor. ... The system-at-large will only ever interact with the RootPriceOracle.",
+        "assertion": "Publishes the generic RootPriceOracle architecture: safe prices from off-chain providers (Chainlink, Redstone, Tellor), on-chain spot prices by trial swap, and floor/ceiling LP pricing for stale debt. All valuation routes through the single named RootPriceOracle contract, so the deployed token/pool feed mapping and its manager are public contract state; the page itself publishes no autoUSD-specific feed mapping, provider set, updater membership or staleness tolerance."
+      }
+    },
+    {
+      "id": "source:32e17a53a0a74c250d5e584b",
+      "value": {
+        "url": "https://sourcify.dev/server/v2/contract/56/0xbb984ce670100aa855f6152f88b26ee57f4ea82a?fields=runtimeMatch,compilation",
+        "observedAt": "2026-10-30T11:02:30Z",
+        "datumAsOf": null,
+        "location": "runtimeMatch / creationMatch / compilation (Sourcify matchId 29229833)",
+        "excerpt": "runtimeMatch: \"match\"; creationMatch: \"match\"; contracts/UnitasMintingV2.sol:UnitasMintingV2, solc 0.8.27+commit.40a35a09, viaIR true",
+        "assertion": "The exact minter deployment is runtime-verified against published source, so its complete authorization surface (MINTER_ROLE, signed-order checks, per-block limits, owner/admin role management, entrypoints) is publicly derivable without any issuer disclosure."
+      }
+    },
+    {
+      "id": "source:c6d30bcd64089bb61c6810c7",
+      "value": {
+        "url": "https://bnb-mainnet.g.alchemy.com/v2/",
+        "observedAt": "2026-10-30T11:01:28Z",
+        "datumAsOf": "2026-10-29T17:42:21Z",
+        "location": "BSC block 130515000: EIP-1967 implementation and admin slots plus eth_getCode for 0xbb984ce670100aa855f6152f88b26ee57f4ea82a and 0xea953ea6634d55dac6697c436b1e81a679db5882",
+        "excerpt": "Implementation slot 0x3608...bbc and admin slot 0xb531...103 both 0x0000...0000 for both accounts; runtime code present at both addresses.",
+        "assertion": "No proxy implementation or proxy admin exists at the pinned block, so the reviewed entrypoint, role and limit surface of UnitasMintingV2 is closed by public code and state; the outstanding execution-scope closure is a public-data curation obligation, not issuer nondisclosure."
+      }
+    },
+    {
+      "id": "source:rs2048-cscbusdc-base-collateral-identity",
+      "value": {
+        "url": "https://mainnet.base.org",
+        "observedAt": "2026-10-30T11:01:31Z",
+        "datumAsOf": "2026-10-29T22:01:39Z",
+        "location": "Pinned Base JSON-RPC eth_call batch at block 53260976, hash 0xbf321e9994a4fb7ca05996c0381d0b66ff959d8b43a0730e32e655d2a6d7e827, 2026-10-29T22:01:39Z; name(), symbol(), decimals() on both unmapped collateral tokens",
+        "excerpt": "0xcbd06e5a2b0c65597161de254aa074e489deb510: name()='Coinbase Wrapped DOGE', symbol()='cbDOGE', decimals()=8. 0xcb17c9db87b595717c857a08468793f5bab6445f: name()='Coinbase Wrapped LTC', symbol()='cbLTC', decimals()=8.",
+        "assertion": "Both collateral assets the lender book reports as unmapped on Base are ERC-20 wrappers of major L1 coins: Coinbase Wrapped DOGE and Coinbase Wrapped LTC."
+      }
+    },
+    {
+      "id": "source:rs2048-cscbusdc-cbdoge-por",
+      "value": {
+        "url": "https://www.coinbase.com/cbdoge/proof-of-reserves",
+        "observedAt": "2026-10-30T11:07:00Z",
+        "datumAsOf": "2026-10-30",
+        "location": "cbDOGE Proof of Reserves page: backing statement and supply-by-network table",
+        "excerpt": "cbDOGE is a wrapped token backed 1:1 by DOGE held by Coinbase... Supply by network: Base 0xcbD06E5A2B0C65597161de254AA074E489dEb510 137,940,883.053 CBDOGE. Total reserve 137,944,522.03 DOGE; total supply 137,940,883.05 cbDOGE.",
+        "assertion": "The issuer and custodian publishes a 1:1 DOGE backing statement, a reserve-versus-supply table and the exact Base deployment address, establishing cbDOGE as a custodied major-L1 wrapper rather than an unclassified exposure."
+      }
+    },
+    {
+      "id": "source:rs2048-cscbusdc-cbltc-por",
+      "value": {
+        "url": "https://www.coinbase.com/cbltc/proof-of-reserves",
+        "observedAt": "2026-10-30T11:07:30Z",
+        "datumAsOf": "2026-10-30",
+        "location": "cbLTC Proof of Reserves page: backing statement and supply-by-network table",
+        "excerpt": "cbLTC is a wrapped token backed 1:1 by LTC held by Coinbase... Supply by network: Base 0xcb17C9Db87B595717C857a08468793f5bAb6445F 86,277.281 CBLTC. Total reserve 86,335.3 LTC; total supply 86,277.28 cbLTC.",
+        "assertion": "The issuer and custodian publishes a 1:1 LTC backing statement, a reserve-versus-supply table and the exact Base deployment address, establishing cbLTC as a custodied major-L1 wrapper rather than an unclassified exposure."
       }
     }
   ],

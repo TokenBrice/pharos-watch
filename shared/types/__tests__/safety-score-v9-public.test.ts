@@ -796,7 +796,12 @@ describe("SafetyScoreV9ResponseSchema", () => {
     expect(parsed.ratingStatus).toBe("rated");
     expect(parsed.partialEvidence?.excludedPillars).toEqual([]);
     expect(Object.values(parsed.pillars).every((pillar) => pillar.score !== null)).toBe(true);
+    // A reviewed A/B datum that excludes no priced component (mixed-cause status,
+    // pillar-level status gap, unscored Exit admission factor) publishes without
+    // a manufactured component key, but never without its causal gap.
     card.partialEvidence.excludedComponentKeys = [];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
+    card.partialEvidence.causeGapRefs = [];
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
   });
 
