@@ -65,62 +65,69 @@ export function assessSupplyIntegrityQuality(
   const expectedActive = value.expectedActiveCount;
   if (value.status === "unknown") {
     unknownReasons.push(`value drift (${value.reason ?? "unknown"})`);
-  } else {
-    const aggregateBreached = value.aggregateRatio != null
-      && (value.aggregateRatio < STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioFloor
-        || value.aggregateRatio > STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioCeiling);
-    if (value.driftFindings.length > 0 || value.frozen || aggregateBreached) {
-      const examples = value.driftFindings.slice(0, 5)
-        .map((finding) => `${finding.stablecoinId} ${finding.ratio.toFixed(2)}x`)
-        .join(", ");
+  }
+  if (value.heldDriftUnknownReason != null) {
+    unknownReasons.push(`held value drift (${value.heldDriftUnknownReason})`);
+  }
+  const heldDrift = value.heldDriftFindings;
+  const aggregateBreached = value.aggregateRatio != null
+    && (value.aggregateRatio < STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioFloor
+      || value.aggregateRatio > STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioCeiling);
+  if (value.driftFindings.length + heldDrift.length > 0 || value.frozen || aggregateBreached) {
+    const examples = [...value.driftFindings, ...heldDrift].slice(0, 5)
+      .map((finding) => `${finding.stablecoinId} ${finding.ratio.toFixed(2)}x`)
+      .join(", ");
+    const findingCount = value.driftFindings.length + heldDrift.length;
+    causes.push(cause(
+      "supply_value_drift",
+      "warning",
+      `Cached supply moved outside the generation-over-generation invariant against the previous daily row`
+        + `${examples ? ` (${examples}${findingCount > 5 ? `, +${findingCount - 5} more` : ""})` : ""}`
+        + `${heldDrift.length > 0 ? `; ${heldDrift.length} still outside the band against the pre-rollover daily baseline` : ""}`
+        + `${aggregateBreached && value.aggregateRatio != null ? `; comparable total ${value.aggregateRatio.toFixed(2)}x` : ""}`
+        + `${value.frozen ? "; comparable total is unchanged across generations" : ""}. `
+        + `Producer sync-stablecoins, cache generation ${isoInstant(value.cacheUpdatedAt)}, budget per-asset `
+        + `${STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor}-${STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling}x, total `
+        + `${STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioFloor}-${STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioCeiling}x.`,
+      {
+        metric: findingCount > 0 ? "supplyValueDriftCount" : "supplyValueAggregateRatio",
+        value: findingCount > 0 ? findingCount : value.aggregateRatio ?? undefined,
+        threshold: findingCount > 0
+          ? STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling
+          : STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioCeiling,
+      },
+    ));
+    degrade();
+  }
+
+  // Carry evidence comes from the stablecoins cache and survives a failed
+  // history read, so it is graded even when the value comparison is unknown.
+  if (value.carryIds.length > 0) {
+    const carryThreshold = Math.max(
+      1,
+      Math.ceil(expectedActive * STATUS_SUPPLY_VALUE_THRESHOLDS.activeSupplyShareThreshold),
+    );
+    const carryBreadth = getActiveAssetServiceBreadthThreshold(expectedActive);
+    const carryStale = value.carryIds.length >= carryThreshold
+      || (value.carryOldestAgeSec != null && value.carryOldestAgeSec > STATUS_SUPPLY_VALUE_THRESHOLDS.carryStaleAfterSec);
+    if (carryStale) {
       causes.push(cause(
-        "supply_value_drift",
+        "supply_carry_stale",
         "warning",
-        `Cached supply moved outside the generation-over-generation invariant against the previous daily row`
-          + `${examples ? ` (${examples}${value.driftFindings.length > 5 ? `, +${value.driftFindings.length - 5} more` : ""})` : ""}`
-          + `${aggregateBreached && value.aggregateRatio != null ? `; comparable total ${value.aggregateRatio.toFixed(2)}x` : ""}`
-          + `${value.frozen ? "; comparable total is unchanged across generations" : ""}. `
-          + `Producer sync-stablecoins, cache generation ${isoInstant(value.cacheUpdatedAt)}, budget per-asset `
-          + `${STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor}-${STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling}x, total `
-          + `${STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioFloor}-${STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioCeiling}x.`,
+        `${value.carryIds.length} active asset(s) publish carried supply (${value.carryIds.slice(0, 8).join(", ")}`
+          + `${value.carryIds.length > 8 ? `, +${value.carryIds.length - 8} more` : ""}); oldest `
+          + `${value.carryOldestAgeSec == null ? "age unknown" : `${Math.floor(value.carryOldestAgeSec / 3600)}h`}`
+          + `${value.carryUnclockedCount > 0 ? `, ${value.carryUnclockedCount} without an observation clock` : ""}. `
+          + `Producer sync-stablecoins, cache generation ${isoInstant(value.cacheUpdatedAt)}; budget `
+          + `${Math.round(STATUS_SUPPLY_VALUE_THRESHOLDS.carryStaleAfterSec / 3600)}h or `
+          + `${percent(STATUS_SUPPLY_VALUE_THRESHOLDS.activeSupplyShareThreshold)} of active.`,
         {
-          metric: value.driftFindings.length > 0 ? "supplyValueDriftCount" : "supplyValueAggregateRatio",
-          value: value.driftFindings.length > 0 ? value.driftFindings.length : value.aggregateRatio ?? undefined,
-          threshold: value.driftFindings.length > 0
-            ? STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling
-            : STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioCeiling,
+          metric: "supplyCarryCount",
+          value: value.carryIds.length,
+          threshold: carryThreshold,
         },
       ));
-      degrade();
-    }
-
-    if (value.carryIds.length > 0) {
-      const carryThreshold = Math.max(
-        1,
-        Math.ceil(expectedActive * STATUS_SUPPLY_VALUE_THRESHOLDS.activeSupplyShareThreshold),
-      );
-      const carryBreadth = getActiveAssetServiceBreadthThreshold(expectedActive);
-      const carryStale = value.carryIds.length >= carryThreshold
-        || (value.carryOldestAgeSec != null && value.carryOldestAgeSec > STATUS_SUPPLY_VALUE_THRESHOLDS.carryStaleAfterSec);
-      if (carryStale) {
-        causes.push(cause(
-          "supply_carry_stale",
-          "warning",
-          `${value.carryIds.length} active asset(s) publish carried supply (${value.carryIds.slice(0, 8).join(", ")}`
-            + `${value.carryIds.length > 8 ? `, +${value.carryIds.length - 8} more` : ""}); oldest `
-            + `${value.carryOldestAgeSec == null ? "age unknown" : `${Math.floor(value.carryOldestAgeSec / 3600)}h`}`
-            + `${value.carryUnclockedCount > 0 ? `, ${value.carryUnclockedCount} without an observation clock` : ""}. `
-            + `Producer sync-stablecoins, cache generation ${isoInstant(value.cacheUpdatedAt)}; budget `
-            + `${Math.round(STATUS_SUPPLY_VALUE_THRESHOLDS.carryStaleAfterSec / 3600)}h or `
-            + `${percent(STATUS_SUPPLY_VALUE_THRESHOLDS.activeSupplyShareThreshold)} of active.`,
-          {
-            metric: "supplyCarryCount",
-            value: value.carryIds.length,
-            threshold: carryThreshold,
-          },
-        ));
-        if (carryBreadth != null && value.carryIds.length >= carryBreadth) degrade();
-      }
+      if (carryBreadth != null && value.carryIds.length >= carryBreadth) degrade();
     }
   }
 

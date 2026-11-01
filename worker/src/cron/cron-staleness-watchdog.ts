@@ -445,6 +445,15 @@ function operatorSectionCharBudget(lineCount: number): number {
   return Math.floor((TELEGRAM_MESSAGE_CHUNK_LIMIT - OPERATOR_ALERT_HEADER.length - lines) / lines) - 8;
 }
 
+function truncateLabelForBudget(label: string, maxChars: number): string | null {
+  if (maxChars <= 1) return null;
+  let end = label.length;
+  while (end > 0 && escapeHtml(label.slice(0, end)).length > maxChars - 1) end -= 1;
+  if (end < label.length && /[\uD800-\uDBFF]/.test(label[end - 1] ?? "")) end -= 1;
+  if (end === 0) return null;
+  return `${escapeHtml(label.slice(0, end).trimEnd())}…`;
+}
+
 function boundedOperatorSection(title: string, labels: readonly string[], budgetChars: number): string {
   const prefix = `<b>${title}</b>: `;
   const escaped = labels.map(escapeHtml);
@@ -452,11 +461,22 @@ function boundedOperatorSection(title: string, labels: readonly string[], budget
   if (full.length <= budgetChars) return full;
   const shown: string[] = [];
   let length = prefix.length;
-  for (const label of escaped) {
+  for (const [index, label] of escaped.entries()) {
     const separator = shown.length > 0 ? ", " : "";
     const hiddenAfter = escaped.length - shown.length - 1;
     const suffix = hiddenAfter > 0 ? `, +${hiddenAfter} more` : "";
-    if (length + separator.length + label.length + suffix.length > budgetChars) break;
+    const available = budgetChars - length - separator.length - suffix.length;
+    if (available <= 0) break;
+    if (label.length > available) {
+      // A section must still name its first finding: trim one oversized label
+      // to the remaining budget instead of delivering only `+N more`.
+      if (shown.length > 0) break;
+      const truncated = truncateLabelForBudget(labels[index], available);
+      if (truncated == null) break;
+      shown.push(truncated);
+      length += separator.length + truncated.length;
+      continue;
+    }
     length += separator.length + label.length;
     shown.push(label);
   }
@@ -800,8 +820,9 @@ export async function runCronStalenessWatchdog(
     + mintBurnStuckWatch.conditions.filter((condition) => condition.active).length;
 
   return {
+    // Completed observations with confirmed findings are ok + metadata.quality
+    // (ADR-31); only failed evidence reads or alert delivery degrade the run.
     status: status.failures.length > 0 || operatorAlertDegraded || !supplyWatch.ok
-      || activeSupplyConditions.length > 0
       ? "degraded"
       : "ok",
     itemCount: stale.length + detailWriteFailures.length + activeSupplyConditions.length

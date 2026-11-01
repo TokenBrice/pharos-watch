@@ -787,6 +787,10 @@ describe("cron staleness watchdog", () => {
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Supply integrity findings");
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("snapshot overdue");
     expect(JSON.parse(confirmed.metadata ?? "{}").firedRuleIds).toContain("supply-snapshot-overdue");
+    // The watchdog completed every measurement; a confirmed input finding is
+    // ok + metadata.quality, not a degraded run (ADR-31).
+    expect(confirmed.status).toBe("ok");
+    expect(JSON.parse(confirmed.metadata ?? "{}").quality.reasons).toContain("supply-integrity-findings");
 
     const currentMarker = {
       ...buildSupplySnapshotCompletionMarker({
@@ -807,6 +811,126 @@ describe("cron staleness watchdog", () => {
     expect(sendToChatMock).toHaveBeenCalledTimes(2);
     expect(sendToChatMock.mock.calls[1]?.[1]).toContain("Supply integrity recovered");
     expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions.recovered).toContain("supply:snapshot-overdue");
+  });
+
+  it("does not re-alert or recover when carried membership changes above the threshold", async () => {
+    vi.useFakeTimers();
+    const nowSec = startOfUtcDaySec(new Date("2026-08-22T00:00:00Z")) + 3_600;
+    vi.setSystemTime(nowSec * 1_000);
+    mockCacheStatus({});
+    const { sqlite, db } = openFixture();
+    const ids = [...ACTIVE_IDS].slice(0, 12);
+    const cachePayload = (carried: Set<string>) => JSON.stringify({
+      peggedAssets: ids.map((id) => ({
+        id, symbol: id.slice(0, 4).toUpperCase(), name: id, price: 1,
+        supplySource: "defillama",
+        supplyObservedAt: carried.has(id) ? nowSec - 5 * 86_400 : nowSec - 3_600,
+        ...(carried.has(id) ? { supplyRestored: true } : {}),
+        circulating: { peggedUSD: 100 },
+      })),
+    });
+    const insertCache = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    insertCache.run("stablecoins", cachePayload(new Set(ids.slice(0, 5))), nowSec - 60);
+    insertCache.run("snapshot-supply:last-write", JSON.stringify({
+      ...buildSupplySnapshotCompletionMarker({
+        snapshotDate: startOfUtcDaySec(new Date(nowSec * 1000)),
+        coverage: buildSupplySnapshotCoverageExpectation(ids, []),
+        accountedActiveCount: ids.length,
+        ownedRowIds: ids,
+        missingActiveIds: [],
+        unavailableActiveIds: [],
+      }),
+      writtenRows: ids.length,
+    }), nowSec - 60);
+    const runs = sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, 1, 'ok', 1, ?)",
+    );
+    for (const definition of CRON_JOB_DEFINITIONS) {
+      if (definition.freshnessSurface === "none"
+        || definition.job === "sync-stablecoins"
+        || definition.job === "sync-stablecoin-charts") continue;
+      runs.run(definition.job, nowSec - 600, JSON.stringify({ published: true }));
+    }
+    runs.run("dispatch-telegram-alerts", nowSec - 60, JSON.stringify({ published: true }));
+    for (const startedAt of [nowSec - 900, nowSec - 1_800]) {
+      runs.run("sync-stablecoins", startedAt, JSON.stringify({
+        priceSourceHealth: {
+          active: { supplyCoverage: { complete: true, observedCount: ids.length, unavailableCount: 0 } },
+        },
+      }));
+    }
+    runs.run("sync-stablecoin-charts", nowSec - 600, JSON.stringify({ reason: "published" }));
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).not.toHaveBeenCalled();
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(String(sendToChatMock.mock.calls[0]?.[1] ?? "")).toContain("carried supply");
+
+    // Different membership, still five carried assets: same condition identity.
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'stablecoins'")
+      .run(cachePayload(new Set([ids[0], ids[1], ids[2], ids[3], ids[5]])));
+    const unchanged = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(unchanged.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: [], recovered: [],
+    });
+
+    // The count genuinely drops below the threshold: recovery is reported once.
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'stablecoins'")
+      .run(cachePayload(new Set()));
+    vi.setSystemTime((nowSec + CRON_STALENESS_ALERT_COOLDOWN_SEC) * 1_000);
+    const recovered = await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).toHaveBeenCalledTimes(2);
+    expect(String(sendToChatMock.mock.calls[1]?.[1] ?? "")).toContain("Supply integrity recovered");
+    expect(JSON.parse(recovered.metadata ?? "{}").alertTransitions.recovered).toContain("supply:carry");
+  });
+
+  it("keeps an oversized supply label as usable text instead of only '+1 more'", async () => {
+    vi.useFakeTimers();
+    const nowSec = startOfUtcDaySec(new Date("2026-08-22T00:00:00Z")) + 3_600;
+    vi.setSystemTime(nowSec * 1_000);
+    mockCacheStatus({});
+    const { sqlite, db } = openFixture();
+    const ids = [...ACTIVE_IDS].slice(0, 12);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      "stablecoins",
+      JSON.stringify({
+        peggedAssets: ids.map((id) => ({
+          id, symbol: id.slice(0, 4).toUpperCase(), name: id, price: 1,
+          supplySource: "defillama", supplyObservedAt: nowSec - 3_600,
+          circulating: { peggedUSD: 100 },
+        })),
+      }),
+      nowSec - 60,
+    );
+    const runs = sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata) VALUES (?, ?, 1, 'ok', 1, ?)",
+    );
+    for (const definition of CRON_JOB_DEFINITIONS) {
+      if (definition.freshnessSurface === "none"
+        || definition.job === "sync-stablecoins"
+        || definition.job === "sync-stablecoin-charts") continue;
+      runs.run(definition.job, nowSec - 600, JSON.stringify({ published: true }));
+    }
+    runs.run("dispatch-telegram-alerts", nowSec - 60, JSON.stringify({ published: true }));
+    runs.run("sync-stablecoin-charts", nowSec - 600, JSON.stringify({
+      reason: "chart-history-truncated",
+      quality: { codes: ["point-count-collapse", "history-start-truncated"] },
+    }));
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+
+    await runCronStalenessWatchdog(db, undefined, options);
+    expect(sendToChatMock).not.toHaveBeenCalled();
+    await runCronStalenessWatchdog(db, undefined, options);
+
+    const text = String(sendToChatMock.mock.calls[0]?.[1] ?? "");
+    expect(text).toContain("Supply integrity findings");
+    // The derived per-line budget is smaller than this label; it must be
+    // trimmed to fit, not dropped in favour of a bare `+1 more`.
+    expect(text).toContain("producer sync-stablecoin-charts");
+    expect(text).toContain("generation 2026-08-2");
   });
 
   it("alerts only on stale and recovery transitions", async () => {

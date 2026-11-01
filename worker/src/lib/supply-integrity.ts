@@ -22,6 +22,8 @@ import { getCompletedSupplySnapshot } from "./supply-snapshot-completion";
 export const SUPPLY_INTEGRITY_CONFIRM_KEY = "cron-staleness-watchdog:supply-confirm:v1";
 const SUPPLY_INTEGRITY_CONFIRM_RUNS = 2;
 const MAX_REPORTED_IDS = 20;
+/** Bound the held drift baselines kept in confirmation state. */
+const MAX_HELD_DRIFT_BASELINES = 50;
 
 export interface SupplyValueDriftFinding {
   stablecoinId: string;
@@ -36,6 +38,15 @@ export interface SupplyValueIntegrityReport {
   checkedCount: number;
   excludedCount: number;
   driftFindings: SupplyValueDriftFinding[];
+  /**
+   * Findings still outside the band against the pre-rollover daily baseline.
+   * They stay raised while the daily snapshot advances onto the drifted value.
+   */
+  heldDriftFindings: SupplyValueDriftFinding[];
+  /** Pre-rollover baselines retained for the next run (active or not re-evaluable). */
+  heldDriftBaselines: Record<string, number>;
+  /** A held baseline could not be re-evaluated this run (unreadable current value or state). */
+  heldDriftUnknownReason: string | null;
   aggregateCurrentUsd: number | null;
   aggregatePreviousUsd: number | null;
   aggregateRatio: number | null;
@@ -161,6 +172,9 @@ function unknownValueIntegrity(reason: string): SupplyValueIntegrityReport {
     checkedCount: 0,
     excludedCount: 0,
     driftFindings: [],
+    heldDriftFindings: [],
+    heldDriftBaselines: {},
+    heldDriftUnknownReason: null,
     aggregateCurrentUsd: null,
     aggregatePreviousUsd: null,
     aggregateRatio: null,
@@ -251,6 +265,7 @@ async function loadSupplyValueIntegrity(
   report.reason = null;
   report.cacheUpdatedAt = cache.updatedAt;
   const driftFindings: SupplyValueDriftFinding[] = [];
+  const currentValues: Record<string, number> = {};
   const carryIds: string[] = [];
   let carryOldestAgeSec: number | null = null;
   let carryUnclockedCount = 0;
@@ -274,6 +289,14 @@ async function loadSupplyValueIntegrity(
     }
 
     const currentUsd = getCirculatingRawOrNull(asset);
+    if (currentUsd !== null
+      && asset.supplyRestored !== true
+      && asset.supplyGapFill == null
+      && asset.supplyChainGuard == null
+      && asset.supplyUnavailableReason == null
+      && typeof asset.supplySource === "string" && asset.supplySource.length > 0) {
+      currentValues[asset.id] = currentUsd;
+    }
     const previous = previousByAsset?.get(asset.id);
     if (currentUsd === null || previous == null) {
       excludedCount++;
@@ -311,11 +334,58 @@ async function loadSupplyValueIntegrity(
     }
   }
 
-  driftFindings.sort((a, b) => a.ratio - b.ratio || a.stablecoinId.localeCompare(b.stablecoinId));
+  // A finding raised against yesterday's daily row must survive the midnight
+  // rollover that moves that row's value onto the cache: recovery needs the
+  // current value back inside the band, not just a newer snapshot baseline.
+  const heldDriftFindings: SupplyValueDriftFinding[] = [];
+  const heldDriftBaselines: Record<string, number> = {};
+  const recoveredFromHeld = new Set<string>();
+  let heldDriftUnknownReason: string | null = null;
+  try {
+    const state = parseConfirmationState(
+      (await getCache(db, SUPPLY_INTEGRITY_CONFIRM_KEY))?.value ?? null,
+    );
+    const held = state["value-drift"]?.held ?? {};
+    const freshIds = new Set(driftFindings.map((finding) => finding.stablecoinId));
+    const unresolvedIds: string[] = [];
+    for (const [stablecoinId, baselineUsd] of Object.entries(held)) {
+      if (!ACTIVE_IDS.has(stablecoinId)) continue;
+      const currentUsd = currentValues[stablecoinId];
+      if (currentUsd == null) {
+        heldDriftBaselines[stablecoinId] = baselineUsd;
+        unresolvedIds.push(stablecoinId);
+        continue;
+      }
+      const ratio = currentUsd / baselineUsd;
+      if (ratio < STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor
+        || ratio > STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling) {
+        heldDriftBaselines[stablecoinId] = baselineUsd;
+        if (!freshIds.has(stablecoinId)) {
+          heldDriftFindings.push({ stablecoinId, currentUsd, previousUsd: baselineUsd, ratio });
+        }
+      } else {
+        // The value returned to the pre-rollover level: this run's move back
+        // from the bad snapshot is recovery, not a new drift finding.
+        recoveredFromHeld.add(stablecoinId);
+      }
+    }
+    if (unresolvedIds.length > 0) heldDriftUnknownReason = "held-drift-value-unavailable";
+  } catch {
+    heldDriftUnknownReason = "supply-confirmation-state-read-failed";
+  }
+  const effectiveDriftFindings = recoveredFromHeld.size === 0
+    ? driftFindings
+    : driftFindings.filter((finding) => !recoveredFromHeld.has(finding.stablecoinId));
+
+  effectiveDriftFindings.sort((a, b) => a.ratio - b.ratio || a.stablecoinId.localeCompare(b.stablecoinId));
+  heldDriftFindings.sort((a, b) => a.ratio - b.ratio || a.stablecoinId.localeCompare(b.stablecoinId));
   carryIds.sort();
   report.checkedCount = checkedCount;
   report.excludedCount = excludedCount;
-  report.driftFindings = driftFindings;
+  report.driftFindings = effectiveDriftFindings;
+  report.heldDriftFindings = heldDriftFindings;
+  report.heldDriftBaselines = heldDriftBaselines;
+  report.heldDriftUnknownReason = heldDriftUnknownReason;
   report.carryIds = carryIds;
   report.carryOldestAgeSec = carryOldestAgeSec;
   report.carryUnclockedCount = carryUnclockedCount;
@@ -546,6 +616,12 @@ export interface SupplyIntegrityCondition {
   unknown: boolean;
   /** Stable across runs while the same finding persists; confirmation resets when it changes. */
   signature: string;
+  /**
+   * Pre-rollover evidence retained while the condition stays raised, so a
+   * changing snapshot baseline is not mistaken for recovery. Omitted when the
+   * evidence read failed and the previous state must stand.
+   */
+  held?: Record<string, number>;
 }
 
 function formatIds(ids: readonly string[]): string {
@@ -568,19 +644,35 @@ function isoDay(seconds: number | null): string {
 export function buildSupplyIntegrityConditions(report: SupplyIntegrityReport): SupplyIntegrityCondition[] {
   const value = report.value;
   const valueDrift = value.driftFindings;
+  const heldDrift = value.heldDriftFindings;
   const aggregateBreached = value.aggregateRatio != null
     && (value.aggregateRatio < STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioFloor
       || value.aggregateRatio > STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioCeiling);
-  const valueActive = valueDrift.length > 0 || value.frozen || aggregateBreached;
+  const valueActive = valueDrift.length > 0 || heldDrift.length > 0 || value.frozen || aggregateBreached;
   const valueLabel = [
     valueDrift.length > 0
       ? `${valueDrift.length} asset(s) outside ${STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor}-${STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling}x (${formatIds(valueDrift.map((finding) => `${finding.stablecoinId} ${finding.ratio.toFixed(2)}x`))})`
+      : null,
+    heldDrift.length > 0
+      ? `${heldDrift.length} asset(s) still outside ${STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor}-${STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling}x of the pre-rollover daily baseline (${formatIds(heldDrift.map((finding) => `${finding.stablecoinId} ${finding.ratio.toFixed(2)}x`))})`
       : null,
     aggregateBreached && value.aggregateRatio != null
       ? `total ${value.aggregateRatio.toFixed(2)}x outside ${STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioFloor}-${STATUS_SUPPLY_VALUE_THRESHOLDS.aggregateRatioCeiling}x`
       : null,
     value.frozen ? "cohort total unchanged across generations" : null,
   ].filter((part): part is string => part != null).join("; ");
+  // Keep every retained pre-rollover baseline, then add the latest daily row
+  // for assets that started drifting this run. Membership never keys the
+  // condition; it changes only the label.
+  const nextHeld: Record<string, number> = { ...value.heldDriftBaselines };
+  for (const finding of valueDrift) {
+    if (nextHeld[finding.stablecoinId] == null) nextHeld[finding.stablecoinId] = finding.previousUsd;
+  }
+  const heldState = Object.fromEntries(
+    Object.entries(nextHeld)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .slice(0, MAX_HELD_DRIFT_BASELINES),
+  );
   const expectedActive = value.expectedActiveCount;
   const carryThreshold = Math.max(
     1,
@@ -630,10 +722,15 @@ export function buildSupplyIntegrityConditions(report: SupplyIntegrityReport): S
       id: "value-drift",
       label: valueActive ? valueLabel : "value drift",
       active: valueActive,
-      unknown: value.status === "unknown",
-      // Coarse, state-shaped signatures keep a persisting finding stable
-      // across runs; the live ratios/counts stay in the label and metadata.
-      signature: `${valueDrift.map((finding) => finding.stablecoinId).join(",")}|${aggregateBreached}|${value.frozen}`,
+      // A persisted finding whose current value could not be re-read holds its
+      // prior state instead of claiming recovery (R2).
+      unknown: !valueActive && (value.status === "unknown" || value.heldDriftUnknownReason != null),
+      // Constant identity: membership and ratios stay in the label, so a
+      // changing drift cohort never resets confirmation.
+      signature: "value-drift",
+      ...(value.heldDriftUnknownReason === "supply-confirmation-state-read-failed"
+        ? {}
+        : { held: heldState }),
     },
     {
       id: "availability",
@@ -648,7 +745,9 @@ export function buildSupplyIntegrityConditions(report: SupplyIntegrityReport): S
       active: carryActive,
       // Carry is read from the cache alone; only a failed cache read is unknown.
       unknown: value.cacheUpdatedAt == null,
-      signature: value.carryIds.join(","),
+      // Constant identity: membership and age stay in the label, so a coin
+      // entering or leaving the carried cohort never resets confirmation.
+      signature: "carried-supply",
     },
     {
       id: "snapshot-overdue",
@@ -683,6 +782,17 @@ export function buildSupplyIntegrityConditions(report: SupplyIntegrityReport): S
 interface ConfirmationEntry {
   signature: string;
   runs: number;
+  /** Drift baselines retained while the value-drift condition stays raised. */
+  held?: Record<string, number>;
+}
+
+function parseHeldBaselines(value: unknown): Record<string, number> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value)
+    .filter((entry): entry is [string, number] =>
+      typeof entry[1] === "number" && Number.isFinite(entry[1]) && entry[1] > 0)
+    .slice(0, MAX_HELD_DRIFT_BASELINES);
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 function parseConfirmationState(value: string | null): Record<string, ConfirmationEntry> {
@@ -692,10 +802,14 @@ function parseConfirmationState(value: string | null): Record<string, Confirmati
     return Object.fromEntries(
       Object.entries(parsed).flatMap(([id, entry]) => {
         if (!entry || typeof entry !== "object") return [];
-        const record = entry as { signature?: unknown; runs?: unknown };
-        return typeof record.signature === "string" && Number.isInteger(record.runs)
-          ? [[id, { signature: record.signature, runs: Number(record.runs) }] as const]
-          : [];
+        const record = entry as { signature?: unknown; runs?: unknown; held?: unknown };
+        if (typeof record.signature !== "string" || !Number.isInteger(record.runs)) return [];
+        const held = parseHeldBaselines(record.held);
+        return [[id, {
+          signature: record.signature,
+          runs: Number(record.runs),
+          ...(held ? { held } : {}),
+        }] as const];
       }),
     );
   } catch {
@@ -731,7 +845,10 @@ export async function confirmSupplyIntegrityConditions(
     const runs = previous[condition.id]?.signature === condition.signature
       ? previous[condition.id].runs + 1
       : 1;
-    next[condition.id] = { signature: condition.signature, runs };
+    // An unreadable hold leaves the prior baselines standing; an empty map
+    // explicitly clears them because every held value recovered.
+    const held = condition.held ?? previous[condition.id]?.held;
+    next[condition.id] = { signature: condition.signature, runs, ...(held ? { held } : {}) };
     return runs >= SUPPLY_INTEGRITY_CONFIRM_RUNS ? condition : { ...condition, active: false };
   });
   try {
@@ -754,6 +871,9 @@ export function compactSupplyIntegrityReport(report: SupplyIntegrityReport): Rec
       excludedCount: report.value.excludedCount,
       driftCount: report.value.driftFindings.length,
       driftIds: report.value.driftFindings.slice(0, MAX_REPORTED_IDS).map((finding) => finding.stablecoinId),
+      heldDriftCount: report.value.heldDriftFindings.length,
+      heldDriftIds: report.value.heldDriftFindings.slice(0, MAX_REPORTED_IDS).map((finding) => finding.stablecoinId),
+      heldDriftUnknownReason: report.value.heldDriftUnknownReason,
       aggregateRatio: report.value.aggregateRatio,
       frozen: report.value.frozen,
       carryCount: report.value.carryIds.length,
