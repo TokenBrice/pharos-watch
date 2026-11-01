@@ -50,6 +50,19 @@ describe("twitter helpers", () => {
     );
   });
 
+  it("keeps exactly one cashtag when the copy already tags a non-selected ticker", () => {
+    const result = buildTweetText(
+      "",
+      "$USDT fell while USDC rose and USDT stabilized.",
+      undefined,
+      null,
+      { leadSignalId: "liquidity:usdc", coins: ["USDC", "USDT"] },
+    );
+
+    expect(result).toBe("USDT fell while $USDC rose and USDT stabilized.");
+    expect(result.match(/\$[A-Z]/g) ?? []).toHaveLength(1);
+  });
+
   it("keeps the complete map hook inside the 270-character boundary", () => {
     const hook = "See the map.";
     const result = buildTweetText(

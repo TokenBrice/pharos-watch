@@ -73,10 +73,21 @@ function buildRawStatus(rawOverallStatus = "healthy", freshnessDiagnostics: Arra
   return { rawOverallStatus, dbHealthy: true, evidenceReadFailures: [] as string[], sectionErrors: {}, confidence: 1, causes: { overall: [] }, freshnessDiagnostics };
 }
 const computeRawStatusMock = vi.fn(async (_db: D1Database) => buildRawStatus());
-const reconcileStatusStateMock = vi.fn(async () => ({
-  effectiveStatus: "stale",
-  persistenceSucceeded: true,
-}));
+const reconcileStatusStateMock = vi.fn(async (
+  _db?: unknown,
+  _now?: number,
+  rawStatus?: StatusHealthValue,
+  _confidence?: number,
+  _causes?: unknown,
+  onIssue?: (issue: { code: string; operation: string; message: string }) => void,
+) => {
+  void onIssue;
+  void rawStatus;
+  return {
+    effectiveStatus: "stale" as StatusHealthValue,
+    persistenceSucceeded: true,
+  };
+});
 const buildDiscrepancyMock = vi.fn((_status: unknown, _probe: unknown, _now: number, streak: number | null) => ({
   hasDivergence: true,
   severityDelta: 1,
@@ -628,6 +639,39 @@ describe("runStatusSelfCheck", () => {
       });
     },
   );
+
+  it("does not derive a discrepancy from the raw fallback when status_state is unreadable", async () => {
+    reconcileStatusStateMock.mockImplementationOnce(async (
+      _db?: unknown,
+      _now?: number,
+      rawStatus?: StatusHealthValue,
+      _confidence?: number,
+      _causes?: unknown,
+      onIssue?: (issue: { code: string; operation: string; message: string }) => void,
+    ) => {
+      onIssue?.({ code: "status_state_read_failed", operation: "load-status-state", message: "D1 unavailable" });
+      return { effectiveStatus: rawStatus ?? "stale", persistenceSucceeded: false };
+    });
+
+    const result = await runStatusSelfCheck({} as D1Database);
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      failedOutputs: string[];
+      discrepancyStreak: number | null;
+      discrepancy: { consecutiveDivergent: number | null };
+    };
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.failedOutputs).toEqual(["status_state", "status_discrepancy_state"]);
+    // No observation was attempted, so the durable streak is not rewritten.
+    expect(updateDiscrepancyObservationMock).not.toHaveBeenCalled();
+    expect(metadata.discrepancyStreak).toBeNull();
+    expect(metadata.discrepancy.consecutiveDivergent).toBeNull();
+    const discrepancyArgs = buildDiscrepancyMock.mock.calls[
+      buildDiscrepancyMock.mock.calls.length - 1
+    ] as unknown[];
+    expect(discrepancyArgs[0]).toBeNull();
+    expect(discrepancyArgs[4]).toBe("status-unreadable");
+  });
 
   it("fails closed on a current evidence read rather than the observed service verdict", async () => {
     computeRawStatusMock.mockResolvedValueOnce({ ...buildRawStatus(), dbHealthy: false });

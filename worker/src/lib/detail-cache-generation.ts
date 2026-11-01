@@ -1,5 +1,6 @@
 import { createLeaseOwner } from "./cron-lease-primitives";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { logWorkerEvent } from "./structured-log";
 
 export interface DetailCacheGenerationClaim {
   stablecoinId: string;
@@ -84,21 +85,33 @@ export async function publishDetailCacheGeneration(
   );
   const written = (cacheResult.meta.changes ?? 0) === 1;
   if (written) {
-    await runWithOverloadRetry(() =>
-      db.prepare(
-        `UPDATE detail_cache_write_generations
-            SET published_at = ?, updated_at = ?
-          WHERE stablecoin_id = ?
-            AND generation = ?
-            AND claim_owner = ?`,
-      ).bind(
-        Math.floor(Date.now() / 1_000),
-        Math.floor(Date.now() / 1_000),
-        claim.stablecoinId,
-        claim.generation,
-        claim.owner,
-      ).run(),
-    );
+    try {
+      await runWithOverloadRetry(() =>
+        db.prepare(
+          `UPDATE detail_cache_write_generations
+              SET published_at = ?, updated_at = ?
+            WHERE stablecoin_id = ?
+              AND generation = ?
+              AND claim_owner = ?`,
+        ).bind(
+          Math.floor(Date.now() / 1_000),
+          Math.floor(Date.now() / 1_000),
+          claim.stablecoinId,
+          claim.generation,
+          claim.owner,
+        ).run(),
+      );
+    } catch (error) {
+      // The cache row is the publication; published_at has no reader, so a
+      // post-commit bookkeeping fault must not be reported as a failed write.
+      logWorkerEvent({
+        scope: "lib",
+        level: "warn",
+        event: "detail_cache_generation_bookkeeping_failed",
+        message: "Published detail cache row but failed to mark its generation published",
+        error,
+      });
+    }
   }
   return {
     written,

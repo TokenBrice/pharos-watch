@@ -58,7 +58,8 @@ export async function logAdminAction(db: D1Database, entry: AdminActionLogEntry,
                target = excluded.target,
                result = excluded.result,
                http_status = excluded.http_status,
-               details_json = excluded.details_json`
+               details_json = excluded.details_json
+             WHERE COALESCE(json_extract(admin_action_audit.details_json, '$.idempotentReplay'), 0) = 1`
           : `INSERT OR IGNORE INTO admin_action_audit
                (created_at, actor, action, target, result, http_status, details_json, intent_key)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
@@ -66,6 +67,24 @@ export async function logAdminAction(db: D1Database, entry: AdminActionLogEntry,
         .prepare(sql)
         .bind(...values)
         .run();
+      if (
+        entry.intentWriteMode === "authoritative"
+        && result.success
+        && (result.meta.changes ?? 0) === 0
+      ) {
+        // The intent key already names a completed execution (it outlived the
+        // idempotency ledger): keep that evidence and record this later
+        // execution as its own non-deduplicated row rather than rewriting it.
+        const inserted = await db
+          .prepare(
+            `INSERT INTO admin_action_audit
+               (created_at, actor, action, target, result, http_status, details_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          )
+          .bind(now, actor, entry.action, entry.target ?? null, entry.result, entry.httpStatus ?? null, detailsJson)
+          .run();
+        return inserted.success ? true : reportAuditWriteFailure(entry.action, "D1 returned success=false");
+      }
       return result.success ? true : reportAuditWriteFailure(entry.action, "D1 returned success=false");
     }
     const result = await db

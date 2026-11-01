@@ -872,8 +872,12 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
 
   await options.reportProgress?.({ stage: "raw-status" });
   const raw = await computeRawStatus(db, assessedAt);
+  let statusStateReadFailed = false;
   const persistedStatus = await reconcileStatusState(db, assessedAt, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
-    () => failedOutputs.add("status_state"));
+    (issue) => {
+      failedOutputs.add("status_state");
+      if (issue.code === "status_state_read_failed") statusStateReadFailed = true;
+    });
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
   const cloudflareD1StatusBindings = options.cloudflareD1StatusBindings
     ?? (options.d1StatusConfig
@@ -904,11 +908,22 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   const publicHealthSnapshotPersistenceSucceeded = await writeStatusPublicHealthSnapshot(db, assessedAt,
     { ...publicHealthBody, ...publicStatus.projection }, publicHealthAssessment.statusExcludingCacheFreshness,
     publicHealthAssessment.statusExcludingCacheEvidence);
-  const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, assessedAt);
+  // An unreadable status_state cannot establish effective-vs-raw divergence.
+  // The raw fallback is not the persisted authority, so observing it would
+  // overwrite a real streak with an invented in-sync/zero verdict.
+  const discrepancyObserved = statusStateReadFailed ? false : hasDivergence(effectiveStatus, probeSummary, assessedAt);
 
-  const discrepancyState = await updateDiscrepancyObservation(db, assessedAt, discrepancyObserved, hasProbeFailure,
-    () => failedOutputs.add("status_discrepancy_state"));
-  const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, assessedAt, discrepancyState.consecutiveDivergent);
+  const discrepancyState = statusStateReadFailed
+    ? { consecutiveDivergent: null, consecutiveProbeFailures: null, persistenceSucceeded: false }
+    : await updateDiscrepancyObservation(db, assessedAt, discrepancyObserved, hasProbeFailure,
+      () => failedOutputs.add("status_discrepancy_state"));
+  const discrepancy = buildDiscrepancy(
+    statusStateReadFailed ? null : effectiveStatus,
+    probeSummary,
+    assessedAt,
+    discrepancyState.consecutiveDivergent,
+    "status-unreadable",
+  );
   if (!probePersistenceSucceeded) failedOutputs.add("status_probe_runs");
   if (!statusPersistenceSucceeded) failedOutputs.add("status_state");
   if (!rawSnapshotPersistenceSucceeded) failedOutputs.add("status:raw-snapshot:v1");

@@ -144,7 +144,14 @@ function healthyDigestDb(): ReturnType<typeof fakeDb> {
 }
 
 function mockCurrentMap(date = DATE): void {
-  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ date }), {
+  const asOfSec = Math.floor(Date.parse(`${date}T08:00:00Z`) / 1000);
+  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+    date,
+    asOfSec,
+    renderedAtSec: asOfSec + 30,
+    edition: "daily",
+    bytes: { png: 1 },
+  }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   })));
@@ -312,6 +319,46 @@ describe("digest publication watchdog", () => {
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata ?? "{}").conditions["map-producer-lag"].advisory).toBe(true);
     expect(sendToChatMock.mock.calls[0]?.[1]).toContain("Producer-lag notice");
+  });
+
+  it("does not certify a today-dated manifest the digest would reject as data-stale", async () => {
+    const nowSec = at(`${DATE}T08:10:00Z`);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      date: DATE,
+      asOfSec: nowSec - 80 * 3600,
+      renderedAtSec: nowSec - 80 * 3600 + 30,
+      edition: "daily",
+      bytes: { png: 1 },
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })));
+
+    const result = await runDigestPublicationWatchdog(
+      healthyDigestDb(),
+      nowSec,
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    const condition = JSON.parse(result.metadata ?? "{}").conditions["map-producer-lag"];
+    expect(condition.state).toBe("stale");
+    expect(condition.detail).toContain("72h budget");
+    expect(String(sendToChatMock.mock.calls[0]?.[1])).toContain("Producer-lag notice");
+  });
+
+  it("does not certify a today-dated manifest the digest would reject as invalid", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ date: DATE }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    })));
+
+    const result = await runDigestPublicationWatchdog(
+      healthyDigestDb(),
+      at(`${DATE}T08:10:00Z`),
+      { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } },
+    );
+    const condition = JSON.parse(result.metadata ?? "{}").conditions["map-producer-lag"];
+    expect(condition.state).toBe("stale");
+    expect(condition.detail).toContain("rejected by the digest");
   });
 
   it("does not let the advisory cooldown hide a later blocking daily failure", async () => {

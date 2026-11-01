@@ -296,6 +296,20 @@ const YieldResponseFreshnessMetaSchema = FreshnessAssessmentSchema
   })
   .strict();
 
+/**
+ * History may lack both the cache row and confirmed producer output; its
+ * verdict then names the unavailable authority instead of publishing a
+ * zero-derived clock.
+ */
+const YieldHistoryFreshnessMetaSchema = YieldResponseFreshnessMetaSchema.extend({
+  updatedAt: z.number().nullable(),
+  ageSeconds: z.number().nullable(),
+});
+
+const YieldHistoryMethodologySchema = MethodologyEnvelopeSchema.extend({
+  asOf: z.number().nullable(),
+});
+
 export const YieldRankingsResponseSchema = z.object({
   rankings: z.array(YieldRankingSchema),
   riskFreeRate: z.number(),
@@ -330,8 +344,8 @@ export const YieldHistoryResponseSchema = z.object({
   current: YieldHistoryPointSchema.nullable(),
   history: z.array(YieldHistoryPointSchema),
   warning: z.string().optional(),
-  _meta: YieldResponseFreshnessMetaSchema.optional(),
-  methodology: MethodologyEnvelopeSchema,
+  _meta: YieldHistoryFreshnessMetaSchema.optional(),
+  methodology: YieldHistoryMethodologySchema,
   publication: YieldPublicationMetadataSchema.nullable().optional(),
 });
 export type YieldHistoryResponse = z.infer<typeof YieldHistoryResponseSchema>;

@@ -2,7 +2,7 @@ import { formatIsoDate } from "@shared/lib/format";
 import { runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { throwIfAborted } from "../lib/abort";
 import { getCache, setCache } from "../lib/db-cache";
-import { readSafetyMapManifestDate, type SafetyMapManifestDateObservation } from "../lib/digest-safety-map";
+import { isSafetyMapManifestDataCurrent, readSafetyMapManifestDate, type SafetyMapManifestDateObservation } from "../lib/digest-safety-map";
 import { escapeHtml, type TelegramCreds } from "../telegram/delivery/telegram";
 import type { CronResult } from "../lib/cron-logger";
 import {
@@ -372,13 +372,21 @@ async function readPublicationObservations(
 
   if (options.mapDue) {
     map = await readSafetyMapManifestDate(signal);
-    const mapCurrent = map.date === date;
+    // The digest resolver refuses an invalid manifest and any data clock at or
+    // beyond the 72h budget; a date-only match must not certify more than that.
+    const mapCurrent = map.date === date
+      && map.manifestValid
+      && isSafetyMapManifestDataCurrent(map.asOfSec, nowSec);
     observations.push({
       condition: "map-producer-lag",
       state: mapCurrent ? "ok" : "stale",
       detail: mapCurrent
         ? "manifest is current"
-        : `map manifest for ${date} is unavailable${map.reason ? ` (${map.reason})` : ` (published ${map.date ?? "no date"})`}`,
+        : map.date === date
+          ? map.manifestValid
+            ? `manifest is dated today but its data clock ${map.asOfSec} is beyond the 72h budget`
+            : `manifest is dated today but rejected by the digest (${map.reason ?? "manifest-invalid"})`
+          : `map manifest for ${date} is unavailable${map.reason ? ` (${map.reason})` : ` (published ${map.date ?? "no date"})`}`,
       advisory: true,
     });
   }

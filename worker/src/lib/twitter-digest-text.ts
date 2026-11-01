@@ -24,7 +24,6 @@ const TRACKED_CASHTAG_PATTERN = new RegExp(
 
 interface CashtagMatch {
   end: number;
-  hadCashtag: boolean;
   start: number;
   symbol: string;
 }
@@ -85,7 +84,7 @@ function injectCashtags(text: string, digestMetadata?: unknown): string {
     const fullMatch = match[0] ?? "";
     const symbol = match[2] ?? "";
     if (!symbol) continue;
-    matches.push({ start, end: start + fullMatch.length, hadCashtag: match[1] === "$", symbol });
+    matches.push({ start, end: start + fullMatch.length, symbol });
   }
   if (matches.length === 0) return text;
   const preferred = preferredCashtagSymbols(digestMetadata);
@@ -100,7 +99,7 @@ function injectCashtags(text: string, digestMetadata?: unknown): string {
     output += text.slice(cursor, match.start);
     output += index === selectedIndex
       ? `$${match.symbol.toUpperCase()}`
-      : `${match.hadCashtag ? "$" : ""}${match.symbol}`;
+      : match.symbol;
     cursor = match.end;
   });
   return output + text.slice(cursor);

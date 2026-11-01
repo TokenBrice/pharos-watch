@@ -376,6 +376,24 @@ describe("handleChains", () => {
     }
   });
 
+  it("keeps the route's degraded 110 and dependency advisory past the fresh budget", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    try {
+      vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9({ held: true }));
+      const response = await handleChains(mockD1([
+        stablecoinsCache([asset("usdc-circle", { Ethereum: { current: 100 } })], 2_500),
+      ]));
+      const body = await response.json() as { _meta: { status: string } };
+      const warning = response.headers.get("Warning") ?? "";
+      expect(body._meta.status).toBe("degraded");
+      expect(warning).toContain('110 - "Response is degraded (2500s old, max 1800s)"');
+      expect(warning).toContain("safety-score dependency publication held");
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+    } finally {
+      clock.mockRestore();
+    }
+  });
+
   it("publishes null totals for an admitted payload with no observed supply, never $0 (K-029)", async () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
     const cache = stablecoinsCache([asset("usdc-circle", {}, { circulating: {} })]);

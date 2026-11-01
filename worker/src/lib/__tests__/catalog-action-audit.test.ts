@@ -272,6 +272,40 @@ describe("catalog action canonical audit", () => {
     });
   });
 
+  it("keeps a completed intent row when the same key is executed again", async () => {
+    const sqlite = fixtures.open().sqlite;
+    const db = createSqliteD1(sqlite);
+    const definition = endpoint("remediate-blacklist-amount-gaps");
+
+    await auditCatalogActionResponse({
+      db,
+      endpoint: definition,
+      request: request("/api/remediate-blacklist-amount-gaps?stablecoin=USDT&dryRun=false", "reused-intent", {
+        headers: { "Cf-Access-Authenticated-User-Email": "alice@pharos.watch" },
+      }),
+      response: Response.json({ ok: true }, { headers: { "X-Idempotent-Replay": "false" } }),
+    });
+    const original = sqlite
+      .prepare("SELECT created_at, actor, target FROM admin_action_audit ORDER BY id")
+      .get() as { created_at: number; actor: string; target: string };
+
+    await auditCatalogActionResponse({
+      db,
+      endpoint: definition,
+      request: request("/api/remediate-blacklist-amount-gaps?stablecoin=DAI&dryRun=true", "reused-intent", {
+        headers: { "Cf-Access-Authenticated-User-Email": "bob@pharos.watch" },
+      }),
+      response: Response.json({ ok: true }, { headers: { "X-Idempotent-Replay": "false" } }),
+    });
+
+    const auditRows = sqlite
+      .prepare("SELECT created_at, actor, target FROM admin_action_audit ORDER BY id")
+      .all() as Array<{ created_at: number; actor: string; target: string }>;
+    expect(auditRows).toHaveLength(2);
+    expect(auditRows[0]).toEqual(original);
+    expect(auditRows[1]).toMatchObject({ actor: "bob@pharos.watch", target: "DAI" });
+  });
+
   it("distinguishes an absent batch target from an unsafe configured target", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
