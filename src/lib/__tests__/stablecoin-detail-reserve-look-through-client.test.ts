@@ -19,9 +19,15 @@ const UNCLASSIFIED_PARENT = coin("raw", {
   symbol: "RAW",
   reserves: [{ name: "Strategy basket", pct: 100, risk: "medium", issuerOrObligor: "Strategy desk" }],
 });
+const PROVENANCE_PARENT = coin("provenance", {
+  symbol: "PROV",
+  reserves: [{ name: "Liquid Cash strategy basket", pct: 100, risk: "medium", assetClass: "other", issuerOrObligor: "Strategy desk" }],
+  reserveReview: { scope: "full-composition", reviewedAt: "2026-10-27" },
+});
 const PARENTS: ReadonlyMap<string, StablecoinMeta> = new Map([
   [PARENT.id, PARENT],
   [UNCLASSIFIED_PARENT.id, UNCLASSIFIED_PARENT],
+  [PROVENANCE_PARENT.id, PROVENANCE_PARENT],
   ["empty", coin("empty", { reserves: [] })],
 ]);
 
@@ -63,6 +69,14 @@ describe("projectReserveLookThroughClientSummary", () => {
       { name: "Strategy basket", pct: 100, risk: "medium", obligor: "Strategy desk", assetClassLabel: null },
     ]);
     expect(summary!.parentReviewedAt).toBeNull();
+  });
+
+  it("draws a provenance-only parent's slices from its curated basket", () => {
+    const summary = projectReserveLookThroughClientSummary(wrapperOf("provenance"), PARENTS);
+    expect(summary!.parentReviewedAt).toBe("2026-10-27");
+    expect(summary!.slices).toMatchObject([
+      { name: "Liquid Cash strategy basket", pct: 100, risk: "medium", obligor: "Strategy desk", assetClassLabel: null },
+    ]);
   });
 
   it.each([

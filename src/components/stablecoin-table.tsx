@@ -36,6 +36,8 @@ interface StablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
+  /** The loaded report-cards response's methodology version, for the CSV label. */
+  reportCardsMethodologyVersion?: string | null;
   sourceGenerations?: StablecoinTableSourceGenerations;
   initialVisibleColumns?: readonly ColumnId[];
   columnPreferenceNamespace?: string;
@@ -66,6 +68,7 @@ export function StablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
+  reportCardsMethodologyVersion,
   sourceGenerations,
   initialVisibleColumns,
   columnPreferenceNamespace = "pharos-table",
@@ -109,6 +112,7 @@ export function StablecoinTable({
     activeFilters,
     eligibleIds,
     reportCards,
+    reportCardsMethodologyVersion,
     searchQuery,
     sort,
     renderedSet: columns.renderedSet,

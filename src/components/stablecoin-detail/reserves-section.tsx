@@ -415,7 +415,7 @@ function LookThroughCaption({
  * sentences restate figures the facts and slice detail already carry.
  */
 function buildVerdict(summary: ReserveQualityClientSummary | null): string | null {
-  if (!summary) return null;
+  if (!summary?.lede) return null;
   return findSummaryBudgetViolations(summary.lede).length === 0 ? summary.lede : deriveVerdictLine(summary.lede);
 }
 
@@ -466,8 +466,12 @@ export function ReservesSection({
   // The reviewed basis is the curated `coin.reserves`. The quality summary is
   // derived from it but only exists when slices carry both asset class and
   // liquidity horizon, so partially annotated baskets (USDe) still draw here.
+  // A provenance-only summary projects the review's chip/footer evidence
+  // without quality slices, so the visual falls back to the curated basket.
   const reviewedSlices = useMemo(
-    () => (qualitySummary ? reviewedCompositionSlices(qualitySummary) : compositionSlices(coin.reserves ?? [])),
+    () => (qualitySummary && !qualitySummary.provenanceOnly
+      ? reviewedCompositionSlices(qualitySummary)
+      : compositionSlices(coin.reserves ?? [])),
     [qualitySummary, coin.reserves],
   );
   const liveSlices = useMemo(
@@ -567,7 +571,7 @@ export function ReservesSection({
 
   const headerRight = wholeBasketSummary || feedStatus ? (
     <>
-      {wholeBasketSummary ? (
+      {wholeBasketSummary?.chipLabel ? (
         // The module's verdict chip ("Opaque exit") never truncates: `shrink-0!`
         // beats the header slot's shrink-and-truncate rule; the title wraps instead.
         <Badge variant="outline" className={cn(CHIP_CLASS, "shrink-0!", wholeBasketSummary.chipToneClass)}>
@@ -649,7 +653,7 @@ export function ReservesSection({
                 </ul>
               </ModuleDisclosure>
             ) : null}
-            {qualitySummary ? <SliceDetail summary={qualitySummary} /> : null}
+            {qualitySummary && !qualitySummary.provenanceOnly ? <SliceDetail summary={qualitySummary} /> : null}
             {showLiveFeed ? (
               <LiveFeedDetail
                 slices={liveSlices}

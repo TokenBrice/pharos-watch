@@ -180,6 +180,9 @@ describe("YieldSourceSheet", () => {
     expect(screen.getByText("Native · depth n/a")).toBeTruthy();
     expect(screen.getByText("Depth").nextElementSibling?.textContent).toBe("Native");
     expect(screen.queryByText(/Unknown depth/)).toBeNull();
+    // Native-unmeasured depth is not evidence debt: the posture chip stays clean.
+    expect(screen.getByText("Clean")).toBeTruthy();
+    expect(screen.queryByText("Watch")).toBeNull();
   });
 
   it("shows current and previous source identity for source changes", () => {

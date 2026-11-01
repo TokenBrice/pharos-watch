@@ -169,8 +169,14 @@ function routePacketCount(sharePct: number): number {
   return 1;
 }
 
+/**
+ * The aggregate throat's HHI is computed from the protocol buckets the global
+ * DEX snapshot publishes, not from pool rows. The label names that basis so a
+ * protocol-bucket scope is never read as a pool-level concentration measure.
+ */
 export function throatLabelForCrowding(concentrationHhi: number | null | undefined): string {
-  return getHhiBand(concentrationHhi)?.throatLabel ?? "Crowding not scored";
+  const band = getHhiBand(concentrationHhi);
+  return band ? `Protocol crowding: ${band.throatLabel}` : "Protocol crowding not scored";
 }
 
 export function crowdingBand(concentrationHhi: number | null | undefined): ExitRouteCrowdingBand {

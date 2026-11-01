@@ -17,6 +17,7 @@ import {
 import type { DexLiquidityTableMap, FilterTag, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { V9SafetyTableRow } from "@/lib/safety-score-v9-consumers";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 
 export type StablecoinTableSourceGenerations = Partial<Record<"stablecoins" | "pegSummary" | "dexLiquidity" | "reportCards", number | null>>;
 
@@ -284,6 +285,7 @@ export function exportStablecoinsCsv(
   dexLiquidity?: DexLiquidityTableMap,
   reportCards?: Record<string, V9SafetyTableRow>,
   sourceGenerations?: StablecoinTableSourceGenerations,
+  reportCardsMethodologyVersion?: string | null,
 ): void {
   const generationsBySource = {
     stablecoins: generationIso(sourceGenerations?.stablecoins),
@@ -292,14 +294,18 @@ export function exportStablecoinsCsv(
     reportCards: generationIso(sourceGenerations?.reportCards),
   };
   const generationValues = Object.values(generationsBySource);
-  // Conservative mixed-source convention: oldest participating generation,
-  // only when all participating clocks are known.
-  const asOfISO = generationValues.reduce<string | null>(
-    (oldest, generation) => oldest === null || generation === null
-      ? null
-      : generation < oldest ? generation : oldest,
-    generationValues[0] ?? null,
+  // Mixed-source convention: the oldest known participating generation dates
+  // the export; unread clocks stay null and never withhold those that were read.
+  const knownGenerations = generationValues.filter((generation): generation is string => generation !== null);
+  const asOfISO = knownGenerations.reduce<string | null>(
+    (oldest, generation) => oldest === null || generation < oldest ? generation : oldest,
+    null,
   ) ?? "unknown";
+  // The Safety Score version belongs in the methodology label only when the
+  // report-card response that supplied the grade/mint columns was loaded.
+  const methodologyLabel = reportCards != null && reportCardsMethodologyVersion
+    ? `published source values · safety-score ${toMethodologyVersionLabel(reportCardsMethodologyVersion)}`
+    : "published source values";
 
   downloadCsvWithPreamble(
     sorted,
@@ -355,7 +361,7 @@ export function exportStablecoinsCsv(
       endpoint: "stablecoins",
       asOfISO,
       sourceUrl: typeof window === "undefined" ? "https://pharos.watch/" : window.location.href,
-      methodologyLabel: "published source values",
+      methodologyLabel,
       sourceGenerations: generationsBySource,
     },
   );

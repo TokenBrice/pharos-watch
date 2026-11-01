@@ -85,6 +85,33 @@ describe("yield source risk UI helpers", () => {
     }).map((driver) => driver.key)).toEqual(["stale-source"]);
   });
 
+  it("does not treat a native source's unmeasured depth as evidence debt", () => {
+    const unmeasured = {
+      sourceRisk: { sourceRiskPenalty: 1, sourceDepthRatio: null, sourceAgeSeconds: 60, venueRiskTier: "low" as const },
+      sourceTvlUsd: null,
+    };
+    // Callers that omit the yield identity keep the legacy evidence-debt read.
+    expect(classifyYieldSourcePosture(unmeasured)).toBe("watch");
+    expect(classifyYieldSourcePosture({ ...unmeasured, yieldType: "lending-vault", sourceRole: "canonical-holder" })).toBe("clean");
+    // An external opportunity's unknown depth stays real evidence debt.
+    expect(classifyYieldSourcePosture({ ...unmeasured, yieldType: "lending-opportunity", sourceRole: "external-opportunity" })).toBe("watch");
+    // A native row with measured TVL but no supply-relative ratio is still unmeasured.
+    expect(classifyYieldSourcePosture({
+      ...unmeasured,
+      sourceTvlUsd: 10_000_000,
+      yieldType: "lending-vault",
+      sourceRole: "canonical-holder",
+    })).toBe("watch");
+    // Measured native depth is classified on the measurement, not the yield type.
+    expect(classifyYieldSourcePosture({
+      ...unmeasured,
+      sourceRisk: { ...unmeasured.sourceRisk, sourceDepthRatio: 0.02 },
+      sourceTvlUsd: 10_000_000,
+      yieldType: "lending-vault",
+      sourceRole: "canonical-holder",
+    })).toBe("clean");
+  });
+
   it("formats material source-risk summaries for compact row cells", () => {
     expect(formatYieldSourceRiskSummary({ sourceRiskScore: 42, sourceRiskPenalty: 1.32 })).toBe(
       "Source risk 42/100 | 1.32x",

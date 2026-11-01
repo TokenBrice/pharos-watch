@@ -46,7 +46,7 @@ export function projectReserveLookThroughClientSummary(
   if (parent.reserveReview?.scope != null && parent.reserveReview.scope !== "full-composition") return null;
 
   const quality = projectReserveQualityClientSummary(parent);
-  const rows: ReserveLookThroughSliceClientRow[] = quality
+  const rows: ReserveLookThroughSliceClientRow[] = quality && !quality.provenanceOnly
     ? quality.slices.map((row) => ({
         key: row.key,
         name: row.name,

@@ -69,7 +69,7 @@ describe("nominal price consumers", () => {
 });
 
 describe("stablecoin export provenance", () => {
-  it("records supplied upstream generations instead of download time and preserves unknown clocks and cells", () => {
+  it("dates the export by the oldest known upstream generation and preserves unknown clocks and cells", () => {
     downloadCsvMock.mockReset();
     const rows = [
       makeCoin("zero", "Zero", { circulating: { peggedUSD: 0 } }),
@@ -79,9 +79,8 @@ describe("stablecoin export provenance", () => {
     exportStablecoinsCsv(rows, new Map([["zero", 1], ["unknown", 2]]), new Map(), {}, {}, { stablecoins: sourceTime, pegSummary: sourceTime - 60, reportCards: null });
     const [exported, columns, , preamble] = downloadCsvMock.mock.calls[0] as [StablecoinData[], CsvColumn<StablecoinData>[], string, ExportPreamble];
     expect(exported).toBe(rows);
-    // An unknown participating clock withholds the scalar as-of instead of
-    // letting the stablecoins generation date the whole export.
-    expect(preamble.asOfISO).toBe("unknown");
+    // Unread clocks stay listed but never withhold the oldest clock that was read.
+    expect(preamble.asOfISO).toBe("2026-09-01T11:59:00.000Z");
     const header = formatPreambleCsv(preamble);
     expect(header).toContain("stablecoins=2026-09-01T12:00:00.000Z");
     expect(header).toContain("pegSummary=2026-09-01T11:59:00.000Z");
@@ -115,7 +114,7 @@ describe("stablecoin export provenance", () => {
     });
   });
 
-  it("keeps a never-read source visible as an unknown generation and withholds the scalar as-of", () => {
+  it("keeps a never-read source visible as an unknown generation and dates by the clocks that were read", () => {
     downloadCsvMock.mockReset();
     const rows = [makeCoin("usdc", "USDC")];
     const sourceTime = Date.parse("2026-09-01T12:00:00Z") / 1000;
@@ -125,7 +124,7 @@ describe("stablecoin export provenance", () => {
     });
 
     const preamble = downloadCsvMock.mock.calls[0][3] as ExportPreamble;
-    expect(preamble.asOfISO).toBe("unknown");
+    expect(preamble.asOfISO).toBe("2026-09-01T11:59:00.000Z");
     expect(preamble.sourceGenerations).toEqual({
       stablecoins: "2026-09-01T12:00:00.000Z",
       pegSummary: "2026-09-01T11:59:00.000Z",
@@ -133,6 +132,18 @@ describe("stablecoin export provenance", () => {
       reportCards: null,
     });
     expect(formatPreambleCsv(preamble)).toContain("reportCards=unknown");
+  });
+
+  it("appends the loaded report-card methodology version to the CSV label", () => {
+    downloadCsvMock.mockReset();
+    const rows = [makeCoin("usdc", "USDC")];
+    exportStablecoinsCsv(rows, new Map([["usdc", 1]]), new Map(), {}, {}, {}, "10.01");
+    expect((downloadCsvMock.mock.calls[0][3] as ExportPreamble).methodologyLabel)
+      .toBe("published source values · safety-score v10.01");
+    // No loaded report-card response means the label keeps its unversioned form.
+    exportStablecoinsCsv(rows, new Map([["usdc", 1]]), new Map(), {}, undefined, {}, "10.01");
+    expect((downloadCsvMock.mock.calls[1][3] as ExportPreamble).methodologyLabel)
+      .toBe("published source values");
   });
 });
 

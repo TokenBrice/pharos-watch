@@ -24,6 +24,7 @@ const AMBER_VALUE_CLASS = "text-state-warn";
 const NO_REVIEW_COIN = { ...COIN, reserves: [] };
 
 const SUMMARY: ReserveQualityClientSummary = {
+  provenanceOnly: false,
   chipLabel: "Highly liquid",
   chipToneClass: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700",
   lede: "2 reviewed reserve slices — 100% convertible within one day.",
@@ -134,6 +135,30 @@ describe("ReservesSection", () => {
     },
   );
 
+  it.each([
+    ["usde-ethena", "Confidence: Verified"],
+    ["usdon-ondo", "Confidence: Probable"],
+  ])("shows review provenance without a verdict, ladder or slice detail for %s", (id, confidence) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    const qualitySummary = projectReserveQualityClientSummary(coin)!;
+    const { container } = renderSection({ coin, qualitySummary, reserves: null });
+
+    expect(qualitySummary.provenanceOnly).toBe(true);
+    expect(screen.getByText(confidence)).toBeDefined();
+    expect(container.textContent).toContain(`Reviewed ${coin.reserveReview!.reviewedAt}`);
+    expect(container.innerHTML).toContain(coin.reserveReview!.sources[0]!.url);
+    expect(container.textContent).toContain(coin.reserveReview!.compositionBasis!);
+    expect(container.textContent).toContain(coin.reserveReview!.knownUnknownExposure!);
+    // Provenance-only: the curated basket still draws, but no whole-basket
+    // verdict, liquidity facts, ladder or slice-detail fold is derived.
+    expect(screen.getByRole("figure").getAttribute("aria-label")).toContain(coin.reserves![0]!.name);
+    expect(screen.queryByText("Highly liquid")).toBeNull();
+    expect(screen.queryByText("Liquidity ladder")).toBeNull();
+    expect(screen.queryByText("Liquid ≤ 1 day")).toBeNull();
+    expect(screen.queryByText("Slice detail & risk factors")).toBeNull();
+    expect(container.textContent).not.toContain("convertible within one day");
+  });
+
   it("builds the module from the reviewed slices: one visual, at most four facts, both anchors", () => {
     const { container } = renderSection();
     const region = screen.getByRole("region", { name: "Reserves" });
@@ -145,7 +170,7 @@ describe("ReservesSection", () => {
     expect(container.querySelectorAll("#reserve-quality")).toHaveLength(1);
     expect(screen.getByText("Reserves")).toBeDefined();
     expect(screen.getByText("Highly liquid")).toBeDefined();
-    expect(screen.getByText(SUMMARY.lede)).toBeDefined();
+    expect(screen.getByText(SUMMARY.lede!)).toBeDefined();
     expect(container.querySelectorAll('[role="figure"]')).toHaveLength(1);
     expect(screen.getByRole("figure").getAttribute("aria-label"))
       .toBe("Reviewed reserve slices: U.S. Treasury bills 80%, Bank deposits 20%");
@@ -285,7 +310,7 @@ describe("ReservesSection", () => {
       expect(via.closest("p")?.textContent).toMatch(/PAR staking vault shares.*via PAR/);
       // The wrapper's whole-basket chip, facts and ladder describe a different
       // population than the parent slices drawn here, so they are not shown.
-      expect(screen.queryByText(WRAPPER_SUMMARY.chipLabel)).toBeNull();
+      expect(screen.queryByText(WRAPPER_SUMMARY.chipLabel!)).toBeNull();
       expect(screen.queryByRole("group", { name: "Reserve facts" })).toBeNull();
       expect(screen.queryByText("Liquidity ladder")).toBeNull();
       expect(screen.queryByText("Not published")).toBeNull();
@@ -293,7 +318,7 @@ describe("ReservesSection", () => {
 
     it("words the verdict over the drawn parent slices, not the wrapper's single claim", () => {
       renderSection({ qualitySummary: WRAPPER_SUMMARY, lookThrough: LOOK_THROUGH });
-      expect(screen.queryByText(SUMMARY.lede)).toBeNull();
+      expect(screen.queryByText(SUMMARY.lede!)).toBeNull();
       const verdict = screen.getByText(/^Via PAR: 2 reviewed slices/);
       expect(verdict.textContent).toContain("Liquid cash strategy basket");
       expect(verdict.textContent).toContain("70%");
