@@ -746,6 +746,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
   cacheKey: string;
   syncStartSec: number;
   activePriceCoverage: StablecoinActivePriceCoverage;
+  previousActivePriceCoverage?: PreviousStablecoinActivePriceCoverage | null;
 }): CronResult {
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     input.assets.map((asset) => String(asset.id)),
@@ -761,7 +762,10 @@ export function buildFallbackStablecoinsSyncResult(input: {
     authoritativeOverrideStats: input.authoritativeOverrideStats,
   }));
 
-  const degradedReason = resolveSyncDegradedReason(input, publicationGap);
+  const degradedReason = resolveSyncDegradedReason({
+    ...input,
+    previousPricedActiveCount: input.previousActivePriceCoverage?.pricedActiveCount ?? null,
+  }, publicationGap);
   const depegObservation = depegObservationQuality(input);
   const preferredNativeSupply = preferredNativeSupplyQuality(input.assets);
   const qualityReasons = [...(degradedReason ? [degradedReason] : []), ...depegObservation.reasons,

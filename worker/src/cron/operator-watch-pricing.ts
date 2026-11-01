@@ -6,7 +6,7 @@ import { formatIsoDate } from "@shared/lib/format";
 import type { BluechipRatingsMap } from "@shared/types/market";
 import type { CacheStatus } from "@shared/types/status";
 import { getCache } from "../lib/db-cache";
-import { parseBluechipRatingsCache } from "../lib/bluechip-cache";
+import { readBluechipRatingsCache } from "../lib/bluechip-cache";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import type { OperatorWatchCondition } from "./cron-staleness-watchdog";
 
@@ -36,18 +36,24 @@ export interface PricingOperatorWatchInput {
 function fxConditions(fx: CachedStatus | undefined): OperatorWatchCondition[] {
   if (!fx) return [];
   const details = fx.warning ? `: ${fx.warning}` : "";
+  // Only a parsed FX generation carries a source status and sync mode. Without
+  // both, the cache row or its metadata is absent or unreadable: hold the prior
+  // state rather than reporting a recovery nothing measured (R2).
+  const unknown = fx.mode == null && fx.sourceStatus == null;
   return [
     {
       section: "fx-rates",
       id: "source-stale",
       label: `source stale${details}`,
       active: fx.sourceStatus === "stale",
+      unknown,
     },
     {
       section: "fx-rates",
       id: "cached-fallback",
       label: `cached fallback (${fx.consecutiveFallbackRuns ?? 0} consecutive runs)${details}`,
       active: fx.mode === "cached-fallback",
+      unknown,
     },
   ];
 }
@@ -115,14 +121,18 @@ async function bluechipCoverageCondition(
   } catch {
     return { section: "daily-lane", id, active: false, unknown: true };
   }
-  const ratings = cache?.value ? parseBluechipRatingsCache(cache.value, "operator-watch-pricing:bluechip") : {};
+  const read = cache?.value
+    ? readBluechipRatingsCache(cache.value, "operator-watch-pricing:bluechip")
+    : { ratings: {}, droppedIds: [] };
   // A missing or unusable map is not evidence that a constituent went stale:
   // `producer-stale` owns an absent cache, and a corrupt payload keeps this
-  // condition's prior state instead of paging as a coverage failure.
-  if (Object.keys(ratings).length === 0) {
+  // condition's prior state instead of paging as a coverage failure. A dropped
+  // expected entry is unreadable evidence, not a missing constituent.
+  if (Object.keys(read.ratings).length === 0
+    || read.droppedIds.some((stablecoinId) => expectedIds.includes(stablecoinId))) {
     return { section: "daily-lane", id, active: false, unknown: true };
   }
-  const gaps = countBluechipCoverageGaps(ratings, expectedIds, nowSec);
+  const gaps = countBluechipCoverageGaps(read.ratings, expectedIds, nowSec);
   return {
     section: "daily-lane",
     id,

@@ -52,7 +52,7 @@ function bluechipRatings(overrides: Record<string, Partial<BluechipRating>> = {}
   return ratings;
 }
 
-function bluechipDb(ratings: Record<string, BluechipRating> | null) {
+function bluechipDb(ratings: Record<string, unknown> | null) {
   return mockD1([{
     match: "FROM cache WHERE key = ?",
     rows: ratings == null
@@ -63,7 +63,7 @@ function bluechipDb(ratings: Record<string, BluechipRating> | null) {
 
 function conditionsFor(
   caches: Parameters<typeof buildPricingOperatorConditions>[1]["caches"],
-  ratings: Record<string, BluechipRating> | null = bluechipRatings(),
+  ratings: Record<string, unknown> | null = bluechipRatings(),
 ) {
   return buildPricingOperatorConditions(bluechipDb(ratings), { caches, nowSec: NOW });
 }
@@ -155,6 +155,17 @@ describe("pricing operator conditions", () => {
     });
   });
 
+  it("keeps both FX conditions unknown when the cache carries no parsed state", async () => {
+    const conditions = await conditionsFor({
+      [CACHE_FRESHNESS_LANES.fxRates.cacheKey]: { publishedAt: null },
+    });
+    expect(conditions.filter((condition) => condition.section === "fx-rates")).toEqual([
+      expect.objectContaining({ id: "source-stale", active: false, unknown: true }),
+      expect.objectContaining({ id: "cached-fallback", active: false, unknown: true }),
+    ]);
+    expect(pricingOperatorRuleIds(conditions)).toEqual([]);
+  });
+
   it("raises bluechip coverage gaps at the shared 48-hour observation budget", async () => {
     const [staleId, freshId] = EXPECTED_BLUECHIP_IDS;
     const conditions = await conditionsFor(
@@ -179,5 +190,17 @@ describe("pricing operator conditions", () => {
       });
       expect(pricingOperatorRuleIds(conditions)).not.toContain("bluechip-coverage");
     }
+  });
+
+  it("keeps a partially unreadable bluechip cache unknown instead of reporting dropped constituents missing", async () => {
+    const [droppedId] = EXPECTED_BLUECHIP_IDS;
+    const ratings: Record<string, unknown> = { ...bluechipRatings() };
+    ratings[droppedId] = { grade: "not-a-grade" };
+    const conditions = await conditionsFor({}, ratings);
+    expect(conditions.find((condition) => condition.id === "bluechip-ratings-coverage")).toMatchObject({
+      active: false,
+      unknown: true,
+    });
+    expect(pricingOperatorRuleIds(conditions)).not.toContain("bluechip-coverage");
   });
 });

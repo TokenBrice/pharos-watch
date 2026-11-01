@@ -63,39 +63,84 @@ const YIELD_BENCHMARK_MAX_RELATIVE_CHANGE: Record<YieldBenchmarkKey, number> = {
   TRY: 1,
 };
 
-/** Ratios only a unit change produces, whatever the key's own band. */
-const UNIT_SCALE_RATIO_MIN = 0.05;
+/**
+ * Ratios only a unit change produces, whatever the key's own band. The bounds
+ * are unconditional so a wide policy-rate band cannot admit a 100x
+ * percent->fraction drift.
+ */
 const UNIT_SCALE_RATIO_MAX = 0.2;
 const UNIT_SCALE_RATIO_INVERSE_MIN = 5;
-const UNIT_SCALE_RATIO_INVERSE_MAX = 20;
 /**
- * Absolute move (percentage points) below which no relative band applies:
- * near-zero policy benchmarks (CHF SAR3MC, EUR €STR) produce huge ratios from
- * economically tiny moves.
+ * Absolute move (percentage points) at or below which no relative band applies:
+ * 50 bp covers ordinary central-bank steps at low or zero levels, including a
+ * sign crossing. Only larger moves are graded against the key's relative band.
  */
-const RATE_ABSOLUTE_MOVE_FLOOR = 0.25;
+const RATE_ABSOLUTE_MOVE_ALWAYS_PLAUSIBLE = 0.5;
+/** Same out-of-band level repeated within this relative tolerance is a level shift. */
+const RATE_CONFIRMATION_RELATIVE_TOLERANCE = 0.05;
+
+export type YieldBenchmarkRateRejection = "non-finite" | "unit-scale" | "relative-band";
+
+export interface YieldBenchmarkRateAssessment {
+  accepted: boolean;
+  rejection: YieldBenchmarkRateRejection | null;
+  /** The rejected level repeated on the next observation and was accepted as a shift. */
+  confirmedLevelShift: boolean;
+}
+
+function sameRejectedLevel(rate: number, previousRejectedRate: number): boolean {
+  const scale = Math.max(Math.abs(rate), Math.abs(previousRejectedRate));
+  return Math.abs(rate - previousRejectedRate) <= scale * RATE_CONFIRMATION_RELATIVE_TOLERANCE;
+}
 
 /**
- * Whether a freshly parsed market rate may replace the published benchmark.
- * Without a prior market observation there is no local baseline; the provider's
- * own range guard remains the only value check. A rejected rate keeps the
- * previous retained value and names `<key>-rate-out-of-band` in run metadata.
+ * Grade a freshly parsed market rate against the last published market
+ * observation. A relative-band rejection may be confirmed on the next run when
+ * the same out-of-band level repeats within tolerance; a unit-scale ratio is
+ * never confirmation-eligible, so a persistent 100x drift stays rejected.
+ */
+export function assessYieldBenchmarkRate(
+  key: YieldBenchmarkKey,
+  rate: number,
+  previousMarketRate: number | null | undefined,
+  previouslyRejectedRate?: number | null,
+): YieldBenchmarkRateAssessment {
+  // Policy benchmarks may legitimately publish zero or negative observations.
+  if (!Number.isFinite(rate)) {
+    return { accepted: false, rejection: "non-finite", confirmedLevelShift: false };
+  }
+  if (previousMarketRate == null || !Number.isFinite(previousMarketRate) || previousMarketRate === 0) {
+    return { accepted: true, rejection: null, confirmedLevelShift: false };
+  }
+  if (Math.abs(rate - previousMarketRate) <= RATE_ABSOLUTE_MOVE_ALWAYS_PLAUSIBLE) {
+    return { accepted: true, rejection: null, confirmedLevelShift: false };
+  }
+  const ratio = rate / previousMarketRate;
+  if (ratio <= UNIT_SCALE_RATIO_MAX || ratio >= UNIT_SCALE_RATIO_INVERSE_MIN) {
+    return { accepted: false, rejection: "unit-scale", confirmedLevelShift: false };
+  }
+  if (Math.abs(ratio - 1) <= YIELD_BENCHMARK_MAX_RELATIVE_CHANGE[key]) {
+    return { accepted: true, rejection: null, confirmedLevelShift: false };
+  }
+  if (previouslyRejectedRate != null
+    && Number.isFinite(previouslyRejectedRate)
+    && sameRejectedLevel(rate, previouslyRejectedRate)) {
+    return { accepted: true, rejection: null, confirmedLevelShift: true };
+  }
+  return { accepted: false, rejection: "relative-band", confirmedLevelShift: false };
+}
+
+/**
+ * Whether a freshly parsed market rate may replace the published benchmark
+ * without a confirmation. A rejected rate keeps the previous retained value and
+ * names `<key>-rate-out-of-band` in run metadata.
  */
 export function isYieldBenchmarkRatePlausible(
   key: YieldBenchmarkKey,
   rate: number,
   previousMarketRate: number | null | undefined,
 ): boolean {
-  // Policy benchmarks may legitimately publish zero or negative observations.
-  if (!Number.isFinite(rate)) return false;
-  if (previousMarketRate == null || !Number.isFinite(previousMarketRate) || previousMarketRate === 0) return true;
-  if (Math.abs(rate - previousMarketRate) <= RATE_ABSOLUTE_MOVE_FLOOR) return true;
-  const ratio = rate / previousMarketRate;
-  if ((ratio >= UNIT_SCALE_RATIO_MIN && ratio <= UNIT_SCALE_RATIO_MAX)
-    || (ratio >= UNIT_SCALE_RATIO_INVERSE_MIN && ratio <= UNIT_SCALE_RATIO_INVERSE_MAX)) {
-    return false;
-  }
-  return Math.abs(ratio - 1) <= YIELD_BENCHMARK_MAX_RELATIVE_CHANGE[key];
+  return assessYieldBenchmarkRate(key, rate, previousMarketRate).accepted;
 }
 
 /**

@@ -138,6 +138,9 @@ interface RiskFreeRateCachePayload {
   lastMarketRecordDate: string | null;
   lastMarketFetchedAt: number | null;
   lastMarketSource: string | null;
+  lastRejectedMarketRate?: number | null;
+  lastRejectedMarketRecordDate?: string | null;
+  lastRejectedMarketFetchedAt?: number | null;
 }
 
 interface RiskFreeRatesCachePayload {
@@ -200,6 +203,9 @@ export function buildRiskFreeRateCachePayload(
     lastMarketRecordDate: inferredLastMarketRecordDate,
     lastMarketFetchedAt: inferredLastMarketFetchedAt,
     lastMarketSource: inferredLastMarketSource,
+    lastRejectedMarketRate: fields.lastRejectedMarketRate ?? null,
+    lastRejectedMarketRecordDate: fields.lastRejectedMarketRecordDate ?? null,
+    lastRejectedMarketFetchedAt: fields.lastRejectedMarketFetchedAt ?? null,
   };
 }
 
@@ -259,6 +265,9 @@ function parseRiskFreeRateRecord(
         lastMarketSource:
           toNullableString(parsed.lastMarketSource) ??
           (lastMarketRate != null ? source : null),
+        lastRejectedMarketRate: coerceFiniteNumber(parsed.lastRejectedMarketRate),
+        lastRejectedMarketRecordDate: toNullableString(parsed.lastRejectedMarketRecordDate),
+        lastRejectedMarketFetchedAt: coerceFiniteNumber(parsed.lastRejectedMarketFetchedAt),
       };
     }
   }
@@ -283,6 +292,9 @@ function parseRiskFreeRateRecord(
     lastMarketRecordDate: null,
     lastMarketFetchedAt: legacyRate === RISK_FREE_RATE_FALLBACK ? null : cacheUpdatedAt,
     lastMarketSource: legacyRate === RISK_FREE_RATE_FALLBACK ? null : "legacy-scalar",
+    lastRejectedMarketRate: null,
+    lastRejectedMarketRecordDate: null,
+    lastRejectedMarketFetchedAt: null,
   };
 }
 

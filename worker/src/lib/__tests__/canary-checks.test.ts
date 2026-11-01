@@ -100,6 +100,7 @@ function stablecoinsRunRows(options: {
       started_at: options.startedAt ?? NOW - 60,
       status: "ok",
       metadata: JSON.stringify({
+        cacheWriteMode: "published",
         ...(options.includeCoverage === false ? {} : {
           activePriceCoverage: {
             complete: missingPriceCount === 0,
@@ -1625,12 +1626,24 @@ describe("worker data invariant canaries", () => {
 });
 
 describe("pricing canaries", () => {
-  function pricingDb(rows: Record<string, unknown>[]) {
-    return mockD1([{ match: "canary-stablecoins-pricing-runs", matchBinds: [2], rows }]);
+  function pricingDb(rows: Record<string, unknown>[], publishedRows?: Record<string, unknown>[]) {
+    return mockD1([
+      { match: "canary-stablecoins-pricing-runs", matchBinds: [2], rows },
+      ...(publishedRows
+        ? [{ match: "canary-stablecoins-published-runs", rows: publishedRows }]
+        : []),
+    ]);
   }
 
-  async function runPricingCheck(checkId: string, rows: Record<string, unknown>[]) {
-    const summary = await runCanaryChecks(pricingDb(rows), { observedAt: NOW, mode: "status" });
+  async function runPricingCheck(
+    checkId: string,
+    rows: Record<string, unknown>[],
+    publishedRows?: Record<string, unknown>[],
+  ) {
+    const summary = await runCanaryChecks(pricingDb(rows, publishedRows), {
+      observedAt: NOW,
+      mode: "status",
+    });
     return summary.results.find((result) => result.checkId === checkId);
   }
 
@@ -1709,11 +1722,77 @@ describe("pricing canaries", () => {
     expect(single).toMatchObject({ status: "ok", metadata: { baselineAvailable: false, unavailableCount: 2 } });
   });
 
+  it("grades the last published generation when newer attempts did not publish", async () => {
+    const publication = stablecoinsRunRows({ startedAt: NOW - 960 })[0]!;
+    const skipped = {
+      started_at: NOW - 60,
+      status: "skipped_locked",
+      metadata: JSON.stringify({ reason: "lease-locked" }),
+    };
+    const abandoned = {
+      started_at: NOW - 300,
+      status: "error",
+      metadata: JSON.stringify({
+        reason: "stale-slot-reconciled",
+        failureCategory: "platform-abandoned",
+        childDisposition: "abandoned",
+      }),
+    };
+
+    for (const checkId of ["stablecoins-active-price-coverage", "depeg-observation-coverage"]) {
+      const check = await runPricingCheck(checkId, [skipped, abandoned], [publication]);
+      expect(check).toMatchObject({
+        status: "ok",
+        metadata: { runStartedAt: NOW - 960, runStatus: "ok", runAgeSec: 960 },
+      });
+    }
+  });
+
+  it("fails closed when no generation published inside the producer budget", async () => {
+    const skipped = {
+      started_at: NOW - 60,
+      status: "skipped_locked",
+      metadata: JSON.stringify({ reason: "lease-locked" }),
+    };
+    const check = await runPricingCheck("stablecoins-active-price-coverage", [skipped], []);
+    expect(check).toMatchObject({
+      status: "error",
+      executionStatus: "failed",
+      executionFailureReason: "sync-stablecoins-run-unavailable",
+      metadata: { runStartedAt: NOW - 60, runStatus: "skipped_locked", runAgeSec: 60 },
+    });
+  });
+
+  it("compares against the previous published census, not a newer skipped attempt", async () => {
+    const current = stablecoinsRunRows({
+      unavailableCount: 2,
+      reasonCounts: { "primary-unusable": 2 },
+      startedAt: NOW - 60,
+    })[0]!;
+    const skipped = {
+      started_at: NOW - 120,
+      status: "skipped_locked",
+      metadata: JSON.stringify({ reason: "lease-locked" }),
+    };
+    const previous = stablecoinsRunRows({ startedAt: NOW - 960 })[0]!;
+
+    const check = await runPricingCheck(
+      "depeg-observation-coverage",
+      [current, skipped],
+      [current, previous],
+    );
+    expect(check).toMatchObject({
+      status: "degraded",
+      metadata: { baselineAvailable: true, unavailableDelta: 2, runStartedAt: NOW - 60 },
+    });
+  });
+
   it("reports a held or failed depeg stage instead of healthy coverage", async () => {
     const held = await runPricingCheck("depeg-observation-coverage", [{
       started_at: NOW - 60,
       status: "degraded",
       metadata: JSON.stringify({
+        cacheWriteMode: "published",
         activePriceCoverage: { expectedActiveCount: ACTIVE_IDS.size, pricedActiveCount: ACTIVE_IDS.size, missingPriceCount: 0 },
         quality: {
           reason: "depeg-open-event-limit-reached",

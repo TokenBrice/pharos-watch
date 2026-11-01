@@ -12,9 +12,9 @@ import {
 import { buildHardcodedUsdBenchmark, withYieldBenchmarkStaticMeta, type ParsedYieldBenchmarkMeta, type ParsedYieldBenchmarkRegistry } from "./yield-sync/benchmarks";
 import {
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
+  assessYieldBenchmarkRate,
   benchmarkRecordAgeSeconds,
   classifyYieldBenchmarkFreshness,
-  isYieldBenchmarkRatePlausible,
 } from "@shared/lib/yield-benchmark-freshness";
 import { throwIfAborted } from "../lib/abort";
 import { loadRiskFreeRateRegistryWithState } from "./yield-sync/state";
@@ -532,6 +532,9 @@ function toCacheEntry(benchmark: ParsedYieldBenchmarkMeta | null) {
     lastMarketRecordDate: benchmark.lastMarketRecordDate,
     lastMarketFetchedAt: benchmark.lastMarketFetchedAt,
     lastMarketSource: benchmark.lastMarketSource,
+    lastRejectedMarketRate: benchmark.lastRejectedMarketRate ?? null,
+    lastRejectedMarketRecordDate: benchmark.lastRejectedMarketRecordDate ?? null,
+    lastRejectedMarketFetchedAt: benchmark.lastRejectedMarketFetchedAt ?? null,
   });
 }
 
@@ -557,6 +560,7 @@ function prepareStructuredBenchmarks(benchmarks: ParsedYieldBenchmarkRegistry, g
 function buildRetainedBenchmark(
   previous: ParsedYieldBenchmarkMeta | null,
   fallbackMode: string,
+  rejected?: { rate: number; recordDate: string | null; fetchedAt: number } | null,
 ): ParsedYieldBenchmarkMeta | null {
   if (
     previous?.lastMarketRate != null &&
@@ -583,6 +587,11 @@ function buildRetainedBenchmark(
       lastMarketRecordDate: previous.lastMarketRecordDate,
       lastMarketFetchedAt: previous.lastMarketFetchedAt,
       lastMarketSource: previous.lastMarketSource,
+      // Only the immediately preceding rejection is confirmation evidence; a
+      // failed or non-publishing run clears it so two unrelated values cannot pair.
+      lastRejectedMarketRate: rejected?.rate ?? null,
+      lastRejectedMarketRecordDate: rejected?.recordDate ?? null,
+      lastRejectedMarketFetchedAt: rejected?.fetchedAt ?? null,
     };
   }
 
@@ -626,7 +635,19 @@ function buildResolvedBenchmark(params: {
     ...resolved,
     isProxy: params.isProxy ?? resolved.isProxy,
     ...marketFields,
+    lastRejectedMarketRate: null,
+    lastRejectedMarketRecordDate: null,
+    lastRejectedMarketFetchedAt: null,
   };
+}
+
+export interface BenchmarkRateConfirmation {
+  key: YieldBenchmarkKey;
+  rate: number;
+  previousMarketRate: number;
+  previousRejectedMarketRate: number;
+  previousRejectedMarketFetchedAt: number | null;
+  confirmedAt: number;
 }
 
 interface ResolvedBenchmarkProvider {
@@ -634,6 +655,7 @@ interface ResolvedBenchmarkProvider {
   parsed: BenchmarkFetchResult | null;
   meta: ParsedYieldBenchmarkMeta | null;
   failureMode: string | null;
+  confirmation?: BenchmarkRateConfirmation | null;
   responseDiagnostics?: BenchmarkProviderAttemptDiagnostic[];
 }
 
@@ -775,8 +797,17 @@ async function resolveBenchmarkProvider(params: {
   const outcome = await provider.fetch({ signal });
   const fetched = outcome && "result" in outcome ? outcome.result : outcome;
   const responseDiagnostics = outcome?.responseDiagnostics;
-  const previousMarketRate = previous[provider.key]?.lastMarketRate ?? null;
-  const rateRejected = fetched != null && !isYieldBenchmarkRatePlausible(provider.key, fetched.rate, previousMarketRate);
+  const previousBenchmark = previous[provider.key] ?? null;
+  const previousMarketRate = previousBenchmark?.lastMarketRate ?? null;
+  const assessment = fetched != null
+    ? assessYieldBenchmarkRate(
+        provider.key,
+        fetched.rate,
+        previousMarketRate,
+        previousBenchmark?.lastRejectedMarketRate ?? null,
+      )
+    : null;
+  const rateRejected = assessment != null && !assessment.accepted;
   const parsed = rateRejected ? null : fetched;
   if (rateRejected && fetched) {
     await recordBenchmarkRateOutOfBand(db, provider.key, fetched.rate, previousMarketRate);
@@ -791,13 +822,30 @@ async function resolveBenchmarkProvider(params: {
         fetchedAt,
         source: parsed.source ?? provider.source,
       })
-    : buildRetainedBenchmark(previous[provider.key] ?? null, rateRejected ? rejectionMode : provider.fallbackMode);
+    : buildRetainedBenchmark(
+        previousBenchmark,
+        rateRejected ? rejectionMode : provider.fallbackMode,
+        rateRejected && fetched
+          ? { rate: fetched.rate, recordDate: fetched.recordDate, fetchedAt }
+          : null,
+      );
+  const confirmation = assessment?.confirmedLevelShift && fetched && previousMarketRate != null
+    ? {
+        key: provider.key,
+        rate: fetched.rate,
+        previousMarketRate,
+        previousRejectedMarketRate: previousBenchmark?.lastRejectedMarketRate ?? fetched.rate,
+        previousRejectedMarketFetchedAt: previousBenchmark?.lastRejectedMarketFetchedAt ?? null,
+        confirmedAt: fetchedAt,
+      }
+    : null;
 
   return {
     key: provider.key,
     parsed,
     meta,
     failureMode: parsed ? null : (meta?.fallbackMode ?? (rateRejected ? rejectionMode : provider.fallbackMode)),
+    ...(confirmation ? { confirmation } : {}),
     ...(responseDiagnostics ? { responseDiagnostics } : {}),
   };
 }
@@ -822,12 +870,31 @@ async function resolveMxnBenchmarkProvider(params: {
     };
   }
   const banxicoFetched = token ? await tryBanxicoCetes(token, signal) : null;
-  const banxicoRateRejected = banxicoFetched != null
-    && !isYieldBenchmarkRatePlausible("MXN", banxicoFetched.rate, previous.MXN?.lastMarketRate ?? null);
+  const previousMxn = previous.MXN ?? null;
+  const previousMarketRate = previousMxn?.lastMarketRate ?? null;
+  const assessment = banxicoFetched != null
+    ? assessYieldBenchmarkRate(
+        "MXN",
+        banxicoFetched.rate,
+        previousMarketRate,
+        previousMxn?.lastRejectedMarketRate ?? null,
+      )
+    : null;
+  const banxicoRateRejected = assessment != null && !assessment.accepted;
   const banxicoParsed = banxicoRateRejected ? null : banxicoFetched;
   if (banxicoRateRejected && banxicoFetched) {
-    await recordBenchmarkRateOutOfBand(db, "MXN", banxicoFetched.rate, previous.MXN?.lastMarketRate ?? null);
+    await recordBenchmarkRateOutOfBand(db, "MXN", banxicoFetched.rate, previousMarketRate);
   }
+  const confirmation = assessment?.confirmedLevelShift && banxicoFetched && previousMarketRate != null
+    ? {
+        key: "MXN" as const,
+        rate: banxicoFetched.rate,
+        previousMarketRate,
+        previousRejectedMarketRate: previousMxn?.lastRejectedMarketRate ?? banxicoFetched.rate,
+        previousRejectedMarketFetchedAt: previousMxn?.lastRejectedMarketFetchedAt ?? null,
+        confirmedAt: fetchedAt,
+      }
+    : null;
   if (banxicoParsed) {
     await recordOutcome(db, circuitSource, true);
     return {
@@ -841,6 +908,7 @@ async function resolveMxnBenchmarkProvider(params: {
         source: "banxico-cetes-28d",
       }),
       failureMode: null,
+      ...(confirmation ? { confirmation } : {}),
     };
   }
 
@@ -848,7 +916,13 @@ async function resolveMxnBenchmarkProvider(params: {
     ? (banxicoRateRejected ? "mxn-rate-out-of-band" : "banxico-cetes-failed")
     : "banxico-token-missing";
   if (token) await recordOutcome(db, circuitSource, false);
-  const meta = buildRetainedBenchmark(previous.MXN, baseFallbackMode);
+  const meta = buildRetainedBenchmark(
+    previousMxn,
+    baseFallbackMode,
+    banxicoRateRejected && banxicoFetched
+      ? { rate: banxicoFetched.rate, recordDate: banxicoFetched.recordDate, fetchedAt }
+      : null,
+  );
   return {
     key: "MXN",
     parsed: null,
@@ -965,10 +1039,14 @@ export async function fetchTbillRate(
 
   const usdCircuitSource = benchmarkCircuitKey("USD");
   const usdAllowed = await shouldAttemptFetch(db, usdCircuitSource);
-  const usdPreviousMarketRate = previous.USD?.lastMarketRate ?? null;
+  const previousUsd = previous.USD ?? null;
+  const usdPreviousMarketRate = previousUsd?.lastMarketRate ?? null;
+  const usdPreviousRejectedRate = previousUsd?.lastRejectedMarketRate ?? null;
   const usdFredFetched = usdAllowed ? await tryFredCsv(FRED_TBILL_CSV_URL, signal, USD_FRED_MAX_OBSERVATION_AGE_DAYS) : null;
-  const usdFredRejected = usdFredFetched != null
-    && !isYieldBenchmarkRatePlausible("USD", usdFredFetched.rate, usdPreviousMarketRate);
+  const usdFredAssessment = usdFredFetched != null
+    ? assessYieldBenchmarkRate("USD", usdFredFetched.rate, usdPreviousMarketRate, usdPreviousRejectedRate)
+    : null;
+  const usdFredRejected = usdFredAssessment != null && !usdFredAssessment.accepted;
   if (usdFredRejected && usdFredFetched) {
     await recordBenchmarkRateOutOfBand(db, "USD", usdFredFetched.rate, usdPreviousMarketRate);
   }
@@ -977,16 +1055,35 @@ export async function fetchTbillRate(
   // Treasury feed, which must pass the same band: unit or definition drift at
   // one publisher cannot publish a "current" USD benchmark.
   const usdTreasuryFetched = usdAllowed && !usdFred ? await tryTreasuryXml(signal) : null;
+  const usdTreasuryAssessment = usdTreasuryFetched != null
+    ? assessYieldBenchmarkRate("USD", usdTreasuryFetched.rate, usdPreviousMarketRate, usdPreviousRejectedRate)
+    : null;
   const usdParsed = usdFred
-    ?? (usdTreasuryFetched != null && isYieldBenchmarkRatePlausible("USD", usdTreasuryFetched.rate, usdPreviousMarketRate)
-      ? usdTreasuryFetched
-      : null);
+    ?? (usdTreasuryAssessment?.accepted ? usdTreasuryFetched : null);
   const usdSource = usdFred ? "fred-dgs3mo" : usdParsed ? "treasury-yield-xml" : null;
   const usdFallbackMode = !usdAllowed
     ? "circuit-open"
     : usdFredRejected || (usdTreasuryFetched != null && usdParsed == null)
       ? "usd-rate-out-of-band"
       : "all-sources-failed";
+  const usdConfirmationSource = usdFredAssessment?.confirmedLevelShift ? usdFredFetched
+    : usdTreasuryAssessment?.confirmedLevelShift ? usdTreasuryFetched
+      : null;
+  const usdConfirmation = usdConfirmationSource && usdPreviousMarketRate != null
+    ? {
+        key: "USD" as const,
+        rate: usdConfirmationSource.rate,
+        previousMarketRate: usdPreviousMarketRate,
+        previousRejectedMarketRate: usdPreviousRejectedRate ?? usdConfirmationSource.rate,
+        previousRejectedMarketFetchedAt: previousUsd?.lastRejectedMarketFetchedAt ?? null,
+        confirmedAt: fetchedAt,
+      }
+    : null;
+  const usdRejectedCandidate = usdFredRejected && usdFredFetched
+    ? usdFredFetched
+    : usdTreasuryAssessment != null && !usdTreasuryAssessment.accepted
+      ? usdTreasuryFetched
+      : null;
   const usdMeta =
     usdParsed && usdSource
       ? buildResolvedBenchmark({
@@ -996,8 +1093,13 @@ export async function fetchTbillRate(
           fetchedAt,
           source: usdSource,
         })
-      : (buildRetainedBenchmark(previous.USD, usdFallbackMode) ??
-        buildHardcodedUsdBenchmark(usdFallbackMode));
+      : (buildRetainedBenchmark(
+          previous.USD,
+          usdFallbackMode,
+          usdRejectedCandidate
+            ? { rate: usdRejectedCandidate.rate, recordDate: usdRejectedCandidate.recordDate, fetchedAt }
+            : null,
+        ) ?? buildHardcodedUsdBenchmark(usdFallbackMode));
 
   if (usdAllowed) {
     await recordOutcome(db, usdCircuitSource, usdParsed != null);
@@ -1018,6 +1120,11 @@ export async function fetchTbillRate(
   for (const descriptor of BENCHMARK_FETCH_DESCRIPTORS) {
     if (resolvedByKey[descriptor.key]?.parsed) resolvedKeys.push(descriptor.key);
   }
+  const rateConfirmations: BenchmarkRateConfirmation[] = [
+    ...(usdConfirmation ? [usdConfirmation] : []),
+    ...Object.values(resolvedByKey).flatMap((resolved) =>
+      resolved.confirmation ? [resolved.confirmation] : []),
+  ];
   // A cache row that exists but cannot be parsed leaves no evidence behind the
   // keys this run did not resolve. Rewriting it with the placeholder registry
   // would destroy the raw row and publish an unverifiable "current" snapshot, so
@@ -1094,6 +1201,13 @@ export async function fetchTbillRate(
         registryCacheState: loaded.cacheState,
         registryCacheWrite,
         resolvedBenchmarkKeys: resolvedKeys,
+        ...(rateConfirmations.length > 0 ? {
+          benchmarkRateConfirmations: rateConfirmations,
+          quality: {
+            reason: "benchmark-rate-level-shift-confirmed",
+            confirmedKeys: rateConfirmations.map(({ key }) => key),
+          },
+        } : {}),
         ...buildGbpResponseDiagnosticMetadata(resolvedByKey.GBP),
         brlResponseAttempts: resolvedByKey.BRL.responseDiagnostics ?? [],
       },

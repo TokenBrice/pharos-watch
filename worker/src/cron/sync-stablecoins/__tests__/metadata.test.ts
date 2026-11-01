@@ -954,6 +954,27 @@ describe("priced-cohort collapse", () => {
     expect(recovered.status).toBe("ok");
   });
 
+  it("degrades a CoinGecko-supply-fallback publication whose priced cohort collapses", () => {
+    const assets = pricedAssets(40);
+    const result = buildFallbackStablecoinsSyncResult({
+      ...syncInput(assets),
+      providerDiagnostics: [],
+      cacheKey: "stablecoins",
+      syncStartSec: 1_777_000_000,
+      authoritativeOverrideCount: 0,
+      cachedFallbackCount: 0,
+      nativePegCorrectionCount: 0,
+      nativePegFillCount: 0,
+      activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets),
+      previousActivePriceCoverage: previousFullCohort,
+    });
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "stablecoin-price-coverage-collapse",
+      quality: { reason: "stablecoin-price-coverage-collapse" },
+    });
+  });
+
   it("only degrades against the previous generation when it is material", async () => {
     const assets = pricedAssets(4);
     const result = buildStablecoinsSyncResult({

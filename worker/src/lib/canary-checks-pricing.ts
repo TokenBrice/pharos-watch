@@ -11,7 +11,9 @@ import { boundedJson, parseObjectMetadata } from "./json-metadata";
  * instead of re-reading payloads: one indexed `cron_runs` row (bounded LIMIT)
  * per measurement, and the counts the producer itself published. They close the
  * "producer reports ok while the priced or depeg-observed cohort is partial"
- * gap without adding an outbound fetch or a new table.
+ * gap without adding an outbound fetch or a new table. Only a published
+ * generation carries coverage evidence: a newer lease/priority skip, blocked
+ * payload or stale-slot reconciliation row must not outrank it (ADR-29).
  */
 
 type CanaryFinding = Omit<CanaryCheckResult, "checkId" | "label" | "description" | "observedAt" | "durationMs">;
@@ -97,6 +99,86 @@ async function loadRecentStablecoinsRuns(
   return (rows.results ?? []).slice(0, limit);
 }
 
+/** Only a published generation wrote coverage; every other status is an attempt. */
+function isPublishedStablecoinsRun(row: StablecoinsRunRow): boolean {
+  return parseObjectMetadata(row.metadata)?.cacheWriteMode === "published";
+}
+
+/**
+ * Newest published generations inside the producer's own freshness budget. The
+ * time bound keeps this an indexed `(job, started_at)` range seek even when a
+ * long run of attempts never publishes.
+ */
+async function loadPublishedStablecoinsRuns(
+  db: D1Database,
+  observedAt: number,
+  limit: number,
+  signal?: AbortSignal,
+): Promise<StablecoinsRunRow[]> {
+  const rows = await runWithOverloadRetry(() =>
+    db
+      .prepare(
+        `SELECT /* canary-stablecoins-published-runs */
+           started_at, status, metadata
+         FROM cron_runs
+        WHERE job = 'sync-stablecoins'
+          AND metadata IS NOT NULL
+          AND started_at >= ?
+          AND CASE WHEN json_valid(metadata)
+                THEN json_extract(metadata, '$.cacheWriteMode') END = 'published'
+        ORDER BY started_at DESC, id DESC
+        LIMIT ?`,
+      )
+      .bind(observedAt - STABLECOINS_RUN_MAX_AGE_SEC, limit)
+      .all<StablecoinsRunRow>(),
+    undefined,
+    signal,
+  );
+  return (rows.results ?? []).slice(0, limit).filter(isPublishedStablecoinsRun);
+}
+
+type StablecoinsMeasurementRows =
+  | { ok: true; rows: StablecoinsRunRow[] }
+  | { ok: false; finding: CanaryFinding };
+
+/**
+ * Rows a pricing canary may grade. The newest attempt still owns the stale
+ * verdict, but a non-publishing attempt is not coverage evidence: the last
+ * published generation inside the two-interval budget is graded instead. When
+ * none exists, the measurement fails closed rather than reporting a cohort the
+ * producer never published.
+ */
+async function loadStablecoinsMeasurementRows(
+  db: D1Database,
+  observedAt: number,
+  signal?: AbortSignal,
+): Promise<StablecoinsMeasurementRows> {
+  const recent = await loadRecentStablecoinsRuns(db, 2, signal);
+  const newestAttempt = recent[0];
+  if (!newestAttempt) {
+    return { ok: false, finding: failedResult("sync-stablecoins-run-unavailable") };
+  }
+  const staleReason = staleRunReason(newestAttempt, observedAt);
+  if (staleReason) {
+    return {
+      ok: false,
+      finding: failedResult(staleReason, runTimeMetadata(newestAttempt, observedAt)),
+    };
+  }
+  if (recent.every(isPublishedStablecoinsRun)) return { ok: true, rows: recent };
+  const published = await loadPublishedStablecoinsRuns(db, observedAt, 2, signal);
+  if (published.length === 0) {
+    return {
+      ok: false,
+      finding: failedResult(
+        "sync-stablecoins-run-unavailable",
+        runTimeMetadata(newestAttempt, observedAt),
+      ),
+    };
+  }
+  return { ok: true, rows: published };
+}
+
 function runTimeMetadata(row: StablecoinsRunRow, observedAt: number): Record<string, unknown> {
   return {
     producer: "sync-stablecoins",
@@ -124,11 +206,14 @@ async function checkStablecoinsActivePriceCoverage(
   signal?: AbortSignal,
 ): Promise<CanaryFinding> {
   try {
-    // Two rows: the latest measurement plus its predecessor for the diagnostic
-    // baseline. Both checks use one bounded query shape so a mock or operator
-    // sees one indexed `cron_runs` read per measurement.
-    const [row, previousRow] = await loadRecentStablecoinsRuns(db, 2, signal);
+    // The latest published generation plus its predecessor for the diagnostic
+    // baseline. Both checks share one bounded read path; the published-only
+    // select runs only when a newer attempt did not publish.
+    const measurement = await loadStablecoinsMeasurementRows(db, observedAt, signal);
+    if (!measurement.ok) return measurement.finding;
+    const row = measurement.rows[0];
     if (!row) return failedResult("sync-stablecoins-run-unavailable");
+    const previousRow = measurement.rows[1];
     const metadata = parseObjectMetadata(row.metadata);
     const coverage = asRecord(metadata?.activePriceCoverage);
     const expectedActiveCount = integerOrNull(coverage?.expectedActiveCount);
@@ -224,7 +309,9 @@ async function checkDepegObservationCoverage(
   signal?: AbortSignal,
 ): Promise<CanaryFinding> {
   try {
-    const rows = await loadRecentStablecoinsRuns(db, 2, signal);
+    const measurement = await loadStablecoinsMeasurementRows(db, observedAt, signal);
+    if (!measurement.ok) return measurement.finding;
+    const rows = measurement.rows;
     const row = rows[0];
     if (!row) return failedResult("sync-stablecoins-run-unavailable");
     const metadata = parseObjectMetadata(row.metadata);
