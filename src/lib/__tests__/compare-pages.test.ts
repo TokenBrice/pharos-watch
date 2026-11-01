@@ -114,7 +114,7 @@ const PILOT_REPORT_FACTS: Record<string, { left: { period: string; scope: string
     right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
   },
   "usdt-tether-vs-usdg-paxos": {
-    left: { period: "2026-06-30", scope: ATTESTATION_PARTIAL_SCOPE },
+    left: { period: "2026-09-30", scope: ATTESTATION_PARTIAL_SCOPE },
     right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
   },
   "rlusd-ripple-vs-usdc-circle": {
@@ -126,7 +126,7 @@ const PILOT_REPORT_FACTS: Record<string, { left: { period: string; scope: string
     right: { period: "2026-06-30", scope: ATTESTATION_FULL_SCOPE },
   },
   "usdt-tether-vs-usdc-circle": {
-    left: { period: "2026-06-30", scope: ATTESTATION_PARTIAL_SCOPE },
+    left: { period: "2026-09-30", scope: ATTESTATION_PARTIAL_SCOPE },
     right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
   },
   "usde-ethena-vs-usds-sky": {
@@ -489,7 +489,7 @@ describe("reviewed redemption evidence", () => {
     expect(findRow(absent, "Redemption minimum")).toBeUndefined();
     expect(findRow(absent, "Redemption fee basis")).toBeUndefined();
     // Report evidence is server-owned and survives the config omission.
-    expect(findRow(absent, "Latest reviewed report period")?.left).toBe("2026-06-30");
+    expect(findRow(absent, "Latest reviewed report period")?.left).toBe("2026-09-30");
 
     mockGetCurrentRedemptionConfig.mockImplementation((id) =>
       id === "usdt-tether" ? null : (REDEMPTION_BACKSTOP_CONFIGS[id] ?? null),

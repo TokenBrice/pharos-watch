@@ -830,7 +830,7 @@ Stage transitions always persist; same-stage updates coalesce within 10 seconds,
 
 ### Circuit Breakers
 
-`worker/src/lib/circuit-breaker.ts` owns per-source `circuit:<source>` state; `shared/lib/circuit-sources.ts` owns keys/scopes and active/retired classification. Individual rows are execution authority. Admin summaries enumerate active sources with bounded reads, never rebuild the retired aggregate index. Malformed records fail closed; diagnostics label them invalid/unavailable rather than inventing closed evidence. Absent initial rows are legitimate closed state; admitted records preserve additive fields.
+`worker/src/lib/circuit-breaker.ts` owns per-source `circuit:<source>` state; `shared/lib/circuit-sources.ts` owns keys/scopes and active/retired classification. Individual rows are execution authority. Admin summaries enumerate active sources with bounded reads, never rebuild the retired aggregate index. Malformed records fail closed; diagnostics label them invalid/unavailable rather than inventing closed evidence. Admission reads (`shouldAttemptFetch`) deny the fetch so the caller degrades to its retained cache or fallback instead of failing the request, while direct record readers report the corrupt row. Absent initial rows are legitimate closed state; admitted records preserve additive fields.
 
 Three consecutive failures open; recovery probing begins after 30 minutes. Half-open admission is best-effort, not a cross-isolate lock, and may admit concurrent probes; unresolved probes reopen after two intervals. State transitions emit structured events, not webhook fan-out. Cron degraded/locked/neutral outcomes are neutral by default, explicit `ok` heals and thrown/error fails unless the source opts into stricter behavior.
 

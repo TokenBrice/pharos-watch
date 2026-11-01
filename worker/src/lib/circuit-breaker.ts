@@ -190,7 +190,21 @@ export async function getCircuitRecordsForSources(
  * recorded outcome for two probe intervals reverts to open.
  */
 export async function shouldAttemptFetch(db: D1Database, source: string): Promise<boolean> {
-  const record = await getCircuitRecord(db, source);
+  let record: CircuitRecord;
+  try {
+    record = await getCircuitRecord(db, source);
+  } catch (error) {
+    if (!(error instanceof InvalidCircuitRecordError)) throw error;
+    // Corrupt state must not admit a read (R2), but an admission predicate must
+    // not fail its caller's request either: a public endpoint degrades to its
+    // retained cache instead of a 500. Deny this attempt and leave the repair to
+    // recordOutcome(); the status surface names the invalid source.
+    logWorkerEvent({
+      scope: "lib", level: "warn", event: "circuit_record_invalid",
+      message: "Circuit record invalid; denying admission", provider: source, error,
+    });
+    return false;
+  }
   if (record.state === "closed") return true;
   const now = Math.floor(Date.now() / 1000);
 

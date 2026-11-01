@@ -347,9 +347,9 @@ describe("stablecoin markdown", () => {
     );
     expect(md).not.toContain("https://api.pharos.watch/api/stablecoin/");
     // The release filename never rewrites an underlying observation date.
-    expect(md).toContain("latest period ending Jun 30, 2026");
+    expect(md).toContain("latest period ending Sep 30, 2026");
     const backingAnswer = buildStablecoinFaqItems(TRACKED_META_BY_ID.get("usdt-tether")!)[2].answer;
-    expect(backingAnswer).toContain("Jun 30, 2026");
+    expect(backingAnswer).toContain("Sep 30, 2026");
     expect(backingAnswer).not.toContain("2026-10-22");
   });
 

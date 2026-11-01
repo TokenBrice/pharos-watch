@@ -411,7 +411,10 @@ describe("CoinGecko on-chain share partitions", () => {
     const [asset] = await fetchFiatCoinGeckoTokens(cgData(1_020, 1, susdeMeta));
     expect(asset.chainPartition).toMatchObject({ onchainUsd: 1_000, observedAt: NOW_SEC - 30 });
     expect(asset.chainCirculating?.Ethereum?.current).toBeCloseTo(714, 10);
-    expect(asset.chainCirculating?.["sUSDe unattributed OFT escrow"]?.current).toBeCloseTo(71.4, 10);
+    // The reviewed Monad OFT leg is a configured representation now, so the
+    // fixture's flat 10-unit-per-leg mock leaves 300 - 24 * 10 = 60 units
+    // unattributed (scaled by the 1_020/1_000 partition ratio).
+    expect(asset.chainCirculating?.["sUSDe unattributed OFT escrow"]?.current).toBeCloseTo(61.2, 10);
     expect(asset.chainCirculating?.["sUSDe unattributed OFT escrow"]).not.toHaveProperty("chainId");
     expect(sumRows(asset)).toBeCloseTo(1_020, 10);
   });

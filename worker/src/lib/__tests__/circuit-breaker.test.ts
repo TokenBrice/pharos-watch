@@ -342,7 +342,8 @@ describe("circuit-breaker", () => {
     it.each(["not-json", JSON.stringify({ state: "unknown" })])("denies admission then repairs success for %s", async (value) => {
       const { db, sqlite } = fixtures.open();
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:dwellir-evm", value, 100);
-      await expect(shouldAttemptFetch(db, "dwellir-evm")).rejects.toThrow("Invalid circuit record for dwellir-evm");
+      // Denial, not a throw: the predicate must not fail its caller's request.
+      expect(await shouldAttemptFetch(db, "dwellir-evm")).toBe(false);
       await recordOutcome(db, "dwellir-evm", true);
       expect(await getCircuitRecord(db, "dwellir-evm")).toEqual(makeRecord({ lastSuccessAt: Math.floor(Date.now() / 1000) }));
       expect(await shouldAttemptFetch(db, "dwellir-evm")).toBe(true);
@@ -359,7 +360,7 @@ describe("circuit-breaker", () => {
     it("applies the same fail-closed repair to every source", async () => {
       const { db, sqlite } = fixtures.open();
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:coingecko-prices", "not-json", 100);
-      await expect(shouldAttemptFetch(db, "coingecko-prices")).rejects.toThrow("Invalid circuit record for coingecko-prices");
+      expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
       expect((await recordOutcome(db, "coingecko-prices", false)).after).toMatchObject({ state: "open", consecutiveFailures: 1 });
       expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
     });
@@ -372,7 +373,7 @@ describe("circuit-breaker", () => {
         JSON.stringify(makeRecord({ state: "open", consecutiveFailures: 3, lastFailureAt: now - 60, openedAt: now - 60 })),
         now + 120,
       );
-      await expect(shouldAttemptFetch(db, "coingecko-prices")).rejects.toThrow("Invalid circuit record for coingecko-prices");
+      expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
       expect((await recordOutcome(db, "coingecko-prices", false)).after).toMatchObject({
         state: "open",
         consecutiveFailures: 1,

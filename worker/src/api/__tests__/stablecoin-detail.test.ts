@@ -9,9 +9,11 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildFreshnessMeta } from "../../lib/api-freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { createStaleCacheHitResponse } from "../stablecoin-detail/shared";
 
 const fixtures = createLatestSchemaFixtureTracker();
+const DETAIL_CIRCUIT_KEY = `circuit:${CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL}`;
 
 // Stub external fetches before importing the handler
 type FetchOutcome = Response | Error | Promise<Response>;
@@ -596,6 +598,9 @@ describe("handleStablecoinDetail", () => {
     const now = Math.floor(Date.now() / 1000);
 
     const db = mockD1([
+      // First boot: no circuit row, so the breaker admits the upstream attempt.
+      // The stale-detail cache row must not answer a circuit-key read.
+      { match: "FROM cache WHERE key = ?", matchBinds: [DETAIL_CIRCUIT_KEY], rows: [], first: null },
       {
         match: "cache",
         rows: [],
@@ -618,6 +623,8 @@ describe("handleStablecoinDetail", () => {
     const cachedValue = makeDLDetailBody();
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
+      // First boot: no circuit row, so the breaker admits the upstream attempt.
+      { match: "FROM cache WHERE key = ?", matchBinds: [DETAIL_CIRCUIT_KEY], rows: [], first: null },
       {
         match: "cache",
         rows: [],
@@ -693,6 +700,8 @@ describe("handleStablecoinDetail", () => {
     ] });
     const now = Math.floor(Date.now() / 1000);
     const staleDb = mockD1([
+      // First boot: no circuit row, so the breaker admits the upstream attempt.
+      { match: "FROM cache WHERE key = ?", matchBinds: [DETAIL_CIRCUIT_KEY], rows: [], first: null },
       {
         match: "cache",
         rows: [],
