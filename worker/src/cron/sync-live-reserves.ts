@@ -186,11 +186,22 @@ async function runReserveCoinQueue(args: {
       : 0;
     const admissionMarginMs = Math.max(args.budgetConfig.minimumAttemptBudgetMs, observedMsPerCoin * 2
       + args.budgetConfig.d1FinalizeTimeoutMs + args.budgetConfig.finalizationMarginMs);
+    // Only a real run-budget/deadline stop is a truncation. The four-hourly
+    // producer stops earlier by design and hands the suffix to continuation.
+    const workBudgetYield = budgetRemaining >= admissionMarginMs
+      && workRemaining < admissionMarginMs
+      && counts.attemptedCoins < args.budgetConfig.maxCoinsPerSlice;
     if (budgetRemaining < admissionMarginMs || workRemaining < admissionMarginMs
       || counts.attemptedCoins >= args.budgetConfig.maxCoinsPerSlice) {
-      logWorkerEventArgs("handler", "warn",
-        `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
-      );
+      if (workBudgetYield) {
+        logWorkerEventArgs("handler", "info",
+          `[sync-live-reserves] Work budget horizon reached at coin ${index}/${total}, deferring remaining to continuation`,
+        );
+      } else {
+        logWorkerEventArgs("handler", "warn",
+          `[sync-live-reserves] Run budget exhausted at coin ${index}/${total}, deferring remaining`,
+        );
+      }
       if (args.checkpoint) {
         const checkpointStartedMs = Date.now();
         await advanceLiveReserveCheckpoint(args.db, args.checkpoint, {
@@ -213,7 +224,7 @@ async function runReserveCoinQueue(args: {
           ...deferredTail,
           nextCursorStablecoinId: coin.id,
           cursorRecordedAt: attemptedAt,
-          runBudgetTruncationCount: 1,
+          runBudgetTruncationCount: workBudgetYield ? 0 : 1,
         };
         break;
       }

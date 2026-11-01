@@ -61,6 +61,7 @@ interface RunMetadata {
   cursorRecordedAt?: number | null;
   cursorTailCompletedAt?: number | null;
   runBudgetTruncationCount?: number;
+  finalizationDeadlineMs?: number;
   artifactCleanup?: { breakerCacheDeleted?: number };
   finalizationTailBudgetExhausted?: boolean;
   artifactCleanupSkipped?: boolean;
@@ -370,6 +371,8 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     })]);
     const budget = resolveLiveReserveSyncBudgetConfig(LIVE_RESERVE_PRODUCER_BUDGETS);
     const startedMs = nowMs;
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
     const batch = db.batch.bind(db);
     vi.spyOn(db, "batch").mockImplementation(async (statements) => {
       if (statements.some((statement) => (statement as MockPreparedStatement).sql.includes("INSERT INTO reserve_sync_state"))) {
@@ -392,7 +395,8 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     const attempted = Math.floor((budget.workBudgetMs - budget.minimumAttemptBudgetMs) / LIVE_RESERVE_SLICE_COST.wallMsPerCoin) + 1;
     expect(attempted).toBeLessThan(SYNC_ORDERED_CONFIGURED_COINS.length);
     expect(result.status).toBe("ok");
-    expect(JSON.parse(result.metadata!)).toMatchObject({
+    const metadata = parseMetadata(result.metadata);
+    expect(metadata).toMatchObject({
       budgetMs: budget.runBudgetMs,
       workBudgetMs: budget.workBudgetMs,
       attemptedCoins: attempted,
@@ -401,12 +405,20 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       nextCursorStablecoinId: SYNC_ORDERED_CONFIGURED_COINS[attempted]!.id,
       continuationPending: true,
       runBudgetTruncated: false,
+      // The designed yield is continuation, not a run-budget truncation.
+      runBudgetTruncationCount: 0,
     });
     expect(nowMs - startedMs).toBe(attempted * LIVE_RESERVE_SLICE_COST.wallMsPerCoin);
     // The whole slice, including its finalization tail, stays inside 60% of the
     // run budget: the other 40% is headroom for cohort growth.
     expect(nowMs - startedMs + budget.d1FinalizeTimeoutMs + budget.finalizationMarginMs)
       .toBeLessThanOrEqual(Math.floor(budget.runBudgetMs * LIVE_RESERVE_PRODUCER_WORK_BUDGET_RATIO));
+    expect(metadata.finalizationDeadlineMs)
+      .toBe(startedMs + budget.workBudgetMs + budget.d1FinalizeTimeoutMs);
+    expect(metadata.finalizationDeadlineMs! - startedMs)
+      .toBeLessThanOrEqual(Math.floor(budget.runBudgetMs * LIVE_RESERVE_PRODUCER_WORK_BUDGET_RATIO));
+    expect(warnSpy.mock.calls.some(([line]) => String(line).includes("Run budget exhausted"))).toBe(false);
+    expect(infoSpy.mock.calls.some(([line]) => String(line).includes("Work budget horizon"))).toBe(true);
     const boundary = db.getHistory().find((entry) =>
       entry.sql.includes("UPDATE worker_scheduled_checkpoints") && entry.sql.includes("current_item_key = NULL"));
     expect(boundary?.binds.slice(0, 2)).toEqual([SYNC_ORDERED_CONFIGURED_COINS[attempted]!.id, attempted]);
@@ -414,6 +426,33 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     expect(db.getHistory().some((entry) =>
       entry.sql.includes("last_status = 'skipped'") || entry.binds.includes("run-budget-exhausted"))).toBe(false);
     expect(sealAcceptedReserveGeneration).not.toHaveBeenCalled();
+  });
+
+  it("keeps counting a genuine run-budget stop as a checkpoint truncation", async () => {
+    mockAdapterRegistry(async () => ({
+      slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
+    }));
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    const identity = checkpointIdentity(1, "run-budget-stop");
+    const db = mockD1([checkpointTable({
+      attemptNo: 1, invocationId: identity.invocationId, state: "running",
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id, itemsDone: 0,
+    })]);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const result = await syncLiveReserves(db, new AbortController().signal, {}, async (update) => {
+      if (update.stage === "setup") nowMs += 3_000;
+    }, {
+      runBudgetMs: 2_000, adapterTimeoutMs: 1_000, d1FinalizeTimeoutMs: 500, finalizationMarginMs: 200,
+    }, identity);
+
+    expect(parseMetadata(result.metadata)).toMatchObject({
+      attemptedCoins: 0,
+      runBudgetTruncated: false,
+      continuationPending: true,
+      runBudgetTruncationCount: 1,
+    });
+    expect(warnSpy.mock.calls.some(([line]) => String(line).includes("Run budget exhausted"))).toBe(true);
   });
 
   it("defers coin 126 even with the full 300-second wall allowance remaining", async () => {

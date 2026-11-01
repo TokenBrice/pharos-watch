@@ -86,7 +86,11 @@ interface LiveReserveFinalizationBudget {
 }
 
 function resolveFinalizationBudget(args: FinalizeReserveSyncRunArgs): LiveReserveFinalizationBudget {
-  const deadlineMs = args.runStartedMs + args.budgetConfig.runBudgetMs + args.budgetConfig.d1FinalizeTimeoutMs;
+  // Slices that reserve admission headroom (the four-hourly producer) charge
+  // their finalization tail to the same horizon; other slices keep the whole
+  // run budget before finalizing.
+  const admissionHorizonMs = Math.min(args.budgetConfig.runBudgetMs, args.budgetConfig.workBudgetMs);
+  const deadlineMs = args.runStartedMs + admissionHorizonMs + args.budgetConfig.d1FinalizeTimeoutMs;
   return {
     deadlineMs,
     remainingMs: Math.max(0, deadlineMs - Date.now()),
