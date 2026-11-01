@@ -268,7 +268,8 @@ async function readPublicationObservations(
     const criticalInputs = await readCriticalDegradedSources(
       db,
       "$.dataQuality.degradedSources",
-      `${NON_WEEKLY_DIGEST_SQL_FILTER} AND ${NON_INTERNAL_DIGEST_SQL_FILTER} AND ${NON_BLOCKED_DIGEST_SQL_FILTER}`,
+      // Each filter is an OR chain; parenthesise them so AND cannot rebind across them.
+      `(${NON_WEEKLY_DIGEST_SQL_FILTER}) AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})`,
       dayStartSec,
       nowSec,
       signal,
@@ -332,7 +333,7 @@ async function readPublicationObservations(
     const weeklyCriticalInputs = await readCriticalDegradedSources(
       db,
       "$.degradedSourcesThisWeek",
-      `json_extract(digest_meta, '$.type') = 'weekly' AND ${NON_INTERNAL_DIGEST_SQL_FILTER} AND ${NON_BLOCKED_DIGEST_SQL_FILTER}`,
+      `json_extract(digest_meta, '$.type') = 'weekly' AND (${NON_INTERNAL_DIGEST_SQL_FILTER}) AND (${NON_BLOCKED_DIGEST_SQL_FILTER})`,
       weekStartSec,
       nowSec,
       signal,

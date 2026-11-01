@@ -255,6 +255,29 @@ describe("digest publication watchdog", () => {
     });
   });
 
+  it("ignores a later blocked edition when reading daily degraded sources", async () => {
+    const { sqlite, db } = fixtures.open();
+    const now = at(`${DATE}T10:00:00Z`);
+    const insert = sqlite.prepare(
+      "INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_meta) VALUES (?, 'digest', ?, ?)",
+    );
+    insert.run(
+      at(`${DATE}T09:00:00Z`),
+      JSON.stringify({ dataQuality: { degradedSources: ["active-depegs-query"] } }),
+      JSON.stringify({ type: "daily" }),
+    );
+    insert.run(
+      at(`${DATE}T09:30:00Z`),
+      JSON.stringify({ dataQuality: { degradedSources: [] } }),
+      JSON.stringify({ type: "daily", qualityGate: "blocked" }),
+    );
+    const metadata = JSON.parse((await runDigestPublicationWatchdog(db, now)).metadata ?? "{}");
+    expect(metadata.conditions["daily-inputs"]).toMatchObject({
+      state: "stale",
+      detail: "degraded: active-depegs-query",
+    });
+  });
+
   it("alerts when the Telegram edition is not sent", async () => {
     const result = await runDigestPublicationWatchdog(
       fakeDb({ dailyTelegram: "pending", twitterState: JSON.stringify({ state: "sent" }) }),

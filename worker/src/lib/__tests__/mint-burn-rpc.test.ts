@@ -318,13 +318,24 @@ describe("mint/burn ordered RPC fallback", () => {
       expect(calls.every(call => call.method === "eth_getBlockByNumber" && call.params[0] === "finalized")).toBe(true);
     });
 
-  it("rejects a finalized header older than the mint/burn finality budget", async () => {
-    const staleTimestamp = Math.floor(Date.now() / 1000) - 31 * 60;
+  it.each([
+    ["ethereum", 31 * 60],
+    ["base", 2 * 60 * 60 + 60],
+  ] as const)("rejects a %s finalized header older than its finality budget", async (chain, ageSec) => {
+    const staleTimestamp = Math.floor(Date.now() / 1000) - ageSec;
     const fetcher = recorder(() => ({
       result: { number: "0x66", timestamp: `0x${staleTimestamp.toString(16)}`, hash: word(12) },
     }));
-    expect(await getMintBurnFinalizedHead("base", admitted(), createBudget(20))).toBeNull();
+    expect(await getMintBurnFinalizedHead(chain, admitted(chain), createBudget(20))).toBeNull();
     expect(fetcher).toHaveBeenCalled();
+  });
+
+  it("admits a rollup finalized header that trails L1 finality by under two hours", async () => {
+    const lagTimestamp = Math.floor(Date.now() / 1000) - 45 * 60;
+    recorder(() => ({
+      result: { number: "0x66", timestamp: `0x${lagTimestamp.toString(16)}`, hash: word(12) },
+    }));
+    expect(await getMintBurnFinalizedHead("base", admitted("base"), createBudget(20))).toMatchObject({ number: 102 });
   });
 
   it("skips finalizedTagUnsupported endpoints and uses only a supported admitted fallback", async () => {
