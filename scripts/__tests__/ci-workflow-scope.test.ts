@@ -213,15 +213,17 @@ describe("CI workflow scope", () => {
   it("restricts auxiliary production publishers to main for manual and scheduled runs", () => {
     const scenarios = parseYaml(readRepoFile(".github/workflows/dependency-scenarios-refresh.yml"));
     const map = parseYaml(readRepoFile(".github/workflows/safety-map-refresh.yml"));
-    for (const workflow of [scenarios, map]) {
+    const curation = parseYaml(readRepoFile(".github/workflows/curation-expiry-sweep.yml"));
+    for (const workflow of [scenarios, map, curation]) {
       expect(workflow.on).toHaveProperty("workflow_dispatch");
       expect(workflow.on.schedule.length).toBeGreaterThan(0);
     }
     // Main-only, without an event restriction: main dispatches and schedules
     // remain admitted, while feature-branch dispatches cannot get credentials.
-    for (const job of [scenarios.jobs.scenarios, map.jobs.plan]) {
+    for (const job of [scenarios.jobs.scenarios, map.jobs.plan, curation.jobs.sweep]) {
       expect(job.if).toBe("${{ github.ref == 'refs/heads/main' }}");
     }
+    expect(curation.on.schedule).toEqual([{ cron: "45 5 * * 2" }]);
     expect(scenarios.on.schedule).toEqual([{ cron: "17 2 * * *" }]);
     expect(Object.keys(map.jobs)).toEqual(["plan"]);
     const steps = map.jobs.plan.steps as Array<{
@@ -563,6 +565,37 @@ describe("CI workflow scope", () => {
       OBSERVED_HEAVY_WORKER_VERSION: "${{ steps.verify-heavy-identity.outputs.worker_version }}",
       PHAROS_API_KEY: "${{ secrets.PHAROS_API_KEY }}",
     });
+  });
+
+  it("gates every Shock Coverage Refresh credential path on main", () => {
+    const shock = parseYaml(readRepoFile(".github/workflows/shock-coverage-refresh.yml")) as {
+      jobs: Record<string, { if?: string }>;
+    };
+    expect(shock.jobs.targets.if)
+      .toBe("${{ github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || github.event.schedule == '41 3 * * *') }}");
+    expect(shock.jobs.measure.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    expect(shock.jobs.refresh.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+  });
+
+  it("restores Worker incident evidence only from a successful main run of its own workflow", () => {
+    const monitor = parseYaml(readRepoFile(".github/workflows/worker-memory-monitor.yml")) as {
+      jobs: Record<string, { steps: Array<{ name?: string; run?: string; env?: Record<string, string> }> }>;
+    };
+    const restore = monitor.jobs.incidents.steps.find((step) => step.name === "Restore latest rolling evidence archive")!;
+    // A pull_request run executes in this repository and reports its head ref
+    // in workflow_run.head_branch, so artifact metadata alone is not an
+    // identity: authenticate the producing run before trusting the archive.
+    expect(restore.env).toMatchObject({ GH_REPO: "${{ github.repository }}" });
+    expect(restore.run).toContain("actions/artifacts?per_page=100");
+    for (const guard of [
+      '.path == ".github/workflows/worker-memory-monitor.yml"',
+      '(.event == "schedule" or .event == "workflow_dispatch")',
+      '.conclusion == "success"',
+      ".head_sha == $head_sha",
+      ".head_repository.full_name == $repo",
+      'startswith("worker-incidents-\\($run_id)-")',
+    ]) expect(restore.run).toContain(guard);
+    expect(restore.run).toContain("actions/runs/$run_id");
   });
 
   it("captures a pre-deploy data baseline and keeps the delayed volume check in a separate workflow_run", () => {

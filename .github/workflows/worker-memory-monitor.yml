@@ -197,11 +197,44 @@ jobs:
           GH_REPO: ${{ github.repository }}
         shell: bash
         run: |
+          set -euo pipefail
           mkdir -p "$RUNNER_TEMP/worker-incidents-previous"
-          artifact_id="$(gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" | jq -r '[.[].artifacts[] | select(.expired == false and (.name | startswith("worker-incidents-")) and .workflow_run.head_branch == "main")] | sort_by(.created_at) | last | .id // empty')"
-          if [[ -n "$artifact_id" ]]; then
+          # Pull-request runs execute in this repository and expose the PR head
+          # ref in workflow_run.head_branch, so artifact metadata alone is not a
+          # producer identity: a fork branch named "main" matches it. Authenticate
+          # the producing run before trusting any archive, then bind the artifact
+          # name to that run. Anything else is ignored newest-to-oldest.
+          candidates="$(gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" \
+            | jq -r '[.[].artifacts[] | select(.expired == false and (.name | startswith("worker-incidents-")) and .workflow_run.head_branch == "main")]
+              | sort_by(.created_at) | reverse
+              | .[] | [.id, .name, .workflow_run.id, .workflow_run.head_sha] | @tsv')"
+          rejected=0
+          while IFS=$'\t' read -r artifact_id artifact_name run_id head_sha; do
+            [[ -n "$artifact_id" ]] || continue
+            if ! gh api "repos/$GH_REPO/actions/runs/$run_id" \
+              | jq -e --arg repo "$GH_REPO" --arg head_sha "$head_sha" --arg name "$artifact_name" --argjson run_id "$run_id" '
+                  .path == ".github/workflows/worker-memory-monitor.yml" and
+                  (.event == "schedule" or .event == "workflow_dispatch") and
+                  .status == "completed" and .conclusion == "success" and
+                  .head_branch == "main" and .head_sha == $head_sha and
+                  .head_repository.full_name == $repo and
+                  ($name | startswith("worker-incidents-\($run_id)-"))
+                ' >/dev/null; then
+              rejected=$((rejected + 1))
+              continue
+            fi
             gh api "repos/$GH_REPO/actions/artifacts/$artifact_id/zip" > "$RUNNER_TEMP/worker-incidents-previous.zip"
-            unzip -q "$RUNNER_TEMP/worker-incidents-previous.zip" -d "$RUNNER_TEMP/worker-incidents-previous"
+            # The producer uploads exactly these two files; any other member
+            # shape is not an archive this restore path knows how to trust.
+            if [[ "$(unzip -Z1 "$RUNNER_TEMP/worker-incidents-previous.zip" | LC_ALL=C sort | tr '\n' ' ')" == "bundle.json report.md " ]]; then
+              unzip -q "$RUNNER_TEMP/worker-incidents-previous.zip" -d "$RUNNER_TEMP/worker-incidents-previous"
+              break
+            fi
+            rm -f "$RUNNER_TEMP/worker-incidents-previous.zip"
+            rejected=$((rejected + 1))
+          done <<< "$candidates"
+          if [[ ! -f "$RUNNER_TEMP/worker-incidents-previous/bundle.json" && "$rejected" -gt 0 ]]; then
+            echo "::warning::Ignored $rejected incident artifact(s) that failed producer authentication or archive validation; starting a fresh 21-day window."
           fi
       - name: Capture deployment delivery child and publication evidence
         if: ${{ always() && !cancelled() }}

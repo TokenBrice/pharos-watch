@@ -36,7 +36,10 @@ concurrency:
 
 jobs:
   targets:
-    if: github.event_name != 'schedule' || github.event.schedule == '41 3 * * *'
+    # Main-only before checkout or credential use: a feature-branch dispatch
+    # would otherwise measure, upload with the R2 keys, and run the automation
+    # PR token against branch code.
+    if: ${{ github.ref == 'refs/heads/main' && (github.event_name != 'schedule' || github.event.schedule == '41 3 * * *') }}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.targets.outputs.matrix }}
@@ -75,6 +78,7 @@ jobs:
 
   measure:
     needs: targets
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     strategy:
@@ -105,6 +109,7 @@ jobs:
 
   refresh:
     needs: measure
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:

@@ -12,8 +12,10 @@ Run every command from the repository root. Use one fresh production capture for
 entire sweep; do not combine worklists or dates from different producer cycles.
 
 The sweep is also automated: `.github/workflows/curation-expiry-sweep.yml` runs this
-procedure every Tuesday at 05:45 UTC (and on manual dispatch) with the deploy
-pipeline's Cloudflare credentials. It updates or creates the "Safety Score curation
+procedure every Tuesday at 05:45 UTC (and on a manual dispatch from `main`) with the deploy
+pipeline's Cloudflare credentials. The `sweep` job requires `refs/heads/main` before
+checkout or credential use, so a feature-branch dispatch skips it while scheduled
+execution and main dispatch remain enabled. It updates or creates the "Safety Score curation
 expiry sweep" issue with registry counts, all eight generator statuses and the full
 artifact link before the renewals, ledger-sentinel, live-withheld/expiry and
 Dependencies/Backing excerpts. Its complete

@@ -99,7 +99,7 @@ During its window the surface reports `current`, `dispatched`, `awaiting-render`
 
 ### Provisioning
 
-`vars.SAFETY_MAP_KV_NAMESPACE_ID` and `secrets.SAFETY_MAP_KV_TOKEN` are provisioned. The token is scoped to *Workers KV Storage: Edit* on that one namespace and is deliberately **not** `CLOUDFLARE_API_TOKEN`, the broad account token that deploys production Pages. Scoping this writer to one namespace keeps an unattended browser job away from the deploy token, even though some other scheduled workflows (for example `curation-expiry-sweep.yml`) still consume that account token outside `production` environment protection.
+`vars.SAFETY_MAP_KV_NAMESPACE_ID` and `secrets.SAFETY_MAP_KV_TOKEN` are provisioned. The token is scoped to *Workers KV Storage: Edit* on that one namespace and is deliberately **not** `CLOUDFLARE_API_TOKEN`, the broad account token that deploys production Pages. Scoping this writer to one namespace keeps an unattended browser job away from the deploy token, even though some other scheduled workflows (for example `curation-expiry-sweep.yml`) still consume that account token outside `production` environment protection; those jobs gate on `refs/heads/main` before checkout, so a feature-branch dispatch cannot reach the credential.
 
 The Worker kick reuses the Worker secret `GITHUB_PAT` that the feedback issue bridge already requires. A classic token needs `repo` scope; a fine-grained token needs *Actions: Read and write* on this repository in addition to the feedback bridge's *Issues* access. A token without Actions write access surfaces as `dispatch-failed` with `dispatch-http-403` on the kick surface.
 
