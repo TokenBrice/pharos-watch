@@ -37,6 +37,24 @@ import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cac
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
 
+/** Stored-field refusals from the shared row parser, named for the public reason. */
+const DEPEG_ROW_PARSE_FAILURE = /^\[depeg-helpers\] Invalid (direction|source|close_reason)\b/;
+
+class DepegEventRowUnreadableError extends Error {
+  constructor(
+    readonly eventId: number,
+    readonly reason: string,
+  ) {
+    super(`Unreadable depeg event row ${eventId}`);
+    this.name = "DepegEventRowUnreadableError";
+  }
+}
+
+function depegRowFailureReason(error: unknown): string {
+  const field = DEPEG_ROW_PARSE_FAILURE.exec(toErrorMessage(error))?.[1];
+  return field ? `invalid-${field.replaceAll("_", "-")}` : "unreadable-row";
+}
+
 interface DexAvailabilityRow {
   stablecoin_id: string;
   source_total_tvl: number | null;
@@ -264,7 +282,15 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
           throw new IncidentProjectionUnavailableError();
         },
       },
-      mapRow: (row) => rowToPublicDepegEvent(row, activeIncidentProjectionLoad.projections),
+      mapRow: (row) => {
+        // The shared parser stays the single admission authority; one refused
+        // row fails the whole page instead of publishing a partial ledger.
+        try {
+          return rowToPublicDepegEvent(row, activeIncidentProjectionLoad.projections);
+        } catch (error) {
+          throw new DepegEventRowUnreadableError(row.id, depegRowFailureReason(error));
+        }
+      },
       searchParams: params,
       pagination,
       parsedPagination,
@@ -291,6 +317,13 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
       },
     });
     } catch (error) {
+      if (error instanceof DepegEventRowUnreadableError) {
+        return jsonResponse({
+          error: "Depeg event row unreadable",
+          reason: error.reason,
+          eventId: error.eventId,
+        }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
+      }
       if (!(error instanceof IncidentProjectionUnavailableError)) throw error;
       return jsonResponse({
         error: "Canonical incident history unavailable",

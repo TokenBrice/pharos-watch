@@ -165,7 +165,7 @@ export async function loadTelegramMiniAppState(
       null,
       { results: [] as MiniAppSubscriptionRow[] },
       { results: [] as PresetSubscriptionRow[] },
-      null,
+      { available: false } as const,
       null,
     ] as const;
 
@@ -229,9 +229,10 @@ export async function loadTelegramMiniAppState(
       };
     }),
     health: {
-      lastSuccessfulDeliveryAt: health?.lastSuccessfulDeliveryAt ?? null,
-      lastSuccessfulReplyAt: health?.lastSuccessfulReplyAt ?? null,
-      recentFailureClass: health?.recentFailureClass ?? null,
+      diagnosticsAvailable: health.available,
+      lastSuccessfulDeliveryAt: health.available ? health.diagnostics?.lastSuccessfulDeliveryAt ?? null : null,
+      lastSuccessfulReplyAt: health.available ? health.diagnostics?.lastSuccessfulReplyAt ?? null : null,
+      recentFailureClass: health.available ? health.diagnostics?.recentFailureClass ?? null : null,
       queuedAlerts: Number(pending?.queued_alerts ?? 0),
     },
   };

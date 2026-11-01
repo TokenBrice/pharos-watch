@@ -366,8 +366,12 @@ describe("syncStablecoins", () => {
     const db = makeSyncDb();
     const writes = trackCacheWrites(db);
     const data = makeDlResponse(60);
-    // Intake does not require pegMechanism; the published row schema does, so 11 rows fail publication.
-    for (const asset of data.peggedAssets.slice(0, 11)) delete (asset as Partial<PeggedAsset>).pegMechanism;
+    // Tracked intake rows always carry a registry mechanism, so use untracked
+    // rows: intake admits them, and the published row schema then rejects 11.
+    for (const [index, asset] of data.peggedAssets.slice(0, 11).entries()) {
+      asset.id = `fixture-no-mechanism-${index}`;
+      delete (asset as Partial<PeggedAsset>).pegMechanism;
+    }
     mockFetchWithRetry(defaultSyncRoutes(data));
     const result = await syncStablecoins(db);
     expect(result).toMatchObject({ itemCount: 60, status: "degraded" });

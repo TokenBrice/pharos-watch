@@ -101,7 +101,7 @@ Every successful session read or mutation also records the response `stateRevisi
 
 Watcher status uses enabled global/direct/preset families, not row existence: retained empty subscribers have no enabled alerts. Indefinite pause and timed snooze suppress the active heading; timed snoozes expire at the shared client `nowSec` deadline. Delivery history remains visible independently.
 
-Delivery health shows separate latest successful alert and command-reply clocks; neither is evidence that the other lane succeeded. Late diagnostic writes do not move these clocks backward or clear a newer failure. Equal-second failures remain visible even beside a successful reply/delivery; the full reconciliation rule is owned by [State / persistence](./telegram-architecture.md#7-state--persistence).
+Delivery health shows separate latest successful alert and command-reply clocks; neither is evidence that the other lane succeeded. A failed diagnostics read is unavailable (`health.diagnosticsAvailable: false`), distinct from a missing row, and Settings renders both clocks as `—`. Late diagnostic writes do not move these clocks backward or clear a newer failure. Equal-second failures remain visible even beside a successful reply/delivery; the full reconciliation rule is owned by [State / persistence](./telegram-architecture.md#7-state--persistence).
 
 Stale-auth relaunch encodes the visible screen: Coin detail → `coin_<id>`, Settings → `settings`, Add coins → `setup`, anything else → `home`.
 

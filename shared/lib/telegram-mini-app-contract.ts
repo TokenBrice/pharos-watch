@@ -393,6 +393,8 @@ export const TelegramMiniAppMutableStateSchema = z
         lastSuccessfulReplyAt: z.number().nullable(),
         queuedAlerts: z.number(),
         recentFailureClass: z.string().nullable(),
+        // Absent on older Workers; false means the diagnostics read failed.
+        diagnosticsAvailable: z.boolean().optional(),
       })
       .passthrough(),
   })

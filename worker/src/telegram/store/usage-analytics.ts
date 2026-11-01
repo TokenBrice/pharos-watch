@@ -482,10 +482,15 @@ export async function loadTelegramTopFollowedCoins(
     .slice(0, limit);
 }
 
+/** A failed diagnostics read is unavailable evidence, distinct from a missing row. */
+export type TelegramChatHealthDiagnosticsRead =
+  | { available: true; diagnostics: TelegramChatHealthDiagnostics | null }
+  | { available: false };
+
 export async function loadTelegramChatHealthDiagnostics(
   db: D1Database,
   chatId: string,
-): Promise<TelegramChatHealthDiagnostics | null> {
+): Promise<TelegramChatHealthDiagnosticsRead> {
   try {
     const row = await db
       .prepare(
@@ -495,13 +500,16 @@ export async function loadTelegramChatHealthDiagnostics(
       )
       .bind(chatId)
       .first<DeliveryDiagnosticsRow>();
-    if (!row) return null;
+    if (!row) return { available: true, diagnostics: null };
     return {
-      lastSuccessfulDeliveryAt: coerceNullableTimestamp(row.last_successful_delivery_at),
-      lastSuccessfulReplyAt: coerceNullableTimestamp(row.last_successful_reply_at),
-      recentFailureClass: row.recent_failure_class ?? null,
+      available: true,
+      diagnostics: {
+        lastSuccessfulDeliveryAt: coerceNullableTimestamp(row.last_successful_delivery_at),
+        lastSuccessfulReplyAt: coerceNullableTimestamp(row.last_successful_reply_at),
+        recentFailureClass: row.recent_failure_class ?? null,
+      },
     };
   } catch {
-    return null;
+    return { available: false };
   }
 }

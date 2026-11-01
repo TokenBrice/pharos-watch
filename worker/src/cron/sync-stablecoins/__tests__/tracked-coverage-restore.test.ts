@@ -60,6 +60,26 @@ describe("restoreMissingTrackedAssets", () => {
     });
   });
 
+  it("restores the curated pegMechanism vocabulary instead of the cached upstream label", () => {
+    // United Stables is reviewed rwa-backed, which the published DefiLlama
+    // vocabulary spells fiat-backed; a cached crypto-backed row must not carry.
+    const previous = asset({
+      id: "u-united-stables",
+      symbol: "U",
+      pegMechanism: "crypto-backed",
+      circulating: { peggedUSD: 100 },
+      supplyObservedAt: NOW_SEC - 900,
+    });
+
+    const result = restoreMissingTrackedAssets(
+      fullActiveIntake(["u-united-stables"]),
+      new Map([["u-united-stables", previous]]),
+      NOW_SEC,
+    );
+
+    expect(result.assets.find((row) => row.id === "u-united-stables")?.pegMechanism).toBe("fiat-backed");
+  });
+
   it("restores an omitted supplemental tracked coin exactly once through tracked coverage", () => {
     const id = "paxg-paxos";
     const previous = asset({
