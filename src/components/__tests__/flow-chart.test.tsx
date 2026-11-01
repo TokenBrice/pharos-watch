@@ -154,7 +154,7 @@ describe("FlowChart", () => {
       "Partial valuation: net unavailable",
       "—",
     ]);
-    expect(screen.getByText(/1 hourly bucket has unpriced events/i)).toBeTruthy();
+    expect(screen.getByText(/1 hourly bucket has a withheld net/i)).toBeTruthy();
     // The withheld net is a hatched column over its bucket, and the line's last proven point is marked.
     expect(chartState.hatchedFrom).toEqual([(firstHour + 3_600) * 1000 - 1_800_000]);
     expect(chartState.stopDot).toEqual({ x: firstHour * 1000, y: 7 });
@@ -168,6 +168,10 @@ describe("FlowChart", () => {
     const row = screen.getAllByRole("row")[1];
     expect(within(row).getAllByRole("cell").map((cell) => cell.textContent))
       .toEqual([`≥ $${volume}`, "≥ $0", "—", "—", "Complete", "Observed subtotals"]);
+    // The withheld net comes from incomplete scan coverage here, not unpriced events.
+    expect(screen.getByText("Net withheld")).toBeTruthy();
+    expect(screen.getByText(/1 hourly bucket has a withheld net/i)).toBeTruthy();
+    expect(screen.queryByText(/unpriced events/i)).toBeNull();
   });
 
   it("renders hourly bucket labels in UTC regardless of the viewer timezone", () => {

@@ -112,6 +112,9 @@ describe("classifyApyChange", () => {
     expect(result.confidence).toBe("high");
     expect(result.largestDelta).toBeNull();
     expect(result.sourceSwitchDetail?.apy30dDelta).toBe(2);
+    // The ledger delta is a trailing-30d difference; the history branch reuses
+    // this headline for a one-day jump, so the label names no window.
+    expect(result.headline).toBe("Source switched from old (+2.0pp impact).");
   });
 
   it("attributes a real switch observed in history with high confidence (no ledger timestamp)", () => {
