@@ -92,12 +92,16 @@ describe("DEWSDetail retained evidence", () => {
     expect(screen.queryByText("Depeg Early Warning")).toBeNull();
   });
 
-  it("keeps a successful null-current read as not-yet-computed across a refresh error", () => {
+  it("names the machine reason when a successful read has no current row", () => {
     useDetailMock.mockReturnValue({
-      isLoading: false, error: new Error("HTTP 502"), data: { current: null, history: [] }, refetch: vi.fn(),
+      isLoading: false,
+      error: new Error("HTTP 502"),
+      data: { current: null, currentStatus: "unavailable", currentReasons: ["current-row-malformed"], history: [] },
+      refetch: vi.fn(),
     });
     render(<DEWSDetail stablecoinId="usdc-circle" />);
-    expect(screen.getByText(/No DEWS data available yet/)).toBeTruthy();
+    expect(screen.getByText("DEWS score unavailable (current-row-malformed).")).toBeTruthy();
+    expect(screen.queryByText(/No DEWS data available yet|next computation cycle/)).toBeNull();
     expect(screen.queryByText(/Connection issue|Failed to load/)).toBeNull();
   });
 

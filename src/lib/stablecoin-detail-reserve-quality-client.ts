@@ -142,11 +142,11 @@ const CHIP_TONES = {
 } as const;
 
 /** Rounds to at most 1 decimal and trims trailing zeros, e.g. 12.56 -> "12.6%", 71 -> "71%".
- *  A non-whole share that would round to 100 prints "<100%" instead of overstating the whole. */
+ *  A non-whole share that would round to 100 prints ">99.9%" instead of overstating the whole. */
 export function formatReserveQualityPct(value: number): string {
   if (value > 0 && value < 0.1) return "<0.1%";
   const rounded = Number(value.toFixed(1));
-  return value < 100 && rounded >= 100 ? "<100%" : `${rounded}%`;
+  return value < 100 && rounded >= 100 ? ">99.9%" : `${rounded}%`;
 }
 
 interface ChipVerdict {
@@ -184,9 +184,10 @@ function buildConvertibilityClause(liquidWithinOneDayPct: number, unknownHorizon
     return "no published exit timeline for any of the basket.";
   }
   if (unknownHorizonPct > 0) {
+    const disclosedPct = formatReserveQualityPct(liquidWithinOneDayPct);
     const disclosed =
       liquidWithinOneDayPct > 0
-        ? `at least ${formatReserveQualityPct(liquidWithinOneDayPct)} convertible within one day`
+        ? `${disclosedPct.startsWith(">") ? disclosedPct : `at least ${disclosedPct}`} convertible within one day`
         : "none of the disclosed basket converts within one day";
     return `${disclosed}; ${formatReserveQualityPct(unknownHorizonPct)} has no published exit timeline.`;
   }

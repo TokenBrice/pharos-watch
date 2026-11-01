@@ -28,6 +28,7 @@ import {
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
+import { PYS_DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
 import {
   formatYieldSourceRiskSummary,
   getYieldSourceDepthDisplay,
@@ -224,6 +225,7 @@ export function YieldSafetyBadge({
   safetyScore,
   safetySrLabel,
   opportunityDerived = false,
+  usedDefaultSafety = false,
   compact = false,
 }: {
   grade: YieldViewModelRow["safetyGrade"];
@@ -231,6 +233,8 @@ export function YieldSafetyBadge({
   safetySrLabel: string;
   /** True when the yield model produced this grade instead of Safety Score V9. */
   opportunityDerived?: boolean;
+  /** True when the score is the conservative default, not a measured Safety Score. */
+  usedDefaultSafety?: boolean;
   compact?: boolean;
 }) {
   // A Royco Dawn tranche grade and an external-opportunity grade publish into
@@ -244,6 +248,7 @@ export function YieldSafetyBadge({
   ) : null;
   const describe = (base: string) =>
     opportunityDerived ? `${base} — ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}` : base;
+  const defaultSafetyLabel = `No safety grade available — defaulted to ${PYS_DEFAULT_SAFETY_SCORE}`;
 
   if (grade && grade !== "NR") {
     return (
@@ -258,7 +263,7 @@ export function YieldSafetyBadge({
       </Badge>
     );
   }
-  if (safetyScore !== null) {
+  if (safetyScore !== null && !usedDefaultSafety) {
     return (
       <Badge
         variant="outline"
@@ -272,7 +277,11 @@ export function YieldSafetyBadge({
     );
   }
   return (
-    <span className="text-muted-foreground" aria-label={safetySrLabel}>
+    <span
+      className="text-muted-foreground"
+      title={usedDefaultSafety ? defaultSafetyLabel : undefined}
+      aria-label={usedDefaultSafety ? defaultSafetyLabel : safetySrLabel}
+    >
       {"—"}
     </span>
   );

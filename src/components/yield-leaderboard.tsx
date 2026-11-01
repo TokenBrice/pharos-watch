@@ -93,7 +93,7 @@ function LeaderboardHeading({
     await copy(window.location.href);
   }, [copy]);
   const handleExport = useCallback(() => {
-    const exportData = exportRows.map((row, index) => ({ rank: index + 1, row }));
+    const exportData = exportRows.map((row) => ({ rank: row.viewRank, row }));
     downloadCsvWithPreamble(exportData, YIELD_EXPORT_COLUMNS, "pharos-yield-rankings", {
       endpoint: "yield-rankings",
       asOfISO: new Date(updatedAt * 1000).toISOString(),
@@ -535,6 +535,8 @@ export function YieldMobileCard({
   );
   const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
   const workbenchLink = getYieldWorkbenchLink(row.id);
+  // A default-safety score is a scoring input, not a measured Safety Score.
+  const usedDefaultSafety = row.provenance?.usedDefaultSafety === true;
 
   return (
     <article
@@ -596,13 +598,14 @@ export function YieldMobileCard({
           safetyScore={safetyScore}
           safetySrLabel={safetySrLabel}
           opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+          usedDefaultSafety={usedDefaultSafety}
           compact
         />
         <Badge variant="outline" className={`text-3xs ${YIELD_TYPE_STYLES[row.yieldType]?.badge ?? ""}`}>
           {YIELD_TYPE_LABELS[row.yieldType] ?? row.yieldType}
         </Badge>
         <YieldZoneChip
-          safetyScore={safetyScore}
+          safetyScore={usedDefaultSafety ? null : safetyScore}
           apy30d={row.apy30d}
           benchmarkRate={resolvedBenchmark.rate}
         />

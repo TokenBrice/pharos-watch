@@ -142,11 +142,27 @@ describe("buildBackingMetricsView", () => {
     expect(view?.headline.basis.trim()).not.toBe("");
   });
 
+  it("never claims a supply denominator for a reviewed ratio or backstop", () => {
+    const debtBasis: MechanismCollateralizationView = {
+      ...reviewed,
+      ratio: 1.650849,
+      liquidationCapacityRatio: 0.919,
+    };
+    const view = build({ collateralization: debtBasis })!;
+    expect(view.headline.basis).not.toMatch(/supply/i);
+    expect(JSON.stringify(view)).not.toMatch(/vs supply|share of supply/i);
+
+    const { container } = render(<BackingMetricsCard view={view} />);
+    expect(container.textContent).not.toMatch(/vs supply|share of supply/i);
+    expect(container.textContent).toContain("as reviewed");
+  });
+
   it("folds the reviewed ratio and protocol ratios into the details when the live ratio leads", () => {
     const view = build({ liveRatio: 1.183, collateralization: { ...reviewed, ratio: 1.042 }, backing: factsOnly });
     expect(view?.headline.value).toBe("118.3%");
     const folded = view?.details.map((row) => row.value) ?? [];
     expect(folded).toContain("104.2%");
+    expect(view?.details.map((row) => row.label)).toContain("Reviewed collateral ratio");
     expect(view?.details.every((row) => row.label.trim() !== "")).toBe(true);
   });
 
@@ -266,6 +282,8 @@ describe("buildBackingMetricsView", () => {
     const view = build({ collateralization: reviewed, liveLiquidationCapacityRatio: 0.704, liveAtSec: 1785168827 });
     expect(view?.headline.value).toBe("245.5%");
     expect(view?.subMetrics[0]?.value).toBe("70.4%");
+    expect(view?.subMetrics[0]?.label).toBe("Liquidation backstop");
+    expect(view?.subMetrics[0]?.hint).toBe("Capital committed to absorb liquidations.");
     expect(view?.freshness.live).not.toBeNull();
     expect(view?.freshness.reviewedAt).toBe(reviewed.reviewedAt);
   });

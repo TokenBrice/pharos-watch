@@ -115,9 +115,13 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
     <span className="font-semibold text-foreground">
       Showing {loadedCount.toLocaleString()} of {totalCount!.toLocaleString()} events
     </span>
-  ) : (
+  ) : totalCount != null ? (
     <span className="font-semibold text-foreground">
       {loadedCount.toLocaleString()} {loadedCount === 1 ? "event" : "events"}
+    </span>
+  ) : (
+    <span className="font-semibold text-foreground">
+      Showing {loadedCount.toLocaleString()} {loadedCount === 1 ? "event" : "events"}
     </span>
   );
   const parts: ReactNode[] = [];

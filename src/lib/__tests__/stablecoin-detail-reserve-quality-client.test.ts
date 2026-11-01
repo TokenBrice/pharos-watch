@@ -95,9 +95,28 @@ describe("projectReserveQualityClientSummary", () => {
   });
 
   it("keeps a near-whole share short of 100% at display precision", () => {
-    expect(formatReserveQualityPct(99.99757415980419)).toBe("<100%");
-    expect(formatReserveQualityPct(99.96)).toBe("<100%");
+    expect(formatReserveQualityPct(99.99757415980419)).toBe(">99.9%");
+    expect(formatReserveQualityPct(99.96)).toBe(">99.9%");
     expect(formatReserveQualityPct(100)).toBe("100%");
+  });
+
+  it.each([
+    [99.99999962097924, 3.790207601143955e-7],
+    [0.0067, 99.9933],
+    [0.005757310118, 99.994242689881],
+    [3.651e-8, 99.99999996349],
+    [9.352639691815362e-15, 99.99999999999999],
+  ])("bounds a rounded-to-whole share beside a positive opposite share (%s / %s)", (liquid, unknown) => {
+    const summary = projectReserveQualityClientSummary(
+      coinWith([
+        { name: "Liquid", pct: liquid, risk: "very-low", assetClass: "cash", liquidityHorizon: "immediate" },
+        { name: "Untimed", pct: unknown, risk: "high", assetClass: "other", liquidityHorizon: "unknown" },
+        { name: "Rest", pct: 100 - liquid - unknown, risk: "medium", assetClass: "other", liquidityHorizon: "over-seven-days" },
+      ]),
+    )!;
+    expect(summary.lede).not.toContain("100%");
+    expect(summary.lede).not.toContain("at least >");
+    expect(summary.lede).not.toContain("≥ >");
   });
 
   it("ignores float-summation dust at the full-basket boundary", () => {

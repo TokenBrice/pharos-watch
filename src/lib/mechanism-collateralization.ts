@@ -7,11 +7,11 @@ import { getMechanismReviewOverlay } from "./mechanism-overlay.server";
  * pages pass the slim view object below as a prop instead.
  */
 export interface MechanismCollateralizationView {
-  /** Ratio of protocol-priced collateral over supply; null when not applicable. */
+  /** Reviewed collateralization ratio; the review's denominator varies by asset. Null when not applicable. */
   ratio: number | null;
   /** Reviewer rationale when the ratio is ruled structurally not applicable. */
   notApplicableRationale: string | null;
-  /** Committed liquidation capacity over supply; null when unmeasured or N/A. */
+  /** Reviewed committed liquidation capacity ratio; null when unmeasured or N/A. */
   liquidationCapacityRatio: number | null;
   /** Calendar date or exact UTC instant at which the evidence was pinned. */
   reviewedAt: string;

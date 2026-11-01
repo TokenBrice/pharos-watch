@@ -115,6 +115,7 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
         safetyScore={row.safetyScore}
         safetySrLabel={formatYieldSafetySrLabel(row.safetyGrade, row.safetyScore)}
         opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+        usedDefaultSafety={row.provenance?.usedDefaultSafety === true}
         compact
       />
     ),

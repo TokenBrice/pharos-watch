@@ -309,7 +309,7 @@ function ChainRelatedHubs({ chainId, taxonomyLinks }: { chainId: string; taxonom
         </div>
       ) : (
         <p className="rounded-xl border border-dashed border-border/70 bg-muted/10 px-4 py-4 text-sm text-muted-foreground">
-          Related taxonomy hubs appear after Pharos maps tracked deployments on this chain.
+          Related taxonomy hubs appear after Pharos maps active deployments on this chain.
         </p>
       )}
     </section>
@@ -341,7 +341,7 @@ export default async function ChainProfilePage({ params }: { params: Promise<{ c
       }}
       headerActions={<ShareButton ogPath={API_PATHS.ogChain(chain)} />}
       leadParagraphs={[
-        `Stablecoin supply, Chain Health and tracked deployments on ${meta.name}.`,
+        `Stablecoin supply, Chain Health and active deployments on ${meta.name}.`,
         ...buildChainEditorialIntro({ chainName: meta.name, meta, deployments }),
       ]}
       leadDisclosureLabel={`About the ${meta.name} registry cohort`}

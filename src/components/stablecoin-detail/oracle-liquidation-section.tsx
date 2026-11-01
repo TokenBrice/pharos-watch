@@ -173,8 +173,9 @@ function renderOracleHeaderStatus(
 }
 
 /**
- * Sources → aggregator → consumer. Sources are the reviewed feed providers
- * (an empty list is a dashed "Undisclosed" station, never a blank chip), the
+ * Sources → aggregator → consumer. Feeds are itemized per branch, so a reviewed
+ * profile with no branch feeds is a dashed missing station, not a claim that the
+ * issuer withheld its sources; only an opaque review is "Undisclosed". The
  * aggregator is the reviewed pricing tier, and the consumer follows the role.
  *
  * The rail reads its own width (`@container/rail`): in a ~480 px tile the
@@ -201,7 +202,10 @@ function OraclePricePath({
     summary.feedCount > 0 ? `${summary.feedCount} ${summary.feedCount === 1 ? "feed" : "feeds"}` : null,
     summary.branchCount > 1 ? `${summary.branchCount} branches` : null,
   ].filter((part): part is string => part != null).join(" · ");
-  const sourcesText = providers.length > 0 ? `sources ${providers.join(", ")}` : "sources undisclosed";
+  const sourcesUndisclosed = providers.length === 0 && summary.tier === "opaque-or-unknown";
+  const sourcesText = providers.length > 0
+    ? `sources ${providers.join(", ")}`
+    : sourcesUndisclosed ? "sources undisclosed" : "sources not itemized";
 
   return (
     <div
@@ -214,7 +218,7 @@ function OraclePricePath({
       <div className="flex flex-col gap-1 @xl/rail:flex-row @xl/rail:items-start @xl/rail:gap-3">
         <RailStation
           label="Sources"
-          value={providers.length > 0 ? sourceChips : "Undisclosed"}
+          value={providers.length > 0 ? sourceChips : sourcesUndisclosed ? "Undisclosed" : "—"}
           tone={providers.length > 0 ? "default" : "unknown"}
           title={providers.length > 0 ? providers.join(", ") : undefined}
           wrap

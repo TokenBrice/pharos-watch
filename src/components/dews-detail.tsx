@@ -159,6 +159,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   }
 
   if (!data?.current) {
+    const unavailableReason = data?.currentReasons?.[0] ?? null;
     return (
       <Card>
         <CardHeader>
@@ -168,7 +169,7 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            No DEWS data available yet. Score will appear after the next computation cycle.
+            DEWS score unavailable{unavailableReason ? ` (${unavailableReason})` : ""}.
           </p>
         </CardContent>
       </Card>
