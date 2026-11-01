@@ -50,23 +50,34 @@ const TAPE_CLASS_SOURCES: readonly TapeClassSource[] = [
   },
 ] as const;
 
+// The score clock must match the organic-only relation the projectors read
+// (`SAFETY_SCORE_HISTORY_TAPE_SOURCE_SQL`): methodology boundary baselines are
+// written at the snapshot day but never advance a projector cursor. Two scalar
+// MAX subqueries keep each read an index seek instead of a full-table scan.
 const SOURCE_CLOCK_SQL = `SELECT /* pharos:canary:tape-class-liveness */
   (SELECT MAX(stored_at) FROM stability_index_samples) AS psi_at,
   (SELECT MAX(computed_at) FROM stress_signals) AS dews_at,
-  (SELECT MAX(recorded_at) FROM (
-    SELECT recorded_at FROM safety_grade_history
-    UNION ALL
-    SELECT recorded_at FROM safety_score_history_v2
-  )) AS score_at,
+  (SELECT MAX(recorded_at) FROM safety_grade_history WHERE prev_grade IS NOT NULL) AS score_legacy_at,
+  (SELECT MAX(recorded_at)
+     FROM safety_score_history_v2
+    WHERE transition_kind = 'organic-grade-change'
+      AND prev_grade IS NOT NULL) AS score_v2_at,
   (SELECT MAX(recorded_at) FROM yield_history WHERE is_best = 1) AS yield_history_at,
   (SELECT MAX(created_at) FROM yield_source_decisions) AS yield_decisions_at`;
 
 interface TapeSourceClocksRow {
   psi_at: number | null;
   dews_at: number | null;
-  score_at: number | null;
+  score_legacy_at: number | null;
+  score_v2_at: number | null;
   yield_history_at: number | null;
   yield_decisions_at: number | null;
+}
+
+function maxClock(left: number | null, right: number | null): number | null {
+  if (left == null) return right;
+  if (right == null) return left;
+  return Math.max(left, right);
 }
 
 function sourceClockFor(eventClass: string, row: TapeSourceClocksRow): number | null {
@@ -75,7 +86,7 @@ function sourceClockFor(eventClass: string, row: TapeSourceClocksRow): number | 
     case "dews.escalated":
     case "dews.deescalated": return row.dews_at;
     case "score.upgraded":
-    case "score.downgraded": return row.score_at;
+    case "score.downgraded": return maxClock(row.score_legacy_at, row.score_v2_at);
     case "yield.warning_emitted": return row.yield_history_at;
     case "yield.pys_dropped": return row.yield_decisions_at;
     default: return null;

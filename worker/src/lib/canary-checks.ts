@@ -522,7 +522,13 @@ async function checkPsiLatestSample(db: D1Database, observedAt: number) {
     const coverageRead = readPsiUniverseCoverage(row.input_snapshot);
     const coverage = coverageRead.kind === "ok"
       ? {
-          status: classifyPsiUniverseCoverage(coverageRead.expected, coverageRead.admittedSupply),
+          // Coverage is a core-universe claim: supply-unavailable members are
+          // their own finding, and `present` may still include historical ids
+          // persisted by older producers, so classify on the missing core list.
+          status: classifyPsiUniverseCoverage(
+            coverageRead.expected,
+            coverageRead.expected - coverageRead.missingFromCacheIds.length,
+          ),
           expected: coverageRead.expected,
           present: coverageRead.present,
           admittedSupply: coverageRead.admittedSupply,

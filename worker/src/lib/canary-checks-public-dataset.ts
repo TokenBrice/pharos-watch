@@ -29,6 +29,7 @@ interface PublicationEvidenceRow {
   dews_computed_at: number | null;
   compressed_size: number | null;
   dex_published_row_count: number | null;
+  sealed_dex_row_count: number | null;
 }
 
 function isCount(value: unknown): value is number {
@@ -71,6 +72,7 @@ export async function checkPublicDatasetSnapshotCompleteness(
                   CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.liquidityCount') END AS liquidity_count,
                   CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.dewsComputedAt') END AS dews_computed_at,
                   CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.compressedSize') END AS compressed_size,
+                  CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.dexPublicationRowCount') END AS sealed_dex_row_count,
                   (SELECT current_row_count
                      FROM dex_liquidity_publication_generations
                     WHERE state = 'published'
@@ -101,6 +103,7 @@ export async function checkPublicDatasetSnapshotCompleteness(
       dewsComputedAt: evidence?.dews_computed_at ?? null,
       compressedSize: evidence?.compressed_size ?? null,
       dexPublishedRowCount: evidence?.dex_published_row_count ?? null,
+      sealedDexPublicationRowCount: evidence?.sealed_dex_row_count ?? null,
     };
     if (!evidence) {
       // Older than cron_runs retention or written by another producer: the
@@ -128,14 +131,20 @@ export async function checkPublicDatasetSnapshotCompleteness(
         metadata,
       );
     }
+    // The sealed row is immutable: compare it with the generation the producer
+    // read at seal time. A later published generation may legitimately grow.
+    // Pre-gate rows carry no sealed count, so fall back to the live generation.
+    const comparisonRowCount = isCount(evidence.sealed_dex_row_count)
+      ? evidence.sealed_dex_row_count
+      : evidence.dex_published_row_count;
     if (
-      isCount(evidence.dex_published_row_count)
-      && evidence.dex_published_row_count > 0
-      && (!isCount(evidence.liquidity_count) || evidence.liquidity_count < evidence.dex_published_row_count)
+      isCount(comparisonRowCount)
+      && comparisonRowCount > 0
+      && (!isCount(evidence.liquidity_count) || evidence.liquidity_count < comparisonRowCount)
     ) {
       return degradedResult(
         `sealed liquidity section has ${metadata.liquidityCount ?? "no"} rows for a ` +
-          `${evidence.dex_published_row_count}-row published generation`,
+          `${comparisonRowCount}-row published generation`,
         metadata,
       );
     }

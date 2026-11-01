@@ -16,15 +16,11 @@ export const REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES = [
   "psi-unavailable",
   "psi-contributors-query",
   "psi-contributors-stale",
-  // Stablecoins supply (the digest fails closed on a non-ok cache)
-  "supply-unavailable",
-  "missing-cache",
-  "json-parse-failed",
-  "invalid-payload-shape",
-  "missing-pegged-assets",
-  "filtered-malformed-entries",
-  "published-contract-invalid",
-  "cache-read-failed",
+  // Stablecoins supply. A non-ok cache fails the digest closed before an
+  // edition is published, so only these recorded reasons can reach a row.
+  "stablecoins-cache-stale",
+  "supply-current-unavailable",
+  "supply-prev-week-baseline",
   // Safety Score
   "safety-canonical-snapshot",
   "source-load-failed",

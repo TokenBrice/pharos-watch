@@ -5,6 +5,7 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../../lib/native-peg-quote-cache";
 import { PSI_CONDITION_BAND_VALUES } from "@shared/types/stability-constants";
 
@@ -45,6 +46,7 @@ import { buildEditorialPrompt, scanEditorialText } from "@shared/lib/editorial-s
 import { getPsiBandStreak } from "@shared/lib/psi-view-model";
 import type { DigestInputData } from "@shared/types/digest";
 import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
+import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "../digest-input-quality";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDailyDigestScenario, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
 
@@ -675,6 +677,31 @@ describe("market and risk collectors", () => {
     vi.mocked(loadStablecoinsCache).mockResolvedValue({ kind: "unavailable", reason: "stablecoins-cache-missing" } as never);
     const { inputData } = await buildDailyDigestInput(makeDailyDigestScenario().db);
     expect(inputData.mcap7dDelta).toBeNull();
+  });
+  it("treats a stale cache and a partial core supply cohort as regime-critical", async () => {
+    const scenario = makeDailyDigestScenario();
+    const nowSec = Math.floor(Date.now() / 1000);
+    const source = scenario.sourcePayload as {
+      updatedAt: number;
+      payload: { peggedAssets: Array<Record<string, unknown>> };
+    };
+    source.updatedAt = nowSec - API_FRESHNESS_MAX_AGE_SEC.stablecoins - 1;
+    source.payload.peggedAssets = source.payload.peggedAssets
+      .filter((asset) => asset.id === "usdt-tether")
+      .map(({ circulatingPrevWeek: _drop, ...asset }) => asset);
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
+    const { inputData } = await buildDailyDigestInput(scenario.db);
+    const recorded = inputData.dataQuality?.degradedSources ?? [];
+    expect(recorded).toContain("stablecoins-cache-stale");
+    expect(recorded).toContain("supply-current-unavailable");
+    expect(recorded).toContain("supply-prev-week-baseline");
+    const supplySources = recorded.filter(
+      (source) => source.startsWith("supply-") || source === "stablecoins-cache-stale",
+    );
+    expect(supplySources).not.toHaveLength(0);
+    for (const source of supplySources) {
+      expect(REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES as readonly string[]).toContain(source);
+    }
   });
   it("never restates flow claims that missing valuation could alter", async () => {
     const partialMint = {

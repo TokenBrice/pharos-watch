@@ -14,6 +14,8 @@ import {
   runCanaryChecks,
 } from "../canary-checks";
 import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
+import { checkTapeClassLiveness } from "../canary-checks-tape";
+import { tapeProjectorCursorKey } from "../tape-event-store";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import {
@@ -396,7 +398,8 @@ function healthyD1(
       clocks?: Partial<{
         psi_at: number;
         dews_at: number;
-        score_at: number;
+        score_legacy_at: number;
+        score_v2_at: number;
         yield_history_at: number;
         yield_decisions_at: number;
       }>;
@@ -411,6 +414,7 @@ function healthyD1(
         dews_computed_at: number | null;
         compressed_size: number | null;
         dex_published_row_count: number | null;
+        sealed_dex_row_count: number | null;
       }> | null;
     };
   } = {},
@@ -507,7 +511,8 @@ function healthyD1(
       first: {
         psi_at: NOW - 60,
         dews_at: NOW - 60,
-        score_at: NOW - 60,
+        score_legacy_at: NOW - 60,
+        score_v2_at: NOW - 60,
         yield_history_at: NOW - 60,
         yield_decisions_at: NOW - 60,
         ...dex.tape?.clocks,
@@ -533,6 +538,7 @@ function healthyD1(
             dews_computed_at: NOW - 4_000,
             compressed_size: 4_096,
             dex_published_row_count: 408,
+            sealed_dex_row_count: 408,
             ...dex.publicDataset?.evidence,
           },
       rows: [],
@@ -670,7 +676,7 @@ describe("worker data invariant canaries", () => {
           expected,
           present: admitted,
           admittedSupply: admitted,
-          missingFromCacheIds: [],
+          missingFromCacheIds: Array.from({ length: expected - admitted }, (_, index) => `missing-${index}`),
           supplyUnavailableIds: [],
           trendUnavailableIds: [],
         },
@@ -720,7 +726,8 @@ describe("worker data invariant canaries", () => {
         clocks: {
           psi_at: stale,
           dews_at: stale,
-          score_at: stale,
+          score_legacy_at: stale,
+          score_v2_at: stale,
           yield_history_at: stale,
           yield_decisions_at: stale,
         },
@@ -730,6 +737,51 @@ describe("worker data invariant canaries", () => {
       status: "skipped",
       error: "tape-source-stale",
       metadata: { evaluatedCount: 0 },
+    });
+  });
+
+  it("clocks score tape classes from organic history rows only", async () => {
+    const { sqlite, db } = fixtures.open();
+    const organicAt = NOW - 10_000;
+    const insertV2 = sqlite.prepare(
+      `INSERT INTO safety_score_history_v2
+         (history_id, stablecoin_id, recorded_at, model, methodology_version, policy_id,
+          policy_digest, evaluation_build_digest, base_input_generation_id,
+          model_publication_generation_id, transition_kind, grade, score, prev_grade, created_at)
+       VALUES (?, 'usdt-tether', ?, 'v9', 'v9', 'psi-policy', ?, ?, ?, 'generation-1', ?, 'A', 90, ?, 1)`,
+    );
+    const buildDigest = "d".repeat(64);
+    const baseInput = `report-cards-input:v1:${"a".repeat(64)}`;
+    insertV2.run("organic-1", organicAt, "p".repeat(64), buildDigest, baseInput, "organic-grade-change", "B+");
+    insertV2.run("boundary-1", NOW, "p".repeat(64), buildDigest, baseInput, "methodology-boundary-baseline", null);
+    const insertCursor = sqlite.prepare(
+      "INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)",
+    );
+    for (const eventClass of ["score.upgraded", "score.downgraded"]) {
+      insertCursor.run(tapeProjectorCursorKey(eventClass), String(organicAt), organicAt);
+    }
+
+    const result = await checkTapeClassLiveness(db, NOW, {});
+    expect(result).toMatchObject({
+      status: "ok",
+      metadata: {
+        classes: expect.arrayContaining([
+          expect.objectContaining({
+            eventClass: "score.upgraded",
+            sourceMax: organicAt,
+            lagSec: 0,
+            evaluated: true,
+            reason: null,
+          }),
+          expect.objectContaining({
+            eventClass: "score.downgraded",
+            sourceMax: organicAt,
+            lagSec: 0,
+            evaluated: true,
+            reason: null,
+          }),
+        ]),
+      },
     });
   });
 
@@ -753,6 +805,32 @@ describe("worker data invariant canaries", () => {
       .toMatchObject({
         status: "degraded",
         error: "sealed liquidity section has 3 rows for a 408-row published generation",
+      });
+  });
+
+  it("compares the sealed liquidity section with its own sealed generation, not a later one", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: {
+        evidence: { liquidity_count: 408, dex_published_row_count: 500, sealed_dex_row_count: 408 },
+      },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "ok",
+        metadata: { liquidityCount: 408, sealedDexPublicationRowCount: 408 },
+      });
+  });
+
+  it("falls back to the live DEX generation for a sealed row written before the count was recorded", async () => {
+    const summary = await runCanaryChecks(healthyD1({
+      publicDataset: {
+        evidence: { liquidity_count: 408, dex_published_row_count: 500, sealed_dex_row_count: null },
+      },
+    }), { observedAt: NOW, mode: "status" });
+    expect(summary.results.find((result) => result.checkId === "public-dataset-snapshot-completeness"))
+      .toMatchObject({
+        status: "degraded",
+        error: "sealed liquidity section has 408 rows for a 500-row published generation",
       });
   });
 
@@ -1280,7 +1358,8 @@ describe("worker data invariant canaries", () => {
         first: {
           psi_at: NOW - 60,
           dews_at: NOW - 60,
-          score_at: NOW - 60,
+          score_legacy_at: NOW - 60,
+          score_v2_at: NOW - 60,
           yield_history_at: NOW - 60,
           yield_decisions_at: NOW - 60,
         },

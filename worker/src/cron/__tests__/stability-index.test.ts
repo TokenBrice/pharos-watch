@@ -15,6 +15,8 @@ import { persistActiveNativeEventQuotes, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from 
 import { PSI_NATIVE_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/depeg-quote-domain";
 import { computeStabilityIndex, DEWS_STRESS_BREADTH_SCALE, getDepreciationFactor } from "../../lib/stability-index";
 import { computePsiDepegContribution } from "@shared/lib/psi-contribution";
+import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
+import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -816,6 +818,74 @@ describe("computeAndStoreStabilityIndex", () => {
       status: "error",
     });
     expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("universe-coverage");
+  });
+
+  it("classifies universe coverage without netting PSI-historical assets against missing core members", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const coreIds = [...CORE_AGGREGATE_ACTIVE_IDS];
+    const missing = new Set(coreIds.slice(0, 4));
+    const peggedAssets = coreIds
+      .filter((id) => !missing.has(id))
+      .map((id) => makeStabilityAsset({ id, symbol: id.slice(0, 6) }));
+    for (const id of PSI_HISTORICAL_IDS) {
+      peggedAssets.push(makeStabilityAsset({ id, symbol: id.slice(0, 6) }));
+    }
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: { peggedAssets },
+      updatedAt: nowSec,
+    });
+    const db = makeDb();
+    const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db) as {
+      universeCoverage: {
+        expected: number;
+        present: number;
+        status: string;
+        missingFromCacheIds: string[];
+      };
+    };
+    expect(snapshot.universeCoverage.missingFromCacheIds).toHaveLength(4);
+    expect(snapshot.universeCoverage).toMatchObject({
+      expected: coreIds.length,
+      present: coreIds.length - 4,
+      status: "degraded",
+    });
+    expect(JSON.parse(result.metadata ?? "{}").quality.reasons).toContain("universe-coverage");
+  });
+
+  it("keeps an unreadable core supply out of the universe-coverage finding", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const coreIds = [...CORE_AGGREGATE_ACTIVE_IDS];
+    const noSupply = new Set(coreIds.filter((id) => id !== "usdt-tether").slice(0, 4));
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: {
+        peggedAssets: coreIds.map((id) => makeStabilityAsset({
+          id,
+          symbol: id.slice(0, 6),
+          ...(noSupply.has(id) ? { circulating: {} } : {}),
+        })),
+      },
+      updatedAt: nowSec,
+    });
+    const db = makeDb();
+    const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db) as {
+      universeCoverage: {
+        present: number;
+        admittedSupply: number;
+        status: string;
+      };
+    };
+    expect(snapshot.universeCoverage).toMatchObject({
+      present: coreIds.length,
+      admittedSupply: coreIds.length - 4,
+      status: "ok",
+    });
+    const reasons = JSON.parse(result.metadata ?? "{}").quality.reasons;
+    expect(reasons).toContain("supply-unavailable");
+    expect(reasons).not.toContain("universe-coverage");
   });
 
   it("publishes ok with explicit input quality when an open depeg has no usable price", async () => {

@@ -44,7 +44,6 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   }
 
   const tracked = stablecoinsCache.payload.peggedAssets.filter((coin) => CORE_PSI_ELIGIBLE_IDS.has(coin.id));
-  const trackedIds = new Set(tracked.map((coin) => coin.id));
 
   let totalMcapUsd = 0;
   let pairedMcapUsd = 0;
@@ -72,19 +71,27 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     symbolById.set(coin.id, coin.symbol);
   }
 
+  const coreTrackedIds = new Set(
+    tracked.filter((coin) => CORE_AGGREGATE_ACTIVE_IDS.has(coin.id)).map((coin) => coin.id),
+  );
+  const coreSupplyUnavailableCount = supplyUnavailableIds
+    .filter((id) => CORE_AGGREGATE_ACTIVE_IDS.has(id))
+    .length;
   const universeCoverage = {
     expected: CORE_AGGREGATE_ACTIVE_IDS.size,
-    present: tracked.length,
-    admittedSupply: tracked.length - supplyUnavailableIds.length,
+    // Coverage measures the core aggregate cohort only; PSI-historical assets
+    // are outside the denominator and supply availability is its own component.
+    present: coreTrackedIds.size,
+    admittedSupply: coreTrackedIds.size - coreSupplyUnavailableCount,
     missingFromCacheIds: [...CORE_AGGREGATE_ACTIVE_IDS]
-      .filter((id) => !trackedIds.has(id))
+      .filter((id) => !coreTrackedIds.has(id))
       .sort(),
     supplyUnavailableIds,
     trendUnavailableIds,
   };
   const universeCoverageStatus = classifyPsiUniverseCoverage(
     universeCoverage.expected,
-    universeCoverage.admittedSupply,
+    universeCoverage.present,
   );
 
   const mcap7dChangePct = Number.isFinite(pairedPrevWeek) && pairedPrevWeek > 0 && Number.isFinite(pairedMcapUsd)
