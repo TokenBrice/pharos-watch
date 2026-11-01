@@ -137,6 +137,20 @@ export function useSelector(
   const criticalQueryFailed =
     (stablecoins.error != null && stablecoins.data === undefined) ||
     (reportCards.error != null && reportCards.data === undefined);
+  // The live comparison shortlist is built from these optional feeds; an
+  // errored read with nothing retained collapses it for coverage reasons, so
+  // the delta must not publish that collapse as Added/Removed today.
+  const profileFeeds =
+    liveInput?.profile === "yield"
+      ? [pegSummary, yieldRankings]
+      : liveInput?.profile === "trading"
+        ? [pegSummary, stressSignals, dexLiquidity]
+        : liveInput
+          ? [pegSummary, stressSignals]
+          : [];
+  const profileFeedFailed = profileFeeds.some(
+    (query) => query.error != null && query.data === undefined,
+  );
 
   const datasetReady =
     stablecoins.data?.peggedAssets != null &&
@@ -219,7 +233,7 @@ export function useSelector(
         isFrozen: true,
         liveOutput: engineResult.kind === "ready" ? engineResult.output : null,
         liveStatus:
-          criticalQueryFailed || engineResult.kind === "error"
+          criticalQueryFailed || profileFeedFailed || engineResult.kind === "error"
             ? "error"
             : engineResult.kind === "ready"
               ? "ready"

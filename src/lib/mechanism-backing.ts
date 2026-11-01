@@ -81,16 +81,19 @@ const METRIC_SPECS: Partial<Record<MechanismArchetype, readonly MetricSpec[]>> =
     },
     {
       key: "marginBufferPct",
-      label: "Excess backing",
+      // Reviewed overlays apply this key to different denominators (exchange
+      // margin headroom, junior/senior tranche coverage), so the shared label
+      // and hint must not assert a supply denominator.
+      label: "Buffer ratio",
       unit: "percent",
       alreadyPercent: true,
-      hint: "Backing held above circulating supply, as a share of supply.",
+      hint: "Capital held above the protocol's stated buffer requirement.",
     },
     {
       key: "lossAbsorptionShare",
       label: "Loss absorption",
       unit: "percent",
-      hint: "Capital committed to absorb losses before holders, as a share of supply.",
+      hint: "Capital committed to absorb losses before holders.",
     },
   ],
   "rwa-credit-fund": [

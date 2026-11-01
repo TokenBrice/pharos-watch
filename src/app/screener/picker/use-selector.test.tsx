@@ -1,23 +1,36 @@
 // @vitest-environment jsdom
 
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makePickerQueryData, mockSelectorOutput } from "./picker.test-support";
 
-const { buildSelectorRowsMock, runSelectorMock, useStablecoinsMock } = vi.hoisted(() => ({
+const {
+  buildSelectorRowsMock,
+  runSelectorMock,
+  useStablecoinsMock,
+  requestJsonMock,
+  validateSnapshotMock,
+} = vi.hoisted(() => ({
   buildSelectorRowsMock: vi.fn(),
   runSelectorMock: vi.fn(),
   useStablecoinsMock: vi.fn(),
+  requestJsonMock: vi.fn(),
+  validateSnapshotMock: vi.fn(),
 }));
 
 vi.mock("@/hooks/use-stablecoins", () => ({ useStablecoins: useStablecoinsMock }));
+
+vi.mock("@/lib/request", async () => {
+  const actual = await vi.importActual<Record<string, unknown>>("@/lib/request");
+  return { ...actual, requestJson: requestJsonMock };
+});
 
 vi.mock("@shared/lib/selector", async () => {
   const actual = await vi.importActual<Record<string, unknown>>("@shared/lib/selector/types");
   return {
     ...actual,
     runSelector: runSelectorMock,
-    validateSelectorSnapshotResponse: vi.fn(() => ({ ok: false, error: "shape" })),
+    validateSelectorSnapshotResponse: validateSnapshotMock,
   };
 });
 
@@ -44,7 +57,29 @@ describe("useSelector", () => {
       methodologyVersions: OUTPUT.methodologyVersions,
     });
     runSelectorMock.mockReturnValue(OUTPUT);
+    requestJsonMock.mockResolvedValue({});
+    validateSnapshotMock.mockReturnValue({ ok: false, error: "shape" });
   });
+
+  it("marks the snapshot comparison unavailable when a live profile feed failed", async () => {
+    useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [] }, dataUpdatedAt: 1, error: null });
+    const queries = makePickerQueryData();
+    for (const [name, query] of Object.entries(queries)) {
+      vi.mocked(apiHooks[name as keyof typeof queries]).mockReturnValue(query() as never);
+    }
+    vi.mocked(usePegSummary).mockReturnValue({
+      data: undefined,
+      dataUpdatedAt: 0,
+      error: new Error("peg-summary unavailable"),
+    } as never);
+    validateSnapshotMock.mockReturnValue({ ok: true, snapshot: OUTPUT });
+
+    const { result } = renderHook(() => useSelector(INPUT, "a".repeat(32)));
+
+    await waitFor(() => expect(result.current.status).toBe("snapshot-found"));
+    expect(result.current).toMatchObject({ status: "snapshot-found", liveStatus: "error" });
+  });
+
   it("keeps the first-step form independent of evaluation feeds and cached rankings", () => {
     useStablecoinsMock.mockReturnValue({ data: { peggedAssets: [] }, dataUpdatedAt: 1, error: null });
     const { result, rerender } = renderHook(

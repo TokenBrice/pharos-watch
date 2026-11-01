@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CircleCheck, CircleHelp, CircleX, ExternalLink } from "lucide-react";
 import { formatElapsedSeconds } from "@shared/lib/format";
+import { TELEGRAM_ALERT_FAMILIES } from "@shared/lib/telegram-alert-families";
 import { TableBody, TableCaption, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Button } from "@/components/ui/button";
 import {
@@ -478,12 +479,15 @@ function AudienceCoverage({ model }: { model: CommsWorkbenchModel }) {
             <MetricRow label="Subscriber chats" value={formatCount(audience.totalChats)} />
             <MetricRow label="Alert enabled" value={formatCount(audience.alertEnabledChats)} />
             <MetricRow label="Alert ready" value={formatCount(audience.deliverableChats)} />
-            <MetricRow label="Saved coin follows" value={formatCount(audience.subscribedChats)} />
+            <MetricRow label="Chats with coin follows" value={formatCount(audience.subscribedChats)} />
             <MetricRow label="Total follows" value={formatCount(audience.totalSubscriptions)} />
             <MetricRow label="Explicit follows" value={formatCount(audience.explicitCoinSubscriptions)} />
             <MetricRow label="Preset-implied follows" value={formatCount(audience.presetImpliedCoinSubscriptions)} />
             <MetricRow label="Preset followers" value={formatCount(audience.activePresetFollowers)} />
-            <MetricRow label="Average follows / chat" value={formatCount(audience.averageSubscriptionsPerChat)} />
+            <MetricRow
+              label="Average explicit follows / chat with explicit follows"
+              value={formatCount(audience.averageSubscriptionsPerChat)}
+            />
           </dl>
         </section>
 
@@ -492,11 +496,13 @@ function AudienceCoverage({ model }: { model: CommsWorkbenchModel }) {
             Preferences
           </h3>
           <dl className="mt-2 min-w-0 divide-y divide-border/40">
-            <MetricRow label="DEWS" value={formatCount(audience.alertTypeChats.dews)} />
-            <MetricRow label="Depeg" value={formatCount(audience.alertTypeChats.depeg)} />
-            <MetricRow label="Safety" value={formatCount(audience.alertTypeChats.safety)} />
-            <MetricRow label="Launch" value={formatCount(audience.alertTypeChats.launch)} />
-            <MetricRow label="Reserve" value={formatCount(audience.alertTypeChats.reserve)} />
+            {TELEGRAM_ALERT_FAMILIES.map((family) => (
+              <MetricRow
+                key={family.key}
+                label={family.shortLabel}
+                value={formatCount(audience.alertTypeChats[family.key])}
+              />
+            ))}
             <MetricRow label="All alert types" value={formatCount(audience.alertTypeChats.allTypes)} />
             <MetricRow label="Custom preferences" value={formatCount(audience.customPreferenceChats)} />
             <MetricRow label="Quiet hours" value={formatCount(audience.quietHoursEnabledChats)} />

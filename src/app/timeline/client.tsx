@@ -305,6 +305,11 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         permalinkId={permalinkId}
         permalinkBufferIsLoading={feed.permalinkBuffer.isLoading}
         bufferEvent={feed.bufferEvent}
+        permalinkBufferError={feed.permalinkBuffer.error}
+        permalinkBufferHasData={feed.permalinkBuffer.data !== undefined}
+        permalinkBufferDataUpdatedAt={feed.permalinkBuffer.dataUpdatedAt}
+        permalinkBufferMeta={feed.permalinkBuffer.meta ?? null}
+        refetchPermalink={() => void feed.permalinkBuffer.refetch()}
         highlightedId={interactions.highlightedId}
         loadAnnouncement={interactions.loadAnnouncement}
         emptyStateChips={emptyStateChips}

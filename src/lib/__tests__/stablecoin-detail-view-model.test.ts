@@ -471,6 +471,15 @@ describe("stablecoin detail view-model builder", () => {
     expect(snapshot.agreeSources).toEqual(["coingecko", "alchemy-address"]);
   });
 
+  it("keeps unread peg provenance absent instead of a measured empty result", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+
+    const snapshot = buildDetailPegPriceSnapshot("usdc-circle", coin, undefined, undefined);
+
+    expect(snapshot.consensusSources).toBeNull();
+    expect(snapshot.agreeSources).toBeNull();
+  });
+
   it("keeps a present peg row's empty source lists instead of borrowing summary provenance", () => {
     const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
     const summary = { consensusSources: ["coingecko"], agreeSources: ["coingecko"] } as StablecoinLiveSummary;

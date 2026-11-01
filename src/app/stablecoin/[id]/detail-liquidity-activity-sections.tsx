@@ -122,8 +122,8 @@ export function DetailLiquidityActivitySections({
             <LazySection minHeight={200}>
               <PriceTransparencyCard
                 coinData={viewModel.coinData}
-                consensusSources={viewModel.consensusSources ?? []}
-                agreeSources={viewModel.agreeSources ?? []}
+                consensusSources={viewModel.consensusSources}
+                agreeSources={viewModel.agreeSources}
                 dexPriceCheck={viewModel.dexPriceCheck}
               />
             </LazySection>

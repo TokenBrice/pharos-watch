@@ -640,7 +640,7 @@ describe("coverage helpers", () => {
       { key: "price-only", label: "price-only", count: 1 },
       { key: "sources-5-plus", label: "5+ sources:", count: 0 },
       { key: "sources-3-4", label: "3-4:", count: 1 },
-      { key: "sources-1-2", label: "1-2:", count: 0 },
+      { key: "sources-1-2", label: "0-2:", count: 0 },
     ]);
   });
 
@@ -861,13 +861,45 @@ describe("coverage helpers", () => {
         safetyRatingStatus: "not-rated",
         dexCoverageClass: null,
       }),
+      makeCoverageRow(["zero", "ZERO"], {
+        marketCapUsd: 500,
+        consensusSources: [],
+        safetyScore: null,
+        safetyRatingStatus: "not-rated",
+        dexCoverageClass: null,
+      }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows);
+
+    expect(summary.breakdown).toContainEqual({ key: "tracked", label: "tracked", count: 3 });
+    expect(summary.breakdown).toContainEqual({ key: "sources-5-plus", label: "5+ sources:", count: 1 });
+    expect(summary.breakdown).toContainEqual({ key: "sources-3-4", label: "3-4:", count: 0 });
+    // An explicit empty source array measures zero depth, so it stays in the 0-2 bucket.
+    expect(summary.breakdown).toContainEqual({ key: "sources-1-2", label: "0-2:", count: 2 });
+  });
+
+  it("withholds the source-depth buckets when a tracked row reports no source count", () => {
+    const rows = [
+      makeCoverageRow(["measured", "MEAS"], {
+        marketCapUsd: 500,
+        consensusSources: ["coingecko", "defillama", "pyth"],
+        safetyScore: null,
+        safetyRatingStatus: "not-rated",
+        dexCoverageClass: null,
+      }),
+      makeCoverageRow(["unknown", "UNK"], {
+        marketCapUsd: 500,
+        safetyScore: null,
+        safetyRatingStatus: "not-rated",
+        dexCoverageClass: null,
+      }),
     ];
 
     const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows);
 
     expect(summary.breakdown).toContainEqual({ key: "tracked", label: "tracked", count: 2 });
-    expect(summary.breakdown).toContainEqual({ key: "sources-5-plus", label: "5+ sources:", count: 1 });
-    expect(summary.breakdown).toContainEqual({ key: "sources-1-2", label: "1-2:", count: 1 });
+    expect(summary.breakdown.some((item) => item.key.startsWith("sources-"))).toBe(false);
   });
 
   it("uses score-grade live reserves as the headline metric for reserve summaries", () => {

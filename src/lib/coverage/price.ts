@@ -87,10 +87,12 @@ function formatPrice(
     items.push(breakdownItem(DATA_UNAVAILABLE_KIND, "data n/a", unavailable));
   }
 
-  // Source-depth distribution
+  // Source-depth distribution. Only publish it when every tracked row reported a
+  // source count: otherwise the remainder is unknown depth, not the `tracked`
+  // bucket's rows folded into an observed-depth claim.
   let deep = 0; // 5+ sources
   let mid = 0; // 3-4 sources
-  let shallow = 0; // 1-2 sources
+  let shallow = 0; // 0-2 sources
   for (const row of rows) {
     const count = row.statuses.price.sourceCount;
     if (count == null) continue;
@@ -98,10 +100,11 @@ function formatPrice(
     else if (count >= 3) mid++;
     else shallow++;
   }
-  if (deep + mid + shallow > 0) {
+  const tracked = get("tracked");
+  if (tracked > 0 && deep + mid + shallow === tracked) {
     items.push(breakdownItem("sources-5-plus", "5+ sources:", deep));
     items.push(breakdownItem("sources-3-4", "3-4:", mid));
-    items.push(breakdownItem("sources-1-2", "1-2:", shallow));
+    items.push(breakdownItem("sources-1-2", "0-2:", shallow));
   }
   return items;
 }

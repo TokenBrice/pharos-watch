@@ -110,6 +110,26 @@ describe("CoverageFeatureSnapshotRow", () => {
     expect(screen.queryByText("0%")).toBeNull();
   });
 
+  it("keeps a tracked row with unknown source depth out of the not-covered gap", () => {
+    const base = {
+      coin: makeStablecoinMeta(), marketCapUsd: 100, hasPegCoverage: true,
+      safetyScore: null, safetyRatingStatus: "not-rated" as const, dexCoverageClass: null,
+      hasYieldCoverage: false, flowCoverageStatus: null,
+    };
+    const feature = COVERAGE_FEATURES.find((entry) => entry.key === "price")!;
+    const summary = buildCoverageFeatureSummary(feature, [
+      buildCoverageRow({ ...base, consensusSources: ["a", "b", "c"] }),
+      buildCoverageRow({ ...base, coin: makeStablecoinMeta({ id: "unknown-depth" }) }),
+    ]);
+    const { container } = render(<CoverageFeatureSnapshotRow summary={summary} />);
+
+    const bar = screen.getByRole("img");
+    expect(bar.getAttribute("aria-label")).toContain("tracked 2");
+    expect(bar.getAttribute("aria-label")).not.toContain("not covered");
+    expect(container.textContent).not.toContain("not covered");
+    expect(bar.querySelectorAll("[title]")).toHaveLength(1);
+  });
+
   it("labels observed-only snapshot ratios as known cap", () => {
     const feature = COVERAGE_FEATURES.find((entry) => entry.key === "yield")!;
     const base = buildCoverageRow({
