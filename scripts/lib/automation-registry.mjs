@@ -305,6 +305,9 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   generatedArtifact({
     id: "safety-score-v9-evaluation-build",
     buildLifecycle: "maintenance-only",
+    // Regenerated once per integration head, not per commit: CI prepare still
+    // fails a stale head through the bootstrap tracked-output assertion.
+    ciDriftCheck: false,
     checkCommand: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts --check",
     command: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
     bootstrap: true,

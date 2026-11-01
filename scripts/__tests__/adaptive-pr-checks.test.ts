@@ -11,7 +11,7 @@ import {
   runPrStaticChecks,
   STRUCTURAL_CHECKS,
 } from "../maintenance/run-pr-static-checks.ts";
-import { selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
+import { selectCheckableArtifactIds, selectGeneratedArtifacts } from "../lib/automation-registry.mjs";
 describe("adaptive PR checks", () => {
   it("selects doc sync for selector-only and required-only owners without depending on context mode", () => {
     const originalLength = PATH_FAMILIES.length;
@@ -239,16 +239,20 @@ describe("adaptive PR checks", () => {
     "worker/src/lib/safety-score-v9/candidate.ts",
     "worker/src/lib/safety-score-v9/extension.ts",
     "worker/src/lib/safety-score-v9/fact-set.ts",
-  ])("checks the evaluation manifest for offline runtime input %s even without Pages changes", (path) => {
+  ])("guards the evaluation manifest for offline runtime input %s at the CI head, not per commit", (path) => {
     // The Wave-1 near-miss: a worker-only commit touching a manifest-pinned V9
     // source left the evaluation-build manifest stale and passed the PR gate.
+    // The manifest is regenerated once per integration head; CI prepare's
+    // bootstrap tracked-output assertion fails a stale head instead.
     const plan = buildPrStaticCheckPlan([path]);
     const artifactCommand = plan.commands.find(
       (command): command is { name: string; args: string[] } =>
         command.name === "check:generated-artifacts" && "args" in command,
     );
     expect(plan.classification.pagesChanged).toBe(false);
-    expect(artifactCommand?.args[0]).toContain("safety-score-v9-evaluation-build");
+    expect(artifactCommand?.args[0] ?? "").not.toContain("safety-score-v9-evaluation-build");
+    expect(selectGeneratedArtifacts({ bootstrap: true, check: true }).map((artifact) => artifact.id))
+      .toContain("safety-score-v9-evaluation-build");
   });
 
   it("selects structural checks for production and validation surfaces", () => {
