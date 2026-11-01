@@ -1,5 +1,5 @@
 import { scanEditorialText, type EditorialFinding } from "@shared/lib/editorial-style";
-import { escapeHtml } from "../../telegram/delivery/telegram";
+import { escapeHtml, renderTelegramDigestBody } from "../../telegram/delivery/telegram";
 
 export interface DigestWrapperEditorialFinding {
   ruleId: string;
@@ -70,8 +70,9 @@ export function scanTelegramDigestWrapper(params: {
   cemeteryAppendixHtml: string | null;
 }): DigestWrapperEditorialFinding[] {
   let wrapperOnly = maskSegment(params.rendered, escapeHtml(params.modelTitle));
-  const renderedModelBody = escapeHtml(params.modelExtended).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
-  wrapperOnly = maskSegment(wrapperOnly, renderedModelBody);
+  const modelBody = renderTelegramDigestBody(params.modelExtended);
+  wrapperOnly = maskSegment(wrapperOnly, modelBody.bodyHtml);
+  wrapperOnly = maskSegment(wrapperOnly, modelBody.standingHtml);
 
   const cemeteryAppendix = params.cemeteryAppendixHtml ?? "";
   const ordinaryWrapper = maskSegment(wrapperOnly, cemeteryAppendix);

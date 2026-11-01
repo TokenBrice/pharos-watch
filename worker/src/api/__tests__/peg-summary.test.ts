@@ -12,6 +12,7 @@ import { __pegSummaryTestHooks, handlePegSummary } from "../peg-summary";
 import { loadTimelineOgPage } from "../og-page/timeline";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import * as currentPegObservations from "../../lib/current-peg-observations";
+import { DEX_PRICE_CHECK_FRESHNESS_SEC } from "../../lib/constants";
 
 const nowSec = Math.floor(Date.now() / 1000);
 
@@ -478,7 +479,7 @@ describe("handlePegSummary", () => {
 
   it("hides dexPriceCheck when data is too stale for UI display", async () => {
     const asset = makeAsset({ id: "usdt-tether", symbol: "USDT" });
-    const db = makePegSummaryDbWithDexPrice([asset], nowSec - 7200);
+    const db = makePegSummaryDbWithDexPrice([asset], nowSec - DEX_PRICE_CHECK_FRESHNESS_SEC);
     const res = await handlePegSummary(db);
     const body = (await res.json()) as {
       coins: Array<{ id: string; dexPriceCheck?: { agrees: boolean } | null }>;

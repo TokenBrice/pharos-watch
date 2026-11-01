@@ -597,5 +597,9 @@ describe("DDRv2 storage contract cases", () => {
     await recordLockOpportunity(db, retry);
     expect(row<{ last_state: string }>(db, "SELECT last_state FROM depeg_resolver_prediction_lock_state WHERE incident_key = ?", incident.incidentKey)).toEqual({ last_state: "publication_retry_pending" });
     expect(row<{ count: number }>(db, "SELECT COUNT(*) AS count FROM depeg_resolver_lock_opportunity_audit WHERE incident_key = ? AND action = 'publication_retry_pending'", incident.incidentKey)).toEqual({ count: 1 });
+
+    await recordLockOpportunity(db, { ...retry, action: "published", reason: null });
+    expect(row<{ last_state: string }>(db, "SELECT last_state FROM depeg_resolver_prediction_lock_state WHERE incident_key = ?", incident.incidentKey)).toEqual({ last_state: "published" });
+    expect(row<{ count: number }>(db, "SELECT COUNT(*) AS count FROM depeg_resolver_lock_opportunity_audit WHERE incident_key = ? AND action = 'published'", incident.incidentKey)).toEqual({ count: 1 });
   }));
 });

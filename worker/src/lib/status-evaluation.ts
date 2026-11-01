@@ -130,9 +130,10 @@ export async function computeRawStatus(
   // Independent status loads run in parallel. The repo's six-request outbound
   // budget applies to fetch phases, not these D1 reads; none is scheduled via
   // waitUntil.
+  const readNow = Math.floor(Date.now() / 1000);
   const [cronHealth, budgetOnlySurfaceResult, dataQuality, supplyIntegrity, supplements, transitionsLast24h] = await Promise.all([
-    loadCronHealth(db, now, { readNow: Math.floor(Date.now() / 1000) }),
-    loadBudgetOnlySurfaceStatuses(db, now),
+    loadCronHealth(db, now, { readNow }),
+    loadBudgetOnlySurfaceStatuses(db, now, readNow),
     getDataQuality(db, now, {
       blacklistMetrics: publicHealth.blacklistMetrics,
       stablecoinPublication: publicHealth.stablecoinPublication,

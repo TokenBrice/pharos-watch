@@ -138,7 +138,11 @@ export function getRuntimeProducerIdentity(
     scheduleKey: runtime.scheduleKey,
     job,
     producerPath: descriptor.producerPath,
-    producerKind: runtime.producerKind ?? descriptor.producerKind,
+    // Budget-only identities are canonical: the runtime's scheduled-job default
+    // would never match the descriptor key /api/status reads.
+    producerKind: descriptor.statusTracked
+      ? runtime.producerKind ?? descriptor.producerKind
+      : descriptor.producerKind,
     invocationId: runtime.invocationId ?? `scheduled:${runtime.scheduleKey}:${runtime.slotStartedAt}`,
     workerVersion: runtime.workerVersion ?? null,
     slotStartedAt: runtime.slotStartedAt,

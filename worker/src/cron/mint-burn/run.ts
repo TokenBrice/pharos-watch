@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { invalidateMintBurnFlowCaches, readMintBurnWindowContext } from "../../lib/mint-burn-flows-service";
-import { isGrandfatheredMintBurnConfig, mintBurnDisabledReason, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
+import { isGrandfatheredMintBurnConfig, mintBurnDisabledReason, resolveMintBurnDisabledSymbols, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
 import { createBudget } from "../../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { loadMintBurnPriceContextBatch } from "../../lib/mint-burn-pipeline/context";
@@ -94,10 +94,13 @@ export class MintBurnRun {
 
     throwIfAborted(signal);
     const budget = createBudget(GLOBAL_BUDGET_LIMIT);
-    const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
-    const disabledSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
-
     const allActiveConfigs = includeActiveTrackedIds(MINT_BURN_CONFIGS, (config) => config.stablecoinId);
+    const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
+    const disabledSymbols = resolveMintBurnDisabledSymbols(
+      allActiveConfigs,
+      normalizeDisabledSymbolSet(options.disabledSymbols),
+    );
+
     const allTrackableConfigs = allActiveConfigs.filter((config) => laneIncludesConfig(lane, config));
     let enabledConfigs: MintBurnContractConfig[] = [];
     const retentionConfigs: MintBurnContractConfig[] = [];

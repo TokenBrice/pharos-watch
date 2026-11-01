@@ -4,7 +4,7 @@ import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
-import { mintBurnDisabledReason } from "../lib/mint-burn-publication";
+import { mintBurnDisabledReason, resolveMintBurnDisabledSymbols } from "../lib/mint-burn-publication";
 import { normalizeDisabledConfigIdSet, normalizeDisabledSymbolSet } from "./mint-burn/run-state";
 
 /**
@@ -43,8 +43,9 @@ function activeMintBurnPairs(
   disabledIds: ReadonlySet<string>,
   disabledSymbols: ReadonlySet<string>,
 ): { keys: Set<string>; json: string } {
+  const resolvedSymbols = resolveMintBurnDisabledSymbols(MINT_BURN_CONFIGS, disabledSymbols);
   const pairs = includeActiveTrackedIds(
-    MINT_BURN_CONFIGS.filter((config) => mintBurnDisabledReason(config, disabledIds, disabledSymbols) == null),
+    MINT_BURN_CONFIGS.filter((config) => mintBurnDisabledReason(config, disabledIds, resolvedSymbols) == null),
     (config) => config.stablecoinId,
   ).map((config) => [config.stablecoinId, config.chain.chainId] as [string, string]);
   return {

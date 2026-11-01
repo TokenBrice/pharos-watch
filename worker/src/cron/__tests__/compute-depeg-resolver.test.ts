@@ -681,6 +681,14 @@ describe("computeDepegResolver", () => {
     const payload = readDdrSnapshotPayload(db);
     expect(payload.rows[0].prediction.policyDelaySec).toBe(72 * 3600);
     expect(payload.rows[0].prediction.lockTrigger).toBe("readiness_backstop");
+    // A successful retry must advance the pre-seal lock state past
+    // publication_retry_pending; otherwise it contradicts first-publication membership.
+    expect(stores.recordLockDeferral).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      incidentKey: sealed.incidentKey,
+      eventId: sealed.eventId,
+      action: "published",
+      reason: null,
+    }));
   });
 
   it("marks the public snapshot degraded when the manifest write fails after sealing", async () => {

@@ -27,6 +27,26 @@ export function mintBurnDisabledReason(
   return null;
 }
 
+/**
+ * The legacy symbol switch is coin-scoped only when every config carrying that
+ * symbol belongs to one stablecoin. A shared ticker (GUSD, MUSD, USDP, YUSD, …)
+ * would otherwise withdraw an unrelated coin, so an ambiguous symbol disables
+ * nothing; operators use MINT_BURN_DISABLED_IDS for that case.
+ */
+export function resolveMintBurnDisabledSymbols(
+  configs: readonly MintBurnContractConfig[],
+  disabledSymbols: ReadonlySet<string>,
+): Set<string> {
+  const idsBySymbol = new Map<string, Set<string>>();
+  for (const config of configs) {
+    const symbol = config.symbol.toUpperCase();
+    const ids = idsBySymbol.get(symbol) ?? new Set<string>();
+    ids.add(config.stablecoinId.toLowerCase());
+    idsBySymbol.set(symbol, ids);
+  }
+  return new Set([...disabledSymbols].filter((symbol) => (idsBySymbol.get(symbol)?.size ?? 0) <= 1));
+}
+
 export interface MintBurnAdmissionRow {
   config_key: string;
   config_fingerprint: string;

@@ -236,6 +236,32 @@ export async function writePublicationBeforeCache(input: {
       publicPredictionIds,
       publicPredictionRowHashes,
     });
+    // The manifest (and its first-publication membership) is committed; advance
+    // the pre-seal lock state so it cannot keep asserting a pending retry.
+    for (const sealed of retryPendingSealed) {
+      try {
+        await input.stores.recordLockDeferral(input.db, {
+          incidentKey: sealed.incidentKey,
+          eventId: sealed.eventId,
+          runId: input.ddrRunId,
+          runAt: input.nowSec,
+          eligibleAt: sealed.eligibleAt,
+          predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
+          healthStatus: "healthy",
+          action: "published",
+          reason: null,
+          lockTrigger: sealed.lockTrigger ?? null,
+          forecastReadinessScore: sealed.forecastReadinessScore ?? null,
+          forecastReadinessVersion: sealed.forecastReadinessVersion ?? null,
+          readinessThreshold: sealed.readinessThreshold ?? null,
+          backstopAt: sealed.backstopAt ?? null,
+          backstopDelaySec: sealed.backstopDelaySec ?? null,
+        });
+      } catch (error) {
+        // Accounting must not relabel a committed publication as failed.
+        console.warn(`[ddr] publication-lock-state-unrecorded:${formatDdrrFailure(error)}`);
+      }
+    }
     return { attempted: true, ok: true, manifest, firstPublication, error: null };
   } catch (error) {
     for (const sealed of retryPendingSealed) {

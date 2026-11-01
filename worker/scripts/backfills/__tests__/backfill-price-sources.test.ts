@@ -114,6 +114,34 @@ describe("fetchMarketBackfillPriceSeries", () => {
     ]);
   });
 
+  it("applies the above-peg policy to merged DefiLlama history inside a bounded replay window", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_534_000_001_000);
+    fetchWithRetryMock.mockResolvedValue(makeJsonResponse({ coins: { "coingecko:tether": { prices: [
+      { timestamp: 1_531_517_487, price: 1.0732 },
+      { timestamp: 1_533_999_999, price: 1.01 },
+    ] } } }));
+    const result = await fetchMarketBackfillPriceSeries(makeMeta({ id: "usdt-tether" }), "tether", {
+      granularity: "daily", range: { startSec: 1_530_999_999, endSec: 1_534_000_001 },
+      seedCoinGeckoPrices: [
+        { timestamp: 1_531_000_000, price: 1.021 },
+        { timestamp: 1_532_000_000, price: 1.002 },
+      ],
+    });
+    expect(result.prices).toEqual([
+      { timestamp: 1_532_000_000, price: 1.002 },
+      { timestamp: 1_533_999_999, price: 1.01 },
+    ]);
+    expect(result.diagnostics.policyAdjustments).toEqual([
+      { source: "coingecko", adjustment: "above-peg-clamp", removedPoints: 1 },
+      { source: "defillama", adjustment: "above-peg-clamp", removedPoints: 1 },
+    ]);
+    expect(result.diagnostics.perSourceStats).toEqual([
+      { source: "coingecko", points: 1, startTimestamp: 1_532_000_000, endTimestamp: 1_532_000_000 },
+      { source: "defillama", points: 1, startTimestamp: 1_533_999_999, endTimestamp: 1_533_999_999 },
+    ]);
+  });
+
   it("rejects cancellation during hourly pacing without returning empty history or calling a provider", async () => {
     const controller = new AbortController();
     const pending = fetchMarketBackfillPriceSeries(makeMeta(), "euro-coin", {

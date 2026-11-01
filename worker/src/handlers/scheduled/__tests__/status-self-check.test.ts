@@ -208,6 +208,18 @@ describe("hourly corroboration before the next publication", () => {
     expect(JSON.stringify(mocks.recordBudgetSurfaceTelemetry.mock.calls)).not.toContain("secret-token");
   });
 
+  it("records price-corroboration under its budget-only producer identity", async () => {
+    await runStatusSelfCheckSlot(runtime([]));
+    expect(mocks.recordBudgetSurfaceTelemetry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      surface: "price-corroboration",
+      producer: expect.objectContaining({
+        scheduleKey: "statusSelfCheckOffset",
+        job: "price-corroboration",
+        producerKind: "budget-only",
+      }),
+    }));
+  });
+
   it.each([24])("refreshes DEX only on minute %s", async (minute) => {
     await runStatusSelfCheckSlot(runtime([], minute));
     expect(mocks.runPriceCorroboration).not.toHaveBeenCalled();

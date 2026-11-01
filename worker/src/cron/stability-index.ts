@@ -18,7 +18,7 @@ import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-reg
 import { classifyPsiUniverseCoverage } from "@shared/lib/psi-policy";
 import { throwIfAborted } from "../lib/abort";
 import { getNativeEventPrice, isNativePegEvent, type NativeEventPriceEvidence } from "@shared/lib/depeg-quote-domain";
-import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { isObservedPrice, isReplaySafePriceSource } from "@shared/lib/pricing-source-policy";
 import { protocolParProvider } from "../lib/authoritative-price-sources/protocol-par";
 import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
 
@@ -161,7 +161,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   try {
     const replayPriceCache = await getPriceCache(db);
     for (const [assetId, cached] of replayPriceCache) {
-      // Pre-cutover nominal routes wrote par under the observed redemption source.
+      // Replay fallback uses only replay-safe cached values; a nominal par
+      // reference is not an observed price and cannot turn an open depeg into
+      // measured calm. Legacy `protocol-redeem` par rows carry no mode.
+      if (!isReplaySafePriceSource(cached.source) || cached.observedAtMode === "nominal_reference") continue;
       if (cached.source === "protocol-redeem" && protocolParProvider.matches(assetId)) continue;
       if (
         cached.price != null &&
