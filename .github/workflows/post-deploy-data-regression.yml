@@ -5,7 +5,9 @@ name: Post-deploy data regression
 # separate read-only workflow rather than part of the short deploy job. It
 # consumes the pre-deploy baseline artifact captured by Deploy to Cloudflare.
 on:
-  workflow_run:
+  # Reviewed exception: the job below runs only for main-branch push or dispatch
+  # deploys from this repository, so fork-controlled runs never reach secrets.
+  workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: ["Deploy to Cloudflare"]
     types: [completed]
   workflow_dispatch:
