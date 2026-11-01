@@ -121,6 +121,15 @@ export function formatCompactUsd(value: number): string {
   return formatCompactUsdWithOptions(value);
 }
 
+/**
+ * Compact USD for observed supply amounts: the unit tier rounds to whole
+ * dollars, so a positive sub-dollar amount would print "$0". Keep the bound
+ * visible as "<$1" instead of inventing cents; zero still prints "$0".
+ */
+export function formatCompactUsdOrSubDollar(value: number): string {
+  return value > 0 && value < 1 ? "<$1" : formatCompactUsd(value);
+}
+
 export function formatCompactUsdShort(value: number): string {
   return formatCompactUsdWithOptions(value, {
     decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 },

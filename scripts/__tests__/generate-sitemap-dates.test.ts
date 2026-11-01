@@ -3,6 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import { collectStablecoinDetailDates, STABLECOIN_DETAIL_CONTENT_REVISED_AT } from "../lib/sitemap-detail-dates";
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
+import { BLOG_POSTS } from "../../src/data/blog";
 
 const generator = vi.hoisted(() => ({
   gitLog: "",
@@ -112,6 +113,9 @@ const BASE_COMMIT = "2026-02-01T00:00:00+00:00";
 const LATER_COMMIT = "2026-09-30T12:00:00+00:00";
 const SCHEMA_PATH = "shared/types/editorial-content.ts";
 const STUDY_PATH = "src/lib/case-studies/usdc-svb-2023.json";
+const BLOG_INDEX_PATH = "src/data/blog/index.ts";
+const BLOG_RENDERER_PATH = "src/app/blog/[slug]/page.tsx";
+const BLOG_POST_PATHS = BLOG_POSTS.map((post) => `src/data/blog/posts/${post.slug}.md`);
 
 async function scannedHistoryFiles(): Promise<string[]> {
   const { execFileSync } = await vi.importActual<typeof import("node:child_process")>("node:child_process");
@@ -119,7 +123,6 @@ async function scannedHistoryFiles(): Promise<string[]> {
     "src/app",
     "src/lib/case-studies",
     "src/data/blog",
-    "src/lib/page-metadata.ts",
     SCHEMA_PATH,
     "shared/data/stablecoins/coins",
     "shared/data/stablecoins/domains",
@@ -201,5 +204,39 @@ describe("generated sitemap dates are independent of checkout time", () => {
     expect(changed.length).toBeGreaterThan(1);
     expect(changed.every((route) => /^\/learn\/case-studies\/[^/]+\/$/.test(route))).toBe(true);
     expect(changed).not.toContain("/learn/case-studies/");
+  });
+
+  it("does not re-stamp blog posts for a registry or site-wide metadata edit", async () => {
+    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
+    const registryEdit = await runGenerator({
+      gitLog: gitLogFor(files, [BLOG_INDEX_PATH]),
+      mtime: "2026-10-27T09:00:00.000Z",
+    });
+    expect(changedRoutes(baseline, registryEdit).filter((route) => /^\/blog\/[^/]+\/$/.test(route))).toEqual([]);
+
+    const metadataPath = "src/lib/page-metadata.ts";
+    const metadataEdit = await runGenerator({
+      gitLog: gitLogFor([...files, metadataPath], [metadataPath]),
+      mtime: "2026-10-27T09:00:00.000Z",
+    });
+    expect(changedRoutes(baseline, metadataEdit).filter((route) => /^\/blog\/[^/]+\/$/.test(route))).toEqual([]);
+  });
+
+  it("dates each post from its own markdown and the shared renderer only", async () => {
+    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
+    const editedPost = BLOG_POST_PATHS[0];
+    const postEdit = await runGenerator({
+      gitLog: gitLogFor(files, [editedPost]),
+      mtime: "2026-10-27T09:00:00.000Z",
+    });
+    expect(changedRoutes(baseline, postEdit)).toEqual([`/blog/${BLOG_POSTS[0].slug}/`]);
+
+    const rendererEdit = await runGenerator({
+      gitLog: gitLogFor(files, [BLOG_RENDERER_PATH]),
+      mtime: "2026-10-27T09:00:00.000Z",
+    });
+    expect(changedRoutes(baseline, rendererEdit).sort()).toEqual(
+      BLOG_POSTS.map((post) => `/blog/${post.slug}/`).sort(),
+    );
   });
 });

@@ -1,5 +1,5 @@
 /** Render a validated Pharos daily edition using local assets; never fetch or rank data. */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, extname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { firefox } from "playwright";
@@ -7,6 +7,7 @@ import { DailySocialSnapshotSchema, buildDailySocialAltText, dailySocialRowLabel
 import { escapeXml } from "../lib/og-svg.mts";
 import { parseStrictCliArgs, requireCliString, runCliEntrypoint, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { DAILY_SOCIAL_SNAPSHOT_DIGEST_SUFFIX, dailySocialSnapshotDigest } from "../lib/daily-social-snapshot-digest";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const WIDTH = 1600;
@@ -238,17 +239,26 @@ export async function main(argv: string[]): Promise<void> {
   const out = resolve(requireCliString(values.out, "--out"));
   if (!out.endsWith(".png")) throw new Error("--out must end in .png");
   const input = DailySocialSnapshotSchema.parse(JSON.parse(readFileSync(inputPath, "utf8")));
+  const snapshotDigest = dailySocialSnapshotDigest(input);
   const svg = renderDailySocialSvg(input);
   const base = out.slice(0, -4);
+  // Every artifact is staged beside its final name and renamed only after the
+  // font check and screenshot succeed, so a failed run never leaves a stale
+  // poster.png (or a poster from a different snapshot) next to snapshot.json.
+  const tmpSvg = `${base}.svg.tmp`;
+  const tmpHtml = `${base}.tmp.html`;
+  const tmpPng = `${base}.tmp.png`;
+  const tmpAlt = `${base}.alt.txt.tmp`;
+  const tmpDigest = `${base}${DAILY_SOCIAL_SNAPSHOT_DIGEST_SUFFIX}.tmp`;
   mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(`${base}.svg`, svg);
-  writeFileSync(`${base}.html`, `<!doctype html><meta charset="utf-8"><style>body{margin:0;background:${BG}}svg{display:block}</style>${svg}`);
+  writeFileSync(tmpSvg, svg);
+  writeFileSync(tmpHtml, `<!doctype html><meta charset="utf-8"><style>body{margin:0;background:${BG}}svg{display:block}</style>${svg}`);
   const browser = await firefox.launch({ headless: true });
   try {
     const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: 1 });
     // All poster resources must be embedded, including fonts and coin logos.
     await page.route(/^https?:\/\//, (route) => route.abort());
-    await page.goto(pathToFileURL(`${base}.html`).href, { waitUntil: "load" });
+    await page.goto(pathToFileURL(tmpHtml).href, { waitUntil: "load" });
     const fontsLoaded = await page.evaluate(async () => {
       const fonts = ["24px 'Newsreader'", "24px 'Bricolage Grotesque'"];
       await Promise.all(fonts.map((font) => document.fonts.load(font)));
@@ -256,11 +266,18 @@ export async function main(argv: string[]): Promise<void> {
       return fonts.every((font) => document.fonts.check(font));
     });
     if (!fontsLoaded) throw new Error("Poster fonts failed to load");
-    await page.screenshot({ path: out, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
+    await page.screenshot({ path: tmpPng, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT } });
   } finally {
     await browser.close();
   }
-  writeFileSync(`${base}.alt.txt`, `${buildDailySocialAltText(input)}\n`);
+  writeFileSync(tmpAlt, `${buildDailySocialAltText(input)}\n`);
+  writeFileSync(tmpDigest, `${snapshotDigest}\n`);
+  renameSync(tmpSvg, `${base}.svg`);
+  renameSync(tmpHtml, `${base}.html`);
+  renameSync(tmpPng, out);
+  renameSync(tmpAlt, `${base}.alt.txt`);
+  // The digest lands last: a poster without its matching sidecar fails publish.
+  renameSync(tmpDigest, `${base}${DAILY_SOCIAL_SNAPSHOT_DIGEST_SUFFIX}`);
   console.log(`Rendered ${out}`);
 }
 

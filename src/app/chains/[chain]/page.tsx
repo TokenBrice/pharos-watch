@@ -24,6 +24,7 @@ import {
   CHAIN_STABLECOIN_FEATURE_LINKS,
   getRelatedChainTaxonomyLinks,
   getTrackedDeploymentsForChain,
+  rankChainDeployments,
   type ChainFeatureLink,
   type ChainTaxonomyLink,
   type ChainTrackedDeployment,
@@ -61,10 +62,7 @@ export async function generateMetadata({ params }: { params: Promise<{ chain: st
 
 /** Base coins lead; NAV tokens and variants (sUSDe, spUSDT) only fill remaining slots. */
 function formatSymbolList(deployments: readonly Pick<ChainTrackedDeployment, "symbol" | "isNavOrVariant">[]): string {
-  const ranked = [
-    ...deployments.filter((deployment) => !deployment.isNavOrVariant),
-    ...deployments.filter((deployment) => deployment.isNavOrVariant),
-  ];
+  const ranked = rankChainDeployments(deployments);
   return formatProseList([...new Set(ranked.map((deployment) => deployment.symbol))].slice(0, 3));
 }
 
@@ -144,7 +142,7 @@ function buildChainEditorialIntro({
   meta: ChainMeta;
   deployments: readonly ChainTrackedDeployment[];
 }): string[] {
-  const highlightedDeployments = deployments.slice(0, 5);
+  const highlightedDeployments = rankChainDeployments(deployments).slice(0, 5);
   const trackedDeploymentCount = deployments.reduce((sum, deployment) => sum + deployment.contractCount, 0);
 
   if (trackedDeploymentCount === 0) {
@@ -191,7 +189,7 @@ function ChainRouteCta({
   chainName: string;
   deployments: readonly ChainTrackedDeployment[];
 }) {
-  const compareIds = deployments.slice(0, 4).map((deployment) => deployment.id);
+  const compareIds = rankChainDeployments(deployments).slice(0, 4).map((deployment) => deployment.id);
 
   return (
     <section className="rounded-xl border border-border/60 bg-muted/20 px-4 py-4">

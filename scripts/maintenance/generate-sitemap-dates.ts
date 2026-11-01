@@ -37,9 +37,9 @@ const CASE_STUDY_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../shared/types/editorial-content.ts"),
 ];
 const BLOG_DETAIL_SHARED_SOURCES = [
+  // Per-post dates must not move with the post registry or a site-wide
+  // metadata module: only the renderer every article body shares.
   join(__dirname, "../../src/app/blog/[slug]/page.tsx"),
-  join(__dirname, "../../src/data/blog/index.ts"),
-  join(__dirname, "../../src/lib/page-metadata.ts"),
 ];
 const METHODOLOGY_CHANGELOG_SHARED_SOURCES = [
   // This route owns the shared display config as well as dynamic route metadata.
@@ -67,7 +67,6 @@ const GIT_DATE_SCAN_PATHS = [
   "src/app",
   "src/lib/case-studies",
   "src/data/blog",
-  "src/lib/page-metadata.ts",
   "shared/types/editorial-content.ts",
   "shared/data/stablecoins/coins",
   STABLECOIN_DOMAIN_SOURCE_DIR,

@@ -10,7 +10,6 @@ export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS: string[] = [
   "src/app/**",
   "src/lib/case-studies/**",
   "src/data/blog/**",
-  "src/lib/page-metadata.ts",
   // Case-study schema: a shared Article dependency of every case-study page.
   "shared/types/editorial-content.ts",
   // Profile-wide content changes move every profile through the explicit

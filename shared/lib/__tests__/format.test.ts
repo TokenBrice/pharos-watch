@@ -17,6 +17,7 @@ import {
   formatCurrency,
   formatCompactCount,
   formatCompactUsd,
+  formatCompactUsdOrSubDollar,
   formatCompactUsdWithOptions,
   formatCompactUsdShort,
   formatCompactUsdShortLowerK,
@@ -583,6 +584,15 @@ describe("relative duration helpers", () => {
     expect(formatApproxDurationSeconds(90 * 60, { style: "long" })).toBe("1.5 hr");
     expect(formatApproxDurationSeconds(3 * 86_400, { style: "long" })).toBe("3.0 days");
     expect(formatApproxDurationSeconds(Number.NaN, { invalidFallback: "—" })).toBe("—");
+  });
+
+  it("keeps a positive sub-dollar supply visible instead of rounding it to $0", () => {
+    expect(formatCompactUsdOrSubDollar(0.2309)).toBe("<$1");
+    expect(formatCompactUsdOrSubDollar(0.999)).toBe("<$1");
+    expect(formatCompactUsdOrSubDollar(0)).toBe("$0");
+    expect(formatCompactUsdOrSubDollar(1)).toBe("$1");
+    expect(formatCompactUsdOrSubDollar(71_571_257.67)).toBe("$71.6M");
+    expect(formatCompactUsdOrSubDollar(Number.NaN)).toBe("N/A");
   });
 });
 

@@ -43,11 +43,16 @@ vi.mock("@/hooks/api-hooks", () => ({
 }));
 
 vi.mock("@/app/alt-pegs/alt-peg-stablecoin-table", () => ({
-  AltPegStablecoinTable: ({ dexLiquidity, selectedPeg }: {
+  AltPegStablecoinTable: ({ dexLiquidity, selectedPeg, sourceGenerations }: {
     dexLiquidity?: Record<string, { liquidityScore: number | null }>;
     selectedPeg: string | null;
+    sourceGenerations?: Record<string, number | undefined>;
   }) => (
-    <div data-testid="alt-peg-stablecoin-table" data-selected-peg={selectedPeg ?? ""}>
+    <div
+      data-testid="alt-peg-stablecoin-table"
+      data-selected-peg={selectedPeg ?? ""}
+      data-source-generations={JSON.stringify(sourceGenerations ?? null)}
+    >
       <span data-testid="alt-peg-liquidity-score">{dexLiquidity?.["eurc-circle"]?.liquidityScore ?? "unavailable"}</span>
     </div>
   ),
@@ -203,6 +208,87 @@ describe("AltPegsClient", () => {
       expect(screen.queryByText(/Refresh failed/)).toBeNull();
     }
     expect(screen.getByTestId("non-usd-share-chart")).toBeTruthy();
+  });
+
+  it("passes the four producer generations to the table export", () => {
+    useStablecoinsMock.mockReturnValue({ ...useStablecoinsMock(), meta: { updatedAt: 11_111, ageSeconds: 0, status: "fresh" } });
+    usePegSummaryMock.mockReturnValue({ ...usePegSummaryMock(), meta: { updatedAt: 22_222, ageSeconds: 0, status: "fresh" } });
+    useDexLiquidityTableMock.mockReturnValue({ ...useDexLiquidityTableMock(), meta: { updatedAt: 33_333, ageSeconds: 0, status: "fresh" } });
+    useReportCardsV9Mock.mockReturnValue({ ...useReportCardsV9Mock(), meta: { updatedAt: 44_444, ageSeconds: 0, status: "fresh" } });
+    render(<AltPegsClient />);
+    expect(JSON.parse(screen.getByTestId("alt-peg-stablecoin-table").getAttribute("data-source-generations")!)).toEqual({
+      stablecoins: 11_111,
+      pegSummary: 22_222,
+      dexLiquidity: 33_333,
+      reportCards: 44_444,
+    });
+  });
+
+  function freshMeta(updatedAt: number) {
+    return { updatedAt, ageSeconds: 0, status: "fresh" };
+  }
+
+  // Aliases keep the mock identifiers out of hook-shaped helper names.
+  const queryMocks = {
+    stablecoins: useStablecoinsMock,
+    share: useNonUsdShareMock,
+    pegSummary: usePegSummaryMock,
+    dexLiquidity: useDexLiquidityTableMock,
+    reportCards: useReportCardsV9Mock,
+  };
+
+  /** Every source healthy and populated; one overlay is then aged by the caller. */
+  function primeOverlayHealth(now: number) {
+    const nowSec = Math.floor(now / 1000);
+    queryMocks.stablecoins.mockReturnValue({ ...queryMocks.stablecoins(), dataUpdatedAt: now, meta: freshMeta(nowSec) });
+    queryMocks.share.mockReturnValue({ ...queryMocks.share(), dataUpdatedAt: now, meta: freshMeta(nowSec) });
+    queryMocks.pegSummary.mockReturnValue({
+      ...queryMocks.pegSummary(), data: { coins: [{ id: "usdc-circle" }] }, dataUpdatedAt: now, meta: freshMeta(nowSec),
+    });
+    queryMocks.dexLiquidity.mockReturnValue({
+      ...queryMocks.dexLiquidity(), data: { "eurc-circle": { liquidityScore: 0 } }, dataUpdatedAt: now, meta: freshMeta(nowSec),
+    });
+    queryMocks.reportCards.mockReturnValue({
+      ...queryMocks.reportCards(), data: { cards: [{ id: "usdc-circle" }] }, dataUpdatedAt: now, meta: freshMeta(nowSec),
+    });
+  }
+
+  it.each([
+    {
+      label: "Peg Data",
+      maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.pegSummary,
+      apply: (meta: object) => queryMocks.pegSummary.mockReturnValue({ ...queryMocks.pegSummary(), meta }),
+    },
+    {
+      label: "Liquidity",
+      maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.dexLiquidity,
+      apply: (meta: object) => queryMocks.dexLiquidity.mockReturnValue({ ...queryMocks.dexLiquidity(), meta }),
+    },
+    {
+      label: "Report Cards",
+      maxAgeSec: API_FRESHNESS_MAX_AGE_SEC.reportCards,
+      apply: (meta: object) => queryMocks.reportCards.mockReturnValue({ ...queryMocks.reportCards(), meta }),
+    },
+  ])("ages $label in the page banner once it passes its public stale band", ({ label, maxAgeSec, apply }) => {
+    const now = Date.now();
+    primeOverlayHealth(now);
+    const ageSeconds = maxAgeSec * 12 + 1;
+    apply({ updatedAt: Math.floor(now / 1000) - ageSeconds, ageSeconds, status: "fresh" });
+    render(<AltPegsClient />);
+    expect(screen.getByText("Showing an older snapshot")).toBeTruthy();
+    expect(screen.getAllByText(label, { exact: false }).length).toBeGreaterThan(0);
+  });
+
+  it("keeps the page banner quiet while an overlay is inside its stale band", () => {
+    const now = Date.now();
+    primeOverlayHealth(now);
+    const ageSeconds = API_FRESHNESS_MAX_AGE_SEC.pegSummary * 12 - 1;
+    usePegSummaryMock.mockReturnValue({
+      ...usePegSummaryMock(),
+      meta: { updatedAt: Math.floor(now / 1000) - ageSeconds, ageSeconds, status: "fresh" },
+    });
+    render(<AltPegsClient />);
+    expect(screen.queryByText("Showing an older snapshot")).toBeNull();
   });
 
   it.each([false, true])("separates initial failure from retained failed refresh (hasData=%s)", (hasData) => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDepegHistoryDescription,
   buildPublicDatasetCitation,
   buildPublicDatasetMirrorJsonLd,
   PHAROS_DATA_LICENSE_URL,
@@ -44,6 +45,22 @@ describe("flagship Dataset JSON-LD", () => {
     expect(jsonLd.includedInDataCatalog["@id"]).toBe(PHAROS_PUBLIC_DATA_CATALOG_ID);
     expect(jsonLd.creator["@id"]).toBe("https://pharos.watch#organization");
     expect(jsonLd.distribution.map((download) => download.encodingFormat)).toEqual(["application/json", "text/csv"]);
+  });
+
+  it("never promises an audit-verdict column the depeg export does not carry", () => {
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "depeg-history")!;
+    const fields = Object.keys(descriptor.export.rows[0] ?? {});
+    expect(descriptor.description.includes("audit verdict")).toBe(fields.includes("auditVerdict"));
+    expect(buildDepegHistoryDescription(["id", "source", "auditVerdict"])).toContain("audit verdict");
+    expect(buildDepegHistoryDescription(["id", "source"])).not.toContain("audit verdict");
+  });
+
+  it("names the top-stablecoins export's actual final CSV column", () => {
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "top-stablecoins")!;
+    const last = Object.keys(descriptor.export.rows[0] ?? {}).at(-1);
+    expect(last).toBe("supplyProvenance");
+    expect(descriptor.description).toContain(`and ${last} is the final CSV column`);
+    expect(descriptor.description).not.toMatch(/final CSV column, supplyUnavailableReason/);
   });
 });
 

@@ -29,12 +29,22 @@ export interface PublicDatasetDescriptor {
   temporalStartField?: string;
 }
 
+/**
+ * The depeg card's schema sentence names only fields the linked export
+ * actually carries: a sheet capture must not promise an audit-verdict column
+ * it lacks.
+ */
+export function buildDepegHistoryDescription(rowFields: readonly string[]): string {
+  const auditVerdict = rowFields.includes("auditVerdict") ? ", plus the ledger's audit verdict" : "";
+  return `Public history of tracked depeg events with stablecoin IDs, direction, peak deviation, timing, duration, prices, peg reference, and source${auditVerdict}.`;
+}
+
 export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescriptor[] = [
   {
     slug: "top-stablecoins",
     name: "Pharos Top Stablecoins Dataset",
     description:
-      "Public snapshot of tracked stablecoins with peg type, peg mechanism, price, circulating USD supply, chain count, and chain coverage. The final CSV column, supplyUnavailableReason, explains unavailable supply without shifting existing columns.",
+      "Public snapshot of tracked stablecoins with peg type, peg mechanism, price, circulating USD supply, chain count, and chain coverage. The supplyUnavailableReason column explains unavailable supply without shifting existing columns, and supplyProvenance is the final CSV column.",
     keywords: ["stablecoin market cap", "stablecoin supply", "stablecoin chains", "stablecoin dataset"],
     export: PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"] as PublicDatasetExport,
   },
@@ -49,8 +59,9 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
   {
     slug: "depeg-history",
     name: "Pharos Depeg History Dataset",
-    description:
-      "Public history of tracked depeg events with stablecoin IDs, direction, peak deviation, timing, duration, prices, peg reference, source, and audit verdict.",
+    description: buildDepegHistoryDescription(
+      Object.keys(PUBLIC_DATASET_CURRENT_EXPORTS["depeg-history"].rows[0] ?? {}),
+    ),
     keywords: ["stablecoin depeg history", "depeg events", "peg monitoring", "stablecoin incident data"],
     export: PUBLIC_DATASET_CURRENT_EXPORTS["depeg-history"] as PublicDatasetExport,
     temporalStartField: "startedAtISO",
