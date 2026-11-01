@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Pre-launch bank deposit token: one VUSD represents US$1 on deposit with VersaBank USA National Association. This is exposure to a bank deposit and its balance sheet, not a separately segregated 100%-cash reserve trust. Federal deposit-insurance eligibility remains subject to regulatory confirmation.",
+  "collateral": "Pre-launch bank deposit token: one VUSD represents US$1 on deposit with VersaBank USA National Association. This is exposure to a bank deposit and its balance sheet, not a separately segregated 100%-cash reserve trust. VersaBank's 15 October 2026 release calls VUSD FDIC insurance-eligible without naming a regulator decision.",
   "pegMechanism": "The USDVB pilot issues one token per US$1 deposited with VersaBank USA, with issuance and redemption through VersaVault and access/control through VersaView on planned Algorand, Ethereum and Stellar deployments. Ordinary external-holder transfer and redemption rights, minimums, fees, timing and capacity are unpublished.",
   "mechanismArchetype": "fiat-cash",
   "links": [
@@ -25,7 +25,16 @@
   },
   "status": "pre-launch",
   "announcedDate": "2025-08-26",
-  "launchPhaseDetail": "Internal USDVB pilot announced August 26, 2025, with limited designated external deposit-partner/client deployment planned. Pilot is not a supported catalog launch-phase enum, so no launchPhase is assigned. Commercial launch requires the bank’s stated OCC non-objection process; the September 1, 2026 filing still seeks regulatory confirmation of deposit-insurance eligibility and the ability to pay interest. On October 15 2026 VersaBank announced the US commercial phase, under which VersaBank USA is to issue a tokenized deposit branded VUSD; the release names no chain or date. Pharos tracks the commercial token as VUSD from October 15 2026; USDVB remains the pilot name. No current launch window or official chain-qualified asset addresses are established.",
+  "launchPhaseDetail": "Internal USDVB pilot announced August 26, 2025, with limited designated external deposit-partner/client deployment planned. Pilot is not a supported catalog launch-phase enum, so no launchPhase is assigned. The bank had described commercial launch as subject to an OCC non-objection process, and its September 1, 2026 filing sought regulatory confirmation of deposit-insurance eligibility and the ability to pay interest. On October 1 2026 VersaBank said VersaBank USA is serving as issuer of Bank of North Dakota's Roughrider Coin, live on Fiserv's digital asset platform, with responsibility for minting, burning, custody and reserve asset management. On October 15 2026 VersaBank announced the US commercial phase, under which VersaBank USA is to issue VUSD, a tokenized deposit the release calls interest-paying and FDIC insurance-eligible. The release says the phase is in full compliance with U.S. federal banking regulations and cites recent certainty around the bank's compliance, but names no regulator decision, chain or date. Pharos tracks the commercial token as VUSD from October 15 2026; USDVB remains the pilot name. No current launch window or official chain-qualified asset addresses are established.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://www.newsfilecorp.com/release/319128",
+      "title": "VersaBank Initiates Commercial Phase of Tokenized Deposit Program in the United States",
+      "description": "VersaBank's October 15 2026 release announcing that VersaBank USA will issue VUSD, a U.S. dollar tokenized deposit the bank describes as interest-paying and FDIC insurance-eligible, with exchange listings planned as soon as feasible.",
+      "source": "VersaBank via Newsfile"
+    }
+  ],
   "milestones": [
     {
       "date": "2025-08-26",
@@ -40,6 +49,13 @@
       "title": "Quarterly filing retains conditional tokenized-deposit strategy",
       "sourceUrl": "https://www.versabank.com/wp-content/uploads/2026/09/VB-Q326-MDA-vF.pdf",
       "description": "The bank seeks regulatory confirmation of insurance eligibility and the ability to pay interest; the filing does not establish a public USDVB commercial launch."
+    },
+    {
+      "date": "2026-10-01",
+      "type": "partnership",
+      "title": "VersaBank USA becomes issuer of Bank of North Dakota's Roughrider Coin",
+      "description": "VersaBank said its subsidiary VersaBank USA, N.A. is serving as issuer of Roughrider Coin on Fiserv's digital asset platform, responsible for minting, burning, custody and reserve asset management, with Solana and Fireblocks named as supporting partners. The release calls Roughrider a stablecoin for bank-to-bank payments and does not mention VUSD or USDVB.",
+      "sourceUrl": "https://www.newsfilecorp.com/release/316860/Versabank-Partners-with-Fiserv-to-Provide-Critical-Digital-Asset-Technology-and-CustodyReserve-Management-Services-for-Bank-of-North-Dakotas-Roughrider-Stablecoin"
     },
     {
       "date": "2026-10-15",

@@ -17,9 +17,27 @@
     { "label": "Asset Hub asset", "url": "https://assethub-polkadot.subscan.io/assets/7873" }
   ],
   "status": "pre-launch",
+  "announcedDate": "2026-09-07",
   "launchDate": "2026-10-08",
   "launchPhase": "launched",
+  "launchPhaseDetail": "Polkadot OpenGov referendum 1944 created dotUSD as Asset Hub asset 7873, with 6 decimals, and took effect on October 8 2026. Its first phase allows only capped one-to-one minting and redemption against USDT through a peg stability module, alongside a Treasury-funded DOT/dotUSD pool. DOT-collateral vaults are left to a later phase. On October 26 the Technical Fellowship disclosed an XCM bug that had removed about 4.06 million dotUSD from the recorded supply while the tokens stayed in the pool, and arbitrage against the imbalance cost the Treasury's liquidity position an estimated $1.3 million. Referendum 1961 restored the recorded supply on October 30 without changing any balance. Asset Hub showed 4,212,640.59 dotUSD across 60 accounts on November 1 2026. Pharos tracks dotUSD pre-launch because no admitted source prices it: CoinGecko's dotusd preview has a null price and DefiLlama has no listing.",
+  "featuredContent": [
+    {
+      "type": "article",
+      "url": "https://pcf.network/news/dotusd-approved/",
+      "title": "DOT holders approve dotUSD, Polkadot's native stablecoin",
+      "description": "The Polkadot Community Foundation's October 8 2026 post on referendum 1944 taking effect and on dotUSD's USDT-backed first phase.",
+      "source": "Polkadot Community Foundation"
+    }
+  ],
   "milestones": [
+    {
+      "date": "2026-09-07",
+      "type": "announcement",
+      "title": "dotUSD proposal submitted to Polkadot OpenGov as referendum 1944",
+      "description": "The Polkadot Community Foundation put forward the community-drafted dotUSD referendum, which asks the Treasury to seed the DOT/dotUSD pool with $2.5 million of USDT used to mint dotUSD and $2.5 million of DOT. Its first phase allows only capped one-to-one minting against USDT through a peg stability module, leaving DOT-collateral vaults to a later phase. The referendum was confirmed on October 7 and executed on October 8 2026.",
+      "sourceUrl": "https://polkadot.subsquare.io/referenda/1944"
+    },
     {
       "date": "2026-10-08",
       "type": "milestone",
@@ -28,10 +46,17 @@
       "sourceUrl": "https://pcf.network/news/dotusd-approved/"
     },
     {
-      "date": "2026-10-27",
+      "date": "2026-10-26",
       "type": "milestone",
-      "title": "XCM supply-accounting bug omits about 4.06 million dotUSD; referendum 1961 corrects the record",
-      "description": "The Polkadot Technical Fellowship found an XCM supply-accounting error that left about 4.06 million dotUSD out of Asset Hub's recorded supply while the tokens remained in a liquidity pool. The resulting pool imbalance cost the Treasury's liquidity position an estimated $1.3 million to arbitrage; user wallets and funds were unaffected, and impacted assets were moved to a controlled account. OpenGov referendum 1961 executed to fix the dotUSD supply record and unblock Snowbridge.",
+      "title": "XCM bug removes about 4.06 million dotUSD from recorded supply",
+      "description": "The Polkadot Technical Fellowship disclosed that an XCM bug on Asset Hub had removed about 4.06 million dotUSD from the recorded token supply while the tokens remained in the DOT/dotUSD liquidity pool. Arbitrage against the resulting price imbalance cut the Treasury's liquidity position by an estimated $1.3 million. The Fellowship said it had fixed the bug through a whitelisted caller referendum and moved the impacted assets to a controlled account, and that user wallets and funds were unaffected.",
+      "sourceUrl": "https://forum.polkadot.network/t/xcm-issue-affecting-asset-hub/19126"
+    },
+    {
+      "date": "2026-10-30",
+      "type": "milestone",
+      "title": "Referendum 1961 restores dotUSD's recorded supply and unblocks Snowbridge",
+      "description": "OpenGov referendum 1961, submitted on October 27 2026, executed on October 30. The runtime upgrade recalculated dotUSD's recorded supply from existing balances without changing any holder's balance, and restored the Bridge Hub weights whose change had put Snowbridge on hold.",
       "sourceUrl": "https://polkadot.subsquare.io/referenda/1961"
     }
   ],

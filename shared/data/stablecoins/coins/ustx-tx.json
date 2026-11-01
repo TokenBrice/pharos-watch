@@ -28,10 +28,10 @@
   "announcedDate": "2026-09-23",
   "launchDate": "2026-10-20",
   "launchPhase": "launched",
-  "launchPhaseDetail": "tx launched USTX on October 20 2026, issued by Brale and backed 1:1 by US dollar reserves; users mint it on the tx chain by depositing USDC from Ethereum, Solana, Base or Polygon. USTX is live, but Pharos tracks it pre-launch because no native asset address, decimals, supply figure, token-specific control and redemption terms, or price listing has been published, so it cannot enter runtime data. tx is not an authored supported deployment chain.",
+  "launchPhaseDetail": "tx launched USTX on October 20 2026, issued by Brale and backed 1:1 by US dollar reserves; users mint it on the tx chain by depositing USDC from Ethereum, Solana, Base or Polygon. The issuer has published no asset details, but the chain shows USTX, created on October 8 2026, as denom uustx-core1rfxrg75fzuq5hgnnymjgsxj70d9w9cs8xuza7x with 6 decimals, clawback enabled and an issuer-owned extension contract that can pause transfers and blacklist addresses. Supply was 4,833 USTX across 55 holders on November 1 2026. USTX is live, but Pharos tracks it pre-launch because no price listing or redemption terms have been published and the tx chain is not a Pharos-supported chain, so its supply cannot enter runtime data.",
   "listingStatusReview": {
     "changedAt": "2026-10-30",
-    "reason": "Missing lanes: price and supply. CoinGecko has no tx USTX listing and no denom, contract or decimals is published.",
+    "reason": "Missing lanes: price and supply. USTX exists on the tx chain as denom uustx-core1rfxrg75fzuq5hgnnymjgsxj70d9w9cs8xuza7x with 6 decimals, but Pharos does not support that chain and neither CoinGecko nor DefiLlama lists it.",
     "reviewBy": "2026-12-20"
   },
   "milestones": [
@@ -41,6 +41,13 @@
       "title": "tx announces native USTX issued by Brale",
       "sourceUrl": "https://www.linkedin.com/feed/update/urn:li:ugcPost:7508604753505964033/",
       "description": "The issuer partnership promises full 1:1 backing and an October launch for settlement of tokenized stocks, ETFs and other real-world assets."
+    },
+    {
+      "date": "2026-10-08",
+      "type": "milestone",
+      "title": "Brale creates the USTX token on the tx chain",
+      "description": "Brale's issuer account created USTX on the tx chain (chain ID coreum-mainnet-1) as denom uustx-core1rfxrg75fzuq5hgnnymjgsxj70d9w9cs8xuza7x, with 6 decimals and zero initial supply. The token enables minting, IBC transfers, clawback and an issuer-owned extension contract that can pause transfers and blacklist addresses.",
+      "sourceUrl": "https://www.mintscan.io/coreum/tx/6E65ABA38826BB5594A5D0F3709532CDF4D877E90B1F48BE52B89D416A4CBFD7"
     },
     {
       "date": "2026-10-20",

@@ -110,7 +110,7 @@
       "date": "2026-08-03",
       "type": "milestone",
       "title": "Polaris docs define an immutable core with bounded Stewardship",
-      "description": "The Security Guarantees page states that the core protocol is immutable with no admin privileges, that USDp has no freeze or blacklist function, and that no privileged actor can mint outside the pETH-collateralized process. A bounded Stewardship role can still change interest rate splits, POLAR conversion parameters, flow recipients and weightings, and replace faulty oracle feeds; it cannot upgrade core contracts, add collateral, or change the bonding curve or liquidation mechanics. The docs do not say who holds Stewardship or whether a timelock applies.",
+      "description": "The Security Guarantees page states that the core protocol is immutable with no admin privileges, that USDp has no freeze or blacklist function, and that no privileged actor can mint outside the pETH-collateralized process. A bounded Stewardship role can still change interest rate splits, POLAR conversion parameters, flow recipients and weightings, and replace faulty oracle feeds; it cannot upgrade core contracts, add collateral, or change the bonding curve or liquidation mechanics. Stewardship decisions run through vePOLAR, the staked form of POLAR, which the docs renamed sPOLAR on October 14 2026. The docs do not say whether a timelock applies.",
       "sourceUrl": "https://docs.polaris.finance/risks/security-properties"
     },
     {

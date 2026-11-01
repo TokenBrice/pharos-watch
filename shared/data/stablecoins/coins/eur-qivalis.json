@@ -31,13 +31,13 @@
   "announcedDate": "2025-09",
   "expectedLaunchDate": "2026-Q4",
   "launchPhase": "announced",
-  "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); De Nederlandsche Bank granted Qivalis electronic money institution authorisation, announced October 14 2026; Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis. No launch date accompanied the authorisation and the H2 2026 target stands; September 8 2026 secondary reports reaffirmed public Ethereum as the issuance chain without a Qivalis press release",
+  "launchPhaseDetail": "37-bank consortium across 15 countries (May 20 expansion added ~20 members incl. ABN Amro, Intesa Sanpaolo, Rabobank, Nordea, Raiffeisen Bank International, up from 17); Fireblocks selected as core infrastructure partner Apr 21; French Finance Minister Lescure publicly endorses project (Apr 17); De Nederlandsche Bank granted Qivalis electronic money institution authorisation, announced October 14 2026; Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published; ERC-20F standard with built-in governance/AML/KYC; launching on Ethereum (primary), Polygon, Base with permissioned KYC layer; ticker not yet published by Qivalis. No launch date accompanied the authorisation and the H2 2026 target stands; September 8 2026 secondary reports reaffirmed public Ethereum as the issuance chain without a Qivalis press release.",
   "featuredContent": [
     {
       "type": "article",
-      "url": "https://www.caixabank.com/comunicacion/noticia/caixabank-and-qivalis-partner-to-launch-a-euro-stablecoin_en.html",
-      "title": "CaixaBank and Qivalis partner to launch a euro stablecoin",
-      "description": "Spanish banking giant CaixaBank partners with Qivalis to develop a fully regulated euro stablecoin under MiCA, targeting crypto exchanges and DeFi protocols.",
+      "url": "https://www.caixabank.com/en/headlines/news/qivalis-joint-venture-of-a-european-banking-consortium-to-launch-euro-stablecoin-in-the-second-half-of-2026",
+      "title": "Qivalis, joint venture of a European banking consortium, to launch euro stablecoin in the second half of 2026",
+      "description": "CaixaBank's December 2 2025 release announcing the incorporation and name of Amsterdam-based Qivalis, its leadership team, and a plan to launch the euro stablecoin in the second half of 2026 while it works towards DNB authorisation as an e-money institution.",
       "image": "/featured/qivalis-caixabank.png",
       "source": "CaixaBank"
     },
@@ -65,10 +65,10 @@
   ],
   "milestones": [
     {
-      "date": "2025-09-15",
+      "date": "2025-09-25",
       "type": "announcement",
-      "title": "CaixaBank and Qivalis announce euro stablecoin initiative",
-      "sourceUrl": "https://www.caixabank.com/comunicacion/noticia/caixabank-and-qivalis-partner-to-launch-a-euro-stablecoin_en.html"
+      "title": "Nine European banks form a consortium to issue a euro stablecoin",
+      "sourceUrl": "https://www.unicreditgroup.eu/en/press-media/press-releases/2025/september/nine-major-european-banks-join-forces-to-issue-stablecoin.html"
     },
     {
       "date": "2026-02-04",
@@ -152,7 +152,7 @@
       "type": "regulatory",
       "title": "De Nederlandsche Bank authorises Qivalis as an electronic money institution",
       "description": "Qivalis announced that DNB granted it electronic money institution authorisation, making it eligible to issue euro electronic money tokens. Qivalis says issuance will begin in the coming months once MiCA requirements are met and the token white paper is published. No launch date or ticker was given.",
-      "sourceUrl": "https://thepaypers.com/fintech/news/qivalis-secures-emi-authorisation-from-de-nederlandsche-bank"
+      "sourceUrl": "https://qivalis.eu/press/news/qivalis-receives-authorisation-as-an-electronic-money-institution-from-de-nederlandsche-bank"
     }
   ]
 }

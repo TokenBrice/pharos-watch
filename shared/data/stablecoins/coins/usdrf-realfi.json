@@ -28,9 +28,34 @@
     }
   ],
   "status": "pre-launch",
+  "announcedDate": "2026-04-20",
   "launchDate": "2026-10-01",
   "launchPhase": "launched",
+  "launchPhaseDetail": "RealFi launched USDrf, a dollar token backed by off-chain credit, and its junior staked token sUSDrf on Cardano mainnet on October 1 2026. Supply was 5,403,937 USDrf on Cardano on November 1 2026. Direct minting and redemption are limited to whitelisted institutions under an Institutional Minting Agreement, through a human-approved first-in-first-out queue with daily and monthly limits. Retail holders exit by trading on decentralized exchanges. RealFi's docs name TxPipe, Anastasia Labs and Halborn as auditors and HT Digital as reserve attestation provider, but no audit report or attestation had been published by November 1 2026. Pharos tracks USDrf pre-launch because no admitted source prices it: CoinGecko's realfi-usdrf preview has a null price, and DefiLlama 445 carries a generic fallback quote shared by 90 assets rather than a market price.",
+  "featuredContent": [
+    {
+      "type": "blog",
+      "url": "https://realfi.co/blog/realfi-is-live-on-cardano",
+      "title": "RealFi Is Live on Cardano Mainnet",
+      "description": "RealFi's October 1 2026 mainnet launch post for USDrf and sUSDrf.",
+      "source": "RealFi"
+    }
+  ],
   "milestones": [
+    {
+      "date": "2026-04-20",
+      "type": "announcement",
+      "title": "RealFi introduces USDr and its staked sUSDr",
+      "description": "RealFi's introductory post presents USDr as the protocol's stablecoin and sUSDr as its staked layer. The Cardano asset still carries the on-chain name USDr, while RealFi now brands it USDrf.",
+      "sourceUrl": "https://realfi.co/blog/introducing-realfi-a-financial-system-that-works-for-everyone"
+    },
+    {
+      "date": "2026-06-24",
+      "type": "testnet",
+      "title": "RealFi announces testnet phase 1 opening July 6",
+      "description": "RealFi announced that phase 1 of its testnet would go live on July 6 2026, with testnet tokens carrying no monetary value.",
+      "sourceUrl": "https://realfi.co/blog/introducing-the-realfi-testnet-real-value-real-economy-real-access"
+    },
     {
       "date": "2026-10-01",
       "type": "milestone",

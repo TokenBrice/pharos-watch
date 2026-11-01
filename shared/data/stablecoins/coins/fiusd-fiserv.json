@@ -38,7 +38,7 @@
     }
   ],
   "launchPhase": "beta",
-  "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'). At the Bernstein Strategic Decisions conference (June 3 2026) CEO Lyons confirmed 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch. That window closed without a launch announcement. The Q2 2026 earnings release filed with the SEC on August 6 2026 does not mention FIUSD, stablecoins, digital assets, or Solana anywhere, and Fiserv cut its full-year guidance in the same release; the earnings call transcript is equally silent. Pharos retired the July expectation on September 6 2026 and now carries the year only. Bank of North Dakota's Roughrider Coin white-label is still expected to begin its state-bank pilot in September 2026. Fiserv's digital asset platform went live on October 1 2026 hosting Roughrider Coin rather than FIUSD; on October 5 Fiserv said it had pivoted away from Paxos and Circle toward a more proprietary coin, joined the Open USD consortium, and gave no FIUSD launch date",
+  "launchPhaseDetail": "Platform live; Q1 2026 earnings (May 5): CEO Lyons confirms stablecoin pilot for interbank money movement; Huntington confirmed as pilot partner alongside Bank of North Dakota and others (cross-border, digital escrow); INDX cash settlement launched Feb 2026; StoneCastle acquired; May 14 Investor Day positioned FIUSD as a core strategic growth vector ('issued through banks, accepted through merchants'). At the Bernstein Strategic Decisions conference (June 3 2026) CEO Lyons confirmed 'FIUSD goes live in July,' setting July 2026 for the interbank platform launch. That window closed without a launch announcement. The Q2 2026 earnings release filed with the SEC on August 6 2026 does not mention FIUSD, stablecoins, digital assets, or Solana anywhere, and Fiserv cut its full-year guidance in the same release; the earnings call transcript is equally silent. Pharos retired the July expectation on September 6 2026 and now carries the year only. Fiserv's digital asset platform went live on October 1 2026 hosting Roughrider Coin rather than FIUSD; on October 5 Fiserv said it had pivoted away from Paxos and Circle toward a more proprietary coin, joined the Open USD consortium, and gave no FIUSD launch date.",
   "featuredContent": [
     {
       "type": "article",
@@ -69,19 +69,19 @@
       "date": "2025-06-23",
       "type": "partnership",
       "title": "PayPal partnership for FIUSD interoperability",
-      "sourceUrl": "https://investors.fiserv.com/news-events/news-release-details/fiserv-and-paypal-expand-partnership-to-advance-stablecoin-payments"
+      "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-and-paypal-expand-partnership-advance-stablecoin-payments"
     },
     {
       "date": "2025-09-29",
       "type": "partnership",
       "title": "StoneCastle acquisition announced to help FIs retain funds from FIUSD issuance",
-      "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-completes-stonecastle-acquisition-extending-insured"
+      "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/fiserv-signs-definitive-agreement-acquire-stonecastle-cash"
     },
     {
       "date": "2025-10-08",
       "type": "partnership",
       "title": "Fiserv powers Roughrider Coin for Bank of North Dakota",
-      "sourceUrl": "https://investors.fiserv.com/news-events/news-release-details/bank-of-north-dakota-and-fiserv-partner-to-launch-roughrider-coin-north-dakotas-first-stablecoin"
+      "sourceUrl": "https://investors.fiserv.com/news-releases/news-release-details/bank-north-dakota-and-fiserv-partner-launch-roughrider-coin"
     },
     {
       "date": "2025-12-17",
