@@ -45,7 +45,7 @@ const METHODOLOGY_FAQ_ITEMS = [
   {
     question: "How is the Pharos peg score calculated?",
     answer:
-      "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but begins at a reviewed replay-coverage date when one exists; otherwise it falls back to the coin's age or earliest durable observation. It requires at least 7 days of tracking data; scores under 30 days are flagged as early.",
+      "The peg score is a composite 0–100 measure combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. The tracking window spans up to 4 years but begins at a reviewed replay-coverage date when one exists; otherwise it falls back to the coin's age or earliest durable observation. It requires at least 7 days of tracking data; the coverage start, source and verification status are published as historyCoverage and shown as 'Score coverage' in depeg history.",
   },
   {
     question: "What is the DEWS early-warning system?",

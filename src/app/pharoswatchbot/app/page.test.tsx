@@ -309,24 +309,21 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("offers a bot link or close action when launch data never arrives", async () => {
+  it("loads the signed URL launch payload when the Telegram SDK never loads", async () => {
     vi.useFakeTimers();
-    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
-    const fetchMock = vi.fn();
+    const signed = "auth_date=1800000000&hash=abc&user=%7B%7D";
+    window.history.replaceState({}, "", `/pharoswatchbot/app/#tgWebAppData=${encodeURIComponent(signed)}&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop`);
+    const fetchMock = vi.fn().mockResolvedValue(ok(baseState));
     installMiniAppFetch(fetchMock);
-    render(<PharosWatchBotMiniAppPage />);
-    await act(async () => { vi.advanceTimersByTime(8_050); });
-    expect(screen.getByRole("link", { name: "Open PharosWatchBot" }).getAttribute("href")).toBe("https://t.me/PharosWatchBot");
 
-    cleanup();
-    const close = vi.fn();
-    window.Telegram = { WebApp: { initData: "", platform: "tdesktop", ready: vi.fn(), close } };
     render(<PharosWatchBotMiniAppPage />);
-    await act(async () => { vi.advanceTimersByTime(8_050); });
-    expect(screen.getByText("Telegram didn't pass your launch details. Close and reopen from PharosWatchBot.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Close and reopen" }));
-    expect(close).toHaveBeenCalledOnce();
-    expect(fetchMock).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_050); });
+
+    expect(screen.getByRole("heading", { name: "Alerts on" })).toBeTruthy();
+    expect(screen.queryByText("Telegram didn't pass your launch details. Close and reopen from PharosWatchBot.")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toEqual({ initData: signed });
   });
 
   it("loads the session into the tab-free Home screen", async () => {
@@ -730,6 +727,22 @@ describe("PharosWatchBotMiniAppPage", () => {
       expect(main.show).not.toHaveBeenCalled();
       expect(main.onClick).not.toHaveBeenCalled();
     }
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("keeps delivery ages advancing while the session stays open", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const nowSec = 1_800_000_000;
+    const fetchMock = renderMiniApp({
+      state: makeMiniAppState({ health: { lastSuccessfulDeliveryAt: nowSec - 60, lastSuccessfulReplyAt: null } }),
+      launch: { initDataUnsafe: { start_param: "settings" } },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    expect(screen.getByText("1 min ago")).toBeTruthy();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10 * 60_000); });
+    expect(screen.getByText("11 min ago")).toBeTruthy();
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 

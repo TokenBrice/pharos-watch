@@ -27,6 +27,8 @@ import { relaunchPayloadForScreen, useMiniAppView } from "./use-mini-app-view";
 const BOT_DM_SAMPLE_LINK = `${TELEGRAM_BOT_URL}?start=sample`;
 /** When the tab returns to visible after being hidden longer than this, refetch the session to avoid stale state. */
 const VISIBILITY_REFRESH_THRESHOLD_MS = 10 * 60 * 1000;
+/** Relative ages and "today" clocks stay live while the Mini App is open, without waiting for a state change. */
+const CLOCK_TICK_MS = 30 * 1000;
 
 /** No subscriber yet, or nothing followed at all: Home doubles as setup. */
 function isNewUser(state: TelegramMiniAppState): boolean {
@@ -138,6 +140,13 @@ export function PharosWatchBotMiniAppClient() {
     updateClock();
     return () => window.clearTimeout(timer);
   }, [state]);
+
+  // The effect above only wakes for timed snooze deadlines; keep every other
+  // relative label advancing while the session stays mounted.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowSec(Math.floor(Date.now() / 1000)), CLOCK_TICK_MS);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const loadSession = useMiniAppSessionLoader({
     terminalRef,

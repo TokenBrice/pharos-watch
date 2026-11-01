@@ -34,6 +34,18 @@ describe("depeg FAQ pending confirmation", () => {
     expect(html).not.toMatch(/opens events immediately|rejects the pending incident instead/);
   });
 
+  it("states the PegScore tracking gate without a retired early-score label", () => {
+    const html = renderToStaticMarkup(<DepegPage />);
+    const jsonLd = [...html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)]
+      .map((match) => JSON.parse(match[1]!.replace(/\\u003c/g, "<")))
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .find((value) => value["@type"] === "FAQPage");
+    const entry = jsonLd?.mainEntity.find((item: { name: string }) => item.name === "How is the peg score calculated?");
+    expect(entry?.acceptedAnswer.text).toContain("fewer than 7 days of tracking history");
+    expect(entry?.acceptedAnswer.text).toContain("historyCoverage");
+    expect(entry?.acceptedAnswer.text).not.toMatch(/Early score/i);
+  });
+
   it("describes only non-disputed recorded events in the route metadata", () => {
     expect(metadata.description).toContain("2 recorded depeg events");
   });

@@ -371,8 +371,9 @@ export function YieldIntelligenceMethodologySection() {
                       legacy-partial; later points store versioned inputs for exact PYS recomputation
                     </li>
                     <li>
-                      Rows carrying `safety-unrated` or `opportunity-evidence-missing` remain estimated until the missing
-                      safety or market-risk evidence is reviewed; stale source and benchmark evidence remains PYS NR
+                      Rows carrying `safety-unrated` remain estimated until the missing Safety evidence is reviewed;
+                      rows carrying `opportunity-evidence-missing` publish PYS NR with no score until the missing
+                      market-risk evidence is supplied; stale source and benchmark evidence remains PYS NR
                     </li>
                     <li>
                       Some DeFiLlama and protocol-native surfaces still depend on upstream asset metadata completeness; the

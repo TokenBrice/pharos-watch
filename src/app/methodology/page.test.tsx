@@ -24,7 +24,7 @@ import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { QUALITY_WEIGHT, CHAIN_ENVIRONMENT_WEIGHT, CONCENTRATION_WEIGHT, PEG_STABILITY_WEIGHT, BACKING_DIVERSITY_WEIGHT } from "@shared/lib/chains/health";
 import { PYS_BENCHMARK_SPREAD_WEIGHT, PYS_RISK_PENALTY_EXPONENT, PYS_RISK_PENALTY_FLOOR, PYS_SUSTAINABILITY_FLOOR, PYS_MAX_SOURCE_RISK_PENALTY, PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
 import { DEFINITIONS } from "@/lib/definitions";
-import { DEPEG_RESOLVER_SECTION_CONTENT, PRICING_PIPELINE_SECTION_CONTENT, SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
+import { DEPEG_RESOLVER_SECTION_CONTENT, MINT_BURN_FLOW_SECTION_CONTENT, PRICING_PIPELINE_SECTION_CONTENT, SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
 import { METHODOLOGY_HISTORY_ARCHIVES, methodologyHistoryAnchor } from "@shared/lib/methodology-versions/archives";
 
 function methodologyDocument() {
@@ -266,6 +266,58 @@ describe("MethodologyPage", () => {
     const text = methodologyDocument().querySelector("#liquidity-methodology")!.textContent!.replace(/\s+/g, " ");
     expect(text).toContain("~43%+->100");
     expect(text).not.toContain("~32%+->100");
+  });
+
+  it("states the actual PegScore coverage disclosure instead of a retired early-score label", () => {
+    const root = methodologyDocument();
+    const faq = [...root.querySelectorAll('script[type="application/ld+json"]')]
+      .map((script) => JSON.parse(script.textContent!))
+      .flatMap((value) => (Array.isArray(value) ? value : [value]))
+      .find((value) => value["@type"] === "FAQPage");
+    const entry = faq?.mainEntity.find((item: { name: string }) => item.name === "How is the Pharos peg score calculated?");
+    expect(entry?.acceptedAnswer.text).not.toMatch(/early/i);
+    expect(entry?.acceptedAnswer.text).toContain("historyCoverage");
+    expect(DEFINITIONS.pegScore.detail).not.toMatch(/early/i);
+    expect(DEFINITIONS.pegScore.long).not.toMatch(/early/i);
+    const technical = root.querySelector("#pegscore-dews-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(technical).not.toMatch(/Early score/);
+    expect(technical).toContain("Score coverage");
+  });
+
+  it("describes the frozen archive without a fabricated all-F report card", () => {
+    const text = methodologyDocument().querySelector("#lifecycle-phases-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).not.toMatch(/all-F/i);
+    expect(text).toContain("Frozen · not scored");
+    expect(text).toContain("No current report card is rendered");
+  });
+
+  it("states the leg-quarantine rule instead of keeping a stalled mint/burn leg in scope", () => {
+    const text = methodologyDocument().querySelector("#mint-burn-flow-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).toContain("quarantined from the common watermark");
+    expect(text).toContain("reactivation-pending");
+    expect(text).not.toContain("that later stalls stays in scope");
+    expect(MINT_BURN_FLOW_SECTION_CONTENT.markdown).toContain("quarantines an admitted leg");
+  });
+
+  it("lists only blacklist contracts with an active scan", () => {
+    const text = methodologyDocument().querySelector("#blacklist-tracker-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).not.toMatch(/\bAEUR\b/);
+  });
+
+  it("keeps a confirm-required opposite reading from retiring the live depeg", () => {
+    const text = methodologyDocument().querySelector("#pegscore-dews-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).not.toMatch(/retires the stale live row/);
+    expect(text).toContain("keeps the existing old-direction lifecycle open");
+    expect(text).toContain("superseded-direction");
+    const owner = readFileSync(resolve(process.cwd(), "docs/depeg-detection.md"), "utf8");
+    expect(owner).toContain("`confirm_required` direction changes keep the old-direction lifecycle open");
+  });
+
+  it("separates estimated safety-unrated yield rows from opportunity-evidence-missing NR rows", () => {
+    const text = methodologyDocument().querySelector("#yield-intelligence-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).toContain("Rows carrying `safety-unrated` remain estimated");
+    expect(text).toContain("rows carrying `opportunity-evidence-missing` publish PYS NR");
+    expect(text).not.toContain("`safety-unrated` or `opportunity-evidence-missing` remain estimated");
   });
 
 });
