@@ -41,24 +41,24 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://dashboard.ledgerlens.io/c/maple",
-    "provider": "The Network Firm (combined syrupUSDC and syrupUSDT collateral verification dashboard; last verified 2026-09-29 at 01:00 UTC, not a syrupUSDC-specific reserve-to-liability reconciliation)",
+    "provider": "The Network Firm Tech & Services, LLC (combined syrupUSDC, syrupUSDT and syrupUSDG collateral verification dashboard; last verified 2026-10-30 at 17:00 UTC; syrupUSDC $1,521.43M of $2,024.86M total; not a syrupUSDC-specific reserve-to-liability reconciliation; non-attest technology service)",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "United States",
     "latestReport": {
       "reviewReference": {
-        "date": "2026-09-29",
-        "reviewedAt": "2026-10-01",
+        "date": "2026-10-30",
+        "reviewedAt": "2026-11-01",
         "dateKind": "unspecified"
       },
       "assuranceMethod": "unknown",
       "scope": "assets-only",
       "liabilityReconciliation": "unknown",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA22syrupUSDC)",
+      "reviewer": "Pharos findings-curation renewal 2026-11-01 (syrupUSDC dashboard refresh)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "The Network Firm combined syrupUSDC and syrupUSDT collateral verification",
+          "label": "The Network Firm Tech & Services combined syrupUSDC, syrupUSDT and syrupUSDG collateral verification, last verified 2026-10-30 at 17:00 UTC",
           "url": "https://dashboard.ledgerlens.io/c/maple"
         }
       ]

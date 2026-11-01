@@ -261,7 +261,7 @@ The six-chain native sum was 4,416,180,470.74 at 2026-09-27T20:43:47–20:44:16Z
 
 `shared/types/live-reserve-adapter-declarations.ts` owns keys/schema/evidence/validation/telemetry; `worker/src/cron/reserve-adapters/index.ts` owns fetchers. Coin configs own usage, sidecars research, manifests report values. Derive rosters, do not copy them.
 
-Tether's seven-day balance-sheet policy reflects Friday-publish/weekend-skip cadence, not quarterly composition age. A live balance-sheet clock cannot restamp reviewed composition.
+Tether's seven-day disclosure policy reflects Friday-publish/weekend-skip cadence, not quarterly composition age. The live JSON carries daily net circulation plus a live reserve residual, not the report-dated balance sheet; USDT coverage totals and their ratio are withheld, and a live circulation clock cannot restamp reviewed composition.
 
 ### Adapter maintenance entry
 
@@ -416,7 +416,7 @@ Reservoir keeps unverified composition/separate pinned route proof; shared PSM c
 
 ### Issuer balance sheets and reviewed reports
 
-Tether live totals and historical composition are different facts. [USDT config](../../shared/data/stablecoins/coins/usdt-tether.json) owns exact URL/date/signed denominator/keyed integer-dollar packet: no partial sums/redistribution/rounding residual. [Sidecar](../../shared/data/stablecoins/domains/reserves/usdt-tether.json) owns classifications/webpage discrepancy. Live totals cannot reset composition date/denominator; XAUT inherits neither USD units nor USDT date, MXNT circulation proves no valued backing. An entry whose `total_assets` equals `total_liabilities` is a self-referential identity, so `collateralizationRatio` is withheld with `ratioUnavailableReason: "not-comparable"` instead of publishing 1.0 as coverage. Missing diagnostics remain null, genuine zero survives; not-issued>authorized is invalid, never clamped. Invalid auxiliary chains need not invalidate aggregate facts; quarantine remains adverse info.
+Tether live circulation and report-dated balance-sheet facts are different. [USDT config](../../shared/data/stablecoins/coins/usdt-tether.json) owns exact URL/date/signed denominator/keyed integer-dollar packet: no partial sums/redistribution/rounding residual. [Sidecar](../../shared/data/stablecoins/domains/reserves/usdt-tether.json) owns classifications/webpage discrepancy. The live JSON's `total_assets`/`total_liabilities` track daily net circulation plus a live reserve residual, not the issuer's report-dated balance sheet, so USDT `collateralizationRatio`, `totalAssetsUsd`, `totalLiabilitiesUsd` and `shareholderEquityUsd` are withheld and the reported status is `ratioUnavailableReason: "not-comparable"`. The reviewed BDO packet remains the report-date authority; live totals cannot reset composition date/denominator; XAUT inherits neither USD units nor USDT date, MXNT circulation proves no valued backing. An entry whose `total_assets` equals `total_liabilities` is likewise a self-referential identity, so its ratio is withheld instead of publishing 1.0 as coverage. Missing diagnostics remain null, genuine zero survives; not-issued>authorized is invalid, never clamped. Invalid auxiliary chains need not invalidate aggregate facts; quarantine remains adverse info.
 
 OUSG requires exact complete dated position IDs/cent reconciliation; Other Assets stays unknown and quarantined BENJI gains no score. Current NAV cannot create a mixed-date coverage ratio. Image-bound report rows require exact PDF/text/page provenance before transcription applies.
 

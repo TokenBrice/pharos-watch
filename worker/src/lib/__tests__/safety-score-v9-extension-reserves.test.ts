@@ -157,7 +157,8 @@ const ISSUER_PREFIXED_NAMED_REPORT: V9ExtensionRegistryMeta = {
 };
 
 describe("v10.01 named reserve reports", () => {
-  const asOfSec = Date.parse("2026-06-30T00:00:00Z") / 1000;
+  // USDT's current BDO packet is the September 30, 2026 report.
+  const asOfSec = Date.parse("2026-09-30T00:00:00Z") / 1000;
   const usdt = { ...usdtCoin, ...usdtReserveEnvelope } as unknown as V9ExtensionRegistryMeta;
 
   it.each(["fresh", "stale", "absent"])("keeps USDY's reviewed Safety inputs identical with a %s display probe", (state) => {
@@ -249,6 +250,7 @@ describe("v10.01 named reserve reports", () => {
       evidenceClass: "static-validated",
     });
     for (const source of meta.proofOfReserves!.latestReport!.sources) source.label = "Issuer financial figures";
+    meta.proofOfReserves!.latestReport!.reviewer = "Pharos curation reviewer";
     expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(meta, clockSec)).toBeNull();
   });
 
