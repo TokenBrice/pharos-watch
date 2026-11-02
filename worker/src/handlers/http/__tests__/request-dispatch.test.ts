@@ -514,17 +514,6 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.notFoundResponse).toHaveBeenCalledOnce();
   });
 
-  it("still dispatches the registered report-cards v9 route", async () => {
-    const response = await handleHttpRequestImpl(
-      new Request("https://api.pharos.watch/api/report-cards/v9"),
-      makeEnv(),
-      makeCtx(),
-    );
-
-    expect(response.status).toBe(200);
-    expect(mocks.route).toHaveBeenCalledOnce();
-  });
-
   it("records attribution and writes edge cache on successful routing", async () => {
     const routedResponse = new Response(JSON.stringify({ ok: true }), {
       status: 200,

@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   computeSafetyScoreV9: vi.fn(),
   recoverSafetyScoreV9PublicMaterialization: vi.fn(),
   logWorkerEvent: vi.fn(),
+  syncSupplyAttribution: vi.fn(),
 }));
 
 vi.mock("../slot-groups", async (importOriginal) => ({
@@ -31,7 +32,11 @@ vi.mock("../../../lib/safety-score-v9/publication-runner", () => ({
 vi.mock("../../../lib/structured-log", () => ({
   logWorkerEvent: mocks.logWorkerEvent,
 }));
+vi.mock("../../../cron/sync-v9-supply-attribution", () => ({ syncSafetyScoreV9SupplyAttribution: mocks.syncSupplyAttribution }));
+import { getCronJobMeta } from "@shared/lib/cron-jobs";
+import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 import { runV9PublicationSlot } from "../v9-publication";
+import { runV9SupplyAttributionSlot } from "../v9-supply-attribution";
 
 interface CapturedInsert {
   sql: string;
@@ -226,5 +231,37 @@ describe("V9 publication scheduling", () => {
 
     expect(mocks.computeSafetyScoreV9).not.toHaveBeenCalled();
     expect(inserts).toHaveLength(0);
+  });
+});
+
+describe("scheduled supply-attribution native context", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.runScheduledSlotGroups.mockImplementation(async (
+      _scheduledRuntime: ScheduledRuntimeContext,
+      _label: string,
+      stages: Array<Array<{ tasks: Array<{
+        run: (
+          signal: AbortSignal,
+          reportProgress: CronProgressReporter,
+        ) => Promise<unknown>;
+      }> }>>,
+    ) => {
+      await stages[0]?.[0]?.tasks[0]?.run(new AbortController().signal, vi.fn());
+      return { jobsRun: 1, jobsSucceeded: 1, jobsErrored: 0, jobsDegraded: 0, jobsSkipped: 0 };
+    });
+  });
+
+  it.each([true, false])("forwards only the runtime's admitted native capability: %s", async admitted => {
+    const signal = new AbortController().signal;
+    const window = { slotStartedAtSec: 1000, deadlineMs: Date.now() + 180_000, minimumRemainingMs: 60_000 };
+    mocks.runV9AfterCoreWithinWindow.mockImplementation(async (_input, run) => run(signal, window));
+    mocks.syncSupplyAttribution.mockResolvedValue({ status: "ok", itemCount: 1 });
+    const dwellirNative = admitted ? createDwellirNativeCapability("native-test-key-placeholder") : undefined;
+    const job = getCronJobMeta("sync-v9-supply-attribution");
+    if (!job) throw new Error("Supply-attribution job is missing from the cron registry");
+    const runtime = makeScheduledRuntime({ dwellirNative, scheduleKey: job.scheduleKey });
+    await runV9SupplyAttributionSlot(runtime);
+    expect(mocks.syncSupplyAttribution).toHaveBeenCalledExactlyOnceWith(runtime.db, runtime.chainRpcs, signal, window, dwellirNative);
   });
 });

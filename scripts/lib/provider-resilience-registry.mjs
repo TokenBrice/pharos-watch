@@ -398,7 +398,6 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     tests: [
       "worker/src/api/__tests__/status-snapshots-core.test.ts",
       "worker/src/api/__tests__/status-data-loaders.test.ts",
-      "worker/src/api/__tests__/status-cron-telegram.test.ts",
       "worker/src/api/__tests__/status-data-quality-state.test.ts",
     ],
     allowBareFetch: true,

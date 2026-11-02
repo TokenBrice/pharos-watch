@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PAUSE_SENTINEL_TS } from "@shared/lib/telegram-delivery-policy";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { createTelegramFetchSpy } from "../../../test-helpers/__shared/telegram";
+import type { WebhookCommandContext } from "../context";
 import { handleForget } from "../forget";
 import { coinIdHash } from "../../callbacks/pick";
 import { resolveTicker } from "../../common/alerts-parser";
 import { handleList } from "../list";
+import { handlePause } from "../pause";
 import { handleSettings } from "../settings";
 import { handleStart } from "../start";
 import { handleSubscribe } from "../subscribe";
@@ -214,5 +218,49 @@ describe("/settings, /list and /forget", () => {
     expect(message).toContain("ids of messages already processed");
     expect(buttonsFromMarkup(options.replyMarkup).map((button) => button.callback_data))
       .toEqual([`forget:yes:${(NOW + 900).toString(36)}`, "forget:no"]);
+  });
+
+  it("rejects /forget in a group chat with a private-chat-only message and no disambiguation row", async () => {
+    const replyToChat = vi.fn().mockResolvedValue(undefined);
+    const ctx: WebhookCommandContext = makeCommandContext(mockD1(), { chatType: "group", replyToChat });
+
+    await handleForget(ctx, "");
+
+    expect(replyToChat).toHaveBeenCalledWith(
+      expect.stringContaining("Open a private chat"),
+    );
+    expect((ctx.db as MockD1Database).getHistory().some((entry) =>
+      entry.sql.includes("INSERT INTO telegram_pending_disambiguation"),
+    )).toBe(false);
+  });
+});
+
+describe("/pause command", () => {
+  function seeded() {
+    const fixture = fixtures.open();
+    fixture.sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, alert_snooze_until_ts, preference_generation)
+      VALUES ('42', 1, 1, 123, 7), ('neighbor', 1, 1, 456, 9)`);
+    return fixture;
+  }
+
+  it.each([["", PAUSE_SENTINEL_TS], ["off", null], ["resume", null], ["4h", NOW + 14400]] as const)("persists %s only for the current chat", async (arg, until) => {
+    const { sqlite, db } = seeded();
+    const ctx = makeCommandContext(db);
+    await handlePause(ctx, arg);
+    expect(sqlite.prepare("SELECT chat_id, alert_snooze_until_ts, preference_generation FROM telegram_subscribers ORDER BY chat_id").all()).toEqual([
+      { chat_id: "42", alert_snooze_until_ts: until, preference_generation: 8 },
+      { chat_id: "neighbor", alert_snooze_until_ts: 456, preference_generation: 9 },
+    ]);
+    const options = vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]?.[1];
+    expectMiniAppButton(buttonsFromMarkup(options?.replyMarkup), "Manage Alerts", "snooze");
+  });
+
+  it("rejects unknown arguments without changing preferences", async () => {
+    const { sqlite, db } = seeded();
+    const before = sqlite.prepare("SELECT * FROM telegram_subscribers ORDER BY chat_id").all();
+    const ctx = makeCommandContext(db);
+    await handlePause(ctx, "forever");
+    expect(ctx.replyToChat).toHaveBeenCalledOnce();
+    expect(sqlite.prepare("SELECT * FROM telegram_subscribers ORDER BY chat_id").all()).toEqual(before);
   });
 });

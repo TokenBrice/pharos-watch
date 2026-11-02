@@ -1329,3 +1329,17 @@ describe("handleBackfillSupplyHistory", () => {
     expect(priceResponse.bodyUsed).toBe(true);
   });
 });
+
+describe("handleBackfillSupplyHistory shape", () => {
+  it("returns 400 with { error } for a malformed startDay query param", async () => {
+    const db = mockD1([]);
+    const req = makeApiRequest("https://operator.invalid/jobs/backfill-supply-history?startDay=not-a-date", {
+      adminKey: "secret",
+    });
+
+    const res = await handleBackfillSupplyHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+
+    const body = (await readJsonResponse(res, 400)) as { error: string };
+    expect(typeof body.error).toBe("string");
+  });
+});

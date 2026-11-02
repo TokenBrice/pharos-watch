@@ -18,4 +18,8 @@ describe("telegram delivery policy exports", () => {
     }
     expect(policy.TELEGRAM_FANOUT_PAGE_CHATS).toBeGreaterThan(0);
   });
+
+  it("keeps the message chunk limit below Telegram's 4096-byte cap with headroom", () => {
+    expect(policy.TELEGRAM_MESSAGE_CHUNK_LIMIT).toBeLessThan(4096);
+  });
 });

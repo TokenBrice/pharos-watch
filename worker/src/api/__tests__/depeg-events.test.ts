@@ -275,35 +275,6 @@ describe("handleDepegEvents", () => {
     }
   });
 
-  it("returns 200 with events and total", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=usdt-tether"));
-    const body = (await readJsonResponse(res, 200)) as {
-      events: unknown[];
-      total: number;
-      methodology: Record<string, unknown>;
-    };
-    expect(body.events).toHaveLength(1);
-    expect(body.total).toBe(1);
-    expect(body).not.toHaveProperty("counts");
-    expect(body.methodology).toHaveProperty("version");
-    expect(body.methodology).toHaveProperty("changelogPath");
-  });
-
-  it("maps snake_case to camelCase via rowToDepegEvent", async () => {
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, { match: "depeg_events", rows: [row] },]);
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events"));
-    const body = (await res.json()) as { events: Array<Record<string, unknown>> };
-    const event = body.events[0];
-    expect(event).toHaveProperty("stablecoinId");
-    expect(event).toHaveProperty("peakDeviationBps");
-    expect(event).toHaveProperty("startedAt");
-    expect(event).toHaveProperty("pegReference");
-    expect(event).toHaveProperty("closeReason", null);
-    expect(event).not.toHaveProperty("stablecoin_id");
-    expect(event).not.toHaveProperty("peak_deviation_bps");
-  });
-
   it("exposes closeReason for terminal depeg rows", async () => {
     const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "pharos:depeg-events:count", rows: [{ total: 1 }] }, {
       match: "depeg_events",

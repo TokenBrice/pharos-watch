@@ -48,31 +48,22 @@ describe("pruneTelegramProcessedUpdates", () => {
   it("deletes at most 5000 expired processed update rows per call", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
     try {
-      
-      const insert = sqlite.prepare(
-        `INSERT INTO telegram_processed_updates (
-           update_id,
-           received_at,
-           processed_at,
-           update_type,
-           chat_id,
-           status,
-           error_class
-         )
-         VALUES (?, ?, NULL, 'message', '42', 'processed', NULL)`,
-      );
-
-      sqlite.exec("BEGIN");
-      try {
-        for (let updateId = 1; updateId <= 5_001; updateId += 1) {
-          insert.run(updateId, 1_699_999_000 - updateId);
-        }
-        insert.run(9_000, 1_699_999_940);
-        sqlite.exec("COMMIT");
-      } catch (err) {
-        sqlite.exec("ROLLBACK");
-        throw err;
-      }
+      // One set-based insert keeps the 5,001-row backlog fixture cheap.
+      sqlite.exec(`
+        WITH RECURSIVE seq(update_id) AS (
+          SELECT 1
+          UNION ALL
+          SELECT update_id + 1 FROM seq WHERE update_id < 5001
+        )
+        INSERT INTO telegram_processed_updates (
+          update_id, received_at, processed_at, update_type, chat_id, status, error_class
+        )
+        SELECT update_id, 1699999000 - update_id, NULL, 'message', '42', 'processed', NULL FROM seq;
+        INSERT INTO telegram_processed_updates (
+          update_id, received_at, processed_at, update_type, chat_id, status, error_class
+        )
+        VALUES (9000, 1699999940, NULL, 'message', '42', 'processed', NULL);
+      `);
 
       const countRows = (where = "", ...args: unknown[]): number => {
         const row = sqlite

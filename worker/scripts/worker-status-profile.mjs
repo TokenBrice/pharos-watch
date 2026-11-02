@@ -1,4 +1,3 @@
-import { register } from "tsx/esm/api";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 
 // Run the actual source handler against a SELECT-only D1 transport. Never persist status/self-check state.
@@ -30,7 +29,12 @@ export function createReadOnlyProfileDb(query, receipts) {
 }
 
 export async function profileStatusRoute({ env = process.env, fetchImpl = fetch, now = () => new Date(), handler, trackerFactory, query } = {}) {
-  register();
+  // Only the TypeScript source graph needs the tsx loader; injected seams keep
+  // the profile cheap enough to run without registering it.
+  if (!query || !handler || !trackerFactory) {
+    const { register } = await import("tsx/esm/api");
+    register();
+  }
   const receipts = [];
   if (!query) {
     const account = env.CLOUDFLARE_ACCOUNT_ID;

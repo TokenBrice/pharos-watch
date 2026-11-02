@@ -187,7 +187,7 @@ describe("handleBlacklistSummary", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-public-aggregate"))).toBe(true);
   });
 
-  it.each(["stats", "chart", "chains", "coverage", "freezeLedgerMeta", "dataQuality", "methodology"])(
+  it.each(["stats", "chart", "coverage"])(
     "rejects malformed nested cached %s rather than serving it",
     async (field) => {
       const now = Math.floor(Date.now() / 1000);

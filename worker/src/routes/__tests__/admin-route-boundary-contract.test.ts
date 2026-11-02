@@ -1,23 +1,31 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { DatabaseSync } from "node:sqlite";
+import { describe, expect, it, vi } from "vitest";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import type { FullRouteContext, StaticRouteDefinition } from "../shared";
 import { runAdminJob } from "../../lib/admin-job";
-
-const fixtures = createLatestSchemaFixtureTracker();
-afterEach(fixtures.closeAll);
 
 const handlers = vi.hoisted(() => ({
   dews: vi.fn(async () => Response.json({ ok: true })),
   remediate: vi.fn(async () => Response.json({ ok: true })),
 }));
+const moduleLoads = vi.hoisted(() => ({
+  dews: vi.fn(),
+  remediate: vi.fn(),
+}));
 
-vi.mock("../../api/backfill-dews", () => ({
-  handleBackfillDEWS: ({ request, url }: { request?: Request; url: URL }) =>
-    runAdminJob({ request, url, parseBody: true }, () => handlers.dews()),
-}));
-vi.mock("../../api/remediate-blacklist-amount-gaps", () => ({
-  handleRemediateBlacklistAmountGapsTrusted: handlers.remediate,
-}));
+vi.mock("../../api/backfill-dews", () => {
+  moduleLoads.dews();
+  return {
+    handleBackfillDEWS: ({ request, url }: { request?: Request; url: URL }) =>
+      runAdminJob({ request, url, parseBody: true }, () => handlers.dews()),
+  };
+});
+vi.mock("../../api/remediate-blacklist-amount-gaps", () => {
+  moduleLoads.remediate();
+  return {
+    handleRemediateBlacklistAmountGapsTrusted: handlers.remediate,
+  };
+});
 
 import { ADMIN_STATIC_ROUTES } from "../admin-routes";
 
@@ -67,6 +75,32 @@ async function expectNoStoreJson(response: Response, status: number, body: unkno
 }
 
 describe("admin route boundary contract", () => {
+  it("rejects an idempotent route before importing its endpoint module", async () => {
+    vi.resetModules();
+    moduleLoads.remediate.mockClear();
+    const { ADMIN_STATIC_ROUTES } = await import("../admin-routes");
+    const route = ADMIN_STATIC_ROUTES.find((candidate) => candidate.endpoint.key === "remediate-blacklist-amount-gaps");
+    if (!route) throw new Error("Missing route remediate-blacklist-amount-gaps");
+
+    const response = await route.handler(makeContext(route, { method: "POST" }));
+
+    await expectNoStoreJson(response, 401, { error: "Unauthorized" });
+    expect(moduleLoads.remediate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a conditional-idempotency route before importing its endpoint module", async () => {
+    vi.resetModules();
+    moduleLoads.dews.mockClear();
+    const { ADMIN_STATIC_ROUTES } = await import("../admin-routes");
+    const route = ADMIN_STATIC_ROUTES.find((candidate) => candidate.endpoint.key === "backfill-dews");
+    if (!route) throw new Error("Missing route backfill-dews");
+
+    const response = await route.handler(makeContext(route, { method: "POST" }));
+
+    await expectNoStoreJson(response, 401, { error: "Unauthorized" });
+    expect(moduleLoads.dews).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["always-idempotent", "remediate-blacklist-amount-gaps", "POST"],
     ["conditional-idempotency mutation", "backfill-dews", "POST"],
@@ -111,20 +145,36 @@ describe("admin route boundary contract", () => {
 
   it("replays an always-idempotent route without invoking its handler twice", async () => {
     const route = findRoute("remediate-blacklist-amount-gaps");
-    const { db } = fixtures.open();
-    const callsBefore = handlers.remediate.mock.calls.length;
-    const options = { db, trustedAdmin: true, idempotencyKey: "route-replay-contract" } as const;
+    // `runIdempotentAction` touches only admin_idempotency_keys, so the replay
+    // needs that table's schema rather than the full migration template.
+    const sqlite = new DatabaseSync(":memory:");
+    try {
+      sqlite.exec(`CREATE TABLE admin_idempotency_keys (
+        action TEXT NOT NULL,
+        idempotency_key TEXT NOT NULL,
+        request_hash TEXT NOT NULL,
+        response_status INTEGER NOT NULL,
+        response_body TEXT NOT NULL,
+        created_at INTEGER NOT NULL, reservation_owner TEXT, reservation_generation INTEGER NOT NULL DEFAULT 0, execution_started_at INTEGER,
+        PRIMARY KEY (action, idempotency_key)
+      )`);
+      const db = createSqliteD1(sqlite);
+      const callsBefore = handlers.remediate.mock.calls.length;
+      const options = { db, trustedAdmin: true, idempotencyKey: "route-replay-contract" } as const;
 
-    const first = await route.handler(makeContext(route, options));
-    const replay = await route.handler(makeContext(route, options));
+      const first = await route.handler(makeContext(route, options));
+      const replay = await route.handler(makeContext(route, options));
 
-    expect(first.status).toBe(200);
-    expect(first.headers.get("X-Idempotent-Replay")).toBe("false");
-    expect(first.headers.get("Cache-Control")).toBe("no-store");
-    expect(replay.status).toBe(200);
-    expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
-    expect(replay.headers.get("Cache-Control")).toBe("no-store");
-    expect(handlers.remediate).toHaveBeenCalledTimes(callsBefore + 1);
+      expect(first.status).toBe(200);
+      expect(first.headers.get("X-Idempotent-Replay")).toBe("false");
+      expect(first.headers.get("Cache-Control")).toBe("no-store");
+      expect(replay.status).toBe(200);
+      expect(replay.headers.get("X-Idempotent-Replay")).toBe("true");
+      expect(replay.headers.get("Cache-Control")).toBe("no-store");
+      expect(handlers.remediate).toHaveBeenCalledTimes(callsBefore + 1);
+    } finally {
+      sqlite.close();
+    }
   });
 
   it("applies no-store to successful conditional-idempotency reads", async () => {
