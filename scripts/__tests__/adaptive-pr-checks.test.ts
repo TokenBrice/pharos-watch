@@ -307,6 +307,11 @@ describe("adaptive PR checks", () => {
     ["shared/lib/classification.ts", true],
     ["functions/selector-snapshot/[[path]].ts", true],
     ["scripts/ci/check-provider-resilience.ts", true],
+    // `allowJs` pulls the imported registry modules into the program; no
+    // include glob matches them, so only program membership can select them.
+    ["scripts/lib/cli-argv-policy.mjs", true],
+    ["scripts/maintenance/report-build-size.mjs", true],
+    ["scripts/ci/check-seo-static.mjs", false],
     ["next-env.d.ts", true],
     ["package.json", true],
     ["package-lock.json", true],
@@ -321,6 +326,23 @@ describe("adaptive PR checks", () => {
   ])("selects root typecheck only for inputs tsconfig.typecheck.json can observe: %s -> %s", (path, expected) => {
     const compile = buildPrStaticCheckPlan([path], { group: "compile" }).commands.map((command) => command.name);
     expect(compile.includes("typecheck")).toBe(expected);
+  });
+
+  it("selects root typecheck for an imported script module only the program compiles", () => {
+    withTempRepo("pharos-static-typecheck", {
+      "tsconfig.typecheck.json": JSON.stringify({
+        compilerOptions: { allowJs: true },
+        include: ["src/**/*.ts"],
+      }),
+      "src/keep.ts": 'import "./helper.mjs";\nexport {};\n',
+      "src/helper.mjs": "export const helper = true;\n",
+      "src/unreferenced.mjs": "export const other = true;\n",
+    }, (cwd) => {
+      const compile = (file: string) =>
+        buildPrStaticCheckPlan([file], { cwd, group: "compile" }).commands.map((command) => command.name);
+      expect(compile("src/helper.mjs")).toContain("typecheck");
+      expect(compile("src/unreferenced.mjs")).not.toContain("typecheck");
+    });
   });
 
   it("runs root typecheck when the tsconfig cannot be read", () => {

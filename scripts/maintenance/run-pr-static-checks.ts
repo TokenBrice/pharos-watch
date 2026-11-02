@@ -61,7 +61,8 @@ const ROOT_TYPECHECK_WIDENED_TRIGGERS = [
   /\.d\.ts$/,
   /^src\/generated\//,
 ];
-const ROOT_TYPECHECK_EXTENSIONS = /\.(?:ts|tsx|mts)$/;
+const ROOT_TYPECHECK_SOURCE_EXTENSIONS = /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
+const ROOT_TYPECHECK_SOURCE_ROOTS = /^(?:src|shared|functions|scripts)\//;
 const ROOT_TYPECHECK_EXCLUDED_PATH =
   /(^|\/)(?:__tests__|__mocks__)(?:\/|$)|\.test\.tsx?$|^(?:worker|node_modules|coverage|out|worktrees|\.worktrees)\//;
 
@@ -114,45 +115,79 @@ function resolveStructuralConcurrency(env: NodeJS.ProcessEnv = process.env): num
   return Math.min(configured, STRUCTURAL_CHECKS.length);
 }
 
-const rootTypecheckFileCache = new Map<string, ReadonlySet<string> | null>();
+interface RootTypecheckSources {
+  /** Files the config's `include`/`exclude` selection names. */
+  included: ReadonlySet<string>;
+  /** Memoized program membership; null when the program cannot be built. */
+  programFiles: () => ReadonlySet<string> | null;
+}
 
-/** The exact files `tsconfig.typecheck.json` would compile, or null when the
- * config cannot be read/parsed (the caller then runs typecheck). */
-function rootTypecheckFiles(cwd: string): ReadonlySet<string> | null {
-  if (rootTypecheckFileCache.has(cwd)) return rootTypecheckFileCache.get(cwd) ?? null;
-  let files: ReadonlySet<string> | null = null;
+const rootTypecheckSourceCache = new Map<string, RootTypecheckSources | null>();
+
+/** The include set is not the program `tsc -p tsconfig.typecheck.json` compiles:
+ * `allowJs` adds imported `.js`/`.mjs` modules the include globs never match, and
+ * module resolution adds the files they import. Selection must test the program,
+ * so it is built lazily — once per process, only when a changed file is not
+ * already known to belong. */
+function rootTypecheckSources(cwd: string): RootTypecheckSources | null {
+  if (rootTypecheckSourceCache.has(cwd)) return rootTypecheckSourceCache.get(cwd) ?? null;
+  let sources: RootTypecheckSources | null = null;
   try {
     const configPath = resolve(cwd, "tsconfig.typecheck.json");
     const config = ts.readConfigFile(configPath, ts.sys.readFile);
     if (!config.error) {
       const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, cwd, undefined, configPath);
-      if (parsed.errors.length === 0) files = new Set(parsed.fileNames.map((file) => resolve(file)));
+      if (parsed.errors.length === 0) {
+        const rootNames = [...parsed.fileNames];
+        let programFiles: ReadonlySet<string> | null | undefined;
+        sources = {
+          included: new Set(rootNames.map((file) => resolve(file))),
+          programFiles: () => {
+            if (programFiles === undefined) {
+              try {
+                const program = ts.createProgram(rootNames, parsed.options);
+                programFiles = new Set(program.getSourceFiles().map((sourceFile) => resolve(sourceFile.fileName)));
+              } catch {
+                programFiles = null;
+              }
+            }
+            return programFiles;
+          },
+        };
+      }
     }
   } catch {
-    files = null;
+    sources = null;
   }
-  rootTypecheckFileCache.set(cwd, files);
-  return files;
+  rootTypecheckSourceCache.set(cwd, sources);
+  return sources;
 }
 
 /** Root typing is skipped only for a known-irrelevant change set; a missing or
- * unreadable config, a deleted typed source file and every config/dependency/
- * generated input keep today's run. */
+ * unreadable config, a typed source the program cannot classify (a deleted file,
+ * or a JS/TS module under the typed roots the program never reaches) and every
+ * config/dependency/generated input keep today's run. */
 function selectsRootTypecheck(changedFiles: readonly string[], cwd = process.cwd()): boolean {
   if (changedFiles.some((file) => ROOT_TYPECHECK_WIDENED_TRIGGERS.some((pattern) => pattern.test(file)))) {
     return true;
   }
-  const included = rootTypecheckFiles(cwd);
-  if (included === null) return true;
-  return changedFiles.some((file) => {
+  const sources = rootTypecheckSources(cwd);
+  if (sources === null) return true;
+  const needsProgram: string[] = [];
+  for (const file of changedFiles) {
     const absolute = resolve(cwd, file);
-    if (included.has(absolute)) return true;
-    // A deleted typed source is absent from the parsed program; keep today's
-    // run rather than treating it as untyped. Test paths stay excluded.
-    return ROOT_TYPECHECK_EXTENSIONS.test(file)
-      && !existsSync(absolute)
-      && !ROOT_TYPECHECK_EXCLUDED_PATH.test(file);
-  });
+    if (sources.included.has(absolute)) return true;
+    if (!ROOT_TYPECHECK_SOURCE_ROOTS.test(file) || !ROOT_TYPECHECK_SOURCE_EXTENSIONS.test(file)) continue;
+    if (ROOT_TYPECHECK_EXCLUDED_PATH.test(file)) continue;
+    // A deleted typed source belongs to no program; keep today's run rather
+    // than treating it as untyped.
+    if (!existsSync(absolute)) return true;
+    needsProgram.push(file);
+  }
+  if (needsProgram.length === 0) return false;
+  const programFiles = sources.programFiles();
+  if (programFiles === null) return true;
+  return needsProgram.some((file) => programFiles.has(resolve(cwd, file)));
 }
 
 async function runStructuralChecks({

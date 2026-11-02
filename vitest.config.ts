@@ -119,10 +119,11 @@ export default defineConfig({
               name: "worker-shared",
               include: workerSharedTests,
               // The eligibility scan above (no vi.mock/hoisted module factories,
-              // no unrestored global/env stubs, no env writes) is what makes
-              // this safe; central setup restores mocks and module state after
-              // every test. A file that fails shuffled runs moves back to the
-              // isolated `worker` project.
+              // no unrestored global/env stubs, no env writes, no stateful
+              // support module without a reset hook) is what makes this safe;
+              // central setup restores mocks and module state after every test.
+              // A file that fails shuffled runs moves back to the isolated
+              // `worker` project.
               isolate: false,
               pool: "forks" as const,
               setupFiles: VITEST_PROJECT_SETUP_FILES["worker-shared"].map((file) => path.resolve(__dirname, file)),

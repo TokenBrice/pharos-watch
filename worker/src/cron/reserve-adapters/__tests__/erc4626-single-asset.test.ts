@@ -15,7 +15,9 @@ import {
   type RedemptionCapacityTelemetry,
 } from "../erc4626-redemption-capacity";
 import {
+  getErc4626Network,
   installErc4626Network,
+  resetErc4626NetworkForTests,
   runTrackedVault,
   type Erc4626RpcFixture,
 } from "./erc4626-single-asset.test-support";
@@ -194,6 +196,13 @@ function trackedVaultSyncState(snapshot: { fetchedAt: number; attemptId: string 
 }
 
 describe("fetchErc4626SingleAssetReserves", () => {
+
+  it("drops the installed network so a later shared-cache file starts from the default fixture", () => {
+    installErc4626Network({ chain: "base" });
+    expect(getErc4626Network()?.chainRpcs.has("base")).toBe(true);
+    resetErc4626NetworkForTests();
+    expect(getErc4626Network()).toBeUndefined();
+  });
 
   it.each([0n, 630_000_000_000_000_000n, 150_000_000_000_000_000_000n])(
     "excludes sDAI wallet donations from reviewed Pot backing: %s",

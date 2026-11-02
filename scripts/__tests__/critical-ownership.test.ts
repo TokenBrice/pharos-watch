@@ -10,6 +10,7 @@ import {
   deriveBaseCriticalOwnership,
   deriveCriticalOwnership,
   EXECUTABLE_TEST_PROJECTS,
+  hasModuleScopeMutableState,
   isWorkerSharedTestEligible,
   WORKER_SHARED_ISOLATED_OVERRIDES,
   WORKER_SHARED_TEST_FILES,
@@ -195,9 +196,70 @@ describe("worker-shared pilot eligibility", () => {
       'vi.stubEnv("X", "1");',
       'process.env.X = "1";',
       'process.env["X"] = "1";',
+      'process.env.X ||= "1";',
+      'process.env.X ??= "1";',
+      'process.env.X += "1";',
+      'process.env.X++;',
+      'delete process.env.X;',
+      'Object.assign(process.env, { X: "1" });',
     ];
     for (const source of eligible) expect(isWorkerSharedTestEligible(source), source).toBe(true);
     for (const source of ineligible) expect(isWorkerSharedTestEligible(source), source).toBe(false);
+  });
+
+  it("detects module-scope mutable state that a shared cache would carry", () => {
+    const stateful = [
+      "let activeNetwork;\nexport function install() { activeNetwork = 1; }\n",
+      "var cache = 1;\n",
+      'const entries = new Map<string, number>();\n',
+      'const table: Record<string, true> = {};\ntable["x"] = true;\n',
+      "export const cases = [];\ncases.push(1);\n",
+    ];
+    const stateless = [
+      "export const labels: Record<string, true> = { a: true };\n",
+      "const LIMIT = 10;\nconst parse = (value: string) => Number(value);\n",
+      "const ABI = parseAbi([\"function totalSupply() view returns (uint256)\"]);\n",
+    ];
+    for (const source of stateful) expect(hasModuleScopeMutableState(source), source).toBe(true);
+    for (const source of stateless) expect(hasModuleScopeMutableState(source), source).toBe(false);
+  });
+
+  it("keeps importers of stateful support modules isolated until a reset hook is wired", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-worker-shared-support-"));
+    temporaryDirectories.push(cwd);
+    const tests = join(cwd, "worker/src/cron/reserve-adapters/__tests__");
+    mkdirSync(tests, { recursive: true });
+    writeFileSync(join(tests, "stateful.test-support.ts"), "let activeNetwork;\nexport function install() { activeNetwork = 1; }\n");
+    writeFileSync(join(tests, "clean.test-support.ts"), "export const label = 'clean';\n");
+    writeFileSync(join(tests, "imports-state.test.ts"), 'import { install } from "./stateful.test-support";\ninstall();\n');
+    writeFileSync(join(tests, "imports-clean.test.ts"), 'import { label } from "./clean.test-support";\nvoid label;\n');
+    writeFileSync(join(tests, "imports-unresolvable.test.ts"), 'import { helper } from "./missing.test-support";\nvoid helper;\n');
+
+    expect(collectWorkerSharedTestFiles(cwd)).toEqual([
+      "worker/src/cron/reserve-adapters/__tests__/imports-clean.test.ts",
+    ]);
+  });
+
+  it("accepts stateful support state only when the shared setup runs its reset hook", () => {
+    const build = (setupCallsHook: boolean) => {
+      const cwd = mkdtempSync(join(tmpdir(), "pharos-worker-shared-hook-"));
+      temporaryDirectories.push(cwd);
+      const tests = join(cwd, "worker/src/cron/reserve-adapters/__tests__");
+      mkdirSync(tests, { recursive: true });
+      mkdirSync(join(cwd, "worker/src/test-helpers"), { recursive: true });
+      writeFileSync(
+        join(tests, "erc4626-single-asset.test-support.ts"),
+        "let activeNetwork;\nexport function install() { activeNetwork = 1; }\nexport function resetErc4626NetworkForTests(): void { activeNetwork = undefined; }\n",
+      );
+      writeFileSync(join(tests, "imports-state.test.ts"), 'import { install } from "./erc4626-single-asset.test-support";\ninstall();\n');
+      writeFileSync(
+        join(cwd, "worker/src/test-helpers/setup-shared-isolation.ts"),
+        setupCallsHook ? "resetErc4626NetworkForTests();\n" : "// no reset\n",
+      );
+      return collectWorkerSharedTestFiles(cwd);
+    };
+    expect(build(true)).toEqual(["worker/src/cron/reserve-adapters/__tests__/imports-state.test.ts"]);
+    expect(build(false)).toEqual([]);
   });
 
   it("classifies only reserve-adapter test files under __tests__", () => {

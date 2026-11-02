@@ -72,6 +72,30 @@ function createSourceChecker(sourceFiles: readonly ts.SourceFile[]): ts.TypeChec
   return ts.createProgram(sourceFiles.map((sourceFile) => sourceFile.fileName), options, host).getTypeChecker();
 }
 
+/** True when the declaration makes the name a global: an ambient (`declare`)
+ * declaration, a `declare global { … }` augmentation, or — handled by the
+ * caller — a declaration in another file. A single shared program resolves
+ * `fetch` in every module to such a symbol, so symbol presence alone cannot
+ * mean "shadowed locally". */
+function isAmbientDeclaration(declaration: ts.Declaration): boolean {
+  for (let node: ts.Node | undefined = declaration; node && !ts.isSourceFile(node); node = node.parent) {
+    if (ts.isModuleDeclaration(node) && (node.flags & ts.NodeFlags.GlobalAugmentation) !== 0) return true;
+    if (ts.canHaveModifiers(node)
+      && (ts.getModifiers(node) ?? []).some((modifier) => modifier.kind === ts.SyntaxKind.DeclareKeyword)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isGlobalFetchSymbol(symbol: ts.Symbol, sourceFile: ts.SourceFile): boolean {
+  if (symbol.getName() !== "fetch") return false;
+  const declarations = symbol.getDeclarations() ?? [];
+  if (declarations.length === 0) return true;
+  return declarations.some((declaration) =>
+    declaration.getSourceFile() !== sourceFile || isAmbientDeclaration(declaration));
+}
+
 function collectBareFetchCalls(
   sourceFile: ts.SourceFile,
   source: string,
@@ -86,7 +110,8 @@ function collectBareFetchCalls(
     if (ts.isParenthesizedExpression(expression)) return isGlobalFetch(expression.expression);
     if (!ts.isIdentifier(expression)) return false;
     const symbol = checker.getSymbolAtLocation(expression);
-    return symbol ? aliases.has(symbol) : expression.text === "fetch";
+    if (!symbol) return expression.text === "fetch";
+    return aliases.has(symbol) || isGlobalFetchSymbol(symbol, sourceFile);
   }
 
   function assign(name: ts.Identifier, value: ts.Expression | undefined): void {
