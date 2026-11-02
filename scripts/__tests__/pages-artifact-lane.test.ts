@@ -4,7 +4,15 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { dropRetiredDepegEventEntries, pagesArtifactEnvironment, runPagesArtifactLane } from "../ci/run-pages-artifact-lane.ts";
+import {
+  compileInputStageArtifacts,
+  criticalCssScopeForLane,
+  dropRetiredDepegEventEntries,
+  pagesArtifactEnvironment,
+  preparedWorkspaceCompileInputArtifacts,
+  runPagesArtifactLane,
+} from "../ci/run-pages-artifact-lane.ts";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { depegLedgerCaptureId } from "../lib/depeg-ledger-capture.ts";
 import { PAGES_RELEASE_DATA_ARCHIVE, createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
 
@@ -19,6 +27,15 @@ const write = (root: string, path: string, value: string) => {
   mkdirSync(dirname(join(root, path)), { recursive: true });
   writeFileSync(join(root, path), value);
 };
+
+const RERUN_COMPILE_INPUT_IDS = ["editorial-style", "legacy-stablecoin-redirects", "mint-burn-conservation-runtime"];
+
+function preparedCompileInputOutputs(root: string): void {
+  for (const artifact of GENERATED_ARTIFACT_REGISTRY as { id: string; buildLifecycle: string; outputPaths: string[] }[]) {
+    if (artifact.buildLifecycle !== "compile-input" || RERUN_COMPILE_INPUT_IDS.includes(artifact.id)) continue;
+    for (const output of artifact.outputPaths) write(root, output, "{}");
+  }
+}
 
 function dataFixture(root: string): void {
   write(root, "data/digests.json", '{"release":true}');
@@ -47,6 +64,108 @@ describe("Pages artifact input profile", () => {
       SEO_PREVIOUS_SITEMAP_URL: "", PHAROS_PAGES_REPLAY: "",
     });
     expect(pagesArtifactEnvironment({}, "https://explicit.example/sitemap.xml").SEO_PREVIOUS_SITEMAP_URL).toBe("https://explicit.example/sitemap.xml");
+  });
+
+  it("derives only the compile-input artifacts a reused prepare workspace cannot supply", () => {
+    expect(preparedWorkspaceCompileInputArtifacts()).toEqual(RERUN_COMPILE_INPUT_IDS);
+  });
+
+  it("adds any compile-input output the transported workspace lacks", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-prepared-outputs-"));
+    try {
+      preparedCompileInputOutputs(root);
+      expect(compileInputStageArtifacts(root)).toEqual(RERUN_COMPILE_INPUT_IDS);
+      rmSync(join(root, "shared/data/safety-score-v9/incident-runtime-v1.generated.json"));
+      expect(compileInputStageArtifacts(root)).toEqual(
+        [...RERUN_COMPILE_INPUT_IDS, "safety-score-v9-incident-runtime"].sort(),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reruns only those artifacts when reuse of the prepared workspace is requested", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-reuse-workspace-"));
+    try {
+      dataFixture(root);
+      preparedCompileInputOutputs(root);
+      vi.stubEnv("PHAROS_PAGES_REUSE_PREPARED_WORKSPACE", "1");
+      spawn.mockReset();
+      spawn.mockReturnValue({ status: 0, signal: null });
+      await expect(runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false })).resolves.toMatchObject({ dataStatus: "degraded-data" });
+      const compileInputs = spawn.mock.calls.filter((call) => call[1].some((arg: string) => arg.includes("run-generated-artifacts.ts")));
+      expect(compileInputs).toHaveLength(1);
+      expect(compileInputs[0][0]).toBe(process.execPath);
+      expect(compileInputs[0][1]).toEqual([
+        "--import", "tsx", "scripts/maintenance/run-generated-artifacts.ts",
+        `--only=${RERUN_COMPILE_INPUT_IDS.join(",")}`,
+      ]);
+      expect(spawn.mock.calls.some((call) => call[1].includes("generated:compile-input"))).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reruns every missing compile-input artifact when the prepared workspace is empty", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-reuse-incomplete-"));
+    try {
+      dataFixture(root);
+      vi.stubEnv("PHAROS_PAGES_REUSE_PREPARED_WORKSPACE", "1");
+      spawn.mockReset();
+      spawn.mockReturnValue({ status: 0, signal: null });
+      await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+      const compileInputs = spawn.mock.calls.filter((call) => call[1].some((arg: string) => arg.includes("run-generated-artifacts.ts")));
+      expect(compileInputs).toHaveLength(1);
+      const only = (compileInputs[0][1] as string[]).find((arg) => arg.startsWith("--only="))!;
+      expect(only.slice("--only=".length).split(",")).toEqual(expect.arrayContaining([
+        ...RERUN_COMPILE_INPUT_IDS,
+        "sitemap-dates",
+        "docs-metadata",
+        "safety-score-v9-incident-runtime",
+        "safety-score-v9-incident-review-key-migration",
+        "safety-score-v9-lane-emitter-descriptors",
+      ]));
+      expect(spawn.mock.calls.some((call) => call[0] === "npm" && call[1].includes("generated:compile-input"))).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the full compile-input lifecycle without the reuse flag", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-full-compile-input-"));
+    try {
+      dataFixture(root);
+      spawn.mockReset();
+      spawn.mockReturnValue({ status: 0, signal: null });
+      await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+      expect(spawn.mock.calls.some((call) => call[0] === "npm" && call[1].includes("generated:compile-input"))).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    { value: "false", scope: "gates" },
+    { value: "true", scope: "all" },
+    { value: "0", scope: "all" },
+    { value: undefined, scope: "all" },
+  ] as const)("narrows critical CSS only for an explicit full-pass=false ($value)", async ({ value, scope }) => {
+    expect(criticalCssScopeForLane({ PHAROS_CRITICAL_CSS_FULL_PASS: value })).toBe(scope);
+    const root = mkdtempSync(join(tmpdir(), "pharos-pages-critical-css-scope-"));
+    try {
+      dataFixture(root);
+      vi.stubEnv("PHAROS_CRITICAL_CSS_FULL_PASS", value);
+      spawn.mockReset();
+      spawn.mockReturnValue({ status: 0, signal: null });
+      await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
+      const postbuild = spawn.mock.calls.find((call) => call[1].includes("postbuild"));
+      expect(postbuild?.[2].env.PHAROS_CRITICAL_CSS_SCOPE).toBe(scope);
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it("never forwards acquisition tokens or other credentials to generator/build children", async () => {

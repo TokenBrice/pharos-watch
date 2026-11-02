@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 import { PUBLIC_ROUTE_PATHS } from "../../../src/lib/public-route-inventory";
+import { gatedHtmlRoutes } from "../report-build-size.mjs";
 
 const SCRIPT = resolve(process.cwd(), "scripts/maintenance/report-build-size.mjs");
 const ZOD_CHUNK = "out/_next/static/chunks/framework-zod.js";
@@ -92,6 +93,20 @@ afterEach(() => {
 });
 
 describe("report-build-size", () => {
+  it("exports the same HTML route set its blocking byte and eager-JS gates measure", () => {
+    const routes = gatedHtmlRoutes();
+    expect(new Set(routes).size).toBe(routes.length);
+    expect(routes).toEqual([...routes].sort());
+    expect(routes).toEqual(expect.arrayContaining([
+      "index.html",
+      "cemetery/index.html",
+      "api/reference/index.html",
+      DETAIL_ROUTE.replace(/^out\//, "") + "/index.html",
+      ...BUDGET_ROUTES.map((route) => `${route}/index.html`),
+    ]));
+    expect(PUBLIC_ROUTE_PATHS).toContain("/api/reference/");
+  });
+
   it("reports the payload inventory measured from the generated build", () => {
     const result = runReport(syntheticBuild());
 
