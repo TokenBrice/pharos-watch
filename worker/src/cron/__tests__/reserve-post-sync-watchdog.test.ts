@@ -396,10 +396,11 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
       expect(gap).toMatchObject({
         continuous: false,
         driftIds: [],
-        observedSince: {},
         unavailableIds: [COIN],
         publishedAt: t0 + interval,
       });
+      // toMatchObject treats {} as a wildcard; the gap must carry no epochs.
+      expect(gap.observedSince).toEqual({});
 
       nowSpy.mockReturnValue((t0 + 2 * interval) * 1000);
       mocks.drift.mockResolvedValue({

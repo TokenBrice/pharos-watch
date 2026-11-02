@@ -192,6 +192,7 @@ jobs:
           install-playwright-chromium: "false"
           install-playwright-firefox: "false"
       - name: Restore latest rolling evidence archive
+        id: restore-archive
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -207,6 +208,8 @@ jobs:
           # memory job exits red on a heavy kill and the incidents job exits red
           # on an unavailable read, but both still upload that day's shard, so
           # requiring a green conclusion would discard the incident day itself.
+          # A run whose own restore failed never captures (see the capture
+          # step), so it uploads no truncated shard to be restored here.
           # Anything else is ignored newest-to-oldest.
           candidates="$(gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" \
             | jq -r '[.[].artifacts[] | select(.expired == false and (.name | startswith("worker-incidents-")) and .workflow_run.head_branch == "main")]
@@ -241,7 +244,9 @@ jobs:
             echo "::warning::Ignored $rejected incident artifact(s) that failed producer authentication or archive validation; starting a fresh 21-day window."
           fi
       - name: Capture deployment delivery child and publication evidence
-        if: ${{ always() && !cancelled() }}
+        # Without the restored archive the bundle would hold only today's shard;
+        # restoring that later would drop the rest of the 21-day window.
+        if: ${{ always() && !cancelled() && steps.restore-archive.outcome == 'success' }}
         id: incidents
         continue-on-error: true
         env:

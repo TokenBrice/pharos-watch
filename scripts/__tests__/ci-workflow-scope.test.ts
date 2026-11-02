@@ -579,7 +579,7 @@ describe("CI workflow scope", () => {
 
   it("restores Worker incident evidence from its own completed main run even when an evidence job alerts", () => {
     const monitor = parseYaml(readRepoFile(".github/workflows/worker-memory-monitor.yml")) as {
-      jobs: Record<string, { steps: Array<{ name?: string; run?: string; env?: Record<string, string> }> }>;
+      jobs: Record<string, { steps: Array<{ id?: string; if?: string; name?: string; run?: string; env?: Record<string, string> }> }>;
     };
     const restore = monitor.jobs.incidents.steps.find((step) => step.name === "Restore latest rolling evidence archive")!;
     // A pull_request run executes in this repository and reports its head ref
@@ -600,6 +600,11 @@ describe("CI workflow scope", () => {
     // on an unavailable read; both still upload that day's shard. Requiring a
     // green run here would discard the incident day itself.
     expect(restore.run).not.toContain('.conclusion == "success"');
+    // A red run is restorable only because a failed restore never captures:
+    // otherwise its one-day shard would replace the 21-day window.
+    expect(restore.id).toBe("restore-archive");
+    const capture = monitor.jobs.incidents.steps.find((step) => step.name === "Capture deployment delivery child and publication evidence")!;
+    expect(capture.if).toContain("steps.restore-archive.outcome == 'success'");
     expect(restore.run).toContain("actions/runs/$run_id");
   });
 
