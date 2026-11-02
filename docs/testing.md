@@ -1,6 +1,6 @@
 # Testing & Linting
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · [Pre-push readiness](#pre-push-readiness) · Commands · [Smallest adequate check per area](#smallest-adequate-check-per-area) · [Generated-artifact failure playbook](#generated-artifact-failure-playbook) · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · [Test-lane gate protocol](#test-lane-gate-protocol) · Coverage · [Extending tests](#extending-tests) · ESLint Configuration.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · [Pre-push readiness](#pre-push-readiness) · Commands · [Smallest adequate check per area](#smallest-adequate-check-per-area) · [Generated-artifact failure playbook](#generated-artifact-failure-playbook) · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · [Test-lane gate protocol](#test-lane-gate-protocol) · Coverage · [Extending tests](#extending-tests) · Anti-creep · ESLint Configuration.
 
 ## Overview
 
@@ -462,6 +462,10 @@ Outside the [V9 resource lane](#v9-resource-lane) the PR tier does not build the
 API contracts validate response schemas and use existing typed row fixtures. Cron contracts assert normal/degraded reasons, unavailable inputs, no optimistic publication and retained last-good state. No-throw or defined-return assertions are not degraded-mode evidence; SQL publication tests assert retained rows and absence of new writes in real SQLite.
 
 Use the actual [`blacklist.test.ts`](../worker/src/api/__tests__/blacklist.test.ts) and [`snapshot-psi.test.ts`](../worker/src/cron/__tests__/snapshot-psi.test.ts) behavioral owners as examples, not copied tutorial tests. Run the owning file and [focused feedback](#smallest-adequate-check-per-area) during authoring; [readiness](#pre-push-readiness) remains a separate contract.
+
+## Anti-creep
+
+Repeat the measurement-and-backlog campaign with the [`ci-slim-pass`](../.codex/skills/ci-slim-pass/SKILL.md) skill — baseline, finder fan-out, adversarial verification, verified backlog — on the monthly cadence or when a lane is over budget two weeks running.
 
 ## ESLint Configuration
 
