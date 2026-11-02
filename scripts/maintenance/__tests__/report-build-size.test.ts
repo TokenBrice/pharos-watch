@@ -297,6 +297,8 @@ describe("report-build-size", () => {
 
   it.each([BUDGET_ROUTES[0]])("enforces the /%s/ eager-script gzip budget", (route) => {
     const build = syntheticBuild({ extraFiles: { [`out/${route}/index.html`]: SHELL_HTML + SHELL_HTML } });
+    // Positive control: the ceiling failing below is otherwise satisfiable.
+    expect(runReport(build).status).toBe(0);
     const result = runReport(build, {
       budgets: { [`PHAROS_SIZE_BUDGET_${route.toUpperCase().replaceAll("-", "_")}_EAGER_JS_GZIP_BYTES`]: "1" },
     });

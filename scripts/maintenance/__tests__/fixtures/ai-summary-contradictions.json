@@ -1,0 +1,1186 @@
+{
+  "capturedQueueArtifact": 12657840940,
+  "capturedGeneration": "report-cards:v9:v1:ecac7bf36c52ad74e9b1c01df86c9822428848bfcf03f3f595e15c3b0303b876",
+  "capturedAsOfSec": 1793042252,
+  "acceptedGeneration": "report-cards:v9:v1:5c3995f33f8144dd5259af2dc1d1580f98fc6e83c9ecba98f820487f04c265ea",
+  "asOfSec": 1793085501,
+  "rows": [
+    {
+      "id": "aa-falconx-mev-capital",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 52.03999999999999,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "aid-gaib",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card: a 3-of-5 Safe and a bare externally owned account share the admin role that can replace mint-critical logic.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 38.75,
+        "control": 50,
+        "exit": 75.22
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "alusd-alchemix",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest of the three pillars: 3-of-7 Safes administer the V3 contracts, and legacy token-admin reactivation and upgrade powers remain.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 41,
+        "control": 50,
+        "exit": 43.05
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "apyusd-apyx",
+      "kind": "weakest-pillar",
+      "originalClaim": "economic control is the weakest",
+      "originalSentence": "Among the wrapper's own pillars, economic control is the weakest: the Chainlink CCIP representations on Base, BNB Chain and Solana carry controls whose authority and economic semantics Pharos has not resolved.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 42.192583,
+        "control": 45,
+        "exit": 61.88
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "audm-macropod",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest of the three pillars on the {{grade}} card: on Ethereum, Base and Redbelly, the admin and minter roles sit with externally owned accounts, and the mint is economically unbounded and reconciled only after the fact.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 69.04820000000001,
+        "control": 75,
+        "exit": 74.19
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "audm-mento",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card: the AUD/USD rate comes from a single relayer reporter with one configured aggregator, and minting is economically unbounded.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 55.619221654782045,
+        "control": 70,
+        "exit": 77.75
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "bbqusdc-steakhouse",
+      "kind": "weakest-pillar",
+      "originalClaim": "Backing is the weakest",
+      "originalSentence": "Backing is the weakest, because the exposure depends on collateral a curator chooses and on USDC, whose reserve quality and freeze power the vault inherits from Circle.",
+      "claimed": "backing",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 54.87904511776961,
+        "control": 45,
+        "exit": 79.89
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "bnusd-balanced",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest line on the {{grade}} card: the token's debt ceiling now reads zero, but a single EOA owns the Governance SCORE that could raise it or replace mint-critical logic.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": null,
+        "control": 50,
+        "exit": 49.44
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "brlm-mento",
+      "kind": "weakest-pillar",
+      "originalClaim": "economic control is the weakest",
+      "originalSentence": "The exit pillar is the strongest line on the {{grade}} card, since the Broker swap is permissionless, while economic control is the weakest.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 55.619221654782045,
+        "control": 70,
+        "exit": 84.1
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "brz-transfero",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest line on the {{grade}} card: two Safes hold the owner and master-minter roles, and the master minter can authorize minters with arbitrary replenishable allowances.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 35,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "buck-bucket-protocol",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest: the V1 oracle topology is opaque, with forty registered collateral branches fed almost entirely by threshold-one Supra or whitelisted-rule oracles, and the admin and upgrade caps sit with team wallets.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 40,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "cadc-cad-coin",
+      "kind": "weakest-pillar",
+      "originalClaim": "backing is the weakest",
+      "originalSentence": "On the {{grade}} report card, backing is the weakest pillar because the scored input carries no reserve composition, and exit scores almost as low because on-chain depth absorbs only a sliver of a stress-size sale.",
+      "claimed": "backing",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 68.83250000000001,
+        "control": 75,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "ceur-celo",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest: the owner Safe appoints operators and burners that can move or destroy any holder balance, a Wormhole NTT route carries a material share of supply to Monad, and residual Ethereum, Polygon, and Solana balances are legacy bridged cEUR.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 55.619221654782045,
+        "control": 65,
+        "exit": 81.88
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "copm-mento",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest of the three pillars.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 55.619221654782045,
+        "control": 70,
+        "exit": 78.45
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "deuro-deuro",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar and sets the {{grade}} overall grade: one account holds a majority of aged votes, and existing hub settlement paths can mint to cover a reserve shortfall without a fresh veto window.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 73.03748,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "dusd-dtrinity",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar behind the {{grade}} overall grade: six contracts hold minter roles across the four tokens, the token has no supply cap, and Sonic's proxy admin sits under a 2-of-4 Safe with no timelock.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 38,
+        "control": 60,
+        "exit": 50.05
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "dusd-standx",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar behind the {{grade}} overall grade: issuance on BSC and Solana runs through StandX's Settler controls, whose backend signer set is undisclosed.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 52.5,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "tie-retained"
+    },
+    {
+      "id": "eurq-quantoz",
+      "kind": "weakest-pillar",
+      "originalClaim": "backing is the weakest",
+      "originalSentence": "That is why backing is the weakest pillar on the card and the {{grade}} overall grade sits below what the licence suggests.",
+      "claimed": "backing",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 65.1270375,
+        "control": 75,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "fxsave-f-x-protocol",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit pillar is the weakest",
+      "originalSentence": "Pharos classifies it as a strategy-vault variant of fxUSD, so its {{grade}} overall grade cannot exceed its parent's, and the exit pillar is the weakest line on its card because every route out shares the same fxUSD failure domain.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 71.605,
+        "control": 60,
+        "exit": 61.38
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "ggbr-goldfish-gold",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar behind the {{grade}} overall grade: a single issuer key mints through a factory whose reserve-verification checks are commented out, a 2-of-3 Safe can freeze any holder immediately, and a timelocked admin can blacklist or force-transfer balances.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 43,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "gho-aave",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar by a wide margin.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 59.5322778126678,
+        "control": 60,
+        "exit": 97.07
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "gtusdc-gauntlet",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit is the weakest",
+      "originalSentence": "Backing follows closely, while exit is the weakest line because withdrawals depend on whatever USDC the underlying Morpho markets can return and can queue when those markets are fully utilised.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 65.32734413544571,
+        "control": 60,
+        "exit": 79.93
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "gtusdcp-gauntlet",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit is the weakest",
+      "originalSentence": "Backing follows, and exit is the weakest line, because withdrawals depend on Morpho market liquidity and on the curator not having optimised the book into a queue at the wrong moment.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 60.609712663950404,
+        "control": 60,
+        "exit": 80.69
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "hbusdt-hyperbeat",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit is the weakest",
+      "originalSentence": "The {{grade}} overall grade sits below its USDT parent, and exit is the weakest pillar: Hyperbeat documents a liquidity-conditional instant redemption and a two-day request route, but neither has established same-size capacity.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 54.5,
+        "control": 45,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "hlscope-hamilton-lane",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} report card.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 48.24999999999999,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "hollar-hydrated",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit pillar is the weakest",
+      "originalSentence": "Hydration publishes no dated per-asset collateral weights, so the whole reserve is scored as an unsplit basket; the launch was less than two years ago; and the exit pillar is the weakest of the three because the route out has no stated same-notional dollar output.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 47.300000000000004,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "honey-berachain",
+      "kind": "weakest-pillar",
+      "originalClaim": "economic control is the weakest",
+      "originalSentence": "Backing is the strongest pillar on architecture, while economic control is the weakest: a 3-of-5 Berachain Safe can upgrade both the token and the factory immediately, can blacklist or pause holders, and leaves minting economically unbounded, which caps the score.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 62.39020500342744,
+        "control": 75,
+        "exit": 68.05
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "hyusd-hylo",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar for a different reason.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 75.08340517241379,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "inalpha-nest",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit is the weakest",
+      "originalSentence": "With no reviewed reserve composition, the {{grade}} report card scores backing on mechanism evidence alone, and exit is the weakest pillar.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 44,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "jpym-mento",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar and the one that sets the grade.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 49.84192307692308,
+        "control": 65,
+        "exit": 78.69
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "kau-kinesis",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest pillar on the card because no score-eligible runtime redemption route is compiled, and an uncapped minter on the representation weighs on economic control.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 46.14875000000001,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "kesm-mento",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 55.619221654782045,
+        "control": 70,
+        "exit": 78.09
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "lisusd-lista",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the card: admin-role membership is not fully established and effective minting is scored as unbounded.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 52.900000000000006,
+        "control": 60,
+        "exit": 67.59
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "lvusd-leverup",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the card: issuance is gated only by an upgradeable engine owned by a 3-of-5 Safe, and Pharos scores effective minting as unbounded.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 40.604520111,
+        "control": 60,
+        "exit": null
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "meusd-mezo",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar: the Mezo token owner's 5-of-9 Safe administers the canonical mint list and can authorize additional minters, so Pharos scores issuance as unbounded.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 58.925,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "mglobal-midas-fasanara",
+      "kind": "holder-address-scope",
+      "originalClaim": "2026, holders",
+      "originalSentence": "Since June 23, 2026, holders can also post mGLOBAL as collateral on Aave's Horizon RWA market to borrow USDC, RLUSD or GHO, though Pharos flags thin secondary-market volume.",
+      "claimed": "2026,",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 63.83,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "false-positive-retained"
+    },
+    {
+      "id": "ntbill-nest",
+      "kind": "weakest-pillar",
+      "originalClaim": "economic control is the weakest",
+      "originalSentence": "Backing is the strongest pillar, while economic control is the weakest: minting is unbounded with no independent whole-supply reconciliation, and Pharos cannot resolve who controls several of its bridged deployments.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 59.342954275407926,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "nusd-neutrl",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar, because minting is unbounded and Pharos cannot resolve who controls the bridged deployments.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 52.5,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "ousg-ondo-finance",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is still the weakest",
+      "originalSentence": "Exit is still the weakest pillar, and eligibility is the durable constraint: that USDC route reaches only onboarded Qualified Purchasers.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 78.59009703071087,
+        "control": 60,
+        "exit": 68
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "pusd-plume",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest of the three pillars because a 3-of-6 Safe can call the vault's mint function with zero collateral, change who may mint, and upgrade the native-deposit logic without a timelock.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 61.2474,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "rwausdi-multipli",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest of the three pillars behind the {{grade}} overall grade, because Pharos has no reviewed same-notional exit route to credit.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 41.3964,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "savusd-avant",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest of those pillars.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 63.554249999999996,
+        "control": 50,
+        "exit": 66.92
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "sbold-k3-capital",
+      "kind": "weakest-pillar",
+      "originalClaim": "Backing is the weakest",
+      "originalSentence": "Backing is the weakest of the three pillars.",
+      "claimed": "backing",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 67.76136449836564,
+        "control": 65,
+        "exit": 71.53
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "spusd-soulpeg",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 49.045,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "steakusdc-steakhouse",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit is the weakest",
+      "originalSentence": "Withdrawals draw on idle USDC and a configured liquidity adapter, so exits still depend on available Morpho liquidity, and exit is the weakest pillar.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 64.76835121494436,
+        "control": 45,
+        "exit": 80.8
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "stusd-stoneyield",
+      "kind": "weakest-pillar",
+      "originalClaim": "Control is the weakest",
+      "originalSentence": "Control is the weakest of the three pillars on the {{grade}} report card.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 38,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "suiusde-sui",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest pillar, because minting and redemption run through USDC only, priced by a single Pyth feed and gated by eligibility, with no comparable secondary route reviewed.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 74.85922989348168,
+        "control": 45,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "susd-hedgecore",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest pillar: early redemption is operator-controlled, the hUSDC wrapper only opens one direction, and Pharos finds no route an ordinary holder can use to redeem.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 39.5,
+        "control": 65,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "susd-solayer",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest of the three pillars: Pharos has no runtime evidence for the redemption route, so the card cannot score a same-size way out.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 49.61886397688043,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "susd1plus-lorenzo",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest of the three pillars on the {{grade}} report card.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 40,
+        "control": 45,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "susdc-spark",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest: withdrawals draw on idle vault liquidity, with Savings Liquidity Intents for large exits, and Pharos cannot score a same-size route through either.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 71.0535548139285,
+        "control": 60,
+        "exit": 91.92
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "syrupusdg-maple",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest of the three pillars on the {{grade}} card, because Pharos has not established capacity or settlement terms for a same-size dollar exit.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 54.465,
+        "control": 50,
+        "exit": 70
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "tgbp-tokenised",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest of the three pillars behind the {{grade}} overall grade; {{term:redemption}}redemption{{/term}} runs through the issuer's sterling rails.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 51.663922295936,
+        "control": 75,
+        "exit": 51.96
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "thbill-theo",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is now the weakest",
+      "originalSentence": "Economic control is now the weakest of the three pillars.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 35,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usd3-3jane",
+      "kind": "weakest-pillar",
+      "originalClaim": "Backing is the weakest",
+      "originalSentence": "Backing is the weakest of the three pillars behind the {{grade}} overall grade.",
+      "claimed": "backing",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 63.72651800000001,
+        "control": 60,
+        "exit": 80.79
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usda-anzens",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit is the weakest",
+      "originalSentence": "Mint and {{term:redemption}}redemption{{/term}} run through KYC-verified bank transfers for users in eligible U.S. states, and with no comparable same-notional route beside the issuer, exit is the weakest of the three pillars.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 41.75,
+        "control": 85,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usda-avalon",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest of the three pillars: a single 5-of-6 Safe can add minters and upgrade both minter proxies, and many of the LayerZero routes across its chains have unresolved bridge controls.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 51.24,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdb-blast",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest of the three pillars because the deployment is Blast-only and Pharos recognizes no DEX pool that can absorb a same-notional sale, leaving the {{term:bridge}}bridge{{/term}} withdrawal as the route out.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 47.675000000000004,
+        "control": 45,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdcx-movement",
+      "kind": "weakest-pillar",
+      "originalClaim": "economic control is the weakest",
+      "originalSentence": "The {{grade}} overall grade sits well below its parent because economic control is the weakest of the three pillars: the attester, admin, pause, and package-upgrade powers on the Movement side are scored as bridge controls whose share of supply Pharos has not resolved.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 88.726593375,
+        "control": 50,
+        "exit": 47.54
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdf-astherus",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest of the three pillars: the token's admin timelock can grant minting rights to a new caller that bypasses both the USDT deposit path and the supply cap, and Aster publishes no price-feed topology for the valuation and rebalancing that keep the reserve {{term:delta-neutral}}delta-neutral{{/term}}.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 38.9066,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdh-hermetica",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest of the three pillars: minting and {{term:redemption}}redemption{{/term}} require KYC through Hermetica's app on one chain, and the queued redemption path has no established cost or settlement terms.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 41.769541495228,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdm-mega",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card: a 4-of-8 Safe owns the upgradeable Ethereum token and can add an arbitrary minter or replace mint logic without a timelock, and the same Safe can blacklist and seize named holders' balances.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 57.564394684654076,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "tie-retained",
+      "note": "Captured 2026-10-26 as a strict contradiction; the 2026-10-27 accepted card ties control and exit at 50, so the claim is no longer proven false and the prose is retained."
+    },
+    {
+      "id": "usdm-moneta",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest pillar on the {{grade}} card.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 43.25,
+        "control": 85,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdrif-rif",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 72.97015196171344,
+        "control": 70,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdu-usdu-finance",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card, because the curator-operated Morpho adapter can mint USDU into its own vault without a fixed cap.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 48.103822256,
+        "control": 45,
+        "exit": 37.5
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdv-solomon",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card: a 3-of-9 multisig can replace the mint program with no timelock, and minting is economically unbounded.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 40,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdx-hex-trust",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 42.5,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usdz-anzen",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest pillar, because Pharos has not established a same-value route open to ordinary holders.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 43.540000000000006,
+        "control": 45,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usg-tangent",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card by a wide margin.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 68.65817097724097,
+        "control": 70,
+        "exit": 64.85
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usp-pikudao",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card, dragged by a manual issuer price feed that sets issuance and redemption prices and by uncapped minting; exit comes next.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 37,
+        "control": 45,
+        "exit": 55.97
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "ussd-sonic-labs",
+      "kind": "weakest-pillar",
+      "originalClaim": "Exit is the weakest",
+      "originalSentence": "Exit is the weakest pillar, since Pharos has not established a same-value route beyond the unwrap.",
+      "claimed": "exit",
+      "weakestPillar": "control",
+      "pillars": {
+        "backing": 71.7856370165444,
+        "control": 60,
+        "exit": 85.99
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "usx-solstice",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit pillar is the weakest",
+      "originalSentence": "The exit pillar is the weakest of the three.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 54.98599999999999,
+        "control": 75,
+        "exit": 70
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "uusd-anything-labs",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card, scored on strong evidence that the owner can mint without an economic bound.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 35,
+        "control": 60,
+        "exit": null
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "vgbp-vnx",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on a {{grade}} card: each of the three deployments can be minted with no multisig, timelock or global supply cap.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 61.6541,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "tie-retained"
+    },
+    {
+      "id": "vnxau-vnx",
+      "kind": "weakest-pillar",
+      "originalClaim": "exit is the weakest",
+      "originalSentence": "Reviewed physical-redemption evidence exists, but no score-eligible runtime route does, so exit is the weakest pillar.",
+      "claimed": "exit",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 43,
+        "control": 75,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "wbrl-ripio",
+      "kind": "weakest-pillar",
+      "originalClaim": "economic control is the weakest",
+      "originalSentence": "On the six original deployments one Ripio address holds mint and upgrade roles while a 4-of-7 Safe holds admin, and minting is economically unbounded with no qualified reconciliation or supervisory check, so economic control is the weakest pillar on a {{grade}} card even though secondary exit scores well.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 39.5,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "wclp-ripio",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on the {{grade}} card.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 35,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "wcop-ripio",
+      "kind": "weakest-pillar",
+      "originalClaim": "economic control is the weakest",
+      "originalSentence": "Issuance on every reviewed chain answers to Ripio-held keys with no qualified reconciliation or supervisory check, which is why economic control is the weakest pillar on a {{grade}} card.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 35,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "weusd-picwe",
+      "kind": "weakest-pillar",
+      "originalClaim": "economic control is the weakest",
+      "originalSentence": "Mint authority is uncapped and held by a PicWe admin key, which is why economic control is the weakest of the three pillars behind the {{grade}} overall grade.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 35,
+        "control": 50,
+        "exit": 68.84
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "wmxn-ripio",
+      "kind": "weakest-pillar",
+      "originalClaim": "economic control is the weakest",
+      "originalSentence": "Ripio's issuer address holds mint and upgrade roles on every reviewed native deployment, with a 4-of-7 Safe as admin, which is why economic control is the weakest pillar on a {{grade}} card.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 35,
+        "control": 60,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "wusd-worldwide",
+      "kind": "weakest-pillar",
+      "originalClaim": "Control is the weakest",
+      "originalSentence": "Control is the weakest pillar on a {{grade}} card: one WSPN admin address governs roles on every chain, and the token has no supply cap.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 39.5,
+        "control": 50,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "xdai-gnosis",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar on a {{grade}} card, because the authority behind the selected bridge route remains unresolved.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 58.354340439389155,
+        "control": 60,
+        "exit": 77.57
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "xofm-mento",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic control is the weakest",
+      "originalSentence": "Economic control is the weakest pillar: Pharos classes the oracle design as single-source or laggy, and the token owner can appoint a new minter with no token-level collateral check.",
+      "claimed": "control",
+      "weakestPillar": "exit",
+      "pillars": {
+        "backing": 55.619221654782045,
+        "control": 70,
+        "exit": 50
+      },
+      "disposition": "strict-corrected"
+    },
+    {
+      "id": "zkusd-goal3",
+      "kind": "weakest-pillar",
+      "originalClaim": "Economic Control is the weakest",
+      "originalSentence": "Economic Control is the weakest pillar, backing and exit rest on limited evidence, and the overall grade is {{grade}}.",
+      "claimed": "control",
+      "weakestPillar": "backing",
+      "pillars": {
+        "backing": 35,
+        "control": 50,
+        "exit": null
+      },
+      "disposition": "strict-corrected"
+    }
+  ]
+}

@@ -118,26 +118,62 @@ export function scanSelectorEditorialSource(file: string, source: string): Selec
   return findings;
 }
 
+/** The explainer fields the guard reads; the authored modules narrow to these. */
+export interface MechanismExplainerContent {
+  readonly archetype: string;
+  readonly representativeCoins: readonly { readonly coinId: string; readonly note: string }[];
+  readonly whatToWatch: readonly string[];
+}
+
+type MechanismExplainerMeta = Parameters<typeof resolveMechanismArchetype>[0] & {
+  readonly pegMechanism?: string | null;
+};
+
+export interface MechanismExplainerSources {
+  readonly archetypes: readonly string[];
+  readonly content: Readonly<Record<string, MechanismExplainerContent>>;
+  readonly metaById: ReadonlyMap<string, MechanismExplainerMeta>;
+  readonly resolveArchetype: (
+    coin: MechanismExplainerMeta,
+    registry: ReadonlyMap<string, MechanismExplainerMeta>,
+  ) => string | null;
+  readonly activeNavMembers: readonly unknown[];
+}
+
 /**
  * Authored mechanism-explainer prose is content, not runtime code: every
  * representative coin must resolve to its own archetype, DEWS bullets may not
  * promise coverage the engine skips, and the OUSG note may not contradict the
  * reviewed reserve composition it describes.
+ *
+ * `overrides` exists so the owning test can drive one rule at a time; the guard
+ * itself always runs against the authored sources and the real repo files.
  */
-function mechanismExplainerIssues(repoRoot: string): string[] {
+export function mechanismExplainerIssues(
+  repoRoot: string,
+  overrides: Partial<MechanismExplainerSources> = {},
+): string[] {
+  const sources: MechanismExplainerSources = {
+    archetypes: MECHANISM_ARCHETYPE_VALUES,
+    content: ARCHETYPE_CONTENT,
+    metaById: TRACKED_META_BY_ID,
+    resolveArchetype: resolveMechanismArchetype,
+    activeNavMembers: getActiveByArchetype("synthetic-delta-neutral").filter((coin) => coin.flags.navToken),
+    ...overrides,
+  };
   const issues: string[] = [];
-  for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
-    const content = ARCHETYPE_CONTENT[archetype];
+  for (const archetype of sources.archetypes) {
+    const content = sources.content[archetype];
     if (content.archetype !== archetype) {
       issues.push(`src/lib/mechanism-explainers: ${archetype} content declares archetype ${content.archetype}`);
     }
     for (const entry of content.representativeCoins) {
-      const meta = TRACKED_META_BY_ID.get(entry.coinId);
+      const meta = sources.metaById.get(entry.coinId);
       if (!meta) {
         issues.push(`src/lib/mechanism-explainers: ${archetype} representative coin ${entry.coinId} is not tracked`);
         continue;
       }
-      const resolved = resolveMechanismArchetype(meta, TRACKED_META_BY_ID);
+      const resolved = sources.resolveArchetype(meta, sources.metaById);
       if (resolved !== archetype) {
         issues.push(`src/lib/mechanism-explainers: ${archetype} representative coin ${entry.coinId} resolves to ${resolved}`);
       }
@@ -156,11 +192,10 @@ function mechanismExplainerIssues(repoRoot: string): string[] {
   }
 
   // NAV wrappers are not scored by DEWS, so its bullet must name that exception.
-  const navMembers = getActiveByArchetype("synthetic-delta-neutral").filter((coin) => coin.flags.navToken);
-  if (navMembers.length === 0) {
+  if (sources.activeNavMembers.length === 0) {
     issues.push("src/lib/mechanism-explainers: synthetic-delta-neutral has no active NAV wrapper to qualify DEWS coverage");
   }
-  const navDewsBullets = ARCHETYPE_CONTENT["synthetic-delta-neutral"].whatToWatch.filter((bullet) => /DEWS/.test(bullet));
+  const navDewsBullets = sources.content["synthetic-delta-neutral"].whatToWatch.filter((bullet) => /DEWS/.test(bullet));
   if (navDewsBullets.length === 0) {
     issues.push("src/lib/mechanism-explainers: synthetic-delta-neutral DEWS bullet no longer names the NAV exception");
   }
@@ -170,7 +205,7 @@ function mechanismExplainerIssues(repoRoot: string): string[] {
     }
   }
 
-  const ousgNote = ARCHETYPE_CONTENT.tbill.representativeCoins.find((entry) => entry.coinId === "ousg-ondo-finance")?.note;
+  const ousgNote = sources.content.tbill.representativeCoins.find((entry) => entry.coinId === "ousg-ondo-finance")?.note;
   if (!ousgNote) {
     issues.push("src/lib/mechanism-explainers: tbill OUSG example is missing its note");
   } else {

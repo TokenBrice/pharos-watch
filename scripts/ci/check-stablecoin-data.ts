@@ -752,6 +752,11 @@ export function getRemovedStablecoinRedirectIssues(
   } = {},
 ): string[] {
   const issues: string[] = [];
+  // Fail closed on an empty removal list: both loops below would otherwise pass
+  // vacuously while every retired profile URL rots.
+  if (removed.length === 0) {
+    issues.push("removed-stablecoin list is empty, so no retired profile redirect can be verified");
+  }
   const rules = parseRedirectRules(redirectsSource);
   const listed = new Set<string>();
   for (const coin of removed) {

@@ -201,6 +201,21 @@ describe("methodology registry", () => {
           changelogEntry.version,
         ]);
       }
+      // `date` and `effectiveAt` are authored as independent columns, and their
+      // offsets legitimately vary (next cadence boundary, reconstructed cuts), so
+      // the derivable invariant is their order: newest-first must hold for both.
+      for (let index = 1; index < methodology.entries.length; index += 1) {
+        const newer = methodology.entries[index - 1]!;
+        const older = methodology.entries[index]!;
+        expect(
+          newer.date >= older.date,
+          `${methodology.key}: ${newer.version} (${newer.date}) must not precede ${older.version} (${older.date})`,
+        ).toBe(true);
+        expect(
+          newer.effectiveAt >= older.effectiveAt,
+          `${methodology.key}: ${newer.version} must not activate before ${older.version}`,
+        ).toBe(true);
+      }
       const highestAt = (cut: number) => (versionsByCut.get(cut) ?? []).reduce((highest, version) =>
         compareMethodologyVersions(version, highest) > 0 ? version : highest);
       let previous: string | undefined;

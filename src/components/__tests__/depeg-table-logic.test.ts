@@ -49,14 +49,15 @@ describe("compareDepegTrackerRows — numeric field keys", () => {
   // The comparator is shared and covered centrally; one row per extractor pins this module's field
   // mapping and its absolute transforms. Null handling stays in the per-key cases below.
   it.each([
-    ["pegScore", { pegScore: 95 }, { pegScore: 40 }],
-    ["pegPct", { pegPct: 98 }, { pegPct: 75 }],
-    ["eventCount", { eventCount: 15 }, { eventCount: 2 }],
-    ["trackingSpanDays", { trackingSpanDays: 365 }, { trackingSpanDays: 7 }],
-    ["currentDeviationBps", { currentDeviationBps: -200 }, { currentDeviationBps: 50 }],
-    ["worstDeviationBps", { worstDeviationBps: -500 }, { worstDeviationBps: 100 }],
-  ] as const)("ranks %s descending by its own extractor, absolute where signed", (key, high, low) => {
-    expect(compareDepegTrackerRows(makeRow(high), makeRow(low), sort(key, "desc"))).toBeLessThan(0);
+    ["pegScore", "desc", { pegScore: 95 }, { pegScore: 40 }],
+    ["pegScore", "asc", { pegScore: 40 }, { pegScore: 95 }],
+    ["pegPct", "desc", { pegPct: 98 }, { pegPct: 75 }],
+    ["eventCount", "desc", { eventCount: 15 }, { eventCount: 2 }],
+    ["trackingSpanDays", "desc", { trackingSpanDays: 365 }, { trackingSpanDays: 7 }],
+    ["currentDeviationBps", "desc", { currentDeviationBps: -200 }, { currentDeviationBps: 50 }],
+    ["worstDeviationBps", "desc", { worstDeviationBps: -500 }, { worstDeviationBps: 100 }],
+  ] as const)("ranks %s %s by its own extractor, absolute where signed", (key, direction, first, second) => {
+    expect(compareDepegTrackerRows(makeRow(first), makeRow(second), sort(key, direction))).toBeLessThan(0);
   });
 });
 

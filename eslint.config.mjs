@@ -827,7 +827,7 @@ const eslintConfig = defineConfig([
             },
             ...frontendToWorkerRestrictedImportPatterns,
             {
-              group: ["**/documentation", "./documentation"],
+              group: ["**/documentation", "./documentation", "**/documentation.js", "./documentation.js"],
               message:
                 "Scoring modules must not import the documentation class (Decision B / OP-R0 S-3): it annotates evidence without pricing it.",
             },
@@ -845,6 +845,13 @@ const eslintConfig = defineConfig([
         },
         {
           selector: "MemberExpression[object.name='evidence'][property.name='documentation']",
+          message:
+            "Scoring modules must not read the documentation policy block (Decision B / OP-R0 S-3).",
+        },
+        {
+          // The real policy access shape is `policy.semantic.evidence.documentation`,
+          // where `evidence` is itself a member expression.
+          selector: "MemberExpression[object.property.name='evidence'][property.name='documentation']",
           message:
             "Scoring modules must not read the documentation policy block (Decision B / OP-R0 S-3).",
         },

@@ -110,7 +110,7 @@ describe("ComparePairPage", () => {
       slugs.find(hasSiblingPair),
       slugs.find((slug) => !hasSiblingPair(slug)),
     ].filter((slug): slug is string => slug != null);
-    expect(sample.length).toBeGreaterThan(0);
+    expect(sample.length).toBe(2);
     for (const slug of sample) {
       const document = await renderPair(slug);
       expect(document.querySelectorAll("h1"), slug).toHaveLength(1);

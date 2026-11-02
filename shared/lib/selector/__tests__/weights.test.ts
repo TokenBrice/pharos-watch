@@ -22,6 +22,31 @@ describe("weights", () => {
     expect(() => assertWeightsSumTo100("treasury", bad)).toThrow();
   });
 
+  it("published profile weights match the screener design", () => {
+    // These numbers are the public screener's ranking parameters: nothing else
+    // pins them, and an edit that still sums to 100 would move rankings silently.
+    expect(WEIGHT_VECTORS).toEqual({
+      treasury: { safetyOverall: 55, pegStabilityHistory: 22, dewsInverted: 13, bluechip: 10 },
+      yield: {
+        pharosYieldScore: 28,
+        safetyOverall: 19,
+        yieldVariance: 16,
+        sourceRiskInverted: 13,
+        excessApy: 10,
+        pegStabilityLive: 8,
+        liquidity: 6,
+      },
+      trading: {
+        liquidity: 30,
+        pegScoreNow: 30,
+        dewsInverted: 15,
+        safetyOverall: 14,
+        supplyLog: 8,
+        liquidityDiversification: 3,
+      },
+    });
+  });
+
   it("no vector prices a V9 pillar beside the composite that contains it", () => {
     for (const profile of SELECTOR_PROFILES) {
       const vector = WEIGHT_VECTORS[profile] as Record<string, number | undefined>;
