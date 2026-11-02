@@ -5,13 +5,13 @@ import {
   collectExecutableTestCandidates,
   collectExecutableTestFiles,
   collectModuleSpecifiers,
-  compileGlobMatcher,
   isStablecoinCatalogDataOnly,
   planPrTestSelection,
   resolveModuleSpecifier,
   selectDirectImporters,
   selectImportGraphTests,
 } from "../lib/pr-import-graph.mts";
+import { cachedGlobMatcher, compileGlobMatcher } from "../lib/glob-matcher.mts";
 import { EXECUTABLE_TEST_PROJECTS } from "../lib/critical-ownership.mts";
 import { VITEST_SETUP_FILES } from "../lib/vitest-setup-files.mts";
 import { compareCommitSelections, incomparableCommit, summarizeParityFailures } from "../ci/check-test-plan-parity";
@@ -179,6 +179,10 @@ describe("static import-graph PR test selection", () => {
       for (const pattern of [...project.include, ...project.exclude]) {
         const matcher = compileGlobMatcher(pattern);
         for (const file of files) expect(matcher(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));
+        // Selection asks these patterns about every candidate and every selected
+        // file; a fresh minimatch parse per call is what made that quadratic.
+        expect(cachedGlobMatcher(pattern)).toBe(cachedGlobMatcher(pattern));
+        for (const file of files) expect(cachedGlobMatcher(pattern)(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));
       }
     }
   });
