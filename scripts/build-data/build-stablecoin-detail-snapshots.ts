@@ -59,7 +59,7 @@ function detailGenerationRefreshable(coinId: string): boolean {
 }
 
 /** The bulk reason that proves the detail cache row itself is absent. */
-const DETAIL_CACHE_ABSENT_REASON = "detail-cache-missing";
+const DETAIL_CACHE_ABSENT_REASON = "detail-cache-missing" satisfies Extract<DetailSnapshotInputEntry, { status: "unavailable" }>["reason"];
 /**
  * Supply-history numbers keep 10 significant digits: far finer than any chart,
  * delta or depeg reading, and 1-1.5 KB lighter on a 90-day history, so the

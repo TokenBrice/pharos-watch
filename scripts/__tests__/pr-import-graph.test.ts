@@ -161,7 +161,8 @@ describe("static import-graph PR test selection", () => {
       "package.json", "worker/package.json", "tsconfig.json", "vitest.config.ts", "src/test/setup.ts", "scripts/test/helper.ts",
       "scripts/lib/pr-import-graph.mts", "scripts/lib/pr-test-selection.mts", "scripts/lib/pr-test-plan.mts",
       "scripts/maintenance/run-pr-tests.ts", "scripts/lib/critical-ownership.mts", "scripts/lib/critical-test-files.mts",
-      "scripts/lib/doc-ownership-registry.mts", "docs/doc-ownership.json",
+      "scripts/lib/doc-ownership-registry.mts", "docs/doc-ownership.json", "scripts/lib/glob-matcher.mts",
+      "scripts/lib/nightly-test-tier.mts",
       ...VITEST_SETUP_FILES,
     ]) {
       expect(planPrTestSelection([changed], { graph }), changed).toEqual({ files: TEST_FILES, mode: "closure" });

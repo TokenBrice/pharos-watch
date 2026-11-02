@@ -241,7 +241,8 @@ const PAGES_ARTIFACT_PATTERNS = [
   /(^|\/)(?:\.nvmrc|\.npmrc|\.node-version|\.tool-versions|mise\.toml|\.mise\.toml)$/,
 ] as const;
 /** The export compiles no test module and runs no support file. */
-const PAGES_ARTIFACT_TEST_PATTERNS = [
+/** Test-only paths: they compile into no artifact and run in neither lane's measurement. */
+export const LANE_TEST_FILE_PATTERNS = [
   /(^|\/)__tests__\//,
   /\.(?:test|spec)\.[cm]?[jt]sx?$/,
   /(^|\/)[^/]*test-support\.[cm]?[jt]sx?$/,
@@ -301,7 +302,7 @@ export function hasPagesArtifactImpact(
     exactPaths: [...PAGES_ARTIFACT_EXACT_PATHS, ...DEPLOY_IMPACT_REGISTRY.pages.exactPaths],
     prefixes: PAGES_ARTIFACT_PREFIXES,
     patterns: PAGES_ARTIFACT_PATTERNS,
-    nonInputPatterns: PAGES_ARTIFACT_TEST_PATTERNS,
+    nonInputPatterns: LANE_TEST_FILE_PATTERNS,
     ignoredPrefixes: PAGES_ARTIFACT_NON_INPUT_PREFIXES,
     // Worker and Pages Functions code never compiles into the static export
     // (ADR-2); deleting a module an export input imported also edits that importer.

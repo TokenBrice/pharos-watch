@@ -104,6 +104,14 @@ describe("Pages artifact selection", () => {
     expect(classifyChangedFiles([path])).toMatchObject({ pagesChanged: true, pagesArtifactRequired: true });
   });
 
+  it.each([
+    "shared/lib/__tests__/retired-helper.test.ts",
+    "worker/src/lib/__tests__/retired-helper.test-support.ts",
+  ])("runs neither lane for a deleted test-only file %s", (path) => {
+    expect(existsSync(resolve(import.meta.dirname, "../..", path)), path).toBe(false);
+    expect(classifyChangedFiles([path])).toMatchObject({ pagesArtifactRequired: false, v9ResourceRequired: false });
+  });
+
   it("keeps a deleted Worker module out of the export lane while v9 still runs", () => {
     const path = "worker/src/api/retired-route.ts";
     expect(existsSync(resolve(import.meta.dirname, "../..", path)), path).toBe(false);

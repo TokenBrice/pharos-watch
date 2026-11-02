@@ -18,6 +18,7 @@ import {
   hasPagesArtifactImpact,
   laneInputFiles,
   LANE_DELETION_NON_INPUT_PREFIXES,
+  LANE_TEST_FILE_PATTERNS,
   type LaneInputSpec,
 } from "../lib/lane-input-closure.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -142,6 +143,9 @@ function v9ResourceLaneSpec({ cwd, fs }: { cwd: string; fs?: PrImportGraphFs }):
     roots: V9_RESOURCE_CLOSURE_ROOTS,
     prefixes: V9_RESOURCE_PREFIXES,
     patterns: [V9_RESOURCE_TOOLCHAIN_PATTERN],
+    // Harness tests are closure roots, so they still select (a deleted root is
+    // unresolved); any other test file is no input of the measurement.
+    nonInputPatterns: LANE_TEST_FILE_PATTERNS,
     ignoredPrefixes: KNOWN_NON_V9_PREFIXES,
     deletionNonInputPrefixes: LANE_DELETION_NON_INPUT_PREFIXES,
   };

@@ -142,12 +142,14 @@ jobs:
         # Anti-creep (H2/H3), once per PR and never inside check:structural:
         # that selection skips test-only PRs, which are exactly the ones this
         # gate exists for. File stats plus the frozen-base ceilings, the frozen
-        # base's own sizes and the net add diff; no generated input, no network.
+        # base's own sizes and the net add diff; no generated input. Base blobs
+        # the blob:none clone lacks are fetched lazily, so bound the step.
         # Non-fatal here on purpose: its exit code is published as a step output
         # and enforced by `PR gate`, so a budget failure cannot skip the
         # validation lanes that say whether the PR is otherwise sound.
         id: test-corpus-budget
         continue-on-error: true
+        timeout-minutes: 5
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           TEST_BUDGET_OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'test-budget-override') }}
