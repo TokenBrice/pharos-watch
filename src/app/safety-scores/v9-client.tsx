@@ -44,7 +44,7 @@ const SORT_OPTIONS: ReadonlyArray<{ key: V9SortKey; label: string }> = [
 
 const PEG_OPTIONS: ReadonlyArray<{ key: Exclude<PegFilter, "all">; label: string }> = [
   { key: "usd", label: "USD" },
-  { key: "fiat-non-usd", label: "Fiat non USD" },
+  { key: "fiat-non-usd", label: "Other pegs" },
   { key: "commodities", label: "Commodities" },
 ];
 

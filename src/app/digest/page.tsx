@@ -4,7 +4,7 @@ import { Send } from "lucide-react";
 import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
-import { DigestNameplate } from "@/components/digest-nameplate";
+import { DigestNameplateLive } from "@/components/digest-nameplate-live";
 import { DigestColophon } from "@/components/digest-colophon";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { buildCollectionItemListJsonLd, safeJsonLd } from "@/lib/json-ld";
@@ -58,7 +58,7 @@ export default function DigestArchivePage() {
           )}
       />
 
-      <DigestNameplate issueNumber={LATEST_DAILY_DIGEST?.editionNumber} date={LATEST_DAILY_DIGEST?.date} />
+      <DigestNameplateLive initialLead={LATEST_DAILY_DIGEST} />
 
       <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-sm text-muted-foreground">
         <Send className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" aria-hidden="true" />

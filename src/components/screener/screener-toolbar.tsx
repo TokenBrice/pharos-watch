@@ -112,6 +112,17 @@ export function ScreenerToolbar({
   const groupId = useId();
   const update = useCallback(
     <K extends keyof ScreenerFilters>(key: K, value: ScreenerFilters[K]) => {
+      // A URL can carry a ceiling with no control of its own. When the visible
+      // floor passes a non-default ceiling, clear that ceiling in the same
+      // update instead of leaving a contradictory hidden bound.
+      if (key === "dewsMin" && typeof value === "number" && filters.dewsMax !== SCREENER_FILTER_DEFAULTS.dewsMax && value > filters.dewsMax) {
+        onChange({ ...filters, dewsMin: value, dewsMax: SCREENER_FILTER_DEFAULTS.dewsMax });
+        return;
+      }
+      if (key === "supplyMin" && typeof value === "number" && filters.supplyMax !== SCREENER_FILTER_DEFAULTS.supplyMax && value > filters.supplyMax) {
+        onChange({ ...filters, supplyMin: value, supplyMax: SCREENER_FILTER_DEFAULTS.supplyMax });
+        return;
+      }
       onChange({ ...filters, [key]: value });
     },
     [filters, onChange],

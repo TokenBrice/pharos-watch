@@ -56,6 +56,13 @@ describe("flagship Dataset JSON-LD", () => {
     expect(buildDepegHistoryDescription(["id", "source"])).not.toContain("audit verdict");
   });
 
+  it("describes the peg-mechanism dimension as the variant-parent field the export carries", () => {
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "peg-mechanism-distribution")!;
+    expect(Object.keys(descriptor.export.rows[0] ?? {})).toContain("pegReferenceId");
+    expect(descriptor.description).toContain("variant parent (pegReferenceId)");
+    expect(descriptor.description).not.toContain("peg reference");
+  });
+
   it("names the top-stablecoins population the export actually carries", () => {
     const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "top-stablecoins")!;
     const outsideRegistry = descriptor.export.rows.filter((row) => !TRACKED_META_BY_ID.has(String(row.id)));

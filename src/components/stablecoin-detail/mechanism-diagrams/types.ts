@@ -1,3 +1,5 @@
+import type { BackingType } from "@shared/types";
+
 /**
  * Optional per-coin overrides applied on top of an archetype diagram.
  *
@@ -43,4 +45,9 @@ export interface MechanismTemplateFacts {
    * keeps the archetype's liquidation copy.
    */
   liquidationEngine?: boolean | null;
+  /**
+   * Coin's `flags.backing`; `crypto-backed` switches `fiat-cash` away from the
+   * bank-transfer and issuer-custody copy to the collateral-only config.
+   */
+  backing?: BackingType | null;
 }

@@ -162,6 +162,7 @@ export function useStablecoinTableRows({
   activeFilters,
   eligibleIds,
   reportCards,
+  reportCardsMethodologyVersion,
   searchQuery,
   sort,
   renderedSet,
@@ -179,6 +180,7 @@ export function useStablecoinTableRows({
   activeFilters: readonly FilterTag[];
   eligibleIds?: ReadonlySet<string>;
   reportCards?: Record<string, V9SafetyTableRow>;
+  reportCardsMethodologyVersion?: string | null;
   searchQuery?: string;
   sort: StablecoinTableSort;
   renderedSet: ReadonlySet<ColumnId>;
@@ -288,8 +290,16 @@ export function useStablecoinTableRows({
     [virtualizer],
   );
   const handleCsvExport = useCallback(() => {
-    exportStablecoinsCsv(displayed, sortedRankById, pegScores, dexLiquidity, reportCards, sourceGenerations);
-  }, [dexLiquidity, displayed, pegScores, reportCards, sortedRankById, sourceGenerations]);
+    exportStablecoinsCsv(
+      displayed,
+      sortedRankById,
+      pegScores,
+      dexLiquidity,
+      reportCards,
+      sourceGenerations,
+      reportCardsMethodologyVersion,
+    );
+  }, [dexLiquidity, displayed, pegScores, reportCards, reportCardsMethodologyVersion, sortedRankById, sourceGenerations]);
   const onPreviousOverviewPage = useCallback(() => {
     setOverviewPageIndex((current) => Math.max(0, current - 1));
     scrollRef.current?.scrollTo({ top: 0 });

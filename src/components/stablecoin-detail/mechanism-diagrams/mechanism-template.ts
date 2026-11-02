@@ -58,21 +58,22 @@ export type SyntheticStrategy = NonNullable<CoinOverride["syntheticStrategy"]>;
 
 /**
  * Hedged-synthetic copy per implementation. The generic SVG reads the
- * `perp-short` entry; ftUSD-style lending carry opts into `borrow-stake`
- * through its coin override.
+ * `perp-short` entry; coin pages draw the neutral shape unless their override
+ * names an implementation, and ftUSD-style lending carry opts into
+ * `borrow-stake` through its coin override.
  */
 export const SYNTHETIC_DELTA_NEUTRAL_COPY: Record<SyntheticStrategy, FlowCopy> = {
   "perp-short": {
     accentColor: "var(--mechanism-synthetic-delta-neutral)",
     stressFootnote: "stress: funding-rate inversion",
-    ariaLabel: (symbol) =>
-      `Crypto deposited as spot collateral is hedged with equal short perp positions; the funding rate paid by perp longs becomes the yield on ${symbol}.`,
-    description: (symbol) =>
-      `Users deposit crypto as spot collateral; the protocol opens an equal-size short perpetual futures position to neutralize price exposure; the funding rate paid by perp longs flows to ${symbol} holders as yield.`,
+    ariaLabel: (_symbol) =>
+      `Crypto deposited as spot collateral is hedged with equal short perp positions; the funding rate paid by perp longs is the strategy's carry.`,
+    description: (_symbol) =>
+      `Users deposit crypto as spot collateral; the protocol opens an equal-size short perpetual futures position to neutralize price exposure; the funding rate paid by perp longs is the strategy's carry.`,
     defaultSteps: (symbol) => [
       { label: "Crypto deposit", subtitle: "spot collateral" },
       { label: "Long spot + short perp", subtitle: "delta-neutral hedge" },
-      { label: `${symbol} minted`, subtitle: "funding-rate yield" },
+      { label: `${symbol} minted`, subtitle: "strategy carry" },
     ],
     loop: { from: 1, to: 2, label: "funding", danger: false, dashed: false },
     fragile: false,
@@ -92,6 +93,28 @@ export const SYNTHETIC_DELTA_NEUTRAL_COPY: Record<SyntheticStrategy, FlowCopy> =
     loop: { from: 1, to: 2, label: "carry", danger: false, dashed: false },
     fragile: false,
   },
+};
+
+/**
+ * Coin pages without a `syntheticStrategy` override state only the shape every
+ * member shares — collateral in, an offsetting hedge, the token out. A coin's
+ * reviewed mechanism may use neither perps nor a funding carry, so neither is
+ * claimed and no return path is drawn.
+ */
+const NEUTRAL_SYNTHETIC_COPY: FlowCopy = {
+  accentColor: "var(--mechanism-synthetic-delta-neutral)",
+  stressFootnote: "stress: collateral or hedge failure",
+  ariaLabel: (symbol) =>
+    `Collateral is deposited against an offsetting hedge; ${symbol} is minted against the hedged position.`,
+  description: (symbol) =>
+    `Users deposit collateral; the protocol holds an offsetting hedge and mints ${symbol} against the hedged position.`,
+  defaultSteps: (symbol) => [
+    { label: "Collateral deposit" },
+    { label: "Offsetting hedge" },
+    { label: `${symbol} minted` },
+  ],
+  loop: null,
+  fragile: false,
 };
 
 /** Step-box centres on the 600-wide SVG canvas the three-step configs target. */
@@ -146,7 +169,9 @@ export function resolveMechanismFlowTemplate(
 ): MechanismFlowTemplate {
   const copy = isThreeStepArchetype(archetype)
     ? threeStepFlowCopy(resolveThreeStepConfig(archetype, facts))
-    : SYNTHETIC_DELTA_NEUTRAL_COPY[override?.syntheticStrategy ?? "perp-short"];
+    : override?.syntheticStrategy
+      ? SYNTHETIC_DELTA_NEUTRAL_COPY[override.syntheticStrategy]
+      : NEUTRAL_SYNTHETIC_COPY;
   const [first, second, third] = copy.defaultSteps(symbol);
   const stressFootnote = override?.stressFootnote ?? copy.stressFootnote;
   return {

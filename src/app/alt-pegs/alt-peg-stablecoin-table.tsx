@@ -35,6 +35,7 @@ interface AltPegStablecoinTableProps {
   pegScores?: Map<string, PegSummaryCoin>;
   dexLiquidity?: DexLiquidityTableMap;
   reportCards?: Record<string, V9SafetyTableRow>;
+  reportCardsMethodologyVersion?: string | null;
   sourceGenerations?: StablecoinTableSourceGenerations;
 }
 
@@ -53,6 +54,7 @@ export function AltPegStablecoinTable({
   pegScores,
   dexLiquidity,
   reportCards,
+  reportCardsMethodologyVersion,
   sourceGenerations,
 }: AltPegStablecoinTableProps) {
   const pinnedStablecoins = usePinnedStablecoins();
@@ -107,6 +109,7 @@ export function AltPegStablecoinTable({
         pegScores={pegScores}
         dexLiquidity={dexLiquidity}
         reportCards={reportCards}
+        reportCardsMethodologyVersion={reportCardsMethodologyVersion}
         sourceGenerations={sourceGenerations}
         pinnedStablecoinIds={pinnedStablecoins.pinnedIds}
         onTogglePinnedStablecoin={pinnedStablecoins.togglePinned}

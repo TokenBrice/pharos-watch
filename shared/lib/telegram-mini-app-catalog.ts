@@ -7,6 +7,8 @@ export interface TelegramMiniAppCatalogCoin {
   symbol: string;
   name: string;
   peg: string;
+  /** NAV tokens only: the site's hero peg label ("USDe NAV"), instead of a "{CODE} peg" subtitle. */
+  pegLabel?: string;
   status: string;
   /** 1-based position in the curated canonical market-cap order; a sort key, not a published statistic. */
   rank: number;

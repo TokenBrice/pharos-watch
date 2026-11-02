@@ -573,6 +573,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         sourceTvlUsd={readyModel.sourceExplorer.selectedSource.sourceTvlUsd}
         sourceDepthLens={readyModel.sourceExplorer.selectedSource.depthLens}
         yieldType={readyModel.sourceExplorer.selectedSource.yieldType}
+        sourceRole={readyModel.sourceExplorer.selectedSource.sourceRole}
         sourceRiskDrivers={readyModel.sourceExplorer.selectedSource.sourceRiskDrivers}
         sourceChanged={readyModel.sourceExplorer.sourceSwitch.changed}
         confidenceTier={readyModel.sourceExplorer.selectedSource.confidenceTier}

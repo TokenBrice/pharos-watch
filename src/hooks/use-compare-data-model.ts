@@ -60,6 +60,10 @@ function toFreshnessQuery(
   };
 }
 
+function isProducerUpdatedAt(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
 export function useCompareDataModel({
 
   selectedIds,
@@ -131,6 +135,21 @@ export function useCompareDataModel({
       ?? redemption.error ?? yieldRankings.error ?? stress.error ?? flow.error
     : null);
   const hasPrimaryData = !!listData?.peggedAssets?.length;
+
+  // The share card is dated by the oldest producer generation among the payloads
+  // it reads. A loaded payload without a clock, or an unknown stablecoins clock,
+  // leaves the stamp off rather than dating the card by receipt time.
+  const shareAsOfUpdatedAt = useMemo(() => {
+    const stablecoinsUpdatedAt = list.meta?.updatedAt;
+    if (listData === undefined || !isProducerUpdatedAt(stablecoinsUpdatedAt)) return null;
+    const loadedGenerations: (number | null | undefined)[] = [stablecoinsUpdatedAt];
+    if (pegSummary !== undefined) loadedGenerations.push(peg.meta?.updatedAt);
+    if (dexData !== undefined) loadedGenerations.push(dex.meta?.updatedAt);
+    if (reportCardsData !== undefined) loadedGenerations.push(reportCards.meta?.updatedAt);
+    const knownGenerations = loadedGenerations.filter(isProducerUpdatedAt);
+    if (knownGenerations.length !== loadedGenerations.length) return null;
+    return Math.min(...knownGenerations);
+  }, [dex, dexData, list, listData, peg, pegSummary, reportCards, reportCardsData]);
 
   const freshnessQueries = useMemo<StaleQuery[]>(() => [
     toFreshnessQuery("stablecoins", list, hasPrimaryData),
@@ -344,6 +363,7 @@ export function useCompareDataModel({
     hasPrimaryData,
     pegRates,
     radarCards,
+    shareAsOfUpdatedAt,
     supplySeries,
   };
 }

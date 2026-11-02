@@ -15,7 +15,7 @@ import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-regist
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { MicaProfile, PegCurrency } from "@shared/types";
 import { formatRegisterDeathDate } from "@/components/cemetery/cemetery-register-model";
-import { formatFuzzyDate } from "@/lib/pre-launch";
+import { formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
 
 /** MiCA status is shown only where EU authorization is the cohort's live question. */
 const MICA_AT_A_GLANCE_PEGS: ReadonlySet<PegCurrency> = new Set<PegCurrency>(["EUR", "GBP", "CHF"]);
@@ -90,6 +90,8 @@ export interface UpcomingPegCoinEntry {
   symbol: string;
   /** "Testnet · target H2 2026", or the phase with "no target date set". */
   status: string;
+  /** Live coin awaiting admitted data; rendered apart from the upcoming grid. */
+  launched: boolean;
 }
 
 export function buildUpcomingPegCoinEntries(
@@ -107,6 +109,7 @@ export function buildUpcomingPegCoinEntries(
       name: coin.name,
       symbol: coin.symbol,
       status: `${phase} · ${target}`,
+      launched: isLaunchedAwaitingData(coin),
     };
   });
 }

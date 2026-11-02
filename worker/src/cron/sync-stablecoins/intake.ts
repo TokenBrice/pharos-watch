@@ -40,6 +40,7 @@ import {
   loadFreshFxRates,
   loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
+  pegMechanismFromBacking,
   restoreMissingTrackedAssets,
   withholdUnclockedCarriedSupply,
   type CronResult,
@@ -435,6 +436,7 @@ export async function loadStablecoinsIntake(
     const mapped = REGISTRY_BY_LLAMA_ID.get(String(asset.id));
     if (mapped) {
       asset.id = mapped.id;
+      asset.pegMechanism = pegMechanismFromBacking(mapped.flags.backing, mapped.flags.pegCurrency);
     }
   }
 

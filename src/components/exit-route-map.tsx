@@ -23,7 +23,7 @@ import "./exit-route-instrument.css";
 
 function SelectedExitRoutePanel({ selection }: { selection: LiquidityExitRouteSelection }) {
   if (selection.kind === "throat") {
-    // The aggregate depth is the hero beam; the readout gives the crowding read instead of repeating it.
+    // The aggregate depth is the hero beam; the readout gives the protocol crowding read instead of repeating it.
     return (
       <div className="exit-route-selection-panel" data-testid="selected-exit-route-panel" aria-live="polite">
         <span className="pharos-label">Exit throat</span>
@@ -140,7 +140,7 @@ function ExitRouteInstrumentScene({
     `${formatCurrency(model.totalTvlUsd)} DEX TVL`,
     model.topProtocol ? `${model.topProtocol.label} leading protocol` : null,
     model.topChain ? `${model.topChain.label} leading chain` : null,
-    !crowding ? null : `${model.concentrationHhi!.toFixed(2)} crowding index`,
+    !crowding ? null : `${model.concentrationHhi!.toFixed(2)} protocol crowding`,
   ].filter(Boolean).join(", ");
 
   const throatSelection = aggregateThroatSelection(model);
@@ -277,7 +277,7 @@ function ExitRouteInstrumentScene({
             className={`exit-route-instrument__throat ${selected.kind === "throat" ? "exit-route-instrument__route-selected" : ""}`}
             data-testid="exit-throat"
             data-crowding-band={throat.band}
-            aria-label={`Aggregate exit throat, ${formatCurrency(model.totalTvlUsd)} total DEX TVL, crowding index ${!crowding ? "not scored" : `${model.concentrationHhi!.toFixed(2)}, ${crowding.concentrationLabel.toLowerCase()} crowding`}`}
+            aria-label={`Aggregate exit throat, ${formatCurrency(model.totalTvlUsd)} total DEX TVL, protocol crowding ${!crowding ? "not scored" : `${model.concentrationHhi!.toFixed(2)}, ${crowding.concentrationLabel.toLowerCase()} crowding`}`}
             onFocus={() => onSelect(throatSelection)}
             onMouseEnter={() => onSelect(throatSelection)}
             onClick={() => onSelect(throatSelection)}
@@ -300,12 +300,12 @@ function ExitRouteInstrumentScene({
                 aria-hidden="true"
               />
             ))}
-            {/* The throat is drawn from HHI, so it carries the crowding index; the depth it passes is the hero beam above. */}
+            {/* The throat is drawn from the protocol-bucket HHI, so it carries the protocol crowding read; the depth it passes is the hero beam above. */}
             <text x={EXIT_ROUTE_SCENE.throatX} y="212" textAnchor="middle" fill="var(--route-hero)" fontSize="30" fontWeight="700" fontFamily="var(--font-geist-mono)" style={{ fontVariantNumeric: "tabular-nums slashed-zero" }} aria-hidden="true">
               {!crowding ? "NR" : model.concentrationHhi!.toFixed(2)}
             </text>
             <text x={EXIT_ROUTE_SCENE.throatX} y="231" textAnchor="middle" fill="var(--route-caption)" fontSize="10.5" fontWeight="500" fontFamily="var(--font-sans), ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
-              Crowding index
+              Protocol crowding
             </text>
             <text x={EXIT_ROUTE_SCENE.throatX} y="248" textAnchor="middle" fill="var(--route-throat-marker)" fontSize="10.5" fontWeight="600" fontFamily="var(--font-sans), ui-sans-serif, system-ui, sans-serif" aria-hidden="true">
               {crowding ? `${crowding.concentrationLabel} crowding` : "Not scored"}
@@ -348,14 +348,14 @@ function FallbackRouteColumn({
 
 /**
  * Below 768px the scene would crop; the same doors and lanes read as two short
- * lists, and the throat's crowding index (shown nowhere else) leads them.
+ * lists, and the throat's protocol crowding (shown nowhere else) leads them.
  */
 function ExitRouteFallbackList({ model }: { model: LiquidityExitRouteModel }) {
   const crowding = getHhiBand(model.concentrationHhi);
   return (
     <div className="exit-route-fallback-list" data-testid="exit-route-fallback-list" aria-label="Exit routes as a list">
       <p className="col-span-2 flex items-baseline justify-between gap-3 border-b border-border/50 pb-2 text-sm" data-testid="exit-route-fallback-crowding">
-        <span className="text-muted-foreground">Crowding index</span>
+        <span className="text-muted-foreground">Protocol crowding</span>
         <span>
           <span className="pharos-numeric font-semibold">
             {!crowding ? "NR" : model.concentrationHhi!.toFixed(2)}

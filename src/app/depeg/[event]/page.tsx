@@ -9,7 +9,8 @@ import { buildPageMetadata } from "@/lib/page-metadata";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { DEPEG_AUDIT_DISPUTED_BADGE, resolveMechanismArchetype } from "@shared/lib/classification";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { formatDeviationBps, formatIsoTimestamp } from "@shared/lib/format";
 import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
@@ -101,15 +102,27 @@ export async function generateMetadata(
   });
 }
 
+const PROVENANCE_BADGE_CLASS = "inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-3xs font-medium leading-none";
+
 function ProvenanceLine({ event }: { event: DepegEventEntry }) {
   const methodologyVersion = getMethodologyVersionAt("depeg-dews", event.startedAt);
   const versionLabel = toMethodologyVersionLabel(methodologyVersion);
   const provenance = event.provenance ?? null;
+  const disputed = isDisputedAuditVerdict(provenance?.auditVerdict);
   const parts: string[] = [`Detected under ${versionLabel}`];
   if (provenance?.confidenceTier) parts.push(`${provenance.confidenceTier} confidence`);
-  if (provenance?.auditVerdict) parts.push(`audit: ${provenance.auditVerdict}`);
+  if (provenance?.auditVerdict && !disputed) parts.push(`audit: ${provenance.auditVerdict}`);
   if (event.confirmationSources) parts.push(`confirmed via ${event.confirmationSources}`);
-  return <p className="text-sm text-muted-foreground">{parts.join(" · ")}</p>;
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+      {disputed ? (
+        <span className={`${PROVENANCE_BADGE_CLASS} ${DEPEG_AUDIT_DISPUTED_BADGE.className}`}>
+          {DEPEG_AUDIT_DISPUTED_BADGE.label}
+        </span>
+      ) : null}
+      <span>{parts.join(" · ")}</span>
+    </p>
+  );
 }
 
 function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; includeTime: boolean }) {

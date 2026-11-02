@@ -15,7 +15,7 @@ import {
   type YieldSourceFreshnessDisplay,
 } from "@/lib/yield-source-presentation";
 import { getYieldRowSourceClockInput } from "@/lib/yield-workbench-row";
-import type { AltYieldSource, YieldDecisionRejectionReasonCode, YieldRanking, YieldType } from "@shared/types";
+import type { AltYieldSource, YieldDecisionRejectionReasonCode, YieldRanking, YieldSourceRole, YieldType } from "@shared/types";
 
 export interface YieldRejectionHint {
   code: YieldDecisionRejectionReasonCode;
@@ -29,6 +29,7 @@ export interface YieldSourceExplorerSource {
   displayLabel: string;
   url: string | null;
   yieldType: YieldType;
+  sourceRole: YieldSourceRole | null;
   apy30d: number;
   sourceTvlUsd: number | null;
   dataSource: string;
@@ -117,6 +118,7 @@ export function buildYieldSourceExplorerModel(
       label: ranking.yieldSource,
       url: ranking.yieldSourceUrl ?? null,
       yieldType: ranking.yieldType,
+      sourceRole: ranking.sourceRole ?? null,
       apy30d: ranking.apy30d,
       sourceTvlUsd: ranking.sourceTvlUsd,
       dataSource: ranking.dataSource,
@@ -131,6 +133,7 @@ export function buildYieldSourceExplorerModel(
       label: source.yieldSource,
       url: sourceUrl(source),
       yieldType: source.yieldType,
+      sourceRole: source.sourceRole ?? null,
       apy30d: source.apy30d,
       sourceTvlUsd: source.sourceTvlUsd,
       dataSource: source.dataSource,

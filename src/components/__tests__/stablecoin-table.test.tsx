@@ -163,12 +163,14 @@ describe("StablecoinTable", () => {
     render(<StablecoinTable
       data={[coin]} isLoading={false} activeFilters={[]}
       pegScores={new Map()} dexLiquidity={{}} reportCards={{}}
+      reportCardsMethodologyVersion="10.01"
       sourceGenerations={{ stablecoins: 1_725_192_000, pegSummary: null, dexLiquidity: 1_725_191_940, reportCards: null }}
     />);
     fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
     expect(downloadCsvWithPreambleMock).toHaveBeenCalledOnce();
     expect(downloadCsvWithPreambleMock.mock.calls[0][3]).toMatchObject({
-      asOfISO: "unknown",
+      asOfISO: "2024-09-01T11:59:00.000Z",
+      methodologyLabel: "published source values · safety-score v10.01",
       sourceGenerations: {
         stablecoins: "2024-09-01T12:00:00.000Z", pegSummary: null,
         dexLiquidity: "2024-09-01T11:59:00.000Z", reportCards: null,

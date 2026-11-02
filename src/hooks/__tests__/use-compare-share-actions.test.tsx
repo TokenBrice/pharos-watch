@@ -81,10 +81,17 @@ describe("useCompareShareActions", () => {
       radarCards: [],
       axisOrder: [],
       axisLabels: {},
+      asOfUpdatedAt: 1_700_000_000,
     }));
 
     await act(async () => result.current.handleDownload());
 
+    expect(shareImageMocks.renderCompareShareImage).toHaveBeenLastCalledWith(
+      expect.any(Array),
+      expect.anything(),
+      undefined,
+      1_700_000_000,
+    );
     const [coins] = shareImageMocks.renderCompareShareImage.mock.calls.at(-1) as [Array<{ symbol: string; marketCap: string; weeklyChange: string }>];
     expect(coins.find((coin) => coin.symbol === "USDC")).toMatchObject({ marketCap: coverage === "unavailable" ? "—" : "$1.00M", weeklyChange: "—" });
     expect(coins.find((coin) => coin.symbol === "USDT")).toMatchObject({ marketCap: "$0.00", weeklyChange: "-100.00%" });

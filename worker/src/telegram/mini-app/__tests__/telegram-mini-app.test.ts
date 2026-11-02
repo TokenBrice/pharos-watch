@@ -116,6 +116,38 @@ describe("handleTelegramMiniAppSession", () => {
     expect(body.catalog.searchableCoins.length).toBeGreaterThan(0);
   });
 
+  it("publishes diagnostics as available when the chat has no diagnostics row", async () => {
+    const initData = await privateInitData();
+    const db = makeMiniAppDb(stateReadTables());
+
+    const response = await handleTelegramMiniAppSession(db, makeMiniAppRequest("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
+    const body = await response.json() as { health: { diagnosticsAvailable?: boolean; lastSuccessfulDeliveryAt: number | null; lastSuccessfulReplyAt: number | null } };
+
+    expect(response.status).toBe(200);
+    expect(body.health).toMatchObject({
+      diagnosticsAvailable: true,
+      lastSuccessfulDeliveryAt: null,
+      lastSuccessfulReplyAt: null,
+    });
+  });
+
+  it("marks health diagnostics unavailable when the diagnostics read fails", async () => {
+    const initData = await privateInitData();
+    const db = makeMiniAppDb(stateReadTables(), {
+      failOn: { match: "FROM telegram_chat_delivery_diagnostics", error: new Error("diagnostics unavailable") },
+    });
+
+    const response = await handleTelegramMiniAppSession(db, makeMiniAppRequest("/api/telegram-mini-app/session", { initData }), BOT_TOKEN);
+    const body = await response.json() as { health: { diagnosticsAvailable?: boolean; lastSuccessfulDeliveryAt: number | null; lastSuccessfulReplyAt: number | null } };
+
+    expect(response.status).toBe(200);
+    expect(body.health).toMatchObject({
+      diagnosticsAvailable: false,
+      lastSuccessfulDeliveryAt: null,
+      lastSuccessfulReplyAt: null,
+    });
+  });
+
   it("reports followed-group membership as unknown, never empty, when the market-cap cache is unreadable", async () => {
     const initData = await privateInitData();
     const db = makeMiniAppDb([

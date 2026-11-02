@@ -331,6 +331,44 @@ describe("YieldDetailSection", () => {
     expect(within(row).queryByText("Unknown depth")).toBeNull();
   });
 
+  it("reads an alternate's depth from its source role, not its yield type", () => {
+    mockRankings([makeRanking({ altSources: [
+      makeAltYieldSource({
+        sourceKey: "native-role",
+        yieldSource: "Native role source",
+        yieldSourceUrl: "https://example.com/native-role",
+        yieldType: "lending-opportunity",
+        sourceRole: "canonical-holder",
+        sourceTvlUsd: null,
+      }),
+      makeAltYieldSource({
+        sourceKey: "external-role",
+        yieldSource: "External role source",
+        yieldSourceUrl: "https://example.com/external-role",
+        yieldType: "lending-vault",
+        sourceRole: "external-opportunity",
+        sourceTvlUsd: null,
+      }),
+    ] })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    const table = screen.getByTestId("yield-detail-alt-sources-table");
+    const nativeRow = within(table).getByRole("link", { name: "Native role source" }).closest("tr")!;
+    expect(within(nativeRow).getByText("Native · depth n/a")).toBeTruthy();
+    expect(within(nativeRow).getByText("Native", { exact: true })).toBeTruthy();
+    expect(within(nativeRow).queryByText("—")).toBeNull();
+
+    const externalRow = within(table).getByRole("link", { name: "External role source" }).closest("tr")!;
+    expect(within(externalRow).getByText("Unknown depth")).toBeTruthy();
+    expect(within(externalRow).getByText("—")).toBeTruthy();
+
+    // The compact list on the same surface reads the same role-driven values.
+    const list = screen.getByRole("list", { name: "Compact retained yield sources" });
+    expect(list.textContent).toContain("Native role source");
+    expect(list.textContent).toContain("Native · depth n/a");
+    expect(list.textContent).toContain("External role source");
+    expect(list.textContent).toContain("Unknown depth");
+  });
+
   it("does not infer a missing chain for a published venue", () => {
     mockRankings([makeRanking({ sourceRole: "external-opportunity", sourceRisk: { venueProtocol: "Published venue" } })]);
     render(<YieldDetailSection stablecoinId="usdn-smardex" />);

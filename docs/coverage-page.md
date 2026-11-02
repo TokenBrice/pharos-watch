@@ -33,7 +33,7 @@ Count and market-cap denominators name the full active or feature-eligible popul
 
 - Reserve headline counts score-grade live inputs, not every detail reserve view.
 - Redemption headline counts strong modeled coverage; heuristic, resolved-unscored, configured-unrated and impaired rows remain in breakdowns without being counted as strong.
-- Price headline requires at least three observed consensus sources; a matrix Tracked row may have fewer.
+- Price headline requires at least three observed consensus sources. Its count and market-cap denominators admit Tracked rows with a known `sourceCount` plus Missing rows as zero sources, excluding NAV price-only and Data n/a rows, the same population as the Source-target tile. Missing covers both an absent peg-summary row and a present row with no observed price. The snapshot bar stacks that population's observed-depth buckets plus the uncovered gap (retaining Data n/a as a visible segment), so excluded rows never inflate either; whenever the denominator excludes known rows the cap share reads known cap.
 - Freezable coverage includes every reviewed exposure state across the active universe, not just live event tracking.
 
 Source-depth tiles/filters share observed `sourceCount` with row detail. Market-source/authoritative-override categories remain distinct. Override-only data does not create a market-source card. Input-coverage explanations name the actual missing-data owner (issuer reporting cadence, for example), not a generic Pharos delay; a held publication replaces counts with hold context.
@@ -52,13 +52,13 @@ Data n/a is neither covered nor uncovered: exclude it from feature count/cap den
 
 Safety membership comes from each published card's `ratingStatus`, not score presence: a rated zero remains Rated and genuine not-rated remains NR in the known population. Per-card pipeline gaps retain published machine reasons and use Data n/a, as do absent cards/publications; they have their own unavailable breakdown and leave known count/cap reach and the No Safety gap filter. Stacked bars retain those unavailable rows as visible segments without treating them as known coverage.
 
-Omitted source arrays/counts mean unknown; explicit empty arrays measure zero. Cap aggregation carries observation count/completeness. Partial subtotals/ratios say known market cap; no observations is n/a; measured zero stays $0 while zero-denominator ratios remain n/a. Cap skew requires measured count and cap shares; no valid candidate means n/a. An observed uncovered denominator cannot manufacture a zero covered numerator when no covered row has observed cap.
+Omitted source arrays/counts mean unknown; explicit empty arrays measure zero. Cap aggregation carries observation count/completeness. Partial subtotals/ratios say known market cap; no observations is n/a; measured zero stays $0 while zero-denominator ratios remain n/a. A feature denominator that its filter narrows to zero while known rows exist is a zero-denominator n/a, not Data n/a. Cap skew requires measured count and cap shares; no valid candidate means n/a. An observed uncovered denominator cannot manufacture a zero covered numerator when no covered row has observed cap.
 
 Shared mobile/table coin identities use market-cap availability, not positivity: an observed zero displays $0, while an unavailable placeholder displays Mcap -.
 
 ## UX Contract
 
-Search/filter/sort/page use URL state; defaults are omitted and lens changes reset page one. Default sorting is descending live cap. The strict Reserves lens matches score-grade live only, not proof/curated validation. Shared paginated table/cards must show the same eligible set and full filtered count; cards expose remaining statuses through accessible expansion. The active lens and cap share describe that set, not visible page rows.
+Search/filter/sort/page use URL state; defaults are omitted and lens changes reset page one. Default sorting is descending live cap. The strict Reserves lens matches score-grade live only, not proof/curated validation. The FreezeWatch chip keeps the `blacklist` filter key and its live event-tracker predicate. Shared paginated table/cards must show the same eligible set and full filtered count; cards expose remaining statuses through accessible expansion. The active lens and cap share describe that set, not visible page rows.
 
 Shared freshness notices cover every contributing live family without discarding structural coverage when optional queries fail. Retained liquidity distinguishes producer-refresh failure from source/quality warnings; older snapshot notices take precedence. Advisory detail may explain reasons without dumping machine flags into banner text. Stablecoins-source unavailability shows the error card and withholds the matrix rather than inventing cap weights.
 

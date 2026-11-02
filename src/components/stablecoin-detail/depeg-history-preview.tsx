@@ -1,6 +1,7 @@
 import { TableFrame } from "@/components/table";
 import { formatBps, formatDuration, formatIsoDate } from "@shared/lib/format";
-import { getDepegClosureSnapshotLabel } from "@shared/lib/classification";
+import { DEPEG_AUDIT_DISPUTED_BADGE, getDepegClosureSnapshotLabel } from "@shared/lib/classification";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import type {
   DepegHistorySnapshotEvent,
   StablecoinDetailHistorySnapshot,
@@ -10,6 +11,8 @@ const SOURCE_KIND_LABELS = {
   live: "Live observation",
   backfill: "Historical backfill",
 } as const;
+
+const DISPUTED_BADGE_CLASS = "ml-1.5 inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-3xs font-medium leading-none";
 
 function SourceCell({ event }: { event: DepegHistorySnapshotEvent }) {
   if (event.href) {
@@ -37,7 +40,7 @@ function SourceCell({ event }: { event: DepegHistorySnapshotEvent }) {
  * 830 KB ceiling. TableFrame still owns the shell, caption and viewport.
  */
 export function DepegHistoryPreview({ snapshot }: { snapshot: StablecoinDetailHistorySnapshot }) {
-  const shown = snapshot.events.length;
+  const shown = snapshot.events.filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict)).length;
   return (
     <TableFrame
       testId="depeg-history-preview"
@@ -76,7 +79,14 @@ export function DepegHistoryPreview({ snapshot }: { snapshot: StablecoinDetailHi
                 formatDuration(event.startedAt, event.endedAt)
               )}
             </td>
-            <td>{getDepegClosureSnapshotLabel(event.closure)}</td>
+            <td>
+              {getDepegClosureSnapshotLabel(event.closure)}
+              {isDisputedAuditVerdict(event.provenance?.auditVerdict) ? (
+                <span className={`${DISPUTED_BADGE_CLASS} ${DEPEG_AUDIT_DISPUTED_BADGE.className}`}>
+                  {DEPEG_AUDIT_DISPUTED_BADGE.label}
+                </span>
+              ) : null}
+            </td>
             <td>
               <SourceCell event={event} />
             </td>

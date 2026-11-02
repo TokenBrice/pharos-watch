@@ -29,6 +29,7 @@ import {
 } from "../../shared/types/stablecoin-client-meta.ts";
 import { resolveMintAuthorityStatusKind } from "../../shared/lib/classification/mint-authority.ts";
 import { resolveMechanismArchetype } from "../../shared/lib/classification/resolve-mechanism-archetype.ts";
+import { getHeroPegLabel } from "../../shared/lib/classification.ts";
 import { atomicWriteFileSync } from "../lib/atomic-artifact-write.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -670,6 +671,11 @@ export function buildTelegramMiniAppCatalogOutput({
 
   // `rank` is the 1-based position in the curated canonical market-cap order.
   // The Mini App uses it only to sort search results and followed coins.
+  const symbolsById = new Map(
+    parsed
+      .filter((coin) => typeof coin?.id === "string" && typeof coin?.symbol === "string")
+      .map((coin) => [coin.id, coin.symbol]),
+  );
   const searchableCoins = orderSourceCoins(parsed, readCanonicalOrder(canonicalOrderJsonPath))
     .filter((coin) => !["frozen", "quarantined", "delisted"].includes(coin.status ?? "active"))
     .map((coin, index) => {
@@ -681,11 +687,18 @@ export function buildTelegramMiniAppCatalogOutput({
       ) {
         throw new Error(`[client-registry] Mini App catalog entry ${index} has invalid metadata`);
       }
+      const pegLabel = coin.flags.navToken === true
+        ? getHeroPegLabel(
+            coin.flags,
+            typeof coin.pegReferenceId === "string" ? symbolsById.get(coin.pegReferenceId) : undefined,
+          )
+        : null;
       return {
         stablecoinId: coin.id,
         symbol: coin.symbol,
         name: coin.name,
         peg: coin.flags.pegCurrency,
+        ...(pegLabel ? { pegLabel } : {}),
         status: coin.status ?? "active",
         rank: index + 1,
         // Wrapped, savings, vault and yield-bearing variants; the Mini App lists base coins first.

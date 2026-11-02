@@ -123,8 +123,10 @@ export function classifyYieldSourceDepth(params: {
 
 /**
  * Depth lens as displayed. `native-unmeasured` deliberately lives outside
- * {@link YieldSourceDepthLens}: the lens drives depth filters, board counts,
- * source posture, and URL state, none of which change here.
+ * {@link YieldSourceDepthLens}: the lens drives depth filters, board counts
+ * and URL state, so the display state must not masquerade as a fourth measured
+ * band. Source posture reads `isNativeUnmeasured` separately to exempt a
+ * native row from evidence debt.
  */
 export type YieldSourceDepthDisplayLens = YieldSourceDepthLens | "native-unmeasured";
 
@@ -301,11 +303,15 @@ export function getYieldSourceRiskDrivers(params: {
     });
   }
 
-  if (params.sourceChanged || (sourceSwitchCount30d !== null && sourceSwitchCount30d > 0)) {
+  const changedInLatestSnapshot = params.sourceChanged === true;
+  const changedInTrailingMonth = sourceSwitchCount30d !== null && sourceSwitchCount30d > 0;
+  if (changedInLatestSnapshot || changedInTrailingMonth) {
     drivers.push({
       key: "source-changed",
       label: "source changed",
-      description: "Selected source changed versus the prior published snapshot.",
+      description: changedInLatestSnapshot
+        ? "Selected source changed versus the prior published snapshot."
+        : "Selected source changed within the last 30 days.",
     });
   }
 
@@ -330,6 +336,9 @@ export function classifyYieldSourcePosture(params: {
   sourceRisk?: YieldSourceRisk | null;
   sourceTvlUsd?: number | null;
   sourceDepthLens?: YieldSourceDepthLens | null;
+  /** Supplied with `sourceRole` so a native source's unmeasured depth is not evidence debt. */
+  yieldType?: YieldType;
+  sourceRole?: YieldSourceRole | null;
   sourceChanged?: boolean;
   sourceFreshness?: YieldSourcePublishedFreshness | null;
   warningSignals?: readonly string[] | null;
@@ -340,6 +349,14 @@ export function classifyYieldSourcePosture(params: {
     sourceRisk,
     sourceTvlUsd: params.sourceTvlUsd,
   });
+  // A native row has no venue to measure; its unknown depth is "not
+  // applicable", not evidence we failed to read. External rows keep the debt.
+  const nativeUnmeasuredDepth = params.yieldType != null && getYieldSourceDepthDisplay({
+    depthLens: sourceDepthLens,
+    yieldType: params.yieldType,
+    sourceRole: params.sourceRole,
+    sourceTvlUsd: params.sourceTvlUsd,
+  }).isNativeUnmeasured;
   const sourceRiskPenalty = finiteNumber(sourceRisk?.sourceRiskPenalty) ?? 1;
   const sourceSwitchCount30d = finiteNumber(sourceRisk?.sourceSwitchCount30d);
   const sourceChanged = params.sourceChanged === true || (sourceSwitchCount30d !== null && sourceSwitchCount30d > 0);
@@ -368,7 +385,7 @@ export function classifyYieldSourcePosture(params: {
     driverKeys.has("concentrated-dependency") ||
     driverKeys.has("limited-history") ||
     driverKeys.has("source-changed");
-  const hasEvidenceDebt = sourceDepthLens === "unknown";
+  const hasEvidenceDebt = sourceDepthLens === "unknown" && !nativeUnmeasuredDepth;
   const hasUnknownVenueDebt = sourceRisk?.venueRiskTier === "unknown";
   const hasWatchWarning = hasAnySignal(warningSignals, SOURCE_POSTURE_WATCH_WARNING_SIGNALS);
 

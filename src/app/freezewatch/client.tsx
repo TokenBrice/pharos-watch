@@ -82,6 +82,7 @@ export default function FreezeWatchClient() {
     stablecoins,
     stablecoinFxFallbackRates,
     reportCardMap,
+    reportCardsMethodologyVersion,
     blacklistStatusBuckets,
     supportDataLoading,
     stablecoinsError,
@@ -245,6 +246,7 @@ export default function FreezeWatchClient() {
             sourceGenerations={sourceGenerations}
             fxFallbackRates={stablecoinFxFallbackRates}
             reportCards={reportCardMap}
+            reportCardsMethodologyVersion={reportCardsMethodologyVersion}
             error={stablecoinsError}
             isLoading={supportDataLoading}
             onRetry={refetchSupport}

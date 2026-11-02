@@ -217,7 +217,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
           />
         </div>
         <div className="mt-3 pharos-chart-stage">
-          <FlowChart hourly={hourly} isLoading={isChartLoading} />
+          <FlowChart hourly={hourly} isLoading={isChartLoading} publishedWindow={chartData?.window} />
         </div>
       </section>
 

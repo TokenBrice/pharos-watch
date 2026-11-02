@@ -13,6 +13,7 @@ import {
 } from "@/lib/page-metadata";
 import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { isStablecoinTitleTreatment } from "@/lib/stablecoin-title-cohort";
+import { formatFuzzyDate } from "@/lib/pre-launch";
 
 // Cohort membership is frozen in stablecoin-title-cohort.json.
 const TREATMENT_ID = "usdc-circle";
@@ -178,10 +179,33 @@ describe("pre-launch metadata", () => {
     });
     expect(titleOf(launched)).toBe("TSTX Stablecoin (Test Dollar): Status & Tracking");
     expect(descriptionOf(launched)).toBe(
-      "TSTX is Acme's dollar stablecoin. Latest milestone: Oct 5, 2026. Launched Oct 5, 2026; not yet tracked.",
+      "TSTX is Acme's dollar stablecoin. Launched Oct 5, 2026; not yet tracked. Latest milestone: Oct 5, 2026.",
     );
     expect(descriptionOf(testCoin({ status: "pre-launch", launchPhase: "launched", launchDate: "2026-10-05" })))
       .not.toContain("pre-launch");
+  });
+
+  it("keeps the curated one-liner ahead of the launched caveat, which outranks any milestone, on all 12 rows", () => {
+    const launchedRows = TRACKED_STABLECOINS.filter(
+      (coin) => coin.status === "pre-launch" && coin.launchPhase === "launched",
+    );
+    expect(launchedRows).toHaveLength(12);
+    for (const coin of launchedRows) {
+      const description = descriptionOf(coin);
+      // The curated one-liner is never shortened or displaced by the caveat.
+      expect(description.startsWith(coin.oneLiner!), coin.id).toBe(true);
+      expect(description.length, coin.id).toBeLessThanOrEqual(180);
+      const caveatIndex = description.indexOf("not yet tracked");
+      const milestoneIndex = description.indexOf("Latest milestone:");
+      if (caveatIndex >= 0 && milestoneIndex >= 0) {
+        expect(caveatIndex, coin.id).toBeLessThan(milestoneIndex);
+      }
+      if (caveatIndex < 0) {
+        // Dropped only because the whole one-liner plus the caveat cannot fit.
+        const caveat = coin.launchDate ? `Launched ${formatFuzzyDate(coin.launchDate)}; not yet tracked.` : "Launched; not yet tracked.";
+        expect(coin.oneLiner!.length + 1 + caveat.length, coin.id).toBeGreaterThan(180);
+      }
+    }
   });
 });
 

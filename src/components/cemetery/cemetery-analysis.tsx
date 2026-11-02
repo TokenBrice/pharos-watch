@@ -77,6 +77,7 @@ export function CemeteryAnalysis({ stats }: { stats: CemeteryStats }) {
     counts: CAUSE_ORDER.map((cause) => year.byCause[cause]),
     tracked: CAUSE_ORDER.map((cause) => year.trackedByCause[cause]),
     medianPeakLabel: year.medianPeak === null ? null : formatCemeteryPeak(year.medianPeak),
+    recordedPeakCount: year.recordedPeakCount,
     partial: year.partial,
   }));
 

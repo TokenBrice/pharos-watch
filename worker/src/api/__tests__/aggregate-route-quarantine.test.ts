@@ -16,7 +16,8 @@ import { getResponseReadyCacheKey } from "../../lib/api-cache-read";
  *
  * These pin the current whole-response admission: one unusable stored row fails
  * the route instead of being withheld while the readable peers publish. Both
- * cases are candidates for an owner decision; changing them is intentional.
+ * routes fail closed; depeg-events names the refused row, stablecoins names the
+ * malformed cached payload.
  */
 const SEC = 1_700_000_000;
 const fixtures = createLatestSchemaFixtureTracker();
@@ -42,21 +43,23 @@ describe("/api/depeg-events single-row admission", () => {
   });
 
   it.each([
-    { field: "direction", overrides: { direction: "sideways" }, expected: /Invalid direction "sideways"/ },
-    { field: "source", overrides: { source: "replay" }, expected: /Invalid source "replay"/ },
-    { field: "close_reason", overrides: { close_reason: "not-a-close-reason" }, expected: /Invalid close_reason/ },
-  ])("fails the public route instead of publishing an empty cohort for one unreadable $field row", async ({ overrides, expected }) => {
+    { field: "direction", overrides: { direction: "sideways" }, reason: "invalid-direction" },
+    { field: "source", overrides: { source: "replay" }, reason: "invalid-source" },
+    { field: "close_reason", overrides: { close_reason: "not-a-close-reason" }, reason: "invalid-close-reason" },
+  ])("names the refused $field row instead of publishing a partial ledger", async ({ overrides, reason }) => {
     // No partial publish: a row whose stored semantics cannot be classified is
     // not served as a best-effort event (never invent direction/source/closure).
     const badRow: Record<string, unknown> = { ...makeDepegRow({ id: 2 }), ...overrides };
     const db = dbWithRows([makeDepegRow({ id: 1 }), badRow]);
     const url = new URL("https://x/api/depeg-events");
+    const expected = { error: "Depeg event row unreadable", reason, eventId: 2 };
     const publicResponse = await route(routeContextFactory({ db })({ url }));
     expect(publicResponse).not.toBeNull();
-    expect(await readJsonResponse(publicResponse!, 500)).toEqual({ error: "Internal Server Error" });
-    // Secondary: the unreadable row is the handler's own refusal, not an
+    expect(publicResponse!.headers.get("Cache-Control")).toBe("no-store");
+    expect(await readJsonResponse(publicResponse!, 503)).toEqual(expected);
+    // Secondary: the unreadable row is the handler's own named refusal, not an
     // unrelated failure the error boundary happened to catch.
-    await expect(handleDepegEvents(db, url)).rejects.toThrow(expected);
+    expect(await readJsonResponse(await handleDepegEvents(db, url), 503)).toEqual(expected);
   });
 
   it("keeps a row whose stored coverage JSON no longer decodes, with explicit empty coverage", async () => {

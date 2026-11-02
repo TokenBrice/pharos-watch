@@ -415,7 +415,7 @@ function LookThroughCaption({
  * sentences restate figures the facts and slice detail already carry.
  */
 function buildVerdict(summary: ReserveQualityClientSummary | null): string | null {
-  if (!summary) return null;
+  if (!summary?.lede) return null;
   return findSummaryBudgetViolations(summary.lede).length === 0 ? summary.lede : deriveVerdictLine(summary.lede);
 }
 
@@ -466,8 +466,12 @@ export function ReservesSection({
   // The reviewed basis is the curated `coin.reserves`. The quality summary is
   // derived from it but only exists when slices carry both asset class and
   // liquidity horizon, so partially annotated baskets (USDe) still draw here.
+  // A provenance-only summary projects the review's chip/footer evidence
+  // without quality slices, so the visual falls back to the curated basket.
   const reviewedSlices = useMemo(
-    () => (qualitySummary ? reviewedCompositionSlices(qualitySummary) : compositionSlices(coin.reserves ?? [])),
+    () => (qualitySummary && !qualitySummary.provenanceOnly
+      ? reviewedCompositionSlices(qualitySummary)
+      : compositionSlices(coin.reserves ?? [])),
     [qualitySummary, coin.reserves],
   );
   const liveSlices = useMemo(
@@ -525,17 +529,27 @@ export function ReservesSection({
   const baselineNote = isLiveFeed ? null : (footnote?.text ?? null);
 
   const sources: EvidenceFooterSource[] = [];
-  for (const source of [...(qualitySummary?.sources ?? []), ...(footnote?.references ?? [])]) {
+  for (const source of [
+    ...(qualitySummary?.sources ?? []),
+    ...(lookThroughView?.parent.parentSources ?? []),
+    ...(footnote?.references ?? []),
+  ]) {
     if (!sources.some((existing) => existing.url === source.url)) sources.push({ label: source.label, url: source.url });
   }
   const basisSource = qualitySummary?.sources[0];
   // The "Live reserve feed" fold already opens on the dated stamp; it is
   // repeated here only when that fold is absent.
   const foldedLiveStamp = keepsOneDate && isLiveFeed && !showLiveFeed ? (footnote?.text ?? null) : null;
-  const lookThroughDates = lookThroughView
+  const parent = lookThroughView?.parent ?? null;
+  const parentBasisDate = parent?.parentCompositionAsOf && parent.parentCompositionAsOf !== parent.parentReviewedAt
+    ? `as of ${parent.parentCompositionAsOf}${parent.parentReviewedAt ? `, reviewed ${parent.parentReviewedAt}` : ""}`
+    : parent?.parentReviewedAt
+      ? `reviewed ${parent.parentReviewedAt}`
+      : null;
+  const lookThroughDates = parent
     ? [
-        lookThroughView.parent.parentReviewedAt
-          ? `${lookThroughView.parent.parentSymbol} reserves reviewed ${lookThroughView.parent.parentReviewedAt}${
+        parentBasisDate
+          ? `${parent.parentSymbol} reserves ${parentBasisDate}${
             reviewedAt ? `; the review date below covers ${coin.symbol}'s own basis` : ""
           }.`
           : null,
@@ -567,7 +581,7 @@ export function ReservesSection({
 
   const headerRight = wholeBasketSummary || feedStatus ? (
     <>
-      {wholeBasketSummary ? (
+      {wholeBasketSummary?.chipLabel ? (
         // The module's verdict chip ("Opaque exit") never truncates: `shrink-0!`
         // beats the header slot's shrink-and-truncate rule; the title wraps instead.
         <Badge variant="outline" className={cn(CHIP_CLASS, "shrink-0!", wholeBasketSummary.chipToneClass)}>
@@ -649,7 +663,7 @@ export function ReservesSection({
                 </ul>
               </ModuleDisclosure>
             ) : null}
-            {qualitySummary ? <SliceDetail summary={qualitySummary} /> : null}
+            {qualitySummary && !qualitySummary.provenanceOnly ? <SliceDetail summary={qualitySummary} /> : null}
             {showLiveFeed ? (
               <LiveFeedDetail
                 slices={liveSlices}

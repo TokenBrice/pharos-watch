@@ -78,5 +78,9 @@ describe("DataHealthBanner", () => {
     expect(markup).toContain("Flows has not populated yet");
     expect(markup).not.toContain("Prices and Flows");
     expect(markup).not.toContain("Last successful update");
+    // The banner keeps the worst state's title and tone.
+    expect(markup).toContain('data-health-state="unavailable"');
+    expect(markup).toContain(">Waiting for initial data</p>");
+    expect(markup).not.toContain("Showing an older snapshot");
   });
 });

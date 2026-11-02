@@ -158,8 +158,9 @@ describe("HistoryClient", () => {
 
   it("retains cached history while exposing a refresh failure", async () => {
     const retainedTransitions = [{ ...status.timeline[0], id: 999 }].filter(Boolean);
+    const retainedAt = status.timestamp - 3_600;
     useStatusHistoryMock.mockReturnValue({
-      data: { transitions: retainedTransitions, hasMore: false },
+      data: { timestamp: retainedAt, transitions: retainedTransitions, hasMore: false },
       error: new Error("refresh failed"),
       isLoading: false,
       refetch: vi.fn().mockResolvedValue(undefined),
@@ -170,9 +171,11 @@ describe("HistoryClient", () => {
 
     const props = historySectionPropsMock.mock.calls.at(-1)?.[0] as {
       allTransitions: unknown[];
+      historyObservedAt: number | null;
       historyEvidence: { source: string; state: string; message: string };
     };
     expect(props.allTransitions).toEqual(retainedTransitions);
+    expect(props.historyObservedAt).toBe(retainedAt);
     expect(props.historyEvidence).toMatchObject({ source: "history", state: "stale" });
     expect(props.historyEvidence.message).toContain("refresh failed");
   });

@@ -15,6 +15,8 @@ import {
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronResult } from "../../lib/cron-logger";
+import { isCommodityPeg } from "@shared/lib/filter-tags";
+import type { BackingType, PegCurrency } from "@shared/types/core";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
@@ -771,6 +773,24 @@ export function mergeSupplementalLastKnownGood(
   };
 }
 
+/**
+ * Published `pegMechanism` keeps DefiLlama's vocabulary, which has no distinct
+ * `rwa-backed` value. Tracked intake rows publish the reviewed registry backing
+ * in that vocabulary; untracked rows keep the upstream label untouched.
+ * Commodity pegs are the exception: the gold/silver supplemental lane publishes
+ * the registry backing unchanged, so the same coin must not flip to
+ * `fiat-backed` when this path rebuilds its row.
+ */
+const PUBLISHED_PEG_MECHANISM_BY_BACKING = {
+  "rwa-backed": "fiat-backed",
+  "crypto-backed": "crypto-backed",
+  algorithmic: "algorithmic",
+} as const satisfies Record<BackingType, string>;
+
+export function pegMechanismFromBacking(backing: BackingType, pegCurrency: PegCurrency): string {
+  return isCommodityPeg(pegCurrency) ? backing : PUBLISHED_PEG_MECHANISM_BY_BACKING[backing];
+}
+
 const ACTIVE_TRACKED_IDS = new Set(ACTIVE_STABLECOINS.map((meta) => meta.id));
 
 export interface TrackedCoverageRestoreResult {
@@ -803,14 +823,16 @@ export function restoreMissingTrackedAssets(
     if (presentIds.has(id)) continue;
     const previous = previousAssetsById.get(id);
     const meta = ACTIVE_META_BY_ID.get(id)!;
+    const pegMechanism = pegMechanismFromBacking(meta.flags.backing, meta.flags.pegCurrency);
     if (prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(id)) {
       const restoredBase = previous ? markRestoredSupply(previous, nowSec) : null;
       // A prior row that cannot name its observation clock keeps only identity
       // and price: the native supply packet is withheld, never re-dated.
       const current = restoredBase ?? (previous ? cloneCachedAsset(previous) : {
         id, name: meta.name, symbol: meta.symbol, geckoId: meta.geckoId,
-        pegType: pegTypeFromCurrency(meta.flags.pegCurrency), pegMechanism: meta.flags.backing, price: null,
+        pegType: pegTypeFromCurrency(meta.flags.pegCurrency), pegMechanism, price: null,
       });
+      current.pegMechanism = pegMechanism;
       const retained = restorePreferredNativeSupply(current, previous, nowSec);
       restoredAssets.push(retained);
       if (retained.supplyRestored) restoredIds.push(id);
@@ -826,6 +848,7 @@ export function restoreMissingTrackedAssets(
       droppedIds.push(id);
       continue;
     }
+    restored.pegMechanism = pegMechanism;
     restoredAssets.push(restored);
     restoredIds.push(id);
   }

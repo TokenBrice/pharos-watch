@@ -1,4 +1,4 @@
-import type { ReserveRisk, StablecoinMeta } from "@shared/types";
+import type { ReserveRisk, StablecoinLink, StablecoinMeta } from "@shared/types";
 import { projectReserveQualityClientSummary } from "@/lib/stablecoin-detail-reserve-quality-client";
 
 /** One reviewed slice of the wrapped parent's basket, bounded to what the look-through visual draws. */
@@ -21,6 +21,10 @@ export interface ReserveLookThroughClientSummary {
   parentSymbol: string;
   /** The parent's own reserve review date; the wrapper's footer date does not cover these slices. */
   parentReviewedAt: string | null;
+  /** The parent review's composition date, when it names one. */
+  parentCompositionAsOf: string | null;
+  /** The parent review's sources, merged into the wrapper's Sources fold. */
+  parentSources: StablecoinLink[];
   slices: ReserveLookThroughSliceClientRow[];
 }
 
@@ -46,7 +50,7 @@ export function projectReserveLookThroughClientSummary(
   if (parent.reserveReview?.scope != null && parent.reserveReview.scope !== "full-composition") return null;
 
   const quality = projectReserveQualityClientSummary(parent);
-  const rows: ReserveLookThroughSliceClientRow[] = quality
+  const rows: ReserveLookThroughSliceClientRow[] = quality && !quality.provenanceOnly
     ? quality.slices.map((row) => ({
         key: row.key,
         name: row.name,
@@ -68,6 +72,8 @@ export function projectReserveLookThroughClientSummary(
     parentId: parent.id,
     parentSymbol: parent.symbol,
     parentReviewedAt: parent.reserveReview?.reviewedAt ?? null,
+    parentCompositionAsOf: parent.reserveReview?.compositionAsOf ?? null,
+    parentSources: parent.reserveReview?.sources ?? [],
     slices: rows,
   };
 }

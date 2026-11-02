@@ -108,6 +108,26 @@ export function buildScoreWaterfall(card: WaterfallCard): ScoreWaterfallStep[] {
       // the reason here would print the same sentence twice.
       detail: null,
     });
+  } else {
+    // An asset premium can be truncated by its own publication ceiling rather
+    // than a card cap. Compare against the full pre-cap chain, including rows
+    // suppressed by a display threshold: a suppressed peg haircut followed by
+    // ordinary rounding is not a ceiling, while a premium above the published
+    // integer is.
+    if (
+      preCap !== null
+      && published !== Math.round(preCap)
+      && preCap - published > POINT_EPSILON
+    ) {
+      steps.push({
+        key: "publication-maximum",
+        label: "Publication maximum",
+        kind: "cap",
+        operator: `max ${published.toFixed(0)}`,
+        value: published,
+        detail: null,
+      });
+    }
   }
 
   // A single stage that never moved the number explains nothing the headline

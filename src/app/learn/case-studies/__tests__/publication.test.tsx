@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "@/lib/case-studies";
+import type { CaseStudy } from "@shared/types/editorial-content";
 import { CaseStudyBody } from "../case-study-body";
 import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
 import { metadata as hubMetadata } from "../page";
@@ -42,6 +43,41 @@ describe("case-study publication metadata", () => {
     const study = CASE_STUDY_LIST.find((entry) => entry.slug === "usde-oracle-2025")!;
     const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
     expect(html).toContain("Scope: Binance order-book print");
+  });
+
+  it("drops NAV-priced widgets so the archival snapshot renders instead of a $1 tape", () => {
+    for (const slug of ["usyc-nav-pricing-2025", "usd0pp-usual-2025"]) {
+      const study = CASE_STUDY_LIST.find((entry) => entry.slug === slug)!;
+      const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
+      expect(html, slug).not.toContain('data-testid="case-study-chart"');
+      expect(html, slug).toContain("Event window");
+    }
+  });
+
+  it("drops a non-USD widget that would be drawn on a $1 tape", () => {
+    const base = CASE_STUDY_LIST.find((entry) => entry.slug === "usdc-svb-2023")!;
+    const study: CaseStudy = {
+      ...base,
+      dataWidgets: [
+        { kind: "peg-deviation", coinId: "eurot-token-teknoloji", caption: "EUR test" },
+      ],
+    };
+    const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
+    expect(html).not.toContain('data-testid="case-study-chart"');
+    expect(html).toContain("Event window");
+  });
+
+  it("keeps a USD peg tape for a non-NAV widget", () => {
+    const study = CASE_STUDY_LIST.find((entry) => entry.slug === "usdc-svb-2023")!;
+    const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
+    expect(html).toContain('data-testid="case-study-chart"');
+  });
+
+  it("shows an unavailable archival metric as an em dash", () => {
+    const study = CASE_STUDY_LIST.find((entry) => entry.slug === "usyc-nav-pricing-2025")!;
+    const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
+    expect(html).not.toContain("n/a");
+    expect(html.match(/—/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
   it("keeps the authored Published byline and takes Article dateModified from the per-study sitemap date", () => {

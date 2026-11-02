@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useYieldCompareSelection } from "@/hooks/use-yield-compare-selection";
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import {
@@ -26,7 +27,7 @@ import { copyText } from "@/lib/clipboard";
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { getLogoSrc, type LogoMap } from "@/lib/logos";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
-import { YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { PYS_NULL_REASON_TEXT, YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 interface YieldCompareDrawerProps {
@@ -95,7 +96,19 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     key: "pys",
     label: "PYS",
     align: "right",
-    render: (row) => (row.pharosYieldScore !== null ? formatScore(row.pharosYieldScore) : "—"),
+    render: (row) => {
+      if (row.pharosYieldScore !== null) return formatScore(row.pharosYieldScore);
+      const reason = row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null;
+      if (!reason) return "—";
+      return (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">{"—"}</span>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-[220px] text-2xs">{reason}</TooltipContent>
+        </Tooltip>
+      );
+    },
   },
   {
     key: "qualification",
@@ -171,7 +184,7 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
   },
   {
     key: "warnings",
-    label: "Warnings",
+    label: "Investment warnings",
     align: "left",
     render: (row) =>
       selectInvestmentWarningSignals(row.warningSignals).length === 0

@@ -114,14 +114,14 @@ const ARCHETYPE_CASES = [
     archetype: "synthetic-delta-neutral",
     symbol: "USDC",
     ariaPhrase: "hedged with equal short perp positions",
-    descPhrase: "funding rate paid by perp longs flows to USDC holders",
+    descPhrase: "the strategy's carry",
     steps: [
       "Crypto deposit",
       "spot collateral",
       "Long spot + short perp",
       "delta-neutral hedge",
       "USDC minted",
-      "funding-rate yield",
+      "strategy carry",
     ],
     // The desktop box splits the hedge into its two legs; the mobile stack
     // states the combined step instead, so each variant is read separately.
@@ -131,7 +131,7 @@ const ARCHETYPE_CASES = [
       "Long spot",
       "Short perp",
       "USDC minted",
-      "funding-rate yield",
+      "strategy carry",
     ],
     returnCaption: "funding",
     stress: "stress: funding-rate inversion",

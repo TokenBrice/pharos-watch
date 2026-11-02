@@ -222,6 +222,7 @@ export function AltPegsClient() {
           pegScores={tableInputs.pegScores}
           dexLiquidity={dexLiquidityQuery.data ?? undefined}
           reportCards={tableInputs.reportCards}
+          reportCardsMethodologyVersion={reportCardsQuery.data?.safetyScoreIdentity?.methodologyVersion ?? null}
           sourceGenerations={{
             stablecoins: stablecoinsQuery.meta?.updatedAt,
             pegSummary: pegSummaryQuery.meta?.updatedAt,

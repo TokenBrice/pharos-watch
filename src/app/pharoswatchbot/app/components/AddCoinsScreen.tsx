@@ -90,7 +90,7 @@ export function AddCoinsScreen({ state, canEdit, busy, pendingOperation, onApply
     });
   };
 
-  const renderRow = (coin: Pick<CatalogCoin, "stablecoinId" | "symbol" | "name"> & { peg?: string | null }) => {
+  const renderRow = (coin: Pick<CatalogCoin, "stablecoinId" | "symbol" | "name" | "pegLabel"> & { peg?: string | null }) => {
     const id = coin.stablecoinId;
     const following = followedIds.has(id);
     const selected = isSelected(id);
@@ -120,7 +120,7 @@ export function AddCoinsScreen({ state, canEdit, busy, pendingOperation, onApply
           </span>
         )}
         title={<><span className="font-medium">{coin.symbol}</span> <span className="text-muted-foreground">{coin.name !== coin.symbol ? coin.name : ""}</span></>}
-        subtitle={[status, coin.peg ? `${coin.peg} peg` : null, preset ? `In ${preset}` : null].filter(Boolean).join(" · ") || undefined}
+        subtitle={[status, coin.pegLabel ?? (coin.peg ? `${coin.peg} peg` : null), preset ? `In ${preset}` : null].filter(Boolean).join(" · ") || undefined}
         onClick={() => toggle(id)}
       />
     );

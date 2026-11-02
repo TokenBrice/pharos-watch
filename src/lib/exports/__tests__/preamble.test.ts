@@ -20,4 +20,12 @@ describe("ExportPreamble formatters", () => {
     expect(formatPreambleMarkdown(provenance)).toContain("reportCards=unknown");
     expect(JSON.parse(formatPreambleNdjson(provenance))._meta.sourceGenerations).toEqual(provenance.sourceGenerations);
   });
+
+  it("renders an optional source assessment clock only when known", () => {
+    const withClock = { ...FIXTURE, sourceAssessedISO: "2026-05-16T12:00:05.000Z" };
+    expect(formatPreambleCsv(withClock)).toContain(
+      "As of: 2026-05-16T12:00:00.000Z | Source assessed: 2026-05-16T12:00:05.000Z | URL:",
+    );
+    expect(formatPreambleCsv(FIXTURE)).not.toContain("Source assessed:");
+  });
 });

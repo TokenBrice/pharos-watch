@@ -1,6 +1,6 @@
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { CoinOption } from "@/lib/compare-types";
-import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 
 type CompareSelectionLink = Pick<CoinOption, "id" | "symbol">;
 
@@ -14,34 +14,23 @@ export interface CompareSelectionInsights {
 
 export function buildCompareSelectionInsights({
   selectedIds,
-  selectedCoins,
-  comparisonCoins,
 }: {
   selectedIds: readonly string[];
-  selectedCoins: readonly (CoinOption | null)[];
-  comparisonCoins: readonly ComparisonCoinEntry[];
 }): CompareSelectionInsights | null {
   if (selectedIds.length < 2) return null;
 
-  const selectedLinks = selectedCoins.filter((coin): coin is CoinOption => coin !== null);
+  const selectedMeta = selectedIds
+    .map((id) => TRACKED_META_BY_ID.get(id))
+    .filter((meta): meta is NonNullable<typeof meta> => meta != null);
 
-  if (comparisonCoins.length < 2) {
-    return {
-      lens: "Build the peer set first, then read peg behavior, liquidity, and safety in the same frame instead of hopping between detail pages.",
-      cohort: "Live metadata is still loading for the selected set.",
-      structure: "The comparison panels below will sharpen once the full dataset lands.",
-      links: selectedLinks,
-    };
-  }
+  if (selectedMeta.length < 2 || selectedMeta.length !== selectedIds.length) return null;
 
-  const comparisonMeta = comparisonCoins;
-
-  const pegSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.pegCurrency));
-  const governanceSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.governance));
-  const backingSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.backing));
+  const pegSet = new Set(selectedMeta.map((coin) => coin.flags.pegCurrency));
+  const governanceSet = new Set(selectedMeta.map((coin) => coin.flags.governance));
+  const backingSet = new Set(selectedMeta.map((coin) => coin.flags.backing));
   // A NAV-accruing token shares the peg flag but is designed to accrue, not to
   // hold $1: neither a same-peg substitution read nor a common peg target holds.
-  const hasNavMember = comparisonMeta.some((coin) => coin.meta.flags.navToken === true);
+  const hasNavMember = selectedMeta.some((coin) => coin.flags.navToken === true);
   const samePegSet = pegSet.size === 1;
 
   const lens =
@@ -53,20 +42,25 @@ export function buildCompareSelectionInsights({
 
   const cohort =
     governanceSet.size === 1
-      ? `Shared governance model across the set: ${GOVERNANCE_LABELS[comparisonMeta[0].meta.flags.governance] ?? comparisonMeta[0].meta.flags.governance}.`
+      ? `Shared governance model across the set: ${GOVERNANCE_LABELS[selectedMeta[0].flags.governance] ?? selectedMeta[0].flags.governance}.`
       : "Mixed governance models across the selected assets.";
 
   const structure =
     backingSet.size === 1
-      ? `Shared backing profile: ${BACKING_LABELS[comparisonMeta[0].meta.flags.backing] ?? comparisonMeta[0].meta.flags.backing}.`
+      ? `Shared backing profile: ${BACKING_LABELS[selectedMeta[0].flags.backing] ?? selectedMeta[0].flags.backing}.`
       : "Mixed backing structures across the set.";
 
   const pegContext =
     samePegSet
       ? hasNavMember
         ? ""
-        : `Common peg target: ${PEG_LABELS_SHORT[comparisonMeta[0].meta.flags.pegCurrency] ?? comparisonMeta[0].meta.flags.pegCurrency}.`
+        : `Common peg target: ${PEG_LABELS_SHORT[selectedMeta[0].flags.pegCurrency] ?? selectedMeta[0].flags.pegCurrency}.`
       : "Multiple peg targets are represented in the selected set.";
 
-  return { lens, cohort, structure: pegContext ? `${structure} ${pegContext}` : structure, links: comparisonMeta };
+  return {
+    lens,
+    cohort,
+    structure: pegContext ? `${structure} ${pegContext}` : structure,
+    links: selectedMeta.map((coin) => ({ id: coin.id, symbol: coin.symbol })),
+  };
 }
