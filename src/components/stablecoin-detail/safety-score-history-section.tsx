@@ -133,6 +133,12 @@ function TransitionIndicator({ point }: { point: DisplayHistoryPoint }) {
 
 interface SafetyScoreHistorySectionProps {
   stablecoinId: string;
+  /**
+   * Whether the asset carries a grade in the current publication. `false` ends the
+   * claim at the last observation instead of the grade-history cron's writing run;
+   * `null` (default) is unknown and keeps the existing lane-bound behaviour.
+   */
+  currentlyRated?: boolean | null;
 }
 
 interface HistoryLane {
@@ -157,9 +163,16 @@ function formatUtcMinute(sec: number): string {
  * The latest instant the merged history supports. Grade streaks and the open timeline segment end
  * here, never at "now": identity-aware coverage must be readable, no lane may still be loading or
  * missing after a failed read, and every retained lane's generation must be known. The oldest
- * generation bounds the claim.
+ * generation bounds the claim. An asset with no grade in the current publication ends at its last
+ * observation instead: the grade-history clock is job-wide, so it cannot date a carried-forward grade.
  */
-function resolveClaimEndpoint(legacy: HistoryLane, identityAware: HistoryLane, nowSec: number): number | null {
+function resolveClaimEndpoint(
+  legacy: HistoryLane,
+  identityAware: HistoryLane,
+  nowSec: number,
+  currentlyRated: boolean | null,
+): number | null {
+  if (currentlyRated === false) return null;
   if (identityAware.data === undefined) return null;
   const lanes = [legacy, identityAware];
   if (lanes.some((lane) => lane.isLoading || (lane.error != null && lane.data === undefined))) return null;
@@ -168,7 +181,10 @@ function resolveClaimEndpoint(legacy: HistoryLane, identityAware: HistoryLane, n
   return Math.min(nowSec, ...(generations as number[]));
 }
 
-export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySectionProps) {
+export function SafetyScoreHistorySection({
+  stablecoinId,
+  currentlyRated = null,
+}: SafetyScoreHistorySectionProps) {
   const legacyQuery = useSafetyScoreHistory(stablecoinId, 3650);
   const identityAwareQuery = useSafetyScoreHistoryV2(stablecoinId, 3650);
   const [expanded, setExpanded] = useState(false);
@@ -183,21 +199,21 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
     [identityAwareQuery.data, legacyQuery.data],
   );
   const lastDate = history.length > 0 ? history[history.length - 1].date : null;
-  const rawEndpoint = resolveClaimEndpoint(legacyQuery, identityAwareQuery, nowSec);
+  const rawEndpoint = resolveClaimEndpoint(legacyQuery, identityAwareQuery, nowSec, currentlyRated);
   // A segment bounded before its own start has no defensible duration.
   const endpoint = rawEndpoint != null && lastDate != null && rawEndpoint >= lastDate ? rawEndpoint : null;
 
   const stats = useMemo(() => {
     if (history.length === 0) return null;
 
+    // NR is not a grade: an all-NR history has no best or lowest grade to name.
     const graded = history.filter((p) => p.grade !== "NR");
-    const pool = graded.length > 0 ? graded : history;
 
-    let best = pool[0];
-    let worst = pool[0];
-    for (const p of pool) {
-      if (gradeRank(p.grade) < gradeRank(best.grade)) best = p;
-      if (gradeRank(p.grade) > gradeRank(worst.grade)) worst = p;
+    let best: DisplayHistoryPoint | null = null;
+    let worst: DisplayHistoryPoint | null = null;
+    for (const p of graded) {
+      if (best === null || gradeRank(p.grade) < gradeRank(best.grade)) best = p;
+      if (worst === null || gradeRank(p.grade) > gradeRank(worst.grade)) worst = p;
     }
 
     const lastEntry = history[history.length - 1];
@@ -287,24 +303,28 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
         {/* Summary stats strip */}
         {stats && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <StatBox label="Best grade">
-              <SafetyGradeBadge
-                grade={stats.best.grade}
-                score={stats.best.score}
-                size="xs"
-                versionTopic="safetyScore"
-                versionVariant="tooltip-only"
-              />
-            </StatBox>
-            <StatBox label="Lowest grade">
-              <SafetyGradeBadge
-                grade={stats.worst.grade}
-                score={stats.worst.score}
-                size="xs"
-                versionTopic="safetyScore"
-                versionVariant="tooltip-only"
-              />
-            </StatBox>
+            {stats.best && stats.worst ? (
+              <>
+                <StatBox label="Best grade">
+                  <SafetyGradeBadge
+                    grade={stats.best.grade}
+                    score={stats.best.score}
+                    size="xs"
+                    versionTopic="safetyScore"
+                    versionVariant="tooltip-only"
+                  />
+                </StatBox>
+                <StatBox label="Lowest grade">
+                  <SafetyGradeBadge
+                    grade={stats.worst.grade}
+                    score={stats.worst.score}
+                    size="xs"
+                    versionTopic="safetyScore"
+                    versionVariant="tooltip-only"
+                  />
+                </StatBox>
+              </>
+            ) : null}
             {stats.streakDays != null && endpoint != null ? (
             <StatBox className="col-span-2 sm:col-span-1" label={`Streak as of ${new Date(endpoint * 1000).toISOString().slice(0, 10)}`}>
               <div className="flex items-center gap-1.5">

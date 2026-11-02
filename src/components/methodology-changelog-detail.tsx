@@ -91,6 +91,7 @@ function ChangelogDetailBlocks({ blocks }: { blocks: readonly MethodologyChangel
             return (
               <ContentTable
                 key={index}
+                id={block.tableId}
                 tableProps={block.ariaLabel ? { "aria-label": block.ariaLabel } : undefined}
                 tableId={block.tableId}
                 testId={block.testId}

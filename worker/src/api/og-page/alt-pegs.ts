@@ -27,7 +27,7 @@ export const loadAltPegsOgPage: OgPageLoader = async (db, nowSec) => {
     budgetSec,
     generation: `stablecoins:${stablecoins.updatedAt}`,
     ...(partial
-      ? { stampNote: `Partial · ${snapshot.altSupplyObservedCount - snapshot.altSupplyPartialCount}/${snapshot.altCoinCount} non-USD coins observed` }
+      ? { stampNote: `Partial · ${snapshot.altSupplyObservedCount}/${snapshot.altCoinCount} non-USD coins observed` }
       : {}),
   };
 };

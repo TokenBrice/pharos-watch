@@ -54,4 +54,28 @@ describe("CoverageLensSummary", () => {
     expect(screen.getByText(/in the current result set/).textContent).toContain("n/a");
     expect(screen.queryByText(/\$0|0%/)).toBeNull();
   });
+
+  it("does not attach a known-market-cap basis to an empty result set", () => {
+    const rows = [row("known", 100)];
+    render(<CoverageLensSummary rows={rows} filteredRows={[]} search="none" filter="all" />);
+    const summary = screen.getByText(/in the current result set/).textContent ?? "";
+    expect(summary).toContain("n/a");
+    expect(summary).not.toContain("known market cap");
+  });
+
+  it("never rounds a nonzero share down to 0%", () => {
+    const rows = [row("big", 60_000_000_000), row("tiny", 1_000_000)];
+    render(<CoverageLensSummary rows={rows} filteredRows={[rows[1]]} search="tiny" filter="all" />);
+    const share = screen.getByText(/of active market cap/).textContent ?? "";
+    expect(share).toContain("<1%");
+    expect(share).not.toContain("0%");
+  });
+
+  it("never rounds a partial universe up to 100%", () => {
+    const rows = [row("big", 299_999_000_000), row("tiny", 1_000_000)];
+    render(<CoverageLensSummary rows={rows} filteredRows={[rows[0]]} search="big" filter="all" />);
+    const share = screen.getByText(/of active market cap/).textContent ?? "";
+    expect(share).toContain(">99%");
+    expect(share).not.toContain("100%");
+  });
 });

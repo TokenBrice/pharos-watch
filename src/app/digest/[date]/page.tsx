@@ -6,7 +6,8 @@ import { EditorialColophon } from "@/components/editorial-colophon";
 import { PreferredSourcePrompt } from "@/components/preferred-source-prompt";
 import { EditorialMasthead } from "@/components/editorial-masthead";
 import { splitDigestParagraphs, EDITORIAL_BODY_STYLE, formatDigestDateLabel, parseDigestParagraph } from "@/lib/digest";
-import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
+import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { buildArticleJsonLd, safeJsonLd } from "@/lib/json-ld";
 import { buildPageMetadata, composeDescription, summarizeText, trimTextAtWordBoundary } from "@/lib/page-metadata";
@@ -192,11 +193,10 @@ function renderDigestDetail(digest: DigestContentEntry) {
             ? "Weekly recap composed from the week's tracked events and DEWS history; scores reflect data available at publication."
             : "Daily digest composed from the day's tracked events and DEWS history; scores reflect data available at publication."
         }
-        methodologyVersion={SAFETY_SCORE_METHODOLOGY_VERSION_LABEL}
+        methodologyVersion={toMethodologyVersionLabel(getMethodologyVersionAt("safety-score", digest.generatedAt))}
         citation={{
           title: `${digest.title} (${formatted})`,
           canonicalUrl: `${SITE_URL}/digest/${digest.date}/`,
-          accessedDate: digest.date,
         }}
       />
     </div>

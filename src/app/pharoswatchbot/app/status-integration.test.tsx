@@ -47,12 +47,22 @@ describe("Mini App confirmed watcher status", () => {
     [makeMiniAppState({ subscriber: { snoozeUntilTs: 4_102_444_800 } }), "Alerts paused"],
     [makeMiniAppState({ subscriber: { snoozeUntilTs: 9_000_000_000 } }), "Alerts snoozed"],
     [makeMiniAppState({ health: { recentFailureClass: "blocked" } }), "Telegram stopped delivering alerts"],
+    [makeMiniAppState({ health: { recentFailureClass: "chat_not_found" } }), "Telegram stopped delivering alerts"],
     [makeMiniAppState(), "Alerts on"],
   ])("classifies the confirmed session as %#: %s", async (state, heading) => {
     launch(state);
     await waitFor(() => expect(screen.getByRole("heading", { name: heading })).toBeTruthy());
     if (heading !== "Alerts on") expect(screen.queryByRole("heading", { name: "Alerts on" })).toBeNull();
   });
+
+  it.each(["bad_request", "formatting_error", "payload_too_large", "auth_error", "chat_migrated"])(
+    "does not promise a retry for the non-retryable failure class %s",
+    async (failureClass) => {
+      launch(makeMiniAppState({ health: { recentFailureClass: failureClass } }));
+      await waitFor(() => expect(screen.getByRole("heading", { name: "Last delivery failed" })).toBeTruthy());
+      expect(screen.queryByText(/retry automatically/i)).toBeNull();
+    },
+  );
 
   it("stops claiming active alerts after confirmed unsubscribe-all retains the subscriber", async () => {
     const operations = launch(makeMiniAppState(), emptyState);

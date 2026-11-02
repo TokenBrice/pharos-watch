@@ -1,15 +1,24 @@
 // @vitest-environment jsdom
 
-import type { ReactNode } from "react";
+import { createElement, type ComponentType, type ReactElement, type ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { FlowChart } from "@/components/flow-chart";
+
+const originalTz = process.env.TZ;
+process.env.TZ = "America/Los_Angeles";
+afterAll(() => {
+  process.env.TZ = originalTz;
+});
 
 const chartState = vi.hoisted(() => ({
   data: [] as Array<Record<string, number | boolean | null>>,
   connectNulls: undefined as boolean | undefined,
   hatchedFrom: [] as number[],
   stopDot: null as { x: number; y: number } | null,
+  tickFormatter: undefined as ((ts: number) => string) | undefined,
+  tooltipContent: undefined as ReactElement | undefined,
 }));
 
 vi.mock("@/hooks/use-chart-container-ready", () => ({
@@ -21,7 +30,10 @@ vi.mock("@/hooks/use-prefers-reduced-motion", () => ({
 }));
 
 vi.mock("@/components/chart-primitives/axes", () => ({
-  TimeXAxis: () => null,
+  TimeXAxis: ({ tickFormatter }: { tickFormatter?: (ts: number) => string }) => {
+    chartState.tickFormatter = tickFormatter;
+    return null;
+  },
   MonoYAxis: () => null,
   TimeGrid: () => null,
   useNiceValueAxis: () => ({}),
@@ -41,7 +53,10 @@ vi.mock("recharts", () => ({
     chartState.connectNulls = connectNulls;
     return null;
   },
-  Tooltip: () => null,
+  Tooltip: ({ content }: { content?: ReactElement }) => {
+    chartState.tooltipContent = content;
+    return null;
+  },
   ReferenceLine: () => null,
   ReferenceArea: ({ x1, fill }: { x1: number; fill?: string }) => {
     if (fill?.startsWith("url(")) chartState.hatchedFrom.push(x1);
@@ -53,6 +68,18 @@ vi.mock("recharts", () => ({
     return null;
   },
 }));
+
+/** Render the captured tooltip element against the first chart bucket. */
+function tooltipMarkup(): string {
+  const content = chartState.tooltipContent!;
+  const datum = chartState.data[0];
+  return renderToStaticMarkup(createElement(content.type as ComponentType<Record<string, unknown>>, {
+    ...(content.props as Record<string, unknown>),
+    active: true,
+    label: datum.ts as number,
+    payload: [{ dataKey: "net", value: datum.net, color: "", name: "", payload: datum }],
+  }));
+}
 
 describe("FlowChart", () => {
   it("preserves missing hourly buckets as gaps and excludes them from the rolling mean", () => {
@@ -127,7 +154,7 @@ describe("FlowChart", () => {
       "Partial valuation: net unavailable",
       "—",
     ]);
-    expect(screen.getByText(/1 hourly bucket has unpriced events/i)).toBeTruthy();
+    expect(screen.getByText(/1 hourly bucket has a withheld net/i)).toBeTruthy();
     // The withheld net is a hatched column over its bucket, and the line's last proven point is marked.
     expect(chartState.hatchedFrom).toEqual([(firstHour + 3_600) * 1000 - 1_800_000]);
     expect(chartState.stopDot).toEqual({ x: firstHour * 1000, y: 7 });
@@ -141,5 +168,29 @@ describe("FlowChart", () => {
     const row = screen.getAllByRole("row")[1];
     expect(within(row).getAllByRole("cell").map((cell) => cell.textContent))
       .toEqual([`≥ $${volume}`, "≥ $0", "—", "—", "Complete", "Observed subtotals"]);
+    // The withheld net comes from incomplete scan coverage here, not unpriced events.
+    expect(screen.getByText("Net withheld")).toBeTruthy();
+    expect(screen.getByText(/1 hourly bucket has a withheld net/i)).toBeTruthy();
+    expect(screen.queryByText(/unpriced events/i)).toBeNull();
+  });
+
+  it("renders hourly bucket labels in UTC regardless of the viewer timezone", () => {
+    const hourTs = Date.UTC(2026, 10, 1) / 1000;
+    render(<FlowChart isLoading={false} hourly={[
+      { hourTs, mintVolumeUsd: 1, burnVolumeUsd: 0, netFlowUsd: 1 },
+      { hourTs: hourTs + 3_600, mintVolumeUsd: 1, burnVolumeUsd: 0, netFlowUsd: 1 },
+    ]} />);
+    expect(chartState.tickFormatter?.(hourTs * 1000)).toBe("00:00");
+    expect(tooltipMarkup()).toContain("Nov 1, 2026, 12:00 AM");
+  });
+
+  it("renders daily bucket labels in UTC regardless of the viewer timezone", () => {
+    const dayTs = Date.UTC(2026, 9, 1) / 1000;
+    render(<FlowChart isLoading={false} hourly={[
+      { hourTs: dayTs, mintVolumeUsd: 1, burnVolumeUsd: 0, netFlowUsd: 1 },
+      { hourTs: dayTs + 30 * 86_400, mintVolumeUsd: 1, burnVolumeUsd: 0, netFlowUsd: 1 },
+    ]} />);
+    expect(chartState.tickFormatter?.(dayTs * 1000)).toBe("Oct 1");
+    expect(tooltipMarkup()).toContain("Oct 1, 2026");
   });
 });

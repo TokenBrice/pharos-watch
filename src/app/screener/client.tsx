@@ -32,10 +32,13 @@ import {
   CLIENT_TRACKED_STABLECOINS,
 } from "@shared/lib/stablecoins/client-registry";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
+import { getResolvedBlacklistStatusLabel } from "@shared/lib/blacklist-status";
+import { isIncludedInArchetype } from "@shared/lib/stablecoins/mechanism-membership";
 import { resolveCustodyModel } from "@shared/lib/report-card-policy";
 import {
   resolveMintAuthorityScoreDisplay,
 } from "@/lib/mint-authority-display";
+import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { MINT_AUTHORITY_SCORE_FILTER_CONFIG, MINT_AUTHORITY_STATUS_CONFIG } from "@shared/lib/classification";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { getCirculatingRawOrNull, getPrevMonthRawOrNull } from "@shared/lib/supply";
@@ -47,14 +50,21 @@ import type { TablePaginationProps } from "@/components/table-pagination";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 // Curated classification is immutable for the lifetime of the client bundle.
+// Commodity pegs that only inherit a parent's archetype stay in the tracked
+// universe; the membership predicate narrows mechanism deep-links to the
+// mechanism pages' archetype buckets.
 const SCREENABLE_COINS = CLIENT_TRACKED_STABLECOINS
   .filter((meta) => meta.status !== "quarantined" && meta.status !== "delisted")
-  .map((meta) => ({
-    meta,
-    mechanism: resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID),
-    custodyModel: resolveCustodyModel(meta),
-    blacklistable: projectBlacklistable(meta.blacklistStatus),
-  }));
+  .map((meta) => {
+    const mechanism = resolveMechanismArchetype(meta, CLIENT_ACTIVE_META_BY_ID);
+    return {
+      meta,
+      mechanism,
+      mechanismIncluded: isIncludedInArchetype(meta, mechanism),
+      custodyModel: resolveCustodyModel(meta),
+      blacklistable: projectBlacklistable(meta.blacklistStatus),
+    };
+  });
 
 const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "id", accessor: (row) => row.id },
@@ -84,7 +94,9 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "safety_weakest_pillar", accessor: (row) => row.safetyWeakestPillar ?? "" },
   { header: "safety_binding_cap", accessor: (row) => row.safetyBindingCapReason ?? "" },
   { header: "custody_model", accessor: (row) => row.custodyModel },
-  { header: "blacklistable", accessor: (row) => row.blacklistable ?? "" },
+  // The reviewed label keeps "Upstream" for inherited exposure; the filter
+  // vocabulary stays the legacy three-bucket projection.
+  { header: "blacklistable", accessor: (row) => getResolvedBlacklistStatusLabel(row.id) ?? "" },
   {
     header: "mint_authority",
     accessor: (row) => MINT_AUTHORITY_STATUS_CONFIG[row.mintAuthority].spokenLabel,
@@ -92,7 +104,9 @@ const EXPORT_COLUMNS: CsvColumn<ScreenerRow>[] = [
   { header: "mint_authority_score", accessor: (row) => row.mintAuthorityScore ?? "" },
   {
     header: "mint_authority_score_band",
-    accessor: (row) => MINT_AUTHORITY_SCORE_FILTER_CONFIG[row.mintAuthorityScoreBand].label,
+    accessor: (row) => row.mintAuthorityScoreBand === null
+      ? null
+      : MINT_AUTHORITY_SCORE_FILTER_CONFIG[row.mintAuthorityScoreBand].label,
   },
 ];
 
@@ -191,6 +205,9 @@ export function ScreenerClient() {
     () => safetyProjection?.status === "available" ? safetyProjection.value : {},
     [safetyProjection],
   );
+  // A missing/inadmissible report-cards publication is not the same claim as
+  // an admitted card with no published mint posture (which stays "nr").
+  const safetyPublicationAvailable = safetyProjection?.status === "available";
 
   // Build only after a primary dataset is available, including retained data.
   // Optional score reads preserve unknown values until their sources arrive.
@@ -207,10 +224,12 @@ export function ScreenerClient() {
     }
 
     const rows: ScreenerRow[] = [];
-    for (const { meta, mechanism, custodyModel, blacklistable } of SCREENABLE_COINS) {
+    for (const { meta, mechanism, mechanismIncluded, custodyModel, blacklistable } of SCREENABLE_COINS) {
       const safety = safetyById[meta.id] ?? null;
       const pegCoin = pegById.get(meta.id);
-      const mintAuthorityScore = resolveMintAuthorityScoreDisplay(safety?.mint);
+      const mintAuthorityScore = safetyPublicationAvailable
+        ? resolveMintAuthorityScoreDisplay(safety?.mint)
+        : null;
       rows.push({
         id: meta.id,
         name: meta.name,
@@ -218,6 +237,7 @@ export function ScreenerClient() {
         lifecycle: meta.status ?? "active",
         type: meta.flags.governance,
         mechanism,
+        mechanismIncluded,
         peg: meta.flags.pegCurrency,
         supplyUsd: supplyById.get(meta.id) ?? null,
         pegScore: pegCoin?.pegScore ?? null,
@@ -245,18 +265,18 @@ export function ScreenerClient() {
         custodyModel,
         blacklistable,
         mintAuthority: meta.mintAuthorityStatus ?? "unknown",
-        mintAuthorityScore: mintAuthorityScore.score,
-        mintAuthorityScoreBand: mintAuthorityScore.bandKey,
-        mintAuthorityScoreLabel: mintAuthorityScore.scoreLabel,
-        mintAuthorityScoreBandLabel: mintAuthorityScore.bandLabel,
-        mintAuthorityScoreBadgeClassName: mintAuthorityScore.badgeClassName,
-        mintAuthorityScoreDetail: mintAuthorityScore.detail,
+        mintAuthorityScore: mintAuthorityScore?.score ?? null,
+        mintAuthorityScoreBand: mintAuthorityScore?.bandKey ?? null,
+        mintAuthorityScoreLabel: mintAuthorityScore?.scoreLabel ?? null,
+        mintAuthorityScoreBandLabel: mintAuthorityScore?.bandLabel ?? null,
+        mintAuthorityScoreBadgeClassName: mintAuthorityScore?.badgeClassName ?? null,
+        mintAuthorityScoreDetail: mintAuthorityScore?.detail ?? null,
         pegDeviationSeries: unobservedPriceIds.has(meta.id) ? undefined : buildPegDeviationSeries(pegCoin),
         supplySeries: supplySeriesById.get(meta.id),
       });
     }
     return rows;
-  }, [stablecoinsData, pegById, safetyById, stressData, dexData]);
+  }, [stablecoinsData, pegById, safetyById, safetyPublicationAvailable, stressData, dexData]);
 
   const scoreFilterDataState = resolveScreenerFilterDataState(filters, {
     dews: { loading: isStressLoading, hasData: stressData != null, error: stressError },
@@ -385,7 +405,9 @@ export function ScreenerClient() {
             // 9.1: the mint columns are the published V9 mint component, so
             // they are stamped with the safety-score identity. The retired
             // standalone mint-authority lane no longer produces this value.
-            methodologyLabel={`safety-score ${reportData?.safetyScoreIdentity?.methodologyVersion ?? "v9"} (mint control columns included); mixed-source export, as-of oldest producer generation when all known`}
+            methodologyLabel={safetyPublicationAvailable && reportData
+              ? `safety-score ${toMethodologyVersionLabel(reportData.safetyScoreIdentity.methodologyVersion)} (mint control columns included); mixed-source export, as-of oldest producer generation when all known`
+              : "safety-score columns unavailable this run; mixed-source export, as-of oldest producer generation when all known"}
             triggerLabel={dataState === "loading" ? "Loading" : "Export"}
             triggerClassName="min-w-24"
             disabled={dataState !== "ready"}

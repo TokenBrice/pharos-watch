@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildDepegHistoryDescription,
   buildPublicDatasetCitation,
   buildPublicDatasetMirrorJsonLd,
   PHAROS_DATA_LICENSE_URL,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/analytics-dataset-json-ld";
 import { buildCemeteryDatasetJsonLd } from "@/lib/cemetery-json-ld";
 import { PUBLIC_DATASET_CURRENT_DATE, PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_INTERVAL = /^\d{4}-\d{2}[-\d]{0,3}\/\d{4}-\d{2}[-\d]{0,3}$/;
@@ -44,6 +46,42 @@ describe("flagship Dataset JSON-LD", () => {
     expect(jsonLd.includedInDataCatalog["@id"]).toBe(PHAROS_PUBLIC_DATA_CATALOG_ID);
     expect(jsonLd.creator["@id"]).toBe("https://pharos.watch#organization");
     expect(jsonLd.distribution.map((download) => download.encodingFormat)).toEqual(["application/json", "text/csv"]);
+  });
+
+  it("never promises an audit-verdict column the depeg export does not carry", () => {
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "depeg-history")!;
+    const fields = Object.keys(descriptor.export.rows[0] ?? {});
+    expect(descriptor.description.includes("audit verdict")).toBe(fields.includes("auditVerdict"));
+    expect(buildDepegHistoryDescription(["id", "source", "auditVerdict"])).toContain("audit verdict");
+    expect(buildDepegHistoryDescription(["id", "source"])).not.toContain("audit verdict");
+  });
+
+  it("names the top-stablecoins population the export actually carries", () => {
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "top-stablecoins")!;
+    const outsideRegistry = descriptor.export.rows.filter((row) => !TRACKED_META_BY_ID.has(String(row.id)));
+    expect(outsideRegistry.length).toBeGreaterThan(0);
+    expect(descriptor.description).not.toContain("of tracked stablecoins");
+    expect(descriptor.description).toContain("outside the tracked catalog");
+  });
+
+  it("advertises only score metrics the scores-latest export populates", () => {
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "scores-latest")!;
+    const populated = new Set(
+      Object.keys(descriptor.export.rows[0] ?? {}).filter((field) =>
+        descriptor.export.rows.some((row) => row[field] != null),
+      ),
+    );
+    expect(populated).not.toContain("pegScore");
+    expect(descriptor.description.toLowerCase()).not.toContain("pegscore");
+    expect(descriptor.keywords).not.toContain("PegScore");
+  });
+
+  it("names the top-stablecoins export's actual final CSV column", () => {
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "top-stablecoins")!;
+    const last = Object.keys(descriptor.export.rows[0] ?? {}).at(-1);
+    expect(last).toBe("supplyProvenance");
+    expect(descriptor.description).toContain(`and ${last} is the final CSV column`);
+    expect(descriptor.description).not.toMatch(/final CSV column, supplyUnavailableReason/);
   });
 });
 

@@ -150,14 +150,15 @@ function getFeeSummary(entry: RedemptionBackstopEntry): FeeSummary {
 
 function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
   const scoringHorizon = entry.capacityProfile?.scoringHorizon;
+  // `queued` records an observed queue depth, never a queue-bounded amount: the
+  // scoring capacity stays immediate (or daily-limited), so it is read as immediate.
+  const horizon = scoringHorizon === "queued" ? "immediate" : scoringHorizon;
   const title =
-    scoringHorizon === "daily"
+    horizon === "daily"
       ? "Daily Capacity"
-      : scoringHorizon === "queued"
-        ? "Queued Capacity"
-        : scoringHorizon === "eventual" || entry.capacitySemantics === "eventual-only"
-          ? "Eventual Redeemability"
-          : "Immediate Capacity";
+      : horizon === "eventual" || entry.capacitySemantics === "eventual-only"
+        ? "Eventual Redeemability"
+        : "Immediate Capacity";
   const scoringCapacityUsd =
     entry.capacityProfile?.scoringUsd != null &&
     Number.isFinite(entry.capacityProfile.scoringUsd) &&
@@ -209,13 +210,11 @@ function getCapacitySummary(entry: RedemptionBackstopEntry): CapacitySummary {
 
   if (capacityUsd || capacityRatio) {
     const horizonDetail =
-      scoringHorizon === "daily"
+      horizon === "daily"
         ? " Current modeled capacity is daily-limited."
-        : scoringHorizon === "queued"
-          ? " Current modeled capacity is queue-limited."
-          : scoringHorizon === "eventual"
-            ? " Capacity is modeled as eventual redeemability rather than current same-size liquidity."
-            : " Current modeled immediate redeemable capacity.";
+        : horizon === "eventual"
+          ? " Capacity is modeled as eventual redeemability rather than current same-size liquidity."
+          : " Current modeled immediate redeemable capacity.";
     return {
       title,
       headline: [capacityUsd, capacityRatio].filter(Boolean).join(" · "),
@@ -251,9 +250,6 @@ function buildTelemetryContext(entry: RedemptionBackstopEntry): TelemetryContext
     }
     if (entry.capacityProfile.eventualUsd != null) {
       items.push({ label: "Eventual capacity", value: formatCurrency(entry.capacityProfile.eventualUsd, 1) });
-    }
-    if (entry.capacityProfile.queuedUsd != null) {
-      items.push({ label: "Queued capacity", value: formatCurrency(entry.capacityProfile.queuedUsd, 1) });
     }
     if (entry.capacityProfile.modeledExitSizeUsd != null) {
       items.push({ label: "Modeled exit", value: formatCurrency(entry.capacityProfile.modeledExitSizeUsd, 1) });

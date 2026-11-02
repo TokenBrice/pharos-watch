@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ContentTable } from "@/components/table";
 import type { ContentTableColumn, ContentTableRow } from "@/components/table/content-table";
 import { buildExplorerUrl } from "@shared/lib/explorer";
-import type { ChainTrackedDeployment } from "../static-chain-content";
+import { rankChainDeployments, type ChainTrackedDeployment } from "../static-chain-content";
 
 /** Presentational bound: the complete profile directory below remains the continuation. */
 const CHAIN_CONTRACT_TABLE_ROW_LIMIT = 20;
@@ -24,12 +24,7 @@ const COLUMNS: ContentTableColumn[] = [
  * order, and never a claim that a recorded address is currently supported.
  */
 function buildChainContractRows(deployments: readonly ChainTrackedDeployment[]) {
-  const ordered = [
-    ...deployments.filter((deployment) => !deployment.isNavOrVariant),
-    ...deployments.filter((deployment) => deployment.isNavOrVariant),
-  ];
-
-  return ordered.flatMap((deployment) =>
+  return rankChainDeployments(deployments).flatMap((deployment) =>
     deployment.contracts.map((contract) => ({ deployment, contract })),
   );
 }

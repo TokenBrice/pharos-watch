@@ -148,7 +148,13 @@ export function DepegResolverRowCard({ row, logos }: DepegResolverRowCardProps) 
           unresolvedShare != null ||
           duration.horizons.some((cell) => cell.state === "not_informative"))));
   // Evidence classes lead with the base rate; terminal and no-verdict cards carry their own copy below.
-  const showClassBlurb = vocabulary === "evidence_class" && !terminal && !insufficient;
+  // A recovery_likely row can still publish kill signals (above-peg breaks), where the
+  // class-wide "no kill signal fired" blurb would be false.
+  const showClassBlurb =
+    vocabulary === "evidence_class" &&
+    !terminal &&
+    !insufficient &&
+    !(tier === "recovery_likely" && (row.direction === "above" || kills.length > 0));
 
   return (
     <div className="pharos-card-shell @container/ddr gap-0 overflow-hidden p-4 sm:p-5">

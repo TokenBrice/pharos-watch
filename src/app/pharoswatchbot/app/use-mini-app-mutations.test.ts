@@ -409,6 +409,25 @@ describe("useMiniAppMutations", () => {
     expect(apiMocks.postMiniAppSnapshot.mock.calls[1]?.[1].operation).toEqual({ kind: "undo-bulk-watchlist", ...undo });
   });
 
+  it("reports the preview's applied adds and removes, not the requested selection", async () => {
+    apiMocks.postMiniAppBulkWatchlistPreview.mockResolvedValue({
+      contractVersion: "9", catalogVersion: "c",
+      result: {
+        kind: "bulk-watchlist-preview", expectedPreferenceGeneration: 2, previewFingerprint: "preview-v1-2-abcdef12",
+        adds: ["usdt-tether"], removes: [], unchanged: ["usdc-circle"], sourceImpact: [],
+        undo: { expectedPreferenceGeneration: 3, expectedFingerprint: "preview-v1-3-abcdef12", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether"] },
+      },
+    });
+    apiMocks.postMiniAppSnapshot.mockResolvedValue(makeSnapshot());
+    const { result } = renderHook(() => useMiniAppMutations(makeArgs()));
+    await act(async () => { expect(await result.current.applyBulkWatchlist(["usdc-circle", "usdt-tether"], [])).toBe(true); });
+    expect(apiMocks.postMiniAppSnapshot).toHaveBeenCalledOnce();
+    expect(apiMocks.postMiniAppSnapshot.mock.calls[0]?.[1].operation).toMatchObject({
+      kind: "confirm-bulk-watchlist", addStablecoinIds: ["usdc-circle", "usdt-tether"], removeStablecoinIds: [],
+    });
+    expect(result.current.notice).toMatchObject({ text: "Added 1 coin.", undoLabel: "Undo" });
+  });
+
   it("keeps a bulk edit as unsaved intent once launch auth expired, without a preview read", async () => {
     const { result } = renderHook(() => useMiniAppMutations(makeArgs({ authExpired: true })));
     await act(async () => { expect(await result.current.applyBulkWatchlist(["usdt-tether", "usdc-circle"], [])).toBe(false); });

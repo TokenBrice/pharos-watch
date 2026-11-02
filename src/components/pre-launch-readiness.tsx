@@ -1,6 +1,8 @@
 "use client";
 
-import { useSyncExternalStore, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { useUtcDayNowMs } from "@/hooks/use-utc-day-clock";
+import { DAY_MS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { PHASE_DOT, formatFuzzyDate, isLaunchedAwaitingData, type DriftDisplayStatus } from "@/lib/pre-launch";
 import { DRIFT_STATUS_LABEL } from "@shared/lib/classification/pre-launch";
@@ -14,50 +16,12 @@ import {
 import { formatUtcDayLabel } from "@shared/lib/format";
 import type { StablecoinMeta } from "@shared/types";
 
-const DAY_MS = 86_400_000;
-const clockListeners = new Set<() => void>();
-let clockNowMs: number | null = null;
-let clockTimer: number | undefined;
-
-function updateClock() {
-  window.clearTimeout(clockTimer);
-  clockNowMs = Date.now();
-  // Every fuzzy target expires at a UTC midnight, as do announcement day counts.
-  // Waking daily also advances the path after its last target has expired.
-  const nextDayMs = (Math.floor(clockNowMs / DAY_MS) + 1) * DAY_MS;
-  clockTimer = window.setTimeout(updateClock, nextDayMs - clockNowMs);
-  for (const listener of clockListeners) listener();
-}
-
-function resumeClock() {
-  if (document.visibilityState === "visible") updateClock();
-}
-
-function subscribeToClock(listener: () => void) {
-  clockListeners.add(listener);
-  if (clockListeners.size === 1) {
-    document.addEventListener("visibilitychange", resumeClock);
-    updateClock();
-  }
-  return () => {
-    clockListeners.delete(listener);
-    if (clockListeners.size === 0) {
-      window.clearTimeout(clockTimer);
-      document.removeEventListener("visibilitychange", resumeClock);
-      clockNowMs = null;
-    }
-  };
-}
-
-const getClockSnapshot = () => clockNowMs;
-const getServerClockSnapshot = () => null;
-
 /**
  * One visitor-clock snapshot and UTC-boundary timer for readiness and path.
  * Server and first hydration retain placeholders, never the build date.
  */
 export function usePreLaunchNowMs(): number | null {
-  return useSyncExternalStore(subscribeToClock, getClockSnapshot, getServerClockSnapshot);
+  return useUtcDayNowMs();
 }
 
 /**

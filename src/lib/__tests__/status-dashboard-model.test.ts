@@ -3,6 +3,7 @@ import type { EndpointProbeResult, StatusCause, StatusResponse } from "@shared/t
 import { StatusResponseSchema } from "@shared/types/status";
 import { projectPublicStatus } from "@shared/lib/public-status-components";
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";
+import { buildTriageHeadline } from "@/lib/status/triage-inbox";
 import {
   makeActivePriceCoverage,
   makeCompleteTelegramBotStatus,
@@ -286,6 +287,12 @@ describe("status dashboard model", () => {
       oldestRequiredSuccessAtMs: null,
       oldestRequiredAgeSec: null,
     });
+    // A missing required source is not a "current" read, and the triage line
+    // refuses to answer rather than reporting nothing to do.
+    expect(model.evidence.label).not.toMatch(/^Current/);
+    expect(
+      buildTriageHeadline({ items: [], act: [], watch: [], informational: [] }, model.evidence),
+    ).toEqual({ verdict: "unavailable", text: "Cannot answer: Public health unavailable. Showing the last good read." });
     expect(model.clientDataStale).toBe(true);
     expect(model.decision.nextStep).toBe("refresh-evidence");
     expect(model.notices.some((notice) => notice.id === "client-partial")).toBe(true);

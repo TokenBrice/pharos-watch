@@ -227,6 +227,29 @@ describe("projectOracleRiskClientSummary", () => {
     expect(summary!.maxLiquidationDelayLabel).toBe("None");
   });
 
+  it("omits the aggregate delay when a reviewed branch has no bounded wait", () => {
+    const summary = projectOracleRiskClientSummary(coinWith({
+      ...BOLD_LIKE_PROFILE,
+      branches: [
+        { ...BOLD_LIKE_PROFILE.branches![0], debtSharePct: 25, liquidationState: "callable", liquidationDelaySec: 0 },
+        { ...BOLD_LIKE_PROFILE.branches![1], debtSharePct: 75, liquidationState: "uncallable" },
+      ],
+    }));
+    // The uncallable branch cannot carry a delay, so the observed zero is not
+    // the profile's maximum wait (R1: unavailable is not zero).
+    expect(summary!.branches[1].liquidationDelayLabel).toBe("uncallable (reviewed)");
+    expect(summary!.maxLiquidationDelayLabel).toBeNull();
+
+    const unknown = projectOracleRiskClientSummary(coinWith({
+      ...BOLD_LIKE_PROFILE,
+      branches: [
+        { ...BOLD_LIKE_PROFILE.branches![0], liquidationState: "unknown" },
+        { ...BOLD_LIKE_PROFILE.branches![1], liquidationDelaySec: 3600 },
+      ],
+    }));
+    expect(unknown!.maxLiquidationDelayLabel).toBeNull();
+  });
+
   it("separates the oracle's own price delay from the liquidation delay", () => {
     const osm = projectOracleRiskClientSummary(coinWith({
       ...BOLD_LIKE_PROFILE,

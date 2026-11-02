@@ -74,7 +74,41 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
     expect(model.pegDeviationColorClass).toBe("text-green-700 dark:text-green-400");
   });
 
-  it("renders an absent commodity reference as an em dash and skips deviation", () => {
+  it("keeps a USD coin's observed price while the peg summary is pending", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({
+        id: "usdc-circle",
+        price: 1,
+        priceSource: "coingecko",
+        priceConfidence: "high",
+      }),
+      pegScores: new Map(),
+      density: "spacious",
+      variant: "default",
+    });
+
+    expect(model.priceCell).toBe("$1.0000");
+    expect(model.absPegDeviationBps).toBeNull();
+  });
+
+  it("keeps a non-USD price unavailable while its peg reference is unknown", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({
+        id: "eurc-circle",
+        pegType: "peggedEUR",
+        price: 1.08,
+        priceSource: "coingecko",
+        priceConfidence: "high",
+      }),
+      pegScores: new Map(),
+      density: "spacious",
+      variant: "default",
+    });
+
+    expect(model.priceCell).toBe("—");
+  });
+
+  it("keeps an observed commodity price while its peg reference is unavailable and skips deviation", () => {
     const model = buildStablecoinTableRowModel({
       coin: makeStablecoin({
         id: "xaut-tether",
@@ -98,7 +132,7 @@ describe("buildStablecoinTableRowModel peg deviation", () => {
     });
 
     expect(model.pegRef).toBeNull();
-    expect(model.priceCell).toBe("—");
+    expect(model.priceCell).toBe("$3000.0000");
     expect(model.absPegDeviationBps).toBeNull();
   });
 
@@ -216,6 +250,22 @@ describe("buildStablecoinTableRowModel supply changes", () => {
     expect(model.change24h).toBe(0);
     expect(model.change7d).toBe(0);
     expect(model.supplySparklineValues).toEqual([1_000_000, 1_000_000, 1_000_000]);
+  });
+
+  it("keeps a carried supply observation out of the change cells", () => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({
+        circulating: { peggedUSD: 100_000_000 },
+        circulatingPrevDay: { peggedUSD: 95_000_000 },
+        circulatingPrevWeek: { peggedUSD: 90_000_000 },
+        supplyRestored: true,
+        supplyObservedAt: 1_700_000_000,
+      }),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.change24h).toBeNull();
+    expect(model.change7d).toBeNull();
   });
 
   it("keeps changes null when previous supply is unavailable", () => {

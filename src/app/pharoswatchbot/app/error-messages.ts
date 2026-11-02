@@ -83,15 +83,17 @@ export function miniAppErrorMessage(err: unknown, context: MiniAppErrorContext):
       case "stale-bulk-preview":
         return "Your coins changed in the meantime. Nothing was saved; check the list and try again.";
       case "internal":
-        return "Something went wrong. Nothing was saved; try again.";
+        return "Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.";
       default:
         break;
     }
-    if (err.status >= 500) return "Something went wrong. Nothing was saved; try again.";
+    if (err.status >= 500) {
+      return "Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.";
+    }
     return "Change not saved. Try again.";
   }
 
   return context === "session"
     ? "Couldn't load your alerts. Check your connection and try again."
-    : "Change not saved. Check your connection and try again.";
+    : "Change not confirmed. Check the list before retrying.";
 }

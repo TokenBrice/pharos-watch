@@ -348,7 +348,8 @@ function formatBpsAsPercent(bps: number): string {
 }
 
 function describeRedemptionFee(config: RedemptionBackstopConfig): string | null {
-  const cost = config.costModel;
+  // The v9 route terms carry extra terms of the same reviewed schedule.
+  const cost = { ...config.costModel, ...config.v9RouteCostTerms };
   const min = cost.kind === "fee-bps" ? cost.feeBps : cost.feeBpsMin;
   const max = cost.feeBpsMax ?? (cost.kind === "fee-bps" ? cost.feeBps : undefined);
   const suffix = config.outputAssetType === "physical-commodity-delivery" ? ", before delivery and third-party costs" : "";
@@ -396,6 +397,12 @@ function describeRedemptionOutput(coin: StablecoinMeta, config: RedemptionBackst
     const listed = outputSymbols.slice(0, 3);
     const rest = outputSymbols.length - listed.length;
     return `for ${formatProseList(rest > 0 ? [...listed, `${rest} other assets`] : listed)}${minimum}`;
+  }
+  // A reviewed fiat payout is a known identity; only an output the review
+  // could not identify stays unresolved.
+  const hasUnresolvedIdentity = config.unresolvedOutputAssetKeys?.some((key) => !key.startsWith("fiat:"));
+  if (hasUnresolvedIdentity) {
+    return `for an unresolved output asset${minimum}`;
   }
   switch (config.outputAssetType) {
     case "stable-single":

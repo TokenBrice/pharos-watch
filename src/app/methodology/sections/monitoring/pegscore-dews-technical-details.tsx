@@ -118,8 +118,7 @@ function PegScoreTechnicalDetails() {
           Without that verified anchor, PegScore prefers a curated launch date, then the earliest supply snapshot,
           then the first durable Pharos valid-price observation for priced assets without supply-history coverage.
           Young coins are not diluted across history they didn&apos;t exist for, and unobserved pre-coverage days are not
-          silently treated as stable. Requires at least 7 days of tracking data; returns null otherwise. Scores based
-          on 7&ndash;30 days are marked as &ldquo;Early score&rdquo; to signal limited history. The API additionally publishes a
+          silently treated as stable. Requires at least 7 days of tracking data; returns null otherwise. The API additionally publishes a
           coverage-aware 90-day view with observed days, incidents, constituent threshold crossings, and peg percentage.
         </p>
       </div>
@@ -345,7 +344,7 @@ function DewsTechnicalDetails() {
           </li>
           <li>Non-USD pegs: cross-source divergence is dampened by 0.7 (noisier FX pricing)</li>
           <li>Nominal par is not an observed price: without observed primary or DEX evidence, divergence stays unavailable rather than calm</li>
-          <li>Small coins (&lt;$50M): supply velocity is dampened via a logarithmic size factor</li>
+          <li>Small coins (&lt;$1B): supply velocity is dampened via a logarithmic size factor</li>
           <li>Missing or stale DEX and mint/burn freshness stays unavailable; zero-current rows retire; aggregate freshness uses the newest current row while the body exposes oldest-row lag</li>
         </ul>
       </div>

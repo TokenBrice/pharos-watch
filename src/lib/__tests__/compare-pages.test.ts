@@ -655,6 +655,61 @@ describe("comparison rows and JSON-LD parity", () => {
     }
   });
 
+  it("labels NAV wrappers by their reference asset instead of a fixed dollar peg", () => {
+    const navPage = getPage("sdai-sky-vs-susde-ethena");
+    const rows = buildComparisonAtAGlanceRows(navPage, NOW_SEC);
+    expect(findRow(rows, "Peg target")).toEqual({
+      label: "Peg target",
+      left: "DAI-denominated NAV",
+      right: "USDe-denominated NAV",
+    });
+    expect(navPage.intro).toContain("sDAI targets DAI-denominated NAV, while sUSDe targets USDe-denominated NAV.");
+    expect(navPage.intro).not.toContain("Both target the US Dollar");
+
+    expect(findRow(buildComparisonAtAGlanceRows(getPage("gho-aave-vs-sgho-aave"), NOW_SEC), "Peg target")).toEqual({
+      label: "Peg target",
+      left: "US Dollar",
+      right: "GHO-denominated NAV",
+    });
+  });
+
+  it("keeps the plain peg label for non-NAV dollar tokens", () => {
+    expect(findRow(buildComparisonAtAGlanceRows(getPage("usdt-tether-vs-usdc-circle"), NOW_SEC), "Peg target")).toEqual({
+      label: "Peg target",
+      left: "US Dollar",
+      right: "US Dollar",
+    });
+    expect(getPage("usdt-tether-vs-usdc-circle").intro).toContain("Both target the US Dollar.");
+  });
+
+  it("never publishes an arbitrary first reserve asset as the reserve signal", () => {
+    const cases = [
+      ["usde-ethena-vs-usds-sky", "right", "USDC"],
+      ["usds-sky-vs-dai-makerdao", "left", "USDC"],
+      ["usds-sky-vs-dai-makerdao", "right", "USDC"],
+      ["usdt-tether-vs-frax-frax", "right", "WTGXX"],
+      ["dai-makerdao-vs-gho-aave", "right", "GhoDirectFacilitator GSMs Mainnet"],
+    ] as const;
+    for (const [slug, side, firstReserve] of cases) {
+      const value = findRow(buildComparisonAtAGlanceRows(getPage(slug), NOW_SEC), "Reserve signal")?.[side];
+      expect(value, `${slug}:${side}`).not.toBe(firstReserve);
+    }
+
+    const base = getPage("usdc-circle-vs-usdg-paxos");
+    const withoutProof = {
+      ...base,
+      left: {
+        ...base.left,
+        proofOfReserves: undefined,
+        collateral: undefined,
+        reserves: [{ name: "Arbitrary First Reserve", pct: 100, risk: "low" as const }],
+      },
+    };
+    expect(findRow(buildComparisonAtAGlanceRows(withoutProof, NOW_SEC), "Reserve signal")?.left).toBe(
+      "Collateral profile disclosed",
+    );
+  });
+
   it("covers every key in the shared assurance and eligibility vocabularies", () => {
     expect(Object.keys(PROOF_ASSURANCE_METHOD_LABELS).sort()).toEqual([...PROOF_ASSURANCE_METHOD_VALUES].sort());
     expect(Object.keys(PROOF_ASSURANCE_SCOPE_LABELS).sort()).toEqual([...PROOF_ASSURANCE_SCOPE_VALUES].sort());

@@ -196,6 +196,23 @@ describe("HeroPassportStrip", () => {
     expect(chains.className).toContain("w-40");
   });
 
+  it("does not publish a zero-chain fact when no contract record exists", () => {
+    const items = buildHeroPassportItems({
+      coin: TRACKED_META_BY_ID.get("hbd-hive")!,
+      chainCount: 0,
+      blacklistStatus: null,
+      resolvedMechanismArchetype: null,
+      mintAuthority: { status: "not-reviewed", mintPathLabel: "Unknown", mintPathShortLabel: "Unknown" },
+      redemptionBackstop: null,
+      pegScoreResult: null,
+      isNavToken: false,
+    });
+    const { queryByRole, queryByText } = render(<HeroPassportStrip items={items} />);
+
+    expect(queryByRole("link", { name: /Deployed on 0 chains/ })).toBeNull();
+    expect(queryByText("Chains")).toBeNull();
+  });
+
   it("renders nothing when fewer than three facts resolve", () => {
     const { container } = render(<HeroPassportStrip items={ITEMS.slice(0, 2)} />);
     expect(container.firstChild).toBeNull();

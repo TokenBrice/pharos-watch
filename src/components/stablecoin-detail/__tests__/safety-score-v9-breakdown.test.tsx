@@ -61,8 +61,8 @@ describe("SafetyScoreV9PillarRow", () => {
 
   it.each([
     { cause: "C" as const, score: 35, reason: "undisclosed by issuer" },
-    { cause: "U" as const, score: 50, reason: "not yet researched" },
-    { cause: "U" as const, score: 60, reason: "not yet researched" },
+    { cause: "U" as const, score: 50, reason: "unresolved" },
+    { cause: "U" as const, score: 60, reason: "unresolved" },
   ])("names a $cause priced unknown without calling it excluded", ({ cause, score, reason }) => {
     const { container } = render(<SafetyScoreV9PillarRow cardId="card" pillar={{ ...pillar(null), pricedUnknown: { cause, score } }} />);
     expect(container.textContent).toContain("Unknown");

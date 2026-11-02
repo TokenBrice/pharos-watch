@@ -10,7 +10,7 @@ This document covers two frontend-only feature surfaces that are not backed by d
 
 ## Stablecoin Cemetery (`/cemetery`)
 
-The route title and description count from `buildCemeteryStats(CEMETERY_ENTRIES)` (total, first death year and per-cause tally with `CAUSE_META` labels), the same stats the hero and cause strip render.
+The route title and description count from `buildCemeteryStats(CEMETERY_ENTRIES)` (total and per-cause tally with `CAUSE_META` labels; the description dates the failure window from the first death year), the same stats the hero and cause strip render.
 
 `src/app/cemetery/page.tsx` owns the static shell. `shared/lib/cemetery-merged.ts` supplies data; `src/lib/cemetery-stats.ts`, `cemetery-register.ts` and `cemetery-selection.ts` own projections/navigation. `src/components/cemetery/` owns rendering and interaction.
 
@@ -181,7 +181,7 @@ Each pair page ends with a "Related comparisons" section: "More {A} comparisons"
 - Static comparison landing pages are generated from `STATIC_COMPARISON_PAGES` in `src/lib/compare-pages.ts` and live at `/compare/<left-id>-vs-<right-id>/`.
 - Mobile selection renders selected-coin chips plus one add selector instead of all five selector slots up front. The underlying URL state and five-coin maximum are unchanged; desktop keeps the full slot grid.
 
-Static HTML never links a `/compare/?coins=` facet: `buildStaticCompareHref()` (`src/lib/compare-links.ts`) links the curated pair page when one exists (a coin's primary pair; for two coins, their pair) and otherwise `/compare/#coins=<ids>`, which crawlers read as `/compare/`. Once the query is readable, `useCompareSelection()` adopts that fragment into `?coins=` (an explicit `?coins=` selection wins) and drops the fragment. `buildLiveCompareUrl()` stays for client-side navigation and the pair pages' "Open live compare" tool links.
+Static HTML never links a `/compare/?coins=` facet: `buildStaticCompareHref()` (`src/lib/compare-links.ts`) links the curated pair page when one exists (a coin's primary pair; for two coins, their pair) and otherwise `/compare/#coins=<ids>`, which crawlers read as `/compare/`. Once the query is readable, `useCompareSelection()` adopts that fragment into `?coins=` (an explicit `?coins=` selection wins on first load) and drops the fragment; later same-route `#coins=` navigations are re-adopted through the history-change signal. `buildLiveCompareUrl()` stays for client-side navigation and the pair pages' "Open live compare" tool links.
 
 Initial load normalizes the `coins` URL param to the accepted canonical ID list. If invalid tokens were present, `useCompareSelection()` rewrites the URL to the surviving canonical IDs or removes `coins` entirely.
 
@@ -223,4 +223,4 @@ The peg-track-record row `Open recorded incident` reports `activeDepeg` as Yes/N
 - Both pages are part of static export and rely on client-side fetches where applicable.
 - Cemetery reliability depends on repository data curation (`shared/data/dead-stablecoins.json` via `shared/lib/dead-stablecoins.ts`).
 - Cemetery Telegram notifications depend on the daily Telegram digest post plus `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID`; additions are detected from the repo dataset, not from a separate API feed.
-- Compare global error/freshness notices include aggregate mint/burn flows. Tracking coverage requires a successful aggregate read; failed or absent evidence is unavailable, not zero tracked. Per-coin flow-history failures get a retry notice; supply-history failures show inline "History unavailable". The shared retry includes both histories, preserving retained data and successful peers.
+- Compare global error/freshness notices include aggregate mint/burn flows. Tracking coverage requires a successful aggregate read; failed or absent evidence is unavailable, not zero tracked. Per-coin flow-history failures get a retry notice; supply-history failures show inline "History unavailable". The supply-history read follows the chart range, requesting the unbounded `range=all` window for All and a covering bounded window otherwise. The shared retry includes both histories, preserving retained data and successful peers.

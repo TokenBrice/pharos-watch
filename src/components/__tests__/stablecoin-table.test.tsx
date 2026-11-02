@@ -137,6 +137,28 @@ describe("StablecoinTable", () => {
     expect(screen.queryByText(/deltas reflect supply expansion and contraction/)).toBeNull();
   });
 
+  it("reads a missing stablecoins payload as unavailable instead of an empty filter result", () => {
+    const { rerender } = render(
+      <StablecoinTable data={undefined} isLoading={false} activeFilters={["usd-peg"]} />,
+    );
+    expect(screen.queryByText("No stablecoins match your filters")).toBeNull();
+    expect(screen.getByText("No stablecoin data available")).toBeTruthy();
+
+    rerender(<StablecoinTable data={[]} isLoading={false} activeFilters={["usd-peg"]} />);
+    expect(screen.getByText("No stablecoins match your filters")).toBeTruthy();
+  });
+
+  it("reads a failed stablecoins read as unreachable data instead of an empty market", () => {
+    const { rerender } = render(
+      <StablecoinTable data={undefined} isLoading={false} activeFilters={[]} unavailable />,
+    );
+    expect(screen.queryByText("No stablecoin data available")).toBeNull();
+    expect(screen.getByText("We couldn't reach the data.")).toBeTruthy();
+
+    rerender(<StablecoinTable data={[]} isLoading={false} activeFilters={[]} />);
+    expect(screen.getByText("No stablecoin data available")).toBeTruthy();
+  });
+
   it("threads supplied source generations through the table model into the CSV preamble", () => {
     render(<StablecoinTable
       data={[coin]} isLoading={false} activeFilters={[]}
@@ -146,7 +168,7 @@ describe("StablecoinTable", () => {
     fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
     expect(downloadCsvWithPreambleMock).toHaveBeenCalledOnce();
     expect(downloadCsvWithPreambleMock.mock.calls[0][3]).toMatchObject({
-      asOfISO: "2024-09-01T12:00:00.000Z",
+      asOfISO: "unknown",
       sourceGenerations: {
         stablecoins: "2024-09-01T12:00:00.000Z", pegSummary: null,
         dexLiquidity: "2024-09-01T11:59:00.000Z", reportCards: null,

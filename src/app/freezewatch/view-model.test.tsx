@@ -143,7 +143,7 @@ describe("useFreezeWatchPageController", () => {
   it("derives cursor page state and resets navigation when URL ledger filters change", () => {
     const { result, rerender } = renderHook(() => useFreezeWatchPageController());
     expect(useBlacklistEventsPageMock).toHaveBeenCalledWith(expect.objectContaining({
-      stablecoin: "USDT", chainName: "Tron", eventType: "destroy", query: "abc",
+      stablecoin: "USDT", chainId: "tron", eventType: "destroy", query: "abc",
       sortBy: "event", sortDirection: "asc", limit: 50, cursor: undefined, includeTotal: true,
     }));
     expect(result.current.clampedPage).toBe(1);
@@ -189,7 +189,7 @@ describe("useFreezeWatchPageController", () => {
       expect(result.current.page).toBe(1);
       expect(result.current.canPreviousPage).toBe(false);
       expect(useBlacklistEventsPageMock.mock.calls.every(([query]) =>
-        query.stablecoin === "USDC" && query.chainName === "Ethereum" && query.cursor === undefined,
+        query.stablecoin === "USDC" && query.chainId === "ethereum" && query.cursor === undefined,
       )).toBe(true);
       expect(trackEventMock).toHaveBeenCalledWith("filter_applied", {
         page: "freezewatch", filter_type: "stablecoin", filter_value: "USDC",
@@ -389,6 +389,27 @@ describe("useFreezeWatchPageController", () => {
 
     expect(result.current.error).toBe(reportCardsError);
     expect(result.current.stablecoinsError).toBeNull();
+  });
+
+  it("forwards the chain id when the summary (and its chain-name lookup) is unavailable", () => {
+    currentSearch = "?chain=tron";
+    useBlacklistSummaryMock.mockReturnValue({
+      data: undefined, isLoading: false, error: new Error("HTTP 503"), refetch: vi.fn(),
+    });
+    const { result } = renderHook(() => useFreezeWatchPageController());
+
+    const pageParams = useBlacklistEventsPageMock.mock.calls.at(-1)?.[0];
+    expect(result.current.chainFilter).toBe("tron");
+    expect(pageParams).toMatchObject({ chainId: "tron" });
+    expect(pageParams).not.toHaveProperty("chainName");
+  });
+
+  it("forwards an unresolved chain id instead of silently querying every chain", () => {
+    currentSearch = "?chain=bogus";
+    const { result } = renderHook(() => useFreezeWatchPageController());
+
+    expect(result.current.chainFilter).toBe("bogus");
+    expect(useBlacklistEventsPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ chainId: "bogus" }));
   });
 
   it("removes stale chainId alias when updating the chain filter", () => {

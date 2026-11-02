@@ -142,7 +142,8 @@ export function summarizeCoverageMarketCap(rows: readonly CoverageRow[]) {
     totalUsd: observedCount > 0 ? totalUsd : null,
     observedCount,
     totalCount: rows.length,
-    complete: observedCount === rows.length,
+    // No observations is unavailable, not vacuously complete.
+    complete: observedCount > 0 && observedCount === rows.length,
   };
 }
 

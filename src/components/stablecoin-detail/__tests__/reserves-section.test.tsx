@@ -175,9 +175,21 @@ describe("ReservesSection", () => {
     const rest = screen.getByLabelText("Remaining reserve slices");
     expect(within(rest).getAllByRole("listitem")).toHaveLength(2);
     expect(rest.closest("details")!.querySelector("summary")!.textContent).toContain("6%");
+    // The fold counts the merged groups it renders, never the slices they cover.
+    expect(rest.closest("details")!.querySelector("summary")!.textContent).toContain("2 more groups");
     const detail = screen.getByLabelText("Reserve slices");
     expect(within(detail).getAllByRole("listitem")).toHaveLength(7);
     slices.forEach((slice) => expect(within(detail).getByText(slice.name)).toBeDefined());
+  });
+
+  it("counts folded merged groups in the disclosure, not the reviewed slices they cover", () => {
+    const coin = TRACKED_META_BY_ID.get("frax-frax")!;
+    const qualitySummary = projectReserveQualityClientSummary(coin)!;
+    expect(qualitySummary.sliceCount).toBeGreaterThan(5);
+    renderSection({ coin, qualitySummary });
+    const summary = screen.getByLabelText("Remaining reserve slices").closest("details")!.querySelector("summary")!;
+    expect(summary.textContent).toContain("10 more groups");
+    expect(summary.textContent).not.toMatch(/more slices/);
   });
 
   it("adds the reviewed date to the footer and names the source in the as-of fact", () => {
@@ -271,6 +283,12 @@ describe("ReservesSection", () => {
       const via = screen.getByRole("link", { name: "PAR" });
       expect(via.getAttribute("href")).toBe("/stablecoin/par-coin/#reserves");
       expect(via.closest("p")?.textContent).toMatch(/PAR staking vault shares.*via PAR/);
+      // The wrapper's whole-basket chip, facts and ladder describe a different
+      // population than the parent slices drawn here, so they are not shown.
+      expect(screen.queryByText(WRAPPER_SUMMARY.chipLabel)).toBeNull();
+      expect(screen.queryByRole("group", { name: "Reserve facts" })).toBeNull();
+      expect(screen.queryByText("Liquidity ladder")).toBeNull();
+      expect(screen.queryByText("Not published")).toBeNull();
     });
 
     it("words the verdict over the drawn parent slices, not the wrapper's single claim", () => {
@@ -279,6 +297,20 @@ describe("ReservesSection", () => {
       const verdict = screen.getByText(/^Via PAR: 2 reviewed slices/);
       expect(verdict.textContent).toContain("Liquid cash strategy basket");
       expect(verdict.textContent).toContain("70%");
+    });
+
+    it("never prints a wrapper's single-slice chip or liquidity facts over the parent basket", () => {
+      const coin = TRACKED_META_BY_ID.get("usdcx-movement")!;
+      const qualitySummary = projectReserveQualityClientSummary(coin);
+      const lookThrough = projectReserveLookThroughClientSummary(coin, TRACKED_META_BY_ID);
+      expect(qualitySummary?.chipLabel).toBe("Opaque exit");
+      expect(lookThrough).not.toBeNull();
+      renderSection({ coin, qualitySummary, lookThrough });
+      expect(screen.queryByText("Opaque exit")).toBeNull();
+      expect(screen.queryByText("Not published")).toBeNull();
+      expect(screen.queryByRole("group", { name: "Reserve facts" })).toBeNull();
+      expect(screen.getByText(/^Via /).textContent)
+        .toContain(`${lookThrough!.parentSymbol}: ${lookThrough!.slices.length} reviewed slices`);
     });
 
     it("keeps the wrapper's own basket when its reviewed basis is not a single slice", () => {

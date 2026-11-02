@@ -102,6 +102,41 @@ describe("SelectorResultSummary", () => {
     expect(onEditAnswer).toHaveBeenCalledWith("peg");
   });
 
+  it("keeps the coverage skip count out of the funnel heading", () => {
+    render(
+      <SelectorResultSummary
+        {...summaryProps({
+          universe: { active: 287, surviving: 283 },
+          shortlistCount: 3,
+          coverageWarnings: { sparse: false, uneven: false, skippedForCoverageCount: 4 },
+        })}
+      />,
+    );
+
+    const heading = screen.getByRole("heading", { level: 2 });
+    expect(heading.textContent).toBe(
+      "287 in scope USD stablecoins → 283 filtered → 3 shortlist entries",
+    );
+    expect(heading.textContent).not.toContain("skipped");
+    expect(screen.queryByText(/Sparse coverage/i)).toBeNull();
+  });
+
+  it("names no skipped coins when none were skipped for coverage", () => {
+    render(
+      <SelectorResultSummary
+        {...summaryProps({
+          universe: { active: 287, surviving: 283 },
+          shortlistCount: 3,
+          coverageWarnings: { sparse: false, uneven: false, skippedForCoverageCount: 0 },
+        })}
+      />,
+    );
+
+    expect(screen.getByRole("heading", { level: 2 }).textContent).toBe(
+      "287 in scope USD stablecoins → 283 filtered → 3 shortlist entries",
+    );
+  });
+
   it("blocks a second submission while the share link is pending", async () => {
     const pending = deferred<void>();
     const onCopyShareLink = vi.fn().mockReturnValue(pending.promise);

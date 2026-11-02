@@ -12,6 +12,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveMechanismArchetype } from "@shared/lib/classification";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { formatDeviationBps, formatIsoTimestamp } from "@shared/lib/format";
+import { getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH } from "@shared/lib/methodology-versions/constants";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
@@ -112,10 +113,12 @@ function ProvenanceLine({ event }: { event: DepegEventEntry }) {
 }
 
 function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; includeTime: boolean }) {
-  const startPrice = formatEventPrice(event.startPrice);
-  const peakPrice = formatEventPrice(event.peakPrice);
+  const startPrice = formatEventPrice(event.startPrice, event.pegType, event.pegReference);
+  const peakPrice = formatEventPrice(event.peakPrice, event.pegType, event.pegReference);
   const { closure, label: closureLabel, isRecovery } = getDepegEventClosurePresentation(event);
-  const recoveryPrice = isRecovery ? formatEventPrice(event.recoveryPrice) : null;
+  const recoveryPrice = isRecovery
+    ? formatEventPrice(event.recoveryPrice, event.pegType, event.pegReference)
+    : null;
   const durationSec = event.endedAt != null ? event.endedAt - event.startedAt : null;
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
@@ -184,7 +187,7 @@ function buildDepegRecordContext({
   event: DepegEventEntry;
   versionLabel: string;
 }): string {
-  const startPrice = formatEventPrice(event.startPrice);
+  const startPrice = formatEventPrice(event.startPrice, event.pegType, event.pegReference);
   const pegReference = formatEventPrice(event.pegReference);
   const sourceLabel = event.source === "live" ? "live monitoring" : "a historical backfill";
   const pricePath = startPrice && pegReference
@@ -323,7 +326,7 @@ export default async function DepegEventPage(
 
       <RelatedIncidentsRail
         excludeEventId={event.slug}
-        pegCurrency={event.pegType}
+        pegCurrency={getPegTaxonomyByType(event.pegType)?.currency}
         riskArchetype={coin ? resolveMechanismArchetype(coin, TRACKED_META_BY_ID) ?? undefined : undefined}
         startedAt={event.startedAt}
       />

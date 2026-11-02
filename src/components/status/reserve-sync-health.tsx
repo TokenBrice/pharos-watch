@@ -149,7 +149,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
         </div>
 
         <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
-          <div className="text-xs font-medium text-foreground">Fresh Evidence Mix</div>
+          <div className="text-xs font-medium text-foreground">Snapshot evidence mix</div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <div>
               <div className="text-muted-foreground">Independent eligible</div>

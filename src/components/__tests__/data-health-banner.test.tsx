@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DataHealthBanner } from "../data-health-banner";
 import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
+import { ApiFetchError } from "@/lib/api";
 
 describe("DataHealthBanner", () => {
   const nowMs = Date.UTC(2026, 9, 21, 12);
@@ -61,5 +62,21 @@ describe("DataHealthBanner", () => {
     ]} />);
     expect(markup).toContain("Supply history last refreshed");
     expect(markup).not.toContain("Peg Data");
+  });
+
+  it("keeps a retained stale lane and an unpopulated lane in their own findings", () => {
+    const markup = renderToStaticMarkup(<DataHealthBanner entries={[
+      derive({ label: "Prices", dataUpdatedAt: nowMs - 13 * 3600_000 }),
+      derive({
+        label: "Flows",
+        hasData: false,
+        dataUpdatedAt: 0,
+        error: new ApiFetchError("/api/flows", 503, JSON.stringify({ error: "Data not yet available" })),
+      }),
+    ]} />);
+    expect(markup).toContain("Prices last refreshed over 13h ago");
+    expect(markup).toContain("Flows has not populated yet");
+    expect(markup).not.toContain("Prices and Flows");
+    expect(markup).not.toContain("Last successful update");
   });
 });

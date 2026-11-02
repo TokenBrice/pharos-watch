@@ -10,8 +10,8 @@ import {
 describe("safety score reason labels", () => {
   it.each([
     { pillar: "backing" as const, cause: "C" as const, score: 35, label: "Backing undisclosed by issuer" },
-    { pillar: "exit" as const, cause: "U" as const, score: 50, label: "Exit not yet researched" },
-    { pillar: "control" as const, cause: "U" as const, score: 60, label: "Control not yet researched" },
+    { pillar: "exit" as const, cause: "U" as const, score: 50, label: "Exit unresolved" },
+    { pillar: "control" as const, cause: "U" as const, score: 60, label: "Control unresolved" },
   ])("describes the priced $pillar cause without inventing a pipeline failure", ({ pillar, cause, score, label }) => {
     const pillars = { backing: { score: 80 }, exit: { score: 70 }, control: { score: 60 }, [pillar]: { score: null, aggregationDisposition: "unavailable", pricedUnknown: { cause, score } } };
     const result = describePartialEvidence({ ratingStatus: "rated", pillars,
@@ -30,7 +30,7 @@ describe("safety score reason labels", () => {
     const neighborhood = describePartialEvidence({ partialEvidence })!;
     expect(neighborhood.gaps.map(formatPartialEvidenceGap)).toEqual(["Exit unavailable"]);
     expect(neighborhood.summary).toBe("Exit has no usable evidence.");
-    expect(`${table.summary} ${neighborhood.summary}`).not.toMatch(/\d|pipeline|not yet researched|undisclosed/);
+    expect(`${table.summary} ${neighborhood.summary}`).not.toMatch(/\d|pipeline|unresolved|undisclosed/);
   });
 
   it("keeps reduced cause-B projections distinct from pipeline gaps", () => {

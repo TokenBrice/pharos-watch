@@ -29,9 +29,12 @@ describe("case-study publication metadata", () => {
 
   it("counts the archive and its outcomes in the hub title and description", () => {
     expect(hubMetadata.title).toBe(`Stablecoin Depeg History: ${CASE_STUDY_LIST.length} Case Studies`);
-    expect(hubMetadata.description).toContain(
+    const description = String(hubMetadata.description);
+    expect(description).toContain(
       `(${CASE_STUDY_OUTCOME_COUNTS.died} died, ${CASE_STUDY_OUTCOME_COUNTS.wounded} wounded, ${CASE_STUDY_OUTCOME_COUNTS.survived} survived)`,
     );
+    expect(description).toContain("depeg and failure case studies");
+    expect(description).not.toMatch(/reconstructed stablecoin depegs|how each ended/i);
     expect(CASE_STUDY_OUTCOME_COUNTS.died + CASE_STUDY_OUTCOME_COUNTS.wounded + CASE_STUDY_OUTCOME_COUNTS.survived).toBe(CASE_STUDY_LIST.length);
   });
 

@@ -57,11 +57,8 @@ vi.mock("@/hooks/use-pinned-stablecoins", () => ({
   usePinnedStablecoins: usePinnedStablecoinsMock,
 }));
 
-vi.mock("@/components/homepage-client-view-model", () => ({
-  buildHomepageCriticalViewModel: () => ({
-    pegScores: new Map(),
-    filteredRowCount: 392,
-  }),
+vi.mock("@/components/homepage-client-view-model", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/components/homepage-client-view-model")>()),
   buildHomepageOptionalViewModel: () => ({
     reportCardMap: {},
   }),

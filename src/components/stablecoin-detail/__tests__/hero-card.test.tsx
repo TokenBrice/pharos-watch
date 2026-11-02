@@ -427,6 +427,33 @@ describe("HeroCard", () => {
     expect(html).toContain("Last observed · 2026-06-30");
   });
 
+  it.each(["card", "cell"] as const)("labels the %s USD fallback price as USD, not the peg currency", (variant) => {
+    const eurCoin: StablecoinMeta = { ...coin, flags: { ...coin.flags, pegCurrency: "EUR" } };
+    const html = renderToStaticMarkup(<HeroPriceMetric
+      coin={eurCoin}
+      coinData={{ ...coinData, price: 1.117990454919679 }}
+      price={{ pegRef: null, deviationBps: null, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+      variant={variant}
+    />);
+
+    expect(html).toContain("Price (USD)");
+    expect(html).toContain("$1.1180");
+    expect(html).not.toContain("Price (EUR)");
+  });
+
+  it.each(["card", "cell"] as const)("keeps the %s native-unit label when a reference is usable", (variant) => {
+    const eurCoin: StablecoinMeta = { ...coin, flags: { ...coin.flags, pegCurrency: "EUR" } };
+    const html = renderToStaticMarkup(<HeroPriceMetric
+      coin={eurCoin}
+      coinData={{ ...coinData, price: 1.11 }}
+      price={{ pegRef: 1.11, deviationBps: 0, pegReferenceUnavailable: false, isNavToken: false, limitedDepegCoverageNote: null }}
+      variant={variant}
+    />);
+
+    expect(html).toContain("Price (EUR)");
+    expect(html).toContain("EUR 1.0000");
+  });
+
   it("renders the active-depeg chip when the peg summary flags one", () => {
     const html = renderHero();
 

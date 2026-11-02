@@ -428,7 +428,7 @@ describe("RedemptionBackstopCard", () => {
     expect(html).toMatch(/Exit correlation:\s*<span[^>]*>independent issuer rail</);
     expect(html).toContain("Scoring capacity: $1.5M");
     expect(html).toContain("Eventual capacity: $20.0M");
-    expect(html).toContain("Queued capacity: $12.0M");
+    expect(html).not.toContain("Queued capacity: $12.0M");
     expect(html).toContain("Modeled exit: $2.0M");
     expect(html).toContain("Eventual score: 82/100");
     // Retail and institutional cost are distinct scores; swapping them must fail.

@@ -12,7 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDexLiquidityCoin } from "@/hooks/api-hooks";
 import type { DexLiquidityData } from "@shared/types/market";
-import { formatCurrency, formatPercentFromRatio } from "@shared/lib/format";
+import { formatCurrency, formatPercentFromRatio, formatUsdPriceAdaptive } from "@shared/lib/format";
 import { formatLiquiditySourceMix, getLiquidityCoverageBadge } from "@/lib/liquidity-coverage";
 import { describeDexVolume } from "@/lib/dex-volume-display";
 import { DEX_VOLUME_COVERAGE_MIN, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
@@ -339,7 +339,7 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
             <div className="space-y-1">
               <p className="pharos-label">DEX-implied price</p>
               <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <span className="text-lg font-extrabold font-mono tabular-nums">${liq.dexPriceUsd.toFixed(4)}</span>
+                <span className="text-lg font-extrabold font-mono tabular-nums">${formatUsdPriceAdaptive(liq.dexPriceUsd)}</span>
                 {liq.dexDeviationBps != null && (
                   <span
                     className={`text-sm font-mono ${

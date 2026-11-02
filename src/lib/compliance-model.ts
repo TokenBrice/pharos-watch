@@ -81,7 +81,8 @@ export interface GeniusComplianceRow extends BaseComplianceRow {
   enforcementStatus?: GeniusEnforcementStatus;
   daspOfferSaleStatus?: GeniusDaspOfferSaleStatus;
   hasAnyDisclosure: boolean;
-  reserveDisclosurePresent: boolean;
+  /** Tri-state: undefined is no record, never a reviewed absence. */
+  reserveDisclosurePresent?: boolean;
   reserveDisclosureUrl?: string;
   redemptionPolicyPresent: boolean;
   monthlyAttestationPresent: boolean;
@@ -103,6 +104,8 @@ export interface ComplianceFilters {
 export interface ComplianceViewModel {
   rows: ComplianceRow[];
   watchRows: ComplianceRow[];
+  /** Rows in the selected regime before status, token-type, peg, or search filtering. */
+  regimeTotal: number;
   totalTracked: number;
   isGeniusEffective: boolean;
 }
@@ -249,10 +252,9 @@ function buildGeniusRow(
       genius.reserveDisclosurePresent ||
         genius.reserveDisclosureUrl ||
         genius.redemptionPolicyPresent ||
-        genius.monthlyAttestationPresent ||
-        reserveReportNote,
+        genius.monthlyAttestationPresent,
     ),
-    reserveDisclosurePresent: genius.reserveDisclosurePresent ?? false,
+    reserveDisclosurePresent: genius.reserveDisclosurePresent,
     reserveDisclosureUrl: genius.reserveDisclosureUrl,
     redemptionPolicyPresent: genius.redemptionPolicyPresent ?? false,
     monthlyAttestationPresent: genius.monthlyAttestationPresent ?? false,
@@ -437,10 +439,15 @@ export function buildComplianceViewModel(filters: ComplianceFilters): Compliance
 
   const rows = all.rows.filter((row) => matchesFilters(row, filters, q)).sort(sortComplianceRows);
   const watchRows = all.watchRows.filter((row) => matchesFilters(row, filters, q)).sort(sortComplianceRows);
+  const regimeRows = filters.regime === "all"
+    ? all.rows.length + all.watchRows.length
+    : all.rows.filter((row) => row.regime === filters.regime).length +
+      all.watchRows.filter((row) => row.regime === filters.regime).length;
 
   return {
     rows,
     watchRows,
+    regimeTotal: regimeRows,
     totalTracked: all.rows.length + all.watchRows.length,
     isGeniusEffective: all.geniusEffective,
   };

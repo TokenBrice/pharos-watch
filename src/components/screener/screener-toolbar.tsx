@@ -144,8 +144,8 @@ export function ScreenerToolbar({
                 {matchingRows.toLocaleString("en-US")}
               </span>
               <span className="text-sm font-medium text-muted-foreground">
-                of <span className="pharos-numeric text-foreground">{totalRows.toLocaleString("en-US")}</span> tracked{" "}
-                {active ? "matching" : "— pre-launch and frozen included"}
+                of <span className="pharos-numeric text-foreground">{totalRows.toLocaleString("en-US")}</span>{" "}
+                screenable coins {active ? "matching" : "— pre-launch and frozen included"}
               </span>
             </p>
           ) : (

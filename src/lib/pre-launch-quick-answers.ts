@@ -11,10 +11,10 @@ type QuickAnswerCoin = Pick<
   | "launchDate" | "listingStatusReview"
 >;
 
-/** `oneLiner` up to its first clause break, as one sentence: "QEUR is … from Qivalis." */
+/** The registry `oneLiner`, as one sentence: "QEUR is … from Qivalis, a 37-bank consortium." */
 export function firstOneLinerClause(oneLiner: string | undefined): string | null {
-  const clause = oneLiner?.split(/,\s|;\s|\.\s|\s—\s|\s–\s/)[0]?.trim().replace(/[.,;:]+$/, "");
-  return clause ? `${clause}.` : null;
+  const text = oneLiner?.trim().replace(/[.,;:]+$/, "");
+  return text ? `${text}.` : null;
 }
 
 function describeLaunchTiming(coin: QuickAnswerCoin): string {

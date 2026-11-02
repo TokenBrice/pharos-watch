@@ -14,7 +14,7 @@ const BAR_LABEL_MIN_PCT = 8;
 const BAR_LABELS: Partial<Record<string, string>> = {
   "sources-5-plus": "5+",
   "sources-3-4": "3-4",
-  "sources-1-2": "1-2",
+  "sources-1-2": "0-2",
   "price-only": "price",
   "data-unavailable": "n/a",
   rated: "rated",

@@ -191,7 +191,7 @@ function formatSourceSwitchHeadline(detail: {
   if (largestDelta) {
     return `${formatPp(largestDelta.value)} APY ${daysAgo(largestDelta.ts, nowMs)}d ago — source switched from ${previous} (${formatPp(detail.apy30dDelta)} impact).`;
   }
-  return `Source switched from ${previous} (${formatPp(detail.apy30dDelta)} impact on 30d APY).`;
+  return `Source switched from ${previous} (${formatPp(detail.apy30dDelta)} impact).`;
 }
 
 function formatOrganicHeadline(

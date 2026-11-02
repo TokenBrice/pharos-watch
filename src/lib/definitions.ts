@@ -16,6 +16,7 @@
  */
 import { DEWS_SIGNAL_LABELS, DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
 import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { DEPEG_ARCHIVE_EPOCH_DATE, MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/lib/depeg-event-config";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import { GAUGE_BAND_RANGES } from "@shared/lib/mint-burn-gauge-bands";
@@ -239,7 +240,7 @@ export const DEFINITIONS = {
   depeg: {
     label: "Depeg",
     short: `A confirmed deviation from peg beyond the detection threshold: ${DEPEG_THRESHOLD_BPS} bps for USD pegs, ${DEPEG_THRESHOLD_BPS_NON_USD} bps for other pegs.`,
-    long: `A deviation from peg that crosses the detection threshold (${DEPEG_THRESHOLD_BPS} bps for USD pegs, ${DEPEG_THRESHOLD_BPS_NON_USD} bps for other pegs) and passes multi-source confirmation. Contradictory secondary evidence is treated as contradiction, not weak support. Events with a peak deviation of 500 bps or more get a dedicated incident page.`,
+    long: `A deviation from peg that crosses the detection threshold (${DEPEG_THRESHOLD_BPS} bps for USD pegs, ${DEPEG_THRESHOLD_BPS_NON_USD} bps for other pegs) and passes multi-source confirmation. Contradictory secondary evidence is treated as contradiction, not weak support. Events from ${DEPEG_ARCHIVE_EPOCH_DATE} onward whose absolute peak deviation is ${MIN_DEPEG_PAGE_DEVIATION_BPS} bps or more, plus pinned earlier incidents, get a dedicated incident page.`,
     listed: true,
     seeAlso: ["depegBps", "dews", "ddr"],
     ...PEG,
@@ -271,9 +272,9 @@ export const DEFINITIONS = {
     label: "Peg Score",
     short: "Historical 0-100 peg-behavior score built from time-at-peg, event severity, and active-depeg penalties.",
     detail:
-      "Requires at least 7 tracking days; 7-30 day scores are marked early. NAV tokens return NR because they are not meant to hold a fixed price.",
+      "Requires at least 7 tracking days. NAV tokens return NR because they are not meant to hold a fixed price.",
     long:
-      "A 0-100 score for a stablecoin's historical peg behavior, combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. It needs at least 7 days of tracking; scores under 30 days are marked early. NAV tokens return NR because they are not meant to hold a fixed price. Peg Score enters the Safety Score as a multiplier.",
+      "A 0-100 score for a stablecoin's historical peg behavior, combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. It needs at least 7 days of tracking. NAV tokens return NR because they are not meant to hold a fixed price. Peg Score enters the Safety Score as a multiplier.",
     listed: true,
     seeAlso: ["depeg", "dews", "safetyScore"],
     ...PEG,
@@ -651,6 +652,9 @@ export const DEFINITIONS = {
     listed: true,
   },
 } as const satisfies Record<string, Definition>;
+
+/** One header tooltip for the Peg Score column on every stablecoin table. */
+export const PEG_SCORE_HEADER_TITLE = `${DEFINITIONS.pegScore.label}: ${DEFINITIONS.pegScore.short}`;
 
 export type DefinitionKey = keyof typeof DEFINITIONS;
 

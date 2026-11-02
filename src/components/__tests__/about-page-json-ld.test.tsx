@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { AboutPageContent } from "@/components/about/about-page-content";
+import { BLACKLIST_STABLECOINS } from "@shared/types/market";
+import { PRE_LAUNCH_STABLECOIN_COUNT } from "@/lib/stablecoin-static-data";
 
 vi.mock("next/link", async () => {
   // Vitest hoists mock factories; import the shared mock inside its factory.
@@ -34,6 +36,15 @@ describe("About structured-data documentation links", () => {
         url: "https://pharos.watch/api/reference/",
       }),
     ]));
+  });
+});
+
+describe("About coverage copy", () => {
+  it("uses one pre-launch count and the reviewed freeze-scan count", () => {
+    const html = renderToStaticMarkup(<AboutPageContent />);
+    expect(html).toContain(`freeze monitoring across ${BLACKLIST_STABLECOINS.length} stablecoins`);
+    expect(html).toContain(`${PRE_LAUNCH_STABLECOIN_COUNT} upcoming launches`);
+    expect(html).toContain(`${PRE_LAUNCH_STABLECOIN_COUNT} upcoming stablecoins`);
   });
 });
 

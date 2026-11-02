@@ -167,6 +167,21 @@ describe("YieldSourceSheet", () => {
     expect(chart.getAttribute("data-benchmark-label")).toBe("EUR 3M compounded €STR");
   });
 
+  it("reads a native holder-yield source as depth not applicable in the sheet and card", () => {
+    renderYieldSourceSheet({
+      ...makeRanking("buidl", "best-buidl", "alt-buidl"),
+      yieldType: "rebase",
+      dataSource: "rate-derived",
+      sourceTvlUsd: null,
+      sourceRisk: { sourceDepthRatio: null, sourceRiskPenalty: 1 },
+      altSources: [],
+    });
+
+    expect(screen.getByText("Native · depth n/a")).toBeTruthy();
+    expect(screen.getByText("Depth").nextElementSibling?.textContent).toBe("Native");
+    expect(screen.queryByText(/Unknown depth/)).toBeNull();
+  });
+
   it("shows current and previous source identity for source changes", () => {
     renderYieldSourceSheet({
       ...makeRanking("usdc", "best-usdc", "alt-usdc"),

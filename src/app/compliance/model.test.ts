@@ -56,6 +56,7 @@ const fixtures = vi.hoisted(() => {
     },
     {
       id: "dollar-review",
+      proofOfReserves: { latestReport: { periodEnd: "2026-06-30", publishedAt: "2026-07-29" } },
       genius: {
         authorizationStatus: "unknown",
         applicability: "unclear",
@@ -157,6 +158,15 @@ describe("Compliance model", () => {
     expect(totalTracked).toBe(6);
   });
 
+  it("scopes the tracked denominator to the selected regime", () => {
+    expect(viewModel({ regime: "mica" }).regimeTotal).toBe(3);
+    expect(viewModel({ regime: "genius" }).regimeTotal).toBe(3);
+
+    const filtered = viewModel({ regime: "mica", status: "authorized" });
+    expect(filtered.rows.map((row) => row.id)).toEqual(["euro-emt"]);
+    expect(filtered.regimeTotal).toBe(3);
+  });
+
   it("promotes active GENIUS rows into the main table once the regime is effective", () => {
     fixtures.isGeniusRegimeEffective.mockReturnValue(true);
 
@@ -186,13 +196,16 @@ describe("Compliance model", () => {
     expect(intent.reserveReportNote).toContain("period end 2026-06-30");
     expect(intent.reserveReportNote).toContain("published 2026-07-29");
     expect(intent.monthlyAttestationPresent).toBe(true);
+    expect(intent.reserveDisclosurePresent).toBe(true);
     expect(intent.hasAnyDisclosure).toBe(true);
     expect(intent.reviewedAt).toBe("2026-09-30");
     expect(intent).not.toHaveProperty("references");
 
-    // No disclosure evidence at all must not read as "has disclosure".
+    // A base-catalog report note alone must not manufacture a disclosure section.
     expect(review.hasAnyDisclosure).toBe(false);
-    expect(review.reserveReportNote).toBeUndefined();
+    expect(review.reserveReportNote).toContain("period end 2026-06-30");
+    // An unrecorded reserve-disclosure flag stays undefined, never a reviewed no.
+    expect(review.reserveDisclosurePresent).toBeUndefined();
     expect(review.monthlyAttestationPresent).toBe(false);
     expect(review.foreignExceptionStatus).toBe("unknown");
     // A missing review date stays unavailable; no current or build date stands in.

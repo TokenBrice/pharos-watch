@@ -123,7 +123,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
   const chartUpdatedAt = isChartFromSummary ? summaryUpdatedAt : chartQueryUpdatedAt;
   const isWeeklyLoading = isWeeklyFromChart ? isChartLoading : isWeeklyQueryLoading;
 
-  const gauge = summaryData?.gauge;
+  const gauge = summaryData?.gauge ?? null;
   const coins = summaryData?.coins ?? [];
   const hourly = chartData?.hourly ?? [];
   const weeklyHourly = (isWeeklyFromChart ? chartData?.hourly : weeklyData?.hourly) ?? [];
@@ -185,18 +185,22 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         showFreshnessBanner={showDataHealthBanner}
       />
 
-      <FlowGaugeHero
-        gauge={gauge ?? null}
-        coins={coins}
-        sync={sync}
-        window={summaryData?.window}
-        dataHealth={dataHealth}
-        isLoading={isSummaryLoading}
-      />
+      {summaryData == null && !isSummaryLoading ? null : (
+        <>
+          <FlowGaugeHero
+            gauge={gauge}
+            coins={coins}
+            sync={sync}
+            window={summaryData?.window}
+            dataHealth={dataHealth}
+            isLoading={isSummaryLoading}
+          />
 
-      <section id="data" tabIndex={-1} aria-label="Per-coin flows">
-        <FlowTable coins={coins} isLoading={isSummaryLoading} />
-      </section>
+          <section id="data" tabIndex={-1} aria-label="Per-coin flows">
+            <FlowTable coins={coins} isLoading={isSummaryLoading} />
+          </section>
+        </>
+      )}
 
       <section aria-labelledby="chart-heading">
         <div className="flex flex-wrap items-center justify-between gap-3">

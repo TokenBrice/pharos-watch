@@ -99,6 +99,20 @@ describe("PriceTransparencyCard", () => {
     expect(screen.queryByText(/time-at-peg/)).toBeNull();
   });
 
+  it("points the evidence footer at the pricing methodology, not the Peg Score", () => {
+    render(
+      <PriceTransparencyCard
+        coinData={makeCoinData("coingecko")}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={null}
+      />,
+    );
+    const methodology = screen.getAllByRole("link", { name: "View methodology" });
+    expect(methodology.some((link) => /^\/methodology\/?#pricing-pipeline-methodology$/.test(link.getAttribute("href") ?? ""))).toBe(true);
+    expect(methodology.some((link) => /pegscore/.test(link.getAttribute("href") ?? ""))).toBe(false);
+  });
+
   it("keeps the compact title plain", () => {
     render(
       <PriceTransparencyCard

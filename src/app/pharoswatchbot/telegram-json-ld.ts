@@ -8,7 +8,7 @@ import { DAILY_CHANGES_TIME, DAILY_LIVE_ALERT_CAP } from "./telegram-content";
 // One feature line per canonical alert family, then the non-alert features.
 const TELEGRAM_FEATURE_LIST = [
   ...TELEGRAM_ALERT_FAMILIES.map((family) => family.featureLine),
-  `Daily Changes message at ${DAILY_CHANGES_TIME} local time for smaller moves`,
+  `Daily Changes message for smaller moves at ${DAILY_CHANGES_TIME} UTC unless you set a time zone`,
   `Quiet by default: at most ${DAILY_LIVE_ALERT_CAP} live alerts a day outside depegs`,
   "Mute 24h, Pause all 4h and Fewer like this buttons on every alert",
   "Preset watchlists that keep tracking current cohorts",

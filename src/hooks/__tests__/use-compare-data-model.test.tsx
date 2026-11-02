@@ -61,6 +61,8 @@ vi.mock("../use-mint-burn-flows", () => ({
 
 import { useCompareDataModel } from "../use-compare-data-model";
 import { COMPARE_COLORS } from "@/lib/compare-config";
+import { STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS } from "@/lib/api-query-descriptors";
+import type { TimeRangeOption } from "@/lib/chart-time-range";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
@@ -120,7 +122,7 @@ describe("useCompareDataModel", () => {
   });
   it("keeps only the selector list active until comparisons are selected", () => {
     const { result, rerender } = renderHook(
-      ({ selectedIds }) => useCompareDataModel({ selectedIds, flowHours: 24, radarCohort: "peg" }),
+      ({ selectedIds }) => useCompareDataModel({ selectedIds, flowHours: 24, radarCohort: "peg", range: "all" }),
       { initialProps: { selectedIds: [] as string[] } },
     );
     const metricHooks = [
@@ -138,7 +140,7 @@ describe("useCompareDataModel", () => {
   });
 
   it("enables metrics immediately for an initial URL-provided selection", () => {
-    renderHook(() => useCompareDataModel({ selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg" }));
+    renderHook(() => useCompareDataModel({ selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg", range: "all" }));
     expect(useReportCardsV9Mock).toHaveBeenCalledWith({ enabled: true });
     expect(usePegSummaryMock).toHaveBeenCalledWith({ enabled: true });
   });
@@ -159,7 +161,7 @@ describe("useCompareDataModel", () => {
         dataUpdatedAt: data ? 1_790_000_010_000 : 0,
       }));
       const { result } = renderHook(() => useCompareDataModel({
-        selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg",
+        selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg", range: "all",
       }));
       expect(result.current.hasPrimaryData).toBe(true);
       expect(result.current.comparisonCoins).toHaveLength(1);
@@ -201,6 +203,7 @@ describe("useCompareDataModel", () => {
       selectedIds: ["usdc-circle", "usdt-tether"],
       flowHours: 24,
       radarCohort: "peg",
+      range: "all",
     }));
 
     expect(result.current.freshnessQueries.map((query) => query.preset)).toEqual([
@@ -251,11 +254,30 @@ describe("useCompareDataModel", () => {
       })])
       .mockReturnValueOnce([]);
     const { result } = renderHook(() => useCompareDataModel({
-      selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg",
+      selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg", range: "all",
     }));
     expect(result.current.supplySeries).toEqual([
       expect.objectContaining({ id: "usdc-circle", data: [{ ts: 1_700_000_000_000, value: 123 }] }),
     ]);
+  });
+
+  it("requests a supply-history window that covers the chart range, including unbounded All", () => {
+    const { rerender } = renderHook(
+      ({ range }: { range: TimeRangeOption }) => useCompareDataModel({
+        selectedIds: ["usdt-tether"], flowHours: 24, radarCohort: "peg", range,
+      }),
+      { initialProps: { range: "all" as TimeRangeOption } },
+    );
+    expect(supplyHistoryQueryOptionsMock).toHaveBeenLastCalledWith("usdt-tether", "all");
+
+    rerender({ range: "1y" });
+    expect(supplyHistoryQueryOptionsMock).toHaveBeenLastCalledWith("usdt-tether", 365);
+
+    rerender({ range: "90d" });
+    expect(supplyHistoryQueryOptionsMock).toHaveBeenLastCalledWith(
+      "usdt-tether",
+      STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS,
+    );
   });
 
   it("returns only the flow-error retry controls needed by the client", () => {
@@ -274,6 +296,7 @@ describe("useCompareDataModel", () => {
       selectedIds: ["usdc-circle"],
       flowHours: 24,
       radarCohort: "peg",
+      range: "all",
     }));
 
     expect(result.current.flowErrorNotice).toMatchObject({
@@ -294,7 +317,7 @@ describe("useCompareDataModel", () => {
       queries[0] === "flow" ? histories : []);
     mintBurnFlowsCoinQueryOptionsMock.mockReturnValue("flow");
     const { result } = renderHook(() => useCompareDataModel({
-      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg",
+      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg", range: "all",
     }));
     expect(result.current.flowSeries).toHaveLength(2);
     expect(result.current.globalError).toBe(error);
@@ -310,12 +333,23 @@ describe("useCompareDataModel", () => {
       data: { coins: [] }, dataUpdatedAt: 1_700_000_010_000, meta, error, isError: true,
     }));
     const { result } = renderHook(() => useCompareDataModel({
-      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg",
+      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg", range: "all",
     }));
     expect(result.current.globalError).toBe(error);
     expect(result.current.flowCoverageCount).toBeNull();
     expect(result.current.freshnessQueries.find((query) => query.preset === "mintBurnFlows"))
       .toMatchObject({ error, hasData: true, dataUpdatedAt: 1_700_000_010_000, meta });
+  });
+
+  it("stamps the flow generation from the producer meta, not the newest bucket start", () => {
+    useMintBurnFlowsMock.mockReturnValue(makeQueryResult({
+      data: { coins: [], updatedAt: 1_699_990_000 },
+      meta: { updatedAt: 1_699_997_000, ageSeconds: 10, status: "fresh" },
+    }));
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg", range: "all",
+    }));
+    expect(result.current.flowUpdatedAt).toBe(1_699_997_000);
   });
 
   it("reports one failed flow history while preserving another history and retrying both", () => {
@@ -328,7 +362,7 @@ describe("useCompareDataModel", () => {
       queries[0] === "flow" ? histories : []);
     mintBurnFlowsCoinQueryOptionsMock.mockReturnValue("flow");
     const { result } = renderHook(() => useCompareDataModel({
-      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg",
+      selectedIds: ["usdc-circle", "usdt-tether"], flowHours: 24, radarCohort: "peg", range: "all",
     }));
     expect(result.current.flowSeries).toHaveLength(1);
     expect(result.current.flowErrorNotice).toMatchObject({ error, hasData: true });

@@ -194,4 +194,58 @@ describe("YieldCompareDrawer", () => {
     expect(cells["Safety provenance"]).toBe(safetyProvenance ?? "unknown");
     expect(cells["PYS qualification"]).toBe("partial");
   });
+
+  it("reads a native row's unmeasurable depth as Native rather than Unknown", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            yieldType: "rebase",
+            sourceRole: "canonical-holder",
+            sourceTvlUsd: null,
+            sourceDepthLens: "unknown",
+          } as Partial<YieldViewModelRow>),
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(screen.getAllByText("Native").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryAllByText("Unknown")).toHaveLength(0);
+  });
+
+  it("marks a currency-mismatched benchmark fallback in the compare cell", () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,xsgd-straitsx");
+    render(
+      <YieldCompareDrawer
+        open
+        onOpenChange={vi.fn()}
+        rows={[
+          makeRow({
+            id: "usdc-circle",
+            symbol: "USDC",
+            benchmarkLabel: "USD 3M T-Bill",
+            benchmarkSelectionMode: "native",
+            peg: "USD",
+          } as Partial<YieldViewModelRow>),
+          makeRow({
+            id: "xsgd-straitsx",
+            symbol: "XSGD",
+            name: "XSGD",
+            benchmarkLabel: "USD 3M T-Bill",
+            benchmarkSelectionMode: "fallback-usd",
+            benchmarkIsFallback: true,
+            peg: "SGD",
+          } as Partial<YieldViewModelRow>),
+        ]}
+        logos={{}}
+      />,
+    );
+
+    expect(screen.getAllByText("USD 3M T-Bill (fallback)").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("USD 3M T-Bill").length).toBeGreaterThan(0);
+  });
 });

@@ -85,6 +85,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
             logos={logos}
             onTraceNode={graph.handleTraceNodeChange}
             onUseAsExposureRoot={graph.onUseAsExposureRoot}
+            detailScope={detailNodePresentation}
             variant="overlay"
           />
         }
@@ -109,6 +110,7 @@ export function ContagionGraphBody({ graph, logos, detailNodePresentation, commo
             logos={logos}
             onTraceNode={graph.handleTraceNodeChange}
             onUseAsExposureRoot={graph.onUseAsExposureRoot}
+            detailScope={detailNodePresentation}
             variant="panel"
           />
         ) : !detailNodePresentation ? (

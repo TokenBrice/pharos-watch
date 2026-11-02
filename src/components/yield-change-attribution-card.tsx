@@ -53,7 +53,7 @@ export function YieldChangeAttributionCard({ attribution }: { attribution: Yield
                 <span className="font-mono tabular-nums text-foreground">
                   {formatYieldApyDelta(attribution.sourceSwitchDetail.apy30dDelta)}
                 </span>{" "}
-                impact on 30d APY.
+                impact on APY.
               </li>
             ) : null}
           </ul>

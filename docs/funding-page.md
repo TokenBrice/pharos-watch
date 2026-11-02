@@ -33,4 +33,4 @@ Cost review and approved ledger updates retain original review/receipt clocks. A
 
 ## Editorial and presentation contract
 
-Ledger totals and supporter counts use the full accepted dataset, not visible donor rows. Historic month comparisons expose exact values alongside neutral bars; unavailable evidence is not a zero donation/cost. Shared helpers/schema under `shared/lib/funding/` remain the numerical authority.
+Ledger totals and supporter counts use the full accepted dataset, not visible donor rows. Historic month comparisons expose exact values alongside neutral bars; unavailable evidence is not a zero donation/cost. The recent-donations footer names its visible and total row counts, not supporters; distinct-supporter counts come from the shared summary. Shared helpers/schema under `shared/lib/funding/` remain the numerical authority.

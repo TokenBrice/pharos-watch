@@ -128,7 +128,15 @@ export function HeroPriceMetric({
 }: HeroPriceMetricProps & { variant: HeroMetricVariant }) {
   const observed = isObservedPrice(coinData) && typeof coinData.price === "number"
     && Number.isFinite(coinData.price) && coinData.price > 0;
-  const price = formatHeroNativePrice(observed ? coinData.price : null, coin.flags.pegCurrency ?? "USD", pegRef);
+  const pegCurrency = coin.flags.pegCurrency ?? "USD";
+  const price = formatHeroNativePrice(observed ? coinData.price : null, pegCurrency, pegRef);
+  // The label names the unit the formatter actually used: a "$" peg symbol or an
+  // unusable reference falls back to the observed USD price, never a native one.
+  const priceUnit = pegCurrencySymbol(pegCurrency) === "$"
+    || pegRef == null || !Number.isFinite(pegRef) || pegRef <= 0
+    ? "USD"
+    : pegCurrency;
+  const priceLabel = pegCurrency === "USD" ? "Price" : `Price (${priceUnit})`;
   // A frozen archive's price is its last observation, not a live peg reading.
   const frozenAt = coin.status === "frozen" ? coin.frozenAt ?? null : null;
   const referenceLine = !observed
@@ -147,7 +155,7 @@ export function HeroPriceMetric({
   if (variant === "cell") {
     return (
       <CompactMetricCell
-        label={`Price${coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}`}
+        label={priceLabel}
         subline={<span className={referenceClass}><FigureLeadText text={referenceLine} /></span>}
       >
         <p
@@ -167,7 +175,7 @@ export function HeroPriceMetric({
   return (
     <div className="min-w-0 pharos-inset px-3 py-2.5">
       <p className={HERO_METRIC_LABEL_CLASS}>
-        Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
+        {priceLabel}
       </p>
       <p className={`break-words font-extrabold pharos-numeric tracking-tight ${confidenceClass(observed ? coinData.priceConfidence : null)} text-xl`}>
         {price}

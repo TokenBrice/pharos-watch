@@ -7,6 +7,7 @@ import {
   formatChartDate,
   formatChartPercent,
   formatPercent,
+  formatCoverageRatio,
   formatPegOccupancy,
   formatPercentFromRatio,
   formatPrice,
@@ -16,6 +17,7 @@ import {
   formatCurrency,
   formatCompactCount,
   formatCompactUsd,
+  formatCompactUsdOrSubDollar,
   formatCompactUsdWithOptions,
   formatCompactUsdShort,
   formatCompactUsdShortLowerK,
@@ -26,6 +28,7 @@ import {
   formatBps,
   formatEventDate,
   formatNativePrice,
+  formatUsdPriceAdaptive,
   pegCurrencySymbol,
   formatPercentChange,
   formatSupply,
@@ -91,6 +94,22 @@ describe("formatPercent", () => {
   it("returns dash for non-finite values", () => {
     expect(formatPercent(Infinity)).toBe("-");
     expect(formatPercent(NaN)).toBe("-");
+  });
+});
+
+describe("formatCoverageRatio", () => {
+  it.each([
+    [1, "100.0%"],
+    [0.99996, "<100%"],
+    [0.999, "99.9%"],
+    [0.9, "90.0%"],
+    [0, "0.0%"],
+  ])("formats coverage ratio %s as %s", (value, expected) => {
+    expect(formatCoverageRatio(value)).toBe(expected);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])("preserves unavailable coverage %s", (value) => {
+    expect(formatCoverageRatio(value)).toBe("-");
   });
 });
 
@@ -521,6 +540,26 @@ describe("formatNativePrice", () => {
   });
 });
 
+describe("formatUsdPriceAdaptive", () => {
+  it("keeps sub-cent USD prices from rounding to a wrong display", () => {
+    expect(formatUsdPriceAdaptive(0.0000553)).toBe("0.0000553");
+    expect(formatUsdPriceAdaptive(0.0000499)).toBe("0.0000499");
+    expect(formatUsdPriceAdaptive(0.0003159)).toBe("0.000316");
+    expect(formatUsdPriceAdaptive(0.0010367)).toBe("0.001037");
+  });
+
+  it("keeps the established four-decimal display at and above a cent", () => {
+    expect(formatUsdPriceAdaptive(1.0002)).toBe("1.0002");
+    expect(formatUsdPriceAdaptive(0.089)).toBe("0.0890");
+  });
+
+  it("returns N/A for nullish or invalid values", () => {
+    expect(formatUsdPriceAdaptive(null)).toBe("N/A");
+    expect(formatUsdPriceAdaptive(undefined)).toBe("N/A");
+    expect(formatUsdPriceAdaptive(NaN)).toBe("N/A");
+  });
+});
+
 describe("non-finite formatter fallbacks", () => {
   it("does not leak Infinity or NaN from direct number formatters", () => {
     const outputs = [
@@ -566,6 +605,15 @@ describe("relative duration helpers", () => {
     expect(formatApproxDurationSeconds(90 * 60, { style: "long" })).toBe("1.5 hr");
     expect(formatApproxDurationSeconds(3 * 86_400, { style: "long" })).toBe("3.0 days");
     expect(formatApproxDurationSeconds(Number.NaN, { invalidFallback: "—" })).toBe("—");
+  });
+
+  it("keeps a positive sub-dollar supply visible instead of rounding it to $0", () => {
+    expect(formatCompactUsdOrSubDollar(0.2309)).toBe("<$1");
+    expect(formatCompactUsdOrSubDollar(0.999)).toBe("<$1");
+    expect(formatCompactUsdOrSubDollar(0)).toBe("$0");
+    expect(formatCompactUsdOrSubDollar(1)).toBe("$1");
+    expect(formatCompactUsdOrSubDollar(71_571_257.67)).toBe("$71.6M");
+    expect(formatCompactUsdOrSubDollar(Number.NaN)).toBe("N/A");
   });
 });
 

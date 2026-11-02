@@ -49,7 +49,7 @@ function makeMatrixInput({ activeStablecoins, errors, ...payloads }: MatrixInput
           data: error ? undefined : (payloads[key] ?? DEFAULT_PAYLOADS[key]),
           dataUpdatedAt: 7,
           error,
-          meta: null,
+          meta: { updatedAt: 7, ageSeconds: 0, status: "fresh" as const },
         },
       ];
     }),
@@ -91,6 +91,15 @@ describe("buildCoverageMatrixModel", () => {
     expect(unavailable.rows.every((row) => row.statuses.safety.kind === "data-unavailable")).toBe(true);
     expect(unavailable.featureSummaries.find((summary) => summary.feature.key === "safety")).toMatchObject({
       availableCount: 0, totalCount: 0, coveragePct: null, mcapSharePct: null,
+    });
+    expect(unavailable.featureSummaries.find((summary) => summary.feature.key === "reserves")).toMatchObject({
+      availableCount: 0,
+      totalCount: 0,
+      coveragePct: null,
+      marketCapComplete: false,
+      breakdown: expect.arrayContaining([
+        { key: "data-unavailable", label: "data n/a", count: ids.length },
+      ]),
     });
   });
 
@@ -179,7 +188,7 @@ describe("buildCoverageMatrixModel", () => {
     expect(model.unavailableFeatures).toEqual([]);
     expect(model.isInitialDataLoading).toBe(false);
     expect(model.isStablecoinDataUnavailable).toBe(false);
-    expect(model.dataUpdatedAt).toBe(7);
+    expect(model.dataAsOfMs).toBe(7_000);
     expect(model.staleQueries.every((query) => query.hasData)).toBe(true);
   });
 
@@ -315,6 +324,22 @@ describe("buildCoverageMatrixModel", () => {
     const status = model.rows[0].statuses.dependency;
     expect(status.kind).toBe("unmapped-gap");
     expect(status.detail).toContain("unreviewed-dependency-relationships");
+  });
+
+  it("does not claim dependency evidence for an asset absent from the publication", () => {
+    const model = buildCoverageMatrixModel(makeMatrixInput({
+      reportCards: makeReportCardsV9Response({
+        cards: [makeV9Card({ id: "usdc-circle", score: 90 })],
+      }),
+      activeStablecoins: [
+        trackedMeta("usdc-circle"),
+        { ...trackedMeta("usdt-tether"), hasAuthoredDependencyEvidence: false },
+      ],
+    }));
+    const status = model.rows.find((row) => row.id === "usdt-tether")!.statuses.dependency;
+    expect(status.kind).toBe("unmapped-gap");
+    expect(status.detail).toBe("No live dependency-map edge was resolved.");
+    expect(status.detail).not.toContain("Dependency evidence exists");
   });
 
   it("selects widest/narrowest/mostConcentrated features consistently with featureSummaries", () => {

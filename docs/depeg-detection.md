@@ -484,8 +484,10 @@ streak/current-event metrics over full available history. It does not use
 PegScore's four-year clamp; do not present its full-history occupancy/span as
 the scored window.
 
-The latest chronological terminal boundary is classified with `classifyDepegClosure`
-before deriving recovery age. `currentStreakDays` is available only for recovered
+The latest chronological terminal boundary, excluding reviewed-dispute verdicts
+through the same `isPegScoreExcludedAuditVerdict` authority as Peg Score, is
+classified with `classifyDepegClosure` before deriving recovery age.
+`currentStreakDays` is available only for recovered
 or legacy-recovered closures, including a genuine zero-day recovery; coverage loss,
 superseded direction, removed tracking and unknown closure withhold it rather than
 falling back to an older recovery. `latestClosure` preserves that distinction in

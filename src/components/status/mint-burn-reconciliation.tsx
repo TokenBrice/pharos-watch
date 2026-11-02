@@ -14,7 +14,9 @@ type ReconciliationRow = MintBurnReconciliationSummary["rows"][number];
 function integrityStatus(row: ReconciliationRow, version?: number): IntegrityStatus {
   if (version !== 1 || !row.conservation?.length) return "Unverified";
   if (row.status === "critical" && row.conservation.some((record) => record.status === "mismatch")) return "Critical";
-  if (row.status === "ok" && row.conservation.every((record) => record.status === "ok")) return "Verified";
+  // The published row verdict is authoritative; an unsupported or unavailable
+  // leg does not veto it as long as one contract actually verified.
+  if (row.status === "ok" && row.conservation.some((record) => record.status === "ok")) return "Verified";
   return "Unverified";
 }
 
@@ -114,7 +116,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
                   <span className="font-medium text-foreground">{row.symbol}</span>
                   <span className={cn("rounded-full px-2 py-0.5 text-xs font-semibold", statusTone(status))}>{status}</span>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">Audit coverage: {status === "Verified" ? "All configured contracts verified" : "See contract audit status below"}</p>
+                <p className="mt-2 text-xs text-muted-foreground">Audit coverage: {status === "Verified" ? "All supported contracts verified" : "See contract audit status below"}</p>
                 {!records?.length ? <p className="mt-3 text-xs text-muted-foreground">No matched-block audit available.</p> : records.map((record) => {
                   const checkedAt = auditDate(record.checkedAt);
                   return (
@@ -133,7 +135,7 @@ export function MintBurnReconciliationCard({ summary, error }: {
                           ["Supply change", record.supplyDeltaRaw], ["Residual", record.residualRaw],
                         ] as const).map(([label, raw]) => (
                           <div key={label} className="min-w-0">
-                            <dt className="text-muted-foreground">{label} ({row.symbol})</dt>
+                            <dt className="text-muted-foreground">{label} ({record.units === "raw-shares" ? `${row.symbol} shares` : row.symbol})</dt>
                             <dd className="pharos-numeric break-all">{formatRawTokens(raw, record.decimals)}</dd>
                           </div>
                         ))}

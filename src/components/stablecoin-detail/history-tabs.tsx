@@ -25,6 +25,8 @@ type HistoryTabsProps = DepegHistoryProps & {
   depegHistoryPreview?: ReactNode;
   /** The view to select first; the route's loading and list-error branches open Depeg. */
   initialTab?: HistoryTabKey;
+  /** Whether the asset carries a grade in the current publication (`null` = unknown). */
+  currentlyRated?: boolean | null;
 };
 
 type HistoryTabKey = "grade" | "depeg" | "ddr";
@@ -122,6 +124,7 @@ export function HistoryTabs({
   historyActive,
   depegHistoryPreview = null,
   initialTab,
+  currentlyRated,
   ...depegProps
 }: HistoryTabsProps) {
   const [selected, setSelected] = useState<HistoryTabKey | null>(null);
@@ -149,7 +152,7 @@ export function HistoryTabs({
       key: "grade",
       label: "Grade",
       anchorId: "grade-history",
-      content: <LiveSafetyScoreHistorySection stablecoinId={stablecoinId} />,
+      content: <LiveSafetyScoreHistorySection stablecoinId={stablecoinId} currentlyRated={currentlyRated} />,
     });
   }
   if (!isNavToken) {

@@ -185,7 +185,7 @@ export function buildTriageHeadline(
   inbox: TriageInbox,
   evidence: Pick<DashboardEvidence, "state" | "staleLabels" | "missingLabels">,
 ): { verdict: OperatorVerdict; text: string } {
-  if (evidence.state === "unavailable") {
+  if (evidence.state === "unavailable" || evidence.missingLabels.length > 0) {
     const labels = evidence.missingLabels.join(", ") || "Status evidence";
     return { verdict: "unavailable", text: `Cannot answer: ${labels} unavailable. Showing the last good read.` };
   }

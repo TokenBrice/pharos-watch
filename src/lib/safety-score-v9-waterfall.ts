@@ -42,7 +42,9 @@ export function buildScoreWaterfall(card: WaterfallCard): ScoreWaterfallStep[] {
       kind: "base",
       operator: null,
       value: quality,
-      detail: card.partialEvidence === null
+      // Only a dropped pillar renormalizes the weights; a subcomponent or
+      // A/B cause gap leaves all three pillars priced.
+      detail: (card.partialEvidence?.excludedPillars.length ?? 0) === 0
         ? "Smooth bounded headroom over the included Backing, Exit, and Control pillars."
         : "Smooth bounded headroom over included pillars only; excluded pipeline gaps have zero weight and remaining weights are renormalized.",
     },

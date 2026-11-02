@@ -126,7 +126,17 @@ export function buildPsiBeamDimmers<
 >(componentData: readonly T[] | undefined): PsiBeamDimmerLane[] {
   if (!componentData?.length) return [];
   const current = componentData[componentData.length - 1];
-  const previous = componentData.length > 1 ? componentData[componentData.length - 2] : null;
+  // The API prepends a component-less synthetic today row; compare against
+  // the newest earlier sample that actually reports a component instead.
+  const previous = componentData
+    .slice(0, -1)
+    .reverse()
+    .find((point) =>
+      point.severity !== null
+      || point.breadth !== null
+      || point.stressBreadth !== null
+      || point.trend !== null
+    ) ?? null;
   const keys: PsiBeamDimmerKey[] = ["severity", "breadth", "stressBreadth", "trend"];
 
   return keys.map((key) => {

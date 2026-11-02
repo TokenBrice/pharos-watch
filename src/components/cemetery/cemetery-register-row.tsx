@@ -9,7 +9,7 @@ import type { CemeteryRegisterRow } from "@/lib/cemetery-register";
 import { formatCemeteryPeak } from "@/lib/cemetery-stats";
 import { cn } from "@/lib/utils";
 import { CemeteryRegisterAutopsy } from "./cemetery-register-autopsy";
-import { formatRegisterDeathDate } from "./cemetery-register-model";
+import { formatCemeteryPeg, formatRegisterDeathDate } from "./cemetery-register-model";
 import styles from "./cemetery-register.module.css";
 
 const NOT_RECORDED = (
@@ -109,7 +109,7 @@ export const CemeteryRegisterRowPair = memo(function CemeteryRegisterRowPair({
         <TableCell className="pharos-numeric px-2 text-right text-xs sm:px-3 sm:text-sm">
           {row.peak === null ? NOT_RECORDED : formatCemeteryPeak(row.peak)}
         </TableCell>
-        <TableCell className="pharos-numeric hidden text-xs md:table-cell">{row.pegCurrency}</TableCell>
+        <TableCell className="pharos-numeric hidden text-xs md:table-cell">{formatCemeteryPeg(row.pegCurrency)}</TableCell>
         <TableCell className="hidden text-xs text-muted-foreground lg:table-cell">
           {row.mechanismArchetype ? MECHANISM_ARCHETYPE_SHORT_LABELS[row.mechanismArchetype] : NOT_RECORDED}
         </TableCell>

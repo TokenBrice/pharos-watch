@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TimeRangeOption } from "@/hooks/use-time-range-filter";
+import { URL_FILTER_HISTORY_CHANGE_EVENT } from "@/hooks/use-url-filters";
 import { useUrlState } from "@/hooks/use-url-state";
 import { trackEvent } from "@/lib/analytics";
 import { parseComparePrefillHash } from "@/lib/compare-links";
@@ -45,6 +46,10 @@ export function useCompareSelection() {
   // stays the source of truth) unless an explicit selection is already
   // present, and drop the fragment so a reload or share keeps one form.
   const prefillHandled = useRef(false);
+  const rangeRef = useRef(range);
+  useEffect(() => {
+    rangeRef.current = range;
+  }, [range]);
   useEffect(() => {
     if (!isReady || prefillHandled.current) return;
     prefillHandled.current = true;
@@ -54,6 +59,25 @@ export function useCompareSelection() {
     if (selectedIds.length > 0) return;
     replaceState({ coins: prefill.slice(0, MAX_COMPARE_COINS), range });
   }, [isReady, range, replaceState, selectedIds]);
+
+  // A `#coins=` link into the mounted picker is a same-route navigation, which
+  // Next commits with pushState (no `hashchange`), so re-adopt the fragment on
+  // every announced URL change instead of only on mount.
+  useEffect(() => {
+    const adoptPrefill = () => {
+      if (!prefillHandled.current) return;
+      const prefill = parseComparePrefillHash(window.location.hash);
+      if (!prefill) return;
+      window.history.replaceState(window.history.state, "", `${window.location.pathname}${window.location.search}`);
+      replaceState({ coins: prefill.slice(0, MAX_COMPARE_COINS), range: rangeRef.current });
+    };
+    window.addEventListener("hashchange", adoptPrefill);
+    window.addEventListener(URL_FILTER_HISTORY_CHANGE_EVENT, adoptPrefill);
+    return () => {
+      window.removeEventListener("hashchange", adoptPrefill);
+      window.removeEventListener(URL_FILTER_HISTORY_CHANGE_EVENT, adoptPrefill);
+    };
+  }, [replaceState]);
 
   const setRange = useCallback(
     (newRange: TimeRangeOption) => {

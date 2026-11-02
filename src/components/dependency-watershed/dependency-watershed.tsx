@@ -31,9 +31,12 @@ export function downstreamHeadline(names: string, result: DependencyExposureResu
   const complete = result.direct.complete && result.indirect.complete;
   const total = knownRows.length ? `${formatCurrency(result.direct.knownUsd + result.indirect.knownUsd, 2)}${complete ? "" : " (known supply only)"}` : "USD unavailable";
   const usd = (value: number, available: boolean) => available ? formatCurrency(value, 2) : "USD unavailable";
+  // A complete layer with no rows is an observed zero, not an unavailable read.
+  const directAvailable = knownRows.some(row => row.minHop === 1) || (result.direct.complete && knownRows.length > 0);
+  const indirectAvailable = knownRows.some(row => row.minHop > 1) || (result.indirect.complete && knownRows.length > 0);
   return {
     lead: `Downstream of ${names}: ${total} of mapped dependent supply across ${result.reached} ${result.reached === 1 ? "coin" : "coins"}`,
-    detail: `direct ${usd(result.direct.knownUsd, knownRows.some(row => row.minHop === 1))} · indirect ${usd(result.indirect.knownUsd, knownRows.some(row => row.minHop > 1))} (includes ${usd(result.direct.overlapUsd + result.indirect.overlapUsd, knownRows.length > 0)} counted in more than one layer)`,
+    detail: `direct ${usd(result.direct.knownUsd, directAvailable)} · indirect ${usd(result.indirect.knownUsd, indirectAvailable)} (includes ${usd(result.direct.overlapUsd + result.indirect.overlapUsd, knownRows.length > 0)} counted in more than one layer)`,
   };
 }
 

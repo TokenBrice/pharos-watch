@@ -80,7 +80,9 @@ function summarizeStablecoins(metadata: Record<string, unknown>): string[] {
 
 function summarizeStatusSelfCheck(metadata: Record<string, unknown>): string[] {
   const sampleCount = readNumber(metadata.sampleCount);
+  const passCount = readNumber(metadata.passCount);
   const failCount = readNumber(metadata.failCount);
+  const passedProbes = passCount ?? (sampleCount != null && failCount != null ? sampleCount - failCount : null);
   const probeStatus = readString(metadata.probeStatus);
   const rawOverallStatus = readString(metadata.rawOverallStatus);
   const effectiveStatus = readString(metadata.effectiveStatus);
@@ -94,12 +96,12 @@ function summarizeStatusSelfCheck(metadata: Record<string, unknown>): string[] {
   const slowestProbes = formatSlowestProbes(metadata.slowestProbes);
 
   return [
-    sampleCount != null && failCount != null && probeStatus
-      ? `probes ${sampleCount - failCount}/${sampleCount} ok, ${failCount} failed (${probeStatus})`
+    passedProbes != null && sampleCount != null && sampleCount > 0 && failCount != null && probeStatus
+      ? `probes ${passedProbes}/${sampleCount} ok, ${failCount} failed (${probeStatus})`
       : null,
     rawOverallStatus && effectiveStatus ? `status raw ${rawOverallStatus} -> effective ${effectiveStatus}` : null,
     probeMode ? `probe mode ${probeMode}` : null,
-    p95LatencyMs != null
+    p95LatencyMs != null && sampleCount !== 0
       ? `latency${medianLatencyMs != null ? ` median ${medianLatencyMs}ms,` : ""} p95 ${p95LatencyMs}ms${maxLatencyMs != null ? `, max ${maxLatencyMs}ms` : ""}`
       : null,
     slowestProbes,

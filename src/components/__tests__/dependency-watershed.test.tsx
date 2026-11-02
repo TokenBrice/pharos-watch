@@ -108,8 +108,32 @@ describe("DependencyWatershed", () => {
       reached: 1, bandCounts: { material: 1, minor: 0, trace: 0, unknown: 0 } };
     render(<DependencyWatershed publication={pub} overlay={{ roots: ["aaa"], rows: new Map([["bbb", { minHop: 1 }]]) }} result={result} labelOf={labelOf} onAddRoot={vi.fn()} fallback={null} />);
     expect(screen.getByText("Downstream of AAA: $300.00 of mapped dependent supply across 1 coin")).toBeTruthy();
+    const detail = screen.getByText(/^direct \$300\.00/);
+    expect(detail.textContent).toContain("indirect $0.00");
+    expect(detail.textContent).not.toContain("indirect USD unavailable");
     expect(screen.getByText("Linked coins; not a loss forecast")).toBeTruthy();
     expect(within(screen.getByRole("group", { name: /Dependency watershed/ })).getAllByRole("button")[0]!.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("labels an incomplete indirect total and counts its unknown supply in the table", () => {
+    const pub = publication(
+      [
+        { from: "aaa", to: "bbb", kind: "basket", materiality: "basket-weighted", weight: 0.5, upstreamScore: 80 },
+        { from: "bbb", to: "ccc", kind: "serial", materiality: "serial", weight: null, upstreamScore: 80 },
+        { from: "bbb", to: "fff", kind: "serial", materiality: "serial", weight: null, upstreamScore: 80 },
+      ],
+      [node("aaa", 1_000), node("bbb", 600), node("ccc", 200), node("fff", null)],
+    );
+    render(<DependencyWatershed publication={pub} overlay={null} result={null} labelOf={labelOf} onAddRoot={vi.fn()} fallback={null} />);
+    const details = screen.getByText(/^Table view ·/).closest("details")!;
+    details.open = true;
+    fireEvent(details, new Event("toggle", { bubbles: false }));
+    const table = screen.getByRole("table", { name: /Upstream hubs/ });
+    const row = within(table).getAllByRole("row").find(candidate => candidate.textContent?.startsWith("AAA"))!;
+    const cells = within(row).getAllByRole("cell").map(cell => cell.textContent);
+    expect(cells[2]).toBe("$300.00");
+    expect(cells[3]).toBe("$100.00 (known only)");
+    expect(cells[5]).toBe("1");
   });
 });
 

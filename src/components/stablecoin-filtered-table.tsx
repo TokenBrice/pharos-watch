@@ -58,6 +58,7 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
         data={data?.peggedAssets}
         isLoading={isLoading}
         activeFilters={activeFilters}
+        unavailable={Boolean(error && !data?.peggedAssets)}
         logos={logos}
         pegScores={tableInputs.pegScores}
         dexLiquidity={dexLiquidity ?? undefined}

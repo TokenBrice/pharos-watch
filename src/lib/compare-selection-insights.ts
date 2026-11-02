@@ -5,7 +5,8 @@ import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 type CompareSelectionLink = Pick<CoinOption, "id" | "symbol">;
 
 export interface CompareSelectionInsights {
-  lens: string;
+  /** Null when the set mixes NAV-accruing tokens into a single peg flag: they do not target $1. */
+  lens: string | null;
   cohort: string;
   structure: string;
   links: readonly CompareSelectionLink[];
@@ -38,11 +39,17 @@ export function buildCompareSelectionInsights({
   const pegSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.pegCurrency));
   const governanceSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.governance));
   const backingSet = new Set(comparisonMeta.map((coin) => coin.meta.flags.backing));
+  // A NAV-accruing token shares the peg flag but is designed to accrue, not to
+  // hold $1: neither a same-peg substitution read nor a common peg target holds.
+  const hasNavMember = comparisonMeta.some((coin) => coin.meta.flags.navToken === true);
+  const samePegSet = pegSet.size === 1;
 
   const lens =
-    pegSet.size === 1
-      ? "Same-peg peer set. Read this screen as a true substitution decision: who keeps the peg cleaner, stays more liquid, and carries the cleaner structural risk profile."
-      : "Cross-peg set. Structural differences matter more here than raw deviation, so use the panels below to separate currency exposure from stablecoin design risk.";
+    samePegSet && hasNavMember
+      ? null
+      : samePegSet
+        ? "Same-peg peer set. Read this screen as a true substitution decision: who keeps the peg cleaner, stays more liquid, and carries the cleaner structural risk profile."
+        : "Cross-peg set. Structural differences matter more here than raw deviation, so use the panels below to separate currency exposure from stablecoin design risk.";
 
   const cohort =
     governanceSet.size === 1
@@ -55,9 +62,11 @@ export function buildCompareSelectionInsights({
       : "Mixed backing structures across the set.";
 
   const pegContext =
-    pegSet.size === 1
-      ? `Common peg target: ${PEG_LABELS_SHORT[comparisonMeta[0].meta.flags.pegCurrency] ?? comparisonMeta[0].meta.flags.pegCurrency}.`
+    samePegSet
+      ? hasNavMember
+        ? ""
+        : `Common peg target: ${PEG_LABELS_SHORT[comparisonMeta[0].meta.flags.pegCurrency] ?? comparisonMeta[0].meta.flags.pegCurrency}.`
       : "Multiple peg targets are represented in the selected set.";
 
-  return { lens, cohort, structure: `${structure} ${pegContext}`, links: comparisonMeta };
+  return { lens, cohort, structure: pegContext ? `${structure} ${pegContext}` : structure, links: comparisonMeta };
 }

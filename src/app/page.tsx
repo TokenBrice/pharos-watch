@@ -36,7 +36,7 @@ export default async function HomePage() {
   const total = CORE_AGGREGATE_STABLECOIN_COUNT;
   const heroSnapshot = await getHomepageHeroSnapshot();
 
-  // Top 20 stablecoins for ItemList schema
+  // First 20 core stablecoins in curated order for ItemList schema
   const itemListEntries = buildStablecoinItemListEntries(HOMEPAGE_TOP_CORE_STABLECOINS, {
     resolveUrl: (coin) => `${SITE_URL}${buildStablecoinUrl(coin.id)}`,
     resolveImage: (coin) => {
@@ -59,8 +59,9 @@ export default async function HomePage() {
               itemListId: `${SITE_URL}/#homepage-itemlist`,
               name: "Pharos - Stablecoin Analytics Dashboard",
               description: `${total} core stablecoins and cash equivalents tracked by Pharos across supported chains.`,
-              itemListName: "Top 20 Stablecoins by Market Cap",
-              itemListDescription: `Top 20 of ${total} core stablecoins and cash equivalents tracked by Pharos.`,
+              itemListName: "20 Core Stablecoins Tracked by Pharos",
+              itemListDescription: `20 of ${total} core stablecoins and cash equivalents tracked by Pharos, in Pharos display order.`,
+              itemListOrder: "https://schema.org/ItemListUnordered",
               entries: itemListEntries,
             }),
           )}

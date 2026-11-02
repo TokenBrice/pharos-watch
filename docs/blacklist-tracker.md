@@ -139,7 +139,7 @@ Reviewed registry membership determines exposure bucket counts independently of 
 
 Complete coverage supports full-cohort shares. Partial coverage qualifies shares and totals as observed-only and names excluded assets; the share card is withheld. With no observed supply, totals and shares are unavailable while reviewed coin counts remain visible. A bucket with no observed member supply has no value or share; the combined exposed share is also unavailable when no exposed member has observed supply, even if non-freezable supply is known.
 
-An empty chart means no valued ledger snapshots, not no recorded events. Missing or failed summary reads remain unavailable. Fresh blacklist evidence cannot renew supply or Safety Score evidence: each source retains its own clock, budget and read outcome. CSV exports describe only the currently loaded server page and keep native units separate from USD-at-event values; unavailable amounts remain empty.
+An empty chart means no valued ledger snapshots, not no recorded events. The seismograph headline comes from the summary's authoritative `totalEvents`, and its quarterly points aggregate every symbol key in `perCoinQuarterlyEventTypes`, including retired assets. Missing or failed summary reads remain unavailable. Fresh blacklist evidence cannot renew supply or Safety Score evidence: each source retains its own clock, budget and read outcome. CSV exports describe only the currently loaded server page and keep native units separate from USD-at-event values; unavailable amounts remain empty.
 
 ## Blacklist Sync State Semantics
 

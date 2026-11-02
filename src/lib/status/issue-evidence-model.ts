@@ -206,7 +206,9 @@ export function groupDashboardIssues(issues: readonly DashboardIssue[]): Dashboa
 
 const EVIDENCE_LABELS: Record<DashboardEvidenceState, string> = {
   current: "Current and complete",
-  partial: "Current with partial evidence",
+  // A required query that never loaded is a missing source, not a "current"
+  // read: the label must not claim currency the state gate cannot prove.
+  partial: "Partial evidence",
   stale: "Stale",
   unavailable: "Unavailable",
 };

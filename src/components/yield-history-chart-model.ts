@@ -28,15 +28,17 @@ const SOURCE_KEY_SUFFIX_LENGTH = 12;
  *                         staying sensitive to multi-week anomalies.
  *   SPIKE_MIN_APY       — absolute floor of 2 % APY; below this the ratio is noisy and a
  *                         "2×" jump carries no actionable information.
- *   SPIKE_RATIO_THRESHOLD — a point is flagged when its APY is ≥2× the trailing mean,
- *                           matching the same 2× threshold used by the server-side
- *                           `detectWarningSignals` function.
- * When fewer than 3 trailing data-points fall inside the window (e.g. at the start of the
- * series), the algorithm falls back to the series-wide positive-APY mean so that early
- * outliers are still catchable. */
+ *   SPIKE_RATIO_THRESHOLD — a point is flagged only when its APY is strictly above 2× the
+ *                           trailing mean, matching the server-side `detectWarningSignals`
+ *                           comparison.
+ * A "trailing" mean only covers the current source's run: a best-source switch changes
+ * what is measured, not how much the coin pays. Observed zero and negative APY are real
+ * observations and stay in the mean; the ratio is skipped when that mean is non-positive
+ * or fewer than three preceding observations remain inside the run and window. */
 const SPIKE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const SPIKE_MIN_APY = 2;
 const SPIKE_RATIO_THRESHOLD = 2.0;
+const SPIKE_MIN_TRAILING_POINTS = 3;
 
 interface SpikeAnnotation {
   date: number;
@@ -48,42 +50,35 @@ interface SpikeAnnotation {
 }
 
 function computeSpikeAnnotations(
-  chartData: Array<{ date: number; apy: number }>,
+  chartData: YieldHistoryChartPoint[],
 ): SpikeAnnotation[] {
   const result: SpikeAnnotation[] = [];
-  /* Compute a single reference average from the full series to catch outliers
-     near the start of the window where trailing context is thin. */
-  const seriesPositiveApys = chartData.filter((p) => p.apy > 0).map((p) => p.apy);
-  const seriesMean =
-    seriesPositiveApys.length > 0
-      ? seriesPositiveApys.reduce((sum, v) => sum + v, 0) / seriesPositiveApys.length
-      : 0;
   for (let i = 0; i < chartData.length; i++) {
     const point = chartData[i];
-    if (point.apy <= SPIKE_MIN_APY) continue;
+    if (!Number.isFinite(point.apy) || point.apy <= SPIKE_MIN_APY) continue;
 
     const windowStart = point.date - SPIKE_WINDOW_MS;
-    const trailingPoints = chartData
-      .slice(0, i)
-      .filter((p) => p.date >= windowStart && p.apy > 0);
-
-    let avg: number;
-    let spanStartTs: number;
-    if (trailingPoints.length >= 3) {
-      avg = trailingPoints.reduce((sum, p) => sum + p.apy, 0) / trailingPoints.length;
-      spanStartTs = trailingPoints[0]!.date;
-    } else if (seriesMean > 0) {
-      avg = seriesMean;
-      spanStartTs = chartData[0]!.date;
-    } else {
-      continue;
+    const trailingPoints: YieldHistoryChartPoint[] = [];
+    for (let j = i - 1; j >= 0; j--) {
+      const candidate = chartData[j];
+      // A source switch is a sourceKey change; `sourceSwitch` alone also marks
+      // an is_best flip for the same source in source mode, which is not a
+      // baseline boundary.
+      if (candidate.sourceKey !== point.sourceKey) break;
+      trailingPoints.unshift(candidate);
     }
+
+    const windowPoints = trailingPoints.filter((p) => p.date >= windowStart && Number.isFinite(p.apy));
+    if (windowPoints.length < SPIKE_MIN_TRAILING_POINTS) continue;
+
+    const avg = windowPoints.reduce((sum, p) => sum + p.apy, 0) / windowPoints.length;
     if (avg <= 0) continue;
 
     const ratio = point.apy / avg;
-    if (ratio >= SPIKE_RATIO_THRESHOLD) {
+    if (ratio > SPIKE_RATIO_THRESHOLD) {
       // The trailing window is bounded by the fetched range, so a 7d view
       // averages ~7 days — label the span actually used, not "30d" (E22).
+      const spanStartTs = windowPoints[0]!.date;
       const windowDays = Math.max(
         1,
         Math.min(

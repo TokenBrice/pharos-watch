@@ -193,6 +193,7 @@ const COVERAGE_BREAKDOWN_TONES: Partial<
     proof: "violetMuted",
     curated: "blueSoftMuted",
     estimated: "orangeMuted",
+    "data-unavailable": "gap",
   },
   redemption: {
     "modeled-heuristic": "amberStrongMuted",

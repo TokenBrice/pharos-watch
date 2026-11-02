@@ -193,6 +193,7 @@ export const coverageFeature = definePresetCoverageFeature({
     { key: "proof", label: "proof" },
     { key: "curated", label: "curated" },
     { key: "estimated", label: "estimated" },
+    { key: DATA_UNAVAILABLE_KIND, label: "data n/a" },
   ],
   legendItems: RESERVES_LEGEND,
   resolve: resolveReserve,

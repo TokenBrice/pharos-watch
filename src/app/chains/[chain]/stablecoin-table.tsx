@@ -3,7 +3,7 @@
 import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { BACKING_LABELS_SHORT } from "@shared/lib/classification";
-import { formatCompactUsd, formatSignedPercent } from "@shared/lib/format";
+import { formatCompactUsdOrSubDollar, formatSignedPercent } from "@shared/lib/format";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import {
@@ -17,7 +17,7 @@ import {
 } from "@/components/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ChainDetailCoin } from "@shared/types/chains";
-import { deltaColor } from "@/lib/chain-ui";
+import { deltaColor, formatChainShare } from "@/lib/chain-ui";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
@@ -91,7 +91,7 @@ export function StablecoinTable({
           <InteractiveTableRow
             key={coin.id}
             role="link"
-            ariaLabel={`${coin.name} (${coin.symbol}) — ${formatCompactUsd(coin.supplyUsd)} on chain`}
+            ariaLabel={`${coin.name} (${coin.symbol}) — ${formatCompactUsdOrSubDollar(coin.supplyUsd)} on chain`}
             className="group transition-colors hover:bg-muted/40"
             onActivate={() => router.push(buildStablecoinUrl(coin.id))}
           >
@@ -104,7 +104,7 @@ export function StablecoinTable({
                 <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
               </span>
             </TableCell>
-            <TableCell className="text-right font-mono tabular-nums">{formatCompactUsd(coin.supplyUsd)}</TableCell>
+            <TableCell className="text-right font-mono tabular-nums">{formatCompactUsdOrSubDollar(coin.supplyUsd)}</TableCell>
             <TableCell className="text-right">
               <div className="flex items-center justify-end gap-2">
                 <div className="h-1.5 w-12 overflow-hidden rounded-full bg-muted">
@@ -114,7 +114,7 @@ export function StablecoinTable({
                   />
                 </div>
                 <span className="w-10 text-right font-mono text-xs tabular-nums text-muted-foreground">
-                  {(coin.chainShare * 100).toFixed(1)}%
+                  {formatChainShare(coin.chainShare)}
                 </span>
               </div>
             </TableCell>

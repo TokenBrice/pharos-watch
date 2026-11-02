@@ -151,6 +151,30 @@ describe("HistorySection", () => {
     expect(screen.queryByText(/No degradation transition appears/i)).toBeNull();
   });
 
+  it("does not name the selected window for a fallback recurrence summary", () => {
+    const props = baseProps();
+    render(
+      <HistorySection
+        {...props}
+        historyWindow="6h"
+        allTransitions={[
+          { ...transition, id: 1, at: props.nowSeconds - 10 * 86_400 },
+          { ...transition, id: 2, at: props.nowSeconds - 3 * 86_400 },
+        ]}
+        transitionsLast24h={2}
+        historyEvidence={{
+          source: "status-fallback",
+          state: "error",
+          completeness: "unknown",
+          message: "History query failed; showing recent status transitions only.",
+        }}
+      />,
+    );
+
+    expect(screen.queryByText(/Recurring causes in the loaded 6h window/)).toBeNull();
+    expect(screen.getByText(/Recurring causes in the recent status fallback/)).toBeTruthy();
+  });
+
   it("labels row-limited history as bounded and keeps negative deployment correlation unknown", () => {
     const props = baseProps();
     const boundedTransitions: StatusTransition[] = [{

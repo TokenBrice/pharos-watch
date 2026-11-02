@@ -76,6 +76,7 @@ export default function FreezeWatchClient() {
     summaryLoading,
     summaryError,
     error,
+    pageError,
     freshnessQueries,
     sourceGenerations,
     stablecoins,
@@ -291,6 +292,7 @@ export default function FreezeWatchClient() {
           <BlacklistTable
             events={events}
             isLoading={pageLoading}
+            error={pageError}
             page={clampedPage}
             pageSize={pageSize}
             sortKey={sortKey}
@@ -348,6 +350,7 @@ export default function FreezeWatchClient() {
         <InterventionSeismograph
           stats={summary?.stats}
           chart={summary?.chart}
+          totalEvents={summary?.totalEvents}
           isLoading={summaryLoading}
           error={summaryError}
           onRetry={() => void refetchSummary()}

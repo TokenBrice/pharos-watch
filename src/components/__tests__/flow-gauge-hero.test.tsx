@@ -160,6 +160,14 @@ describe("FlowGaugeHero", () => {
     expect(beam?.textContent).not.toContain("0");
   });
 
+  it("omits the verdict when the summary payload was not read", () => {
+    const { container } = render(<FlowGaugeHero gauge={null} coins={[]} sync={null} />);
+
+    expect(container.textContent).not.toMatch(/not rated this window|history and fully valued/i);
+    expect(container.querySelector("p.pharos-numeric")?.textContent).toBe("—Not rated");
+    expect(screen.getByText("Printed 24h")).toBeTruthy();
+  });
+
   it("preserves unknown activity and unavailable totals in the hero and run-line data surface", () => {
     const { container } = render(
       <FlowGaugeHero

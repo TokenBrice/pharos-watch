@@ -128,8 +128,12 @@ export function MintBurnFlowMethodologySection() {
                 gauge weights. Existing contracts sharing a chain bucket must be disabled together; a new
                 sibling contract waits for independently attributable history. The frozen 137 pre-gate config keys are grandfathered for membership;
                 source-field edits retain that membership, while current-fingerprint coverage remains required.
-                An active admitted leg that later stalls stays in scope. A re-enabled stale leg waits for
-                fresh frontier and incumbent-hour proof without repeating the 90-day gate; shared buckets resume together.
+                An active admitted leg whose scan frontier passes the 8-hour watermark budget is quarantined
+                from the common watermark: the other coins keep publishing, its own outputs stay unavailable
+                rather than zero, and publication reports it pending-admission / reactivation-pending until it
+                proves the current closed hour. A roster-wide stall quarantines nothing and stays stale. A
+                re-enabled stale leg waits for fresh frontier and incumbent-hour proof without repeating the
+                90-day gate; shared buckets resume together.
               </p>
               <p>
                 USDT Tron joins through that admission gate in the critical lane. Only Issue/Redeem count;

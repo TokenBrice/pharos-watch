@@ -60,7 +60,7 @@ export function getAboutLeadParagraphs({
 }: Pick<AboutStablecoinCounts, "activeStablecoins">): string[] {
   return [
     "Most trackers show price. Pharos shows risk.",
-    `Live reserve feeds, forward-looking depeg warnings, and public blacklist monitoring across a ${activeStablecoins}-asset core universe of stablecoins and cash equivalents: everything that could make a stable asset fail.`,
+    `Live reserve feeds where a reviewed adapter exists, forward-looking depeg warnings across a ${activeStablecoins}-asset core universe of stablecoins and cash equivalents, and public blacklist monitoring: everything that could make a stable asset fail.`,
   ];
 }
 

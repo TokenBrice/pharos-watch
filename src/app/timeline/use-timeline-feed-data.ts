@@ -94,11 +94,12 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
   const permalinkSuppressed = rawBufferEvent != null && bufferEvent == null;
   const permalinkResolved = !!permalinkId && (isInLoadedFeed || rawBufferEvent != null);
 
-  // The server total counts suppressed rows too, so a visible total is only
-  // known once the raw traversal is complete.
-  const visibleTotal: number | null = suppressedCount === 0
-    ? events.total
-    : events.hasNextPage ? null : visibleEvents.length;
+  // The server total counts suppressed and rejected rows too, so a visible
+  // total is only known once the raw traversal is complete; the loaded visible
+  // rows then carry the honest count.
+  const visibleTotal: number | null = events.hasNextPage
+    ? null
+    : suppressedCount === 0 && events.droppedRows === 0 ? events.total : visibleEvents.length;
 
   return {
     events,

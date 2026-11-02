@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Download, ExternalLink } from "lucide-react";
 import { downloadCsv } from "@/lib/exports/csv";
 import { getNextSortState } from "@/hooks/use-sort";
+import { resolveQueryViewState } from "@/lib/query-view-state";
 import { formatAddress, formatEventDate } from "@shared/lib/format";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import type { BlacklistEvent, BlacklistSortDirection, BlacklistSortKey } from "@shared/types";
@@ -37,6 +38,8 @@ const AMOUNT_SOURCE_TOOLTIPS: Record<string, string> = {
 interface BlacklistTableProps {
   events: BlacklistEvent[];
   isLoading: boolean;
+  /** The ledger read failed. Without retained rows this is unavailable, never an empty result. */
+  error?: unknown | null;
   page: number;
   pageSize: number;
   sortKey: BlacklistSortKey;
@@ -65,6 +68,7 @@ const MOBILE_SORT_OPTIONS: Array<{ key: BlacklistSortKey; label: string }> = [
 export function BlacklistTable({
   events,
   isLoading,
+  error = null,
   page,
   pageSize,
   sortKey,
@@ -130,6 +134,10 @@ export function BlacklistTable({
       </DataTableShell>
     );
   }
+
+  // A failed ledger read with no retained rows is unavailable, not an empty match set (R2).
+  const viewState = resolveQueryViewState({ hasData: events.length > 0, isLoading, error });
+  if (viewState === "unavailable") return null;
 
   return (
     <TooltipProvider delayDuration={220}>

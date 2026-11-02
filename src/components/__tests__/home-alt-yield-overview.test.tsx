@@ -82,12 +82,18 @@ describe("HomeAltYieldOverview", () => {
       { ...makeSummaryRow("usdc-circle", "USDC", 5, 60), provenance: makeYieldProvenance({ safetyProvenance: "opportunity-safety" }) },
       { ...makeSummaryRow("usdt-tether", "USDT", 4, 50), provenance: makeYieldProvenance({ safetyProvenance: "live-report-card" }) },
       { ...makeSummaryRow("dai-makerdao", "DAI", 3, 40), provenance: makeYieldProvenance({ safetyProvenance: "default-safety", usedDefaultSafety: true }) },
+      {
+        ...makeSummaryRow("pyusd-paypal", "PYUSD", 2, 30),
+        safetyGrade: "NR" as const,
+        provenance: makeYieldProvenance({ safetyProvenance: "default-safety", usedDefaultSafety: true }),
+      },
     ];
     useYieldRankingsSummaryMock.mockReturnValue({ data, isLoading: false });
     render(<HomeAltYieldOverview />);
     const opportunity = screen.getByLabelText(`Yield safety B+ — ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}`);
     expect(opportunity.textContent).toContain("†");
     expect(opportunity.getAttribute("title")).toContain(YIELD_OPPORTUNITY_SAFETY_DESCRIPTION);
+    expect(screen.getByLabelText("No safety grade available — defaulted to 40").textContent).toBe("—");
     expect(screen.getByLabelText("Yield safety B+").textContent).not.toContain("†");
     expect(screen.getByLabelText("Yield safety B+ (default safety)").textContent).not.toContain("†");
   });

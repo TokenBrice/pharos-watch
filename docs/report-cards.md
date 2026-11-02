@@ -186,7 +186,7 @@ Graph/DDR/digest-detail/ops read the accepted cohort; grade/identity readers use
 
 Portfolio dependency exposure is unavailable, not $0, when a basket link's share is unknown. Observed zero shares stay $0, and unknown-share links still count as routes.
 
-Rated read-only top-driver `reason`: binding cap, else weakest pillar; Control prefers recognized score-matching binding mint posture, otherwise pillar/score. Nonbinding/score-mismatched postures cannot supply it. Badges/reason codes may be empty. Scores/evidence/schema/withholding stay unchanged; reasons explain current constraints, not history/misconduct.
+Rated read-only top-driver `reason`: binding cap, else weakest pillar; Control prefers recognized score-matching binding mint posture, otherwise pillar/score. Nonbinding/score-mismatched postures cannot supply it. Badges/reason codes may be empty. Pipeline-gap cards project no top driver, so technical unavailability never reads as a withheld score. Scores/evidence/schema/withholding stay unchanged; reasons explain current constraints, not history/misconduct.
 
 Without PSI, stability-index OG is unavailable, never `0`/`MELTDOWN`. Coverage: `expectedCount` assets assessed, rated/NR/pipeline-gap reconciled; only `ratedCount` means scored. Holds replace headlines.
 

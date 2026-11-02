@@ -110,6 +110,26 @@ describe("CoverageFeatureSnapshotRow", () => {
     expect(screen.queryByText("0%")).toBeNull();
   });
 
+  it("keeps a tracked row with unknown source depth out of the not-covered gap", () => {
+    const base = {
+      coin: makeStablecoinMeta(), marketCapUsd: 100, hasPegCoverage: true,
+      safetyScore: null, safetyRatingStatus: "not-rated" as const, dexCoverageClass: null,
+      hasYieldCoverage: false, flowCoverageStatus: null,
+    };
+    const feature = COVERAGE_FEATURES.find((entry) => entry.key === "price")!;
+    const summary = buildCoverageFeatureSummary(feature, [
+      buildCoverageRow({ ...base, consensusSources: ["a", "b", "c"] }),
+      buildCoverageRow({ ...base, coin: makeStablecoinMeta({ id: "unknown-depth" }) }),
+    ]);
+    const { container } = render(<CoverageFeatureSnapshotRow summary={summary} />);
+
+    const bar = screen.getByRole("img");
+    expect(bar.getAttribute("aria-label")).toContain("tracked 2");
+    expect(bar.getAttribute("aria-label")).not.toContain("not covered");
+    expect(container.textContent).not.toContain("not covered");
+    expect(bar.querySelectorAll("[title]")).toHaveLength(1);
+  });
+
   it("labels observed-only snapshot ratios as known cap", () => {
     const feature = COVERAGE_FEATURES.find((entry) => entry.key === "yield")!;
     const base = buildCoverageRow({
@@ -121,6 +141,24 @@ describe("CoverageFeatureSnapshotRow", () => {
     ]);
     render(<CoverageFeatureSnapshotRow summary={summary} />);
     expect(screen.getByText("of known cap")).toBeTruthy();
+  });
+
+  it("renders a report-cards outage as a data n/a reserve segment, not a coverage gap", () => {
+    const base = {
+      coin: makeStablecoinMeta(), marketCapUsd: 100, hasPegCoverage: true,
+      safetyScore: null, safetyRatingStatus: "not-rated" as const, dexCoverageClass: null,
+      hasYieldCoverage: false, flowCoverageStatus: null, dataAvailability: { reserves: false },
+    };
+    const feature = COVERAGE_FEATURES.find((entry) => entry.key === "reserves")!;
+    const summary = buildCoverageFeatureSummary(feature, [
+      buildCoverageRow({ ...base }),
+      buildCoverageRow({ ...base, coin: makeStablecoinMeta({ id: "second" }) }),
+    ]);
+    const { container } = render(<CoverageFeatureSnapshotRow summary={summary} />);
+
+    expect(screen.getByRole("img").getAttribute("aria-label")).toBe("Reserve view coverage: data n/a 2");
+    expect(container.textContent).toContain("of known cap");
+    expect(container.textContent).not.toContain("not covered");
   });
 
   it("renders cap skew unavailable without naming a feature when no share is observed", () => {

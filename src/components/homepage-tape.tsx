@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
+import { useMinuteClockSec } from "@/hooks/use-minute-clock-sec";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { collapseForHomepageStrip, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
@@ -30,6 +31,8 @@ interface TapeItemProps {
   logoSrc: string | undefined;
   logoName: string | null;
   logos: Record<string, string>;
+  /** Viewer-clock milliseconds; 0 before the mounted clock ticks. */
+  nowMs: number;
 }
 
 const STACKED_LOGO_LIMIT = 4;
@@ -128,7 +131,7 @@ function resolveEventHref(event: TapeEvent): string {
   return event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
 }
 
-function TapeItem({ entry, logoSrc, logoName, logos }: TapeItemProps) {
+function TapeItem({ entry, logoSrc, logoName, logos, nowMs }: TapeItemProps) {
   const { event, count, coinIds } = entry;
   const consolidated = coinIds && coinIds.length > 1;
   const title = consolidated ? (consolidatedDewsTitle(event) ?? formatTapeEventTitle(event)) : formatTapeEventTitle(event);
@@ -159,7 +162,9 @@ function TapeItem({ entry, logoSrc, logoName, logos }: TapeItemProps) {
           ×{badgeValue}
         </span>
       ) : null}
-      <span className="tabular-nums text-muted-foreground/80">{formatRelativeTimeMs(event.ts)}</span>
+      <span className="tabular-nums text-muted-foreground/80">
+        {formatRelativeTimeMs(event.ts, { now: nowMs || undefined })}
+      </span>
     </Link>
   );
 }
@@ -183,6 +188,9 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
   // pass below then merges flapping coins (e.g. USDXL repeating depeg cycles)
   // into a single cell with a count badge.
   const { data, isLoading, error } = useLatestEvents({ limit: 100, severityFloor: "notice" });
+  // The hourly poll cannot refresh a relative age; a minute clock does.
+  const nowSec = useMinuteClockSec();
+  const nowMs = nowSec * 1000;
   const logos = logosById;
   const events = data?.events ?? EMPTY_EVENTS;
   const collapsed = useMemo(
@@ -245,6 +253,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
                     logoSrc={logoId ? getLogoSrc(logos, logoId) : undefined}
                     logoName={logoId}
                     logos={logos}
+                    nowMs={nowMs}
                   />
                 );
               })}

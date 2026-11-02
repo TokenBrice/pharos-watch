@@ -8,7 +8,7 @@ import complianceAsset from "@shared/data/stablecoins/coins.compliance.generated
 import { CAUSE_META } from "@shared/lib/cause-of-death";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { BACKING_LABELS, GOVERNANCE_LABELS } from "@shared/lib/classification";
-import { LAUNCH_PHASE_LABELS } from "@shared/lib/classification/pre-launch";
+import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { sortCemeteryCoins } from "@shared/lib/cemetery";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
@@ -96,7 +96,7 @@ export function buildUpcomingPegCoinEntries(
   coins: readonly Pick<StablecoinClientMeta, "id" | "name" | "symbol" | "launchPhase" | "expectedLaunchDate" | "launchDate">[],
 ): UpcomingPegCoinEntry[] {
   return coins.map((coin) => {
-    const phase = coin.launchPhase ? LAUNCH_PHASE_LABELS[coin.launchPhase] : "Unphased";
+    const phase = coin.launchPhase ? LAUNCH_PHASE_LABELS[coin.launchPhase] : PRE_LAUNCH_UNPHASED_LABEL;
     // A launched coin is live: its launch date, never a stale target.
     const target = coin.launchPhase === "launched"
       ? coin.launchDate ? `since ${formatFuzzyDate(coin.launchDate)}` : "launch date not recorded"

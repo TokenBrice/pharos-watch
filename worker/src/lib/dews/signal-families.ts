@@ -117,7 +117,7 @@ export function computeSupplySignal(input: DEWSInput): SignalResult {
 
   const rawVelocity = (0.6 * norm1d + 0.4 * norm7d) / componentCoverage;
 
-  // Size-adjusted dampening: small coins (<$50M) have naturally volatile supply
+  // Size-adjusted dampening: coins below $1B have naturally volatile supply
   const sizeFactor = Math.min(1, Math.log10(Math.max(mcapUsd, 1e6) / 1e6) / 3);
 
   const value = clamp(rawVelocity * sizeFactor, 0, 100);
