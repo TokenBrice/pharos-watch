@@ -94,12 +94,12 @@ describe("ICP wire codecs", () => {
       const valid = Buffer.from("a266737461747573677265706c696564657265706c79a1636172674144", "hex");
       let fallbackCalls = 0;
       vi.stubGlobal("fetch", async () => new Response(++fallbackCalls === 1 ? Buffer.from("5f", "hex") : valid));
-      expect(Array.from((await queryIcpCanister(options)).reply)).toEqual([68]);
+      expect(Array.from((await queryIcpCanister(options)).reply ?? [])).toEqual([68]);
       expect(fallbackCalls).toBe(2);
       // Indefinite maps and chunked byte strings remain valid envelopes.
       vi.stubGlobal("fetch", async () => new Response(Buffer.from(
         "bf66737461747573677265706c696564657265706c79bf636172675f4144ffffff", "hex")));
-      expect(Array.from((await queryIcpCanister(options)).reply)).toEqual([68]);
+      expect(Array.from((await queryIcpCanister(options)).reply ?? [])).toEqual([68]);
     } finally {
       vi.unstubAllGlobals();
     }
