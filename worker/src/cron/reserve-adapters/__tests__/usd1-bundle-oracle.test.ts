@@ -10,10 +10,12 @@ import {
   runAdapter,
   type AdapterNetworkSpec,
 } from "./reserve-adapter.test-support";
+import cip56Fixture from "./fixtures/cip56-usd1-instrument-2026-10-30.json";
 
 // Raw values read 2026-09-27 (docs/live-reserves.md "Reviewed liability
 // scopes"): the latest bundle (2026-09-25T17:31:07Z) and the six issuer-native
-// supplies read around 2026-09-27T20:43:47Z, 51 h 12 m 40 s later.
+// supplies read around 2026-09-27T20:43:47Z, 51 h 12 m 40 s later. The Canton
+// row is the registry-reported 2026-10-30 read documented in the appendix.
 const BUNDLE_TIMESTAMP = 1_790_357_467;
 const RESERVES_RAW = 4_416_592_902_739_999_770_000_000_000n;
 const LATE_SUPPLY_READ_AT = 1_790_541_827;
@@ -24,7 +26,8 @@ const TRON_SUPPLY = 10_062_604_900_000_000_000_000_000n;
 const SOLANA_SUPPLY = 1_390_641_181_372_169n;
 const APTOS_SUPPLY = 20_017_233_381_117n;
 const TEMPO_SUPPLY = 1_119_862_264n;
-const EXPECTED_SUPPLY = 4_416_180_470.736875;
+const CANTON_SUPPLY = 1_239_859_800_019n;
+const EXPECTED_SUPPLY = 4_416_180_594.722855;
 const EXPECTED_RESERVES = 4_416_592_902.74;
 
 const USD1_ORACLE = "0x691b74146cdba162449012aa32d3cbf5df77d4c4";
@@ -44,13 +47,16 @@ const SOLANA_RPC_URLS = [
 ];
 const APTOS_REST = "https://api.mainnet.aptoslabs.com/v1";
 const APTOS_LEDGER = "7386894871";
+const CANTON_REGISTRY_URL = "https://api.utilities.digitalasset.com/api/token-standard/v0/registrars/1220b::1220bab043849b986b52bc6271edf1ae962bab03d9f0c0713f071732d2278386bd02/registry/metadata/v1/instruments/USD1";
+const CANTON_REGISTRAR = "1220b::1220bab043849b986b52bc6271edf1ae962bab03d9f0c0713f071732d2278386bd02";
+const CANTON_INSTRUMENT = `${CANTON_REGISTRAR}:USD1`;
 
 afterEach(() => vi.restoreAllMocks());
 
 const SCOPE: IssuerNativeLiabilityScope = {
   basis: "issuer-native-supply",
-  reviewedAt: "2026-09-27",
-  evidenceRef: "KPMG July 2026 USD1 examination Note A",
+  reviewedAt: "2026-11-02",
+  evidenceRef: "KPMG August 2026 USD1 examination Note A footnote 3; CIP-56 registry metadata",
   included: [
     { chain: "ethereum", reader: "evm-erc20" },
     { chain: "bsc", reader: "evm-erc20" },
@@ -58,6 +64,18 @@ const SCOPE: IssuerNativeLiabilityScope = {
     { chain: "solana", reader: "solana-spl-mint" },
     { chain: "aptos", reader: "aptos-fungible-asset" },
     { chain: "tempo", reader: "evm-erc20" },
+    {
+      chain: "canton",
+      reader: "cip56-registry",
+      registry: {
+        url: CANTON_REGISTRY_URL,
+        registrarParty: CANTON_REGISTRAR,
+        instrumentId: "USD1",
+        symbol: "USD1",
+        decimals: 10,
+        maxSupplyAgeSec: 604800,
+      },
+    },
   ],
   excluded: ["plume", "monad", "mantle", "morph-l2", "abcore", "xlayer"].map((chain) => ({
     chain,
@@ -79,6 +97,18 @@ function nativeContributions(observedAt: number): MultichainSupplyContribution[]
     { chain: "solana", tokenAddress: SOLANA_MINT, raw: SOLANA_SUPPLY, decimals: 6, observedAt },
     { chain: "aptos", tokenAddress: APTOS_METADATA, raw: APTOS_SUPPLY, decimals: 6, observedAt },
     { chain: "tempo", tokenAddress: TEMPO_TOKEN, raw: TEMPO_SUPPLY, decimals: 6, observedAt },
+    {
+      chain: "canton",
+      tokenAddress: CANTON_INSTRUMENT,
+      raw: CANTON_SUPPLY,
+      decimals: 10,
+      observedAt,
+      provenance: {
+        sourceUrl: CANTON_REGISTRY_URL,
+        basis: "registry-reported CIP-56 token metadata totalSupply",
+        asOf: new Date(observedAt * 1000).toISOString(),
+      },
+    },
   ];
 }
 
@@ -130,11 +160,17 @@ describe("adaptUsd1BundleOracle", () => {
       ratioSkewSec: 3_600,
       liabilityScope: {
         basis: "issuer-native-supply",
-        includedChains: ["ethereum", "bsc", "tron", "solana", "aptos", "tempo"],
+        includedChains: ["ethereum", "bsc", "tron", "solana", "aptos", "tempo", "canton"],
         unclassifiedChains: [],
         failedChains: [],
         maxReserveSupplySkewSec: 14_400,
       },
+      liabilitySupplyProvenance: [{
+        chain: "canton",
+        sourceUrl: CANTON_REGISTRY_URL,
+        basis: expect.stringContaining("CIP-56"),
+        asOf: new Date(IN_BOUND_SUPPLY_READ_AT * 1000).toISOString(),
+      }],
       redemption: { holderEligibility: "verified-customer", sourceTimestamp: BUNDLE_TIMESTAMP },
     });
     expect((result.metadata?.details as Record<string, unknown>).reserveScope).toContain("USD1 BitGo Reported Reserves");
@@ -178,8 +214,19 @@ function usd1Network(options: {
   solana?: ChainOutcome;
   aptos?: ChainOutcome;
   bundle?: string;
+  canton?: "ok" | "fail" | "missing-supply";
+  cantonAsOf?: string;
 }): AdapterNetworkSpec {
   vi.spyOn(Date, "now").mockReturnValue(options.readAt * 1000);
+  const cantonPayload = {
+    ...cip56Fixture,
+    totalSupplyAsOf: options.cantonAsOf ?? new Date(options.readAt * 1000).toISOString(),
+  };
+  const cantonResponse = options.canton === "fail"
+    ? { status: 500, body: "registry unavailable" }
+    : options.canton === "missing-supply"
+      ? { ...cantonPayload, totalSupply: undefined }
+      : cantonPayload;
   const solanaAccount = options.solana === "fail"
     ? { jsonrpc: "2.0", id: 1, result: { context: { slot: 451_107_855 }, value: null } }
     : {
@@ -228,12 +275,13 @@ function usd1Network(options: {
         type: "0x1::fungible_asset::Metadata",
         data: { decimals: 6 },
       },
+      [CANTON_REGISTRY_URL]: cantonResponse,
     },
   };
 }
 
 describe("fetchUsd1BundleOracleReserves", () => {
-  it.each([false, true])("reads the six issuer-native chains and none of the CCIP representations (inherited Ethereum pin=%s)", async (inheritedPin) => {
+  it.each([false, true])("reads the six catalog issuer-native chains plus the Canton registry and no CCIP representation (inherited Ethereum pin=%s)", async (inheritedPin) => {
     const { result, network } = await runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
       network: usd1Network({ readAt: IN_BOUND_SUPPLY_READ_AT }),
       nowSec: IN_BOUND_SUPPLY_READ_AT,
@@ -245,15 +293,33 @@ describe("fetchUsd1BundleOracleReserves", () => {
     expect(result.metadata?.observedBlock).toEqual({ chain: "ethereum", number: 26_071_248, timestamp: IN_BOUND_SUPPLY_READ_AT });
     expect(result.metadata?.supplyUsd).toBeCloseTo(EXPECTED_SUPPLY, 2);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(EXPECTED_RESERVES / EXPECTED_SUPPLY, 9);
-    expect(result.metadata).toMatchObject({ supplyCoverageComplete: true, ratioSkewSec: 3_600 });
+    expect(result.metadata).toMatchObject({
+      supplyCoverageComplete: true,
+      ratioSkewSec: 3_600,
+      liabilityScope: { includedChains: ["ethereum", "bsc", "tron", "solana", "aptos", "tempo", "canton"] },
+      liabilitySupplyProvenance: [{
+        chain: "canton",
+        sourceUrl: CANTON_REGISTRY_URL,
+        basis: expect.stringContaining("CIP-56"),
+        asOf: new Date(IN_BOUND_SUPPLY_READ_AT * 1000).toISOString(),
+      }],
+    });
     expect(result.metadata?.supplyContributions).toEqual(expect.arrayContaining([
       { chain: "aptos", tokenAddress: APTOS_METADATA, supplyRaw: "20017233381117", decimals: 6, observedAt: IN_BOUND_SUPPLY_READ_AT },
       { chain: "tempo", tokenAddress: TEMPO_TOKEN, supplyRaw: "1119862264", decimals: 6, observedAt: IN_BOUND_SUPPLY_READ_AT },
+      {
+        chain: "canton",
+        tokenAddress: CANTON_INSTRUMENT,
+        supplyRaw: "1239859800019",
+        decimals: 10,
+        observedAt: IN_BOUND_SUPPLY_READ_AT,
+      },
     ]));
     expect(result.warnings).toBeUndefined();
     expect(network.rpcCalls.filter((call) => call.selector === "0x18160ddd").map((call) => call.chain).sort())
       .toEqual(["bsc", "ethereum", "tempo"]);
     expect(network.rpcCalls.some((call) => call.contract === BRIDGE_TOKEN)).toBe(false);
+    expect(network.requests.some((request) => request.url === CANTON_REGISTRY_URL)).toBe(true);
   });
 
   it("withholds the ratio when supply is read 51 hours after the bundle", async () => {
@@ -290,6 +356,33 @@ describe("fetchUsd1BundleOracleReserves", () => {
     expectWarningEffect(result, "partial-supply-read-failure", "degraded");
   });
 
+  it.each([
+    ["an unavailable registry", { canton: "fail" as const }, /HTTP 500/],
+    ["a payload without totalSupply", { canton: "missing-supply" as const }, /totalSupply/],
+    ["a registry clock older than the reviewed supply-age bound", {
+      cantonAsOf: new Date((IN_BOUND_SUPPLY_READ_AT - 604_801) * 1000).toISOString(),
+    }, /totalSupplyAsOf.*old/],
+  ])("withholds the ratio and marks coverage incomplete for %s", async (_label, overrides, reason) => {
+    const { result } = await runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
+      network: usd1Network({ readAt: IN_BOUND_SUPPLY_READ_AT, ...overrides }),
+      nowSec: IN_BOUND_SUPPLY_READ_AT,
+    });
+
+    expect(result.metadata?.collateralizationRatio).toBeUndefined();
+    expect(result.metadata).toMatchObject({
+      supplyReadComplete: false,
+      supplyCoverageComplete: false,
+      ratioUnavailableReason: "included-supply-read-failed",
+    });
+    const failed = (result.metadata?.liabilityScope as {
+      failedChains: Array<{ chain: string; reason: string }>;
+    }).failedChains.find((entry) => entry.chain === "canton");
+    expect(failed?.reason).toMatch(reason);
+    expect((result.metadata?.supplyContributions as Array<{ chain: string }>).some((entry) => entry.chain === "canton")).toBe(false);
+    expect(result.metadata?.liabilitySupplyProvenance).toBeUndefined();
+    expectWarningEffect(result, "partial-supply-read-failure", "degraded");
+  });
+
   it("fails the Tempo read closed when catalog decimals disagree with the chain", async () => {
     const { coin: catalogCoin } = resolveAdapterCoin("usd1-bundle-oracle", "usd1-world-liberty-financial");
     const { result } = await runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
@@ -320,7 +413,7 @@ describe("fetchUsd1BundleOracleReserves", () => {
   it("fails when no included supply read succeeds", async () => {
     await expect(runAdapter("usd1-bundle-oracle", "usd1-world-liberty-financial", {
       coin: { contracts: [{ chain: "ethereum", address: USD1_TOKEN, decimals: 18 }] },
-      network: usd1Network({ readAt: IN_BOUND_SUPPLY_READ_AT, ethereumSupply: null }),
+      network: usd1Network({ readAt: IN_BOUND_SUPPLY_READ_AT, ethereumSupply: null, canton: "fail" }),
       nowSec: IN_BOUND_SUPPLY_READ_AT,
       validate: false,
     })).rejects.toThrow(/usd1-bundle-oracle/);
