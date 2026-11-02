@@ -688,7 +688,9 @@ describe("CI workflow scope", () => {
       expect(setupOf(nightly.jobs[job])?.with, job).toMatchObject({ "node-modules-cache": "true" });
     }
     for (const [job, definition] of Object.entries(weekly.jobs)) {
-      if (job === "gitleaks") continue;
+      // These jobs install nothing: gitleaks imports only Node builtins and the
+      // CI report renders from workflow-fetched files (asserted below).
+      if (job === "gitleaks" || job === "ci-report") continue;
       expect(setupOf(definition)?.with, job).toMatchObject({ "node-modules-cache": "true" });
     }
     // The history-scan job imports only Node builtins; it has no workspace setup.
@@ -762,6 +764,43 @@ describe("CI workflow scope", () => {
     const red = nightly.jobs["nightly-red"];
     expect(red.needs).toContain("test-plan-parity");
     expect(red.env?.TEST_PLAN_PARITY_RESULT).toBe("${{ needs.test-plan-parity.result }}");
+  });
+
+  it("publishes the weekly CI report from a main-only workflow-fed job", () => {
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
+    const job = weekly.jobs["ci-report"];
+    // Branch evidence never reaches the single owned issue.
+    expect(job.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    expect(job.permissions).toEqual({ contents: "read", actions: "read", issues: "write" });
+    expect(job.needs).toBeUndefined();
+    // No dependents: a telemetry failure cannot fail another weekly job.
+    for (const [name, definition] of Object.entries(weekly.jobs)) {
+      if (name === "ci-report") continue;
+      expect(definition.needs ?? [], name).not.toContain("ci-report");
+    }
+
+    const steps = job.steps ?? [];
+    // The token is confined to the gh-only steps; the renderer that parses
+    // repository and API content never sees it.
+    const tokenSteps = steps.filter((step) => step.env?.GH_TOKEN !== undefined);
+    expect(tokenSteps.map((step) => step.id)).toEqual(["window", "timings", "publish"]);
+    for (const step of tokenSteps) expect(step.run ?? "").not.toMatch(/\b(npm|npx)\b/);
+    const render = steps.find((step) => step.name === "Render the weekly report");
+    expect(render?.env?.GH_TOKEN).toBeUndefined();
+    expect(render?.run).toContain("scripts/maintenance/report-ci-weekly.ts");
+    // Advisory evidence only: a missing nightly timing artifact must not red the
+    // job before the report names the section unavailable.
+    expect(steps.find((step) => step.id === "timings")?.["continue-on-error"]).toBe(true);
+    // The report installs nothing, so it restores no dependency cache.
+    expect(steps.some((step) => step.uses === "$/.github/actions/setup-workspace")).toBe(false);
+    // One stable issue identity: the locator, the edit and the create all name
+    // the same title, and the label is created with the issue.
+    const publish = steps.find((step) => step.id === "publish")?.run ?? "";
+    const titles = [...publish.matchAll(/(?:--title|select\(\.title ==) "([^"]+)"/g)].map((match) => match[1]);
+    expect(titles.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(titles)).toEqual(new Set(["Weekly CI report"]));
+    expect(publish).toContain("ci:weekly-report");
+    expect(publish).not.toContain("gh issue comment");
   });
 
   it("opens the nightly-red issue on the first red run and never closes it on cancellation", () => {

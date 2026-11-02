@@ -6,7 +6,7 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 import { execFileSync } from "node:child_process";
-import { PR_DOC_COMMANDS, PR_LANES, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
+import { PR_DOC_COMMANDS, PR_LANES, PR_PREPARE_BUDGET_SECONDS, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { buildWorkerStablecoinCatalog } from "../build-data/generate-worker-stablecoin-catalog";
 import { buildPrWorkflowMatrix, formatPrWorkflowOutputs } from "../maintenance/generate-pr-workflow-matrix.ts";
@@ -117,6 +117,26 @@ describe("PR lane manifest", () => {
     expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
       { lane: "v9-resource", timeout: 8 },
     ]);
+  });
+
+  it("declares report-only lane budgets below each job timeout", () => {
+    expect(Object.fromEntries(PR_LANES.map((lane) => [lane.id, lane.budgetSeconds ?? null]))).toEqual({
+      preflight: null,
+      "v9-resource": 220,
+      "static-guards": 120,
+      tests: 200,
+      "static-compile": 150,
+      "pages-artifact": 250,
+      gate: null,
+    });
+    for (const lane of PR_LANES) {
+      if (lane.budgetSeconds === undefined) continue;
+      // A budget is reporting evidence, not a kill switch: an over-budget lane
+      // must still have time left to finish inside its own timeout.
+      expect(lane.budgetSeconds, lane.id).toBeLessThan(lane.timeoutMinutes * 60);
+    }
+    // `prepare` is a workflow job, so its budget lives beside the manifest.
+    expect(PR_PREPARE_BUDGET_SECONDS).toBe(90);
   });
 
   it("uses the same strict commands for local and sharded execution", () => {
