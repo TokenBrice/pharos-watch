@@ -15,6 +15,7 @@ import {
 import { EXECUTABLE_TEST_PROJECTS } from "../lib/critical-ownership.mts";
 import { VITEST_SETUP_FILES } from "../lib/vitest-setup-files.mts";
 import { compareCommitSelections, summarizeParityFailures } from "../ci/check-test-plan-parity";
+import { withTempRepo } from "./helpers/test-state";
 
 const CWD = "/repo";
 
@@ -218,6 +219,22 @@ describe("static import-graph PR test selection", () => {
         expect(matcher(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));
       }
     }
+  });
+
+  it("keeps nightly-tier files in the execution projects but out of the planner universe", () => {
+    withTempRepo("pharos-nightly-universe", {
+      "src/__tests__/owner.test.ts": "it(\"owner\", () => {});\n",
+      "src/__tests__/sweep.nightly.test.ts": "it(\"sweep\", () => {});\n",
+      "scripts/__tests__/guard.nightly.test.ts": "it(\"guard\", () => {});\n",
+    }, (cwd) => {
+      // `npm test`/nightly enumerate the candidate set, so the files still run there.
+      expect(collectExecutableTestCandidates(cwd)).toEqual([
+        "scripts/__tests__/guard.nightly.test.ts",
+        "src/__tests__/owner.test.ts",
+        "src/__tests__/sweep.nightly.test.ts",
+      ]);
+      expect(collectExecutableTestFiles(cwd)).toEqual(["src/__tests__/owner.test.ts"]);
+    });
   });
 
   it("selects every file matched by a template-literal dynamic import", () => {

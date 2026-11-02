@@ -69,6 +69,7 @@
     "check:pr": "node --import tsx scripts/maintenance/run-pr-checks.ts",
     "check:pr:static": "node --import tsx scripts/maintenance/run-pr-static-checks.ts",
     "check:test-plan-parity": "node --import tsx scripts/ci/check-test-plan-parity.ts",
+    "check:test-tier": "node --import tsx scripts/ci/check-test-tier.ts",
     "check:focused": "node --import tsx scripts/maintenance/run-focused-checks.ts",
     "check:release": "node --import tsx scripts/maintenance/run-release-rehearsal.ts",
     "check:pages-release": "node --import tsx scripts/maintenance/run-pages-release-checks.ts",

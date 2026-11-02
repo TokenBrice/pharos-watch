@@ -66,6 +66,21 @@ describe("declared non-import-graph PR test ownership", () => {
   });
 });
 
+describe("nightly-tier exclusion", () => {
+  const mandatory = "scripts/__tests__/run-pr-tests.test.ts";
+  const nightly = "scripts/__tests__/corpus-sweep.nightly.test.ts";
+
+  it("drops a changed nightly-tier file and its import/declaration selection from the PR plan", () => {
+    const selected = selectPrTestFiles([nightly], [mandatory], [nightly], new Map([[nightly, [nightly]]]), () => true);
+    expect(selected).toEqual([mandatory]);
+  });
+
+  it("fails closed when an always-run contract names a nightly-tier file", () => {
+    expect(() => selectPrTestFiles([], [nightly], [], new Map(), () => true))
+      .toThrow(/always-run PR contract/);
+  });
+});
+
 describe("documentation-owner dedup", () => {
   const mandatory = "scripts/__tests__/run-pr-tests.test.ts";
 

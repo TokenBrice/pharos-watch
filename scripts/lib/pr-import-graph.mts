@@ -21,6 +21,7 @@ import { dirname, extname, isAbsolute, join, matchesGlob, relative, resolve } fr
 
 import { hasOnlyInternalDocsImpact } from "./deploy-impact.mts";
 import { EXECUTABLE_TEST_PROJECTS, normalizeOwnershipPath } from "./critical-ownership.mts";
+import { isNightlyTestFile } from "./nightly-test-tier.mts";
 import { resolveLocalPackageImport } from "./package-imports.mts";
 import { collectSourceFilesUnderRoots } from "./source-files.mts";
 import { VITEST_SETUP_FILES } from "./vitest-setup-files.mts";
@@ -66,6 +67,8 @@ const PLANNER_SOURCE_FILES = [
   "scripts/lib/critical-ownership.mts",
   "scripts/lib/critical-test-files.mts",
   "scripts/lib/doc-ownership-registry.mts",
+  // The nightly-tier vocabulary decides what the planner may select.
+  "scripts/lib/nightly-test-tier.mts",
   "docs/doc-ownership.json",
 ] as const;
 
@@ -275,12 +278,17 @@ export function collectExecutableTestCandidates(cwd = process.cwd()): string[] {
  * Enumerate Vitest's executable test universe: the `EXECUTABLE_TEST_PROJECTS`
  * include/exclude sets, restricted to the roots those projects scan. The
  * patterns are compiled once at module load, not per candidate file.
+ *
+ * Nightly-tier files (`*.nightly.test.ts`, `scripts/lib/nightly-test-tier.mts`)
+ * stay in the execution projects, so `npm test` and the nightly shards run
+ * them, but they are never part of the universe this planner can select.
  */
 export function collectExecutableTestFiles(cwd = process.cwd()): string[] {
   return collectExecutableTestCandidates(cwd)
     .filter((file) => EXECUTABLE_TEST_MATCHERS.some((project) =>
       project.include.some((matcher) => matcher(file))
       && !project.exclude.some((matcher) => matcher(file))))
+    .filter((file) => !isNightlyTestFile(file))
     .sort();
 }
 

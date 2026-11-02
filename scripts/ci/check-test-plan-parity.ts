@@ -22,6 +22,7 @@ import { argv as processArgv } from "node:process";
 import { parseCliInteger, parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { collectGitPaths } from "../lib/changed-files.mts";
 import { localBin } from "../lib/local-bin.mts";
+import { isNightlyTestFile } from "../lib/nightly-test-tier.mts";
 import { buildPrImportGraph, collectExecutableTestFiles, planPrTestSelection, type PrTestSelectionMode } from "../lib/pr-import-graph.mts";
 import { parseVitestFileList } from "../lib/pr-test-selection.mts";
 
@@ -198,7 +199,9 @@ export function checkCommitParity(commit: string, { root = process.cwd(), workDi
     });
     if (listed.error) throw listed.error;
     if (listed.status !== 0) throw new Error(`vitest list failed for ${commit}: ${String(listed.stderr ?? "").slice(-2000)}`);
-    const viteFiles = parseVitestFileList(listed.stdout ?? "");
+    // The nightly tier is a deliberate planner subset, so both sides of the
+    // comparison keep only PR-tier files.
+    const viteFiles = parseVitestFileList(listed.stdout ?? "").filter((file) => !isNightlyTestFile(file));
     return {
       commit,
       parent,

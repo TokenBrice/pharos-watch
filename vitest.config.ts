@@ -62,6 +62,17 @@ export default defineConfig({
   json: { stringify: true, namedExports: false },
   test: {
     execArgv: nodeExecArgv,
+    // Nightly-tier tag vocabulary (`scripts/lib/nightly-test-tier.mts`). The
+    // PR runner passes `--tagsFilter=!nightly`; every other invocation keeps
+    // the tagged cases. `strictTags` turns a misspelled tag into a collection
+    // error instead of a silent tier change.
+    tags: [
+      {
+        name: "nightly",
+        description: "Nightly full-suite tier: excluded from PR test selection.",
+      },
+    ],
+    strictTags: true,
     // Vitest's 5s default is below what several honest suites need on a
     // two-core CI runner: full-registry scoring, workerd rendering, migrated
     // SQLite fixtures and whole-tree AST scans all cost seconds of real work.
