@@ -26,7 +26,7 @@
     "dev:proxy": "node --import tsx scripts/maintenance/dev-api-proxy.ts",
     "ci:census": "node --import tsx scripts/maintenance/ci-failure-census.ts",
     "bootstrap:generated": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --bootstrap",
-    "bootstrap:generated:history": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=sitemap-dates,docs-metadata",
+    "bootstrap:generated:history": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=docs-metadata & docs_pid=$!; node --import tsx scripts/maintenance/run-generated-artifacts.ts --only=sitemap-dates & sitemap_pid=$!; wait \"$docs_pid\"; docs_status=$?; wait \"$sitemap_pid\"; sitemap_status=$?; [ \"$docs_status\" -eq 0 ] && [ \"$sitemap_status\" -eq 0 ]",
     "generated:compile-input": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=compile-input",
     "generated:post-refresh": "node --import tsx scripts/maintenance/run-generated-artifacts.ts --build-lifecycle=post-refresh",
     "verify:coingecko-ids": "python3 scripts/maintenance/verify-coingecko-ids.py",

@@ -26,6 +26,7 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-generated: "false"
+          node-modules-cache: "true"
       - name: Materialize compile-input artifacts
         # The refresh consumes the generated catalog. This lifecycle must never
         # acquire live snapshots: those belong to the Worker-gated release job.
