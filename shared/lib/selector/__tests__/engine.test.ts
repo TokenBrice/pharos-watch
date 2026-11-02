@@ -25,6 +25,16 @@ const ROUTE_VENUES: Record<SelectorProfile, readonly RouteVenue[]> = {
   trading: [["cex"], ["perps"], ["spot"], ["all"]],
 };
 
+// PR-tier representative matrix: one horizon, tolerance, venue and exit per profile.
+const REPRESENTATIVE_ROUTE_HORIZONS = ["1to7d"] as const;
+const REPRESENTATIVE_ROUTE_DEPEGS = ["tight"] as const;
+const REPRESENTATIVE_ROUTE_EXITS = ["24h"] as const;
+const REPRESENTATIVE_ROUTE_VENUES: Record<SelectorProfile, readonly RouteVenue[]> = {
+  treasury: [["some"]],
+  yield: [["dex"]],
+  trading: [["perps"]],
+};
+
 function routeComposability(
   profile: SelectorProfile,
   venue: RouteVenue,
@@ -46,14 +56,18 @@ function routeSkipsExit(
   return profile === "treasury" && horizon === "6mplus" && depegTolerance === "zero";
 }
 
-function routeInputs(): SelectorInput[] {
+function routeInputs(scope: "representative" | "full" = "representative"): SelectorInput[] {
+  const horizons = scope === "full" ? ROUTE_HORIZONS : REPRESENTATIVE_ROUTE_HORIZONS;
+  const depegTolerances = scope === "full" ? ROUTE_DEPEGS : REPRESENTATIVE_ROUTE_DEPEGS;
+  const venuesByProfile = scope === "full" ? ROUTE_VENUES : REPRESENTATIVE_ROUTE_VENUES;
+  const exitSpeeds = scope === "full" ? ROUTE_EXITS : REPRESENTATIVE_ROUTE_EXITS;
   const out: SelectorInput[] = [];
   for (const pegCurrency of SELECTOR_ELIGIBLE_PEG_CURRENCIES) {
     for (const profile of SELECTOR_PROFILES_FOR_ROUTES) {
-      for (const horizon of ROUTE_HORIZONS) {
-        for (const depegTolerance of ROUTE_DEPEGS) {
-          for (const venue of ROUTE_VENUES[profile]) {
-            const exits = routeSkipsExit(profile, horizon, depegTolerance) ? ["any"] as const : ROUTE_EXITS;
+      for (const horizon of horizons) {
+        for (const depegTolerance of depegTolerances) {
+          for (const venue of venuesByProfile[profile]) {
+            const exits = routeSkipsExit(profile, horizon, depegTolerance) ? ["any"] as const : exitSpeeds;
             for (const exitSpeed of exits) {
               out.push(makeInput({
                 profile,
@@ -871,7 +885,7 @@ describe("runSelector — universal properties", () => {
     expect(out.recommended[1]?.rankRobustness?.label).toBe("concentration-adjusted");
   });
 
-  it("never recommends an NR asset across the combinatorial route suite", () => {
+  it("never recommends an NR asset across a representative route matrix", () => {
     const data = buildFixtureData();
     for (const input of routeInputs()) {
       const out = runSelector(input, data, FIXTURE_DATASET);
@@ -890,6 +904,20 @@ describe("runSelector — universal properties", () => {
         "safetyScore",
       ],
     });
+  });
+
+  // Nightly tier: the representative matrix above keeps one horizon, tolerance, venue and
+  // exit per profile (with the yzusd-yuzu coverage warning); this case expands it to the
+  // ~1,956 runSelector invocations the PR tier cannot afford.
+  it("never recommends an NR asset across the combinatorial route suite", { tags: ["nightly"] }, () => {
+    const data = buildFixtureData();
+    for (const input of routeInputs("full")) {
+      const out = runSelector(input, data, FIXTURE_DATASET);
+      expect(
+        out.recommended.some((recommendation) => recommendation.safetyGrade === "NR"),
+        `${input.pegCurrency}/${input.profile}/${input.horizon}/${input.depegTolerance}/${input.composability}/${input.exitSpeed}`,
+      ).toBe(false);
+    }
   });
 
   it("does not re-admit an NR row through relaxed fallback", () => {

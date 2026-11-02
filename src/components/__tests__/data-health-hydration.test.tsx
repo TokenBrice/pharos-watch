@@ -228,7 +228,13 @@ function detailRequestBudgetSnapshot(generatedAt: number): StablecoinDetailSnaps
 }
 
 describe("stablecoin detail request budget", () => {
-  it("census: every frozen profile reads no current-only lane with every viewport gate open", async () => {
+  // Nightly tier: renders the view model once per frozen profile (~40 renderHook/waitFor
+  // boots). The PR tier keeps the frozen gate in use-stablecoin-detail-view-model.test.tsx
+  // "disables every current-only lane, health entry and retry despite open viewport controls",
+  // the frozen prefetch skip in src/app/stablecoin/[id]/client.test.tsx "starts no current
+  // summary read for a frozen archive, unlike an active control", and the per-profile
+  // snapshot invariant in shared/lib/stablecoins/__tests__/registry.test.ts.
+  it("census: every frozen profile reads no current-only lane with every viewport gate open", { tags: ["nightly"] }, async () => {
     const frozen = [...TRACKED_META_BY_ID.values()].filter((coin) => coin.status === "frozen");
     expect(frozen.length).toBeGreaterThan(0);
     const forbidden = /\/api\/(?:stablecoin-live-summary|dex-liquidity|report-cards|redemption-backstop|yield-rankings|stress-signals|mint-burn-flows|stablecoin-reserves)/;

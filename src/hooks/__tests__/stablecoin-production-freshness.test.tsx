@@ -93,7 +93,10 @@ describe("production stablecoin freshness", () => {
   });
 
 
-  it.each(["homepage", "depeg", "safety-scores", "yield"])("keeps the shared real stablecoins producer fresh on %s", async () => {
+  // Nightly tier: four executions of the shared producer replay. The PR tier keeps the
+  // detail/browser-detail real-capture replay above and "carries a stalled non-USD
+  // producer clock through a successful registered query" in use-api-query.test.ts.
+  it.each(["homepage", "depeg", "safety-scores", "yield"])("keeps the shared real stablecoins producer fresh on %s", { tags: ["nightly"] }, async () => {
     const now = captured.stablecoins.capturedAtMs;
     vi.spyOn(Date, "now").mockReturnValue(now);
     vi.stubGlobal("fetch", vi.fn(async () => response("stablecoins")));
