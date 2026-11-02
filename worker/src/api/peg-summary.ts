@@ -21,6 +21,7 @@ import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-tr
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import { deriveCurrentPegObservationMap } from "../lib/current-peg-observations";
 import {
+  effectiveStartedAtSql,
   EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
   IncidentProjectionUnavailableError,
 } from "../lib/depeg-event-projection";
@@ -96,37 +97,64 @@ function storedAuditVerdict(row: PegEventDayRow): string | null {
   return row.provenance_audit_verdict;
 }
 
+type PegEventDayCountRead =
+  | { kind: "ok"; today: number; yesterday: number }
+  | { kind: "unavailable"; reason: "peg-event-day-count-read-failed" };
+
 /**
  * Read-time re-bucketing for a cached generation from an earlier UTC day: the
- * cached pair names that generation's "today". Bounded by idx_depeg_started to
- * the two-day window.
+ * cached pair names that generation's "today". The counters must use the same
+ * clock the producer counts (`rowToPublicDepegEvent`), i.e. an active
+ * incident's projected first onset, not the current fragment's `started_at`.
+ * The raw `started_at` is never earlier than that effective onset, so the
+ * indexed two-day bound still admits every row the counters can bucket.
+ *
+ * A failed read is reported, never defaulted to zero: the route answers with
+ * an explicit typed 503 instead of an unhandled error or a false calm day.
  */
-async function loadPegEventDayCounts(db: D1Database, nowSec: number) {
+async function loadPegEventDayCounts(db: D1Database, nowSec: number): Promise<PegEventDayCountRead> {
   const todayStartSec = bucketUnixSecondsToUtcDay(nowSec);
-  const rows = await db.prepare(
-    `SELECT /* pharos:peg-summary:depeg-event-day-counts */
-       e.stablecoin_id, e.started_at, e.provenance_json, e.provenance_audit_verdict
-       FROM depeg_events_with_provenance e
-      WHERE e.started_at >= ?
-        AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}`,
-  ).bind(todayStartSec - DAY_SECONDS).all<PegEventDayRow>();
-  return countPegEventDays((rows.results ?? []).map((row) => ({
-    stablecoinId: row.stablecoin_id,
-    startedAt: row.started_at,
-    provenance: { auditVerdict: storedAuditVerdict(row) },
-  })), nowSec);
+  try {
+    const rows = await db.prepare(
+      `SELECT /* pharos:peg-summary:depeg-event-day-counts */
+         e.stablecoin_id,
+         ${effectiveStartedAtSql("e")} AS started_at,
+         e.provenance_json, e.provenance_audit_verdict
+         FROM depeg_events_with_provenance e
+        WHERE e.started_at >= ?
+          AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}`,
+    ).bind(todayStartSec - DAY_SECONDS).all<PegEventDayRow>();
+    const counts = countPegEventDays((rows.results ?? []).map((row) => ({
+      stablecoinId: row.stablecoin_id,
+      startedAt: row.started_at,
+      provenance: { auditVerdict: storedAuditVerdict(row) },
+    })), nowSec);
+    return { kind: "ok", today: counts.today, yesterday: counts.yesterday };
+  } catch (error) {
+    logWorkerEventArgs("api", "warn",
+      "[peg-summary] depeg event day-count query failed:",
+      error instanceof Error ? error.message : error,
+    );
+    return { kind: "unavailable", reason: "peg-event-day-count-read-failed" };
+  }
 }
 
 async function resolveCachedEventDayCounts(
   db: D1Database,
   payload: { computedAtSec: number; depegEventsToday: number; depegEventsYesterday: number },
   nowSec: number,
-): Promise<{ today: number; yesterday: number }> {
+): Promise<PegEventDayCountRead> {
   if (bucketUnixSecondsToUtcDay(payload.computedAtSec) === bucketUnixSecondsToUtcDay(nowSec)) {
-    return { today: payload.depegEventsToday, yesterday: payload.depegEventsYesterday };
+    return { kind: "ok", today: payload.depegEventsToday, yesterday: payload.depegEventsYesterday };
   }
-  const counts = await loadPegEventDayCounts(db, nowSec);
-  return { today: counts.today, yesterday: counts.yesterday };
+  return loadPegEventDayCounts(db, nowSec);
+}
+
+function eventDayCountsUnavailable(reason: "peg-event-day-count-read-failed"): Response {
+  return jsonResponse({
+    error: "Canonical depeg event day counters unavailable",
+    reason,
+  }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
 }
 
 export const __pegSummaryTestHooks = {
@@ -195,6 +223,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   if (pegAnalyticsCache.kind === "ok") {
     pegDataById = pegAnalyticsCache.pegDataById;
     const counts = await resolveCachedEventDayCounts(db, pegAnalyticsCache.payload, now);
+    if (counts.kind !== "ok") return eventDayCountsUnavailable(counts.reason);
     depegEventsToday = counts.today;
     depegEventsYesterday = counts.yesterday;
     freshnessAsOf = Math.min(freshnessAsOf, pegAnalyticsCache.payload.computedAtSec);
@@ -219,6 +248,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       }
       pegDataById = retained.pegDataById;
       const counts = await resolveCachedEventDayCounts(db, retained.payload, now);
+      if (counts.kind !== "ok") return eventDayCountsUnavailable(counts.reason);
       depegEventsToday = counts.today;
       depegEventsYesterday = counts.yesterday;
       freshnessAsOf = Math.min(freshnessAsOf, retained.payload.computedAtSec);

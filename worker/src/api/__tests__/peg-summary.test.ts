@@ -1175,6 +1175,85 @@ describe("handlePegSummary", () => {
     expect(body.summary?.depegEventsYesterday).toBe(0);
   });
 
+  it("re-buckets a previous-day generation on the incident's projected onset, not the fragment clock", async () => {
+    vi.useFakeTimers();
+    const requestNowSec = Date.parse("2026-07-13T00:05:00Z") / 1000;
+    vi.setSystemTime(requestNowSec * 1000);
+    const publishedAtSec = Date.parse("2026-07-12T23:46:00Z") / 1000;
+    const firstOnsetSec = Date.parse("2026-07-12T23:00:00Z") / 1000;
+    const currentFragmentSec = Date.parse("2026-07-13T00:01:00Z") / 1000;
+    const independentTodaySec = Date.parse("2026-07-13T00:02:00Z") / 1000;
+    const incidentKey = `ddr2:${"a".repeat(32)}`;
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const stablecoins = JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 })] });
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("stablecoins", stablecoins, requestNowSec);
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("peg-analytics", JSON.stringify({
+          computedAtSec: publishedAtSec,
+          depegEventsToday: 1,
+          depegEventsYesterday: 0,
+          pegData: [makeCachedPegCoin()],
+        }), publishedAtSec);
+      const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
+        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at, start_price, peg_reference)
+        VALUES (?, 'usdt-tether', 'USDT', 'peggedUSD', 'below', 200, ?, NULL, 0.99, 1)`);
+      insertEvent.run(101, currentFragmentSec);
+      insertEvent.run(102, firstOnsetSec);
+      insertEvent.run(103, independentTodaySec);
+      const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+        (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1700000100)`);
+      insertLink.run(incidentKey, 101);
+      insertLink.run(incidentKey, 102);
+      sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+        (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+         first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
+         superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+        VALUES (?, 'usdt-tether', 'USD', 'below', 102, 101, ?, ?, 200, 'active', NULL, ?, 1700000100, 1700000100)`)
+        .run(incidentKey, firstOnsetSec, currentFragmentSec, "a".repeat(64));
+
+      const body = await readJsonResponse(await handlePegSummary(db), 200) as {
+        summary: { depegEventsToday: number; depegEventsYesterday: number };
+      };
+      // Event 101's current fragment started today, but its incident's first
+      // onset was yesterday: the producer and /api/depeg-events count it there.
+      expect(body.summary).toMatchObject({ depegEventsToday: 1, depegEventsYesterday: 1 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("returns an explicit 503 when the midnight re-bucketing read fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse("2026-07-13T00:05:00Z"));
+    const publishedAtSec = Date.parse("2026-07-12T23:46:00Z") / 1000;
+    const stablecoins = JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 })] });
+    const db = mockD1([
+      { match: "cache", matchBinds: ["stablecoins"], rows: [{
+        key: "stablecoins", value: stablecoins, updated_at: publishedAtSec,
+      }] },
+      { match: "cache", matchBinds: ["peg-analytics"], rows: [{
+        key: "peg-analytics", updated_at: publishedAtSec,
+        value: JSON.stringify({
+          computedAtSec: publishedAtSec,
+          depegEventsToday: 3,
+          depegEventsYesterday: 4,
+          pegData: [makeCachedPegCoin()],
+        }),
+      }] },
+      { match: "depeg_events_with_provenance", rows: [], throwError: new Error("D1 unavailable") },
+      { match: "dex_prices", rows: [] },
+    ]);
+
+    const res = await handlePegSummary(db);
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(await readJsonResponse(res, 503)).toMatchObject({
+      error: expect.stringContaining("depeg event"),
+      reason: "peg-event-day-count-read-failed",
+    });
+  });
+
   it("serves a previous-day accepted generation across midnight without recomputing", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(Date.parse("2026-07-13T00:05:00Z"));

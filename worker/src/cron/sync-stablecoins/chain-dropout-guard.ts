@@ -160,6 +160,27 @@ function setChainCurrent(candidate: Candidate, value: number | null): void {
     rows[label].current = value == null ? null : weightTotal > 0 ? value * weights[index] / weightTotal : index === 0 ? value : 0;
   });
 }
+type ChainHistoryBucket = "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth";
+/**
+ * The provider aggregate's history buckets sum only the chains present in this packet, while a carried
+ * chain enters the headline at its frozen baseline. A bucket therefore keeps the provider's meaning only
+ * when that chain's own packet row still observed exactly the carried baseline (the carried chain's
+ * window change is then zero). An absent row (BUIDL/TRYB) or a bucket that has aged away from the
+ * baseline would pair the carried total against a different composition and must stay unavailable (R1).
+ */
+function carriedHistoryBucketObserved(
+  asset: PeggedAsset,
+  unrepaired: readonly Candidate[],
+  key: ChainHistoryBucket,
+): boolean {
+  const canonical = canonicalizeChainCirculating(asset.chainCirculating);
+  return unrepaired.every((candidate) => {
+    const bucket = candidate.state.chainId
+      ? canonical.get(candidate.state.chainId)?.[key]
+      : normalizeChainSupplyValue(asset.chainCirculating?.[candidate.state.chainLabel]?.[key]);
+    return bucket != null && bucket === candidate.state.baselineUsd;
+  });
+}
 function repair(candidate: Candidate, valueUsd: number, observedAt: number, resolution: "onchain-total-supply" | "defillama-chain-history"): void {
   setChainCurrent(candidate, valueUsd);
   candidate.asset.circulating![candidate.pegKey] = (candidate.asset.circulating![candidate.pegKey] ?? 0) + valueUsd - (candidate.evidence.listCurrentUsd ?? 0);
@@ -581,12 +602,13 @@ export async function guardChainDropouts(input: {
       asset.supplyRestored = true;
       // The provider's aggregate history sums only the chains present in this
       // packet; the carried total re-adds the dropped chains, so pairing the two
-      // would publish a synthetic move (R1: a carried generation keeps its own
-      // history, and here that history is partial). The change stays unavailable
-      // until a fresh observed packet lands.
-      asset.circulatingPrevDay = null;
-      asset.circulatingPrevWeek = null;
-      asset.circulatingPrevMonth = null;
+      // would publish a synthetic move (R1). An observed bucket that already
+      // equals the carried baseline keeps its provider history (the carried
+      // chain's change is zero); an absent chain, an aged-away bucket or an
+      // ambiguous held total leaves the change unavailable until a fresh packet.
+      for (const bucket of ["circulatingPrevDay", "circulatingPrevWeek", "circulatingPrevMonth"] as const) {
+        if (ambiguous || !carriedHistoryBucketObserved(asset, unrepaired, bucket)) asset[bucket] = null;
+      }
       const carriedClocks = unrepaired
         .map((candidate) => candidate.evidence.baselineObservedAt)
         .filter((clock): clock is number => typeof clock === "number" && Number.isSafeInteger(clock) && clock > 0);

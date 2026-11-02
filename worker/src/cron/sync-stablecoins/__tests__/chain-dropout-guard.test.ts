@@ -282,6 +282,78 @@ describe("chain dropout guard", () => {
     expect(getPrevMonthRawOrNull(asset)).toBeNull();
   });
 
+  it("keeps a carried chain's observed history bucket when it already equals its baseline", async () => {
+    // The dropped chain's packet row is present and still reports the carried
+    // baseline as its own previous-day/week/month bucket, so the provider
+    // aggregate history describes the same composition the carried headline
+    // publishes: change1d/7d/30d are observable zeros, not unavailable.
+    const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+    const asset: PeggedAsset = {
+      ...usdg(),
+      circulating: { peggedUSD: 900_000_000 },
+      circulatingPrevDay: { peggedUSD: 1_000_000_000 },
+      circulatingPrevWeek: { peggedUSD: 1_000_000_000 },
+      circulatingPrevMonth: { peggedUSD: 1_000_000_000 },
+      chains: ["Ethereum", "X Layer"],
+      chainCirculating: {
+        Ethereum: { current: 900_000_000, circulatingPrevDay: 900_000_000 },
+        "X Layer": {
+          current: 0,
+          circulatingPrevDay: 100_000_000,
+          circulatingPrevWeek: 100_000_000,
+          circulatingPrevMonth: 100_000_000,
+        },
+      },
+    };
+
+    const result = await guardChainDropouts({ assets: [asset], now, state: { version: 1, pairs: {} } });
+
+    expect(result.quarantinedAssetIds).toEqual(["usdg-paxos"]);
+    expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined" } });
+    expect(getCirculatingRawOrNull(asset)).toBe(1_000_000_000);
+    expect(getPrevDayRawOrNull(asset)).toBe(1_000_000_000);
+    expect(getPrevWeekRawOrNull(asset)).toBe(1_000_000_000);
+    expect(getPrevMonthRawOrNull(asset)).toBe(1_000_000_000);
+  });
+
+  it("withholds a carried chain's history bucket once its own packet bucket leaves the baseline", async () => {
+    // One day into the carry the packet row still exists, but its previous-day
+    // bucket has aged to zero while the baseline stays frozen: the aggregate
+    // day delta would be synthetic, while the untouched week/month buckets
+    // still observe the baseline.
+    const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [JSON.stringify(["usdg-paxos", "xlayer"])]: {
+        assetId: "usdg-paxos", chainLabel: "X Layer", chainId: "xlayer",
+        baselineUsd: 100_000_000, baselineObservedAt: now - DAY, baselineSource: "state", quarantinedSince: now - DAY,
+      },
+    } };
+    const asset: PeggedAsset = {
+      ...usdg(),
+      circulating: { peggedUSD: 900_000_000 },
+      circulatingPrevDay: { peggedUSD: 900_000_000 },
+      circulatingPrevWeek: { peggedUSD: 1_000_000_000 },
+      circulatingPrevMonth: { peggedUSD: 1_000_000_000 },
+      chains: ["Ethereum", "X Layer"],
+      chainCirculating: {
+        Ethereum: { current: 900_000_000, circulatingPrevDay: 900_000_000 },
+        "X Layer": {
+          current: 0,
+          circulatingPrevDay: 0,
+          circulatingPrevWeek: 100_000_000,
+          circulatingPrevMonth: 100_000_000,
+        },
+      },
+    };
+
+    await guardChainDropouts({ assets: [asset], now, state });
+
+    expect(getCirculatingRawOrNull(asset)).toBe(1_000_000_000);
+    expect(getPrevDayRawOrNull(asset)).toBeNull();
+    expect(getPrevWeekRawOrNull(asset)).toBe(1_000_000_000);
+    expect(getPrevMonthRawOrNull(asset)).toBe(1_000_000_000);
+  });
+
   it.each([false, true])("keeps omitted quarantined chains sticky across generations (empty map: %s)", async (emptyMap) => {
     const initial: PeggedAsset = {
       ...usdg(), id: "usdc-circle", circulating: { peggedUSD: 20_000_000 },
