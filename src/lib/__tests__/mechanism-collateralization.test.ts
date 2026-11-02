@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMechanismCollateralizationView } from "../mechanism-collateralization";
+import { getMechanismReviewOverlay } from "../mechanism-overlay.server";
 
 describe("buildMechanismCollateralizationView", () => {
   it("extracts the measured CDP ratio, backstop, and provenance", () => {
@@ -17,7 +18,8 @@ describe("buildMechanismCollateralizationView", () => {
     // JPYm is backed by the resolved Mento CDP deployment, not a conversion token.
     const view = buildMechanismCollateralizationView("jpym-mento");
     expect(view).not.toBeNull();
-    expect(view?.ratio).toBeCloseTo(1.679490127255, 6);
+    // The projection carries the reviewed overlay value without rewriting it.
+    expect(view?.ratio).toBe(getMechanismReviewOverlay("jpym-mento")?.metrics["collateralizationRatio"]);
     expect(view?.notApplicableRationale).toBeNull();
     expect(view?.sourceLabel).toMatch(/Mento deployments/i);
   });

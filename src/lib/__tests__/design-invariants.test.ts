@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { inspectComponentStyles, isComponentSourceFile } from "./design-invariants.test-support";
+import { inspectComponentStyles, inspectComponentTree, isComponentSourceFile } from "./design-invariants.test-support";
 
 /**
  * Design invariants guarded at the repo level so a future commit cannot
@@ -54,11 +54,13 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-// Collected once: both invariants scan the same component tree.
-const COMPONENT_SOURCES = walk(COMPONENTS_DIR).map((file) => {
-  const rel = toPosixRel(file);
-  return { rel, violations: inspectComponentStyles(rel, readFileSync(file, "utf8")) };
-});
+// Collected once: both invariants scan the same component tree through one
+// shared TypeScript Program instead of one Program per source file.
+const COMPONENT_SOURCES = (() => {
+  const files = walk(COMPONENTS_DIR).map((file) => ({ path: toPosixRel(file), source: readFileSync(file, "utf8") }));
+  const violations = inspectComponentTree(files);
+  return files.map(({ path }) => ({ rel: path, violations: violations.get(path) ?? [] }));
+})();
 
 describe("design invariants", () => {
   it("never uses Tailwind max-* variants (this pipeline does not emit them)", () => {

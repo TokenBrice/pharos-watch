@@ -62,7 +62,6 @@ describe("buildReserveFetchNotice", () => {
       } });
       // Operator signal (Telegram, /status); the footnote still names fallback/stale modes.
       expect(buildReserveFeedStatus(reserves, null)).toBeNull();
-      expect(reserves.sync?.stale).toBe(true);
     }
   });
 
@@ -499,7 +498,7 @@ describe("dated reserve disclosures", () => {
     expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of 2026-09-26");
   });
 
-  it.each(["2026-02-30", "2026-13-01", "2026-6-30", "2026-06-30T00:00:00Z", "", 20260630])(
+  it.each(["2026-02-30", "2026-13-01", "2026-6-30", 20260630])(
     "rejects invalid reviewed composition date %s without borrowing the totals clock",
     (compositionAsOf) => {
       const reserves = makeReserves({

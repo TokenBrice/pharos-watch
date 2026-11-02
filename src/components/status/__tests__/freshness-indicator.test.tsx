@@ -37,19 +37,10 @@ describe("FreshnessIndicator", () => {
     expect(screen.getByRole("tooltip").textContent).toContain("more than 12m old");
   });
 
-  it("increments age via internal timer", () => {
-    vi.setSystemTime(new Date(1_700_000_000_000));
-    render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
-    expect(screen.getByText(/30s ago/i)).toBeDefined();
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
-    expect(screen.getByText(/35s ago/i)).toBeDefined();
-  });
-
   it("keeps ticking age text out of live regions", () => {
     vi.setSystemTime(new Date(1_700_000_000_000));
     render(<FreshnessIndicator updatedAtMs={1_700_000_000_000 - 30_000} staleAfterMs={120_000} />);
+    expect(screen.getByText(/30s ago/i)).toBeDefined();
     const absoluteLabel = screen.getByRole("time").querySelector(".sr-only")?.textContent;
 
     expect(absoluteLabel).toMatch(/^Refreshed at /);

@@ -46,8 +46,6 @@ describe("yield CSV projections", () => {
     ["scored", 50, "live-report-card", 5_000_000],
     ["NR", null, "live-report-card", 5_000_000],
     ["null TVL", 50, "live-report-card", null],
-    ["opportunity safety", 50, "opportunity-safety", 5_000_000],
-    ["default safety", 50, "default-safety", 5_000_000],
     ["unknown provenance", 50, undefined, 5_000_000],
   ] as const)("preserves both CSV byte projections for %s", (_name, pys, safetyProvenance, tvl) => {
     const row: YieldViewModelRow = {

@@ -65,7 +65,6 @@ type ComparisonRow = ReturnType<typeof buildComparisonAtAGlanceRows>[number];
 
 const EXAMINATION_SCOPE = "Examination; assets and liabilities; full liability reconciliation";
 const ATTESTATION_PARTIAL_SCOPE = "Attestation; assets and liabilities; partial liability reconciliation";
-const ATTESTATION_FULL_SCOPE = "Attestation; assets and liabilities; full liability reconciliation";
 const USDE_SCOPE = "Method not established; assets only; liability reconciliation unknown";
 
 const VERIFIED_REPORT: LatestReport = {
@@ -108,32 +107,15 @@ function findRow(rows: readonly ComparisonRow[], label: string): ComparisonRow |
   return rows.find((row) => row.label === label);
 }
 
-const PILOT_REPORT_FACTS: Record<string, { left: { period: string; scope: string }; right: { period: string; scope: string } }> = {
-  "usdc-circle-vs-usdg-paxos": {
-    left: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-    right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-  },
-  "usdt-tether-vs-usdg-paxos": {
-    left: { period: "2026-09-30", scope: ATTESTATION_PARTIAL_SCOPE },
-    right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-  },
-  "rlusd-ripple-vs-usdc-circle": {
-    left: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-    right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-  },
-  "paxg-paxos-vs-xaut-tether": {
-    left: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-    right: { period: "2026-06-30", scope: ATTESTATION_FULL_SCOPE },
-  },
-  "usdt-tether-vs-usdc-circle": {
-    left: { period: "2026-09-30", scope: ATTESTATION_PARTIAL_SCOPE },
-    right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
-  },
-  "usde-ethena-vs-usds-sky": {
-    left: { period: "2026-09-27", scope: USDE_SCOPE },
-    right: { period: "Not recorded", scope: "Not recorded" },
-  },
-};
+/** The reviewed report projection: the coin's verified latestReport, never a storage type. */
+function expectedReportFacts(coin: StablecoinMeta): { period: string; scope: string } {
+  const report = coin.proofOfReserves?.latestReport;
+  if (!report || report.confidence !== "verified") return { period: "Not recorded", scope: "Not recorded" };
+  return {
+    period: report.periodEnd ?? "Not recorded",
+    scope: `${PROOF_ASSURANCE_METHOD_LABELS[report.assuranceMethod]}; ${PROOF_ASSURANCE_SCOPE_LABELS[report.scope]}; ${LIABILITY_RECONCILIATION_LABELS[report.liabilityReconciliation]}`,
+  };
+}
 
 const REDEMPTION_FACTS: Record<
   string,
@@ -326,14 +308,18 @@ describe("comparison evidence pilot scope", () => {
 
 describe("reviewed report evidence", () => {
   it("renders the reviewed report period and scope for every pilot pair", () => {
-    for (const [slug, expected] of Object.entries(PILOT_REPORT_FACTS)) {
-      const rows = buildComparisonAtAGlanceRows(getPage(slug), NOW_SEC);
-      expect(findRow(rows, "Latest reviewed report period"), slug).toEqual(
-        expect.objectContaining({ left: expected.left.period, right: expected.right.period }),
-      );
-      expect(findRow(rows, "Assurance scope"), slug).toEqual(
-        expect.objectContaining({ left: expected.left.scope, right: expected.right.scope }),
-      );
+    for (const slug of COMPARISON_EVIDENCE_PILOT_SLUGS) {
+      const page = getPage(slug);
+      const rows = buildComparisonAtAGlanceRows(page, NOW_SEC);
+      for (const [side, coin] of [["left", page.left], ["right", page.right]] as const) {
+        const expected = expectedReportFacts(coin);
+        expect(findRow(rows, "Latest reviewed report period"), slug).toEqual(
+          expect.objectContaining({ [side]: expected.period }),
+        );
+        expect(findRow(rows, "Assurance scope"), slug).toEqual(
+          expect.objectContaining({ [side]: expected.scope }),
+        );
+      }
     }
   });
 

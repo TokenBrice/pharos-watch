@@ -212,8 +212,12 @@ describe("ReservesSection", () => {
     const qualitySummary = projectReserveQualityClientSummary(coin)!;
     expect(qualitySummary.sliceCount).toBeGreaterThan(5);
     renderSection({ coin, qualitySummary });
-    const summary = screen.getByLabelText("Remaining reserve slices").closest("details")!.querySelector("summary")!;
-    expect(summary.textContent).toContain("10 more groups");
+    const rest = screen.getByLabelText("Remaining reserve slices");
+    const summary = rest.closest("details")!.querySelector("summary")!;
+    const renderedGroups = within(rest).getAllByRole("listitem");
+    // The disclosure counts the merged groups it renders, never the slices they cover.
+    expect(renderedGroups.length).toBeGreaterThan(0);
+    expect(summary.textContent).toContain(`${renderedGroups.length} more groups`);
     expect(summary.textContent).not.toMatch(/more slices/);
   });
 

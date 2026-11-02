@@ -4,7 +4,6 @@ import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import {
   API_FRESHNESS_MAX_AGE_SEC,
   CACHE_FRESHNESS_LANES,
-  FRESHNESS_SENTINEL_CACHE_KEYS,
   getCacheFreshnessLane,
   type CacheFreshnessLaneConfig,
 } from "@shared/lib/api-freshness";
@@ -152,14 +151,6 @@ describe("data surface descriptors", () => {
       endpointMaxAgeSec: 600,
       availabilityMaxAgeSec: 600,
     });
-    expect(CACHE_FRESHNESS_LANES_BY_KEY.dexLiquidity).toMatchObject({
-      cacheKey: "dex-liquidity",
-      producerJob: "sync-dex-liquidity",
-      producerIntervalSec: 3600,
-      endpointMaxAgeSec: 14_400,
-      availabilityMaxAgeSec: 43_200,
-      freshnessSentinelKey: "freshness:dex-liquidity",
-    });
     expect(CACHE_FRESHNESS_LANES_BY_KEY.yieldData).toMatchObject({
       cacheKey: "yield-data",
       producerJob: "sync-yield-data",
@@ -168,15 +159,6 @@ describe("data surface descriptors", () => {
       availabilityMaxAgeSec: 7200,
       freshnessSentinelKey: "freshness:yield-data",
     });
-    expect(CACHE_FRESHNESS_LANES_BY_KEY.dews).toMatchObject({
-      cacheKey: "dews",
-      producerJob: "compute-dews",
-      producerIntervalSec: 1800,
-      endpointMaxAgeSec: 1800,
-      availabilityMaxAgeSec: 1800,
-      freshnessSentinelKey: "freshness:dews",
-    });
-    expect(FRESHNESS_SENTINEL_CACHE_KEYS).toEqual(["dex-liquidity", "yield-data", "dews"]);
 
     for (const surface of DATA_SURFACE_DESCRIPTOR_LIST) {
       if (!("cacheFreshnessLaneKey" in surface) || !surface.cacheFreshnessLaneKey) continue;

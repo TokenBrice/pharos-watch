@@ -27,7 +27,6 @@ vi.mock("@shared/lib/runtime-origins", () => ({
 import {
   createApiQueryFn,
   createApiPollingQueryOptions,
-  getPollingWindow,
   createStaticQueryOptions,
 } from "../use-api-query";
 
@@ -113,16 +112,8 @@ describe("use-api-query", () => {
   });
 
   // ------------------------------------------------------------------
-  // getPollingWindow / createApiPollingQueryOptions
+  // createApiPollingQueryOptions
   // ------------------------------------------------------------------
-  describe("getPollingWindow", () => {
-    it("encodes staleTime = interval, refetchInterval = 2× interval", () => {
-      const { staleTime, refetchInterval } = getPollingWindow(30_000);
-      expect(staleTime).toBe(30_000);
-      expect(refetchInterval).toBe(60_000);
-    });
-  });
-
   describe("createApiPollingQueryOptions", () => {
 
     it("respects enabled=false and retry override", () => {
