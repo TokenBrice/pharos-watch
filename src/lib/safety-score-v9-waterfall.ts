@@ -108,6 +108,21 @@ export function buildScoreWaterfall(card: WaterfallCard): ScoreWaterfallStep[] {
       // the reason here would print the same sentence twice.
       detail: null,
     });
+  } else {
+    const last = steps[steps.length - 1];
+    // An asset premium can be truncated by its own publication ceiling rather
+    // than a card cap. Rounding alone cannot explain a gap wider than the
+    // published integer, so name that ceiling instead of jumping silently.
+    if (last && last.value > published && published !== Math.round(last.value)) {
+      steps.push({
+        key: "publication-maximum",
+        label: "Publication maximum",
+        kind: "cap",
+        operator: `max ${published.toFixed(0)}`,
+        value: published,
+        detail: null,
+      });
+    }
   }
 
   // A single stage that never moved the number explains nothing the headline

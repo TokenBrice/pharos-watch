@@ -52,6 +52,32 @@ export function SafetyScoresTechnicalDetails() {
           without the fields remain unlabelled. Exit sizes a continuous 5% of usable supply within $1m–$25m; smaller
           execution receipts remain lower bounds, not proof of full-request completion.
         </p>
+        <p>
+          A disclosure the redemption run admitted as fresh is carried forward until that run&apos;s own budget (the
+          next scheduled refresh plus one retry) expires, keeping its original observation time, so a source budget
+          lapsing between runs does not drop the route.
+        </p>
+        <p>
+          A DEX route whose measured observation ages past its freshness window is derated rather than discarded: it
+          keeps its place in the exit capacity denominator at reduced credit, because an expired producer window is
+          weaker evidence rather than absent evidence. A route with no retained observation at all still fails closed,
+          as does a stale non-atomic redemption route. Dropping expired routes outright previously let an ordinary
+          producer-schedule delay move a score with no market event behind it, and propagated that move to every asset
+          backed by the affected one.
+        </p>
+        <div className="space-y-2">
+          <h3 className="text-foreground font-medium">Grade stability</h3>
+          <p>
+            A published letter grade changes only after two consecutive publications compute the same new band. Until
+            then the card keeps its previous grade beside the raw score and discloses the computed band
+            (<code className="text-xs">gradeHold</code>). Scores are never held or smoothed, and moves into or out of NR
+            or a pipeline gap publish immediately. When a run&apos;s deployment-supply attribution misses an asset, the
+            last admitted attribution is reused for one further 30-minute cycle, keeping its original observation time;
+            after that the existing unavailable-supply treatment applies. Likewise, when the stablecoin supply sync has not
+            re-observed an asset, its last observed circulating supply stays usable for one further hour beyond the
+            30-minute supply budget, keeping its original observation time; a fresh observation always replaces it.
+          </p>
+        </div>
         <p className="pharos-numeric">
           candidate = weakestPriced + {formula.compensabilityHeadroom} × tanh((weightedQuality − weakestPriced) /{" "}
           {formula.compensabilityHeadroom})

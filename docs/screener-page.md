@@ -16,11 +16,11 @@ Supply uses `getCirculatingRawOrNull()`. Missing assets or absent/empty/invalid 
 
 ## URL Contract
 
-`SCREENER_URL_SCHEMA` is the sole key/validation authority. Its families cover exact identity, stress/size, safety, classification/custody, lifecycle/control and mint authority. Enum lists are comma-delimited; minimum floors are inclusive. Writers omit defaults and clear only owned keys, preserving unrelated query parameters.
+`SCREENER_URL_SCHEMA` is the sole key/validation authority. Its families cover exact identity, stress/size, safety, classification/custody, lifecycle/control and mint authority. Safety evidence values mirror the published card's V9 level (`strong`, `adequate`, `limited`, `insufficient`), with `nr` for unrated rows; the badge, filter and `safety_evidence` export all use that value, never a downgraded alias. Enum lists are comma-delimited; minimum floors are inclusive. Writers omit defaults and clear only owned keys, preserving unrelated query parameters.
 
 `coins` accepts up to eight recognized tracked IDs and takes precedence over broad projection filters: a relaxed Picker recommendation cannot disappear on arrival. Legacy `mechanism=<slug>` normalizes once after hydration to `mechanisms=<slug>`; without lifecycle state it pins `lifecycle=active`. Invalid/deprecated aliases are removed; canonical writers never emit them.
 
-Palette `screen` commands encode only admitted schema fields, and the preview counts those encoded constraints. Repeated minima take the largest floor; repeated maxima take the smallest ceiling; enum-list values accumulate without duplicates. Contradictory bounds or an unrepresentable scalar produce non-runnable feedback rather than an unfiltered destination. Existing strict-operator aliases remain inclusive, and non-positive supply ceilings remain omitted.
+Palette `screen` commands encode only admitted schema fields, and the preview counts those encoded constraints. Repeated minima take the largest floor; repeated maxima take the smallest ceiling; enum-list values accumulate without duplicates. Contradictory bounds or an unrepresentable scalar produce non-runnable feedback rather than an unfiltered destination. Raising the visible DEWS or supply floor past a non-default URL ceiling clears that ceiling in the same update, so a hidden bound cannot empty the screen. Existing strict-operator aliases remain inclusive, and non-positive supply ceilings remain omitted.
 
 ## Loading, Error, And Freshness
 

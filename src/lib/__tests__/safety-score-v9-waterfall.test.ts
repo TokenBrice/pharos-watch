@@ -114,6 +114,66 @@ describe("buildScoreWaterfall", () => {
     expect(steps.at(-1)?.kind).toBe("published");
   });
 
+  it("explains a premium truncated by the publication maximum", () => {
+    // USDT's real shape: quality 82.5364, +12.0 premium to 94.5364, published
+    // at the 87 A+ floor. The premium row keeps its pre-publication value.
+    const base = cardWithStages({
+      aggregatedQualityScore: 82.5364,
+      pegMultiplier: 1,
+      baseAssetScore: 82.5364,
+      deploymentAdjustmentPoints: 0,
+      deploymentAdjustedScore: 82.5364,
+      preCapScore: 94.5364,
+      publishedScore: 87,
+    });
+    const card = {
+      ...base,
+      scoreTrace: {
+        ...base.scoreTrace,
+        scoreAdjustments: [
+          {
+            source: "asset-premium",
+            kind: "market-anchor-longevity",
+            label: "#1 & Longevity Premium",
+            configuredPoints: 12,
+            appliedPoints: 12,
+            scoreBefore: 82.5364,
+            scoreAfter: 94.5364,
+            publishedScoreBefore: 83,
+            publishedScoreAfter: 87,
+          },
+        ],
+      },
+    } as SafetyScoreV9CurrentCard;
+
+    const steps = buildScoreWaterfall(card);
+    expect(steps.map((step) => step.key)).toEqual([
+      "quality",
+      "adjustment-market-anchor-longevity",
+      "publication-maximum",
+    ]);
+    expect(steps[1]).toMatchObject({ operator: "+12.0", value: 94.5364 });
+    expect(steps[2]).toMatchObject({
+      label: "Publication maximum",
+      operator: "max 87",
+      value: 87,
+    });
+  });
+
+  it("does not invent a publication maximum for ordinary rounding", () => {
+    const card = cardWithStages({
+      aggregatedQualityScore: 86.7,
+      pegMultiplier: 0.95,
+      baseAssetScore: 82.365,
+      deploymentAdjustmentPoints: 0,
+      deploymentAdjustedScore: 82.365,
+      preCapScore: 82.365,
+      publishedScore: 82,
+    });
+
+    expect(buildScoreWaterfall(card).map((step) => step.key)).toEqual(["quality", "peg", "published"]);
+  });
+
   it("keeps the three-pillar caption when only a subcomponent carries partial evidence", () => {
     const base = makeV9Card();
     const card = {

@@ -44,7 +44,7 @@ import type {
 export const PEG_VALUES = Object.keys(PEG_METADATA) as readonly PegCurrency[];
 export const SAFETY_GRADE_VALUES = ReportCardGradeSchema.options;
 const SCREENER_COIN_VALUES = CLIENT_TRACKED_STABLECOINS.map((coin) => coin.id);
-export const SAFETY_EVIDENCE_VALUES = ["strong", "adequate", "limited", "nr"] as const;
+export const SAFETY_EVIDENCE_VALUES = ["strong", "adequate", "limited", "insufficient", "nr"] as const;
 export type SafetyEvidenceValue = (typeof SAFETY_EVIDENCE_VALUES)[number];
 
 /**

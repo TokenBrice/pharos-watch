@@ -134,6 +134,22 @@ describe("ScreenerTable desktop table", () => {
     });
   });
 
+  it("renders Insufficient evidence instead of downgrading it to Limited", async () => {
+    installViewportMatchMedia(1400);
+
+    render(
+      <ScreenerTable
+        rows={[{ ...row, safetyEvidence: "insufficient" }]}
+        dataState="ready"
+        hasActiveFilters={false}
+        sort={makeSort()}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getAllByText("Insufficient").length).toBeGreaterThan(0));
+    expect(screen.queryByText("Limited")).toBeNull();
+  });
+
   it("states the Peg Score's real tracking window in the header tooltip", async () => {
     installViewportMatchMedia(1400);
 
