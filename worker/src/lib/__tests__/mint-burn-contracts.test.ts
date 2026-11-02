@@ -287,7 +287,6 @@ describe("mint-burn-contracts Ethereum transfer expansion", () => {
     { stablecoinId: "apxusd-apyx", symbol: "apxUSD", address: "0x98a878b1cd98131b271883b390f68d2c90674665", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "u-united-stables", symbol: "U", address: "0xce24439f2d9c6a2289f741120fe202248b666666", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "a7a5-old-vector", symbol: "A7A5", address: "0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9", decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000 },
-    { stablecoinId: "usda-avalon", symbol: "USDA", address: "0x8a60e489004ca22d775c5f2c657598278d17d9c2", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "brz-transfero", symbol: "BRZ", address: "0x01d33fd36ec67c6ada32cf36b31e88ee190b1839", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "kag-kinesis", symbol: "KAG", address: "0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e", decimals: 18, dustThreshold: 10, startBlock: 21_900_000 },
     { stablecoinId: "satusd-river", symbol: "satUSD", address: "0x1958853a8be062dc4f401750eb233f5850f0d0d2", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },

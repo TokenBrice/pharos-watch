@@ -22,7 +22,8 @@ vi.mock("../sources-optional", async (importOriginal) => {
 });
 
 const now = 1790467200;
-const excluded = ["vbill-vaneck", "stkgho-umbrella-aave", "usdb-blast", "bc3m-backed"];
+const excluded = ["vbill-vaneck", "stkgho-umbrella-aave", "bc3m-backed"];
+const frozenExcluded = ["usdb-blast", "usda-avalon"];
 
 function benchmarks() {
   const registry = baseEvaluationInput().riskFreeRates;
@@ -51,6 +52,10 @@ describe("derived source admission", () => {
     for (const id of excluded) {
       expect(result.resolved.some((entry) => entry.id === id && entry.yield?.dataSource === "price-derived")).toBe(false);
       expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === id)?.strategies.some((entry) => entry.kind === "price-derived")).toBe(false);
+    }
+    for (const id of frozenExcluded) {
+      expect(result.resolved.some((entry) => entry.id === id && entry.yield?.dataSource === "price-derived")).toBe(false);
+      expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === id)).toBeUndefined();
     }
     for (const id of ["aa-falconx-mev-capital", "stusd-stoneyield"]) {
       expect(result.resolved.find((entry) => entry.id === id && entry.yield?.dataSource === "price-derived")?.yield?.currentApy).toBeCloseTo((Math.pow(price, 365.25 / 30) - 1) * 100);

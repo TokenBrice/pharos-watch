@@ -10,13 +10,6 @@ export const YIELD_VARIANT_MAP: Record<string, YieldVariant> = {
     yieldSource: "Neutrl savings (sNUSD)",
     yieldType: "lending-vault",
   },
-  // Avalon USDa -> sUSDa (savings wrapper, $162M TVL)
-  "usda-avalon": {
-    variantSymbol: "sUSDa",
-    variantChain: "ethereum",
-    yieldSource: "Avalon savings (sUSDa)",
-    yieldType: "lending-vault",
-  },
   // infiniFi USD -> siUSD (savings wrapper, $157M TVL)
   "iusd-infinifi": {
     variantSymbol: "siUSD",

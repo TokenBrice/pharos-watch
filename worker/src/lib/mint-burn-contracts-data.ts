@@ -52,7 +52,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
 }> = [
   { stablecoinId: "u-united-stables", dustThreshold: 10_000 },
   { stablecoinId: "a7a5-old-vector", dustThreshold: 10_000 },
-  { stablecoinId: "usda-avalon", dustThreshold: 10_000 },
   { stablecoinId: "brz-transfero", dustThreshold: 10_000 },
   { stablecoinId: "kag-kinesis", dustThreshold: 10 },
   { stablecoinId: "satusd-river", dustThreshold: 10_000 },

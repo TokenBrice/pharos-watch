@@ -24,8 +24,14 @@ describe("detail shared modules regulatory slot", () => {
   });
 
   it("keeps the not-reviewed placeholder when the coin has no curated regime profile", () => {
-    const modules = sharedModulesFor("usda-avalon");
+    const modules = sharedModulesFor("xusd-babelfish");
     expect(modules.regulatoryStanding).toBeNull();
     expect(modules.regulatoryNotReviewed).toBe(true);
+  });
+
+  it("suppresses the not-reviewed placeholder for a frozen archive profile", () => {
+    const modules = sharedModulesFor("usda-avalon");
+    expect(modules.regulatoryStanding).toBeNull();
+    expect(modules.regulatoryNotReviewed).toBe(false);
   });
 });

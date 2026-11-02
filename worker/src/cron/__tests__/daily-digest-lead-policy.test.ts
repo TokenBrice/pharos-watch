@@ -111,15 +111,14 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
 
   it("scores severity on live deviation, not the frozen event peak", async () => {
     const { topDepegs } = await replayCollector(seedsFromFixture(fixture.inputData), nowSec);
-    const avalon = topDepegs.find((depeg) => depeg.stablecoinId === "usda-avalon");
-    expect(avalon).toBeDefined();
-    // Stored peak claims -3098 bps; the live price ($0.9821) is -179 bps.
-    expect(avalon?.currentBps).toBe(-179);
-    expect(avalon?.severityBasis).toBe("current");
-    expect(avalon?.bps).toBe(-3098);
-    // On the live basis this is a chronic shallow softness, not a critical
-    // depeg: the age-based suppression rules apply again.
-    expect(avalon?.suppressReason).toBeDefined();
+    const apxusd = topDepegs.find((depeg) => depeg.stablecoinId === "apxusd-apyx");
+    expect(apxusd).toBeDefined();
+    // Stored peak claims -3159 bps; the live price ($0.8430) is -1570 bps.
+    expect(apxusd?.currentBps).toBe(-1570);
+    expect(apxusd?.severityBasis).toBe("current");
+    expect(apxusd?.bps).toBe(-3159);
+    // On the live basis this is neither a severe collapse nor suppressed.
+    expect(apxusd?.suppressReason).toBeUndefined();
   });
 
   it("keeps a genuinely deep live depeg critical and unsuppressed", async () => {
@@ -299,7 +298,7 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
           peak_price: null, peg_reference: 1,
         },
         {
-          stablecoin_id: "usda-avalon", symbol: "USDA", peg_type: "peggedUSD",
+          stablecoin_id: "usda-anzens", symbol: "USDA", peg_type: "peggedUSD",
           direction: "below", peak_deviation_bps: 2_140, started_at: at - 61 * 3_600,
           peak_price: null, peg_reference: 1,
         },
@@ -307,13 +306,13 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     }]));
     for (const asset of [
       makeAsset({ id: "usda-alpha-partner", symbol: "USDA", price: 0.488, priceObservedAt: ctx.nowSec }),
-      makeAsset({ id: "usda-avalon", symbol: "USDA", price: 0.786, priceObservedAt: ctx.nowSec }),
+      makeAsset({ id: "usda-anzens", symbol: "USDA", price: 0.786, priceObservedAt: ctx.nowSec }),
     ]) {
       ctx.trackedStablecoinIds = new Set([...ctx.trackedStablecoinIds, asset.id]);
       ctx.stablecoinAssetById.set(asset.id, asset);
     }
     ctx.mcapById.set("usda-alpha-partner", 22_400_000);
-    ctx.mcapById.set("usda-avalon", 104_000_000);
+    ctx.mcapById.set("usda-anzens", 104_000_000);
 
     const collected = await collectActiveDepegs(ctx);
     const input: DigestInputData = {
@@ -327,7 +326,7 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     const depegCandidateIds = input.editorialCandidates
       .filter((entry) => entry.kind === "depeg")
       .map((entry) => entry.id);
-    expect(depegCandidateIds).toEqual(["depeg:usda-avalon:active", "depeg:usda-alpha-partner:active"]);
+    expect(depegCandidateIds).toEqual(["depeg:usda-anzens:active", "depeg:usda-alpha-partner:active"]);
 
     const [requirement] = buildCriticalDailyLeadRequirements(input) ?? [];
     expect(requirement?.severity).toBe("hard");
@@ -400,20 +399,28 @@ describe("depeg lifecycle flags (Batch 5)", () => {
     const { classifyDepegLifecycle } = await import("../../lib/depeg-lifecycle");
     const fixture = loadFixture("2026-07-18");
     const { topDepegs } = await replayCollector(seedsFromFixture(fixture.inputData), generatedAt(fixture.inputData));
-    const flags = classifyDepegLifecycle(
-      topDepegs.map((depeg) => ({
-        stablecoinId: depeg.stablecoinId ?? depeg.symbol,
-        symbol: depeg.symbol,
-        ageHours: depeg.ageHours,
-        currentBps: depeg.currentBps,
-        mcapUsd: depeg.mcapUsd,
-      })),
-    );
+    const lifecycleRows = topDepegs.map((depeg) => ({
+      stablecoinId: depeg.stablecoinId ?? depeg.symbol,
+      symbol: depeg.symbol,
+      ageHours: depeg.ageHours,
+      currentBps: depeg.currentBps,
+      mcapUsd: depeg.mcapUsd,
+    }));
+    lifecycleRows.push({
+      stablecoinId: "chronic-fixture",
+      symbol: "CHRONIC",
+      ageHours: 40 * 24,
+      currentBps: -100,
+      mcapUsd: 50_000_000,
+    });
+    const flags = classifyDepegLifecycle(lifecycleRows);
     const byId = new Map(flags.map((flag) => [flag.stablecoinId, flag.kind]));
     // pmUSD: $0.705 live, event ~80 days old -> a stalled collapse awaiting review.
     expect(byId.get("pmusd-precious-metals")).toBe("stalled-collapse");
-    // usda-avalon: -179 bps live, open since December -> chronic shallow, not a crisis.
-    expect(byId.get("usda-avalon")).toBe("chronic-shallow");
+    // A long-open shallow deviation remains a chronic review flag.
+    expect(byId.get("chronic-fixture")).toBe("chronic-shallow");
+    // usda-avalon is frozen, so its live quote no longer enters the active replay.
+    expect(byId.has("usda-avalon")).toBe(false);
     // apxUSD: -1,570 bps live -> neither shallow nor >=2,500; needs no ruling.
     expect(byId.has("apxusd-apyx")).toBe(false);
   });

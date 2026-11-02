@@ -315,19 +315,6 @@ describe("blacklist-contracts shared metadata alignment", () => {
     )!.events);
   });
 
-  it("tracks Avalon USDA blacklist events without a non-existent DestroyedBlackFunds event", () => {
-    const config = CONTRACT_CONFIGS.find(
-      (c) => c.stablecoinId === "usda-avalon" && c.chain.chainId === "ethereum",
-    );
-
-    expect(config).toBeDefined();
-    expect(config!.events.map((event) => event.signature)).toEqual([
-      "AddedBlackList(address)",
-      "RemovedBlackList(address)",
-    ]);
-    expect(getBlacklistEventBySignature(config!, "DestroyedBlackFunds")).toBeUndefined();
-  });
-
   it("returns undefined for an unknown topic hash", () => {
     const config = CONTRACT_CONFIGS[0];
     expect(getBlacklistEventByTopic(config, "0xdeadbeef")).toBeUndefined();

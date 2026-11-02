@@ -64,6 +64,26 @@ const BLAST_SUPPLY_RPC = {
   [`${BLAST_USDB}:0x18160ddd`]: 100n * 10n ** 18n,
   [`${BLAST_USDB}:0x313ce567`]: 18n,
 };
+// usdb-blast is frozen; the corpus replays the adapter with its archived config.
+const BLAST_USDB_COIN = {
+  id: "usdb-blast",
+  name: "USDB Blast",
+  symbol: "USDB",
+  liveReservesConfig: {
+    adapter: "blast-usdb-yield-manager",
+    version: 1,
+    semantics: "single-asset",
+    breakerScope: "usdb-blast",
+    inputs: { primary: { kind: "onchain-evm", chain: "ethereum", rpcMode: "public-rpc" } },
+    params: {
+      yieldManagerAddress: BLAST_YIELD_MANAGER,
+      supplyChain: "blast",
+      supplyTokenAddress: BLAST_USDB,
+      rpcUrl: "https://ethereum-rpc.publicnode.com",
+      supplyRpcUrl: "https://rpc.blast.io",
+    },
+  },
+} as unknown as StablecoinMeta;
 const SUPERSTATE_LIQUIDITY_URL = "https://api.superstate.com/v1/funds/liquidity";
 const SUPERSTATE_ORACLE = "0x289B5036cd942e619E1Ee48670F98d214E745AAC";
 const SUPERSTATE_TOKEN = "0x43415eB6ff9DB7E26A15b704e7A3eDCe97d31C4e";
@@ -237,6 +257,7 @@ const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
   // Synthetic RPC values retained from blast-usdb-yield-manager.test.ts.
   "blast-usdb-yield-manager": {
     coinId: "usdb-blast",
+    coin: BLAST_USDB_COIN,
     nowSec: 1_788_912_032,
     network: { rpc: { [`ethereum:${BLAST_YIELD_MANAGER}:0xd4c3eea0`]: 120n * 10n ** 18n, ...BLAST_SUPPLY_RPC } },
     expected: {

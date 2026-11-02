@@ -129,23 +129,6 @@ const USDT_EVENT_FAMILY: readonly BlacklistEventDef[] = [
   },
 ];
 
-// Avalon USDa exposes the legacy AddedBlackList/RemovedBlackList events, but
-// its verified ABI does not expose Tether's DestroyedBlackFunds event.
-const AVALON_USDA_EVENT_FAMILY: readonly BlacklistEventDef[] = [
-  {
-    signature: "AddedBlackList(address)",
-    topicHash: USDT_ADDED_BLACKLIST_TOPIC,
-    eventType: "blacklist",
-    hasAmount: false,
-  },
-  {
-    signature: "RemovedBlackList(address)",
-    topicHash: USDT_REMOVED_BLACKLIST_TOPIC,
-    eventType: "unblacklist",
-    hasAmount: false,
-  },
-];
-
 // --- USDT0 event definitions (Arbitrum and other USDT0-upgraded L2s) ---
 // These use indexed address params, so the address is in topics[1] not data.
 
@@ -796,12 +779,6 @@ const CONTRACT_CONFIG_SPECS: ContractEventConfigSpec[] = [
   // AddressesFrozen/AddressesUnFrozen events. Reuses the addressArrayData path
   // already used by USDTB / AID / TGBP deny-list batches.
   { chain: ETHEREUM, stablecoinId: "eurcv-societe-generale-forge", stablecoin: "EURCV", startBlock: 18_427_793, events: SOCGEN_FREEZE_FAMILY },
-
-  // USDA (Avalon) — Ethereum implementation emits legacy AddedBlackList /
-  // RemovedBlackList only. It has a role-gated burn(address,uint256), but no
-  // DestroyedBlackFunds event for event-level destroy tracking.
-  { chain: ETHEREUM, stablecoinId: "usda-avalon", stablecoin: "USDA", startBlock: 21_108_194, events: AVALON_USDA_EVENT_FAMILY },
-  // USDA on BSC: deferred — see consolidated contract-creation note.
 
   // USAT (Tether USAT) — Ethereum proxy (impl 0x8b98bcd9b1f8ae112fb2b58b45c3bc9a75cc4d0e)
   // emits BlockPlaced / BlockReleased / DestroyedBlockedFunds with indexed address,
