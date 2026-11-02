@@ -354,7 +354,7 @@ export async function loadDexYieldWatchConditions(
 }
 
 /** A failed detector read keeps prior transitions instead of reporting recovery. */
-export function buildDexYieldWatchUnknownConditions(): DexYieldWatchResult {
+function buildDexYieldWatchUnknownConditions(): DexYieldWatchResult {
   return {
     conditions: [
       { section: "producer-quality", id: "yield-data-coverage", active: false, unknown: true },

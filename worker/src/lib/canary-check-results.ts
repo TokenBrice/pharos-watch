@@ -11,7 +11,7 @@ export interface CanaryCheckOutcome {
   error?: string | null;
 }
 
-export const MAX_CANARY_ERROR_CHARS = 800;
+const MAX_CANARY_ERROR_CHARS = 800;
 
 export function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
   return value.length <= maxChars ? value : `${value.slice(0, maxChars)}...`;

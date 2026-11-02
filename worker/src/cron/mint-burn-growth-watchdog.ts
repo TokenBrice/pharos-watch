@@ -26,8 +26,8 @@ export const MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD = 2_300_000;
  * counted event for a full week is silent unless a content check compares it
  * with history. Unsupported conservation legs never had a supply-delta fence.
  */
-export const MINT_BURN_ACTIVITY_BASELINE_WINDOW_SEC = 30 * DAY_SECONDS;
-export const MINT_BURN_ACTIVITY_RECENT_WINDOW_SEC = 7 * DAY_SECONDS;
+const MINT_BURN_ACTIVITY_BASELINE_WINDOW_SEC = 30 * DAY_SECONDS;
+const MINT_BURN_ACTIVITY_RECENT_WINDOW_SEC = 7 * DAY_SECONDS;
 export const MINT_BURN_ACTIVITY_MIN_BASELINE_EVENTS = 30;
 const MINT_BURN_ACTIVITY_SAMPLE_LIMIT = 10;
 

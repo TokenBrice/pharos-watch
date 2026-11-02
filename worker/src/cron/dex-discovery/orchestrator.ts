@@ -88,7 +88,7 @@ export const DEX_DISCOVERY_FINALIZATION_TAIL_BUDGET_MS = 20_000;
  * provider in one run is provider-level drift, not two pools closing. A single
  * flip stays an ordinary census change.
  */
-export const DEX_DISCOVERY_CENSUS_COLLAPSE_MIN_FLIPS = 2;
+const DEX_DISCOVERY_CENSUS_COLLAPSE_MIN_FLIPS = 2;
 
 function summarizeDiscoveryError(err: unknown): string {
   if (err instanceof Error) {

@@ -42,7 +42,7 @@ export const HOWEY_UNCERTAIN_ASSETS: ReadonlySet<string> = new Set([
 // ---------------------------------------------------------------------------
 
 /** R1 Skeptic P3.8 / Compliance P2 — active-depeg threshold scales with tolerance. */
-export function activeDepegThresholdBps(tol: SelectorDepegTolerance): number {
+function activeDepegThresholdBps(tol: SelectorDepegTolerance): number {
   switch (tol) {
     case "zero":
       return 50;

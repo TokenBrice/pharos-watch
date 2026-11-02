@@ -6,9 +6,9 @@ import { MINT_BURN_WATERMARK_MAX_AGE_SEC } from "./mint-burn-flows-service";
 const DAY_SECONDS = 24 * 3600;
 const BASELINE_MAX_AGE_SEC = 7 * DAY_SECONDS;
 /** A 20% roster drop is far beyond a normal rotation or a single quarantine. */
-export const MINT_BURN_ROSTER_REGRESSION_RATIO = 0.8;
+const MINT_BURN_ROSTER_REGRESSION_RATIO = 0.8;
 /** Event history only grows; a 10% drop means rows disappeared. */
-export const BLACKLIST_EVENT_REGRESSION_RATIO = 0.9;
+const BLACKLIST_EVENT_REGRESSION_RATIO = 0.9;
 export const MINT_BURN_PUBLICATION_BASELINE_KEY = "canary:mint-burn-publication-baseline:v1";
 export const BLACKLIST_ROSTER_BASELINE_KEY = "canary:blacklist-roster-baseline:v1";
 
