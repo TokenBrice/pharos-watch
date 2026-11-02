@@ -157,7 +157,7 @@ describe("adaptSkyModules", () => {
       sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
     });
     expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct)
-      .toBeCloseTo(123_456 / 15_063_945_708.17 * 100, 12);
+      .toBeCloseTo(123_456 / 12_782_606_761.34 * 100, 12);
   });
 
   it("rejects drift removing stablecoins.collateral", async () => {
@@ -373,22 +373,23 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
 
   it.each(["usds-sky", "dai-makerdao"])("reconciles the capture-derived reconstruction for %s", async (coinId) => {
     const measuredUsd = Number(captureDerived.measuredUsdcBalanceRaw) / 1e6;
+    const groupDebt = Number(captureDerived.groups[0].debt);
     const { result } = await runAdapter("sky-makercore", coinId, {
       network: installAdapterNetwork(skyNetwork(captureDerived.groups, {
         balance: BigInt(captureDerived.measuredUsdcBalanceRaw),
       })),
       nowSec: Date.parse(captureDerived.groups[0].datetime) / 1000 + 60,
     });
-    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct).toBeCloseTo(39.504746438483196, 10);
-    expect(result.slices.find((slice) => slice.sourceKey === "sky-makercore:module:stablecoins-residual")?.pct)
-      .toBeCloseTo(0.00754965536971366, 10);
+    expect(result.slices.find((slice) => slice.coinId === "usdc-circle")?.pct).toBeCloseTo(39.4, 10);
+    expect(result.slices.some((slice) => typeof slice.sourceKey === "string"
+      && slice.sourceKey.endsWith("stablecoins-residual"))).toBe(false);
     expect(result.metadata).toMatchObject({
       balanceSheetScope: "shared-sky-maker",
       sharedBookAssetIds: ["dai-makerdao", "usds-sky"],
       sharedBookMeasuredHoldings: { "usdc-circle": measuredUsd },
-      reconciliationExcessUsd: 0,
-      reconciliationExcessShare: 0,
+      reconciliationExcessUsd: measuredUsd - groupDebt,
     });
+    expect(result.metadata?.reconciliationExcessShare).toBeCloseTo((measuredUsd - groupDebt) / captureDerived.totalGroupDebtUsd, 12);
     expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
     expect(result.slices.some((slice) => ["usdt-tether", "usdp-paxos"].includes(slice.coinId ?? ""))).toBe(false);
   });
@@ -418,7 +419,7 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
     const { result } = await runSky(SAMPLE_GROUPS, { balance: 0n });
     expect(result.slices.filter((slice) => slice.coinId)).toEqual([]);
     expect(result.slices.find((slice) => slice.sourceKey === "sky-makercore:module:stablecoins-residual")?.pct)
-      .toBeCloseTo(Number(SAMPLE_GROUPS[0].collateral) / SAMPLE_GROUPS.reduce((sum, row) => sum + Number(row.collateral), 0) * 100, 10);
+      .toBeCloseTo(Number(SAMPLE_GROUPS[0].debt) / SAMPLE_GROUPS.reduce((sum, row) => sum + Number(row.debt), 0) * 100, 10);
   });
   it.each(["gem", "pocket"] as const)("withholds attribution when the pinned %s identity differs", async (field) => {
     const { result } = await runSky(SAMPLE_GROUPS, { [field]: "0x0000000000000000000000000000000000000001" });
@@ -664,14 +665,10 @@ describe("fetchSkyMakercoreReserves PSM attribution", () => {
       totalLiabilitiesUsd: 1000,
       totalReserveUsd: 1100,
       collateralizationRatio: 1.1,
-      unknownExposurePct: (100 / 1100) * 100,
+      unknownExposurePct: 10,
       skyStablecoinsModuleCollateralUsd: 0,
-      details: {
-        compositionScope: "gross-assets",
-        compositionDenominatorUsd: 1100,
-      },
     });
-    expect(result.slices.find((slice) => slice.name === "Other modules")?.pct).toBeCloseTo((100 / 1100) * 100, 10);
+    expect(result.slices.find((slice) => slice.name === "Other modules")?.pct).toBe(10);
     expect(result.warnings?.some((warning) => warning.code === "source-timestamp-coverage-incomplete")).toBe(false);
   });
 

@@ -4,7 +4,7 @@
     {
       "sourceKey": "sky-makercore:lite-psm:usdc",
       "name": "USDC (Sky LitePSM)",
-      "pct": 29.58,
+      "pct": 36.26,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -17,7 +17,7 @@
     {
       "sourceKey": "sky-makercore:module:grove",
       "name": "Grove (RWA)",
-      "pct": 13.83,
+      "pct": 17.69,
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Grove Agent and underlying institutional-credit counterparties",
@@ -28,7 +28,7 @@
     {
       "sourceKey": "sky-makercore:module:spark",
       "name": "Spark (lending)",
-      "pct": 31.78,
+      "pct": 36.35,
       "risk": "low",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Spark Agent and its lending, liquidity, CeFi, and RWA counterparties",
@@ -38,7 +38,7 @@
     {
       "sourceKey": "sky-makercore:module:obex",
       "name": "Obex",
-      "pct": 3.31,
+      "pct": 3.82,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Obex Agent and supported institutional stablecoin projects",
@@ -48,7 +48,7 @@
     {
       "sourceKey": "sky-makercore:module:core",
       "name": "Core (crypto vaults)",
-      "pct": 11.35,
+      "pct": 3.66,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Sky Core vault collateral pools and underlying crypto protocols",
@@ -58,7 +58,7 @@
     {
       "sourceKey": "sky-makercore:module:staked",
       "name": "Staking Engine",
-      "pct": 9.53,
+      "pct": 1.51,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Sky governance token and LockStake Engine",
@@ -68,7 +68,7 @@
     {
       "sourceKey": "sky-makercore:module:legacy-rwa",
       "name": "Legacy RWA",
-      "pct": 0.57,
+      "pct": 0.66,
       "risk": "low",
       "assetClass": "other",
       "issuerOrObligor": "Sky legacy RWA legal structures and underlying obligors",
@@ -78,7 +78,7 @@
     {
       "sourceKey": "sky-makercore:module:osero",
       "name": "Osero",
-      "pct": 0.04,
+      "pct": 0.05,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Osero allocator vault, ALMProxy, and deployed strategy counterparties",
@@ -88,7 +88,7 @@
     {
       "sourceKey": "sky-makercore:module:stablecoins-residual",
       "name": "Unattributed stablecoins (PSM)",
-      "pct": 0.01,
+      "pct": 0,
       "risk": "very-low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky PSM contracts and external stablecoin issuers",
@@ -98,8 +98,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-11-01",
-    "reviewer": "DeepSeek top-25 accuracy lane 2026-11-01 (Sky gross-asset composition)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
     "confidence": "verified",
     "sources": [
       {
@@ -115,12 +115,12 @@
         "url": "https://developers.skyeco.com/protocol/tokens/usds/"
       },
       {
-        "label": "Sky MakerCore group collateral snapshot, captured 2026-11-01T21:42:23Z",
+        "label": "Sky MakerCore group debt snapshot, captured 2026-10-27T16:15:32Z",
         "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
       },
       {
-        "label": "Ethereum block 26322700 (2026-11-01T21:46:35Z) LitePSM USDC pocket tokenbalance via Blockscout",
-        "url": "https://eth.blockscout.com/api?module=account&action=tokenbalance&contractaddress=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48&address=0x37305b1cd40574e4c5ce33f8e8306be057fd7341&tag=0x191a70c"
+        "label": "Ethereum block 26285179 (2026-10-27T16:15:23Z) LitePSM gem, pocket, and USDC pocket balance reads",
+        "url": "https://etherscan.io/block/26285179"
       },
       {
         "label": "Sky protocol dashboard",
@@ -159,9 +159,9 @@
         "url": "https://developers.skyeco.com/protocol/rewards/staking-engine/"
       }
     ],
-    "rationale": "The 2026-11-01 captured Sky book (Block Analitica groups feed, eight-group census, 2026-11-01T21:42:23Z) reports $12,263,606,469.42 total collateral and $10,255,119,262.51 total group debt. At Ethereum block 26322700 (2026-11-01T21:46:35Z) LitePSM gem() and pocket() return canonical USDC and the verified pocket, which holds $3,627,959,769.713103 USDC. Stablecoins module collateral is $3,628,753,635.570323, so the measurement sits $793,865.857219 below it, no excess cap applies, and the exact residual is published as a 0.01% classification row. Composition shares now use the gross-asset book as the denominator: Spark 31.78%, USDC 29.58%, Grove 13.83%, Core 11.35%, Staking Engine 9.53%, Obex 3.31%, Legacy RWA 0.57%, Osero 0.04% and residual 0.01%, with largest-remainder two-decimal rounding summing to 100.00. This replaces the 2026-10-27 group-debt shares, which understated the over-collateralised Core and Staking Engine modules (3.66% and 1.51%) relative to the published collateral book. Both DAI and USDS share this book. Positive unexplained remainders and failed reconciliations retain the existing very-low PSM-pool risk, without an inferred constituent identity. Allocators remain classified at their deployed-strategy failure domain.",
-    "compositionBasis": "2026-11-01 captured group-collateral shares (largest-remainder two-decimal rounding sums to 100.00); canonical gem() and measured LitePSM USDC pocket balance at Ethereum block 26322700 reconciled against stablecoins module collateral",
-    "compositionAsOf": "2026-11-01",
+    "rationale": "The October 27 captured Sky book (Block Analitica groups feed, 8-group census, 2026-10-27T16:15:32Z) totals $10,634,677,862.31 group debt. At Ethereum block 26285179 (2026-10-27T16:15:23Z) LitePSM gem() and pocket() return canonical USDC and the verified pocket, which holds $3,855,715,288.247954 USDC, or 36.256061% of total debt. Both DAI and USDS share this book. The measurement sits $15,941.44 below the $3,855,731,229.69 stablecoins group debt, so no excess cap applies and the 0.00015% unattributed stablecoins remainder rounds to the zero keyed residual row. Spark $3,865,739,649.40 (36.35%), Grove $1,881,439,967.11 (17.69%), Obex $405,806,827.00 (3.82%), Core $389,431,324.16 (3.66%), Staking Engine $161,101,693.80 (1.51%), Legacy RWA $70,427,132.12 (0.66%), and Osero $5,000,039.04 (0.05%) are weighted at two decimals. The zero keyed residual is a classification row, not a holding. Positive unexplained remainders and failed reconciliations retain the existing very-low PSM-pool risk, without an inferred constituent identity. Allocators remain classified at their deployed-strategy failure domain.",
+    "compositionBasis": "October 27 captured group-debt shares; canonical gem() and measured LitePSM USDC pocket balance at Ethereum block 26285179 with explicit reconciliation",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Unexplained positive PSM remainders stay unlinked; excess above 0.25 percentage points fails the split closed. Allocator groups have no invented tracked-token look-through weights.",
     "knownUnknownExposurePct": 0,
@@ -169,49 +169,49 @@
       {
         "reserveIndex": 1,
         "reserveName": "Grove (RWA)",
-        "pct": 13.83,
+        "pct": 17.69,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Grove is a Sky Agent allocation into institutional-credit strategies, not a direct wrapper around one tracked stablecoin."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Spark (lending)",
-        "pct": 31.78,
+        "pct": 36.35,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Spark is an allocator and lending-protocol position with multiple deployment counterparties, not a direct wrapper around one tracked stablecoin."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Obex",
-        "pct": 3.31,
+        "pct": 3.82,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Obex is an Agent allocation across supported institutional stablecoin projects rather than one canonical tracked reserve asset."
       },
       {
         "reserveIndex": 4,
         "reserveName": "Core (crypto vaults)",
-        "pct": 11.35,
+        "pct": 3.66,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The Core bucket is a multi-collateral crypto-vault pool, not one canonical tracked reserve asset."
       },
       {
         "reserveIndex": 5,
         "reserveName": "Staking Engine",
-        "pct": 9.53,
+        "pct": 1.51,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The Staking Engine bucket is collateralized by SKY positions in LockStake Engine vaults, not by another tracked stablecoin."
       },
       {
         "reserveIndex": 6,
         "reserveName": "Legacy RWA",
-        "pct": 0.57,
+        "pct": 0.66,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The legacy RWA bucket represents external legal structures and obligors rather than a direct tracked-stablecoin dependency."
       },
       {
         "reserveIndex": 7,
         "reserveName": "Osero",
-        "pct": 0.04,
+        "pct": 0.05,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Osero is a Sky allocator position with mutable deployed strategies rather than one direct tracked-stablecoin reserve asset."
       }
