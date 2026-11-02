@@ -165,6 +165,9 @@ describe("FlowChart", () => {
       valuation: "complete", scanCoverage: { complete: false, unavailableReason: "scan-coverage-incomplete" },
     }]} />);
     expect(chartState.data[0]).toMatchObject({ valuation: "complete", scanComplete: false, net: null });
+    // The scan-coverage row stays bound to the wire scan flag.
+    expect(tooltipMarkup()).toContain("Scan coverage");
+    expect(tooltipMarkup()).toContain("Incomplete: observed subtotals");
     const row = screen.getAllByRole("row")[1];
     expect(within(row).getAllByRole("cell").map((cell) => cell.textContent))
       .toEqual([`≥ $${volume}`, "≥ $0", "—", "—", "Complete", "Observed subtotals"]);
@@ -204,14 +207,16 @@ describe("FlowChart", () => {
       ts: Date.UTC(2026, 9, 2),
       mint: 10,
       net: 10,
-      scanComplete: false,
+      scanComplete: true,
+      periodPartial: true,
     });
-    expect(chartState.data[2]).toMatchObject({ mint: 20, net: 20, scanComplete: true });
+    expect(chartState.data[2]).toMatchObject({ mint: 20, net: 20, scanComplete: true, periodPartial: false });
     expect(chartState.data[30]).toMatchObject({
       ts: Date.UTC(2026, 10, 1),
       mint: 30,
       net: 30,
-      scanComplete: false,
+      scanComplete: true,
+      periodPartial: true,
     });
 
     const firstRow = screen.getAllByRole("row")[1];
@@ -226,6 +231,9 @@ describe("FlowChart", () => {
     ]);
     const lastRow = screen.getAllByRole("row").at(-1)!;
     expect(within(lastRow).getAllByRole("cell")[5].textContent).toBe("Observed subtotals");
+    // A clipped window edge is a period partial, not an incomplete hourly scan.
+    expect(tooltipMarkup()).toContain("≥ $10");
+    expect(tooltipMarkup()).not.toContain("Scan coverage");
   });
 
   it("leaves daily edge buckets complete without a published window", () => {
@@ -241,8 +249,8 @@ describe("FlowChart", () => {
       />,
     );
 
-    expect(chartState.data[0]).toMatchObject({ net: 10, scanComplete: true });
-    expect(chartState.data.at(-1)).toMatchObject({ net: 30, scanComplete: true });
+    expect(chartState.data[0]).toMatchObject({ net: 10, scanComplete: true, periodPartial: false });
+    expect(chartState.data.at(-1)).toMatchObject({ net: 30, scanComplete: true, periodPartial: false });
   });
 
   it("renders daily bucket labels in UTC regardless of the viewer timezone", () => {

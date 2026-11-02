@@ -8,13 +8,13 @@ Risk-adjusted yield tracking and ranking for yield-bearing stablecoins and curat
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.52`<!-- GENERATED-END: methodology-version-yield-methodology -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-yield-methodology -->`v8.53`<!-- GENERATED-END: methodology-version-yield-methodology -->
 - **Public changelog page:** `/methodology/yield-changelog/`
 - **Canonical source:** `shared/lib/methodology-versions/registry.ts`
 
 Yield versions are bumped when APY source resolution, source arbitration, history semantics, PYS scoring logic, or score-affecting publication rules change.
 
-**Open release gates:** v8.52 (USDGO reclassified as non-yield-bearing; its EFFR proxy is removed) activation is provisionally **2026-10-26 00:00 UTC (`1792972800`)**, to be re-dated at release. v8.51 (two-hour core publication; interval-derived stale/aging/API bounds double) is active from **2026-10-23 00:00 UTC (`1792713600`)**, shipped with the cadence release. v8.49 activation is provisionally **2026-10-16 00:00 UTC (`1792108800`)**, to be re-dated at release; fresh admitted observations and a valid comparison anchor are required. For v8.48, fixed-clock input/output comparison and owner review of changed outcomes remain release gates, separate from fresh producer observations and production resource evidence. Replay cannot reconstruct pruned mint evidence or unknown legacy Midas observation clocks. These are obligations, not claims of completed replay, deployment or production health.
+**Open release gates:** v8.53 (a native source's unmeasured depth is no longer source-posture evidence debt; external unknown depth stays Watch) activation is provisionally **2026-11-03 00:00 UTC (`1793664000`)**, to be re-dated at release. v8.52 (USDGO reclassified as non-yield-bearing; its EFFR proxy is removed) activation is provisionally **2026-10-26 00:00 UTC (`1792972800`)**, to be re-dated at release. v8.51 (two-hour core publication; interval-derived stale/aging/API bounds double) is active from **2026-10-23 00:00 UTC (`1792713600`)**, shipped with the cadence release. v8.49 activation is provisionally **2026-10-16 00:00 UTC (`1792108800`)**, to be re-dated at release; fresh admitted observations and a valid comparison anchor are required. For v8.48, fixed-clock input/output comparison and owner review of changed outcomes remain release gates, separate from fresh producer observations and production resource evidence. Replay cannot reconstruct pruned mint evidence or unknown legacy Midas observation clocks. These are obligations, not claims of completed replay, deployment or production health.
 
 Version deltas live in the [structured public changelog](https://pharos.watch/methodology/yield-changelog/), not a second release diary here. The [PYS contract](#pharos-yield-score-pys) owns score qualification, the [benchmark registry](#benchmark-registry) owns independent benchmark clocks, and [Persistence And Publication](#persistence-and-publication) owns migration-first ordering and final admission.
 ---

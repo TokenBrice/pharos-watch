@@ -1,5 +1,20 @@
 [
   {
+    "version": "8.53",
+    "title": "Native Unmeasured Depth Is Not Source-Posture Evidence Debt",
+    "date": "2026-11-02",
+    "effectiveAt": 1793664000,
+    "summary": "A native yield source with no measured venue TVL no longer moves its row to Watch as evidence debt; the depth lens still reports it as n/a. External opportunities with unknown depth remain evidence debt.",
+    "impact": [
+      "`classifyYieldSourcePosture()` treats `sourceDepthLens === \"unknown\"` as evidence debt only for external rows. Native rows carry `Native · depth n/a` under the v8.40 semantics, so their unmeasured depth is not a failed read and no longer adds a Watch driver; `/yield` posture membership, posture filter counts and source-risk card labels follow that classification.",
+      "External `lending-opportunity`, `fixed-yield` and `structured-tranche` rows with unknown depth still read Watch. A native row that measures venue TVL but lacks the supply-relative depth ratio remains unmeasured, and every other posture driver still applies.",
+      "PYS weights, source-risk penalties, depth-band thresholds, depth gating, benchmarks and published APY history are unchanged. This is a presentation-membership correction following v8.40; no value is rewritten or deleted.",
+      "Planned activation is provisionally 2026-11-03 00:00 UTC (1793664000), following the next-UTC-midnight convention; re-date effectiveAt at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "8.52",
     "title": "USDGO Reclassified as Non-Yield-Bearing",
     "date": "2026-10-25",

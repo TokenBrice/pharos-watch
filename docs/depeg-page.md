@@ -31,7 +31,8 @@ softening rules for discovery surfaces do not apply here.
   `buildDepegEventTitle` renders `{SYMBOL} Depeg, {Month D, YYYY}: {deviation} Below|Above Peg`
   with no clause dash; it is also the H1 of every non-curated event, while curated
   annotation labels keep their own H1. An unavailable deviation is omitted, never printed
-  as a placeholder. A disputed ledger audit appends the existing `Disputed` label in
+  as a placeholder. A ledger audit whose verdict is `disputed` or `false_positive`
+  (the reviewed-dispute set) appends the existing `Disputed` label in
   parentheses to the title, description and synopsis, keeping the measured figure, and
   prepends the shared `Disputed` badge to the provenance line in place of the raw
   `audit: …` token; other verdicts keep that token. The

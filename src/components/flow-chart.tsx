@@ -54,7 +54,10 @@ interface ChartDatum {
   rollingNet: number | null;
   /** Bucket valuation completeness; `null` for an interpolated gap. */
   valuation: MintBurnValuationCompleteness | null;
+  /** Wire hourly scan coverage for the bucket. */
   scanComplete: boolean;
+  /** The bucket covers less than its full period at a published-window edge. */
+  periodPartial: boolean;
   isInterpolated: boolean;
 }
 
@@ -63,6 +66,11 @@ const PARTIAL_BUCKET_NOTE = "Partial valuation: net unavailable";
 function formatBucketVolume(value: number | null, valuation: MintBurnValuationCompleteness | null, decimals: number, scanComplete: boolean): string {
   if (value == null) return "—";
   return formatMintBurnVolume(value, valuation, (v) => formatCurrency(v, decimals), scanComplete);
+}
+
+/** A gross volume is complete only when the wire scan is complete and the bucket covers its full period. */
+function isVolumeComplete(datum: Pick<ChartDatum, "scanComplete" | "periodPartial">): boolean {
+  return datum.scanComplete && !datum.periodPartial;
 }
 
 function describeBucketValuation(valuation: MintBurnValuationCompleteness | null): string {
@@ -82,12 +90,12 @@ const FLOW_TABLE_DATE_FMT = new Intl.DateTimeFormat("en-US", {
 
 const FLOW_TABLE_COLUMNS: ChartDataTableColumn<ChartDatum>[] = [
   { id: "time", label: "Time (UTC)", format: (row) => FLOW_TABLE_DATE_FMT.format(new Date(row.ts)) },
-  { id: "mint", label: "Minted (USD)", format: (row) => formatBucketVolume(row.mint, row.valuation, 0, row.scanComplete) },
-  { id: "burn", label: "Burned (USD)", format: (row) => formatBucketVolume(row.burn, row.valuation, 0, row.scanComplete) },
+  { id: "mint", label: "Minted (USD)", format: (row) => formatBucketVolume(row.mint, row.valuation, 0, isVolumeComplete(row)) },
+  { id: "burn", label: "Burned (USD)", format: (row) => formatBucketVolume(row.burn, row.valuation, 0, isVolumeComplete(row)) },
   { id: "net", label: "Net flow (USD)", format: (row) => row.net == null ? "—" : formatCurrency(row.net, 0) },
   { id: "cumulative", label: "Cumulative (USD)", format: (row) => row.cumulative == null ? "—" : formatCurrency(row.cumulative, 0) },
   { id: "valuation", label: "Valuation", format: (row) => describeBucketValuation(row.valuation) },
-  { id: "scan", label: "Gross totals", format: (row) => row.isInterpolated || row.scanComplete ? "—" : "Observed subtotals" },
+  { id: "scan", label: "Gross totals", format: (row) => row.isInterpolated || isVolumeComplete(row) ? "—" : "Observed subtotals" },
 ];
 
 const DAY_SECONDS = DAY_HOURS * 60 * 60;
@@ -119,6 +127,7 @@ interface AggregatedBucket {
   net: number | null;
   valuation: MintBurnValuationCompleteness | null;
   scanComplete: boolean;
+  periodPartial: boolean;
   isInterpolated: boolean;
 }
 
@@ -160,7 +169,8 @@ function aggregateBuckets(
       burn: entry?.burn ?? null,
       net: entry?.net ?? null,
       valuation: entry?.valuation ?? null,
-      scanComplete: (entry?.scanComplete ?? false) && coveredSeconds >= bucketSeconds,
+      scanComplete: entry?.scanComplete ?? false,
+      periodPartial: coveredSeconds < bucketSeconds,
       isInterpolated: entry == null,
     });
   }
@@ -237,6 +247,7 @@ export function FlowChart({ hourly, isLoading, publishedWindow }: FlowChartProps
         rollingNet: hasObservation && rollingCount > 0 ? rolling / rollingCount : null,
         valuation: b.valuation,
         scanComplete: b.scanComplete,
+        periodPartial: b.periodPartial,
         isInterpolated: b.isInterpolated,
       });
     }
@@ -520,8 +531,8 @@ function FlowTooltip({
       <TooltipLabel>{time}</TooltipLabel>
       {datum ? (
         <>
-          <TooltipRow color={CHART_GREEN} label="Mint" value={formatBucketVolume(datum.mint, datum.valuation, 2, datum.scanComplete)} />
-          <TooltipRow color={CHART_RED} label="Burn" value={formatBucketVolume(datum.burn, datum.valuation, 2, datum.scanComplete)} />
+          <TooltipRow color={CHART_GREEN} label="Mint" value={formatBucketVolume(datum.mint, datum.valuation, 2, isVolumeComplete(datum))} />
+          <TooltipRow color={CHART_RED} label="Burn" value={formatBucketVolume(datum.burn, datum.valuation, 2, isVolumeComplete(datum))} />
           {!datum.scanComplete && !datum.isInterpolated ? (
             <TooltipRow label="Scan coverage" value="Incomplete: observed subtotals" />
           ) : null}

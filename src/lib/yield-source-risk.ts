@@ -123,8 +123,10 @@ export function classifyYieldSourceDepth(params: {
 
 /**
  * Depth lens as displayed. `native-unmeasured` deliberately lives outside
- * {@link YieldSourceDepthLens}: the lens drives depth filters, board counts,
- * source posture, and URL state, none of which change here.
+ * {@link YieldSourceDepthLens}: the lens drives depth filters, board counts
+ * and URL state, so the display state must not masquerade as a fourth measured
+ * band. Source posture reads `isNativeUnmeasured` separately to exempt a
+ * native row from evidence debt.
  */
 export type YieldSourceDepthDisplayLens = YieldSourceDepthLens | "native-unmeasured";
 

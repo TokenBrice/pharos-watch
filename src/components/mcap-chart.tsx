@@ -61,6 +61,7 @@ function ExpandableHistoryMcapChart(props: McapChartProps) {
     requestedRange === "all" ? "all" : 365,
     { enabled: needsFullHistory },
   );
+  const refetchFullHistory = fullHistoryQuery.refetch;
   const hasExpandedHistory = needsFullHistory && fullHistoryQuery.data.length > 0;
   // A wide selection is not a painted window until its own observations land
   // (R7): the plotted 90-day seed is the active window, while the requested
@@ -71,6 +72,7 @@ function ExpandableHistoryMcapChart(props: McapChartProps) {
   const setRequestedRange = props.controlledRange ? props.onControlledRangeChange : setLocalRange;
   const wideReadUnavailable = useRef(false);
   const retryingWideRead = useRef(false);
+  const retryTargetRange = useRef<TimeRangeOption | null>(null);
 
   useEffect(() => {
     if (fullHistoryQuery.isFetching || fullHistoryQuery.isLoading) {
@@ -92,17 +94,31 @@ function ExpandableHistoryMcapChart(props: McapChartProps) {
     setRequestedRange,
   ]);
 
+  // The reset above leaves the hook on the 90-day seed, so a retry must wait
+  // until the clicked range's own key is active. Refetching before that would
+  // hit the seed's key and leave the target window's empty cache unrenewed.
+  useEffect(() => {
+    if (retryTargetRange.current == null || retryTargetRange.current !== requestedRange) return;
+    retryTargetRange.current = null;
+    // The reset effect already skipped this render; let the retry's own settle
+    // (data or empty) take the normal path instead of holding the flag.
+    retryingWideRead.current = false;
+    void refetchFullHistory();
+  }, [refetchFullHistory, requestedRange]);
+
   const handleRangeChange = (next: TimeRangeOption) => {
     if (next === "1y" || next === "all") {
+      retryTargetRange.current = null;
       if (wideReadUnavailable.current) {
         wideReadUnavailable.current = false;
         retryingWideRead.current = true;
-        void fullHistoryQuery.refetch();
+        retryTargetRange.current = next;
       }
       setRequestedRange?.(next);
       return;
     }
     retryingWideRead.current = false;
+    retryTargetRange.current = null;
     setRequestedRange?.(next);
   };
 
