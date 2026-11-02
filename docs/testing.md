@@ -401,6 +401,12 @@ A commit that deletes, renames, or merges test files carries the gate artifacts 
 
 No waiver or enumerated path is relaxed to accommodate deletion; migrate every enumerated path in the same commit. Any proposed floor decrease must satisfy the explicit, expiring reviewed-record protocol in [Critical Coverage Gate](#critical-coverage-gate); no cleanup transition is currently active.
 
+#### Retiring tests
+
+`npm run tests:retire -- <test paths…> [--replacement <path>]` prints the edits a deletion needs and `--write` applies them. [`retire-tests.ts`](../scripts/maintenance/retire-tests.ts) owns the enrolled registry list: `critical-test-files.mts`, `provider-resilience-registry.mjs` `tests`, `doc-ownership.json` `testOwnership`, `critical-coverage.mjs` waiver `ownerTest`, the vitest isolation lists, the PR lane command roster and the required V9 resource case file. The dry run shows each hit with its exact before/after line, then every remaining reference in docs, skills, runbooks, comments and `testOwnership` check commands as a hand-fix list, then a [Test evidence rules](#test-evidence-rules) table of the deleted cases for the author to fill with the surviving path and exact title.
+
+It refuses (non-zero, nothing written) without `--replacement` for a path in `ALWAYS_RUN_TEST_FILES`/the critical lists, for a named reference that cannot be deleted mechanically (waiver `ownerTest`, the V9 resource case file), and whenever a removal would leave a registered owner list (`tests`/`testOwnership`) empty; a `--replacement` that is not an existing test file, a missing enrolled registry, an uneditable list shape, and a rewrite that would leave invalid JSON or a syntax error also refuse rather than write. `--write` never relaxes an enumerated path, floor or waiver count; run the owning checks (`npm run check:provider-resilience`, `npm run check:critical-coverage-completeness`, `npx vitest run scripts/__tests__/doc-ownership-registry.test.ts`) and apply the hand-fix list before the commit.
+
 ### Test style
 
 - Use `describe` per function, `it` per behavior.

@@ -62,6 +62,7 @@
     "qualify:worker-memory": "node scripts/maintenance/qualify-worker-memory.mjs",
     "calibrate:v9-resource": "node --import tsx worker/scripts/calibrate-v9-resource.ts",
     "test:critical-contracts": "node --import tsx scripts/maintenance/run-critical-contracts.ts",
+    "tests:retire": "node --import tsx scripts/maintenance/retire-tests.ts",
     "coverage:critical": "node --import tsx scripts/maintenance/run-critical-coverage.ts",
     "coverage:critical:update-baseline": "node --import tsx scripts/maintenance/update-critical-coverage-baseline.ts",
     "check:critical-coverage-completeness": "node --import tsx scripts/ci/check-critical-coverage.ts --completeness",
