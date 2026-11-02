@@ -234,12 +234,15 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     }
   }
 
+  // The tile shares the Price row's denominator, so it is complete only when
+  // that row is: known rows outside the denominator leave its cap share partial.
+  const priceSummary = featureSummaries.find((summary) => summary.feature.key === "price");
   const sourceDepthProgress = {
     totalCount,
     atTargetCount,
     exactTwoCount,
     belowTargetCount,
-    marketCapComplete: sourceDepthMcapObservedCount === totalCount,
+    marketCapComplete: sourceDepthMcapObservedCount === totalCount && priceSummary?.marketCapComplete === true,
     atTargetPct: totalCount > 0 ? (atTargetCount / totalCount) * 100 : null,
     atTargetMcapPct: sourceDepthMcapUsd > 0 ? (atTargetMcapUsd / sourceDepthMcapUsd) * 100 : null,
     exactTwoMcapPct: sourceDepthMcapUsd > 0 ? (exactTwoMcapUsd / sourceDepthMcapUsd) * 100 : null,

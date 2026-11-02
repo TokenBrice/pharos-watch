@@ -210,7 +210,7 @@ function currentMethodologyExample(operationId: string): Record<string, string |
     case "yieldRankings":
       return { currentVersion: YIELD_METHODOLOGY_VERSION, methodologyVersion: SAFETY_SCORE_METHODOLOGY_VERSION };
     case "yieldAdapterManifest":
-      return { methodologyVersion: `v${YIELD_METHODOLOGY_VERSION}` };
+      return { methodologyVersion: YIELD_METHODOLOGY_VERSION };
     case "yieldHistory":
       return { currentVersion: YIELD_METHODOLOGY_VERSION, methodologyVersion: YIELD_METHODOLOGY_VERSION };
     case "stressSignals":

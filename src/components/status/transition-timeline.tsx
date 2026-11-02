@@ -61,7 +61,7 @@ interface TransitionTimelineProps {
   evidenceScope?: "loaded-window" | "recent-status-fallback";
   /** The transition read failed or returned no completeness marker: an empty list is not "nothing happened" (R2). */
   readFailed?: boolean;
-  /** `nowSeconds` is a retained response's own clock: durations end there and the newest row is not current. */
+  /** The data is a retained response: the newest row is not "Current state"; durations end at `durationNowSeconds`, while `nowSeconds` stays the live clock. */
   retainedClock?: boolean;
   onRetry?: () => void;
   isRetrying?: boolean;

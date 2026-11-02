@@ -7,6 +7,16 @@ function requireFinite(value: number, field: string): number {
   return value;
 }
 
+/**
+ * The ledger's provenance marker for a receipt the funding-update workflow
+ * could not price; its `usd_at_receipt` is a placeholder, not a value.
+ */
+export const UNPRICED_DONATION_PRICE_NOTE = "manual-token-not-priced";
+
+export function isUnpricedDonation(priceNote: string): boolean {
+  return priceNote === UNPRICED_DONATION_PRICE_NOTE;
+}
+
 export function computeCostsTotal(items: readonly CostLineItem[]): number {
   return items.reduce((sum, item) => sum + requireFinite(item.usd_per_month, "cost"), 0);
 }

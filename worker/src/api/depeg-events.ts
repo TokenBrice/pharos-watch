@@ -318,8 +318,8 @@ export const handleDepegEvents = async (db: D1Database, url: URL): Promise<Respo
     });
     } catch (error) {
       if (error instanceof DepegEventRowUnreadableError) {
-        // Keep the refused row visible to operators: this named 503 replaces the
-        // generic route_handler_error log the previous throw produced.
+        // Keep the refused row visible to operators: the named 503 alone used to
+        // return without logging which row was refused.
         logWorkerEventArgs(
           "api",
           "error",

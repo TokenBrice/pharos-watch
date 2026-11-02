@@ -573,11 +573,14 @@ describe("buildCoverageMatrixModel", () => {
       mcapSharePct: (500 / 900) * 100,
     });
     expect(priceSummary?.coveragePct).toBeCloseTo(100 / 3, 10);
+    // Two known rows sit outside the shared denominator, so both the Price row
+    // and the tile qualify their cap share as known market cap.
+    expect(priceSummary?.marketCapComplete).toBe(false);
     expect(model.sourceDepthProgress).toMatchObject({
       totalCount: 3,
       atTargetCount: 1,
       belowTargetCount: 2,
-      marketCapComplete: true,
+      marketCapComplete: false,
       atTargetMcapPct: (500 / 900) * 100,
     });
   });

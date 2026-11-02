@@ -1037,7 +1037,7 @@ Machine-readable source-list manifest for every yield-bearing asset, including a
 
 ```json
 {
-  "methodologyVersion": "v8.53"
+  "methodologyVersion": "8.53"
 }
 ```
 

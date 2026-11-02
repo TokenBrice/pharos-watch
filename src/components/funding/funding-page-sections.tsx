@@ -15,7 +15,7 @@ import type { DonationSummary, MonthlyCommunityCoverage } from "@shared/lib/fund
 import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
 import { API_PAGE_ANCHORS, DONOR_KEY_CLAIMS_OPEN } from "@shared/lib/public-api-contract";
 import { DONOR_KEY_QUALIFYING_STABLECOINS } from "@shared/lib/funding/donor-eligibility";
-import { formatCoveragePct, groupCostsByCategory } from "@shared/lib/funding/helpers";
+import { formatCoveragePct, groupCostsByCategory, isUnpricedDonation } from "@shared/lib/funding/helpers";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 
 const PHAROS_FUNDING_WALLET_DISPLAY = "0x5d698362EDb8AEa1C2b2483096BDeE3265D860DB";
@@ -66,14 +66,9 @@ function formatUsdWhole(value: number): string {
   return `$${formatDecimal(value, 0, 0)}`;
 }
 
-/** The ledger's provenance marker for a receipt it could not price ("manual-token-not-priced"). */
-function isUnpricedPriceNote(priceNote: string): boolean {
-  return priceNote === "unpriced" || priceNote.includes("not-priced");
-}
-
 /** Donor-wall receipts: provenance says whether the receipt was priced; zero is a value. */
 function formatDonationUsd(value: number, priceNote: string): string {
-  if (isUnpricedPriceNote(priceNote)) return "—";
+  if (isUnpricedDonation(priceNote)) return "—";
   // A priced gift below one cent would round to "$0.00"; print the bound instead.
   if (value > 0 && value < 0.01) return "<$0.01";
   if (value < 1) return `$${formatDecimal(value, 2, 2)}`;
