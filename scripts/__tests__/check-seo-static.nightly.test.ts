@@ -1,3 +1,5 @@
+// Nightly tier: PR coverage retained by scripts/maintenance/run-pages-release-checks.ts
+// (the Pages artifact lane runs `npm run seo:check` against the real exported `out/`).
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";

@@ -1,3 +1,5 @@
+// Nightly tier: PR coverage retained by scripts/maintenance/run-pages-release-checks.ts
+// (the Pages artifact lane runs the same checker against the real `.next` chunks).
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
