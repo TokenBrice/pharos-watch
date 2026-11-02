@@ -149,7 +149,10 @@ describe("V9 contagion input decision", () => {
 });
 
 describe("V9 resource lane selection", () => {
-  it("selects every input the measured setup and live bundles contain", async () => {
+  // Bundling both real probes takes ~25 s on a CI runner, so this whole-closure
+  // proof is nightly-tier; the PR tier keeps the per-path rows in
+  // scripts/__tests__/classify-deploy-changes.test.ts and the contagion bundle check above.
+  it("selects every input the measured setup and live bundles contain", { tags: ["nightly"], timeout: 120_000 }, async () => {
     const root = resolve(import.meta.dirname, "../../..");
     const directory = temporary();
     const modes = ["setup", "live"] as const;
