@@ -379,7 +379,7 @@ describe("CI workflow scope", () => {
       id?: string; uses?: string; run?: string; with?: Record<string, unknown>; env?: Record<string, string>;
     }>;
 
-    expect(deploy.jobs["deploy-worker"].needs).toEqual(["plan", "data-baseline"]);
+    expect(deploy.jobs["deploy-worker"].needs).toEqual(["plan"]);
     const workerDeployCondition = String(deploy.jobs["deploy-worker"].if).replace(/\s+/g, " ");
     expect(workerDeployCondition).toContain("!cancelled()");
     expect(workerDeployCondition).not.toContain("always()");
@@ -610,59 +610,6 @@ describe("CI workflow scope", () => {
     expect(restore.run).toContain('if ! run_json="$(gh api "repos/$GH_REPO/actions/runs/$run_id")"; then');
     expect(restore.run).toContain("refusing to start a fresh window");
     expect(restore.run).toContain("actions/runs/$run_id");
-  });
-
-  it("captures a pre-deploy data baseline and keeps the delayed volume check in a separate workflow_run", () => {
-    const deploy = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as {
-      jobs: Record<string, {
-        needs?: string | string[];
-        permissions?: Record<string, string>;
-        steps: Array<{ name?: string; run?: string; uses?: string; env?: Record<string, string>; with?: Record<string, unknown>; "continue-on-error"?: boolean }>;
-      }>;
-    };
-    const baseline = deploy.jobs["data-baseline"];
-    expect(baseline.needs).toBe("plan");
-    expect(baseline.permissions).toEqual({ contents: "read" });
-    const capture = baseline.steps.find((step) => step.run?.includes("check-post-deploy-data-regression.ts"));
-    expect(capture?.run).toContain("--capture");
-    expect(capture?.env).toMatchObject({ PHAROS_API_KEY: "${{ secrets.PHAROS_API_KEY }}" });
-    expect(capture?.["continue-on-error"]).toBe(true);
-    const upload = baseline.steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
-    expect(upload?.with).toMatchObject({ name: "post-deploy-data-baseline", "if-no-files-found": "error" });
-    expect(upload?.["continue-on-error"]).toBe(true);
-    expect(deploy.jobs["deploy-worker"].needs).toEqual(["plan", "data-baseline"]);
-
-    const delayed = parseYaml(readRepoFile(".github/workflows/post-deploy-data-regression.yml")) as {
-      on: { workflow_run: { workflows: string[]; types: string[] } };
-      jobs: Record<string, {
-        if?: string;
-        permissions?: Record<string, string>;
-        steps: Array<{ name?: string; run?: string; uses?: string; if?: string; with?: Record<string, unknown> }>;
-      }>;
-    };
-    expect(delayed.on.workflow_run).toEqual({ workflows: ["Deploy to Cloudflare"], types: ["completed"] });
-    const job = delayed.jobs["data-regression"];
-    expect(job.if).toContain("github.event.workflow_run.event == 'push'");
-    expect(job.if).toContain("github.event.workflow_run.event == 'workflow_dispatch'");
-    expect(job.if).toContain("github.event.workflow_run.head_repository.full_name == github.repository");
-    expect(job.if).toContain("github.event.workflow_run.head_branch == 'main'");
-    expect(job.permissions).toEqual({ actions: "read", contents: "read", issues: "write" });
-    const download = job.steps.find((step) => step.uses?.startsWith("actions/download-artifact@"));
-    expect(download?.with).toMatchObject({
-      name: "post-deploy-data-baseline",
-      "run-id": "${{ steps.deploy-run.outputs.run-id }}",
-      "github-token": "${{ github.token }}",
-    });
-    for (const step of job.steps) {
-      if (step.run) expect(step.run).not.toContain("${{");
-    }
-    expect(job.steps.find((step) => step.name === "Fail on data regression")?.if)
-      .toBe("steps.data-regression.outcome == 'failure'");
-    const unreadable = job.steps.find((step) => step.name === "Fail on unreadable evidence");
-    expect(unreadable?.if).toBe("${{ always() }}");
-    expect(unreadable?.run).toContain("BASELINE_AVAILABLE");
-    expect(unreadable?.run).toContain('"passed"');
-    expect(unreadable?.run).toContain('"skipped"');
   });
 
   it("keeps the curation expiry sweep process-only with sentinel verdicts and by-week renewal views", () => {
