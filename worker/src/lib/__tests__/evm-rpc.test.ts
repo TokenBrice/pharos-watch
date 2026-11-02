@@ -778,6 +778,24 @@ describe("evm-rpc helpers", () => {
     },
   );
 
+  it.each([
+    { code: -32000, message: "out of gas", stops: true },
+    { code: -32003, message: "out of gas: gas required exceeds: 30000000", stops: true },
+    { code: -32005, message: "out of gas", stops: false },
+  ])("stops aggregate failover on deterministic OOG $code only when it is an execution budget error", async ({ code, message, stops }) => {
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ error: { code, message } }));
+    expect(await fetchEvmMulticall3Aggregate3AtBlock("ethereum", [
+      { label: "first", target: `0x${"1".repeat(40)}`, callData: "0x12345678" },
+      { label: "second", target: `0x${"1".repeat(40)}`, callData: "0x12345678" },
+    ], 16, {
+      extraRpcUrls: ["https://primary.example", "https://secondary.example"],
+      maxRetries: 0, stopOnExecutionBudgetError: true,
+    })).toBeNull();
+    expect(attemptedUrls()).toEqual(stops
+      ? ["https://primary.example"]
+      : ["https://primary.example", "https://secondary.example"]);
+  });
+
   it.each([true, false])("only permits an observed direct revert when allowFailure is %s", async allowFailure => {
     const hash = `0x${"a".repeat(64)}` as `0x${string}`;
     fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: "0x" }))
@@ -1238,6 +1256,28 @@ describe("evm-rpc helpers", () => {
     });
     expect(requestedBlockTags).toEqual(["0x63", "0x62"]);
     expect(requestedBlockTags).not.toContain("0x32");
+  });
+
+  it("sends near-head timestamp probes through a retained-window Dwellir endpoint", async () => {
+    const retained = { ...dwellirEndpoint("https://monad-retained.n.dwellir.com", "recent"), logsHistory: { retainedBlocks: 1_400_000 } };
+    const alchemy = registryEndpoint("https://monad-alchemy.example", "alchemy");
+    const chainRpcs = chainRpcsWith("monad", [alchemy, retained]);
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ result: blockResult(1_999_999, "0x3e3") }))
+      .mockResolvedValueOnce(rpcResponse({ result: blockResult(1_999_998, "0x3de") }));
+
+    const block = await resolveClosestBlockAtOrBeforeTimestamp(
+      "monad",
+      990,
+      {
+        latestBlockNumber: 2_000_000,
+        blockTimestampByNumber: new Map([[2_000_000, 1000]]),
+      },
+      { chainRpcs, maxRetries: 0 },
+    );
+
+    expect(block).toBe(1_999_998);
+    expect(attemptedUrls()).toEqual([retained.url, retained.url]);
   });
 
   it("fetches proxy hex results from Etherscan", async () => {

@@ -20,6 +20,7 @@ import {
   evaluateCurveCryptoSwapEligibility,
   getCurveCryptoSwapReviewedDeploymentFamily,
   getCurveCryptoSwapReviewedPolicy,
+  quoteCurveCryptoSwapRequests,
   resolveCurveCryptoSwapTokenIndices,
   validateCurveCryptoSwapProfileProof,
   verifyCurveCryptoSwapDeployment,
@@ -612,6 +613,42 @@ describe("Curve CryptoSwap quote transport", () => {
     expect(sizes).toEqual([8, 4, 4, 1]);
     expect(outcomes).toHaveLength(9);
     expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
+  });
+
+  it("splits a first-provider OOG through the default transport without replaying it on fallbacks", async () => {
+    const aggregateAbi = parseAbi([
+      "function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)",
+    ]);
+    const chainRpcs = buildChainRpcs("alchemy-test-key", undefined, { dwellirApiKey: "dwellir-test-key" });
+    const config = chainRpcs.get("ethereum")!;
+    const primary = config.endpoints.find((endpoint) => endpoint.operator === "dwellir")!;
+    const fallback = config.endpoints.find((endpoint) => endpoint.operator === "alchemy")!;
+    config.endpoints = [primary, fallback].map((endpoint) => ({ ...endpoint, position: "registry" as const }));
+    const sizes: number[] = [];
+    const fetchMock = vi.fn<typeof fetch>(async (_url, init) => {
+      const request = JSON.parse(String(init?.body)) as { id: number; params: [{ data: `0x${string}` }] };
+      const size = decodeFunctionData({ abi: aggregateAbi, data: request.params[0].data }).args[0].length;
+      sizes.push(size);
+      return Response.json(size === 8
+        ? { jsonrpc: "2.0", id: request.id, error: { code: -32003, message: "out of gas: gas required exceeds: 30000000" } }
+        : { jsonrpc: "2.0", id: request.id, result: encodeAbiParameters(
+          parseAbiParameters("(bool success,bytes returnData)[]"),
+          [Array.from({ length: size }, () => ({ success: true, returnData: uint256Return(0n) }))],
+        ) });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const outcomes = await quoteCurveCryptoSwapRequests({
+        requests: makeCurveQuoteRequests(makeTarget(), TWOCRYPTO_POOL, ETHEREUM_BLOCK, 8),
+        chainRpcs,
+      });
+
+      expect(sizes).toEqual([8, 4, 4]);
+      expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual(Array(3).fill(primary.url));
+      expect(outcomes.every((outcome) => outcome.point?.amountOutRaw === "0")).toBe(true);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("preserves the Curve adaptive multicall golden unattempted result", async () => {

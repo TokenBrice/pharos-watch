@@ -36,7 +36,8 @@ import {
   type EvmV2ReplayCase,
 } from "./fixtures/evm-v2-fixtures";
 import { captureRpcs, replayTokenLookups } from "./constant-product-v2.test-support";
-import type { EvmMulticall3Result } from "../../../lib/evm-rpc";
+import type { ChainRpcConfig } from "../../../lib/chain-registry";
+import type { EvmMulticall3Result, EvmRpcOptions } from "../../../lib/evm-rpc";
 
 const U = "0xce24439f2d9c6a2289f741120fe202248b666666" as const;
 const WBNB = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c" as const;
@@ -528,6 +529,96 @@ describe("constant-product V2 execution", () => {
       ],
     });
     expect(fetchMulticall).toHaveBeenCalledOnce();
+  });
+
+  it("pins the BSC multicall to the authenticated finalized head on a recent-only Dwellir route", async () => {
+    const finalized = {
+      number: 49_999_940,
+      timestamp: 1_699_999_940,
+      hash: `0x${"ab".repeat(32)}` as `0x${string}`,
+    };
+    const candidate = makeCandidate();
+    const metric = initSourcePoolGraph("u-united-stables", "U");
+    metric.pools.push({
+      poolId: buildPoolFingerprint("bsc", "pancakeswap", [U, WBNB])!,
+      project: "pancakeswap",
+      chain: "BSC",
+      tvlUsd: 2_000_000,
+      symbol: "U-WBNB",
+      volumeUsd1d: 100_000,
+      poolType: "ds-amm",
+      source: "dexscreener",
+      extra: { evmV2ExecutionCandidate: candidate },
+    });
+    const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "pancakeswap-v2")!;
+    const chainRpcs: Map<string, ChainRpcConfig> = new Map([["bsc", {
+      chainId: "bsc",
+      chainName: "BSC",
+      type: "evm",
+      explorerUrl: "https://explorer.example",
+      endpoints: [
+        { url: "https://bsc-dwellir.example", operator: "dwellir", keyed: true, position: "registry", stateHistory: "recent", logsHistory: "full" },
+        { url: "https://bsc-archive.example", operator: "alchemy", keyed: true, position: "registry", stateHistory: "archive", logsHistory: "full" },
+      ],
+    }]]);
+    const fetchBlockNumber = vi.fn(async () => 50_000_000);
+    const fetchBlockHeader = vi.fn(async (_chain: string, blockNumberOrTag: number | "finalized") =>
+      blockNumberOrTag === "finalized" ? finalized : finalized);
+    const fetchCodeAtBlock = vi.fn(async (
+      _chain: string | undefined,
+      _address: string,
+      _blockNumber?: number | "latest",
+      _options?: EvmRpcOptions,
+    ) => "0x6000" as const);
+    const fetchMulticall = vi.fn(async (
+      _chain: string,
+      calls: readonly { label: string }[],
+      _blockNumber: number,
+      _options?: EvmRpcOptions,
+    ) => calls.map((call) => ({
+      label: call.label,
+      success: true,
+      returnData: call.label.endsWith("-pair")
+        ? addressWord(PAIR)
+        : call.label.endsWith("-token0")
+          ? addressWord(U)
+          : call.label.endsWith("-token1")
+            ? addressWord(WBNB)
+            : call.label.endsWith("-reserves")
+              ? reservesWord(1_000_000n * 10n ** 18n, 2_000n * 10n ** 18n)
+              : word(18n),
+    })));
+
+    await enrichEvmV2ExecutionModels({
+      nowSec: 1_700_000_000,
+      sourceGenerationId: "dex-stage:fixture",
+      metrics: new Map([[metric.stablecoinId, metric]]),
+      chainAddressToId: new Map([[canonicalExitRouteAssetKey("bsc", U), metric.stablecoinId]]),
+      contractMetaByChainAddress: new Map(),
+      stablecoinPriceById: new Map([[metric.stablecoinId, 1]]),
+      chainRpcs,
+      dependencies: {
+        fetchBlockNumber,
+        fetchBlockHeader,
+        fetchCodeAtBlock,
+        fetchMulticall: fetchMulticall as never,
+        hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
+      },
+    });
+
+    expect(fetchBlockNumber).not.toHaveBeenCalled();
+    expect(metric.pools[0]!.extra?.ammExecutionModel).toMatchObject({
+      source: "pancakeswap-v2",
+      capture: { blockNumber: finalized.number, blockHash: finalized.hash, blockTimestamp: finalized.timestamp },
+    });
+    expect(fetchCodeAtBlock.mock.calls[0]![2]).toBe(finalized.number);
+    expect((fetchCodeAtBlock.mock.calls[0]![3] as EvmRpcOptions).recentStatePin).toMatchObject({
+      chainId: "bsc", header: finalized, finalized,
+    });
+    expect(fetchMulticall.mock.calls[0]![2]).toBe(finalized.number);
+    expect((fetchMulticall.mock.calls[0]![3] as EvmRpcOptions).recentStatePin).toMatchObject({
+      chainId: "bsc", header: finalized, finalized,
+    });
   });
 
   it("implies the tracked V2 input from a unique authoritative counter-asset", async () => {
