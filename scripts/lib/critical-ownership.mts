@@ -36,10 +36,73 @@ export const ISOLATED_NODE_TESTS = [
 export const THREADED_WORKER_TESTS = [
   "worker/src/lib/__tests__/safety-score-v9-native-input-pipeline.test.ts",
 ];
+
+// Phased non-isolated worker pilot: reserve-adapter suites that own no
+// per-file module state run in the shared `worker-shared` project. Everything
+// else stays in the isolated `worker` project, so the classifier is
+// deliberately fail-closed: an unknown input (unreadable file, new mock or
+// global-stub pattern) runs isolated.
+const WORKER_SHARED_TEST_ROOT = "worker/src/cron/reserve-adapters";
+const WORKER_SHARED_INELIGIBLE_PATTERNS = [
+  /vi\.mock\s*\(/,
+  /vi\.doMock\s*\(/,
+  /vi\.resetModules\s*\(/,
+  /vi\.hoisted\s*\(/,
+  /process\.env\s*=(?!=)/,
+  /process\.env\.[A-Za-z_$][\w$]*\s*=(?!=)/,
+  /process\.env\[[^\]]+\]\s*=(?!=)/,
+] as const;
+
+/** True when a reserve-adapter test source can share one module cache. */
+export function isWorkerSharedTestEligible(source: string): boolean {
+  if (WORKER_SHARED_INELIGIBLE_PATTERNS.some((pattern) => pattern.test(source))) return false;
+  if (/vi\.stubGlobal\s*\(/.test(source) && !/vi\.unstubAllGlobals\s*\(/.test(source)) return false;
+  if (/vi\.stubEnv\s*\(/.test(source) && !/vi\.unstubAllEnvs\s*\(/.test(source)) return false;
+  return true;
+}
+
+// Files that pass the source scan but failed a shuffled shared-process run.
+// Each keeps per-file isolation (the value names the observed failure); remove
+// the entry only after the cause is fixed and the stability protocol passes
+// again.
+export const WORKER_SHARED_ISOLATED_OVERRIDES: Readonly<Record<string, string>> = {
+  "worker/src/cron/reserve-adapters/__tests__/frax.test.ts":
+    "Asserts the complete request URL set immediately after a rejection; a stray in-flight retry from an earlier shared file can append a URL.",
+  "worker/src/cron/reserve-adapters/__tests__/request.test.ts":
+    "Asserts exact fetch call counts; a preceding shared file's pending retry can consume its scripted mock.",
+  "worker/src/cron/reserve-adapters/__tests__/usdd-data-platform.test.ts":
+    "Asserts a real 5 s abort wait completes within 9 s; CPU contention under default shared-process parallelism made that timing assertion flaky.",
+};
+
+/** Classify the current reserve-adapter candidate files once per process. */
+export function collectWorkerSharedTestFiles(cwd = process.cwd()): string[] {
+  return collectSourceFilesUnderRoot(WORKER_SHARED_TEST_ROOT, cwd, {
+    extensions: TEST_FILE_EXTENSIONS,
+    excludedDirs: ["node_modules", "dist"],
+    skipDotEntries: true,
+  })
+    .map((file) => normalizeOwnershipPath(relative(cwd, file)))
+    .filter((file) => file.split("/").includes("__tests__") && TEST_FILE_PATTERN.test(file))
+    .filter((file) => !Object.hasOwn(WORKER_SHARED_ISOLATED_OVERRIDES, file))
+    .filter((file) => {
+      try {
+        return isWorkerSharedTestEligible(readFileSync(resolve(cwd, file), "utf8"));
+      } catch {
+        return false;
+      }
+    })
+    .sort();
+}
+
+export const WORKER_SHARED_TEST_FILES = collectWorkerSharedTestFiles();
+
 export const EXECUTABLE_TEST_PROJECTS = [
   { name: "node", include: ["{functions,scripts,shared}/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: ISOLATED_NODE_TESTS },
   { name: "node-isolated", include: ISOLATED_NODE_TESTS, exclude: [] },
-  { name: "worker", include: ["worker/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: THREADED_WORKER_TESTS },
+  { name: "worker", include: ["worker/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: [...THREADED_WORKER_TESTS, ...WORKER_SHARED_TEST_FILES] },
+  ...(WORKER_SHARED_TEST_FILES.length > 0
+    ? [{ name: "worker-shared", include: WORKER_SHARED_TEST_FILES, exclude: [] }]
+    : []),
   { name: "worker-threads", include: THREADED_WORKER_TESTS, exclude: [] },
   { name: "src", include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: [] },
 ];

@@ -1,12 +1,18 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  deriveCriticalOwnership,
-  deriveBaseCriticalOwnership,
+  assertExecutableTestFiles,
   collectOwningTests,
+  collectWorkerSharedTestFiles,
+  deriveBaseCriticalOwnership,
+  deriveCriticalOwnership,
+  EXECUTABLE_TEST_PROJECTS,
+  isWorkerSharedTestEligible,
+  WORKER_SHARED_ISOLATED_OVERRIDES,
+  WORKER_SHARED_TEST_FILES,
 } from "../lib/critical-ownership.mts";
 
 const temporaryDirectories: string[] = [];
@@ -171,4 +177,51 @@ describe("critical ownership derivation", () => {
     expect(ownership.get(source)).toEqual([test]);
   });
 
+});
+
+describe("worker-shared pilot eligibility", () => {
+  it("rejects per-file module state and unrestored global stubs", () => {
+    const eligible = [
+      'import { it } from "vitest";\nit("x", () => {});\n',
+      'vi.stubGlobal("fetch", vi.fn());\nvi.unstubAllGlobals();\n',
+      'vi.stubEnv("X", "1");\nvi.unstubAllEnvs();\n',
+    ];
+    const ineligible = [
+      'vi.mock("./adapter");',
+      'vi.doMock("./adapter");',
+      'vi.resetModules();',
+      'vi.hoisted(() => ({}));',
+      'vi.stubGlobal("fetch", vi.fn());',
+      'vi.stubEnv("X", "1");',
+      'process.env.X = "1";',
+      'process.env["X"] = "1";',
+    ];
+    for (const source of eligible) expect(isWorkerSharedTestEligible(source), source).toBe(true);
+    for (const source of ineligible) expect(isWorkerSharedTestEligible(source), source).toBe(false);
+  });
+
+  it("classifies only reserve-adapter test files under __tests__", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-worker-shared-"));
+    temporaryDirectories.push(cwd);
+    const tests = join(cwd, "worker/src/cron/reserve-adapters/__tests__");
+    mkdirSync(tests, { recursive: true });
+    writeFileSync(join(tests, "clean.test.ts"), 'import { it } from "vitest";\nit("x", () => {});\n');
+    writeFileSync(join(tests, "mocked.test.ts"), 'vi.mock("./adapter");\n');
+    writeFileSync(join(tests, "harness.test-support.ts"), "export const harness = true;\n");
+    mkdirSync(join(cwd, "worker/src/other/__tests__"), { recursive: true });
+    writeFileSync(join(cwd, "worker/src/other/__tests__/clean.test.ts"), 'import { it } from "vitest";\n');
+
+    expect(collectWorkerSharedTestFiles(cwd)).toEqual([
+      "worker/src/cron/reserve-adapters/__tests__/clean.test.ts",
+    ]);
+  });
+
+  it("keeps every classified file owned by exactly one executable project", () => {
+    const repoRoot = resolve(import.meta.dirname, "../..");
+    expect(EXECUTABLE_TEST_PROJECTS.filter((project) => project.name === "worker-shared")).toHaveLength(1);
+    expect(() => assertExecutableTestFiles(WORKER_SHARED_TEST_FILES, { cwd: repoRoot })).not.toThrow();
+    const isolatedOverrides = Object.keys(WORKER_SHARED_ISOLATED_OVERRIDES);
+    expect(() => assertExecutableTestFiles(isolatedOverrides, { cwd: repoRoot })).not.toThrow();
+    for (const file of isolatedOverrides) expect(WORKER_SHARED_TEST_FILES).not.toContain(file);
+  });
 });

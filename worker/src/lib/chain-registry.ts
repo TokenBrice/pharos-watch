@@ -118,6 +118,11 @@ const RPC_AUTH_BY_ORIGIN = new Map<
   { provider: RpcAuthProvider; headers: Readonly<Record<string, string>> }
 >();
 
+/** @internal Clear per-isolate provider auth registrations so test files can share a process. */
+export function resetChainRegistryStateForTests(): void {
+  RPC_AUTH_BY_ORIGIN.clear();
+}
+
 /**
  * Registers auth headers for the url's origin. Re-registering the same provider
  * replaces the headers (key rotation / tests); a different provider claiming an
