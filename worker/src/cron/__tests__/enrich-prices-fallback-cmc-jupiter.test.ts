@@ -49,8 +49,8 @@ describe("enrichMissingPrices", () => {
     expect(result.resolved).toBe(1);
     const slotCalls = fetchSpy.getHistory().filter((entry) => entry.body?.includes('"method":"getSlot"'));
     expect(slotCalls.map((entry) => new URL(entry.url).hostname)).toEqual(keyedFailure
-      ? ["solana-mainnet.g.alchemy.com", "lb.drpc.org", "solana-rpc.publicnode.com"]
-      : ["solana-mainnet.g.alchemy.com"]);
+      ? ["lb.drpc.org", "solana-mainnet.g.alchemy.com", "solana-rpc.publicnode.com"]
+      : ["lb.drpc.org", "solana-mainnet.g.alchemy.com"]);
     expect(result.diagnostics).toEqual(expect.arrayContaining([expect.objectContaining({
       endpoint: keyedFailure ? "solana-rpc.publicnode.com/" : "solana-mainnet.g.alchemy.com/v2/",
       success: true, responseRowCount: 1,
