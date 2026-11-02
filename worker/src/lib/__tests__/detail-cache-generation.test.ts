@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createLatestSchemaFixtureTracker, createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../detail-cache-generation";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -20,5 +20,26 @@ describe("detail cache generation fencing", () => {
     });
     const cached = sqlite.prepare("SELECT value FROM cache WHERE key = 'detail:coin-a'").get() as { value: string };
     expect(cached.value).toBe("newer");
+  });
+
+  it("reports a committed cache write even when the generation bookkeeping update fails", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite({
+      onRun: (sql) => {
+        if (sql.startsWith("UPDATE detail_cache_write_generations")) {
+          throw new Error("post-write bookkeeping failed");
+        }
+      },
+    });
+    try {
+      const claim = await claimDetailCacheGeneration(db, "coin-a", { owner: "owner", claimedAtMs: 1_000_100 });
+      await expect(publishDetailCacheGeneration(db, "detail:coin-a", "body", claim)).resolves.toMatchObject({
+        written: true,
+        skippedBecauseStale: false,
+      });
+      const cached = sqlite.prepare("SELECT value FROM cache WHERE key = 'detail:coin-a'").get() as { value: string };
+      expect(cached.value).toBe("body");
+    } finally {
+      sqlite.close();
+    }
   });
 });

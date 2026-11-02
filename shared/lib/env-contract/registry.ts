@@ -137,7 +137,13 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "SAFETY_GRADES_RATE_LIMIT",
     valueType: "RateLimit",
-    description: "Cloudflare per-source rate limiter for public safety grades, dependency graph, and uncached dependency scenarios, checked before reads.",
+    description: "Cloudflare per-source rate limiter for public safety grades, dependency graph, dependency scenarios, and site-data public status history, checked before reads.",
+    runtimes: { worker: { status: "required" } },
+  },
+  {
+    key: "FEEDBACK_PREAUTH_RATE_LIMIT",
+    valueType: "RateLimit",
+    description: "Cloudflare per-IP rate limiter for feedback submissions, checked before the request body and idempotency bookkeeping.",
     runtimes: { worker: { status: "required" } },
   },
   {
@@ -466,7 +472,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "MINT_BURN_DISABLED_SYMBOLS",
     valueType: "string",
-    description: "Mint/burn runtime disable list by symbol (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy.",
+    description: "Mint/burn runtime disable list by symbol (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy. A ticker shared by more than one tracked stablecoin is ignored with a `mint_burn_disabled_symbol_ignored` warning; use `MINT_BURN_DISABLED_IDS` for those.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },

@@ -32,7 +32,7 @@ function parseArray<T>(input: unknown, schema: ZodType<T>): T[] | null {
     const result = schema.safeParse(item);
     if (result.success) valid.push(result.data);
   }
-  return valid;
+  return input.length > 0 && valid.length === 0 ? null : valid;
 }
 
 export function selectDigestIntelligence(input: unknown): DigestIntelligenceSummary {

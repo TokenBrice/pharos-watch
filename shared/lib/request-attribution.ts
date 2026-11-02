@@ -27,6 +27,21 @@ const REQUEST_SOURCE_ATTRIBUTION_DISABLED_ENV = "REQUEST_SOURCE_ATTRIBUTION_DISA
 
 const SAME_SITE_FETCH_VALUES = new Set(["same-site", "same-origin"]);
 
+// A rejected batch proves a statement-level rollback only for errors raised
+// before or during execution. These transport errors can arrive after the
+// batch committed, so replaying additive upserts would double-count.
+const AMBIGUOUS_BATCH_FAILURE_MARKERS = [
+  "Network connection lost",
+  "D1 DB storage operation exceeded timeout",
+  "D1_ERROR: internal error; reference",
+  "client disconnected",
+] as const;
+
+function isAmbiguousBatchFailure(error: unknown): boolean {
+  const message = String(error);
+  return AMBIGUOUS_BATCH_FAILURE_MARKERS.some((marker) => message.includes(marker));
+}
+
 export interface ApiRequestRouteMetric {
   routeKey: string;
   routePath: string;
@@ -181,12 +196,8 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
         const statements = chunk.map((entry) => db
           .prepare(options.insertSql)
           .bind(...options.bindInsertParams(entry)));
-        try {
-          await db.batch(statements as never[]);
-        } catch (error) {
-          // D1 batches are atomic. Restore the failed chunk and untouched tail,
-          // but not chunks that already committed before this failure.
-          for (const entry of entries.slice(chunkIndex * options.batchSize)) {
+        const restore = (fromChunkIndex: number): void => {
+          for (const entry of entries.slice(fromChunkIndex * options.batchSize)) {
             const key = options.buildKey(entry);
             const newerEntry = buffered.get(key);
             if (newerEntry) {
@@ -194,6 +205,24 @@ export function createBufferedAttributionRecorder<TEntry extends BufferedAttribu
             }
             buffered.set(key, entry);
           }
+        };
+        try {
+          await db.batch(statements as never[]);
+        } catch (error) {
+          if (isAmbiguousBatchFailure(error)) {
+            // Unknown outcome: keep the never-sent tail for the bounded retry
+            // but drop this chunk instead of re-applying its counts.
+            restore(chunkIndex + 1);
+            console.warn(
+              `[request-attribution] ${options.logLabel} batch outcome unknown; dropping chunk to avoid double counting:`,
+              error,
+            );
+            throw error;
+          }
+          // D1 statement failures are atomic. Restore the failed chunk and
+          // untouched tail, but not chunks that already committed before this
+          // failure.
+          restore(chunkIndex);
           throw error;
         }
       }

@@ -601,6 +601,40 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(provenanceOnly.supplyGapFill?.withheldHistoricalBuckets).toEqual(["day"]);
   });
 
+  it("never splices a newer D1 history row onto a carried supply packet", async () => {
+    const { db, sqlite } = fixtures.open();
+    // 2026-11-01 BUIDL shape: a 2026-10-30 headline carried forward must not take a
+    // 2026-11-01 daily row as its 1d baseline and publish a synthetic +5.35% change.
+    const carried = {
+      ...makeAsset(), id: "carried-defillama", circulating: { peggedEUR: 2115 },
+      circulatingPrevDay: null, circulatingPrevWeek: { peggedEUR: 2165 }, circulatingPrevMonth: null,
+      supplyRestored: true, supplyObservedAt: 1_793_000_000,
+    };
+    const ordinary = {
+      ...makeAsset(), id: "ordinary", supplySource: "defillama",
+      circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: { peggedEUR: 0 },
+    };
+    const now = new Date();
+    for (const asset of [carried, ordinary]) {
+      // The carried row's D1 value is within the 30% band, so only the restored
+      // provenance — not the reasonableness gate — can keep it out.
+      const history = asset.id === carried.id ? 2007 : 95;
+      for (const days of [1, 7, 30]) {
+        const date = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - days) / 1000;
+        sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)")
+          .run(asset.id, date, history);
+      }
+    }
+
+    expect(await fillMissingSupplyHistory(db, [carried, ordinary])).toBe(2);
+    expect(carried).toMatchObject({
+      circulatingPrevDay: null, circulatingPrevWeek: { peggedEUR: 2165 }, circulatingPrevMonth: null,
+    });
+    expect(ordinary).toMatchObject({
+      circulatingPrevDay: { peggedEUR: 95 }, circulatingPrevWeek: { peggedEUR: 95 }, circulatingPrevMonth: { peggedEUR: 0 },
+    });
+  });
+
   it("rejects conflicting chain attribution: an unavailable attributed chain or several missing chains", async () => {
     const unavailable = makeAsset();
     unavailable.chainCirculating.Stellar = { current: null, circulatingPrevDay: 9 };

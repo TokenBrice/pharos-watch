@@ -192,6 +192,15 @@ export async function resolveDigestSafetyMap(
 export interface SafetyMapManifestDateObservation {
   date: string | null;
   reason: string | null;
+  /** Accepted data clock when the body satisfies the digest's manifest contract. */
+  asOfSec: number | null;
+  /** False when the digest resolver would reject the body as manifest-invalid. */
+  manifestValid: boolean;
+}
+
+/** Same 72-hour data budget the digest resolver applies before attaching the map. */
+export function isSafetyMapManifestDataCurrent(asOfSec: number | null, nowSec: number): boolean {
+  return asOfSec != null && nowSec >= asOfSec && nowSec - asOfSec < MAX_DATA_AGE_SEC;
 }
 
 /**
@@ -213,7 +222,7 @@ export async function readSafetyMapManifestDate(
     });
     if (!response.ok) {
       await cancelResponseBodyQuietly(response);
-      return { date: null, reason: `manifest-http-${response.status}` };
+      return { date: null, reason: `manifest-http-${response.status}`, asOfSec: null, manifestValid: false };
     }
     const raw = await readResponseTextWithinLimitWithSignal(
       response,
@@ -224,20 +233,24 @@ export async function readSafetyMapManifestDate(
     try {
       parsed = JSON.parse(raw);
     } catch {
-      return { date: null, reason: "manifest-invalid-json" };
+      return { date: null, reason: "manifest-invalid-json", asOfSec: null, manifestValid: false };
     }
     const manifestDate = parsed && typeof parsed === "object" && "date" in parsed
       ? parsed.date
       : null;
     if (typeof manifestDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(manifestDate)) {
-      return { date: null, reason: "manifest-invalid" };
+      return { date: null, reason: "manifest-invalid", asOfSec: null, manifestValid: false };
     }
-    return { date: manifestDate, reason: null };
+    const manifest = parseDigestSafetyMapManifest(parsed, "canonical");
+    if (!manifest) {
+      return { date: manifestDate, reason: "manifest-invalid", asOfSec: null, manifestValid: false };
+    }
+    return { date: manifestDate, reason: null, asOfSec: manifest.asOfSec, manifestValid: true };
   } catch (error) {
     throwIfAborted(signal);
     const reason = error instanceof Error && error.message
       ? error.message.slice(0, 80)
       : "read-failed";
-    return { date: null, reason: `manifest-read-failed:${reason}` };
+    return { date: null, reason: `manifest-read-failed:${reason}`, asOfSec: null, manifestValid: false };
   }
 }

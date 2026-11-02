@@ -177,6 +177,27 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
 }
 
 /**
+ * The effective onset of one depeg-event row: an active incident's projected
+ * first onset replaces the fragment's own `started_at`. One SQL authority for
+ * every caller that names that clock (the public page and the summary's
+ * read-time day counters).
+ */
+export function effectiveStartedAtSql(eventsAlias: string): string {
+  return `COALESCE((
+        SELECT canonical.first_started_at
+          FROM depeg_resolver_incidents owner
+          JOIN depeg_resolver_incidents canonical
+            ON canonical.incident_key = CASE
+                 WHEN owner.incident_state = 'active' THEN owner.incident_key
+                 ELSE COALESCE(owner.superseded_by_incident_key, owner.incident_key)
+               END
+         WHERE owner.current_event_id = ${eventsAlias}.id
+           AND canonical.incident_state = 'active'
+           AND COALESCE(${effectiveAliasIncidentKeySql("canonical")}, canonical.incident_key) = owner.incident_key
+      ), ${eventsAlias}.started_at)`;
+}
+
+/**
  * Raw fragment clocks remain intact; public pagination uses the projected onset.
  * A projection row is keyed by its effective fragment's `current_event_id`, and
  * an incident's current event is one linked event (links are unique per event),
@@ -185,18 +206,7 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
  * instead of cross-joining them with the whole materialized projection.
  */
 export const PUBLIC_DEPEG_EVENTS_SQL = `(
-  SELECT events.*, COALESCE((
-        SELECT canonical.first_started_at
-          FROM depeg_resolver_incidents owner
-          JOIN depeg_resolver_incidents canonical
-            ON canonical.incident_key = CASE
-                 WHEN owner.incident_state = 'active' THEN owner.incident_key
-                 ELSE COALESCE(owner.superseded_by_incident_key, owner.incident_key)
-               END
-         WHERE owner.current_event_id = events.id
-           AND canonical.incident_state = 'active'
-           AND COALESCE(${effectiveAliasIncidentKeySql("canonical")}, canonical.incident_key) = owner.incident_key
-      ), events.started_at) AS effective_started_at
+  SELECT events.*, ${effectiveStartedAtSql("events")} AS effective_started_at
     FROM depeg_events_with_provenance events
 )`;
 

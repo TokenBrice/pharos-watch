@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   deliverTwitterDigestWithLedger,
+  readTwitterDigestDeliveryStatus,
   type TwitterDigestDeliveryRecord,
 } from "../twitter-digest-ledger";
 
@@ -13,6 +14,37 @@ const fixtures = createLatestSchemaFixtureTracker();
 function loadRecord(sqlite: DatabaseSync): TwitterDigestDeliveryRecord {
   const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(KEY) as { value: string };
   return JSON.parse(row.value) as TwitterDigestDeliveryRecord;
+}
+
+/**
+ * D1 can commit a fenced UPDATE and then lose its acknowledgement. The overload
+ * retry replays the statement, whose WHERE now compares the pre-write value and
+ * matches zero rows.
+ */
+function makeCommitThenTimeoutDb(db: D1Database): D1Database {
+  let ambiguousWrites = 0;
+  return {
+    prepare: (query: string) => {
+      const statement = db.prepare(query);
+      return {
+        bind: (...values: unknown[]) => {
+          const bound = statement.bind(...values);
+          return {
+            run: async () => {
+              const result = await bound.run();
+              if (ambiguousWrites === 0 && query.startsWith("UPDATE cache SET value = ?")) {
+                ambiguousWrites += 1;
+                throw new Error("D1 DB storage operation exceeded timeout");
+              }
+              return result;
+            },
+            first: () => bound.first(),
+            all: () => bound.all(),
+          };
+        },
+      };
+    },
+  } as unknown as D1Database;
 }
 
 afterEach(() => {
@@ -121,5 +153,43 @@ describe("Twitter digest delivery ledger", () => {
       attempts: 1,
       tweetId: "1900000000000000001",
     });
+  });
+
+  it("treats a committed claim whose acknowledgement was lost as claimed, not lost", async () => {
+    const { sqlite, db } = fixtures.open();
+    const post = vi.fn(async () => ({ tweetId: "1900000000000000002", mediaAttached: false }));
+
+    await expect(deliverTwitterDigestWithLedger(makeCommitThenTimeoutDb(db), KEY, 17, NOW_SEC, post))
+      .resolves.toMatchObject({ status: "sent", post: { tweetId: "1900000000000000002" } });
+    expect(post).toHaveBeenCalledTimes(1);
+    expect(loadRecord(sqlite)).toMatchObject({ state: "sent", attempts: 1 });
+  });
+
+  it.each([
+    ["a partial repair record", '{"state":"failed","attempts":1}'],
+    ["a foreign schema record", '{"schemaVersion":2,"state":"execution_unknown","attempts":1,"createdAt":1,"updatedAt":1}'],
+  ])("does not publish %s as already sent", async (_label, value) => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(KEY, value, NOW_SEC);
+    const post = vi.fn();
+
+    await expect(readTwitterDigestDeliveryStatus(db, KEY)).resolves.toBe("skipped: execution-unknown");
+    await expect(deliverTwitterDigestWithLedger(db, KEY, 17, NOW_SEC, post)).resolves.toEqual({
+      status: "skipped",
+      reason: "execution-unknown",
+    });
+    expect(post).not.toHaveBeenCalled();
+  });
+
+  it("keeps the known legacy delivery marker duplicate-safe", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(KEY, JSON.stringify({ sentAt: 1, editionNumber: 17 }), NOW_SEC);
+    const post = vi.fn();
+
+    await expect(readTwitterDigestDeliveryStatus(db, KEY)).resolves.toBe("skipped: already-sent");
+    await expect(deliverTwitterDigestWithLedger(db, KEY, 17, NOW_SEC, post))
+      .resolves.toEqual({ status: "skipped", reason: "already-sent" });
+    expect(post).not.toHaveBeenCalled();
   });
 });

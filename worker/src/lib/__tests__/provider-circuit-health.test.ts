@@ -30,6 +30,7 @@ describe("provider-circuit-health", () => {
               lastFailureAt: 1_900,
               openedAt: 1_800,
             })),
+            updated_at: 1_900,
           },
           {
             key: `circuit:${CIRCUIT_SOURCE.ORCA_API}`,
@@ -39,6 +40,7 @@ describe("provider-circuit-health", () => {
               lastFailureAt: 1_700,
               openedAt: 1_600,
             })),
+            updated_at: 1_700,
           },
         ],
       },
@@ -76,6 +78,7 @@ describe("provider-circuit-health", () => {
               lastFailureAt: 1_900,
               openedAt: 1_850,
             })),
+            updated_at: 1_900,
           },
         ],
       },
@@ -91,7 +94,7 @@ describe("provider-circuit-health", () => {
   it("distinguishes malformed stored evidence from absent initial closed state", async () => {
     const health = await loadProviderCircuitHealth(mockD1([{
       match: "FROM cache WHERE key IN",
-      rows: [{ key: `circuit:${CIRCUIT_SOURCE.BALANCER_API}`, value: "{" }],
+      rows: [{ key: `circuit:${CIRCUIT_SOURCE.BALANCER_API}`, value: "{", updated_at: 1_900 }],
     }]), 2_000);
     expect(health.status).toBe("unknown");
     expect(health.invalidCount).toBe(1);

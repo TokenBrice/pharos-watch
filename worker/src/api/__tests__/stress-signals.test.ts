@@ -7,7 +7,7 @@ import {
   StressSignalsAllResponseSchema,
   StressSignalDetailResponseSchema,
 } from "@shared/types/market";
-import { ACTIVE_IDS, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_META_BY_ID, PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { API_FRESHNESS_MAX_AGE_SEC, STRESS_SIGNALS_DEGRADED_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { persistDewsResults } from "../../lib/dews/persistence";
@@ -17,6 +17,9 @@ import { makeDewsInput } from "../../lib/__tests__/dews.test-support";
 afterEach(() => vi.restoreAllMocks());
 const nowSec = Math.floor(Date.now() / 1000);
 const completedDewsAt = nowSec - 60;
+const dewsScoreableActiveIds = [...ACTIVE_IDS].filter(
+  (stablecoinId) => ACTIVE_META_BY_ID.get(stablecoinId)?.flags.navToken !== true,
+);
 const preLaunchStablecoinId = PRE_LAUNCH_STABLECOINS[0]?.id;
 if (!preLaunchStablecoinId) {
   throw new Error("stress-signals tests require at least one pre-launch stablecoin");
@@ -124,6 +127,11 @@ function makeStrictAggregateDb(rows: Record<string, unknown>[], completedAt = no
   return mockD1([
     dewsPublicationPointerMatch(completedAt),
     {
+      match: LATEST_AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
+      matchBinds: [completedAt],
+      rows: [],
+    },
+    {
       match: AGGREGATE_STRESS_SIGNALS_CUTOFF_SQL,
       matchBinds: [completedAt],
       rows,
@@ -158,6 +166,12 @@ function makeStrictSingleCoinDb(
 ) {
   return mockD1([
     dewsPublicationPointerMatch(completedAt),
+    {
+      match: LATEST_STRESS_SIGNAL_CUTOFF_SQL,
+      matchBinds: ["usdt-tether", completedAt],
+      rows: [],
+      first: null,
+    },
     {
       match: LEGACY_STRESS_SIGNAL_CUTOFF_SQL,
       matchBinds: ["usdt-tether", completedAt],
@@ -530,10 +544,10 @@ describe("handleStressSignals contract tests", () => {
     expect(body.malformedRows).toBe(1);
     expect(body).toMatchObject({
       computedCount: 1,
-      missingCount: ACTIVE_IDS.size - 2,
+      missingCount: dewsScoreableActiveIds.length - 2,
       coverageStatus: "degraded",
       coverageReasons: ["partial-coverage"],
-      coverageRatio: Number((1 / ACTIVE_IDS.size).toFixed(4)),
+      coverageRatio: Number((1 / dewsScoreableActiveIds.length).toFixed(4)),
     });
   });
 
@@ -597,12 +611,14 @@ describe("handleStressSignals contract tests", () => {
     expect(body.signals).toHaveProperty("usdt-tether");
     expect(body.signals).not.toHaveProperty("tbill-openeden");
     expect(body.signals).not.toHaveProperty("bfusd-binance");
-    expect(body.eligibleCount).toBe(ACTIVE_IDS.size);
+    expect(body.eligibleCount).toBe(dewsScoreableActiveIds.length);
     expect(body.computedCount).toBe(1);
   });
 
-  it("marks aggregate coverage ok when every active stablecoin has a current row", async () => {
-    const rows = [...ACTIVE_IDS].map((stablecoinId) => ({
+  it("marks aggregate coverage ok when every DEWS-scoreable active stablecoin has a current row", async () => {
+    expect(dewsScoreableActiveIds.length).toBeGreaterThan(0);
+    expect(dewsScoreableActiveIds.length).toBeLessThan(ACTIVE_IDS.size);
+    const rows = dewsScoreableActiveIds.map((stablecoinId) => ({
       stablecoin_id: stablecoinId,
       score: 12,
       band: "CALM",
@@ -614,13 +630,17 @@ describe("handleStressSignals contract tests", () => {
     const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
 
     const body = (await readJsonResponse(res, 200)) as {
+      eligibleCount: number;
       computedCount: number;
       missingCount: number;
+      coverageRatio: number;
       coverageStatus: string;
       coverageReasons: string[];
     };
-    expect(body.computedCount).toBe(ACTIVE_IDS.size);
+    expect(body.eligibleCount).toBe(dewsScoreableActiveIds.length);
+    expect(body.computedCount).toBe(dewsScoreableActiveIds.length);
     expect(body.missingCount).toBe(0);
+    expect(body.coverageRatio).toBe(1);
     expect(body.coverageStatus).toBe("ok");
     expect(body.coverageReasons).toEqual([]);
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
@@ -826,9 +846,56 @@ describe("handleStressSignals contract tests", () => {
     expect(body.updatedAt).toBe(0);
     expect(body.computedCount).toBe(0);
     expect(body.coverageStatus).toBe("unavailable");
-    expect(body.coverageReasons).toContain("no-current-rows");
+    expect(body.coverageReasons).toEqual(["publication-pointer-unavailable", "computed-count-zero"]);
     expect(res.headers.get("Warning")).toContain("DEWS current rows unavailable");
     expect(db.getHistory()).toHaveLength(1);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("names an unreadable publication pointer instead of reporting no current rows", async () => {
+    const db = mockD1([{
+      match: PUBLICATION_POINTER_SQL,
+      matchBinds: ["dews:published-generation"],
+      rows: [],
+      throwError: new Error("D1 read failed"),
+    }], { strict: true });
+
+    const res = await handleStressSignals(db, new URL("https://x/api/stress-signals"));
+
+    const body = (await readJsonResponse(res, 200)) as {
+      coverageStatus: string;
+      coverageReasons: string[];
+    };
+    expect(body.coverageStatus).toBe("unavailable");
+    expect(body.coverageReasons[0]).toBe("publication-pointer-unavailable");
+    expect(body.coverageReasons).not.toContain("no-current-rows");
+    expect(db.getHistory()).toHaveLength(1);
+    expect(() => db.assertAllMatchesUsed()).not.toThrow();
+  });
+
+  it("names an unreadable publication pointer in single-coin mode", async () => {
+    const db = mockD1([
+      {
+        match: PUBLICATION_POINTER_SQL,
+        matchBinds: ["dews:published-generation"],
+        rows: [],
+        throwError: new Error("D1 read failed"),
+      },
+      { match: STRESS_SIGNAL_HISTORY_SQL, rows: [] },
+    ], { strict: true });
+
+    const res = await handleStressSignals(
+      db,
+      new URL("https://x/api/stress-signals?stablecoin=usdt-tether&days=7"),
+    );
+
+    const body = (await readJsonResponse(res, 200)) as {
+      currentStatus: string;
+      currentReasons: string[];
+    };
+    expect(body.currentStatus).toBe("unavailable");
+    expect(body.currentReasons[0]).toBe("publication-pointer-unavailable");
+    expect(body.currentReasons).not.toContain("single-coin-current-row-missing");
     expect(() => db.assertAllMatchesUsed()).not.toThrow();
   });
 

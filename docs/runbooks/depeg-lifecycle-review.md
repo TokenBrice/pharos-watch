@@ -31,9 +31,10 @@ into days, so they can trip up to ~30 minutes early.
 
 - **Cache:** D1 `cache` table, key `depeg:lifecycle-flags` —
   `{ updatedAt, flags: [{ stablecoinId, symbol, kind, currentBps, ageDays, mcapUsd }] }`,
-  sorted by |deviation| × mcap. A digest run whose active-depeg read failed
-  leaves this key untouched, so `updatedAt` names the last successful read and
-  the prior queue stays pending.
+  sorted by |deviation| × mcap. A digest run whose active-depeg read failed,
+  whose stablecoins price cache was stale, or whose open-event supply was
+  unreadable leaves this key untouched, so `updatedAt` names the last successful
+  read and the prior queue stays pending.
 - **Cron metadata:** the `daily-digest` cron lane's metadata string appends
   `lifecycle-review: SYMBOL:kind|…` whenever flags exist, so the admin crons
   view surfaces pending reviews without a new UI surface.

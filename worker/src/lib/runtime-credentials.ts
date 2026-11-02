@@ -55,10 +55,9 @@ export function buildTelegramCreds(env: TelegramCredentialEnv): TelegramCreds | 
  * falling back to `TELEGRAM_CHAT_ID`.
  */
 export function buildTelegramOperatorCreds(env: Pick<Env, "TELEGRAM_BOT_TOKEN" | "TELEGRAM_OPERATOR_CHAT_ID">): TelegramCreds | null {
-  return env.TELEGRAM_BOT_TOKEN && env.TELEGRAM_OPERATOR_CHAT_ID
-    ? {
-        botToken: env.TELEGRAM_BOT_TOKEN,
-        chatId: env.TELEGRAM_OPERATOR_CHAT_ID,
-      }
+  const botToken = trimmed(env.TELEGRAM_BOT_TOKEN);
+  const chatId = trimmed(env.TELEGRAM_OPERATOR_CHAT_ID);
+  return botToken && chatId
+    ? { botToken, chatId }
     : null;
 }

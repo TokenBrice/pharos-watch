@@ -16,7 +16,7 @@ expectTypeOf<EndpointDefinitionByKey<"backfill-dews">["methods"]>()
 const ENDPOINT_DEFINITION_KEYS = [
   "key", "path", "methods", "adminRequired", "mutatingAdmin", "cacheBypass",
   "publicApiAccess", "siteDataAccess", "strictContract", "probeGroup", "probePath",
-  "cacheKeyIgnoresQuery", "opsProxyTimeoutMs", "probeSemanticKind", "statusPageAction",
+  "cacheKeyIgnoresQuery", "cacheKeyQueryParams", "opsProxyTimeoutMs", "probeSemanticKind", "statusPageAction",
   "routeDependencies",
 ] as const satisfies readonly (keyof EndpointDefinition)[];
 
@@ -59,6 +59,14 @@ describe("endpoint definition factory parity", () => {
       path: "/api/donor-key-claims", methods: ["POST"],
       adminRequired: false, mutatingAdmin: false, cacheBypass: true,
       publicApiAccess: "exempt", siteDataAccess: "denied",
+    });
+  });
+
+  it("keeps the multi-megabyte DEX history route off the public site-data lane", () => {
+    expect(ENDPOINT_DEFINITIONS.find((endpoint) => endpoint.key === "dex-liquidity-history")).toMatchObject({
+      path: "/api/dex-liquidity-history",
+      publicApiAccess: "protected",
+      siteDataAccess: "denied",
     });
   });
 

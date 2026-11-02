@@ -33,12 +33,14 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.66`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.67`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
 
 The [public Pricing changelog](https://pharos.watch/methodology/pricing-pipeline-changelog/) owns release chronology, activation dates and retained historical behavior. Supply admission, historical-bucket conservation and repair clocks remain governed by the [supply contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/supply-snapshot.md#supply-data-source), not by a second Pricing specification.
+
+Pricing v6.67 keeps a provider aggregate history bucket on a chain-dropout carry only when every carried chain's own packet row still reports that window at the carried baseline; an absent, zero or divergent bucket, or an attribution-ambiguous held total, leaves that window null. The [supply contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/supply-snapshot.md#chain-dropout-guard) owns the detailed carry condition.
 
 ### Release obligations
 

@@ -4,7 +4,7 @@ import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
-import { loadStablecoinsCache } from "../lib/stablecoins-cache";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../lib/stablecoins-cache";
 import {
   getCirculatingRawOrNull,
   getPrevDayRawOrNull,
@@ -21,8 +21,9 @@ export const handleStablecoinSummary = async (
   db: D1Database,
   id: string,
 ): Promise<Response> => {
-  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "strict" });
-  if (stablecoinsCache.kind !== "ok") {
+  // One malformed sibling must not withhold an admitted asset (ADR-35/R8).
+  const stablecoinsCache = await loadStablecoinsCache(db, { mode: "lenient" });
+  if (!hasUsableStablecoinsPayload(stablecoinsCache) || stablecoinsCache.updatedAt == null) {
     return errorResponse(503, "Cached stablecoins data is corrupt");
   }
 
@@ -30,6 +31,13 @@ export const handleStablecoinSummary = async (
   if (!coin) {
     return errorResponse(404, `Stablecoin ${id} not found`);
   }
+
+  // A cached replay keeps its original quote clock; age the freshness verdict
+  // on the oldest contributing observation, never the sync write generation.
+  const priceObservedAt = isObservedPrice(coin) ? coin.priceObservedAt ?? coin.priceUpdatedAt ?? null : null;
+  const freshnessAsOf = priceObservedAt == null
+    ? stablecoinsCache.updatedAt
+    : Math.min(stablecoinsCache.updatedAt, priceObservedAt);
 
   // A present coin whose current buckets are absent/empty/invalid has unavailable current
   // supply (null + reason), never a measured 0 that would fabricate a -100% delta.
@@ -47,6 +55,9 @@ export const handleStablecoinSummary = async (
     priceUsd: isObservedPrice(coin) ? coin.price ?? null : null,
     priceSource: coin.priceSource,
     priceConfidence: isObservedPrice(coin) ? coin.priceConfidence ?? null : null,
+    priceObservedAt,
+    priceSyncedAt: coin.priceSyncedAt ?? null,
+    priceUpdatedAt: coin.priceUpdatedAt ?? null,
     ...(!isObservedPrice(coin) && coin.priceObservedAtMode != null ? { priceObservedAtMode: coin.priceObservedAtMode } : {}),
     ...(coin.nominalPriceReference ? { nominalPriceReference: coin.nominalPriceReference } : {}),
     ...(isObservedPrice(coin) && coin.priceDerivation ? { priceDerivation: coin.priceDerivation } : {}),
@@ -73,7 +84,7 @@ export const handleStablecoinSummary = async (
   }, {
     headers: addFreshnessHeaders(
       { "Cache-Control": CACHE_PROFILES.producerBacked },
-      stablecoinsCache.updatedAt,
+      freshnessAsOf,
       API_FRESHNESS_MAX_AGE_SEC.stablecoins,
     ),
   });

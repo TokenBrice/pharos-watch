@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 
 const mocks = vi.hoisted(() => ({
@@ -35,6 +36,7 @@ import {
   type ReserveAdapterAlertAttempt,
   type ReserveAdapterAlertState,
 } from "../reserve-post-sync-watchdog";
+import { SNAPSHOT_KEYS } from "../telegram/sources/telegram-alert-snapshots";
 
 const COIN = "iusd-infinifi";
 const NOW = 1_000_000;
@@ -115,6 +117,37 @@ describe("evaluateReserveAdapterAlerts", () => {
       attempt({ attemptedAt: NOW + 14_400, status: "ok", failureCategory: null }),
     ], { prior: recovered.state });
     expect(afterRecovery.recovered).toEqual([]);
+  });
+
+  it("keeps a rule raised while any coin still fails and reports no rule-level recovery", () => {
+    const other = "usdc-circle";
+    const prior: ReserveAdapterAlertState = {
+      version: 1,
+      coins: {
+        [COIN]: { failureRaised: true, scoreIneligibleRaised: false, clockRaised: false },
+        [other]: { failureRaised: true, scoreIneligibleRaised: false, clockRaised: false },
+      },
+    };
+    const result = evaluateReserveAdapterAlerts({
+      nowSec: NOW,
+      attemptsByCoin: new Map([
+        [COIN, [attempt({ attemptedAt: NOW, status: "ok", failureCategory: null })]],
+        [other, [
+          attempt({ attemptedAt: NOW }),
+          attempt({ attemptedAt: NOW - 14_400 }),
+          attempt({ attemptedAt: NOW - 28_800 }),
+        ]],
+      ]),
+      sourceAgeBudgetByCoin: new Map([[COIN, 7_200], [other, 7_200]]),
+      scoreIneligibleCoinIds: new Set(),
+      scoreIneligibleUnknownCoinIds: new Set(),
+      acknowledgedCoinIds: new Set(),
+      previous: prior,
+    });
+    expect(result.raised).toEqual([]);
+    expect(result.recovered).toEqual([]);
+    expect(result.state.coins[other]?.failureRaised).toBe(true);
+    expect(result.state.coins[COIN]).toBeUndefined();
   });
 
   it.each([
@@ -334,6 +367,55 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
       } | null;
     };
   }
+
+  it("publishes an explicit non-continuous gap for an empty observed census so recovery cold-seeds", async () => {
+    const interval = CRON_INTERVALS["sync-live-reserves"];
+    const t0 = NOW;
+    const nowSpy = vi.spyOn(Date, "now");
+    try {
+      nowSpy.mockReturnValue(t0 * 1000);
+      mocks.drift.mockResolvedValue({
+        driftCoins: [], fallbackCoins: [], observedIds: [COIN], liveReserveMap: new Map(),
+      });
+      await runReservePostSyncWatchdog(historyDb([]));
+      const healthy = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as { observedSince: Record<string, number> };
+      expect(healthy.observedSince[COIN]).toBe(t0);
+
+      // The watchdog's own four-hourly slot runs, but no cohort member was observed.
+      nowSpy.mockReturnValue((t0 + interval) * 1000);
+      mocks.drift.mockResolvedValue({
+        driftCoins: [], fallbackCoins: [COIN], observedIds: [], liveReserveMap: new Map(),
+      });
+      const gapResult = await runReservePostSyncWatchdog(historyDb([]));
+      const gapMetadata = JSON.parse(gapResult.metadata ?? "{}") as { degradedReasons: string[] };
+      expect(gapMetadata.degradedReasons).toContain("reserve-drift-census-empty");
+
+      // An explicit gap replaces the retained healthy envelope: the census
+      // cannot certify a no-drift set, and the source must not look continuous.
+      const gap = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as Record<string, unknown>;
+      expect(gap).toMatchObject({
+        continuous: false,
+        driftIds: [],
+        unavailableIds: [COIN],
+        publishedAt: t0 + interval,
+      });
+      // toMatchObject treats {} as a wildcard; the gap must carry no epochs.
+      expect(gap.observedSince).toEqual({});
+
+      nowSpy.mockReturnValue((t0 + 2 * interval) * 1000);
+      mocks.drift.mockResolvedValue({
+        driftCoins: [{ id: COIN, liveScore: 40, curatedScore: 60, delta: 20 }],
+        fallbackCoins: [], observedIds: [COIN], liveReserveMap: new Map(),
+      });
+      await runReservePostSyncWatchdog(historyDb([]));
+      const recovery = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as { observedSince: Record<string, number> };
+      // A single missed cycle must not inherit the pre-gap epoch: dispatch
+      // compares epochs to cold-seed a member returning from a blind interval.
+      expect(recovery.observedSince[COIN]).toBe(t0 + 2 * interval);
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
 
   it("fires once at the third cycle and recovers once when a cycle succeeds", async () => {
     const second = await readAlert([historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error")]);

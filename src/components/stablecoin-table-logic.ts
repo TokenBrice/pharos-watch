@@ -5,7 +5,7 @@ import { getReportCardGradeRank } from "@shared/lib/report-card-core";
 import { resolveMintAuthorityScoreDisplay, resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { getNavPriceReference } from "@/lib/nav-price-reference";
 import type { ColumnId } from "@/hooks/use-preferences";
-import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter, OTHER_PEG_TAGS } from "@shared/lib/filter-tags";
+import { GRADE_FILTER_TAGS, getFilterTags, gradeMatchesFilter } from "@shared/lib/filter-tags";
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
 import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
@@ -148,9 +148,7 @@ export function buildTrackedIdSet(
       if (!eligibleIds.has(stablecoin.id)) return false;
       // Check regular filters (from metadata tags)
       const tags = getFilterTags(stablecoin);
-      const regularMatch = regularFilters.every((filter) =>
-        filter === "other-peg" ? tags.some((tag) => OTHER_PEG_TAGS.includes(tag)) : tags.includes(filter),
-      );
+      const regularMatch = regularFilters.every((filter) => tags.includes(filter));
       if (!regularMatch) return false;
 
       // Check grade filters (from reportCards)

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import {
@@ -9,11 +9,13 @@ import {
 const cacheRows = vi.hoisted(() => new Map<string, { value: string; updatedAt: number }>());
 const getCacheMock = vi.hoisted(() => vi.fn());
 const setCacheIfNewerMock = vi.hoisted(() => vi.fn());
+const deleteCacheMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../db-cache", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../db-cache")>()),
   getCache: getCacheMock,
   setCacheIfNewer: setCacheIfNewerMock,
+  deleteCache: deleteCacheMock,
 }));
 
 const { loadPegAnalyticsCache, publishPegAnalyticsCache } = await import("../peg-analytics-cache");
@@ -21,7 +23,34 @@ const { loadPegAnalyticsCache, publishPegAnalyticsCache } = await import("../peg
 const NOW_SEC = 1_783_891_200;
 const TODAY_START_SEC = Math.floor(NOW_SEC / DAY_SECONDS) * DAY_SECONDS;
 
-const pegRow = { id: "usdt-tether" } as unknown as PegSummaryCoin;
+const pegRow = {
+  id: "usdt-tether",
+  symbol: "USDT",
+  name: "Tether",
+  pegType: "peggedUSD",
+  pegCurrency: "USD",
+  governance: "centralized",
+  currentDeviationBps: 0,
+  pegScore: 99,
+  pegPct: 99.9,
+  severityScore: 7,
+  spreadPenalty: 2,
+  eventCount: 1,
+  worstDeviationBps: -120,
+  activeDepeg: false,
+  lastEventAt: NOW_SEC - DAY_SECONDS,
+  trackingSpanDays: 400,
+  methodologyVersion: "6.08",
+} satisfies PegSummaryCoin;
+
+function validPayload(computedAtSec = NOW_SEC): string {
+  return JSON.stringify({
+    computedAtSec,
+    depegEventsToday: 0,
+    depegEventsYesterday: 0,
+    pegData: [pegRow],
+  });
+}
 
 function snapshot(
   allEvents: Array<{ stablecoinId: string; startedAt: number; provenance?: { auditVerdict: string } | null }>,
@@ -35,11 +64,19 @@ function snapshot(
 }
 
 describe("publishPegAnalyticsCache", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   beforeEach(() => {
     resetCacheJsonParseFailureCountersForTests();
     cacheRows.clear();
     getCacheMock.mockReset();
     getCacheMock.mockImplementation(async (_db: unknown, key: string) => cacheRows.get(key) ?? null);
+    deleteCacheMock.mockReset();
+    deleteCacheMock.mockImplementation(async (_db: unknown, key: string) => {
+      cacheRows.delete(key);
+    });
     setCacheIfNewerMock.mockReset();
     setCacheIfNewerMock.mockImplementation(async (
       _db: unknown,
@@ -108,5 +145,55 @@ describe("publishPegAnalyticsCache", () => {
     setCacheIfNewerMock.mockRejectedValue(new Error("d1 unavailable"));
 
     await expect(publishPegAnalyticsCache({} as D1Database, snapshot([]))).resolves.toBe(false);
+  });
+
+  it("rejects a row whose peg data predates the published coin shape", async () => {
+    cacheRows.set("peg-analytics", {
+      value: JSON.stringify({
+        computedAtSec: NOW_SEC,
+        depegEventsToday: 0,
+        depegEventsYesterday: 0,
+        pegData: [{ id: "usdt-tether" }],
+      }),
+      updatedAt: NOW_SEC,
+    });
+
+    await expect(
+      loadPegAnalyticsCache({} as D1Database, { maxAgeMs: Number.MAX_SAFE_INTEGER }),
+    ).resolves.toEqual({ kind: "miss", reason: "invalid-payload" });
+  });
+
+  it("rejects day-scoped counters published on a previous UTC day", async () => {
+    const publishedAtSec = Date.parse("2026-07-12T23:46:00Z") / 1000;
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse("2026-07-13T00:05:00Z"));
+    cacheRows.set("peg-analytics", {
+      value: validPayload(publishedAtSec),
+      updatedAt: publishedAtSec,
+    });
+
+    await expect(
+      loadPegAnalyticsCache({} as D1Database, { requireCurrentUtcDay: true }),
+    ).resolves.toEqual({ kind: "miss", reason: "stale-day" });
+    // The day scope is opt-in: callers that only read the non-day-scoped rows
+    // (the OG renderer) still accept the same generation.
+    await expect(
+      loadPegAnalyticsCache({} as D1Database, { maxAgeMs: Infinity }),
+    ).resolves.toMatchObject({ kind: "ok" });
+  });
+
+  it("rejects and clears a future-dated row so the next publish can write", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const futureSec = NOW_SEC + 86_400;
+    cacheRows.set("peg-analytics", { value: validPayload(NOW_SEC), updatedAt: futureSec });
+
+    await expect(
+      loadPegAnalyticsCache({} as D1Database, { maxAgeMs: Infinity }),
+    ).resolves.toEqual({ kind: "miss", reason: "future-timestamp" });
+    expect(deleteCacheMock).toHaveBeenCalledWith(expect.anything(), "peg-analytics");
+
+    await expect(publishPegAnalyticsCache({} as D1Database, snapshot([], NOW_SEC))).resolves.toBe(true);
+    expect(cacheRows.get("peg-analytics")?.updatedAt).toBe(NOW_SEC);
   });
 });

@@ -1,3 +1,4 @@
+import type { FreshnessTimestampReason } from "./api-freshness-age";
 import { decodeCachedJson } from "./cache-json";
 import {
   readCacheWithPolicy,
@@ -20,8 +21,15 @@ interface SafeParseSchema<T> {
   safeParse(value: unknown): SafeParseSuccess<T> | SafeParseFailure;
 }
 
+export type VersionedSnapshotCacheClockReason = Extract<
+  FreshnessTimestampReason,
+  "future-timestamp" | "invalid-timestamp"
+>;
+
 export interface VersionedSnapshotCacheReasons<TReason extends string> {
   missingCache: TReason;
+  /** A present row whose own clock failed timestamp admission; distinct from absent. */
+  cacheClockRejected: (reason: VersionedSnapshotCacheClockReason) => TReason;
   jsonParseFailed: TReason;
   invalidPayload: TReason;
   invalidEnvelope: TReason;
@@ -65,6 +73,14 @@ export async function loadVersionedSnapshotCache<TPayload, TReason extends strin
 ): Promise<VersionedSnapshotCacheLoadResult<TPayload, TReason>> {
   const policy = rawSnapshotPolicy(options);
   const cached = await readCacheWithPolicy(db, policy);
+  if (cached.state === "invalid"
+    && (cached.reason === "future-timestamp" || cached.reason === "invalid-timestamp")) {
+    return {
+      kind: "error",
+      reason: options.reasons.cacheClockRejected(cached.reason),
+      updatedAt: cached.updatedAt,
+    };
+  }
   return parseVersionedSnapshotCache(
     (cached.state === "fresh" || cached.state === "stale") && cached.usable
       ? { value: cached.value, updatedAt: cached.updatedAt }

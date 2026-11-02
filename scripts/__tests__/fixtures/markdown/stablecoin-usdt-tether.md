@@ -23,7 +23,7 @@ USDT held Safety Score A (83/100) as of 2026-10-22 in Pharos's scores-latest rel
 
 ## Collateral
 
-Q2 2026 attestation: $187.75B total assets vs $183.64B liabilities; about $140.6B in U.S. Treasury bills and reverse repurchase agreements, $18.8B precious metals, $5.8B Bitcoin, $13.5B secured loans, and a $4.11B excess reserve buffer.
+Q3 2026 attestation: $191.45B total assets vs $183.50B liabilities; about $139.6B in U.S. Treasury bills, reverse repurchase agreements and cash equivalents, $19.1B precious metals, $8.4B Bitcoin, $14.2B secured loans, and a $7.95B excess reserve buffer.
 
 ## Peg Mechanism
 
@@ -47,7 +47,7 @@ As of Oct 22, 2026, Pharos grades USDT A (83/100) on its Safety Score. Pharos's 
 
 ### What backs USDT?
 
-Pharos records USDT's reserves as of Jun 30, 2026 as 61.2% U.S. Treasury bills, 10% Precious metals, 9.9% Overnight reverse repurchase agreements, and 8 smaller holdings. Reserve evidence: Independent Attestation by BDO Italia, latest period ending Jun 30, 2026. Pharos classifies the backing as Real-World Asset Backed.
+Pharos records USDT's reserves as of Sep 30, 2026 as 64.2% U.S. Treasury bills, 10% Precious metals, 7.4% Secured loans, and 8 smaller holdings. Reserve evidence: Independent Attestation by BDO Italia, latest period ending Sep 30, 2026. Pharos classifies the backing as Real-World Asset Backed.
 
 ### Can USDT be frozen or blacklisted?
 
@@ -61,11 +61,10 @@ Under the route Pharos reviewed on Apr 16, 2026, customers the issuer has verifi
 
 ### Reserve sources
 
-- [BDO ISAE 3000R report at 2026-06-30, signed 2026-07-31; report page 4 / PDF page 9, footnotes 3-13 reverified 2026-10-02 UTC](<https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf>)
-- [Tether latest-report index and presentation, inspected 2026-09-27](<https://tether.to/en/transparency/?tab=reports>)
-- [Tether live transparency balance endpoint (separate balance-sheet observation, not composition)](<https://app.tether.to/transparency.json>)
-- [BDO ISAE 3000R report at 2026-03-31, signed 2026-04-30 (prior-quarter equity comparison), reviewed 2026-10-19](<https://assets.ctfassets.net/vyse88cgwfbl/6crn1tXbl6AtWZBWucZnfg/c4ff472d70c1b48c2f689f27b54c84f5/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_31-03-2026.pdf>)
-- [Tether Q2 2026 reports and reserves](<https://tether.to/transparency/?tab=reports>)
+- [BDO ISAE 3000R report at 2026-09-30, signed Milan 2026-10-30; report page 4 category dollars and footnotes 4-14 reverified 2026-11-01 UTC](<https://assets.ctfassets.net/vyse88cgwfbl/7nQYtcoP9GxIUFSyro2dGK/8d0521470b9e99c8c0831019cabea4ee/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_30-09-2026.pdf>)
+- [Tether latest-report index and presentation, inspected 2026-11-01; report-dated assets, liabilities and net equity block](<https://tether.to/en/transparency/?tab=reports>)
+- [Tether live transparency endpoint (daily net circulation and live reserve residual, not the report-dated balance sheet or composition)](<https://app.tether.to/transparency.json>)
+- [Tether Q3 2026 attestation release, 2026-10-30: $191,451,091,374 assets, $183,496,460,904 liabilities and a $7,954,630,470 excess buffer](<https://tether.io/news/tether-generates-1-5-billion-in-q3-net-operating-profit-as-reserve-buffer-doubles-to-almost-8-billion/>)
 - [Reserve source](<https://tether.to/en/transparency>)
 
 ### Redemption sources

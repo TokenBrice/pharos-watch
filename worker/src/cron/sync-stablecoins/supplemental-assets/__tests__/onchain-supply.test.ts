@@ -232,7 +232,7 @@ const SUSDE_OFT = "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2";
 const SUSDE_REPRESENTATION_CHAINS = [
   "plasma", "linea", "fraxtal", "hyperevm", "berachain", "zircuit", "metis", "xlayer",
   "base", "bsc", "morph-l2", "scroll", "kava", "swellchain", "mode", "mantle",
-  "arbitrum", "manta", "blast", "optimism", "zksync", "avalanche", "solana",
+  "arbitrum", "manta", "blast", "optimism", "zksync", "avalanche", "solana", "monad",
 ];
 
 function makeSusdeMeta(): StablecoinMeta {
@@ -586,15 +586,17 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
 
   it("splits sUSDe's canonical row into free float and an unattributed escrow remainder", async () => {
     mockSusdeLegs();
-    // The OFT adapter escrows 300, but only 230 of it is claimed by configured
-    // representation legs: TON, Aptos and unmatched escrow are the remaining 70.
+    // The OFT adapter escrows 300, but only 240 of it is claimed by configured
+    // representation legs (including Monad): TON, Aptos and unmatched escrow are
+    // the remaining 60.
     fetchOnchainUint256Mock.mockResolvedValue(300n * 10n ** 18n);
 
     const result = await fetchCuratedAggregateOnChainMcap(makeSusdeMeta(), 1);
 
     expect(result?.mcap).toBe(1_000);
     expect(result?.chainCirculating?.Ethereum?.current).toBe(700);
-    expect(result?.chainCirculating?.["sUSDe unattributed OFT escrow"]?.current).toBe(70);
+    expect(result?.chainCirculating?.Monad?.current).toBe(10);
+    expect(result?.chainCirculating?.["sUSDe unattributed OFT escrow"]?.current).toBe(60);
     const published = Object.values(result?.chainCirculating ?? {}).reduce((sum, value) => sum + value.current, 0);
     expect(published).toBeCloseTo(1_000, 6);
     const joinedCalls = vi.mocked(evmRpc.fetchEvmUint256AtBlock).mock.calls;
@@ -610,6 +612,31 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       contract: "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
       data: `0x70a08231${SUSDE_OFT.slice(2).padStart(64, "0")}`,
     });
+  });
+
+  it("admits USYC's complete native four-chain stock instead of a stale CoinGecko cap", async () => {
+    const meta = TRACKED_META_BY_ID.get("usyc-hashnote")!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(true);
+    probeTrackedTokenSupplyMock.mockImplementation(async (supplyMeta, input) => {
+      const chain = input?.chain ?? supplyMeta?.contracts?.[0]?.chain;
+      if (chain === "ethereum") return 30_872_668_252_824n;
+      if (chain === "bsc") return 1_929_937_727_947_452n;
+      if (chain === "solana") return 122_481_545n;
+      return null;
+    });
+    fetchErc20TotalSupplyMock.mockResolvedValue(0n);
+
+    const result = await fetchCuratedAggregateOnChainMcap(meta, 1.1421542786596874);
+
+    // 1,960,810,518.68 USYC on-chain; the published CoinGecko cap implied
+    // $2,359,932,884.03 and must never be admitted once the roster is preferred.
+    expect(result?.mcap).toBeCloseTo(2_239_548_123.55, 2);
+    expect(result?.chainCirculating?.Ethereum?.current).toBeCloseTo(35_261_350.14, 2);
+    expect(result?.chainCirculating?.BSC?.current).toBeCloseTo(2_204_286_633.52, 2);
+    expect(result?.chainCirculating?.Solana?.current).toBeCloseTo(139.89, 2);
+    expect(result?.chainCirculating?.Arc?.current).toBe(0);
+    expect(Object.values(result!.chainCirculating!).reduce((sum, row) => sum + row.current, 0))
+      .toBeCloseTo(result!.mcap, 6);
   });
 
   it("withholds an escrow partition when its canonical header changes after the escrow read", async () => {

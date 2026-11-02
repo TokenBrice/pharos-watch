@@ -217,7 +217,14 @@ export async function writeCacheWithPolicy<T>(
 export async function shouldSkipFreshCache(db: D1Database, key: string, maxAgeSec: number): Promise<boolean> {
   const cached = await getCache(db, key);
   if (!cached) return false;
-  return Date.now() / 1000 - cached.updatedAt < maxAgeSec;
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (assessFreshnessTimestamp(nowSec, cached.updatedAt).reason != null) {
+    // A future-dated clock is not freshness, and the if-newer write would keep
+    // rejecting the producer's current-clock repair, so drop the row.
+    await deleteCache(db, key);
+    return false;
+  }
+  return nowSec - cached.updatedAt < maxAgeSec;
 }
 
 export interface CacheWriteResult {

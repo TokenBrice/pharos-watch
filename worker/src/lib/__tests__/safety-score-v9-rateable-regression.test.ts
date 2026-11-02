@@ -9,7 +9,9 @@ import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extensio
 import { capturedAccessMetaById } from "./safety-score-v9-capture.test-support";
 
 // Frozen producer rows for usdt-tether and usdc-circle, originally captured
-// on 2026-07-13 and coherently reclocked to 2026-10-02. Access evidence
+// on 2026-07-13 and coherently reclocked to 2026-11-02, past the registry's
+// 2026-10-30 USDT BDO Q3 attestation pin and 2026-11-01 custody recheck.
+// Access evidence
 // available at that clock is frozen alongside the producer rows;
 // other registry evidence still exercises current adapters.
 // This guards the July 13 rescue against compiler changes silently removing

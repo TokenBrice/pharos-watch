@@ -1,6 +1,6 @@
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { medianOfRounded } from "@shared/lib/peg-utils";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
@@ -13,14 +13,18 @@ import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
-import { getDepegThresholdBps } from "../lib/constants";
+import { getDepegThresholdBpsForPegCurrency } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
-import { loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
+import { countPegEventDays, loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
 import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import { deriveCurrentPegObservationMap } from "../lib/current-peg-observations";
-import { IncidentProjectionUnavailableError } from "../lib/depeg-event-projection";
+import {
+  effectiveStartedAtSql,
+  EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL,
+  IncidentProjectionUnavailableError,
+} from "../lib/depeg-event-projection";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION,
@@ -29,7 +33,6 @@ import {
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base";
 import { DEPEG_EVENT_MIN_SUPPLY_USD } from "@shared/lib/depeg-config";
-import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 
 function deriveDexDeviationBps(
   dexPriceUsd: number,
@@ -51,6 +54,107 @@ function deriveDexDeviationBps(
     return Math.round(((currentMultiplier * dexVsPrimaryMultiplier) - 1) * 10000);
   }
   return null;
+}
+
+/**
+ * The peg unit the live observation map admits: the curated registry currency
+ * decides when the snapshot label disagrees, the snapshot label is used only
+ * for currencies with no canonical peg type, and the older analytics label is
+ * a last resort for an absent snapshot row.
+ */
+function resolvePegType(
+  asset: StablecoinData | undefined,
+  pegCurrency: string,
+  cachedPegType: string,
+): string {
+  const livePegType = normalizePegType(asset?.pegType);
+  const registryPegType = normalizePegType(pegTypeFromCurrency(pegCurrency));
+  if (livePegType != null && (registryPegType == null || livePegType === registryPegType)) {
+    return livePegType;
+  }
+  if (registryPegType != null) return registryPegType;
+  return normalizePegType(cachedPegType) ?? "";
+}
+
+type PegEventDayRow = {
+  stablecoin_id: string;
+  started_at: number;
+  provenance_json: string | null;
+  provenance_audit_verdict: string | null;
+};
+
+function storedAuditVerdict(row: PegEventDayRow): string | null {
+  if (row.provenance_json) {
+    try {
+      const parsed = JSON.parse(row.provenance_json) as { auditVerdict?: unknown } | null;
+      if (parsed != null && typeof parsed === "object" && typeof parsed.auditVerdict === "string") {
+        return parsed.auditVerdict;
+      }
+    } catch {
+      // Unreadable provenance falls through to the column, as rowToDepegEvent does.
+    }
+  }
+  return row.provenance_audit_verdict;
+}
+
+type PegEventDayCountRead =
+  | { kind: "ok"; today: number; yesterday: number }
+  | { kind: "unavailable"; reason: "peg-event-day-count-read-failed" };
+
+/**
+ * Read-time re-bucketing for a cached generation from an earlier UTC day: the
+ * cached pair names that generation's "today". The counters must use the same
+ * clock the producer counts (`rowToPublicDepegEvent`), i.e. an active
+ * incident's projected first onset, not the current fragment's `started_at`.
+ * The raw `started_at` is never earlier than that effective onset, so the
+ * indexed two-day bound still admits every row the counters can bucket.
+ *
+ * A failed read is reported, never defaulted to zero: the route answers with
+ * an explicit typed 503 instead of an unhandled error or a false calm day.
+ */
+async function loadPegEventDayCounts(db: D1Database, nowSec: number): Promise<PegEventDayCountRead> {
+  const todayStartSec = bucketUnixSecondsToUtcDay(nowSec);
+  try {
+    const rows = await db.prepare(
+      `SELECT /* pharos:peg-summary:depeg-event-day-counts */
+         e.stablecoin_id,
+         ${effectiveStartedAtSql("e")} AS started_at,
+         e.provenance_json, e.provenance_audit_verdict
+         FROM depeg_events_with_provenance e
+        WHERE e.started_at >= ?
+          AND ${EXCLUDE_SUPERSEDED_ACTIVE_INCIDENT_EVENTS_SQL}`,
+    ).bind(todayStartSec - DAY_SECONDS).all<PegEventDayRow>();
+    const counts = countPegEventDays((rows.results ?? []).map((row) => ({
+      stablecoinId: row.stablecoin_id,
+      startedAt: row.started_at,
+      provenance: { auditVerdict: storedAuditVerdict(row) },
+    })), nowSec);
+    return { kind: "ok", today: counts.today, yesterday: counts.yesterday };
+  } catch (error) {
+    logWorkerEventArgs("api", "warn",
+      "[peg-summary] depeg event day-count query failed:",
+      error instanceof Error ? error.message : error,
+    );
+    return { kind: "unavailable", reason: "peg-event-day-count-read-failed" };
+  }
+}
+
+async function resolveCachedEventDayCounts(
+  db: D1Database,
+  payload: { computedAtSec: number; depegEventsToday: number; depegEventsYesterday: number },
+  nowSec: number,
+): Promise<PegEventDayCountRead> {
+  if (bucketUnixSecondsToUtcDay(payload.computedAtSec) === bucketUnixSecondsToUtcDay(nowSec)) {
+    return { kind: "ok", today: payload.depegEventsToday, yesterday: payload.depegEventsYesterday };
+  }
+  return loadPegEventDayCounts(db, nowSec);
+}
+
+function eventDayCountsUnavailable(reason: "peg-event-day-count-read-failed"): Response {
+  return jsonResponse({
+    error: "Canonical depeg event day counters unavailable",
+    reason,
+  }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
 }
 
 export const __pegSummaryTestHooks = {
@@ -101,6 +205,8 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       }),
     // Producer-published by the quarter-hourly report-cards pass; the direct
     // compute below re-scans ~21K depeg_events rows, so it is fallback-only.
+    // A previous-day generation is still accepted: its day-scoped counters are
+    // re-bucketed below, so midnight never forces a recompute or an outage.
     loadPegAnalyticsCache(db).catch(() => ({ kind: "miss" as const, reason: "missing-cache" as const })),
   ]);
 
@@ -116,8 +222,10 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
 
   if (pegAnalyticsCache.kind === "ok") {
     pegDataById = pegAnalyticsCache.pegDataById;
-    depegEventsToday = pegAnalyticsCache.payload.depegEventsToday;
-    depegEventsYesterday = pegAnalyticsCache.payload.depegEventsYesterday;
+    const counts = await resolveCachedEventDayCounts(db, pegAnalyticsCache.payload, now);
+    if (counts.kind !== "ok") return eventDayCountsUnavailable(counts.reason);
+    depegEventsToday = counts.today;
+    depegEventsYesterday = counts.yesterday;
     freshnessAsOf = Math.min(freshnessAsOf, pegAnalyticsCache.payload.computedAtSec);
   } else {
     const pegAnalytics = await derivePegAnalyticsSnapshot(db, {
@@ -139,22 +247,17 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
         }, { status: 503, headers: { "Cache-Control": CACHE_PROFILES.noStore } });
       }
       pegDataById = retained.pegDataById;
-      depegEventsToday = retained.payload.depegEventsToday;
-      depegEventsYesterday = retained.payload.depegEventsYesterday;
+      const counts = await resolveCachedEventDayCounts(db, retained.payload, now);
+      if (counts.kind !== "ok") return eventDayCountsUnavailable(counts.reason);
+      depegEventsToday = counts.today;
+      depegEventsYesterday = counts.yesterday;
       freshnessAsOf = Math.min(freshnessAsOf, retained.payload.computedAtSec);
     } else {
       pegDataById = pegAnalytics.pegDataById;
       // Count depeg events started today vs yesterday (UTC day boundaries)
-      const todayStartSec = bucketUnixSecondsToUtcDay(pegAnalytics.nowSec);
-      const yesterdayStartSec = todayStartSec - DAY_SECONDS;
-      depegEventsToday = 0;
-      depegEventsYesterday = 0;
-      for (const event of pegAnalytics.allEvents) {
-        if (TRACKED_META_BY_ID.get(event.stablecoinId)?.flags.navToken === true) continue;
-        if (isDisputedAuditVerdict(event.provenance?.auditVerdict)) continue;
-        if (event.startedAt >= todayStartSec) depegEventsToday += 1;
-        else if (event.startedAt >= yesterdayStartSec) depegEventsYesterday += 1;
-      }
+      const counts = countPegEventDays(pegAnalytics.allEvents, pegAnalytics.nowSec);
+      depegEventsToday = counts.today;
+      depegEventsYesterday = counts.yesterday;
     }
   }
 
@@ -223,7 +326,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
         const referencePrice = primaryTrust !== "unusable" ? asset?.price ?? null : null;
         dexBps = referencePrice == null ? null : deriveDepegSignal(dexRow.dex_price_usd, referencePrice)?.bps ?? null;
       } else {
-        const pegType = pegData.pegType || asset?.pegType || pegTypeFromCurrency(meta.flags.pegCurrency) || null;
+        const pegType = resolvePegType(asset, meta.flags.pegCurrency, pegData.pegType) || null;
         dexBps = deriveDexDeviationBps(
           dexRow.dex_price_usd,
           pegType,
@@ -255,7 +358,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       id: meta.id,
       symbol: meta.symbol,
       name: meta.name,
-      pegType: pegData.pegType,
+      pegType: resolvePegType(asset, meta.flags.pegCurrency, pegData.pegType),
       pegCurrency: meta.flags.pegCurrency,
       governance: meta.flags.governance,
       currentDeviationBps: currentBps,
@@ -300,7 +403,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       totalTracked++;
       const absBps = Math.abs(currentBps);
       allAbsBps.push(absBps);
-      const pegThreshold = getDepegThresholdBps(pegData.pegType || asset?.pegType);
+      const pegThreshold = getDepegThresholdBpsForPegCurrency(meta.flags.pegCurrency);
       if (observation?.currentSignal && !signalCrossesThreshold(observation.currentSignal, pegThreshold)) coinsAtPeg++;
       if (!worstCurrent || absBps > Math.abs(worstCurrent.bps)) {
         worstCurrent = { id: meta.id, symbol: meta.symbol, bps: currentBps };

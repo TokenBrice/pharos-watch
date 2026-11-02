@@ -16,7 +16,7 @@
     "url": "https://reserves.bridge.xyz/ousd",
     "provider": "Ernst & Young LLP",
     "attestorTier": "big4",
-    "cadence": "monthly",
+    "cadence": "quarterly",
     "attestorJurisdiction": "United States",
     "latestReport": {
       "periodEnd": "2026-08-31",
@@ -24,17 +24,29 @@
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
-      "liabilityReconciliation": "full",
-      "reviewer": "C09 bottom-up refinement 2026-10-21; EY signed report and exact four-deployment liability scope retrieved 2026-10-20",
+      "liabilityReconciliation": "partial",
+      "reviewer": "C09 bottom-up refinement 2026-10-21; EY signed report and exact four-deployment liability scope retrieved 2026-10-20; pre-launch coverage re-reviewed 2026-11-01. The August 31 examination attests only $40,690.16 of OUSD supply (Base $10,066.76, Ethereum $10,287.20, Solana $10,115.18, Tempo $10,221.02) against $40,741.77 reserves with zero timing differences. That examined supply predates the 2026-09-30 launch and equals 0.0046% of the $893,011,828.85 aggregate on-chain supply observed 2026-11-01, so the report fully reconciles a pre-launch test-scale book but does not establish whole-token liability reconciliation, which is recorded as partial. No post-launch EY report existed at 2026-11-01: the September and October monthly-named URLs return 404, the issuer dashboard links no newer report, and Bridge documents independent attestations as quarterly and optional. Open Standard's monthly-attestation promise remains unfulfilled; cadence follows Bridge's documented quarterly/optional engagement, and this pin must not be read as current whole-token assurance.",
       "confidence": "verified",
       "sources": [
         {
-          "label": "EY Open USD Reserves Report, August 31, 2026; signed October 1 (retrieved 2026-10-20)",
+          "label": "EY Open USD Reserves Report, August 31, 2026; signed October 1 (retrieved 2026-10-20); Exhibit A examined supply and Exhibit B reserves ($40,690.16 / $40,741.77) reread 2026-11-01",
           "url": "https://reserves.bridge.xyz/attestations/ousd/2026/ousd_attestation_2026_08.pdf"
         },
         {
-          "label": "Bridge OUSD monthly attestation index (retrieved 2026-10-20)",
+          "label": "Bridge OUSD attestation dashboard; lists only the August 2026 report (retrieved 2026-10-20 and 2026-11-01)",
           "url": "https://reserves.bridge.xyz/ousd"
+        },
+        {
+          "label": "Bridge OUSD transparency API, observation 2026-11-01T21:40:39Z: $893,011,828.85 aggregate on-chain supply and $895,011,946.26 reserves",
+          "url": "https://transparency.bridge.xyz/v0/stablecoins/ousd"
+        },
+        {
+          "label": "Bridge reporting documentation: independent attestations are quarterly and available subject to an additional fee; monthly reports are transaction/balance summaries (retrieved 2026-11-01)",
+          "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency"
+        },
+        {
+          "label": "Open Standard launch announcement, 2026-09-30: monthly reserve attestations promised",
+          "url": "https://joinopenstandard.com/blog/ousd-is-live"
         }
       ]
     }

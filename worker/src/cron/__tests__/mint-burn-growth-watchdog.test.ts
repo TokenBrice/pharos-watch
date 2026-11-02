@@ -7,9 +7,17 @@ import {
   runMintBurnGrowthWatchdog,
 } from "../mint-burn-growth-watchdog";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 
 const activeConfig = MINT_BURN_CONFIGS.find(
   (config) => config.enabled !== false && WORKER_ACTIVE_IDS.has(config.stablecoinId),
+)!;
+// YUSD is carried by two stablecoins, so the env switch alone disables neither;
+// only the durable keys retained by the producer keep a quarantined leg paused.
+const ambiguousSymbolConfig = MINT_BURN_CONFIGS.find(
+  (config) => config.enabled !== false
+    && WORKER_ACTIVE_IDS.has(config.stablecoinId)
+    && config.symbol.toUpperCase() === "YUSD",
 )!;
 
 function rowCountTable(rowCount: number | null) {
@@ -126,6 +134,66 @@ describe("runMintBurnGrowthWatchdog", () => {
       activityCollapse: [],
       firedRuleIds: [],
     });
+  });
+
+  it("honors a retained durable disable for an ambiguous symbol", async () => {
+    const yusdKey = mintBurnConfigKey(ambiguousSymbolConfig);
+    const db = mockD1(
+      [
+        rowCountTable(100_000),
+        {
+          match: "mint_burn_publication_policy",
+          rows: [{ disabled_keys: JSON.stringify([yusdKey]), paused_keys: "[]" }],
+        },
+        activityTable([{
+          stablecoin_id: ambiguousSymbolConfig.stablecoinId,
+          chain_id: ambiguousSymbolConfig.chain.chainId,
+          recent_events: 0,
+          baseline_events: MINT_BURN_ACTIVITY_MIN_BASELINE_EVENTS,
+        }]),
+      ],
+      { strictSql: false },
+    );
+
+    const result = await runMintBurnGrowthWatchdog(db, undefined, {
+      disabledSymbols: ["YUSD"],
+    });
+
+    expect(result.status).toBeUndefined();
+    expect(JSON.parse(String(result.metadata))).toMatchObject({
+      activityCollapse: [],
+      firedRuleIds: [],
+    });
+  });
+
+  it("names the disabled-policy read as the unavailable input, not the activity baseline", async () => {
+    const db = mockD1(
+      [
+        rowCountTable(100_000),
+        {
+          match: "mint_burn_publication_policy",
+          throwError: new Error("D1 unavailable"),
+          rows: [],
+        },
+      ],
+      { strictSql: false },
+    );
+
+    const result = await runMintBurnGrowthWatchdog(db, undefined, {
+      disabledSymbols: ["YUSD"],
+    });
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(100_000);
+    const metadata = JSON.parse(String(result.metadata));
+    expect(metadata).toMatchObject({
+      reason: "mint-burn-disabled-policy-unavailable",
+      rowCount: 100_000,
+      disabledPolicyUnavailable: true,
+    });
+    expect(metadata).not.toHaveProperty("activityBaselineUnavailable");
+    expect(db.getHistory().some(({ sql }) => sql.includes("pharos:mint-burn-activity-collapse")))
+      .toBe(false);
   });
 
   it("degrades instead of reporting healthy when the activity baseline read fails", async () => {

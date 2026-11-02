@@ -341,17 +341,28 @@ export async function computeDepegResolver(
   });
   v2ErrataLoadError = errataState.error;
 
-  const publication = await writePublicationBeforeCache({
-    stores: storeContracts,
-    db,
-    snapshot: diagnosticSnapshot,
-    incidentsByEventId,
-    sealed: refreshedPublicationState.sealed,
-    firstPublication: refreshedPublicationState.firstPublication,
-    errata: errataState.errata,
-    ddrRunId: options.ddrRunId,
-    nowSec,
-  });
+  // An unreadable errata overlay cannot attest that no corrections exist, so
+  // no manifest may be finalized from the errata-free projection (R2).
+  const errataOverlayUnavailable = errataState.error != null;
+  const publication = errataOverlayUnavailable
+    ? {
+        attempted: false,
+        ok: false,
+        manifest: null,
+        firstPublication: refreshedPublicationState.firstPublication,
+        error: null,
+      }
+    : await writePublicationBeforeCache({
+        stores: storeContracts,
+        db,
+        snapshot: diagnosticSnapshot,
+        incidentsByEventId,
+        sealed: refreshedPublicationState.sealed,
+        firstPublication: refreshedPublicationState.firstPublication,
+        errata: errataState.errata,
+        ddrRunId: options.ddrRunId,
+        nowSec,
+      });
   v2PublicationAttempted = publication.attempted;
   v2PublicationSucceeded = publication.ok;
   v2PublicationError = publication.error;
@@ -367,16 +378,19 @@ export async function computeDepegResolver(
     nowSec,
   });
   const publicationFailed = publication.attempted && !publication.ok;
-  if (publicationFailed) {
+  const outputDegraded = publicationFailed || errataOverlayUnavailable;
+  if (outputDegraded) {
     publicSnapshot._meta.degraded = true;
-    publicSnapshot._meta.degradedReason = `publication-retry-pending:${publication.error ?? "manifest-write-failed"}`;
+    publicSnapshot._meta.degradedReason = publicationFailed
+      ? `publication-retry-pending:${publication.error ?? "manifest-write-failed"}`
+      : `errata-overlay-unavailable:${errataState.error}`;
   }
   await writeDepegResolverSnapshot(db, publicSnapshot);
   const reviewArtifacts = await persistDepegResolverReviewArtifacts(db, diagnosticSnapshot, storeContracts, options.signal);
   const reviewMetadata = reviewArtifactMetadata(reviewArtifacts);
 
   return {
-    ...(publicationFailed ? { status: "degraded" as const } : {}),
+    ...(outputDegraded ? { status: "degraded" as const } : {}),
     itemCount: rows.length,
     metadata: JSON.stringify({
       ddrRunId: options.ddrRunId,
@@ -402,16 +416,17 @@ export async function computeDepegResolver(
       v2PublicationSucceeded,
       v2PublicationError,
       v2ErrataLoadError,
-      // A failed manifest write leaves the public snapshot on the previous
-      // generation: the run is incomplete work, and its output clock must not
-      // advance until the snapshot is actually published.
-      ...(publicationFailed ? {
-        outputPublishedAt: null,
-        reason: "ddr-publication-failed",
+      // A published snapshot (even an empty board) confirms this run's output;
+      // a failed manifest write or an unreadable errata overlay does not.
+      outputPublishedAt: publication.ok ? nowSec : null,
+      // A failed publication leaves the public board on an older generation:
+      // the run is incomplete work, and its output clock must not advance.
+      ...(outputDegraded ? {
+        reason: publicationFailed ? "ddr-publication-failed" : "ddr-errata-overlay-unavailable",
         quality: {
-          reason: "ddr-publication-failed",
+          reason: publicationFailed ? "ddr-publication-failed" : "ddr-errata-overlay-unavailable",
           ...(reviewMetadata.quality ? { reasons: [reviewMetadata.quality.reason] } : {}),
-          detail: publication.error ?? null,
+          detail: publicationFailed ? publication.error : errataState.error,
         },
       } : {}),
     }),

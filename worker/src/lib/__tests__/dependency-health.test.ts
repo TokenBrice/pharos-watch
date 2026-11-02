@@ -255,6 +255,45 @@ describe("buildDependencyHealth", () => {
     expect(dependencyHealth.dependencies["yield-rankings"].reason).not.toContain("unavailable");
   });
 
+  it("attributes a degraded yield publication to the safety-score-v9 input it names", () => {
+    const dependencyHealth = buildDependencyHealth({
+      now: NOW,
+      publicationHealth: {
+        checkedAt: NOW - 30,
+        surfaces: {},
+        failedSurfaces: [{
+          surface: "safety-score-v9",
+          code: "v9-snapshot-unavailable",
+          message: "Safety Score V9 publication is unavailable.",
+        }],
+      },
+      caches: {
+        stablecoins: cache(),
+        "dex-liquidity": cache({ producerJob: "sync-dex-liquidity", maxAge: 43_200 }),
+        "yield-data": cache({ producerJob: "sync-yield-data", producerIntervalSec: 7_200 }),
+      },
+      crons: {
+        "sync-stablecoins": cron(),
+        "sync-dex-liquidity": cron(),
+        "sync-yield-data": cron({
+          expectedIntervalSec: 7_200,
+          healthy: false,
+          runs: [{
+            startedAt: NOW - 120,
+            durationMs: 300,
+            status: "degraded",
+            degradedReason: "safety-snapshot-unavailable:v9-snapshot-unavailable",
+          }],
+        }),
+      },
+    });
+
+    expect(dependencyHealth.dependencies["yield-rankings"].status).toBe("degraded");
+    const v9Group = dependencyHealth.rootCauseGroups.find((group) => group.rootDependencyId === "safety-score-v9");
+    expect(v9Group?.symptomDependencyIds).toContain("yield-rankings");
+    expect(v9Group?.impactedDependencyIds).toContain("yield-rankings");
+  });
+
   it("groups downstream symptoms under a stale DEX liquidity root", () => {
     const dependencyHealth = buildDependencyHealth({
       now: NOW,

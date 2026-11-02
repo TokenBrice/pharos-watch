@@ -14,9 +14,9 @@ import { fetchJsonWithRetry } from "./fetch-retry";
  */
 
 const OpenExchangeRatesSchema = z.object({
-  // Unix seconds of the provider's own rate snapshot. Optional here so a payload
-  // without it is rejected with a reason instead of failing as a schema error.
-  timestamp: z.number().optional(),
+  // Unix seconds of the provider's own rate snapshot. Tolerant here so a payload
+  // without a usable value is rejected with a reason instead of failing as a schema error.
+  timestamp: z.unknown().optional(),
   rates: z.record(z.string(), z.number()),
 });
 

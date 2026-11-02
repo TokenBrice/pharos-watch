@@ -4,6 +4,11 @@ import { onRequest } from "../_site-data/[[path]].ts";
 import * as requestAttribution from "../lib/request-attribution";
 import { resetSiteDataRequestAttributionStateForTests } from "../lib/request-attribution";
 import {
+  SITE_DATA_RATE_LIMIT_MAX_PER_WINDOW,
+  isSiteDataRateLimited,
+  resetSiteDataRateLimitStateForTests,
+} from "../lib/site-data-rate-limit";
+import {
   observeHttpResponse,
   type HttpResponseObservation,
 } from "@shared/test-utils/http-response-contract";
@@ -69,6 +74,7 @@ describe("site-data proxy", () => {
 
   beforeEach(() => {
     resetSiteDataRequestAttributionStateForTests();
+    resetSiteDataRateLimitStateForTests();
     vi.spyOn(Math, "random").mockReturnValue(0);
     cacheMatch.mockReset();
     cachePut.mockReset();
@@ -82,6 +88,7 @@ describe("site-data proxy", () => {
 
   afterEach(() => {
     resetSiteDataRequestAttributionStateForTests();
+    resetSiteDataRateLimitStateForTests();
     vi.unstubAllGlobals();
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -188,6 +195,18 @@ describe("site-data proxy", () => {
     expect(response.headers.get("X-Private-Upstream")).toBeNull();
     expectNoindex(response);
     expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it("forwards the edge-verified client IP for site-lane rate limiting", async () => {
+    const fetchSpy = siteApi.json("/api/public-status-history?window=7d", { ok: true });
+
+    const response = await onRequest(siteDataContext(new Request(
+      "https://pharos.watch/_site-data/public-status-history?window=7d",
+      { headers: { Origin: "https://pharos.watch", "CF-Connecting-IP": "203.0.113.9" } },
+    )));
+
+    expect(response.status).toBe(200);
+    expect(fetchSpy.getHistory()[0]?.headers["x-pharos-client-ip"]).toBe("203.0.113.9");
   });
 
   it("uses the service binding with canonical host, secret, query and attribution without resetting clocks", async () => {
@@ -464,6 +483,30 @@ describe("site-data proxy", () => {
     expectNoindex(response);
     await expect(response.json()).resolves.toEqual({ error: "Rate limit exceeded" });
     expect(cachePut).not.toHaveBeenCalled();
+  });
+
+  it("returns 429 before the upstream fetch when one client-IP source exceeds the read ceiling", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-20T12:00:00Z"));
+    const headers = { Origin: "https://pharos.watch", "CF-Connecting-IP": "203.0.113.77" };
+    for (let i = 0; i < SITE_DATA_RATE_LIMIT_MAX_PER_WINDOW; i++) {
+      expect(await isSiteDataRateLimited(
+        new Request("https://pharos.watch/_site-data/stablecoins", { headers }),
+        makeEnv(),
+      )).toBe(false);
+    }
+    const fetchSpy = siteApi.json("/api/stablecoins", { ok: true });
+
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", { headers })),
+    );
+
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("60");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expectNoindex(response);
+    await expect(response.json()).resolves.toEqual({ error: "Too many requests" });
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it("fails closed on production site hosts when SITE_API_ORIGIN is unset", async () => {

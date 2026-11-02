@@ -2,7 +2,7 @@ import type { CronResult } from "./cron-logger";
 
 const NON_OUTPUT_REASONS = [
   "already_written_today", "already_written_today_before_freshness_gate",
-  "cadence_bucket_completed", "cadence_bucket_in_progress",
+  "cadence_bucket_completed", "cadence_bucket_in_progress", "cadence_bucket_superseded",
   "circuit-open", "no-pending-request", "not-due-today",
 ] as const;
 

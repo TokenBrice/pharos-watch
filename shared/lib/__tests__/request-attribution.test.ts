@@ -39,7 +39,10 @@ function createRecorder(overrides: Partial<CreateBufferedAttributionRecorderOpti
   });
 }
 
-function persistedDb(beforeCommit: () => Promise<void> = async () => {}) {
+function persistedDb(
+  beforeCommit: () => Promise<void> = async () => {},
+  afterCommit: () => Promise<void> = async () => {},
+) {
   const rows: unknown[][] = [];
   const db: AttributionDb = {
     prepare: () => ({
@@ -48,6 +51,7 @@ function persistedDb(beforeCommit: () => Promise<void> = async () => {}) {
     batch: async (statements) => {
       await beforeCommit();
       rows.push(...(statements as unknown as { values: unknown[] }[]).map((statement) => statement.values));
+      await afterCommit();
       return [];
     },
   };
@@ -118,5 +122,24 @@ describe("createBufferedAttributionRecorder", () => {
     await vi.runAllTimersAsync();
     await current;
     expect(rows).toEqual([[1_700_000_000, "same", 4]]);
+  });
+
+  it("drops a committed batch whose response was lost instead of replaying its counts", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let committed = 0;
+    const { db, rows } = persistedDb(undefined, async () => {
+      committed++;
+      if (committed === 1) throw new Error("D1_ERROR: Network connection lost.");
+    });
+    const recorder = createRecorder();
+
+    const record = recorder.record(db, makeEntry("once"), 1_700_000_000);
+    await vi.runAllTimersAsync();
+    await record;
+
+    // The batch committed before the response was lost: replaying the additive
+    // upsert would persist the same sample twice.
+    expect(rows).toEqual([[1_700_000_000, "once", 1]]);
   });
 });

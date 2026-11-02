@@ -224,6 +224,22 @@ describe("runDataInvariantCanary", () => {
     });
   });
 
+  it("names the completed finding when alert mode escalates it to error", async () => {
+    runAndPersistCanaryChecks.mockResolvedValueOnce({
+      observedAt: 1_775_900_000, totalChecks: ACTIVE_CANARY_CHECK_IDS.length,
+      okCount: ACTIVE_CANARY_CHECK_IDS.length - 1, degradedCount: 0, errorCount: 1, skippedCount: 0,
+      completedCount: ACTIVE_CANARY_CHECK_IDS.length, failedCount: 0,
+      worstStatus: "error", worstSeverity: "error",
+      results: ACTIVE_CANARY_CHECK_IDS.map((checkId, index) => ({
+        checkId, status: index === 0 ? "error" : "ok", severity: index === 0 ? "error" : "info",
+        executionStatus: "completed", executionFailureReason: null, durationMs: 1,
+      })),
+    });
+    const result = await runDataInvariantCanary(mockD1(), { mode: "alert" });
+    expect(result.status).toBe("error");
+    expect(JSON.parse(result.metadata!)).toMatchObject({ reason: "canary-error", failedCount: 0 });
+  });
+
   it("reports persistence rejection according to operational mode", async () => {
     for (const [mode, status] of [["status", "degraded"], ["alert", "error"]] as const) {
       runAndPersistCanaryChecks.mockRejectedValueOnce(new Error("persistence failed"));

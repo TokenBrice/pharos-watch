@@ -102,7 +102,8 @@ The current proxy now fails closed on its own trust boundary:
 
 - it verifies the inbound UI Access token against `CF_ACCESS_TEAM_DOMAIN` + `CF_ACCESS_OPS_UI_AUD`
 - it accepts the first non-empty token from `Cf-Access-Jwt-Assertion`, `cf-access-token`, or the `CF_Authorization` cookie and signature-verifies it as a UI application JWT with a valid email claim
-- it requires same-origin `Origin` evidence for mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`)
+- it rejects browser requests whose `Sec-Fetch-Site` is present and is neither `same-origin` nor `none`, so a cross-site page or navigation cannot drive audited GET actions with the operator's Access session; an absent header means a non-browser client, which cannot present that session
+- it additionally requires same-origin `Origin` evidence for mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`)
 - it still injects the Pages-managed service token pair only on the server-to-server hop to `ops-api.pharos.watch`
 
 ### Proxy contract
@@ -110,14 +111,15 @@ The current proxy now fails closed on its own trust boundary:
 - Allowed upstream paths are limited to admin routes and shared dynamic-admin matchers exported from `shared/lib/api-endpoints/` (for example `/api/api-keys/:id/update`).
 - HTTP method rules are enforced through the shared endpoint validators (`validateEndpointMethod()` in the proxy and `validateRouteMatchMethod()` in the Worker router, both backed by `validateAllowedEndpointMethods()`), so the proxy returns `405` with `Allow` when a caller uses the wrong verb for an otherwise valid admin route.
 - The proxy verifies the inbound UI Access token before the upstream fetch. Missing or invalid Access token evidence (`Cf-Access-Jwt-Assertion`, `cf-access-token`, or `CF_Authorization`) returns `401`.
-- Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) require an `Origin` matching `OPS_UI_ORIGIN`; missing, foreign, malformed or non-HTTP(S) origins return `403`. Only `POST` reaches this check: method validation rejects `PUT`, `PATCH` and `DELETE` with `405` and the endpoint's actual `Allow` methods (typically `POST`).
+- Every browser request is checked against `Sec-Fetch-Site` after JWT verification: `same-origin` and `none` (user-initiated navigation) pass, while `cross-site`, `same-site`, and any other value return `403` before the upstream fetch. Requests without the header (server-side automation, `npm run test:smoke-ops`) are unaffected; they cannot obtain the operator's Access session.
+- Mutating requests (`POST`, `PUT`, `PATCH`, `DELETE`) additionally require an `Origin` matching `OPS_UI_ORIGIN`; missing, foreign, malformed or non-HTTP(S) origins return `403`. Only `POST` reaches this check: method validation rejects `PUT`, `PATCH` and `DELETE` with `405` and the endpoint's actual `Allow` methods (typically `POST`).
 - The proxy forwards only `Accept`, `Content-Type`, `Idempotency-Key`, and `X-Pharos-Admin` from the browser request. After signature-verifying the UI Access JWT and normalizing its email claim, it injects that verified value as `Cf-Access-Authenticated-User-Email` for durable audit attribution; a browser-supplied actor header is ignored. It also adds `CF-Access-Client-Id` and `CF-Access-Client-Secret` from Pages env itself, so browser callers never supply server-to-server credentials.
 - The proxy reflects only `Allow`, `Cache-Control`, `Content-Type`, `Idempotency-Key`, `Warning`, `X-Data-Age`, `X-Execution-Certainty`, and `X-Idempotent-Replay` back to the browser. This preserves replay/certainty semantics without opening arbitrary upstream headers. A final policy decorator forces `private, no-store`, both CDN-specific no-store headers, `noindex`, and response security headers on every early or upstream return. Upstream `public` cache directives cannot survive the operator boundary.
 - Request bodies are capped incrementally at 128 KiB, including when `Content-Length` is absent or understated; oversized requests return `413`. Upstream responses are buffered under the shared 16 MiB proxy cap before returning to the browser; oversized or unreadable upstream responses return `502`.
 - Failure policy is explicit:
   - `404` for non-ops origins or non-allowlisted paths
   - `401` for missing or invalid UI JWT
-  - `403` for mutating requests without same-origin `Origin`
+  - `403` for a non-same-origin `Sec-Fetch-Site` browser request, or a mutating request without same-origin `Origin`
   - `405` for method mismatch
   - `413` when the request body exceeds 128 KiB
   - `500` when the Pages-side service token pair or UI JWT verification bindings are not configured

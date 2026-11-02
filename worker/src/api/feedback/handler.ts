@@ -12,12 +12,37 @@ import {
 import { submitFeedback } from "./submission";
 import type { FeedbackEnv } from "./types";
 
+const FEEDBACK_PREAUTH_RETRY_AFTER_SEC = 60;
+
 export async function handleFeedbackRequest(
   db: D1Database,
   request: Request,
   env: FeedbackEnv,
   execCtx?: ExecutionContext,
 ): Promise<Response> {
+  // Spend the native per-IP allowance before body parsing or idempotency
+  // bookkeeping, mirroring the supporter-key claim. The durable D1 form limit
+  // stays authoritative; this only rejects floods before they reach D1 writes.
+  if (!env.FEEDBACK_PREAUTH_RATE_LIMIT) {
+    return errorResponse(503, "Feedback service temporarily unavailable. Please try again.", {
+      retryAfterSec: FEEDBACK_PREAUTH_RETRY_AFTER_SEC,
+    });
+  }
+  try {
+    const limited = await env.FEEDBACK_PREAUTH_RATE_LIMIT.limit({
+      key: request.headers.get("CF-Connecting-IP") ?? "unknown",
+    });
+    if (!limited.success) {
+      return errorResponse(429, "Too many submissions. Please wait a few minutes.", {
+        retryAfterSec: FEEDBACK_PREAUTH_RETRY_AFTER_SEC,
+      });
+    }
+  } catch {
+    return errorResponse(503, "Feedback service temporarily unavailable. Please try again.", {
+      retryAfterSec: FEEDBACK_PREAUTH_RETRY_AFTER_SEC,
+    });
+  }
+
   const idempotencyRequest = request.clone();
   const parsed = await parseFeedbackRequest(request);
   if (parsed instanceof Response) return parsed;

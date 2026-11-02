@@ -687,6 +687,7 @@ describe("computeAndStoreStabilityIndex", () => {
         },
       ],
     });
+    db.sqlite.prepare("UPDATE price_cache SET source = 'coingecko' WHERE asset_id = 'usdf-falcon'").run();
 
     const result = await computeAndStoreStabilityIndex(db);
     const snapshot = readInsertedInputSnapshot(db);
@@ -757,10 +758,11 @@ describe("computeAndStoreStabilityIndex", () => {
   });
 
   it.each([
-    ["usbd-bima", "protocol-redeem", false],
-    ["usbd-bima", "coingecko", true],
-    ["usdf-falcon", "protocol-redeem", true],
-  ] as const)("admits replay price for %s from %s only when it is observed", async (id, source, observed) => {
+    ["usbd-bima", "protocol-redeem", null, false],
+    ["usbd-bima", "coingecko", null, true],
+    ["usdf-falcon", "protocol-redeem", null, true],
+    ["usbd-bima", "protocol-par", "nominal_reference", false],
+  ] as const)("admits replay price for %s from %s (%s) only when it is replay-safe", async (id, source, observedAtMode, observed) => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
       kind: "ok",
@@ -771,7 +773,8 @@ describe("computeAndStoreStabilityIndex", () => {
       depegRows: [{ stablecoin_id: id, peg_reference: 1, started_at: nowSec - 3600 }],
       priceCacheRows: [{ asset_id: id, price: 0.98, updated_at: nowSec - 60 }],
     });
-    db.sqlite.prepare("UPDATE price_cache SET source = ? WHERE asset_id = ?").run(source, id);
+    db.sqlite.prepare("UPDATE price_cache SET source = ?, observed_at_mode = ? WHERE asset_id = ?")
+      .run(source, observedAtMode, id);
     const result = await computeAndStoreStabilityIndex(db);
     const snapshot = readInsertedInputSnapshot(db);
     if (observed) {

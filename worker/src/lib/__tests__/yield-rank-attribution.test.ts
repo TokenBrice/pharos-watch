@@ -41,6 +41,39 @@ describe("publication rank attribution", () => {
     })).toBeNull();
   });
 
+  it("does not attribute a rank move to an unchanged source depth level", () => {
+    const originalRow = makeYieldRanking({
+      publishedRank: 4,
+      pharosYieldScore: 40,
+      sourceRisk: { sourceDepthRatio: 0.012, sourceRiskPenalty: 1 },
+    });
+    const hydratedRow = makeYieldRanking({
+      liveRank: 2,
+      pharosYieldScore: 30,
+      sourceRisk: { sourceDepthRatio: 0.012, sourceRiskPenalty: 1 },
+    });
+    const attribution = buildYieldRankChangeAttribution({
+      originalRow, hydratedRow, previousRank: 4, safetyChanged: false, methodologyChanged: false,
+    });
+    expect(attribution?.primaryDriver).toBe("apy");
+    expect(attribution?.driverContributions?.tvlDepth).toBeNull();
+  });
+
+  it("does not attribute a peer-driven move to an unchanged APY", () => {
+    const originalRow = makeYieldRanking({ publishedRank: 1, pharosYieldScore: 60, currentApy: 4, apy30d: 4 });
+    const hydratedRow = makeYieldRanking({ liveRank: 2, pharosYieldScore: 60, currentApy: 4, apy30d: 4 });
+    const attribution = buildYieldRankChangeAttribution({
+      originalRow, hydratedRow, previousRank: 1, safetyChanged: false, methodologyChanged: false,
+    });
+    expect(attribution).toMatchObject({
+      previousRank: 1,
+      rankDelta: -1,
+      pysDelta: 0,
+      primaryDriver: null,
+      driverContributions: { apy: null },
+    });
+  });
+
   it("does not attribute an unchanged source penalty, but measures a changed multiplier", () => {
     const originalRow = makeYieldRanking({ publishedRank: 2, sourceRisk: { sourceRiskPenalty: 1.2 } });
     const hydratedRow = makeYieldRanking({ liveRank: 1, sourceRisk: { sourceRiskPenalty: 1.2 } });

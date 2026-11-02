@@ -7,6 +7,7 @@ export {
 export {
   ENDPOINT_DEFINITIONS,
   STRICT_CONTRACT_PATHS_LIST,
+  getEndpointCacheKeyQueryParams,
   getEndpointDefinition,
   getEndpointDefinitionByKey,
   getEndpointOpsProxyTimeoutMs,

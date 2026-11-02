@@ -13,7 +13,7 @@ import { runCronSentinel } from "../../cron/cron-sentinel";
 import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import { resolveCloudflareD1StatusConfig } from "../../lib/env";
 import { normalizeWorkerCanaryMode } from "../../lib/canary-checks";
-import { runRuntimeBudgetOnlyTask, type ScheduledRuntimeContext } from "./context";
+import { getRuntimeProducerIdentity, runRuntimeBudgetOnlyTask, type ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
 
 export function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext) {
@@ -121,6 +121,7 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
         dueCount: collected.corroboration?.cohortSize ?? dex?.cohortSize ?? 0, processedCount: collected.corroboration?.cacheEntriesWritten ?? dex?.resolved ?? 0,
         outcome: phaseFailed ? "error" : degraded ? "degraded" : "ok",
         ...(phaseFailed ? { error: Object.values(collected.phaseErrors)[0] } : {}),
+        producer: getRuntimeProducerIdentity(runtime, "price-corroboration"),
         metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null, dexRefresh: dex, addressRefresh: dex?.addressRefresh ?? null, phaseErrors: collected.phaseErrors, ...(phaseFailed ? { errorClass: Object.values(collected.phaseErrors)[0] } : {}) },
       });
       await logCronEvent(runtime.db, {
@@ -140,6 +141,7 @@ export async function runStatusSelfCheckSlot(runtime: ScheduledRuntimeContext) {
       await recordBudgetSurfaceTelemetry(runtime.db, {
         surface: "price-corroboration", durationMs: Date.now() - startedMs,
         dueCount: 0, processedCount: 0, outcome: "error", error: errorClass,
+        producer: getRuntimeProducerIdentity(runtime, "price-corroboration"),
         metadata: { slotStartedAt: runtime.slotStartedAt, workerVersion: runtime.workerVersion ?? null },
       });
       await logCronEvent(runtime.db, {

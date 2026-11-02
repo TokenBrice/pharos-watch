@@ -1,7 +1,7 @@
 import { makeScheduledEnv } from "../../../test-helpers/scheduled-runtime.test-support";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createScheduledRuntimeContext } from "../context";
+import { createScheduledRuntimeContext, getRuntimeProducerIdentity } from "../context";
 import { createSlotDeadline } from "../../../lib/cron-timeouts";
 import { makeCaptureDb, type DbCall } from "../../../lib/__tests__/cron-progress.test-support";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -34,6 +34,34 @@ describe("scheduled runtime context", () => {
     vi.setSystemTime(1_030_000);
     expect(runtime.deadline).toBe(deadline);
     expect(deadline.remainingMs()).toBe(remainingMs - 30_000);
+  });
+
+  it("derives the canonical budget-only producer kind instead of the scheduled-job default", () => {
+    const runtime = createScheduledRuntimeContext(
+      { DB: makeCaptureDb([]) } as Parameters<typeof createScheduledRuntimeContext>[0],
+      {} as ExecutionContext,
+      { cron: "*/5 * * * *", scheduleKey: "digestTriggerPoll", scheduledTimeMs: null, slotStartedAt: 1_800_000_000 },
+    );
+    expect(getRuntimeProducerIdentity(runtime, "digest-trigger-poll")).toMatchObject({
+      scheduleKey: "digestTriggerPoll",
+      job: "digest-trigger-poll",
+      producerPath: "digestTriggerPoll",
+      producerKind: "budget-only",
+    });
+  });
+
+  it("keeps an explicit non-default producer kind for a status-tracked task", () => {
+    const runtime = createScheduledRuntimeContext(
+      { DB: makeCaptureDb([]) } as Parameters<typeof createScheduledRuntimeContext>[0],
+      {} as ExecutionContext,
+      {
+        cron: "11 */4 * * *", scheduleKey: "fourHourlyReserveSync", scheduledTimeMs: null,
+        slotStartedAt: 1_800_000_000, producerKind: "scheduled-recovery",
+      },
+    );
+    expect(getRuntimeProducerIdentity(runtime, "sync-live-reserves")).toMatchObject({
+      producerKind: "scheduled-recovery",
+    });
   });
 
   it("inherits the same executing deadline for a reconstructed runtime", () => {

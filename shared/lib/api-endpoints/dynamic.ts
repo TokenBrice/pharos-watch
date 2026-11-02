@@ -25,6 +25,8 @@ export interface DynamicEndpointDescriptor {
   publicApiAccess: EndpointPublicApiAccess;
   siteDataAccess: EndpointSiteDataAccess;
   adminRequired: boolean;
+  /** Mirrors the owning definition: the handler consumes no query string. */
+  cacheKeyIgnoresQuery?: boolean;
   routeDependencies: readonly EndpointDependency[];
   requestAttribution: {
     routeKey: string;
@@ -81,6 +83,7 @@ function publicDynamic<Key extends DynamicEndpointDescriptorKey & EndpointKey>(
     publicApiAccess: definition.publicApiAccess,
     siteDataAccess: definition.siteDataAccess,
     adminRequired: definition.adminRequired,
+    cacheKeyIgnoresQuery: definition.cacheKeyIgnoresQuery,
     routeDependencies: definition.routeDependencies ?? [],
     requestAttribution: { routeKey: definition.key, routePath: definition.path },
   };

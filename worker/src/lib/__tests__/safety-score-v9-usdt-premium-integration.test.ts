@@ -22,9 +22,10 @@ const EXPECTED_MARKET_ORDER = [
 
 // Scoped from the recovered 2026-07-24 exact production capture so the
 // integration test retains USDT's measured Curve routes and real wrapper facts.
-// Producer epochs retain their relative ages at the 2026-10-23 scoring clock,
-// after the live registry's 2026-10-22 oracle review. Access reviews are captured
-// separately so later catalog reviews cannot quarantine this historical input.
+// Producer epochs retain their relative ages at the 2026-11-02 scoring clock,
+// past the registry's 2026-10-30 USDT BDO Q3 attestation pin and the
+// 2026-11-01 custody recheck. Access reviews are captured separately so later
+// catalog reviews cannot quarantine this historical input.
 // susdt-spark live rows are refreshed to the erc4626-single-asset adapter's
 // current keyed two-slice emission so the capture tracks the 2026-09-29
 // spUSDT re-curation instead of the retired single unkeyed row.

@@ -59,6 +59,40 @@ describe("cadence buckets", () => {
     })).resolves.toMatchObject({ kind: "skip", reason: "already-completed", bucket: 100 });
   });
 
+  it("does not report a later unfinished bucket as a completed generation", async () => {
+    const db = mockD1([{
+      match: "SELECT value, updated_at FROM cache WHERE key = ?",
+      rows: [{
+        key: "cadence:test",
+        value: marker({ bucket: 41, state: "failed", claimedAt: 1_010 }),
+        updated_at: 1_010,
+      }],
+    }]);
+
+    await expect(claimCadenceBucket(db, {
+      key: "cadence:test",
+      bucket: 40,
+      nowSec: 1_020,
+      staleClaimAfterSec: 60,
+    })).resolves.toMatchObject({ kind: "skip", reason: "superseded", bucket: 41 });
+
+    const result = await runCadenceBucketPublication(db, {
+      key: "cadence:test",
+      cadenceSec: 1_800,
+      staleClaimAfterSec: 60,
+      scheduledAtSec: 72_000,
+      startedAtSec: 72_020,
+      job: "test-job",
+      releaseFailureEvent: "test.release-failed",
+      releaseFailureMessage: "release failed",
+      publication: async () => ({ itemCount: 1, metadata: '{"lastWriteAdvanced":true}' }),
+    });
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      reason: "cadence_bucket_superseded",
+      cadence: { bucket: 40, observedBucket: 41 },
+    });
+  });
+
   it("rejects stale owners at the reclaim boundary and keeps failed work retryable", async () => {
     const { db, sqlite } = fixtures.open();
     const options = { key: "cadence:test", bucket: 100, nowSec: 1_000, staleClaimAfterSec: 60 };

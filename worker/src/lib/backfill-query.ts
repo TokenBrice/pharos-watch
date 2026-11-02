@@ -40,6 +40,11 @@ export function selectBackfillCoins<T extends BackfillCoin>(
   const allowBatchSizeOverride = options.allowBatchSizeOverride ?? true;
   const singleId = url.searchParams.get(stablecoinParam);
 
+  if (singleId !== null && singleId.trim() === "") {
+    return {
+      response: errorResponse(400, `Invalid ${stablecoinParam}: must not be empty`),
+    };
+  }
   if (singleId) {
     const match = allCoins.filter((coin) => coin.id === singleId);
     if (match.length === 0) {

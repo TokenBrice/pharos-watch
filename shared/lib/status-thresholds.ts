@@ -52,12 +52,24 @@ export function classifyPublicationDiagnostic(surface: PublicationSurfaceHealth 
   const published = surface.lastPublishedGeneration;
   const attempt = surface.lastAttemptedGeneration;
   if (!published) return { status: "stale", reason: "No published generation recorded.", maxAgeSec: null, updatedAt: attempt?.startedAt ?? null };
-  if ((attempt?.state === "failed" || attempt?.state === "rejected") && attempt.startedAt > published.startedAt) {
+  // An attempt on the accepted generation's own clock cannot be proven older;
+  // fail closed rather than certify a hold or simultaneous failure as published.
+  if ((attempt?.state === "failed" || attempt?.state === "rejected") && attempt.startedAt >= published.startedAt) {
     return {
       status: "degraded",
       reason: attempt.failureReason ?? surface.lastFailureReason ?? `Latest generation ${attempt.state}.`,
       maxAgeSec: null,
       updatedAt: attempt.failedAt ?? attempt.startedAt,
+    };
+  }
+  // A candidate whose clock failed timestamp admission publishes a null age
+  // and a named reason; it cannot fall through to the published clock.
+  if (attempt?.state === "candidate" && surface.candidateAgeSec == null) {
+    return {
+      status: "degraded",
+      reason: surface.lastFailureReason ?? "Candidate generation clock rejected.",
+      maxAgeSec: STATUS_PUBLICATION_PENDING_MAX_AGE_SEC,
+      updatedAt: null,
     };
   }
   if (surface.candidateAgeSec != null && surface.candidateAgeSec > STATUS_PUBLICATION_PENDING_MAX_AGE_SEC) {

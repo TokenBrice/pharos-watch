@@ -1,4 +1,5 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
+import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "@shared/lib/status-thresholds";
 import {
   StablecoinChartAggregateUniverseSchema,
   type StablecoinChartPoint,
@@ -29,12 +30,21 @@ function coerceFiniteNumber(value: unknown): number | undefined {
   return numeric;
 }
 
-export function normalizeStablecoinChartDateSeconds(value: unknown): number | null {
+const CHART_DATE_MILLISECONDS_THRESHOLD = 1_000_000_000_000;
+
+/** DefiLlama has emitted both seconds and epoch milliseconds; consumers require seconds. */
+export function normalizeStablecoinChartDateSeconds(value: unknown, nowSec?: number): number | null {
   const numeric = coerceFiniteNumber(value);
   if (numeric == null || numeric <= 0) {
     return null;
   }
-  return Math.trunc(numeric);
+  const seconds = Math.trunc(
+    numeric >= CHART_DATE_MILLISECONDS_THRESHOLD ? numeric / 1000 : numeric,
+  );
+  if (nowSec != null && seconds > nowSec + STATUS_ALLOWED_FUTURE_SKEW_SEC) {
+    return null;
+  }
+  return seconds;
 }
 
 export function normalizeStablecoinChartBuckets(value: unknown): Record<string, number | null> | null {

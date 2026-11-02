@@ -3,7 +3,8 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import type { BlacklistSummaryResponse } from "@shared/types/market";
 import { handleBlacklistSummary, materializeBlacklistSummarySnapshot } from "../blacklist-summary-service";
 import { loadBlacklistCurrentBalanceMap, upsertBlacklistCurrentBalance } from "../blacklist-current-balances";
-import { getBlacklistConfigsForSymbolAndChain } from "../blacklist-contracts";
+import { CONTRACT_CONFIGS, getBlacklistConfigsForSymbolAndChain } from "../blacklist-contracts";
+import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -81,6 +82,65 @@ describe("blacklist summary freeze aggregates", () => {
     expect(response.headers.get("X-Data-Updated-At")).toBe("unknown");
     expect(response.headers.get("X-Data-Age")).toBe("unavailable");
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("derives cold-request coverage freshness from the oldest config success, not cron output", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    const oldestSuccessAt = now - 3 * 86400;
+    sqlite.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata)
+      VALUES ('sync-blacklist', ?, 100, 'degraded', ?)`)
+      .run(now, JSON.stringify({ outputPublishedAt: now }));
+    const insertState = sqlite.prepare(
+      "INSERT OR REPLACE INTO blacklist_sync_state (config_key, last_succeeded_at) VALUES (?, ?)",
+    );
+    let eligibleConfigs = 0;
+    for (const config of CONTRACT_CONFIGS) {
+      if (!WORKER_ACTIVE_IDS.has(config.stablecoinId)) continue;
+      insertState.run(config.configKey, oldestSuccessAt);
+      eligibleConfigs++;
+    }
+    expect(eligibleConfigs).toBeGreaterThan(0);
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, explorer_tx_url, explorer_address_url)
+      VALUES ('fresh-event', 'USDC', 'ethereum', 'Ethereum', 'blacklist', '0xabc', '0xtx', 1, ?, '', '')`)
+      .run(now);
+
+    const response = await handleBlacklistSummary(db);
+    const summary = await response.json() as BlacklistSummaryResponse;
+
+    expect(summary.totalEvents).toBe(1);
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(oldestSuccessAt));
+    expect(Number(response.headers.get("X-Data-Age"))).toBeGreaterThanOrEqual(3 * 86400);
+    expect(response.headers.get("Warning")).toContain("110");
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("does not count a failed first balance read as fresh ledger evidence", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = 2_000_000_000;
+    sqlite.prepare(`INSERT INTO blacklist_current_balances
+      (id, stablecoin, chain_id, address, amount_native, amount_usd, source, status, observed_at,
+       last_successful_observed_at)
+      VALUES ('failed-first', 'USDC', 'ethereum', '0xfailed', NULL, NULL, 'current_balance',
+              'provider_failed', ?, NULL)`)
+      .run(now);
+
+    await materializeBlacklistSummarySnapshot(db, now, now);
+    const summary = await (await handleBlacklistSummary(db)).json() as BlacklistSummaryResponse;
+
+    expect(summary.freezeLedgerMeta).toMatchObject({
+      totalRows: 1,
+      providerFailedCount: 1,
+      oldestObservedAt: null,
+      newestObservedAt: null,
+      oldestAgeSec: null,
+      newestAgeSec: null,
+      freshnessDistribution: { fresh: 0, degraded: 0, stale: 1 },
+      currentFreshnessDistribution: { fresh: 0, degraded: 0, stale: 1 },
+      statusDistribution: { provider_failed: 1 },
+    });
   });
 
   it("sums every canonical gold cohort without including non-gold events", async () => {

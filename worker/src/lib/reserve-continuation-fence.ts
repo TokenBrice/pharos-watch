@@ -81,7 +81,44 @@ export async function claimReserveContinuation(
       ...exactBinds, input.deliveryId, input.owner),
   ]));
   assertSlotDeadline(input.deadline);
-  if (results[0].meta.changes !== 1 || results[1].meta.changes !== 1) return null;
+  if (results[0].meta.changes !== 1 || results[1].meta.changes !== 1) {
+    // A transport retry can replay a committed batch and report zero changes.
+    // Read back the exact owner this delivery wrote; a failed insert cannot own
+    // work, but our own committed claim is still work we hold.
+    const owned = await db.prepare(
+      `SELECT execution_owner, execution_generation, invocation_id, state, started_at, deadline_ms
+         FROM reserve_continuation_executions WHERE delivery_id = ?`,
+    ).bind(input.deliveryId).first<{
+      execution_owner: string;
+      execution_generation: number;
+      invocation_id: string;
+      state: string;
+      started_at: number;
+      deadline_ms: number;
+    }>();
+    assertSlotDeadline(input.deadline);
+    if (!owned
+      || owned.execution_owner !== input.owner
+      || owned.execution_generation !== 1
+      || owned.invocation_id !== input.owner
+      || owned.state !== "running"
+      || owned.deadline_ms !== input.deadline.platformDeadlineMs) return null;
+    const recovered = await loadLiveReserveCheckpoint(db, message);
+    assertSlotDeadline(input.deadline);
+    if (!recovered
+      || recovered.state !== "recovering"
+      || recovered.completedAt !== null
+      || recovered.invocationId !== input.owner
+      || recovered.recoveryOwner !== input.owner
+      || recovered.recoveryLeaseUntil == null
+      || recovered.recoveryLeaseUntil < timestamp) return null;
+    return {
+      fence: { kind: "reserve-continuation", deliveryId: input.deliveryId, scheduleKey: message.scheduleKey,
+        slotStartedAt: message.slotStartedAt, invocationId: input.owner, owner: input.owner, generation: 1, workerRole: "public" },
+      checkpoint: recovered,
+      readyToClaimMs: Math.max(0, Date.now() - owned.started_at * 1000),
+    };
+  }
   return {
     fence: { kind: "reserve-continuation", deliveryId: input.deliveryId, scheduleKey: message.scheduleKey,
       slotStartedAt: message.slotStartedAt, invocationId: input.owner, owner: input.owner, generation: 1, workerRole: "public" },

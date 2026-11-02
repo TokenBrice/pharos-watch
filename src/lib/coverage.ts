@@ -52,6 +52,7 @@ export type CoverageCoinMeta = Pick<
   genius?: GeniusClientProfile;
   liveReservesConfig?: StablecoinMeta["liveReservesConfig"];
   liveReserveAdapter?: NonNullable<StablecoinMeta["liveReservesConfig"]>["adapter"];
+  hasCuratedReserves?: boolean;
   mintAuthoritySummary?: MintAuthorityCoverageSummary | null;
 };
 

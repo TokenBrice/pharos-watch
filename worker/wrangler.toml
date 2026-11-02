@@ -166,6 +166,14 @@ namespace_id = "2026091201"
   limit = 120
   period = 60
 
+[[ratelimits]]
+name = "FEEDBACK_PREAUTH_RATE_LIMIT"
+namespace_id = "2026110101"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
 [vars]
 CORS_ORIGIN = "https://pharos.watch,https://ops.pharos.watch"
 SELF_URL = "https://api.pharos.watch"

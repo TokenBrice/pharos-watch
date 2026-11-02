@@ -50,6 +50,19 @@ describe("fetchRealtimeFxRates", () => {
   });
 
   it.each([
+    ["null", null],
+    ["string", String(NOW_SEC - 60)],
+  ] as const)("rejects a %s provider timestamp as timestamp-missing instead of a fetch failure", async (_label, timestamp) => {
+    mockFetch([{ match: () => true, body: { timestamp, rates: { EUR: 0.925 } } }]);
+
+    const result = await fetchRealtimeFxRates("test-key", undefined, NOW_SEC);
+
+    expect(result.completed).toBe(true);
+    expect(result.observation).toBeNull();
+    expect(result.rejection).toEqual({ reason: "timestamp-missing", upstreamTimestamp: null });
+  });
+
+  it.each([
     ["missing", undefined, "timestamp-missing"],
     ["stale beyond one missed hourly publish", NOW_SEC - 2 * 3600 - 1, "timestamp-stale"],
     ["future-skewed", NOW_SEC + 5 * 60 + 1, "timestamp-future"],

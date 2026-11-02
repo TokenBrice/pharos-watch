@@ -1,6 +1,7 @@
 import { resolveApiRequestRouteMetric } from "@shared/lib/request-attribution";
 import {
   SITE_DATA_ALLOWED_METHOD,
+  SITE_DATA_CLIENT_IP_HEADER,
   SITE_DATA_PROXY_SECRET_HEADER,
   isSiteDataAllowedMethod,
   resolveSiteDataUpstreamPath,
@@ -12,6 +13,7 @@ import {
 } from "../lib/proxy-utils";
 import { isRequestSourceAttributionDisabled, recordSiteDataRequest } from "../lib/request-attribution";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
+import { isSiteDataRateLimited } from "../lib/site-data-rate-limit";
 import { resolveSiteApiOrigin, validatePagesSiteDataProxyEnv, type SiteDataProxyEnv } from "../lib/site-api-env";
 import { withNoindex } from "../lib/noindex";
 import {
@@ -64,6 +66,10 @@ function buildUpstreamHeaders(request: Request, env: SiteDataProxyEnv): Headers 
   const secret = env.SITE_API_SHARED_SECRET?.trim() ?? "";
   return buildUpstreamHeadersShared(request, FORWARDED_REQUEST_HEADERS, {
     [SITE_DATA_PROXY_SECRET_HEADER]: secret,
+    // The edge sets CF-Connecting-IP and strips client-supplied copies. Forward
+    // it so the Worker can key site-lane limits per reader instead of collapsing
+    // every caller into one shared bucket.
+    [SITE_DATA_CLIENT_IP_HEADER]: request.headers.get("CF-Connecting-IP") ?? "unknown",
   });
 }
 
@@ -130,6 +136,11 @@ export const onRequest = async (context: SiteDataProxyContext): Promise<Response
       return requestedPath ? resolveSiteDataUpstreamPath(requestedPath) : null;
     },
     rejectUpstreamPath: (_context, upstreamPath) => (upstreamPath ? null : jsonError(404, "Not found")),
+    // Only admitted reads are metered, so path/method rejections stay unmetered.
+    beforeFetch: async ({ request, env }) =>
+      (await isSiteDataRateLimited(request, env))
+        ? jsonError(429, "Too many requests", { "Retry-After": "60" })
+        : null,
     buildUpstreamRequest: ({ request, env }, upstreamPath) => {
       const upstreamHeaders = buildUpstreamHeaders(request, env);
 

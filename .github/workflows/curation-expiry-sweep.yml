@@ -18,6 +18,9 @@ permissions:
 
 jobs:
   sweep:
+    # Main-only before checkout or credential use: a feature-branch dispatch
+    # would otherwise run branch code with the deploy-scoped Cloudflare token.
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:

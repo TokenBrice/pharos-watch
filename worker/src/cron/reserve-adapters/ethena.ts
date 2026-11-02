@@ -7,6 +7,9 @@ import type {
 import { encodeAddress, encodeBalanceOfCallData } from "../../lib/evm-selectors";
 import { rethrowIfAborted } from "../../lib/abort";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../../lib/public-rpc-registry";
+import { ETHENA_PROTOCOL_API_URLS } from "@shared/lib/protocol-api-sources/ethena";
+import { toErrorMessage } from "@shared/lib/error-utils";
+import { redactProviderUrls } from "../../lib/safe-error-message";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
   decodeAbiWordAt,
@@ -23,6 +26,7 @@ import {
   fetchOnchainMulticall3,
   requireJsonInputFromConfig,
   reserveDegradedWarning,
+  reserveInfoWarning,
   SOURCE_TIMESTAMP_SPREAD_DEGRADE_SEC,
   summarizeSourceTimestampsRequiringCoverage,
   unverifiedFreshnessMetadata,
@@ -41,6 +45,41 @@ interface EthenaCollateralRow {
 export interface EthenaCollateralResponse {
   collateral: EthenaCollateralRow[];
   totalBackingAssetsInUsd: number;
+}
+
+export interface EthenaCollateralizationStatusResponse {
+  timestamp: string;
+  totalBackingAssetsInUsd: number;
+}
+
+export interface EthenaBackingTotalReconciliation {
+  status: "reconciled" | "mismatch";
+  issuerStatusTotalBackingAssetsInUsd: number;
+  relativeDiff: number;
+}
+
+// The positions endpoint and the collateralization status endpoint are separate
+// issuer surfaces for the same whole-book backing total. A 5% relative band
+// tolerates update races while rejecting self-inconsistent windows such as
+// 2026-10-30/31, when the positions total sat about 5% above the adjacent
+// reconciled observation and the issuer's own category surface disagreed.
+export const ETHENA_BACKING_TOTAL_RECONCILIATION_TOLERANCE = 0.05;
+
+export function reconcileEthenaBackingTotal(
+  reportedTotalBackingAssetsInUsd: number,
+  issuerStatusTotalBackingAssetsInUsd: number,
+): EthenaBackingTotalReconciliation {
+  if (!Number.isFinite(issuerStatusTotalBackingAssetsInUsd) || issuerStatusTotalBackingAssetsInUsd <= 0) {
+    throw new Error("Ethena collateralization status has invalid totalBackingAssetsInUsd");
+  }
+  const relativeDiff = Math.abs(
+    issuerStatusTotalBackingAssetsInUsd - reportedTotalBackingAssetsInUsd,
+  ) / reportedTotalBackingAssetsInUsd;
+  return {
+    status: relativeDiff > ETHENA_BACKING_TOTAL_RECONCILIATION_TOLERANCE ? "mismatch" : "reconciled",
+    issuerStatusTotalBackingAssetsInUsd,
+    relativeDiff,
+  };
 }
 
 type EthenaBucket = "stable" | "btc" | "eth" | "equity" | "other";
@@ -78,6 +117,7 @@ export function listUnexpectedEthenaAssets(payload: EthenaCollateralResponse): s
 export function adaptEthenaCollateral(
   payload: EthenaCollateralResponse,
   _sourceUrl?: string,
+  issuerStatus?: EthenaCollateralizationStatusResponse | null,
 ): AdapterResult {
   if (!Number.isFinite(payload.totalBackingAssetsInUsd) || payload.totalBackingAssetsInUsd <= 0) {
     throw new Error("Ethena missing or invalid totalBackingAssetsInUsd");
@@ -175,32 +215,73 @@ export function adaptEthenaCollateral(
     ));
   }
 
+  let reconciliation: EthenaBackingTotalReconciliation | null = null;
+  if (issuerStatus === null) {
+    warnings.push(reserveDegradedWarning(
+      "source-total-reconciliation-unavailable",
+      "Ethena collateralization status was unavailable; the positions total was not published against a second issuer surface",
+    ));
+  } else if (issuerStatus !== undefined) {
+    reconciliation = reconcileEthenaBackingTotal(
+      payload.totalBackingAssetsInUsd,
+      issuerStatus.totalBackingAssetsInUsd,
+    );
+    if (reconciliation.status === "mismatch") {
+      warnings.push(reserveDegradedWarning(
+        "source-total-reconciliation-mismatch",
+        `Ethena positions total $${payload.totalBackingAssetsInUsd.toFixed(2)} differs from the issuer collateralization status $${issuerStatus.totalBackingAssetsInUsd.toFixed(2)} by ${(reconciliation.relativeDiff * 100).toFixed(2)}% (tolerance ${(ETHENA_BACKING_TOTAL_RECONCILIATION_TOLERANCE * 100).toFixed(0)}%)`,
+      ));
+    }
+  }
+
+  // A total that cannot be reconciled to the second issuer surface is withheld;
+  // the row-derived composition remains available, but the degraded warning
+  // withholds this snapshot from scoring.
+  const totalReconciled = reconciliation?.status === "reconciled";
+  const metadata: NonNullable<AdapterResult["metadata"]> = {
+    assetCount,
+    computedTotalBackingAssetsInUsd,
+    ...(issuerStatus === undefined || totalReconciled
+      ? { totalBackingAssetsInUsd: payload.totalBackingAssetsInUsd }
+      : {}),
+    ...(lastUpdatedAt != null ? { lastUpdatedAt } : {}),
+    ...(timestampSummary.sourceTimestamp != null && timestampSummary.untimestampedCount === 0
+      ? {
+          ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
+          latestRowUpdatedAt: timestampSummary.latestSourceTimestamp,
+          sourceTimestampSpreadSec: timestampSummary.sourceTimestampSpreadSec,
+          sourceTimestampCount: timestampSummary.timestampCount,
+        }
+      : unverifiedFreshnessMetadata(
+          "issuer-api",
+          materialRows.length > 0
+            ? `Ethena collateral payload omitted source timestamps for ${timestampSummary.untimestampedCount} of ${materialRows.length} material rows`
+            : "Ethena collateral rows did not expose a trustworthy source timestamp",
+        )),
+    unknownExposurePct:
+      computedTotalBackingAssetsInUsd > 0
+        ? (unknownExposureUsd / computedTotalBackingAssetsInUsd) * 100
+        : 0,
+  };
+
+  if (issuerStatus !== undefined) {
+    metadata.details = {
+      ...(metadata.details ?? {}),
+      backingTotalReconciliation: reconciliation?.status ?? "unavailable",
+      ...(reconciliation
+        ? {
+            issuerStatusTotalBackingAssetsInUsd: reconciliation.issuerStatusTotalBackingAssetsInUsd,
+            backingTotalReconciliationDiffPct: reconciliation.relativeDiff * 100,
+            ...(issuerStatus ? { issuerStatusTimestamp: issuerStatus.timestamp } : {}),
+          }
+        : {}),
+    };
+  }
+
   return {
     slices,
     ...(warnings.length > 0 ? { warnings } : {}),
-    metadata: {
-      assetCount,
-      computedTotalBackingAssetsInUsd,
-      totalBackingAssetsInUsd: payload.totalBackingAssetsInUsd,
-      ...(lastUpdatedAt != null ? { lastUpdatedAt } : {}),
-      ...(timestampSummary.sourceTimestamp != null && timestampSummary.untimestampedCount === 0
-        ? {
-            ...verifiedFreshnessMetadata(timestampSummary.sourceTimestamp),
-            latestRowUpdatedAt: timestampSummary.latestSourceTimestamp,
-            sourceTimestampSpreadSec: timestampSummary.sourceTimestampSpreadSec,
-            sourceTimestampCount: timestampSummary.timestampCount,
-          }
-        : unverifiedFreshnessMetadata(
-            "issuer-api",
-            materialRows.length > 0
-              ? `Ethena collateral payload omitted source timestamps for ${timestampSummary.untimestampedCount} of ${materialRows.length} material rows`
-              : "Ethena collateral rows did not expose a trustworthy source timestamp",
-          )),
-      unknownExposurePct:
-        computedTotalBackingAssetsInUsd > 0
-          ? (unknownExposureUsd / computedTotalBackingAssetsInUsd) * 100
-          : 0,
-    },
+    metadata,
   };
 }
 
@@ -373,11 +454,37 @@ export async function fetchEthenaReserves(
     ctx,
     { headers: ETHENA_BROWSER_HEADERS },
   );
-  const adapted = adaptEthenaCollateral(payload, primaryInput.url);
-  const warnings: LiveReserveWarning[] = listUnexpectedEthenaAssets(payload).map((asset) => reserveDegradedWarning(
-    "unknown-asset",
-    `Ethena asset bucketed into other-crypto: ${asset}`,
-  ));
+
+  let issuerStatus: EthenaCollateralizationStatusResponse | null = null;
+  const statusWarnings: LiveReserveWarning[] = [];
+  try {
+    issuerStatus = await fetchJsonWithRetry<EthenaCollateralizationStatusResponse>(
+      ETHENA_PROTOCOL_API_URLS.collateralizationStatus,
+      signal,
+      8_000,
+      ctx,
+      { headers: ETHENA_BROWSER_HEADERS },
+    );
+    if (!Number.isFinite(issuerStatus.totalBackingAssetsInUsd) || issuerStatus.totalBackingAssetsInUsd <= 0) {
+      throw new Error("Ethena collateralization status has invalid totalBackingAssetsInUsd");
+    }
+  } catch (error) {
+    rethrowIfAborted(error, signal);
+    issuerStatus = null;
+    statusWarnings.push(reserveInfoWarning(
+      "source-total-reconciliation-fetch-failed",
+      redactProviderUrls(`Ethena collateralization status: ${toErrorMessage(error)}`),
+    ));
+  }
+
+  const adapted = adaptEthenaCollateral(payload, primaryInput.url, issuerStatus);
+  const warnings: LiveReserveWarning[] = [
+    ...statusWarnings,
+    ...listUnexpectedEthenaAssets(payload).map((asset) => reserveDegradedWarning(
+      "unknown-asset",
+      `Ethena asset bucketed into other-crypto: ${asset}`,
+    )),
+  ];
   const redemption = await fetchEthenaRedemptionTelemetry(signal, ctx);
 
   return {

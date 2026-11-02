@@ -79,6 +79,22 @@ export interface ReserveAdapterAlertEvaluation {
   }>;
 }
 
+const RESERVE_ADAPTER_ALERT_RULES: ReadonlyArray<readonly [ReserveAdapterAlertRuleId, keyof ReserveAdapterAlertCoinState]> = [
+  ["reserve-adapter-failure-sustained", "failureRaised"],
+  ["reserve-score-ineligible-sustained", "scoreIneligibleRaised"],
+  ["reserve-source-clock-stalled", "clockRaised"],
+];
+
+function activeRuleIds(coins: Record<string, ReserveAdapterAlertCoinState>): Set<ReserveAdapterAlertRuleId> {
+  const active = new Set<ReserveAdapterAlertRuleId>();
+  for (const state of Object.values(coins)) {
+    for (const [ruleId, flag] of RESERVE_ADAPTER_ALERT_RULES) {
+      if (state[flag]) active.add(ruleId);
+    }
+  }
+  return active;
+}
+
 /**
  * Transition-only reserve alert predicates. A condition raises once when it
  * crosses its threshold and recovers once when it clears; a matching feed
@@ -100,8 +116,6 @@ export function evaluateReserveAdapterAlerts(params: {
   previous: ReserveAdapterAlertState;
 }): ReserveAdapterAlertEvaluation {
   const coins: Record<string, ReserveAdapterAlertCoinState> = {};
-  const raised = new Set<ReserveAdapterAlertRuleId>();
-  const recovered = new Set<ReserveAdapterAlertRuleId>();
   const failedSources: ReserveAdapterAlertEvaluation["failedSources"] = [];
   const scoreIneligibleSources: ReserveAdapterAlertEvaluation["scoreIneligibleSources"] = [];
   const scoreIneligibleUnknownSources: ReserveAdapterAlertEvaluation["scoreIneligibleUnknownSources"] = [];
@@ -171,18 +185,6 @@ export function evaluateReserveAdapterAlerts(params: {
       ? prior.scoreIneligibleRaised
       : scoreIneligibleCondition && (prior.scoreIneligibleRaised || !acknowledged);
     const clockRaised = clockCondition && (prior.clockRaised || !acknowledged);
-    if (failureRaised && !prior.failureRaised) raised.add("reserve-adapter-failure-sustained");
-    if (scoreIneligibleRaised && !prior.scoreIneligibleRaised) {
-      raised.add("reserve-score-ineligible-sustained");
-    }
-    if (clockRaised && !prior.clockRaised) raised.add("reserve-source-clock-stalled");
-    // Recovery follows the evidence clearing, never an acknowledgement.
-    if (prior.failureRaised && !failureCondition) recovered.add("reserve-adapter-failure-sustained");
-    if (prior.scoreIneligibleRaised && !scoreIneligibleUnknown && !scoreIneligibleEvidence) {
-      recovered.add("reserve-score-ineligible-sustained");
-    }
-    if (prior.clockRaised && !clockCondition) recovered.add("reserve-source-clock-stalled");
-
     if (failureCondition) failedSources.push({ stablecoinId: coinId, failedCycles });
     if (scoreIneligibleCondition) {
       scoreIneligibleSources.push({ stablecoinId: coinId, degradedCycles });
@@ -205,10 +207,14 @@ export function evaluateReserveAdapterAlerts(params: {
     }
   }
 
+  // Rule-level transitions over the persisted per-coin state: one coin clearing
+  // does not recover a rule another coin still holds.
+  const priorActiveRuleIds = activeRuleIds(params.previous.coins);
+  const nextActiveRuleIds = activeRuleIds(coins);
   return {
     state: { version: 1, coins },
-    raised: [...raised],
-    recovered: [...recovered],
+    raised: [...nextActiveRuleIds].filter((ruleId) => !priorActiveRuleIds.has(ruleId)),
+    recovered: [...priorActiveRuleIds].filter((ruleId) => !nextActiveRuleIds.has(ruleId)),
     failedSources,
     scoreIneligibleSources,
     scoreIneligibleUnknownSources,
@@ -342,18 +348,38 @@ export async function runReservePostSyncWatchdog(
     }
 
     const reservePublishedAt = Math.floor(Date.now() / 1000);
-    const previousReserveSource = await getCache(db, SNAPSHOT_KEYS.reserve);
-    const reserveSourceEnvelope = buildAlertReserveSourceEnvelope(
-      drift.driftCoins.map((entry) => entry.id),
-      previousReserveSource,
-      {
+    // Publish an envelope every slot. An empty observed census cannot certify a
+    // complete no-drift set, so it publishes an explicit non-continuous gap
+    // instead of an `ok` source state (and instead of withholding the write: a
+    // retained healthy envelope stays fresh for two producer intervals, which
+    // would let the next publish inherit the pre-gap observation epochs and
+    // report drift that began during the blind cycle).
+    if (drift.observedIds.length > 0 || drift.fallbackCoins.length === 0) {
+      const previousReserveSource = await getCache(db, SNAPSHOT_KEYS.reserve);
+      const reserveSourceEnvelope = buildAlertReserveSourceEnvelope(
+        drift.driftCoins.map((entry) => entry.id),
+        previousReserveSource,
+        {
+          nowSec: reservePublishedAt,
+          producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+          observedIds: drift.observedIds,
+          unavailableIds: drift.fallbackCoins,
+        },
+      );
+      await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
+    } else {
+      degradedReasons.push("reserve-drift-census-empty");
+      // No previous envelope: continuity is broken, every observation epoch is
+      // reset, and dispatch cold-seeds instead of adopting an empty drift set
+      // as a verified no-drift result.
+      const reserveSourceEnvelope = buildAlertReserveSourceEnvelope([], null, {
         nowSec: reservePublishedAt,
         producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
-        observedIds: drift.observedIds,
+        observedIds: [],
         unavailableIds: drift.fallbackCoins,
-      },
-    );
-    await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
+      });
+      await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
+    }
 
     maxSyncAgeSec = await getMaxSyncAge(
       db,

@@ -26,6 +26,8 @@ export interface TwitterDigestDeliveryRecord {
   completedAt?: number;
   tweetId?: string;
   lastError?: string;
+  /** Unique per claim attempt so a replayed write can be told from a new owner. */
+  claimToken?: string;
 }
 
 interface TwitterDeliveryErrorShape {
@@ -59,6 +61,18 @@ function parseRecord(value: string): TwitterDigestDeliveryRecord | null {
   }
 }
 
+/** The pre-ledger same-day marker shapes are delivery evidence; anything else unreadable is not. */
+function isLegacyDeliveryMarker(value: string): boolean {
+  if (value === "sent") return true;
+  try {
+    const parsed = JSON.parse(value) as { state?: unknown; sentAt?: unknown } | null;
+    return parsed != null && typeof parsed === "object"
+      && (parsed.state === "sent" || (parsed.state == null && typeof parsed.sentAt === "number"));
+  } catch {
+    return false;
+  }
+}
+
 /** Existing editions need durable evidence before another attempt is allowed. */
 export async function readTwitterDigestDeliveryStatus(
   db: D1Database,
@@ -67,8 +81,12 @@ export async function readTwitterDigestDeliveryStatus(
   const row = await db.prepare("SELECT value FROM cache WHERE key = ?").bind(key).first<{ value: string }>();
   if (!row) return "skipped: execution-unknown";
   const record = parseRecord(row.value);
-  // A legacy marker is still proof of delivery, not permission to resend.
-  if (!record || record.state === "sent") return "skipped: already-sent";
+  if (!record) {
+    // Marker presence alone never proves a tweet; only the known legacy marker
+    // shapes (or a terminal sent row) are duplicate-safe.
+    return isLegacyDeliveryMarker(row.value) ? "skipped: already-sent" : "skipped: execution-unknown";
+  }
+  if (record.state === "sent") return "skipped: already-sent";
   if (record.state === "execution_unknown") return "skipped: execution-unknown";
   if (record.state === "failed" && record.attempts >= TWITTER_DIGEST_MAX_ATTEMPTS) {
     return "skipped: attempt-limit";
@@ -85,16 +103,38 @@ async function replaceRecord(
   signal?: AbortSignal,
 ): Promise<boolean> {
   throwIfAborted(signal);
+  const nextValue = JSON.stringify(next);
   const result = await runWithOverloadRetry(() =>
     db
       .prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ? AND value = ?")
-      .bind(JSON.stringify(next), next.updatedAt, key, previousValue)
+      .bind(nextValue, next.updatedAt, key, previousValue)
       .run(),
     3,
     signal,
   );
   throwIfAborted(signal);
-  return Number(result.meta.changes ?? 0) === 1;
+  if (Number(result.meta.changes ?? 0) === 1) return true;
+  // A transport-ambiguous retry can replay an UPDATE this run already
+  // committed and report zero changes because the WHERE now compares the
+  // pre-write value. Read the row back: only the intended record (including
+  // this claim's token) proves the write landed; a different record is a lost
+  // fence.
+  const row = await runWithOverloadRetry(() =>
+    db
+      .prepare("SELECT value FROM cache WHERE key = ?")
+      .bind(key)
+      .first<{ value: string }>(),
+    3,
+    signal,
+  );
+  throwIfAborted(signal);
+  if (!row) throw new Error(`Twitter digest delivery ledger disappeared (${key})`);
+  return row.value === nextValue;
+}
+
+function createClaimToken(nowSec: number): string {
+  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  return cryptoObj?.randomUUID?.() ?? `${nowSec}:${Math.random().toString(36).slice(2)}`;
 }
 
 async function claimDelivery(
@@ -136,8 +176,11 @@ async function claimDelivery(
     if (!row) throw new Error(`Twitter digest delivery ledger disappeared (${key})`);
     candidateValue = row.value;
     const parsed = parseRecord(row.value);
-    // Legacy same-day markers predate the ledger and must remain duplicate-safe.
-    if (!parsed) return { status: "skipped", reason: "already-sent" };
+    if (!parsed) {
+      if (isLegacyDeliveryMarker(row.value)) return { status: "skipped", reason: "already-sent" };
+      logExecutionUnknown(key, 0, "unreadable_ledger_record");
+      return { status: "skipped", reason: "execution-unknown" };
+    }
     candidate = parsed;
 
     if (candidate.state === "sent") return { status: "skipped", reason: "already-sent" };
@@ -174,6 +217,7 @@ async function claimDelivery(
     completedAt: undefined,
     tweetId: undefined,
     lastError: undefined,
+    claimToken: createClaimToken(nowSec),
   };
   if (!(await replaceRecord(db, key, candidateValue, sending, signal))) {
     return { status: "skipped", reason: "in-flight" };

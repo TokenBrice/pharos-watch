@@ -8,6 +8,7 @@ import { buildDdrResponse } from "../depeg-resolver/public-projection";
 import { sealEligibleLocks } from "../depeg-resolver/publication";
 import type { DdrEventDbRow } from "../depeg-resolver/types";
 import { computeDepegResolver, type DdrV2StoreContracts } from "../compute-depeg-resolver";
+import { confirmedCronOutputAt } from "../../lib/cron-output";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import {
   makeDdrCanonicalIncident,
@@ -401,10 +402,14 @@ describe("computeDepegResolver", () => {
     // four-year training corpus is never read. R1: that unread corpus size is
     // unavailable, not a zero-incident calibration corpus.
     expect(payload._meta.lineage).toBeNull();
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata).toMatchObject({
       incidentCount: null,
       quarantinedCoins: null,
+      outputPublishedAt: NOW_SEC,
     });
+    // A deliberately published empty board is a confirmed output generation.
+    expect(confirmedCronOutputAt(result, metadata, NOW_SEC)).toBe(NOW_SEC);
   });
 
   it.each([
@@ -681,6 +686,14 @@ describe("computeDepegResolver", () => {
     const payload = readDdrSnapshotPayload(db);
     expect(payload.rows[0].prediction.policyDelaySec).toBe(72 * 3600);
     expect(payload.rows[0].prediction.lockTrigger).toBe("readiness_backstop");
+    // A successful retry must advance the pre-seal lock state past
+    // publication_retry_pending; otherwise it contradicts first-publication membership.
+    expect(stores.recordLockDeferral).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      incidentKey: sealed.incidentKey,
+      eventId: sealed.eventId,
+      action: "published",
+      reason: null,
+    }));
   });
 
   it("marks the public snapshot degraded when the manifest write fails after sealing", async () => {
@@ -816,6 +829,57 @@ describe("computeDepegResolver", () => {
     expect(payload.rows[0].noCall).toBeTruthy();
     expect(payload.rows[0].prediction.errataHistory).toHaveLength(1);
     expect((manifestBasePayload as { rows?: Array<{ kind?: string }> }).rows?.[0]?.kind).toBe("invalidated_prediction");
+  });
+
+  it("degrades instead of finalizing an errata-free manifest when the errata read fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const event = activeEvent();
+    const { stores, sealed } = storesFor();
+    stores.loadSealedPublicPredictions = vi.fn(async () => [sealed]);
+    stores.loadFirstPublicationMembership = vi.fn(async () => [
+      {
+        publicPredictionId: sealed.id,
+        incidentKey: sealed.incidentKey,
+        snapshotToken: "ddr-public-original",
+        snapshotGeneration: 2,
+        publishedAt: NOW_SEC - 600,
+      },
+    ]);
+    stores.loadPredictionErrata = vi.fn(async () => {
+      throw new Error("D1 errata read failed");
+    });
+    const db = resolverDb([
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      ...healthyDewsPublicationTables(),
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
+    ]);
+
+    const result = await computeDepegResolver({
+      db,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      storeContracts: stores,
+    });
+
+    const payload = readDdrSnapshotPayload(db);
+    expect(payload._meta.degraded).toBe(true);
+    expect(payload._meta.degradedReason).toContain("errata-overlay-unavailable:");
+    expect(payload._meta.degradedReason).toContain("D1 errata read failed");
+    expect(stores.writePublicationManifest).not.toHaveBeenCalled();
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata).toMatchObject({
+      outputPublishedAt: null,
+      reason: "ddr-errata-overlay-unavailable",
+      quality: { reason: "ddr-errata-overlay-unavailable" },
+    });
+    expect(confirmedCronOutputAt(result, metadata, NOW_SEC)).toBeNull();
   });
 
   it("uses durable pending promotion outcome time for late confirmation locks", async () => {

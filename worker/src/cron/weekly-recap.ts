@@ -202,6 +202,7 @@ export async function generateWeeklyRecap(
         title: existing.digest_title ?? "",
         text: existing.digest_text,
         extended: existing.digest_extended ?? existing.digest_text,
+        meta: existing.digest_meta,
       },
       safetyContext,
       qualityGateStatus: null,

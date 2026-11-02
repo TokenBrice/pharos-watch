@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   checkDdrEligibleUnsealed,
@@ -356,6 +357,27 @@ describe("depeg canary checks", () => {
       status: "ok",
       metadata: { blindEventCount: 0, events: [] },
     });
+  });
+
+  it("exempts frozen coins, whose open rows are preserved history", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(
+      `INSERT INTO depeg_events
+         (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
+          start_price, peg_reference, last_trusted_price_at, price_coverage_gap_started_at)
+       VALUES (?, ?, 'peggedUSD', 'below', 150, ?, NULL, 0.985, 1, ?, NULL)`,
+    );
+    const [frozenId] = [...FROZEN_IDS];
+    insert.run(frozenId, "FRZ", NOW - 90_000, NOW - 80_000);
+    insert.run("live-coin", "LIVE", NOW - 5_000, NOW - 2_000);
+
+    const result = await checkDepegOpenCoverage(db, NOW);
+
+    expect(result).toMatchObject({
+      status: "degraded",
+      metadata: { blindEventCount: 1, events: [{ stablecoinId: "live-coin" }] },
+    });
+    expect((result.metadata as { events: unknown[] }).events).toHaveLength(1);
   });
 
   it("reports the full blind cohort while capping the event detail list", async () => {

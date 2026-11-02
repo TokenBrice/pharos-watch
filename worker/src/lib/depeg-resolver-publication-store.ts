@@ -941,10 +941,15 @@ const NEXT_PUBLICATION_SEQUENCE_SQL =
 async function loadReusablePayloadToken(db: D1Database, basePayloadContentHash: string): Promise<string | null> {
   const row = await db
     .prepare(
-      `SELECT snapshot_token, base_payload_content_hash
-       FROM depeg_resolver_publication_snapshots_v2
-       WHERE snapshot_kind = 'ddr_public'
-       ORDER BY snapshot_sequence DESC
+      `SELECT s.snapshot_token, s.base_payload_content_hash
+       FROM depeg_resolver_publication_snapshots_v2 s
+       WHERE s.snapshot_kind = 'ddr_public'
+         AND NOT EXISTS (
+           SELECT 1
+           FROM depeg_resolver_publication_snapshot_errata e
+           WHERE e.snapshot_token = s.snapshot_token
+         )
+       ORDER BY s.snapshot_sequence DESC
        LIMIT 1`,
     )
     .first<{ snapshot_token: string; base_payload_content_hash: string | null }>();
@@ -1190,6 +1195,11 @@ export async function loadLatestPublicationManifest(db: D1Database): Promise<Ddr
              SELECT 1
              FROM depeg_resolver_publication_snapshot_errata e
              WHERE e.snapshot_token = s.snapshot_token
+           )
+           AND NOT EXISTS (
+             SELECT 1
+             FROM depeg_resolver_publication_snapshot_errata payload_errata
+             WHERE payload_errata.snapshot_token = s.payload_snapshot_token
            )
          ORDER BY s.published_at DESC, s.snapshot_sequence DESC
          LIMIT 1`,

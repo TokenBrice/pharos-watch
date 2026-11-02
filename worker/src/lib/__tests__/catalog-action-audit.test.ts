@@ -81,6 +81,47 @@ describe("catalog action canonical audit", () => {
     expect(JSON.parse(rows(sqlite)[0]!.details_json!)).toMatchObject({ mode: "live" });
   });
 
+  it("audits a POST dry run with the handler's resolved mode", async () => {
+    const sqlite = fixtures.open().sqlite;
+    await auditCatalogActionResponse({
+      db: createSqliteD1(sqlite), endpoint: endpoint("backfill-dews"),
+      request: request("/api/backfill-dews?repair=prune-history&dry-run=true", "dews-prune-dry-run"),
+      response: Response.json({ repair: "prune-history", dryRun: true }),
+    });
+    expect(JSON.parse(rows(sqlite)[0]!.details_json!)).toMatchObject({ method: "POST", mode: "dry-run" });
+  });
+
+  it("keeps the GET preview inspect verdict when the handler returns a resolved dryRun flag", async () => {
+    const sqlite = fixtures.open().sqlite;
+    await auditCatalogActionResponse({
+      db: createSqliteD1(sqlite), endpoint: endpoint("backfill-dews"),
+      request: request("/api/backfill-dews?repair=prune-history&dry-run=true", "dews-prune-preview", { method: "GET" }),
+      response: Response.json({ repair: "prune-history", dryRun: true }),
+    });
+    expect(JSON.parse(rows(sqlite)[0]!.details_json!)).toMatchObject({ method: "GET", mode: "inspect" });
+  });
+
+  it("persists a later same-key success over an earlier headerless failure", async () => {
+    const sqlite = fixtures.open().sqlite;
+    const db = createSqliteD1(sqlite);
+    const definition = endpoint("debug-sync-state");
+    const req = request("/api/debug-sync-state", "retry-same-intent", { method: "GET" });
+
+    await auditCatalogActionResponse({
+      db, endpoint: definition, request: req,
+      response: Response.json({ error: "D1 read failed" }, { status: 500 }),
+    });
+    await auditCatalogActionResponse({
+      db, endpoint: definition, request: req,
+      response: Response.json({ ok: true }, { status: 200 }),
+    });
+
+    const auditRows = rows(sqlite);
+    expect(auditRows).toHaveLength(1);
+    expect(auditRows[0]).toMatchObject({ result: "ok", http_status: 200 });
+    expect(JSON.parse(auditRows[0]!.details_json!)).toMatchObject({ outcome: "succeeded" });
+  });
+
   it("records only allowlisted scope and outcome metadata", async () => {
     const sqlite = fixtures.open().sqlite;
     const db = createSqliteD1(sqlite);
@@ -270,6 +311,40 @@ describe("catalog action canonical audit", () => {
       executionCertainty: "confirmed",
       idempotentReplay: false,
     });
+  });
+
+  it("keeps a completed intent row when the same key is executed again", async () => {
+    const sqlite = fixtures.open().sqlite;
+    const db = createSqliteD1(sqlite);
+    const definition = endpoint("remediate-blacklist-amount-gaps");
+
+    await auditCatalogActionResponse({
+      db,
+      endpoint: definition,
+      request: request("/api/remediate-blacklist-amount-gaps?stablecoin=USDT&dryRun=false", "reused-intent", {
+        headers: { "Cf-Access-Authenticated-User-Email": "alice@pharos.watch" },
+      }),
+      response: Response.json({ ok: true }, { headers: { "X-Idempotent-Replay": "false" } }),
+    });
+    const original = sqlite
+      .prepare("SELECT created_at, actor, target FROM admin_action_audit ORDER BY id")
+      .get() as { created_at: number; actor: string; target: string };
+
+    await auditCatalogActionResponse({
+      db,
+      endpoint: definition,
+      request: request("/api/remediate-blacklist-amount-gaps?stablecoin=DAI&dryRun=true", "reused-intent", {
+        headers: { "Cf-Access-Authenticated-User-Email": "bob@pharos.watch" },
+      }),
+      response: Response.json({ ok: true }, { headers: { "X-Idempotent-Replay": "false" } }),
+    });
+
+    const auditRows = sqlite
+      .prepare("SELECT created_at, actor, target FROM admin_action_audit ORDER BY id")
+      .all() as Array<{ created_at: number; actor: string; target: string }>;
+    expect(auditRows).toHaveLength(2);
+    expect(auditRows[0]).toEqual(original);
+    expect(auditRows[1]).toMatchObject({ actor: "bob@pharos.watch", target: "DAI" });
   });
 
   it("distinguishes an absent batch target from an unsafe configured target", async () => {

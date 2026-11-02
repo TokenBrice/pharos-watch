@@ -344,6 +344,7 @@ CORPUS_CASES["usdtb-transparency"] = {
 // Trimmed happy-path fixtures from the six adapter tests (not new live captures).
 // Each drift removes a denominator field while leaving plausible holdings intact.
 const ETHENA_ENDPOINT = "https://app.ethena.fi/api/positions/current/collateral";
+const ETHENA_STATUS_ENDPOINT = "https://app.ethena.fi/api/collateralization/status";
 const SKY_ENDPOINT = "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt";
 const FALCON_ENDPOINT = "https://api.falcon.finance/api/v1/transparency";
 const JUPUSD_ENDPOINT = "https://api.jupusd.money/api/data";
@@ -354,6 +355,11 @@ const ETHENA_FIXTURE = {
     { asset: "BTC", exchange: "Binance", timestamp: 1_757_000_000, usdAmount: 20 },
     { asset: "ETH", exchange: "Binance", timestamp: 1_757_000_000, usdAmount: 45 },
   ],
+};
+// The second issuer surface the adapter reconciles the positions total against.
+const ETHENA_STATUS_FIXTURE = {
+  timestamp: "2025-09-04T15:33:20.000000Z",
+  totalBackingAssetsInUsd: 100,
 };
 const SKY_FIXTURE = {
   count: 2,
@@ -398,10 +404,19 @@ const SKY_RPC = {
 CORPUS_CASES.ethena = {
   coinId: "usde-ethena",
   nowSec: 1_757_003_600,
-  network: { json: { [ETHENA_ENDPOINT]: ETHENA_FIXTURE }, rpc: ETHENA_RPC },
+  network: {
+    json: { [ETHENA_ENDPOINT]: ETHENA_FIXTURE, [ETHENA_STATUS_ENDPOINT]: ETHENA_STATUS_FIXTURE },
+    rpc: ETHENA_RPC,
+  },
   drift: {
     label: "totalBackingAssetsInUsd is dropped",
-    network: { json: { [ETHENA_ENDPOINT]: { ...ETHENA_FIXTURE, totalBackingAssetsInUsd: undefined } }, rpc: ETHENA_RPC },
+    network: {
+      json: {
+        [ETHENA_ENDPOINT]: { ...ETHENA_FIXTURE, totalBackingAssetsInUsd: undefined },
+        [ETHENA_STATUS_ENDPOINT]: ETHENA_STATUS_FIXTURE,
+      },
+      rpc: ETHENA_RPC,
+    },
     outcome: "error",
   },
 };

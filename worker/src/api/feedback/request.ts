@@ -2,7 +2,7 @@ import { errorResponse, jsonResponse } from "../../lib/api-response";
 import { parseRequestJsonWithSchema } from "../../lib/api-json-body";
 import { reserveFeedbackRateLimit } from "../../lib/rate-limit";
 import { safeErrorMessage } from "../../lib/safe-error-message";
-import { resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
+import { READABLE_REGISTRY_BY_ID, resolveStablecoinId } from "@shared/lib/stablecoin-id-registry";
 import {
   FEEDBACK_RATE_LIMIT_MAX_SUBMISSIONS,
   FEEDBACK_RATE_LIMIT_WINDOW_SEC,
@@ -45,9 +45,13 @@ export function validateFeedbackSubmission(feedback: FeedbackBody): ValidatedFee
       return errorResponse(400, "Invalid stablecoinId");
     }
     canonicalStablecoinId = resolved.canonicalId;
+    const canonicalName = READABLE_REGISTRY_BY_ID.get(resolved.canonicalId)?.name;
     feedback = {
       ...feedback,
       stablecoinId: resolved.canonicalId,
+      // The verified label and cached snapshot describe the canonical ID, so a
+      // client-supplied display name must not point the issue at another asset.
+      ...(feedback.stablecoinName && canonicalName ? { stablecoinName: canonicalName } : {}),
     };
   }
 

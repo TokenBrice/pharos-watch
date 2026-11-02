@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import {
   applyNonOkProviderDiagnostic,
   buildBlockedProviderDiagnostic,
   buildPricingProviderDiagnostic,
+  recoverProviderOnNoCandidates,
 } from "../pricing-provider-lifecycle";
 import {
   appendPricingAssetAttempts,
   createPricingAssetAttempt,
   MAX_ASSET_ATTEMPTS_PER_DIAGNOSTIC,
+  type PricingProviderAttemptDiagnostic,
 } from "../pricing-provider-diagnostics";
 
 describe("pricing provider lifecycle helpers", () => {
@@ -73,6 +76,36 @@ describe("pricing provider lifecycle helpers", () => {
       success: false,
       snippet: "blocked by provider",
       rejectionReasonCounts: { "non-ok": 1 },
+    });
+  });
+
+  it("does not publish a no-candidate success when the circuit row was unreadable", async () => {
+    const db = mockD1([{
+      match: "cache",
+      rows: [{ key: "circuit:dexscreener-prices", value: "not-json", updated_at: 100 }],
+    }]);
+    const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+
+    await recoverProviderOnNoCandidates({
+      db,
+      circuitSource: "dexscreener-prices",
+      diagnostic: {
+        source: "dexscreener-exact",
+        stage: "no-candidates",
+        endpoint: "api.dexscreener.com/tokens/v1",
+      },
+      diagnostics,
+    });
+
+    // A corrupt read is not a provider verdict; the repaired open row must wait
+    // for the measured half-open probe instead of closing on an invented success.
+    expect(diagnostics).toEqual([]);
+    const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.binds[0]).toBe("circuit:dexscreener-prices");
+    expect(JSON.parse(String(writes[0]?.binds[1]))).toMatchObject({
+      state: "open",
+      lastSuccessAt: null,
     });
   });
 });

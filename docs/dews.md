@@ -227,7 +227,7 @@ Storage, retention, exact publication proofs and machine-readable run diagnostic
 
 ### `GET /api/stress-signals`
 
-**All coins (no params):** Returns current accepted-generation DEWS for active tracked stablecoins, with `signals`, newest `updatedAt`, oldest `oldestComputedAt`, malformed-row diagnostics and the shared methodology envelope. `eligibleCount` is the active-registry size; other lifecycle states are excluded. Aggregate freshness headers use `updatedAt`; the oldest row is disclosed separately, not used to stale the entire surface.
+**All coins (no params):** Returns current accepted-generation DEWS for active tracked stablecoins, with `signals`, newest `updatedAt`, oldest `oldestComputedAt`, malformed-row diagnostics and the shared methodology envelope. `eligibleCount` is the active DEWS cohort: active-registry IDs less NAV tokens, which are never scored; other lifecycle states are excluded. Aggregate freshness headers use `updatedAt`; the oldest row is disclosed separately, not used to stale the entire surface.
 
 **Single coin:** `?stablecoin=usdt-tether&days=30` returns `current` plus daily `history` (default 30 days, range 1–365). Unknown IDs return `404 Unknown stablecoin`; pre-launch IDs return `404 Stablecoin not tracked`. Quarantined, delisted and frozen tracked IDs retain single-coin history access.
 

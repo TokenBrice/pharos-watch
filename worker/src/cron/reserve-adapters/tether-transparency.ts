@@ -144,7 +144,6 @@ export function adaptTetherTransparency(
   }
 
   const chainDetails = buildChainDetails(entry.blockChains);
-  const shareholderEquityUsd = parseAmount(entry.shareholder_eq);
 
   const warnings: LiveReserveWarning[] = [];
   // Tether ships identical total_assets/total_liabilities strings for some
@@ -168,6 +167,19 @@ export function adaptTetherTransparency(
       ),
     );
   }
+  // USDT's transparency.json total_assets/total_liabilities track daily net
+  // circulation plus a live reserve residual, not the report-dated balance
+  // sheet in the reviewed BDO packet. Publishing them as totals would restate
+  // an unattested daily snapshot under the signed-report labels.
+  const withholdsReportDatedBalanceSheet = params.currencyIso === "usdt";
+  if (withholdsReportDatedBalanceSheet) {
+    warnings.push(
+      reserveInfoWarning(
+        "tether-live-balance-not-reported-balance-sheet",
+        `Tether's live ${params.currencyIso.toUpperCase()} totals combine daily net circulation with a live reserve residual; they do not reproduce the report-dated issuer balance sheet, so coverage totals are withheld in favour of the reviewed BDO packet`,
+      ),
+    );
+  }
   // Canonical keyed order makes emission independent of report-row ordering.
   const slices = params.currencyIso === "usdt"
     ? params.reviewedComposition.rows.map(({ dollars, ...slice }) => ({
@@ -188,18 +200,11 @@ export function adaptTetherTransparency(
     metadata: {
       diag: { rawSumDeviation: calculateRawPercentageSumDeviation(slices.map((slice) => slice.pct)) },
       ...verifiedFreshnessMetadata(sourceTimestamp),
-      ...(params.currencyIso !== "mxnt" && !selfReferentialRatio
+      ...(params.currencyIso !== "mxnt" && !selfReferentialRatio && !withholdsReportDatedBalanceSheet
         ? { collateralizationRatio: totalAssets / totalLiabilities }
         : {}),
-      ...(params.currencyIso !== "mxnt" && selfReferentialRatio
+      ...(params.currencyIso !== "mxnt" && (selfReferentialRatio || withholdsReportDatedBalanceSheet)
         ? { ratioUnavailableReason: "not-comparable" as const }
-        : {}),
-      ...(params.currencyIso === "usdt"
-        ? {
-            totalAssetsUsd: totalAssets,
-            totalLiabilitiesUsd: totalLiabilities,
-            ...(Number.isFinite(shareholderEquityUsd) ? { shareholderEquityUsd } : {}),
-          }
         : {}),
       details: {
         ...chainDetails,

@@ -27,7 +27,12 @@ const FalconAssetRowSchema = z
     return normalized;
   });
 
-const FalconReservesSchema = z.record(z.string(), z.record(z.string(), DecimalSourceSchema));
+// An empty published map is missing evidence, not a zero reserves total.
+const FalconReservesSchema = z
+  .record(z.string(), z.record(z.string(), DecimalSourceSchema))
+  .refine((reserves) => Object.values(reserves).some((entries) => Object.keys(entries).length > 0), {
+    message: "Falcon reserves must include at least one custodian amount",
+  });
 
 export const FalconTransparencySchema = z
   .object({

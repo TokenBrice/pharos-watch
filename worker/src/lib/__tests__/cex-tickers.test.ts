@@ -397,6 +397,36 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.value.prices.has("DAI")).toBe(false);
   });
 
+  it("records every failed Coinbase product in diagnostics for a partial fan-out", async () => {
+    mockFetch([
+      { match: "/products/USDT-USD/ticker", body: { price: "0.9998" } },
+      { match: "/products/PAXG-USD/ticker", body: {}, status: 404 },
+      { match: "/products/AUDD-USDC/ticker", body: {}, status: 404 },
+    ], { requireMatch: true });
+    const outcome = await fetchCoinbasePrices(["USDT", "PAXG", "AUDD"]);
+
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.prices.get("USDT")).toBeCloseTo(0.9998, 4);
+    expect(outcome.value.diagnostics).toEqual([
+      {
+        source: "coinbase",
+        stage: "primary",
+        endpoint: "api.exchange.coinbase.com/products/{product}/ticker",
+        status: 404,
+        ok: false,
+        success: false,
+      },
+      {
+        source: "coinbase",
+        stage: "primary",
+        endpoint: "api.exchange.coinbase.com/products/{product}/ticker",
+        status: 404,
+        ok: false,
+        success: false,
+      },
+    ]);
+  });
+
   it("rejects ticker prices with trailing non-numeric text", async () => {
     mockFetch([
       { match: "/products/USDT-USD/ticker", body: { bid: "0.9997 USD", ask: "0.9999 USD", price: "0.9998 USD" } },

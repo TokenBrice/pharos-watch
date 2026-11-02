@@ -143,6 +143,12 @@ const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   "myrc-blox",
   "stac-securitize",
   "eurspkcc-spiko",
+  // Reviewed 2026-11-01: the complete four-chain native roster read
+  // 1,960,810,518.68 USYC against a CoinGecko market cap that still reflected
+  // pre-2026-10-31 BSC burns. Prefer the on-chain stock; never republish the
+  // contradicted cap when a leg is unreadable.
+  // https://bscscan.com/token/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311
+  "usyc-hashnote",
 ]);
 
 export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): boolean {
@@ -509,8 +515,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // reviewed representation is reallocated out of it. Legs outside
   // buildChainRpcs() carry a verified public endpoint. The TON jetton and the
   // Aptos fungible asset have no supported supply probe, so they stay
-  // unconfigured and their balances remain inside the Ethereum bucket rather
-  // than failing the whole aggregate closed.
+  // unconfigured; the escrow-residual policy publishes their balances under the
+  // unattributed label rather than assigning them to the Ethereum bucket.
   "susde-ethena": [
     { chain: "ethereum" },
     supplyProbeChain("plasma"),
@@ -537,6 +543,9 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("zksync"),
     { chain: "avalanche" },
     { chain: "solana" },
+    // Reviewed 2026-11-01: Monad's LayerZero OFT held 16,640,244.562356 sUSDe
+    // (MonadScan), previously absorbed by the unattributed escrow residual.
+    supplyProbeChain("monad"),
   ],
   // wsrUSD is an ERC-4626 NAV wrapper with no DefiLlama pegged-asset row
   // (llamaId null), so the CoinGecko fiat-cg lane leaves chainCirculating empty
@@ -806,13 +815,17 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("apechain"),
     supplyProbeChain("pharos"),
   ],
-  // PAXG is issuer-native on Ethereum and Solana. The Ethereum LayerZero OFTWrapper
-  // 0xd09ede557ef195983c9544a5724046fbd6e8a3c6 is a burn/mint SupplyController
-  // (approvalRequired false; balanceOf 0), so Ethereum totalSupply does not escrow
-  // the Solana float and the legs sum. Verified 2026-08-18: Ethereum 434,564.906308
-  // (block 25784877) + Solana 2,382.341744 (slot 440141599) = 436,947.248052,
-  // matching CoinGecko circulating exactly. Do not add CANONICAL_SUPPLY_CHAINS.
-  "paxg-paxos": [{ chain: "ethereum" }, { chain: "solana" }],
+  // PAXG is issuer-native on Ethereum, Solana and Base. The Ethereum LayerZero
+  // OFTWrapper 0xd09ede557ef195983c9544a5724046fbd6e8a3c6 is a burn/mint
+  // SupplyController (approvalRequired false; balanceOf 0), so Ethereum
+  // totalSupply does not escrow the Solana or Base float and the legs sum.
+  // KPMG's 2026-09-30 PAXG examination reconciles 235 Base PAXG among redeemable
+  // tokens (liabilities Ethereum 432,506 / Solana 2,560 / Base 235 / Robinhood 5),
+  // and the Base proxy is reviewed as Paxos issuer-native issuance rather than a
+  // bridge representation. Explorer reads on 2026-11-01: Ethereum
+  // 442,885.899659 + Solana 3,215.284434, with Base the ~235 oz remainder.
+  // Do not add CANONICAL_SUPPLY_CHAINS.
+  "paxg-paxos": [{ chain: "ethereum" }, { chain: "solana" }, { chain: "base" }],
   // DGLD is independently gold-backed on Ethereum and Base after the 2026-06-30
   // bridge close. Verified 2026-08-18: Ethereum 1,603.687 (block 25784877) + Base
   // 401.159 (block 50150845) = 2,004.846. Deprecated Base 0xd02f50…d6c9 reads 0.

@@ -43,6 +43,18 @@ describe("fetchZephyrZysSource", () => {
     );
   });
 
+  it("rejects an observation clock beyond the future-skew allowance", async () => {
+    mockYieldSourceRoutes([
+      {
+        match: "zephyrprotocol.com/api/v1/historicalreturns",
+        headers: { "x-last-success-at": String((Math.floor(Date.now() / 1000) + 2 * 3600) * 1000) },
+        body: { oneDay: { effectiveApy: 9.3084 } },
+      },
+    ]);
+
+    await expect(fetchZephyrZysSource()).resolves.toBeNull();
+  });
+
   it.each([
     {
       name: "refuses to date a payload the upstream marks x-stale",

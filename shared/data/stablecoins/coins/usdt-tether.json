@@ -7,7 +7,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Q2 2026 attestation: $187.75B total assets vs $183.64B liabilities; about $140.6B in U.S. Treasury bills and reverse repurchase agreements, $18.8B precious metals, $5.8B Bitcoin, $13.5B secured loans, and a $4.11B excess reserve buffer.",
+  "collateral": "Q3 2026 attestation: $191.45B total assets vs $183.50B liabilities; about $139.6B in U.S. Treasury bills, reverse repurchase agreements and cash equivalents, $19.1B precious metals, $8.4B Bitcoin, $14.2B secured loans, and a $7.95B excess reserve buffer.",
   "pegMechanism": "Direct redemption through Tether for verified customers at $1 less applicable fees, subject to Tether's terms. Supply figures include USDT0 (omnichain variant via LayerZero lock-and-mint) deployed on 20+ additional chains",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "1",
@@ -21,21 +21,25 @@
     "cadence": "quarterly",
     "attestorJurisdiction": "Italy",
     "latestReport": {
-      "periodEnd": "2026-06-30",
-      "publishedAt": "2026-07-31",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-30",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "OpenAI Codex backing review",
+      "reviewer": "Pharos findings-curation renewal 2026-11-01 (BDO Q3 2026 pin; report authorized and signed Milan 2026-10-30, category dollars from report page 4 and eleven categories summing to total assets)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Tether Q2 2026 reports and reserves",
-          "url": "https://tether.to/transparency/?tab=reports"
+          "label": "Tether Q3 2026 reports and reserves (most recent Reserves report as of September 30, 2026)",
+          "url": "https://tether.to/en/transparency/?tab=reports"
         },
         {
-          "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-06-30 (signed Milan, 2026-07-31)",
-          "url": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"
+          "label": "BDO ISAE 3000R assurance report on Tether International financial figures and reserves as of 2026-09-30 (signed Milan, 2026-10-30)",
+          "url": "https://assets.ctfassets.net/vyse88cgwfbl/7nQYtcoP9GxIUFSyro2dGK/8d0521470b9e99c8c0831019cabea4ee/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_30-09-2026.pdf"
+        },
+        {
+          "label": "Tether Q3 2026 attestation release, 2026-10-30: $191,451,091,374 assets, $183,496,460,904 liabilities and a $7,954,630,470 excess buffer",
+          "url": "https://tether.io/news/tether-generates-1-5-billion-in-q3-net-operating-profit-as-reserve-buffer-doubles-to-almost-8-billion/"
         }
       ]
     }
@@ -353,14 +357,14 @@
     "params": {
       "currencyIso": "usdt",
       "reviewedComposition": {
-        "sourceUrl": "https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf",
-        "asOf": "2026-06-30",
-        "totalAssetsUsd": 187751426411,
+        "sourceUrl": "https://assets.ctfassets.net/vyse88cgwfbl/7nQYtcoP9GxIUFSyro2dGK/8d0521470b9e99c8c0831019cabea4ee/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_30-09-2026.pdf",
+        "asOf": "2026-09-30",
+        "totalAssetsUsd": 191451091374,
         "rows": [
           {
             "sourceKey": "tether:usdt:treasury-bills",
             "name": "U.S. Treasury bills",
-            "dollars": 114960963604,
+            "dollars": 122839738995,
             "risk": "very-low",
             "assetClass": "treasury-bill",
             "issuerOrObligor": "United States Treasury",
@@ -374,7 +378,7 @@
           {
             "sourceKey": "tether:usdt:overnight-reverse-repo",
             "name": "Overnight reverse repurchase agreements",
-            "dollars": 18625552412,
+            "dollars": 9518706336,
             "risk": "very-low",
             "assetClass": "repo",
             "issuerOrObligor": "Undisclosed reverse-repo counterparties",
@@ -389,7 +393,7 @@
           {
             "sourceKey": "tether:usdt:term-reverse-repo",
             "name": "Term reverse repurchase agreements",
-            "dollars": 6993428950,
+            "dollars": 7177537907,
             "risk": "very-low",
             "assetClass": "repo",
             "issuerOrObligor": "Undisclosed reverse-repo counterparties",
@@ -404,7 +408,7 @@
           {
             "sourceKey": "tether:usdt:non-us-treasury-bills",
             "name": "Non-US Treasury bills",
-            "dollars": 22374689,
+            "dollars": 21981521,
             "risk": "medium",
             "assetClass": "government-security",
             "issuerOrObligor": "Undisclosed non-US sovereign issuers",
@@ -419,7 +423,7 @@
           {
             "sourceKey": "tether:usdt:cash-bank-deposits",
             "name": "Cash and bank deposits",
-            "dollars": 40307440,
+            "dollars": 20427407,
             "risk": "very-low",
             "assetClass": "bank-deposit",
             "issuerOrObligor": "Undisclosed banking counterparties",
@@ -432,7 +436,7 @@
           {
             "sourceKey": "tether:usdt:corporate-bonds",
             "name": "Corporate bonds",
-            "dollars": 8711171,
+            "dollars": 63881392,
             "risk": "high",
             "assetClass": "public-credit",
             "issuerOrObligor": "Undisclosed corporate issuers",
@@ -447,7 +451,7 @@
           {
             "sourceKey": "tether:usdt:precious-metals",
             "name": "Precious metals",
-            "dollars": 18838357171,
+            "dollars": 19084651736,
             "risk": "medium",
             "assetClass": "other",
             "issuerOrObligor": "Physical gold inventory",
@@ -461,7 +465,7 @@
           {
             "sourceKey": "tether:usdt:bitcoin",
             "name": "Bitcoin",
-            "dollars": 5801630681,
+            "dollars": 8367170264,
             "risk": "medium",
             "assetClass": "cryptoasset",
             "issuerOrObligor": "Tether-controlled on-chain wallets",
@@ -475,7 +479,7 @@
           {
             "sourceKey": "tether:usdt:public-equities",
             "name": "Public equities",
-            "dollars": 3761438892,
+            "dollars": 4177803686,
             "risk": "high",
             "assetClass": "other",
             "issuerOrObligor": "Undisclosed public-equity issuers",
@@ -490,7 +494,7 @@
           {
             "sourceKey": "tether:usdt:other-investments",
             "name": "Other investments",
-            "dollars": 5244911675,
+            "dollars": 6004074506,
             "risk": "high",
             "assetClass": "other",
             "issuerOrObligor": "Undisclosed",
@@ -505,7 +509,7 @@
           {
             "sourceKey": "tether:usdt:secured-loans",
             "name": "Secured loans",
-            "dollars": 13453749726,
+            "dollars": 14175117624,
             "risk": "high",
             "assetClass": "private-credit",
             "issuerOrObligor": "Undisclosed third-party borrowers",

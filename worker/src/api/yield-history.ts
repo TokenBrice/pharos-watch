@@ -12,6 +12,7 @@ import { logWorkerEventArgs } from "../lib/structured-log";
 import { parseJson } from "../lib/json-parse";
 import { isSuppressedYieldHistoryRow } from "../lib/yield-history-ownership-handoffs";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { getCacheRatioThresholds } from "@shared/lib/status-thresholds";
 import { isRecord } from "@shared/lib/type-guards";
 import { YIELD_HISTORY_RAW_DAYS } from "@shared/lib/yield-history-policy";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
@@ -412,13 +413,50 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
 
     const current = history.length > 0 ? (history[history.length - 1] ?? null) : null;
     const interval = CRON_INTERVALS["sync-yield-data"];
-    const freshness = buildFreshnessMeta(publishedCutoff, interval, "yield-data");
+    const clockUnavailable = publishedCutoff <= 0;
+    const assessedAtSec = Math.floor(Date.now() / 1000);
+    const yieldBands = getCacheRatioThresholds("yield-data");
+    // Neither the cache row nor confirmed cron output established a clock: the
+    // verdict stays stale, but no timestamp or age may be invented from zero.
+    const freshness = clockUnavailable
+      ? {
+          updatedAt: null,
+          ageSeconds: null,
+          assessedAt: assessedAtSec,
+          freshBudgetSec: interval * yieldBands.degraded,
+          degradedBudgetSec: interval * yieldBands.stale,
+          status: "stale" as const,
+        }
+      : buildFreshnessMeta(publishedCutoff, interval, "yield-data", { assessedAt: assessedAtSec });
     const freshnessMeta = {
       ...freshness,
-      status: authorityUnavailable ? "stale" as const : freshness.status,
-      reason: authorityUnavailable ? "publication-cutoff-unavailable"
+      status: authorityUnavailable || clockUnavailable ? "stale" as const : freshness.status,
+      reason: authorityUnavailable || clockUnavailable ? "publication-cutoff-unavailable"
         : freshness.status !== "fresh" ? "yield-publication-age" : null,
     };
+    const responseHeaders = clockUnavailable
+      ? {
+          "Cache-Control": "no-store",
+          "X-Data-Age": "unavailable",
+          "X-Data-Updated-At": "unknown",
+          "X-Data-Freshness": freshnessMeta.status,
+          "X-Data-Freshness-Reason": freshnessMeta.reason ?? "publication-cutoff-unavailable",
+          Warning: `110 - "Yield publication ${freshnessMeta.status} (${freshnessMeta.reason ?? "publication-cutoff-unavailable"})"`,
+        }
+      : addFreshnessHeaders({
+          "Cache-Control": freshnessMeta.status !== "fresh" ? "no-store" : CACHE_PROFILES.slow,
+          ...(freshnessMeta.status !== "fresh" ? {
+            Warning: `110 - "Yield publication ${freshnessMeta.status} (${freshnessMeta.reason})"`,
+          } : {}),
+        }, publishedCutoff, interval, freshness);
+    const methodology = buildMethodologyEnvelope({
+      version: YIELD_METHODOLOGY_VERSION,
+      versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+      currentVersion: YIELD_METHODOLOGY_VERSION,
+      currentVersionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
+      changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
+      asOf: latestHistoryTimestamp,
+    });
 
     return jsonResponseWithHeaders(
       {
@@ -427,20 +465,13 @@ export const handleYieldHistory = async (db: D1Database, url: URL): Promise<Resp
         _meta: freshnessMeta,
         ...(freshnessWarning ? { warning: freshnessWarning } : {}),
         ...(publication ? { publication } : {}),
-        methodology: buildMethodologyEnvelope({
-          version: YIELD_METHODOLOGY_VERSION,
-          versionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
-          currentVersion: YIELD_METHODOLOGY_VERSION,
-          currentVersionLabel: YIELD_METHODOLOGY_VERSION_LABEL,
-          changelogPath: YIELD_METHODOLOGY_CHANGELOG_PATH,
-          asOf: latestHistoryTimestamp,
-        }),
+        methodology: {
+          ...methodology,
+          // No cutoff and an empty history leave the methodology as-of
+          // unestablished; a zero would be read as an epoch-backed clock.
+          asOf: latestHistoryTimestamp > 0 ? latestHistoryTimestamp : null,
+        },
       },
-      addFreshnessHeaders({
-        "Cache-Control": freshnessMeta.status !== "fresh" ? "no-store" : CACHE_PROFILES.slow,
-        ...(freshnessMeta.status !== "fresh" ? {
-          Warning: `110 - "Yield publication ${freshnessMeta.status} (${freshnessMeta.reason})"`,
-        } : {}),
-      }, publishedCutoff, interval, freshness),
+      responseHeaders,
     );
   };

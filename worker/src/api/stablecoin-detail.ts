@@ -97,6 +97,87 @@ function startStablecoinDetailRefresh(config: {
   return refresh;
 }
 
+const DETAIL_REFRESH_LEASE_PREFIX = "detail-refresh:";
+const DETAIL_REFRESH_LEASE_TTL_SECONDS = 60;
+
+interface DetailRefreshLease {
+  key: string;
+  owner: string;
+}
+
+type DetailRefreshLeaseClaim =
+  | { state: "claimed"; lease: DetailRefreshLease }
+  | { state: "busy" }
+  | { state: "unavailable" };
+
+function detailRefreshLeaseKey(id: string): string {
+  return `${DETAIL_REFRESH_LEASE_PREFIX}${id}`;
+}
+
+function createDetailRefreshOwner(id: string): string {
+  const cryptoObj = (globalThis as { crypto?: { randomUUID?: () => string } }).crypto;
+  const suffix = cryptoObj?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${detailRefreshLeaseKey(id)}:${suffix}`;
+}
+
+/**
+ * Cross-isolate single-flight for provider detail refreshes. The in-memory Map
+ * above only dedupes one isolate; this short D1 lease also supplies a cooldown
+ * after a failed refresh, so a cache-busting caller cannot force provider work
+ * on every request. The lease value is stored in its own cache key; the
+ * authoritative detail cache entry is never touched.
+ */
+async function claimDetailRefreshLease(db: D1Database, id: string): Promise<DetailRefreshLeaseClaim> {
+  const key = detailRefreshLeaseKey(id);
+  const owner = createDetailRefreshOwner(id);
+  const now = Math.floor(Date.now() / 1000);
+  try {
+    const claimed = await db
+      .prepare(
+        `INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+         WHERE NOT json_valid(cache.value) OR COALESCE(json_extract(cache.value, '$.leaseUntil'), 0) <= ?
+         RETURNING key`,
+      )
+      .bind(key, JSON.stringify({ owner, leaseUntil: now + DETAIL_REFRESH_LEASE_TTL_SECONDS }), now, now)
+      .first<{ key: string }>();
+    return claimed ? { state: "claimed", lease: { key, owner } } : { state: "busy" };
+  } catch (err) {
+    // A lease write failure must not turn a servable detail read into an error.
+    logWorkerEventArgs("api", "warn",
+      `[detail] refresh lease unavailable stablecoin=${id} error=${String(err).slice(0, 300)}`,
+    );
+    return { state: "unavailable" };
+  }
+}
+
+async function releaseDetailRefreshLease(db: D1Database, lease: DetailRefreshLease): Promise<void> {
+  try {
+    await db
+      .prepare("DELETE FROM cache WHERE key = ? AND json_valid(value) AND json_extract(value, '$.owner') = ?")
+      .bind(lease.key, lease.owner)
+      .run();
+  } catch (err) {
+    // The lease expires on its own; release is only a fast-path cleanup.
+    logWorkerEventArgs("api", "warn",
+      `[detail] refresh lease release failed key=${lease.key} error=${String(err).slice(0, 300)}`,
+    );
+  }
+}
+
+function releaseDetailRefreshLeaseAfterSuccess(
+  refresh: Promise<SharedDetailRefreshResponse>,
+  db: D1Database,
+  lease: DetailRefreshLease,
+): Promise<SharedDetailRefreshResponse> {
+  return refresh.then(async (response) => {
+    if (response.status >= 200 && response.status < 300) {
+      await releaseDetailRefreshLease(db, lease);
+    }
+    return response;
+  });
+}
+
 function scheduleStablecoinDetailRefresh(config: {
   db: D1Database;
   id: string;
@@ -104,10 +185,11 @@ function scheduleStablecoinDetailRefresh(config: {
   cached: { value: string; updatedAt: number };
   ctx: ExecutionContext;
   coingeckoApiKey?: string | null;
-}): void {
+}, lease?: DetailRefreshLease): void {
   const refresh = startStablecoinDetailRefresh(config);
+  const settled = lease ? releaseDetailRefreshLeaseAfterSuccess(refresh, config.db, lease) : refresh;
   config.ctx.waitUntil(
-    refresh
+    settled
       .then(() => undefined)
       .catch((err) => {
         logWorkerEventArgs("api", "warn",
@@ -138,23 +220,35 @@ const resolveStablecoinDetail = async (db: D1Database, id: string, ctx: Executio
       if (!providerRefreshAllowed) {
         return createStaleCacheHitResponse(normalizedCached.value, age, normalizedCached.updatedAt);
       }
+      const withinStaleWindow = age < DETAIL_STALE_CACHE_MAX_AGE_SECONDS;
+      const staleResponse = createStaleCacheHitResponse(normalizedCached.value, age, normalizedCached.updatedAt);
       const freshness = buildFreshnessMeta(normalizedCached.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoin-detail");
       if (freshness.status !== "fresh") {
+        const leaseClaim = await claimDetailRefreshLease(db, id);
+        if (leaseClaim.state === "busy" && withinStaleWindow) return staleResponse;
         logWorkerEventArgs("api", "warn",
           `[detail] cache past freshness budget stablecoin=${id} age=${age}; refreshing synchronously`,
         );
-        const response = await startStablecoinDetailRefresh({
+        const refresh = startStablecoinDetailRefresh({
           db,
           id,
           pegType,
-          cached: age < DETAIL_STALE_CACHE_MAX_AGE_SECONDS ? normalizedCached : null,
+          cached: withinStaleWindow ? normalizedCached : null,
           ctx,
           coingeckoApiKey,
         });
+        const response = leaseClaim.state === "claimed"
+          ? await releaseDetailRefreshLeaseAfterSuccess(refresh, db, leaseClaim.lease)
+          : await refresh;
         return createResponseFromSharedResponse(response);
       }
-      scheduleStablecoinDetailRefresh({ db, id, pegType, cached: normalizedCached, ctx, coingeckoApiKey });
-      return createStaleCacheHitResponse(normalizedCached.value, age, normalizedCached.updatedAt);
+      const leaseClaim = await claimDetailRefreshLease(db, id);
+      if (leaseClaim.state === "busy") return staleResponse;
+      scheduleStablecoinDetailRefresh(
+        { db, id, pegType, cached: normalizedCached, ctx, coingeckoApiKey },
+        leaseClaim.state === "claimed" ? leaseClaim.lease : undefined,
+      );
+      return staleResponse;
     }
 
     if (!providerRefreshAllowed) {

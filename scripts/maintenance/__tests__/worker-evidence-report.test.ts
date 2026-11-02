@@ -1,4 +1,4 @@
-import { readFileSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -55,6 +55,68 @@ describe("21-day incident evidence", () => {
     expect(bundle.missingDays).toHaveLength(19);
     expect(bundle.coverage).toBe("partial");
     expect(bundle.reasons).toContain("daily-artifact-history-missing");
+    expect(bundle.quarantinedDayCount).toBe(0);
+  });
+
+  it("quarantines malformed archived days instead of throwing or trusting them", () => {
+    const end = 30 * DAY;
+    const valid = {
+      schemaVersion: 1, from: 29 * DAY, to: 30 * DAY,
+      sources: { children: { coverage: "complete", reason: null, rows: [] } },
+    };
+    const noSources = { schemaVersion: 1, from: 28 * DAY, to: 29 * DAY };
+    const nonObjectSource = { schemaVersion: 1, from: 27 * DAY, to: 28 * DAY, sources: { children: "complete" } };
+    const bundle = assembleIncidentBundle([valid, noSources, null, nonObjectSource], end);
+    expect(bundle.days).toHaveLength(1);
+    expect(bundle.quarantinedDayCount).toBe(3);
+    expect(bundle.missingDays).toHaveLength(20);
+    expect(bundle.reasons).toContain("archived-day-quarantined");
+    expect(bundle.coverage).toBe("partial");
+  });
+
+  it("refuses an over-long archived day list instead of merging it", async () => {
+    const root = mkdtempSync(join(tmpdir(), "worker-incidents-archive-"));
+    const archiveDir = join(root, "archive");
+    const outDir = join(root, "out");
+    mkdirSync(archiveDir, { recursive: true });
+    const days = Array.from({ length: 22 }, (_, index) => ({
+      schemaVersion: 1, from: index * DAY, to: (index + 1) * DAY, sources: {},
+    }));
+    writeFileSync(join(archiveDir, "bundle.json"), JSON.stringify({ schemaVersion: 1, days }));
+    try {
+      await captureWorkerIncidentBundle({ outDir, archiveDir, database: "db", remote: true }, {
+        query: vi.fn().mockReturnValue([]), env: {}, now: new Date("2026-10-18T01:17:00Z"),
+        deliveryReader: vi.fn().mockResolvedValue({ rows: [] }),
+      });
+      const bundle = JSON.parse(readFileSync(join(outDir, "bundle.json"), "utf8"));
+      expect(bundle.days[0].sources.archive).toMatchObject({
+        coverage: "partial", reason: "previous-artifact-unreadable",
+      });
+      expect(bundle.quarantinedDayCount).toBe(0);
+    } finally { rmSync(root, { recursive: true, force: true }); }
+  });
+
+  it("keeps the current shard authoritative when the restored archive has malformed days", async () => {
+    const root = mkdtempSync(join(tmpdir(), "worker-incidents-archive-"));
+    const archiveDir = join(root, "archive");
+    const outDir = join(root, "out");
+    mkdirSync(archiveDir, { recursive: true });
+    const to = Date.parse("2026-10-18T00:00:00Z") / 1000;
+    writeFileSync(join(archiveDir, "bundle.json"), JSON.stringify({
+      schemaVersion: 1, days: [null, { schemaVersion: 1, from: to - 2 * DAY, to: to - DAY }],
+    }));
+    try {
+      const result = await captureWorkerIncidentBundle({ outDir, archiveDir, database: "db", remote: true }, {
+        query: vi.fn().mockReturnValue([]), env: {}, now: new Date("2026-10-18T01:17:00Z"),
+        deliveryReader: vi.fn().mockResolvedValue({ rows: [] }),
+      });
+      expect(result.quarantinedDayCount).toBe(2);
+      const bundle = JSON.parse(readFileSync(join(outDir, "bundle.json"), "utf8"));
+      expect(bundle.days).toHaveLength(1);
+      expect(bundle.days[0].from).toBe(Date.parse("2026-10-18T00:00:00Z") / 1000 - DAY);
+      expect(bundle.reasons).toContain("archived-day-quarantined");
+      expect(readFileSync(join(outDir, "report.md"), "utf8")).toContain("quarantined archived days: 2");
+    } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
   it("joins only singleton invocation/version evidence and retains duplicate delivery uncertainty", () => {

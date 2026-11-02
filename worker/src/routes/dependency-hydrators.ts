@@ -40,6 +40,7 @@ export const ROUTE_DEPENDENCY_HYDRATORS = {
     routeCtx.feedbackEnv = {
       GITHUB_PAT: env.GITHUB_PAT,
       FEEDBACK_IP_SALT: env.FEEDBACK_IP_SALT,
+      FEEDBACK_PREAUTH_RATE_LIMIT: env.FEEDBACK_PREAUTH_RATE_LIMIT,
     };
   },
   workerStatusConfig(routeCtx, env) {

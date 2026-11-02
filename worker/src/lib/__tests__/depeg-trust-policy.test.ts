@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { PegReferenceTrustInput } from "@shared/lib/peg-reference-trust";
+import { CRON_INTERVALS, DEX_LIQUIDITY_STAGE_LEAD_SEC } from "@shared/lib/cron-jobs";
 import { makePythDepegPrice, makeSoftAgreementDepegPrice } from "./depeg-price.test-support";
 import {
   chooseIndependentOffchainDepegConfirmer,
   classifyPrimaryDepegTrust,
+  getDexTrustPolicy,
   getFreshIndependentPrimarySourceFamilies,
   getPrimaryDepegSourceFamilies,
   hasFreshMultiSourcePrimaryAgreement,
@@ -158,6 +160,14 @@ describe("DEX trust policy", () => {
 
     expect(isTrustedDexPriceRow(thinFreshRow, nowSec, "ui")).toBe(true);
     expect(isTrustedDexPriceRow(thinFreshRow, nowSec, "depeg")).toBe(false);
+  });
+
+  it("derives the UI window from the hourly DEX producer cadence plus its stage lead", () => {
+    expect(getDexTrustPolicy("ui").maxAgeSec).toBe(
+      CRON_INTERVALS["sync-dex-liquidity"] * 2 + DEX_LIQUIDITY_STAGE_LEAD_SEC,
+    );
+    const stageClock = nowSec - 3_960;
+    expect(isTrustedDexPriceRow({ updated_at: stageClock, source_total_tvl: 10_000_000 }, nowSec, "ui")).toBe(true);
   });
 
   it("rejects future-dated and non-finite rows for every tier", () => {

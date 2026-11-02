@@ -67,6 +67,7 @@ const MICA_COMPLIANCE_FIELDS = [
   "references",
 ];
 const LIVE_RESERVE_ADAPTER_FIELD = "liveReserveAdapter";
+const HAS_CURATED_RESERVES_FIELD = "hasCuratedReserves";
 const GENIUS_FIELD = "genius";
 const LISTING_CLASS_FIELD = "listingClass";
 const CHAIN_IDS_FIELD = "chainIds";
@@ -165,6 +166,7 @@ export function projectListCoin(coin, listFields, listingClass, sourceById) {
   }
   const liveReserveAdapter = projectLiveReserveAdapter(coin);
   if (liveReserveAdapter !== undefined) projected[LIVE_RESERVE_ADAPTER_FIELD] = liveReserveAdapter;
+  if ((coin?.reserves?.length ?? 0) > 0) projected[HAS_CURATED_RESERVES_FIELD] = true;
   const mintAuthorityStatus = projectMintAuthorityStatus(coin);
   if (mintAuthorityStatus !== undefined) projected[MINT_AUTHORITY_STATUS_FIELD] = mintAuthorityStatus;
   const yieldType = coin?.yieldConfig?.yieldType;
@@ -574,6 +576,9 @@ export function validateListProjection(slim, sourceCoin, index, listFields, list
   }
   if (slim[LIVE_RESERVE_ADAPTER_FIELD] !== projectLiveReserveAdapter(sourceCoin)) {
     throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${LIVE_RESERVE_ADAPTER_FIELD} diverges from source`);
+  }
+  if ((slim[HAS_CURATED_RESERVES_FIELD] === true) !== ((sourceCoin?.reserves?.length ?? 0) > 0)) {
+    throw new Error(`[client-registry] entry ${index} (${slim.id}): field ${HAS_CURATED_RESERVES_FIELD} diverges from source`);
   }
   if (slim.yieldType !== sourceCoin?.yieldConfig?.yieldType) {
     throw new Error(`[client-registry] entry ${index} (${slim.id}): field yieldType diverges from source`);

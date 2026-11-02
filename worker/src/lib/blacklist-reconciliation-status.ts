@@ -70,8 +70,21 @@ export async function loadBlacklistReconciliationStatus(db: D1Database): Promise
     .first<ReconciliationRunRow>();
 
   if (!row) return { ...EMPTY_BLACKLIST_RECONCILIATION_STATUS };
+  const tronAtSafeHead =
+    row.tron_cursor_after != null && row.tron_safe_head != null && row.tron_cursor_after >= row.tron_safe_head;
+  const arbitrumAtSafeHead =
+    row.arbitrum_expected_config_count > 0 &&
+    row.arbitrum_at_safe_head_count === row.arbitrum_expected_config_count &&
+    row.arbitrum_min_cursor != null &&
+    row.arbitrum_min_safe_head != null &&
+    row.arbitrum_min_cursor >= row.arbitrum_min_safe_head;
+  // A stored verified verdict whose own counters contradict the derived
+  // safe-head state is an inconsistent observation, not a verified frontier.
+  const status = row.status === "verified" && (!tronAtSafeHead || !arbitrumAtSafeHead)
+    ? "unknown"
+    : row.status;
   return {
-    status: row.status,
+    status,
     runId: publicReconciliationRunId(row),
     manifestId: row.manifest_id,
     manifestSha256: row.manifest_sha256,
@@ -85,14 +98,8 @@ export async function loadBlacklistReconciliationStatus(db: D1Database): Promise
     balanceReplayExpectedCount: row.balance_replay_expected_count,
     balanceReplayMatchingCount: row.balance_replay_matching_count,
     unresolvedManifestGapCount: row.unresolved_manifest_gap_count,
-    tronAtSafeHead:
-      row.tron_cursor_after != null && row.tron_safe_head != null && row.tron_cursor_after >= row.tron_safe_head,
-    arbitrumAtSafeHead:
-      row.arbitrum_expected_config_count > 0 &&
-      row.arbitrum_at_safe_head_count === row.arbitrum_expected_config_count &&
-      row.arbitrum_min_cursor != null &&
-      row.arbitrum_min_safe_head != null &&
-      row.arbitrum_min_cursor >= row.arbitrum_min_safe_head,
+    tronAtSafeHead,
+    arbitrumAtSafeHead,
     startedAt: row.started_at,
     completedAt: row.completed_at,
   };

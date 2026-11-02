@@ -1835,27 +1835,27 @@ const tetherUsdtRowKeys = [
 ] as const;
 
 const tetherUsdtReviewedDollars: Record<typeof tetherUsdtRowKeys[number], number> = {
-  "tether:usdt:treasury-bills": 114960963604,
-  "tether:usdt:overnight-reverse-repo": 18625552412,
-  "tether:usdt:term-reverse-repo": 6993428950,
-  "tether:usdt:non-us-treasury-bills": 22374689,
-  "tether:usdt:cash-bank-deposits": 40307440,
-  "tether:usdt:corporate-bonds": 8711171,
-  "tether:usdt:precious-metals": 18838357171,
-  "tether:usdt:bitcoin": 5801630681,
-  "tether:usdt:public-equities": 3761438892,
-  "tether:usdt:other-investments": 5244911675,
-  "tether:usdt:secured-loans": 13453749726,
+  "tether:usdt:treasury-bills": 122839738995,
+  "tether:usdt:overnight-reverse-repo": 9518706336,
+  "tether:usdt:term-reverse-repo": 7177537907,
+  "tether:usdt:non-us-treasury-bills": 21981521,
+  "tether:usdt:cash-bank-deposits": 20427407,
+  "tether:usdt:corporate-bonds": 63881392,
+  "tether:usdt:precious-metals": 19084651736,
+  "tether:usdt:bitcoin": 8367170264,
+  "tether:usdt:public-equities": 4177803686,
+  "tether:usdt:other-investments": 6004074506,
+  "tether:usdt:secured-loans": 14175117624,
 };
 
 const tetherUsdtReviewedCompositionSchema = z.object({
-  sourceUrl: z.literal("https://assets.ctfassets.net/vyse88cgwfbl/2kYf7r64h3tzwiu6F0CbUB/2997abd2f11ecea74a21528048b50707/Opinion___Report_-_Tether_International_Financial_Figure_30-06-2026.pdf"),
-  asOf: z.literal("2026-06-30"),
-  totalAssetsUsd: z.literal(187751426411),
+  sourceUrl: z.literal("https://assets.ctfassets.net/vyse88cgwfbl/7nQYtcoP9GxIUFSyro2dGK/8d0521470b9e99c8c0831019cabea4ee/ISAE_3000R_-_Opinion_Tether_International_Financial_Figure_30-09-2026.pdf"),
+  asOf: z.literal("2026-09-30"),
+  totalAssetsUsd: z.literal(191451091374),
   rows: z.array(z.object({
     sourceKey: z.enum(tetherUsdtRowKeys),
     // Bounded integers and eleven rows keep the sum exactly representable.
-    dollars: z.number().int().nonnegative().max(187751426411),
+    dollars: z.number().int().nonnegative().max(191451091374),
     name: ReserveSliceSchema.shape.name,
     risk: ReserveSliceSchema.shape.risk,
     assetClass: ReserveSliceSchema.shape.assetClass,
@@ -3206,9 +3206,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   }),
   // NOTE(owner-review): evidenceClass "independent" mirrors the frax-balance-sheet
   // issuer-balance-sheet precedent (live total assets/liabilities + freshness,
-  // configured static composition), but the totals here are Tether's own
-  // self-published transparency.json rather than a third-party-audited feed.
-  // Flagged for owner review of whether this should instead be "static-validated".
+  // configured static composition), but the feed here is Tether's own
+  // self-published transparency.json rather than a third-party-audited source.
+  // Its total_assets/total_liabilities are daily net circulation plus a live
+  // reserve residual, not the report-dated issuer balance sheet, so USDT
+  // coverage totals and their ratio are withheld; the reviewed BDO packet owns
+  // the composition and report-dated totals.
   "tether-transparency": declareAdapter(tetherTransparencyParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "issuer-attested",
     displayBadgeKind: "proof",
@@ -3220,12 +3223,12 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     // median gap of 1.00 d and a maximum gap of 3.00 d. The recurring
     // Friday-publish/weekend-skip lands exactly on the old 3-day bound with
     // zero margin, and the 2026-08-16 shift from 01:00Z to 23:30Z consumed
-    // it. The 7-day tier accepts collateralizationRatio, totalAssetsUsd,
-    // totalLiabilitiesUsd, and chain details up to 7 days old; reserve-category
-    // percentages are curated in liveReservesConfig.params.slices and do not
-    // age with this feed. Those totals are currently unscored for a fiat-cash
-    // asset, so this bound protects strong backing evidence, not a scored
-    // number.
+    // it. The 7-day tier accepts chain circulation detail up to 7 days old;
+    // reserve-category percentages are curated in
+    // liveReservesConfig.params.reviewedComposition and do not age with this
+    // feed. USDT balance-sheet totals are withheld because the live feed does
+    // not carry them; those totals are unscored for a fiat-cash asset anyway,
+    // so this bound protects strong backing evidence, not a scored number.
     validation: DISCLOSURE_VALIDATION,
   }),
   "tether-transparency-mxnt": {

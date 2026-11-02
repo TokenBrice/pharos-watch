@@ -9,9 +9,11 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { buildFreshnessMeta } from "../../lib/api-freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { claimDetailCacheGeneration, publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { createStaleCacheHitResponse } from "../stablecoin-detail/shared";
 
 const fixtures = createLatestSchemaFixtureTracker();
+const DETAIL_CIRCUIT_KEY = `circuit:${CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL}`;
 
 // Stub external fetches before importing the handler
 type FetchOutcome = Response | Error | Promise<Response>;
@@ -596,6 +598,9 @@ describe("handleStablecoinDetail", () => {
     const now = Math.floor(Date.now() / 1000);
 
     const db = mockD1([
+      // First boot: no circuit row, so the breaker admits the upstream attempt.
+      // The stale-detail cache row must not answer a circuit-key read.
+      { match: "FROM cache WHERE key = ?", matchBinds: [DETAIL_CIRCUIT_KEY], rows: [], first: null },
       {
         match: "cache",
         rows: [],
@@ -618,6 +623,8 @@ describe("handleStablecoinDetail", () => {
     const cachedValue = makeDLDetailBody();
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([
+      // First boot: no circuit row, so the breaker admits the upstream attempt.
+      { match: "FROM cache WHERE key = ?", matchBinds: [DETAIL_CIRCUIT_KEY], rows: [], first: null },
       {
         match: "cache",
         rows: [],
@@ -646,6 +653,44 @@ describe("handleStablecoinDetail", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
+  it("coalesces a stale refresh across isolates with a D1 lease and releases it on success", async () => {
+    const cachedValue = makeDLDetailBody();
+    const now = Math.floor(Date.now() / 1000);
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("detail:usdt-tether", cachedValue, now - 600);
+
+    let resolveFetch!: (response: Response) => void;
+    let entered!: () => void;
+    const fetchEntered = new Promise<void>((resolve) => { entered = resolve; });
+    respondToFetch(() => new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+      entered();
+    }));
+
+    const ctxA = makeCtx();
+    const first = await handleStablecoinDetail(db, "usdt-tether", ctxA);
+    expect(first.status).toBe(200);
+    expect(first.headers.get("X-Data-Updated-At")).toBe(String(now - 600));
+    await fetchEntered;
+    expect(ctxA.waitUntil).toHaveBeenCalledTimes(1);
+
+    // Simulate another isolate: clear only the in-memory single-flight Map.
+    resetStablecoinDetailStateForTests();
+
+    const ctxB = makeCtx();
+    const second = await handleStablecoinDetail(db, "usdt-tether", ctxB);
+    expect(second.status).toBe(200);
+    expect(second.headers.get("X-Data-Updated-At")).toBe(String(now - 600));
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(ctxB.waitUntil).not.toHaveBeenCalled();
+
+    resolveFetch(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
+    await Promise.allSettled(ctxA.waitUntilPromises);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache WHERE key = 'detail-refresh:usdt-tether'").get())
+      .toEqual({ count: 0 });
+  });
+
   it("lets synchronous callers read a refresh also awaited by stale background refresh", async () => {
     const staleCachedValue = makeDLDetailBody({ tokens: [
       { date: 1690000000, totalCirculatingUSD: { peggedUSD: 80_000_000 }, totalCirculating: { peggedUSD: 80_000_000 } },
@@ -655,6 +700,8 @@ describe("handleStablecoinDetail", () => {
     ] });
     const now = Math.floor(Date.now() / 1000);
     const staleDb = mockD1([
+      // First boot: no circuit row, so the breaker admits the upstream attempt.
+      { match: "FROM cache WHERE key = ?", matchBinds: [DETAIL_CIRCUIT_KEY], rows: [], first: null },
       {
         match: "cache",
         rows: [],

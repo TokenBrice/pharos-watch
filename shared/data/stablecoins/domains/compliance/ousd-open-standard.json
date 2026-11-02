@@ -47,8 +47,8 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://reserves.bridge.xyz/ousd",
     "redemptionPolicyPresent": true,
-    "monthlyAttestationPresent": true,
-    "notes": "Authorization posture reviewed 2026-10-07 and not renewed here: Bridge's token-specific OUSD overview names the GENIUS Act, supporting issuer-announced intent rather than statutory compliance or official authorization. Bridge Building Inc. remains the named current issuer; the separate Bridge National Trust Bank in organization and its preliminary conditional charter approval do not establish current OUSD prudential supervision or PPSI approval. Issuer pathway stays unknown. Binding BBI terms provide eligible-user redemption subject to onboarding, compliance and processing conditions. Disclosure-only correction retrieved 2026-10-20: the dashboard now links an EY independent examination of the August 31 OUSD reserves and whole redeemable supply, signed October 1, with all four exact native deployments. The original no-report finding is superseded, and monthlyAttestationPresent records this published report plus the issuer's monthly-report commitment. Canonical report dates are authored only in proofOfReserves.latestReport; no current holdings or authorization claim is inferred from the report. DASP posture remains the prior pre-effective finding, and no enforcement-history or primary-regulator assignment is added.",
+    "monthlyAttestationPresent": false,
+    "notes": "Authorization posture reviewed 2026-10-07 and not renewed here: Bridge's token-specific OUSD overview names the GENIUS Act, supporting issuer-announced intent rather than statutory compliance or official authorization. Bridge Building Inc. remains the named current issuer; the separate Bridge National Trust Bank in organization and its preliminary conditional charter approval do not establish current OUSD prudential supervision or PPSI approval. Issuer pathway stays unknown. Binding BBI terms provide eligible-user redemption subject to onboarding, compliance and processing conditions. Reserve-attestation posture re-reviewed 2026-11-01: the dashboard links one EY independent examination of the August 31 pre-launch book, signed October 1, and Bridge documents independent attestations as quarterly and optional. Open Standard's announced monthly attestations remain unpublished (the September and October monthly-named URLs returned 404), so neither a single pre-launch report nor a promise is a published monthly series; monthlyAttestationPresent is false. Canonical report dates are authored only in proofOfReserves.latestReport; no current holdings or authorization claim is inferred from the report. DASP posture remains the prior pre-effective finding, and no enforcement-history or primary-regulator assignment is added.",
     "references": [
       {
         "label": "Bridge OUSD launch: current BBI issuer and explicit national trust bank limitation",
@@ -117,14 +117,20 @@
         "sourceDate": "2026-08-17"
       },
       {
-        "label": "EY Open USD reserve examination, signed October 1; disclosure-presence correction only",
+        "label": "EY Open USD reserve examination of the pre-launch August 31 book, signed October 1; one examination is not a monthly series",
         "url": "https://reserves.bridge.xyz/attestations/ousd/2026/ousd_attestation_2026_08.pdf",
         "sourceKind": "auditor-report",
-        "accessedAt": "2026-10-20",
+        "accessedAt": "2026-11-01",
         "sourceDate": "2026-10-01"
+      },
+      {
+        "label": "Bridge reporting documentation: independent attestations are quarterly and optional; monthly reports are transaction/balance summaries",
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reporting-and-transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-11-01"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-11-01"
   }
 }

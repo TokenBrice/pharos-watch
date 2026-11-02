@@ -4,6 +4,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   beginReserveSyncAttempt,
   didReserveSyncSuccessBecomeAuthoritative,
+  finalizeReserveSyncAttempt,
   getReserveSyncState,
   pruneLiveReserveHistory,
 } from "../live-reserves/store";
@@ -13,6 +14,7 @@ import {
   finalizeReserveSuccess,
   mockReserveD1 as mockD1,
   reserveSyncAttemptInput,
+  reserveSyncStateInput,
 } from "./live-reserves-store.test-support";
 
 describe("live-reserves-store", () => {
@@ -48,6 +50,35 @@ describe("live-reserves-store", () => {
     }
   });
 
+
+  it("accepts an ambiguous committed failure write only after readback", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      await beginReserveSyncAttempt(db, reserveSyncAttemptInput("attempt-ambiguous-failure"));
+      const batch = db.batch.bind(db);
+      vi.spyOn(db, "batch").mockImplementationOnce(async (statements) => {
+        await batch(statements);
+        throw new Error("Network connection lost");
+      });
+
+      await expect(finalizeReserveSyncAttempt(
+        db,
+        reserveSyncStateInput("attempt-ambiguous-failure", {
+          lastStatus: "error",
+          lastError: "provider failed",
+        }),
+      )).resolves.toEqual({ finalized: true });
+
+      expect(sqlite.prepare(
+        "SELECT status, COUNT(*) AS n FROM reserve_sync_attempt_history WHERE attempt_id = ?",
+      ).all("attempt-ambiguous-failure")).toEqual([{ status: "error", n: 1 }]);
+      expect(sqlite.prepare(
+        "SELECT pending_attempt_id, last_status FROM reserve_sync_state WHERE stablecoin_id = ?",
+      ).get("iusd-infinifi")).toEqual({ pending_attempt_id: null, last_status: "error" });
+    } finally {
+      sqlite.close();
+    }
+  });
 
   it("publishes neither canonical row past the deadline and both rows inside it", async () => {
     const { createSqliteD1 } = await import("@shared/test-utils/sqlite-d1");

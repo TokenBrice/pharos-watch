@@ -35,8 +35,10 @@ export interface BlacklistGapMetricsOptions {
 }
 
 const DEFAULT_BLACKLIST_GAP_METRICS_CACHE_TTL_SEC = 300;
+// The producer snapshot is accepted only inside the same freshness budget the
+// blacklist summary endpoint grades it against.
 const DEFAULT_BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC =
-  API_FRESHNESS_MAX_AGE_SEC.blacklistSummary * 2;
+  API_FRESHNESS_MAX_AGE_SEC.blacklistSummary;
 
 interface CachedBlacklistGapMetricsPayload {
   version: typeof BLACKLIST_GAP_METRICS_CACHE_VERSION;

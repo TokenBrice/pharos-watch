@@ -10,7 +10,14 @@ import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC, readMintBurnWindowContext, resolveMintBurnWatermark, finalizeMintBurnFlowResponse } from "../mint-burn-flows-service";
-import { compactMintBurnPublication, isGrandfatheredMintBurnConfig, mintBurnDisabledReason, syncMintBurnPublicationPolicy } from "../mint-burn-publication";
+import {
+  compactMintBurnPublication,
+  isGrandfatheredMintBurnConfig,
+  mintBurnDisabledReason,
+  resolveMintBurnDisabledSymbolPolicy,
+  resolveMintBurnDisabledSymbols,
+  syncMintBurnPublicationPolicy,
+} from "../mint-burn-publication";
 import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -117,11 +124,53 @@ describe("mint/burn durable publication admission", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM mint_burn_admission").get()).toEqual({ n: 0 });
   });
 
-  it("honors ID, config-key, symbol and enabled switches through one ingestion authority", () => {
+  it("honors the ID, config-key, symbol and enabled switches through one ingestion authority", () => {
     expect(mintBurnDisabledReason(config, new Set([config.stablecoinId]), new Set())).toBe("id-disabled");
     expect(mintBurnDisabledReason(config, new Set([mintBurnConfigKey(config).toLowerCase()]), new Set())).toBe("id-disabled");
     expect(mintBurnDisabledReason(config, new Set(), new Set([config.symbol.toUpperCase()]))).toBe("symbol-disabled");
     expect(mintBurnDisabledReason({ ...config, enabled: false }, new Set(), new Set())).toBe("config-disabled");
+  });
+
+  it("honors a symbol switch only when the symbol names one stablecoin", () => {
+    const idsBySymbol = new Map<string, Set<string>>();
+    for (const entry of MINT_BURN_CONFIGS) {
+      const symbol = entry.symbol.toUpperCase();
+      const ids = idsBySymbol.get(symbol) ?? new Set<string>();
+      ids.add(entry.stablecoinId);
+      idsBySymbol.set(symbol, ids);
+    }
+    const ambiguous = [...idsBySymbol.keys()].filter((symbol) => idsBySymbol.get(symbol)!.size > 1);
+    const unambiguous = [...idsBySymbol.keys()].filter((symbol) => idsBySymbol.get(symbol)!.size === 1);
+    expect(ambiguous).not.toHaveLength(0);
+    for (const symbol of ambiguous) {
+      const resolved = resolveMintBurnDisabledSymbols(MINT_BURN_CONFIGS, new Set([symbol]));
+      expect(resolved.has(symbol), symbol).toBe(false);
+    }
+    for (const symbol of unambiguous) {
+      const resolved = resolveMintBurnDisabledSymbols(MINT_BURN_CONFIGS, new Set([symbol]));
+      expect(resolved.has(symbol), symbol).toBe(true);
+    }
+  });
+
+  it("retains prior durable keys for an ambiguous symbol and names why it was ignored", () => {
+    const yusd = MINT_BURN_CONFIGS.filter((entry) => entry.symbol.toUpperCase() === "YUSD");
+    const yusdKeys = yusd.map(mintBurnConfigKey);
+    const resolution = resolveMintBurnDisabledSymbolPolicy(
+      MINT_BURN_CONFIGS,
+      new Set(["YUSD", "NOT-A-COIN"]),
+      new Set([yusdKeys[0]!]),
+    );
+    expect([...resolution.symbols]).toEqual([]);
+    expect([...resolution.retainedKeys]).toEqual([yusdKeys[0]]);
+    expect(resolution.ignored).toEqual([
+      { symbol: "NOT-A-COIN", reason: "unknown-symbol", stablecoinIds: [], retainedKeys: [] },
+      {
+        symbol: "YUSD",
+        reason: "shared-symbol",
+        stablecoinIds: [...new Set(yusd.map((entry) => entry.stablecoinId.toLowerCase()))].sort(),
+        retainedKeys: [yusdKeys[0]],
+      },
+    ]);
   });
 
   it("purges disabled publications, fences old writers, and restores the durable admission on re-enable", async () => {
@@ -328,5 +377,17 @@ describe("mint/burn durable publication admission", () => {
     });
     expect((await readMintBurnWindowContext(db, end + 180, [config, legacy])).configs).toEqual([config, legacy]);
     expect(pausedKeys()).not.toContain(legacyKey);
+  });
+
+  it("fails closed on an undecodable paused_keys value instead of lifting a pause", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
+      VALUES (1, '[]', 'not-json', ?)`).run(end);
+    // The pause column gates reactivation: reading a corrupt value as empty
+    // would publish a leg that must stay pending, so readers and writers refuse.
+    await expect(readMintBurnWindowContext(db, end, [config])).rejects.toThrow("Invalid mint/burn publication policy");
+    await expect(syncMintBurnPublicationPolicy(db, [], end + 60, [mintBurnConfigKey(config)])).rejects.toThrow();
+    expect(sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get())
+      .toEqual({ paused_keys: "not-json" });
   });
 });

@@ -2,7 +2,11 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { BLACKLIST_PROOF_CATCHUP_WINDOW_SEC, BLACKLIST_RECENT_WINDOW_SEC, getBlacklistGapStatus } from "@shared/lib/status-thresholds";
-import { materializeBlacklistGapMetrics, queryBlacklistGapMetrics } from "../blacklist-gaps";
+import {
+  BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
+  materializeBlacklistGapMetrics,
+  queryBlacklistGapMetrics,
+} from "../blacklist-gaps";
 import { getBlacklistGapMetricsCacheKey } from "../blacklist-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -242,6 +246,56 @@ describe("queryBlacklistGapMetrics", () => {
     expect(result.oldestRecoverableAgeSec).toBe(3720);
     expect(db.getHistory()).toHaveLength(1);
     expect(db.getHistory()[0]?.binds).toEqual(["blacklist:gap-metrics:producer:v3:86400:core"]);
+  });
+
+  it("rejects producer snapshots past the surface freshness budget", async () => {
+    const now = 1_800_000_000;
+    const { sqlite, db } = fixtures.open();
+    const options = { recentWindowSec: 86_400, includeDistributions: false };
+    const metrics = (totalEvents: number) => ({
+      totalEvents,
+      missingAmounts: 2,
+      recentMissingAmounts: 1,
+      recentWindowSec: 86_400,
+      missingRatio: 0.1,
+      classificationMissingAmounts: 2,
+      classificationWatchCount: 1,
+      unrecoverableMissingAmounts: 0,
+      oldestRecoverableAgeSec: 3600,
+      neverAttemptedCount: 1,
+      repeatedFailureCount: 0,
+      statusDistribution: {},
+      sourceDistribution: {},
+    });
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+    insert.run(
+      getBlacklistGapMetricsCacheKey(options, "producer"),
+      JSON.stringify({
+        version: 3,
+        includeDistributions: false,
+        recentWindowSec: 86_400,
+        metrics: metrics(999),
+      }),
+      now - 7 * 3600,
+    );
+    insert.run(
+      getBlacklistGapMetricsCacheKey(options, "request"),
+      JSON.stringify({
+        version: 3,
+        includeDistributions: false,
+        recentWindowSec: 86_400,
+        metrics: metrics(20),
+      }),
+      now - 60,
+    );
+
+    const result = await queryBlacklistGapMetrics(db, now, {
+      ...options,
+      producerSnapshotTtlSec: BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
+      cacheTtlSec: 300,
+    });
+
+    expect(result.totalEvents).toBe(20);
   });
 
   it("materializes full and core producer snapshots from one live full query", async () => {

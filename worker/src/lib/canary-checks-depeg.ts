@@ -5,6 +5,7 @@ import {
 } from "@shared/lib/depeg-config";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { STATUS_DEPEG_DETECTION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -320,7 +321,8 @@ interface BlindOpenEventRow {
  * coverage clock names the stuck leg inline, without waiting for a whole-run
  * census loss. `gapStartedAt` breaks off-peg continuity and is preserved by a
  * later at-par observation, so the effective blind clock is the newer of the
- * two columns rather than the gap alone.
+ * two columns rather than the gap alone. Frozen coins are exempt: their open
+ * rows are preserved history that is never observed or force-closed again.
  */
 export async function checkDepegOpenCoverage(db: D1Database, observedAt: number) {
   try {
@@ -333,12 +335,13 @@ export async function checkDepegOpenCoverage(db: D1Database, observedAt: number)
              COUNT(*) OVER () AS total_count
            FROM depeg_events
            WHERE ended_at IS NULL
+             AND stablecoin_id NOT IN (SELECT value FROM json_each(?))
              AND (last_trusted_price_at IS NOT NULL OR price_coverage_gap_started_at IS NOT NULL)
              AND MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) < ?
            ORDER BY MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) ASC
            LIMIT 25`,
         )
-        .bind(blindBefore)
+        .bind(JSON.stringify([...FROZEN_IDS]), blindBefore)
         .all<BlindOpenEventRow>(),
     );
     const blind = rows.results ?? [];

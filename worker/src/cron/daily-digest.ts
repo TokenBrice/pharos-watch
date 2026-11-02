@@ -344,9 +344,17 @@ export async function generateDailyDigest(
   // Persist owner-review lifecycle flags (stalled collapses / chronic shallow
   // pegs needing a manual freeze-or-close ruling). Best-effort: a cache write
   // failure must not degrade an otherwise successful digest run. A failed
-  // active-depeg read degrades to an empty flag list, so it must not replace
-  // the prior review queue with a fresh "nothing pending" observation.
-  if (!degradedReasons.includes("active-depegs-query")) {
+  // active-depeg read degrades to an empty flag list, and so does missing live
+  // price or supply evidence, so none may replace the prior review queue with
+  // a fresh "nothing pending" observation.
+  const lifecycleEvidenceDegraded = [
+    "active-depegs-query",
+    "stablecoins-cache-stale",
+    "active-depeg-supply-unavailable",
+  ].some((reason) =>
+    degradedReasons.includes(reason) || (inputData.degradedSources ?? []).includes(reason),
+  );
+  if (!lifecycleEvidenceDegraded) {
     try {
       await setCache(
         db,

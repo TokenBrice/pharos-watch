@@ -221,6 +221,10 @@ async function loadDurationDiagnostics(
                END
              )
              AND (
+               NOT json_valid(metadata)
+               OR COALESCE(json_extract(metadata, '$.schedulerTerminalSource'), '') <> 'synthetic'
+             )
+             AND (
                duration_ms >= ?
                OR (
                  json_valid(metadata)
@@ -259,6 +263,10 @@ async function loadDurationDiagnostics(
                   WHEN json_valid(metadata) THEN COALESCE(json_extract(metadata, '$.reason') <> ?, 1)
                   ELSE 1
                 END
+              )
+              AND (
+                NOT json_valid(metadata)
+                OR COALESCE(json_extract(metadata, '$.schedulerTerminalSource'), '') <> 'synthetic'
               )
               AND (
                 duration_ms >= ?
@@ -365,6 +373,10 @@ export async function runCronDurationWatchdog(
                WHEN json_valid(metadata) THEN COALESCE(json_extract(metadata, '$.reason') <> ?, 1)
                ELSE 1
              END
+           )
+           AND (
+             NOT json_valid(metadata)
+             OR COALESCE(json_extract(metadata, '$.schedulerTerminalSource'), '') <> 'synthetic'
            )`,
       )
       .bind(

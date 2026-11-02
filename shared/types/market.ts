@@ -1397,6 +1397,8 @@ export const StressSignalDataReasonSchema = z.enum([
   "all-current-rows-malformed",
   "single-coin-current-row-missing",
   "current-row-malformed",
+  "publication-pointer-unavailable",
+  "current-rows-read-failed",
   "computed-count-zero",
   "partial-coverage",
 ]);

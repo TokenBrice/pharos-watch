@@ -12,6 +12,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { makeNoopD1, makeRunCountingNoopD1 } from "../../../test-helpers/noop-d1";
 import {
   buildTelegramCreds,
+  buildTelegramOperatorCreds,
   buildTwitterCreds,
   missingTelegramCredentialNames,
   missingTwitterCredentialNames,
@@ -784,6 +785,12 @@ describe("runtime digest credentials", () => {
     ).toBeNull();
     expect(
       buildTelegramCreds({ TELEGRAM_BOT_TOKEN: " bot ", TELEGRAM_CHAT_ID: "  " } as Parameters<typeof buildTelegramCreds>[0]),
+    ).toBeNull();
+    expect(
+      buildTelegramOperatorCreds({ TELEGRAM_BOT_TOKEN: "bot\n", TELEGRAM_OPERATOR_CHAT_ID: " -100123" }),
+    ).toEqual({ botToken: "bot", chatId: "-100123" });
+    expect(
+      buildTelegramOperatorCreds({ TELEGRAM_BOT_TOKEN: "bot", TELEGRAM_OPERATOR_CHAT_ID: "   " }),
     ).toBeNull();
   });
 

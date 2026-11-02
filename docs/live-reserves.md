@@ -174,7 +174,7 @@ The optional `sync` object exposes the last operational state:
 | `lastAttemptedAt` | Latest attempt timestamp, when present                                                                                              |
 | `lastSuccessAt`   | Latest success timestamp, when present                                                                                              |
 | `warnings[]`      | Warning messages surfaced by the latest attempt and, when relevant, storage-integrity warnings injected by the fail-closed resolver |
-| `lastError`       | Most recent adapter error message (truncated to 200 chars), when present                                                            |
+| `lastError`       | Most recent adapter error message (truncated to 200 chars), when present; names transport identity only (status, content type, redacted URL, error class), never upstream body text |
 | `failureCategory` | Machine-readable failure class from attempt metadata, when present                                                                  |
 | `uncertainWrite`  | `true` when the latest attempt hit the D1 write-timeout / finalize-rejection path and authoritative state could not be proven       |
 | `freshness`       | The budgets, clock, and generation behind `stale` (table below)                                                                     |

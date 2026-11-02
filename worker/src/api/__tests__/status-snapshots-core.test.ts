@@ -9,6 +9,8 @@ import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-regist
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnConservationCacheKey } from "../../lib/mint-burn-conservation";
 import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
+import * as activeSafetyScoreSource from "../../lib/safety-score-active-source";
+import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import {
   handleStatus,
   STATUS_RAW_SNAPSHOT_CACHE_KEY,
@@ -459,6 +461,13 @@ describe("handleStatus", () => {
 
   it("preserves healthy, public-impact degraded, and publication-query-unavailable status tuples", async () => {
     const now = Math.floor(Date.now() / 1000);
+    // Publication health also reads the V9 Safety Score cohort; keep that
+    // surface healthy so the scenarios' publication outcome is the only one
+    // their fixtures seed.
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreCohort").mockResolvedValue({
+      kind: "v9",
+      snapshot: makeWorkerReportCardsV9Response({ asOfSec: now - 60, updatedAt: now - 30 }),
+    });
     const publicImpactCause = {
       code: "cache_ratio_degraded",
       layer: "availability",
