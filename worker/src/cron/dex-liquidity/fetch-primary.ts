@@ -102,7 +102,7 @@ export interface PrimaryPoolCompactionResult {
   rejectedPoolIds: string[];
 }
 
-export function compactPrimaryPoolsForTrackedStablecoins(
+function compactPrimaryPoolsForTrackedStablecoins(
   pools: LlamaPool[],
   lookups: Pick<SymbolLookups, "chainAddressToId" | "symbolToChainScopedIds">,
 ): PrimaryPoolCompactionResult {

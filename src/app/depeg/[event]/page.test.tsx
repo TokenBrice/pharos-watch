@@ -37,7 +37,7 @@ vi.mock("@/lib/depeg-event-page-data", async (importOriginal) => {
   return {
     ...actual,
     DEPEG_EVENT_ENTRIES: events,
-    eventBySlug: new Map([...actual.eventBySlug, ...EVENTS_BY_SLUG]),
+    eventBySlug: new Map<string, unknown>([...actual.eventBySlug, ...EVENTS_BY_SLUG]),
     formatIncidentNumber: () => null,
   };
 });

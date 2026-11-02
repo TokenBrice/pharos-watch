@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TELEGRAM_FANOUT_PAGE_CHATS } from "../telegram-delivery-policy";
+import { TELEGRAM_FANOUT_PAGE_CHATS, TELEGRAM_MESSAGE_CHUNK_LIMIT } from "../telegram-delivery-policy";
 
 describe("telegram delivery policy", () => {
   // The broadcast coordinator divides the target chat count by
@@ -9,6 +9,6 @@ describe("telegram delivery policy", () => {
   });
 
   it("keeps the message chunk limit below Telegram's 4096-byte cap with headroom", () => {
-    expect(policy.TELEGRAM_MESSAGE_CHUNK_LIMIT).toBeLessThan(4096);
+    expect(TELEGRAM_MESSAGE_CHUNK_LIMIT).toBeLessThan(4096);
   });
 });
