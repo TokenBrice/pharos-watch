@@ -23,7 +23,7 @@ import {
 } from "../lib/lane-input-closure.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import type { PrImportGraphFs } from "../lib/pr-import-graph.mts";
-import { hasV9ContagionInput } from "../../worker/scripts/lib/v9-resource-policy.ts";
+import { hasV9ContagionInput } from "../../worker/scripts/lib/v9-contagion-inputs.ts";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 

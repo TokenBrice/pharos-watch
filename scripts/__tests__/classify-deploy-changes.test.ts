@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { isBuiltin } from "node:module";
+import { dirname, relative, resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -18,6 +19,7 @@ import {
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { splitNullDelimited } from "../lib/changed-files.mts";
 import { hasLaneInputImpact, hasPagesArtifactImpact } from "../lib/lane-input-closure.mts";
+import { collectModuleSpecifiers } from "../lib/pr-import-graph.mts";
 
 describe("contracts workspace deployment selection", () => {
   it("keeps source-only contracts in both deployed runtime surfaces", () => {
@@ -116,6 +118,35 @@ describe("Pages artifact selection", () => {
     const path = "worker/src/api/retired-route.ts";
     expect(existsSync(resolve(import.meta.dirname, "../..", path)), path).toBe(false);
     expect(classifyChangedFiles([path])).toMatchObject({ pagesArtifactRequired: false, v9ResourceRequired: true });
+  });
+
+  it("loads with plain node before any install, as the deploy plan job runs it", () => {
+    // deploy-cloudflare.yml `plan` runs this CLI with `node` and no node_modules:
+    // every runtime import must be a builtin or an explicit-extension repo module.
+    const root = resolve(import.meta.dirname, "../..");
+    // Package imports inside a function the classifier never calls.
+    const lazyPackageImports = new Set(["scripts/lib/smoke-runtime.mjs -> playwright"]);
+    const seen = new Set<string>();
+    const problems: string[] = [];
+    const visit = (file: string) => {
+      if (seen.has(file)) return;
+      seen.add(file);
+      const { specifiers, patterns } = collectModuleSpecifiers(readFileSync(resolve(root, file), "utf8"));
+      if (patterns.length) problems.push(`${file}: computed import`);
+      for (const specifier of specifiers) {
+        if (isBuiltin(specifier)) continue;
+        if (!specifier.startsWith(".")) {
+          if (!lazyPackageImports.has(`${file} -> ${specifier}`)) problems.push(`${file} -> ${specifier} (package)`);
+          continue;
+        }
+        const target = relative(root, resolve(dirname(resolve(root, file)), specifier)).replaceAll("\\", "/");
+        if (!existsSync(resolve(root, target))) { problems.push(`${file} -> ${specifier} (not loadable by node)`); continue; }
+        visit(target);
+      }
+    };
+    visit("scripts/ci/classify-deploy-changes.ts");
+    expect(problems).toEqual([]);
+    expect(seen.size).toBeGreaterThan(5);
   });
 
   it("selects the lane for its own selector module", () => {
