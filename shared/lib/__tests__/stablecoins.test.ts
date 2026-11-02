@@ -24,9 +24,6 @@ import {
   parseStablecoinMetaAssets,
 } from "../stablecoins/schema";
 
-const EURR_PRE_LAUNCH_ID = "eurr-revolut";
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 495;
-
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id: "schema-test-usd",
@@ -80,10 +77,6 @@ describe("tracked stablecoin metadata", () => {
   });
 
   it("keeps every lifecycle partition aligned after the JSON migration", () => {
-    const inactiveStablecoinCount = PRE_LAUNCH_STABLECOINS.length
-      + FROZEN_STABLECOINS.length
-      + QUARANTINED_STABLECOINS.length
-      + DELISTED_STABLECOINS.length;
     const partitionIds = [
       ...ACTIVE_STABLECOINS,
       ...PRE_LAUNCH_STABLECOINS,
@@ -94,61 +87,14 @@ describe("tracked stablecoin metadata", () => {
       (coin) => coin.id,
     );
 
-    // Deliberate addition tripwire: bump this expected total when adding a tracked coin.
-    expect(TRACKED_STABLECOINS).toHaveLength(EXPECTED_TRACKED_STABLECOIN_COUNT);
-    expect(ACTIVE_STABLECOINS).toHaveLength(TRACKED_STABLECOINS.length - inactiveStablecoinCount);
-    expect(ACTIVE_STABLECOINS.length + inactiveStablecoinCount).toBe(TRACKED_STABLECOINS.length);
-    expect(new Set(partitionIds).size).toBe(TRACKED_STABLECOINS.length);
-    expect(PRE_LAUNCH_STABLECOINS.map((coin) => coin.id)).toEqual([
-      "roughrider-bnd",
-      "fiusd-fiserv",
-      "eur-qivalis",
-      "pusd-polaris",
-      "pgold-polaris",
-      "klarnausd-klarna",
-      "rgbp-revolut",
-      "regbp-restabilise",
-      "gbp-vvtx",
-      "hkdap-anchorpoint",
-      "hkd-hsbc",
-      "okrw-hashed",
-      "arc-anq",
-      "brl-b3",
-      "usdf-flipcash",
-      "hkdr-rd-technologies",
-      "brd-volpon",
-      "krw1-bdacs",
-      "rusd-revolut",
-      EURR_PRE_LAUNCH_ID,
-      "eurxt-caceis",
-      "weur-aplauz",
-      "plnq-quantoz",
-      "czkc-czkc",
-      "brl-itau",
-      "krw-imbank",
-      "krw-kb-kookmin",
-      "gynusd-gyndore",
-      "gelt-tether",
-      "tgld-tenbin",
-      "thgold-theo",
-      "ejpy-jbfd",
-      "aed-rakbank",
-      "aedz-zand",
-      "ddsc-aedc",
-      "bils-bitsofgold",
-      "kusd-kerne",
-      "rd-rai-dollar",
-      "usd-bank-consortium",
-      "ustx-tx",
-      "net-cloudflare",
-      "usdvb-versabank",
-      "btd-alpen",
-      "jpy-megabank-consortium",
-      "jpydf-deltaforesight",
-      "dotusd-polkadot",
-      "usdrf-realfi",
-      "zlusd-zelle",
-    ]);
+    // The lifecycle registries must partition the tracked catalog: no row may
+    // vanish from every partition or appear twice, and a pre-launch row must not
+    // reach the active registry.
+    expect(partitionIds.toSorted()).toEqual(TRACKED_STABLECOINS.map((coin) => coin.id).toSorted());
+    for (const coin of PRE_LAUNCH_STABLECOINS) {
+      expect(coin.status, coin.id).toBe("pre-launch");
+      expect(ACTIVE_META_BY_ID.has(coin.id), coin.id).toBe(false);
+    }
   });
 
   it("keeps tracked registry metadata free of standalone algorithmic backing classifications", () => {

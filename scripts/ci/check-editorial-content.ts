@@ -1,9 +1,10 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, globSync, readdirSync, readFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { createMethodologyVersion } from "@shared/lib/methodology-versions/base";
 import { METHODOLOGY_CHANGELOG_REGISTRY } from "@shared/lib/methodology-versions/registry";
 import { MINT_AUTHORITY_METHODOLOGY_PATH, MINT_AUTHORITY_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { EDITORIAL_POLICY, scanEditorialText } from "@shared/lib/editorial-style";
 import { PUBLIC_ROUTE_PATHS } from "../../src/lib/public-route-inventory";
 import { CaseStudyContentSchema, DependencyExposureContentSchema, DependencyMapContentSchema, MethodologyContentSchema, WeeklyContentSchema } from "@shared/types/editorial-content";
 import { editorialReferenceIssues } from "../lib/editorial-content";
@@ -24,6 +25,92 @@ function registeredJsonFiles(repoRoot: string, owners: readonly string[]): Set<s
     }
   }
   return registered;
+}
+
+/**
+ * Selector/picker surfaces carry authored prose outside the JSON lanes. Their
+ * corpus gate lives here so it runs once in the PR structural lane instead of
+ * inside the shared unit suite.
+ */
+const SELECTOR_EDITORIAL_REQUIRED_TARGETS = [
+  "shared/lib/selector/what-to-watch-templates.ts",
+  "shared/lib/selector/why-keys.ts",
+  "shared/lib/selector",
+  "src/app/screener/picker",
+  "src/components/selector",
+  "scripts/fixtures/selector-editorial-examples.md",
+];
+const SELECTOR_EDITORIAL_CORPUS_GLOBS = [
+  "shared/lib/selector/**/*.ts",
+  "src/app/screener/picker/**/*.{ts,tsx}",
+  "src/components/selector/**/*.{ts,tsx}",
+  "scripts/fixtures/selector-editorial-examples.md",
+];
+const SELECTOR_EDITORIAL_RULE_IDS = new Set(
+  EDITORIAL_POLICY.rules
+    .filter(
+      (rule) =>
+        rule.severity.byRegister?.["analytical-explanation"] !== undefined ||
+        rule.id === "no-investment-recommendation",
+    )
+    .map((rule) => rule.id),
+);
+
+export interface SelectorEditorialFinding {
+  file: string;
+  line: number;
+  rule: string;
+  match: string;
+  excerpt: string;
+}
+
+export function discoverSelectorEditorialCorpus(
+  root = process.cwd(),
+  patterns = SELECTOR_EDITORIAL_CORPUS_GLOBS,
+  required = SELECTOR_EDITORIAL_REQUIRED_TARGETS,
+): string[] {
+  for (const path of required) {
+    if (!existsSync(join(root, path))) throw new Error(`required scan target missing: ${path}`);
+  }
+  return [...new Set(globSync(patterns, { cwd: root }))]
+    .filter((path) => !path.split("/").some((part) => part.startsWith(".") || part === "__tests__"))
+    .filter((path) => !/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(path))
+    .map((path) => join(root, path));
+}
+
+export function scanSelectorEditorialSource(file: string, source: string): SelectorEditorialFinding[] {
+  const findings: SelectorEditorialFinding[] = [];
+  const sourceLines = source.split("\n");
+  const units: Array<{ text: string; offset: number }> = [];
+  if (file.endsWith(".md")) {
+    units.push({ text: source, offset: 0 });
+  } else {
+    const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const visit = (node: ts.Node): void => {
+      if (ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) {
+        units.push({ text: node.text, offset: node.getStart(sourceFile) + 1 });
+      } else if (ts.isJsxText(node)) {
+        units.push({ text: node.getText(sourceFile), offset: node.getStart(sourceFile) });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(sourceFile);
+  }
+
+  for (const unit of units) {
+    for (const finding of scanEditorialText(unit.text, { register: "analytical-explanation" })) {
+      // Existing universal-rule debt is ratcheted by the repository corpus gate.
+      // The Selector surfaces own the Selector-specific central rules only.
+      if (!SELECTOR_EDITORIAL_RULE_IDS.has(finding.ruleId)) continue;
+      const index = unit.offset + finding.index;
+      const line = source.slice(0, index).split("\n").length;
+      const excerpt = sourceLines[line - 1] ?? "";
+      if (!excerpt.includes("banned-phrase-allow:")) {
+        findings.push({ file, line, rule: finding.ruleId, match: finding.excerpt, excerpt: excerpt.trim().slice(0, 160) });
+      }
+    }
+  }
+  return findings;
 }
 
 export function checkEditorialContent(repoRoot = process.cwd()): string[] {
@@ -92,6 +179,15 @@ export function checkEditorialContent(repoRoot = process.cwd()): string[] {
   if (mint) {
     try { createMethodologyVersion({ currentVersion: MINT_AUTHORITY_METHODOLOGY_VERSION, changelogPath: MINT_AUTHORITY_METHODOLOGY_PATH, changelog: MethodologyContentSchema.parse(mint) }); }
     catch (error) { issues.push(`mint-authority: ${String(error)}`); }
+  }
+  try {
+    for (const file of discoverSelectorEditorialCorpus(repoRoot)) {
+      for (const finding of scanSelectorEditorialSource(file, readFileSync(file, "utf8"))) {
+        issues.push(`${relative(repoRoot, file)}:${finding.line} [${finding.rule}] ${finding.match} — ${finding.excerpt}`);
+      }
+    }
+  } catch (error) {
+    issues.push(error instanceof Error ? error.message : String(error));
   }
   return issues;
 }

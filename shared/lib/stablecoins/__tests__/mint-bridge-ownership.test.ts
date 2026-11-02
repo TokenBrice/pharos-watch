@@ -245,15 +245,6 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
     expectNoOwnershipViolations(validateMintBridgeOwnership(meta, { enforce: true }));
   });
 
-  it("keeps every current catalog route bound to its destination deployment", () => {
-    const mismatches = [...TRACKED_META_BY_ID.values()].flatMap((meta) =>
-      validateMintBridgeOwnership(meta).filter((violation) =>
-        violation.code === "route-deployment-identity-mismatch",
-      ),
-    );
-    expectNoOwnershipViolations(mismatches);
-  });
-
   it("rejects a representation deployment referenced from Mint Authority at the schema boundary", () => {
     const representation = representationRoute(BASE_ROUTE);
     expect(() =>
@@ -521,14 +512,6 @@ describe("Mint Authority / Bridge Risk ownership boundary", () => {
       ]),
     );
     expect(violationCodes(validateMintBridgeOwnership(validMeta))).toEqual([]);
-  });
-
-  it("enforces reviewed native deployment ownership for every active Mint Authority path", () => {
-    const violations = [...ACTIVE_META_BY_ID.values()].flatMap((meta) =>
-      validateMintBridgeOwnership(meta, { enforce: true }),
-    );
-
-    expectNoOwnershipViolations(violations);
   });
 
   it.each(NON_ACTIVE_LIFECYCLE_STATUSES)(

@@ -91,11 +91,12 @@ function collectFiles(rootDir: string): string[] {
   });
 }
 
-function parseEnvExampleKeys(filePath: string) {
+function parseEnvExampleAssignments(text: string) {
   const keys = new Set<string>();
   const duplicates = new Set<string>();
+  const values = new Map<string, string>();
 
-  for (const rawLine of splitLines(readFileSync(filePath, "utf8"))) {
+  for (const rawLine of splitLines(text)) {
     const line = rawLine.trim();
     if (line.length === 0 || line.startsWith("#")) continue;
 
@@ -107,9 +108,51 @@ function parseEnvExampleKeys(filePath: string) {
 
     if (keys.has(key)) duplicates.add(key);
     keys.add(key);
+    const rawValue = line.slice(equalsIndex + 1).trim();
+    values.set(key, unquote(rawValue) ?? rawValue);
   }
 
-  return { duplicates, keys };
+  return { duplicates, keys, values };
+}
+
+function parseEnvExampleKeys(filePath: string) {
+  return parseEnvExampleAssignments(readFileSync(filePath, "utf8"));
+}
+
+/**
+ * Keys the example must never advertise: the site reads stablecoin data through
+ * Pages Functions instead of a direct database binding, and the Telegram
+ * adoption salt was replaced by the selector-snapshot salt.
+ */
+const FORBIDDEN_ENV_EXAMPLE_KEYS = ["DB", "TELEGRAM_ADOPTION_IP_HASH_SECRET"] as const;
+const FORBIDDEN_ENV_EXAMPLE_KEY_PREFIXES = ["VAULTS_FYI_"] as const;
+/** The example must show the canonical origin, not a placeholder that a copied
+ * `.env.local` could turn into a silent upstream. */
+const REQUIRED_ENV_EXAMPLE_VALUES: Readonly<Record<string, string>> = {
+  SITE_API_ORIGIN: "https://site-api.pharos.watch",
+};
+
+export function findEnvExamplePolicyErrors(text: string): string[] {
+  const { keys, values } = parseEnvExampleAssignments(text);
+  const errors: string[] = [];
+
+  for (const key of FORBIDDEN_ENV_EXAMPLE_KEYS) {
+    if (keys.has(key)) errors.push(`.env.example must not document ${key}`);
+  }
+  for (const key of keys) {
+    const prefix = FORBIDDEN_ENV_EXAMPLE_KEY_PREFIXES.find((candidate) => key.startsWith(candidate));
+    if (prefix) errors.push(`.env.example must not document retired ${prefix}* keys (found ${key})`);
+  }
+  for (const [key, expected] of Object.entries(REQUIRED_ENV_EXAMPLE_VALUES)) {
+    const actual = values.get(key);
+    if (actual !== expected) {
+      errors.push(
+        `.env.example must document ${key}=${expected} (found ${actual === undefined ? "no entry" : JSON.stringify(actual)})`,
+      );
+    }
+  }
+
+  return errors;
 }
 
 export function getWorkerEnvBindings() {
@@ -436,6 +479,8 @@ export function runEnvContractCheck({
   if (envExample.duplicates.size > 0) {
     errors.push(`.env.example defines duplicate keys: ${[...envExample.duplicates].sort().join(", ")}`);
   }
+
+  errors.push(...findEnvExamplePolicyErrors(readFileSync(envExamplePath, "utf8")));
 
   assertFileMatchesExpected(envExamplePath, renderEnvExample(), errors);
 

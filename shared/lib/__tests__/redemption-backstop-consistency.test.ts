@@ -161,16 +161,24 @@ describe("redemption backstop config consistency", () => {
   });
 
   it("expanded shared configs receive per-coin reviewed docs instead of shared first-id docs", () => {
-    const expectedPrimaryUrls = new Map([
-      ["a7a5-old-vector", "https://www.a7a5.io/"],
-      ["gusd-gate", "https://www.gate.com/staking/USDT?isDebtType=1&pid=33"],
-      ["usyc-hashnote", "https://usyc.hashnote.com/"],
-      ["zarp-zarp", "https://www.zarpstablecoin.com/"],
-      ["cetes-etherfuse", "https://app.etherfuse.com/legal/proof-of-reserves"],
-    ]);
+    // Each group is one `defineBatch` in offchain-issuer/base-batches.ts whose
+    // members carry their own reviewed sources. Inheriting the batch's first-id
+    // docs would repeat one URL across siblings.
+    const expandedDocGroups = [
+      ["usyc-hashnote", "a7a5-old-vector", "gusd-gate"],
+      ["zarp-zarp", "cetes-etherfuse"],
+      [
+        "audx-aussie-dollar-token", "brl1-brl1", "cngn-compliant-naira", "reur-royal-euro",
+        "wars-argentine-peso", "eusd-telcoin", "rusd-royal-dollar",
+      ],
+    ] as const;
 
-    for (const [id, expectedUrl] of expectedPrimaryUrls) {
-      expect(REDEMPTION_BACKSTOP_CONFIGS[id]?.docs?.[0]?.url).toBe(expectedUrl);
+    for (const group of expandedDocGroups) {
+      const urls = group.map((id) => REDEMPTION_BACKSTOP_CONFIGS[id]?.docs?.[0]?.url);
+      for (const [index, url] of urls.entries()) {
+        expect(url, group[index]).toMatch(/^https:\/\/\S+$/);
+      }
+      expect(new Set(urls).size, group.join(",")).toBe(group.length);
     }
   });
 

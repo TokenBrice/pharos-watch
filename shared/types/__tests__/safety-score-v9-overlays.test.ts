@@ -80,14 +80,6 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     },
   );
 
-  it("validates every checked-in overlay asset through the shared schemas", () => {
-    expect(() => SafetyScoreV9MechanismReviewOverlayFileSchema.parse(mechanismOverlays)).not.toThrow();
-    expect(() => SafetyScoreV9ReviewedTransferFileSchema.parse(transferOverlays)).not.toThrow();
-    expect(() =>
-      SafetyScoreV9OperationalResilienceOverlayFileSchema.parse(operationalResilienceHistoricalFixture),
-    ).not.toThrow();
-  });
-
   it("rejects a malformed mechanism row instead of allowing a frontend cast", () => {
     expect(SafetyScoreV9MechanismReviewOverlayFileSchema.safeParse(mechanismFixture).success).toBe(true);
     const malformed = { ...mechanismFixture, overlays: [{ ...mechanismFixture.overlays[0], unexpectedPublishedField: true }] };

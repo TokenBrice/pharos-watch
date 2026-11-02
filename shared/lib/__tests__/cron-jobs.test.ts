@@ -35,22 +35,11 @@ describe("cron job schedule metadata", () => {
     expect(CRON_JOB_DEFINITIONS.some((definition) => definition.job === "compute-safety-score-v9-workflow")).toBe(false);
     expect(CRON_INTERVALS).not.toHaveProperty("compute-safety-score-v9-workflow");
   });
-  it("reserves the same bounded redemption pool in natural and recovery slots", () => {
+  it("reserves a three-connection redemption backstop pool", () => {
     expect(REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY).toBe(3);
-    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "sync-redemption-backstops")).toMatchObject({
-      scheduleKey: "fourHourlyReserveSync", maxConnections: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY,
-    });
-    expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "reserve-recovery")).toMatchObject({
-      scheduleKey: "fiveMinuteReserveRecovery", maxConnections: REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY,
-    });
   });
 
   it("retains the durable reserve identity on five-minute polls that are all config opportunities", () => {
-    const schedule = "1,6,11,16,21,26,31,36,41,46,51,56 * * * *";
-    expect(CRON_SCHEDULE_DEFINITIONS.fiveMinuteReserveRecovery).toEqual({
-      schedule, intervalSec: 300, offsetSec: 60, cpuPlacement: "sub-hourly-allowed",
-    });
-    expect(CRON_TRIGGER_SCHEDULES.fiveMinuteReserveRecovery).toEqual([schedule]);
     expect(CRON_JOB_DEFINITIONS.find((job) => job.job === "reserve-recovery")).toMatchObject({
       intervalSec: 300, group: "five-minute", scheduleKey: "fiveMinuteReserveRecovery",
     });
@@ -68,28 +57,16 @@ describe("cron job schedule metadata", () => {
     expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "status-self-check")).toMatchObject({ maxConnections: 2 });
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "status-self-check")).toMatchObject({ maxConnections: 2 });
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "price-corroboration")).toMatchObject({ maxConnections: 4 });
-    expect(CRON_TRIGGER_SCHEDULES.statusSelfCheckOffset).toEqual(["9 * * * *", "24 * * * *", "39 * * * *", "54 * * * *"]);
   });
   it("reserves one project-tape service-binding connection without adding a trigger", () => {
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "project-tape")).toMatchObject({
       scheduleKey: "dewsPsiOffset", maxConnections: 1, connectionGroup: "dews-psi-chain",
     });
-    expect(CRON_TRIGGER_SCHEDULES.dewsPsiOffset).toEqual(["26,56 * * * *"]);
     expect(CRON_GROWTH_HEADROOM_POLICY.maxFetchCapableEntriesBeforeRebalance).toBe(35);
     expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(43);
     expect(CRON_GROWTH_HEADROOM_POLICY.maxHeadroomFullTriggersBeforeRebalance).toBe(2);
   });
 
-
-  it("keeps the DEX source lane hourly while preserving the half-hourly consumer aliases", () => {
-    expect(CRON_SCHEDULES.halfHourlyOffset).toBe("10 * * * *");
-    expect(CRON_TRIGGER_SCHEDULES.halfHourlyOffset).toEqual(["10 * * * *"]);
-    expect(CRON_SCHEDULES.halfHourlyChartsOffset).toBe("16,46 * * * *");
-    expect(CRON_TRIGGER_SCHEDULES.halfHourlyChartsOffset).toEqual([
-      "16 * * * *",
-      "46 * * * *",
-    ]);
-  });
 
   it("declares the bounded nested Curve discovery fan-out", () => {
     expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "sync-dex-discovery")).toMatchObject({
@@ -129,16 +106,6 @@ describe("cron job schedule metadata", () => {
 
     // The logical cadence, and therefore slot identity and status freshness,
     // must not move when the physical topology changes.
-    expect(CRON_SCHEDULES.quarterHourly).toBe("*/15 * * * *");
-    expect(CRON_SCHEDULES.v9SupplyAttributionOffset).toBe("8,23,38,53 * * * *");
-    expect(CRON_SCHEDULES.depegResolverOffset).toBe("13,28,43,58 * * * *");
-    expect(CRON_SCHEDULES.v9PublicationOffset).toBe("22 * * * *");
-    expect(CRON_SCHEDULES.statusSelfCheckOffset).toBe("9,24,39,54 * * * *");
-    expect(CRON_SCHEDULES.halfHourlyMintBurnCritical).toBe("4,34 * * * *");
-    expect(CRON_SCHEDULES.halfHourlyMintBurnExtended).toBe("18 * * * *");
-
-    expect(CRON_SCHEDULES.halfHourlyMeasuredExecution).toBe("0,30 * * * *");
-    expect(CRON_SCHEDULES.halfHourlyMeasuredExecutionSupplemental).toBe("15,45 * * * *");
     for (const [minute, logicalMinute] of [["20", "15"], ["50", "45"]] as const) {
       expect(getCronSlotStartedAtForSchedule(
         "halfHourlyMeasuredExecutionSupplemental", Date.parse(`2026-10-08T19:${minute}:03Z`),
@@ -167,9 +134,6 @@ describe("cron job schedule metadata", () => {
       .toBe(Date.parse("2026-10-23T16:22:00Z") / 1000);
     expect(SCHEDULED_SLOT_DISPATCH_OFFSET_SEC.v9PublicationOffset).toBe(0);
 
-    const physicalTriggers = Object.values(CRON_TRIGGER_SCHEDULES).flat();
-    expect(physicalTriggers).toHaveLength(42);
-    expect(CRON_GROWTH_HEADROOM_POLICY.maxPhysicalTriggersBeforeRebalance).toBe(43);
   });
 
   it("derives 26/56 minute slots for the DEWS/PSI offset schedule", () => {

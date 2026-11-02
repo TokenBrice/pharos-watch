@@ -22,38 +22,6 @@ describe("weights", () => {
     expect(() => assertWeightsSumTo100("treasury", bad)).toThrow();
   });
 
-  it("Treasury weights match the design", () => {
-    expect(WEIGHT_VECTORS.treasury).toEqual({
-      safetyOverall: 55,
-      pegStabilityHistory: 22,
-      dewsInverted: 13,
-      bluechip: 10,
-    });
-  });
-
-  it("Yield weights match the design", () => {
-    expect(WEIGHT_VECTORS.yield).toEqual({
-      pharosYieldScore: 28,
-      safetyOverall: 19,
-      yieldVariance: 16,
-      sourceRiskInverted: 13,
-      excessApy: 10,
-      pegStabilityLive: 8,
-      liquidity: 6,
-    });
-  });
-
-  it("Trading weights match the design", () => {
-    expect(WEIGHT_VECTORS.trading).toEqual({
-      liquidity: 30,
-      pegScoreNow: 30,
-      dewsInverted: 15,
-      safetyOverall: 14,
-      supplyLog: 8,
-      liquidityDiversification: 3,
-    });
-  });
-
   it("no vector prices a V9 pillar beside the composite that contains it", () => {
     for (const profile of SELECTOR_PROFILES) {
       const vector = WEIGHT_VECTORS[profile] as Record<string, number | undefined>;

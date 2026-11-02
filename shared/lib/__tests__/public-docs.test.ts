@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PUBLIC_DOCS, preparePublicDocMarkdown } from "../public-docs";
+import { DOC_GROUPS, PUBLIC_DOCS, preparePublicDocMarkdown } from "../public-docs";
 
 const DOCS_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "docs");
 const DOC_SOURCES = PUBLIC_DOCS.map((doc) => ({
@@ -19,15 +19,16 @@ function withoutProtectedSegments(markdown: string): string {
 }
 
 describe("PUBLIC_DOCS registry", () => {
-  it("publishes the Blacklist Tracker methodology with matching source and metadata", () => {
-    expect(PUBLIC_DOCS.find((doc) => doc.slug === "blacklist-tracker")).toEqual({
-      source: "blacklist-tracker.md",
-      slug: "blacklist-tracker",
-      title: "Blacklist Tracker",
-      summary:
-        "Blacklist Tracker methodology for stablecoin freezes, releases, wipes, event coverage, frozen-balance valuation, and direct versus upstream exposure.",
-      group: "methodology",
-    });
+  // DOC_SOURCES reads every registered source from disk at module load, so a
+  // missing or unreadable source file fails the whole suite before this runs.
+  it("keeps every published doc uniquely addressable and grouped", () => {
+    for (const field of ["slug", "source", "title", "summary"] as const) {
+      const values = PUBLIC_DOCS.map((doc) => doc[field]);
+      expect(new Set(values).size, `duplicate PUBLIC_DOCS ${field}`).toBe(PUBLIC_DOCS.length);
+    }
+    for (const doc of PUBLIC_DOCS) {
+      expect(DOC_GROUPS).toContain(doc.group);
+    }
   });
 
   it("rewrites or removes non-public relative links before publication", () => {
