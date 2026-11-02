@@ -1391,6 +1391,7 @@
         "scripts/lib/automation-registry.mjs",
         "scripts/lib/command-runner.mts",
         "scripts/lib/deploy-impact.mts",
+        "scripts/lib/lane-input-closure.mts",
         "scripts/lib/generated-artifacts.ts",
         "scripts/lib/post-deploy-acceptance.mts",
         "scripts/lib/pr-*.mts",

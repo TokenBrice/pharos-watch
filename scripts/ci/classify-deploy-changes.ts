@@ -12,7 +12,9 @@ import {
   normalizeRepoPath,
 } from "../lib/deploy-impact.mts";
 import { collectGitPaths } from "../lib/changed-files.mts";
+import { hasLaneInputImpact, hasPagesArtifactImpact } from "../lib/lane-input-closure.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { hasV9ContagionInput } from "../../worker/scripts/lib/v9-resource-policy.ts";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 
@@ -54,73 +56,62 @@ export {
   hasWorkerReleaseImpact,
 };
 
-// The artifact registry owns evaluator/catalog generation dependencies. The
-// resource probe also reaches capture, publication, DB and setup-only helpers
-// outside V9-named modules. Conservatively cover shared/Worker library and data
-// families rather than duplicate hundreds of transitive import paths here.
-// Frontend, API and unrelated cron edits can still skip the PR-only lane;
-// nightly remains unconditional, and unknown inputs fail closed below.
-const V9_RESOURCE_PATHS: Record<string, true> = {
-  ".ci/safety-score-v9-resource-budget.json": true,
-  ".github/actions/setup-workspace/action.yml": true,
-  ".github/workflows/pull-request-checks.yml": true,
-  ".github/workflows/nightly-validation.yml": true,
-  "scripts/ci/classify-deploy-changes.ts": true,
-  "scripts/ci/select-generated-artifacts.mts": true,
-  "scripts/lib/automation-registry.mjs": true,
-  "scripts/lib/changed-files.mts": true,
-  "scripts/lib/cli-args.mjs": true,
-  "scripts/lib/command-runner.mts": true,
-  "scripts/lib/local-bin.mts": true,
-  "scripts/lib/smoke-runtime.mjs": true,
-  "scripts/lib/wrangler-toml.mjs": true,
-  "scripts/lib/pr-lanes.mts": true,
-  "scripts/lib/safety-score-v9-evaluation-inputs.mts": true,
-  "scripts/maintenance/generate-pr-workflow-matrix.ts": true,
-  "scripts/maintenance/run-v9-resource-lane.ts": true,
-  "worker/scripts/measure-v9-resource.ts": true,
-  "worker/scripts/calibrate-v9-resource.ts": true,
-};
-const V9_RESOURCE_PREFIXES = [
-  "shared/lib/",
-  "shared/data/",
-  "shared/types/",
-  "shared/test-utils/",
-  "worker/src/lib/",
-  "worker/src/cron/compute-safety-score-v9",
-  "worker/src/cron/reserve-adapters/",
-  "worker/src/cron/dex-liquidity/",
-  "worker/src/cron/dex-discovery/",
-  "worker/src/cron/sync-live-reserves-config",
-  "worker/src/cron/sync-live-reserves-shared",
-  "worker/src/cron/shared/cursor-rotation",
-  "worker/src/cron/sync-stablecoins/shared",
-  "worker/src/cron/sync-stablecoins/enrich-prices-shared",
-  "worker/src/test-helpers/",
-  "worker/migrations/",
-  "worker/scripts/lib/v9-resource",
-];
+// The lane's inputs are the modules its setup, live and natural children
+// actually bundle (fixture bootstrap, the measured probe and the harness that
+// builds and drives them) plus the contagion sub-predicate it can switch on.
+// Anything else — a Worker cron, a reserve adapter, an unrelated shared helper —
+// cannot change the measured envelope, so the PR-only lane may skip it.
+// Nightly remains unconditional, and unknown inputs fail closed below.
+const V9_RESOURCE_CLOSURE_ROOTS = [
+  "worker/scripts/measure-v9-resource.ts",
+  "scripts/maintenance/run-v9-resource-lane.ts",
+  "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
+  "worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts",
+  "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
+  "worker/src/lib/__tests__/safety-score-v9-resource-probe.test-support.ts",
+] as const;
+// Selection, transport, policy and calibration inputs that are not import edges
+// of the harness. Changing any of them changes what or how the lane measures.
+const V9_RESOURCE_PATHS = [
+  ".ci/safety-score-v9-resource-budget.json",
+  ".github/actions/setup-workspace/action.yml",
+  ".github/workflows/pull-request-checks.yml",
+  ".github/workflows/nightly-validation.yml",
+  "scripts/ci/classify-deploy-changes.ts",
+  "scripts/ci/select-generated-artifacts.mts",
+  "scripts/lib/automation-registry.mjs",
+  "scripts/lib/changed-files.mts",
+  "scripts/lib/pr-lanes.mts",
+  "scripts/lib/safety-score-v9-evaluation-inputs.mts",
+  "scripts/maintenance/generate-pr-workflow-matrix.ts",
+  "worker/scripts/calibrate-v9-resource.ts",
+] as const;
+// Read at runtime rather than imported: the migration set builds the fixture
+// schema and the catalog JSON feeds the packed full-registry input.
+const V9_RESOURCE_PREFIXES = ["shared/data/stablecoins/", "worker/migrations/"];
 const KNOWN_NON_V9_PREFIXES = [
-  ".github/", ".ci/", "docs/", "src/", "public/", "functions/",
-  "tests/", "scripts/", "shared/", "worker/", "data/",
+  ".ci/", ".github/", "agents/", "data/", "docs/", "functions/", "public/", "scripts/",
+  "shared/", "src/", "tests/", "worker/",
 ];
+const V9_RESOURCE_TOOLCHAIN_PATTERN =
+  /(^|\/)(?:package(?:-lock)?\.json|tsconfig[^/]*\.json|vitest[^/]*|wrangler[^/]*|\.nvmrc|\.npmrc|\.node-version|\.tool-versions|mise\.toml|\.mise\.toml)$/;
 
 export function hasV9ResourceImpact(
   files: readonly string[],
   generatedArtifactIds: readonly string[] = selectChangedGeneratedArtifactIds(files),
 ): boolean {
-  // Catalog generators and their transitive inputs share the artifact registry.
+  // Catalog generators and their transitive inputs share the artifact registry;
+  // the packed worker catalog is the probe's `#pharos-full-catalog` input.
   if (generatedArtifactIds.includes("safety-score-v9-evaluation-build")) return true;
-  // An empty or malformed diff cannot establish that resource inputs are absent.
-  if (files.length === 0) return true;
-  return files.some((rawFile) => {
-    const file = normalizeRepoPath(rawFile);
-    if (!file || file.startsWith("/") || file.split("/").some((part) => part === "." || part === ".." || part === "")) return true;
-    if (V9_RESOURCE_PATHS[file] === true || V9_RESOURCE_PREFIXES.some((prefix) => file.startsWith(prefix))) return true;
-    if (/(^|\/)(?:package(?:-lock)?\.json|tsconfig[^/]*\.json|vitest[^/]*|wrangler[^/]*|\.nvmrc|\.npmrc|\.node-version|\.tool-versions|mise\.toml|\.mise\.toml)$/.test(file)) return true;
-    if (!file.includes("/") && file.endsWith(".md")) return false;
-    // A new/unrecognized top-level input is not evidence of a safe skip.
-    return !KNOWN_NON_V9_PREFIXES.some((prefix) => file.startsWith(prefix));
+  if (generatedArtifactIds.includes("stablecoin-worker-full-catalog")) return true;
+  return hasLaneInputImpact(files, {
+    id: "v9-resource-lane",
+    roots: V9_RESOURCE_CLOSURE_ROOTS,
+    exactPaths: V9_RESOURCE_PATHS,
+    prefixes: V9_RESOURCE_PREFIXES,
+    patterns: [V9_RESOURCE_TOOLCHAIN_PATTERN],
+    matches: (file) => hasV9ContagionInput([file]),
+    ignoredPrefixes: KNOWN_NON_V9_PREFIXES,
   });
 }
 
@@ -130,8 +121,10 @@ export function classifyChangedFiles(
 ): DeployClassification {
   const normalizedFiles = [...new Set(changedFiles.map((file) => normalizeRepoPath(file)))].sort();
   const pagesChanged = hasPagesDeployImpact(normalizedFiles);
-  // Test-only edits under Pages paths still validate but publish nothing.
+  // Publishable Pages changes still drive the deploy; the PR artifact lane
+  // builds only for the export's import closure or one of its declared inputs.
   const pagesDeployRequired = hasPagesPublishImpact(normalizedFiles);
+  const pagesArtifactRequired = hasPagesArtifactImpact(normalizedFiles);
   const workerChanged = hasWorkerDeployImpact(normalizedFiles);
   const workerDeployRequired = hasWorkerReleaseImpact(normalizedFiles);
   const generatedArtifactIds = selectChangedGeneratedArtifactIds(normalizedFiles);
@@ -140,7 +133,7 @@ export function classifyChangedFiles(
     deployRequired: hasDeployImpact(normalizedFiles),
     docsChanged: normalizedFiles.some((file) => hasOnlyInternalDocsImpact([file])),
     docsOnly: hasOnlyInternalDocsImpact(normalizedFiles),
-    pagesArtifactRequired: pagesDeployRequired,
+    pagesArtifactRequired,
     pagesChanged,
     pagesCriticalCssFullPass: hasCriticalCssPipelineImpact(normalizedFiles),
     pagesDeployRequired,

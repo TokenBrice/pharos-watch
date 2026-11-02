@@ -4,12 +4,20 @@ import { join, relative, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import { assertResourceProbeCatalog, buildSafetyScoreV9ContagionProbe, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
+import { assertResourceProbeCatalog, buildResourceProbe, buildSafetyScoreV9ContagionProbe, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
 import type * as Esbuild from "esbuild";
 import { calibrateV9Resource } from "../calibrate-v9-resource";
 // Static edge so any change in the contagion closure selects this tripwire.
 import { evaluateV9ContagionScenario } from "@shared/lib/safety-score-v9/contagion";
 import { GLOBAL_HEAP_BYTES, hasV9ContagionInput, RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, ResourcePolicySchema, loadResourcePolicy, validateResourcePolicy, type ResourceIdentity } from "../lib/v9-resource-policy";
+
+// The lane selector lives with the deploy classifier, whose registry graph the
+// Worker type program does not compile (ADR-2). Resolve it by path at runtime so
+// this tripwire stays in the suite that owns the bundles it proves.
+const CLASSIFIER_MODULE = "../../../scripts/ci/classify-deploy-changes";
+const { hasV9ResourceImpact } = await import(CLASSIFIER_MODULE) as {
+  hasV9ResourceImpact(files: readonly string[]): boolean;
+};
 
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -137,6 +145,33 @@ describe("V9 contagion input decision", () => {
       expect(hasV9ContagionInput([file]), file).toBe(true);
     }
     expect(hasV9ContagionInput(["README.md", "src/app/page.tsx", "shared/lib/blacklist.ts"])).toBe(false);
+  });
+});
+
+describe("V9 resource lane selection", () => {
+  it("selects every input the measured setup and live bundles contain", async () => {
+    const root = resolve(import.meta.dirname, "../../..");
+    const directory = temporary();
+    const modes = ["setup", "live"] as const;
+    const built = await Promise.all(modes.map((mode) => buildResourceProbe(root, directory, mode)));
+    for (const [index, mode] of modes.entries()) {
+      const bundled = built[index].inputs
+        .map((input) => relative(root, input).replaceAll("\\", "/"))
+        .filter((input) => !input.startsWith(".."));
+      // Vendor packages and builtins are external; the toolchain pattern owns those.
+      expect(bundled.length, mode).toBeGreaterThan(100);
+      expect(bundled.filter((input) => !hasV9ResourceImpact([input])), mode).toEqual([]);
+    }
+  });
+
+  it("selects the harness that builds and drives those children", () => {
+    for (const file of [
+      "worker/scripts/measure-v9-resource.ts",
+      "scripts/maintenance/run-v9-resource-lane.ts",
+      "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
+      "worker/src/lib/__tests__/safety-score-v9-resource-probe.test-support.ts",
+      "worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts",
+    ]) expect(hasV9ResourceImpact([file]), file).toBe(true);
   });
 });
 

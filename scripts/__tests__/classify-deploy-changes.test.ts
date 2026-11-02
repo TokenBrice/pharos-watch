@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -14,6 +17,7 @@ import {
 } from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { splitNullDelimited } from "../lib/changed-files.mts";
+import { hasLaneInputImpact, hasPagesArtifactImpact } from "../lib/lane-input-closure.mts";
 
 describe("contracts workspace deployment selection", () => {
   it("keeps source-only contracts in both deployed runtime surfaces", () => {
@@ -54,6 +58,72 @@ describe("Pages artifact selection", () => {
       expect(classifyChangedFiles([path]).pagesArtifactRequired).toBe(false);
     },
   );
+
+  it.each([
+    // Deploys, but cannot change the static export the PR lane builds.
+    "shared/lib/api-router.ts",
+    "functions/api/proxy.ts",
+    "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts",
+  ])("validates without building for a Pages path outside the export closure %s", (path) => {
+    expect(classifyChangedFiles([path])).toMatchObject({
+      pagesChanged: true,
+      pagesDeployRequired: true,
+      pagesArtifactRequired: false,
+    });
+    expect(hasPagesPublishImpact([path])).toBe(true);
+  });
+
+  it("keeps the export's on-disk inputs, which are never import edges", () => {
+    for (const path of [
+      "docs/depeg-detection.md",
+      "public/_redirects",
+      "public/datasets/stablecoins.json",
+      "shared/data/stablecoins/coins/usdc-circle.json",
+      "data/depeg-events/2024.json",
+    ]) {
+      expect(classifyChangedFiles([path]).pagesArtifactRequired, path).toBe(true);
+    }
+  });
+
+  it("keeps every module behind the lane's npm scripts selected", () => {
+    const scripts: Record<string, string> = JSON.parse(
+      readFileSync(resolve(import.meta.dirname, "../../package.json"), "utf8"),
+    ).scripts;
+    for (const name of [
+      "check:pages-artifact",
+      "generated:compile-input",
+      "generated:post-refresh",
+      "postbuild",
+      "check:pages-release",
+      "check:feature-flag-inlining",
+      "check:build-size",
+      "check:phishing-signatures",
+      "seo:check",
+    ]) {
+      const file = /((?:scripts|src|shared|worker)\/[\w./-]+\.(?:[cm]?[jt]sx?|mjs))/.exec(scripts[name] ?? "")?.[1];
+      expect(file, name).toBeTruthy();
+      expect(hasPagesArtifactImpact([file!]), `${name} -> ${file}`).toBe(true);
+    }
+  });
+
+  it.each([[[]], [[""]], [["../outside.ts"]], [["/outside/page.tsx"]], [["src//app/page.tsx"]], [["unclassified/runtime.ts"]]])(
+    "builds the artifact for an empty, malformed or unclassifiable diff %j", (files) => {
+      expect(hasPagesArtifactImpact(files)).toBe(true);
+    },
+  );
+
+  it("builds the artifact when the lane's closure cannot be built", () => {
+    const missing = {
+      existsSync: () => false,
+      readFileSync: () => "",
+      statSync: () => ({ isFile: () => true }),
+    };
+    expect(hasLaneInputImpact(["src/components/header.tsx"], {
+      id: "unreadable-lane",
+      roots: ["src/app/page.tsx"],
+      ignoredPrefixes: ["src/"],
+    }, { fs: missing })).toBe(true);
+  });
 
   it.each([
     "src/components/__tests__/header.test.tsx",
@@ -100,14 +170,12 @@ describe("V9 resource selection", () => {
   it.each([
     "shared/lib/safety-score-v9/compile.ts",
     "shared/lib/safety-score-v9/new-module.ts",
-    "worker/src/lib/safety-score-v9-publication.ts",
+    "worker/src/lib/safety-score-v9/publication-store.ts",
     "worker/src/lib/safety-score-v9/native-input.ts",
     "worker/src/lib/db-cache.ts",
     "worker/src/lib/report-cards-snapshot.ts",
     "worker/src/cron/compute-safety-score-v9.ts",
     "worker/src/cron/reserve-adapters/token-supply.ts",
-    "worker/src/cron/dex-liquidity/persistence.ts",
-    "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
     "worker/src/test-helpers/v9-fixed-input.ts",
     "worker/migrations/0263_safety_score_capture_archive.sql",
     "shared/test-utils/sqlite-d1.ts",
@@ -122,6 +190,9 @@ describe("V9 resource selection", () => {
     "scripts/lib/local-bin.mts",
     "scripts/lib/wrangler-toml.mjs",
     "worker/scripts/measure-v9-resource.ts",
+    "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
+    "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
+    "worker/src/lib/__tests__/safety-score-v9-resource-probe.test-support.ts",
     "worker/wrangler.heavy.toml",
     ".ci/safety-score-v9-resource-budget.json",
     "package-lock.json",
@@ -135,6 +206,8 @@ describe("V9 resource selection", () => {
     "src/components/header.tsx",
     "worker/src/api/health.ts",
     "worker/src/cron/sync-blacklist.ts",
+    "worker/src/cron/dex-liquidity/persistence.ts",
+    "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
     "worker/scripts/telegram-load.ts",
     "scripts/build-data/build-stablecoin-detail-snapshots.ts",
     "docs/testing.md",
