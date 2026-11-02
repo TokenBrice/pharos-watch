@@ -58,9 +58,9 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
     ],
   },
   // buildPrWorkflowMatrix emits lanes in declaration order and the workflow
-  // caps validation at max-parallel: 10. Keep v9-resource inside that first
-  // ten and static-compile last, so an eleven-job selection (eight test
-  // shards) queues only the shortest lane instead of the slow resource lane.
+  // caps validation concurrency. Keep v9-resource ahead of the test shards and
+  // static-compile last, so a queued job is the shortest lane rather than the
+  // slow resource lane.
   {
     id: "v9-resource",
     selector: "v9-resource",
@@ -78,7 +78,7 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
   {
     id: "tests",
     selector: "code",
-    shards: 8,
+    shards: 10,
     timeoutMinutes: 15,
     commands: [{ id: "pr-tests", program: "npm", args: ["run", "test:pr", "--"] }],
   },

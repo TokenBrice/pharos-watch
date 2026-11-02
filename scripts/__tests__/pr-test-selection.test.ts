@@ -64,3 +64,30 @@ describe("declared non-import-graph PR test ownership", () => {
       .toThrow(docRatchet);
   });
 });
+
+describe("documentation-owner dedup", () => {
+  const mandatory = "scripts/__tests__/run-pr-tests.test.ts";
+
+  it("drops the docs-driven invariant suites when the docs owner already runs them", () => {
+    expect(selectPrTestFiles([], [mandatory], ["docs/testing.md"], new Map(), () => true, { docsChanged: true }))
+      .toEqual([mandatory]);
+  });
+
+  it("keeps a doc-declared suite that a non-doc source also selects", () => {
+    const selected = selectPrTestFiles([], [mandatory], ["docs/testing.md", "package.json"], new Map(), () => true, { docsChanged: true });
+    expect(selected).toContain(docRatchet);
+    // Every router-declaration source is documentation, so the router suite
+    // stays with the static-guards docs owner.
+    expect(selected).not.toContain(router);
+  });
+
+  it("keeps a doc-declared suite that is also a changed test file", () => {
+    const selected = selectPrTestFiles([router], [mandatory], ["docs/testing.md"], new Map(), () => true, { docsChanged: true });
+    expect(selected).toEqual([router, mandatory].sort());
+  });
+
+  it("leaves the docs declarations in place when docs did not change", () => {
+    const selected = selectPrTestFiles([], [mandatory], ["docs/testing.md"], new Map(), () => true);
+    expect(selected).toEqual(expect.arrayContaining([docRatchet, router, mandatory]));
+  });
+});

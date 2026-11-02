@@ -75,7 +75,7 @@ describe("PR lane manifest", () => {
     ]);
   });
 
-  it.each([4, 8])("generates %i planned test shards in the validation matrix", (testShards) => {
+  it.each([1, 4, 10])("generates %i planned test shards in the validation matrix", (testShards) => {
     const selection = {
       docsOnly: false, testShards,
     };
@@ -138,7 +138,7 @@ describe("PR lane manifest", () => {
 
   it("rejects invalid test fan-out instead of dropping selected tests", () => {
     const selection = { docsOnly: false };
-    for (const shards of [0, -1, 1.5, 9]) {
+    for (const shards of [0, -1, 1.5, 11]) {
       expect(() => buildPrWorkflowMatrix({ ...selection, testShards: shards })).toThrow(/shard/);
     }
   });
