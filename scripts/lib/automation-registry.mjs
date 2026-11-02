@@ -186,10 +186,11 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     checkCommand: "tsx scripts/maintenance/generate-sitemap-dates.ts --check",
     command: "tsx scripts/maintenance/generate-sitemap-dates.ts",
     checkable: false,
-    // Chain, peg-hub and taxonomy route lists read the stablecoin registry.
-    dependsOn: ["stablecoin-catalog"],
+    // Chain, peg-hub and taxonomy route lists read the stablecoin registry
+    // and the generated static stablecoin projection.
+    dependsOn: ["stablecoin-catalog", "stablecoin-client-projections"],
     outputPaths: ["src/generated/sitemap-dates.json", "src/generated/sitemap-dates.json.d.ts"],
-    phase: 1,
+    phase: 2,
     requiresGitHistory: true,
     script: "scripts/maintenance/generate-sitemap-dates.ts",
     sourcePaths: SITEMAP_COMMIT_DERIVED_SOURCE_PATHS,
