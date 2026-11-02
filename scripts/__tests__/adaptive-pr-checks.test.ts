@@ -321,11 +321,6 @@ describe("adaptive PR checks", () => {
     ["shared/lib/classification.ts", true],
     ["functions/selector-snapshot/[[path]].ts", true],
     ["scripts/ci/check-provider-resilience.ts", true],
-    // `allowJs` pulls the imported registry modules into the program; no
-    // include glob matches them, so only program membership can select them.
-    ["scripts/lib/cli-argv-policy.mjs", true],
-    ["scripts/maintenance/report-build-size.mjs", true],
-    ["scripts/ci/check-seo-static.mjs", false],
     ["next-env.d.ts", true],
     ["package.json", true],
     ["package-lock.json", true],
@@ -338,6 +333,24 @@ describe("adaptive PR checks", () => {
     ["src/lib/example.test.ts", false],
     ["worker/src/cron/__tests__/x.test.ts", false],
   ])("selects root typecheck only for inputs tsconfig.typecheck.json can observe: %s -> %s", (path, expected) => {
+    const compile = buildPrStaticCheckPlan([path], { group: "compile" }).commands.map((command) => command.name);
+    expect(compile.includes("typecheck")).toBe(expected);
+  });
+
+  // Nightly tier: PR coverage retained by scripts/__tests__/adaptive-pr-checks.test.ts
+  // "selects root typecheck for an imported script module only the program
+  // compiles" (below) drives the same program-membership branch over a fixture
+  // program, and every typed-root change still selects root typecheck in the
+  // compile lane. These rows build the whole real root typecheck program
+  // (`allowJs` closure over ~2,300 files, seconds of work) only to read which
+  // `.mjs` modules it reaches — the full-corpus sweep the PR gate cannot afford.
+  it.each([
+    // `allowJs` pulls the imported registry modules into the program; no
+    // include glob matches them, so only program membership can select them.
+    ["scripts/lib/cli-argv-policy.mjs", true],
+    ["scripts/maintenance/report-build-size.mjs", true],
+    ["scripts/ci/check-seo-static.mjs", false],
+  ])("selects root typecheck for an .mjs module only the real program reaches: %s -> %s", { tags: ["nightly"] }, (path, expected) => {
     const compile = buildPrStaticCheckPlan([path], { group: "compile" }).commands.map((command) => command.name);
     expect(compile.includes("typecheck")).toBe(expected);
   });

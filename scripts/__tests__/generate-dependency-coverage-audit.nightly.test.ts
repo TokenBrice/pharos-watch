@@ -1,3 +1,5 @@
+// Nightly tier: PR coverage retained by scripts/ci/check-dependency-review-gaps.ts
+// (the static-guards STRUCTURAL_CHECKS entry builds and evaluates the audit on the repo every code PR).
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
 import type { LiveReserveAdapterKey, LiveReservesConfig } from "@shared/types/live-reserves";

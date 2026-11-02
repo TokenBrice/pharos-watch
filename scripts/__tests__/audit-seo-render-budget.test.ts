@@ -125,7 +125,10 @@ function poolSection({
   return `<main><h1>USDT (USDT) stablecoin analytics</h1><section id="dex-liquidity">${wrapper ? `<div data-lazy-section="">${body}</div>` : body}</section><a href="/stablecoin/usdc-circle/">USDC</a></main>`;
 }
 
-describe("SEO render audit fixture collection", () => {
+// Nightly tier: audit-seo-render-budget is an operator tool with no CI caller and
+// no PR-tier guard; only its untagged "SEO render audit CLI and report" cases
+// (argument parsing, route eligibility, report counters) stay on the PR tier.
+describe("SEO render audit fixture collection", { tags: ["nightly"] }, () => {
   it("counts factual table rows separately from an identical empty skeleton", () => {
     const factual = makeSnapshot(poolSection({ rows: 2 }));
     const skeleton = makeSnapshot(poolSection({ rows: 2, factual: false }));
@@ -194,7 +197,7 @@ describe("SEO render audit fixture collection", () => {
   });
 });
 
-describe("SEO render audit sentinels", () => {
+describe("SEO render audit sentinels", { tags: ["nightly"] }, () => {
   it("accepts bounded pool facts inside a closed disclosure and a deferred chart", () => {
     const snapshot = makeSnapshot(poolSection({ rows: 5 }));
     const sentinels = evaluate(snapshot, { raw: snapshot });
@@ -611,7 +614,7 @@ describe("SEO render audit sentinels", () => {
   });
 });
 
-describe("SEO render audit failure buckets", () => {
+describe("SEO render audit failure buckets", { tags: ["nightly"] }, () => {
   function makeEventPage() {
     const handlers = new Map<string, Array<(arg: unknown) => unknown>>();
     return {
@@ -724,7 +727,7 @@ describe("SEO render audit failure buckets", () => {
   });
 });
 
-describe("SEO render audit API-failure replay", () => {
+describe("SEO render audit API-failure replay", { tags: ["nightly"] }, () => {
   function makeFakeRoute(url: string) {
     const fulfill = vi.fn(async () => undefined);
     const fallback = vi.fn(async () => undefined);
@@ -929,7 +932,7 @@ describe("SEO render audit API-failure replay", () => {
   });
 });
 
-describe("SEO render audit route orchestration", () => {
+describe("SEO render audit route orchestration", { tags: ["nightly"] }, () => {
   const rawSnapshot = () => makeSnapshot(poolSection({ rows: 5 }), { mode: "raw" });
   const mobileSnapshot = () => makeSnapshot(poolSection({ rows: 5 }));
 

@@ -196,6 +196,29 @@ jobs:
           node-modules-cache: "true"
       - run: npm run check:test-plan-parity -- --commits=5
 
+  worker-shared-stability:
+    name: Worker-shared shuffled isolation backstop
+    # The PR tier reuses one module cache for the classified `worker-shared`
+    # files. Re-run that same classified set isolated and shuffled nightly: an
+    # order-dependent file that a PR run happens not to expose fails here, and
+    # the isolated result separates a real regression from shared-state leakage.
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+        with:
+          node-modules-cache: "true"
+      # Shuffled in one shared module cache: the PR tier runs these files
+      # non-isolated in a fixed order, so only this run explores other orders.
+      - name: Run the classified worker-shared files shared and shuffled
+        run: npm test -- --project worker-shared --sequence.shuffle --sequence.seed=${{ github.run_id }}
+      # Isolated: catches a file that only passes on state another file leaked.
+      - name: Run the classified worker-shared files isolated
+        run: npm test -- --project worker-shared --isolate
+
   v9-resource:
     name: V9 resource budget
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
@@ -312,7 +335,7 @@ jobs:
 
   nightly-red:
     name: Nightly red issue
-    needs: [full-static, full-tests, v9-resource, lighthouse, web-vitals, test-timings, test-plan-parity]
+    needs: [full-static, full-tests, v9-resource, lighthouse, web-vitals, test-timings, test-plan-parity, worker-shared-stability]
     if: ${{ always() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -330,6 +353,7 @@ jobs:
       WEB_VITALS_RESULT: ${{ needs.web-vitals.result }}
       TEST_TIMINGS_RESULT: ${{ needs.test-timings.result }}
       TEST_PLAN_PARITY_RESULT: ${{ needs.test-plan-parity.result }}
+      WORKER_SHARED_STABILITY_RESULT: ${{ needs.worker-shared-stability.result }}
     steps:
       - name: Upsert the nightly-red issue
         # One owned issue tracks the nightly state: failed leaves are listed
@@ -345,7 +369,8 @@ jobs:
             "lighthouse:${LIGHTHOUSE_RESULT}" \
             "web-vitals:${WEB_VITALS_RESULT}" \
             "test-timings:${TEST_TIMINGS_RESULT}" \
-            "test-plan-parity:${TEST_PLAN_PARITY_RESULT}"; do
+            "test-plan-parity:${TEST_PLAN_PARITY_RESULT}" \
+            "worker-shared-stability:${WORKER_SHARED_STABILITY_RESULT}"; do
             job="${entry%:*}"
             result="${entry##*:}"
             case "${result}" in

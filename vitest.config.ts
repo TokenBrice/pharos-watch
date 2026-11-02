@@ -50,9 +50,9 @@ const isolationDependentNodeTests = ISOLATED_NODE_TESTS;
 // suite on a thread worker; the rest of worker/ retains process isolation.
 const threadBackedWorkerTests = THREADED_WORKER_TESTS;
 
-// Non-isolated worker pilot: reserve-adapter files that `critical-ownership.mts`
-// classifies as state-safe share one module cache per fork; everything else
-// stays in the isolated `worker` project.
+// Non-isolated worker project: `worker/src/{cron,lib}` files that
+// `critical-ownership.mts` classifies as state-safe share one module cache per
+// fork; everything else stays in the isolated `worker` project.
 const workerSharedTests = WORKER_SHARED_TEST_FILES;
 
 export default defineConfig({
@@ -115,7 +115,7 @@ export default defineConfig({
         // Worker suites lean on module-level state (circuit breakers, caches,
         // D1 stubs) and fail without per-file isolation — verified 2026-07-02
         // (263 test failures under isolate:false). Keep default isolation,
-        // except for the classified `worker-shared` pilot below.
+        // except for the classified `worker-shared` project below.
         extends: true,
         test: {
           name: "worker",

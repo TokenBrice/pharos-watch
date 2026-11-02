@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type * as AbortModule from "../../../lib/abort";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -20,6 +21,18 @@ import type { PeggedAsset } from "../enrich-prices-shared";
 import { nextDexRefreshCursor, planDexRefresh, runPriceDexRefresh } from "../price-dex-refresh";
 import { makePeggedAsset } from "./_fixtures";
 import * as shortLived from "../price-short-lived-refresh";
+
+const { sleepWithSignalMock } = vi.hoisted(() => ({
+  // Provider pacing (DexScreener 1100 ms between batches, CoinGecko on-chain
+  // 250 ms between requests) is real I/O-shaped waiting, not the behavior under
+  // test; zero it the way fetch-retry.test.ts does so the suite never sleeps
+  // through the published rate limits.
+  sleepWithSignalMock: vi.fn<(ms: number, signal?: AbortSignal) => Promise<void>>(async () => undefined),
+}));
+vi.mock("../../../lib/abort", async (importOriginal) => ({
+  ...await importOriginal<typeof AbortModule>(),
+  sleepWithSignal: sleepWithSignalMock,
+}));
 
 const id = "usdaf-asymmetry";
 const target = { id, chain: "ethereum", target: "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8" };

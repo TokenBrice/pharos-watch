@@ -5,6 +5,7 @@ import {
   isReserveSupplyAdmissionBootstrapAuthorized,
 } from "@shared/lib/live-reserve-adapters";
 import {
+  getCollidingSymbolContractIssues,
   getCommodityProtocolSlugIssue,
   getContractDeploymentIssues,
   getCommodityAllocatedPegMatchIssues,
@@ -66,6 +67,29 @@ describe("overdue listing status review warning", () => {
     const input = structuredClone(quarantined);
     getOverdueListingStatusReviewIssue(input, Date.parse("2027-06-01T00:00:00Z"));
     expect(input).toEqual(quarantined);
+  });
+});
+
+describe("colliding symbol contract identity", () => {
+  const deployment = { chain: "ethereum", address: "0xabcdef0000000000000000000000000000000000", decimals: 6 };
+  const coin = (id: string, symbol: string, overrides: Record<string, unknown> = {}) =>
+    ({ id, symbol, ...overrides }) as unknown as StablecoinMeta;
+
+  it("rejects a namesake with neither a contract footprint nor an external provider id", () => {
+    expect(getCollidingSymbolContractIssues([
+      coin("alpha-usd", "FIX", { contracts: [deployment] }),
+      coin("beta-usd", "FIX"),
+    ])).toEqual([expect.stringContaining("beta-usd")]);
+  });
+
+  it("admits contract, traded-contract and provider-id disambiguation", () => {
+    expect(getCollidingSymbolContractIssues([
+      coin("alpha-usd", "FIX", { contracts: [deployment] }),
+      coin("beta-usd", "FIX", { tradedContracts: [deployment] }),
+      coin("gamma-usd", "FIX", { geckoId: "fixture-coin" }),
+      coin("delta-usd", "FIX", { cmcSlug: "fixture-coin" }),
+    ])).toEqual([]);
+    expect(getCollidingSymbolContractIssues([coin("alpha-usd", "FIX"), coin("solo-usd", "SOLO")])).toEqual([]);
   });
 });
 

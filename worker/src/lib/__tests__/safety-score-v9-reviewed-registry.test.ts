@@ -185,7 +185,11 @@ describe("reviewed registry admitted graph retention", () => {
   });
 });
 
-const extraIds = Array.from({ length: 18 }, (_, index) => `gamma-${String(index + 1).padStart(2, "0")}`);
+// Alpha is the malformed/duplicate review owner and beta its healthy peer. The
+// nine further assets keep ten of the eleven candidates healthy, because a
+// producer failure holds globally below nine healthy in ten: that keeps one
+// quarantined asset on the publish path without paying for a 20-asset build.
+const extraIds = Array.from({ length: 9 }, (_, index) => `gamma-${String(index + 1).padStart(2, "0")}`);
 const fixedInput = makeV9CohortFixedInput(extraIds);
 const mechanismPath = "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 const transferPath = "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";

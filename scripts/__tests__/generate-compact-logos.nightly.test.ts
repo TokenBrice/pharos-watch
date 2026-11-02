@@ -1,3 +1,5 @@
+// Nightly tier: PR coverage retained by scripts/maintenance/run-pr-static-checks.ts
+// (`check:generated-artifacts --only=compact-logos` runs the registered `--check` on affected PRs).
 import sharp from "sharp";
 import {
   existsSync,

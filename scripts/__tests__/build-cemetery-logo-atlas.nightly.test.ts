@@ -1,3 +1,5 @@
+// Nightly tier: PR coverage retained by scripts/maintenance/run-pr-static-checks.ts
+// (`check:generated-artifacts --only=cemetery-logo-atlas` runs the registered `--check` on affected PRs).
 import sharp from "sharp";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";

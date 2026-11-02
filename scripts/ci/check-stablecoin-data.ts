@@ -528,6 +528,31 @@ function isTrackedRuntimeCoin(coin: StablecoinMeta): boolean {
   return isReadableStablecoinMeta(coin);
 }
 
+/**
+ * A symbol shared by several active coins needs a deployment footprint so address-based
+ * routing can tell the namesakes apart. External provider ids disambiguate a coin with no
+ * contract footprint of its own.
+ */
+export function getCollidingSymbolContractIssues(coins: readonly StablecoinMeta[]): string[] {
+  const bySymbol = new Map<string, StablecoinMeta[]>();
+  for (const coin of coins) {
+    const symbol = coin.symbol.toUpperCase();
+    const namesakes = bySymbol.get(symbol);
+    if (namesakes) namesakes.push(coin);
+    else bySymbol.set(symbol, [coin]);
+  }
+  const issues: string[] = [];
+  for (const [symbol, namesakes] of bySymbol) {
+    if (namesakes.length <= 1) continue;
+    for (const coin of namesakes) {
+      if (coin.contracts?.length || coin.tradedContracts?.length) continue;
+      if (coin.geckoId || coin.cmcSlug) continue;
+      issues.push(`${coin.id}: symbol "${symbol}" is shared but the coin has no contract for address-based disambiguation`);
+    }
+  }
+  return issues;
+}
+
 export function getListingGovernanceIssues(
   coins: readonly StablecoinMeta[],
   listingDecisions: unknown = listingDecisionsAsset,
@@ -944,6 +969,13 @@ function runStablecoinDataCheck(): void {
 
     for (const error of validateVariantRelationships(allEntries.map((entry) => entry.coin))) {
       reportError(`${STABLECOIN_DATA_DIR}: ${error}`);
+    }
+
+    // Active coins disambiguate a shared symbol by deployment address.
+    for (const issue of getCollidingSymbolContractIssues(
+      allEntries.map((entry) => entry.coin).filter((coin) => isActiveStablecoinMeta(coin)),
+    )) {
+      reportError(`${STABLECOIN_DATA_DIR}: ${issue}`);
     }
 
     for (const issue of findBlacklistabilityReviewIssues(allEntries.map((entry) => entry.coin))) {

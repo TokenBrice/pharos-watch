@@ -167,7 +167,10 @@ describe.each([StablecoinMetaAssetArraySchema, StablecoinMetaCatalogInvariantsSc
   (schema) => {
     const deployment = { chain: "ethereum", address: "0xabcdef0000000000000000000000000000000000", decimals: 6 };
 
-    it("admits the full tracked source catalog", () => {
+    // Nightly tier: parses the whole tracked source catalog. The PR tier keeps
+    // `npm run check:stablecoin-data` (scripts/lib/stablecoin-catalog-sources.ts loads
+    // every source through this schema family) and `npm run check:generated-artifacts`.
+    it("admits the full tracked source catalog", { tags: ["nightly"] }, () => {
       expect(schema.safeParse(TRACKED_SOURCE_COINS).success).toBe(true);
     });
 
@@ -1353,7 +1356,10 @@ describe("StablecoinMeta schema — mint authority", () => {
     expect(MintAuthorityProfileSchema.safeParse(makeMintAuthority({ controls: [control] })).success).toBe(false);
   });
 
-  it("admits current corpus authority profiles, including weighted and same-chain system transport controls", () => {
+  // Nightly tier: projects every authored mint-authority and bridge-risk profile in the
+  // catalog. The PR tier keeps `npm run check:stablecoin-data`, which parses each source
+  // through StablecoinMetaSourceAssetSchema including these control schemas.
+  it("admits current corpus authority profiles, including weighted and same-chain system transport controls", { tags: ["nightly"] }, () => {
     for (const coin of TRACKED_SOURCE_COINS) {
       if (coin.mintAuthority) {
         expect(MintAuthorityProfileSchema.safeParse(coin.mintAuthority).success, `${coin.id} mint`).toBe(true);

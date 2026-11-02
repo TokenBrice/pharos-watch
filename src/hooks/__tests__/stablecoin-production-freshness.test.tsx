@@ -93,7 +93,7 @@ describe("production stablecoin freshness", () => {
   });
 
 
-  it.each(["homepage", "depeg", "safety-scores", "yield"])("keeps the shared real stablecoins producer fresh on %s", async () => {
+  const expectSharedStablecoinsProducerFresh = async () => {
     const now = captured.stablecoins.capturedAtMs;
     vi.spyOn(Date, "now").mockReturnValue(now);
     vi.stubGlobal("fetch", vi.fn(async () => response("stablecoins")));
@@ -110,5 +110,9 @@ describe("production stablecoin freshness", () => {
     } finally {
       client.clear();
     }
-  });
+  };
+  // One surface keeps the stablecoins producer interval on the PR tier.
+  it("keeps the shared real stablecoins producer fresh on homepage", expectSharedStablecoinsProducerFresh);
+  // Nightly tier: the same replay for the other surfaces sharing the producer.
+  it.each(["depeg", "safety-scores", "yield"])("keeps the shared real stablecoins producer fresh on %s", { tags: ["nightly"] }, expectSharedStablecoinsProducerFresh);
 });

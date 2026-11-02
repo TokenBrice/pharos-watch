@@ -65,7 +65,50 @@ function state(overrides: Partial<IcpGldtState> = {}): IcpGldtState {
 }
 
 describe("ICP wire codecs", () => {
-  it("rejects malformed CBOR under an external process deadline and preserves boundary fallback", async () => {
+  it("rejects malformed CBOR and preserves boundary fallback in-process", async () => {
+    // The bounded input list is the PR-tier proof of the rejection/fallback
+    // branch; the deep-nesting vector and the external kill deadline stay in
+    // the nightly child-process case below, where a decoder hang cannot wedge
+    // a PR worker.
+    const malformed = [
+      "", "5f", "5f58", "5f5801", "5f4100", "5f6100ff", "5f5fff",
+      "58", "5900", "5a000000", "5bffffffffffffffff", "5b0000000000000002ff",
+      "7bffffffffffffffff", "9bffffffffffffffff", "bbffffffffffffffff",
+      "9f", "bf6161", "81", "a100",
+    ];
+    const options = {
+      canisterId: SWAP, methodName: "get_swap_configs",
+      arg: new Uint8Array(), signal: new AbortController().signal,
+    };
+    try {
+      for (const hex of malformed) {
+        let calls = 0;
+        vi.stubGlobal("fetch", async () => {
+          calls++;
+          return new Response(Buffer.from(hex, "hex"));
+        });
+        await expect(queryIcpCanister(options), hex).rejects.toThrow(/icp:/);
+        // The query boundary is attempted once and retried once, never looped.
+        expect(calls, hex).toBe(2);
+      }
+      const valid = Buffer.from("a266737461747573677265706c696564657265706c79a1636172674144", "hex");
+      let fallbackCalls = 0;
+      vi.stubGlobal("fetch", async () => new Response(++fallbackCalls === 1 ? Buffer.from("5f", "hex") : valid));
+      expect(Array.from((await queryIcpCanister(options)).reply ?? [])).toEqual([68]);
+      expect(fallbackCalls).toBe(2);
+      // Indefinite maps and chunked byte strings remain valid envelopes.
+      vi.stubGlobal("fetch", async () => new Response(Buffer.from(
+        "bf66737461747573677265706c696564657265706c79bf636172675f4144ffffff", "hex")));
+      expect(Array.from((await queryIcpCanister(options)).reply ?? [])).toEqual([68]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // Nightly tier: a node+tsx child process (~0.7 s startup) whose only unique
+  // subject is an external kill deadline for a synchronous decoder hang. PR
+  // coverage retained by the in-process rejection/fallback case above.
+  it("rejects malformed CBOR under an external process deadline and preserves boundary fallback", { tags: ["nightly"], timeout: 15_000 }, async () => {
     // A synchronous decoder hang cannot be interrupted by a Vitest/AbortSignal timer
     // in that same process. The parent owns this child's kill deadline.
     const source = new URL("../icp.ts", import.meta.url).href;
@@ -113,7 +156,7 @@ describe("ICP wire codecs", () => {
       ["--import", "tsx", "--input-type=module", "--eval", script],
       { timeout: 10_000, killSignal: "SIGKILL", cwd: fileURLToPath(new URL("../../../../../", import.meta.url).href) });
     expect(JSON.parse(stdout)).toEqual({ rejected: 20, fallbackCalls: 2, abortTimerRan: true });
-  }, 15_000);
+  });
 
   it.each([1, 2, 4, 8])("decodes signed %i-byte boundaries without changing unsigned values", (width) => {
     const index = [1, 2, 4, 8].indexOf(width);

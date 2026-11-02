@@ -814,6 +814,20 @@ describe("CI workflow scope", () => {
     expect(red.env?.TEST_PLAN_PARITY_RESULT).toBe("${{ needs.test-plan-parity.result }}");
   });
 
+  it("keeps a nightly shuffled isolated run of the classified worker-shared files", () => {
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const job = nightly.jobs["worker-shared-stability"];
+    expect(job.needs).toBeUndefined();
+    expect(job["timeout-minutes"]).toBe(20);
+    expect(job.steps?.filter((step) => step.run).map((step) => step.run)).toEqual([
+      "npm test -- --project worker-shared --sequence.shuffle --sequence.seed=${{ github.run_id }}",
+      "npm test -- --project worker-shared --isolate",
+    ]);
+    const red = nightly.jobs["nightly-red"];
+    expect(red.needs).toContain("worker-shared-stability");
+    expect(red.env?.WORKER_SHARED_STABILITY_RESULT).toBe("${{ needs.worker-shared-stability.result }}");
+  });
+
   it("publishes the weekly CI report from a main-only workflow-fed job", () => {
     const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
     const job = weekly.jobs["ci-report"];
@@ -878,6 +892,7 @@ describe("CI workflow scope", () => {
       WEB_VITALS_RESULT: "skipped",
       TEST_TIMINGS_RESULT: "success",
       TEST_PLAN_PARITY_RESULT: "success",
+      WORKER_SHARED_STABILITY_RESULT: "success",
     };
     const run = (overrides: Partial<NodeJS.ProcessEnv>): string => {
       writeFileSync(log, "");

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
-import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
+import { createSafetyScoreV9FullRegistryInput, FULL_REGISTRY_CLOCK_SEC } from "./fixtures/safety-score-v9-full-registry-input";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { canonicalV9RouteKey } from "@shared/lib/safety-score-v9/facts";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
@@ -501,9 +501,14 @@ describe("Safety Score V9 publication runner", () => {
           })]));
         throw new evaluateSet.V9AssetEvaluationError("brz-transfero", { issues: [{ path: ["structuralSignals"] }] });
       });
-    const input = structuredClone(fullRegistryInput);
+    // The two named assets plus one healthy peer are all this case needs: the
+    // retry re-evaluates the whole owned input, so a full-registry snapshot
+    // would spend ~30 s proving asset-local quarantine it already proves on a
+    // cohort. Full-registry publication stays covered by the V9 resource case.
+    const input = createSafetyScoreV9FullRegistryInput(
+      FULL_REGISTRY_CLOCK_SEC, ["audd-novatti", "brz-transfero", "usdc-circle"]);
     // This logic test does not exercise the wall-clock publication window, so
-    // isolate the clock and timeout signal from full-registry recompilation time.
+    // isolate the clock and timeout signal from cohort recompilation time.
     const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now());
     const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => new AbortController().signal);
     try {

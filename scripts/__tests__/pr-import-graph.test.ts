@@ -14,6 +14,7 @@ import {
 import { cachedGlobMatcher, compileGlobMatcher } from "../lib/glob-matcher.mts";
 import { EXECUTABLE_TEST_PROJECTS } from "../lib/critical-ownership.mts";
 import { VITEST_SETUP_FILES } from "../lib/vitest-setup-files.mts";
+import { isNightlyTestFile } from "../lib/nightly-test-tier.mts";
 import { compareCommitSelections, incomparableCommit, summarizeParityFailures } from "../ci/check-test-plan-parity";
 import { withTempRepo } from "./helpers/test-state";
 
@@ -217,8 +218,10 @@ describe("static import-graph PR test selection", () => {
     }
     // Literal entries (the isolated/threaded/shared file lists) stay in the
     // universe and match nothing else, without 250 full-universe passes.
+    // Nightly-tier files run in the execution projects but sit outside the
+    // planner universe, so a literal may name one.
     for (const pattern of patterns.filter((value) => !/[*?[{]/.test(value))) {
-      expect(universe.has(pattern), pattern).toBe(true);
+      expect(universe.has(pattern) || (isNightlyTestFile(pattern) && candidates.includes(pattern)), pattern).toBe(true);
       const matcher = compileGlobMatcher(pattern);
       for (const file of [pattern, pattern.replace(/\.(test|spec)\./, ".$1-x."), `${pattern}.bak`, `nested/${pattern}`]) {
         expect(matcher(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));

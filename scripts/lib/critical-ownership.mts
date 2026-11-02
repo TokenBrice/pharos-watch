@@ -2,7 +2,7 @@ import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 
-import { collectSourceFilesUnderRoot } from "./source-files.mts";
+import { collectSourceFilesUnderRoot, collectSourceFilesUnderRoots } from "./source-files.mts";
 import { cachedGlobMatcher } from "./glob-matcher.mts";
 import { resolveLocalPackageImport } from "./package-imports.mts";
 
@@ -42,12 +42,13 @@ export const THREADED_WORKER_TESTS = [
   "worker/src/lib/__tests__/safety-score-v9-native-input-pipeline.test.ts",
 ];
 
-// Phased non-isolated worker pilot: reserve-adapter suites that own no
-// per-file module state run in the shared `worker-shared` project. Everything
-// else stays in the isolated `worker` project, so the classifier is
-// deliberately fail-closed: an unknown input (unreadable file, new mock or
-// global-stub pattern) runs isolated.
-const WORKER_SHARED_TEST_ROOT = "worker/src/cron/reserve-adapters";
+// Phased non-isolated worker project: `worker/src/{cron,lib}` suites that own
+// no per-file module state run in the shared `worker-shared` project (the
+// reserve-adapter pilot directory was the first tranche). Everything else stays
+// in the isolated `worker` project, so the classifier is deliberately
+// fail-closed: an unknown input (unreadable file, new mock or global-stub
+// pattern) runs isolated.
+const WORKER_SHARED_TEST_ROOTS = ["worker/src/cron", "worker/src/lib"] as const;
 // Every `process.env` write form: plain/compound assignment on the object or a
 // key, increment/decrement, `delete`, and an in-place `Object.assign`.
 const PROCESS_ENV_WRITE_PATTERNS = [
@@ -109,7 +110,7 @@ const WORKER_SHARED_RESET_HOOKS: Readonly<Record<string, string>> = {
 };
 const WORKER_SHARED_ISOLATION_SETUP_PATH = "worker/src/test-helpers/setup-shared-isolation.ts";
 
-/** True when a reserve-adapter test source can share one module cache. */
+/** True when a `worker/src/{cron,lib}` test source can share one module cache. */
 export function isWorkerSharedTestEligible(source: string): boolean {
   if (WORKER_SHARED_INELIGIBLE_PATTERNS.some((pattern) => pattern.test(source))) return false;
   if (/vi\.stubGlobal\s*\(/.test(source) && !/vi\.unstubAllGlobals\s*\(/.test(source)) return false;
@@ -128,17 +129,21 @@ export const WORKER_SHARED_ISOLATED_OVERRIDES: Readonly<Record<string, string>> 
     "Asserts exact fetch call counts; a preceding shared file's pending retry can consume its scripted mock.",
   "worker/src/cron/reserve-adapters/__tests__/usdd-data-platform.test.ts":
     "Asserts a real 5 s abort wait completes within 9 s; CPU contention under default shared-process parallelism made that timing assertion flaky.",
+  "worker/src/lib/__tests__/safety-score-v9-extension-reserves.test.ts":
+    "Its executed cases leave module-singleton state that suppresses the route-compilation spy in safety-score-v9-fact-set-exit-coverage.test.ts > \"resolves one policy per fixed input without leaking another capture's clock\"; an import-only run of this file leaves that suite green.",
+  "worker/src/lib/__tests__/safety-score-v9-fact-set-exit-coverage.test.ts":
+    "Asserts exact route-compiler spy call counts; once any earlier shared file has compiled a route the compiler's module-level caches are warm, so the spy records no call. Passes as the only file in its fork.",
 };
 
-/** Classify the current reserve-adapter candidate files once per process. */
+/** Classify the current `worker/src/{cron,lib}` candidate files once per process. */
 export function collectWorkerSharedTestFiles(cwd = process.cwd()): string[] {
-  return collectSourceFilesUnderRoot(WORKER_SHARED_TEST_ROOT, cwd, {
+  return collectSourceFilesUnderRoots(WORKER_SHARED_TEST_ROOTS, cwd, {
     extensions: TEST_FILE_EXTENSIONS,
     excludedDirs: ["node_modules", "dist"],
     skipDotEntries: true,
   })
-    .map((file) => normalizeOwnershipPath(relative(cwd, file)))
     .filter((file) => file.split("/").includes("__tests__") && TEST_FILE_PATTERN.test(file))
+    .filter((file) => !THREADED_WORKER_TESTS.includes(file))
     .filter((file) => !Object.hasOwn(WORKER_SHARED_ISOLATED_OVERRIDES, file))
     .filter((file) => {
       try {
@@ -345,6 +350,13 @@ export function findUnresetMutableSupportImports(
     try {
       moduleSource = fsImpl.readFileSync(resolve(cwd, resolved), "utf8");
     } catch {
+      unreset.add(resolved);
+      continue;
+    }
+    // A support module that registers mocks or writes process.env at module
+    // scope keeps that registration in the shared module cache for every later
+    // file in the process, so its importers stay isolated.
+    if (WORKER_SHARED_INELIGIBLE_PATTERNS.some((pattern) => pattern.test(moduleSource))) {
       unreset.add(resolved);
       continue;
     }
