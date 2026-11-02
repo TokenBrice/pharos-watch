@@ -33,6 +33,7 @@ import {
   diagnoseSafetyScoreV9NullSupplyReviewOutcome,
   type SafetyScoreV9NullSupplyReviewOutcome,
 } from "./extension-supply";
+import type { SafetyScoreV9CompilerInput } from "./native-input";
 
 export function deriveSafetyScoreV9PegScore(
   peg: { pegScore: number | null; activeDepeg: boolean; lastEventAt: number | null },
@@ -46,6 +47,25 @@ export function deriveSafetyScoreV9PegScore(
     windowSec: V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegHistoryWindowSec,
     quietHistoryFloor: V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegQuietHistoryFloor,
   });
+}
+
+/**
+ * Admits the optional directional peg input once per compilation.
+ *
+ * The captured `premiumWeight` is the policy weight the producer scored with; a
+ * capture bound to another weight would silently mix premium discount rates, so
+ * the mismatch fails the compilation instead of the individual assets.
+ */
+export function assertSafetyScoreV9DirectionalPegAdmission(
+  directionalPeg: SafetyScoreV9CompilerInput["safetyScoreV9DirectionalPeg"],
+): void {
+  if (directionalPeg === undefined) return;
+  const policyPremiumWeight = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegPremiumWeight;
+  if (directionalPeg.premiumWeight !== policyPremiumWeight) {
+    throw new Error(
+      `Directional peg input premium weight ${directionalPeg.premiumWeight} does not match policy pegPremiumWeight ${policyPremiumWeight}`,
+    );
+  }
 }
 
 function nullSupplyReviewOutcome(
@@ -179,8 +199,51 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
   const pegKey = reference
     ? `peg:${reference.referenceKind}:${reference.referenceKey}`
     : `peg:unresolved:${context.asset.assetId}`;
+  const directionalPeg = context.fixedInput.safetyScoreV9DirectionalPeg;
   const activeDepegAssetId = configuredReferenceId ?? context.asset.assetId;
-  const activeDepegBps = context.fixedInput.activeDepegPeakBpsById[activeDepegAssetId] ?? null;
+  // The summary's any-direction open-event peak stays the consistency witness;
+  // a directional capture carries the discount-only peak beside it, and that is
+  // the one the active-depeg caps may read. Legacy captures use one map for both.
+  const anyOpenPeakBps = context.fixedInput.activeDepegPeakBpsById[activeDepegAssetId] ?? null;
+  const directionalDiscountPeakById = directionalPeg?.activeDiscountPeakBpsById;
+  const hasDirectionalDiscountEntry =
+    directionalDiscountPeakById !== undefined &&
+    Object.prototype.hasOwnProperty.call(directionalDiscountPeakById, activeDepegAssetId);
+  // R1/R2: a witness peak with no directional entry is a producer inconsistency,
+  // never "no active discount". `null` is the captured "open premiums only".
+  const directionalDiscountEntryMissing =
+    directionalPeg !== undefined && anyOpenPeakBps !== null && !hasDirectionalDiscountEntry;
+  const activeDepegBps = directionalPeg === undefined
+    ? anyOpenPeakBps
+    : hasDirectionalDiscountEntry
+      ? directionalDiscountPeakById![activeDepegAssetId] ?? null
+      : null;
+  if (directionalDiscountEntryMissing) {
+    // Fail closed for the ordinary asset and for every configured-reference
+    // child: an unverifiable discount state is neither a cap nor a clean peg.
+    return {
+      status: missingLocalFact(context, {
+        componentKey: "peg",
+        reasonCode: "missing-peg-input",
+        ownerDomain: "peg",
+        responsibility: "producer-failed",
+        policyRuleId: "v9.peg.current",
+        message:
+          `The directional peg input carries no discount entry for ${activeDepegAssetId} despite an open-event peak of ${anyOpenPeakBps} bps.`,
+      }).status,
+      pegKey,
+      sourceGenerationId: source.generationId,
+      referenceKind: reference?.referenceKind ?? "other",
+      referenceKey: reference?.referenceKey ?? `unresolved:${context.asset.assetId}`,
+      methodologyVersion: context.fixedInput.methodologyVersion,
+      pegScore: null,
+      currentDeviationBps: null,
+      activeDepeg: null,
+      activeDepegBps: null,
+      trackingSpanDays: null,
+      failureDomains: reference?.failureDomains ?? [],
+    };
+  }
   if (reference?.referenceKind === "nav" && configuredReferenceId !== null && activeDepegBps !== null) {
     const evidenceId = addEvidence(
       context,
@@ -288,8 +351,31 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     ),
   );
   const evidence = context.evidence.get(evidenceId)!;
-  const activeDepeg = configuredReferenceId === null ? peg.activeDepeg : activeDepegBps !== null;
-  const pegScore = deriveSafetyScoreV9PegScore(peg, context.fixedInput.clockSec);
+  const activeDepeg =
+    directionalPeg === undefined && configuredReferenceId === null
+      ? peg.activeDepeg
+      : activeDepegBps !== null;
+  // A directional capture carries the premium-weighted score for every captured
+  // peg row. An absent entry is unavailable, never a silent fallback to the
+  // summary's unweighted score (R1/R2).
+  const capturedDirectionalPegScore =
+    directionalPeg !== undefined && Object.prototype.hasOwnProperty.call(
+      directionalPeg.pegScoreById, context.asset.assetId,
+    )
+      ? directionalPeg.pegScoreById[context.asset.assetId]
+      : undefined;
+  const pegScore = directionalPeg === undefined
+    ? deriveSafetyScoreV9PegScore(peg, context.fixedInput.clockSec)
+    : capturedDirectionalPegScore === undefined
+      ? null
+      : deriveSafetyScoreV9PegScore(
+          {
+            pegScore: capturedDirectionalPegScore,
+            activeDepeg: peg.activeDepeg,
+            lastEventAt: peg.lastEventAt,
+          },
+          context.fixedInput.clockSec,
+        );
   const quietPegObservation =
     reference !== null &&
     !unresolvedReference &&
@@ -299,12 +385,24 @@ export function buildPeg(context: AssetBuildContext): V9AssetFactsV2["peg"] {
     activeDepeg === false &&
     peg.eventCount === 0 &&
     peg.worstDeviationBps === null;
+  // A directional capture must still reconcile its two open-event views: the
+  // summary's active flag requires the any-direction witness, a captured
+  // discount requires the summary to report an open event, and the asset needs
+  // its own directional score row. Configured-reference children inherit the
+  // parent's discount instead, which the exact key set above already witnesses.
+  const directionalConsistencyHolds =
+    directionalPeg === undefined ||
+    configuredReferenceId !== null ||
+    ((!peg.activeDepeg || anyOpenPeakBps !== null) &&
+      (activeDepegBps === null || peg.activeDepeg) &&
+      capturedDirectionalPegScore !== undefined);
   const complete =
     reference !== null &&
     !unresolvedReference &&
     pegScore !== null &&
     (peg.currentDeviationBps !== null || quietPegObservation) &&
-    (!activeDepeg || activeDepegBps !== null);
+    (!activeDepeg || activeDepegBps !== null) &&
+    directionalConsistencyHolds;
   const hasPartialActiveDepegEvidence =
     reference !== null &&
     !unresolvedReference &&

@@ -464,6 +464,7 @@ const V9FormulaPolicySchema = z
       "active-control-incident": z.object({ critical: ScoreSchema }).strict(),
     }).strict(),
     pegExponent: z.number().finite().min(0).max(1),
+    pegPremiumWeight: z.number().finite().min(0).max(1),
     pegHistoryWindowSec: z.number().int().positive(),
     pegQuietHistoryFloor: ScoreSchema,
     activeDepegCaps: z
