@@ -171,6 +171,19 @@ export function isPoolChallengeEligibleConsensus(sources: string[]): boolean {
   );
 }
 
+/**
+ * Whether a two-source agreeing set is entirely list-style aggregators. Such a
+ * pair is not independent corroboration and is published as `single-source`,
+ * so callers deciding whether fresh legs agree must apply the same rule.
+ */
+export function isListAggregatorOnlyPair(sources: readonly string[]): boolean {
+  const sourceParts = normalizePricingSourceKeys(sources);
+  return (
+    sourceParts.length === 2 &&
+    sourceParts.every((source) => getPricingSourceRegistryEntry(source)?.isListAggregator === true)
+  );
+}
+
 export function isReplaySafePriceSource(source: string | null | undefined): boolean {
   if (!source) return false;
   const sourceParts = normalizePricingSourceKeys(source);
