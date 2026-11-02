@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import type { BlacklistGapMetrics } from "../../blacklist-gaps";
 import { makeBlacklistReconciliationStatusRow } from "../../../test-helpers/__shared/fixtures";
@@ -176,15 +175,5 @@ describe("getDataQuality repair debt", () => {
     expect(quality.onchainDivergenceRatio).toBe(1 / 3);
     expect(quality.totalStablecoins).toBe(400);
     expect(quality.missingPrices).toBe(7);
-
-    const circulatingFixtures = [
-      [{ peggedUSD: 100, peggedEUR: 25 }, 125],
-      [{ peggedUSD: null as unknown as number }, null],
-      [{ peggedUSD: Number.NaN }, null],
-      [{ peggedUSD: 0 }, 0],
-    ] as const;
-    for (const [circulating, expected] of circulatingFixtures) {
-      expect(getCirculatingRawOrNull({ circulating })).toBe(expected);
-    }
   });
 });

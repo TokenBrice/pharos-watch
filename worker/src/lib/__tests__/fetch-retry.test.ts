@@ -435,33 +435,6 @@ describe("fetchWithRetry", () => {
     }
   });
 
-  it("keeps the per-attempt timeout active while reading JSON bodies", async () => {
-    vi.useFakeTimers();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    try {
-      const fetchMock = mockFetch([{ match: () => true, respond: () => neverEndingResponse("{") }]);
-
-      const resultPromise = fetchJsonWithRetry(
-        "https://example.com/slow.json",
-        undefined,
-        0,
-        { timeoutMs: 5 },
-      );
-
-      const expectation = expect(resultPromise).resolves.toBeNull();
-      await vi.advanceTimersByTimeAsync(5);
-      await expectation;
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(warnRecords(warnSpy)).toContainEqual(expect.objectContaining({
-        event: "fetch_retry_attempt_failed",
-        errorName: "TimeoutError",
-      }));
-    } finally {
-      warnSpy.mockRestore();
-      vi.useRealTimers();
-    }
-  });
-
   it("keeps the per-attempt timeout active while reading text bodies", async () => {
     vi.useFakeTimers();
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);

@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1Strict } from "@shared/test-utils/mock-d1";
 import { getRedemptionBackstopConfig } from "@shared/lib/redemption-backstops";
 import * as redemptionBackstops from "@shared/lib/redemption-backstops";
@@ -32,6 +32,10 @@ import type { ExitExecutionModelReview } from "@shared/types/exit-route";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { buildRedemptionBackstopsSnapshot, loadRedemptionBackstopSnapshot, upsertRedemptionBackstopSnapshots } from "../redemption-backstops-store";
+import { buildRedemptionBackstopEntry as buildEntryForMergedCases } from "../redemption-backstop/sources";
+import { getRedemptionBackstopConfig as getRedemptionBackstopConfigForCostTests, type RedemptionBackstopConfig, type RedemptionCostModel } from "@shared/lib/redemption-backstops";
+import { mergeRedemptionRouteStatus } from "../redemption-backstop/route-status";
+import { resolveBoundedFeeScore, resolveCostScenarioScores, resolveRedemptionStaticFields } from "../redemption-backstop/cost";
 
 const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock, observeExecutableRedemptionRouteMock } = vi.hoisted(() => ({
   getReserveSyncStateMock: vi.fn(),
@@ -2194,5 +2198,311 @@ describe("buildRedemptionBackstopEntry", () => {
     delete acceptedLegacy.capacityProfile?.exitRouteObservations;
     delete baselineLegacy.capacityProfile?.exitRouteObservations;
     expect(acceptedLegacy).toEqual(baselineLegacy);
+  });
+});
+const staticOpen = {
+  routeStatus: "open" as const,
+  routeStatusSource: "static-config" as const,
+};
+
+describe("mergeRedemptionRouteStatus", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("constructs the merged entry from supplied metadata without external I/O", async () => {
+    const fetchMock = vi.fn(() => { throw new Error("Unexpected fetch"); });
+    vi.stubGlobal("fetch", fetchMock);
+    const db = mockD1Strict([]);
+    const now = 1_700_000_000;
+    const entry = await buildEntryForMergedCases(db, "zchf-frankencoin", route({
+      capacityModel: { kind: "reserve-sync-metadata" },
+    }), 50_000_000, null, now, {
+      reserveSnapshotMetadata: liveSnapshot("zchf-frankencoin", {
+        redemption: {
+          capacityUsd: 5_000_000,
+          capacityKind: "live-direct",
+          freshnessKind: "same-run-onchain",
+          sourceTimestamp: now - 120,
+          routeStatus: "paused",
+          routeStatusSource: "onchain",
+        },
+      }, { fetchedAt: now - 120 }),
+    });
+    expect(entry).toMatchObject({
+      routeStatus: "paused", routeStatusSource: "onchain", resolutionState: "impaired", score: null,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("falls back to static status when no live route status is present", () => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: {
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
+      },
+      allowSevereMarketOpenException: false,
+    });
+
+    expect(result.routeStatus).toBe("unknown");
+    expect(result.routeStatusSource).toBe("static-config");
+    expect(result.impaired).toBe(false);
+    expect(result.notes).toEqual([]);
+  });
+
+  it.each([null, 100_000_000])("withholds the reviewed ordinary yUSD suspension with supply %s and no reserve read", async (supplyUsd) => {
+    const db = mockD1Strict([]);
+    const config = getRedemptionBackstopConfig("yusd-yieldfi")!;
+    const entry = await buildEntryForMergedCases(
+      db, "yusd-yieldfi", config, supplyUsd, null, Date.UTC(2026, 9, 12) / 1_000,
+      { reserveSnapshotMetadata: null, routeAvailability: severeMarketEvidence({ routeStatus: "unknown" }) },
+    );
+    expect(entry).toMatchObject({
+      routeStatus: "suspended", routeStatusSource: "operator-notice",
+      routeStatusReviewedAt: "2026-10-11", resolutionState: "impaired",
+      score: null, capacityScore: null, immediateCapacityUsd: null,
+      capsApplied: ["reviewed-route-suspension"],
+    });
+    if (supplyUsd == null) {
+      expect(entry.capacityProfile).toBeUndefined();
+    } else {
+      expect(entry.capacityProfile).toMatchObject({ immediateUsd: null, eventualUsd: null, scoringUsd: null });
+    }
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it.each([
+    { supplyUsd: null, marketStatus: "unknown" as const },
+    { supplyUsd: 1_000_000, marketStatus: "degraded" as const },
+  ])("withholds EURR's suspended issuer channel with $marketStatus market evidence", async ({ supplyUsd, marketStatus }) => {
+    const db = mockD1Strict([]);
+    const config = getRedemptionBackstopConfig("eurr-stablr")!;
+    const entry = await buildEntryForMergedCases(
+      db, "eurr-stablr", config, supplyUsd, null, Date.UTC(2026, 9, 8) / 1_000,
+      { reserveSnapshotMetadata: null, routeAvailability: severeMarketEvidence({ routeStatus: marketStatus }) },
+    );
+    expect(entry).toMatchObject({
+      routeStatus: "suspended",
+      routeStatusSource: "operator-notice",
+      routeStatusReviewedAt: "2026-10-07",
+      resolutionState: "impaired",
+      score: null,
+      capacityScore: null,
+      immediateCapacityUsd: null,
+      capsApplied: ["reviewed-route-suspension"],
+    });
+    if (supplyUsd == null) {
+      expect(entry.capacityProfile).toBeUndefined();
+    } else {
+      expect(entry.capacityProfile).toMatchObject({ immediateUsd: null, eventualUsd: null, scoringUsd: null });
+    }
+    expect(db.getHistory()).toEqual([]);
+  });
+
+  it("impairs live-open evidence during severe market impairment when the route is not strong live-direct", () => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      liveEvidence: {
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+      },
+      severeMarketImplied: severeMarketEvidence(),
+      allowSevereMarketOpenException: false,
+    });
+
+    expect(result.routeStatus).toBe("degraded");
+    expect(result.routeStatusSource).toBe("market-implied");
+    expect(result.impaired).toBe(true);
+    expect(result.capsApplied).toEqual(["market-implied-depeg-impairment"]);
+  });
+
+  it("honors a producer-approved strong live-direct exception", () => {
+    // The entry builder sets this flag only when the final live-direct capacity
+    // state also carries explicit live-open status.
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      severeMarketImplied: severeMarketEvidence(),
+      allowSevereMarketOpenException: true,
+    });
+
+    expect(result.routeStatus).toBe("open");
+    expect(result.routeStatusSource).toBe("static-config");
+    expect(result.impaired).toBe(false);
+    expect(result.capsApplied).toEqual([]);
+  });
+
+  it.each([1, undefined])("does not exempt strong live-direct routes from output dependency impairment (share %s)", (share) => {
+    const result = mergeRedemptionRouteStatus({
+      staticEvidence: staticOpen,
+      liveEvidence: {
+        routeStatus: "open",
+        routeStatusSource: "onchain",
+      },
+      severeMarketImplied: severeMarketEvidence({
+        routeStatusReason: "Output asset impairment",
+        outputImpairedDependencyId: "usdc-circle",
+        ...(share === undefined ? {} : { outputImpairedShare: share }),
+      }),
+      allowSevereMarketOpenException: true,
+    });
+
+    expect(result.routeStatus).toBe("degraded");
+    expect(result.routeStatusSource).toBe("market-implied");
+    expect(result.impaired).toBe(true);
+    expect(result.capsApplied).toEqual(["market-implied-depeg-impairment"]);
+  });
+});
+
+describe("resolveBoundedFeeScore", () => {
+  it.each([
+    [0, 100], [10, 100], [11, 80], [50, 80],
+    [51, 60], [100, 60], [101, 40], [500, 40],
+  ])("scores %s bps as %s", (feeBps, score) => {
+    expect(resolveBoundedFeeScore(feeBps)).toBe(score);
+  });
+});
+
+describe("resolveCostScenarioScores", () => {
+  it("makes high fixed network costs expensive for retail users", () => {
+    const scores = resolveCostScenarioScores(
+      {
+        kind: "fee-bps",
+        feeBps: 0,
+        gasOrBridgeCostUsd: 25,
+      },
+      0,
+    );
+
+    expect(scores?.retail).toBe(40);
+    expect(scores?.activeUser).toBe(80);
+    expect(scores?.institutional).toBe(100);
+  });
+
+  it("uses documented fee ranges for scenario scoring", () => {
+    const scores = resolveCostScenarioScores(
+      {
+        kind: "dynamic-or-unclear",
+        confidence: "formula",
+        feeBpsMin: 5,
+        feeBpsMax: 75,
+        feeDescription: "5-75 bps depending on utilization",
+      },
+      null,
+    );
+
+    expect(scores?.activeUser).toBe(60);
+    expect(scores?.institutional).toBe(60);
+  });
+});
+
+describe("fractional live fee precision", () => {
+  const scores = { accessScore: 100, settlementScore: 100, executionCertaintyScore: 100, outputAssetQualityScore: 100 };
+  const config = getRedemptionBackstopConfigForCostTests("rusd-reservoir")!;
+
+  describe.each([
+    { kind: "dynamic-or-unclear", confidence: "formula" },
+    { kind: "fee-bps", feeBps: 0 },
+  ] satisfies RedemptionCostModel[])("$kind", (costModel) => {
+    it.each([0.4, 10, 10.49, 50.49, 100.49])("preserves admitted %s bps in component and scenario scores", (feeBps) => {
+      const now = 1_797_120_000;
+      const fields = resolveRedemptionStaticFields(
+        "rusd-reservoir", { ...config, costModel }, scores, null, now,
+        { ...readRedemptionBackstopLiveMetadata("rusd-reservoir", null, now), canUseFee: true, redemptionFeeBps: feeBps },
+      );
+      const score = resolveBoundedFeeScore(feeBps);
+      expect(fields.selectedLiveFee).toBe(true);
+      expect(fields.feeBps).toBe(feeBps);
+      expect(fields.costScore).toBe(score);
+      expect(fields.costScenarioScores).toEqual({ retail: score, activeUser: score, institutional: score });
+    });
+  });
+});
+
+describe("component cost unavailable reasons", () => {
+  const now = Date.UTC(2026, 6, 13) / 1_000;
+  const scores = { accessScore: 100, settlementScore: 100, executionCertaintyScore: 100, outputAssetQualityScore: 100 };
+  const fiatReferences = {
+    clockSec: now,
+    pegDataById: {
+      captured: { pegCurrency: "EUR", pegReference: { valueUsd: 1.25, source: "fx" as const, contributorCount: 0, asOf: now } },
+    },
+  };
+  const baseConfig: RedemptionBackstopConfig = {
+    routeFamily: "offchain-issuer", accessModel: "issuer-api", settlementModel: "atomic",
+    executionModel: "rules-based-nav", outputAssetType: "stable-single",
+    capacityModel: { kind: "fixed-usd", amountUsd: 10_000_000, confidence: "documented-bound" },
+    costModel: { kind: "fee-bps", feeBps: 0 },
+    docs: [{ label: "Synthetic terms", url: "https://example.com/terms", supports: ["fees"] }],
+    reviewedAt: "2026-07-01",
+  };
+
+  it.each([
+    { currency: "USD", bounded: false, withFx: false, reason: "redemption-cost-percentage-ceiling-absent" },
+    { currency: "EUR", bounded: false, withFx: true, reason: "redemption-cost-percentage-ceiling-absent" },
+    { currency: "EUR", bounded: false, withFx: false, reason: "redemption-cost-percentage-ceiling-absent" },
+    { currency: "EUR", bounded: true, withFx: false, reason: "redemption-cost-fiat-reference-unavailable" },
+    { currency: "EUR", bounded: true, withFx: true, reason: null },
+    { currency: "USD", bounded: true, withFx: false, reason: null },
+  ])("names the cause for $currency, bounded=$bounded, withFx=$withFx", ({ currency, bounded, withFx, reason }) => {
+    const costModel: RedemptionCostModel = {
+      kind: "dynamic-or-unclear", confidence: "formula",
+      feeBpsMin: 5,
+      ...(bounded ? { feeBpsMax: 10 } : {}),
+      feeComponents: [{ currency, terms: { flatAmount: 1 } }],
+    };
+    const fields = resolveRedemptionStaticFields(
+      "synthetic-fiat-issuer", { ...baseConfig, costModel }, scores, null, now, undefined,
+      withFx ? fiatReferences : undefined,
+    );
+    expect(fields.feeBps).toBeNull();
+    expect(fields.notes).toEqual(reason ? [reason] : []);
+    if (reason) {
+      expect(fields.costScenarioScores).toBeUndefined();
+      expect(fields.costScore).toBe(40);
+    } else {
+      expect(fields.costScenarioScores).toEqual({ retail: 80, activeUser: 80, institutional: 80 });
+      expect(fields.costScore).toBe(80);
+    }
+  });
+});
+
+describe("USSD BrandedCustodian fee", () => {
+  it("publishes the owner-settable redeemFee() as an unquantified formula cost", () => {
+    const config = getRedemptionBackstopConfigForCostTests("ussd-sonic-labs")!;
+    const fields = resolveRedemptionStaticFields("ussd-sonic-labs", config, {
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      outputAssetQualityScore: 100,
+    });
+
+    expect(fields).toMatchObject({
+      feeBps: null,
+      feeConfidence: "formula",
+      feeModelKind: "formula",
+      costScore: 60,
+    });
+    expect(fields.costScenarioScores).toBeUndefined();
+  });
+});
+
+describe("V8 compatibility", () => {
+  it("does not apply V9-only USDT route terms to legacy cost scenarios", () => {
+    const config = getRedemptionBackstopConfigForCostTests("usdt-tether")!;
+    const fields = resolveRedemptionStaticFields("usdt-tether", config, {
+      accessScore: 100,
+      settlementScore: 100,
+      executionCertaintyScore: 100,
+      outputAssetQualityScore: 100,
+    });
+
+    expect(config.costModel).not.toHaveProperty("minFeeUsd");
+    expect(fields).toMatchObject({
+      costScore: 100,
+      feeBps: null,
+      costScenarioScores: {
+        retail: 100,
+        activeUser: 100,
+        institutional: 100,
+      },
+    });
   });
 });

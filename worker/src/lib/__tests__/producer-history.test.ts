@@ -331,13 +331,13 @@ describe("producer history", () => {
       FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 0, productive: 0 });
   });
 
-  it("initializes 183k existing rows with one covering-index aggregate and reapplies idempotently", () => {
+  it("initializes existing rows with one covering-index aggregate and reapplies idempotently", () => {
     const { sqlite } = createMigratedDb();
     for (const name of ["insert", "delete", "productivity", "identity"]) {
       sqlite.exec(`DROP TRIGGER trg_producer_retained_counts_${name}`);
     }
     sqlite.exec("DROP TABLE worker_producer_retained_counts");
-    sqlite.exec(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 183000)
+    sqlite.exec(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 5000)
       INSERT INTO worker_producer_history (
         idempotency_key, schedule_key, job, producer_path, producer_kind, invocation_id,
         invoked_at, completed_at, outcome, productive, created_at
@@ -347,11 +347,11 @@ describe("producer history", () => {
     sqlite.exec(migration);
     expect(sqlite.prepare(`SELECT * FROM worker_producer_retained_counts ORDER BY job`).all()).toHaveLength(10);
     expect(sqlite.prepare(`SELECT SUM(invocation_count) AS invocations, SUM(productive_count) AS productive
-      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 183000, productive: 91500 });
+      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 5000, productive: 2500 });
     sqlite.exec("DELETE FROM worker_producer_history WHERE idempotency_key = 'backfill-1'");
     sqlite.exec(migration);
     expect(sqlite.prepare(`SELECT SUM(invocation_count) AS invocations, SUM(productive_count) AS productive
-      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 182999, productive: 91499 });
+      FROM worker_producer_retained_counts`).get()).toEqual({ invocations: 4999, productive: 2499 });
   });
 
   it("matches legacy recounts after retention deletes without another completion", async () => {

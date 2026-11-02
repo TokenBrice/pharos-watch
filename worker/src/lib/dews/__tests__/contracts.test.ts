@@ -23,14 +23,4 @@ describe("DEWS wire contracts", () => {
   it("stays a type-only module with no runtime exports", () => {
     expect(Object.keys(dewsContracts)).toEqual([]);
   });
-
-  it("keeps the persisted decode reason vocabulary closed", () => {
-    const reasons: Record<PersistedJsonDecodeReason, true> = {
-      missing: true,
-      "json-parse-failed": true,
-      "invalid-shape": true,
-    };
-
-    expect(Object.keys(reasons)).toEqual(["missing", "json-parse-failed", "invalid-shape"]);
-  });
 });

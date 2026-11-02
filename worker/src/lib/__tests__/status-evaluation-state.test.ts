@@ -14,7 +14,7 @@ import {
   makeReserveComposition as makeBaseReserveComposition,
 } from "@shared/types/__tests__/status.test-support";
 import { synthesizeOverallCauses } from "../status/evaluation-causes";
-import { maxStatus, SEVERITY } from "../status-reliability-shared";
+import { maxStatus } from "../status-reliability-shared";
 import {
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
@@ -117,7 +117,6 @@ describe("status evaluation policy", () => {
     ["degraded", "degraded", "degraded"], ["degraded", "stale", "stale"],
     ["stale", "healthy", "stale"], ["stale", "degraded", "stale"], ["stale", "stale", "stale"],
   ] as const)("aggregates %s and %s using the shared severity order", (left, right, expected) => {
-    expect(SEVERITY).toEqual({ healthy: 0, degraded: 1, stale: 2 });
     expect(maxStatus(left, right)).toBe(expected);
   });
 

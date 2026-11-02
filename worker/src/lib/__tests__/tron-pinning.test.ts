@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import usdtTetherCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
+import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { IssuerNativeLiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 import { buildChainRpcs } from "../chain-registry";
 import {
@@ -11,6 +12,9 @@ import { pinnedBlockPlan } from "../../cron/reserve-adapters/evm-observation-pla
 import { fetchTronErc20TotalSupply } from "../../cron/reserve-adapters/onchain";
 import { aggregateScopedLiabilitySupply, evaluateLiabilityCoverage } from "../../cron/reserve-adapters/multichain-supply";
 import { runPinnedBlockCapture } from "../../cron/dex-liquidity/evm-capture-helpers";
+
+const USDT_COIN = usdtTetherCoin as unknown as ReserveAdapterCoin;
+const USDT_TRON_CONTRACT = USDT_COIN.contracts!.find((row) => row.chain === "tron")!;
 
 const ADDRESS = "0x0000000000000000000000000000000000000001";
 const HASH = `0x${"a".repeat(64)}` as const;
@@ -87,16 +91,14 @@ describe("TRON historical-state admission", () => {
   });
   it("withholds constant-contract supply when a TRON observedBlock is required", async () => {
     const fetcher = network();
-    const contract = ACTIVE_META_BY_ID.get("usdt-tether")!.contracts!.find(row => row.chain === "tron")!;
-    expect(await fetchTronErc20TotalSupply(contract.address, signal, { observedBlock: { chain: "tron", number: 100, timestamp: 1000 } })).toBeNull();
+    expect(await fetchTronErc20TotalSupply(USDT_TRON_CONTRACT.address, signal, { observedBlock: { chain: "tron", number: 100, timestamp: 1000 } })).toBeNull();
     expect(fetcher).not.toHaveBeenCalled();
   });
   it("measures latest TRON supply at completion, so an old reserve clock cannot hide skew", async () => {
     const start = 1791184000;
     vi.spyOn(Date, "now").mockReturnValue((start + 301) * 1000);
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({ result: { result: true }, constant_result: ["01"] })));
-    const meta = ACTIVE_META_BY_ID.get("usdt-tether")!;
-    const coin = { ...meta, contracts: meta.contracts!.filter(row => row.chain === "tron") };
+    const coin = { ...USDT_COIN, contracts: USDT_COIN.contracts!.filter(row => row.chain === "tron") };
     const scope: IssuerNativeLiabilityScope = { basis: "issuer-native-supply", reviewedAt: "2026-10-05", evidenceRef: "test census", included: [{ chain: "tron", reader: "tron-trc20" }], excluded: [], maxReserveSupplySkewSec: 300 };
     const supply = await aggregateScopedLiabilitySupply({ coin, scope, adapterKey: "test", signal, nowSec: start, readEvmToken: async () => ({ raw: null, decimals: null }) });
     expect(supply.contributions[0]?.observedAt).toBe(start + 301);
