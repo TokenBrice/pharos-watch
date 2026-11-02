@@ -80,6 +80,20 @@ describe("isolate-local state registry", () => {
         .map((stateName) => ({ sourcePath: "state.ts", stateName })));
   });
 
+  it.each([
+    ["a type annotation", "const responseCache: Record<string, number> = {};"],
+    ["an object type annotation", "const responseCache: { hit: number; miss: number } = {};"],
+    ["a comment before the literal", "const responseCache = /* seeded */ {};"],
+  ])("detects a stateful object literal declared with %s", (_label, declaration) => {
+    const root = roots.makeRoot();
+    roots.writeText(root, "state.ts", `
+      ${declaration}
+      function update() { responseCache["hit"] = true; }
+    `);
+    expect(findUnregisteredIsolateLocalState([], { root, sourceFiles: [resolve(root, "state.ts")] }))
+      .toEqual([{ sourcePath: "state.ts", stateName: "responseCache" }]);
+  });
+
   it("suppresses only the exact registered source path and state name", () => {
     const root = roots.makeRoot();
     for (const file of ["a.ts", "b.ts"]) roots.writeText(root, file, `

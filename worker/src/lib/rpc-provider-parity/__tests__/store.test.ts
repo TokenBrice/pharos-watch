@@ -570,13 +570,16 @@ describe("rpc parity store wire form", () => {
   });
 
   it("keeps maximum dual-check layouts under the row budget with an attributable retained suffix", () => {
+    // Sequential pruning re-encodes the whole row per drop; size the fixture
+    // just over the byte bound so only a couple of drops are needed.
+    const fixtureRuns = 82;
     let seed = 1_234_567;
     const latency = () => {
       seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0;
       return seed % 8_001;
     };
-    const runs = Array.from({ length: RPC_PARITY_RETENTION_RUNS }, (_, index) => fullParityRun(
-      NOW_SEC - (RPC_PARITY_RETENTION_RUNS - 1 - index) * 3600,
+    const runs = Array.from({ length: fixtureRuns }, (_, index) => fullParityRun(
+      NOW_SEC - (fixtureRuns - 1 - index) * 3600,
       (chainId, chainIndex) => ({
         commonBlock: 380_000_000 + index * 3600 + chainIndex * 1000,
         ...(chainId === "hyperevm" ? {
@@ -613,20 +616,24 @@ describe("rpc parity store wire form", () => {
     expect(row.chains).toHaveLength(RPC_PARITY_TARGETS.length);
     expect(encodeRpcParityStoreRow(row).length).toBeLessThan(RPC_PARITY_MAX_ROW_BYTES);
     const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(row));
-    expect(decoded?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
+    expect(decoded?.gateRuns).toHaveLength(runs.length);
     expect(decoded?.gateRuns?.[0][0]).toBe(runs[0].atSec);
     expect(row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
-    expect(row.runs.length).toBeLessThanOrEqual(RPC_PARITY_RETENTION_RUNS);
+    expect(row.runs.length).toBeLessThan(fixtureRuns);
     expect(decoded?.runs).toHaveLength(row.runs.length);
-    expect(decoded?.runs[row.runs.length - 1]?.samples[RPC_PARITY_TARGETS.length - 1].calls).toEqual(runs[167].samples[RPC_PARITY_TARGETS.length - 1].calls);
-    expect(decoded?.runs[0].atSec).toBe(runs[RPC_PARITY_RETENTION_RUNS - row.runs.length].atSec);
+    expect(decoded?.runs[row.runs.length - 1]?.samples[RPC_PARITY_TARGETS.length - 1].calls).toEqual(runs[fixtureRuns - 1].samples[RPC_PARITY_TARGETS.length - 1].calls);
+    expect(decoded?.runs[0].atSec).toBe(runs[fixtureRuns - row.runs.length].atSec);
   });
 
   it("prunes highly compressible full-width token proofs to the reader's raw ceiling", () => {
+    // Sequential pruning re-encodes the whole row per drop; size the fixture
+    // just over the raw ceiling instead of a full week so the prune starts from
+    // the budget violation it targets.
+    const fixtureRuns = 69;
     const supply = ((1n << 256n) - 1n).toString();
     const previousSupply = ((1n << 256n) - 2n).toString();
-    const runs = Array.from({ length: RPC_PARITY_RETENTION_RUNS }, (_, index) => fullParityRun(
-      NOW_SEC - (RPC_PARITY_RETENTION_RUNS - 1 - index) * 3600,
+    const runs = Array.from({ length: fixtureRuns }, (_, index) => fullParityRun(
+      NOW_SEC - (fixtureRuns - 1 - index) * 3600,
       (chainId, chainIndex) => {
         const token = paritySample(chainId, { dwellirHead: 380_000_000 + chainIndex * 1000 }).tokenFreshness!;
         if (token.reason === "bracket-too-wide") return {};
@@ -652,8 +659,8 @@ describe("rpc parity store wire form", () => {
     expect(gunzipSync(Buffer.from(envelope.payload, "base64")).byteLength).toBeLessThanOrEqual(RPC_PARITY_MAX_DECOMPRESSED_BYTES);
     expect(encoded.length).toBeLessThanOrEqual(RPC_PARITY_MAX_ROW_BYTES);
     expect(merged.droppedOldest).toBeGreaterThan(0);
-    expect(merged.row.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
-    expect(decodeRpcParityStoreRow(encoded)?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
+    expect(merged.row.gateRuns).toHaveLength(runs.length);
+    expect(decodeRpcParityStoreRow(encoded)?.gateRuns).toHaveLength(runs.length);
     expect(merged.row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
     expect(decodeRpcParityStoreRow(encoded)?.runs).toHaveLength(merged.row.runs.length);
     expect(merged.row.runs[0].atSec).toBe(runs[merged.droppedOldest].atSec);

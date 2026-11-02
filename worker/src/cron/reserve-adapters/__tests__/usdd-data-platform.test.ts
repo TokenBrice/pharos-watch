@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   adaptUsddLatestCollateral,
   matchUsddCollateralHistoryTimestamp,
   reconcileUsddItemizedCollateral,
+  USDD_HISTORY_TIMEOUT_MS,
 } from "../usdd-data-platform";
 import {
   expectValidAdapterOutput,
@@ -424,20 +425,34 @@ describe("USDD collateral-history freshness join", () => {
   it("falls back to unverified after one bounded hanging history attempt and still reads the PSM", async () => {
     const { spec } = tronNetwork();
     const reconciled = { ...latest, data: { ...latest.data } };
-    const { result, network } = await runAdapterWithFakeTimers(() => runUsdd({
-      network: { ...spec, json: {
-        ...spec.json,
-        [TRON_LATEST]: reconciled,
-        [TRON_HISTORY]: (request: Request) => new Promise((_resolve, reject) => {
-          request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true });
-        }),
-      } },
-      nowSec: NOW_SEC,
-    }));
-    expect(result.metadata?.sourceTimestamp).toBeUndefined();
-    expect(result.metadata?.freshnessMode).toBe("unverified");
-    expect(network.fetchSpy.getHistory().filter(request => request.url === TRON_HISTORY)).toHaveLength(1);
-    expect(result.metadata?.redemption).toMatchObject({ capacityKind: "live-direct" });
+    // The join is one short attempt: a budget near the adapter deadline would
+    // starve the PSM reads that follow it.
+    expect(USDD_HISTORY_TIMEOUT_MS).toBeLessThan(9_000);
+    vi.useFakeTimers();
+    try {
+      let settled = false;
+      const outcome = runUsdd({
+        network: { ...spec, json: {
+          ...spec.json,
+          [TRON_LATEST]: reconciled,
+          [TRON_HISTORY]: (request: Request) => new Promise((_resolve, reject) => {
+            request.signal.addEventListener("abort", () => reject(request.signal.reason), { once: true });
+          }),
+        } },
+        nowSec: NOW_SEC,
+      });
+      void outcome.then(() => { settled = true; }, () => { settled = true; });
+      await vi.advanceTimersByTimeAsync(USDD_HISTORY_TIMEOUT_MS - 1);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      const { result, network } = await outcome;
+      expect(result.metadata?.sourceTimestamp).toBeUndefined();
+      expect(result.metadata?.freshnessMode).toBe("unverified");
+      expect(network.fetchSpy.getHistory().filter(request => request.url === TRON_HISTORY)).toHaveLength(1);
+      expect(result.metadata?.redemption).toMatchObject({ capacityKind: "live-direct" });
+    } finally {
+      vi.useRealTimers();
+    }
   }, 15_000);
 
   it("keeps unverified freshness when collateral-history fails", async () => {

@@ -14,8 +14,13 @@ const STATE_DIRECTORIES = ["worker/src", "shared/lib", "functions"];
 const MUTABLE_CONSTRUCTOR = /new (?:Map|Set|WeakMap|WeakSet|IsolateLocalState)\b/;
 const RECORDER_FACTORY = /createBufferedAttributionRecorder\b/;
 const STATEFUL_CONTAINER_NAME = /(cache|counter|key|limiter|limit|state|promise|initialization|window|secret|queue|buffer|pending|inflight)/i;
-// Mirrors STATEFUL_CONTAINER_NAME as a module-level `name = {`/`name = [` line.
-const STATEFUL_LITERAL_ASSIGNMENT = /(cache|counter|key|limiter|limit|state|promise|initialization|window|secret|queue|buffer|pending|inflight)[\p{L}\p{N}_$]*\s*=\s*[\[{]/iu;
+// Any object/array literal assignment can initialise a stateful container, for
+// any declared name or type annotation. Comments may sit between `=` and the
+// literal, so a comment immediately before the literal is its own hint.
+// Parsing a few extra files is harmless; skipping one would silently drop the
+// declaration from the guard.
+const LITERAL_ASSIGNMENT = /=\s*[\[{]/;
+const COMMENTED_LITERAL = /(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*\n?)\s*[\[{]/;
 // Cheap superset of every candidate declaration below. Whole-tree parsing plus
 // parent-pointer construction is the expensive part of this guard; files
 // without a plausible declaration marker cannot produce a candidate.
@@ -23,7 +28,8 @@ const CANDIDATE_TEXT_HINTS = [
   MUTABLE_CONSTRUCTOR,
   RECORDER_FACTORY,
   /\blet\s/,
-  STATEFUL_LITERAL_ASSIGNMENT,
+  LITERAL_ASSIGNMENT,
+  COMMENTED_LITERAL,
 ];
 
 const STATE_SCAN_EXTENSIONS = new Set([".ts", ".tsx"]);
