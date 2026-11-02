@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "note": "Downward-only ceilings for the test corpus (PLAN §7 H2). Measured over the Git index by scripts/ci/check-test-corpus-budget.ts; npm run test-corpus:update only lowers them. Raising one needs an owner-approved edit.",
+  "note": "Downward-only ceilings for the test corpus (docs/testing.md#test-corpus-budget). Measured over the Git index by scripts/ci/check-test-corpus-budget.ts; npm run test-corpus:update only lowers them. Raising one needs an owner-approved edit.",
   "metrics": {
-    "testFiles": 2327,
-    "testBytes": 31808327,
+    "testFiles": 2279,
+    "testBytes": 31842258,
     "testSupportFiles": 242,
     "fixtureBytes": 10096736
   }

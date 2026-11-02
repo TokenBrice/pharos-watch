@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Anti-creep ratchet for the test corpus (PLAN §7 H2/H3, owner-approved).
+ * Anti-creep ratchet for the test corpus (docs/testing.md#test-corpus-budget).
  *
  * H2 keeps a committed ceiling on four volume metrics that need no test run:
  * test files, test bytes, test-support files and fixture bytes. Every metric is
@@ -69,7 +69,7 @@ const METRIC_HINTS: Record<TestCorpusMetricKey, string> = {
 
 const USAGE = `Usage: npm run check:test-corpus-budget -- [options]
 
-Anti-creep guard for the test corpus (PLAN §7 H2/H3).
+Anti-creep guard for the test corpus (docs/testing.md#test-corpus-budget).
 
   H2  each metric in ${TEST_CORPUS_BUDGET_PATH} is a ceiling measured over the
       Git index; growth fails. \`npm run test-corpus:update\` lowers the
@@ -294,7 +294,7 @@ export function runTestCorpusBudgetCheck({
     const budget: TestCorpusBudget = {
       version: 1,
       note:
-        "Downward-only ceilings for the test corpus (PLAN §7 H2). Measured over the Git index by " +
+        "Downward-only ceilings for the test corpus (docs/testing.md#test-corpus-budget). Measured over the Git index by " +
         "scripts/ci/check-test-corpus-budget.ts; npm run test-corpus:update only lowers them. " +
         "Raising one needs an owner-approved edit.",
       metrics: next,
