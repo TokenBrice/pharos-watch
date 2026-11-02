@@ -121,6 +121,15 @@ export function formatCompactUsd(value: number): string {
   return formatCompactUsdWithOptions(value);
 }
 
+/**
+ * Compact USD for observed supply amounts: the unit tier rounds to whole
+ * dollars, so a positive sub-dollar amount would print "$0". Keep the bound
+ * visible as "<$1" instead of inventing cents; zero still prints "$0".
+ */
+export function formatCompactUsdOrSubDollar(value: number): string {
+  return value > 0 && value < 1 ? "<$1" : formatCompactUsd(value);
+}
+
 export function formatCompactUsdShort(value: number): string {
   return formatCompactUsdWithOptions(value, {
     decimals: { trillion: 1, billion: 1, million: 1, thousand: 1, unit: 0 },
@@ -165,6 +174,19 @@ export function pegCurrencySymbol(pegCurrency: string): string {
 export function formatPrice(price: number | null | undefined, symbol = "$", decimals = 4): string {
   if (!isFiniteNumber(price)) return "N/A";
   return `${symbol}${price.toFixed(decimals)}`;
+}
+
+/**
+ * USD price with magnitude-based precision: four decimals at a cent and above,
+ * six below a cent, eight below $0.0001. Non-USD fiat pegs live far below
+ * $0.01, where a fixed four decimals rounds a real price to $0.0001 or $0.0000.
+ */
+export function formatUsdPriceAdaptive(value: number | null | undefined): string {
+  if (!isFiniteNumber(value)) return "N/A";
+  const abs = Math.abs(value);
+  const decimals = abs >= 0.01 ? 4 : abs >= 0.0001 ? 6 : 8;
+  const fixed = value.toFixed(decimals);
+  return abs < 0.01 ? trimTrailingZeros(fixed) : fixed;
 }
 
 /**
@@ -451,6 +473,13 @@ export function formatPegOccupancy(value: number | null | undefined, decimals = 
   if (!isFiniteNumber(value)) return "-";
   const rounded = value.toFixed(decimals);
   return value < 100 && Number(rounded) === 100 ? "<100%" : `${rounded}%`;
+}
+
+/** Keep a sub-1 coverage ratio distinguishable from exact full coverage at display precision. */
+export function formatCoverageRatio(ratio: number | null | undefined, decimals = 1): string {
+  if (!isFiniteNumber(ratio)) return "-";
+  const rounded = (ratio * 100).toFixed(decimals);
+  return ratio < 1 && Number(rounded) === 100 ? "<100%" : `${rounded}%`;
 }
 
 /** Format a signed percentage-point value (0-100 scale) with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */

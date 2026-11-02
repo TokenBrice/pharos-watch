@@ -8,7 +8,7 @@ import { PoolSourceLabel, TvlTrendChart } from "@/components/dex-liquidity-card-
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
-import { formatCurrency } from "@shared/lib/format";
+import { formatCurrency, formatUsdPriceAdaptive } from "@shared/lib/format";
 
 /** The market-breakdown fold defers only the TVL chart until first open. */
 function openMarketBreakdown(container: HTMLElement) {
@@ -202,6 +202,17 @@ describe("DexLiquidityCard", () => {
     },
   );
 
+  it.each([0.0000553, 0.0000499])("renders sub-cent DEX-implied price %s with adaptive precision", (dexPriceUsd) => {
+    useDexLiquidityMock.mockReturnValue({
+      data: { "usdc-circle": makeDexLiquidityData({ poolCount: 1, totalTvlUsd: 1_000_000, liquidityScore: 76, dexPriceUsd, dexDeviationBps: 0 }) },
+      isLoading: false,
+    });
+    const { container } = render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+    openMarketBreakdown(container);
+    const price = screen.getByText("DEX-implied price").parentElement!.querySelector("span.text-lg")!;
+    expect(price.textContent).toBe(`$${formatUsdPriceAdaptive(dexPriceUsd)}`);
+  });
+
   it.each([0, 100_000])("renders invalid coverage as unavailable even with TVL %s", (totalTvlUsd) => {
     useDexLiquidityMock.mockReturnValue({
       data: { "usdc-circle": makeDexLiquidityData({
@@ -359,6 +370,13 @@ describe("DexLiquidityCard", () => {
       ]);
     });
 
+    it("renders sub-cent pool prices with the same magnitude-based precision as the header", () => {
+      const [pool] = makePools(1);
+      const { container } = renderCard({ poolCount: 1, pools: [{ ...pool!, price: 0.000061 }] });
+      expect(poolTables(container)[0]!.textContent).toContain("$0.000061");
+      expect(poolTables(container)[0]!.textContent).not.toContain("$0.0001");
+    });
+
     it("labels five displayed rows from the authoritative pool count rather than the sliced list", () => {
       const { container } = renderCard({ poolCount: 9 });
       expect(poolTables(container)[0]!.querySelectorAll("tbody tr")).toHaveLength(5);
@@ -422,6 +440,13 @@ describe("DexLiquidityCard", () => {
       expect(renderWindows([...pools])).toEqual([
         { value: "—", detail },
         { value: "—", detail },
+      ]);
+    });
+
+    it("suppresses a zero partial lower bound in favour of the completeness label", () => {
+      expect(renderWindows([fresh(0), fresh(null)])).toEqual([
+        { value: "—", detail: "Partial coverage" },
+        { value: "—", detail: "Partial coverage" },
       ]);
     });
 

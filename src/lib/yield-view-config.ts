@@ -203,7 +203,7 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
   {
     key: "opportunistic",
     label: "Opportunistic",
-    description: "C- safety, all source postures, hide warnings",
+    description: `safety ${YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic}+, all source postures, hide warnings`,
     overrides: {
       minSafety: YIELD_RISK_BUDGET_MIN_SAFETY.opportunistic,
       warnings: "hide",
@@ -216,6 +216,24 @@ export const YIELD_RISK_BUDGET_SPECS: readonly YieldRiskBudgetSpec[] = [
     overrides: {},
   },
 ];
+
+/** Filters a risk budget replaces; the rest of the view is preserved. */
+export const RISK_BUDGET_FILTER_KEYS: readonly (keyof YieldViewModelFilters)[] = [
+  "minSafety",
+  "depth",
+  "sourcePosture",
+  "sourceConfidence",
+  "warnings",
+];
+
+/** True when every risk-budget axis equals the band's overrides (or the default). */
+export function filtersMatchRiskBudget(filters: YieldViewModelFilters, spec: YieldRiskBudgetSpec): boolean {
+  for (const key of RISK_BUDGET_FILTER_KEYS) {
+    const target = (spec.overrides as Record<string, unknown>)[key] ?? DEFAULT_FILTERS[key];
+    if (filters[key] !== target) return false;
+  }
+  return true;
+}
 
 export const YIELD_PRESET_SPECS: readonly YieldPresetSpec[] = [
   {

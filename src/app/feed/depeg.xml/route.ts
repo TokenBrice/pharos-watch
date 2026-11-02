@@ -7,6 +7,8 @@ import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { DepegEventEntry } from "@shared/types/market";
 import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
+import { DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
+import { isDisputedAuditVerdict } from "@shared/lib/depeg-audit";
 import { readDepegEventSnapshot } from "@/lib/depeg-event-snapshot";
 
 export const dynamic = "force-static";
@@ -16,7 +18,9 @@ const FEED_PATH = "/feed/depeg.xml";
 const MAX_ITEMS = 100;
 
 const CLOSURE_STATUS: Record<DepegClosureClassification, string> = {
-  open: "Active",
+  // The recorded-outcome vocabulary stays owned by the shared classification;
+  // an open record is "Ongoing", never a claim about the coin's current price.
+  open: DEPEG_CLOSURE_LABELS.open,
   recovered: "Resolved",
   legacy_recovered: "Resolved",
   coverage_lost: "Closed (coverage lost; recovery not confirmed)",
@@ -26,8 +30,11 @@ const CLOSURE_STATUS: Record<DepegClosureClassification, string> = {
 };
 
 function depegItems(events: readonly DepegEventEntry[]): RssItem[] {
-  const staticPageSlugs = new Set(selectStaticDepegEventPages(events).map((event) => event.slug));
-  return events
+  // Reviewed disputes are quarantined from syndication and from the item
+  // budget, matching the archive badge and the recorded-event count.
+  const confirmed = events.filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict));
+  const staticPageSlugs = new Set(selectStaticDepegEventPages(confirmed).map((event) => event.slug));
+  return confirmed
     .slice()
     .sort((a, b) => b.startedAt - a.startedAt)
     .slice(0, MAX_ITEMS)
@@ -44,7 +51,9 @@ function depegItems(events: readonly DepegEventEntry[]): RssItem[] {
       return {
         title,
         link: eventLink,
-        description: `${status} ${event.direction} peg by ${peakBps} bps starting ${startedISO}.`,
+        // The deviation is the event's recorded peak, not a live reading:
+        // qualify it so an open record never reads as a current price level.
+        description: `${status}; peaked at ${peakBps} bps ${event.direction} peg starting ${startedISO}.`,
         guid: `pharos:depeg-event:${event.slug}`,
         pubDate: toRfc822(event.startedAt * 1000),
       };

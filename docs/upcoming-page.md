@@ -1,6 +1,6 @@
 # Upcoming Page
 
-Public `/upcoming/` is the pre-launch tracker, separate from active monitoring. `src/app/upcoming/page.tsx` owns metadata/static shell (title `Upcoming Stablecoin Launches ({Mon YYYY}): {N} Tracked` with the UTC build month and the upcoming count; description from the per-phase tally of `UPCOMING_LAUNCH_PHASE_VALUES` with `LAUNCH_PHASE_LABELS`) and projects the server registry into `src/components/upcoming-client.tsx`; `src/lib/pre-launch.ts` owns phase, fuzzy-date, drift and sorting semantics.
+Public `/upcoming/` is the pre-launch tracker, separate from active monitoring. `src/app/upcoming/page.tsx` owns metadata/static shell (title `Upcoming Stablecoin Launches ({Mon YYYY}): {N} Tracked` with the UTC build month and the upcoming count; description from the per-phase tally of `UPCOMING_LAUNCH_PHASE_VALUES` with `LAUNCH_PHASE_LABELS` plus the `PRE_LAUNCH_UNPHASED_LABEL` bucket, so the published parts sum to the upcoming count) and projects the server registry into `src/components/upcoming-client.tsx`; `src/lib/pre-launch.ts` owns phase, fuzzy-date, drift and sorting semantics.
 
 ## Data Contract
 

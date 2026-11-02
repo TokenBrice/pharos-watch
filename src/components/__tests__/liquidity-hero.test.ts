@@ -54,6 +54,16 @@ const TAIL_GLOBAL = makeDexLiquidityData({
 });
 
 describe("LiquidityHero", () => {
+  it("shows an unusable 7d aggregate as a placeholder instead of NaN", () => {
+    render(createElement(LiquidityHero, {
+      stats: makeStats({ agg7dChange: Number.NaN }),
+      liquidityMap: { [DEX_GLOBAL_KEY]: TAIL_GLOBAL },
+    }));
+    const label = screen.getByText("7d change, coins with 7d history");
+    expect(label.parentElement?.textContent).toContain("—");
+    expect(label.parentElement?.textContent).not.toMatch(/NaN/);
+  });
+
   it.each([NaN, Infinity, -Infinity, -0.01, 1.01])("keeps invalid HHI %s unscored in map and fallback readouts", (concentrationHhi) => {
     render(createElement(LiquidityHero, {
       stats: makeStats(),

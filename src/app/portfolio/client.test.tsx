@@ -202,4 +202,18 @@ describe("PortfolioClient URL sync", () => {
     expect(screen.getByText(/Pipeline gap · fewer than two pillars available/)).toBeTruthy();
     expect(screen.queryByText(/NR|0\/100|100\/100/)).toBeNull();
   });
+
+  it("keeps every carded holding's grade visible when one holding has no card", () => {
+    portfolioState = {
+      ...basePortfolioState(),
+      holdings: [
+        { coinId: "usdc-circle", amount: 100 },
+        { coinId: "usdv-solomon", amount: 300 },
+      ],
+    };
+    reportCardsState.data = makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle", score: 80 })] });
+    render(<PortfolioClient />);
+    expect(screen.getByRole("alert").textContent).toContain("portfolio-card-unavailable");
+    expect(screen.getByLabelText("Safety grade A-, score 80")).toBeTruthy();
+  });
 });

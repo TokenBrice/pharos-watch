@@ -7,6 +7,7 @@ import {
 } from "@shared/lib/genius";
 import type { ComplianceRow } from "@/lib/compliance-model";
 import type { GeniusComplianceEvidence } from "@/lib/compliance-evidence";
+import { DISCLOSURE_STATE_LABELS, reviewedState } from "@/lib/regulatory-standing";
 import { ComplianceStatusBadge, EmptyCell } from "./compliance-row-primitives";
 
 type GeniusComplianceRow = Extract<ComplianceRow, { regime: "genius" }>;
@@ -65,7 +66,7 @@ export function GeniusReserveCell({ row }: { row: GeniusComplianceRow }) {
   if (!row.hasAnyDisclosure) return <EmptyCell />;
   const content = (
     <>
-      {row.reserveDisclosurePresent ? "Reserve disclosure" : "Disclosure"}
+      {DISCLOSURE_STATE_LABELS[reviewedState(row.reserveDisclosurePresent)]}
       {row.reserveReportNote ? <span className="block text-xs text-muted-foreground">{row.reserveReportNote}</span> : null}
       {row.redemptionPolicyPresent ? <span className="block text-xs text-muted-foreground">Redemption policy</span> : null}
       {row.monthlyAttestationPresent ? (
@@ -99,7 +100,7 @@ export function GeniusReviewDetails({ evidence: row }: { evidence: GeniusComplia
         <div className="space-y-1">
           <p className="font-medium text-foreground">Sources checked</p>
           <ul className="list-inside list-disc space-y-0.5">
-            {row.negativeEvidenceSourcesChecked.slice(0, 5).map((source) => (
+            {row.negativeEvidenceSourcesChecked.map((source) => (
               <li key={source}>{source}</li>
             ))}
           </ul>

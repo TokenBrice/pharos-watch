@@ -201,6 +201,16 @@ export function isTelegramSnoozeActive(ts: number | null | undefined, nowSec: nu
 }
 
 /**
+ * Failure classes the delivery transport resolves to `blocked` (a `403` or a
+ * blocked lifecycle description, and `chat_not_found`): Telegram cannot deliver
+ * until the reader messages the bot again, so the reader copy names that
+ * recovery path. Retryability stays owned by the Worker transport.
+ */
+export function isTelegramBlockedFailureClass(failureClass: string | null | undefined): boolean {
+  return failureClass === "blocked" || failureClass === "chat_not_found";
+}
+
+/**
  * Reviewed calibration inputs that exist only in the synthetic load model.
  * Production-enforced values above are imported separately by the harness.
  */

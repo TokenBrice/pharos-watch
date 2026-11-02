@@ -117,9 +117,25 @@ function flap(id: number, at: number, to: StatusTransition["to"], subjects?: str
 }
 
 describe("incident folding and recurrence", () => {
-  it("keeps an incident that began before the loaded window with an unknown duration", () => {
+  it("keeps an incident that began before the loaded window with an unknown duration and unknown causes", () => {
     const [episode] = foldIncidentEpisodes([flap(9, 500, "healthy")], 4_000);
-    expect(episode).toMatchObject({ startedAt: null, durationSec: null, endedAt: 500, ongoing: false });
+    expect(episode).toMatchObject({
+      startedAt: null, durationSec: null, endedAt: 500, ongoing: false, causeCodes: null,
+    });
+  });
+
+  it("derives a window-start recovery's worst state from the state it recovered from", () => {
+    const [episode] = foldIncidentEpisodes([{
+      ...flap(9, 500, "healthy"),
+      from: "stale",
+      causes: [{
+        code: "onchain_monitor_low_sample",
+        layer: "data-quality",
+        severity: "info",
+        message: "Recovery-time observation.",
+      }],
+    }], 4_000);
+    expect(episode).toMatchObject({ startedAt: null, worstState: "stale", causeCodes: null });
   });
 
   it("treats an escalation as the oldest loaded row as an incident that began earlier", () => {

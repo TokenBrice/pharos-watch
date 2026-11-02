@@ -109,13 +109,17 @@ export function useInfiniteDepegEvents({
     () => pages?.[0] ? ({ events, total, totalExact, nextCursor, pending }) : undefined,
     [pages, events, nextCursor, pending, total, totalExact],
   );
+  // Cursor exhaustion is independent of refresh health: a failed background
+  // refetch can retain a complete retained page set without a next page.
+  const hasLoadedAllPages = data != null && !query.isLoading && !isFetchingNextPage &&
+    !hasNextPage && nextCursor == null && (!totalExact || total === 0 || events.length >= total);
 
   return {
     ...query,
     data,
     loadedCount: events.length,
-    isFullyLoaded: data != null && !error && !query.isLoading && !isFetchingNextPage &&
-      !hasNextPage && nextCursor == null && (!totalExact || total === 0 || events.length >= total),
+    isFullyLoaded: hasLoadedAllPages && !error,
+    hasLoadedAllPages,
     isAutoLoadCapped,
     meta,
   };

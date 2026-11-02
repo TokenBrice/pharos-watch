@@ -165,7 +165,9 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
               tabIndex={-1}
               className="text-base font-semibold tracking-tight text-foreground outline-none sm:text-lg"
             >
-              <span className="pharos-numeric">{universe.active.toLocaleString()}</span> tracked {pegLabel} stablecoins → <span className="pharos-numeric">{universe.surviving.toLocaleString()}</span> filtered → <span className="pharos-numeric">{shortlistCount}</span> shortlist entries
+              <span className="pharos-numeric">{universe.active.toLocaleString()}</span> in scope {pegLabel} stablecoins →{" "}
+              <span className="pharos-numeric">{universe.surviving.toLocaleString()}</span> filtered →{" "}
+              <span className="pharos-numeric">{shortlistCount}</span> shortlist entries
             </h2>
           </div>
         </div>

@@ -12,12 +12,13 @@ import {
   resolveYieldScoreQualification,
 } from "@/lib/yield-constants";
 import {
-  YIELD_SOURCE_DEPTH_DEFINITIONS,
   YIELD_SOURCE_POSTURE_DEFINITIONS,
   formatYieldSourceRiskSummary,
+  getYieldSourceDepthDisplay,
   isNativeYieldSource,
 } from "@/lib/yield-source-risk";
 import { getYieldDecisionReasonLine, getYieldWorkbenchSourceRole } from "@/lib/yield-workbench-row";
+import { getYieldBenchmarkDisplayLabel } from "@/lib/yield-benchmark";
 import { formatYieldSafetySrLabel, YieldSafetyBadge } from "@/components/yield-leaderboard-row-parts";
 import { isOpportunityDerivedSafety } from "@shared/lib/yield-opportunity-provenance";
 import { trackEvent } from "@/lib/analytics";
@@ -114,6 +115,7 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
         safetyScore={row.safetyScore}
         safetySrLabel={formatYieldSafetySrLabel(row.safetyGrade, row.safetyScore)}
         opportunityDerived={isOpportunityDerivedSafety(row.provenance?.safetyProvenance)}
+        usedDefaultSafety={row.provenance?.usedDefaultSafety === true}
         compact
       />
     ),
@@ -152,7 +154,14 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     key: "depth",
     label: "Depth",
     align: "left",
-    render: (row) => YIELD_SOURCE_DEPTH_DEFINITIONS[row.sourceDepthLens]?.label ?? "—",
+    // Same display lens as the board and mobile card: a native row with no
+    // venue TVL is "not applicable", not an unclassified measurement.
+    render: (row) => getYieldSourceDepthDisplay({
+      depthLens: row.sourceDepthLens,
+      yieldType: row.yieldType,
+      sourceRole: getYieldWorkbenchSourceRole(row),
+      sourceTvlUsd: row.sourceTvlUsd,
+    }).label,
   },
   {
     key: "stability",
@@ -173,7 +182,7 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     key: "benchmark",
     label: "Benchmark",
     align: "left",
-    render: (row) => row.benchmarkLabel ?? "—",
+    render: (row) => (row.benchmarkLabel ? getYieldBenchmarkDisplayLabel(row) : "—"),
   },
 ];
 

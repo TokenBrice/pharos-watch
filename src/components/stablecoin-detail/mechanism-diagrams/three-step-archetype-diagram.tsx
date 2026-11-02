@@ -270,6 +270,9 @@ const CDP_RESERVE_CONFIG: ThreeStepConfig = {
  * queues served as liquidity allows (syrupUSDC) and weekly processing. A coin
  * page therefore states no cadence: redemption follows the issuer's terms,
  * and the coin's own Redemption route carries the specifics.
+ *
+ * NAV-token members are fund shares whose value tracks the fund's NAV; the
+ * non-NAV credit vehicles keep the credit-portfolio wording below.
  */
 const RWA_CREDIT_COIN_CONFIG: ThreeStepConfig = {
   accentColor: "var(--mechanism-rwa-credit-fund)",
@@ -294,6 +297,29 @@ const RWA_CREDIT_COIN_CONFIG: ThreeStepConfig = {
   },
 };
 
+const RWA_FUND_NAV_COIN_CONFIG: ThreeStepConfig = {
+  accentColor: "var(--mechanism-rwa-credit-fund)",
+  stressFootnote: "stress: NAV markdown / redemption gate",
+  ariaLabel: (symbol) =>
+    `Investor cash funds the issuer's portfolio; ${symbol} value tracks fund performance, and redemptions follow the issuer's terms.`,
+  description: (symbol) =>
+    `Investors subscribe or deposit cash; the issuer deploys it into the fund's portfolio, whose marks drive NAV and carry market and liquidity risk; ${symbol} value reflects fund performance, with redemption timing and gates set by the issuer's terms.`,
+  defaultSteps: (symbol) => [
+    { label: "Investor cash", subtitle: "subscribed or deposited" },
+    { label: "Fund portfolio", subtitle: "marked to fund NAV" },
+    { label: `${symbol} issued`, subtitle: "value tracks fund NAV" },
+  ],
+  returnArrow: {
+    fromX: 500,
+    toX: 75,
+    topY: 90,
+    peakY: 140,
+    label: "redeem",
+    strokeWidth: 1.2,
+    dashed: true,
+  },
+};
+
 /**
  * Resolves the archetype's diagram copy. `facts` is the coin in hand (see
  * {@link MechanismTemplateFacts}); without it the archetype keeps its family
@@ -306,7 +332,9 @@ export function resolveThreeStepConfig(
   if (!facts) return THREE_STEP_ARCHETYPE_CONFIG[archetype];
   if (archetype === "tbill" && facts.navToken === false) return TBILL_PAR_REDEMPTION_CONFIG;
   if (archetype === "cdp" && facts.liquidationEngine === false) return CDP_RESERVE_CONFIG;
-  if (archetype === "rwa-credit-fund") return RWA_CREDIT_COIN_CONFIG;
+  if (archetype === "rwa-credit-fund") {
+    return facts.navToken === true ? RWA_FUND_NAV_COIN_CONFIG : RWA_CREDIT_COIN_CONFIG;
+  }
   return THREE_STEP_ARCHETYPE_CONFIG[archetype];
 }
 

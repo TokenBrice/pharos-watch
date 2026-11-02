@@ -6,8 +6,8 @@ export const content: ArchetypeContent = {
   subtitle:
     "Protocol-level supply rules and arbitrage defend the peg; current designs can hold real collateral, unlike historical pure mint/burn systems.",
   lead: [
-    "This mechanism family uses programmatic issuance, redemption, or market operations to defend a target value. Collateral is design-specific: FPI's documented design uses legacy-FRAX-linked balances and AMO positions, USDD 2.0 combines collateralized vaults with Peg Stability Modules, and ZSD enforces a reserve-ratio floor against ZEPH collateral. An algorithmic mechanism does not itself mean an unbacked token. The current collateralized variants are described below.",
-    "Pharos taxonomy no longer treats algorithmic as a tracked backing bucket; that historical backing label remains for off-catalog PSI assets. The walkthrough below covers the historical pure mint/burn variant, exemplified by UST/LUNA, not the reserve mechanics of FPI, USDD 2.0, or ZSD. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
+    "This mechanism family uses programmatic issuance, redemption, or market operations to defend a target value. Collateral is design-specific: FPI's documented design uses legacy-FRAX-linked balances and AMO positions, and HBD converts against HIVE under a debt-ratio haircut. An algorithmic mechanism does not itself mean an unbacked token. The current collateralized variants are described below.",
+    "Pharos taxonomy no longer treats algorithmic as a tracked backing bucket; that historical backing label remains for off-catalog PSI assets. The walkthrough below covers the historical pure mint/burn variant, exemplified by UST/LUNA, not the reserve mechanics of FPI. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
   ],
   howItWorks: [
     {
@@ -46,20 +46,12 @@ export const content: ArchetypeContent = {
   ],
   representativeCoins: [
     {
-      coinId: "usdd-tron-dao-reserve",
-      note: "TRON DAO Reserve's stablecoin. USDD 2.0 mints against TRX and sTRX vaults with a CDP-style minimum collateral ratio, and operates USDT/USDC Peg Stability Modules on TRON and Ethereum. Reserves also include the Smart Allocator deployment of stablecoin reserves into Aave and JustLend. Structurally a CDP-plus-PSM hybrid today; classified as algorithmic on Pharos because of the system's depeg history and retained privileged mint authority.",
-    },
-    {
       coinId: "fpi-frax",
       note: "Frax's CPI-referenced unit of account. Its documented design targets a 100% collateral ratio using legacy-FRAX-linked balances and AMO positions, with FPIS sales as a shortfall backstop. The target does not establish a 100% liquid FRAX reserve composition. Pharos tracks FPI as a variable-peg NAV token. FIP-448 proposes freezing the CPI reference price and disabling new minting; the proposal alone does not establish completed execution.",
     },
     {
       coinId: "hbd-hive",
       note: "Hive's algorithmic dollar. The protocol allows HBD-to-HIVE conversion at $1 of HIVE per HBD over a 3.5-day median price window; HIVE-to-HBD conversions require posting collateral. A haircut rule halts new HBD production and reduces the redemption value when the HBD-to-HIVE debt ratio exceeds the protocol's threshold (historically around 30%).",
-    },
-    {
-      coinId: "zsd-zephyr-protocol",
-      note: "Djed-inspired stablecoin on a Monero-derived private chain, minted against ZEPH base-coin collateral with a minimum 400% reserve ratio enforced before new ZSD can be issued. No ZEPH is ever minted to defend the ZSD peg, which structurally rules out a UST-style death spiral but leaves ZSD exposed to ZEPH price drawdowns reducing the reserve ratio below the mint threshold.",
     },
   ],
   variations: [
@@ -71,12 +63,12 @@ export const content: ArchetypeContent = {
     {
       id: "fractional-conversion-based",
       title: "Fractional and conversion-based",
-      body: "FRAX v1 paired partial collateral with an algorithmic remainder before migrating to a fully collateralized model. HBD and ZSD mint against a single protocol-native base coin under conversion rules with safety thresholds (HBD's haircut, ZSD's 400% reserve ratio). These designs limit the death-spiral surface by capping issuance rather than relying purely on arbitrage.",
+      body: "FRAX v1 paired partial collateral with an algorithmic remainder before migrating to a fully collateralized model. HBD mints against a single protocol-native base coin under conversion rules with a debt-ratio haircut. These designs limit the death-spiral surface by capping issuance rather than relying purely on arbitrage.",
     },
     {
       id: "cdp-psm-hybrids",
-      title: "CDP-plus-PSM hybrids retained under the label",
-      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module, close to the CDP archetype in mechanism, but it is classified as algorithmic because of its depeg history and privileged mint path. FPI's documented design targets a 100% collateral ratio and includes FPIS sales as a backstop; the target does not establish its observed reserve composition. The bucket is broader than its name suggests.",
+      title: "CDP-plus-PSM hybrids",
+      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module; Pharos classifies it under the CDP archetype rather than algorithmic. FPI's documented design targets a 100% collateral ratio and includes FPIS sales as a backstop; the target does not establish its observed reserve composition.",
     },
   ],
   whatToWatch: [
@@ -85,7 +77,7 @@ export const content: ArchetypeContent = {
     "Mint Authority review. Most coins under this archetype retain privileged mint authority; sudden mint bursts and admin-key activity are supply-control risk rather than holder-freeze events.",
     "PegScore and the 7-day deviation chart on each coin page. The composite peg score caps lower for chronic deviators, and the chart shows whether a depeg actually closed or just went stale at a discount.",
     "PSI Top Contributors table. Chronic depegs decay through the PSI factor floor (0.25 after roughly 120 days), so a long-running algorithmic depeg is downweighted in the system-wide stability index rather than amplified.",
-    "Live Reserve view where available. USDD exposes a 4-hourly collateral mix (TRX, sTRX, Smart Allocator, USDT PSM); FPI's composition should be read from the dated reserve evidence, separately from its collateral-ratio target. Quarterly snapshots are too coarse for this design family.",
+    "Live Reserve view where available. FPI's composition should be read from the dated reserve evidence, separately from its collateral-ratio target. Quarterly snapshots are too coarse for this design family.",
   ],
   crossLinks: [
     {

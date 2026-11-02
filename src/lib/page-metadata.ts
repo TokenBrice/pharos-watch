@@ -24,7 +24,7 @@ import { DIGEST_DATES } from "@/lib/digest-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { OgPageSlug } from "@shared/lib/og-route-cards";
 import { buildArticleJsonLd } from "@/lib/json-ld";
-import { formatUtcDayLabel } from "@shared/lib/format";
+import { formatDeathDate, formatUtcDayLabel } from "@shared/lib/format";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import { formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
@@ -462,8 +462,12 @@ function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
 
 export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
   if (coin.status === "frozen") {
+    // `frozenAt` can predate Pharos (an issuer's historical freeze date), so the
+    // description claims no tracking window; it dates the death from the obituary.
+    const identity = hasRedundantName(coin) ? coin.name : `${coin.name} (${coin.symbol})`;
+    const died = coin.obituary ? ` that died in ${formatDeathDate(coin.obituary.deathDate)}` : "";
     const description = composeDescription([
-      `Historical data and obituary for ${coin.name} (${coin.symbol}), a now-defunct stablecoin tracked by Pharos through ${coin.frozenAt ?? "freeze date"}.`,
+      `Historical data and obituary for ${identity}, a now-defunct stablecoin${died}.`,
       coin.obituary?.epitaph,
     ], PROFILE_DESCRIPTION_MAX_LENGTH);
     return buildPageMetadata({
@@ -618,10 +622,23 @@ export function buildDefinedTermSetJsonLd(): Record<string, unknown> {
 }
 
 // First-publish date for the mechanism explainer cluster (git: 9de91c809,
-// the commit that added src/app/learn/mechanisms). `dateModified` comes from
-// the git-derived sitemap date for the cluster, so it only moves when the
-// explainer content actually changes — not on every build.
+// the commit that added src/app/learn/mechanisms). Archetypes added later carry
+// their own first-publish date so a page's `datePublished` never predates its
+// route. `dateModified` comes from the git-derived sitemap date for the cluster,
+// so it only moves when the explainer content actually changes — not on every build.
 const MECHANISM_EXPLAINER_DATE_PUBLISHED = "2026-05-16T00:00:00Z";
+const MECHANISM_ARCHETYPE_PUBLISHED_AT: Record<MechanismArchetype, string> = {
+  "fiat-cash": MECHANISM_EXPLAINER_DATE_PUBLISHED,
+  tbill: MECHANISM_EXPLAINER_DATE_PUBLISHED,
+  cdp: MECHANISM_EXPLAINER_DATE_PUBLISHED,
+  "synthetic-delta-neutral": MECHANISM_EXPLAINER_DATE_PUBLISHED,
+  algorithmic: MECHANISM_EXPLAINER_DATE_PUBLISHED,
+  "rwa-credit-fund": "2026-05-20T00:00:00Z",
+  "commodity-claim": "2026-08-08T00:00:00Z",
+  "ucits-trs-fund": "2026-10-02T00:00:00Z",
+  "shared-reserve": "2026-10-02T00:00:00Z",
+  "protocol-position": "2026-10-02T00:00:00Z",
+};
 const MECHANISM_EXPLAINER_DATE_MODIFIED =
   (sitemapDates as Record<string, string>)["/learn/mechanisms/"] ?? MECHANISM_EXPLAINER_DATE_PUBLISHED;
 
@@ -638,7 +655,7 @@ export function buildArchetypeArticleJsonLd(archetype: MechanismArchetype): Reco
     url,
     mainEntityOfPage: url,
     inLanguage: "en",
-    datePublished: MECHANISM_EXPLAINER_DATE_PUBLISHED,
+    datePublished: MECHANISM_ARCHETYPE_PUBLISHED_AT[archetype],
     dateModified: MECHANISM_EXPLAINER_DATE_MODIFIED,
     extra: {
       isPartOf: `${SITE_ORIGIN}/learn/mechanisms/`,

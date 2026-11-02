@@ -16,6 +16,15 @@ const Tweet = dynamic(() => import("react-tweet").then((mod) => mod.Tweet), {
   loading: TweetEmbedLoading,
 });
 
+/**
+ * A build-time fetch failure and a deleted tweet look identical here, and
+ * neither is a reviewed finding about the coin: omit the embed rather than
+ * baking react-tweet's "Tweet not found" card into the static export.
+ */
+function TweetUnavailable() {
+  return <></>;
+}
+
 export function PreLaunchTweetEmbed({ id }: PreLaunchTweetEmbedProps) {
-  return <Tweet id={id} />;
+  return <Tweet id={id} components={{ TweetNotFound: TweetUnavailable }} onError={() => null} />;
 }

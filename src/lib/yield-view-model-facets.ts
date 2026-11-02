@@ -17,7 +17,9 @@ import {
   MIN_SAFETY_OPTIONS,
   MIN_TVL_OPTIONS,
   SOURCE_CONFIDENCE_ORDER,
+  YIELD_RISK_BUDGET_SPECS,
   compareYieldPegs,
+  filtersMatchRiskBudget,
   getYieldPegLabel,
   type YieldOpportunityFilter,
   type YieldPegFilter,
@@ -285,6 +287,12 @@ export function getYieldComparisonLabel(filters: YieldViewModelFilters): string 
     return `${getYieldPegLabel(filters.peg)} peg`;
   }
   if (filters.benchmark !== "all") return `${filters.benchmark} benchmark`;
+  // A risk band (the landing default included) sets several axes at once, so naming
+  // one of them ("No-warning set") would hide the safety floor the view also applies.
+  const riskBudget = YIELD_RISK_BUDGET_SPECS.find(
+    (spec) => spec.key !== "all" && filtersMatchRiskBudget(filters, spec),
+  );
+  if (riskBudget) return riskBudget.label;
   if (filters.warnings === "hide") return "No-warning set";
   if (filters.warnings === "only") return "Warning set";
   if (filters.sourceConfidence !== "all") return `${filters.sourceConfidence} confidence`;

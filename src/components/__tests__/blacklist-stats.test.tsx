@@ -101,6 +101,34 @@ describe("BlacklistStats", () => {
     expect(screen.getAllByText(expected)).toHaveLength(3);
   });
 
+  it("qualifies the tracked frozen subtotal when snapshots lack a USD value", () => {
+    const stats = makeStats();
+    stats.trackedFrozenTotal = 1_000;
+    stats.trackedAddressCount = 10;
+    stats.trackedAmountGapCount = 4;
+    render(
+      <BlacklistStats
+        summary={{ ...makeSummary(), stats }}
+        isLoading={false}
+        blacklistStatusBuckets={[]}
+        supportDataLoading={false}
+      />,
+    );
+    expect(screen.getByText("$1.00K (partial)")).toBeTruthy();
+  });
+
+  it("leaves a fully priced tracked frozen subtotal unqualified", () => {
+    render(
+      <BlacklistStats
+        summary={{ ...makeSummary(), stats: makeStats() }}
+        isLoading={false}
+        blacklistStatusBuckets={[]}
+        supportDataLoading={false}
+      />,
+    );
+    expect(screen.getByText("$3.40B")).toBeTruthy();
+  });
+
   it("renders the unfreezable market-share stat from the blacklist-status no bucket", () => {
     render(
       <BlacklistStats

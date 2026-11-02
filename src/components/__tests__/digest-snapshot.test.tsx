@@ -64,7 +64,7 @@ describe("DigestSnapshot", () => {
 
   it.each([
     { cause: "C", score: 35, reason: "undisclosed by issuer" },
-    { cause: "U", score: 50, reason: "not yet researched" },
+    { cause: "U", score: 50, reason: "unresolved" },
   ])("describes archived $cause priced unknowns without a pipeline label", ({ cause, score, reason }) => {
     mockSnapshot({ safetyScores: { model: "v9", mentionedCoins: [{
       symbol: "TEST", grade: "C", score: 48, ratingStatus: "rated",

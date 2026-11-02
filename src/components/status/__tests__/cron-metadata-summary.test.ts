@@ -32,6 +32,28 @@ describe("summarizeCronMetadata", () => {
     expect(summary).toContain("reason status-self-check-persistence-failed");
   });
 
+  it("uses the published pass count so a reported-degraded health probe is not counted as passed", () => {
+    const summary = summarizeCronMetadata("status-self-check", {
+      sampleCount: 5, passCount: 4, failCount: 0, probeStatus: "degraded",
+    });
+    expect(summary).toContain("probes 4/5 ok, 0 failed (degraded)");
+    expect(summary.some((line) => line.includes("5/5 ok"))).toBe(false);
+  });
+
+  it("keeps legacy self-check rows readable without a pass count", () => {
+    expect(summarizeCronMetadata("status-self-check", {
+      sampleCount: 5, failCount: 1, probeStatus: "degraded",
+    })).toContain("probes 4/5 ok, 1 failed (degraded)");
+  });
+
+  it("does not render an empty self-check sample as all-ok or zero latency", () => {
+    const summary = summarizeCronMetadata("status-self-check", {
+      sampleCount: 0, passCount: 0, failCount: 0, probeStatus: "stale", p95LatencyMs: 0,
+    });
+    expect(summary.some((line) => line.includes("/0 ok"))).toBe(false);
+    expect(summary.some((line) => line.includes("p95"))).toBe(false);
+  });
+
   it("separates observed global excess from named source quarantine", () => {
     expect(summarizeCronMetadata("sync-dex-liquidity", {
       sourceCoverage: {

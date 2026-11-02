@@ -7,7 +7,7 @@ import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-s
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import { BLUECHIP_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/bluechip-freshness";
 import { computeRecentPegStats } from "@shared/lib/peg-score";
-import { makeReportCardsV9Card, makeReportCardsV9Pillars } from "@shared/test-utils/report-cards-v9";
+import { makeReportCardsV9Card, makeReportCardsV9Pillars, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -112,6 +112,11 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
 
 const PEG_RATES: Record<string, number> = { USD: 1 };
 
+function metricRow(html: string, label: string): string | undefined {
+  const row = html.split("</tr>").find((chunk) => chunk.includes(label));
+  return row ? `${row}</tr>` : undefined;
+}
+
 describe("ComparisonTable", () => {
   it("does not frame unequal directional activity as a universal best value", () => {
     const minting = makeCoin("usdt", "USDT");
@@ -123,6 +128,17 @@ describe("ComparisonTable", () => {
     expect(html).toContain("+$1.00M");
     expect(html).toContain("-$2.00M");
     expect(html).not.toMatch(/\bbest\b/i);
+  });
+
+  it("keeps a pipeline-gap card out of the withheld top-driver chip", () => {
+    const coin = makeCoin("xmd", "XMD");
+    coin.safetyCard = makeReportCardsV9PipelineGapCard();
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    expect(html).toContain("Pipeline gap — no Safety Score published");
+    expect(html).not.toContain("Score withheld");
+    const driverRow = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*Top driver(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
+    expect(driverRow).toContain("No comparable data available");
+    expect(driverRow).not.toContain("Required evidence is withheld");
   });
 
   it("labels unwired evidence freshness honestly in both evidence and driver rows", () => {
@@ -314,5 +330,63 @@ describe("ComparisonTable", () => {
       expect(row).toContain("No comparable data available");
       expect(row).not.toContain("%");
     }
+  });
+
+  it("does not report an unassessed binding cap as 'None' for non-rated cards", () => {
+    const notRated = makeCoin("usdt", "USDT");
+    notRated.safetyCard = makeReportCardsV9Card({ score: null });
+    const pipelineGap = makeCoin("usdc", "USDC");
+    pipelineGap.safetyCard = makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc" });
+
+    const html = renderToStaticMarkup(
+      <ComparisonTable coins={[notRated, pipelineGap]} pegRates={PEG_RATES} logos={{}} />,
+    );
+
+    const row = metricRow(html, "Binding cap");
+    expect(row).not.toContain(">None<");
+    expect(row?.match(/No comparable data available/g)).toHaveLength(2);
+    expect(html).toContain("Pipeline gap — no Safety Score published");
+  });
+
+  it("keeps 'None' for a rated card without a binding cap", () => {
+    const coin = makeCoin("usdt", "USDT");
+    const row = metricRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} />), "Binding cap");
+    expect(row).toContain(">None<");
+  });
+
+  it("resolves variant parents and scored dependencies to reader-facing labels", () => {
+    const coin = makeCoin("savings-usdt", "SUSDT");
+    coin.meta = { ...coin.meta, variantOf: "usdt-tether", variantKind: "savings-passthrough" };
+    coin.safetyCard = {
+      ...coin.safetyCard!,
+      dependencies: {
+        ...coin.safetyCard!.dependencies,
+        serial: [{
+          upstreamAssetId: "usdc-circle", score: 84, ratingStatus: "rated",
+          partialEvidence: null, causeGapRefs: [], limitedEvidenceCauses: [], blocked: false,
+        }],
+        basket: [],
+      },
+    };
+
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+
+    const variantRow = metricRow(html, "Variant relationship");
+    expect(variantRow).toContain("Savings variant of Tether (USDT)");
+    expect(variantRow).not.toContain("usdt-tether");
+    const dependencyRow = metricRow(html, "Scored dependencies");
+    expect(dependencyRow).toContain("USDC");
+    expect(dependencyRow).not.toContain("usdc-circle");
+  });
+
+  it("names an untracked variant parent without exposing its id", () => {
+    const coin = makeCoin("savings-unknown", "SUNK");
+    coin.meta = { ...coin.meta, variantOf: "unknown-parent", variantKind: "savings-passthrough" };
+    const row = metricRow(
+      renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />),
+      "Variant relationship",
+    );
+    expect(row).toContain("Savings variant of an untracked asset");
+    expect(row).not.toContain("unknown-parent");
   });
 });

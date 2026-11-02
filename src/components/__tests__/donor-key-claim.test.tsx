@@ -132,6 +132,31 @@ describe("DonorKeyClaim failure details", () => {
     expect(screen.queryByText(token)).toBeNull();
   });
 
+  it.each([
+    "pepper_missing",
+    "issue_failed",
+    "rate_limiter_missing",
+    "rate_limit_unavailable",
+    "donations_ledger_invalid",
+  ] as const)("does not blame a held Safety Score publication for %s", async (reason) => {
+    vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
+    vi.mocked(claimDonorKey).mockRejectedValue(new DonorKeyClaimError(503, "Supporter key claims are temporarily unavailable", null, reason));
+    render(<DonorKeyClaim />);
+    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).not.toContain("Safety Score publication");
+    expect(alert.textContent).toContain("unavailable right now");
+  });
+
+  it("keeps the held-publication explanation when the Safety Score publication is unavailable", async () => {
+    vi.stubGlobal("ethereum", { request: vi.fn(async ({ method }: { method: string }) => method === "personal_sign" ? "0xsignature" : [account]) });
+    vi.mocked(claimDonorKey).mockRejectedValue(new DonorKeyClaimError(503, "Supporter key claims are temporarily unavailable", null, "safety_scores_unavailable"));
+    render(<DonorKeyClaim />);
+    fireEvent.click(screen.getByRole("button", { name: "Claim supporter key" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Safety Score publication");
+  });
+
   it("shows the wallet hand-off after a claim attempt without a wallet and drops it once one injects", async () => {
     render(<DonorKeyClaim />);
     expect(screen.queryByText("Open in MetaMask")).toBeNull();

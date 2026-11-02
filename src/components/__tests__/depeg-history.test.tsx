@@ -21,6 +21,7 @@ afterEach(() => {
 
 
 function mockEvents(events: DepegEvent[], overrides: Record<string, unknown> = {}) {
+  const isFullyLoaded = overrides.isFullyLoaded ?? true;
   useInfiniteDepegEventsMock.mockReturnValue({
     data: { events, total: events.length, totalExact: true },
     isLoading: false,
@@ -28,7 +29,10 @@ function mockEvents(events: DepegEvent[], overrides: Record<string, unknown> = {
     refetch: vi.fn(),
     isFetchingNextPage: false,
     loadedCount: events.length,
-    isFullyLoaded: true,
+    isFullyLoaded,
+    hasLoadedAllPages: isFullyLoaded,
+    isAutoLoadCapped: false,
+    hasNextPage: false,
     ...overrides,
   });
 }
@@ -114,6 +118,34 @@ describe("DepegHistory provenance badges", () => {
     render(<DepegHistory stablecoinId="usdc-circle" />);
     expect(screen.getByTestId("stablecoin-depeg-history-table")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+  });
+
+  it("keeps a complete retained list paginated after a failed refresh without claiming loading", () => {
+    const now = Math.floor(Date.now() / 1000);
+    const events = Array.from({ length: 30 }, (_, index) => makeEvent({
+      id: index + 1, startedAt: now - index * 86_400,
+    }));
+    mockEvents(events, {
+      error: new Error("refresh failed"),
+      refetch: vi.fn(),
+      isFullyLoaded: false,
+      hasLoadedAllPages: true,
+      isAutoLoadCapped: false,
+      isFetchingNextPage: false,
+      hasNextPage: false,
+      data: { events, total: 30, totalExact: false, nextCursor: null },
+    });
+    render(<DepegHistory stablecoinId="usdc-circle" />);
+
+    expect(screen.queryByText(/Loading full history/)).toBeNull();
+    const incidents = screen.getByText("Incidents").parentElement!.textContent ?? "";
+    expect(incidents).toContain("30");
+    expect(incidents).not.toContain("30+");
+    // Pagination stays available, so rows beyond the first fold remain reachable.
+    fireEvent.click(screen.getByRole("button", { name: "Show all 30 incidents" }));
+    expect(tableRowCount()).toBe(25);
+    fireEvent.click(screen.getAllByRole("button", { name: "Go to next page" })[0]);
+    expect(tableRowCount()).toBe(5);
   });
 
   it("renders pending_reason and confirmation_sources badges when present", () => {
@@ -232,6 +264,35 @@ describe("DepegHistory incident fold", () => {
     expect(screen.queryByLabelText("Go to next page")).toBeNull();
   });
 
+});
+
+describe("DepegHistory coverage anchor", () => {
+  it("renders a UTC-day anchor on the reader's calendar day west of Greenwich", () => {
+    const originalTz = process.env.TZ;
+    process.env.TZ = "America/Los_Angeles";
+    try {
+      mockEvents([makeEvent()]);
+      render(<DepegHistory stablecoinId="usdc-circle" historyCoverage={{
+        startedAt: Date.UTC(2024, 2, 1) / 1000, source: "asset-age", status: "assumed",
+      }} />);
+      const anchor = screen.getByText(/Score coverage:/).textContent ?? "";
+      expect(anchor).toContain("since Mar 1, 2024");
+      expect(anchor).not.toContain("Feb 29, 2024");
+    } finally {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    }
+  });
+
+  it("publishes no second incident total beside the panel's own dispute-filtered count", () => {
+    mockEvents([makeEvent({ provenance: { auditVerdict: "disputed" } })]);
+    render(<DepegHistory stablecoinId="usdc-circle" historyCoverage={{
+      startedAt: Date.UTC(2026, 1, 11) / 1000, source: "asset-age", status: "assumed",
+    }} />);
+    const anchor = screen.getByText(/Score coverage:/).textContent ?? "";
+    expect(anchor).toContain("since Feb 11, 2026");
+    expect(anchor).not.toMatch(/incident/i);
+  });
 });
 
 describe("DepegHistory embedded preview handoff", () => {

@@ -78,4 +78,19 @@ describe("FlowRunLine", () => {
 
     expect(mainPlot(container)?.getAttribute("viewBox")).toBe("0 0 200 72");
   });
+
+  it("does not draw an unavailable weight at the collapsed-stage height beside weighted stubs", () => {
+    const unavailable = makeMintBurnFlowCoin({ stablecoinId: "coin-c", symbol: "COINC", pressureShiftScore: 5, gaugeWeightUsd: null });
+    const model = buildRunLineModel(gauge(), [...coins, unavailable]);
+    const { container } = render(<FlowRunLine model={model} />);
+
+    const gutter = [...container.querySelectorAll("svg")].find((svg) => svg.getAttribute("viewBox") === "0 0 100 190")!;
+    const ticks = [...gutter.querySelectorAll("line[stroke-dasharray='3 3']")];
+    // The weighted stage draws only stubs with a published positive weight.
+    expect(ticks.length).toBeGreaterThan(0);
+    expect(ticks.every((line) => Number(line.getAttribute("y1")) - Number(line.getAttribute("y2")) > 36)).toBe(true);
+    // The unavailable-weight coin stays counted and tabulated.
+    expect(model.stubs.map((stub) => stub.id)).toContain("coin-c");
+    expect(screen.getByText("Weight unavailable")).toBeTruthy();
+  });
 });

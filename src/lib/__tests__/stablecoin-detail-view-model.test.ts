@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
+import { projectFrozenSnapshotLiveSummary } from "@/lib/frozen-snapshot-live-summary";
 import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { MintBurnFlowsResponse, PegSummaryCoin, PegSummaryResponse } from "@shared/types";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
@@ -448,6 +450,59 @@ describe("stablecoin detail view-model builder", () => {
       deviationBps: currentDeviationBps,
       pegReferenceUnavailable,
     });
+  });
+
+  it("falls back to the admitted summary's archived provenance when the peg read has no row", () => {
+    const coin = TRACKED_META_BY_ID.get("msusd-main-street");
+    const frozenSnapshot = FROZEN_SNAPSHOTS_BY_ID.get("msusd-main-street");
+    expect(coin).toBeDefined();
+    expect(frozenSnapshot).toBeDefined();
+    const summary = projectFrozenSnapshotLiveSummary(frozenSnapshot!)!;
+
+    const snapshot = buildDetailPegPriceSnapshot("msusd-main-street", coin!, undefined, summary);
+
+    expect(snapshot.pegScoreResult).toBeNull();
+    expect(snapshot.consensusSources).toEqual([
+      "coingecko",
+      "coingecko-onchain-address",
+      "alchemy-address",
+      "moralis-address",
+    ]);
+    expect(snapshot.agreeSources).toEqual(["coingecko", "alchemy-address"]);
+  });
+
+  it("keeps unread peg provenance absent instead of a measured empty result", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+
+    const snapshot = buildDetailPegPriceSnapshot("usdc-circle", coin, undefined, undefined);
+
+    expect(snapshot.consensusSources).toBeNull();
+    expect(snapshot.agreeSources).toBeNull();
+  });
+
+  it("keeps a present peg row's empty source lists instead of borrowing summary provenance", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const summary = { consensusSources: ["coingecko"], agreeSources: ["coingecko"] } as StablecoinLiveSummary;
+    const pegSummaryCoin = makePegSummaryCoin({
+      id: "usdc-circle",
+      name: coin.name,
+      symbol: coin.symbol,
+      pegType: "peggedUSD",
+      pegCurrency: coin.flags.pegCurrency,
+      currentDeviationBps: 0,
+      consensusSources: [],
+      agreeSources: [],
+    });
+
+    const snapshot = buildDetailPegPriceSnapshot(
+      "usdc-circle",
+      coin,
+      { coins: [pegSummaryCoin], summary: null, methodology: {} } as PegSummaryResponse,
+      summary,
+    );
+
+    expect(snapshot.consensusSources).toEqual([]);
+    expect(snapshot.agreeSources).toEqual([]);
   });
 
   it("uses report-card snapshot freshness instead of the browser fetch timestamp", () => {

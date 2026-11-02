@@ -28,6 +28,7 @@ import {
 import { formatCurrency, formatPercent, formatScore } from "@shared/lib/format";
 import { YIELD_BENCHMARK_KEY_CURRENCY } from "@shared/types/yield";
 import { computePysBreakdown, formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
+import { PYS_DEFAULT_SAFETY_SCORE } from "@shared/lib/yield-scoring";
 import {
   formatYieldSourceRiskSummary,
   getYieldSourceDepthDisplay,
@@ -66,15 +67,15 @@ type AvailableYieldSource = {
   yieldSource: string;
 };
 
-export function ApyRangeBar({ apy30d, min, max }: { apy30d: number; min: number; max: number }) {
+export function ApyRangeBar({ currentApy, min, max }: { currentApy: number; min: number; max: number }) {
   const span = Math.max(0, max - min);
   // WHY: zero-width spans collapse the dot onto the bar's left edge; bias to centered.
-  const position = span === 0 ? 50 : clampScore(((apy30d - min) / span) * 100);
+  const position = span === 0 ? 50 : clampScore(((currentApy - min) / span) * 100);
   return (
     <div
       className="relative inline-flex h-4 w-14 items-center"
       role="img"
-      aria-label={`30 day APY range ${min.toFixed(1)}% to ${max.toFixed(1)}%, current ${apy30d.toFixed(1)}%`}
+      aria-label={`30 day APY range ${min.toFixed(1)}% to ${max.toFixed(1)}%, current ${currentApy.toFixed(1)}%`}
     >
       <div className="absolute inset-x-0 top-1/2 h-0.5 -translate-y-1/2 rounded-full bg-muted" />
       <div
@@ -224,6 +225,7 @@ export function YieldSafetyBadge({
   safetyScore,
   safetySrLabel,
   opportunityDerived = false,
+  usedDefaultSafety = false,
   compact = false,
 }: {
   grade: YieldViewModelRow["safetyGrade"];
@@ -231,6 +233,8 @@ export function YieldSafetyBadge({
   safetySrLabel: string;
   /** True when the yield model produced this grade instead of Safety Score V9. */
   opportunityDerived?: boolean;
+  /** True when the score is the conservative default, not a measured Safety Score. */
+  usedDefaultSafety?: boolean;
   compact?: boolean;
 }) {
   // A Royco Dawn tranche grade and an external-opportunity grade publish into
@@ -244,6 +248,7 @@ export function YieldSafetyBadge({
   ) : null;
   const describe = (base: string) =>
     opportunityDerived ? `${base} — ${YIELD_OPPORTUNITY_SAFETY_DESCRIPTION}` : base;
+  const defaultSafetyLabel = `No safety grade available — defaulted to ${PYS_DEFAULT_SAFETY_SCORE}`;
 
   if (grade && grade !== "NR") {
     return (
@@ -258,7 +263,7 @@ export function YieldSafetyBadge({
       </Badge>
     );
   }
-  if (safetyScore !== null) {
+  if (safetyScore !== null && !usedDefaultSafety) {
     return (
       <Badge
         variant="outline"
@@ -272,7 +277,11 @@ export function YieldSafetyBadge({
     );
   }
   return (
-    <span className="text-muted-foreground" aria-label={safetySrLabel}>
+    <span
+      className="text-muted-foreground"
+      title={usedDefaultSafety ? defaultSafetyLabel : undefined}
+      aria-label={usedDefaultSafety ? defaultSafetyLabel : safetySrLabel}
+    >
       {"—"}
     </span>
   );

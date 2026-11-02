@@ -24,7 +24,7 @@ The hub's static comparison matrix is headed `Types of stablecoins` (`#mechanism
 
 FPI copy keeps its documented 100% collateral-ratio target distinct from dated observed reserve composition, including when the target depends on legacy-FRAX-linked balances and AMO positions. FIP-448 remains a proposal until a separately authorized evidence refresh verifies execution. A design target is never rendered as observed coverage or a completed wind-down.
 
-Tracked examples and lifecycle counts use `shared/lib/stablecoins/by-mechanism.ts`: active coins appear in canonical order with variants nested; commodity pegs participate only in their explicitly resolved `commodity-claim` family; unresolved effective archetypes are excluded. Hub counts and upcoming/frozen links use the same admission policy. Relevant case studies retain canonical study order.
+Tracked examples and lifecycle counts use `shared/lib/stablecoins/by-mechanism.ts`: active coins appear in canonical order with variants nested; commodity pegs participate in their explicitly resolved `commodity-claim` family and in any other archetype their own classification explicitly names, while inherited or absent classifications are excluded; unresolved effective archetypes are excluded. Hub counts and upcoming/frozen links use the same admission policy. Relevant case studies retain canonical study order.
 
 ### Diagram Scope
 
@@ -56,7 +56,7 @@ Shared navigation links directly to Mechanisms and Case Studies. Mechanism pages
 ## Maintenance Checks
 
 - `src/app/__tests__/static-content-route-contracts.test.tsx`: exact registered static params; `src/app/__tests__/sitemap-frozen.test.ts`: canonical public route inventory.
-- `src/app/learn/case-studies/__tests__/content.test.ts`: coin references, chart reachability, chronology, deviation consistency, widget relationships and event lookups. `npm run check:editorial-content` owns metadata/body shapes, registration, filenames, tracked/cemetery identities and internal links.
+- `src/app/learn/case-studies/__tests__/content.test.ts`: coin references, chart reachability, chronology, deviation consistency, widget relationships and event lookups. `src/lib/mechanism-explainers/__tests__/content-registry.test.ts` checks every authored representative coin against the mechanism registry. `npm run check:editorial-content` owns metadata/body shapes, registration, filenames, tracked/cemetery identities and internal links.
 - `src/lib/__tests__/term-markup.test.ts`: glossary marker parsing/visible labels and AI-summary corpus integrity.
 - `npm run check:generated-artifacts -- --only=case-study-client-index`: client-safe projection. The `og-editorial` artifact owns the shared Learn card's SVG/font signatures and Firefox-rendered PNG checks; legacy bespoke PNGs are inert.
 - `npm run seo:check`: sitemap, OG references and crawlability after a Pages build.

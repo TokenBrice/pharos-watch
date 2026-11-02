@@ -144,6 +144,16 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   const pegCoinById = new Map((input.pegSummary.data?.coins ?? []).map((coin) => [coin.id, coin]));
   const yieldIds = new Set((input.yieldRankings.data?.rankings ?? []).map((row) => row.id));
   const flowById = new Map((input.mintBurnFlows.data?.coins ?? []).map((row) => [row.stablecoinId, row]));
+  // Configured legs whose coin is not yet published in `coins` are still
+  // configuration: the coin is not "Not Covered". The publication names the
+  // real state, so an unpublished configured coin reads as unavailable flow
+  // data (or Disabled when every leg is operator-disabled) instead.
+  const flowLegsById = new Map<string, NonNullable<MintBurnFlowsResponse["publication"]>["legs"]>();
+  for (const leg of input.mintBurnFlows.data?.publication?.legs ?? []) {
+    const legs = flowLegsById.get(leg.stablecoinId);
+    if (legs) legs.push(leg);
+    else flowLegsById.set(leg.stablecoinId, [leg]);
+  }
   const reportCardById = new Map((input.reportCards.data?.cards ?? []).map((card) => [card.id, card]));
   const dependencyFacts = input.reportCards.data
     ? buildV9DependencyCoverageFacts(activeStablecoins, input.reportCards.data)
@@ -154,6 +164,13 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     const asset = assetById.get(coin.id);
     const reportCard = reportCardById.get(coin.id);
     const mcap = getCirculatingRawOrNull(asset);
+    const publishedFlowStatus = flowById.get(coin.id)?.coverage?.status;
+    const unpublishedFlowLegs = publishedFlowStatus == null ? flowLegsById.get(coin.id) : undefined;
+    const unpublishedFlowConfigured = unpublishedFlowLegs != null && unpublishedFlowLegs.length > 0;
+    const unpublishedFlowDisabled =
+      unpublishedFlowLegs != null
+      && unpublishedFlowLegs.length > 0
+      && unpublishedFlowLegs.every((leg) => leg.status === "disabled");
     return buildCoverageRow({
       coin: { ...coin, ...COMPLIANCE_BY_ID.get(coin.id) },
       marketCapUsd: mcap ?? 0,
@@ -167,12 +184,15 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       dexCoverageClass: input.dexLiquidity.data?.[coin.id]?.coverageClass ?? null,
       redemptionEntry: input.redemptionBackstops.data?.coins?.[coin.id] ?? null,
       hasYieldCoverage: yieldIds.has(coin.id),
-      flowCoverageStatus: flowById.get(coin.id)?.coverage?.status ?? null,
+      flowCoverageStatus: publishedFlowStatus ?? (unpublishedFlowDisabled ? "disabled" : null),
       dependencyCoverage: dependencyFacts.get(coin.id) ?? null,
       blacklistStatus: getResolvedBlacklistStatus(coin.id),
       publishedMint: reportCard ? readV9CardMintComponent(reportCard) : null,
       liveReserveFresh: reportCard?.backingFromLiveReserves ?? null,
-      dataAvailability: queryAvailability,
+      dataAvailability:
+        unpublishedFlowConfigured && !unpublishedFlowDisabled
+          ? { ...queryAvailability, flows: false }
+          : queryAvailability,
     });
   });
   const featureSummaries = COVERAGE_FEATURES.map((feature) => buildCoverageFeatureSummary(feature, rows));
@@ -271,7 +291,14 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
   const isInitialDataLoading = coverageQueries.some((query) => query.data === undefined && !query.error);
   const unavailableFeatures = FEATURE_QUERY_AVAILABLE_KEYS.filter((key) => !queryAvailability[key]);
 
-  const dataUpdatedAt = Math.max(...coverageQueries.map((query) => query.dataUpdatedAt ?? 0));
+  // The page is only as current as its oldest contributing producer. TanStack's
+  // `dataUpdatedAt` is this browser's fetch receipt, not a served generation.
+  const producerClocksMs = coverageQueries
+    .filter((query) => query.data !== undefined)
+    .map((query) => query.meta?.updatedAt)
+    .filter((updatedAt): updatedAt is number => typeof updatedAt === "number" && Number.isFinite(updatedAt))
+    .map((updatedAt) => updatedAt * 1000);
+  const dataAsOfMs = producerClocksMs.length > 0 ? Math.min(...producerClocksMs) : undefined;
 
   return {
     rows,
@@ -286,7 +313,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     isInitialDataLoading,
     isStablecoinDataUnavailable,
     unavailableFeatures,
-    dataUpdatedAt: dataUpdatedAt > 0 ? dataUpdatedAt : undefined,
+    dataAsOfMs,
     staleQueries: COVERAGE_MATRIX_QUERY_KEYS.map((preset) => {
       const query = input[preset];
       return {

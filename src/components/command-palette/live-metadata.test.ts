@@ -45,6 +45,36 @@ describe("command palette live supply metadata", () => {
     expect(buildStablecoinLiveMetadata(data, query, nowMs + 60_001).get("usdc-circle")?.health).toBeUndefined();
   });
 
+  it("withholds peg health when the only reference is a single coin's own price", () => {
+    const data = { peggedAssets: [makeStablecoin({ id: "kgst-kyrgyz-som", pegType: "peggedKGS", price: 0.010856 })] };
+    expect(buildStablecoinLiveMetadata(data, query, nowMs).get("kgst-kyrgyz-som")?.health).toBeUndefined();
+  });
+
+  it("admits peg health from a live FX reference", () => {
+    const data = {
+      peggedAssets: [makeStablecoin({ id: "kgst-kyrgyz-som", pegType: "peggedKGS", price: 0.010856 })],
+      fxFallbackRates: { peggedKGS: 0.0118 },
+    };
+    expect(buildStablecoinLiveMetadata(data, query, nowMs).get("kgst-kyrgyz-som")?.health).toEqual({ kind: "peg", status: "alert" });
+  });
+
+  it("withholds peg health when a two-coin peer median mirrors half of a real move", () => {
+    const data = { peggedAssets: [
+      makeStablecoin({ id: "try-test-alpha", pegType: "peggedTRY", price: 0.029 }),
+      makeStablecoin({ id: "try-test-beta", pegType: "peggedTRY", price: 0.025 }),
+    ] };
+    const metadata = buildStablecoinLiveMetadata(data, query, nowMs);
+    expect(metadata.get("try-test-alpha")?.health).toBeUndefined();
+    expect(metadata.get("try-test-beta")?.health).toBeUndefined();
+  });
+
+  it("requires the registry peg unit to agree with the snapshot peg type", () => {
+    const data = { peggedAssets: [
+      makeStablecoin({ id: "usdc-circle", pegType: "peggedEUR", price: 1 }),
+    ] };
+    expect(buildStablecoinLiveMetadata(data, query, nowMs).get("usdc-circle")?.health).toBeUndefined();
+  });
+
   it("does not turn a fresh request receipt into a producer generation, while retaining NAV classification", () => {
     const data = { peggedAssets: [
       makeStablecoin({ id: "usdc-circle", price: 1 }),

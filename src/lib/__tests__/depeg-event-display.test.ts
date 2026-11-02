@@ -50,9 +50,9 @@ describe("depeg event collision display", () => {
 
 describe("depeg event search title and description", () => {
   const usdc: DepegEventDisplayInput = {
-    stablecoinId: "usdc-circle", symbol: "USDC", slug: "title-fixture",
+    stablecoinId: "usdc-circle", symbol: "USDC", slug: "title-fixture", pegType: "peggedUSD",
     direction: "below", peakDeviationBps: -1210, startedAt: Date.parse("2023-03-11T03:00:00Z") / 1000,
-    endedAt: Date.parse("2023-03-13T03:00:00Z") / 1000, peakPrice: 0.879, recoveryPrice: 1, closeReason: "recovered-primary",
+    endedAt: Date.parse("2023-03-13T03:00:00Z") / 1000, peakPrice: 0.879, recoveryPrice: 1, pegReference: 1, closeReason: "recovered-primary",
   };
 
   it("leads with the symbol, date and deviation, without a clause dash", () => {
@@ -80,13 +80,52 @@ describe("depeg event search title and description", () => {
     );
     expect(buildDepegEventDescription(usdc, true, null)).toMatch(/^USDC fell 12\.1% below its peg at 03:00 UTC on March 11, 2023\./);
   });
+
+  it("renders the synopsis prices in the peg's native unit", () => {
+    const eurc: DepegEventDisplayInput = {
+      ...usdc,
+      symbol: "EURC",
+      pegType: "peggedEUR",
+      pegReference: 1.17,
+      peakPrice: 1.05,
+      recoveryPrice: 1.17,
+    };
+    const synopsis = buildDepegEventSynopsis(eurc);
+    expect(synopsis).toContain("at €0.8974");
+    expect(synopsis).toContain("€1.00");
+    expect(synopsis).not.toContain("$1.05");
+  });
+
+  it("qualifies a disputed audit verdict without dropping the measured deviation", async () => {
+    const slug = "a7a5-2026-08-06";
+    const event = DEPEG_EVENT_ENTRIES.find((entry) => entry.slug === slug)!;
+    expect(event.provenance?.auditVerdict).toBe("disputed");
+
+    expect(buildDepegEventTitle(event, false)).toBe("A7A5 Depeg, August 6, 2026: 8197.8% Above Peg (Disputed)");
+    expect(buildDepegEventDescription(event, false)).toContain("rose 8197.8% above its peg (Disputed)");
+    expect(buildDepegEventSynopsis(event)).toContain("8197.8% (Disputed)");
+    const metadata = await generateMetadata({ params: Promise.resolve({ event: slug }) });
+    expect(metadata.description).toContain("(Disputed)");
+  });
+
+  it("qualifies exactly the disputed archive events", () => {
+    for (const event of DEPEG_EVENT_ENTRIES) {
+      const disputed = event.provenance?.auditVerdict === "disputed" || event.provenance?.auditVerdict === "false_positive";
+      const texts = [
+        buildDepegEventTitle(event, false),
+        buildDepegEventDescription(event, false),
+        buildDepegEventSynopsis(event),
+      ];
+      for (const text of texts) expect(text.includes("(Disputed)"), event.slug).toBe(disputed);
+    }
+  });
 });
 
 describe("depeg closure presentation", () => {
   const base: DepegEventDisplayInput = {
-    stablecoinId: "usdc-circle", symbol: "USDC", slug: "closure-fixture",
+    stablecoinId: "usdc-circle", symbol: "USDC", slug: "closure-fixture", pegType: "peggedUSD",
     direction: "below", peakDeviationBps: -500, startedAt: 1_700_000_000,
-    endedAt: 1_700_003_600, peakPrice: 0.95, recoveryPrice: 1, closeReason: null,
+    endedAt: 1_700_003_600, peakPrice: 0.95, recoveryPrice: 1, pegReference: 1, closeReason: null,
   };
 
   it.each([

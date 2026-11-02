@@ -202,4 +202,12 @@ describe("buildStablecoinBreadcrumbItems", () => {
     expect(buildStablecoinBreadcrumbItems(base)).toHaveLength(3);
     expect(buildStablecoinBreadcrumbItems(base)[2].name).toBe(`${base.name} (${base.symbol})`);
   });
+
+  it("names a launched-awaiting-data profile's published phase, not Upcoming", () => {
+    const launched = makeStablecoinMeta({ status: "pre-launch", launchPhase: "launched" });
+    expect(buildStablecoinBreadcrumbItems(launched)[1]).toEqual({
+      name: "Launched – awaiting data",
+      url: "/upcoming/",
+    });
+  });
 });

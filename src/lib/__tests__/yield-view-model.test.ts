@@ -600,6 +600,18 @@ describe("buildYieldViewModel", () => {
     },
   );
 
+  it("names the applied risk band instead of one of its axes", () => {
+    const universe = prepareYieldUniverse(rows, null);
+    const landing = buildYieldViewModel(universe, {});
+    expect(landing.comparisonLabel).toBe("Opportunistic");
+    expect(landing.visibleRows.every((row) => row.rankLabel.endsWith("in Opportunistic"))).toBe(true);
+
+    expect(buildYieldViewModel(universe, { risk: "conservative" }).comparisonLabel).toBe("Conservative");
+    expect(buildYieldViewModel(universe, { risk: "balanced" }).comparisonLabel).toBe("Balanced");
+    // A single axis without a band still names that axis.
+    expect(buildYieldViewModel(universe, { risk: "any", warnings: "hide" }).comparisonLabel).toBe("No-warning set");
+  });
+
   it("round-trips explicit risk-band params instead of flagging them", () => {
     const opportunistic = buildYieldViewModel(prepareYieldUniverse(rows, null), { risk: "opportunistic" });
     expect(opportunistic.invalidParamKeys).not.toContain("risk");

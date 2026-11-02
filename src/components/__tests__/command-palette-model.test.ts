@@ -103,4 +103,14 @@ describe("command palette model", () => {
       });
     }
   });
+
+  it("keeps a reviewed dispute's badge on its recent-depeg row", () => {
+    const disputed = buildCommandPaletteResultDescriptors({ query: "eurm", history: [], isDark: false })
+      .find((item) => item.id === "depeg-eurm-2026-08-12");
+    expect(disputed?.sublabel).toContain("Disputed");
+
+    const ordinary = buildCommandPaletteResultDescriptors({ query: "lusd", history: [], isDark: false })
+      .find((item) => item.id === "depeg-lusd-2026-10-29");
+    expect(ordinary?.sublabel).not.toContain("Disputed");
+  });
 });

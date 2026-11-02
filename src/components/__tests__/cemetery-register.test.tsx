@@ -216,6 +216,31 @@ describe("CemeteryRegister", () => {
     expect(mainRowIds().slice(-2)).toEqual(["coin-5", "coin-28"]);
   });
 
+  it("counts filtered matches against the register total without claiming the total matched", () => {
+    window.history.replaceState(null, "", "/cemetery/?cause=regulatory");
+    render(<Harness />);
+    expect(screen.getByText("Showing 1 matching of 30 records")).toBeDefined();
+    expect(screen.queryByText("Showing 1 of 30 matching")).toBeNull();
+  });
+
+  it("prints the shared peg label instead of the raw peg enum", () => {
+    const entries: CemeteryEntry[] = [
+      { ...fixture(0), id: "peg-var", pegCurrency: "VAR" },
+      { ...fixture(1), id: "peg-other", pegCurrency: "OTHER" },
+    ];
+    render(<Harness entries={entries} rows={buildCemeteryRegisterRows(entries)} />);
+
+    const varRow = mainRow("peg-var");
+    expect(within(varRow).getByText("CPI")).toBeTruthy();
+    expect(within(varRow).queryByText("VAR")).toBeNull();
+    expect(within(mainRow("peg-other")).getByText("Other")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open autopsy for Coin 0 (C0)" }));
+    const autopsy = document.getElementById("autopsy-peg-var")!;
+    expect(within(autopsy).getByText("CPI")).toBeTruthy();
+    expect(within(autopsy).queryByText("VAR")).toBeNull();
+  });
+
   it("prints the derived facts in an expanded autopsy", () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: "Open autopsy for Coin 2 (C2)" }));

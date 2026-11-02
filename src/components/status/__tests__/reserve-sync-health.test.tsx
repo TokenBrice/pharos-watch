@@ -83,6 +83,26 @@ describe("ReserveSyncHealthCard", () => {
     expect(container.textContent).toContain("73.7% fresh, 73.7% authoritative");
   });
 
+  it("does not label all-cohort counters as part of a fresh-evidence partition", () => {
+    render(
+      <ReserveSyncHealthCard
+        health={makeReserveHealth({
+          freshCoins: 250,
+          independentFreshUnverified: 8,
+          staticValidatedFresh: 60,
+          weakProbeFresh: 42,
+          independentFreshEligible: 140,
+          writeTimeoutUncertain: 1,
+        })}
+        nowSeconds={1_712_600_120}
+      />,
+    );
+
+    expect(screen.getByText("Snapshot evidence mix")).toBeTruthy();
+    expect(screen.queryByText("Fresh Evidence Mix")).toBeNull();
+    expect(screen.getByText("Write-timeout uncertain")).toBeTruthy();
+  });
+
   it("shows the by-design degraded count and keeps pre-split rows unavailable", () => {
     const { container } = render(
       <ReserveSyncHealthCard

@@ -1,4 +1,6 @@
 import { formatCurrency } from "@shared/lib/format";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { gradeRange, scoreToGrade } from "@shared/lib/report-card-core";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { SafetyGradeSupplyMix } from "@/components/safety-grade-distribution-bar";
@@ -98,11 +100,18 @@ function pegMatchesFilter(pegType: string | undefined, pegFilter: Exclude<PegFil
 }
 
 export function buildSafetyPegTypeMap(
-  peggedAssets?: Array<{ id: string; pegType?: string }>,
+  cards?: ReadonlyArray<{ id: string }>,
 ): Map<string, string> {
-  if (!peggedAssets) return new Map();
+  if (!cards) return new Map();
   return new Map(
-    peggedAssets.flatMap((asset) => asset.pegType ? [[asset.id, asset.pegType]] : []),
+    cards.flatMap((card) => {
+      const pegCurrency = CLIENT_TRACKED_META_BY_ID.get(card.id)?.flags.pegCurrency;
+      if (!pegCurrency) return [];
+      // Variable and OTHER pegs have no canonical DefiLlama type. Keep their
+      // registry peg bucket so every non-"all" filter still sees them.
+      const pegType = pegTypeFromCurrency(pegCurrency) ?? `pegged${pegCurrency}`;
+      return [[card.id, pegType]];
+    }),
   );
 }
 

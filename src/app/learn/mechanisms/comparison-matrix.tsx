@@ -72,7 +72,7 @@ const MATRIX: Record<MechanismArchetype, Record<MatrixCol, string>> = {
   },
   tbill: {
     collateralLocation: "Off-chain",
-    redemptionRight: "NAV",
+    redemptionRight: "NAV or par",
     yieldSource: "Treasury yield",
     primaryFailureMode: "Redemption gate",
     governanceDep: "Low",
@@ -98,7 +98,7 @@ const MATRIX: Record<MechanismArchetype, Record<MatrixCol, string>> = {
     jurisdictionDep: "Medium",
   },
   algorithmic: {
-    collateralLocation: "None",
+    collateralLocation: "Design-specific: none to protocol collateral",
     redemptionRight: "Burn",
     yieldSource: "—",
     primaryFailureMode: "Reflexive collapse",

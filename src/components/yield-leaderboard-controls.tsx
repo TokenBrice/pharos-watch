@@ -2,7 +2,6 @@
 
 import { type ReactNode, useId, useState } from "react";
 import { AlertTriangle, ChevronDown, Search, Star, X } from "lucide-react";
-import { useWatchlist } from "@/hooks/use-watchlist";
 import {
   getActiveFilterSummaries,
   type YieldPresetKey,
@@ -12,6 +11,8 @@ import { cn } from "@/lib/utils";
 
 interface YieldLeaderboardControlsProps {
   viewModel: YieldViewModel;
+  /** Whether the URL carries an explicit filter param; the landing band alone is not resettable. */
+  hasExplicitFilterParams: boolean;
   onFilterChange: (key: string, value: string) => void;
   onClearFilters: () => void;
   onApplyPreset: (presetKey: YieldPresetKey) => void;
@@ -135,6 +136,7 @@ function ActiveFilterPill({
 
 export function YieldLeaderboardControls({
   viewModel,
+  hasExplicitFilterParams,
   onFilterChange,
   onClearFilters,
   onApplyPreset,
@@ -143,19 +145,20 @@ export function YieldLeaderboardControls({
   const panelId = useId();
   const [showFilters, setShowFilters] = useState(false);
   const yieldTypeTabs = options.yieldType.filter((option) => option.count > 0);
-  const { idSet: watchlistIds } = useWatchlist();
+  // Counts come from the stacked view model, so a chip never promises rows its
+  // click cannot produce (the landing band hides warning rows).
+  const watchlistCount = options.watchlist.find((option) => option.value === "only")?.count ?? 0;
   const watchlistActive = filters.watchlist === "only";
-  const attentionActive = filters.attention === "watchlist";
-  const attentionCount = options.attention.find((option) => option.value === "watchlist")?.count ?? 0;
-  const showWatching = watchlistIds.size > 0;
+  const attentionPreset = presets.find((preset) => preset.key === "watchlist-warnings");
+  const attentionCount = attentionPreset?.count ?? 0;
+  const attentionActive = attentionPreset?.active ?? false;
+  const showWatching = watchlistCount > 0 || watchlistActive;
+  // The gated icon chip above already applies this preset; rendering the preset
+  // chip too would put two identical controls in the same views row.
+  const visiblePresets = presets.filter((preset) => preset.key !== "watchlist-warnings");
 
   const activeFilterSummaries = getActiveFilterSummaries(viewModel);
   const activeFilterCount = activeFilterSummaries.length;
-  const hasResettableState =
-    activeFilterCount > 0 ||
-    filters.peg !== "all" ||
-    filters.q !== "" ||
-    filters.trending !== "all";
   const filtersToggleLabel =
     activeFilterCount > 0 ? `Filters (${activeFilterCount} active)` : "Filters";
   const activePreset = presets.find((preset) => preset.active);
@@ -202,7 +205,7 @@ export function YieldLeaderboardControls({
             ))
           : null}
 
-        {hasResettableState ? (
+        {hasExplicitFilterParams ? (
           <button
             type="button"
             onClick={onClearFilters}
@@ -265,7 +268,7 @@ export function YieldLeaderboardControls({
           <>
             <ChipButton
               label="Watching"
-              count={watchlistIds.size}
+              count={watchlistCount}
               active={watchlistActive}
               ariaPressed={watchlistActive}
               dataActive={watchlistActive}
@@ -285,7 +288,7 @@ export function YieldLeaderboardControls({
               ariaPressed={attentionActive}
               dataActive={attentionActive}
               title="Show watched yields with warnings or source changes"
-              onClick={() => onFilterChange("attention", attentionActive ? "all" : "watchlist")}
+              onClick={() => onApplyPreset("watchlist-warnings")}
               leadingIcon={
                 <AlertTriangle
                   aria-hidden="true"
@@ -295,7 +298,7 @@ export function YieldLeaderboardControls({
             />
           </>
         ) : null}
-        {presets.map((preset) => (
+        {visiblePresets.map((preset) => (
           <ChipButton
             key={preset.key}
             label={preset.label}

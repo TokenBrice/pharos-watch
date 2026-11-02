@@ -2,7 +2,9 @@ import { deriveIndicativeDeviationBps } from "@/lib/stablecoin-detail-derive";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { formatCompactUsd } from "@shared/lib/format";
-import { derivePegRates, getPegReference } from "@shared/lib/peg-rates";
+import { derivePegRates, getPegReference, normalizePegType } from "@shared/lib/peg-rates";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import { isAuthoritativeDepegPegReference } from "@shared/lib/peg-reference-trust";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { StablecoinListResponse } from "@shared/types";
 import type {
@@ -64,17 +66,27 @@ export function buildStablecoinLiveMetadata(
   }, nowMs);
   const isCurrent = hasClock && healthInfo.state === "fresh";
 
-  const { rates } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, stablecoinsData.fxFallbackRates);
+  const { rates, sources, counts } = derivePegRates(peggedAssets, TRACKED_META_BY_ID, stablecoinsData.fxFallbackRates);
   for (const asset of peggedAssets) {
     const marketCapUsd = hasClock ? getCirculatingRawOrNull(asset) : null;
     const meta = TRACKED_META_BY_ID.get(asset.id);
-    const peg = asset.pegType;
+    const peg = normalizePegType(asset.pegType);
     let health: CommandPaletteStablecoinHealth | undefined;
     if (meta?.flags.navToken) {
       health = { kind: "nav" };
     } else if (isCurrent && peg && isObservedPrice(asset) && asset.price != null) {
-      const reference = getPegReference(peg, rates, meta?.commodityOunces);
-      const deviationBps = deriveIndicativeDeviationBps(asset.price, reference);
+      // The registry peg unit decides whether the snapshot pegType may anchor
+      // the reference, and the shared trust gate rejects a thin peer median.
+      const registryPegType = normalizePegType(pegTypeFromCurrency(meta?.flags.pegCurrency));
+      const referenceIsAuthoritative = (registryPegType == null || registryPegType === peg)
+        && isAuthoritativeDepegPegReference({
+          pegType: peg,
+          pegCurrency: meta?.flags.pegCurrency,
+          pegRateSource: sources[peg] ?? null,
+          pegRateContributorCount: counts[peg] ?? null,
+        });
+      const reference = referenceIsAuthoritative ? getPegReference(peg, rates, meta?.commodityOunces) : null;
+      const deviationBps = reference != null ? deriveIndicativeDeviationBps(asset.price, reference) : null;
       if (deviationBps != null) {
         const bps = Math.abs(deviationBps);
         const threshold = peg === "peggedUSD" ? DEPEG_THRESHOLD_BPS : DEPEG_THRESHOLD_BPS_NON_USD;

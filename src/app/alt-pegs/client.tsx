@@ -168,6 +168,27 @@ export function AltPegsClient() {
             hasData: !!shareQuery.data?.length,
             meta: shareQuery.meta,
           },
+          {
+            preset: "pegSummary",
+            dataUpdatedAt: pegSummaryQuery.dataUpdatedAt,
+            error: pegSummaryQuery.error,
+            hasData: !!pegSummaryQuery.data?.coins?.length,
+            meta: pegSummaryQuery.meta,
+          },
+          {
+            preset: "dexLiquidity",
+            dataUpdatedAt: dexLiquidityQuery.dataUpdatedAt,
+            error: dexLiquidityQuery.error,
+            hasData: !!dexLiquidityQuery.data,
+            meta: dexLiquidityQuery.meta,
+          },
+          {
+            preset: "reportCards",
+            dataUpdatedAt: reportCardsQuery.dataUpdatedAt,
+            error: reportCardsQuery.error,
+            hasData: !!reportCardsQuery.data?.cards?.length,
+            meta: reportCardsQuery.meta,
+          },
         ]}
       />
       {stablecoinsQuery.isError ? (
@@ -193,6 +214,7 @@ export function AltPegsClient() {
         <AltPegStablecoinTable
           data={stablecoinsQuery.data?.peggedAssets}
           isLoading={stablecoinsQuery.isLoading}
+          unavailable={Boolean(stablecoinsQuery.error)}
           pegRows={snapshot.distributionRows}
           selectedPeg={selectedPeg}
           onSelectPeg={setSelectedPeg}
@@ -200,6 +222,12 @@ export function AltPegsClient() {
           pegScores={tableInputs.pegScores}
           dexLiquidity={dexLiquidityQuery.data ?? undefined}
           reportCards={tableInputs.reportCards}
+          sourceGenerations={{
+            stablecoins: stablecoinsQuery.meta?.updatedAt,
+            pegSummary: pegSummaryQuery.meta?.updatedAt,
+            dexLiquidity: dexLiquidityQuery.meta?.updatedAt,
+            reportCards: reportCardsQuery.meta?.updatedAt,
+          }}
         />
       </SectionErrorBoundary>
 

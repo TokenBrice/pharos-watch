@@ -8,7 +8,7 @@ import { cleanupFrontendTest } from "@/test-utils/frontend";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
-import { QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
+import { QUALITY_TIER_3_CLASSES, PEG_DEVIATION_TONE_CLASSES } from "@shared/lib/classification";
 import { makeDews, makePendingIncident } from "./depeg.test-support";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
@@ -124,6 +124,56 @@ describe("DepegControlBoard", () => {
     expect(within(row).queryByText("unknown")).toBeNull();
   });
 
+  it("does not paint an unavailable live deviation with the healthy tone", () => {
+    renderBoard([makeRow({ activeDepeg: false, currentDeviationBps: null, pegScore: null }, makeDews({ score: 0, band: "CALM" }))]);
+    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    const values = within(row).getAllByText("—");
+    for (const deviation of values) {
+      expect(deviation.className).toContain("text-muted-foreground");
+      expect(deviation.className).not.toContain(PEG_DEVIATION_TONE_CLASSES.healthy.text);
+    }
+  });
+
+  it("keeps the healthy tone for an observed zero deviation", () => {
+    renderBoard([makeRow({ activeDepeg: false, currentDeviationBps: 0 }, makeDews({ score: 0, band: "CALM" }))]);
+    const row = screen.getByRole("button", { name: /open susd depeg detail/i });
+    for (const value of within(row).getAllByText("0 bps")) {
+      expect(value.className).toContain(PEG_DEVIATION_TONE_CLASSES.healthy.text);
+    }
+  });
+
+  it("derives a pending incident's age from firstSeenAt on the page clock", () => {
+    const NOW = 1_700_100_000;
+    const row = makeRow({ activeDepeg: false, currentDeviationBps: 0 }, null);
+    row.pendingIncident = makePendingIncident({
+      stablecoinId: row.coin.id,
+      symbol: row.coin.symbol,
+      firstSeenAt: NOW - 720,
+      ageSec: 60,
+    });
+    const view = renderBoard([row], { nowSeconds: NOW });
+    const renderedRow = () => screen.getByRole("button", { name: /open susd depeg detail/i });
+    expect(within(renderedRow()).getByText("12m")).toBeTruthy();
+    expect(within(renderedRow()).queryByText("1m")).toBeNull();
+
+    view.rerender(
+      <DepegControlBoard
+        rows={[row]}
+        logos={{}}
+        pegFilter="all"
+        typeFilter="all"
+        searchQuery=""
+        onPegFilterChange={vi.fn()}
+        onTypeFilterChange={vi.fn()}
+        onSearchChange={vi.fn()}
+        onClearFilters={vi.fn()}
+        onRowClick={vi.fn()}
+        nowSeconds={NOW + 600}
+      />,
+    );
+    expect(within(renderedRow()).getByText("22m")).toBeTruthy();
+  });
+
   it.each(["open", "pending", "floor", "warning", "danger"] as const)(
     "preserves the known %s status ahead of unknown observations",
     (status) => {
@@ -225,6 +275,23 @@ describe("DepegControlBoard", () => {
     expect(screen.getByRole("button", { name: /Attention sort, asc/i })).toBeTruthy();
     rows = screen.getAllByRole("button", { name: /open .* depeg detail/i });
     expect(within(rows[0]).getByText("CLEAR")).toBeTruthy();
+  });
+
+  it("counts below-floor rows in the same filtered universe as the attention figure", () => {
+    const goldFloor = makeRow({
+      id: "gold-floor",
+      symbol: "GOLDF",
+      pegCurrency: "GOLD",
+      depegEventCoverageLimited: true,
+      activeDepeg: false,
+      currentDeviationBps: 0,
+    }, null);
+
+    renderBoard([goldFloor], { pegFilter: "GOLD" });
+
+    expect(screen.getByText(/need attention/).textContent).toBe(
+      "0 filtered coins need attention · 1 below the event-history floor",
+    );
   });
 
 });

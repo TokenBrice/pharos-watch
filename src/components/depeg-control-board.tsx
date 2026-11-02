@@ -37,8 +37,6 @@ interface DepegControlBoardProps {
   onClearFilters: () => void;
   onRowClick: (id: string) => void;
   nowSeconds: number;
-  /** Assets whose event history is too short to score, shown as scope context. */
-  eventFloorCount?: number;
 }
 
 const BOARD_PAGE_SIZE = 12;
@@ -125,7 +123,9 @@ function InstrumentRow({
   const prefetch = usePrefetchStablecoin();
   const occupancyBasisId = useId();
   const coin = row.coin;
-  const absDev = Math.abs(coin.currentDeviationBps ?? 0);
+  const deviationClass = coin.currentDeviationBps == null
+    ? "text-muted-foreground"
+    : deviationColorClass(Math.abs(coin.currentDeviationBps));
   const trackingSpan = formatTrackingSpanDays(coin.trackingSpanDays);
   const pegHealthValue =
     coin.pegScore !== null ? (
@@ -133,12 +133,13 @@ function InstrumentRow({
     ) : (
       <span className="text-muted-foreground">NR</span>
     );
-  const eventAge =
-    row.pendingIncident?.ageSec != null
-      ? formatElapsedSeconds(row.pendingIncident.ageSec)
-      : coin.lastEventAt != null
-        ? `${formatElapsedSeconds(Math.max(0, nowSeconds - coin.lastEventAt))} ago`
-        : "clear";
+  // The response's pending ageSec is request-frozen; derive from firstSeenAt
+  // so the row follows the same display clock as the last-event age.
+  const eventAge = row.pendingIncident
+    ? formatElapsedSeconds(Math.max(0, nowSeconds - row.pendingIncident.firstSeenAt))
+    : coin.lastEventAt != null
+      ? `${formatElapsedSeconds(Math.max(0, nowSeconds - coin.lastEventAt))} ago`
+      : "clear";
   return (
     <button
       type="button"
@@ -178,7 +179,7 @@ function InstrumentRow({
           className="col-span-2 lg:col-span-1"
           label="Deviation"
           value={
-            <span className={cn(deviationColorClass(absDev))}>
+            <span className={cn(deviationClass)}>
               {coin.currentDeviationBps != null ? `${coin.currentDeviationBps > 0 ? "+" : ""}${coin.currentDeviationBps} bps` : "—"}
             </span>
           }
@@ -236,10 +237,12 @@ export function DepegControlBoard({
   onClearFilters,
   onRowClick,
   nowSeconds,
-  eventFloorCount,
 }: DepegControlBoardProps) {
   const warningCount = rows.filter((row) => row.coin.activeDepeg || row.pendingIncident ||
     (row.dews != null && isThreatBand(row.dews.band) && THREAT_BAND_ORDER[row.dews.band] >= THREAT_BAND_ORDER.ALERT)).length;
+  // Below the live-event supply floor, event history is not scored. Count only
+  // the rows in view so this figure shares the attention count's universe.
+  const eventFloorCount = rows.filter((row) => row.coin.depegEventCoverageLimited).length;
   const filtersActive = pegFilter !== "all" || typeFilter !== "all" || searchQuery.length > 0;
 
   const {
@@ -271,7 +274,9 @@ export function DepegControlBoard({
           <h2 className="pharos-section-title mt-1">Peg control board</h2>
         </div>
         <p className="pharos-meta">
-          <span className="pharos-numeric font-semibold text-foreground">{warningCount}</span>{" "}
+          <span className="pharos-numeric font-semibold text-foreground">
+            {warningCount}
+          </span>{" "}
           {filtersActive ? "filtered coins need attention" : "need attention"}
           {eventFloorCount ? (
             <>

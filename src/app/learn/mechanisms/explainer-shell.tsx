@@ -11,6 +11,7 @@ import { mechanismDiagramFor } from "@/components/stablecoin-detail/mechanism-di
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { cn } from "@/lib/utils";
 import { CASE_STUDY_LIST } from "@/lib/case-studies";
+import { isLaunchedAwaitingData } from "@/lib/pre-launch";
 import {
   CASE_STUDY_OUTCOME_CHIPS,
   CASE_STUDY_OUTCOME_LABELS,
@@ -166,7 +167,7 @@ function RepresentativeCoins({
     <RelatedCoinsList
       coins={coins}
       kicker="Tracked examples"
-      heading="Live coins using this design"
+      heading="Tracked coins using this design"
     />
   );
 }
@@ -306,8 +307,10 @@ function TrackedCoinList({
   // is roughly supply-descending and matches what the screener defaults to
   // before the runtime supply query lands.
   const coins = getActiveByArchetype(archetype);
+  // Launched rows are live, not upcoming: the /upcoming/ projection excludes
+  // them too, so they must not inflate this footer's "+N upcoming".
   const preLaunchCount = getCoinsByLifecycleStatus(archetype, "pre-launch")
-    .length;
+    .filter((coin) => !isLaunchedAwaitingData(coin)).length;
   const frozenCount = getCoinsByLifecycleStatus(archetype, "frozen").length;
   const { parents, childrenByParentId } = nestVariants(coins);
   const trackedCoinCount = coins.length;

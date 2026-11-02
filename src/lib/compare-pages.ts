@@ -2,10 +2,10 @@ import {
   BACKING_LABELS_SHORT,
   GOVERNANCE_LABELS,
   LIABILITY_RECONCILIATION_LABELS,
-  PEG_LABELS_SHORT,
   PROOF_ASSURANCE_METHOD_LABELS,
   PROOF_ASSURANCE_SCOPE_LABELS,
   REDEMPTION_HOLDER_ELIGIBILITY_LABELS,
+  getProfilePegLabel,
   getProofOfReservesStyle,
 } from "@shared/lib/classification";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
@@ -195,7 +195,6 @@ function describeReserveSignal(coin: StablecoinMeta): string {
   // blanket "{provider} attestations" label is replaced by the shared resolver.
   const proofStyle = getProofOfReservesStyle(coin.proofOfReserves);
   if (proofStyle) return proofStyle.label;
-  if (coin.reserves?.[0]?.name) return coin.reserves[0].name.replace(/\s*\([^)]*\)/g, "").trim();
   if (coin.collateral) return coin.collateral.split(/[.;]/)[0]?.trim() ?? "Collateral profile disclosed";
   return "Collateral profile disclosed";
 }
@@ -241,11 +240,20 @@ function buildComparisonGradeSentence(left: StablecoinMeta, right: StablecoinMet
   return `In the Pharos Safety Score release of ${grades.asOf}, ${left.symbol} held ${formatGradeClause(grades.left)} and ${right.symbol} held ${formatGradeClause(grades.right)}.`;
 }
 
+function comparisonPegLabel(coin: StablecoinMeta): string {
+  return getProfilePegLabel(
+    coin.flags,
+    coin.pegReferenceId ? TRACKED_META_BY_ID.get(coin.pegReferenceId)?.symbol : undefined,
+  );
+}
+
 function buildComparisonIntro(left: StablecoinMeta, right: StablecoinMeta): string {
+  const leftPegLabel = comparisonPegLabel(left);
+  const rightPegLabel = comparisonPegLabel(right);
   const pegSentence =
-    left.flags.pegCurrency === right.flags.pegCurrency
-      ? `Both target the ${PEG_LABELS_SHORT[left.flags.pegCurrency]}.`
-      : `${left.symbol} targets ${PEG_LABELS_SHORT[left.flags.pegCurrency]}, while ${right.symbol} targets ${PEG_LABELS_SHORT[right.flags.pegCurrency]}.`;
+    leftPegLabel === rightPegLabel
+      ? `Both target the ${leftPegLabel}.`
+      : `${left.symbol} targets ${leftPegLabel}, while ${right.symbol} targets ${rightPegLabel}.`;
   const governanceSentence =
     left.flags.governance === right.flags.governance
       ? `They share a ${GOVERNANCE_LABELS[left.flags.governance].toLowerCase()} governance model.`
@@ -870,8 +878,8 @@ export function buildComparisonAtAGlanceRows(
     },
     {
       label: "Peg target",
-      left: PEG_LABELS_SHORT[left.flags.pegCurrency],
-      right: PEG_LABELS_SHORT[right.flags.pegCurrency],
+      left: comparisonPegLabel(left),
+      right: comparisonPegLabel(right),
     },
     {
       label: "Yield-bearing",

@@ -76,7 +76,8 @@ describe("HTTP Warning presentation", () => {
 
 describe("deriveDataHealth", () => {
   it.each([
-    [new ApiFetchError("/api/prices", 503, null), false, "unavailable", "Data is not yet available.", undefined],
+    [new ApiFetchError("/api/prices", 503, '{"error":"Data not yet available"}'), false, "unavailable", "Data is not yet available.", undefined],
+    [new ApiFetchError("/api/prices", 503, '{"error":"maintenance"}'), false, "error", "Failed to load data.", undefined],
     [new Error("failed"), false, "error", "Failed to load data.", undefined],
     [new Error("failed"), true, "degraded", "Using last successful data while refresh retries.", "refresh"],
     [undefined, false, "unavailable", "Data is not yet available.", undefined],

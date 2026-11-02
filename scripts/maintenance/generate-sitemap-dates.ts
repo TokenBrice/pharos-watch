@@ -12,6 +12,9 @@ import {
 } from "../lib/sitemap-detail-dates";
 import { CASE_STUDY_LIST } from "../../src/lib/case-studies";
 import { BLOG_POSTS } from "../../src/data/blog";
+import { getIndexableChainIds } from "../../src/lib/chain-indexing";
+import { PEG_HUB_PEGS, PEG_HUB_SLUGS } from "../../src/lib/peg-landing";
+import { ALL_STABLECOIN_TAXONOMY_PAGES } from "../../src/lib/stablecoin-taxonomy";
 import {
   METHODOLOGY_CHANGELOG_REGISTRY,
   type MethodologyChangelogRegistryKey,
@@ -37,9 +40,9 @@ const CASE_STUDY_DETAIL_SHARED_SOURCES = [
   join(__dirname, "../../shared/types/editorial-content.ts"),
 ];
 const BLOG_DETAIL_SHARED_SOURCES = [
+  // Per-post dates must not move with the post registry or a site-wide
+  // metadata module: only the renderer every article body shares.
   join(__dirname, "../../src/app/blog/[slug]/page.tsx"),
-  join(__dirname, "../../src/data/blog/index.ts"),
-  join(__dirname, "../../src/lib/page-metadata.ts"),
 ];
 const METHODOLOGY_CHANGELOG_SHARED_SOURCES = [
   // This route owns the shared display config as well as dynamic route metadata.
@@ -61,13 +64,33 @@ const METHODOLOGY_CHANGELOG_ENTRY_SOURCES: Record<MethodologyChangelogRegistryKe
 const SCORING_CHANGELOG_CONTENT_SOURCES = [
   join(__dirname, "../../src/app/methodology/changelog-content/scoring"),
 ];
+const CHAIN_PROFILE_SOURCES = [
+  join(APP_DIR, "chains/[chain]"),
+  join(APP_DIR, "chains/static-chain-content.ts"),
+];
+const PEG_HUB_SOURCES = [
+  join(APP_DIR, "stablecoins/[peg]"),
+  join(__dirname, "../../src/lib/peg-hub-content.ts"),
+  join(__dirname, "../../src/lib/peg-landing.ts"),
+  join(__dirname, "../../src/lib/peg-taxonomy.ts"),
+];
+const TAXONOMY_SOURCES = [
+  join(APP_DIR, "stablecoins/taxonomy-page.tsx"),
+  join(__dirname, "../../src/lib/stablecoin-taxonomy-urls.ts"),
+  join(__dirname, "../../src/lib/stablecoin-taxonomy.ts"),
+];
 
 const GIT_LOG_MARKER = "--PHAROS-SITEMAP-COMMIT--";
 const GIT_DATE_SCAN_PATHS = [
   "src/app",
   "src/lib/case-studies",
+  "src/lib/chain-indexing.ts",
+  "src/lib/peg-hub-content.ts",
+  "src/lib/peg-landing.ts",
+  "src/lib/peg-taxonomy.ts",
+  "src/lib/stablecoin-taxonomy-urls.ts",
+  "src/lib/stablecoin-taxonomy.ts",
   "src/data/blog",
-  "src/lib/page-metadata.ts",
   "shared/types/editorial-content.ts",
   "shared/data/stablecoins/coins",
   STABLECOIN_DOMAIN_SOURCE_DIR,
@@ -211,12 +234,40 @@ function addMethodologyChangelogDates(dates: Record<string, string>): void {
   }
 }
 
+function addChainProfileDates(dates: Record<string, string>): void {
+  const sharedLastModified = latestIso(...CHAIN_PROFILE_SOURCES.map(getLastModified));
+  for (const chainId of getIndexableChainIds()) {
+    dates[`/chains/${chainId}/`] = sharedLastModified;
+  }
+}
+
+function addPegHubDates(dates: Record<string, string>): void {
+  const sharedLastModified = latestIso(...PEG_HUB_SOURCES.map(getLastModified));
+  for (const peg of PEG_HUB_PEGS) {
+    const slug = PEG_HUB_SLUGS[peg];
+    if (slug) dates[`/stablecoins/${slug}/`] = sharedLastModified;
+  }
+}
+
+function addTaxonomyDates(dates: Record<string, string>): void {
+  const sharedLastModified = latestIso(...TAXONOMY_SOURCES.map(getLastModified));
+  for (const page of ALL_STABLECOIN_TAXONOMY_PAGES) {
+    const routeLastModified = getLastModified(join(APP_DIR, "stablecoins", page.kind, `[${page.kind}]`));
+    dates[page.href] = latestIso(sharedLastModified, routeLastModified);
+  }
+}
+
 const dates: Record<string, string> = {};
 walkPages(APP_DIR, "/", dates);
+// walkPages only descends into directories; the root page owns "/".
+dates["/"] = getLastModified(join(APP_DIR, "page.tsx"));
 addStablecoinDetailDates(dates);
 addCaseStudyDates(dates);
 addBlogDates(dates);
 addMethodologyChangelogDates(dates);
+addChainProfileDates(dates);
+addPegHubDates(dates);
+addTaxonomyDates(dates);
 
 // The mechanism explainer hub date must move when any archetype content
 // module under the cluster changes — per-archetype Article JSON-LD sources

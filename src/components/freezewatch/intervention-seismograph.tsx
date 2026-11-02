@@ -7,11 +7,12 @@ import { resolveQueryViewState } from "@/lib/query-view-state";
 import { EVENT_CHART_COLORS, EVENT_LABELS } from "@shared/lib/classification";
 import { formatCompactCount } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
-import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 
 interface InterventionSeismographProps {
   stats: BlacklistSummaryResponse["stats"] | undefined;
   chart: BlacklistSummaryResponse["chart"] | undefined;
+  /** Producer-counted ledger total; the quarterly payload may omit archived rows. */
+  totalEvents?: number;
   isLoading: boolean;
   error?: unknown;
   onRetry?: () => void;
@@ -69,8 +70,9 @@ function compareQuarterLabels(a: string, b: string): number {
 export function buildQuarterPoints(stats: BlacklistSummaryResponse["stats"] | undefined): QuarterPoint[] {
   if (!stats) return [];
   const map = new Map<string, { blacklist: number; unblacklist: number; destroy: number }>();
-  for (const symbol of BLACKLIST_STABLECOINS) {
-    const points = stats.perCoinQuarterlyEventTypes[symbol] ?? [];
+  // Aggregate the payload rather than the compiled list: retired assets and a
+  // newly deployed symbol the client bundle does not know still belong to it.
+  for (const points of Object.values(stats.perCoinQuarterlyEventTypes)) {
     for (const point of points) {
       const existing = map.get(point.quarter) ?? { blacklist: 0, unblacklist: 0, destroy: 0 };
       existing.blacklist += point.blacklist;
@@ -88,7 +90,7 @@ export function buildQuarterPoints(stats: BlacklistSummaryResponse["stats"] | un
     }));
 }
 
-export function InterventionSeismograph({ stats, chart, isLoading, error, onRetry }: InterventionSeismographProps) {
+export function InterventionSeismograph({ stats, chart, totalEvents: authoritativeTotalEvents, isLoading, error, onRetry }: InterventionSeismographProps) {
   const titleId = useId();
   const points = useMemo(() => buildQuarterPoints(stats), [stats]);
   const hasData = stats != null && chart != null;
@@ -117,7 +119,7 @@ export function InterventionSeismograph({ stats, chart, isLoading, error, onRetr
     );
   }
 
-  const totalEvents = points.reduce((sum, point) => sum + point.total, 0);
+  const totalEvents = authoritativeTotalEvents ?? points.reduce((sum, point) => sum + point.total, 0);
   const peakPoint = points.reduce<QuarterPoint | null>(
     (peak, point) => (!peak || point.total > peak.total ? point : peak),
     null,

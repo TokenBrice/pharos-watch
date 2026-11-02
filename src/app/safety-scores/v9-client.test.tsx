@@ -229,6 +229,22 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getByTestId("v9-card").textContent).toBe("partial");
   });
 
+  it("keeps the peg filter usable while the independent stablecoins read is unavailable", () => {
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle", grade: "A", score: 90 }),
+        makeV9Card({ id: "usdt-tether", grade: "B", score: 75 }),
+      ],
+    })));
+    mocks.useStablecoins.mockReturnValue(query(undefined));
+
+    render(<ReportCardsV9Client />);
+    fireEvent.click(screen.getAllByRole("button", { name: "USD" })[0]);
+
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
+    expect(screen.queryByText(/No coins match this filter/)).toBeNull();
+  });
+
   it("shows V9 unavailable without a V8 fallback", () => {
     mocks.useReportCardsV9.mockReturnValue({
       ...query(undefined),

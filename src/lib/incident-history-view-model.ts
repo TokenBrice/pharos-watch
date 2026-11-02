@@ -222,7 +222,8 @@ export interface IncidentEpisode {
   /** null when the start is outside the loaded window. */
   durationSec: number | null;
   worstState: StatusTransition["to"];
-  causeCodes: string[];
+  /** null when the start predates the loaded window, so no causes were observed for it. */
+  causeCodes: string[] | null;
   /** Triage verdict for the episode's causes (`getCausesVerdict`); recovered episodes still carry it. */
   verdict: "act" | "watch";
   transitionCount: number;
@@ -245,14 +246,23 @@ export function foldIncidentEpisodes(
     if (!open) return;
     const startedAt = open.startKnown ? open.first.at : null;
     const end = endedAt ?? nowSeconds;
+    // A recovery as the oldest loaded row only observed the state the incident
+    // recovered from: its own causes are recovery-time observations, not the
+    // incident's, and its `to` says nothing about the worst state.
+    const windowStartRecovery = !open.startKnown && open.first.to === "healthy";
+    const recoveredFrom = open.first.from;
     episodes.push({
       id: `incident-${open.first.id}`,
       startedAt,
       endedAt,
       ongoing: endedAt == null,
       durationSec: startedAt == null ? null : Math.max(0, end - startedAt),
-      worstState: open.members.some((member) => member.to === "stale") ? "stale" : "degraded",
-      causeCodes: [...new Set(open.members.flatMap((member) => member.causes.map((cause) => cause.code)))].sort(),
+      worstState: windowStartRecovery && recoveredFrom != null && recoveredFrom !== "healthy"
+        ? recoveredFrom
+        : open.members.some((member) => member.to === "stale") ? "stale" : "degraded",
+      causeCodes: windowStartRecovery
+        ? null
+        : [...new Set(open.members.flatMap((member) => member.causes.map((cause) => cause.code)))].sort(),
       verdict: getCausesVerdict(open.members.flatMap((member) => member.causes)),
       transitionCount: open.members.length,
     });

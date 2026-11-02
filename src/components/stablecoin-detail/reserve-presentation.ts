@@ -269,7 +269,7 @@ export function buildReserveCompositionNote(reserves: ReserveResult | null): str
       minimumFractionDigits: 4,
       maximumFractionDigits: 4,
     }).format(referenceNavUsd);
-    notes.push(`Strategy reference NAV is ${formattedNav} per share.`);
+    notes.push(`Strategy reference NAV is ${formattedNav}.`);
   }
 
   const yieldBasisShare = reserves.metadata?.yieldBasisCollateralPct;

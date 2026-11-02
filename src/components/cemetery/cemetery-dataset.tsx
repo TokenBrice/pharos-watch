@@ -62,7 +62,7 @@ export function CemeteryDataset() {
         <div className="grid lg:grid-cols-2">
           <div className="min-w-0 space-y-3 px-4 py-4 md:px-5 md:py-5">
             <p className="pharos-numeric text-[11px] uppercase tracking-[0.08em] text-muted-foreground">
-              {facts.join(" · ")} · checksum <span className="normal-case">{meta.sourceChecksumShort}</span>
+              {facts.join(" · ")} · source checksum <span className="normal-case">{meta.sourceChecksumShort}</span>
             </p>
             <div className="flex flex-wrap gap-2">
               <DatasetLink href={meta.jsonUrl}>JSON</DatasetLink>

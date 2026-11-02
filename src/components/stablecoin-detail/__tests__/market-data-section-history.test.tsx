@@ -275,12 +275,39 @@ describe("MarketDataSection history expansion", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain("range=");
     await waitFor(() => expect(marketCapDomain()).toBe(ANNUAL_DOMAIN));
     const slider = screen.getByRole("slider", { name: "Brush time window" });
-    expect(slider.getAttribute("aria-valuemin")).toBe(String((ANNUAL_HISTORY[ANNUAL_HISTORY.length - 1].date - 365 * DAY) * 1000));
+    // A 1Y window shorter than a year starts at the first observation.
+    expect(slider.getAttribute("aria-valuemin")).toBe(
+      String(Math.max(ANNUAL_HISTORY[ANNUAL_HISTORY.length - 1].date - 365 * DAY, ANNUAL_HISTORY[0].date) * 1000),
+    );
 
     // Back to a seeded range: the seed domain returns and the expanded query
     // disables again.
     fireEvent.click(screen.getByRole("button", { name: "90D" }));
     expect(marketCapDomain()).toBe(SEED_DOMAIN);
+  });
+
+  it("clamps the brush domain to the first observation when history is shorter than the range", () => {
+    const shortHistory = Array.from({ length: 42 }, (_, index) => ({
+      date: SEED_HISTORY[SEED_HISTORY.length - 1].date - (41 - index) * DAY,
+      circulatingUsd: 100 + index,
+      price: 1,
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    client.setQueryData(
+      FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory("usdt-tether", STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS).queryKey,
+      { data: shortHistory, meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" } },
+      { updatedAt: Date.now() },
+    );
+    renderSeededSection(client);
+
+    const slider = screen.getByRole("slider", { name: "Brush time window" });
+    expect(slider.getAttribute("aria-valuemin")).toBe(String(shortHistory[0].date * 1000));
+    expect(slider.getAttribute("aria-valuemax")).toBe(String(shortHistory[shortHistory.length - 1].date * 1000));
+
+    // A keyboard-seeded window can never start before the first observation,
+    // so no brush selection can empty the chart.
+    fireEvent.keyDown(slider, { key: "ArrowRight" });
+    expect(Number(slider.getAttribute("aria-valuenow"))).toBeGreaterThanOrEqual(shortHistory[0].date * 1000);
   });
 
   it("clears a brush selection when the time range changes", () => {

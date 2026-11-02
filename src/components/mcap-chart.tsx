@@ -61,9 +61,8 @@ function ExpandableHistoryMcapChart(props: McapChartProps) {
     range === "all" ? "all" : 365,
     { enabled: needsFullHistory },
   );
-  const data = needsFullHistory && fullHistoryQuery.data.length > 0
-    ? fullHistoryQuery.data
-    : props.data;
+  const hasExpandedHistory = needsFullHistory && fullHistoryQuery.data.length > 0;
+  const data = hasExpandedHistory ? fullHistoryQuery.data : props.data;
 
   return (
     <McapChartBody

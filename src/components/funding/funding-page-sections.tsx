@@ -407,7 +407,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
           )}
           {community.length > limit ? (
             <p className="text-xs text-muted-foreground">
-              Showing most recent {limit} of {community.length} supporters.
+              Showing most recent {limit} of {community.length} donations.
             </p>
           ) : null}
           {lastUpdatedLabel ? <p className="text-xs text-muted-foreground">Last refresh: {lastUpdatedLabel}.</p> : null}

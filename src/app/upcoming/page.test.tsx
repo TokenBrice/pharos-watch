@@ -3,7 +3,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { PRE_LAUNCH_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import UpcomingPage from "./page";
+import { PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
+import { isLaunchedAwaitingData } from "@/lib/pre-launch";
+import UpcomingPage, { metadata } from "./page";
 
 vi.mock("@/components/upcoming-client", () => ({ UpcomingClient: () => <div data-testid="upcoming-client" /> }));
 vi.mock("@/components/share-button", () => ({ ShareButton: () => null }));
@@ -24,5 +26,22 @@ describe("UpcomingPage", () => {
     for (const coin of PRE_LAUNCH_STABLECOINS) {
       expect(hrefs.some((href) => href.startsWith(`/stablecoin/${coin.id}`)), coin.id).toBe(true);
     }
+  });
+
+  it("publishes a phase tally whose parts account for every upcoming coin", () => {
+    const upcoming = PRE_LAUNCH_STABLECOINS.filter((coin) => !isLaunchedAwaitingData(coin));
+    const description = String(metadata.description);
+    const tally = description.slice(
+      description.indexOf("By phase: ") + "By phase: ".length,
+      description.indexOf(". Targets"),
+    );
+    const counts = tally.split(", ").map((part) => {
+      const match = /^(.+) (\d+)$/.exec(part);
+      expect(match, part).not.toBeNull();
+      return Number(match![2]);
+    });
+    expect(counts.reduce((sum, count) => sum + count, 0)).toBe(upcoming.length);
+    const unphased = upcoming.filter((coin) => !coin.launchPhase).length;
+    if (unphased > 0) expect(tally).toContain(`${PRE_LAUNCH_UNPHASED_LABEL} ${unphased}`);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SafetyScoreV9CurrentCard, V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
+import type { V9PublicationHoldReason } from "@shared/types/report-cards-v9";
 import { COVERAGE_GAP_OWNER_SWATCH_CLASSES } from "@shared/lib/classification";
 import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "@shared/types/safety-score-v9-vocabulary";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -8,6 +9,7 @@ import {
   buildDataCoverageModel,
   describeDataCoverageHoldCauses,
   describeIssuerReview,
+  V9_PUBLICATION_HOLD_REASON_LIMIT,
 } from "@/lib/safety-score-data-coverage";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 
@@ -417,4 +419,49 @@ describe("describeDataCoverageHoldCauses", () => {
     expect(causes.join(" ")).not.toContain("floor-a");
   });
 
+  it.each([
+    { code: "dex-stale" },
+    { code: "dex-unavailable" },
+    { code: "redemption-stale" },
+    { code: "redemption-unavailable" },
+    { code: "live-reserves-unavailable" },
+    { code: "live-reserves-coverage-below-floor" },
+    { code: "v9-public-materialization-pending" },
+    { code: "coverage-floor-failed", floorIds: ["floor-a"] },
+    {
+      code: "producer-failed-pipeline-gap", assetId: "usdc-circle", source: "reason",
+      reasonCode: "missing-applicable-peg", path: "reserves", effect: "pipeline-gap",
+    },
+    { code: "assessment-failed", detail: "internal validator detail" },
+  ] as readonly V9PublicationHoldReason[])("names a reader-facing cause for a $code hold", (reason) => {
+    const causes = describeDataCoverageHoldCauses([reason]);
+    expect(causes.length).toBeGreaterThan(0);
+    expect(causes.join(" ")).not.toContain(reason.code);
+  });
+
+  it("names a materialization-pending hold without restating what the page shows", () => {
+    expect(describeDataCoverageHoldCauses([{ code: "v9-public-materialization-pending" }])).toEqual([
+      "The newest ratings publication is still pending.",
+    ]);
+  });
+
+  it("qualifies a producer-asset sentence as a lower bound at the reason cap", () => {
+    const producerReason = (assetId: string) => ({
+      code: "producer-failed-pipeline-gap" as const,
+      assetId,
+      source: "reason" as const,
+      reasonCode: "missing-pillar-evidence" as const,
+      path: "asset-compilation",
+      effect: "pipeline-gap" as const,
+    });
+    const capped = Array.from({ length: V9_PUBLICATION_HOLD_REASON_LIMIT }, (_, index) =>
+      producerReason(`asset-${String(index).padStart(2, "0")}`),
+    );
+    const [bounded] = describeDataCoverageHoldCauses(capped);
+    expect(bounded).toMatch(/^At least 24 assets \(/);
+    expect(bounded).toContain("rely on a data feed that did not deliver.");
+
+    const [belowCap] = describeDataCoverageHoldCauses(capped.slice(0, 23));
+    expect(belowCap).toMatch(/^23 assets \(/);
+  });
 });

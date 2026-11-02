@@ -28,9 +28,13 @@ export function PegScoreDewsOverview() {
       <MethodologyDetails summary="Depeg Confirmation & Trust Gates">
         <div className="space-y-3">
           <p>
-            When a live event is later contradicted across the peg by a low-confidence primary price, the detector now
-            retires the stale live row immediately and routes the replacement move through pending confirmation instead
-            of leaving the wrong direction active.
+            A live event changes direction only on an authoritative primary input or fresh trusted aggregate DEX
+            corroboration of the new direction from at least two protocol groups: the old row closes as
+            <code className="mx-1 text-xs">superseded-direction</code> and the replacement move waits in pending
+            confirmation. A <code className="mx-1 text-xs">confirm_required</code> opposite reading — cached, fallback,
+            low-confidence or stale primary — keeps the existing old-direction lifecycle open, adds it to the
+            <code className="mx-1 text-xs">seen</code> set, and logs a warning, with no pending row. An admitted native-domain quote can drive direction
+            replacement for a native-origin row.
           </p>
           <p>
             Pending incidents are no longer write-once snapshots. While a candidate is waiting for confirmation,

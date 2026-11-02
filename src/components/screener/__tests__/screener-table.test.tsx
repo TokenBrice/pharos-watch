@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ScreenerTable } from "@/components/screener/screener-table";
+import { PEG_SCORE_HEADER_TITLE } from "@/lib/definitions";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
 import type { ScreenerRow, ScreenerSortKey } from "@/lib/screener-filters";
 import type { DataTableSortControls } from "@/components/data-table-shell";
@@ -111,7 +112,7 @@ describe("ScreenerTable desktop table", () => {
 
   it.each([
     { cause: "C" as const, score: 35, reason: "undisclosed by issuer" },
-    { cause: "U" as const, score: 50, reason: "not yet researched" },
+    { cause: "U" as const, score: 50, reason: "unresolved" },
   ])("renders $cause priced unknowns with cause-specific text", async ({ cause, score, reason }) => {
     installViewportMatchMedia(1400);
     const partial: ScreenerRow = {
@@ -131,6 +132,17 @@ describe("ScreenerTable desktop table", () => {
     await waitFor(() => {
       expect(screen.getByLabelText("Safety grade B+, score 82")).toBeTruthy();
     });
+  });
+
+  it("states the Peg Score's real tracking window in the header tooltip", async () => {
+    installViewportMatchMedia(1400);
+
+    render(<ScreenerTable rows={[row]} dataState="ready" hasActiveFilters={false} sort={makeSort()} />);
+
+    await waitFor(() => expect(screen.getByTestId("stablecoin-screener-table")).toBeTruthy());
+    const title = screen.getByText("Peg Score").closest("th")?.getAttribute("title");
+    expect(title).toBe(PEG_SCORE_HEADER_TITLE);
+    expect(title).not.toMatch(/over 30 days/i);
   });
 
   it("skips xl-only sparkline SVGs below the xl breakpoint", async () => {

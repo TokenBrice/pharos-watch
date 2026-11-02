@@ -69,7 +69,10 @@ function coverageRatioLabel(coverageRatio: number | null | undefined): string {
   return coverageRatio == null ? "n/a" : formatPercentFromRatio(coverageRatio, 0);
 }
 
-function coverageSubtext(coverage: YieldHealthSummary["sourceRiskCoverage"]): string {
+function coverageSubtext(health: YieldHealthSummary): string {
+  // A missing rankings payload is unreadable evidence, not a validated empty cohort.
+  if (health.rankingCount == null) return "rankings unavailable";
+  const coverage = health.sourceRiskCoverage;
   if (coverage.totalRows <= 0) return "no ranking rows";
   return `${coverage.rowsWithSourceRisk}/${coverage.totalRows} rows with sourceRisk`;
 }
@@ -87,7 +90,8 @@ function supplementalFamilyLabel(
 }
 
 function auditQueueSubtext(coverageAudit: YieldHealthSummary["coverageAudit"]): string {
-  if (coverageAudit.headlineGapCount == null && coverageAudit.recommendationCandidateCount == null) {
+  // Either side missing means the audit's queue counts are not a measured zero.
+  if (coverageAudit.headlineGapCount == null || coverageAudit.recommendationCandidateCount == null) {
     return "queue unavailable";
   }
   const stale = coverageAudit.staleAutoLendingOverrideCount ?? 0;
@@ -102,7 +106,7 @@ function auditQueueSubtext(coverageAudit: YieldHealthSummary["coverageAudit"]): 
     ...(budget ? [`budget ${budget.headlineGaps}/${budget.recommendationCandidates}`] : []),
   ];
   const suffix = parts.length > 0 ? ` · ${parts.join(" · ")}` : "";
-  return `${coverageAudit.headlineGapCount ?? 0} gaps · ${coverageAudit.recommendationCandidateCount ?? 0} candidates${suffix}`;
+  return `${coverageAudit.headlineGapCount} gaps · ${coverageAudit.recommendationCandidateCount} candidates${suffix}`;
 }
 
 function rankingSubtext(health: YieldHealthSummary): string {
@@ -234,7 +238,7 @@ export function YieldHealthCard({
                 {health.sourceRiskCoverage.status}
               </span>
             }
-            subtext={coverageSubtext(health.sourceRiskCoverage)}
+            subtext={coverageSubtext(health)}
           />
         </div>
 

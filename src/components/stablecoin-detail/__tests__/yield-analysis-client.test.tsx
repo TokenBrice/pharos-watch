@@ -222,6 +222,11 @@ describe("YieldAnalysisClient", () => {
         "This stablecoin doesn't currently have yield data tracked. The protocol may not expose a yield-bearing pool, or the source is not on the curated allowlist.",
     },
     {
+      id: "u-united-stables",
+      coin: staticCoin("u-united-stables", "United Stables", "U", false),
+      expected: "Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet.",
+    },
+    {
       id: "buck-buck-assets",
       coin: staticCoin("buck-buck-assets", "Buck", "BUCK", true),
       expected: "This stablecoin is frozen — historical yield data is no longer being refreshed.",
@@ -246,6 +251,42 @@ describe("YieldAnalysisClient", () => {
     await waitFor(() => expect(screen.getByText(expected)).toBeTruthy());
   });
 
+  it("labels NAV tokens with their reference asset but keeps the peer cohort on its own peg", () => {
+    setRankingsQuery({
+      data: makeResponse([
+        makeRanking({ id: "xgld-unitas", symbol: "xGLD", name: "xGLD" }),
+        makeRanking({ id: "fpi-frax", symbol: "FPI", name: "Frax Price Index" }),
+      ]),
+    });
+    render(
+      <YieldAnalysisClient
+        id="xgld-unitas"
+        staticCoin={{
+          id: "xgld-unitas",
+          name: "xGLD",
+          symbol: "xGLD",
+          pegReferenceSymbol: "XAUT",
+          flags: {
+            backing: "crypto-backed",
+            pegCurrency: "VAR",
+            governance: "centralized",
+            yieldBearing: true,
+            rwa: true,
+            navToken: true,
+          },
+        }}
+      />,
+    );
+
+    const header = screen.getByRole("heading", { name: "xGLD" }).closest("section")!;
+    expect(header.textContent).toContain("XAUT-denominated NAV");
+    expect(header.textContent).not.toContain("CPI");
+
+    const peerRail = screen.getByRole("heading", { name: "Nearby yield context" }).closest("section")!;
+    expect(peerRail.textContent).toContain("CPI peg peers by PYS rank");
+    expect(peerRail.textContent).not.toContain("XAUT-denominated NAV peg peers");
+  });
+
   it("renders the query error in the shared frame", () => {
     setRankingsQuery({ data: undefined, error: new Error("yield rankings failed") });
 
@@ -261,6 +302,58 @@ describe("YieldAnalysisClient", () => {
     expect(screen.getByText("yield rankings failed")).toBeTruthy();
   });
 
+
+  it("withholds the all-clear when the fetched warning evidence is unreadable", () => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([
+      makeHistoryPoint({
+        date: "2026-08-01T10:00:00Z",
+        apy: 0.051,
+        warningSignals: [],
+        warningSignalsStatus: "unreadable",
+      }),
+    ]);
+
+    renderWorkbench();
+
+    expect(within(document.getElementById("warning-signals")!).queryByText(/No warning signals recorded/)).toBeNull();
+  });
+
+  it("publishes only the switch ledger, not the durable 30-day count over a different population", () => {
+    setRankingsQuery({
+      data: makeResponse([makeRanking({ sourceRisk: { sourceSwitchCount30d: 0 } as never })]),
+    });
+    setHistoryQuery([
+      makeHistoryPoint({ date: "2026-08-01T10:00:00Z", apy: 0.05, yieldSource: "Primary Source" }),
+      makeHistoryPoint({
+        date: "2026-08-02T10:00:00Z", apy: 0.06, yieldSource: "Alt Source",
+        sourceKey: "alt-source", sourceSwitch: true,
+      }),
+      makeHistoryPoint({
+        date: "2026-08-03T10:00:00Z", apy: 0.05, yieldSource: "Primary Source",
+        sourceKey: "primary-source", sourceSwitch: true,
+      }),
+    ]);
+
+    renderWorkbench();
+
+    const card = document.getElementById("source-switches")!;
+    expect(card.querySelectorAll("li")).toHaveLength(2);
+    expect(within(card).queryByText(/30 days/)).toBeNull();
+    expect(within(card).queryByText(/30-day switch count/)).toBeNull();
+  });
+
+  it.each([
+    ["loading", { data: undefined, error: null, isLoading: true }],
+    ["failed", { data: undefined, error: new Error("history failed"), isLoading: false }],
+  ] as const)("does not attribute a move from an unread history (%s)", (_state, overrides) => {
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([], overrides);
+
+    renderWorkbench();
+
+    expect(screen.queryByTestId("yield-change-attribution")).toBeNull();
+  });
 
   it("groups same signal-source pairs inside the 24h bucket, counts repeats, and orders groups newest first", () => {
     setRankingsQuery({ data: makeResponse([makeRanking()]) });
@@ -381,7 +474,7 @@ describe("YieldAnalysisClient", () => {
 
     expect(document.getElementById("warning-signals")!.querySelectorAll('[role="status"]')).toHaveLength(1);
     expect(document.getElementById("source-switches")!.querySelectorAll('[role="status"]')).toHaveLength(1);
-    expect(screen.getAllByText("yield history failed")).toHaveLength(2);
+    for (const card of timelineCards()) expect(within(card).getByText("yield history failed")).toBeTruthy();
     expect(screen.queryByText(/No warning signals recorded/)).toBeNull();
     expect(screen.queryByText(/No source switches recorded/)).toBeNull();
     for (const card of timelineCards()) fireEvent.click(within(card).getByRole("button", { name: /Retry/ }));

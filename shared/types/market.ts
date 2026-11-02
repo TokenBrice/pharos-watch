@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SfraxStockPerimeterObservationSchema } from "./sfrax-supply";
-import { DepegAuditVerdictSchema } from "./depeg-audit";
+import { DepegAuditVerdictSchema, type DepegAuditVerdict } from "./depeg-audit";
 import { CAUSE_OF_DEATH_VALUES } from "./cause-of-death";
 import { FreshnessAssessmentSchema } from "@pharos/contracts/api-meta";
 import { CoinProjectionMetadataSchema } from "./coin-projection";
@@ -951,6 +951,8 @@ export interface DepegEventSearchEntry {
   direction: DepegDirection;
   peakDeviationBps: DepegEvent["peakDeviationBps"];
   startedAt: DepegEvent["startedAt"];
+  /** Reviewed audit verdict; absent when the ledger records none. */
+  auditVerdict?: DepegAuditVerdict;
 }
 
 export const DepegEventCloseReasonSchema = z.enum(DEPEG_EVENT_CLOSE_REASON_VALUES);

@@ -45,6 +45,11 @@ interface TimelineFeedProps {
   permalinkId: string;
   permalinkBufferIsLoading: boolean;
   bufferEvent: TapeEvent | null;
+  permalinkBufferError: Error | null;
+  permalinkBufferHasData: boolean;
+  permalinkBufferDataUpdatedAt: number;
+  permalinkBufferMeta: ApiMeta | null;
+  refetchPermalink: () => void;
   highlightedId: string | null;
   loadAnnouncement: string;
   emptyStateChips: readonly ActiveFilterChip[];
@@ -79,6 +84,11 @@ export function TimelineFeed({
   permalinkId,
   permalinkBufferIsLoading,
   bufferEvent,
+  permalinkBufferError,
+  permalinkBufferHasData,
+  permalinkBufferDataUpdatedAt,
+  permalinkBufferMeta,
+  refetchPermalink,
   highlightedId,
   loadAnnouncement,
   emptyStateChips,
@@ -93,7 +103,10 @@ export function TimelineFeed({
       <QueryFreshnessNotices
         error={error}
         hasData={hasData}
-        onRetry={() => void refetch()}
+        onRetry={() => {
+          if (permalinkBufferError) refetchPermalink();
+          void refetch();
+        }}
         queries={[
           {
             label: "Timeline",
@@ -102,10 +115,19 @@ export function TimelineFeed({
             hasData,
             meta,
           },
+          ...(permalinkBufferError
+            ? [{
+                label: "Linked event",
+                dataUpdatedAt: permalinkBufferDataUpdatedAt,
+                error: permalinkBufferError,
+                hasData: permalinkBufferHasData,
+                meta: permalinkBufferMeta,
+              }]
+            : []),
         ]}
       />
 
-      {permalinkId && !permalinkBufferIsLoading && !bufferEvent && !permalinkSuppressed && !rawEvents.some((e) => e.id === permalinkId) ? (
+      {permalinkId && !permalinkBufferIsLoading && !permalinkBufferError && !bufferEvent && !permalinkSuppressed && !rawEvents.some((e) => e.id === permalinkId) ? (
         <div
           title={permalinkId}
           className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-amber-700 dark:text-amber-400"
@@ -154,7 +176,7 @@ export function TimelineFeed({
           <div>
             <EventSkeleton />
           </div>
-        ) : visibleEvents.length === 0 && !(hasNextPage && rawEvents.length > 0) ? (
+        ) : !hasData ? null : visibleEvents.length === 0 && !(hasNextPage && rawEvents.length > 0) ? (
           <div>
             <EmptyState
               onClearAll={emptyStateFallback.apply}

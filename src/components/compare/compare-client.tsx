@@ -298,6 +298,7 @@ export function CompareClient() {
     selectedIds,
     flowHours,
     radarCohort,
+    range,
   });
 
   const { handleDownload, handleTwitterShare, handleWebShare, shareLoading, toast } = useCompareShareActions({
@@ -327,9 +328,11 @@ export function CompareClient() {
     () => buildCompareSelectionInsights({ selectedIds, selectedCoins, comparisonCoins }),
     [comparisonCoins, selectedCoins, selectedIds],
   );
+  // A producer clock ahead of the reader's leaves no computable age: print no
+  // claim rather than a clamped zero.
   const flowUpdatedMinutes =
-    flowUpdatedAt && nowSeconds != null
-      ? Math.max(0, Math.round((nowSeconds - flowUpdatedAt) / 60))
+    flowUpdatedAt != null && nowSeconds != null && nowSeconds >= flowUpdatedAt
+      ? Math.round((nowSeconds - flowUpdatedAt) / 60)
       : null;
 
   // Render selector slots (filled slots + empty slots up to MAX_COINS)
@@ -376,7 +379,9 @@ export function CompareClient() {
               <div className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
                 <div className="pharos-inset px-3.5 py-3">
                   <p className="pharos-label">How to read this set</p>
-                  <p className="mt-1 text-sm text-foreground">{selectionInsights.lens}</p>
+                  {selectionInsights.lens ? (
+                    <p className="mt-1 text-sm text-foreground">{selectionInsights.lens}</p>
+                  ) : null}
                   <p className="mt-2 text-xs text-muted-foreground">
                     {selectionInsights.cohort} {selectionInsights.structure}
                   </p>

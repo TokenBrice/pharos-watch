@@ -66,4 +66,36 @@ describe("Chain detail StablecoinTable", () => {
     fireEvent.keyDown(row, { key: " " });
     expect(push).toHaveBeenLastCalledWith("/stablecoin/usdc-circle/");
   });
+
+  it("prints a nonzero share below 0.05% as <0.1%, not 0.0%", () => {
+    render(
+      <StablecoinTable
+        coins={[makeCoin({
+          id: "trusd-tori",
+          name: "trUSD",
+          symbol: "trUSD",
+          supplyUsd: 71_571_257.67,
+          chainShare: RatioSchema.parse(0.0004967482853156454),
+        })]}
+        backingFilter={null}
+      />,
+    );
+
+    expect(screen.getByText("<0.1%")).toBeTruthy();
+    expect(screen.queryByText("0.0%")).toBeNull();
+    expect(screen.getByText("$71.6M")).toBeTruthy();
+  });
+
+  it("prints a positive sub-dollar supply as <$1, not $0", () => {
+    render(
+      <StablecoinTable
+        coins={[makeCoin({ id: "pyusd-paypal", name: "PYUSD", symbol: "PYUSD", supplyUsd: 0.2309, chainShare: RatioSchema.parse(0.0001) })]}
+        backingFilter={null}
+      />,
+    );
+
+    expect(screen.queryByText("$0")).toBeNull();
+    expect(screen.getByText("<$1")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /<\$1 on chain/ })).toBeTruthy();
+  });
 });

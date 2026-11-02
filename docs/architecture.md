@@ -78,7 +78,7 @@ Stable providers outlive navigation; optional chrome never gates content. [Shell
 - `og:site_name`: `src/lib/site-identity.ts`.
 - `src/app/layout.tsx` owns sitewide metadata, RSS alternates and root JSON-LD identities. Do not emit `SearchAction` without a real query handler or preload analytics independently of its runtime gate.
 - Dataset JSON-LD requires explicit Pharos `Organization` creator/publisher, URL license, Pharos URN and canonical `sameAs`; included `DataCatalog` needs `@id`, `name`, `url`. `url`/`sameAs` identify HTML; `distribution.contentUrl` is a crawlable public download, never `/_site-data/*`. Profile Markdown is build-time catalog data, not live metrics.
-- `src/app/sitemap.ts` / `src/app/robots.ts` own crawl/membership policy. Git route dates are editorial, not metric clocks; summary/sidecar changes affect only their profile's floor. Profiles floor at a content-revision constant. Funding also uses checked-in data dates. History metadata generators reject shallow checkouts, never use filesystem dates; refresh via [Scripts](./scripts.md).
+- `src/app/sitemap.ts` / `src/app/robots.ts` own crawl/membership policy. Git route dates are editorial, not metric clocks; summary/sidecar changes affect only their profile's floor. Profiles floor at a content-revision constant. Funding, the homepage and the digest hub also use their checked-in data dates. History metadata generators reject shallow checkouts, never use filesystem dates; refresh via [Scripts](./scripts.md).
 - Operator/Mini App routes use `noindex,nofollow`; Mini App is not host-gated. Robots-blocked crawlers cannot observe noindex to deindex existing operator URLs. Public noindex routes (portfolio, yield subpages, datasets) stay crawlable; [Screener](./screener-page.md#snapshot-sharing) owns picker sharing.
 
 ### Standalone PharosVille
@@ -102,7 +102,7 @@ These same-origin Pages surfaces are **not** Worker API routes. Bindings/admissi
 ### Static feed route handlers
 
 `src/app/feed/**/route.ts` owns static RSS/XML feeds from checked-in/generated inputs; sitemap and `npm run seo:check` cover HTML only. Feed links use native `<a>`, not `Link` (no RSC payload).
-Depeg RSS uses `classifyDepegClosure`: only recovered events (including legacy) say `Resolved`; other terminal classes name tracking closure, not recovery.
+Depeg RSS uses `classifyDepegClosure`: only recovered events (including legacy) say `Resolved`; other terminal classes name tracking closure, not recovery. Reviewed-disputed rows are quarantined before the item budget. Methodology RSS dates items by the authored `date` (the changelog page's clock) and carries an explicit build-time `lastBuildDate`, never a later activation timestamp.
 
 ---
 

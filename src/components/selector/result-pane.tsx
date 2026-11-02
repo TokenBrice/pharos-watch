@@ -171,11 +171,9 @@ export function ResultPane({
         <SelectorEmptyState
           profile={profile}
           pegCurrency={effectiveInput.pegCurrency}
-          coverageSparse={
-            output.coverageWarnings.sparse ||
-            output.coverageWarnings.uneven ||
-            output.coverageWarnings.skippedForCoverageCount > 0
-          }
+          // Sparse/uneven are the engine's coverage-policy verdicts; a skip
+          // below those thresholds does not make the peg under-covered.
+          coverageSparse={output.coverageWarnings.sparse || output.coverageWarnings.uneven}
           closestSurvivors={buildClosestSurvivorsFromOutput(output)}
           relaxableConstraints={buildRelaxableConstraintsFromOutput(output)}
           onRelax={onRelax}

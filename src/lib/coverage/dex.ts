@@ -51,25 +51,15 @@ const DEX_STATUS_PRESETS = {
     detail: "No observed DEX-liquidity row is currently available.",
     spokenLabel: "Not covered",
   },
-  unknown: {
-    kind: "unknown",
-    label: "Unknown",
-    tone: "slate",
-    available: false,
-    sortRank: 0,
-    detail: "DEX-liquidity coverage data is unavailable right now.",
-  },
 } satisfies Record<string, CoverageStatusPreset>;
 
 function resolveDex(
   coverageClass: LiquidityCoverageClass | null | undefined,
   dataAvailable = true,
 ): CoverageStatus {
-  if (!dataAvailable) {
-    return createDataUnavailableStatus("DEX liquidity");
-  }
-
-  return createPresetStatus(DEX_STATUS_PRESETS[coverageClass ?? "unknown"] ?? DEX_STATUS_PRESETS.unknown);
+  const preset = dataAvailable && coverageClass != null ? DEX_STATUS_PRESETS[coverageClass] : undefined;
+  // A missing class is an upstream outage, not an uncovered gap (ADR-34).
+  return preset ? createPresetStatus(preset) : createDataUnavailableStatus("DEX liquidity");
 }
 
 const DEX_LEGEND: readonly CoverageLegendItem[] = [

@@ -315,6 +315,55 @@ describe("StablecoinDetailSeoContent", () => {
       expect(items[1].answer).toContain("direct redemption is limited to customers the issuer has verified");
     });
 
+    it("never publishes the internal fee review note", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = {
+        ...reviewedRoute,
+        outputAssetType: "stable-single",
+        physicalCommodityDelivery: undefined,
+        costModel: { kind: "dynamic-or-unclear", feeDescription: "Internal reviewer note: 0.10% with a $1,000 minimum", feeBpsMax: 10 },
+        v9RouteCostTerms: { minFeeUsd: 1_000 },
+        v9RouteReviewTerms: { minRedeemUsd: 100_000 },
+      };
+      const answer = buildStablecoinFaqItems(coin).find((item) => item.question === "How do you redeem TSTD?")?.answer;
+
+      expect(answer).not.toContain("Internal reviewer note");
+    });
+
+    it("does not invent a payout asset the review left unresolved", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = {
+        ...reviewedRoute,
+        outputAssetType: "bluechip-collateral",
+        outputAssets: undefined,
+        physicalCommodityDelivery: undefined,
+        unresolvedOutputAssetKeys: ["fiat:USD", "stablecoin:identity-unspecified", "physical:XAU"],
+        unresolvedOutputDisposition: "reviewed-external",
+      };
+      const answer = buildStablecoinFaqItems(coin).find((item) => item.question === "How do you redeem TSTD?")?.answer;
+
+      expect(answer).toContain("can redeem TSTD for an unresolved output asset");
+      expect(answer).not.toContain("blue-chip crypto collateral");
+    });
+
+    it("does not call a reviewed fiat payout an unresolved output asset", () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      vi.setSystemTime(new Date("2026-10-25T00:00:00Z"));
+      mockRedemptionConfigs[coin.id] = {
+        ...reviewedRoute,
+        outputAssetType: "stable-single",
+        outputAssets: undefined,
+        physicalCommodityDelivery: undefined,
+        unresolvedOutputAssetKeys: ["fiat:MXN"],
+        unresolvedOutputDisposition: "reviewed-external",
+      };
+      const answer = buildStablecoinFaqItems(coin).find((item) => item.question === "How do you redeem TSTD?")?.answer;
+
+      expect(answer).not.toContain("unresolved output asset");
+    });
+
     it("omits the answer once the review is older than the reviewed-evidence budget", () => {
       vi.useFakeTimers({ toFake: ["Date"] });
       vi.setSystemTime(new Date("2028-01-01T00:00:00Z"));

@@ -4,6 +4,7 @@ import { computePegScore } from "@shared/lib/peg-score";
 import { DAY_SECONDS } from "@/lib/constants";
 import { WEEK_SECONDS } from "@shared/lib/time-constants";
 import { classifyDepegClosure, type DepegClosureClassification } from "@shared/lib/depeg-closure";
+import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
 
 interface PegStabilityMetrics {
   /** Record-derived peg occupancy estimate (0–100), not proof of continuous observation */
@@ -55,10 +56,12 @@ export function computePegStability(
   const limited = historySpanSec < WEEK_SECONDS;
 
   // Inspect the latest terminal boundary before considering recovery; never skip
-  // a tracking closure and resurrect an older recovered episode.
+  // a tracking closure and resurrect an older recovered episode. Reviewed
+  // disputes are not counted evidence, matching computePegScore's exclusion.
   const depeggedNow = pegMetrics.activeDepeg;
   let latestClosed: DepegEvent | null = null;
   for (const event of events) {
+    if (isPegScoreExcludedAuditVerdict(event.provenance?.auditVerdict)) continue;
     if (event.endedAt == null || event.endedAt > nowSec) continue;
     if (latestClosed == null || event.endedAt >= latestClosed.endedAt!) {
       latestClosed = event;

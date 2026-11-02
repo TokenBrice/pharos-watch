@@ -9,6 +9,7 @@ import {
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
 import { makeAltYieldSource, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldRanking, YieldRankingsResponse } from "@shared/types";
+import type { ApiMeta } from "@/lib/api";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "./yield-detail.test-support";
 
 const { useYieldRankingsMock, useYieldHistoryMock } = vi.hoisted(() => ({
@@ -118,14 +119,21 @@ function altSource(sourceKey: string, yieldSource: string, currentApy: number, a
 
 function mockRankingsQuery(overrides: {
   data?: YieldRankingsResponse;
-  meta?: { warning: string } | null;
+  meta?: ApiMeta | null;
   error?: Error | null;
   isLoading?: boolean;
 }): void {
-  useYieldRankingsMock.mockReturnValue({ data: undefined, meta: null, error: null, isLoading: false, ...overrides });
+  useYieldRankingsMock.mockReturnValue({
+    data: undefined,
+    meta: null,
+    error: null,
+    isLoading: false,
+    dataUpdatedAt: Date.now(),
+    ...overrides,
+  });
 }
 
-function mockRankings(rankings: YieldRanking[], meta: { warning: string } | null = null): void {
+function mockRankings(rankings: YieldRanking[], meta: ApiMeta | null = null): void {
   mockRankingsQuery({ data: makeYieldDetailResponse(rankings, { riskFreeRate: 0.03, scalingFactor: 1 }), meta });
 }
 
@@ -220,6 +228,49 @@ describe("YieldDetailSection", () => {
     expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
   });
 
+  it.each([
+    ["a 199 hydration advisory", { status: "degraded" as const, warning: '199 - "Yield safety hydration degraded: safety-identity-missing"' }],
+    ["mild 3x-6x lateness", {
+      status: "degraded" as const,
+      updatedAt: Math.floor(Date.now() / 1000) - 25_200,
+      ageSeconds: 25_200,
+      freshBudgetSec: 21_600,
+      degradedBudgetSec: 43_200,
+      warning: '110 - "Yield publication degraded (25200s old, fresh budget 21600s)"',
+    }],
+  ])("keeps %s out of the reader notice (ADR-42)", (_label, meta) => {
+    mockRankings([makeRanking()], meta as ApiMeta);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.queryByRole("status")).toBeNull();
+    expect(document.body.textContent).not.toContain("safety-identity-missing");
+  });
+
+  it("shows the shared stale notice when the publication is past the degraded budget", () => {
+    mockRankings([makeRanking()], {
+      status: "stale",
+      updatedAt: Math.floor(Date.now() / 1000) - 100_000,
+      ageSeconds: 100_000,
+    });
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.getByRole("status").textContent).toContain("Showing an older snapshot");
+  });
+
+  it("does not call an unread history insufficient data", () => {
+    mockRankings([makeRanking()]);
+    useYieldHistoryMock.mockReturnValue({
+      data: undefined, meta: null, error: null, isLoading: true, dataUpdatedAt: 0, refetch: vi.fn(),
+    });
+    const { rerender } = render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.queryByText(/Not enough data to attribute/)).toBeNull();
+
+    useYieldHistoryMock.mockReturnValue({
+      data: undefined, meta: null, error: new Error("history failed"), isLoading: false, dataUpdatedAt: 0, refetch: vi.fn(),
+    });
+    rerender(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(screen.queryByText(/Not enough data to attribute/)).toBeNull();
+    expect(screen.queryByText("history failed")).toBeNull();
+  });
+
   it("gates price appreciation explanation on the published calculation mode", () => {
     const row = makeRanking({ sourceRole: "fallback-proxy", provenance: makeYieldProvenance({ calculationMode: "benchmark-model", scoreQualification: "estimated" }) });
     mockRankings([row]);
@@ -264,6 +315,20 @@ describe("YieldDetailSection", () => {
     fireEvent.click(within(table).getByRole("button", { name: "Sort alternate sources by APY 30d ascending" }));
     expect(labels()).toEqual(["Large TVL", "Small TVL", "Zero TVL", "Unknown TVL"]);
     expect(screen.queryByRole("button", { name: /Show .* more source/ })).toBeNull();
+  });
+
+  it("reads a native alternate with no venue TVL as Native, not unknown or a dash", () => {
+    mockRankings([makeRanking({
+      altSources: [altSource("native-holder", "Native holder", 3, 3, null)],
+    })]);
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    const table = screen.getByTestId("yield-detail-alt-sources-table");
+    const row = within(table).getByRole("link", { name: "Native holder" }).closest("tr")!;
+    expect(within(row).getByText("Native · depth n/a")).toBeTruthy();
+    // The lending-vault badge and the TVL cell both read Native; neither is a dash.
+    expect(within(row).getAllByText("Native", { exact: true })).toHaveLength(2);
+    expect(within(row).queryByText("—")).toBeNull();
+    expect(within(row).queryByText("Unknown depth")).toBeNull();
   });
 
   it("does not infer a missing chain for a published venue", () => {

@@ -11,7 +11,9 @@ const MAX_ITEMS = 50;
 function methodologyItems(): RssItem[] {
   const all = METHODOLOGY_CHANGELOG_REGISTRY.flatMap((source) => source.entries.map((entry) => ({ source, entry })));
   return all
-    .sort((a, b) => b.entry.effectiveAt - a.entry.effectiveAt)
+    // Items are published on their authored date, so the feed order must use
+    // the same clock; activation only breaks same-day ties.
+    .sort((a, b) => b.entry.date.localeCompare(a.entry.date) || b.entry.effectiveAt - a.entry.effectiveAt)
     .slice(0, MAX_ITEMS)
     .map(({ source, entry }) => {
       const impactHtml = entry.impact.length
@@ -23,7 +25,9 @@ function methodologyItems(): RssItem[] {
         link: `${SITE_URL}${source.publicPath}`,
         description,
         guid: `pharos:methodology:${source.feedKey}:${entry.version}`,
-        pubDate: toRfc822(entry.effectiveAt * 1000),
+        // Publish on the authored date shown by the changelog page; activation
+        // can be later than authorship.
+        pubDate: toRfc822(`${entry.date}T00:00:00Z`),
       };
     });
 }
@@ -34,5 +38,6 @@ export const GET = createRssRoute({
   feedUrl: `${SITE_URL}${FEED_PATH}`,
   description:
     "Versioned methodology updates from pharos.watch — Safety Score, DEWS, DDR, PSI, Liquidity, Chain Health, Blacklist Tracker, Mint/Burn Flow, Pricing Pipeline, and Yield Intelligence.",
+  lastBuildDate: () => toRfc822(new Date()),
   items: methodologyItems,
 });

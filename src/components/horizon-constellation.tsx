@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { PHASE_DOT, type DriftDisplayStatus } from "@/lib/pre-launch";
-import { LAUNCH_PHASE_LABELS } from "@shared/lib/classification/pre-launch";
+import { LAUNCH_PHASE_LABELS, PRE_LAUNCH_UNPHASED_LABEL } from "@shared/lib/classification/pre-launch";
 import {
   HORIZON_COINS_BY_PHASE,
   HORIZON_CONSTELLATION_LAYOUT,
@@ -73,7 +73,7 @@ const PHASE_CELLS: readonly HorizonCell[] = HORIZON_PHASE_ORDER.map((phase, inde
 
 const UNPHASED_CELL: HorizonCell = {
   key: "unphased",
-  label: "Unphased",
+  label: PRE_LAUNCH_UNPHASED_LABEL,
   srLabel: "Phase not assigned",
   markerClass: UNPHASED_DOT_CLASS,
   fieldClass: UNPHASED_FIELD_CLASS,

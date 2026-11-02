@@ -152,4 +152,44 @@ describe("useCompareSelection", () => {
     expect(window.location.search).toBe("?coins=usdt-tether");
     expect(result.current.selectedIds).toEqual(["usdt-tether"]);
   });
+
+  it("adopts a #coins= prefill after a same-route history push", async () => {
+    window.history.replaceState(null, "", "/compare/");
+
+    const { result } = renderHook(() => useCompareSelection());
+    expect(result.current.selectedIds).toEqual([]);
+
+    // Next commits a same-route hash link with pushState, which fires no
+    // `hashchange`; only the patched history event announces it.
+    await act(async () => {
+      window.history.pushState(null, "", "/compare/#coins=paxg-paxos,xaut-tether");
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedIds).toEqual(["paxg-paxos", "xaut-tether"]);
+    });
+    expect(window.location.search).toBe("?coins=paxg-paxos%2Cxaut-tether");
+    expect(window.location.hash).toBe("");
+  });
+
+  it("switches an explicit selection when a same-route prefill link clears the query", async () => {
+    window.history.replaceState(null, "", "/compare/?coins=usdt-tether,usdc-circle");
+
+    const { result } = renderHook(() => useCompareSelection());
+    await waitFor(() => {
+      expect(result.current.selectedIds).toEqual(["usdt-tether", "usdc-circle"]);
+    });
+
+    await act(async () => {
+      window.history.pushState(null, "", "/compare/#coins=paxg-paxos,xaut-tether");
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(result.current.selectedIds).toEqual(["paxg-paxos", "xaut-tether"]);
+    });
+    expect(window.location.search).toBe("?coins=paxg-paxos%2Cxaut-tether");
+    expect(window.location.hash).toBe("");
+  });
 });

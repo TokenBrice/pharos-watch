@@ -203,7 +203,10 @@ describe("TimelineClient", () => {
       if (reference) expect(classes, label).toEqual(reference);
       reference = classes;
       expect(document.querySelector('[aria-label="Filter by event type"]')!.outerHTML, label).toBe(shellFilters);
-      if (label === "partial") expect(screen.getByText("Showing 1 of 12,345 events")).toBeTruthy();
+      if (label === "partial") {
+        expect(screen.getByText("Showing 1 event")).toBeTruthy();
+        expect(screen.queryByText(/of 12,345 events/)).toBeNull();
+      }
       if (label === "success") expect(screen.getByText("1 event")).toBeTruthy();
       if (label === "empty") expect(screen.getByText("0 events")).toBeTruthy();
       cleanup();
@@ -259,6 +262,21 @@ describe("TimelineClient", () => {
     render(<TimelineClient />);
     expect(screen.getByText("fetch failed")).toBeTruthy();
     expect(screen.queryByText("▌")).toBeNull();
+    // A failed read is not an observed empty feed.
+    expect(screen.queryByText(/no events match these filters/i)).toBeNull();
+  });
+
+  it.each<[string, Partial<UseEventsResult>]>([
+    ["pending", { isLoading: true, pages: undefined, dataUpdatedAt: 0 }],
+    ["failed", { error: new Error("fetch failed"), pages: undefined, dataUpdatedAt: 0 }],
+  ])("withholds the event count until a response page is admitted: %s", (_label, overrides) => {
+    mockEvents([], overrides);
+    render(<TimelineClient />);
+    const summary = document.querySelector('[data-timeline-slot="summary"]')!;
+    expect(summary.textContent).not.toMatch(/\d+\s+events?/);
+    // The window and severity labels describe the filters, not the feed.
+    expect(summary.textContent).toContain("last 7 days");
+    expect(summary.textContent).toContain("Notice+ severity");
   });
 
   it("keeps a retained empty page quiet through a failed refetch below the public budget", () => {
@@ -583,7 +601,7 @@ describe("TimelineClient", () => {
     expect(screen.getByText("Notice+ severity")).toBeTruthy();
   });
 
-  it("summary band shows partial-load count when total exceeds loaded events", () => {
+  it("withholds the raw server total until the visible traversal is complete", () => {
     mockEvents(
       [
         makeTapeEvent({ id: "evt-1", title: "Event one" }),
@@ -594,8 +612,12 @@ describe("TimelineClient", () => {
 
     render(<TimelineClient />);
 
-    expect(screen.getByText("Showing 2 of 1,247 events")).toBeTruthy();
-    expect(screen.getByText(/Load more \(1,245 remaining\)/)).toBeTruthy();
+    // The server COUNT includes rows the reader projection can suppress, so it
+    // is not a visible total until every raw page has been admitted.
+    expect(screen.queryByText(/of 1,247 events/)).toBeNull();
+    expect(screen.getByText("Showing 2 events")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Load more" })).toBeTruthy();
+    expect(screen.queryByText(/remaining/)).toBeNull();
   });
 
   describe("operational yield advisories", () => {
@@ -622,6 +644,42 @@ describe("TimelineClient", () => {
       render(<TimelineClient />);
       expect(screen.getByText(/^1 events?$/)).toBeTruthy();
     });
+
+    it("never publishes a raw total that includes unloaded suppressed rows", () => {
+      const firstPageEvents = [
+        makeTapeEvent({ id: "d1", title: "Depeg one" }),
+        makeTapeEvent({ id: "d2", title: "Depeg two", coinId: "usdt-tether" }),
+      ];
+      const firstPage = {
+        data: { events: firstPageEvents, nextCursor: "cursor-2", droppedRows: 0, total: 1000 },
+        meta: null,
+      };
+      mockEvents(firstPageEvents, {
+        data: { events: firstPageEvents, nextCursor: "cursor-2" },
+        total: 1000,
+        hasNextPage: true,
+        pages: [firstPage],
+      });
+      const { rerender } = render(<TimelineClient />);
+      expect(screen.queryByText(/of 1,000 events/)).toBeNull();
+      expect(screen.queryByText(/remaining/)).toBeNull();
+
+      const hidden = [warning("w1", ["aging"])];
+      const secondPage = {
+        data: { events: hidden, nextCursor: null, droppedRows: 0, total: null },
+        meta: null,
+      };
+      const allEvents = [...firstPageEvents, ...hidden];
+      mockEvents(allEvents, {
+        data: { events: allEvents, nextCursor: null },
+        total: 1000,
+        hasNextPage: false,
+        pages: [firstPage, secondPage],
+      });
+      rerender(<TimelineClient />);
+      expect(screen.getByText("2 events")).toBeTruthy();
+      expect(screen.queryByText(/of 1,000 events/)).toBeNull();
+    });
   });
 
   it("keeps rejected malformed rows out of the reader-facing total", () => {
@@ -635,7 +693,8 @@ describe("TimelineClient", () => {
 
     render(<TimelineClient />);
 
-    expect(screen.getByText("Showing 2 of 5 events")).toBeTruthy();
+    expect(screen.getByText("2 events")).toBeTruthy();
+    expect(screen.queryByText(/Showing 2 of 5 events/)).toBeNull();
     expect(screen.queryByText(/rows rejected/)).toBeNull();
   });
 

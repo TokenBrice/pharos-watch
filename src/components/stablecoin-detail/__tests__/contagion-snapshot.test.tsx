@@ -331,6 +331,20 @@ describe("ContagionSnapshot", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
+  it("keeps the drawn graph when only the supply read fails", () => {
+    useStablecoinsMock.mockReturnValue({
+      data: undefined,
+      error: new Error("503"),
+      dataUpdatedAt: 0,
+      refetch: vi.fn(),
+    });
+
+    render(<ContagionSnapshot stablecoinId="usde-ethena" />);
+
+    expect(screen.getByTestId("contagion-graph").getAttribute("data-edges")).toBe("usdc-circle>usde-ethena");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("restarts both sources on retry and drops the notice once they recover", () => {
     const refetchCards = vi.fn();
     const refetchSupply = vi.fn();

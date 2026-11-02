@@ -291,7 +291,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
   const formatXAxisTick = useCallback(
     (ts: number) => {
       if (rangeHours <= 48) {
-        return new Date(ts).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+        return new Date(ts).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "UTC" });
       }
       if (rangeHours <= 8 * DAY_HOURS) {
         return formatChartDate(ts, "with-time");
@@ -327,7 +327,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
               backgroundImage: `repeating-linear-gradient(135deg, ${CHART_SLATE} 0 1px, transparent 1px 4px)`,
             }}
           >
-            Net withheld: unpriced events
+            Net withheld
           </ChartLegendChip>
         ) : null}
         <span className="ml-auto text-2xs text-muted-foreground/70">
@@ -466,7 +466,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
                     strokeWidth={3}
                     paintOrder="stroke"
                   >
-                    Cumulative stops: unpriced events
+                    Cumulative stops: withheld net
                   </text>
                 )}
               />
@@ -482,7 +482,7 @@ export function FlowChart({ hourly, isLoading }: FlowChartProps) {
       {partialBucketCount > 0 && (
         <p className="mt-1 text-xs text-muted-foreground">
           Partial valuation: {partialBucketCount} {useDailyBuckets ? "daily" : "hourly"}{" "}
-          {partialBucketCount === 1 ? "bucket has" : "buckets have"} unpriced events. Hatched columns mark the
+          {partialBucketCount === 1 ? "bucket has" : "buckets have"} a withheld net. Hatched columns mark the
           withheld nets, and the cumulative line stops before the first one. Mint and burn volumes there are lower bounds.
         </p>
       )}
@@ -504,12 +504,8 @@ function FlowTooltip({
   if (!active || !payload || !label) return null;
 
   const datum = payload[0]?.payload;
-  const time = new Date(label).toLocaleString(
-    "en-US",
-    useDailyBuckets
-      ? { month: "short", day: "numeric", year: "numeric" }
-      : { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true },
-  );
+  // Buckets are closed UTC hours; the viewer's timezone must not move the date.
+  const time = formatChartDate(label, useDailyBuckets ? "short-year" : "full");
 
   return (
     <PharosChartTooltip active={active}>

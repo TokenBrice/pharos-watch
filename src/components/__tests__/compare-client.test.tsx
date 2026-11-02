@@ -45,6 +45,31 @@ describe("CompareClient flow coverage", () => {
     }
   });
 
+  it("labels the flow generation with the producer clock, never a clamped zero age", () => {
+    const nowSec = 1_700_000_000;
+    const model = (flowUpdatedAt: number) => ({
+      comparisonCoins: [], detailErrors: {}, detailLoading: false, flowCardData: [], flowCoverageCount: 0,
+      flowErrorNotice: null, flowScopeLabel: "Configured issuance chains", flowSeries: [{ id: "usdc-circle", data: [] }],
+      flowUpdatedAt, freshnessQueries: [], globalError: null, handleRetry: vi.fn(), hasPrimaryData: true,
+      pegRates: {}, radarCards: [], supplySeries: [],
+    });
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1000);
+    try {
+      useCompareDataModelMock.mockReturnValue(model(nowSec - 3_660));
+      const { unmount } = render(<CompareClient />);
+      expect(screen.getByText("Updated 61 min ago · Configured issuance chains")).toBeTruthy();
+      unmount();
+
+      // A reader clock behind the producer has no computable age: no fresh claim.
+      useCompareDataModelMock.mockReturnValue(model(nowSec + 7_200));
+      render(<CompareClient />);
+      expect(screen.queryByText(/min ago/)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("names the active-plus-frozen population behind the comparable count", () => {
     useCompareDataModelMock.mockReturnValue({
       comparisonCoins: [], detailErrors: {}, detailLoading: false, flowCardData: [], flowCoverageCount: 0,

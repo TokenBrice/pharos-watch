@@ -91,7 +91,6 @@ export function KeyboardShortcuts({
         <label className="flex items-center justify-between gap-3 border-t border-border/60 px-2 pt-3 text-sm">
           <span>
             Enable single-key shortcuts (
-            <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">?</kbd>,{" "}
             <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">1-9</kbd>,{" "}
             <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">T</kbd>,{" "}
             <kbd className="rounded-sm border border-border/70 bg-muted/50 px-1 py-0.5 font-mono tabular-nums">/</kbd>)

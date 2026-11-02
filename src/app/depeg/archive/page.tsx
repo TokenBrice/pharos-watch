@@ -24,7 +24,7 @@ export default function DepegArchivePage() {
       ]}
       title="Depeg Event Archive"
       leadParagraphs={[
-        "The complete permanent record of confirmed depeg events tracked by Pharos, grouped by month and ordered newest first.",
+        "The permanent record of confirmed depeg events tracked by Pharos, grouped by month and ordered newest first.",
       ]}
     >
       <DepegEventArchive />

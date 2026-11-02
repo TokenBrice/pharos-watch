@@ -44,7 +44,8 @@ import {
 import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
 import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client-meta";
 import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
-import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, getProfilePegLabel, YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import { hasStaticYieldWorkbench } from "@shared/lib/yield-auto-lending";
 import type { YieldHistoryPoint } from "@shared/types";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
@@ -127,10 +128,14 @@ function buildYieldCompareHref(currentId: string, peerIds: readonly string[]): s
   return `/yield/?compare=${encodeURIComponent(ids.join(","))}`;
 }
 
-function formatPeerCohortLabel(model: YieldPeerRailModel): string {
+function formatPeerCohortLabel(model: YieldPeerRailModel, staticCoin: StablecoinStaticMeta): string {
   const yieldTypeLabel = YIELD_TYPE_LABELS[model.currentYieldType] ?? model.currentYieldType;
   if (model.cohortKind === "same-peg") {
-    const pegLabel = model.currentPeg ? (PEG_LABELS_SHORT[model.currentPeg] ?? model.currentPeg) : "same-peg";
+    // The cohort is selected by the registry peg currency, not by a NAV
+    // token's resolved reference asset, so the label names that same bucket.
+    const pegLabel = model.currentPeg
+      ? PEG_LABELS_SHORT[model.currentPeg] ?? model.currentPeg
+      : PEG_LABELS_SHORT[staticCoin.flags.pegCurrency] ?? staticCoin.flags.pegCurrency;
     return `${pegLabel} peg peers by PYS rank`;
   }
   if (model.cohortKind === "same-yield-type-safety") {
@@ -147,7 +152,7 @@ function formatPeerSelectionNote(model: YieldPeerRailModel): string {
   return `${windowLabel} · ${model.cohortSize} row${model.cohortSize === 1 ? "" : "s"} in cohort`;
 }
 
-function YieldPeerRail({ model, currentId }: { model: YieldPeerRailModel; currentId: string }) {
+function YieldPeerRail({ model, currentId, staticCoin }: { model: YieldPeerRailModel; currentId: string; staticCoin: StablecoinStaticMeta }) {
   const compareSetHref = buildYieldCompareHref(
     currentId,
     model.items.map((item) => item.row.id),
@@ -162,7 +167,7 @@ function YieldPeerRail({ model, currentId }: { model: YieldPeerRailModel; curren
             Nearby yield context
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {formatPeerCohortLabel(model)} · {formatPeerSelectionNote(model)}
+            {formatPeerCohortLabel(model, staticCoin)} · {formatPeerSelectionNote(model)}
           </p>
         </div>
         <Link
@@ -254,7 +259,7 @@ function StablecoinYieldDetailHeader({
               <p className="text-sm text-muted-foreground">
                 {GOVERNANCE_LABELS[staticCoin.flags.governance] ?? staticCoin.flags.governance} ·{" "}
                 {BACKING_LABELS[staticCoin.flags.backing] ?? staticCoin.flags.backing} ·{" "}
-                {PEG_LABELS_SHORT[staticCoin.flags.pegCurrency] ?? staticCoin.flags.pegCurrency}
+                {getProfilePegLabel(staticCoin.flags, staticCoin.pegReferenceSymbol)}
               </p>
               <p className="max-w-2xl text-sm text-muted-foreground">
                 Source comparison, warning signals timeline, and source-switch history for {staticCoin.symbol}.
@@ -409,7 +414,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   }, [id]);
 
   const coin = TRACKED_META_BY_ID.get(id);
-  const shouldHaveYieldData = coin?.flags.yieldBearing ?? false;
+  const shouldHaveYieldData = coin ? hasStaticYieldWorkbench(coin) : false;
   const sourcesParam = getParam("sources");
   const requestedSourceKeys = useMemo(
     () =>
@@ -452,6 +457,11 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
   );
 
   const warningEvents = useMemo(() => deriveWarningEvents(historyQuery.data?.history ?? []), [historyQuery.data]);
+  // Unreadable persisted warnings are unknown, not clean: no fetched point can prove an all-clear.
+  const unreadableWarningPoints = useMemo(
+    () => (historyQuery.data?.history ?? []).filter((point) => point.warningSignalsStatus === "unreadable").length,
+    [historyQuery.data],
+  );
 
   const sourceSwitchEvents = useMemo(
     () => deriveSourceSwitchEvents(historyQuery.data?.history ?? []),
@@ -475,9 +485,9 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
 
   const apyChangeAttribution = useMemo(
     () =>
-      ranking
+      ranking && historyQuery.data
         ? classifyApyChange({
-            history: historyQuery.data?.history ?? [],
+            history: historyQuery.data.history,
             decisionLedger: ranking.decisionLedger ?? null,
             yieldStability: ranking.yieldStability ?? null,
           })
@@ -551,18 +561,18 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
 
   if (!readyModel || !ranking) return null;
 
-  const sourceSwitchCount30d = ranking.sourceRisk?.sourceSwitchCount30d ?? null;
   const currentWarningSignals = readyModel.warningSignals;
 
   return (
     <YieldAnalysisFrame id={id} staticCoin={staticCoin} logoSrc={logoSrc} model={readyModel}>
-      {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} /> : null}
+      {peerRailModel ? <YieldPeerRail model={peerRailModel} currentId={id} staticCoin={staticCoin} /> : null}
 
       <YieldSourceRiskCard
         sourceLabel={readyModel.sourceExplorer.selectedSource.displayLabel}
         sourceRisk={readyModel.sourceExplorer.selectedSource.sourceRisk}
         sourceTvlUsd={readyModel.sourceExplorer.selectedSource.sourceTvlUsd}
         sourceDepthLens={readyModel.sourceExplorer.selectedSource.depthLens}
+        yieldType={readyModel.sourceExplorer.selectedSource.yieldType}
         sourceRiskDrivers={readyModel.sourceExplorer.selectedSource.sourceRiskDrivers}
         sourceChanged={readyModel.sourceExplorer.sourceSwitch.changed}
         confidenceTier={readyModel.sourceExplorer.selectedSource.confidenceTier}
@@ -622,10 +632,12 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
             />
           ) : warningEvents.length === 0 ? (
             currentWarningSignals.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No warning signals recorded in the fetched 90-day history (only the last 30 days are hourly, so
-                signals that resolved between daily snapshots may not appear).
-              </p>
+              unreadableWarningPoints === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No warning signals recorded in the fetched 90-day history (only the last 30 days are hourly, so
+                  signals that resolved between daily snapshots may not appear).
+                </p>
+              ) : null
             ) : (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
@@ -701,7 +713,6 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
               <p>
                 No source switches recorded in the fetched 90-day best-source history (only the last 30 days are
                 hourly, so switches that started and ended between daily snapshots may not appear).
-                {sourceSwitchCount30d != null ? ` (30-day switch count: ${sourceSwitchCount30d}.)` : ""}
               </p>
               {readyModel.sourceExplorer.sourceSwitch.changed ? (
                 <p>
@@ -711,38 +722,31 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
               ) : null}
             </div>
           ) : (
-            <>
-              {sourceSwitchCount30d != null ? (
-                <p className="text-xs text-muted-foreground">
-                  {sourceSwitchCount30d} source switch{sourceSwitchCount30d === 1 ? "" : "es"} in the past 30 days.
-                </p>
-              ) : null}
-              <ul className="space-y-2">
-                {sourceSwitchEvents.map((event) => (
-                  <li
-                    key={`${event.timestamp}-${event.toSourceKey ?? "switch"}`}
-                    className="flex items-start gap-3 rounded-lg border border-state-info-solid/25 bg-state-info-solid/5 px-3 py-2"
-                  >
-                    <ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-state-info-bright" />
-                    <div className="min-w-0 flex-1 text-sm text-state-info-strong">
-                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                        <span className="font-medium">
-                          {event.fromSourceLabel
-                            ? `${event.fromSourceLabel} → ${event.toSourceLabel ?? "—"}`
-                            : `Switched to ${event.toSourceLabel ?? "—"}`}
-                        </span>
-                        <span className="pharos-numeric text-xs text-state-info-bright">
-                          {formatChartDate(event.timestamp, "with-time")}
-                        </span>
-                      </div>
-                      <p className="text-xs text-state-info-bright">
-                        APY at switch: <span className="pharos-numeric">{formatPercent(event.apy)}</span>
-                      </p>
+            <ul className="space-y-2">
+              {sourceSwitchEvents.map((event) => (
+                <li
+                  key={`${event.timestamp}-${event.toSourceKey ?? "switch"}`}
+                  className="flex items-start gap-3 rounded-lg border border-state-info-solid/25 bg-state-info-solid/5 px-3 py-2"
+                >
+                  <ArrowLeftRight className="mt-0.5 h-4 w-4 shrink-0 text-state-info-bright" />
+                  <div className="min-w-0 flex-1 text-sm text-state-info-strong">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                      <span className="font-medium">
+                        {event.fromSourceLabel
+                          ? `${event.fromSourceLabel} → ${event.toSourceLabel ?? "—"}`
+                          : `Switched to ${event.toSourceLabel ?? "—"}`}
+                      </span>
+                      <span className="pharos-numeric text-xs text-state-info-bright">
+                        {formatChartDate(event.timestamp, "with-time")}
+                      </span>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </>
+                    <p className="text-xs text-state-info-bright">
+                      APY at switch: <span className="pharos-numeric">{formatPercent(event.apy)}</span>
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>

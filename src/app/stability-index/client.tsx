@@ -35,7 +35,10 @@ import {
 function PsiHistoryChart({ initialData }: { initialData: StabilityIndexResponse }) {
   const [needsFullHistory, setNeedsFullHistory] = useState(false);
   const fullHistory = useStabilityIndexFullHistory({ enabled: needsFullHistory });
-  const { history, current } = fullHistory.data ?? initialData;
+  // A disabled TanStack query still serves its cached entry; the chart must
+  // fall back to the detail read rather than freeze on old full history.
+  const source = needsFullHistory ? (fullHistory.data ?? initialData) : initialData;
+  const { history, current } = source;
   const chartData = useMemo(() => buildPsiChartData(history, current), [history, current]);
   return (
     <div className="space-y-3">

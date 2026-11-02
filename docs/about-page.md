@@ -8,7 +8,7 @@ Keep canonical `/about/`, public indexability, AboutPage schema and FAQPage sche
 
 ## Section Contract
 
-Explain what is directly tracked, what is computed and where evidence/methodology can be inspected. The dependency principle distinguishes serial final-score limits from proportional backing inheritance; map means direct links/structural look-through, not a failure simulator. Do not move curated narratives into a computed-feature roster.
+Explain what is directly tracked, what is computed and where evidence/methodology can be inspected. The dependency principle distinguishes serial premium-free parent-score limits from proportional backing inheritance; map means direct links/structural look-through, not a failure simulator. Do not move curated narratives into a computed-feature roster.
 
 The team section discloses that the owner also works on Polaris, and that Polaris-related coverage, like everything else on Pharos, remains purely data-driven. No dossier link, affiliation table, independent-review claim or scoring intervention follows from that disclosure.
 

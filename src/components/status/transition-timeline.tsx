@@ -80,11 +80,23 @@ function SubjectLinks({ subjects }: { subjects: readonly string[] }) {
   );
 }
 
-function RecurrenceSummary({ groups, window }: { groups: readonly IncidentRecurrenceGroup[]; window: StatusHistoryWindow }) {
+function RecurrenceSummary({
+  groups,
+  window,
+  evidenceScope,
+}: {
+  groups: readonly IncidentRecurrenceGroup[];
+  window: StatusHistoryWindow;
+  evidenceScope: "loaded-window" | "recent-status-fallback";
+}) {
   if (groups.length === 0) return null;
   return (
     <div className="space-y-2 rounded-md border border-state-warn bg-state-warn-subtle px-3 py-2.5">
-      <h4 className="text-sm font-medium text-state-warn">Recurring causes in the loaded {window} window</h4>
+      <h4 className="text-sm font-medium text-state-warn">
+        {evidenceScope === "loaded-window"
+          ? `Recurring causes in the loaded ${window} window`
+          : "Recurring causes in the recent status fallback"}
+      </h4>
       <ul className="space-y-1.5 text-xs text-foreground">
         {groups.map((group) => (
           <li key={group.key} className="flex flex-wrap items-baseline gap-x-1.5 gap-y-1">
@@ -126,7 +138,7 @@ function IncidentList({ episodes, nowSeconds }: { episodes: readonly IncidentEpi
                   : `${episode.ongoing ? "Held for" : "Lasted"} ${formatElapsedSeconds(episode.durationSec)}`}
               </span>
               <span className="min-w-0 break-words font-mono text-muted-foreground">
-                {episode.causeCodes.join(", ") || "No persisted causes"}
+                {episode.causeCodes == null ? "—" : episode.causeCodes.join(", ") || "No persisted causes"}
               </span>
             </div>
             <div className="shrink-0 text-muted-foreground">
@@ -314,7 +326,7 @@ export function TransitionTimeline({
         <p className="text-sm text-muted-foreground">Recent transition count unavailable; flapping cannot be assessed.</p>
       )}
 
-      <RecurrenceSummary groups={recurrence} window={window} />
+      <RecurrenceSummary groups={recurrence} window={window} evidenceScope={evidenceScope} />
 
       {view.isFlapping ? (
         <div className="rounded-md border border-state-warn-solid/40 bg-state-warn-solid/[0.06] px-3 py-2.5 text-sm text-state-warn-ink">

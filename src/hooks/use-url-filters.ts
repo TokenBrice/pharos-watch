@@ -12,7 +12,7 @@ import { useCallback, useMemo, useSyncExternalStore } from "react";
  * This keeps route-local filter state shareable without requiring App Router navigation.
  */
 
-const URL_FILTER_HISTORY_CHANGE_EVENT = "pharos:url-filter-history-change";
+export const URL_FILTER_HISTORY_CHANGE_EVENT = "pharos:url-filter-history-change";
 let historyPatchSubscribers = 0;
 let originalPushState: History["pushState"] | null = null;
 let originalReplaceState: History["replaceState"] | null = null;

@@ -48,7 +48,6 @@ export function BlacklistStats({
   const supportUnavailable = supportState === "unavailable";
   const stats = summary?.stats;
   const dataQuality = summary?.dataQuality;
-  const trackedFrozenTotal = stats ? (stats.trackedFrozenTotal ?? stats.activeFrozenTotal ?? 0) : null;
   const freezableSummary = computeFreezableSummary(blacklistStatusBuckets);
   const totalTrackedMarketCap = freezableSummary.totalMarketCap;
   const unfreezableBucket = blacklistStatusBuckets?.find((bucket) => bucket.key === "no") ?? null;
@@ -175,7 +174,14 @@ export function BlacklistStats({
       )}
       <MetricStatCard
         title="Tracked frozen total"
-        value={trackedFrozenTotal === null ? "—" : formatCurrency(trackedFrozenTotal)}
+        value={
+          stats
+            ? formatBlacklistValuation(stats.trackedFrozenTotal, {
+                knownCount: stats.trackedAddressCount - stats.trackedAmountGapCount,
+                unavailableCount: stats.trackedAmountGapCount,
+              })
+            : "—"
+        }
         subtext="last-known freeze snapshots"
         valueClassName="pharos-numeric text-3xl font-semibold"
         subtextClassName="text-sm text-muted-foreground"

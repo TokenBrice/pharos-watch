@@ -144,7 +144,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
               aria-expanded={showAll}
               className="pharos-focus-ring pharos-control-pill"
             >
-              {showAll ? `Show only the ${DEFAULT_VISIBLE_ROWS} most urgent` : `Show all ${ordered.length} forecasts`}
+              {showAll ? `Show only the ${DEFAULT_VISIBLE_ROWS} most urgent` : `Show all ${ordered.length} incident rows`}
             </button>
           ) : null}
         </>

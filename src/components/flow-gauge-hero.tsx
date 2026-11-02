@@ -241,7 +241,11 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
   const { score, band } = model;
   const scoredCoins = model.ticks.length;
   const withheld = model.withheldForValuation;
-  const verdict = buildGaugeVerdict(model.bandUnsettled ? "unsettled" : band, selectRunLineDrivers(model));
+  // An unread summary has no gauge payload to describe: the error notice and the
+  // "—" beam already say so, and a sentence would claim something about every coin.
+  const verdict = gauge == null
+    ? null
+    : buildGaugeVerdict(model.bandUnsettled ? "unsettled" : band, selectRunLineDrivers(model));
   const trackedCoins = gauge?.trackedCoins ?? coins.length;
   const watermark = window?.watermark;
   const excludedCoins = gauge?.scanCoverage?.excludedCoins ?? 0;
@@ -326,7 +330,9 @@ export function FlowGaugeHero({ gauge, coins, sync, window, dataHealth = null, i
       subKicker="Last 24 hours"
       sub={
         <div className="space-y-3">
-          <p className="text-pretty text-sm leading-relaxed text-foreground/85">{verdict}</p>
+          {verdict ? (
+            <p className="text-pretty text-sm leading-relaxed text-foreground/85">{verdict}</p>
+          ) : null}
           <div className="divide-y divide-border/50">
             <HeroMetricRow
               label="Printed 24h"

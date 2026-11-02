@@ -36,6 +36,13 @@ export function DetailHistoryExploreSections({
   historyGateRef,
   viewModel,
 }: DetailHistoryExploreSectionsProps) {
+  // A frozen archive and a card outside `rated` carry no current-publication grade,
+  // so Grade History must not date a streak at the grade-history cron's writing run.
+  const currentlyRated = viewModel.reportCard
+    ? viewModel.reportCard.ratingStatus === "rated"
+    : viewModel.coin.status === "frozen"
+      ? false
+      : null;
   return (
     <>
       <div ref={historyGateRef} className="space-y-6">
@@ -54,13 +61,13 @@ export function DetailHistoryExploreSections({
             stablecoinId={viewModel.id}
             isNavToken={viewModel.isNavToken}
             historyActive={historyActive}
+            currentlyRated={currentlyRated}
             depegHistoryPreview={depegHistoryPreview}
             observationStartedAt={viewModel.pegScoreResult?.observationStartedAt ?? null}
             hasPriceData={isObservedPrice(viewModel.coinData) && viewModel.coinData.price != null}
             depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
             historyCoverage={viewModel.pegScoreResult?.historyCoverage ?? null}
             recent90d={viewModel.pegScoreResult?.recent90d ?? null}
-            scoreWindowIncidentCount={viewModel.pegScoreResult?.eventCount ?? null}
           />
         ) : (
           <LazySection minHeight={390}>
@@ -68,12 +75,12 @@ export function DetailHistoryExploreSections({
               stablecoinId={viewModel.id}
               isNavToken={viewModel.isNavToken}
               historyActive={historyActive}
+              currentlyRated={currentlyRated}
               observationStartedAt={viewModel.pegScoreResult?.observationStartedAt ?? null}
               hasPriceData={isObservedPrice(viewModel.coinData) && viewModel.coinData.price != null}
               depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
               historyCoverage={viewModel.pegScoreResult?.historyCoverage ?? null}
               recent90d={viewModel.pegScoreResult?.recent90d ?? null}
-              scoreWindowIncidentCount={viewModel.pegScoreResult?.eventCount ?? null}
             />
           </LazySection>
         )}

@@ -4,7 +4,7 @@ import { getActiveChainIds } from "@shared/lib/chains";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { isChainProfileIndexable, MIN_INDEXABLE_CHAIN_STABLECOINS } from "@/lib/chain-indexing";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
-import { getTrackedDeploymentsForChain } from "../static-chain-content";
+import { getTrackedDeploymentsForChain, rankChainDeployments } from "../static-chain-content";
 import ChainProfilePage, { generateMetadata } from "./page";
 
 vi.mock("./client", () => ({
@@ -66,6 +66,23 @@ describe("ChainProfilePage", () => {
     expect(html.indexOf("chain client ethereum")).toBeLessThan(html.indexOf("Tracked Stablecoins On Ethereum"));
     expect(html.indexOf("Tracked Stablecoins On Ethereum")).toBeLessThan(html.indexOf("Related Stablecoin Hubs"));
     expect(html.indexOf("chain client ethereum")).toBeLessThan(html.indexOf("Related Stablecoin Hubs"));
+  });
+
+  it("links the leading base stablecoins, not a parent coin plus its wrappers", async () => {
+    const html = await renderChainPage("ethereum");
+    const coins = "usdt-tether,usdc-circle,usde-ethena,usds-sky";
+    expect(html.includes(`href="/compare#coins=${coins}"`) || html.includes(`href="/compare/#coins=${coins}"`)).toBe(true);
+  });
+
+  it("lets variants fill the compare cohort only after every base coin", () => {
+    for (const chain of getActiveChainIds()) {
+      const deployments = getTrackedDeploymentsForChain(chain);
+      const selected = rankChainDeployments(deployments).slice(0, 4).map((deployment) => deployment.id);
+      const baseIds = new Set(deployments.filter((deployment) => !deployment.isNavOrVariant).map((deployment) => deployment.id));
+      const firstVariant = selected.findIndex((id) => !baseIds.has(id));
+      expect(firstVariant === -1 || selected.slice(firstVariant).every((id) => !baseIds.has(id)), chain).toBe(true);
+      if (firstVariant !== -1) expect(firstVariant, chain).toBe(Math.min(baseIds.size, 4));
+    }
   });
 
   it("noindexes chain profiles with fewer tracked stablecoins than the bar, and only those", async () => {

@@ -9,6 +9,7 @@ import type { ReactElement, Ref } from "react";
 import { CHAIN_HEALTH_LABELS } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { formatCompactUsd, formatSignedCompactUsd, formatSignedPercent } from "@shared/lib/format";
+import { formatChainShare } from "@shared/lib/chain-share-format";
 import { CONTAINERS_PER_BAY, HARBOR_UNIT_USD, isHarborChainVessel, type HarborVessel } from "@shared/lib/harbor-scene";
 import styles from "./harbor.module.css";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
@@ -136,7 +137,7 @@ export function HarborRecordCard({ vessel, names, focusChainId, onClose, onShowI
           <li key={row.id}>
             <span>{row.symbol}</span>
             <span className={styles.num}>
-              {formatCompactUsd(row.supplyUsd)} · {(row.share * 100).toFixed(1)}%
+              {formatCompactUsd(row.supplyUsd)} · {formatChainShare(row.share)}
             </span>
           </li>
         ))}

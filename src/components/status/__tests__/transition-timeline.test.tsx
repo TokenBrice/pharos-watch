@@ -50,6 +50,43 @@ describe("TransitionTimeline", () => {
     expect(screen.getByText(/No persisted causes are available/i)).toBeTruthy();
   });
 
+  it("keeps a window-start recovery's causes unknown instead of printing recovery-time codes", () => {
+    const recovery: StatusTransition = {
+      id: 20,
+      scope: "global",
+      from: "stale",
+      to: "healthy",
+      rawStatus: "healthy",
+      transitionType: "recover",
+      reason: "Checks recovered",
+      confidence: 1,
+      causes: [{
+        code: "reserve_sync_history_write_gap",
+        layer: "data-quality",
+        severity: "info",
+        message: "Recovery-time observation.",
+      }],
+      at: 1_700_000_000,
+    };
+    render(
+      <TransitionTimeline
+        transitions={[recovery]}
+        nowSeconds={1_700_000_100}
+        transitionsLast24h={1}
+        window="24h"
+        filters={DEFAULT_INCIDENT_HISTORY_QUERY}
+        onWindowChange={vi.fn()}
+        onFiltersChange={vi.fn()}
+        isLoading={false}
+      />,
+    );
+
+    const episode = screen.getByTitle("Worst admin state: stale").closest("li")!;
+    expect(episode.textContent).toContain("—");
+    expect(episode.textContent).not.toContain("No persisted causes");
+    expect(episode.textContent).not.toContain("reserve_sync_history_write_gap");
+  });
+
   it("renders a failed read as an error with retry, never as an empty history", () => {
     const onRetry = vi.fn();
     render(

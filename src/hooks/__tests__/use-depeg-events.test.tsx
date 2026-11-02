@@ -242,7 +242,9 @@ describe("useInfiniteDepegEvents", () => {
     useInfiniteQueryMock.mockReturnValue(makeInfiniteQueryResult([first, last], { error: new Error("refresh failed") }));
     rerender();
     expect(result.current.data?.events).toHaveLength(2);
+    // A failed refresh keeps the complete retained pages and their exhaustion.
     expect(result.current.isFullyLoaded).toBe(false);
+    expect(result.current.hasLoadedAllPages).toBe(true);
   });
 
   it("requests pending incidents when enabled", async () => {

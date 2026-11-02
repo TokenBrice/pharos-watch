@@ -255,6 +255,11 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(isMiniAppErrorCode(null)).toBe(false);
     expect(miniAppErrorMessage(new MiniAppRequestError(429, "rate-limited", 12), "mutation"))
       .toBe("Too many changes in a row. Wait a few seconds, then try again.");
+    // Post-commit-capable failures never assert that nothing persisted.
+    expect(miniAppErrorMessage(new MiniAppRequestError(500, "internal"), "mutation"))
+      .toBe("Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.");
+    expect(miniAppErrorMessage(new TypeError("Failed to fetch"), "mutation"))
+      .toBe("Change not confirmed. Check the list before retrying.");
     expect(isMiniAppErrorCode("stale-recap-preference")).toBe(false);
   });
 
@@ -309,24 +314,21 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("offers a bot link or close action when launch data never arrives", async () => {
+  it("loads the signed URL launch payload when the Telegram SDK never loads", async () => {
     vi.useFakeTimers();
-    window.history.replaceState({}, "", "/pharoswatchbot/app/#tgWebAppData=signed-init-data&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop");
-    const fetchMock = vi.fn();
+    const signed = "auth_date=1800000000&hash=abc&user=%7B%7D";
+    window.history.replaceState({}, "", `/pharoswatchbot/app/#tgWebAppData=${encodeURIComponent(signed)}&tgWebAppVersion=9.0&tgWebAppPlatform=tdesktop`);
+    const fetchMock = vi.fn().mockResolvedValue(ok(baseState));
     installMiniAppFetch(fetchMock);
-    render(<PharosWatchBotMiniAppPage />);
-    await act(async () => { vi.advanceTimersByTime(8_050); });
-    expect(screen.getByRole("link", { name: "Open PharosWatchBot" }).getAttribute("href")).toBe("https://t.me/PharosWatchBot");
 
-    cleanup();
-    const close = vi.fn();
-    window.Telegram = { WebApp: { initData: "", platform: "tdesktop", ready: vi.fn(), close } };
     render(<PharosWatchBotMiniAppPage />);
-    await act(async () => { vi.advanceTimersByTime(8_050); });
-    expect(screen.getByText("Telegram didn't pass your launch details. Close and reopen from PharosWatchBot.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Close and reopen" }));
-    expect(close).toHaveBeenCalledOnce();
-    expect(fetchMock).not.toHaveBeenCalled();
+    await act(async () => { await vi.advanceTimersByTimeAsync(8_050); });
+
+    expect(screen.getByRole("heading", { name: "Alerts on" })).toBeTruthy();
+    expect(screen.queryByText("Telegram didn't pass your launch details. Close and reopen from PharosWatchBot.")).toBeNull();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toEqual({ initData: signed });
   });
 
   it("loads the session into the tab-free Home screen", async () => {
@@ -445,6 +447,46 @@ describe("PharosWatchBotMiniAppPage", () => {
     });
     expect(screen.getByRole("switch", { name: switchName("USDC Safety Score") }).getAttribute("aria-checked")).toBe("false");
     expect(screen.getByText("Can't check USD Top 25 coverage right now")).toBeTruthy();
+    // Unreadable coverage is neither on nor off, so the switch cannot be toggled
+    // into a positive claim of either kind.
+    expect(screen.getByRole("switch", { name: switchName("USDC Safety Score") }).hasAttribute("disabled")).toBe(true);
+  });
+
+  it("shows unreadable coin coverage as a missing value, never as Off", async () => {
+    const state = makeMiniAppState({
+      subscriber: { globalAlerts: { dews: false, depeg: false } },
+      subscriptions: [],
+      presets: [top25({ safety: true }, null)],
+      catalog: rankedCatalog,
+    });
+    await renderReadyMiniApp({ state, launch: { initDataUnsafe: { start_param: "coin_usdt-tether" } } });
+    expect(screen.getByText("Can't check USD Top 25 coverage right now")).toBeTruthy();
+    const safetyRow = screen.getByText("Safety Score").closest("div")!;
+    expect(safetyRow.textContent).toContain("—");
+    expect(safetyRow.textContent).not.toContain("Off");
+  });
+
+  it("claims neither coverage nor a mute when a followed preset's members are unreadable", async () => {
+    const state = makeMiniAppState({
+      subscriber: { globalAlerts: { dews: false, depeg: false, safety: false } },
+      presets: [top25({ dews: true }, null)],
+      catalog: rankedCatalog,
+    });
+    await renderReadyMiniApp({ state, launch: { initDataUnsafe: { start_param: "coin_usdt-tether" } } });
+    const subtitle = screen.getByText("Can't check USD Top 25 coverage right now");
+    const row = subtitle.closest<HTMLElement>("div.relative")!;
+    expect(within(row).queryByText("Off")).toBeNull();
+    expect(within(row).queryByText("On")).toBeNull();
+    expect(screen.queryAllByRole("switch")).toHaveLength(0);
+
+    cleanup();
+    await renderReadyMiniApp({
+      state: makeMiniAppState({ presets: [top25({ safety: true }, null)], catalog: rankedCatalog }),
+      launch: { initDataUnsafe: { start_param: "coin_usdc-circle" } },
+    });
+    const safety = screen.getByRole("switch", { name: switchName("USDC Safety Score") });
+    expect(safety.getAttribute("aria-checked")).toBe("false");
+    expect(safety).toHaveProperty("disabled", true);
   });
 
   it("follows an unfollowed coin from the MainButton and leaves unknown coins untouched", async () => {
@@ -554,10 +596,10 @@ describe("PharosWatchBotMiniAppPage", () => {
     expect(screen.queryByRole("group", { name: "Resume alerts" })).toBeNull();
   });
 
-  it("puts the recovery action in the MainButton for blocked delivery", async () => {
+  it.each(["blocked", "chat_not_found"])("puts the recovery action in the MainButton for %s delivery", async (failureClass) => {
     const main = nativeButton();
     const openTelegramLink = vi.fn();
-    await renderReadyMiniApp({ state: makeMiniAppState({ health: { recentFailureClass: "blocked" } }), launch: { MainButton: main, openTelegramLink } });
+    await renderReadyMiniApp({ state: makeMiniAppState({ health: { recentFailureClass: failureClass } }), launch: { MainButton: main, openTelegramLink } });
     expect(screen.getByRole("heading", { name: "Telegram stopped delivering alerts" })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Alerts on" })).toBeNull();
     await waitFor(() => expect(main.text).toBe("Open chat with PharosWatchBot"));
@@ -704,11 +746,11 @@ describe("PharosWatchBotMiniAppPage", () => {
     await renderReadyMiniApp({ fetchImpl: fetchMock });
     fireEvent.click(screen.getByRole("button", { name: /^All stablecoins/ }));
     fireEvent.click(screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") }));
-    await waitFor(() => expect(screen.getByText("Something went wrong. Nothing was saved; try again.")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.")).toBeTruthy());
     expectMutationRequest(fetchMock, { kind: "set-global", alertType: "safety", enabled: true });
     expect(screen.getByRole("switch", { name: switchName("All stablecoins Safety Score") }).getAttribute("aria-checked")).toBe("false");
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    expect(screen.queryByText("Something went wrong. Nothing was saved; try again.")).toBeNull();
+    expect(screen.queryByText("Something went wrong. We couldn't confirm that change; reopen from PharosWatchBot to check.")).toBeNull();
   });
 
   it.each<[string, number | null, string | null]>([
@@ -731,6 +773,33 @@ describe("PharosWatchBotMiniAppPage", () => {
       expect(main.onClick).not.toHaveBeenCalled();
     }
     expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("keeps delivery ages advancing while the session stays open", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_800_000_000_000);
+    const nowSec = 1_800_000_000;
+    const fetchMock = renderMiniApp({
+      state: makeMiniAppState({ health: { lastSuccessfulDeliveryAt: nowSec - 60, lastSuccessfulReplyAt: null } }),
+      launch: { initDataUnsafe: { start_param: "settings" } },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(20); });
+    expect(screen.getByText("1 min ago")).toBeTruthy();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10 * 60_000); });
+    expect(screen.getByText("11 min ago")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("omits delivery clocks the state did not observe instead of claiming 'Not yet'", async () => {
+    renderMiniApp({
+      state: makeMiniAppState({ health: { lastSuccessfulDeliveryAt: null, lastSuccessfulReplyAt: null } }),
+      launch: { initDataUnsafe: { start_param: "settings" } },
+    });
+    await waitFor(() => expect(screen.getByText("Delivery")).toBeTruthy());
+    expect(screen.queryByText("Last alert delivered")).toBeNull();
+    expect(screen.queryByText("Last reply from the bot")).toBeNull();
+    expect(screen.queryByText("Not yet")).toBeNull();
   });
 
   it("restores snooze choices and detaches the native MainButton exactly at expiry without a POST", async () => {

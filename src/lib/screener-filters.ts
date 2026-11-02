@@ -243,6 +243,12 @@ export interface ScreenerRow {
   lifecycle: StablecoinStatus;
   /** Mechanism archetype from the slim client registry (may be undefined). */
   mechanism: MechanismArchetype | null;
+  /**
+   * Whether the coin itself belongs to its resolved archetype. A commodity peg
+   * that only inherits a parent's archetype stays in the universe; a mechanism
+   * filter excludes it, matching the mechanism pages.
+   */
+  mechanismIncluded?: boolean;
   /** Governance type from `StablecoinClientMeta.flags`. */
   type: GovernanceType;
   /** Peg currency from `StablecoinClientMeta.flags`. */
@@ -280,12 +286,12 @@ export interface ScreenerRow {
   mintAuthority: MintAuthorityStatusKind;
   /** Published Safety V9 mint-control component (0-100). null = not rated. */
   mintAuthorityScore: number | null;
-  /** Score band bucket, or "nr" when unrated. */
-  mintAuthorityScoreBand: MintAuthorityScoreFilterValue;
-  mintAuthorityScoreLabel: string;
-  mintAuthorityScoreBandLabel: string;
-  mintAuthorityScoreBadgeClassName: string;
-  mintAuthorityScoreDetail: string;
+  /** Score band bucket; null when the report-cards publication is unavailable. */
+  mintAuthorityScoreBand: MintAuthorityScoreFilterValue | null;
+  mintAuthorityScoreLabel: string | null;
+  mintAuthorityScoreBandLabel: string | null;
+  mintAuthorityScoreBadgeClassName: string | null;
+  mintAuthorityScoreDetail: string | null;
   /** Two-point [worst, current] peg deviations for the desktop peg-range sparkline; not a 30-day history. */
   pegDeviationSeries?: ReadonlyArray<number | null>;
   /** Compact supply samples for the desktop 30d supply sparkline. */
@@ -424,7 +430,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     if (!passesMinimum(row.liquidityScore, filters.liquidityScoreMin)) return false;
     if (custodyModelSet && !custodyModelSet.has(row.custodyModel)) return false;
     if (mechanismSet) {
-      if (!row.mechanism || !mechanismSet.has(row.mechanism)) return false;
+      if (!row.mechanism || row.mechanismIncluded === false || !mechanismSet.has(row.mechanism)) return false;
     }
     if (typeSet && !typeSet.has(row.type)) return false;
     if (pegSet && !pegSet.has(row.peg)) return false;
@@ -434,7 +440,7 @@ export function applyFilters(rows: readonly ScreenerRow[], filters: ScreenerFilt
     }
     if (mintAuthoritySet && !mintAuthoritySet.has(row.mintAuthority)) return false;
     if (!passesMinimum(row.mintAuthorityScore, filters.mintAuthorityScoreMin)) return false;
-    if (mintAuthorityScoreSet && !mintAuthorityScoreSet.has(row.mintAuthorityScoreBand)) return false;
+    if (mintAuthorityScoreSet && (row.mintAuthorityScoreBand === null || !mintAuthorityScoreSet.has(row.mintAuthorityScoreBand))) return false;
     return true;
   });
 }

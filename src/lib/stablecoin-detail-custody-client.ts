@@ -204,12 +204,15 @@ const REHYPOTHECATION_SENTENCES: Record<CustodyRehypothecation, string | null> =
 /**
  * Reviewed names that stand in for custodians nobody has named: "Undisclosed
  * Australian bank", "Reserve custodians and counterparties (not publicly
- * identified)", "Custodian(s) not publicly named in the June 2026 report". A
- * named entity whose *allocation* is undisclosed ("BitGo Trust Company, Inc.
- * (… allocation undisclosed)") stays a named provider.
+ * identified)", "Custodian(s) not publicly named in the June 2026 report".
+ * A row can also name a legal owner or a contract while recording that the
+ * custodian roster itself is undisclosed ("… (reserve owner; MXNT custodian
+ * roster undisclosed)"). A named entity whose *allocation* is undisclosed
+ * ("BitGo Trust Company, Inc. (… allocation undisclosed)") stays a named
+ * provider.
  */
 const UNIDENTIFIED_PROVIDER_PATTERN =
-  /^(?:one or more |unverified and )?(?:undisclosed|unidentified|unnamed)\b|\bnot (?:publicly |individually |separately )?(?:identified|named|disclosed)\b|\bnames undisclosed\b|\(unnamed\)/i;
+  /^(?:one or more |unverified and )?(?:undisclosed|unidentified|unnamed)\b|\bnot (?:publicly |individually |separately )?(?:identified|named|disclosed)\b|\bnames undisclosed\b|\(unnamed\)|\bcustodians? (?:roster )?undisclosed\b|\bcontroller undisclosed\b/i;
 
 /** Contract and wallet addresses never reach the summary layer (summary budget). */
 const RAW_ADDRESS = /\s*\b(?:0x[0-9a-fA-F]{6,}|(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{25,})\b/g;

@@ -11,6 +11,13 @@ const DOC_SOURCES = PUBLIC_DOCS.map((doc) => ({
   body: readFileSync(join(DOCS_DIR, doc.source), "utf-8"),
 }));
 
+/** Code spans/fences and URLs are published verbatim; internal-vocabulary redaction applies to the rest. */
+const PROTECTED_SEGMENT = /```[\s\S]*?```|`[^`\n]*`|https?:\/\/[^\s)<>]+/g;
+
+function withoutProtectedSegments(markdown: string): string {
+  return markdown.replace(PROTECTED_SEGMENT, "");
+}
+
 describe("PUBLIC_DOCS registry", () => {
   it("publishes the Blacklist Tracker methodology with matching source and metadata", () => {
     expect(PUBLIC_DOCS.find((doc) => doc.slug === "blacklist-tracker")).toEqual({
@@ -27,7 +34,21 @@ describe("PUBLIC_DOCS registry", () => {
     for (const { body } of DOC_SOURCES) {
       const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true });
       expect(rendered).not.toMatch(/\]\((?:\.\.?\/|[^:/)#]+\.md)/);
-      expect(rendered).not.toMatch(/agents\/|AGENTS\.md|\.claude|TODO|FIXME|runbook/i);
+      expect(withoutProtectedSegments(rendered)).not.toMatch(/agents\/|AGENTS\.md|\.claude|TODO|FIXME|runbook/i);
+    }
+  });
+
+  it("never rewrites link destinations, code spans, or fenced blocks", () => {
+    for (const { body } of DOC_SOURCES) {
+      const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true });
+      expect(rendered).not.toMatch(/\]\([^)\n]*\s[^)\n]*\)/);
+      for (const url of body.match(/https?:\/\/[^\s)<>]+/g) ?? []) {
+        expect(rendered).toContain(url);
+      }
+      for (const span of body.match(/`[^`\n]*`/g) ?? []) {
+        expect(rendered).toContain(span);
+      }
+      expect(rendered).not.toMatch(/^#{1,6}.*\b(\w+) \1\b/im);
     }
   });
 });

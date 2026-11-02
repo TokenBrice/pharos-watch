@@ -2,6 +2,7 @@
 
 import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { PegDeviationChart } from "@/components/peg-deviation-chart";
+import { ChartSkeleton } from "@/components/chart-skeleton";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import type {
   CaseStudyDataWidget,
@@ -22,24 +23,29 @@ export function CaseStudyChart({
   widget: CaseStudyDataWidget;
   eventWindows: readonly CaseStudyEventWindow[];
 }) {
-  const { data, error } = useSupplyHistory(
+  const { data, error, isLoading } = useSupplyHistory(
     widget.coinId,
     getCaseStudyChartDays(eventWindows),
   );
+  const hasData = data.some((point) => point.price != null && point.price > 0);
+  const pending = isLoading && !hasData;
 
   return (
     <figure className="pharos-card-shell overflow-hidden">
-      {error ? (
-        <div className="px-4 py-4 sm:px-6">
-          <QueryErrorNotice error={error} hasData={data.length > 0} />
+      {error && !hasData ? (
+        <div className="px-4 pt-4 sm:px-6">
+          <QueryErrorNotice error={error} hasData={hasData} />
         </div>
-      ) : (
+      ) : null}
+      {pending ? (
+        <ChartSkeleton />
+      ) : hasData || !error ? (
         <PegDeviationChart
           data={data}
           pegCurrency="USD"
           embedded
         />
-      )}
+      ) : null}
       <figcaption className="border-t border-border/40 px-4 py-3 text-xs leading-relaxed text-muted-foreground sm:px-6">
         {widget.caption}
       </figcaption>

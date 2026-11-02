@@ -243,6 +243,32 @@ describe("projectDdrTrackRecordSummary", () => {
     expect(unscored.lede).toContain("No frozen DDR forecast");
   });
 
+  it("claims grading only for the forecasts that were actually scored", () => {
+    const pendingOnly = projectDdrTrackRecordSummary(
+      response([predictionRow({ verdictReview: "pending" })]),
+      COIN,
+    )!;
+    expect(pendingOnly.lede).toContain("1 frozen DDR forecast published for this coin");
+    expect(pendingOnly.lede).not.toContain("graded against the confirmed outcome");
+
+    const mixed = projectDdrTrackRecordSummary(
+      response([
+        predictionRow({ eventId: 1 }),
+        predictionRow({ eventId: 2, verdictReview: "pending" }),
+      ]),
+      COIN,
+    )!;
+    expect(mixed.lede).toContain("2 frozen DDR forecasts published for this coin.");
+    expect(mixed.lede).not.toContain("graded against the confirmed outcome");
+    expect(mixed.lede).toContain("1 of 1 scored recovery call correct");
+
+    const fullyScored = projectDdrTrackRecordSummary(
+      response([predictionRow({ eventId: 1 }), predictionRow({ eventId: 2 })]),
+      COIN,
+    )!;
+    expect(fullyScored.lede).toContain("graded against the confirmed outcome");
+  });
+
   it("orders incidents newest first and folds the tail into a hidden count", () => {
     const rows = Array.from({ length: 8 }, (_, index) =>
       predictionRow({ eventId: index + 1, startedAt: 1_700_000_000 + index * 86_400 }),

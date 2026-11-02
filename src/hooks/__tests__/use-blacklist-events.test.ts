@@ -24,7 +24,7 @@ describe("useBlacklistEventsPage", () => {
       name: "every filter",
       params: {
         stablecoin: "USDC",
-        chainName: "Ethereum",
+        chainId: "ethereum",
         eventType: "blacklist" as const,
         query: "0xabc",
         sortBy: "stablecoin" as const,
@@ -33,7 +33,7 @@ describe("useBlacklistEventsPage", () => {
         offset: 50,
         includeTotal: true,
       },
-      queryKey: ["blacklist-events", "USDC", "Ethereum", "blacklist", "0xabc", "stablecoin", "asc", 25, 50, "first", true],
+      queryKey: ["blacklist-events", "USDC", "ethereum", "blacklist", "0xabc", "stablecoin", "asc", 25, 50, "first", true],
     },
     {
       name: "stable defaults",

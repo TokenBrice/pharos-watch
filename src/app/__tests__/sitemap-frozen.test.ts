@@ -9,6 +9,10 @@ import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/a
 import { CHANGELOG_MONTH_ARCHIVES } from "@/lib/changelog-history";
 import { getIndexableChainIds } from "@/lib/chain-indexing";
 import { PEG_HUB_PAGES } from "@/lib/peg-taxonomy";
+import { ALL_STABLECOIN_TAXONOMY_PAGES } from "@/lib/stablecoin-taxonomy";
+import { DIGEST_ENTRIES } from "@/lib/digest-registry";
+import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
+import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 import sitemapDates from "@/generated/sitemap-dates.json";
 
 const entries = sitemap();
@@ -46,9 +50,61 @@ describe("sitemap", () => {
     }
   });
 
+  it("dates client-fetch shells by their own route edit, not the depeg/digest clock", () => {
+    const dates = sitemapDates as Record<string, string>;
+    for (const path of [
+      "/liquidity/",
+      "/yield/",
+      "/safety-scores/map/",
+      "/stability-index/",
+      "/dependency-map/",
+      "/status/",
+      "/freezewatch/",
+      "/chains/",
+    ]) {
+      expect(entriesByUrl.get(`${SITE_ORIGIN}${path}`)?.lastModified, path).toEqual(
+        new Date(dates[path] ?? dates["/"]),
+      );
+    }
+  });
+
+  it("dates the safety-scores hub by the preview it bakes", () => {
+    const preview = getSafetyScoresPreview();
+    expect(preview).not.toBeNull();
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/safety-scores/`)?.lastModified).toEqual(
+      new Date(Math.max(
+        new Date(sitemapDates["/safety-scores/"]).getTime(),
+        (preview?.publishedAtSec ?? 0) * 1000,
+      )),
+    );
+  });
+
+  it("dates the digest hub by its newest publication", () => {
+    const newestDigestMs = Math.max(...DIGEST_ENTRIES.map((digest) => digest.generatedAt * 1000));
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/digest/`)?.lastModified).toEqual(
+      new Date(Math.max(new Date(sitemapDates["/digest/"]).getTime(), newestDigestMs)),
+    );
+  });
+
+  it("dates the homepage by the top-stablecoins dataset the build baked", () => {
+    const asOfMs = Date.parse(PUBLIC_DATASET_CURRENT_EXPORTS["top-stablecoins"]._meta.asOfISO);
+    expect(entriesByUrl.get(`${SITE_ORIGIN}/`)?.lastModified).toEqual(
+      new Date(Math.max(new Date(sitemapDates["/"]).getTime(), asOfMs)),
+    );
+  });
+
   it("includes every peg hub, pre-launch-only hubs included", () => {
     for (const page of PEG_HUB_PAGES) {
       expect(urls.has(`${SITE_ORIGIN}${page.href}`), page.href).toBe(true);
+    }
+  });
+
+  it("dates generated peg hubs and taxonomy pages from their own family", () => {
+    const dates = sitemapDates as Record<string, string>;
+    for (const page of [...PEG_HUB_PAGES, ...ALL_STABLECOIN_TAXONOMY_PAGES]) {
+      expect(entriesByUrl.get(`${SITE_ORIGIN}${page.href}`)?.lastModified, page.href).toEqual(
+        new Date(dates[page.href] ?? dates["/stablecoins/"]),
+      );
     }
   });
 

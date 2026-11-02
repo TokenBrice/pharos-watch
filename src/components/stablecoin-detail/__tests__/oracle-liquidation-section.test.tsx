@@ -213,10 +213,23 @@ describe("OracleLiquidationSection", () => {
     expect(spectrum?.getAttribute("aria-label")).toContain(`band 1 of ${ORACLE_TIER_POLICY_BANDS.length}`);
   });
 
-  it("draws an empty provider list as an undisclosed source station feeding the mint / redeem quote", () => {
+  it("draws an empty provider list as a missing source station, not an undisclosed one", () => {
     const { container } = render(<OracleLiquidationSection summary={PRICE_FEED} />);
     const path = pricePath(container)!;
     expect(path).not.toBeNull();
+    expect(path.getAttribute("aria-label")).toContain("sources not itemized");
+    expect(path.getAttribute("aria-label")).not.toContain("undisclosed");
+    expect(path.textContent).toContain("—");
+    expect(path.textContent).not.toContain("Undisclosed");
+  });
+
+  it("keeps Undisclosed for an opaque review with no itemized feeds", () => {
+    const { container } = render(
+      <OracleLiquidationSection
+        summary={{ ...PRICE_FEED, tier: "opaque-or-unknown", tierLabel: "Opaque / unknown" }}
+      />,
+    );
+    const path = pricePath(container)!;
     expect(path.getAttribute("aria-label")).toContain("sources undisclosed");
     expect(path.textContent).toContain("Undisclosed");
   });

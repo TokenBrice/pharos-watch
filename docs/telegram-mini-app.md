@@ -10,7 +10,7 @@ The Mini App is the Telegram-native control panel for managing PharosWatchBot su
 
 Launch is private-chat scoped for the current phase: bot commands and alert delivery continue to work in groups, but Web App launch buttons are attached only to private-chat replies. Group, supergroup, and channel chats remain in command-only mode until a fresh admin verification path and group-scoped launch ownership model exist.
 
-Unsigned browser **preview** is a permanent launch-guidance state. With no supported Telegram launch hint, it explains how to open the Mini App and makes zero session API calls; it exposes no subscription controls or mutation authority. It is not awaiting promotion to a browser control panel. A Telegram-indicated launch with missing or failed signed data remains the distinct missing/error state, and signed `initData` validation is always the backend authorization boundary. `noindex` and robots exclusion govern discoverability, not access control.
+Unsigned browser **preview** is a permanent launch-guidance state. With no supported Telegram launch hint, it explains how to open the Mini App and makes zero session API calls; it exposes no subscription controls or mutation authority. It is not awaiting promotion to a browser control panel. A Telegram-indicated launch that never yields signed data remains the distinct missing/error state; when the WebApp SDK fails to load, the client falls back to the signed `tgWebAppData` payload already present in the launch URL. Signed `initData` validation is always the backend authorization boundary. `noindex` and robots exclusion govern discoverability, not access control.
 
 
 ## Personalized Recap Retirement
@@ -116,7 +116,7 @@ Coin rows and Coin detail show, per live family, what will actually reach the ch
 - **On**: the coin's own row enables the family.
 - **On via PRESET / All stablecoins**: no own flag, and a followed preset whose `memberIds` include the coin (DEWS, depeg and safety only) or the matching All stablecoins family covers it.
 - **Muted**: the family is off with its override marker set while a preset or All stablecoins is known to cover it.
-- **Can't be checked**: a covering preset's `memberIds` is `null`; the client claims neither coverage nor a mute of it, and coin rows say "X can't be checked" rather than "No alerts".
+- **Can't be checked**: a covering preset's `memberIds` is `null`; the client claims neither coverage nor a mute of it, coin rows say "X can't be checked" rather than "No alerts", and the family's switch stays unchecked and disabled.
 - **Off**: nothing covers it.
 
 Coin detail renders On and On via as switched on. Turning an inherited family off sends `alertTypes: { family: false }`, which writes the override marker and mutes it for that coin only; per-coin tuning pickers appear only for families the coin enables itself. Following and unfollowing a preset changes `telegram_preset_subscriptions` plus the subscriber row's activity and preference-generation markers in `telegram_subscribers`; direct/local coin rows in `telegram_subscriptions` remain unchanged.

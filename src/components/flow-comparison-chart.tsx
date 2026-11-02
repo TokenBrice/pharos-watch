@@ -89,8 +89,8 @@ export function FlowComparisonChart({
         </div>
         {unavailableSeries.length > 0 && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Partial valuation: {unavailableSeries.map((s) => `${s.label} ${s.unavailableHours}h`).join(", ")} omitted
-            because unpriced events leave the signed net unavailable.
+            Missing net: {unavailableSeries.map((s) => `${s.label} ${s.unavailableHours}h`).join(", ")} omitted
+            because the hour&apos;s signed net is unavailable.
           </p>
         )}
         {unknownCoverageSeries.length > 0 && (

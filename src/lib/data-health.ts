@@ -1,5 +1,5 @@
 import type { ApiMeta } from "@/lib/api";
-import { ApiFetchError } from "@/lib/api";
+import { isDatasetNotPopulatedError } from "@/lib/api";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 type DataHealthState = "fresh" | "degraded" | "stale" | "unavailable" | "error";
@@ -114,7 +114,7 @@ export function formatDataHealthWarning(warning: string): string {
 }
 
 function isUnavailableError(error: unknown): boolean {
-  return error instanceof ApiFetchError && error.status === 503;
+  return isDatasetNotPopulatedError(error);
 }
 
 function getFreshBudgetMs(staleTime: number, meta: ApiMeta | null | undefined): number {

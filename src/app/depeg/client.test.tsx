@@ -211,6 +211,44 @@ describe("DepegClient", () => {
     expect(hero.dataset.alerts).toBe(missing === "dews" || missing === "peg" ? "null" : "1");
   });
 
+  it("treats a DEWS payload with no readable current rows as unavailable", () => {
+    mountDepegRoute({
+      signals: {
+        signals: {},
+        updatedAt: 0,
+        meta: { status: "degraded", warning: '199 - "DEWS current rows unavailable"' },
+      },
+    });
+    expect(screen.getByTestId("depeg-hero").dataset.alerts).toBe("null");
+    const query = (mocks.QueryFreshnessNotices.mock.calls.at(-1)![0] as { queries: StaleQuery[] }).queries
+      .find((entry) => entry.preset === "stressSignals")!;
+    expect(query.hasData).toBe(false);
+    expect(screen.queryByTestId("dews-alert-feed")).toBeNull();
+  });
+
+  it("hides the resolved-history card until the first event page is readable", () => {
+    const absent = { data: undefined, error: new Error("source unavailable"), isLoading: false, dataUpdatedAt: 0, meta: null, refetch: vi.fn() };
+    mocks.usePegSummary.mockReturnValue(makePegSummaryResult({ coins: [makeCoin("coin-a", "A")] }));
+    mocks.useStressSignals.mockReturnValue(makeStressSignalsResult({ signals: { "coin-a": { band: "CALM" } } }));
+    mocks.useInfiniteDepegEvents.mockReturnValue(absent);
+    mocks.useDepegResolverSurfaces.mockReturnValue(makeResolverSurfaces());
+    mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
+    render(<DepegClient />);
+    expect(screen.queryByTestId("feed-Recent resolved detections")).toBeNull();
+  });
+
+  it("hides the control board when the peg catalog was not read", () => {
+    const absent = { data: undefined, error: new Error("source unavailable"), isLoading: false, dataUpdatedAt: 0, meta: null, refetch: vi.fn() };
+    mocks.usePegSummary.mockReturnValue(absent);
+    mocks.useStressSignals.mockReturnValue(makeStressSignalsResult({ signals: { "coin-a": { band: "ALERT" } } }));
+    mocks.useInfiniteDepegEvents.mockReturnValue(makeEventsResult());
+    mocks.useDepegResolverSurfaces.mockReturnValue(makeResolverSurfaces());
+    mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
+    render(<DepegClient />);
+    expect(screen.queryByTestId("depeg-control-board")).toBeNull();
+    expect(screen.getByTestId("depeg-hero").dataset.alerts).toBe("null");
+  });
+
   it("labels open incidents from their unique event's latest trusted observation, without touching the census", () => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW_SEC * 1000);
