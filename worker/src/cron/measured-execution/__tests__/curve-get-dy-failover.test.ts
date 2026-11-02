@@ -30,7 +30,7 @@ function setup() {
   return {
     primary: primary.url,
     fallback: fallback.url,
-    execute: (count: number) => executeCurveGetDyMulticall({
+    execute: (count: number, splitOnExecutionBudgetError = true) => executeCurveGetDyMulticall({
       chain: "ethereum",
       calls: Array.from({ length: count }, (_, index) => ({
         label: `get_dy-${index}`, target: POOL, callData: "0x5e0d443f", allowFailure: true,
@@ -38,6 +38,7 @@ function setup() {
       blockNumber: 21_000_000,
       blockHash: BLOCK_HASH,
       chainRpcs,
+      splitOnExecutionBudgetError,
     }),
   };
 }
@@ -66,6 +67,16 @@ describe("Curve get_dy execution-budget failover", () => {
 
     expect(await run.execute(8)).toBeNull();
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([run.primary]);
+  });
+
+  it("keeps provider failover for non-adaptive callers that cannot split an OOG", async () => {
+    const run = setup();
+    fetchMock.mockImplementation(async (url) => url === run.primary
+      ? rpcResponse({ error: { code: -32003, message: "out of gas: gas required exceeds: 30000000" } })
+      : aggregateResponse(8));
+
+    expect(await run.execute(8, false)).toHaveLength(8);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([run.primary, run.fallback]);
   });
 
   it("keeps provider failover for a singleton OOG", async () => {

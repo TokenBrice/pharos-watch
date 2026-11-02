@@ -350,6 +350,22 @@ export async function resolveDeploymentSupplyCensusEvmPins(
             finalizedHeader.number === header.number && finalizedHeader.hash === header.hash
             ? finalizedHeader
             : await readFinalizedSafely();
+          // A finalized head above the anchor does not prove the anchor is its
+          // ancestor (a reorg may have orphaned it). Re-read the canonical
+          // header at the anchor height after finality, as CCIP pins do, and
+          // keep the historical route on any mismatch or failed read.
+          if (finalized !== null && finalized.number > header.number) {
+            let canonical: EvmBlockHeader | null = null;
+            try {
+              canonical = await dependencies.fetchEvmBlockHeader(
+                chainId, header.number, { ...headerOptions, observedHeadBlock: finalized.number },
+              );
+            } catch (error) {
+              rethrowIfAborted(error, input.signal);
+            }
+            if (canonical === null || canonical.hash !== header.hash ||
+              canonical.timestamp !== header.timestamp) finalized = null;
+          }
         }
         resolutions.set(chainId, finalized === null
           ? { kind: "pinned", anchor }

@@ -209,6 +209,57 @@ describe("runPinnedBlockCapture recent-state Dwellir admission", () => {
   });
 
   it.each([
+    { label: "no deadline and a short family freshness window", deadlineMs: undefined, maxAgeSec: 600 },
+    { label: "an unbounded deadline", deadlineMs: Number.POSITIVE_INFINITY, maxAgeSec: 600 },
+  ])("keeps the finalized pin valid for the measured-freshness window with $label", async ({ deadlineMs, maxAgeSec }) => {
+    const fetchBlockHeader = vi.fn(async (_chain: string, blockNumberOrTag: number | "finalized") =>
+      blockNumberOrTag === "finalized" ? FINALIZED : { ...FINALIZED, number: blockNumberOrTag });
+    let pin: { maxAgeSec: number; observedAtSec: number; header: EvmBlockHeader } | undefined;
+    await runPinnedBlockCapture({
+      chain: CHAIN,
+      rpcOptions: { chainRpcs: chainRpcsWith([dwellirEndpoint("recent"), ARCHIVE_ENDPOINT]), deadlineMs },
+      fetchBlockNumber: vi.fn(async () => LATEST.number),
+      fetchBlockHeader,
+      nowSec: NOW_SEC,
+      maxAgeSec,
+      verifyDeployment: async (capture) => {
+        pin = capture.rpcOptions.recentStatePin;
+        return { ok: true };
+      },
+      buildCalls: async () => ({ ok: true, value: null }),
+      onResults: vi.fn(),
+      onFailure: vi.fn(),
+    });
+
+    expect(pin).toBeDefined();
+    expect(Number.isSafeInteger(pin!.maxAgeSec)).toBe(true);
+    expect(pin!.maxAgeSec - (pin!.observedAtSec - pin!.header.timestamp)).toBeGreaterThanOrEqual(DEX_MEASURED_FRESHNESS_MAX_SEC);
+  });
+
+  it("keeps the latest-head capture when the caller excludes Dwellir", async () => {
+    const fetchBlockHeader = vi.fn(async (_chain: string, _blockNumberOrTag: number | "finalized") => LATEST);
+    let pin: unknown = null;
+    await runPinnedBlockCapture({
+      chain: CHAIN,
+      rpcOptions: { chainRpcs: chainRpcsWith([dwellirEndpoint("recent"), ARCHIVE_ENDPOINT]), excludeSupplementalRpc: true },
+      fetchBlockNumber: vi.fn(async () => LATEST.number),
+      fetchBlockHeader,
+      nowSec: NOW_SEC,
+      maxAgeSec: DEX_MEASURED_FRESHNESS_MAX_SEC,
+      verifyDeployment: async (capture) => {
+        pin = capture.rpcOptions.recentStatePin;
+        return { ok: true };
+      },
+      buildCalls: async () => ({ ok: true, value: null }),
+      onResults: vi.fn(),
+      onFailure: vi.fn(),
+    });
+
+    expect(fetchBlockHeader.mock.calls.map(([, blockNumberOrTag]) => blockNumberOrTag)).toEqual([LATEST.number, LATEST.number]);
+    expect(pin).toBeUndefined();
+  });
+
+  it.each([
     { label: "an archive Dwellir route", endpoints: [dwellirEndpoint("archive"), ARCHIVE_ENDPOINT] },
     { label: "a routing-disabled recent Dwellir route", endpoints: [dwellirEndpoint("recent", { routingDisabled: true }), ARCHIVE_ENDPOINT] },
     { label: "a finalized-tag-unsupported recent Dwellir route", endpoints: [dwellirEndpoint("recent", { finalizedTagUnsupported: true }), ARCHIVE_ENDPOINT] },

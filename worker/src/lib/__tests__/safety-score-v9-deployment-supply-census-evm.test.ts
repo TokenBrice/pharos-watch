@@ -684,6 +684,42 @@ describe("pinned EVM chain reads", () => {
     expect(header).not.toHaveBeenCalledWith("monad", "finalized", expect.anything());
   });
 
+  it.each([
+    { label: "still canonical", canonicalHash: `0x${"ab".repeat(32)}`, keeps: true },
+    { label: "orphaned by a reorg", canonicalHash: `0x${"ef".repeat(32)}`, keeps: false },
+  ] as const)("re-authenticates an anchor below the finalized head when it is $label", async ({ canonicalHash, keeps }) => {
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    const anchorHeader: EvmBlockHeader = { number: 100, hash: `0x${"ab".repeat(32)}`, timestamp: CLOCK - 60 };
+    const finalizedHeader: EvmBlockHeader = { number: 110, hash: `0x${"cd".repeat(32)}`, timestamp: CLOCK - 30 };
+    let numberedReads = 0;
+    const header = vi.fn(async (_chain: string, block: number | "finalized", _options?: unknown) => {
+      if (block === "finalized") return finalizedHeader;
+      numberedReads += 1;
+      return numberedReads === 1 ? anchorHeader : { ...anchorHeader, hash: canonicalHash as `0x${string}` };
+    });
+    const resolve = vi.fn(async (
+      _chain: string, _clock: number, cache: { latestBlockNumber?: number },
+    ) => {
+      cache.latestBlockNumber = 120;
+      return 100;
+    });
+    const pins = await resolveDeploymentSupplyCensusEvmPins({
+      chainIds: ["monad"],
+      scoringClockSec: CLOCK,
+      chainRpcs,
+    }, {
+      resolveClosestBlockAtOrBeforeTimestamp: resolve as unknown as DeploymentSupplyCensusEvmDependencies["resolveClosestBlockAtOrBeforeTimestamp"],
+      fetchEvmBlockHeader: header as unknown as DeploymentSupplyCensusEvmDependencies["fetchEvmBlockHeader"],
+    });
+
+    expect(header).toHaveBeenLastCalledWith("monad", 100, expect.objectContaining({ observedHeadBlock: 110 }));
+    expect(pins.get("monad")).toEqual({
+      kind: "pinned",
+      anchor: { blockNumber: 100, blockHash: anchorHeader.hash, blockTimeSec: anchorHeader.timestamp },
+      ...(keeps ? { finalized: finalizedHeader } : {}),
+    });
+  });
+
   it("attaches a valid recent-state pin so a recent-only Dwellir route can serve the census reads", async () => {
     const now = Math.floor(Date.now() / 1000);
     const blockHash: `0x${string}` = `0x${"ab".repeat(32)}`;

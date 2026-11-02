@@ -1,5 +1,6 @@
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
+import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
 import { decodeAbiParameters } from "viem/utils";
 
 import {
@@ -52,7 +53,8 @@ async function resolveRecentStateCapture(input: {
   nowSec: number;
   maxAgeSec: number;
 }): Promise<{ header: EvmBlockHeader; pin: RecentFinalizedRpcPin } | null> {
-  if (!hasRecentOnlyDwellirRoute(input.chain, input.rpcOptions)) return null;
+  // Callers that exclude Dwellir gain nothing from a finalized capture.
+  if (input.rpcOptions.excludeSupplementalRpc || !hasRecentOnlyDwellirRoute(input.chain, input.rpcOptions)) return null;
   const finalized = await input.fetchBlockHeader(input.chain, "finalized", input.rpcOptions);
   if (!finalized) return null;
   const nowMs = Date.now();
@@ -62,18 +64,24 @@ async function resolveRecentStateCapture(input: {
   // `validRecentPin` re-checks this at every request, so a future timestamp is
   // never a usable observation clock.
   if (finalized.timestamp > observedAtSec) return null;
-  const deadlineSec = input.rpcOptions.deadlineMs == null
+  const { deadlineMs, timeoutMs } = input.rpcOptions;
+  const deadlineSec = deadlineMs == null || !Number.isFinite(deadlineMs)
     ? 0
-    : Math.max(0, Math.ceil((input.rpcOptions.deadlineMs - nowMs) / 1000));
-  const inFlightSec = input.rpcOptions.timeoutMs == null
+    : Math.max(0, Math.ceil((deadlineMs - nowMs) / 1000));
+  const inFlightSec = timeoutMs == null || !Number.isFinite(timeoutMs)
     ? 0
-    : Math.max(0, Math.ceil(input.rpcOptions.timeoutMs / 1000));
+    : Math.max(0, Math.ceil(timeoutMs / 1000));
   // The header itself stays bounded by the caller's freshness window. The pin
   // window only keeps the already-authenticated block admissible for this
   // capture's remaining state reads, so it must outlast them rather than
-  // expire at the first slow Multicall batch.
-  const pinMaxAgeSec = observedAtSec - finalized.timestamp +
-    Math.max(input.maxAgeSec, deadlineSec + inFlightSec + RECENT_PIN_EXPIRY_MARGIN_SEC);
+  // expire at the first slow Multicall batch. Callers without a deadline get
+  // the measured-freshness window: an expired pin would fail reads outright,
+  // while a long-lived one only lets a pruned recent node refuse and fail over.
+  const pinMaxAgeSec = observedAtSec - finalized.timestamp + Math.max(
+    input.maxAgeSec, DEX_MEASURED_FRESHNESS_MAX_SEC,
+    deadlineSec + inFlightSec + RECENT_PIN_EXPIRY_MARGIN_SEC,
+  );
+  if (!Number.isSafeInteger(pinMaxAgeSec)) return null;
   const pin: RecentFinalizedRpcPin = {
     chainId: input.chain,
     header: finalized,
