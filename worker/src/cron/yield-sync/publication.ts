@@ -990,6 +990,7 @@ function evaluatedSourceToRanking(
 ) {
   const meta = TRACKED_META_BY_ID.get(source.id);
   const benchmarkRate = finiteBaseValue(source.benchmarkRate, "benchmarkRate", source.id);
+  const sourceRisk = buildYieldSourceRisk({ source, provenance, isBest: true });
   return {
     id: source.id,
     symbol: source.symbol,
@@ -1004,6 +1005,7 @@ function evaluatedSourceToRanking(
       stablecoinId: source.id,
       sourceKey: source.sourceKey,
       yieldSource: source.yieldSource,
+      venueProtocol: sourceRisk?.venueProtocol,
     }),
     yieldType: source.yieldType,
     dataSource: source.dataSource,
@@ -1035,7 +1037,7 @@ function evaluatedSourceToRanking(
     altSources: [] as AltYieldSource[],
     alternateSummary: undefined as YieldAlternateSummary | null | undefined,
     rankChangeAttribution: undefined as YieldRankChangeAttribution | null | undefined,
-    sourceRisk: buildYieldSourceRisk({ source, provenance, isBest: true }),
+    sourceRisk,
     sourceRole: deriveYieldSourceRole(source, { isSelected: true }),
     ...(publicationGenerationId ? { publicationGenerationId } : {}),
     ...(publishedRank ? { publishedRank } : {}),
@@ -1064,6 +1066,11 @@ function buildAltYieldSource(params: {
   provenance: Record<string, unknown> | null;
   selectionRank: number | undefined;
 }): AltYieldSource {
+  const sourceRisk = buildYieldSourceRisk({
+    source: params.candidate,
+    provenance: params.provenance,
+    isBest: false,
+  });
   return {
     sourceKey: params.candidate.sourceKey,
     yieldSource: params.candidate.yieldSource,
@@ -1071,17 +1078,14 @@ function buildAltYieldSource(params: {
       stablecoinId: params.candidate.id,
       sourceKey: params.candidate.sourceKey,
       yieldSource: params.candidate.yieldSource,
+      venueProtocol: sourceRisk?.venueProtocol,
     }),
     yieldType: params.candidate.yieldType as AltYieldSource["yieldType"],
     currentApy: params.candidate.currentApy,
     apy30d: params.candidate.apy30d,
     sourceTvlUsd: params.candidate.sourceTvlUsd,
     dataSource: params.candidate.dataSource,
-    sourceRisk: buildYieldSourceRisk({
-      source: params.candidate,
-      provenance: params.provenance,
-      isBest: false,
-    }),
+    sourceRisk,
     sourceRole: deriveYieldSourceRole(params.candidate, { isSelected: false }),
     confidenceTier: params.candidate.confidenceTier,
     calculationMode: params.candidate.calculationMode,
