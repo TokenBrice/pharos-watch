@@ -495,7 +495,7 @@ describe("buildChainRpcs", () => {
     expect(getRpcAuthHeaders(url)).toBeUndefined();
   });
 
-  it("prepends keyed Solana RPCs in dRPC then Alchemy order", () => {
+  it("prepends keyed Solana RPCs in Alchemy then dRPC order", () => {
     const solana = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get("solana");
 
     expect(solana).toMatchObject({
@@ -505,14 +505,14 @@ describe("buildChainRpcs", () => {
       explorerUrl: "https://solscan.io",
     });
     expect(registryRpcUrls(solana)).toEqual([
-      `https://lb.drpc.org/ogrpc?network=solana&dkey=${DRPC_KEY}`,
       "https://solana-mainnet.g.alchemy.com/v2/",
+      `https://lb.drpc.org/ogrpc?network=solana&dkey=${DRPC_KEY}`,
     ]);
   });
 
   it("keeps the Alchemy key out of the Solana RPC URL and serves it as an auth header", () => {
     const solana = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get("solana");
-    const alchemyUrl = registryRpcUrls(solana).find((url) => url.includes(".g.alchemy.com/"))!;
+    const alchemyUrl = primaryRpcUrl(solana)!;
 
     expect(alchemyUrl).not.toContain(ALCHEMY_KEY);
     expect(getRpcAuthHeaders(alchemyUrl)).toEqual({ Authorization: `Bearer ${ALCHEMY_KEY}` });
