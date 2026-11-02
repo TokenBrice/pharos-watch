@@ -473,6 +473,8 @@ The list-supply policy is [ADR-8](./architecture.md#adr-8); [Supply Data Source]
 
 The **detail** endpoint (`stablecoins.llama.fi/stablecoin/{id}`) can supply native `totalCirculating`/`circulating` buckets and day-specific `totalCirculatingUSD`. For non-USD pegs, `normalizeDefiLlamaDetailBody()` in `worker/src/api/stablecoin-detail/defillama.ts` preserves these independently: a missing historical USD or native side stays unavailable, never revalued with the current `parsed.price`.
 
+**DAI perimeter (2026-11-02).** DefiLlama's DAI total (`llamaId = 5`) is Ethereum ERC20 `totalSupply()` plus the Dai Savings Rate balance `Vat.dai(Pot)` (`peggedassets-server` `dai/index.ts` at `34406240e`). Its `calcCirculating` nets every bridged-from-Ethereum chain row out of the Ethereum row, so bridged representations are not counted twice. At Ethereum block 26325487, `totalSupply()` read 4,535.21M and `Vat.dai(Pot)` 188.02M (sum 4,723.23M vs DefiLlama's 4,722.50M); non-Ethereum rows summed to 571.55M and matched their L1 escrows (Polygon predicate 442.11M vs row 442.13M). sDAI holds 163.01M of that DSR but is a `stablecoin-variant` listing outside the core aggregate, so DSR DAI is counted once, through DAI. The list total is published unchanged; no single-issuance override applies.
+
 
 ### Supplemental chain history
 
