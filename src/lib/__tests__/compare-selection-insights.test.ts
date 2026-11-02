@@ -1,28 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { StablecoinData } from "@shared/types";
-import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import { buildCompareSelectionInsights } from "@/lib/compare-selection-insights";
 
-function entry(id: string): ComparisonCoinEntry {
-  const meta = CLIENT_TRACKED_META_BY_ID.get(id);
-  if (!meta) throw new Error(`missing client meta for ${id}`);
-  return {
-    id,
-    symbol: meta.symbol,
-    name: meta.name,
-    data: {} as StablecoinData,
-    meta: meta as unknown as ComparisonCoinEntry["meta"],
-    bluechipPublicationAvailable: false,
-  };
-}
-
 function build(ids: string[]) {
-  return buildCompareSelectionInsights({
-    selectedIds: ids,
-    selectedCoins: ids.map((id) => ({ id, name: id, symbol: id })),
-    comparisonCoins: ids.map(entry),
-  });
+  return buildCompareSelectionInsights({ selectedIds: ids });
 }
 
 describe("buildCompareSelectionInsights", () => {
@@ -30,6 +10,24 @@ describe("buildCompareSelectionInsights", () => {
     const insights = build(["usdc-circle", "usdt-tether"])!;
     expect(insights.lens).toContain("Same-peg peer set");
     expect(insights.structure).toContain("Common peg target: US Dollar");
+  });
+
+  it("builds set claims and detail links from registry meta for every selected coin", () => {
+    const insights = build(["usdc-circle", "usdt-tether"])!;
+    expect(insights.cohort).toContain("Shared governance model across the set");
+    expect(insights.structure).toContain("Shared backing profile");
+    expect(insights.links).toEqual([
+      { id: "usdc-circle", symbol: "USDC" },
+      { id: "usdt-tether", symbol: "USDT" },
+    ]);
+    expect(`${insights.cohort} ${insights.structure}`).not.toContain("still loading");
+  });
+
+  it("does not claim a shared model from an admitted subset that differs from the selection", () => {
+    const insights = build(["usdc-circle", "ousd-origin-protocol"])!;
+    expect(insights.cohort).toBe("Mixed governance models across the selected assets.");
+    expect(insights.structure).toContain("Mixed backing structures across the set.");
+    expect(insights.links.map((link) => link.id)).toEqual(["usdc-circle", "ousd-origin-protocol"]);
   });
 
   it.each([

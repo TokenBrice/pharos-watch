@@ -40,6 +40,8 @@ interface UseCompareShareActionsOptions {
   radarCards: CompareRadarCard[];
   axisOrder: readonly string[];
   axisLabels: Record<string, string>;
+  /** Oldest producer generation behind the exported figures; null omits the stamp. */
+  asOfUpdatedAt: number | null;
 }
 
 export function useCompareShareActions({
@@ -49,6 +51,7 @@ export function useCompareShareActions({
   radarCards,
   axisOrder,
   axisLabels,
+  asOfUpdatedAt,
 }: UseCompareShareActionsOptions) {
   const [shareLoading, setShareLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -71,6 +74,7 @@ export function useCompareShareActions({
     coins: ShareCoinData[];
     pharosLogo: HTMLImageElement;
     radarData?: ShareRadarData;
+    asOfUpdatedAt: number | null;
   } | null> => {
     if (comparisonCoins.length < 2) return null;
 
@@ -122,15 +126,15 @@ export function useCompareShareActions({
       };
     }
 
-    return { coins: shareCoins, pharosLogo, radarData };
-  }, [axisLabels, axisOrder, comparisonCoins, logos, pegRates, radarCards]);
+    return { coins: shareCoins, pharosLogo, radarData, asOfUpdatedAt };
+  }, [asOfUpdatedAt, axisLabels, axisOrder, comparisonCoins, logos, pegRates, radarCards]);
 
   const handleTwitterShare = useCallback(async () => {
     setShareLoading(true);
     try {
       const data = await buildShareData();
       if (data) {
-        const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
+        const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData, data.asOfUpdatedAt);
         if (canvas) {
           const blob = await canvasToBlob(canvas);
           try {
@@ -163,7 +167,7 @@ export function useCompareShareActions({
     try {
       const data = await buildShareData();
       if (!data) return;
-      const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
+      const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData, data.asOfUpdatedAt);
       if (!canvas) return;
       const blob = await canvasToBlob(canvas);
       const file = new File([blob], "pharos-compare.png", { type: "image/png" });
@@ -203,7 +207,7 @@ export function useCompareShareActions({
     try {
       const data = await buildShareData();
       if (!data) return;
-      const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData);
+      const canvas = renderCompareShareImage(data.coins, data.pharosLogo, data.radarData, data.asOfUpdatedAt);
       if (!canvas) return;
       const blob = await canvasToBlob(canvas);
       triggerBlobDownload(blob, "pharos-compare.png", "sync");

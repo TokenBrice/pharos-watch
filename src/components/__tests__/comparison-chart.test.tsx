@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const captured = vi.hoisted(() => ({
   charts: [] as Array<{
+    ariaLabel: string;
     tooltipLabelFormatter: (timestamp: number) => string;
     tableDateFormatter: (timestamp: number) => string;
   }>,
@@ -54,13 +55,18 @@ const SERIES = [
   },
 ];
 
-function renderChart(range?: TimeRangeOption) {
+function renderChart(
+  range?: TimeRangeOption,
+  series = SERIES,
+  normalizable = false,
+) {
   render(
     <ComparisonChart
       title="Supply"
-      series={SERIES}
+      series={series}
       range={range}
       onRangeChange={vi.fn()}
+      normalizable={normalizable}
     />,
   );
   return captured.charts.at(-1)!;
@@ -83,5 +89,39 @@ describe("ComparisonChart date labels", () => {
     const chart = renderChart("7d");
     expect(chart.tooltipLabelFormatter(Date.UTC(2022, 0, 5))).toBe("Jan 5");
     expect(chart.tableDateFormatter(Date.UTC(2022, 0, 5))).toBe("Jan 5");
+  });
+});
+
+describe("ComparisonChart plotted series", () => {
+  it("counts only series with a value in the filtered window and dashes the rest", () => {
+    const chart = renderChart("7d", [
+      SERIES[0],
+      {
+        ...SERIES[1],
+        data: [{ ts: Date.UTC(2022, 0, 5), value: 50 }],
+      },
+    ]);
+    expect(chart.ariaLabel).toBe("Supply comparison chart with 1 series");
+
+    const markers = [...document.querySelectorAll(".pharos-chart-legend-chip")].map(
+      (chip) => chip.querySelector("span")!,
+    );
+    expect(markers).toHaveLength(2);
+    expect(markers[0].className).toContain("rounded-full");
+    expect(markers[1].className).toContain("border-dashed");
+  });
+
+  it("counts series dropped by normalized mode as unplotted", () => {
+    renderChart(undefined, [
+      SERIES[0],
+      {
+        ...SERIES[1],
+        data: [{ ts: Date.UTC(2024, 0, 5), value: 0 }],
+      },
+    ], true);
+
+    fireEvent.click(screen.getByText("Normalized %"));
+
+    expect(captured.charts.at(-1)!.ariaLabel).toBe("Supply comparison chart with 1 series");
   });
 });

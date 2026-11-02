@@ -204,6 +204,7 @@ The live-flow cards and comparison table both preserve an explicitly observed ze
 Compare includes client-side share/export rendering:
 
 - Builds a canvas card via `src/lib/compare-share-image.ts`
+- The card footer appends the oldest loaded producer generation (`stablecoins`, `pegSummary`, `dexLiquidity`, `reportCards`) as `As of DD Mon YYYY, HH:MM UTC`; an unknown contributing clock omits it, and the browser fetch clock is never used
 - Supports clipboard image copy + Twitter intent flow
 - Supports PNG download from the generated canvas
 - The share card reads market cap and the 7-day supply change through `getCirculatingRawOrNull()` / `getPrevWeekRawOrNull()`; an unavailable operand renders `—`, never `$0.00` or a fabricated `-100%` change

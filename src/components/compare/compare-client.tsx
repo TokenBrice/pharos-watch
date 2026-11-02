@@ -293,6 +293,7 @@ export function CompareClient() {
     hasPrimaryData,
     pegRates,
     radarCards,
+    shareAsOfUpdatedAt,
     supplySeries,
   } = useCompareDataModel({
     selectedIds,
@@ -308,6 +309,7 @@ export function CompareClient() {
     radarCards,
     axisOrder: ["backing", "exit", "control"],
     axisLabels: { backing: "Backing", exit: "Exit", control: "Control" },
+    asOfUpdatedAt: shareAsOfUpdatedAt,
   });
 
   // nowSeconds only feeds the "Updated N min ago" flow-staleness label, so the
@@ -325,8 +327,8 @@ export function CompareClient() {
     .map(stablecoinLabel)
     .join(" vs ");
   const selectionInsights = useMemo(
-    () => buildCompareSelectionInsights({ selectedIds, selectedCoins, comparisonCoins }),
-    [comparisonCoins, selectedCoins, selectedIds],
+    () => buildCompareSelectionInsights({ selectedIds }),
+    [selectedIds],
   );
   // A producer clock ahead of the reader's leaves no computable age: print no
   // claim rather than a clamped zero.
