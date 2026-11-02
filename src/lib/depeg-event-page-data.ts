@@ -4,7 +4,6 @@ import { DEPEG_EVENT_DATA_DIR, readDepegEventPageEntries } from "@/lib/depeg-eve
 import {
   buildSameDayDirectionCollisionSlugs,
   DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS,
-  formatEventTimestamp,
 } from "@/lib/depeg-event-display";
 
 export type { DepegEventEntry } from "@shared/types/market";
@@ -35,8 +34,7 @@ export const INDEXABLE_DEPEG_EVENT_ENTRIES: readonly DepegEventEntry[] = DEPEG_E
 );
 
 /**
- * The coin's newest permanent depeg event pages. The label carries the UTC start
- * time, because a coin can open several events in one month.
+ * The coin's newest permanent depeg event pages ("USDC depeg Mar 2023").
  */
 export function buildExploreDepegEventLinks(
   coinId: string,
@@ -47,7 +45,11 @@ export function buildExploreDepegEventLinks(
     .slice(0, limit)
     .map((event) => ({
       href: `/depeg/${event.slug}/`,
-      label: `${symbol} depeg ${formatEventTimestamp(event.startedAt, true)}`,
+      label: `${symbol} depeg ${new Date(event.startedAt * 1000).toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      })}`,
     }));
 }
 

@@ -16,7 +16,7 @@
  */
 import { DEWS_SIGNAL_LABELS, DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
 import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
-import { DEPEG_ARCHIVE_EPOCH_SECONDS, MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/lib/depeg-event-config";
+import { DEPEG_ARCHIVE_EPOCH_DATE, MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/lib/depeg-event-config";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import { GAUGE_BAND_RANGES } from "@shared/lib/mint-burn-gauge-bands";
@@ -45,9 +45,6 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 
 const NEUTRAL_GAUGE_RANGE = GAUGE_BAND_RANGES.find(({ band }) => band === "NEUTRAL")!;
-
-/** Archive-epoch date quoted by the depeg definition, derived from the page policy. */
-const DEPEG_ARCHIVE_EPOCH_DATE = new Date(DEPEG_ARCHIVE_EPOCH_SECONDS * 1000).toISOString().slice(0, 10);
 
 export interface Definition {
   /** Display label used in tooltips and popovers. */

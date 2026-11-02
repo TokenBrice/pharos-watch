@@ -1,5 +1,4 @@
 import { PEG_METADATA } from "@shared/lib/classification";
-import { activeDepegThresholdBps } from "@shared/lib/selector/exclusions";
 import {
   SELECTOR_ELIGIBLE_PEG_CURRENCIES,
   type SelectorDepegTolerance,
@@ -58,16 +57,10 @@ export const HORIZON_OPTIONS: readonly SelectorOption<SelectorHorizon>[] = [
   { value: "6mplus", label: "6 months or more" },
 ];
 
-/** The label states the admission ceiling the selector engine enforces for that tolerance. */
-function admittedBandLabel(tolerance: SelectorDepegTolerance): string {
-  const percent = activeDepegThresholdBps(tolerance) / 100;
-  return `Within ${Number.isInteger(percent) ? percent : percent.toFixed(1)}%`;
-}
-
 export const DEPEG_OPTIONS: readonly SelectorOption<SelectorDepegTolerance>[] = [
-  { value: "zero", label: admittedBandLabel("zero"), sublabel: "Peg must hold without exception." },
-  { value: "tight", label: admittedBandLabel("tight"), sublabel: "Brief slippage acceptable if liquidity holds." },
-  { value: "moderate", label: admittedBandLabel("moderate"), sublabel: "Short depegs OK if recovery is clean." },
+  { value: "zero", label: "Zero tolerance", sublabel: "Peg must hold without exception." },
+  { value: "tight", label: "Within 1%", sublabel: "Brief slippage acceptable if liquidity holds." },
+  { value: "moderate", label: "Moderate", sublabel: "Short depegs OK if recovery is clean." },
 ];
 
 export const VENUE_OPTIONS_BY_PROFILE: Record<SelectorProfile, readonly SelectorOption<SelectorVenuePreference>[]> = {

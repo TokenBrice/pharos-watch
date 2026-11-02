@@ -240,7 +240,7 @@ describe("SelectorClient — state machine", () => {
     setUrlSearch("p=treasury&h=1to6m&d=tight&v=custody&u=24h&step=4");
     render(<SelectorClient />);
 
-    fireEvent.click(await screen.findByLabelText(/Within 2%/i));
+    fireEvent.click(await screen.findByLabelText(/Moderate/i));
     expect(window.location.search).toContain("step=4");
     expect(screen.getAllByText(/How tight does the peg need to hold/i).length).toBeGreaterThan(0);
 
@@ -278,7 +278,7 @@ describe("SelectorClient — state machine", () => {
     render(<SelectorClient />);
 
     fireEvent.click(await screen.findByLabelText(/1 – 7 days/i));
-    fireEvent.click(screen.getByLabelText(/Within 0.5%/i));
+    fireEvent.click(screen.getByLabelText(/Within 1%/i));
     fireEvent.click(screen.getByLabelText(/Centralized venues/i));
     fireEvent.click(screen.getByLabelText(/Same day/i));
 

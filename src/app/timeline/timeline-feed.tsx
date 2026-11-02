@@ -103,7 +103,10 @@ export function TimelineFeed({
       <QueryFreshnessNotices
         error={error}
         hasData={hasData}
-        onRetry={() => (permalinkBufferError ? refetchPermalink() : void refetch())}
+        onRetry={() => {
+          if (permalinkBufferError) refetchPermalink();
+          void refetch();
+        }}
         queries={[
           {
             label: "Timeline",

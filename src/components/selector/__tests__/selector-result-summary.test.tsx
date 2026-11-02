@@ -102,7 +102,7 @@ describe("SelectorResultSummary", () => {
     expect(onEditAnswer).toHaveBeenCalledWith("peg");
   });
 
-  it("reconciles the funnel with the in-scope universe and coins skipped for missing live data", () => {
+  it("keeps the coverage skip count out of the funnel heading", () => {
     render(
       <SelectorResultSummary
         {...summaryProps({
@@ -115,8 +115,9 @@ describe("SelectorResultSummary", () => {
 
     const heading = screen.getByRole("heading", { level: 2 });
     expect(heading.textContent).toBe(
-      "287 in scope USD stablecoins → 283 filtered (4 skipped for missing live data) → 3 shortlist entries",
+      "287 in scope USD stablecoins → 283 filtered → 3 shortlist entries",
     );
+    expect(heading.textContent).not.toContain("skipped");
     expect(screen.queryByText(/Sparse coverage/i)).toBeNull();
   });
 

@@ -9,10 +9,6 @@ import { formatProseList } from "@shared/lib/format";
 import type { PegCurrency } from "@shared/types";
 import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
 import {
-  resolveBlacklistStatusBucket,
-  type BlacklistStatusBucketKey,
-} from "@shared/lib/blacklist-status-buckets";
-import {
   ACTIVE_PEGS,
   PEG_HUB_SLUGS,
   PEG_INTRO,
@@ -128,18 +124,6 @@ function buildCountMap<T extends string>(
   return counts;
 }
 
-function buildFreezeSummary(directlyFreezableCount: number, upstreamOrPossibleCount: number): string {
-  const direct = `${directlyFreezableCount} tracked coin${directlyFreezableCount === 1 ? "" : "s"} in the cohort`;
-  if (directlyFreezableCount > 0 && upstreamOrPossibleCount > 0) {
-    return `${direct} can be directly frozen or denylisted; ${upstreamOrPossibleCount} more ${upstreamOrPossibleCount === 1 ? "inherits" : "inherit"} that exposure through collateral or ${upstreamOrPossibleCount === 1 ? "carries" : "carry"} it as a possibility.`;
-  }
-  if (directlyFreezableCount > 0) return `${direct} can be directly frozen or denylisted.`;
-  if (upstreamOrPossibleCount > 0) {
-    return `${upstreamOrPossibleCount} tracked coin${upstreamOrPossibleCount === 1 ? "" : "s"} in the cohort ${upstreamOrPossibleCount === 1 ? "carries" : "carry"} reviewed freeze exposure through collateral or possible controls; none is marked as directly freezable in the static registry.`;
-  }
-  return "No tracked coin in this cohort is marked as directly freezable in the static registry.";
-}
-
 function buildPegRiskSummary({
   coins,
   shortLabel,
@@ -149,24 +133,13 @@ function buildPegRiskSummary({
 }): string {
   const backingEntry = getLargestEntry(buildCountMap(coins, (coin) => coin.flags.backing));
   const governanceEntry = getLargestEntry(buildCountMap(coins, (coin) => coin.flags.governance));
-  // Freeze exposure is a reviewed tri-state: possible and inherited controls
-  // are exposure even when no coin is directly freezable (ADR-28/ADR-32).
-  const blacklistBuckets = new Map<BlacklistStatusBucketKey, number>();
-  for (const coin of coins) {
-    if (coin.blacklistStatus == null) continue;
-    const bucket = resolveBlacklistStatusBucket(coin.blacklistStatus);
-    blacklistBuckets.set(bucket, (blacklistBuckets.get(bucket) ?? 0) + 1);
-  }
+  const blacklistableCount = coins.filter((coin) => coin.blacklistStatus === true).length;
   const backingLabel = backingEntry ? BACKING_LABELS_SHORT[backingEntry[0]] ?? backingEntry[0] : "mixed backing";
   const governanceLabel = governanceEntry
     ? GOVERNANCE_LABELS_SHORT[governanceEntry[0]] ?? governanceEntry[0]
     : "mixed governance";
-  const freezeSummary = buildFreezeSummary(
-    blacklistBuckets.get("yes") ?? 0,
-    (blacklistBuckets.get("upstream") ?? 0) + (blacklistBuckets.get("possible") ?? 0),
-  );
 
-  return `${shortLabel} risk review starts with ${backingLabel.toLowerCase()} backing and ${governanceLabel.toLowerCase()} governance, the largest categories in this cohort. ${freezeSummary}`;
+  return `${shortLabel} risk review starts with ${backingLabel.toLowerCase()} backing and ${governanceLabel.toLowerCase()} governance, the largest categories in this cohort. ${blacklistableCount > 0 ? `${blacklistableCount} tracked coin${blacklistableCount === 1 ? "" : "s"} in the cohort can be directly frozen or denylisted.` : "No tracked coin in this cohort is marked as directly freezable in the static registry."}`;
 }
 
 function buildPegIntro({

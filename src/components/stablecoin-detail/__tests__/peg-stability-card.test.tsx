@@ -136,15 +136,36 @@ describe("PegStabilityCard", () => {
     expect(card.textContent).not.toContain("Reviewed ");
   });
 
-  it("describes an rwa-credit-fund coin as a fund portfolio, never a credit portfolio", () => {
-    const { container } = render(
+  it("reserves fund-NAV copy for navToken credit-fund coins", () => {
+    const nav = render(
+      <PegStabilityCard
+        meta={coin({
+          mechanismArchetype: "rwa-credit-fund",
+          flags: {
+            backing: "crypto-backed",
+            pegCurrency: "USD",
+            governance: "decentralized",
+            yieldBearing: false,
+            rwa: false,
+            navToken: true,
+          },
+        })}
+        isWrapper={false}
+      />,
+    );
+    const navText = within(mechanismModule(nav.container)).getByRole("figure").textContent ?? "";
+    expect(navText).toContain("Fund portfolio");
+    expect(navText).toContain("value tracks fund NAV");
+    cleanup();
+
+    // The $1-pegged credit vehicles keep the archetype's credit-portfolio wording.
+    const credit = render(
       <PegStabilityCard meta={coin({ mechanismArchetype: "rwa-credit-fund" })} isWrapper={false} />,
     );
-    const text = within(mechanismModule(container)).getByRole("figure").textContent ?? "";
-    expect(text).toContain("Fund portfolio");
-    expect(text).toContain("value tracks fund NAV");
-    // Tokenized fund shares and bullion trackers use this archetype too.
-    expect(text).not.toMatch(/private credit|credit portfolio|credit losses|CLO/i);
+    const creditText = within(mechanismModule(credit.container)).getByRole("figure").textContent ?? "";
+    expect(creditText).toContain("Credit portfolio");
+    expect(creditText).toContain("value tracks credit losses");
+    expect(creditText).not.toContain("Fund portfolio");
   });
 
   it("never names another coin's incident in a coin's stress line", () => {

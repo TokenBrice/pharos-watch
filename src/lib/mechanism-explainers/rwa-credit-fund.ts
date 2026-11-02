@@ -88,7 +88,7 @@ export const content: ArchetypeContent = {
     {
       id: "multi-strategy-structured-credit",
       title: "Multi-strategy and structured credit vaults",
-      body: "The Midas family (mF-ONE, mGLOBAL, mRe7YIELD, mMEV, mHYPER) wraps fund-managed mandates with monthly or quarterly redemption schedules. The Tradable PC-series (PC0000031, PC0000033, PC0000089, PC0000101) tokenizes specific structured-finance receivables (rent financing, post-settlement legal financing) outside the diversified-fund template.",
+      body: "The Midas family (mF-ONE, mGLOBAL) wraps fund-managed mandates with monthly or quarterly redemption schedules. The Tradable PC-series (PC0000031, PC0000033, PC0000089, PC0000101) tokenizes specific structured-finance receivables (rent financing, post-settlement legal financing) outside the diversified-fund template.",
     },
   ],
   whatToWatch: [

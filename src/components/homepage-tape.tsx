@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
+import { useMinuteClockSec } from "@/hooks/use-minute-clock-sec";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { collapseForHomepageStrip, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
@@ -188,16 +189,8 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
   // into a single cell with a count badge.
   const { data, isLoading, error } = useLatestEvents({ limit: 100, severityFloor: "notice" });
   // The hourly poll cannot refresh a relative age; a minute clock does.
-  const [nowMs, setNowMs] = useState(0);
-  useEffect(() => {
-    const tick = () => setNowMs(Date.now());
-    const timer = setTimeout(tick, 0);
-    const interval = setInterval(tick, 60_000);
-    return () => {
-      clearTimeout(timer);
-      clearInterval(interval);
-    };
-  }, []);
+  const nowSec = useMinuteClockSec();
+  const nowMs = nowSec * 1000;
   const logos = logosById;
   const events = data?.events ?? EMPTY_EVENTS;
   const collapsed = useMemo(
