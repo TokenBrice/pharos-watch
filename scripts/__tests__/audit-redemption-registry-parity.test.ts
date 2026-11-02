@@ -4,12 +4,20 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
-import { buildSnapshot } from "../maintenance/audit-redemption-registry-parity";
+import { buildSnapshot, compareSnapshots } from "../maintenance/audit-redemption-registry-parity";
 
 describe("redemption registry parity", () => {
   let directory: string;
   beforeEach(() => { directory = mkdtempSync(join(tmpdir(), "redemption-parity-")); });
   afterEach(() => { rmSync(directory, { recursive: true, force: true }); });
+
+  function compareInProcess(before: unknown, after: unknown) {
+    const beforePath = join(directory, "before.json");
+    const afterPath = join(directory, "after.json");
+    writeFileSync(beforePath, JSON.stringify(before));
+    writeFileSync(afterPath, JSON.stringify(after));
+    return compareSnapshots(beforePath, afterPath);
+  }
 
   function compareWithCli(before: unknown, after: unknown) {
     const beforePath = join(directory, "before.json");
@@ -40,9 +48,16 @@ describe("redemption registry parity", () => {
     const config = REDEMPTION_BACKSTOP_CONFIGS["lusd-liquity"];
     const before = buildSnapshot({ test: config });
     const after = buildSnapshot({ test: { ...config, [field]: value } });
+    expect(compareInProcess(before, after).join("\n")).toContain(`registry.test.${field}:`);
+  });
+
+  it("reports a material change through the --compare CLI with exit status 1 and stderr", () => {
+    const config = REDEMPTION_BACKSTOP_CONFIGS["lusd-liquity"];
+    const before = buildSnapshot({ test: config });
+    const after = buildSnapshot({ test: { ...config, outputAssets: ["usdt-tether"] } });
     const result = compareWithCli(before, after);
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain(`registry.test.${field}:`);
+    expect(result.stderr).toContain("registry.test.outputAssets:");
   });
 
   it("captures every config field without projecting supply-full into immediate capacity", () => {
