@@ -154,7 +154,8 @@ jobs:
             echo "No shard timing reports were produced; skipping the timing artifact."
             exit 0
           fi
-          npm run test-timings:build -- --input .tmp/test-timings-input --output .tmp/test-timings.json
+          # This job installs nothing: run the dependency-free merge script directly.
+          node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/maintenance/build-test-timings.ts --input .tmp/test-timings-input --output .tmp/test-timings.json
       - name: Retain the nightly test timings
         if: ${{ always() && hashFiles('.tmp/test-timings.json') != '' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
