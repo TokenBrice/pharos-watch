@@ -605,6 +605,10 @@ describe("CI workflow scope", () => {
     expect(restore.id).toBe("restore-archive");
     const capture = monitor.jobs.incidents.steps.find((step) => step.name === "Capture deployment delivery child and publication evidence")!;
     expect(capture.if).toContain("steps.restore-archive.outcome == 'success'");
+    // An unreadable producing-run lookup fails the restore instead of counting
+    // as a rejection, which would start a one-day window over a good archive.
+    expect(restore.run).toContain('if ! run_json="$(gh api "repos/$GH_REPO/actions/runs/$run_id")"; then');
+    expect(restore.run).toContain("refusing to start a fresh window");
     expect(restore.run).toContain("actions/runs/$run_id");
   });
 

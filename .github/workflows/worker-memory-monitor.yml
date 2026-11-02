@@ -218,15 +218,20 @@ jobs:
           rejected=0
           while IFS=$'\t' read -r artifact_id artifact_name run_id head_sha; do
             [[ -n "$artifact_id" ]] || continue
-            if ! gh api "repos/$GH_REPO/actions/runs/$run_id" \
-              | jq -e --arg repo "$GH_REPO" --arg head_sha "$head_sha" --arg name "$artifact_name" --argjson run_id "$run_id" '
+            # A failed lookup is not a rejection: fail the step so capture is
+            # skipped rather than starting a one-day window over a good archive.
+            if ! run_json="$(gh api "repos/$GH_REPO/actions/runs/$run_id")"; then
+              echo "::error::Could not read producing run $run_id; refusing to start a fresh window."
+              exit 1
+            fi
+            if ! jq -e --arg repo "$GH_REPO" --arg head_sha "$head_sha" --arg name "$artifact_name" --argjson run_id "$run_id" '
                   .path == ".github/workflows/worker-memory-monitor.yml" and
                   (.event == "schedule" or .event == "workflow_dispatch") and
                   .status == "completed" and .conclusion != "cancelled" and
                   .head_branch == "main" and .head_sha == $head_sha and
                   .head_repository.full_name == $repo and
                   ($name | startswith("worker-incidents-\($run_id)-"))
-                ' >/dev/null; then
+                ' <<< "$run_json" >/dev/null; then
               rejected=$((rejected + 1))
               continue
             fi
