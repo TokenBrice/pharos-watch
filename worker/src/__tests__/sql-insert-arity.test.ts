@@ -4,6 +4,9 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 const WORKER_SRC = path.resolve(__dirname, "..");
+// Necessary condition of INSERT_PATTERN on the cooked literal text. `\u`/`\x`
+// escapes can spell any INSERT letter, so those files are parsed as well.
+const INSERT_PREFILTER = /insert|\\[ux]/i;
 const INSERT_PATTERN =
   /INSERT\s+(?:OR\s+(?:IGNORE|REPLACE|ABORT|FAIL|ROLLBACK)\s+|)INTO\s+[\w.]+\s*\(([^()]*)\)\s*VALUES\s*\(/gi;
 
@@ -75,7 +78,7 @@ function sqlArityMismatches(sql: string): Array<{ columns: number; values: numbe
 // Only standalone TS string/no-substitution template literals are supported.
 // Dynamic templates, concatenated SQL and INSERT ... SELECT require runtime SQLite coverage.
 function scanSource(source: string, file: string) {
-  const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, false);
   const mismatches: Array<{ file: string; line: number; columns: number; values: number }> = [];
   function visit(node: ts.Node) {
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
@@ -106,8 +109,11 @@ describe("worker INSERT statements", () => {
   });
 
   it("binds the same number of values as named columns in supported literals", () => {
-    expect(listSourceFiles(WORKER_SRC).flatMap((file) =>
-      scanSource(readFileSync(file, "utf8"), path.relative(WORKER_SRC, file)))).toEqual([]);
-    // Parses every worker source file; the budget covers the scan, not assertions.
+    expect(listSourceFiles(WORKER_SRC).flatMap((file) => {
+      const source = readFileSync(file, "utf8");
+      return INSERT_PREFILTER.test(source) ? scanSource(source, path.relative(WORKER_SRC, file)) : [];
+    })).toEqual([]);
+    // Parses every worker source file containing INSERT or a hex/unicode escape;
+    // the budget covers the scan, not assertions.
   }, 60_000);
 });

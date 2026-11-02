@@ -946,10 +946,33 @@ export function mergeRpcParityRun(
 
   let droppedOldest = 0;
   let bytes = encodedRowBytesForPruning(row);
-  while ((bytes === null || bytes > maxBytes) && row.runs.length > 1) {
-    row.runs.shift();
-    droppedOldest += 1;
-    bytes = encodedRowBytesForPruning(row);
+  // Encoding the whole window (gzip level 9) dominates pruning, so drop in
+  // batches and linearise inside the final batch: the retained suffix is still
+  // the first count that fits, not just a batch boundary.
+  const maxDrops = row.runs.length - 1;
+  const dropBatch = 8;
+  if ((bytes === null || bytes > maxBytes) && maxDrops > 0) {
+    const encodeWithoutOldest = (dropCount: number): number | null => encodedRowBytesForPruning({
+      ...row,
+      runs: row.runs.slice(dropCount),
+    });
+    let dropCount = 0;
+    while (dropCount < maxDrops) {
+      dropCount = Math.min(dropCount + dropBatch, maxDrops);
+      bytes = encodeWithoutOldest(dropCount);
+      if (bytes !== null && bytes <= maxBytes) break;
+    }
+    const batchStart = Math.max(0, dropCount - dropBatch);
+    for (let candidate = batchStart + 1; candidate < dropCount; candidate += 1) {
+      const candidateBytes = encodeWithoutOldest(candidate);
+      if (candidateBytes !== null && candidateBytes <= maxBytes) {
+        dropCount = candidate;
+        bytes = candidateBytes;
+        break;
+      }
+    }
+    droppedOldest = dropCount;
+    row.runs.splice(0, droppedOldest);
   }
   if (bytes === null) throw new RangeError(RAW_ROW_BUDGET_ERROR);
   return { row, bytes, droppedOldest, reset };

@@ -127,15 +127,20 @@ describe("rpc parity store merging", () => {
   it("drops the oldest runs, never the newest, when the row exceeds the size bound", () => {
     let row: RpcParityStoreRow | null = null;
     const atSecs: number[] = [];
+    let droppedOldest = 0;
     for (let index = 0; index < 12; index += 1) {
       const atSec = NOW_SEC + index * 3600;
       atSecs.push(atSec);
-      row = mergeRpcParityRun(row, fullParityRun(atSec), { nowSec: atSec, maxBytes: 1_000 }).row;
+      const merged = mergeRpcParityRun(row, fullParityRun(atSec), { nowSec: atSec, maxBytes: 1_000 });
+      droppedOldest += merged.droppedOldest;
+      row = merged.row;
     }
     if (!row) throw new Error("row not built");
-    expect(row.runs.length).toBeGreaterThanOrEqual(1);
-    expect(row.runs.length).toBeLessThan(atSecs.length);
-    expect(row.runs[row.runs.length - 1].atSec).toBe(atSecs[atSecs.length - 1]);
+    // A 1 KB bound never fits even one full-roster run, so every merge keeps the
+    // newest run and drops exactly the run it replaced.
+    expect(row.runs).toHaveLength(1);
+    expect(droppedOldest).toBe(atSecs.length - 1);
+    expect(row.runs[0].atSec).toBe(atSecs[atSecs.length - 1]);
     const retained = row.runs.map((run) => run.atSec);
     expect(retained).toEqual(atSecs.slice(atSecs.length - retained.length));
   });

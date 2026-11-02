@@ -17,10 +17,22 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 
 const fxFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   fxFixtures.closeAll();
 });
+
+/** Run a retry-backed call under fake timers, advancing in 500 ms steps. */
+async function drainRetryBackoff<T>(promise: Promise<T>): Promise<T> {
+  let settled = false;
+  void promise.then(() => { settled = true; }, () => { settled = true; });
+  for (let elapsed = 0; elapsed < 10_000 && !settled; elapsed += 500) {
+    await vi.advanceTimersByTimeAsync(500);
+  }
+  if (!settled) throw new Error("retry backoff did not settle within 10s of fake time");
+  return await promise;
+}
 
 describe("historical FX configuration", () => {
   it("skips a non-USD coin without any FX reference and performs no writes", async () => {
@@ -347,6 +359,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
   });
 
   it.each([503, 404])("refetches a transiently failed day on the next run (fallback status=%s)", async (fallbackStatus) => {
+    vi.useFakeTimers();
     vi.spyOn(console, "warn").mockImplementation(() => {});
     mockFetch([
       { match: "cdn.jsdelivr.net", body: { error: "unavailable" }, status: 503 },
@@ -363,7 +376,7 @@ describe("fetchHistoricalSecondaryFxRates", () => {
     ]);
 
     expect(
-      await fetchHistoricalSecondaryFxRates(firstDb, ["ARS"], "2025-06-14", "2025-06-14"),
+      await drainRetryBackoff(fetchHistoricalSecondaryFxRates(firstDb, ["ARS"], "2025-06-14", "2025-06-14")),
     ).toEqual({ ARS: [] });
     expect(
       firstDb.getHistory().some((entry) => entry.sql.includes("INSERT INTO cache")),
