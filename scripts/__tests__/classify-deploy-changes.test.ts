@@ -104,6 +104,12 @@ describe("Pages artifact selection", () => {
     expect(classifyChangedFiles([path])).toMatchObject({ pagesChanged: true, pagesArtifactRequired: true });
   });
 
+  it("keeps a deleted Worker module out of the export lane while v9 still runs", () => {
+    const path = "worker/src/api/retired-route.ts";
+    expect(existsSync(resolve(import.meta.dirname, "../..", path)), path).toBe(false);
+    expect(classifyChangedFiles([path])).toMatchObject({ pagesArtifactRequired: false, v9ResourceRequired: true });
+  });
+
   it("selects the lane for its own selector module", () => {
     expect(hasPagesArtifactImpact(["scripts/lib/lane-input-closure.mts"])).toBe(true);
     expect(classifyChangedFiles(["scripts/lib/lane-input-closure.mts"]).pagesArtifactRequired).toBe(true);

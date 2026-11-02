@@ -303,6 +303,8 @@ export function hasPagesArtifactImpact(
     patterns: PAGES_ARTIFACT_PATTERNS,
     nonInputPatterns: PAGES_ARTIFACT_TEST_PATTERNS,
     ignoredPrefixes: PAGES_ARTIFACT_NON_INPUT_PREFIXES,
-    deletionNonInputPrefixes: LANE_DELETION_NON_INPUT_PREFIXES,
+    // Worker and Pages Functions code never compiles into the static export
+    // (ADR-2); deleting a module an export input imported also edits that importer.
+    deletionNonInputPrefixes: [...LANE_DELETION_NON_INPUT_PREFIXES, "functions/", "worker/"],
   }, { cwd, fs });
 }
