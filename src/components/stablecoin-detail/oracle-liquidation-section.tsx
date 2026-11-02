@@ -457,11 +457,14 @@ export function OracleLiquidationSection({
 
   // The ladder sits beside the score pill, so it lights the scored posture
   // when the card publishes one; otherwise the review's own tier.
-  const scoredTier = component != null && component.score !== null ? component.posture : summary.tier;
+  const hasScoredTier = component != null && component.score !== null;
+  const scoredTier = hasScoredTier ? component.posture : summary.tier;
   const scoredLadder = resolveOracleTierLadder(scoredTier);
   const ladderTier = scoredLadder ? scoredTier : summary.tier;
   const ladder = scoredLadder ?? resolveOracleTierLadder(summary.tier);
   const tierLabel = oracleTierLabel(ladderTier);
+  // The verdict states the reviewed tier, so a ladder lit by the score is named for it.
+  const ladderName = hasScoredTier && scoredLadder ? "Scored tier" : "Oracle tier";
 
   const sortedBranches = sortOracleBranchesForDisplay(summary.branches);
   const showBranches = sortedBranches.length >= 2;
@@ -516,7 +519,7 @@ export function OracleLiquidationSection({
       mode="ordinal"
       bands={ladder.bands}
       activeKey={ladder.activeKey}
-      ariaLabel={`Oracle tier ${tierLabel}: band ${ladder.position} of ${ladder.bands.length} in the published oracle tier order, weakest to strongest${
+      ariaLabel={`${ladderName} ${tierLabel}: band ${ladder.position} of ${ladder.bands.length} in the published oracle tier order, weakest to strongest${
         ladder.tiedTierLabels.length > 0 ? `; it shares its band with ${ladder.tiedTierLabels.join(" and ")}` : ""
       }.`}
     />

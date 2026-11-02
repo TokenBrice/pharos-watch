@@ -119,6 +119,23 @@ describe("RedemptionBackstopCard", () => {
     }
   });
 
+  it("draws a permissionless contract open only for any-holder eligibility, else closed and named by it", () => {
+    const openContract = (holderEligibility: RedemptionBackstopEntry["holderEligibility"]): RedemptionBackstopEntry => ({
+      ...BASE_ENTRY, accessModel: "permissionless-onchain", holderEligibility,
+    });
+    const rail = () => moduleRoot().querySelector('[role="img"][aria-label^="Redemption route"]')!;
+
+    const anyHolder = render(<RedemptionBackstopCard entry={openContract("any-holder")} />);
+    expect(rail().getAttribute("aria-label")).toContain("through Permissionless onchain access to");
+    expect(rail().textContent).toContain("Permissionless");
+    anyHolder.unmount();
+
+    render(<RedemptionBackstopCard entry={openContract("issuer-discretionary")} />);
+    expect(rail().getAttribute("aria-label")).toContain("through Permissionless onchain access (Issuer discretion) to");
+    expect(rail().textContent).toContain("Issuer discretion");
+    expect(rail().textContent).not.toContain("Permissionless");
+  });
+
   it("uses the shared composition total and preserves component contribution order", () => {
     render(<RedemptionBackstopCard entry={BASE_ENTRY} />);
     const table = within(moduleRoot()).getByRole("table", { hidden: true });
