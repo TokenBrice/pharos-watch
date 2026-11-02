@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import type { QueryKey } from "@tanstack/react-query";
 import { MethodologyHint } from "@/components/methodology-hint";
 import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
-import { PEG_SCORE_HEADER_TITLE } from "@/lib/definitions";
 import { SortableTableHead } from "@/components/sortable-table-head";
 import { TableHead, TableHeader, TableRow } from "@/components/table";
 import { Button } from "@/components/ui/button";
@@ -150,7 +149,7 @@ export const STABLECOIN_HEADER_DEFS: readonly StablecoinHeaderDef[] = [
     headerAdornment: <MethodologyHint topic="pegScore" />,
     sortKey: "stability",
     className: "w-[156px] text-right",
-    title: PEG_SCORE_HEADER_TITLE,
+    title: "Peg Stability Score (0-100): measures peg-holding consistency over 30 days",
   },
   {
     id: "liquidity",

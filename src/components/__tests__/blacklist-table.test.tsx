@@ -116,11 +116,11 @@ function renderTable(events: BlacklistEvent[] = [event], error: unknown | null =
 }
 
 describe("BlacklistTable", () => {
-  it("reports a failed ledger read as unavailable instead of an empty match set", () => {
+  it("hides the module on a failed ledger read instead of showing an empty match set", () => {
     renderTable([], new Error("ledger read failed"));
     expect(screen.queryByText("No freeze events match your filters.")).toBeNull();
-    // Both containers carry the notice.
-    expect(screen.getAllByText("Freeze ledger data is temporarily unavailable. No status claim is being made.")).toHaveLength(2);
+    expect(screen.queryByTestId("freezewatch-events-table")).toBeNull();
+    expect(screen.queryByText(/temporarily unavailable/)).toBeNull();
   });
 
   it("keeps the empty match copy for a settled empty read", () => {

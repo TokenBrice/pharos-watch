@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useMediaQuery } from "@/hooks/use-is-mobile";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
-import { QueryStateNotice } from "@/components/query-state-notice";
 import { DEPEG_LIVE_PING_CLASS } from "@shared/lib/classification";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { Button } from "@/components/ui/button";
@@ -20,9 +19,6 @@ interface DepegFeedProps {
   logos?: Record<string, string>;
   title?: string;
   emptyMessage?: string;
-  /** The read failed with nothing retained: an empty list is not an observed absence. */
-  unavailable?: boolean;
-  onRetry?: () => void;
 }
 
 const MOBILE_PAGE_SIZE = 3;
@@ -33,8 +29,6 @@ export function DepegFeed({
   logos,
   title = "Recent depeg events",
   emptyMessage = "No confirmed depeg events in this view.",
-  unavailable = false,
-  onRetry,
 }: DepegFeedProps) {
   const prefetch = usePrefetchStablecoin();
   // Desktop/mobile page size from the live breakpoint; `false` keeps SSR and
@@ -101,11 +95,7 @@ export function DepegFeed({
         {title}
       </h2>
       <div className="flex-1 overflow-y-auto grid grid-cols-1 items-start gap-y-1.5 lg:grid-cols-3 lg:gap-x-4 lg:gap-y-2" aria-live="polite">
-        {unavailable ? (
-          <div className="lg:col-span-3">
-            <QueryStateNotice state="unavailable" label="Resolved depeg history" onRetry={onRetry} />
-          </div>
-        ) : events.length === 0 ? (
+        {events.length === 0 ? (
           <p className="pharos-empty-note lg:col-span-3">
             {emptyMessage}
           </p>

@@ -344,17 +344,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
              active warnings, the chart, and the three stat tiles stay above ── */}
       <ModuleDisclosure label="Yield diagnostics">
       <div className="mt-3 space-y-4">
-      {attribution ? (
-        <p className="text-sm text-muted-foreground">{attribution.headline}</p>
-      ) : historyQuery.isLoading ? (
-        <Skeleton className="h-10 w-full rounded-lg" />
-      ) : historyQuery.error ? (
-        <QueryErrorNotice
-          error={historyQuery.error instanceof Error ? historyQuery.error : null}
-          hasData={false}
-          onRetry={() => { void historyQuery.refetch(); }}
-        />
-      ) : null}
+      {attribution ? <p className="text-sm text-muted-foreground">{attribution.headline}</p> : null}
 
       <YieldRankMovementCard attribution={ranking.rankChangeAttribution} />
 

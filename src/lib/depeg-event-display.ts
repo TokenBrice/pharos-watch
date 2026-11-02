@@ -10,7 +10,7 @@ export const DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS = Date.parse("2026-07-18
 
 export type DepegEventDisplayInput = Pick<
   DepegEvent,
-  "stablecoinId" | "symbol" | "direction" | "peakDeviationBps" | "startedAt" | "endedAt" | "peakPrice" | "recoveryPrice" | "closeReason"
+  "stablecoinId" | "symbol" | "pegType" | "direction" | "peakDeviationBps" | "startedAt" | "endedAt" | "peakPrice" | "recoveryPrice" | "pegReference" | "closeReason"
 > & {
   slug: string;
   /** Absent on legacy unaudited rows, which make no audit claim. */
@@ -120,7 +120,7 @@ function buildDepegEventOutcome(event: DepegEventDisplayInput, includeEndTime: b
   if (closure === "open" || event.endedAt == null) return "The event remains ongoing.";
   const duration = formatApproxDurationSeconds(event.endedAt - event.startedAt, { style: "long" });
   const endTime = includeEndTime ? ` at ${formatEventUtcTime(event.endedAt)}` : "";
-  const recoveryPrice = isRecovery ? formatEventPrice(event.recoveryPrice) : null;
+  const recoveryPrice = isRecovery ? formatEventPrice(event.recoveryPrice, event.pegType, event.pegReference) : null;
   return isRecovery
     ? `Recovered after ${duration}${endTime}${recoveryPrice ? ` at ${recoveryPrice}` : ""}.`
     : `${label} after ${duration}${endTime}.`;
@@ -146,7 +146,7 @@ export function buildDepegEventDescription(
 
 export function buildDepegEventSynopsis(event: DepegEventDisplayInput): string {
   const deviation = formatDeviationBps(event.peakDeviationBps);
-  const peakPrice = formatEventPrice(event.peakPrice);
+  const peakPrice = formatEventPrice(event.peakPrice, event.pegType, event.pegReference);
   const outcome = buildDepegEventOutcome(event, true);
   return `${event.symbol} moved ${depegDirectionLabel(event.direction)} at ${formatEventUtcTime(event.startedAt)} on ${formatEventLongDate(event.startedAt)}, with a peak deviation of ${deviation}${disputedQualifier(event)}${peakPrice ? ` at ${peakPrice}` : ""}. ${outcome}`;
 }

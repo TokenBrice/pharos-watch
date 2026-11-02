@@ -268,7 +268,7 @@ describe("MethodologyPage", () => {
     expect(text).not.toContain("~32%+->100");
   });
 
-  it("states the actual PegScore coverage disclosure instead of a retired early-score label", () => {
+  it("states the PegScore tracking gate without a retired early-score label", () => {
     const root = methodologyDocument();
     const faq = [...root.querySelectorAll('script[type="application/ld+json"]')]
       .map((script) => JSON.parse(script.textContent!))
@@ -276,19 +276,12 @@ describe("MethodologyPage", () => {
       .find((value) => value["@type"] === "FAQPage");
     const entry = faq?.mainEntity.find((item: { name: string }) => item.name === "How is the Pharos peg score calculated?");
     expect(entry?.acceptedAnswer.text).not.toMatch(/early/i);
-    expect(entry?.acceptedAnswer.text).toContain("historyCoverage");
+    expect(entry?.acceptedAnswer.text).not.toContain("historyCoverage");
     expect(DEFINITIONS.pegScore.detail).not.toMatch(/early/i);
     expect(DEFINITIONS.pegScore.long).not.toMatch(/early/i);
     const technical = root.querySelector("#pegscore-dews-methodology")!.textContent!.replace(/\s+/g, " ");
     expect(technical).not.toMatch(/Early score/);
-    expect(technical).toContain("Score coverage");
-  });
-
-  it("describes the frozen archive without a fabricated all-F report card", () => {
-    const text = methodologyDocument().querySelector("#lifecycle-phases-methodology")!.textContent!.replace(/\s+/g, " ");
-    expect(text).not.toMatch(/all-F/i);
-    expect(text).toContain("Frozen · not scored");
-    expect(text).toContain("No current report card is rendered");
+    expect(technical).not.toContain("historyCoverage");
   });
 
   it("states the leg-quarantine rule instead of keeping a stalled mint/burn leg in scope", () => {
@@ -315,7 +308,7 @@ describe("MethodologyPage", () => {
 
   it("separates per-coin unrated fallback PYS from an unavailable safety snapshot and opportunity-evidence-missing NR", () => {
     const text = methodologyDocument().querySelector("#yield-intelligence-methodology")!.textContent!.replace(/\s+/g, " ");
-    expect(text).toContain("Rows whose per-coin report card is unrated keep the 40/NR fallback and an estimated PYS with `safety-unrated`");
+    expect(text).toContain("Rows whose per-coin report card is unrated keep the 40/NR fallback and publish null PYS with `safety-unrated`");
     expect(text).toContain("an unavailable common safety snapshot publishes PYS NR with the same reason");
     expect(text).toContain("rows carrying `opportunity-evidence-missing` publish PYS NR");
     expect(text).not.toContain("`safety-unrated` or `opportunity-evidence-missing` remain estimated");

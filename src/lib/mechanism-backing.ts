@@ -87,7 +87,7 @@ const METRIC_SPECS: Partial<Record<MechanismArchetype, readonly MetricSpec[]>> =
       label: "Buffer ratio",
       unit: "percent",
       alreadyPercent: true,
-      hint: "Capital held above the protocol's stated buffer requirement.",
+      hint: "Capital above the measured liability or margin requirement.",
     },
     {
       key: "lossAbsorptionShare",

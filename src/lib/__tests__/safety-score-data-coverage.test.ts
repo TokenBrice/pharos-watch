@@ -9,9 +9,9 @@ import {
   buildDataCoverageModel,
   describeDataCoverageHoldCauses,
   describeIssuerReview,
+  V9_PUBLICATION_HOLD_REASON_LIMIT,
 } from "@/lib/safety-score-data-coverage";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { V9_PUBLICATION_HOLD_REASON_LIMIT } from "@shared/types/report-cards-v9";
 
 const REVIEWED_AT_SEC = Date.parse("2026-10-03T00:00:00Z") / 1000;
 const EARLIER_REVIEWED_AT_SEC = Date.parse("2026-09-28T00:00:00Z") / 1000;
@@ -439,9 +439,9 @@ describe("describeDataCoverageHoldCauses", () => {
     expect(causes.join(" ")).not.toContain(reason.code);
   });
 
-  it("explains a materialization-pending hold that keeps the previous snapshot", () => {
+  it("names a materialization-pending hold without restating what the page shows", () => {
     expect(describeDataCoverageHoldCauses([{ code: "v9-public-materialization-pending" }])).toEqual([
-      "The newest accepted ratings publication has not finished publishing, so the previous snapshot is shown.",
+      "The newest ratings publication is still pending.",
     ]);
   });
 

@@ -37,7 +37,7 @@ const priorityCaseStudySlugs = new Set(priorityCaseStudies.map(({ study }) => st
 
 export const metadata: Metadata = buildPageMetadata({
   title: `Stablecoin Depeg History: ${CASE_STUDY_LIST.length} Case Studies`,
-  description: `${CASE_STUDY_LIST.length} reconstructed stablecoin depeg and failure case studies, from Terra to USDC at SVB: what broke, why the design allowed it, and how each resolved or is still unfolding (${CASE_STUDY_OUTCOME_COUNTS.died} died, ${CASE_STUDY_OUTCOME_COUNTS.wounded} wounded, ${CASE_STUDY_OUTCOME_COUNTS.survived} survived).`,
+  description: `${CASE_STUDY_LIST.length} stablecoin depeg and failure case studies, from Terra to USDC at SVB: what broke, why the design allowed it, and how each played out (${CASE_STUDY_OUTCOME_COUNTS.died} died, ${CASE_STUDY_OUTCOME_COUNTS.wounded} wounded, ${CASE_STUDY_OUTCOME_COUNTS.survived} survived).`,
   canonical: "/learn/case-studies/",
   ogImage: `${SITE_ORIGIN}/og-editorial-learn.png`,
 });

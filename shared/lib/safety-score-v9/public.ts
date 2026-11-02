@@ -1369,9 +1369,6 @@ function weakestPillarHeadline(
 export function projectTopDriver(card: SafetyScoreV9CurrentCard): SafetyScoreV9TopDriver | null {
   if (card.witnessTexts !== undefined) card = resolveV9PublicWitnessTexts(card);
   const evidenceFreshness = card.evidence.freshness;
-  // A pipeline gap is technical unavailability, not a withheld verdict; it has
-  // no score-bearing driver to project.
-  if (card.ratingStatus === "pipeline-gap") return null;
   if (card.score === null || card.grade === "NR") {
     const message = card.nrReasons[0]?.message ?? "Required evidence is withheld.";
     return {

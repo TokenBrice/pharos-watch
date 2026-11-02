@@ -102,10 +102,6 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
   const shareErrorId = useId();
   const disabledReasonId = useId();
   const pegLabel = PEG_METADATA[input.pegCurrency]?.filterLabel ?? input.pegCurrency;
-  // `universe.active` is the post-Howey candidate pool, not the site's tracked
-  // count, and coverage skips reduce `surviving`; name both so the funnel
-  // stages add up.
-  const skippedForCoverageCount = coverageWarnings?.skippedForCoverageCount ?? 0;
   const resultBanners = buildResultBanners({
     lowConfidence,
     coverageWarnings,
@@ -170,11 +166,8 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
               className="text-base font-semibold tracking-tight text-foreground outline-none sm:text-lg"
             >
               <span className="pharos-numeric">{universe.active.toLocaleString()}</span> in scope {pegLabel} stablecoins →{" "}
-              <span className="pharos-numeric">{universe.surviving.toLocaleString()}</span> filtered
-              {skippedForCoverageCount > 0
-                ? ` (${skippedForCoverageCount.toLocaleString()} skipped for missing live data)`
-                : null}{" "}
-              → <span className="pharos-numeric">{shortlistCount}</span> shortlist entries
+              <span className="pharos-numeric">{universe.surviving.toLocaleString()}</span> filtered →{" "}
+              <span className="pharos-numeric">{shortlistCount}</span> shortlist entries
             </h2>
           </div>
         </div>

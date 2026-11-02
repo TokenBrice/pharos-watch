@@ -247,7 +247,7 @@ describe("frozen profile metadata", () => {
   it("drops the redundant parenthetical and keeps the epitaph", () => {
     const coin = TRACKED_META_BY_ID.get("usdkg-gold-dollar")!;
     expect(descriptionOf(coin)).toBe(
-      `Historical data and obituary for USDKG, a now-defunct stablecoin. ${coin.obituary?.epitaph}`,
+      `Historical data and obituary for USDKG, a now-defunct stablecoin that died in Oct 2026. ${coin.obituary?.epitaph}`,
     );
   });
 });

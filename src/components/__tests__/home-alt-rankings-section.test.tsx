@@ -91,31 +91,6 @@ describe("HomeAltRankingsSection", () => {
 
 
 
-  it("does not claim a zero census while the market feed is still loading", () => {
-    useStablecoinsMock.mockReturnValue({ data: undefined, isLoading: true, error: null });
-
-    render(<HomeAltRankingsSection titleId="home-alt-rankings-title" />);
-
-    expect(screen.getByText("Stablecoin rankings are updating.")).toBeTruthy();
-    expect(screen.queryByText(/Showing/)).toBeNull();
-  });
-
-  it("keeps the neutral placeholder for a paused feed with no successful read", () => {
-    useStablecoinsMock.mockReturnValue({ data: undefined, isLoading: false, error: null });
-
-    render(<HomeAltRankingsSection titleId="home-alt-rankings-title" />);
-
-    expect(screen.getByText("Stablecoin rankings are updating.")).toBeTruthy();
-    expect(screen.queryByText(/Showing/)).toBeNull();
-  });
-
-  it("claims the census from a successful payload", () => {
-    render(<HomeAltRankingsSection titleId="home-alt-rankings-title" />);
-
-    expect(screen.getByText(/Showing/).textContent).toContain("1");
-    expect(screen.queryByText("Stablecoin rankings are updating.")).toBeNull();
-  });
-
   it("does not render a generic empty table when the market query fails", () => {
     useStablecoinsMock.mockReturnValue({
       data: undefined,

@@ -1586,7 +1586,7 @@
     "recordedAt": "2026-02-19",
     "peakMcap": 160000000,
     "epitaph": "$93M loss broke three coins",
-    "obituary": "Yield-bearing stablecoin that collapsed when an external fund manager disclosed a $93M loss. xUSD plunged 77% from $1 to $0.26, freezing ~$160M in user deposits. The collapse exposed $285M in interconnected DeFi debt and caused cascading contagion that also toppled deUSD and Stables Labs USDX.",
+    "obituary": "Yield-bearing stablecoin that collapsed when an external fund manager disclosed a $93M loss. xUSD plunged 74% from $1 to $0.26, freezing ~$160M in user deposits. The collapse exposed $285M in interconnected DeFi debt and caused cascading contagion that also toppled deUSD and Stables Labs USDX.",
     "sourceUrl": "https://finance.yahoo.com/news/stream-finance-loses-93-million-225557903.html",
     "sourceLabel": "Yahoo Finance",
     "contracts": [

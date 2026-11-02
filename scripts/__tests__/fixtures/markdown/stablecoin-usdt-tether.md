@@ -55,7 +55,7 @@ Based on tracked contract metadata and blacklist coverage, issuer or admin freez
 
 ### How do you redeem USDT?
 
-Under the route Pharos reviewed on Apr 16, 2026, customers the issuer has verified can redeem USDT for a single stable asset, such as cash or a stablecoin, with a $100,000 minimum. Settlement takes multiple days. The reviewed redemption fee: 0.10% with a $1,000 minimum. Whether a given holder qualifies is set by the route's own terms, not by this summary.
+Under the route Pharos reviewed on Apr 16, 2026, customers the issuer has verified can redeem USDT for a single stable asset, such as cash or a stablecoin, with a $100,000 minimum. Settlement takes multiple days. The reviewed redemption fee is at most 0.1%. Whether a given holder qualifies is set by the route's own terms, not by this summary.
 
 ## Sources
 

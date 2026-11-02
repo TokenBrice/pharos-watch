@@ -44,9 +44,9 @@ function rowFor(html: string, slug: string): string {
 }
 
 describe("depeg event archive badges", () => {
-  it("states the archive epoch and pinned pre-epoch scope", () => {
+  it("states the archive deviation threshold", () => {
     const html = renderToStaticMarkup(<DepegEventArchive />);
-    expect(html).toContain("Confirmed events at 5% deviation or worse since 2026-01-01, plus pinned earlier incidents.");
+    expect(html).toContain("Confirmed events at 5% deviation or worse.");
   });
 
   it("badges disputed and false-positive events as Disputed, with no explanatory sub-text", () => {

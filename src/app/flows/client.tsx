@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useMintBurnFlows } from "@/hooks/use-mint-burn-flows";
-import { QueryErrorNotice } from "@/components/query-error-notice";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import type { StaleQuery } from "@/components/stale-data-banner";
 import { useHydrated } from "@/hooks/use-hydrated";
@@ -186,13 +185,7 @@ export default function FlowsClient({ faqItems }: { faqItems: readonly FaqItem[]
         showFreshnessBanner={showDataHealthBanner}
       />
 
-      {summaryData == null && !isSummaryLoading ? (
-        // The 24h aggregate owns the hero and the table: a missing payload is a
-        // failed read, never a zero-coin pass. The page-level notice reports it
-        // when nothing else loaded; with the chart in hand that notice is silent,
-        // so the failed 24h read is reported where its modules would have rendered.
-        chartData ? <QueryErrorNotice error={summaryError} onRetry={() => void refetchSummary()} /> : null
-      ) : (
+      {summaryData == null && !isSummaryLoading ? null : (
         <>
           <FlowGaugeHero
             gauge={gauge}

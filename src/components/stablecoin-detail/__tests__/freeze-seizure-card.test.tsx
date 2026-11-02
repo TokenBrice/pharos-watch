@@ -184,12 +184,13 @@ describe("FreezeSeizureModule", () => {
     expect(rail().textContent).not.toMatch(/\b0\b/);
   });
 
-  it("labels the retained-ledger total as that ledger, not a present-tense holding", () => {
+  it("draws the retained-ledger total as a frozen figure", () => {
     usageResult(statsFor("USDT", { events: 2, addresses: 1, frozen: 100, destroyed: 0 }));
     renderModule();
     const text = rail().textContent ?? "";
-    expect(text).toMatch(/frozen \(persistent freeze-ledger\)/);
-    expect(rail().getAttribute("aria-label")).toContain("persistent freeze-ledger");
+    expect(text).toMatch(/\$100 frozen/);
+    expect(rail().getAttribute("aria-label")).toContain("$100 frozen");
+    expect(rail().getAttribute("aria-label")).not.toContain("persistent freeze-ledger");
   });
 
   it("reads a fully released ledger as no active freezes rather than a frozen total", () => {
@@ -197,7 +198,7 @@ describe("FreezeSeizureModule", () => {
     renderModule();
     const text = rail().textContent ?? "";
     expect(text).toContain("No active freezes");
-    expect(text).not.toMatch(/frozen \(persistent freeze-ledger\)/);
+    expect(text).not.toMatch(/\$100 frozen/);
   });
 
   it("states a watched coin with no recorded event in words, not as zero", () => {

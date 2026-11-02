@@ -295,7 +295,6 @@ export default function FreezeWatchClient() {
             events={events}
             isLoading={pageLoading}
             error={pageError}
-            onRetry={() => { void refetchPage(); }}
             page={clampedPage}
             pageSize={pageSize}
             sortKey={sortKey}

@@ -24,7 +24,7 @@ import { DIGEST_DATES } from "@/lib/digest-registry";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { OgPageSlug } from "@shared/lib/og-route-cards";
 import { buildArticleJsonLd } from "@/lib/json-ld";
-import { formatUtcDayLabel } from "@shared/lib/format";
+import { formatDeathDate, formatUtcDayLabel } from "@shared/lib/format";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import { formatFuzzyDate, isLaunchedAwaitingData } from "@/lib/pre-launch";
 import { getSnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
@@ -465,10 +465,11 @@ function buildStablecoinDetailDescription(coin: StablecoinMeta): string {
 export function buildStablecoinDetailMetadata(coin: StablecoinMeta): Metadata {
   if (coin.status === "frozen") {
     // `frozenAt` can predate Pharos (an issuer's historical freeze date), so the
-    // description claims no tracking window; the page itself still shows the date.
+    // description claims no tracking window; it dates the death from the obituary.
     const identity = hasRedundantName(coin) ? coin.name : `${coin.name} (${coin.symbol})`;
+    const died = coin.obituary ? ` that died in ${formatDeathDate(coin.obituary.deathDate)}` : "";
     const description = composeDescription([
-      `Historical data and obituary for ${identity}, a now-defunct stablecoin.`,
+      `Historical data and obituary for ${identity}, a now-defunct stablecoin${died}.`,
       coin.obituary?.epitaph,
     ], PROFILE_DESCRIPTION_MAX_LENGTH);
     return buildPageMetadata({

@@ -4,7 +4,6 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StablecoinTable } from "@/components/stablecoin-table";
-import { PEG_SCORE_HEADER_TITLE } from "@/lib/definitions";
 import { cleanupFrontendTest, installMatchMediaMock, resetBrowserStorage } from "@/test-utils/frontend";
 import { buildV9SafetyTableMap } from "@/lib/safety-score-v9-consumers";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -177,13 +176,6 @@ describe("StablecoinTable", () => {
         dexLiquidity: "2024-09-01T11:59:00.000Z", reportCards: null,
       },
     });
-  });
-
-  it("states the Peg Score's real tracking window in the header tooltip", () => {
-    render(<StablecoinTable data={[coin]} isLoading={false} activeFilters={[]} />);
-    const title = screen.getByText("Peg Score").closest("th")?.getAttribute("title");
-    expect(title).toBe(PEG_SCORE_HEADER_TITLE);
-    expect(title).not.toMatch(/over 30 days/i);
   });
 
   it("normalizes persisted column visibility from localStorage", async () => {

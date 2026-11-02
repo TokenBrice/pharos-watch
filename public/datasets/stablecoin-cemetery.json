@@ -7,11 +7,11 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:399d2d8c201bd7102d5555ffb00d4b9b5c4bdf08d062bd95ecd10f7fef722e13",
+  "sourceChecksum": "sha256:b2c25f1a14bd4b01ea868b1a5b1e5215cfbcf6dd1b93d44896a672d271c9da8a",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
-      "checksum": "sha256:5134f07980f06fec10d063d8c26ec02400d1606a64cef4c449efd63495e5c105",
+      "checksum": "sha256:e0a870b8d3eafb1020309a85838d1fcaac15195b842537b0dc3ba0a49fb7988a",
       "role": "Curated dead-stablecoin metadata."
     },
     {
@@ -1636,7 +1636,7 @@
       "deathDatePrecision": "month",
       "peakMcapUsd": 160000000,
       "epitaph": "$93M loss broke three coins",
-      "obituary": "Yield-bearing stablecoin that collapsed when an external fund manager disclosed a $93M loss. xUSD plunged 77% from $1 to $0.26, freezing ~$160M in user deposits. The collapse exposed $285M in interconnected DeFi debt and caused cascading contagion that also toppled deUSD and Stables Labs USDX.",
+      "obituary": "Yield-bearing stablecoin that collapsed when an external fund manager disclosed a $93M loss. xUSD plunged 74% from $1 to $0.26, freezing ~$160M in user deposits. The collapse exposed $285M in interconnected DeFi debt and caused cascading contagion that also toppled deUSD and Stables Labs USDX.",
       "sourceUrl": "https://finance.yahoo.com/news/stream-finance-loses-93-million-225557903.html",
       "sourceLabel": "Yahoo Finance",
       "archivedDataAvailable": false,

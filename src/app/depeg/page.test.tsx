@@ -42,7 +42,7 @@ describe("depeg FAQ pending confirmation", () => {
       .find((value) => value["@type"] === "FAQPage");
     const entry = jsonLd?.mainEntity.find((item: { name: string }) => item.name === "How is the peg score calculated?");
     expect(entry?.acceptedAnswer.text).toContain("fewer than 7 days of tracking history");
-    expect(entry?.acceptedAnswer.text).toContain("historyCoverage");
+    expect(entry?.acceptedAnswer.text).not.toContain("historyCoverage");
     expect(entry?.acceptedAnswer.text).not.toMatch(/Early score/i);
   });
 

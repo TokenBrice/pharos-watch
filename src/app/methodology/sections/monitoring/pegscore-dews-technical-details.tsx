@@ -118,10 +118,8 @@ function PegScoreTechnicalDetails() {
           Without that verified anchor, PegScore prefers a curated launch date, then the earliest supply snapshot,
           then the first durable Pharos valid-price observation for priced assets without supply-history coverage.
           Young coins are not diluted across history they didn&apos;t exist for, and unobserved pre-coverage days are not
-          silently treated as stable. Requires at least 7 days of tracking data; returns null otherwise. The coverage
-          start, source and verification status are published as historyCoverage and shown as &ldquo;Score coverage&rdquo; in
-          depeg history. The API additionally publishes a coverage-aware 90-day view with observed days, incidents,
-          constituent threshold crossings, and peg percentage.
+          silently treated as stable. Requires at least 7 days of tracking data; returns null otherwise. The API additionally publishes a
+          coverage-aware 90-day view with observed days, incidents, constituent threshold crossings, and peg percentage.
         </p>
       </div>
 

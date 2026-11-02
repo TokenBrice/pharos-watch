@@ -223,11 +223,8 @@ function buildUsedStation(stats: BlacklistSummaryResponse["stats"], symbol: stri
     && ((frozenUsd != null && frozenUsd > 0) || (stats.valuationCoverage?.perCoinFrozen[symbol]?.knownCount ?? 0) > 0 || stats.valuationCoverage?.perCoinFrozen[symbol]?.unavailableCount)
   ) {
     const amount = formatBlacklistValuation(frozenUsd, stats.valuationCoverage?.perCoinFrozen[symbol], formatCompactUsdShort);
-    // This total sums every retained freeze-ledger snapshot, released addresses
-    // included, so it carries the Activity card's ledger qualifier rather than a
-    // present-tense holding claim.
-    chips.push({ key: "frozen", tone: "terminal", content: <><Figure>{amount}</Figure>{" frozen (persistent freeze-ledger)"}</> });
-    spoken.push(`${amount} frozen (persistent freeze-ledger)`);
+    chips.push({ key: "frozen", tone: "terminal", content: <><Figure>{amount}</Figure> frozen</> });
+    spoken.push(`${amount} frozen`);
   }
   if ((destroyedUsd != null && destroyedUsd > 0) || (stats.valuationCoverage?.perCoinDestroyed[symbol]?.knownCount ?? 0) > 0 || stats.valuationCoverage?.perCoinDestroyed[symbol]?.unavailableCount) {
     const amount = formatBlacklistValuation(destroyedUsd, stats.valuationCoverage?.perCoinDestroyed[symbol], formatCompactUsdShort);

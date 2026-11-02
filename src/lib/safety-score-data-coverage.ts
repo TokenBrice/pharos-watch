@@ -1,7 +1,6 @@
-import {
-  V9_PUBLICATION_HOLD_REASON_LIMIT,
-  type ReportCardsV9CurrentResponse,
-  type V9PublicationHoldReason,
+import type {
+  ReportCardsV9CurrentResponse,
+  V9PublicationHoldReason,
 } from "@shared/types/report-cards-v9";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
 import {
@@ -161,6 +160,12 @@ function assetListLabel(assetIds: readonly string[]): string {
 }
 
 /**
+ * Producer-side cap on `publicationHealth.reasons`, one row per affected asset.
+ * Consumers must read a full list as a lower bound, never as the whole census.
+ */
+export const V9_PUBLICATION_HOLD_REASON_LIMIT = 24;
+
+/**
  * Collapses the publication hold reasons into reader-facing sentences. Producer
  * failures repeat per asset and per reason code, so they fold into a single
  * asset-scoped sentence. Assessment detail is never echoed: it carries internal
@@ -197,7 +202,7 @@ export function describeDataCoverageHoldCauses(
       causes.push("Live reserve coverage is below the publication floor.");
     }
     if (reason.code === "v9-public-materialization-pending") {
-      causes.push("The newest accepted ratings publication has not finished publishing, so the previous snapshot is shown.");
+      causes.push("The newest ratings publication is still pending.");
     }
     if (reason.code === "assessment-failed") causes.push("The latest ratings update could not be verified.");
     if (reason.code === "coverage-floor-failed") {

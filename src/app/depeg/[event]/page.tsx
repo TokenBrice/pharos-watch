@@ -168,7 +168,7 @@ function RecoveryPanel({ event, includeTime }: { event: DepegEventEntry; include
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">Peg reference</dt>
         <dd className="pharos-numeric font-medium text-foreground">
-          {formatEventPrice(event.pegReference, event.pegType, event.pegReference) ?? "—"}
+          {formatEventPrice(event.pegReference) ?? "—"}
         </dd>
       </div>
       {startPrice ? (
@@ -201,7 +201,7 @@ function buildDepegRecordContext({
   versionLabel: string;
 }): string {
   const startPrice = formatEventPrice(event.startPrice, event.pegType, event.pegReference);
-  const pegReference = formatEventPrice(event.pegReference, event.pegType, event.pegReference);
+  const pegReference = formatEventPrice(event.pegReference);
   const sourceLabel = event.source === "live" ? "live monitoring" : "a historical backfill";
   const pricePath = startPrice && pegReference
     ? `The checked-in price path starts at ${startPrice} against a recorded peg reference of ${pegReference}.`

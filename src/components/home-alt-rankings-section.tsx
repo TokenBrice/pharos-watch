@@ -107,7 +107,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           <h2 id={titleId} className="pharos-display text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             Stablecoin Overview
           </h2>
-          {filteredRowCount == null ? (
+          {stablecoinsState === "unavailable" ? (
             <p className="text-sm text-muted-foreground">Stablecoin rankings are updating.</p>
           ) : (
             <p className="text-sm text-muted-foreground">

@@ -16,7 +16,7 @@
  */
 import { DEWS_SIGNAL_LABELS, DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
 import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
-import { DEPEG_ARCHIVE_EPOCH_SECONDS, MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/lib/depeg-event-config";
+import { DEPEG_ARCHIVE_EPOCH_DATE, MIN_DEPEG_PAGE_DEVIATION_BPS } from "@/lib/depeg-event-config";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import { GAUGE_BAND_RANGES } from "@shared/lib/mint-burn-gauge-bands";
@@ -45,9 +45,6 @@ import {
 } from "@shared/lib/methodology-versions/constants";
 
 const NEUTRAL_GAUGE_RANGE = GAUGE_BAND_RANGES.find(({ band }) => band === "NEUTRAL")!;
-
-/** Archive-epoch date quoted by the depeg definition, derived from the page policy. */
-const DEPEG_ARCHIVE_EPOCH_DATE = new Date(DEPEG_ARCHIVE_EPOCH_SECONDS * 1000).toISOString().slice(0, 10);
 
 export interface Definition {
   /** Display label used in tooltips and popovers. */
@@ -275,9 +272,9 @@ export const DEFINITIONS = {
     label: "Peg Score",
     short: "Historical 0-100 peg-behavior score built from time-at-peg, event severity, and active-depeg penalties.",
     detail:
-      "Requires at least 7 tracking days; the coverage start, source and verification status are published as historyCoverage. NAV tokens return NR because they are not meant to hold a fixed price.",
+      "Requires at least 7 tracking days. NAV tokens return NR because they are not meant to hold a fixed price.",
     long:
-      "A 0-100 score for a stablecoin's historical peg behavior, combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. It needs at least 7 days of tracking; the coverage start, source and verification status are published as historyCoverage and shown as 'Score coverage' in depeg history. NAV tokens return NR because they are not meant to hold a fixed price. Peg Score enters the Safety Score as a multiplier.",
+      "A 0-100 score for a stablecoin's historical peg behavior, combining time-at-peg (50%) and event severity (50%), minus penalties for active depegs and erratic behavior. It needs at least 7 days of tracking. NAV tokens return NR because they are not meant to hold a fixed price. Peg Score enters the Safety Score as a multiplier.",
     listed: true,
     seeAlso: ["depeg", "dews", "safetyScore"],
     ...PEG,
