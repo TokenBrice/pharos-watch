@@ -1406,6 +1406,7 @@
         "worker/scripts/measure-v9-resource.ts",
         "worker/scripts/calibrate-v9-resource.ts",
         "worker/scripts/lib/v9-resource-policy.ts",
+        "worker/scripts/lib/v9-contagion-inputs.ts",
         "worker/src/lib/__tests__/safety-score-v9-resource-*.test-support.ts",
         "scripts/maintenance/run-generated-artifacts.ts",
         "scripts/maintenance/prepare-workspace.ts",
