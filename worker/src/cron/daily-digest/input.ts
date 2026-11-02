@@ -5,7 +5,7 @@ import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isRecord } from "@shared/lib/type-guards";
 import { round1 } from "@shared/lib/math";
 import type { StablecoinData } from "@shared/types/market";
-import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { getDisplayedPsi } from "@shared/lib/psi-view-model";
 import { CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-registry";
 import { CORE_STABLECOIN_AGGREGATE_UNIVERSE } from "@shared/lib/stablecoins/aggregate-universe";
@@ -223,9 +223,10 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     const mcap = getCirculatingRawOrNull(coin);
     const prevWeek = getPrevWeekRawOrNull(coin);
     if (mcap === null) continue;
-    // A restored row keeps the clock of the publication that read it; it is a
-    // published carry, not an observation this digest run can count (R6).
-    if (coin.supplyRestored === true) {
+    // An outage-fallback restore keeps the clock of the publication that read
+    // it; it is a carried weight, not an observation this digest run can count
+    // (R6). Routine main-path carries stay observed.
+    if (isOutageFallbackCarry(coin)) {
       carriedSupplyIds.push(coin.id);
       continue;
     }

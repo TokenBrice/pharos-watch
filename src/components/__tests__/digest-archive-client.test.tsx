@@ -270,6 +270,7 @@ describe("DigestArchiveClient supply coverage", () => {
   it.each([
     [0, { complete: false, observedCount: 0, unavailableCount: 2 }, "Mcap unavailable", null],
     [100e9, { complete: false, observedCount: 1, unavailableCount: 1 }, "Known mcap subtotal", "1/2 coins observed"],
+    [100e9, { complete: false, observedCount: 1, unavailableCount: 1, carriedCount: 1 }, "Known mcap subtotal", "1/3 coins observed"],
     [100e9, undefined, "Known mcap subtotal", "coverage unproven"],
     [0, { complete: true, observedCount: 2, unavailableCount: 0 }, "Total mcap: $0", "2/2 coins observed"],
   ])("keeps supply evidence qualified in archive links", (totalMcapUsd, supplyCoverage, label, qualifier) => {

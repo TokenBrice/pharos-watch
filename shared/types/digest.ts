@@ -273,7 +273,7 @@ export const DigestSupplyCoverageSchema = z.object({
   complete: z.boolean(),
   observedCount: z.number().int().nonnegative(),
   unavailableCount: z.number().int().nonnegative(),
-  /** Core members published from a restored (carried) row: weights, not this run's observations. */
+  /** Core members carried by the outage fallback (`supplyRestoreMode`): weights, not this run's observations. */
   carriedCount: z.number().int().nonnegative().optional(),
   carriedIds: z.array(z.string()).optional(),
   /** SHA-256 of JSON [aggregateUniverse, sorted full-universe member IDs]. */

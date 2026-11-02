@@ -327,7 +327,7 @@ function DigestSnapshotContent({ date }: { date: string }) {
                   {formatCurrency(totalMcapUsd)}
                 </span>
                 {" "}{coverage
-                  ? `(${coverage.observedCount}/${coverage.observedCount + coverage.unavailableCount} coins observed)`
+                  ? `(${coverage.observedCount}/${coverage.observedCount + coverage.unavailableCount + (coverage.carriedCount ?? 0)} coins observed)`
                   : "(coverage unproven)"}
               </>
             )}

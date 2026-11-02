@@ -2,7 +2,7 @@ import { projectV9CompactPartialEvidence, projectV9EvidencePillars } from "@shar
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
-import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { DEWS_SIGNAL_LABELS, type DewsSignalKey } from "@shared/lib/dews-config";
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
@@ -239,12 +239,16 @@ export async function collectDewsStress(
       let alertPlusMcapUsd = 0;
       let observedCount = 0;
       let unavailableCount = 0;
+      const carriedIds: string[] = [];
       for (const row of todayRows) {
         if (!isDewsAlertBand(row.band)) continue;
         const coin = ctx.stablecoinAssetById.get(row.stablecoin_id);
         const supply = coin ? getCirculatingRawOrNull(coin) : null;
         if (supply === null) {
           unavailableCount++;
+        } else if (coin && isOutageFallbackCarry(coin)) {
+          // An outage restore is a published weight, not this run's observation (R6).
+          carriedIds.push(coin.id);
         } else {
           observedCount++;
           alertPlusMcapUsd += supply;
@@ -343,8 +347,14 @@ export async function collectDewsStress(
       return collectorResult({
         bandCounts,
         yesterdayBandCounts,
-        alertPlusMcapUsd: observedCount > 0 || unavailableCount === 0 ? alertPlusMcapUsd : null,
-        alertPlusSupplyCoverage: { complete: unavailableCount === 0, observedCount, unavailableCount },
+        alertPlusMcapUsd: observedCount > 0 || (unavailableCount === 0 && carriedIds.length === 0)
+          ? alertPlusMcapUsd : null,
+        alertPlusSupplyCoverage: {
+          complete: unavailableCount === 0 && carriedIds.length === 0,
+          observedCount,
+          unavailableCount,
+          ...(carriedIds.length > 0 ? { carriedCount: carriedIds.length, carriedIds: [...carriedIds].sort() } : {}),
+        },
         bandChangeCount: yesterdayBandCounts === null ? null : bandChangeCount,
         bandChanges: bandChanges.slice(0, 5),
         elevatedCoins,

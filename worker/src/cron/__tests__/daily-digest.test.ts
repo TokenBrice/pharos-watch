@@ -678,13 +678,24 @@ describe("market and risk collectors", () => {
     const { inputData } = await buildDailyDigestInput(makeDailyDigestScenario().db);
     expect(inputData.mcap7dDelta).toBeNull();
   });
-  it("names carried supply in coverage instead of counting it as an observation", async () => {
+  it("names outage-fallback carried supply in coverage instead of counting it as an observation", async () => {
+    // Control: without the carry the 2-coin fixture is complete, so the
+    // incompleteness asserted below is attributable to the outage restore.
+    const controlScenario = makeDailyDigestScenario();
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(controlScenario.sourcePayload);
+    const { inputData: controlInput } = await buildDailyDigestInput(controlScenario.db);
+    expect(controlInput.supplyCoverage).toMatchObject({
+      complete: true, observedCount: 2, unavailableCount: 0,
+    });
+
     const scenario = makeDailyDigestScenario();
     const source = scenario.sourcePayload as unknown as {
       payload: { peggedAssets: Array<Record<string, unknown>> };
     };
     source.payload.peggedAssets = source.payload.peggedAssets.map((asset) =>
-      asset.id === "usdt-tether" ? { ...asset, supplyRestored: true } : asset);
+      asset.id === "usdt-tether"
+        ? { ...asset, supplyRestored: true, supplyRestoreMode: "outage-fallback" }
+        : asset);
     vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
 
     const { inputData } = await buildDailyDigestInput(scenario.db);
@@ -706,6 +717,24 @@ describe("market and risk collectors", () => {
     const prompt = buildUserPrompt(inputData);
     expect(prompt).toContain("1 observed");
     expect(prompt).toContain("1 carried");
+  });
+  it("keeps a routine main-path carry as an observed member", async () => {
+    const scenario = makeDailyDigestScenario();
+    const source = scenario.sourcePayload as unknown as {
+      payload: { peggedAssets: Array<Record<string, unknown>> };
+    };
+    source.payload.peggedAssets = source.payload.peggedAssets.map((asset) =>
+      asset.id === "usdt-tether" ? { ...asset, supplyRestored: true } : asset);
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
+
+    const { inputData } = await buildDailyDigestInput(scenario.db);
+
+    // Main-path chain-dropout carries keep today's treatment; only the outage
+    // fallback restore is excluded from the observed cohort.
+    expect(inputData.totalMcapUsd).toBe(160_000_000);
+    expect(inputData.supplyCoverage).toMatchObject({ complete: true, observedCount: 2, unavailableCount: 0 });
+    expect(inputData.supplyCoverage?.carriedCount).toBeUndefined();
+    expect(inputData.dataQuality?.degradedSources ?? []).not.toContain("supply-current-unavailable");
   });
   it("pages a stale cache but keeps a partial core supply cohort as metadata", async () => {
     const scenario = makeDailyDigestScenario();
@@ -1050,5 +1079,38 @@ describe("history and DEWS collectors", () => {
       expect(breadth?.impactScore).toBe(0.1);
       expect(breadth?.headlineFacts).toContain(missingSupply ? "$145.00M ALERT+ known supply subtotal (incomplete coverage)" : "$145.00M ALERT+ market cap");
     }
+  });
+  it("excludes only outage-fallback carries from the DEWS ALERT+ observed census", async () => {
+    const at = Math.floor(Date.now() / 1000) - 600;
+    const assets = [
+      makeAsset({ id: "coin-0", symbol: "C0", circulating: { peggedUSD: 20e6 } }),
+      makeAsset({ id: "coin-1", symbol: "C1", circulating: { peggedUSD: 30e6 }, supplyRestored: true }),
+      makeAsset({
+        id: "coin-2", symbol: "C2", circulating: { peggedUSD: 40e6 },
+        supplyRestored: true, supplyRestoreMode: "outage-fallback",
+      }),
+    ];
+    const rows = assets.map((asset) => ({ stablecoin_id: asset.id, score: 65, band: "ALERT", signals_json: "{}", computed_at: at }));
+    const ctx = ctxFor([
+      ...makePublishedDewsTables(rows),
+      { match: "FROM stress_signal_history WHERE snapshot_date = ?", rows: [] },
+    ]);
+    ctx.trackedStablecoinAssets = assets;
+    ctx.trackedStablecoinIds = new Set(assets.map((asset) => asset.id));
+    ctx.stablecoinAssetById = new Map(assets.map((asset) => [asset.id, asset]));
+
+    const dewsStress = (await collectDewsStress(ctx)).value!;
+    expect(dewsStress).toMatchObject({
+      alertPlusMcapUsd: 50e6,
+      alertPlusSupplyCoverage: {
+        complete: false,
+        observedCount: 2,
+        unavailableCount: 0,
+        carriedCount: 1,
+        carriedIds: ["coin-2"],
+      },
+    });
+    const input: DigestInputData = { ...BASE_DIGEST_INPUT, activeDepegCount: 0, topDepegs: [], dewsStress };
+    expect(buildUserPrompt(input)).toContain("ALERT+ known supply subtotal: $50.00M");
   });
 });

@@ -123,7 +123,7 @@ export function supplyObservationClock(asset: Pick<PeggedAsset, "supplyObservedA
 export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
   "id" | "supplySource" | "supplyObservedAt" | "supplyRestored" | "supplyUnavailableReason" | "supplyPerimeter" | "circulating" | "chainCirculating" | "chainPartition"
 >, runStartedAt?: number): Pick<PeggedAsset,
-  "supplySource" | "supplyUnavailableReason" | "supplyObservedAt" | "supplyRestored" | "supplyGapFill" | "supplyChainGuard"
+  "supplySource" | "supplyUnavailableReason" | "supplyObservedAt" | "supplyRestored" | "supplyRestoreMode" | "supplyGapFill" | "supplyChainGuard"
   | "circulating" | "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth" | "chainCirculating" | "chains" | "supplyPerimeter" | "chainPartition"
 > | null {
   const assetId = String(asset.id);
@@ -151,6 +151,7 @@ export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
     supplyUnavailableReason: reason ?? undefined,
     supplyObservedAt: undefined,
     supplyRestored: undefined,
+    supplyRestoreMode: undefined,
     supplyGapFill: undefined,
     supplyChainGuard: undefined,
     supplyPerimeter: undefined,
@@ -172,6 +173,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         gecko_id: _ignoredSnakeCase,
         supplyObservedAt: _ignoredSupplyObservedAt,
         supplyRestored: _ignoredSupplyRestored,
+        supplyRestoreMode: _ignoredSupplyRestoreMode,
         supplyUnavailableReason: _ignoredSupplyUnavailableReason,
         supplyPerimeter: _ignoredSupplyPerimeter,
         supplyChainGuard: _ignoredSupplyChainGuard,
@@ -227,6 +229,9 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         ...(hasUsablePrice && priceDerivation.success ? { priceDerivation: priceDerivation.data } : {}),
         ...(supplyObservedAt != null ? { supplyObservedAt } : {}),
         ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
+        ...(asset.supplyRestored === true && asset.supplyRestoreMode === "outage-fallback"
+          ? { supplyRestoreMode: "outage-fallback" as const }
+          : {}),
         ...(asset.id === SFRAX_STOCK_PERIMETER.assetId && !hold && asset.supplyPerimeter ? { supplyPerimeter: asset.supplyPerimeter } : {}),
         ...(supplyChainGuard.success ? { supplyChainGuard: supplyChainGuard.data } : {}),
         circulatingPrevDay: toPegBuckets(asset.circulatingPrevDay),
@@ -380,6 +385,8 @@ function markRestoredSupply(asset: PeggedAsset, nowSec: number): PeggedAsset | n
   if (observedAt == null) return null;
   const restored = cloneCachedAsset(asset);
   restored.supplyRestored = true;
+  // Routine restores stay unmarked; the outage fallback tags its own carries.
+  delete restored.supplyRestoreMode;
   restored.supplyObservedAt = observedAt;
   if (asset.chainPartition || (asset.supplySource === "coingecko-fallback" && isOnchainSupplyPartitionExcluded(String(asset.id)))) {
     const partition = restoreCuratedAggregateChainPartition({ ...restored, chainCirculating: {} }, asset, nowSec, true);
@@ -909,6 +916,7 @@ export function withholdUnclockedCarriedSupply(assets: PeggedAsset[]): string[] 
     asset.circulatingPrevWeek = null;
     asset.circulatingPrevMonth = null;
     delete asset.supplyRestored;
+    delete asset.supplyRestoreMode;
     delete asset.supplyObservedAt;
     delete asset.supplyGapFill;
     delete asset.supplyPerimeter;

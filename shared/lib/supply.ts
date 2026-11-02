@@ -1,3 +1,5 @@
+import type { SupplyRestoreMode } from "../types/market";
+
 /**
  * Carry-forward ceiling for last-known-good supplemental supply. Restores
  * preserve the original supplyObservedAt, so age compounds run-over-run;
@@ -9,6 +11,17 @@ export const SUPPLEMENTAL_RESTORE_MAX_AGE_SEC = 7 * 86400;
 export const SUPPLEMENTAL_RESTORE_MAX_FUTURE_SKEW_SEC = 60;
 
 type PegBucketRecord = Record<string, number> | null | undefined;
+
+/**
+ * A carry produced by the DefiLlama-outage fallback. Routine main-path carries
+ * (chain-dropout repair, coverage restore) keep their existing treatment; only
+ * this mode is flagged as an outage restore by PSI and the digest.
+ */
+export function isOutageFallbackCarry(
+  c: { supplyRestored?: boolean; supplyRestoreMode?: SupplyRestoreMode },
+): boolean {
+  return c.supplyRestored === true && c.supplyRestoreMode === "outage-fallback";
+}
 
 export type SupplyBucketInvalidReason = "not-a-record" | "non-finite-bucket" | "negative-bucket" | "overflow";
 

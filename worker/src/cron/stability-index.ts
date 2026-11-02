@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
@@ -60,9 +60,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       supplyUnavailableIds.push(coin.id);
       continue;
     }
-    // A DefiLlama-outage carry keeps its original clock and source; it is a
+    // An outage-fallback restore keeps its original clock and source; it is a
     // documented weight, not a supply observation made by this run (R6).
-    if (coin.supplyRestored === true) carriedSupplyIds.push(coin.id);
+    // Routine main-path carries (chain dropout, coverage restore) stay observed.
+    if (isOutageFallbackCarry(coin)) carriedSupplyIds.push(coin.id);
     totalMcapUsd += mcap;
     const prevWeek = getPrevWeekRawOrNull(coin);
     if (prevWeek != null && Number.isFinite(prevWeek) && prevWeek >= 0) {

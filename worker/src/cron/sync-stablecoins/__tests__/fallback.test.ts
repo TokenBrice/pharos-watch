@@ -7,7 +7,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { FROZEN_SNAPSHOTS, FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
@@ -15,6 +16,7 @@ import { NAV_PARENT_ONLY_GECKO_IDS } from "../supplemental-assets";
 import type { PeggedAsset } from "../enrich-prices";
 import type { PreviousStablecoinsLoadResult } from "../shared";
 import { normalizeStablecoinsPayload } from "../shared";
+import { MIN_VALID_ASSET_COUNT } from "../../../lib/constants";
 import * as structuredLog from "../../../lib/structured-log";
 import * as onchainSupply from "../supplemental-assets/onchain-supply";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
@@ -388,7 +390,11 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(onchainSupply.fetchCuratedAggregateOnChainMcap).not.toHaveBeenCalled();
     expect(result.status).toBe("degraded");
     expect(result.itemCount).toBeGreaterThan(0);
-    expect(JSON.parse(result.metadata!)).toMatchObject({
+    const metadata = JSON.parse(result.metadata!) as {
+      rowsRead: number;
+      sourceCoverage: { coingeckoFallbackAssets: number };
+    };
+    expect(metadata).toMatchObject({
       reason: "previous-stablecoins-publication-unreadable",
       previousCacheState: "error",
       fallbackMode: "coingecko-supply-fallback",
@@ -396,6 +402,42 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       cacheWriteMode: "no-write",
       capabilities: { stablecoinsCache: false, depegPipeline: false },
     });
+    // Frozen archive rows are injected, not CoinGecko-served: rowsRead must not
+    // absorb them even though itemCount still describes the withheld payload.
+    expect(result.itemCount).toBe(metadata.rowsRead + FROZEN_SNAPSHOTS.length);
+    expect(metadata.sourceCoverage.coingeckoFallbackAssets).toBe(metadata.rowsRead);
+  });
+
+  it("publishes frozen archive rows with their captured chains and source during an outage", async () => {
+    const snapshot = FROZEN_SNAPSHOTS_BY_ID.get("usdv-solomon")!;
+    const frozenRow = { ...(snapshot.peggedAssetRow as unknown as PeggedAsset) };
+    // A previous publication whose frozen row carries a multi-day-old clock must
+    // not be treated as a stale provider read and have its chains nulled.
+    const previous: PeggedAsset = {
+      ...frozenRow,
+      supplyObservedAt: NOW_SEC - 3 * 86_400,
+      chainCirculating: Object.fromEntries(Object.entries(frozenRow.chainCirculating ?? {}).map(
+        ([label, row]) => [label, { ...(row as Record<string, unknown>), current: 123 }],
+      )),
+    };
+    subPhaseMocks.loadPreviousStablecoinsById.mockResolvedValueOnce({
+      previousAssetsById: new Map([[snapshot.id, previous]]), cacheState: { state: "ok" },
+    });
+
+    await syncViaCoingeckoFallback(mockD1([]), buildRealCgData(Infinity), undefined, NOW_SEC);
+    const write = subPhaseMocks.validateAndWriteStablecoinsCache.mock.calls[0][0];
+    const frozenAssets = write.assets.filter((asset) => FROZEN_IDS.has(String(asset.id)));
+    const coingeckoServed = write.assets.filter((asset) => !FROZEN_IDS.has(String(asset.id)));
+
+    // The floor grades CoinGecko-served rows only; the archived cohort rides
+    // along after it passes.
+    expect(coingeckoServed.length).toBeGreaterThanOrEqual(MIN_VALID_ASSET_COUNT);
+    expect(frozenAssets).toHaveLength(FROZEN_SNAPSHOTS.length);
+    expect(frozenAssets.every((asset) => typeof asset.supplySource === "string" && asset.supplySource.length > 0))
+      .toBe(true);
+    expect(write.assets.find((asset) => asset.id === "usr-resolv")?.supplySource).toBe("defillama");
+    expect(write.assets.find((asset) => asset.id === snapshot.id)?.chainCirculating)
+      .toEqual(frozenRow.chainCirculating);
   });
 
   // -----------------------------------------------------------------------

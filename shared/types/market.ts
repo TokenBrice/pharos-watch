@@ -229,6 +229,14 @@ export const SupplyObservationProvenanceSchema = z.object({
 });
 export type SupplyObservationProvenance = z.infer<typeof SupplyObservationProvenanceSchema>;
 
+/**
+ * Why a `supplyRestored` row was carried. Only the DefiLlama-outage fallback sets
+ * `outage-fallback`; routine chain-dropout and coverage carries stay unmarked so
+ * consumers can keep treating them as normal main-path carries.
+ */
+export const SupplyRestoreModeSchema = z.enum(["outage-fallback"]);
+export type SupplyRestoreMode = z.infer<typeof SupplyRestoreModeSchema>;
+
 const StablecoinDataRawSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -252,6 +260,7 @@ const StablecoinDataRawSchema = z.object({
   supplySource: z.string().optional(),
   supplyObservedAt: z.number().nullable().optional(),
   supplyRestored: z.boolean().optional(),
+  supplyRestoreMode: SupplyRestoreModeSchema.optional(),
   supplyUnavailableReason: SupplyUnavailableReasonSchema.optional(),
   supplyPerimeter: SfraxStockPerimeterObservationSchema.optional(),
   supplyGapFill: SupplyGapFillProvenanceSchema.optional(),
@@ -309,6 +318,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   supplySource: asset.supplySource,
   ...(asset.supplyObservedAt != null ? { supplyObservedAt: asset.supplyObservedAt } : {}),
   ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
+  ...(asset.supplyRestoreMode != null ? { supplyRestoreMode: asset.supplyRestoreMode } : {}),
   ...(asset.supplyUnavailableReason != null ? { supplyUnavailableReason: asset.supplyUnavailableReason } : {}),
   ...(asset.supplyPerimeter != null ? { supplyPerimeter: asset.supplyPerimeter } : {}),
   ...(asset.supplyGapFill != null ? { supplyGapFill: asset.supplyGapFill } : {}),

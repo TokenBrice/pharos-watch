@@ -47,7 +47,7 @@ export const StabilityIndexInputDegradationSchema = z.object({
   openDepegNoPrice: z.boolean().optional(),
   openDepegsWithoutPrice: z.number().int().nullable().optional(),
   supplyUnavailableIds: z.array(z.string()).optional(),
-  /** Carried (supplyRestored) members included as weights, never as this run's observations. */
+  /** Outage-fallback carried members (`supplyRestoreMode`), weights but not this run's observations. */
   carriedSupplyIds: z.array(z.string()).optional(),
   trendUnavailableIds: z.array(z.string()).optional(),
 });
