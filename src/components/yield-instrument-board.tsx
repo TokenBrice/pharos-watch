@@ -231,6 +231,7 @@ function YieldInstrumentRowBase({
     safetyScore,
     pysColor,
     breakdown,
+    pysDrags,
     confidenceStyle,
     confidenceLabel,
     freshness,
@@ -398,7 +399,13 @@ function YieldInstrumentRowBase({
             />
           </div>
           <div className="mt-1 truncate text-3xs text-muted-foreground">
-            <YieldCohortChip cohort={row.cohortPercentile} />
+            {pysDrags.length > 0 ? (
+              <span className="tabular-nums text-state-warn-bright" title="PYS points lost to this factor">
+                {pysDrags.map((drag) => `−${Math.abs(drag.points)} ${drag.label}`).join(" · ")}
+              </span>
+            ) : (
+              <YieldCohortChip cohort={row.cohortPercentile} />
+            )}
           </div>
         </div>
 
