@@ -138,20 +138,6 @@ export function decodeMintBurnDisabledKeys(policy: string): Set<string> {
   return new Set(keys);
 }
 
-/**
- * The pause column is derived, self-healing state. Treat a corrupt value as
- * empty so readers and the producer can rewrite it; the disabled column stays
- * strict because publishing a wrong scope would re-enable a disabled leg.
- */
-export function decodeMintBurnPausedKeys(policy: string): Set<string> {
-  try {
-    return decodeMintBurnDisabledKeys(policy);
-  } catch (error) {
-    if (!(error instanceof MintBurnPublicationPolicyDecodeError)) throw error;
-    return new Set();
-  }
-}
-
 /** The durable disabled scope a rollout must not silently erase. */
 export async function readMintBurnDisabledKeys(db: D1Database, signal?: AbortSignal): Promise<Set<string>> {
   const row = await runWithOverloadRetry(
@@ -190,8 +176,7 @@ export async function syncMintBurnPublicationPolicy(
       VALUES (1, ?, (SELECT json_group_array(config_key) FROM (${pauseCandidatesSql})), ?)
       ON CONFLICT(id) DO UPDATE SET disabled_keys = excluded.disabled_keys, updated_at = excluded.updated_at,
         paused_keys = (SELECT json_group_array(value) FROM (
-          SELECT value FROM json_each(CASE WHEN json_valid(mint_burn_publication_policy.paused_keys)
-            THEN mint_burn_publication_policy.paused_keys ELSE '[]' END) AS prior
+          SELECT value FROM json_each(mint_burn_publication_policy.paused_keys) AS prior
           WHERE ? IS NULL
             OR prior.value IN (SELECT value FROM json_each(?))
             OR prior.value IN (SELECT value FROM json_each(?))
@@ -324,8 +309,7 @@ export function compactMintBurnPublication(publication: MintBurnPublication): Mi
 export async function persistMintBurnResumptions(db: D1Database, keys: readonly string[], policy: string) {
   if (keys.length === 0) return;
   await executeAtomicBatch(db, [db.prepare(`UPDATE mint_burn_publication_policy SET paused_keys = (
-    SELECT json_group_array(value) FROM json_each(
-      CASE WHEN json_valid(paused_keys) THEN paused_keys ELSE '[]' END)
+    SELECT json_group_array(value) FROM json_each(paused_keys)
     WHERE value NOT IN (SELECT value FROM json_each(?))
   ) WHERE id = 1 AND disabled_keys = ?`).bind(JSON.stringify(keys), policy)]);
 }
@@ -335,8 +319,7 @@ export async function persistMintBurnQuarantines(db: D1Database, keys: readonly 
   if (keys.length === 0) return;
   await executeAtomicBatch(db, [db.prepare(`UPDATE mint_burn_publication_policy SET paused_keys = (
     SELECT json_group_array(value) FROM (
-      SELECT value FROM json_each(
-        CASE WHEN json_valid(paused_keys) THEN paused_keys ELSE '[]' END)
+      SELECT value FROM json_each(paused_keys)
       UNION SELECT value FROM json_each(?)
     )
   ) WHERE id = 1 AND disabled_keys = ?`).bind(JSON.stringify(keys), policy)]);

@@ -44,9 +44,13 @@ function broadcastJob(jobId: string, excludeChatId?: string) {
 }
 
 function storedMessageHtml(sqlite: DatabaseSync): unknown[] {
-  return sqlite.prepare(
-    "SELECT CASE WHEN json_valid(payload_json) THEN json_extract(payload_json, '$.messageHtml') END AS message_html FROM telegram_jobs",
-  ).all().map((row) => (row as { message_html: unknown }).message_html);
+  // A scrub must remove the key, not corrupt the payload: an invalid payload
+  // would also read as null, so require valid JSON first.
+  const rows = sqlite.prepare(
+    "SELECT json_valid(payload_json) AS valid, json_extract(payload_json, '$.messageHtml') AS message_html FROM telegram_jobs",
+  ).all() as Array<{ valid: number; message_html: unknown }>;
+  for (const row of rows) expect(row.valid).toBe(1);
+  return rows.map((row) => row.message_html);
 }
 
 describe("broadcast job payload retention", () => {
@@ -130,5 +134,7 @@ describe("broadcast job payload retention", () => {
     expect(await sweepTelegramJobs(db, NOW + 1)).toMatchObject({ jobsDone: 1 });
     expect(sqlite.prepare("SELECT state FROM telegram_jobs").get()).toEqual({ state: "done" });
     expect(storedMessageHtml(sqlite)).toEqual([null]);
+    expect(sqlite.prepare("SELECT json_extract(payload_json, '$.scope') AS scope FROM telegram_jobs").get())
+      .toEqual({ scope: "all" });
   });
 });

@@ -151,7 +151,7 @@ describe("mint/burn disabled symbols", () => {
     ).get()).toEqual(before);
   });
 
-  it("rewrites a corrupt paused_keys value instead of aborting the run", async () => {
+  it("fails the run closed on a corrupt paused_keys value and leaves the row for repair", async () => {
     const { db, sqlite } = fixtures.open();
     sqlite.prepare(
       `INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
@@ -161,16 +161,14 @@ describe("mint/burn disabled symbols", () => {
       .filter((config) => config.symbol.toUpperCase() !== "USDC")
       .map(mintBurnConfigKey);
 
-    const result = await new MintBurnRun(db, "alchemy-key", {
+    await expect(new MintBurnRun(db, "alchemy-key", {
       lane: "critical",
       disabledConfigIds,
       disabledSymbols: ["USDC"],
-    }).execute();
+    }).execute()).rejects.toThrow();
 
-    expect(result.status).toBe("ok");
-    const paused = JSON.parse(String((sqlite.prepare(
+    expect((sqlite.prepare(
       "SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1",
-    ).get() as { paused_keys: string }).paused_keys)) as string[];
-    expect(Array.isArray(paused)).toBe(true);
+    ).get() as { paused_keys: string }).paused_keys).toBe("not-json");
   });
 });
