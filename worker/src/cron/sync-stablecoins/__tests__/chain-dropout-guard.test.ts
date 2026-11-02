@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema, SupplyGapFillProvenanceSchema } from "@shared/types/market";
-import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
+import {
+  getCirculatingRawOrNull,
+  getPrevDayRawOrNull,
+  getPrevMonthRawOrNull,
+  getPrevWeekRawOrNull,
+  SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
+} from "@shared/lib/supply";
 import { buildChainRpcs, hasRegistryRpc } from "../../../lib/chain-registry";
 import { normalizeStablecoinsPayload } from "../shared";
 import type { PeggedAsset } from "../enrich-prices-shared";
@@ -243,6 +249,37 @@ describe("chain dropout guard", () => {
     expect(recovered.supplyRestored).toBeUndefined();
     expect(recovered.supplyChainGuard).toBeUndefined();
     expect(Object.values(recovery.state.pairs).find((pair) => pair.chainId === "xlayer")).toMatchObject({ baselineUsd: 1_400_000_000, baselineObservedAt: NOW + 9 * DAY, quarantinedSince: null });
+  });
+
+  it("withholds the list's partial history when a carried total replaces the provider aggregate", async () => {
+    // BUIDL/TRYB shape (2026-11-01): the dropped chain's row is absent from the
+    // list, so the provider aggregate and its circulatingPrevDay/Week/Month sum
+    // only the surviving chains. The carried total re-adds the dropped baseline,
+    // so that chain-derived history cannot be the baseline of the headline.
+    const asset: PeggedAsset = {
+      ...usdg(), id: "buidl-blackrock", name: "BlackRock USD Institutional Digital Liquidity Fund", symbol: "BUIDL",
+      circulating: { peggedUSD: 2_007_537_545.52 },
+      circulatingPrevDay: { peggedUSD: 2_007_537_545.52 },
+      circulatingPrevWeek: { peggedUSD: 1_998_000_000 },
+      circulatingPrevMonth: { peggedUSD: 1_989_000_000 },
+      chains: ["Ethereum"],
+      chainCirculating: { Ethereum: { current: 2_007_537_545.52, circulatingPrevDay: 2_007_537_545.52 } },
+    };
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [JSON.stringify(["buidl-blackrock", "solana"])]: {
+        assetId: "buidl-blackrock", chainLabel: "Solana", chainId: "solana",
+        baselineUsd: 107_427_733.81, baselineObservedAt: NOW - DAY, baselineSource: "state", quarantinedSince: null,
+      },
+    } };
+
+    const result = await guardChainDropouts({ assets: [asset], now: NOW, state });
+
+    expect(result.quarantinedAssetIds).toEqual(["buidl-blackrock"]);
+    expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined" } });
+    expect(getCirculatingRawOrNull(asset)).toBeCloseTo(2_114_965_279.33, 2);
+    expect(getPrevDayRawOrNull(asset)).toBeNull();
+    expect(getPrevWeekRawOrNull(asset)).toBeNull();
+    expect(getPrevMonthRawOrNull(asset)).toBeNull();
   });
 
   it.each([false, true])("keeps omitted quarantined chains sticky across generations (empty map: %s)", async (emptyMap) => {

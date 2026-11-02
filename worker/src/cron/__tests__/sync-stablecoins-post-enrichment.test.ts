@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { DatabaseSync } from "node:sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
-import { normalizeStablecoinsPayload } from "../sync-stablecoins/shared";
+import { normalizeStablecoinsPayload, stampPriceMetadata } from "../sync-stablecoins/shared";
 import {
   loadPriceCorroborationObservations,
   writePriceCorroborationObservations,
@@ -378,6 +378,29 @@ describe("runPostEnrichmentPricePipeline", () => {
     expect(result.nativePegCorrectionCount).toBe(0);
     expect(asset.price).toBe(1.12);
     expect(asset.priceSource).toBe("coingecko");
+  });
+
+  it("corrects an undated incumbent whose priceUpdatedAt is only this run's application stamp", async () => {
+    // A DefiLlama list quote carries no source observation. `stampPriceMetadata`
+    // records observedAt=null and puts the sync clock in priceUpdatedAt, which is
+    // a publication stamp, not evidence that the incumbent is fresher.
+    const asset = makeAsset({ price: 1.12 });
+    stampPriceMetadata(
+      asset, "defillama", "single-source", null, null,
+      ["defillama"], ["defillama"], 1_700_000_050, "defillama", null,
+    );
+    expect(asset.priceObservedAt).toBeNull();
+    expect(asset.priceUpdatedAt).toBe(1_700_000_050);
+    fetchCurrentNativePegImpliedUsdQuotesMock.mockResolvedValue(nativeQuote(1_700_000_000));
+
+    const result = await runPostEnrichmentPricePipeline(nativePipelineInput(asset), "");
+
+    expect(isAbortResult(result)).toBe(false);
+    if (isAbortResult(result)) throw new Error("unexpected abort result");
+    expect(result.nativePegCorrectionCount).toBe(1);
+    expect(asset.price).toBe(1.08);
+    expect(asset.priceSource).toBe("coingecko-native-implied");
+    expect(asset.priceObservedAt).toBe(1_700_000_000);
   });
 
   it("replaces high-confidence mixed-source output when only one hard source disagrees with native pricing", async () => {

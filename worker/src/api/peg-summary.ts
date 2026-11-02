@@ -177,7 +177,9 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       }),
     // Producer-published by the quarter-hourly report-cards pass; the direct
     // compute below re-scans ~21K depeg_events rows, so it is fallback-only.
-    loadPegAnalyticsCache(db, { requireCurrentUtcDay: true }).catch(() => ({ kind: "miss" as const, reason: "missing-cache" as const })),
+    // A previous-day generation is still accepted: its day-scoped counters are
+    // re-bucketed below, so midnight never forces a recompute or an outage.
+    loadPegAnalyticsCache(db).catch(() => ({ kind: "miss" as const, reason: "missing-cache" as const })),
   ]);
 
   let pegDataById: ReadonlyMap<string, PegSummaryCoin>;
@@ -208,7 +210,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       return null;
     });
     if (pegAnalytics === null) {
-      const retained = await loadPegAnalyticsCache(db, { maxAgeMs: Infinity, requireCurrentUtcDay: true });
+      const retained = await loadPegAnalyticsCache(db, { maxAgeMs: Infinity });
       if (retained.kind !== "ok") {
         return jsonResponse({
           error: "Canonical incident history unavailable",

@@ -579,6 +579,14 @@ export async function guardChainDropouts(input: {
     const partialCoverage = material && deficit > 0 && deficit <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio * (aggregate + deficit);
     if (material && !partialCoverage) {
       asset.supplyRestored = true;
+      // The provider's aggregate history sums only the chains present in this
+      // packet; the carried total re-adds the dropped chains, so pairing the two
+      // would publish a synthetic move (R1: a carried generation keeps its own
+      // history, and here that history is partial). The change stays unavailable
+      // until a fresh observed packet lands.
+      asset.circulatingPrevDay = null;
+      asset.circulatingPrevWeek = null;
+      asset.circulatingPrevMonth = null;
       const carriedClocks = unrepaired
         .map((candidate) => candidate.evidence.baselineObservedAt)
         .filter((clock): clock is number => typeof clock === "number" && Number.isSafeInteger(clock) && clock > 0);

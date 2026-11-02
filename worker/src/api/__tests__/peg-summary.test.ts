@@ -252,13 +252,16 @@ describe("handlePegSummary", () => {
   it.each([false, true].flatMap((retained) => (["failed-read", "malformed-row"] as const).map((failure) => ({ retained, failure }))))(
     "does not substitute raw analytics on $failure projection with retained cache=$retained", async ({ retained, failure }) => {
     vi.useFakeTimers();
-    vi.setSystemTime(nowSec * 1000);
-    const computedAtSec = sameDayCachedAt(3600);
+    // A fixed mid-day clock keeps the 1h-old row stale on every run; clamping a
+    // real clock to midnight would make the row accidentally fresh (00:00-00:30 UTC).
+    const requestNowSec = Date.parse("2026-07-13T12:00:00Z") / 1000;
+    vi.setSystemTime(requestNowSec * 1000);
+    const computedAtSec = requestNowSec - 3600;
     const pegData = [makeCachedPegCoin({ eventCount: 1 })];
     const reason = failure === "failed-read" ? "incident-projection-read-failed" : "incident-projection-invalid";
     const db = mockD1([
       { match: "cache", matchBinds: ["stablecoins"], rows: [{
-        key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether" })] }), updated_at: nowSec,
+        key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether" })] }), updated_at: requestNowSec,
       }] },
       { match: "cache", matchBinds: ["peg-analytics"], rows: retained ? [{
         key: "peg-analytics", updated_at: computedAtSec,
@@ -281,7 +284,7 @@ describe("handlePegSummary", () => {
       const body = await readJsonResponse(res, 200) as { coins: PegSummaryCoin[]; degradedReason: string };
       expect(body.degradedReason).toBe(reason);
       expect(body.coins[0].eventCount).toBe(1);
-      expect(res.headers.get("X-Data-Age")).toBe(String(nowSec - computedAtSec));
+      expect(res.headers.get("X-Data-Age")).toBe("3600");
     } else {
       expect(await readJsonResponse(res, 503)).toMatchObject({ reason });
     }
@@ -1172,38 +1175,116 @@ describe("handlePegSummary", () => {
     expect(body.summary?.depegEventsYesterday).toBe(0);
   });
 
-  it("fails closed instead of retaining previous-day counters during a projection outage", async () => {
+  it("serves a previous-day accepted generation across midnight without recomputing", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(Date.parse("2026-07-13T00:05:00Z"));
     const publishedAtSec = Date.parse("2026-07-12T23:46:00Z") / 1000;
-    const asset = makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 });
+    const todayStartSec = Date.parse("2026-07-13T00:00:00Z") / 1000;
+    const stablecoinsValue = JSON.stringify({
+      peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 })],
+    });
     const db = mockD1([
       { match: "cache", matchBinds: ["stablecoins"], rows: [{
-        key: "stablecoins", value: JSON.stringify({ peggedAssets: [asset] }), updated_at: publishedAtSec,
+        key: "stablecoins", value: stablecoinsValue, updated_at: publishedAtSec,
       }] },
       { match: "cache", matchBinds: ["peg-analytics"], rows: [{
         key: "peg-analytics", updated_at: publishedAtSec,
         value: JSON.stringify({
           computedAtSec: publishedAtSec,
-          depegEventsToday: 1,
-          depegEventsYesterday: 0,
-          pegData: [makeCachedPegCoin()],
+          // Previous-day counters that must never be relabelled as today's.
+          depegEventsToday: 9,
+          depegEventsYesterday: 9,
+          pegData: [makeCachedPegCoin({ eventCount: 7 })],
         }),
       }] },
       { match: "cache", rows: [{
-        key: "stablecoins", value: JSON.stringify({ peggedAssets: [asset] }), updated_at: publishedAtSec,
+        key: "stablecoins", value: stablecoinsValue, updated_at: publishedAtSec,
       }] },
       {
         match: "pharos:depeg-event-projection:active-incidents",
         rows: [],
         throwError: new Error("projection unavailable"),
       },
-      { match: "depeg_events", rows: [] },
+      {
+        match: "depeg_events",
+        rows: [
+          makeDepegEventRow({ id: 1, started_at: todayStartSec + 60 }),
+          makeDepegEventRow({ id: 2, started_at: todayStartSec - 60 }),
+        ],
+      },
       { match: "dex_prices", rows: [] },
       { match: "supply_history", rows: [] },
     ]);
 
-    await readJsonResponse(await handlePegSummary(db), 503);
+    const res = await handlePegSummary(db);
+    const body = await readJsonResponse(res, 200) as {
+      coins: PegSummaryCoin[];
+      summary: { depegEventsToday: number; depegEventsYesterday: number };
+      degradedReason?: string;
+    };
+    // The 19-minute-old generation is accepted, so the failing projection is
+    // never consulted and the route stays cacheable.
+    expect(body.degradedReason).toBeUndefined();
+    expect(res.headers.get("Cache-Control")).toContain("s-maxage=300");
+    expect(body.coins.find((coin) => coin.id === "usdt-tether")?.eventCount).toBe(7);
+    // Counters are re-bucketed against the request's UTC day, not the publish day.
+    expect(body.summary.depegEventsToday).toBe(1);
+    expect(body.summary.depegEventsYesterday).toBe(1);
+  });
+
+  it("retains a stale previous-day generation during a projection outage and re-buckets its counters", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse("2026-07-13T00:26:00Z"));
+    const publishedAtSec = Date.parse("2026-07-12T23:46:00Z") / 1000;
+    const todayStartSec = Date.parse("2026-07-13T00:00:00Z") / 1000;
+    const stablecoinsValue = JSON.stringify({
+      peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 })],
+    });
+    const db = mockD1([
+      { match: "cache", matchBinds: ["stablecoins"], rows: [{
+        key: "stablecoins", value: stablecoinsValue, updated_at: publishedAtSec,
+      }] },
+      { match: "cache", matchBinds: ["peg-analytics"], rows: [{
+        key: "peg-analytics", updated_at: publishedAtSec,
+        value: JSON.stringify({
+          computedAtSec: publishedAtSec,
+          depegEventsToday: 9,
+          depegEventsYesterday: 9,
+          pegData: [makeCachedPegCoin({ eventCount: 7 })],
+        }),
+      }] },
+      { match: "cache", rows: [{
+        key: "stablecoins", value: stablecoinsValue, updated_at: publishedAtSec,
+      }] },
+      {
+        match: "pharos:depeg-event-projection:active-incidents",
+        rows: [],
+        throwError: new Error("projection unavailable"),
+      },
+      {
+        match: "depeg_events",
+        rows: [
+          makeDepegEventRow({ id: 1, started_at: todayStartSec + 60 }),
+          makeDepegEventRow({ id: 2, started_at: todayStartSec - 60 }),
+        ],
+      },
+      { match: "dex_prices", rows: [] },
+      { match: "supply_history", rows: [] },
+    ]);
+
+    const res = await handlePegSummary(db);
+    const body = await readJsonResponse(res, 200) as {
+      coins: PegSummaryCoin[];
+      summary: { depegEventsToday: number; depegEventsYesterday: number };
+      degradedReason: string;
+    };
+    // The 40-minute-old row misses the normal window, the recompute fails, and
+    // the retained load must serve it with re-bucketed counters instead of 503.
+    expect(body.degradedReason).toBe("incident-projection-read-failed");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(body.coins.find((coin) => coin.id === "usdt-tether")?.eventCount).toBe(7);
+    expect(body.summary.depegEventsToday).toBe(1);
+    expect(body.summary.depegEventsYesterday).toBe(1);
   });
 
   it("recomputes current deviation and reference admission from the live snapshot", async () => {

@@ -279,7 +279,11 @@ export async function runPostEnrichmentPricePipeline(
     } else if (
       !currentHasStrongBypassAuthority &&
       nativePegImpliedUsd != null &&
-      nativePegImpliedUsd.updatedAt >= (asset.priceObservedAt ?? asset.priceUpdatedAt ?? 0) &&
+      // Only a named source observation can outrank the native quote. An undated
+      // incumbent has observedAt=null while priceUpdatedAt is merely this run's
+      // application stamp, so it must stay correctable (it carries no evidence
+      // that it is fresher than the native observation).
+      nativePegImpliedUsd.updatedAt >= (asset.priceObservedAt ?? 0) &&
       nativePegDivergenceBps != null &&
       nativePegDivergenceBps > NATIVE_PEG_PRICE_GUARD_MAX_DRIFT_BPS
     ) {
