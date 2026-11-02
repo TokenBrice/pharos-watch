@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import ts from "typescript";
 import {
   assertIsolateLocalStateRegistryComplete,
+  findModuleStateDeclarations,
   findUnregisteredIsolateLocalState,
+  listStateScanFiles,
+  matchesCandidatePrefilter,
 } from "../lib/isolate-local-state-registry-check";
 import {
   ISOLATE_LOCAL_STATE_REGISTRY,
@@ -83,8 +86,14 @@ describe("isolate-local state registry", () => {
   it.each([
     ["a type annotation", "const responseCache: Record<string, number> = {};"],
     ["an object type annotation", "const responseCache: { hit: number; miss: number } = {};"],
+    ["an arrow-function type annotation", "const responseCache: Map<string, (value: number) => string> = {};"],
+    ["a multi-line generic type annotation", "const responseCache: Record<\n        string,\n        number\n      > = {};"],
     ["a comment before the literal", "const responseCache = /* seeded */ {};"],
-  ])("detects a stateful object literal declared with %s", (_label, declaration) => {
+    ["a line comment before the literal", "const responseCache =\n        // seeded\n        {};"],
+    ["a line break before the literal", "const responseCache =\n        {};"],
+    ["a comment before the `=`", "const responseCache /* seeded */ = {};"],
+    ["a second declaration on the same line", "const seeded = 1; let responseCache = loadCache();"],
+  ])("detects a stateful declaration with %s", (_label, declaration) => {
     const root = roots.makeRoot();
     roots.writeText(root, "state.ts", `
       ${declaration}
@@ -124,6 +133,23 @@ describe("isolate-local state registry", () => {
 
   it("covers all real Worker and Pages isolate-local module state", () => {
     expect(findUnregisteredIsolateLocalState(ISOLATE_LOCAL_STATE_REGISTRY, { root })).toEqual([]);
+  }, 15_000);
+
+  it("prefilters a strict superset of the files the AST pass reports state in", () => {
+    const files = listStateScanFiles(root);
+    const dropped: string[] = [];
+    let admitted = 0;
+    for (const file of files) {
+      const prefiltered = matchesCandidatePrefilter(readFileSync(file, "utf8"));
+      if (prefiltered) admitted += 1;
+      // The prefilter is the only thing standing between untracked module state
+      // and a green guard, so it is only allowed to skip files the AST pass
+      // agrees hold no state - declared and mutated or not.
+      else if (findModuleStateDeclarations(root, file).length > 0) dropped.push(relative(root, file));
+    }
+    expect(dropped, `Files with module state the prefilter drops:\n${dropped.join("\n")}`).toEqual([]);
+    // Parsing the admitted files is what the guard costs, so keep them rare.
+    expect(admitted / files.length).toBeLessThan(0.3);
   }, 15_000);
 
 });
