@@ -17,8 +17,12 @@ these, so the flags below prompt manual lifecycle review rather than auto-close.
 Computed daily by `worker/src/lib/depeg-lifecycle.ts` inside the digest cron's
 active-depeg collector, before the prompt slice. The collector excludes
 untracked/frozen coins and unavailable market caps. Flags require a fresh live
-price and a positive stored peg reference; a stale stored peak never triggers
-a freeze review.
+price and a positive current authoritative peg reference. USD-quote events use
+that current reference (the same authority `/api/peg-summary` uses, rederived
+from the stablecoins snapshot); native-quote events use the event-native
+reference. The reference latched when the event opened is not used for
+USD-quoted events because FX and commodity references drift; a stale stored
+peak never triggers a freeze review.
 The 21- and 30-day thresholds use a rounded-hourly age that is then floored
 into days, so they can trip up to ~30 minutes early.
 
@@ -32,9 +36,10 @@ into days, so they can trip up to ~30 minutes early.
 - **Cache:** D1 `cache` table, key `depeg:lifecycle-flags` —
   `{ updatedAt, flags: [{ stablecoinId, symbol, kind, currentBps, ageDays, mcapUsd }] }`,
   sorted by |deviation| × mcap. A digest run whose active-depeg read failed,
-  whose stablecoins price cache was stale, or whose open-event supply was
-  unreadable leaves this key untouched, so `updatedAt` names the last successful
-  read and the prior queue stays pending.
+  whose stablecoins price cache was stale, whose open-event supply was
+  unreadable, or which could not resolve a current reference for an open
+  USD-quote event leaves this key untouched, so `updatedAt` names the last
+  successful read and the prior queue stays pending.
 - **Cron metadata:** the `daily-digest` cron lane's metadata string appends
   `lifecycle-review: SYMBOL:kind|…` whenever flags exist, so the admin crons
   view surfaces pending reviews without a new UI surface.

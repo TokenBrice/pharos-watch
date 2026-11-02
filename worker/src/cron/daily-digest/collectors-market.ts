@@ -100,6 +100,7 @@ export async function collectActiveDepegs(
     let activeDepegCount = 0;
     const activeDepegSignalKeys: string[] = [];
     let supplyUnavailable = false;
+    let referenceUnavailable = false;
 
     const withImpact = rows.flatMap((row) => {
       if (!ctx.trackedStablecoinIds.has(row.stablecoin_id) || FROZEN_IDS.has(row.stablecoin_id)) {
@@ -133,17 +134,39 @@ export async function collectActiveDepegs(
       const priceObservedAt = nativeEvent ? nativeObservation?.observedAt : usdObservedAt;
       const direction = row.direction;
       const bps = direction === "below" ? -Math.abs(row.peak_deviation_bps) : Math.abs(row.peak_deviation_bps);
-      // Severity decisions run on the live deviation vs the event's peg
-      // reference; the stored peak is context only. Without a usable live
-      // price the peak remains the basis, flagged so downstream consumers
-      // never mistake it for a current observation.
-      const pegReference =
+      // Native-quote events measure against the event-native reference. A
+      // USD-quoted event measures against the current authoritative reference
+      // (same authority as /api/peg-summary): the reference latched when the
+      // event opened drifts with FX and commodity prices, so it mis-ranks and
+      // mis-flags long-open events. An unavailable current reference is
+      // unknown, never the latched value (R2).
+      const latchedReference =
         typeof row.peg_reference === "number" && Number.isFinite(row.peg_reference) && row.peg_reference > 0
           ? row.peg_reference
           : null;
-      const currentBps = livePrice != null && pegReference != null
-        ? deriveDepegSignal(livePrice, pegReference)?.bps ?? null
+      const observation = nativeEvent ? null : ctx.currentPegObservationById.get(row.stablecoin_id);
+      const observationReference = observation?.pegReference?.valueUsd ?? null;
+      const currentReference =
+        observation != null && !observation.pegReferenceUnavailable &&
+        observationReference != null && Number.isFinite(observationReference) && observationReference > 0
+          ? observationReference
+          : null;
+      if (!nativeEvent && currentReference == null) referenceUnavailable = true;
+      // Severity decisions run on the live deviation; the stored peak is
+      // context only. Without a usable live price the peak remains the basis,
+      // flagged so downstream consumers never mistake it for a current
+      // observation. The published reference is the one a live deviation is
+      // measured against this run.
+      const liveReference = nativeEvent ? latchedReference : currentReference;
+      const currentBps = livePrice != null && liveReference != null
+        ? deriveDepegSignal(livePrice, liveReference)?.bps ?? null
         : null;
+      const pegReference = nativeEvent ? latchedReference : currentReference;
+      // A USD price without a live deviation is not a current observation:
+      // publishing it would pair "(stored peak; live price unavailable)" with
+      // "current $X", and the response lint only checks rows carrying
+      // currentBps. Native rows keep their event-native quote clock.
+      const publishesCurrentObservation = nativeEvent ? livePrice != null : currentBps != null;
       const severityBps = currentBps ?? bps;
       const severityBasis: "current" | "peak-fallback" = currentBps != null ? "current" : "peak-fallback";
       const impactScore = getDepegMarketImpactScore(severityBps, mcapUsd);
@@ -163,10 +186,12 @@ export async function collectActiveDepegs(
         ...(nativeEvent && row.peak_price != null ? { peakPriceNative: row.peak_price } : {}),
         ...(nativeEvent && livePrice != null ? { currentPriceNative: livePrice } : {}),
         ...(pegReference != null ? { pegReference } : {}),
-        ...(livePrice != null && priceObservedAt != null ? { priceObservedAt } : {}),
+        // Marks a reference re-read each run, so editions stay comparable while it drifts.
+        ...(!nativeEvent && pegReference != null ? { pegReferenceBasis: "current" as const } : {}),
+        ...(publishesCurrentObservation && priceObservedAt != null ? { priceObservedAt } : {}),
         ...(currentBps != null ? { currentBps } : {}),
         ...(!nativeEvent && row.peak_price != null ? { peakPriceUsd: row.peak_price } : {}),
-        ...(!nativeEvent && livePrice != null ? { currentPriceUsd: livePrice } : {}),
+        ...(!nativeEvent && publishesCurrentObservation && livePrice != null ? { currentPriceUsd: livePrice } : {}),
         suppressReason: getActiveDepegSuppressReason({ mcapUsd, ageHours, bps: severityBps }),
       };
     });
@@ -193,6 +218,7 @@ export async function collectActiveDepegs(
           peakPriceNative,
           currentPriceNative,
           pegReference,
+          pegReferenceBasis,
           priceObservedAt,
           peakPriceUsd,
           currentPriceUsd,
@@ -213,6 +239,7 @@ export async function collectActiveDepegs(
           ...(currentPriceNative != null ? { currentPriceNative } : {}),
           ...(currentBps != null ? { currentBps } : {}),
           ...(pegReference != null ? { pegReference } : {}),
+          ...(pegReferenceBasis != null ? { pegReferenceBasis } : {}),
           ...(priceObservedAt != null ? { priceObservedAt } : {}),
           ...(peakPriceUsd != null ? { peakPriceUsd } : {}),
           ...(currentPriceUsd != null ? { currentPriceUsd } : {}),
@@ -226,10 +253,18 @@ export async function collectActiveDepegs(
     // a stalled collapse must not escape review by ranking ninth.
     const lifecycleFlags = classifyDepegLifecycle(withImpact);
 
+    // An open USD event without a current authoritative reference cannot be
+    // measured this run. It is named so lifecycle persistence keeps the prior
+    // review queue instead of overwriting it with a queue that silently drops
+    // the coin.
+    const qualityReasons = [
+      ...(supplyUnavailable ? ["active-depeg-supply-unavailable"] : []),
+      ...(referenceUnavailable ? ["active-depeg-reference-unavailable"] : []),
+    ];
     return collectorResult(
       { activeDepegCount, activeDepegSignalKeys, topDepegs, lifecycleFlags },
       [],
-      supplyUnavailable ? ["active-depeg-supply-unavailable"] : [],
+      qualityReasons,
     );
   } catch (error) {
     logWorkerEventArgs("handler", "error", "[daily-digest] Failed to query active depegs:", error);

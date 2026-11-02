@@ -48,7 +48,7 @@ import type { DigestInputData } from "@shared/types/digest";
 import { loadActiveSafetyScoreCohort } from "../../lib/safety-score-active-source";
 import { REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES } from "../digest-input-quality";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
-import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, makeCollectorCtx, makeDailyDigestScenario, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
+import { BASE_DIGEST_INPUT, BASE_SAFETY_CONTEXT, canonicalSafetySource, currentPegObservation, makeCollectorCtx, makeDailyDigestScenario, makeDigestRow, makePublishedDewsTables, missingPublishedGaugeTable, PUBLISHED_GAUGE_SCORE, publishedGaugePayload, publishedGaugeTable, VALID_CAPTURE_MAP_SUMMARY } from "./daily-digest.test-support";
 
 const DEFAULT_EXTENDED = "T. T. T.\n\nT. T. T.\n\nT. T. T.";
 const fixture = (opts: { extended?: string; text?: string; lead?: string; leadSignalId?: string; tone?: string } = {}): ParsedDigestResponse => ({ digestTitle: "T", digestText: opts.text ?? "T.", digestExtended: opts.extended ?? DEFAULT_EXTENDED, digestMeta: JSON.stringify({ leadSignalId: opts.leadSignalId, lead: opts.lead ?? "depeg", tone: opts.tone ?? "dry", coins: ["USDT"] }), strippedDashCount: 0, usedRawTextFallback: false });
@@ -834,6 +834,105 @@ describe("market and risk collectors", () => {
     ctx.trackedStablecoinAssets.push(variant); (ctx.trackedStablecoinIds as Set<string>).add(variant.id); ctx.stablecoinAssetById.set(variant.id, variant); ctx.mcapById.set(variant.id, 1e9);
     const result = await collectActiveDepegs(ctx); expect(ctx.coreAggregateStablecoinIds.has(variant.id)).toBe(false); expect(result.value.topDepegs[0]).toMatchObject({ stablecoinId: "susds-sky", symbol: "sUSDS" });
   });
+  it("measures a USD-quoted gold event against the current reference, not the latched one", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const ctx = ctxFor(depegTable([{
+      stablecoin_id: "xaum-matrixdock", symbol: "XAUM", peg_type: "peggedGOLD", source: "live",
+      direction: "above", peak_deviation_bps: 1660, started_at: now - 10 * 86_400, peg_reference: 4051,
+    }]));
+    const asset = makeAsset({ id: "xaum-matrixdock", symbol: "XAUM", pegType: "peggedGOLD", price: 3902, priceObservedAt: now });
+    (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
+    ctx.stablecoinAssetById.set(asset.id, asset);
+    ctx.mcapById.set(asset.id, 40e6);
+    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(3902)]]);
+    const result = await collectActiveDepegs(ctx);
+    // At today's par against today's gold reference. The latched 4051 reference
+    // would have published ~-368 bps from the same live price.
+    expect(result.value.topDepegs[0]).toMatchObject({
+      severityBasis: "current", currentBps: 0, pegReference: 3902, currentPriceUsd: 3902, bps: 1660,
+    });
+    expect(result.value.lifecycleFlags).toEqual([]);
+  });
+  it("flags a month-old premium against the current reference as chronic-shallow", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const ctx = ctxFor(depegTable([{
+      // The reference latched when the event opened (38.22) is not the current
+      // silver reference (30). Measuring the same live price against it would
+      // read ~-2043 bps and emit no chronic-shallow flag.
+      stablecoin_id: "xagm-matrixdock", symbol: "XAGM", peg_type: "peggedSILVER", source: "live",
+      direction: "above", peak_deviation_bps: 2043, started_at: now - 41 * 86_400, peg_reference: 38.22,
+    }]));
+    const asset = makeAsset({ id: "xagm-matrixdock", symbol: "XAGM", pegType: "peggedSILVER", price: 30.411, priceObservedAt: now });
+    (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
+    ctx.stablecoinAssetById.set(asset.id, asset);
+    ctx.mcapById.set(asset.id, 100e6);
+    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(30)]]);
+    const result = await collectActiveDepegs(ctx);
+    expect(result.value.topDepegs[0]).toMatchObject({
+      currentBps: 137, severityBasis: "current", pegReference: 30, pegReferenceBasis: "current", currentPriceUsd: 30.411,
+    });
+    expect(result.value.lifecycleFlags).toEqual([
+      expect.objectContaining({ stablecoinId: "xagm-matrixdock", kind: "chronic-shallow", currentBps: 137, ageDays: 41 }),
+    ]);
+  });
+  it.each(["missing", "withheld"] as const)(
+    "never falls back to the latched reference when the current reference is %s",
+    async (state) => {
+      const now = Math.floor(Date.now() / 1000);
+      const ctx = ctxFor(depegTable([{
+        stablecoin_id: "xaum-matrixdock", symbol: "XAUM", peg_type: "peggedGOLD", source: "live",
+        direction: "below", peak_deviation_bps: -5000, started_at: now - 41 * 86_400, peg_reference: 5000,
+      }]));
+      const asset = makeAsset({ id: "xaum-matrixdock", symbol: "XAUM", pegType: "peggedGOLD", price: 1000, priceObservedAt: now });
+      (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
+      ctx.stablecoinAssetById.set(asset.id, asset);
+      ctx.mcapById.set(asset.id, 40e6);
+      ctx.currentPegObservationById = state === "withheld"
+        ? new Map([[asset.id, currentPegObservation(null, { pegReferenceUnavailable: true })]])
+        : new Map();
+      const result = await collectActiveDepegs(ctx);
+      // The latched 5000 reference would have produced -8000 bps and a false
+      // stalled-collapse flag.
+      expect(result.value.topDepegs[0]).toMatchObject({ severityBasis: "peak-fallback", bps: -5000 });
+      expect(result.value.topDepegs[0].currentBps).toBeUndefined();
+      expect(result.value.topDepegs[0].pegReference).toBeUndefined();
+      // A live USD price without a current deviation is not a current
+      // observation: no "current $X" beside a stored-peak bps the lint skips.
+      expect(result.value.topDepegs[0].currentPriceUsd).toBeUndefined();
+      expect(result.value.topDepegs[0].priceObservedAt).toBeUndefined();
+      expect(result.qualityReasons).toEqual(["active-depeg-reference-unavailable"]);
+      expect(result.value.lifecycleFlags).toEqual([]);
+      const prompt = buildUserPrompt({ ...BASE_DIGEST_INPUT, topDepegs: result.value.topDepegs });
+      expect(prompt).toContain("(stored peak; live price unavailable)");
+      expect(prompt).not.toContain("current $");
+    },
+  );
+  it("keeps a USD-peg event on the current reference of one", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const ctx = ctxFor(depegTable([{ ...activeRows.usdc, started_at: now - 3_600, peg_reference: 1 }]));
+    ctx.stablecoinAssetById.get("usdc-circle")!.price = 0.98;
+    const result = await collectActiveDepegs(ctx);
+    expect(result.value.topDepegs[0]).toMatchObject({
+      currentBps: -200, severityBasis: "current", pegReference: 1, currentPriceUsd: 0.98, priceObservedAt: now,
+    });
+    expect(result.qualityReasons).toBeUndefined();
+  });
+  it("keeps a native-quote event on the event-native reference", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const ctx = ctxFor(depegTable([{
+      stablecoin_id: "eurc-circle", symbol: "EURC", peg_type: "peggedEUR", source: "live", quote_mode: "native-peg",
+      direction: "below", peak_deviation_bps: -800, started_at: now - 3 * 86_400, peg_reference: 1,
+      current_native_quote: JSON.stringify({ value: 0.92, observedAt: now - 60, source: "coingecko" }),
+    }]));
+    ctx.trackedStablecoinIds = new Set([...ctx.trackedStablecoinIds, "eurc-circle"]);
+    ctx.mcapById.set("eurc-circle", 250e6);
+    // The USD-domain observation map must not override the native reference.
+    ctx.currentPegObservationById = new Map([["eurc-circle", currentPegObservation(1.1)]]);
+    const result = await collectActiveDepegs(ctx);
+    expect(result.value.topDepegs[0]).toMatchObject({
+      quoteMode: "native-peg", currentBps: -800, pegReference: 1, severityBasis: "current",
+    });
+  });
 
   it.each([
     ["persisted native", "live", "native-peg", "fresh", false, 1],
@@ -864,14 +963,16 @@ describe("market and risk collectors", () => {
         quoteState === "malformed" ? "{invalid" : JSON.stringify({ value: 0.98, observedAt: quoteAt, source: "coingecko" }), quoteAt);
     const ctx = makeCollectorCtx(db);
     const asset = makeAsset({ id: "eurc-circle", symbol: "EURC", pegType: "peggedEUR", price: 1.1, priceObservedAt: now });
+    const native = quoteMode === "native-peg" || (quoteMode == null && source === "live");
     (ctx.trackedStablecoinIds as Set<string>).add(asset.id);
     ctx.stablecoinAssetById.set(asset.id, asset);
     ctx.mcapById.set(asset.id, 100e6);
+    // USD-quoted rows measure against the current reference; the native rows ignore it.
+    ctx.currentPegObservationById = new Map([[asset.id, currentPegObservation(native ? null : pegReference)]]);
     const result = await collectActiveDepegs(ctx);
     expect(result.degradedReasons).toEqual([]);
     expect(result.value.activeDepegCount).toBe(1);
     const fact = result.value.topDepegs[0];
-    const native = quoteMode === "native-peg" || (quoteMode == null && source === "live");
     if (!native) {
       expect(fact).toMatchObject({ quoteMode: "usd", currentPriceUsd: 1.1, currentBps: pegReference === 1 ? 1000 : 0, priceObservedAt: now, severityBasis: "current" });
       expect(fact.currentPriceNative).toBeUndefined();

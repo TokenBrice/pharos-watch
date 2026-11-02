@@ -13,6 +13,7 @@ import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
 import { getConditionBand } from "@shared/lib/psi-policy";
 import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
+import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../../lib/current-peg-observations";
 import { sha256Hex } from "../../lib/hash";
 import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
@@ -261,6 +262,21 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   const todayTs = bucketUnixSecondsToUtcDay(nowSec);
   const yesterdayTs = todayTs - DAY_SECONDS;
   const evidence: DigestEvidence = {};
+  const stablecoinsCacheIsFresh =
+    stablecoinsCacheResult.updatedAt != null &&
+    nowSec - stablecoinsCacheResult.updatedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins;
+  // Current peg references come from the same authority `/api/peg-summary`
+  // publishes, derived from the full stablecoins payload (not the tracked
+  // subset). A stale cache cannot witness a current reference, so its map stays
+  // empty and USD-quote events keep their stored peak, never the latched
+  // event reference.
+  const currentPegObservationById: ReadonlyMap<string, CurrentPegObservation> = stablecoinsCacheIsFresh
+    ? deriveCurrentPegObservationMap({
+        peggedAssets: stablecoinAssets,
+        fxFallbackRates: stablecoinsCacheResult.payload.fxFallbackRates,
+        asOf: stablecoinsCacheResult.updatedAt,
+      })
+    : new Map();
 
   const ctx: CollectorContext = {
     db,
@@ -271,9 +287,8 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     coreAggregateStablecoinIds: CORE_AGGREGATE_ACTIVE_IDS,
     stablecoinAssetById,
     mcapById,
-    stablecoinsCacheIsFresh:
-      stablecoinsCacheResult.updatedAt != null &&
-      nowSec - stablecoinsCacheResult.updatedAt <= API_FRESHNESS_MAX_AGE_SEC.stablecoins,
+    currentPegObservationById,
+    stablecoinsCacheIsFresh,
     nowSec,
     todayTs,
     yesterdayTs,

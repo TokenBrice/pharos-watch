@@ -135,7 +135,8 @@ async function assertReaderParity(stored: string, label: string) {
       db, trackedStablecoinAssets: assets, trackedStablecoinIds: new Set(assets.map(asset => asset.id)),
       coreAggregateStablecoinAssets: assets, coreAggregateStablecoinIds: new Set(assets.map(asset => asset.id)),
       stablecoinAssetById: new Map(assets.map(asset => [asset.id, asset])),
-      mcapById: new Map(assets.map(asset => [asset.id, 20_000_000])), stablecoinsCacheIsFresh: true,
+      mcapById: new Map(assets.map(asset => [asset.id, 20_000_000])), currentPegObservationById: new Map(),
+      stablecoinsCacheIsFresh: true,
       nowSec: now, todayTs: now, yesterdayTs: now - 86_400,
     }, new Set(assets.map(asset => asset.symbol)));
     const history = await snapshotSafetyGradeHistory(db);

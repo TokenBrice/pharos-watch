@@ -8,7 +8,7 @@ import {
   type DigestSnapshotFixture,
 } from "../../test-helpers/__fixtures__/digest-snapshots";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { makeCollectorCtx } from "./daily-digest.test-support";
+import { currentPegObservation, makeCollectorCtx } from "./daily-digest.test-support";
 import { collectActiveDepegs } from "../daily-digest/collectors-market";
 import { buildEditorialCandidates } from "../daily-digest/editorial-candidates";
 import { buildCriticalDailyLeadRequirements } from "../daily-digest/critical-lead-requirements";
@@ -69,6 +69,7 @@ async function replayCollector(seeds: DepegEventSeed[], nowSec: number) {
     coreAggregateStablecoinIds: new Set(),
     stablecoinAssetById,
     mcapById: new Map(seeds.map((seed) => [seed.stablecoinId, seed.mcapUsd])),
+    currentPegObservationById: new Map(seeds.map((seed) => [seed.stablecoinId, currentPegObservation(seed.pegReference ?? 1)])),
     stablecoinsCacheIsFresh: true,
     nowSec,
     todayTs: nowSec - (nowSec % 86_400),
@@ -315,6 +316,11 @@ describe("daily-digest lead policy (golden replay of the July 2026 USX era)", ()
     ctx.mcapById.set("usda-anzens", 104_000_000);
 
     const collected = await collectActiveDepegs(ctx);
+    // Both USDA events are USD-quoted: the derived $1 reference makes these
+    // live deviations (price against par), not stored-peak fallbacks.
+    const byId = new Map(collected.value.topDepegs.map((depeg) => [depeg.stablecoinId, depeg]));
+    expect(byId.get("usda-alpha-partner")).toMatchObject({ severityBasis: "current", currentBps: -5_120 });
+    expect(byId.get("usda-anzens")).toMatchObject({ severityBasis: "current", currentBps: -2_140 });
     const input: DigestInputData = {
       ...fixture.inputData,
       activeDepegCount: collected.value.activeDepegCount,

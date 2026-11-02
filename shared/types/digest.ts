@@ -367,10 +367,16 @@ export interface DigestInputData {
     quoteMode?: "native-peg" | "usd";
     peakPriceNative?: number;
     currentPriceNative?: number;
-    /** Signed deviation computed from the live price vs the event's peg reference. */
+    /** Signed deviation computed from the live price vs the reference the event is currently measured against. */
     currentBps?: number;
-    /** Event reference and producing quote time; absent on legacy archived rows. */
+    /**
+     * Reference the live deviation was measured against. USD-quoted events use the
+     * current authoritative reference; native-quote events use the event-native
+     * reference. Absent when no current reference was usable and on legacy rows.
+     */
     pegReference?: number;
+    /** "current" when a USD-quoted reference was re-read this run; such editions compare across reference drift. */
+    pegReferenceBasis?: "current";
     priceObservedAt?: number;
     /** Which deviation severity decisions were made on: live price ("current") or the stored peak ("peak-fallback"). */
     severityBasis?: "current" | "peak-fallback";
@@ -838,6 +844,7 @@ const DigestSnapshotInputDataSchema = z
             startedAt: z.number().optional(),
             currentBps: z.number().optional(),
             pegReference: z.number().positive().optional(),
+            pegReferenceBasis: z.literal("current").optional(),
             priceObservedAt: z.number().optional(),
             quoteMode: z.enum(["native-peg", "usd"]).optional(),
             peakPriceNative: z.number().positive().optional(),
