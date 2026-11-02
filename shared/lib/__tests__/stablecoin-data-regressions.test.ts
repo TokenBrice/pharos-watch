@@ -5,6 +5,7 @@ import usdkgMetadata from "../../data/stablecoins/coins/usdkg-gold-dollar.json";
 import ejpyMetadata from "../../data/stablecoins/coins/ejpy-jbfd.json";
 import usdcCompliance from "../../data/stablecoins/domains/compliance/usdc-circle.json";
 import ousdMetadata from "../../data/stablecoins/coins/ousd-open-standard.json";
+import ousdCompliance from "../../data/stablecoins/domains/compliance/ousd-open-standard.json";
 import syrupUsdcMetadata from "../../data/stablecoins/coins/syrupusdc-maple.json";
 import usd1Metadata from "../../data/stablecoins/coins/usd1-world-liberty-financial.json";
 import usdtMetadata from "../../data/stablecoins/coins/usdt-tether.json";
@@ -71,6 +72,14 @@ describe("stablecoin source-data regressions", () => {
     );
     const overlay = mechanismOverlays.overlays.find((row) => row.assetId === "ousd-open-standard");
     expect(overlay?.components.assuranceAndReconciliation).toMatchObject({ quality: "limited" });
+  });
+
+  it("does not claim a published monthly attestation for OUSD's quarterly proof cadence", () => {
+    // docs/genius-tracker.md: only a published attestation series supports
+    // monthlyAttestationPresent; the single pre-launch EY examination and a
+    // documented quarterly/optional engagement do not.
+    expect(ousdMetadata.proofOfReserves.cadence).toBe("quarterly");
+    expect(ousdCompliance.genius.monthlyAttestationPresent).toBe(false);
   });
 
   it("refreshes syrupUSDC's collateral dashboard pin and includes the third pool", () => {

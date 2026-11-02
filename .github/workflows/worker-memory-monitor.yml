@@ -203,7 +203,11 @@ jobs:
           # ref in workflow_run.head_branch, so artifact metadata alone is not a
           # producer identity: a fork branch named "main" matches it. Authenticate
           # the producing run before trusting any archive, then bind the artifact
-          # name to that run. Anything else is ignored newest-to-oldest.
+          # name to that run. Any completed non-cancelled run qualifies: the
+          # memory job exits red on a heavy kill and the incidents job exits red
+          # on an unavailable read, but both still upload that day's shard, so
+          # requiring a green conclusion would discard the incident day itself.
+          # Anything else is ignored newest-to-oldest.
           candidates="$(gh api --paginate --slurp "repos/$GH_REPO/actions/artifacts?per_page=100" \
             | jq -r '[.[].artifacts[] | select(.expired == false and (.name | startswith("worker-incidents-")) and .workflow_run.head_branch == "main")]
               | sort_by(.created_at) | reverse
@@ -215,7 +219,7 @@ jobs:
               | jq -e --arg repo "$GH_REPO" --arg head_sha "$head_sha" --arg name "$artifact_name" --argjson run_id "$run_id" '
                   .path == ".github/workflows/worker-memory-monitor.yml" and
                   (.event == "schedule" or .event == "workflow_dispatch") and
-                  .status == "completed" and .conclusion == "success" and
+                  .status == "completed" and .conclusion != "cancelled" and
                   .head_branch == "main" and .head_sha == $head_sha and
                   .head_repository.full_name == $repo and
                   ($name | startswith("worker-incidents-\($run_id)-"))

@@ -577,7 +577,7 @@ describe("CI workflow scope", () => {
     expect(shock.jobs.refresh.if).toBe("${{ github.ref == 'refs/heads/main' }}");
   });
 
-  it("restores Worker incident evidence only from a successful main run of its own workflow", () => {
+  it("restores Worker incident evidence from its own completed main run even when an evidence job alerts", () => {
     const monitor = parseYaml(readRepoFile(".github/workflows/worker-memory-monitor.yml")) as {
       jobs: Record<string, { steps: Array<{ name?: string; run?: string; env?: Record<string, string> }> }>;
     };
@@ -590,11 +590,16 @@ describe("CI workflow scope", () => {
     for (const guard of [
       '.path == ".github/workflows/worker-memory-monitor.yml"',
       '(.event == "schedule" or .event == "workflow_dispatch")',
-      '.conclusion == "success"',
+      '.status == "completed"',
+      '.conclusion != "cancelled"',
       ".head_sha == $head_sha",
       ".head_repository.full_name == $repo",
       'startswith("worker-incidents-\\($run_id)-")',
     ]) expect(restore.run).toContain(guard);
+    // The memory job exits red on a heavy kill and the incidents job exits red
+    // on an unavailable read; both still upload that day's shard. Requiring a
+    // green run here would discard the incident day itself.
+    expect(restore.run).not.toContain('.conclusion == "success"');
     expect(restore.run).toContain("actions/runs/$run_id");
   });
 

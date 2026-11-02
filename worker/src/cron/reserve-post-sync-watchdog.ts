@@ -348,9 +348,12 @@ export async function runReservePostSyncWatchdog(
     }
 
     const reservePublishedAt = Math.floor(Date.now() / 1000);
-    // An empty observed census cannot certify a complete no-drift set. Leave
-    // the previous envelope in place so it ages into `stale` (suppressing
-    // reserve alerts) instead of publishing an `ok` source state.
+    // Publish an envelope every slot. An empty observed census cannot certify a
+    // complete no-drift set, so it publishes an explicit non-continuous gap
+    // instead of an `ok` source state (and instead of withholding the write: a
+    // retained healthy envelope stays fresh for two producer intervals, which
+    // would let the next publish inherit the pre-gap observation epochs and
+    // report drift that began during the blind cycle).
     if (drift.observedIds.length > 0 || drift.fallbackCoins.length === 0) {
       const previousReserveSource = await getCache(db, SNAPSHOT_KEYS.reserve);
       const reserveSourceEnvelope = buildAlertReserveSourceEnvelope(
@@ -366,6 +369,16 @@ export async function runReservePostSyncWatchdog(
       await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
     } else {
       degradedReasons.push("reserve-drift-census-empty");
+      // No previous envelope: continuity is broken, every observation epoch is
+      // reset, and dispatch cold-seeds instead of adopting an empty drift set
+      // as a verified no-drift result.
+      const reserveSourceEnvelope = buildAlertReserveSourceEnvelope([], null, {
+        nowSec: reservePublishedAt,
+        producerIntervalSec: CRON_INTERVALS["sync-live-reserves"],
+        observedIds: [],
+        unavailableIds: drift.fallbackCoins,
+      });
+      await setCache(db, SNAPSHOT_KEYS.reserve, JSON.stringify(reserveSourceEnvelope), signal);
     }
 
     maxSyncAgeSec = await getMaxSyncAge(
