@@ -1258,6 +1258,28 @@ describe("evm-rpc helpers", () => {
     expect(requestedBlockTags).not.toContain("0x32");
   });
 
+  it("sends near-head timestamp probes through a retained-window Dwellir endpoint", async () => {
+    const retained = { ...dwellirEndpoint("https://monad-retained.n.dwellir.com", "recent"), logsHistory: { retainedBlocks: 1_400_000 } };
+    const alchemy = registryEndpoint("https://monad-alchemy.example", "alchemy");
+    const chainRpcs = chainRpcsWith("monad", [alchemy, retained]);
+    fetchWithRetryMock
+      .mockResolvedValueOnce(rpcResponse({ result: blockResult(1_999_999, "0x3e3") }))
+      .mockResolvedValueOnce(rpcResponse({ result: blockResult(1_999_998, "0x3de") }));
+
+    const block = await resolveClosestBlockAtOrBeforeTimestamp(
+      "monad",
+      990,
+      {
+        latestBlockNumber: 2_000_000,
+        blockTimestampByNumber: new Map([[2_000_000, 1000]]),
+      },
+      { chainRpcs, maxRetries: 0 },
+    );
+
+    expect(block).toBe(1_999_998);
+    expect(attemptedUrls()).toEqual([retained.url, retained.url]);
+  });
+
   it("fetches proxy hex results from Etherscan", async () => {
     fetchWithRetryMock.mockResolvedValue(
       rpcResponse({ result: "0x000000000000000000000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }),

@@ -1252,11 +1252,17 @@ export async function resolveClosestBlockAtOrBeforeTimestamp(
     cache.latestBlockNumber = latestBlock;
   }
 
+  // Every probe is at or below the head just observed, so near-head retained
+  // windows can admit the read without a caller-supplied head.
+  const headerOptions: EvmRpcOptions = {
+    ...(options ?? {}),
+    observedHeadBlock: options?.observedHeadBlock ?? latestBlock,
+  };
   const getTimestamp = async (blockNumber: number): Promise<number | null> => {
     const cached = cache.blockTimestampByNumber.get(blockNumber);
     if (cached != null) return cached;
 
-    const timestamp = await fetchEvmBlockTimestamp(chainId, blockNumber, options);
+    const timestamp = await fetchEvmBlockTimestamp(chainId, blockNumber, headerOptions);
     if (timestamp != null) {
       cache.blockTimestampByNumber.set(blockNumber, timestamp);
     }

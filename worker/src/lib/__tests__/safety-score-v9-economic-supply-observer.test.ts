@@ -99,6 +99,22 @@ describe("reviewed economic supply observation", () => {
     // Reviewed safety lag is not an authenticated finalized head.
     expect(vi.mocked(evmRpc.fetchEvmMulticall3Aggregate3AtBlock).mock.calls[0][3]?.recentStatePin).toBeUndefined();
   });
+  it("passes the observed chain head to numbered header searches", async () => {
+    const f = fixture();
+    expect((await f.run()).status).toBe("accepted");
+    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", 100,
+      expect.objectContaining({ observedHeadBlock: 102 }));
+  });
+  it("passes the observed chain head to the finalized-preferred canonical recheck", async () => {
+    const f = fixture();
+    f.plan.deployments[0]!.read = { kind: "evm-total-supply", safeBlockLag: 15059, pinPolicy: "finalized-preferred" };
+    vi.mocked(evmRpc.fetchEvmBlockNumber).mockResolvedValue(20000);
+    vi.mocked(evmRpc.fetchEvmBlockHeader).mockImplementation(async (_chain, number) =>
+      ({ number: number === "finalized" ? 19000 : number, timestamp: CLOCK - 900, hash: HASH }));
+    expect((await f.run()).status).toBe("accepted");
+    expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledWith("ethereum", 19000,
+      expect.objectContaining({ observedHeadBlock: 20000 }));
+  });
 
   it("replaces the reviewed heuristic with authenticated finalized state, never a latest substitution", async () => {
     const f = fixture();
