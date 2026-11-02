@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type * as AbortModule from "../../lib/abort";
 import {
   solanaSlotResponse,
   staleIsoTimestamp,
@@ -20,6 +21,17 @@ import { validateCompositePricingSourceFreshness } from "../../lib/pricing-sourc
 import { buildChainRpcs } from "../../lib/chain-registry";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
+
+const { sleepWithSignalMock } = vi.hoisted(() => ({
+  // Retry backoff after a 429 and between rotated Solana slot RPCs is real
+  // waiting, not the behavior under test; zero it the way fetch-retry.test.ts
+  // does so backoff cases assert the recorded outcome instead of sleeping.
+  sleepWithSignalMock: vi.fn<(ms: number, signal?: AbortSignal) => Promise<void>>(async () => undefined),
+}));
+vi.mock("../../lib/abort", async (importOriginal) => ({
+  ...await importOriginal<typeof AbortModule>(),
+  sleepWithSignal: sleepWithSignalMock,
+}));
 
 function emptyCmcLastFetchCache() {
   return {
