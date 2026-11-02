@@ -393,6 +393,7 @@ export function buildRedemptionBackstopCardViewModel(entry: RedemptionBackstopEn
     resolutionSummary: getResolutionSummary(entry),
     score: entry.score,
     accessModel: entry.accessModel,
+    holderEligibility: entry.holderEligibility,
     accessLabel: REDEMPTION_ACCESS_LABELS[entry.accessModel],
     settlementLabel: REDEMPTION_SETTLEMENT_LABELS[entry.settlementModel],
     outputAssetLabel: REDEMPTION_OUTPUT_ASSET_LABELS[entry.outputAssetType],

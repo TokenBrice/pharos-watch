@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { aggregateChains } from "@shared/lib/chains/aggregator";
+import { chainCirculatingForDisplay } from "@shared/lib/chains/circulating";
 import { StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema, SupplyGapFillProvenanceSchema } from "@shared/types/market";
 import {
   getCirculatingRawOrNull,
@@ -280,6 +282,39 @@ describe("chain dropout guard", () => {
     expect(getPrevDayRawOrNull(asset)).toBeNull();
     expect(getPrevWeekRawOrNull(asset)).toBeNull();
     expect(getPrevMonthRawOrNull(asset)).toBeNull();
+  });
+
+  it.each([false, true])("keeps the published carried chain unavailable while its display sums to the headline (persisted ambiguity: %s)", async (ambiguous) => {
+    // BUIDL shape (2026-11-01, #1826): Tempo is absent from the provider packet while its carry re-adds
+    // the frozen baseline. Production held a persisted ambiguous total the fresh chains still matched.
+    const rows: Record<string, number> = { Ethereum: 401_541_068.11, Solana: 812_650_279.58, Avalanche: 793_346_197.83 };
+    const freshTotal = Object.values(rows).reduce((sum, value) => sum + value, 0);
+    const tempoBaselineUsd = 107_427_733.81;
+    const asset: PeggedAsset = {
+      ...usdg(), id: "buidl-blackrock", name: "BlackRock USD Institutional Digital Liquidity Fund", symbol: "BUIDL",
+      circulating: { peggedUSD: freshTotal }, chains: Object.keys(rows),
+      chainCirculating: Object.fromEntries(Object.entries(rows).map(([label, current]) => [label, { current, circulatingPrevDay: current }])),
+    };
+    const state: ChainDropoutState = { version: 1, pairs: { [JSON.stringify(["buidl-blackrock", "tempo"])]: {
+      assetId: "buidl-blackrock", chainLabel: "Tempo", chainId: "tempo", baselineUsd: tempoBaselineUsd,
+      baselineObservedAt: NOW - DAY, baselineSource: "state", quarantinedSince: NOW - DAY,
+      ...(ambiguous ? { ambiguousSince: NOW - DAY, heldTotalUsd: freshTotal + tempoBaselineUsd } : {}),
+    } } };
+
+    await guardChainDropouts({ assets: [asset], now: NOW, state });
+
+    const published = StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0];
+    const headline = getCirculatingRawOrNull(published)!;
+    expect(headline).toBeCloseTo(freshTotal + tempoBaselineUsd, 2);
+    expect(published.supplyChainGuard).toMatchObject({ status: "quarantined", chains: [{ chainId: "tempo", resolution: "carried-baseline" }] });
+    // Data consumers are unchanged: the published row stays unavailable, so chain aggregation still names it.
+    expect(published.chainCirculating.Tempo.current).toBeNull();
+    const view = aggregateChains({ peggedAssets: [published], safetyScores: {}, pegRates: {}, updatedAt: NOW });
+    expect(view.supplyCoverage?.chainIdsWithUnavailableObservations).toEqual(["tempo"]);
+    // Presentation shows the carried baseline, so the displayed chain rows sum to the headline.
+    const display = chainCirculatingForDisplay(published)!;
+    expect(display.Tempo.current).toBe(tempoBaselineUsd);
+    expect(Object.values(display).reduce((sum, row) => sum + row.current!, 0)).toBeCloseTo(headline, 2);
   });
 
   it("keeps a carried chain's observed history bucket when it already equals its baseline", async () => {

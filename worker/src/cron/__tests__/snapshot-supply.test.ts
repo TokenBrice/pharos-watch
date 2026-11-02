@@ -531,6 +531,111 @@ describe("snapshotSupply", () => {
     }
   });
 
+  describe("replacement with owned coins this generation only restores", () => {
+    const requiredIds = ["usdt-tether", "usdc-circle", "dai-sky", "pyusd-paypal", "fdusd-first-digital"];
+    type DayRow = { stablecoin_id: string; circulating_usd: number };
+
+    function openDay() {
+      const { sqlite, db } = createLatestSchemaSqlite();
+      const nowSec = Math.floor(Date.now() / 1000);
+      const putCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      const snapshotAt = async (offsetSec: number, rows: Record<string, unknown>[], gated = false) => {
+        putCache.run("stablecoins", JSON.stringify({ peggedAssets: rows.map((row) => makeSnapshotAsset(row)) }), nowSec + offsetSec);
+        const result = await snapshotSupply(db, undefined, {
+          nowSec: nowSec + offsetSec, requiredActiveIds: requiredIds, snapshotEligibleIds: requiredIds,
+          ...(gated ? { minStablecoinsCacheUpdatedAtSec: nowSec + offsetSec, freshnessGateLabel: "daily0800Utc" } : {}),
+        });
+        return JSON.parse(String(result.metadata)) as Record<string, unknown>;
+      };
+      const dayRows = () => sqlite.prepare(
+        "SELECT stablecoin_id, circulating_usd FROM supply_history ORDER BY stablecoin_id",
+      ).all() as DayRow[];
+      const ownedRowIds = () => JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get("snapshot-supply:last-write")!.value)).ownedRowIds as string[];
+      return { sqlite, snapshotAt, dayRows, ownedRowIds };
+    }
+
+    it("rewrites the many recovered coins while keeping the row of the one owned coin now restored", async () => {
+      const day = openDay();
+      try {
+        // A CoinGecko hiccup at the day's first write leaves only USDT observed.
+        await day.snapshotAt(0, [
+          { id: "usdt-tether", circulating: { peggedUSD: 100 } },
+          ...requiredIds.slice(1).map((id) => ({ id, circulating: { peggedUSD: 1 }, supplyRestored: true })),
+        ]);
+        expect(day.dayRows()).toEqual([{ stablecoin_id: "usdt-tether", circulating_usd: 100 }]);
+
+        // CoinGecko is back while USDT is restored: the recovered coins are written and USDT keeps its row.
+        const recovered = [
+          { id: "usdt-tether", circulating: { peggedUSD: 999 }, supplyRestored: true },
+          { id: "usdc-circle", circulating: { peggedUSD: 50 } },
+          { id: "dai-sky", circulating: { peggedUSD: 10 } },
+          { id: "pyusd-paypal", circulating: { peggedUSD: 20 } },
+          { id: "fdusd-first-digital", circulating: { peggedUSD: 30 } },
+        ];
+        await day.snapshotAt(900, recovered);
+        const replaced: DayRow[] = [
+          { stablecoin_id: "dai-sky", circulating_usd: 10 },
+          { stablecoin_id: "fdusd-first-digital", circulating_usd: 30 },
+          { stablecoin_id: "pyusd-paypal", circulating_usd: 20 },
+          { stablecoin_id: "usdc-circle", circulating_usd: 50 },
+          { stablecoin_id: "usdt-tether", circulating_usd: 100 },
+        ];
+        expect(day.dayRows()).toEqual(replaced);
+        expect(day.ownedRowIds()).toEqual([...requiredIds].sort());
+
+        // USDT still restored: nothing recovered, so the day is not rewritten again.
+        expect(await day.snapshotAt(1800, recovered)).toMatchObject({ reason: "already_written_today" });
+        expect(day.dayRows()).toEqual(replaced);
+      } finally {
+        day.sqlite.close();
+      }
+    });
+
+    it("keeps an outage-written row through the recovery that only restores that coin", async () => {
+      const day = openDay();
+      try {
+        // A DefiLlama outage spans the day start: the 08:00 net writes the one coin CoinGecko observed.
+        await day.snapshotAt(0, [
+          { id: "usdc-circle", circulating: { peggedUSD: 55 } },
+          ...requiredIds.filter((id) => id !== "usdc-circle")
+            .map((id) => ({ id, circulating: { peggedUSD: 1 }, supplyRestored: true })),
+        ], true);
+        expect(day.dayRows()).toEqual([{ stablecoin_id: "usdc-circle", circulating_usd: 55 }]);
+
+        // DefiLlama recovers but restores USDC: every recovered coin is written and USDC keeps its row.
+        await day.snapshotAt(3600, [
+          { id: "usdt-tether", circulating: { peggedUSD: 100 } },
+          { id: "usdc-circle", circulating: { peggedUSD: 999 }, supplyRestored: true },
+          { id: "dai-sky", circulating: { peggedUSD: 10 } },
+          { id: "pyusd-paypal", circulating: { peggedUSD: 20 } },
+          { id: "fdusd-first-digital", circulating: { peggedUSD: 30 } },
+        ]);
+        const recoveredDay: DayRow[] = [
+          { stablecoin_id: "dai-sky", circulating_usd: 10 },
+          { stablecoin_id: "fdusd-first-digital", circulating_usd: 30 },
+          { stablecoin_id: "pyusd-paypal", circulating_usd: 20 },
+          { stablecoin_id: "usdc-circle", circulating_usd: 55 },
+          { stablecoin_id: "usdt-tether", circulating_usd: 100 },
+        ];
+        expect(day.dayRows()).toEqual(recoveredDay);
+        expect(day.ownedRowIds()).toEqual([...requiredIds].sort());
+
+        // USDC observed again is already owned: the day keeps its first observations.
+        expect(await day.snapshotAt(4500, [
+          { id: "usdt-tether", circulating: { peggedUSD: 101 } },
+          { id: "usdc-circle", circulating: { peggedUSD: 56 } },
+          { id: "dai-sky", circulating: { peggedUSD: 11 } },
+          { id: "pyusd-paypal", circulating: { peggedUSD: 21 } },
+          { id: "fdusd-first-digital", circulating: { peggedUSD: 31 } },
+        ])).toMatchObject({ reason: "already_written_today" });
+        expect(day.dayRows()).toEqual(recoveredDay);
+      } finally {
+        day.sqlite.close();
+      }
+    });
+  });
+
   it("records only observed prices, each with its actual observation clock", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {

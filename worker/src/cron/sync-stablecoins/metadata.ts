@@ -161,6 +161,24 @@ function boundedIds(ids: readonly string[]): { ids: string[]; total: number; tru
   };
 }
 
+function trackedCoverageMetadata(trackedCoverage: TrackedCoverageRestoreResult | null | undefined) {
+  if (!trackedCoverage || (trackedCoverage.restoredIds.length === 0 && trackedCoverage.droppedIds.length === 0)) return null;
+  return {
+    restoredIds: boundedIds(trackedCoverage.restoredIds),
+    droppedIds: boundedIds(trackedCoverage.droppedIds),
+  };
+}
+
+/** Rows the CoinGecko outage intake served this run; tracked-coverage rows were carried or withheld, not read. */
+export function countFallbackCoingeckoAssets(
+  assets: readonly Pick<PeggedAsset, "id">[],
+  trackedCoverage: TrackedCoverageRestoreResult | null | undefined,
+): number {
+  if (!trackedCoverage || trackedCoverage.assets.length === 0) return assets.length;
+  const coverageIds = new Set(trackedCoverage.assets.map((asset) => String(asset.id)));
+  return assets.filter((asset) => !coverageIds.has(String(asset.id))).length;
+}
+
 function preferredNativeSupplyQuality(assets: readonly PeggedAsset[]) {
   const unavailableIds: string[] = [];
   const restoredIds: string[] = [];
@@ -685,12 +703,8 @@ export function buildStablecoinsSyncResult(input: {
       gapFillRejections: compactDiagnosticValue(input.supplyGapReconciliation.gapFillRejections),
     };
   }
-  if (input.trackedCoverage && (input.trackedCoverage.restoredIds.length > 0 || input.trackedCoverage.droppedIds.length > 0)) {
-    metadata.trackedCoverage = {
-      restoredIds: boundedIds(input.trackedCoverage.restoredIds),
-      droppedIds: boundedIds(input.trackedCoverage.droppedIds),
-    };
-  }
+  const trackedCoverage = trackedCoverageMetadata(input.trackedCoverage);
+  if (trackedCoverage) metadata.trackedCoverage = trackedCoverage;
   if (input.depegErrorCount > 0) {
     metadata.depegErrorCount = input.depegErrorCount;
     metadata.depegErrors = compactDiagnosticValue(input.depegErrors);
@@ -747,12 +761,23 @@ export function buildFallbackStablecoinsSyncResult(input: {
   syncStartSec: number;
   activePriceCoverage: StablecoinActivePriceCoverage;
   previousActivePriceCoverage?: PreviousStablecoinActivePriceCoverage | null;
+  trackedCoverage?: TrackedCoverageRestoreResult | null;
 }): CronResult {
   const publicationCoverage = evaluateStablecoinPublicationCoverage(
     input.assets.map((asset) => String(asset.id)),
     input.syncStartSec,
   );
-  const publicationGap = classifyStablecoinPublicationGap(publicationCoverage);
+  const coingeckoFallbackAssets = countFallbackCoingeckoAssets(input.assets, input.trackedCoverage);
+  const trackedCoverage = trackedCoverageMetadata(input.trackedCoverage);
+  // Restores keep the published payload complete, but they are carries, not this run's reads: the
+  // run's verdict and downstream capability are graded on the observed rows only (ADR-31, R2).
+  const restoredIds = new Set(input.trackedCoverage?.restoredIds ?? []);
+  const publicationGap = classifyStablecoinPublicationGap(restoredIds.size === 0
+    ? publicationCoverage
+    : evaluateStablecoinPublicationCoverage(
+      input.assets.map((asset) => String(asset.id)).filter((id) => !restoredIds.has(id)),
+      input.syncStartSec,
+    ));
   const persistedActivePriceCoverage = input.activePriceCoverage.missingActiveAssets.length > 20
     ? compactStablecoinActivePriceCoverage(input.activePriceCoverage, 20)
     : input.activePriceCoverage;
@@ -775,10 +800,11 @@ export function buildFallbackStablecoinsSyncResult(input: {
     status: degradedReason ? "degraded" : "ok",
     itemCount: input.assets.length,
     metadata: buildSyncMetadata({
-      rowsRead: input.assets.length,
+      rowsRead: coingeckoFallbackAssets,
       rowsWritten: input.assets.length,
       rowsDropped: 0,
-      sourceCoverage: { defillama: false, coingeckoFallbackAssets: input.assets.length },
+      sourceCoverage: { defillama: false, coingeckoFallbackAssets },
+      ...(trackedCoverage ? { trackedCoverage } : {}),
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       enrichment: input.enrichStats,

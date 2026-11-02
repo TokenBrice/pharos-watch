@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   canonicalizeChainCirculating,
+  chainCirculatingForDisplay,
   type RawChainCirculating,
 } from "../chains/circulating";
+import type { SupplyChainGuardProvenance } from "../../types/market";
 
 describe("chain-circulating", () => {
   it("preserves unknown history when aliases mix observed and unobserved supply", () => {
@@ -189,5 +191,49 @@ describe("chain-circulating", () => {
     });
 
     expect(canonical.get("hyperliquid")?.current).toBe(Number.MAX_VALUE);
+  });
+});
+
+describe("chainCirculatingForDisplay", () => {
+  // BUIDL shape (2026-11-01, #1826): the published Tempo row stays unavailable while its carry re-adds the
+  // frozen $107.4M baseline to the headline.
+  const fresh = { Ethereum: 401_541_068.11, Solana: 812_650_279.58, Avalanche: 793_346_197.83 };
+  const freshTotal = Object.values(fresh).reduce((sum, value) => sum + value, 0);
+  const tempo = {
+    chainId: "tempo", chainLabel: "Tempo", listCurrentUsd: null, baselineUsd: 107_427_733.81,
+    baselineObservedAt: 1_793_391_290, baselineSource: "state", resolution: "carried-baseline",
+  } satisfies SupplyChainGuardProvenance["chains"][number];
+  function carriedRow(headline: number, chains: SupplyChainGuardProvenance["chains"] = [tempo]) {
+    const chainCirculating: RawChainCirculating = {
+      ...Object.fromEntries(Object.entries(fresh).map(([label, current]) => [label, { current }])),
+      Tempo: { current: null },
+    };
+    return { circulating: { peggedUSD: headline }, chainCirculating, supplyChainGuard: { chains } };
+  }
+
+  it("shows a carried chain at its baseline when the displayed rows then sum to the headline", () => {
+    const row = carriedRow(freshTotal + tempo.baselineUsd);
+    const display = chainCirculatingForDisplay(row)!;
+    expect(display.Tempo).toEqual({ current: tempo.baselineUsd });
+    const displayed = Object.values(display).reduce((sum, point) => sum + point.current!, 0);
+    expect(displayed).toBeCloseTo(freshTotal + tempo.baselineUsd, 2);
+    // Presentation only: the published row is not mutated.
+    expect(row.chainCirculating.Tempo).toEqual({ current: null });
+  });
+
+  it.each([
+    // TRYB/XUSD shape: a persisted ambiguous held total the fresh chains have since moved away from.
+    ["a held total the displayed rows do not reach", carriedRow(freshTotal + tempo.baselineUsd + 7_287.34)],
+    ["an unavailable headline", { ...carriedRow(freshTotal + tempo.baselineUsd), circulating: {} }],
+    ["an expired carry", carriedRow(freshTotal + tempo.baselineUsd, [{ ...tempo, resolution: "unavailable" }])],
+    ["no guard provenance", { ...carriedRow(freshTotal + tempo.baselineUsd), supplyChainGuard: undefined }],
+  ])("keeps the published rows for %s", (_case, row) => {
+    expect(chainCirculatingForDisplay(row)).toBe(row.chainCirculating);
+  });
+
+  it("keeps the published rows when another chain current is unavailable", () => {
+    const row = carriedRow(freshTotal + tempo.baselineUsd);
+    row.chainCirculating.Solana = { current: null };
+    expect(chainCirculatingForDisplay(row)).toBe(row.chainCirculating);
   });
 });

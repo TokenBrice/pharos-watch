@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildPrimaryConsensusResults } from "../enrich-prices-primary-consensus";
 import { validateCompositePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
+import { classifyPrimaryDepegTrust } from "../../../lib/depeg-trust-policy";
 import {
   createEmptyPrimaryConsensusQuoteMaps,
   type PrimaryDexPriceSources,
@@ -120,6 +121,105 @@ describe("buildPrimaryConsensusResults", () => {
         confidence: "single-source",
         observedAt: nowSec - 3_018,
       });
+    });
+  });
+
+  describe("promoted DEX protocol lane", () => {
+    // pmUSD at the 2026-11-02 06:45 UTC run, when its open depeg event went blind.
+    const nowSec = 1_793_601_977;
+    const pmusd: PeggedAsset = {
+      id: "pmusd-precious-metals", name: "Precious Metals USD", symbol: "pmUSD",
+      geckoId: "precious-metals-usd", pegType: "peggedUSD",
+    };
+
+    function build(laneAgeSec: number, cgPrice: number | null = 0.534161): PrimaryPriceResult | undefined {
+      const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+      if (cgPrice != null) {
+        quoteMaps.cgQuotes.set("precious-metals-usd", { price: cgPrice, observedAt: nowSec - 20, observedAtMode: "upstream" });
+      }
+      quoteMaps.curvePrices.set(pmusd.id, 0.53416);
+      quoteMaps.curveObservedAtByCoinId.set(pmusd.id, nowSec - 30);
+      const results = new Map<string, PrimaryPriceResult>();
+      buildPrimaryConsensusResults({
+        candidates: [pmusd],
+        quoteMaps,
+        dexRows: new Map() as PrimaryDexRows,
+        dexPriceSources: new Map([[pmusd.id, [{
+          protocol: "curve", chain: "ethereum", price: 0.53416, tvl: 7_684_693, updatedAt: nowSec - laneAgeSec,
+        }]]]) as PrimaryDexPriceSources,
+        nowSec,
+        resolveDlListQuote: () => undefined,
+        results,
+        stats: createStats(),
+      });
+      return results.get(pmusd.id);
+    }
+
+    const trustOf = (result: PrimaryPriceResult) => classifyPrimaryDepegTrust({
+      price: result.price,
+      priceSource: result.source,
+      priceConfidence: result.confidence,
+      priceObservedAt: result.observedAt,
+      priceObservedAtMode: result.observedAtMode,
+      agreeSources: result.agreeSources,
+    }, nowSec);
+
+    it("keeps a lane past the strictest co-leg window from ageing fresh hard agreement past the depeg budget", () => {
+      // 34 minutes old: inside the 35-minute protocol-source budget, outside the
+      // 30-minute primary budget, so it stamped the composite untrusted.
+      const result = build(2_071);
+
+      expect(result).toMatchObject({ source: "coingecko+curve-onchain", confidence: "high", observedAt: nowSec - 30 });
+      expect(trustOf(result!)).toBe("authoritative");
+      expect(validateCompositePricingSourceFreshness({
+        source: result!.source,
+        observedAt: result!.observedAt,
+        observedAtMode: result!.observedAtMode,
+        nowSec,
+        requireObservedAt: true,
+      }).accepted).toBe(true);
+      // The held lane was read this run: it stays an available candidate, so the
+      // three-source depth that keeps pmUSD out of the corroboration probes holds.
+      expect(result!.candidateSources).toEqual(["coingecko", "curve-onchain", "curve-dex"]);
+      expect(result!.agreeSources).not.toContain("curve-dex");
+    });
+
+    it("drops a lane inside the primary budget too while the fresh legs agree", () => {
+      const result = build(1_500);
+
+      expect(result).toMatchObject({ source: "coingecko+curve-onchain", observedAt: nowSec - 30 });
+      expect(result!.candidateSources).toContain("curve-dex");
+    });
+
+    it("admits a lane inside the strictest co-leg window as an agreeing leg", () => {
+      const result = build(100);
+
+      expect(result?.agreeSources).toContain("curve-dex");
+      expect(result?.observedAt).toBe(nowSec - 100);
+    });
+
+    it("keeps Curve agreement through a missing CoinGecko leg, dated by the older lane", () => {
+      const result = build(1_500, null);
+
+      expect(result).toMatchObject({ source: "curve-dex+curve-onchain", confidence: "high", observedAt: nowSec - 1_500 });
+      expect(trustOf(result!)).toBe("authoritative");
+    });
+
+    it("keeps Curve agreement through a CoinGecko leg more than 50 bps away, dated by the older lane", () => {
+      // 0.5450 sits about 200 bps from the Curve quote, outside the agreement threshold.
+      const result = build(1_500, 0.545);
+
+      expect(result).toMatchObject({ source: "curve-dex+curve-onchain", confidence: "high", observedAt: nowSec - 1_500 });
+      expect(result!.disagreeSources).toContain("coingecko");
+      expect(trustOf(result!)).toBe("authoritative");
+    });
+
+    it("does not rescue a missing CoinGecko leg with a lane past the primary budget", () => {
+      const result = build(2_071, null);
+
+      expect(result).toMatchObject({ source: "curve-onchain", confidence: "single-source", observedAt: nowSec - 30 });
+      expect(trustOf(result!)).toBe("confirm_required");
+      expect(result!.candidateSources).toEqual(["curve-onchain", "curve-dex"]);
     });
   });
 

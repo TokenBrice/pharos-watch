@@ -222,6 +222,12 @@ export async function snapshotSupply(
       (id) => requiredActiveIdSet.has(id) && !(lastWrite.ownedRowIds ?? []).includes(id),
     )
     : [];
+  // Restored rows are never written, so a replacement keeps the day's admitted row of an owned coin
+  // this generation can only restore instead of deleting it (a DefiLlama-outage generation restores
+  // most of the cohort); every other owned row is rewritten from the current observations.
+  const restoredOwnedIds = lastWrite?.snapshotDate === snapshotDate
+    ? restoredOnlyIds.filter((id) => (lastWrite.ownedRowIds ?? []).includes(id))
+    : [];
   const alreadyWritten = publicationGapBand !== "systemic"
     && lastWrite?.snapshotDate === snapshotDate
     && lastWrite.coverageIdentityVerified
@@ -328,17 +334,18 @@ export async function snapshotSupply(
           coverage: coverageExpectation,
           accountedActiveCount:
             publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
-          ownedRowIds: snapshotRows.map(([stablecoinId]) => stablecoinId),
+          ownedRowIds: [...snapshotRows.map(([stablecoinId]) => stablecoinId), ...restoredOwnedIds],
           missingActiveIds: publicationCoverage.missingActiveIds,
           unavailableActiveIds,
         }),
         generationId: crypto.randomUUID(),
         writtenRows: snapshotRows.length,
       });
+      const keptRowIds = new Set(restoredOwnedIds);
       const ownedStablecoinIds = [...new Set([
         ...snapshotEligibleIds,
         ...(lastWrite?.ownedRowIds ?? []),
-      ])].sort();
+      ])].filter((stablecoinId) => !keptRowIds.has(stablecoinId)).sort();
       const deleteStatements = chunkArray(
         ownedStablecoinIds,
         D1_MAX_BOUND_PARAMETERS - 1,

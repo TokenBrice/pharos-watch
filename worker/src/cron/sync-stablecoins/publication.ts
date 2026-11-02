@@ -26,6 +26,7 @@ import {
   buildBlockedInvalidPayloadResult,
   buildSkippedNewerCacheResult,
   buildStablecoinsSyncResult,
+  countFallbackCoingeckoAssets,
 } from "./metadata";
 import { isAbortResult, runDepegPipeline } from "./post-enrichment";
 import {
@@ -218,9 +219,11 @@ export async function runStablecoinsPostIntakePublication(
 
   const main = input.metadata.path === "main";
   const labels = publicationLabels(input.metadata.path);
-  const rowsRead = input.metadata.path === "main" ? input.metadata.input.rawAssetCount : input.assets.length;
+  const rowsRead = input.metadata.path === "main"
+    ? input.metadata.input.rawAssetCount
+    : countFallbackCoingeckoAssets(input.assets, input.metadata.input.trackedCoverage);
   const rowsDropped = input.metadata.path === "main" ? input.metadata.input.droppedMalformedAssets : 0;
-  const sourceCoverage = main ? { defillama: true } : { defillama: false, coingeckoFallbackAssets: input.assets.length };
+  const sourceCoverage = main ? { defillama: true } : { defillama: false, coingeckoFallbackAssets: rowsRead };
   const fallbackMode = main ? null : "coingecko-supply-fallback";
   const blockedResult = (summary: StablecoinsStalenessSummary): CronResult => ({
     status: "degraded",

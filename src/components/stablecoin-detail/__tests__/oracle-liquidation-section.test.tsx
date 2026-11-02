@@ -144,7 +144,7 @@ function rolesWithOracle(role: ControlComponentRole, score: number | null = 45):
 }
 
 function ladder(container: HTMLElement): Element | null {
-  return container.querySelector('[role="img"][aria-label^="Oracle tier"]');
+  return container.querySelector('[role="img"][aria-label*="published oracle tier order"]');
 }
 
 function pricePath(container: HTMLElement): Element | null {
@@ -211,6 +211,26 @@ describe("OracleLiquidationSection", () => {
     const spectrum = ladder(container);
     expect(spectrum?.getAttribute("aria-label")).toContain("Privileged internal pricing");
     expect(spectrum?.getAttribute("aria-label")).toContain(`band 1 of ${ORACLE_TIER_POLICY_BANDS.length}`);
+  });
+
+  it("names the ladder the scored tier, so a mixed-tier coin's verdict keeps the reviewed tier", () => {
+    // SUMMARY is reviewed as redundant-with-failover; the Control component scores privileged-internal-pricing.
+    const { container, getAllByText } = render(
+      <OracleLiquidationSection summary={SUMMARY} controlRoles={rolesWithOracle("limiting")} />,
+    );
+    const label = ladder(container)?.getAttribute("aria-label");
+    expect(label).toMatch(/^Scored tier Privileged internal pricing: band 1 of /);
+    expect(label).not.toContain("Oracle tier");
+    // The verdict sentence is the authored review's, unchanged by the scored ladder.
+    expect(getAllByText(SUMMARY.verdict!).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("keeps the oracle tier name on a ladder that lights the review's own tier", () => {
+    for (const controlRoles of [undefined, rolesWithOracle("excluded", null)]) {
+      const view = render(<OracleLiquidationSection summary={PRICE_FEED} controlRoles={controlRoles} />);
+      expect(ladder(view.container)?.getAttribute("aria-label")).toMatch(/^Oracle tier Privileged internal pricing: band 1 of /);
+      view.unmount();
+    }
   });
 
   it("draws an empty provider list as a missing source station, not an undisclosed one", () => {
