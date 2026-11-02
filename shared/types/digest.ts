@@ -273,10 +273,17 @@ export const DigestSupplyCoverageSchema = z.object({
   complete: z.boolean(),
   observedCount: z.number().int().nonnegative(),
   unavailableCount: z.number().int().nonnegative(),
+  /** Core members published from a restored (carried) row: weights, not this run's observations. */
+  carriedCount: z.number().int().nonnegative().optional(),
+  carriedIds: z.array(z.string()).optional(),
   /** SHA-256 of JSON [aggregateUniverse, sorted full-universe member IDs]. */
   memberFingerprint: z.string().regex(/^[0-9a-f]{64}$/).optional(),
 }).refine((coverage) => !coverage.complete || coverage.unavailableCount === 0, {
   message: "Complete supply cannot have unavailable members",
+}).refine((coverage) => !coverage.complete || (coverage.carriedCount ?? 0) === 0, {
+  message: "Complete supply cannot have carried members",
+}).refine((coverage) => coverage.carriedCount == null || (coverage.carriedIds?.length ?? 0) === coverage.carriedCount, {
+  message: "Carried supply ids must name every carried member",
 });
 
 export const DigestMcap7dDeltaCoverageSchema = z.object({

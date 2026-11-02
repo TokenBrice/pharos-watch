@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
+import { FROZEN_SNAPSHOTS, FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
 import {
   buildFallbackAssetsFromCoinGecko,
   buildInsufficientFallbackResult,
@@ -206,6 +207,25 @@ describe("CoinGecko fallback phases", () => {
     expect(assets[0]).toMatchObject({
       pegType: "peggedREAL",
       circulating: { peggedREAL: 5_000_000 },
+    });
+  });
+
+  it("injects frozen snapshot rows the CoinGecko feed cannot serve, with their captured clocks", async () => {
+    const stablecoins = ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && meta.id !== "hbd-hive");
+    const cgData = Object.fromEntries(stablecoins.map((meta) => [meta.geckoId!, {
+      usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC,
+    }]));
+    const result = await runFallbackIntakePhase({ syncStartSec: NOW_SEC, cgData, stablecoins });
+    expect("assets" in result).toBe(true);
+    const assets = (result as { assets: PeggedAsset[] }).assets;
+    const frozenIds = new Set(FROZEN_SNAPSHOTS.map((snapshot) => snapshot.id));
+    expect(assets.filter((asset) => frozenIds.has(asset.id)).map((asset) => asset.id).sort())
+      .toEqual([...frozenIds].sort());
+    const aeur = FROZEN_SNAPSHOTS_BY_ID.get("aeur-anchored-coins")!;
+    expect(assets.find((asset) => asset.id === aeur.id)).toMatchObject({
+      price: 1.117990454919679,
+      priceObservedAt: Math.floor(Date.parse(aeur.capturedAt) / 1000),
+      circulating: { peggedEUR: 1_117_775.589919203 },
     });
   });
 

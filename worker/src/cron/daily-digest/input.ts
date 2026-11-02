@@ -214,6 +214,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
   let baselineMcapUsd = 0;
   let coreCoinCount = 0;
   let baselineCoinCount = 0;
+  const carriedSupplyIds: string[] = [];
   let biggestSupplyChange: DigestInputData["biggestSupplyChange"] = null;
   const supplyChanges7d: NonNullable<DigestInputData["supplyChanges7d"]> = [];
   let biggestAbsChange = 0;
@@ -222,6 +223,12 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     const mcap = getCirculatingRawOrNull(coin);
     const prevWeek = getPrevWeekRawOrNull(coin);
     if (mcap === null) continue;
+    // A restored row keeps the clock of the publication that read it; it is a
+    // published carry, not an observation this digest run can count (R6).
+    if (coin.supplyRestored === true) {
+      carriedSupplyIds.push(coin.id);
+      continue;
+    }
     totalMcapUsd += mcap;
     coreCoinCount += 1;
     // A coin with no prior-week bucket has no measurable 7-day change. Counting
@@ -426,7 +433,12 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
     aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
     totalMcapUsd,
     supplyCoverage: { complete: coreCoinCount === CORE_AGGREGATE_ACTIVE_IDS.size,
-      observedCount: coreCoinCount, unavailableCount: CORE_AGGREGATE_ACTIVE_IDS.size - coreCoinCount,
+      observedCount: coreCoinCount,
+      unavailableCount: CORE_AGGREGATE_ACTIVE_IDS.size - coreCoinCount - carriedSupplyIds.length,
+      ...(carriedSupplyIds.length > 0 ? {
+        carriedCount: carriedSupplyIds.length,
+        carriedIds: [...carriedSupplyIds].sort(),
+      } : {}),
       memberFingerprint: await sha256Hex(JSON.stringify([
         CORE_STABLECOIN_AGGREGATE_UNIVERSE, [...CORE_AGGREGATE_ACTIVE_IDS].sort(),
       ])) },

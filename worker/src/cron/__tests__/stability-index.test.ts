@@ -891,6 +891,47 @@ describe("computeAndStoreStabilityIndex", () => {
     expect(reasons).not.toContain("universe-coverage");
   });
 
+  it("names carried supply without admitting it as an observed core member", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+      kind: "ok",
+      payload: {
+        peggedAssets: [
+          makeStabilityAsset(),
+          makeStabilityAsset({
+            id: "usdc-circle", symbol: "USDC", supplyRestored: true,
+            circulating: { peggedUSD: 50_000_000 },
+          }),
+        ],
+      },
+      updatedAt: nowSec,
+    });
+    const db = makeDb();
+    const result = await computeAndStoreStabilityIndex(db);
+    const snapshot = readInsertedInputSnapshot(db) as {
+      totalMcapUsd: number;
+      carriedSupplyIds: string[];
+      universeCoverage: { present: number; admittedSupply: number };
+      degradedComponents: string[];
+    };
+    const metadata = JSON.parse(result.metadata ?? "{}") as {
+      carriedSupplyIds: string[];
+      carriedSupplyCount: number;
+      supplyUnavailableIds: string[];
+      quality: { reasons: string[] };
+    };
+
+    // The carried weight still sizes the index, but coverage names it instead
+    // of counting it among the members this generation observed (R6).
+    expect(snapshot).toMatchObject({ totalMcapUsd: 150_000_000, carriedSupplyIds: ["usdc-circle"] });
+    expect(snapshot.universeCoverage).toMatchObject({ present: 2, admittedSupply: 1 });
+    expect(snapshot.degradedComponents).toContain("carried-supply");
+    expect(metadata).toMatchObject({
+      carriedSupplyIds: ["usdc-circle"], carriedSupplyCount: 1, supplyUnavailableIds: [],
+    });
+    expect(metadata.quality.reasons).toContain("carried-supply");
+  });
+
   it("publishes ok with explicit input quality when an open depeg has no usable price", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({

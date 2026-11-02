@@ -78,7 +78,7 @@ export function buildUserPrompt(
       ? "Total stablecoin market cap: unavailable (supply-current-unavailable)"
       : data.supplyCoverage?.complete === true
         ? `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`
-        : `Known stablecoin market-cap subtotal: ${formatCurrency(data.totalMcapUsd)}; supply coverage ${data.supplyCoverage ? `${data.supplyCoverage.observedCount} observed, ${data.supplyCoverage.unavailableCount} unavailable` : "unverified"}. Do not describe this as the complete market total.`,
+        : `Known stablecoin market-cap subtotal: ${formatCurrency(data.totalMcapUsd)}; supply coverage ${data.supplyCoverage ? `${data.supplyCoverage.observedCount} observed, ${data.supplyCoverage.unavailableCount} unavailable${data.supplyCoverage.carriedCount ? `, ${data.supplyCoverage.carriedCount} carried` : ""}` : "unverified"}. Do not describe this as the complete market total.`,
     mcap7dDelta == null
       ? "7-day market cap change: unavailable (no-7d-comparison-pairs)"
       : `7-day market cap change: ${mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(mcap7dDelta)} (${mcap7dPct})${mcap7dCoverage}`,

@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import { getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
@@ -8,9 +9,11 @@ import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { throwIfAborted } from "../../lib/abort";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import type { CronResult } from "./shared";
-import { buildSyncMetadata, restorePreferredNativeSupply } from "./shared";
+import { buildSyncMetadata, hydrateGeckoIdAliases, restorePreferredNativeSupply } from "./shared";
+import { filterStructurallyValidAssets, normalizeChainCirculating } from "./phase-helpers";
 import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
+import { mergeFrozenSnapshots } from "./intake";
 import { NAV_PARENT_ONLY_GECKO_IDS } from "./supplemental-assets";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 import type { OnChainMcapResult } from "./supplemental-assets/onchain-supply";
@@ -108,14 +111,24 @@ export async function runFallbackIntakePhase(
   input: FallbackIntakeInput,
 ): Promise<{ assets: PeggedAsset[] } | CronResult> {
   await reportStablecoinsStage(input.reportProgress, "fallback-intake", "Building CoinGecko fallback intake");
-  const assets = buildFallbackAssetsFromCoinGecko(input);
-
-  if (assets.length < MIN_VALID_ASSET_COUNT) {
+  const coingeckoAssets = buildFallbackAssetsFromCoinGecko(input);
+  // The floor grades the CoinGecko-served cohort; archived frozen rows must not
+  // make a collapsed feed look sufficient.
+  if (coingeckoAssets.length < MIN_VALID_ASSET_COUNT) {
     logWorkerEventArgs("handler", "error",
-      `[sync-stablecoins] CG fallback only got ${assets.length} assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`,
+      `[sync-stablecoins] CG fallback only got ${coingeckoAssets.length} assets (need ${MIN_VALID_ASSET_COUNT}+), skipping cache write`,
     );
-    return buildInsufficientFallbackResult(assets.length);
+    return buildInsufficientFallbackResult(coingeckoAssets.length);
   }
+  // Frozen coins are absent from every upstream list, so the outage publication
+  // injects their captured DefiLlama rows exactly as the primary intake does:
+  // merge before structural admission, then normalize the provider buckets.
+  const { validAssets } = filterStructurallyValidAssets(
+    mergeFrozenSnapshots(coingeckoAssets, FROZEN_SNAPSHOTS),
+  );
+  hydrateGeckoIdAliases(validAssets);
+  normalizeChainCirculating(validAssets);
+  const assets = validAssets;
 
   return { assets };
 }

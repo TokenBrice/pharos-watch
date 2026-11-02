@@ -678,6 +678,35 @@ describe("market and risk collectors", () => {
     const { inputData } = await buildDailyDigestInput(makeDailyDigestScenario().db);
     expect(inputData.mcap7dDelta).toBeNull();
   });
+  it("names carried supply in coverage instead of counting it as an observation", async () => {
+    const scenario = makeDailyDigestScenario();
+    const source = scenario.sourcePayload as unknown as {
+      payload: { peggedAssets: Array<Record<string, unknown>> };
+    };
+    source.payload.peggedAssets = source.payload.peggedAssets.map((asset) =>
+      asset.id === "usdt-tether" ? { ...asset, supplyRestored: true } : asset);
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
+
+    const { inputData } = await buildDailyDigestInput(scenario.db);
+
+    // Only USDC was read this run; USDT's carried 100M is named, not admitted
+    // to the digest's market-cap subtotal (R6).
+    expect(inputData.totalMcapUsd).toBe(60_000_000);
+    expect(inputData.supplyCoverage).toMatchObject({
+      complete: false,
+      observedCount: 1,
+      carriedCount: 1,
+      carriedIds: ["usdt-tether"],
+    });
+    expect(inputData.mcap7dDelta).toBe(-2_000_000);
+    expect(inputData.mcap7dDeltaCoverage).toMatchObject({ coveredCoins: 1 });
+    expect(inputData.biggestSupplyChange).toMatchObject({ id: "usdc-circle" });
+    expect(inputData.supplyChanges7d?.map((change) => change.stablecoinId)).toEqual(["usdc-circle"]);
+    expect(inputData.dataQuality?.degradedSources).toContain("supply-current-unavailable");
+    const prompt = buildUserPrompt(inputData);
+    expect(prompt).toContain("1 observed");
+    expect(prompt).toContain("1 carried");
+  });
   it("pages a stale cache but keeps a partial core supply cohort as metadata", async () => {
     const scenario = makeDailyDigestScenario();
     const nowSec = Math.floor(Date.now() / 1000);

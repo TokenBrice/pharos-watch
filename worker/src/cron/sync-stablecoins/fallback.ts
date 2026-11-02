@@ -1,4 +1,5 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
@@ -165,7 +166,9 @@ export async function syncViaCoingeckoFallback(
     await loadStablecoinsPublicationContinuity(db, syncStartSec);
 
   for (const asset of assets) {
-    if (!asset.supplySource) asset.supplySource = "coingecko-fallback";
+    // Injected frozen rows keep their captured provenance; CoinGecko did not
+    // serve their supply this run (R6).
+    if (!asset.supplySource && !FROZEN_IDS.has(String(asset.id))) asset.supplySource = "coingecko-fallback";
   }
   // Same restore-or-degrade backstop as the primary intake: a coin CoinGecko cannot serve keeps its
   // previous row (`supplyRestored`, original clock and source) or preferred-native unavailable supply,
