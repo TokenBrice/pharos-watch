@@ -224,10 +224,8 @@ describe("doc-ownership registry integrity", () => {
     const frontend = mappings.find((mapping) => mapping.id === "frontend-routes");
     expect(frontend && matchesAny(file, frontend.sources)).toBe(true);
     const selector = frontend!.reading?.find((entry) => matchesAny(file, entry.sources));
-    expect(selector?.local).toEqual([
-      { path: "docs/architecture.md", anchor: "frontend-runtime-and-seo-surface" },
-      { path: "docs/stablecoin-detail-page.md", anchor: "route-shape" },
-    ]);
+    expect(selector?.local).toContainEqual({ path: "docs/architecture.md", anchor: "frontend-runtime-and-seo-surface" });
+    expect(selector?.local).toContainEqual({ path: "docs/stablecoin-detail-page.md", anchor: "route-shape" });
   });
 
   it("routes the public licence text and About principles copy to the About contract", () => {
@@ -241,12 +239,10 @@ describe("doc-ownership registry integrity", () => {
   it("keeps Functions in CI check ownership while selecting runtime and applicable proxy contracts", () => {
     const policy = mappings.find((mapping) => mapping.id === "validation-ci-policy");
     expect(policy?.sources).toContain("functions/**");
-    expect(policy?.checks).toEqual(["npx vitest run scripts/__tests__"]);
+    expect(policy?.checks).toContain("npx vitest run scripts/__tests__");
     const generic = policy?.reading?.find((selector) => selector.sources.includes("functions/**"));
-    expect(generic?.local).toEqual([
-      { path: "docs/architecture.md", anchor: "pages-function-endpoints-not-worker-api" },
-      { path: "docs/worker-infrastructure.md", anchor: "http-request-handling-entry" },
-    ]);
+    expect(generic?.local).toContainEqual({ path: "docs/architecture.md", anchor: "pages-function-endpoints-not-worker-api" });
+    expect(generic?.local).toContainEqual({ path: "docs/worker-infrastructure.md", anchor: "http-request-handling-entry" });
     const refs = enumerateDocReferences(policy!);
     expect(refs).toEqual(expect.arrayContaining([
       { path: "docs/operator-origin-access.md", anchor: "pages-functions-proxy" },

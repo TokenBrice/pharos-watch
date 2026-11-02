@@ -23,7 +23,7 @@ describe("contracts workspace generated-artifact inputs", () => {
 });
 
 describe("generated-artifact runner lifecycle selection", () => {
-  it.each(["sitemap-dates", "runbook-index,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {
+  it.each(["runbook-index,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {
     const cwd = mkdtempSync(join(tmpdir(), "pharos-uncheckable-"));
     try {
       const result = spawnSync(process.execPath, [

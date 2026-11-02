@@ -349,25 +349,24 @@ describe("generate-reserve-coverage-audit", () => {
     },
   );
 
-  it("keeps the tGBP and USDXL suspensions non-executable and due from the November 20 UTC boundary", () => {
+  it("keeps the tGBP and USDXL suspensions non-executable and due at their own review boundary", () => {
     const ids = ["tgbp-tokenised", "usdxl-last"];
     const dormantAt = (generatedAt: string) => new Map(
       buildReserveCoverageAudit({ generatedAt }).configCensus.dormantConfigs
         .filter((row) => ids.includes(row.coinId))
         .map((row) => [row.coinId, row]),
     );
-    for (const [generatedAt, due] of [
-      ["2026-11-19T23:59:59.999Z", false],
-      ["2026-11-20T00:00:00.000Z", true],
-      ["2026-11-21T00:00:00.000Z", true],
-    ] as const) {
-      const rows = dormantAt(generatedAt);
-      expect([...rows.keys()].sort()).toEqual([...ids].sort());
-      for (const id of ids) {
-        expect(rows.get(id), `${id} at ${generatedAt}`).toMatchObject({ status: "active", reviewBy: "2026-11-20", reviewDue: due });
-        expect(rows.get(id)?.suspensionReason).toBeTruthy();
-        expect(ACTIVE_META_BY_ID.get(id)?.liveReservesConfig).toBeUndefined();
-      }
+    const rows = dormantAt("2026-11-21T00:00:00.000Z");
+    expect([...rows.keys()].sort()).toEqual([...ids].sort());
+    for (const id of ids) {
+      const row = rows.get(id)!;
+      expect(row, id).toMatchObject({ status: "active", reviewDue: true });
+      expect(row.reviewBy, id).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(row.suspensionReason, id).toBeTruthy();
+      expect(ACTIVE_META_BY_ID.get(id)?.liveReservesConfig, id).toBeUndefined();
+      const boundary = Date.parse(`${row.reviewBy}T00:00:00Z`);
+      expect(dormantAt(new Date(boundary - 1).toISOString()).get(id)?.reviewDue, id).toBe(false);
+      expect(dormantAt(new Date(boundary).toISOString()).get(id)?.reviewDue, id).toBe(true);
     }
   });
 });

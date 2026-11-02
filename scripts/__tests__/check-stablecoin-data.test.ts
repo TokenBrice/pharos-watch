@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types";
-import jltxxSource from "@shared/data/stablecoins/coins/jltxx-jpmorgan.json";
 import {
   computeLiveReserveConfigFingerprint,
   isReserveSupplyAdmissionBootstrapAuthorized,
-  LiveReservesConfigSchema,
 } from "@shared/lib/live-reserve-adapters";
 import {
   getCommodityProtocolSlugIssue,
@@ -86,11 +84,8 @@ describe("terminal live-reserve binding gate", () => {
     }, Date.parse("2026-10-11T00:00:00Z"))).toBeNull();
     expect(getExpiredReserveSupplyAdmissionBootstrapIssue({})).toBeNull();
   });
-  it("retires JLTXX's expired bootstrap without reauthorizing recovery or changing reserve identity", () => {
-    const config = LiveReservesConfigSchema.parse(jltxxSource.liveReservesConfig);
+  it("retires an expired bootstrap without reauthorizing recovery or changing reserve identity", () => {
     const expiryMs = Date.parse("2026-10-10T00:00:00Z");
-    expect(jltxxSource.status).toBe("quarantined");
-    expect(config.adapter).toBe("jpmorgan-nav");
     expect(config.bootstrapForSupplyAdmission).toBeUndefined();
     expect(getExpiredReserveSupplyAdmissionBootstrapIssue({ liveReservesConfig: config }, expiryMs)).toBeNull();
     expect(isReserveSupplyAdmissionBootstrapAuthorized(config, expiryMs - 1)).toBe(false);

@@ -71,10 +71,22 @@ describe("cemetery dataset provenance", () => {
     expect(entry?.checksum).toBe(`sha256:${sha256Hex(stableJsonStringifyV1(buildFrozenCemeteryProjection()))}`);
   });
 
-  it("preserves the independently reviewed WEMIX archive facts", () => {
-    expect(buildFrozenCemeteryProjection().find((row) => row.id === "wemix-dollar-wemix"))
-      .toMatchObject({ name: "WEMIX Dollar", symbol: "WEMIX$", causeOfDeath: "abandoned",
-        deathDate: "2026-04", peakMcap: 22400000, archivedDataAvailable: true });
+  it("projects the reviewed WEMIX archive facts from its frozen coin source", () => {
+    const coin = FROZEN_STABLECOINS.find((candidate) => candidate.id === "wemix-dollar-wemix")!;
+    const row = buildFrozenCemeteryProjection().find((entry) => entry.id === coin.id)!;
+    expect(row).toMatchObject({
+      name: coin.name,
+      symbol: coin.symbol,
+      causeOfDeath: coin.obituary?.causeOfDeath,
+      deathDate: coin.obituary?.deathDate,
+      peakMcap: coin.obituary?.peakMcap,
+      archivedDataAvailable: true,
+    });
+    expect(row.deathDate).toHaveLength(coin.obituary!.deathDate!.length);
+    const [year, month, day] = row.deathDate!.split("-");
+    expect(year).toMatch(/^\d{4}$/);
+    expect(month).toMatch(/^\d{2}$/);
+    if (day !== undefined) expect(day).toMatch(/^\d{2}$/);
   });
 
   it("projects every frozen coin exactly once, ordered by id", () => {

@@ -102,3 +102,40 @@ tester.run("pharos/contracts-imports", rule, {
     ].map((code) => ({ code, filename: contract, errors: [{ messageId: "dynamic" }] })),
   ],
 });
+
+const sharedTypesRule = plugin?.rules?.["shared-types-imports"];
+if (!sharedTypesRule) throw new Error("ESLint configuration must register pharos/shared-types-imports");
+const sharedTypesFilename = resolve("shared/types/value.ts");
+
+tester.run("pharos/shared-types-imports", sharedTypesRule, {
+  valid: [
+    { code: 'import type { StablecoinData } from "@shared/types";', filename: resolve("src/allowed.ts") },
+    { code: 'import { type StablecoinData as Row } from "@shared/types";', filename: resolve("src/allowed.ts") },
+    { code: 'import { StablecoinListResponseSchema } from "@shared/types/core";', filename: resolve("src/allowed.ts") },
+    { code: 'import type { Value } from "@shared/lib/value";', filename: resolve("shared/types/__tests__/value.ts") },
+    { code: 'import type { Value } from "../lib/value";', filename: resolve("shared/types/value.test.ts") },
+    { code: 'import type { Value } from "./value";', filename: sharedTypesFilename },
+    { code: 'import type { Value } from "../../lib-other/value";', filename: sharedTypesFilename },
+    { code: 'import { z } from "zod";', filename: resolve("shared/contracts/api-meta.ts") },
+    { code: 'import { Value } from "./api-keys";', filename: resolve("shared/contracts/request-source.ts") },
+  ],
+  invalid: [
+    ...[
+      'import { StablecoinListResponseSchema, type StablecoinData } from "@shared/types";',
+      'import { StablecoinListResponseSchema as Schema } from "@shared/types";',
+    ].map((code) => ({ code, filename: resolve("src/rejected.ts"), errors: [{ messageId: "broad" }] })),
+    ...[
+      'import type { PricingSourceKey } from "../lib/pricing-source-registry";',
+      'import type { Value } from "@shared/lib/value";',
+      'import { Value } from "@shared/lib";',
+      'export { Value } from "@shared/lib/value";',
+      'export type { Value } from "../lib/value";',
+      'export * from "../lib/value";',
+    ].map((code) => ({ code, filename: sharedTypesFilename, errors: [{ messageId: "dependency" }] })),
+    ...[
+      'import type { Value } from "../lib/value";',
+      'export { Value } from "@shared/lib/value";',
+      'export * from "../lib/value";',
+    ].map((code) => ({ code, filename: resolve("shared/contracts/api-meta.ts"), errors: [{ messageId: "dependency" }] })),
+  ],
+});

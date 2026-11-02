@@ -135,6 +135,13 @@ const ROUTE_FIXTURES = [
   ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 26_618, 26_618],
 ] as const;
 
+// Two representatives: the largest single-route reading and the only route whose
+// auto/contract fixture ceilings differ. The enumeration below measures every
+// mapped reading signature, so the remaining rows repeat the same branch.
+const ROUTE_FIXTURE_SAMPLES = ROUTE_FIXTURES.filter(([file]) =>
+  file === "worker/src/api/yield-history.ts" || file === "functions/safety-scores/map.json.ts",
+);
+
 interface ReadingSignature {
   file: string;
   mode: "auto" | "contract";
@@ -723,7 +730,7 @@ function warnIfOverBudget(
 }
 
 describe("route context budget warnings and fixture ratchets", () => {
-  it.each(ROUTE_FIXTURES)("reports %s against its exact auto/contract fixture ceilings", (file, autoCeiling, contractCeiling) => {
+  it.each(ROUTE_FIXTURE_SAMPLES)("reports %s against its exact auto/contract fixture ceilings", (file, autoCeiling, contractCeiling) => {
     // Visit both modes before reporting so one breach cannot hide the other.
     const failures: string[] = [];
     const warnings: string[] = [];

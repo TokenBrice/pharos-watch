@@ -22,7 +22,7 @@ const changeContract = "scripts/__tests__/pharos-change-contract.test.ts";
 
 function selectingSpawn() {
   return vi.fn((file: string, args: string[]) => ({ status: 0, stdout: file === "git" ? "" : args[0] === "list"
-    ? "scripts/__tests__/run-pr-tests.test.ts\nscripts/__tests__/critical-test-files.test.ts\n" : "", stderr: "" }));
+    ? "scripts/__tests__/run-pr-tests.test.ts\nscripts/__tests__/critical-ownership.test.ts\n" : "", stderr: "" }));
 }
 /** Inject a selection so the suite never builds the real import graph. */
 function selection(files: string[]) {
@@ -31,7 +31,7 @@ function selection(files: string[]) {
 
 describe("PR test runner prepared plans", () => {
   it("retains critical-owner files despite a retired coverage-deferral environment flag", () => {
-    const selected = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-test-files.test.ts"];
+    const selected = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-ownership.test.ts"];
     const plain = selectingSpawn();
     runPrTests({ argv: ["--base=base"], env, spawn: plain as never, planSelection: selection(selected) });
     const deferred = selectingSpawn();
@@ -44,7 +44,7 @@ describe("PR test runner prepared plans", () => {
 
   it("executes only the requested prepared files without rerunning selection or native Vitest sharding", () => {
     const path = planPath();
-    const files = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-test-files.test.ts"];
+    const files = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-ownership.test.ts"];
     const plan = createPrTestPlan("base", files);
     writeFileSync(path, JSON.stringify(plan));
     const spawn = selectingSpawn();
@@ -56,7 +56,7 @@ describe("PR test runner prepared plans", () => {
   it("uses the same deterministic partitions for local shards and prepared plans", () => {
     const path = planPath();
     const prepare = selectingSpawn();
-    const files = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-test-files.test.ts"];
+    const files = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-ownership.test.ts"];
     expect(runPrTests({ argv: ["--plan-out", path], env, spawn: prepare as never, planSelection: selection(files) })).toBe(0);
     expect(prepare.mock.calls.some(([, args]) => args[0] === "run")).toBe(false);
     const plan = readPrTestPlan(path);
@@ -68,7 +68,7 @@ describe("PR test runner prepared plans", () => {
   });
 
   it("plans a duration partition from nightly timings and ignores unusable timing evidence", () => {
-    const files = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-test-files.test.ts"];
+    const files = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-ownership.test.ts"];
     const timings = temporaryPath("timings.json");
     writeFileSync(timings, JSON.stringify({
       version: 1,
@@ -104,7 +104,7 @@ describe("PR test runner prepared plans", () => {
     }
     expect(spawn.mock.calls.some(([, args]) => args[0] === "list")).toBe(true);
     const run = spawn.mock.calls.find(([, args]) => args[0] === "run")![1].slice(1);
-    expect(run).toContain("scripts/__tests__/critical-test-files.test.ts");
+    expect(run).toContain("scripts/__tests__/critical-ownership.test.ts");
   });
 
   it("drops the doc invariant suites from the docs-driven selection only", () => {

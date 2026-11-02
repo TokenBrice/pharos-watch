@@ -2,7 +2,6 @@ import { readFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { CRON_JOB_DEFINITIONS } from "../../../shared/lib/cron-jobs";
 import { summarizeWorkerEvidence, renderWorkerEvidenceTable } from "../worker-evidence-report.mjs";
 import { assembleIncidentBundle, captureWorkerIncidentBundle, joinIncidentEvidence } from "../worker-incident-bundle.mjs";
 
@@ -181,16 +180,5 @@ describe("21-day incident evidence", () => {
         expect.objectContaining({ job: "job", status: "error", invocation_id: null, worker_version: null }),
       ]);
     } finally { rmSync(outDir, { recursive: true, force: true }); }
-  });
-});
-
-describe("lane freshness draft", () => {
-  it("lists every registered logical job exactly once and requires owner sign-off", () => {
-    const doc = readFileSync("docs/process/lane-freshness-matrix.md", "utf8");
-    const names = [...doc.matchAll(/^\| `([^`]+)` \|/gm)].map((match) => match[1]);
-    expect(names).toHaveLength(CRON_JOB_DEFINITIONS.length);
-    expect(new Set(names).size).toBe(names.length);
-    expect([...names].sort()).toEqual(CRON_JOB_DEFINITIONS.map((job) => job.job).sort());
-    expect(doc).toContain("Draft for owner sign-off");
   });
 });

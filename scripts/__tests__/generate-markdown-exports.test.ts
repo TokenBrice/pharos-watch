@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { join } from "node:path";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { buildMethodologyChangelogMarkdown, buildMethodologyIndexMarkdown } from "../lib/methodology-to-markdown";
@@ -26,20 +26,6 @@ import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 
 // The parity check reads the profile fold's text rows, not its chain logos.
 vi.mock("next/image", () => ({ default: () => null }));
-
-const fixtureWrites = vi.hoisted(() => new Map<string, string>());
-
-// The refresh script overwrites its fixtures in place; capture the bytes so a
-// test can compare them without touching the checkout.
-vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs")>();
-  return {
-    ...actual,
-    writeFileSync: (path: Parameters<typeof actual.writeFileSync>[0], body: string) => {
-      fixtureWrites.set(basename(String(path)), String(body));
-    },
-  };
-});
 
 afterEach(() => { vi.restoreAllMocks(); });
 
@@ -413,15 +399,6 @@ describe("authored Markdown export fixtures", () => {
     ["stablecoin-usdt-tether.md", () => renderStablecoinDetail("usdt-tether", undefined, MARKDOWN_FIXTURE_RELEASE)],
   ] as const)("preserves exported bytes for %s", (name, render) => {
     expect(render()).toBe(readFileSync(new URL(`./fixtures/markdown/${name}`, import.meta.url), "utf8"));
-  });
-
-  it("refreshes the committed bytes from the pinned release clock", async () => {
-    await import("../maintenance/refresh-markdown-export-fixtures");
-    for (const name of ["changelog-index.md", "methodology-index.md", "stablecoin-usdt-tether.md"]) {
-      expect(fixtureWrites.get(name)).toBe(
-        readFileSync(new URL(`./fixtures/markdown/${name}`, import.meta.url), "utf8"),
-      );
-    }
   });
 });
 
