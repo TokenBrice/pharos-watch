@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { HeroCard, HeroIdentityHeader } from "@/components/stablecoin-detail/hero-card";
-import { HeroPriceMetric } from "@/components/stablecoin-detail/hero-card-metrics";
+import { HeroPriceMetric, HeroSupplyMetric } from "@/components/stablecoin-detail/hero-card-metrics";
 import { buildStablecoinDetailHeroViewModel } from "@/lib/stablecoin-detail-view-model";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
@@ -626,5 +626,27 @@ describe("HeroIdentityHeader", () => {
       hydration.hydrated = false;
       vi.restoreAllMocks();
     }
+  });
+});
+
+describe("HeroSupplyMetric", () => {
+  it("renders an em dash when historical supply deltas are unavailable", () => {
+    const markup = renderToStaticMarkup(
+      <HeroSupplyMetric
+        supply={1_000}
+        coinSymbol="USDT"
+        supplyTrend={{
+          current: 1_000,
+          safePrevWeek: null,
+          safePrevMonth: null,
+          hasPrevMonth: true,
+          prevWeekTrendClass: "text-muted-foreground",
+          prevMonthTrendClass: "text-muted-foreground",
+        }}
+      />,
+    );
+
+    expect(markup).toContain("30D");
+    expect(markup.match(/—/g)).toHaveLength(2);
   });
 });

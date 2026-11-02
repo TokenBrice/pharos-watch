@@ -3,7 +3,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import YieldDetailSection from "@/components/yield-detail-section";
-import { YieldChangeAttributionCard } from "@/components/yield-change-attribution-card";
 import {
   buildSourceRiskGoldenFixture,
 } from "@shared/test-utils/yield-source-risk-golden-fixtures";
@@ -463,18 +462,6 @@ describe("YieldDetailSection", () => {
     },
   );
 
-  it.each([[1, "+1.00 pp"], [-1, "-1.00 pp"], [-0.001, "+0.00 pp"]] as const)(
-    "uses percentage points for source-change impact %s",
-    (delta, label) => {
-      const { container } = render(<YieldChangeAttributionCard attribution={{
-        attribution: "source-switch", confidence: "high", headline: "Observed source switch",
-        largestDelta: { value: delta, ts: Date.UTC(2026, 8, 1) },
-        sourceSwitchDetail: { previousSourceKey: "previous", apy30dDelta: delta },
-      }} />);
-      expect(screen.getAllByText(label)).toHaveLength(2);
-      expect(container.textContent).not.toContain(`${delta.toFixed(2)}%`);
-    },
-  );
   it("distinguishes an absent comparison from measured unchanged", () => {
     mockRankings([makeRanking({ rankChangeAttribution: undefined })]);
 

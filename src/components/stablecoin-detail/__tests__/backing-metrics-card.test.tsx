@@ -2,8 +2,8 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/core";
+import { V9_MECHANISM_FIELDS } from "@shared/lib/safety-score-v9/mechanism-fields";
 import {
   BackingMetricsCard,
   buildBackingMetricsView,
@@ -16,6 +16,9 @@ import { RAIL_METRIC_MAX_SUB_METRICS } from "../rail-card";
 import { buildMechanismBackingView, type MechanismBackingView } from "@/lib/mechanism-backing";
 import type { MechanismCollateralizationView } from "@/lib/mechanism-collateralization";
 import * as overlayLookup from "@/lib/mechanism-overlay.server";
+
+// The checked-in overlay file is ~2 MB and Zod-parsed at module load; this suite supplies its own.
+vi.mock("@/lib/mechanism-overlay.server", () => ({ getMechanismReviewOverlay: vi.fn() }));
 
 const reviewed: MechanismCollateralizationView = {
   ratio: 2.455,
@@ -301,8 +304,9 @@ describe("buildBackingMetricsView", () => {
   });
 
   it("keeps at most two sub-metrics and loses no reviewed metric for every archetype", () => {
-    const overlays = mechanismReviewOverlays.overlays as unknown as { metrics: Record<string, unknown> }[];
-    const metricKeys = [...new Set(overlays.flatMap((overlay) => Object.keys(overlay.metrics)))];
+    // Metric identities come from the field map, not the checked-in overlay file.
+    const metricKeys = [...new Set(MECHANISM_ARCHETYPE_VALUES.flatMap((archetype) => V9_MECHANISM_FIELDS[archetype].metrics))];
+    expect(metricKeys.length).toBeGreaterThan(0);
     for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
       vi.spyOn(overlayLookup, "getMechanismReviewOverlay").mockReturnValue({
         assetId: "controlled",

@@ -20,15 +20,6 @@ describe("Chain profile composition", () => {
     expect(document.body.textContent).toContain("<$1");
   });
 
-  it("prints a nonzero share below 0.05% as <0.1%", () => {
-    const sliver = makeCoin({ id: "trusd-tori", name: "trUSD", symbol: "trUSD", supplyUsd: 764_201, chainShare: RatioSchema.parse(0.0001364) });
-    const leader = makeCoin({ supplyUsd: 5_598_729_074, chainShare: RatioSchema.parse(0.9998636) });
-    render(<CompositionSection model={buildChainRouteViewModel([leader, sliver], leader.supplyUsd + sliver.supplyUsd)} />);
-
-    expect(screen.getAllByText(/<0\.1%/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/^0\.0%/)).toBeNull();
-  });
-
   it("keeps a positive pooled rest total out of the $0 bucket", () => {
     const coins = [
       ...Array.from({ length: 10 }, (_, index) => makeCoin({

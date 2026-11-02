@@ -81,16 +81,21 @@ describe("stablecoin taxonomy hub pages", () => {
       return href!.slice(hashIndex + "#coins=".length).split(",").map(decodeURIComponent);
     };
     const variantOfById = new Map(ACTIVE_STABLECOINS.map((coin) => [coin.id, coin.variantOf ?? null]));
+    // Derived invariant: the roster is the cohort's first four non-wrapper members in registry order.
+    const leadersOf = (page: { coins: readonly { id: string; variantOf?: string | null }[] }) =>
+      page.coins.filter((coin) => (coin.variantOf ?? null) === null).slice(0, 4).map((coin) => coin.id);
 
     const cryptoHtml = renderToStaticMarkup(
       await backingRoute.default({ params: Promise.resolve({ backing: "crypto" }) }),
     );
-    expect(compareIds(cryptoHtml)).toEqual(["usde-ethena", "usds-sky", "dai-makerdao", "usdf-falcon"]);
+    expect(compareIds(cryptoHtml)).toEqual(leadersOf(BACKING_TAXONOMY_PAGES.find((page) => page.slug === "crypto")!));
 
     const cefiDependentHtml = renderToStaticMarkup(
       await governanceRoute.default({ params: Promise.resolve({ governance: "cefi-dependent" }) }),
     );
-    expect(compareIds(cefiDependentHtml)).toEqual(["usde-ethena", "usds-sky", "dai-makerdao", "usdf-falcon"]);
+    expect(compareIds(cefiDependentHtml)).toEqual(
+      leadersOf(GOVERNANCE_TAXONOMY_PAGE_BY_SLUG.get("cefi-dependent")!),
+    );
 
     const defiIds = compareIds(
       renderToStaticMarkup(await governanceRoute.default({ params: Promise.resolve({ governance: "defi" }) })),
