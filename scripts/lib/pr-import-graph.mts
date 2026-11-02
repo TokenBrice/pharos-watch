@@ -155,13 +155,48 @@ function escapeRegexCharacter(value: string): string {
   return value.replace(/[\\^$.*+?()[\]{}|]/g, "\\$&");
 }
 
+/** An alternative this compiler reproduces literally (no nested pattern syntax). */
+const LITERAL_GLOB_ALTERNATIVE = /^[A-Za-z0-9._-]+$/;
+
+/**
+ * Whether every token in `pattern` is one `compileGlobMatcher` models: `**`,
+ * `*`, `?`, `?(a|b)`, `{a,b}` and `[abc]` with literal alternatives. Extglobs
+ * `+(`, `!(`, `@(`, `*(`, negated character classes, nested braces and
+ * backslash escapes are left to `matchesGlob`, because escaping them literally
+ * would silently drop matching files from the test universe.
+ */
+function isCompilableGlob(pattern: string): boolean {
+  for (let index = 0; index < pattern.length; index++) {
+    const character = pattern[index];
+    if (character === "\\") return false;
+    if (character === "[") {
+      const end = pattern.indexOf("]", index + 1);
+      if (end < 0 || !LITERAL_GLOB_ALTERNATIVE.test(pattern.slice(index + 1, end))) return false;
+      index = end;
+    } else if (character === "{") {
+      const end = pattern.indexOf("}", index + 1);
+      if (end < 0 || !pattern.slice(index + 1, end).split(",").every((part) => LITERAL_GLOB_ALTERNATIVE.test(part))) return false;
+      index = end;
+    } else if (character === "?" && pattern[index + 1] === "(") {
+      const end = pattern.indexOf(")", index + 2);
+      if (end < 0 || !pattern.slice(index + 2, end).split("|").every((part) => LITERAL_GLOB_ALTERNATIVE.test(part))) return false;
+      index = end;
+    } else if ("+!@*".includes(character) && pattern[index + 1] === "(") {
+      return false;
+    }
+  }
+  return true;
+}
+
 /**
  * Compile a `path.matchesGlob` pattern once. Supports the syntax the executable
- * project patterns use: `**`, `*`, `?`, `{a,b}`, `[abc]` and the `?(a|b)`
- * extglob; anything else is escaped literally, so a new pattern cannot silently
- * match more than `matchesGlob` would (the owning test compares both).
+ * project patterns use (`**`, `*`, `?`, `{a,b}`, `[abc]`, the `?(a|b)` extglob)
+ * and delegates every other pattern to `matchesGlob` itself, so no pattern can
+ * silently select fewer files than the authority (the owning test compares
+ * both over the real candidate universe).
  */
 export function compileGlobMatcher(pattern: string): (file: string) => boolean {
+  if (!isCompilableGlob(pattern)) return (file: string) => matchesGlob(file, pattern);
   let source = "^";
   for (let index = 0; index < pattern.length; index++) {
     const character = pattern[index];
@@ -223,17 +258,26 @@ const EXECUTABLE_TEST_MATCHERS = EXECUTABLE_TEST_PROJECTS.map((project) => ({
 }));
 
 /**
+ * Every test-shaped file under the roots the executable projects scan: the
+ * candidate set `EXECUTABLE_TEST_PROJECTS` partitions. Exported so the owning
+ * test can compare the compiled matchers with `path.matchesGlob` over the real
+ * tree instead of the already-filtered universe.
+ */
+export function collectExecutableTestCandidates(cwd = process.cwd()): string[] {
+  return collectSourceFilesUnderRoots(TEST_SCAN_ROOTS, cwd, {
+    extensions: TEST_FILE_EXTENSIONS,
+    excludedDirs: ["node_modules", "dist"],
+    skipDotEntries: true,
+  }).filter((file) => TEST_FILE_PATTERN.test(file));
+}
+
+/**
  * Enumerate Vitest's executable test universe: the `EXECUTABLE_TEST_PROJECTS`
  * include/exclude sets, restricted to the roots those projects scan. The
  * patterns are compiled once at module load, not per candidate file.
  */
 export function collectExecutableTestFiles(cwd = process.cwd()): string[] {
-  return collectSourceFilesUnderRoots(TEST_SCAN_ROOTS, cwd, {
-    extensions: TEST_FILE_EXTENSIONS,
-    excludedDirs: ["node_modules", "dist"],
-    skipDotEntries: true,
-  })
-    .filter((file) => TEST_FILE_PATTERN.test(file))
+  return collectExecutableTestCandidates(cwd)
     .filter((file) => EXECUTABLE_TEST_MATCHERS.some((project) =>
       project.include.some((matcher) => matcher(file))
       && !project.exclude.some((matcher) => matcher(file))))

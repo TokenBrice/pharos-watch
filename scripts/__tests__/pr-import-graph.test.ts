@@ -2,6 +2,8 @@ import { matchesGlob } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildPrImportGraph,
+  collectExecutableTestCandidates,
+  collectExecutableTestFiles,
   collectModuleSpecifiers,
   compileGlobMatcher,
   isStablecoinCatalogDataOnly,
@@ -12,7 +14,7 @@ import {
 } from "../lib/pr-import-graph.mts";
 import { EXECUTABLE_TEST_PROJECTS } from "../lib/critical-ownership.mts";
 import { VITEST_SETUP_FILES } from "../lib/vitest-setup-files.mts";
-import { compareCommitSelections } from "../ci/check-test-plan-parity";
+import { compareCommitSelections, summarizeParityFailures } from "../ci/check-test-plan-parity";
 
 const CWD = "/repo";
 
@@ -180,6 +182,44 @@ describe("static import-graph PR test selection", () => {
     }
   });
 
+  it("delegates glob syntax the compiler does not model to path.matchesGlob instead of escaping it", () => {
+    const cases: readonly [string, readonly string[], readonly string[]][] = [
+      ["src/**/+(a|b).test.ts", ["src/a.test.ts", "src/aa.test.ts"], ["src/c.test.ts"]],
+      ["src/**/@(a|b).test.ts", ["src/a.test.ts", "src/b.test.ts"], ["src/c.test.ts"]],
+      ["src/**/!(a).test.ts", ["src/b.test.ts"], ["src/a.test.ts"]],
+      ["src/**/*(a).test.ts", ["src/a.test.ts", "src/aa.test.ts"], ["src/c.test.ts"]],
+      ["src/**/[!a].test.ts", ["src/b.test.ts"], ["src/a.test.ts"]],
+      ["src/**/{a,{b,c}}.test.ts", ["src/a.test.ts", "src/b.test.ts"], ["src/d.test.ts"]],
+    ];
+    for (const [pattern, matching, rejected] of cases) {
+      const matcher = compileGlobMatcher(pattern);
+      for (const file of matching) expect(matcher(file), `${pattern} vs ${file}`).toBe(true);
+      for (const file of rejected) expect(matcher(file), `${pattern} vs ${file}`).toBe(false);
+      for (const file of [...matching, ...rejected]) expect(matcher(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));
+    }
+  });
+
+  it("partitions the real candidate universe exactly like path.matchesGlob", () => {
+    const candidates = collectExecutableTestCandidates();
+    const universe = new Set(collectExecutableTestFiles());
+    const patterns = [...new Set(EXECUTABLE_TEST_PROJECTS.flatMap((project) => [...project.include, ...project.exclude]))];
+    expect(candidates.length).toBeGreaterThan(1000);
+    // Glob patterns select exactly the `matchesGlob` set over every real candidate.
+    for (const pattern of patterns.filter((value) => /[*?[{]/.test(value))) {
+      const matcher = compileGlobMatcher(pattern);
+      expect(candidates.filter((file) => matcher(file)), pattern).toEqual(candidates.filter((file) => matchesGlob(file, pattern)));
+    }
+    // Literal entries (the isolated/threaded/shared file lists) stay in the
+    // universe and match nothing else, without 250 full-universe passes.
+    for (const pattern of patterns.filter((value) => !/[*?[{]/.test(value))) {
+      expect(universe.has(pattern), pattern).toBe(true);
+      const matcher = compileGlobMatcher(pattern);
+      for (const file of [pattern, pattern.replace(/\.(test|spec)\./, ".$1-x."), `${pattern}.bak`, `nested/${pattern}`]) {
+        expect(matcher(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));
+      }
+    }
+  });
+
   it("selects every file matched by a template-literal dynamic import", () => {
     const files = {
       ...BASE_FILES,
@@ -256,13 +296,31 @@ describe("static import-graph PR test selection", () => {
 
   it("reports selection parity, skips data-only routing and rejects a vacuous Vite result", () => {
     expect(compareCommitSelections("data-only", ["scripts/a.test.ts"], ["scripts/b.test.ts"])).toMatchObject({
-      skipped: "data-only", missing: [], vacuous: false,
+      skipped: "data-only", missing: [], vacuous: false, comparable: false, unproven: false,
     });
-    expect(compareCommitSelections("closure", ["scripts/a.test.ts"], [])).toMatchObject({ vacuous: true, missing: [] });
+    expect(compareCommitSelections("closure", ["scripts/a.test.ts"], [])).toMatchObject({ vacuous: true, missing: [], comparable: true });
     expect(compareCommitSelections("closure", ["scripts/a.test.ts"], ["scripts/b.test.ts"])).toMatchObject({
-      missing: ["scripts/b.test.ts"], vacuous: false,
+      missing: ["scripts/b.test.ts"], vacuous: false, comparable: true,
     });
-    expect(compareCommitSelections("closure", [], [])).toMatchObject({ vacuous: false });
+    expect(compareCommitSelections("closure", [], [])).toMatchObject({ vacuous: false, comparable: false, unproven: false });
+  });
+
+  it("fails a parity run that compares nothing or drops a changed executable test", () => {
+    const result = (commit: string, comparison: ReturnType<typeof compareCommitSelections>) => ({
+      commit, parent: `${commit}^`, changed: 1, ...comparison,
+    });
+    const compared = result("a".repeat(40), compareCommitSelections("closure", ["scripts/a.test.ts"], ["scripts/a.test.ts"]));
+    expect(summarizeParityFailures([compared])).toEqual([]);
+    // A changed executable test that neither side selects is missing evidence.
+    const unproven = result("b".repeat(40), compareCommitSelections("closure", [], [], 1));
+    expect(unproven.unproven).toBe(true);
+    expect(summarizeParityFailures([compared, unproven]).join("\n")).toContain("changed executable test(s) selected nothing");
+    // Empty comparisons and data-only skips prove nothing, however many run.
+    const empty = result("c".repeat(40), compareCommitSelections("closure", [], []));
+    const dataOnly = result("d".repeat(40), compareCommitSelections("data-only", ["scripts/a.test.ts"], []));
+    expect(summarizeParityFailures([empty, dataOnly]).join("\n")).toContain("compared no non-vacuous selection across 2 commit(s)");
+    // A single real comparison keeps an otherwise empty window valid.
+    expect(summarizeParityFailures([empty, dataOnly, compared])).toEqual([]);
   });
 
   it("routes stablecoin catalog data to direct catalog/registry owners instead of the closure", () => {

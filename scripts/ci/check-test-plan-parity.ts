@@ -8,7 +8,10 @@
  * data so no history rewriting is needed), and compare it with
  * `planPrTestSelection`. The check fails when the static planner misses a file
  * Vitest selects; static-only extras are reported but allowed, because the
- * planner is allowed to run more tests than the runtime, never fewer.
+ * planner is allowed to run more tests than the runtime, never fewer. A run
+ * that compares nothing is also a failure: a commit that changed an executable
+ * test must select one, and at least one commit in the window must produce a
+ * non-empty comparison on either side.
  *
  * Usage: node --import tsx scripts/ci/check-test-plan-parity.ts [--commits=N]
  */
@@ -25,7 +28,7 @@ import { parseVitestFileList } from "../lib/pr-test-selection.mts";
 const DEFAULT_COMMITS = 5;
 const WORK_DIR = ".tmp/test-plan-parity";
 
-interface CommitParity {
+export interface CommitParity {
   commit: string;
   parent: string;
   changed: number;
@@ -40,18 +43,25 @@ interface CommitParity {
   staticOnly: number;
   /** Vite selected nothing although the static planner found tests. */
   vacuous: boolean;
+  /** At least one selection was non-empty, so the commit compared something. */
+  comparable: boolean;
+  /** The commit changed an executable test file, yet neither side selected one. */
+  unproven: boolean;
 }
 
 /**
  * Compare one commit's selections. `vacuous` catches a broken `related` filter
  * that returns nothing: a static selection with no Vite counterpart is not a
- * pass, it is missing evidence.
+ * pass, it is missing evidence. `unproven` covers the mirror case of a commit
+ * that changed an executable test file — such a commit must reach a selection
+ * on both sides, so two empty sets mean the planner or the filter is broken.
  */
 export function compareCommitSelections(
   mode: PrTestSelectionMode,
   staticFiles: readonly string[],
   viteFiles: readonly string[],
-): Pick<CommitParity, "mode" | "staticCount" | "viteCount" | "skipped" | "missing" | "staticOnly" | "vacuous"> {
+  changedExecutableTests = 0,
+): Pick<CommitParity, "mode" | "staticCount" | "viteCount" | "skipped" | "missing" | "staticOnly" | "vacuous" | "comparable" | "unproven"> {
   if (mode === "data-only") {
     return {
       mode,
@@ -61,6 +71,8 @@ export function compareCommitSelections(
       missing: [],
       staticOnly: 0,
       vacuous: false,
+      comparable: false,
+      unproven: false,
     };
   }
   const staticSet = new Set(staticFiles);
@@ -72,7 +84,30 @@ export function compareCommitSelections(
     missing: viteFiles.filter((file) => !staticSet.has(file)).sort(),
     staticOnly: staticFiles.filter((file) => !viteSet.has(file)).length,
     vacuous: staticFiles.length > 0 && viteFiles.length === 0,
+    comparable: staticFiles.length > 0 || viteFiles.length > 0,
+    unproven: changedExecutableTests > 0 && staticFiles.length === 0 && viteFiles.length === 0,
   };
+}
+
+/**
+ * Failure lines for a whole run. A run that compared nothing (every commit
+ * data-only or selecting nothing on both sides) is a failure too: printing
+ * "covers Vitest" while comparing nothing is a vacuous pass.
+ */
+export function summarizeParityFailures(results: readonly CommitParity[]): string[] {
+  const failures: string[] = [];
+  const missing = results.reduce((count, result) => count + result.missing.length, 0);
+  const vacuous = results.filter((result) => result.vacuous).map((result) => result.commit.slice(0, 12));
+  const unproven = results.filter((result) => result.unproven).map((result) => result.commit.slice(0, 12));
+  if (missing > 0) failures.push(`static planner missed ${missing} Vitest-selected file(s)`);
+  if (vacuous.length > 0) failures.push(`Vitest selected nothing for ${vacuous.join(", ")} despite a static selection`);
+  if (unproven.length > 0) failures.push(`changed executable test(s) selected nothing for ${unproven.join(", ")}`);
+  if (failures.length === 0 && !results.some((result) => result.comparable)) {
+    failures.push(
+      `compared no non-vacuous selection across ${results.length} commit(s) (all data-only or empty); rerun with a larger --commits window`,
+    );
+  }
+  return failures;
 }
 
 function git(args: readonly string[], cwd = process.cwd(), encoding: "utf8" | null = "utf8"): string {
@@ -142,6 +177,7 @@ export function checkCommitParity(commit: string, { root = process.cwd(), workDi
   const tree = materializeTree(commit, join(root, workDir), root);
   try {
     const graph = buildPrImportGraph({ cwd: tree, testFiles: collectExecutableTestFiles(tree) });
+    const changedExecutableTests = changed.filter((file) => graph.testFileSet.has(file)).length;
     const staticSelection = planPrTestSelection(changed, { graph });
     if (staticSelection.fallback) throw new Error(`static planner fell back: ${staticSelection.fallback}`);
     if (staticSelection.mode === "data-only") {
@@ -151,7 +187,7 @@ export function checkCommitParity(commit: string, { root = process.cwd(), workDi
         commit,
         parent,
         changed: changed.length,
-        ...compareCommitSelections(staticSelection.mode, staticSelection.files, []),
+        ...compareCommitSelections(staticSelection.mode, staticSelection.files, [], changedExecutableTests),
       };
     }
     const listed = spawnSync(localBin("vitest"), ["list", "--filesOnly", "--config", ".parity.vitest.config.ts"], {
@@ -167,7 +203,7 @@ export function checkCommitParity(commit: string, { root = process.cwd(), workDi
       commit,
       parent,
       changed: changed.length,
-      ...compareCommitSelections(staticSelection.mode, staticSelection.files, viteFiles),
+      ...compareCommitSelections(staticSelection.mode, staticSelection.files, viteFiles, changedExecutableTests),
     };
   } finally {
     rmSync(tree, { recursive: true, force: true });
@@ -186,19 +222,14 @@ export function main(argv: readonly string[] = processArgv.slice(2)): number {
     process.stdout.write(
       `[test-plan-parity] ${result.commit.slice(0, 12)} vs ${result.parent.slice(0, 12)}: ${result.changed} changed, mode ${result.mode}`
         + `${result.skipped ? ` (skipped: ${result.skipped})` : ""}, static ${result.staticCount}, vite ${result.viteCount}, `
-        + `missing ${result.missing.length}, static-only ${result.staticOnly}${result.vacuous ? ", VACUOUS" : ""}\n`,
+        + `missing ${result.missing.length}, static-only ${result.staticOnly}${result.vacuous ? ", VACUOUS" : ""}`
+        + `${result.unproven ? ", UNPROVEN" : ""}\n`,
     );
     for (const file of result.missing.slice(0, 10)) process.stdout.write(`  missing: ${file}\n`);
   }
-  const missing = results.flatMap((result) => result.missing.map((file) => `${result.commit.slice(0, 12)}: ${file}`));
-  const vacuous = results.filter((result) => result.vacuous).map((result) => result.commit.slice(0, 12));
-  if (missing.length > 0 || vacuous.length > 0) {
-    if (missing.length > 0) {
-      process.stderr.write(`[test-plan-parity] FAIL: static planner missed ${missing.length} Vitest-selected file(s)\n`);
-    }
-    if (vacuous.length > 0) {
-      process.stderr.write(`[test-plan-parity] FAIL: Vitest selected nothing for ${vacuous.join(", ")} despite a static selection\n`);
-    }
+  const failures = summarizeParityFailures(results);
+  if (failures.length > 0) {
+    for (const failure of failures) process.stderr.write(`[test-plan-parity] FAIL: ${failure}\n`);
     return 1;
   }
   process.stdout.write(`[test-plan-parity] OK: static selection covers Vitest for ${results.length} commit(s)\n`);
