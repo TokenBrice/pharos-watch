@@ -62,7 +62,7 @@ function providerRowExclusionsFor(reviews: readonly ReviewedProviderRowExclusion
     keyPath: "providerChainLabel",
   });
 }
-export const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze(
+const SAFETY_SCORE_V9_INDEPENDENT_LIABILITY_SUPPLY_ASSET_IDS = Object.freeze(
   SUPPLY_ATTRIBUTION_REVIEWS.independentLiabilityAssetIds.sort(compareText),
 );
 const INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET = new Set(
