@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
+import { FROZEN_SNAPSHOTS, FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
 import {
   buildFallbackAssetsFromCoinGecko,
   buildInsufficientFallbackResult,
@@ -15,6 +16,8 @@ import { checkStablecoinsPriceStaleness } from "../runtime";
 import {
   runStablecoinsPostIntakePublication,
 } from "../publication";
+import { buildChainRpcs } from "../../../lib/chain-registry";
+import { TOTAL_SUPPLY_SELECTOR } from "../../../lib/evm-selectors";
 import type { PeggedAsset } from "../enrich-prices";
 import { makePeggedAsset } from "./_fixtures";
 
@@ -39,6 +42,7 @@ const fallbackMocks = vi.hoisted(() => ({
 
 const onchainSupplyMocks = vi.hoisted(() => ({
   fetchCuratedAggregateOnChainMcap: vi.fn(),
+  fetchOnChainMcap: vi.fn(),
 }));
 
 vi.mock("../post-enrichment", async (importOriginal) => ({
@@ -64,6 +68,7 @@ vi.mock("../phase-helpers", async (importOriginal) => ({
 vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../supplemental-assets/onchain-supply")>()),
   fetchCuratedAggregateOnChainMcap: onchainSupplyMocks.fetchCuratedAggregateOnChainMcap,
+  fetchOnChainMcap: onchainSupplyMocks.fetchOnChainMcap,
 }));
 
 const NOW_SEC = 1_700_000_000;
@@ -204,6 +209,25 @@ describe("CoinGecko fallback phases", () => {
     expect(assets[0]).toMatchObject({
       pegType: "peggedREAL",
       circulating: { peggedREAL: 5_000_000 },
+    });
+  });
+
+  it("injects frozen snapshot rows the CoinGecko feed cannot serve, with their captured clocks", async () => {
+    const stablecoins = ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && meta.id !== "hbd-hive");
+    const cgData = Object.fromEntries(stablecoins.map((meta) => [meta.geckoId!, {
+      usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC,
+    }]));
+    const result = await runFallbackIntakePhase({ syncStartSec: NOW_SEC, cgData, stablecoins });
+    expect("assets" in result).toBe(true);
+    const assets = (result as { assets: PeggedAsset[] }).assets;
+    const frozenIds = new Set(FROZEN_SNAPSHOTS.map((snapshot) => snapshot.id));
+    expect(assets.filter((asset) => frozenIds.has(asset.id)).map((asset) => asset.id).sort())
+      .toEqual([...frozenIds].sort());
+    const aeur = FROZEN_SNAPSHOTS_BY_ID.get("aeur-anchored-coins")!;
+    expect(assets.find((asset) => asset.id === aeur.id)).toMatchObject({
+      price: 1.117990454919679,
+      priceObservedAt: Math.floor(Date.parse(aeur.capturedAt) / 1000),
+      circulating: { peggedEUR: 1_117_775.589919203 },
     });
   });
 
@@ -616,7 +640,9 @@ describe("CoinGecko fallback phases", () => {
 describe("overlayFallbackCuratedAggregateSupply", () => {
   beforeEach(() => {
     onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockReset();
+    onchainSupplyMocks.fetchOnChainMcap.mockReset();
   });
+  afterEach(() => vi.restoreAllMocks());
 
   it.each([1, null])("preserves sFRAX's explicit publication hold after a failed overlay with price %s", async (price) => {
     onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue(null);
@@ -645,6 +671,70 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
       }
     },
   );
+
+  it("reads a preferred single-register asset instead of withholding its provable supply", async () => {
+    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue(null);
+    onchainSupplyMocks.fetchOnChainMcap.mockResolvedValue({
+      mcap: 3_500_000,
+      supplySource: "onchain-circulating-supply",
+      observedAt: NOW_SEC,
+      chain: "ethereum",
+      chainLabel: "Ethereum",
+      chainCirculating: { Ethereum: { current: 3_500_000, chainId: "ethereum" } },
+    });
+    const assets = [makeAsset({ id: "usg-tangent", price: 1.01, supplySource: "coingecko-fallback" })];
+
+    await overlayFallbackCuratedAggregateSupply(assets);
+
+    expect(onchainSupplyMocks.fetchOnChainMcap).toHaveBeenCalledTimes(1);
+    expect(assets[0]).toMatchObject({
+      supplySource: "onchain-circulating-supply",
+      supplyObservedAt: NOW_SEC,
+      circulating: { peggedUSD: 3_500_000 },
+      chainCirculating: { Ethereum: { current: 3_500_000 } },
+    });
+    expect(assets[0].supplyUnavailableReason).toBeUndefined();
+  });
+
+  it("threads the run's RPC map into the real single-register probe", async () => {
+    const realOnchainSupply = await vi.importActual<typeof import("../supplemental-assets/onchain-supply")>(
+      "../supplemental-assets/onchain-supply",
+    );
+    const evmRpc = await import("../../../lib/evm-rpc");
+    const chainRpcs = buildChainRpcs();
+    const blockHash = `0x${"1".repeat(64)}` as const;
+    let keeperReads = 0;
+
+    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue(null);
+    onchainSupplyMocks.fetchOnChainMcap.mockImplementation(realOnchainSupply.fetchOnChainMcap);
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    vi.spyOn(evmRpc, "fetchEvmBlockNumber").mockImplementation(async (_chain, options) => {
+      // USG's keeper exclusion needs a pinned block, so it can only read when
+      // the fallback path forwards the same RPC map the main path uses.
+      expect(options?.chainRpcs).toBe(chainRpcs);
+      return 123;
+    });
+    vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockResolvedValue({
+      number: 123, hash: blockHash, timestamp: NOW_SEC,
+    });
+    vi.spyOn(evmRpc, "fetchEvmUint256AtBlock").mockImplementation(async (_chain, _contract, data) => {
+      if (data === TOTAL_SUPPLY_SELECTOR) return 4_000_000n * 10n ** 18n;
+      keeperReads += 1;
+      return keeperReads === 1 ? 300_000n * 10n ** 18n : 100_000n * 10n ** 18n;
+    });
+    const assets = [makeAsset({ id: "usg-tangent", price: 1.01, supplySource: "coingecko-fallback" })];
+
+    await overlayFallbackCuratedAggregateSupply(assets, undefined, chainRpcs);
+
+    expect(keeperReads).toBe(2);
+    expect(assets[0]).toMatchObject({
+      supplySource: "onchain-circulating-supply",
+      supplyObservedAt: NOW_SEC,
+      circulating: { peggedUSD: 3_636_000 },
+      chainCirculating: { Ethereum: { current: 3_636_000, chainId: "ethereum" } },
+    });
+    expect(assets[0].supplyUnavailableReason).toBeUndefined();
+  });
 
   it("replaces fresh CoinGecko supply and incompatible history on a successful preferred read", async () => {
     const native = makeAsset({

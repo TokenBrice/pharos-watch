@@ -9,6 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
@@ -154,8 +155,18 @@ describe("DefiLlama outage publication with a complete previous publication", ()
       expect(row, meta.id).toMatchObject({ supplySource: "coingecko-fallback", supplyObservedAt: MAIN_SEC + 870 });
       expect(row.supplyRestored, meta.id).toBeUndefined();
     }
+    // Frozen coins are absent from every live feed, so an outage publication
+    // restores their archived rows exactly as the primary intake does.
+    for (const snapshot of FROZEN_SNAPSHOTS) {
+      expect(published.get(snapshot.id), snapshot.id).toMatchObject({
+        frozen: true,
+        circulating: snapshot.peggedAssetRow.circulating,
+      });
+    }
     // Every published supply is an admitted observation or carry; no unavailable value became zero.
-    for (const row of published.values()) {
+    for (const meta of ACTIVE_STABLECOINS) {
+      const row = published.get(meta.id);
+      if (!row) continue;
       const supply = getCirculatingRawOrNull(row);
       expect(supply === null || supply > 0, row.id).toBe(true);
     }

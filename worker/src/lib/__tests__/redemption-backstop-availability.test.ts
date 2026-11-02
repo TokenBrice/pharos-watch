@@ -33,10 +33,10 @@ function observations(entries: Array<[string, number]>) {
 describe("buildRedemptionCurrentDepegObservationMap", () => {
   const now = 1_788_220_800;
 
-  function authoritativeAsset(observedAt: number) {
+  function authoritativeAsset(observedAt: number, id = "usdc-circle") {
     return makeAsset({
-      id: "usda-avalon",
-      symbol: "USDa",
+      id,
+      symbol: id === "usda-avalon" ? "USDa" : "USDC",
       price: 0.7,
       priceSource: "pyth",
       priceConfidence: "single-source",
@@ -53,7 +53,17 @@ describe("buildRedemptionCurrentDepegObservationMap", () => {
       now,
     });
 
-    expect(result.get("usda-avalon")?.currentDeviationBps).toBe(-3000);
+    expect(result.get("usdc-circle")?.currentDeviationBps).toBe(-3000);
+  });
+
+  it("excludes a frozen stablecoin from the current deviation map", () => {
+    const result = buildRedemptionCurrentDepegObservationMap({
+      peggedAssets: [authoritativeAsset(now - 60, "usda-avalon")],
+      stablecoinsGenerationAt: now - 60,
+      now,
+    });
+
+    expect(result.has("usda-avalon")).toBe(false);
   });
 
   it("rejects a fresh generation whose underlying quote is stale", () => {
@@ -63,7 +73,7 @@ describe("buildRedemptionCurrentDepegObservationMap", () => {
       now,
     });
 
-    expect(result.has("usda-avalon")).toBe(false);
+    expect(result.has("usdc-circle")).toBe(false);
   });
 });
 

@@ -8,6 +8,7 @@ import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { IntentLink } from "@/components/intent-link";
+import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail/module-title";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,13 +41,14 @@ import {
   resolveMechanismArchetype,
 } from "@shared/lib/classification";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import type { MechanismArchetype } from "@shared/types";
+import type { MechanismArchetype, StablecoinMeta } from "@shared/types";
 import { DetailContent } from "./detail-content";
 import { HistoryTabsShell } from "./detail-lazy-sections";
 
 function DetailLoadingShell({
   id,
   coin,
+  contracts,
   logoSrc,
   heading,
   mechanismArchetype,
@@ -55,6 +57,7 @@ function DetailLoadingShell({
 }: {
   id: string;
   coin: StablecoinStaticMeta;
+  contracts: NonNullable<StablecoinMeta["contracts"]>;
   logoSrc?: string;
   heading?: string;
   mechanismArchetype?: MechanismArchetype | null;
@@ -89,6 +92,17 @@ function DetailLoadingShell({
         <Skeleton className="h-[200px] rounded-xl" />
       </div>
       <Skeleton className="mt-12 h-[420px] rounded-xl" />
+      {/* Contracts are registry facts, not live lanes, so the in-flow module
+          mounts before the dossier settles. It is the only `#contracts` owner
+          here: the shell is replaced by the loaded layout, whose below-xl copy
+          sits in the same Context zone. Chain-hub contract tables link to it,
+          so a profile's static export keeps the destination even when the
+          snapshot has no live lanes. */}
+      {contracts.length > 0 ? (
+        <div className="mt-12 xl:hidden">
+          <ContractDeployments coinId={id} contracts={contracts} />
+        </div>
+      ) : null}
       {/* Static recorded facts outlive the loading read: the History shell owns
           the retained-ledger preview here, exactly as the ready dossier does.
           Depeg is the selected view because Grade has no source to read yet. */}
@@ -249,6 +263,7 @@ function StablecoinDetailClientContent({
       <DetailLoadingShell
         id={id}
         coin={staticCoin}
+        contracts={coin.contracts ?? []}
         logoSrc={logoSrc}
         heading={heading}
         mechanismArchetype={mechanismArchetype}

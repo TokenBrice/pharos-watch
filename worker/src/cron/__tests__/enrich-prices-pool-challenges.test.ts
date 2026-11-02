@@ -759,6 +759,32 @@ describe("applyPoolChallenge", () => {
     expect(updated.observedAtBySource).toEqual({ "pool-tvl-weighted": 800 });
     expect(updated.observedAtModeBySource).toEqual({ "pool-tvl-weighted": "local_fetch" });
   });
+
+  it("does not list a co-leg-held lane as disagreeing after replacement", () => {
+    // curve-dex was read this run but held out of the vote by the co-leg budget
+    // (v6.68), so it has no pre-replacement price. A non-voting candidate cannot
+    // disagree with the replacement.
+    const { results, pools, pegTypes, stats } = makePoolChallengeInputs({
+      assetId: "dusd-test",
+      result: makePriceConsensusResult({
+        candidateSources: ["coingecko", "defillama-list", "curve-dex"],
+        agreeSources: ["coingecko", "defillama-list"],
+        allPrices: { coingecko: 1, "defillama-list": 1 },
+      }),
+      pools: [
+        { price: 0.8, tvlUsd: 500_000, protocol: "curve", chain: "ethereum" },
+        { price: 0.82, tvlUsd: 500_000, protocol: "balancer", chain: "ethereum" },
+      ],
+    });
+
+    applyPoolChallenge(results, pools, pegTypes, stats);
+
+    const updated = results.get("dusd-test")!;
+    expect(updated.source).toBe("pool-tvl-weighted");
+    expect(updated.candidateSources).toContain("curve-dex");
+    expect(updated.disagreeSources).toEqual(["coingecko", "defillama-list"]);
+    expect(updated.disagreeSources).not.toContain("curve-dex");
+  });
 });
 
 describe("applyListAggregatorDowngrade", () => {

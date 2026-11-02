@@ -48,14 +48,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "The report measures USD cash 314771112 and redeemable liabilities 308322426, excluding 6448686 issuer-held tokens from circulation. A pinned URL/hash can validate this historical report but cannot certify the newest series member. Preserve accounting basis and static-validated classification until authoritative complete index discovery exists.",
   },
-  "usda-avalon": {
-    sourceUrl: "https://docs.avalonfinance.xyz/avalon-btcfi-products/cedefi-cdp-usda.md",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "Avalon complete CeDeFi custody and collateral census",
-    freshnessEvidence: "Reviewed 2026-10-07: official Bitcoin-backed USDa CDP docs are reachable but publish no dated supply-weighted custody/collateral book.",
-    scoreGradePlausible: false,
-    note: "Require the complete tracked USDa custody, collateral and liability snapshot with a source timestamp. Selected on-chain pools omit CeDeFi scope; supply and eligible collateral prose cannot establish full reserves.",
-  },
   "moveusd-cfx": {
     sourceUrl: "https://trust.cfx.to/",
     sourceQuality: "weak-proof",

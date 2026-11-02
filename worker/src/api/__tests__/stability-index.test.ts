@@ -365,6 +365,7 @@ describe("handleStabilityIndex contract tests", () => {
       input_snapshot: JSON.stringify({
         totalMcapUsd: 1e11, contributors: [],
         supplyUnavailableIds: ["usdc-circle"],
+        carriedSupplyIds: ["usde-ethena"],
         trendUnavailableIds: ["usdt-tether"],
       }),
     };
@@ -376,7 +377,9 @@ describe("handleStabilityIndex contract tests", () => {
     const body = await readJsonResponse(res, 200);
     const parsed = StabilityIndexResponseSchema.parse(body);
     expect(parsed.current?.inputDegradation).toMatchObject({
-      supplyUnavailableIds: ["usdc-circle"], trendUnavailableIds: ["usdt-tether"],
+      supplyUnavailableIds: ["usdc-circle"],
+      carriedSupplyIds: ["usde-ethena"],
+      trendUnavailableIds: ["usdt-tether"],
     });
   });
 

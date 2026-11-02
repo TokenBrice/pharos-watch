@@ -256,7 +256,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.68");
+    expect(methodology.currentLabel).toBe("v6.69");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -272,7 +272,7 @@ describe("methodology registry", () => {
     expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
     expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
     expect(release.title).toBe("Conserved historical missing-chain attribution");
-    expect(methodology.entries.slice(0, 8).map((candidate) => candidate.version)).toEqual(["6.68", "6.67", "6.66", "6.65", "6.64", "6.63", "6.62", "6.61"]);
+    expect(methodology.entries.slice(0, 8).map((candidate) => candidate.version)).toEqual(["6.69", "6.68", "6.67", "6.66", "6.65", "6.64", "6.63", "6.62"]);
   });
 
   it("activates the October 28 Pricing releases at one cut, with 6.60 resolving from it", () => {
@@ -312,18 +312,30 @@ describe("methodology registry", () => {
     });
     expect(release.summary).toContain("carried");
     expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600 - 1)).toBe("6.65");
-    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600)).toBe("6.67");
+    // 6.68 shipped at the same November 2 cut and supersedes 6.67 there.
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600)).toBe("6.68");
   });
 
-  it("activates the DEX protocol-lane co-leg budget at its provisional November 3 cut", () => {
+  it("activates the DEX protocol-lane co-leg budget at its November 2 cut", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.68")!;
     expect(release).toMatchObject({
-      version: "6.68", date: "2026-11-02", effectiveAt: 1_793_664_000, reconstructed: false,
+      version: "6.68", date: "2026-11-02", effectiveAt: 1_793_577_600, reconstructed: false,
     });
     expect(release.summary).toContain("co-leg budget");
-    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_664_000 - 1)).toBe("6.67");
-    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_664_000)).toBe("6.68");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600 - 1)).toBe("6.65");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600)).toBe("6.68");
+  });
+
+  it("activates the blind-coin price-curation release at its provisional November 4 cut", () => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
+    const release = methodology.entries.find((candidate) => candidate.version === "6.69")!;
+    expect(release).toMatchObject({
+      version: "6.69", date: "2026-11-02", effectiveAt: 1_793_750_400, reconstructed: false,
+    });
+    expect(release.summary).toContain("tangent-usg");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_750_400 - 1)).toBe("6.68");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_750_400)).toBe("6.69");
   });
 
   it.each([

@@ -34,7 +34,11 @@ import { runDirectCli } from "../lib/cli-args.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const DETAIL_SNAPSHOT_OUTPUT_DIR = resolve(REPO_ROOT, "src/generated/stablecoin-detail-snapshots");
-export const DETAIL_SNAPSHOT_TARGET_BYTES = 8 * 1024;
+// 12 KiB: frxUSD's 33-chain 90-day supply envelope (9,179 B) overflowed the
+// previous 8 KiB target, which dropped its supply lane and left the dossier in
+// its loading state in the static export. The bound stays a hard cap; every
+// other envelope is well under it.
+export const DETAIL_SNAPSHOT_TARGET_BYTES = 12 * 1024;
 const MAX_PARALLEL_COIN_REQUESTS = 6;
 // Match the six-connection budget; bulk bodies finish before fallback reads begin.
 const MAX_PARALLEL_BULK_REQUESTS = 6;
@@ -145,7 +149,7 @@ export function buildStablecoinDetailSnapshots(inputs: SnapshotInputs): Stableco
       const { supplyHistory: _oversizedSupplyHistory, ...lanes } = cappedSnapshot.lanes;
       console.warn(
         `[stablecoin-detail-snapshots] Omitting supply history for ${coin.id}: ` +
-        `${snapshotBytes} byte envelope exceeds the 8 KiB target`,
+        `${snapshotBytes} byte envelope exceeds the ${DETAIL_SNAPSHOT_TARGET_BYTES / 1024} KiB target`,
       );
       cappedSnapshot = { ...cappedSnapshot, lanes };
       snapshotBytes = serializedSnapshotBytes(cappedSnapshot);
@@ -154,7 +158,7 @@ export function buildStablecoinDetailSnapshots(inputs: SnapshotInputs): Stableco
       const { liveSummary: _oversizedLiveSummary, ...lanes } = cappedSnapshot.lanes;
       console.warn(
         `[stablecoin-detail-snapshots] Omitting live summary for ${coin.id}: ` +
-        `${snapshotBytes} byte envelope still exceeds the 8 KiB target`,
+        `${snapshotBytes} byte envelope still exceeds the ${DETAIL_SNAPSHOT_TARGET_BYTES / 1024} KiB target`,
       );
       cappedSnapshot = { ...cappedSnapshot, lanes };
       snapshotBytes = serializedSnapshotBytes(cappedSnapshot);
@@ -162,7 +166,7 @@ export function buildStablecoinDetailSnapshots(inputs: SnapshotInputs): Stableco
     if (snapshotBytes > DETAIL_SNAPSHOT_TARGET_BYTES) {
       throw new Error(
         `[stablecoin-detail-snapshots] Empty envelope for ${coin.id} is ${snapshotBytes} bytes; ` +
-        "cannot satisfy the 8 KiB hard cap",
+        `cannot satisfy the ${DETAIL_SNAPSHOT_TARGET_BYTES / 1024} KiB hard cap`,
       );
     }
     // Display-only release values, dated by the dataset clock; never a query
@@ -180,7 +184,7 @@ export function buildStablecoinDetailSnapshots(inputs: SnapshotInputs): Stableco
       if (withAssessmentBytes <= DETAIL_SNAPSHOT_TARGET_BYTES) return withAssessment;
       console.warn(
         `[stablecoin-detail-snapshots] Omitting saved safety assessment for ${coin.id}: ` +
-        `${withAssessmentBytes} byte envelope exceeds the 8 KiB target`,
+        `${withAssessmentBytes} byte envelope exceeds the ${DETAIL_SNAPSHOT_TARGET_BYTES / 1024} KiB target`,
       );
     }
     return cappedSnapshot;
@@ -499,7 +503,7 @@ export async function runCli(check = process.env.PHAROS_DETAIL_SNAPSHOT_CHECK ==
     maxSnapshotBytes: Math.max(...Object.values(sizes)),
   }));
   if (oversized.length > 0) {
-    console.warn(`[stablecoin-detail-snapshots] ${oversized.length} snapshots exceed the 8 KiB target`);
+    console.warn(`[stablecoin-detail-snapshots] ${oversized.length} snapshots exceed the ${DETAIL_SNAPSHOT_TARGET_BYTES / 1024} KiB target`);
   }
   console.log(`[stablecoin-detail-snapshots] ${check ? "validated" : "wrote"} ${snapshots.length} snapshots`);
 }

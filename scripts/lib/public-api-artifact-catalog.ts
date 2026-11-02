@@ -530,7 +530,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "stability-index",
     summary: "Pharos Stability Index",
-    description: "PSI and history. Daily components preserve null versus observed zero; partial averages disclose `dailyProvenance.componentSampleCounts`. All-day averaging and mixed-version provenance remain intact; `componentsUnavailable` names gaps. Legacy counts remain unknown. Partial samples retain unpriced-event diagnostics and stored `current.inputDegradation.supplyUnavailableIds` / `trendUnavailableIds`. Unavailable supply is excluded from denominators and contributors; unusable aggregate market-cap or paired trend inputs retain the previous sample, never invented zero.",
+    description: "PSI and history. Daily components preserve null versus observed zero; partial averages disclose `dailyProvenance.componentSampleCounts`. All-day averaging and mixed-version provenance remain intact; `componentsUnavailable` names gaps. Legacy counts remain unknown. Partial samples retain unpriced-event diagnostics and stored `current.inputDegradation.supplyUnavailableIds` / `carriedSupplyIds` / `trendUnavailableIds`. A DefiLlama-outage carry (`supplyRestored` with `supplyRestoreMode: \"outage-fallback\"`) remains an index weight but is excluded from `universeCoverage.admittedSupply` and never claimed as an observation; routine main-path carries keep their existing treatment. Unavailable supply is excluded from denominators and contributors, and unusable aggregate market-cap or paired trend inputs retain the previous sample, never invented zero.",
     tags: ["Risk"],
     responseSchema: "StabilityIndexResponse",
     parameters: [

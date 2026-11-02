@@ -617,8 +617,8 @@ describe("yield config registry", () => {
     expect(PRICE_DERIVED_FALLBACK_IDS.has("xgld-unitas")).toBe(false);
     expect(PRICE_DERIVED_FALLBACK_IDS.has("usdb-blast")).toBe(true);
     expect(isPriceDerivedYieldEligible("usdb-blast", INTENTIONAL_GAP_REASONS["usdb-blast"])).toBe(false);
-    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "usdb-blast")
-      ?.strategies.some((entry) => entry.kind === "price-derived")).toBe(false);
+    // usdb-blast is frozen, so its fallback membership no longer yields a manifest entry.
+    expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === "usdb-blast")).toBeUndefined();
     for (const id of ["fpi-frax", "isc-international-stable-currency", "sdai-sky"]) {
       expect(isPriceDerivedYieldEligible(id), id).toBe(true);
       expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === id)

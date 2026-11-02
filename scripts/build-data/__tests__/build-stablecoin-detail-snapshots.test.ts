@@ -242,7 +242,7 @@ describe("stablecoin detail snapshot generator", () => {
     )).rejects.toThrow();
   });
 
-  it("keeps a representative compact summary and 90-day supply envelope within 8 KiB", () => {
+  it("keeps a representative compact summary and 90-day supply envelope within the target", () => {
     const history = Array.from({ length: 90 }, (_, index) => ({
       date: 1_700_000_000 + index * 86_400,
       circulatingUsd: 100_000_000 + index * 10_000,
@@ -321,12 +321,12 @@ describe("stablecoin detail snapshot generator", () => {
     history[1] = { ...history[1], circulatingUsd: 1e-9 };
     const updatedAt = { liveSummary: 1_700_000_000_000, supplyHistory: 1_700_000_000_000 };
     const { asOfMs, ...assessment } = SCORES_ROW;
-    // Precondition: at the API's full precision the assessment lane would not fit.
-    expect(serializedSnapshotBytes({
+    // Full-precision bytes, to prove compaction shrinks the envelope below.
+    const fullPrecisionBytes = serializedSnapshotBytes({
       version: 1, stablecoinId: "usdt-tether", generatedAt: 1_700_000_100_000,
       updatedAt: { ...updatedAt, safetyAssessment: asOfMs },
       lanes: { liveSummary: summary, supplyHistory: history, safetyAssessment: assessment },
-    })).toBeGreaterThan(DETAIL_SNAPSHOT_TARGET_BYTES);
+    });
     const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const snapshot = buildStablecoinDetailSnapshots({
@@ -340,6 +340,7 @@ describe("stablecoin detail snapshot generator", () => {
     expect(warning).not.toHaveBeenCalled();
     expect(Object.keys(snapshot.lanes).sort()).toEqual(["liveSummary", "safetyAssessment", "supplyHistory"]);
     expect(serializedSnapshotBytes(snapshot)).toBeLessThanOrEqual(DETAIL_SNAPSHOT_TARGET_BYTES);
+    expect(serializedSnapshotBytes(snapshot)).toBeLessThan(fullPrecisionBytes);
     const compacted = snapshot.lanes.supplyHistory!;
     expect(compacted).toHaveLength(90);
     // Unavailable stays unavailable, a tiny observed value never becomes zero,

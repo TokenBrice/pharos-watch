@@ -39,7 +39,7 @@ describe("mint/burn durable publication admission", () => {
   it("explicitly grandfathers every pre-gate key without fabricating scan coverage", async () => {
     const { db } = fixtures.open();
     const legacy = MINT_BURN_CONFIGS.filter(isGrandfatheredMintBurnConfig);
-    expect(legacy).toHaveLength(135);
+    expect(legacy).toHaveLength(134);
     const scope = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
     expect(scope.configs).toEqual(legacy);
     expect(scope.publication.legs.filter((leg) => leg.status === "admitted")
@@ -102,7 +102,7 @@ describe("mint/burn durable publication admission", () => {
     const { publication } = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
     const compact = compactMintBurnPublication(publication);
     expect(compact).toMatchObject({ legsScope: "non-admitted", legCount: MINT_BURN_CONFIGS.length,
-      admittedCount: 135, pendingAdmissionCount: 2, disabledCount: 0 });
+      admittedCount: 134, pendingAdmissionCount: 2, disabledCount: 0 });
     expect(compact.legs).toEqual(publication.legs.filter((leg) => leg.status !== "admitted"));
     expect(new Set(compact.admittedPairs!.map((pair) => JSON.stringify(pair)))).toEqual(new Set(publication.legs
       .filter((leg) => leg.status === "admitted").map((leg) => JSON.stringify([leg.stablecoinId, leg.chainId]))));

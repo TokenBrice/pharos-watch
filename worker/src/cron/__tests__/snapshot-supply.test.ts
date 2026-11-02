@@ -636,6 +636,55 @@ describe("snapshotSupply", () => {
     });
   });
 
+  it("keeps the observed row of an owned coin whose supply read turns unavailable", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const requiredIds = Array.from({ length: 12 }, (_, index) => `coin-${index}`);
+      const putCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      const options = { requiredActiveIds: requiredIds, snapshotEligibleIds: requiredIds };
+      const dayRows = () => sqlite.prepare(
+        "SELECT stablecoin_id, circulating_usd FROM supply_history ORDER BY stablecoin_id",
+      ).all() as Array<{ stablecoin_id: string; circulating_usd: number }>;
+      const marker = () => JSON.parse(String(
+        sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("snapshot-supply:last-write")!.value,
+      )) as { ownedRowIds: string[]; unavailableActiveIds: string[] };
+
+      putCache.run("stablecoins", JSON.stringify({ peggedAssets: [
+        makeSnapshotAsset({ id: "coin-0", circulating: { peggedUSD: 100 } }),
+        makeSnapshotAsset({ id: "coin-1", circulating: { peggedUSD: 50 } }),
+        ...requiredIds.slice(2).map((id) => makeSnapshotAsset({
+          id, circulating: { peggedUSD: 1 }, supplyRestored: true,
+        })),
+      ] }), nowSec);
+      await snapshotSupply(db, undefined, { ...options, nowSec });
+      expect(dayRows()).toEqual([
+        { stablecoin_id: "coin-0", circulating_usd: 100 },
+        { stablecoin_id: "coin-1", circulating_usd: 50 },
+      ]);
+
+      // The recovered cohort forces a day rewrite, but coin-1's supply cannot be
+      // read this generation. Its earlier observation is not a redemption.
+      putCache.run("stablecoins", JSON.stringify({ peggedAssets: [
+        makeSnapshotAsset({ id: "coin-0", circulating: { peggedUSD: 120 } }),
+        makeSnapshotAsset({ id: "coin-1", circulating: {} }),
+        ...requiredIds.slice(2).map((id) => makeSnapshotAsset({ id, circulating: { peggedUSD: 2 } })),
+      ] }), nowSec + 60);
+      const rewritten = await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 60 });
+      expect(rewritten.itemCount).toBe(11);
+      expect(dayRows()).toContainEqual({ stablecoin_id: "coin-1", circulating_usd: 50 });
+      expect(marker().ownedRowIds).toContain("coin-1");
+      expect(marker().unavailableActiveIds).toEqual(["coin-1"]);
+
+      // An unchanged unreadable supply is not a rewrite trigger; the row survives.
+      expect(JSON.parse(String((await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 120 })).metadata)))
+        .toMatchObject({ reason: "already_written_today" });
+      expect(dayRows()).toContainEqual({ stablecoin_id: "coin-1", circulating_usd: 50 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("records only observed prices, each with its actual observation clock", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {

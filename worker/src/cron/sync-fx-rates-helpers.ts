@@ -1,20 +1,20 @@
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CIRCUIT_SOURCE } from "../lib/constants";
 import { fetchRealtimeFxRates, type RealtimeFxObservation } from "../lib/fx-realtime";
-import { fetchChainlinkReferenceQuoteSnapshot, type ChainlinkReferenceQuote } from "../lib/chainlink-feeds";
+import { fetchChainlinkReferenceQuoteSnapshot, type ChainlinkReferenceQuote, type ChainlinkReferenceQuoteSnapshot } from "../lib/chainlink-feeds";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import { getCache, setCache } from "../lib/db-cache";
 import type { MetalPegKey, MetalsResolution } from "../lib/fx-metals";
 import type { FxRateSourceMode, FxRateState, FxRateSyncMode, FxRatesMeta, FxSourceCadence } from "../lib/fx-rate-state";
-import { FX_SOURCE_MAX_FUTURE_SKEW_SEC, getFxSourceStatus, isAdmissibleFxSourceDate, persistFxRateState } from "../lib/fx-rate-state";
+import { FX_SOURCE_MAX_FUTURE_SKEW_SEC, getFxSourceStatus, isAdmissibleFxSourceDate, isFreshFxObservation, persistFxRateState } from "../lib/fx-rate-state";
 import { logCronEvent, type CronEventInput, type CronResult } from "../lib/cron-logger";
 import {
   applyRealtimeOverlaySourceMetadata,
   canCarryForwardFxRates,
   inheritFxSourceMetadata,
 } from "../lib/fx-source-metadata";
-import { invertUnitsPerUsd } from "../lib/fx-config";
+import { invertUnitsPerUsd, MAX_FX_RATE_DELTA_PCT } from "../lib/fx-config";
 import { toErrorMessage } from "@shared/lib/error-utils";
 
 const CHAINLINK_FAILING_RUNS_CACHE_KEY = "chainlink:failing-runs";
@@ -74,7 +74,7 @@ type FxCronEvent = Omit<CronEventInput, "job">;
 export type OpenExchangeRatesSourceStatus = "ok" | "partial" | "rate-limited" | "unavailable";
 export type ChainlinkSourceStatus = "ok" | "partial" | "unavailable";
 
-async function withFxOverlayCircuit<TStatus extends string>(
+async function withFxOverlayCircuit<TStatus>(
   db: D1Database,
   options: {
     source: (typeof CIRCUIT_SOURCE)[keyof typeof CIRCUIT_SOURCE];
@@ -606,6 +606,18 @@ export class FxSyncRunState {
         existingUpdatedAt > 0 &&
         quote.updatedAt < existingUpdatedAt;
       const metalPegKey = isChainlinkMetalPegKey(pegKey);
+      // One incumbent-authority predicate for the spot and Chainlink paths
+      // (R5): an unknown clock is not fresh, so it gets no veto. Non-metal
+      // overlays retain their existing divergence guard.
+      const incumbentIsFresh = metalPegKey
+        ? isFreshFxObservation(existingUpdatedAt, this.sourceModeByPeg[pegKey], this.syncStartSec, {
+          pegKey,
+          cadence: this.sourceCadenceByPeg[pegKey],
+          sourceDate: this.sourceDateByPeg[pegKey] ?? null,
+        })
+        : true;
+      const existing = this.usableRates[pegKey];
+      const hasExisting = existing != null && existing > 0;
 
       if (quoteOlderThanCurrent && !metalPegKey) {
         this.recordCronEvent({
@@ -617,8 +629,51 @@ export class FxSyncRunState {
         continue;
       }
 
-      const existing = this.usableRates[pegKey];
-      if (existing != null && existing > 0) {
+      if (quoteOlderThanCurrent && metalPegKey) {
+        // A metal clock never moves backwards: an older round may confirm a
+        // fresh incumbent within the cross-check bound, but it can never
+        // replace it.
+        if (hasExisting && incumbentIsFresh) {
+          const delta = Math.abs(quote.price - existing) / existing;
+          if (delta > CHAINLINK_REFERENCE_MAX_DIVERGENCE) {
+            this.recordCronEvent({
+              eventType: "chainlink-rate-diverged",
+              severity: "warning",
+              message: "Chainlink quote diverged from current reference.",
+              metadata: {
+                pegKey,
+                currentRate: existing,
+                chainlinkRate: quote.price,
+                deltaPct: Number((delta * 100).toFixed(1)),
+              },
+            });
+          } else {
+            this.recordCronEvent({
+              eventType: "chainlink-older-metal-quote-validated",
+              severity: "info",
+              message: "Validated older Chainlink metal quote against current reference.",
+              metadata: {
+                pegKey,
+                currentRate: existing,
+                chainlinkRate: Number(quote.price.toFixed(6)),
+                chainlinkUpdatedAt: quote.updatedAt,
+                existingUpdatedAt,
+              },
+            });
+            accepted++;
+          }
+        } else {
+          this.recordCronEvent({
+            eventType: "chainlink-older-quote-skipped",
+            severity: "info",
+            message: "Skipping older Chainlink metal quote against a non-fresh incumbent.",
+            metadata: { pegKey, chainlinkUpdatedAt: quote.updatedAt, existingUpdatedAt },
+          });
+        }
+        continue;
+      }
+
+      if (hasExisting && incumbentIsFresh) {
         const delta = Math.abs(quote.price - existing) / existing;
         if (delta > CHAINLINK_REFERENCE_MAX_DIVERGENCE) {
           this.recordCronEvent({
@@ -634,26 +689,33 @@ export class FxSyncRunState {
           });
           continue;
         }
-      }
-
-      const normalized = Number(quote.price.toFixed(6));
-      if (this.validateRate(pegKey, normalized, this.prevRates[pegKey])) {
-        if (quoteOlderThanCurrent && metalPegKey && existing != null && existing > 0) {
+      } else if (hasExisting && metalPegKey) {
+        // A stale or unknown-clock incumbent has no 5% veto, but a move past
+        // the prior-value delta bound needs an independent fresh corroborator.
+        // The run's metal resolution would already have applied one, so no
+        // such corroboration remains here.
+        const delta = Math.abs(quote.price - existing) / existing;
+        if (delta > MAX_FX_RATE_DELTA_PCT) {
           this.recordCronEvent({
-            eventType: "chainlink-older-metal-quote-validated",
-            severity: "info",
-            message: "Validated older Chainlink metal quote against current reference.",
+            eventType: "chainlink-rate-diverged",
+            severity: "warning",
+            message: "Chainlink quote jumped a non-fresh reference without fresh corroboration.",
             metadata: {
               pegKey,
               currentRate: existing,
-              chainlinkRate: normalized,
-              chainlinkUpdatedAt: quote.updatedAt,
-              existingUpdatedAt,
+              chainlinkRate: quote.price,
+              deltaPct: Number((delta * 100).toFixed(1)),
             },
           });
-          accepted++;
           continue;
         }
+      }
+
+      const normalized = Number(quote.price.toFixed(6));
+      const prevRateForValidation = hasExisting && !incumbentIsFresh
+        ? undefined
+        : this.prevRates[pegKey];
+      if (this.validateRate(pegKey, normalized, prevRateForValidation)) {
         this.usableRates[pegKey] = normalized;
         applyRealtimeOverlaySourceMetadata(
           pegKey,
@@ -665,7 +727,9 @@ export class FxSyncRunState {
           this.sourceDateByPeg,
         );
         accepted++;
-      } else if (this.prevRates[pegKey]) {
+      } else if (!(pegKey in this.usableRates) && this.prevRates[pegKey]) {
+        // A rejected quote never displaces an incumbent from this run; only a
+        // peg with no current value may recover its previous observation.
         this.usableRates[pegKey] = this.prevRates[pegKey]!;
         this.inheritPrevious(pegKey);
       }
@@ -913,6 +977,70 @@ export async function runOpenExchangeRatesOverlay(
   });
 }
 
+async function applyChainlinkOverlaySnapshot(
+  db: D1Database,
+  state: FxSyncRunState,
+  snapshot: ChainlinkReferenceQuoteSnapshot,
+  runBestEffort: RunBestEffort,
+): Promise<ChainlinkSourceStatus> {
+  const accepted = state.applyChainlinkQuotes(snapshot.quotes);
+  await runBestEffort("recordOutcome:chainlink-feeds", async () => {
+    await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, snapshot.quotes.size > 0);
+  });
+  return snapshot.quotes.size > 0
+    ? (accepted === snapshot.quotes.size ? "ok" : "partial")
+    : "unavailable";
+}
+
+/**
+ * Fetch the Chainlink reference snapshot before metals resolution so a fresh
+ * metal round can corroborate a spot move that exceeds the prior-value delta
+ * bound against a non-fresh incumbent. The caller must pass the result to
+ * `runChainlinkOverlay` so one fetch serves both purposes.
+ */
+export async function prepareChainlinkOverlay(
+  db: D1Database,
+  state: FxSyncRunState,
+  signal: AbortSignal | undefined,
+  chainRpcs: Map<string, ChainRpcConfig> | undefined,
+  drpcApiKey: string | null | undefined,
+  etherscanApiKey: string | null | undefined,
+  runBestEffort: RunBestEffort,
+): Promise<ChainlinkReferenceQuoteSnapshot | "unavailable"> {
+  const snapshot = await withFxOverlayCircuit(db, {
+    source: CIRCUIT_SOURCE.CHAINLINK_FEEDS,
+    circuitOpenEvent: {
+      eventType: "chainlink-reference-feed-circuit-open",
+      severity: "warning",
+      message: "Chainlink reference-feed circuit is open; skipping overlay.",
+    },
+    failedEvent: {
+      eventType: "chainlink-reference-feeds-failed",
+      severity: "warning",
+      message: "Chainlink reference feeds failed.",
+    },
+    failureOutcomeLabel: "recordOutcome:chainlink-feeds-failure",
+    signal,
+    runBestEffort,
+    run: async () => {
+      const previousFailingRuns = await loadChainlinkFailingRuns(db);
+      return await fetchChainlinkReferenceQuoteSnapshot(
+        signal,
+        chainRpcs,
+        state.syncStartSec,
+        drpcApiKey,
+        etherscanApiKey,
+        previousFailingRuns,
+      );
+    },
+  });
+  if (snapshot === "unavailable") return snapshot;
+  await runBestEffort("setCache:chainlink-failing-runs", async () => {
+    await setCache(db, CHAINLINK_FAILING_RUNS_CACHE_KEY, JSON.stringify(snapshot.failingRuns));
+  });
+  return snapshot;
+}
+
 export async function runChainlinkOverlay(
   db: D1Database,
   state: FxSyncRunState,
@@ -921,7 +1049,10 @@ export async function runChainlinkOverlay(
   drpcApiKey: string | null | undefined,
   etherscanApiKey: string | null | undefined,
   runBestEffort: RunBestEffort,
+  prepared?: ChainlinkReferenceQuoteSnapshot | "unavailable",
 ): Promise<ChainlinkSourceStatus> {
+  if (prepared === "unavailable") return "unavailable";
+  if (prepared) return applyChainlinkOverlaySnapshot(db, state, prepared, runBestEffort);
   return withFxOverlayCircuit(db, {
     source: CIRCUIT_SOURCE.CHAINLINK_FEEDS,
     circuitOpenEvent: {
@@ -947,16 +1078,10 @@ export async function runChainlinkOverlay(
         etherscanApiKey,
         previousFailingRuns,
       );
-      const accepted = state.applyChainlinkQuotes(snapshot.quotes);
-      await runBestEffort("recordOutcome:chainlink-feeds", async () => {
-        await recordOutcome(db, CIRCUIT_SOURCE.CHAINLINK_FEEDS, snapshot.quotes.size > 0);
-      });
       await runBestEffort("setCache:chainlink-failing-runs", async () => {
         await setCache(db, CHAINLINK_FAILING_RUNS_CACHE_KEY, JSON.stringify(snapshot.failingRuns));
       });
-      return snapshot.quotes.size > 0
-        ? (accepted === snapshot.quotes.size ? "ok" : "partial")
-        : "unavailable";
+      return applyChainlinkOverlaySnapshot(db, state, snapshot, runBestEffort);
     },
   });
 }

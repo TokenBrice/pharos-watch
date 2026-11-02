@@ -188,6 +188,12 @@ describe("curated on-chain supply paths", () => {
       .toEqual(["ethereum", "bsc", "solana", "arc"]);
   });
 
+  it("prefers USG's keeper-adjusted issuer-native stock over a CoinGecko market cap", () => {
+    const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(true);
+    expect(selectSingleOnchainSupplyProbeContract(meta)?.chain).toBe("ethereum");
+  });
+
   it.each(["ylds-figure", "sfrxusd-frax"])(
     "keeps %s aggregate supply unavailable until its complete perimeter is reviewed",
     (id) => expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get(id)!)).toBeNull(),

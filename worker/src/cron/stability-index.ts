@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { getCirculatingRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { getCirculatingRawOrNull, getPrevWeekRawOrNull, isOutageFallbackCarry } from "@shared/lib/supply";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
@@ -52,6 +52,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   const symbolById = new Map<string, string>();
 
   const supplyUnavailableIds: string[] = [];
+  const carriedSupplyIds: string[] = [];
   const trendUnavailableIds: string[] = [];
   for (const coin of tracked) {
     const mcap = getCirculatingRawOrNull(coin);
@@ -59,6 +60,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
       supplyUnavailableIds.push(coin.id);
       continue;
     }
+    // An outage-fallback restore keeps its original clock and source; it is a
+    // documented weight, not a supply observation made by this run (R6).
+    // Routine main-path carries (chain dropout, coverage restore) stay observed.
+    if (isOutageFallbackCarry(coin)) carriedSupplyIds.push(coin.id);
     totalMcapUsd += mcap;
     const prevWeek = getPrevWeekRawOrNull(coin);
     if (prevWeek != null && Number.isFinite(prevWeek) && prevWeek >= 0) {
@@ -77,16 +82,22 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
   const coreSupplyUnavailableCount = supplyUnavailableIds
     .filter((id) => CORE_AGGREGATE_ACTIVE_IDS.has(id))
     .length;
+  const coreCarriedSupplyCount = carriedSupplyIds
+    .filter((id) => CORE_AGGREGATE_ACTIVE_IDS.has(id))
+    .length;
   const universeCoverage = {
     expected: CORE_AGGREGATE_ACTIVE_IDS.size,
     // Coverage measures the core aggregate cohort only; PSI-historical assets
     // are outside the denominator and supply availability is its own component.
+    // Carried supply remains a published weight but is not admitted as an
+    // observation this generation.
     present: coreTrackedIds.size,
-    admittedSupply: coreTrackedIds.size - coreSupplyUnavailableCount,
+    admittedSupply: coreTrackedIds.size - coreSupplyUnavailableCount - coreCarriedSupplyCount,
     missingFromCacheIds: [...CORE_AGGREGATE_ACTIVE_IDS]
       .filter((id) => !coreTrackedIds.has(id))
       .sort(),
     supplyUnavailableIds,
+    carriedSupplyIds,
     trendUnavailableIds,
   };
   const universeCoverageStatus = classifyPsiUniverseCoverage(
@@ -311,6 +322,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
     ...(openDepegsWithoutPrice > 0 ? ["open-depeg-no-price"] : []),
     ...(supplyUnavailableIds.length > 0 ? ["supply-unavailable"] : []),
     ...(trendUnavailableIds.length > 0 ? ["trend-inputs-unavailable"] : []),
+    ...(carriedSupplyIds.length > 0 ? ["carried-supply"] : []),
     ...(universeCoverageStatus !== "ok" ? ["universe-coverage"] : []),
   ];
 
@@ -362,6 +374,7 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         openDepegsWithoutPrice,
         degradedComponents,
         supplyUnavailableIds,
+        carriedSupplyIds,
         trendUnavailableIds,
         universeCoverage: {
           ...universeCoverage,
@@ -405,8 +418,10 @@ export async function computeAndStoreStabilityIndex(db: D1Database, signal?: Abo
         quality: { reason: degradedComponents[0], reasons: degradedComponents },
       } : {}),
       supplyUnavailableIds,
+      carriedSupplyIds,
       trendUnavailableIds,
       supplyUnavailableCount: supplyUnavailableIds.length,
+      carriedSupplyCount: carriedSupplyIds.length,
       trendUnavailableCount: trendUnavailableIds.length,
       universeCoverage: {
         ...universeCoverage,

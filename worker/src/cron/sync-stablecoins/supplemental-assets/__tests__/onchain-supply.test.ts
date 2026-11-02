@@ -614,6 +614,33 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     });
   });
 
+  it("values USG's keeper-adjusted issuer-native stock, never the CoinGecko cap", async () => {
+    const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(true);
+    probeTrackedTokenSupplyMock.mockResolvedValue(4_000_000n * 10n ** 18n);
+    fetchErc20TotalSupplyMock.mockResolvedValue(4_000_000n * 10n ** 18n);
+    // Both reviewed PegKeeper balances (CURATED_ONCHAIN_SUPPLY_EXCLUSIONS)
+    // subtract from totalSupply; CoinGecko's cap counts that inventory.
+    fetchOnchainUint256Mock
+      .mockResolvedValueOnce(300_000n * 10n ** 18n)
+      .mockResolvedValueOnce(100_000n * 10n ** 18n);
+
+    const result = await fetchOnChainMcap(meta, 1.01);
+
+    expect(result?.supplySource).toBe("onchain-circulating-supply");
+    expect(result?.mcap).toBeCloseTo(3_636_000, 6);
+    expect(result?.chainCirculating).toEqual({ Ethereum: { current: 3_636_000, chainId: "ethereum" } });
+    expect(fetchOnchainUint256Mock).toHaveBeenCalledTimes(2);
+    const holders = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[meta.id].holderAddresses;
+    expect(fetchOnchainUint256Mock.mock.calls.map(([input]) => input.contract)).toEqual([
+      meta.contracts![0]!.address, meta.contracts![0]!.address,
+    ]);
+    for (const [index, holder] of holders.entries()) {
+      expect(String(fetchOnchainUint256Mock.mock.calls[index]?.[0].data))
+        .toContain(holder.slice(2).toLowerCase());
+    }
+  });
+
   it("admits USYC's complete native four-chain stock instead of a stale CoinGecko cap", async () => {
     const meta = TRACKED_META_BY_ID.get("usyc-hashnote")!;
     expect(prefersOnChainSupplyMcap(meta)).toBe(true);

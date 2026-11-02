@@ -52,6 +52,9 @@ function readPsiInputDegradation(snapshot: Record<string, unknown>): StabilityIn
   const supplyUnavailableIds = Array.isArray(snapshot.supplyUnavailableIds)
     ? snapshot.supplyUnavailableIds.filter((id): id is string => typeof id === "string")
     : undefined;
+  const carriedSupplyIds = Array.isArray(snapshot.carriedSupplyIds)
+    ? snapshot.carriedSupplyIds.filter((id): id is string => typeof id === "string")
+    : undefined;
   const trendUnavailableIds = Array.isArray(snapshot.trendUnavailableIds)
     ? snapshot.trendUnavailableIds.filter((id): id is string => typeof id === "string")
     : undefined;
@@ -64,6 +67,7 @@ function readPsiInputDegradation(snapshot: Record<string, unknown>): StabilityIn
     openDepegNoPrice: unpricedOpenDepegs > 0,
     openDepegsWithoutPrice: unpricedOpenDepegs > 0 ? unpricedOpenDepegs : null,
     ...(supplyUnavailableIds ? { supplyUnavailableIds } : {}),
+    ...(carriedSupplyIds ? { carriedSupplyIds } : {}),
     ...(trendUnavailableIds ? { trendUnavailableIds } : {}),
   };
 
@@ -74,6 +78,7 @@ function readPsiInputDegradation(snapshot: Record<string, unknown>): StabilityIn
     || degradation.depegEventsFailureReason != null
     || degradation.openDepegNoPrice
     || (supplyUnavailableIds?.length ?? 0) > 0
+    || (carriedSupplyIds?.length ?? 0) > 0
     || (trendUnavailableIds?.length ?? 0) > 0
   )
     ? degradation

@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.43",
+    "title": "Commodity peer medians require three contributors",
+    "date": "2026-11-02",
+    "effectiveAt": 1793664000,
+    "summary": "A commodity peer median may stand in for spot only when at least three live same-metal coins contribute. Thin commodity groups fail closed, and a stale or unknown-clock cached metal observation bounds a spot move only within the prior-value delta limit: a larger move needs independent fresh corroboration.",
+    "impact": [
+      "`shared/lib/peg-reference-trust.ts` exports the single `MIN_PEER_MEDIAN_CONTRIBUTORS = 3` authority. Gold and silver medians with one or two contributors are `non-authoritative-reference`: a one-coin median is the coin's own price and a two-coin median mirrors half of any real move onto the healthy peer. Direct spot/FX references do not need peer contributors.",
+      "The `fx-rates` metals producer applies the same quorum before admitting a tracked commodity median, so a thin median cannot be published as a spot substitute. The affected asset falls back to an honestly clocked cached value or reports an unavailable reference instead.",
+      "A metal quote that moves more than 20% against a stale or unknown-clock incumbent is admitted only when an independent fresh source confirms it within 5%: a fresh, provider-dated Chainlink round or a three-contributor commodity median. Otherwise the incumbent is retained with its original observation clock rather than the run clock, and an undated quote is never treated as provider-dated evidence. A fresh Chainlink metal round replaces a non-fresh incumbent only within the same prior-value bound; older rounds never replace a newer incumbent or move its clock backwards.",
+      "Detection thresholds, confirmation, recovery and DEWS weights are unchanged. Activation is 2026-11-03 00:00 UTC (1793664000)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.42",
     "title": "Public depeg counts exclude disputed rows; retired coins are marked",
     "date": "2026-10-31",

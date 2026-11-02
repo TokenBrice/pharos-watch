@@ -504,7 +504,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
               ? "Mcap unavailable (0 coins observed)"
               : d.totalMcapUsd == null ? null
                 : `${coverage?.complete ? "Total mcap" : "Known mcap subtotal"}: ${formatCurrency(d.totalMcapUsd, 0)} · ${
-                  coverage ? `${coverage.observedCount}/${coverage.observedCount + coverage.unavailableCount} coins observed` : "coverage unproven"
+                  coverage ? `${coverage.observedCount}/${coverage.observedCount + coverage.unavailableCount + (coverage.carriedCount ?? 0)} coins observed` : "coverage unproven"
                 }`;
             // The risk signal often repeats verbatim across consecutive editions;
             // show it where it first appears or changes, not on every row.

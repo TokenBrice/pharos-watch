@@ -1069,15 +1069,6 @@
     },
     {
       "chainId": "ethereum",
-      "stablecoinId": "usda-avalon",
-      "address": "0x8a60e489004ca22d775c5f2c657598278d17d9c2",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
       "stablecoinId": "usdaf-asymmetry",
       "address": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
       "decimals": 18,

@@ -9,21 +9,32 @@ export interface PegReferenceTrustInput {
 }
 
 /**
+ * Minimum live contributors before a peer median may stand in for a missing
+ * direct reference. A 1-coin median is the coin's own price (deviation always
+ * ~0) and a 2-coin median mirrors half of any real move onto the healthy peer.
+ */
+export const MIN_PEER_MEDIAN_CONTRIBUTORS = 3;
+
+/**
  * Whether a derived peg reference is trustworthy enough to anchor deviation
- * numbers. USD pegs anchor at 1; commodity pegs use an available arbitraged peer median;
- * non-USD fiat pegs use live FX when available, otherwise they need a peer-group median of
- * at least 3 coins — a 1-coin median is the coin's own price (deviation
- * always ~0) and a 2-coin median mirrors half of any real move onto the
- * healthy peer. The depeg detection engine has always failed closed on this;
- * display surfaces share the same gate (depeg-dews v6.08). The legacy
- * `fallback` source remains accepted for cached payload compatibility.
+ * numbers. USD pegs anchor at 1; commodity and non-USD fiat pegs use live
+ * FX/spot when available, otherwise they need a peer-group median of at least
+ * `MIN_PEER_MEDIAN_CONTRIBUTORS` coins. The depeg detection engine has always
+ * failed closed on this; display surfaces share the same gate (depeg-dews
+ * v6.08). The legacy `fallback` source remains accepted for cached payload
+ * compatibility.
  */
 export function isAuthoritativeDepegPegReference(input: PegReferenceTrustInput): boolean {
   const isCommodityPeg =
     input.pegCurrency === "GOLD" || input.pegCurrency === "SILVER" ||
     input.pegType === "peggedGOLD" || input.pegType === "peggedSILVER";
   if (isCommodityPeg) {
-    return input.pegRateAvailable ?? input.pegRateSource != null;
+    const available = input.pegRateAvailable ?? input.pegRateSource != null;
+    if (!available) return false;
+    // A commodity peer median may stand in for spot only with a real quorum;
+    // a direct spot/fx/fallback rate does not need peers.
+    return input.pegRateSource !== "median"
+      || (input.pegRateContributorCount ?? 0) >= MIN_PEER_MEDIAN_CONTRIBUTORS;
   }
 
   // Only an explicit USD identity anchors at 1 without a peg type. An absent
@@ -47,5 +58,5 @@ export function isAuthoritativeDepegPegReference(input: PegReferenceTrustInput):
   }
 
   return input.pegRateSource === "fx" || input.pegRateSource === "fallback" ||
-    (input.pegRateContributorCount ?? 0) >= 3;
+    (input.pegRateContributorCount ?? 0) >= MIN_PEER_MEDIAN_CONTRIBUTORS;
 }

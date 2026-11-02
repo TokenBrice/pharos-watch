@@ -4,7 +4,8 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { runCadenceBucketPublication } from "../lib/cadence-bucket";
-import { loadFxRateState, type FxRatesMeta } from "../lib/fx-rate-state";
+import { isFreshFxObservation, loadFxRateState, type FxRatesMeta } from "../lib/fx-rate-state";
+import type { ChainlinkReferenceQuoteSnapshot } from "../lib/chainlink-feeds";
 import {
   EXPECTED_FX_PEG_KEYS,
   isValidFxRate,
@@ -12,10 +13,11 @@ import {
   PRIMARY_FX_CURRENCIES,
   SECONDARY_FX_CURRENCY_TO_PEG,
 } from "../lib/fx-config";
-import { loadCommodityPeerMedianReference, resolveMetalReferenceRates } from "../lib/fx-metals";
+import { loadCommodityPeerMedianReference, resolveMetalReferenceRates, type MetalPegKey } from "../lib/fx-metals";
 import {
   FxSyncRunState,
   persistFxSyncResult,
+  prepareChainlinkOverlay,
   runChainlinkOverlay,
   runOpenExchangeRatesOverlay,
 } from "./sync-fx-rates-helpers";
@@ -298,10 +300,47 @@ async function runFxRatePublication(
     }
 
     const metalsDue = isFxSourceDue("metals", sourceLastSuccessAtBySource, syncStartSec);
+    const chainlinkDue = isFxSourceDue("chainlink", sourceLastSuccessAtBySource, syncStartSec);
+    let chainlinkPrepared: ChainlinkReferenceQuoteSnapshot | "unavailable" | undefined;
     if (metalsDue) {
+      // Fetch Chainlink first so a fresh metal round can corroborate a spot
+      // move that exceeds the prior-value delta bound against a non-fresh
+      // incumbent; the same snapshot is applied after metals below.
+      if (chainlinkDue) {
+        chainlinkPrepared = await prepareChainlinkOverlay(
+          db,
+          syncState,
+          signal,
+          chainRpcs,
+          drpcApiKey,
+          etherscanApiKey,
+          runBestEffort,
+        );
+      }
+      const freshChainlinkRates: Partial<Record<MetalPegKey, number>> = {};
+      if (chainlinkPrepared && chainlinkPrepared !== "unavailable") {
+        for (const pegKey of ["peggedGOLD", "peggedSILVER"] as const) {
+          const quote = chainlinkPrepared.quotes.get(pegKey);
+          if (quote && isFreshFxObservation(quote.updatedAt, "live", syncStartSec, { pegKey, cadence: "intraday" })) {
+            freshChainlinkRates[pegKey] = quote.price;
+          }
+        }
+      }
+      const prevMetalRateIsFresh = (pegKey: MetalPegKey): boolean => isFreshFxObservation(
+        prevState?.sourceUpdatedAtByPeg[pegKey] ?? null,
+        prevState?.sourceModeByPeg[pegKey],
+        syncStartSec,
+        {
+          pegKey,
+          cadence: prevState?.sourceCadenceByPeg[pegKey],
+          sourceDate: prevState?.sourceDateByPeg?.[pegKey] ?? null,
+        },
+      );
       const metals = await resolveMetalReferenceRates({
         prevRates: syncState.prevRates,
+        prevRateIsFresh: prevMetalRateIsFresh,
         commodityPeerMedian,
+        freshChainlinkRates,
         syncStartSec,
         signal,
         validateRate: (pegKey, rate, prevRate) => isValidFxRate(pegKey, rate, prevRate, "[sync-fx-rates]"),
@@ -318,7 +357,7 @@ async function runFxRatePublication(
       syncState.sources["commodity-peer-median"] = prevState?.sources?.["commodity-peer-median"] ?? "cached";
     }
 
-    if (isFxSourceDue("chainlink", sourceLastSuccessAtBySource, syncStartSec)) {
+    if (chainlinkDue) {
       syncState.sources.chainlink = await runChainlinkOverlay(
         db,
         syncState,
@@ -327,6 +366,7 @@ async function runFxRatePublication(
         drpcApiKey,
         etherscanApiKey,
         runBestEffort,
+        chainlinkPrepared,
       );
       if (syncState.sources.chainlink === "ok" || syncState.sources.chainlink === "partial") {
         sourceLastSuccessAtBySource.chainlink = syncStartSec;

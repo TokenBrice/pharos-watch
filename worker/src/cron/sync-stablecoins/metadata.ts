@@ -5,7 +5,7 @@ import type {
   DepegObservationUnavailableReason,
 } from "../depeg-detection/types";
 import { HiveMarketDiagnosticSchema } from "@shared/types/hive-market-price";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
@@ -174,9 +174,11 @@ export function countFallbackCoingeckoAssets(
   assets: readonly Pick<PeggedAsset, "id">[],
   trackedCoverage: TrackedCoverageRestoreResult | null | undefined,
 ): number {
-  if (!trackedCoverage || trackedCoverage.assets.length === 0) return assets.length;
-  const coverageIds = new Set(trackedCoverage.assets.map((asset) => String(asset.id)));
-  return assets.filter((asset) => !coverageIds.has(String(asset.id))).length;
+  const coverageIds = new Set((trackedCoverage?.assets ?? []).map((asset) => String(asset.id)));
+  // Frozen snapshots are injected from the archive, never served by CoinGecko.
+  return assets.filter((asset) =>
+    !coverageIds.has(String(asset.id)) && !FROZEN_IDS.has(String(asset.id))
+  ).length;
 }
 
 function preferredNativeSupplyQuality(assets: readonly PeggedAsset[]) {

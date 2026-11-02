@@ -3,6 +3,17 @@
   "name": "USDB Blast",
   "symbol": "USDB",
   "oneLiner": "USDB is Blast L2's native yield-bearing dollar, bridged USDC/USDT routed through MakerDAO DSR with auto-rebasing yield to Blast holders.",
+  "status": "frozen",
+  "frozenAt": "2026-11-02",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-10-26",
+    "epitaph": "The chain that issued Blast's dollar switched itself off",
+    "obituary": "Blast announced on October 2, 2026 that it would wind down its Ethereum L2 because operating costs exceeded revenue, and the normal withdrawal interface closed on October 26 with about $40.4M still sitting in the canonical bridge. USDB exists only on Blast: users receive it by bridging USDC, USDT or DAI to the L2, and redeem it for DAI only by proving a withdrawal back to Ethereum, so the end of the chain ends the product even though the L1 bridge contracts still accept contract-level exits. Supply fell from about $11.4M to $8.6M in the month to capture, every tracked Blast USDB pool shows zero 24-hour volume, and CoinGecko's last quote on October 30 came from those idle pools. Pharos freezes USDB as an archived wind-down asset; holders keep the L1 bridge claim described in Blast's withdrawal guides.",
+    "peakMcap": 425699174,
+    "sourceUrl": "https://x.com/blast/status/2106032805280891073",
+    "sourceLabel": "Blast L2 wind-down announcement"
+  },
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -55,30 +66,6 @@
   "governanceQuality": "multisig",
   "windDownAnnouncedAt": "2026-10-02",
   "windDownSourceUrl": "https://x.com/blast/status/2106032805280891073",
-  "liveReservesConfig": {
-    "adapter": "blast-usdb-yield-manager",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "usdb-blast",
-    "display": {
-      "url": "https://blast.io/",
-      "label": "Blast"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
-    },
-    "params": {
-      "yieldManagerAddress": "0xa230285d5683C74935aD14c446e137c8c8828438",
-      "supplyChain": "blast",
-      "supplyTokenAddress": "0x4300000000000000000000000000000000000003",
-      "rpcUrl": "https://ethereum-rpc.publicnode.com",
-      "supplyRpcUrl": "https://rpc.blast.io"
-    }
-  },
   "yieldConfig": {
     "yieldSource": "Blast native yield",
     "yieldType": "governance-set"

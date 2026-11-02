@@ -78,15 +78,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "f3466b63ebc8e954fc0811399d1fb1830517bc1df9b0346f964bfc89f72b433f"
+      "sha256": "204106cf6872663201c88320ab616ffa07625524b31976cf1e6658a3f810ed63"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "9d4fd980fc2584247301947fe0f0afb2cb5ee7c94983a91476867d935cb04d5b"
+      "sha256": "92aac106140fec7cabb157557f5b8e77984729633a57c62db2883c474a223c8c"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "14695c7bf6d3ab4537502ce69331a3a43a7a59d7eb476da077b786642f781a73"
+      "sha256": "7e2b761d0573f90cacc2a0d2a791a4b91d1be5dffa3549ea5ca88254620a3c11"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -274,7 +274,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/pricing-source-policy.ts",
-      "sha256": "6bc783f0f8b7adaf923bbe69005be36a90b1160c3d38e8551c3ae827e82c9176"
+      "sha256": "31e0fe3e5f508fed2fc63525d1eedc8f8e1f15f6bae5bbbc518f08c3cb73f777"
     },
     {
       "path": "shared/lib/pricing-source-registry-aggregators.ts",
@@ -746,7 +746,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/supply.ts",
-      "sha256": "644cf59260cb1a397c848d535b860f0317b5cac27cadf05af6dfae037b461920"
+      "sha256": "eb3aa658de41dd4857b28c484e83ec13c8a9ff8a3170cf394f9ec87ffe1e8fd6"
     },
     {
       "path": "shared/lib/time-constants.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-02-block-26326766-shock-coverage.json.gz"
     }
   ],
-  "digest": "9fdf9f7aaa9e5038c9db3278f3ac2df4a0cf2809515f1f45572a3b219b03f833"
+  "digest": "466bafab094b0d0bd762a61a964c29fe1e9ad0a2dc61e716ad70b87dcbd5084c"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -478,16 +478,16 @@ describe("DEX refresh continuity", () => {
 });
 
 describe("exact-address coverage refresh", () => {
-  // USDA: an active row whose only live lane is the exact-address provider.
-  const usda = () => makePeggedAsset({ id: "usda-avalon", symbol: "USDA", price: 0.9750917398,
+  // USDC: an active row whose only live lane is the exact-address provider.
+  const usdc = () => makePeggedAsset({ id: "usdc-circle", symbol: "USDC", price: 0.9750917398,
     priceSource: "coingecko-onchain-address", priceConfidence: "fallback",
     priceObservedAt: now - 600, priceObservedAtMode: "local_fetch" });
   const addressProvider = { enabledProviders: "coingecko-onchain-address", cgApiKey: "cg-key" };
   const onchainRequest = (url: string) => url.includes("/onchain/networks/");
   // Only the deep network answers; everything else is an unindexed deployment,
-  // exactly as the live provider sees USDA's dust chains.
+  // exactly as the live provider sees USDC's long tail of chains.
   const onchainRoutes = (price = "0.9822") => [{
-    match: (request: Request) => onchainRequest(request.url) && request.url.includes("/networks/berachain/"),
+    match: (request: Request) => onchainRequest(request.url) && request.url.includes("/networks/arbitrum/"),
     respond: (request: Request) => coingeckoResponse(
       new URL(request.url).pathname.split("/tokens/multi/")[1]!.split(",")[0]!, price, "120000"),
   }, {
@@ -506,7 +506,7 @@ describe("exact-address coverage refresh", () => {
   }
 
   it("re-observes the row this lane prices and stages the quote for the next publication", async () => {
-    prepareAddressRefresh(usda());
+    prepareAddressRefresh(usdc());
     const cg = mockFetch(onchainRoutes());
     const before = Math.floor(Date.now() / 1_000);
     const recordOutcome = vi.spyOn(circuit, "recordOutcomeDecision").mockResolvedValue(undefined);
@@ -525,40 +525,40 @@ describe("exact-address coverage refresh", () => {
     });
     const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
     const observation = state.observations.find((row: { source: string }) => row.source === "coingecko-onchain-address");
-    expect(observation).toMatchObject({ id: "usda-avalon", chain: "berachain", price: 0.9822, observedAtMode: "local_fetch" });
+    expect(observation).toMatchObject({ id: "usdc-circle", chain: "arbitrum", price: 0.9822, observedAtMode: "local_fetch" });
     expect(observation.observedAt).toBeGreaterThanOrEqual(before);
     expect(observation.observedAt).toBeLessThanOrEqual(Math.floor(Date.now() / 1_000));
     // The deployment that produced the quote becomes the next slot's routed target.
-    expect(state.addressTargets).toEqual([{ id: "usda-avalon", chain: "berachain",
-      target: "0xff12470a969dd362eb6595ffb44c82c959fe9acc", observedAt: observation.observedAt }]);
+    expect(state.addressTargets).toEqual([{ id: "usdc-circle", chain: "arbitrum",
+      target: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", observedAt: observation.observedAt }]);
     expect(cg.getHistory().some((entry) => onchainRequest(entry.url))).toBe(true);
   });
 
   it("re-reads a stored deployment instead of re-probing every chain", async () => {
-    prepareAddressRefresh(usda());
+    prepareAddressRefresh(usdc());
     await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({ observations: [], targets: [], cursor: 0,
-      addressTargets: [{ id: "usda-avalon", chain: "berachain", target: "0xff12470a969dd362eb6595ffb44c82c959fe9acc", observedAt: now - 900 }] }), now - 900);
+      addressTargets: [{ id: "usdc-circle", chain: "arbitrum", target: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", observedAt: now - 900 }] }), now - 900);
     const cg = mockFetch(onchainRoutes());
 
     const summary = await runPriceDexRefresh({ db, syncStartSec: now, addressProvider });
 
     const requests = cg.getHistory().map((entry) => entry.url).filter(onchainRequest);
-    expect(requests).toEqual(["https://pro-api.coingecko.com/api/v3/onchain/networks/berachain/tokens/multi/0xff12470a969dd362eb6595ffb44c82c959fe9acc"]);
+    expect(requests).toEqual(["https://pro-api.coingecko.com/api/v3/onchain/networks/arbitrum/tokens/multi/0xaf88d065e77c8cc2239327c5edb3a432268e5831"]);
     expect(summary.addressRefresh).toMatchObject({ targetCount: 1, resolved: 1, cappedTargets: 0, successfulRequests: 1 });
   });
 
   it("refreshes a published address quote despite its gap review while excluding acknowledged missing rows", async () => {
-    // Co-dated synthetic USDA and authored WUSD reviews: the spy returns the
+    // Co-dated synthetic USDC and authored WUSD reviews: the spy returns the
     // real resolver's result for exactly these fixtures.
     const wusdReview = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
-    const usdaReview = { ...wusdReview, stablecoinId: "usda-avalon" };
+    const usdcReview = { ...wusdReview, stablecoinId: "usdc-circle" };
     const resolveReviews = coverage.resolveStablecoinPriceGapReviews;
     vi.spyOn(coverage, "resolveStablecoinPriceGapReviews").mockImplementation((ids, nowSec) =>
-      resolveReviews(ids, nowSec, [usdaReview, wusdReview]));
+      resolveReviews(ids, nowSec, [usdcReview, wusdReview]));
     const slot = wusdReview.reviewedAt + 60;
-    expect([...resolveReviews([...ACTIVE_META_BY_ID.keys()], slot, [usdaReview, wusdReview]).activeById.keys()].sort())
-      .toEqual(["usda-avalon", "wusd-worldwide"]);
-    prepareAddressRefresh({ ...usda(), priceObservedAt: slot - 600 },
+    expect([...resolveReviews([...ACTIVE_META_BY_ID.keys()], slot, [usdcReview, wusdReview]).activeById.keys()].sort())
+      .toEqual(["usdc-circle", "wusd-worldwide"]);
+    prepareAddressRefresh({ ...usdc(), priceObservedAt: slot - 600 },
       makePeggedAsset({ id: "wusd-worldwide", symbol: "WUSD", price: null }));
     const cg = mockFetch(onchainRoutes());
 
@@ -567,15 +567,15 @@ describe("exact-address coverage refresh", () => {
     expect(summary.addressRefresh).toMatchObject({ cohortSize: 1, resolved: 1 });
     const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
     expect(state.observations.filter((row: { source: string }) => row.source === "coingecko-onchain-address"))
-      .toEqual([expect.objectContaining({ id: "usda-avalon", chain: "berachain", price: 0.9822 })]);
+      .toEqual([expect.objectContaining({ id: "usdc-circle", chain: "arbitrum", price: 0.9822 })]);
     expect(cg.getHistory().filter((entry) => onchainRequest(entry.url)).every((entry) =>
       !entry.url.includes("0x7cd017ca5ddb86861fa983a34b5f495c6f898c41"))).toBe(true);
   });
 
   it.each(["404", "missing", "thin"])("evicts a definitively unresolved %s address hint and broadens the next slot", async (kind) => {
-    prepareAddressRefresh(usda());
+    prepareAddressRefresh(usdc());
     await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({ observations: [], targets: [], cursor: 0,
-      addressTargets: [{ id: "usda-avalon", chain: "berachain", target: "0xff12470a969dd362eb6595ffb44c82c959fe9acc", observedAt: now - 900 }] }), now - 900);
+      addressTargets: [{ id: "usdc-circle", chain: "arbitrum", target: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", observedAt: now - 900 }] }), now - 900);
     const cg = mockFetch([{ match: (request) => onchainRequest(request.url),
       ...(kind === "404" ? { status: 404, body: { error: "not found" } }
         : kind === "missing" ? { body: { data: [] } }
@@ -593,7 +593,7 @@ describe("exact-address coverage refresh", () => {
   });
 
   it("records the exact-address circuit outcome and stages nothing when the provider refuses", async () => {
-    prepareAddressRefresh(usda());
+    prepareAddressRefresh(usdc());
     mockFetch([{ match: (request) => onchainRequest(request.url), status: 429, body: { error: "rate limited" } }]);
     const recordOutcome = vi.spyOn(circuit, "recordOutcomeDecision").mockResolvedValue(undefined);
 
@@ -606,8 +606,8 @@ describe("exact-address coverage refresh", () => {
   });
 
   it("skips the address lane without a request or circuit write while its breaker is open", async () => {
-    prepareAddressRefresh(usda());
-    const hint = { id: "usda-avalon", chain: "berachain", target: "0xff12470a969dd362eb6595ffb44c82c959fe9acc", observedAt: now - 900 };
+    prepareAddressRefresh(usdc());
+    const hint = { id: "usdc-circle", chain: "arbitrum", target: "0xaf88d065e77c8cc2239327c5edb3a432268e5831", observedAt: now - 900 };
     await setCacheIfNewer(db, DEX_REFRESH_CACHE_KEY, JSON.stringify({ observations: [], targets: [], cursor: 0, addressTargets: [hint] }), now - 900);
     const cg = mockFetch(onchainRoutes());
     vi.spyOn(circuit, "shouldAttemptFetch").mockResolvedValue(false);
@@ -622,7 +622,7 @@ describe("exact-address coverage refresh", () => {
   });
 
   it("runs no address request when the provider is unconfigured or the row is under a reviewed gap", async () => {
-    prepareAddressRefresh(usda());
+    prepareAddressRefresh(usdc());
     const cg = mockFetch([{ match: (request) => onchainRequest(request.url), respond: (request) =>
       coingeckoResponse(new URL(request.url).pathname.split("/tokens/multi/")[1]!.split(",")[0]!, "0.9822", "120000") }]);
 
@@ -645,7 +645,7 @@ describe("exact-address coverage refresh", () => {
 
   it("keeps the DEX lane and the staged payload intact when the address lane spends its deadline", async () => {
     vi.useFakeTimers();
-    prepareAddressRefresh(usda());
+    prepareAddressRefresh(usdc());
     vi.spyOn(addressProviders, "collectAddressPriceProviderQuotes").mockImplementation((params) => {
       let rejectRequest!: (reason?: unknown) => void;
       const pending = new Promise<AddressPriceProviderCollectionResult>((_resolve, reject) => { rejectRequest = reject; });

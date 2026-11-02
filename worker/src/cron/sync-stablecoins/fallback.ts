@@ -1,4 +1,5 @@
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
@@ -19,6 +20,7 @@ import {
   reportStablecoinsStage,
 } from "./runtime";
 import { applyTrackedAssetOverrides } from "./phase-helpers";
+import { countFallbackCoingeckoAssets } from "./metadata";
 import {
   buildPreviousTrustedPriceLookup,
   createValidationContextResolver,
@@ -51,6 +53,9 @@ export async function restoreFallbackCacheState({
   try {
     const nowSec = Math.floor(Date.now() / 1000);
     for (const asset of assets) {
+      // Frozen rows are archive captures, not this run's provider rows. Their
+      // captured chain supply and clocks must survive an outage untouched.
+      if (FROZEN_IDS.has(String(asset.id))) continue;
       const prev = previousAssetsById.get(String(asset.id));
       if (prev?.supplySource === "coingecko-gap-fill") {
         carryForwardSupplyGapFill(asset, prev);
@@ -86,17 +91,17 @@ export async function restoreFallbackCacheState({
 }
 
 /** No cache write: the omitted tracked coins have no readable prior row to restore from (R2). */
-function buildUnreadablePreviousPublicationResult(assetCount: number): CronResult {
+function buildUnreadablePreviousPublicationResult(assetCount: number, rowsRead: number): CronResult {
   return {
     status: "degraded",
     itemCount: assetCount,
     metadata: buildSyncMetadata({
       reason: "previous-stablecoins-publication-unreadable",
       previousCacheState: "error",
-      rowsRead: assetCount,
+      rowsRead,
       rowsWritten: 0,
       rowsDropped: 0,
-      sourceCoverage: { defillama: false, coingeckoFallbackAssets: assetCount },
+      sourceCoverage: { defillama: false, coingeckoFallbackAssets: rowsRead },
       fallbackMode: "coingecko-supply-fallback",
       validationFailures: 0,
       upstreamFetchOk: false,
@@ -137,17 +142,20 @@ export async function syncViaCoingeckoFallback(
   const { previousAssetsById, previousCacheState } = await restoreFallbackCacheState({ db, assets });
   // The canonical write would replace a possibly complete publication with the CoinGecko subset.
   if (previousCacheState.state === "error") {
+    // Only CoinGecko-served rows are this run's reads; frozen archive rows are
+    // injected before the check and are not part of the outage cohort.
+    const rowsRead = countFallbackCoingeckoAssets(assets, null);
     logWorkerEvent({
       scope: "lib",
       job: "sync-stablecoins",
       level: "error",
       event: "fallback-previous-publication-unreadable",
       message: "Previous stablecoins publication is unreadable; withholding the CoinGecko outage cohort",
-      metadata: { reason: "previous-stablecoins-publication-unreadable", coingeckoFallbackAssets: assets.length },
+      metadata: { reason: "previous-stablecoins-publication-unreadable", coingeckoFallbackAssets: rowsRead },
     });
-    return buildUnreadablePreviousPublicationResult(assets.length);
+    return buildUnreadablePreviousPublicationResult(assets.length, rowsRead);
   }
-  await overlayFallbackCuratedAggregateSupply(assets, signal, dwellirNative, previousAssetsById);
+  await overlayFallbackCuratedAggregateSupply(assets, signal, chainRpcs, dwellirNative, previousAssetsById);
   const { fxFallbackRates, validationReferences } = await loadFreshFxRates(
     db,
     "[sync-stablecoins:fallback]",
@@ -165,7 +173,12 @@ export async function syncViaCoingeckoFallback(
     await loadStablecoinsPublicationContinuity(db, syncStartSec);
 
   for (const asset of assets) {
-    if (!asset.supplySource) asset.supplySource = "coingecko-fallback";
+    // Injected frozen rows keep their captured provenance; CoinGecko did not
+    // serve their supply this run. Where the archive names no source, label it
+    // as the primary intake does, never as CoinGecko-served (R6).
+    if (!asset.supplySource) {
+      asset.supplySource = FROZEN_IDS.has(String(asset.id)) ? "defillama" : "coingecko-fallback";
+    }
   }
   // Same restore-or-degrade backstop as the primary intake: a coin CoinGecko cannot serve keeps its
   // previous row (`supplyRestored`, original clock and source) or preferred-native unavailable supply,
@@ -177,6 +190,13 @@ export async function syncViaCoingeckoFallback(
   applyTrackedAssetOverrides(trackedCoverage.assets);
   assets.push(...trackedCoverage.assets);
   logTrackedCoverageRestore(trackedCoverage);
+  // Every carried row in this publication came from the outage fallback. Tag
+  // it so PSI/digest flag it, while routine main-path carries stay unmarked.
+  for (const asset of assets) {
+    if (FROZEN_IDS.has(String(asset.id))) continue;
+    if (asset.supplyRestored === true) asset.supplyRestoreMode = "outage-fallback";
+    else delete asset.supplyRestoreMode;
+  }
   prevalidatePrices({
     assets, previousTrustedPrices, validationContexts, validationReferences,
     logLabel: "Pre-rejected fallback price",
