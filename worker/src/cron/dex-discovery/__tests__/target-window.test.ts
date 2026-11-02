@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
+import { DEX_DISCOVERY_PROVIDER_REGISTRY } from "@shared/lib/dex-deployment-coverage";
 import {
   classifyDexPlaceholderCoverage,
   type DexDeploymentCensusRow,
@@ -96,11 +97,13 @@ describe("estimateDeploymentCrawlCostMs", () => {
   });
 
   it("charges every provider stage that visits a deployment, not just the first", () => {
-    expect(estimateDeploymentCrawlCostMs("ethereum", "0x1111111111111111111111111111111111111111")).toBe(
-      1_450 + // coingecko
-      2_800 + // geckoterminal
-      1_700 + // dexscreener
-      1_200, // curve
+    const address = "0x1111111111111111111111111111111111111111";
+    const visitingStages = DEX_DISCOVERY_PROVIDER_REGISTRY
+      .filter((provider) => provider.lifecycle === "active" && provider.supports("ethereum", address));
+    // More than one stage must visit this deployment, or the pin is vacuous.
+    expect(visitingStages.length).toBeGreaterThan(1);
+    expect(estimateDeploymentCrawlCostMs("ethereum", address)).toBe(
+      visitingStages.reduce((sum, provider) => sum + provider.requestCostMs, 0),
     );
   });
 

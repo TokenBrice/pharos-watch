@@ -65,9 +65,8 @@ describe("frozen-snapshot price provenance", () => {
     const syncStartSec = Math.floor(Date.parse("2026-10-30T12:00:00Z") / 1000);
     const snapshot = FROZEN_SNAPSHOTS_BY_ID.get("aeur-anchored-coins");
     if (!snapshot) throw new Error("expected the checked-in AEUR frozen snapshot");
-    expect(Number.isFinite(Date.parse(snapshot.capturedAt))).toBe(true);
-    expect(snapshot.peggedAssetRow).toMatchObject({ priceSource: "defillama" });
-    expect(typeof snapshot.peggedAssetRow.price).toBe("number");
+    expect(snapshot.capturedAt).toBe("2026-07-08T08:00:33.000Z");
+    expect(snapshot.peggedAssetRow).toMatchObject({ price: 1.117990454919679, priceSource: "defillama" });
     expect(snapshot.peggedAssetRow).not.toHaveProperty("priceObservedAt");
     expect(snapshot.peggedAssetRow).not.toHaveProperty("priceUpdatedAt");
 
@@ -93,6 +92,7 @@ describe("frozen-snapshot price provenance", () => {
     const frozenRow = validAssets.find((asset) => asset.id === "aeur-anchored-coins");
     if (!frozenRow) throw new Error("expected the injected AEUR row to pass structural admission");
     expect(frozenRow.geckoId).toBeUndefined();
+    expect(frozenRow.price).toBe(snapshot.peggedAssetRow.price);
     expect(frozenRow.priceObservedAt).toBe(Date.parse(snapshot.capturedAt) / 1000);
 
     applyConsensusResults({

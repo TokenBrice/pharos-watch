@@ -57,6 +57,7 @@ function expectRegisteredSelection(measurement: CoverageMeasurement, row: Regist
     stressLiquidationCoverageRatio: row.measuredFacts.stressLiquidationCoverageRatio,
     branchContributions: row.measuredFacts.branchContributions,
   });
+  expect(measurement.codeHashPins).toEqual(row.codePins);
   expect(measurement.codeHashPins).toHaveLength(row.replayVerification!.codePinsConsumed);
   expect(measurement.codeHashPins.every((pin) => /^0x[0-9a-f]{64}$/.test(pin.codeHash))).toBe(true);
 }

@@ -303,10 +303,9 @@ function database(assets: ReturnType<typeof asset>[] | null, selected = rows, up
   ]);
 }
 
-beforeEach(() => vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000));
-afterEach(() => { vi.restoreAllMocks(); });
-
 describe("Sui shadow diagnostic price preflight and reasons", () => {
+  beforeEach(() => vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000));
+
   it.each(["high", "single-source"])("attempts both real retained pools with fresh %s published prices", async (confidence) => {
     const fetcher = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("not found", { status: 404 }));
     const db = database(rows.map((row) => asset(row.stablecoin_id, { priceConfidence: confidence })));

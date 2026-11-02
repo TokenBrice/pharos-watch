@@ -389,7 +389,8 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
     expect(fixedInput.activeAssetIds).toEqual([COMPOSITE_ID, SUPPORT_ID]);
     expect(extension.assets.map((asset) => asset.assetId)).toEqual([COMPOSITE_ID, SUPPORT_ID]);
     // The assembled fixture follows the current full catalog identity; the
-    // frozen revision remains the point-in-time Day1 donor receipt.
+    // frozen revision below remains the point-in-time Day1 donor receipt.
+    expect(donorFixed.registryRevision).toBe(`sha256:${donorReplay.extension.registryFingerprint}`);
     expect(fixedInput.registryFingerprint).toBe(currentGlobalRegistryFingerprint);
     expect(extension.registryFingerprint).toBe(currentGlobalRegistryFingerprint);
     expect(result.compiledFacts.sourceFingerprints.registry.payloadSha256).toBe(currentGlobalRegistryFingerprint);

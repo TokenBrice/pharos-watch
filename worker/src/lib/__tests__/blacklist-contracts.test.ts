@@ -219,6 +219,46 @@ describe("blacklist-contracts shared metadata alignment", () => {
     expect(missing).toEqual([]);
   });
 
+  // Tracker curation is a reviewed per-deployment decision with no sound
+  // metadata derivation; dropping a listed config would under-report coverage.
+  it("includes first-wave blacklist expansion configs", () => {
+    expect(CONTRACT_CONFIGS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ stablecoinId: "usdg-paxos", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "rlusd-ripple", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "u-united-stables", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "u-united-stables", chain: expect.objectContaining({ chainId: "bsc" }) }),
+        expect.objectContaining({ stablecoinId: "usdtb-ethena", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "a7a5-old-vector", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+      ]),
+    );
+  });
+
+  it("includes direct EVM follow-up coverage configs", () => {
+    expect(CONTRACT_CONFIGS).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "bsc" }) }),
+        expect.objectContaining({ stablecoinId: "fdusd-first-digital", chain: expect.objectContaining({ chainId: "arbitrum" }) }),
+        expect.objectContaining({ stablecoinId: "brz-transfero", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "brz-transfero", chain: expect.objectContaining({ chainId: "gnosis" }) }),
+        expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "arbitrum" }) }),
+        expect.objectContaining({ stablecoinId: "ausd-agora", chain: expect.objectContaining({ chainId: "base" }) }),
+        expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "euri-banking-circle", chain: expect.objectContaining({ chainId: "bsc" }) }),
+        expect.objectContaining({ stablecoinId: "usdq-quantoz", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "usdo-openeden", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "usdo-openeden", chain: expect.objectContaining({ chainId: "base" }) }),
+        expect.objectContaining({ stablecoinId: "usdx-hex-trust", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "aid-gaib", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "tgbp-tokenised", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "tgbp-tokenised", chain: expect.objectContaining({ chainId: "avalanche" }) }),
+        expect.objectContaining({ stablecoinId: "eurc-circle", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+        expect.objectContaining({ stablecoinId: "buidl-blackrock", chain: expect.objectContaining({ chainId: "ethereum" }) }),
+      ]),
+    );
+  });
+
   it("resolves first-wave event families by topic", () => {
     const usdtb = CONTRACT_CONFIGS.find((config) => config.stablecoinId === "usdtb-ethena");
     expect(usdtb).toBeDefined();

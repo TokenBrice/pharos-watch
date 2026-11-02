@@ -371,6 +371,20 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
         rationale: "Ordinary public persisted GraphQL GET verified200 on 2026-10-03; exact Base ONED stock and complete published USDC wallets reconcile. Source-controlled query hash/schema drift fail closed with stable machine reasons, without HTML/stale/partial fallback. This remains issuer-attested telemetry, not independent financial assurance or funded redemption capacity.",
       },
     },
+    "attestation-pdf-index": {
+      primaryInputKinds: ["http-html"], sourceModel: "validated-static", evidenceClass: "static-validated",
+      configValidation: config("attestation-mix", 1), validation: { ...verified, maxSourceAgeSec: 12960000 },
+      displayBadgeKind: "curated-validated",
+    },
+    "zephyr-scanner": {
+      sourceModel: "single-bucket", evidenceClass: "weak-live-probe",
+      configValidation: config("protocol-reserve", 3), validation: dashboard, displayBadgeKind: "proof",
+    },
+    "blackrock-brsrv-holdings": {
+      primaryInputKinds: ["http-html"], evidenceClass: "weak-live-probe", sourceOriginClass: "issuer-attested",
+      preferredFreshnessMode: "verified", validation: { ...verified, maxSourceAgeSec: 432000 },
+      displayBadgeKind: "proof",
+    },
   };
   it.each(Object.keys(descriptorBaseline) as (keyof typeof descriptorBaseline)[])(
     "preserves the complete resolved %s descriptor", (key) => {

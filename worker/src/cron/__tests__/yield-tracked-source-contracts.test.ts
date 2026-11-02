@@ -151,7 +151,6 @@ describe("tracked holder source contracts", () => {
       sqlite.close();
     }
   });
-});
 
   it("isolates a D1 anchor-read failure in the Ondo USDY oracle entry", async () => {
     const db = mockD1(
@@ -168,3 +167,4 @@ describe("tracked holder source contracts", () => {
     expect(onOutcome).toHaveBeenCalledTimes(1);
     expect(onOutcome).toHaveBeenCalledWith({ label: "Ondo USDY oracle source", outcome: "failed" });
   });
+});

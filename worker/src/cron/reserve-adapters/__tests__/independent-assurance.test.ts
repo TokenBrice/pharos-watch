@@ -1047,10 +1047,15 @@ describe("audd-independent-assurance (William Buck ASRS 4400 AUP)", () => {
   it("reviews the September 2026 agreed-upon-procedures report and reconciles every chain's circulation", () => {
     const manifest = getIndependentAssuranceManifest("AUDD");
     expect(manifest.assuranceTier).toBe("agreed-upon-procedures");
-    // Reconciliation enforces computed-total-equals-sum and the reported-difference
-    // bound; these invariants add evidence the reconciler does not pin per report.
+    // Reconciliation recomputes both totals from the reviewed rows and admits the
+    // report's reported cent-rounding difference within the profile's bound.
     expect(reconcileIndependentAssuranceManifest(manifest, AUDD_INDEPENDENT_ASSURANCE_PROFILE.reconciliation))
-      .toBeDefined();
+      .toMatchObject({
+        computedAssetTotal: "11289945.05",
+        liabilityTotal: "11159088.48",
+        reportedAssetDifference: "0",
+        reportedLiabilityDifference: "0.01",
+      });
     for (const chain of ["stellar", "xrpl", "ethereum", "solana", "hedera", "base", "xdc", "redbelly", "arc"]) {
       expect(manifest.liabilities.some((row) => row.code === chain && Number(row.amount) > 0)).toBe(true);
     }

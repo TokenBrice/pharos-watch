@@ -398,6 +398,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       (control) => control.keyCustodyAttestation === undefined,
     );
     expect(controlsWithoutAttestation.length).toBeGreaterThan(0);
+    let custodyScopedControls = 0;
     for (const authored of controlsWithoutAttestation) {
       const operator = asset.controls.find((control) =>
         control.authority?.authorityKey === `${authored.chain ?? ""}:${authored.address}`,
@@ -409,6 +410,7 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
       const hasFreshCustodyQuestion = custodyQuestionRefs.has(authored.label.toLowerCase()) ||
         (authored.address != null && custodyQuestionRefs.has(`${authored.chain ?? ""}:${authored.address.toLowerCase()}`));
       if (!hasFreshCustodyQuestion) continue;
+      custodyScopedControls += 1;
       expect(operator!.factorStatuses?.keyCustody?.observationState).toBe("missing");
       const gapIds = operator!.factorStatuses?.keyCustody?.gapIds ?? [];
       expect(gapIds.length).toBeGreaterThan(0);
@@ -418,6 +420,9 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
         expect(gap.causeProof).toMatchObject({ cause: "C", assertion: "researched-nondisclosure" });
       }
     }
+    // Non-vacuity: a curation edit that drops every custody scoped question
+    // must fail here rather than silently skipping the branch above.
+    expect(custodyScopedControls).toBeGreaterThan(0);
   });
 
   // The C-wave review resolved RecoveryModeTriggerModule representation and
