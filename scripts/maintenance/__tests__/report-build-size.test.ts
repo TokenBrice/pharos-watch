@@ -3,9 +3,9 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { PUBLIC_ROUTE_PATHS } from "../../../src/lib/public-route-inventory";
-import { gatedHtmlRoutes } from "../report-build-size.mjs";
+import { gatedHtmlRoutes, runReportBuildSize } from "../report-build-size.mjs";
 
 const SCRIPT = resolve(process.cwd(), "scripts/maintenance/report-build-size.mjs");
 const ZOD_CHUNK = "out/_next/static/chunks/framework-zod.js";
@@ -80,10 +80,41 @@ function runReport(buildRoot: string, { budgets = {}, check = true }: {
 } = {}) {
   const summaryPath = join(buildRoot, "step-summary.md");
   writeFileSync(summaryPath, "");
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const log = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+    stdout.push(args.map(String).join(" "));
+  });
+  const error = vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+    stderr.push(args.map(String).join(" "));
+  });
+  try {
+    const status = runReportBuildSize({
+      cwd: buildRoot,
+      argv: check ? ["--check"] : [],
+      env: { ...process.env, GITHUB_STEP_SUMMARY: summaryPath, ...budgets },
+      publicRoutePaths: PUBLIC_ROUTE_PATHS,
+    });
+    return {
+      status,
+      stdout: `${stdout.join("\n")}\n`,
+      stderr: `${stderr.join("\n")}\n`,
+      stepSummary: readFileSync(summaryPath, "utf8"),
+    };
+  } finally {
+    log.mockRestore();
+    error.mockRestore();
+  }
+}
+
+/** One real child process: CLI wiring and exit codes are the process boundary. */
+function runReportProcess(buildRoot: string, { check = true }: { check?: boolean } = {}) {
+  const summaryPath = join(buildRoot, "step-summary.md");
+  writeFileSync(summaryPath, "");
   const result = spawnSync(process.execPath, check ? [SCRIPT, "--check"] : [SCRIPT], {
     cwd: buildRoot,
     encoding: "utf8",
-    env: { ...process.env, GITHUB_STEP_SUMMARY: summaryPath, ...budgets },
+    env: { ...process.env, GITHUB_STEP_SUMMARY: summaryPath },
   });
   return { ...result, stepSummary: readFileSync(summaryPath, "utf8") };
 }
@@ -280,8 +311,8 @@ describe("report-build-size", () => {
     const emptyRoot = mkdtempSync(join(tmpdir(), "report-build-size-empty-"));
     tempDirs.push(emptyRoot);
 
-    const gated = runReport(emptyRoot, { check: true });
-    const advisory = runReport(emptyRoot, { check: false });
+    const gated = runReportProcess(emptyRoot, { check: true });
+    const advisory = runReportProcess(emptyRoot, { check: false });
 
     expect(existsSync(join(emptyRoot, "out"))).toBe(false);
     expect(gated.status).toBe(1);

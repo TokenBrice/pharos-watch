@@ -25,6 +25,7 @@ import {
  * `inputFreshness.dexLiquidity.ageSeconds`).
  */
 export const FULL_REGISTRY_CLOCK_SEC = v9TestClockSec();
+const ALL_ACTIVE_ASSET_IDS = ACTIVE_STABLECOINS.map((coin) => coin.id);
 
 
 function resourceRoute(assetId: string, clockSec: number) {
@@ -63,12 +64,23 @@ function resourceRoute(assetId: string, clockSec: number) {
 /**
  * Production-scale exact input for resource tests. It combines every active
  * registry overlay with deterministic peg, reserve, supply, and route rows
- * without coupling the gate to a production read.
+ * without coupling the gate to a production read. `assetIds` narrows the same
+ * shape to a cohort for cases that need the production clock/freshness fields
+ * without paying for the full ~386-asset registry.
  */
-export function createSafetyScoreV9FullRegistryInput(clockSec = FULL_REGISTRY_CLOCK_SEC) {
+export function createSafetyScoreV9FullRegistryInput(
+  clockSec = FULL_REGISTRY_CLOCK_SEC,
+  assetIds: readonly string[] = ALL_ACTIVE_ASSET_IDS,
+) {
   const dexUpdatedAtSec = clockSec - 100;
+  const coins = ACTIVE_STABLECOINS.filter((coin) => assetIds.includes(coin.id));
+  const unknownIds = assetIds.filter((assetId) => !coins.some((coin) => coin.id === assetId));
+  if (unknownIds.length > 0) {
+    throw new Error(`Unknown stablecoin ids in V9 cohort fixture: ${unknownIds.join(", ")}`);
+  }
   return createReportCardsFixedInput({
     captureKind: "exact-publication-inputs",
+    activeAssetIds: coins.map((coin) => coin.id),
     capturedAt: new Date(clockSec * 1_000).toISOString(),
     sourceGeneration: `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${clockSec}`,
     dexGenerationId: `dex-liquidity-${dexUpdatedAtSec}`,
@@ -84,7 +96,7 @@ export function createSafetyScoreV9FullRegistryInput(clockSec = FULL_REGISTRY_CL
       redemptionBackstops: { updatedAt: null, ageSeconds: null, stale: true },
     },
     pegDataById: Object.fromEntries(
-      ACTIVE_STABLECOINS.map((coin) => [
+      coins.map((coin) => [
         coin.id,
         {
           id: coin.id,
@@ -116,7 +128,7 @@ export function createSafetyScoreV9FullRegistryInput(clockSec = FULL_REGISTRY_CL
     ),
     activeDepegPeakBpsById: {},
     dexLiqMap: Object.fromEntries(
-      ACTIVE_STABLECOINS.map((coin) => [
+      coins.map((coin) => [
         coin.id,
         {
           liquidityScore: 80,
@@ -151,10 +163,10 @@ export function createSafetyScoreV9FullRegistryInput(clockSec = FULL_REGISTRY_CL
     redemptionBackstopMap: {},
     bluechipMap: {},
     resolvedBlacklistStatuses: Object.fromEntries(
-      ACTIVE_STABLECOINS.map((coin) => [coin.id, false]),
+      coins.map((coin) => [coin.id, false]),
     ),
     liveReserveMap: Object.fromEntries(
-      ACTIVE_STABLECOINS.map((coin) => [
+      coins.map((coin) => [
         coin.id,
         [
           {
@@ -171,13 +183,13 @@ export function createSafetyScoreV9FullRegistryInput(clockSec = FULL_REGISTRY_CL
       ]),
     ),
     liveReserveProvenanceMap: Object.fromEntries(
-      ACTIVE_STABLECOINS.map((coin) => [
+      coins.map((coin) => [
         coin.id,
         { source: "resource-fixture", fetchedAt: dexUpdatedAtSec },
       ]),
     ),
     chainCirculatingById: Object.fromEntries(
-      ACTIVE_STABLECOINS.map((coin) => [
+      coins.map((coin) => [
         coin.id,
         {
           ethereum: {
@@ -202,8 +214,9 @@ export function createSafetyScoreV9FullRegistryInput(clockSec = FULL_REGISTRY_CL
  */
 export function createNativeSafetyScoreV9FullRegistryInput(
   clockSec = FULL_REGISTRY_CLOCK_SEC,
+  assetIds: readonly string[] = ALL_ACTIVE_ASSET_IDS,
 ): NativeSafetyScoreV9Input {
-  const legacy = createSafetyScoreV9FullRegistryInput(clockSec);
+  const legacy = createSafetyScoreV9FullRegistryInput(clockSec, assetIds);
   const {
     schemaVersion: _schemaVersion,
     captureKind: _captureKind,
@@ -243,4 +256,16 @@ export function createNativeSafetyScoreV9FullRegistryInput(
     ),
     dexPayloadFingerprint: computeNativeDexLiquidityPayloadFingerprint(dexLiqMap, legacy.dexGenerationId),
   });
+}
+
+/**
+ * Native v4 capture over a small asset cohort. Cases that only need the
+ * production clock/freshness shape should use this instead of compiling the
+ * full ~386-asset registry.
+ */
+export function createNativeSafetyScoreV9CohortInput(
+  assetIds: readonly string[],
+  clockSec = FULL_REGISTRY_CLOCK_SEC,
+): NativeSafetyScoreV9Input {
+  return createNativeSafetyScoreV9FullRegistryInput(clockSec, assetIds);
 }

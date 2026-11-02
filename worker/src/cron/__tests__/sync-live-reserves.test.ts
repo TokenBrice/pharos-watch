@@ -20,6 +20,7 @@ import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { breakerKeyForConfig, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { advanceLiveReserveCheckpoint, beginLiveReserveCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
 import { finalizeReserveSyncRun } from "../sync-live-reserves-finalize";
 import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 import { createAdapterLatencyCollector, syncReserveCoin } from "../sync-live-reserves-core";
@@ -149,6 +150,31 @@ describe("syncLiveReserves", () => {
       return keys;
     }, new Set<string>())
     .size;
+
+  type SyncLiveReserves = typeof import("../sync-live-reserves").syncLiveReserves;
+
+  /**
+   * Scope a real-SQLite run to one coin: seed (or re-seed) the checkpoint
+   * frontier at that coin and cap the slice at two lifecycles. The adapter,
+   * persistence and retention behaviour under test is unchanged; only the
+   * unrelated queue prefix is skipped.
+   */
+  async function runScopedSlice(
+    sync: SyncLiveReserves,
+    db: Parameters<SyncLiveReserves>[0],
+    coinId: string,
+    budget: NonNullable<Parameters<SyncLiveReserves>[4]> = {},
+  ): Promise<Awaited<ReturnType<SyncLiveReserves>>> {
+    const index = SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === coinId);
+    if (index < 0) throw new Error(`coin ${coinId} is not in the live reserve queue`);
+    const identity = makeCheckpointIdentity(1, `scoped-${coinId}`);
+    await beginLiveReserveCheckpoint(db, {
+      slotStartedAt: identity.slotStartedAt,
+      invocationId: identity.invocationId,
+    });
+    await advanceLiveReserveCheckpoint(db, identity, { nextItemKey: coinId, itemsDone: index });
+    return sync(db, new AbortController().signal, {}, undefined, { maxCoinsPerSlice: 2, ...budget }, identity);
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -443,9 +469,9 @@ describe("syncLiveReserves", () => {
         },
       }));
       const { db, sqlite } = fixtures.open();
-      // This suite resets/mocks the producer module graph between cases.
+      // The adapter registry is a hoisted module mock; import the producer after the mock is installed.
       const { syncLiveReserves } = await import("../sync-live-reserves");
-      await syncLiveReserves(db, new AbortController().signal, {});
+      await runScopedSlice(syncLiveReserves, db, "usdcx-movement");
       const before = sqlite.prepare(
         "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
       ).get("usdcx-movement");
@@ -454,7 +480,7 @@ describe("syncLiveReserves", () => {
         .toMatchObject({ capacityUsd: 100 });
       nowMs += 60_000;
       balance = outcome === "observed-zero" ? 0n : null;
-      await syncLiveReserves(db, new AbortController().signal, {});
+      await runScopedSlice(syncLiveReserves, db, "usdcx-movement");
       const after = sqlite.prepare(
         "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
       ).get("usdcx-movement");
@@ -465,7 +491,7 @@ describe("syncLiveReserves", () => {
         expect(served?.liveAt).toBe(Math.floor(nowMs / 1000));
         nowMs += 60_000;
         balance = null;
-        await syncLiveReserves(db, new AbortController().signal, {});
+        await runScopedSlice(syncLiveReserves, db, "usdcx-movement");
         expect(sqlite.prepare(
           "SELECT fetched_at, attempt_id, metadata FROM reserve_composition WHERE stablecoin_id = ?",
         ).get("usdcx-movement")).toEqual(after);
@@ -493,16 +519,16 @@ describe("syncLiveReserves", () => {
         : { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] },
     }));
     const { db, sqlite } = fixtures.open();
-    // The producer graph is reset between cases; load its current mocks.
+    // The adapter registry is a hoisted module mock; import the producer after the mock is installed.
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runScopedSlice(syncLiveReserves, db, "u-united-stables");
     const healthy = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables");
     expect(healthy).toBeDefined();
     expect((await resolveReserveResult(db, "u-united-stables", Math.floor(nowMs / 1000)))?.metadata)
       .toMatchObject({ totalReserveUsd: 110, collateralizationRatio: 1.1 });
     nowMs += 60_000;
     totalReserve = "0";
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runScopedSlice(syncLiveReserves, db, "u-united-stables");
     const adverse = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables");
     expect(adverse).not.toEqual(healthy);
     const served = await resolveReserveResult(db, "u-united-stables", Math.floor(nowMs / 1000));
@@ -517,7 +543,7 @@ describe("syncLiveReserves", () => {
     }));
     nowMs += 60_000;
     totalReserve = "unavailable";
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runScopedSlice(syncLiveReserves, db, "u-united-stables");
     expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("u-united-stables")).toEqual(adverse);
     const retained = await resolveReserveResult(db, "u-united-stables", Math.floor(nowMs / 1000));
     expect(retained?.metadata).toMatchObject({ totalReserveUsd: 0, collateralizationRatio: 0 });
@@ -547,9 +573,9 @@ describe("syncLiveReserves", () => {
           : { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] },
       }));
       const { db, sqlite } = fixtures.open();
-      // This suite resets/mocks the producer module graph between cases, so a static import would retain stale mocks.
+      // The adapter registry is a hoisted module mock; import the producer after the mock is installed.
       const { syncLiveReserves } = await import("../sync-live-reserves");
-      await syncLiveReserves(db, new AbortController().signal, {});
+      await runScopedSlice(syncLiveReserves, db, "crvusd-curve");
       const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("crvusd-curve");
       expect(snapshot).toBeDefined();
       const original = await resolveReserveResult(db, "crvusd-curve", Math.floor(nowMs / 1000));
@@ -557,7 +583,7 @@ describe("syncLiveReserves", () => {
       for (let attempt = 0; attempt < 2; attempt++) {
         incomplete = true;
         nowMs += 60_000;
-        await syncLiveReserves(db, new AbortController().signal, {});
+        await runScopedSlice(syncLiveReserves, db, "crvusd-curve");
         expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get("crvusd-curve")).toEqual(snapshot);
         const served = await resolveReserveResult(db, "crvusd-curve", Math.floor(nowMs / 1000));
         expect(served?.reserves).toEqual(original?.reserves);
@@ -611,9 +637,9 @@ describe("syncLiveReserves", () => {
       },
     }));
     const { db, sqlite } = fixtures.open();
-    // The suite resets the producer graph between cases; a static import would retain stale mocks.
+    // The adapter registry is a hoisted module mock; import the producer after the mock is installed.
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runScopedSlice(syncLiveReserves, db, id);
     const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id);
     expect(snapshot).toBeDefined();
     const original = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
@@ -623,7 +649,7 @@ describe("syncLiveReserves", () => {
     for (let attempt = 0; attempt < 2; attempt++) {
       incomplete = true;
       nowMs += 60_000;
-      await syncLiveReserves(db, new AbortController().signal, {});
+      await runScopedSlice(syncLiveReserves, db, id);
       expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id)).toEqual(snapshot);
       expect(sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)).toEqual(success);
       const served = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
@@ -685,9 +711,9 @@ describe("syncLiveReserves", () => {
       },
     }));
     const { db, sqlite } = fixtures.open();
-    // The suite resets the producer module graph between cases; static imports retain stale mocks.
+    // The adapter registry is a hoisted module mock; import the producer after the mock is installed.
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await runScopedSlice(syncLiveReserves, db, id);
     const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id);
     expect(snapshot).toBeDefined();
     const original = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));
@@ -697,7 +723,7 @@ describe("syncLiveReserves", () => {
     for (let attempt = 0; attempt < 2; attempt++) {
       incomplete = true;
       nowMs += 60_000;
-      await syncLiveReserves(db, new AbortController().signal, {});
+      await runScopedSlice(syncLiveReserves, db, id);
       expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(id)).toEqual(snapshot);
       expect(sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(id)).toEqual(success);
       const served = await resolveReserveResult(db, id, Math.floor(nowMs / 1000));

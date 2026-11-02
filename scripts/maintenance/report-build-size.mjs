@@ -6,12 +6,12 @@ import { gzipSync } from "node:zlib";
 import { fileURLToPath } from "node:url";
 import { execFileSync } from "node:child_process";
 
+import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import {
   countDocumentsReferencingChunks,
   projectStaticRouteCapacity,
   summarizeStaticRouteFamilies,
 } from "../lib/static-export-capacity.mts";
-import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -25,10 +25,6 @@ function formatBytes(bytes) {
   return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${unit}`;
 }
 
-// The report reads the build under the current working directory, matching the
-// sibling artifact gates (`check:phishing-signatures`, `check:seo-static`) that
-// run beside it over the same published `out/` tree.
-const root = path.resolve(".");
 const MINIMUM_FILE_HEADROOM_RATIO = 0.25;
 const MAX_CLASSIC_ZOD_HTML_REFERENCE_RATIO = 0.75;
 const CLASSIC_ZOD_CHUNK_MARKER = "_zod.traits";
@@ -125,8 +121,6 @@ const REPRESENTATIVE_DETAIL_ROUTES = [
 ];
 
 const CEMETERY_ROUTE = "cemetery";
-// The documented largest HTML and RSC-TXT payload.
-const API_REFERENCE_ROUTE = "api/reference";
 const ROUTE_EAGER_JS_BUDGETS = {
   depeg: "depegEagerJsGzipBytes",
   "safety-scores": "safetyScoresEagerJsGzipBytes",
@@ -135,6 +129,8 @@ const ROUTE_EAGER_JS_BUDGETS = {
   screener: "screenerEagerJsGzipBytes",
   portfolio: "portfolioEagerJsGzipBytes",
 };
+const API_REFERENCE_ROUTE = "api/reference";
+
 /**
  * HTML files whose bytes the blocking artifact gates measure: home, the
  * representative detail pages, every per-route eager-JS budget entry, the
@@ -151,16 +147,29 @@ export function gatedHtmlRoutes() {
   ].sort();
 }
 
-function resolveBudget(key) {
-  const raw = process.env[BUDGET_ENV[key]];
+// Load in the source checkout: the inventory's TS aliases resolve relative to
+// its tsconfig, not to a separately supplied artifact working directory.
+function loadPublicRoutePaths() {
+  return JSON.parse(execFileSync(process.execPath, [
+    "--import", "tsx", "--input-type=module", "-e",
+    'import { PUBLIC_ROUTE_PATHS } from "./src/lib/public-route-inventory.ts"; process.stdout.write(JSON.stringify(PUBLIC_ROUTE_PATHS));',
+  ], { cwd: fileURLToPath(new URL("../../", import.meta.url)), encoding: "utf8", timeout: 30_000 }));
+}
+
+function proseRoutesFrom(publicRoutePaths) {
+  return publicRoutePaths
+    .filter((href) => /^\/(?:privacy|about|methodology|stablecoins|status)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
+    .map((href) => href.slice(1, -1));
+}
+
+function resolveBudget(key, env) {
+  const raw = env[BUDGET_ENV[key]];
   if (!raw) return DEFAULT_BUDGETS[key];
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_BUDGETS[key];
 }
 
-const budgets = Object.fromEntries(Object.keys(DEFAULT_BUDGETS).map((key) => [key, resolveBudget(key)]));
-
-function collectFiles(dir, predicate = () => true) {
+function collectFiles(root, dir, predicate = () => true) {
   const out = [];
   if (!existsSync(dir)) return out;
 
@@ -218,7 +227,7 @@ function printTopCompressed(title, files, limit = 20) {
   }
 }
 
-function readFontManifestSummary() {
+function readFontManifestSummary(root) {
   const manifestPath = path.join(root, ".next/server/next-font-manifest.json");
   if (!existsSync(manifestPath)) {
     return null;
@@ -271,8 +280,8 @@ function referenceDelta(
   };
 }
 
-function writeStepSummary(rows) {
-  const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+function writeStepSummary(rows, env) {
+  const summaryPath = env.GITHUB_STEP_SUMMARY;
   if (!summaryPath) return;
   const lines = [
     "## Build size budgets",
@@ -292,18 +301,26 @@ function writeStepSummary(rows) {
   appendFileSync(summaryPath, `${lines.join("\n")}\n`);
 }
 
-function main() {
-  const args = new Set(process.argv.slice(2));
+/**
+ * In-process entry point shared by the CLI and its tests. Reads the build under
+ * `cwd`, writes the same report as a direct run, and returns the CLI exit code
+ * (1 only for a blocking `--check` failure). `publicRoutePaths` lets callers
+ * that already loaded the checked-in inventory skip the tsx child process.
+ */
+export function runReportBuildSize({
+  cwd = process.cwd(),
+  argv = process.argv.slice(2),
+  env = process.env,
+  publicRoutePaths = loadPublicRoutePaths(),
+} = {}) {
+  // The report reads the build under the current working directory, matching the
+  // sibling artifact gates (`check:phishing-signatures`, `check:seo-static`) that
+  // run beside it over the same published `out/` tree.
+  const root = path.resolve(cwd);
+  const args = new Set(argv);
   const check = args.has("--check");
-  // Load in the source checkout: the inventory's TS aliases resolve relative to
-  // its tsconfig, not to a separately supplied artifact working directory.
-  const PUBLIC_ROUTE_PATHS = JSON.parse(execFileSync(process.execPath, [
-    "--import", "tsx", "--input-type=module", "-e",
-    'import { PUBLIC_ROUTE_PATHS } from "./src/lib/public-route-inventory.ts"; process.stdout.write(JSON.stringify(PUBLIC_ROUTE_PATHS));',
-  ], { cwd: fileURLToPath(new URL("../../", import.meta.url)), encoding: "utf8", timeout: 30_000 }));
-  const PROSE_ROUTES = PUBLIC_ROUTE_PATHS
-    .filter((href) => /^\/(?:privacy|about|methodology|stablecoins|status)\/$|^\/api\/(?:reference\/)?$|^\/docs\//.test(href))
-    .map((href) => href.slice(1, -1));
+  const budgets = Object.fromEntries(Object.keys(DEFAULT_BUDGETS).map((key) => [key, resolveBudget(key, env)]));
+  const PROSE_ROUTES = proseRoutesFrom(publicRoutePaths);
 
   const outDir = path.join(root, "out");
   const nextStaticDir = path.join(outDir, "_next/static");
@@ -313,16 +330,16 @@ function main() {
 
   if (!existsSync(outDir)) {
     console.error("[build-size] Missing out/. Run npm run build first.");
-    process.exit(check ? 1 : 0);
+    return check ? 1 : 0;
   }
 
-  const allOutFiles = collectFiles(outDir);
-  const jsFiles = collectFiles(chunksDir, (file) => file.endsWith(".js"));
-  const cssFiles = collectFiles(cssDir, (file) => file.endsWith(".css"));
+  const allOutFiles = collectFiles(root, outDir);
+  const jsFiles = collectFiles(root, chunksDir, (file) => file.endsWith(".js"));
+  const cssFiles = collectFiles(root, cssDir, (file) => file.endsWith(".css"));
   const cssFilesWithGzip = withGzipSize(cssFiles);
-  const mediaFiles = collectFiles(mediaDir);
-  const htmlFiles = collectFiles(outDir, (file) => file.endsWith(".html"));
-  const txtFiles = collectFiles(outDir, (file) => file.endsWith(".txt"));
+  const mediaFiles = collectFiles(root, mediaDir);
+  const htmlFiles = collectFiles(root, outDir, (file) => file.endsWith(".html"));
+  const txtFiles = collectFiles(root, outDir, (file) => file.endsWith(".txt"));
   const routeFamilySummaries = summarizeStaticRouteFamilies(allOutFiles);
   const classicZodChunkNames = jsFiles
     .filter((file) => readFileSync(file.path, "utf8").includes(CLASSIC_ZOD_CHUNK_MARKER))
@@ -376,7 +393,7 @@ function main() {
   printTop("Top HTML files", htmlFiles, 30);
   printTop("Top TXT/RSC helper files", txtFiles, 30);
 
-  const fontSummary = readFontManifestSummary();
+  const fontSummary = readFontManifestSummary(root);
   if (fontSummary) {
     console.log("\nFont manifest sample");
     for (const entry of fontSummary.slice(0, 30)) {
@@ -387,6 +404,7 @@ function main() {
   const representativeDetails = REPRESENTATIVE_DETAIL_ROUTES.flatMap((route) => {
     const htmlPath = path.join(outDir, route, "index.html");
     const pageTxtFiles = collectFiles(
+      root,
       path.join(outDir, route),
       (file) => file.includes("__PAGE__") && file.endsWith(".txt"),
     );
@@ -569,16 +587,23 @@ function main() {
         );
       }
     }
-    writeStepSummary(referenceRows);
+    writeStepSummary(referenceRows, env);
 
     if (failures.length > 0) {
       console.error("\n[build-size] Deploy gate failures:");
       for (const failure of failures) {
         console.error(`- ${failure}`);
       }
-      process.exit(1);
+      return 1;
     }
   }
+  return 0;
+}
+
+function main() {
+  const exitCode = runReportBuildSize();
+  // Keep the success path a natural exit so piped stdout is never truncated.
+  if (exitCode !== 0) process.exit(exitCode);
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) main();

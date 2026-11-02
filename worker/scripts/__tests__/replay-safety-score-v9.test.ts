@@ -8,7 +8,7 @@ import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-inp
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildSafetyScoreV9BaselineExtension } from "../../src/lib/safety-score-v9/extension";
 import { buildNativeV9InputCacheEntry } from "../../src/lib/safety-score-v9/native-input";
-import { createNativeSafetyScoreV9FullRegistryInput } from "../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
+import { createNativeSafetyScoreV9CohortInput } from "../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/report-cards-fixed-input";
 import {
   findFutureDatedCuratedReviews,
@@ -41,7 +41,16 @@ const CLOCK_SEC = v9TestClockSec();
 const PUBLISHED_AT_SEC = CLOCK_SEC + 10;
 const PUBLISHED_AT_ISO = new Date(PUBLISHED_AT_SEC * 1_000).toISOString();
 
-const nativeInput = createNativeSafetyScoreV9FullRegistryInput();
+// The parser cases need the native v4 shape, not the full ~386-asset registry.
+const nativeInput = createNativeSafetyScoreV9CohortInput(["usdc-circle", "usdt-tether"]);
+
+// The local registry is immutable for the run; fingerprinting it per case costs
+// seconds at this registry size.
+let cachedLocalRegistrySnapshot: ReturnType<typeof localRegistrySnapshot> | undefined;
+function localSnapshot() {
+  cachedLocalRegistrySnapshot ??= localRegistrySnapshot();
+  return cachedLocalRegistrySnapshot;
+}
 
 function exactFixedInput() {
   return createReplayFixedInput(CLOCK_SEC, {
@@ -90,7 +99,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       const scenario = JSON.parse(readFileSync(output, "utf8"));
       expect(scenario.pipeline.fixedInput.redemptionBackstopMap).toEqual(next.redemptionBackstopMap);
       expect(scenario.replayScenario).toEqual({ kind: "current-redemption-rederivation", sourceBaseInputGenerationId: input.baseInputGenerationId });
-      writeFileSync(capture, JSON.stringify({ kind: "safety-score-v9-registry-capture", fixedInput: input, registrySnapshot: localRegistrySnapshot() }));
+      writeFileSync(capture, JSON.stringify({ kind: "safety-score-v9-registry-capture", fixedInput: input, registrySnapshot: localSnapshot() }));
       await expect(runSafetyScoreV9ReplayCli([...args, "--rederive-current-redemption"])).rejects.toThrow("capture-time registry modes");
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -374,7 +383,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
   });
 
   it("replays a capture-time NAV asset that is non-NAV live only with its verified registry snapshot", async () => {
-    const snapshot = structuredClone(localRegistrySnapshot());
+    const snapshot = structuredClone(localSnapshot());
     snapshot.activeStablecoins.find((coin) => coin.id === "usdc-circle")!.flags.navToken = true;
     snapshot.fingerprint = registrySnapshotFingerprint(snapshot);
     const { baseInputGenerationId: _derived, ...capture } = exactFixedInput();
