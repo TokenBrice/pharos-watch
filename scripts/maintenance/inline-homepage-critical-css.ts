@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,8 +10,11 @@ import { runDirectCli } from "../lib/cli-args.mjs";
 import { gatedHtmlRoutes } from "./report-build-size.mjs";
 
 // `gates` narrows the pass to the HTML routes whose bytes the artifact gates
-// measure. Anything else (including unset) keeps the full public pass.
+// measure, plus the largest exported pages so the blocking largest-HTML ceiling
+// always measures an inlined page. Anything else (including unset) keeps the
+// full public pass.
 export const CRITICAL_CSS_SCOPE_GATES = "gates";
+export const GATE_SCOPED_LARGEST_HTML_PAGES = 3;
 
 export function collectCriticalCssPages(outDir: string): string[] {
   return readdirSync(outDir, { withFileTypes: true, recursive: true })
@@ -22,9 +25,12 @@ export function collectCriticalCssPages(outDir: string): string[] {
 }
 
 /**
- * Gate-scoped selection is a strict subset of the public pass. A missing gate
- * route or an unrecognised scope falls back to the full pass so a scoped run
- * never processes less than the artifact gates can prove.
+ * Gate-scoped selection is a subset of the public pass. A missing gate route or
+ * an unrecognised scope falls back to the full pass so a scoped run never
+ * processes less than the artifact gates can prove. The largest pre-inline
+ * pages are always included because `largestHtmlBytes` measures every exported
+ * HTML file; without them a non-gate page could overtake the gate routes and
+ * the PR build would measure its un-inlined size.
  */
 export function selectCriticalCssPages(
   outDir: string,
@@ -35,7 +41,12 @@ export function selectCriticalCssPages(
   const relative = new Set(pages.map((file) => path.relative(outDir, file).split(path.sep).join("/")));
   const routes = gatedHtmlRoutes();
   if (routes.length === 0 || !routes.every((route) => relative.has(route))) return [...pages];
-  return routes.map((route) => path.join(outDir, ...route.split("/")));
+  const largest = [...pages]
+    .map((file) => ({ file, size: statSync(file).size }))
+    .sort((a, b) => b.size - a.size || a.file.localeCompare(b.file))
+    .slice(0, GATE_SCOPED_LARGEST_HTML_PAGES)
+    .map((entry) => entry.file);
+  return [...new Set([...routes.map((route) => path.join(outDir, ...route.split("/"))), ...largest])].sort();
 }
 
 export function criticalCssWorkerCount(pageCount: number): number {

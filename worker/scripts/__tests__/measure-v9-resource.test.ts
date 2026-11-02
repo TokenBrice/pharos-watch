@@ -3,9 +3,8 @@ import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
-import { buildSync } from "esbuild";
 import { afterEach, describe, expect, it } from "vitest";
-import { assertResourceProbeCatalog, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
+import { assertResourceProbeCatalog, buildSafetyScoreV9ContagionProbe, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
 import type * as Esbuild from "esbuild";
 import { calibrateV9Resource } from "../calibrate-v9-resource";
 // Static edge so any change in the contagion closure selects this tripwire.
@@ -108,28 +107,33 @@ describe("V9 resource diagnostic failure modes", () => {
 });
 
 describe("V9 contagion input decision", () => {
-  it("covers the contagion evaluator's current esbuild import closure", () => {
+  it("covers every input the nine-scenario probe bundles", () => {
     expect(typeof evaluateV9ContagionScenario).toBe("function");
     const root = resolve(import.meta.dirname, "../../..");
-    const compilation = buildSync({
-      absWorkingDir: root, entryPoints: [resolve(root, "shared/lib/safety-score-v9/contagion.ts")],
-      bundle: true, metafile: true, write: false, format: "esm", platform: "node", target: "node24",
-      tsconfig: resolve(root, "tsconfig.json"), external: ["node:*"], logLevel: "silent",
-    });
-    const inputs = Object.keys(compilation.metafile!.inputs)
+    const { inputs: bundled } = buildSafetyScoreV9ContagionProbe(root, temporary());
+    const inputs = bundled
       .map((input) => relative(root, input).replaceAll("\\", "/"))
       .filter((input) => !input.startsWith(".."));
-    expect(inputs).toContain("shared/lib/safety-score-v9/contagion.ts");
+    for (const expected of [
+      "shared/lib/safety-score-v9/contagion.ts",
+      "shared/lib/peg-score.ts",
+      "shared/lib/report-card-evidence-journal.ts",
+      "shared/data/stablecoins/coins.generated.json",
+      "worker/src/test-helpers/v9-fixed-input.ts",
+      "worker/src/lib/safety-score-v9/candidate.ts",
+    ]) expect(inputs, expected).toContain(expected);
     expect(inputs.filter((input) => !hasV9ContagionInput([input]))).toEqual([]);
   });
 
   it("matches the probe harness and toolchain while unrelated diffs skip contagion", () => {
     for (const file of ["worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts",
       "worker/scripts/lib/v9-resource-policy.ts", "worker/scripts/measure-v9-resource.ts",
+      "shared/lib/peg-score.ts", "shared/lib/report-card-evidence-journal.ts",
+      "shared/data/stablecoins/coins.generated.json", "worker/src/test-helpers/v9-fixed-input.ts",
       "package.json", "package-lock.json", "worker/wrangler.heavy.toml", "tsconfig.base.json", ".nvmrc"]) {
       expect(hasV9ContagionInput([file]), file).toBe(true);
     }
-    expect(hasV9ContagionInput(["README.md", "src/app/page.tsx", "shared/lib/peg-score.ts"])).toBe(false);
+    expect(hasV9ContagionInput(["README.md", "src/app/page.tsx", "shared/lib/blacklist.ts"])).toBe(false);
   });
 });
 

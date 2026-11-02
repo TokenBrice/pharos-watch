@@ -135,7 +135,9 @@ const API_REFERENCE_ROUTE = "api/reference";
  * HTML files whose bytes the blocking artifact gates measure: home, the
  * representative detail pages, every per-route eager-JS budget entry, the
  * cemetery payloads and the API reference. The PR critical-CSS lane narrows to
- * this same set so a scoped run still feeds every byte ceiling it can affect.
+ * this same set plus the three largest exported pages, so a scoped run still
+ * feeds every byte ceiling it can affect and `largestHtmlBytes` always measures
+ * an inlined page.
  */
 export function gatedHtmlRoutes() {
   return [

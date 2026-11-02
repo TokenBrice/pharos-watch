@@ -118,7 +118,9 @@ function contagionLine(contagion: LaneReport["contagion"]) {
   if (contagion.status === "passed") {
     const trigger = contagion.reason === "contagion-inputs"
       ? `nine-scenario matrix; ${contagion.changedFiles.length} changed file${contagion.changedFiles.length === 1 ? "" : "s"} matched a contagion input`
-      : "nine-scenario matrix; non-PR context";
+      : contagion.reason === "no-pr-base" ? "nine-scenario matrix; no PR base (nightly/manual/local context)"
+        : contagion.reason === "diff-unavailable" ? "nine-scenario matrix; PR diff unavailable, so it fails closed"
+          : `nine-scenario matrix; ${contagion.reason}`;
     return `Contagion: **passed** (${trigger}).`;
   }
   if (contagion.status === "failed") return `Contagion: **failed** (${CONTAGION_CASE}).`;

@@ -6,6 +6,7 @@ import { dirname, relative, resolve } from "node:path";
 import { hostname, release } from "node:os";
 import { RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, loadResourcePolicy, type ResourcePolicy, type ResourceIdentity } from "../../../scripts/lib/v9-resource-policy";
 import ts from "typescript";
+import { buildSync } from "esbuild";
 import { z } from "zod";
 import type * as Esbuild from "esbuild";
 import type { BuildOptions, Plugin } from "esbuild";
@@ -425,4 +426,140 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
     flush();
   }
   return report;
+}
+
+// The nine-scenario contagion probe prepares its input inside the 256 MiB child,
+// so every module this bundle reaches can change the measured envelope. The PR
+// contagion guard must select any diff touching this closure; both the probe
+// build below and worker/scripts/__tests__/measure-v9-resource.test.ts assert
+// the esbuild metafile against hasV9ContagionInput.
+export const SAFETY_SCORE_V9_CONTAGION_PROBE_SOURCE = `
+          import { readFileSync } from "node:fs";
+          import { normalizeFixedInput } from "../report-cards-fixed-input.ts";
+          import { applySafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation.ts";
+          import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-budget.ts";
+          import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
+          import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9/candidate.ts";
+          import { serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec.ts";
+          import { measurePublicationByteBudget } from "@shared/lib/safety-score-v9-resource-bytes";
+          import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
+          import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension.ts";
+          import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set.ts";
+          import { createV9ContagionScenarioEvaluator } from "@shared/lib/safety-score-v9/contagion";
+          import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+          import { createReportCardEvidenceJournalV1 } from "@shared/lib/report-card-evidence-journal";
+          import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+          import { buildSafetyScoreV9PegProvenanceSummary, projectSafetyScoreV9PegScoreResult } from "../safety-score-v9/peg-provenance.ts";
+          import { computePegScore } from "@shared/lib/peg-score";
+
+          const capturePath = process.env.SAFETY_SCORE_V9_RESOURCE_CAPTURE;
+          let input = capturePath
+            ? JSON.parse(readFileSync(capturePath, "utf8")).fixedInput
+            : normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
+          if (!capturePath) {
+          input.evidenceJournalById = Object.fromEntries(input.activeAssetIds.slice(0, 250).map(assetId => [
+            assetId, [0, 1].map(index => createReportCardEvidenceJournalV1({
+              schemaVersion: 1, lane: "reserve", assetId, attemptId: "resource-reserve:" + index,
+              sourceId: "resource-reserve-adapter", sourceOriginClass: "onchain-observation",
+              attemptCode: "reserve.collector.attempted", admissionCode: "reserve.admission.accepted",
+              fallbackCode: "reserve.fallback.not-used", attemptedAtSec: input.clockSec - 20 + index,
+              completedAtSec: input.clockSec - 10 + index, sourceTimestampSec: input.clockSec - 20 + index,
+              sourceBlock: null, contentSha256: "a".repeat(64), sidecarMaterializationSha256: null,
+            })),
+          ]));
+          input.supplyAttributionJournalById = {
+            "wm-m0": [createSupplyAttributionJournalV1({
+              schemaVersion: 1, lane: "supply-attribution", assetId: "wm-m0", attemptId: "resource-supply:1",
+              sourceId: "wm.reviewed-deployment-unit-partition.v1", sourceOriginClass: "onchain-observation",
+              baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration,
+              registryFingerprint: input.registryFingerprint, routeInventoryDigest: "b".repeat(64),
+              attemptCode: "supply-attribution.collector.attempted", admissionCode: "supply-attribution.admission.accepted",
+              fallbackCode: "supply-attribution.fallback.not-used", attemptedAtSec: input.clockSec - 20,
+              completedAtSec: input.clockSec - 10, scoringClockSec: input.clockSec,
+              sourceObservedAtSec: input.clockSec - 20, failedRouteId: null, contentSha256: "c".repeat(64),
+            })],
+          };
+          input.pegProvenanceById = Object.fromEntries(input.activeAssetIds.map(assetId => [
+            assetId, buildSafetyScoreV9PegProvenanceSummary({
+              assetId, events: [], trackingStartSec: input.clockSec - 180 * 86400, clockSec: input.clockSec,
+              expectedLegacyInclusive: projectSafetyScoreV9PegScoreResult(computePegScore([], input.clockSec - 180 * 86400, input.clockSec)),
+            }),
+          ]));
+          }
+          if (!capturePath) {
+            const admission = assessSafetyScoreV9ResourceBudget({
+              catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: input.activeAssetIds.length, inputBytes: null,
+            });
+            if (!admission.admitted) throw new Error(admission.reason);
+            const base = input;
+            input = applySafetyScoreV9SupplyAttributionGeneration(input, null).fixedInput;
+            if (input.baseInputGenerationId !== base.baseInputGenerationId ||
+              input.aggregateCirculatingById !== base.aggregateCirculatingById ||
+              input.dexLiqMap !== base.dexLiqMap) throw new Error("Attribution composition copied or changed the base");
+          }
+          let extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input, { allowRegistryMismatch: Boolean(capturePath) });
+          if (process.env.CONTAGION_MATRIX === "1") {
+            const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(input, extension);
+            const { v9FactSetDigest, ...rawCompileInput } = compiled;
+            extension = null;
+            const policy = loadV9CandidateMethodologyPolicy(input.clockSec);
+            const counts = [];
+            const started = performance.now();
+            const evaluateScenario = createV9ContagionScenarioEvaluator({
+              rawCompileInput, policy, clock: input.clockSec,
+              publicationGenerationId: "resource-fixture",
+            });
+            for (const assetId of ["usdc-circle", "usdt-tether", "usds-sky"]) {
+              for (const shock of [
+                { kind: "score-limit", assetId, dimension: "final", limit: 40 },
+                { kind: "depeg", assetId, activeDepegBps: 1000, template: "one-day-history-and-exit-held" },
+                { kind: "mint-control-compromise", assetId },
+              ]) {
+                const result = evaluateScenario({ id: assetId + ":" + shock.kind, shocks: [shock] });
+                counts.push(result.manifest);
+                globalThis.gc?.();
+              }
+            }
+            process.stdout.write(JSON.stringify({
+              expected: input.activeAssetIds.length, counts,
+              wallMs: performance.now() - started,
+              finalHeapUsedBytes: process.memoryUsage().heapUsed,
+              peakRssBytes: process.resourceUsage().maxRSS * 1024,
+            }));
+            process.exit(0);
+          }
+          if (capturePath) {
+            const result = buildSafetyScoreV9PublicationFromNormalizedInput({
+              fixedInput: input, extension, publishedAtSec: input.clockSec,
+            });
+            const stored = await serializeSafetyScoreV9Publication(result.candidate);
+            const metadata = JSON.parse(stored);
+            process.stdout.write(JSON.stringify({ baseInputGenerationId: result.candidate.baseInputGenerationId,
+              candidateBytes: metadata.uncompressedBytes, compressedBytes: metadata.compressedBytes,
+              publicationBytes: measurePublicationByteBudget(result.candidate, metadata.uncompressedBytes) }));
+            process.exit(0);
+          }
+          throw new Error("Expected explicit contagion or historical capture protocol");
+        `;
+export function buildSafetyScoreV9ContagionProbe(root: string, directory: string) {
+  const outfile = resolve(directory, "contagion-probe.mjs");
+  const compilation = buildSync({
+    absWorkingDir: root,
+    stdin: {
+      contents: SAFETY_SCORE_V9_CONTAGION_PROBE_SOURCE,
+      loader: "ts",
+      resolveDir: resolve(root, "worker/src/lib/__tests__"),
+      sourcefile: "safety-score-v9-resource-probe.ts",
+    },
+    outfile,
+    bundle: true,
+    metafile: true,
+    platform: "node",
+    format: "esm",
+    target: "node24",
+    tsconfig: resolve(root, "tsconfig.json"),
+    logLevel: "silent",
+    banner: { js: "globalThis.__zod_globalConfig = { jitless: true };" },
+  });
+  return { outfile, inputs: Object.keys(compilation.metafile!.inputs) };
 }

@@ -90,7 +90,8 @@ describe("critical CSS pipeline selection", () => {
     expect(classifyChangedFiles([path]).pagesCriticalCssFullPass).toBe(false);
   });
 
-  it.each([[[]], [[""]], [["../outside.css"]]])("fails closed to the full pass for unknown input %j", (files) => {
+  it.each([[[]], [[""]], [["../outside.css"]], [["../outside.ts"]], [["./src/app/page.tsx"]], [["src//app/page.tsx"]],
+    [["/outside/page.tsx"]], [["src/app/../page.tsx"]], [["..\\outside.ts"]]])("fails closed to the full pass for unknown input %j", (files) => {
     expect(hasCriticalCssPipelineImpact(files)).toBe(true);
   });
 });

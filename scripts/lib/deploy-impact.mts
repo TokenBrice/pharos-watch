@@ -41,7 +41,9 @@ export function hasCriticalCssPipelineImpact(files: readonly string[]): boolean 
   if (files.length === 0) return true;
   return files.some((rawFile) => {
     const file = normalizeRepoPath(rawFile);
-    if (!file) return true;
+    // Reject absolute, empty-component and traversal paths like hasV9ResourceImpact:
+    // a malformed diff cannot establish that CSS inputs are absent.
+    if (!file || file.startsWith("/") || file.split("/").some((part) => part === "." || part === ".." || part === "")) return true;
     return CRITICAL_CSS_PIPELINE_EXACT_PATHS.has(file)
       || file.endsWith(".css")
       || /(^|\/)(?:tailwind|postcss|next)\.config\.[cm]?[jt]s$/.test(file);

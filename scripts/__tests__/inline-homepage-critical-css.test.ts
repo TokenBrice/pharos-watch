@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   collectCriticalCssPages,
   criticalCssWorkerCount,
+  GATE_SCOPED_LARGEST_HTML_PAGES,
   optimizeCriticalCssPages,
   selectCriticalCssPages,
 } from "../maintenance/inline-homepage-critical-css";
@@ -80,8 +81,34 @@ describe("critical CSS worker pool", () => {
     expect(selectCriticalCssPages(outDir, "all")).toEqual(all);
     expect(selectCriticalCssPages(outDir, "everything")).toEqual(all);
     const scoped = selectCriticalCssPages(outDir, "gates").map((file) => path.relative(outDir, file).split(path.sep).join("/"));
-    expect(scoped).toEqual(gatedHtmlRoutes());
-    expect(scoped).not.toContain("about/index.html");
+    const gateRoutes = gatedHtmlRoutes();
+    expect(scoped).toEqual(expect.arrayContaining(gateRoutes));
+    expect(scoped.filter((route) => !gateRoutes.includes(route))).toHaveLength(GATE_SCOPED_LARGEST_HTML_PAGES);
+  });
+
+  it("adds the largest exported HTML files so the largest-HTML gate always measures an inlined page", () => {
+    const outDir = fixture();
+    addGateRoutes(outDir);
+    const oversized = (bytes: number) => `<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><main class="coin">${"x".repeat(bytes)}</main></body></html>`;
+    const routes = [
+      ["digest/oversized/index.html", 20_000],
+      ["digest/second/index.html", 10_000],
+      ["digest/third/index.html", 5_000],
+      ["digest/fourth/index.html", 1_000],
+    ] as const;
+    for (const [route, bytes] of routes) {
+      const file = path.join(outDir, route);
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, oversized(bytes));
+    }
+    const scoped = selectCriticalCssPages(outDir, "gates").map((file) => path.relative(outDir, file).split(path.sep).join("/"));
+    expect(scoped).toEqual(expect.arrayContaining([
+      ...gatedHtmlRoutes(),
+      "digest/oversized/index.html",
+      "digest/second/index.html",
+      "digest/third/index.html",
+    ]));
+    expect(scoped).not.toContain("digest/fourth/index.html");
   });
 
   it("falls back to the full pass when a gate-measured route is missing", () => {

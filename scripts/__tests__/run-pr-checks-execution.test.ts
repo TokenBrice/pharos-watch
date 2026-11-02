@@ -282,6 +282,28 @@ describe("isolated V9 resource execution", () => {
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
+  it.each([
+    { name: "a non-PR context", env: {}, cycles: 2, label: "no PR base (nightly/manual/local context)" },
+    { name: "an unreadable PR diff", env: { PR_BASE_SHA: baseSha }, cycles: 1, label: "PR diff unavailable, so it fails closed" },
+  ])("labels a passed contagion matrix for $name instead of calling it non-PR context", async ({ env, cycles, label }) => {
+    const directory = mkdtempSync(`${tmpdir()}/pharos-resource-decision-`);
+    try {
+      expect(await runV9ResourceLane({ argv: [], outputDirectory: directory, resourceDirectory: directory,
+        env, listChangedFiles: () => { throw new Error("must not read a diff"); },
+        runCommand: async (command) => {
+          if (command.args.includes("worker/scripts/measure-v9-resource.ts")) {
+            const invocationId = command.args.find((arg) => arg.startsWith("--invocation-id="))!.split("=")[1];
+            writeFileSync(resolve(directory, "report.json"), JSON.stringify(guardReport(invocationId, cycles)));
+          } else writeFileSync(resolve(directory, "vitest.json"), JSON.stringify(report([{ title: contagion, status: "passed" }])));
+          return 0;
+        },
+      })).toBe(0);
+      const summary = readFileSync(resolve(directory, "summary.md"), "utf8");
+      expect(summary).toContain(`Contagion: **passed** (nine-scenario matrix; ${label}).`);
+      expect(summary).not.toContain("non-PR context");
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
   it("keeps admission covered without probes under npm test despite ambient opt-in", () => {
     const directory = mkdtempSync(`${tmpdir()}/pharos-resource-default-off-`);
     const output = resolve(directory, "vitest.json");
