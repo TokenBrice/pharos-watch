@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FX_RATE_BOUNDS } from "@shared/lib/peg-price-bounds";
 import { PEG_CURRENCY_VALUES } from "@shared/types/core";
 import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
-import { EXPECTED_FX_PEG_KEYS, invertUnitsPerUsd, isValidFxRate, PRIMARY_CURRENCY_TO_PEG, REALTIME_FX_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "../fx-config";
+import { EXPECTED_FX_PEG_KEYS, PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS, SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS, invertUnitsPerUsd, isValidFxRate, PRIMARY_CURRENCY_TO_PEG, REALTIME_FX_CURRENCY_TO_PEG, SECONDARY_FX_CURRENCY_TO_PEG } from "../fx-config";
 import { getNaturalFxCadence, inferFxSourceCadence } from "../fx-cadence";
 
 describe("fx-config currency maps", () => {
@@ -71,14 +71,32 @@ describe("fx-config currency maps", () => {
 });
 
 describe("fx cadence classification", () => {
-  it.each(Object.values(PRIMARY_CURRENCY_TO_PEG))("classifies %s as business-daily", (pegKey) => {
-    expect(getNaturalFxCadence(pegKey)).toBe("business-daily");
-    expect(inferFxSourceCadence(pegKey)).toBe("business-daily");
-  });
+  // The declared provider pairs, not the derived Records, are the source of
+  // truth for which source serves a peg; iterating them keeps the assertion
+  // from restating fx-cadence.ts's own Set construction.
+  it.each(PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([pegKey]) => pegKey))(
+    "classifies %s as business-daily",
+    (pegKey) => {
+      expect(getNaturalFxCadence(pegKey)).toBe("business-daily");
+      expect(inferFxSourceCadence(pegKey)).toBe("business-daily");
+    },
+  );
 
-  it.each(Object.values(SECONDARY_FX_CURRENCY_TO_PEG))("classifies %s as calendar-daily", (pegKey) => {
-    expect(getNaturalFxCadence(pegKey)).toBe("calendar-daily");
-    expect(inferFxSourceCadence(pegKey)).toBe("calendar-daily");
+  it.each(SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([pegKey]) => pegKey))(
+    "classifies %s as calendar-daily",
+    (pegKey) => {
+      expect(getNaturalFxCadence(pegKey)).toBe("calendar-daily");
+      expect(inferFxSourceCadence(pegKey)).toBe("calendar-daily");
+    },
+  );
+
+  it("keeps the two daily providers on disjoint peg sets so precedence cannot hide a duplicate", () => {
+    const declared = [
+      ...PRIMARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([pegKey]) => pegKey),
+      ...SECONDARY_PEG_TYPE_TO_CURRENCY_PAIRS.map(([pegKey]) => pegKey),
+    ];
+    expect(new Set(declared).size).toBe(declared.length);
+    expect(new Set(declared)).toEqual(new Set(EXPECTED_FX_PEG_KEYS));
   });
 
   it.each(["peggedUSD", "peggedGOLD", "peggedSILVER", "peggedUNKNOWN"])(

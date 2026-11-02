@@ -4,10 +4,11 @@ vi.mock("../../lib/evm-rpc", () => ({
   fetchEvmUint256AtBlock: vi.fn(),
 }));
 
-import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
-import { fetchCompoundV3SupplyRates } from "../yield-sync/sources-rpc";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import { fetchEvmUint256AtBlock } from "../../lib/evm-rpc";
 import { makeChainRpcConfig } from "../../test-helpers/chain-rpc-fixtures.test-support";
+import { fetchCompoundV3SupplyRates } from "../yield-sync/sources-rpc";
+import { fetchOndoUsdyOracleSource } from "../yield-sync/sources-optional";
 
 const mockEvmCall = vi.mocked(fetchEvmUint256AtBlock);
 
@@ -21,6 +22,55 @@ function makeChainRpcs(chains: string[] = ["ethereum"]): Map<string, ChainRpcCon
     }),
   ]));
 }
+
+describe("fetchOndoUsdyOracleSource", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it("derives APY from USDY oracle price vs prior price", async () => {
+    mockEvmCall.mockResolvedValue(1_085_000_000_000_000_000n);
+    const result = await fetchOndoUsdyOracleSource(
+      1.0835, 7, 1_771_000_000,
+    );
+    expect(result).toEqual(expect.objectContaining({
+      dataSource: "protocol-api",
+      sourceKey: "protocol-api:ondo-usdy-oracle",
+    }));
+    expect(result!.currentApy).toBeCloseTo(7.4855, 4);
+  });
+
+  it("retains a finite negative USDY NAV return and its next history anchor", async () => {
+    mockEvmCall.mockResolvedValue(990_000_000_000_000_000n);
+    const anchor = 1_771_000_000;
+    const result = await fetchOndoUsdyOracleSource(1, 7, anchor);
+    expect(result?.currentApy).toBeCloseTo((Math.pow(0.99, 365.25 / 7) - 1) * 100);
+    expect(result?.apyBase).toBe(result?.currentApy);
+    expect(result).toMatchObject({ exchangeRate: 0.99, comparisonAnchorObservedAt: anchor });
+  });
+
+  it("returns seed row when no prior price exists", async () => {
+    mockEvmCall.mockResolvedValue(1_085_000_000_000_000_000n);
+    const result = await fetchOndoUsdyOracleSource(null, 0, null);
+    expect(result).toEqual(expect.objectContaining({
+      currentApy: 0,
+      observationKind: "anchor-only",
+      exchangeRate: expect.closeTo(1.085, 2),
+      sourceKey: "protocol-api:ondo-usdy-oracle",
+    }));
+  });
+
+  it("keeps a flat measured return distinct from a bootstrap anchor", async () => {
+    mockEvmCall.mockResolvedValue(1_000_000_000_000_000_000n);
+    const result = await fetchOndoUsdyOracleSource(1, 7, 1_771_000_000);
+    expect(result).toMatchObject({ currentApy: 0, apyBase: 0, exchangeRate: 1 });
+    expect(result?.observationKind).toBeUndefined();
+  });
+
+  it("returns null when oracle call fails", async () => {
+    mockEvmCall.mockResolvedValue(null);
+    const result = await fetchOndoUsdyOracleSource(null, 7, null);
+    expect(result).toBeNull();
+  });
+});
 
 describe("fetchCompoundV3SupplyRates", () => {
   afterEach(() => { vi.restoreAllMocks(); });

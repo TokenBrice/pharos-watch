@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "../stablecoins/registry";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import {
   AQUARIUS_SUPPORTED_TOKEN_IDS,
+  CURVE_NATIVE_DISCOVERY_CHAINS,
   DEX_COVERAGE_WAIVERS,
   DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS,
+  DEX_DISCOVERY_PROVIDER_REGISTRY,
   getActiveDexCoverageWaiver,
   getDexDiscoveryProviders,
   getGeckoTerminalDiscoveryTarget,
@@ -236,6 +239,19 @@ describe("DEX deployment coverage ownership", () => {
       ]),
     ).toBe(true);
     expect(isCensusProviderSetSupersededByRegistry("kava", "usdx", ["curve", "kava-swap"])).toBe(false);
+  });
+
+  it("resolves the active Curve provider on every chain its discovery set names", () => {
+    const curve = DEX_DISCOVERY_PROVIDER_REGISTRY.find((provider) => provider.providerId === "curve");
+    expect(curve, "the registry must keep a Curve adapter").toBeDefined();
+    expect(curve!.lifecycle).toBe("active");
+    expect(CURVE_NATIVE_DISCOVERY_CHAINS.size).toBeGreaterThan(0);
+    for (const chain of CURVE_NATIVE_DISCOVERY_CHAINS) {
+      // A chain id the registry does not know would silently resolve no
+      // provider, so the discovery set itself is validated against CHAIN_META.
+      expect(CHAIN_META[chain], `${chain} must be a registered chain`).toBeDefined();
+      expect(getDexDiscoveryProviders(chain), chain).toContain("curve");
+    }
   });
 
   it("gives every exclusively inaccessible coin an owned, unexpired waiver", () => {
