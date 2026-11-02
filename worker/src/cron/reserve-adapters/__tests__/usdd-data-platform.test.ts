@@ -9,6 +9,7 @@ import {
   expectWarningEffect,
   expectWarnings,
   runAdapter,
+  runAdapterWithFakeTimers,
   type AdapterNetworkSpec,
 } from "./reserve-adapter.test-support";
 import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
@@ -289,7 +290,7 @@ describe("fetchUsddDataPlatformReserves", () => {
   });
 
   it("keeps an aggregated book unverified when one chain cannot be dated", async () => {
-    const { result } = await runUsdd({
+    const { result } = await runAdapterWithFakeTimers(() => runUsdd({
       config: chainConfig,
       network: {
         json: {
@@ -300,13 +301,13 @@ describe("fetchUsddDataPlatformReserves", () => {
         },
       },
       nowSec: NOW_SEC,
-    });
+    }));
     expect(result.metadata?.sourceTimestamp).toBeUndefined();
     expect(result.metadata?.freshnessMode).toBe("unverified");
   });
 
   it("fails closed instead of publishing a surviving chain as the whole book", async () => {
-    await expect(runUsdd({
+    await expect(runAdapterWithFakeTimers(() => runUsdd({
       config: {
         inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } },
         params: { additionalCollateralUrls: [TRON_LATEST, BSC_LATEST] },
@@ -320,7 +321,7 @@ describe("fetchUsddDataPlatformReserves", () => {
       },
       nowSec: NOW_SEC,
       validate: false,
-    })).rejects.toThrow(/503/);
+    }))).rejects.toThrow(/503/);
   });
 
   // A 200/{code:0} body without its collateral payload is a failed chain read,
@@ -423,8 +424,7 @@ describe("USDD collateral-history freshness join", () => {
   it("falls back to unverified after one bounded hanging history attempt and still reads the PSM", async () => {
     const { spec } = tronNetwork();
     const reconciled = { ...latest, data: { ...latest.data } };
-    const startedAt = Date.now();
-    const { result, network } = await runUsdd({
+    const { result, network } = await runAdapterWithFakeTimers(() => runUsdd({
       network: { ...spec, json: {
         ...spec.json,
         [TRON_LATEST]: reconciled,
@@ -433,8 +433,7 @@ describe("USDD collateral-history freshness join", () => {
         }),
       } },
       nowSec: NOW_SEC,
-    });
-    expect(Date.now() - startedAt).toBeLessThan(9_000);
+    }));
     expect(result.metadata?.sourceTimestamp).toBeUndefined();
     expect(result.metadata?.freshnessMode).toBe("unverified");
     expect(network.fetchSpy.getHistory().filter(request => request.url === TRON_HISTORY)).toHaveLength(1);
@@ -442,12 +441,12 @@ describe("USDD collateral-history freshness join", () => {
   }, 15_000);
 
   it("keeps unverified freshness when collateral-history fails", async () => {
-    const { result } = await runUsdd({
+    const { result } = await runAdapterWithFakeTimers(() => runUsdd({
       config: { inputs: { primary: { kind: "http-json", url: ETHEREUM_LATEST } }, params: {} },
       network: { json: { [ETHEREUM_LATEST]: latest } },
       nowSec: NOW_SEC,
       allowUnmatched: true,
-    });
+    }));
     expect(result.metadata?.sourceTimestamp).toBeUndefined();
     expect(result.metadata?.freshnessMode).toBe("unverified");
   });
@@ -609,10 +608,10 @@ describe("fetchUsddDataPlatformReserves Tron PSM redemption telemetry", () => {
 
   it("withholds redemption telemetry when the request throws", async () => {
     const { spec } = tronNetwork({ fail: true });
-    const { result } = await runUsdd({
+    const { result } = await runAdapterWithFakeTimers(() => runUsdd({
       network: spec,
       nowSec: NOW_SEC,
-    });
+    }));
 
     expect(result.metadata?.redemption).toBeUndefined();
   });

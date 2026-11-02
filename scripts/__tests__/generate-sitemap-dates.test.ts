@@ -1,5 +1,6 @@
 import { join, resolve } from "node:path";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import { generateSitemapDates } from "../maintenance/generate-sitemap-dates.ts";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import { collectStablecoinDetailDates, STABLECOIN_DETAIL_CONTENT_REVISED_AT } from "../lib/sitemap-detail-dates";
 import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
@@ -162,8 +163,7 @@ async function runGenerator({ gitLog, mtime }: { gitLog: string; mtime: string }
   generator.gitLog = gitLog;
   generator.mtime = new Date(mtime);
   generator.written = null;
-  vi.resetModules();
-  await import("../maintenance/generate-sitemap-dates.ts");
+  generateSitemapDates({ freshGitDateIndex: true, entries });
   expect(generator.written).not.toBeNull();
   return generator.written!;
 }
@@ -174,27 +174,25 @@ function changedRoutes(before: Record<string, string>, after: Record<string, str
 
 describe("generated sitemap dates are independent of checkout time", () => {
   let files: string[] = [];
+  let baseline!: Record<string, string>;
 
   beforeAll(async () => {
     files = await scannedHistoryFiles();
-  });
-
-  afterEach(() => {
-    vi.resetModules();
+    // One baseline serves every scenario: the output must not depend on the
+    // checkout time, so scenarios only need the routes their edit moves.
+    baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-03-01T00:00:00.000Z" });
   });
 
   it("declares and scans the shared case-study schema", async () => {
     expect(SITEMAP_COMMIT_DERIVED_SOURCE_PATHS).toContain(SCHEMA_PATH);
     expect(files).toContain(SCHEMA_PATH);
-    await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-26T19:23:19.000Z" });
     expect(generator.gitLogArgs).toContain(SCHEMA_PATH);
   });
 
   it("produces identical output for two different checkout times", async () => {
-    const first = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-03-01T00:00:00.000Z" });
     const second = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
-    expect(second).toEqual(first);
-    expect(first["/learn/case-studies/usdc-svb-2023/"]).toBe(BASE_COMMIT);
+    expect(second).toEqual(baseline);
+    expect(baseline["/learn/case-studies/usdc-svb-2023/"]).toBe(BASE_COMMIT);
   });
 
   it("fails closed when a tracked route source has no Git history", async () => {
@@ -205,14 +203,12 @@ describe("generated sitemap dates are independent of checkout time", () => {
   });
 
   it("advances only the edited study and the hub for a single case-study edit", async () => {
-    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
     const edited = await runGenerator({ gitLog: gitLogFor(files, [STUDY_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
     expect(changedRoutes(baseline, edited)).toEqual(["/learn/case-studies/", "/learn/case-studies/usdc-svb-2023/"]);
     expect(edited["/learn/case-studies/usdc-svb-2023/"]).toBe(LATER_COMMIT);
   });
 
   it("advances every case-study detail page for a shared schema edit", async () => {
-    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
     const edited = await runGenerator({ gitLog: gitLogFor(files, [SCHEMA_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
     const changed = changedRoutes(baseline, edited);
     expect(changed.length).toBeGreaterThan(1);
@@ -221,7 +217,6 @@ describe("generated sitemap dates are independent of checkout time", () => {
   });
 
   it("does not re-stamp blog posts for a registry or site-wide metadata edit", async () => {
-    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
     const registryEdit = await runGenerator({
       gitLog: gitLogFor(files, [BLOG_INDEX_PATH]),
       mtime: "2026-10-27T09:00:00.000Z",
@@ -237,7 +232,6 @@ describe("generated sitemap dates are independent of checkout time", () => {
   });
 
   it("dates each post from its own markdown and the shared renderer only", async () => {
-    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
     const editedPost = BLOG_POST_PATHS[0];
     const postEdit = await runGenerator({
       gitLog: gitLogFor(files, [editedPost]),
@@ -255,7 +249,6 @@ describe("generated sitemap dates are independent of checkout time", () => {
   });
 
   it("gives the root route its own Git date", async () => {
-    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
     expect(baseline["/"]).toBe(BASE_COMMIT);
 
     // A sibling src/app edit must not move the root; only page.tsx owns it.
@@ -274,7 +267,6 @@ describe("generated sitemap dates are independent of checkout time", () => {
   });
 
   it("advances every indexable chain profile for a shared chain-content edit", async () => {
-    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
     const edited = await runGenerator({ gitLog: gitLogFor(files, [CHAIN_CONTENT_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
     const changed = changedRoutes(baseline, edited);
 
@@ -285,7 +277,6 @@ describe("generated sitemap dates are independent of checkout time", () => {
   });
 
   it("advances every peg hub for a shared peg-taxonomy edit", async () => {
-    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
     const edited = await runGenerator({ gitLog: gitLogFor(files, [PEG_TAXONOMY_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
     const expected = PEG_HUB_PEGS
       .map((peg) => PEG_HUB_SLUGS[peg])
@@ -296,7 +287,6 @@ describe("generated sitemap dates are independent of checkout time", () => {
   });
 
   it("advances every taxonomy cohort page for a shared taxonomy-renderer edit", async () => {
-    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
     const edited = await runGenerator({ gitLog: gitLogFor(files, [TAXONOMY_PAGE_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
     const expected = ALL_STABLECOIN_TAXONOMY_PAGES.map((page) => page.href);
 

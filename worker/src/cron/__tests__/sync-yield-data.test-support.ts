@@ -306,6 +306,10 @@ export function yieldFallbackTableMatches(overrides: MockTableConfig[] = []): Mo
     { match: "source_switch = 0", rows: [] },
     { match: "cache", rows: [] },
     { match: "yield_data", rows: [] },
+    // The ownership-handoff purge drains until a statement reports zero rows.
+    // With the mock's default `changes: 1`, every full sync runs the 250,000-row
+    // loop to exhaustion; no fixture seeds handoff rows, so report none removed.
+    { match: "pharos:yield-sync:ownership-handoff-delete", rows: [], runMeta: { changes: 0 } },
     { match: "yield_history", rows: [] },
     { match: "supply_history", rows: [] },
     { match: "depeg_events", rows: [] },
