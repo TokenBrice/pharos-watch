@@ -222,25 +222,16 @@ export async function snapshotSupply(
       (id) => requiredActiveIdSet.has(id) && !(lastWrite.ownedRowIds ?? []).includes(id),
     )
     : [];
-  // A replacement rewrites only this generation's observations, so it would delete the day's
-  // admitted row of an owned coin this generation can only restore (a DefiLlama-outage generation
-  // restores most of the cohort). The day is kept; a generation observing them again replaces it.
+  // Restored rows are never written, so a replacement keeps the day's admitted row of an owned coin
+  // this generation can only restore instead of deleting it (a DefiLlama-outage generation restores
+  // most of the cohort); every other owned row is rewritten from the current observations.
   const restoredOwnedIds = lastWrite?.snapshotDate === snapshotDate
     ? restoredOnlyIds.filter((id) => (lastWrite.ownedRowIds ?? []).includes(id))
     : [];
-  const replacementDeferred = recoveredSinceLastWrite.length > 0 && restoredOwnedIds.length > 0;
-  const deferredReplacement: CronMetadataRecord = replacementDeferred ? {
-    replacementDeferred: {
-      recoveredIds: recoveredSinceLastWrite.slice(0, 20),
-      recoveredCount: recoveredSinceLastWrite.length,
-      restoredOwnedIds: restoredOwnedIds.slice(0, 20),
-      restoredOwnedCount: restoredOwnedIds.length,
-    },
-  } : {};
   const alreadyWritten = publicationGapBand !== "systemic"
     && lastWrite?.snapshotDate === snapshotDate
     && lastWrite.coverageIdentityVerified
-    && (recoveredSinceLastWrite.length === 0 || replacementDeferred);
+    && recoveredSinceLastWrite.length === 0;
   if (
     options.minStablecoinsCacheUpdatedAtSec != null
     && stablecoinsCache.updatedAt < options.minStablecoinsCacheUpdatedAtSec
@@ -258,7 +249,6 @@ export async function snapshotSupply(
           ...JSON.parse(result.metadata ?? "{}"),
           ...publicationGap,
           ...qualityFindings(),
-          ...deferredReplacement,
         },
       });
     }
@@ -289,7 +279,6 @@ export async function snapshotSupply(
           ...(repairedPriceRows > 0 ? { outputPublishedAt: lastWrite?.updatedAt ?? null } : {}),
           ...publicationGap,
           ...qualityFindings(),
-          ...deferredReplacement,
           snapshotDate,
           repairedPriceRows,
         },
@@ -345,17 +334,18 @@ export async function snapshotSupply(
           coverage: coverageExpectation,
           accountedActiveCount:
             publicationCoverage.presentActiveCount + publicationCoverage.waivedActiveCount,
-          ownedRowIds: snapshotRows.map(([stablecoinId]) => stablecoinId),
+          ownedRowIds: [...snapshotRows.map(([stablecoinId]) => stablecoinId), ...restoredOwnedIds],
           missingActiveIds: publicationCoverage.missingActiveIds,
           unavailableActiveIds,
         }),
         generationId: crypto.randomUUID(),
         writtenRows: snapshotRows.length,
       });
+      const keptRowIds = new Set(restoredOwnedIds);
       const ownedStablecoinIds = [...new Set([
         ...snapshotEligibleIds,
         ...(lastWrite?.ownedRowIds ?? []),
-      ])].sort();
+      ])].filter((stablecoinId) => !keptRowIds.has(stablecoinId)).sort();
       const deleteStatements = chunkArray(
         ownedStablecoinIds,
         D1_MAX_BOUND_PARAMETERS - 1,

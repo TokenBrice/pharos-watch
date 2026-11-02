@@ -181,29 +181,32 @@ describe("DefiLlama outage publication with a complete previous publication", ()
     });
   });
 
-  it("cannot rewrite a supply day the primary path already snapshotted", async () => {
+  it("cannot erase a supply day the primary path already snapshotted", async () => {
     // A CoinGecko-detail coin the morning publication restored is served fresh by the outage feed, so
-    // snapshot-supply sees it as recovered. The quarter-hourly gate skips the job on the unsafe run; the
-    // 08:00 safety net gates only on freshness, so snapshot-supply itself must keep the written day.
+    // snapshot-supply sees it as recovered and rewrites the day. The quarter-hourly gate skips the job on
+    // the unsafe run; the 08:00 safety net gates only on freshness, so the rewrite must keep the rows of
+    // coins the outage generation only restores.
     const recovered = COINGECKO_FEED.find((meta) => !isPreferredOrHeld(meta.id))!;
     const db = await openWithCompletePublication(new Set([recovered.id]));
     const day = Math.floor(MAIN_SEC / 86_400) * 86_400;
-    const dayRows = async () => (await db.prepare(
-      "SELECT stablecoin_id, circulating_usd FROM supply_history WHERE snapshot_date = ? ORDER BY stablecoin_id",
-    ).bind(day).all<{ stablecoin_id: string; circulating_usd: number }>()).results;
+    const dayRows = async () => new Map((await db.prepare(
+      "SELECT stablecoin_id, circulating_usd FROM supply_history WHERE snapshot_date = ?",
+    ).bind(day).all<{ stablecoin_id: string; circulating_usd: number }>()).results
+      .map((row) => [row.stablecoin_id, row.circulating_usd]));
     await snapshotSupply(db, undefined, { nowSec: MAIN_SEC + 60 });
     const written = await dayRows();
-    expect(written.length).toBeGreaterThan(RESTORABLE.length);
-    expect(written.some((row) => row.stablecoin_id === recovered.id)).toBe(false);
+    expect(written.has(recovered.id)).toBe(false);
+    for (const meta of RESTORABLE) expect(written.get(meta.id), meta.id).toBe(10_000_000);
 
     const outage = await runOutage(db, MAIN_SEC + 900);
     expect(parseStablecoinsCapabilities(outage).stablecoinsCache).toBe(false);
-    const result = await snapshotSupply(db, undefined, { nowSec: MAIN_SEC + 960 });
-    expect(await dayRows()).toEqual(written);
-    expect(JSON.parse(result.metadata!)).toMatchObject({
-      reason: "already_written_today",
-      replacementDeferred: { recoveredIds: [recovered.id], restoredOwnedCount: RESTORABLE.length },
-    });
+    await snapshotSupply(db, undefined, { nowSec: MAIN_SEC + 960, minStablecoinsCacheUpdatedAtSec: MAIN_SEC + 900 });
+    const rewritten = await dayRows();
+    for (const meta of RESTORABLE) expect(rewritten.get(meta.id), meta.id).toBe(10_000_000);
+    expect(rewritten.get(recovered.id)).toBe(5_000_000);
+    const marker = await getCache(db, "snapshot-supply:last-write");
+    const ownedRowIds = new Set(JSON.parse(marker!.value).ownedRowIds as string[]);
+    for (const meta of RESTORABLE) expect(ownedRowIds.has(meta.id), meta.id).toBe(true);
   });
 
   it("does not re-date a carry across consecutive outage publications and drops it past the ceiling", async () => {
