@@ -71,24 +71,14 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
           filter: blob:none
-      - uses: $/.github/actions/setup-workspace
-        with:
-          bootstrap-history: "true"
-          node-modules-cache: "true"
-          workspace-artifact: none
-      - name: Classify PR changes
-        id: classify
-        env:
-          DEPLOY_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          DEPLOY_EVENT_NAME: push
-          DEPLOY_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --classify
       - name: Acquire nightly test timings
-        # Advisory input to the planner: the token is confined to this `gh`
-        # step, no repository code runs here, and any failure leaves no file so
-        # planning falls back to round-robin shards.
+        # Advisory input to the planner. Runs before setup-workspace so the
+        # token-bearing `gh` step executes before any PR code; the token is
+        # confined here, and any failure leaves no file so planning falls back
+        # to round-robin shards.
         id: test-timings
-        if: ${{ steps.classify.outputs.docs_only != 'true' }}
+        timeout-minutes: 2
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -122,6 +112,18 @@ jobs:
             rm -f "${timings}"
             echo "No nightly test timings from the last 7 days; planning with round-robin shards."
           fi
+      - uses: $/.github/actions/setup-workspace
+        with:
+          bootstrap-history: "true"
+          node-modules-cache: "true"
+          workspace-artifact: none
+      - name: Classify PR changes
+        id: classify
+        env:
+          DEPLOY_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          DEPLOY_EVENT_NAME: push
+          DEPLOY_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node --experimental-strip-types scripts/maintenance/generate-pr-workflow-matrix.ts --classify
       - name: Plan PR tests once
         if: ${{ steps.classify.outputs.docs_only != 'true' }}
         env:

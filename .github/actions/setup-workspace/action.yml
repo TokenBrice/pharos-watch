@@ -154,10 +154,11 @@ runs:
           node_modules
           worker/node_modules
           shared/contracts/node_modules
-        # Exact key only: a tree built from another lockfile, Node version,
-        # platform or npm config must never be restored. Generated outputs are
-        # deliberately absent so the bootstrap drift guard keeps its meaning.
-        key: node-modules-${{ runner.os }}-${{ runner.arch }}-${{ inputs.node-version }}-${{ hashFiles('package-lock.json', '.npmrc') }}
+        # Exact key only: a tree built from another lockfile, workspace
+        # manifest, Node version, platform or npm config must never be
+        # restored. Generated outputs are deliberately absent so the bootstrap
+        # drift guard keeps its meaning.
+        key: node-modules-${{ runner.os }}-${{ runner.arch }}-${{ inputs.node-version }}-${{ hashFiles('package-lock.json', 'package.json', 'worker/package.json', 'shared/contracts/package.json', '.npmrc') }}
 
     - if: ${{ inputs.install-deps == 'true' && inputs.node-modules-cache == 'true' && steps.node-modules-cache.outputs.cache-hit != 'true' }}
       shell: bash

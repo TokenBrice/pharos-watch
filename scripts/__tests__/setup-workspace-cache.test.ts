@@ -87,7 +87,7 @@ describe("setup-workspace caches", () => {
     // Exact key only: no restore-keys may substitute a tree built from another
     // lockfile, Node version, platform or npm configuration.
     expect(restore.with.key).toBe(
-      "node-modules-${{ runner.os }}-${{ runner.arch }}-${{ inputs.node-version }}-${{ hashFiles('package-lock.json', '.npmrc') }}",
+      "node-modules-${{ runner.os }}-${{ runner.arch }}-${{ inputs.node-version }}-${{ hashFiles('package-lock.json', 'package.json', 'worker/package.json', 'shared/contracts/package.json', '.npmrc') }}",
     );
     expect(restore.with["restore-keys"]).toBeUndefined();
     // A cache outage falls back to npm ci instead of failing the job.

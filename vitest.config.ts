@@ -7,6 +7,10 @@ import {
   THREADED_WORKER_TESTS,
   WORKER_SHARED_TEST_FILES,
 } from "./scripts/lib/critical-ownership.mts";
+import {
+  VITEST_GLOBAL_SETUP_FILES,
+  VITEST_PROJECT_SETUP_FILES,
+} from "./scripts/lib/vitest-setup-files.mts";
 
 const normalizedRoot = path.resolve(__dirname).replaceAll("\\", "/");
 const isWorktreeCheckout = normalizedRoot.includes("/.worktrees/") || normalizedRoot.includes("/worktrees/");
@@ -69,15 +73,12 @@ export default defineConfig({
     // The gitignored stablecoin catalog artifacts are static imports in many
     // suites; a stale local copy fails them with misleading validation errors.
     // The setup regenerates them when cached input/output metadata changes
-    // (inherited by every project via extends).
+    // (inherited by every project via extends). The second entry builds the
+    // migrated SQLite template once per run; fixture processes deserialize it
+    // or replay migrations when it is unavailable.
     // Absolute path: vitest resolves relative setup paths against the
     // invocation cwd, which may be worker/.
-    globalSetup: [
-      path.resolve(__dirname, "scripts/test/ensure-fresh-stablecoin-artifacts.ts"),
-      // Build the migrated SQLite template once per run; fixture processes
-      // deserialize it or replay migrations when it is unavailable.
-      path.resolve(__dirname, "scripts/test/prepare-latest-schema-sqlite-template.ts"),
-    ],
+    globalSetup: VITEST_GLOBAL_SETUP_FILES.map((file) => path.resolve(__dirname, file)),
     projects: [
       {
         extends: true,
@@ -124,7 +125,7 @@ export default defineConfig({
               // isolated `worker` project.
               isolate: false,
               pool: "forks" as const,
-              setupFiles: [path.resolve(__dirname, "worker/src/test-helpers/setup-shared-isolation.ts")],
+              setupFiles: VITEST_PROJECT_SETUP_FILES["worker-shared"].map((file) => path.resolve(__dirname, file)),
             },
           }]
         : []),
@@ -141,7 +142,7 @@ export default defineConfig({
         test: {
           name: "src",
           include: EXECUTABLE_TEST_PROJECTS.find((project) => project.name === "src")!.include,
-          setupFiles: [path.resolve(__dirname, "src/test/setup.ts")],
+          setupFiles: VITEST_PROJECT_SETUP_FILES.src.map((file) => path.resolve(__dirname, file)),
         },
       },
     ],

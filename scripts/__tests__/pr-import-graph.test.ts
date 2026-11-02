@@ -1,13 +1,18 @@
+import { matchesGlob } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   buildPrImportGraph,
   collectModuleSpecifiers,
+  compileGlobMatcher,
   isStablecoinCatalogDataOnly,
   planPrTestSelection,
   resolveModuleSpecifier,
   selectDirectImporters,
   selectImportGraphTests,
 } from "../lib/pr-import-graph.mts";
+import { EXECUTABLE_TEST_PROJECTS } from "../lib/critical-ownership.mts";
+import { VITEST_SETUP_FILES } from "../lib/vitest-setup-files.mts";
+import { compareCommitSelections } from "../ci/check-test-plan-parity";
 
 const CWD = "/repo";
 
@@ -21,13 +26,35 @@ function fixtureFs(files: Record<string, string>) {
       return contents;
     },
     statSync: (path: string) => ({ isFile: () => relativePath(path) in files }),
+    readdirSync: (path: string) => {
+      const directory = relativePath(path).replace(/\/$/, "");
+      const prefix = directory ? `${directory}/` : "";
+      const entries = new Map<string, boolean>();
+      for (const file of Object.keys(files)) {
+        if (!file.startsWith(prefix)) continue;
+        const rest = file.slice(prefix.length);
+        const slash = rest.indexOf("/");
+        entries.set(slash < 0 ? rest : rest.slice(0, slash), slash >= 0);
+      }
+      return [...entries].map(([name, isDirectory]) => ({
+        name,
+        isDirectory: () => isDirectory,
+        isFile: () => !isDirectory,
+      }));
+    },
   };
 }
 
 /** Minimal checkout: package imports, an alias target, a re-export barrel and a JSON module. */
 const BASE_FILES: Record<string, string> = {
   "vitest.config.ts": "export default {};\n",
+  "scripts/test/ensure-fresh-stablecoin-artifacts.ts": "export {};\n",
+  "scripts/test/prepare-latest-schema-sqlite-template.ts": "export {};\n",
+  "worker/src/test-helpers/setup-shared-isolation.ts": "export {};\n",
+  "src/test/setup.ts": "export {};\n",
   "package.json": JSON.stringify({ imports: { "#catalog": "./shared/lib/catalog.ts" } }),
+  "node_modules/zod/package.json": "{}",
+  "node_modules/@scope/pkg/package.json": "{}",
   "shared/lib/catalog.ts": "export const catalog = [];\n",
   "shared/lib/registry.ts": "import { catalog } from \"./catalog\";\nexport const registry = catalog;\n",
   "shared/lib/barrel.ts": "export { registry } from \"./registry\";\n",
@@ -114,16 +141,128 @@ describe("static import-graph PR test selection", () => {
     expect(resolveModuleSpecifier("#catalog", "scripts/x.test.ts", options)).toEqual({ kind: "file", file: "shared/lib/catalog.ts" });
     expect(resolveModuleSpecifier("../lib", "scripts/__tests__/x.test.ts", options)).toEqual({ kind: "file", file: "scripts/lib/index.ts" });
     expect(resolveModuleSpecifier("zod", "scripts/x.test.ts", options)).toEqual({ kind: "external" });
+    expect(resolveModuleSpecifier("@scope/pkg/subpath", "scripts/x.test.ts", options)).toEqual({ kind: "external" });
+    expect(resolveModuleSpecifier("node:fs", "scripts/x.test.ts", options)).toEqual({ kind: "external" });
     expect(resolveModuleSpecifier("./missing", "scripts/x.test.ts", options)).toMatchObject({ kind: "unresolved" });
     expect(resolveModuleSpecifier("#unknown", "scripts/x.test.ts", options)).toMatchObject({ kind: "unresolved" });
     expect(resolveModuleSpecifier("../../../outside", "scripts/x.test.ts", options)).toMatchObject({ kind: "unresolved" });
+    // A new alias or a package that is not installed is not silently external:
+    // it falls back to Vitest instead of dropping the edge.
+    expect(resolveModuleSpecifier("@scope/unconfigured", "scripts/x.test.ts", options)).toMatchObject({ kind: "unresolved" });
+    expect(resolveModuleSpecifier("not-installed-package", "scripts/x.test.ts", options)).toMatchObject({ kind: "unresolved" });
   });
 
-  it("selects whole-universe reruns for toolchain inputs", () => {
+  it("selects whole-universe reruns for toolchain inputs and planner sources", () => {
     const graph = build();
-    for (const changed of ["package.json", "worker/package.json", "tsconfig.json", "vitest.config.ts", "src/test/setup.ts", "scripts/test/helper.ts"]) {
-      expect(planPrTestSelection([changed], { graph })).toEqual({ files: TEST_FILES, mode: "closure" });
+    for (const changed of [
+      "package.json", "worker/package.json", "tsconfig.json", "vitest.config.ts", "src/test/setup.ts", "scripts/test/helper.ts",
+      "scripts/lib/pr-import-graph.mts", "scripts/lib/pr-test-selection.mts", "scripts/lib/pr-test-plan.mts",
+      "scripts/maintenance/run-pr-tests.ts", "scripts/lib/critical-ownership.mts", "scripts/lib/critical-test-files.mts",
+      "scripts/lib/doc-ownership-registry.mts", "docs/doc-ownership.json",
+      ...VITEST_SETUP_FILES,
+    ]) {
+      expect(planPrTestSelection([changed], { graph }), changed).toEqual({ files: TEST_FILES, mode: "closure" });
     }
+  });
+
+  it("compiles the executable-test globs once with the same semantics as path.matchesGlob", () => {
+    const files = [
+      "src/a.test.ts", "src/a.test.tsx", "src/a.spec.mts", "src/nested/a.test.js",
+      "worker/src/a.test.ts", "worker/src/nested/a.spec.mts",
+      "scripts/a.test.ts", "shared/lib/a.spec.tsx", "functions/a.test.ts",
+      "src/a.ts", "worker/src/a.ts", "scripts/a.mts", "src/__tests__/a.test.ts",
+    ];
+    for (const project of EXECUTABLE_TEST_PROJECTS) {
+      for (const pattern of [...project.include, ...project.exclude]) {
+        const matcher = compileGlobMatcher(pattern);
+        for (const file of files) expect(matcher(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));
+      }
+    }
+  });
+
+  it("selects every file matched by a template-literal dynamic import", () => {
+    const files = {
+      ...BASE_FILES,
+      "shared/lib/stablecoins/client-detail.ts": "export const load = async (id: string) => import(`../../data/stablecoins/coins.client.detail/${id}.generated.json`);\n",
+      "shared/data/stablecoins/coins.client.detail/usdc.generated.json": "{\"id\":\"usdc\"}\n",
+      "shared/data/stablecoins/coins.client.detail/usdt.generated.json": "{\"id\":\"usdt\"}\n",
+      "scripts/__tests__/client-detail.test.ts": "import { load } from \"@shared/lib/stablecoins/client-detail\";\nit(\"detail\", () => load);\n",
+    };
+    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
+    for (const changed of [
+      "shared/data/stablecoins/coins.client.detail/usdc.generated.json",
+      "shared/data/stablecoins/coins.client.detail/usdt.generated.json",
+    ]) {
+      expect(selectImportGraphTests(graph, [changed])).toEqual(["scripts/__tests__/client-detail.test.ts"]);
+    }
+  });
+
+  it("selects every file matched by import.meta.glob", () => {
+    const files = {
+      ...BASE_FILES,
+      "scripts/lib/globbed.ts": "export const modules = import.meta.glob(\"../fixtures/*.json\");\n",
+      "scripts/fixtures/a.json": "{\"id\":\"a\"}\n",
+      "scripts/fixtures/b.json": "{\"id\":\"b\"}\n",
+      "scripts/fixtures/ignored.txt": "not a match\n",
+      "scripts/__tests__/globbed.test.ts": "import { modules } from \"../lib/globbed\";\nit(\"glob\", () => modules);\n",
+    };
+    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
+    expect(selectImportGraphTests(graph, ["scripts/fixtures/a.json"])).toEqual(["scripts/__tests__/globbed.test.ts"]);
+    expect(selectImportGraphTests(graph, ["scripts/fixtures/ignored.txt"])).toEqual([]);
+  });
+
+  it("falls back when a template or glob pattern has no usable static directory prefix", () => {
+    const files = {
+      ...BASE_FILES,
+      "src/lib/dynamic.ts": "export const load = async (name: string) => import(`${name}.json`);\n",
+      "src/lib/glob-any.ts": "export const modules = import.meta.glob(\"**/*.json\");\n",
+      "scripts/__tests__/dynamic.test.ts": "import { load } from \"@/lib/dynamic\";\nit(\"dynamic\", () => load);\n",
+      "scripts/__tests__/glob-any.test.ts": "import { modules } from \"@/lib/glob-any\";\nit(\"glob\", () => modules);\n",
+    };
+    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
+    expect(graph.unresolved.join("\n")).toContain("without a static directory prefix");
+    const selection = planPrTestSelection(["shared/lib/registry.ts"], { graph });
+    expect(selection.files).toEqual([]);
+    expect(selection.fallback).toContain("unresolved local specifier");
+  });
+
+  it("marks a file with an unterminated literal unresolved instead of dropping later imports", () => {
+    const cases: readonly [string, string, string][] = [
+      ["template", "scripts/__tests__/unterminated-template.test.ts", "const value = `open\nimport { registry } from \"@shared/lib/registry\";\n"],
+      ["string", "scripts/__tests__/unterminated-string.test.ts", "const value = \"open"],
+      ["regex", "scripts/__tests__/unterminated-regex.test.ts", "const value = /open"],
+    ];
+    for (const [kind, testFile, source] of cases) {
+      const files = { ...BASE_FILES, [testFile]: source };
+      const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+      const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
+      expect(graph.unresolved.join("\n"), kind).toContain(`unterminated ${kind === "regex" ? "regular expression" : kind === "string" ? "string literal" : "template literal"}`);
+      expect(planPrTestSelection(["shared/lib/registry.ts"], { graph }).fallback, kind).toContain("unresolved local specifier");
+    }
+  });
+
+  it("does not treat nested templates or expression regexes as unterminated", () => {
+    const files = {
+      ...BASE_FILES,
+      "worker/scripts/nested.ts": "const a = `${sqlString(`x`)}`;\nconst b = `'${value.replace(/'/g, \"''\")}'`;\n",
+    };
+    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
+    expect(graph.unresolved).toEqual([]);
+  });
+
+  it("reports selection parity, skips data-only routing and rejects a vacuous Vite result", () => {
+    expect(compareCommitSelections("data-only", ["scripts/a.test.ts"], ["scripts/b.test.ts"])).toMatchObject({
+      skipped: "data-only", missing: [], vacuous: false,
+    });
+    expect(compareCommitSelections("closure", ["scripts/a.test.ts"], [])).toMatchObject({ vacuous: true, missing: [] });
+    expect(compareCommitSelections("closure", ["scripts/a.test.ts"], ["scripts/b.test.ts"])).toMatchObject({
+      missing: ["scripts/b.test.ts"], vacuous: false,
+    });
+    expect(compareCommitSelections("closure", [], [])).toMatchObject({ vacuous: false });
   });
 
   it("routes stablecoin catalog data to direct catalog/registry owners instead of the closure", () => {
@@ -161,6 +300,24 @@ describe("static import-graph PR test selection", () => {
     const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
     expect(planPrTestSelection(["shared/data/stablecoins/coins/usdc.json"], { graph })).toEqual({
       files: ["scripts/__tests__/catalog-entry.test.ts", "scripts/__tests__/json.test.ts"],
+      mode: "data-only",
+    });
+  });
+
+  it("routes catalog data through one wrapper module and stops at two hops", () => {
+    const files = {
+      ...BASE_FILES,
+      "shared/data/stablecoins/frozen-snapshots.json": "{\"snapshots\":[]}\n",
+      "shared/lib/frozen-snapshots.ts": "import snapshots from \"@shared/data/stablecoins/frozen-snapshots.json\";\nexport const load = () => snapshots;\n",
+      "shared/lib/frozen-snapshots-wrapper.ts": "import { load } from \"./frozen-snapshots\";\nexport const value = load;\n",
+      "shared/lib/frozen-snapshots-deep.ts": "import { value } from \"./frozen-snapshots-wrapper\";\nexport const deep = value;\n",
+      "scripts/__tests__/frozen-snapshots.test.ts": "import { load } from \"@shared/lib/frozen-snapshots\";\nit(\"wrapper\", () => load);\n",
+      "scripts/__tests__/frozen-snapshots-deep.test.ts": "import { deep } from \"@shared/lib/frozen-snapshots-deep\";\nit(\"deep\", () => deep);\n",
+    };
+    const testFiles = Object.keys(files).filter((file) => /\.test\.ts$/.test(file)).sort();
+    const graph = buildPrImportGraph({ cwd: CWD, fs: fixtureFs(files), testFiles });
+    expect(planPrTestSelection(["shared/data/stablecoins/frozen-snapshots.json"], { graph })).toEqual({
+      files: ["scripts/__tests__/frozen-snapshots.test.ts"],
       mode: "data-only",
     });
   });

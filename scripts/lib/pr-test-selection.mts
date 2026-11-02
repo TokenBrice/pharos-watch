@@ -4,7 +4,18 @@ import { assertExecutableTestFiles, collectOwningTests, normalizeOwnershipPath, 
 import { ALWAYS_RUN_TEST_FILES } from "./critical-test-files.mts";
 import { hasOnlyInternalDocsImpact } from "./deploy-impact.mts";
 import { DECLARED_TEST_OWNERSHIP, matchesOwnershipGlob } from "./doc-ownership-registry.mts";
+import { PR_DOC_COMMANDS } from "./pr-lanes.mts";
 export { ALWAYS_RUN_TEST_FILES };
+
+/**
+ * Test files the docs owner already reruns through `PR_DOC_COMMANDS`. A
+ * doc-only declaration is skipped only when every one of its tests is here;
+ * any other doc-owned test keeps its place in the plan.
+ */
+export const PR_DOC_OWNER_TEST_FILES: ReadonlySet<string> = new Set(
+  PR_DOC_COMMANDS.flatMap((command) =>
+    command.args.filter((arg) => /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(arg)).map(normalizeOwnershipPath)),
+);
 
 
 export function parseVitestFileList(output: unknown): string[] {
@@ -18,9 +29,9 @@ export interface SelectPrTestFilesOptions {
   /**
    * The change set includes internal docs, whose owner (static guards, or the
    * docs-only inline path) already runs the doc-ownership and router invariant
-   * suites. Ignore doc-only declaration sources here so the same suites are not
-   * scheduled twice; a declaration that also matches a non-doc source, a changed
-   * test file or an import-graph edge keeps its tests.
+   * suites. A declaration is skipped only when every changed source it matches
+   * is documentation and every one of its tests is in `PR_DOC_COMMANDS`; any
+   * other doc-owned test keeps its place in the plan.
    */
   docsChanged?: boolean;
 }
@@ -38,11 +49,18 @@ export function selectPrTestFiles(
   for (const test of collectOwningTests(changedSourceFiles, ownership)) {
     if (exists(test)) selected.add(test);
   }
-  const declaredSources = docsChanged
-    ? changedSourceFiles.filter((file) => !hasOnlyInternalDocsImpact([normalizeOwnershipPath(file)]))
-    : changedSourceFiles;
   for (const declaration of DECLARED_TEST_OWNERSHIP) {
-    if (!declaredSources.some((file) => declaration.sources.some((glob) => matchesOwnershipGlob(normalizeOwnershipPath(file), glob)))) continue;
+    const matchingSources = changedSourceFiles.filter((file) =>
+      declaration.sources.some((glob) => matchesOwnershipGlob(normalizeOwnershipPath(file), glob)));
+    if (matchingSources.length === 0) continue;
+    // The docs owner already runs the doc-ownership/router invariants; skip a
+    // declaration only when it has nothing else to run and every changed source
+    // is documentation. Other doc-owned suites (e.g. a runbook validator) stay.
+    if (docsChanged
+      && matchingSources.every((file) => hasOnlyInternalDocsImpact([normalizeOwnershipPath(file)]))
+      && declaration.tests.every((test) => PR_DOC_OWNER_TEST_FILES.has(normalizeOwnershipPath(test)))) {
+      continue;
+    }
     assertExecutableTestFiles(declaration.tests, { exists });
     for (const test of declaration.tests) selected.add(test);
   }

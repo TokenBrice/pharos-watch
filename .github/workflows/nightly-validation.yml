@@ -114,7 +114,7 @@ jobs:
       - name: Run the full suite shard with JSON timings
         run: |
           mkdir -p .tmp
-          npm test -- --shard=${{ matrix.shard }}/4 --reporter=default --reporter=json --outputFile=.tmp/vitest-shard-${{ matrix.shard }}.json
+          npm test -- --shard=${{ matrix.shard }}/4 --reporter=default --reporter=github-actions --reporter=json --outputFile=.tmp/vitest-shard-${{ matrix.shard }}.json
       - name: Retain the shard timing report
         if: ${{ always() }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -149,6 +149,9 @@ jobs:
           path: .tmp/test-timings-input
           merge-multiple: true
       - name: Merge the shard timing reports
+        # Telemetry must never turn a green nightly red; a malformed report only
+        # skips the timing artifact.
+        continue-on-error: true
         run: |
           if ! compgen -G ".tmp/test-timings-input/*.json" > /dev/null; then
             echo "No shard timing reports were produced; skipping the timing artifact."
@@ -165,6 +168,24 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 14
+
+  test-plan-parity:
+    name: Static test-plan parity
+    # Full-history main-only canary: the static planner must keep covering
+    # Vitest's `--changed` selection for recent first-parent commits.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: $/.github/actions/setup-workspace
+        with:
+          bootstrap-history: "true"
+          node-modules-cache: "true"
+      - run: npm run check:test-plan-parity -- --commits=5
 
   v9-resource:
     name: V9 resource budget
@@ -282,7 +303,7 @@ jobs:
 
   nightly-red:
     name: Nightly red issue
-    needs: [full-static, full-tests, v9-resource, lighthouse, web-vitals, test-timings]
+    needs: [full-static, full-tests, v9-resource, lighthouse, web-vitals, test-timings, test-plan-parity]
     if: ${{ always() && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -299,6 +320,7 @@ jobs:
       LIGHTHOUSE_RESULT: ${{ needs.lighthouse.result }}
       WEB_VITALS_RESULT: ${{ needs.web-vitals.result }}
       TEST_TIMINGS_RESULT: ${{ needs.test-timings.result }}
+      TEST_PLAN_PARITY_RESULT: ${{ needs.test-plan-parity.result }}
     steps:
       - name: Upsert the nightly-red issue
         # One owned issue tracks the nightly state: failed leaves are listed
@@ -306,22 +328,29 @@ jobs:
         run: |
           set -u
           failed=()
+          cancelled=false
           for entry in \
             "full-static:${FULL_STATIC_RESULT}" \
             "full-tests:${FULL_TESTS_RESULT}" \
             "v9-resource:${V9_RESOURCE_RESULT}" \
             "lighthouse:${LIGHTHOUSE_RESULT}" \
             "web-vitals:${WEB_VITALS_RESULT}" \
-            "test-timings:${TEST_TIMINGS_RESULT}"; do
+            "test-timings:${TEST_TIMINGS_RESULT}" \
+            "test-plan-parity:${TEST_PLAN_PARITY_RESULT}"; do
             job="${entry%:*}"
             result="${entry##*:}"
             case "${result}" in
-              # Skipped lanes (e.g. web-vitals without a GA4 property) and a
-              # superseded cancelled run are not red evidence.
-              success|skipped|cancelled) ;;
+              # Skipped lanes (e.g. web-vitals without a GA4 property) are green.
+              success|skipped) ;;
+              # A cancelled run is incomplete evidence: neither open nor close.
+              cancelled) cancelled=true ;;
               *) failed+=("${job} (${result})") ;;
             esac
           done
+          if [[ "${cancelled}" == "true" ]]; then
+            echo "Nightly run was cancelled; leaving the ci:nightly-red issue unchanged."
+            exit 0
+          fi
           gh label create "ci:nightly-red" --color B60205 \
             --description "Nightly validation is failing" --force >/dev/null 2>&1 || true
           open_issues="$(gh issue list --label ci:nightly-red --state open --limit 20 \
@@ -344,6 +373,8 @@ jobs:
               gh issue create --title "Nightly validation is red" --label ci:nightly-red --body-file "${body_file}"
             fi
           else
+            # Close only when every needed leaf is success or skipped; a
+            # cancelled run returned above without touching the issue.
             while IFS= read -r issue_number; do
               [[ -n "${issue_number}" ]] || continue
               gh issue close "${issue_number}" --comment "Nightly validation is green again: ${RUN_URL}"

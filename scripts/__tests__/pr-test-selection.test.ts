@@ -73,6 +73,18 @@ describe("documentation-owner dedup", () => {
       .toEqual([mandatory]);
   });
 
+  it("keeps doc-owned tests the docs commands do not run", () => {
+    // docs/process/lane-freshness-matrix.md declares the evidence-report and
+    // worker-status validators; the static-guards docs owner runs only the two
+    // invariant suites, so those validators must stay in the test plan.
+    const selected = selectPrTestFiles([], [mandatory], ["docs/process/lane-freshness-matrix.md"], new Map(), () => true, { docsChanged: true });
+    expect(selected).toEqual(expect.arrayContaining([
+      mandatory,
+      "scripts/maintenance/__tests__/worker-evidence-report.test.ts",
+      "worker/scripts/__tests__/worker-status-profile.test.ts",
+    ]));
+  });
+
   it("keeps a doc-declared suite that a non-doc source also selects", () => {
     const selected = selectPrTestFiles([], [mandatory], ["docs/testing.md", "package.json"], new Map(), () => true, { docsChanged: true });
     expect(selected).toContain(docRatchet);
