@@ -778,6 +778,24 @@ describe("evm-rpc helpers", () => {
     },
   );
 
+  it.each([
+    { code: -32000, message: "out of gas", stops: true },
+    { code: -32003, message: "out of gas: gas required exceeds: 30000000", stops: true },
+    { code: -32005, message: "out of gas", stops: false },
+  ])("stops aggregate failover on deterministic OOG $code only when it is an execution budget error", async ({ code, message, stops }) => {
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ error: { code, message } }));
+    expect(await fetchEvmMulticall3Aggregate3AtBlock("ethereum", [
+      { label: "first", target: `0x${"1".repeat(40)}`, callData: "0x12345678" },
+      { label: "second", target: `0x${"1".repeat(40)}`, callData: "0x12345678" },
+    ], 16, {
+      extraRpcUrls: ["https://primary.example", "https://secondary.example"],
+      maxRetries: 0, stopOnExecutionBudgetError: true,
+    })).toBeNull();
+    expect(attemptedUrls()).toEqual(stops
+      ? ["https://primary.example"]
+      : ["https://primary.example", "https://secondary.example"]);
+  });
+
   it.each([true, false])("only permits an observed direct revert when allowFailure is %s", async allowFailure => {
     const hash = `0x${"a".repeat(64)}` as `0x${string}`;
     fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: "0x" }))

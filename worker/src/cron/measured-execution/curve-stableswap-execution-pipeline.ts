@@ -85,6 +85,9 @@ export function executeCurveGetDyMulticall(input: {
       return consumed;
     } } : {}),
     gas: CURVE_STABLESWAP_MULTICALL_GAS,
+    // A multi-call OOG is deterministic at this pinned block and gas cap: split
+    // instead of replaying it on every provider. Singletons keep full failover.
+    stopOnExecutionBudgetError: input.calls.length > 1,
     multicallBatchSize: Math.min(CURVE_STABLESWAP_MULTICALL_BATCH_SIZE, input.calls.length),
   });
 }

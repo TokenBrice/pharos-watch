@@ -56,7 +56,7 @@ export interface EvmRpcOptions {
   gas?: string;
   /** Maximum number of calls per Multicall3 aggregate3 request. Defaults to one request for the full input. */
   multicallBatchSize?: number;
-  /** Reviewed quote aggregates may return unavailable on -32000/out of gas so their caller can split before failover. */
+  /** Reviewed quote aggregates may return unavailable on -32000/-32003 out of gas so their caller can split before failover. */
   stopOnExecutionBudgetError?: boolean;
   /** EIP-1898 identity for every state read; unsupported hash reads fail closed. */
   stateBlockHash?: `0x${string}`;
@@ -666,8 +666,10 @@ async function fetchJsonRpcOutcome<T>(
       const body = result.rows.get(1)!;
       if (body.error) {
         failures.push(`${rpcUrl}: RPC error ${body.error.code ?? ""} ${body.error.message ?? ""}`);
+        // geth/erigon report the same deterministic OOG as -32000, reth (Alchemy) as -32003.
         if (options?.stopOnExecutionBudgetError &&
-            body.error.code === -32000 && /\bout of gas\b/i.test(body.error.message ?? "")) break;
+            (body.error.code === -32000 || body.error.code === -32003) &&
+            /\bout of gas\b/i.test(body.error.message ?? "")) break;
         if (policy?.stopOnExecutionRevert && method === "eth_call" &&
             (body.error.code === 3 || /\bexecution reverted\b/i.test(body.error.message ?? ""))) {
           return { status: "reverted" };
