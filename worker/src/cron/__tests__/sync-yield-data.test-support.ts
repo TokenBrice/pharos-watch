@@ -152,6 +152,7 @@ vi.mock("../../lib/yield-config/yield-config-rate-sources", async (importOrigina
 }));
 vi.mock("../../lib/yield-config/yield-config-lending-protocols", () => ({
   LENDING_PROTOCOL_ALLOWLIST: new Set(["venus-core-pool", "aave-v3"]),
+  LAYER3_EXCLUDED_VENUE_PROJECTS: new Set(["venus-core-pool", "aave-v3", "project-0"]),
   LENDING_PROTOCOL_LABELS: {
     "venus-core-pool": "Venus Core Pool",
     "aave-v3": "Aave V3",

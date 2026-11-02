@@ -25,6 +25,11 @@ export const YIELD_POOL_MAP: Record<string, string> = {
   // reUSD -> reUSDe uses the Re Protocol API; no verified DeFiLlama pool UUID
   // TBILL - openeden-tbill native, Ethereum, $27M TVL, ~3.0% APY
   "tbill-openeden": "e140f3b2-0327-46ea-93f5-88b17b0a0a16",
+  // USDO - openeden-usdo BSC rebase, $144k TVL; pins the pick Layer 3 used to
+  // make now that lending-venue matches are skipped. The Ethereum pool
+  // f083596e-032d-4d6b-a7a8-1836d3f99bcd ($12.6M) is the larger instrument;
+  // switching to it is a curation follow-up.
+  "usdo-openeden": "85d9b9d3-3ca0-410c-bde0-d8ab07fe21c3",
   // YUSD - aegis native, Ethereum, $36M TVL, ~5.7% APY
   "yusd-aegis": "f91b2168-c279-475c-a98a-673220f4fee7",
   // USDB (172) - no native DL pool; Blast native yield is not tracked by DL Yields
