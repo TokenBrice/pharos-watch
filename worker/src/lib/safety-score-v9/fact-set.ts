@@ -66,6 +66,7 @@ import {
   buildEconomicControlReview,
 } from "./fact-set-control";
 import {
+  assertSafetyScoreV9DirectionalPegAdmission,
   buildPeg,
   buildSupply,
 } from "./fact-set-peg-supply";
@@ -642,6 +643,9 @@ function compileSafetyScoreV9FactSetWithIsolation(
       `Safety Score v9 extension registry fingerprint ${extension.registryFingerprint} does not match fixed input ${fixedInput.registryFingerprint}`,
     );
   }
+  // One admission for the whole cohort: a capture bound to a different premium
+  // weight mixes two discount rates no per-asset quarantine could isolate.
+  assertSafetyScoreV9DirectionalPegAdmission(fixedInput.safetyScoreV9DirectionalPeg);
   if (streamed === undefined) assertSafetyScoreV9ExactExtensionAssets(fixedInput, extension);
   // Keep the digest-only projection out of this frame while facts accumulate.
   let researchPayloadSha256 = streamed === undefined ? (() => sha256HexFromUtf8Chunks(stableJsonStringifyChunksV1({
@@ -729,6 +733,9 @@ function compileSafetyScoreV9FactSetWithIsolation(
           navPriceById: fixedInput.navPriceById ?? {},
           ...(fixedInput.exitOutputPriceById ? { exitOutputPriceById: fixedInput.exitOutputPriceById } : {}),
           activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
+          ...(fixedInput.safetyScoreV9DirectionalPeg
+            ? { safetyScoreV9DirectionalPeg: fixedInput.safetyScoreV9DirectionalPeg }
+            : {}),
         }),
         observedAtSec: extension.sources.peg.observedAtSec,
       },

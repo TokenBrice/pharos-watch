@@ -6,7 +6,7 @@ import { collectActiveDepegs, collectResolvedDepegs } from "../collectors-market
 import { collectDewsStress, collectYieldAnomalies } from "../collectors-risk";
 import { buildChangeSummary } from "../digest-change-summary";
 import { buildForwardLookOutcomes, buildNextTriggers } from "../digest-next-triggers";
-import type { DigestEvidence } from "../digest-evidence";
+import { comparableDepegs, type DigestEvidence } from "../digest-evidence";
 import { makeCollectorCtx, makePublishedDewsTables } from "../../__tests__/daily-digest.test-support";
 
 function input(at: number, current = true): DigestInputData {
@@ -171,6 +171,24 @@ describe("canonical comparable digest evidence", () => {
     );
     expect(outcomes[0]).toMatchObject({ status: "pending" });
     expect(outcomes[0].detail).toContain("800 bps");
+  });
+
+  it("compares current-reference USD rows across reference drift, but never a legacy latched row", () => {
+    const DAY_SECONDS = 86_400;
+    const now = 1_800_000_000;
+    const gold = (at: number, pegReference: number, currentBps: number, current = true) => ({
+      stablecoinId: "xaum-matrixdock", symbol: "XAUM", bps: 1660, startedAt: now - 20 * DAY_SECONDS, direction: "above" as const,
+      mcapUsd: 6.8e7, quoteMode: "usd" as const, pegReference, severityBasis: "current" as const, currentBps, priceObservedAt: at,
+      ...(current ? { pegReferenceBasis: "current" as const } : {}),
+    });
+    const today = gold(now, 3902, -3);
+    // Two current-basis editions measured against each run's own gold reference.
+    expect(comparableDepegs(today, gold(now - DAY_SECONDS, 3950, 120), input(now), input(now - DAY_SECONDS))).toBe(true);
+    // A pre-fix edition measured against the latched opening reference is not a baseline.
+    expect(comparableDepegs(today, gold(now - DAY_SECONDS, 4051, -372, false), input(now), input(now - DAY_SECONDS))).toBe(false);
+    // Legacy USD-peg rows keep reference 1 and stay comparable with current-basis rows.
+    const usd = (at: number, currentBps: number, current: boolean) => ({ ...gold(at, 1, currentBps, current), stablecoinId: "usdt-tether", symbol: "USDT" });
+    expect(comparableDepegs(usd(now, -150, true), usd(now - DAY_SECONDS, -120, false), input(now), input(now - DAY_SECONDS))).toBe(true);
   });
 
   it("keeps supply-7d outcomes attached to the armed coin when symbols collide", () => {

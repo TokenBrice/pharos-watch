@@ -234,7 +234,11 @@ export function YieldIntelligenceMethodologySection() {
                     applies to every peg currency, including GOLD/SILVER, because tracked supply is USD-denominated.
                     Holder-versus-deposit typing is assigned before this gate. Curated receipt sources retain holder yield;
                     auto-discovered pools remain lending opportunities because symbol and deployment matches do not
-                    establish receipt ownership. A parent-token projection is a deposit opportunity, not passive yield on plain holdings.
+                    establish receipt ownership. A base-symbol fallback that resolves to an authored lending venue is
+                    skipped: a deposit market is neither the coin&apos;s own yield nor a venue opportunity until lending
+                    discovery admits it under its own rules. An issuer&apos;s own pool in such a project must be pinned,
+                    and a skipped pool does not suppress the coin&apos;s price-derived fallback. A parent-token projection
+                    is a deposit opportunity, not passive yield on plain holdings.
                     An underlying-address match alone identifies the deposit asset, not ownership of a differently named
                     receipt: native fallback also requires the tracked instrument&apos;s exact symbol, so Royco&apos;s
                     senior tranche is not promoted into apyUSD holder yield. ZCHF&apos;s Frankencoin Savings row likewise

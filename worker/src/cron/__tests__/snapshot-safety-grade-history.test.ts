@@ -485,6 +485,7 @@ describe("digest grade availability", () => {
       coreAggregateStablecoinAssets: assets, coreAggregateStablecoinIds: new Set(assets.map((asset) => asset.id)),
       stablecoinAssetById: new Map(assets.map((asset) => [asset.id, asset])),
       mcapById: new Map(assets.map((asset) => [asset.id, 20_000_000])),
+      currentPegObservationById: new Map(),
       stablecoinsCacheIsFresh: true, nowSec, todayTs: nowSec, yesterdayTs: nowSec - 86400,
     };
     const collected = await collectSafetyScores(ctx, new Set(["GAP", "PARTIAL"]));

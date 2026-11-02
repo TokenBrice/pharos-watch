@@ -21,7 +21,7 @@ describe("public blacklist analytics eligibility", () => {
     const collect = () => collectBlacklistActivity({ db, nowSec: NOW, todayTs: NOW, yesterdayTs: NOW - 86400,
       trackedStablecoinAssets: [], trackedStablecoinIds: new Set(), coreAggregateStablecoinAssets: [],
       coreAggregateStablecoinIds: new Set(), stablecoinAssetById: new Map(), mcapById: new Map(),
-      stablecoinsCacheIsFresh: true });
+      currentPegObservationById: new Map(), stablecoinsCacheIsFresh: true });
     expect.soft(await hydrate()).toEqual({ blacklistCounts: new Map(), blacklistSourceOk: true, rowsRead: 0 });
     expect.soft(await collect()).toEqual({
       value: { eventCount: 0, totalAmountUsd: 0, unpricedEventCount: 0, editorialEligible: false, topEvents: [] },

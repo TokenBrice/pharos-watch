@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.41`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.42`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v8, API wrapper v9 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity; domain `safety-score-v9.evaluation-build.v2` hashes reviewed JSON data by its stable parsed value, so formatting/key-order-only edits do not, while executable sources stay byte-hashed. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -71,7 +71,7 @@ Raw grade bands use the rounded own score: **A+ 87–100; A 83–86; A− 80–8
 
 Questions/low scores/incidents never cause NR; <2 usable pillars is pipeline-gap. Required-parent technical failures propagate pipeline-gap/null score/grade. Other parent unavailability/quarantine/accepted holds remain. Uncertainty witnesses survive above C−; attribution never gates letters ([history](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-29)).
 
-Five caps: open-event peak depeg≥10%→49/≥25%→25/≥50%→10; known age<24m→84; parent/wrapper; realized loss; speculative-credit→59. Unknown age is uncapped. [Scope gates](process/report-cards-appendix.md#cap-limits-and-scope-gates) own eligibility and quantization; no other structural/evidence ceiling remains.
+Five caps: open **below-peg** peak depeg≥10%→49/≥25%→25/≥50%→10 (premiums never cap; a blind open discount still caps; audit-excluded open events do not); known age<24m→84; parent/wrapper; realized loss; speculative-credit→59. Unknown age is uncapped. [Scope gates](process/report-cards-appendix.md#cap-limits-and-scope-gates) own eligibility and quantization; no other structural/evidence ceiling remains.
 
 Source-proved NAV/imposed withdrawal loss: ≥25%→39, ≥1%→49, held365d then relaxing to100 at730d. [Event scope, sources and exclusions](process/report-cards-appendix.md#cap-limits-and-scope-gates) prevent duplicate or non-holder-loss charges; thresholds/periods are calibration.
 
@@ -101,7 +101,7 @@ Exit request=5% usable supply clamped **$1m–$25m**; missing/stale supply=$25m.
 
 **AM17:** all routes excluded as immaterial plus applicable A/C/U rail gaps means unknown Exit, not fabricated exhaustion. The published cause set is the scorer's priced cause set, including relevant factor gaps. For no-route censuses, a current aggregate-reconciled verified-no-pools share `z` remains measured zero: `Exit = (1 − z) × unknownQuality(Exit, cause)`; only uncovered supply is unknown. Unsupported-chain dust cannot replace measured zero with whole-pillar U50.
 
-Peg spread uses only non-positive signed peak deviations; exclude above-peg events rather than zero-filling them, so premiums neither create nor dilute downside spread. Other peg terms retain their treatment.
+Peg spread uses only non-positive signed peak deviations; exclude above-peg events rather than zero-filling them, so premiums neither create nor dilute downside spread. The Safety peg input counts premiums at 0.25× (`pegPremiumWeight`) in off-peg time, per-event severity and the active penalty; the public Peg Score and its other terms are unchanged.
 
 ### Morpho lender collateral-book Backing (v10.19)
 

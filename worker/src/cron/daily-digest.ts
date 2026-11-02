@@ -345,12 +345,13 @@ export async function generateDailyDigest(
   // pegs needing a manual freeze-or-close ruling). Best-effort: a cache write
   // failure must not degrade an otherwise successful digest run. A failed
   // active-depeg read degrades to an empty flag list, and so does missing live
-  // price or supply evidence, so none may replace the prior review queue with
-  // a fresh "nothing pending" observation.
+  // price, supply or current-reference evidence, so none may replace the prior
+  // review queue with a fresh "nothing pending" observation.
   const lifecycleEvidenceDegraded = [
     "active-depegs-query",
     "stablecoins-cache-stale",
     "active-depeg-supply-unavailable",
+    "active-depeg-reference-unavailable",
   ].some((reason) =>
     degradedReasons.includes(reason) || (inputData.degradedSources ?? []).includes(reason),
   );

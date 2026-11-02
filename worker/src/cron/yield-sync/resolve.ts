@@ -66,6 +66,7 @@ import {
   AUTO_LENDING_POOL_MAP,
   AUTO_LENDING_SAFETY_BYPASS_IDS,
   isAutoLendingCollisionBlockedForStablecoin,
+  LAYER3_EXCLUDED_VENUE_PROJECTS,
   LENDING_PROTOCOL_ALLOWLIST,
 } from "../../lib/yield-config/yield-config-lending-protocols";
 import { EXPLICIT_YIELD_SOURCE_POOL_MAP } from "../../lib/yield-config/yield-config-explicit-pools";
@@ -1507,7 +1508,25 @@ export async function resolveTrackedYieldSources(params: {
       if (!fullPool) continue;
 
       const variant = YIELD_VARIANT_MAP[id];
-      const isVariantPool = variant != null && dlPool.pool !== YIELD_POOL_MAP[id];
+      const isNativePool = dlPool.pool === YIELD_POOL_MAP[id];
+      const isVariantPool = variant != null && !isNativePool;
+      const venueProject = fullPool.project.trim().toLowerCase();
+      // Layer 3 has only a base-symbol/address guess, never a curated holder
+      // identity. A match inside a lending venue is a deposit market that holds
+      // the tracked coin, so it can neither publish under the coin's native
+      // label nor skip lending discovery's admission gates (safety, APY floor,
+      // collision/source blocks, measured size). Skip before any bookkeeping so
+      // the coin's own price-derived fallback still runs. An issuer's own pool
+      // in such a project is pinned in YIELD_POOL_MAP; a reviewed vault share
+      // keeps its own venue via YIELD_VARIANT_CHILD_VENUE_PROTOCOLS.
+      const isLayer3Match = !isNativePool && !isVariantPool;
+      if (
+        isLayer3Match
+        && YIELD_VARIANT_CHILD_VENUE_PROTOCOLS[id] !== venueProject
+        && LAYER3_EXCLUDED_VENUE_PROJECTS.has(venueProject)
+      ) {
+        continue;
+      }
       resolved.push({
         id,
         symbol,

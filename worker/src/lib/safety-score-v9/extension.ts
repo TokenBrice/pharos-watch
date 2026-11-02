@@ -2431,6 +2431,9 @@ export function createSafetyScoreV9BaselineExtensionSource(
     navPriceById: fixedInput.navPriceById ?? {},
     ...(fixedInput.exitOutputPriceById ? { exitOutputPriceById: fixedInput.exitOutputPriceById } : {}),
     activeDepegPeakBpsById: fixedInput.activeDepegPeakBpsById,
+    ...(fixedInput.safetyScoreV9DirectionalPeg
+      ? { safetyScoreV9DirectionalPeg: fixedInput.safetyScoreV9DirectionalPeg }
+      : {}),
   });
   const researchOverlaysGenerationDigest = domainDigest("safety-score-v9.research-overlays.v3", {
     registryRevision: fixedInput.registryRevision,

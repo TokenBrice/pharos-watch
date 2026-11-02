@@ -60,7 +60,8 @@ export function SafetyScoresTechnicalDetails() {
           facts={[
             { label: "Pillar weights", value: "40/35/25 across all three priced pillars; no missing-pillar renormalization" },
             { label: "Peg adjustment", value: `(pegScore / 100)^${formula.pegExponent}` },
-            { label: "Active-depeg caps", value: activeDepegCaps },
+            { label: "Peg premium weight", value: `${formula.pegPremiumWeight}× on premium off-peg time, severity and active penalty; spread below-only` },
+            { label: "Active-depeg caps (open below-peg peak)", value: activeDepegCaps },
             { label: "Track-record ceilings", value: trackRecordCeilings },
             { label: "Rounding", value: rounding },
             { label: "Equal-cap priority", value: formula.capTiePriority.join(" → ") },

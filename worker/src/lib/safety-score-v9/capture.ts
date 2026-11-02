@@ -1,5 +1,7 @@
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { isPegScoreExcludedAuditVerdict } from "@shared/lib/depeg-audit";
+import { computePremiumWeightedPegScore } from "@shared/lib/peg-score";
 import {
   computeReportCardsRegistryFingerprint,
   computeRedemptionPayloadFingerprint,
@@ -355,12 +357,31 @@ export async function buildNativeSafetyScoreV9Capture(
   }
   const redemptionBackstopMap = redemptionStale ? {} : Object.fromEntries(admittedRedemptionRows);
 
+  // The same rule `computePegScore` applies: an audit-excluded event is not
+  // scored evidence, so it can neither cap nor witness an open depeg.
+  const openEventsAfterAudit = (stablecoinId: string) =>
+    (pegAnalytics.eventsByCoin?.get(stablecoinId) ?? [])
+      .filter((event) => event.endedAt === null && !isPegScoreExcludedAuditVerdict(event.provenance?.auditVerdict));
+  // Max |peak| over open, audit-eligible events: direction-agnostic, and the
+  // consistency witness for the peg summary's own `activeDepeg`.
   const activeDepegPeakBpsById = new Map<string, number>();
-  for (const [stablecoinId, events] of pegAnalytics.eventsByCoin ?? new Map()) {
-    const activePeakBps = events
-      .filter((event) => event.endedAt === null)
+  // The discount-only peak covers the same assets as its witness, including
+  // parents outside the scored peg rows that configured references inherit from.
+  // A discount is a negative peak by sign only: historical `direction` labels
+  // disagree with their own sign, and a premium must never cap. Every witness id
+  // gets an entry (`null` = premiums only) so a missing entry stays detectable.
+  const activeDiscountPeakBpsById: Record<string, number | null> = {};
+  for (const [stablecoinId] of pegAnalytics.eventsByCoin ?? new Map()) {
+    const openEvents = openEventsAfterAudit(stablecoinId);
+    const activePeakBps = openEvents
       .reduce((max, event) => Math.max(max, Math.abs(event.peakDeviationBps)), 0);
-    if (activePeakBps > 0) activeDepegPeakBpsById.set(stablecoinId, activePeakBps);
+    if (activePeakBps > 0) {
+      activeDepegPeakBpsById.set(stablecoinId, activePeakBps);
+      const discountPeakBps = openEvents
+        .filter((event) => event.peakDeviationBps < 0)
+        .reduce((max, event) => Math.max(max, Math.abs(event.peakDeviationBps)), 0);
+      activeDiscountPeakBpsById[stablecoinId] = discountPeakBps > 0 ? discountPeakBps : null;
+    }
   }
 
   const dexPublication = await loadExactDexPublicationGeneration(db);
@@ -453,6 +474,34 @@ export async function buildNativeSafetyScoreV9Capture(
   const pegDataById = Object.fromEntries(
     inheritPureWrapperPegObservations(nonNavPegDataById, ACTIVE_META_BY_ID),
   );
+  // The directional peg input: the premium-weighted score the summary cannot
+  // carry, plus the discount-only peak the active-depeg caps may read. Both use
+  // exactly the tracking start and clock the row's own computePegScore did —
+  // `historyCoverage.startedAt` *is* that resolved anchor (peg provenance
+  // asserts the same equality), and `clockSec` is the peg-analytics clock.
+  const pegPremiumWeight = V9_CANDIDATE_POLICY_V1.policy.semantic.formula.pegPremiumWeight;
+  const directionalPegScoreById: Record<string, number | null> = {};
+  for (const [stablecoinId, pegRow] of Object.entries(pegDataById)) {
+    const events = pegAnalytics.eventsByCoin?.get(stablecoinId) ?? [];
+    const trackingStartSec = pegRow.historyCoverage?.startedAt ?? null;
+    // A premium weight of 1 is the public score. If it does not reproduce the
+    // captured row, this capture bound the wrong window or clock for that asset,
+    // so the directional score below could not be trusted either.
+    const recomputedLegacyPegScore = computePremiumWeightedPegScore(events, trackingStartSec, clockSec, 1);
+    if (recomputedLegacyPegScore !== pegRow.pegScore) {
+      throw new Error(
+        `Directional peg input for ${stablecoinId} recomputes peg score ${recomputedLegacyPegScore} at tracking start ${trackingStartSec}; the captured peg row reports ${pegRow.pegScore}`,
+      );
+    }
+    directionalPegScoreById[stablecoinId] = computePremiumWeightedPegScore(
+      events, trackingStartSec, clockSec, pegPremiumWeight,
+    );
+  }
+  const safetyScoreV9DirectionalPeg = {
+    premiumWeight: pegPremiumWeight,
+    pegScoreById: directionalPegScoreById,
+    activeDiscountPeakBpsById,
+  };
   const input = normalizeNativeV9Input({
     schemaVersion: 4,
     captureKind: "native-v9-inputs",
@@ -483,6 +532,7 @@ export async function buildNativeSafetyScoreV9Capture(
     navPriceById: buildNavPriceById(peggedAssets, clockSec),
     exitOutputPriceById: buildExitOutputPriceById(peggedAssets, clockSec),
     activeDepegPeakBpsById: Object.fromEntries(activeDepegPeakBpsById),
+    safetyScoreV9DirectionalPeg,
     redemptionBackstopMap,
     liveReserveMap: Object.fromEntries(liveReserveMap),
     liveReserveProvenanceMap: Object.fromEntries(capturedReserveProvenanceMap),
