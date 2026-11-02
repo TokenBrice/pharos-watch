@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
+import { getOnchainSupplyHoldReason } from "@shared/lib/onchain-supply-probe";
+import { getCirculatingRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import { restoreMissingTrackedAssets } from "../shared";
 
@@ -166,6 +167,27 @@ describe("restoreMissingTrackedAssets", () => {
     expect(result.restoredIds).toEqual([]);
     expect(result.droppedIds).toEqual(["usdc-circle"]);
     expect(result.assets).toEqual([]);
+  });
+
+  it("keeps a reviewed hold published with withheld supply when its prior row has none", () => {
+    const id = ACTIVE_STABLECOINS.find((meta) => getOnchainSupplyHoldReason(meta.id))!.id;
+    // Publication always withholds a held coin, so the previous row is the withheld one.
+    const previous = asset({ id, symbol: id, supplySource: "onchain-supply-withheld", price: 1, priceObservedAt: NOW_SEC - 60 });
+
+    const result = restoreMissingTrackedAssets(fullActiveIntake([id]), new Map([[id, previous]]), NOW_SEC);
+
+    expect(result.restoredIds).not.toContain(id);
+    expect(result.droppedIds).not.toContain(id);
+    const row = result.assets.find((entry) => entry.id === id)!;
+    expect(row).toMatchObject({
+      supplySource: "onchain-supply-withheld",
+      supplyUnavailableReason: getOnchainSupplyHoldReason(id),
+      circulating: {},
+      price: null,
+    });
+    expect(getCirculatingRawOrNull(row)).toBeNull();
+    expect(row.supplyRestored).toBeUndefined();
+    expect(row.supplyObservedAt).toBeUndefined();
   });
 
   it("keeps reporting a coin absent from both the intake and the previous payload as dropped", () => {

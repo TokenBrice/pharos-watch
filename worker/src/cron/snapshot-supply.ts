@@ -222,10 +222,25 @@ export async function snapshotSupply(
       (id) => requiredActiveIdSet.has(id) && !(lastWrite.ownedRowIds ?? []).includes(id),
     )
     : [];
+  // A replacement rewrites only this generation's observations, so it would delete the day's
+  // admitted row of an owned coin this generation can only restore (a DefiLlama-outage generation
+  // restores most of the cohort). The day is kept; a generation observing them again replaces it.
+  const restoredOwnedIds = lastWrite?.snapshotDate === snapshotDate
+    ? restoredOnlyIds.filter((id) => (lastWrite.ownedRowIds ?? []).includes(id))
+    : [];
+  const replacementDeferred = recoveredSinceLastWrite.length > 0 && restoredOwnedIds.length > 0;
+  const deferredReplacement: CronMetadataRecord = replacementDeferred ? {
+    replacementDeferred: {
+      recoveredIds: recoveredSinceLastWrite.slice(0, 20),
+      recoveredCount: recoveredSinceLastWrite.length,
+      restoredOwnedIds: restoredOwnedIds.slice(0, 20),
+      restoredOwnedCount: restoredOwnedIds.length,
+    },
+  } : {};
   const alreadyWritten = publicationGapBand !== "systemic"
     && lastWrite?.snapshotDate === snapshotDate
     && lastWrite.coverageIdentityVerified
-    && recoveredSinceLastWrite.length === 0;
+    && (recoveredSinceLastWrite.length === 0 || replacementDeferred);
   if (
     options.minStablecoinsCacheUpdatedAtSec != null
     && stablecoinsCache.updatedAt < options.minStablecoinsCacheUpdatedAtSec
@@ -243,6 +258,7 @@ export async function snapshotSupply(
           ...JSON.parse(result.metadata ?? "{}"),
           ...publicationGap,
           ...qualityFindings(),
+          ...deferredReplacement,
         },
       });
     }
@@ -273,6 +289,7 @@ export async function snapshotSupply(
           ...(repairedPriceRows > 0 ? { outputPublishedAt: lastWrite?.updatedAt ?? null } : {}),
           ...publicationGap,
           ...qualityFindings(),
+          ...deferredReplacement,
           snapshotDate,
           repairedPriceRows,
         },

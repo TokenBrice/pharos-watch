@@ -531,6 +531,66 @@ describe("snapshotSupply", () => {
     }
   });
 
+  it("keeps a written day while an owned coin is only restored, then replaces it once observed", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const requiredIds = ["usdt-tether", "usdc-circle", "dai-sky"];
+      const options = { nowSec, requiredActiveIds: requiredIds, snapshotEligibleIds: requiredIds };
+      const putCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      const publish = (at: number, rows: Record<string, unknown>[]) =>
+        putCache.run("stablecoins", JSON.stringify({ peggedAssets: rows.map((row) => makeSnapshotAsset(row)) }), at);
+      const dayRows = () => sqlite.prepare(
+        "SELECT stablecoin_id, circulating_usd FROM supply_history ORDER BY stablecoin_id",
+      ).all();
+
+      publish(nowSec, [
+        { id: "usdt-tether", circulating: { peggedUSD: 100 } },
+        { id: "usdc-circle", circulating: { peggedUSD: 50 } },
+        { id: "dai-sky", circulating: { peggedUSD: 10 }, supplyRestored: true },
+      ]);
+      await snapshotSupply(db, undefined, options);
+      const written = [
+        { stablecoin_id: "usdc-circle", circulating_usd: 50 },
+        { stablecoin_id: "usdt-tether", circulating_usd: 100 },
+      ];
+      expect(dayRows()).toEqual(written);
+
+      // A DefiLlama-outage generation restores the owned USDT row while DAI recovers from another
+      // source. Replacing the day would delete the admitted USDT row and write none in its place.
+      publish(nowSec + 60, [
+        { id: "usdt-tether", circulating: { peggedUSD: 100 }, supplyRestored: true },
+        { id: "usdc-circle", circulating: { peggedUSD: 55 } },
+        { id: "dai-sky", circulating: { peggedUSD: 12 } },
+      ]);
+      const deferred = await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 60 });
+      expect(deferred.status).toBeUndefined();
+      expect(JSON.parse(String(deferred.metadata))).toMatchObject({
+        reason: "already_written_today",
+        replacementDeferred: {
+          recoveredIds: ["dai-sky"], recoveredCount: 1, restoredOwnedIds: ["usdt-tether"], restoredOwnedCount: 1,
+        },
+      });
+      expect(dayRows()).toEqual(written);
+
+      // Once every owned coin is observed again, the recovery replaces the day as before.
+      publish(nowSec + 120, [
+        { id: "usdt-tether", circulating: { peggedUSD: 110 } },
+        { id: "usdc-circle", circulating: { peggedUSD: 56 } },
+        { id: "dai-sky", circulating: { peggedUSD: 13 } },
+      ]);
+      const replaced = await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 120 });
+      expect(replaced.itemCount).toBe(3);
+      expect(dayRows()).toEqual([
+        { stablecoin_id: "dai-sky", circulating_usd: 13 },
+        { stablecoin_id: "usdc-circle", circulating_usd: 56 },
+        { stablecoin_id: "usdt-tether", circulating_usd: 110 },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("records only observed prices, each with its actual observation clock", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {

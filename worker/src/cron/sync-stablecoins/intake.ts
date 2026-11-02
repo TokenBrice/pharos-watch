@@ -39,6 +39,7 @@ import {
   hydrateGeckoIdAliases,
   loadFreshFxRates,
   loadPreviousStablecoinsById,
+  logTrackedCoverageRestore,
   mergeSupplementalLastKnownGood,
   pegMechanismFromBacking,
   restoreMissingTrackedAssets,
@@ -525,25 +526,7 @@ export async function loadStablecoinsIntake(
   if (trackedCoverage.assets.length > 0) {
     assets = [...assets, ...trackedCoverage.assets];
   }
-  if (trackedCoverage.restoredIds.length > 0) {
-    logWorkerEvent({
-      scope: "lib",
-      job: "sync-stablecoins",
-      level: "warn",
-      event: "tracked-assets-restored",
-      message: "Intake omitted tracked coins; restored last-known-good rows",
-      metadata: { restoredIds: trackedCoverage.restoredIds },
-    });
-  }
-  if (trackedCoverage.droppedIds.length > 0) {
-    logWorkerEvent({
-      scope: "lib",
-      job: "sync-stablecoins",
-      event: "tracked-assets-unrestorable",
-      message: "Tracked coins are missing from intake with no restorable row; publishing without them",
-      metadata: { droppedIds: trackedCoverage.droppedIds },
-    });
-  }
+  logTrackedCoverageRestore(trackedCoverage);
 
   applyTrackedAssetOverrides(assets);
 

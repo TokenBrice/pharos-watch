@@ -376,6 +376,28 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(subPhaseMocks.validateAndWriteStablecoinsCache).not.toHaveBeenCalled();
   });
 
+  it("withholds the outage cohort when the previous publication cannot be read", async () => {
+    // Nothing can restore the coins CoinGecko omits, so publishing would replace a
+    // possibly complete publication with the smaller CoinGecko subset (R2).
+    subPhaseMocks.loadPreviousStablecoinsById.mockResolvedValueOnce({
+      previousAssetsById: new Map(), cacheState: { state: "error", message: "D1_ERROR: read failed" },
+    });
+    const result = await syncViaCoingeckoFallback(mockD1([]), buildRealCgData(Infinity), undefined, NOW_SEC);
+
+    expect(subPhaseMocks.validateAndWriteStablecoinsCache).not.toHaveBeenCalled();
+    expect(onchainSupply.fetchCuratedAggregateOnChainMcap).not.toHaveBeenCalled();
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBeGreaterThan(0);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      reason: "previous-stablecoins-publication-unreadable",
+      previousCacheState: "error",
+      fallbackMode: "coingecko-supply-fallback",
+      rowsWritten: 0,
+      cacheWriteMode: "no-write",
+      capabilities: { stablecoinsCache: false, depegPipeline: false },
+    });
+  });
+
   // -----------------------------------------------------------------------
   // (c) Non-USD pegged coin: circulating is USD-denominated
   //
