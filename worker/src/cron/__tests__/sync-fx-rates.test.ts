@@ -197,7 +197,7 @@ describe("syncFxRates", () => {
     expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(losingKey)).toBeUndefined();
   });
 
-  it("uses fresh commodity peer medians from the stablecoins cache when gold-api.com is unavailable", async () => {
+  it("uses fresh commodity peer medians with a real quorum when gold-api.com is unavailable", async () => {
     mockFetch(fxMirrors({
       gold: { body: { error: "blocked" }, status: 503 },
       silver: { body: { error: "blocked" }, status: 503 },
@@ -210,12 +210,14 @@ describe("syncFxRates", () => {
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(metadata.mode).toBe("live");
     expect(metadata.sources["gold-api.com"]).toBe("error");
-    expect(metadata.sources["commodity-peer-median"]).toBe("ok");
+    expect(metadata.sources["commodity-peer-median"]).toBe("partial");
 
     const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
     expect(cachedRates.peggedGOLD).toBeCloseTo(2905, 6);
-    expect(cachedRates.peggedSILVER).toBeCloseTo(31.5, 6);
+    // Only KAG and XAGm are active silver coins in production; GRAMS is
+    // quarantined, so the two-coin group must not stand in for spot.
+    expect(cachedRates.peggedSILVER).toBeUndefined();
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
@@ -224,11 +226,9 @@ describe("syncFxRates", () => {
       sourceDateByPeg: Record<string, string | null>;
     };
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedGOLD).toBe(stablecoinsUpdatedAt - 30);
-    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(stablecoinsUpdatedAt - 30);
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeUndefined();
     expect(cachedMeta.sourceCadenceByPeg.peggedGOLD).toBe("intraday");
-    expect(cachedMeta.sourceCadenceByPeg.peggedSILVER).toBe("intraday");
     expect(cachedMeta.sourceDateByPeg.peggedGOLD).toBeNull();
-    expect(cachedMeta.sourceDateByPeg.peggedSILVER).toBeNull();
   });
 
   it("rejects gold-api.com metal spots that diverge from the commodity peer median", async () => {
@@ -258,13 +258,12 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeNull();
   });
 
-  it("re-anchors a stale cached silver spot instead of republishing it", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  it("keeps a stale cached silver spot when a dated low quote has no corroboration", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const silverObservedAt = nowSec - 30;
     mockFetch(fxMirrors({
       gold: { body: { price: 2900, updatedAt: new Date(nowSec * 1000).toISOString() } },
-      silver: { body: { price: 50.378, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
+      silver: { body: { price: 5.0378, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
     }));
 
     const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
@@ -280,18 +279,91 @@ describe("syncFxRates", () => {
 
     const result = await syncFxRates(db);
     const metadata = JSON.parse(result.metadata ?? "{}");
-    expect(metadata.sources["gold-api.com"]).toBe("ok");
-    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("Rejected peggedSILVER=50.378"));
+    expect(metadata.sources["gold-api.com"]).toBe("partial");
 
     const write = findCacheWrite(db, "fx-rates");
     const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
-    expect(cachedRates.peggedSILVER).toBeCloseTo(50.378, 6);
+    expect(cachedRates.peggedSILVER).toBeCloseTo(40.448374, 6);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceUpdatedAtByPeg: Record<string, number | null>;
+    };
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(nowSec - 26 * 3600);
+  });
+
+  it("re-anchors a stale cached silver spot corroborated by a fresh Chainlink round", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const silverObservedAt = nowSec - 30;
+    const { routes, chainRpcs } = makeChainlinkFxFeed({
+      chain: "ethereum",
+      feedAddress: "0x379589227b15F1a12195D3f2d90bBc9F31f95235",
+      answer: 5_037_800_000n,
+      updatedAt: nowSec - 600,
+    });
+    mockFetch([
+      ...routes.filter((route) => !(typeof route.match === "string" && route.match.includes("gold-api.com/price/XAG"))),
+      { match: "gold-api.com/price/XAG", body: { price: 50.39, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
+    ], { requireMatch: true });
+
+    const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
+    const previousMeta = makeFxRatesMeta(previousRates, {
+      usableSyncAt: nowSec - 60,
+      updatedAt: nowSec - 3600,
+    });
+    previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
+    });
+
+    const result = await syncFxRates(db, undefined, undefined, chainRpcs);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.sources["gold-api.com"]).toBe("ok");
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("Rejected peggedSILVER=50.39"));
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedSILVER).toBeCloseTo(50.39, 6);
 
     const metaWrite = findCacheWrite(db, "fx-rates-meta");
     const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
       sourceUpdatedAtByPeg: Record<string, number | null>;
     };
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(silverObservedAt);
+  });
+
+  it("does not treat a non-fresh Chainlink round as spot corroboration", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const silverObservedAt = nowSec - 30;
+    const { routes, chainRpcs } = makeChainlinkFxFeed({
+      chain: "ethereum",
+      feedAddress: "0x379589227b15F1a12195D3f2d90bBc9F31f95235",
+      answer: 5_037_800_000n,
+      updatedAt: nowSec - 8 * 3600,
+    });
+    mockFetch([
+      ...routes.filter((route) => !(typeof route.match === "string" && route.match.includes("gold-api.com/price/XAG"))),
+      { match: "gold-api.com/price/XAG", body: { price: 50.39, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
+    ], { requireMatch: true });
+
+    const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
+    const previousMeta = makeFxRatesMeta(previousRates, {
+      usableSyncAt: nowSec - 60,
+      updatedAt: nowSec - 3600,
+    });
+    previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
+    });
+
+    await syncFxRates(db, undefined, undefined, chainRpcs);
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedSILVER).toBeCloseTo(40.448374, 6);
   });
 
   it("falls back to cached rates when frankfurter.dev is unavailable", async () => {

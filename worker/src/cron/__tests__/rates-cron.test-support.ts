@@ -519,20 +519,6 @@ export function makeCommodityStablecoinsCacheRow(updatedAt: number): CacheRow {
         chainCirculating: {},
         chains: ["Ethereum"],
       },
-      {
-        id: "grams-token-teknoloji",
-        name: "Grams",
-        symbol: "GRAMS",
-        pegType: "peggedSILVER",
-        pegMechanism: "rwa-backed",
-        price: 31.5 * 0.0321507466,
-        priceSource: "defillama",
-        priceObservedAt: updatedAt - 30,
-        priceObservedAtMode: "upstream",
-        circulating: { peggedSILVER: 20_000_000 },
-        chainCirculating: {},
-        chains: ["Ethereum"],
-      },
     ],
   }, updatedAt);
 }

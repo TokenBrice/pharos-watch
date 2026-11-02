@@ -147,7 +147,7 @@ describe("FxSyncRunState metal references", () => {
       .toBe("stale");
   });
 
-  it("lets a fresh Chainlink metal round replace a stale spot reference", () => {
+  it("lets a fresh Chainlink metal round replace a stale spot reference within the delta bound", () => {
     const observedAt = syncStartSec - 26 * 3600;
     const prevState = buildPrevState({ peggedSILVER: 40.448374 });
     prevState.sourceUpdatedAtByPeg.peggedSILVER = observedAt;
@@ -156,11 +156,59 @@ describe("FxSyncRunState metal references", () => {
 
     const chainlinkUpdatedAt = syncStartSec - 600;
     const accepted = state.applyChainlinkQuotes(new Map([
-      ["peggedSILVER", { pegKey: "peggedSILVER", price: 50.378, updatedAt: chainlinkUpdatedAt, chainId: "ethereum", proxyAddress: "0xfeed" }],
+      ["peggedSILVER", { pegKey: "peggedSILVER", price: 45, updatedAt: chainlinkUpdatedAt, chainId: "ethereum", proxyAddress: "0xfeed" }],
     ]));
 
     expect(accepted).toBe(1);
-    expect(state.usableRates.peggedSILVER).toBe(50.378);
+    expect(state.usableRates.peggedSILVER).toBe(45);
+    expect(state.sourceUpdatedAtByPeg.peggedSILVER).toBe(chainlinkUpdatedAt);
+  });
+
+  it("keeps a stale incumbent when a fresh Chainlink round jumps it by more than 20% without corroboration", () => {
+    const observedAt = syncStartSec - 26 * 3600;
+    const prevState = buildPrevState({ peggedSILVER: 40.448374 });
+    prevState.sourceUpdatedAtByPeg.peggedSILVER = observedAt;
+    const state = createMetalState(prevState);
+    applyCachedSilver(state);
+
+    const accepted = state.applyChainlinkQuotes(new Map([
+      ["peggedSILVER", { pegKey: "peggedSILVER", price: 50.378, updatedAt: syncStartSec - 600, chainId: "ethereum", proxyAddress: "0xfeed" }],
+    ]));
+
+    expect(accepted).toBe(0);
+    expect(state.usableRates.peggedSILVER).toBe(40.448374);
+    expect(state.sourceUpdatedAtByPeg.peggedSILVER).toBe(observedAt);
+  });
+
+  it("never moves a metal clock backwards to an older Chainlink round", () => {
+    const observedAt = syncStartSec - 7 * 3600;
+    const prevState = buildPrevState({ peggedSILVER: 50 });
+    prevState.sourceUpdatedAtByPeg.peggedSILVER = observedAt;
+    const state = createMetalState(prevState);
+    applyCachedSilver(state, 50);
+
+    const accepted = state.applyChainlinkQuotes(new Map([
+      ["peggedSILVER", { pegKey: "peggedSILVER", price: 49, updatedAt: syncStartSec - 11 * 3600, chainId: "ethereum", proxyAddress: "0xfeed" }],
+    ]));
+
+    expect(accepted).toBe(0);
+    expect(state.usableRates.peggedSILVER).toBe(50);
+    expect(state.sourceUpdatedAtByPeg.peggedSILVER).toBe(observedAt);
+  });
+
+  it("lets an unknown-clock incumbent accept a fresh Chainlink round within the delta bound", () => {
+    const prevState = buildPrevState({ peggedSILVER: 50 });
+    prevState.sourceUpdatedAtByPeg.peggedSILVER = null;
+    const state = createMetalState(prevState);
+    applyCachedSilver(state, 50);
+
+    const chainlinkUpdatedAt = syncStartSec - 600;
+    const accepted = state.applyChainlinkQuotes(new Map([
+      ["peggedSILVER", { pegKey: "peggedSILVER", price: 53, updatedAt: chainlinkUpdatedAt, chainId: "ethereum", proxyAddress: "0xfeed" }],
+    ]));
+
+    expect(accepted).toBe(1);
+    expect(state.usableRates.peggedSILVER).toBe(53);
     expect(state.sourceUpdatedAtByPeg.peggedSILVER).toBe(chainlinkUpdatedAt);
   });
 

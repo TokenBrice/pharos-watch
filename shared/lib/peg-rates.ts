@@ -1,5 +1,6 @@
 import type { PegAssetBase, StablecoinMeta } from "../types";
 import { normalizeLegacyPegType } from "./peg-price-bounds";
+import { MIN_PEER_MEDIAN_CONTRIBUTORS } from "./peg-reference-trust";
 import { PEG_TAXONOMY } from "./peg-taxonomy";
 import { median } from "./stats";
 import { getCirculatingRawOrNull } from "./supply";
@@ -123,7 +124,7 @@ export function derivePegRates(
       ? mergedFallbacks[peg]
       : undefined;
     const isCommodityPeg = peg === "peggedGOLD" || peg === "peggedSILVER";
-    if (fallback && (!isCommodityPeg || prices.length < 3)) {
+    if (fallback && (!isCommodityPeg || prices.length < MIN_PEER_MEDIAN_CONTRIBUTORS)) {
       rates[peg] = fallback;
       sources[peg] = isCommodityPeg ? "fallback" : "fx";
       counts[peg] = prices.length;

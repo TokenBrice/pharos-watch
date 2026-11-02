@@ -4,7 +4,9 @@ import { MIN_PEER_MEDIAN_CONTRIBUTORS } from "@shared/lib/peg-reference-trust";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "./api-schema";
 import { USER_AGENT } from "./constants";
+import { MAX_FX_RATE_DELTA_PCT } from "./fx-config";
 import { fetchJsonWithRetry } from "./fetch-retry";
+import { isFreshFxObservation } from "./fx-rate-state";
 import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "./stablecoins-cache";
 import { z } from "zod";
 import { validateCompositePricingSourceFreshness } from "./pricing-source-freshness";
@@ -112,6 +114,7 @@ export async function resolveMetalReferenceRates(
     prevRates,
     prevRateIsFresh = () => true,
     commodityPeerMedian,
+    freshChainlinkRates = {},
     syncStartSec,
     signal,
     validateRate,
@@ -119,20 +122,53 @@ export async function resolveMetalReferenceRates(
     prevRates: Record<string, number>;
     /**
      * Whether the previous per-peg observation is young enough to veto a
-     * replacement. A stale incumbent has no authority to reject a fresh,
-     * bounded, provider-dated quote; treating it as one deadlocks the metal
-     * feed after a real move larger than the prior-value delta limit.
+     * replacement. A stale or unknown-clock incumbent may still bound a
+     * move within the delta limit, but a larger move needs an independent
+     * fresh corroborator (see `freshChainlinkRates`).
      */
     prevRateIsFresh?: (pegKey: MetalPegKey) => boolean;
     commodityPeerMedian: CommodityPeerMedianReference;
+    /**
+     * Fresh, provider-dated Chainlink metal rounds fetched by the caller in
+     * this run. A quote that jumps more than the prior-value delta limit
+     * against a non-fresh incumbent is admitted only when one of these
+     * independent rounds confirms it within the cross-check bound.
+     */
+    freshChainlinkRates?: Partial<Record<MetalPegKey, number>>;
     syncStartSec: number;
     signal?: AbortSignal;
     validateRate: (pegKey: MetalPegKey, rate: number, prevRate: number | undefined) => boolean;
   },
 ): Promise<MetalsResolution> {
   const resolvedByPeg: Partial<Record<MetalPegKey, ResolvedMetalRate>> = {};
-  const priorRate = (pegKey: MetalPegKey): number | undefined =>
-    prevRateIsFresh(pegKey) ? prevRates[pegKey] : undefined;
+
+  const resolveProviderUpdatedAt = (candidate: z.infer<typeof MetalPriceSchema> | undefined): number | null => {
+    const updatedAt = candidate?.updatedAt ? Math.floor(Date.parse(candidate.updatedAt) / 1000) : NaN;
+    return Number.isFinite(updatedAt) && updatedAt > 0 && updatedAt <= syncStartSec + 60 ? updatedAt : null;
+  };
+
+  const isFreshProviderDated = (pegKey: MetalPegKey, updatedAt: number | null): boolean =>
+    updatedAt != null &&
+    isFreshFxObservation(updatedAt, "live", syncStartSec, { pegKey, cadence: "intraday" });
+
+  const hasFreshCorroboration = (pegKey: MetalPegKey, candidateRate: number): boolean => {
+    const chainlinkRate = freshChainlinkRates[pegKey];
+    if (
+      typeof chainlinkRate === "number" &&
+      Number.isFinite(chainlinkRate) &&
+      chainlinkRate > 0 &&
+      relativeDivergence(candidateRate, chainlinkRate) <= METAL_CROSS_CHECK_MAX_DIVERGENCE
+    ) {
+      return true;
+    }
+    const medianRate = commodityPeerMedian.rates[pegKey];
+    const medianCount = commodityPeerMedian.counts[pegKey] ?? 0;
+    return typeof medianRate === "number" &&
+      medianRate > 0 &&
+      medianCount >= MIN_PEER_MEDIAN_CONTRIBUTORS &&
+      isFreshProviderDated(pegKey, commodityPeerMedian.updatedAt) &&
+      relativeDivergence(candidateRate, medianRate) <= METAL_CROSS_CHECK_MAX_DIVERGENCE;
+  };
 
   const resolvePeerMedian = (pegKey: MetalPegKey): ResolvedMetalRate | null => {
     const rate = commodityPeerMedian.rates[pegKey];
@@ -140,7 +176,7 @@ export async function resolveMetalReferenceRates(
     if (typeof rate !== "number" || rate <= 0 || count < MIN_PEER_MEDIAN_CONTRIBUTORS) {
       return null;
     }
-    if (!validateRate(pegKey, rate, priorRate(pegKey))) {
+    if (!validateRate(pegKey, rate, prevRateIsFresh(pegKey) ? prevRates[pegKey] : undefined)) {
       return null;
     }
     return {
@@ -165,25 +201,48 @@ export async function resolveMetalReferenceRates(
   const resolveMetal = (pegKey: MetalPegKey, candidate: z.infer<typeof MetalPriceSchema> | undefined): ResolvedMetalRate | null => {
     const candidateRate = candidate?.price;
     const peerMedian = resolvePeerMedian(pegKey);
-    if (typeof candidateRate === "number" && candidateRate > 0 && validateRate(pegKey, candidateRate, priorRate(pegKey))) {
-      if (peerMedian) {
-        const divergence = relativeDivergence(candidateRate, peerMedian.rate);
-        if (divergence > METAL_CROSS_CHECK_MAX_DIVERGENCE) {
-          logWorkerEventArgs("lib", "warn",
-            `[sync-fx-rates] Rejected gold-api.com ${pegKey} rate ${candidateRate} because it diverged ` +
-            `${Number((divergence * 100).toFixed(1))}% from commodity peer median ${peerMedian.rate}`,
-          );
-          return peerMedian;
-        }
-      }
-      const updatedAt = candidate?.updatedAt ? Math.floor(Date.parse(candidate.updatedAt) / 1000) : NaN;
-      return {
-        rate: candidateRate,
-        source: "gold-api.com",
-        updatedAt: Number.isFinite(updatedAt) && updatedAt > 0 && updatedAt <= syncStartSec + 60 ? updatedAt : null,
-      };
+    if (typeof candidateRate !== "number" || !(candidateRate > 0)) {
+      return peerMedian ?? resolveCached(pegKey);
     }
-    return peerMedian ?? resolveCached(pegKey);
+
+    const incumbentRate = prevRates[pegKey];
+    const hasIncumbent = typeof incumbentRate === "number" && Number.isFinite(incumbentRate) && incumbentRate > 0;
+    const candidateUpdatedAt = resolveProviderUpdatedAt(candidate);
+    const candidateIsProviderDated = candidateUpdatedAt != null;
+    // An undated quote is not provider-dated evidence: it may never use the
+    // stale-incumbent exemption (docs: a fresh, bounded, provider-dated quote).
+    const incumbentCanVeto = !hasIncumbent || prevRateIsFresh(pegKey) || !candidateIsProviderDated;
+
+    if (!validateRate(pegKey, candidateRate, incumbentCanVeto ? incumbentRate : undefined)) {
+      return peerMedian ?? resolveCached(pegKey);
+    }
+
+    if (hasIncumbent && !incumbentCanVeto) {
+      const move = relativeDivergence(candidateRate, incumbentRate);
+      if (move > MAX_FX_RATE_DELTA_PCT && !hasFreshCorroboration(pegKey, candidateRate)) {
+        logWorkerEventArgs("lib", "warn",
+          `[sync-fx-rates] Kept stale ${pegKey} incumbent ${incumbentRate} because ` +
+          `${candidateRate} moved ${(move * 100).toFixed(1)}% without fresh corroboration`,
+        );
+        return peerMedian ?? resolveCached(pegKey);
+      }
+    }
+
+    if (peerMedian) {
+      const divergence = relativeDivergence(candidateRate, peerMedian.rate);
+      if (divergence > METAL_CROSS_CHECK_MAX_DIVERGENCE) {
+        logWorkerEventArgs("lib", "warn",
+          `[sync-fx-rates] Rejected gold-api.com ${pegKey} rate ${candidateRate} because it diverged ` +
+          `${Number((divergence * 100).toFixed(1))}% from commodity peer median ${peerMedian.rate}`,
+        );
+        return peerMedian;
+      }
+    }
+    return {
+      rate: candidateRate,
+      source: "gold-api.com",
+      updatedAt: candidateUpdatedAt,
+    };
   };
 
   try {
