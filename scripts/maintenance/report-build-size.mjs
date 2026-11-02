@@ -64,8 +64,10 @@ const DEFAULT_BUDGETS = {
   // keep about 10 KB of headroom for public schema growth.
   largestTxtBytes: 1_401_000,
   // Live mirrors, server-rendered dossiers, and failure scenarios dominate
-  // representative detail payloads. Keep about 3% headroom over release data.
-  representativeDetailHtmlBytes: 830_000,
+  // representative detail payloads. Keep about 3% headroom over release data:
+  // re-baselined 2026-11-02 from 830,000 B after the USDe profile measured
+  // 829,576 B (owner decision on #1825), so ordinary copy growth no longer fails.
+  representativeDetailHtmlBytes: 855_000,
   representativeDetailPageTxtBytes: 145_000,
   // Sum gzip sizes of all script chunks referenced by a detail page's HTML.
   // Keep narrow headroom so shared first-load chunk growth stays reviewable.

@@ -37,7 +37,7 @@ function SourceCell({ event }: { event: DepegHistorySnapshotEvent }) {
  * Rows use plain table elements and one shared variant class per body: the
  * shared cell primitives repeat their utility classes on every cell, which
  * would add several kilobytes to a profile whose raw HTML is already near the
- * 830 KB ceiling. TableFrame still owns the shell, caption and viewport.
+ * representative detail HTML ceiling. TableFrame still owns the shell, caption and viewport.
  */
 export function DepegHistoryPreview({ snapshot }: { snapshot: StablecoinDetailHistorySnapshot }) {
   const shown = snapshot.events.filter((event) => !isDisputedAuditVerdict(event.provenance?.auditVerdict)).length;
