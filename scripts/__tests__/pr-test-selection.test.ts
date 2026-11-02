@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createPrTestPlan } from "../lib/pr-test-plan.mts";
 import { selectPrTestFiles } from "../lib/pr-test-selection.mts";
@@ -74,15 +75,17 @@ describe("documentation-owner dedup", () => {
   });
 
   it("keeps doc-owned tests the docs commands do not run", () => {
-    // docs/process/lane-freshness-matrix.md declares the evidence-report and
-    // worker-status validators; the static-guards docs owner runs only the two
-    // invariant suites, so those validators must stay in the test plan.
-    const selected = selectPrTestFiles([], [mandatory], ["docs/process/lane-freshness-matrix.md"], new Map(), () => true, { docsChanged: true });
-    expect(selected).toEqual(expect.arrayContaining([
-      mandatory,
-      "scripts/maintenance/__tests__/worker-evidence-report.test.ts",
-      "worker/scripts/__tests__/worker-status-profile.test.ts",
-    ]));
+    // The static-guards docs owner runs only the two invariant suites, so a
+    // doc's other declared validators must stay in the test plan.
+    const doc = "docs/process/lane-freshness-matrix.md";
+    const declared = (JSON.parse(readFileSync("docs/doc-ownership.json", "utf8")) as {
+      mappings: Array<{ testOwnership?: Array<{ sources: string[]; tests: string[] }> }>;
+    }).mappings.flatMap((mapping) => mapping.testOwnership ?? [])
+      .filter((owner) => owner.sources.includes(doc))
+      .flatMap((owner) => owner.tests);
+    expect(declared.length).toBeGreaterThan(0);
+    const selected = selectPrTestFiles([], [mandatory], [doc], new Map(), () => true, { docsChanged: true });
+    expect(selected).toEqual(expect.arrayContaining([mandatory, ...declared]));
   });
 
   it("keeps a doc-declared suite that a non-doc source also selects", () => {
