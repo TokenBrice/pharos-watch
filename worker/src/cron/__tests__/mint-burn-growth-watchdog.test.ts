@@ -166,6 +166,36 @@ describe("runMintBurnGrowthWatchdog", () => {
     });
   });
 
+  it("names the disabled-policy read as the unavailable input, not the activity baseline", async () => {
+    const db = mockD1(
+      [
+        rowCountTable(100_000),
+        {
+          match: "mint_burn_publication_policy",
+          throwError: new Error("D1 unavailable"),
+          rows: [],
+        },
+      ],
+      { strictSql: false },
+    );
+
+    const result = await runMintBurnGrowthWatchdog(db, undefined, {
+      disabledSymbols: ["YUSD"],
+    });
+
+    expect(result.status).toBe("degraded");
+    expect(result.itemCount).toBe(100_000);
+    const metadata = JSON.parse(String(result.metadata));
+    expect(metadata).toMatchObject({
+      reason: "mint-burn-disabled-policy-unavailable",
+      rowCount: 100_000,
+      disabledPolicyUnavailable: true,
+    });
+    expect(metadata).not.toHaveProperty("activityBaselineUnavailable");
+    expect(db.getHistory().some(({ sql }) => sql.includes("pharos:mint-burn-activity-collapse")))
+      .toBe(false);
+  });
+
   it("degrades instead of reporting healthy when the activity baseline read fails", async () => {
     const db = mockD1(
       [

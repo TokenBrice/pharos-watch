@@ -32,7 +32,7 @@ import { MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, r
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import {
-  decodeMintBurnDisabledKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, selectMintBurnStalledFrontiers,
+  decodeMintBurnDisabledKeys, decodeMintBurnPausedKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, selectMintBurnStalledFrontiers,
   persistMintBurnAdmissions, persistMintBurnQuarantines, persistMintBurnResumptions,
   prepareMintBurnAdmissions, prepareMintBurnPublicationPolicy, resolveMintBurnPublication,
   type MintBurnAdmissionRow,
@@ -103,7 +103,7 @@ export async function readMintBurnWindowContext(
   const storedPolicy = (results[2].results as Array<{ disabled_keys: string; paused_keys?: string }>)[0];
   const policy = storedPolicy?.disabled_keys ?? "[]";
   const disabledKeys = decodeMintBurnDisabledKeys(policy);
-  const pausedKeys = decodeMintBurnDisabledKeys(storedPolicy?.paused_keys ?? "[]");
+  const pausedKeys = decodeMintBurnPausedKeys(storedPolicy?.paused_keys ?? "[]");
   // A pause recorded while a key sat outside the active roster is latent: it gates
   // re-admission but not a quarantined coin's retained per-coin detail.
   const scopedPausedKeys = new Set(configs.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId)

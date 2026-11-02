@@ -378,4 +378,18 @@ describe("mint/burn durable publication admission", () => {
     expect((await readMintBurnWindowContext(db, end + 180, [config, legacy])).configs).toEqual([config, legacy]);
     expect(pausedKeys()).not.toContain(legacyKey);
   });
+
+  it("treats an undecodable paused_keys value as empty so the next policy write can repair it", async () => {
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
+      VALUES (1, '[]', 'not-json', ?)`).run(end);
+    // A reader must not fail closed on the derived pause column; only the
+    // disabled column gates what may be published.
+    const scope = await readMintBurnWindowContext(db, end, [config]);
+    expect(scope.publication.legs).toHaveLength(1);
+    await syncMintBurnPublicationPolicy(db, [], end + 60, [mintBurnConfigKey(config)]);
+    const paused = String((sqlite.prepare(
+      "SELECT paused_keys FROM mint_burn_publication_policy WHERE id = 1").get() as { paused_keys: string }).paused_keys);
+    expect(() => JSON.parse(paused)).not.toThrow();
+  });
 });

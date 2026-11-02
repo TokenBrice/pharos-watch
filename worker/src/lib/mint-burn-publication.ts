@@ -6,6 +6,7 @@ import { mintBurnScanCoverageAdmits, mintBurnScanFingerprint, type MintBurnScanS
 import grandfatheredConfigKeys from "./mint-burn-pipeline/grandfathered-config-keys.json";
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import { batchExecute, executeAtomicBatch } from "./db";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 
 /** netFlow90dUsd is the longest published aggregate. */
 const MINT_BURN_ADMISSION_BASELINE_SEC = 90 * DAY_SECONDS;
@@ -113,17 +114,51 @@ export function prepareMintBurnPublicationPolicy(db: D1Database) {
   return db.prepare("SELECT disabled_keys, paused_keys FROM mint_burn_publication_policy WHERE id = 1");
 }
 
+/** The stored value was read, but it is not a usable key list; a writer may replace it. */
+export class MintBurnPublicationPolicyDecodeError extends Error {
+  cause?: unknown;
+
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message);
+    this.name = "MintBurnPublicationPolicyDecodeError";
+    if (options && "cause" in options) this.cause = options.cause;
+  }
+}
+
 export function decodeMintBurnDisabledKeys(policy: string): Set<string> {
-  const keys: unknown = JSON.parse(policy);
+  let keys: unknown;
+  try {
+    keys = JSON.parse(policy);
+  } catch (error) {
+    throw new MintBurnPublicationPolicyDecodeError("Invalid mint/burn publication policy", { cause: error });
+  }
   if (!Array.isArray(keys) || !keys.every((key) => typeof key === "string")) {
-    throw new Error("Invalid mint/burn publication policy");
+    throw new MintBurnPublicationPolicyDecodeError("Invalid mint/burn publication policy");
   }
   return new Set(keys);
 }
 
+/**
+ * The pause column is derived, self-healing state. Treat a corrupt value as
+ * empty so readers and the producer can rewrite it; the disabled column stays
+ * strict because publishing a wrong scope would re-enable a disabled leg.
+ */
+export function decodeMintBurnPausedKeys(policy: string): Set<string> {
+  try {
+    return decodeMintBurnDisabledKeys(policy);
+  } catch (error) {
+    if (!(error instanceof MintBurnPublicationPolicyDecodeError)) throw error;
+    return new Set();
+  }
+}
+
 /** The durable disabled scope a rollout must not silently erase. */
-export async function readMintBurnDisabledKeys(db: D1Database): Promise<Set<string>> {
-  const row = await prepareMintBurnPublicationPolicy(db).first<{ disabled_keys: string }>();
+export async function readMintBurnDisabledKeys(db: D1Database, signal?: AbortSignal): Promise<Set<string>> {
+  const row = await runWithOverloadRetry(
+    () => prepareMintBurnPublicationPolicy(db).first<{ disabled_keys: string }>(),
+    3,
+    signal,
+  );
   return decodeMintBurnDisabledKeys(row?.disabled_keys ?? "[]");
 }
 
@@ -155,7 +190,8 @@ export async function syncMintBurnPublicationPolicy(
       VALUES (1, ?, (SELECT json_group_array(config_key) FROM (${pauseCandidatesSql})), ?)
       ON CONFLICT(id) DO UPDATE SET disabled_keys = excluded.disabled_keys, updated_at = excluded.updated_at,
         paused_keys = (SELECT json_group_array(value) FROM (
-          SELECT value FROM json_each(mint_burn_publication_policy.paused_keys) AS prior
+          SELECT value FROM json_each(CASE WHEN json_valid(mint_burn_publication_policy.paused_keys)
+            THEN mint_burn_publication_policy.paused_keys ELSE '[]' END) AS prior
           WHERE ? IS NULL
             OR prior.value IN (SELECT value FROM json_each(?))
             OR prior.value IN (SELECT value FROM json_each(?))
@@ -288,7 +324,8 @@ export function compactMintBurnPublication(publication: MintBurnPublication): Mi
 export async function persistMintBurnResumptions(db: D1Database, keys: readonly string[], policy: string) {
   if (keys.length === 0) return;
   await executeAtomicBatch(db, [db.prepare(`UPDATE mint_burn_publication_policy SET paused_keys = (
-    SELECT json_group_array(value) FROM json_each(paused_keys)
+    SELECT json_group_array(value) FROM json_each(
+      CASE WHEN json_valid(paused_keys) THEN paused_keys ELSE '[]' END)
     WHERE value NOT IN (SELECT value FROM json_each(?))
   ) WHERE id = 1 AND disabled_keys = ?`).bind(JSON.stringify(keys), policy)]);
 }
@@ -298,7 +335,8 @@ export async function persistMintBurnQuarantines(db: D1Database, keys: readonly 
   if (keys.length === 0) return;
   await executeAtomicBatch(db, [db.prepare(`UPDATE mint_burn_publication_policy SET paused_keys = (
     SELECT json_group_array(value) FROM (
-      SELECT value FROM json_each(paused_keys)
+      SELECT value FROM json_each(
+        CASE WHEN json_valid(paused_keys) THEN paused_keys ELSE '[]' END)
       UNION SELECT value FROM json_each(?)
     )
   ) WHERE id = 1 AND disabled_keys = ?`).bind(JSON.stringify(keys), policy)]);

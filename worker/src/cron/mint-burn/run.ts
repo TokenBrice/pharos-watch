@@ -2,6 +2,7 @@ import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import { invalidateMintBurnFlowCaches, readMintBurnWindowContext } from "../../lib/mint-burn-flows-service";
 import {
   isGrandfatheredMintBurnConfig,
+  MintBurnPublicationPolicyDecodeError,
   mintBurnDisabledReason,
   readMintBurnDisabledKeys,
   resolveMintBurnDisabledSymbolPolicy,
@@ -106,11 +107,14 @@ export class MintBurnRun {
     let priorDisabledKeys = new Set<string>();
     if (operatorSymbols.size > 0) {
       try {
-        priorDisabledKeys = await readMintBurnDisabledKeys(db);
+        priorDisabledKeys = await readMintBurnDisabledKeys(db, signal);
       } catch (error) {
-        // A corrupt stored policy must not abort the lane. Keep no durable keys
-        // from the unreadable row; the policy sync below rewrites it from the
-        // env switch, which is also what self-heals the row.
+        // Only a stored value that cannot be decoded may proceed with no
+        // retained keys, because the policy sync below rewrites that row from
+        // the env switch. A failed read must fail the lane closed before any
+        // rewrite: treating it as "nothing disabled" would erase the durable
+        // quarantine the rollout is meant to preserve.
+        if (!(error instanceof MintBurnPublicationPolicyDecodeError)) throw error;
         logWorkerEvent({
           scope: "handler",
           job: jobName,

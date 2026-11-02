@@ -48,12 +48,13 @@ async function activeMintBurnPairs(
   db: D1Database,
   disabledIds: ReadonlySet<string>,
   disabledSymbols: ReadonlySet<string>,
+  signal?: AbortSignal,
 ): Promise<{ keys: Set<string>; json: string }> {
   const activeConfigs = includeActiveTrackedIds(MINT_BURN_CONFIGS, (config) => config.stablecoinId);
   // Mirror the producer's disable scope: an ambiguous env ticker disables no
   // coin by itself, but the durable keys it retained must stay paused here too.
   const priorDisabledKeys = disabledSymbols.size > 0
-    ? await readMintBurnDisabledKeys(db)
+    ? await readMintBurnDisabledKeys(db, signal)
     : new Set<string>();
   const policy = resolveMintBurnDisabledSymbolPolicy(activeConfigs, disabledSymbols, priorDisabledKeys);
   const pairs = activeConfigs
@@ -66,15 +67,31 @@ async function activeMintBurnPairs(
   };
 }
 
+type CollapsedLeg = {
+  stablecoinId: string;
+  chainId: string;
+  baselineEvents: number;
+};
+
+type CollapsedLegsResult =
+  | { failed: false; legs: CollapsedLeg[] }
+  | { failed: true; reason: "mint-burn-activity-baseline-unavailable" | "mint-burn-disabled-policy-unavailable" };
+
 async function loadCollapsedLegs(
   db: D1Database,
   nowSec: number,
   disabledIds: ReadonlySet<string>,
   disabledSymbols: ReadonlySet<string>,
   signal?: AbortSignal,
-): Promise<{ legs: Array<{ stablecoinId: string; chainId: string; baselineEvents: number }>; failed: boolean }> {
+): Promise<CollapsedLegsResult> {
+  let activePairs: Awaited<ReturnType<typeof activeMintBurnPairs>>;
   try {
-    const activePairs = await activeMintBurnPairs(db, disabledIds, disabledSymbols);
+    activePairs = await activeMintBurnPairs(db, disabledIds, disabledSymbols, signal);
+  } catch {
+    throwIfAborted(signal);
+    return { failed: true, reason: "mint-burn-disabled-policy-unavailable" };
+  }
+  try {
     const rows = await db
       .prepare(
         `/* pharos:mint-burn-activity-collapse */
@@ -115,7 +132,7 @@ async function loadCollapsedLegs(
     };
   } catch {
     throwIfAborted(signal);
-    return { legs: [], failed: true };
+    return { failed: true, reason: "mint-burn-activity-baseline-unavailable" };
   }
 }
 
@@ -143,9 +160,11 @@ export async function runMintBurnGrowthWatchdog(
   const metadata = {
     rowCount,
     thresholdRows: MINT_BURN_EVENTS_ROW_ALERT_THRESHOLD,
-    ...(activity.failed
-      ? { activityBaselineUnavailable: true }
-      : { activityCollapse: activity.legs.slice(0, MINT_BURN_ACTIVITY_SAMPLE_LIMIT) }),
+    ...(!activity.failed
+      ? { activityCollapse: activity.legs.slice(0, MINT_BURN_ACTIVITY_SAMPLE_LIMIT) }
+      : activity.reason === "mint-burn-disabled-policy-unavailable"
+        ? { disabledPolicyUnavailable: true }
+        : { activityBaselineUnavailable: true }),
   };
   if (activity.failed) {
     return createCronResult({
@@ -153,7 +172,7 @@ export async function runMintBurnGrowthWatchdog(
       itemCount: rowCount,
       metadata: {
         ...metadata,
-        reason: "mint-burn-activity-baseline-unavailable",
+        reason: activity.reason,
         firedRuleIds: [],
       },
     });
