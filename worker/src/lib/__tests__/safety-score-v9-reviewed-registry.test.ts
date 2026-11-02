@@ -325,4 +325,3 @@ describe("reviewed registry asset isolation", { timeout: V9_EVALUATION_TEST_TIME
     })).toEqual({ decision: "publish", reasons: [], affectedAssetIds: ["alpha"] });
   });
 });
-
