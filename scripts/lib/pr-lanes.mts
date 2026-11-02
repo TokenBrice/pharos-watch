@@ -64,7 +64,8 @@ export const PR_LANES: readonly PrLaneDefinition[] = [
   {
     id: "v9-resource",
     selector: "v9-resource",
-    // Faithful setup/live/natural/correctness smoke: 101s; contagion wall policy: 90s.
+    // Faithful setup/live/natural/correctness smoke with one PR publication cycle;
+    // contagion (90s wall policy) runs only when the PR diff reaches a contagion input.
     // Eight minutes allows CI setup, bundling and scheduling headroom without a 35-minute hang.
     timeoutMinutes: 8,
     commands: [{ id: "v9-resource", program: "npm", args: ["run", "test:v9-resource"] }],
