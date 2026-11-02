@@ -30,6 +30,8 @@ import { reserveCompositionInput } from "./live-reserves-store.test-support";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReportCardsFixedInput } from "../../test-helpers/report-cards-fixed-input";
 import { makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
+import zarscCoin from "@shared/data/stablecoins/coins/zarsc-supercoin.json";
+import zarscReserves from "@shared/data/stablecoins/domains/reserves/zarsc-supercoin.json";
 import usdtCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
 import usdtReserveEnvelope from "@shared/data/stablecoins/domains/reserves/usdt-tether.json";
 // Frozen c6f5e2f36 admission inputs, not a claim about the current USDY book.
@@ -1622,4 +1624,39 @@ describe("assurance report freshness", () => {
       expect(review.assuranceAndReconciliation.quality).toBeNull();
     },
   );
+});
+
+const zarscMeta = { ...zarscCoin, ...zarscReserves } as unknown as V9ExtensionRegistryMeta;
+const zarscClock = Date.parse("2026-10-22T00:00:00Z") / 1000;
+const zarscReportExpiry = Date.parse("2026-09-30T00:00:00Z") / 1000
+  + V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.evidenceExpiry.namedFirmReserveReportMaxAgeSec;
+
+describe("named AUP historical composition, not assurance", () => {
+  it("admits the complete named historical cash composition only as static-validated", () => {
+    const admission = buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, zarscClock);
+    expect(admission?.evidenceClass).toBe("static-validated");
+    expect(admission?.rows).toHaveLength(1);
+    expect(admission?.rows[0]?.pct).toBe(100);
+    const supervised = { ...zarscMeta, mintAuthority: { ...zarscMeta.mintAuthority!, supervision: "prudential" as const } };
+    expect(buildSafetyScoreV9ReviewedStaticReserveRows(supervised, zarscClock)?.evidenceClass).toBe("static-validated");
+  });
+  it("rejects unidentified firms, mismatched methods/periods, incomplete scope and expired reports", () => {
+    const unknown = structuredClone(zarscMeta);
+    unknown.proofOfReserves!.provider = "Unknown provider";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(unknown, zarscClock)).toBeNull();
+    const method = structuredClone(zarscMeta);
+    method.proofOfReserves!.latestReport!.assuranceMethod = "audit";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(method, zarscClock)).toBeNull();
+    const period = structuredClone(zarscMeta);
+    period.reserveReview!.compositionAsOf = "2026-08-31";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(period, zarscClock)).toBeNull();
+    const scope = structuredClone(zarscMeta);
+    scope.reserveReview!.confidence = "unknown";
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(scope, zarscClock)).toBeNull();
+    const incomplete = structuredClone(zarscMeta);
+    incomplete.reserves![0]!.pct = 50;
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(incomplete, zarscClock)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, zarscReportExpiry + 1)).toBeNull();
+    expect(buildSafetyScoreV9ReviewedAuditedFallbackReserveRows(zarscMeta, Date.parse("2026-10-20T00:00:00Z") / 1000)).toBeNull();
+  });
 });

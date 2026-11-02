@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { SAFETY_SCORE_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { computeRedemptionPayloadFingerprint } from "@shared/lib/report-cards-fixed-input-identity";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { computePegScore } from "@shared/lib/peg-score";
@@ -32,7 +31,7 @@ import { captureReservePipelineGaps } from "../safety-score-v9/capture";
 const CLOCK_SEC = 1_783_891_200;
 const DEX_UPDATED_AT = 1_783_891_100;
 const SOURCE_GENERATION = `report-cards:${SAFETY_SCORE_METHODOLOGY_VERSION}:${CLOCK_SEC}`;
-const ACTIVE_IDS = ACTIVE_STABLECOINS.map((coin) => coin.id);
+const LEGACY_IDS = ["usdc-circle", "usdt-tether"] as const;
 
 function nativeDraft(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   const dexLiqMap = {
@@ -460,6 +459,7 @@ describe("native Safety Score V9 input", () => {
   it("still parses a retained v3 capture through the legacy parser", async () => {
     const legacy = createReportCardsFixedInput({
       captureKind: "exact-publication-inputs",
+      activeAssetIds: [...LEGACY_IDS],
       capturedAt: new Date(CLOCK_SEC * 1_000).toISOString(),
       sourceGeneration: SOURCE_GENERATION,
       dexGenerationId: `dex-liquidity-${DEX_UPDATED_AT}`,
@@ -477,7 +477,7 @@ describe("native Safety Score V9 input", () => {
       pegDataById: {},
       activeDepegPeakBpsById: {},
       dexLiqMap: Object.fromEntries(
-        ACTIVE_IDS.map((id) => [
+        LEGACY_IDS.map((id) => [
           id,
           {
             liquidityScore: null,
@@ -491,7 +491,7 @@ describe("native Safety Score V9 input", () => {
       ),
       redemptionBackstopMap: {},
       bluechipMap: {},
-      resolvedBlacklistStatuses: Object.fromEntries(ACTIVE_IDS.map((id) => [id, false])),
+      resolvedBlacklistStatuses: Object.fromEntries(LEGACY_IDS.map((id) => [id, false])),
       liveReserveMap: {},
       liveReserveProvenanceMap: {},
       chainCirculatingById: {},
