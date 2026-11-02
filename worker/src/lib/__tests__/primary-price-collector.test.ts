@@ -534,6 +534,125 @@ describe("buildPrimarySourceCandidates", () => {
     ]);
   });
 
+  describe("co-leg budget for protocol lanes", () => {
+    // pmUSD at the 2026-11-02 06:45 UTC run: Curve on-chain (300 s window) and
+    // CoinGecko (900 s) put the co-leg budget at 300 - 180 = 120 s.
+    const nowSec = 1_793_601_977;
+    const pmusd = { id: "pmusd-precious-metals", symbol: "pmUSD" };
+    const curveLane = (ageSec: number) => ({
+      protocol: "curve", price: 0.53416, tvl: 7_684_693, updatedAt: nowSec - ageSec, chain: "ethereum",
+    });
+    const freshLegs = (cgPrice: number | null) => ({
+      cgPrice,
+      cgObservedAt: cgPrice == null ? null : nowSec - 20,
+      cgObservedAtMode: cgPrice == null ? null : "upstream" as const,
+      curvePrice: 0.53416,
+      curveObservedAt: nowSec - 30,
+    });
+
+    it("keeps a lane past the strictest co-leg window out and records its budget and age", () => {
+      // A 34-minute-old curve-dex lane, inside its own 35-minute source budget.
+      const { sources, hasPromotedDexProtocolSource, coLegHeldDexSources, dexCandidateTelemetry, priceSourceConfidenceProfile } =
+        buildPrimarySourceCandidates(pmusd, makeCollected({ ...freshLegs(0.534161), protocolSources: [curveLane(2_071)] }), {
+          nowSec,
+          freshLegsAgree: () => true,
+        });
+
+      expect(sources.map((source) => source.source)).toEqual(["coingecko", "curve-onchain"]);
+      expect(hasPromotedDexProtocolSource).toBe(true);
+      expect(coLegHeldDexSources).toEqual(["curve-dex"]);
+      expect(dexCandidateTelemetry).toMatchObject([
+        { sourceKey: "curve-dex", status: "excluded", reason: "outside_co_leg_budget", coLegBudgetSec: 120, ageSec: 2_071 },
+      ]);
+      expect(priceSourceConfidenceProfile).toBeNull();
+    });
+
+    it("admits a lane exactly at the co-leg budget and holds one a second past it", () => {
+      const build = (ageSec: number) =>
+        buildPrimarySourceCandidates(pmusd, makeCollected({ ...freshLegs(0.534161), protocolSources: [curveLane(ageSec)] }), {
+          nowSec,
+          freshLegsAgree: () => true,
+        });
+
+      expect(build(120).sources.map((source) => source.source)).toEqual(["coingecko", "curve-onchain", "curve-dex"]);
+      expect(build(121).sources.map((source) => source.source)).toEqual(["coingecko", "curve-onchain"]);
+      expect(build(121).dexCandidateTelemetry).toMatchObject([{ reason: "outside_co_leg_budget", coLegBudgetSec: 120, ageSec: 121 }]);
+    });
+
+    it("lets a lane inside the primary budget rejoin when the fresh legs cannot agree", () => {
+      // CoinGecko missing: Curve on-chain alone cannot form a cluster.
+      const build = (ageSec: number) =>
+        buildPrimarySourceCandidates(pmusd, makeCollected({ ...freshLegs(null), protocolSources: [curveLane(ageSec)] }), {
+          nowSec,
+          freshLegsAgree: () => false,
+        });
+
+      const admitted = build(1_800);
+      expect(admitted.sources.map((source) => source.source)).toEqual(["curve-onchain", "curve-dex"]);
+      expect(admitted.sources.find((source) => source.source === "curve-dex")?.observedAt).toBe(nowSec - 1_800);
+      expect(admitted.coLegHeldDexSources).toEqual([]);
+      expect(admitted.dexCandidateTelemetry).toMatchObject([{ sourceKey: "curve-dex", status: "accepted" }]);
+
+      const tooOld = build(1_801);
+      expect(tooOld.sources.map((source) => source.source)).toEqual(["curve-onchain"]);
+      expect(tooOld.dexCandidateTelemetry).toMatchObject([{ reason: "outside_co_leg_budget", ageSec: 1_801 }]);
+    });
+
+    it("never lets an older lane rejoin without a consensus authority or a hard leg to agree with", () => {
+      const withoutAuthority = buildPrimarySourceCandidates(
+        pmusd,
+        makeCollected({ ...freshLegs(null), protocolSources: [curveLane(1_500)] }),
+        { nowSec },
+      );
+      expect(withoutAuthority.sources.map((source) => source.source)).toEqual(["curve-onchain"]);
+
+      // CoinGecko is soft: a lone soft leg gives the older lane nothing hard to agree with.
+      const softOnly = buildPrimarySourceCandidates(
+        pmusd,
+        makeCollected({ cgPrice: 0.53416, cgObservedAt: nowSec - 20, cgObservedAtMode: "upstream", protocolSources: [curveLane(1_500)] }),
+        { nowSec, freshLegsAgree: () => false },
+      );
+      expect(softOnly.sources.map((source) => source.source)).toEqual(["coingecko"]);
+    });
+
+    it("does not let a lane outside the budget corroborate one inside it", () => {
+      // CoinGecko alone (soft, 900 s window): budget 720 s, and no hard leg.
+      const { sources, dexCandidateTelemetry } = buildPrimarySourceCandidates(
+        { id: "dusd-test", symbol: "DUSD" },
+        makeCollected({
+          cgPrice: 1.0,
+          cgObservedAt: 1_700_000_000,
+          cgObservedAtMode: "upstream",
+          protocolSources: [
+            { protocol: "balancer", price: 1.0001, tvl: 500_000, updatedAt: 1_700_000_000 - 60, chain: "ethereum" },
+            { protocol: "uniswap-v3", price: 1.0002, tvl: 500_000, updatedAt: 1_700_000_000 - 1_000, chain: "base" },
+          ],
+        }),
+        { nowSec: 1_700_000_000, freshLegsAgree: () => false },
+      );
+
+      expect(sources.map((source) => source.source)).toEqual(["coingecko"]);
+      expect(dexCandidateTelemetry).toMatchObject([
+        { sourceKey: "balancer-dex", status: "excluded", reason: "lacked_corroboration" },
+        { sourceKey: "uniswap-v3-dex", status: "excluded", reason: "outside_co_leg_budget", coLegBudgetSec: 720, ageSec: 1_000 },
+      ]);
+    });
+  });
+
+  it("keeps protocol lanes that are the only legs on their own freshness window", () => {
+    const nowSec = 1_700_000_000;
+    const collected = makeCollected({
+      protocolSources: [
+        { protocol: "balancer", price: 1.0001, tvl: 500_000, updatedAt: nowSec - 2_000, chain: "ethereum" },
+        { protocol: "uniswap-v3", price: 1.0002, tvl: 1_500_000, updatedAt: nowSec - 2_000, chain: "base" },
+      ],
+    });
+
+    const { sources } = buildPrimarySourceCandidates({ id: "usdc-circle", symbol: "USDC" }, collected, { nowSec });
+
+    expect(sources.map((source) => source.source)).toEqual(["balancer-dex", "uniswap-v3-dex"]);
+  });
+
   it("records missing and invalid DEX observation timestamps as explicit exclusions", () => {
     const candidate = (updatedAt: number | null) => ({
       protocol: "balancer",

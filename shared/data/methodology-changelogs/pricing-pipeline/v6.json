@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.68",
+    "title": "DEX protocol lanes bounded by the co-leg freshness budget",
+    "date": "2026-11-02",
+    "effectiveAt": 1793664000,
+    "summary": "A promoted per-protocol DEX lane (`curve-dex`, `aero-dex`, `orca-dex`, ...) now joins a primary consensus beside other legs only while it fits the same co-leg budget as the DEX aggregate: the 30-minute primary budget and the strictest co-leg registry window minus a 180-second run margin. When the fresh legs cannot agree on their own, a lane up to 30 minutes old that agrees with a fresh hard leg still joins and dates the result by its own clock. Consensus stamps a cluster with its oldest agreeing leg, so a lane inside its own 35-minute source budget had been ageing fresh hard agreement past the depeg-trust budget.",
+    "impact": [
+      "`worker/src/lib/primary-price-collector.ts`: lanes are judged against the co-leg budget before corroboration, so only lanes inside it corroborate one another. A held lane records `outside_co_leg_budget` with its `coLegBudgetSec` and `ageSec`, and stays in `consensusSources` as an available, non-voting candidate, so source depth and the corroboration-probe cohorts are unchanged. The $50,000 lane floor and aggregate withholding are unchanged; lanes that are the only kind of leg keep their own window.",
+      "Degraded runs: if the fresh legs do not form an agreeing cluster (CoinGecko missing, or more than 50 bps from Curve on-chain), a lane at most 1,800 s old that agrees with a fresh hard leg rejoins. The composite is dated by that lane, never by a fresh leg's clock, so Curve-backed assets keep their pre-6.68 high, authoritative result in that state.",
+      "Why: at the 2026-11-02 06:45 UTC run all 14 assets with a lane in their agreeing cluster (pmUSD, RLUSD, BOLD, LUSD, reUSD, ...) published composite clocks 2,011-2,054 s old, past the 1,800 s depeg-trust budget. Thirteen become authoritative at such runs; CASH stays `confirm_required` because its remaining CoinGecko and Kraken pair is not depeg-authoritative. pmUSD's open depeg had recorded blind coverage about once an hour. The same composites also failed each co-leg's own window in authoritative parent checks, the failure mode already fixed for the aggregate leg.",
+      "Trust tiers, weights, thresholds and the depeg detector are unchanged. Provisional activation is 2026-11-03 00:00 UTC (1793664000), to be re-dated at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.67",
     "title": "Observed chain history survives a chain-dropout carry",
     "date": "2026-11-02",

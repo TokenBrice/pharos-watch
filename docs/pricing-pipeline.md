@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.67`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.68`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -41,6 +41,8 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 The [public Pricing changelog](https://pharos.watch/methodology/pricing-pipeline-changelog/) owns release chronology, activation dates and retained historical behavior. Supply admission, historical-bucket conservation and repair clocks remain governed by the [supply contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/supply-snapshot.md#supply-data-source), not by a second Pricing specification.
 
 Pricing v6.67 keeps a provider aggregate history bucket on a chain-dropout carry only when every carried chain's own packet row still reports that window at the carried baseline; an absent, zero or divergent bucket, or an attribution-ambiguous held total, leaves that window null. The [supply contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/supply-snapshot.md#chain-dropout-guard) owns the detailed carry condition.
+
+Pricing v6.68 bounds promoted per-protocol DEX lanes by the same co-leg budget as the DEX aggregate, so an hourly lane inside its own 35-minute source budget can no longer age fresh hard agreement past the 30-minute depeg-trust budget, while a lane up to 30 minutes old still backs a hard leg whose fresh peers are missing or diverge; [Source Weights](#source-weights) owns the rule.
 
 ### Release obligations
 
@@ -100,6 +102,8 @@ Reserve NAV/supply share configuration-bound successful evidence, independent fe
 Curve USDT-reference pools first value USDT through its existing USDC anchor. USAT, Quantoz USDQ, sUSDS and USDx multiply their pool ratios by the admitted USDT USD quote; DOLA explicitly permits the two-dependency DOLA -> sUSDS -> USDT path. sUSDe's DOLA pool reuses that path, USD3's, DUSD's and trUSD's frxUSD pools reuse the existing frxUSD -> crvUSD route, reUSD's fxUSD pool reuses the existing fxUSD route, and scrvUSD chains through reUSD; MUSD's 2pool metapool resolves through its USDC underlying, and sUSDe's raw ratio is not multiplied by the ERC-4626 rate because its vault rate is internal. Missing or stale dependencies withhold the quote, and the oldest contributing observation dates the result.
 
 Promoted DEX corroboration is candidate-scoped. A hard-source match admits only the agreeing protocol lane, while DEX-only corroboration requires an independent protocol lane within the existing divergence threshold. Divergent siblings are excluded with `lacked_corroboration` telemetry rather than inheriting another lane's evidence.
+
+Consensus dates a cluster by its oldest agreeing leg, so both DEX leg kinds share one co-leg budget (`getDexCoLegBudgetSec`). Beside any non-DEX leg, the `dex-promoted` aggregate and each protocol lane join only while no older than the 30-minute primary budget and the strictest co-leg registry window minus a 180-second run margin, and only lanes inside that budget can corroborate one another. Otherwise an hourly DEX observation inside its own source budget would date fresh hard agreement past the depeg-trust budget (v6.68: pmUSD's Curve composite went `confirm_required` about once an hour) and fail each co-leg's window in authoritative parent checks. A held lane records `outside_co_leg_budget` with `coLegBudgetSec` and `ageSec`, and stays in `consensusSources` as an available, non-voting candidate so source-depth targeting is unchanged. When the fresh legs cannot form an agreeing cluster on their own (one missing, or diverging beyond the threshold), a lane at most 30 minutes old that agrees with a fresh hard leg rejoins; the result then carries that lane's older clock rather than a fresh one. When DEX legs are the only legs they keep their own windows.
 
 The primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry and pool-challenge lanes protect depeg detection within publication. Exact-address transport remains detached; CoinGecko Onchain is the sole retained adapter and requires explicit allowlisting. Retired source registry keys, including `pyth` and `redstone`, remain renderable for historical provenance but cannot contribute live observations.
 
