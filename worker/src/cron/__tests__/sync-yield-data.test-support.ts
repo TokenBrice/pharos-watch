@@ -321,7 +321,9 @@ function makeYieldHistoryTables(historyRows: YieldHistoryFixtureRow[]): MockTabl
     { match: "pharos:yield-sync:orphan-yield-data-delete", rows: [], allowUnused: true },
     { match: "pharos:yield-sync:history-retention-delete", rows: [], allowUnused: true },
     { match: "pharos:yield-sync:daily-history-retention-delete", rows: [], allowUnused: true },
-    { match: "pharos:yield-sync:ownership-handoff-delete", rows: [], allowUnused: true },
+    // The purge loop stops on a zero-change DELETE; the mock default of 1 would
+    // exhaust the 250k-row budget on every healthy publication.
+    { match: "pharos:yield-sync:ownership-handoff-delete", rows: [], runMeta: { changes: 0 }, allowUnused: true },
     ...yieldSyncPruneTableMatches(),
     {
       match: "SELECT value, updated_at FROM cache WHERE key = ?",

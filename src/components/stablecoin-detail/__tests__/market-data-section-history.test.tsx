@@ -91,6 +91,25 @@ function renderSeededSection(queryClient = makeSeededQueryClient()) {
 
 const marketCapDomain = () => screen.getByTestId("market-cap-domain").textContent;
 
+function useRetryFakeTimers() {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+}
+
+// The query retries twice with the production 1 s + 2 s backoff. Advance past
+// both retry timers instead of waiting on the wall clock; the assertions still
+// run against the real retry policy and error state.
+async function advanceRetryBackoff() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(3_100);
+  });
+}
+
+async function flushQueryMicrotasks() {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0);
+  });
+}
+
 describe("MarketDataSection history expansion", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -151,17 +170,24 @@ describe("MarketDataSection history expansion", () => {
     }));
     const { container } = renderSeededSection();
     const seedClock = container.querySelector("time")?.getAttribute("datetime");
-    fireEvent.click(screen.getByRole("button", { name: range }));
-    await waitFor(() => expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(`${range} history could not be loaded`), { timeout: 4500 });
-    expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain("Only the available 90-day window is shown");
-    expect(marketCapDomain()).toBe(SEED_DOMAIN);
-    expect(container.querySelector("time")?.getAttribute("datetime")).toBe(seedClock);
-    expect(screen.getByRole("button", { name: range }).getAttribute("aria-pressed")).toBe("true");
-    failing = false;
-    fireEvent.click(screen.getByRole("button", { name: `Retry ${range} history` }));
-    await waitFor(() => expect(marketCapDomain()).toBe(range === "All" ? FULL_DOMAIN : ANNUAL_DOMAIN));
-    expect(requests.every((url) => range === "All" ? url.includes("range=all") && !url.includes("days=") : url.includes("days=365") && !url.includes("range="))).toBe(true);
-    expect(screen.queryByRole("button", { name: `Retry ${range} history` })).toBeNull();
+    useRetryFakeTimers();
+    try {
+      fireEvent.click(screen.getByRole("button", { name: range }));
+      await advanceRetryBackoff();
+      expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain(`${range} history could not be loaded`);
+      expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain("Only the available 90-day window is shown");
+      expect(marketCapDomain()).toBe(SEED_DOMAIN);
+      expect(container.querySelector("time")?.getAttribute("datetime")).toBe(seedClock);
+      expect(screen.getByRole("button", { name: range }).getAttribute("aria-pressed")).toBe("true");
+      failing = false;
+      fireEvent.click(screen.getByRole("button", { name: `Retry ${range} history` }));
+      await flushQueryMicrotasks();
+      expect(marketCapDomain()).toBe(range === "All" ? FULL_DOMAIN : ANNUAL_DOMAIN);
+      expect(requests.every((url) => range === "All" ? url.includes("range=all") && !url.includes("days=") : url.includes("days=365") && !url.includes("range="))).toBe(true);
+      expect(screen.queryByRole("button", { name: `Retry ${range} history` })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it.each(["All", "1Y"])("distinguishes a successful empty %s expansion from a transport failure", async (range) => {
@@ -191,16 +217,22 @@ describe("MarketDataSection history expansion", () => {
     fireEvent.click(screen.getByRole("button", { name: "All" }));
     await waitFor(() => expect(chip(container)?.getAttribute("data-state")).toBe("stale"));
     expect(coverageNotice()?.textContent).toContain("All history is stale");
-    act(() => { void client.refetchQueries({ queryKey: key, exact: true }); });
-    await waitFor(() => expect(client.getQueryState(key)?.status).toBe("error"), { timeout: 4500 });
-    expect(coverageNotice()?.textContent).toContain("All history is stale");
-    expect(coverageNotice()?.textContent).toContain("Observations from 2017-07-14 to ");
-    expect(coverageNotice()?.textContent).not.toContain("refresh failed");
-    expect(coverageNotice()?.textContent).not.toContain("90-day");
-    expect(marketCapDomain()).toBe(FULL_DOMAIN);
-    expect(chip(container)?.getAttribute("data-state")).toBe("stale");
-    expect(chip(container)?.getAttribute("datetime")).toBe(new Date(updatedAt * 1000).toISOString());
-    expect(screen.getByRole("button", { name: "Retry All history" })).toBeTruthy();
+    useRetryFakeTimers();
+    try {
+      act(() => { void client.refetchQueries({ queryKey: key, exact: true }); });
+      await advanceRetryBackoff();
+      expect(client.getQueryState(key)?.status).toBe("error");
+      expect(coverageNotice()?.textContent).toContain("All history is stale");
+      expect(coverageNotice()?.textContent).toContain("Observations from 2017-07-14 to ");
+      expect(coverageNotice()?.textContent).not.toContain("refresh failed");
+      expect(coverageNotice()?.textContent).not.toContain("90-day");
+      expect(marketCapDomain()).toBe(FULL_DOMAIN);
+      expect(chip(container)?.getAttribute("data-state")).toBe("stale");
+      expect(chip(container)?.getAttribute("datetime")).toBe(new Date(updatedAt * 1000).toISOString());
+      expect(screen.getByRole("button", { name: "Retry All history" })).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps a 13-day generation quiet in chip and notice under a 20-day producer budget", async () => {
@@ -224,11 +256,17 @@ describe("MarketDataSection history expansion", () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("refresh failed"); }));
     const { container } = renderSeededSection(client);
     fireEvent.click(screen.getByRole("button", { name: "All" }));
-    act(() => { void client.refetchQueries({ queryKey: key, exact: true }); });
-    await waitFor(() => expect(client.getQueryState(key)?.status).toBe("error"), { timeout: 4500 });
-    expect(coverageNotice()).toBeNull();
-    expect(chip(container)?.getAttribute("data-state")).toBe("retained");
-    expect(marketCapDomain()).toBe(FULL_DOMAIN);
+    useRetryFakeTimers();
+    try {
+      act(() => { void client.refetchQueries({ queryKey: key, exact: true }); });
+      await advanceRetryBackoff();
+      expect(client.getQueryState(key)?.status).toBe("error");
+      expect(coverageNotice()).toBeNull();
+      expect(chip(container)?.getAttribute("data-state")).toBe("retained");
+      expect(marketCapDomain()).toBe(FULL_DOMAIN);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("warns once a mounted retained expansion crosses the 12-day public band", async () => {
