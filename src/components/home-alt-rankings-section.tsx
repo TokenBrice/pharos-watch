@@ -155,6 +155,7 @@ export function HomeAltRankingsSection({ titleId }: HomeAltRankingsSectionProps)
           pegScores={pegScores}
           dexLiquidity={dexLiquidity ?? undefined}
           reportCards={reportCardMap}
+          reportCardsMethodologyVersion={reportCardsData?.safetyScoreIdentity?.methodologyVersion ?? null}
           sourceGenerations={{
             stablecoins: stablecoinsQuery.meta?.updatedAt,
             pegSummary: pegSummaryQuery.meta?.updatedAt,

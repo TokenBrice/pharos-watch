@@ -28,6 +28,8 @@ export interface CoverageFeatureDefinition {
   scopeFilter?: (row: CoverageRow) => boolean;
   headlineKinds?: readonly string[];
   headlineFilter?: (row: CoverageRow) => boolean;
+  /** Population admitted to this feature's count and cap denominators (default: every known row). */
+  denominatorFilter?: (row: CoverageRow) => boolean;
   headlineCountLabel?: string;
   headlineCoverageLabel?: (coveragePct: number) => string;
   headlineShareLabel?: string;
@@ -56,18 +58,24 @@ export interface CoverageFeatureSummary {
   availableCount: number;
   totalCount: number;
   /**
-   * Null when every scoped row is `data-unavailable`: an upstream outage is
-   * published as "Data n/a", never as 0% coverage.
+   * Null when the denominator admits no known row: either every scoped row is
+   * `data-unavailable` (an upstream outage) or a denominator filter excludes
+   * every known row (a zero-denominator ratio, published as n/a not 0%).
    */
   coveragePct: number | null;
+  /** True when the null `coveragePct` is an upstream outage rather than an empty denominator. */
+  coverageUnavailable: boolean;
   coveredMcapUsd: number | null;
   marketCapObservedCount: number;
+  /** Complete cap observation over the full known population, not only the admitted denominator. */
   marketCapComplete: boolean;
   mcapSharePct: number | null;
   countLabel: string;
   coverageLabel: string;
   shareLabel: string;
   breakdown: CoverageBreakdownItem[];
+  /** Breakdown formatted over the denominator population that `totalCount` counts. */
+  denominatorBreakdown: CoverageBreakdownItem[];
 }
 
 export interface CoverageRow {

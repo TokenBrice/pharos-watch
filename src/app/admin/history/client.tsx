@@ -69,6 +69,7 @@ export default function HistoryClient() {
     >
       {(data) => {
         const hasHistoryData = historyQuery.data != null;
+        const historyObservedAt = hasHistoryData ? historyQuery.data.timestamp : null;
         const historyError = historyQuery.error instanceof Error ? historyQuery.error : null;
         const allTransitions = hasHistoryData ? historyQuery.data.transitions : data.timeline;
         const historyCompleteness =
@@ -153,6 +154,7 @@ export default function HistoryClient() {
             historyLoading={historyQuery.isLoading}
             onRetryHistory={() => void historyQuery.refetch()}
             historyRetrying={historyQuery.isFetching}
+            historyObservedAt={historyObservedAt}
             historyEvidence={historyEvidence}
           />
         );

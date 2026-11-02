@@ -35,7 +35,9 @@ import {
 import { useSelector } from "@/hooks/use-selector";
 import { RequestSequence, requestJson } from "@/lib/request";
 import { copyText } from "@/lib/clipboard";
+import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import type { SchemaLike } from "@shared/lib/schema-like";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 interface SnapshotWriteResponse {
   sid: string;
@@ -328,10 +330,11 @@ function SessionRestorePanel({
 function isTradingDataStale(output: SelectorOutput | null): boolean {
   if (!output || output.profile !== "trading") return false;
   const enforceAllKeys = output.input.pegCurrency === "USD";
+  // The share-link block follows the ADR-42 stale band: 12x each producer cadence.
   const limits: Record<string, number> = {
-    pegSummary: 10 * 60,
-    dexTvl: 15 * 60,
-    dews: 35 * 60,
+    pegSummary: CACHE_FRESHNESS_LANES.stablecoins.producerIntervalSec * FRESHNESS_RATIOS.DEGRADED,
+    dexTvl: CACHE_FRESHNESS_LANES.dexLiquidity.producerIntervalSec * FRESHNESS_RATIOS.DEGRADED,
+    dews: CACHE_FRESHNESS_LANES.dews.producerIntervalSec * FRESHNESS_RATIOS.DEGRADED,
   };
   return output.recommended.some((rec) => {
     if (rec.profile !== "trading") return false;

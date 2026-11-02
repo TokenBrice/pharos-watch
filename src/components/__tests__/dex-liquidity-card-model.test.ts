@@ -16,7 +16,7 @@ describe("DEX liquidity verdict bands", () => {
 
       expect(getConcentrationLabel(hhi)?.label).toBe(band?.concentrationLabel);
       expect(crowdingBand(hhi)).toBe(band?.key);
-      expect(throatLabelForCrowding(hhi)).toBe(band?.throatLabel);
+      expect(throatLabelForCrowding(hhi)).toBe(`Protocol crowding: ${band?.throatLabel}`);
     },
   );
 
@@ -37,7 +37,7 @@ describe("DEX liquidity verdict bands", () => {
       expect(getHhiBand(hhi)).toBeNull();
       expect(getConcentrationLabel(hhi)).toBeNull();
       expect(crowdingBand(hhi)).toBe("unknown");
-      expect(throatLabelForCrowding(hhi)).toBe("Crowding not scored");
+      expect(throatLabelForCrowding(hhi)).toBe("Protocol crowding not scored");
     },
   );
 

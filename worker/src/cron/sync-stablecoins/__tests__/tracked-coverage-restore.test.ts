@@ -60,6 +60,26 @@ describe("restoreMissingTrackedAssets", () => {
     });
   });
 
+  it("restores the curated pegMechanism vocabulary instead of the cached upstream label", () => {
+    // United Stables is reviewed rwa-backed, which the published DefiLlama
+    // vocabulary spells fiat-backed; a cached crypto-backed row must not carry.
+    const previous = asset({
+      id: "u-united-stables",
+      symbol: "U",
+      pegMechanism: "crypto-backed",
+      circulating: { peggedUSD: 100 },
+      supplyObservedAt: NOW_SEC - 900,
+    });
+
+    const result = restoreMissingTrackedAssets(
+      fullActiveIntake(["u-united-stables"]),
+      new Map([["u-united-stables", previous]]),
+      NOW_SEC,
+    );
+
+    expect(result.assets.find((row) => row.id === "u-united-stables")?.pegMechanism).toBe("fiat-backed");
+  });
+
   it("restores an omitted supplemental tracked coin exactly once through tracked coverage", () => {
     const id = "paxg-paxos";
     const previous = asset({
@@ -77,7 +97,9 @@ describe("restoreMissingTrackedAssets", () => {
 
     expect(result.restoredIds).toEqual([id]);
     expect(result.assets).toHaveLength(1);
-    expect(result.assets[0]).toMatchObject({ id, supplyRestored: true });
+    // Gold publishes the registry backing ("rwa-backed"), exactly as the
+    // supplemental gold/silver lane does; it is not a fiat peg.
+    expect(result.assets[0]).toMatchObject({ id, supplyRestored: true, pegMechanism: "rwa-backed" });
   });
 
   it("does not restore coins already present in the intake list", () => {

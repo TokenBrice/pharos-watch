@@ -300,7 +300,7 @@ export const FILTER_OPTIONS: ReadonlyArray<{
   { key: "yield", group: "feature", label: "Yield" },
   { key: "live-reserves", group: "feature", label: "Reserves" },
   { key: "flows", group: "feature", label: "Flows" },
-  { key: "blacklist", group: "feature", label: "Blacklist" },
+  { key: "blacklist", group: "feature", label: "FreezeWatch" },
   { key: "missing-safety", group: "gap", label: "No Safety" },
   { key: "missing-dex", group: "gap", label: "No DEX" },
   { key: "missing-live-reserves", group: "gap", label: "No Reserves" },

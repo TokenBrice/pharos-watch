@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Area, ReferenceDot } from "recharts";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
@@ -54,22 +54,80 @@ export function McapChart({
 
 function ExpandableHistoryMcapChart(props: McapChartProps) {
   const [localRange, setLocalRange] = useState<TimeRangeOption>("all");
-  const range = props.controlledRange ?? localRange;
-  const needsFullHistory = range === "1y" || range === "all";
+  const requestedRange = props.controlledRange ?? localRange;
+  const needsFullHistory = requestedRange === "1y" || requestedRange === "all";
   const fullHistoryQuery = useSupplyHistory(
     props.stablecoinId,
-    range === "all" ? "all" : 365,
+    requestedRange === "all" ? "all" : 365,
     { enabled: needsFullHistory },
   );
+  const refetchFullHistory = fullHistoryQuery.refetch;
   const hasExpandedHistory = needsFullHistory && fullHistoryQuery.data.length > 0;
+  // A wide selection is not a painted window until its own observations land
+  // (R7): the plotted 90-day seed is the active window, while the requested
+  // range stays in state so the pill moves once wider data arrives.
+  const seedPlotted = needsFullHistory && !hasExpandedHistory;
+  const range: TimeRangeOption = seedPlotted ? "90d" : requestedRange;
   const data = hasExpandedHistory ? fullHistoryQuery.data : props.data;
+  const setRequestedRange = props.controlledRange ? props.onControlledRangeChange : setLocalRange;
+  const wideReadUnavailable = useRef(false);
+  const retryingWideRead = useRef(false);
+  const retryTargetRange = useRef<TimeRangeOption | null>(null);
+
+  useEffect(() => {
+    if (fullHistoryQuery.isFetching || fullHistoryQuery.isLoading) {
+      retryingWideRead.current = false;
+      return;
+    }
+    if (!needsFullHistory || retryingWideRead.current) return;
+    if (fullHistoryQuery.data.length === 0) {
+      wideReadUnavailable.current = true;
+      setRequestedRange?.("90d");
+    } else {
+      wideReadUnavailable.current = false;
+    }
+  }, [
+    fullHistoryQuery.data.length,
+    fullHistoryQuery.isFetching,
+    fullHistoryQuery.isLoading,
+    needsFullHistory,
+    setRequestedRange,
+  ]);
+
+  // The reset above leaves the hook on the 90-day seed, so a retry must wait
+  // until the clicked range's own key is active. Refetching before that would
+  // hit the seed's key and leave the target window's empty cache unrenewed.
+  useEffect(() => {
+    if (retryTargetRange.current == null || retryTargetRange.current !== requestedRange) return;
+    retryTargetRange.current = null;
+    // The reset effect already skipped this render; let the retry's own settle
+    // (data or empty) take the normal path instead of holding the flag.
+    retryingWideRead.current = false;
+    void refetchFullHistory();
+  }, [refetchFullHistory, requestedRange]);
+
+  const handleRangeChange = (next: TimeRangeOption) => {
+    if (next === "1y" || next === "all") {
+      retryTargetRange.current = null;
+      if (wideReadUnavailable.current) {
+        wideReadUnavailable.current = false;
+        retryingWideRead.current = true;
+        retryTargetRange.current = next;
+      }
+      setRequestedRange?.(next);
+      return;
+    }
+    retryingWideRead.current = false;
+    retryTargetRange.current = null;
+    setRequestedRange?.(next);
+  };
 
   return (
     <McapChartBody
       {...props}
       data={data}
       controlledRange={range}
-      onControlledRangeChange={props.controlledRange ? props.onControlledRangeChange : setLocalRange}
+      onControlledRangeChange={handleRangeChange}
     />
   );
 }

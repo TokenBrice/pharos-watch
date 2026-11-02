@@ -72,7 +72,7 @@ describe("LiquidityHero", () => {
     const throat = screen.getByTestId("exit-throat");
     const fallback = screen.getByTestId("exit-route-fallback-crowding");
     expect(throat.getAttribute("data-crowding-band")).toBe("unknown");
-    expect(throat.getAttribute("aria-label")).toContain("crowding index not scored");
+    expect(throat.getAttribute("aria-label")).toContain("protocol crowding not scored");
     expect(throat.textContent).toContain("NR");
     expect(fallback.textContent).toContain("NR");
     expect(fallback.textContent).not.toMatch(/(Low|Medium|High) crowding|NaN|Infinity/);
@@ -89,8 +89,9 @@ describe("LiquidityHero", () => {
     expect(within(hero).getByText("4 of 6 observed on DEX")).toBeTruthy();
     expect(within(hero).getByText("3 rated · 1 NR")).toBeTruthy();
     expect(screen.getByTestId("exit-route-instrument").getAttribute("role")).toBe("img");
-    // The fallback lists keep the crowding index the hidden scene carries on phones.
+    // The fallback lists keep the protocol crowding the hidden scene carries on phones.
     expect(screen.getByTestId("exit-route-fallback-crowding").textContent).toContain("0.31");
+    expect(screen.getByTestId("exit-route-fallback-crowding").textContent).toContain("Protocol crowding");
     expect(screen.getByTestId("exit-route-fallback-crowding").textContent).toContain("Medium crowding");
     expect(screen.getByTestId("protocol-door-curve").getAttribute("data-share-pct")).toBe("30.00");
     expect(screen.getByTestId("protocol-door-_other-routes")).toBeTruthy();
@@ -107,11 +108,15 @@ describe("LiquidityHero", () => {
     expect(screen.queryByText("Open routes")).toBeNull();
     expect(screen.queryByText("Leading door:")).toBeNull();
 
-    // The throat carries the crowding index, not a second copy of the beam.
+    // The throat carries the protocol crowding, not a second copy of the beam.
     const throat = screen.getByTestId("exit-throat");
     expect(throat.textContent).toContain("0.31");
+    expect(throat.textContent).toContain("Protocol crowding");
     expect(throat.textContent).toContain("Medium crowding");
+    expect(throat.getAttribute("aria-label")).toContain("protocol crowding 0.31");
     expect(throat.textContent).not.toContain(formatCurrency(10_000));
+    expect(screen.getByTestId("selected-exit-route-panel").textContent)
+      .toContain("Protocol crowding: Visible route concentration");
 
     const ledger = screen.getByTestId("exit-route-ledger");
     expect(within(ledger).getByText("Venue mix")).toBeTruthy();

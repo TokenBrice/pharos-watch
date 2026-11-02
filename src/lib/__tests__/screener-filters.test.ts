@@ -223,6 +223,15 @@ describe("applyFilters", () => {
       expected: ["usdc-circle"],
     },
     {
+      name: "keeps Insufficient evidence distinct from Limited",
+      rows: [
+        makeRow({ id: "insufficient", safetyEvidence: "insufficient" }),
+        makeRow({ id: "limited", safetyEvidence: "limited" }),
+      ],
+      filters: { safetyEvidence: ["insufficient"] },
+      expected: ["insufficient"],
+    },
+    {
       name: "treats coins as exact Picker inspection mode even when broad filters diverge",
       rows: [
         makeRow({ id: "usdc-circle", pegScore: 10 }),
@@ -470,7 +479,7 @@ describe("SCREENER_URL_SCHEMA codec", () => {
       mintAuthorityScoreMin: 65,
       mintAuthorityScores: ["hardened", "governed"],
       coins: ["usdc-circle"],
-      safetyEvidence: ["strong", "nr"],
+      safetyEvidence: ["strong", "insufficient", "nr"],
       custodyModels: ["onchain"],
       pegScoreMin: 80,
       liquidityScoreMin: 65,
@@ -484,7 +493,7 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(encoded).toContain("mintAuthorityScoreMin=65");
     expect(encoded).toContain("mintAuthorityScores=hardened%2Cgoverned");
     expect(encoded).toContain("coins=usdc-circle");
-    expect(encoded).toContain("safetyEvidence=strong%2Cnr");
+    expect(encoded).toContain("safetyEvidence=strong%2Cinsufficient%2Cnr");
     expect(encoded).toContain("custodyModels=onchain");
     expect(encoded).toContain("pegScoreMin=80");
     expect(encoded).toContain("liquidityScoreMin=65");
@@ -498,7 +507,7 @@ describe("SCREENER_URL_SCHEMA codec", () => {
     expect(decoded.mintAuthorityScoreMin).toBe(65);
     expect(decoded.mintAuthorityScores).toEqual(["hardened", "governed"]);
     expect(decoded.coins).toEqual(["usdc-circle"]);
-    expect(decoded.safetyEvidence).toEqual(["strong", "nr"]);
+    expect(decoded.safetyEvidence).toEqual(["strong", "insufficient", "nr"]);
     expect(decoded.custodyModels).toEqual(["onchain"]);
     expect(decoded.pegScoreMin).toBe(80);
     expect(decoded.liquidityScoreMin).toBe(65);

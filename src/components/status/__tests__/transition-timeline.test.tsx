@@ -87,6 +87,37 @@ describe("TransitionTimeline", () => {
     expect(episode.textContent).not.toContain("reserve_sync_history_write_gap");
   });
 
+  it("marks the newest row last known when the clock comes from a retained read", () => {
+    const transition: StatusTransition = {
+      id: 21,
+      scope: "global",
+      from: "healthy",
+      to: "degraded",
+      rawStatus: "degraded",
+      transitionType: "degrade",
+      reason: "Retained degradation",
+      confidence: 1,
+      causes: [],
+      at: 1_700_000_000,
+    };
+    render(
+      <TransitionTimeline
+        transitions={[transition]}
+        nowSeconds={1_700_003_600}
+        transitionsLast24h={1}
+        window="24h"
+        filters={DEFAULT_INCIDENT_HISTORY_QUERY}
+        onWindowChange={vi.fn()}
+        onFiltersChange={vi.fn()}
+        isLoading={false}
+        retainedClock
+      />,
+    );
+
+    expect(screen.getByText(/Last known state: 1h/)).toBeTruthy();
+    expect(screen.queryByText(/Current state/)).toBeNull();
+  });
+
   it("renders a failed read as an error with retry, never as an empty history", () => {
     const onRetry = vi.fn();
     render(

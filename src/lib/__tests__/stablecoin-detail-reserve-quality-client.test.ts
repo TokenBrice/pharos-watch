@@ -1,5 +1,6 @@
 // src/lib/__tests__/stablecoin-detail-reserve-quality-client.test.ts
 import { describe, expect, it } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { ReserveReview, ReserveSlice, StablecoinMeta } from "@shared/types";
 import {
   formatReserveQualityPct,
@@ -150,6 +151,49 @@ describe("projectReserveQualityClientSummary", () => {
       ),
     ).toBeNull();
   });
+
+  it("projects only review provenance when a full-composition review misses one quality dimension", () => {
+    const summary = projectReserveQualityClientSummary(
+      coinWith([{ name: "Cash", pct: 100, risk: "very-low", assetClass: "cash" }], USDC_LIKE_REVIEW),
+    )!;
+    expect(summary.provenanceOnly).toBe(true);
+    expect(summary.chipLabel).toBeNull();
+    expect(summary.lede).toBeNull();
+    expect(summary.ladder).toEqual([]);
+    expect(summary.liquidWithinOneDayPct).toBeNull();
+    expect(summary.unknownHorizonPct).toBeNull();
+    expect(summary.unidentifiedObligorsPct).toBeNull();
+    expect(summary.slices).toEqual([]);
+    expect(summary.reviewedAt).toBe("2026-07-18");
+    expect(summary.asOf).toBe("2026-06-30");
+    expect(summary.confidenceLabel).toBe("Verified");
+    expect(summary.compositionBasis).toBe("Monthly attestation composition table.");
+    expect(summary.knownUnknownExposureNote).toBe("No undisclosed obligors in the attested basket.");
+    expect(summary.sources).toEqual([{ label: "Circle reserve report", url: "https://example.com/reserves" }]);
+  });
+
+  it.each([
+    ["usde-ethena", "Verified"],
+    ["usdon-ondo", "Probable"],
+  ])(
+    "projects provenance only for the reviewed full-composition book %s",
+    (id, confidenceLabel) => {
+      const coin = TRACKED_META_BY_ID.get(id)!;
+      const review = coin.reserveReview!;
+      const summary = projectReserveQualityClientSummary(coin)!;
+      expect(summary.provenanceOnly).toBe(true);
+      expect(summary.chipLabel).toBeNull();
+      expect(summary.lede).toBeNull();
+      expect(summary.ladder).toEqual([]);
+      expect(summary.sliceCount).toBe(coin.reserves!.length);
+      expect(summary.reviewedAt).toBe(review.reviewedAt);
+      expect(summary.asOf).toBe(review.compositionAsOf ?? null);
+      expect(summary.confidenceLabel).toBe(confidenceLabel);
+      expect(summary.compositionBasis).toBe(review.compositionBasis);
+      expect(summary.knownUnknownExposureNote).toBe(review.knownUnknownExposure);
+      expect(summary.sources).toEqual(review.sources);
+    },
+  );
 
   it("returns null when liquidity horizons are curated but no asset class is", () => {
     expect(

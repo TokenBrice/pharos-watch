@@ -17,6 +17,7 @@ import {
   getYieldAlternateSourceCount,
   getYieldRowSourceClockInput,
   getYieldWorkbenchDataSource,
+  getYieldWorkbenchSourceRole,
   isYieldRankingSummary,
   type YieldWorkbenchRanking,
 } from "@/lib/yield-workbench-row";
@@ -233,6 +234,8 @@ export function buildYieldSourceBoardModel(
       sourceRisk: ranking.sourceRisk,
       sourceTvlUsd: ranking.sourceTvlUsd,
       sourceDepthLens,
+      yieldType: ranking.yieldType,
+      sourceRole: getYieldWorkbenchSourceRole(ranking),
       sourceChanged: ranking.provenance?.sourceSwitch ?? false,
       sourceFreshness: ranking.provenance?.sourceFreshness,
       warningSignals: ranking.warningSignals,

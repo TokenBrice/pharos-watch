@@ -83,32 +83,59 @@ export function UpcomingPegCoinsSection({
   entries: readonly UpcomingPegCoinEntry[];
 }) {
   if (entries.length === 0) return null;
+  const upcoming = entries.filter((entry) => !entry.launched);
+  const launched = entries.filter((entry) => entry.launched);
+  const LaunchedHeading = upcoming.length > 0 ? "h3" : "h2";
   return (
-    <section aria-labelledby="peg-upcoming" className="space-y-3">
-      <SectionHeading
-        id="peg-upcoming"
-        title={`Upcoming ${shortLabel} stablecoins`}
-        description={
-          <>
-            Announced coins Pharos tracks before launch, with each issuer&apos;s launch phase and current target. See
-            every launch on{" "}
-            <Link href="/upcoming/" className={LINK_CLASS}>
-              Upcoming stablecoins
-            </Link>
-            .
-          </>
-        }
-      />
-      <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {entries.map((entry) => (
-          <li key={entry.id} className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm">
-            <Link href={entry.href} className={LINK_CLASS}>
-              {entry.name} ({entry.symbol})
-            </Link>
-            <span className="mt-1 block text-xs text-muted-foreground">{entry.status}</span>
-          </li>
-        ))}
-      </ul>
+    <section
+      aria-labelledby={upcoming.length > 0 ? "peg-upcoming" : "peg-launched"}
+      className="space-y-3"
+    >
+      {upcoming.length > 0 ? (
+        <>
+          <SectionHeading
+            id="peg-upcoming"
+            title={`Upcoming ${shortLabel} stablecoins`}
+            description={
+              <>
+                Announced coins Pharos tracks before launch, with each issuer&apos;s launch phase and current target. See
+                every launch on{" "}
+                <Link href="/upcoming/" className={LINK_CLASS}>
+                  Upcoming stablecoins
+                </Link>
+                .
+              </>
+            }
+          />
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {upcoming.map((entry) => (
+              <li key={entry.id} className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm">
+                <Link href={entry.href} className={LINK_CLASS}>
+                  {entry.name} ({entry.symbol})
+                </Link>
+                <span className="mt-1 block text-xs text-muted-foreground">{entry.status}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+      {launched.length > 0 ? (
+        <div className="space-y-2">
+          <LaunchedHeading id="peg-launched" className="pharos-label">
+            Launched – not yet tracked
+          </LaunchedHeading>
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {launched.map((entry) => (
+              <li key={entry.id} className="rounded-xl border border-border/60 bg-background/60 px-3 py-3 text-sm">
+                <Link href={entry.href} className={LINK_CLASS}>
+                  {entry.name} ({entry.symbol})
+                </Link>
+                <span className="mt-1 block text-xs text-muted-foreground">{entry.status}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </section>
   );
 }

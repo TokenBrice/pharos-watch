@@ -491,11 +491,18 @@ describe("ScreenerClient freshness notices", () => {
       safetyBackingScore: 86,
       safetyExitScore: 88,
       safetyControlScore: 90,
-      safetyEvidence: "limited",
+      safetyEvidence: "insufficient",
       safetyWeakestPillar: "backing",
       safetyWeakestScore: 86,
       safetyBindingCapReason: bindingCap.reason,
     }));
+    const exported = mocks.TableExportMenu.mock.calls.at(-1)?.[0] as {
+      data: ScreenerRow[];
+      columns: CsvColumn<ScreenerRow>[];
+    };
+    const exportedRow = exported.data.find((candidate) => candidate.id === "usdc-circle")!;
+    const evidenceCell = exported.columns.find((column) => column.header === "safety_evidence")!;
+    expect(evidenceCell.accessor(exportedRow, 0)).toBe("insufficient");
   });
   it("preserves technical null grades, excluded pillars and causes in rows and exports", () => {
     const response = makeReportCardsV9Response({ cards: [

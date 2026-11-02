@@ -425,6 +425,8 @@ Yield v8.51 publishes core rankings every two hours. Freshness rules stated in p
 
 Yield v8.52 reclassifies USDGO as non-yield-bearing, like USDC and USDT: the token pays holders nothing, and OSL's EFFR-linked yield is a separate distribution to professional investors. Its EFFR-net-of-fee proxy is removed; the USD_EFFR benchmark and every other asset's scoring are unchanged.
 
+Yield v8.53 keeps a native source's unmeasured depth out of source-posture evidence debt: rows whose yield accrues on the asset itself show Native · depth n/a and no longer read Watch for that reason alone, while an external opportunity's unknown venue depth still does. PYS weights, source-risk penalties, depth bands and published values are unchanged.
+
 
 ## PegScore and Depeg Early Warning Score (DEWS)
 

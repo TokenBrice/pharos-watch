@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
@@ -60,8 +61,19 @@ const usdt = makeRow({
   yieldSource: "Morpho",
 });
 
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 beforeEach(() => {
   window.history.replaceState(null, "", "/yield/");
+  vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 
@@ -121,6 +133,35 @@ describe("YieldCompareDrawer", () => {
     expect(screen.getAllByText("Medium (3.1/5), partial confidence").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Decision reason").length).toBeGreaterThan(0);
     expect(screen.getAllByText("Curated source preferred | 1 alternate rejected").length).toBeGreaterThan(0);
+  });
+
+  it("labels investment warnings and gives an unrated PYS its null-reason tooltip", async () => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle");
+    render(
+      <TooltipProvider>
+        <YieldCompareDrawer
+          open
+          onOpenChange={vi.fn()}
+          rows={[
+            makeRow({
+              pharosYieldScore: null,
+              pysNullReason: "source-stale",
+              warningSignals: ["data-stale"],
+            } as Partial<YieldViewModelRow>),
+          ]}
+          logos={{}}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getAllByText("Investment warnings").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Warnings")).toBeNull();
+    expect(screen.getAllByText("None").length).toBeGreaterThan(0);
+
+    const dash = screen.getAllByText("—").find((node) => node.closest("[data-slot='tooltip-trigger']"));
+    expect(dash).toBeTruthy();
+    fireEvent.focus(dash!);
+    expect(await screen.findByText("Source observation stale")).toBeTruthy();
   });
 
   it("does not pass inherited logo properties as image sources", () => {

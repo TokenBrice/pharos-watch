@@ -45,15 +45,21 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
       : null;
   const blacklistUnknown =
     dq.blacklistGapStatus === "failed" || blacklistRatio == null || blacklistRecent == null || blacklistWindow == null;
-  const blacklistState = blacklistUnknown
-    ? "unknown"
-    : worstSeverity([
-        thresholdState(
+  // Public gap counts are a superset of the graded classification's, so this ratio can
+  // raise attention but cannot prove the internal Critical tier that the server owns.
+  const blacklistRatioState: PipelineSeverity =
+    blacklistRatio == null
+      ? "unknown"
+      : thresholdState(
           blacklistRatio,
           STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded,
           STATUS_BLACKLIST_THRESHOLDS.missingRatioStale,
           true,
-        ),
+        );
+  const blacklistState = blacklistUnknown
+    ? "unknown"
+    : worstSeverity([
+        blacklistRatioState === "critical" ? "watch" : blacklistRatioState,
         thresholdState(
           blacklistRecent,
           STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch,
@@ -144,7 +150,9 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
           ? `${blacklistTotal} retained blacklist events`
           : "Unknown retained-event population",
       warningThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded, 0)} (watch at >=${STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch} recent)`,
-      staleThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale, 0)}`,
+      // The public ratio can raise attention to Watch but cannot prove the
+      // server-owned Critical tier, so the Stale column names that cap.
+      staleThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale, 0)} (watch cap)`,
       state: blacklistState,
       stateDetail: blacklistUnknown
         ? dq.blacklistGapStatus === "failed"

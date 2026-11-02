@@ -509,6 +509,7 @@ export function DetailRiskContextSections({
               parentArchetype={parentArchetype}
               parentNavToken={isWrapperVariant ? (viewModel.variantParent?.flags?.navToken ?? null) : null}
               parentLiquidationEngine={isWrapperVariant ? parentLiquidationEngine : null}
+              parentBacking={isWrapperVariant ? (viewModel.variantParent?.flags?.backing ?? null) : null}
               variantKind={viewModel.coin.variantKind ?? null}
               hasReviewedReserves={hasReviewedSlices}
               mechanismBacking={mechanismBacking}

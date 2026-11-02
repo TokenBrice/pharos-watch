@@ -142,7 +142,7 @@ The server-rendered autopsy rows (first 25) carry the kicker, epitaph, obituary 
 
 Both charts are hand-rolled SVG driven by compact series props from `CemeteryStats`, with no Recharts on the route. Each has a `ChartDataTable` disclosure, which is also the screen-reader surface.
 
-- Deaths by year keeps a continuous axis, marks partial years and separates tracked/curated coverage. Empty years are catalog gaps, not evidence of no failures; absent peaks stay unrecorded. Count/share views and headlines use guarded stats.
+- Deaths by year keeps a continuous axis, marks partial years and separates tracked/curated coverage. Empty years are catalog gaps, not evidence of no failures; absent peaks stay unrecorded. A year's median peak names its recorded denominator (`n of m recorded`) when only some of its records carry a peak. Count/share views and headlines use guarded stats.
 - Peak-by-cause plots recorded peaks only, names omissions/denominators and uses deterministic jitter and roving tabindex. Jitter maps the same frozen `fnv1a32(id)` hash through `(hash / 0xffffffff) * 2 - 1`; labelled dots retain their below-lane placement. Selecting a dot reveals the register row; the data table is an equivalent screen-reader surface.
 
 Peak market cap is never presented as a loss: the section copy states that it measures size at the top, and the only peak sums shown are over recorded peaks with their `knownCount`.
@@ -204,6 +204,7 @@ The live-flow cards and comparison table both preserve an explicitly observed ze
 Compare includes client-side share/export rendering:
 
 - Builds a canvas card via `src/lib/compare-share-image.ts`
+- The card footer appends the oldest loaded producer generation (`stablecoins`, `pegSummary`, `dexLiquidity`, `reportCards`) as `As of DD Mon YYYY, HH:MM UTC`; an unknown contributing clock omits it, and the browser fetch clock is never used
 - Supports clipboard image copy + Twitter intent flow
 - Supports PNG download from the generated canvas
 - The share card reads market cap and the 7-day supply change through `getCirculatingRawOrNull()` / `getPrevWeekRawOrNull()`; an unavailable operand renders `—`, never `$0.00` or a fabricated `-100%` change

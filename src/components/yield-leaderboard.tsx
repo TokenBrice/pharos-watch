@@ -74,6 +74,7 @@ function LeaderboardHeading({
   sortDirection,
   exportRows,
   updatedAt,
+  sourceClock,
   methodologyLabel,
 }: {
   summary: YieldLeaderboardFilterSummary;
@@ -81,9 +82,15 @@ function LeaderboardHeading({
   sortDirection: "asc" | "desc";
   exportRows: readonly YieldViewModelRow[];
   updatedAt: number;
+  sourceClock: YieldSourceDisplayClock | null;
   methodologyLabel: string;
 }) {
   const { copied, copy } = useCopyToClipboard();
+  const sourceAssessedAt = sourceClock?.assessedAt;
+  const sourceAssessedISO =
+    typeof sourceAssessedAt === "number" && Number.isFinite(sourceAssessedAt) && sourceAssessedAt > 0
+      ? new Date(sourceAssessedAt * 1000).toISOString()
+      : undefined;
   const sortLabel = SORT_KEY_LABELS[sortKey] ?? sortKey;
   const arrow = sortDirection === "asc" ? "↑" : "↓";
   const appended = summary.comparisonLabel ? `, ${summary.comparisonLabel} rows` : "";
@@ -97,11 +104,12 @@ function LeaderboardHeading({
     downloadCsvWithPreamble(exportData, YIELD_EXPORT_COLUMNS, "pharos-yield-rankings", {
       endpoint: "yield-rankings",
       asOfISO: new Date(updatedAt * 1000).toISOString(),
+      ...(sourceAssessedISO ? { sourceAssessedISO } : {}),
       sourceUrl: window.location.href,
       methodologyLabel,
     });
     trackEvent("yield_exported", { scope: "ranking", row_count: exportData.length });
-  }, [exportRows, methodologyLabel, updatedAt]);
+  }, [exportRows, methodologyLabel, sourceAssessedISO, updatedAt]);
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
@@ -330,6 +338,7 @@ export function YieldLeaderboard({
           sortDirection={sortDirection}
           exportRows={sorted}
           updatedAt={effectiveUpdatedAt}
+          sourceClock={sourceClock}
           methodologyLabel={methodologyLabel}
         />
       ) : null}

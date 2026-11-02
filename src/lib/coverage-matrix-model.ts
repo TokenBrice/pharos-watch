@@ -26,6 +26,7 @@ import {
   type CoverageFeatureSummary,
 } from "@/lib/coverage";
 import { buildV9DependencyCoverageFacts } from "@/lib/dependency-coverage-facts";
+import { countsTowardPriceDepth } from "@/lib/coverage/price";
 
 // Compliance evidence lives outside the compact client list, in the same
 // generated projection consumed by /compliance/.
@@ -178,6 +179,7 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
       hasPegCoverage: pegIds.has(coin.id),
       consensusSources: pegCoin?.consensusSources,
       priceConfidence: pegCoin?.priceConfidence ?? undefined,
+      currentPriceUnavailable: pegCoin?.currentPriceUnavailable === true,
       safetyScore: reportCard?.score ?? null,
       safetyRatingStatus: reportCard?.ratingStatus,
       safetyReasonCodes: reportCard?.reasonCodes,
@@ -208,10 +210,10 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
 
   for (const row of rows) {
     const priceStatus = row.statuses.price;
-    if (priceStatus.kind === "data-unavailable" || priceStatus.kind === "price-only" || priceStatus.sourceCount == null) continue;
+    if (!countsTowardPriceDepth(row)) continue;
 
     totalCount++;
-    const sourceCount = priceStatus.sourceCount;
+    const sourceCount = priceStatus.sourceCount ?? 0;
     if (row.marketCapAvailable) {
       sourceDepthMcapObservedCount++;
       sourceDepthMcapUsd += row.marketCapUsd;
@@ -232,12 +234,15 @@ export function buildCoverageMatrixModel(input: CoverageMatrixModelInput) {
     }
   }
 
+  // The tile shares the Price row's denominator, so it is complete only when
+  // that row is: known rows outside the denominator leave its cap share partial.
+  const priceSummary = featureSummaries.find((summary) => summary.feature.key === "price");
   const sourceDepthProgress = {
     totalCount,
     atTargetCount,
     exactTwoCount,
     belowTargetCount,
-    marketCapComplete: sourceDepthMcapObservedCount === totalCount,
+    marketCapComplete: sourceDepthMcapObservedCount === totalCount && priceSummary?.marketCapComplete === true,
     atTargetPct: totalCount > 0 ? (atTargetCount / totalCount) * 100 : null,
     atTargetMcapPct: sourceDepthMcapUsd > 0 ? (atTargetMcapUsd / sourceDepthMcapUsd) * 100 : null,
     exactTwoMcapPct: sourceDepthMcapUsd > 0 ? (exactTwoMcapUsd / sourceDepthMcapUsd) * 100 : null,

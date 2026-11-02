@@ -43,9 +43,15 @@ export interface ReserveQualitySliceClientRow {
 }
 
 export interface ReserveQualityClientSummary {
-  chipLabel: string;
-  chipToneClass: string;
-  lede: string;
+  /**
+   * True for a full-composition review whose authored slices miss a quality
+   * dimension: review provenance is projected alone, with no verdict, chip
+   * or ladder.
+   */
+  provenanceOnly: boolean;
+  chipLabel: string | null;
+  chipToneClass: string | null;
+  lede: string | null;
   ladder: ReserveQualityLadderClientRow[];
   /** Whole-basket aggregates are unavailable for explicitly contextual reviews. */
   liquidWithinOneDayPct: number | null;
@@ -243,7 +249,41 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
   // Preserve legacy reviewless curated books; an explicit limited scope never
   // grants whole-token composition authority, even when its rows total 100%.
   const contextual = review?.scope != null && review.scope !== "full-composition";
-  if (slices.length === 0 || (!hasQualityData && !contextual)) return null;
+  if (slices.length === 0 || (!hasQualityData && !contextual && review?.scope !== "full-composition")) return null;
+
+  const confidenceLabel =
+    typeof review?.confidence === "string"
+      ? (RESEARCH_REVIEW_CONFIDENCE_LABELS[review.confidence] ?? review.confidence)
+      : null;
+
+  // A full-composition review still owns reviewed provenance when its slices
+  // carry only one quality dimension. Project that provenance alone: the
+  // module has no whole-basket verdict, chip or ladder to derive. Contextual
+  // reviews keep their existing contextual projection.
+  if (!hasQualityData && !contextual) {
+    return {
+      provenanceOnly: true,
+      chipLabel: null,
+      chipToneClass: null,
+      lede: null,
+      ladder: [],
+      liquidWithinOneDayPct: null,
+      unknownHorizonPct: null,
+      contextual: false,
+      unidentifiedObligorsPct: null,
+      selfExposurePct: null,
+      topPositionName: null,
+      topPositionPct: null,
+      asOf: review?.compositionAsOf ?? null,
+      sliceCount: slices.length,
+      confidenceLabel,
+      reviewedAt: review?.reviewedAt ?? null,
+      compositionBasis: review?.compositionBasis ?? null,
+      knownUnknownExposureNote: review?.knownUnknownExposure ?? null,
+      slices: [],
+      sources: review?.sources ?? [],
+    };
+  }
 
   const ladder = buildLadder(slices);
   const ladderPct = (horizon: ReserveLiquidityHorizon): number =>
@@ -279,6 +319,7 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     : resolveChip(liquidWithinOneDayPct, unknownHorizonPct);
 
   return {
+    provenanceOnly: false,
     chipLabel: chip.label,
     chipToneClass: chip.toneClass,
     lede: contextual
@@ -294,8 +335,7 @@ export function projectReserveQualityClientSummary(coin: StablecoinMeta): Reserv
     topPositionPct: !contextual && hasTopPosition ? round1(topSlice.pct) : null,
     asOf: review?.compositionAsOf ?? null,
     sliceCount: slices.length,
-    confidenceLabel:
-      typeof review?.confidence === "string" ? (RESEARCH_REVIEW_CONFIDENCE_LABELS[review.confidence] ?? review.confidence) : null,
+    confidenceLabel,
     reviewedAt: review?.reviewedAt ?? null,
     compositionBasis: review?.compositionBasis ?? null,
     knownUnknownExposureNote: review?.knownUnknownExposure ?? null,

@@ -354,6 +354,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         sourceTvlUsd={view.sourceExplorer.selectedSource.sourceTvlUsd}
         sourceDepthLens={view.sourceExplorer.selectedSource.depthLens}
         yieldType={view.sourceExplorer.selectedSource.yieldType}
+        sourceRole={view.sourceExplorer.selectedSource.sourceRole}
         sourceRiskDrivers={view.sourceExplorer.selectedSource.sourceRiskDrivers}
         sourceChanged={view.sourceExplorer.sourceSwitch.changed}
         confidenceTier={view.sourceExplorer.selectedSource.confidenceTier}

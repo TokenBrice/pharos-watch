@@ -85,6 +85,15 @@ export function ComparisonChart({
     });
   }, [normalized, filteredData, series]);
 
+  // A series is plotted only when the displayed rows actually carry a value for
+  // it; a range cut or a failed normalized anchor can leave it with none.
+  const plottedIds = useMemo(
+    () => new Set(series
+      .filter((s) => displayData.some((row) => Number.isFinite(row[s.id])))
+      .map((s) => s.id)),
+    [displayData, series],
+  );
+
   // Determine XAxis date format based on selected range
   const formatTimestamp = useCallback((ts: number) => {
     if (activeRange === "7d" || activeRange === "30d") {
@@ -136,15 +145,22 @@ export function ComparisonChart({
       <CardContent>
         {series.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-2">
-            {series.map((s) => (
-              <ChartLegendChip
-                key={s.id}
-                markerClassName="inline-block h-0.5 w-4 rounded-full"
-                markerStyle={{ backgroundColor: s.color }}
-              >
-                <span>{s.label}</span>
-              </ChartLegendChip>
-            ))}
+            {series.map((s) => {
+              const plotted = plottedIds.has(s.id);
+              return (
+                <ChartLegendChip
+                  key={s.id}
+                  markerClassName={plotted
+                    ? "inline-block h-0.5 w-4 rounded-full"
+                    : "inline-block h-0 w-4 border-t border-dashed"}
+                  markerStyle={plotted
+                    ? { backgroundColor: s.color }
+                    : { borderTopColor: s.color }}
+                >
+                  <span>{s.label}</span>
+                </ChartLegendChip>
+              );
+            })}
           </div>
         )}
         {displayData.length > 0 ? (
@@ -153,7 +169,7 @@ export function ComparisonChart({
               series={series}
               getValue={(datum) => datum.value}
               data={displayData}
-              ariaLabel={`${title} comparison chart with ${series.length} series`}
+              ariaLabel={`${title} comparison chart with ${plottedIds.size} series`}
               className="h-[300px] sm:h-[400px]"
               height="100%"
               margin={{ top: 8, right: 8, bottom: 16, left: 0 }}

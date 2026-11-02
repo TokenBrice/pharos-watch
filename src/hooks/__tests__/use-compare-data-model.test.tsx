@@ -370,4 +370,84 @@ describe("useCompareDataModel", () => {
     for (const history of histories) expect(history.refetch).toHaveBeenCalledTimes(1);
   });
 
+  it("stamps the share image from the oldest loaded producer generation", () => {
+    useStablecoinsMock.mockReturnValue(makeQueryResult({
+      data: { peggedAssets: [makeStablecoin({ id: "usdc-circle" })], fxFallbackRates: {} },
+      dataUpdatedAt: 9_000_000,
+      meta: { updatedAt: 500, status: "fresh" },
+    }));
+    usePegSummaryMock.mockReturnValue(makeQueryResult({
+      data: { coins: [] },
+      dataUpdatedAt: 8_000_000,
+      meta: { updatedAt: 400, status: "fresh" },
+    }));
+    useDexLiquidityMock.mockReturnValue(makeQueryResult({
+      data: {},
+      dataUpdatedAt: 7_000_000,
+      meta: { updatedAt: 300, status: "fresh" },
+    }));
+    useReportCardsV9Mock.mockReturnValue(makeQueryResult({
+      data: { cards: [] },
+      dataUpdatedAt: 6_000_000,
+      meta: { updatedAt: 200, status: "fresh" },
+    }));
+
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg", range: "all",
+    }));
+
+    expect(result.current.shareAsOfUpdatedAt).toBe(200);
+  });
+
+  it("omits the share stamp when the stablecoins producer clock is unknown", () => {
+    useStablecoinsMock.mockReturnValue(makeQueryResult({
+      data: { peggedAssets: [makeStablecoin({ id: "usdc-circle" })], fxFallbackRates: {} },
+      dataUpdatedAt: 9_000_000,
+      meta: { updatedAt: null, status: "unknown", reason: "producer-clock-unavailable" },
+    }));
+    usePegSummaryMock.mockReturnValue(makeQueryResult({
+      data: { coins: [] },
+      meta: { updatedAt: 400, status: "fresh" },
+    }));
+    useDexLiquidityMock.mockReturnValue(makeQueryResult({
+      data: {},
+      meta: { updatedAt: 300, status: "fresh" },
+    }));
+    useReportCardsV9Mock.mockReturnValue(makeQueryResult({
+      data: { cards: [] },
+      meta: { updatedAt: 200, status: "fresh" },
+    }));
+
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg", range: "all",
+    }));
+
+    expect(result.current.shareAsOfUpdatedAt).toBeNull();
+  });
+
+  it("keeps an unknown loaded producer clock from overstating the share generation", () => {
+    useStablecoinsMock.mockReturnValue(makeQueryResult({
+      data: { peggedAssets: [makeStablecoin({ id: "usdc-circle" })], fxFallbackRates: {} },
+      meta: { updatedAt: 500, status: "fresh" },
+    }));
+    usePegSummaryMock.mockReturnValue(makeQueryResult({
+      data: { coins: [] },
+      meta: { updatedAt: 400, status: "fresh" },
+    }));
+    useDexLiquidityMock.mockReturnValue(makeQueryResult({
+      data: {},
+      meta: { updatedAt: null, status: "unknown", reason: "producer-clock-unavailable" },
+    }));
+    useReportCardsV9Mock.mockReturnValue(makeQueryResult({
+      data: { cards: [] },
+      meta: { updatedAt: 200, status: "fresh" },
+    }));
+
+    const { result } = renderHook(() => useCompareDataModel({
+      selectedIds: ["usdc-circle"], flowHours: 24, radarCohort: "peg", range: "all",
+    }));
+
+    expect(result.current.shareAsOfUpdatedAt).toBeNull();
+  });
+
 });

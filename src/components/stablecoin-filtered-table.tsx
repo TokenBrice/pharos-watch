@@ -63,6 +63,7 @@ export function StablecoinFilteredTable({ activeFilters, renderNotice }: Stablec
         pegScores={tableInputs.pegScores}
         dexLiquidity={dexLiquidity ?? undefined}
         reportCards={tableInputs.reportCards}
+        reportCardsMethodologyVersion={reportCardsData?.safetyScoreIdentity?.methodologyVersion ?? null}
         sourceGenerations={{
           stablecoins: meta?.updatedAt,
           pegSummary: pegSummaryQuery.meta?.updatedAt,

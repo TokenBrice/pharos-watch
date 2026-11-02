@@ -155,6 +155,22 @@ export function StablecoinSafetyScoreV9Card({
                   </Tooltip>
                 </TooltipProvider>
               ) : null}
+              {card.gradeHold ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="pharos-focus-ring rounded-full" aria-label="Grade held">
+                        <Badge variant="outline" className="rounded-full border-border/60 bg-muted/40 text-2xs font-medium text-muted-foreground">
+                          Grade held
+                        </Badge>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-left">
+                      Published letter retained; this score&apos;s raw band is {card.gradeHold.rawGrade}.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
               <ScoreModifiers card={card} />
             </div>
             <p className="text-xs text-muted-foreground">{presentation.evidenceSummary}</p>

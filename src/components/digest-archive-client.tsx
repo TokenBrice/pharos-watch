@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDailyDigest, useDigestArchive } from "@/hooks/api-hooks";
+import { useDigestArchive } from "@/hooks/api-hooks";
+import { digestDateSlug, useDigestLead } from "@/hooks/use-digest-lead";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -28,12 +29,8 @@ import { cn } from "@/lib/utils";
 
 const SKELETON_ROWS = Array.from({ length: 5 }, (_, i) => i);
 
-function tsToDateSlug(ts: number): string {
-  return new Date(ts * 1000).toISOString().slice(0, 10);
-}
-
 function toDigestSlug(ts: number, digestType: "daily" | "weekly"): string {
-  const date = tsToDateSlug(ts);
+  const date = digestDateSlug(ts);
   return digestType === "weekly" ? `${date}-weekly` : date;
 }
 
@@ -267,25 +264,7 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
 }
 
 export function DigestArchiveClient({ initialLead }: { initialLead?: DigestContentEntry } = {}) {
-  const [seed] = useState(initialLead);
-  const archiveQuery = useDigestArchive();
-  const { data: dailyLead } = useDailyDigest();
-  const archiveLead = seed ? archiveQuery.data?.digests.find((entry) => entry.digestType !== "weekly") : null;
-  const liveLead = archiveLead && (!dailyLead?.digest || !dailyLead.generatedAt || archiveLead.generatedAt > dailyLead.generatedAt)
-    ? { ...archiveLead, digest: archiveLead.digestText }
-    : dailyLead;
-  const liveSlug = liveLead?.digest && liveLead.generatedAt ? tsToDateSlug(liveLead.generatedAt) : null;
-  const seedData = seed ? {
-    digest: seed.text, digestTitle: seed.title, digestExtended: seed.extended, generatedAt: seed.generatedAt,
-  } : null;
-  const lead = liveSlug && (!seed || liveSlug > seed.date) ? liveLead : seedData && liveSlug === seed?.date ? {
-    ...seedData,
-    riskSignal: liveLead?.riskSignal,
-    riskTape: liveLead?.riskTape,
-    nextTriggers: liveLead?.nextTriggers,
-  } : seedData;
-  const leadSlug = lead?.generatedAt ? tsToDateSlug(lead.generatedAt) : null;
-  const leadDate = lead?.generatedAt ? formatLongDate(new Date(lead.generatedAt * 1000), { utc: true }) : null;
+  const { lead, leadSlug, leadDate, archiveQuery } = useDigestLead(initialLead);
 
   return (
     <div className="space-y-8">

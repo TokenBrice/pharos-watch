@@ -158,6 +158,63 @@ describe("reliability issue model", () => {
     expect(model.modeSummaries.find((mode) => mode.id === "demand")?.severity).toBe("unknown");
   });
 
+  it.each([
+    ["degraded", "warning"],
+    ["stale", "critical"],
+    ["unknown", "unknown"],
+  ] as const)("raises one dependencies issue for a %s canary aggregate", (status, kind) => {
+    const base = makeHealthyReliabilityStatusResponse();
+    const data = degraded(base, {
+      canaries: {
+        ...base.canaries!,
+        status,
+        totalChecks: 8,
+        okCount: 5,
+        staleCount: 1,
+        failedCount: 1,
+        unknownExecutionCount: 1,
+        missingCheckIds: ["check-a", "check-b"],
+      },
+    });
+
+    const issue = buildReliabilityWorkspaceModel(input({ data })).issues.find(
+      (candidate) => candidate.id === "canary:aggregate",
+    );
+    expect(issue).toMatchObject({ mode: "dependencies", kind });
+    expect(issue?.detail).toBe("5/8 checks ok; 1 stale, 1 failed, 1 unknown execution, 2 missing.");
+  });
+
+  it("names the degraded, error and skipped buckets behind a non-healthy canary aggregate", () => {
+    const base = makeHealthyReliabilityStatusResponse();
+    const data = degraded(base, {
+      canaries: {
+        ...base.canaries!,
+        status: "degraded",
+        totalChecks: 8,
+        okCount: 4,
+        degradedCount: 2,
+        errorCount: 1,
+        skippedCount: 1,
+        staleCount: 0,
+        failedCount: 0,
+        unknownExecutionCount: 0,
+        missingCheckIds: [],
+      },
+    });
+
+    const issue = buildReliabilityWorkspaceModel(input({ data })).issues.find(
+      (candidate) => candidate.id === "canary:aggregate",
+    );
+    expect(issue?.detail).toBe("4/8 checks ok; 2 degraded, 1 error, 1 skipped.");
+  });
+
+  it("adds no canary aggregate issue for a healthy aggregate and leaves per-check issues to their loop", () => {
+    const base = makeHealthyReliabilityStatusResponse();
+    const model = buildReliabilityWorkspaceModel(input({ data: base }));
+
+    expect(model.issues.find((issue) => issue.id === "canary:aggregate")).toBeUndefined();
+  });
+
   it("surfaces absent inactive evidence in the workspace summary", () => {
     const data = degraded(makeHealthyStatusResponse(), { caches: {} });
     const model = buildReliabilityWorkspaceModel(

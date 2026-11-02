@@ -48,10 +48,17 @@ function resolvePrice(
   hasPegCoverage: boolean,
   consensusSources?: string[],
   priceConfidence?: string,
+  currentPriceUnavailable = false,
   dataAvailable = true,
 ): CoverageStatus {
   if (!dataAvailable) {
     return createDataUnavailableStatus("Price and depeg");
+  }
+
+  if (currentPriceUnavailable) {
+    const status = createPresetStatus(PRICE_STATUS_PRESETS.missing);
+    status.detail = "No observed market price is available for this asset.";
+    return status;
   }
 
   if (coin.flags.navToken) {
@@ -71,6 +78,21 @@ function resolvePrice(
   }
 
   return createPresetStatus(PRICE_STATUS_PRESETS.missing);
+}
+
+/**
+ * One observed-depth population for the Price row and the Source-target tile:
+ * a row counts when its price depth is observed (Tracked with a reported
+ * `sourceCount`) or Missing (uncovered, counted as zero sources). NAV
+ * price-only and Data n/a rows stay outside both denominators.
+ */
+export function countsTowardPriceDepth(row: CoverageRow): boolean {
+  const status = row.statuses.price;
+  return (
+    status.kind !== DATA_UNAVAILABLE_KIND &&
+    status.kind !== "price-only" &&
+    (status.sourceCount != null || status.kind === "missing")
+  );
 }
 
 function formatPrice(
@@ -122,7 +144,7 @@ const PRICE_LEGEND: readonly CoverageLegendItem[] = [
   },
   {
     term: "Missing",
-    description: "No peg-summary row is currently available for this asset.",
+    description: "No observed market price is currently available for this asset.",
     kinds: ["missing"],
   },
 ] as const;

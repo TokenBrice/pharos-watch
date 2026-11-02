@@ -66,11 +66,13 @@ describe("buildStablecoinDetailClientCoin display gating", () => {
     expect("reserveReview" in clientCoin).toBe(false);
   });
 
-  it("hides reserve quality for reserve slices with no quality attributes", () => {
+  it("projects reserve provenance only when slices miss a quality attribute", () => {
     const clientCoin = buildStablecoinDetailClientCoin(
       coinWith({ reserves: [{ name: "Cash", pct: 100, risk: "very-low" }], reserveReview: RESERVE_REVIEW }),
     );
-    expect("reserveQualitySummary" in clientCoin).toBe(false);
+    expect(clientCoin.reserveQualitySummary?.provenanceOnly).toBe(true);
+    expect(clientCoin.reserveQualitySummary?.chipLabel).toBeNull();
+    expect(clientCoin.reserveQualitySummary?.reviewedAt).toBe("2026-07-18");
     expect("reserveReview" in clientCoin).toBe(false);
   });
 

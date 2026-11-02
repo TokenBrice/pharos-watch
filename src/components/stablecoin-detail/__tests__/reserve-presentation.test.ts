@@ -430,6 +430,8 @@ describe("reserve composition slices", () => {
       parentId: "parent-coin",
       parentSymbol: "PAR",
       parentReviewedAt: null,
+      parentCompositionAsOf: null,
+      parentSources: [],
       slices: [
         { key: "a:0", name: "Hedged basis book", pct: 18.7, risk: "medium", obligor: null, assetClassLabel: null },
         { key: "b:1", name: "CoreGhoDirectMinter", pct: 81.3, risk: "low", obligor: "Aave GHO facilitator", assetClassLabel: "Protocol position" },

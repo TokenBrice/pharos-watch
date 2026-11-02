@@ -95,6 +95,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
   const selectedDepthDisplay = getYieldSourceDepthDisplay({
     depthLens: selectedSource.depthLens,
     yieldType: selectedSource.yieldType,
+    sourceRole: selectedSource.sourceRole,
     sourceTvlUsd: selectedSource.sourceTvlUsd,
   });
   const hasAlternateSelected =
@@ -238,6 +239,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             sourceTvlUsd={activeSource.sourceTvlUsd}
             sourceDepthLens={activeSource.depthLens}
             yieldType={activeSource.yieldType}
+            sourceRole={activeSource.sourceRole}
             sourceRiskDrivers={activeSource.sourceRiskDrivers}
             sourceChanged={activeSource.isChosen ? sourceExplorer.sourceSwitch.changed : false}
             confidenceTier={activeSource.confidenceTier}
@@ -264,6 +266,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
                     const depthDisplay = getYieldSourceDepthDisplay({
                       depthLens: source.depthLens,
                       yieldType: source.yieldType,
+                      sourceRole: source.sourceRole,
                       sourceTvlUsd: source.sourceTvlUsd,
                     });
 

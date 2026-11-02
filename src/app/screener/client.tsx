@@ -256,9 +256,7 @@ export function ScreenerClient() {
             ? "pipeline-gap"
             : safety?.ratingStatus === "not-rated"
               ? "nr"
-              : safety?.evidence.level === "insufficient"
-                ? "limited"
-                : safety?.evidence.level ?? null,
+              : safety?.evidence.level ?? null,
         safetyWeakestPillar: safety?.weakestPillar?.pillar ?? null,
         safetyWeakestScore: safety?.weakestPillar?.score ?? null,
         safetyBindingCapReason: safety?.bindingCapReason ?? null,

@@ -23,4 +23,11 @@ describe("ArchetypeExplainerBody representative coins", () => {
     // heading cannot call the whole set live.
     expect(screen.getByRole("link", { name: /USR/ })).toBeTruthy();
   });
+
+  it("omits quarantined coins from tracked examples", () => {
+    render(<ArchetypeExplainerBody content={ARCHETYPE_CONTENT.tbill} />);
+
+    expect(screen.queryByRole("link", { name: /BENJI/ })).toBeNull();
+    expect(screen.getAllByRole("link", { name: /BUIDL/ }).length).toBeGreaterThan(0);
+  });
 });

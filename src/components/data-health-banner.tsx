@@ -56,27 +56,29 @@ export function DataHealthBanner({
   const errorEntries = publicEntries.filter((entry) => entry.state === "error");
   const unavailableEntries = publicEntries.filter((entry) => entry.state === "unavailable");
   const staleEntries = publicEntries.filter((entry) => entry.state === "stale");
-  const titles: string[] = [];
   const messages: string[] = [];
   if (errorEntries.length > 0) {
     const affected = formatAffectedLabels(errorEntries.map((entry) => entry.label));
-    titles.push("Refresh failed");
     messages.push(`Could not refresh ${affected}.`);
   }
   if (unavailableEntries.length > 0) {
     const labels = unavailableEntries.map((entry) => entry.label);
     const affected = formatAffectedLabels(labels);
-    titles.push("Waiting for initial data");
     messages.push(`${affected} ${labels.length === 1 ? "has" : "have"} not populated yet.`);
   }
   if (staleEntries.length > 0) {
     const age = worstAge(staleEntries);
-    titles.push("Showing an older snapshot");
     messages.push(
       `${formatAffectedLabels(staleEntries.map((entry) => entry.label))} last refreshed over ${age != null ? formatElapsedSeconds(age / 1000) : "unknown"} ago.`,
     );
   }
-  const title = titles.join(" · ");
+  // The banner keeps one title and one tone: those of the worst state.
+  const title =
+    merged.state === "error"
+      ? "Refresh failed"
+      : merged.state === "unavailable"
+        ? "Waiting for initial data"
+        : "Showing an older snapshot";
   const message = messages.join(" ");
 
   // A stamp belongs to its own group; with mixed findings it would read as the

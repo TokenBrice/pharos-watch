@@ -11,6 +11,7 @@ import {
   resolveMechanismFlowTemplate,
   type MechanismFlowTemplate,
 } from "../mechanism-template";
+import { resolveThreeStepConfig } from "../three-step-archetype-diagram";
 import type { MechanismTemplateFacts } from "../types";
 
 /** Every line a template can put on the page or in its accessible name. */
@@ -54,6 +55,7 @@ function shippedTemplate(id: string): MechanismFlowTemplate {
         buildMechanismBackingView(id),
         buildStablecoinDetailClientCoin(coin).oracleRiskSummary?.role,
       ),
+      backing: coin.flags.backing,
     },
     getCoinOverride(id),
   );
@@ -100,18 +102,62 @@ describe("resolveMechanismFlowTemplate", () => {
     expect(resolveMechanismFlowTemplate("tbill", "GUSD", { navToken: false }).loop).not.toBeNull();
   });
 
-  it("follows the coin override's synthetic strategy and step replacements", () => {
-    const perp = resolveMechanismFlowTemplate("synthetic-delta-neutral", "USDe", {});
+  it("draws neutral synthetic copy unless the coin override names a strategy", () => {
+    const neutral = resolveMechanismFlowTemplate("synthetic-delta-neutral", "USDe", {});
+    const perp = resolveMechanismFlowTemplate("synthetic-delta-neutral", "USDe", {}, {
+      syntheticStrategy: "perp-short",
+    });
     const lending = resolveMechanismFlowTemplate("synthetic-delta-neutral", "ftUSD", {}, {
       syntheticStrategy: "borrow-stake",
       steps: [{}, {}, { label: "ftUSD base token" }],
     });
+    expect(templateCopy(neutral)).not.toMatch(/perp|funding|yield|payout/i);
+    expect(neutral.loop).toBeNull();
     expect(templateCopy(perp)).toMatch(/perp/i);
+    expect(templateCopy(perp)).not.toMatch(/yield on|holders/i);
     expect(templateCopy(lending)).not.toMatch(/perp/i);
     expect(lending.steps[2].label).toBe("ftUSD base token");
     expect(lending.steps[0].label).toBe(resolveMechanismFlowTemplate("synthetic-delta-neutral", "X", {}, {
       syntheticStrategy: "borrow-stake",
     }).steps[0].label);
+  });
+
+  it("gives algorithmic coins a coin-level config without the UST claims", () => {
+    const template = resolveMechanismFlowTemplate("algorithmic", "LVUSD", {});
+    expect(templateCopy(template)).not.toMatch(/governance token|no 1:1|reflexive collapse/i);
+    expect(template.loop).toEqual(expect.objectContaining({ label: "arbitrage", danger: false }));
+    expect(template.fragile).toBe(false);
+    // `/learn` keeps the family copy and its dated precedent.
+    const family = resolveThreeStepConfig("algorithmic");
+    expect(family.stressFootnote).toBe("stress: reflexive collapse");
+    expect(family.returnArrow?.label).toBe("reflexive collapse");
+  });
+
+  it("withholds the bank rail from crypto-backed fiat-cash coins only", () => {
+    const crypto = resolveMechanismFlowTemplate("fiat-cash", "yoUSD", { backing: "crypto-backed" });
+    const rwa = resolveMechanismFlowTemplate("fiat-cash", "USDC", { backing: "rwa-backed" });
+    expect(templateCopy(crypto)).not.toMatch(/bank transfer|KYC|custod|1:1|redeem|banking-rail/i);
+    expect(crypto.loop).toBeNull();
+    expect(templateCopy(rwa)).toMatch(/bank transfer/i);
+    expect(rwa.loop).not.toBeNull();
+  });
+
+  it("describes the crypto-backed fiat-cash cohort by reserve and issuance, not user-posted collateral", () => {
+    const cohort = [...TRACKED_META_BY_ID.values()].filter(
+      (coin) => coin.status !== "pre-launch"
+        && coin.mechanismArchetype === "fiat-cash"
+        && coin.flags.backing === "crypto-backed",
+    );
+    expect(cohort).toHaveLength(24);
+    for (const coin of cohort) {
+      const template = shippedTemplate(coin.id);
+      const copy = templateCopy(template);
+      // Bridged and pool-backed members never post collateral themselves.
+      expect(copy, coin.id).not.toMatch(/users post|posted with the protocol/i);
+      expect(copy, coin.id).toContain("issued against crypto assets");
+      expect(copy, coin.id).not.toMatch(/bank transfer|KYC|custod|1:1|redeem|banking-rail/i);
+      expect(template.loop, coin.id).toBeNull();
+    }
   });
 });
 
@@ -140,6 +186,29 @@ describe("shipped coins (dossier audit 2026-10-06, defect 6)", () => {
   it("keeps a coin's own dated incident from its override", () => {
     expect(shippedTemplate("usdc-circle").stressFootnote).toMatch(/\bUSDC\b/);
     expect(shippedTemplate("dai-makerdao").stressFootnote).toMatch(/\bDAI\b/);
+  });
+
+  it("routes USDe's carry to sUSDe stakers in the override", () => {
+    const usde = shippedTemplate("usde-ethena");
+    expect(usde.steps[2].subtitle).toBe("yield to sUSDe stakers");
+    expect(usde.ariaLabel).toContain("sUSDe stakers");
+    expect(usde.description).toContain("sUSDe stakers");
+    // The perp hedge is the source of the carry loop and its funding stress.
+    expect(usde.loop).toEqual(expect.objectContaining({ label: "funding" }));
+    expect(usde.stressFootnote).toBe("stress: funding-rate inversion");
+  });
+
+  it("keeps the funding carry for a synthetic coin whose reviewed mechanism names a perp hedge", () => {
+    const usr = shippedTemplate("usr-resolv");
+    expect(usr.loop).toEqual(expect.objectContaining({ label: "funding" }));
+    expect(usr.stressFootnote).toBe("stress: funding-rate inversion");
+  });
+
+  it("keeps the bank rail on rwa-backed fiat-cash coins only", () => {
+    expect(templateCopy(shippedTemplate("usdc-circle"))).toMatch(/bank transfer/i);
+    expect(templateCopy(shippedTemplate("xdai-gnosis"))).not.toMatch(
+      /bank transfer|KYC|custod|1:1|redeem|banking-rail/i,
+    );
   });
 });
 

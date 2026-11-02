@@ -85,6 +85,33 @@ describe("yield source risk UI helpers", () => {
     }).map((driver) => driver.key)).toEqual(["stale-source"]);
   });
 
+  it("does not treat a native source's unmeasured depth as evidence debt", () => {
+    const unmeasured = {
+      sourceRisk: { sourceRiskPenalty: 1, sourceDepthRatio: null, sourceAgeSeconds: 60, venueRiskTier: "low" as const },
+      sourceTvlUsd: null,
+    };
+    // Callers that omit the yield identity keep the legacy evidence-debt read.
+    expect(classifyYieldSourcePosture(unmeasured)).toBe("watch");
+    expect(classifyYieldSourcePosture({ ...unmeasured, yieldType: "lending-vault", sourceRole: "canonical-holder" })).toBe("clean");
+    // An external opportunity's unknown depth stays real evidence debt.
+    expect(classifyYieldSourcePosture({ ...unmeasured, yieldType: "lending-opportunity", sourceRole: "external-opportunity" })).toBe("watch");
+    // A native row with measured TVL but no supply-relative ratio is still unmeasured.
+    expect(classifyYieldSourcePosture({
+      ...unmeasured,
+      sourceTvlUsd: 10_000_000,
+      yieldType: "lending-vault",
+      sourceRole: "canonical-holder",
+    })).toBe("watch");
+    // Measured native depth is classified on the measurement, not the yield type.
+    expect(classifyYieldSourcePosture({
+      ...unmeasured,
+      sourceRisk: { ...unmeasured.sourceRisk, sourceDepthRatio: 0.02 },
+      sourceTvlUsd: 10_000_000,
+      yieldType: "lending-vault",
+      sourceRole: "canonical-holder",
+    })).toBe("clean");
+  });
+
   it("formats material source-risk summaries for compact row cells", () => {
     expect(formatYieldSourceRiskSummary({ sourceRiskScore: 42, sourceRiskPenalty: 1.32 })).toBe(
       "Source risk 42/100 | 1.32x",
@@ -117,6 +144,23 @@ describe("yield source risk UI helpers", () => {
     expect(getYieldSourceRiskDrivers({ sourceRisk: null })).toEqual([]);
     expect(getYieldSourceRiskDrivers({ sourceRisk: buildSourceRiskGoldenFixture("missing-safety") })).toEqual([]);
     expect(formatYieldSourceRiskDriverSummary([])).toBe("No source-risk drivers shown.");
+  });
+
+  it("describes a count-only source switch by its trailing-30-day window", () => {
+    const [countOnly] = getYieldSourceRiskDrivers({ sourceRisk: { sourceSwitchCount30d: 1 } });
+    expect(countOnly).toMatchObject({
+      key: "source-changed",
+      description: "Selected source changed within the last 30 days.",
+    });
+
+    const [latest] = getYieldSourceRiskDrivers({
+      sourceRisk: { sourceSwitchCount30d: 2 },
+      sourceChanged: true,
+    });
+    expect(latest).toMatchObject({
+      key: "source-changed",
+      description: "Selected source changed versus the prior published snapshot.",
+    });
   });
 
   it("classifies source depth only when TVL and supply-relative depth are present", () => {

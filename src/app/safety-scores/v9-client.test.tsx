@@ -229,6 +229,22 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getByTestId("v9-card").textContent).toBe("partial");
   });
 
+  it("labels the non-USD, non-commodity peg bucket as other pegs", () => {
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle", grade: "A", score: 90 }),
+        makeV9Card({ id: "eurs-stasis", grade: "B", score: 75 }),
+      ],
+    })));
+    render(<ReportCardsV9Client />);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Other pegs" })[0]);
+
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+    expect(screen.getByTestId("v9-card").textContent).toBe("eurs-stasis");
+    expect(screen.getByText(/· other peg/)).toBeTruthy();
+  });
+
   it("keeps the peg filter usable while the independent stablecoins read is unavailable", () => {
     mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
       cards: [

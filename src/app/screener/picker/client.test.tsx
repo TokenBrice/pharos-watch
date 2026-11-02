@@ -289,7 +289,7 @@ describe("SelectorClient — state machine", () => {
     expect(await screen.findByText(/in scope USD stablecoins/i)).toBeTruthy();
   });
 
-  it("blocks Trading share links when per-input staleness exceeds its cadence-aware limit", async () => {
+  it("keeps Trading share links enabled at the ADR-42 stale band", async () => {
     const mod = await import("@shared/lib/selector");
     (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
       mockSelectorOutput({
@@ -300,7 +300,37 @@ describe("SelectorClient — state machine", () => {
             ...baseRecommendation,
             profile: "trading",
             recommendedSource: null,
-            perInputStaleness: { pegSummary: 500, dexTvl: 901, dews: 1_800 },
+            perInputStaleness: { pegSummary: 10_800, dexTvl: 43_200, dews: 21_600 },
+          },
+        ],
+      }),
+    );
+
+    setUrlSearch("p=trading&h=1to7d&d=tight&v=cex&u=24h&step=result");
+    render(<SelectorClient />);
+
+    const copy = await screen.findByRole("button", { name: /Copy share link/i });
+    expect(copy.hasAttribute("disabled")).toBe(false);
+  });
+
+  it.each([
+    ["pegSummary", 10_801],
+    ["dexTvl", 43_201],
+    ["dews", 21_601],
+  ])("blocks Trading share links when %s crosses the ADR-42 stale band", async (key, ageSeconds) => {
+    const mod = await import("@shared/lib/selector");
+    (mod.runSelector as ReturnType<typeof vi.fn>).mockImplementation((input: SelectorInput) =>
+      mockSelectorOutput({
+        profile: "trading",
+        input,
+        recommended: [
+          {
+            ...baseRecommendation,
+            profile: "trading",
+            recommendedSource: null,
+            // All USD-trading keys are required, so the other two must sit just
+            // under their own band or the missing-key guard blocks vacuously.
+            perInputStaleness: { pegSummary: 10_799, dexTvl: 43_199, dews: 21_599, [key]: ageSeconds },
           },
         ],
       }),

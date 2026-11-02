@@ -96,6 +96,56 @@ describe("YieldLeaderboard export", () => {
     expect(safetyProvenance?.accessor((data as unknown[])[0])).toBe("default-safety");
   });
 
+  it("records the source assessment clock beside the publication as-of date", () => {
+    const row = makeYieldViewModelRow({});
+    render(
+      <YieldLeaderboard
+        rows={[row]}
+        logos={{}}
+        riskFreeRate={3.5}
+        medianApy={4}
+        scalingFactor={1}
+        updatedAt={1_778_908_800}
+        sourceClock={{ assessedAt: 1_778_908_803 }}
+        filterSummary={{
+          visibleCount: 1,
+          totalCount: 1,
+          comparisonLabel: "",
+          activeFilters: [],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Export 1 yield rows as CSV" }));
+    const [, , , preamble] = downloadCsvWithPreambleMock.mock.calls[0]!;
+    expect(preamble.asOfISO).toBe(new Date(1_778_908_800 * 1000).toISOString());
+    expect(preamble.sourceAssessedISO).toBe(new Date(1_778_908_803 * 1000).toISOString());
+  });
+
+  it("omits the source assessment clock when it is unknown", () => {
+    const row = makeYieldViewModelRow({});
+    render(
+      <YieldLeaderboard
+        rows={[row]}
+        logos={{}}
+        riskFreeRate={3.5}
+        medianApy={4}
+        scalingFactor={1}
+        updatedAt={1_778_908_800}
+        filterSummary={{
+          visibleCount: 1,
+          totalCount: 1,
+          comparisonLabel: "",
+          activeFilters: [],
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Export 1 yield rows as CSV" }));
+    const [, , , preamble] = downloadCsvWithPreambleMock.mock.calls[0]!;
+    expect(preamble).not.toHaveProperty("sourceAssessedISO");
+  });
+
   it("exports the published view rank instead of the current sort position", () => {
     const rows = [
       makeYieldViewModelRow({ id: "b", symbol: "B", viewRank: 2, rankLabel: "#2" }),

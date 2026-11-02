@@ -21,7 +21,7 @@ import {
 } from "@/lib/yield-source-risk";
 import { formatCurrency } from "@shared/lib/format";
 import { numberValue } from "@shared/lib/type-guards";
-import type { YieldRanking, YieldType } from "@shared/types";
+import type { YieldRanking, YieldSourceRole, YieldType } from "@shared/types";
 import { YieldAccessStructure } from "@/components/yield-access-structure";
 
 type YieldSourceRisk = YieldRanking["sourceRisk"];
@@ -32,6 +32,7 @@ export interface YieldSourceRiskCardProps {
   sourceTvlUsd: number | null;
   sourceDepthLens: YieldSourceDepthLens;
   yieldType: YieldType;
+  sourceRole?: YieldSourceRole | null;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
   sourceChanged?: boolean;
   /** Reader-facing source age from the source's own clock (public gate). */
@@ -86,6 +87,7 @@ export function YieldSourceRiskCard({
   sourceTvlUsd,
   sourceDepthLens,
   yieldType,
+  sourceRole = null,
   sourceRiskDrivers,
   sourceChanged = false,
   freshness,
@@ -96,14 +98,14 @@ export function YieldSourceRiskCard({
   showVenueBreakdown = true,
   className,
 }: YieldSourceRiskCardProps) {
-  const postureInput = { sourceRisk, sourceTvlUsd, sourceDepthLens, sourceChanged, sourceFreshness, warningSignals };
+  const postureInput = { sourceRisk, sourceTvlUsd, sourceDepthLens, yieldType, sourceRole, sourceChanged, sourceFreshness, warningSignals };
   const posture = classifyYieldSourcePosture(postureInput);
   const postureMeta = YIELD_SOURCE_POSTURE_DEFINITIONS[posture];
   const postureLabel = formatYieldSourcePosture(
     posture,
     isYieldSourcePostureScoringWindowOnly(postureInput, posture, freshness?.status === "stale"),
   );
-  const depthDisplay = getYieldSourceDepthDisplay({ depthLens: sourceDepthLens, yieldType, sourceTvlUsd });
+  const depthDisplay = getYieldSourceDepthDisplay({ depthLens: sourceDepthLens, yieldType, sourceRole, sourceTvlUsd });
   const venueTier = sourceRisk?.venueRiskTier ?? null;
   const venueConfidence = sourceRisk?.venueRiskConfidence ?? null;
   const dependency = sourceRisk?.dependencyConcentration ?? null;
