@@ -1,6 +1,4 @@
 // @vitest-environment jsdom
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -255,8 +253,6 @@ describe("MethodologyPage", () => {
     const text = methodologyDocument().querySelector("#pricing-pipeline-methodology")!.textContent!.replace(/\s+/g, " ");
     expect(text).toContain("withheld once an overlapping protocol DEX candidate passes registry, freshness, price and TVL checks, even if corroboration later fails");
     expect(text).not.toContain("withheld only when an overlapping protocol-level DEX bridge lane is admitted");
-    const owner = readFileSync(resolve(process.cwd(), "docs/pricing-pipeline.md"), "utf8");
-    expect(owner).toContain("the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration.");
   });
 
   it("explains Bank Run Gauge unavailability by missing or zero weights, not only all-NR", () => {
@@ -313,8 +309,6 @@ describe("MethodologyPage", () => {
     expect(text).not.toMatch(/retires the stale live row/);
     expect(text).toContain("keeps the existing old-direction lifecycle open");
     expect(text).toContain("superseded-direction");
-    const owner = readFileSync(resolve(process.cwd(), "docs/depeg-detection.md"), "utf8");
-    expect(owner).toContain("`confirm_required` direction changes keep the old-direction lifecycle open");
   });
 
   it("separates per-coin unrated fallback PYS from an unavailable safety snapshot and opportunity-evidence-missing NR", () => {

@@ -70,6 +70,9 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `MINT_BURN_STALE_WARN_SEC` | `string` | optional | - | - | Mint/burn stale-warning threshold override (seconds). |
 | `MINT_BURN_STALE_CRIT_SEC` | `string` | optional | - | - | Mint/burn stale-critical threshold override (seconds). |
 | `MINT_BURN_ALERT_COOLDOWN_SEC` | `string` | optional | - | - | Mint/burn stale-alert dedupe cooldown override (seconds). |
+| `WEEKLY_DIGEST_MODEL` | `string` | optional | - | - | Optional Worker var overriding the weekly recap generation model. |
+| `WEEKLY_DIGEST_EFFORT` | `string` | optional | - | - | Optional Worker var overriding the weekly recap reasoning effort. |
+| `WEEKLY_DIGEST_MAX_TOKENS` | `string` | optional | - | - | Optional Worker var overriding the weekly recap output token cap. |
 | `OPENEXCHANGERATES_API_KEY` | `string` | optional | - | - | Open Exchange Rates credential used for FX cross-validation. |
 | `BANXICO_TOKEN` | `string` | required | - | - | Banxico SIE API token required for official MXN CETES 28-day benchmark rates; when the feed fails, MXN retains the last market benchmark when available or remains unavailable for USD fallback. |
 | `CLOUDFLARE_ACCOUNT_ID` | `string` | optional | - | - | Cloudflare account scope used by admin D1 status metrics. |

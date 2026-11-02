@@ -113,6 +113,7 @@
     "check:cloudflare-account-state": "node scripts/ci/check-cloudflare-account-state-drift.mjs",
     "check:unused-code": "node --import tsx scripts/ci/check-unused-code.ts",
     "check:sensitive-page-copy": "node --import tsx scripts/ci/check-sensitive-page-copy.ts",
+    "check:homepage-health-copy": "node --import tsx scripts/ci/check-homepage-health-copy.ts",
     "check:script-entrypoints": "node --import tsx scripts/ci/check-script-entrypoints.ts",
     "check:cli-args-policy": "node --import tsx scripts/ci/check-cli-args-policy.ts",
     "check:agent-skills": "node scripts/maintenance/sync-agent-skills.mjs --check",

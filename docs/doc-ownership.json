@@ -1363,7 +1363,7 @@
         },
         {
           "sources": ["docs/process/lane-freshness-matrix.md"],
-          "tests": ["scripts/__tests__/freshness-document-contract.test.ts"]
+          "tests": ["scripts/__tests__/doc-sync.test.ts"]
         },
         {
           "sources": ["scripts/maintenance/monitor-worker-memory.ts", "scripts/maintenance/__tests__/fixtures/worker-memory/**", ".github/workflows/worker-memory-monitor.yml"],

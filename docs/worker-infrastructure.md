@@ -58,7 +58,7 @@ Use `logCronRun()` for terminal outcomes, `recordCronFailure()` for non-fatal ex
 
 ## Env Interface
 
-`Env` (`worker/src/lib/env.ts`) projects the shared binding manifest through a Worker-local platform type map; shared code imports no Worker globals. Wrangler owns deployed bindings and vars, checked against manifest key/type metadata by `npm run check:env-contract`. Operator requirement status is separate from ingress requiredness: `GITHUB_PAT`, `FEEDBACK_IP_SALT`, and `BANXICO_TOKEN` remain optional properties, with missing credentials reported by runtime validation.
+`Env` (`worker/src/lib/env.ts`) projects the shared binding manifest through a Worker-local platform type map; shared code imports no Worker globals. Wrangler owns deployed bindings and vars, checked against manifest key/type metadata by `npm run check:env-contract`. The same check requires every runtime env read to be declared: `env.X`/`runtime.env.X` in `worker/src` and `functions`, and inlined `process.env.NEXT_PUBLIC_*` in `src`. Operator requirement status is separate from ingress requiredness: `GITHUB_PAT`, `FEEDBACK_IP_SALT`, and `BANXICO_TOKEN` remain optional properties, with missing credentials reported by runtime validation.
 
 `worker/src/lib/env.ts` exports the worker runtime views used by validation:
 

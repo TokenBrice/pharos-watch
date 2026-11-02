@@ -30,6 +30,7 @@ import { PATH_FAMILIES, enumerateDocReferences, matchesOwnershipGlob } from "../
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { PR_DOC_COMMANDS, type PrLaneCommandDefinition } from "../lib/pr-lanes.mts";
 import { SENSITIVE_COPY_ROOTS } from "../ci/check-sensitive-page-copy.ts";
+import { isHomepageCopyPath } from "../ci/check-homepage-health-copy.ts";
 
 const ROOT_DEPENDENCY_PATHS = new Set(["package.json", "package-lock.json"]);
 const REVIEWED_DEPENDENCY_AUDIT_PATHS: Record<string, true> = {
@@ -281,6 +282,9 @@ export function buildPrStaticCheckPlan(
     file === "scripts/ci/check-sensitive-page-copy.ts"
   )) {
     commands.push({ name: "check:sensitive-page-copy" });
+  }
+  if (changedFiles.some(isHomepageCopyPath)) {
+    commands.push({ name: "check:homepage-health-copy" });
   }
   commands.push(...baselineChecks);
 

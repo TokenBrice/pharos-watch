@@ -2,7 +2,7 @@
 
 import { readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
-import { collectSourceFiles } from "../lib/source-files.mts";
+import { collectSourceFiles, collectSourceFilesUnderRoot } from "../lib/source-files.mts";
 import { splitLines } from "../lib/doc-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
@@ -14,6 +14,7 @@ import {
   renderWorkerInfrastructureEnvBlock,
 } from "@shared/lib/env-contract";
 import { ENV_BINDINGS } from "@shared/lib/env-contract/registry";
+import type { EnvBindingDefinition, EnvRuntimeName } from "@shared/lib/env-contract/types";
 
 const repoRoot = process.cwd();
 const envExamplePath = resolve(repoRoot, ".env.example");
@@ -57,6 +58,18 @@ const SOURCE_SCAN_EXTENSIONS = new Set([
   ".yaml",
   ".sh",
 ]);
+
+/** Runtime code reads env through a binding object (`env.X`, `runtime.env.X`)
+ * or, for the static frontend, through inlined `process.env.NEXT_PUBLIC_*`.
+ * Both must be declared in the manifest; the manifest renders `.env.example`.
+ * `process.env` is excluded: those are Node/build variables, not bindings. */
+const RUNTIME_ENV_OBJECT_KEY_PATTERNS = [
+  /(?:^|[^A-Za-z0-9_$.])env\.([A-Z][A-Z0-9_]+)/g,
+  /(?<!process)\.env\.([A-Z][A-Z0-9_]+)/g,
+];
+const FRONTEND_PUBLIC_ENV_KEY_PATTERN = /process\.env\.(NEXT_PUBLIC_[A-Z][A-Z0-9_]*)/g;
+const RUNTIME_ENV_SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts"]);
+const TEST_SOURCE_PATH = /(?:^|\/)(?:__tests__|__mocks__|test-helpers)(?:\/|$)|\.(?:test|test-support)\.[cm]?[jt]sx?$/;
 
 const DOC_NON_ENV_TOKENS = new Set([
   "WORKER_RESERVED_ENV_KEYS",
@@ -324,6 +337,60 @@ export function collectSourceEnvKeys(filePaths: readonly string[]): Set<string> 
   return keys;
 }
 
+export interface RuntimeEnvReadInventory {
+  worker: ReadonlySet<string>;
+  pages: ReadonlySet<string>;
+  frontend: ReadonlySet<string>;
+}
+
+function collectRuntimeEnvReadKeys(filePaths: readonly string[], patterns: readonly RegExp[]): Set<string> {
+  const keys = new Set<string>();
+  for (const filePath of filePaths) {
+    const source = readFileSync(filePath, "utf8");
+    for (const pattern of patterns) addRegexMatches(keys, source, pattern);
+  }
+  return keys;
+}
+
+/** Runtime env reads must be declared in the manifest that also renders
+ * `.env.example`; a hand-added key otherwise works in Cloudflare and silently
+ * disappears from the operator contract. Non-binding globals (`ASSETS`,
+ * `SITE_API`) and CI/build variables are not env candidates, so they stay out. */
+export function findUndeclaredRuntimeEnvKeys(
+  reads: RuntimeEnvReadInventory,
+  bindings: readonly EnvBindingDefinition[] = ENV_BINDINGS,
+): string[] {
+  const errors: string[] = [];
+  const check = (keys: ReadonlySet<string>, runtimes: readonly EnvRuntimeName[], label: string) => {
+    for (const key of [...keys].sort()) {
+      const declared = bindings.some((binding) =>
+        binding.key === key && runtimes.some((runtime) => binding.runtimes[runtime]));
+      if (!declared) {
+        errors.push(
+          `${label} reads undeclared env key ${key}; declare it in shared/lib/env-contract/registry.ts ` +
+            `with the ${runtimes.join("/")} runtime`,
+        );
+      }
+    }
+  };
+  check(reads.worker, ["worker"], "Worker runtime");
+  check(reads.pages, ["pagesOps", "pagesSiteData"], "Pages Functions runtime");
+  check(reads.frontend, ["frontend"], "Frontend build");
+  return errors;
+}
+
+export function collectRuntimeEnvReads(root = repoRoot): RuntimeEnvReadInventory {
+  const sourceFiles = (rootDir: string) => collectSourceFilesUnderRoot(rootDir, root, {
+    extensions: RUNTIME_ENV_SOURCE_EXTENSIONS,
+  }).filter((filePath) => !TEST_SOURCE_PATH.test(relative(root, filePath).replaceAll("\\", "/")));
+
+  return {
+    worker: collectRuntimeEnvReadKeys(sourceFiles("worker/src"), RUNTIME_ENV_OBJECT_KEY_PATTERNS),
+    pages: collectRuntimeEnvReadKeys(sourceFiles("functions"), RUNTIME_ENV_OBJECT_KEY_PATTERNS),
+    frontend: collectRuntimeEnvReadKeys(sourceFiles("src"), [FRONTEND_PUBLIC_ENV_KEY_PATTERN]),
+  };
+}
+
 function extractInlineCodeTokens(line: string): string[] {
   const tokens: string[] = [];
   let index = 0;
@@ -482,6 +549,8 @@ export function runEnvContractCheck({
 
   errors.push(...findEnvExamplePolicyErrors(readFileSync(envExamplePath, "utf8")));
 
+  errors.push(...findUndeclaredRuntimeEnvKeys(collectRuntimeEnvReads()));
+
   assertFileMatchesExpected(envExamplePath, renderEnvExample(), errors);
 
   for (const block of GENERATED_DOC_BLOCKS) {
@@ -505,7 +574,7 @@ export function runEnvContractCheck({
   }
 
   consoleImpl.log(
-    "Environment contract is in sync with Wrangler bindings, the shared manifest, generated docs blocks, and referenced env names.",
+    "Environment contract is in sync with Wrangler bindings, the shared manifest, runtime env reads, generated docs blocks, and referenced env names.",
   );
   return true;
 }
