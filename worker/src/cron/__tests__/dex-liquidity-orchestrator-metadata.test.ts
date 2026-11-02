@@ -101,15 +101,33 @@ describe("dex liquidity cron metadata", () => {
     expect(buildDexLiquidityCronMetadata(params)).not.toHaveProperty("quality");
   });
 
-  it("degrades the quality verdict only for a confirmed cohort drop", () => {
+  it("retains a chain TVL drop as a warning without declaring incomplete inputs", () => {
     const params = metadataParams();
     Object.assign(params.scoreState.analysis.sourceCoverage, {
-      qualityDriftFlags: ["chain-tvl-drop:ethereum"],
-      cohortDriftFlags: ["chain-tvl-drop:ethereum"],
+      qualityDriftFlags: ["chain-tvl-drop:ink"],
+      cohortDriftFlags: ["chain-tvl-drop:ink"],
     });
     const metadata = buildDexLiquidityCronMetadata(params);
-    expect(metadata.quality).toEqual({ degraded: true, reasons: ["chain-tvl-drop:ethereum"] });
+    expect(metadata.quality).toEqual({ reasons: ["chain-tvl-drop:ink"] });
   });
+
+  it.each([{ otherFlags: [] }, { otherFlags: ["chain-tvl-drop:ink"] }])(
+    "degrades for source-pool loss and leads with its cause alongside $otherFlags", ({ otherFlags }) => {
+      const params = metadataParams();
+      const flags = [...otherFlags, "source-family-drop:cg_onchain"];
+      Object.assign(params.scoreState.analysis.sourceCoverage, {
+        qualityDriftFlags: flags,
+        cohortDriftFlags: flags,
+      });
+      const metadata = buildDexLiquidityCronMetadata(params);
+      const reasons = ["source-family-drop:cg_onchain", ...otherFlags];
+      expect(metadata.quality).toEqual({ degraded: true, reasons });
+      const compacted = compactCronMetadataForPersistence(JSON.stringify({
+        ...metadata, oversizedDiagnostic: "x".repeat(MAX_PERSISTED_CRON_METADATA_BYTES),
+      }));
+      expect(JSON.parse(compacted.metadata!).quality).toEqual({ degraded: true, reasons });
+    },
+  );
 
   it("reports partial-source warnings even without confirmed drift or a failed source", () => {
     const params = metadataParams();
