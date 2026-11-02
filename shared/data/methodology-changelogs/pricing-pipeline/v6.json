@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.67",
+    "title": "Observed chain history survives a chain-dropout carry",
+    "date": "2026-11-02",
+    "effectiveAt": 1793577600,
+    "summary": "When a chain-dropout carry publishes the frozen vetted baseline, a provider aggregate history bucket is now kept only if every carried chain's own packet row still reports that bucket at the baseline; an absent, zero or divergent bucket keeps the window unavailable, and attribution ambiguity still withholds all three.",
+    "impact": [
+      "A carried chain's own 1d/7d/30d bucket equal to the carried baseline makes the provider aggregate history describe the same composition as the carried total: its window change is zero, so `change1d`/`change7d`/`change30d` stay observable on the carried row instead of publishing unavailable.",
+      "An absent chain row (for example BUIDL/TRYB), a null or zero bucket, a bucket that has aged away from the frozen baseline, or an attribution-ambiguous held total leaves that aggregate bucket null. Pairing the provider history with a carried total that re-adds a differently measured chain would publish a synthetic move (R1).",
+      "Current supply, the seven-day carry ceiling, partial coverage, repair and release paths, and `supplyChainGuard` provenance are unchanged. Activation is 2026-11-02 00:00 UTC (1793577600)."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.66",
     "title": "Wide CEX bid/ask spreads are rejected",
     "date": "2026-11-01",
