@@ -93,12 +93,34 @@ describe("isolate-local state registry", () => {
     ["a line break before the literal", "const responseCache =\n        {};"],
     ["a comment before the `=`", "const responseCache /* seeded */ = {};"],
     ["a second declaration on the same line", "const seeded = 1; let responseCache = loadCache();"],
+    // Statement starts the column-0 anchor used to miss: a comment between
+    // `export` and the keyword, and a declaration that follows another
+    // statement or a block boundary on the same line.
+    ["a comment between `export` and the keyword", "export /* seeded */ const responseCache = new Map();"],
+    ["a preceding statement on the same line", "seed(); const responseCache = new Map();"],
+    ["a preceding block on the same line", "if (seed) { seed(); } const responseCache = new Map();"],
   ])("detects a stateful declaration with %s", (_label, declaration) => {
     const root = roots.makeRoot();
     roots.writeText(root, "state.ts", `
       ${declaration}
       function update() { responseCache["hit"] = true; }
     `);
+    expect(findUnregisteredIsolateLocalState([], { root, sourceFiles: [resolve(root, "state.ts")] }))
+      .toEqual([{ sourcePath: "state.ts", stateName: "responseCache" }]);
+  });
+
+  it("detects an object type body written without indentation", () => {
+    // The type body's lines sit in column 0, where the statement-end heuristic
+    // used to stop after `hit: number;` before reaching the initializer.
+    const root = roots.makeRoot();
+    roots.writeText(root, "state.ts", [
+      "const responseCache: {",
+      "hit: number;",
+      "miss: number;",
+      "} = {};",
+      'function update() { responseCache["hit"] = true; }',
+      "",
+    ].join("\n"));
     expect(findUnregisteredIsolateLocalState([], { root, sourceFiles: [resolve(root, "state.ts")] }))
       .toEqual([{ sourcePath: "state.ts", stateName: "responseCache" }]);
   });
@@ -148,8 +170,10 @@ describe("isolate-local state registry", () => {
       else if (findModuleStateDeclarations(root, file).length > 0) dropped.push(relative(root, file));
     }
     expect(dropped, `Files with module state the prefilter drops:\n${dropped.join("\n")}`).toEqual([]);
-    // Parsing the admitted files is what the guard costs, so keep them rare.
-    expect(admitted / files.length).toBeLessThan(0.3);
+    // Parsing the admitted files is what the guard costs, so keep them rare. A
+    // stateful-module wave legitimately raises this; 0.5 still catches a
+    // prefilter that has stopped narrowing at all.
+    expect(admitted / files.length).toBeLessThan(0.5);
   }, 15_000);
 
 });

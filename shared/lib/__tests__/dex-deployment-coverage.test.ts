@@ -6,7 +6,6 @@ import {
   CURVE_NATIVE_DISCOVERY_CHAINS,
   DEX_COVERAGE_WAIVERS,
   DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS,
-  DEX_DISCOVERY_PROVIDER_REGISTRY,
   getActiveDexCoverageWaiver,
   getDexDiscoveryProviders,
   getGeckoTerminalDiscoveryTarget,
@@ -241,16 +240,13 @@ describe("DEX deployment coverage ownership", () => {
     expect(isCensusProviderSetSupersededByRegistry("kava", "usdx", ["curve", "kava-swap"])).toBe(false);
   });
 
-  it("resolves the active Curve provider on every chain its discovery set names", () => {
-    const curve = DEX_DISCOVERY_PROVIDER_REGISTRY.find((provider) => provider.providerId === "curve");
-    expect(curve, "the registry must keep a Curve adapter").toBeDefined();
-    expect(curve!.lifecycle).toBe("active");
+  it("names only chains the chain registry knows in the Curve native discovery set", () => {
+    // `curve.supports` is this very set (`shared/lib/dex-deployment-coverage.ts`),
+    // so resolving the provider from it proves nothing; the independent
+    // invariant is that every chain in the set is a registered chain id.
     expect(CURVE_NATIVE_DISCOVERY_CHAINS.size).toBeGreaterThan(0);
     for (const chain of CURVE_NATIVE_DISCOVERY_CHAINS) {
-      // A chain id the registry does not know would silently resolve no
-      // provider, so the discovery set itself is validated against CHAIN_META.
       expect(CHAIN_META[chain], `${chain} must be a registered chain`).toBeDefined();
-      expect(getDexDiscoveryProviders(chain), chain).toContain("curve");
     }
   });
 

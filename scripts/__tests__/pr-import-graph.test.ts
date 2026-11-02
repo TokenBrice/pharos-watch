@@ -14,7 +14,7 @@ import {
 } from "../lib/pr-import-graph.mts";
 import { EXECUTABLE_TEST_PROJECTS } from "../lib/critical-ownership.mts";
 import { VITEST_SETUP_FILES } from "../lib/vitest-setup-files.mts";
-import { compareCommitSelections, summarizeParityFailures } from "../ci/check-test-plan-parity";
+import { compareCommitSelections, incomparableCommit, summarizeParityFailures } from "../ci/check-test-plan-parity";
 import { withTempRepo } from "./helpers/test-state";
 
 const CWD = "/repo";
@@ -338,6 +338,21 @@ describe("static import-graph PR test selection", () => {
     expect(summarizeParityFailures([empty, dataOnly]).join("\n")).toContain("compared no non-vacuous selection across 2 commit(s)");
     // A single real comparison keeps an otherwise empty window valid.
     expect(summarizeParityFailures([empty, dataOnly, compared])).toEqual([]);
+  });
+
+  it("reports a commit the current planner cannot plan as not comparable", () => {
+    const compared = {
+      commit: "a".repeat(40), parent: `${"a".repeat(40)}^`, changed: 1,
+      ...compareCommitSelections("closure", ["scripts/a.test.ts"], ["scripts/a.test.ts"]),
+    };
+    const fellBack = incomparableCommit("c".repeat(40), `${"c".repeat(40)}^`, 2, "closure", "2 unresolved local specifier(s): a; b");
+    expect(fellBack).toMatchObject({
+      fallback: "2 unresolved local specifier(s): a; b", comparable: false, missing: [], vacuous: false, unproven: false,
+    });
+    // A fallback commit is missing evidence, never a parity pass: it does not
+    // fail a run that compared something, and it cannot carry a run alone.
+    expect(summarizeParityFailures([compared, fellBack])).toEqual([]);
+    expect(summarizeParityFailures([fellBack]).join("\n")).toContain("compared no non-vacuous selection across 1 commit(s)");
   });
 
   it("routes stablecoin catalog data to direct catalog/registry owners instead of the closure", () => {

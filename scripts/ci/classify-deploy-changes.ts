@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from "node:child_process";
+import { matchesGlob } from "node:path";
 import {
   hasCriticalCssPipelineImpact,
   hasDeployImpact,
@@ -12,8 +13,15 @@ import {
   normalizeRepoPath,
 } from "../lib/deploy-impact.mts";
 import { collectGitPaths } from "../lib/changed-files.mts";
-import { hasLaneInputImpact, hasPagesArtifactImpact } from "../lib/lane-input-closure.mts";
+import {
+  hasLaneInputImpact,
+  hasPagesArtifactImpact,
+  laneInputFiles,
+  LANE_DELETION_NON_INPUT_PREFIXES,
+  type LaneInputSpec,
+} from "../lib/lane-input-closure.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import type { PrImportGraphFs } from "../lib/pr-import-graph.mts";
 import { hasV9ContagionInput } from "../../worker/scripts/lib/v9-resource-policy.ts";
 import { selectChangedGeneratedArtifactIds } from "./select-generated-artifacts.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
@@ -81,6 +89,8 @@ const V9_RESOURCE_PATHS = [
   "scripts/ci/select-generated-artifacts.mts",
   "scripts/lib/automation-registry.mjs",
   "scripts/lib/changed-files.mts",
+  // The selector is its own input: a change here redefines what the lane measures.
+  "scripts/lib/lane-input-closure.mts",
   "scripts/lib/pr-lanes.mts",
   "scripts/lib/safety-score-v9-evaluation-inputs.mts",
   "scripts/maintenance/generate-pr-workflow-matrix.ts",
@@ -90,29 +100,74 @@ const V9_RESOURCE_PATHS = [
 // schema and the catalog JSON feeds the packed full-registry input.
 const V9_RESOURCE_PREFIXES = ["shared/data/stablecoins/", "worker/migrations/"];
 const KNOWN_NON_V9_PREFIXES = [
-  ".ci/", ".github/", "agents/", "data/", "docs/", "functions/", "public/", "scripts/",
-  "shared/", "src/", "tests/", "worker/",
+  ".agents/", ".ci/", ".claude/", ".codex/", ".github/", ".impeccable/", ".omp/", "agents/", "data/", "docs/",
+  "functions/", "public/", "scripts/", "shared/", "src/", "tests/", "worker/",
 ];
 const V9_RESOURCE_TOOLCHAIN_PATTERN =
   /(^|\/)(?:package(?:-lock)?\.json|tsconfig[^/]*\.json|vitest[^/]*|wrangler[^/]*|\.nvmrc|\.npmrc|\.node-version|\.tool-versions|mise\.toml|\.mise\.toml)$/;
 
+const artifactSourceCache = new WeakMap<ReadonlySet<string>, string[]>();
+
+/**
+ * Source paths of generated artifacts whose output the lane bundles. The probe
+ * imports some generated files as data (the worker-runtime catalog through
+ * `shared/lib/stablecoins/worker-runtime-registry.ts`, the report-card registry
+ * fingerprint module), so a change to a source of one of them changes the
+ * measured bundle without being an import edge of the harness. Outputs are
+ * matched against the lane's own closure, so a new artifact joins the lane as
+ * soon as one of its outputs does and no artifact id is restated here.
+ */
+function v9GeneratedArtifactSourcePaths(
+  spec: LaneInputSpec,
+  options: { cwd: string; fs?: PrImportGraphFs },
+): string[] {
+  const outputs = laneInputFiles(spec, options);
+  const cached = artifactSourceCache.get(outputs);
+  if (cached) return cached;
+  const artifacts = GENERATED_ARTIFACT_REGISTRY as { outputPaths?: readonly string[]; sourcePaths: readonly string[] }[];
+  const files = [...outputs];
+  const bundled = artifacts.filter((artifact) =>
+    (artifact.outputPaths ?? []).some((output) =>
+      outputs.has(output)
+      || files.some((file) => file.startsWith(`${output}/`) || (output.includes("*") && matchesGlob(file, output)))));
+  const sources = bundled.flatMap((artifact) => artifact.sourcePaths);
+  // The closure is cached per checkout, so the derivation is computed once.
+  artifactSourceCache.set(outputs, sources);
+  return sources;
+}
+
+function v9ResourceLaneSpec({ cwd, fs }: { cwd: string; fs?: PrImportGraphFs }): LaneInputSpec {
+  const base: LaneInputSpec = {
+    id: "v9-resource-lane",
+    roots: V9_RESOURCE_CLOSURE_ROOTS,
+    prefixes: V9_RESOURCE_PREFIXES,
+    patterns: [V9_RESOURCE_TOOLCHAIN_PATTERN],
+    ignoredPrefixes: KNOWN_NON_V9_PREFIXES,
+    deletionNonInputPrefixes: LANE_DELETION_NON_INPUT_PREFIXES,
+  };
+  const artifactSources = v9GeneratedArtifactSourcePaths(base, { cwd, fs });
+  return {
+    ...base,
+    exactPaths: V9_RESOURCE_PATHS,
+    // Registry source paths are patterns (`shared/types/**`), so they match here
+    // rather than in the literal exact paths.
+    matches: (file) =>
+      hasV9ContagionInput([file]) || artifactSources.some((pattern) => file === pattern || matchesGlob(file, pattern)),
+  };
+}
+
 export function hasV9ResourceImpact(
   files: readonly string[],
   generatedArtifactIds: readonly string[] = selectChangedGeneratedArtifactIds(files),
+  { cwd = process.cwd(), fs }: { cwd?: string; fs?: PrImportGraphFs } = {},
 ): boolean {
-  // Catalog generators and their transitive inputs share the artifact registry;
-  // the packed worker catalog is the probe's `#pharos-full-catalog` input.
+  // Two artifacts the probe packs through an input rather than an output, so
+  // the output-derived rule above cannot place them: the packed worker catalog
+  // is the probe's `#pharos-full-catalog` input, and the evaluation build
+  // manifest gates which inputs the fixture derives from that catalog.
   if (generatedArtifactIds.includes("safety-score-v9-evaluation-build")) return true;
   if (generatedArtifactIds.includes("stablecoin-worker-full-catalog")) return true;
-  return hasLaneInputImpact(files, {
-    id: "v9-resource-lane",
-    roots: V9_RESOURCE_CLOSURE_ROOTS,
-    exactPaths: V9_RESOURCE_PATHS,
-    prefixes: V9_RESOURCE_PREFIXES,
-    patterns: [V9_RESOURCE_TOOLCHAIN_PATTERN],
-    matches: (file) => hasV9ContagionInput([file]),
-    ignoredPrefixes: KNOWN_NON_V9_PREFIXES,
-  });
+  return hasLaneInputImpact(files, v9ResourceLaneSpec({ cwd, fs }), { cwd, fs });
 }
 
 export function classifyChangedFiles(

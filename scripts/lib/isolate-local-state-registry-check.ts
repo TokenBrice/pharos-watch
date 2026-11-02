@@ -26,9 +26,21 @@ const STATEFUL_CONTAINER_NAME = new RegExp(STATEFUL_CONTAINER_KEYWORDS, "i");
 // function body is not a candidate, and neither is a stateful object literal
 // nested in one. Statements start in column 0; their parameter lists, generic
 // annotations and closing braces also do, so a statement ends at the first
-// column-0 line terminated by `;` rather than at the next column-0 line.
-// eslint-disable-next-line security/detect-unsafe-regex -- anchored line-start match, no nested quantifiers
-const MODULE_DECLARATION_START = /^(?:export\s+)?(?:const|let|var)\b/gm;
+// column-0 line terminated by `;` rather than at the next column-0 line —
+// unless it has opened a brace it has not closed yet (see `moduleStatementEnd`).
+// A declaration can also start mid-line: after another statement (`;`), a block
+// boundary (`{`/`}`), or a leading block/line comment, and `export` may sit
+// before a comment rather than directly before the keyword. A comment run never
+// crosses a line break: a declaration that follows a multi-line comment starts
+// its own line and matches the `^` alternative, while a run that crossed lines
+// would swallow every declaration in between (a `//` inside a string is enough
+// to start one).
+const COMMENT_RUN = String.raw`(?:(?:/\*[\s\S]*?\*/|//[^\n]*)[ \t]*)*`;
+// eslint-disable-next-line security/detect-non-literal-regexp -- interpolates the module-level comment-run fragment, not caller input
+const MODULE_DECLARATION_START = new RegExp(
+  String.raw`(?:^|[;{}][ \t]*)${COMMENT_RUN}(?:export[ \t]+${COMMENT_RUN})?(?:const|let|var)\b`,
+  "gmu",
+);
 // A `let` declaration starts its statement or follows another one on the same
 // line; either way its initializer can be of any form.
 // eslint-disable-next-line security/detect-unsafe-regex -- bounded alternative, no nested quantifiers
@@ -63,11 +75,35 @@ export function listStateScanFiles(root: string): string[] {
 
 // Address just past the column-0 line that terminates the module-level
 // statement starting at `start`, or the end of the file when the statement has no
-// terminating `;` (automatic semicolon insertion, a trailing declaration).
+// terminating `;` (automatic semicolon insertion, a trailing declaration). An
+// object type body written at column 0 terminates its first lines with `;` while
+// the declaration is still open, so the statement keeps extending until the
+// braces it opened balance.
+function openBraces(text: string): number {
+  let open = 0;
+  for (const char of text) {
+    if (char === "{") open += 1;
+    if (char === "}" && open > 0) open -= 1;
+  }
+  return open;
+}
+
 function moduleStatementEnd(text: string, start: number): number {
   MODULE_STATEMENT_END.lastIndex = start;
-  const end = MODULE_STATEMENT_END.exec(text);
-  return end ? end.index + end[0].length : text.length;
+  let end = MODULE_STATEMENT_END.exec(text);
+  if (!end) return text.length;
+  let stop = end.index + end[0].length;
+  let open = openBraces(text.slice(start, stop));
+  while (open > 0) {
+    MODULE_STATEMENT_END.lastIndex = stop;
+    end = MODULE_STATEMENT_END.exec(text);
+    if (!end) return text.length;
+    const next = end.index + end[0].length;
+    // Count only the text added since the last stop, so the scan stays linear.
+    open += openBraces(text.slice(stop, next));
+    stop = next;
+  }
+  return stop;
 }
 
 // Statement shape, not absolute indentation, marks module level. A file written
@@ -94,7 +130,10 @@ export function matchesCandidatePrefilter(text: string): boolean {
   const source = withoutCommonIndent(text);
   // matchAll clones the pattern, so the shared lastIndex is never mutated.
   for (const match of source.matchAll(MODULE_DECLARATION_START)) {
-    const statement = source.slice(match.index, moduleStatementEnd(source, match.index));
+    // The pattern consumes the `;`/`{`/`}` this declaration follows, so the
+    // statement itself starts after it.
+    const start = /^[;{}]/.test(match[0]) ? match.index + 1 : match.index;
+    const statement = source.slice(start, moduleStatementEnd(source, start));
     if (MUTABLE_CONSTRUCTOR.test(statement) || RECORDER_FACTORY.test(statement)) return true;
     // A `let` declaration is a candidate whatever its initializer looks like.
     if (LET_DECLARATION_START.test(statement) && statement.includes("=")) return true;

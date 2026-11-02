@@ -44,7 +44,7 @@
         { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }
       ],
       "checks": [
-        "npx vitest run shared/lib/scene src/components/__tests__/scene-marks.test.tsx src/components/__tests__/scene-motion-coverage.test.ts"
+        "npx vitest run shared/lib/scene src/components/__tests__/ui-primitives.test.tsx src/components/__tests__/scene-motion-coverage.test.ts"
       ],
       "rules": [
         "The Cemetery must stay byte-identical during kit refactors.",
