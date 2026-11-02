@@ -316,16 +316,17 @@ describe("DepegResolverModule", () => {
       expect(screen.queryByText(/recovered\s+incidents/)).toBeNull();
     });
 
-    it.each([[1, "1 coin excluded"], [3, "3 coins excluded"]] as const)(
-      "names %i quarantined coins outside the calibration corpus",
-      (quarantinedCoins, suffix) => {
+    it.each([[1, "41 coins (1 excluded)"], [3, "41 coins (3 excluded)"]] as const)(
+      "reconciles %i quarantined coins inside the calibrated coin count",
+      (quarantinedCoins, corpus) => {
         render(<DepegResolverModule data={response({
           _meta: { ...meta, lineage: lineage(8_466, 41, quarantinedCoins) },
           rows: [row],
         })} />);
         expect(screen.getByText(/^Calibrated on/).textContent).toBe(
-          `Calibrated on 8,466 historical incidents · 41 coins · ${suffix}`,
+          `Calibrated on 8,466 historical incidents · ${corpus}`,
         );
+        expect(screen.queryByText(/coins? excluded/)).toBeNull();
       },
     );
 

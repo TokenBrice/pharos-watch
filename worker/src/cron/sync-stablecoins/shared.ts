@@ -15,7 +15,8 @@ import {
 import { setCacheIfNewer, getCache, getPriceCache, type PriceCacheEntry } from "../../lib/db-cache";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CronResult } from "../../lib/cron-logger";
-import type { BackingType } from "@shared/types/core";
+import { isCommodityPeg } from "@shared/lib/filter-tags";
+import type { BackingType, PegCurrency } from "@shared/types/core";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import type { PriceValidationReferences } from "../../lib/price-validation";
 import { loadFxRateState, getFxReferenceTypeFromState } from "../../lib/fx-rate-state";
@@ -776,6 +777,9 @@ export function mergeSupplementalLastKnownGood(
  * Published `pegMechanism` keeps DefiLlama's vocabulary, which has no distinct
  * `rwa-backed` value. Tracked intake rows publish the reviewed registry backing
  * in that vocabulary; untracked rows keep the upstream label untouched.
+ * Commodity pegs are the exception: the gold/silver supplemental lane publishes
+ * the registry backing unchanged, so the same coin must not flip to
+ * `fiat-backed` when this path rebuilds its row.
  */
 const PUBLISHED_PEG_MECHANISM_BY_BACKING = {
   "rwa-backed": "fiat-backed",
@@ -783,8 +787,8 @@ const PUBLISHED_PEG_MECHANISM_BY_BACKING = {
   algorithmic: "algorithmic",
 } as const satisfies Record<BackingType, string>;
 
-export function pegMechanismFromBacking(backing: BackingType): string {
-  return PUBLISHED_PEG_MECHANISM_BY_BACKING[backing];
+export function pegMechanismFromBacking(backing: BackingType, pegCurrency: PegCurrency): string {
+  return isCommodityPeg(pegCurrency) ? backing : PUBLISHED_PEG_MECHANISM_BY_BACKING[backing];
 }
 
 const ACTIVE_TRACKED_IDS = new Set(ACTIVE_STABLECOINS.map((meta) => meta.id));
@@ -819,7 +823,7 @@ export function restoreMissingTrackedAssets(
     if (presentIds.has(id)) continue;
     const previous = previousAssetsById.get(id);
     const meta = ACTIVE_META_BY_ID.get(id)!;
-    const pegMechanism = pegMechanismFromBacking(meta.flags.backing);
+    const pegMechanism = pegMechanismFromBacking(meta.flags.backing, meta.flags.pegCurrency);
     if (prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(id)) {
       const restoredBase = previous ? markRestoredSupply(previous, nowSec) : null;
       // A prior row that cannot name its observation clock keeps only identity

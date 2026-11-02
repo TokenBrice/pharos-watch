@@ -64,7 +64,12 @@ describe("pipeline quality model", () => {
       },
     });
 
-    expect(buildPipelineQualityModel(data).rows.find((row) => row.id === "blacklist-gaps")?.state).toBe("watch");
+    expect(buildPipelineQualityModel(data).rows.find((row) => row.id === "blacklist-gaps")).toMatchObject({
+      state: "watch",
+      // The public ratio can never prove Critical, so the Stale column names
+      // the watch cap instead of implying an attainable critical tier.
+      staleThreshold: ">=2% (watch cap)",
+    });
   });
 
   it("keeps inactive on-chain ratio gates Unknown instead of reporting healthy zeroes", () => {

@@ -430,9 +430,17 @@ describe("useCompareDataModel", () => {
       data: { peggedAssets: [makeStablecoin({ id: "usdc-circle" })], fxFallbackRates: {} },
       meta: { updatedAt: 500, status: "fresh" },
     }));
+    usePegSummaryMock.mockReturnValue(makeQueryResult({
+      data: { coins: [] },
+      meta: { updatedAt: 400, status: "fresh" },
+    }));
     useDexLiquidityMock.mockReturnValue(makeQueryResult({
       data: {},
       meta: { updatedAt: null, status: "unknown", reason: "producer-clock-unavailable" },
+    }));
+    useReportCardsV9Mock.mockReturnValue(makeQueryResult({
+      data: { cards: [] },
+      meta: { updatedAt: 200, status: "fresh" },
     }));
 
     const { result } = renderHook(() => useCompareDataModel({

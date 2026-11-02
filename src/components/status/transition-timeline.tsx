@@ -46,6 +46,12 @@ const PUBLIC_IMPACT_LABELS: Record<IncidentPublicImpact, string> = {
 interface TransitionTimelineProps {
   transitions: readonly StatusTransition[];
   nowSeconds: number;
+  /**
+   * Clock used only for elapsed durations (rows and incident episodes). A
+   * retained read ends durations at its own response clock while "ago" labels
+   * stay on the live `nowSeconds`.
+   */
+  durationNowSeconds?: number;
   transitionsLast24h: number | null;
   window: StatusHistoryWindow;
   filters: IncidentHistoryFilters;
@@ -264,6 +270,7 @@ function CauseDetails({ transition }: { transition: StatusTransition }) {
 export function TransitionTimeline({
   transitions,
   nowSeconds,
+  durationNowSeconds = nowSeconds,
   transitionsLast24h,
   window,
   filters,
@@ -278,10 +285,13 @@ export function TransitionTimeline({
 }: TransitionTimelineProps) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const view = useMemo(
-    () => buildIncidentHistoryView(transitions, nowSeconds, transitionsLast24h, filters),
-    [filters, nowSeconds, transitions, transitionsLast24h],
+    () => buildIncidentHistoryView(transitions, durationNowSeconds, transitionsLast24h, filters),
+    [durationNowSeconds, filters, transitions, transitionsLast24h],
   );
-  const episodes = useMemo(() => foldIncidentEpisodes(transitions, nowSeconds), [transitions, nowSeconds]);
+  const episodes = useMemo(
+    () => foldIncidentEpisodes(transitions, durationNowSeconds),
+    [durationNowSeconds, transitions],
+  );
   const recurrence = useMemo(() => buildIncidentRecurrence(transitions), [transitions]);
   const hasActiveFilters =
     filters.severity !== "all" ||

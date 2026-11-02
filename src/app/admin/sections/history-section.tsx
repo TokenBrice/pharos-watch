@@ -232,7 +232,7 @@ export function HistorySection({
   const historyCoverage =
     historyEvidence.source === "status-fallback" ? "status-fallback" : historyEvidence.completeness;
   const retainedClock = historyEvidence.state === "stale" && historyObservedAt != null;
-  const timelineNowSeconds = retainedClock ? historyObservedAt : nowSeconds;
+  const timelineDurationNowSeconds = retainedClock ? historyObservedAt : nowSeconds;
 
   return (
     <StatusSection
@@ -298,7 +298,8 @@ export function HistorySection({
       ) : null}
       <TransitionTimeline
         transitions={allTransitions}
-        nowSeconds={timelineNowSeconds}
+        nowSeconds={nowSeconds}
+        durationNowSeconds={timelineDurationNowSeconds}
         transitionsLast24h={transitionsLast24h}
         window={historyWindow}
         filters={historyFilters}

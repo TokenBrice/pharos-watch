@@ -150,7 +150,9 @@ export function buildPipelineQualityModel(data: StatusResponse): PipelineQuality
           ? `${blacklistTotal} retained blacklist events`
           : "Unknown retained-event population",
       warningThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded, 0)} (watch at >=${STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch} recent)`,
-      staleThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale, 0)}`,
+      // The public ratio can raise attention to Watch but cannot prove the
+      // server-owned Critical tier, so the Stale column names that cap.
+      staleThreshold: `>=${formatPercentFromRatio(STATUS_BLACKLIST_THRESHOLDS.missingRatioStale, 0)} (watch cap)`,
       state: blacklistState,
       stateDetail: blacklistUnknown
         ? dq.blacklistGapStatus === "failed"

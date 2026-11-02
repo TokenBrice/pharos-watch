@@ -213,6 +213,9 @@ export function buildReliabilityWorkspaceModel(input: ReliabilityWorkspaceInput)
   if (canaries && canaryAggregateKind) {
     const missingCheckCount = canaries.missingCheckIds?.length ?? 0;
     const counts = [
+      canaries.degradedCount > 0 ? `${canaries.degradedCount} degraded` : null,
+      canaries.errorCount > 0 ? `${canaries.errorCount} error` : null,
+      canaries.skippedCount > 0 ? `${canaries.skippedCount} skipped` : null,
       canaries.staleCount > 0 ? `${canaries.staleCount} stale` : null,
       (canaries.failedCount ?? 0) > 0 ? `${canaries.failedCount} failed` : null,
       (canaries.unknownExecutionCount ?? 0) > 0 ? `${canaries.unknownExecutionCount} unknown execution` : null,

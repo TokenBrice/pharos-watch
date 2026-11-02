@@ -97,7 +97,9 @@ describe("restoreMissingTrackedAssets", () => {
 
     expect(result.restoredIds).toEqual([id]);
     expect(result.assets).toHaveLength(1);
-    expect(result.assets[0]).toMatchObject({ id, supplyRestored: true });
+    // Gold publishes the registry backing ("rwa-backed"), exactly as the
+    // supplemental gold/silver lane does; it is not a fiat peg.
+    expect(result.assets[0]).toMatchObject({ id, supplyRestored: true, pegMechanism: "rwa-backed" });
   });
 
   it("does not restore coins already present in the intake list", () => {

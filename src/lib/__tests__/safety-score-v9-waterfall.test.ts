@@ -174,6 +174,35 @@ describe("buildScoreWaterfall", () => {
     expect(buildScoreWaterfall(card).map((step) => step.key)).toEqual(["quality", "peg", "published"]);
   });
 
+  it("does not invent a publication maximum when a suppressed peg row explains the gap", () => {
+    // Quality 87.55 with a 0.996 peg multiplier: the peg row is suppressed by
+    // PEG_EPSILON, but the pre-cap score 87.1998 publishes as 87. Plain rounding
+    // of the full chain explains the gap; no publication ceiling is involved.
+    const base = cardWithStages({
+      aggregatedQualityScore: 87.55,
+      pegMultiplier: 0.996,
+      baseAssetScore: 87.1998,
+      deploymentAdjustmentPoints: 0,
+      deploymentAdjustedScore: 87.1998,
+      preCapScore: 87.1998,
+      publishedScore: 87,
+    });
+    // Subcomponent-only partial evidence keeps the otherwise single-pillar
+    // chain visible, which is where the false cap row appeared.
+    const card = {
+      ...base,
+      partialEvidence: {
+        reasonCode: "partial-evidence-pipeline-gap",
+        excludedPillars: [],
+        excludedComponentKeys: ["redemption:reviewed:cost"],
+        causeGapRefs: [2],
+        causes: ["B"],
+      },
+    } as SafetyScoreV9CurrentCard;
+
+    expect(buildScoreWaterfall(card).map((step) => step.key)).toEqual(["quality", "published"]);
+  });
+
   it("keeps the three-pillar caption when only a subcomponent carries partial evidence", () => {
     const base = makeV9Card();
     const card = {

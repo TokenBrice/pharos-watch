@@ -328,7 +328,9 @@ describe("SelectorClient — state machine", () => {
             ...baseRecommendation,
             profile: "trading",
             recommendedSource: null,
-            perInputStaleness: { [key]: ageSeconds },
+            // All USD-trading keys are required, so the other two must sit just
+            // under their own band or the missing-key guard blocks vacuously.
+            perInputStaleness: { pegSummary: 10_799, dexTvl: 43_199, dews: 21_599, [key]: ageSeconds },
           },
         ],
       }),

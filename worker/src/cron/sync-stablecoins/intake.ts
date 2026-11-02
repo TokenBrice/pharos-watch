@@ -436,7 +436,7 @@ export async function loadStablecoinsIntake(
     const mapped = REGISTRY_BY_LLAMA_ID.get(String(asset.id));
     if (mapped) {
       asset.id = mapped.id;
-      asset.pegMechanism = pegMechanismFromBacking(mapped.flags.backing);
+      asset.pegMechanism = pegMechanismFromBacking(mapped.flags.backing, mapped.flags.pegCurrency);
     }
   }
 

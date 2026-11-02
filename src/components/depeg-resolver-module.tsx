@@ -68,9 +68,8 @@ function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summ
             incidents · <span className="pharos-numeric">{lineage.coinCount}</span> coins
             {lineage.quarantinedCoins > 0 ? (
               <>
-                {" · "}
-                <span className="pharos-numeric">{lineage.quarantinedCoins}</span>{" "}
-                {lineage.quarantinedCoins === 1 ? "coin" : "coins"} excluded
+                {" ("}
+                <span className="pharos-numeric">{lineage.quarantinedCoins}</span> excluded)
               </>
             ) : null}
           </p>

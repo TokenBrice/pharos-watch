@@ -66,9 +66,16 @@ function formatUsdWhole(value: number): string {
   return `$${formatDecimal(value, 0, 0)}`;
 }
 
-/** Donor-wall receipts: an unpriced donation is not zero, and sub-dollar gifts keep cents. */
-function formatDonationUsd(value: number): string {
-  if (value === 0) return "—";
+/** The ledger's provenance marker for a receipt it could not price ("manual-token-not-priced"). */
+function isUnpricedPriceNote(priceNote: string): boolean {
+  return priceNote === "unpriced" || priceNote.includes("not-priced");
+}
+
+/** Donor-wall receipts: provenance says whether the receipt was priced; zero is a value. */
+function formatDonationUsd(value: number, priceNote: string): string {
+  if (isUnpricedPriceNote(priceNote)) return "—";
+  // A priced gift below one cent would round to "$0.00"; print the bound instead.
+  if (value > 0 && value < 0.01) return "<$0.01";
   if (value < 1) return `$${formatDecimal(value, 2, 2)}`;
   return formatUsdWhole(value);
 }
@@ -395,7 +402,7 @@ export function DonorList({ donations, lastUpdatedAt, limit = 20 }: DonorListPro
                   <li key={`${d.chain}-${d.tx_hash}`} className="flex items-baseline justify-between gap-3">
                     <span className="flex-1 truncate font-mono text-xs">{displayText}</span>
                     <span className="shrink-0 text-xs text-muted-foreground">
-                      <span className="pharos-numeric">{formatDonationUsd(d.usd_at_receipt)}</span>{" "}
+                      <span className="pharos-numeric">{formatDonationUsd(d.usd_at_receipt, d.price_note)}</span>{" "}
                       {explorerUrl ? (
                         <a
                           href={explorerUrl}

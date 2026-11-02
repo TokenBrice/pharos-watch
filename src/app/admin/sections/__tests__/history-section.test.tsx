@@ -145,6 +145,10 @@ describe("HistorySection", () => {
     expect(screen.queryByText(/Current state/)).toBeNull();
     expect(screen.getByText(/Held for 1h/)).toBeTruthy();
     expect(screen.queryByText(/Held for 2h 30m/)).toBeNull();
+    // Only durations end at the retained clock; "ago" labels stay relative to
+    // the live clock so a stale read does not re-base reader-facing times.
+    expect(screen.getAllByText(/2h 30m ago/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/1h ago/)).toHaveLength(0);
   });
 
   it("keeps the current-state label when the history read is not retained", () => {

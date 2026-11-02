@@ -255,8 +255,11 @@ describe("Telegram Mini App shared contract", () => {
     }
   });
 
-  it("accepts an optional NAV peg label on catalog coins", () => {
-    expect(TelegramMiniAppCatalogSchema.safeParse({
+  it("parses an optional NAV peg label and rejects a non-string value", () => {
+    // The catalog object is `.passthrough()`, so only asserting parse success
+    // (or the retained value) would pass without a declared field: a non-string
+    // must be the thing that fails.
+    const catalog = {
       ...TELEGRAM_MINI_APP_CATALOG,
       searchableCoins: [{
         stablecoinId: "susde-ethena",
@@ -265,7 +268,15 @@ describe("Telegram Mini App shared contract", () => {
         peg: "USD",
         pegLabel: "USDe NAV",
       }],
-    }).success).toBe(true);
+    };
+    const parsed = TelegramMiniAppCatalogSchema.safeParse(catalog);
+    if (!parsed.success) throw new Error(JSON.stringify(parsed.error.issues));
+    expect(parsed.data.searchableCoins[0]?.pegLabel).toBe("USDe NAV");
+
+    expect(TelegramMiniAppCatalogSchema.safeParse({
+      ...catalog,
+      searchableCoins: [{ ...catalog.searchableCoins[0], pegLabel: 42 }],
+    }).success).toBe(false);
   });
 
   it("rejects unknown preset ids at catalog and mutable-state boundaries", () => {

@@ -29,4 +29,19 @@ describe("SafetyScoresTechnicalDetails", () => {
       expect(historical).not.toContain(phrase);
     }
   });
+
+  it("keeps the aggregation formula and facts grid out of the moved Grade stability block", () => {
+    const html = renderToStaticMarkup(<SafetyScoresTechnicalDetails />);
+    const current = disclosure(html, CURRENT_SUMMARY, HISTORICAL_SUMMARY);
+    const factsIndex = current.indexOf("Pillar weights");
+    const formulaIndex = current.indexOf("candidate = weakestPriced");
+    const carryIndex = current.indexOf("carried forward until that run");
+    const gradeIndex = current.indexOf("Grade stability");
+
+    expect(formulaIndex).toBeGreaterThanOrEqual(0);
+    expect(factsIndex).toBeGreaterThan(formulaIndex);
+    // The moved prose follows the facts grid instead of interrupting it.
+    expect(carryIndex).toBeGreaterThan(factsIndex);
+    expect(gradeIndex).toBeGreaterThan(carryIndex);
+  });
 });
