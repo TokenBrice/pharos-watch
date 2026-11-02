@@ -145,6 +145,16 @@ describe("pinned Move fungible-asset census reads", () => {
     }
   });
 
+  it("returns unresolved for malformed ConcurrentSupply.current instead of converting it to zero", async () => {
+    vi.mocked(fetchJsonWithRetry)
+      .mockResolvedValueOnce({ chain_id: 1, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::ConcurrentSupply", data: { current: {} } })
+      .mockResolvedValueOnce({ type: "0x1::fungible_asset::Metadata", data: { decimals: 6 } });
+    expect(await fetchMoveFungibleAssetSupply(metadataAddress, signal(), base, undefined, {
+      clockSec: clock, expectedChainId: 1,
+    })).toBeNull();
+  });
+
   it("authenticates the deployed OFT package metadata and all mint/burn/transfer refs at the same ledger", async () => {
     vi.mocked(fetchJsonWithRetry)
       .mockResolvedValueOnce({ chain_id: 126, ledger_version: "100", ledger_timestamp: String(clock * 1_000_000) })

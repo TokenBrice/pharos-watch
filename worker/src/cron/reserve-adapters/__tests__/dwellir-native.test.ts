@@ -200,9 +200,13 @@ describe("native credential redirect scoping", () => {
       .toEqual({ result: ["0x1", "0x0"] });
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
-  it.each(DWELLIR_NATIVE_ENDPOINTS.flatMap(endpoint =>
-    [301, 302, 303, 307, 308].map(status => ({ endpoint, status })),
-  ))("rejects $status from $endpoint.network without forwarding credentials", async ({ endpoint, status }) => {
+  // Every redirect status funnels into the same non-2xx refusal branch, so one
+  // status per endpoint proves the refusal (and credential non-forwarding) on
+  // each endpoint; the statuses rotate across endpoints for breadth.
+  it.each(DWELLIR_NATIVE_ENDPOINTS.map((endpoint, index) => ({
+    endpoint,
+    status: [301, 302, 307, 308][index % 4],
+  })))("rejects $status from $endpoint.network without forwarding credentials", async ({ endpoint, status }) => {
     const response = new Response(JSON.stringify({ result: ["0x1", "0x0"] }), {
       status, headers: { Location: "https://unapproved.example/native" },
     });

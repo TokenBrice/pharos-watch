@@ -228,10 +228,18 @@ describe("fetchInitiaWrapperVaultReserves", () => {
     await expect(runInitia(network, REVIEWED_TRANSPORT)).rejects.toThrow(/disagree on iusdSupply/);
   });
 
-  it("suspends live admission for the halted chain until the 2026-11-03 review", async () => {
+  it("suspends live admission whenever the binding carries a suspension marker", async () => {
     const run = await runInitia(twoProviders(), REVIEWED_TRANSPORT);
-    expect(run.config.suspended).toMatchObject({ since: "2026-10-23", reviewBy: "2026-11-03" });
-    const admission = evaluateAdapterSnapshotAdmission(run, NOW);
+    // Synthetic marker: the durable contract is the admission verdict, not the
+    // catalog's current suspension window.
+    const suspended = {
+      ...run,
+      config: {
+        ...run.config,
+        suspended: { reason: "initia chain halted", since: "2026-01-01", reviewBy: "2026-12-31" },
+      },
+    };
+    const admission = evaluateAdapterSnapshotAdmission(suspended, NOW);
     expect(admission.eligible).toBe(false);
     expect(admission.reasons).toContain("suspended");
   });

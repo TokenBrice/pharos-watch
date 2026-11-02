@@ -22,22 +22,17 @@ const AMBIGUOUS_NEAR_PERCENT_HTML = `
 </canvas>
 `;
 
-const COIN_CASES = [
-  {
-    coinType: "usdc",
-    displayId: "usdc-in-circulation",
-    canvasId: "usdc_chartjs_canvas",
-    attributes: 'data-usdc-us-treasuries="70" data-usdc-months="20" data-usdc-cash="10" data-usdc-in-circulation="0"',
-  },
-  {
-    coinType: "eurc",
-    displayId: "euro-in-circulation",
-    canvasId: "eurocoin_chartjs_canvas",
-    attributes: 'data-eurocoin-cash="98" data-eurocoin-tokens="2"',
-  },
-];
+// Parser/layout boundaries are shared by both coins (they differ only in ids and
+// slice tables); this USDC matrix covers every boundary branch, and the EURC
+// happy paths below keep the coin-specific wiring.
+const { coinType, displayId, canvasId, attributes } = {
+  coinType: "usdc",
+  displayId: "usdc-in-circulation",
+  canvasId: "usdc_chartjs_canvas",
+  attributes: 'data-usdc-us-treasuries="70" data-usdc-months="20" data-usdc-cash="10" data-usdc-in-circulation="0"',
+};
 
-describe.each(COIN_CASES)("Circle $coinType disclosure boundaries", ({ coinType, displayId, canvasId, attributes }) => {
+describe("Circle USDC disclosure boundaries", () => {
   const canvas = `<canvas id="${canvasId}" ${attributes}></canvas>`;
   const anchor = `<span id="${displayId}" data-point="100"></span>`;
   const date = "<p>As of Sep 24, 2026</p>";

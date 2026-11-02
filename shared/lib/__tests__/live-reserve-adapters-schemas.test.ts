@@ -349,6 +349,14 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     "usd1-bundle-oracle": {
       ...singleBucket, configValidation: config("single-asset", 3), validation: { ...verified, maxSourceAgeSec: 604800 },
     },
+    "usdgo-transparency": {
+      primaryInputKinds: ["http-html"], sourceOriginClass: "independent-assurance",
+      configValidation: config("attestation-mix", 3), validation: { ...verified, maxSourceAgeSec: 6048000 },
+    },
+    "sbc-independent-assurance": {
+      primaryInputKinds: ["http-html"], sourceOriginClass: "independent-assurance",
+      configValidation: config("attestation-mix", 2), validation: { ...verified, maxSourceAgeSec: 4000000 },
+    },
     "usdtb-transparency": { preferredFreshnessMode: "verified", validation: dashboard },
     "youves-tezos": cdp,
     "dgld-gold-mapper": { ...weakProbe, validation: { ...verified, maxSourceAgeSec: 259200, maxUnknownExposurePct: 0 } },

@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
@@ -19,11 +22,13 @@ import { resolveReserveResult } from "../../lib/live-reserves/store-views";
 import { buildChainRpcs, hasRegistryRpc } from "../../lib/chain-registry";
 import { unverifiedFreshnessMetadata } from "../reserve-adapters/freshness";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { breakerKeyForConfig, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
+import { breakerKeyForConfig, CONFIGURED_COINS, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import { advanceLiveReserveCheckpoint, beginLiveReserveCheckpoint } from "../../lib/scheduled-recovery-checkpoint";
 import { finalizeReserveSyncRun } from "../sync-live-reserves-finalize";
 import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 import { createAdapterLatencyCollector, syncReserveCoin } from "../sync-live-reserves-core";
+import { getReserveSyncState } from "../../lib/live-reserves/store-read";
+import { adaptMakinaStrategyReserves } from "../reserve-adapters/makina-strategy";
 import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
 import type { ReserveSyncStateRecord } from "../../lib/live-reserves/store";
 import {
@@ -2201,5 +2206,58 @@ describe("buildSharedSourceCacheKey", () => {
     expect(buildSharedSourceCacheKey(usdcConfig, adapter)).not.toEqual(
       buildSharedSourceCacheKey(eurcConfig, adapter),
     );
+  });
+});
+
+describe("syncReserveCoin makina sign contract", () => {
+  const fixtures = createLatestSchemaFixtureTracker();
+  afterEach(() => fixtures.closeAll());
+
+  const MAKINA_FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "../reserve-adapters/__tests__/fixtures");
+  const strategyFixture = JSON.parse(readFileSync(join(MAKINA_FIXTURES, "makina-strategy.json"), "utf8"));
+  const allocationsFixture = JSON.parse(readFileSync(join(MAKINA_FIXTURES, "makina-allocations.json"), "utf8"));
+  const PARAMS = {
+    allocationsUrl: "https://api.makina.finance/v1/strategies/0x6b006870C83b1Cd49E766Ac9209f8d68763Df721/allocations",
+    machineAddress: "0x6b006870C83b1Cd49E766Ac9209f8d68763Df721",
+    accountingTokenSymbol: "USDC",
+    accountingTokenDecimals: 6,
+    otherThresholdPct: 2,
+    reconciliationTolerancePct: 0.5,
+  };
+
+  it("retains the accepted snapshot and original clocks when a below-tolerance debt loses its sign", async () => {
+    const { sqlite, db } = fixtures.open();
+    const coin = CONFIGURED_COINS.find((candidate) => candidate.id === "dusd-dialectic")!;
+    const adapter = { ...LIVE_RESERVE_ADAPTER_DEFINITIONS["makina-strategy"], fetch: vi.fn() };
+    const sourceClock = Math.floor(Date.now() / 1000) - 120;
+    const strategy = structuredClone(strategyFixture);
+    strategy.meta.generated_at = new Date(sourceClock * 1000).toISOString();
+    strategy.data.aum = strategy.data.lastReportedAum = "9990000000";
+    const allocations = structuredClone(allocationsFixture);
+    allocations.meta.generated_at = strategy.meta.generated_at;
+    allocations.data.base_tokens = [{
+      accounting_token_value: "10000000000", token: structuredClone(strategyFixture.data.accountingToken),
+    }];
+    allocations.data.positions = [{ protocol: "aave-v4", value: "10000000", is_debt: true, updated_at: sourceClock }];
+    const args = {
+      db, coin, adapter, signal: new AbortController().signal,
+      breakerCanFetch: new Map([["live-reserves:makina-strategy", true]]), d1FinalizeTimeoutMs: 30_000,
+      runAdapter: async () => adaptMakinaStrategyReserves(strategy, allocations, PARAMS),
+    };
+    expect((await syncReserveCoin({ ...args, previousState: null })).status).toBe("synced");
+    const before = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id);
+    expect(before).toBeDefined();
+    const previousState = await getReserveSyncState(db, coin.id);
+    delete allocations.data.positions[0].is_debt;
+    const attempt = await syncReserveCoin({ ...args, previousState });
+    expect(attempt.status).toBe("failed");
+    expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(coin.id)).toEqual(before);
+    const retainedState = await getReserveSyncState(db, coin.id);
+    expect(retainedState).toMatchObject({
+      lastStatus: "error", lastSuccessAt: previousState!.lastSuccessAt,
+      lastSuccessAttemptId: previousState!.lastSuccessAttemptId,
+      // Adapter exceptions are persisted as lastError, not synthesized warnings.
+      lastError: expect.stringMatching(/is_debt/),
+    });
   });
 });

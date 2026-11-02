@@ -5,7 +5,8 @@ import { computeLiveReserveConfigFingerprint, LiveReservesConfigSchema } from "@
 import { programAddress, publicKeyBytes } from "../../dex-liquidity/solana/program-address";
 import { decodeM0SolanaGlobal, fetchM0SolanaWrapperReserves } from "../m0-solana-wrapper";
 import { readSolanaMint, scaledSolanaRawAmount, SOLANA_TOKEN_2022_PROGRAM } from "../solana";
-import { expectValidAdapterOutput } from "./reserve-adapter.test-support";
+import { validateAdapterOutput } from "../validate";
+import { getReserveAdapter } from "../index";
 import currentCapture from "./fixtures/m0-solana-local-2026-10-21.json";
 
 const NOW = 1792543000;
@@ -84,7 +85,8 @@ describe("M0 Solana local wrapper", () => {
     expect(f.vault).toBe(profile.vault);
     if ("global" in profile) expect(f.global).toBe(profile.global);
     const result = await fetchM0SolanaWrapperReserves(f.coin, f.config, new AbortController().signal, { nowSec: NOW });
-    expectValidAdapterOutput("m0-solana-wrapper", result);
+    const report = validateAdapterOutput(result, { adapter: getReserveAdapter("m0-solana-wrapper") ?? undefined });
+    expect(report.valid).toBe(true);
     expect(result.slices).toEqual([expect.objectContaining({ pct: 100, coinId: "m-m0", depType: "wrapper", sourceKey: "m0-solana-wrapper:m-vault" })]);
     expect(result.metadata).toMatchObject({ observedBlock: { chain: "solana", number: SLOT, timestamp: NOW }, underlyingBalanceRaw: "100000000", indexedUnderlyingBalanceRaw: "110000000", totalSupplyRaw: "110000000", collateralizationRatio: 1 });
     expect(result.metadata).not.toHaveProperty("redemption");
@@ -121,7 +123,8 @@ describe("M0 Solana local wrapper", () => {
       return Response.json({ result: { context: currentCapture.response.result.context, value: (rpc.params[0] as string[]).map((address) => captured.get(address) ?? null) } });
     }));
     const result = await fetchM0SolanaWrapperReserves(f.coin, f.config, new AbortController().signal, { nowSec: currentCapture.block.timestamp });
-    expectValidAdapterOutput("m0-solana-wrapper", result);
+    const report = validateAdapterOutput(result, { adapter: getReserveAdapter("m0-solana-wrapper") ?? undefined });
+    expect(report.valid).toBe(true);
     expect(result.metadata?.observedBlock).toEqual({ chain: "solana", number: currentCapture.block.slot, timestamp: currentCapture.block.timestamp });
     expect(result.metadata?.totalSupplyRaw).toBe(profile.id === "usdk-kast" ? "23939622844939" : "14008669633239");
     expect(result.metadata?.indexedUnderlyingBalanceRaw).toBe(profile.id === "usdk-kast" ? "24441457026511" : "14009619525355");
