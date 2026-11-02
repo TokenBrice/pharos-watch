@@ -324,7 +324,7 @@ async function enrichChain(input: {
     nowSec: input.nowSec,
     maxAgeSec: CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC,
     verifyDeployment: async () => ({ ok: true }),
-    buildCalls: async ({ blockNumber, header }) => {
+    buildCalls: async ({ blockNumber, header, rpcOptions: captureRpcOptions }) => {
       const states = new Map<CurveRateProbe, CurveRatePoolState | null>();
       for (let start = 0; start < input.probes.length; start += MAX_PROBES_PER_MULTICALL) {
         throwIfAborted(input.signal);
@@ -333,7 +333,7 @@ async function enrichChain(input: {
           input.chain,
           buildPoolCalls(probes, start),
           blockNumber,
-          rpcOptions,
+          captureRpcOptions,
         );
         if (!results) return { ok: false };
         const byLabel = mapEvmCaptureResults(results);

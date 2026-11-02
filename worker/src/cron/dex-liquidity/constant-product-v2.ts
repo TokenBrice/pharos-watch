@@ -396,12 +396,12 @@ async function enrichDeployment(input: {
     freshnessFailureReason: "stale-observation",
     fetchBlockNumber: input.dependencies.fetchBlockNumber,
     fetchBlockHeader: input.dependencies.fetchBlockHeader,
-    verifyDeployment: async ({ blockNumber }) => {
+    verifyDeployment: async ({ blockNumber, rpcOptions: captureRpcOptions }) => {
       const factoryCode = await input.dependencies.fetchCodeAtBlock(
         input.deployment.chain,
         input.deployment.factoryAddress,
         blockNumber,
-        rpcOptions,
+        captureRpcOptions,
       );
       if (
         factoryCode == null ||
@@ -412,7 +412,7 @@ async function enrichDeployment(input: {
       }
       return { ok: true };
     },
-    buildCalls: async ({ blockNumber, header }) => {
+    buildCalls: async ({ blockNumber, header, rpcOptions: captureRpcOptions }) => {
       const actions: Array<() => void> = [];
       const gate = (references: readonly CandidateReference[], reason: V2GateReason) => {
         for (const reference of references) actions.push(() => gateReference(reference, reason));
@@ -447,7 +447,7 @@ async function enrichDeployment(input: {
           input.deployment.chain,
           poolCalls,
           blockNumber,
-          rpcOptions,
+          captureRpcOptions,
         );
         if (!rawResults) {
           // Request-level transport failure: nothing was observed for this

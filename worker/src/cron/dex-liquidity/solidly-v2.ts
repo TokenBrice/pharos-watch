@@ -112,18 +112,18 @@ export async function enrichSolidlyV2ExecutionModels(input: {
         chain: deployment.chain, rpcOptions: options,
         nowSec, maxAgeSec: DEX_MEASURED_FRESHNESS_MAX_SEC,
         fetchBlockNumber: deps.fetchBlockNumber, fetchBlockHeader: deps.fetchBlockHeader,
-        verifyDeployment: async ({ blockNumber }) => {
-          const factoryCode = await deps.fetchCodeAtBlock(deployment.chain, deployment.factoryAddress, blockNumber, options);
+        verifyDeployment: async ({ blockNumber, rpcOptions: captureRpcOptions }) => {
+          const factoryCode = await deps.fetchCodeAtBlock(deployment.chain, deployment.factoryAddress, blockNumber, captureRpcOptions);
           if (!factoryCode) return { ok: false, reason: "transport-unavailable" };
           if (deps.hashCode(factoryCode) !== deployment.factoryCodeHash) return { ok: false, reason: "deployment-code-mismatch" };
           if (!deployment.implementationAddress) return { ok: true };
-          const code = await deps.fetchCodeAtBlock(deployment.chain, deployment.implementationAddress, blockNumber, options);
+          const code = await deps.fetchCodeAtBlock(deployment.chain, deployment.implementationAddress, blockNumber, captureRpcOptions);
           if (!code) return { ok: false, reason: "transport-unavailable" };
           if (deps.hashCode(code) !== deployment.implementationCodeHash) return { ok: false, reason: "deployment-code-mismatch" };
           const results = await deps.fetchMulticall(deployment.chain, [
             { label: "implementation", target: deployment.factoryAddress, callData: "0x5c60da1b" },
             { label: "paused", target: deployment.factoryAddress, callData: "0xb187bd26" },
-          ], blockNumber, options);
+          ], blockNumber, captureRpcOptions);
           if (!results) return { ok: false, reason: "transport-unavailable" };
           const mapped = mapEvmCaptureResults(results);
           const implementation = decodeEvmCaptureAddress(deployment.chain, mapped.get("implementation"));
@@ -132,7 +132,7 @@ export async function enrichSolidlyV2ExecutionModels(input: {
           const paused = decodeEvmCaptureBool(mapped.get("paused"));
           return paused === false ? { ok: true } : { ok: false, reason: paused ? "paused-or-swap-disabled" : "incomplete-exact-capture" };
         },
-        buildCalls: async ({ blockNumber, header }) => {
+        buildCalls: async ({ blockNumber, header, rpcOptions: captureRpcOptions }) => {
           const actions: Array<() => void> = [];
           const gate = (rows: Reference[], reason: GateReason) => { for (const row of rows) actions.push(() => applyGate(row, reason)); };
           for (let start = 0; start < groups.length; start += 4) {
@@ -156,7 +156,7 @@ export async function enrichSolidlyV2ExecutionModels(input: {
                 { label: `${index}-fee-true`, target: deployment.factoryAddress, callData: encodeFunctionData({ abi: SOLIDLY_V2_ABI, functionName: "getFee", args: [target, true] }) },
               ];
             });
-            const raw = await deps.fetchMulticall(deployment.chain, calls, blockNumber, options);
+            const raw = await deps.fetchMulticall(deployment.chain, calls, blockNumber, captureRpcOptions);
             if (!raw) { for (const rows of batch) gate(rows, "transport-unavailable"); continue; }
             const results = mapEvmCaptureResults(raw);
             for (let index = 0; index < batch.length; index++) {
@@ -197,7 +197,7 @@ export async function enrichSolidlyV2ExecutionModels(input: {
                 if (metadata[0] !== 10n ** decimals[0]! || metadata[1] !== 10n ** decimals[1]! || metadata[2] !== reserves[0] || metadata[3] !== reserves[1] || metadata[4] !== stable || metadata[5].toLowerCase() !== token0 || metadata[6].toLowerCase() !== token1) { gate(rows, "incomplete-exact-capture"); continue; }
               } catch { gate(rows, "incomplete-exact-capture"); continue; }
               if (reserves[0] <= 0n || reserves[1] <= 0n) { gate(rows, "invalid-invariant-parameters"); continue; }
-              const poolCode = await deps.fetchCodeAtBlock(deployment.chain, candidate.poolAddress, blockNumber, options);
+              const poolCode = await deps.fetchCodeAtBlock(deployment.chain, candidate.poolAddress, blockNumber, captureRpcOptions);
               if (!poolCode) { gate(rows, "transport-unavailable"); continue; }
               if (deps.hashCode(poolCode) !== deployment.poolCodeHash) { gate(rows, "deployment-code-mismatch"); continue; }
               const tokens = [token0, token1] as const;
@@ -227,7 +227,7 @@ export async function enrichSolidlyV2ExecutionModels(input: {
                 const quoteResults = await deps.fetchMulticall(deployment.chain, points.map((point, i) => ({
                   label: `quote-${i}`, target: candidate.poolAddress,
                   callData: encodeFunctionData({ abi: SOLIDLY_V2_ABI, functionName: "getAmountOut", args: [point.amountIn!, tokens[tokenInIndex]] }),
-                })), blockNumber, options);
+                })), blockNumber, captureRpcOptions);
                 if (!quoteResults) { gate([reference], "transport-unavailable"); continue; }
                 const quotes = mapEvmCaptureResults(quoteResults);
                 if (points.some((point, i) => decodeEvmCaptureUint256(quotes.get(`quote-${i}`)) !== point.amountOut)) { gate([reference], "quote-failed"); continue; }
@@ -260,7 +260,7 @@ export async function enrichSolidlyV2ExecutionModels(input: {
                   const endpoints = await deps.fetchMulticall(deployment.chain, [...additional].map(([amountIn], i) => ({
                     label: `endpoint-${i}`, target: candidate.poolAddress,
                     callData: encodeFunctionData({ abi: SOLIDLY_V2_ABI, functionName: "getAmountOut", args: [BigInt(amountIn), tokens[tokenInIndex]] }),
-                  })), blockNumber, options);
+                  })), blockNumber, captureRpcOptions);
                   if (!endpoints || Date.now() >= input.deadlineMs) { gate([reference], "transport-unavailable"); continue; }
                   const endpointResults = mapEvmCaptureResults(endpoints);
                   if ([...additional].some(([, amountOut], i) => decodeEvmCaptureUint256(endpointResults.get(`endpoint-${i}`))?.toString() !== amountOut)) { gate([reference], "quote-failed"); continue; }
