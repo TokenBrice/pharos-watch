@@ -62,7 +62,12 @@ export default defineConfig({
     // (inherited by every project via extends).
     // Absolute path: vitest resolves relative setup paths against the
     // invocation cwd, which may be worker/.
-    globalSetup: [path.resolve(__dirname, "scripts/test/ensure-fresh-stablecoin-artifacts.ts")],
+    globalSetup: [
+      path.resolve(__dirname, "scripts/test/ensure-fresh-stablecoin-artifacts.ts"),
+      // Build the migrated SQLite template once per run; fixture processes
+      // deserialize it or replay migrations when it is unavailable.
+      path.resolve(__dirname, "scripts/test/prepare-latest-schema-sqlite-template.ts"),
+    ],
     projects: [
       {
         extends: true,
