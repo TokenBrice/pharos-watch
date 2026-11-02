@@ -36,8 +36,8 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const DETAIL_SNAPSHOT_OUTPUT_DIR = resolve(REPO_ROOT, "src/generated/stablecoin-detail-snapshots");
 // 12 KiB: frxUSD's 33-chain 90-day supply envelope (9,179 B) overflowed the
 // previous 8 KiB target, which dropped its supply lane and left the dossier in
-// its loading state in the static export (no #contracts module). The bound stays
-// a hard cap; every other envelope is well under it.
+// its loading state in the static export. The bound stays a hard cap; every
+// other envelope is well under it.
 export const DETAIL_SNAPSHOT_TARGET_BYTES = 12 * 1024;
 const MAX_PARALLEL_COIN_REQUESTS = 6;
 // Match the six-connection budget; bulk bodies finish before fallback reads begin.
