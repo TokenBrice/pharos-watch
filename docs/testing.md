@@ -1,6 +1,6 @@
 # Testing & Linting
 
-> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · [Pre-push readiness](#pre-push-readiness) · Commands · [Smallest adequate check per area](#smallest-adequate-check-per-area) · [Generated-artifact failure playbook](#generated-artifact-failure-playbook) · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · [Test-lane gate protocol](#test-lane-gate-protocol) · Coverage · Adding a New Test · ESLint Configuration.
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: Overview · [Pre-push readiness](#pre-push-readiness) · Commands · [Smallest adequate check per area](#smallest-adequate-check-per-area) · [Generated-artifact failure playbook](#generated-artifact-failure-playbook) · Source Formatting Policy · CI Pipeline · Vitest Runtime Profiling · Test Setup · Test Infrastructure · Test Inventory · Conventions · [Test-lane gate protocol](#test-lane-gate-protocol) · Coverage · [Extending tests](#extending-tests) · ESLint Configuration.
 
 ## Overview
 
@@ -326,7 +326,7 @@ Independent-assurance suites use their existing sibling test-support module and 
 
 [`adapter-corpus.test.ts`](../worker/src/cron/reserve-adapters/__tests__/adapter-corpus.test.ts) and its sibling test-support module own corpus enrollment. Every registered adapter needs exactly one case or a reviewed structural/backlog exemption; stale, duplicate, missing or insufficiently justified entries fail. Happy-path captures must validate, including the descriptor's allowed freshness modes; upstream drift must fail or degrade explicitly, never silently publish a fallback.
 
-Add a captured happy-path-plus-drift case with each replayable adapter. Structural exemptions explain why replay cannot work; backlog entries name the existing behavioral owner and still owe a capture. Clearing backlog means adding that evidence, not deleting keys.
+Add the captured happy-path-plus-drift `CORPUS_CASES` row for each replayable adapter; a new adapter adds no per-adapter `*.test.ts`. Structural exemptions explain why replay cannot work; backlog entries name the existing behavioral owner and still owe a capture. Clearing backlog means adding that evidence, not deleting keys.
 
 ### Latest-Schema SQLite Harness (`shared/test-utils/latest-schema-sqlite.ts`)
 
@@ -408,7 +408,6 @@ No waiver or enumerated path is relaxed to accommodate deletion; migrate every e
 - Use `makeStablecoin()` / `makeStablecoinMeta()` from `shared/test-utils/stablecoin.ts` (see `shared/lib/__tests__/supply.test.ts`) for partial `StablecoinData` mocks — avoids `as any` casts.
 - Use shared fixtures from `worker/src/test-helpers/__shared/fixtures.ts` for DB row mocks.
 - Keep cases focused and parameterize repeated scenario scaffolding. Canonical ownership, independent expectations and deletion evidence follow [Test evidence rules](#test-evidence-rules); shared setup follows [sibling test-support modules](#sibling-test-support-modules).
-- Keep real-child CLI rejection cases separate from successful multi-command round trips. Share fixture construction, not mutable execution state, so process-startup costs for independent failure scenarios do not accumulate inside one test deadline; retain the existing command limits and every rejection assertion.
 - Mock lazily loaded frontend sections by module (`vi.mock("./detail-lazy-sections", …)` with one stub per exported section name), never by `next/dynamic` loader source text or `dynamic()` call order — an ordering-keyed mock silently mis-assigns stubs when a section is added or reordered.
 
 ### Test evidence rules
@@ -450,9 +449,15 @@ Runner concurrency, LCOV parsing, baseline schema and supported scope/ref contro
 
 [Production Canaries](../.github/workflows/production-canaries.yml) runs daily at 06:37 UTC/manual with independent authenticated full API/OG contracts, Chromium Pages assets and HTTP-to-HTTPS transport probes. Missing API credentials fail; any probe failure fails its job/run. Browser smokes cover hydrated behavior/assets, not unit-test source shape. The local Pages wrapper requires its owned export server and built output; missing output, occupied explicit ports or early child failure cannot pass readiness. Canaries are read-only monitors, not deployment/rollback triggers or post-deploy acceptance.
 
-## Adding a New Test
+## Extending tests
+
+Extend the owning suite before adding anything: a row in an existing `it.each`, then a case in the owning `describe`, then the file. At most one test file per production module, plus its sibling `*.test-support.ts`. A regression repro earns a permanent case only as the cheapest proof of a contract no existing case covers, as a row or case in that suite rather than a per-fix file, adding at most 40 test lines unless the PR body justifies more; session-scoped repros stay in scratch. Never raise the committed corpus budget without an owner-approved record.
 
 Colocate with the owning module or established lane-local test directory. Frontend imports use canonical frontend/shared boundaries; Worker imports stay relative. Shared scaffolding follows the [sibling test-support module convention](#sibling-test-support-modules).
+
+CLI behaviour is tested in-process through the exported `main()`/`runCli`; spawn a real child process only where the process boundary is the contract (exit code, stdin, environment scrubbing), keep every rejection assertion, and keep those cases separate from successful multi-command round trips, sharing fixture construction rather than execution state. Retry/backoff cases use fake timers or injected zero delays, never real sleeps.
+
+Outside the [V9 resource lane](#v9-resource-lane) the PR tier does not build the full registry: a slow or registry-wide sweep belongs to the nightly tier and names the PR-tier guard or cohort case that keeps coverage. Assert curated data through derived invariants, never exact rosters, counts or digests, and leave source, documentation and YAML text checks to ESLint, structural guards or `check:doc-sync`. Reserve-adapter evidence is a [corpus replay row](#corpus-replay-gate-__tests__adapter-corpustestts), not a per-adapter file.
 
 API contracts validate response schemas and use existing typed row fixtures. Cron contracts assert normal/degraded reasons, unavailable inputs, no optimistic publication and retained last-good state. No-throw or defined-return assertions are not degraded-mode evidence; SQL publication tests assert retained rows and absence of new writes in real SQLite.
 
