@@ -155,7 +155,7 @@ export async function syncViaCoingeckoFallback(
     });
     return buildUnreadablePreviousPublicationResult(assets.length, rowsRead);
   }
-  await overlayFallbackCuratedAggregateSupply(assets, signal, dwellirNative, previousAssetsById);
+  await overlayFallbackCuratedAggregateSupply(assets, signal, chainRpcs, dwellirNative, previousAssetsById);
   const { fxFallbackRates, validationReferences } = await loadFreshFxRates(
     db,
     "[sync-stablecoins:fallback]",

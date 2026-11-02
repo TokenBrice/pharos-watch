@@ -254,6 +254,53 @@ describe("buildPrimaryConsensusResults", () => {
       expect(trustOf(result)).toBe("authoritative");
     });
 
+    it("does not rejoin a lane that lands in the list pair's group instead of the hard leg's", () => {
+      // The CoinGecko/list pair sits about 53 bps from Curve, so a 25-minute lane
+      // at 0.535 agrees with both. Rejoining it creates a three-source cluster
+      // with the pair, not Curve: the composite is dated 1,500 s old, fails its
+      // CoinGecko leg's freshness, and escapes the list-pair downgrade. The lane
+      // must stay held; the fresh list pair is the correct single-source result.
+      const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
+      quoteMaps.cgQuotes.set("precious-metals-usd", {
+        price: 0.537,
+        observedAt: nowSec - 20,
+        observedAtMode: "upstream",
+      });
+      quoteMaps.curvePrices.set(pmusd.id, 0.53416);
+      quoteMaps.curveObservedAtByCoinId.set(pmusd.id, nowSec - 30);
+      const results = new Map<string, PrimaryPriceResult>();
+      const stats = createStats();
+      buildPrimaryConsensusResults({
+        candidates: [pmusd],
+        quoteMaps,
+        dexRows: new Map() as PrimaryDexRows,
+        dexPriceSources: new Map([[pmusd.id, [{
+          protocol: "curve", chain: "ethereum", price: 0.535, tvl: 7_684_693, updatedAt: nowSec - 1_500,
+        }]]]) as PrimaryDexPriceSources,
+        nowSec,
+        resolveDlListQuote: () => ({ price: 0.537, observedAt: nowSec - 25, observedAtMode: "upstream" }),
+        results,
+        stats,
+      });
+      applyListAggregatorDowngrade(results, stats);
+
+      const result = results.get(pmusd.id)!;
+      expect(result).toMatchObject({
+        source: "coingecko+defillama-list",
+        confidence: "single-source",
+        observedAt: nowSec - 25,
+      });
+      expect(result.agreeSources).not.toContain("curve-dex");
+      expect(result.candidateSources).toContain("curve-dex");
+      expect(validateCompositePricingSourceFreshness({
+        source: result.source,
+        observedAt: result.observedAt,
+        observedAtMode: result.observedAtMode,
+        nowSec,
+        requireObservedAt: true,
+      }).accepted).toBe(true);
+    });
+
     it("does not rescue a missing CoinGecko leg with a lane past the primary budget", () => {
       const result = build(2_071, null);
 

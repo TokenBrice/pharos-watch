@@ -472,17 +472,23 @@ export function isSupplyObservationWithinRestoreCeiling(observedAt: number, nowS
 
 function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean {
   if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous)) return false;
-  // Cached on-chain totals must still satisfy today's deployment roster. A
-  // removed or expanded aggregate cannot re-enter through generic carry-forward.
-  if (previous.supplySource === "onchain-total-supply") {
+  // Cached on-chain packets must still satisfy today's deployment roster. A
+  // removed or expanded aggregate, an ambiguous multi-contract footprint or a
+  // reviewed hold cannot re-enter through generic carry-forward. Ordinary
+  // circulating packets that are not a preferred native read (HBD) keep the
+  // generic seven-day carry contract below.
+  if (previous.supplySource === "onchain-total-supply" || previous.supplySource === "onchain-circulating-supply") {
     const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === String(previous.id));
     if (!meta) return false;
-    const labels = CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID.get(meta.id);
-    if (labels) {
-      const bucket = getSinglePositiveCirculatingBucket(previous);
-      if (!bucket || !hasReconciledCuratedAggregateSupplyPacket(previous, labels, bucket)) return false;
-    } else if (!selectSupplementalOnchainSupplyProbeContract(meta)) {
-      return false;
+    if (previous.supplySource === "onchain-total-supply" || prefersOnChainSupplyMcap(meta)) {
+      if (getOnchainSupplyHoldReason(meta.id)) return false;
+      const labels = CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID.get(meta.id);
+      if (labels) {
+        const bucket = getSinglePositiveCirculatingBucket(previous);
+        if (!bucket || !hasReconciledCuratedAggregateSupplyPacket(previous, labels, bucket)) return false;
+      } else if (!selectSupplementalOnchainSupplyProbeContract(meta)) {
+        return false;
+      }
     }
   }
   const observedAt = normalizeOptionalTimestamp(previous.supplyObservedAt);
@@ -498,7 +504,9 @@ export function restorePreferredNativeSupply(
   previous: PeggedAsset | undefined,
   nowSec: number,
 ): PeggedAsset {
-  const restored = previous?.supplySource === "onchain-total-supply" && !previous.supplyUnavailableReason
+  const restorableSource = previous?.supplySource === "onchain-total-supply"
+    || previous?.supplySource === "onchain-circulating-supply";
+  const restored = restorableSource && !previous.supplyUnavailableReason
     && getCirculatingRawOrNull(previous) !== null && isWithinRestoreCeiling(previous, nowSec)
     ? markRestoredSupply(previous, nowSec) : null;
   const unavailable = reviewedOnchainSupplyHoldFields({

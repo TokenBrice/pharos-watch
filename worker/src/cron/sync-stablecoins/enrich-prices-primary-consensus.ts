@@ -7,7 +7,8 @@ import {
 import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
 import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
-import { isListAggregatorOnlyPair } from "@shared/lib/pricing-source-policy";
+import { isHardPricingTrustTier, isListAggregatorOnlyPair } from "@shared/lib/pricing-source-policy";
+import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-registry";
 import {
   buildPrimarySourceCandidates,
   isDexLegWithinCoLegBudget,
@@ -110,6 +111,13 @@ export function buildPrimaryConsensusResults(params: {
         // A list-aggregator pair publishes as `single-source` after hardening, so
         // it cannot establish independent fresh-leg agreement here.
         return freshConsensus?.confidence === "high" && !isListAggregatorOnlyPair(freshConsensus.agreeSources);
+      },
+      fallbackLaneLandsInHardGroup: (legs: readonly SourcePrice[], lane: SourcePrice) => {
+        const rejoined = computePriceConsensus([...legs], pegRef, DIVERGENCE_THRESHOLD_BPS, { mode: consensusMode });
+        if (rejoined?.confidence !== "high" || !rejoined.agreeSources.includes(lane.source)) return false;
+        return rejoined.agreeSources.some((source) =>
+          source !== lane.source &&
+          isHardPricingTrustTier(getPricingSourceRegistryEntry(source)?.trustTier));
       },
     };
     let sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);

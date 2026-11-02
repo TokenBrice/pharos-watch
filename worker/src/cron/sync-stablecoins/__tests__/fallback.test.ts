@@ -281,6 +281,22 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     },
   );
 
+  it("forwards the run's RPC map to the fallback supply overlay", async () => {
+    const chainRpcs = new Map();
+    await syncViaCoingeckoFallback(
+      mockD1([]),
+      buildRealCgData(Infinity),
+      undefined,
+      NOW_SEC,
+      undefined, undefined, undefined, undefined, chainRpcs,
+    );
+
+    const usgCall = vi.mocked(onchainSupply.fetchCuratedAggregateOnChainMcap).mock.calls
+      .find(([coin]) => coin.id === "usg-tangent");
+    expect(usgCall).toBeDefined();
+    expect(usgCall?.[2]).toBe(chainRpcs);
+  });
+
   it.each(["ustb-superstate", "gtusdcp-gauntlet"])("retains %s's fresh CoinGecko total instead of token stock", async (id) => {
     const meta = ACTIVE_META_BY_ID.get(id)!;
     const cgData = buildRealCgData(Infinity);

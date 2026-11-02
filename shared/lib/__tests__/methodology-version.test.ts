@@ -312,18 +312,19 @@ describe("methodology registry", () => {
     });
     expect(release.summary).toContain("carried");
     expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600 - 1)).toBe("6.65");
-    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600)).toBe("6.67");
+    // 6.68 shipped at the same November 2 cut and supersedes 6.67 there.
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600)).toBe("6.68");
   });
 
-  it("activates the DEX protocol-lane co-leg budget at its provisional November 3 cut", () => {
+  it("activates the DEX protocol-lane co-leg budget at its November 2 cut", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.68")!;
     expect(release).toMatchObject({
-      version: "6.68", date: "2026-11-02", effectiveAt: 1_793_664_000, reconstructed: false,
+      version: "6.68", date: "2026-11-02", effectiveAt: 1_793_577_600, reconstructed: false,
     });
     expect(release.summary).toContain("co-leg budget");
-    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_664_000 - 1)).toBe("6.67");
-    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_664_000)).toBe("6.68");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600 - 1)).toBe("6.65");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_577_600)).toBe("6.68");
   });
 
   it("activates the blind-coin price-curation release at its provisional November 4 cut", () => {

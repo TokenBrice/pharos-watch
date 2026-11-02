@@ -274,6 +274,12 @@ export function buildPrimarySourceCandidates(
      * it no lane older than the co-leg budget is admitted.
      */
     freshLegsAgree?: (legs: readonly SourcePrice[]) => boolean;
+    /**
+     * Consensus authority for an older lane proposed by the degraded rejoin.
+     * Receives the fresh legs plus that lane; true only when the lane lands in a
+     * hard leg's agreement group, not a larger soft or list cluster.
+     */
+    fallbackLaneLandsInHardGroup?: (legs: readonly SourcePrice[], lane: SourcePrice) => boolean;
   },
 ): PrimarySourceBuildResult {
   const divergenceThresholdBps = options?.divergenceThresholdBps ?? DIVERGENCE_THRESHOLD_BPS;
@@ -469,7 +475,12 @@ export function buildPrimarySourceCandidates(
     fallbackLanes.length > 0 &&
     options?.freshLegsAgree?.([...baseSources, ...admittedPromotedDexProtocolSources]) === false
   ) {
-    admittedPromotedDexProtocolSources.push(...fallbackLanes);
+    for (const lane of fallbackLanes) {
+      const legs = [...baseSources, ...admittedPromotedDexProtocolSources, lane];
+      if (options.fallbackLaneLandsInHardGroup == null || options.fallbackLaneLandsInHardGroup(legs, lane)) {
+        admittedPromotedDexProtocolSources.push(lane);
+      }
+    }
   }
 
   if (admittedPromotedDexProtocolSources.length > 0) {

@@ -17,6 +17,7 @@ import {
   normalizeStablecoinsPayload,
   restoreCuratedAggregateChainPartition,
   restoreMissingTrackedAssets,
+  restorePreferredNativeSupply,
   reviewedOnchainSupplyHoldFields,
   withholdUnclockedCarriedSupply,
 } from "../shared";
@@ -100,6 +101,48 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       }
     },
   );
+
+  it("restores USG's keeper-adjusted circulating packet across an unreadable read", () => {
+    const previousFor = (age: number) => asset({
+      id: "usg-tangent",
+      symbol: "USG",
+      supplySource: "onchain-circulating-supply",
+      supplyObservedAt: NOW_SEC - age,
+      circulating: { peggedUSD: 4_040_000 },
+      chainCirculating: { Ethereum: { chainId: "ethereum", current: 4_040_000 } },
+      chains: ["Ethereum"],
+    });
+
+    for (const age of [60, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC]) {
+      const previous = previousFor(age);
+      const previousById = new Map([[previous.id, previous]]);
+      const supplemental = mergeSupplementalLastKnownGood(
+        [asset({ id: previous.id, symbol: previous.symbol })], previousById, new Set(), NOW_SEC,
+      ).assets[0];
+      const tracked = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets.find((row) => row.id === previous.id)!;
+      const restored = restorePreferredNativeSupply(
+        asset({ id: previous.id, symbol: previous.symbol, supplySource: "onchain-supply-withheld" }),
+        previous,
+        NOW_SEC,
+      );
+      for (const row of [supplemental, tracked, restored]) {
+        expect(row).toMatchObject({
+          supplySource: "onchain-circulating-supply",
+          supplyObservedAt: NOW_SEC - age,
+          supplyRestored: true,
+          circulating: { peggedUSD: 4_040_000 },
+          chainCirculating: { Ethereum: { chainId: "ethereum", current: 4_040_000 } },
+        });
+      }
+    }
+
+    const expired = previousFor(SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1);
+    expect(restorePreferredNativeSupply(
+      asset({ id: expired.id, symbol: expired.symbol, supplySource: "onchain-supply-withheld" }),
+      expired,
+      NOW_SEC,
+    ).supplyRestored).toBeUndefined();
+  });
 
   it.each([
     { id: "ustb-superstate", labels: ["Ethereum", "Plume", "Solana"] },

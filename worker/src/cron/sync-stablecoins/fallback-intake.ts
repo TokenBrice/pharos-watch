@@ -4,6 +4,7 @@ import { FROZEN_SNAPSHOTS } from "@shared/lib/stablecoins/frozen-snapshots";
 import { getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { throwIfAborted } from "../../lib/abort";
@@ -148,6 +149,7 @@ export async function runFallbackIntakePhase(
 export async function overlayFallbackCuratedAggregateSupply(
   assets: PeggedAsset[],
   signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
   dwellirNative?: DwellirNativeCapability,
   previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
 ): Promise<void> {
@@ -161,13 +163,13 @@ export async function overlayFallbackCuratedAggregateSupply(
     const priceUsd = toPositiveFiniteNumber(asset.price);
     let onChainMcap: OnChainMcapResult | null = null;
     if (priceUsd != null) {
-      onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal, dwellirNative);
+      onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, chainRpcs, signal, dwellirNative);
       // A preferred single-register asset has no curated roster but still owns
       // a readable native stock; withholding it would publish unavailable
       // supply the one deployment can prove. `fetchOnChainMcap` refuses every
       // multi-contract footprint, so no ambiguous perimeter is summed here.
       if (!onChainMcap && prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)) {
-        onChainMcap = await fetchOnChainMcap(meta, priceUsd, undefined, signal, dwellirNative);
+        onChainMcap = await fetchOnChainMcap(meta, priceUsd, chainRpcs, signal, dwellirNative);
       }
     }
     if (!onChainMcap?.chainCirculating) {
