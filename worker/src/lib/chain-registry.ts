@@ -331,13 +331,11 @@ export function buildChainRpcs(
     configs.push(rpcConfig(chainId, "other", publicRegistryEndpoints(publicRpc)));
   }
 
-  // dRPC leads: its key's free pool covers Solana's current-state reads, while
-  // Alchemy bills each call. Alchemy remains the keyed fallback.
   const keyedSolanaEndpoints = [
-    drpcApiKey ? registryEndpoint(drpcRpcUrl("solana", drpcApiKey), "drpc") : undefined,
     alchemyApiKey
       ? registryEndpoint(buildAlchemyRpcUrl("solana-mainnet", alchemyApiKey), "alchemy")
       : undefined,
+    drpcApiKey ? registryEndpoint(drpcRpcUrl("solana", drpcApiKey), "drpc") : undefined,
   ].filter((endpoint): endpoint is RpcEndpoint => endpoint !== undefined);
   if (keyedSolanaEndpoints.length > 0) {
     configs.push(rpcConfig(SOLANA_PUBLIC_RPC_CHAIN_ID, "other", keyedSolanaEndpoints));
