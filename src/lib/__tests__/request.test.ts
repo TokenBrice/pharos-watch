@@ -1,5 +1,3 @@
-// @vitest-environment jsdom
-
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RequestFailure, RequestSequence, requestJson, requestJsonWithResponse, requestResponse } from "@/lib/request";
 import { mockFetch } from "@shared/test-utils/mock-fetch";

@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { SafetyMapContext, SafetyMapEnv } from "../lib/safety-map";
 import { makeKV, type TestKVNamespace } from "./helpers/mock-kv";
 import { onRequest } from "../safety-scores/map.png.ts";
+import { onRequest as webpOnRequest } from "../safety-scores/map.webp";
 
 const PNG_MAGIC = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x01, 0x02]);
+const WEBP_MAGIC = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0, 0, 0, 0x57, 0x45, 0x42, 0x50]);
 
 function mapRequest(search = "", method = "GET"): Request {
   return new Request(`https://pharos.watch/safety-scores/map.png${search}`, { method });
@@ -152,5 +154,26 @@ describe("GET /safety-scores/map.png", () => {
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
+  });
+});
+
+describe("GET /safety-scores/map.webp", () => {
+  // The teaser route shares every failure branch with map.png through
+  // `functions/lib/safety-map.ts`; only its KV key and content type differ.
+  function webpRequest(method = "GET"): Request {
+    return new Request("https://pharos.watch/safety-scores/map.webp", { method });
+  }
+
+  it("serves the derivative rather than the full PNG, with matching HEAD headers", async () => {
+    const kv = makeKV();
+    kv.__putBinary("safety-map:latest.webp", WEBP_MAGIC);
+    const get = await webpOnRequest({ request: webpRequest(), env: { SELECTOR_SNAPSHOTS: kv } });
+    const head = await webpOnRequest({ request: webpRequest("HEAD"), env: { SELECTOR_SNAPSHOTS: kv } });
+    expect(get.status).toBe(200);
+    expect(get.headers.get("Content-Type")).toBe("image/webp");
+    expect(get.headers.get("Cache-Control")).toBe("public, max-age=60, s-maxage=300, stale-while-revalidate=86400");
+    expect(new Uint8Array(await get.arrayBuffer())).toEqual(WEBP_MAGIC);
+    expect([...head.headers]).toEqual([...get.headers]);
+    expect((await head.arrayBuffer()).byteLength).toBe(0);
   });
 });

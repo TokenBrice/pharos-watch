@@ -24,7 +24,7 @@ export function getConditionBand(score: number): PsiConditionBand {
  * sample per producer interval; a partial day is still a valid average over
  * observed members, but it is not proof of complete publication.
  */
-export const PSI_DAILY_MIN_SAMPLE_SHARE = 0.8;
+const PSI_DAILY_MIN_SAMPLE_SHARE = 0.8;
 
 export function getPsiDailySampleBudget(
   producerIntervalSec: number,
@@ -43,7 +43,7 @@ export function getPsiDailySampleBudget(
  * admitted members, so the producer publishes with a quality finding and the
  * canary raises the finding to `/status`.
  */
-export const PSI_UNIVERSE_COVERAGE_THRESHOLDS = {
+const PSI_UNIVERSE_COVERAGE_THRESHOLDS = {
   degradedFreeMissing: 1,
   degradedMissingRatio: 0.01,
   errorMissingRatio: 0.1,

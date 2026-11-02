@@ -19,7 +19,11 @@ const DEFAULT_YIELD_PUBLICATION_D1_TABLES: MockTableConfig[] = [
   { match: "pharos:yield-sync:decision-alternatives-retention-delete", rows: [] },
   { match: "pharos:yield-sync:abandoned-staged-generation-finalize", rows: [] },
   { match: "pharos:yield-sync:publication-generation-retention-delete", rows: [] },
-  { match: "pharos:yield-sync:ownership-handoff-delete", rows: [] },
+  // The producer drains in 5,000-row chunks until a chunk reports no changes.
+  // This fixture has no handoff rows to delete, so report an empty drain
+  // instead of the default `changes: 1`, which would run the full 250,000-row
+  // budget of DELETE statements before terminating.
+  { match: "pharos:yield-sync:ownership-handoff-delete", rows: [], runMeta: { changes: 0 } },
   // Cleanup ranks all published decisions before checking linked-source eligibility.
   { match: "ranked_generations", rows: [] },
   { match: "INSERT INTO cache", rows: [], runMeta: { changes: 1 } },

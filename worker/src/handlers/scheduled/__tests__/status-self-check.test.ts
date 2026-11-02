@@ -105,7 +105,8 @@ describe("hourly corroboration before the next publication", () => {
     // queued behind it would never start. They must finish while it runs.
     let observersDoneBeforeSelfCheck = false;
     mocks.runStatusSelfCheck.mockImplementationOnce(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      // A macrotask yield lets the observers' chains start without a real delay.
+      await new Promise((resolve) => setTimeout(resolve, 0));
       observersDoneBeforeSelfCheck = mocks.runDataInvariantCanary.mock.calls.length === 1
         && mocks.runCronSentinel.mock.calls.length === 1;
       return { status: "ok", itemCount: 1 };
@@ -220,8 +221,8 @@ describe("hourly corroboration before the next publication", () => {
     }));
   });
 
-  it.each([24])("refreshes DEX only on minute %s", async (minute) => {
-    await runStatusSelfCheckSlot(runtime([], minute));
+  it("refreshes DEX only on minute 24", async () => {
+    await runStatusSelfCheckSlot(runtime([], 24));
     expect(mocks.runPriceCorroboration).not.toHaveBeenCalled();
     expect(mocks.runPriceDexRefresh).toHaveBeenCalledOnce();
     expect(mocks.logCronEvent).toHaveBeenCalledOnce();

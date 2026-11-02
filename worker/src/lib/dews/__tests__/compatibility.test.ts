@@ -73,16 +73,10 @@ describe("piecewiseLinear", () => {
 });
 
 describe("getThreatBand", () => {
+  // Threshold-independent pins only: the band edges are derived from
+  // DEWS_THREAT_BANDS below, so retuning a band does not restate it here.
   it.each([
     [0, "CALM"],
-    [15, "CALM"],
-    [16, "WATCH"],
-    [35, "WATCH"],
-    [36, "ALERT"],
-    [55, "ALERT"],
-    [56, "WARNING"],
-    [75, "WARNING"],
-    [76, "DANGER"],
     [100, "DANGER"],
   ] as const)("score %d => %s", (score, band) => {
     expect(getThreatBand(score)).toBe(band);

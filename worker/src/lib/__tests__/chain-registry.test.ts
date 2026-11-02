@@ -17,6 +17,7 @@ import {
   registerRpcAuth,
   registryRpcEndpoints,
   registryRpcUrls,
+  resetChainRegistryStateForTests,
   supplementalRpcEndpoints,
 } from "../chain-registry";
 
@@ -492,6 +493,14 @@ describe("buildChainRpcs", () => {
     expect(getRpcAuthHeaders(url)).toEqual({ Authorization: `Bearer ${ALCHEMY_KEY}` });
 
     expect(buildAlchemyRpcUrl("eth-mainnet")).toBe(url);
+    expect(getRpcAuthHeaders(url)).toBeUndefined();
+  });
+
+  it("clears registered provider auth through the shared-process reset hook", () => {
+    const url = buildAlchemyRpcUrl("eth-mainnet", ALCHEMY_KEY);
+    expect(getRpcAuthHeaders(url)).toEqual({ Authorization: `Bearer ${ALCHEMY_KEY}` });
+
+    resetChainRegistryStateForTests();
     expect(getRpcAuthHeaders(url)).toBeUndefined();
   });
 

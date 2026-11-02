@@ -92,6 +92,7 @@ describe("frozen-snapshot price provenance", () => {
     const frozenRow = validAssets.find((asset) => asset.id === "aeur-anchored-coins");
     if (!frozenRow) throw new Error("expected the injected AEUR row to pass structural admission");
     expect(frozenRow.geckoId).toBeUndefined();
+    expect(frozenRow.price).toBe(snapshot.peggedAssetRow.price);
     expect(frozenRow.priceObservedAt).toBe(Date.parse(snapshot.capturedAt) / 1000);
 
     applyConsensusResults({

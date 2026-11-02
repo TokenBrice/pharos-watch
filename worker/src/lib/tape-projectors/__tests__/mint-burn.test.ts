@@ -8,7 +8,9 @@ afterEach(() => {
 });
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { projectMintBurnLargeFlows } from "../mint-burn";
-import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "./test-support";
+import { mockTapeD1, tapeCacheWriteBinds, tapeInsertBinds, tapeInsertBindsForType } from "./test-support";
+import { projectPsiBandShifts } from "../psi";
+import { projectScoreDowngraded, projectScoreUpgraded } from "../score";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
@@ -301,6 +303,422 @@ describe("mint_burn projector", () => {
   it("emits nothing on an empty source", async () => {
     const db = mockTapeD1(withRows([])) as MockD1Database;
     await projectMintBurnLargeFlows(db);
+    expect(tapeInsertBinds(db)).toHaveLength(0);
+  });
+});
+
+const MATCH_FETCH_SAMPLES = "WHERE stored_at > ?";
+const MATCH_PRIOR_BAND = "WHERE stored_at <= ?";
+
+function tables(samples: Record<string, unknown>[], priors: Record<string, unknown>[] = []): MockTableConfig[] {
+  return [
+    { match: "FROM cache WHERE key", rows: [] },
+    // Prior-band lookup must match BEFORE the samples query (substring tie).
+    { match: MATCH_PRIOR_BAND, rows: priors, first: priors[0] ?? null },
+    { match: MATCH_FETCH_SAMPLES, rows: samples },
+  ];
+}
+
+describe("psi projector", () => {
+  it("scales severity to critical for MELTDOWN transitions", async () => {
+    const db = mockTapeD1(
+      tables([
+        { stored_at: SEC,       score: 96, band: "BEDROCK",  methodology_version: "3.3" },
+        { stored_at: SEC + 900, score: 5,  band: "MELTDOWN", methodology_version: "3.3" },
+      ]),
+    ) as MockD1Database;
+
+    await projectPsiBandShifts(db);
+    const inserts = tapeInsertBindsForType(db, "psi.shifted_down");
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]![2]).toBe("critical");
+  });
+
+  it("emits psi.shifted_up at info regardless of magnitude", async () => {
+    const db = mockTapeD1(
+      tables([
+        { stored_at: SEC,       score: 50, band: "CRISIS",  methodology_version: "3.3" },
+        { stored_at: SEC + 900, score: 96, band: "BEDROCK", methodology_version: "3.3" },
+      ]),
+    ) as MockD1Database;
+
+    await projectPsiBandShifts(db);
+    const ups = tapeInsertBindsForType(db, "psi.shifted_up");
+    const downs = tapeInsertBindsForType(db, "psi.shifted_down");
+    expect(ups).toHaveLength(1);
+    expect(downs).toHaveLength(0);
+    expect(ups[0]![2]).toBe("info");
+  });
+
+  it("emits nothing when consecutive samples share a band", async () => {
+    const db = mockTapeD1(
+      tables([
+        { stored_at: SEC,       score: 96, band: "BEDROCK", methodology_version: "3.3" },
+        { stored_at: SEC + 900, score: 95, band: "BEDROCK", methodology_version: "3.3" },
+      ]),
+    ) as MockD1Database;
+
+    await projectPsiBandShifts(db);
+    expect(tapeInsertBinds(db)).toHaveLength(0);
+  });
+
+  it("uses the immediately preceding same-band score and keeps payloads identical across split scans", async () => {
+    const scan = async (split: boolean) => {
+      const { db, sqlite } = fixtures.open();
+      const insert = sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, methodology_version, components, input_snapshot) VALUES (?, ?, ?, '3.3', '{}', '{}')");
+      insert.run(SEC, 99, "BEDROCK");
+      insert.run(SEC + 900, 95, "BEDROCK");
+      insert.run(SEC + 1800, 90, "STEADY");
+      if (split) {
+        expect(await projectPsiBandShifts(db, { maxRows: 2 })).toEqual({ projected: 0, advanced: SEC + 900 });
+      }
+      expect(await projectPsiBandShifts(db)).toEqual({ projected: 1, advanced: SEC + 1800 });
+      return sqlite.prepare("SELECT event_id, source_row_id, payload_json FROM tape_events").get()!;
+    };
+
+    const oneShot = await scan(false);
+    expect(JSON.parse(String(oneShot.payload_json))).toEqual({
+      prevBand: "BEDROCK", newBand: "STEADY", prevScore: 95, newScore: 90, sampleAt: SEC + 1800,
+    });
+    expect(await scan(true)).toEqual(oneShot);
+  });
+
+  it("uses prior-batch band when only one sample appears in the new batch", async () => {
+    const db = mockTapeD1([
+      { match: "FROM cache WHERE key", rows: [{ key: "tape-projector:cursor:psi.band_changed", value: String(SEC - 1) }] },
+      { match: MATCH_PRIOR_BAND, rows: [], first: { stored_at: SEC - 900, score: 96, band: "BEDROCK", methodology_version: "3.3" } },
+      { match: MATCH_FETCH_SAMPLES, rows: [{ stored_at: SEC + 900, score: 70, band: "FRACTURE", methodology_version: "3.3" }] },
+    ]) as MockD1Database;
+
+    await projectPsiBandShifts(db);
+    const inserts = tapeInsertBindsForType(db, "psi.shifted_down");
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]![2]).toBe("warning"); // BEDROCK → FRACTURE
+  });
+
+  it("persists one shift across cursor reruns and forced source replay", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO stability_index_samples (stored_at, score, band, methodology_version, components, input_snapshot) VALUES (?, ?, ?, '3.3', '{}', '{}')");
+    insert.run(SEC, 96, "BEDROCK");
+    insert.run(SEC + 900, 70, "FRACTURE");
+    await projectPsiBandShifts(db);
+    const select = sqlite.prepare("SELECT event_id, source_row_id, type, severity FROM tape_events");
+    const events = select.all();
+    expect(events).toEqual([{
+      event_id: expect.any(String), source_row_id: `${SEC + 900}:FRACTURE`, type: "psi.shifted_down", severity: "warning",
+    }]);
+    const cursor = sqlite.prepare("SELECT value FROM cache WHERE key = 'tape-projector:cursor:psi.band_changed'");
+    expect(cursor.get()).toEqual({ value: String(SEC + 900) });
+    await projectPsiBandShifts(db);
+    await projectPsiBandShifts(db, { since: 0 });
+    expect(select.all()).toEqual(events);
+    expect(cursor.get()).toEqual({ value: String(SEC + 900) });
+  });
+
+  it("derives the same nonempty shift identity independently of persistence", async () => {
+    const samples = [
+      { stored_at: SEC, score: 96, band: "BEDROCK", methodology_version: "3.3" },
+      { stored_at: SEC + 900, score: 70, band: "FRACTURE", methodology_version: "3.3" },
+    ];
+    const first = mockTapeD1(tables(samples)) as MockD1Database;
+    const second = mockTapeD1(tables(samples)) as MockD1Database;
+    await projectPsiBandShifts(first);
+    await projectPsiBandShifts(second);
+    const firstIds = tapeInsertBindsForType(first, "psi.shifted_down").map((binds) => binds[0]);
+    expect(firstIds).toEqual([expect.stringMatching(/\S+/)]);
+    expect(tapeInsertBindsForType(second, "psi.shifted_down").map((binds) => binds[0])).toEqual(firstIds);
+  });
+});
+
+const MATCH_GRADE_HISTORY = "FROM safety_grade_history";
+
+function gradeRow(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    stablecoin_id: "usdt-tether",
+    recorded_at: SEC,
+    grade: "A",
+    score: 90,
+    prev_grade: "B",
+    prev_score: 75,
+    methodology_version: "8.11",
+    model: "v8",
+    identity_schema_version: 1,
+    policy_id: null,
+    policy_digest: null,
+    evaluation_build_digest: null,
+    base_input_generation_id: null,
+    model_publication_generation_id: null,
+    transition_kind: "organic-grade-change",
+    source_table: "safety_grade_history",
+    source_row_id: `usdt-tether:${SEC}`,
+    row_sort_id: `legacy:usdt-tether:${SEC}`,
+    ...overrides,
+  };
+}
+
+function scoreTables(rows: Record<string, unknown>[], cursor?: number): MockTableConfig[] {
+  return [
+    {
+      match: "FROM cache WHERE key",
+      rows: cursor == null ? [] : [{ key: "tape-projector:cursor:score.upgraded", value: String(cursor) }],
+    },
+    { match: MATCH_GRADE_HISTORY, rows },
+  ];
+}
+
+describe("score projector", () => {
+  it("routes grade upgrades to score.upgraded with info severity", async () => {
+    const db = mockTapeD1(scoreTables([gradeRow()])) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result).toEqual({ projected: 1, advanced: SEC });
+    const inserts = tapeInsertBinds(db);
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]![1]).toBe("score.upgraded");
+    expect(inserts[0]![2]).toBe("info");
+    expect(inserts[0]![13]).toBe("usdt-tether:1700000000");
+  });
+
+  it("routes grade downgrades and scales severity by rank delta", async () => {
+    const db = mockTapeD1(
+      scoreTables([gradeRow({ grade: "B-", score: 65, prev_grade: "A", prev_score: 85 })]),
+    ) as MockD1Database;
+
+    const result = await projectScoreDowngraded(db);
+
+    expect(result).toEqual({ projected: 1, advanced: SEC });
+    const inserts = tapeInsertBinds(db);
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]![1]).toBe("score.downgraded");
+    expect(inserts[0]![2]).toBe("severe");
+  });
+
+  it("skips equal-rank rows but advances the watermark past them", async () => {
+    const db = mockTapeD1(scoreTables([gradeRow({ grade: "B", prev_grade: "B" })])) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result).toEqual({ projected: 0, advanced: SEC });
+    expect(tapeInsertBinds(db)).toHaveLength(0);
+    expect(tapeCacheWriteBinds(db, "score.upgraded")[0]?.[1]).toBe(String(SEC));
+  });
+
+  it("expands a full batch through same-timestamp grade rows before advancing the watermark", async () => {
+    const limitedRows = [
+      gradeRow({ stablecoin_id: "usdt-tether", source_row_id: `usdt-tether:${SEC}`, row_sort_id: "1" }),
+      gradeRow({ stablecoin_id: "usdc-circle", source_row_id: `usdc-circle:${SEC}`, row_sort_id: "2" }),
+    ];
+    const expandedRows = [
+      ...limitedRows,
+      gradeRow({ stablecoin_id: "dai-makerdao", source_row_id: `dai-makerdao:${SEC}`, row_sort_id: "3" }),
+    ];
+    const db = mockTapeD1([
+      { match: "FROM cache WHERE key", rows: [] },
+      { match: MATCH_GRADE_HISTORY, matchBinds: [0, 2], rows: limitedRows },
+      { match: MATCH_GRADE_HISTORY, matchBinds: [0, SEC], rows: expandedRows },
+    ]) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db, { maxRows: 2 });
+
+    expect(result).toEqual({ projected: 3, advanced: SEC });
+    expect(tapeInsertBinds(db).map((binds) => binds[13])).toEqual([
+      "usdt-tether:1700000000",
+      "usdc-circle:1700000000",
+      "dai-makerdao:1700000000",
+    ]);
+    expect(tapeCacheWriteBinds(db, "score.upgraded")[0]?.[1]).toBe(String(SEC));
+  });
+
+  it("treats unknown grades as lower than NR for guarded fallback ordering", async () => {
+    const db = mockTapeD1(
+      scoreTables([gradeRow({ grade: "NR", score: null, prev_grade: "UNKNOWN", prev_score: null })]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result.projected).toBe(1);
+    const inserts = tapeInsertBinds(db);
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0]![1]).toBe("score.upgraded");
+  });
+
+  it("preserves V2 source identity for organic rows", async () => {
+    const db = mockTapeD1(
+      scoreTables([
+        gradeRow({
+          source_table: "safety_score_history_v2",
+          source_row_id: "safety-score-history:v2:event:123",
+          row_sort_id: "v2:safety-score-history:v2:event:123",
+          evaluation_build_digest: "a".repeat(64),
+          base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+          model_publication_generation_id: "report-cards:8.11:123",
+        }),
+      ]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result.projected).toBe(1);
+    const inserts = tapeInsertBinds(db);
+    expect(inserts[0]?.[12]).toBe("safety_score_history_v2");
+    expect(inserts[0]?.[13]).toBe("safety-score-history:v2:event:123");
+    expect(JSON.parse(String(inserts[0]?.[11]))).toMatchObject({
+      safetyScore: {
+        identityStatus: "complete",
+        identity: { model: "v8", evaluationBuildDigest: "a".repeat(64) },
+      },
+    });
+  });
+
+  it("retains V8 identity for dual-written legacy rows while marking true legacy rows unidentified", async () => {
+    const dualWrittenSourceRowId = `usdt-tether:${SEC}`;
+    const trueLegacySourceRowId = `usdc-circle:${SEC}`;
+    const db = mockTapeD1(
+      scoreTables([
+        gradeRow({
+          source_table: "safety_grade_history",
+          source_row_id: dualWrittenSourceRowId,
+          row_sort_id: "v2:safety-score-history:v2:usdt-tether:1700000000",
+          evaluation_build_digest: "a".repeat(64),
+          base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+          model_publication_generation_id: "report-cards:8.11:1700000000",
+        }),
+        gradeRow({
+          stablecoin_id: "usdc-circle",
+          source_table: "safety_grade_history",
+          source_row_id: trueLegacySourceRowId,
+          row_sort_id: `legacy:${trueLegacySourceRowId}`,
+        }),
+      ]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result).toEqual({ projected: 2, advanced: SEC });
+    const provenanceBySourceRowId = Object.fromEntries(
+      tapeInsertBinds(db).map((binds) => [
+        String(binds[13]),
+        (JSON.parse(String(binds[11])) as { safetyScore: unknown }).safetyScore,
+      ]),
+    );
+    expect(provenanceBySourceRowId[dualWrittenSourceRowId]).toEqual({
+      identityStatus: "complete",
+      identity: {
+        model: "v8",
+        schemaVersion: 1,
+        methodologyVersion: "8.11",
+        evaluationBuildDigest: "a".repeat(64),
+        baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+        publicationGenerationId: "report-cards:8.11:1700000000",
+      },
+    });
+    expect(provenanceBySourceRowId[trueLegacySourceRowId]).toEqual({
+      identityStatus: "legacy-v8-unidentified",
+      identity: null,
+    });
+  });
+
+  it("projects an organic V9 row with complete policy provenance", async () => {
+    const db = mockTapeD1(
+      scoreTables([
+        gradeRow({
+          source_table: "safety_score_history_v2",
+          source_row_id: "safety-score-history:v2:v9:123",
+          row_sort_id: "v2:safety-score-history:v2:v9:123",
+          methodology_version: "9.0",
+          model: "v9",
+          policy_id: "safety-score-v9-policy",
+          policy_digest: "c".repeat(64),
+          evaluation_build_digest: "a".repeat(64),
+          base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+          model_publication_generation_id: "safety-score-v9:123",
+        }),
+      ]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result).toEqual({ projected: 1, advanced: SEC });
+    expect(JSON.parse(String(tapeInsertBinds(db)[0]?.[11]))).toMatchObject({
+      safetyScore: {
+        identityStatus: "complete",
+        identity: {
+          model: "v9",
+          schemaVersion: 1,
+          methodologyVersion: "9.0",
+          policyId: "safety-score-v9-policy",
+          policyDigest: "c".repeat(64),
+          evaluationBuildDigest: "a".repeat(64),
+          baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+          publicationGenerationId: "safety-score-v9:123",
+        },
+      },
+    });
+  });
+
+  it.each([
+    {
+      name: "skips a V9 row whose policy identity is incomplete",
+      overrides: {
+        source_table: "safety_score_history_v2",
+        source_row_id: "safety-score-history:v2:v9:123",
+        row_sort_id: "v2:safety-score-history:v2:v9:123",
+        model: "v9",
+        policy_id: null,
+        policy_digest: null,
+        evaluation_build_digest: "a".repeat(64),
+        base_input_generation_id: `report-cards-input:v1:${"b".repeat(64)}`,
+        model_publication_generation_id: "safety-score-v9:123",
+      },
+    },
+    {
+      name: "does not project methodology-boundary baselines as organic movements",
+      overrides: {
+        transition_kind: "methodology-boundary-baseline",
+        prev_grade: null,
+        prev_score: null,
+      },
+    },
+  ])("$name", async ({ overrides }) => {
+    const db = mockTapeD1(scoreTables([gradeRow(overrides)])) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    expect(result).toEqual({ projected: 0, advanced: SEC });
+    expect(tapeInsertBinds(db)).toHaveLength(0);
+  });
+
+  it("does not insert events or advance the cursor during dry runs", async () => {
+    const db = mockTapeD1(scoreTables([gradeRow()])) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db, { dryRun: true });
+
+    expect(result).toEqual({ projected: 1, advanced: null });
+    expect(tapeInsertBinds(db)).toHaveLength(0);
+    expect(tapeCacheWriteBinds(db, "score.upgraded")).toHaveLength(0);
+  });
+
+  it("does not publish a not-rated coin becoming rated as a grade upgrade", async () => {
+    const db = mockTapeD1(
+      scoreTables([gradeRow({ grade: "F", score: 20, prev_grade: "NR", prev_score: null })]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    // NR is the explicit not-rated outcome, not a grade below F.
+    expect(result).toEqual({ projected: 0, advanced: SEC });
+    expect(tapeInsertBinds(db)).toHaveLength(0);
+  });
+
+  it("does not publish a rated coin losing its rating as a severe grade downgrade", async () => {
+    const db = mockTapeD1(
+      scoreTables([gradeRow({ grade: "NR", score: null, prev_grade: "A", prev_score: 85 })]),
+    ) as MockD1Database;
+
+    const result = await projectScoreDowngraded(db);
+
+    expect(result).toEqual({ projected: 0, advanced: SEC });
     expect(tapeInsertBinds(db)).toHaveLength(0);
   });
 });

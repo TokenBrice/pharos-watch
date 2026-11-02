@@ -27,10 +27,21 @@ import { DEFINITIONS } from "@/lib/definitions";
 import { DEPEG_RESOLVER_SECTION_CONTENT, MINT_BURN_FLOW_SECTION_CONTENT, PRICING_PIPELINE_SECTION_CONTENT, SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
 import { METHODOLOGY_HISTORY_ARCHIVES, methodologyHistoryAnchor } from "@shared/lib/methodology-versions/archives";
 
+// The page is static (no props, constant date): render once and reuse the parsed document.
+let cachedHtml: string | null = null;
+let cachedRoot: HTMLElement | null = null;
+
+function methodologyHtml() {
+  cachedHtml ??= renderToStaticMarkup(<MethodologyPage />);
+  return cachedHtml;
+}
+
 function methodologyDocument() {
-  const root = document.createElement("div");
-  root.innerHTML = renderToStaticMarkup(<MethodologyPage />);
-  return root;
+  if (!cachedRoot) {
+    cachedRoot = document.createElement("div");
+    cachedRoot.innerHTML = methodologyHtml();
+  }
+  return cachedRoot;
 }
 
 function tableCells(root: HTMLElement, testId: string) {
@@ -86,7 +97,7 @@ describe("MethodologyPage", () => {
 
 
   it("renders every section anchor that methodology context deep-links to", () => {
-    const html = renderToStaticMarkup(<MethodologyPage />);
+    const html = methodologyHtml();
     const anchors = new Set(
       Object.values(METHODOLOGY_CONTEXT)
         .map((item) => item.methodologyPath)

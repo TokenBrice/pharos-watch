@@ -8,6 +8,7 @@ import {
   parseL2BeatSummaryProjects,
   runCli,
 } from "../maintenance/generate-l2beat-snapshot-coverage-audit";
+import { runCli as runBridgeRouteCandidatesCli } from "../maintenance/build-l2beat-bridge-route-candidates";
 
 function observedBaseline() {
   return { projects: Object.fromEntries(Object.entries(L2BEAT_CHAIN_RISK_SNAPSHOT).map(([id, snapshot]) => [id, {
@@ -57,5 +58,18 @@ describe("generate-l2beat-snapshot-coverage-audit", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("build-l2beat-bridge-route-candidates", () => {
+  it("refuses report writes into stablecoin source data", async () => {
+    const stdout = { write: vi.fn(() => true) };
+
+    await expect(runBridgeRouteCandidatesCli([
+      "--coin",
+      "usdc-circle",
+      "--report",
+      "shared/data/stablecoins/l2beat-bridge.md",
+    ], process.cwd(), stdout)).rejects.toThrow("advisory");
   });
 });

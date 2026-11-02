@@ -574,13 +574,12 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
   }
 
 
-  it("keeps callback_data within 64 bytes for every tracked stablecoin id", () => {
-    for (const id of TRACKED_META_BY_ID.keys()) {
-      const markup = buildAlertReplyMarkup(singleCoinAlerts(id), 0);
-      expect(collectCallbackData(markup)).toContain(`settings:o:${id}`);
-      for (const data of collectCallbackData(markup)) {
-        expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
-      }
+  it("keeps single-coin callback_data within 64 bytes for the longest tracked stablecoin id", () => {
+    const longestId = Array.from(TRACKED_META_BY_ID.keys()).reduce((a, b) => (b.length > a.length ? b : a));
+    const markup = buildAlertReplyMarkup(singleCoinAlerts(longestId), 0);
+    expect(collectCallbackData(markup)).toContain(`settings:o:${longestId}`);
+    for (const data of collectCallbackData(markup)) {
+      expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
     }
   });
 

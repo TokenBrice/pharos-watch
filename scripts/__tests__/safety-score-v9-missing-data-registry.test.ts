@@ -842,6 +842,15 @@ describe("Safety Score v9 documentation band", () => {
     const overBar = documentationResidualForRoot("root", rows, taskIds, 0.1);
     expect(overBar.bucket).toBe("open");
     expect(overBar.datumCount).toBe(11);
+
+    // The bar itself is open too: dust requires a book share strictly below it.
+    const atBar = documentationResidualForRoot(
+      "root",
+      [dust("root:gap:dust-at-bar", "reserve:at-bar", 0.001)],
+      taskIds,
+      0.1,
+    );
+    expect(atBar.bucket).toBe("open");
   });
 
   it("reads both the schema-7 cutover envelope and the schema-8 publication", () => {

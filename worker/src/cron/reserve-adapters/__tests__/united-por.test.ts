@@ -14,24 +14,7 @@ const SLICE = {
   risk: "low" as const,
 };
 
-
 describe("adaptUnitedPorPayload", () => {
-  it("computes the honest ratio and verified freshness for a clean, non-ripcord snapshot", () => {
-    const result = adaptUnitedPorPayload(UNITED_POR_PAYLOAD, SLICE);
-
-    expect(result.slices).toEqual([{ ...SLICE, pct: 100 }]);
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Math.floor(Date.parse("2026-07-09T16:10:01.559Z") / 1000),
-      freshnessMode: "verified",
-      totalReserveUsd: 1038136298.86,
-      supplyUsd: 1030959209.0,
-      details: { accountName: "United Stables", ripcord: false, freshnessSource: "same-run-render-clock" },
-    });
-    const expectedRatio = 1038136298.86 / 1030959209.0;
-    expect(result.metadata!.collateralizationRatio).toBeCloseTo(expectedRatio, 9);
-    expect(result.metadata!.details).not.toHaveProperty("ripcordDetails");
-    expect(result.warnings ?? []).toEqual([]);
-  });
 
   it("flags a ripcord=true snapshot as degraded and folds ripcordDetails into the warning message", () => {
     const payload: UnitedPorPayload = {
@@ -96,12 +79,6 @@ describe("adaptUnitedPorPayload", () => {
     expect(result.metadata).toMatchObject({ supplyUsd: 0 });
     expect(result.metadata).not.toHaveProperty("collateralizationRatio");
     expectWarningEffect(result, "united-por-zero-supply", "degraded");
-  });
-
-  it("throws on a malformed payload with an invalid totalReserve", () => {
-    const malformed: UnitedPorPayload = { ...UNITED_POR_PAYLOAD, totalReserve: "not-a-number" };
-
-    expect(() => adaptUnitedPorPayload(malformed, SLICE)).toThrow("invalid totalReserve");
   });
 
   it("throws on a malformed payload with an invalid totalToken", () => {

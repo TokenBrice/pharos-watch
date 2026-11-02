@@ -52,10 +52,10 @@ afterEach(() => {
 });
 
 describe("catalog action canonical audit", () => {
+  // One request form per boolean spelling: the audited mode comes from the
+  // response.dryRun branch, so numeric 1/0 duplicates are decoys.
   it.each([
     ["", false, "live"],
-    ["?dryRun=1", true, "dry-run"],
-    ["?dryRun=0", false, "live"],
     ["?dryRun=true", true, "dry-run"],
     ["?dryRun=false", false, "live"],
   ] as const)("audits the repair handler's resolved mode for %s", async (query, dryRun, mode) => {
@@ -69,16 +69,6 @@ describe("catalog action canonical audit", () => {
     expect(JSON.parse(rows(sqlite)[0]!.details_json!)).toMatchObject({ mode });
     expect(rows(sqlite)[0]!.details_json).not.toContain("not-persisted");
     expect(await response.json()).toMatchObject({ dryRun });
-  });
-
-  it("does not treat the catalog preview default as the execution default", async () => {
-    const sqlite = fixtures.open().sqlite;
-    await auditCatalogActionResponse({
-      db: createSqliteD1(sqlite), endpoint: endpoint("remediate-blacklist-amount-gaps"),
-      request: request("/api/remediate-blacklist-amount-gaps", "default-live"),
-      response: Response.json({ ok: true }),
-    });
-    expect(JSON.parse(rows(sqlite)[0]!.details_json!)).toMatchObject({ mode: "live" });
   });
 
   it("audits a POST dry run with the handler's resolved mode", async () => {

@@ -92,26 +92,31 @@ describe("ComparePairPage", () => {
     expect(research).toHaveLength(1);
   });
 
-  it.each([
-    "jpyc-jpyc-vs-jpysc-sbi-startale",
-    "usdy-ondo-finance-vs-usyc-hashnote",
-    "eurc-circle-vs-eurcv-societe-generale-forge",
-    "xaut-tether-vs-xaum-matrixdock",
-    "usd1-world-liberty-financial-vs-usdt-tether",
-    "brla-brla-digital-vs-brl1-brl1",
-    "gho-aave-vs-sgho-aave",
-    "usdf-falcon-vs-susdf-falcon",
-    "apxusd-apyx-vs-apyusd-apyx",
-  ])("registers the sibling-demand pair %s", async (slug) => {
-    expect(STATIC_COMPARISON_PAGE_BY_SLUG.has(slug)).toBe(true);
-    const document = await renderPair(slug);
-    expect(document.querySelectorAll("h1")).toHaveLength(1);
-    const page = STATIC_COMPARISON_PAGE_BY_SLUG.get(slug)!;
-    const hasOtherPair = [page.left.id, page.right.id].some((coinId) =>
-      getStaticComparisonPagesForCoin(coinId).some((candidate) => candidate.slug !== slug),
-    );
-    // The section only renders when either coin has another curated pair.
-    expect(document.getElementById("related-comparisons-title") !== null).toBe(hasOtherPair);
+  it("registers every pair under its own slug and renders the related section only when a sibling pair exists", async () => {
+    for (const [slug, page] of STATIC_COMPARISON_PAGE_BY_SLUG) {
+      expect(STATIC_COMPARISON_PAGE_BY_SLUG.get(page.slug), slug).toBe(page);
+      expect(page.href, slug).toBe(`/compare/${page.slug}/`);
+    }
+
+    const hasSiblingPair = (slug: string) => {
+      const page = STATIC_COMPARISON_PAGE_BY_SLUG.get(slug)!;
+      return [page.left.id, page.right.id].some((coinId) =>
+        getStaticComparisonPagesForCoin(coinId).some((candidate) => candidate.slug !== slug),
+      );
+    };
+    // One rendered representative per related-section branch, not a curated roster.
+    const slugs = [...STATIC_COMPARISON_PAGE_BY_SLUG.keys()];
+    const sample = [
+      slugs.find(hasSiblingPair),
+      slugs.find((slug) => !hasSiblingPair(slug)),
+    ].filter((slug): slug is string => slug != null);
+    expect(sample.length).toBe(2);
+    for (const slug of sample) {
+      const document = await renderPair(slug);
+      expect(document.querySelectorAll("h1"), slug).toHaveLength(1);
+      // The section only renders when either coin has another curated pair.
+      expect(document.getElementById("related-comparisons-title") !== null, slug).toBe(hasSiblingPair(slug));
+    }
   });
 });
 

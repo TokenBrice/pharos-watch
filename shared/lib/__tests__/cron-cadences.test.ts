@@ -25,6 +25,24 @@ describe("cron cadence split", () => {
     }
   });
 
+  // Moved from the former src/components/__tests__/cron-config.test.ts: the job-level
+  // frequency ratchet belongs with the cadence table a reviewed change must touch.
+  it("pins reduced-frequency cron intervals used by status", () => {
+    const intervals = Object.fromEntries(CRON_JOB_DEFINITIONS.map((cron) => [cron.job, cron.intervalSec]));
+    expect(intervals["sync-blacklist"]).toBe(6 * 3600);
+    expect(intervals["sync-dex-discovery"]).toBe(6 * 3600);
+    expect(intervals["sync-dex-liquidity-stage"]).toBe(3600);
+    expect(intervals["sync-dex-liquidity"]).toBe(3600);
+    expect(intervals["sync-cl-exit-depth"]).toBe(1800);
+    expect(intervals["sync-live-reserves"]).toBe(4 * 3600);
+    expect(intervals["sync-redemption-backstops"]).toBe(4 * 3600);
+    expect(intervals["sync-kinesis-supply"]).toBe(4 * 3600);
+    expect(intervals["sync-yield-data"]).toBe(2 * 3600);
+    expect(intervals["sync-yield-supplemental"]).toBe(4 * 3600);
+    expect(intervals["prune-status-probe-runs"]).toBe(86400);
+    expect(intervals["prune-cron-history"]).toBe(86400);
+  });
+
   it("preserves reviewed DEX freshness while other evidence producers follow their cron cadence", () => {
     for (const [job, intervalSec] of Object.entries(V9_EVIDENCE_PRODUCER_INTERVAL_SEC)) {
       if (job === "sync-dex-liquidity") {

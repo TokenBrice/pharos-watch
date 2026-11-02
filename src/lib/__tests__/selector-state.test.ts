@@ -7,7 +7,7 @@ import {
   SELECTOR_PROFILES,
 } from "@shared/lib/selector/types";
 import { decodeSelectorState, encodeSelectorState } from "@/lib/selector-state";
-import { VENUE_OPTIONS_BY_PROFILE } from "@/lib/selector-options";
+import { DEPEG_OPTIONS, VENUE_OPTIONS_BY_PROFILE } from "@/lib/selector-options";
 
 describe("selector URL vocabulary parity", () => {
   it.each([
@@ -37,5 +37,15 @@ describe("selector URL vocabulary parity", () => {
     expect(decodeSelectorState(`p=${profile}&v=${options.join(",")}`).venue).toEqual(
       profile === "treasury" ? ["custody"] : ["all"],
     );
+  });
+});
+
+describe("DEPEG_OPTIONS", () => {
+  it("keeps the owner-approved labels and states the one admitted band", () => {
+    expect(DEPEG_OPTIONS.map((option) => option.label)).toEqual([
+      "Zero tolerance",
+      "Within 1%",
+      "Moderate",
+    ]);
   });
 });

@@ -233,7 +233,7 @@ export async function runDexScreenerPass(
    * pick (a test, a replay) pins it. Without this the chain a run selects
    * depends on the hour it happens to execute in, so an assertion on
    * which deployment leads passes locally and fails in CI — which is why the
-   * pinned URL in `enrich-prices-fallback-cmc-jupiter.test.ts` had to be
+   * pinned URL in `enrich-prices-fallback-cmc.test.ts` had to be
    * weakened to a prefix at `ebe1340c7`.
    */
   nowMs?: number,

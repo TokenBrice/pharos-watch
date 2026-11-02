@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { runFeatureFlagInlining } from "../ci/check-feature-flag-inlining";
 import { withTempRepo } from "./helpers/test-state";
 
 const script = resolve("scripts/ci/check-feature-flag-inlining.ts");
@@ -22,7 +23,7 @@ describe("feature flag inlining", () => {
     ["nested template interpolation", "const enabled = `outer ${`inner ${process.env[name]}`}`;", 1],
   ])("scans %s as syntax rather than literal text", (_label, source, status) => {
     withTempRepo("pharos-feature-flag", { "src/lib/feature-flags.ts": source }, (cwd) => {
-      const result = spawnSync(process.execPath, ["--import", loader, script], { cwd, env, encoding: "utf8" });
+      const result = runFeatureFlagInlining({ cwd, env });
       expect(result.status, result.stderr).toBe(status);
       if (status === 1) expect(result.stderr).toContain("uses dynamic `process.env[...]` access");
       else expect(result.stdout).toContain("source-level OK");
@@ -37,11 +38,19 @@ describe("feature flag inlining", () => {
       "src/lib/feature-flags.ts": "export const enabled = process.env.NEXT_PUBLIC_PHAROS_TEST === 'true';",
       ".next/static/chunks/nested/page.js": chunk,
     }, (cwd) => {
-      const result = spawnSync(process.execPath, ["--import", loader, script], {
-        cwd, env: { ...env, NEXT_PUBLIC_PHAROS_TEST: "" }, encoding: "utf8",
-      });
+      const result = runFeatureFlagInlining({ cwd, env: { ...env, NEXT_PUBLIC_PHAROS_TEST: "" } });
       expect(result.status, result.stderr).toBe(status);
       expect(status === 1 ? result.stderr : result.stdout).toContain(status === 1 ? "not inlined" : "inlined across 1 chunks");
+    });
+  });
+
+  it("wires the CLI exit status and error stream", () => {
+    withTempRepo("pharos-feature-flag", {
+      "src/lib/feature-flags.ts": "const enabled = process.env[name];",
+    }, (cwd) => {
+      const result = spawnSync(process.execPath, ["--import", loader, script], { cwd, env, encoding: "utf8" });
+      expect(result.status, result.stderr).toBe(1);
+      expect(result.stderr).toContain("uses dynamic `process.env[...]` access");
     });
   });
 });

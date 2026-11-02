@@ -24,6 +24,16 @@ import { sha256Hex } from "@shared/lib/sha256";
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
+// Three round-trips run the capture CLI, which re-derives and re-verifies the
+// local registry snapshot from trusted, immutable files each time. Memoise both
+// per process; the verifier's own rejection paths stay covered by the replay
+// suite.
+vi.mock("../lib/safety-score-v9-registry", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/safety-score-v9-registry")>();
+  const snapshot = actual.verifyRegistrySnapshot(actual.localRegistrySnapshot());
+  return { ...actual, localRegistrySnapshot: () => snapshot, verifyRegistrySnapshot: () => snapshot };
+});
+
 const CLOCK = v9TestClockSec();
 const indexRow = (overrides: Partial<SafetyScoreCaptureArchiveIndex> = {}): SafetyScoreCaptureArchiveIndex => ({
   generation_id: "report-cards:v9:fixture-accepted", published_at: CLOCK, methodology_version: "9.0",
@@ -41,7 +51,7 @@ function insertCronRun(
     .run(PUBLICATION_PRODUCER_JOB, run.startedAt, 1_000, run.status ?? "ok", run.metadata, run.productive ?? 1);
 }
 
-async function archiveFixture(encoding?: "legacy" | "dictionary") {
+async function buildArchiveInputs() {
   const base = makeV9FixedInput({ assetId: "wm-m0", clockSec: CLOCK });
   const publication = makeWorkerSafetyScoreV9Publication({
     baseInputGenerationId: base.baseInputGenerationId, publishedAtSec: CLOCK,
@@ -49,6 +59,14 @@ async function archiveFixture(encoding?: "legacy" | "dictionary") {
   });
   const baseEntry = await buildReportCardsFixedInputCacheEntry(base);
   const delta = await buildSafetyScoreV9PublicationReplayCapture(publication, base, null, null);
+  return { base, publication, baseEntry, delta };
+}
+
+let archiveInputs: ReturnType<typeof buildArchiveInputs> | undefined;
+
+async function archiveFixture(encoding?: "legacy" | "dictionary") {
+  archiveInputs ??= buildArchiveInputs();
+  const { base, publication, baseEntry, delta } = await archiveInputs;
   const object: SafetyScoreCaptureArchiveObject = {
     schemaVersion: 1, generationId: publication.publicationGenerationId, publishedAt: CLOCK,
     methodologyVersion: publication.policyVersion, policyDigest: publication.policy.semanticDigest,

@@ -105,16 +105,12 @@ describe("firstOneLinerClause", () => {
     expect(firstOneLinerClause(undefined)).toBeNull();
   });
 
-  it("names every issuer in the published pre-launch one-liners", () => {
-    const answers = new Map(
-      ["jpy-megabank-consortium", "krw-imbank", "ddsc-aedc"].map((id) => {
-        const coin = TRACKED_META_BY_ID.get(id)!;
-        const item = buildPreLaunchQuickAnswers(coin).find((entry) => entry.question === `Who issues ${coin.symbol}?`);
-        return [id, item?.answer];
-      }),
-    );
-    expect(answers.get("jpy-megabank-consortium")).toContain("MUFG, Mizuho, and SMBC");
-    expect(answers.get("krw-imbank")).toContain("iM Bank and Finger");
-    expect(answers.get("ddsc-aedc")).toContain("IHC, FAB and Sirius");
+  it("answers the issuer question with each registry one-liner, launched rows included", () => {
+    const withOneLiner = [...TRACKED_META_BY_ID.values()].filter((coin) => coin.oneLiner?.trim());
+    expect(withOneLiner.length).toBeGreaterThan(0);
+    for (const coin of withOneLiner) {
+      const item = buildPreLaunchQuickAnswers(coin).find((entry) => entry.question === `Who issues ${coin.symbol}?`);
+      expect(item?.answer, coin.id).toBe(firstOneLinerClause(coin.oneLiner));
+    }
   });
 });

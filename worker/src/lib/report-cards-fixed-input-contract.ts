@@ -240,7 +240,7 @@ interface CommonFixedInput {
  * claims a score where the summary reports insufficient data, and never ranks
  * below the summary: premium weighting can only lift the score.
  */
-export function assertSafetyScoreV9DirectionalPegConsistency(input: {
+function assertSafetyScoreV9DirectionalPegConsistency(input: {
   pegDataById: Readonly<Record<string, { pegScore?: number | null }>>;
   activeDepegPeakBpsById: Readonly<Record<string, number>>;
   safetyScoreV9DirectionalPeg?: SafetyScoreV9DirectionalPeg;

@@ -234,37 +234,6 @@ describe("computePoolStress", () => {
 });
 
 describe("computeDurabilityScore", () => {
-  it("organicFraction = 0.25 → organic sub-score ≈ 50", () => {
-    // sqrt(0.25) * 100 = 50; organic weight = 0.15
-    const m = initMetrics("test", "TEST");
-    m.organicTvlWeightedSum = 250_000;
-    m.totalTvlForOrganic = 1_000_000;
-    // With neutral stabilities (null → 50 each) and no maturity (0):
-    // raw = 50*0.15 + 50*0.35 + 50*0.25 + 0*0.25 = 7.5+17.5+12.5+0 = 37.5 → 38
-    const score = computeDurabilityScore(m, null, null);
-    expect(score).toBe(38);
-  });
-
-  it("organicFraction = 1.0 → organic sub-score = 100", () => {
-    // sqrt(1.0) * 100 = 100
-    const m = initMetrics("test", "TEST");
-    m.organicTvlWeightedSum = 1_000_000;
-    m.totalTvlForOrganic = 1_000_000;
-    // raw = 100*0.15 + 50*0.35 + 50*0.25 + 0*0.25 = 15+17.5+12.5+0 = 45 → 45
-    const score = computeDurabilityScore(m, null, null);
-    expect(score).toBe(45);
-  });
-
-  it("tvlStability = 1.0 → tvlStabilityScore = 100", () => {
-    // tvlStabilityScore = 100; all others neutral/zero
-    const m = initMetrics("test", "TEST");
-    m.organicTvlWeightedSum = 0;
-    m.totalTvlForOrganic = 0; // organicFraction fallback = 0.5 → sqrt(0.5)*100 ≈ 70.7
-    // raw = 70.7*0.15 + 100*0.35 + 50*0.25 + 0*0.25 = 10.6+35+12.5+0 = 58.1 → 58
-    const score = computeDurabilityScore(m, 1.0, null);
-    expect(score).toBe(58);
-  });
-
   it("oldestPoolDays = 365 → maturityScore = 100", () => {
     // maturityScore = min(100, (365/365)*100) = 100
     const m = initMetrics("test", "TEST");

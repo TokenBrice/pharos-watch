@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MAX_OPS_ADMIN_REQUEST_BODY_BYTES, onRequest } from "../api/admin/[[path]].ts";
-import type { OpsAdminProxyEnv } from "../lib/ops-env";
+import { resolveOpsApiOrigin, validatePagesOpsProxyEnv, type OpsAdminProxyEnv } from "../lib/ops-env";
 import { makePagesProxyContext } from "./helpers/pages-context";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { mockUpstream } from "./helpers/mock-upstream";
@@ -566,6 +566,25 @@ describe("ops admin proxy", () => {
     const response = await responsePromise;
     expect(response.status).toBe(504);
     await expect(response.json()).resolves.toEqual({ error: "Operator API upstream timed out" });
+  });
+
+});
+
+describe("ops env contract", () => {
+  it("rejects non-canonical credential-bearing ops origins", () => {
+    for (const origin of [
+      "http://ops-api.pharos.watch",
+      "ftp://ops-api.pharos.watch",
+      "https://attacker.example",
+      "https://ops-api.pharos.watch/path",
+      "data:text/plain,opaque",
+    ]) {
+      expect(resolveOpsApiOrigin({ OPS_API_ORIGIN: origin })).toBeNull();
+    }
+    expect(validatePagesOpsProxyEnv({ OPS_API_ORIGIN: "https://attacker.example" })).toContainEqual({
+      code: "ops-api-origin-invalid",
+      message: "OPS_API_ORIGIN must be the canonical HTTPS origin https://ops-api.pharos.watch.",
+    });
   });
 
 });

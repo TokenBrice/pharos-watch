@@ -1,10 +1,9 @@
-import { buildSync } from "esbuild";
 import {
   mkdtempSync,
   rmSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import {
   afterAll,
@@ -17,6 +16,8 @@ import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-b
 import { buildResourcePressure } from "../cron-resource-pressure";
 import { REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
 import { createResourceProbeEnv } from "./safety-score-v9-resource-env.test-support";
+import { buildSafetyScoreV9ContagionProbe } from "./safety-score-v9-resource-budget.test-support";
+import { hasV9ContagionInput } from "../../../scripts/lib/v9-resource-policy";
 import { measurePublicationByteBudget, PublicationByteMetricsSchema, RESOURCE_PUBLICATION_CARD_UNIT_MAX_BYTES, RESOURCE_PUBLICATION_STREAMED_TOTAL_REGRESSION_MAX_BYTES } from "@shared/lib/safety-score-v9-resource-bytes";
 import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_UNCOMPRESSED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
 
@@ -145,7 +146,6 @@ describe("Safety Score V9 compile admission", () => {
 });
 
 const ROOT = resolve(import.meta.dirname, "../../../..");
-const TEST_DIRECTORY = resolve(import.meta.dirname);
 // Frozen pre-Phase-2 BASE from 335ecb0f5, smoke-out/base-20261003-0149.json
 // .pipeline.candidate encoded with stableJsonStringifyV1 and gzipCanonicalJson;
 // uncompressedBytes/contentSha256 below are the persisted pre-gzip bytes.
@@ -166,147 +166,39 @@ let bundledProbe = "";
 let bundledInputs: string[] = [];
 
 describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 contagion and historical capture resource budgets", {
-  timeout: 210_000,
+  // Bounded by the 130-second child kill guard; keeps a wedged contagion step
+  // from pushing the eight-minute lane past its job timeout.
+  timeout: 150_000,
 }, () => {
   beforeAll(() => {
     temporaryDirectory = mkdtempSync(join(tmpdir(), "pharos-v9-resource-"));
-    bundledProbe = join(temporaryDirectory, "probe.mjs");
-    const compilation = buildSync({
-      stdin: {
-        contents: `
-          import { readFileSync } from "node:fs";
-          import { normalizeFixedInput } from "../report-cards-fixed-input.ts";
-          import { applySafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation.ts";
-          import { assessSafetyScoreV9ResourceBudget } from "../safety-score-v9/resource-budget.ts";
-          import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
-          import { buildSafetyScoreV9PublicationFromNormalizedInput } from "../safety-score-v9/candidate.ts";
-          import { serializeSafetyScoreV9Publication } from "../safety-score-v9/publication-codec.ts";
-          import { measurePublicationByteBudget } from "@shared/lib/safety-score-v9-resource-bytes";
-          import { createSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input.ts";
-          import { buildSafetyScoreV9BaselineExtensionFromNormalizedInput } from "../safety-score-v9/extension.ts";
-          import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set.ts";
-          import { createV9ContagionScenarioEvaluator } from "@shared/lib/safety-score-v9/contagion";
-          import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
-          import { createReportCardEvidenceJournalV1 } from "@shared/lib/report-card-evidence-journal";
-          import { createSupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-          import { buildSafetyScoreV9PegProvenanceSummary, projectSafetyScoreV9PegScoreResult } from "../safety-score-v9/peg-provenance.ts";
-          import { computePegScore } from "@shared/lib/peg-score";
-
-          const capturePath = process.env.SAFETY_SCORE_V9_RESOURCE_CAPTURE;
-          let input = capturePath
-            ? JSON.parse(readFileSync(capturePath, "utf8")).fixedInput
-            : normalizeFixedInput(createSafetyScoreV9FullRegistryInput());
-          if (!capturePath) {
-          input.evidenceJournalById = Object.fromEntries(input.activeAssetIds.slice(0, 250).map(assetId => [
-            assetId, [0, 1].map(index => createReportCardEvidenceJournalV1({
-              schemaVersion: 1, lane: "reserve", assetId, attemptId: "resource-reserve:" + index,
-              sourceId: "resource-reserve-adapter", sourceOriginClass: "onchain-observation",
-              attemptCode: "reserve.collector.attempted", admissionCode: "reserve.admission.accepted",
-              fallbackCode: "reserve.fallback.not-used", attemptedAtSec: input.clockSec - 20 + index,
-              completedAtSec: input.clockSec - 10 + index, sourceTimestampSec: input.clockSec - 20 + index,
-              sourceBlock: null, contentSha256: "a".repeat(64), sidecarMaterializationSha256: null,
-            })),
-          ]));
-          input.supplyAttributionJournalById = {
-            "wm-m0": [createSupplyAttributionJournalV1({
-              schemaVersion: 1, lane: "supply-attribution", assetId: "wm-m0", attemptId: "resource-supply:1",
-              sourceId: "wm.reviewed-deployment-unit-partition.v1", sourceOriginClass: "onchain-observation",
-              baseInputGenerationId: input.baseInputGenerationId, sourceGeneration: input.sourceGeneration,
-              registryFingerprint: input.registryFingerprint, routeInventoryDigest: "b".repeat(64),
-              attemptCode: "supply-attribution.collector.attempted", admissionCode: "supply-attribution.admission.accepted",
-              fallbackCode: "supply-attribution.fallback.not-used", attemptedAtSec: input.clockSec - 20,
-              completedAtSec: input.clockSec - 10, scoringClockSec: input.clockSec,
-              sourceObservedAtSec: input.clockSec - 20, failedRouteId: null, contentSha256: "c".repeat(64),
-            })],
-          };
-          input.pegProvenanceById = Object.fromEntries(input.activeAssetIds.map(assetId => [
-            assetId, buildSafetyScoreV9PegProvenanceSummary({
-              assetId, events: [], trackingStartSec: input.clockSec - 180 * 86400, clockSec: input.clockSec,
-              expectedLegacyInclusive: projectSafetyScoreV9PegScoreResult(computePegScore([], input.clockSec - 180 * 86400, input.clockSec)),
-            }),
-          ]));
-          }
-          if (!capturePath) {
-            const admission = assessSafetyScoreV9ResourceBudget({
-              catalogAssets: TRACKED_SOURCE_COINS.length, activeAssets: input.activeAssetIds.length, inputBytes: null,
-            });
-            if (!admission.admitted) throw new Error(admission.reason);
-            const base = input;
-            input = applySafetyScoreV9SupplyAttributionGeneration(input, null).fixedInput;
-            if (input.baseInputGenerationId !== base.baseInputGenerationId ||
-              input.aggregateCirculatingById !== base.aggregateCirculatingById ||
-              input.dexLiqMap !== base.dexLiqMap) throw new Error("Attribution composition copied or changed the base");
-          }
-          let extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(input, { allowRegistryMismatch: Boolean(capturePath) });
-          if (process.env.CONTAGION_MATRIX === "1") {
-            const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(input, extension);
-            const { v9FactSetDigest, ...rawCompileInput } = compiled;
-            extension = null;
-            const policy = loadV9CandidateMethodologyPolicy(input.clockSec);
-            const counts = [];
-            const started = performance.now();
-            const evaluateScenario = createV9ContagionScenarioEvaluator({
-              rawCompileInput, policy, clock: input.clockSec,
-              publicationGenerationId: "resource-fixture",
-            });
-            for (const assetId of ["usdc-circle", "usdt-tether", "usds-sky"]) {
-              for (const shock of [
-                { kind: "score-limit", assetId, dimension: "final", limit: 40 },
-                { kind: "depeg", assetId, activeDepegBps: 1000, template: "one-day-history-and-exit-held" },
-                { kind: "mint-control-compromise", assetId },
-              ]) {
-                const result = evaluateScenario({ id: assetId + ":" + shock.kind, shocks: [shock] });
-                counts.push(result.manifest);
-                globalThis.gc?.();
-              }
-            }
-            process.stdout.write(JSON.stringify({
-              expected: input.activeAssetIds.length, counts,
-              wallMs: performance.now() - started,
-              finalHeapUsedBytes: process.memoryUsage().heapUsed,
-              peakRssBytes: process.resourceUsage().maxRSS * 1024,
-            }));
-            process.exit(0);
-          }
-          if (capturePath) {
-            const result = buildSafetyScoreV9PublicationFromNormalizedInput({
-              fixedInput: input, extension, publishedAtSec: input.clockSec,
-            });
-            const stored = await serializeSafetyScoreV9Publication(result.candidate);
-            const metadata = JSON.parse(stored);
-            process.stdout.write(JSON.stringify({ baseInputGenerationId: result.candidate.baseInputGenerationId,
-              candidateBytes: metadata.uncompressedBytes, compressedBytes: metadata.compressedBytes,
-              publicationBytes: measurePublicationByteBudget(result.candidate, metadata.uncompressedBytes) }));
-            process.exit(0);
-          }
-          throw new Error("Expected explicit contagion or historical capture protocol");
-        `,
-        loader: "ts",
-        resolveDir: TEST_DIRECTORY,
-        sourcefile: "safety-score-v9-resource-probe.ts",
-      },
-      outfile: bundledProbe,
-      bundle: true,
-      metafile: true,
-      platform: "node",
-      format: "esm",
-      target: "node24",
-      tsconfig: join(ROOT, "tsconfig.json"),
-      logLevel: "silent",
-      // Mirror the Worker's zod: v4 never JIT-compiles schemas under a Cloudflare userAgent
-      // (zod 4.5.4 src/v4/core/util.ts:411 `allowsEval` returns false; schemas.ts:2272-2275
-      // gate `fastpass` on it), but Node would eval ~12 MiB of fastpass code and closures
-      // that the isolate never holds. Pre-populating zod's global config before any schema
-      // module loads (src/v4/core/core.ts:212-227) disables the same JIT here.
-      banner: { js: "globalThis.__zod_globalConfig = { jitless: true };" },
-    });
-    bundledInputs = Object.keys(compilation.metafile!.inputs);
+    const built = buildSafetyScoreV9ContagionProbe(ROOT, temporaryDirectory);
+    bundledProbe = built.outfile;
+    bundledInputs = built.inputs;
   });
 
   afterAll(() => {
     if (temporaryDirectory) {
       rmSync(temporaryDirectory, { recursive: true, force: true });
     }
+  });
+
+  it("selects the contagion matrix for every input the nine-scenario probe bundles", () => {
+    const root = resolve(import.meta.dirname, "../../../..");
+    // Third-party modules are pinned by the lockfiles, themselves contagion
+    // inputs; CI checks out node_modules inside the repo, local worktrees may not.
+    const inputs = bundledInputs
+      .map((input) => relative(root, input).replaceAll("\\", "/"))
+      .filter((input) => !input.startsWith("..") && !/(^|\/)node_modules\//.test(input));
+    for (const expected of [
+      "shared/lib/safety-score-v9/contagion.ts",
+      "shared/lib/peg-score.ts",
+      "shared/lib/report-card-evidence-journal.ts",
+      "shared/data/stablecoins/coins.generated.json",
+      "worker/src/test-helpers/v9-fixed-input.ts",
+      "worker/src/lib/safety-score-v9/candidate.ts",
+    ]) expect(inputs, expected).toContain(expected);
+    expect(inputs.filter((input) => !hasV9ContagionInput([input]))).toEqual([]);
   });
 
   it("excludes broad schema barrels and sync-cron helpers from publication", () => {

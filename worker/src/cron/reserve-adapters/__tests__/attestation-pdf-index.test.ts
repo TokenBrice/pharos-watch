@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
@@ -16,6 +19,9 @@ import {
 } from "../attestation-pdf-index";
 import { expectValidAdapterOutput, installAdapterNetwork } from "./reserve-adapter.test-support";
 import ripioJune from "./fixtures/ripio-wfiat-june-2026.json";
+
+const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
+const ZARSC_SUPERCOIN_HTML = readFileSync(join(FIXTURES_DIR, "zarsc-supercoin.html"), "utf8");
 
 const CONFIGURED_PARAMS: AttestationPdfIndexParams = {
   slices: [
@@ -291,27 +297,35 @@ describe("adaptAttestationPdfIndex", () => {
   it.each([wars, wbrl, wcop, wmxn])("reads $id's reviewed balance date rather than its upload folder", (coin) => {
     const config = coin.liveReservesConfig as LiveReservesConfig;
     const params = parseLiveReserveAdapterParams("attestation-pdf-index", config.params);
+    const report = params.reviewedReport!;
     const result = adaptAttestationPdfIndex(ripioJune.html, params, { indexUrl: ripioJune.sourceUrl });
+    const balanceDateMs = Date.parse(`${report.balanceDate}T00:00:00Z`);
+    // The published report date comes from the month.day.year filename in the
+    // reviewed URL; derive it so advancing the reviewed report does not need a
+    // literal edit here.
+    const numericDate = report.url.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+    expect(numericDate, "reviewed report URL carries a month.day.year date").not.toBeNull();
+    const reportDate = `${numericDate![3]}-${numericDate![1]}-${numericDate![2]}`;
 
     expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 5, 30) / 1000,
-      reportDate: "2026-06-30",
+      sourceTimestamp: balanceDateMs / 1000,
+      reportDate,
       reportDatePrecision: "day",
-      reportBalanceDate: "2026-06-30",
-      reportPdfUrl: params.reviewedReport!.url,
+      reportBalanceDate: report.balanceDate,
+      reportPdfUrl: report.url,
       freshnessMode: "verified",
     });
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).not.toHaveProperty("redemption");
     // Quarterly Ripio reports inherit the lagged-quarterly cap: 100 days after
-    // the June 30 balance date is a healthy cycle, 151 days is not.
+    // the reviewed balance date is a healthy cycle, 151 days is not.
     expect(config.scoring?.maxSourceAgeSec).toBeUndefined();
     const inCycle = expectValidAdapterOutput("attestation-pdf-index", result, {
-      now: Date.UTC(2026, 9, 8) / 1000,
+      now: balanceDateMs / 1000 + 100 * 86_400,
     });
     expect(inCycle.warnings.some((warning) => warning.code === "stale-source-data")).toBe(false);
     const validation = expectValidAdapterOutput("attestation-pdf-index", result, {
-      now: Date.UTC(2026, 10, 28) / 1000,
+      now: balanceDateMs / 1000 + 151 * 86_400,
     });
     expect(validation.warnings).toContainEqual(expect.objectContaining({ code: "stale-source-data", effect: "degraded" }));
     expect(validation.warnings.some((warning) => warning.code === "stale-redemption-source-timestamp")).toBe(false);
@@ -353,6 +367,24 @@ describe("adaptAttestationPdfIndex", () => {
     expect(expectValidAdapterOutput("attestation-pdf-index", result, {
       now: Date.UTC(2026, 9, 21) / 1000,
     }).warnings).toEqual([]);
+  });
+
+  it("dates the captured Supercoin August report from its reviewed balance date", () => {
+    const reportUrl = "https://cdn.prod.website-files.com/6a46ac9899c74f98e01a0974/6aab8e272c83908780b26065_ZARSC%20AUG%202026%20Stablecoin%20Attestation%2031082026%20FINAL.pdf";
+    const params = parseLiveReserveAdapterParams("attestation-pdf-index", {
+      ...zarsc.liveReservesConfig.params,
+      reviewedReport: { url: reportUrl, balanceDate: "2026-08-31" },
+    });
+    const result = adaptAttestationPdfIndex(ZARSC_SUPERCOIN_HTML, params, {
+      indexUrl: "https://www.supercoin.co.za/assurance-reports",
+    });
+    expect(result.metadata).toMatchObject({
+      sourceTimestamp: Date.parse("2026-08-31T00:00:00Z") / 1000,
+      freshnessMode: "verified",
+      reportPdfUrl: reportUrl,
+      compositionSource: "configured-static-slices",
+    });
+    expect(result.metadata).not.toHaveProperty("collateralizationRatio");
   });
 
   it("uses ZARP's reviewed September balances rather than the October report date", () => {

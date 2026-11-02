@@ -25,6 +25,31 @@ function isTestPath(file: string): boolean {
   return /(^|\/)__tests__\//.test(file) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
 }
 
+// Critical-CSS pipeline inputs: any stylesheet or build-time CSS config change
+// can alter extraction for every route. Package files are included
+// conservatively because a `beasties` bump is only visible in their contents;
+// rerunning the full pass is always safe.
+const CRITICAL_CSS_PIPELINE_EXACT_PATHS = new Set<string>([
+  "scripts/maintenance/inline-homepage-critical-css.ts",
+  "scripts/maintenance/critical-css-worker.mjs",
+  "package.json",
+  "package-lock.json",
+]);
+
+export function hasCriticalCssPipelineImpact(files: readonly string[]): boolean {
+  // An empty or malformed diff cannot establish that CSS inputs are absent.
+  if (files.length === 0) return true;
+  return files.some((rawFile) => {
+    const file = normalizeRepoPath(rawFile);
+    // Reject absolute, empty-component and traversal paths like hasV9ResourceImpact:
+    // a malformed diff cannot establish that CSS inputs are absent.
+    if (!file || file.startsWith("/") || file.split("/").some((part) => part === "." || part === ".." || part === "")) return true;
+    return CRITICAL_CSS_PIPELINE_EXACT_PATHS.has(file)
+      || file.endsWith(".css")
+      || /(^|\/)(?:tailwind|postcss|next)\.config\.[cm]?[jt]s$/.test(file);
+  });
+}
+
 function isPagesImpactPath(file: string): boolean {
   return (
     FULL_DEPLOY_INFRA_PATHS.has(file) ||

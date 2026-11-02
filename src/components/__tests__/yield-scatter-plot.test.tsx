@@ -38,9 +38,8 @@ function showTooltip(id: string) {
 
 describe("YieldScatterPlot", () => {
   it.each([
+    // risk and mobile are orthogonal inputs; one row per branch covers both.
     { risk: undefined, mobile: false },
-    { risk: "any", mobile: false },
-    { risk: undefined, mobile: true },
     { risk: "any", mobile: true },
   ])("renders captured acrdx loss inside the $risk cohort, mobile=$mobile", async ({ risk, mobile }) => {
     chart.mobile = mobile;

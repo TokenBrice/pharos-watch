@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -24,6 +24,20 @@ function write(root: string, path: string, content: string): void {
   const absolutePath = join(root, path);
   mkdirSync(dirname(absolutePath), { recursive: true });
   writeFileSync(absolutePath, content);
+}
+
+/** Run an authored workflow shell prefix without blocking the sibling variant. */
+function runShell(script: string, options: { cwd: string; env: NodeJS.ProcessEnv }): Promise<{
+  status: number | null; stdout: string; stderr: string;
+}> {
+  return new Promise((resolvePromise) => {
+    const child = spawn("bash", ["-c", script], options);
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", (chunk: string) => { stdout += chunk; });
+    child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk; });
+    child.on("close", (status) => resolvePromise({ status, stdout, stderr }));
+  });
 }
 
 describe("mechanism refresh append-only verifier", () => {
@@ -85,9 +99,11 @@ describe("mechanism refresh captured artifact handoff", () => {
     }], new Date(capturedAt));
   }
 
-  it.each([false, true])(
+  // The two authored-shell variants are independent temp repos; running them
+  // concurrently pays one cold tsx start instead of two serial cold starts.
+  it.concurrent.each([false, true])(
     "runs the real workflow handoff for an open PR (new snapshot: %s)",
-    (newSnapshot) => {
+    async (newSnapshot) => {
       const root = mkdtempSync(join(tmpdir(), "pharos-mechanism-handoff-"));
       const cwd = join(root, "work");
       mkdirSync(cwd);
@@ -125,8 +141,8 @@ describe("mechanism refresh captured artifact handoff", () => {
         // the no-change exit; stop before commit/push/PR publication.
         const prefix = step.run.slice(0, step.run.indexOf("git commit \\\n"));
         expect(prefix).toContain("--stage restore-artifacts");
-        const result = spawnSync("bash", ["-c", prefix], {
-          cwd, encoding: "utf8",
+        const result = await runShell(prefix, {
+          cwd,
           env: { ...process.env, ASSET_ID: asset, GITHUB_REPOSITORY: "TokenBrice/pharos-watch",
             PATH: `${join(cwd, "bin")}:${process.env.PATH}`, TSX_TSCONFIG_PATH: TSCONFIG },
         });

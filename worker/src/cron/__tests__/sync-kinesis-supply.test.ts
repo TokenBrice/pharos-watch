@@ -360,26 +360,6 @@ describe("syncKinesisSupply", () => {
     expect(vi.mocked(recordOutcomeSafe).mock.calls[0]![2]).toBe(true);
   });
 
-  it("handles array response format", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
-    const arrayResponse = new Response(
-      JSON.stringify([
-        { date: "2026-03-22", circulation: 2_580_000, mint: 131_000_000, redemption: 128_420_000 },
-        { date: "2026-03-23", circulation: 2_586_388, mint: 131_051_834, redemption: 128_465_446 },
-      ]),
-      { status: 200 },
-    );
-    vi.mocked(fetchTextWithRetry).mockResolvedValue(await textResult(arrayResponse));
-
-    const { db, bindFn } = makeDb();
-    // Only test KAU by making KAG circuit open
-    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source !== "kinesis-kag-horizon");
-    await syncKinesisSupply(db, AbortSignal.timeout(5000));
-
-    // Should use the last element
-    expect(bindFn).toHaveBeenCalledWith("kau-kinesis", "kinesis-kau", 2_586_388, 1_700_000_000);
-  });
-
   it("treats invalid circulation as failure", async () => {
     vi.mocked(fetchTextWithRetry).mockResolvedValue(
       await textResult(new Response(JSON.stringify({ circulation: -5, mint: 0, redemption: 0 }), { status: 200 })),

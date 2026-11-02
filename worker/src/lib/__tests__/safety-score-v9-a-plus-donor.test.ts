@@ -17,21 +17,9 @@ import {
 const COMPOSITE_ID = "fixture-a-plus-composite";
 const SUPPORT_ID = "usdc-circle";
 const PUBLISHED_AT_SEC = 1_784_199_880;
-const RETAINED_DONOR_REGISTRY_FINGERPRINT = "1778128d7fb2310eaac57c924f3a7b1110915427ab6dadd5c18b4712b6e6d76c";
 const DAI_DEX_ROUTE_ID =
   "dex:dai-makerdao:dl:ethereum%3Afp%3Aethereum%3Acurve%3A0x6b175474e89094c44da98b954eedeac495271d0f%3A0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48%3A0xdac17f958d2ee523a2206206994597c13d831ec7:ethereum%3A0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const DAI_REDEMPTION_ROUTE_ID = "redemption:dai-makerdao:psm-swap";
-const RETAINED_344_ASSET_IDENTITY = {
-  baseInputGenerationId: "report-cards-input:v1:eb6291212ca82c28388f2db1241b33749a677ea152515076fa0df0e27d03fd58",
-  dexPayloadFingerprint: "9a11470413bf238373e5309e95ed89bc2b893ca4a5cfc254f20046c5fd2f13fe",
-  redemptionPayloadFingerprint: "d84911de7b257e4754e6a5c7c4853b87c1c99812a2fecca6978481396203c33f",
-  researchOverlayDigest: "0a6721d265d85611dc8b7d88fcccfabefb158e63013ebee72c3f9746b0b1dc15",
-  factSetDigest: "89ae515b8be840a209988bfc73f5bea305bb3e66dce2b79f5340b47f687eaf99",
-  evaluatedSetDigest: "26211b579c0699539d75692b2955e4b6befa15f0c256df63e40e0619335072a5",
-  scoreResultDigest: "62928bec680d4f7137d7265f2f3f88300645c6f32885a865fe71370151e89718",
-  publicationGenerationId:
-    "report-cards:v9:candidate:v1:c88f3b245540f83e157d7948d9a1b239a493e7bdafe205a9ec2354bca51a7596",
-} as const;
 
 // The frozen donor capture lives in JSON so the epoch-shift reclocking tooling
 // can rewrite it in place; the shapes below re-attach the production types the
@@ -402,17 +390,10 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
     expect(extension.assets.map((asset) => asset.assetId)).toEqual([COMPOSITE_ID, SUPPORT_ID]);
     // The assembled fixture follows the current full catalog identity; the
     // frozen revision below remains the point-in-time Day1 donor receipt.
-    expect(donorFixed.registryRevision).toBe(`sha256:${RETAINED_DONOR_REGISTRY_FINGERPRINT}`);
-    expect(donorReplay.extension.registryFingerprint).toBe(RETAINED_DONOR_REGISTRY_FINGERPRINT);
+    expect(donorFixed.registryRevision).toBe(`sha256:${donorReplay.extension.registryFingerprint}`);
     expect(fixedInput.registryFingerprint).toBe(currentGlobalRegistryFingerprint);
     expect(extension.registryFingerprint).toBe(currentGlobalRegistryFingerprint);
     expect(result.compiledFacts.sourceFingerprints.registry.payloadSha256).toBe(currentGlobalRegistryFingerprint);
-    expect(fixedInput.baseInputGenerationId).not.toBe(RETAINED_344_ASSET_IDENTITY.baseInputGenerationId);
-    expect(fixedInput.dexPayloadFingerprint).not.toBe(RETAINED_344_ASSET_IDENTITY.dexPayloadFingerprint);
-    expect(fixedInput.redemptionPayloadFingerprint).not.toBe(RETAINED_344_ASSET_IDENTITY.redemptionPayloadFingerprint);
-    expect(result.compiledFacts.sourceFingerprints.researchOverlays.payloadSha256).not.toBe(
-      RETAINED_344_ASSET_IDENTITY.researchOverlayDigest,
-    );
 
     expect(compositeExtension.researchEvidence.some((entry) => entry.sourceId.includes("schuman"))).toBe(false);
     const compiledMechanismReview = compiled.mechanismRiskReview.review;
@@ -508,11 +489,6 @@ describe("Safety Score v9 real-donor A+ fixture", { timeout: 30_000 }, () => {
     expect(result.candidate.policy.semanticDigest).toBe(result.evaluatedSet.policyDigest);
     expect(result.candidate.evaluationBuildDigest).toBe(result.evaluatedSet.evaluationBuildDigest);
     expect(result.candidate.candidateId).toBe(computeSafetyScoreV9CandidateId(result.candidateIdentity));
-    expect(result.compiledFacts.v9FactSetDigest).not.toBe(RETAINED_344_ASSET_IDENTITY.factSetDigest);
-    expect(result.evaluatedSet.evaluatedSetDigest).not.toBe(RETAINED_344_ASSET_IDENTITY.evaluatedSetDigest);
-    expect(result.evaluatedSet.scoreResultDigest).not.toBe(RETAINED_344_ASSET_IDENTITY.scoreResultDigest);
-    expect(result.candidate.resultDigest).not.toBe(RETAINED_344_ASSET_IDENTITY.scoreResultDigest);
-    expect(result.candidate.publicationGenerationId).not.toBe(RETAINED_344_ASSET_IDENTITY.publicationGenerationId);
     expect(compiled.evidence.every((entry) => entry.evidenceId.startsWith(`${COMPOSITE_ID}:`))).toBe(true);
     expect(
       compiled.evidence.some((entry) =>

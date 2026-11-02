@@ -15,22 +15,16 @@ vi.mock("next/link", async () => {
 vi.mock("@/lib/fonts/digest", () => ({ digestDisplay: { className: "digest-font" } }));
 
 const ROWS = buildCemeteryRegisterRows(CEMETERY_ENTRIES);
+// Every distinct peg in the register, not a curated id roster: the card must label each one.
+const ROW_BY_PEG = new Map(ROWS.map((row) => [row.pegCurrency, row]));
 
 describe("PlotMapRecordCard", () => {
-  it.each([
-    ["rai-rai-reflex-index-2024-02", "VAR"],
-    ["krt-terrakrw-2022-05", "OTHER"],
-    ["cnht-tether-cnh-2026-02", "CNH"],
-    ["xnk-kinka", "GOLD"],
-    ["gyen-gyen", "JPY"],
-    ["vndc-jade-labs", "VND"],
-  ])("prints the shared peg label for %s instead of the raw peg enum", (id, pegCurrency) => {
-    const row = ROWS.find((candidate) => candidate.id === id);
-    expect(row?.pegCurrency).toBe(pegCurrency);
+  it.each([...ROW_BY_PEG.keys()])("prints the shared peg label for %s instead of the raw peg enum", (pegCurrency) => {
+    const row = ROW_BY_PEG.get(pegCurrency)!;
 
     render(
       <PlotMapRecordCard
-        row={row!}
+        row={row}
         flowers={0}
         onLeaveFlower={() => {}}
         onReadRegister={() => {}}
@@ -39,7 +33,7 @@ describe("PlotMapRecordCard", () => {
       />,
     );
 
-    expect(screen.getByText("Peg").nextElementSibling?.textContent).toBe(PEG_LABELS_SHORT[row!.pegCurrency]);
+    expect(screen.getByText("Peg").nextElementSibling?.textContent).toBe(PEG_LABELS_SHORT[pegCurrency]);
     expect(screen.queryByText(pegCurrency)).toBeNull();
   });
 });

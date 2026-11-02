@@ -19,7 +19,7 @@ const DEPEG_CENSUS_RUN_READ_LIMIT = 4;
  * window, and the newest completed census is exactly the age the operator
  * needs. One day of producer runs stays a bounded index read.
  */
-export const DEPEG_LEDGER_CLOCK_READ_LIMIT = Math.ceil((24 * 3600) / CRON_INTERVALS["sync-stablecoins"]);
+const DEPEG_LEDGER_CLOCK_READ_LIMIT = Math.ceil((24 * 3600) / CRON_INTERVALS["sync-stablecoins"]);
 
 const CENSUS_GAP_REASONS: readonly DepegObservationGapReason[] = [
   "asset-absent",

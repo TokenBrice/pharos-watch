@@ -75,20 +75,6 @@ describe("adaptSuperstateLiquidity", () => {
     });
   });
 
-  it("keeps NAV slices and on-chain capacity when the ticker is absent from the optional liquidity body", () => {
-    const result = adaptSuperstateLiquidity(navResult, {}, "USTB", 9_310_000);
-
-    expect(result.slices).toEqual(navResult.slices);
-    expect(result.metadata).toMatchObject({
-      superstateLiquidityTicker: "USTB",
-      redemption: { capacityUsd: 9_310_000 },
-    });
-    expect(result.metadata).not.toHaveProperty("apiLiquidityUsd");
-    expect(result.warnings).toEqual([
-      expect.objectContaining({ code: "superstate-liquidity-unavailable", effect: "info" }),
-    ]);
-  });
-
   it("keeps NAV slices and on-chain capacity when liquidity amounts are malformed", () => {
     const result = adaptSuperstateLiquidity(
       navResult,

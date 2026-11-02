@@ -12,9 +12,7 @@ import {
   TRACKED_STABLECOINS,
 } from "../registry";
 import {
-  isActiveStablecoinMeta,
   isDelistedStablecoinMeta,
-  isFrozenStablecoinMeta,
   isPreLaunchStablecoinMeta,
   isQuarantinedStablecoinMeta,
   isReadableStablecoinMeta,
@@ -23,15 +21,6 @@ import { FROZEN_SNAPSHOTS_BY_ID } from "../frozen-snapshots";
 import { getListingClass } from "../listing-governance";
 
 describe("registry universes", () => {
-  it("ACTIVE = status === 'active'", () => {
-    expect(ACTIVE_STABLECOINS.every(isActiveStablecoinMeta)).toBe(true);
-    expect(ACTIVE_STABLECOINS.every((c) => c.status === "active" || c.status === undefined)).toBe(true);
-    expect(ACTIVE_STABLECOINS.some((c) => c.status === "pre-launch")).toBe(false);
-    expect(ACTIVE_STABLECOINS.some((c) => c.status === "quarantined")).toBe(false);
-    expect(ACTIVE_STABLECOINS.some((c) => c.status === "delisted")).toBe(false);
-    expect(ACTIVE_STABLECOINS.some((c) => c.status === "frozen")).toBe(false);
-  });
-
   it("QUARANTINED and DELISTED retain readable records without entering active", () => {
     expect(QUARANTINED_STABLECOINS.every(isQuarantinedStablecoinMeta)).toBe(true);
     expect(DELISTED_STABLECOINS.every(isDelistedStablecoinMeta)).toBe(true);
@@ -76,11 +65,6 @@ describe("registry universes", () => {
     expect(coin?.liveReservesConfig).toBeUndefined();
     expect(coin?.frozenAt).toBeUndefined();
     expect(coin?.obituary).toBeUndefined();
-  });
-
-  it("FROZEN = status === 'frozen'", () => {
-    expect(FROZEN_STABLECOINS.every(isFrozenStablecoinMeta)).toBe(true);
-    expect(FROZEN_STABLECOINS.every((c) => c.status === "frozen")).toBe(true);
   });
 
   it("preserves USDKG as a readable frozen identity, not an active producer", () => {

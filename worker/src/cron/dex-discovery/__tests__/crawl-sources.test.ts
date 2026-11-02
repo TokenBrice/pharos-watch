@@ -522,6 +522,49 @@ describe("crawlCoin DexScreener hardening", () => {
     });
   });
 
+  it("stops later targets after a refusal and records the failure immediately", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(fetchDsTokenPairsWithStatus).mockResolvedValueOnce({
+      ok: false,
+      pairs: [],
+      status: 429,
+      contentType: "text/plain",
+      error: "HTTP 429",
+      hardRefusal: true,
+    });
+    const runState = createDexScreenerDiscoveryRunState();
+    const context = createCrawlStageContext({
+      stablecoinId: "test-coin",
+      knownPoolIds: new Set(),
+      nowSec: 1_800_000_000,
+      pools: [],
+    });
+
+    const { providerChecks, stoppedEarly } = await crawlDexScreenerPoolsStage({
+      db: createMockDb(),
+      targets: [
+        ["ethereum", "0xabc"],
+        ["bsc", "0xdef"],
+      ],
+      context,
+      runState,
+    });
+
+    expect(fetchDsTokenPairsWithStatus).toHaveBeenCalledTimes(1);
+    expect(stoppedEarly).toBe(false);
+    expect(providerChecks).toEqual([
+      expect.objectContaining({ provider: "dexscreener", status: "failure", retryable: true }),
+    ]);
+    expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DEXSCREENER_LIQUIDITY, false);
+    expect(runState).toMatchObject({ outcomeRecorded: true, successfulRequests: 0 });
+  });
+
+  it("records nothing when the provider was never attempted", async () => {
+    await finalizeDexScreenerDiscoveryRun(createMockDb(), createDexScreenerDiscoveryRunState());
+
+    expect(recordOutcome).not.toHaveBeenCalled();
+  });
+
   it("keeps CoinGecko onchain staging output aligned with current discovery rows", async () => {
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValueOnce({
       transportOk: true,

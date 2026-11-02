@@ -84,8 +84,9 @@ describe("ESLint config ratchets", () => {
     }
   });
 
-  // Cold type-aware ESLint builds the project watch program before either probe;
-  // coverage runs have taken ~35s, beyond the shared 20s test budget.
+  // Type-aware parsing only needs the probe member's own type graph. The full
+  // tsconfig.typecheck.json project (~2,300 files) is covered by `lint:typed`;
+  // this probe keeps identical compilerOptions over a single-file project.
   it("blocks unsafe external-data operations while permitting a reviewed unknown decoder", async () => {
     const typedEslint = new ESLint({
       cache: false,
@@ -93,8 +94,12 @@ describe("ESLint config ratchets", () => {
       overrideConfigFile: "eslint.typed.config.mjs",
       overrideConfig: {
         languageOptions: {
-          // Watch programs typecheck lintText's input, not the on-disk source, even in CI.
-          parserOptions: { disallowAutomaticSingleRunInference: true },
+          parserOptions: {
+            project: "./tsconfig.eslint-ratchet.json",
+            tsconfigRootDir: process.cwd(),
+            // Watch programs typecheck lintText's input, not the on-disk source, even in CI.
+            disallowAutomaticSingleRunInference: true,
+          },
         },
       },
     });

@@ -97,6 +97,7 @@ import {
 } from "./extension-routes";
 import {
   buildSafetyScoreV9SupplyAdmission,
+  type ReviewedProviderRowExclusionRow,
 } from "./extension-supply";
 import {
   normalizeSafetyScoreV9CompilerInput,
@@ -156,6 +157,8 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
   reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
   accessClaimGraphReviews?: ReadonlyMap<string, V9AccessClaimGraphReview>;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
+  /** Injected reviewed provider-row exclusions; omitted reads the shared curated registry. */
+  providerRowExclusionReviews?: readonly ReviewedProviderRowExclusionRow[];
   /**
    * Evaluation inputs of the v10.39 lane closure, loaded by the publication
    * runner: the admitted certificate chain per lane (only `current` reads are
@@ -2712,6 +2715,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           {
             meta,
             transferMaterialityGeneration: options.transferMaterialityGeneration ?? null,
+            ...(options.providerRowExclusionReviews === undefined ? {} : { providerRowExclusionReviews: options.providerRowExclusionReviews }),
           },
         );
         const supplyReview = supplyAdmission.review;

@@ -381,13 +381,9 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     expect(asset.control.structuralFailures).toContainEqual(expect.objectContaining({ kind: "centralized-mint", severity: "high" }));
   });
 
-  it("keeps Axis's KMS-disclosed operator custody unresolved without an HSM attestation", () => {
+  it("keeps curated operator custody unresolved without an admitted attestation", () => {
     const assetId = "usdx-axis";
     const meta = ACTIVE_META_BY_ID.get(assetId)!;
-    const operatorAddress = "0xdeca86926d2aec9c3b0eeeb54aacfde6d0249370";
-    const authoredOperator = meta.mintAuthority!.controls!.find((control) => control.address === operatorAddress);
-    expect(authoredOperator).toBeDefined();
-    expect(authoredOperator!.keyCustodyAttestation).toBeUndefined();
     const input = fixedInput([assetId], {}, {
       clockSec: REGISTRY_FIXTURE_CLOCK_SEC,
       capturedAt: REGISTRY_FIXTURE_CAPTURED_AT,
@@ -395,18 +391,38 @@ describe("Safety Score v9 mint authoring contract (authoring-contract batch, own
     const extension = buildSafetyScoreV9BaselineExtension(input, { metaById: new Map([[assetId, meta]]) });
     const compiled = compileSafetyScoreV9FactSetFromNormalizedInput(normalizeFixedInput(input), extension);
     const asset = compiled.assets.find((candidate) => candidate.assetId === assetId)!;
-    const operator = asset.controls.find((control) =>
-      control.authority?.authorityKey === `ethereum:${operatorAddress}`,
-    )!;
-    expect(operator.keyCustody).toBe("unknown");
-    expect(operator.factorStatuses?.keyCustody?.observationState).toBe("missing");
-    const gapIds = operator.factorStatuses?.keyCustody?.gapIds ?? [];
-    expect(gapIds.length).toBeGreaterThan(0);
-    for (const gapId of gapIds) {
-      const gap = asset.gaps.find((candidate) => candidate.gapId === gapId)!;
-      // The researched KMS disclosure still does not attest HSM-resident signing keys.
-      expect(gap.causeProof).toMatchObject({ cause: "C", assertion: "researched-nondisclosure" });
+    const custodyQuestionRefs = new Set((meta.mintAuthority!.review.scopedQuestions ?? [])
+      .filter((question) => question.subject === "key-custody-independence")
+      .map((question) => question.controlRef.toLowerCase()));
+    const controlsWithoutAttestation = meta.mintAuthority!.controls!.filter(
+      (control) => control.keyCustodyAttestation === undefined,
+    );
+    expect(controlsWithoutAttestation.length).toBeGreaterThan(0);
+    let custodyScopedControls = 0;
+    for (const authored of controlsWithoutAttestation) {
+      const operator = asset.controls.find((control) =>
+        control.authority?.authorityKey === `${authored.chain ?? ""}:${authored.address}`,
+      );
+      expect(operator, authored.label).toBeDefined();
+      expect(operator!.keyCustody).toBe("unknown");
+      // Only a fresh custody scoped question emits the C/researched-nondisclosure
+      // factor gap; other controls stay unknown without inventing a review.
+      const hasFreshCustodyQuestion = custodyQuestionRefs.has(authored.label.toLowerCase()) ||
+        (authored.address != null && custodyQuestionRefs.has(`${authored.chain ?? ""}:${authored.address.toLowerCase()}`));
+      if (!hasFreshCustodyQuestion) continue;
+      custodyScopedControls += 1;
+      expect(operator!.factorStatuses?.keyCustody?.observationState).toBe("missing");
+      const gapIds = operator!.factorStatuses?.keyCustody?.gapIds ?? [];
+      expect(gapIds.length).toBeGreaterThan(0);
+      for (const gapId of gapIds) {
+        const gap = asset.gaps.find((candidate) => candidate.gapId === gapId)!;
+        // The researched KMS disclosure still does not attest HSM-resident signing keys.
+        expect(gap.causeProof).toMatchObject({ cause: "C", assertion: "researched-nondisclosure" });
+      }
     }
+    // Non-vacuity: a curation edit that drops every custody scoped question
+    // must fail here rather than silently skipping the branch above.
+    expect(custodyScopedControls).toBeGreaterThan(0);
   });
 
   // The C-wave review resolved RecoveryModeTriggerModule representation and

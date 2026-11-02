@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { FROZEN_SNAPSHOTS, FROZEN_SNAPSHOTS_BY_ID } from "@shared/lib/stablecoins/frozen-snapshots";
 import {
   buildFallbackAssetsFromCoinGecko,
@@ -654,7 +653,11 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
     expect(published.circulating).toEqual({});
   });
 
-  it.each(ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)))(
+  it.each(["usg-tangent", "usyc-hashnote"].map((id) => {
+    const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === id);
+    if (!meta) throw new Error(`missing preferred supply fixture: ${id}`);
+    return meta;
+  }))(
     "withholds $id's supply without dropping its row when native supply cannot be admitted", async (meta) => {
       for (const price of [1, undefined]) {
         onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockReset().mockResolvedValue(null);

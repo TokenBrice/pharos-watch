@@ -8,6 +8,7 @@ import {
   PEG_TAXONOMY_PAGE_BY_SLUG,
   PRE_LAUNCH_PEG_TAXONOMY_PAGES,
 } from "@/lib/peg-taxonomy";
+import { buildPegAtAGlanceRows } from "@/lib/peg-hub-content";
 import PegPage from "./page";
 
 vi.mock("./client", () => ({
@@ -15,6 +16,12 @@ vi.mock("./client", () => ({
     <div data-testid="peg-client">peg client {pegCurrency}</div>
   ),
 }));
+
+/** The at-a-glance cap is module-private; derive it from the USD cohort, which exceeds it. */
+function atAGlanceCap() {
+  const usd = PEG_TAXONOMY_PAGE_BY_SLUG.get("usd")!;
+  return buildPegAtAGlanceRows(usd.value, usd.coins).rows.length;
+}
 
 describe("PegPage", () => {
   it("renders currency-specific context, top coins, and conversion links", async () => {
@@ -63,6 +70,7 @@ describe("PegPage", () => {
   });
 
   it("renders the registry-only at-a-glance table, upcoming and former lists on a currency hub", async () => {
+    const cap = atAGlanceCap();
     const eur = PEG_TAXONOMY_PAGE_BY_SLUG.get("eur")!;
     const html = renderToStaticMarkup(await PegPage({ params: Promise.resolve({ peg: "eur" }) }));
     const document = new DOMParser().parseFromString(html, "text/html");
@@ -70,7 +78,7 @@ describe("PegPage", () => {
     expect(document.querySelector("h1")?.textContent).toBe(eur.title);
     const table = document.querySelector('table[aria-labelledby="peg-at-a-glance"]');
     expect(table?.textContent).toContain("MiCA status");
-    expect(table?.querySelectorAll("tbody tr").length).toBe(Math.min(eur.coins.length, 24));
+    expect(table?.querySelectorAll("tbody tr").length).toBe(Math.min(eur.coins.length, cap));
     expect(table?.textContent).not.toMatch(/\$\d/);
 
     const upcoming = document.getElementById("peg-upcoming")?.closest("section");
@@ -82,24 +90,25 @@ describe("PegPage", () => {
     expect(former?.querySelectorAll("li").length).toBeGreaterThan(0);
     expect(html.indexOf("peg client EUR")).toBeLessThan(html.indexOf("peg-at-a-glance"));
     // The table already links every member, so the chip directory is omitted rather than repeated.
-    expect(eur.coins.length).toBeLessThanOrEqual(24);
+    expect(eur.coins.length).toBeLessThanOrEqual(cap);
     expect(html).not.toContain("Stablecoin directory");
     expect(html).toContain("Swipe sideways for more columns");
   });
 
   it("limits the USD chip directory to members past the at-a-glance table", async () => {
+    const cap = atAGlanceCap();
     const usd = PEG_TAXONOMY_PAGE_BY_SLUG.get("usd")!;
     const html = renderToStaticMarkup(await PegPage({ params: Promise.resolve({ peg: "usd" }) }));
     const document = new DOMParser().parseFromString(html, "text/html");
     const directory = Array.from(document.querySelectorAll("h2")).find((h2) => h2.textContent === "Stablecoin directory")
       ?.closest("section");
 
-    expect(usd.coins.length).toBeGreaterThan(24);
-    expect(directory?.textContent).toContain(`Browse the other ${usd.coins.length - 24} tracked ${usd.shortLabel} stablecoins`);
+    expect(usd.coins.length).toBeGreaterThan(cap);
+    expect(directory?.textContent).toContain(`Browse the other ${usd.coins.length - cap} tracked ${usd.shortLabel} stablecoins`);
     const linked = new Set(Array.from(directory?.querySelectorAll("a") ?? []).map((a) => a.getAttribute("href")));
-    expect(linked.size).toBe(usd.coins.length - 24);
+    expect(linked.size).toBe(usd.coins.length - cap);
     expect(linked.has(`/stablecoin/${usd.coins[0]!.id}`)).toBe(false);
-    expect(linked.has(`/stablecoin/${usd.coins[24]!.id}`)).toBe(true);
+    expect(linked.has(`/stablecoin/${usd.coins[cap]!.id}`)).toBe(true);
   });
 
   it("names each related hub once, without repeating its count under the title", async () => {

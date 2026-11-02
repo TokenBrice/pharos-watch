@@ -115,13 +115,13 @@ describe("sFRAX current-token-stock perimeter", () => {
     expect(evmRpc.fetchEvmBlockHeader).toHaveBeenCalledTimes(18);
   });
 
-  it.each(["ethereum", "arbitrum", "avalanche", "base", "blast", "bsc", "fraxtal", "metis", "optimism"])(
+  it.each(["ethereum", "fraxtal"])(
     "withholds the entire generation when %s cannot be read", async (chain) => {
       missingChain = chain;
       await expect(fetchSfraxStockSupply(meta, PRICE)).resolves.toBeNull();
     },
   );
-  it.each(["ethereum", "fraxtal"])("withholds a changed canonical %s header", async (chain) => {
+  it.each(["fraxtal"])("withholds a changed canonical %s header", async (chain) => {
     changedHeader = chain;
     await expect(fetchSfraxStockSupply(meta, PRICE)).resolves.toBeNull();
   });

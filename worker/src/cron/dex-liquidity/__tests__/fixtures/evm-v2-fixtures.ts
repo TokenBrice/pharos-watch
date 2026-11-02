@@ -32,11 +32,6 @@ export interface EvmV2ReplayCase {
   readonly counterDecimals: number;
   readonly poolAddress: `0x${string}`;
   readonly pairTokenOrder: "stable-first" | "counter-first";
-  readonly fact: {
-    readonly assetId: string;
-    readonly reasonCode: string;
-    readonly exactFactPath: string;
-  };
 }
 
 export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
@@ -51,11 +46,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005001",
     pairTokenOrder: "stable-first",
-    fact: {
-      assetId: "idrt-rupiah-token",
-      reasonCode: "unsupported-same-notional-route",
-      exactFactPath: "exit:unsupported-same-notional-route",
-    },
   },
   {
     assetId: "spusd-soulpeg",
@@ -68,11 +58,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005002",
     pairTokenOrder: "stable-first",
-    fact: {
-      assetId: "spusd-soulpeg",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:spusd-soulpeg:gap:exit-routes",
-    },
   },
   {
     assetId: "stusd-stoneyield",
@@ -85,11 +70,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005003",
     pairTokenOrder: "counter-first",
-    fact: {
-      assetId: "stusd-stoneyield",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:stusd-stoneyield:gap:exit-routes",
-    },
   },
   {
     assetId: "susd-hedgecore",
@@ -102,11 +82,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005004",
     pairTokenOrder: "stable-first",
-    fact: {
-      assetId: "susd-hedgecore",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:susd-hedgecore:gap:exit-routes",
-    },
   },
   {
     assetId: "usda-alpha-partner",
@@ -119,11 +94,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005005",
     pairTokenOrder: "counter-first",
-    fact: {
-      assetId: "usda-alpha-partner",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:usda-alpha-partner:gap:exit-routes",
-    },
   },
   {
     assetId: "uusd-anything-labs",
@@ -136,11 +106,6 @@ export const EVM_V2_REPLAY_CASES: readonly EvmV2ReplayCase[] = [
     counterDecimals: 18,
     poolAddress: "0x0000000000000000000000000000000000005006",
     pairTokenOrder: "stable-first",
-    fact: {
-      assetId: "uusd-anything-labs",
-      reasonCode: "missing-runtime-route-evidence",
-      exactFactPath: "gap:exit:local-component:uusd-anything-labs:gap:exit-routes",
-    },
   },
 ] as const;
 

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   collectSourceEnvKeys,
+  findEnvExamplePolicyErrors,
   findWranglerBindingContractErrors,
   getWorkerEnvBindings,
   parseWranglerWorkerConfigBindings,
@@ -80,6 +81,30 @@ describe("check-env-contract source references", () => {
     });
   });
 
+});
+
+describe("check-env-contract .env.example content policy", () => {
+  it("rejects retired example keys and a non-canonical site API origin", () => {
+    expect(findEnvExamplePolicyErrors([
+      "SITE_API_ORIGIN=https://site-api.pharos.watch",
+      "CORS_ORIGIN=https://pharos.watch",
+    ].join("\n"))).toEqual([]);
+
+    expect(findEnvExamplePolicyErrors([
+      "DB=local-d1",
+      "VAULTS_FYI_TOKEN=secret",
+      "TELEGRAM_ADOPTION_IP_HASH_SECRET=secret",
+      "SITE_API_ORIGIN=http://localhost:8787",
+    ].join("\n"))).toEqual([
+      ".env.example must not document DB",
+      ".env.example must not document TELEGRAM_ADOPTION_IP_HASH_SECRET",
+      ".env.example must not document retired VAULTS_FYI_* keys (found VAULTS_FYI_TOKEN)",
+      '.env.example must document SITE_API_ORIGIN=https://site-api.pharos.watch (found "http://localhost:8787")',
+    ]);
+    expect(findEnvExamplePolicyErrors("# empty example\n")).toEqual([
+      ".env.example must document SITE_API_ORIGIN=https://site-api.pharos.watch (found no entry)",
+    ]);
+  });
 });
 
 describe("check-env-contract Wrangler binding parser", () => {

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
-import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { decideDepegAsset } from "../decision-engine";
 import type { DepegDetectionRow } from "../types";
@@ -65,6 +64,24 @@ const goldMeta: StablecoinMeta = {
   },
   geckoId: "vnx-gold",
   commodityOunces: 0.0321507466,
+};
+
+// Local copy of the ZARm metadata the native-domain recovery path reads; the
+// catalog entry's PSI-eligible membership is guarded by
+// sync-stablecoins/__tests__/supply-gap-reconciliation.test.ts.
+const zarMeta: StablecoinMeta = {
+  id: "zarm-mento",
+  name: "Mento South African Rand",
+  symbol: "ZARm",
+  flags: {
+    backing: "crypto-backed",
+    pegCurrency: "ZAR",
+    governance: "centralized-dependent",
+    yieldBearing: false,
+    rwa: false,
+    navToken: false,
+  },
+  geckoId: "celo-south-african-rand",
 };
 
 function makeAsset(overrides: Partial<PegAssetBase> = {}): PegAssetBase {
@@ -718,8 +735,7 @@ describe("decideDepegAsset", () => {
   });
 
   it("recovers a native-domain row from its native quote under a nominal USD primary", () => {
-    const meta = PSI_ELIGIBLE_META_BY_ID.get("zarm-mento");
-    if (!meta) throw new Error("zarm-mento must remain a PSI-eligible catalog member");
+    const meta = zarMeta;
 
     // zarm-mento publishes reviewed ZAR par as `protocol-par` /
     // `nominal_reference` whenever no trusted market quote is admitted, so its

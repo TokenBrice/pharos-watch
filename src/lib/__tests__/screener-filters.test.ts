@@ -434,6 +434,26 @@ describe("resolveScreenerFilterDataState", () => {
     { filters: { liquidityScoreMin: 65 }, source: "liquidity" },
   ])("qualifies active $source predicates by publication availability ($filters)", ({ filters, source }) => {
     const active = { ...SCREENER_FILTER_DEFAULTS, ...filters };
+    // The active key requires its own publication, so an errored empty read is unavailable...
+    expect(resolveScreenerFilterDataState(active, {
+      ...loaded, [source]: { loading: false, hasData: false, error: new Error("offline") },
+    })).toBe("unavailable");
+    // ...while every other source failing cannot gate it.
+    const othersUnavailable = Object.fromEntries(
+      (Object.keys(loaded) as Array<keyof ScreenerFilterSources>).map((key) => [
+        key, key === source ? loaded[key] : { loading: false, hasData: false, error: new Error("irrelevant") },
+      ]),
+    ) as ScreenerFilterSources;
+    expect(resolveScreenerFilterDataState(active, othersUnavailable)).toBe("ready");
+  });
+
+  it.each([
+    { filters: { dewsMin: 80 }, source: "dews" },
+    { filters: { safetyGrades: ["A"] }, source: "report" },
+    { filters: { pegScoreMin: 80 }, source: "peg" },
+    { filters: { liquidityScoreMin: 65 }, source: "liquidity" },
+  ] as const)("resolves every publication state from the required $source", ({ filters, source }) => {
+    const active = { ...SCREENER_FILTER_DEFAULTS, ...filters };
     const resolve = (state: ScreenerFilterSources[typeof source]) =>
       resolveScreenerFilterDataState(active, { ...loaded, [source]: state });
     expect(resolve({ loading: true, hasData: false })).toBe("loading");

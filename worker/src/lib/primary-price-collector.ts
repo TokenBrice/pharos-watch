@@ -190,7 +190,7 @@ const DEX_CO_LEG_RUN_LATENCY_MARGIN_SEC = 180;
  * the primary budget and the strictest co-leg window; as the sole kind of leg
  * it keeps its own freshness window.
  */
-export function getDexCoLegBudgetSec(coLegSources: readonly { source: string }[]): number {
+function getDexCoLegBudgetSec(coLegSources: readonly { source: string }[]): number {
   let maxAgeSec = DEPEG_PRIMARY_PRICE_MAX_AGE_SEC;
   for (const { source } of coLegSources) {
     const sourceMaxAgeSec = getPricingSourceRegistryEntry(source)?.maxTrustedAgeSec;

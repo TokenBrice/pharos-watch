@@ -12,25 +12,21 @@ function makeCoin(overrides: Partial<StablecoinMeta> = {}): StablecoinMeta {
 }
 
 describe("StablecoinMeta", () => {
-  it("accepts a frozen coin with obituary block", () => {
+  it("rejects a non-URL obituary source", () => {
     const meta = {
       ...makeCoin({ id: "fixture-frozen", name: "Fixture", symbol: "FXT" }),
-      status: "frozen",
+      status: "frozen" as const,
       frozenAt: "2026-04-27",
       obituary: {
-        causeOfDeath: "abandoned",
+        causeOfDeath: "abandoned" as const,
         deathDate: "2026-04",
         epitaph: "Closed without ceremony.",
         obituary: "FXT was sunset by its issuer in April 2026.",
-        sourceUrl: "https://example.com/fxt-shutdown",
+        sourceUrl: "not-a-url",
         sourceLabel: "Issuer announcement",
       },
     };
-    expect(StablecoinMetaSourceAssetSchema.parse(meta).obituary).toEqual(meta.obituary);
-    const result = StablecoinMetaSourceAssetSchema.safeParse({
-      ...meta,
-      obituary: { ...meta.obituary, sourceUrl: "not-a-url" },
-    });
+    const result = StablecoinMetaSourceAssetSchema.safeParse(meta);
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.issues).toContainEqual(expect.objectContaining({ path: ["obituary", "sourceUrl"] }));

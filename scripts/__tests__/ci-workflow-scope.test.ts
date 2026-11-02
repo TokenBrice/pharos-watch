@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
@@ -199,8 +200,10 @@ describe("CI workflow scope", () => {
     expect(weekly.jobs["v9-resource"]).toBeUndefined();
     expect(readRepoFile(".github/workflows/weekly-validation.yml")).not.toContain("npm run test:v9-resource");
     expect(nightly.jobs["full-tests"].strategy.matrix.shard).toEqual([1, 2, 3, 4]);
-    expect(nightly.jobs["full-tests"].steps.some((step: { run?: string }) =>
-      step.run === "npm test -- --shard=${{ matrix.shard }}/4")).toBe(true);
+    const shardRun = nightly.jobs["full-tests"].steps.find((step: { run?: string }) =>
+      step.run?.includes("npm test -- --shard=${{ matrix.shard }}/4"));
+    expect(shardRun?.run).toContain("--reporter=default --reporter=github-actions --reporter=json");
+    expect(shardRun?.run).toContain("--outputFile=.tmp/vitest-shard-${{ matrix.shard }}.json");
   });
 
   it("runs CodeQL weekly on Monday and manual dispatch, not pushes", () => {
@@ -660,6 +663,165 @@ describe("CI workflow scope", () => {
     expect(upload.with?.path).toBe("agents/sweep/");
   });
 
+  type WorkflowStep = {
+    id?: string; name?: string; uses?: string; run?: string; if?: string;
+    permissions?: Record<string, string>;
+    "continue-on-error"?: boolean; "timeout-minutes"?: number;
+    with?: Record<string, unknown>; env?: Record<string, string>;
+  };
+  type WorkflowJob = {
+    needs?: string | string[]; if?: string; permissions?: Record<string, string>;
+    "timeout-minutes"?: number; env?: Record<string, string>;
+    outputs?: Record<string, string>; strategy?: Record<string, unknown>; steps?: WorkflowStep[];
+  };
+  type Workflow = { jobs: Record<string, WorkflowJob> };
+
+  it("caches installed dependencies only in secret-free jobs", () => {
+    const pr = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as Workflow;
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
+    const deploy = parseYaml(readRepoFile(".github/workflows/deploy-cloudflare.yml")) as Workflow;
+    const preparePages = parseYaml(readRepoFile(".github/workflows/pages-prepare.yml")) as Workflow;
+    const setupOf = (job: WorkflowJob) => job.steps?.find((step) => step.uses === "$/.github/actions/setup-workspace");
+    expect(setupOf(pr.jobs.prepare)?.with).toMatchObject({ "node-modules-cache": "true" });
+    for (const job of ["full-static", "full-tests", "v9-resource", "lighthouse", "web-vitals", "test-plan-parity"]) {
+      expect(setupOf(nightly.jobs[job])?.with, job).toMatchObject({ "node-modules-cache": "true" });
+    }
+    for (const [job, definition] of Object.entries(weekly.jobs)) {
+      if (job === "gitleaks") continue;
+      expect(setupOf(definition)?.with, job).toMatchObject({ "node-modules-cache": "true" });
+    }
+    // The history-scan job imports only Node builtins; it has no workspace setup.
+    expect(setupOf(weekly.jobs.gitleaks)).toBeUndefined();
+    // pages-prepare packs a workspace consumed by the credential-holding
+    // pages-release job, so it never restores a writable dependency cache.
+    expect(setupOf(preparePages.jobs["pages-prepare"])?.with).toMatchObject({ "node-modules-cache": "false" });
+    // Production credential holders install without a writable dependency cache.
+    expect(setupOf(deploy.jobs["deploy-worker"])?.with).toMatchObject({ "node-modules-cache": "false" });
+    expect(setupOf(deploy.jobs["post-deploy-acceptance"])?.with).toMatchObject({ "install-deps": "false" });
+    expect(setupOf(deploy.jobs.plan)?.with).toMatchObject({ "install-deps": "false" });
+  });
+
+  it("keeps validation history and wires the Pages critical-CSS scope", () => {
+    const pr = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as Workflow;
+    const checkoutOf = (job: WorkflowJob) => job.steps?.find((step) => step.uses?.startsWith("actions/checkout@"));
+    expect(pr.jobs.validation.strategy?.["max-parallel"]).toBe(14);
+    expect(checkoutOf(pr.jobs.validation)?.with?.["fetch-depth"]).toBe(0);
+    expect(pr.jobs.prepare.outputs?.pages_critical_css_full_pass)
+      .toBe("${{ steps.classify.outputs.pages_critical_css_full_pass }}");
+    const replay = pr.jobs["pages-artifact"].steps?.find((step) => step.env?.PR_LANE_ID === "pages-artifact");
+    expect(replay?.env).toMatchObject({
+      PHAROS_CRITICAL_CSS_FULL_PASS: "${{ needs.prepare.outputs.pages_critical_css_full_pass }}",
+      PHAROS_PAGES_REUSE_PREPARED_WORKSPACE: "1",
+    });
+  });
+
+  it("confines the timing-acquisition token and scopes the nightly-red issue writer", () => {
+    const pr = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as Workflow;
+    const prepare = pr.jobs.prepare;
+    expect(prepare.permissions).toEqual({ contents: "read", actions: "read" });
+    // Only the gh-only acquisition step may see a token; candidate code never does.
+    const tokenSteps = (prepare.steps ?? []).filter((step) => step.env?.GH_TOKEN !== undefined);
+    expect(tokenSteps.map((step) => step.id)).toEqual(["test-timings"]);
+    expect(tokenSteps[0]?.run).not.toMatch(/\b(npm|npx|node)\b/);
+    // Acquisition runs immediately after checkout, before setup-workspace and
+    // therefore before any PR code; a bounded, non-fatal advisory step.
+    const prepareSteps = prepare.steps ?? [];
+    const checkout = prepareSteps.findIndex((step) => step.uses?.startsWith("actions/checkout@"));
+    const acquire = prepareSteps.findIndex((step) => step.id === "test-timings");
+    const setup = prepareSteps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace");
+    expect(acquire).toBe(checkout + 1);
+    expect(acquire).toBeLessThan(setup);
+    expect(prepareSteps[acquire]["timeout-minutes"]).toBe(2);
+    expect(prepareSteps[acquire]["continue-on-error"]).toBe(true);
+    expect(prepareSteps[acquire].if).toBeUndefined();
+
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const red = nightly.jobs["nightly-red"];
+    expect(red.permissions).toEqual({ contents: "read", issues: "write" });
+    expect(red.if).toContain("refs/heads/main");
+    expect(red.steps?.every((step) => step.uses === undefined)).toBe(true);
+    // Telemetry merge failure is a warning, never a red nightly leaf.
+    const merge = nightly.jobs["test-timings"].steps?.find((step) => step.name === "Merge the shard timing reports");
+    expect(merge?.["continue-on-error"]).toBe(true);
+  });
+
+  it("wires the main-only static test-plan parity canary into the nightly red set", () => {
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const job = nightly.jobs["test-plan-parity"];
+    expect(job.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    expect(job.needs).toBeUndefined();
+    expect(job["timeout-minutes"]).toBe(30);
+    const checkout = job.steps?.find((step) => step.uses?.startsWith("actions/checkout@"));
+    expect(checkout?.with?.["fetch-depth"]).toBe(0);
+    const setup = job.steps?.find((step) => step.uses === "$/.github/actions/setup-workspace");
+    expect(setup?.with).toMatchObject({ "node-modules-cache": "true", "bootstrap-history": "true" });
+    expect(job.steps?.filter((step) => step.run).map((step) => step.run)).toEqual([
+      "npm run check:test-plan-parity -- --commits=5",
+    ]);
+    const red = nightly.jobs["nightly-red"];
+    expect(red.needs).toContain("test-plan-parity");
+    expect(red.env?.TEST_PLAN_PARITY_RESULT).toBe("${{ needs.test-plan-parity.result }}");
+  });
+
+  it("opens the nightly-red issue on the first red run and never closes it on cancellation", () => {
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as Workflow;
+    const script = nightly.jobs["nightly-red"].steps?.find((step) => step.name === "Upsert the nightly-red issue")?.run;
+    expect(script).toBeDefined();
+    const root = mkdtempSync(join(tmpdir(), "pharos-nightly-red-"));
+    const log = join(root, "gh.log");
+    const gh = join(root, "gh");
+    writeFileSync(gh, [
+      "#!/usr/bin/env bash",
+      'printf "%s\\n" "$*" >> "$GH_LOG"',
+      'if [[ "$1" == "issue" && "$2" == "list" && -n "${OPEN_ISSUE:-}" ]]; then printf "%s\\n" "$OPEN_ISSUE"; fi',
+      "exit 0",
+      "",
+    ].join("\n"), { mode: 0o755 });
+    const base: NodeJS.ProcessEnv = {
+      ...process.env,
+      PATH: `${root}:${process.env.PATH ?? ""}`,
+      GH_LOG: log,
+      RUNNER_TEMP: root,
+      RUN_URL: "https://example.test/run/1",
+      FULL_STATIC_RESULT: "success",
+      FULL_TESTS_RESULT: "success",
+      V9_RESOURCE_RESULT: "success",
+      LIGHTHOUSE_RESULT: "success",
+      WEB_VITALS_RESULT: "skipped",
+      TEST_TIMINGS_RESULT: "success",
+      TEST_PLAN_PARITY_RESULT: "success",
+    };
+    const run = (overrides: Partial<NodeJS.ProcessEnv>): string => {
+      writeFileSync(log, "");
+      const result = spawnSync("bash", ["-c", script!], { env: { ...base, ...overrides }, encoding: "utf8" });
+      expect(result.status, result.stderr).toBe(0);
+      return readFileSync(log, "utf8");
+    };
+    try {
+      // One red leaf is enough to open the issue, even with no previous issue.
+      const red = run({ FULL_TESTS_RESULT: "failure" });
+      expect(red).toContain("issue create --title Nightly validation is red");
+      expect(red).not.toContain("issue close");
+      // A cancelled leaf neither opens nor closes and does not comment.
+      const cancelled = run({ FULL_TESTS_RESULT: "cancelled", OPEN_ISSUE: "7" });
+      expect(cancelled).not.toContain("issue close");
+      expect(cancelled).not.toContain("issue create");
+      expect(cancelled).not.toContain("issue comment");
+      expect(cancelled).not.toContain("label create");
+      // Every leaf success/skipped closes the one issue.
+      const green = run({ OPEN_ISSUE: "7" });
+      expect(green).toContain("issue close 7");
+      expect(green).not.toContain("issue create");
+      // Any non-success/skipped leaf (e.g. a tool failure) keeps it open.
+      const failed = run({ OPEN_ISSUE: "7", TEST_PLAN_PARITY_RESULT: "failure" });
+      expect(failed).toContain("issue comment 7");
+      expect(failed).not.toContain("issue close");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
 });
 
 it("snapshots trusted base code and policy before PR checkout and scans both modes afterward", () => {
@@ -673,6 +835,9 @@ it("snapshots trusted base code and policy before PR checkout and scans both mod
   expect(snapshot).toBeLessThan(steps.indexOf(checkouts[1]));
   expect(scanner).toBeGreaterThan(steps.indexOf(checkouts[1]));
   expect(steps[scanner].run).toContain('git fetch --no-tags origin "${GITLEAKS_HEAD_REF}"');
+  // The trusted snapshot checkout is shallow; the range scan must restore full history.
+  expect(steps[scanner].run).toContain("git fetch --no-tags --unshallow origin");
+  expect(steps[scanner].run).toContain('git cat-file -e "${GITLEAKS_BASE_REF}^{commit}"');
   expect(steps[scanner].env.GITLEAKS_HEAD_REF).toBe("${{ github.event.pull_request.head.sha }}");
 });
 

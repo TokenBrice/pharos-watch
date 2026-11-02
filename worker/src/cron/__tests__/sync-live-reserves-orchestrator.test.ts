@@ -80,7 +80,8 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
-    vi.resetModules();
+    // The adapter registry is a hoisted module mock, so a fresh module graph is
+    // not needed between cases; the dynamic imports below stay cache hits.
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
     nowMs = 1_700_000_000_000;
@@ -192,14 +193,23 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
+    // The pairing/ordering invariants are per-slice. A 40-coin tail cohort keeps
+    // the per-coin binding ratio meaningful (per-run reads amortize) without
+    // sweeping the full configured queue.
+    const COHORT_SIZE = 40;
+    const cohortStart = CONFIGURED_COIN_COUNT - COHORT_SIZE;
     const identity = checkpointIdentity(1, "producer-owner");
     const db = mockD1([checkpointTable({
       attemptNo: 1,
       invocationId: identity.invocationId,
-      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[0]!.id,
-      itemsDone: 0,
+      nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[cohortStart]!.id,
+      itemsDone: cohortStart,
       state: "running",
       sourceAttemptNo: null,
+      cohortGrading: {
+        itemsDone: cohortStart, complete: true, synced: cohortStart, failed: 0,
+        persistenceFailed: 0, circuitSkipped: 0, attemptedCoins: cohortStart,
+      },
     })]);
     const { syncLiveReserves } = await import("../sync-live-reserves");
 
@@ -208,14 +218,14 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       new AbortController().signal,
       {},
       undefined,
-      TIGHT_BUDGET,
+      { ...TIGHT_BUDGET, maxCoinsPerSlice: COHORT_SIZE },
       identity,
     );
 
     expect(result.status).toBe("ok");
     expect(sealAcceptedReserveGeneration).toHaveBeenCalledWith(expect.anything(), identity, expect.any(String),
       CONFIGURED_COINS.map((coin) => coin.id), expect.objectContaining({
-        status: "ok", itemCount: CONFIGURED_COIN_COUNT, productivity: result.productivity,
+        status: "ok", itemCount: COHORT_SIZE, productivity: result.productivity,
       }));
     const sealedResult = vi.mocked(sealAcceptedReserveGeneration).mock.calls[0]![4];
     expect(JSON.parse(result.metadata!)).toEqual({
@@ -240,13 +250,13 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       && entry.sql.includes("pending_attempt_id = excluded.pending_attempt_id")
     ));
 
-    expect(itemStarts).toHaveLength(CONFIGURED_COIN_COUNT);
+    expect(itemStarts).toHaveLength(COHORT_SIZE);
     expect(boundaryWrites).toHaveLength(1);
-    expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 2);
-    expect(domainAttemptBegins).toHaveLength(CONFIGURED_COIN_COUNT);
+    expect(checkpointUpdates).toHaveLength(COHORT_SIZE + 2);
+    expect(domainAttemptBegins).toHaveLength(COHORT_SIZE);
     const cost = JSON.parse(result.metadata!).d1Cost;
-    expect(cost.batchCalls).toBeGreaterThanOrEqual(2 * CONFIGURED_COIN_COUNT);
-    expect(cost.bindingCalls).toBeLessThan(3 * CONFIGURED_COIN_COUNT);
+    expect(cost.batchCalls).toBeGreaterThanOrEqual(2 * COHORT_SIZE);
+    expect(cost.bindingCalls).toBeLessThan(3 * COHORT_SIZE);
     expect(shouldAttemptFetchMock).not.toHaveBeenCalled();
     expect(boundaryWrites[0]?.binds.slice(0, 2)).toEqual([null, CONFIGURED_COIN_COUNT]);
     for (const begin of domainAttemptBegins) {
@@ -261,11 +271,18 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => {
       return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
     });
-    // This suite resets the module graph before installing each adapter mock.
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    const sliceSize = Math.ceil(SYNC_ORDERED_CONFIGURED_COINS.length / 3);
-    let frontier = 0;
-    let cohortGrading: LiveReserveCohortGrading | undefined;
+    // Two-coin slices keep the producer/continuation handoff assertions at the
+    // same granularity without sweeping the full configured queue. The cohort
+    // sits at the tail so the final slice exhausts its frontier.
+    const sliceSize = 2;
+    const cohortSize = sliceSize * 3;
+    const cohortStart = SYNC_ORDERED_CONFIGURED_COINS.length - cohortSize;
+    let frontier = cohortStart;
+    let cohortGrading: LiveReserveCohortGrading = {
+      itemsDone: cohortStart, complete: true, synced: cohortStart, failed: 0,
+      persistenceFailed: 0, circuitSkipped: 0, attemptedCoins: cohortStart,
+    };
     for (let slice = 0; slice < 3; slice++) {
       // One checkpoint root/attempt; the normal handoff only replaces its owner.
       const identity = checkpointIdentity(1, `slice-${slice}`);
@@ -306,7 +323,9 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
         entry.sql.includes("SELECT key FROM cache WHERE key LIKE"))).toBe(slice === 2);
       frontier = expectedDone;
     }
-    expect(visited).toEqual(SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id));
+    expect(visited).toEqual(
+      SYNC_ORDERED_CONFIGURED_COINS.slice(cohortStart, cohortStart + cohortSize).map((coin) => coin.id),
+    );
     expect(new Set(visited).size).toBe(visited.length);
     expect(sealAcceptedReserveGeneration).toHaveBeenCalledTimes(1);
   });
@@ -315,7 +334,6 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
-    // Reset modules above installs this test's adapter registry before import.
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const frontier = SYNC_ORDERED_CONFIGURED_COINS.length - 93;
     const identity = checkpointIdentity(1, "packed-suffix");
@@ -362,7 +380,6 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
-    // Reset modules above installs this test's adapter registry before import.
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const identity = checkpointIdentity(1, "producer-headroom");
     const db = mockD1([checkpointTable({
@@ -459,7 +476,6 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     mockAdapterRegistry(async () => ({
       slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }],
     }));
-    // Reset modules above installs this test's adapter registry before import.
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const identity = checkpointIdentity(1, "cpu-capped");
     const db = mockD1([checkpointTable({
@@ -659,5 +675,62 @@ describe("live reserve sync budget defaults", () => {
     // deferred-tail writes, run finalization, and cron logging. The watchdog
     // still saw cap hits with the earlier 60s assertion.
     expect(worstCaseMs).toBeLessThanOrEqual(TWELVE_MINUTE_LEASE_MS - 120_000);
+  });
+});
+
+describe("live reserve execution budgets", () => {
+  it("sanitizes unavailable overrides to the lease-safe defaults", () => {
+    expect(resolveLiveReserveSyncBudgetConfig({
+      adapterTimeoutMs: Number.NaN, runBudgetMs: Number.POSITIVE_INFINITY,
+      d1FinalizeTimeoutMs: 0, finalizationMarginMs: -1,
+    })).toEqual({
+      adapterTimeoutMs: 20_000, runBudgetMs: 540_000, workBudgetMs: 540_000,
+      d1FinalizeTimeoutMs: 30_000, finalizationMarginMs: 5_000, minimumAttemptBudgetMs: 55_000,
+      maxCoinsPerSlice: 1933,
+    });
+  });
+
+  it("floors finite overrides and derives admission headroom rather than trusting a caller total", () => {
+    expect(resolveLiveReserveSyncBudgetConfig({
+      adapterTimeoutMs: 10_000.9, runBudgetMs: 400_000.9, workBudgetMs: 500_000.9,
+      d1FinalizeTimeoutMs: 5_000.9, finalizationMarginMs: 1_000.9, minimumAttemptBudgetMs: 1,
+    })).toEqual({
+      adapterTimeoutMs: 10_000, runBudgetMs: 400_000, workBudgetMs: 400_000,
+      d1FinalizeTimeoutMs: 5_000, finalizationMarginMs: 1_000, minimumAttemptBudgetMs: 16_000,
+      maxCoinsPerSlice: 1933,
+    });
+  });
+
+  it("yields a producer slice at 60% of its run budget, keeping the other 40% as growth headroom", () => {
+    const config = resolveLiveReserveSyncBudgetConfig(LIVE_RESERVE_PRODUCER_BUDGETS);
+    expect(config.runBudgetMs).toBe(540_000);
+    expect(config.workBudgetMs).toBe(289_000);
+    // The finalization tail is charged to the admitted 60%, so the whole slice
+    // cannot consume the reserved headroom.
+    const sliceWorstCaseMs = config.workBudgetMs + config.d1FinalizeTimeoutMs + config.finalizationMarginMs;
+    expect(sliceWorstCaseMs).toBe(Math.floor(config.runBudgetMs * LIVE_RESERVE_PRODUCER_WORK_BUDGET_RATIO));
+    expect((config.runBudgetMs - sliceWorstCaseMs) / config.runBudgetMs).toBeGreaterThanOrEqual(0.4);
+    // More than the ~30-coin cohort growth that already risks truncation.
+    expect(Math.floor((config.runBudgetMs - sliceWorstCaseMs) / LIVE_RESERVE_SLICE_COST.wallMsPerCoin))
+      .toBeGreaterThan(30);
+    // An inherited event deadline still bounds admission below the producer horizon.
+    expect(resolveLiveReserveSyncBudgetConfig({ ...LIVE_RESERVE_PRODUCER_BUDGETS, runBudgetMs: 200_000 }).workBudgetMs)
+      .toBe(200_000);
+  });
+
+  it("extends continuation wall time without raising the reviewed 125-coin CPU cap", () => {
+    const config = resolveLiveReserveSyncBudgetConfig(LIVE_RESERVE_CONTINUATION_BUDGETS);
+    expect(config.runBudgetMs).toBe(300_000);
+    // A continuation slice owns its whole reviewed budget; the coin cap bounds it.
+    expect(config.workBudgetMs).toBe(300_000);
+    expect(config.minimumAttemptBudgetMs).toBe(55_000);
+    expect(config.adapterTimeoutMs).toBe(20_000);
+    expect(config.d1FinalizeTimeoutMs).toBe(30_000);
+    expect(config.finalizationMarginMs).toBe(5_000);
+    expect(config.maxCoinsPerSlice).toBe(125);
+    expect(config.maxCoinsPerSlice * LIVE_RESERVE_SLICE_COST.wallMsPerCoin + config.minimumAttemptBudgetMs)
+      .toBeLessThanOrEqual(config.runBudgetMs);
+    expect(config.maxCoinsPerSlice * LIVE_RESERVE_SLICE_COST.cpuMsPerCoin + LIVE_RESERVE_SLICE_COST.cpuMarginMs)
+      .toBeLessThan(30_000);
   });
 });

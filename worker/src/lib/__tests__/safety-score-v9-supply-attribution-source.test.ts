@@ -10,9 +10,11 @@ import {
 import { createNativeSafetyScoreV9FullRegistryInput } from "./fixtures/safety-score-v9-full-registry-input";
 import type * as SupplyAttributionContract from "../safety-score-v9/supply-attribution-contract";
 
+const FULL_REGISTRY_INPUT = createNativeSafetyScoreV9FullRegistryInput();
+
 describe("Safety Score V9 supply-attribution source", () => {
   it("projects the exact input to a bounded identity-linked source", async () => {
-    const input = createNativeSafetyScoreV9FullRegistryInput();
+    const input = FULL_REGISTRY_INPUT;
     const source = buildSafetyScoreV9SupplyAttributionSource(input);
     const value = serializeSafetyScoreV9SupplyAttributionSource(source);
     const parsed = parseSafetyScoreV9SupplyAttributionSource(value);
@@ -43,7 +45,7 @@ describe("Safety Score V9 supply-attribution source", () => {
   });
 
   it("selects the census population only from a projection, never the attribution allowlist", () => {
-    const input = createNativeSafetyScoreV9FullRegistryInput();
+    const input = FULL_REGISTRY_INPUT;
     const source = buildSafetyScoreV9SupplyAttributionSource(input);
     const projected = parseSafetyScoreV9SupplyAttributionSource({
       ...source,
@@ -70,7 +72,7 @@ describe("Safety Score V9 supply-attribution source", () => {
   });
 
   it("travels only admissible census peg references and drops unusable rows by name", () => {
-    const input = createNativeSafetyScoreV9FullRegistryInput();
+    const input = structuredClone(FULL_REGISTRY_INPUT);
     const [validAssetId, nonFiniteAssetId, negativeAsOfAssetId] = input.activeAssetIds;
     const clockSec = input.clockSec;
     const censusRow = {

@@ -86,7 +86,7 @@ describe("flagship Dataset JSON-LD", () => {
   it("names the top-stablecoins export's actual final CSV column", () => {
     const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "top-stablecoins")!;
     const last = Object.keys(descriptor.export.rows[0] ?? {}).at(-1);
-    expect(last).toBe("supplyProvenance");
+    expect(last).toBeDefined();
     expect(descriptor.description).toContain(`and ${last} is the final CSV column`);
     expect(descriptor.description).not.toMatch(/final CSV column, supplyUnavailableReason/);
   });

@@ -1,13 +1,15 @@
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import { assertResourceProbeCatalog, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
+import { assertResourceProbeCatalog, buildSafetyScoreV9ContagionProbe, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
 import type * as Esbuild from "esbuild";
 import { calibrateV9Resource } from "../calibrate-v9-resource";
-import { GLOBAL_HEAP_BYTES, RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, ResourcePolicySchema, loadResourcePolicy, validateResourcePolicy, type ResourceIdentity } from "../lib/v9-resource-policy";
+// Static edge so any change in the contagion closure selects this tripwire.
+import { evaluateV9ContagionScenario } from "@shared/lib/safety-score-v9/contagion";
+import { GLOBAL_HEAP_BYTES, hasV9ContagionInput, RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, ResourcePolicySchema, loadResourcePolicy, validateResourcePolicy, type ResourceIdentity } from "../lib/v9-resource-policy";
 
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -28,6 +30,13 @@ describe("V9 resource diagnostic failure modes", () => {
       { reason: "missing-phase", phase: "facts-compiled", cycle: 1 },
       { reason: "missing-phase", phase: "facts-compiled", cycle: 2 },
     ]);
+  });
+
+  it("requires only the configured publication cycles", () => {
+    const memory = process.memoryUsage();
+    const sample = { type: "phase" as const, cycle: 1, phase: "facts-compiled", before: memory, after: memory };
+    expect(validateResourceSamples([sample], ["facts-compiled"], undefined, [1])).toEqual([]);
+    expect(validateResourceSamples([sample], ["facts-compiled"])).toEqual([{ reason: "missing-phase", phase: "facts-compiled", cycle: 2 }]);
   });
 
   it("retains a readable report on construction failure and classifies a crashing child", async () => {
@@ -94,6 +103,40 @@ describe("V9 resource diagnostic failure modes", () => {
       lengths.push(result[2]);
     }
     expect(lengths[0]).toBeLessThan(lengths[1]);
+  });
+});
+
+describe("V9 contagion input decision", () => {
+  it("covers every input the nine-scenario probe bundles", () => {
+    expect(typeof evaluateV9ContagionScenario).toBe("function");
+    const root = resolve(import.meta.dirname, "../../..");
+    const { inputs: bundled } = buildSafetyScoreV9ContagionProbe(root, temporary());
+    // Third-party modules are pinned by the lockfiles, themselves contagion
+    // inputs; CI checks out node_modules inside the repo, local worktrees may not.
+    const inputs = bundled
+      .map((input) => relative(root, input).replaceAll("\\", "/"))
+      .filter((input) => !input.startsWith("..") && !/(^|\/)node_modules\//.test(input));
+    expect(hasV9ContagionInput(["package-lock.json"]) && hasV9ContagionInput(["worker/package-lock.json"])).toBe(true);
+    for (const expected of [
+      "shared/lib/safety-score-v9/contagion.ts",
+      "shared/lib/peg-score.ts",
+      "shared/lib/report-card-evidence-journal.ts",
+      "shared/data/stablecoins/coins.generated.json",
+      "worker/src/test-helpers/v9-fixed-input.ts",
+      "worker/src/lib/safety-score-v9/candidate.ts",
+    ]) expect(inputs, expected).toContain(expected);
+    expect(inputs.filter((input) => !hasV9ContagionInput([input]))).toEqual([]);
+  });
+
+  it("matches the probe harness and toolchain while unrelated diffs skip contagion", () => {
+    for (const file of ["worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts",
+      "worker/scripts/lib/v9-resource-policy.ts", "worker/scripts/measure-v9-resource.ts",
+      "shared/lib/peg-score.ts", "shared/lib/report-card-evidence-journal.ts",
+      "shared/data/stablecoins/coins.generated.json", "worker/src/test-helpers/v9-fixed-input.ts",
+      "package.json", "package-lock.json", "worker/wrangler.heavy.toml", "tsconfig.base.json", ".nvmrc"]) {
+      expect(hasV9ContagionInput([file]), file).toBe(true);
+    }
+    expect(hasV9ContagionInput(["README.md", "src/app/page.tsx", "shared/lib/blacklist.ts"])).toBe(false);
   });
 });
 

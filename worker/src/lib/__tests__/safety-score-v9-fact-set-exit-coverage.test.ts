@@ -1284,7 +1284,8 @@ describe("cause-bound Exit compiler admission", () => {
     const fixed = exactFixedInput();
     const reviewed = structuredClone(extension());
     reviewed.registryFingerprint = fixed.registryFingerprint;
-    const retained = Array.from({ length: 65 }, (_, index) => ({
+    const limit = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.maximumScoreEligiblePortfolioCandidates;
+    const retained = Array.from({ length: limit + 1 }, (_, index) => ({
       lane: "redemption" as const, observation: { ...structuredClone(observation),
         routeId: `redemption:alpha:${String(index).padStart(2, "0")}` },
       disposition: "observed" as const, rejection: null,
@@ -1302,7 +1303,7 @@ describe("cause-bound Exit compiler admission", () => {
       portfolioFactStatus: asset.exitStatus, routes: asset.exitRoutes.map(projectV9ExitEvaluationRoute) }, V9_CANDIDATE_POLICY_V1);
     expect(result).toMatchObject({ score: null, aggregationDisposition: "excluded-a-b",
       primaryRouteKey: null, diversificationRouteKey: null, supportedComponentKeys: [] });
-    const last = asset.exitRoutes.find((route) => route.routeId === "redemption:alpha:64")!;
+    const last = asset.exitRoutes.find((route) => route.routeId === `redemption:alpha:${String(limit).padStart(2, "0")}`)!;
     expect(result.routes.find((route) => route.routeKey === last.routeKey)).toMatchObject({
       score: null, included: false, capacityPoint: null, cause: "A", effectiveScoringWeight: 0,
     });

@@ -63,8 +63,11 @@ describe("typed mechanism reviews", () => {
     const rows = getSafetyScoreV9MechanismReviewedUnavailableComponents(
       "xo-exodus", "fiat-cash", Date.parse("2026-10-30T10:17:46Z") / 1000,
     );
+    const overlay = overlaysAsset.overlays.find((row) => row.assetId === "xo-exodus")!;
+    const authoredReviewedAt = overlay.components.assuranceAndReconciliation?.review?.reviewedAt;
     // The October 20 component review was published at 22:19:27Z; the typed
     // review carries only its calendar day and must never be re-dated.
-    expect(rows.find((row) => row.componentKey === "assuranceAndReconciliation")?.reviewedAt).toBe("2026-10-20");
+    expect(rows.find((row) => row.componentKey === "assuranceAndReconciliation")?.reviewedAt).toBe(authoredReviewedAt);
+    expect(rows.find((row) => row.componentKey === "assuranceAndReconciliation")?.reviewedAt).not.toBe("2026-10-30");
   });
 });

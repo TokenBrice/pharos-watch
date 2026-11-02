@@ -6,7 +6,6 @@ import {
   CHAIN_MATURITY_GATE_IDS,
   CHAIN_MATURITY_REVIEWS_V1,
   chainMaturityReviewForSlug,
-  type ChainMaturityGateId,
   resolveChainMaturityAdmissionsAt,
 } from "@shared/data/safety-score-v9/chain-maturity-reviews-v1";
 import { commonModeSignalSeverity, type V9CommonModeContext } from "../safety-score-v9/evaluate-set";
@@ -15,34 +14,14 @@ import { compileNativeV3FactSet, coreFixture, evaluateV9FactSet } from "./safety
 
 const EXPECTED_ADMITTED = ["base", "ethereum", "hedera"] as const;
 
-const EXPECTED_PENDING = [
-  "arbitrum",
-  "avalanche",
-  "bsc",
-  "cardano",
-  "conflux",
-  "gnosis",
-  "hyperliquid",
-  "klaytn",
-  "optimism",
-  "polygon",
-  "rootstock",
-  "solana",
-  "sui",
-  "tron",
-  "xrpl",
-] as const;
-
-const EXPECTED_EXCLUDED_FAILURES = {
-  celo: ["continuity", "change-control", "dependency-exit"],
-  sonic: ["continuity"],
-  linea: ["change-control"],
-  berachain: ["continuity"],
-  movement: ["continuity", "change-control"],
-  monad: ["continuity"],
-  plume: ["continuity"],
-  "polygon-zkevm": ["liveness", "dependency-exit"],
-} as const satisfies Readonly<Record<string, readonly ChainMaturityGateId[]>>;
+/** Gate outcomes are the authority; the state buckets are derived, never authored. */
+const DEFAULT_RESOLUTION = resolveChainMaturityAdmissionsAt();
+const PENDING_CHAINS = DEFAULT_RESOLUTION.reviews
+  .filter((review) => review.state === "pending")
+  .map((review) => review.chainSlug);
+const FAILED_CHAINS = DEFAULT_RESOLUTION.reviews
+  .filter((review) => review.state === "failed")
+  .map((review) => review.chainSlug);
 
 function chainContext(chainSlug: string, share: number | null): V9CommonModeContext {
   return {
@@ -67,10 +46,25 @@ function chainContext(chainSlug: string, share: number | null): V9CommonModeCont
 
 describe("Safety Score v9 chain-maturity registry", () => {
   it("admits every chain that passes all five dated gates", () => {
-    expect(CHAIN_MATURITY_REVIEWS_V1).toHaveLength(26);
-    expect(CHAIN_MATURITY_REVIEWS_V1.map((review) => review.chainSlug).sort()).toEqual(
-      [...EXPECTED_ADMITTED, ...EXPECTED_PENDING, ...Object.keys(EXPECTED_EXCLUDED_FAILURES)].sort(),
-    );
+    // The registry owns the roster: unique slugs, a reviewed gate row for each
+    // gate, and a resolved state that follows the gate results.
+    expect(new Set(CHAIN_MATURITY_REVIEWS_V1.map((review) => review.chainSlug)).size)
+      .toBe(CHAIN_MATURITY_REVIEWS_V1.length);
+    for (const review of CHAIN_MATURITY_REVIEWS_V1) {
+      const gateIds = CHAIN_MATURITY_GATE_IDS;
+      for (const gateId of gateIds) {
+        expect(review.gates[gateId], `${review.chainSlug}/${gateId}`).toBeDefined();
+        expect(review.gates[gateId].sources.length, `${review.chainSlug}/${gateId}`).toBeGreaterThan(0);
+      }
+      const hasFailure = gateIds.some((gateId) => review.gates[gateId].result === "fail");
+      const hasPending = gateIds.some((gateId) => review.gates[gateId].result === "pending");
+      const resolved = chainMaturityReviewForSlug(review.chainSlug)!;
+      expect(resolved.state === "failed", review.chainSlug).toBe(hasFailure);
+      if (!hasFailure) expect(resolved.state === "pending", review.chainSlug).toBe(hasPending);
+      if (!hasFailure && !hasPending) {
+        expect(["admitted", "expired", "not-yet-admitted"], review.chainSlug).toContain(resolved.state);
+      }
+    }
     expect([...CHAIN_MATURITY_ADMITTED_CHAIN_SLUGS].sort()).toEqual([...EXPECTED_ADMITTED].sort());
     for (const chainSlug of EXPECTED_ADMITTED) {
       const review = chainMaturityReviewForSlug(chainSlug);
@@ -85,15 +79,15 @@ describe("Safety Score v9 chain-maturity registry", () => {
   });
 
   it("keeps every ruled exclusion fail-closed on its adjudicated gates", () => {
-    for (const [chainSlug, expectedFailures] of Object.entries(EXPECTED_EXCLUDED_FAILURES)) {
-      const review = chainMaturityReviewForSlug(chainSlug);
-      expect(review, chainSlug).not.toBeNull();
-      expect(review?.admission, chainSlug).toBe("exclude");
-      const actualFailures = CHAIN_MATURITY_GATE_IDS.filter(
-        (gateId) => review?.gates[gateId].result === "fail",
-      );
-      expect(actualFailures, chainSlug).toEqual(expectedFailures);
+    for (const review of DEFAULT_RESOLUTION.reviews) {
+      if (review.state !== "failed") continue;
+      expect(review.admission, review.chainSlug).toBe("exclude");
+      expect(
+        CHAIN_MATURITY_GATE_IDS.some((gateId) => review.gates[gateId].result === "fail"),
+        review.chainSlug,
+      ).toBe(true);
     }
+    expect(FAILED_CHAINS.length).toBeGreaterThan(0);
   });
 
   it("records an own document date or independent verification metadata for every gate source", () => {
@@ -119,9 +113,13 @@ describe("Safety Score v9 chain-maturity registry", () => {
   it("holds the 404/non-supporting review queue outside matureChains", () => {
     const resolution = resolveChainMaturityAdmissionsAt();
     expect(resolution.admittedChainSlugs).toEqual(["base", "ethereum", "hedera"]);
-    for (const chainSlug of EXPECTED_PENDING) {
-      expect(chainMaturityReviewForSlug(chainSlug)?.admission, chainSlug).toBe("exclude");
-      expect(chainMaturityReviewForSlug(chainSlug)?.state, chainSlug).toBe("pending");
+    expect(PENDING_CHAINS.length).toBeGreaterThan(0);
+    for (const review of resolution.reviews) {
+      const expectedAdmission = (EXPECTED_ADMITTED as readonly string[]).includes(review.chainSlug)
+        ? "admit"
+        : "exclude";
+      expect(review.admission, review.chainSlug).toBe(expectedAdmission);
+      if (review.state === "pending") expect(review.admission, review.chainSlug).toBe("exclude");
     }
   });
 
@@ -248,7 +246,7 @@ describe("Safety Score v9 chain common-mode maturity severity", () => {
   });
 
   it("never charges pending, dead-link or unreviewed chains, including unknown exposure", () => {
-    for (const chain of [...EXPECTED_PENDING, "xlayer", "robinhood", "unknown-l2"]) {
+    for (const chain of [...PENDING_CHAINS, "xlayer", "robinhood", "unknown-l2"]) {
       for (const share of [0.1, 0.25, 1, null] as const) {
         expect(commonModeSignalSeverity(
           { kind: "chain", key: chain }, chainContext(chain, share), materiality,
@@ -258,7 +256,8 @@ describe("Safety Score v9 chain common-mode maturity severity", () => {
   });
 
   it("retains every authored failure rather than treating missing source verification as a pass", () => {
-    for (const chain of Object.keys(EXPECTED_EXCLUDED_FAILURES)) {
+    expect(FAILED_CHAINS.length).toBeGreaterThan(0);
+    for (const chain of FAILED_CHAINS) {
       expect(commonModeSignalSeverity(
         { kind: "chain", key: chain }, chainContext(chain, 1), materiality,
       ), chain).toBe("high");

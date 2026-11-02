@@ -48,7 +48,7 @@ describe("PR lane manifest", () => {
     expect(Object.keys(WORKFLOW.jobs)).toEqual(["secrets", "prepare", "validation", "pages-artifact", "pr-gate"]);
     expect(WORKFLOW.jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "pages-artifact"]);
     expect(Object.keys(prepare.outputs ?? {})).toEqual([
-      "docs_only", "docs_inline_succeeded", "matrix",
+      "docs_only", "docs_inline_succeeded", "matrix", "pages_critical_css_full_pass",
       "playwright_firefox_required", "pages_artifact_required", "workspace_artifact_name",
     ]);
     expect(validation.needs).toBe("prepare");
@@ -75,7 +75,7 @@ describe("PR lane manifest", () => {
     ]);
   });
 
-  it.each([4, 8])("generates %i planned test shards in the validation matrix", (testShards) => {
+  it.each([1, 4, 10])("generates %i planned test shards in the validation matrix", (testShards) => {
     const selection = {
       docsOnly: false, testShards,
     };
@@ -88,8 +88,8 @@ describe("PR lane manifest", () => {
     expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
       { lane: "v9-resource", timeout: 8 },
     ]);
-    // max-parallel: 10 starts matrix jobs in order. The resource lane must be
-    // inside the first ten; the shortest lane absorbs the queued slot.
+    // max-parallel: 14 starts matrix jobs in order. The resource lane must be
+    // inside the first fourteen; the shortest lane absorbs any queued slot.
     expect(matrix.slice(0, 2).map((entry) => entry.lane)).toEqual(["v9-resource", "static-guards"]);
     expect(matrix.at(-1)).toEqual({ lane: "static-compile", timeout: 20 });
     expect(matrix.map((entry) => entry.lane)).not.toContain("docs");
@@ -138,7 +138,7 @@ describe("PR lane manifest", () => {
 
   it("rejects invalid test fan-out instead of dropping selected tests", () => {
     const selection = { docsOnly: false };
-    for (const shards of [0, -1, 1.5, 9]) {
+    for (const shards of [0, -1, 1.5, 11]) {
       expect(() => buildPrWorkflowMatrix({ ...selection, testShards: shards })).toThrow(/shard/);
     }
   });

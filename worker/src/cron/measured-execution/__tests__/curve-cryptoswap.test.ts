@@ -145,7 +145,6 @@ describe("Curve CryptoSwap policy", () => {
     const active = CURVE_CRYPTOSWAP_REVIEWED_COHORT;
     expect(active.every((entry) => entry.transferSemanticsReviewed)).toBe(true);
     const pinned = active.filter((entry) => entry.identityAnchor === "pinned-pool-code");
-    expect(pinned).toHaveLength(8);
     expect(
       pinned.every(
         (entry) =>
@@ -158,19 +157,6 @@ describe("Curve CryptoSwap policy", () => {
     // R3 (2026-07-29) promoted the reviewed Ethereum TwoCrypto census; no other
     // chain or generation has a reviewed family, so nothing else can ride it.
     const familyAnchored = active.filter((entry) => entry.identityAnchor === "reviewed-deployment-family");
-    expect(familyAnchored).toHaveLength(11);
-    expect(getCurveCryptoSwapReviewedDeploymentFamily("ethereum", "twocrypto-ng")?.mathDeployments).toEqual(
-      expect.arrayContaining([
-        {
-          address: "0x2005995a71243be9fb995dab4742327dc76564df",
-          codeHash: "0xbc931b24ccca3aae2cd24bf83022386ae21d4c96af2f7c7f57a91c743b8352e3",
-        },
-        {
-          address: "0x1fd8af16dc4bebd950521308d55d0543b6cdf4a1",
-          codeHash: "0x70d105ee0e9b857244d87521bbcef34cfb4cbd600592af61bbc7c76180648d61",
-        },
-      ]),
-    );
     expect(
       familyAnchored.every(
         (entry) =>

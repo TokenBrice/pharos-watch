@@ -7,7 +7,8 @@ import { getCache } from "../../db-cache";
 import { RPC_PARITY_TARGETS } from "../targets";
 import { rpcParityRotation } from "../../../cron/rpc-provider-parity/probe";
 import { RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, RPC_PARITY_MAX_CALLS_PER_OPERATOR } from "../types";
-import { headLagThresholdBlocks, RPC_PARITY_GATE_MIN_RUNS } from "../report";
+import { buildRpcParityChainSummary, evaluateRpcParityGate, headLagThresholdBlocks, RPC_PARITY_GATE_MIN_RUNS } from "../report";
+import { applyRpcParityGateHistory, captureRpcParityGateRun, isRpcParityGateRun } from "../gate-history";
 import {
   decodeRpcParityStoreRow,
   encodeRpcParityStoreRow,
@@ -127,15 +128,20 @@ describe("rpc parity store merging", () => {
   it("drops the oldest runs, never the newest, when the row exceeds the size bound", () => {
     let row: RpcParityStoreRow | null = null;
     const atSecs: number[] = [];
+    let droppedOldest = 0;
     for (let index = 0; index < 12; index += 1) {
       const atSec = NOW_SEC + index * 3600;
       atSecs.push(atSec);
-      row = mergeRpcParityRun(row, fullParityRun(atSec), { nowSec: atSec, maxBytes: 1_000 }).row;
+      const merged = mergeRpcParityRun(row, fullParityRun(atSec), { nowSec: atSec, maxBytes: 1_000 });
+      droppedOldest += merged.droppedOldest;
+      row = merged.row;
     }
     if (!row) throw new Error("row not built");
-    expect(row.runs.length).toBeGreaterThanOrEqual(1);
-    expect(row.runs.length).toBeLessThan(atSecs.length);
-    expect(row.runs[row.runs.length - 1].atSec).toBe(atSecs[atSecs.length - 1]);
+    // A 1 KB bound never fits even one full-roster run, so every merge keeps the
+    // newest run and drops exactly the run it replaced.
+    expect(row.runs).toHaveLength(1);
+    expect(droppedOldest).toBe(atSecs.length - 1);
+    expect(row.runs[0].atSec).toBe(atSecs[atSecs.length - 1]);
     const retained = row.runs.map((run) => run.atSec);
     expect(retained).toEqual(atSecs.slice(atSecs.length - retained.length));
   });
@@ -565,13 +571,16 @@ describe("rpc parity store wire form", () => {
   });
 
   it("keeps maximum dual-check layouts under the row budget with an attributable retained suffix", () => {
+    // Sequential pruning re-encodes the whole row per drop; size the fixture
+    // just over the byte bound so only a couple of drops are needed.
+    const fixtureRuns = 82;
     let seed = 1_234_567;
     const latency = () => {
       seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0;
       return seed % 8_001;
     };
-    const runs = Array.from({ length: RPC_PARITY_RETENTION_RUNS }, (_, index) => fullParityRun(
-      NOW_SEC - (RPC_PARITY_RETENTION_RUNS - 1 - index) * 3600,
+    const runs = Array.from({ length: fixtureRuns }, (_, index) => fullParityRun(
+      NOW_SEC - (fixtureRuns - 1 - index) * 3600,
       (chainId, chainIndex) => ({
         commonBlock: 380_000_000 + index * 3600 + chainIndex * 1000,
         ...(chainId === "hyperevm" ? {
@@ -608,20 +617,24 @@ describe("rpc parity store wire form", () => {
     expect(row.chains).toHaveLength(RPC_PARITY_TARGETS.length);
     expect(encodeRpcParityStoreRow(row).length).toBeLessThan(RPC_PARITY_MAX_ROW_BYTES);
     const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(row));
-    expect(decoded?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
+    expect(decoded?.gateRuns).toHaveLength(runs.length);
     expect(decoded?.gateRuns?.[0][0]).toBe(runs[0].atSec);
     expect(row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
-    expect(row.runs.length).toBeLessThanOrEqual(RPC_PARITY_RETENTION_RUNS);
+    expect(row.runs.length).toBeLessThan(fixtureRuns);
     expect(decoded?.runs).toHaveLength(row.runs.length);
-    expect(decoded?.runs[row.runs.length - 1]?.samples[RPC_PARITY_TARGETS.length - 1].calls).toEqual(runs[167].samples[RPC_PARITY_TARGETS.length - 1].calls);
-    expect(decoded?.runs[0].atSec).toBe(runs[RPC_PARITY_RETENTION_RUNS - row.runs.length].atSec);
+    expect(decoded?.runs[row.runs.length - 1]?.samples[RPC_PARITY_TARGETS.length - 1].calls).toEqual(runs[fixtureRuns - 1].samples[RPC_PARITY_TARGETS.length - 1].calls);
+    expect(decoded?.runs[0].atSec).toBe(runs[fixtureRuns - row.runs.length].atSec);
   });
 
   it("prunes highly compressible full-width token proofs to the reader's raw ceiling", () => {
+    // Sequential pruning re-encodes the whole row per drop; size the fixture
+    // just over the raw ceiling instead of a full week so the prune starts from
+    // the budget violation it targets.
+    const fixtureRuns = 69;
     const supply = ((1n << 256n) - 1n).toString();
     const previousSupply = ((1n << 256n) - 2n).toString();
-    const runs = Array.from({ length: RPC_PARITY_RETENTION_RUNS }, (_, index) => fullParityRun(
-      NOW_SEC - (RPC_PARITY_RETENTION_RUNS - 1 - index) * 3600,
+    const runs = Array.from({ length: fixtureRuns }, (_, index) => fullParityRun(
+      NOW_SEC - (fixtureRuns - 1 - index) * 3600,
       (chainId, chainIndex) => {
         const token = paritySample(chainId, { dwellirHead: 380_000_000 + chainIndex * 1000 }).tokenFreshness!;
         if (token.reason === "bracket-too-wide") return {};
@@ -647,8 +660,8 @@ describe("rpc parity store wire form", () => {
     expect(gunzipSync(Buffer.from(envelope.payload, "base64")).byteLength).toBeLessThanOrEqual(RPC_PARITY_MAX_DECOMPRESSED_BYTES);
     expect(encoded.length).toBeLessThanOrEqual(RPC_PARITY_MAX_ROW_BYTES);
     expect(merged.droppedOldest).toBeGreaterThan(0);
-    expect(merged.row.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
-    expect(decodeRpcParityStoreRow(encoded)?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
+    expect(merged.row.gateRuns).toHaveLength(runs.length);
+    expect(decodeRpcParityStoreRow(encoded)?.gateRuns).toHaveLength(runs.length);
     expect(merged.row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
     expect(decodeRpcParityStoreRow(encoded)?.runs).toHaveLength(merged.row.runs.length);
     expect(merged.row.runs[0].atSec).toBe(runs[merged.droppedOldest].atSec);
@@ -729,5 +742,97 @@ describe("rpc parity store persistence", () => {
     const store = await readRpcParityStore(db);
     expect(store.error).toBeNull();
     expect(store.row?.runs.map((run) => run.atSec)).toEqual(expect.arrayContaining(retainedAtSec));
+  });
+});
+
+function summaryFor(row: RpcParityStoreRow) {
+  return buildRpcParityChainSummary({
+    chainId: "base", runs: row.runs, gateRuns: row.gateRuns, latest: row.latest.base ?? null,
+    dwellirHost: paritySample("base").dwellirHost, fallbackComparator: paritySample("base").comparator,
+    logsHistoryIsNone: false, blockTimeSec: 2,
+  });
+}
+
+describe("independently retained parity gate history", () => {
+  it("keeps negative evidence after the exact detailed byte boundary prunes its run", () => {
+    const first = mergeRpcParityRun(null, fullParityRun(NOW_SEC - 3600, (chain) => chain === "base" ? {
+      stateMatched: false, logMatched: false,
+      calls: {
+        dwellir: [{ step: "head", phase: "firstTouch", latencyMs: 1, errorClass: "timeout" }], comparator: [],
+      },
+    } : {}), { nowSec: NOW_SEC - 3600 });
+    const second = mergeRpcParityRun(first.row, fullParityRun(NOW_SEC), { nowSec: NOW_SEC });
+    const exact = mergeRpcParityRun(first.row, fullParityRun(NOW_SEC), { nowSec: NOW_SEC, maxBytes: second.bytes });
+    expect(exact.row.runs).toHaveLength(2);
+    const pruned = mergeRpcParityRun(first.row, fullParityRun(NOW_SEC), { nowSec: NOW_SEC, maxBytes: second.bytes - 1 });
+    expect(pruned.row.runs).toHaveLength(1);
+    const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(pruned.row));
+    expect(decoded?.gateRuns).toHaveLength(2);
+    const summary = summaryFor(decoded!);
+    expect(summary.windowStartSec).toBe(NOW_SEC);
+    expect(summary.windowDurationSec).toBe(0);
+    expect(summary.gateWindow).toEqual({ windowStartSec: NOW_SEC - 3600, windowEndSec: NOW_SEC, windowDurationSec: 3600, runs: 2 });
+    expect(summary.stateParity).toMatchObject({ checked: 2, mismatched: 1, lastMismatch: { atSec: NOW_SEC - 3600 } });
+    expect(summary.logParity.mismatched).toBe(1);
+    expect(summary.availability.dwellir.head.attempts).toBeGreaterThan(1);
+    expect(summary.availability.dwellir.head.successRate).toBeLessThan(1);
+    expect(summary.gate.failing).toEqual(expect.arrayContaining(["state-parity", "log-parity", "success-rate:head"]));
+  });
+
+  it("preserves stale identity and both freshness counters without fabricating timings or token values", () => {
+    const sample = paritySample("base");
+    const stale = { ...sample.sentinelFreshness!, verdict: "stale" as const, reason: "served-block-behind" as const,
+      servedBlock: sample.sentinelFreshness!.headBefore! - 10, lagBlocks: 10, latestValue: "123", numericValues: [] };
+    sample.sentinelFreshness = stale;
+    sample.latestFreshness = stale;
+    const run = captureRpcParityGateRun(NOW_SEC - 3600, [sample]);
+    expect(isRpcParityGateRun(run)).toBe(true);
+    expect(run[1][0][7]).not.toHaveProperty("latestValue");
+    expect(run[1][0][7]).not.toHaveProperty("numericValues");
+    const row = mergeRpcParityRun(null, fullParityRun(NOW_SEC), { nowSec: NOW_SEC }).row;
+    const summary = summaryFor(row);
+    const latency = structuredClone(summary.latency);
+    applyRpcParityGateHistory(summary, [run, captureRpcParityGateRun(NOW_SEC, row.runs[0].samples)]);
+    expect(summary.latestFreshness.stale).toBe(1);
+    expect(summary.latestFreshness.sentinel.stale).toBe(1);
+    expect(summary.latestFreshness.tokenState.fresh).toBe(2);
+    expect(summary.latestFreshness.lastStale).toMatchObject({ atSec: NOW_SEC - 3600, reason: "served-block-behind", call: stale.call });
+    expect(summary.latency).toEqual(latency);
+    expect(evaluateRpcParityGate(summary, 2).failing).toContain("latest-state-freshness");
+  });
+
+  it("retains the exact seven-day cutoff, expires one second beyond it, and replaces duplicate counters", () => {
+    const firstAt = NOW_SEC - RPC_PARITY_RETENTION_SEC;
+    const first = mergeRpcParityRun(null, fullParityRun(firstAt, () => ({ stateMatched: false })), { nowSec: firstAt });
+    const boundary = mergeRpcParityRun(first.row, fullParityRun(NOW_SEC), { nowSec: NOW_SEC });
+    expect(boundary.row.gateRuns?.map(([atSec]) => atSec)).toEqual([firstAt, NOW_SEC]);
+    expect(summaryFor(boundary.row).stateParity.mismatched).toBe(1);
+    const replaced = mergeRpcParityRun(boundary.row, fullParityRun(NOW_SEC, () => ({ logMatched: false })), { nowSec: NOW_SEC });
+    expect(replaced.row.gateRuns).toHaveLength(2);
+    expect(summaryFor(replaced.row).logParity.mismatched).toBe(1);
+    const expired = mergeRpcParityRun(replaced.row, fullParityRun(NOW_SEC + 1), { nowSec: NOW_SEC + 1 });
+    expect(expired.row.gateRuns?.map(([atSec]) => atSec)).toEqual([NOW_SEC, NOW_SEC + 1]);
+    expect(summaryFor(expired.row).stateParity.mismatched).toBe(0);
+  });
+
+  it("resets only the changed host's counters and does not mutate the old row", () => {
+    const first = mergeRpcParityRun(null, fullParityRun(NOW_SEC - 3600, () => ({ stateMatched: false })), { nowSec: NOW_SEC - 3600 });
+    const before = structuredClone(first.row.gateRuns);
+    const second = mergeRpcParityRun(first.row, fullParityRun(NOW_SEC, (chain) => chain === "base" ? { dwellirHost: "new-base.n.dwellir.com" } : {}), { nowSec: NOW_SEC });
+    expect(second.row.gateRuns?.[0][1].some(([chain]) => chain === "base")).toBe(false);
+    expect(second.row.gateRuns?.[0][1].some(([chain]) => chain === "arc")).toBe(true);
+    expect(first.row.gateRuns).toEqual(before);
+  });
+
+  it("reads v6 evidence without inventing discarded history and rejects damaged v7 counters", () => {
+    const row = mergeRpcParityRun(null, fullParityRun(NOW_SEC), { nowSec: NOW_SEC }).row;
+    const envelope = JSON.parse(encodeRpcParityStoreRow(row));
+    const wire = JSON.parse(gunzipSync(Buffer.from(envelope.payload, "base64")).toString());
+    const legacy = { ...wire, v: 6 };
+    delete legacy.gateRuns;
+    expect(decodeRpcParityStoreRow(JSON.stringify(legacy))?.gateRuns).toEqual(row.gateRuns);
+    expect(decodeRpcParityStoreRow(JSON.stringify({ ...wire, gateRuns: undefined }))).toBeNull();
+    wire.gateRuns[0][1][0][5][0] = [1, 2, 0, 0];
+    expect(decodeRpcParityStoreRow(JSON.stringify(wire))).toBeNull();
   });
 });

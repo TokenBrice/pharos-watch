@@ -3,7 +3,44 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { WorkspaceStatusBoundary } from "@/app/admin/workspace-status-boundary";
+import { createStatusWorkspaceClient } from "@/app/admin/status-workspace-client";
 import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
+import type { StatusResponse } from "@shared/types";
+
+const { useStatusMock, sectionPropsMock } = vi.hoisted(() => ({
+  useStatusMock: vi.fn(),
+  sectionPropsMock: vi.fn(),
+}));
+
+vi.mock("@/hooks/admin-api-hooks", () => ({ useStatus: useStatusMock }));
+
+const StatusSection = (props: { data: StatusResponse }) => {
+  sectionPropsMock(props);
+  return <div>status section</div>;
+};
+const StatusWorkspaceClient = createStatusWorkspaceClient(StatusSection);
+
+describe("createStatusWorkspaceClient", () => {
+  it("forwards status data, retry and only Error failures to the workspace boundary", () => {
+    const status = makeHealthyStatusResponse();
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    useStatusMock.mockReturnValue({ data: status, error: null, isLoading: false, refetch });
+    const view = render(<StatusWorkspaceClient />);
+    expect(sectionPropsMock).toHaveBeenLastCalledWith({ data: status });
+
+    // A non-Error rejection is not error evidence: the boundary sees null, not a fabricated failure.
+    useStatusMock.mockReturnValue({ data: undefined, error: "boom", isLoading: false, refetch });
+    view.rerender(<StatusWorkspaceClient />);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("status").textContent).toContain("Status data is unavailable");
+
+    // The boundary's retry command is the status query's refetch.
+    useStatusMock.mockReturnValue({ data: undefined, error: new Error("status timeout"), isLoading: false, refetch });
+    view.rerender(<StatusWorkspaceClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+});
 
 
 describe("WorkspaceStatusBoundary announcements", () => {

@@ -26,6 +26,9 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-generated: "false"
+          # This packed workspace feeds the credential-holding pages-release
+          # job, so dependencies are installed fresh, never restored writable.
+          node-modules-cache: "false"
       - name: Materialize compile-input artifacts
         # The refresh consumes the generated catalog. This lifecycle must never
         # acquire live snapshots: those belong to the Worker-gated release job.

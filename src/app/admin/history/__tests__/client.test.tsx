@@ -87,14 +87,6 @@ afterEach(() => {
 
 describe("HistoryClient", () => {
 
-  it("passes nullable role evidence without manufacturing deployment metadata", async () => {
-    render(<HistoryClient />);
-    await waitFor(() => expect(historySectionPropsMock).toHaveBeenCalled());
-    const props = historySectionPropsMock.mock.calls.at(-1)?.[0] as ComponentProps<typeof HistorySection>;
-    expect(props.workerVersions).toEqual({ public: null, heavy: null });
-    expect(props.transitionsLast24h).toBe(status.summary.transitionsLast24h);
-  });
-
   it("passes both verified markers even when producer history names a newer execution", () => {
     const workerVersions = {
       public: { scriptName: "stablecoin-api", workerVersion: "public-v1", activatedAt: 100 },

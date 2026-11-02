@@ -1,9 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { dirname, extname, posix, resolve } from "node:path";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, extname, join, posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { resolveLocalPackageImport } from "../lib/package-imports.mts";
 import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
 import {
@@ -62,6 +64,9 @@ function hasRuntimeBindings(importClause: ts.ImportClause | undefined): boolean 
 }
 
 function runtimeImports(path: string): string[] {
+  // JSON data has no imports; parsing the multi-MB packed catalog as TypeScript
+  // only burns time and cannot contribute closure members.
+  if (extname(path) === ".json") return [];
   const source = readFileSync(resolve(REPO_ROOT, path), "utf8");
   const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const imports: string[] = [];
@@ -103,7 +108,6 @@ function collectRuntimeImportClosure(): Set<string> {
 
 const roots = createTempRepoTracker("pharos-v9-build-manifest");
 afterEach(() => roots.cleanup());
-
 // JSON data members hash their canonical parse, so fixtures must be valid JSON.
 const fixtureBytes = (path: string, label: string) =>
   path.endsWith(".json") ? `${JSON.stringify({ path, label })}\n` : `${label} ${path}\n`;
@@ -117,9 +121,39 @@ function fixtureRoot(): string {
   return root;
 }
 
+// The score-source rotation matrix shares one fixture tree and one frozen
+// baseline: every row mutates a single file and restores it, so rebuilding the
+// 300-odd-file tree per row only repeats identical work.
+let sharedRoot = "";
+let sharedBaseline: ReturnType<typeof buildV9EvaluationBuildManifest>;
+
+beforeAll(() => {
+  sharedRoot = mkdtempSync(join(tmpdir(), "pharos-v9-build-manifest-shared-"));
+  for (const path of V9_EVALUATION_BUILD_SOURCE_PATHS) {
+    mkdirSync(dirname(resolve(sharedRoot, path)), { recursive: true });
+    writeFileSync(resolve(sharedRoot, path), fixtureBytes(path, "fixture"));
+  }
+  sharedBaseline = buildV9EvaluationBuildManifest(sharedRoot);
+});
+
+afterAll(() => {
+  if (sharedRoot) rmSync(sharedRoot, { recursive: true, force: true });
+});
+
 describe("Safety Score v9 evaluation-build manifest", () => {
   it("enrolls every fixed identity input and recursive capture summaries for regeneration", () => {
-    for (const source of [...V9_EVALUATION_BUILD_SOURCE_PATHS,
+    const artifact = GENERATED_ARTIFACT_REGISTRY
+      .find((entry: { id: string }) => entry.id === "safety-score-v9-evaluation-build")!;
+    expect(artifact.sourcePaths).toEqual(expect.arrayContaining([
+      ...V9_EVALUATION_BUILD_SOURCE_PATHS,
+      "scripts/lib/safety-score-v9-evaluation-inputs.mts",
+      "scripts/lib/mechanism-measurement/capture-summary.ts",
+      "shared/data/safety-score-v9/mechanism-measurements/**/*.summary.json",
+    ]));
+    // Representative selector calls cover direct, recursive-glob and helper paths;
+    // the data assertion above keeps every fixed identity source enrolled.
+    for (const source of [
+      V9_EVALUATION_BUILD_SOURCE_PATHS[0]!,
       "shared/data/safety-score-v9/mechanism-measurements/one.summary.json",
       "shared/data/safety-score-v9/mechanism-measurements/nested/deleted.summary.json",
       "scripts/lib/mechanism-measurement/capture-summary.ts",
@@ -209,16 +243,19 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     "shared/lib/safety-score-v9/reserve-provenance.ts",
     ...V9_SCORE_INPUT_DATA_PATHS,
   ])("rotates build identity for score-bearing source %s", (path) => {
-    const root = fixtureRoot();
-    const before = buildV9EvaluationBuildManifest(root);
+    const before = sharedBaseline;
     expect(before.files).toContainEqual(expect.objectContaining({ path }));
-    writeFileSync(resolve(root, path), fixtureBytes(path, "changed score-bearing contract"));
-    const after = buildV9EvaluationBuildManifest(root);
-    expect(after.domain).toBe(V9_EVALUATION_BUILD_DIGEST_DOMAIN);
-    expect(after.digest).not.toBe(before.digest);
-    expect(after.files.map((file) => file.path)).toContain(path);
-    expect(renderV9EvaluationBuildManifest(after)).toContain(path);
-    expect(renderV9EvaluationBuildManifest(after)).toContain(after.digest);
+    writeFileSync(resolve(sharedRoot, path), fixtureBytes(path, "changed score-bearing contract"));
+    try {
+      const after = buildV9EvaluationBuildManifest(sharedRoot);
+      expect(after.domain).toBe(V9_EVALUATION_BUILD_DIGEST_DOMAIN);
+      expect(after.digest).not.toBe(before.digest);
+      expect(after.files.map((file) => file.path)).toContain(path);
+      expect(renderV9EvaluationBuildManifest(after)).toContain(path);
+      expect(renderV9EvaluationBuildManifest(after)).toContain(after.digest);
+    } finally {
+      writeFileSync(resolve(sharedRoot, path), fixtureBytes(path, "fixture"));
+    }
   });
 
   it("binds the configured Worker full-catalog decoder and its transported complete bytes", () => {

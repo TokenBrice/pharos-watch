@@ -8,7 +8,7 @@
  * telemetry expectations. Each replayed adapter proves that an upstream failure
  * surfaces as an error or a `degraded` warning, not a plausible wrong snapshot.
  */
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import type { StablecoinMeta } from "@shared/types/core";
 import usdx from "@shared/data/stablecoins/coins/usdx-kava.json";
@@ -451,7 +451,7 @@ const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
         totalReserveUsd: 1038136298.86,
         supplyUsd: 1030959209.0,
         collateralizationRatio: expect.closeTo(1038136298.86 / 1030959209.0, 9),
-        details: { accountName: "United Stables", ripcord: false },
+        details: { accountName: "United Stables", ripcord: false, freshnessSource: "same-run-render-clock" },
       },
       warnings: [],
       warningsUndefined: true,
@@ -522,6 +522,11 @@ const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
         totalReserveUsd: 1_221_858.9661031931,
         supplyUsd: 385_036.81291444064,
         collateralizationRatio: 3.173356,
+        reserveAssetAmount: 3_838_581.0555380915,
+        reserveAssetPriceUsd: 0.31831006,
+        reserveRatioMovingAverage: 3.218013,
+        zsdYieldReserve: 315_747.159842202,
+        hardForkVersion: 11,
       },
       warnings: [],
       warningsUndefined: true,
@@ -633,45 +638,58 @@ describe("adapter corpus replay", () => {
   });
 
   it.each(caseEntries)("%s surfaces upstream failure or shape drift instead of publishing it", async (key, corpusCase) => {
-    const { drift } = corpusCase;
-    const run = await runAdapter(key, corpusCase.coin ?? corpusCase.coinId, {
-      network: drift.network,
-      nowSec: drift.nowSec ?? corpusCase.nowSec,
-      validate: false,
-    }).then(
-      (value) => ({ status: "ok" as const, value }),
-      (error: unknown) => ({ status: "error" as const, error }),
-    );
+    // Retryable 5xx drift rows exercise the production 1 s + 2 s backoff. Fake
+    // only the timer primitives so the retry policy still runs, then advance it
+    // instead of sleeping on the wall clock.
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const { drift } = corpusCase;
+      const runPromise = runAdapter(key, corpusCase.coin ?? corpusCase.coinId, {
+        network: drift.network,
+        nowSec: drift.nowSec ?? corpusCase.nowSec,
+        validate: false,
+      }).then(
+        (value) => ({ status: "ok" as const, value }),
+        (error: unknown) => ({ status: "error" as const, error }),
+      );
+      // Let the first attempt settle before advancing, so its per-request
+      // timeout is disposed instead of firing during the backoff.
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.runAllTimersAsync();
+      const run = await runPromise;
 
-    if (drift.outcome === "error") {
-      expect(run.status, `${key}: ${drift.label} published a snapshot instead of failing`).toBe("error");
-      if (corpusCase.expected && run.status === "error") {
-        expect(run.error).toBeInstanceOf(Error);
-        if (drift.error) expect(run.error).toHaveProperty("message", expect.stringMatching(drift.error));
+      if (drift.outcome === "error") {
+        expect(run.status, `${key}: ${drift.label} published a snapshot instead of failing`).toBe("error");
+        if (corpusCase.expected && run.status === "error") {
+          expect(run.error).toBeInstanceOf(Error);
+          if (drift.error) expect(run.error).toHaveProperty("message", expect.stringMatching(drift.error));
+        }
+        return;
       }
-      return;
-    }
 
-    if (drift.outcome === "info") {
-      expect(run.status, `${key}: ${drift.label} threw; the corpus expects an informational publication`).toBe("ok");
+      if (drift.outcome === "info") {
+        expect(run.status, `${key}: ${drift.label} threw; the corpus expects an informational publication`).toBe("ok");
+        if (run.status !== "ok") return;
+        const warnings = [...(run.value.result.warnings ?? []), ...run.value.report.warnings];
+        expect(
+          warnings.map((warning) => warning.code),
+          `${key}: ${drift.label} published without naming the omitted optional feed`,
+        ).toContain(drift.warningCode);
+        expect(warnings.find((warning) => warning.code === drift.warningCode)?.effect).toBe("info");
+        return;
+      }
+
+      expect(run.status, `${key}: ${drift.label} threw; the corpus expects a degraded publication`).toBe("ok");
       if (run.status !== "ok") return;
       const warnings = [...(run.value.result.warnings ?? []), ...run.value.report.warnings];
+      const degrading = warnings.filter((warning) => warning.effect === "degraded" || warning.effect === "fatal");
       expect(
-        warnings.map((warning) => warning.code),
-        `${key}: ${drift.label} published without naming the omitted optional feed`,
-      ).toContain(drift.warningCode);
-      expect(warnings.find((warning) => warning.code === drift.warningCode)?.effect).toBe("info");
-      return;
+        degrading.map((warning) => warning.code),
+        `${key}: ${drift.label} published silently — no degraded warning`,
+      ).not.toEqual([]);
+    } finally {
+      vi.useRealTimers();
     }
-
-    expect(run.status, `${key}: ${drift.label} threw; the corpus expects a degraded publication`).toBe("ok");
-    if (run.status !== "ok") return;
-    const warnings = [...(run.value.result.warnings ?? []), ...run.value.report.warnings];
-    const degrading = warnings.filter((warning) => warning.effect === "degraded" || warning.effect === "fatal");
-    expect(
-      degrading.map((warning) => warning.code),
-      `${key}: ${drift.label} published silently — no degraded warning`,
-    ).not.toEqual([]);
   });
 
   afterAll(() => {

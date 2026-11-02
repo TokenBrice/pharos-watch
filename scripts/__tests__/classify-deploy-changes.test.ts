@@ -4,6 +4,7 @@ import {
   classifyChangedFiles,
   classifyDeployChanges,
   emitGithubOutputs,
+  hasCriticalCssPipelineImpact,
   hasDeployImpact,
   hasPagesDeployImpact,
   hasPagesPublishImpact,
@@ -53,6 +54,46 @@ describe("Pages artifact selection", () => {
       expect(classifyChangedFiles([path]).pagesArtifactRequired).toBe(false);
     },
   );
+
+  it.each([
+    "src/components/__tests__/header.test.tsx",
+    "shared/lib/classification.spec.ts",
+    "src/app/__tests__/page.test.tsx",
+  ])("validates but does not build the artifact for test-only path %s", (path) => {
+    expect(classifyChangedFiles([path])).toMatchObject({ pagesChanged: true, pagesArtifactRequired: false });
+  });
+});
+
+describe("critical CSS pipeline selection", () => {
+  it.each([
+    "src/app/globals.css",
+    "src/styles/tokens/semantic.css",
+    "src/components/harbor/harbor.module.css",
+    "tailwind.config.ts",
+    "postcss.config.mjs",
+    "next.config.ts",
+    "scripts/maintenance/inline-homepage-critical-css.ts",
+    "scripts/maintenance/critical-css-worker.mjs",
+    "package.json",
+    "package-lock.json",
+  ])("requires the full critical-CSS pass for %s", (path) => {
+    expect(classifyChangedFiles([path]).pagesCriticalCssFullPass).toBe(true);
+    expect(hasCriticalCssPipelineImpact([path])).toBe(true);
+  });
+
+  it.each([
+    "src/app/page.tsx",
+    "src/components/header.tsx",
+    "shared/data/stablecoins/coins/usdc-circle.json",
+    "docs/testing.md",
+  ])("permits the gate-scoped pass for %s", (path) => {
+    expect(classifyChangedFiles([path]).pagesCriticalCssFullPass).toBe(false);
+  });
+
+  it.each([[[]], [[""]], [["../outside.css"]], [["../outside.ts"]], [["./src/app/page.tsx"]], [["src//app/page.tsx"]],
+    [["/outside/page.tsx"]], [["src/app/../page.tsx"]], [["..\\outside.ts"]]])("fails closed to the full pass for unknown input %j", (files) => {
+    expect(hasCriticalCssPipelineImpact(files)).toBe(true);
+  });
 });
 
 describe("V9 resource selection", () => {
@@ -131,7 +172,7 @@ describe("V9 resource selection", () => {
 });
 
 describe("emitGithubOutputs", () => {
-  it("emits only the six consumed workflow outputs while retaining classification fields", () => {
+  it("emits only the seven consumed workflow outputs while retaining classification fields", () => {
     const write = vi.spyOn(process.stdout, "write").mockReturnValue(true);
     try {
       const classification = classifyChangedFiles(["package-lock.json"]);
@@ -139,6 +180,7 @@ describe("emitGithubOutputs", () => {
       expect(write.mock.calls.map(([line]) => line)).toEqual([
         "docs_only=false\n",
         "pages_artifact_required=true\n",
+        "pages_critical_css_full_pass=true\n",
         "pages_deploy_required=true\n",
         "playwright_firefox_required=false\n",
         "v9_resource_required=true\n",
@@ -304,6 +346,7 @@ describe("classifyDeployChanges", () => {
     expect(result.workerDeployRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
     expect(result.pagesDeployRequired).toBe(true);
+    expect(result.pagesCriticalCssFullPass).toBe(true);
     expect(result.docsOnly).toBe(false);
   });
 
@@ -317,6 +360,8 @@ describe("classifyDeployChanges", () => {
     expect(result.workerChanged).toBe(true);
     expect(result.workerDeployRequired).toBe(true);
     expect(result.pagesChanged).toBe(true);
+    expect(result.pagesArtifactRequired).toBe(true);
+    expect(result.pagesCriticalCssFullPass).toBe(true);
     expect(result.pagesDeployRequired).toBe(true);
   });
 
@@ -345,6 +390,7 @@ describe("classifyDeployChanges", () => {
       workerChanged: worker,
       workerDeployRequired: worker,
       pagesChanged: pages,
+      pagesArtifactRequired: publish,
       pagesDeployRequired: publish,
       docsOnly,
       changedFiles: [...files].sort(),

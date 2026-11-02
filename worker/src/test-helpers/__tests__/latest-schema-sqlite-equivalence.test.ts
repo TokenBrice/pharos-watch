@@ -1,10 +1,16 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { pathToFileURL, URL } from "node:url";
 import { Worker } from "node:worker_threads";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import {
+  buildLatestSchemaTemplate,
+  createLatestSchemaFixtureTracker,
+  latestSchemaTemplateCachePath,
+  latestSchemaTemplateKey,
+} from "@shared/test-utils/latest-schema-sqlite";
 
 /**
  * Equivalence gate for the latest-schema harness (PLAN.md:175). However the
@@ -94,9 +100,30 @@ async function cacheKeysFromWorkerThread(key: string): Promise<string[]> {
 
 const reference = replayMigrations();
 const fixtures = createLatestSchemaFixtureTracker();
+const temporaryDirectories: string[] = [];
+
+function makeTemporaryDirectory(): string {
+  const directory = mkdtempSync(path.join(tmpdir(), "pharos-latest-schema-"));
+  temporaryDirectories.push(directory);
+  return directory;
+}
+
+function writeTemplateCache(cacheDir: string, template: Uint8Array): string {
+  const cachePath = latestSchemaTemplateCachePath(latestSchemaTemplateKey(), cacheDir);
+  writeFileSync(cachePath, template);
+  return cachePath;
+}
+
+let templateBytes: Uint8Array | undefined;
+function builtTemplate(): Uint8Array {
+  return (templateBytes ??= buildLatestSchemaTemplate());
+}
 
 afterEach(() => fixtures.closeAll());
-afterAll(() => reference.close());
+afterAll(() => {
+  reference.close();
+  for (const directory of temporaryDirectories) rmSync(directory, { recursive: true, force: true });
+});
 
 describe("latest-schema fixture equivalence", () => {
   it("matches an independent worker/migrations replay in schema, seeded rows and integrity", () => {
@@ -207,6 +234,94 @@ describe("latest-schema fixture equivalence", () => {
       expect(sqlite.prepare(`${query} ${predicate}`).all()).toEqual([{ value: expected }]);
       expect(() => sqlite.exec(seed)).toThrow(/UNIQUE/);
     }
+  });
+});
+
+describe("latest-schema template cache", () => {
+  it("restores a disk-cached template equivalently to a fresh migration replay", () => {
+    const cacheDir = makeTemporaryDirectory();
+    writeTemplateCache(cacheDir, builtTemplate());
+    const tracker = createLatestSchemaFixtureTracker({ templateCacheDir: cacheDir });
+    try {
+      expect(describeDatabase(tracker.open().sqlite)).toEqual(describeDatabase(reference));
+    } finally {
+      tracker.closeAll();
+    }
+  });
+
+  it("restores the cached bytes instead of rebuilding a template in-process", () => {
+    const cacheDir = makeTemporaryDirectory();
+    const template = new DatabaseSync(":memory:");
+    try {
+      template.deserialize(builtTemplate());
+      template.exec("CREATE TABLE disk_cache_probe (id INTEGER PRIMARY KEY)");
+      writeTemplateCache(cacheDir, template.serialize());
+    } finally {
+      template.close();
+    }
+    const tracker = createLatestSchemaFixtureTracker({ templateCacheDir: cacheDir });
+    try {
+      expect(tracker.open().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'disk_cache_probe'").get())
+        .toEqual({ name: "disk_cache_probe" });
+    } finally {
+      tracker.closeAll();
+    }
+  });
+
+  it.each<[string, (cacheDir: string) => void]>([
+    ["missing", () => {}],
+    ["cached under another migration key", (cacheDir) => {
+      writeFileSync(latestSchemaTemplateCachePath("0".repeat(64), cacheDir), builtTemplate());
+    }],
+    ["truncated", (cacheDir) => {
+      writeTemplateCache(cacheDir, builtTemplate().subarray(0, Math.floor(builtTemplate().byteLength / 2)));
+    }],
+  ])("falls back to a full replay when the template file is %s", (_label, seedCache) => {
+    const cacheDir = makeTemporaryDirectory();
+    seedCache(cacheDir);
+    const tracker = createLatestSchemaFixtureTracker({ templateCacheDir: cacheDir });
+    try {
+      const { sqlite } = tracker.open();
+      expect(describeDatabase(sqlite)).toEqual(describeDatabase(reference));
+      insertCacheKey(sqlite, "after-fallback");
+      expect(cacheKeys(sqlite)).toEqual(["after-fallback"]);
+    } finally {
+      tracker.closeAll();
+    }
+  });
+
+  it("keeps uncached fixtures replaying migrations when a template is cached", () => {
+    const cacheDir = makeTemporaryDirectory();
+    const template = new DatabaseSync(":memory:");
+    try {
+      template.deserialize(builtTemplate());
+      template.exec("CREATE TABLE disk_cache_probe (id INTEGER PRIMARY KEY)");
+      writeTemplateCache(cacheDir, template.serialize());
+    } finally {
+      template.close();
+    }
+    const tracker = createLatestSchemaFixtureTracker({ uncached: true, templateCacheDir: cacheDir });
+    try {
+      expect(describeDatabase(tracker.open().sqlite)).toEqual(describeDatabase(reference));
+    } finally {
+      tracker.closeAll();
+    }
+  });
+
+  it("changes the cache key when a migration byte or name changes", () => {
+    const first = makeTemporaryDirectory();
+    const copy = makeTemporaryDirectory();
+    const changedByte = makeTemporaryDirectory();
+    const changedName = makeTemporaryDirectory();
+    writeFileSync(path.join(first, "0001_test.sql"), "CREATE TABLE items (id INTEGER);\n");
+    writeFileSync(path.join(copy, "0001_test.sql"), "CREATE TABLE items (id INTEGER);\n");
+    writeFileSync(path.join(changedByte, "0001_test.sql"), "CREATE TABLE items (id INTEGER) ;\n");
+    writeFileSync(path.join(changedName, "0002_test.sql"), "CREATE TABLE items (id INTEGER);\n");
+
+    const key = latestSchemaTemplateKey(first);
+    expect(latestSchemaTemplateKey(copy)).toBe(key);
+    expect(latestSchemaTemplateKey(changedByte)).not.toBe(key);
+    expect(latestSchemaTemplateKey(changedName)).not.toBe(key);
   });
 });
 

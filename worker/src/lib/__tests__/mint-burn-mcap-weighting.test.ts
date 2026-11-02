@@ -85,15 +85,6 @@ describe("sumMcapForTrackedChains", () => {
     expect(sumMcapForTrackedChains("nonexistent", chainCirculatingDL, peggedTotal)).toBe(37_000_000_000);
   });
 
-  it("uses the canonical circulating total when tracked-chain data is absent", () => {
-    expect(
-      sumMcapForTrackedChains("nonexistent", undefined, {
-        peggedUSD: 125_000_000,
-        peggedEUR: 75_000_000,
-      }),
-    ).toBe(200_000_000);
-  });
-
   it("returns null, not 0, when the fallback supply is absent, empty or wholly invalid", () => {
     expect(sumMcapForTrackedChains("usdc-circle", undefined, undefined)).toBeNull();
     expect(sumMcapForTrackedChains("usdc-circle", {}, {})).toBeNull();

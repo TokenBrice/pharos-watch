@@ -1877,14 +1877,20 @@ Options:
 `);
 }
 
-export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
+export interface RunCliDeps {
+  readStdin?: () => string;
+  /** Reuse one immutable Markdown snapshot when a caller runs several routes in one process. */
+  documents?: RouteContextDocumentCache;
+}
+
+export function runCli(argv: readonly string[] = process.argv.slice(2), deps: RunCliDeps = {}): void {
   const { explicitFiles, options } = parseArgs(argv);
   if (options.help) {
     printHelp();
     return;
   }
 
-  const hookRead = options.hook ? readHookInput() : { input: {}, malformed: false };
+  const hookRead = options.hook ? readHookInput(deps) : { input: {}, malformed: false };
   const hookMode = normalizeHookMode(options.hook);
 
   if (options.hook && hookRead.malformed) {
@@ -1988,7 +1994,7 @@ export function runCli(argv: readonly string[] = process.argv.slice(2)): void {
     contract.checks = [];
     process.exitCode = 1;
   }
-  const context = buildRouteContext(contract);
+  const context = buildRouteContext(contract, deps.documents ? { documents: deps.documents } : {});
   if (options.format === "json") {
     console.log(JSON.stringify({ ...contract, context }, null, 2));
     return;

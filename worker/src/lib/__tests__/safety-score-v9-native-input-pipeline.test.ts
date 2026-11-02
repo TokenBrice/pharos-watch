@@ -27,6 +27,7 @@ import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-ga
 import { resolveV9EffectiveScoringWeight } from "@shared/types/safety-score-v9-public-causes";
 import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
 import {
+  createNativeSafetyScoreV9CohortInput,
   createNativeSafetyScoreV9FullRegistryInput,
   createSafetyScoreV9FullRegistryInput,
 } from "./fixtures/safety-score-v9-full-registry-input";
@@ -59,6 +60,7 @@ import { buildSafetyScoreV9LenderCollateralProjection } from "../safety-score-v9
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { compareCodeUnits } from "@shared/lib/compare";
+import { SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC } from "../../cron/compute-safety-score-v9";
 import { createV9CaptureDexSnapshot } from "./safety-score-v9-capture.test-support";
 
 // The shared setup evaluates both capture lanes. Preserve the coverage budget
@@ -170,7 +172,10 @@ function subsetInput(template: NativeSafetyScoreV9Input, observations: Record<st
   });
 }
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
+});
 
 describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
   const input = createNativeSafetyScoreV9FullRegistryInput();
@@ -972,4 +977,34 @@ describe("v10.19 lender-book wire and policy admission", () => {
     }
     expect(LenderCollateralBackingSchema.safeParse({ ...bundle, byAssetId: { "savusd-avant": { ...row, sourceCause: "U", sourceGapIds: [] } } }).success).toBe(false);
   });
+});
+
+// The two assets carry every clock-derived evidence age the compiler reads
+// (peg observation, chain supply, DEX route, live-reserve provenance and the
+// inherited redemption clock), so moving a compile off the capture clock still
+// changes the bytes. Full-registry compilation is covered by the native-input
+// pipeline suite.
+const COHORT_ASSET_IDS = ["usdc-circle", "usdt-tether"] as const;
+
+// The publisher admits a capture that lags the live stablecoins cache by up to
+// SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC. Every evidence age (peg and
+// chainSupply at 2 x 900 s included) is measured against the capture's frozen
+// `clockSec`, never the compile wall clock, so a late compile must score
+// byte-identically to an on-time one.
+describe("Safety Score V9 compile clock", () => {
+  it("compiles a capture identically on time and at the lag budget", () => {
+    const fixedInput = createNativeSafetyScoreV9CohortInput(COHORT_ASSET_IDS);
+    const compileAt = (wallSec: number) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(wallSec * 1_000);
+      const result = buildSafetyScoreV9Candidate({ fixedInput, publishedAtSec: fixedInput.clockSec });
+      vi.useRealTimers();
+      return stableJsonStringifyV1(result.candidate);
+    };
+
+    const onTime = compileAt(fixedInput.clockSec);
+    const late = compileAt(fixedInput.updatedAt + SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC);
+
+    expect(late === onTime).toBe(true);
+  }, V9_EVALUATION_TEST_TIMEOUT_MS);
 });

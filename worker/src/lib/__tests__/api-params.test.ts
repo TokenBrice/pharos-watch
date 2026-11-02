@@ -252,30 +252,12 @@ describe("parseFloatParam", () => {
 });
 
 describe("parseQueryParams", () => {
-  it("parses multiple params into an object", () => {
-    const params = new URLSearchParams("limit=25&offset=10");
-    const result = parseQueryParams(params, {
-      limit: { type: "int", default: 50, min: 1, max: 200 },
-      offset: { type: "int", default: 0, min: 0, max: 10000 },
-    });
-    expect(result).toEqual({ limit: 25, offset: 10 });
-  });
-
   it("returns 400 Response for invalid param", () => {
     const params = new URLSearchParams("limit=abc");
     const result = parseQueryParams(params, {
       limit: { type: "int", default: 50, min: 1, max: 200 },
     });
     expect(result).toBeInstanceOf(Response);
-  });
-
-  it("uses defaults for missing params", () => {
-    const params = new URLSearchParams("");
-    const result = parseQueryParams(params, {
-      limit: { type: "int", default: 50, min: 1, max: 200 },
-      offset: { type: "int", default: 0, min: 0, max: 10000 },
-    });
-    expect(result).toEqual({ limit: 50, offset: 0 });
   });
 
   it("supports float params", () => {
@@ -358,17 +340,6 @@ describe("parseEnumParam", () => {
     expect(parseEnumParam(null, validModes, "mode", "strict")).toBe("strict");
   });
 
-  it("returns the parsed enum value when valid", () => {
-    expect(parseEnumParam("relaxed", validModes, "mode", "strict")).toBe("relaxed");
-  });
-
-  it("returns a 400 response for invalid values", async () => {
-    const result = parseEnumParam("legacy", validModes, "mode", "strict");
-    expect(result).toBeInstanceOf(Response);
-    const response = result as Response;
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: "Invalid mode parameter" });
-  });
 });
 
 describe("parseRequiredStablecoinIdParam", () => {

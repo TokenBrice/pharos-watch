@@ -1,13 +1,21 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
-  deriveCriticalOwnership,
-  deriveBaseCriticalOwnership,
+  assertExecutableTestFiles,
   collectOwningTests,
+  collectWorkerSharedTestFiles,
+  deriveBaseCriticalOwnership,
+  deriveCriticalOwnership,
+  EXECUTABLE_TEST_PROJECTS,
+  hasModuleScopeMutableState,
+  isWorkerSharedTestEligible,
+  WORKER_SHARED_ISOLATED_OVERRIDES,
+  WORKER_SHARED_TEST_FILES,
 } from "../lib/critical-ownership.mts";
+import { buildCriticalCoverageArgs } from "../lib/critical-test-files.mts";
 
 const temporaryDirectories: string[] = [];
 
@@ -171,4 +179,135 @@ describe("critical ownership derivation", () => {
     expect(ownership.get(source)).toEqual([test]);
   });
 
+});
+
+describe("worker-shared pilot eligibility", () => {
+  it("rejects per-file module state and unrestored global stubs", () => {
+    const eligible = [
+      'import { it } from "vitest";\nit("x", () => {});\n',
+      'vi.stubGlobal("fetch", vi.fn());\nvi.unstubAllGlobals();\n',
+      'vi.stubEnv("X", "1");\nvi.unstubAllEnvs();\n',
+    ];
+    const ineligible = [
+      'vi.mock("./adapter");',
+      'vi.doMock("./adapter");',
+      'vi.resetModules();',
+      'vi.hoisted(() => ({}));',
+      'vi.stubGlobal("fetch", vi.fn());',
+      'vi.stubEnv("X", "1");',
+      'process.env.X = "1";',
+      'process.env["X"] = "1";',
+      'process.env.X ||= "1";',
+      'process.env.X ??= "1";',
+      'process.env.X += "1";',
+      'process.env.X++;',
+      'delete process.env.X;',
+      'Object.assign(process.env, { X: "1" });',
+    ];
+    for (const source of eligible) expect(isWorkerSharedTestEligible(source), source).toBe(true);
+    for (const source of ineligible) expect(isWorkerSharedTestEligible(source), source).toBe(false);
+  });
+
+  it("detects module-scope mutable state that a shared cache would carry", () => {
+    const stateful = [
+      "let activeNetwork;\nexport function install() { activeNetwork = 1; }\n",
+      "var cache = 1;\n",
+      'const entries = new Map<string, number>();\n',
+      'const table: Record<string, true> = {};\ntable["x"] = true;\n',
+      "export const cases = [];\ncases.push(1);\n",
+    ];
+    const stateless = [
+      "export const labels: Record<string, true> = { a: true };\n",
+      "const LIMIT = 10;\nconst parse = (value: string) => Number(value);\n",
+      "const ABI = parseAbi([\"function totalSupply() view returns (uint256)\"]);\n",
+    ];
+    for (const source of stateful) expect(hasModuleScopeMutableState(source), source).toBe(true);
+    for (const source of stateless) expect(hasModuleScopeMutableState(source), source).toBe(false);
+  });
+
+  it("keeps importers of stateful support modules isolated until a reset hook is wired", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-worker-shared-support-"));
+    temporaryDirectories.push(cwd);
+    const tests = join(cwd, "worker/src/cron/reserve-adapters/__tests__");
+    mkdirSync(tests, { recursive: true });
+    writeFileSync(join(tests, "stateful.test-support.ts"), "let activeNetwork;\nexport function install() { activeNetwork = 1; }\n");
+    writeFileSync(join(tests, "clean.test-support.ts"), "export const label = 'clean';\n");
+    writeFileSync(join(tests, "imports-state.test.ts"), 'import { install } from "./stateful.test-support";\ninstall();\n');
+    writeFileSync(join(tests, "imports-clean.test.ts"), 'import { label } from "./clean.test-support";\nvoid label;\n');
+    writeFileSync(join(tests, "imports-unresolvable.test.ts"), 'import { helper } from "./missing.test-support";\nvoid helper;\n');
+
+    expect(collectWorkerSharedTestFiles(cwd)).toEqual([
+      "worker/src/cron/reserve-adapters/__tests__/imports-clean.test.ts",
+    ]);
+  });
+
+  it("accepts stateful support state only when the shared setup runs its reset hook", () => {
+    const build = (setupCallsHook: boolean) => {
+      const cwd = mkdtempSync(join(tmpdir(), "pharos-worker-shared-hook-"));
+      temporaryDirectories.push(cwd);
+      const tests = join(cwd, "worker/src/cron/reserve-adapters/__tests__");
+      mkdirSync(tests, { recursive: true });
+      mkdirSync(join(cwd, "worker/src/test-helpers"), { recursive: true });
+      writeFileSync(
+        join(tests, "erc4626-single-asset.test-support.ts"),
+        "let activeNetwork;\nexport function install() { activeNetwork = 1; }\nexport function resetErc4626NetworkForTests(): void { activeNetwork = undefined; }\n",
+      );
+      writeFileSync(join(tests, "imports-state.test.ts"), 'import { install } from "./erc4626-single-asset.test-support";\ninstall();\n');
+      writeFileSync(
+        join(cwd, "worker/src/test-helpers/setup-shared-isolation.ts"),
+        setupCallsHook ? "resetErc4626NetworkForTests();\n" : "// no reset\n",
+      );
+      return collectWorkerSharedTestFiles(cwd);
+    };
+    expect(build(true)).toEqual(["worker/src/cron/reserve-adapters/__tests__/imports-state.test.ts"]);
+    expect(build(false)).toEqual([]);
+  });
+
+  it("classifies only reserve-adapter test files under __tests__", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-worker-shared-"));
+    temporaryDirectories.push(cwd);
+    const tests = join(cwd, "worker/src/cron/reserve-adapters/__tests__");
+    mkdirSync(tests, { recursive: true });
+    writeFileSync(join(tests, "clean.test.ts"), 'import { it } from "vitest";\nit("x", () => {});\n');
+    writeFileSync(join(tests, "mocked.test.ts"), 'vi.mock("./adapter");\n');
+    writeFileSync(join(tests, "harness.test-support.ts"), "export const harness = true;\n");
+    mkdirSync(join(cwd, "worker/src/other/__tests__"), { recursive: true });
+    writeFileSync(join(cwd, "worker/src/other/__tests__/clean.test.ts"), 'import { it } from "vitest";\n');
+
+    expect(collectWorkerSharedTestFiles(cwd)).toEqual([
+      "worker/src/cron/reserve-adapters/__tests__/clean.test.ts",
+    ]);
+  });
+
+  it("keeps every classified file owned by exactly one executable project", () => {
+    const repoRoot = resolve(import.meta.dirname, "../..");
+    expect(EXECUTABLE_TEST_PROJECTS.filter((project) => project.name === "worker-shared")).toHaveLength(1);
+    expect(() => assertExecutableTestFiles(WORKER_SHARED_TEST_FILES, { cwd: repoRoot })).not.toThrow();
+    const isolatedOverrides = Object.keys(WORKER_SHARED_ISOLATED_OVERRIDES);
+    expect(() => assertExecutableTestFiles(isolatedOverrides, { cwd: repoRoot })).not.toThrow();
+    for (const file of isolatedOverrides) expect(WORKER_SHARED_TEST_FILES).not.toContain(file);
+  });
+});
+
+describe("critical execution contracts", () => {
+  it("rejects missing, non-test and multiply-owned mandatory files", () => {
+    expect(() => assertExecutableTestFiles(["src/missing.test.ts"], { exists: () => false })).toThrow("src/missing.test.ts");
+    expect(() => assertExecutableTestFiles(["src/source.ts"], { exists: () => true })).toThrow("src/source.ts");
+    expect(() => assertExecutableTestFiles(["tests/browser/page.spec.ts"], { exists: () => true })).toThrow("tests/browser/page.spec.ts");
+    const project = { name: "duplicate", include: ["src/**/*.test.ts"], exclude: [] };
+    expect(() => assertExecutableTestFiles(["src/owner.test.ts"], { exists: () => true, projects: [project, project] })).toThrow("found 2");
+  });
+
+  it("never turns an empty ownership selection into unrestricted Vitest execution", () => {
+    const options = { criticalFiles: ["src/source.ts"], ownership: new Map() };
+    expect(() => buildCriticalCoverageArgs([], options)).toThrow(/Empty/);
+    expect(() => buildCriticalCoverageArgs([], { criticalFiles: [] })).toThrow(/Empty/);
+  });
+
+  it("retains all critical owners while narrowing measured sources", () => {
+    const ownership = new Map([["src/first.ts", ["src/first.test.ts"]], ["src/second.ts", ["src/second.test.ts"]]]);
+    const args = buildCriticalCoverageArgs([], { criticalFiles: [...ownership.keys()], ownership, changedFiles: ["src/first.ts"], exists: () => true });
+    expect(args.filter((arg) => arg.startsWith("--coverage.include="))).toEqual(["--coverage.include=src/first.ts"]);
+    expect(args.filter((arg) => arg.endsWith(".test.ts"))).toEqual(["src/first.test.ts", "src/second.test.ts"]);
+  });
 });

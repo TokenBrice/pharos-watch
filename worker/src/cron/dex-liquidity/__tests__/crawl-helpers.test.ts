@@ -181,7 +181,7 @@ describe("crawlTokenPools", () => {
     expect(newPools.get("yzusd-yuzu")?.[0].priceObservedAt).toBe(observedAt);
   });
 
-  it.each([50_000, 100_000, 200_000, null, 0])("quarantines oversized fallback without scaling admitted raw TVL (protocol total %s)", async (cap) => {
+  it.each([50_000, 100_000, null, 0])("quarantines oversized fallback without scaling admitted raw TVL (protocol total %s)", async (cap) => {
     const newPools = new Map<string, GtNewPool[]>();
     const priceObs = new Map();
     const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});

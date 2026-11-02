@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import type { SafetyScoreV9ReplayArtifact } from "../../replay-safety-score-v9";
 type Mutable<T> = { -readonly [Key in keyof T]: Mutable<T[Key]> };
 import { execFileSync } from "node:child_process";
@@ -13,9 +13,14 @@ import { validateSafetyScoreV9ReplayIntegrity, reproduceSafetyScoreV9Replay } fr
 import { buildSafetyScoreV9ReplayLaneScreening } from "../../../src/lib/safety-score-v9/publication-replay-capture";
 import { loadReviewedLaneEmitterCatalog } from "../../../src/lib/safety-score-v9/lane-emitter-catalog";
 
-function fixture() {
+// One artifact build is shared: every case mutates only its own clone.
+let baseArtifact: SafetyScoreV9ReplayArtifact;
+beforeAll(() => {
   const fixedInput = createReplayFixedInput(v9TestClockSec());
-  return structuredClone(buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: fixedInput.clockSec })) as Mutable<SafetyScoreV9ReplayArtifact>;
+  baseArtifact = buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: fixedInput.clockSec });
+});
+function fixture() {
+  return structuredClone(baseArtifact) as Mutable<SafetyScoreV9ReplayArtifact>;
 }
 
 describe("permanent replay integrity", () => {

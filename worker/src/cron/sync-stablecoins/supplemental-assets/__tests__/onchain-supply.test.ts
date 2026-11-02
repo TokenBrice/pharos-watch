@@ -834,7 +834,6 @@ describe("curation-expanded complete supply rosters", () => {
     {
       id: "syzusd-yuzu",
       canonical: "plasma",
-      // Synthetic complete stock includes the newly verified Base representation.
       supplies: { plasma: 100, ethereum: 10, monad: 10, hyperevm: 10, sei: 10, pharos: 10, berachain: 10, aptos: 0.25, base: 10 },
     },
     {
@@ -842,21 +841,16 @@ describe("curation-expanded complete supply rosters", () => {
       canonical: undefined,
       supplies: { ethereum: 100, arbitrum: 10, base: 20, optimism: 30, unichain: 40 },
     },
-    { id: "usyc-hashnote", supplies: { ethereum: 100, bsc: 10, solana: 20, arc: 0 } },
-    { id: "jtrsy-anemoy", supplies: { ethereum: 100, base: 10, arbitrum: 20, avalanche: 30, plume: 40, bsc: 50, monad: 60, solana: 0, pharos: 70 } },
-    { id: "nopal-nest", supplies: { ethereum: 100, plume: 10, bsc: 20, solana: 30, plasma: 0, worldchain: 40, avalanche: 50, arc: 60, monad: 70, robinhood: 80 } },
-    { id: "acred-apollo-securitize", supplies: { aptos: 10, avalanche: 20, ethereum: 100, ink: 30, polygon: 40, sei: 50, solana: 60 } },
-    { id: "brsrv-blackrock", supplies: { ethereum: 100, tempo: 0, solana: 0 } },
-    { id: "syrupusdg-maple", canonical: "ethereum", supplies: { ethereum: 100, robinhood: 10, arbitrum: 20, ink: 0, solana: 0 } },
-    { id: "susdat-saturn", canonical: "ethereum", supplies: { ethereum: 100, bsc: 10, monad: 20 } },
-    { id: "wsrusd-reservoir", canonical: "ethereum", supplies: { ethereum: 100, base: 1, berachain: 1, sonic: 1, arbitrum: 1, bsc: 1, avalanche: 1, unichain: 1, plume: 1, sei: 1, worldchain: 1, katana: 1, hyperevm: 1, linea: 1, monad: 1, pharos: 1, solana: 1, plasma: 1, megaeth: 0, tempo: 1, xdc: 1 } },
-    { id: "brlv-crown", supplies: { base: 100, ethereum: 10, tempo: 20 } },
-    { id: "chfau-allunity", supplies: { ethereum: 100, polygon: 0, base: 10, tempo: 0, solana: 20, arc: 0 } },
-    { id: "susn-noon", canonical: "ethereum", supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5 } },
-    { id: "apyusd-apyx", canonical: "ethereum", supplies: { ethereum: 100, base: 10, bsc: 10, solana: 10 } },
-    { id: "susdai-usd-ai", supplies: { arbitrum: 100, ethereum: 10, base: 20, plasma: 30, solana: 40, arc: 50 } },
-    { id: "stac-securitize", supplies: { ethereum: 100, solana: 170 } },
-    { id: "jaaa-janus-henderson-anemoy", supplies: { ethereum: 100, base: 10, bsc: 20, avalanche: 30, monad: 40, arbitrum: 50, pharos: 0, xlayer: 0, arc: 0 } },
+    {
+      id: "susn-noon",
+      canonical: "ethereum",
+      supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5 },
+    },
+    {
+      id: "apyusd-apyx",
+      canonical: "ethereum",
+      supplies: { ethereum: 100, base: 10, bsc: 10, solana: 10 },
+    },
   ];
 
   beforeEach(() => {

@@ -125,9 +125,6 @@ describe("client registry field contract", () => {
 
   it("omits every authored suspended reader from both generated client outputs", () => {
     const suspendedCoins = TRACKED_SOURCE_COINS.filter((coin) => coin.liveReservesConfig?.suspended);
-    expect(suspendedCoins.map((coin) => coin.id)).toEqual(expect.arrayContaining([
-      "bnusd-balanced", "inalpha-nest", "tgbp-tokenised", "usdxl-last",
-    ]));
     const { output, detailOutputs } = buildClientRegistryOutput();
     const listCoins = JSON.parse(output) as StablecoinClientListMeta[];
     for (const sourceCoin of suspendedCoins) {

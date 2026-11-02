@@ -404,7 +404,6 @@ Explicit current limitations also remain source-tested:
 Canonical coverage and parser tests live in:
 
 - `worker/src/lib/__tests__/blacklist-contracts.test.ts`
-- `worker/src/cron/blacklist/__tests__/blacklist-contracts.test.ts`
 - `worker/src/cron/blacklist/__tests__/evm-source.test.ts`
 - `worker/src/cron/blacklist/__tests__/evm-source-coverage.test.ts`
 - `worker/src/cron/blacklist/__tests__/tron-source.test.ts`

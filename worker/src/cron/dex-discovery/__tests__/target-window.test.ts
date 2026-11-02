@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { ContractDeployment } from "@shared/types/core";
+import { DEX_DISCOVERY_PROVIDER_REGISTRY } from "@shared/lib/dex-deployment-coverage";
+import {
+  classifyDexPlaceholderCoverage,
+  type DexDeploymentCensusRow,
+} from "../../dex-liquidity/deployment-census-coverage";
 import {
   advanceDiscoveryTargetCursor,
   DEX_DISCOVERY_PER_COIN_BUDGET_MS,
@@ -89,6 +94,17 @@ describe("estimateDeploymentCrawlCostMs", () => {
         "CDWOB6T7SVSMMQN5V3P2OPTBAXOP7DAZHGVW3PYTZIKHVFKN6TBSXR6A",
       ),
     ).toBe(8_000);
+  });
+
+  it("charges every provider stage that visits a deployment, not just the first", () => {
+    const address = "0x1111111111111111111111111111111111111111";
+    const visitingStages = DEX_DISCOVERY_PROVIDER_REGISTRY
+      .filter((provider) => provider.lifecycle === "active" && provider.supports("ethereum", address));
+    // More than one stage must visit this deployment, or the pin is vacuous.
+    expect(visitingStages.length).toBeGreaterThan(1);
+    expect(estimateDeploymentCrawlCostMs("ethereum", address)).toBe(
+      visitingStages.reduce((sum, provider) => sum + provider.requestCostMs, 0),
+    );
   });
 
   it("prices only EVM-shaped MANTRA deployments for GeckoTerminal", () => {
@@ -236,5 +252,73 @@ describe("advanceDiscoveryTargetCursor", () => {
     });
 
     expect(keysOf(next.targets)).toContain(discoveryTargetCursorKey(window[2]!));
+  });
+});
+
+const CENSUS_NOW_SEC = 1_800_000_000;
+
+function censusDeployment(index: number): ContractDeployment {
+  return {
+    chain: "osmosis",
+    address: `ibc/${index.toString(16).padStart(64, "0").toUpperCase()}`,
+    decimals: 6,
+  };
+}
+
+function reviewedEmptyRow(target: ContractDeployment): DexDeploymentCensusRow {
+  return {
+    stablecoin_id: "synthetic-empty",
+    chain: target.chain,
+    contract_address: target.address,
+    outcome: "verified_no_pools",
+    provider_set_json: JSON.stringify(["osmosis-sqs"]),
+    reason: "A provider completed the direct-token query with no eligible pool",
+    observed_pool_count: 0,
+    observed_at: CENSUS_NOW_SEC,
+    discovery_last_crawl_at: CENSUS_NOW_SEC,
+  };
+}
+
+describe("DEX census rotating sweep", () => {
+  it("moves from discovery deferral to complete-empty only after the production sweep reviews every target", () => {
+    const targets = Array.from({ length: 10 }, (_, index) => censusDeployment(index + 1));
+    const expectedWindows = estimateDiscoverySweepWindowCount(targets);
+    const rows = new Map<string, DexDeploymentCensusRow>();
+    let cursor: string | null = null;
+    expect(expectedWindows).toBeGreaterThan(1);
+
+    for (let run = 0; run < expectedWindows; run++) {
+      const window = selectDiscoveryTargetWindow({
+        targets,
+        cursor,
+        budgetMs: DEX_DISCOVERY_PER_COIN_BUDGET_MS,
+      });
+      const checked = new Set(window.targets.map(discoveryTargetCursorKey));
+      for (const target of window.targets) {
+        rows.set(discoveryTargetCursorKey(target), reviewedEmptyRow(target));
+      }
+      cursor = advanceDiscoveryTargetCursor(window.targets, checked);
+      const classification = classifyDexPlaceholderCoverage({
+        deployments: targets,
+        outcomeRows: [...rows.values()],
+        nowSec: CENSUS_NOW_SEC,
+      });
+      if (run === 0) {
+        expect(classification.state).toBe("discovery-deferral");
+        expect(classification.census.missingOutcomeCount).toBeGreaterThan(0);
+      }
+    }
+
+    expect(new Set(rows.keys())).toEqual(new Set(targets.map(discoveryTargetCursorKey)));
+    expect(
+      classifyDexPlaceholderCoverage({
+        deployments: targets,
+        outcomeRows: [...rows.values()],
+        nowSec: CENSUS_NOW_SEC,
+      }),
+    ).toMatchObject({
+      state: "complete-empty",
+      census: { missingOutcomeCount: 0, staleOutcomeCount: 0, verifiedNoPoolsCount: targets.length },
+    });
   });
 });

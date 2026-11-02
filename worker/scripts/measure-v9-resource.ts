@@ -8,10 +8,11 @@ async function main() {
     profile: { type: "string", default: "compute" }, runs: { type: "string", default: "1" },
     "phase-manifest": { type: "string", default: "post-p2" }, policy: { type: "string" }, "invocation-id": { type: "string" },
     guard: { type: "boolean", default: false },
+    "publication-cycles": { type: "string", default: "2" },
     "deadline-seconds": { type: "string", default: "300" }, directory: { type: "string" },
   } });
   if (values.help) {
-    console.log("Usage: npm run measure:v9-resource -- --profile=compute|heavy-warm --runs=N [--policy=PATH | --guard]\n--guard requires complete phases, correctness/bytes and natural 128 MiB; it automatically enforces a checked-in qualified policy, or explicitly reports policy: unqualified if absent. --policy always requires a valid file. Without either option this is diagnostic.");
+    console.log("Usage: npm run measure:v9-resource -- --profile=compute|heavy-warm --runs=N [--publication-cycles=1|2] [--policy=PATH | --guard]\n--guard requires complete phases, correctness/bytes and natural 128 MiB; it automatically enforces a checked-in qualified policy, or explicitly reports policy: unqualified if absent. --policy always requires a valid file. Without either option this is diagnostic.");
   } else {
     assertCliUsage(values.profile === "compute" || values.profile === "heavy-warm", "--profile must be compute or heavy-warm");
     assertCliUsage(typeof values.runs === "string" && /^[1-9]\d*$/.test(values.runs) && Number.isSafeInteger(Number(values.runs)), "--runs must be a positive integer");
@@ -22,12 +23,15 @@ async function main() {
     assertCliUsage((!values.guard && values.policy === undefined) || values.profile === "compute", "guard/policy assertions require the compute profile");
     const deadlineSeconds = Number(values["deadline-seconds"]);
     assertCliUsage(Number.isInteger(deadlineSeconds) && deadlineSeconds > 0 && deadlineSeconds <= 360, "--deadline-seconds must be an integer between 1 and 360");
+    const publicationCycles = Number(values["publication-cycles"]);
+    assertCliUsage(publicationCycles === 1 || publicationCycles === 2, "--publication-cycles must be 1 or 2");
     const directory = resolve(root, typeof values.directory === "string" ? values.directory : ".tmp/safety-score-v9-resource");
     const report = await measureV9Resource(root, values.profile as ResourceProfile, Number(values.runs), manifest as PhaseManifest, {
       policyPath: values.guard ? resolve(root, ".ci/safety-score-v9-resource-budget.json") : typeof values.policy === "string" ? resolve(root, values.policy) : undefined,
       allowUnqualifiedPolicy: values.guard === true,
       invocationId: typeof values["invocation-id"] === "string" ? values["invocation-id"] : undefined,
       deadlineMs: deadlineSeconds * 1000,
+      publicationCycles,
       directory,
     });
     console.log(JSON.stringify({ report: resolve(directory, "report.json"), policy: report.policy, complete: report.complete, violations: report.violations }, null, 2));

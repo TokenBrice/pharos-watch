@@ -73,6 +73,10 @@ vi.mock("../safety-score-v9/accepted-projection-readers", async (importOriginal)
 }));
 
 const fixedInput = makeV9FixedInput({ assetId: "usdc-circle" });
+// Building the production-scale registry snapshot is the expensive part of the
+// three full-registry cases; each takes a clone so no test observes another's
+// mutations.
+const fullRegistryInput = createSafetyScoreV9FullRegistryInput();
 const noMeasuredExitExpiry = { assetIds: [], witnessesByAssetId: {} };
 const missingLaneCertificateWarnings = loadReviewedLaneEmitterCatalog().descriptors
   .map((row) => `lane-incident-certificate-missing:${row.subjectDeploymentKey}`).sort();
@@ -497,7 +501,7 @@ describe("Safety Score V9 publication runner", () => {
           })]));
         throw new evaluateSet.V9AssetEvaluationError("brz-transfero", { issues: [{ path: ["structuralSignals"] }] });
       });
-    const input = createSafetyScoreV9FullRegistryInput();
+    const input = structuredClone(fullRegistryInput);
     // This logic test does not exercise the wall-clock publication window, so
     // isolate the clock and timeout signal from full-registry recompilation time.
     const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now());
@@ -618,7 +622,7 @@ describe("Safety Score V9 publication runner", () => {
     >("../safety-score-v9/publication-assessment");
     mocks.assess.mockImplementation(assessV9Publication);
     const { baseInputGenerationId: _baseId, ...draft } =
-      createSafetyScoreV9FullRegistryInput();
+      structuredClone(fullRegistryInput);
     draft.liveReserveMap = {};
     draft.v9PublicationInputHealth = {
       dex: {
@@ -664,7 +668,7 @@ describe("Safety Score V9 publication runner", () => {
       typeof import("../safety-score-v9/publication-assessment")
     >("../safety-score-v9/publication-assessment");
     mocks.assess.mockImplementation(assessV9Publication);
-    const { baseInputGenerationId: _baseId, ...draft } = createSafetyScoreV9FullRegistryInput();
+    const { baseInputGenerationId: _baseId, ...draft } = structuredClone(fullRegistryInput);
     const assetId = draft.activeAssetIds[0]!;
     const observation = draft.dexLiqMap[assetId]!.exitRouteObservations![0]!;
     draft.v9PublicationInputHealth = {

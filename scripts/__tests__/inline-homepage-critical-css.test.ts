@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import path from "node:path";
 import { runInNewContext } from "node:vm";
@@ -6,8 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   collectCriticalCssPages,
   criticalCssWorkerCount,
+  GATE_SCOPED_LARGEST_HTML_PAGES,
   optimizeCriticalCssPages,
+  selectCriticalCssPages,
 } from "../maintenance/inline-homepage-critical-css";
+import { gatedHtmlRoutes } from "../maintenance/report-build-size.mjs";
 
 const temporaryRoots: string[] = [];
 const stylesheet = ".home{color:red}.coin{color:blue}.yield{color:green}.dark{color-scheme:dark;--background:black}.unused{padding:2rem}";
@@ -49,6 +52,15 @@ function fixture(): string {
   return outDir;
 }
 
+function addGateRoutes(outDir: string): void {
+  for (const route of gatedHtmlRoutes()) {
+    const file = path.join(outDir, route);
+    if (existsSync(file)) continue;
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, '<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><main class="coin">Page</main></body></html>');
+  }
+}
+
 afterEach(() => {
   vi.unstubAllEnvs();
   for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true });
@@ -58,6 +70,63 @@ describe("critical CSS worker pool", () => {
   it("selects every public HTML page, including nested routes and digests, but excludes admin and non-HTML files", () => {
     const outDir = fixture();
     expect(collectCriticalCssPages(outDir)).toEqual(pageNames.map((name) => path.join(outDir, name)).sort());
+  });
+
+  it("narrows to every artifact-gate route only for the gates scope, falling back to the full pass otherwise", () => {
+    const outDir = fixture();
+    addGateRoutes(outDir);
+    const all = collectCriticalCssPages(outDir);
+    vi.stubEnv("PHAROS_CRITICAL_CSS_SCOPE", undefined);
+    expect(selectCriticalCssPages(outDir)).toEqual(all);
+    expect(selectCriticalCssPages(outDir, "all")).toEqual(all);
+    expect(selectCriticalCssPages(outDir, "everything")).toEqual(all);
+    const scoped = selectCriticalCssPages(outDir, "gates").map((file) => path.relative(outDir, file).split(path.sep).join("/"));
+    const gateRoutes = gatedHtmlRoutes();
+    expect(scoped).toEqual(expect.arrayContaining(gateRoutes));
+    expect(scoped.filter((route) => !gateRoutes.includes(route))).toHaveLength(GATE_SCOPED_LARGEST_HTML_PAGES);
+  });
+
+  it("adds the largest exported HTML files so the largest-HTML gate always measures an inlined page", () => {
+    const outDir = fixture();
+    addGateRoutes(outDir);
+    const oversized = (bytes: number) => `<!DOCTYPE html><html><head><link rel="stylesheet" href="/_next/static/css/app.css"></head><body><main class="coin">${"x".repeat(bytes)}</main></body></html>`;
+    const routes = [
+      ["digest/oversized/index.html", 20_000],
+      ["digest/second/index.html", 10_000],
+      ["digest/third/index.html", 5_000],
+      ["digest/fourth/index.html", 1_000],
+    ] as const;
+    for (const [route, bytes] of routes) {
+      const file = path.join(outDir, route);
+      mkdirSync(path.dirname(file), { recursive: true });
+      writeFileSync(file, oversized(bytes));
+    }
+    const scoped = selectCriticalCssPages(outDir, "gates").map((file) => path.relative(outDir, file).split(path.sep).join("/"));
+    expect(scoped).toEqual(expect.arrayContaining([
+      ...gatedHtmlRoutes(),
+      "digest/oversized/index.html",
+      "digest/second/index.html",
+      "digest/third/index.html",
+    ]));
+    expect(scoped).not.toContain("digest/fourth/index.html");
+  });
+
+  it("falls back to the full pass when a gate-measured route is missing", () => {
+    const outDir = fixture();
+    addGateRoutes(outDir);
+    rmSync(path.join(outDir, "cemetery/index.html"));
+    expect(selectCriticalCssPages(outDir, "gates")).toEqual(collectCriticalCssPages(outDir));
+  });
+
+  it("keeps every per-page assertion for a gate-scoped page", async () => {
+    const outDir = fixture();
+    addGateRoutes(outDir);
+    const broken = path.join(outDir, "api/reference/index.html");
+    const content = "<!DOCTYPE html><html><head></head><body>No stylesheet</body></html>";
+    writeFileSync(broken, content);
+    await expect(optimizeCriticalCssPages(outDir, selectCriticalCssPages(outDir, "gates"), 1))
+      .rejects.toThrow("out/api/reference/index.html: Beasties did not inline a critical style block.");
+    expect(readFileSync(broken, "utf8")).toBe(content);
   });
 
   it("bounds the default pool by available CPUs and pages, with a local override", () => {

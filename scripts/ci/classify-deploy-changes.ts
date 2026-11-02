@@ -2,6 +2,7 @@
 
 import { execFileSync } from "node:child_process";
 import {
+  hasCriticalCssPipelineImpact,
   hasDeployImpact,
   hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
@@ -26,6 +27,7 @@ export interface DeployClassification {
   docsOnly: boolean;
   pagesArtifactRequired: boolean;
   pagesChanged: boolean;
+  pagesCriticalCssFullPass: boolean;
   pagesDeployRequired: boolean;
   playwrightFirefoxRequired: boolean;
   reason: string;
@@ -43,6 +45,7 @@ interface ClassifyDeployChangesOptions {
 }
 
 export {
+  hasCriticalCssPipelineImpact,
   hasDeployImpact,
   hasOnlyInternalDocsImpact,
   hasPagesDeployImpact,
@@ -127,6 +130,7 @@ export function classifyChangedFiles(
 ): DeployClassification {
   const normalizedFiles = [...new Set(changedFiles.map((file) => normalizeRepoPath(file)))].sort();
   const pagesChanged = hasPagesDeployImpact(normalizedFiles);
+  // Test-only edits under Pages paths still validate but publish nothing.
   const pagesDeployRequired = hasPagesPublishImpact(normalizedFiles);
   const workerChanged = hasWorkerDeployImpact(normalizedFiles);
   const workerDeployRequired = hasWorkerReleaseImpact(normalizedFiles);
@@ -136,8 +140,9 @@ export function classifyChangedFiles(
     deployRequired: hasDeployImpact(normalizedFiles),
     docsChanged: normalizedFiles.some((file) => hasOnlyInternalDocsImpact([file])),
     docsOnly: hasOnlyInternalDocsImpact(normalizedFiles),
-    pagesArtifactRequired: pagesChanged,
+    pagesArtifactRequired: pagesDeployRequired,
     pagesChanged,
+    pagesCriticalCssFullPass: hasCriticalCssPipelineImpact(normalizedFiles),
     pagesDeployRequired,
     playwrightFirefoxRequired: GENERATED_ARTIFACT_REGISTRY.some(
       (artifact) => generatedArtifactIds.includes(artifact.id) && artifact.requiredBrowsers?.includes("firefox"),
@@ -166,6 +171,7 @@ export function classifyDeployChanges({
     docsOnly: false,
     pagesArtifactRequired: true,
     pagesChanged: true,
+    pagesCriticalCssFullPass: true,
     pagesDeployRequired: true,
     playwrightFirefoxRequired: true,
     reason,
@@ -206,6 +212,7 @@ function writeGithubOutputLine(key: string, value: string): void {
 export function emitGithubOutputs(classification: DeployClassification): void {
   writeGithubOutputLine("docs_only", classification.docsOnly ? "true" : "false");
   writeGithubOutputLine("pages_artifact_required", classification.pagesArtifactRequired ? "true" : "false");
+  writeGithubOutputLine("pages_critical_css_full_pass", classification.pagesCriticalCssFullPass ? "true" : "false");
   writeGithubOutputLine("pages_deploy_required", classification.pagesDeployRequired ? "true" : "false");
   writeGithubOutputLine(
     "playwright_firefox_required",
@@ -229,6 +236,8 @@ export function runCli(env: NodeJS.ProcessEnv = process.env): void {
     }
   }
   console.error(`[deploy-changes] pages_changed=${classification.pagesChanged}`);
+  console.error(`[deploy-changes] pages_artifact_required=${classification.pagesArtifactRequired}`);
+  console.error(`[deploy-changes] pages_critical_css_full_pass=${classification.pagesCriticalCssFullPass}`);
   console.error(`[deploy-changes] pages_deploy_required=${classification.pagesDeployRequired}`);
   console.error(`[deploy-changes] playwright_firefox_required=${classification.playwrightFirefoxRequired}`);
   console.error(`[deploy-changes] worker_changed=${classification.workerChanged}`);

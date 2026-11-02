@@ -471,6 +471,7 @@ const eslintConfig = defineConfig([
     // Gate/tooling caches (e.g. the local Worker bundle proof) are
     // gitignored build outputs, never lintable source.
     ".cache/**",
+    ".tmp/**",
     ".claude/**",
     ".worktrees/**",
     "worktrees/**",
@@ -747,6 +748,28 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Delivery v2 fan-out/drain inputs are the only live authority. The retired
+    // target-plan/pre-set-resolution budgets must not become importable again,
+    // and an in-test export denylist would vanish with the test file.
+    files: ["shared/lib/telegram-delivery-policy.ts"],
+    rules: {
+      "no-restricted-exports": [
+        "error",
+        {
+          restrictedNamedExports: [
+            "TELEGRAM_TARGET_PLAN_HORIZON_PAGE_SIZE",
+            "TELEGRAM_TARGET_PLAN_ENQUEUE_PAGE_SIZE",
+            "TELEGRAM_TARGET_PLAN_MAX_STEPS_PER_RUN",
+            "TELEGRAM_PRESET_RESOLUTION_PAGE_SIZE",
+            "TELEGRAM_PRESET_RESOLUTION_MAX_PAGES_PER_RUN",
+            "TELEGRAM_PRESET_RESOLUTION_MAX_MS_PER_RUN",
+            "estimateTelegramTargetPlanCoordinatorBound",
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Force callers to route /api/ paths through the shared registry so the
     // surface stays grep-able and typed. The selector only catches literals
     // passed as function-call arguments — object/JSX-attribute literals (doc
@@ -773,6 +796,71 @@ const eslintConfig = defineConfig([
         "error",
         ...layoutScriptRestrictedSyntax,
         ...apiPathRestrictedSyntax,
+      ],
+    },
+  },
+  {
+    // Decision B / OP-R0 S-3: the documentation class is derived-only. These
+    // scoring modules must never read it, so the class can annotate evidence
+    // without re-pricing it. Kept last because flat config replaces the
+    // no-restricted-imports/no-restricted-syntax options of every earlier block
+    // that matches the same files, so this must re-apply the shared/lib import
+    // ban and the /api/ literal selectors it would otherwise drop.
+    files: [
+      "shared/lib/safety-score-v9/score.ts",
+      "shared/lib/safety-score-v9/formula.ts",
+      "shared/lib/safety-score-v9/evaluate-set.ts",
+      "shared/lib/safety-score-v9/dependencies.ts",
+      "shared/lib/safety-score-v9/control.ts",
+      "shared/lib/safety-score-v9/evaluate-asset.ts",
+      "shared/lib/safety-score-v9/backing.ts",
+      "shared/lib/safety-score-v9/exit.ts",
+      "shared/lib/safety-score-v9/control-mint-grade.ts",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@shared/*"],
+              message: "Within shared/lib/, use relative imports (./file) instead of @shared/* aliases.",
+            },
+            ...frontendToWorkerRestrictedImportPatterns,
+            {
+              group: ["**/documentation", "./documentation", "**/documentation.js", "./documentation.js"],
+              message:
+                "Scoring modules must not import the documentation class (Decision B / OP-R0 S-3): it annotates evidence without pricing it.",
+            },
+          ],
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        ...apiPathRestrictedSyntax,
+        {
+          selector:
+            "Identifier[name=/^(?:V9Documentation|classifyV9DocumentationGap$|documentationGapIds$|isV9DocumentationDatum$|documentationOnlyLimitedPillars$|resolveV9DocumentationControl$)/]",
+          message:
+            "Scoring modules must not reference the documentation class (Decision B / OP-R0 S-3).",
+        },
+        {
+          selector: "MemberExpression[object.name='evidence'][property.name='documentation']",
+          message:
+            "Scoring modules must not read the documentation policy block (Decision B / OP-R0 S-3).",
+        },
+        {
+          // The real policy access shape is `policy.semantic.evidence.documentation`,
+          // where `evidence` is itself a member expression.
+          selector: "MemberExpression[object.property.name='evidence'][property.name='documentation']",
+          message:
+            "Scoring modules must not read the documentation policy block (Decision B / OP-R0 S-3).",
+        },
+        {
+          selector: "ImportExpression[source.value=/documentation/]",
+          message:
+            "Scoring modules must not import the documentation class (Decision B / OP-R0 S-3).",
+        },
       ],
     },
   },

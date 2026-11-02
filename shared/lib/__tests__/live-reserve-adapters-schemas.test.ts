@@ -349,6 +349,14 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     "usd1-bundle-oracle": {
       ...singleBucket, configValidation: config("single-asset", 3), validation: { ...verified, maxSourceAgeSec: 604800 },
     },
+    "usdgo-transparency": {
+      primaryInputKinds: ["http-html"], sourceOriginClass: "independent-assurance",
+      configValidation: config("attestation-mix", 3), validation: { ...verified, maxSourceAgeSec: 6048000 },
+    },
+    "sbc-independent-assurance": {
+      primaryInputKinds: ["http-html"], sourceOriginClass: "independent-assurance",
+      configValidation: config("attestation-mix", 2), validation: { ...verified, maxSourceAgeSec: 4000000 },
+    },
     "usdtb-transparency": { preferredFreshnessMode: "verified", validation: dashboard },
     "youves-tezos": cdp,
     "dgld-gold-mapper": { ...weakProbe, validation: { ...verified, maxSourceAgeSec: 259200, maxUnknownExposurePct: 0 } },
@@ -362,6 +370,20 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
         status: "active",
         rationale: "Ordinary public persisted GraphQL GET verified200 on 2026-10-03; exact Base ONED stock and complete published USDC wallets reconcile. Source-controlled query hash/schema drift fail closed with stable machine reasons, without HTML/stale/partial fallback. This remains issuer-attested telemetry, not independent financial assurance or funded redemption capacity.",
       },
+    },
+    "attestation-pdf-index": {
+      primaryInputKinds: ["http-html"], sourceModel: "validated-static", evidenceClass: "static-validated",
+      configValidation: config("attestation-mix", 1), validation: { ...verified, maxSourceAgeSec: 12960000 },
+      displayBadgeKind: "curated-validated",
+    },
+    "zephyr-scanner": {
+      sourceModel: "single-bucket", evidenceClass: "weak-live-probe",
+      configValidation: config("protocol-reserve", 3), validation: dashboard, displayBadgeKind: "proof",
+    },
+    "blackrock-brsrv-holdings": {
+      primaryInputKinds: ["http-html"], evidenceClass: "weak-live-probe", sourceOriginClass: "issuer-attested",
+      preferredFreshnessMode: "verified", validation: { ...verified, maxSourceAgeSec: 432000 },
+      displayBadgeKind: "proof",
     },
   };
   it.each(Object.keys(descriptorBaseline) as (keyof typeof descriptorBaseline)[])(

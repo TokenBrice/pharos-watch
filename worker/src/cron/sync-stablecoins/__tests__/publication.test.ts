@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { WORKER_ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull } from "@shared/lib/supply";
 import type { PeggedAsset } from "../enrich-prices";
@@ -17,6 +18,7 @@ import * as coverage from "../../../lib/stablecoin-publication-coverage";
 import { evaluateStablecoinActivePriceCoverage } from "../../../lib/stablecoin-publication-coverage";
 import { createEmptyGtProbeStats } from "../../../lib/geckoterminal-price-probe-stats";
 import {
+  loadStablecoinsPublicationContinuity,
   runStablecoinsPostIntakePublication,
   type StablecoinsPostIntakePublicationContext,
 } from "../publication";
@@ -301,5 +303,16 @@ describe("stablecoins publication cohort", () => {
     const replay = await getPriceCache(db);
     expect(replay.get(rejectedId)).toEqual(priorReplay);
     expect(replay.get(healthy[0]!.id)?.syncedAt).toBe(now);
+  });
+});
+
+describe("publication continuity provider priority", () => {
+  it("does not prioritize healthy majors when persisted coverage is unreadable", async () => {
+    const db = mockD1([{ match: "FROM cron_runs", rows: [{ metadata: '{"activePriceCoverage":"malformed"}' }] }]);
+    const continuity = await loadStablecoinsPublicationContinuity(db, 1_790_461_000);
+    expect(continuity.previousMissingGenerationsById.size).toBe(0);
+    expect(continuity.previousActivePriceCoverage).toEqual({
+      missingActiveIds: [], missingActiveAssets: [], unavailableReason: "previous-coverage-malformed",
+    });
   });
 });

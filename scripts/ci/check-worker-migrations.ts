@@ -702,6 +702,9 @@ export async function validateWorkerMigrations({
 
   try {
     db = new DatabaseSync(join(tempDir, "migrations.db"));
+    // The replay database is a throwaway verification artifact: skip fsync for
+    // the thousands of implicitly committed DDL statements in the baseline.
+    db.exec("PRAGMA synchronous = OFF");
     for (const file of migrationFiles) {
       try {
         db.exec(migrationSql.get(file)!);
@@ -728,7 +731,9 @@ export async function validateWorkerMigrations({
 
     for (const row of dataMigrationRows) {
       const migrationIndex = migrationFiles.indexOf(row.filename);
-      const fixtureDb = new DatabaseSync(join(tempDir, `fixture-${row.sequence}.db`));
+      // Each fixture only needs a private, fresh pre-migration schema; keeping
+      // it in memory avoids a file-backed replay per reviewed migration.
+      const fixtureDb = new DatabaseSync(":memory:");
       try {
         for (const priorFile of migrationFiles.slice(0, migrationIndex)) {
           fixtureDb.exec(migrationSql.get(priorFile)!);
