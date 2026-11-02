@@ -118,7 +118,7 @@ const COHORT_DROP_RATIO = 0.1;
 const COHORT_CHAIN_MIN_PREVIOUS_TVL_USD = 1_000_000;
 const COHORT_SOURCE_FAMILY_MIN_PREVIOUS_POOLS = 5;
 const CHAIN_TVL_DROP_FLAG_PREFIX = "chain-tvl-drop:";
-const SOURCE_FAMILY_DROP_FLAG_PREFIX = "source-family-drop:";
+export const SOURCE_FAMILY_DROP_FLAG_PREFIX = "source-family-drop:";
 
 const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";
 
@@ -144,8 +144,8 @@ export interface DexLiquidityDriftSummary {
   qualityDriftFlags: string[];
   /**
    * Confirmed per-chain/per-source-family cohort drops. They also appear in
-   * `qualityDriftFlags`; this list is what marks the run's quality verdict
-   * degraded so the sentinel-backed cache-health floor can see it.
+   * `qualityDriftFlags`; only source-family pool loss marks input quality
+   * degraded, while chain TVL movement remains an operator warning.
    */
   cohortDriftFlags: string[];
   qualityDriftCandidates: DexLiquidityDriftCandidate[];
