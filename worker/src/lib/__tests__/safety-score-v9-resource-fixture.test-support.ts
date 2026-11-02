@@ -32,6 +32,8 @@ import { SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES } from "@shared/
 
 const sqlite = new DatabaseSync(process.env.PHAROS_RESOURCE_DATABASE!);
 const db = createSqliteD1(sqlite);
+// Only an explicit single-cycle request trims the seeded replay rows.
+const publicationCycles = process.env.PHAROS_RESOURCE_CYCLES === "1" ? 1 : 2;
 const bucket = { async put(_key: string, body: unknown) {
   assert.equal(typeof body, "string");
   const object = JSON.parse(body as string);
@@ -154,7 +156,7 @@ try {
     const alert = parsePersistedAlertSafetyV9SourceEnvelope({ value: String(alertRow.value), updatedAt: Number(alertRow.updated_at) });
     assert(alert);
     assert.equal(alert.publicationGenerationId, publication.publicationGenerationId);
-    assert.equal(Number(sqlite.prepare("SELECT count(*) AS count FROM safety_score_capture_archive").get()!.count), 3);
+    assert.equal(Number(sqlite.prepare("SELECT count(*) AS count FROM safety_score_capture_archive").get()!.count), publicationCycles + 1);
     const transport = (await loadSafetyScoreV9PublicationStoredRow(db))!.value;
     const envelope = JSON.parse(transport);
     const enrichment = JSON.parse(String(deltaRow.value));
@@ -216,7 +218,7 @@ try {
     assert(publication);
     const current = requireCurrentSafetyScoreV9Publication(publication);
     const rawBytes = Number(JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value)).uncompressedBytes);
-    const cycles = [await seedCycle(1, baseClock + 1800), await seedCycle(2, baseClock + 3600)];
+    const cycles = [await seedCycle(1, baseClock + 1800), await seedCycle(2, baseClock + 3600)].slice(0, publicationCycles);
     writeFileSync(process.env.PHAROS_RESOURCE_MANIFEST!, JSON.stringify({ prior, cycles, fixtureRawPublicationBytes: rawBytes,
       publicationBytes: measurePublicationByteBudget(current, rawBytes),
       reserveJournalAssets: ACTIVE_STABLECOINS.length, reserveJournalRows: ACTIVE_STABLECOINS.length + 100, supplyJournalAssets: 1 }));

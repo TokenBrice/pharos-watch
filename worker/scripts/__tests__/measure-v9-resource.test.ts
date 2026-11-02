@@ -1,13 +1,16 @@
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
+import { buildSync } from "esbuild";
 import { afterEach, describe, expect, it } from "vitest";
 import { assertResourceProbeCatalog, measureV9Resource, readHeavyProbeBuildSettings, runResourceChild, validateResourceSamples } from "../../src/lib/__tests__/safety-score-v9-resource-budget.test-support";
 import type * as Esbuild from "esbuild";
 import { calibrateV9Resource } from "../calibrate-v9-resource";
-import { GLOBAL_HEAP_BYTES, RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, ResourcePolicySchema, loadResourcePolicy, validateResourcePolicy, type ResourceIdentity } from "../lib/v9-resource-policy";
+// Static edge so any change in the contagion closure selects this tripwire.
+import { evaluateV9ContagionScenario } from "@shared/lib/safety-score-v9/contagion";
+import { GLOBAL_HEAP_BYTES, hasV9ContagionInput, RESOURCE_HARNESS_REVISION, RESOURCE_PHASES, ResourcePolicySchema, loadResourcePolicy, validateResourcePolicy, type ResourceIdentity } from "../lib/v9-resource-policy";
 
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
@@ -28,6 +31,13 @@ describe("V9 resource diagnostic failure modes", () => {
       { reason: "missing-phase", phase: "facts-compiled", cycle: 1 },
       { reason: "missing-phase", phase: "facts-compiled", cycle: 2 },
     ]);
+  });
+
+  it("requires only the configured publication cycles", () => {
+    const memory = process.memoryUsage();
+    const sample = { type: "phase" as const, cycle: 1, phase: "facts-compiled", before: memory, after: memory };
+    expect(validateResourceSamples([sample], ["facts-compiled"], undefined, [1])).toEqual([]);
+    expect(validateResourceSamples([sample], ["facts-compiled"])).toEqual([{ reason: "missing-phase", phase: "facts-compiled", cycle: 2 }]);
   });
 
   it("retains a readable report on construction failure and classifies a crashing child", async () => {
@@ -94,6 +104,32 @@ describe("V9 resource diagnostic failure modes", () => {
       lengths.push(result[2]);
     }
     expect(lengths[0]).toBeLessThan(lengths[1]);
+  });
+});
+
+describe("V9 contagion input decision", () => {
+  it("covers the contagion evaluator's current esbuild import closure", () => {
+    expect(typeof evaluateV9ContagionScenario).toBe("function");
+    const root = resolve(import.meta.dirname, "../../..");
+    const compilation = buildSync({
+      absWorkingDir: root, entryPoints: [resolve(root, "shared/lib/safety-score-v9/contagion.ts")],
+      bundle: true, metafile: true, write: false, format: "esm", platform: "node", target: "node24",
+      tsconfig: resolve(root, "tsconfig.json"), external: ["node:*"], logLevel: "silent",
+    });
+    const inputs = Object.keys(compilation.metafile!.inputs)
+      .map((input) => relative(root, input).replaceAll("\\", "/"))
+      .filter((input) => !input.startsWith(".."));
+    expect(inputs).toContain("shared/lib/safety-score-v9/contagion.ts");
+    expect(inputs.filter((input) => !hasV9ContagionInput([input]))).toEqual([]);
+  });
+
+  it("matches the probe harness and toolchain while unrelated diffs skip contagion", () => {
+    for (const file of ["worker/src/lib/__tests__/safety-score-v9-resource-budget.test.ts",
+      "worker/scripts/lib/v9-resource-policy.ts", "worker/scripts/measure-v9-resource.ts",
+      "package.json", "package-lock.json", "worker/wrangler.heavy.toml", "tsconfig.base.json", ".nvmrc"]) {
+      expect(hasV9ContagionInput([file]), file).toBe(true);
+    }
+    expect(hasV9ContagionInput(["README.md", "src/app/page.tsx", "shared/lib/peg-score.ts"])).toBe(false);
   });
 });
 

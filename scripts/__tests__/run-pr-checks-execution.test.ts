@@ -5,7 +5,7 @@ import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "no
 import { tmpdir } from "node:os";
 import { inspectPrCheckout, runPrChecks, type RunPrChecksOptions } from "../maintenance/run-pr-checks.ts";
 import { writePrCheckReceipt, type PrCheckReceipt } from "../lib/pr-check-receipt.mts";
-import { assertFaithfulResourceReport, assertRequiredResourceCases, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
+import { assertFaithfulResourceReport, assertRequiredResourceCases, decideV9Contagion, RESOURCE_TEST_FILE, runV9ResourceLane } from "../maintenance/run-v9-resource-lane.ts";
 import type * as ChangedFilesModule from "../lib/changed-files.mts";
 import type * as CriticalOwnershipModule from "../lib/critical-ownership.mts";
 import { RESOURCE_HARNESS_REVISION, RESOURCE_PHASES } from "../../worker/scripts/lib/v9-resource-policy";
@@ -110,7 +110,7 @@ describe("isolated V9 resource execution", () => {
         [{ title: contagion, status: "passed" }],
       )));
       await expect(runV9ResourceLane({
-        argv: [], outputDirectory: directory, resourceDirectory: directory, runCommand: async () => 0,
+        argv: [], outputDirectory: directory, resourceDirectory: directory, runCommand: async () => 0, env: {},
       })).rejects.toThrow();
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
@@ -120,12 +120,15 @@ describe("isolated V9 resource execution", () => {
       unitLimitBytes: 106_404, streamedTotalBytes: 8_158_138, streamedTotalRegressionLimitBytes: 8_250_000, streamedTotalLimitBytes: 14_000_000 } };
     const faithful = { schemaVersion: 1, invocationId: "previous-run", complete: true, diagnosticOnly: false,
       harnessRevision: RESOURCE_HARNESS_REVISION,
-      profile: "compute", phaseManifest: "post-p2", violations: [], policy: "qualified", declaredPhases: [...RESOURCE_PHASES],
+      profile: "compute", phaseManifest: "post-p2", violations: [], publicationCycles: 2, policy: "qualified", declaredPhases: [...RESOURCE_PHASES],
       appliedPolicy: { globalPostGcHeapBytes: 117440512, phaseLimitsBytes: Object.fromEntries(RESOURCE_PHASES.map(phase => [phase, 100])) },
       runs: [{ violations: [], live: { status: 0, signal: null, reasons: [], correctness, phaseMaxima: Object.fromEntries(RESOURCE_PHASES.map(phase => [phase, { postGcHeapBytes: 90 }])) },
         "hard-cap": { status: 0, signal: null, reasons: [], correctness } }] };
     expect(() => assertFaithfulResourceReport(faithful, "current-run")).toThrow("stale-resource-report");
     expect(() => assertFaithfulResourceReport(faithful, "previous-run")).not.toThrow();
+    expect(() => assertFaithfulResourceReport(faithful, "previous-run", 1)).toThrow("resource-cycle-count-mismatch");
+    expect(() => assertFaithfulResourceReport({ ...faithful, publicationCycles: 1 }, "previous-run", 1)).not.toThrow();
+    expect(() => assertFaithfulResourceReport({ ...faithful, publicationCycles: 1 }, "previous-run", 2)).toThrow("resource-cycle-count-mismatch");
     expect(() => assertFaithfulResourceReport({ ...faithful, violations: [{ reason: "phase-budget-exceeded" }] }, "previous-run")).toThrow();
     expect(() => assertFaithfulResourceReport({ ...faithful, runs: [] }, "previous-run")).toThrow();
     for (const declaredPhases of [[], ["phase"], RESOURCE_PHASES.slice(1), [...RESOURCE_PHASES].reverse(), [...RESOURCE_PHASES, "extra"]]) {
@@ -154,14 +157,14 @@ describe("isolated V9 resource execution", () => {
     const publicationBytes = { unit: "card", units: 396, largestUnitBytes: 85_123,
       unitLimitBytes: 106_404, streamedTotalBytes: 8_158_138, streamedTotalRegressionLimitBytes: 8_250_000, streamedTotalLimitBytes: 14_000_000 };
     try {
-      expect(await runV9ResourceLane({ argv: [], outputDirectory: directory, resourceDirectory: directory,
+      expect(await runV9ResourceLane({ argv: [], outputDirectory: directory, resourceDirectory: directory, env: {},
         runCommand: async (command) => {
           if (command.args.includes("worker/scripts/measure-v9-resource.ts")) {
             const invocationId = command.args.find((arg) => arg.startsWith("--invocation-id="))!.split("=")[1];
             writeFileSync(resolve(directory, "report.json"), JSON.stringify({
               schemaVersion: 1, invocationId, complete: true, diagnosticOnly: false,
               harnessRevision: RESOURCE_HARNESS_REVISION, profile: "compute", phaseManifest: "post-p2",
-              violations: [], policy: "unqualified", declaredPhases: [...RESOURCE_PHASES],
+              violations: [], publicationCycles: 2, policy: "unqualified", declaredPhases: [...RESOURCE_PHASES],
               runs: [{ violations: [], live: { status: 0, signal: null, reasons: [],
                 phaseMaxima: Object.fromEntries(RESOURCE_PHASES.map((phase) => [phase, { postGcHeapBytes: 90 }])),
                 correctness: { publicationBytes } },
@@ -175,6 +178,107 @@ describe("isolated V9 resource execution", () => {
       expect(summary).toContain("| hard-cap | 396 | 85123 | 106404 | 8158138 | 8250000 | 14000000 |");
       expect(summary).toContain("Natural 128 MiB exit status: 0");
       expect(summary).toContain('policy: **"unqualified"**');
+      expect(summary).toContain("2 publication cycles");
+      expect(summary).toContain("Contagion: **passed**");
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it("runs contagion only for a PR diff that reaches a contagion input and fails closed otherwise", () => {
+    expect(decideV9Contagion(undefined, () => { throw new Error("must not read"); }))
+      .toEqual({ required: true, reason: "no-pr-base", changedFiles: [] });
+    expect(decideV9Contagion(baseSha, () => { throw new Error("git failed"); }))
+      .toMatchObject({ required: true, reason: "diff-unavailable" });
+    expect(decideV9Contagion(baseSha, () => [])).toMatchObject({ required: true, reason: "diff-unavailable" });
+    expect(decideV9Contagion(baseSha, () => ["README.md", "src/app/page.tsx"]))
+      .toEqual({ required: false, reason: "no-contagion-inputs", changedFiles: ["README.md", "src/app/page.tsx"] });
+    for (const file of [
+      "shared/lib/safety-score-v9/contagion.ts", "shared/lib/safety-score-v9/evaluate-set.ts",
+      "shared/lib/dependency-graph.ts", "shared/lib/strongly-connected-components.ts",
+      "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+      "shared/types/safety-score-v9-facts.ts", "worker/src/lib/safety-score-v9/fact-set.ts",
+      "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
+      "worker/scripts/lib/v9-resource-policy.ts", "package-lock.json", "worker/wrangler.heavy.toml",
+    ]) expect(decideV9Contagion(baseSha, () => [file]), file).toMatchObject({ required: true, reason: "contagion-inputs" });
+  });
+
+  const publicationBytes = { unit: "card", units: 396, largestUnitBytes: 85_123,
+    unitLimitBytes: 106_404, streamedTotalBytes: 8_158_138, streamedTotalRegressionLimitBytes: 8_250_000, streamedTotalLimitBytes: 14_000_000 };
+  const guardReport = (invocationId: string, publicationCycles: number) => ({
+    schemaVersion: 1, invocationId, complete: true, diagnosticOnly: false,
+    harnessRevision: RESOURCE_HARNESS_REVISION, profile: "compute", phaseManifest: "post-p2",
+    violations: [], publicationCycles, policy: "unqualified", declaredPhases: [...RESOURCE_PHASES],
+    stages: { bundle: { durationMs: 1000, builds: 2 }, setup: { durationMs: 2000, children: 1, failed: 0 },
+      live: { durationMs: 3000, children: 1, failed: 0 }, natural: { durationMs: 2500, children: 1, failed: 0 },
+      correctness: { durationMs: 1500, children: 2, failed: 0 } },
+    runs: [{ violations: [], live: { status: 0, signal: null, reasons: [],
+      phaseMaxima: Object.fromEntries(RESOURCE_PHASES.map((phase) => [phase, { postGcHeapBytes: 90 }])),
+      correctness: { publicationBytes } },
+      "hard-cap": { status: 0, signal: null, reasons: [], correctness: { publicationBytes } } }],
+  });
+
+  it("skips the contagion step after a failed guard and records it as skipped", async () => {
+    const directory = mkdtempSync(`${tmpdir()}/pharos-resource-guard-failed-`);
+    try {
+      const commands: string[] = [];
+      await expect(runV9ResourceLane({ argv: [], outputDirectory: directory, resourceDirectory: directory, env: {},
+        runCommand: async (command) => { commands.push(command.cmd); return 1; },
+      })).rejects.toThrow();
+      expect(commands).toHaveLength(1);
+      const laneReport = JSON.parse(readFileSync(resolve(directory, "report.json"), "utf8"));
+      expect(laneReport.lane).toMatchObject({ prContext: false, publicationCycles: 2,
+        contagion: { required: false, reason: "skipped-after-failure", status: "skipped" } });
+      expect(JSON.parse(readFileSync(resolve(directory, "contagion.json"), "utf8")))
+        .toMatchObject({ required: false, reason: "skipped-after-failure", status: "skipped" });
+      expect(readFileSync(resolve(directory, "summary.md"), "utf8"))
+        .toContain("Contagion: **skipped** (the guard measurement failed first)");
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it("uses one publication cycle and runs no contagion when a PR diff has no contagion input", async () => {
+    const directory = mkdtempSync(`${tmpdir()}/pharos-resource-pr-skip-`);
+    try {
+      const commands: string[][] = [];
+      expect(await runV9ResourceLane({ argv: [], outputDirectory: directory, resourceDirectory: directory,
+        env: { PR_BASE_SHA: baseSha }, listChangedFiles: () => ["README.md"],
+        runCommand: async (command) => {
+          commands.push([...command.args]);
+          const invocationId = command.args.find((arg) => arg.startsWith("--invocation-id="))!.split("=")[1];
+          writeFileSync(resolve(directory, "report.json"), JSON.stringify(guardReport(invocationId, 1)));
+          return 0;
+        },
+      })).toBe(0);
+      expect(commands).toHaveLength(1);
+      expect(commands[0]).toContain("--publication-cycles=1");
+      const laneReport = JSON.parse(readFileSync(resolve(directory, "report.json"), "utf8"));
+      expect(laneReport.lane).toMatchObject({ prContext: true, publicationCycles: 1,
+        contagion: { required: false, reason: "no-contagion-inputs", status: "skipped", changedFiles: ["README.md"] } });
+      const summary = readFileSync(resolve(directory, "summary.md"), "utf8");
+      expect(summary).toContain("1 publication cycle");
+      expect(summary).toContain("Contagion: **skipped** (no contagion input changed)");
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it("runs the named contagion pass when a PR diff reaches a contagion input", async () => {
+    const directory = mkdtempSync(`${tmpdir()}/pharos-resource-pr-contagion-`);
+    try {
+      const commands: string[][] = [];
+      expect(await runV9ResourceLane({ argv: [], outputDirectory: directory, resourceDirectory: directory,
+        env: { PR_BASE_SHA: baseSha }, listChangedFiles: () => ["shared/lib/safety-score-v9/evaluate-set.ts"],
+        runCommand: async (command) => {
+          commands.push([...command.args]);
+          if (command.args.includes("worker/scripts/measure-v9-resource.ts")) {
+            const invocationId = command.args.find((arg) => arg.startsWith("--invocation-id="))!.split("=")[1];
+            writeFileSync(resolve(directory, "report.json"), JSON.stringify(guardReport(invocationId, 1)));
+          } else writeFileSync(resolve(directory, "vitest.json"), JSON.stringify(report([{ title: contagion, status: "passed" }])));
+          return 0;
+        },
+      })).toBe(0);
+      expect(commands).toHaveLength(2);
+      expect(commands[0]).toContain("--publication-cycles=1");
+      const laneReport = JSON.parse(readFileSync(resolve(directory, "report.json"), "utf8"));
+      expect(laneReport.lane.contagion).toMatchObject({ required: true, reason: "contagion-inputs", status: "passed",
+        changedFiles: ["shared/lib/safety-score-v9/evaluate-set.ts"] });
+      expect(readFileSync(resolve(directory, "summary.md"), "utf8")).toContain("Contagion: **passed**");
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 

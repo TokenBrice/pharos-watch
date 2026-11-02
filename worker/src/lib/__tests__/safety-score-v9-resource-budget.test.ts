@@ -166,7 +166,9 @@ let bundledProbe = "";
 let bundledInputs: string[] = [];
 
 describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 contagion and historical capture resource budgets", {
-  timeout: 210_000,
+  // Bounded by the 130-second child kill guard; keeps a wedged contagion step
+  // from pushing the eight-minute lane past its job timeout.
+  timeout: 150_000,
 }, () => {
   beforeAll(() => {
     temporaryDirectory = mkdtempSync(join(tmpdir(), "pharos-v9-resource-"));

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, relative, resolve } from "node:path";
@@ -133,8 +133,12 @@ function instrumentation(root: string): Plugin {
   };
 }
 
+// One measured bundle serves both the live and natural children. The probe hook
+// is compiled in but inert unless the live child opts in, so the natural 128 MiB
+// child executes no forced GC or phase append.
 const OBSERVER_BANNER = `import { appendFileSync as __resourceAppend } from 'node:fs';
 globalThis.__pharosResourcePhase = (phase) => {
+  if (process.env.PHAROS_RESOURCE_INSTRUMENTATION !== '1') return;
   if (typeof globalThis.gc !== 'function') throw new Error('forced-gc-unavailable');
   const before = process.memoryUsage(); globalThis.gc(); const after = process.memoryUsage();
   __resourceAppend(process.env.PHAROS_RESOURCE_OUTPUT, JSON.stringify({type:'phase',phase,cycle:globalThis.__pharosResourceCycle ?? 0,before,after})+'\\n');
@@ -191,12 +195,12 @@ type ModeResult = ChildResult & {
 };
 type RunResult = { run: number; violations: ResourceViolation[]; live?: ModeResult; "hard-cap"?: ModeResult };
 export type ResourceReport = Record<string, unknown> & { complete?: boolean; identity?: ResourceIdentity; runs: RunResult[]; violations: ResourceViolation[] };
-export function validateResourceSamples(samples: ResourceSample[], phases: readonly string[], policy?: { phaseLimitsBytes: Record<string, number>; globalPostGcHeapBytes: number }): ResourceViolation[] {
+export function validateResourceSamples(samples: ResourceSample[], phases: readonly string[], policy?: { phaseLimitsBytes: Record<string, number>; globalPostGcHeapBytes: number }, cycles: readonly number[] = [1, 2]): ResourceViolation[] {
   const violations: ResourceViolation[] = [];
   for (const phase of phases) {
     const matching = samples.filter((sample) => sample.type === "phase" && sample.phase === phase);
-    const cycles = phase === "module-initialized" || phase === "prep-complete" ? [phase === "module-initialized" ? 0 : 1] : [1, 2];
-    for (const cycle of cycles) if (!matching.some((sample) => sample.cycle === cycle)) violations.push({ reason: "missing-phase", phase, cycle });
+    const required = phase === "module-initialized" ? [0] : phase === "prep-complete" ? [1] : cycles;
+    for (const cycle of required) if (!matching.some((sample) => sample.cycle === cycle)) violations.push({ reason: "missing-phase", phase, cycle });
     for (const sample of matching) {
       if (!sample.after || !sample.before) { violations.push({ reason: "invalid-phase-sample", phase }); continue; }
       if (policy && (!Number.isFinite(policy.phaseLimitsBytes[phase]) || sample.after.heapUsed > policy.phaseLimitsBytes[phase])) violations.push({ reason: "phase-budget-exceeded", phase, observed: sample.after.heapUsed, limit: policy.phaseLimitsBytes[phase] ?? null });
@@ -219,36 +223,94 @@ export function runResourceChild(root: string, entry: string, protocol: Record<s
   return { status: result.status, signal: result.signal, error: result.error?.message ?? null, reasons };
 }
 
-export async function measureV9Resource(root: string, profile: ResourceProfile, runs: number, manifest: PhaseManifest, options: { directory?: string; policyPath?: string; invocationId?: string; allowUnqualifiedPolicy?: boolean; deadlineMs?: number } = {}) {
+/** Async twin of runResourceChild so the live and natural children can overlap. */
+export function runResourceChildAsync(root: string, entry: string, protocol: Record<string, string>, flags: string[], directory: string, name: string, deadline = Date.now() + RESOURCE_MEASUREMENT_DEADLINE_MS): Promise<ChildResult> {
+  const remaining = deadline - Date.now();
+  if (remaining <= 0) return Promise.resolve({ status: null, signal: null, error: "overall-resource-measurement-deadline-exceeded", reasons: [{ reason: "wall-timeout" }] });
+  const offlinePreload = new URL("../../../scripts/lib/v9-resource-offline.mjs", import.meta.url).href;
+  return new Promise((resolveChild) => {
+    const childProcess = spawn(process.execPath, ["--import", offlinePreload, ...flags, entry], { cwd: root, env: resourceChildEnvironment(protocol), stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    let overflow = false;
+    let timedOut = false;
+    let settled = false;
+    const timer = setTimeout(() => { timedOut = true; childProcess.kill("SIGKILL"); }, Math.min(300_000, remaining));
+    childProcess.stdout.on("data", (chunk: Buffer) => { if (stdout.length < 16 * 1024 * 1024) stdout += chunk.toString(); else overflow = true; });
+    childProcess.stderr.on("data", (chunk: Buffer) => { if (stderr.length < 16 * 1024 * 1024) stderr += chunk.toString(); else overflow = true; });
+    const finish = (status: number | null, signal: NodeJS.Signals | null, error: string | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      writeFileSync(resolve(directory, `${name}.stderr`), stderr);
+      writeFileSync(resolve(directory, `${name}.stdout`), stdout);
+      const reasons: ResourceViolation[] = [];
+      if (timedOut) reasons.push({ reason: "wall-timeout" });
+      else if (signal || /heap out of memory|Reached heap limit|Allocation failed/i.test(stderr)) reasons.push({ reason: "child-oom-or-signal", signal });
+      else if (status !== 0 || overflow) reasons.push({ reason: "child-failed", status });
+      resolveChild({ status, signal, error, reasons });
+    };
+    childProcess.on("error", (error) => finish(null, null, error.message));
+    childProcess.on("close", (status, signal) => finish(status, signal, null));
+  });
+}
+
+export async function measureV9Resource(root: string, profile: ResourceProfile, runs: number, manifest: PhaseManifest, options: { directory?: string; policyPath?: string; invocationId?: string; allowUnqualifiedPolicy?: boolean; deadlineMs?: number; publicationCycles?: number } = {}) {
   const deadlineMs = Math.min(options.deadlineMs ?? RESOURCE_MEASUREMENT_DEADLINE_MS, 360_000);
   const deadline = Date.now() + deadlineMs;
   const directory = options.directory ?? resolve(root, ".tmp/safety-score-v9-resource");
+  // Only an explicit PR request reduces the warm-cycle sample; anything else keeps two.
+  const publicationCycles = options.publicationCycles === 1 ? 1 : 2;
+  const phaseCycles = publicationCycles === 1 ? [1] : [1, 2];
   rmSync(directory, { recursive: true, force: true });
   mkdirSync(directory, { recursive: true });
-  const report: ResourceReport = { schemaVersion: 1, invocationId: options.invocationId ?? randomUUID(), generatedAt: new Date().toISOString(), harnessRevision: RESOURCE_HARNESS_REVISION, phaseManifest: manifest, profile, diagnosticOnly: !options.policyPath, node: process.version, v8: process.versions.v8, platform: process.platform, arch: process.arch, fixtureProductionGap: "Synthetic inputs and evidence density are not production-size replay; measured card-unit and streamed-total bytes and Node heap limits do not establish Workers isolate capacity.", runs: [], violations: [] };
+  const report: ResourceReport = { schemaVersion: 1, invocationId: options.invocationId ?? randomUUID(), generatedAt: new Date().toISOString(), harnessRevision: RESOURCE_HARNESS_REVISION, phaseManifest: manifest, profile, publicationCycles, diagnosticOnly: !options.policyPath, node: process.version, v8: process.versions.v8, platform: process.platform, arch: process.arch, fixtureProductionGap: "Synthetic inputs and evidence density are not production-size replay; measured card-unit and streamed-total bytes and Node heap limits do not establish Workers isolate capacity.", runs: [], violations: [] };
   report.policy = options.policyPath ? "unqualified" : "diagnostic";
   report.declaredPhases = PHASE_MANIFESTS[manifest];
+  report.stages = { bundle: { durationMs: 0, builds: 0 }, setup: { durationMs: 0, children: 0, failed: 0 }, live: { durationMs: 0, children: 0, failed: 0 }, natural: { durationMs: 0, children: 0, failed: 0 }, correctness: { durationMs: 0, children: 0, failed: 0 } };
   report.complete = false;
   report.deadlineMs = deadlineMs;
   const flush = () => writeFileSync(resolve(directory, "report.json"), `${JSON.stringify(report, null, 2)}\n`);
   flush();
+  type StageName = "setup" | "live" | "natural" | "correctness";
+  const stages = report.stages as Record<StageName | "bundle", { durationMs: number; children?: number; failed?: number; builds?: number }>;
+  function stageFor(name: string): StageName {
+    if (name === "setup") return "setup";
+    if (name.endsWith("-correctness")) return "correctness";
+    return name.startsWith("live") ? "live" : "natural";
+  }
+  function recordStage(name: string, durationMs: number, failed: number) {
+    const stage = stages[stageFor(name)];
+    stage.durationMs += durationMs;
+    stage.children = (stage.children ?? 0) + 1;
+    stage.failed = (stage.failed ?? 0) + failed;
+  }
   async function buildBeforeDeadline(mode: "setup" | "live" | "hard-cap") {
     const remaining = deadline - Date.now();
     if (remaining <= 0) throw new ResourceWallTimeout();
+    const started = Date.now();
     let timer: NodeJS.Timeout | undefined;
     try {
-      return await Promise.race([
+      const built = await Promise.race([
         buildResourceProbe(root, directory, mode),
         new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new ResourceWallTimeout()), remaining); }),
       ]);
+      stages.bundle.durationMs += Date.now() - started;
+      stages.bundle.builds = (stages.bundle.builds ?? 0) + 1;
+      return built;
     } finally { clearTimeout(timer); }
   }
-  function child(entry: string, protocol: Record<string, string>, flags: string[], name: string) {
-    report.activeChild = name;
+  async function child(entry: string, protocol: Record<string, string>, flags: string[], name: string) {
+    report.activeChildren = [...((report.activeChildren as string[] | undefined) ?? []), name];
     flush();
-    const result = runResourceChild(root, entry, protocol, flags, directory, name, deadline);
+    const started = Date.now();
+    const result = await runResourceChildAsync(root, entry, protocol, flags, directory, name, deadline);
+    const durationMs = Date.now() - started;
+    recordStage(name, durationMs, result.reasons.length ? 1 : 0);
+    report.childTimings = [...((report.childTimings as Array<Record<string, unknown>> | undefined) ?? []), { name, durationMs, status: result.status, signal: result.signal }];
     report.lastChild = { name, ...result };
-    delete report.activeChild;
+    report.activeChildren = ((report.activeChildren as string[]) ?? []).filter((active) => active !== name);
+    if (!(report.activeChildren as string[]).length) delete report.activeChildren;
     flush();
     if (result.reasons.some((violation) => violation.reason === "wall-timeout")) throw new ResourceWallTimeout();
     return result;
@@ -272,11 +334,10 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
   try {
     const setup = await buildBeforeDeadline("setup");
     const live = await buildBeforeDeadline("live");
-    const hardCap = await buildBeforeDeadline("hard-cap");
-    report.bundle = { esbuildVersion: live.esbuildVersion, wranglerVersion: live.wranglerVersion, settings: live.settings, liveSha256: live.sha256, hardCapSha256: hardCap.sha256 };
+    report.bundle = { esbuildVersion: live.esbuildVersion, wranglerVersion: live.wranglerVersion, settings: live.settings, sha256: live.sha256 };
     const fixturePath = resolve(directory, "fixture.sqlite");
     const fixtureManifest = resolve(directory, "fixture.json");
-    const preparation = child(setup.outfile, { PHAROS_RESOURCE_DATABASE: fixturePath, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "setup" }, ["--max-old-space-size=512"], "setup");
+    const preparation = await child(setup.outfile, { PHAROS_RESOURCE_DATABASE: fixturePath, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "setup", PHAROS_RESOURCE_CYCLES: String(publicationCycles) }, ["--max-old-space-size=512"], "setup");
     if (preparation.reasons.length) throw new Error(`fixture-preparation-failed:${JSON.stringify(preparation)}`);
     report.fixture = JSON.parse(readFileSync(fixtureManifest, "utf8"));
     const hash = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
@@ -311,16 +372,26 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
     for (let run = 1; run <= runs; run += 1) {
       const entry: RunResult = { run, violations: [] };
       report.runs.push(entry);
-      for (const [mode, build, flags] of [["live", live, ["--max-old-space-size=256", "--expose-gc"]], ["hard-cap", hardCap, ["--max-old-space-size=128"]]] as const) {
-        const database = resolve(directory, `${mode}-${run}.sqlite`);
-        const output = resolve(directory, `${mode}-${run}.ndjson`);
+      const liveDatabase = resolve(directory, `live-${run}.sqlite`);
+      const naturalDatabase = resolve(directory, `hard-cap-${run}.sqlite`);
+      const liveOutput = resolve(directory, `live-${run}.ndjson`);
+      const naturalOutput = resolve(directory, `hard-cap-${run}.ndjson`);
+      for (const [database, output] of [[liveDatabase, liveOutput], [naturalDatabase, naturalOutput]] as const) {
         copyFileSync(fixturePath, database);
         writeFileSync(output, "");
-        const result = child(build.outfile, { PHAROS_RESOURCE_DATABASE: database, PHAROS_RESOURCE_OUTPUT: output, PHAROS_RESOURCE_PROFILE: profile }, [...flags], `${mode}-${run}`);
+      }
+      // One measured bundle, two heap envelopes; the natural child's probe hook is inert.
+      const outcomes = await Promise.allSettled([
+        child(live.outfile, { PHAROS_RESOURCE_DATABASE: liveDatabase, PHAROS_RESOURCE_OUTPUT: liveOutput, PHAROS_RESOURCE_PROFILE: profile, PHAROS_RESOURCE_CYCLES: String(publicationCycles), PHAROS_RESOURCE_INSTRUMENTATION: "1" }, ["--max-old-space-size=256", "--expose-gc"], `live-${run}`),
+        child(live.outfile, { PHAROS_RESOURCE_DATABASE: naturalDatabase, PHAROS_RESOURCE_OUTPUT: naturalOutput, PHAROS_RESOURCE_PROFILE: profile, PHAROS_RESOURCE_CYCLES: String(publicationCycles) }, ["--max-old-space-size=128"], `hard-cap-${run}`),
+      ]);
+      for (const outcome of outcomes) if (outcome.status === "rejected") throw outcome.reason;
+      const [liveResult, naturalResult] = outcomes.map((outcome) => (outcome as PromiseFulfilledResult<ChildResult>).value);
+      for (const [mode, result, output] of [["live", liveResult, liveOutput], ["hard-cap", naturalResult, naturalOutput]] as const) {
         let samples: ResourceSample[] = [];
         try { samples = readFileSync(output, "utf8").trim().split("\n").filter(Boolean).map((line) => SampleSchema.parse(JSON.parse(line))); }
         catch (error) { result.reasons.push({ reason: "protocol-fault", detail: String(error) }); }
-        if (mode === "live") result.reasons.push(...validateResourceSamples(samples, [...PHASE_MANIFESTS[manifest], ...(profile === "heavy-warm" ? ["prep-complete"] : [])], policy));
+        if (mode === "live") result.reasons.push(...validateResourceSamples(samples, [...PHASE_MANIFESTS[manifest], ...(profile === "heavy-warm" ? ["prep-complete"] : [])], policy, phaseCycles));
         if (!samples.some((sample) => sample.type === "complete")) result.reasons.push({ reason: "missing-completion" });
         const phaseMaxima = Object.fromEntries(PHASE_MANIFESTS[manifest].map((phase) => {
           const values = samples.filter((sample) => sample.type === "phase" && sample.phase === phase);
@@ -330,7 +401,7 @@ export async function measureV9Resource(root: string, profile: ResourceProfile, 
         entry.violations.push(...result.reasons.map((reason) => ({ ...reason, mode })));
         flush();
         if (result.status === 0) {
-          const check = child(setup.outfile, { PHAROS_RESOURCE_DATABASE: database, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "inspect" }, ["--max-old-space-size=512"], `${mode}-${run}-correctness`);
+          const check = await child(setup.outfile, { PHAROS_RESOURCE_DATABASE: mode === "live" ? liveDatabase : naturalDatabase, PHAROS_RESOURCE_MANIFEST: fixtureManifest, PHAROS_RESOURCE_ACTION: "inspect", PHAROS_RESOURCE_CYCLES: String(publicationCycles) }, ["--max-old-space-size=512"], `${mode}-${run}-correctness`);
           if (!check.reasons.length) {
             try {
               const lines = readFileSync(resolve(directory, `${mode}-${run}-correctness.stdout`), "utf8").trim().split("\n");

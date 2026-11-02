@@ -3,6 +3,76 @@ import { z } from "zod";
 
 export const RESOURCE_HARNESS_REVISION = "full-path-post-p2-v5-calibrated-bytes";
 export const RESOURCE_PHASES = ["module-initialized", "native-envelope-loaded", "native-inflate-decoded", "native-input-decoded", "enrichment-loaded", "accepted-baseline-row-loaded", "accepted-baseline-parsed", "accepted-baseline-ready", "extension-built", "facts-compiled", "evaluation-complete", "candidate-finalized", "gate-assessed", "replay-serialized", "store-admitted", "publication-gzip-complete", "score-index-serialized", "publication-committed", "alert-envelope-projected", "journal-complete", "archive-string-built", "archive-upload-pending", "publication-settled"] as const;
+// PR validation runs the nine-scenario contagion matrix only when the diff can
+// change it: the evaluator's esbuild import closure (shared lib/types/data
+// entries below, asserted by the closure case in
+// worker/scripts/__tests__/measure-v9-resource.test.ts), the probe's fact-set
+// compile path, the resource harness itself and toolchain files. Any other PR
+// skips contagion; no PR base (nightly/manual/local) or an unreadable diff runs it.
+export const V9_CONTAGION_INPUT_PREFIXES: readonly string[] = [
+  "shared/lib/safety-score-v9/",
+  "shared/lib/business-calendars.ts",
+  "shared/lib/compare.ts",
+  "shared/lib/depeg-config.ts",
+  "shared/lib/dependency-derivation.ts",
+  "shared/lib/dependency-graph.ts",
+  "shared/lib/evm-address.ts",
+  "shared/lib/exit-route-scoring.ts",
+  "shared/lib/live-reserve-adapter-descriptors.ts",
+  "shared/lib/live-reserve-adapters.ts",
+  "shared/lib/math.ts",
+  "shared/lib/sha256.ts",
+  "shared/lib/stable-json.ts",
+  "shared/lib/strongly-connected-components.ts",
+  "shared/lib/type-guards.ts",
+  "shared/data/safety-score-v9/",
+  "shared/data/business-calendars/reviewed.ts",
+  "shared/types/safety-score-v9",
+  "shared/types/business-calendars.ts",
+  "shared/types/chain-identity.ts",
+  "shared/types/coin-projection.ts",
+  "shared/types/contagion.ts",
+  "shared/types/core.ts",
+  "shared/types/date-primitives.ts",
+  "shared/types/deployment-amounts.ts",
+  "shared/types/deployment-id.ts",
+  "shared/types/dependency-types.ts",
+  "shared/types/exit-route-identity.ts",
+  "shared/types/exit-route.ts",
+  "shared/types/live-reserve-adapter-declarations.ts",
+  "shared/types/live-reserve-adapter-policy.ts",
+  "shared/types/live-reserve-core.ts",
+  "shared/types/measured-execution.ts",
+  "shared/types/methodology-envelope.ts",
+  "shared/types/redemption.ts",
+  "shared/types/report-card-grade.ts",
+  "shared/types/reserve-bounded-facts.ts",
+  "shared/types/reserve-input.ts",
+  "shared/types/reserve-nav-supply.ts",
+  "shared/types/reserves.ts",
+  "shared/types/safety-schema-primitives.ts",
+  "shared/types/stablecoin-meta-control-schemas.ts",
+  "shared/types/stablecoin-meta-mint-authority-refinements.ts",
+  "shared/types/stablecoin-meta-primitives.ts",
+  "shared/types/stablecoin-taxonomy.ts",
+  "shared/types/validators.ts",
+  "worker/src/lib/safety-score-v9/fact-set",
+  "worker/src/lib/__tests__/safety-score-v9-resource-",
+  "worker/src/lib/__tests__/fixtures/safety-score-v9-",
+  "worker/scripts/lib/v9-resource",
+  "worker/scripts/measure-v9-resource.ts",
+  "worker/scripts/calibrate-v9-resource.ts",
+  "scripts/maintenance/run-v9-resource-lane.ts",
+];
+// Package metadata, tsconfig/vitest/wrangler config and Node version files can
+// change the probe build or its runtime; mirror the deploy classifier's rule.
+const V9_CONTAGION_TOOLCHAIN_PATTERN = /(^|\/)(?:package(?:-lock)?\.json|tsconfig[^/]*\.json|vitest[^/]*|wrangler[^/]*|\.nvmrc|\.npmrc|\.node-version|\.tool-versions|mise\.toml|\.mise\.toml)$/;
+export function hasV9ContagionInput(files: readonly string[]): boolean {
+  return files.some((raw) => {
+    const file = raw.replaceAll("\\", "/");
+    return V9_CONTAGION_INPUT_PREFIXES.some((prefix) => file.startsWith(prefix)) || V9_CONTAGION_TOOLCHAIN_PATTERN.test(file);
+  });
+}
 export const GLOBAL_HEAP_BYTES = 112 * 1024 * 1024;
 export const CALIBRATION_MAX_BYTES = 110 * 1024 * 1024;
 export const TOLERANCE_BYTES = 2 * 1024 * 1024;
