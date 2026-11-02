@@ -103,9 +103,25 @@ export class MintBurnRun {
     const allActiveConfigs = includeActiveTrackedIds(MINT_BURN_CONFIGS, (config) => config.stablecoinId);
     const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
     const operatorSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
-    const priorDisabledKeys = operatorSymbols.size > 0
-      ? await readMintBurnDisabledKeys(db)
-      : new Set<string>();
+    let priorDisabledKeys = new Set<string>();
+    if (operatorSymbols.size > 0) {
+      try {
+        priorDisabledKeys = await readMintBurnDisabledKeys(db);
+      } catch (error) {
+        // A corrupt stored policy must not abort the lane. Keep no durable keys
+        // from the unreadable row; the policy sync below rewrites it from the
+        // env switch, which is also what self-heals the row.
+        logWorkerEvent({
+          scope: "handler",
+          job: jobName,
+          level: "warn",
+          event: "mint_burn_disabled_policy_unreadable",
+          message: "Stored mint/burn disabled policy is unreadable; retaining no durable keys and rewriting it from the env switch",
+          error,
+          metadata: { configuredSymbols: [...operatorSymbols].sort() },
+        });
+      }
+    }
     const symbolPolicy = resolveMintBurnDisabledSymbolPolicy(allActiveConfigs, operatorSymbols, priorDisabledKeys);
     const disabledSymbols = symbolPolicy.symbols;
     for (const ignored of symbolPolicy.ignored) {

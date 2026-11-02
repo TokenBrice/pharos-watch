@@ -565,5 +565,25 @@ describe("circuit-breaker", () => {
       expect(write?.binds[0]).toBe("circuit:src");
       expect(JSON.parse(String(write?.binds[1]))).toMatchObject({ state: "closed", consecutiveFailures: 0 });
     });
+
+    it("leaves a repaired corrupt row open instead of publishing an unmeasured success", async () => {
+      const db = mockD1([{
+        match: "cache",
+        rows: [{ key: "circuit:src", value: "not-json", updated_at: 100 }],
+      }]);
+
+      await recoverBreakerOnNoCandidate(db, "src");
+
+      const writes = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
+      // Only the fail-closed repair may land; a success write would claim a
+      // measured outcome that never happened (ADR-29) and erase the open row
+      // the half-open probe depends on.
+      expect(writes).toHaveLength(1);
+      expect(writes[0]?.binds[0]).toBe("circuit:src");
+      expect(JSON.parse(String(writes[0]?.binds[1]))).toMatchObject({
+        state: "open",
+        lastSuccessAt: null,
+      });
+    });
   });
 });

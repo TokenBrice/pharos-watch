@@ -4,7 +4,12 @@ import { createCronResult } from "../lib/cron-result";
 import { throwIfAborted } from "../lib/abort";
 import { includeActiveTrackedIds } from "./shared/exclude-frozen";
 import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
-import { mintBurnDisabledReason, resolveMintBurnDisabledSymbols } from "../lib/mint-burn-publication";
+import {
+  mintBurnDisabledReason,
+  readMintBurnDisabledKeys,
+  resolveMintBurnDisabledSymbolPolicy,
+} from "../lib/mint-burn-publication";
+import { mintBurnConfigKey } from "../lib/mint-burn-pipeline/sync-state";
 import { normalizeDisabledConfigIdSet, normalizeDisabledSymbolSet } from "./mint-burn/run-state";
 
 /**
@@ -39,15 +44,22 @@ export interface MintBurnGrowthWatchdogOptions {
   disabledSymbols?: readonly string[];
 }
 
-function activeMintBurnPairs(
+async function activeMintBurnPairs(
+  db: D1Database,
   disabledIds: ReadonlySet<string>,
   disabledSymbols: ReadonlySet<string>,
-): { keys: Set<string>; json: string } {
-  const resolvedSymbols = resolveMintBurnDisabledSymbols(MINT_BURN_CONFIGS, disabledSymbols);
-  const pairs = includeActiveTrackedIds(
-    MINT_BURN_CONFIGS.filter((config) => mintBurnDisabledReason(config, disabledIds, resolvedSymbols) == null),
-    (config) => config.stablecoinId,
-  ).map((config) => [config.stablecoinId, config.chain.chainId] as [string, string]);
+): Promise<{ keys: Set<string>; json: string }> {
+  const activeConfigs = includeActiveTrackedIds(MINT_BURN_CONFIGS, (config) => config.stablecoinId);
+  // Mirror the producer's disable scope: an ambiguous env ticker disables no
+  // coin by itself, but the durable keys it retained must stay paused here too.
+  const priorDisabledKeys = disabledSymbols.size > 0
+    ? await readMintBurnDisabledKeys(db)
+    : new Set<string>();
+  const policy = resolveMintBurnDisabledSymbolPolicy(activeConfigs, disabledSymbols, priorDisabledKeys);
+  const pairs = activeConfigs
+    .filter((config) => mintBurnDisabledReason(config, disabledIds, policy.symbols) == null
+      && !policy.retainedKeys.has(mintBurnConfigKey(config)))
+    .map((config) => [config.stablecoinId, config.chain.chainId] as [string, string]);
   return {
     keys: new Set(pairs.map(([stablecoinId, chainId]) => `${stablecoinId}|${chainId}`)),
     json: JSON.stringify(pairs),
@@ -62,7 +74,7 @@ async function loadCollapsedLegs(
   signal?: AbortSignal,
 ): Promise<{ legs: Array<{ stablecoinId: string; chainId: string; baselineEvents: number }>; failed: boolean }> {
   try {
-    const activePairs = activeMintBurnPairs(disabledIds, disabledSymbols);
+    const activePairs = await activeMintBurnPairs(db, disabledIds, disabledSymbols);
     const rows = await db
       .prepare(
         `/* pharos:mint-burn-activity-collapse */

@@ -82,8 +82,11 @@ export async function recoverProviderOnNoCandidates(params: {
   diagnostics: PricingProviderAttemptDiagnostic[];
 }): Promise<void> {
   if (!params.db) return;
-  const { record } = await getCircuitRecordForAdmission(params.db, params.circuitSource);
-  if (record.state === "closed") return;
+  const { record, invalid } = await getCircuitRecordForAdmission(params.db, params.circuitSource);
+  // A corrupt row was repaired to a fail-closed open record, but that repair is
+  // not a provider outcome: do not publish a success diagnostic or close the
+  // breaker. The half-open probe records the next measured outcome.
+  if (invalid || record.state === "closed") return;
   params.diagnostics.push(buildNoCandidatesDiagnostic(params.diagnostic));
   await recordOutcomeSafe(params.db, params.circuitSource, true);
 }

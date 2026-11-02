@@ -369,15 +369,18 @@ export async function recordOutcomeDecision(
  * record success so the breaker can transition toward closed on the next
  * read. Prevents sources whose candidate set temporarily empties from
  * staying open indefinitely.
+ *
+ * A corrupt row is only repaired here, never closed: the repair is not an
+ * observed provider outcome, so the repaired open row waits for the measured
+ * half-open probe (R2/ADR-29).
  */
 export async function recoverBreakerOnNoCandidate(
   db: D1Database,
   source: string,
 ): Promise<void> {
-  const { record } = await getCircuitRecordForAdmission(db, source);
-  if (record.state !== "closed") {
-    await recordOutcome(db, source, true);
-  }
+  const { record, invalid } = await getCircuitRecordForAdmission(db, source);
+  if (invalid || record.state === "closed") return;
+  await recordOutcome(db, source, true);
 }
 
 /** No-candidate recovery is best-effort bookkeeping; a storage fault must not abort the caller's collected work. */
