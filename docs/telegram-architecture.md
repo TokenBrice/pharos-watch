@@ -135,7 +135,7 @@ Every five minutes `dispatchTelegramAlerts` (`worker/src/cron/telegram/dispatch/
 1. Load sources and the `alert:*-snapshot` baselines. A missing or stale baseline seeds silently. An eventless run rewrites the baselines.
 2. Detected events become a deterministic `alert:<sha256(events + baseline)>` job. The job, the advanced baselines and the roll-up change-log rows they consume commit in **one** D1 batch (eventless runs too), so a crash or failed write re-detects the same events and re-derives the same job id (`INSERT OR IGNORE`).
 3. Fresh Tape freeze events after `alert:freeze-tape-cursor` become one `freeze:<tapeEventId>` job each. Below-threshold events go to the roll-up change log. Job and change-log inserts are idempotent (`INSERT OR IGNORE`) and commit in chunks of at most 100 statements. The cursor advance rides in the last chunk, so a burst cannot wedge the cursor, and the cursor never passes an unwritten event.
-4. `planning` jobs, read one at a time in `(created_at, job_id)` order, fan out one page of ≤200 chats at a time through the kind's `buildPage` (12 pages per run at most). A page's rows are sorted by chat id and committed in batches of at most 420 rows ending on chat boundaries. Each batch advances `telegram_jobs.cursor` to its last chat; builders page by `chat_id > cursor`. A slice that still cannot fit, or any other throw, fails the job closed without stopping other jobs. A replayed page is ignored by `UNIQUE (job_id, chat_id, seq)`. A builder that throws (for example a preset resolution failure) leaves the job `planning`: it fails closed, is retried next run and is cancelled at its TTL. It is never treated as an empty audience.
+4. `planning` jobs, read one at a time in `(created_at, job_id)` order, fan out one page of ≤200 chats at a time through the kind's `buildPage` (12 pages per run at most). A page's rows are sorted by chat id and committed in batches of at most 420 rows ending on chat boundaries. Each batch advances `telegram_jobs.cursor` to its last chat; builders page by `chat_id > cursor`. The batch that readies the job also removes a broadcast payload's message HTML, since every row then carries its own chunk. A slice that still cannot fit, or any other throw, fails the job closed without stopping other jobs. A replayed page is ignored by `UNIQUE (job_id, chat_id, seq)`. A builder that throws (for example a preset resolution failure) leaves the job `planning`: it fails closed, is retried next run and is cancelled at its TTL. It is never treated as an empty audience.
 5. The roll-up hook `runTelegramRollupStep` (hourly freeze batch and the 09:00-local daily roll-up) enqueues direct-delivery `freeze_batch` and `rollup` jobs. It is wrapped, so a failure is logged, degrades the run and never blocks alerts.
 6. Drain and the sweep run (see [Queue](#6-queue--rate-limit--retry)).
 
@@ -368,7 +368,7 @@ Indexes are part of that migration authority; this map does not duplicate index 
 
 | Evidence | Retention |
 | --- | --- |
-| Terminal `telegram_deliveries` rows (`done_at`), then `telegram_jobs` with no remaining row | 90d (`alertAudit`) |
+| Terminal `telegram_deliveries` rows (`done_at`, body dropped), then `telegram_jobs` with no remaining row (a broadcast payload's `messageHtml` is removed before that) | 90d (`alertAudit`) |
 | Processed updates | 7d |
 | Usage and lifecycle aggregates | 400d |
 | Chat delivery diagnostics | 90d |
