@@ -4,7 +4,7 @@ import {fileURLToPath, pathToFileURL} from 'node:url';
 import {execFileSync} from 'node:child_process';
 import {inflateSync} from 'node:zlib';
 import {chromium} from 'playwright';
-import {allowlistedRichText} from './rich-text.mjs';
+import {validateEditorialContent} from './rich-text.mjs';
 import {parseStrictCliArgs, requireCliString} from '../../../../scripts/lib/cli-args.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
@@ -43,14 +43,7 @@ c.annex.blocks.forEach((b,i)=>{ for(const f of ['tag','heading','body']) text(b[
 if (!Array.isArray(c.chartAnnotations)) fail('chartAnnotations must be an array (empty is allowed)');
 c.chartAnnotations.forEach((a,i)=>{date(a.date,`chartAnnotations[${i}].date`);text(a.label,`chartAnnotations[${i}].label`);if(a.date<c.period.start||a.date>c.period.end)fail(`chartAnnotations[${i}].date falls outside period`);});
 // Enforce the same rich-text contract at every editorial HTML position.
-for (const field of ['tldr', 'watch']) c[field] = c[field].map((value, i) => allowlistedRichText(value, `${field}[${i}]`));
-for (const id of ['movers', 'launches', 'stress', 'market']) {
-  const section = sections[id];
-  if (id === 'movers') section.rows.forEach((row, i) => { row.why = allowlistedRichText(row.why, `sections.movers.rows[${i}].why`); });
-  else section.items = section.items.map((value, i) => allowlistedRichText(value, `sections.${section.id}.items[${i}]`));
-}
-c.annex.blocks.forEach((block, i) => { block.body = allowlistedRichText(block.body, `annex.blocks[${i}].body`); });
-c.annex.methodology = allowlistedRichText(c.annex.methodology, 'annex.methodology');
+validateEditorialContent(c);
 const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 const archive=JSON.parse(await fs.readFile(path.join(data,'digest-archive.json'),'utf8'));
 const days=new Map();

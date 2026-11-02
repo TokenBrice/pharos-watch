@@ -14,6 +14,17 @@ const STATE_DIRECTORIES = ["worker/src", "shared/lib", "functions"];
 const MUTABLE_CONSTRUCTOR = /new (?:Map|Set|WeakMap|WeakSet|IsolateLocalState)\b/;
 const RECORDER_FACTORY = /createBufferedAttributionRecorder\b/;
 const STATEFUL_CONTAINER_NAME = /(cache|counter|key|limiter|limit|state|promise|initialization|window|secret|queue|buffer|pending|inflight)/i;
+// Mirrors STATEFUL_CONTAINER_NAME as a module-level `name = {`/`name = [` line.
+const STATEFUL_LITERAL_ASSIGNMENT = /(cache|counter|key|limiter|limit|state|promise|initialization|window|secret|queue|buffer|pending|inflight)[\p{L}\p{N}_$]*\s*=\s*[\[{]/iu;
+// Cheap superset of every candidate declaration below. Whole-tree parsing plus
+// parent-pointer construction is the expensive part of this guard; files
+// without a plausible declaration marker cannot produce a candidate.
+const CANDIDATE_TEXT_HINTS = [
+  MUTABLE_CONSTRUCTOR,
+  RECORDER_FACTORY,
+  /\blet\s/,
+  STATEFUL_LITERAL_ASSIGNMENT,
+];
 
 const STATE_SCAN_EXTENSIONS = new Set([".ts", ".tsx"]);
 const STATE_SCAN_EXCLUDED_DIRS = new Set(["__tests__", "__mocks__", "test-helpers"]);
@@ -33,13 +44,6 @@ function rootIdentifier(expression: ts.Expression): string | null {
   return ts.isIdentifier(current) ? current.text : null;
 }
 
-function isFunctionDescendant(node: ts.Node): boolean {
-  for (let current = node.parent; current; current = current.parent) {
-    if (ts.isFunctionLike(current)) return true;
-  }
-  return false;
-}
-
 function isAssignmentOperator(kind: ts.SyntaxKind): boolean {
   return kind >= ts.SyntaxKind.FirstAssignment && kind <= ts.SyntaxKind.LastAssignment;
 }
@@ -53,8 +57,9 @@ function isStatefulInitializer(initializer: ts.Expression, name: string, isLet: 
     || isLet;
 }
 
-function isMutationOfCandidate(node: ts.Node, candidates: Map<string, boolean>): void {
-  if (ts.isCallExpression(node) && isFunctionDescendant(node) && ts.isPropertyAccessExpression(node.expression)) {
+function isMutationOfCandidate(node: ts.Node, candidates: Map<string, boolean>, insideFunction: boolean): void {
+  if (!insideFunction) return;
+  if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
     const method = node.expression.name.text;
     if (["set", "add", "delete", "clear", "push", "reset"].includes(method)) {
       const name = rootIdentifier(node.expression.expression);
@@ -62,12 +67,12 @@ function isMutationOfCandidate(node: ts.Node, candidates: Map<string, boolean>):
     }
   }
 
-  if (ts.isBinaryExpression(node) && isAssignmentOperator(node.operatorToken.kind) && isFunctionDescendant(node)) {
+  if (ts.isBinaryExpression(node) && isAssignmentOperator(node.operatorToken.kind)) {
     const name = rootIdentifier(node.left);
     if (name && candidates.has(name)) candidates.set(name, true);
   }
 
-  if ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) && isFunctionDescendant(node)) {
+  if (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) {
     const name = rootIdentifier(node.operand);
     if (name && candidates.has(name)) candidates.set(name, true);
   }
@@ -75,11 +80,13 @@ function isMutationOfCandidate(node: ts.Node, candidates: Map<string, boolean>):
 
 function findCandidatesInFile(root: string, file: string): IsolateLocalStateCandidate[] {
   const sourcePath = relative(root, file);
+  const text = readFileSync(file, "utf8");
+  if (!CANDIDATE_TEXT_HINTS.some((hint) => hint.test(text))) return [];
   const source = ts.createSourceFile(
     sourcePath,
-    readFileSync(file, "utf8"),
+    text,
     ts.ScriptTarget.Latest,
-    true,
+    false,
     getScriptKind(file),
   );
   const candidates = new Map<string, boolean>();
@@ -96,11 +103,14 @@ function findCandidatesInFile(root: string, file: string): IsolateLocalStateCand
     }
   }
 
-  const visit = (node: ts.Node): void => {
-    isMutationOfCandidate(node, candidates);
-    ts.forEachChild(node, visit);
+  // Without parent pointers, track function nesting while visiting instead of
+  // walking ancestors for every node.
+  const visit = (node: ts.Node, functionDepth: number): void => {
+    const depth = functionDepth + Number(ts.isFunctionLike(node));
+    isMutationOfCandidate(node, candidates, depth > 0);
+    ts.forEachChild(node, (child) => visit(child, depth));
   };
-  visit(source);
+  visit(source, 0);
 
   return [...candidates]
     .filter(([, isMutated]) => isMutated)

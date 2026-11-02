@@ -25,3 +25,21 @@ export function allowlistedRichText(value, field) {
   };
   return [...fragment.childNodes].map(render).join('');
 }
+
+/**
+ * Enforce the rich-text contract at every editorial HTML position. Mutates the
+ * parsed content into its canonical allowlisted form and throws on active or
+ * unsupported markup, so the builder and its tests share one boundary.
+ */
+export function validateEditorialContent(content) {
+  const sections = Object.fromEntries(content.sections.map(section => [section.id, section]));
+  for (const field of ['tldr', 'watch']) content[field] = content[field].map((value, i) => allowlistedRichText(value, `${field}[${i}]`));
+  for (const id of ['movers', 'launches', 'stress', 'market']) {
+    const section = sections[id];
+    if (id === 'movers') section.rows.forEach((row, i) => { row.why = allowlistedRichText(row.why, `sections.movers.rows[${i}].why`); });
+    else section.items = section.items.map((value, i) => allowlistedRichText(value, `sections.${section.id}.items[${i}]`));
+  }
+  content.annex.blocks.forEach((block, i) => { block.body = allowlistedRichText(block.body, `annex.blocks[${i}].body`); });
+  content.annex.methodology = allowlistedRichText(content.annex.methodology, 'annex.methodology');
+  return content;
+}

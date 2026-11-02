@@ -63,16 +63,20 @@ describe("isolate-local state registry", () => {
       const cache = new Map(); const members = new Set(); const queue = [];
       let count = 0; let pending = null; const state = {};
       const recorder = createBufferedAttributionRecorder();
+      const crossRequestCache =
+        {};
       const immutable = new Map(); const settings = { limit: 5 };
+      const plain = 1; let retryBudget = 0;
       function update() {
         cache.set("a", 1); cache.delete("a"); cache.clear(); members.add("a"); queue.push(1);
         count++; ++count; pending = Promise.resolve(); state["value"] = 1;
+        crossRequestCache["hit"] = true; retryBudget = 3;
         const localCache = new Map(); localCache.set("a", 1);
         return immutable.get(settings.limit);
       }
     `);
     expect(findUnregisteredIsolateLocalState([], { root, sourceFiles: [resolve(root, "state.ts")] }))
-      .toEqual(["cache", "members", "queue", "count", "pending", "state", "recorder"]
+      .toEqual(["cache", "members", "queue", "count", "pending", "state", "recorder", "crossRequestCache", "retryBudget"]
         .map((stateName) => ({ sourcePath: "state.ts", stateName })));
   });
 

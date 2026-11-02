@@ -712,6 +712,12 @@ describe("publishYieldCoordinatorResults", () => {
       Math.floor(FIXED_NOW.getTime() / 1000) - YIELD_HISTORY_MAX_DAYS * DAY_SECONDS,
     );
     expect(handoffCleanupIndex).toBeGreaterThan(historyRetentionIndex);
+    // The drain stops when a chunk reports no changes; an empty fixture must not
+    // make it repeat the same coin for the whole 250,000-row budget.
+    const handoffDeletes = history.filter((entry) =>
+      entry.sql.includes("pharos:yield-sync:ownership-handoff-delete"),
+    );
+    expect(new Set(handoffDeletes.map((entry) => entry.binds[0])).size).toBe(handoffDeletes.length);
 
     const degradedDb = makePublicationDb();
     const degradedResult = await publishYieldCoordinatorResults(
