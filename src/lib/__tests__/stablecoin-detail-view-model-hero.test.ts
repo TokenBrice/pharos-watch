@@ -6,6 +6,7 @@ import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { pegScoreColor } from "@/lib/severity-colors";
 import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
 const quietDeviations = vi.hoisted(() => ({ value: null as boolean | null }));
@@ -238,7 +239,7 @@ describe("stablecoin detail hero view-model builder", () => {
     expect(pegDisplay(observed).sub).toBe("0 incidents");
   });
 
-  it("marks a numeric peg score under 30 tracking days as early, never as amber", () => {
+  it("marks a numeric peg score under 30 tracking days as early while keeping its score colour", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const pegDisplay = (trackingSpanDays: number) =>
       buildDetailHero({
@@ -248,10 +249,11 @@ describe("stablecoin detail hero view-model builder", () => {
         }),
       }).tertiaryMetrics.find((metric) => metric.key === "peg-score")!.display;
 
+    // Only the sub-line is muted; the number keeps the score's own tier colour.
     expect(pegDisplay(10)).toMatchObject({
       value: "100",
       sub: "Early score · 10d tracked",
-      color: "text-muted-foreground",
+      color: pegScoreColor(100),
     });
     expect(pegDisplay(10).sub).not.toContain("incidents");
     expect(pegDisplay(29).sub).toBe("Early score · 29d tracked");

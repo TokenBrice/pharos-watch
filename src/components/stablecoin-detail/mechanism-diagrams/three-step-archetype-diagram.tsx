@@ -297,19 +297,21 @@ const ALGORITHMIC_COIN_CONFIG: ThreeStepConfig = {
  * The `fiat-cash` family default describes an issuer's bank rail, but a
  * crypto-backed member has no customer bank transfer, fiat custody or issuer
  * redemption to describe. Those claims, their redeem loop and the
- * banking-rail stress are withheld; the collateral and supply shape remains.
+ * banking-rail stress are withheld, and the copy names no collateral poster:
+ * bridged and pool-backed members are issued against reserves they never
+ * received from a user.
  */
 const FIAT_CASH_CRYPTO_CONFIG: ThreeStepConfig = {
   accentColor: "var(--mechanism-fiat-cash)",
   stressFootnote: "stress: collateral or liquidity shock",
   ariaLabel: (symbol) =>
-    `Crypto collateral is posted with the protocol; the protocol mints ${symbol} against that collateral.`,
+    `${symbol} is issued against crypto assets held in reserve; supply follows the issuer's or protocol's rules.`,
   description: (symbol) =>
-    `Users post crypto collateral with the protocol; the protocol mints ${symbol} against that collateral and manages supply and liquidity under its own rules.`,
+    `${symbol} is issued against crypto assets held in reserve; the issuer or protocol manages supply and liquidity under its own rules.`,
   defaultSteps: (symbol) => [
-    { label: "Crypto collateral", subtitle: "posted with the protocol" },
-    { label: "Supply module", subtitle: "mint and burn by rule" },
-    { label: `${symbol} minted`, subtitle: "against posted collateral" },
+    { label: "Crypto assets", subtitle: "held in reserve" },
+    { label: "Issuance module", subtitle: "supply managed by rule" },
+    { label: `${symbol} issued`, subtitle: "against crypto assets" },
   ],
 };
 

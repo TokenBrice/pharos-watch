@@ -107,7 +107,7 @@ export function buildPegScoreDisplay(
       sub: early
         ? `Early score · ${pegScoreResult.trackingSpanDays}d tracked`
         : (pegScoreEventLine ?? (pegScoreResult.pegPct == null ? "Peg coverage unavailable" : `${pegScoreResult.pegPct.toFixed(1)}% at peg`)),
-      color: early ? HERO_MUTED_CLASS : pegScoreColor(pegScoreResult.pegScore),
+      color: pegScoreColor(pegScoreResult.pegScore),
     };
   }
   if (tooNewForPegScore) {

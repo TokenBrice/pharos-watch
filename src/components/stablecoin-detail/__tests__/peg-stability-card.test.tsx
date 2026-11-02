@@ -173,7 +173,8 @@ describe("PegStabilityCard", () => {
       <PegStabilityCard meta={coin({ mechanismArchetype: "fiat-cash" })} isWrapper={false} />,
     );
     const text = within(mechanismModule(container)).getByRole("figure").textContent ?? "";
-    expect(text).toContain("Crypto collateral");
+    expect(text).toContain("Crypto assets");
+    expect(text).toContain("issued against crypto assets");
     expect(text).not.toMatch(/bank transfer|KYC|custodied 1:1|eligible holders redeem|banking-rail/i);
   });
 
@@ -193,6 +194,26 @@ describe("PegStabilityCard", () => {
     const text = within(mechanismModule(container)).getByRole("figure").textContent ?? "";
     expect(text).toMatch(/bank transfer/i);
     expect(text).toMatch(/eligible holders redeem/i);
+  });
+
+  it("draws a wrapper's parent flow from the parent's backing, not the wrapper's", () => {
+    const wrapper = (parentBacking: StablecoinDetailCoinMeta["flags"]["backing"]) => render(
+      <PegStabilityCard
+        meta={coin({ mechanismArchetype: "fiat-cash", variantOf: "usdc-circle" })}
+        isWrapper
+        parentSymbol="USDC"
+        parentArchetype="fiat-cash"
+        parentBacking={parentBacking}
+      />,
+    );
+    const rwa = wrapper("rwa-backed");
+    expect(within(mechanismModule(rwa.container)).getByRole("figure").textContent).toMatch(/bank transfer/i);
+    cleanup();
+
+    const crypto = wrapper("crypto-backed");
+    const cryptoText = within(mechanismModule(crypto.container)).getByRole("figure").textContent ?? "";
+    expect(cryptoText).toContain("issued against crypto assets");
+    expect(cryptoText).not.toMatch(/bank transfer|KYC|custodied 1:1|eligible holders redeem|banking-rail/i);
   });
 
   it("never names another coin's incident in a coin's stress line", () => {

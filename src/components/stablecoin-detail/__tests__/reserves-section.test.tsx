@@ -336,6 +336,29 @@ describe("ReservesSection", () => {
       expect(container.textContent?.split("PAR reserves as of").length).toBe(2);
     });
 
+    it("does not repeat a parent review date as both as-of and reviewed", () => {
+      const { container } = renderSection({
+        qualitySummary: WRAPPER_SUMMARY,
+        lookThrough: { ...LOOK_THROUGH, parentCompositionAsOf: "2026-09-30" },
+      });
+      const provenance = Array.from(container.querySelectorAll("details"))
+        .find((fold) => fold.querySelector(`a[href="${LOOK_THROUGH.parentSources[0]!.url}"]`));
+      expect(provenance!.textContent).toContain("PAR reserves reviewed 2026-09-30");
+      expect(provenance!.textContent).not.toContain("as of 2026-09-30");
+    });
+
+    it("keeps the wrapper's basis and live-feed dates when the parent has neither", () => {
+      const { container } = renderSection({
+        qualitySummary: WRAPPER_SUMMARY,
+        lookThrough: { ...LOOK_THROUGH, parentReviewedAt: null, parentCompositionAsOf: null },
+        reserves: makeReserves({ reserves: [] }),
+      });
+      const provenance = Array.from(container.querySelectorAll("details"))
+        .find((fold) => fold.querySelector(`a[href="${LOOK_THROUGH.parentSources[0]!.url}"]`));
+      expect(provenance!.textContent).toContain("IUSD basis as of 2026-06-30");
+      expect(provenance!.textContent).toContain("Live feed: ");
+    });
+
     it("dedupes a parent source already cited by the wrapper", () => {
       const { container } = renderSection({
         qualitySummary: WRAPPER_SUMMARY,

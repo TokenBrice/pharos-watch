@@ -141,6 +141,24 @@ describe("resolveMechanismFlowTemplate", () => {
     expect(templateCopy(rwa)).toMatch(/bank transfer/i);
     expect(rwa.loop).not.toBeNull();
   });
+
+  it("describes the crypto-backed fiat-cash cohort by reserve and issuance, not user-posted collateral", () => {
+    const cohort = [...TRACKED_META_BY_ID.values()].filter(
+      (coin) => coin.status !== "pre-launch"
+        && coin.mechanismArchetype === "fiat-cash"
+        && coin.flags.backing === "crypto-backed",
+    );
+    expect(cohort).toHaveLength(24);
+    for (const coin of cohort) {
+      const template = shippedTemplate(coin.id);
+      const copy = templateCopy(template);
+      // Bridged and pool-backed members never post collateral themselves.
+      expect(copy, coin.id).not.toMatch(/users post|posted with the protocol/i);
+      expect(copy, coin.id).toContain("issued against crypto assets");
+      expect(copy, coin.id).not.toMatch(/bank transfer|KYC|custod|1:1|redeem|banking-rail/i);
+      expect(template.loop, coin.id).toBeNull();
+    }
+  });
 });
 
 describe("deriveLiquidationEngine", () => {
@@ -175,6 +193,15 @@ describe("shipped coins (dossier audit 2026-10-06, defect 6)", () => {
     expect(usde.steps[2].subtitle).toBe("yield to sUSDe stakers");
     expect(usde.ariaLabel).toContain("sUSDe stakers");
     expect(usde.description).toContain("sUSDe stakers");
+    // The perp hedge is the source of the carry loop and its funding stress.
+    expect(usde.loop).toEqual(expect.objectContaining({ label: "funding" }));
+    expect(usde.stressFootnote).toBe("stress: funding-rate inversion");
+  });
+
+  it("keeps the funding carry for a synthetic coin whose reviewed mechanism names a perp hedge", () => {
+    const usr = shippedTemplate("usr-resolv");
+    expect(usr.loop).toEqual(expect.objectContaining({ label: "funding" }));
+    expect(usr.stressFootnote).toBe("stress: funding-rate inversion");
   });
 
   it("keeps the bank rail on rwa-backed fiat-cash coins only", () => {

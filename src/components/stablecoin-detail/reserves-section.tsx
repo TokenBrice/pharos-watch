@@ -541,16 +541,18 @@ export function ReservesSection({
   // repeated here only when that fold is absent.
   const foldedLiveStamp = keepsOneDate && isLiveFeed && !showLiveFeed ? (footnote?.text ?? null) : null;
   const parent = lookThroughView?.parent ?? null;
-  const parentBasisDate = parent?.parentCompositionAsOf
+  const parentBasisDate = parent?.parentCompositionAsOf && parent.parentCompositionAsOf !== parent.parentReviewedAt
     ? `as of ${parent.parentCompositionAsOf}${parent.parentReviewedAt ? `, reviewed ${parent.parentReviewedAt}` : ""}`
     : parent?.parentReviewedAt
       ? `reviewed ${parent.parentReviewedAt}`
       : null;
-  const lookThroughDates = parent && parentBasisDate
+  const lookThroughDates = parent
     ? [
-        `${parent.parentSymbol} reserves ${parentBasisDate}${
-          reviewedAt ? `; the review date below covers ${coin.symbol}'s own basis` : ""
-        }.`,
+        parentBasisDate
+          ? `${parent.parentSymbol} reserves ${parentBasisDate}${
+            reviewedAt ? `; the review date below covers ${coin.symbol}'s own basis` : ""
+          }.`
+          : null,
         qualitySummary?.asOf
           ? `${coin.symbol} basis as of ${qualitySummary.asOf}${basisSource ? `, per ${reportName(basisSource.label)}` : ""}.`
           : null,

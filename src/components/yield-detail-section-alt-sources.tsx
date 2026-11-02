@@ -15,6 +15,7 @@ import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   formatYieldSourceRiskCompact,
   getYieldSourceDepthDisplay,
+  isNativeYieldSource,
 } from "@/lib/yield-source-risk";
 import type { YieldSourceExplorerAlternate } from "@/lib/yield-source-explorer-model";
 
@@ -113,6 +114,7 @@ export function YieldDetailSectionAltSources({
           const depthDisplay = getYieldSourceDepthDisplay({
             depthLens: source.depthLens,
             yieldType: source.yieldType,
+            sourceRole: source.sourceRole,
             sourceTvlUsd: source.sourceTvlUsd,
           });
           return (
@@ -148,7 +150,7 @@ export function YieldDetailSectionAltSources({
                     <span className="font-mono text-2xs tabular-nums text-muted-foreground">
                       TVL {source.sourceTvlUsd !== null
                         ? formatCurrency(source.sourceTvlUsd)
-                        : depthDisplay.isNativeUnmeasured ? "Native" : "—"}
+                        : isNativeYieldSource(source.sourceRole, source.yieldType) ? "Native" : "—"}
                     </span>
                     {confidence ? (
                       <span className="text-2xs text-muted-foreground">{confidence}</span>
@@ -275,6 +277,7 @@ export function YieldDetailSectionAltSources({
             const depthDisplay = getYieldSourceDepthDisplay({
               depthLens: source.depthLens,
               yieldType: source.yieldType,
+              sourceRole: source.sourceRole,
               sourceTvlUsd: source.sourceTvlUsd,
             });
             return (
@@ -333,7 +336,7 @@ export function YieldDetailSectionAltSources({
                 <TableCell className="px-0 py-2 text-right font-mono tabular-nums text-muted-foreground">
                   {source.sourceTvlUsd !== null
                     ? formatCurrency(source.sourceTvlUsd)
-                    : depthDisplay.isNativeUnmeasured ? "Native" : "—"}
+                    : isNativeYieldSource(source.sourceRole, source.yieldType) ? "Native" : "—"}
                 </TableCell>
                 <TableCell className="px-0 py-2 text-center">
                   <button
