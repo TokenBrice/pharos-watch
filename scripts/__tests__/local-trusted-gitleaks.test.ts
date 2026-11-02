@@ -2,7 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   gitleaksCandidateMatchesTrusted,
   runGitleaks,
@@ -10,13 +10,26 @@ import {
   snapshotGitleaksTrustedInputs,
 } from "../ci/run-gitleaks";
 
-const roots: string[] = [];
 const strongPolicy = "[extend]\nuseDefault = true\n";
 const weakPolicy = "[extend]\nuseDefault = false\n";
 
-function fixture(weaken = false) {
+interface FixtureRepo {
+  root: string;
+  baseSha: string;
+  strongHeadSha: string;
+  weakHeadSha: string;
+  legacySetupSha: string;
+  mergeSha: string;
+  git: (...args: string[]) => string;
+}
+
+let repo: FixtureRepo;
+
+// One repository serves every case; revisions are committed once in beforeAll
+// and each test only reads objects. Rebuilding an 11-command repository per
+// case was the fixture's dominant cost.
+beforeAll(() => {
   const root = mkdtempSync(join(tmpdir(), "pharos-local-trusted-test-"));
-  roots.push(root);
   const git = (...args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: "pipe" }).trim();
   const put = (path: string, bytes: string) => {
     mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -33,15 +46,35 @@ function fixture(weaken = false) {
   git("commit", "--quiet", "-m", "base");
   const baseSha = git("rev-parse", "HEAD");
   put("change.txt", "candidate content\n");
-  if (weaken) put(".gitleaks.toml", weakPolicy);
   git("add", ".");
   git("commit", "--quiet", "-m", "head");
-  const headSha = git("rev-parse", "HEAD");
-  // Make the caller's checkout differ from the requested head, and its policy
-  // differ from both commits: neither ambient input may select scanner policy.
+  const strongHeadSha = git("rev-parse", "HEAD");
+  git("checkout", "--quiet", "--detach", baseSha);
+  put(".gitleaks.toml", weakPolicy);
+  put("change.txt", "candidate content\n");
+  git("add", ".");
+  git("commit", "--quiet", "-m", "weak-policy head");
+  const weakHeadSha = git("rev-parse", "HEAD");
+  git("checkout", "--quiet", "--detach", baseSha);
+  put("scripts/ci/run-gitleaks.ts", 'export async function runGitleaks() { throw new Error("private scanner diagnostic"); }\n');
+  git("add", "scripts/ci/run-gitleaks.ts");
+  git("commit", "--quiet", "-m", "scanner setup failure");
+  const legacySetupSha = git("rev-parse", "HEAD");
+  // Make the caller's checkout differ from every requested head, and its policy
+  // differ from every commit: neither ambient input may select scanner policy.
   git("checkout", "--quiet", "--detach", baseSha);
   put(".gitleaks.toml", "# ambient policy must not be read\n");
-  return { root, baseSha, headSha, git };
+  const mergeSha = git("commit-tree", git("rev-parse", `${baseSha}^{tree}`),
+    "-p", baseSha, "-p", weakHeadSha, "-m", "synthetic merge");
+  repo = { root, baseSha, strongHeadSha, weakHeadSha, legacySetupSha, mergeSha, git };
+});
+
+afterAll(() => {
+  if (repo) rmSync(repo.root, { recursive: true, force: true });
+});
+
+function fixture(weaken = false) {
+  return { ...repo, headSha: weaken ? repo.weakHeadSha : repo.strongHeadSha };
 }
 
 type ScannerOptions = Record<string, unknown>;
@@ -57,7 +90,6 @@ function stubScanner(onScan: (args: string[], options: ScannerOptions) => number
 }
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
   vi.restoreAllMocks();
 });
 
@@ -139,11 +171,9 @@ describe("local trusted Gitleaks", () => {
   });
 
   it("adds a parity merge checkout without changing branch range or candidate policy", async () => {
-    const { root, baseSha, headSha, git } = fixture(true);
+    const { root, baseSha, headSha, mergeSha, git } = fixture(true);
     // The synthetic merge tree intentionally has base policy, while the branch
     // has weaker candidate policy. Candidate inputs must still come from head.
-    const mergeSha = git("commit-tree", git("rev-parse", `${baseSha}^{tree}`),
-      "-p", baseSha, "-p", headSha, "-m", "synthetic merge");
     let scanRoot = "";
     const runScanner = stubScanner((args, options) => {
       scanRoot = String(options.cwd);
@@ -191,13 +221,8 @@ describe("local trusted Gitleaks", () => {
   });
 
   it("maps legacy scanner setup throws to exit 2 without printing private diagnostics", async () => {
-    const { root, git } = fixture();
-    writeFileSync(join(root, "scripts/ci/run-gitleaks.ts"),
-      'export async function runGitleaks() { throw new Error("private scanner diagnostic"); }\n');
-    git("add", "scripts/ci/run-gitleaks.ts");
-    git("commit", "--quiet", "-m", "scanner setup failure");
-    const sha = git("rev-parse", "HEAD");
-    const outcome = await runLocalTrustedGitleaks({ repoRoot: root, baseSha: sha, headSha: sha });
+    const { root, legacySetupSha } = fixture();
+    const outcome = await runLocalTrustedGitleaks({ repoRoot: root, baseSha: legacySetupSha, headSha: legacySetupSha });
     expect(outcome).toMatchObject({ ok: false, exitCode: 2 });
     expect(outcome.summary).not.toContain("private scanner diagnostic");
   });

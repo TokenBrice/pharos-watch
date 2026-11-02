@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { resolveLocalPackageImport } from "../lib/package-imports.mts";
 import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
 import {
@@ -62,6 +63,9 @@ function hasRuntimeBindings(importClause: ts.ImportClause | undefined): boolean 
 }
 
 function runtimeImports(path: string): string[] {
+  // JSON data has no imports; parsing the multi-MB packed catalog as TypeScript
+  // only burns time and cannot contribute closure members.
+  if (extname(path) === ".json") return [];
   const source = readFileSync(resolve(REPO_ROOT, path), "utf8");
   const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   const imports: string[] = [];
@@ -119,7 +123,18 @@ function fixtureRoot(): string {
 
 describe("Safety Score v9 evaluation-build manifest", () => {
   it("enrolls every fixed identity input and recursive capture summaries for regeneration", () => {
-    for (const source of [...V9_EVALUATION_BUILD_SOURCE_PATHS,
+    const artifact = GENERATED_ARTIFACT_REGISTRY
+      .find((entry: { id: string }) => entry.id === "safety-score-v9-evaluation-build")!;
+    expect(artifact.sourcePaths).toEqual(expect.arrayContaining([
+      ...V9_EVALUATION_BUILD_SOURCE_PATHS,
+      "scripts/lib/safety-score-v9-evaluation-inputs.mts",
+      "scripts/lib/mechanism-measurement/capture-summary.ts",
+      "shared/data/safety-score-v9/mechanism-measurements/**/*.summary.json",
+    ]));
+    // Representative selector calls cover direct, recursive-glob and helper paths;
+    // the data assertion above keeps every fixed identity source enrolled.
+    for (const source of [
+      V9_EVALUATION_BUILD_SOURCE_PATHS[0]!,
       "shared/data/safety-score-v9/mechanism-measurements/one.summary.json",
       "shared/data/safety-score-v9/mechanism-measurements/nested/deleted.summary.json",
       "scripts/lib/mechanism-measurement/capture-summary.ts",

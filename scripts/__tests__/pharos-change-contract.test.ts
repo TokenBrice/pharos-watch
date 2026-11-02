@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { linkSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildPermissionRequestHookOutput,
@@ -14,8 +14,10 @@ import {
   findShellCommandViolation,
   formatContract,
   ROUTE_CONTEXT_CEILINGS,
+  runCli,
 } from "../ci/pharos-change-contract.ts";
 import type { ChangeContract, RouteContextDocumentCache } from "../ci/pharos-change-contract.ts";
+import { runCliEntrypoint } from "../lib/cli-args.mjs";
 import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
 import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
 import { buildFocusedCheckPlan } from "../maintenance/run-focused-checks.ts";
@@ -48,6 +50,62 @@ function runHookCliProcess(
     stderr: String(result.stderr ?? ""),
     stdout: String(result.stdout ?? ""),
   };
+}
+
+/**
+ * Routed Markdown is immutable for the duration of this suite. Sharing the
+ * parsed snapshot keeps repeated route builds byte-identical without reading
+ * the same documents again for every fixture and in-process CLI invocation.
+ */
+const routeDocuments: RouteContextDocumentCache = new Map();
+
+interface InProcessCliResult {
+  status: number;
+  stdout: string;
+  stderr: string;
+}
+
+/** Exercise the real CLI dispatcher in-process: same parser, output and exit codes. */
+async function runContractCli(
+  argv: readonly string[],
+  { readStdin, env = {} }: { readStdin?: () => string; env?: NodeJS.ProcessEnv } = {},
+): Promise<InProcessCliResult> {
+  const stdout: string[] = [];
+  const stderr: string[] = [];
+  const log = vi.spyOn(console, "log").mockImplementation((...args: unknown[]) => {
+    stdout.push(args.map(String).join(" "));
+  });
+  const error = vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => {
+    stderr.push(args.map(String).join(" "));
+  });
+  const previousExitCode = process.exitCode;
+  const previousEnv = new Map(Object.keys(env).map((key) => [key, process.env[key]]));
+  process.exitCode = undefined;
+  Object.assign(process.env, env);
+  try {
+    await runCliEntrypoint(() => runCli(argv, { readStdin, documents: routeDocuments }), {
+      label: "pharos-change-contract",
+      stderr: { write: (text: string) => { stderr.push(text); } },
+    });
+    return { status: process.exitCode ?? 0, stdout: stdout.join("\n"), stderr: stderr.join("\n") };
+  } finally {
+    process.exitCode = previousExitCode;
+    for (const [key, value] of previousEnv) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    log.mockRestore();
+    error.mockRestore();
+  }
+}
+
+async function runHookInProcess(
+  hook: HookMode,
+  input = "",
+  env: NodeJS.ProcessEnv = {},
+  extraArgs: readonly string[] = [],
+): Promise<InProcessCliResult> {
+  return runContractCli([`--hook=${hook}`, ...extraArgs], { readStdin: () => input, env });
 }
 
 function docKeys(contract: { docs: Array<{ anchor?: string; path: string }> }): string[] {
@@ -249,7 +307,7 @@ describe("route context accounting", () => {
   it("prints the same measured payload in text and keeps accounting outside check selection", () => {
     const contract = classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"]);
     const original = JSON.stringify(contract);
-    const context = buildRouteContext(contract);
+    const context = buildRouteContext(contract, { documents: routeDocuments });
     expect(JSON.stringify(contract)).toBe(original);
     const text = formatContract(contract, { context });
     expect(text).toContain(`Total initial routed context: ${context.total.bytes} B, ${context.total.lines} lines, ~${context.total.approximateTokens} tokens (merged per file).`);
@@ -361,19 +419,20 @@ describe("reading selectors and context modes", () => {
     expect(contract.contextMode.reasons.some((reason) => reason.startsWith("Contract-sensitive input:"))).toBe(true);
   });
 
-  it.each(["local", "invalid", "AUTO", ""])("rejects invalid --context=%s", (context) => {
-    const result = spawnSync(process.execPath,
-      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", `--context=${context}`, "--file", "src/components/stablecoin-table.tsx", "--json"],
-      { encoding: "utf8" });
+  it.each(["local", "invalid", "AUTO", ""])("rejects invalid --context=%s", async (context) => {
+    const result = await runContractCli(
+      [`--context=${context}`, "--file", "src/components/stablecoin-table.tsx", "--json"],
+    );
     expect(result.status).toBe(2);
     expect(result.stderr).toContain(context === "" ? "--context requires a non-empty value" : "Invalid --context");
     expect(result.stdout).toBe("");
   });
 
-  it.each(["auto", "contract"] as const)("fails unmapped CLI routing without a runnable plan in %s mode", (context) => {
-    const result = spawnSync(process.execPath,
-      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", `--context=${context}`, "--new-file",
-        "--file", "unmapped.fixture", "--file", "src/components/stablecoin-table.tsx", "--json"], { encoding: "utf8" });
+  it.each(["auto", "contract"] as const)("fails unmapped CLI routing without a runnable plan in %s mode", async (context) => {
+    const result = await runContractCli([
+      `--context=${context}`, "--new-file",
+      "--file", "unmapped.fixture", "--file", "src/components/stablecoin-table.tsx", "--json",
+    ]);
     expect(result.status).toBe(1);
     const output = JSON.parse(result.stdout);
     expect(output.unmappedPaths).toEqual(["unmapped.fixture"]);
@@ -388,14 +447,13 @@ describe("reading selectors and context modes", () => {
     "functions/safety-scores/map.json.ts", "shared/data/stablecoins/coins/usdt-tether.json",
     "worker/src/telegram/webhook/telegram-webhook.ts", "worker/migrations/0268_telegram_planning_lookup_indexes.sql",
     "scripts/maintenance/worker-evidence-report.mjs",
-  ])("keeps the emitted check plan byte-identical across modes for %s", (file) => {
-    const outputs = (["auto", "contract"] as const).map((context) => {
-      const result = spawnSync(process.execPath,
-        ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", `--context=${context}`, "--file", file, "--json"],
-        { encoding: "utf8" });
+  ])("keeps the emitted check plan byte-identical across modes for %s", async (file) => {
+    const outputs = [];
+    for (const context of ["auto", "contract"] as const) {
+      const result = await runContractCli([`--context=${context}`, "--file", file, "--json"]);
       expect(result.status).toBe(0);
-      return JSON.parse(result.stdout);
-    });
+      outputs.push(JSON.parse(result.stdout));
+    }
     expect(JSON.stringify(outputs[0].checks)).toBe(JSON.stringify(outputs[1].checks));
     expect(outputs[0].checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
     expect(outputs[0].mappings).toEqual(outputs[1].mappings);
@@ -414,7 +472,7 @@ describe("reading selectors and context modes", () => {
     expect(docKeys({ docs: [...contract.docs, ...contract.background] }))
       .not.toContain("docs/digest-pipeline.md#generation");
     expect([...contract.docs, ...contract.background].some((doc) => doc.path === "docs/safety-score-map.md")).toBe(false);
-    warnIfOverBudget(`evaluator seam (${mode})`, buildRouteContext(contract));
+    warnIfOverBudget(`evaluator seam (${mode})`, buildRouteContext(contract, { documents: routeDocuments }));
   });
 
   it.each([
@@ -473,7 +531,7 @@ describe("reading selectors and context modes", () => {
       "docs/architecture.md#frontend-runtime-and-seo-surface",
       "docs/stablecoin-detail-page.md#route-shape",
     ]);
-    warnIfOverBudget("public llms discovery", buildRouteContext(contract));
+    warnIfOverBudget("public llms discovery", buildRouteContext(contract, { documents: routeDocuments }));
   });
 
   it.each([
@@ -489,7 +547,7 @@ describe("reading selectors and context modes", () => {
       "docs/scripts.md#build-and-generated-artifacts",
       "docs/api-reference.md#surface-split",
     ]);
-    warnIfOverBudget(`dated dataset ${file}`, buildRouteContext(contract));
+    warnIfOverBudget(`dated dataset ${file}`, buildRouteContext(contract, { documents: routeDocuments }));
   });
 
   it.each([
@@ -503,7 +561,7 @@ describe("reading selectors and context modes", () => {
       "docs/scripts.md#build-and-generated-artifacts",
       "docs/api-reference.md#surface-split",
     ]));
-    warnIfOverBudget(`generated dataset ${file}`, buildRouteContext(contract));
+    warnIfOverBudget(`generated dataset ${file}`, buildRouteContext(contract, { documents: routeDocuments }));
   });
 
   it("routes the DexScreener parser to DEX discovery docs and its parser/census tests", () => {
@@ -547,7 +605,7 @@ describe("reading selectors and context modes", () => {
     ));
     expect(docKeys(contract)).not.toContain("docs/testing.md#ci-pipeline");
     expect(docKeys({ docs: contract.background })).toContain("docs/deployment-process.md#ci-deploy-sequence");
-    warnIfOverBudget(`Functions map.${extension}`, buildRouteContext(contract));
+    warnIfOverBudget(`Functions map.${extension}`, buildRouteContext(contract, { documents: routeDocuments }));
   });
 
   it.each([
@@ -671,7 +729,7 @@ describe("route context budget warnings and fixture ratchets", () => {
     const warnings: string[] = [];
     for (const [mode, ceiling] of [["auto", autoCeiling], ["contract", contractCeiling]] as const) {
       try {
-        const context = buildRouteContext(classifyChangedFiles([file], mode));
+        const context = buildRouteContext(classifyChangedFiles([file], mode), { documents: routeDocuments });
         warnings.push(...routeBudgetWarnings(`${file} (${mode})`, context.total.bytes, ceiling));
         if (ceiling > context.ceiling) failures.push(`${file} (${mode}): fixture ${ceiling} exceeds class ceiling ${context.ceiling}`);
         if (context.ceiling !== ROUTE_CONTEXT_CEILINGS[context.class]) failures.push(`${file} (${mode}): ceiling ${context.ceiling} is not the ${context.class} class ceiling`);
@@ -685,7 +743,6 @@ describe("route context budget warnings and fixture ratchets", () => {
 
   it("reports every tracked mapped reading signature against its class ceiling", () => {
     readingSignatures ??= enumerateReadingSignatures();
-    const documents: RouteContextDocumentCache = new Map();
     const measuredBytes = new Map<string, number>();
     const failures: string[] = [];
     const warnings: string[] = [];
@@ -702,7 +759,7 @@ describe("route context budget warnings and fixture ratchets", () => {
         ]);
         let bytes = measuredBytes.get(key);
         if (bytes === undefined) {
-          bytes = buildRouteContext(contract, { documents }).total.bytes;
+          bytes = buildRouteContext(contract, { documents: routeDocuments }).total.bytes;
           measuredBytes.set(key, bytes);
         }
         const routeClass = classifyRouteContext(contract);
@@ -726,8 +783,8 @@ describe("route context budget warnings and fixture ratchets", () => {
   it("reports the evaluator and Functions map measurements against their acceptance limits in both modes", () => {
     for (const mode of ["auto", "contract"] as const) {
       reportBudgetWarnings([
-        ...routeBudgetWarnings(`evaluator (${mode})`, buildRouteContext(classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"], mode)).total.bytes, 80_000),
-        ...routeBudgetWarnings(`Functions map (${mode})`, buildRouteContext(classifyChangedFiles(["functions/safety-scores/map.json.ts"], mode)).total.bytes, 40_000),
+        ...routeBudgetWarnings(`evaluator (${mode})`, buildRouteContext(classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"], mode), { documents: routeDocuments }).total.bytes, 80_000),
+        ...routeBudgetWarnings(`Functions map (${mode})`, buildRouteContext(classifyChangedFiles(["functions/safety-scores/map.json.ts"], mode), { documents: routeDocuments }).total.bytes, 40_000),
       ]);
     }
   });
@@ -735,28 +792,27 @@ describe("route context budget warnings and fixture ratchets", () => {
   it("charges every multi-file route to the 160 KB union without double-counting common guides", () => {
     const files = ["shared/lib/safety-score-v9/evaluate-asset.ts", "functions/safety-scores/map.json.ts"];
     const contract = classifyChangedFiles(files);
-    const context = buildRouteContext(contract);
+    const context = buildRouteContext(contract, { documents: routeDocuments });
     expect(context.class).toBe("multi-domain-batch");
     expect(context.ceiling).toBe(160_000);
     warnIfOverBudget("multi-file union", context);
     expect(context.files.filter((file) => file.path === "AGENTS.md")).toHaveLength(1);
     expect(context.total.bytes).toBeLessThan(files.reduce((sum, file) =>
-      sum + buildRouteContext(classifyChangedFiles([file], "contract")).total.bytes, 0));
+      sum + buildRouteContext(classifyChangedFiles([file], "contract"), { documents: routeDocuments }).total.bytes, 0));
     // Even two paths in the same family use the batch guard, not a sum of caps.
     expect(buildRouteContext(classifyChangedFiles([
       "src/components/stablecoin-table.tsx", "src/app/yield/page.tsx",
-    ])).class).toBe("multi-domain-batch");
+    ]), { documents: routeDocuments }).class).toBe("multi-domain-batch");
   });
 
-  it.each(["text", "json"] as const)("warns on an oversized batch CLI %s with the complete plan and contributions", (format) => {
+  it.each(["text", "json"] as const)("warns on an oversized batch CLI %s with the complete plan and contributions", async (format) => {
     const files = ROUTE_FIXTURES.map(([file]) => file);
-    const result = spawnSync(process.execPath, [
-      "--import", "tsx", "scripts/ci/pharos-change-contract.ts",
+    const result = await runContractCli([
       ...files.flatMap((file) => ["--file", file]), ...(format === "json" ? ["--json"] : []),
-    ], { encoding: "utf8" });
+    ]);
     expect(result.status).toBe(0);
     const contract = classifyChangedFiles(files);
-    const context = buildRouteContext(contract);
+    const context = buildRouteContext(contract, { documents: routeDocuments });
     expect(context.status).toBe("over-budget");
     if (format === "json") {
       const output = JSON.parse(result.stdout);
@@ -822,7 +878,7 @@ describe("route context budget warnings and fixture ratchets", () => {
   it("catches a removed required obligation independently of its smaller byte total", () => {
     const file = "shared/lib/classification.ts";
     const baseline = classifyChangedFiles([file]);
-    const before = buildRouteContext(baseline);
+    const before = buildRouteContext(baseline, { documents: routeDocuments });
     const families = PATH_FAMILIES.filter((family) => baseline.mappings.some((mapping) => mapping.id === family.id));
     const originals = families.map((family) => family.required);
     try {
@@ -830,7 +886,7 @@ describe("route context budget warnings and fixture ratchets", () => {
         family.required = family.required?.filter((doc) => !(doc.path === "docs/architecture.md" && doc.anchor === "adr-28"));
       }
       const contract = classifyChangedFiles([file]);
-      const context = buildRouteContext(contract);
+      const context = buildRouteContext(contract, { documents: routeDocuments });
       expect(context.total.bytes).toBeLessThan(before.total.bytes);
       warnIfOverBudget("classification.ts", context);
       expect(() => expectIntegrityObligations(contract, false)).toThrow();
@@ -839,11 +895,10 @@ describe("route context budget warnings and fixture ratchets", () => {
     }
   });
 
-  it("rejects unknown options instead of silently accepting them", () => {
-    const result = spawnSync(process.execPath, [
-      "--import", "tsx", "scripts/ci/pharos-change-contract.ts", "--ignore-budget",
-      "--file", "shared/lib/safety-score-v9/evaluate-asset.ts",
-    ], { encoding: "utf8" });
+  it("rejects unknown options instead of silently accepting them", async () => {
+    const result = await runContractCli([
+      "--ignore-budget", "--file", "shared/lib/safety-score-v9/evaluate-asset.ts",
+    ]);
     expect(result.status).toBe(2);
     expect(result.stdout).toBe("");
     expect(result.stderr).toContain("--ignore-budget");
@@ -855,18 +910,16 @@ describe("representative --file routing", () => {
     return classifyChangedFiles([file]);
   }
 
-  it("reports evaluator JSON accounting without changing references or synthesized checks", () => {
+  it("reports evaluator JSON accounting without changing references or synthesized checks", async () => {
     const file = "shared/lib/safety-score-v9/evaluate-asset.ts";
-    const result = spawnSync(process.execPath,
-      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", "--file", file, "--json"],
-      { encoding: "utf8" });
+    const result = await runContractCli(["--file", file, "--json"]);
     expect(result.status).toBe(0);
     const output = JSON.parse(result.stdout);
     const contract = route(file);
     expect(output.docs).toEqual(contract.docs);
     expect(output.background).toEqual(contract.background);
     expect(output.scopedContext).toEqual(contract.scopedContext);
-    expect(output.context).toEqual(buildRouteContext(contract));
+    expect(output.context).toEqual(buildRouteContext(contract, { documents: routeDocuments }));
     expect(output.checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
   });
 
@@ -891,16 +944,14 @@ describe("representative --file routing", () => {
     }
   });
 
-  it("prints the same synthesized plan as focused checks", () => {
+  it("prints the same synthesized plan as focused checks", async () => {
     const file = "worker/src/cron/sync-yield-data.ts";
-    const result = spawnSync(process.execPath,
-      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", "--file", file, "--json"],
-      { encoding: "utf8" });
+    const result = await runContractCli(["--file", file, "--json"]);
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout).checks).toEqual(buildFocusedCheckPlan([file]).checks.map((check) => check.command));
     expect(JSON.parse(result.stdout).checks).not.toContain("npm run check:structural");
     const contract = classifyChangedFiles([file]);
-    expect(JSON.parse(result.stdout).context).toEqual(buildRouteContext(contract));
+    expect(JSON.parse(result.stdout).context).toEqual(buildRouteContext(contract, { documents: routeDocuments }));
   });
 
   it.each([
@@ -938,10 +989,8 @@ describe("representative --file routing", () => {
   it.each([
     ["--base", "--head"], ["--base", "--head-ref"],
     ["--base-ref", "--head"], ["--base-ref", "--head-ref"],
-  ])("accepts range aliases %s and %s", (baseFlag, headFlag) => {
-    const result = spawnSync(process.execPath,
-      ["--import", "tsx", "scripts/ci/pharos-change-contract.ts", baseFlag, "HEAD", headFlag, "HEAD", "--json"],
-      { encoding: "utf8" });
+  ])("accepts range aliases %s and %s", async (baseFlag, headFlag) => {
+    const result = await runContractCli([baseFlag, "HEAD", headFlag, "HEAD", "--json"]);
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({ changedFiles: [], source: "base/head range" });
   });
@@ -1667,8 +1716,8 @@ describe("W2.7 malformed hook payloads", () => {
     ["truncated", '{"tool_name": "Bash", "tool_inp'],
     ["non-object", '"text"'],
     ["array", "[]"],
-  ])("denies a %s payload in both enforcement modes", (_label, payload) => {
-    const preToolUse = runHookCliProcess("pre-tool-use", payload);
+  ])("denies a %s payload in both enforcement modes", async (_label, payload) => {
+    const preToolUse = await runHookInProcess("pre-tool-use", payload);
     expect(preToolUse.status).toBe(2);
     expect(JSON.parse(preToolUse.stdout)).toMatchObject({
       decision: "block",
@@ -1676,7 +1725,7 @@ describe("W2.7 malformed hook payloads", () => {
     });
     expect(preToolUse.stderr).toContain("[rule:malformed-hook-input]");
 
-    const permissionRequest = runHookCliProcess("permission-request", payload);
+    const permissionRequest = await runHookInProcess("permission-request", payload);
     expect(permissionRequest.status).toBe(2);
     expect(JSON.parse(permissionRequest.stdout)).toMatchObject({
       hookSpecificOutput: {
@@ -1686,10 +1735,27 @@ describe("W2.7 malformed hook payloads", () => {
     });
   });
 
+  it.each(["pre-tool-use", "permission-request"])("keeps malformed stdin denial at the %s process boundary", (hook) => {
+    const payload = '{"tool_name": "Bash", "tool_inp';
+    const result = runHookCliProcess(hook, payload);
+    expect(result.status).toBe(2);
+    const output = JSON.parse(result.stdout);
+    if (hook === "pre-tool-use") {
+      expect(output).toMatchObject({
+        decision: "block",
+        hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny" },
+      });
+    } else {
+      expect(output).toMatchObject({
+        hookSpecificOutput: { hookEventName: "PermissionRequest", decision: { behavior: "deny" } },
+      });
+    }
+    expect(result.stderr).toContain("[rule:malformed-hook-input]");
+  });
 });
 
 describe("hook diagnostics", () => {
-  it.each(["symlink", "hardlink", "fifo"])("does not write or block on a diagnostic %s", (kind) => {
+  it.each(["symlink", "hardlink", "fifo"])("does not write or block on a diagnostic %s", async (kind) => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-link-"));
     const target = join(directory, "target");
     const diagnosticsPath = join(directory, "diagnostics");
@@ -1698,8 +1764,8 @@ describe("hook diagnostics", () => {
       if (kind === "symlink") symlinkSync(target, diagnosticsPath);
       else if (kind === "hardlink") linkSync(target, diagnosticsPath);
       else execFileSync("mkfifo", [diagnosticsPath]);
-      const result = runHookCliProcess("pre-tool-use", "{}", {
-        ...process.env, PHAROS_HOOK_DIAGNOSTICS: "1", PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
+      const result = await runHookInProcess("pre-tool-use", "{}", {
+        PHAROS_HOOK_DIAGNOSTICS: "1", PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
       });
       expect(result.status).toBe(0);
       expect(readFileSync(target, "utf8")).toBe("unchanged");
@@ -1708,20 +1774,16 @@ describe("hook diagnostics", () => {
     }
   });
 
-  it("writes one secret-free record per hook invocation", () => {
+  it("writes one secret-free record per hook invocation", async () => {
     const directory = mkdtempSync(join(tmpdir(), "pharos-hook-diagnostics-on-"));
     const diagnosticsPath = join(directory, "hook-diagnostics.jsonl");
-    const env = {
-      ...process.env,
-      PHAROS_HOOK_DIAGNOSTICS: "1",
-      PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath,
-    };
+    const env = { PHAROS_HOOK_DIAGNOSTICS: "1", PHAROS_HOOK_DIAGNOSTICS_FILE: diagnosticsPath };
     const secrets = ["SECRET_ARGUMENT_91", "SECRET_CONTENT_52", "SECRET_SESSION_73"];
     const command = `git reset --hard HEAD ${secrets[0]}`;
 
     try {
       const results = [
-        runHookCliProcess(
+        await runHookInProcess(
           "pre-tool-use",
           JSON.stringify({
             hook_event_name: "PreToolUse",
@@ -1731,7 +1793,7 @@ describe("hook diagnostics", () => {
           }),
           env,
         ),
-        runHookCliProcess(
+        await runHookInProcess(
           "permission-request",
           JSON.stringify({
             session_id: secrets[2],
@@ -1743,13 +1805,13 @@ describe("hook diagnostics", () => {
           }),
           env,
         ),
-        runHookCliProcess("pre-tool-use", JSON.stringify({
+        await runHookInProcess("pre-tool-use", JSON.stringify({
           hook_event_name: "PreToolUse", tool_name: "Write",
           tool_input: { file_path: ".env.local", content: secrets[1] },
           session_id: secrets[2],
         }), env),
         // Exercise diagnostics independently of mutable/unmapped working-tree paths.
-        runHookCliProcess("session-start", JSON.stringify({ hook_event_name: "SessionStart", session_id: secrets[2] }),
+        await runHookInProcess("session-start", JSON.stringify({ hook_event_name: "SessionStart", session_id: secrets[2] }),
           env, ["--base", "HEAD", "--head", "HEAD"]),
       ];
       const contents = readFileSync(diagnosticsPath, "utf8");
