@@ -258,6 +258,42 @@ describe("syncFxRates", () => {
     expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBeNull();
   });
 
+  it("re-anchors a stale cached silver spot instead of republishing it", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const silverObservedAt = nowSec - 30;
+    mockFetch(fxMirrors({
+      gold: { body: { price: 2900, updatedAt: new Date(nowSec * 1000).toISOString() } },
+      silver: { body: { price: 50.378, updatedAt: new Date(silverObservedAt * 1000).toISOString() } },
+    }));
+
+    const previousRates = makeCompleteFxRates({ peggedGOLD: 2900, peggedSILVER: 40.448374 });
+    const previousMeta = makeFxRatesMeta(previousRates, {
+      usableSyncAt: nowSec - 60,
+      updatedAt: nowSec - 3600,
+    });
+    previousMeta.sourceUpdatedAtByPeg.peggedSILVER = nowSec - 26 * 3600;
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta: makeCacheRow(previousMeta, nowSec - 60),
+    });
+
+    const result = await syncFxRates(db);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.sources["gold-api.com"]).toBe("ok");
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining("Rejected peggedSILVER=50.378"));
+
+    const write = findCacheWrite(db, "fx-rates");
+    const cachedRates = JSON.parse(String(write?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(cachedRates.peggedSILVER).toBeCloseTo(50.378, 6);
+
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const cachedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceUpdatedAtByPeg: Record<string, number | null>;
+    };
+    expect(cachedMeta.sourceUpdatedAtByPeg.peggedSILVER).toBe(silverObservedAt);
+  });
+
   it("falls back to cached rates when frankfurter.dev is unavailable", async () => {
     mockFetch(fxMirrors({
       frankfurter: "unavailable",

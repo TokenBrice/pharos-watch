@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { derivePegRates } from "@shared/lib/peg-rates";
+import { MIN_PEER_MEDIAN_CONTRIBUTORS } from "@shared/lib/peg-reference-trust";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { validatePayloadWithSchema } from "./api-schema";
 import { USER_AGENT } from "./constants";
@@ -14,6 +15,7 @@ type MetalResolutionSource = "gold-api.com" | "commodity-peer-median" | "cached"
 
 interface CommodityPeerMedianReference {
   rates: Partial<Record<MetalPegKey, number>>;
+  counts: Partial<Record<MetalPegKey, number>>;
   updatedAt: number | null;
 }
 
@@ -46,18 +48,20 @@ function relativeDivergence(candidate: number, reference: number): number {
 
 function deriveCommodityPeerMedianRates(
   peggedAssets: Parameters<typeof derivePegRates>[0],
-): Partial<Record<MetalPegKey, number>> {
-  const { rates } = derivePegRates(peggedAssets, TRACKED_META_BY_ID);
+): Pick<CommodityPeerMedianReference, "rates" | "counts"> {
+  const { rates, counts } = derivePegRates(peggedAssets, TRACKED_META_BY_ID);
   const commodityRates: Partial<Record<MetalPegKey, number>> = {};
+  const commodityCounts: Partial<Record<MetalPegKey, number>> = {};
 
   for (const pegKey of ["peggedGOLD", "peggedSILVER"] as const) {
     const rate = rates[pegKey];
     if (typeof rate === "number" && Number.isFinite(rate) && rate > 0) {
       commodityRates[pegKey] = Number(rate.toFixed(6));
+      commodityCounts[pegKey] = counts[pegKey] ?? 0;
     }
   }
 
-  return commodityRates;
+  return { rates: commodityRates, counts: commodityCounts };
 }
 
 export async function loadCommodityPeerMedianReference(
@@ -66,13 +70,13 @@ export async function loadCommodityPeerMedianReference(
 ): Promise<CommodityPeerMedianReference> {
   const stablecoinsCacheResult = await loadStablecoinsCache(db, { mode: "lenient" });
   if (!hasUsableStablecoinsPayload(stablecoinsCacheResult)) {
-    return { rates: {}, updatedAt: null };
+    return { rates: {}, counts: {}, updatedAt: null };
   }
 
   const observedTimes: number[] = [];
   const peers = stablecoinsCacheResult.payload.peggedAssets.filter((asset) => {
     // Use the same contributor rules as the median, including supply and exclusions.
-    if (Object.keys(deriveCommodityPeerMedianRates([asset])).length === 0) return false;
+    if (Object.keys(deriveCommodityPeerMedianRates([asset]).rates).length === 0) return false;
     const freshness = validateCompositePricingSourceFreshness({
       source: asset.priceSource ?? "",
       observedAt: asset.priceObservedAt === undefined ? asset.priceUpdatedAt : asset.priceObservedAt,
@@ -85,7 +89,7 @@ export async function loadCommodityPeerMedianReference(
     return true;
   });
   return {
-    rates: deriveCommodityPeerMedianRates(peers),
+    ...deriveCommodityPeerMedianRates(peers),
     updatedAt: observedTimes.length > 0 ? Math.min(...observedTimes) : null,
   };
 }
@@ -106,12 +110,20 @@ function summarizeMetalSources(
 export async function resolveMetalReferenceRates(
   {
     prevRates,
+    prevRateIsFresh = () => true,
     commodityPeerMedian,
     syncStartSec,
     signal,
     validateRate,
   }: {
     prevRates: Record<string, number>;
+    /**
+     * Whether the previous per-peg observation is young enough to veto a
+     * replacement. A stale incumbent has no authority to reject a fresh,
+     * bounded, provider-dated quote; treating it as one deadlocks the metal
+     * feed after a real move larger than the prior-value delta limit.
+     */
+    prevRateIsFresh?: (pegKey: MetalPegKey) => boolean;
     commodityPeerMedian: CommodityPeerMedianReference;
     syncStartSec: number;
     signal?: AbortSignal;
@@ -119,13 +131,16 @@ export async function resolveMetalReferenceRates(
   },
 ): Promise<MetalsResolution> {
   const resolvedByPeg: Partial<Record<MetalPegKey, ResolvedMetalRate>> = {};
+  const priorRate = (pegKey: MetalPegKey): number | undefined =>
+    prevRateIsFresh(pegKey) ? prevRates[pegKey] : undefined;
 
   const resolvePeerMedian = (pegKey: MetalPegKey): ResolvedMetalRate | null => {
     const rate = commodityPeerMedian.rates[pegKey];
-    if (typeof rate !== "number" || rate <= 0) {
+    const count = commodityPeerMedian.counts[pegKey] ?? 0;
+    if (typeof rate !== "number" || rate <= 0 || count < MIN_PEER_MEDIAN_CONTRIBUTORS) {
       return null;
     }
-    if (!validateRate(pegKey, rate, prevRates[pegKey])) {
+    if (!validateRate(pegKey, rate, priorRate(pegKey))) {
       return null;
     }
     return {
@@ -150,7 +165,7 @@ export async function resolveMetalReferenceRates(
   const resolveMetal = (pegKey: MetalPegKey, candidate: z.infer<typeof MetalPriceSchema> | undefined): ResolvedMetalRate | null => {
     const candidateRate = candidate?.price;
     const peerMedian = resolvePeerMedian(pegKey);
-    if (typeof candidateRate === "number" && candidateRate > 0 && validateRate(pegKey, candidateRate, prevRates[pegKey])) {
+    if (typeof candidateRate === "number" && candidateRate > 0 && validateRate(pegKey, candidateRate, priorRate(pegKey))) {
       if (peerMedian) {
         const divergence = relativeDivergence(candidateRate, peerMedian.rate);
         if (divergence > METAL_CROSS_CHECK_MAX_DIVERGENCE) {

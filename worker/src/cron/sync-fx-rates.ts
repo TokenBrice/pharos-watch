@@ -4,7 +4,7 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { shouldAttemptFetch, recordOutcome } from "../lib/circuit-breaker";
 import type { ChainRpcConfig } from "../lib/chain-registry";
 import { runCadenceBucketPublication } from "../lib/cadence-bucket";
-import { loadFxRateState, type FxRatesMeta } from "../lib/fx-rate-state";
+import { getFxSourceStatus, loadFxRateState, type FxRatesMeta } from "../lib/fx-rate-state";
 import {
   EXPECTED_FX_PEG_KEYS,
   isValidFxRate,
@@ -12,7 +12,7 @@ import {
   PRIMARY_FX_CURRENCIES,
   SECONDARY_FX_CURRENCY_TO_PEG,
 } from "../lib/fx-config";
-import { loadCommodityPeerMedianReference, resolveMetalReferenceRates } from "../lib/fx-metals";
+import { loadCommodityPeerMedianReference, resolveMetalReferenceRates, type MetalPegKey } from "../lib/fx-metals";
 import {
   FxSyncRunState,
   persistFxSyncResult,
@@ -299,8 +299,19 @@ async function runFxRatePublication(
 
     const metalsDue = isFxSourceDue("metals", sourceLastSuccessAtBySource, syncStartSec);
     if (metalsDue) {
+      const prevMetalRateIsFresh = (pegKey: MetalPegKey): boolean => getFxSourceStatus(
+        prevState?.sourceUpdatedAtByPeg[pegKey] ?? null,
+        prevState?.sourceModeByPeg[pegKey],
+        syncStartSec,
+        {
+          pegKey,
+          cadence: prevState?.sourceCadenceByPeg[pegKey],
+          sourceDate: prevState?.sourceDateByPeg?.[pegKey] ?? null,
+        },
+      ) === "fresh";
       const metals = await resolveMetalReferenceRates({
         prevRates: syncState.prevRates,
+        prevRateIsFresh: prevMetalRateIsFresh,
         commodityPeerMedian,
         syncStartSec,
         signal,

@@ -6,10 +6,12 @@ Two-stage depeg detection pipeline for stablecoins. Stage 1 runs every 15 minute
 
 ## Methodology Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.42`<!-- GENERATED-END: methodology-version-depeg-detection -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-detection -->`v6.43`<!-- GENERATED-END: methodology-version-depeg-detection -->
 - **Runtime/version source:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/depeg-changelog/`
 - **Structured changelog:** `shared/data/methodology-changelogs/depeg-dews/`
+
+The shared `v6.43` release of 2026-11-02 requires at least three live same-metal contributors before a commodity peer median may stand in for spot. A one-coin median is the coin's own price and a two-coin median mirrors half of any real move onto the healthy peer, so those references fail closed as `non-authoritative-reference`. The `fx-rates` metals producer applies the same quorum before publishing a tracked commodity median, and a stale cached metal observation no longer vetoes a fresh, bounded, provider-dated spot quote; a retained cached value keeps its original observation clock. Detection thresholds, confirmation, recovery and DEWS weights are unchanged. Activation is 2026-11-03 00:00 UTC.
 
 The shared `v6.39` release of 2026-10-31 changes historical backfill extraction, not live detection: a deeper sample replaces an open backfill episode's peak only when another sample of that episode lands within 1,000 bps, so a lone wick between par readings cannot become the published peak. The public `depeg-history` dataset also appends `auditVerdict` from ledger provenance (`null` when none), so a reviewed dispute is exported with its verdict rather than as an unmarked depeg. Live thresholds, confirmation, recovery, PegScore and DEWS rules are unchanged; activation is 2026-10-31 00:00 UTC.
 
@@ -48,6 +50,8 @@ Confirmed events feed DDR's canonical incidents and immutable public forecasts o
 | `POOL_CHALLENGE_HIGH_TVL_USD` | $5,000,000 | Pending confirmation: replaces the second-group minimum but not the opposing vote. Live recovery: a single qualifying pool vetoes directly |
 
 `getDepegThresholdBps(pegType)` returns 100 for `peggedUSD`, 150 for all other peg types.
+
+`MIN_PEER_MEDIAN_CONTRIBUTORS` in `shared/lib/peg-reference-trust.ts` is the single quorum authority for peer-median references: non-USD fiat medians and commodity medians both require at least 3 live contributors, while a direct spot/FX reference does not need peers.
 
 Runtime-neutral deviation and directional-signal primitives live in `shared/lib/depeg-signals.ts`; Worker detection, confirmation, analytics, and historical backfills import that authority directly via `@shared/lib/depeg-signals`.
 
@@ -176,7 +180,7 @@ Validation gates (skip if any fail):
 - Price valid: observed, finite and > 0
 - Supply >= $1M (via `getCirculatingRawOrNull()`) for live event recording. Observed sub-floor supply, including zero, closes existing rows as `coverage-lost-supply` with `recovery_price = NULL`; unavailable supply keeps the lifecycle open and records blind coverage
 - Peg reference valid: finite and > 0
-- Non-USD fiat peg references use the live FX rate whenever it is available. A peer median is only a fallback when at least 3 live contributors remain; thin peer medians and empty live peer sets fail closed for that cycle
+- Non-USD fiat peg references use the live FX rate whenever it is available; a fiat peer median is only a fallback and needs at least 3 live contributors. Commodity references may use a peer median only once at least 3 live same-metal contributors are admitted, otherwise they use a direct spot rate when available and fail closed without one. A 1- or 2-coin gold/silver median never anchors deviation
 - Floating `VAR`/`OTHER` pegs have no authoritative reference — their peer median is another coin's level, not a peg — so signal derivation fails closed and they cannot open or mutate live depeg state
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh native-currency quote before mutating live state; a native quote inside the recovery band or pointing the other way vetoes the derived USD/FX onset for that cycle, while a threshold-crossing native quote can initiate a pending candidate when the primary USD-vs-reference path is still inside threshold
 - Every live native-currency quote passes one plausibility bound against its own par (`classifyNativeQuoteImplausibility()` in `worker/src/lib/native-quote-plausibility.ts`, built on the primary price-validation reference band and `DEPEG_EXTREME_MOVE_BPS`). A quote outside that bound is withheld unless an independent source family (trusted DEX protocol groups in Stage 1, the normalized canonical family at confirmation) shows its own implausible move in the same direction. A withheld sample is unavailable evidence with a machine-readable reason: it cannot open a pending candidate, suppress the primary path, deepen a peak, or recover an event

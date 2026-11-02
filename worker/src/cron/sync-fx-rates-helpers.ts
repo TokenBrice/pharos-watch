@@ -606,6 +606,16 @@ export class FxSyncRunState {
         existingUpdatedAt > 0 &&
         quote.updatedAt < existingUpdatedAt;
       const metalPegKey = isChainlinkMetalPegKey(pegKey);
+      // A stale incumbent may not veto a fresher round: its divergence is
+      // measured from an observation with no authority, and the quote keeps
+      // its own round clock below.
+      const existingReferenceIsStale = metalPegKey &&
+        existingUpdatedAt != null &&
+        getFxSourceStatus(existingUpdatedAt, this.sourceModeByPeg[pegKey], this.syncStartSec, {
+          pegKey,
+          cadence: this.sourceCadenceByPeg[pegKey],
+          sourceDate: this.sourceDateByPeg[pegKey] ?? null,
+        }) !== "fresh";
 
       if (quoteOlderThanCurrent && !metalPegKey) {
         this.recordCronEvent({
@@ -618,7 +628,7 @@ export class FxSyncRunState {
       }
 
       const existing = this.usableRates[pegKey];
-      if (existing != null && existing > 0) {
+      if (existing != null && existing > 0 && !existingReferenceIsStale) {
         const delta = Math.abs(quote.price - existing) / existing;
         if (delta > CHAINLINK_REFERENCE_MAX_DIVERGENCE) {
           this.recordCronEvent({
@@ -637,8 +647,8 @@ export class FxSyncRunState {
       }
 
       const normalized = Number(quote.price.toFixed(6));
-      if (this.validateRate(pegKey, normalized, this.prevRates[pegKey])) {
-        if (quoteOlderThanCurrent && metalPegKey && existing != null && existing > 0) {
+      if (this.validateRate(pegKey, normalized, existingReferenceIsStale ? undefined : this.prevRates[pegKey])) {
+        if (quoteOlderThanCurrent && metalPegKey && existing != null && existing > 0 && !existingReferenceIsStale) {
           this.recordCronEvent({
             eventType: "chainlink-older-metal-quote-validated",
             severity: "info",

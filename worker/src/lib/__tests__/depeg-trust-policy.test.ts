@@ -143,7 +143,9 @@ describe("isAuthoritativeDepegPegReference", () => {
     { name: "fallback-backed thin fiat", pegCurrency: "BRL", pegType: "peggedREAL", pegRateSource: "fallback", pegRateContributorCount: 2, expected: true },
     { name: "robust fiat median", pegCurrency: "EUR", pegType: "peggedEUR", pegRateSource: "median", pegRateContributorCount: 4, expected: true },
     { name: "USD reference", pegCurrency: "USD", pegType: "peggedUSD", pegRateSource: "median", pegRateContributorCount: 1, expected: true },
-    { name: "commodity reference", pegCurrency: "GOLD", pegType: "peggedGOLD", pegRateSource: "median", pegRateContributorCount: 1, expected: true },
+    { name: "thin commodity median", pegCurrency: "SILVER", pegType: "peggedSILVER", pegRateSource: "median", pegRateContributorCount: 2, expected: false },
+    { name: "commodity reference", pegCurrency: "GOLD", pegType: "peggedGOLD", pegRateSource: "median", pegRateContributorCount: 3, expected: true },
+    { name: "commodity spot fallback", pegCurrency: "SILVER", pegType: "peggedSILVER", pegRateSource: "fallback", pegRateContributorCount: 0, expected: true },
   ] as const satisfies ReadonlyArray<PegReferenceTrustInput & { name: string; expected: boolean }>)("checks $name authority", ({ name: _name, expected, ...reference }) => {
     expect(isAuthoritativeDepegPegReference(reference)).toBe(expected);
   });
