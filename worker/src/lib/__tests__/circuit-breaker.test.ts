@@ -14,6 +14,7 @@ import {
   resetCircuitBreakerStateForTests,
 } from "../circuit-breaker";
 import { CIRCUIT_SOURCE } from "../constants";
+import { CIRCUIT_OPEN_THRESHOLD, CIRCUIT_PROBE_INTERVAL_SEC } from "@shared/lib/ops-limits";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { countPublicImpactOpenCircuits, getCircuitImpactStatus } from "@shared/lib/public-health";
 
@@ -353,7 +354,11 @@ describe("circuit-breaker", () => {
       const { db, sqlite } = fixtures.open();
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:dwellir-evm", "not-json", 100);
       const outcome = await recordOutcome(db, "dwellir-evm", false);
-      expect(outcome.after).toMatchObject({ state: "open", consecutiveFailures: 1, lastFailureAt: Math.floor(Date.now() / 1000) });
+      expect(outcome.after).toMatchObject({
+        state: "open",
+        consecutiveFailures: CIRCUIT_OPEN_THRESHOLD + 1,
+        lastFailureAt: Math.floor(Date.now() / 1000),
+      });
       expect(await shouldAttemptFetch(db, "dwellir-evm")).toBe(false);
     });
 
@@ -361,7 +366,33 @@ describe("circuit-breaker", () => {
       const { db, sqlite } = fixtures.open();
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:coingecko-prices", "not-json", 100);
       expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
-      expect((await recordOutcome(db, "coingecko-prices", false)).after).toMatchObject({ state: "open", consecutiveFailures: 1 });
+      expect((await recordOutcome(db, "coingecko-prices", false)).after)
+        .toMatchObject({ state: "open", consecutiveFailures: CIRCUIT_OPEN_THRESHOLD + 1 });
+      expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
+    });
+
+    it("persists the repair on denial so the breaker can probe again", async () => {
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:coingecko-prices", "not-json", 100);
+      expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
+      const repaired = sqlite.prepare("SELECT value FROM cache WHERE key = 'circuit:coingecko-prices'").get() as { value: string };
+      expect(JSON.parse(repaired.value)).toMatchObject({
+        state: "open",
+        consecutiveFailures: CIRCUIT_OPEN_THRESHOLD,
+        openedAt: Math.floor(Date.now() / 1000),
+      });
+      vi.advanceTimersByTime((CIRCUIT_PROBE_INTERVAL_SEC + 1) * 1_000);
+      expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(true);
+    });
+
+    it("still denies admission when the fail-closed repair cannot be persisted", async () => {
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("circuit:coingecko-prices", "not-json", 100);
+      const prepare = db.prepare.bind(db);
+      vi.spyOn(db, "prepare").mockImplementation((sql) => {
+        if (sql.includes("INSERT INTO cache")) throw new Error("D1 unavailable");
+        return prepare(sql);
+      });
       expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
     });
 
@@ -376,7 +407,7 @@ describe("circuit-breaker", () => {
       expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);
       expect((await recordOutcome(db, "coingecko-prices", false)).after).toMatchObject({
         state: "open",
-        consecutiveFailures: 1,
+        consecutiveFailures: CIRCUIT_OPEN_THRESHOLD + 1,
         lastFailureAt: now,
       });
       expect(await shouldAttemptFetch(db, "coingecko-prices")).toBe(false);

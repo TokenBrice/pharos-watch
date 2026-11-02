@@ -1,5 +1,5 @@
 import {
-  getCircuitRecord,
+  getCircuitRecordForAdmission,
   recordOutcomeSafe,
   shouldAttemptFetch,
 } from "./circuit-breaker";
@@ -82,7 +82,7 @@ export async function recoverProviderOnNoCandidates(params: {
   diagnostics: PricingProviderAttemptDiagnostic[];
 }): Promise<void> {
   if (!params.db) return;
-  const record = await getCircuitRecord(params.db, params.circuitSource);
+  const { record } = await getCircuitRecordForAdmission(params.db, params.circuitSource);
   if (record.state === "closed") return;
   params.diagnostics.push(buildNoCandidatesDiagnostic(params.diagnostic));
   await recordOutcomeSafe(params.db, params.circuitSource, true);

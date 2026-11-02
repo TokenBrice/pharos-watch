@@ -1,6 +1,12 @@
-import { logWorkerEventArgs } from "../../lib/structured-log";
+import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
 import { invalidateMintBurnFlowCaches, readMintBurnWindowContext } from "../../lib/mint-burn-flows-service";
-import { isGrandfatheredMintBurnConfig, mintBurnDisabledReason, resolveMintBurnDisabledSymbols, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
+import {
+  isGrandfatheredMintBurnConfig,
+  mintBurnDisabledReason,
+  readMintBurnDisabledKeys,
+  resolveMintBurnDisabledSymbolPolicy,
+  syncMintBurnPublicationPolicy,
+} from "../../lib/mint-burn-publication";
 import { createBudget } from "../../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { loadMintBurnPriceContextBatch } from "../../lib/mint-burn-pipeline/context";
@@ -31,7 +37,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { getCircuitRecord } from "../../lib/circuit-breaker";
+import { getCircuitRecordForAdmission } from "../../lib/circuit-breaker";
 import {
   COVERAGE_REPAIR_REQUEST_LIMIT, COVERAGE_REPAIR_WINDOW_MS,
   loadMintBurnCoverageGaps, repairMintBurnCoverage,
@@ -96,23 +102,42 @@ export class MintBurnRun {
     const budget = createBudget(GLOBAL_BUDGET_LIMIT);
     const allActiveConfigs = includeActiveTrackedIds(MINT_BURN_CONFIGS, (config) => config.stablecoinId);
     const disabledConfigIds = normalizeDisabledConfigIdSet(options.disabledConfigIds);
-    const disabledSymbols = resolveMintBurnDisabledSymbols(
-      allActiveConfigs,
-      normalizeDisabledSymbolSet(options.disabledSymbols),
-    );
+    const operatorSymbols = normalizeDisabledSymbolSet(options.disabledSymbols);
+    const priorDisabledKeys = operatorSymbols.size > 0
+      ? await readMintBurnDisabledKeys(db)
+      : new Set<string>();
+    const symbolPolicy = resolveMintBurnDisabledSymbolPolicy(allActiveConfigs, operatorSymbols, priorDisabledKeys);
+    const disabledSymbols = symbolPolicy.symbols;
+    for (const ignored of symbolPolicy.ignored) {
+      logWorkerEvent({
+        scope: "handler",
+        job: jobName,
+        level: "warn",
+        event: "mint_burn_disabled_symbol_ignored",
+        message: "MINT_BURN_DISABLED_SYMBOLS entry names no single stablecoin; use MINT_BURN_DISABLED_IDS",
+        metadata: {
+          symbol: ignored.symbol,
+          reason: ignored.reason,
+          stablecoinIds: ignored.stablecoinIds,
+          retainedConfigKeys: ignored.retainedKeys,
+        },
+      });
+    }
 
     const allTrackableConfigs = allActiveConfigs.filter((config) => laneIncludesConfig(lane, config));
     let enabledConfigs: MintBurnContractConfig[] = [];
     const retentionConfigs: MintBurnContractConfig[] = [];
     const disabledConfigReasons = new Map<string, string>();
-    const disabledPublicationKeys: string[] = [];
+    const disabledPublicationKeys = new Set(symbolPolicy.retainedKeys);
 
     for (const config of allActiveConfigs) {
       const key = configKey(config);
       const reason = mintBurnDisabledReason(config, disabledConfigIds, disabledSymbols);
-      if (reason) {
-        disabledPublicationKeys.push(key);
-        if (laneIncludesConfig(lane, config)) disabledConfigReasons.set(key, reason);
+      if (reason || symbolPolicy.retainedKeys.has(key)) {
+        disabledPublicationKeys.add(key);
+        if (laneIncludesConfig(lane, config)) {
+          disabledConfigReasons.set(key, reason ?? "symbol-disabled-retained");
+        }
         continue;
       }
 
@@ -215,12 +240,14 @@ export class MintBurnRun {
     const lastBlocks = await readMintBurnSyncStateBatch(db, configs);
     const lastBlocksAfterRun = this.lastBlocksAfterRun = new Map(lastBlocks);
 
+    const tronCircuit = configs.some((config) => config.chain.chainId === "tron")
+      ? await getCircuitRecordForAdmission(db, CIRCUIT_SOURCE.TRONGRID)
+      : null;
     const tronOptions = {
       dwellirNative: options.dwellirNative,
       trongridApiKey: options.trongridApiKey,
       // Native outcomes are diagnostic-only; do not acquire another job's half-open probe.
-      trongridAllowed: configs.some((config) => config.chain.chainId === "tron")
-        ? (await getCircuitRecord(db, CIRCUIT_SOURCE.TRONGRID)).state === "closed" : false,
+      trongridAllowed: tronCircuit?.record.state === "closed",
       deadlineMs,
     };
     const chainContexts = await loadMintBurnChainContexts({
@@ -379,7 +406,9 @@ export class MintBurnRun {
     const tronReader = chainContexts.get("tron")?.tronReader;
     if (tronReader) {
       completion.metadata.tronRpc = { calls: tronReader.calls, failures: tronReader.failures,
-        conservationReason: phaseResult.configBreakdown.find((summary) => summary.chainId === "tron")?.conservationReason ?? null };
+        conservationReason: phaseResult.configBreakdown.find((summary) => summary.chainId === "tron")?.conservationReason ?? null,
+        circuitState: tronCircuit?.record.state ?? null,
+        circuitInvalid: tronCircuit?.invalid ?? false };
     }
     if (recalcError) completion.metadata.recalcError = recalcError;
     if (lane === "critical") {

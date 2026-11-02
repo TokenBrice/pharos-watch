@@ -27,24 +27,74 @@ export function mintBurnDisabledReason(
   return null;
 }
 
+export interface MintBurnIgnoredDisabledSymbol {
+  symbol: string;
+  reason: "unknown-symbol" | "shared-symbol";
+  stablecoinIds: string[];
+  /** Previously durable disabled keys for this ticker, preserved across the rollout. */
+  retainedKeys: string[];
+}
+
+export interface MintBurnDisabledSymbolPolicy {
+  symbols: Set<string>;
+  retainedKeys: Set<string>;
+  ignored: MintBurnIgnoredDisabledSymbol[];
+}
+
 /**
  * The legacy symbol switch is coin-scoped only when every config carrying that
  * symbol belongs to one stablecoin. A shared ticker (GUSD, MUSD, USDP, YUSD, …)
  * would otherwise withdraw an unrelated coin, so an ambiguous symbol disables
- * nothing; operators use MINT_BURN_DISABLED_IDS for that case.
+ * nothing; operators use MINT_BURN_DISABLED_IDS for that case. A deployment
+ * that already disabled the ticker before this rule keeps its durable keys, so
+ * the rollout cannot silently re-enable a quarantined leg.
  */
-export function resolveMintBurnDisabledSymbols(
+export function resolveMintBurnDisabledSymbolPolicy(
   configs: readonly MintBurnContractConfig[],
-  disabledSymbols: ReadonlySet<string>,
-): Set<string> {
+  operatorSymbols: ReadonlySet<string>,
+  priorDisabledKeys: ReadonlySet<string> = new Set(),
+): MintBurnDisabledSymbolPolicy {
   const idsBySymbol = new Map<string, Set<string>>();
+  const keysBySymbol = new Map<string, string[]>();
   for (const config of configs) {
     const symbol = config.symbol.toUpperCase();
     const ids = idsBySymbol.get(symbol) ?? new Set<string>();
     ids.add(config.stablecoinId.toLowerCase());
     idsBySymbol.set(symbol, ids);
+    const keys = keysBySymbol.get(symbol) ?? [];
+    keys.push(mintBurnConfigKey(config));
+    keysBySymbol.set(symbol, keys);
   }
-  return new Set([...disabledSymbols].filter((symbol) => (idsBySymbol.get(symbol)?.size ?? 0) <= 1));
+  const symbols = new Set<string>();
+  const retainedKeys = new Set<string>();
+  const ignored: MintBurnIgnoredDisabledSymbol[] = [];
+  for (const symbol of [...operatorSymbols].sort()) {
+    const ids = idsBySymbol.get(symbol);
+    if (!ids || ids.size === 0) {
+      ignored.push({ symbol, reason: "unknown-symbol", stablecoinIds: [], retainedKeys: [] });
+      continue;
+    }
+    if (ids.size > 1) {
+      const retained = (keysBySymbol.get(symbol) ?? []).filter((key) => priorDisabledKeys.has(key)).sort();
+      retained.forEach((key) => retainedKeys.add(key));
+      ignored.push({
+        symbol,
+        reason: "shared-symbol",
+        stablecoinIds: [...ids].sort(),
+        retainedKeys: retained,
+      });
+      continue;
+    }
+    symbols.add(symbol);
+  }
+  return { symbols, retainedKeys, ignored };
+}
+
+export function resolveMintBurnDisabledSymbols(
+  configs: readonly MintBurnContractConfig[],
+  disabledSymbols: ReadonlySet<string>,
+): Set<string> {
+  return resolveMintBurnDisabledSymbolPolicy(configs, disabledSymbols).symbols;
 }
 
 export interface MintBurnAdmissionRow {
@@ -69,6 +119,12 @@ export function decodeMintBurnDisabledKeys(policy: string): Set<string> {
     throw new Error("Invalid mint/burn publication policy");
   }
   return new Set(keys);
+}
+
+/** The durable disabled scope a rollout must not silently erase. */
+export async function readMintBurnDisabledKeys(db: D1Database): Promise<Set<string>> {
+  const row = await prepareMintBurnPublicationPolicy(db).first<{ disabled_keys: string }>();
+  return decodeMintBurnDisabledKeys(row?.disabled_keys ?? "[]");
 }
 
 /** The scheduled runtime is the authority for the env switch; readers share its durable policy. */

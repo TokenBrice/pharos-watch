@@ -10,7 +10,14 @@ import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC, readMintBurnWindowContext, resolveMintBurnWatermark, finalizeMintBurnFlowResponse } from "../mint-burn-flows-service";
-import { compactMintBurnPublication, isGrandfatheredMintBurnConfig, mintBurnDisabledReason, resolveMintBurnDisabledSymbols, syncMintBurnPublicationPolicy } from "../mint-burn-publication";
+import {
+  compactMintBurnPublication,
+  isGrandfatheredMintBurnConfig,
+  mintBurnDisabledReason,
+  resolveMintBurnDisabledSymbolPolicy,
+  resolveMintBurnDisabledSymbols,
+  syncMintBurnPublicationPolicy,
+} from "../mint-burn-publication";
 import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -143,6 +150,27 @@ describe("mint/burn durable publication admission", () => {
       const resolved = resolveMintBurnDisabledSymbols(MINT_BURN_CONFIGS, new Set([symbol]));
       expect(resolved.has(symbol), symbol).toBe(true);
     }
+  });
+
+  it("retains prior durable keys for an ambiguous symbol and names why it was ignored", () => {
+    const yusd = MINT_BURN_CONFIGS.filter((entry) => entry.symbol.toUpperCase() === "YUSD");
+    const yusdKeys = yusd.map(mintBurnConfigKey);
+    const resolution = resolveMintBurnDisabledSymbolPolicy(
+      MINT_BURN_CONFIGS,
+      new Set(["YUSD", "NOT-A-COIN"]),
+      new Set([yusdKeys[0]!]),
+    );
+    expect([...resolution.symbols]).toEqual([]);
+    expect([...resolution.retainedKeys]).toEqual([yusdKeys[0]]);
+    expect(resolution.ignored).toEqual([
+      { symbol: "NOT-A-COIN", reason: "unknown-symbol", stablecoinIds: [], retainedKeys: [] },
+      {
+        symbol: "YUSD",
+        reason: "shared-symbol",
+        stablecoinIds: [...new Set(yusd.map((entry) => entry.stablecoinId.toLowerCase()))].sort(),
+        retainedKeys: [yusdKeys[0]],
+      },
+    ]);
   });
 
   it("purges disabled publications, fences old writers, and restores the durable admission on re-enable", async () => {

@@ -472,7 +472,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "MINT_BURN_DISABLED_SYMBOLS",
     valueType: "string",
-    description: "Mint/burn runtime disable list by symbol (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy.",
+    description: "Mint/burn runtime disable list by symbol (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy. A ticker shared by more than one tracked stablecoin is ignored with a `mint_burn_disabled_symbol_ignored` warning; use `MINT_BURN_DISABLED_IDS` for those.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
