@@ -144,7 +144,7 @@ const PRICE_LEGEND: readonly CoverageLegendItem[] = [
   },
   {
     term: "Missing",
-    description: "No peg-summary row is currently available for this asset.",
+    description: "No observed market price is currently available for this asset.",
     kinds: ["missing"],
   },
 ] as const;

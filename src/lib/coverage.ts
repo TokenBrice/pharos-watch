@@ -104,6 +104,11 @@ export function buildCoverageFeatureSummary(
   const coveredCap = summarizeCoverageMarketCap(primaryRows);
   const scopedCap = summarizeCoverageMarketCap(denominatorRows);
   const breakdownMap = new Map<string, number>();
+  const denominatorBreakdownMap = new Map<string, number>();
+  // A narrowed denominator leaves known rows outside the ratio, so its cap
+  // share is partial even when every admitted row has an observed cap.
+  const marketCapComplete = scopedCap.complete && denominatorRows.length === knownRows.length;
+  const coverageUnavailable = scopedRows.length > 0 && knownRows.length === 0;
   const coveragePct =
     denominatorRows.length > 0 ? (primaryRows.length / denominatorRows.length) * 100 : scopedRows.length > 0 ? null : 0;
 
@@ -111,27 +116,35 @@ export function buildCoverageFeatureSummary(
     const kind = row.statuses[feature.key].kind;
     breakdownMap.set(kind, (breakdownMap.get(kind) ?? 0) + 1);
   }
+  for (const row of denominatorRows) {
+    const kind = row.statuses[feature.key].kind;
+    denominatorBreakdownMap.set(kind, (denominatorBreakdownMap.get(kind) ?? 0) + 1);
+  }
 
   return {
     feature,
     availableCount: primaryRows.length,
     totalCount: denominatorRows.length,
     coveragePct,
+    coverageUnavailable,
     coveredMcapUsd: coveredCap.totalUsd,
     marketCapObservedCount: scopedCap.observedCount,
-    marketCapComplete: scopedCap.complete,
+    marketCapComplete,
     mcapSharePct: coveredCap.totalUsd != null && scopedCap.totalUsd != null && scopedCap.totalUsd > 0
       ? (coveredCap.totalUsd / scopedCap.totalUsd) * 100
       : null,
     countLabel: feature.headlineCountLabel ?? "Coin count",
     coverageLabel:
       coveragePct == null
-        ? "Data n/a"
+        ? coverageUnavailable
+          ? "Data n/a"
+          : "n/a"
         : feature.headlineCoverageLabel?.(coveragePct) ?? `${coveragePct.toFixed(0)}% of active coins`,
-    shareLabel: scopedCap.complete
+    shareLabel: marketCapComplete
       ? feature.headlineShareLabel ?? "Active market-cap reach"
       : `${feature.headlineShareLabel ?? "Market-cap reach"} (known market cap)`,
     breakdown: feature.formatBreakdown(scopedRows, breakdownMap),
+    denominatorBreakdown: feature.formatBreakdown(denominatorRows, denominatorBreakdownMap),
   };
 }
 

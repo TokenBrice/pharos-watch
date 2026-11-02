@@ -78,14 +78,15 @@ function getStackedBarItems(summary: CoverageFeatureSummary): CoverageBreakdownI
     return nonZeroItems;
   }
 
-  const sourceDepthItems = nonZeroItems.filter((item) => PRICE_SOURCE_DEPTH_KEYS.has(item.key));
-  if (sourceDepthItems.length === 0) {
-    return nonZeroItems;
-  }
-
-  const priceOnlyItem = nonZeroItems.find((item) => item.key === "price-only");
-  const unavailableItem = nonZeroItems.find((item) => item.key === "data-unavailable");
-  return [...sourceDepthItems, priceOnlyItem, unavailableItem].filter((item): item is CoverageBreakdownItem => !!item);
+  // The price denominator admits only observed-depth Tracked rows plus Missing
+  // rows, so NAV price-only and unknown-depth rows must not be stacked. Data
+  // n/a stays visible like every other feature's outage segment, and the
+  // caller subtracts it from the not-covered gap.
+  const depthItems = summary.denominatorBreakdown.filter(
+    (item) => item.count > 0 && PRICE_SOURCE_DEPTH_KEYS.has(item.key),
+  );
+  const unavailableItem = summary.breakdown.find((item) => item.key === "data-unavailable" && item.count > 0);
+  return unavailableItem ? [...depthItems, unavailableItem] : depthItems;
 }
 
 export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotRowProps) {
@@ -101,6 +102,12 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
   const barTotalCount = stackedCount + missingCount;
   const missingPct = barTotalCount > 0 ? (missingCount / barTotalCount) * 100 : 0;
   const marketCapLabel = summary.mcapSharePct == null ? "n/a" : `${summary.mcapSharePct.toFixed(0)}%`;
+  const coverageLabel =
+    summary.coveragePct == null
+      ? summary.coverageUnavailable
+        ? "Data n/a"
+        : "n/a"
+      : `${summary.coveragePct.toFixed(0)}%`;
   const segmentLabel = [
     ...barItems.map((item) => `${item.label} ${item.count}`),
     missingCount > 0 ? `not covered ${missingCount}` : null,
@@ -205,9 +212,7 @@ export function CoverageFeatureSnapshotRow({ summary }: CoverageFeatureSnapshotR
             <span className="ml-0.5 text-sm font-medium text-muted-foreground">/{summary.totalCount}</span>
           </div>
           <div className="mt-1.5 pharos-label">
-            <span className="pharos-numeric">
-              {summary.coveragePct == null ? "Data n/a" : `${summary.coveragePct.toFixed(0)}%`}
-            </span>{" "}
+            <span className="pharos-numeric">{coverageLabel}</span>{" "}
             count
           </div>
         </div>

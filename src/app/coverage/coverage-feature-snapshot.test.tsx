@@ -31,6 +31,7 @@ describe("CoverageFeatureSnapshotRow", () => {
       availableCount: 1,
       totalCount: 2,
       coveragePct: 50,
+      coverageUnavailable: false,
       coveredMcapUsd: 800,
       marketCapObservedCount: 2,
       marketCapComplete: true,
@@ -39,6 +40,12 @@ describe("CoverageFeatureSnapshotRow", () => {
       coverageLabel: "50% with reviewed mint authority",
       shareLabel: "Reviewed mint-authority market-cap reach",
       breakdown: [
+        { key: "issuer-or-backend-mint", label: "issuer/backend", count: 1 },
+        { key: "unknown", label: "unknown", count: 1 },
+        { key: "score-concentrated", label: "Concentrated", count: 1 },
+        { key: "score-nr", label: "NR", count: 1 },
+      ],
+      denominatorBreakdown: [
         { key: "issuer-or-backend-mint", label: "issuer/backend", count: 1 },
         { key: "unknown", label: "unknown", count: 1 },
         { key: "score-concentrated", label: "Concentrated", count: 1 },
@@ -64,6 +71,7 @@ describe("CoverageFeatureSnapshotRow", () => {
       availableCount: 3,
       totalCount: 4,
       coveragePct: 75,
+      coverageUnavailable: false,
       coveredMcapUsd: 0,
       marketCapObservedCount: 4,
       marketCapComplete: true,
@@ -75,6 +83,10 @@ describe("CoverageFeatureSnapshotRow", () => {
         { key: "primary", label: "primary", count: 2 },
         { key: "legacy", label: "legacy", count: 1 },
         { key: "data-unavailable", label: "data n/a", count: 1 },
+      ],
+      denominatorBreakdown: [
+        { key: "primary", label: "primary", count: 2 },
+        { key: "legacy", label: "legacy", count: 1 },
       ],
     };
 
@@ -94,6 +106,7 @@ describe("CoverageFeatureSnapshotRow", () => {
       availableCount: 0,
       totalCount: 0,
       coveragePct: null,
+      coverageUnavailable: true,
       coveredMcapUsd: 0,
       marketCapObservedCount: 0,
       marketCapComplete: true,
@@ -102,6 +115,7 @@ describe("CoverageFeatureSnapshotRow", () => {
       coverageLabel: "Data n/a",
       shareLabel: "Active market-cap reach",
       breakdown: [{ key: "data-unavailable", label: "data n/a", count: 3 }],
+      denominatorBreakdown: [],
     };
 
     render(<CoverageFeatureSnapshotRow summary={summary} />);
@@ -110,7 +124,36 @@ describe("CoverageFeatureSnapshotRow", () => {
     expect(screen.queryByText("0%")).toBeNull();
   });
 
-  it("keeps a tracked row with unknown source depth out of the not-covered gap", () => {
+  it("reconciles the price depth bar with the narrowed denominator", () => {
+    const base = {
+      coin: makeStablecoinMeta(), marketCapUsd: 100, hasPegCoverage: true,
+      safetyScore: null, safetyRatingStatus: "not-rated" as const, dexCoverageClass: null,
+      hasYieldCoverage: false, flowCoverageStatus: null,
+    };
+    const navFlags = { ...makeStablecoinMeta().flags, navToken: true };
+    const feature = COVERAGE_FEATURES.find((entry) => entry.key === "price")!;
+    const summary = buildCoverageFeatureSummary(feature, [
+      buildCoverageRow({ ...base, consensusSources: ["a", "b", "c"] }),
+      buildCoverageRow({ ...base, coin: makeStablecoinMeta({ id: "unknown-depth" }) }),
+      buildCoverageRow({
+        ...base,
+        coin: makeStablecoinMeta({ id: "nav-only", flags: navFlags }),
+        hasPegCoverage: false,
+      }),
+      buildCoverageRow({ ...base, coin: makeStablecoinMeta({ id: "unpriced" }), currentPriceUnavailable: true }),
+    ]);
+    const { container } = render(<CoverageFeatureSnapshotRow summary={summary} />);
+
+    const bar = screen.getByRole("img");
+    // The denominator admits the known-depth tracked row and the uncovered row;
+    // price-only and unknown-depth rows stay outside it.
+    expect(summary.totalCount).toBe(2);
+    expect(bar.getAttribute("aria-label")).toContain("not covered 1");
+    expect(bar.getAttribute("aria-label")).not.toContain("price-only");
+    expect(container.textContent).not.toContain("tracked 2");
+  });
+
+  it("qualifies the price cap share when the denominator excludes active rows", () => {
     const base = {
       coin: makeStablecoinMeta(), marketCapUsd: 100, hasPegCoverage: true,
       safetyScore: null, safetyRatingStatus: "not-rated" as const, dexCoverageClass: null,
@@ -119,15 +162,43 @@ describe("CoverageFeatureSnapshotRow", () => {
     const feature = COVERAGE_FEATURES.find((entry) => entry.key === "price")!;
     const summary = buildCoverageFeatureSummary(feature, [
       buildCoverageRow({ ...base, consensusSources: ["a", "b", "c"] }),
-      buildCoverageRow({ ...base, coin: makeStablecoinMeta({ id: "unknown-depth" }) }),
+      buildCoverageRow({
+        ...base,
+        coin: makeStablecoinMeta({
+          id: "nav-only",
+          flags: { ...makeStablecoinMeta().flags, navToken: true },
+        }),
+        marketCapUsd: 900,
+        hasPegCoverage: false,
+      }),
     ]);
+    render(<CoverageFeatureSnapshotRow summary={summary} />);
+
+    expect(screen.getByText("of known cap")).toBeTruthy();
+  });
+
+  it("renders an empty price denominator as n/a rather than a data outage", () => {
+    const feature = COVERAGE_FEATURES.find((entry) => entry.key === "price")!;
+    const summary = buildCoverageFeatureSummary(feature, [
+      buildCoverageRow({
+        coin: makeStablecoinMeta({
+          id: "nav-only",
+          flags: { ...makeStablecoinMeta().flags, navToken: true },
+        }),
+        marketCapUsd: 100,
+        hasPegCoverage: false,
+        safetyScore: null,
+        safetyRatingStatus: "not-rated",
+        dexCoverageClass: null,
+        hasYieldCoverage: false,
+        flowCoverageStatus: null,
+      }),
+    ]);
+    expect(summary.coveragePct).toBeNull();
+    expect(summary.coverageUnavailable).toBe(false);
     const { container } = render(<CoverageFeatureSnapshotRow summary={summary} />);
 
-    const bar = screen.getByRole("img");
-    expect(bar.getAttribute("aria-label")).toContain("tracked 2");
-    expect(bar.getAttribute("aria-label")).not.toContain("not covered");
-    expect(container.textContent).not.toContain("not covered");
-    expect(bar.querySelectorAll("[title]")).toHaveLength(1);
+    expect(container.textContent).not.toContain("Data n/a");
   });
 
   it("labels observed-only snapshot ratios as known cap", () => {

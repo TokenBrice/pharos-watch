@@ -263,6 +263,12 @@ describe("coverage helpers", () => {
     expect(status.sourceCount).toBeUndefined();
   });
 
+  it("describes Missing as an absent observed price, not only an absent peg row", () => {
+    const missing = priceCoverageFeature.legendItems.find((item) => item.kinds.includes("missing"));
+
+    expect(missing?.description).toBe("No observed market price is currently available for this asset.");
+  });
+
   it("maps DEX coverage classes into user-facing labels", () => {
     expect(dexCoverageFeature.resolve("primary").label).toBe("Primary");
     expect(dexCoverageFeature.resolve("fallback").label).toBe("Fallback");
@@ -728,12 +734,42 @@ describe("coverage helpers", () => {
       totalCount: 3,
       coveredMcapUsd: 500,
       marketCapObservedCount: 3,
-      marketCapComplete: true,
+      // The narrowed denominator leaves NAV, unknown-depth and unavailable
+      // caps out of the ratio, so it is a known-cap share, not a full one.
+      marketCapComplete: false,
       mcapSharePct: (500 / 900) * 100,
     });
     expect(summary.coveragePct).toBeCloseTo(100 / 3, 10);
+    expect(summary.shareLabel).toContain("known market cap");
     expect(summary.breakdown).toContainEqual({ key: "price-only", label: "price-only", count: 1 });
     expect(summary.breakdown).toContainEqual({ key: "data-unavailable", label: "data n/a", count: 1 });
+  });
+
+  it("distinguishes an empty price denominator from unavailable price data", () => {
+    const rows = [
+      makeCoverageRow(["nav", "NAV"], {
+        coin: makeCoin({
+          flags: {
+            backing: "rwa-backed",
+            governance: "centralized",
+            pegCurrency: "USD",
+            yieldBearing: false,
+            rwa: true,
+            navToken: true,
+          },
+        }),
+      }),
+    ];
+
+    const summary = buildCoverageFeatureSummary(coverageFeature("price"), rows);
+
+    expect(summary).toMatchObject({
+      availableCount: 0,
+      totalCount: 0,
+      coveragePct: null,
+      coverageUnavailable: false,
+      coverageLabel: "n/a",
+    });
   });
 
   it("preserves unavailable subtotals and explicit-zero cap observations", () => {
@@ -1175,6 +1211,7 @@ describe("coverage helpers", () => {
     const summary = buildCoverageFeatureSummary(coverageFeature("yield"), rows);
 
     expect(summary.coveragePct).toBeNull();
+    expect(summary.coverageUnavailable).toBe(true);
     expect(summary.availableCount).toBe(0);
     expect(summary.totalCount).toBe(0);
     expect(summary.coveredMcapUsd).toBeNull();
