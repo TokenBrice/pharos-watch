@@ -30,6 +30,9 @@ export const ISOLATED_NODE_TESTS = [
   // runner first; under isolate:false a sibling suite that already imported
   // run-pr-checks leaves the real git-backed implementation cached.
   "scripts/__tests__/run-pr-checks-execution.test.ts",
+  // Its vi.mock("node:fs") read patch must reach the router's fs binding, which
+  // only happens when this file loads the router first in its own module cache.
+  "scripts/__tests__/pharos-change-contract.test.ts",
   "scripts/__tests__/serve-static-export.test.ts",
   "shared/lib/__tests__/psi-eligible.test.ts",
   "shared/lib/__tests__/stablecoin-id-registry.test.ts",

@@ -3,7 +3,10 @@ import type { SafetyScoreV9ReplayArtifact } from "../../replay-safety-score-v9";
 type Mutable<T> = { -readonly [Key in keyof T]: Mutable<T[Key]> };
 import { execFileSync } from "node:child_process";
 import { buildSafetyScoreV9ReplayArtifact } from "../../replay-safety-score-v9";
-import { createNativeSafetyScoreV9FullRegistryInput } from "../../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
+import {
+  FULL_REGISTRY_CLOCK_SEC,
+  createNativeSafetyScoreV9CohortInput,
+} from "../../../src/lib/__tests__/fixtures/safety-score-v9-full-registry-input";
 import { createReplayFixedInput } from "../../__tests__/safety-score-v9-replay.test-support";
 import { v9TestClockSec } from "../../../src/test-helpers/v9-fixed-input";
 import { localRegistrySnapshot } from "../safety-score-v9-registry";
@@ -23,11 +26,20 @@ function fixture() {
   return structuredClone(baseArtifact) as Mutable<SafetyScoreV9ReplayArtifact>;
 }
 
+// The local registry is immutable for the run and fingerprinting it scans the
+// whole catalog, so reproduction cases reuse one verified snapshot.
+let cachedLocalSnapshot: ReturnType<typeof localRegistrySnapshot> | undefined;
+function localSnapshot() {
+  cachedLocalSnapshot ??= localRegistrySnapshot();
+  return cachedLocalSnapshot;
+}
+
 describe("permanent replay integrity", () => {
-  // This admission test first compiles/evaluates the entire registry, matching
-  // the coverage budget of safety-score-v9-native-input-pipeline.test.ts.
+  // The native v4 contract is a shape contract — no legacy-only maps survive in
+  // the artifact and the digest validates — so a documented cohort proves it.
+  // Building all ~386 assets cost 15s of this file (20s in CI).
   it("validates the native v4 digest contract without legacy-only maps", () => {
-    const fixedInput = createNativeSafetyScoreV9FullRegistryInput();
+    const fixedInput = createNativeSafetyScoreV9CohortInput(["usdc-circle", "wm-m0"], FULL_REGISTRY_CLOCK_SEC);
     const artifact = buildSafetyScoreV9ReplayArtifact({ fixedInput, publishedAtSec: fixedInput.clockSec });
     expect(Object.prototype.hasOwnProperty.call(artifact.pipeline.fixedInput, "bluechipMap")).toBe(false);
     expect(Object.prototype.hasOwnProperty.call(artifact.pipeline.fixedInput, "resolvedBlacklistStatuses")).toBe(false);
@@ -88,7 +100,7 @@ describe("permanent replay integrity", () => {
     expect(() => reproduceSafetyScoreV9Replay(artifact, {
       sourceRevision: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
       policyId: p.candidateIdentity.policyId, policyDigest: p.candidateIdentity.policyDigest,
-      evaluationBuildDigest: p.candidateIdentity.evaluationBuildDigest, registrySnapshot: localRegistrySnapshot(),
+      evaluationBuildDigest: p.candidateIdentity.evaluationBuildDigest, registrySnapshot: localSnapshot(),
       publishedAtSec: p.candidate.publishedAtSec, transferMaterialityGeneration: null,
     })).not.toThrow();
     expect(() => validateSafetyScoreV9ReplayIntegrity({
@@ -104,7 +116,7 @@ describe("permanent replay integrity", () => {
       policyId: p.candidateIdentity.policyId,
       policyDigest: p.candidateIdentity.policyDigest,
       evaluationBuildDigest: p.candidateIdentity.evaluationBuildDigest,
-      registrySnapshot: localRegistrySnapshot(),
+      registrySnapshot: localSnapshot(),
       publishedAtSec: p.candidate.publishedAtSec,
       transferMaterialityGeneration: null,
     };

@@ -9,6 +9,7 @@ import {
   buildPermissionRequestHookOutput,
   buildPreToolUseHookOutput,
   buildRouteContext,
+  buildSessionStartHookOutput,
   classifyChangedFiles,
   classifyRouteContext,
   findShellCommandViolation,
@@ -23,6 +24,27 @@ import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
 import { buildFocusedCheckPlan } from "../maintenance/run-focused-checks.ts";
 // Match the router's lazy module boundary when extending the routing fixture.
 const { PATH_FAMILIES, DECLARED_TEST_OWNERSHIP } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
+
+/**
+ * Off-by-default routed-Markdown enlargement. The budget case below patches
+ * only reads of `docs/architecture.md` while it is armed, so every other read
+ * in this file (and fixture writes) passes through unchanged.
+ */
+const routedReadPatch = vi.hoisted(() => ({ enlargeArchitectureBytes: 0, architectureReads: 0 }));
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    readFileSync: ((path: Parameters<typeof actual.readFileSync>[0], ...args: unknown[]) => {
+      const value = (actual.readFileSync as (...readArgs: unknown[]) => unknown)(path, ...args);
+      if (routedReadPatch.enlargeArchitectureBytes > 0 && String(path).endsWith("/docs/architecture.md") && typeof value === "string") {
+        routedReadPatch.architectureReads++;
+        return value.replace("#### ADR-28\n", `#### ADR-28\n${"x".repeat(routedReadPatch.enlargeArchitectureBytes)}\n`);
+      }
+      return value;
+    }) as typeof actual.readFileSync,
+  };
+});
 
 function requireBlockingReason(output: unknown): string {
   if (typeof output !== "object" || output === null || !("reason" in output) || typeof output.reason !== "string") {
@@ -68,7 +90,11 @@ interface InProcessCliResult {
 /** Exercise the real CLI dispatcher in-process: same parser, output and exit codes. */
 async function runContractCli(
   argv: readonly string[],
-  { readStdin, env = {} }: { readStdin?: () => string; env?: Readonly<Record<string, string | undefined>> } = {},
+  { readStdin, env = {}, documents = routeDocuments }: {
+    readStdin?: () => string;
+    env?: Readonly<Record<string, string | undefined>>;
+    documents?: RouteContextDocumentCache;
+  } = {},
 ): Promise<InProcessCliResult> {
   const stdout: string[] = [];
   const stderr: string[] = [];
@@ -83,7 +109,7 @@ async function runContractCli(
   process.exitCode = undefined;
   Object.assign(process.env, env);
   try {
-    await runCliEntrypoint(() => runCli(argv, { readStdin, documents: routeDocuments }), {
+    await runCliEntrypoint(() => runCli(argv, { readStdin, documents }), {
       label: "pharos-change-contract",
       stderr: { write: (text: string) => { stderr.push(text); } },
     });
@@ -841,36 +867,27 @@ describe("route context budget warnings and fixture ratchets", () => {
     }
   });
 
-  it("warns on an enlarged required section without removing its reference or coupling hooks/checks to size", () => {
-    // Patch reads only in the child: no repository files or authored obligations
-    // change, and the real CLI exit path still sees the enlarged ADR-28 section.
-    const script = `
-      import fs from "node:fs";
-      import { syncBuiltinESMExports } from "node:module";
-      import * as router from "./scripts/ci/pharos-change-contract.ts";
-      import { buildFocusedCheckPlan } from "./scripts/maintenance/run-focused-checks.ts";
-      const original = fs.readFileSync;
-      let reads = 0;
-      fs.readFileSync = function(path, ...args) {
-        const value = original.call(this, path, ...args);
-        if (String(path).endsWith("/docs/architecture.md") && typeof value === "string") {
-          reads++;
-          return value.replace("#### ADR-28\\n", "#### ADR-28\\n" + "x".repeat(200_000) + "\\n");
-        }
-        return value;
-      };
-      syncBuiltinESMExports();
-      const files = ["shared/lib/safety-score-v9/evaluate-asset.ts"];
-      const contract = router.classifyChangedFiles(files);
+  it("warns on an enlarged required section without removing its reference or coupling hooks/checks to size", async () => {
+    // Patch only routed reads of one document: no repository files or authored
+    // obligations change, and the real CLI path still sees the enlarged ADR-28
+    // section. A private document cache keeps the enlargement out of other cases.
+    const documents: RouteContextDocumentCache = new Map();
+    const files = ["shared/lib/safety-score-v9/evaluate-asset.ts"];
+    routedReadPatch.enlargeArchitectureBytes = 200_000;
+    routedReadPatch.architectureReads = 0;
+    let result: InProcessCliResult;
+    try {
+      const contract = classifyChangedFiles(files);
       buildFocusedCheckPlan(files);
-      router.buildSessionStartHookOutput(contract);
-      router.buildPreToolUseHookOutput({ tool_name: "Read", tool_input: { file_path: "AGENTS.md" } });
-      router.buildPermissionRequestHookOutput({ tool_name: "Read", tool_input: { file_path: "AGENTS.md" } });
-      if (reads !== 0) throw new Error("Hooks/check planner opened routed Markdown");
-      router.runCli(["--file", files[0], "--json"]);
-      if (reads === 0) throw new Error("CLI did not account for the mutated required section");
-    `;
-    const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", script], { encoding: "utf8" });
+      buildSessionStartHookOutput(contract);
+      buildPreToolUseHookOutput({ tool_name: "Read", tool_input: { file_path: "AGENTS.md" } });
+      buildPermissionRequestHookOutput({ tool_name: "Read", tool_input: { file_path: "AGENTS.md" } });
+      expect(routedReadPatch.architectureReads, "hooks/check planner opened routed Markdown").toBe(0);
+      result = await runContractCli(["--file", files[0], "--json"], { documents });
+    } finally {
+      routedReadPatch.enlargeArchitectureBytes = 0;
+    }
+    expect(routedReadPatch.architectureReads, "CLI did not account for the mutated required section").toBeGreaterThan(0);
     expect(result.status, result.stderr).toBe(0);
     const output = JSON.parse(result.stdout);
     expect(output.context.status).toBe("over-budget");

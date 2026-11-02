@@ -49,18 +49,31 @@ function instrumentReads(db: D1Database, delayMs = 0) {
   return { reader, reads };
 }
 
+// The 397-card cohort is a real >4 MiB multi-fragment publication. Seeding it
+// costs ~0.8s (encode, hash, fragment insert), so the seeded database is
+// serialized once and restored per case: every case still owns an independent
+// copy of the same bytes.
+let cohortTemplate: Uint8Array | undefined;
+let cohortPublication: ReturnType<typeof makeWorkerSafetyScoreV9Publication> | undefined;
+
 async function seedCohort() {
-  const { sqlite, db } = database();
-  // Full wire-card shapes, with resolved research text, not a byte-only blob.
-  const cards = Array.from({ length: 397 }, (_, index) => {
-    const card: SafetyScoreV9CurrentCard = makeReportCardsV9Card({ id: `fixture-${index.toString().padStart(3, "0")}` });
-    card.witnessTexts = [`Asset ${index}: ${"Reviewed control and reserve evidence. ".repeat(220)}`];
-    card.evidence.reasons = [{ code: "unresolved-control-identity", message: "~0", path: "control:incidentState" }];
-    return card;
-  });
-  const publication = makeWorkerSafetyScoreV9Publication({ cards });
-  await persistAndMaterialize(db, currentInput(publication));
-  return { sqlite, db, publication };
+  if (cohortTemplate === undefined) {
+    const { sqlite, db } = database();
+    // Full wire-card shapes, with resolved research text, not a byte-only blob.
+    const cards = Array.from({ length: 397 }, (_, index) => {
+      const card: SafetyScoreV9CurrentCard = makeReportCardsV9Card({ id: `fixture-${index.toString().padStart(3, "0")}` });
+      card.witnessTexts = [`Asset ${index}: ${"Reviewed control and reserve evidence. ".repeat(220)}`];
+      card.evidence.reasons = [{ code: "unresolved-control-identity", message: "~0", path: "control:incidentState" }];
+      return card;
+    });
+    cohortPublication = makeWorkerSafetyScoreV9Publication({ cards });
+    await persistAndMaterialize(db, currentInput(cohortPublication));
+    cohortTemplate = sqlite.serialize();
+  }
+  const sqlite = new DatabaseSync(":memory:");
+  sqlite.deserialize(cohortTemplate);
+  databases.push(sqlite);
+  return { sqlite, db: createSqliteD1(sqlite), publication: cohortPublication! };
 }
 
 const databases: DatabaseSync[] = [];
