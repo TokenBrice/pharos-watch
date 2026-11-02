@@ -135,7 +135,7 @@ export async function runV9ResourceLane({
   env = process.env, listChangedFiles = gitChangedFiles,
 }: {
   argv?: readonly string[]; outputDirectory?: string; resourceDirectory?: string;
-  runCommand?: CommandImplementation<SpawnCommand>; env?: NodeJS.ProcessEnv;
+  runCommand?: CommandImplementation<SpawnCommand>; env?: Readonly<Record<string, string | undefined>>;
   listChangedFiles?: (root: string, baseSha: string) => readonly string[];
 } = {}): Promise<number> {
   const { values } = parseStrictCliArgs(argv);
