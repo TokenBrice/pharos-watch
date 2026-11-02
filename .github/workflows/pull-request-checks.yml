@@ -137,6 +137,19 @@ jobs:
         # reads only the committed reviews, the migration artefact and the
         # authoring metadata, so there is no generated input and no network.
         run: npm run check:incident-review-keys
+      - name: Check test corpus budget
+        # Anti-creep (H2/H3), once per PR and never inside check:structural:
+        # that selection skips test-only PRs, which are exactly the ones this
+        # gate exists for. File stats plus the frozen-base add diff; no
+        # generated input, no network. The owner label admits growth and the
+        # new-file cap for this run and never edits the committed budget.
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          TEST_BUDGET_OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'test-budget-override') }}
+        run: |
+          args=()
+          if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then args+=(--override); fi
+          npm run check:test-corpus-budget -- "${args[@]}"
       - name: Check new-asset evidence packet
         # One invocation on the prepared workspace, never per validation shard:
         # the receipt is bound to the post-addition registry fingerprint, so the

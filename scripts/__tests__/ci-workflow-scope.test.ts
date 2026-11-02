@@ -57,6 +57,36 @@ describe("CI workflow scope", () => {
       .toContain('if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
   });
 
+  it("runs the test corpus budget once per PR, outside the selection that skips test-only PRs", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
+      jobs: Record<string, { steps: Array<{ name?: string; uses?: string; run?: string; if?: string; env?: Record<string, string> }> }>;
+    };
+    const steps = workflow.jobs.prepare.steps;
+    const gate = steps.findIndex((step) => step.name === "Check test corpus budget");
+    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    expect(steps.filter((step) => step.run?.includes("check:test-corpus-budget"))).toHaveLength(1);
+    // Unconditional: check:structural's selection skips test-only PRs, so the
+    // gate must not inherit a condition from the classify step.
+    expect(steps[gate].if).toBeUndefined();
+    expect(steps[gate].env).toEqual({
+      PR_BASE_SHA: "${{ github.event.pull_request.base.sha }}",
+      TEST_BUDGET_OVERRIDE: "${{ contains(github.event.pull_request.labels.*.name, 'test-budget-override') }}",
+    });
+    expect(steps[gate].run?.match(/--override/g)).toHaveLength(1);
+    expect(steps[gate].run)
+      .toContain('if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
+
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
+      jobs: Record<string, { steps: Array<{ name?: string; run?: string }> }>;
+    };
+    // The schedule has no PR base, so the nightly declares H2-only instead of
+    // leaving the add diff to an implicit empty base.
+    expect(nightly.jobs["full-static"].steps.filter((step) => step.run?.startsWith("npm run check:test-corpus-budget")))
+      .toHaveLength(1);
+    expect(nightly.jobs["full-static"].steps.some((step) => step.run?.includes("check:test-corpus-budget -- --metrics-only")))
+      .toBe(true);
+  });
+
   it("feeds nightly Lighthouse trusted retained release data with a token confined to acquisition", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, {
@@ -132,6 +162,7 @@ describe("CI workflow scope", () => {
       "npm run lint", "npm run typecheck", "npm run typecheck:worker",
       "npm run lint:typed", "npm run typecheck:tests", "npm run check:structural",
       "npm run check:unused-code", "npm run check:sensitive-page-copy",
+      "npm run check:test-corpus-budget -- --metrics-only",
     ]);
     // Every mandatory command runs independently once the workspace is ready,
     // so one red step cannot mask the remaining mandatory outcomes.
@@ -163,7 +194,7 @@ describe("CI workflow scope", () => {
     expect(staticSteps.indexOf(aggregate!)).toBeGreaterThan(
       staticSteps.findIndex((step) => step.run === "npm run check:structural"));
     const outcomeEnv = Object.entries(aggregate!.env ?? {});
-    expect(outcomeEnv).toHaveLength(8);
+    expect(outcomeEnv).toHaveLength(9);
     for (const failedExpression of [undefined, ...outcomeEnv.map(([, expression]) => expression)]) {
       const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH ?? "" };
       for (const [key, expression] of outcomeEnv) {
