@@ -226,7 +226,7 @@ Coverage scratch/build exclusions are rooted at the checkout, so ancestor direct
 
 The accepted retained-pair replay case in [`replay-safety-score-v9.test.ts`](../worker/scripts/__tests__/replay-safety-score-v9.test.ts) verifies the complete embedded registry across export, replay, and rejection paths. It has an explicit 180-second per-test timeout, matching the heavy full-registry publication precedent in [`safety-score-v9-public-witness-texts.test.ts`](../worker/src/lib/__tests__/safety-score-v9-public-witness-texts.test.ts); V8 coverage and concurrent critical-suite work can push this case beyond 60 seconds. This does not change the global timeout or the separate V9 resource budgets.
 
-The unsafe-boundary probe in [`eslint-config-ratchet.test.ts`](../scripts/__tests__/eslint-config-ratchet.test.ts) has an explicit 60-second per-test timeout for cold type-aware ESLint project initialization under coverage; it retains all unsafe-operation rejection and reviewed-decoder assertions without raising the shared default.
+The unsafe-boundary probe in [`eslint-config-ratchet.test.ts`](../scripts/__tests__/eslint-config-ratchet.test.ts) typechecks through the single-file `tsconfig.eslint-ratchet.json` probe project (same `compilerOptions` as `tsconfig.typecheck.json`) instead of the ~2,300-file project graph; the full project stays covered by `lint:typed`. It keeps an explicit 60-second per-test timeout as headroom for cold ESLint/module initialization under coverage, and retains all unsafe-operation rejection and reviewed-decoder assertions without raising the shared default.
 
 Optional Poppler (`pdftotext` and `pdfinfo` on `PATH`) enables RLUSD assurance PDF extraction cases; compiler/manifest parity remains unconditional without it.
 
@@ -460,7 +460,7 @@ The inherited Next plugin scope includes CommonJS source files so global React H
 
 `Array.isArray` narrows an unknown collection to `any[]`, not validated elements. Keep decoded elements in an `unknown[]` view and narrow each member with the owning record guards or schema before accessing it; preserve existing element types on already-typed readonly collections. Explicitly parameterize empty `Map` and length-only `Array` constructors so their storage cannot introduce implicit `any`.
 
-Typed-lint regression probes use `ESLint.lintText` with an existing in-scope project member and disable automatic single-run inference so the parser typechecks the supplied text even when `CI=true`. Never create transient fixtures under `src/`: concurrent readiness scanners can enumerate them before cleanup and then fail when the files disappear.
+Typed-lint regression probes use `ESLint.lintText` against a member of the single-file `tsconfig.eslint-ratchet.json` probe project (identical `compilerOptions` to `tsconfig.typecheck.json`) and disable automatic single-run inference so the parser typechecks the supplied text even when `CI=true`. Never create transient fixtures under `src/`: concurrent readiness scanners can enumerate them before cleanup and then fail when the files disappear.
 
 Suppressions require a scoped justification, never a blanket subsystem exemption. Flat-config rule options replace rather than merge; use existing composed constants when extending restrictions. Import boundaries, nullable supply admission and React purity remain governed by the root rules and their executable lint authorities.
 
