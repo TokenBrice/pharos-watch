@@ -230,7 +230,40 @@ describe("weekly CI report", () => {
     expect(markdown).toContain("| `scripts/__tests__/slow.test.ts` | 25.0 s |");
     expect(markdown).toContain("3 test file(s) added.");
     expect(markdown).toContain("2 added file(s) could not be measured");
+    // The census caveat travels with the count: it is commit-dated, not merge-dated.
+    expect(markdown).toContain("Census is commit-dated:");
     expect(markdown).toContain("ratio 0.91");
+  });
+
+  it("states the census provenance with an empty window and omits it when no log was supplied", () => {
+    const empty = renderWeeklyReport(buildWeeklyReport({
+      since: "2026-10-26T00:00:00Z",
+      until: "2026-11-02T00:00:00Z",
+      runs,
+      jobs,
+      timings: null,
+      addedTestLog: "",
+      addedTestSizes: {},
+      codeBytes: null,
+      unavailable: [],
+      notes: [],
+    }));
+    expect(empty).toContain("No test file was added in the window.");
+    expect(empty).toContain("Census is commit-dated:");
+
+    const missing = renderWeeklyReport(buildWeeklyReport({
+      since: "2026-10-26T00:00:00Z",
+      until: "2026-11-02T00:00:00Z",
+      runs,
+      jobs,
+      timings: null,
+      addedTestLog: null,
+      addedTestSizes: {},
+      codeBytes: null,
+      unavailable: [{ section: "added-test-files", reason: "added-test-files:missing" }],
+      notes: [],
+    }));
+    expect(missing).not.toContain("Census is commit-dated:");
   });
 
   it("wires the CLI end to end and names every missing input", () => {

@@ -2,9 +2,11 @@
 
 import { readFileSync } from "node:fs";
 import { extname, relative, resolve } from "node:path";
+import ts from "typescript";
 import { collectSourceFiles, collectSourceFilesUnderRoot } from "../lib/source-files.mts";
 import { splitLines } from "../lib/doc-files.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+import { parseSourceFile } from "../lib/ts-ast.mts";
 import { parseAssignments, unquote } from "../lib/wrangler-toml.mjs";
 import { findDocContractDrift } from "../lib/doc-sync/contract-blocks";
 import {
@@ -59,17 +61,20 @@ const SOURCE_SCAN_EXTENSIONS = new Set([
   ".sh",
 ]);
 
-/** Runtime code reads env through a binding object (`env.X`, `runtime.env.X`)
- * or, for the static frontend, through inlined `process.env.NEXT_PUBLIC_*`.
- * Both must be declared in the manifest; the manifest renders `.env.example`.
- * `process.env` is excluded: those are Node/build variables, not bindings. */
-const RUNTIME_ENV_OBJECT_KEY_PATTERNS = [
-  /(?:^|[^A-Za-z0-9_$.])env\.([A-Z][A-Z0-9_]+)/g,
-  /(?<!process)\.env\.([A-Z][A-Z0-9_]+)/g,
-];
-const FRONTEND_PUBLIC_ENV_KEY_PATTERN = /process\.env\.(NEXT_PUBLIC_[A-Z][A-Z0-9_]*)/g;
+/** Runtime code reads env through a binding object (`env.X`, `env["X"]`,
+ * `const { X } = env`, `runtime.env.X`) or, for the static frontend, through
+ * inlined `process.env.NEXT_PUBLIC_*`. Both must be declared in the manifest;
+ * the manifest renders `.env.example`. `process.env` is excluded: those are
+ * Node/build variables, not bindings.
+ *
+ * The reads are collected from the TypeScript AST, not from text: a comment
+ * (`// env.FOO is optional`) or a string literal (`"env.FOO"`) is not a read,
+ * and demanding a registry declaration for one would fail an ordinary PR. */
 const RUNTIME_ENV_SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".mts"]);
-const TEST_SOURCE_PATH = /(?:^|\/)(?:__tests__|__mocks__|test-helpers)(?:\/|$)|\.(?:test|test-support)\.[cm]?[jt]sx?$/;
+const TEST_SOURCE_PATH =
+  /(?:^|\/)(?:__tests__|__mocks__|test-helpers)(?:\/|$)|\.test\.[cm]?[jt]sx?$|[-.]test-support\.[cm]?[jt]sx?$/;
+const PROCESS_OBJECT_NAME = "process";
+const FRONTEND_PUBLIC_ENV_PREFIX = "NEXT_PUBLIC_";
 
 const DOC_NON_ENV_TOKENS = new Set([
   "WORKER_RESERVED_ENV_KEYS",
@@ -343,11 +348,70 @@ export interface RuntimeEnvReadInventory {
   frontend: ReadonlySet<string>;
 }
 
-function collectRuntimeEnvReadKeys(filePaths: readonly string[], patterns: readonly RegExp[]): Set<string> {
+function walkAst(node: ts.Node, visit: (node: ts.Node) => void): void {
+  visit(node);
+  ts.forEachChild(node, (child) => walkAst(child, visit));
+}
+
+/**
+ * `env`, `runtime.env` and `context.env` name a binding object; `process.env`
+ * does not (it is a Node/build variable, and the frontend's public copy has its
+ * own collector below).
+ */
+function isEnvObjectExpression(node: ts.Expression): boolean {
+  if (ts.isIdentifier(node)) return node.text === "env";
+  if (!ts.isPropertyAccessExpression(node) || node.name.text !== "env") return false;
+  return !(ts.isIdentifier(node.expression) && node.expression.text === PROCESS_OBJECT_NAME);
+}
+
+function elementName(node: ts.PropertyAccessExpression | ts.ElementAccessExpression): string | null {
+  if (ts.isPropertyAccessExpression(node)) return node.name.text;
+  return ts.isStringLiteralLike(node.argumentExpression) ? node.argumentExpression.text : null;
+}
+
+/** `env.KEY`, `env["KEY"]`, `runtime.env.KEY` and `const { KEY } = env` binding reads. */
+export function collectRuntimeEnvObjectKeys(sourceFile: ts.SourceFile): Set<string> {
+  const keys = new Set<string>();
+  walkAst(sourceFile, (node) => {
+    if ((ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node)) && isEnvObjectExpression(node.expression)) {
+      const name = elementName(node);
+      if (name !== null) keys.add(name);
+      return;
+    }
+    if (!ts.isVariableDeclaration(node) || !ts.isObjectBindingPattern(node.name) || node.initializer === undefined) return;
+    if (!isEnvObjectExpression(node.initializer)) return;
+    for (const element of node.name.elements) {
+      if (element.dotDotDotToken || !ts.isIdentifier(element.name)) continue;
+      const property = element.propertyName ?? element.name;
+      if (ts.isIdentifier(property) || ts.isStringLiteralLike(property)) keys.add(property.text);
+    }
+  });
+  return keys;
+}
+
+/** Inlined `process.env.NEXT_PUBLIC_*` reads of the static frontend. */
+export function collectFrontendPublicEnvKeys(sourceFile: ts.SourceFile): Set<string> {
+  const keys = new Set<string>();
+  walkAst(sourceFile, (node) => {
+    if (!ts.isPropertyAccessExpression(node) && !ts.isElementAccessExpression(node)) return;
+    const receiver = node.expression;
+    if (!ts.isPropertyAccessExpression(receiver) || receiver.name.text !== "env") return;
+    if (!ts.isIdentifier(receiver.expression) || receiver.expression.text !== PROCESS_OBJECT_NAME) return;
+    const name = elementName(node);
+    if (name !== null && name.startsWith(FRONTEND_PUBLIC_ENV_PREFIX)) keys.add(name);
+  });
+  return keys;
+}
+
+function collectRuntimeEnvReadKeys(
+  filePaths: readonly string[],
+  collect: (sourceFile: ts.SourceFile) => Iterable<string>,
+): Set<string> {
   const keys = new Set<string>();
   for (const filePath of filePaths) {
-    const source = readFileSync(filePath, "utf8");
-    for (const pattern of patterns) addRegexMatches(keys, source, pattern);
+    for (const key of collect(parseSourceFile(filePath).sourceFile)) {
+      if (isEnvKeyCandidate(key)) keys.add(key);
+    }
   }
   return keys;
 }
@@ -385,9 +449,9 @@ export function collectRuntimeEnvReads(root = repoRoot): RuntimeEnvReadInventory
   }).filter((filePath) => !TEST_SOURCE_PATH.test(relative(root, filePath).replaceAll("\\", "/")));
 
   return {
-    worker: collectRuntimeEnvReadKeys(sourceFiles("worker/src"), RUNTIME_ENV_OBJECT_KEY_PATTERNS),
-    pages: collectRuntimeEnvReadKeys(sourceFiles("functions"), RUNTIME_ENV_OBJECT_KEY_PATTERNS),
-    frontend: collectRuntimeEnvReadKeys(sourceFiles("src"), [FRONTEND_PUBLIC_ENV_KEY_PATTERN]),
+    worker: collectRuntimeEnvReadKeys(sourceFiles("worker/src"), collectRuntimeEnvObjectKeys),
+    pages: collectRuntimeEnvReadKeys(sourceFiles("functions"), collectRuntimeEnvObjectKeys),
+    frontend: collectRuntimeEnvReadKeys(sourceFiles("src"), collectFrontendPublicEnvKeys),
   };
 }
 

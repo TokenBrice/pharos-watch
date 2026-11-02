@@ -11,6 +11,7 @@ import {
 } from "../lib/cli-args.mjs";
 import { collectSourceFilesUnderRoots } from "../lib/source-files.mts";
 import { getScriptKind } from "../lib/ts-ast.mts";
+import { ALWAYS_RUN_TEST_FILES, CRITICAL_TEST_FILES } from "../lib/critical-test-files.mts";
 
 const TEST_FILE_PATTERN = /\.(?:test|spec)\.[cm]?[jt]sx?$/;
 const REFERENCE_SCAN_EXTENSIONS = [".md", ".mdx", ".ts", ".tsx", ".mts", ".cts", ".mjs", ".cjs", ".js", ".jsx", ".json", ".yml", ".yaml"];
@@ -24,6 +25,14 @@ const HISTORICAL_REFERENCE_PREFIXES = [".github/artifacts/"];
 const SKIPPED_REFERENCE_FILES = new Set([".gitleaksignore", "package-lock.json"]);
 
 export type RetirementRegistryFormat = "json" | "source";
+
+/**
+ * The literal half of the protected set. `CRITICAL_TEST_FILES` is derived from
+ * the live import scan in `critical-ownership.mts`, so a security or auth owner
+ * test can be critical without any list in this file naming it; retiring one
+ * still needs `--replacement` so the behaviour keeps an owner.
+ */
+export const DERIVED_PROTECTED_TEST_FILES: ReadonlySet<string> = new Set([...ALWAYS_RUN_TEST_FILES, ...CRITICAL_TEST_FILES]);
 
 export interface RetirementRegistry {
   /** Repo-relative registry file; must exist or planning fails closed. */
@@ -136,6 +145,8 @@ export interface RetirementOptions {
   paths: readonly string[];
   replacement?: string;
   registries?: readonly RetirementRegistry[];
+  /** Defaults to the live `ALWAYS_RUN_TEST_FILES`/`CRITICAL_TEST_FILES`. */
+  derivedProtectedTestFiles?: Iterable<string>;
 }
 
 interface TextEdit {
@@ -309,6 +320,39 @@ function describeEdit(text: string, starts: readonly number[], edit: TextEdit): 
   return { before, after: [next.trimEnd()] };
 }
 
+/**
+ * `["exec", "--", "vitest", "run", <test files…>]` roster entries: the owning
+ * guard is the file list after `run`. Retiring the last one leaves syntactically
+ * valid arguments that silently run the wrong selection instead of the lane.
+ */
+function findEmptyVitestRunRosters(sourceFile: ts.SourceFile): number[] {
+  const lines: number[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isArrayLiteralExpression(node)) {
+      const elements = node.elements;
+      const runIndex = elements.findIndex((element, index) => {
+        const previous = index > 0 ? elements[index - 1] : undefined;
+        return ts.isStringLiteralLike(element)
+          && element.text === "run"
+          && previous !== undefined
+          && ts.isStringLiteralLike(previous)
+          && previous.text === "vitest";
+      });
+      if (runIndex >= 0) {
+        const testArguments = elements
+          .slice(runIndex + 1)
+          .filter((element) => !(ts.isStringLiteralLike(element) && element.text.startsWith("-")));
+        if (testArguments.length === 0) {
+          lines.push(sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1);
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return lines;
+}
+
 function verifyRegistryRewrite(registry: RetirementRegistry, next: string, retired: readonly string[]): string | null {
   if (registry.format === "json") {
     try {
@@ -332,6 +376,12 @@ function verifyRegistryRewrite(registry: RetirementRegistry, next: string, retir
   const reparsed = parseRegistry(registry.format, registry.file, next);
   for (const path of retired) {
     if (collectLiteralHits(reparsed, path).length > 0) return `${registry.file}: retirement edit would leave ${path} referenced`;
+  }
+  for (const line of findEmptyVitestRunRosters(reparsed)) {
+    return (
+      `${registry.file}:${line}: retirement edit would leave a \`vitest run\` roster entry with no test argument; ` +
+      "pass --replacement <existing test file> or edit the roster by hand"
+    );
   }
   return null;
 }
@@ -423,8 +473,10 @@ export function planTestRetirement({
   paths,
   replacement: rawReplacement,
   registries = RETIREMENT_REGISTRIES,
+  derivedProtectedTestFiles = DERIVED_PROTECTED_TEST_FILES,
 }: RetirementOptions): RetirementPlan {
   const errors: string[] = [];
+  const derivedProtected = new Set(derivedProtectedTestFiles);
   const retired = [...new Set(paths.map(normalizeRepoPath))].filter((path) => path.length > 0);
   if (retired.length === 0) errors.push("Provide at least one test path to retire.");
   for (const path of retired) {
@@ -450,6 +502,7 @@ export function planTestRetirement({
 
   const edits: RegistryEdit[] = [];
   const writes: Array<{ file: string; content: string }> = [];
+  const protectedRefusals = new Set<string>();
 
   for (const registry of registries) {
     const absolute = resolve(root, registry.file);
@@ -475,6 +528,7 @@ export function planTestRetirement({
           continue;
         }
         if (registry.protected === true && replacement === undefined) {
+          protectedRefusals.add(path);
           errors.push(
             `${path}: listed in ${registry.file}:${line} (${hit.owner}) as a protected contract; pass --replacement <existing test file> so the behaviour keeps an owner`,
           );
@@ -525,6 +579,19 @@ export function planTestRetirement({
       continue;
     }
     writes.push({ file: registry.file, content: applied.content });
+  }
+
+  // The literal registries above name only the enumerated half of the protected
+  // set; `CRITICAL_TEST_FILES` is derived from the live test scan, so a retired
+  // path outside every literal list still needs --replacement.
+  if (replacement === undefined) {
+    for (const path of retired) {
+      if (protectedRefusals.has(path) || !derivedProtected.has(path)) continue;
+      errors.push(
+        `${path}: derived into ALWAYS_RUN_TEST_FILES/CRITICAL_TEST_FILES by the test scan (critical-ownership.mts); ` +
+          "pass --replacement <existing test file> so the behaviour keeps an owner",
+      );
+    }
   }
 
   const manual = collectManualReferences(root, retired, writes);

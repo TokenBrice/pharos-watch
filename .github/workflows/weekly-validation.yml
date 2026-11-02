@@ -246,6 +246,11 @@ jobs:
         # is never needed; `--not <boundary>` keeps a boundary commit whose date
         # still falls inside the window from reporting its whole tree as added.
         # `--no-renames` walks trees only, as the checkout carries no blobs.
+        # `--diff-merges=first-parent` is what makes a merge report the files the
+        # branch actually added; without it a merge commit diffs nothing and a
+        # long-lived branch's work is missing from the census. `--since` prunes
+        # by commit date, which the report states so the count is not read as a
+        # merge-date census.
         # The log lands only after a successful walk: a broken fetch fails the
         # job instead of publishing an empty window as "nothing was added".
         run: |
@@ -263,7 +268,7 @@ jobs:
           work="$(mktemp "${RUNNER_TEMP}/ci-weekly-added.XXXXXX")"
           trap 'rm -f "${work}"' EXIT
           git log origin/main --not "${boundary}" --since="${since}" --diff-filter=A --no-renames \
-            --name-only --pretty=format:'COMMIT %H' > "${work}"
+            --diff-merges=first-parent --name-only --pretty=format:'COMMIT %H' > "${work}"
           mv "${work}" .tmp/ci-weekly/added-tests.log
 
       - name: Acquire the nightly test timings

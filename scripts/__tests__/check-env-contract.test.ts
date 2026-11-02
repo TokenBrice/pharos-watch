@@ -101,6 +101,27 @@ describe("check-env-contract runtime env reads", () => {
     });
   });
 
+  it("reads computed access, destructuring and runtime.env, and ignores comments and strings", () => {
+    withTempRepo("pharos-env-reads-ast", {
+      "worker/src/computed.ts": 'export const a = env["COMPUTED_KEY"];',
+      "worker/src/destructured.ts": "const { DESTRUCTURED_KEY, ALIASED_KEY: local } = env; export { local };",
+      "worker/src/nested.ts": "export const a = runtime.env.RUNTIME_KEY;",
+      "worker/src/noise.ts": [
+        "// env.COMMENT_KEY is optional and env.ANOTHER_KEY is not read",
+        'export const note = "env.STRING_KEY";',
+        "const template = `env.TEMPLATE_KEY`;",
+        "export { note, template };",
+      ].join("\n"),
+      "worker/src/lib/dash-test-support.ts": "export const s = env.SUPPORT_ONLY_KEY;",
+      "src/app/stablecoin/[id]/client-test-support.tsx": "export const f = process.env.NEXT_PUBLIC_HELPER_FLAG;",
+    }, (cwd) => {
+      const reads = collectRuntimeEnvReads(cwd);
+      // `ALIASED_KEY: local` reads ALIASED_KEY from the binding, not the local name.
+      expect([...reads.worker].sort()).toEqual(["ALIASED_KEY", "COMPUTED_KEY", "DESTRUCTURED_KEY", "RUNTIME_KEY"]);
+      expect([...reads.frontend]).toEqual([]);
+    });
+  });
+
   it("rejects an undeclared read or a key declared for another runtime", () => {
     expect(findUndeclaredRuntimeEnvKeys({
       worker: new Set(["CORS_ORIGIN"]),

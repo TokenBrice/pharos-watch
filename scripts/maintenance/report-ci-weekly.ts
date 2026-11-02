@@ -33,8 +33,10 @@ const USAGE = `Usage: node --experimental-strip-types scripts/maintenance/report
 Renders the weekly CI report from inputs the weekly workflow already fetched.
 --runs/--jobs are the GitHub runs and jobs of "Pull Request Checks"; --timings
 is the newest nightly test-timings artifact; --added-test-log is
-\`git log --diff-filter=A --name-only\` for the window. Missing optional inputs
-render as unavailable evidence, never as zero.`;
+\`git log --diff-filter=A --no-renames --diff-merges=first-parent --name-only\`
+for the window, so the census is commit-dated and a merge reports what its
+branch added. Missing optional inputs render as unavailable evidence, never as
+zero.`;
 
 /** Per-file budget: a test file slower than this on the nightly run is flagged. */
 export const SLOW_TEST_FILE_SECONDS = 10;
@@ -42,6 +44,15 @@ const REPORTED_SLOW_FILES = 10;
 const REPORTED_ADDED_FILES = 10;
 const CODE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]);
 const FAILED_RUN_CONCLUSIONS = new Set(["failure", "timed_out", "startup_failure"]);
+/**
+ * The added-file count must not be read as a merge-report: `git log --since`
+ * prunes by the commit that added each path (`--diff-merges=first-parent` makes
+ * a merge show what its branch added), so branch age — not merge time — decides
+ * membership.
+ */
+const ADDED_FILE_CENSUS_NOTE =
+  "Census is commit-dated: `git log --since` keeps the commits that added each path, so a file written " +
+  "weeks before its merge falls outside the window and a merge-only view would count differently.";
 
 export interface WeeklyRun {
   id: number;
@@ -439,7 +450,8 @@ export function renderWeeklyReport(report: WeeklyReport): string {
     }
   }
   lines.push("", "## Test files added in the window", "");
-  if (report.unavailable.some((entry) => entry.section === "added-test-files")) {
+  const addedLogSupplied = !report.unavailable.some((entry) => entry.section === "added-test-files");
+  if (!addedLogSupplied) {
     lines.push("Unavailable — the added-file log was not supplied for this window.");
   } else if (report.addedTotal === 0) {
     lines.push("No test file was added in the window.");
@@ -451,6 +463,7 @@ export function renderWeeklyReport(report: WeeklyReport): string {
       lines.push("", `${report.addedUnmeasured} added file(s) could not be measured from the checkout.`);
     }
   }
+  if (addedLogSupplied) lines.push("", ADDED_FILE_CENSUS_NOTE);
   lines.push("", "## Test / production bytes", "");
   if (report.codeBytes === null) {
     lines.push("Unavailable — the tracked file list could not be measured from this checkout.");

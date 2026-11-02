@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  DERIVED_PROTECTED_TEST_FILES,
   applyRetirementPlan,
   formatRetirementPlan,
   planTestRetirement,
@@ -16,6 +17,7 @@ const OWNER = "shared/lib/__tests__/weather-owner.test.ts";
 const NEXT = "shared/lib/__tests__/weather-owner-next.test.ts";
 const HELPER = "scripts/__tests__/old-helper.test.ts";
 const SOLO = "worker/src/lib/__tests__/solo-weather.test.ts";
+const LANE_ONLY = "scripts/__tests__/lane-only-helper.test.ts";
 const PAIR = ["worker/src/lib/__tests__/pair-a.test.ts", "worker/src/lib/__tests__/pair-b.test.ts"] as const;
 
 function fixture(): string {
@@ -31,6 +33,7 @@ function fixture(): string {
   writeText(root, OWNER, 'import { it } from "vitest";\nit("owns the weather contract", () => {});\n');
   writeText(root, NEXT, 'import { it } from "vitest";\nit("owns the retired weather contract", () => {});\n');
   writeText(root, HELPER, 'import { it } from "vitest";\nit("normalizes helper input", () => {});\n');
+  writeText(root, LANE_ONLY, 'import { it } from "vitest";\nit("owns the lane-only contract", () => {});\n');
   writeText(root, SOLO, 'import { it } from "vitest";\nit("owns the solo contract", () => {});\n');
   for (const pair of PAIR) writeText(root, pair, 'import { it } from "vitest";\nit("owns the pair contract", () => {});\n');
   writeText(root, "scripts/lib/critical-test-files.mts", [
@@ -100,6 +103,9 @@ function fixture(): string {
     "export const PR_DOC_COMMANDS = [",
     `  { id: "doc-ownership-invariants", program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts", "${HELPER}"] },`,
     "];",
+    "export const PR_GUARD_COMMANDS = [",
+    `  { id: "lane-only", program: "npm", args: ["exec", "--", "vitest", "run", "${LANE_ONLY}"] },`,
+    "];",
     "",
   ].join("\n"));
   writeText(root, "scripts/maintenance/run-v9-resource-lane.ts", `export const RESOURCE_TEST_FILE = "${OWNER}";\n`);
@@ -163,6 +169,40 @@ describe("retire-tests", () => {
     expect(isolation.match(/= \[\n\];/g)).toHaveLength(2);
     expect(isolation).toContain('WORKER_SHARED_TEST_FILES = [\n  "worker/src/cron/reserve-adapters/__tests__/kept-helper.test.ts"\n];');
     expect(read(root, "scripts/lib/pr-lanes.mts")).toContain('"scripts/__tests__/doc-ownership-registry.test.ts"]');
+  });
+
+  it("refuses a retirement that would leave a vitest run roster with no test argument", () => {
+    const root = fixture();
+    const plan = planTestRetirement({ root, paths: [LANE_ONLY] });
+
+    expect(plan.errors).toContain(
+      "scripts/lib/pr-lanes.mts:5: retirement edit would leave a `vitest run` roster entry with no test argument; " +
+        "pass --replacement <existing test file> or edit the roster by hand",
+    );
+    expect(plan.writes.map((write) => write.file)).not.toContain("scripts/lib/pr-lanes.mts");
+    expect(() => applyRetirementPlan(plan)).toThrow(/Refusing to apply/);
+    expect(existsSync(join(root, LANE_ONLY))).toBe(true);
+  });
+
+  it("refuses a derived critical owner test without --replacement", () => {
+    const root = fixture();
+    // The literal registries name the enumerated half; the live import scan
+    // derives the rest, so a derived-only critical path needs an owner too.
+    const plan = planTestRetirement({ root, paths: [HELPER], derivedProtectedTestFiles: [HELPER] });
+
+    expect(plan.errors).toContain(
+      `${HELPER}: derived into ALWAYS_RUN_TEST_FILES/CRITICAL_TEST_FILES by the test scan (critical-ownership.mts); ` +
+        "pass --replacement <existing test file> so the behaviour keeps an owner",
+    );
+    expect(plan.writes.map((write) => write.file)).not.toContain("scripts/lib/critical-test-files.mts");
+    expect(() => applyRetirementPlan(plan)).toThrow(/Refusing to apply/);
+    expect(existsSync(join(root, HELPER))).toBe(true);
+  });
+
+  it("protects the derived critical set by default", () => {
+    expect(DERIVED_PROTECTED_TEST_FILES.has("worker/src/telegram/webhook/__tests__/telegram-webhook-auth.test.ts")).toBe(true);
+    expect(DERIVED_PROTECTED_TEST_FILES.has("worker/src/lib/__tests__/auth.test.ts")).toBe(true);
+    expect(DERIVED_PROTECTED_TEST_FILES.has("scripts/__tests__/lane-only-helper.test.ts")).toBe(false);
   });
 
   it("refuses a protected always-run contract without --replacement", () => {

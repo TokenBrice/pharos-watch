@@ -49,7 +49,7 @@ describe("PR lane manifest", () => {
     expect(WORKFLOW.jobs["pr-gate"].needs).toEqual(["secrets", "prepare", "validation", "pages-artifact"]);
     expect(Object.keys(prepare.outputs ?? {})).toEqual([
       "docs_only", "docs_inline_succeeded", "matrix", "pages_critical_css_full_pass",
-      "playwright_firefox_required", "pages_artifact_required", "workspace_artifact_name",
+      "playwright_firefox_required", "pages_artifact_required", "test_corpus_budget", "workspace_artifact_name",
     ]);
     expect(validation.needs).toBe("prepare");
     expect(validation.strategy?.matrix).toBe("${{ fromJSON(needs.prepare.outputs.matrix) }}");
@@ -169,6 +169,7 @@ describe("PR lane manifest", () => {
       SECRETS_RESULT: "success", PREPARE_RESULT: "success", VALIDATION_RESULT: "success",
       DOCS_ONLY: "false", DOCS_INLINE_SUCCEEDED: "false",
       PAGES_ARTIFACT_REQUIRED: "false", PAGES_ARTIFACT_RESULT: "skipped",
+      TEST_CORPUS_BUDGET: "0",
     };
     const docs = { ...code, DOCS_ONLY: "true", DOCS_INLINE_SUCCEEDED: "true", VALIDATION_RESULT: "skipped" };
     const pages = { ...code, PAGES_ARTIFACT_REQUIRED: "true", PAGES_ARTIFACT_RESULT: "success" };
@@ -190,6 +191,11 @@ describe("PR lane manifest", () => {
       expect(() => run({ ...code, PAGES_ARTIFACT_REQUIRED: required })).toThrow();
     }
     expect(() => run({ ...code, PAGES_ARTIFACT_RESULT: "success" })).toThrow();
+    // The corpus budget is enforced from prepare's recorded exit code, and a
+    // missing code is a failure rather than a skipped gate.
+    for (const result of ["1", "", "missing"]) {
+      expect(() => run({ ...code, TEST_CORPUS_BUDGET: result }), `TEST_CORPUS_BUDGET=${result}`).toThrow();
+    }
   });
 
   it("transports every ignored bootstrap output through the required archive, not optional caches", () => {

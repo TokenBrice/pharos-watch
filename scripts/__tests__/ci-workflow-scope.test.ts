@@ -59,7 +59,11 @@ describe("CI workflow scope", () => {
 
   it("runs the test corpus budget once per PR, outside the selection that skips test-only PRs", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
-      jobs: Record<string, { steps: Array<{ name?: string; uses?: string; run?: string; if?: string; env?: Record<string, string> }> }>;
+      jobs: Record<string, {
+        outputs?: Record<string, string>;
+        env?: Record<string, string>;
+        steps: Array<{ name?: string; id?: string; uses?: string; run?: string; if?: string; env?: Record<string, string>; "continue-on-error"?: boolean }>;
+      }>;
     };
     const steps = workflow.jobs.prepare.steps;
     const gate = steps.findIndex((step) => step.name === "Check test corpus budget");
@@ -75,6 +79,19 @@ describe("CI workflow scope", () => {
     expect(steps[gate].run?.match(/--override/g)).toHaveLength(1);
     expect(steps[gate].run)
       .toContain('if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
+
+    // Non-fatal in prepare, because a failure there must not skip the validation
+    // lanes; the recorded exit code is what the PR gate enforces.
+    expect(steps[gate].id).toBe("test-corpus-budget");
+    expect(steps[gate]["continue-on-error"]).toBe(true);
+    expect(steps[gate].run).toContain('echo "exit-code=${status}" >> "${GITHUB_OUTPUT}"');
+    expect(steps[gate].run).toContain("GITHUB_STEP_SUMMARY");
+    expect(workflow.jobs.prepare.outputs?.test_corpus_budget).toBe("${{ steps.test-corpus-budget.outputs.exit-code }}");
+    const prGate = workflow.jobs["pr-gate"];
+    expect(prGate.env?.TEST_CORPUS_BUDGET).toBe("${{ needs.prepare.outputs.test_corpus_budget }}");
+    const require = prGate.steps.find((step) => step.name === "Require the manifest-selected validation path");
+    expect(require?.run).toContain('if [ "${TEST_CORPUS_BUDGET:-missing}" != "0" ]; then');
+    expect(require?.run).toContain("exit 1");
 
     const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, { steps: Array<{ name?: string; run?: string }> }>;
