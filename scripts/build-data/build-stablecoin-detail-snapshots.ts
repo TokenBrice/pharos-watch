@@ -12,7 +12,8 @@ import {
   detailSnapshotSourceUpdatedAt,
 } from "@shared/lib/detail-snapshot-inputs";
 import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE, DetailSnapshotInputsResponseSchema, type DetailSnapshotInputEntry } from "@shared/types/detail-snapshot-inputs";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import { classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import {
   StablecoinDetailResponseSchema,
@@ -46,6 +47,19 @@ const MAX_PARALLEL_BULK_REQUESTS = 6;
 export const DETAIL_SNAPSHOT_UI_STALE_AFTER_MS =
   API_FRESHNESS_MAX_AGE_SEC.stablecoins * FRESHNESS_RATIOS.DEGRADED * 1000;
 export const DETAIL_SNAPSHOT_STALE_REFRESH_LIMIT = 24;
+/**
+ * The detail route materializes a new generation only for an active catalog
+ * record; the predicate is the same one behind its `inactive catalog record`
+ * 404 (`isActiveStablecoinMeta`). A frozen or otherwise non-active row can only
+ * replay the cache row the bulk route already inspected.
+ */
+function detailGenerationRefreshable(coinId: string): boolean {
+  const meta = TRACKED_META_BY_ID.get(coinId);
+  return meta != null && isActiveStablecoinMeta(meta);
+}
+
+/** The bulk reason that proves the detail cache row itself is absent. */
+const DETAIL_CACHE_ABSENT_REASON = "detail-cache-missing" satisfies Extract<DetailSnapshotInputEntry, { status: "unavailable" }>["reason"];
 /**
  * Supply-history numbers keep 10 significant digits: far finer than any chart,
  * delta or depeg reading, and 1-1.5 KB lighter on a 90-day history, so the
@@ -346,12 +360,14 @@ export async function generateSnapshots(
     console.warn("[stablecoin-detail-snapshots] bulk requires SITE_API_SHARED_SECRET; using per-coin acquisition");
     source = "per-coin";
   }
-  const fetchCoin = async (id: string): Promise<SnapshotCoinLanes> => {
-    const detail = await fetchOptionalDetailSnapshotLane(
-      `coin detail for ${id}`,
-      resolveApiPathUrl(apiBase, API_PATHS.stablecoinDetail(id)),
-      StablecoinDetailResponseSchema,
-    );
+  const fetchCoin = async (id: string, detailLane = true): Promise<SnapshotCoinLanes> => {
+    const detail = detailLane
+      ? await fetchOptionalDetailSnapshotLane(
+        `coin detail for ${id}`,
+        resolveApiPathUrl(apiBase, API_PATHS.stablecoinDetail(id)),
+        StablecoinDetailResponseSchema,
+      )
+      : null;
     const history = await fetchOptionalDetailSnapshotLane(
       `supply history for ${id}`,
       resolveApiPathUrl(apiBase, API_PATHS.supplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS)),
@@ -374,7 +390,8 @@ export async function generateSnapshots(
   const assessedAt = options.generatedAt ?? Date.now();
   const acquisition: Array<{
     id: string;
-    source: "per-coin" | "bulk-cache-only" | "bulk-unavailable-fallback" | "bulk-stale-refresh";
+    source: "per-coin" | "bulk-cache-only" | "bulk-unavailable-fallback" | "bulk-unavailable-history-only"
+      | "bulk-stale-refresh";
     updatedAt: SnapshotCoinLanes["updatedAt"];
     bulkUpdatedAt?: SnapshotCoinLanes["updatedAt"];
     bulkSources?: DetailSnapshotInputEntry["sources"];
@@ -409,15 +426,29 @@ export async function generateSnapshots(
     const entries = responses.flat();
     staleCandidateCount = entries.filter((entry) =>
       entry.status === "available" && assessedAt - entry.updatedAt.liveSummary > DETAIL_SNAPSHOT_UI_STALE_AFTER_MS).length;
-    const refreshIds = new Set(selectStaleDetailSnapshotRefreshIds(entries, assessedAt, options.staleRefreshLimit));
+    // Only a refreshable record can spend the capped stale-refresh budget on new
+    // data; a non-active row would re-read the generation the bulk route returned.
+    const refreshIds = new Set(selectStaleDetailSnapshotRefreshIds(
+      entries.filter((entry) => detailGenerationRefreshable(entry.id)),
+      assessedAt,
+      options.staleRefreshLimit,
+    ));
     // Separate phases keep stale refreshes and unavailable fallbacks within the
     // same global cap. Each coin consumes detail then history sequentially.
     const acquired = await mapWithConcurrency(entries, MAX_PARALLEL_COIN_REQUESTS, async (entry) => {
       const refresh = refreshIds.has(entry.id);
-      const source: (typeof acquisition)[number]["source"] = entry.status === "unavailable" ? "bulk-unavailable-fallback"
+      // An inactive record with no cached detail row can only be answered by the
+      // route's inactive 404, so the reviewed fallback reads the history lane alone.
+      const historyOnly = entry.status === "unavailable" && entry.reason === DETAIL_CACHE_ABSENT_REASON
+        && !detailGenerationRefreshable(entry.id);
+      const source: (typeof acquisition)[number]["source"] = entry.status === "unavailable"
+        ? (historyOnly ? "bulk-unavailable-history-only" : "bulk-unavailable-fallback")
         : refresh ? "bulk-stale-refresh" : "bulk-cache-only";
       let lane: SnapshotCoinLanes;
-      if (entry.status === "unavailable" || refresh) {
+      if (historyOnly) {
+        console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; fetching supply history only`);
+        lane = await fetchCoin(entry.id, false);
+      } else if (entry.status === "unavailable" || refresh) {
         console.warn(`[stablecoin-detail-snapshots] ${source} for ${entry.id}; fetching per-coin`);
         // The route may serve the original generation while revalidating. Do not
         // mistake a successful GET for a new producer generation or re-stamp it.

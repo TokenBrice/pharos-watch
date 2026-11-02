@@ -89,6 +89,85 @@ describe("doc-sync Worker runtime documentation", () => {
   });
 });
 
+describe("doc-sync lane freshness matrix", () => {
+  const MATRIX = "docs/process/lane-freshness-matrix.md";
+  const matrix = readFileSync(resolve(ROOT, MATRIX), "utf8");
+
+  it("rejects a row whose budget drifts from the job interval", () => {
+    const drifted = matrix.replace(
+      "| `sync-stablecoins` | 15m | 30m C | critical |",
+      "| `sync-stablecoins` | 15m | 20m C | critical |",
+    );
+    expect(drifted).not.toBe(matrix);
+    expect(checkWithOverrides({ [MATRIX]: drifted })).toEqual([
+      { file: MATRIX, label: "sync-stablecoins freshness budget", expected: "30m (2x interval)", found: "20m" },
+    ]);
+  });
+
+  it("rejects a missing, duplicate or unknown matrix row", () => {
+    const missing = matrix.replace(/^\| `sync-stablecoins` .*$/m, "");
+    expect(checkWithOverrides({ [MATRIX]: missing })).toEqual([
+      { file: MATRIX, label: "missing job sync-stablecoins", expected: "matrix row", found: null },
+    ]);
+
+    const duplicated = `${matrix}\n| \`sync-stablecoins\` | 15m | 30m C | critical | Duplicate. |\n`;
+    expect(checkWithOverrides({ [MATRIX]: duplicated })).toEqual([
+      { file: MATRIX, label: "duplicate job sync-stablecoins", expected: "one matrix row", found: "sync-stablecoins" },
+    ]);
+
+    const unknown = `${matrix}\n| \`unknown-job\` | 15m | 30m C | critical | Unknown. |\n`;
+    expect(checkWithOverrides({ [MATRIX]: unknown })).toEqual([
+      { file: MATRIX, label: "unknown job unknown-job", expected: "a CRON_JOB_DEFINITIONS job", found: "unknown-job" },
+    ]);
+  });
+
+  it("rejects missing sign-off boundaries and owning prose", () => {
+    const matrixDrift = matrix
+      .replace("**Draft for owner sign-off.**", "")
+      .replace("## Sign-off boundary", "## Notes");
+    expect(checkWithOverrides({ [MATRIX]: matrixDrift })).toEqual([
+      { file: MATRIX, label: "draft sign-off boundary", expected: "**Draft for owner sign-off.**", found: null },
+      { file: MATRIX, label: "sign-off boundary heading", expected: "## Sign-off boundary", found: null },
+    ]);
+
+    const flowMap = "docs/data-flow-map.md";
+    expect(checkWithOverrides({
+      [flowMap]: readFileSync(resolve(ROOT, flowMap), "utf8").replace("past the 2h consumer budget", ""),
+    })).toEqual([
+      { file: flowMap, label: "Safety consumer budget", expected: "past the 2h consumer budget", found: null },
+    ]);
+  });
+});
+
+describe("doc-sync methodology owner sentences", () => {
+  it("rejects a methodology page owner doc that drops the shared rule", () => {
+    const pricing = "docs/pricing-pipeline.md";
+    const depeg = "docs/depeg-detection.md";
+    const pricingDrift = readFileSync(resolve(ROOT, pricing), "utf8").replace(
+      "the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration.",
+      "",
+    );
+    const depegDrift = readFileSync(resolve(ROOT, depeg), "utf8").replace(
+      "`confirm_required` direction changes keep the old-direction lifecycle open",
+      "",
+    );
+    expect(checkWithOverrides({ [pricing]: pricingDrift, [depeg]: depegDrift })).toEqual([
+      {
+        file: pricing,
+        label: "aggregate DEX suppression owner",
+        expected: "the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration.",
+        found: null,
+      },
+      {
+        file: depeg,
+        label: "confirm-required direction lifecycle owner",
+        expected: "`confirm_required` direction changes keep the old-direction lifecycle open",
+        found: null,
+      },
+    ]);
+  });
+});
+
 describe("doc-sync isolate-local state documentation", () => {
   it.each([
     "",

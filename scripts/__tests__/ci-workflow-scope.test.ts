@@ -57,6 +57,53 @@ describe("CI workflow scope", () => {
       .toContain('if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
   });
 
+  it("runs the test corpus budget once per PR, outside the selection that skips test-only PRs", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
+      jobs: Record<string, {
+        outputs?: Record<string, string>;
+        env?: Record<string, string>;
+        steps: Array<{ name?: string; id?: string; uses?: string; run?: string; if?: string; env?: Record<string, string>; "continue-on-error"?: boolean }>;
+      }>;
+    };
+    const steps = workflow.jobs.prepare.steps;
+    const gate = steps.findIndex((step) => step.name === "Check test corpus budget");
+    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    expect(steps.filter((step) => step.run?.includes("check:test-corpus-budget"))).toHaveLength(1);
+    // Unconditional: check:structural's selection skips test-only PRs, so the
+    // gate must not inherit a condition from the classify step.
+    expect(steps[gate].if).toBeUndefined();
+    expect(steps[gate].env).toEqual({
+      PR_BASE_SHA: "${{ github.event.pull_request.base.sha }}",
+      TEST_BUDGET_OVERRIDE: "${{ contains(github.event.pull_request.labels.*.name, 'test-budget-override') }}",
+    });
+    expect(steps[gate].run?.match(/--override/g)).toHaveLength(1);
+    expect(steps[gate].run)
+      .toContain('if [[ "${TEST_BUDGET_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
+
+    // Non-fatal in prepare, because a failure there must not skip the validation
+    // lanes; the recorded exit code is what the PR gate enforces.
+    expect(steps[gate].id).toBe("test-corpus-budget");
+    expect(steps[gate]["continue-on-error"]).toBe(true);
+    expect(steps[gate].run).toContain('echo "exit-code=${status}" >> "${GITHUB_OUTPUT}"');
+    expect(steps[gate].run).toContain("GITHUB_STEP_SUMMARY");
+    expect(workflow.jobs.prepare.outputs?.test_corpus_budget).toBe("${{ steps.test-corpus-budget.outputs.exit-code }}");
+    const prGate = workflow.jobs["pr-gate"];
+    expect(prGate.env?.TEST_CORPUS_BUDGET).toBe("${{ needs.prepare.outputs.test_corpus_budget }}");
+    const require = prGate.steps.find((step) => step.name === "Require the manifest-selected validation path");
+    expect(require?.run).toContain('if [ "${TEST_CORPUS_BUDGET:-missing}" != "0" ]; then');
+    expect(require?.run).toContain("exit 1");
+
+    const nightly = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
+      jobs: Record<string, { steps: Array<{ name?: string; run?: string }> }>;
+    };
+    // The schedule has no PR base, so the nightly declares H2-only instead of
+    // leaving the add diff to an implicit empty base.
+    expect(nightly.jobs["full-static"].steps.filter((step) => step.run?.startsWith("npm run check:test-corpus-budget")))
+      .toHaveLength(1);
+    expect(nightly.jobs["full-static"].steps.some((step) => step.run?.includes("check:test-corpus-budget -- --metrics-only")))
+      .toBe(true);
+  });
+
   it("feeds nightly Lighthouse trusted retained release data with a token confined to acquisition", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, {
@@ -132,6 +179,7 @@ describe("CI workflow scope", () => {
       "npm run lint", "npm run typecheck", "npm run typecheck:worker",
       "npm run lint:typed", "npm run typecheck:tests", "npm run check:structural",
       "npm run check:unused-code", "npm run check:sensitive-page-copy",
+      "npm run check:test-corpus-budget -- --metrics-only",
     ]);
     // Every mandatory command runs independently once the workspace is ready,
     // so one red step cannot mask the remaining mandatory outcomes.
@@ -163,7 +211,7 @@ describe("CI workflow scope", () => {
     expect(staticSteps.indexOf(aggregate!)).toBeGreaterThan(
       staticSteps.findIndex((step) => step.run === "npm run check:structural"));
     const outcomeEnv = Object.entries(aggregate!.env ?? {});
-    expect(outcomeEnv).toHaveLength(8);
+    expect(outcomeEnv).toHaveLength(9);
     for (const failedExpression of [undefined, ...outcomeEnv.map(([, expression]) => expression)]) {
       const env: NodeJS.ProcessEnv = { NODE_ENV: "test", PATH: process.env.PATH ?? "" };
       for (const [key, expression] of outcomeEnv) {
@@ -688,7 +736,9 @@ describe("CI workflow scope", () => {
       expect(setupOf(nightly.jobs[job])?.with, job).toMatchObject({ "node-modules-cache": "true" });
     }
     for (const [job, definition] of Object.entries(weekly.jobs)) {
-      if (job === "gitleaks") continue;
+      // These jobs install nothing: gitleaks imports only Node builtins and the
+      // CI report renders from workflow-fetched files (asserted below).
+      if (job === "gitleaks" || job === "ci-report") continue;
       expect(setupOf(definition)?.with, job).toMatchObject({ "node-modules-cache": "true" });
     }
     // The history-scan job imports only Node builtins; it has no workspace setup.
@@ -762,6 +812,43 @@ describe("CI workflow scope", () => {
     const red = nightly.jobs["nightly-red"];
     expect(red.needs).toContain("test-plan-parity");
     expect(red.env?.TEST_PLAN_PARITY_RESULT).toBe("${{ needs.test-plan-parity.result }}");
+  });
+
+  it("publishes the weekly CI report from a main-only workflow-fed job", () => {
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as Workflow;
+    const job = weekly.jobs["ci-report"];
+    // Branch evidence never reaches the single owned issue.
+    expect(job.if).toBe("${{ github.ref == 'refs/heads/main' }}");
+    expect(job.permissions).toEqual({ contents: "read", actions: "read", issues: "write" });
+    expect(job.needs).toBeUndefined();
+    // No dependents: a telemetry failure cannot fail another weekly job.
+    for (const [name, definition] of Object.entries(weekly.jobs)) {
+      if (name === "ci-report") continue;
+      expect(definition.needs ?? [], name).not.toContain("ci-report");
+    }
+
+    const steps = job.steps ?? [];
+    // The token is confined to the gh-only steps; the renderer that parses
+    // repository and API content never sees it.
+    const tokenSteps = steps.filter((step) => step.env?.GH_TOKEN !== undefined);
+    expect(tokenSteps.map((step) => step.id)).toEqual(["window", "timings", "publish"]);
+    for (const step of tokenSteps) expect(step.run ?? "").not.toMatch(/\b(npm|npx)\b/);
+    const render = steps.find((step) => step.name === "Render the weekly report");
+    expect(render?.env?.GH_TOKEN).toBeUndefined();
+    expect(render?.run).toContain("scripts/maintenance/report-ci-weekly.ts");
+    // Advisory evidence only: a missing nightly timing artifact must not red the
+    // job before the report names the section unavailable.
+    expect(steps.find((step) => step.id === "timings")?.["continue-on-error"]).toBe(true);
+    // The report installs nothing, so it restores no dependency cache.
+    expect(steps.some((step) => step.uses === "$/.github/actions/setup-workspace")).toBe(false);
+    // One stable issue identity: the locator, the edit and the create all name
+    // the same title, and the label is created with the issue.
+    const publish = steps.find((step) => step.id === "publish")?.run ?? "";
+    const titles = [...publish.matchAll(/(?:--title|select\(\.title ==) "([^"]+)"/g)].map((match) => match[1]);
+    expect(titles.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(titles)).toEqual(new Set(["Weekly CI report"]));
+    expect(publish).toContain("ci:weekly-report");
+    expect(publish).not.toContain("gh issue comment");
   });
 
   it("opens the nightly-red issue on the first red run and never closes it on cancellation", () => {

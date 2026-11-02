@@ -4,12 +4,15 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  collectRuntimeEnvReads,
   collectSourceEnvKeys,
   findEnvExamplePolicyErrors,
+  findUndeclaredRuntimeEnvKeys,
   findWranglerBindingContractErrors,
   getWorkerEnvBindings,
   parseWranglerWorkerConfigBindings,
 } from "../ci/check-env-contract";
+import { withTempRepo } from "./helpers/test-state";
 
 function withTempEnvSource<T>(source: string, run: (filePath: string) => T, filename = "env.ts"): T {
   const dir = mkdtempSync(join(tmpdir(), "pharos-env-contract-"));
@@ -81,6 +84,66 @@ describe("check-env-contract source references", () => {
     });
   });
 
+});
+
+describe("check-env-contract runtime env reads", () => {
+  it("collects binding reads per runtime and only NEXT_PUBLIC_* from the static frontend", () => {
+    withTempRepo("pharos-env-reads", {
+      "worker/src/runtime.ts": "export const x = env.WORKER_KEY; export const y = process.env.NODE_ENV;",
+      "worker/src/__tests__/runtime.test.ts": "export const z = env.TEST_ONLY_KEY;",
+      "functions/proxy.ts": "export const x = context.env.PAGES_KEY;",
+      "src/lib/flags.ts": "export const a = process.env.NEXT_PUBLIC_FEATURE; export const b = process.env.PHAROS_API_KEY;",
+    }, (cwd) => {
+      const reads = collectRuntimeEnvReads(cwd);
+      expect([...reads.worker]).toEqual(["WORKER_KEY"]);
+      expect([...reads.pages]).toEqual(["PAGES_KEY"]);
+      expect([...reads.frontend]).toEqual(["NEXT_PUBLIC_FEATURE"]);
+    });
+  });
+
+  it("reads computed access, destructuring and runtime.env, and ignores comments and strings", () => {
+    withTempRepo("pharos-env-reads-ast", {
+      "worker/src/computed.ts": 'export const a = env["COMPUTED_KEY"];',
+      "worker/src/destructured.ts": "const { DESTRUCTURED_KEY, ALIASED_KEY: local } = env; export { local };",
+      "worker/src/nested.ts": "export const a = runtime.env.RUNTIME_KEY;",
+      "worker/src/noise.ts": [
+        "// env.COMMENT_KEY is optional and env.ANOTHER_KEY is not read",
+        'export const note = "env.STRING_KEY";',
+        "const template = `env.TEMPLATE_KEY`;",
+        "export { note, template };",
+      ].join("\n"),
+      "worker/src/lib/dash-test-support.ts": "export const s = env.SUPPORT_ONLY_KEY;",
+      "src/app/stablecoin/[id]/client-test-support.tsx": "export const f = process.env.NEXT_PUBLIC_HELPER_FLAG;",
+    }, (cwd) => {
+      const reads = collectRuntimeEnvReads(cwd);
+      // `ALIASED_KEY: local` reads ALIASED_KEY from the binding, not the local name.
+      expect([...reads.worker].sort()).toEqual(["ALIASED_KEY", "COMPUTED_KEY", "DESTRUCTURED_KEY", "RUNTIME_KEY"]);
+      expect([...reads.frontend]).toEqual([]);
+    });
+  });
+
+  it("rejects an undeclared read or a key declared for another runtime", () => {
+    expect(findUndeclaredRuntimeEnvKeys({
+      worker: new Set(["CORS_ORIGIN"]),
+      pages: new Set(["DB"]),
+      frontend: new Set(["NEXT_PUBLIC_API_BASE"]),
+    })).toEqual([]);
+
+    expect(findUndeclaredRuntimeEnvKeys({
+      worker: new Set(["UNDECLARED_WORKER_KEY", "SITE_API_ORIGIN"]),
+      pages: new Set(),
+      frontend: new Set(),
+    })).toEqual([
+      expect.stringContaining("Worker runtime reads undeclared env key SITE_API_ORIGIN"),
+      expect.stringContaining("Worker runtime reads undeclared env key UNDECLARED_WORKER_KEY"),
+    ]);
+
+    expect(findUndeclaredRuntimeEnvKeys({
+      worker: new Set(),
+      pages: new Set(),
+      frontend: new Set(["NEXT_PUBLIC_UNDECLARED"]),
+    })).toEqual([expect.stringContaining("Frontend build reads undeclared env key NEXT_PUBLIC_UNDECLARED")]);
+  });
 });
 
 describe("check-env-contract .env.example content policy", () => {

@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { execFileSync } from "node:child_process";
-import { dirname, extname, isAbsolute, join, matchesGlob, relative, resolve } from "node:path";
+import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 
 import { collectSourceFilesUnderRoot } from "./source-files.mts";
+import { cachedGlobMatcher } from "./glob-matcher.mts";
 import { resolveLocalPackageImport } from "./package-imports.mts";
 
 const TEST_SCAN_ROOTS = [
@@ -164,16 +165,34 @@ export const EXECUTABLE_TEST_PROJECTS = [
   { name: "src", include: ["src/**/*.{test,spec}.?(c|m)[jt]s?(x)"], exclude: [] },
 ];
 
+interface CompiledTestProject {
+  include: ((file: string) => boolean)[];
+  exclude: ((file: string) => boolean)[];
+}
+
+/** Compile the constant project patterns once: `matchesGlob` parses per call, not per pattern. */
+function compileTestProjects(
+  projects: readonly { include: readonly string[]; exclude: readonly string[] }[],
+): CompiledTestProject[] {
+  return projects.map((project) => ({
+    include: project.include.map(cachedGlobMatcher),
+    exclude: project.exclude.map(cachedGlobMatcher),
+  }));
+}
+
+const EXECUTABLE_TEST_MATCHERS = compileTestProjects(EXECUTABLE_TEST_PROJECTS);
+
 export function assertExecutableTestFiles(
   files: readonly string[],
   { cwd = process.cwd(), exists = (path: string) => existsSync(path) && statSync(path).isFile(), projects = EXECUTABLE_TEST_PROJECTS } = {},
 ): void {
   if (files.length === 0) throw new Error("Empty executable test selection");
+  const matchers = projects === EXECUTABLE_TEST_PROJECTS ? EXECUTABLE_TEST_MATCHERS : compileTestProjects(projects);
   for (const input of files) {
     const file = normalizeOwnershipPath(isAbsolute(input) ? relative(cwd, input) : input);
-    const owners = projects.filter((project) =>
-      project.include.some((pattern) => matchesGlob(file, pattern))
-      && !project.exclude.some((pattern) => matchesGlob(file, pattern)));
+    const owners = matchers.filter((project) =>
+      project.include.some((matcher) => matcher(file))
+      && !project.exclude.some((matcher) => matcher(file)));
     if (!TEST_FILE_PATTERN.test(file) || owners.length !== 1 || !exists(resolve(cwd, file))) {
       throw new Error(`Invalid executable test ${file}: expected an existing file owned by exactly one project (found ${owners.length})`);
     }

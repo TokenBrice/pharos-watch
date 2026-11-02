@@ -4,6 +4,7 @@ import { assertExecutableTestFiles, collectOwningTests, normalizeOwnershipPath, 
 import { ALWAYS_RUN_TEST_FILES } from "./critical-test-files.mts";
 import { hasOnlyInternalDocsImpact } from "./deploy-impact.mts";
 import { DECLARED_TEST_OWNERSHIP, matchesOwnershipGlob } from "./doc-ownership-registry.mts";
+import { isNightlyTestFile } from "./nightly-test-tier.mts";
 import { PR_DOC_COMMANDS } from "./pr-lanes.mts";
 export { ALWAYS_RUN_TEST_FILES };
 
@@ -45,6 +46,10 @@ export function selectPrTestFiles(
   { docsChanged = false }: SelectPrTestFilesOptions = {},
 ): string[] {
   if (criticalFiles.length > 0) assertExecutableTestFiles(criticalFiles, { exists });
+  const nightlyCritical = criticalFiles.filter(isNightlyTestFile);
+  if (nightlyCritical.length > 0) {
+    throw new Error(`Nightly-tier test cannot be an always-run PR contract: ${nightlyCritical.join(", ")}`);
+  }
   const selected = new Set([...criticalFiles, ...changedTestFiles.filter((file) => exists(file))]);
   for (const test of collectOwningTests(changedSourceFiles, ownership)) {
     if (exists(test)) selected.add(test);
@@ -64,7 +69,13 @@ export function selectPrTestFiles(
     assertExecutableTestFiles(declaration.tests, { exists });
     for (const test of declaration.tests) selected.add(test);
   }
-  const files = [...selected].map(normalizeOwnershipPath).sort();
+  // The nightly tier runs in `npm test` and the nightly shards only
+  // (`scripts/lib/nightly-test-tier.mts`); a changed nightly file, a declared
+  // owner or an `vitest list --changed` entry never re-enters the PR tier.
+  const files = [...selected]
+    .map(normalizeOwnershipPath)
+    .filter((file) => !isNightlyTestFile(file))
+    .sort();
   assertExecutableTestFiles(files, { exists });
   return files;
 }

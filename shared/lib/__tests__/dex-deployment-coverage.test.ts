@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { ACTIVE_STABLECOINS, TRACKED_STABLECOINS } from "../stablecoins/registry";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import {
   AQUARIUS_SUPPORTED_TOKEN_IDS,
+  CURVE_NATIVE_DISCOVERY_CHAINS,
   DEX_COVERAGE_WAIVERS,
   DEX_DISCOVERY_PROVIDER_EXHAUSTIVENESS,
   getActiveDexCoverageWaiver,
@@ -236,6 +238,16 @@ describe("DEX deployment coverage ownership", () => {
       ]),
     ).toBe(true);
     expect(isCensusProviderSetSupersededByRegistry("kava", "usdx", ["curve", "kava-swap"])).toBe(false);
+  });
+
+  it("names only chains the chain registry knows in the Curve native discovery set", () => {
+    // `curve.supports` is this very set (`shared/lib/dex-deployment-coverage.ts`),
+    // so resolving the provider from it proves nothing; the independent
+    // invariant is that every chain in the set is a registered chain id.
+    expect(CURVE_NATIVE_DISCOVERY_CHAINS.size).toBeGreaterThan(0);
+    for (const chain of CURVE_NATIVE_DISCOVERY_CHAINS) {
+      expect(CHAIN_META[chain], `${chain} must be a registered chain`).toBeDefined();
+    }
   });
 
   it("gives every exclusively inaccessible coin an owned, unexpired waiver", () => {

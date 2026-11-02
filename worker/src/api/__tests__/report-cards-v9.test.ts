@@ -1,5 +1,3 @@
-import { readFileSync } from "node:fs";
-import { URL as NodeURL } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 import { setTimeout as delay } from "node:timers/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -573,8 +571,6 @@ describe("materialized V9 response", () => {
   });
 
   it("never imports the full parser or writes during concurrent cold reads", async () => {
-    const source = readFileSync(new NodeURL("../../lib/report-cards-v9-materialization.ts", import.meta.url), "utf8");
-    expect(source).not.toMatch(/\bparseSafetyScoreV9Publication\b/);
     const { db, sqlite } = await seed();
     sqlite.exec("DELETE FROM safety_score_public_manifests; DELETE FROM safety_score_site_manifests");
     const decode = vi.spyOn(publicationCodec, "parseSafetyScoreV9Publication");

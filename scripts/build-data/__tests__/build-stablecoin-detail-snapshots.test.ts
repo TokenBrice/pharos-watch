@@ -596,6 +596,54 @@ describe("stablecoin detail snapshot generator", () => {
     expect(fetch).toHaveBeenCalledTimes(6);
   });
 
+  it("reads only the history lane for an inactive record whose bulk row proves the detail cache absent", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "fixture-key");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "fixture-site-secret");
+    for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const now = 1_800_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    const frozenId = TRACKED_STABLECOINS.find((coin) => coin.status === "frozen")!.id;
+    const activeId = TRACKED_STABLECOINS.find((coin) => coin.status == null || coin.status === "active")!.id;
+    const sources = { detailCacheUpdatedAt: null, publicationUpdatedAt: null, supplySnapshotUpdatedAt: null, supplySnapshotDate: null };
+    const perCoin: string[] = [];
+    let historyAvailable = true;
+    vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
+      const url = new URL(raw);
+      if (url.pathname.endsWith("/stablecoin-detail-snapshot-inputs")) {
+        return Response.json({ version: 1, entries: url.searchParams.get("ids")!.split(",").map((id) =>
+          id === frozenId || id === activeId
+            ? { id, status: "unavailable", reason: "detail-cache-missing", sources }
+            : bulkEntry(id, now - 60_000)) });
+      }
+      const history = url.pathname.endsWith("/supply-history");
+      const id = history ? url.searchParams.get("stablecoin")! : url.pathname.split("/").at(-1)!;
+      perCoin.push(`${history ? "history" : "detail"}:${id}`);
+      if (!historyAvailable) return new Response("", { status: 404 });
+      return Response.json(history ? [] : { price: 1 }, { headers: { "X-Data-Updated-At": "1799999900" } });
+    }));
+    const snapshots = await generateSnapshots(false, { source: "bulk", generatedAt: now });
+    // The API answers an inactive record with no cached detail from that same absent
+    // row, so the reviewed fallback must not spend a detail read on it.
+    expect(perCoin).not.toContain(`detail:${frozenId}`);
+    expect(perCoin).toContain(`history:${frozenId}`);
+    expect(perCoin).toContain(`detail:${activeId}`);
+    const frozen = snapshots.find((snapshot) => snapshot.stablecoinId === frozenId)!;
+    expect(frozen.lanes).toEqual({ supplyHistory: [] });
+    expect(frozen.updatedAt).toEqual({ supplyHistory: 1_799_999_900_000 });
+    const evidence = JSON.parse(log.mock.calls[0][0] as string).detailSnapshotAcquisition;
+    expect(evidence.entries.find((entry: { id: string }) => entry.id === frozenId)).toMatchObject({
+      source: "bulk-unavailable-history-only", reason: "detail-cache-missing", updatedAt: { supplyHistory: 1_799_999_900_000 },
+    });
+    expect(evidence.entries.find((entry: { id: string }) => entry.id === activeId))
+      .toMatchObject({ source: "bulk-unavailable-fallback" });
+    // History is still mandatory for every acquired coin.
+    historyAvailable = false;
+    await expect(generateSnapshots(false, { source: "bulk", generatedAt: now }))
+      .rejects.toThrow(/No detail snapshot lanes were available/);
+  });
+
 });
 
 describe("bounded stale bulk refresh", () => {
@@ -707,6 +755,56 @@ describe("bounded stale bulk refresh", () => {
     expect(snapshot(refreshedId)).not.toHaveProperty("acquisition");
     failRefresh = true;
     await expect(generateSnapshots(false, { source: "bulk", generatedAt: now, staleRefreshLimit: 2 })).rejects.toThrow();
+  });
+
+  it("spends the stale-refresh cap on refreshable records, never on a non-active row", async () => {
+    vi.stubEnv("PHAROS_API_KEY", "");
+    vi.stubEnv("SITE_API_SHARED_SECRET", "fixture-site-secret");
+    for (const name of ["DIGEST_API_URL", "PUBLIC_DATASETS_API_URL", "SMOKE_API_BASE", "API_BASE_URL"]) vi.stubEnv(name, "");
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const now = 1_800_000_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now);
+    // Oldest first: the frozen row would take a cap slot if it stayed a candidate.
+    const frozenId = TRACKED_STABLECOINS.find((coin) => coin.status === "frozen")!.id;
+    const activeIds = TRACKED_STABLECOINS
+      .filter((coin) => coin.status == null || coin.status === "active").slice(0, 3).map((coin) => coin.id);
+    const staleClocks = new Map<string, number>([
+      [frozenId, now - DETAIL_SNAPSHOT_UI_STALE_AFTER_MS - 4000],
+      ...activeIds.map((id, index) => [id, now - DETAIL_SNAPSHOT_UI_STALE_AFTER_MS - 3000 + index * 1000] as const),
+    ]);
+    const perCoin: string[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (raw: string) => {
+      const url = new URL(raw);
+      if (url.pathname.endsWith("/stablecoin-detail-snapshot-inputs")) {
+        return Response.json({ version: 1, entries: url.searchParams.get("ids")!.split(",").map((id) =>
+          bulkEntry(id, staleClocks.get(id) ?? now - 60_000)) });
+      }
+      const history = url.pathname.endsWith("/supply-history");
+      const id = history ? url.searchParams.get("stablecoin")! : url.pathname.split("/").at(-1)!;
+      perCoin.push(`${history ? "history" : "detail"}:${id}`);
+      return Response.json(history ? [] : { price: 2 }, { headers: { "X-Data-Updated-At": String((now - 30_000) / 1000) } });
+    }));
+    const snapshots = await generateSnapshots(false, { source: "bulk", generatedAt: now, staleRefreshLimit: 2 });
+    const snapshot = (id: string) => snapshots.find((candidate) => candidate.stablecoinId === id)!;
+    // The two oldest refreshable rows consume the cap; the frozen row keeps its bulk generation.
+    expect(perCoin.sort()).toEqual([...activeIds.slice(0, 2).flatMap((id) => [`detail:${id}`, `history:${id}`])].sort());
+    expect(snapshot(frozenId).updatedAt.liveSummary).toBe(staleClocks.get(frozenId));
+    expect(snapshot(frozenId).lanes.liveSummary?.price).toBe(1);
+    for (const id of activeIds.slice(0, 2)) {
+      expect(snapshot(id).updatedAt.liveSummary).toBe(now - 30_000);
+      expect(snapshot(id).lanes.liveSummary?.price).toBe(2);
+    }
+    expect(snapshot(activeIds[2]).updatedAt.liveSummary).toBe(staleClocks.get(activeIds[2]));
+    const evidence = JSON.parse(log.mock.calls[0][0] as string).detailSnapshotAcquisition;
+    expect(evidence).toMatchObject({ staleCandidateCount: 4, staleRefreshLimit: 2 });
+    expect(evidence.entries.find((entry: { id: string }) => entry.id === frozenId)).toMatchObject({
+      source: "bulk-cache-only", updatedAt: { liveSummary: staleClocks.get(frozenId) },
+    });
+    expect(evidence.entries.find((entry: { id: string }) => entry.id === activeIds[2]))
+      .toMatchObject({ source: "bulk-cache-only" });
+    expect(evidence.entries.find((entry: { id: string }) => entry.id === activeIds[1]))
+      .toMatchObject({ source: "bulk-stale-refresh" });
   });
 
   it("reports producer-age percentiles and the UI budget without substituting artifact time or unavailable clocks", () => {

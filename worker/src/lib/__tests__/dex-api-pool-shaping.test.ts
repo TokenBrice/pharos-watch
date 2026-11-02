@@ -473,6 +473,14 @@ describe("Raydium pool-implied counter-asset reference", () => {
     expect(model!.tokens[0]!.referencePriceUsd).toBeCloseTo(75.86 * 0.9999, 6);
   });
 
+  it("retains the exact execution model in the retained PoolEntry", () => {
+    const shaped = modelFor(raydiumPool())!;
+    expect(shaped.ammExecutionModel).toBeDefined();
+    const metrics = new Map<string, SourcePoolGraph>();
+    addSecondaryPoolContribution(metrics, "usdc-circle", "USDC", shaped);
+    expect(metrics.get("usdc-circle")?.pools[0]?.extra?.ammExecutionModel).toEqual(shaped.ammExecutionModel);
+  });
+
   it("produces a schema-valid model with positive diagnostic capacity and no score eligibility", () => {
     const shaped = modelFor(raydiumPool());
     expect(shaped).not.toBeNull();

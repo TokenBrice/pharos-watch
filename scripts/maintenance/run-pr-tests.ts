@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { localBin } from "../lib/local-bin.mts";
 import { collectChangedFiles, collectGitPaths, parseChangedFileArgs } from "../lib/changed-files.mts";
+import { withPrTierVitestArgs } from "../lib/nightly-test-tier.mts";
 import { hasDocsChanges, planPrTestSelection, type PrTestSelectionResult } from "../lib/pr-import-graph.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import { createPrTestPlan, partitionTestFiles, readPrTestPlan, readTestTimings, takeTestShard } from "../lib/pr-test-plan.mts";
@@ -99,7 +100,9 @@ export function runPrTests({
   }
   // An empty explicit shard must not turn into Vitest's unrestricted full run.
   if (files.length === 0) return 0;
-  const vitestArgs = withCiVitestArgs(["run", ...files, ...args], env);
+  // `npm test` and the nightly shards keep the nightly tier; the PR runner is
+  // the one invocation that filters it out (`scripts/lib/nightly-test-tier.mts`).
+  const vitestArgs = withPrTierVitestArgs(withCiVitestArgs(["run", ...files, ...args], env));
   const result = spawn(vitest, vitestArgs, {
     env: { ...env, PHAROS_V9_RESOURCE_LANE: "0" },
     stdio: "inherit",

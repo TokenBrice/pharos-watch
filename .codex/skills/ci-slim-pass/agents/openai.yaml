@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pharos CI Slim Pass"
+  short_description: "Repeatable CI/test-suite slim pass"
+  default_prompt: "Use $ci-slim-pass to measure the Pharos CI lane baselines, produce a verified test-suite backlog, apply it in area lanes and land one observed wave."

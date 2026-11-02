@@ -150,6 +150,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/lib/__tests__/authoritative-price-sources-replay.test.ts",
       "worker/src/lib/__tests__/authoritative-price-sources-vaults.test.ts",
       "worker/src/lib/__tests__/authoritative-price-sources-supply.test.ts",
+      "worker/src/lib/__tests__/authoritative-price-sources-providers.test.ts",
     ],
     allowBareFetch: false,
     resilience: {

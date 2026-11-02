@@ -50,7 +50,22 @@ describe("PR test runner prepared plans", () => {
     const spawn = selectingSpawn();
     expect(runPrTests({ argv: ["--base=base", "--shard=1/1", "--reporter=dot"], env: { ...env, PR_TEST_PLAN_FILE: path }, spawn: spawn as never })).toBe(0);
     expect(spawn).toHaveBeenCalledTimes(1);
-    expect(spawn.mock.calls[0][1]).toEqual(["run", ...plan.shards[0], "--reporter=dot"]);
+    expect(spawn.mock.calls[0][1]).toEqual(["run", ...plan.shards[0], "--reporter=dot", "--tagsFilter=!nightly"]);
+  });
+
+  it("filters the nightly tier from every PR shard without dropping a caller's own tag filter", () => {
+    const files = ["scripts/__tests__/run-pr-tests.test.ts", "scripts/__tests__/critical-ownership.test.ts"];
+    const spawn = selectingSpawn();
+    expect(runPrTests({
+      argv: ["--base=base", "--shard=1/1", "--tagsFilter=network"],
+      env,
+      spawn: spawn as never,
+      planSelection: selection(files),
+    })).toBe(0);
+    const args = spawn.mock.calls.find(([, spawnArgs]) => spawnArgs[0] === "run")![1];
+    // `--tagsFilter` values apply with AND, so the appended filter narrows.
+    expect(args).toContain("--tagsFilter=network");
+    expect(args).toContain("--tagsFilter=!nightly");
   });
 
   it("uses the same deterministic partitions for local shards and prepared plans", () => {
@@ -63,7 +78,7 @@ describe("PR test runner prepared plans", () => {
     for (let shard = 1; shard <= plan.shardCount; shard++) {
       const spawn = selectingSpawn();
       expect(runPrTests({ argv: [`--shard=${shard}/${plan.shardCount}`], env, spawn: spawn as never, planSelection: selection(files) })).toBe(0);
-      expect(spawn.mock.calls.find(([, args]) => args[0] === "run")?.[1]).toEqual(["run", ...plan.shards[shard - 1]]);
+      expect(spawn.mock.calls.find(([, args]) => args[0] === "run")?.[1]).toEqual(["run", ...plan.shards[shard - 1], "--tagsFilter=!nightly"]);
     }
   });
 

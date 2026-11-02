@@ -800,6 +800,33 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Generated registry artifacts publish through the atomic writer so a
+    // crashed/parallel build cannot expose a half-written projection. The
+    // lifecycle registry records the helper in the artifact's sourcePaths
+    // (generated-artifact-lifecycle.test.ts); this owns the call site.
+    files: ["scripts/build-data/build-client-registry.mjs"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "ImportSpecifier[imported.name='writeFileSync']",
+          message:
+            "Generated registry artifacts must write through atomicWriteFileSync (scripts/lib/atomic-artifact-write.mts).",
+        },
+        {
+          selector: "CallExpression[callee.name='writeFileSync']",
+          message:
+            "Generated registry artifacts must write through atomicWriteFileSync (scripts/lib/atomic-artifact-write.mts).",
+        },
+        {
+          selector: "CallExpression[callee.property.name='writeFileSync']",
+          message:
+            "Generated registry artifacts must write through atomicWriteFileSync (scripts/lib/atomic-artifact-write.mts).",
+        },
+      ],
+    },
+  },
+  {
     // Decision B / OP-R0 S-3: the documentation class is derived-only. These
     // scoring modules must never read it, so the class can annotate evidence
     // without re-pricing it. Kept last because flat config replaces the
@@ -845,16 +872,24 @@ const eslintConfig = defineConfig([
             "Scoring modules must not reference the documentation class (Decision B / OP-R0 S-3).",
         },
         {
-          selector: "MemberExpression[object.name='evidence'][property.name='documentation']",
+          // Any `.documentation` read, not just `evidence.documentation`: an
+          // alias (`const ev = semantic.evidence; ev.documentation`) or a
+          // destructure would otherwise slip past a selector keyed on `evidence`.
+          // These modules only read `.evidence.rank`, so the broader property ban
+          // cannot mask a legitimate access.
+          selector: "MemberExpression[property.name='documentation']",
           message:
             "Scoring modules must not read the documentation policy block (Decision B / OP-R0 S-3).",
         },
         {
-          // The real policy access shape is `policy.semantic.evidence.documentation`,
-          // where `evidence` is itself a member expression.
-          selector: "MemberExpression[object.property.name='evidence'][property.name='documentation']",
+          selector: "MemberExpression[computed=true][property.value='documentation']",
           message:
             "Scoring modules must not read the documentation policy block (Decision B / OP-R0 S-3).",
+        },
+        {
+          selector: "ObjectPattern > Property[key.name='documentation']",
+          message:
+            "Scoring modules must not destructure the documentation policy block (Decision B / OP-R0 S-3).",
         },
         {
           selector: "ImportExpression[source.value=/documentation/]",

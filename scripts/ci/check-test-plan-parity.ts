@@ -13,6 +13,12 @@
  * test must select one, and at least one commit in the window must produce a
  * non-empty comparison on either side.
  *
+ * The canary replays the *current* planner over older trees, so a commit that
+ * predates one of the planner's own inputs cannot be planned at all. That commit
+ * is reported as not comparable with the fallback reason instead of failing the
+ * run; it is never a parity pass, and the run-level rule above still fails a
+ * window that only ever fell back.
+ *
  * Usage: node --import tsx scripts/ci/check-test-plan-parity.ts [--commits=N]
  */
 import { spawnSync } from "node:child_process";
@@ -22,6 +28,7 @@ import { argv as processArgv } from "node:process";
 import { parseCliInteger, parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { collectGitPaths } from "../lib/changed-files.mts";
 import { localBin } from "../lib/local-bin.mts";
+import { isNightlyTestFile } from "../lib/nightly-test-tier.mts";
 import { buildPrImportGraph, collectExecutableTestFiles, planPrTestSelection, type PrTestSelectionMode } from "../lib/pr-import-graph.mts";
 import { parseVitestFileList } from "../lib/pr-test-selection.mts";
 
@@ -47,6 +54,41 @@ export interface CommitParity {
   comparable: boolean;
   /** The commit changed an executable test file, yet neither side selected one. */
   unproven: boolean;
+  /**
+   * The planner cannot plan this tree (it predates one of the planner's own
+   * inputs), so the commit proves nothing either way — never a parity pass.
+   */
+  fallback?: string;
+}
+
+/**
+ * A commit the static planner cannot plan. The canary replays the current
+ * planner over historical trees, so a commit older than one of the planner's
+ * inputs always falls back; reporting it as not comparable keeps the nightly
+ * from failing on history while the run-level "compared nothing" rule still
+ * catches a window that produced no evidence.
+ */
+export function incomparableCommit(
+  commit: string,
+  parent: string,
+  changed: number,
+  mode: PrTestSelectionMode,
+  reason: string,
+): CommitParity {
+  return {
+    commit,
+    parent,
+    changed,
+    mode,
+    staticCount: 0,
+    viteCount: 0,
+    fallback: reason,
+    missing: [],
+    staticOnly: 0,
+    vacuous: false,
+    comparable: false,
+    unproven: false,
+  };
 }
 
 /**
@@ -104,7 +146,7 @@ export function summarizeParityFailures(results: readonly CommitParity[]): strin
   if (unproven.length > 0) failures.push(`changed executable test(s) selected nothing for ${unproven.join(", ")}`);
   if (failures.length === 0 && !results.some((result) => result.comparable)) {
     failures.push(
-      `compared no non-vacuous selection across ${results.length} commit(s) (all data-only or empty); rerun with a larger --commits window`,
+      `compared no non-vacuous selection across ${results.length} commit(s) (all data-only, fell back or empty); rerun with a larger --commits window`,
     );
   }
   return failures;
@@ -179,7 +221,7 @@ export function checkCommitParity(commit: string, { root = process.cwd(), workDi
     const graph = buildPrImportGraph({ cwd: tree, testFiles: collectExecutableTestFiles(tree) });
     const changedExecutableTests = changed.filter((file) => graph.testFileSet.has(file)).length;
     const staticSelection = planPrTestSelection(changed, { graph });
-    if (staticSelection.fallback) throw new Error(`static planner fell back: ${staticSelection.fallback}`);
+    if (staticSelection.fallback) return incomparableCommit(commit, parent, changed.length, staticSelection.mode, staticSelection.fallback);
     if (staticSelection.mode === "data-only") {
       // C8 deliberately selects less than the transitive closure; replaying
       // Vitest's selection here would compare two different policies.
@@ -198,7 +240,9 @@ export function checkCommitParity(commit: string, { root = process.cwd(), workDi
     });
     if (listed.error) throw listed.error;
     if (listed.status !== 0) throw new Error(`vitest list failed for ${commit}: ${String(listed.stderr ?? "").slice(-2000)}`);
-    const viteFiles = parseVitestFileList(listed.stdout ?? "");
+    // The nightly tier is a deliberate planner subset, so both sides of the
+    // comparison keep only PR-tier files.
+    const viteFiles = parseVitestFileList(listed.stdout ?? "").filter((file) => !isNightlyTestFile(file));
     return {
       commit,
       parent,
@@ -223,7 +267,8 @@ export function main(argv: readonly string[] = processArgv.slice(2)): number {
       `[test-plan-parity] ${result.commit.slice(0, 12)} vs ${result.parent.slice(0, 12)}: ${result.changed} changed, mode ${result.mode}`
         + `${result.skipped ? ` (skipped: ${result.skipped})` : ""}, static ${result.staticCount}, vite ${result.viteCount}, `
         + `missing ${result.missing.length}, static-only ${result.staticOnly}${result.vacuous ? ", VACUOUS" : ""}`
-        + `${result.unproven ? ", UNPROVEN" : ""}\n`,
+        + `${result.unproven ? ", UNPROVEN" : ""}`
+        + `${result.fallback ? `, NOT COMPARABLE (${result.fallback})` : ""}\n`,
     );
     for (const file of result.missing.slice(0, 10)) process.stdout.write(`  missing: ${file}\n`);
   }

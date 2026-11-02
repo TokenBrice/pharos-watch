@@ -5,16 +5,17 @@ import {
   collectExecutableTestCandidates,
   collectExecutableTestFiles,
   collectModuleSpecifiers,
-  compileGlobMatcher,
   isStablecoinCatalogDataOnly,
   planPrTestSelection,
   resolveModuleSpecifier,
   selectDirectImporters,
   selectImportGraphTests,
 } from "../lib/pr-import-graph.mts";
+import { cachedGlobMatcher, compileGlobMatcher } from "../lib/glob-matcher.mts";
 import { EXECUTABLE_TEST_PROJECTS } from "../lib/critical-ownership.mts";
 import { VITEST_SETUP_FILES } from "../lib/vitest-setup-files.mts";
-import { compareCommitSelections, summarizeParityFailures } from "../ci/check-test-plan-parity";
+import { compareCommitSelections, incomparableCommit, summarizeParityFailures } from "../ci/check-test-plan-parity";
+import { withTempRepo } from "./helpers/test-state";
 
 const CWD = "/repo";
 
@@ -160,7 +161,8 @@ describe("static import-graph PR test selection", () => {
       "package.json", "worker/package.json", "tsconfig.json", "vitest.config.ts", "src/test/setup.ts", "scripts/test/helper.ts",
       "scripts/lib/pr-import-graph.mts", "scripts/lib/pr-test-selection.mts", "scripts/lib/pr-test-plan.mts",
       "scripts/maintenance/run-pr-tests.ts", "scripts/lib/critical-ownership.mts", "scripts/lib/critical-test-files.mts",
-      "scripts/lib/doc-ownership-registry.mts", "docs/doc-ownership.json",
+      "scripts/lib/doc-ownership-registry.mts", "docs/doc-ownership.json", "scripts/lib/glob-matcher.mts",
+      "scripts/lib/nightly-test-tier.mts",
       ...VITEST_SETUP_FILES,
     ]) {
       expect(planPrTestSelection([changed], { graph }), changed).toEqual({ files: TEST_FILES, mode: "closure" });
@@ -178,6 +180,10 @@ describe("static import-graph PR test selection", () => {
       for (const pattern of [...project.include, ...project.exclude]) {
         const matcher = compileGlobMatcher(pattern);
         for (const file of files) expect(matcher(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));
+        // Selection asks these patterns about every candidate and every selected
+        // file; a fresh minimatch parse per call is what made that quadratic.
+        expect(cachedGlobMatcher(pattern)).toBe(cachedGlobMatcher(pattern));
+        for (const file of files) expect(cachedGlobMatcher(pattern)(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));
       }
     }
   });
@@ -218,6 +224,22 @@ describe("static import-graph PR test selection", () => {
         expect(matcher(file), `${pattern} vs ${file}`).toBe(matchesGlob(file, pattern));
       }
     }
+  });
+
+  it("keeps nightly-tier files in the execution projects but out of the planner universe", () => {
+    withTempRepo("pharos-nightly-universe", {
+      "src/__tests__/owner.test.ts": "it(\"owner\", () => {});\n",
+      "src/__tests__/sweep.nightly.test.ts": "it(\"sweep\", () => {});\n",
+      "scripts/__tests__/guard.nightly.test.ts": "it(\"guard\", () => {});\n",
+    }, (cwd) => {
+      // `npm test`/nightly enumerate the candidate set, so the files still run there.
+      expect(collectExecutableTestCandidates(cwd)).toEqual([
+        "scripts/__tests__/guard.nightly.test.ts",
+        "src/__tests__/owner.test.ts",
+        "src/__tests__/sweep.nightly.test.ts",
+      ]);
+      expect(collectExecutableTestFiles(cwd)).toEqual(["src/__tests__/owner.test.ts"]);
+    });
   });
 
   it("selects every file matched by a template-literal dynamic import", () => {
@@ -321,6 +343,21 @@ describe("static import-graph PR test selection", () => {
     expect(summarizeParityFailures([empty, dataOnly]).join("\n")).toContain("compared no non-vacuous selection across 2 commit(s)");
     // A single real comparison keeps an otherwise empty window valid.
     expect(summarizeParityFailures([empty, dataOnly, compared])).toEqual([]);
+  });
+
+  it("reports a commit the current planner cannot plan as not comparable", () => {
+    const compared = {
+      commit: "a".repeat(40), parent: `${"a".repeat(40)}^`, changed: 1,
+      ...compareCommitSelections("closure", ["scripts/a.test.ts"], ["scripts/a.test.ts"]),
+    };
+    const fellBack = incomparableCommit("c".repeat(40), `${"c".repeat(40)}^`, 2, "closure", "2 unresolved local specifier(s): a; b");
+    expect(fellBack).toMatchObject({
+      fallback: "2 unresolved local specifier(s): a; b", comparable: false, missing: [], vacuous: false, unproven: false,
+    });
+    // A fallback commit is missing evidence, never a parity pass: it does not
+    // fail a run that compared something, and it cannot carry a run alone.
+    expect(summarizeParityFailures([compared, fellBack])).toEqual([]);
+    expect(summarizeParityFailures([fellBack]).join("\n")).toContain("compared no non-vacuous selection across 1 commit(s)");
   });
 
   it("routes stablecoin catalog data to direct catalog/registry owners instead of the closure", () => {

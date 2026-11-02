@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -14,6 +17,7 @@ import {
 } from "../ci/classify-deploy-changes.ts";
 import { DEPLOY_IMPACT_REGISTRY } from "../lib/automation-registry.mjs";
 import { splitNullDelimited } from "../lib/changed-files.mts";
+import { hasLaneInputImpact, hasPagesArtifactImpact } from "../lib/lane-input-closure.mts";
 
 describe("contracts workspace deployment selection", () => {
   it("keeps source-only contracts in both deployed runtime surfaces", () => {
@@ -32,9 +36,16 @@ describe("contracts workspace deployment selection", () => {
 describe("Pages artifact selection", () => {
   it.each([
     "src/app/page.tsx",
+    "src/components/header.tsx",
+    "src/styles/tokens/semantic.css",
+    "src/assets/fonts/Geist-Regular.woff2",
+    "src/data/blog/posts/pharos-at-six-months.md",
+    "src/app/favicon.ico",
+    "src/app/robots.ts",
     "next.config.mjs",
     "tailwind.config.ts",
     "postcss.config.cjs",
+    "shared/contracts/package.json",
     "scripts/build-data/build-stablecoin-detail-snapshots.ts",
     "scripts/maintenance/generate-depeg-event-search-data.ts",
     "scripts/build-data/generate-stablecoin-client-projections.ts",
@@ -54,6 +65,131 @@ describe("Pages artifact selection", () => {
       expect(classifyChangedFiles([path]).pagesArtifactRequired).toBe(false);
     },
   );
+
+  it.each([
+    // Agent tooling mirrors repository skills; none of it is compiled or read.
+    ".claude/skills/ci-slim-pass/SKILL.md",
+    ".codex/skills/ci-slim-pass/SKILL.md",
+    ".agents/skills/ci-slim-pass/SKILL.md",
+    ".impeccable/config.json",
+    ".omp/config.yml",
+  ])("validates a skill or agent-tooling change without building either lane %s", (path) => {
+    expect(classifyChangedFiles([path])).toMatchObject({
+      pagesArtifactRequired: false,
+      v9ResourceRequired: false,
+    });
+  });
+
+  it.each([
+    // Deploys, but cannot change the static export the PR lane builds.
+    "shared/lib/admin-gate.ts",
+    "functions/api/admin/[[path]].ts",
+    "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts",
+  ])("validates without building for a Pages path outside the export closure %s", (path) => {
+    expect(classifyChangedFiles([path])).toMatchObject({
+      pagesChanged: true,
+      pagesDeployRequired: true,
+      pagesArtifactRequired: false,
+    });
+    expect(hasPagesPublishImpact([path])).toBe(true);
+  });
+
+  it.each([
+    // The closure is built from the post-change tree, so a deleted module is in
+    // no closure: base∪head semantics make every deletion an input.
+    "src/app/legacy-route/page.tsx",
+    "shared/lib/retired-helper.ts",
+  ])("builds the artifact for a path the checkout no longer contains %s", (path) => {
+    expect(existsSync(resolve(import.meta.dirname, "../..", path)), path).toBe(false);
+    expect(classifyChangedFiles([path])).toMatchObject({ pagesChanged: true, pagesArtifactRequired: true });
+  });
+
+  it.each([
+    "shared/lib/__tests__/retired-helper.test.ts",
+    "worker/src/lib/__tests__/retired-helper.test-support.ts",
+  ])("runs neither lane for a deleted test-only file %s", (path) => {
+    expect(existsSync(resolve(import.meta.dirname, "../..", path)), path).toBe(false);
+    expect(classifyChangedFiles([path])).toMatchObject({ pagesArtifactRequired: false, v9ResourceRequired: false });
+  });
+
+  it("keeps a deleted Worker module out of the export lane while v9 still runs", () => {
+    const path = "worker/src/api/retired-route.ts";
+    expect(existsSync(resolve(import.meta.dirname, "../..", path)), path).toBe(false);
+    expect(classifyChangedFiles([path])).toMatchObject({ pagesArtifactRequired: false, v9ResourceRequired: true });
+  });
+
+  it("selects the lane for its own selector module", () => {
+    expect(hasPagesArtifactImpact(["scripts/lib/lane-input-closure.mts"])).toBe(true);
+    expect(classifyChangedFiles(["scripts/lib/lane-input-closure.mts"]).pagesArtifactRequired).toBe(true);
+  });
+
+  it.each(["docs/retired-runbook.md", ".claude/skills/ci-slim-pass/retired.md"])(
+    "keeps an area neither lane reads out of the lane when it is deleted %s", (path) => {
+      expect(existsSync(resolve(import.meta.dirname, "../..", path)), path).toBe(false);
+      expect(classifyChangedFiles([path])).toMatchObject({
+        pagesArtifactRequired: false,
+        v9ResourceRequired: false,
+      });
+    },
+  );
+
+  it("keeps the export's on-disk inputs, which are never import edges", () => {
+    for (const path of [
+      "docs/depeg-detection.md",
+      "public/_redirects",
+      "public/datasets/stablecoins.json",
+      "shared/data/stablecoins/coins/usdc-circle.json",
+      "data/depeg-events/2024.json",
+    ]) {
+      expect(classifyChangedFiles([path]).pagesArtifactRequired, path).toBe(true);
+    }
+  });
+
+  it("keeps every module behind the lane's npm scripts selected", () => {
+    const scripts: Record<string, string> = JSON.parse(
+      readFileSync(resolve(import.meta.dirname, "../../package.json"), "utf8"),
+    ).scripts;
+    // Every repository path a lane command names, not just the first: a chained
+    // command (`a.ts && b.ts`) must select the lane for each of its modules.
+    const modulePath = /((?:scripts|src|shared|worker|functions)\/[\w./[\]-]+\.(?:[cm]?[jt]sx?|mjs))/g;
+    for (const name of [
+      "check:pages-artifact",
+      "generated:compile-input",
+      "generated:post-refresh",
+      "postbuild",
+      "check:pages-release",
+      "check:feature-flag-inlining",
+      "check:build-size",
+      "check:phishing-signatures",
+      "seo:check",
+    ]) {
+      const files = [...(scripts[name] ?? "").matchAll(modulePath)].map((match) => match[1]!);
+      expect(files.length, name).toBeGreaterThan(0);
+      for (const file of files) {
+        expect(hasPagesArtifactImpact([file]), `${name} -> ${file}`).toBe(true);
+      }
+    }
+  });
+
+  it.each([[[]], [[""]], [["../outside.ts"]], [["/outside/page.tsx"]], [["src//app/page.tsx"]], [["unclassified/runtime.ts"]]])(
+    "builds the artifact for an empty, malformed or unclassifiable diff %j", (files) => {
+      expect(hasPagesArtifactImpact(files)).toBe(true);
+    },
+  );
+
+  it("builds the artifact when the lane's closure cannot be built", () => {
+    const missing = {
+      existsSync: () => false,
+      readFileSync: () => "",
+      statSync: () => ({ isFile: () => true }),
+    };
+    expect(hasLaneInputImpact(["src/components/header.tsx"], {
+      id: "unreadable-lane",
+      roots: ["src/app/page.tsx"],
+      ignoredPrefixes: ["src/"],
+      deletionNonInputPrefixes: [],
+    }, { fs: missing })).toBe(true);
+  });
 
   it.each([
     "src/components/__tests__/header.test.tsx",
@@ -100,28 +236,35 @@ describe("V9 resource selection", () => {
   it.each([
     "shared/lib/safety-score-v9/compile.ts",
     "shared/lib/safety-score-v9/new-module.ts",
-    "worker/src/lib/safety-score-v9-publication.ts",
+    "worker/src/lib/safety-score-v9/publication-store.ts",
     "worker/src/lib/safety-score-v9/native-input.ts",
     "worker/src/lib/db-cache.ts",
     "worker/src/lib/report-cards-snapshot.ts",
     "worker/src/cron/compute-safety-score-v9.ts",
     "worker/src/cron/reserve-adapters/token-supply.ts",
-    "worker/src/cron/dex-liquidity/persistence.ts",
-    "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
     "worker/src/test-helpers/v9-fixed-input.ts",
     "worker/migrations/0263_safety_score_capture_archive.sql",
     "shared/test-utils/sqlite-d1.ts",
     "shared/lib/supply.ts",
     "shared/lib/stablecoins/full-catalog.ts",
+    // Sources of generated artifacts the probe bundles (derived from the
+    // registry's outputs inside the lane closure, not a restated artifact id).
+    "shared/lib/classification.ts",
+    "shared/data/dead-stablecoins.json",
+    "shared/types/core.ts",
     "shared/data/stablecoins/coins/usdc-circle.json",
     "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
     "scripts/maintenance/run-v9-resource-lane.ts",
+    "scripts/lib/lane-input-closure.mts",
     "scripts/build-data/generate-worker-stablecoin-catalog.ts",
     "scripts/ci/select-generated-artifacts.mts",
     "scripts/lib/changed-files.mts",
     "scripts/lib/local-bin.mts",
     "scripts/lib/wrangler-toml.mjs",
     "worker/scripts/measure-v9-resource.ts",
+    "worker/src/lib/__tests__/safety-score-v9-resource-budget.test-support.ts",
+    "worker/src/lib/__tests__/safety-score-v9-resource-fixture.test-support.ts",
+    "worker/src/lib/__tests__/safety-score-v9-resource-probe.test-support.ts",
     "worker/wrangler.heavy.toml",
     ".ci/safety-score-v9-resource-budget.json",
     "package-lock.json",
@@ -135,12 +278,21 @@ describe("V9 resource selection", () => {
     "src/components/header.tsx",
     "worker/src/api/health.ts",
     "worker/src/cron/sync-blacklist.ts",
-    "worker/scripts/telegram-load.ts",
+    "worker/src/cron/dex-liquidity/persistence.ts",
+    "worker/src/cron/sync-stablecoins/enrich-prices-shared.ts",
+    "worker/scripts/list-curation-expiry-queue.ts",
     "scripts/build-data/build-stablecoin-detail-snapshots.ts",
     "docs/testing.md",
   ])("does not select the resource lane for unrelated input %s", (file) => {
     expect(classifyChangedFiles([file]).v9ResourceRequired).toBe(false);
   });
+
+  it.each(["worker/src/lib/retired-cache.ts", "shared/lib/retired-v9-module.ts"])(
+    "selects the resource lane for a path the checkout no longer contains %s", (file) => {
+      expect(existsSync(resolve(import.meta.dirname, "../..", file)), file).toBe(false);
+      expect(classifyChangedFiles([file]).v9ResourceRequired).toBe(true);
+    },
+  );
 
   it.each([
     { files: [] }, { files: [""] }, { files: ["../outside.ts"] },

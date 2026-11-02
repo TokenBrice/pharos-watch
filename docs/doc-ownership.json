@@ -44,7 +44,7 @@
         { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }
       ],
       "checks": [
-        "npx vitest run shared/lib/scene src/components/__tests__/scene-marks.test.tsx src/components/__tests__/scene-motion-coverage.test.ts"
+        "npx vitest run shared/lib/scene src/components/__tests__/ui-primitives.test.tsx src/components/__tests__/scene-motion-coverage.test.ts"
       ],
       "rules": [
         "The Cemetery must stay byte-identical during kit refactors.",
@@ -1363,7 +1363,7 @@
         },
         {
           "sources": ["docs/process/lane-freshness-matrix.md"],
-          "tests": ["scripts/__tests__/freshness-document-contract.test.ts"]
+          "tests": ["scripts/__tests__/doc-sync.test.ts"]
         },
         {
           "sources": ["scripts/maintenance/monitor-worker-memory.ts", "scripts/maintenance/__tests__/fixtures/worker-memory/**", ".github/workflows/worker-memory-monitor.yml"],
@@ -1391,6 +1391,7 @@
         "scripts/lib/automation-registry.mjs",
         "scripts/lib/command-runner.mts",
         "scripts/lib/deploy-impact.mts",
+        "scripts/lib/lane-input-closure.mts",
         "scripts/lib/generated-artifacts.ts",
         "scripts/lib/post-deploy-acceptance.mts",
         "scripts/lib/pr-*.mts",

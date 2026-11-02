@@ -60,6 +60,13 @@ jobs:
       - run: npm run check:sensitive-page-copy
         id: sensitive-page-copy
         if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
+      - name: Check test corpus budget (H2)
+        # The PR gate runs H2/H3 against a frozen base; a schedule has none, so
+        # the nightly runs the metrics half only. This is the backstop that
+        # surfaces corpus debt admitted by a `test-budget-override` PR.
+        run: npm run check:test-corpus-budget -- --metrics-only
+        id: test-corpus-budget
+        if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
       - name: Report mandatory static outcomes
         if: ${{ !cancelled() && steps.workspace.outcome == 'success' }}
         env:
@@ -71,6 +78,7 @@ jobs:
           STRUCTURAL_OUTCOME: ${{ steps.structural.outcome }}
           UNUSED_CODE_OUTCOME: ${{ steps.unused-code.outcome }}
           SENSITIVE_COPY_OUTCOME: ${{ steps.sensitive-page-copy.outcome }}
+          TEST_CORPUS_BUDGET_OUTCOME: ${{ steps.test-corpus-budget.outcome }}
         run: |
           failed=()
           for leaf in \
@@ -81,7 +89,8 @@ jobs:
             "typecheck:tests:$TEST_TYPES_OUTCOME" \
             "check:structural:$STRUCTURAL_OUTCOME" \
             "check:unused-code:$UNUSED_CODE_OUTCOME" \
-            "check:sensitive-page-copy:$SENSITIVE_COPY_OUTCOME"; do
+            "check:sensitive-page-copy:$SENSITIVE_COPY_OUTCOME" \
+            "check:test-corpus-budget -- --metrics-only:$TEST_CORPUS_BUDGET_OUTCOME"; do
             outcome="${leaf##*:}"
             command="${leaf%:*}"
             printf '%s: %s\n' "$command" "$outcome"

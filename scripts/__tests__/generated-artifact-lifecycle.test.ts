@@ -8,6 +8,7 @@ interface RegistryArtifact {
   checkable?: boolean;
   ciDriftCheck?: boolean;
   outputPaths: string[];
+  sourcePaths?: string[];
 }
 
 function selectedIds(options: Record<string, unknown>): string[] {
@@ -38,6 +39,13 @@ describe("generated artifact lifecycle", () => {
   it("leaves authored root instructions outside generated artifact ownership", () => {
     expect(registry.flatMap((artifact) => artifact.outputPaths)).not.toContain("AGENTS.md");
     expect(registry.flatMap((artifact) => artifact.outputPaths)).not.toContain("CLAUDE.md");
+  });
+
+  it("records the atomic writer as a source of every artifact that publishes through it", () => {
+    for (const id of ["stablecoin-catalog", "stablecoin-client-registry"]) {
+      expect(registry.find((artifact) => artifact.id === id)?.sourcePaths)
+        .toContain("scripts/lib/atomic-artifact-write.mts");
+    }
   });
 
   it("materializes ignored compile and serve inputs during bootstrap and their Pages phases", () => {
