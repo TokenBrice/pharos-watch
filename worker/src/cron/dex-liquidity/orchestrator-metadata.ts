@@ -9,6 +9,7 @@ import type { PoolProcessingRejection } from "./process-pool-types";
 import type { CurveStableswapPlainAdmissionDiagnostic, LiquidityFallbackCounters } from "./types";
 import type { MeasuredTargetFunnel } from "./route-telemetry";
 import type { DexLiquidityScoringSourceState, DexLiquidityPoolState } from "./scoring-stage-contract";
+import { SOURCE_FAMILY_DROP_FLAG_PREFIX } from "./orchestrator-drift";
 
 export function getDexLiquiditySourceQualityReasons(sourceState: Pick<DexLiquidityScoringSourceState,
   "failedSources" | "degradedSources" | "directApiSourceSummary">): string[] {
@@ -91,21 +92,20 @@ export function buildDexLiquidityCronMetadata(params: {
   const { persistence, historicalSnapshot, challengerPublication, dexPriceDiagnostics } = params.persistenceState;
   const rejectedPoolCount = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.count, 0);
   const rejectedPoolTvlUsd = poolState.poolRejections.reduce((sum, rejection) => sum + rejection.tvlUsd, 0);
+  // Chain TVL can fall with complete inputs; retained source-pool loss is coverage evidence.
+  const sourceFamilyDriftFlags = (scoreState.analysis.sourceCoverage.cohortDriftFlags ?? [])
+    .filter((flag) => flag.startsWith(SOURCE_FAMILY_DROP_FLAG_PREFIX));
   const qualityReasons = [...new Set([
+    ...sourceFamilyDriftFlags,
     ...(scoreState.analysis.sourceCoverage.qualityDriftFlags ?? []),
     ...getDexLiquiditySourceQualityReasons(sourceState),
   ])];
-  // Confirmed cohort drops (chain TVL / source-family pool retention) keep the
-  // run's execution status unchanged but mark the input-quality verdict
-  // degraded, so the sentinel-backed cache-health floor and /status see it
-  // instead of leaving it as an admin-only Watch chip.
-  const cohortDriftDegraded = (scoreState.analysis.sourceCoverage.cohortDriftFlags ?? []).length > 0;
   return {
     ...(persistence.skippedReason === "required-baseline-read-failed"
       ? { reason: "required-baseline-read-failed" }
       : params.degradedReason != null ? { reason: params.degradedReason } : {}),
     ...(qualityReasons.length > 0
-      ? { quality: { ...(cohortDriftDegraded ? { degraded: true } : {}), reasons: qualityReasons } }
+      ? { quality: { ...(sourceFamilyDriftFlags.length > 0 ? { degraded: true } : {}), reasons: qualityReasons } }
       : {}),
     rowsRead: sourceState.primaryRawPoolCount,
     rowsWritten: persistence.skipped || persistence.skippedReason === "liquidity-cadence-reuse"

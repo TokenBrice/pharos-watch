@@ -391,10 +391,7 @@ export type DexLiquidityWarningSurface =
 
 const GLOBAL_WARNING_SURFACE: DexLiquidityWarningSurface = { scope: "global" };
 
-// Flags that name exactly one stablecoin. Everything else (failed sources, guard
-// proximity, pipeline-wide drift counters, run-level outcomes) is dataset-wide and
-// an operator concern: it surfaces on the global header and /liquidity, never on a
-// coin page, whose freshness banner already covers an aging dataset.
+// Coin findings stay on the named asset; chain TVL movement alone cannot prove input loss.
 const COIN_SCOPED_DRIFT_FLAG = /^(major-tvl-cliff|watchlist-pool-drop):.+$/;
 
 export function buildDexLiquidityWarning(
@@ -434,14 +431,12 @@ export function buildDexLiquidityWarning(
 
   if (latestCron.status !== "degraded" && latestCron.status !== "error" && qualityDriftSeverity === "none") return null;
 
-  // A successful run whose only quality findings name individual coins does not
-  // warrant a dataset-wide advisory.
-  const coinScopedOnly =
+  const scopedOnly =
     failedSources.length === 0
     && !nearCoverageGuard && !nearValueGuard && !nearMajorCoverageGuard
     && qualityDriftFlags.length > 0
-    && qualityDriftFlags.every((flag) => COIN_SCOPED_DRIFT_FLAG.test(flag));
-  if (latestCron.status === "ok" && coinScopedOnly) return null;
+    && qualityDriftFlags.every((flag) => COIN_SCOPED_DRIFT_FLAG.test(flag) || flag.startsWith("chain-tvl-drop:"));
+  if (latestCron.status === "ok" && scopedOnly) return null;
 
   const details: string[] = [];
   if (failedSources.length > 0) details.push(`failedSources=${failedSources.join(",")}`);

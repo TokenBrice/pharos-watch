@@ -282,6 +282,8 @@ describe("handleDexLiquidity", () => {
 
   it.each([
     ["ok", ["major-tvl-cliff:crvusd-curve"], [], false],
+    ["ok", ["major-tvl-cliff:crvusd-curve", "chain-tvl-drop:ink"], [], false],
+    ["ok", ["major-tvl-cliff:crvusd-curve", "chain-tvl-drop:ink", "source-family-drop:cg_onchain"], [], true],
     ["ok", ["major-tvl-cliff:crvusd-curve", "price-observation-drop"], [], true],
     ["ok", ["major-tvl-cliff:crvusd-curve"], ["uniswap-v4-subgraph:arbitrum"], true],
     ["degraded", ["major-tvl-cliff:crvusd-curve"], [], true],
@@ -309,6 +311,18 @@ describe("handleDexLiquidity", () => {
     // operator findings; a coin row warns only when a flag names that coin.
     expect(body["crvusd-curve"].warning).toContain("major-tvl-cliff:crvusd-curve");
     expect(body["usdt-tether"].warning).toBeNull();
+  });
+
+  it("keeps a chain-only TVL warning off the global feed", async () => {
+    const db = mockDexD1([
+      { match: "dex_liquidity_history", rows: [] },
+      { match: "dex_prices", rows: [] },
+      { match: "cron_runs", rows: [], first: { status: "ok", metadata: JSON.stringify({ sourceCoverage: {
+        qualityDriftSeverity: "high", qualityDriftFlags: ["chain-tvl-drop:ink"],
+      } }) } },
+      { match: "dex_liquidity", rows: [row] },
+    ]);
+    expect((await handleDexLiquidity(db)).headers.get("Warning")).toBeNull();
   });
 
   it("keeps a coin-scoped cliff flag off the global surface and on its own coin row", async () => {
