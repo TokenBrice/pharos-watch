@@ -211,8 +211,13 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           node-modules-cache: "true"
-      - name: Run the classified worker-shared files isolated in a shuffled order
-        run: npm test -- --project worker-shared --isolate --sequence.shuffle --sequence.seed=${{ github.run_id }}
+      # Shuffled in one shared module cache: the PR tier runs these files
+      # non-isolated in a fixed order, so only this run explores other orders.
+      - name: Run the classified worker-shared files shared and shuffled
+        run: npm test -- --project worker-shared --sequence.shuffle --sequence.seed=${{ github.run_id }}
+      # Isolated: catches a file that only passes on state another file leaked.
+      - name: Run the classified worker-shared files isolated
+        run: npm test -- --project worker-shared --isolate
 
   v9-resource:
     name: V9 resource budget

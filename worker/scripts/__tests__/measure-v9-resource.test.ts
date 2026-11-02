@@ -88,12 +88,12 @@ describe("V9 resource diagnostic failure modes", () => {
     expect(() => readFileSync(marker)).toThrow();
   });
 
-  // Nightly tier: two real wrangler/esbuild builds (~2.6 s on CI). PR coverage
-  // retained by the real lane in scripts/maintenance/run-v9-resource-lane.ts,
-  // which builds both probes through buildResourceProbe (readHeavyProbeBuildSettings
-  // alias/minify/keep_names plus assertResourceProbeCatalog) on every selected PR,
-  // and by the crash, network-denial and wall-timeout cases above, which stay on
-  // the PR tier. Only the runtime name/minify-length assertions move nightly.
+  // Nightly tier: two real wrangler/esbuild builds (~2.6 s on CI). On a selected
+  // PR the v9 lane's safety-score-v9-resource-budget harness builds both probes
+  // through buildResourceProbe (readHeavyProbeBuildSettings alias plus
+  // assertResourceProbeCatalog), and the crash, network-denial and wall-timeout
+  // cases above stay on the PR tier. The minify/keep_names effect assertions and
+  // the wrong-loader rejection are nightly only.
   it("proves alias, minify and keep_names translation through bundled behavior", { tags: ["nightly"] }, async () => {
     const root = temporary();
     mkdirSync(join(root, "worker"));

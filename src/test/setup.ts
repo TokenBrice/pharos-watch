@@ -9,7 +9,8 @@ import { cleanup, configure } from "@testing-library/react";
  * mount 58 cases, and a healthy `findByRole` on a large tree has timed out at the
  * default (`src/app/pharoswatchbot/app/page.test.tsx`, "keeps last-known state
  * read-only through a refresh failure until retry"). The project-level budget and
- * the resulting 3000 ms `testTimeout` headroom replace per-call overrides; a
+ * its 3000 ms query wait replace per-call overrides (the 20 s `testTimeout` is
+ * unchanged); a
  * genuine hang still fails with the same query error, three seconds later. A case
  * that needs longer passes its own explicit timeout.
  */

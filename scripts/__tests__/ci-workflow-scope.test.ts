@@ -820,7 +820,8 @@ describe("CI workflow scope", () => {
     expect(job.needs).toBeUndefined();
     expect(job["timeout-minutes"]).toBe(20);
     expect(job.steps?.filter((step) => step.run).map((step) => step.run)).toEqual([
-      "npm test -- --project worker-shared --isolate --sequence.shuffle --sequence.seed=${{ github.run_id }}",
+      "npm test -- --project worker-shared --sequence.shuffle --sequence.seed=${{ github.run_id }}",
+      "npm test -- --project worker-shared --isolate",
     ]);
     const red = nightly.jobs["nightly-red"];
     expect(red.needs).toContain("worker-shared-stability");

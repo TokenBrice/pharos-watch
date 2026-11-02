@@ -125,8 +125,9 @@ function poolSection({
   return `<main><h1>USDT (USDT) stablecoin analytics</h1><section id="dex-liquidity">${wrapper ? `<div data-lazy-section="">${body}</div>` : body}</section><a href="/stablecoin/usdc-circle/">USDC</a></main>`;
 }
 
-// Nightly tier: PR coverage retained by the untagged "SEO render audit CLI and
-// report" cases in this file; audit-seo-render-budget has no other CI caller.
+// Nightly tier: audit-seo-render-budget is an operator tool with no CI caller and
+// no PR-tier guard; only its untagged "SEO render audit CLI and report" cases
+// (argument parsing, route eligibility, report counters) stay on the PR tier.
 describe("SEO render audit fixture collection", { tags: ["nightly"] }, () => {
   it("counts factual table rows separately from an identical empty skeleton", () => {
     const factual = makeSnapshot(poolSection({ rows: 2 }));

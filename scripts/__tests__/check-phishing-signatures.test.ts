@@ -39,9 +39,10 @@ describe("check-phishing-signatures", () => {
     ).toThrow(/Inline-script phishing-kit signatures detected/);
   });
 
-  // Nightly tier: PR coverage retained by scripts/maintenance/run-pages-release-checks.ts;
-  // the real `out/` scan proves the clean-site pass path, while the detection
-  // and comment-parsing cases below stay on PR.
+  // Nightly tier: these two pass-path guards (no false positive on an external
+  // src or comment-only markup) run nightly only; the real `out/` scan in
+  // scripts/maintenance/run-pages-release-checks.ts never contains such markup.
+  // The detection and comment-parsing cases below stay on PR.
   it("continues to skip external script tags that use a real src attribute", { tags: ["nightly"] }, () => {
     expect(() =>
       runChecker(
