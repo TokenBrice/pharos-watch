@@ -111,9 +111,12 @@ describe("V9 contagion input decision", () => {
     expect(typeof evaluateV9ContagionScenario).toBe("function");
     const root = resolve(import.meta.dirname, "../../..");
     const { inputs: bundled } = buildSafetyScoreV9ContagionProbe(root, temporary());
+    // Third-party modules are pinned by the lockfiles, themselves contagion
+    // inputs; CI checks out node_modules inside the repo, local worktrees may not.
     const inputs = bundled
       .map((input) => relative(root, input).replaceAll("\\", "/"))
-      .filter((input) => !input.startsWith(".."));
+      .filter((input) => !input.startsWith("..") && !/(^|\/)node_modules\//.test(input));
+    expect(hasV9ContagionInput(["package-lock.json"]) && hasV9ContagionInput(["worker/package-lock.json"])).toBe(true);
     for (const expected of [
       "shared/lib/safety-score-v9/contagion.ts",
       "shared/lib/peg-score.ts",

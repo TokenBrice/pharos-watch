@@ -471,6 +471,7 @@ const eslintConfig = defineConfig([
     // Gate/tooling caches (e.g. the local Worker bundle proof) are
     // gitignored build outputs, never lintable source.
     ".cache/**",
+    ".tmp/**",
     ".claude/**",
     ".worktrees/**",
     "worktrees/**",

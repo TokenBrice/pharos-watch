@@ -185,9 +185,11 @@ describe.skipIf(process.env.PHAROS_V9_RESOURCE_LANE !== "1")("Safety Score V9 co
 
   it("selects the contagion matrix for every input the nine-scenario probe bundles", () => {
     const root = resolve(import.meta.dirname, "../../../..");
+    // Third-party modules are pinned by the lockfiles, themselves contagion
+    // inputs; CI checks out node_modules inside the repo, local worktrees may not.
     const inputs = bundledInputs
       .map((input) => relative(root, input).replaceAll("\\", "/"))
-      .filter((input) => !input.startsWith(".."));
+      .filter((input) => !input.startsWith("..") && !/(^|\/)node_modules\//.test(input));
     for (const expected of [
       "shared/lib/safety-score-v9/contagion.ts",
       "shared/lib/peg-score.ts",
