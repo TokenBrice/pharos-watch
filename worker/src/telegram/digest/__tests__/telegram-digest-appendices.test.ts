@@ -1,3 +1,4 @@
+import { buildTelegramMessage } from "../../../telegram/delivery/telegram";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../test-helpers/cron/index";
 
@@ -436,5 +437,20 @@ describe("diffFrozenIds", () => {
     { name: "ignores removals (un-freezing is out of scope)", current: [], previous: ["usr-resolv"] },
   ])("$name", ({ current, previous }) => {
     expect(diffFrozenIds(new Set(current), new Set(previous))).toEqual(new Set());
+  });
+});
+
+describe("scanTelegramDigestWrapper", () => {
+  it("masks a model-owned Standing paragraph lifted into the blockquote", () => {
+    const extended = "Standing: USDT has been off peg for three weeks.\n\n"
+      + "USDT is a safe haven claim the desk will not repeat.";
+    const rendered = buildTelegramMessage("Calm Drift", extended, "2026-11-01", 179, null, null);
+
+    expect(scanTelegramDigestWrapper({
+      rendered,
+      modelTitle: "Calm Drift",
+      modelExtended: extended,
+      cemeteryAppendixHtml: null,
+    })).toEqual([]);
   });
 });

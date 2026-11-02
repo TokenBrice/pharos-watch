@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../../test-helpers/cron";
 import type * as FetchRetry from "../../../../lib/fetch-retry";
 import usdy from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
@@ -7,6 +7,7 @@ import reusd from "@shared/data/stablecoins/coins/reusd-re-protocol.json";
 import usp from "@shared/data/stablecoins/coins/usp-pikudao.json";
 import usd3 from "@shared/data/stablecoins/coins/usd3-reserve-protocol.json";
 import hbd from "@shared/data/stablecoins/coins/hbd-hive.json";
+import eursafo from "@shared/data/stablecoins/coins/eursafo-spiko.json";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
@@ -84,6 +85,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
     { ...usdy, flags: { ...usdy.flags, pegCurrency: "USD" } },
     { ...hbd, flags: { ...hbd.flags, pegCurrency: "USD" } },
     ...[usyc, reusd, usp, usd3].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
+    eursafo,
   ],
 }));
 
@@ -114,7 +116,7 @@ vi.mock("../../../reserve-adapters/hive-hbd-protocol", () => ({
 
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../fiat-cg";
 import { applyConsensusResults, createValidationContextResolver } from "../../pricing";
-import { normalizeStablecoinsPayload, restoreMissingTrackedAssets } from "../../shared";
+import { normalizeStablecoinsPayload, restoreMissingTrackedAssets, reviewedOnchainSupplyHoldFields } from "../../shared";
 import { validatePublishedAssetPrice } from "../../../../lib/price-publish-policy";
 
 describe("fetchFiatCoinGeckoTokens", () => {
@@ -719,5 +721,22 @@ describe("fetchFiatCoinGeckoTokens", () => {
         price: 1.9, priceObservedAt: lane === "undated" ? null : observedAt, circulating: { peggedUSD: 380 },
       });
     }
+  });
+});
+
+describe("fiat CoinGecko NAV continuity", () => {
+  afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+  it("retains fresh CoinGecko supply when an issuer perimeter refuses only its on-chain roster", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(Response.json({ coins: {} }))));
+    const nowSec = Math.floor(Date.now() / 1000), marketCap = 1_798_801_917.8;
+    const rows = await fetchFiatCoinGeckoTokens({ [eursafo.geckoId]: {
+      usd: 1.14, usd_market_cap: marketCap, last_updated_at: nowSec,
+    } });
+    const row = rows.find((asset) => asset.id === eursafo.id)!;
+    expect(row).toMatchObject({ id: eursafo.id, supplySource: "coingecko-fallback", supplyObservedAt: nowSec,
+      circulating: { peggedEUR: marketCap }, chainCirculating: {},
+    });
+    expect(reviewedOnchainSupplyHoldFields(row, nowSec)).toBeNull();
   });
 });

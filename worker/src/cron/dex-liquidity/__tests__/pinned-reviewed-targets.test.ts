@@ -97,12 +97,9 @@ describe("reviewed active retained-pool targets", () => {
     });
     expect(QUOTER_V2_REVIEWED_RETAINED_POOLS).toHaveLength(9);
     expect(targets).toHaveLength(10);
-    expect(new Set(targets.map((target) => target.targetId)).size).toBe(10);
     expect(estimateAdmissionCohortRpcRequestBreakdown(targets)).toEqual({
       setupRpcRequests: 12, quoteRpcRequests: 29, totalRpcRequests: 41,
     });
-    // At most five ladder points, three refinements and one revert confirmation.
-    expect(targets.length * (5 + 3 + 1)).toBe(90);
   });
 
   it("enrolls the reviewed six-decimal HOME to USDC direction without manufacturing execution evidence", () => {

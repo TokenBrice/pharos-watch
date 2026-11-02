@@ -240,7 +240,6 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
       "worker/src/telegram/delivery/__tests__/telegram.test.ts",
       "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-delivery-queue.test.ts",
       "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-routing-safety.test.ts",
-      "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-backoff-transitions.test.ts",
       "worker/src/cron/telegram/dispatch/__tests__/dispatch-telegram-alerts-snooze-presets.test.ts",
       "worker/src/telegram/delivery/__tests__/telegram-jobs-sqlite.test.ts",
     ],

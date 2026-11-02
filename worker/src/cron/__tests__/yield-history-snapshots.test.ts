@@ -15,6 +15,8 @@ import type { YieldHistorySnapshotRow } from "../yield-sync/history";
 import { evaluateYieldSourcesCooperative, type EvaluateYieldSourcesResult } from "../yield-sync/evaluation";
 import { baseEvaluationInput, resolvedYield } from "./yield-evaluation.test-support";
 import { cleanupFalseLinkedVariantSourceSwitches, drainDecisionRowsBeforeCutoff, drainRowsBeforeCutoff, pruneYieldTables } from "../yield-sync/history";
+import { classifyDecisionRetention } from "../yield-sync/publication";
+import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
 
 function createDb(): { sqlite: DatabaseSync; db: D1Database } {
   return createLatestSchemaSqlite();
@@ -964,6 +966,126 @@ describe("yield coordinator history", () => {
     expect(result.prevBestSourceKeyByCoin.get("parent-coin")).toBe(linkedSourceKey);
     expect(result.sourceSwitchCount30dByCoin.get("parent-coin")).toBe(0);
   });
+});
 
+describe("yield history set loading", () => {
+  it("loads previous TVL only for requested pairs while retaining selected history", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO yield_history (
+           stablecoin_id, source_key, recorded_at, is_best, apy,
+           source_tvl_usd, data_source, publication_state
+         ) VALUES ('coin-a', ?, ?, ?, 4.2, ?, 'test', 'published')`,
+      );
+      insert.run("source-a", 100, 0, 10);
+      insert.run("source-a", 200, 0, 20);
+      insert.run("source-b", 150, 1, 30);
+      insert.run("source-c", 175, 0, 40);
 
+      const snapshots = await loadYieldHistorySnapshots(
+        db,
+        ["coin-a"],
+        1_000,
+        300,
+        {
+          sourceKeysByStablecoin: new Map([
+            ["coin-a", new Set(["source-a"])],
+          ]),
+        },
+      );
+
+      expect(
+        snapshots.historyRows.map((row) => [row.source_key, row.recorded_at]),
+      ).toEqual([
+        ["source-a", 100],
+        ["source-b", 150],
+        ["source-a", 200],
+      ]);
+      expect(
+        snapshots.prevTvlRows.map((row) => [row.source_key, row.recorded_at]),
+      ).toEqual([["source-a", 200]]);
+      expect(snapshots.previousTvlRowsTruncated).toBe(false);
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
+function decisionSource(
+  sourceKey: string,
+  anomalies: string[] = [],
+): EvaluatedYieldSource {
+  return {
+    sourceKey,
+    confidenceTier: "curated",
+    anomalies,
+    rejected: false,
+  } as EvaluatedYieldSource;
+}
+
+describe("yield decision retention parity", () => {
+  it("drains classifier-generated audit rows and retains trend and episode rows", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const source = decisionSource("source-a");
+      const classifications = [
+        classifyDecisionRetention({
+          sourceSwitch: false,
+          source,
+          candidates: [source],
+        }),
+        classifyDecisionRetention({
+          sourceSwitch: true,
+          source,
+          candidates: [source],
+        }),
+        classifyDecisionRetention({
+          sourceSwitch: false,
+          source,
+          candidates: [decisionSource("source-a", ["source-stale"])],
+        }),
+      ];
+      expect(classifications.map((row) => row.retentionReason)).toEqual([
+        "audit",
+        "trend",
+        "episode",
+      ]);
+
+      const insert = sqlite.prepare(
+        `INSERT INTO yield_source_decisions (
+           generation_id, stablecoin_id, selected_source_key,
+           selected_confidence_tier, selected_data_source, selected_apy_30d,
+           selected_reason, source_switch, alternatives_json, created_at,
+           retention_reason, trend_fingerprint
+         ) VALUES (?, 'coin-a', 'source-a', 'curated', 'test', 4.2,
+                   'test', ?, '[]', 100, ?, ?)`,
+      );
+      for (const [index, classification] of classifications.entries()) {
+        insert.run(
+          `generation-${index}`,
+          classification.retentionReason === "trend" ? 1 : 0,
+          classification.retentionReason,
+          classification.trendFingerprint,
+        );
+      }
+
+      expect(await drainDecisionRowsBeforeCutoff({ db, cutoffSec: 200 })).toEqual({
+        deleted: 1,
+        budgetExhausted: false,
+      });
+      expect(
+        sqlite
+          .prepare(
+            "SELECT retention_reason FROM yield_source_decisions ORDER BY retention_reason",
+          )
+          .all(),
+      ).toEqual([
+        { retention_reason: "episode" },
+        { retention_reason: "trend" },
+      ]);
+    } finally {
+      sqlite.close();
+    }
+  });
 });

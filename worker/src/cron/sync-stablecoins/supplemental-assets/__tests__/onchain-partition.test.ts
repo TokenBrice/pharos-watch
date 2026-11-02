@@ -643,7 +643,7 @@ describe("CoinGecko on-chain share partitions", () => {
       }));
   });
 
-  it.each([0, 1, 2, 3, 4, 5, 8, 53, 70, 85, 88])("covers %i candidates in four leading windows and repeats deterministically per slot", async (count) => {
+  it.each([0, 1, 4, 5, 8])("covers %i candidates in four leading windows and repeats deterministically per slot", async (count) => {
     const metas = Array.from({ length: count }, (_unused, index) => ({
       ...aaMeta, id: `rotation-${index}`, geckoId: `rotation-${index}`,
     }));

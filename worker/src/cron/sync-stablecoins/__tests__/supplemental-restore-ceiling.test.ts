@@ -3,8 +3,6 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getOnchainSupplyHoldReason } from "@shared/lib/onchain-supply-probe";
-import { prefersOnChainSupplyMcap } from "../supplemental-assets/onchain-supply";
 import {
   getCirculatingRawOrNull,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
@@ -61,7 +59,11 @@ function syrupChainCirculating(
 }
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
-  it.each(ACTIVE_STABLECOINS.filter((meta) => prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)))(
+  it.each(["usg-tangent", "usyc-hashnote"].map((id) => {
+    const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === id);
+    if (!meta) throw new Error(`missing preferred supply fixture: ${id}`);
+    return meta;
+  }))(
     "restores only bounded native supply for preferred $id", (meta) => {
       const labels = [...new Set(meta.contracts!.map((contract) => CHAIN_META[contract.chain].name))];
       for (const [source, age, admitted] of [

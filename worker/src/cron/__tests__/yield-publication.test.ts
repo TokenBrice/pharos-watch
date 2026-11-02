@@ -17,8 +17,9 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { D1_MAX_BOUND_PARAMETERS } from "../../lib/db";
 
 import { type EvaluatedYieldSource } from "../yield-sync/evaluation";
-import { buildYieldRankingsPayloadFromEvaluatedSources, loadPreviousYieldPublicationSnapshot } from "../yield-sync/publication";
+import { buildYieldRankingsPayloadFromEvaluatedSources, buildYieldSourceProvenance, loadPreviousYieldPublicationSnapshot } from "../yield-sync/publication";
 import { cleanupFalseLinkedVariantSourceSwitches, materializeYieldHistoryDaily, pruneYieldTables } from "../yield-sync/history";
+import { classifyYieldSourceFreshness } from "../../lib/yield-ranking-helpers";
 import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { buildPreviewYieldRankingsArtifacts } from "../yield-sync/publication";
 import type { PreviousYieldPublicationSnapshot } from "../yield-sync/publication";
@@ -1615,5 +1616,49 @@ describe("buildYieldRankingsPayloadFromEvaluatedSources benchmark projection", (
     expect(payload.provenance?.benchmarks?.CAD?.maxRecordAgeSec).toBe(45 * DAY_SECONDS);
     expect(payload.provenance?.benchmark.maxFetchAgeSec).toBe(YIELD_BENCHMARK_SCORE_TTL_SEC);
     expect(payload.provenance?.benchmarks?.CAD?.maxFetchAgeSec).toBe(YIELD_BENCHMARK_SCORE_TTL_SEC);
+  });
+});
+
+const provenanceNow = 1_790_502_000;
+
+describe("yield source provenance observation authority", () => {
+  it.each(["rate-derived", "defillama"])("does not renew an old %s observation from a fresh family fetch", (dataSource) => {
+    const source = {
+      id: "test-coin",
+      sourceKey: dataSource,
+      dataSource,
+      sourceObservedAt: provenanceNow - 37 * 3600,
+      benchmarkMeta: { fetchedAt: provenanceNow - 60, ageSeconds: 60 },
+      previousBestSourceKey: null,
+    } as EvaluatedYieldSource;
+    const provenance = buildYieldSourceProvenance({
+      source,
+      isBest: false,
+      evaluatedSources: [],
+      startSec: provenanceNow,
+      dlPoolsMeta: { mode: "dex-cache", updatedAt: provenanceNow - 60, ageSeconds: 60, poolCount: 1, fallbackMode: null },
+    });
+    expect(provenance.sourceObservedAt).toBe(provenanceNow - 37 * 3600);
+    expect(provenance.sourceAgeSeconds).toBe(37 * 3600);
+    expect(classifyYieldSourceFreshness({
+      dataSource,
+      sourceKey: dataSource,
+      sourceAgeSeconds: provenance.sourceAgeSeconds as number,
+    })).toBe("stale");
+  });
+
+  it("does not synthesize a rate observation from a recent benchmark fetch", () => {
+    const source = {
+      id: "test-coin", sourceKey: "rate-derived", dataSource: "rate-derived",
+      benchmarkMeta: { fetchedAt: provenanceNow, ageSeconds: 0 },
+      previousBestSourceKey: null,
+    } as EvaluatedYieldSource;
+    const provenance = buildYieldSourceProvenance({
+      source, isBest: false, evaluatedSources: [], startSec: provenanceNow,
+      dlPoolsMeta: { mode: "unavailable", updatedAt: null, ageSeconds: null, poolCount: 0, fallbackMode: null },
+    });
+    expect(provenance.sourceObservedAt).toBeNull();
+    expect(provenance.sourceAgeSeconds).toBeNull();
+    expect(provenance.sourceMaxAgeSeconds).toBe(36 * 3600);
   });
 });
