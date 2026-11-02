@@ -255,6 +255,8 @@ describe("fetchDataSources", () => {
 
     const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
     expect(result).toBeNull();
+    // The shared breaker must learn the DL yields leg failed, not stay silent.
+    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "defillama-yields", false);
   });
 
   it("compacts raw yields before Curve while preserving raw cache, fallback, and count semantics", async () => {
@@ -356,6 +358,10 @@ describe("fetchDataSources", () => {
     })]);
     expect(result?.dlYieldsAvailable).toBe(true);
     expect(recordOutcome).not.toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.DL_YIELDS, false);
+    // An unavailable or non-array protocols payload is still a recorded DL failure.
+    if (protocols === null || !Array.isArray(protocols)) {
+      expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "defillama-protocols", false);
+    }
     expect(vi.mocked(buildDlStablecoinPoolsCache)).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ pool: "pool-0", tvlUsd: 100_000 }),
     ]));

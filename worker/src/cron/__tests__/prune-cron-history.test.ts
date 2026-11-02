@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runPruneCronHistory } from "../prune-cron-history";
+import { pruneStatusProbeRuns, runPruneStatusProbeRuns } from "../prune-status-probe-runs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { WORKER_CANARY_RUN_RETENTION_SEC } from "@shared/lib/retention-policy";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "@shared/lib/safety-score-capture-archive";
@@ -428,5 +429,101 @@ describe("runPruneCronHistory", () => {
     // Fresh rows must survive.
     expect(select(sqlite, "SELECT * FROM cron_runs")).toHaveLength(1);
     expect(select(sqlite, "SELECT * FROM cron_slot_executions")).toHaveLength(1);
+  });
+});
+
+const createProbeDb = () => createTestDb().db;
+
+async function seedProbeRuns(
+  db: D1Database,
+  opts: { count: number; createdAt: number; statusRotation: Array<"healthy" | "degraded" | "stale"> },
+) {
+  for (let i = 0; i < opts.count; i++) {
+    const status = opts.statusRotation[i % opts.statusRotation.length];
+    await db
+      .prepare(
+        "INSERT INTO status_probe_runs (status, sample_count, pass_count, fail_count, p95_latency_ms, details_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      )
+      .bind(status, 50, 50, 0, 100, "{}", opts.createdAt)
+      .run();
+  }
+}
+
+describe("pruneStatusProbeRuns", () => {
+  it("throws before D1 work when the cron signal is already aborted", async () => {
+    const controller = new AbortController();
+    controller.abort(new Error("probe prune aborted"));
+
+    await expect(runPruneStatusProbeRuns(createProbeDb(), controller.signal)).rejects.toThrow("probe prune aborted");
+  });
+
+  it("threads an aborted signal into the direct D1 prune helper", async () => {
+    const db = createProbeDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoffSec = now - 90 * 86_400;
+    await seedProbeRuns(db, {
+      count: 1,
+      createdAt: now - 91 * 86_400,
+      statusRotation: ["healthy"],
+    });
+
+    const controller = new AbortController();
+    controller.abort(new Error("probe prune helper aborted"));
+
+    await expect(pruneStatusProbeRuns(db, { cutoffSec, batchSize: 100, signal: controller.signal })).rejects.toThrow(
+      "probe prune helper aborted",
+    );
+    const remaining = await db
+      .prepare("SELECT COUNT(*) AS cnt FROM status_probe_runs")
+      .first<{ cnt: number }>();
+    expect(remaining?.cnt).toBe(1);
+  });
+
+  it("deletes rows older than cutoffSec and stops at batchSize", async () => {
+    const db = createProbeDb();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoffSec = now - 90 * 86_400;
+    // Seed: 150 rows 91 days ago (candidates), 10 rows from today (must survive).
+    await seedProbeRuns(db, {
+      count: 150,
+      createdAt: now - 91 * 86_400,
+      statusRotation: ["healthy", "degraded", "stale"],
+    });
+    await seedProbeRuns(db, {
+      count: 10,
+      createdAt: now - 300,
+      statusRotation: ["healthy"],
+    });
+
+    // First pass: batchSize=100 caps the deletion, leaving 50 eligible rows.
+    const first = await pruneStatusProbeRuns(db, { cutoffSec, batchSize: 100 });
+    expect(first).toEqual({ deleted: 100, cappedAtLimit: true });
+
+    // Second pass finishes the backlog.
+    const second = await pruneStatusProbeRuns(db, { cutoffSec, batchSize: 100 });
+    expect(second).toEqual({ deleted: 50, cappedAtLimit: false });
+
+    // Recent rows survive.
+    const remaining = await db
+      .prepare("SELECT COUNT(*) AS cnt FROM status_probe_runs")
+      .first<{ cnt: number }>();
+    expect(remaining?.cnt).toBe(10);
+  });
+
+  it("reports cappedAtLimit in run metadata when the 90-day backlog fills the batch", async () => {
+    const db = createProbeDb();
+    const now = Math.floor(Date.now() / 1000);
+    const expectedCutoffSec = now - 90 * 86_400;
+    await db.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 10000)
+      INSERT INTO status_probe_runs
+        (status, sample_count, pass_count, fail_count, p95_latency_ms, details_json, created_at)
+      SELECT 'healthy', 50, 50, 0, 100, '{}', ? FROM n`).bind(expectedCutoffSec - 1).run();
+
+    const result = await runPruneStatusProbeRuns(db);
+    const metadata = JSON.parse(result.metadata!) as { deleted: number; cappedAtLimit: boolean };
+
+    expect(metadata).toMatchObject({ deleted: 10_000, cappedAtLimit: true });
+    const remaining = await db.prepare("SELECT COUNT(*) AS cnt FROM status_probe_runs").first<{ cnt: number }>();
+    expect(remaining?.cnt).toBe(0);
   });
 });

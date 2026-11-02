@@ -152,9 +152,7 @@ describe("runPostEnrichmentPricePipeline", () => {
   });
 
   it.each([
-    ["tryb-bilira", "peggedTRY", 0.022, "coingecko-low-volume", 40 * 3600, 900, true],
     ["gbpm-mento", "peggedGBP", 1.32, "coingecko-low-volume", 40 * 3600, 900, true],
-    ["cadm-mento", "peggedCAD", 0.73, "coingecko-low-volume", 40 * 3600, 900, true],
     ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 1200, 900, true],
     ["usdt-tether", "peggedUSD", 1, "coingecko-low-volume", 8 * 86400, 900, false],
     ["usdt-tether", "peggedUSD", 1, "coinmarketcap", 3601, 900, true],

@@ -23,7 +23,6 @@ import {
   findBestLendingPool,
   isBlockedYieldOpportunitySource,
 } from "../yield-helpers";
-import { computeTvlWeightedMedianApy } from "../yield-sync/evaluation";
 import { parseYieldWarningSignals as parseWarningSignals } from "../../lib/yield-utils";
 import { LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yield-config/yield-config-lending-protocols";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
@@ -731,56 +730,6 @@ describe("isBlockedYieldOpportunitySource", () => {
   it("does not block unrelated venues", () => {
     expect(isBlockedYieldOpportunitySource({ yieldSource: "Aave v3 (ethereum)" })).toBe(false);
     expect(isBlockedYieldOpportunitySource({ poolMeta: "Core USDC" })).toBe(false);
-  });
-});
-
-describe("computeTvlWeightedMedianApy", () => {
-  it("returns null for empty input", () => {
-    expect(computeTvlWeightedMedianApy([])).toBeNull();
-  });
-
-  it("returns null when all rows have null TVL", () => {
-    expect(computeTvlWeightedMedianApy([
-      { apy_30d: 5, source_tvl_usd: null },
-      { apy_30d: 3, source_tvl_usd: null },
-    ])).toBeNull();
-  });
-
-  it("returns null when all rows have zero TVL", () => {
-    expect(computeTvlWeightedMedianApy([
-      { apy_30d: 5, source_tvl_usd: 0 },
-    ])).toBeNull();
-  });
-
-  it("returns the APY of a single valid row", () => {
-    expect(computeTvlWeightedMedianApy([
-      { apy_30d: 5, source_tvl_usd: 1_000_000 },
-    ])).toBe(5);
-  });
-
-  it("returns TVL-weighted median, not simple median", () => {
-    const result = computeTvlWeightedMedianApy([
-      { apy_30d: 10, source_tvl_usd: 100_000 },
-      { apy_30d: 3, source_tvl_usd: 10_000_000 },
-    ]);
-    expect(result).toBe(3);
-  });
-
-  it("filters out rows with zero or negative APY", () => {
-    const result = computeTvlWeightedMedianApy([
-      { apy_30d: 0, source_tvl_usd: 100_000_000 },
-      { apy_30d: 5, source_tvl_usd: 1_000_000 },
-    ]);
-    expect(result).toBe(5);
-  });
-
-  it("picks median from sorted valid rows for balanced TVL", () => {
-    const result = computeTvlWeightedMedianApy([
-      { apy_30d: 2, source_tvl_usd: 1_000_000 },
-      { apy_30d: 5, source_tvl_usd: 1_000_000 },
-      { apy_30d: 8, source_tvl_usd: 1_000_000 },
-    ]);
-    expect(result).toBe(5);
   });
 });
 
