@@ -614,6 +614,22 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
     });
   });
 
+  it("values USG's keeper-adjusted issuer-native stock, never the CoinGecko cap", async () => {
+    const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(true);
+    probeTrackedTokenSupplyMock.mockResolvedValue(4_000_000n * 10n ** 18n);
+    fetchErc20TotalSupplyMock.mockResolvedValue(4_000_000n * 10n ** 18n);
+    // Both reviewed PegKeeper balances (CURATED_ONCHAIN_SUPPLY_EXCLUSIONS) read zero here.
+    fetchOnchainUint256Mock.mockResolvedValue(0n);
+
+    const result = await fetchOnChainMcap(meta, 1.01);
+
+    expect(result?.supplySource).toBe("onchain-circulating-supply");
+    expect(result?.mcap).toBeCloseTo(4_040_000, 6);
+    expect(result?.chainCirculating).toEqual({ Ethereum: { current: 4_040_000, chainId: "ethereum" } });
+    expect(fetchOnchainUint256Mock).toHaveBeenCalledTimes(2);
+  });
+
   it("admits USYC's complete native four-chain stock instead of a stale CoinGecko cap", async () => {
     const meta = TRACKED_META_BY_ID.get("usyc-hashnote")!;
     expect(prefersOnChainSupplyMcap(meta)).toBe(true);

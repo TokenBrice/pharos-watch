@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.68`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.69`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -43,6 +43,8 @@ The [public Pricing changelog](https://pharos.watch/methodology/pricing-pipeline
 Pricing v6.67 keeps a provider aggregate history bucket on a chain-dropout carry only when every carried chain's own packet row still reports that window at the carried baseline; an absent, zero or divergent bucket, or an attribution-ambiguous held total, leaves that window null. The [supply contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/supply-snapshot.md#chain-dropout-guard) owns the detailed carry condition.
 
 Pricing v6.68 bounds promoted per-protocol DEX lanes by the same co-leg budget as the DEX aggregate, so an hourly lane inside its own 35-minute source budget can no longer age fresh hard agreement past the 30-minute depeg-trust budget, while a lane up to 30 minutes old still backs a hard leg whose fresh peers are missing or diverge; [Source Weights](#source-weights) owns the rule.
+
+Pricing v6.69 restores Tangent USG's CoinGecko identity (`tangent-usg`), so the ordinary supplemental CoinGecko lane prices it instead of the lone Curve on-chain quote, and makes its keeper-adjusted issuer-native Ethereum stock outrank any CoinGecko market cap. `mai-qidao`, `usda-alpha-partner`, `pathusd-bridge` and `wars-argentine-peso` keep no promoted DEX lane: their venues offer one unmapped or normalized protocol family, or families that disagree beyond the 50-bps corroboration threshold, and no hard source, so the existing corroboration, lane-floor and aggregate-withholding rules decide, not a coin-level switch.
 
 ### Release obligations
 

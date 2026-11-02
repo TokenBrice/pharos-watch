@@ -12,7 +12,8 @@ import { buildSyncMetadata, restorePreferredNativeSupply } from "./shared";
 import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
 import { NAV_PARENT_ONLY_GECKO_IDS } from "./supplemental-assets";
-import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
+import type { OnChainMcapResult } from "./supplemental-assets/onchain-supply";
 import { buildSupplementalAsset, pegTypeKey, toPositiveFiniteNumber, type CoinGeckoMcapData } from "./supplemental-assets/shared";
 
 interface FallbackStablecoinMetadata {
@@ -145,8 +146,17 @@ export async function overlayFallbackCuratedAggregateSupply(
       && getCirculatingRawOrNull(asset) !== null) continue;
 
     const priceUsd = toPositiveFiniteNumber(asset.price);
-    const onChainMcap = priceUsd == null ? null
-      : await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal, dwellirNative);
+    let onChainMcap: OnChainMcapResult | null = null;
+    if (priceUsd != null) {
+      onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal, dwellirNative);
+      // A preferred single-register asset has no curated roster but still owns
+      // a readable native stock; withholding it would publish unavailable
+      // supply the one deployment can prove. `fetchOnChainMcap` refuses every
+      // multi-contract footprint, so no ambiguous perimeter is summed here.
+      if (!onChainMcap && prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)) {
+        onChainMcap = await fetchOnChainMcap(meta, priceUsd, undefined, signal, dwellirNative);
+      }
+    }
     if (!onChainMcap?.chainCirculating) {
       if (prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)) {
         Object.assign(asset, restorePreferredNativeSupply(asset, previousAssetsById?.get(meta.id), Math.floor(Date.now() / 1000)));

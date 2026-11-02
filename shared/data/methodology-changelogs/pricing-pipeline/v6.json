@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.69",
+    "title": "USG gains its CoinGecko identity; its keeper-adjusted stock outranks the CoinGecko cap",
+    "date": "2026-11-02",
+    "effectiveAt": 1793750400,
+    "summary": "Tangent USG gains its verified CoinGecko identity (`tangent-usg`, Ethereum `0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1`, 18 decimals), so the ordinary CoinGecko supplemental price lane can read it instead of the lone Curve on-chain quote. Its published supply now comes only from the issuer-native Ethereum `totalSupply` less the two PegKeeper balances Tangent's own UI excludes; a CoinGecko market cap, which counts that keeper inventory, can never replace it.",
+    "impact": [
+      "`shared/data/stablecoins/coins/usg-tangent.json`: `geckoId: \"tangent-usg\"` restores the CoinGecko price route and the CoinGecko ticker cohort. Price admission, freshness, peg-aware bounds and the existing source families are unchanged.",
+      "`shared/lib/onchain-supply-probe.ts`: `usg-tangent` joins `PREFER_ONCHAIN_SUPPLY_MCAP_IDS`. The preferred read is the existing single-deployment probe over its one Ethereum register, adjusted by `CURATED_ONCHAIN_SUPPLY_EXCLUSIONS` (PegKeeper balances), and the CoinGecko cap is skipped. A failed read restores or withholds; it never republishes the cap.",
+      "`worker/src/cron/sync-stablecoins/fallback-intake.ts`: the outage overlay reads a preferred asset through the single-deployment probe when it has no curated aggregate roster, so a pin on a one-register asset publishes its provable native stock instead of `onchain-supply-withheld`. Multi-contract footprints still refuse the single-contract reader.",
+      "Reviewed 2026-11-02 and left unchanged: `mai-qidao`, `usda-alpha-partner`, `pathusd-bridge` and `wars-argentine-peso` still admit no primary DEX leg. Each has one mapped protocol family, or families more than 50 bps apart, and no hard source; the existing `lacked_corroboration` and aggregate-withholding rules therefore apply, and the $50,000 lane floor excludes pathUSD's Uniswap V4 Tempo pools. The ARS peg is not the blocker: wARS quotes pass the peg-aware bounds. No corroboration threshold, lane floor or trust tier was changed.",
+      "Trust tiers, weights, thresholds and the depeg detector are unchanged. Provisional activation is 2026-11-04 00:00 UTC (1793750400), to be re-dated at release."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.68",
     "title": "DEX protocol lanes bounded by the co-leg freshness budget",
     "date": "2026-11-02",
@@ -9,7 +25,7 @@
       "`worker/src/lib/primary-price-collector.ts`: lanes are judged against the co-leg budget before corroboration, so only lanes inside it corroborate one another. A held lane records `outside_co_leg_budget` with its `coLegBudgetSec` and `ageSec`, and stays in `consensusSources` as an available, non-voting candidate, so source depth and the corroboration-probe cohorts are unchanged. The $50,000 lane floor and aggregate withholding are unchanged; lanes that are the only kind of leg keep their own window.",
       "Degraded runs: if the fresh legs do not form an agreeing cluster (CoinGecko missing, or more than 50 bps from Curve on-chain), a lane at most 1,800 s old that agrees with a fresh hard leg rejoins. The composite is dated by that lane, never by a fresh leg's clock, so Curve-backed assets keep their pre-6.68 high, authoritative result in that state.",
       "Why: at the 2026-11-02 06:45 UTC run all 14 assets with a lane in their agreeing cluster (pmUSD, RLUSD, BOLD, LUSD, reUSD, ...) published composite clocks 2,011-2,054 s old, past the 1,800 s depeg-trust budget. Thirteen become authoritative at such runs; CASH stays `confirm_required` because its remaining CoinGecko and Kraken pair is not depeg-authoritative. pmUSD's open depeg had recorded blind coverage about once an hour. The same composites also failed each co-leg's own window in authoritative parent checks, the failure mode already fixed for the aggregate leg.",
-      "Trust tiers, weights, thresholds and the depeg detector are unchanged. Provisional activation is 2026-11-03 00:00 UTC (1793664000), to be re-dated at release."
+      "Trust tiers, weights, thresholds and the depeg detector are unchanged. Provisional activation is 2026-11-04 00:00 UTC (1793750400), to be re-dated at release."
     ],
     "commits": [],
     "reconstructed": false

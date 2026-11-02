@@ -39,6 +39,7 @@ const fallbackMocks = vi.hoisted(() => ({
 
 const onchainSupplyMocks = vi.hoisted(() => ({
   fetchCuratedAggregateOnChainMcap: vi.fn(),
+  fetchOnChainMcap: vi.fn(),
 }));
 
 vi.mock("../post-enrichment", async (importOriginal) => ({
@@ -64,6 +65,7 @@ vi.mock("../phase-helpers", async (importOriginal) => ({
 vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../supplemental-assets/onchain-supply")>()),
   fetchCuratedAggregateOnChainMcap: onchainSupplyMocks.fetchCuratedAggregateOnChainMcap,
+  fetchOnChainMcap: onchainSupplyMocks.fetchOnChainMcap,
 }));
 
 const NOW_SEC = 1_700_000_000;
@@ -616,6 +618,7 @@ describe("CoinGecko fallback phases", () => {
 describe("overlayFallbackCuratedAggregateSupply", () => {
   beforeEach(() => {
     onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockReset();
+    onchainSupplyMocks.fetchOnChainMcap.mockReset();
   });
 
   it.each([1, null])("preserves sFRAX's explicit publication hold after a failed overlay with price %s", async (price) => {
@@ -645,6 +648,30 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
       }
     },
   );
+
+  it("reads a preferred single-register asset instead of withholding its provable supply", async () => {
+    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue(null);
+    onchainSupplyMocks.fetchOnChainMcap.mockResolvedValue({
+      mcap: 3_500_000,
+      supplySource: "onchain-circulating-supply",
+      observedAt: NOW_SEC,
+      chain: "ethereum",
+      chainLabel: "Ethereum",
+      chainCirculating: { Ethereum: { current: 3_500_000, chainId: "ethereum" } },
+    });
+    const assets = [makeAsset({ id: "usg-tangent", price: 1.01, supplySource: "coingecko-fallback" })];
+
+    await overlayFallbackCuratedAggregateSupply(assets);
+
+    expect(onchainSupplyMocks.fetchOnChainMcap).toHaveBeenCalledTimes(1);
+    expect(assets[0]).toMatchObject({
+      supplySource: "onchain-circulating-supply",
+      supplyObservedAt: NOW_SEC,
+      circulating: { peggedUSD: 3_500_000 },
+      chainCirculating: { Ethereum: { current: 3_500_000 } },
+    });
+    expect(assets[0].supplyUnavailableReason).toBeUndefined();
+  });
 
   it("replaces fresh CoinGecko supply and incompatible history on a successful preferred read", async () => {
     const native = makeAsset({

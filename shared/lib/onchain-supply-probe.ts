@@ -149,6 +149,12 @@ const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   // contradicted cap when a leg is unreadable.
   // https://bscscan.com/token/0x8d0fa28f221eb5735bc71d3a0da67ee5bc821311
   "usyc-hashnote",
+  // Reviewed 2026-11-02: USG's circulating stock is its issuer-native Ethereum
+  // totalSupply less the two PegKeeper balances Tangent's own UI excludes
+  // (`CURATED_ONCHAIN_SUPPLY_EXCLUSIONS`). The CoinGecko market cap counts that
+  // keeper inventory, so it must never replace the adjusted read.
+  // https://etherscan.io/token/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1
+  "usg-tangent",
 ]);
 
 export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): boolean {
