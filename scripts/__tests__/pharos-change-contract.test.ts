@@ -68,7 +68,7 @@ interface InProcessCliResult {
 /** Exercise the real CLI dispatcher in-process: same parser, output and exit codes. */
 async function runContractCli(
   argv: readonly string[],
-  { readStdin, env = {} }: { readStdin?: () => string; env?: NodeJS.ProcessEnv } = {},
+  { readStdin, env = {} }: { readStdin?: () => string; env?: Readonly<Record<string, string | undefined>> } = {},
 ): Promise<InProcessCliResult> {
   const stdout: string[] = [];
   const stderr: string[] = [];
@@ -102,7 +102,7 @@ async function runContractCli(
 async function runHookInProcess(
   hook: HookMode,
   input = "",
-  env: NodeJS.ProcessEnv = {},
+  env: Readonly<Record<string, string | undefined>> = {},
   extraArgs: readonly string[] = [],
 ): Promise<InProcessCliResult> {
   return runContractCli([`--hook=${hook}`, ...extraArgs], { readStdin: () => input, env });
@@ -1735,7 +1735,7 @@ describe("W2.7 malformed hook payloads", () => {
     });
   });
 
-  it.each(["pre-tool-use", "permission-request"])("keeps malformed stdin denial at the %s process boundary", (hook) => {
+  it.each(["pre-tool-use", "permission-request"] as const)("keeps malformed stdin denial at the %s process boundary", (hook) => {
     const payload = '{"tool_name": "Bash", "tool_inp';
     const result = runHookCliProcess(hook, payload);
     expect(result.status).toBe(2);
