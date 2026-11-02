@@ -6,6 +6,7 @@ import { CHAIN_META } from "@shared/types/chain-identity";
 import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
 import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
 import { deriveSfraxStockPerimeter } from "@shared/lib/sfrax-supply";
+import { chainSupplyReconciles } from "@shared/lib/chains/circulating";
 import { SFRAX_STOCK_MAX_AGE_SEC } from "@shared/types/sfrax-supply";
 import {
   getCirculatingRawOrNull,
@@ -579,10 +580,6 @@ function hasReconciledCuratedAggregateSupplyPacket(
     freshAggregateSupply === undefined ||
     (freshAggregateSupply !== null && chainSupplyReconciles(chainSupply, freshAggregateSupply))
   );
-}
-
-function chainSupplyReconciles(chainSupply: number, total: number): boolean {
-  return Math.abs(chainSupply - total) <= Math.max(0.01, total * 1e-9);
 }
 
 /** Scale complete shares only; preserve unattributed residuals and omit unobserved chain history. */
