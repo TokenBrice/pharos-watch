@@ -181,7 +181,7 @@ describe("critical ownership derivation", () => {
 
 });
 
-describe("worker-shared pilot eligibility", () => {
+describe("worker-shared eligibility", () => {
   it("rejects per-file module state and unrestored global stubs", () => {
     const eligible = [
       'import { it } from "vitest";\nit("x", () => {});\n',
@@ -263,19 +263,42 @@ describe("worker-shared pilot eligibility", () => {
     expect(build(false)).toEqual([]);
   });
 
-  it("classifies only reserve-adapter test files under __tests__", () => {
+  it("keeps importers of mock-registering or env-writing support modules isolated", () => {
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-worker-shared-mocks-"));
+    temporaryDirectories.push(cwd);
+    const tests = join(cwd, "worker/src/lib/__tests__");
+    mkdirSync(tests, { recursive: true });
+    writeFileSync(join(tests, "registry-mock.test-support.ts"), 'vi.mock("@shared/lib/stablecoins/registry", () => ({}));\n');
+    writeFileSync(join(tests, "env-writing.test-support.ts"), 'process.env.PHAROS_FIXTURE = "1";\n');
+    writeFileSync(join(tests, "plain.test-support.ts"), "export const label = 'plain';\n");
+    writeFileSync(join(tests, "imports-mock.test.ts"), 'import { label } from "./registry-mock.test-support";\nvoid label;\n');
+    writeFileSync(join(tests, "imports-env.test.ts"), 'import { label } from "./env-writing.test-support";\nvoid label;\n');
+    writeFileSync(join(tests, "imports-plain.test.ts"), 'import { label } from "./plain.test-support";\nvoid label;\n');
+
+    expect(collectWorkerSharedTestFiles(cwd)).toEqual([
+      "worker/src/lib/__tests__/imports-plain.test.ts",
+    ]);
+  });
+
+  it("classifies only __tests__ files under the worker/src/{cron,lib} tranche", () => {
     const cwd = mkdtempSync(join(tmpdir(), "pharos-worker-shared-"));
     temporaryDirectories.push(cwd);
-    const tests = join(cwd, "worker/src/cron/reserve-adapters/__tests__");
-    mkdirSync(tests, { recursive: true });
-    writeFileSync(join(tests, "clean.test.ts"), 'import { it } from "vitest";\nit("x", () => {});\n');
-    writeFileSync(join(tests, "mocked.test.ts"), 'vi.mock("./adapter");\n');
-    writeFileSync(join(tests, "harness.test-support.ts"), "export const harness = true;\n");
-    mkdirSync(join(cwd, "worker/src/other/__tests__"), { recursive: true });
-    writeFileSync(join(cwd, "worker/src/other/__tests__/clean.test.ts"), 'import { it } from "vitest";\n');
+    const cronTests = join(cwd, "worker/src/cron/reserve-adapters/__tests__");
+    mkdirSync(cronTests, { recursive: true });
+    writeFileSync(join(cronTests, "clean.test.ts"), 'import { it } from "vitest";\nit("x", () => {});\n');
+    writeFileSync(join(cronTests, "mocked.test.ts"), 'vi.mock("./adapter");\n');
+    writeFileSync(join(cronTests, "harness.test-support.ts"), "export const harness = true;\n");
+    const libTests = join(cwd, "worker/src/lib/__tests__");
+    mkdirSync(libTests, { recursive: true });
+    writeFileSync(join(libTests, "clean.test.ts"), 'import { it } from "vitest";\nit("x", () => {});\n');
+    for (const outside of ["worker/src/other", "worker/src/handlers", "worker/src/routes"]) {
+      mkdirSync(join(cwd, outside, "__tests__"), { recursive: true });
+      writeFileSync(join(cwd, outside, "__tests__/clean.test.ts"), 'import { it } from "vitest";\n');
+    }
 
     expect(collectWorkerSharedTestFiles(cwd)).toEqual([
       "worker/src/cron/reserve-adapters/__tests__/clean.test.ts",
+      "worker/src/lib/__tests__/clean.test.ts",
     ]);
   });
 
