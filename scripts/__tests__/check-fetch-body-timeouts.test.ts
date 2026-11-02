@@ -137,6 +137,21 @@ describe("fetch body timeout guardrail", () => {
     });
   });
 
+  it("still scans a fetchWithRetry alias spelled with a unicode escape", () => {
+    withTempRepo("pharos-fetch-body-timeouts", {
+      "worker/src/cron/provider.ts": [
+        "export async function run() {",
+        "  const res = await \\u0066etchWithRetry(url);",
+        "  return res.text();",
+        "}",
+      ].join("\n"),
+    }, (cwd) => {
+      expect(scanFetchBodyTimeouts({ cwd })).toEqual([
+        expect.objectContaining({ file: "worker/src/cron/provider.ts", variable: "res", method: "text" }),
+      ]);
+    });
+  });
+
   it("passes when response bodies use the timeout-safe helpers", () => {
     withTempRepo("pharos-fetch-body-timeouts", {
       "worker/src/cron/provider.ts": "export async function run() { return fetchJsonWithRetry(url); }",

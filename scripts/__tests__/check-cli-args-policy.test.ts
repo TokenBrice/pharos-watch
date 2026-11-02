@@ -17,6 +17,8 @@ describe("check-cli-args-policy", () => {
     expect(sourceUsesProcessArgv('const label = "process.argv"; // process.argv\n')).toBe(false);
     expect(sourceUsesProcessArgv("const args = process.argv.slice(2);\n")).toBe(true);
     expect(sourceUsesProcessArgv('const args = process["argv"].slice(2);\n')).toBe(true);
+    expect(sourceUsesProcessArgv("const args = \\u0070rocess.argv.slice(2);\n")).toBe(true);
+    expect(sourceUsesProcessArgv("const argv = processArgs.slice(2);\n")).toBe(false);
   });
 
   it("rejects a newly discovered process.argv entrypoint until it is classified", () => {

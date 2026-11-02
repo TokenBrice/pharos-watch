@@ -72,6 +72,9 @@ export function scanSqlInterpolationSafety(
     cwd,
     extensions: SQL_SAFETY_EXTENSIONS,
     scanFile: ({ relativePath, content, root }) => {
+      // The interpolation pattern is a necessary condition for a violation;
+      // search() keeps a future global flag from carrying lastIndex state.
+      if (content.search(SQL_INTERPOLATION_PATTERN) < 0) return [];
       const violations: SqlSafetyViolation[] = [];
       const lines = content.split("\n");
       const sourceFile = ts.createSourceFile(relativePath, content, ts.ScriptTarget.Latest, true);

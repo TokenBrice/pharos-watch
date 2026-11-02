@@ -127,6 +127,21 @@ describe("provider resilience checker", () => {
     });
   });
 
+  it("still scans a bare fetch spelled with a unicode escape", () => {
+    withTempRepo("pharos-provider-resilience", {
+      "worker/src/escaped.ts": "export async function run() { return \\u0066etch(url); }",
+    }, (cwd) => {
+      const report = scanProviderResilience({
+        cwd,
+        registry: [],
+        requiredFamilies: [],
+        directFetchRoots: ["worker/src"],
+      });
+
+      expect(report.violations.map((violation) => violation.kind)).toContain("unregistered-direct-fetch");
+    });
+  });
+
   it.each(["fetch", "request"])("fails when a new direct %s file is not registered", (callee) => {
     withTempRepo("pharos-provider-resilience", {
       "worker/src/unregistered.ts": `

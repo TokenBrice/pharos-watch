@@ -31,6 +31,9 @@ function normalizeRepoPath(path: string): string {
 }
 
 export function sourceUsesProcessArgv(source: string, path = "source.ts"): boolean {
+  // Both access forms need the `process` identifier; a unicode escape can spell
+  // it (or the `argv` member), so those files still get parsed.
+  if (!source.includes("process") && !/\\u(?:[0-9a-f]{4}|\{[0-9a-f]{1,6}\})/i.test(source)) return false;
   const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, false, getScriptKind(path));
   let found = false;
 

@@ -12,6 +12,8 @@ import {
   STRUCTURAL_CHECKS,
 } from "../maintenance/run-pr-static-checks.ts";
 import { selectCheckableArtifactIds, selectGeneratedArtifacts } from "../lib/automation-registry.mjs";
+import { withTempRepo } from "./helpers/test-state";
+
 describe("adaptive PR checks", () => {
   it("selects doc sync for selector-only and required-only owners without depending on context mode", () => {
     const originalLength = PATH_FAMILIES.length;
@@ -130,6 +132,12 @@ describe("adaptive PR checks", () => {
       .not.toContain("check:dependency-audit");
   });
 
+  it("keeps both dependency audits because neither covers the other", () => {
+    const names = buildPrStaticCheckPlan(["package.json"], { group: "guards" }).commands
+      .map((command) => command.name);
+    expect(names).toEqual(expect.arrayContaining(["audit:deps", "check:dependency-audit"]));
+  });
+
   it.each([
     [],
     ["docs/testing.md"],
@@ -153,7 +161,11 @@ describe("adaptive PR checks", () => {
   });
 
   it("keeps both compilers concurrent while moving every non-compile check to guards", () => {
-    const changedFiles = ["worker/src/lib/safety-score-v9/extension.ts", "docs/editorial-style.md"];
+    const changedFiles = [
+      "worker/src/lib/safety-score-v9/extension.ts",
+      "src/lib/classification.ts",
+      "docs/editorial-style.md",
+    ];
     const compile = buildPrStaticCheckPlan(changedFiles, { group: "compile" });
     expect(compile.commands.map((command) => command.name)).toEqual([
       "lint:changed", "typecheck", "typecheck:worker",
@@ -170,7 +182,7 @@ describe("adaptive PR checks", () => {
       "check:worker-config", "check:worker-package",
     ]));
     expect(partitionPrStaticCheckPlan(guards.commands).parallel.map((command) => command.name)).toEqual([
-      "check:generated-artifacts", "check:structural",
+      "check:generated-artifacts", "check:structural", "check:unused-code",
     ]);
   });
 
@@ -279,11 +291,60 @@ describe("adaptive PR checks", () => {
     expect(buildPrStaticCheckPlan([path]).commands.map((command) => command.name)).toContain("check:sensitive-page-copy");
   });
 
-  it("keeps unused-code nightly-only and unrelated copy out of PR guards", () => {
+  it("runs unused-code as a parallel PR guard without widening the structural roster", () => {
     expect(STRUCTURAL_CHECKS).not.toContain("check:unused-code");
     expect(STRUCTURAL_CHECKS).not.toContain("check:sensitive-page-copy");
-    expect(buildPrStaticCheckPlan(["src/app/page.tsx"]).commands.map((command) => command.name))
-      .not.toContain("check:sensitive-page-copy");
+    const guards = buildPrStaticCheckPlan(["src/app/page.tsx"], { group: "guards" }).commands;
+    expect(guards.map((command) => command.name)).toContain("check:unused-code");
+    expect(partitionPrStaticCheckPlan(guards).parallel.map((command) => command.name)).toContain("check:unused-code");
+    expect(guards.map((command) => command.name)).not.toContain("check:sensitive-page-copy");
+    expect(buildPrStaticCheckPlan(["docs/testing.md"]).commands.map((command) => command.name))
+      .not.toContain("check:unused-code");
+  });
+
+  it.each([
+    ["src/app/page.tsx", true],
+    ["shared/lib/classification.ts", true],
+    ["functions/selector-snapshot/[[path]].ts", true],
+    ["scripts/ci/check-provider-resilience.ts", true],
+    ["next-env.d.ts", true],
+    ["package.json", true],
+    ["package-lock.json", true],
+    ["tsconfig.typecheck.json", true],
+    ["next.config.ts", true],
+    ["src/types/global.d.ts", true],
+    ["src/generated/schema.ts", true],
+    ["docs/testing.md", false],
+    ["worker/src/cron/sync-stablecoins.ts", false],
+    ["src/lib/example.test.ts", false],
+    ["worker/src/cron/__tests__/x.test.ts", false],
+  ])("selects root typecheck only for inputs tsconfig.typecheck.json can observe: %s -> %s", (path, expected) => {
+    const compile = buildPrStaticCheckPlan([path], { group: "compile" }).commands.map((command) => command.name);
+    expect(compile.includes("typecheck")).toBe(expected);
+  });
+
+  it("runs root typecheck when the tsconfig cannot be read", () => {
+    withTempRepo("pharos-static-typecheck", {
+      "tsconfig.typecheck.json": "{ not json",
+      "src/keep.ts": "export {};",
+    }, (cwd) => {
+      expect(buildPrStaticCheckPlan(["docs/testing.md"], { cwd, group: "compile" }).commands
+        .map((command) => command.name)).toContain("typecheck");
+      expect(buildPrStaticCheckPlan(["src/keep.ts"], { cwd, group: "compile" }).commands
+        .map((command) => command.name)).toContain("typecheck");
+    });
+  });
+
+  it("skips root typecheck for a known non-typechecked change set", () => {
+    withTempRepo("pharos-static-typecheck", {
+      "tsconfig.typecheck.json": JSON.stringify({ include: ["src/**/*.ts"] }),
+      "src/keep.ts": "export {};",
+    }, (cwd) => {
+      expect(buildPrStaticCheckPlan(["src/keep.ts"], { cwd, group: "compile" }).commands
+        .map((command) => command.name)).toContain("typecheck");
+      expect(buildPrStaticCheckPlan(["docs/testing.md", "src/keep.test.ts"], { cwd, group: "compile" }).commands
+        .map((command) => command.name)).not.toContain("typecheck");
+    });
   });
 
   it("runs full-repository lint when the boundary policy changes", () => {
@@ -342,7 +403,7 @@ describe("adaptive PR checks", () => {
         },
       });
       expect(calls).toEqual(STRUCTURAL_CHECKS);
-      expect(maxActive).toBe(1);
+      expect(maxActive).toBe(3);
       expect(code).toBe(failedIndexes.length === 0 ? 0 : 1);
       for (const [index, name] of STRUCTURAL_CHECKS.entries()) {
         expect(output.join("")).toContain(failedIndexes.includes(index)
@@ -352,6 +413,50 @@ describe("adaptive PR checks", () => {
       expect(output.join("")).toContain(`${STRUCTURAL_CHECKS.length - failedIndexes.length}/${STRUCTURAL_CHECKS.length} guards passed.`);
     },
   );
+
+  it.each([
+    ["1", 1],
+    ["2", 2],
+    ["9", 9],
+    ["0", 3],
+    ["not-a-number", 3],
+  ])("honours PHAROS_STRUCTURAL_CONCURRENCY=%s with %i active guards", async (value, expected) => {
+    let active = 0;
+    let maxActive = 0;
+    const code = await runPrStaticChecks({
+      argv: ["--structural"],
+      env: { ...process.env, PHAROS_STRUCTURAL_CONCURRENCY: value },
+      stdout: { write: () => true },
+      runCommandImpl: async () => {
+        active += 1;
+        maxActive = Math.max(maxActive, active);
+        await Promise.resolve();
+        active -= 1;
+        return 0;
+      },
+    });
+    expect(code).toBe(0);
+    expect(maxActive).toBe(expected);
+  });
+
+  it("reports every structural outcome in declaration order even when later guards finish first", async () => {
+    const output: string[] = [];
+    const code = await runPrStaticChecks({
+      argv: ["--structural"],
+      env: { ...process.env, PHAROS_STRUCTURAL_CONCURRENCY: "3" },
+      stdout: { write: (text: string) => { output.push(text); return true; } },
+      runCommandImpl: async (command) => {
+        let remaining = STRUCTURAL_CHECKS.length - STRUCTURAL_CHECKS.findIndex((name) => name === command.scriptName);
+        while (remaining-- > 0) await Promise.resolve();
+        return 0;
+      },
+    });
+    expect(code).toBe(0);
+    expect(output.slice(-(STRUCTURAL_CHECKS.length + 1))).toEqual([
+      ...STRUCTURAL_CHECKS.map((name) => `[check:structural] ${name}: passed\n`),
+      `[check:structural] ${STRUCTURAL_CHECKS.length}/${STRUCTURAL_CHECKS.length} guards passed.\n`,
+    ]);
+  });
 
   it("continues structural checks after a thrown command failure", async () => {
     const output: string[] = [];
