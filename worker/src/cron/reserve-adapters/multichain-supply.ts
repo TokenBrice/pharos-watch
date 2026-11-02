@@ -19,18 +19,10 @@ import { DECIMALS_SELECTOR } from "../../lib/evm-selectors";
 import { redactProviderUrls } from "../../lib/safe-error-message";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { pinnedBlockPlan } from "./evm-observation-plan";
-import { fetchCip56RegistrySupply, type Cip56RegistryInstrumentSource, type Cip56RegistrySupplyRead } from "./cip56-registry";
 import { fetchErc20TotalSupply, fetchOnchainUint256, fetchTronErc20TotalSupply } from "./onchain";
 import { APTOS_PUBLIC_REST_URL, fetchMoveFungibleAssetSupply, fetchSolanaMintSupply } from "./token-supply";
 import type { AdapterContext } from "./types";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
-
-export interface MultichainSupplyProvenance {
-  sourceUrl: string;
-  basis: string;
-  /** The source's own observation clock, not the Worker run clock. */
-  asOf: string;
-}
 
 export interface MultichainSupplyContribution {
   chain: string;
@@ -40,8 +32,6 @@ export interface MultichainSupplyContribution {
   /** Unix seconds the read observed: pinned block or ledger time, else the
    *  run clock for latest-state reads. Set by scoped liability reads. */
   observedAt?: number;
-  /** Present when the source clock is reported by an external registry. */
-  provenance?: MultichainSupplyProvenance;
 }
 
 export interface MultichainSupplyAggregate {
@@ -308,52 +298,7 @@ async function readIncludedSupply(
       if (!asset) return fail("fungible-asset ledger read failed");
       return admit(asset.rawSupply, asset.decimals, asset.ledgerTimestampSec ?? nowSec);
     }
-    case "cip56-registry":
-      return fail("cip56-registry reader requires a non-catalog deployment with a registry source");
   }
-}
-
-export type Cip56RegistrySupplyReader = (
-  source: Cip56RegistryInstrumentSource,
-  options: { signal: AbortSignal; nowSec: number; ctx?: AdapterContext },
-) => Promise<Cip56RegistrySupplyRead>;
-
-const CIP56_REGISTRY_SUPPLY_BASIS =
-  "registry-reported CIP-56 token metadata totalSupply (the instrument admin's sum of active Holding amounts, with its own last-computed clock)";
-
-async function readRegistryIncludedSupply(
-  entry: IssuerNativeLiabilityScope["included"][number],
-  options: {
-    signal: AbortSignal;
-    nowSec: number;
-    ctx?: AdapterContext;
-    readRegistrySupply?: Cip56RegistrySupplyReader;
-  },
-): Promise<IncludedRead> {
-  const source = entry.registry;
-  if (!source) {
-    return { ok: false, chain: entry.chain, reason: "CIP-56 registry source is missing" };
-  }
-  const read = await (options.readRegistrySupply ?? fetchCip56RegistrySupply)(source, {
-    signal: options.signal,
-    nowSec: options.nowSec,
-    ctx: options.ctx,
-  });
-  return {
-    ok: true,
-    contribution: {
-      chain: entry.chain,
-      tokenAddress: `${source.registrarParty}:${source.instrumentId}`,
-      raw: read.raw,
-      decimals: read.decimals,
-      observedAt: read.observedAt,
-      provenance: {
-        sourceUrl: source.url,
-        basis: CIP56_REGISTRY_SUPPLY_BASIS,
-        asOf: read.asOf,
-      },
-    },
-  };
 }
 
 /**
@@ -373,8 +318,6 @@ export async function aggregateScopedLiabilitySupply(options: {
   ctx?: AdapterContext;
   tronCtx?: AdapterContext;
   readEvmToken: (contract: ContractDeployment) => Promise<ScopedEvmTokenRead>;
-  /** Test seam for the external CIP-56 registry read. */
-  readRegistrySupply?: Cip56RegistrySupplyReader;
 }): Promise<ScopedLiabilitySupply> {
   const { coin, scope, adapterKey, signal } = options;
   const contracts = coin.contracts ?? [];
@@ -382,21 +325,11 @@ export async function aggregateScopedLiabilitySupply(options: {
   const classified = new Set<string>();
   const invalidScopeChains = new Set<string>();
   const includedChains = new Set(scope.included.map((entry) => entry.chain));
-  for (const entry of scope.included) {
-    if (classified.has(entry.chain)) invalidScopeChains.add(entry.chain);
-    classified.add(entry.chain);
-    // On-chain readers serve catalog deployments only; a registry reader is
-    // the one reviewed way to observe a native deployment outside the catalog.
-    const registryReader = entry.reader === "cip56-registry";
-    if (registryReader
-      ? catalogChains.has(entry.chain) || entry.registry == null
-      : !catalogChains.has(entry.chain) || entry.registry != null) {
-      invalidScopeChains.add(entry.chain);
-    }
-  }
-  for (const entry of scope.excluded) {
+  for (const entry of [...scope.included, ...scope.excluded]) {
     if (classified.has(entry.chain) || !catalogChains.has(entry.chain)) invalidScopeChains.add(entry.chain);
     classified.add(entry.chain);
+  }
+  for (const entry of scope.excluded) {
     if (contracts.filter((contract) => contract.chain === entry.chain).length !== 1
       || (entry.relation === "lock-mint-representation"
         && (!entry.backedBy || !includedChains.has(entry.backedBy)))) {
@@ -415,21 +348,6 @@ export async function aggregateScopedLiabilitySupply(options: {
     return true;
   });
   const reads = await Promise.all(uniqueIncluded.map(async (entry): Promise<IncludedRead> => {
-    if (entry.reader === "cip56-registry") {
-      try {
-        if (catalogChains.has(entry.chain) || entry.registry == null) {
-          return {
-            ok: false,
-            chain: entry.chain,
-            reason: "cip56-registry reader requires a non-catalog deployment with a registry source",
-          };
-        }
-        return await readRegistryIncludedSupply(entry, options);
-      } catch (error) {
-        rethrowIfAborted(error, signal);
-        return { ok: false, chain: entry.chain, reason: redactProviderUrls(toErrorMessage(error)) };
-      }
-    }
     const deployments = contracts.filter((contract) => contract.chain === entry.chain);
     if (deployments.length !== 1) {
       return {
@@ -508,12 +426,6 @@ function unscopedOmissionWarnings(supply: MultichainSupplyAggregate): LiveReserv
   return warnings;
 }
 
-function liabilitySupplyProvenanceMetadata(supply: MultichainSupplyAggregate): { liabilitySupplyProvenance?: Array<{ chain: string } & MultichainSupplyProvenance> } {
-  const provenance = supply.contributions.flatMap((contribution) =>
-    contribution.provenance ? [{ chain: contribution.chain, ...contribution.provenance }] : []);
-  return provenance.length > 0 ? { liabilitySupplyProvenance: provenance } : {};
-}
-
 /**
  * The single admission rule for a supply-comparing reserve ratio. Scoped
  * supply must classify every catalog chain, read every included chain, and
@@ -570,7 +482,6 @@ export function evaluateLiabilityCoverage(input: {
         supplyReadComplete,
         supplyCoverageComplete,
         ...(ratioUnavailableReason ? { ratioUnavailableReason } : {}),
-        ...liabilitySupplyProvenanceMetadata(supply),
       },
       warnings: unscopedOmissionWarnings(supply),
     };
@@ -646,7 +557,6 @@ export function evaluateLiabilityCoverage(input: {
       ...(supplyObservedAt ? { supplyObservedAt } : {}),
       ...(ratioSkewSec != null ? { ratioSkewSec } : {}),
       ...(ratioUnavailableReason ? { ratioUnavailableReason } : {}),
-      ...liabilitySupplyProvenanceMetadata(supply),
     },
     warnings,
   };

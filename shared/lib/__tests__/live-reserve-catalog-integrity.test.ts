@@ -180,23 +180,12 @@ describe("live reserve catalog integrity", () => {
       const scope = source.liveReservesConfig?.params?.liabilityScope;
       if (scope?.basis !== "issuer-native-supply") continue;
       const catalogChains = (source.contracts ?? []).map((contract) => contract.chain).sort();
-      // A reviewed registry reader may include a deployment the catalog does not
-      // track; every catalog deployment still needs exactly one classification.
-      const scopedChains = [
-        ...scope.included.filter((entry) => catalogChains.includes(entry.chain)).map((entry) => entry.chain),
-        ...scope.excluded.map((entry) => entry.chain),
-      ].sort();
+      const scopedChains = [...scope.included, ...scope.excluded].map((entry) => entry.chain).sort();
       if (JSON.stringify(catalogChains) !== JSON.stringify(scopedChains)) {
         failures.push(`${id}: catalog [${catalogChains.join(", ")}] vs scope [${scopedChains.join(", ")}]`);
       }
       for (const entry of scope.included) {
-        if (!catalogChains.includes(entry.chain)) {
-          if (entry.reader !== "cip56-registry" || entry.registry == null) {
-            failures.push(`${id}: ${entry.reader} cannot read non-catalog ${entry.chain} without a CIP-56 registry source`);
-          }
-        } else if (!readerChainType[entry.reader]?.(entry.chain)) {
-          failures.push(`${id}: ${entry.reader} cannot read ${entry.chain}`);
-        }
+        if (!readerChainType[entry.reader]?.(entry.chain)) failures.push(`${id}: ${entry.reader} cannot read ${entry.chain}`);
       }
     }
     expect(failures).toEqual([]);

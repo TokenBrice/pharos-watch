@@ -409,14 +409,6 @@ export const LiveReserveSnapshotMetadataSchema = /* @__PURE__ */ (() => z
     reserveObservedAt: z.number().finite().optional(),
     /** Earliest and latest unix-second observation times of the included supply reads. */
     supplyObservedAt: z.object({ min: z.number().finite(), max: z.number().finite() }).optional(),
-    /** Per-chain provenance for supply reads whose source clock comes from an
-     *  external registry rather than the Worker run clock. */
-    liabilitySupplyProvenance: z.array(z.object({
-      chain: z.string(),
-      sourceUrl: z.string(),
-      basis: z.string(),
-      asOf: z.string(),
-    }).strict()).optional(),
     /** Largest absolute gap between `reserveObservedAt` and any included supply read. */
     ratioSkewSec: z.number().finite().nonnegative().optional(),
     /** Absent on retained legacy snapshots: unknown, not coin-exclusive. */

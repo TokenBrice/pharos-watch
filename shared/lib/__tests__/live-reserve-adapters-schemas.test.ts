@@ -76,58 +76,6 @@ describe("baseLiveReserveConfigSchema", () => {
   });
 });
 
-describe("reviewed liability scope registry readers", () => {
-  const registryUrl = "https://api.utilities.digitalasset.com/api/token-standard/v0/registrars/1220b::1220bab043849b986b52bc6271edf1ae962bab03d9f0c0713f071732d2278386bd02/registry/metadata/v1/instruments/USD1";
-  const registry = {
-    url: registryUrl,
-    registrarParty: "1220b::1220bab043849b986b52bc6271edf1ae962bab03d9f0c0713f071732d2278386bd02",
-    instrumentId: "USD1",
-    symbol: "USD1",
-    decimals: 10,
-    maxSupplyAgeSec: 604800,
-  };
-  const scope = {
-    basis: "issuer-native-supply" as const,
-    reviewedAt: "2026-11-02",
-    evidenceRef: "KPMG August 2026 Note A footnote 3; CIP-56 registry metadata",
-    included: [
-      { chain: "ethereum", reader: "evm-erc20" as const },
-      { chain: "canton", reader: "cip56-registry" as const, registry },
-    ],
-    excluded: [],
-  };
-
-  it("admits a non-catalog CIP-56 registry deployment alongside on-chain readers", () => {
-    expect(parseLiveReserveAdapterParams("usd1-bundle-oracle", { liabilityScope: scope }))
-      .toEqual({ liabilityScope: scope });
-  });
-
-  it.each([
-    ["a CIP-56 reader without a registry source", {
-      ...scope,
-      included: [{ chain: "canton", reader: "cip56-registry" }],
-    }],
-    ["a registry source on an on-chain reader", {
-      ...scope,
-      included: [{ chain: "ethereum", reader: "evm-erc20", registry }],
-    }],
-    ["a registry URL that does not name the reviewed party and instrument", {
-      ...scope,
-      included: [{ chain: "canton", reader: "cip56-registry", registry: { ...registry, url: "https://example.com/USD1" } }],
-    }],
-    ["a registry supply-age bound above the disclosure source budget", {
-      ...scope,
-      included: [{ chain: "canton", reader: "cip56-registry", registry: { ...registry, maxSupplyAgeSec: 604801 } }],
-    }],
-    ["duplicate chain classification", {
-      ...scope,
-      excluded: [{ chain: "canton", relation: "third-party-bridge-representation" as const, reason: "duplicate" }],
-    }],
-  ])("rejects %s", (_label, candidate) => {
-    expect(() => parseLiveReserveAdapterParams("usd1-bundle-oracle", { liabilityScope: candidate })).toThrow();
-  });
-});
-
 describe("reserve-only supply bootstrap authorization", () => {
   const config = {
     adapter: "jpmorgan-nav" as const, version: 1, semantics: "single-asset" as const,

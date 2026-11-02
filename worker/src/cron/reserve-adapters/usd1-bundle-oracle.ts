@@ -173,10 +173,9 @@ export async function fetchUsd1BundleOracleReserves(
   });
 
   // Liabilities are USD1 supply over the reviewed issuer-native perimeter
-  // (params.liabilityScope): each included catalog chain is read with its
-  // declared on-chain reader and decimals, while the Canton deployment is read
-  // from its reviewed CIP-56 registry source; CCIP lock-mint representations
-  // are excluded because their supply is already locked inside Ethereum totalSupply.
+  // (params.liabilityScope): each included chain is read with its declared
+  // reader and on-chain decimals; CCIP lock-mint representations are excluded
+  // because their supply is already locked inside Ethereum totalSupply.
   const supply = await aggregateScopedLiabilitySupply({
     coin,
     scope: params.liabilityScope,

@@ -205,7 +205,7 @@ Uncertain write attempts are intentionally exposed as `sync.uncertainWrite = tru
 
 ### Reviewed liability scopes
 
-Every catalog deployment must have exactly one reviewed liability-scope classification; an unclassified chain withholds the ratio (`liability-scope-unclassified-chain`). Native liabilities and bridged representations are not additive. A native deployment outside the catalog may be included only through a reviewed public registry reader (`cip56-registry`); its `totalSupplyAsOf` is the supply clock, and a missing, future-dated or older-than-reviewed source-age clock fails the read closed so coverage becomes incomplete rather than treating the absent quantity as zero. Original reserve and supply clocks must fit the adapter's reviewed skew bound. The [dated TUSD and USD1 scope review](process/live-reserves-appendix.md#reviewed-liability-scopes) retains chain tables, conservation evidence, USD1's Canton registry policy and its unresolved publication-delay limitation.
+Every catalog deployment must have exactly one reviewed liability-scope classification; an unclassified chain withholds the ratio (`liability-scope-unclassified-chain`). Native liabilities and bridged representations are not additive. Original reserve and supply clocks must fit the adapter's reviewed skew bound. The [dated TUSD and USD1 scope review](process/live-reserves-appendix.md#reviewed-liability-scopes) retains chain tables, conservation evidence and USD1's unresolved publication-delay limitation.
 
 ### Adding a New Adapter
 

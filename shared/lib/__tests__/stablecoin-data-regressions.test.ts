@@ -91,20 +91,10 @@ describe("stablecoin source-data regressions", () => {
 
   it("keeps USD1's liability-scope provenance on the same August report as its attestation pin", () => {
     const scope = usd1Metadata.liveReservesConfig.params.liabilityScope;
-    expect(scope.reviewedAt).toBe("2026-11-02");
+    expect(scope.reviewedAt).toBe("2026-10-01");
     expect(scope.evidenceRef).toContain("August 2026");
     expect(scope.evidenceRef).not.toContain("July 2026");
     expect(scope.evidenceRef).toContain("Canton");
-    expect(scope.evidenceRef).toContain("footnote 3");
-    expect(scope.included.find((entry) => entry.chain === "canton")).toMatchObject({
-      reader: "cip56-registry",
-      registry: {
-        instrumentId: "USD1",
-        symbol: "USD1",
-        decimals: 10,
-        maxSupplyAgeSec: 604800,
-      },
-    });
   });
 
   it("pins USDT's Q3 2026 BDO composition and conserves its exact-dollar packet", () => {

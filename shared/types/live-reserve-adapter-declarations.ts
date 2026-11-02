@@ -801,7 +801,6 @@ const LIABILITY_SUPPLY_READER_VALUES = [
   "tron-trc20",
   "solana-spl-mint",
   "aptos-fungible-asset",
-  "cip56-registry",
 ] as const;
 
 const LIABILITY_SCOPE_EXCLUSION_RELATION_VALUES = [
@@ -809,29 +808,6 @@ const LIABILITY_SCOPE_EXCLUSION_RELATION_VALUES = [
   "third-party-bridge-representation",
 ] as const;
 
-/**
- * Longest accepted age of a registry-reported `totalSupplyAsOf` clock. Reuses
- * the disclosure source-age budget these adapters already apply to upstream
- * disclosure clocks: a value last computed longer ago cannot establish current
- * liabilities, so the included read fails and coverage becomes incomplete.
- */
-const MAX_CIP56_REGISTRY_SUPPLY_AGE_SEC = DISCLOSURE_SOURCE_MAX_AGE_SEC;
-
-const cip56RegistryInstrumentSchema = z
-  .object({
-    /** Exact reviewed metadata URL; the adapter never discovers it at runtime. */
-    url: AbsoluteUrlSchema,
-    /** Daml party administering the instrument; the URL's registrar path segment. */
-    registrarParty: z.string().trim().min(1),
-    instrumentId: z.string().trim().min(1),
-    /** Registry-reported symbol, checked against the payload before admission. */
-    symbol: z.string().trim().min(1),
-    /** Instrument decimals, checked against the payload before scaling. */
-    decimals: z.number().int().min(0).max(10),
-    /** Registry `totalSupplyAsOf` age bound; a stale clock fails the read closed. */
-    maxSupplyAgeSec: z.number().int().positive().max(MAX_CIP56_REGISTRY_SUPPLY_AGE_SEC),
-  })
-  .strict();
 
 /**
  * Default reserve/supply time-skew bound for a reviewed issuer-native scope
@@ -850,8 +826,6 @@ const issuerNativeLiabilityScopeSchema = z
     included: z.array(z.object({
       chain: z.string().trim().min(1),
       reader: z.enum(LIABILITY_SUPPLY_READER_VALUES),
-      /** Required for `cip56-registry`; the deployment must be outside the catalog. */
-      registry: cip56RegistryInstrumentSchema.optional(),
     }).strict()).min(1),
     excluded: z.array(z.object({
       chain: z.string().trim().min(1),
@@ -869,26 +843,6 @@ const issuerNativeLiabilityScopeSchema = z
         ctx.addIssue({ code: "custom", message: `chain ${chain} is classified more than once` });
       }
       seen.add(chain);
-    }
-    for (const entry of scope.included) {
-      const registryReader = entry.reader === "cip56-registry";
-      if (registryReader !== (entry.registry != null)) {
-        ctx.addIssue({
-          code: "custom",
-          message: registryReader
-            ? `cip56-registry reader for ${entry.chain} requires a registry source`
-            : `registry source for ${entry.chain} requires the cip56-registry reader`,
-        });
-      }
-      if (entry.registry) {
-        const expectedPath = `/registrars/${entry.registry.registrarParty}/registry/metadata/v1/instruments/${entry.registry.instrumentId}`;
-        if (!entry.registry.url.endsWith(expectedPath)) {
-          ctx.addIssue({
-            code: "custom",
-            message: `registry URL for ${entry.chain} does not name its registrar party and instrument`,
-          });
-        }
-      }
     }
   });
 

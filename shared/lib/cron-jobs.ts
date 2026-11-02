@@ -742,7 +742,7 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     group: "multi-hourly",
     scheduleKey: "fourHourlyReserveSync",
     triggerMode: "shared",
-    maxConnections: 2, // Serial coins, adapter max2 (USD1's CIP-56 registry read shares that limiter); Morpho uses serial 32-call chunks; the later redemption pool sets the chain peak
+    maxConnections: 2, // Serial coins, adapter max2; Morpho uses serial 32-call chunks; the later redemption pool sets the chain peak
     connectionGroup: "reserve-sync-chain",
   },
   {
