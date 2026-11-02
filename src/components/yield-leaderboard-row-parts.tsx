@@ -40,7 +40,12 @@ import type {
   YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
 import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
-import { YIELD_SOURCE_FACT_LABELS, type YieldRankChangeChipDisplay } from "@/lib/yield-presentation";
+import {
+  YIELD_SOURCE_FACT_LABELS,
+  buildPysNeutralizeInput,
+  selectPysRowDrags,
+  type YieldRankChangeChipDisplay,
+} from "@/lib/yield-presentation";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { trackEvent } from "@/lib/analytics";
 import type { YieldResolvedRowBenchmark } from "@/lib/yield-benchmark";
@@ -672,6 +677,10 @@ export function deriveYieldRowDisplay(
     ...presentation,
     ...labels,
     breakdown,
+    pysDrags: selectPysRowDrags(
+      row.pharosYieldScore,
+      buildPysNeutralizeInput({ apy30d: row.apy30d, safetyScore: row.safetyScore, ...breakdown }),
+    ),
     grade: row.safetyGrade,
     safetyScore: row.safetyScore,
     pysColor: getPysColor(row.pharosYieldScore),

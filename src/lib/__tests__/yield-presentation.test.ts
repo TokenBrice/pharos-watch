@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildRankChangeChipDisplay, formatSignedPysDelta, YIELD_LEADERBOARD_CSV_COLUMNS, YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { buildPysNeutralizeInput, buildRankChangeChipDisplay, formatSignedPysDelta, selectPysRowDrags, YIELD_LEADERBOARD_CSV_COLUMNS, YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { computePYS } from "@shared/lib/yield-scoring";
 import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { buildCsvWithPreamble } from "@/lib/exports/csv";
@@ -114,5 +115,32 @@ describe("buildRankChangeChipDisplay", () => {
       short: "Source risk",
     });
     expect(display?.colorClass).toContain("state-danger");
+  });
+});
+
+describe("selectPysRowDrags", () => {
+  // Live USDG inputs (2026-11-02): 7.36% vs the 4.18% USD hurdle, 87 safety,
+  // 63% stability, 1.235x source-risk penalty, published PYS 62.
+  const usdg = buildPysNeutralizeInput({
+    apy30d: 7.357279948805456,
+    safetyScore: 87,
+    scalingFactor: 8,
+    benchmarkSpread: 3.177279948805456,
+    hurdleRebase: 0,
+    sourceRiskPenalty: 1.235,
+    sustainabilityMult: 0.63,
+  });
+
+  it("names stability and source-risk costs in PYS points, largest first", () => {
+    expect(selectPysRowDrags(62, usdg)).toEqual([
+      { label: "stability", points: -37 },
+      { label: "source risk", points: -15 },
+    ]);
+  });
+
+  it("omits costs under five points and unscored rows", () => {
+    const steady = { ...usdg, sourceRiskPenalty: 1.02, apyVarianceScore: 0.02 };
+    expect(selectPysRowDrags(computePYS(steady), steady)).toEqual([]);
+    expect(selectPysRowDrags(null, usdg)).toEqual([]);
   });
 });
