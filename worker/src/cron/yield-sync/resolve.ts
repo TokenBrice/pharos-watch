@@ -106,9 +106,6 @@ import {
   buildOnChainSourceKey,
 } from "../../lib/yield-utils";
 import {
-  buildInClause,
-} from "../../lib/db";
-import {
   isPriceDerivedYieldEligible,
 } from "../../lib/yield-config/yield-config-registry";
 import {
@@ -1327,26 +1324,33 @@ export async function loadTier1PrevRateRows(
   const candidateIds = [...new Set(tier1CandidateIds)];
   if (candidateIds.length === 0) return tier1PrevRateRows;
 
-  const inClause = buildInClause(candidateIds);
+  // Newest published rate at or before the anchor, one row per coin, ties
+  // resolved by rowid DESC. Driving from the id list keeps each coin to index
+  // seeks; ranking the whole 30-day partition read ~124k rows per run.
   const result = await db
     .prepare(
       `SELECT /* pharos:yield-sync:tier1-previous-rate */
-         stablecoin_id, exchange_rate, recorded_at
-       FROM (
-         SELECT stablecoin_id, exchange_rate, recorded_at,
-                ROW_NUMBER() OVER (
-                  PARTITION BY stablecoin_id
-                  ORDER BY recorded_at DESC, rowid DESC
-                ) AS row_rank
-           FROM yield_history
-          WHERE stablecoin_id IN (${inClause.sql})
-            AND recorded_at <= ?
-            AND exchange_rate > 0
-            AND (publication_generation_id IS NULL OR publication_state = 'published')
-       )
-       WHERE row_rank = 1`,
+         h.stablecoin_id, h.exchange_rate, h.recorded_at
+       FROM json_each(?) AS ids
+       JOIN yield_history h ON h.rowid = (
+         SELECT h2.rowid
+           FROM yield_history h2
+          WHERE h2.stablecoin_id = ids.value
+            AND h2.recorded_at = (
+              SELECT MAX(h3.recorded_at)
+                FROM yield_history h3
+               WHERE h3.stablecoin_id = ids.value
+                 AND h3.recorded_at <= ?
+                 AND h3.exchange_rate > 0
+                 AND (h3.publication_generation_id IS NULL OR h3.publication_state = 'published')
+            )
+            AND h2.exchange_rate > 0
+            AND (h2.publication_generation_id IS NULL OR h2.publication_state = 'published')
+          ORDER BY h2.rowid DESC
+          LIMIT 1
+       )`,
     )
-    .bind(...inClause.binds, sevenDaysAgoSec)
+    .bind(JSON.stringify(candidateIds), sevenDaysAgoSec)
     .all<{ stablecoin_id: string; exchange_rate: number | null; recorded_at: number }>();
   for (const row of result.results ?? []) {
     if (tier1PrevRateRows.has(row.stablecoin_id)) continue;
