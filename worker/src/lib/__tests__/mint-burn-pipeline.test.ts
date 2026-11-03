@@ -650,44 +650,30 @@ describe("mint-burn shared pipeline modules", () => {
     const { db, sqlite } = fixtures.open();
     vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
     const burn = makeRow({ id: "burn-rewrite", direction: "burn", burn_type: "effective_burn" });
+    const stored = () => sqlite.prepare(
+      "SELECT burn_type, burn_review_reason, flow_type FROM mint_burn_events WHERE id = 'burn-rewrite'").get();
     await insertMintBurnRows(db, [burn]);
 
-    // A re-observed window row whose stored classification already equals the
-    // classifier output must not rewrite the row (identical D1 write volume).
-    expect(await updateEventClassifications(db, [{ ...burn }])).toEqual({
-      flowTypeChanges: 0,
-      burnTypeChanges: 1,
-      rowsUpdated: 0,
-    });
-    expect(sqlite.prepare(
-      "SELECT burn_type, burn_review_reason, flow_type FROM mint_burn_events WHERE id = 'burn-rewrite'",
-    ).get()).toEqual({ burn_type: "effective_burn", burn_review_reason: null, flow_type: "standard" });
+    // An unchanged re-observed row is not rewritten.
+    expect(await updateEventClassifications(db, [{ ...burn }]))
+      .toEqual({ flowTypeChanges: 0, burnTypeChanges: 1, rowsUpdated: 0 });
+    expect(stored()).toEqual({ burn_type: "effective_burn", burn_review_reason: null, flow_type: "standard" });
 
-    // A genuine classifier revision still lands and counts the actual change.
+    // A genuine revision lands and is counted.
     expect(await updateEventClassifications(db, [
       { ...burn, burn_type: "bridge_burn", burn_review_reason: "bridge-context" },
     ])).toMatchObject({ rowsUpdated: 1 });
-    expect(sqlite.prepare(
-      "SELECT burn_type, burn_review_reason FROM mint_burn_events WHERE id = 'burn-rewrite'",
-    ).get()).toEqual({ burn_type: "bridge_burn", burn_review_reason: "bridge-context" });
+    expect(stored()).toEqual({ burn_type: "bridge_burn", burn_review_reason: "bridge-context", flow_type: "standard" });
 
-    // The transaction-group protection survives the guard: a standard-flow
-    // replay must not revoke `atomic_roundtrip`, even while burn fields change.
+    // A standard-flow replay never revokes atomic_roundtrip, even while burn fields change.
     await updateEventClassifications(db, [
       { ...burn, flow_type: "atomic_roundtrip", burn_type: "bridge_burn", burn_review_reason: null },
     ]);
-    expect(sqlite.prepare(
-      "SELECT flow_type FROM mint_burn_events WHERE id = 'burn-rewrite'",
-    ).get()).toEqual({ flow_type: "atomic_roundtrip" });
     await updateEventClassifications(db, [
       { ...burn, flow_type: "standard", burn_type: "effective_burn", burn_review_reason: "reviewed-supply-destruction" },
     ]);
-    expect(sqlite.prepare(
-      "SELECT burn_type, burn_review_reason, flow_type FROM mint_burn_events WHERE id = 'burn-rewrite'",
-    ).get()).toEqual({
-      burn_type: "effective_burn",
-      burn_review_reason: "reviewed-supply-destruction",
-      flow_type: "atomic_roundtrip",
+    expect(stored()).toEqual({
+      burn_type: "effective_burn", burn_review_reason: "reviewed-supply-destruction", flow_type: "atomic_roundtrip",
     });
   });
 
