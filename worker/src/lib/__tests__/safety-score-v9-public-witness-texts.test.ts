@@ -32,6 +32,8 @@ vi.mock("@shared/lib/safety-score-v9/public-witness-texts", async (importOrigina
 // bridge representation, a gold peg and an EUR peg.
 const CARD_SHAPE_COHORT = [
   "usdc-circle", "usdt-tether", "dai-makerdao", "wm-m0", "xgld-unitas", "eurc-circle",
+  // The provisional card shape and multi-ref foreign-gap interning.
+  "usdf-astherus", "aa-falconx-mev-capital",
 ] as const;
 
 describe("card-local public witness texts", () => {

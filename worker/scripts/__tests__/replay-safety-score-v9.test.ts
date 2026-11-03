@@ -3,6 +3,7 @@ import { gzipSync } from "node:zlib";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -75,6 +76,21 @@ function exactFixedInput() {
     registryRevision: "registry:fixture",
   });
 }
+
+// The CLIs are exercised in-process elsewhere; these two spawns keep the real
+// entrypoint guard, argv wiring and usage exit code under PR-time proof.
+describe("operator CLI entrypoints", () => {
+  it.each([
+    ["worker/scripts/replay-safety-score-v9.ts", ["--input", "missing.json", "--output", "out.json"], "--published-at is required"],
+    ["worker/scripts/capture-report-cards-fixed-input.ts", ["--not-a-flag"], "Unknown option"],
+  ] as const)("exits 2 with a usage error from the real %s entrypoint", (script, args, message) => {
+    const result = spawnSync(process.execPath, ["--import", "tsx", script, ...args], {
+      cwd: resolve(import.meta.dirname, "../../.."), encoding: "utf8", timeout: 30_000,
+    });
+    expect(result.status, result.stderr).toBe(2);
+    expect(result.stderr).toContain(message);
+  });
+});
 
 describe("Safety Score v9 deterministic replay CLI", () => {
   it("requires explicit current-redemption mode and reseals only targeted captured rows", async () => {
