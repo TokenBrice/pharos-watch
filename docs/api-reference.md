@@ -42,6 +42,7 @@ Unless a route is explicitly called out below as exempt, requests to `https://ap
 
 - header: `X-API-Key: ph_live_<16 hex prefix>_<32 char base64url secret>`
 - example shape: `ph_live_0123456789abcdef_abcdefghijklmnopqrstuvwxyzABCDEF`
+- only that header is read: a key sent as `Authorization: Bearer <key>` or in the query string is ignored, so the request gets `401`
 
 Public, non-admin routes on `https://api.pharos.watch` that do not require `X-API-Key` are limited to:
 
