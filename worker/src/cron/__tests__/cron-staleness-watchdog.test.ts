@@ -128,9 +128,9 @@ function fakeDb(
       return { meta: { changes: 0 } };
     },
     all: async () => {
-      if (sql.includes("ROW_NUMBER() OVER")) {
+      if (sql.includes("AS last_liveness_at")) {
         const started_at = Math.floor(Date.now() / 1000);
-        return { results: (args as string[]).map((job) => ({
+        return { results: (JSON.parse(args[0] as string) as string[]).map((job) => ({
           job,
           last_success_at: producerPublishedAt ?? started_at,
           last_liveness_at: producerPublishedAt ?? started_at,
@@ -150,9 +150,9 @@ function fakeDb(
   return {
     prepare: (sql: string) => {
       const all = async (args: unknown[]) => {
-        if (sql.includes("ROW_NUMBER() OVER")) {
+        if (sql.includes("AS last_liveness_at")) {
           const started_at = Math.floor(Date.now() / 1000);
-          return { results: (args as string[]).map((job) => ({
+          return { results: (JSON.parse(args[0] as string) as string[]).map((job) => ({
             job,
             last_success_at: producerPublishedAt ?? started_at,
             last_liveness_at: producerPublishedAt ?? started_at,

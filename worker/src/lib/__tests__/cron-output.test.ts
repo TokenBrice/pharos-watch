@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import type { CronResult } from "../cron-logger";
-import { confirmedCronOutputAt, CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
+import { confirmedCronOutputAt, CONFIRMED_CRON_OUTPUT_AT_SQL, LATEST_CONFIRMED_CRON_OUTPUT_SQL } from "../cron-output";
 
 const STARTED_AT = 1_790_553_816;
 const DURATION_MS = 135_872;
@@ -95,5 +95,45 @@ describe("legacy quiet scan output evidence", () => {
   it("does not override an explicit unproductive result", () => {
     expect(confirmedCronOutputAt({ status: "ok", itemCount: 0, productivity: { productive: false } },
       quietCoverage, COMPLETED_AT)).toBeNull();
+  });
+});
+
+describe("LATEST_CONFIRMED_CRON_OUTPUT_SQL", () => {
+  function latest(rows: Array<[number, number, string, Record<string, unknown>]>): number | null {
+    const db = new DatabaseSync(":memory:");
+    databases.push(db);
+    db.exec(`CREATE TABLE cron_runs (id INTEGER PRIMARY KEY AUTOINCREMENT, job TEXT NOT NULL,
+      started_at INTEGER NOT NULL, duration_ms INTEGER NOT NULL, status TEXT NOT NULL,
+      item_count INTEGER, metadata TEXT)`);
+    const insert = db.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata)
+      VALUES ('job', ?, ?, ?, 0, ?)`);
+    for (const [startedAt, durationMs, status, metadata] of rows) {
+      insert.run(startedAt, durationMs, status, JSON.stringify(metadata));
+    }
+    db.prepare(`INSERT INTO cron_runs (job, started_at, duration_ms, status, item_count, metadata)
+      VALUES ('other', ?, 0, 'ok', 1, '{}')`).run(STARTED_AT + 9_999);
+    const row = db.prepare(LATEST_CONFIRMED_CRON_OUTPUT_SQL).get("job") as { started_at: number | null } | undefined;
+    const unbounded = db.prepare(`SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) AS started_at FROM cron_runs WHERE job = ?`)
+      .get("job") as { started_at: number | null };
+    // The floor-pruned read must equal the full-history maximum it replaces.
+    expect(row?.started_at ?? null).toBe(unbounded.started_at);
+    return row?.started_at ?? null;
+  }
+
+  it("keeps an overlapping older run whose output clock beats the newest confirmed row", () => {
+    expect(latest([
+      [STARTED_AT, 600_000, "ok", { outputPublishedAt: STARTED_AT + 590 }],
+      [STARTED_AT + 60, 1_000, "ok", { outputPublishedAt: STARTED_AT - 500 }],
+      [STARTED_AT + 120, 1_000, "ok", { casSkipped: true }],
+      [STARTED_AT + 180, 0, "error", {}],
+    ])).toBe(STARTED_AT + 590);
+  });
+
+  it("ignores history below the floor and reports no output without a confirmed row", () => {
+    expect(latest([
+      [STARTED_AT - 200_000, 1_000, "ok", { published: true }],
+      [STARTED_AT, 1_000, "degraded", { cacheWriteMode: "published" }],
+    ])).toBe(STARTED_AT);
+    expect(latest([[STARTED_AT, 1_000, "ok", { casSkipped: true }], [STARTED_AT + 60, 0, "error", {}]])).toBeNull();
   });
 });

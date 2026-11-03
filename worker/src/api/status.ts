@@ -179,7 +179,9 @@ async function resolveRawStatusForResponse(
 
   const snapshot = await loadStatusRawSnapshot(db, now);
   const currentReserve = snapshot.kind === "fresh"
-    ? await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync")).catch(() => null) : null;
+    ? await computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"), undefined, {
+      adapterReliability: false,
+    }).catch(() => null) : null;
   const cachedReserve = snapshot.kind === "fresh" ? snapshot.raw.reserveComposition : null;
   const reviewApplicabilityChanged = cachedReserve?.status === "unavailable" || !currentReserve
     || JSON.stringify([currentReserve.acknowledgedFeeds, currentReserve.expiredFeedReviewIds, currentReserve.invalidFeedReviewIds])
