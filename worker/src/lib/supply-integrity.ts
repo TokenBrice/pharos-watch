@@ -277,7 +277,10 @@ async function loadSupplyValueIntegrity(
   for (const asset of cache.payload.peggedAssets) {
     if (!ACTIVE_IDS.has(asset.id)) continue;
 
-    if (asset.supplyRestored === true) {
+    const currentUsd = getCirculatingRawOrNull(asset);
+    // A carry publishes an older value. A restored row with no value (its carry
+    // window expired) is unavailable supply, counted by the availability read.
+    if (asset.supplyRestored === true && currentUsd !== null) {
       carryIds.push(asset.id);
       const observedAt = asset.supplyObservedAt;
       if (typeof observedAt === "number" && Number.isSafeInteger(observedAt) && observedAt > 0) {
@@ -288,7 +291,6 @@ async function loadSupplyValueIntegrity(
       }
     }
 
-    const currentUsd = getCirculatingRawOrNull(asset);
     if (currentUsd !== null
       && asset.supplyRestored !== true
       && asset.supplyGapFill == null
@@ -423,7 +425,6 @@ function parseActiveSupplyCoverage(metadata: string | null): { observed: number;
   if (!parsed || typeof parsed !== "object") return null;
   const record = parsed as {
     priceSourceHealth?: { active?: { supplyCoverage?: unknown; totalAssets?: unknown }; supplyCoverage?: unknown };
-    supplyChainGuard?: { quarantinedAssetCount?: unknown; unavailableAssetCount?: unknown };
   };
   const coverage = record.priceSourceHealth?.active?.supplyCoverage
     ?? record.priceSourceHealth?.supplyCoverage;
@@ -433,13 +434,12 @@ function parseActiveSupplyCoverage(metadata: string | null): { observed: number;
     || Number(observedCount) < 0 || Number(unavailableCount) < 0) {
     return null;
   }
-  const guard = record.supplyChainGuard;
-  const guardCount = [guard?.quarantinedAssetCount, guard?.unavailableAssetCount]
-    .filter((value): value is number => Number.isInteger(value) && Number(value) >= 0)
-    .reduce((sum, value) => sum + Number(value), 0);
+  // The run's final coverage is the published surface. Chain-guard counts are
+  // intake bookkeeping: quarantined rows publish a carry (graded as carried
+  // supply) and later lanes restore some intake-unavailable rows.
   return {
     observed: Number(observedCount),
-    unavailable: Math.max(Number(unavailableCount), guardCount),
+    unavailable: Number(unavailableCount),
   };
 }
 

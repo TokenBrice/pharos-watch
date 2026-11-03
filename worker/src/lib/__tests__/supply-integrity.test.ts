@@ -76,6 +76,8 @@ function supplyRun(unavailable: number, observed: number, startedAt = NOW - 900)
       priceSourceHealth: {
         active: { supplyCoverage: { complete: unavailable === 0, observedCount: observed, unavailableCount: unavailable } },
       },
+      // Guard bookkeeping is not unavailable supply (quarantines publish a carry).
+      supplyChainGuard: { quarantinedAssetCount: 8, unavailableAssetCount: 1 },
     }),
   };
 }
@@ -267,6 +269,7 @@ describe("supply integrity", () => {
   it("keeps carry evidence when only the daily-history read fails", async () => {
     const assets = normalAssets();
     assets[0] = { ...assets[0], current: 30, supplyRestored: true };
+    assets[1] = { ...assets[1], current: null, supplyRestored: true };
     const report = await loadSupplyIntegrityReport(database({ assets, historyThrows: true }), NOW);
     expect(report.value.status).toBe("unknown");
     expect(report.value.reason).toBe("supply-history-read-failed");
