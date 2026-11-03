@@ -120,6 +120,9 @@ describe("loadProducerFreshnessFacts", () => {
       .run("alpha", NOW - 30, "ok", 1);
     sqlite.prepare("INSERT INTO cron_runs (job, started_at, status, item_count) VALUES (?, ?, ?, ?)")
       .run("alpha", NOW - 10, "error", 0);
+    // An older overlapping run's later output clock survives the floor-pruned scan.
+    sqlite.prepare("INSERT INTO cron_runs (job, started_at, status, item_count, duration_ms, metadata) VALUES (?, ?, ?, ?, ?, ?)")
+      .run("alpha", NOW - 900, "ok", 0, 900_000, JSON.stringify({ outputPublishedAt: NOW - 20 }));
     const [fact] = await loadProducerFreshnessFacts(createSqliteD1(sqlite), NOW, [{
       job: "alpha", label: "Alpha", group: "other", intervalSec: 60,
       scheduleKey: "daily0300Utc", schedule: "0 3 * * *", triggerMode: "isolated", statusImpact: "watch",
@@ -128,7 +131,7 @@ describe("loadProducerFreshnessFacts", () => {
     sqlite.close();
 
     expect(fact).toMatchObject({
-      lastSuccessAt: NOW - 30,
+      lastSuccessAt: NOW - 20,
       lastRunAt: NOW - 10,
       lastStatus: "error",
     });

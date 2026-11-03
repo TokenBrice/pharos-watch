@@ -97,8 +97,8 @@ export const CONFIRMED_CRON_OUTPUT_AT_SQL = `CASE
     OR (status = 'ok' AND item_count > 0) THEN started_at
   ELSE NULL END`;
 
-/** Loose span bound: a Worker caps a scheduled invocation at 15 minutes, far below a day. */
-export const MAX_CRON_ATTEMPT_SPAN_SEC = 86_400;
+/** Span bound far above any recorded attempt (longest: ~18 min, continuation lanes). */
+const MAX_CRON_ATTEMPT_SPAN_SEC = 86_400;
 
 /**
  * Scalar subquery: the confirmed clock of `jobRef`'s newest confirmed row, found
