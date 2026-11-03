@@ -10,8 +10,8 @@ import {
 import { installAdapterNetwork } from "./reserve-adapter.test-support";
 
 const REVIEWED_URL =
-  "https://assets.ctfassets.net/jg6lo9a2ukvr/7m6P0Or1IDsjF8Nj71yoOY/aff37499c0d462e444c5e614ed065e79/Gemini_Trust_Company__LLC_-_GUSD_RR_August_2026_-_Issued.pdf";
-const REVIEWED_DATE = "2026-08-31T05:00:00Z";
+  "https://assets.ctfassets.net/jg6lo9a2ukvr/3HYXlAhHtWfLDSCry4eiyI/d7096b458d345243a4aa786b6bb86c6e/Gemini_Trust_Company__LLC_-_GUSD_Reserves_Report_September_2026_-_Issued.pdf";
+const REVIEWED_DATE = "2026-09-30T05:00:00Z";
 
 interface FixtureEntry {
   date: string;
@@ -47,11 +47,11 @@ function contentfulIndex(entries: FixtureEntry[]): string {
   });
 }
 
-const reviewedEntry = (url = REVIEWED_URL): FixtureEntry => ({ date: REVIEWED_DATE, assetId: "7m6P0Or1IDsjF8Nj71yoOY", url });
-const olderEntry = (date = "2026-07-31T05:00:00Z"): FixtureEntry => ({
+const reviewedEntry = (url = REVIEWED_URL): FixtureEntry => ({ date: REVIEWED_DATE, assetId: "3HYXlAhHtWfLDSCry4eiyI", url });
+const olderEntry = (date = "2026-08-31T05:00:00Z"): FixtureEntry => ({
   date,
-  assetId: "olderJuly",
-  url: "https://assets.ctfassets.net/jg6lo9a2ukvr/older/July_GUSD_Reserves_Report_Draft.pdf",
+  assetId: "7m6P0Or1IDsjF8Nj71yoOY",
+  url: "https://assets.ctfassets.net/jg6lo9a2ukvr/7m6P0Or1IDsjF8Nj71yoOY/aff37499c0d462e444c5e614ed065e79/Gemini_Trust_Company__LLC_-_GUSD_RR_August_2026_-_Issued.pdf",
 });
 
 describe("Gemini Contentful attestation index verification", () => {
@@ -70,15 +70,15 @@ describe("Gemini Contentful attestation index verification", () => {
   });
 
   it("orders offset-formatted reports by instant rather than lexical date", () => {
-    const later = { ...olderEntry(), date: "2026-08-31T00:30:00-05:00" };
+    const later = { ...reviewedEntry(), date: "2026-09-30T00:30:00-05:00" };
     expect(verifyGeminiContentfulIndex(contentfulIndex([reviewedEntry(), later]), manifest))
-      .toEqual({ reportDate: "2026-08-31T05:30:00.000Z", reportUrl: later.url });
+      .toEqual({ reportDate: "2026-09-30T05:30:00.000Z", reportUrl: later.url });
     expect(() => verifyGeminiContentfulIndex(contentfulIndex([later]), manifest))
       .toThrow("reviewed report entry is duplicated or differs");
   });
 
   it("accepts an equivalent reviewed instant but rejects equivalent reviewed-entry ties", () => {
-    const equivalent = { ...reviewedEntry(), date: "2026-08-31T01:00:00-04:00" };
+    const equivalent = { ...reviewedEntry(), date: "2026-09-30T01:00:00-04:00" };
     expect(verifyGeminiContentfulIndex(contentfulIndex([equivalent]), manifest)).toBeNull();
     expect(() => verifyGeminiContentfulIndex(contentfulIndex([reviewedEntry(), equivalent]), manifest))
       .toThrow("reviewed report entry is duplicated or differs");
@@ -90,7 +90,7 @@ describe("Gemini Contentful attestation index verification", () => {
     expect(() => verifyGeminiContentfulIndex("{not json", manifest)).toThrow("not valid JSON");
   });
 
-  it("rejects an older July draft when the reviewed August report is missing", () => {
+  it("rejects an older August draft when the reviewed September report is missing", () => {
     expect(() => verifyGeminiContentfulIndex(contentfulIndex([olderEntry()]), manifest))
       .toThrow("reviewed report missing");
   });
@@ -119,7 +119,7 @@ describe("Gemini GUSD independent assurance", () => {
   const coin = gusd as StablecoinMeta;
 
   it("verifies the reviewed Contentful entry and emits reconciled reserve slices", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-10-07T21:00:00Z"));
+    vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-03T21:00:00Z"));
     const original = assurance.getIndependentAssuranceManifest("GUSD");
     const pdf = "%PDF-1.7 scoped assurance fixture";
     const manifest = { ...original, reportByteLength: pdf.length, reportSha256: createHash("sha256").update(pdf).digest("hex") };
@@ -143,13 +143,13 @@ describe("Gemini GUSD independent assurance", () => {
       manifest.reportUrl,
     ]);
     expect(result.metadata?.collateralizationRatio).toBeCloseTo(1, 12);
-    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-08-31T17:00:00-04:00") / 1000);
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-09-30T17:00:00-04:00") / 1000);
     const sourceAgeDays = (Date.now() / 1000 - result.metadata!.sourceTimestamp!) / 86400;
     expect(sourceAgeDays).toBeGreaterThan(30);
     expect(sourceAgeDays).toBeLessThan(75);
     const reconciled = assurance.reconcileIndependentAssuranceManifest(original);
-    expect(reconciled.computedAssetTotal).toBe("39573881");
-    expect(reconciled.liabilityTotal).toBe("39573881");
+    expect(reconciled.computedAssetTotal).toBe("38378754.4");
+    expect(reconciled.liabilityTotal).toBe("38378754.4");
     expect(result.slices).toEqual([
       expect.objectContaining({ name: expect.stringContaining("cash deposits"), pct: 100, risk: "very-low", assetClass: "bank-deposit" }),
     ]);
@@ -166,15 +166,15 @@ describe("Gemini GUSD independent assurance", () => {
     vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(manifest);
     installAdapterNetwork({
       json: {
-        [manifest.officialIndexUrl]: contentfulIndex([olderEntry(), reviewedEntry(manifest.reportUrl), olderEntry("2026-09-30T05:00:00Z")]),
+        [manifest.officialIndexUrl]: contentfulIndex([olderEntry(), reviewedEntry(manifest.reportUrl), olderEntry("2026-10-30T05:00:00Z")]),
         [manifest.reportUrl]: { body: pdf, headers: { "content-type": "application/pdf", "content-length": String(pdf.length) } },
       },
     });
 
     const result = await fetchGeminiIndependentAssuranceReserves(coin, coin.liveReservesConfig!, AbortSignal.timeout(5000));
-    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-08-31T17:00:00-04:00") / 1000);
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-09-30T17:00:00-04:00") / 1000);
     expect(result.warnings).toContainEqual(expect.objectContaining({
-      code: "newer-unreviewed-report", effect: "degraded", message: expect.stringContaining("2026-09-30T05:00:00.000Z"),
+      code: "newer-unreviewed-report", effect: "degraded", message: expect.stringContaining("2026-10-30T05:00:00.000Z"),
     }));
   });
 
