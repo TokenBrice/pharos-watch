@@ -236,11 +236,11 @@ describe("CoinGecko fallback phases", () => {
       syncStartSec: NOW_SEC,
       cgData: {
         [excluded.geckoId!]: { usd: 1, usd_market_cap: 39_000_000, last_updated_at: NOW_SEC },
-        "usd-coin": { usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC },
+        tether: { usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC },
       },
     });
 
-    expect(assets.map((asset) => asset.id)).toEqual(["usdc-circle"]);
+    expect(assets.map((asset) => asset.id)).toEqual(["usdt-tether"]);
     expect(assets[0]).toMatchObject({
       supplySource: "coingecko-fallback", circulating: { peggedUSD: 5_000_000 }, supplyObservedAt: NOW_SEC,
     });

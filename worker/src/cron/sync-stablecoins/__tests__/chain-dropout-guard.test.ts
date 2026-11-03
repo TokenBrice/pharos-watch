@@ -1091,6 +1091,10 @@ describe("chain dropout guard", () => {
 
   it.each([
     { assetId: "satusd-river", chainId: "arbitrum", chainLabel: "Arbitrum", pegKey: "peggedUSD", baseline: 10_735_947.2549878, current: 1_149_846.870580486, reviewDate: "2026-10-16T06:18:46Z" },
+    { assetId: "satusd-river", chainId: "bob", chainLabel: "BOB", pegKey: "peggedUSD", baseline: 15_262_228.437422091, current: 1_361_964.0212558752, reviewDate: "2026-11-03T10:09:25Z" },
+    { assetId: "satusd-river", chainId: "base", chainLabel: "Base", pegKey: "peggedUSD", baseline: 10_558_605.699254569, current: 239_013.52127648407, reviewDate: "2026-11-03T10:09:25Z" },
+    { assetId: "satusd-river", chainId: "ethereum", chainLabel: "Ethereum", pegKey: "peggedUSD", baseline: 8_377_639.753921411, current: 932_368.8165761745, reviewDate: "2026-11-03T10:09:23Z" },
+    { assetId: "dusd-standx", chainId: "solana", chainLabel: "Solana", pegKey: "peggedUSD", baseline: 3_013_043.925487889, current: 786_947.5441566098, reviewDate: "2026-11-03T10:16:00Z" },
     { assetId: "eurs-stasis", chainId: "polygon", chainLabel: "Polygon", pegKey: "peggedEUR", baseline: 2_125_295.460187289, current: 472_657.74823731947, reviewDate: "2026-10-16T06:18:46Z" },
     { assetId: "sbc-brale", chainId: "polygon", chainLabel: "Polygon", pegKey: "peggedUSD", baseline: 3_476_881, current: 365_027, reviewDate: "2026-10-29T10:50:19Z" },
   ])("accepts only the dated reviewed $assetId chain reduction, not omitted or later incidents", async ({ assetId, chainId, chainLabel, pegKey, baseline, current, reviewDate }) => {
@@ -1105,12 +1109,15 @@ describe("chain dropout guard", () => {
         },
       },
     });
+    // The healthy companion chain must differ from the reviewed chain, or the
+    // omitted-chain scenario would still carry the reviewed chain's row.
+    const companionLabel = chainLabel === "Ethereum" ? "Avalanche" : "Ethereum";
     const makeAsset = (includeChain = true): PeggedAsset => ({
       id: assetId, name: assetId, symbol: assetId, pegType: pegKey, supplySource: "defillama",
       circulating: { [pegKey]: 4_000_000 + (includeChain ? current : 0) },
       circulatingPrevDay: { [pegKey]: 4_000_000 + baseline },
       chainCirculating: {
-        Ethereum: { current: 4_000_000, circulatingPrevDay: 3_000_000 },
+        [companionLabel]: { current: 4_000_000, circulatingPrevDay: 3_000_000 },
         ...(includeChain ? { [chainLabel]: { current, circulatingPrevDay: current } } : {}),
       },
     });

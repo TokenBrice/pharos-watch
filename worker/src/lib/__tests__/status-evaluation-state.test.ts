@@ -825,6 +825,8 @@ describe("status cause text", () => {
     expect(readRedemptionCapacityCoverage(runs)).toEqual({
       startedAt: 300,
       unresolvedMissingCapacity: 6,
+      structuralMissingCapacity: null,
+      runtimeMissingCapacity: 6,
       missingCapacityOkThreshold: 1,
       activeConfigured: 90,
     });
@@ -841,10 +843,33 @@ describe("status cause text", () => {
     expect(readRedemptionCapacityCoverage(undefined)).toBeNull();
   });
 
+  it("separates structural missing capacity from runtime coverage when reading a generation", () => {
+    expect(readRedemptionCapacityCoverage([
+      {
+        startedAt: 300, status: "ok",
+        metadata: {
+          unresolvedMissingCapacity: 57,
+          structuralMissingCapacity: 55,
+          missingCapacityOkThreshold: 4,
+          activeConfigured: 361,
+        },
+      },
+    ])).toEqual({
+      startedAt: 300,
+      unresolvedMissingCapacity: 57,
+      structuralMissingCapacity: 55,
+      runtimeMissingCapacity: 2,
+      missingCapacityOkThreshold: 4,
+      activeConfigured: 361,
+    });
+  });
+
   it("raises the redemption capacity coverage cause only above the published run budget", () => {
-    const coverage = (unresolvedMissingCapacity: number) => ({
+    const coverage = (runtimeMissingCapacity: number, structuralMissingCapacity: number | null = null) => ({
       startedAt: 1_700_000_000,
-      unresolvedMissingCapacity,
+      unresolvedMissingCapacity: runtimeMissingCapacity + (structuralMissingCapacity ?? 0),
+      structuralMissingCapacity,
+      runtimeMissingCapacity,
       missingCapacityOkThreshold: 2,
       activeConfigured: 120,
     });
@@ -853,6 +878,12 @@ describe("status cause text", () => {
     }));
     expect(atBudget.causes.some((entry) => entry.code === "redemption_capacity_coverage_floor")).toBe(false);
 
+    // Structural evidence-limit routes cannot trip the floor even in aggregate.
+    const structuralOnly = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      redemptionCapacityCoverage: coverage(1, 5),
+    }));
+    expect(structuralOnly.causes.some((entry) => entry.code === "redemption_capacity_coverage_floor")).toBe(false);
+
     const overBudget = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
       redemptionCapacityCoverage: coverage(3),
     }));
@@ -860,13 +891,21 @@ describe("status cause text", () => {
     expect(cause).toMatchObject({
       layer: "data-quality",
       severity: "warning",
-      metric: "redemptionUnresolvedMissingCapacity",
+      metric: "redemptionRuntimeMissingCapacity",
       value: 3,
       threshold: 2,
       subjects: ["sync-redemption-backstops"],
     });
     expect(cause?.message).toContain("sync-redemption-backstops run at 2023-11-14T22:13:20.000Z");
     expect(cause?.message).toContain("across 120 active configured route(s)");
+
+    const mixedOverBudget = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      redemptionCapacityCoverage: coverage(5, 44),
+    }));
+    const mixedCause = mixedOverBudget.causes.find((entry) => entry.code === "redemption_capacity_coverage_floor");
+    expect(mixedCause).toMatchObject({ value: 5, threshold: 2 });
+    expect(mixedCause?.message).toContain("5 runtime missing-capacity route(s)");
+    expect(mixedCause?.message).toContain("44 structural evidence-limit route(s) excluded from the floor");
   });
 
   it("emits a distinct warning cause for DDR repair debt", () => {

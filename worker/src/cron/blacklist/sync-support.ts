@@ -16,6 +16,7 @@ type ProcessedRows = {
     failed: number;
     skippedDueBudget: number;
     budgetExhausted: boolean;
+    deferredToDebt: number;
   };
 };
 
@@ -49,6 +50,7 @@ type SyncBlacklistCounters = {
     failed: number;
     skippedDueBudget: number;
     budgetExhausted: boolean;
+    deferredToDebt: number;
   };
 };
 
@@ -138,6 +140,7 @@ export function recordProcessedRows(counters: SyncBlacklistCounters, processed: 
   counters.currentBalanceCacheCounters.updated += processed.currentBalanceCacheCounters.updated;
   counters.currentBalanceCacheCounters.failed += processed.currentBalanceCacheCounters.failed;
   counters.currentBalanceCacheCounters.skippedDueBudget += processed.currentBalanceCacheCounters.skippedDueBudget;
+  counters.currentBalanceCacheCounters.deferredToDebt += processed.currentBalanceCacheCounters.deferredToDebt;
   counters.currentBalanceCacheCounters.budgetExhausted ||= processed.currentBalanceCacheCounters.budgetExhausted;
   counters.totalInsertedRows += processed.insertedRows;
 }

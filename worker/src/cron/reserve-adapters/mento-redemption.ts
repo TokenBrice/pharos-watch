@@ -248,6 +248,10 @@ const LIQUITY_V2_REDEMPTION_RATE_SELECTOR = "0xc52861f2"; // getRedemptionRateWi
 // against the FPMM implementation behind the JPYm/CHFm proxies on 2026-08-12.
 const FPMM_LP_FEE_SELECTOR = "0x704ce43e"; // lpFee()
 const FPMM_PROTOCOL_FEE_SELECTOR = "0xb0e21e8a"; // protocolFee()
+// OracleAdapter.getFXRateIfValid reverts TradingSuspended() whenever the
+// reference rate feed's trading mode is not bidirectional (breaker-restricted).
+// Verified on Celo against FPMM 0x0feb... pool quotes on 2026-11-03.
+const FPMM_TRADING_SUSPENDED_SELECTOR = "0x4ac30c22";
 const FPMM_RESERVES_ABI = [{ type: "uint256" }, { type: "uint256" }, { type: "uint256" }] as const;
 const FPMM_TRADING_LIMITS_ABI = [
   { type: "int120" }, { type: "int120" }, { type: "uint8" },
@@ -551,9 +555,11 @@ async function fetchMentoFpmmPoolsRedemption(
   let capacityUsd = 0;
   let maxFeeBps = 0;
   let settlementDelaySec = 0;
+  let suspendedPools = 0;
   // Sequential pools share one pinned block and the adapter's connection budget.
   for (const pool of params.pools) {
     let scheduledReopenSec: number | null = null;
+    let tradingSuspended = false;
     const output = pool.counterAsset.address.toLowerCase();
     const outputDecimals = pool.counterAsset.decimals;
     if (output === self) throw new Error("mento fpmm-pools: token identity mismatch");
@@ -584,6 +590,9 @@ async function fetchMentoFpmmPoolsRedemption(
           scheduledReopenSec = resolveMentoFxMarketReopen(plan.observedBlock.timestamp);
           if (scheduledReopenSec == null) throw new MentoFxMarketClosedError();
         }
+        if (quoteFailure?.returnData.toLowerCase() === FPMM_TRADING_SUSPENDED_SELECTOR) {
+          tradingSuspended = true;
+        }
         return rows;
       },
     });
@@ -602,6 +611,15 @@ async function fetchMentoFpmmPoolsRedemption(
     const inventoryBound = reserve > 0n ? reserve - 1n : 0n;
     const fee = lp + protocol;
     if (fee > 200n) throw new Error("mento fpmm-pools: invalid quote or fee");
+    if (tradingSuspended) {
+      // The pool's own oracle adapter refused the quote because the reference
+      // rate feed's trading mode is breaker-restricted. A readable pause is an
+      // observed adverse zero for this pool, not a failed telemetry read; the
+      // identity and reserve/balance checks above still bind the pool, and any
+      // remaining configured pools stay measurable.
+      suspendedPools += 1;
+      continue;
+    }
     let amountIn: bigint;
     let amountOut: bigint;
     if (unitQuote == null) {
@@ -651,10 +669,18 @@ async function fetchMentoFpmmPoolsRedemption(
     capacityUsd += decimalNumberFromBigInt(amountOut, outputDecimals);
     maxFeeBps = Math.max(maxFeeBps, Number(fee));
   }
+  const allPoolsSuspended = suspendedPools > 0 && suspendedPools === params.pools.length;
   return buildRedemptionSnapshotMetadata({
-    capacityUsd, capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
+    capacityUsd: allPoolsSuspended ? 0 : capacityUsd,
+    capacityKind: "live-direct-bounded", freshnessKind: "same-run-onchain",
     blockNumber: plan.observedBlock.number, sourceTimestamp: plan.observedBlock.timestamp,
-    routeStatus: "open", routeStatusSource: "onchain", holderEligibility: "any-holder",
+    routeStatus: allPoolsSuspended ? "paused" : "open", routeStatusSource: "onchain",
+    ...(suspendedPools > 0
+      ? {
+          routeStatusReason: `TradingSuspended: ${suspendedPools} of ${params.pools.length} configured FPMM pool(s) are breaker-restricted; capacity covers open pools only`,
+        }
+      : {}),
+    holderEligibility: "any-holder",
     routeObserved: true,
     settlementDelaySec, feeBps: maxFeeBps,
     ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),

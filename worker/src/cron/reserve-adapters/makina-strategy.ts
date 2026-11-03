@@ -209,9 +209,15 @@ const DEFAULT_OTHER_THRESHOLD_PCT = 2;
 const DEFAULT_RECONCILIATION_TOLERANCE_PCT = 0.5;
 const ETHEREUM_CHAIN = "ethereum";
 const CANONICAL_ETHEREUM_USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-const REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION = "0x49c4762ab838f2e5d8252b69b90a1e8587a74511";
+// Beacon 0x1f20cdfa19b860f0dd78fefbb052be5aa5003dd9 was repointed around
+// 2026-10-27 from 0x49c4...74511 to 0x18a6...93baf. The verified main
+// AsyncRedeemer source at both addresses is line-identical (only the
+// interface-file layout differs), so the redeployment is a re-pin, not a
+// semantic drift; re-verified against eth.blockscout sources and live
+// eth_getCode keccak on 2026-11-03.
+const REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION = "0x18a68a9ef93960c27894b5661b510980a6a93baf";
 const REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION_CODE_HASH =
-  "0x395083795e58602401305485b5328241fb589687c9edac0dddede880a083524f";
+  "0x16650c691f2c846f529f23c1050d07ceb4919bfacae4f71e83b54f55837fb5e2";
 const REVIEWED_PENDLE_PT_AUSD_MONAD = "143:0x9fc74f8ed616b5baf52a170caa97d6d3898602d1";
 const REDEEMER_MACHINE_SELECTOR = "0x75c60225";
 const MACHINE_LAST_TOTAL_AUM_SELECTOR = "0x74c59381";

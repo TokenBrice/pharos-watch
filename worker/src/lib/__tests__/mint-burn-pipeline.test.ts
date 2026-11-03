@@ -646,6 +646,37 @@ describe("mint-burn shared pipeline modules", () => {
     expect(stmts).toHaveLength(3);
   });
 
+  it("skips identical classification rewrites and still lands genuine changes", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
+    const burn = makeRow({ id: "burn-rewrite", direction: "burn", burn_type: "effective_burn" });
+    const stored = () => sqlite.prepare(
+      "SELECT burn_type, burn_review_reason, flow_type FROM mint_burn_events WHERE id = 'burn-rewrite'").get();
+    await insertMintBurnRows(db, [burn]);
+
+    // An unchanged re-observed row is not rewritten.
+    expect(await updateEventClassifications(db, [{ ...burn }]))
+      .toEqual({ flowTypeChanges: 0, burnTypeChanges: 1, rowsUpdated: 0 });
+    expect(stored()).toEqual({ burn_type: "effective_burn", burn_review_reason: null, flow_type: "standard" });
+
+    // A genuine revision lands and is counted.
+    expect(await updateEventClassifications(db, [
+      { ...burn, burn_type: "bridge_burn", burn_review_reason: "bridge-context" },
+    ])).toMatchObject({ rowsUpdated: 1 });
+    expect(stored()).toEqual({ burn_type: "bridge_burn", burn_review_reason: "bridge-context", flow_type: "standard" });
+
+    // A standard-flow replay never revokes atomic_roundtrip, even while burn fields change.
+    await updateEventClassifications(db, [
+      { ...burn, flow_type: "atomic_roundtrip", burn_type: "bridge_burn", burn_review_reason: null },
+    ]);
+    await updateEventClassifications(db, [
+      { ...burn, flow_type: "standard", burn_type: "effective_burn", burn_review_reason: "reviewed-supply-destruction" },
+    ]);
+    expect(stored()).toEqual({
+      burn_type: "effective_burn", burn_review_reason: "reviewed-supply-destruction", flow_type: "atomic_roundtrip",
+    });
+  });
+
   it("keeps the high cursor in monotonic mode and permits rewind in replace mode", async () => {
     const { db, sqlite } = fixtures.open();
     await upsertMintBurnSyncState(db, "ethereum-0xabc", 456, "replace");

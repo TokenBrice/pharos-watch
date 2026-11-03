@@ -7,7 +7,7 @@ export const ASSURANCE_RECONCILIATION_TOLERANCES: Partial<Record<IndependentAssu
     reportedLiabilityTotalTolerance: { absolute: "0.05", relativePpm: 0.01 },
   },
   AUSD: {
-    // August 2026 categories sum to $239,090,455; the printed total is $239,090,456.
+    // September 2026 categories sum to $219,154,363; the printed total is $219,154,364.
     reportedAssetTotalTolerance: { absolute: "1", relativePpm: 1 },
   },
   EUROP: {

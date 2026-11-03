@@ -21,10 +21,10 @@ const PARAMS = {
   otherThresholdPct: 2,
   reconciliationTolerancePct: 0.5,
 };
-const REVIEWED_IMPLEMENTATION = "0x49c4762ab838f2e5d8252b69b90a1e8587a74511";
+const REVIEWED_IMPLEMENTATION = "0x18a68a9ef93960c27894b5661b510980a6a93baf";
 const ASYNC_REDEEMER = "0x1303c26cfe06bac5bfee29907f37919643def75c";
 const REVIEWED_IMPLEMENTATION_CODE_HASH =
-  "0x395083795e58602401305485b5328241fb589687c9edac0dddede880a083524f";
+  "0x16650c691f2c846f529f23c1050d07ceb4919bfacae4f71e83b54f55837fb5e2";
 const REDEMPTION_STATE = {
   whitelistEnabled: false,
   sanctionsCheckEnabled: true,
@@ -426,7 +426,7 @@ describe("makina-strategy adapter", () => {
         sourceUrls: [
           "https://docs.makina.finance/concepts/architecture/machine/redemptions",
           `https://eth.blockscout.com/address/${ASYNC_REDEEMER}?tab=contract`,
-          "https://eth.blockscout.com/address/0x49c4762ab838f2e5d8252b69b90a1e8587a74511?tab=contract",
+          "https://eth.blockscout.com/address/0x18a68a9ef93960c27894b5661b510980a6a93baf?tab=contract",
         ],
       },
       redemptionQueue: {

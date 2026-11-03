@@ -6,7 +6,7 @@
     "breakerScope": "usdx-axis",
     "scoring": { "maxSourceAgeSec": 259200 },
     "display": { "url": "https://app.axis.to/transparency?tab=asset-composition", "label": "Axis issuer asset-class transparency" },
-    "inputs": { "primary": { "kind": "http-html", "url": "https://app.axis.to/transparency?tab=asset-composition" } }
+    "inputs": { "primary": { "kind": "http-json", "url": "https://transparency-api.axis.to/dashboard?reserves_period=max&performance_period=max" } }
   },
   "id": "usdx-axis",
   "name": "Axis USD",

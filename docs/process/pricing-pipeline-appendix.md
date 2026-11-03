@@ -299,7 +299,9 @@ Some tracked stablecoins trade at low enough volume that CoinGecko's upstream `l
    and the bounded 24-hour `protocol-redeem-cached-rate` degradation lane — reused pre-intake. The resolved price
    values on-chain total supply only; the row publishes with `price: null` and the live override stage re-prices it in
    the same run. Without a trusted NAV the asset stays out of the payload (fail-closed). For vaults whose config admits
-   one fresh replay-safe single-source parent (`getFreshSingleSourceNavParentId`, including syzUSD → yzUSD and sBOLD/yBOLD → BOLD), the existing
+   one fresh replay-safe single-source parent (`getFreshSingleSourceNavParentId`, including syzUSD → yzUSD, sBOLD/yBOLD → BOLD, and the
+   USDC-parented vaults eearn-ember, krusdc-keyrock, arcusdc-galaxy and susdc-spark-v1 whose own market quotes
+   DefiLlama/CoinGecko dropped on 2026-10-31), the existing
    CoinGecko batch also requests the DefiLlama-owned parent; a positive, reasonable direct `coingecko` quote with a
    fresh upstream clock becomes an unpublished `single-source` parent stub that takes precedence over the previous
    payload's row. Mirror, low-volume and par values never qualify, and the trust gate is unchanged.

@@ -1143,6 +1143,27 @@ describe("syncBlacklist", () => {
       expect(backfillAmounts).not.toHaveBeenCalled();
     });
 
+    it("admits new amount-gap rows to the repair queue even when the maintenance tail is starved", async () => {
+      emptyOk();
+      const startedAt = Date.now();
+      // One config's scan overruns the 10m45s maintenance deadline, exactly like
+      // the 2026-11-03 flood runs: every maintenance lane must be skipped.
+      vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockImplementation(async () => {
+        vi.setSystemTime(startedAt + 650_000);
+        return completeEtherscanLogs();
+      });
+      const db = makeDb();
+      const result = await syncBlacklist(buildTestOpts({ db }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(meta.amountRepairOutcome).toBe("skipped");
+      expect(meta.amountRepairReason).toBe("maintenance-budget-exhausted");
+      expect(meta.amountRepairAttempted).toBeNull();
+      expect(backfillAmounts).not.toHaveBeenCalled();
+      // Queue admission is bookkeeping, not repair: it still ran after the scans.
+      expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-amount-repair-queue-enqueue"))).toBe(true);
+    });
+
     it("degrades instead of rejecting when the current-balance debt lane throws", async () => {
       const db = mockD1([
         ...emptyBlacklistAggregateTables(),

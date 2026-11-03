@@ -107,7 +107,11 @@ describe("resolveVaultNavSupplyPrice", () => {
     expect(getFreshSingleSourceNavParentId("sbold-k3-capital")).toBe("bold-liquity");
     expect(getFreshSingleSourceNavParentId("ybold-yearn")).toBe("bold-liquity");
     expect(getFreshSingleSourceNavParentId("susn-noon")).toBe("usn-noon");
-    expect(getFreshSingleSourceNavParentId("eearn-ember")).toBeNull();
+    expect(getFreshSingleSourceNavParentId("savusd-avant")).toBe("avusd-avant");
+    expect(getFreshSingleSourceNavParentId("eearn-ember")).toBe("usdc-circle");
+    expect(getFreshSingleSourceNavParentId("krusdc-keyrock")).toBe("usdc-circle");
+    expect(getFreshSingleSourceNavParentId("arcusdc-galaxy")).toBe("usdc-circle");
+    expect(getFreshSingleSourceNavParentId("susdc-spark-v1")).toBe("usdc-circle");
     expect(getFreshSingleSourceNavParentId("sgho-aave")).toBeNull();
     expect(getFreshSingleSourceNavParentId("not-a-vault-token")).toBeNull();
   });
