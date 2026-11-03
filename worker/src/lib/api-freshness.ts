@@ -199,7 +199,9 @@ async function readProducerCronHistory(
     const inClause = buildInClause(producerJobs);
     const rows = await db
       .prepare(
-        `WITH producer_runs AS (
+        // Materialized once: the aggregate references this row set four times,
+        // and an inlined CTE re-parsed each run's metadata on every reference.
+        `WITH producer_runs AS MATERIALIZED (
            SELECT job, started_at, status, degraded_reason, ${CONFIRMED_CRON_OUTPUT_AT_SQL} AS output_at,
                   CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.persistence.generationId') END AS generation_id,
                   CASE WHEN json_valid(metadata) THEN json_extract(metadata, '$.quality.degraded') ELSE 0 END AS quality_degraded,

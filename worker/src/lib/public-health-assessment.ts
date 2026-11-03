@@ -401,14 +401,24 @@ async function loadMintBurnHealth(
         "rowCount",
         () =>
           db
+            // One newest-first probe per job: the OR form ran as MULTI-INDEX OR,
+            // parsing and sorting every retained sentinel row before LIMIT 1.
             .prepare(
-              `SELECT job, item_count, metadata
-               FROM cron_runs
-               WHERE (
-                 job = ?
-                 AND json_extract(metadata, '$.mode') = 'daily'
-                 AND json_extract(metadata, '$.sources.growth.status') IN ('ok', 'degraded')
-               ) OR (job = ? AND status IN ('ok', 'degraded'))
+              `SELECT job, item_count, metadata FROM (
+                 SELECT * FROM (
+                   SELECT job, item_count, metadata, started_at FROM cron_runs
+                    WHERE job = ?
+                      AND json_extract(metadata, '$.mode') = 'daily'
+                      AND json_extract(metadata, '$.sources.growth.status') IN ('ok', 'degraded')
+                    ORDER BY started_at DESC LIMIT 1
+                 )
+                 UNION ALL
+                 SELECT * FROM (
+                   SELECT job, item_count, metadata, started_at FROM cron_runs
+                    WHERE job = ? AND status IN ('ok', 'degraded')
+                    ORDER BY started_at DESC LIMIT 1
+                 )
+               )
                ORDER BY started_at DESC
                LIMIT 1`,
             )

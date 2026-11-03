@@ -155,6 +155,7 @@ index	idx_mbe_counted_coin_chain_ts
 index	idx_mbe_flow_type_ts
 index	idx_mbe_historical_price_repair_backlog
 index	idx_mbe_null_price_ts
+index	idx_mbe_roundtrip_group
 index	idx_mbe_symbol_ts
 index	idx_mbh_chain_coin_hour
 index	idx_mbh_chain_hour_coin
@@ -163,6 +164,7 @@ index	idx_mbh_ts
 index	idx_mbh_valuation_unrecorded
 index	idx_onchain_supply_updated
 index	idx_pricing_provider_negative_cache_expiry
+index	idx_public_snapshots_listing
 index	idx_redemption_backstop_history_date
 index	idx_redemption_backstop_history_run_id
 index	idx_redemption_backstop_run_rows_run_id
@@ -185,6 +187,7 @@ index	idx_reserve_sync_attempt_history_coin_time
 index	idx_reserve_sync_state_last_success_attempt
 index	idx_reserve_sync_state_pending_attempt
 index	idx_safety_grade_history_coin
+index	idx_safety_grade_history_prev_grade_recorded_at
 index	idx_safety_grade_history_recorded_at
 index	idx_safety_score_attempts_generation
 index	idx_safety_score_attempts_time
@@ -192,6 +195,7 @@ index	idx_safety_score_capture_archive_published
 index	idx_safety_score_history_v2_coin
 index	idx_safety_score_history_v2_legacy_row
 index	idx_safety_score_history_v2_model_generation
+index	idx_safety_score_history_v2_organic_recorded_at
 index	idx_safety_score_history_v2_recorded_at
 index	idx_safety_score_journal_coin_time
 index	idx_safety_score_journal_retention

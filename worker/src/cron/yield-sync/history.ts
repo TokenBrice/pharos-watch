@@ -782,7 +782,9 @@ export async function materializeYieldHistoryDaily(
          SELECT h.stablecoin_id, h.source_key,
                 CAST(h.recorded_at / ${DAY_SECONDS} AS INTEGER) * ${DAY_SECONDS} AS snapshot_date,
                 MAX(h.recorded_at) AS recorded_at
-           FROM yield_history h
+           -- Seek the out-of-retention range; without the hint the planner
+           -- full-scans idx_yield_hist_coin_source every run (~208k rows).
+           FROM yield_history h INDEXED BY idx_yield_history_recorded_coin
           WHERE h.recorded_at < ?
             AND (h.publication_state IS NULL OR h.publication_state = 'published')
             AND NOT EXISTS (

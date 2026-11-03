@@ -143,12 +143,20 @@ interface TelegramPendingCapacityRow {
  * `fresh_*` columns are zero: the v2 pipeline has no second effect ledger.
  */
 export const TELEGRAM_PENDING_CAPACITY_SQL = `WITH p(now_sec, near_ttl_at, stale_before) AS (SELECT ?, ?, ?),
+-- Three disjoint branches, each served by its partial index; one combined
+-- predicate defeated all of them and scanned every delivery body.
 rows AS (
-  SELECT CASE WHEN state IN ('pending', 'retry') THEN 'pending' ELSE state END AS state,
-         created_at, expires_at, next_attempt_at AS next_at, sending_at AS started_at
+  SELECT 'pending' AS state, created_at, expires_at, next_attempt_at AS next_at, sending_at AS started_at
     FROM telegram_deliveries
-   WHERE state IN ('pending', 'retry', 'sending', 'unknown', 'sent')
-     AND (state IN ('pending', 'retry', 'sending') OR done_at >= (SELECT now_sec FROM p) - 86400)
+   WHERE state IN ('pending', 'retry')
+  UNION ALL
+  SELECT 'sending', created_at, expires_at, next_attempt_at, sending_at
+    FROM telegram_deliveries
+   WHERE state = 'sending'
+  UNION ALL
+  SELECT state, created_at, expires_at, next_attempt_at, sending_at
+    FROM telegram_deliveries
+   WHERE state IN ('unknown', 'sent') AND done_at >= (SELECT now_sec FROM p) - 86400
 )
 SELECT
   SUM(CASE WHEN state = 'pending' THEN 1 ELSE 0 END) AS total,
