@@ -67,6 +67,36 @@ const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
     reviewedAt: Date.parse("2026-10-29T10:50:19Z") / 1000,
     evidenceUrl: "https://polygonscan.com/token/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
   },
+  // 2026-11-03 10:09 UTC: BOB block 40419289 (rpc.gobob.xyz) confirms
+  // 1,322,822.22 satUSD, matching the lower list level after River's BOB
+  // redemption; the persisted $15.26M baseline is a disproven pre-collapse level.
+  {
+    assetId: "satusd-river", chainId: "bob",
+    reviewedAt: Date.parse("2026-11-03T10:09:25Z") / 1000,
+    evidenceUrl: "https://explorer.gobob.xyz/token/0xecf21b335b41f9d5a89f6186a99c19a3c467871f",
+  },
+  // 2026-11-03 10:09 UTC: Base block 53455609 (mainnet.base.org) confirms
+  // 239,013.52 satUSD, exactly the observed list current.
+  {
+    assetId: "satusd-river", chainId: "base",
+    reviewedAt: Date.parse("2026-11-03T10:09:25Z") / 1000,
+    evidenceUrl: "https://basescan.org/token/0x70654aad8b7734dc319d0c3608ec7b32e03fa162",
+  },
+  // 2026-11-03 10:09 UTC: Ethereum block 26333581 (ethereum-rpc.publicnode.com)
+  // confirms 932,368.82 satUSD, exactly the observed list current.
+  {
+    assetId: "satusd-river", chainId: "ethereum",
+    reviewedAt: Date.parse("2026-11-03T10:09:23Z") / 1000,
+    evidenceUrl: "https://etherscan.io/token/0x1958853a8be062dc4f401750eb233f5850f0d0d2",
+  },
+  // 2026-11-03 10:16 UTC: Solana slot 464859942 (api.mainnet-beta.solana.com)
+  // confirms 794,463.996947 DUSD, matching the lower list level after StandX's
+  // Solana contraction from $3.01M.
+  {
+    assetId: "dusd-standx", chainId: "solana",
+    reviewedAt: Date.parse("2026-11-03T10:16:00Z") / 1000,
+    evidenceUrl: "https://solscan.io/token/DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM",
+  },
 ];
 
 const TimestampSchema = z.number().int().nonnegative();
