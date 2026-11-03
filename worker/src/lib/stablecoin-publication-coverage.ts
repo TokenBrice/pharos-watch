@@ -316,6 +316,20 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: Date.UTC(2026, 10, 1, 17, 21) / 1000,
     expiresAt: Date.UTC(2026, 10, 15, 17, 21) / 1000,
   },
+  {
+    stablecoinId: "spusd-soulpeg",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-03 23:48 UTC with fresh GETs: DefiLlama detail 413 reports gecko_id soulpeg-usd but publishes no list price, and coins.llama.fi returns $1.0045316 (confidence 0.99) for both the BSC contract and coingecko:soulpeg-usd at 2026-11-03 18:24:25 UTC, about 5.4 hours old and beyond the 15-minute primary budget. CoinGecko soulpeg-usd reports $1.005 with $211.16 of 24h volume on the same clock. The only DEX market, PancakeSwap SPUSD pair 0x8e0a1c1a3b66a01dc49a0cf1c6d82c0455fe3250, holds $9,190.39 with $0.95 of 24h volume, below the $50K per-pool floor; DefiLlama reports no CMC id. No admissible live market was found and SPUSD is not in the reviewed seven-day lane. Keep SPUSD active and the price missing; all admission gates preserved. Owner ops establishes an admitted observed market or re-reviews by this review's expiry, 2026-11-17 23:48 UTC.",
+    sources: [
+      "https://stablecoins.llama.fi/stablecoin/413",
+      "https://coins.llama.fi/prices/current/bsc:0x40ff3dea2eec93a7b71879874dc4407918da77a6,coingecko:soulpeg-usd",
+      "https://api.coingecko.com/api/v3/simple/price?ids=soulpeg-usd&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
+      "https://api.dexscreener.com/token-pairs/v1/bsc/0x40ff3dea2eec93a7b71879874dc4407918da77a6",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 3, 23, 48) / 1000,
+    expiresAt: Date.UTC(2026, 10, 17, 23, 48) / 1000,
+  },
 ];
 
 /** Standing source-calendar review, separate from temporary gap acknowledgements.
