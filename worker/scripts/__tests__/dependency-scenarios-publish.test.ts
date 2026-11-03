@@ -26,6 +26,8 @@ import { scoreToGrade } from "@shared/types/safety-score-v9-grade";
 import { sha256Hex } from "@shared/lib/sha256";
 import { buildSafetyScoreV9AcceptedPublicationBaseline, type SafetyScoreV9AcceptedPublicationBaseline } from "../../src/lib/safety-score-v9/publication-assessment";
 import { verifyAcceptedPublicationCards, main } from "../compute-dependency-scenarios";
+import { runSafetyScoreV9ReplayCli } from "../replay-safety-score-v9";
+import { runReportCardsFixedInputCaptureCli } from "../capture-report-cards-fixed-input";
 import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
 import { loadReviewedLaneEmitterCatalog } from "../../src/lib/safety-score-v9/lane-emitter-catalog";
 import { buildSafetyScoreV9ReplayLaneScreening } from "../../src/lib/safety-score-v9/publication-replay-capture";
@@ -249,13 +251,20 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     const descriptor = loadReviewedLaneEmitterCatalog().descriptors.find((row) => row.assetId === "frnt-wyoming" &&
       row.subjectDeploymentKey.startsWith("arbitrum:"))!;
     // Synthetic registry scenario only: production FRNT remains global-scope.
+    // Documented cohort snapshot: this capture replays one asset, so only its row
+    // is needed. Fingerprinting the whole ~386-asset catalog is the expensive
+    // part of every snapshot verification (four of them in this case).
     const original = localRegistrySnapshot();
-    const rows = { ...original, activeStablecoins: original.activeStablecoins.map((coin) =>
-      coin.id !== descriptor.assetId ? coin : { ...coin, mintAuthority: undefined, bridgeRouteRisk: { ...coin.bridgeRouteRisk!,
-        routes: coin.bridgeRouteRisk!.routes!.map((route) => route.id !== descriptor.subjectDeploymentKey ? route :
+    const scenarioCoin = original.activeStablecoins.find((coin) => coin.id === descriptor.assetId)!;
+    const rows = {
+      activeStablecoins: [{ ...scenarioCoin, mintAuthority: undefined, bridgeRouteRisk: { ...scenarioCoin.bridgeRouteRisk!,
+        routes: scenarioCoin.bridgeRouteRisk!.routes!.map((route) => route.id !== descriptor.subjectDeploymentKey ? route :
           { ...route, routeClass: "canonical" as const, issuanceModel: "bridge-representation" as const }),
-      } }) };
-    const registrySnapshot = { ...rows, fingerprint: registrySnapshotFingerprint(rows) };
+      } }],
+      frozenStablecoins: [],
+      deadStablecoins: [],
+    };
+    const registrySnapshot = { ...original, ...rows, fingerprint: registrySnapshotFingerprint(rows) };
     const { baseInputGenerationId: _base, ...draft } = createReplayFixedInput(clockSec, { activeAssetIds: [descriptor.assetId] });
     const fixedInput = normalizeFixedInput({ ...draft, registryFingerprint: registrySnapshot.fingerprint });
     const families = [...new Set(descriptor.emitters.flatMap((emitter) => emitter.families))];
@@ -307,8 +316,9 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     expect(complete.status, complete.stderr).toBe(0);
     expect(JSON.parse(complete.stdout).acceptedPublicationVerified).toBe(true);
     const replayPath = resolve(fixture.directory, "replay.json");
-    const replay = spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/replay-safety-score-v9.ts", "--input", resolve(fixture.directory, "capture.json"), "--output", replayPath, "--published-at", String(fixture.base.clockSec)], { encoding: "utf8", timeout: 30_000 });
-    expect(replay.status, replay.stderr).toBe(0);
+    // The replay CLI is exercised in-process: this case asserts the artifact it
+    // writes, not the process boundary (owned by the spawn cases above).
+    await runSafetyScoreV9ReplayCli(["--input", resolve(fixture.directory, "capture.json"), "--output", replayPath, "--published-at", String(fixture.base.clockSec)]);
     expect(JSON.parse(readFileSync(replayPath, "utf8")).pipeline.candidate.publicationGenerationId).toBe(fixture.candidate.publicationGenerationId);
   }, 30_000);
   it("exports the exact retained rows that the historical evaluator's own capture reader verifies and publishes", async () => {
@@ -320,8 +330,7 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     // Mirrors the workflow's credential-free historical stage, with absolute paths and a separate directory.
     const historical = resolve(fixture.directory, "historical");
     mkdirSync(historical);
-    const capture = spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/capture-report-cards-fixed-input.ts", "--accepted-cache-export", resolve(fixture.directory, "accepted.raw.json"), "--output", resolve(historical, "capture.json")], { encoding: "utf8", timeout: 30_000 });
-    expect(capture.status, capture.stderr).toBe(0);
+    await runReportCardsFixedInputCaptureCli(["--accepted-cache-export", resolve(fixture.directory, "accepted.raw.json"), "--output", resolve(historical, "capture.json")]);
     const compute = await fixture.run(["--mode", "compute", "--input", resolve(historical, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", historical]);
     expect(compute.status, compute.stderr).toBe(0);
     expect(JSON.parse(compute.stdout).acceptedPublicationVerified).toBe(true);

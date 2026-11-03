@@ -3,6 +3,7 @@ import { gzipSync } from "node:zlib";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
@@ -52,12 +53,44 @@ function localSnapshot() {
   return cachedLocalRegistrySnapshot;
 }
 
+/**
+ * Documented cohort registry snapshot: a replay only reads the rows of the
+ * assets it captures, while `verifyRegistrySnapshot` re-fingerprints every row
+ * on each verification. The rows below are real registry entries filtered to
+ * the cohort — never synthesized — and the fingerprint is recomputed, so the
+ * snapshot stays fingerprint-bound exactly like a captured one.
+ */
+function cohortSnapshot(assetIds: readonly string[]) {
+  const local = localSnapshot();
+  const rows = {
+    activeStablecoins: local.activeStablecoins.filter((coin) => assetIds.includes(coin.id)),
+    frozenStablecoins: [],
+    deadStablecoins: [],
+  };
+  return { ...local, ...rows, fingerprint: registrySnapshotFingerprint(rows) };
+}
+
 function exactFixedInput() {
   return createReplayFixedInput(CLOCK_SEC, {
     sourceGeneration: "report-cards:fixture:v9-replay",
     registryRevision: "registry:fixture",
   });
 }
+
+// The CLIs are exercised in-process elsewhere; these two spawns keep the real
+// entrypoint guard, argv wiring and usage exit code under PR-time proof.
+describe("operator CLI entrypoints", () => {
+  it.each([
+    ["worker/scripts/replay-safety-score-v9.ts", ["--input", "missing.json", "--output", "out.json"], "--published-at is required"],
+    ["worker/scripts/capture-report-cards-fixed-input.ts", ["--not-a-flag"], "Unknown option"],
+  ] as const)("exits 2 with a usage error from the real %s entrypoint", (script, args, message) => {
+    const result = spawnSync(process.execPath, ["--import", "tsx", script, ...args], {
+      cwd: resolve(import.meta.dirname, "../../.."), encoding: "utf8", timeout: 30_000,
+    });
+    expect(result.status, result.stderr).toBe(2);
+    expect(result.stderr).toContain(message);
+  });
+});
 
 describe("Safety Score v9 deterministic replay CLI", () => {
   it("requires explicit current-redemption mode and reseals only targeted captured rows", async () => {
@@ -99,7 +132,12 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       const scenario = JSON.parse(readFileSync(output, "utf8"));
       expect(scenario.pipeline.fixedInput.redemptionBackstopMap).toEqual(next.redemptionBackstopMap);
       expect(scenario.replayScenario).toEqual({ kind: "current-redemption-rederivation", sourceBaseInputGenerationId: input.baseInputGenerationId });
-      writeFileSync(capture, JSON.stringify({ kind: "safety-score-v9-registry-capture", fixedInput: input, registrySnapshot: localSnapshot() }));
+      // Bind the capture to the asset cohort the case replays, not the whole
+      // catalog: the mode refusal below runs after snapshot verification.
+      const snapshot = cohortSnapshot(["usdc-circle"]);
+      const { baseInputGenerationId: _rebuilt, ...cohortInput } = input;
+      const cohortFixedInput = normalizeSafetyScoreV9CompilerInput({ ...cohortInput, registryFingerprint: snapshot.fingerprint });
+      writeFileSync(capture, JSON.stringify({ kind: "safety-score-v9-registry-capture", fixedInput: cohortFixedInput, registrySnapshot: snapshot }));
       await expect(runSafetyScoreV9ReplayCli([...args, "--rederive-current-redemption"])).rejects.toThrow("capture-time registry modes");
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -383,7 +421,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
   });
 
   it("replays a capture-time NAV asset that is non-NAV live only with its verified registry snapshot", async () => {
-    const snapshot = structuredClone(localSnapshot());
+    const snapshot = structuredClone(cohortSnapshot(["usdc-circle"]));
     snapshot.activeStablecoins.find((coin) => coin.id === "usdc-circle")!.flags.navToken = true;
     snapshot.fingerprint = registrySnapshotFingerprint(snapshot);
     const { baseInputGenerationId: _derived, ...capture } = exactFixedInput();
