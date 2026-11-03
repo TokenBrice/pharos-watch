@@ -57,7 +57,7 @@ function writeExcludedPaths(root: string, contents: string): void {
   }
 }
 
-/** Every `"use client"` module under `src/`, which is where the bundle starts. */
+/** Every `"use client"` module under `src/` and `shared/`, where client bundles can start. */
 function collectClientModules(cwd = process.cwd()): string[] {
   const modules: string[] = [];
   const walk = (relative: string): void => {
@@ -75,6 +75,7 @@ function collectClientModules(cwd = process.cwd()): string[] {
     }
   };
   walk("src");
+  walk("shared");
   return modules.sort();
 }
 
