@@ -216,10 +216,12 @@ stats band and the FreezeWatch share card) classifies coverage as
 `complete`, `partial` or `unavailable`. `unavailable` (no reviewed coin reported supply, including a
 schema-valid empty list) publishes no supply total or share (`—`) while registry counts stay visible.
 `partial` keeps the freezable and unfreezable headline shares but qualifies them as observed-only: the
-hero reads "of observed" market cap, the unfreezable card adds a small `partial` marker beside its figure,
-and the "Observed supply only · N assets without supply data excluded" label and observed totals appear in
-secondary text, so a partial list can never read as a full-market share. The marker never replaces the
-figure; the FreezeWatch share card is still withheld for `partial` coverage. A bucket whose every member lacks supply shows `—` for its value
+hero reads "of observed" market cap, and the unfreezable card's secondary text names the observed totals
+and excluded count ("$X of $Y observed · N without supply data excluded") while the figure itself carries
+no marker, so a partial list can never read as a full-market share. FreezeWatch's tracked frozen total and
+total wiped value likewise show their subtotal without a `(partial)` qualifier (owner decision 2026-11-03:
+the ledger is the most exhaustive tracker available); per-coin lattice rows and stablecoin detail cards keep
+the shared `formatBlacklistValuation` qualifier. The FreezeWatch share card is still withheld for `partial` coverage. A bucket whose every member lacks supply shows `—` for its value
 and share; the combined freeze-exposed value and share are likewise `—` when a nonempty exposed population has no observed supply, even if non-freezable assets are observed; an explicit observed zero remains a real `$0`. The FreezeWatch data-quality notice also lists
 `dataQuality.ambiguousOrderCount` events (with the plain-language `ambiguousOrderReason`, currently Tron
 transfers in separate transactions whose order cannot be confirmed) when the count is positive.
