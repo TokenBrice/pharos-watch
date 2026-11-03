@@ -1105,8 +1105,98 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.quality).toEqual({
       reason: "capacity-coverage-floor",
       unresolvedMissingCapacity: 3,
+      structuralMissingCapacity: 0,
+      runtimeMissingCapacity: 3,
       missingCapacityOkThreshold: 2,
     });
+  });
+
+  it("excludes reviewed unquantified routes from the capacity coverage floor while publishing their census", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    configuredIdsMock = Array.from({ length: 101 }, (_value, index) => `coin-${index + 1}`);
+    const runtimeMissing = new Set(["coin-1"]);
+    const unquantified = new Set(["coin-2", "coin-3", "coin-4", "coin-5", "coin-6"]);
+    const structuralReason = new Set(["coin-7"]);
+
+    loadStablecoinsCacheMock.mockResolvedValue({
+      kind: "ok",
+      updatedAt: now,
+      payload: {
+        peggedAssets: configuredIdsMock.map((id) =>
+          makeAsset({ id, symbol: id.toUpperCase(), circulating: { peggedUSD: 1_000_000 } }),
+        ),
+      },
+    });
+    loadDexLiquidityScoresMock.mockResolvedValue({ map: {}, latestUpdatedAt: now });
+    resolveRedemptionBackstopEntryMock.mockImplementation((_db: unknown, asset: { id: string }) =>
+      Promise.resolve(
+        runtimeMissing.has(asset.id)
+          ? makeResolvedSnapshot(asset.id, now, {
+              score: null,
+              capacityScore: null,
+              provider: "reserve-sync-metadata",
+              sourceMode: "static",
+              resolutionState: "missing-capacity",
+              capacityConfidence: "dynamic",
+              capacitySemantics: "immediate-bounded",
+              modelConfidence: "low",
+              immediateCapacityUsd: null,
+              immediateCapacityRatio: null,
+              notes: ["Live reserve metadata lacks scoring-grade freshness evidence"],
+            })
+          : unquantified.has(asset.id)
+            ? makeResolvedSnapshot(asset.id, now, {
+                score: null,
+                capacityScore: null,
+                provider: "unquantified-model",
+                sourceMode: "static",
+                resolutionState: "missing-capacity",
+                capacityConfidence: "heuristic",
+                capacitySemantics: "eventual-only",
+                modelConfidence: "low",
+                immediateCapacityUsd: null,
+                immediateCapacityRatio: null,
+                notes: ["redemption-capacity-unquantified"],
+              })
+            : structuralReason.has(asset.id)
+              ? makeResolvedSnapshot(asset.id, now, {
+                  score: null,
+                  capacityScore: null,
+                  provider: "reserve-sync-metadata",
+                  sourceMode: "dynamic",
+                  resolutionState: "missing-capacity",
+                  capacityConfidence: "dynamic",
+                  capacitySemantics: "immediate-bounded",
+                  modelConfidence: "low",
+                  capacityRejectionReason: "settlement-bound-unproven",
+                  immediateCapacityUsd: null,
+                  immediateCapacityRatio: null,
+                  notes: ["Live redemption settlement completion bound is unproven; capacity is not established"],
+                })
+              : makeResolvedSnapshot(asset.id, now),
+      ),
+    );
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    expect(result.status).toBe("ok");
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.unresolvedMissingCapacity).toBe(7);
+    expect(metadata.structuralMissingCapacity).toBe(6);
+    expect(metadata.structuralMissingCapacityBy).toEqual({
+      "unquantified-model": 5,
+      "settlement-bound-unproven": 1,
+    });
+    expect(metadata.providerMissingCapacityBy).toEqual({
+      "reserve-sync-metadata": 2,
+      "unquantified-model": 5,
+    });
+    // 101 active configured minus 5 capability-structural routes -> threshold 1;
+    // the reason-based structural row stays in the denominator.
+    expect(metadata.missingCapacityOkThreshold).toBe(1);
+    expect(metadata.quality).toBeUndefined();
   });
 
   it("materializes failed rows instead of leaving the coin absent from the new snapshot", async () => {

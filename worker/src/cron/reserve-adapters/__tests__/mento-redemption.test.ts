@@ -113,6 +113,36 @@ describe("USDm V3 output pools", () => {
     setup(change);
     await expect(fetchMentoRedemptionMetadata(config, new AbortController().signal, undefined)).rejects.toThrow();
   });
+  function failUnitQuoteWith(selector: `0x${string}`, poolIndex?: number) {
+    const implementation = vi.mocked(fetchOnchainMulticall3).getMockImplementation()!;
+    vi.mocked(fetchOnchainMulticall3).mockImplementation(async (options) => {
+      if (poolIndex != null && options.calls[0].contract.toLowerCase() !== pools[poolIndex].poolAddress.toLowerCase()) {
+        return implementation(options);
+      }
+      const rows = await implementation(options);
+      return rows?.map((row) => row.label === "unitQuote"
+        ? { ...row, success: false, returnData: selector }
+        : row) ?? null;
+    });
+  }
+  it("keeps open pools measurable and publishes the pause when one pool is breaker-suspended", async () => {
+    setup();
+    failUnitQuoteWith("0x4ac30c22", 1);
+    const result = await fetchMentoRedemptionMetadata(config, new AbortController().signal, undefined);
+    expect(result.redemption).toMatchObject({
+      capacityUsd: 999.999999, feeBps: 2, routeStatus: "open",
+      routeStatusReason: expect.stringContaining("1 of 2 configured FPMM pool(s)"),
+    });
+  });
+  it("publishes paused zero capacity when every configured pool is breaker-suspended", async () => {
+    setup();
+    failUnitQuoteWith("0x4ac30c22");
+    const result = await fetchMentoRedemptionMetadata(config, new AbortController().signal, undefined);
+    expect(result.redemption).toMatchObject({
+      capacityUsd: 0, routeStatus: "paused", routeStatusSource: "onchain",
+      routeStatusReason: expect.stringContaining("2 of 2"),
+    });
+  });
   function failUnitQuoteWithFxMarketClosed() {
     const implementation = vi.mocked(fetchOnchainMulticall3).getMockImplementation()!;
     vi.mocked(fetchOnchainMulticall3).mockImplementation(async (options) => {
