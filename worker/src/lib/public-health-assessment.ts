@@ -54,7 +54,7 @@ import {
 import type { OperatorAlertHealth, SchedulerLiveness } from "@shared/types/status/public-health";
 import { loadSchedulerLiveness, schedulerLivenessImpactStatus as getSchedulerLivenessImpactStatus, schedulerLivenessWarnings } from "./status/scheduler-liveness";
 import { loadOperatorAlertHealth } from "./status/operator-alert-health";
-import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "./cron-output";
+import { LATEST_CONFIRMED_CRON_OUTPUT_SQL } from "./cron-output";
 
 const DEFAULT_CIRCUIT_RECORD: CircuitRecord = {
   state: "closed",
@@ -388,9 +388,7 @@ async function loadMintBurnHealth(
         "latestSuccessfulSyncAt",
         () =>
           db
-            .prepare(
-              `SELECT MAX(${CONFIRMED_CRON_OUTPUT_AT_SQL}) as started_at FROM cron_runs WHERE job = ?`,
-            )
+            .prepare(LATEST_CONFIRMED_CRON_OUTPUT_SQL)
             .bind(MINT_BURN_CRON_JOB)
             .first<{ started_at: number | null }>()
             .then((row) => row?.started_at ?? null),

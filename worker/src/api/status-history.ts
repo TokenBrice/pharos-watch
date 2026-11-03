@@ -42,7 +42,10 @@ export const handleStatusHistoryRoute = makeAdminRoute<AdminRouteContext>(
       listRecentStatusTransitions(db, limit + 1, { from, to }, () => {
         transitionQueryFailed = true;
       }),
-      computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"))
+      // History shows the cohort cursor, never the 30-day adapter reliability rollup.
+      computeReserveCompositionOverview(db, now, resolveScheduledSlotPolicy("fourHourlyReserveSync"), undefined, {
+        adapterReliability: false,
+      })
         .then((overview) => ({ ok: true as const, overview }))
         .catch((error) => {
           logWorkerEvent({

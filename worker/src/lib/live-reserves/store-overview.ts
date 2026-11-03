@@ -300,6 +300,9 @@ export async function computeReserveCompositionOverview(
   now: number,
   checkpointLiveness: { readonly slotSilenceSec: number; readonly hardDeadSec: number },
   freshnessSec = LIVE_RESERVE_FRESHNESS_SEC,
+  // The 30-day reliability rollup is the heaviest read here; review-applicability
+  // checks that never show it skip it (no rows, availability left unset).
+  options: { readonly adapterReliability?: boolean } = {},
 ): Promise<ReserveCompositionOverview> {
   const configuredCoins = getConfiguredLiveReserveCoins();
   if (configuredCoins.length === 0) {
@@ -311,7 +314,7 @@ export async function computeReserveCompositionOverview(
     loadReserveCompositionRowMap(db),
     loadLatestLiveReserveResumePointer(db),
     loadReserveCohortCompletions(db, now),
-    loadReserveSyncReliabilityRollup(db, now).then((rows) => ({
+    options.adapterReliability === false ? { rows: [], availability: undefined } : loadReserveSyncReliabilityRollup(db, now).then((rows) => ({
       rows,
       availability: { status: "available" as const },
     })).catch((error) => {
