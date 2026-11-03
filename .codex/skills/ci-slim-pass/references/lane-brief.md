@@ -12,7 +12,7 @@ Hard rules:
 - MERGE moves cases intact (assertions unchanged); merged files must share the Vitest project and environment and compatible `vi.mock` setups — if they do not, skip and say why. Never create a new test file.
 - Deleting or renaming a test file: update every registry that names it (`scripts/lib/critical-test-files.mts`, `scripts/lib/critical-coverage.mjs` ownership, `scripts/lib/provider-resilience-registry.mjs`, `docs/doc-ownership.json` testOwnership, docs/skills that cite it) in the same change, and run `npm run check:critical-coverage-completeness` plus `npx vitest run scripts/__tests__/doc-ownership-registry.test.ts`. A deletion of protected behaviour names the surviving test (path and exact title) in the report, per `docs/testing.md` "Test evidence rules".
 - No production-code change except removing an export that only a deleted test used (then `npm run check:unused-code` must stay green).
-- Do not commit, push or create branches/worktrees; do not touch `agents/`.
+- Do not commit, push or create branches/worktrees; do not touch `agents/`. Never apply the `test-budget-override` label (owner-only); if the corpus budget blocks you, trim or retire tests or report it.
 
 Validate: every touched and target test file (`npx vitest run …`), `npm run check:critical-coverage-completeness`, `npm run check:unused-code`, the typechecks the touched packages need, `npx eslint <files>`, `git diff --check`.
 

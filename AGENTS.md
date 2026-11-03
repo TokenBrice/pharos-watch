@@ -23,7 +23,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 - Code, schemas, registries, and checked runtime data are authoritative when prose disagrees.
 - Use your harness's native delegation for independent, disjoint work; never assume it exists.
 - No canonical formatter: match nearby style, no formatting-only churn, `git diff --check` clean (`docs/testing.md#source-formatting-policy`).
-- Extend the owning suite; do not add sibling test files per fix. Slow or registry-wide cases belong to the nightly tier, and the test corpus budget only moves down (`docs/testing.md#extending-tests`).
+- Extend the owning suite; do not add sibling test files per fix. Slow or registry-wide cases belong to the nightly tier, and the test corpus budget only moves down; only the owner applies the `test-budget-override` label (`docs/testing.md#extending-tests`).
 - Credentials: check the ignored root `.env.local` and the documented source before reporting one missing; names only, never values. Worker secrets stay Wrangler-managed.
 - Runtime: mise shims read `.nvmrc`; first run `mise settings add idiomatic_version_file_enable_tools node`, then `mise install`. `check:pr` requires the exact `.nvmrc` Node and npm 11.x.
 - Scratch lives in ignored `agents/`; delete bulky intermediates you created when done. Durable guidance in `docs/` (`docs/process/agent-artifacts.md`).
