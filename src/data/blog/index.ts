@@ -28,6 +28,16 @@ export interface BlogPost {
 
 export const BLOG_POSTS: readonly BlogPost[] = [
   {
+    slug: "what-the-pharos-api-enables",
+    title: "What the Pharos API Enables",
+    description:
+      "How CurveDEX, Frankencoin, KPK and Newton use the Pharos stablecoin API: vault exposure limits, depeg alerts, Curve pool grades and a live issuer score.",
+    datePublished: "2026-11-03",
+    coverImage: "/blog/what-the-pharos-api-enables-cover.png",
+    coverAlt:
+      "The circular Pharos mark under a soft beam, above the label “Pharos API” and the headline “What the API enables.”, then the CurveDEX, Frankencoin, KPK and Newton logos and the line “Pool ratings · Issuer scores · Depeg alerts · Vault policies” on a dark navy background.",
+  },
+  {
     slug: "dwellir-in-kind-sponsorship",
     title: "Indirect Funding: Dwellir Sponsors Our RPC",
     description:

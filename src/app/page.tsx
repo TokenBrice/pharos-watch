@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { HomeAltClient } from "@/components/home-alt-client";
 import { HomeBlogBanner } from "@/components/home-blog-banner";
 import { HomeAltHero } from "@/components/home-alt-hero";
+import { HomeApiStrip } from "@/components/home-api-strip";
 import { HomeMediaStrip } from "@/components/home-media-strip";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { buildCollectionItemListJsonLd, buildStablecoinItemListEntries, safeJsonLd } from "@/lib/json-ld";
@@ -71,7 +72,10 @@ export default async function HomePage() {
       </HomepageEvidenceProvider>
       <HomeBlogBanner />
       <HomeAltClient>
-        <HomeMediaStrip />
+        <div className="mt-3 grid gap-3 sm:mt-4 lg:flex lg:gap-4">
+          <HomeMediaStrip />
+          <HomeApiStrip />
+        </div>
       </HomeAltClient>
     </div>
   );

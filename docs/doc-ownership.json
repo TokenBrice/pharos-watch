@@ -1632,6 +1632,8 @@
         "src/**",
         "data/logos.json",
         "public/logos/**",
+        "public/partners/**",
+        "public/blog/**",
         "public/chains/**",
         "public/datasets/stablecoin-cemetery.*",
         "public/llms.txt",

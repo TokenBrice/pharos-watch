@@ -13,6 +13,7 @@ import { DonationsFileSchema } from "@shared/lib/funding/schema";
 import { DONOR_API_KEY_MIN_USD } from "@shared/lib/ops-limits";
 import { API_PAGE_ANCHORS, PUBLIC_API_ARTIFACTS, PUBLIC_API_HOST } from "@shared/lib/public-api-contract";
 import { ApiOfferCards } from "./api-offer-cards";
+import { ApiPartnerLogos } from "./api-partner-logos";
 import { ApiTabs } from "./api-tabs";
 import { SupporterClaimSteps } from "./supporter-claim-steps";
 
@@ -59,15 +60,18 @@ export default async function ApiPage() {
         "Safety Score grades need no key. Peg, supply, liquidity, reserve and depeg data need a supporter or partner key. The Reference tab documents every endpoint.",
       ]}
       headerSupplement={
-        <div className="flex flex-wrap gap-2">
-          <a href={`#${API_PAGE_ANCHORS.supporterKey}`} className={PILL_CLASS_NAME}>
-            <KeyRound className="h-4 w-4" aria-hidden="true" />
-            Supporter key
-          </a>
-          <a href={`#${API_PAGE_ANCHORS.partnerAccess}`} className={PILL_CLASS_NAME}>
-            <Handshake className="h-4 w-4" aria-hidden="true" />
-            Partner key
-          </a>
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <div className="flex flex-wrap gap-2">
+            <a href={`#${API_PAGE_ANCHORS.supporterKey}`} className={PILL_CLASS_NAME}>
+              <KeyRound className="h-4 w-4" aria-hidden="true" />
+              Supporter key
+            </a>
+            <a href={`#${API_PAGE_ANCHORS.partnerAccess}`} className={PILL_CLASS_NAME}>
+              <Handshake className="h-4 w-4" aria-hidden="true" />
+              Partner key
+            </a>
+          </div>
+          <ApiPartnerLogos />
         </div>
       }
     >
