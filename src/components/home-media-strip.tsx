@@ -9,7 +9,7 @@ export function HomeMediaStrip(): React.JSX.Element {
   const hosts = MEDIA_APPEARANCES.map((appearance) => appearance.host);
 
   return (
-    <section aria-labelledby="home-media-strip-title" className="mt-3 sm:mt-4">
+    <section aria-labelledby="home-media-strip-title" className="min-w-0 lg:flex-1">
       <h2 id="home-media-strip-title" className="sr-only">
         Pharos in the media
       </h2>

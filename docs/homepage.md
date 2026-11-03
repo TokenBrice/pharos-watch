@@ -12,7 +12,7 @@ The hero and market-state line share the site-only compact homepage snapshot, no
 
 The global recent-events rail is in normal flow below sticky navigation on desktop; only navigation remains pinned. On mobile it mounts only on the homepage, not invisibly on interior routes. The fresh-blog banner uses build-time eligibility; expiry disappears on the next deploy, not the visitor's clock, and never precedes the page heading.
 
-Homepage server-only blog/media chrome uses inline decorative SVG and explicit-size, lazy native host-logo images. Do not import shared client icon/image leaves into these server branches: Next's root homepage client-reference group can otherwise attach the homepage and chart chunk list to unrelated routes.
+Homepage server-only blog, API and media chrome uses inline decorative SVG and explicit-size, lazy native logo images. Do not import shared client icon/image leaves into these server branches: Next's root homepage client-reference group can otherwise attach the homepage and chart chunk list to unrelated routes.
 
 ## Data Health
 

@@ -22,7 +22,7 @@ Access presents supporter and partner offers, the free Safety grades feed and cl
 
 ### Partner key terms
 
-Use ops-limit constants for published default rates, never the validation ceiling as capacity. Service commitments are not contractual SLA or uptime/breaking-notice promises. Free-to-users services are free; commercial terms are agreed per request. Do not name partners as endorsements. Operator-issued keys remain internal tier standard with protected-cache isolate fast path; ops authentication is not a public key.
+Use ops-limit constants for published default rates, never the validation ceiling as capacity. Service commitments are not contractual SLA or uptime/breaking-notice promises. Free-to-users services are free; commercial terms are agreed per request. Name partners only through the consented roster under Social proof. Operator-issued keys remain internal tier standard with protected-cache isolate fast path; ops authentication is not a public key.
 
 ### Qualifying coins
 
@@ -36,7 +36,7 @@ Use ops-limit constants for published default rates, never the validation ceilin
 
 ### Social proof
 
-Use `summarizeDonations().lifetimeCommunityDonorCount`, the same full population as Funding, never a displayed/capped donor count.
+Use `summarizeDonations().lifetimeCommunityDonorCount`, the same full population as Funding, never a displayed/capped donor count. The header "Used by" row and the homepage API strip read `API_PARTNERS` (`src/lib/api-partners.ts`): teams that agreed to be named, alphabetical, with local marks under `public/partners/`. Logos state usage, never endorsement or rating input; on desktop the row shares the pill line, so it adds no height above the offers.
 
 ### One Beam exception
 
