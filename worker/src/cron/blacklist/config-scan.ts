@@ -74,6 +74,7 @@ type ScanCounters = {
     failed: number;
     skippedDueBudget: number;
     budgetExhausted: boolean;
+    deferredToDebt: number;
   };
 };
 
@@ -533,6 +534,7 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
         failed: 0,
         skippedDueBudget: 0,
         budgetExhausted: false,
+        deferredToDebt: 0,
       },
     },
     apiErrorClasses: {},
