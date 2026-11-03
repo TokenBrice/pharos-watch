@@ -382,6 +382,37 @@ describe("generateWeeklyRecap", () => {
     expect(JSON.parse(result.metadata ?? "{}").reason).toBe("safety-canonical-snapshot");
   });
 
+  it("keeps chronic partial-supply week metadata out of the run status", async () => {
+    const rows = buildDailyRows();
+    for (const row of rows) {
+      row.input_data = JSON.stringify({
+        ...JSON.parse(row.input_data),
+        degradedSources: ["supply-current-unavailable", "supply-prev-week-baseline"],
+      });
+    }
+    const db = mockD1(makeTables({ dailyRows: rows }));
+    vi.mocked(fetchWithRetry).mockImplementation(async () => weeklyClaudeResponse());
+
+    const result = await generateWeeklyRecap(
+      db,
+      "anthropic-key",
+      null,
+      { botToken: "bot", chatId: "chat" },
+    );
+
+    // The chronic partial-cohort reasons stay degraded-source metadata (recorded
+    // on the persisted input for the prompt and the watchdog), never a standing
+    // operator condition on the cron itself (f8a6cdbee).
+    expect(result.status).toBeUndefined();
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBeUndefined();
+    const insert = db.getHistory().find((entry) => entry.sql.includes("INSERT INTO daily_digest"));
+    expect(insert).toBeDefined();
+    const persisted = JSON.parse(String(insert!.binds[3]));
+    expect(persisted.degradedSourcesThisWeek).toEqual(
+      expect.arrayContaining(["supply-current-unavailable", "supply-prev-week-baseline"]),
+    );
+  });
+
   it("keeps weekly enforce independent from daily shadow and blocks the unresolved raw finding", async () => {
     const violatedExtended = VALID_WEEKLY_EXTENDED.replace("synthesize the slow drift:", "synthesize the slow drift —");
     const db = mockD1(makeTables({
