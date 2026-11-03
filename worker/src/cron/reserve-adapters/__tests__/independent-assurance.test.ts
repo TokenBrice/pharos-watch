@@ -191,8 +191,8 @@ function assuranceFenceCases() {
       adapter: "agora-independent-assurance",
       coinId: "ausd-agora",
       product: "AUSD",
-      html: `<a href="${agoraReviewed}">August</a>`,
-      newerHtml: `<a href="${agoraReviewed}">August</a><a href="https://files.buildwithfern.com/agora.docs.buildwithfern.com/new/docs/assets/2026%20Sep%20-%20Agora%20Dollar%20Reserve%20Report.pdf">September</a>`,
+      html: `<a href="${agoraReviewed}">September</a>`,
+      newerHtml: `<a href="${agoraReviewed}">September</a><a href="https://files.buildwithfern.com/agora.docs.buildwithfern.com/new/docs/assets/2026%20Oct%20-%20Agora%20Dollar%20Reserve%20Report.pdf">October</a>`,
     },
     {
       adapter: "anchorage-independent-assurance",
@@ -200,7 +200,7 @@ function assuranceFenceCases() {
       product: "USAT",
       html: indexFixture("anchorage-independent-assurance.html"),
       newerHtml: indexFixture("anchorage-independent-assurance.html") +
-        '<a href="https://learn.anchorage.com/09.30.26_USAT-Stablecoin-Attestation-Report.pdf">Sep</a>',
+        '<a href="https://learn.anchorage.com/10.31.26_USAT-Stablecoin-Attestation-Report.pdf">Oct</a>',
     },
     {
       adapter: "anchorage-independent-assurance",
@@ -208,7 +208,7 @@ function assuranceFenceCases() {
       product: "USDPT",
       html: indexFixture("usdpt-independent-assurance.html"),
       newerHtml: indexFixture("usdpt-independent-assurance.html") +
-        '<a href="https://learn.anchorage.com/09.30.26_USDPT_Stablecoin_Attestation_Report.pdf">Sep</a>',
+        '<a href="https://learn.anchorage.com/10.31.26_USDPT_Stablecoin_Attestation_Report.pdf">Oct</a>',
     },
     {
       adapter: "audd-independent-assurance",
@@ -759,7 +759,7 @@ describe("independent-assurance manifest framework", () => {
 
   it("recognizes the migrated AUDM monthly report without treating the quarterly AUP as that report", () => {
     expect(AUDM_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(
-      "https://docs.macropod.com/legal/reserve-verification-report-2026-09-30.pdf", "Supply Reporting (Monthly)",
+      "https://docs.macropod.com/legal/reserve-verification-report-31st-october-2026.pdf", "Supply Reporting (Monthly)",
     )).toBe(true);
     expect(AUDM_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(
       "https://docs.macropod.com/legal/agreed-upon-procedures-report-2026-06.pdf", "Independent Quarterly Reconciliation",
@@ -768,13 +768,14 @@ describe("independent-assurance manifest framework", () => {
 
   it("verifies the migrated AUDM monthly index before checking exact report bytes", async () => {
     const reviewed = getIndependentAssuranceManifest("AUDM");
-    const html = `<a href="${reviewed.reportUrl}">Supply Reporting (Monthly)</a>
+    // The live index dates the ordinal-filename link through its anchor label.
+    const html = `<a href="${reviewed.reportUrl}">Supply Reporting (Monthly)Monthly reports detailing supply, reserves, and issued tokens. Latest: as at 31 October 2026.</a>
       <a href="https://docs.macropod.com/legal/agreed-upon-procedures-report-2026-06.pdf">Independent Quarterly Reconciliation</a>`;
     await expect(verifyFixtureIndex("AUDM", AUDM_INDEPENDENT_ASSURANCE_PROFILE, "", html))
       .rejects.toThrow("PDF byte length");
     await expect(verifyFixtureIndex("AUDM", AUDM_INDEPENDENT_ASSURANCE_PROFILE, "",
-      `${html}<a href="https://docs.macropod.com/legal/reserve-verification-report-2026-10-31.pdf">Monthly report</a>`, true))
-      .resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-10-31" } });
+      `${html}<a href="https://docs.macropod.com/legal/reserve-verification-report-2026-11-30.pdf">Monthly report</a>`, true))
+      .resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-11-30" } });
   });
 
   it.each([
@@ -786,11 +787,13 @@ describe("independent-assurance manifest framework", () => {
   ])("rejects an AUDM index with a %s reserve date", async (_label, fileName, text) => {
     const reviewed = getIndependentAssuranceManifest("AUDM");
     const candidate = `https://cdn.prod.website-files.com/${encodeURIComponent(fileName)}`;
+    // The reviewed anchor keeps the live, datable label so only the malformed
+    // candidate introduces the ambiguity under test.
     await expect(verifyFixtureIndex(
       "AUDM",
       AUDM_INDEPENDENT_ASSURANCE_PROFILE,
       "",
-      `<a href="${reviewed.reportUrl}">Reviewed report</a><a href="${candidate}">${text}</a>`,
+      `<a href="${reviewed.reportUrl}">Supply Reporting (Monthly) Latest: as at 31 October 2026</a><a href="${candidate}">${text}</a>`,
     )).rejects.toThrow("ambiguous report date");
   });
 
@@ -838,7 +841,7 @@ describe("independent-assurance manifest framework", () => {
         vi.fn(async (input: RequestInfo | URL) => {
           const url = String(input);
           if (url === reviewed.officialIndexUrl) {
-            return new Response(`<a href="${reviewed.reportUrl}">Reviewed report</a>`, {
+            return new Response(`<a href="${reviewed.reportUrl}">Supply Reporting (Monthly) Latest: as at 31 October 2026</a>`, {
               headers: { "content-type": "text/html" },
             });
           }
@@ -908,11 +911,14 @@ const prepareAgora = async (...args: Parameters<NonNullable<typeof agoraProfile.
   (await agoraProfile.prepareIndexHtml!(...args)) as string;
 const agoraFixture = "agora-transparency-2026-09-30-august.html";
 const agoraFern = `/_fern-files${new URL(agoraManifest.reportUrl).pathname}`;
-const agoraAnchor = (href: string) => `<a href="${href}">2026 Aug - Agora Dollar Reserve Report</a>`;
+const agoraAnchor = (href: string) => `<a href="${href}">2026 Sep - Agora Dollar Reserve Report</a>`;
+// The live index rotated to the September examination and dropped the August
+// link; the frozen August capture plus the served September anchor reproduces it.
+const agoraCurrentIndex = () => indexFixture(agoraFixture) + agoraAnchor(agoraFern);
 
 afterEach(() => vi.unstubAllGlobals());
 
-describe("Agora reviewed August examination", () => {
+describe("Agora reviewed September examination", () => {
   it("parses Fern dates across report naming conventions", () => {
     const date = agoraProfile.reportDateFromCandidate!;
     expect(date("https://x/2026%20Jul%20-%20Agora%20Dollar%20Reserve%20Report.pdf", "2026 Jul - Agora Dollar Reserve Report")).toBe("2026-07-31");
@@ -923,36 +929,36 @@ describe("Agora reviewed August examination", () => {
 
   it("rewrites the signed reviewed report while keeping older transport links", async () => {
     const signed = agoraManifest.reportUrl.replace("files.buildwithfern.com", "fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com") + "?X-Amz-Signature=abcd";
-    const june = "https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com/agora.docs.buildwithfern.com/a7e3e708ecba5f1826066cb1ba633eb231ceb1765bb76a54cb6994be07eaf34c/docs/assets/2026%20Jun%20-%20Agora%20Dollar%20Reserve%20Report.pdf?X-Amz-Signature=efgh";
+    const august = "https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com/agora.docs.buildwithfern.com/444c4f3a9642d6a9149e8fa9736469cd03192f55cc7ff3d2326117b0397875b5/docs/assets/2026%20Aug%20-%20Agora%20Dollar%20Reserve%20Report.pdf?X-Amz-Signature=efgh";
     const may = "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf";
-    const prepared = await prepareAgora([signed, june, may].map(href => `<a href="${href}">report</a>`).join("\n"), new AbortController().signal);
+    const prepared = await prepareAgora([signed, august, may].map(href => `<a href="${href}">report</a>`).join("\n"), new AbortController().signal);
     expect(collectPdfAnchors(prepared)).toEqual([
       { href: agoraManifest.reportUrl, text: "report" },
-      { href: june, text: "report" },
+      { href: august, text: "report" },
       { href: may, text: "report" },
     ]);
   });
 
   it("accepts a single already-stable reviewed link", async () => {
     const prepared = await prepareAgora(agoraAnchor(agoraManifest.reportUrl), new AbortController().signal);
-    expect(collectPdfAnchors(prepared)).toEqual([{ href: agoraManifest.reportUrl, text: "2026 Aug - Agora Dollar Reserve Report" }]);
+    expect(collectPdfAnchors(prepared)).toEqual([{ href: agoraManifest.reportUrl, text: "2026 Sep - Agora Dollar Reserve Report" }]);
   });
 
   it("dates every report candidate in the current official capture", async () => {
-    const prepared = await prepareAgora(indexFixture(agoraFixture), new AbortController().signal);
+    const prepared = await prepareAgora(agoraCurrentIndex(), new AbortController().signal);
     const reports = collectPdfAnchors(prepared).filter(a => /\.pdf(?:[?#]|$)/i.test(a.href) && agoraProfile.isReportCandidate(a.href, a.text));
     expect(reports.every(a => agoraProfile.reportDateFromCandidate!(a.href, a.text) !== null)).toBe(true);
   });
 
-  it("fails closed on the frozen July index because the August reviewed link is missing", async () => {
+  it("fails closed on the frozen July index because the September reviewed link is missing", async () => {
     await expect(prepareAgora(indexFixture("agora-transparency-2026-09-30.html"), new AbortController().signal))
       .rejects.toThrow("reviewed report link missing or ambiguous");
   });
 
   it("binds the official Fern index to the reviewed stable artifact", async () => {
-    const prepared = await prepareAgora(indexFixture(agoraFixture), new AbortController().signal);
+    const prepared = await prepareAgora(agoraCurrentIndex(), new AbortController().signal);
     expect(collectPdfAnchors(prepared).filter(a => a.href === agoraManifest.reportUrl)).toEqual([
-      { href: agoraManifest.reportUrl, text: "2026 Aug - Agora Dollar Reserve Report" },
+      { href: agoraManifest.reportUrl, text: "2026 Sep - Agora Dollar Reserve Report" },
     ]);
     const signed = agoraManifest.reportUrl.replace("files.buildwithfern.com", "fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com") + "?X-Amz-Signature=abcd";
     expect(await prepareAgora(agoraAnchor(signed), new AbortController().signal)).toContain(`href="${agoraManifest.reportUrl}"`);
@@ -961,25 +967,25 @@ describe("Agora reviewed August examination", () => {
   it.each([
     "", agoraAnchor(agoraFern) + agoraAnchor(agoraManifest.reportUrl),
     agoraAnchor(agoraManifest.reportUrl.replace("files.buildwithfern.com", "example.com")),
-    agoraAnchor(agoraFern.replace("444c4f3a", "00000000")),
+    agoraAnchor(agoraFern.replace("03ab55af", "00000000")),
   ])("fails closed on missing, duplicated or drifted reviewed identity", async html => {
     await expect(prepareAgora(html, new AbortController().signal)).rejects.toThrow("reviewed report link missing or ambiguous");
   });
 
   it("reports a newer report as unreviewed and fails closed on undated candidates", async () => {
-    const newer = "https://files.buildwithfern.com/2026%20Sep%20Agora%20Dollar%20Reserve%20Report.pdf";
-    await expect(verifyFixtureIndex("AUSD", agoraProfile, agoraFixture, indexFixture(agoraFixture) + agoraAnchor(newer), true))
-      .resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-09-30", reportUrl: newer } });
-    await expect(verifyFixtureIndex("AUSD", agoraProfile, agoraFixture, indexFixture(agoraFixture) + '<a href="/Agora%20Dollar%20Reserve%20Report.pdf">Report</a>')).rejects.toThrow("ambiguous report date");
+    const newer = "https://files.buildwithfern.com/2026%20Oct%20Agora%20Dollar%20Reserve%20Report.pdf";
+    await expect(verifyFixtureIndex("AUSD", agoraProfile, agoraFixture, agoraCurrentIndex() + agoraAnchor(newer), true))
+      .resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2026-10-31", reportUrl: newer } });
+    await expect(verifyFixtureIndex("AUSD", agoraProfile, agoraFixture, agoraCurrentIndex() + '<a href="/Agora%20Dollar%20Reserve%20Report.pdf">Report</a>')).rejects.toThrow("ambiguous report date");
   });
 
   it("preserves measured categories and excludes created supply without asset netting", () => {
     expect(reconcileIndependentAssuranceManifest(agoraManifest, agoraProfile.reconciliation)).toMatchObject({
-      computedAssetTotal: "239090455", liabilityTotal: "238379206", reportedAssetDifference: "1",
+      computedAssetTotal: "219154363", liabilityTotal: "218359166", reportedAssetDifference: "1",
     });
-    expect(agoraManifest.adjustments).toEqual([expect.objectContaining({ kind: "excluded-circulation", amount: "28141214" })]);
+    expect(agoraManifest.adjustments).toEqual([expect.objectContaining({ kind: "excluded-circulation", amount: "32195647" })]);
     expect(agoraManifest.adjustments![0]).not.toHaveProperty("alreadyNettedIntoAssets");
-    expect(() => reconcileIndependentAssuranceManifest({ ...agoraManifest, reportedAssetTotal: "239090457" }, agoraProfile.reconciliation)).toThrow("reported asset total");
+    expect(() => reconcileIndependentAssuranceManifest({ ...agoraManifest, reportedAssetTotal: "219154366" }, agoraProfile.reconciliation)).toThrow("reported asset total");
   });
 
   it("requires netted asset adjustments to declare their accounting treatment", () => {
@@ -991,7 +997,7 @@ describe("Agora reviewed August examination", () => {
 });
 
 describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", () => {
-  it("reconciles August reserves with both chain redeemable liabilities", () => {
+  it("reconciles September reserves with both chain redeemable liabilities", () => {
     const manifest = getIndependentAssuranceManifest("USAT");
     expect(manifest.assuranceTier).toBe("independent-assurance");
     expect(manifest.conclusion).toBe("unmodified");
@@ -1019,7 +1025,7 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
       '<div class="accordion-dates-grid">' +
       '<a href="https://learn.anchorage.com/05.31.26_USDPT_Stablecoin_Attestation_Report_signed.pdf">May</a>' +
       '<a href="https://learn.anchorage.com/06.30.26_USDPT-Stablecoin-Attestation-Report.pdf">Jun</a>' +
-      `<a href="${reviewed.reportUrl}">Aug</a>` +
+      `<a href="${reviewed.reportUrl}">Sep</a>` +
       "</div>";
     await expect(verifyFixtureIndex(
       "USDPT", USDPT_INDEPENDENT_ASSURANCE_PROFILE, "anchorage-independent-assurance.html", html,
@@ -1027,12 +1033,12 @@ describe("anchorage-independent-assurance (Deloitte Anchorage examinations)", ()
 
     const newer = html.replace(
       "</div>",
-      '<a href="https://learn.anchorage.com/09.30.26_USDPT-Stablecoin-Attestation-Report.pdf">Sep</a></div>',
+      '<a href="https://learn.anchorage.com/10.31.26_USDPT-Stablecoin-Attestation-Report.pdf">Oct</a></div>',
     );
     await expect(verifyFixtureIndex(
       "USDPT", USDPT_INDEPENDENT_ASSURANCE_PROFILE, "anchorage-independent-assurance.html", newer, true,
     )).resolves.toMatchObject({
-      newerUnreviewedReport: { reportDate: "2026-09-30", reportUrl: "https://learn.anchorage.com/09.30.26_USDPT-Stablecoin-Attestation-Report.pdf" },
+      newerUnreviewedReport: { reportDate: "2026-10-31", reportUrl: "https://learn.anchorage.com/10.31.26_USDPT-Stablecoin-Attestation-Report.pdf" },
     });
   });
 

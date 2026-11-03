@@ -30,6 +30,7 @@ describe("blacklist row counter aggregation", () => {
         failed: 0,
         skippedDueBudget: 0,
         budgetExhausted: false,
+        deferredToDebt: 0,
       },
     };
 
@@ -41,6 +42,7 @@ describe("blacklist row counter aggregation", () => {
         failed: 0,
         skippedDueBudget: 3,
         budgetExhausted: true,
+        deferredToDebt: 5,
       },
     });
 
@@ -49,6 +51,7 @@ describe("blacklist row counter aggregation", () => {
       failed: 0,
       skippedDueBudget: 3,
       budgetExhausted: true,
+      deferredToDebt: 5,
     });
   });
 });

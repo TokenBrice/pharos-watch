@@ -2,20 +2,23 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { extractEscapedJsonValueAfterKey } from "../html";
 import { validateAdapterOutput } from "../validate";
 import { adaptAxisIssuerClasses } from "../axis-issuer-classes";
 
 const FIXTURES_DIR = join(dirname(fileURLToPath(import.meta.url)), "fixtures");
 /**
- * Captured 2026-10-29T18:21Z from
- * https://app.axis.to/transparency?tab=asset-composition. The fixture keeps the exact
- * `self.__next_f.push` script; the surrounding page chrome is not parsed.
+ * Captured 2026-11-03 from
+ * https://transparency-api.axis.to/dashboard?reserves_period=max&performance_period=max
+ * (the issuer's `NEXT_PUBLIC_TRANSPARENCY_API_URL`, the exact payload the
+ * transparency page embeds). Trimmed to the fields the adapter reads: `overview`,
+ * `dashboard_details.asset_classes` and `reserves_history`; venue inventories and
+ * performance series are dropped.
  */
-const FIXTURE = readFileSync(join(FIXTURES_DIR, "axis-transparency-2026-10-29.html"), "utf8");
-const DASHBOARD_ANCHOR = '\\"initialDashboard\\":';
-const SOURCE_TIMESTAMP = Math.floor(Date.parse("2026-10-29T12:08:46.361Z") / 1000);
-const NOW = Math.floor(Date.parse("2026-10-29T12:18:00Z") / 1000);
+const FIXTURE: unknown = JSON.parse(
+  readFileSync(join(FIXTURES_DIR, "axis-transparency-api-2026-11-02.json"), "utf8"),
+);
+const SOURCE_TIMESTAMP = Math.floor(Date.parse("2026-11-02T08:46:44.936Z") / 1000);
+const NOW = Math.floor(Date.parse("2026-11-02T09:00:00Z") / 1000);
 
 interface FixtureClass {
   id: string;
@@ -24,12 +27,7 @@ interface FixtureClass {
   unclassified: { gross_usd: number; asset_count: number; percent_of_class: number };
 }
 interface FixtureDashboard {
-  overview: {
-    last_updated?: string;
-    total_reserves: { value: number };
-    usdx_total_supply: number;
-    collateralization_ratio: number;
-  };
+  overview: { last_updated?: string; usdx_total_supply: number };
   dashboard_details: {
     asset_classes: {
       total: number;
@@ -40,37 +38,12 @@ interface FixtureDashboard {
   reserves_history: { data: Array<{ value: number; timestamp: string }> };
 }
 
-/** Replace the captured dashboard object in the escaped flight JSON, keeping every other
- *  byte of the fixture so the parser is exercised against the real wire shape. */
-function mutateDashboard(mutate: (dashboard: FixtureDashboard) => void): string {
-  const anchorIndex = FIXTURE.indexOf(DASHBOARD_ANCHOR);
-  if (anchorIndex < 0) throw new Error("fixture dashboard anchor is missing");
-  const start = FIXTURE.indexOf("{", anchorIndex + DASHBOARD_ANCHOR.length);
-  let depth = 0;
-  let escaped = false;
-  let end = -1;
-  for (let index = start; index < FIXTURE.length; index += 1) {
-    const char = FIXTURE[index];
-    if (escaped) {
-      escaped = false;
-    } else if (char === "\\") {
-      escaped = true;
-    } else if (char === "{") {
-      depth += 1;
-    } else if (char === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        end = index;
-        break;
-      }
-    }
-  }
-  if (start < 0 || end < 0) throw new Error("fixture dashboard object is unterminated");
-  const decoded = extractEscapedJsonValueAfterKey(FIXTURE, DASHBOARD_ANCHOR, "axis-issuer-classes");
-  const dashboard = JSON.parse(decoded) as FixtureDashboard;
+/** Clone the captured dashboard and apply one mutation, so every fail-closed case is
+ *  exercised against the real wire shape. */
+function mutateDashboard(mutate: (dashboard: FixtureDashboard) => void): unknown {
+  const dashboard = structuredClone(FIXTURE) as FixtureDashboard;
   mutate(dashboard);
-  const encoded = JSON.stringify(JSON.stringify(dashboard)).slice(1, -1);
-  return FIXTURE.slice(0, start) + encoded + FIXTURE.slice(end + 1);
+  return dashboard;
 }
 
 function liquidHedge(dashboard: FixtureDashboard): FixtureClass {
@@ -79,7 +52,7 @@ function liquidHedge(dashboard: FixtureDashboard): FixtureClass {
   return row;
 }
 
-const RESIDUAL_PCT = 33_662_245.1926844 / 69_046_922.14880197 * 100;
+const RESIDUAL_PCT = 36_611_766.62222735 / 67_515_210.22623903 * 100;
 
 describe("adaptAxisIssuerClasses", () => {
   it("publishes exactly the five reviewed class keys plus one unclassified residual", () => {
@@ -126,21 +99,21 @@ describe("adaptAxisIssuerClasses", () => {
     expect(residuals[0]!.pct).toBeCloseTo(RESIDUAL_PCT, 8);
     expect(result.metadata?.unknownExposurePct).toBeCloseTo(RESIDUAL_PCT, 8);
     expect(result.slices.find((slice) => slice.sourceKey === "axis:transparency:asset-class:liquid_hedge")?.pct)
-      .toBeCloseTo(76.23764060675437 - RESIDUAL_PCT, 8);
+      .toBeCloseTo(73.52456054127218 - RESIDUAL_PCT, 8);
   });
 
-  it("records the page clock, reserve/supply totals and reconciled ratio", () => {
+  it("records the payload clock, reserve/supply totals and reconciled ratio", () => {
     const result = adaptAxisIssuerClasses(FIXTURE, NOW);
 
     expect(result.metadata).toMatchObject({
       freshnessMode: "verified",
       sourceTimestamp: SOURCE_TIMESTAMP,
-      supplyUsd: 68_864_099.65676695,
+      supplyUsd: 67_150_862.74296746,
     });
-    expect(result.metadata?.totalReserveUsd).toBeCloseTo(69_046_922.148802, 6);
-    expect(result.metadata?.collateralizationRatio).toBeCloseTo(69_046_922.148802 / 68_864_099.65676695, 10);
+    expect(result.metadata?.totalReserveUsd).toBeCloseTo(67_515_210.22623903, 6);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(67_515_210.22623903 / 67_150_862.74296746, 10);
     expect(result.metadata?.details).toMatchObject({
-      lastUpdated: "2026-10-29T12:08:46.361Z",
+      lastUpdated: "2026-11-02T08:46:44.936Z",
       classCount: 5,
       unclassifiedAssetCount: 462,
     });
@@ -150,24 +123,24 @@ describe("adaptAxisIssuerClasses", () => {
   });
 
   it("fails closed when the class values do not sum to the published total", () => {
-    const html = mutateDashboard((dashboard) => {
+    const payload = mutateDashboard((dashboard) => {
       dashboard.dashboard_details.asset_classes.breakdown[0]!.value += 10_000;
     });
-    expect(() => adaptAxisIssuerClasses(html, NOW)).toThrow(/do not sum to the published total/);
+    expect(() => adaptAxisIssuerClasses(payload, NOW)).toThrow(/do not sum to the published total/);
   });
 
   it("fails closed when last_updated is missing", () => {
-    const html = mutateDashboard((dashboard) => {
+    const payload = mutateDashboard((dashboard) => {
       delete dashboard.overview.last_updated;
     });
-    expect(() => adaptAxisIssuerClasses(html, NOW)).toThrow(/last_updated|reviewed shape/);
+    expect(() => adaptAxisIssuerClasses(payload, NOW)).toThrow(/last_updated|reviewed shape/);
   });
 
   it("fails closed on an unreviewed class identity", () => {
-    const html = mutateDashboard((dashboard) => {
+    const payload = mutateDashboard((dashboard) => {
       dashboard.dashboard_details.asset_classes.breakdown[0]!.id = "cash";
     });
-    expect(() => adaptAxisIssuerClasses(html, NOW)).toThrow(/unreviewed or duplicate asset-class identity/);
+    expect(() => adaptAxisIssuerClasses(payload, NOW)).toThrow(/unreviewed or duplicate asset-class identity/);
   });
 
   it("fails closed when an unclassified amount exceeds its class or appears outside liquid hedge", () => {
@@ -184,12 +157,12 @@ describe("adaptAxisIssuerClasses", () => {
   });
 
   it("fails closed when the same-day timeline point contradicts the class total", () => {
-    const html = mutateDashboard((dashboard) => {
-      const point = dashboard.reserves_history.data.find((entry) => entry.timestamp.startsWith("2026-10-29"));
+    const payload = mutateDashboard((dashboard) => {
+      const point = dashboard.reserves_history.data.find((entry) => entry.timestamp.startsWith("2026-11-02"));
       if (!point) throw new Error("fixture timeline point is missing");
       point.value += 10_000;
     });
-    expect(() => adaptAxisIssuerClasses(html, NOW)).toThrow(/timeline point does not match/);
+    expect(() => adaptAxisIssuerClasses(payload, NOW)).toThrow(/timeline point does not match/);
   });
 
   it("allows the 10-minute future skew and rejects a clock one second beyond it", () => {

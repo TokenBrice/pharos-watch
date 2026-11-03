@@ -25,6 +25,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
 import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS, scanBlacklistConfigs } from "./blacklist/config-scan";
 import type { DwellirNativeCapability } from "../lib/dwellir-native";
+import { refreshBlacklistAmountRepairQueue } from "../lib/blacklist/amount-repair-queue";
 import { reconcileCurrentBalanceDebt } from "../lib/blacklist/current-balance-debt";
 
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
@@ -140,6 +141,16 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let tronOrderRepair: RepairStageOutcome = REPAIR_OK;
   let tronAmountRepair: RepairStageOutcome = REPAIR_OK;
   let debtRepair: RepairStageOutcome = REPAIR_OK;
+  // Amount-gap rows this run inserted must reach the durable repair queue even
+  // when the maintenance tail loses its window to scan overruns, circuits or
+  // budgets: queue admission is bookkeeping, not a provider repair attempt.
+  // Without it, a skipped tail leaves zero-attempt events absent from the
+  // queue the repair lane and the operator runbook read.
+  try {
+    await refreshBlacklistAmountRepairQueue(db, Math.floor(Date.now() / 1000));
+  } catch (err) {
+    logWorkerEventArgs("handler", "warn", "[sync-blacklist] Amount repair queue refresh failed:", err);
+  }
 
   // Historical amount repair and Tron freeze-amount replay are maintenance work.
   // They run only after every admissible event source has had its turn. A short,
@@ -444,6 +455,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         currentBalanceCacheFailed: counters.currentBalanceCacheCounters.failed,
         currentBalanceCacheSkippedDueBudget: counters.currentBalanceCacheCounters.skippedDueBudget,
         currentBalanceCacheBudgetExhausted: counters.currentBalanceCacheCounters.budgetExhausted,
+        currentBalanceCacheDeferredToDebt: counters.currentBalanceCacheCounters.deferredToDebt,
         producerGapMetricSnapshots,
         producerSummarySnapshot,
         producerSnapshotSkipped,

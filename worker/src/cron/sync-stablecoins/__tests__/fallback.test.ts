@@ -255,7 +255,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       const published = payload.peggedAssets.find((asset) => asset.id === meta.id);
       expect(write.assets.find((asset) => asset.id === meta.id)?.navToken).toBe(true);
       expect(published).toMatchObject({ id: meta.id, price: 1.12, priceObservedAt: NOW_SEC, pegType: "peggedUSD" });
-      expect(payload.peggedAssets.find((asset) => asset.id === "usdc-circle")?.circulating).toEqual({ peggedUSD: 5_000_000 });
+      expect(payload.peggedAssets.find((asset) => asset.id === "usdt-tether")?.circulating).toEqual({ peggedUSD: 5_000_000 });
       expect(log).toHaveBeenCalledWith(expect.objectContaining({
         event: "preferred-native-supply-unavailable",
         metadata: expect.objectContaining({ stablecoinId: meta.id, reason: "preferred-native-supply-unavailable" }),

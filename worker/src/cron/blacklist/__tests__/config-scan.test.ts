@@ -158,6 +158,7 @@ beforeEach(() => {
       failed: 0,
       skippedDueBudget: 0,
       budgetExhausted: false,
+      deferredToDebt: 0,
     },
   });
 });

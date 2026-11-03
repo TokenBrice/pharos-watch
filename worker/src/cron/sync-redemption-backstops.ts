@@ -7,6 +7,9 @@ import { REDEMPTION_BACKSTOP_RESOLVE_CONCURRENCY } from "@shared/lib/cron-jobs";
 import { STABLECOINS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { resolveCapacityConfidence } from "@shared/lib/redemption-backstop-confidence";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
+import { REDEMPTION_BACKSTOP_PROVIDER_IDS } from "@shared/lib/redemption-backstop-providers";
+import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
@@ -62,6 +65,55 @@ function describeRouteFailure(error: unknown): RouteFailureReason {
 }
 
 const DEX_LIQUIDITY_FRESHNESS_SEC = DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC;
+const STRUCTURAL_MISSING_CAPACITY_REASONS = new Set<string>([
+  // Deterministic evidence-model verdicts, each produced only after this
+  // run's checks executed: the validated marker asserts the route has no
+  // provable completion bound; the observer lanes carry no all-in cost probe;
+  // display-only capacity kinds and payout vocabularies that cannot bind the
+  // complete configured output set are capability facts.
+  "settlement-bound-unproven",
+  "all-in-cost-unobserved",
+  "route-output-identity-unobserved",
+  "unsupported-capacity-kind",
+]);
+
+const CAPABILITY_STRUCTURAL_KINDS = new Set<string>([
+  "unquantified-model",
+  "diagnostic-only-observer",
+  "adapter-without-capacity-telemetry",
+]);
+
+/**
+ * Structural vs runtime missing capacity, derived only from published row
+ * facts, the configured capacity model and registry capability declarations —
+ * never from stablecoin IDs. Structural rows are missing-capacity by
+ * construction (authored `unquantified` model, diagnostic-only observer lane,
+ * adapter that cannot emit route-capacity telemetry for this coin, or a
+ * deterministic evidence-model rejection reason); runtime rows depend on this
+ * run's observation and are the only ones the coverage floor grades.
+ */
+export function structuralMissingCapacityKind(entry: RedemptionBackstopEntry): string | null {
+  if (entry.provider === REDEMPTION_BACKSTOP_PROVIDER_IDS.UNQUANTIFIED_MODEL) return "unquantified-model";
+  const capacityModel = getRedemptionBackstopConfig(entry.stablecoinId)?.capacityModel;
+  if (capacityModel?.kind === "executable-observer" && capacityModel.capacityUse === "diagnostic-only") {
+    return "diagnostic-only-observer";
+  }
+  if (capacityModel?.kind === "reserve-sync-metadata") {
+    const liveConfig = WORKER_TRACKED_META_BY_ID.get(entry.stablecoinId)?.liveReservesConfig;
+    const telemetry = liveConfig ? getLiveReserveAdapterDefinition(liveConfig.adapter)?.redemptionTelemetry : null;
+    const paramsCarryRedemption = liveConfig?.params != null && typeof liveConfig.params === "object" &&
+      "redemption" in (liveConfig.params as Record<string, unknown>);
+    if (telemetry && (telemetry.capacity === "none" || ("capacityParamsGated" in telemetry
+      && telemetry.capacityParamsGated === true && !paramsCarryRedemption))) {
+      return "adapter-without-capacity-telemetry";
+    }
+  }
+  if (entry.capacityRejectionReason != null &&
+    STRUCTURAL_MISSING_CAPACITY_REASONS.has(entry.capacityRejectionReason)) {
+    return entry.capacityRejectionReason;
+  }
+  return null;
+}
 
 function getAllowedMissingCapacityCount(configuredCount: number): number {
   if (configuredCount <= 0) return 0;
@@ -338,6 +390,18 @@ export async function syncRedemptionBackstops(
   const resolvedCount = snapshots.filter((entry) => entry.resolutionState === "resolved").length;
   const unresolvedCount = snapshots.length - resolvedCount;
   const missingCapacityCount = snapshots.filter((entry) => entry.resolutionState === "missing-capacity").length;
+  // Structural missing capacity is config/capability-derived; the coverage
+  // floor grades only the runtime remainder. Both counts stay published.
+  const structuralMissingCapacityBy: Record<string, number> = {};
+  let structuralMissingCapacityCount = 0;
+  for (const entry of snapshots) {
+    if (entry.resolutionState !== "missing-capacity") continue;
+    const kind = structuralMissingCapacityKind(entry);
+    if (kind == null) continue;
+    structuralMissingCapacityCount += 1;
+    structuralMissingCapacityBy[kind] = (structuralMissingCapacityBy[kind] ?? 0) + 1;
+  }
+  const runtimeMissingCapacityCount = missingCapacityCount - structuralMissingCapacityCount;
   const familyMissingCapacityBy: Record<string, number> = {};
   const providerMissingCapacityBy: Record<string, number> = {};
   for (const entry of snapshots) {
@@ -358,6 +422,19 @@ export async function syncRedemptionBackstops(
   const missingFromCache = configuredIds.filter((stablecoinId) => !stablecoinAssetById.has(stablecoinId));
   const cacheAbsentConfiguredCount = missingFromCache.length;
   const activeConfiguredCount = Math.max(0, configuredIds.length - cacheAbsentConfiguredCount);
+  // The tolerance budget sizes runtime failure risk, so its denominator is the
+  // runtime-resolvable cohort: routes whose capability is structurally
+  // missing-capacity can never move the numerator and must not inflate the
+  // allowance either. Reason-based structural rows stay in the denominator:
+  // their sources are capable emitters.
+  const capabilityStructuralActiveConfiguredCount = snapshots.filter((entry) => {
+    const kind = structuralMissingCapacityKind(entry);
+    return kind != null && CAPABILITY_STRUCTURAL_KINDS.has(kind) && stablecoinAssetById.has(entry.stablecoinId);
+  }).length;
+  const runtimeCapacityConfiguredCount = Math.max(
+    0,
+    activeConfiguredCount - capabilityStructuralActiveConfiguredCount,
+  );
   const criticalUnresolvedCount = snapshots.filter(
     (entry) =>
       entry.resolutionState !== "resolved" &&
@@ -369,12 +446,13 @@ export async function syncRedemptionBackstops(
     (entry) => entry.resolutionState === "resolved" && stablecoinAssetById.has(entry.stablecoinId),
   ).length;
   const coverageRatio = activeConfiguredCount > 0 ? activeResolvedCount / activeConfiguredCount : 0;
-  const allowedMissingCapacityCount = getAllowedMissingCapacityCount(activeConfiguredCount);
-  const missingCapacityWithinTolerance = missingCapacityCount <= allowedMissingCapacityCount;
+  const allowedMissingCapacityCount = getAllowedMissingCapacityCount(runtimeCapacityConfiguredCount);
+  const missingCapacityWithinTolerance = runtimeMissingCapacityCount <= allowedMissingCapacityCount;
   const hasNoActiveConfiguredRows = configuredIds.length > 0 && activeConfiguredCount === 0;
   const hasBlockingUnresolved = failedIds.length > 0 || criticalUnresolvedCount > 0;
-  // The capacity coverage floor is an input-evidence condition: the sync wrote
-  // every snapshot it could resolve, so it travels as quality, not a degraded run.
+  // The capacity coverage floor is an input-evidence condition over runtime
+  // missing capacity: the sync wrote every snapshot it could resolve, so it
+  // travels as quality, not a degraded run.
   const capacityCoverageFloorBreached = !missingCapacityWithinTolerance;
   const hasDegradedSyncSignal = hasBlockingUnresolved || liquidityStale || hasNoActiveConfiguredRows;
   const runMetadata: CronMetadataRecord & RedemptionReserveRunMetadata = {
@@ -395,6 +473,8 @@ export async function syncRedemptionBackstops(
     activeResolved: activeResolvedCount,
     unresolved: unresolvedCount,
     unresolvedMissingCapacity: missingCapacityCount,
+    structuralMissingCapacity: structuralMissingCapacityCount,
+    ...(structuralMissingCapacityCount > 0 ? { structuralMissingCapacityBy } : {}),
     ...(missingCapacityCount > 0 ? { familyMissingCapacityBy, providerMissingCapacityBy } : {}),
     unresolvedCritical: criticalUnresolvedCount,
     availabilityDegraded: availabilityDegradedCount,
@@ -450,6 +530,8 @@ export async function syncRedemptionBackstops(
           quality: {
             reason: "capacity-coverage-floor",
             unresolvedMissingCapacity: missingCapacityCount,
+            structuralMissingCapacity: structuralMissingCapacityCount,
+            runtimeMissingCapacity: runtimeMissingCapacityCount,
             missingCapacityOkThreshold: allowedMissingCapacityCount,
           },
         }

@@ -51,8 +51,19 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   defineRegistryErc4626NavVault({ id: "gtusdcp-gauntlet", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "yvusdc-yearn", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "autousd-auto-finance", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
-  defineRegistryErc4626NavVault({ id: "eearn-ember", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
-  defineRegistryErc4626NavVault({ id: "savusd-avant", parentId: AVUSD_AVANT_ID, chain: "avalanche" }),
+  // eearn/arc USDC vaults lost every own-market quote on 2026-10-31 ~06:45 UTC
+  // (DefiLlama coins dropped their contract/mirror keys; no geckoId or a stale
+  // CG ticker), so intake's only supply valuation is this NAV. Without this
+  // flag the USDC parent row comes from the previous 15-minute publication and
+  // misses the composite freshness window at intake time, dropping supply to
+  // the 7-day carry (publication gaps since 2026-10-31).
+  defineRegistryErc4626NavVault({ id: "eearn-ember", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN, allowFreshReplaySafeSingleSourceParent: true }),
+  // avUSD's CG ticker is fresh, but savUSD's own CG ticker died 2026-08-09, so
+  // intake's only supply valuation is this vault NAV. Without this flag the
+  // parent quote comes from the previous 15-minute publication and misses the
+  // composite's 900s coingecko freshness window at intake time, dropping the
+  // coin after the 7d restore ceiling (publication gap since 2026-11-02).
+  defineRegistryErc4626NavVault({ id: "savusd-avant", parentId: AVUSD_AVANT_ID, chain: "avalanche", allowFreshReplaySafeSingleSourceParent: true }),
   // USN prices single-source from CoinGecko. Inherit that fresh replay-safe
   // quote and its confidence instead of the sUSN last trade.
   defineRegistryErc4626NavVault({ id: "susn-noon", parentId: USN_NOON_ID, chain: ETHEREUM_CHAIN, allowFreshReplaySafeSingleSourceParent: true }),
@@ -73,7 +84,10 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   // leg's source, single-source confidence and clock instead of upgrading it.
   defineRegistryErc4626NavVault({ id: "senpathusd-sentora", parentId: "pathusd-bridge", chain: "tempo", allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "skymoneyusdtsavings-sky", parentId: USDT_TETHER_ID, chain: ETHEREUM_CHAIN }),
-  defineRegistryErc4626NavVault({ id: "krusdc-keyrock", parentId: USDC_CIRCLE_ID, chain: "arc" }),
+  // Same 2026-10-31 quote loss as eearn-ember: the arc vaults' only supply
+  // valuation is this NAV, and the previous-payload USDC parent misses the
+  // composite freshness window at intake time.
+  defineRegistryErc4626NavVault({ id: "krusdc-keyrock", parentId: USDC_CIRCLE_ID, chain: "arc", allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "senpyusdpst-sentora", parentId: "pyusd-paypal", chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "senpyusdmwin-sentora", parentId: "pyusd-paypal", chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "senrlusdv2-sentora", parentId: "rlusd-ripple", chain: ETHEREUM_CHAIN }),
@@ -84,8 +98,11 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   defineRegistryErc4626NavVault({ id: "sxsrlusd-sentora", parentId: "rlusd-ripple", chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "senpyusdprimev2-sentora", parentId: "pyusd-paypal", chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "armusdcs-wintermute", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
-  defineRegistryErc4626NavVault({ id: "arcusdc-galaxy", parentId: USDC_CIRCLE_ID, chain: "arc" }),
-  defineRegistryErc4626NavVault({ id: "susdc-spark-v1", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
+  defineRegistryErc4626NavVault({ id: "arcusdc-galaxy", parentId: USDC_CIRCLE_ID, chain: "arc", allowFreshReplaySafeSingleSourceParent: true }),
+  // DefiLlama coins dropped the coingecko:spark-usdc mirror on 2026-10-31 and
+  // the CG ticker is months stale, so sUSDC-v1's only supply valuation is this
+  // NAV (same flag rationale as eearn-ember).
+  defineRegistryErc4626NavVault({ id: "susdc-spark-v1", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN, allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "cscbusdc-clearstar", parentId: USDC_CIRCLE_ID, chain: "base" }),
   defineRegistryErc4626NavVault({ id: "bbqusdc-steakhouse-v2", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "hyperusdca-hyperithm", parentId: USDC_CIRCLE_ID, chain: "monad" }),

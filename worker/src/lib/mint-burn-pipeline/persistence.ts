@@ -59,6 +59,7 @@ export async function insertMintBurnRows(
 export interface ClassificationUpdateCounters {
   flowTypeChanges: number;
   burnTypeChanges: number;
+  /** D1 `meta.changes` total: rows whose stored classification actually changed. */
   rowsUpdated: number;
 }
 
@@ -83,11 +84,20 @@ export async function updateEventClassifications(
       // observes only one side cannot revoke it, because the peer may be absent
       // from this batch. Only a group-wide sweep, the reviewed classification
       // rules or the operator reverse pass may change it.
+      // The WHERE guard skips rows whose stored classification already equals
+      // the classifier output: scan windows re-observe already-persisted rows
+      // every run, and rewriting identical values is pure D1 write volume.
       `UPDATE mint_burn_events
        SET burn_type = ?, burn_review_reason = ?,
            flow_type = CASE WHEN ? = 'standard' AND flow_type = 'atomic_roundtrip' THEN flow_type ELSE ? END
-       WHERE id = ?`,
-    ).bind(row.burn_type, row.burn_review_reason, row.flow_type, row.flow_type, row.id),
+       WHERE id = ?
+         AND (burn_type IS NOT ? OR burn_review_reason IS NOT ?
+           OR flow_type IS NOT CASE WHEN ? = 'standard' AND flow_type = 'atomic_roundtrip'
+                                    THEN flow_type ELSE ? END)`,
+    ).bind(
+      row.burn_type, row.burn_review_reason, row.flow_type, row.flow_type, row.id,
+      row.burn_type, row.burn_review_reason, row.flow_type, row.flow_type,
+    ),
   );
   let rowsUpdated = 0;
   const standardStmts: D1PreparedStatement[] = [];

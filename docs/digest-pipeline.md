@@ -190,7 +190,7 @@ All collectors now distinguish "no signal" from "collector failed". If the activ
 - appends the collector key to the cron metadata string
 - stores the collector keys in `input_data.degradedSources`
 
-Regime-critical degraded sources (active depegs, PSI, supply, Safety) also raise the digest-publication watchdog's `daily-inputs`/`weekly-inputs` condition, and the weekly recap carries `degradedSourcesThisWeek` into its degraded reasons rather than reporting a clean run.
+Regime-critical degraded sources (active depegs, PSI, supply, Safety) also raise the digest-publication watchdog's `daily-inputs`/`weekly-inputs` condition, and the weekly recap escalates only those regime-critical members of `degradedSourcesThisWeek` into its degraded reasons rather than reporting a clean run; chronic partial-cohort supply metadata (for example `supply-current-unavailable`) stays recorded on the persisted input for the prompt and watchdog, never a standing cron condition.
 
 Staleness degrades without implying currency. PSI samples older than 2h record `psi-sample-stale`; fallback admits a completed daily observation window ending ≤24h ago, not a midnight key treated as publication time. Future clocks are rejected. Without either source, `stabilityIndex` is null and regime-critical `psi-unavailable` prevents CALM. PSI contributors older than 2h are dropped; stablecoins outside 600 seconds withhold live severity; yield rows older than 24h are filtered.
 

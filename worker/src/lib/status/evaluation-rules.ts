@@ -148,11 +148,23 @@ export interface AvailabilityEvaluationInput {
  * could resolve), so the status cause must read that run instead of inferring
  * coverage from the endpoint's renewed freshness clock. A generation without
  * those fields returns null (unknown), never a healthy zero.
+ *
+ * The floor counts only runtime missing capacity: `structuralMissingCapacity`
+ * names the config/capability-derived rows excluded from the floor (reviewed
+ * `unquantified` models, diagnostic-only observers, adapters that cannot emit
+ * route-capacity telemetry, and deterministic evidence-model rejection
+ * reasons). Generations published before that field existed report null for
+ * it, and their totals are evaluated as-is rather than reinterpreted.
  */
 export interface RedemptionCapacityCoverageEvidence {
   /** Producer run start clock: the generation this verdict applies to. */
   startedAt: number;
+  /** Total missing-capacity rows, including structural rows. */
   unresolvedMissingCapacity: number;
+  /** Config/capability-derived structural rows; null on legacy generations. */
+  structuralMissingCapacity: number | null;
+  /** Missing-capacity rows that count toward the floor (total minus structural). */
+  runtimeMissingCapacity: number;
   missingCapacityOkThreshold: number;
   activeConfigured: number | null;
 }
@@ -170,11 +182,20 @@ export function readRedemptionCapacityCoverage(
   const unresolved = metadata.unresolvedMissingCapacity;
   if (typeof threshold !== "number" || !Number.isFinite(threshold)
     || typeof unresolved !== "number" || !Number.isFinite(unresolved)) return null;
+  const structural = metadata.structuralMissingCapacity;
+  const structuralMissingCapacity = typeof structural === "number"
+    && Number.isFinite(structural) && structural >= 0
+      ? structural
+      : null;
+  const runtimeMissingCapacity = unresolved -
+    Math.min(structuralMissingCapacity ?? 0, unresolved);
   const activeConfigured = typeof metadata.activeConfigured === "number"
     && Number.isFinite(metadata.activeConfigured) ? metadata.activeConfigured : null;
   return {
     startedAt: run.startedAt,
     unresolvedMissingCapacity: unresolved,
+    structuralMissingCapacity,
+    runtimeMissingCapacity,
     missingCapacityOkThreshold: threshold,
     activeConfigured,
   };
@@ -887,19 +908,22 @@ function evaluateReserveOperationalDiagnostics(input: DataQualityEvaluationInput
     }
   }
   const redemption = input.redemptionCapacityCoverage;
-  if (redemption && redemption.unresolvedMissingCapacity > redemption.missingCapacityOkThreshold) {
+  if (redemption && redemption.runtimeMissingCapacity > redemption.missingCapacityOkThreshold) {
     causes.push(makeCause(
       "data-quality",
       "redemption_capacity_coverage_floor",
       "warning",
       `sync-redemption-backstops run at ${new Date(redemption.startedAt * 1000).toISOString()} published `
-        + `${redemption.unresolvedMissingCapacity} unresolved missing-capacity route(s) above its `
+        + `${redemption.runtimeMissingCapacity} runtime missing-capacity route(s) above its `
         + `${redemption.missingCapacityOkThreshold} budget`
         + (redemption.activeConfigured != null ? ` across ${redemption.activeConfigured} active configured route(s)` : "")
+        + (redemption.structuralMissingCapacity != null && redemption.structuralMissingCapacity > 0
+          ? ` (${redemption.structuralMissingCapacity} structural evidence-limit route(s) excluded from the floor)`
+          : "")
         + ". Failed routes keep placeholder rows, so the endpoint's renewed freshness clock does not prove coverage.",
       {
-        metric: "redemptionUnresolvedMissingCapacity",
-        value: redemption.unresolvedMissingCapacity,
+        metric: "redemptionRuntimeMissingCapacity",
+        value: redemption.runtimeMissingCapacity,
         threshold: redemption.missingCapacityOkThreshold,
         subjects: ["sync-redemption-backstops"],
       },

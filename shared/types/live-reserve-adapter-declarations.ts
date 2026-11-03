@@ -2385,13 +2385,15 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     },
   }),
   "agora-independent-assurance": declareAdapter(agoraAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3),
-  // Axis publishes issuer asset classes on a Next.js transparency dashboard,
-  // not the Accountable location feed: different host, transport, clock and
-  // validation. Verified freshness requires the page's own `last_updated`;
-  // the 48.75% unclassified hedge share is deliberately uncapped so the one
-  // residual row stays visible instead of degrading every snapshot.
+  // Axis publishes issuer asset classes on the transparency dashboard API
+  // (transparency-api.axis.to), the same payload the Next.js page embeds; the
+  // HTML page itself geo-restricts Worker egress to a "not available in your
+  // region" shell since 2026-10-30, so the JSON API is the reviewed feed.
+  // Verified freshness requires the payload's own `last_updated`; the large
+  // unclassified hedge share is deliberately uncapped so the one residual row
+  // stays visible instead of degrading every snapshot.
   "axis-issuer-classes": declareAdapter(noParamsSchema, {
-    primaryInputKinds: ["http-html"],
+    primaryInputKinds: ["http-json"],
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sourceOriginClass: "issuer-attested",
