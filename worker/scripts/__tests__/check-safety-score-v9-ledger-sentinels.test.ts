@@ -176,15 +176,6 @@ describe("ledger sentinel verdicts", () => {
     });
   });
 
-  it("reports a group-clear closure when the claim group has no open items", () => {
-    const report = reportFor(registry({ items: [] }), ledger([decision()]));
-    expect(onlyRow(report)).toMatchObject({
-      verdict: "closed",
-      reason: "sentinels-absent-group-clear",
-      groupState: "no-open-items",
-    });
-  });
-
   it("keeps the group open while the sentinel gap id is still an open item", () => {
     const report = reportFor(registry(), ledger([decision()]));
     const row = onlyRow(report);

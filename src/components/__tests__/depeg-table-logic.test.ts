@@ -61,13 +61,16 @@ describe("compareDepegTrackerRows — numeric field keys", () => {
   });
 });
 
-describe("compareDepegTrackerRows — pegScore", () => {
-  it.each(["asc", "desc"] as const)("sorts unknown peg health last in %s order, after observed zero and nonzero scores", (direction) => {
-    const unknown = makeRow({ pegScore: null });
-    for (const value of observedValues) {
-      const observed = makeRow({ pegScore: value });
-      expect(compareDepegTrackerRows(unknown, observed, sort("pegScore", direction))).toBeGreaterThan(0);
-      expect(compareDepegTrackerRows(observed, unknown, sort("pegScore", direction))).toBeLessThan(0);
+describe.each([
+  ["pegScore", makeRow({ pegScore: null }), observedValues.map((pegScore) => makeRow({ pegScore }))],
+  ["dewsScore", makeRow(), observedValues.map((score) => makeRow({}, makeDews({ score })))],
+  ["currentDeviationBps", makeRow({ currentDeviationBps: null }),
+    [...observedValues, -20].map((currentDeviationBps) => makeRow({ currentDeviationBps }))],
+] as const)("compareDepegTrackerRows — %s availability", (key, unknown, observedRows) => {
+  it.each(["asc", "desc"] as const)("sorts unknown last in %s order, after observed zero and nonzero values", (direction) => {
+    for (const observed of observedRows) {
+      expect(compareDepegTrackerRows(unknown, observed, sort(key, direction))).toBeGreaterThan(0);
+      expect(compareDepegTrackerRows(observed, unknown, sort(key, direction))).toBeLessThan(0);
     }
   });
 });
@@ -78,26 +81,6 @@ describe("compareDepegTrackerRows — dewsScore", () => {
     const low = makeRow({}, makeDews({ score: 10 }));
     const result = compareDepegTrackerRows(high, low, sort("dewsScore", "desc"));
     expect(result).toBeLessThan(0);
-  });
-
-  it.each(["asc", "desc"] as const)("sorts unknown DEWS last in %s order, after observed zero and nonzero scores", (direction) => {
-    const unknown = makeRow({}, null);
-    for (const value of observedValues) {
-      const observed = makeRow({}, makeDews({ score: value }));
-      expect(compareDepegTrackerRows(unknown, observed, sort("dewsScore", direction))).toBeGreaterThan(0);
-      expect(compareDepegTrackerRows(observed, unknown, sort("dewsScore", direction))).toBeLessThan(0);
-    }
-  });
-});
-
-describe("compareDepegTrackerRows — currentDeviationBps", () => {
-  it.each(["asc", "desc"] as const)("sorts unknown deviation last in %s order, after observed zero and nonzero deviations", (direction) => {
-    const unknown = makeRow({ currentDeviationBps: null });
-    for (const value of [...observedValues, -20]) {
-      const observed = makeRow({ currentDeviationBps: value });
-      expect(compareDepegTrackerRows(unknown, observed, sort("currentDeviationBps", direction))).toBeGreaterThan(0);
-      expect(compareDepegTrackerRows(observed, unknown, sort("currentDeviationBps", direction))).toBeLessThan(0);
-    }
   });
 });
 

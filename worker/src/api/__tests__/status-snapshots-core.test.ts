@@ -797,29 +797,13 @@ describe("handleStatus", () => {
   it("returns 200 with status body when authorized", async () => {
     const now = Math.floor(Date.now() / 1000);
     const stablecoinsCache = JSON.stringify({
-      peggedAssets: [
-        {
-          id: "usdt-tether",
-          symbol: "USDT",
-          price: 1.0,
-          consensusSources: ["coingecko", "defillama-list", "pyth"],
-          circulating: { peggedUSD: 100_000_000 },
-        },
-        {
-          id: "usdc-circle",
-          symbol: "USDC",
-          price: 1.0,
-          consensusSources: ["coingecko"],
-          circulating: { peggedUSD: 100_000_000 },
-        },
-        {
-          id: "pyusd-paypal",
-          symbol: "PYUSD",
-          price: 1.0,
-          consensusSources: ["coingecko", "defillama-list", "pyth", "binance", "coinbase"],
-          circulating: { peggedUSD: 100_000_000 },
-        },
-      ],
+      peggedAssets: ([
+        ["usdt-tether", "USDT", ["coingecko", "defillama-list", "pyth"]],
+        ["usdc-circle", "USDC", ["coingecko"]],
+        ["pyusd-paypal", "PYUSD", ["coingecko", "defillama-list", "pyth", "binance", "coinbase"]],
+      ] as const).map(([id, symbol, consensusSources]) => ({
+        id, symbol, price: 1.0, consensusSources, circulating: { peggedUSD: 100_000_000 },
+      })),
     });
 
     const db = fixtureMockD1([
@@ -840,34 +824,13 @@ describe("handleStatus", () => {
             metadata: JSON.stringify({
               priceSourceHealth: {
                 sourceDistribution: {
-                  coingecko: 14,
-                  "coingecko+defillama-list": 118,
-                  defillama: 10,
-                  "defillama-list": 0,
-                  "protocol-redeem": 1,
-                  "defillama-contract": 4,
-                  coinmarketcap: 2,
-                  dexscreener: 1,
-                  jupiter: 0,
-                  pyth: 0,
-                  binance: 0,
-                  kraken: 0,
-                  bitstamp: 0,
-                  coinbase: 0,
-                  redstone: 0,
-                  "curve-onchain": 0,
-                  "dex-promoted": 0,
-                  geckoterminal: 0,
-                  "pool-tvl-weighted": 0,
-                  cached: 4,
-                  missing: 3,
+                  coingecko: 14, "coingecko+defillama-list": 118, defillama: 10, "defillama-list": 0,
+                  "protocol-redeem": 1, "defillama-contract": 4, coinmarketcap: 2, dexscreener: 1,
+                  jupiter: 0, pyth: 0, binance: 0, kraken: 0, bitstamp: 0, coinbase: 0, redstone: 0,
+                  "curve-onchain": 0, "dex-promoted": 0, geckoterminal: 0, "pool-tvl-weighted": 0,
+                  cached: 4, missing: 3,
                 },
-                confidenceDistribution: {
-                  high: 127,
-                  "single-source": 15,
-                  low: 8,
-                  fallback: 6,
-                },
+                confidenceDistribution: { high: 127, "single-source": 15, low: 8, fallback: 6 },
                 totalAssets: 156,
                 lastSync: now - 60,
               },
@@ -889,20 +852,8 @@ describe("handleStatus", () => {
                 nearCoverageGuard: false,
                 nearValueGuard: false,
                 nearMajorCoverageGuard: false,
-                currentCoverageClasses: {
-                  primary: 80,
-                  mixed: 20,
-                  fallback: 20,
-                  legacy: 0,
-                  unobserved: 36,
-                },
-                previousCoverageClasses: {
-                  primary: 82,
-                  mixed: 18,
-                  fallback: 25,
-                  legacy: 0,
-                  unobserved: 31,
-                },
+                currentCoverageClasses: { primary: 80, mixed: 20, fallback: 20, legacy: 0, unobserved: 36 },
+                previousCoverageClasses: { primary: 82, mixed: 18, fallback: 25, legacy: 0, unobserved: 31 },
               },
             }),
           },
@@ -922,55 +873,14 @@ describe("handleStatus", () => {
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
     const body = (await readJsonResponse(res, 200)) as {
-      timestamp: number;
-      dbHealthy: boolean;
-      overallStatus: string;
-      caches: Record<string, unknown>;
-      crons: Record<string, unknown>;
-      dataQuality: Record<string, unknown>;
-      telegramBot: Record<string, unknown> | null;
-      sectionErrors: Record<string, { code: string; message: string } | undefined>;
-      datasetFreshness: Record<string, number | null>;
-      state: Record<string, unknown>;
-      priceSourceHealth: Record<string, unknown> | null;
-      coingeckoPriceDiff: Record<string, unknown> | null;
-      d1Usage: Record<string, unknown> | null;
-      liquidityHealth: Record<string, unknown> | null;
-      yieldHealth: Record<string, unknown> | null;
-      publicationHealth: Record<string, unknown> | null;
-      dependencyHealth: Record<string, unknown> | null;
-      providerCircuitHealth: Record<string, unknown> | null;
-      canaries: Record<string, unknown> | null;
-      mintBurnReconciliation: Record<string, unknown> | null;
-      reserveComposition: Record<string, unknown>;
-      producerHeads: Array<{
-        observed: boolean;
-        invocationCount: number;
-        productiveCount: number;
-      }>;
+      sectionErrors: Record<string, unknown>;
+      producerHeads: Array<{ observed: boolean; invocationCount: number; productiveCount: number }>;
     };
-
-    expect(body).toHaveProperty("timestamp");
-    expect(body).toHaveProperty("dbHealthy");
-    expect(body).toHaveProperty("overallStatus");
-    expect(body).toHaveProperty("caches");
-    expect(body).toHaveProperty("crons");
-    expect(body).toHaveProperty("dataQuality");
-    expect(body).toHaveProperty("telegramBot");
-    expect(body).toHaveProperty("sectionErrors");
-    expect(body).toHaveProperty("datasetFreshness");
-    expect(body).toHaveProperty("state");
-    expect(body).toHaveProperty("priceSourceHealth");
-    expect(body).toHaveProperty("coingeckoPriceDiff");
-    expect(body).toHaveProperty("d1Usage");
-    expect(body).toHaveProperty("liquidityHealth");
-    expect(body).toHaveProperty("yieldHealth");
-    expect(body).toHaveProperty("publicationHealth");
-    expect(body).toHaveProperty("dependencyHealth");
-    expect(body).toHaveProperty("providerCircuitHealth");
-    expect(body).toHaveProperty("canaries");
-    expect(body).toHaveProperty("mintBurnReconciliation");
-    expect(body).toHaveProperty("reserveComposition");
+    for (const key of [
+      "timestamp", "dbHealthy", "overallStatus", "caches", "crons", "dataQuality", "telegramBot", "sectionErrors",
+      "datasetFreshness", "state", "priceSourceHealth", "coingeckoPriceDiff", "d1Usage", "liquidityHealth", "yieldHealth",
+      "publicationHealth", "dependencyHealth", "providerCircuitHealth", "canaries", "mintBurnReconciliation", "reserveComposition",
+    ]) expect(body).toHaveProperty(key);
     expect(body.producerHeads.length).toBeGreaterThan(0);
     expect(body.producerHeads.every((head) =>
       !head.observed && head.invocationCount === 0 && head.productiveCount === 0,

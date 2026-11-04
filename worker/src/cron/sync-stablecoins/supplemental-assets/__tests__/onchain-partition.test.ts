@@ -98,6 +98,20 @@ const ftMeta = fixtureMetas.find((meta) => meta.id === ftusd.id)!;
 const aaMeta = fixtureMetas.find((meta) => meta.id === aa.id)!;
 const susdeMeta = fixtureMetas.find((meta) => meta.id === susde.id)!;
 
+function setMetas(...metas: typeof FIAT_CG_METAS): void {
+  FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
+}
+
+function warningLogs() {
+  return vi.mocked(console.warn).mock.calls.map(([line]) => JSON.parse(String(line)));
+}
+
+function stallUntilAbort(_chain: unknown, _meta: unknown, signal: AbortSignal) {
+  return new Promise<never>((_resolve, reject) => {
+    signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+  });
+}
+
 function cgData(total: number, price: number | null = 1, meta = ftMeta): CoinGeckoMcapData {
   return { [meta.geckoId!]: { usd: price ?? undefined, usd_market_cap: total, last_updated_at: Math.floor(Date.now() / 1_000) - 60 } };
 }
@@ -120,10 +134,20 @@ function supplyPacket(asset: PeggedAsset): string {
 }
 
 function mockSusdeSupply(canonicalUnits = 1_000): void {
-  FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, susdeMeta);
+  setMetas(susdeMeta);
   mocks.read.mockImplementation(async (chain) => BigInt(chain === "ethereum" ? canonicalUnits : 10)
     * 10n ** BigInt(chain === "solana" ? 9 : 18));
   mocks.escrow.mockResolvedValue(300n * 10n ** 18n);
+}
+
+async function previousPartitions() {
+  const previousFt = await readFt();
+  setMetas(aaMeta);
+  mocks.read.mockResolvedValue(100n * 10n ** 18n);
+  const [previousAa] = await fetchFiatCoinGeckoTokens(cgData(100, 1, aaMeta));
+  mockSusdeSupply();
+  const [previousSusde] = await fetchFiatCoinGeckoTokens(cgData(1_000, 1, susdeMeta));
+  return new Map([previousFt, previousAa, previousSusde].map((asset) => [asset.id, asset]));
 }
 
 describe("CoinGecko on-chain share partitions", () => {
@@ -132,7 +156,7 @@ describe("CoinGecko on-chain share partitions", () => {
     vi.setSystemTime(NOW_SEC * 1_000);
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "info").mockImplementation(() => {});
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ftMeta);
+    setMetas(ftMeta);
     mocks.read.mockReset().mockImplementation(async (chain) => BigInt(chain === "ethereum" ? 70 : 30) * 10n ** 6n);
     mocks.escrow.mockReset();
     mocks.partitionRead.mockClear();
@@ -142,13 +166,13 @@ describe("CoinGecko on-chain share partitions", () => {
   });
 
   afterEach(() => {
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...fixtureMetas);
+    setMetas(...fixtureMetas);
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
   it.each(excludedMetas)("never attempts a CoinGecko chain partition for $id", async (meta) => {
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, meta);
+    setMetas(meta);
     mocks.read.mockResolvedValue(100n * 10n ** BigInt(meta.contracts![0].decimals!));
     const report = vi.fn<(summary: OnchainPartitionSummary) => void>();
     const [asset] = await fetchFiatCoinGeckoTokens(cgData(300, 1, meta), undefined, undefined, undefined,
@@ -202,7 +226,7 @@ describe("CoinGecko on-chain share partitions", () => {
     const metas = Array.from({ length: ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT + 2 }, (_, i) => ({
       ...aaMeta, id: `partition-fixture-${i}`, geckoId: `partition-fixture-${i}`,
     }));
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
+    setMetas(...metas);
     mocks.read.mockResolvedValue(200n * 10n ** 18n);
     const report = vi.fn<(summary: OnchainPartitionSummary) => void>();
     await fetchFiatCoinGeckoTokens(Object.assign({}, ...metas.map((meta) => cgData(100, 1, meta))),
@@ -266,7 +290,7 @@ describe("CoinGecko on-chain share partitions", () => {
     expect(divergent.chainPartition).toBeUndefined();
     expect(mergeSupplementalLastKnownGood([divergent], new Map([[previous.id, previous]]), new Set(), NOW_SEC)
       .assets[0].chainCirculating).toEqual({});
-    expect(vi.mocked(console.warn).mock.calls.map(([line]) => JSON.parse(String(line))))
+    expect(warningLogs())
       .toContainEqual(expect.objectContaining({
         event: "onchain-partition-divergence",
         metadata: expect.objectContaining({ stablecoinId: ftMeta.id, ratio: 1.2, reason: "ratio-out-of-band" }),
@@ -299,7 +323,7 @@ describe("CoinGecko on-chain share partitions", () => {
     expect(asset.circulating).toEqual({ peggedUSD: 120 });
     expect(asset.chainCirculating).toEqual({});
     expect(asset.chainPartition).toBeUndefined();
-    expect(vi.mocked(console.warn).mock.calls.map(([line]) => JSON.parse(String(line))))
+    expect(warningLogs())
       .toContainEqual(expect.objectContaining({
         event: "onchain-partition-divergence",
         metadata: expect.objectContaining({ stablecoinId: ftMeta.id, reason: "partition-invalid" }),
@@ -318,7 +342,7 @@ describe("CoinGecko on-chain share partitions", () => {
       if (age > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC) {
         expect(carried.chainCirculating).toEqual({});
         expect(carried.chainPartition).toBeUndefined();
-        expect(vi.mocked(console.warn).mock.calls.map(([line]) => JSON.parse(String(line))))
+        expect(warningLogs())
           .toContainEqual(expect.objectContaining({
             event: "onchain-partition-divergence",
             metadata: expect.objectContaining({ stablecoinId: ftMeta.id, reason: "carry-expired" }),
@@ -337,7 +361,7 @@ describe("CoinGecko on-chain share partitions", () => {
   );
 
   it("attaches an unambiguous single deployment using the same admitted supply price", async () => {
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, aaMeta);
+    setMetas(aaMeta);
     mocks.read.mockResolvedValue(100n * 10n ** 18n);
     const [asset] = await fetchFiatCoinGeckoTokens(cgData(123, 1.2, aaMeta));
     expect(asset.chainCirculating).toEqual({ Ethereum: { chainId: "ethereum", current: 123 } });
@@ -351,27 +375,20 @@ describe("CoinGecko on-chain share partitions", () => {
     expect(carried.circulating).toEqual({ peggedUSD: 150 });
   });
 
-  it.each(["missing-chain", "negative-row"] as const)("does not carry a %s previous partition after an unreadable leg", async (fault) => {
+  it.each(["missing-chain", "negative-row", "obsolete-chain-set"] as const)("does not carry a %s previous partition after an unreadable leg", async (fault) => {
     const previous = await readFt();
     if (fault === "missing-chain") delete previous.chainCirculating!.Sonic;
-    else previous.chainCirculating!.Sonic.current = -30;
-    mocks.read.mockImplementation(async (chain) => chain === "ethereum" ? 70n * 10n ** 6n : null);
+    else if (fault === "negative-row") previous.chainCirculating!.Sonic.current = -30;
+    else {
+      previous.chainCirculating!.Base = { ...previous.chainCirculating!.Sonic, chainId: "base" };
+      delete previous.chainCirculating!.Sonic;
+      expect(sumRows(previous)).toBe(100);
+    }
+    mocks.read.mockImplementation(async (chain) => fault !== "obsolete-chain-set" && chain === "ethereum" ? 70n * 10n ** 6n : null);
     const asset = await readFt(120, previous);
     expect(asset.circulating).toEqual({ peggedUSD: 120 });
     expect(asset.chainCirculating).toEqual({});
     expect(asset.chainPartition).toBeUndefined();
-  });
-
-  it("rejects prior shares for an obsolete chain set even when their sum still matches", async () => {
-    const previous = await readFt();
-    previous.chainCirculating!.Base = { ...previous.chainCirculating!.Sonic, chainId: "base" };
-    delete previous.chainCirculating!.Sonic;
-    expect(sumRows(previous)).toBe(100);
-    mocks.read.mockResolvedValue(null);
-    const asset = await readFt(120, previous);
-    expect(asset.chainPartition).toBeUndefined();
-    expect(asset.chainCirculating).toEqual({});
-    expect(asset.circulating).toEqual({ peggedUSD: 120 });
   });
 
   it("labels whole-row supply restoration as carried without changing the original shares or clock", async () => {
@@ -401,7 +418,7 @@ describe("CoinGecko on-chain share partitions", () => {
     const asset = await pending;
     expect(asset.chainPartition).toEqual({ ...previous.chainPartition, admission: "carried" });
     expect(sumRows(asset)).toBe(120);
-    expect(vi.mocked(console.warn).mock.calls.map(([line]) => JSON.parse(String(line))))
+    expect(warningLogs())
       .toContainEqual(expect.objectContaining({
         event: "onchain-partition-divergence",
         metadata: expect.objectContaining({ stablecoinId: ftMeta.id, reason: "legs-unreadable" }),
@@ -454,7 +471,7 @@ describe("CoinGecko on-chain share partitions", () => {
     expect(asset.circulating).toEqual({ peggedUSD: 1_050 });
     expect(asset.chainCirculating).toEqual({});
     expect(asset.chainPartition).toBeUndefined();
-    expect(vi.mocked(console.warn).mock.calls.map(([line]) => JSON.parse(String(line))))
+    expect(warningLogs())
       .toContainEqual(expect.objectContaining({
         event: "onchain-partition-divergence",
         metadata: expect.objectContaining({ stablecoinId: susdeMeta.id, reason: "partition-invalid" }),
@@ -476,14 +493,14 @@ describe("CoinGecko on-chain share partitions", () => {
   });
 
   it("leaves independently admitted CG supply alone without a NAV price, and keeps no-cap NAV withheld", async () => {
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, aaMeta);
+    setMetas(aaMeta);
     const [asset] = await fetchFiatCoinGeckoTokens(cgData(100, null, aaMeta));
     expect(asset.chainCirculating).toEqual({});
     expect(asset.chainPartition).toBeUndefined();
     expect(asset.circulating).toEqual({ peggedUSD: 100 });
     expect(mocks.read).not.toHaveBeenCalled();
     expect(await fetchFiatCoinGeckoTokens({})).toEqual([]);
-    expect(vi.mocked(console.warn).mock.calls.map(([line]) => JSON.parse(String(line))))
+    expect(warningLogs())
       .toContainEqual(expect.objectContaining({
         event: "supplemental-supply-withheld",
         metadata: expect.objectContaining({ stablecoinId: aaMeta.id, reason: "nav-price-unavailable" }),
@@ -491,7 +508,7 @@ describe("CoinGecko on-chain share partitions", () => {
   });
 
   it("does not carry a previous NAV partition without an admitted current supply price", async () => {
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, aaMeta);
+    setMetas(aaMeta);
     mocks.read.mockResolvedValue(100n * 10n ** 18n);
     const [previous] = await fetchFiatCoinGeckoTokens(cgData(100, 1, aaMeta));
     mocks.read.mockClear();
@@ -505,9 +522,7 @@ describe("CoinGecko on-chain share partitions", () => {
 
   it("propagates caller cancellation through the partition read", async () => {
     const controller = new AbortController();
-    mocks.read.mockImplementation((_chain, _meta, signal: AbortSignal) => new Promise((_resolve, reject) => {
-      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-    }));
+    mocks.read.mockImplementation(stallUntilAbort);
     const pending = fetchFiatCoinGeckoTokens(cgData(100), controller.signal);
     const failure = new Error("caller stopped the sync");
     const rejected = expect(pending).rejects.toBe(failure);
@@ -518,10 +533,8 @@ describe("CoinGecko on-chain share partitions", () => {
   });
 
   it("stops partition reads at the stage deadline and publishes remaining CG totals without partitions", async () => {
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ftMeta, aaMeta, susdeMeta);
-    mocks.read.mockImplementation((_chain, _meta, signal: AbortSignal) => new Promise((_resolve, reject) => {
-      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-    }));
+    setMetas(ftMeta, aaMeta, susdeMeta);
+    mocks.read.mockImplementation(stallUntilAbort);
     const report = vi.fn();
     const pending = fetchFiatCoinGeckoTokens({ ...cgData(100), ...cgData(100, 1, aaMeta), ...cgData(100, 1, susdeMeta) },
       undefined, undefined, undefined, undefined, undefined, undefined, report);
@@ -546,7 +559,7 @@ describe("CoinGecko on-chain share partitions", () => {
       expect(asset.chainCirculating).toEqual({});
       expect(asset.chainPartition).toBeUndefined();
     }
-    expect(vi.mocked(console.warn).mock.calls.map(([line]) => JSON.parse(String(line))))
+    expect(warningLogs())
       .toContainEqual(expect.objectContaining({
         event: "onchain-partition-divergence",
         metadata: expect.objectContaining({
@@ -569,7 +582,7 @@ describe("CoinGecko on-chain share partitions", () => {
     }));
     const fallbackMeta = { ...aaMeta, id: "slow-fallback", geckoId: "slow-fallback",
       flags: { ...aaMeta.flags, navToken: false, yieldBearing: false } };
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, fallbackMeta, ...metas);
+    setMetas(fallbackMeta, ...metas);
     const fallbackLatencyMs = ONCHAIN_PARTITION_STAGE_BUDGET_MS + 5_000;
     const legLatencyMs = 4_000;
     let inFlight = 0;
@@ -619,23 +632,15 @@ describe("CoinGecko on-chain share partitions", () => {
   });
 
   it.each([false, true])("carries a deadline-skipped coin's shares only before expiry (expired %s)", async (expired) => {
-    const previousFt = await readFt();
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, aaMeta);
-    mocks.read.mockResolvedValue(100n * 10n ** 18n);
-    const [previousAa] = await fetchFiatCoinGeckoTokens(cgData(100, 1, aaMeta));
-    mockSusdeSupply();
-    const [previousSusde] = await fetchFiatCoinGeckoTokens(cgData(1_000, 1, susdeMeta));
-    const previousById = new Map([previousFt, previousAa, previousSusde].map((asset) => [asset.id, asset]));
+    const previousById = await previousPartitions();
     const offset = (Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec)
       * 2) % fixtureMetas.length;
     const skippedId = fixtureMetas[(offset + 2) % fixtureMetas.length].id;
     // Expire during the read stage so the skipped row is initially carriable when ordering is chosen.
     if (expired) previousById.get(skippedId)!.chainPartition!.observedAt = NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1;
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...fixtureMetas);
+    setMetas(...fixtureMetas);
     mocks.partitionRead.mockClear();
-    mocks.read.mockReset().mockImplementation((_chain, _meta, signal: AbortSignal) => new Promise((_resolve, reject) => {
-      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-    }));
+    mocks.read.mockReset().mockImplementation(stallUntilAbort);
     const pending = fetchFiatCoinGeckoTokens({ ...cgData(120), ...cgData(150, 1, aaMeta), ...cgData(1_050, 1, susdeMeta) },
       undefined, undefined, undefined, undefined, previousById);
     await vi.advanceTimersByTimeAsync(ONCHAIN_PARTITION_STAGE_BUDGET_MS);
@@ -651,7 +656,7 @@ describe("CoinGecko on-chain share partitions", () => {
         expect(sumRows(asset)).toBeCloseTo(Number(asset.circulating?.peggedUSD), 10);
       }
     }
-    if (expired) expect(vi.mocked(console.warn).mock.calls.map(([line]) => JSON.parse(String(line))))
+    if (expired) expect(warningLogs())
       .toContainEqual(expect.objectContaining({
         event: "onchain-partition-divergence",
         metadata: expect.objectContaining({ stablecoinId: skippedId, reason: "carry-expired" }),
@@ -662,10 +667,8 @@ describe("CoinGecko on-chain share partitions", () => {
     const metas = Array.from({ length: count }, (_unused, index) => ({
       ...aaMeta, id: `rotation-${index}`, geckoId: `rotation-${index}`,
     }));
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
-    mocks.read.mockImplementation((_chain, _meta, signal: AbortSignal) => new Promise((_resolve, reject) => {
-      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
-    }));
+    setMetas(...metas);
+    mocks.read.mockImplementation(stallUntilAbort);
     const stride = Math.min(count, 2);
     const runs = Math.max(1, Math.ceil(count / 2));
     const seen = new Set<string>();
@@ -691,14 +694,9 @@ describe("CoinGecko on-chain share partitions", () => {
   });
 
   it.each(["missing", "expired", "invalid-roster"])("prioritizes %s carry evidence within the backlog without displacing the leading window", async (reason) => {
-    const previousFt = await readFt();
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, aaMeta);
-    mocks.read.mockResolvedValue(100n * 10n ** 18n);
-    const [previousAa] = await fetchFiatCoinGeckoTokens(cgData(100, 1, aaMeta));
-    mockSusdeSupply();
-    const [previousSusde] = await fetchFiatCoinGeckoTokens(cgData(1_000, 1, susdeMeta));
-    const previousById = new Map([previousFt, previousAa, previousSusde].map((asset) => [asset.id, asset]));
+    const previousById = await previousPartitions();
     const metas = [...fixtureMetas, backlogMeta];
+    const previousAa = previousById.get(aaMeta.id)!;
     previousById.set(backlogMeta.id, { ...previousAa, id: backlogMeta.id, chainPartition: { ...previousAa.chainPartition! } });
     const offset = (Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec)
       * 2) % metas.length;
@@ -713,7 +711,7 @@ describe("CoinGecko on-chain share partitions", () => {
     const invalidated = restoreCuratedAggregateChainPartition(current, previousById.get(uncarriedId), NOW_SEC, true);
     if (reason === "expired") expect(invalidated).toMatchObject({ expired: true });
     else expect(invalidated).toBeNull();
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
+    setMetas(...metas);
     mocks.partitionRead.mockClear();
     mocks.read.mockResolvedValue(null);
     const assets = await fetchFiatCoinGeckoTokens({ ...cgData(100), ...cgData(100, 1, aaMeta), ...cgData(1_000, 1, susdeMeta), ...cgData(100, 1, backlogMeta) },
@@ -733,7 +731,7 @@ describe("CoinGecko on-chain share partitions", () => {
     const offset = (Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec) * stride) % metas.length;
     metas[offset] = ftMeta;
     metas[(offset + 1) % metas.length] = aaMeta;
-    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
+    setMetas(...metas);
     mocks.partitionRead.mockClear();
     mocks.read.mockResolvedValue(null);
     await fetchFiatCoinGeckoTokens(Object.assign({}, ...metas.map((meta) => cgData(100, 1, meta))),

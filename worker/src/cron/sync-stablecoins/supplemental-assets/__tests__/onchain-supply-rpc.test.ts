@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import type { StablecoinMeta } from "@shared/types/core";
@@ -17,11 +17,11 @@ const REGISTRY_PRIMARY = "https://supply-primary.example";
 const REGISTRY_FALLBACK = "https://supply-fallback.example";
 
 function supplyResponse(shares: bigint): Response {
-  return new Response(JSON.stringify({
+  return Response.json({
     jsonrpc: "2.0",
     id: 1,
     result: `0x${(shares * 10n ** 18n).toString(16).padStart(64, "0")}`,
-  }), { headers: { "Content-Type": "application/json" } });
+  });
 }
 
 function registryEndpoint(url: string): ChainRpcConfig["endpoints"][number] {
@@ -126,9 +126,7 @@ describe("supplemental on-chain supply RPC routing", () => {
           : pinned && !call.data.toLowerCase().endsWith(holders[0].slice(2).toLowerCase()) ? 0n : 100n;
         result = `0x${(units * 10n ** 18n).toString(16).padStart(64, "0")}`;
       } else throw new Error(`unexpected supply RPC method ${request.method}`);
-      return new Response(JSON.stringify({ jsonrpc: "2.0", id: request.id, result }), {
-        headers: { "Content-Type": "application/json" },
-      });
+      return Response.json({ jsonrpc: "2.0", id: request.id, result });
     }));
     const result = await fetchOnChainMcap(meta, 1, keyedChainRpcs());
     expect(result).toMatchObject({ mcap: 900, observedAt });
@@ -197,28 +195,33 @@ describe("supplemental on-chain supply RPC routing", () => {
 });
 
 describe("XRPL issued-currency supply", () => {
+  const { gateway: gatewayFixture, ledger: ledgerFixture, source, hotwallet } = xrplFixture;
+  const gatewayWith = (patch: object) => ({ result: { ...gatewayFixture.result, ...patch } });
+  const ledgerWith = (patch: object) => ({ result: { ...ledgerFixture.result, ...patch } });
+  const xrplRpc = SUPPLY_RPC_DEFAULTS.xrpl;
   const meta = TRACKED_META_BY_ID.get("ousg-ondo-finance")!;
   const contract = meta.contracts!.find(entry => entry.chain === "xrpl")!;
   const currency = contract.address.split(".")[0];
   const observedAt = Date.parse(xrplFixture.ledgerClosedAt) / 1000;
   const read = (signal = new AbortController().signal) => fetchXrplSupply(
-    contract.address, signal, xrplFixture.source, xrplFixture.source, xrplFixture.hotwallet,
+    contract.address, signal, source, source, hotwallet,
   );
-  const fixtureFetcher = (gateway: unknown = xrplFixture.gateway, ledger: unknown = xrplFixture.ledger) =>
+  const fixtureFetcher = (gateway: unknown = gatewayFixture, ledger: unknown = ledgerFixture) =>
     vi.fn(async (_url: string, init?: RequestInit) =>
       Response.json(JSON.parse(String(init?.body)).method === "ledger" ? ledger : gateway));
   const setClock = (age = 10) => { vi.useFakeTimers(); vi.setSystemTime((observedAt + age) * 1000); };
 
+  beforeEach(() => setClock());
+
   it("reads captured obligations without a fixed scale and pins the validated close clock", async () => {
-    setClock();
     const fetchMock = fixtureFetcher(); vi.stubGlobal("fetch", fetchMock);
     expect(await read()).toEqual({ supply: 1584220.172977231, observedAt });
     expect(fetchMock.mock.calls.map(([url, init]) => [url, JSON.parse(String(init?.body))])).toEqual([
-      [xrplFixture.source, { method: "gateway_balances", params: [{
-        account: xrplFixture.gateway.result.account, strict: true, ledger_index: "validated", hotwallet: xrplFixture.hotwallet,
+      [source, { method: "gateway_balances", params: [{
+        account: gatewayFixture.result.account, strict: true, ledger_index: "validated", hotwallet,
       }] }],
-      [xrplFixture.source, { method: "ledger", params: [{
-        ledger_hash: xrplFixture.gateway.result.ledger_hash, transactions: false, expand: false,
+      [source, { method: "ledger", params: [{
+        ledger_hash: gatewayFixture.result.ledger_hash, transactions: false, expand: false,
       }] }],
     ]);
     const single = { ...meta, id: "xrpl-supply-fixture", contracts: [contract] };
@@ -232,7 +235,7 @@ describe("XRPL issued-currency supply", () => {
     for (const value of ["0", "1584220172977231e-9"]) {
       for (const age of [600, -60, 601, -61]) {
         setClock(age);
-        const gateway = structuredClone(xrplFixture.gateway);
+        const gateway = structuredClone(gatewayFixture);
         gateway.result.obligations = { ...gateway.result.obligations, [currency]: value };
         vi.stubGlobal("fetch", fixtureFetcher(gateway));
         if (age === 601 || age === -61) await expect(read()).rejects.toThrow("xrpl-ledger-stale-or-future");
@@ -242,13 +245,12 @@ describe("XRPL issued-currency supply", () => {
   });
 
   it("sums the full OUSG perimeter and partitions an admitted cap only after every leg succeeds", async () => {
-    setClock();
     let xrplAvailable = true;
     const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
       const request = JSON.parse(String(init?.body));
       if (request.method === "gateway_balances") return Response.json(xrplAvailable
-        ? xrplFixture.gateway : { result: { status: "error", error: "actNotFound" } });
-      if (request.method === "ledger") return Response.json(xrplFixture.ledger);
+        ? gatewayFixture : { result: { status: "error", error: "actNotFound" } });
+      if (request.method === "ledger") return Response.json(ledgerFixture);
       if (request.method === "getTokenSupply") return Response.json({ jsonrpc: "2.0", id: 1,
         result: { context: { slot: 465436215 }, value: { amount: "0", decimals: 6, uiAmount: 0 } },
       });
@@ -284,20 +286,17 @@ describe("XRPL issued-currency supply", () => {
   });
 
   it("withholds malformed, unvalidated or mismatched gateway and ledger evidence", async () => {
-    setClock();
     const badGateways = [
-      null, {}, { result: { ...xrplFixture.gateway.result, validated: false } },
-      { result: { ...xrplFixture.gateway.result, validated: undefined } },
-      { result: { ...xrplFixture.gateway.result, account: "wrong-issuer" } },
-      { result: { ...xrplFixture.gateway.result, obligations: { USD: "1" } } },
-      { result: { ...xrplFixture.gateway.result, obligations: undefined } },
-      { result: { ...xrplFixture.gateway.result, status: "error", error: "actNotFound" } },
-      ...["-1", "invalid", "1e1000", "1.1234567890123456"].map(value => ({
-        result: { ...xrplFixture.gateway.result, obligations: { [currency]: value } },
-      })),
+      null, {}, gatewayWith({ validated: false }),
+      gatewayWith({ validated: undefined }),
+      gatewayWith({ account: "wrong-issuer" }),
+      gatewayWith({ obligations: { USD: "1" } }),
+      gatewayWith({ obligations: undefined }),
+      gatewayWith({ status: "error", error: "actNotFound" }),
+      ...["-1", "invalid", "1e1000", "1.1234567890123456"].map(value => gatewayWith({ obligations: { [currency]: value } })),
       ...["0", "1"].flatMap(value => [
-        { result: { ...xrplFixture.gateway.result, locked: { [currency]: value } } },
-        { result: { ...xrplFixture.gateway.result, frozen_balances: { holder: [{ currency, value }] } } },
+        gatewayWith({ locked: { [currency]: value } }),
+        gatewayWith({ frozen_balances: { holder: [{ currency, value }] } }),
       ]),
     ];
     for (const gateway of badGateways) {
@@ -305,25 +304,22 @@ describe("XRPL issued-currency supply", () => {
       await expect(read()).rejects.toThrow();
       expect(fetchMock).toHaveBeenCalledTimes(1);
     }
-    const { result } = xrplFixture.ledger;
+    const { result } = ledgerFixture;
     for (const ledger of [
-      { result: { ...result, validated: false } }, { result: { ...result, validated: undefined } },
-      { result: { ...result, ledger_hash: "A".repeat(64) } },
-      { result: { ...result, ledger_index: result.ledger_index + 1 } },
+      ledgerWith({ validated: false }), ledgerWith({ validated: undefined }),
+      ledgerWith({ ledger_hash: "A".repeat(64) }),
+      ledgerWith({ ledger_index: result.ledger_index + 1 }),
       ...[{ closed: false }, { close_time: undefined }, { close_time: 0 }, { close_flags: 1 },
-        { ledger_hash: "A".repeat(64) }, { ledger_index: "1" }].map(patch => ({
-        result: { ...result, ledger: { ...result.ledger, ...patch } },
-      })),
+        { ledger_hash: "A".repeat(64) }, { ledger_index: "1" }].map(patch => ledgerWith({ ledger: { ...result.ledger, ...patch } })),
     ]) {
-      vi.stubGlobal("fetch", fixtureFetcher(xrplFixture.gateway, ledger));
+      vi.stubGlobal("fetch", fixtureFetcher(gatewayFixture, ledger));
       await expect(read()).rejects.toThrow();
     }
   });
 
   it("bounds both response bodies and rejects RPC/HTTP errors before fallback", async () => {
-    setClock();
     for (const method of ["gateway_balances", "ledger"]) {
-      const body = method === "ledger" ? xrplFixture.ledger : xrplFixture.gateway;
+      const body = method === "ledger" ? ledgerFixture : gatewayFixture;
       for (const makeResponse of [
         () => Response.json({ ...body, padding: "x".repeat(64 * 1024) }),
         () => Response.json(body, { headers: { "Content-Length": String(64 * 1024 + 1) } }),
@@ -332,39 +328,37 @@ describe("XRPL issued-currency supply", () => {
         () => new Response("unavailable", { status: 503 }),
       ]) {
         vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) =>
-          JSON.parse(String(init?.body)).method === method ? makeResponse() : Response.json(xrplFixture.gateway)));
+          JSON.parse(String(init?.body)).method === method ? makeResponse() : Response.json(gatewayFixture)));
         await expect(read()).rejects.toThrow();
       }
     }
   });
 
   it("restarts the full observation on the fallback after draining a failed primary body", async () => {
-    setClock();
     let failedBody: Response | undefined;
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       const { method } = JSON.parse(String(init?.body));
-      if (url === SUPPLY_RPC_DEFAULTS.xrpl.rpcUrl && method === "ledger") {
+      if (url === xrplRpc.rpcUrl && method === "ledger") {
         failedBody = Response.json({ result: { status: "error" } });
         return failedBody;
       }
-      if (url === SUPPLY_RPC_DEFAULTS.xrpl.fallbackRpcUrl) expect(failedBody?.bodyUsed).toBe(true);
-      return Response.json(method === "ledger" ? xrplFixture.ledger : xrplFixture.gateway);
+      if (url === xrplRpc.fallbackRpcUrl) expect(failedBody?.bodyUsed).toBe(true);
+      return Response.json(method === "ledger" ? ledgerFixture : gatewayFixture);
     });
     vi.stubGlobal("fetch", fetchMock);
     expect(await fetchXrplSupply(contract.address, new AbortController().signal)).toEqual({ supply: 1584220.172977231, observedAt });
     expect(fetchMock.mock.calls.map(([url, init]) => [url, JSON.parse(String(init?.body)).method])).toEqual([
-      [SUPPLY_RPC_DEFAULTS.xrpl.rpcUrl, "gateway_balances"], [SUPPLY_RPC_DEFAULTS.xrpl.rpcUrl, "ledger"],
-      [SUPPLY_RPC_DEFAULTS.xrpl.fallbackRpcUrl, "gateway_balances"], [SUPPLY_RPC_DEFAULTS.xrpl.fallbackRpcUrl, "ledger"],
+      [xrplRpc.rpcUrl, "gateway_balances"], [xrplRpc.rpcUrl, "ledger"],
+      [xrplRpc.fallbackRpcUrl, "gateway_balances"], [xrplRpc.fallbackRpcUrl, "ledger"],
     ]);
-    fetchMock.mockImplementation(async (url: string) => url === SUPPLY_RPC_DEFAULTS.xrpl.rpcUrl
-      ? Response.json({ result: { ...xrplFixture.gateway.result, validated: false } })
+    fetchMock.mockImplementation(async (url: string) => url === xrplRpc.rpcUrl
+      ? Response.json(gatewayWith({ validated: false }))
       : new Response("unavailable", { status: 503 }));
     expect(await fetchOnChainSupplyPartition({ ...meta, id: "xrpl-supply-fixture", contracts: [contract] },
       1, 1, undefined)).toEqual({ reason: "partition-invalid", ratio: null });
   });
 
   it("cancels stalled bodies and does not start a pre-cancelled read", async () => {
-    setClock();
     const fetchMock = vi.fn().mockResolvedValue(new Response(new ReadableStream({ start() {} })));
     vi.stubGlobal("fetch", fetchMock);
     const rejected = expect(read()).rejects.toThrow();
