@@ -289,17 +289,8 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
       safeBlockLag: 10,
       extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.monad,
     },
-    // rpc.pharos.xyz, 2026-11-04: block 22124683 (head - 15), hash 0x82e135d6fdc7411cb8038c5eefbee37a3a3885d3023a1d3d3d0b93e1fa65d757.
-    // Matching header bracket: wards(Spoke)=1, supply=3419937985239 (6 decimals), EIP-1967 slot=0.
-    "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040": {
-      runtime: "evm",
-      liabilityModel: "protocol-burn-mint",
-      runtimeCodeSha256:
-        "a0dcca3d830ffd0f877005e7018f67f691629ab600bb65809818057c0a76b3a6",
-      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
-      safeBlockLag: PHAROS_REVIEWED_DEPLOYMENT_MIN_BLOCK_LAG,
-      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.pharos,
-    },
+    // Keep diagnostic withholding until the route is reviewed; verified pins remain pending in the Worker infrastructure appendix.
+    "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040": null,
     "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj": {
       runtime: "solana",
       liabilityModel: "protocol-burn-mint",

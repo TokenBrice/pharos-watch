@@ -110,7 +110,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chain-rpc-registry.ts",
-      "sha256": "3ebdb398fbf03ef559999eda0f382996ed32d40fcecbb8549c434c8dfd5b7e9f"
+      "sha256": "c3c903c782f507b95f338f7ca4f10c6c5c54a5c991947aee1afc3876e814b94a"
     },
     {
       "path": "shared/lib/circuit-sources.ts",
@@ -1326,7 +1326,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "b0ea65565d952ded66be98217809e980b26fb67b56ca31088499962a8d88dd76"
+      "sha256": "a3189b050d2bb3fda8491d9edf31e70878a13890813f40d39376adc42ee20a47"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-diagnostics.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-04-block-26341087-shock-coverage.json.gz"
     }
   ],
-  "digest": "cedf6af4126ebd88123f5380d6946a32502a38758bb87ae25be2e08128678713"
+  "digest": "ee1174c1a6f22b0d22f84d967cce1cae72aa0e300000da5e4e8ea8d91fae984a"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

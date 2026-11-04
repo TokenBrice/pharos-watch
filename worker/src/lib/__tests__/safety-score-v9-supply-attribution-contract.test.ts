@@ -3,9 +3,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types/core";
-import currentJtrsyRisk from "@shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json";
-import currentJtrsyCoin from "@shared/data/stablecoins/coins/jtrsy-anemoy.json";
 import {
   ReviewedDeploymentUnitPartitionSchema,
   XautRepresentationGroupSupplyAttributionV2Schema,
@@ -334,7 +331,7 @@ function centrifugeObservations(
       contractAddress: route.contractAddress,
       decimals: route.decimals,
       rawSupply:
-        route.chainId === "base" || route.chainId === "solana" || route.chainId === "pharos"
+        route.chainId === "base" || route.chainId === "solana"
           ? "0"
           : (10n ** BigInt(route.decimals) * BigInt(index + 1)).toString(),
       blockNumberOrSlot: (43_000_000 + index).toString(),
@@ -371,17 +368,10 @@ function deriveCentrifuge(
 }
 
 describe("Centrifuge burn/mint deployment supply attribution contract", () => {
-  const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
-  const historical = metaById.get("jtrsy-anemoy")!;
-  beforeEach(() => metaById.set("jtrsy-anemoy", {
-    ...historical, contracts: currentJtrsyCoin.contracts, bridgeRouteRisk: structuredClone(currentJtrsyRisk.bridgeRouteRisk),
-  } as unknown as StablecoinMeta));
-  afterEach(() => metaById.set("jtrsy-anemoy", historical));
-
   it("binds each supported asset to its complete official inventory", () => {
     expect(
       buildReviewedDeploymentRouteInventory("jtrsy-anemoy")!.routes,
-    ).toHaveLength(currentJtrsyCoin.contracts.length);
+    ).toHaveLength(8);
     expect(
       buildReviewedDeploymentRouteInventory("acrdx-anemoy-apollo")!.routes,
     ).toHaveLength(6);
@@ -463,16 +453,12 @@ describe("Centrifuge burn/mint deployment supply attribution contract", () => {
 
   describe("unreviewed zero-supply deployment", () => {
     const assetId = "jtrsy-anemoy";
-    let route = ACTIVE_META_BY_ID.get(assetId)!.bridgeRouteRisk!.routes!.find(
+    const route = ACTIVE_META_BY_ID.get(assetId)!.bridgeRouteRisk!.routes!.find(
       (candidate) => candidate.destinationChain === "solana",
     )!;
-    let originalRoute = structuredClone(route);
+    const originalRoute = structuredClone(route);
 
     beforeEach(() => {
-      route = ACTIVE_META_BY_ID.get(assetId)!.bridgeRouteRisk!.routes!.find(
-        candidate => candidate.destinationChain === "solana",
-      )!;
-      originalRoute = structuredClone(route);
       Object.assign(route, {
         reviewDisposition: "unresolved",
         semantics: "unknown",

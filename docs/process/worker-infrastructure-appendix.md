@@ -1003,7 +1003,8 @@ The 2026-10-05T23:26Z two-target diagnostic rerun reproduced failures on the fir
 
 Single EVM RPC outcomes preserve data, observed execution revert and unavailable evidence. Direct Multicall fallback tolerates only observed optional reverts, never exhausted provider or admission failures; numbered/hash selectors and the closing-header fence remain unchanged. Byte, uint and aggregate decoding reject malformed output before endpoint selection completes, allowing the next eligible provider within the existing admission, credit and deadline policy.
 
-Reviewed deployment supply observers require EIP-1898 `{ blockHash, requireCanonical: true }` for state reads on every chain except Pharos mainnet (1672). Its explicit allowlist entry permits `0x`-hex block-number selectors for `eth_call`, `eth_getCode` and `eth_getStorageAt` at head minus at least 15 blocks, with further rewind allowed for scoring-clock/Solana alignment. After selecting the pin, reread its numbered header immediately before the state batch and again after all state reads; both must match the expected number, hash and timestamp. Missing or changed headers reject as `deployment-pin-header-mismatch`; insufficient lag rejects as `deployment-pin-lag-violation`. No packet survives either failure. Other chains never retry unsupported hash reads with numbered/latest state. The Pharos path retains aggregate3 and fails closed if it is unavailable; it enables no direct-call fallback. `SUPPLY_ATTRIBUTION_RPC_URLS.pharos` owns the observer-local official RPC, without widening the shared registry or other supply readers. Identity pins do not certify unresolved route semantics or admit positive supply on an unreviewed route.
+Reviewed deployment supply observers require EIP-1898 `{ blockHash, requireCanonical: true }` for state reads on every chain except Pharos mainnet (1672). Its explicit allowlist entry permits `0x`-hex block-number selectors for `eth_call`, `eth_getCode` and `eth_getStorageAt` at head minus at least 15 blocks, with further rewind allowed for scoring-clock/Solana alignment. After selecting the pin, reread its numbered header immediately before the state batch and again after all state reads; both must match the expected number, hash and timestamp. Missing or changed headers reject as `deployment-pin-header-mismatch`; insufficient lag rejects as `deployment-pin-lag-violation`. No packet survives either failure. Other chains never retry unsupported hash reads with numbered/latest state. The Pharos path retains aggregate3 and fails closed if it is unavailable; it enables no direct-call fallback. JTRSY's Pharos identity remains explicitly withheld; this capability activates no deployment or RPC inventory. Identity pins do not certify unresolved route semantics or admit positive supply on an unreviewed route.
+
 
 Timestamp-only reads reuse strict numbered-header admission, without adding a default freshness floor. Batched timestamp reads validate one complete `{number, hash, timestamp}` per requested block before projecting cache entries; duplicate IDs invalidate their member, out-of-range IDs are ignored, and malformed/missing members use the existing bounded retries. Expected log hashes still gate admission; a later timestamp cannot inherit an earlier response's hash.
 
@@ -1014,6 +1015,29 @@ CCIP pages use the first eligible provider's span, independent of state history;
 Parity token-state freshness requires a same-head hash match or adjacent-head parent-hash link; a larger head advance is indeterminate (`bracket-ancestry-gap`) without extra RPC requests. This cannot establish token freshness even beside a fresh sentinel. Retained runs stay time-ordered, and each chain's latest pointer accepts only equal/newer run timestamps, so late completion cannot rewind the reported observation; same-slot replacement and seven-day retention remain unchanged.
 
 Capped inclusive Etherscan log ranges split sequentially; exhausted request budgets return incomplete `budget-exhausted` results and recursion beyond depth 8 returns `max-recursion-depth`. A capped singleton returns `etherscan-result-cap-unsplittable`, including when its parent spans two adjacent blocks.
+
+### Pending JTRSY Pharos identity evidence
+
+These observations are retained evidence, not an admitted deployment identity or route review. `CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES` deliberately keeps the Pharos entry `null`, so the observer returns `deployment-identity-authored-withholding` and the producer retains its non-blocking diagnostic treatment. The bracketed-read capability alone must not change that disposition.
+
+| Pinned fact | Observation |
+| --- | --- |
+| Chain / token | Pharos mainnet (1672), `0xc18e6f730896971a79d748e8dea61067a9bc6040` |
+| Keyless endpoint | `https://rpc.pharos.xyz` |
+| Observed at | `2026-11-04T20:29:46.061999Z` |
+| Observed head / pin | 22,124,698 / 22,124,683 (`0x151988b`), 15-block lag |
+| Pin hash | `0x82e135d6fdc7411cb8038c5eefbee37a3a3885d3023a1d3d3d0b93e1fa65d757` |
+| Pin timestamp | `2026-11-04T20:29:30Z` (1793824170) |
+| Token runtime SHA-256 | `a0dcca3d830ffd0f877005e7018f67f691629ab600bb65809818057c0a76b3a6` |
+| Spoke authorization | `wards(0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab) = 1` |
+| Issued share units | `totalSupply() = 3419937985239`, `decimals() = 6`: 3,419,937.985239 shares |
+| Implementation slot | EIP-1967 implementation storage word was zero |
+| Header bracket | Number, hash and timestamp matched before and after the hexadecimal-number state reads |
+
+The [deployment registry](https://docs.centrifuge.io/developer/protocol/deployments/) lists the exact Pharos JTRSY address. The [share bridge guide](https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/) documents generic EVM burn/mint transfers through Spoke; the [release-pinned Spoke source](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/spoke/Spoke.sol) resolves transfers through its configured pool/share-class token binding. These documents and token ward reads do not authenticate that deployed Pharos Spoke runtime or its exact pool/share-class and hub binding. A further pinned controller read was unavailable in the implementation sandbox (DNS resolution failed); it was not recorded as an observed absence.
+
+Activation requires a primary-evidence-backed review of the existing Pharos `bridgeRouteRisk.routes[]` row in `shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json`: establish the deployed Spoke/token/pool/share-class and canonical hub relationship, then author the supported `reviewDisposition`, `issuanceModel`, `semantics`, `routeClass` and `scope`. Retain unresolved adapter, authority, cap and incident claims separately; those control-scope reviews are not the route-model gate. Do not copy another chain's controller/runtime or claim a quorum or incident clearance from `wards(Spoke)=1`. Only after that route review may the verified runtime identity and reviewed RPC be activated and complete same-generation attribution be tested.
+
 
 ## Event-entry recovery details
 
