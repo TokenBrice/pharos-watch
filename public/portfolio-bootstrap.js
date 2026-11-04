@@ -10,5 +10,5 @@
     } catch {}
   }
   // This selects a placeholder only; usePortfolio still validates every holding.
-  document.documentElement.toggleAttribute("data-portfolio-pending", pending);
+  document.documentElement.toggleAttribute("data-portfolio-empty", !pending);
 })();

@@ -103,7 +103,7 @@ export function PortfolioClient() {
 
   return (
     <div>
-    <div className={portfolio.initialized ? "space-y-6" : "space-y-6 [html[data-portfolio-pending]_&]:hidden"}>
+    <div className={portfolio.initialized ? "space-y-6" : "hidden space-y-6 [html[data-portfolio-empty]_&]:block"}>
       {portfolio.holdings.length > 0 && <>
       <QueryFreshnessNotices
         error={reportCardsError}
@@ -222,7 +222,7 @@ export function PortfolioClient() {
       )}
     </div>
     {!portfolio.initialized && (
-      <div className="hidden [html[data-portfolio-pending]_&]:block">
+      <div className="[html[data-portfolio-empty]_&]:hidden">
         <PortfolioLoadingState />
       </div>
     )}

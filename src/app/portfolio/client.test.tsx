@@ -3,6 +3,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import { readFileSync } from "node:fs";
+import { compile } from "tailwindcss";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PortfolioClient } from "./client";
@@ -142,29 +143,39 @@ describe("PortfolioClient URL sync", () => {
     expect(screen.getByText("portfolio-empty-state")).toBeTruthy();
   });
 
-  it("prerenders the first-visit workspace before storage initialization", () => {
+  it.each([["", true], ["", false], ["?p=usdc-circle:100", false]] as const)("prerenders safely (query %s, bootstrap %s)", async (search, runs) => {
     portfolioState.initialized = false;
+    window.history.replaceState(null, "", `/portfolio/${search}`);
+    window.localStorage.setItem("pharos:portfolio", runs ? "[]" : '[{"coinId":"usdc-circle","amount":100}]');
     const html = renderToString(<PortfolioClient />);
     expect(html).toContain("portfolio-empty-state");
     expect(html).toContain("Add holdings manually or load a starter mix below.");
-    expect(html).toContain("[html[data-portfolio-pending]_&amp;]:hidden");
-    expect(html).toContain("hidden [html[data-portfolio-pending]_&amp;]:block");
+    if (runs) new Function(bootstrapScript)();
+    const { container } = render(<PortfolioClient />);
+    const [empty, loading] = container.firstElementChild!.children;
+    const style = document.createElement("style");
+    style.textContent = (await compile("@tailwind utilities;")).build([...empty.classList, ...loading.classList]);
+    document.head.append(style);
+    expect(getComputedStyle(empty).display).toBe(runs ? "block" : "none");
+    expect(getComputedStyle(loading).display).toBe(runs ? "none" : "block");
+    style.remove();
+    document.documentElement.removeAttribute("data-portfolio-empty");
     expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: false });
   });
 
   it("stops using the pre-paint selector once holdings initialize", () => {
     portfolioState.initialized = false;
-    document.documentElement.setAttribute("data-portfolio-pending", "");
+    document.documentElement.setAttribute("data-portfolio-empty", "");
     const { container, rerender } = render(<PortfolioClient />);
     const root = container.firstElementChild;
     expect(container.children).toHaveLength(1);
     portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }] };
     rerender(<PortfolioClient />);
     expect(container.firstElementChild).toBe(root);
-    expect(container.innerHTML).not.toContain("data-portfolio-pending");
+    expect(container.innerHTML).not.toContain("data-portfolio-empty");
     expect(screen.queryByText("portfolio-empty-state")).toBeNull();
     expect(screen.getByText("Total portfolio value")).toBeTruthy();
-    document.documentElement.removeAttribute("data-portfolio-pending");
+    document.documentElement.removeAttribute("data-portfolio-empty");
   });
 
   it("keeps holdings editable while risk enrichment is pending", () => {
@@ -249,34 +260,34 @@ describe("PortfolioClient URL sync", () => {
 describe("portfolio pre-paint selector", () => {
   beforeEach(() => {
     window.localStorage.clear();
-    document.documentElement.removeAttribute("data-portfolio-pending");
+    document.documentElement.removeAttribute("data-portfolio-empty");
     window.history.replaceState(null, "", "/portfolio/");
   });
 
   it.each([null, "[]", "not json", "{}"])("keeps the static empty state for storage %s", (stored) => {
     if (stored !== null) window.localStorage.setItem("pharos:portfolio", stored);
     new Function(bootstrapScript)();
-    expect(document.documentElement.hasAttribute("data-portfolio-pending")).toBe(false);
+    expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(true);
   });
 
   it.each(["", "?p=usdc-circle:100", "?coins=usdc-circle"])("hides the empty state for saved/shared holdings (%s)", (search) => {
     window.history.replaceState(null, "", `/portfolio/${search}`);
     if (!search) window.localStorage.setItem("pharos:portfolio", '[{"coinId":"usdc-circle","amount":100}]');
     new Function(bootstrapScript)();
-    expect(document.documentElement.hasAttribute("data-portfolio-pending")).toBe(true);
+    expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(false);
   });
 
   it("keeps first visits visible when storage access is blocked", () => {
     const read = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
     try {
       expect(() => new Function(bootstrapScript)()).not.toThrow();
-      expect(document.documentElement.hasAttribute("data-portfolio-pending")).toBe(false);
+      expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(true);
       window.history.replaceState(null, "", "/portfolio/?p=usdc-circle:100");
       new Function(bootstrapScript)();
-      expect(document.documentElement.hasAttribute("data-portfolio-pending")).toBe(true);
+      expect(document.documentElement.hasAttribute("data-portfolio-empty")).toBe(false);
     } finally {
       read.mockRestore();
-      document.documentElement.removeAttribute("data-portfolio-pending");
+      document.documentElement.removeAttribute("data-portfolio-empty");
     }
   });
 });
