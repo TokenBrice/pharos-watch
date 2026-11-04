@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import invusdSource from "@shared/data/stablecoins/coins/invusd-inverse-finance.json";
+import type { StablecoinMeta } from "@shared/types/core";
 import { evaluateAdapterSnapshotAdmission, runAdapter } from "./reserve-adapter.test-support";
 import {
   MONOLITH_LENDER_COIN,
@@ -6,6 +8,7 @@ import {
   MONOLITH_LENDER_PIN,
   collateralPriceWord,
   pinnedNetwork,
+  word,
 } from "./monolith-lender.test-support";
 
 const ADAPTER_KEY = "monolith-lender";
@@ -13,6 +16,87 @@ const PIN = MONOLITH_LENDER_PIN;
 const NOW_SEC = MONOLITH_LENDER_NOW_SEC;
 
 describe("monolith-lender adapter", () => {
+  it("reads invUSD V1 from its catalog config and preserves its tiny positive PSM capacity", async () => {
+    // Ethereum 26344306, hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1,
+    // 2026-11-04T22:01:23Z; captures: agents/2026-11-04-invusd/*-pin*.json.
+    const coin = invusdSource as unknown as StablecoinMeta;
+    const lender = "0xf8b349da9244253288f6853835e6582955fd49c9";
+    const collateral = "0x08d23468a467d2bb86fae0e32f247a26c7e2e994";
+    const token = "0x5377680b5986296aa4f9e684e5315a4f24832e56";
+    const psmAsset = "0xdc035d45d973e3ec169d2276ddab16f1e407384f";
+    const psmVault = "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd";
+    const price = 10_888_524_866_614_357_036n;
+    const supply = 115_617_056_531_901_423_851_502n;
+    const freePsmAssets = 208_859_022_366_708n;
+    const totalPaidDebt = 114_188_891_551_953_966_740_921n;
+    const totalFreeDebt = 2_556_229_609_264_083_031_379n;
+    const run = await runAdapter(ADAPTER_KEY, coin, {
+      nowSec: 1_793_829_803,
+      network: {
+        block: {
+          number: 26_344_306,
+          timestamp: 1_793_829_683,
+          hash: "0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1",
+        },
+        rpc: {
+          [`ethereum:${lender}:coin()`]: token,
+          [`ethereum:${lender}:collateral()`]: collateral,
+          [`ethereum:${lender}:psmAsset()`]: psmAsset,
+          [`ethereum:${lender}:psmVault()`]: psmVault,
+          [`ethereum:${lender}:psmAssetDecimals()`]: 18n,
+          [`ethereum:${lender}:getCollateralPrice()`]: collateralPriceWord(price, false, true),
+          [`ethereum:${lender}:getFeedPrice()`]: `0x${word(price)}${word(1_793_827_955n)}`,
+          [`ethereum:${lender}:stalenessThreshold()`]: 86_400n,
+          [`ethereum:${lender}:getSellAmountOut(uint256)`]: 10n ** 18n,
+          [`ethereum:${lender}:freePsmAssets()`]: freePsmAssets,
+          [`ethereum:${lender}:totalPaidDebt()`]: totalPaidDebt,
+          [`ethereum:${lender}:totalFreeDebt()`]: totalFreeDebt,
+          [`ethereum:${collateral}:decimals()`]: 18n,
+          [`ethereum:${collateral}:balanceOf(address)`]: 31_103_066_519_048_901_291_393n,
+          [`ethereum:${psmAsset}:decimals()`]: 18n,
+          [`ethereum:${psmVault}:asset()`]: psmAsset,
+          [`ethereum:${psmVault}:balanceOf(address)`]: 4_131_431_239_334_997_350n,
+          [`ethereum:${psmVault}:maxWithdraw(address)`]: 4_607_440_596_960_599_420n,
+          [`ethereum:${token}:decimals()`]: 18n,
+          [`ethereum:${token}:totalSupply()`]: supply,
+        },
+      },
+    });
+    const { result, network } = run;
+
+    expect(coin.liveReservesConfig?.params).toMatchObject({
+      lenderAddress: lender,
+      collateral: { address: collateral, decimals: 18, risk: "high" },
+      psmAsset: { address: psmAsset, decimals: 18 },
+      psmVault: { address: psmVault, coinId: "susds-sky" },
+    });
+    expect(result.warnings).toBeUndefined();
+    expect(result.slices).toHaveLength(2);
+    expect(result.slices[0]).toMatchObject({
+      sourceKey: `monolith-lender:ethereum:${collateral}`,
+      name: "sINV collateral (Monolith Lender)",
+      risk: "high",
+    });
+    expect(result.slices[1]!.pct).toBeGreaterThan(0);
+    expect(result.metadata?.redemption?.capacityUsd).toBeCloseTo(0.000208859022366708, 18);
+    expect(result.metadata?.redemption).toMatchObject({ routeStatus: "open", routeStatusSource: "onchain" });
+    // Recorded CDP debt includes 1,128.064838175648287506 unminted reserve tokens.
+    expect(result.metadata?.totalDebtUsd).toBeCloseTo(116_745.12116121805, 8);
+    expect(result.metadata?.collateralizationRatio).toBeCloseTo(2.900905099934, 8);
+    expect(result.metadata?.details).toMatchObject({
+      ratioBasis: "collateral-value-over-cdp-debt",
+      capacityBindingSource: "lender-free-psm-assets",
+      freePsmAssetsRaw: freePsmAssets.toString(),
+      psmVaultMaxWithdrawRaw: "4607440596960599420",
+      supplyBackingRaw: (totalPaidDebt + totalFreeDebt + freePsmAssets).toString(),
+      supplyShortfallRaw: "0",
+    });
+    expect(network.rpcCalls).toHaveLength(20);
+    expect(network.rpcCalls.every((call) => call.viaMulticall && call.block === "0x191fb72")).toBe(true);
+    expect(network.unmatched).toEqual([]);
+    expect(evaluateAdapterSnapshotAdmission(run, 1_793_829_803).eligible).toBe(true);
+  });
+
   it("reads the pinned swanUSD Lender in one block-pinned Multicall and publishes debt-based cover", async () => {
     const { result, network, report } = await runAdapter(ADAPTER_KEY, MONOLITH_LENDER_COIN, {
       network: pinnedNetwork(),

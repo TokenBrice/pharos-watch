@@ -329,7 +329,7 @@
         "reserveName": "sinvUSD collateral (sINV-backed stablecoin vault)",
         "pct": 0.040938,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The identified sINV-backed invUSD vault is not a tracked stablecoin dependency; its governance-token-backed claim remains a protocol position."
+        "rationale": "sinvUSD is an untracked savings-vault claim on the now-tracked invUSD. Exact wrapper-to-parent look-through and the current claim allocation were not reviewed in the invUSD addition; retain this measured protocol-position slice unlinked pending that evidence, without inferring a dependency from the shared issuer or ticker."
       },
       {
         "reserveIndex": 13,

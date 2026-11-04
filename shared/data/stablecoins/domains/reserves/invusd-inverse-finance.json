@@ -1,0 +1,127 @@
+{
+  "id": "invusd-inverse-finance",
+  "reserves": [
+    {
+      "sourceKey": "monolith-lender:ethereum:0x08d23468a467d2bb86fae0e32f247a26c7e2e994",
+      "name": "sINV collateral (Monolith Lender)",
+      "pct": 99.999999938329,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Inverse Finance (staked INV governance token)",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "monolith-lender:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+      "name": "sUSDS PSM reserve (Monolith Lender)",
+      "pct": 6.16709990756722e-08,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Protocol (sUSDS savings vault over USDS)",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-11-04",
+    "reviewer": "Codex invUSD addition review 2026-11-04",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned same-block eth_call and eth_getStorageAt reads at Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z); observations 2026-11-04T22:02:06Z–22:08:04Z; numeric block 0x191fb72, header number/hash/time matched before and after",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+        "url": "https://eth.blockscout.com/block/26344306"
+      },
+      {
+        "label": "Monolith V1 invUSD Lender exact-match verified source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+      },
+      {
+        "label": "sINV exact-match verified source and inherited ERC-4626",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x08d23468a467d2bb86fae0e32f247a26c7e2e994?fields=sources"
+      },
+      {
+        "label": "ERC4626Feed exact-match verified source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5221571fb2c1eb20e905110fbad3a274529f58af?fields=sources"
+      },
+      {
+        "label": "SwitchFeed exact-match verified source; operator replacement and bypassable divergence guard",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xeca2f329a011a4d464f8ef97e493974964911ed0?fields=sources"
+      },
+      {
+        "label": "DynamicFeeCurveFeed exact-match verified source; Curve/paired-feed composition and fee controls",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x4c871e951228c2f7224416c921e742a86ef8eecb?fields=sources"
+      },
+      {
+        "label": "sUSDS held shares, maxWithdraw and asset identity, pinned at the same block",
+        "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd#readContract"
+      }
+    ],
+    "rationale": "At Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z), sINV.balanceOf(Lender) was 31,103.066519048901291393 and Lender.getCollateralPrice() returned 10.888524866614357036 USD per sINV, reduceOnly=false and allowLiquidations=true: protocol-marked collateral value is 338,666.513220624412 USD. The recognized PSM balance freePsmAssets() was 0.000208859022366708 USDS, with zero idle USDS cash. These two values reproduce the existing monolith-lender adapter denominator, giving 99.999999938329% sINV and 6.16709990756722e-08% recognized sUSDS PSM backing; the tiny positive PSM weight is retained without display rounding. Actual sUSDS custody was 4.131431239334997350 shares, and maxWithdraw(Lender) was 4.607440596960599420 USDS. That larger vault entitlement does not expand current sell capacity: accruePsmProfit() recognizes appreciation only when pullLocalReserves() is called, after which the same amount is accrued for later coin issuance. Unrecognized vault appreciation is disclosed separately and excluded from this protocol-accounted composition rather than counted as a current par exit. The Lender held paid debt 114,188.891551953966740921 and free debt 2,556.229609264083031379, while Coin.totalSupply was 115,617.056531901423851502 and accruedLocalReserves was 1,128.064838175648287506 (global reserves zero). Supply plus unminted accrued fees equals paid debt plus free debt plus recognized PSM assets exactly to the wei; debt is not substituted for circulating supply. The CDP-only collateralization ratio is 2.900905064400474 (sINV value / paid-plus-free debt), excluding the PSM leg from both CDP sides. The mark is the protocol's governed oracle, not an independently established liquidation price, assurance opinion or proof that the whole collateral book can be sold at that value.",
+    "compositionBasis": "Same-block protocol-accounted backing: sINV balance times Lender.getCollateralPrice plus recognized freePsmAssets at reviewed USDS par; unrecognized sUSDS appreciation disclosed separately, matching monolith-lender adapter semantics",
+    "compositionAsOf": "2026-11-04",
+    "compositionSource": "live-adapter",
+    "scope": "full-composition",
+    "knownUnknownExposure": "The immutable protocol-accounted reserve roster is measured in full: sINV collateral and the USDS/sUSDS PSM leg. No unidentified reserve slice is inferred. Market realization of sINV, legal asset protection and independent financial assurance are not established; the oracle is governed and the recognized PSM sell balance is only 0.000208859022366708 USDS. Stray token transfers are not protocol-accounted backing. The 4.607440596960599420 USDS vault entitlement includes unrecognized appreciation and is not presented as current sell capacity.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "sINV collateral (Monolith Lender)",
+        "pct": 99.999999938329,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "sINV is the independently identified ERC-4626 claim on the INV governance token, not a tracked stablecoin. It remains an unlinked governance-token collateral slice; same issuer identity does not create a DOLA reserve dependency."
+      }
+    ]
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Monolith V1 Lender 0xf8b349da9244253288f6853835e6582955fd49c9 (immutable, non-proxy)",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-11-04",
+    "reviewer": "Codex invUSD addition review 2026-11-04",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned same-block eth_call and eth_getStorageAt reads at Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z); observations 2026-11-04T22:02:06Z–22:08:04Z; numeric block 0x191fb72, header number/hash/time matched before and after",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+        "url": "https://eth.blockscout.com/block/26344306"
+      },
+      {
+        "label": "Monolith V1 invUSD Lender exact-match verified source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+      },
+      {
+        "label": "sINV exact-match verified source and inherited ERC-4626",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x08d23468a467d2bb86fae0e32f247a26c7e2e994?fields=sources"
+      }
+    ],
+    "uncertainty": "The Lender itself holds every protocol-accounted reserve token on Ethereum. sINV is a staked-INV claim whose underlying is held in the sINV/FiRM arrangement, while the PSM holds a Sky savings-vault claim. This establishes on-chain holding structure, not independent custody assurance, enforceable segregation, bankruptcy remoteness, rehypothecation terms or a guaranteed whole-book liquidation horizon. No legal safeguards are inferred from code immutability.",
+    "knownUnknownExposurePct": 100
+  }
+}

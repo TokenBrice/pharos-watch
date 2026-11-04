@@ -1,0 +1,204 @@
+{
+  "id": "invusd-inverse-finance",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-adverse",
+    "confidence": "verified",
+    "headline": "Supply is created against collateral, deposits or recorded debt; the manager Safe can drive interest issuance without a practical ceiling.",
+    "summary": "invUSD is issued by a non-proxy Monolith V1 Lender whose Coin minter is fixed at construction. Users borrow against sINV at a 65% collateral factor or deposit USDS through the PSM before the April 2030 immutability deadline. Interest accrual increases borrower debt and mints interest to the staking vault, with accrued reserve shares minted later. It performs no collateral check and has no practical interest-rate ceiling. The 3-of-6 manager Safe can steer that rate through the half-life and free-debt target band without a timelock. Inverse governance controls the Lender and Factory through a two-day Timelock and can replace roles and redirect bounded shares of interest. The Coin, Lender and Vault are immutable, but the collateral oracle includes a separately governed SwitchFeed; immutability of the outer oracle address does not remove that pricing control. No arbitrary chosen-recipient raw-mint function was found. There is no independently attested whole-supply reconciliation or prudential supervision, and signer custody remains unverified.",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0x5377680b5986296aa4f9e684e5315a4f24832e56"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-11-04",
+      "observedBlock": 26344306,
+      "sources": [
+        {
+          "label": "invUSD Coin exact-match source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+        },
+        {
+          "label": "invUSD Lender exact-match source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+        },
+        {
+          "label": "Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+          "url": "https://etherscan.io/block/26344306"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "deploymentRefs": [
+          "ethereum:0x5377680b5986296aa4f9e684e5315a4f24832e56"
+        ],
+        "canRaiseCap": false,
+        "observedAt": "2026-11-04",
+        "observedBlock": 26344306,
+        "address": "0xf8b349da9244253288f6853835e6582955fd49c9",
+        "label": "Monolith V1 Lender (only Coin minter)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "No numeric supply cap. Borrowing must pass the immutable 65% collateral-factor check against sINV; PSM buys require an equal USDS deposit before the immutability deadline. Interest accrual adds the full interest to paid debt, mints the staked share and defers reserve shares until permissionless fee pulls. Interest accrual does not repeat the collateral check and its rate has no practical ceiling. The half-life can be set as low as 12 hours and the target free-debt band as high as 9,500 basis points. The rate can continue compounding after the deadline freezes the setters; the InterestModel skips accrual at the uint88 rate or uint120 interest overflow guard.",
+        "sources": [
+          {
+            "label": "invUSD Coin exact-match source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+          },
+          {
+            "label": "invUSD Lender exact-match source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+          },
+          {
+            "label": "Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+            "url": "https://etherscan.io/block/26344306"
+          }
+        ],
+        "evidence": "Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z). Coin.minter() is this Lender; exact-match Coin has no minter setter or upgrade path. Supply plus unminted accrued reserves equals paid debt plus free debt plus normalized freePsmAssets: 115617.056531901423851502 + 1128.064838175648287506 = 114188.891551953966740921 + 2556.229609264083031379 + 0.000208859022366708. Collateral factor is 6500 bps; minimum debt 500 invUSD; local/global fee shares are zero. Coin, Lender and Vault implementation/admin/beacon slots read zero."
+      },
+      {
+        "chain": "ethereum",
+        "deploymentRefs": [
+          "ethereum:0x5377680b5986296aa4f9e684e5315a4f24832e56"
+        ],
+        "canRaiseCap": false,
+        "observedAt": "2026-11-04",
+        "observedBlock": 26344306,
+        "address": "0x9d5df30f475cea915b1ed4c0cca59255c897b61b",
+        "label": "Monolith manager Safe (3-of-6, no timelock)",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 6,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "owners": [
+            "0x2723723fdd3db8ba2d6f0e1b333e90a7e60a0411",
+            "0x52f63971afd2a32524c859c29943f9bea38ca907",
+            "0x9f3614afb3df9f899cadbffaa05c6c908059f726",
+            "0x962228a90eac69238c7d1f216d80037e61ea9255",
+            "0x6535020cceb810bdb3f3ca5e93de2460ff7989bb",
+            "0x3fcb35a1cbfb6007f9bc638d388958bc4550cb28"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "observedAt": "2026-11-04",
+          "observedBlock": 26344306,
+          "source": "onchain",
+          "version": "1.3.0",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552"
+        },
+        "capDescription": "Until 23 April 2030 the manager can set the interest-rate half-life between 12 hours and 30 days, free-debt target band between 500 and 9,500 bps, redemption fee up to 500 bps and borrow rounding delta between 50 and 200 bps. setManager has no deadline. It cannot replace the immutable Coin minter or contract logic. Rate and band changes can drive debt-matched interest issuance without a practical ceiling and without another collateral check.",
+        "sources": [
+          {
+            "label": "invUSD Lender exact-match source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+          },
+          {
+            "label": "Manager Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x9d5df30f475cea915b1ed4c0cca59255c897b61b"
+          },
+          {
+            "label": "Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+            "url": "https://etherscan.io/block/26344306"
+          }
+        ],
+        "evidence": "Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z). Lender.manager returned this Safe, getThreshold returned 3 and getOwners returned the six listed owners. getModulesPaginated returned no modules and sentinel continuation. GuardManager storage slot 0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8 read zero. Signer identities, independence and hardware/MPC custody are unverified; no key-custody attestation is asserted. VERSION returned 1.3.0, singleton storage slot zero returned 0xd9db270c1b5e3bd161e8c8503c55ceabee709552 and all six owners returned empty code. The fallback handler was not reliably observed, so its reach remains unverified and no complete execution-scope certificate is asserted."
+      },
+      {
+        "chain": "ethereum",
+        "deploymentRefs": [
+          "ethereum:0x5377680b5986296aa4f9e684e5315a4f24832e56"
+        ],
+        "canRaiseCap": false,
+        "observedAt": "2026-11-04",
+        "observedBlock": 26344306,
+        "address": "0x926df14a23be491164dcf93f4c468a50ef659d5b",
+        "label": "Inverse two-day Timelock (Lender and Factory operator)",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 172800,
+        "modulesOrGuardsStatus": "not-applicable",
+        "capDescription": "The operator can exercise the manager parameter setters before the deadline, replace the manager, transfer the operator role, reduce the immutability deadline and set the local reserve share up to 1,000 bps of interest. Its Factory role can set global interest fees up to 1,000 bps and their recipient. These paths do not authorize arbitrary raw minting; accrued reserve pulls mint recorded fees and PSM profit. Local/global fee setters and operator/manager handoffs have no deadline.",
+        "sources": [
+          {
+            "label": "invUSD Lender exact-match source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+          },
+          {
+            "label": "Monolith V1 Factory verified source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x6d961c9dcf1ad73566822ba4b087892e3839b849?fields=sources"
+          },
+          {
+            "label": "Inverse Timelock verified source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x926df14a23be491164dcf93f4c468a50ef659d5b?fields=sources"
+          },
+          {
+            "label": "GovernorMills exact-match source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6?fields=sources"
+          },
+          {
+            "label": "GovernorMills cancellation-only Guardian verified source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x941c2699ec7e55a50bde030d8e1e70649839259d?fields=sources"
+          },
+          {
+            "label": "Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+            "url": "https://etherscan.io/block/26344306"
+          }
+        ],
+        "evidence": "Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z). Lender.operator and Factory.operator both returned this Timelock, and both pendingOperator values were zero. delay returned 172800, admin returned GovernorMills 0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6 and pendingAdmin was zero. Timelock delay/admin changes require a self-scheduled call; queue and execute require admin. GovernorMills exposes guardian-only emergency admin methods, but its current Guardian 0x941c2699ec7e55a50bde030d8e1e70649839259d is a non-proxy cancellation-only contract with no generic execution, upgrade, fallback or forwarding method able to invoke them. Normal proposals use prior-block INV/xINV votes. No complete voting-power census or uniform-voting certificate is asserted. Factory feeBps, feeRecipient and lender-specific effective fee all read zero."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "evidence": "Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z). Reviewed exact-match Coin/Lender/InterestModel sources and partial-match Factory/Timelock/Guardian sources with pinned getters, code and EIP-1967 slots. Only the Lender may mint. Borrowing, PSM deposits and deferred fee pulls are bounded by their inputs; interest accrual can create increasing supply matched by new borrower debt without another collateral check. The manager Safe and operator Timelock can steer the uncapped rate. No capSemanticsReview is authored because economic semantics are unbounded. No executionScope or governedIssuance certificate is asserted: arbitrary call reach, signer custody and voting-power provenance have not received complete economic-scope certification. This preserves the measured control topology without granting a favorable process rung. The live operator is a two-day Timelock administered by GovernorMills; its current cancellation-only Guardian cannot invoke the governor emergency admin methods. Oracle feed controls and collateral governance belong to the separately reviewed risk/reserve domains. Safe fallback-handler reach, human signer independence, hardware or MPC custody and an exhaustive historical control-incident search remain unverified. The observed non-proxy sources, constructor-fixed pointers and pinned role reads establish the present issuance paths; no absence of historical incidents is claimed.",
+      "reviewer": "Codex invUSD addition 2026-11-04",
+      "reviewedAt": "2026-11-04",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "invUSD Coin exact-match source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+        },
+        {
+          "label": "invUSD Lender exact-match source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+        },
+        {
+          "label": "Monolith V1 InterestModel exact-match source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5b679ddd0eddce323f74aec38e3849d70d57c113?fields=sources"
+        },
+        {
+          "label": "Monolith V1 Factory verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x6d961c9dcf1ad73566822ba4b087892e3839b849?fields=sources"
+        },
+        {
+          "label": "Inverse Timelock verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x926df14a23be491164dcf93f4c468a50ef659d5b?fields=sources"
+        },
+        {
+          "label": "GovernorMills exact-match source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6?fields=sources"
+        },
+        {
+          "label": "GovernorMills cancellation-only Guardian verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x941c2699ec7e55a50bde030d8e1e70649839259d?fields=sources"
+        },
+        {
+          "label": "Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+          "url": "https://etherscan.io/block/26344306"
+        }
+      ]
+    }
+  }
+}

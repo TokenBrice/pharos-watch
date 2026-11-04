@@ -678,6 +678,32 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "All three observed pools report minRedemptionOrderAmount 10000 in raw API units. This is not evidence of a 10,000-token minimum. The docs describe direction-specific DAO enablement and optional fee management; observed enabled flags and balances are not permanent availability or a canonical-request receipt. Wallet connection remains ordinary onchain access rather than an allowlist.",
     ],
   },
+  "invusd-inverse-finance": {
+    ...psmSwapBase,
+    outputAssets: ["usds-sky"],
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      basis: "live-direct-telemetry",
+      requiredOutputAssetKeys: ["usds-sky"],
+    },
+    costModel: fixedFee(
+      0,
+      "The verified Monolith V1 sell() path has no protocol fee; ERC-4626 share rounding and network gas remain separate costs.",
+    ),
+    reviewedAt: "2026-11-04",
+    docs: [
+      sourceRefFull("Monolith Peg Stability Module", "https://docs.monolith.market/protocol/peg-stability-module"),
+      sourceRefFull(
+        "invUSD V1 Lender exact-match sell() source",
+        "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources",
+      ),
+    ],
+    notes: [
+      "The modeled rail burns invUSD for USDS through the Lender's sUSDS holding, permissionlessly in one transaction. sell() has no pause, allowlist or sell-fee setter and remains callable after the 2030-04-23T11:02:47Z immutability deadline; buy() stops at that deadline. Ethereum block 26344306 (0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z) pins the reviewed wiring and terms, not future capacity.",
+      "The monolith-lender adapter measures capacity every run as the lower of freePsmAssets() and sUSDS.maxWithdraw(lender). At the review pin these were 0.000208859022366708 and 4.607440596960599420 USDS respectively. The larger vault holding includes unrecognized appreciation and cannot be used as current sell capacity; permissionless pullLocalReserves() can recognize it, but this config never assumes that call happened. A small positive read remains positive, and measured zero remains zero.",
+      "A separate unmodeled rail burns invUSD against borrowers who elect free debt and pays sINV at the collateral oracle price less redeemFeeBps, 250 bps at the pin and adjustable up to 500 bps before the deadline. Total free debt was 2556.229609264083031379 invUSD, which is a book-wide upper bound rather than an executable all-holder redemption quote. That volatile-collateral rail depends on borrower eligibility, remaining collateral and the governed INV/USD oracle.",
+    ],
+  },
   "swanusd-swan": {
     ...psmSwapBase,
     outputAssets: ["usds-sky"],

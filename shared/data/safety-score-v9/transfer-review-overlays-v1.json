@@ -12282,6 +12282,34 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "invusd-inverse-finance",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Codex invUSD addition 2026-11-04",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x5377680b5986296aa4f9e684e5315a4f24832e56",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z), invUSD Coin returned 2988 bytes of runtime code and zero EIP-1967 implementation, admin and beacon slots. Coin.minter() returned Monolith Lender 0xf8b349da9244253288f6853835e6582955fd49c9. Sourcify exact-match Coin and bundled Solmate ERC20 source show ordinary transfer and transferFrom use only balance and allowance arithmetic; permit changes allowance, mint is restricted to the constructor-immutable minter, and burn affects only the caller own balance. There is no owner, transfer allowlist, blacklist, pause, freeze, seizure hook, arbitrary-holder burn or upgrade entrypoint in this holder-facing token. This review classifies direct Ethereum holder transfers only and does not remove the separate governed interest-issuance or collateral-oracle control paths.",
+          "sources": [
+            {
+              "label": "invUSD Coin exact-match source, including Solmate ERC20",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+            },
+            {
+              "label": "Pinned runtime, EIP-1967 slot and minter reads at Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+              "url": "https://etherscan.io/block/26344306"
+            },
+            {
+              "label": "Keyless PublicNode endpoint used for pinned eth_getCode, eth_getStorageAt and eth_call reads",
+              "url": "https://ethereum-rpc.publicnode.com"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

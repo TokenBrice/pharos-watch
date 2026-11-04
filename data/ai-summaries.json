@@ -1,4 +1,12 @@
 {
+  "invusd-inverse-finance": {
+    "title": "A Monolith dollar backed by staked INV",
+    "text": "invUSD is Inverse Finance’s dollar stablecoin on Monolith, backed by sINV shares representing its own governance token. Borrowers choose interest-bearing debt protected from collateral redemption or free debt that holders can redeem against an eligible borrower. The separate sinvUSD staking vault receives borrower interest. The Coin and Lender cannot be upgraded, but borrowing economics remain governed: a manager Safe can steer interest rates without a timelock, and a two-day governance path controls a replaceable collateral-price feed. The USDS peg-stability module offers a separate swap route whose capacity follows recognized reserves and available sUSDS withdrawals. Pharos distinguishes that executable accounting limit from appreciation still held in the savings vault. Collateral redemption pays sINV and depends on borrowers choosing free debt. Neither exit commits enough liquidity to redeem the entire supply at par.",
+    "updatedAt": "2026-11-04",
+    "authoredBy": "ai",
+    "model": "GPT-6",
+    "factsAsOf": "2026-11-04"
+  },
   "eurxt-caceis": {
     "title": "A Euro Token on CACEIS Bank's Balance Sheet",
     "text": "EURXT is the euro e-money token Crédit Agricole S.A. launched on July 1 2026, issued on Ethereum by CACEIS Bank S.A. under a MiCA white paper. Only professional clients of CACEIS Bank can buy it from the issuer, with a 10,000 EURXT minimum, yet any Ethereum address that is not blacklisted can hold and transfer it. On November 1 2026, however, one wallet held the entire supply, which has stood at 54,366,000 EURXT since September 25 2026. Crédit Agricole describes the reserve as cash on CACEIS Bank's balance sheet, but the white paper allows up to 70% in highly liquid financial instruments. No independent reserve {{term:attestation}}attestation{{/term}} had been located by November 1 2026, and stable-xt.io computes its reserve figure from the token's on-chain supply. A single-key wallet can blacklist a holder and seize its balance, a second can pause all transfers, and a third can replace the contract logic, whose deployed source is unverified. Pharos lists EURXT pre-launch because no admitted source prices it. Under the white paper, holders are unsecured creditors of CACEIS Bank, with par {{term:redemption}}redemption{{/term}} and no issuer fee from 9:00 to 17:00 on French bank business days, after KYC if they are not its clients.",

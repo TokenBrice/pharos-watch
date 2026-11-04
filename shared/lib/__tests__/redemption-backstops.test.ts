@@ -11,6 +11,18 @@ import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "../../data/coverage-dispositions/redemption-coverage-dispositions";
 
 describe("getRedemptionBackstopConfig", () => {
+  it("binds invUSD's USDS exit to live Monolith telemetry instead of a supply fraction", () => {
+    const config = getRedemptionBackstopConfig("invusd-inverse-finance")!;
+    expect(config.outputAssets).toEqual(["usds-sky"]);
+    expect(config.capacityModel).toEqual({
+      kind: "reserve-sync-metadata",
+      basis: "live-direct-telemetry",
+      requiredOutputAssetKeys: ["usds-sky"],
+    });
+    expect(resolveRedemptionCostBpsAtNotional(config.costModel, 1_000)).toBe(0);
+    expect(TRACKED_META_BY_ID.get("invusd-inverse-finance")?.liveReservesConfig?.adapter).toBe("monolith-lender");
+  });
+
   it.each([
     ["usdv-solomon-v2", "defer", "issuer-terms-missing", "https://raw.githubusercontent.com/SolomonLabs/chancery/main/spec/04_Settlement_Pathways_and_Permissions.md"],
     ["iusd-initia", "needs-research", "documentation-insufficient", "https://contents.initia.xyz/app/iusd-faq.json"],

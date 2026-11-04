@@ -1,0 +1,294 @@
+{
+  "id": "invusd-inverse-finance",
+  "blacklistabilityReview": {
+    "reviewedStatus": false,
+    "sources": [
+      {
+        "label": "invUSD Coin exact-match verified source and inherited ERC-20",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5377680b5986296aa4f9e684e5315a4f24832e56?fields=sources"
+      },
+      {
+        "label": "Monolith V1 invUSD Lender exact-match verified source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+      },
+      {
+        "label": "sINV exact-match verified source and inherited ERC-4626",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x08d23468a467d2bb86fae0e32f247a26c7e2e994?fields=sources"
+      },
+      {
+        "label": "Pinned same-block eth_call and eth_getStorageAt reads at Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z); observations 2026-11-04T22:02:06Z–22:08:04Z; numeric block 0x191fb72, header number/hash/time matched before and after",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+        "url": "https://eth.blockscout.com/block/26344306"
+      }
+    ],
+    "evidence": "The sole reviewed liability deployment is Ethereum Coin 0x5377680b5986296aa4f9e684e5315a4f24832e56, with 115,617.056531901423851502 tokens at Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z); it represents the full on-chain supply and is material. minter() returned Lender 0xf8b349da9244253288f6853835e6582955fd49c9; the Coin and Lender have nonempty direct bytecode and zero EIP-1967 implementation, admin and beacon slots. Exact-match Coin and inherited solmate ERC-20 source contain ordinary transfers and permit, an immutable minter and a caller-only burn; there is no owner, arbitrary-holder burn, blacklist, seizure, holder allowlist or global transfer pause. invUSD is not a wrapper and has no declared parent. Reserve basis: the entire CDP borrower book uses sINV, a protocol-governed staked INV claim. sINV's reviewed governance setters and deposit-only cap do not establish issuer/custodian holder exposure under the DAO/protocol-governance collateral carve-out; underlying market and governance risk remains. The USDS/sUSDS PSM is the only separate reviewed issuer/upgradable-token exposure: even counting its entire recognized 0.000208859022366708 USDS at full exposure, it contributes only 0.0000000616709990756722% of protocol-accounted reserves and does not approach the strict majority test. The CDP debt-weighted qualifying exposure is 0%. Lender and oracle management can alter borrowing economics and pricing, but those primary stablecoin redemption and debt-management rails do not target invUSD holder balances. Verdict No records this materiality-scoped direct/parent/reserve review, not an absence of governance, oracle, collateral or legal risk.",
+    "reviewer": "Codex invUSD addition review 2026-11-04",
+    "reviewedAt": "2026-11-04"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "sINV collateral is marked by an immutable ERC-4626 adapter over an INV/USD SwitchFeed whose operator is the Inverse two-day Timelock. The input feed is replaceable, and its current Curve-based implementation has a governance-controlled fee haircut. These reachable controls prevent a claim of independent pricing; stale and invalid answers take different Lender paths.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Codex invUSD addition review 2026-11-04",
+      "rationale": "One sINV borrower market carries the complete paid-plus-free debt book of 116,745.121161218049772300 invUSD at the pin. Its pricing authority, immutable collateral parameters, liquidation rail, absence of committed backstop and bad-debt allocation require branch-scoped review.",
+      "sources": [
+        {
+          "label": "Monolith V1 invUSD Lender exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+        },
+        {
+          "label": "ERC4626Feed exact-match verified source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5221571fb2c1eb20e905110fbad3a274529f58af?fields=sources"
+        },
+        {
+          "label": "SwitchFeed exact-match verified source; operator replacement and bypassable divergence guard",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xeca2f329a011a4d464f8ef97e493974964911ed0?fields=sources"
+        },
+        {
+          "label": "DynamicFeeCurveFeed exact-match verified source; Curve/paired-feed composition and fee controls",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4c871e951228c2f7224416c921e742a86ef8eecb?fields=sources"
+        },
+        {
+          "label": "Pinned same-block eth_call and eth_getStorageAt reads at Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z); observations 2026-11-04T22:02:06Z–22:08:04Z; numeric block 0x191fb72, header number/hash/time matched before and after",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+          "url": "https://eth.blockscout.com/block/26344306"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-04",
+    "reviewer": "Codex invUSD addition review 2026-11-04",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Monolith V1 invUSD Lender exact-match verified source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+      },
+      {
+        "label": "ERC4626Feed exact-match verified source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5221571fb2c1eb20e905110fbad3a274529f58af?fields=sources"
+      },
+      {
+        "label": "SwitchFeed exact-match verified source; operator replacement and bypassable divergence guard",
+        "url": "https://sourcify.dev/server/v2/contract/1/0xeca2f329a011a4d464f8ef97e493974964911ed0?fields=sources"
+      },
+      {
+        "label": "DynamicFeeCurveFeed exact-match verified source; Curve/paired-feed composition and fee controls",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x4c871e951228c2f7224416c921e742a86ef8eecb?fields=sources"
+      },
+      {
+        "label": "sINV exact-match verified source and inherited ERC-4626",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x08d23468a467d2bb86fae0e32f247a26c7e2e994?fields=sources"
+      },
+      {
+        "label": "Pinned same-block eth_call and eth_getStorageAt reads at Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z); observations 2026-11-04T22:02:06Z–22:08:04Z; numeric block 0x191fb72, header number/hash/time matched before and after",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+        "url": "https://eth.blockscout.com/block/26344306"
+      },
+      {
+        "label": "ChainlinkBasePriceFeed exact-match source: mutable heartbeat and primary/fallback admission",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x22390b88c53d1631f673b8dcd91860267137b2c8?fields=sources"
+      },
+      {
+        "label": "Chainlink ETH/USD primary proxy source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419?fields=sources"
+      },
+      {
+        "label": "RedStone ETH/USD transparent fallback proxy source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x67f6838e58859d612e4ddf04da396d6dabb66dc4?fields=sources"
+      },
+      {
+        "label": "RedStone EthereumPriceFeedEthWithoutRoundsV1 exact-match implementation source",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x65ed6a4ac085620ee943c0b15525c4428d23e4db?fields=sources"
+      },
+      {
+        "label": "Fallback ProxyAdmin exact-match source; owner-controlled upgrades",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x8223a6271d1e0bda019ee55d545d7b86eff1f573?fields=sources"
+      }
+    ],
+    "branches": [
+      {
+        "id": "sinv",
+        "label": "sINV Lender market",
+        "tier": "privileged-internal-pricing",
+        "summary": "The single sINV borrower market uses an ERC-4626 exchange-rate adapter over a governor-controlled INV/USD feed chain. A two-day Timelock can replace the SwitchFeed input; the ten-percent transition check does not prevent a trusted operator from steering the price.",
+        "collateralAssets": [
+          "sINV"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Inverse Finance ERC4626Feed",
+            "path": "sINV.previewRedeem(1e18) and convertToAssets(1e18) both read 1.041236844625118441 INV at the pin; the adapter multiplies that rate by the SwitchFeed INV/USD answer and passes through its round identity and updatedAt unchanged.",
+            "address": "0x5221571fb2c1eb20e905110fbad3a274529f58af",
+            "chain": "ethereum",
+            "stalenessBoundSec": 86400,
+            "observedAt": "2026-11-04",
+            "observedBlock": 26344306,
+            "failureDomainKeys": [
+              "inverse:sinv-rate",
+              "inverse:invusd-oracle",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Inverse Finance SwitchFeed",
+            "path": "feed()=0x4c871e951228c2f7224416c921e742a86ef8eecb; operator()=0x926df14a23be491164dcf93f4c468a50ef659d5b; pendingOperator()=zero. The operator can replace the current feed with a positive same-decimal answer initially within ten percent, a guard the verified source explicitly says the trusted operator can sidestep.",
+            "address": "0xeca2f329a011a4d464f8ef97e493974964911ed0",
+            "chain": "ethereum",
+            "observedAt": "2026-11-04",
+            "observedBlock": 26344306,
+            "failureDomainKeys": [
+              "inverse:invusd-oracle",
+              "inverse:timelock",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Inverse Finance DynamicFeeCurveFeed",
+            "path": "Current feed: Curve WETH/INV pool 0xdcd90d866ff9636e5a04768825d05d27b3fb19ec, assetIndex 1, price_oracle 0.004369131979476801 WETH per INV, fee 99774631/1e10; pairedTokenToUsd 0x22390b88c53d1631f673b8dcd91860267137b2c8. gov()=0x926df14a23be491164dcf93f4c468a50ef659d5b, pendingGov zero and maxFee 200000000/1e10 (2%); gov may set that cap anywhere from zero to 100%. The source applies min(pool.fee,maxFee), then multiplies by the paired ETH/USD answer.",
+            "address": "0x4c871e951228c2f7224416c921e742a86ef8eecb",
+            "chain": "ethereum",
+            "observedAt": "2026-11-04",
+            "observedBlock": 26344306,
+            "failureDomainKeys": [
+              "inverse:invusd-oracle",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Inverse Finance ChainlinkBasePriceFeed",
+            "path": "owner()=0x926df14a23be491164dcf93f4c468a50ef659d5b, pendingOwner zero, configured primary heartbeat 3660 seconds. assetToUsd() is Chainlink ETH/USD 0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419; assetToUsdFallback() is RedStone 0x67f6838e58859d612e4ddf04da396d6dabb66dc4. A stale or min/max-bound primary answer selects the fallback; its returned timestamp is not refreshed or independently validated by this wrapper.",
+            "address": "0x22390b88c53d1631f673b8dcd91860267137b2c8",
+            "chain": "ethereum",
+            "heartbeatSec": 3660,
+            "observedAt": "2026-11-04",
+            "observedBlock": 26344306,
+            "failureDomainKeys": [
+              "inverse:invusd-oracle",
+              "inverse:timelock",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Chainlink",
+            "path": "ETH/USD primary: 8 decimals, answer 2417.57120971, updatedAt 2026-11-04T21:32:35Z. Proxy aggregator 0x7d4e742018fb52e48b08be73d041c18b21de6fb5, owner 0x21f73d42eb58ba49ddb685dc29d3bf5c0f0373ca, proposed aggregator zero. This primary round supplies the outer collateral feed timestamp at the pin.",
+            "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+            "chain": "ethereum",
+            "observedAt": "2026-11-04",
+            "observedBlock": 26344306,
+            "failureDomainKeys": [
+              "chainlink:ethereum:eth-usd",
+              "inverse:invusd-oracle",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "RedStone",
+            "path": "ETH/USD fallback: answer 2419.25210386, updatedAt 2026-11-04T20:31:59Z. EIP-1967 implementation 0x65ed6a4ac085620ee943c0b15525c4428d23e4db reads adapter 0xd72a6ba4a87ddb33e801b3f1c7750b2d0911fc6c for ETH. Proxy admin 0x8223a6271d1e0bda019ee55d545d7b86eff1f573 has owner 0x6906f3a09bcc1b7cd3b0c8626724299618df4472. Upgrade authority is observed; independent signer topology, key custody and fallback freshness guarantees are not asserted.",
+            "address": "0x67f6838e58859d612e4ddf04da396d6dabb66dc4",
+            "chain": "ethereum",
+            "observedAt": "2026-11-04",
+            "observedBlock": 26344306,
+            "failureDomainKeys": [
+              "redstone:ethereum:eth-usd",
+              "inverse:invusd-oracle",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "The exchange-rate adapter falls back from previewRedeem to convertToAssets, not to an independent price provider. The paired ETH/USD wrapper switches from Chainlink to RedStone only when the primary answer is stale against its governance-set 3,660-second heartbeat or outside aggregator bounds; it does not separately age-check the fallback, and a primary call or boundary-check revert propagates. Both price paths still use the same governed SwitchFeed, Curve INV/WETH observation and sINV exchange rate. The Lender retains the returned updatedAt: after 86,400 seconds it forces reduce-only and linearly unwinds the price over another 86,400 seconds, flooring the final value at one wei while liquidation remains enabled. A reverting or non-positive feed instead sets reduce-only and disables liquidation, collateral redemption and write-off. New debt also stops whenever protocol-marked collateral value is below total debt.",
+        "observedAt": "2026-11-04",
+        "observedBlock": 26344306,
+        "collateralParameters": [
+          {
+            "asset": "sINV",
+            "maximumLtvPct": 65,
+            "minimumCollateralRatioPct": 153.84615384615384,
+            "note": "Pinned collateralFactor 6500 bps; minimum debt 500 invUSD; redemption fee 250 bps (manager may raise to 500 before deadline). Liquidation incentive is zero at 65% LTV and increases linearly to 10% at 70% LTV. Collateral factor and 24-hour staleness threshold are immutable."
+          }
+        ],
+        "liquidationMechanism": "Any caller may liquidate once debt exceeds 65% of protocol-marked sINV collateral value. Each call burns a positive amount up to min(debt,max(debt/4, 10,000 invUSD)), further bounded by remaining collateral, and pays sINV with a zero-to-ten-percent incentive over 65–70% LTV. There is no configured delay; correct execution still depends on a usable oracle answer and available invUSD.",
+        "liquidationState": "callable",
+        "liquidationDelaySec": 0,
+        "backstop": "The exact Lender dependency set contains no Stability Pool, insurance fund or committed liquidation capital. An external liquidator supplies invUSD and receives the borrower's sINV collateral. Residual debt exceeding 100 times collateral value is written off and redistributed pro rata across surviving paid and free borrowers.",
+        "shutdownOrBadDebtBehavior": "There is no protocol-global pause or shutdown. Oracle reversion/non-positive answers disable liquidation, collateral redemption and write-off; stale answers instead unwind toward one wei. writeOff() burns no coins: it deletes the affected borrower's debt and reallocates it to survivors. If no borrower remains, the debt is deleted without a recipient and the outstanding coin liability remains.",
+        "debtSharePct": 100,
+        "failureDomainKeys": [
+          "inverse:invusd-oracle",
+          "inverse:sinv-rate",
+          "inverse:timelock",
+          "monolith:invusd-lender",
+          "ethereum",
+          "chainlink:ethereum:eth-usd",
+          "redstone:ethereum:eth-usd",
+          "curve:ethereum:inv-weth"
+        ],
+        "sources": [
+          {
+            "label": "Monolith V1 invUSD Lender exact-match verified source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+          },
+          {
+            "label": "ERC4626Feed exact-match verified source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5221571fb2c1eb20e905110fbad3a274529f58af?fields=sources"
+          },
+          {
+            "label": "SwitchFeed exact-match verified source; operator replacement and bypassable divergence guard",
+            "url": "https://sourcify.dev/server/v2/contract/1/0xeca2f329a011a4d464f8ef97e493974964911ed0?fields=sources"
+          },
+          {
+            "label": "DynamicFeeCurveFeed exact-match verified source; Curve/paired-feed composition and fee controls",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x4c871e951228c2f7224416c921e742a86ef8eecb?fields=sources"
+          },
+          {
+            "label": "sINV exact-match verified source and inherited ERC-4626",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x08d23468a467d2bb86fae0e32f247a26c7e2e994?fields=sources"
+          },
+          {
+            "label": "Pinned same-block eth_call and eth_getStorageAt reads at Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z); observations 2026-11-04T22:02:06Z–22:08:04Z; numeric block 0x191fb72, header number/hash/time matched before and after",
+            "url": "https://ethereum-rpc.publicnode.com"
+          },
+          {
+            "label": "Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+            "url": "https://eth.blockscout.com/block/26344306"
+          },
+          {
+            "label": "ChainlinkBasePriceFeed exact-match source: mutable heartbeat and primary/fallback admission",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x22390b88c53d1631f673b8dcd91860267137b2c8?fields=sources"
+          },
+          {
+            "label": "Chainlink ETH/USD primary proxy source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419?fields=sources"
+          },
+          {
+            "label": "RedStone ETH/USD transparent fallback proxy source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x67f6838e58859d612e4ddf04da396d6dabb66dc4?fields=sources"
+          },
+          {
+            "label": "RedStone EthereumPriceFeedEthWithoutRoundsV1 exact-match implementation source",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x65ed6a4ac085620ee943c0b15525c4428d23e4db?fields=sources"
+          },
+          {
+            "label": "Fallback ProxyAdmin exact-match source; owner-controlled upgrades",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x8223a6271d1e0bda019ee55d545d7b86eff1f573?fields=sources"
+          }
+        ]
+      }
+    ]
+  }
+}

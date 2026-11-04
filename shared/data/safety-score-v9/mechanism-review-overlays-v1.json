@@ -25448,6 +25448,94 @@
           "quality": "limited"
         }
       }
+    },
+    {
+      "assetId": "invusd-inverse-finance",
+      "archetype": "cdp",
+      "reviewedAt": "2026-11-04T22:12:01Z",
+      "sources": [
+        {
+          "label": "invUSD Monolith V1 Lender exact-match source: collateral, debt, interest, liquidations, redemption and PSM rules",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+        },
+        {
+          "label": "Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z)",
+          "url": "https://etherscan.io/block/26344306"
+        },
+        {
+          "label": "Pinned eth_call state via PublicNode, corroborated for Lender controls, wiring, debt and oracle price through Dwellir at the same block/hash",
+          "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "sINV ERC-4626 collateral exact-match source",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x08d23468a467d2bb86fae0e32f247a26c7e2e994?fields=sources"
+        },
+        {
+          "label": "ERC4626Feed exact-match source: sINV exchange rate multiplied by its INV/USD feed",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x5221571fb2c1eb20e905110fbad3a274529f58af?fields=sources"
+        },
+        {
+          "label": "SwitchFeed exact-match source: operator can replace the underlying price feed",
+          "url": "https://sourcify.dev/server/v2/contract/1/0xeca2f329a011a4d464f8ef97e493974964911ed0?fields=sources"
+        },
+        {
+          "label": "DynamicFeeCurveFeed exact-match source: Curve INV/WETH price oracle and governed fee cap",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4c871e951228c2f7224416c921e742a86ef8eecb?fields=sources"
+        },
+        {
+          "label": "Monolith liquidations: external funding, chunking, incentives and stale-price decay",
+          "url": "https://docs.monolith.market/protocol/liquidations.md"
+        },
+        {
+          "label": "Monolith redemptions: only borrower-elected free debt is redeemable",
+          "url": "https://docs.monolith.market/protocol/redemptions.md"
+        },
+        {
+          "label": "Monolith bad-debt socialization: write-off redistributes loss to remaining borrowers",
+          "url": "https://docs.monolith.market/protocol/bad-debt-socialization.md"
+        },
+        {
+          "label": "Monolith risks: single-collateral instances without cross-collateralization",
+          "url": "https://docs.monolith.market/security/risks.md"
+        }
+      ],
+      "notes": "Reviewed the exact Monolith V1 deployment at Ethereum block 26344306 (hash 0x83b0878ff157cb03da43c55d4fc122a7f85a61b7e080f5d8a42f26ee4b5c5dd1, 2026-11-04T22:01:23Z), not the swanUSD V2 instance. The measured CDP collateralization ratio is 2.9009050644: 31103.066519048901291393 sINV held by the Lender, multiplied by its own getCollateralPrice() of 10.888524866614357036 USD per sINV, divided by recognized totalPaidDebt 114188.891551953966740921 plus totalFreeDebt 2556.229609264083031379. This is collateral over recognized CDP debt, the live adapter denominator; pending unaccrued interest and the PSM book are excluded, so the ratio is not whole-supply reserve cover or independent financial assurance. The Coin supply is 115617.056531901423851502 and accruedLocalReserves are 1128.064838175648287506: supply plus unminted accrued reserves equals recognized debt plus freePsmAssets 0.000208859022366708 exactly. The 4.131431239334997350 sUSDS held by the Lender can withdraw 4.607440596960599420 USDS, but unrecognized vault appreciation is not spendable freePsmAssets and is not counted as sell capacity. CollateralizationParameters is limited: collateralFactor 6500 bps, minDebt 500 invUSD and stalenessThreshold 86400 seconds are fixed in this verified Lender, but the manager Safe can change interest half-life, free-debt bands, redemption fee and borrow rounding before the 2030-04-23T11:02:47Z deadline. The operator can replace roles and set the V1 local reserve fee up to 1000 bps without that deadline. The immutable outer oracle points to a governed SwitchFeed, currently using a governed DynamicFeeCurveFeed over the INV/WETH pool and ETH/USD, so oracle-address immutability does not establish independent or immutable pricing. These primary code and same-block anchors establish limited evidence; they establish no deployment-specific independent financial attestation or stress assurance. LiquidationMechanics is limited: permissionless liquidation burns caller-funded invUSD after the 65% collateral-factor trigger and pays sINV, with an incentive rising from zero at the trigger to 10% at 70% LTV. The per-call debt bound is min(debt, max(debt/4, 10000 invUSD)), additionally capped by remaining collateral value. PSM buy can supply invUSD against deposited USDS with a zero buy fee at the pin until the deadline, but no stressed liquidation, keeper coverage, sINV unwind-depth or historical liquidation-success claim is made. A reverting or non-positive feed disables liquidations; a price older than 24 hours instead decays over a further 24 hours while liquidations stay enabled. Backstop is weak because the verified Lender has no committed debt-offset capital, stability pool, insurance fund or auction: liquidators fund repayment themselves and writeOff socializes the loss across surviving free and paid borrowers. That documented absence of loss-absorbing capital is a structural deficiency, not an assumed missing balance. BranchIsolation is not applicable because this instance has one immutable collateral token and one debt book; distinct Factory markets are separate Lender/Coin/Vault deployments. ShutdownAndBadDebt is limited: code specifies deterministic permissionless write-off when debt exceeds 100 times collateral value, but has no global shutdown or recapitalization facility. If the final borrower is written off, no remaining borrower absorbs the deleted debt and supply is unchanged. No historical bad-debt census or absence-of-incidents claim is made. StructuralRedemption is limited: holders may redeem only against opted-in free-debt borrowers, one at a time, at the oracle price less the pinned 250-bps fee (mutable up to 500 bps before the deadline). The aggregate free-debt ceiling is 2556.229609264083031379 invUSD, about 2.21% of supply; per-borrower collateral and minimum-debt rules can further bind. The separate fee-free USDS sell rail has only 0.000208859022366708 USDS of recognized capacity at this pin, cross-bounded by sUSDS maxWithdraw, and neither that dust rail nor borrower elections establish supply-wide redemption.",
+      "metrics": {
+        "collateralizationRatio": 2.9009050644,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "The verified Lender commits no pool, insurance fund, auction balance or other capital to liquidation debt repayment. A liquidator must provide invUSD and receives sINV; elected free debt belongs to the separate holder redemption rail. No protocol-funded liquidation-capacity numerator exists.",
+          "sourceUrl": "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "quality": "limited"
+        },
+        "backstop": {
+          "quality": "weak"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "This Monolith instance is one Lender with one immutable sINV collateral token and a single free/paid debt book. It has no internal independent collateral branches; other Factory deployments have separate Coin/Lender/Vault books.",
+          "sourceUrl": "https://docs.monolith.market/security/risks.md"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
     }
   ]
 }

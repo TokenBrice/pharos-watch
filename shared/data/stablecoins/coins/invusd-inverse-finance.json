@@ -1,0 +1,101 @@
+{
+  "id": "invusd-inverse-finance",
+  "name": "invUSD",
+  "symbol": "invUSD",
+  "brand": "Inverse Finance",
+  "oneLiner": "invUSD is Inverse Finance's sINV-backed Monolith dollar, with reserve-limited USDS swaps and borrower-specific collateral redemptions.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent"
+  },
+  "collateral": "sINV governance-token vault shares held by a single Monolith V1 Lender on Ethereum at a 65% collateral factor; the same Lender holds a USDS peg-stability reserve through sUSDS, separate from borrower collateral.",
+  "pegMechanism": "Borrowers mint invUSD against sINV at up to 65% of its oracle value. Paid debt accrues interest; free debt pays no interest and is redeemable by holders against an opted-in borrower at the oracle price less a 2.5% fee, adjustable up to 5% before the April 2030 immutability deadline. The collateral price combines the sINV redemption rate with a governed INV/USD feed built from the Curve INV/WETH oracle and an ETH/USD primary/fallback feed. A 3-of-6 manager Safe can steer the interest rate without a timelock; Inverse governance controls the operator and oracle switch through a two-day Timelock. The PSM mints against USDS deposits and burns invUSD for USDS held in sUSDS, with sells limited by recognized PSM assets and vault withdrawal capacity. Buying stops at the deadline; selling continues. Staking through the separate sinvUSD vault earns borrower interest.",
+  "mechanismArchetype": "cdp",
+  "detailProvider": "defillama",
+  "geckoId": "inverse-usd",
+  "links": [
+    {
+      "label": "Website",
+      "url": "https://app.monolith.market/"
+    },
+    {
+      "label": "Docs",
+      "url": "https://docs.monolith.market/"
+    },
+    {
+      "label": "Inverse Finance",
+      "url": "https://www.inverse.finance/"
+    },
+    {
+      "label": "Token contract",
+      "url": "https://etherscan.io/token/0x5377680b5986296aa4f9e684e5315a4f24832e56"
+    },
+    {
+      "label": "Lender contract",
+      "url": "https://etherscan.io/address/0xf8b349da9244253288f6853835e6582955fd49c9"
+    }
+  ],
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x5377680b5986296aa4f9e684e5315a4f24832e56",
+      "decimals": 18
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "monolith-lender",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "invusd-inverse-finance",
+    "display": {
+      "url": "https://etherscan.io/address/0xf8b349da9244253288f6853835e6582955fd49c9#readContract",
+      "label": "Monolith V1 Lender"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "lenderAddress": "0xf8b349da9244253288f6853835e6582955fd49c9",
+      "collateral": {
+        "address": "0x08d23468a467d2bb86fae0e32f247a26c7e2e994",
+        "decimals": 18,
+        "name": "sINV collateral (Monolith Lender)",
+        "risk": "high"
+      },
+      "psmAsset": {
+        "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+        "decimals": 18,
+        "name": "USDS"
+      },
+      "psmVault": {
+        "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "name": "sUSDS PSM reserve (Monolith Lender)",
+        "risk": "low",
+        "coinId": "susds-sky",
+        "depType": "collateral"
+      },
+      "psmAssetUnitValueUsd": 1,
+      "redemptionOutputAssetKey": "usds-sky",
+      "sourceUrls": [
+        "https://docs.monolith.market/protocol/peg-stability-module",
+        "https://sourcify.dev/server/v2/contract/1/0xf8b349da9244253288f6853835e6582955fd49c9?fields=sources"
+      ]
+    }
+  },
+  "collateralQuality": "exotic",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "launchDate": "2026-04-24",
+  "llamaId": "394",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Reserve-limited exits",
+      "message": "USDS swaps are limited by the Lender\u2019s recognized PSM balance and sUSDS withdrawal capacity. Collateral redemption is a separate route against borrowers who elect free debt; neither route promises a full-supply exit at par."
+    }
+  ]
+}

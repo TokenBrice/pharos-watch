@@ -467,6 +467,7 @@
     "scusd-rings": "core-stablecoin",
     "weusd-picwe": "core-stablecoin",
     "iusd-initia": "stablecoin-variant",
+    "invusd-inverse-finance": "core-stablecoin",
     "usdxl-last": "core-stablecoin",
     "dusd-fluid": "core-stablecoin",
     "bnusd-balanced": "core-stablecoin",
