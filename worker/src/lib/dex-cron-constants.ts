@@ -95,6 +95,7 @@ const USD_REFERENCE_SYMBOLS = new Set([
 ]);
 
 const DEX_SYMBOL_ALIASES: Record<string, string> = {
+  "USD\u20ae": "USDT",
   "USD₮0": "USDT",
   "USDT0": "USDT",
   "AUSDC": "USDC",
