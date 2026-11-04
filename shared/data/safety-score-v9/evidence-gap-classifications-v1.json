@@ -8875,10 +8875,10 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T22:37:19Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (PilotFiat)",
+      "reviewedAt": "2026-11-04T22:03:48Z",
+      "reviewer": "Issue 1707 fresh primary-evidence review 2026-11-04",
       "sourcesRefs": [
-        "source:40c37ab84be522d224461d1c",
+        "source:2d1d94b76db58b885b051b7f",
         "source:629a11e2db59f0f39387b813"
       ],
       "searchedSurfacesRefs": [
@@ -8889,9 +8889,10 @@
         "surface:307fdf36d19347db305fdf16",
         "surface:20111568436a47457c4fe91c",
         "surface:cb5889ca7f2d9e14f6fcb3a4",
-        "surface:825ed83f94973ea1f5749bc1"
+        "surface:825ed83f94973ea1f5749bc1",
+        "surface:5340d4c94c1865b22dabe0fe"
       ],
-      "rationale": "The exact whole-slice liquidityHorizon for allocated reserve gold is undisclosed. The full August gold inventory, vault/source identities, whitepaper, terms, dashboard docs, product FAQ and redemption/wire help disclose ownership and customer conversion mechanisms but no funded or enforceable time bound to realize the entire scoped gold position into USD. Instant token transfer, indicative quotes and market-wide gold volume cannot establish immediate whole-book liquidity."
+      "rationale": "The September 30 report, signed October 23, updates the complete allocated-gold reserve to 435,306 fine troy ounces while retaining the same asset type and named vault providers. Neither its inventory nor the re-read PAX Gold terms supplies a funded or enforceable time bound to realize the entire reserve into USD. The prior product, whitepaper, dashboard and redemption-help research is retained; token transfer, quotes and market-wide volume remain insufficient for whole-position liquidity."
     },
     {
       "id": "uw-syzusd-yuzu-9fa8402715c41797",
@@ -10154,19 +10155,20 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:16:31Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R77)",
+      "reviewedAt": "2026-11-04T22:03:48Z",
+      "reviewer": "Issue 1707 fresh primary-evidence review 2026-11-04",
       "sourcesRefs": [
         "source:7930a285dffaef8bc5fe618d",
-        "source:91e249ee55c3148de0699284"
+        "source:a969760e3b85fad189300e39"
       ],
       "searchedSurfacesRefs": [
         "surface:5590316971a6f3bead3c99bc",
         "surface:1b91e10b93df1c043b612677",
         "surface:4ea813212e616c38fcf1a646",
-        "surface:6e1836d355ccadd392bccd34"
+        "surface:6e1836d355ccadd392bccd34",
+        "surface:661c757c5112aac6b6d03d85"
       ],
-      "rationale": "The BNY Mellon cash deposit slice has no disclosed contractual maximum maturity. August report lists amounts and bank identity but maturity dates only for Treasury CUSIPs; governing terms authorize deposit accounts without demand-deposit characterization or maturity constraint. Cash liquidity is not proof of zero maturity; the Treasury three-month mandate cannot be applied to deposits."
+      "rationale": "The September 30 report, examined October 26, records USD 20,789,144.46 cash deposits separately from the Treasury CUSIP maturity roster and names BNY Mellon as the sole segregated-account provider. It still gives no contractual maximum maturity or demand-deposit characterization for the bank cash. The re-read FIDD terms permit deposit accounts without specifying their tenor. Cash liquidity and the Treasury mandate cannot supply a deposit maturity maximum."
     },
     {
       "id": "rs-020-nwisdom-nest-exit-settlement-20261029",
@@ -21964,10 +21966,10 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:46:41Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W2R07)",
+      "reviewedAt": "2026-11-04T22:03:48Z",
+      "reviewer": "Issue 1707 fresh primary-evidence review 2026-11-04",
       "sourcesRefs": [
-        "source:c87e699aa6ed8ac0d0b51492",
+        "source:fe29d59ee36818add46622b5",
         "source:662a17e6e69851fe9a40507b",
         "source:064691a71c6ab1e8e16002c5"
       ],
@@ -21976,9 +21978,10 @@
         "surface:e3706288f6e7bd890aa4b79e",
         "surface:ecef96acf5ebbecde0694e2b",
         "surface:e07feda363f17dddab9eff72",
-        "surface:7deb8c8abb3f764367005af5"
+        "surface:7deb8c8abb3f764367005af5",
+        "surface:96441a8c07660c68af13f08d"
       ],
-      "rationale": "No whole-slice numerical maturityDaysMax is disclosed for PYUSD's bank deposits. The examination expressly labels $110,919,918 of $111,173,415 as uninsured demand deposits, but does not provide a contractual maturity roster for every insured/network account or an all-account tenor mandate. Terms, deposit-placement disclosures, the current archive and referenced reserve guidance add no exact maximum. Demand claims have no scheduled maturity; do not fabricate zero, reclassify the bank claim as cash, or extend the demand-deposit description beyond its stated scope."
+      "rationale": "The September 30 report, signed October 23, records USD 100,413,388 cash including USD 100,160,089 uninsured demand deposits, without an all-account numerical maturity maximum. The report-wide applied GENIUS deposit criterion supports the separately authored maturity-not-applicable bound; it does not turn an on-demand bank claim into zero-day debt. The re-read stablecoin terms and deposit-placement disclosures add no numerical tenor schedule. Preserve the bank-deposit class and leave maturityDaysMax absent."
     },
     {
       "id": "uw-ousg-ondo-finance-e3e325828f85cd55",
@@ -91495,6 +91498,39 @@
         "excerpt": "cbLTC is a wrapped token backed 1:1 by LTC held by Coinbase... Supply by network: Base 0xcb17C9Db87B595717C857a08468793f5bAb6445F 86,277.281 CBLTC. Total reserve 86,335.3 LTC; total supply 86,277.28 cbLTC.",
         "assertion": "The issuer and custodian publishes a 1:1 LTC backing statement, a reserve-versus-supply table and the exact Base deployment address, establishing cbLTC as a custodied major-L1 wrapper rather than an unclassified exposure."
       }
+    },
+    {
+      "id": "source:2d1d94b76db58b885b051b7f",
+      "value": {
+        "url": "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf",
+        "observedAt": "2026-11-04T22:03:48Z",
+        "datumAsOf": "2026-09-30",
+        "location": "Exhibit B p.6; Exhibit C p.7",
+        "excerpt": "London Good Delivery gold in fine troy ounces of gold",
+        "assertion": "The September report reconciles 435,306 fine troy ounces to redeemable tokens and names the vault providers, but discloses no whole-position USD realization deadline."
+      }
+    },
+    {
+      "id": "source:a969760e3b85fad189300e39",
+      "value": {
+        "url": "https://fwc.widen.net/content/azzc1igqzr/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---September-2026.pdf?u=5lvvtn&download=true",
+        "observedAt": "2026-11-04T22:03:48Z",
+        "datumAsOf": "2026-09-30",
+        "location": "Reserve report p.4 and p.5 (PDF pp.8-9), cash and note 4",
+        "excerpt": "Cash deposits are not eligible for FDIC insurance.",
+        "assertion": "September cash of USD 20,789,144.46 is held in segregated BNY Mellon deposit accounts; neither the cash row nor note 4 identifies a contractual maturity maximum or demand-deposit character."
+      }
+    },
+    {
+      "id": "source:fe29d59ee36818add46622b5",
+      "value": {
+        "url": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf",
+        "observedAt": "2026-11-04T22:03:48Z",
+        "datumAsOf": "2026-09-30",
+        "location": "Exhibit B, Cash, p.7",
+        "excerpt": "the uninsured FDIC demand deposits at commercial banks totaled $71,844,794 and $100,160,089, respectively.",
+        "assertion": "The September report identifies USD 100,413,388 total cash and USD 100,160,089 uninsured demand deposits; it gives no numerical contractual maturity maximum for the whole cash category."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -105381,6 +105417,18 @@
     {
       "id": "surface:447e0aae12331e25e91ccc53",
       "value": "https://www.steakhouse.financial/docs/products/coinbase/steakhouse-high-yield-edition-coinbase"
+    },
+    {
+      "id": "surface:5340d4c94c1865b22dabe0fe",
+      "value": "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf"
+    },
+    {
+      "id": "surface:661c757c5112aac6b6d03d85",
+      "value": "https://fwc.widen.net/content/azzc1igqzr/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---September-2026.pdf?u=5lvvtn&download=true"
+    },
+    {
+      "id": "surface:96441a8c07660c68af13f08d",
+      "value": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf"
     }
   ]
 }

@@ -218,10 +218,10 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   },
   {
     adapter: "reservoir",
-    reviewer: "pharos-live-reserve-upgrade",
-    reviewedAt: "2026-09-09",
+    reviewer: "Pharos issue #1707 exact USDG-vault review",
+    reviewedAt: "2026-11-04",
     sourceFiles: ["worker/src/cron/reserve-adapters/reservoir.ts"],
-    rationale: "Maps the reviewed exact USDAT asset category to usdat-saturn; other collateral and strategy buckets remain unlinked.",
+    rationale: "Maps reviewed stablecoin categories and exact vault identities to their tracked underlying claims, retaining protocol-position risk. Arbitrum block 521297920 (2026-11-04T21:57:16Z), read through https://api-arbitrum-mainnet-archive.n.dwellir.com, binds Gauntlet USDG Premium 0x390c1bb01f3f627144a40617e287d4ce3d5abcfa and Steakhouse USDG Pro 0xbeeff72b77e7584a450e887125f25e8d8819016a asset() to tracked USDG 0x004b506865409877c9fa29bfb1eba929984b9bbc. Exact chain/address matching rejects label-only USDG claims; neither vault counts as stable-bucket cash or immediate PSM capacity. Unreviewed positions remain unlinked. Prior 2026-09-09 disposition retained: Maps the reviewed exact USDAT asset category to usdat-saturn; other collateral and strategy buckets remain unlinked.",
   },
   {
     adapter: "usdai-proof-of-reserves",

@@ -18,11 +18,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
-      "sha256": "b478a1e2b0b51f0cc07a70b6ba3c052c94518a979bbb506dc8d1a8b81bacfc69"
+      "sha256": "c1e377992b1e5639f650c2825910a4c247558c4a0e5ee837c977ce4d4196c126"
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
-      "sha256": "88f1b7b90cca585c8e28dcd3685298577f9c8e8c1dd932c3b3e6877e32950cca"
+      "sha256": "bab5d35e02576c55276afed8989d989a6adb6539b18eff3f259112146a089544"
     },
     {
       "path": "shared/data/safety-score-v9/incident-reviews-v1.json",
@@ -46,7 +46,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "6fa5a2be0bd64f8936ba4d4d96f5e02ac4a9421e3905add76aa92f6bb4205080"
+      "sha256": "bbfc8eb3473c116197026f9c08e9221777b49ffa8b6f14fd135522a9bc4d3b79"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -54,7 +54,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
-      "sha256": "a8de030d647fc02fa50539804f10d33d0a0ddd555024a4b78e5b4b1b6688e065"
+      "sha256": "cad7536b52146b7cb0e606264c3460175f2c8693309a76fe4ca1489880184088"
     },
     {
       "path": "shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
@@ -78,15 +78,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "00c32e1792e54b39777ee8683a2ebbd503fbf1a0c5bb00dcaeafb11b5af76ff9"
+      "sha256": "b8d422f11b8a92505e6ccd5740c4303251fa9f5bd652cc6336142c1b17f10db1"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "2fa43fd80186b87f7f7b2be50f70dfef2906a73188bec2aef40d5f91bb9f972a"
+      "sha256": "d7bfb2a9189de03b89c9a37ca6b8561bcde0693dc59970181381fb360e5ba484"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "9b6a52dda04033f041091528d93167a0a8293fc0bf451017899e9121a4a54760"
+      "sha256": "1cf3b718fbe19bf16422a6c02bb85414a5ccf725046b90fc053f5eccec527d3f"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-04-block-26341087-shock-coverage.json.gz"
     }
   ],
-  "digest": "5cd0bdd2774f6fed288ecafea119261a2350a202dbf8d394e01266e827c11101"
+  "digest": "8cdd6c26537bc248efb8ac9d6fe0d95e7b7da9a94a96a6bdd5badcd92d78b267"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -14814,9 +14814,21 @@
         {
           "label": "Ethena mint/redeem contract documentation (atomic execution, supported assets, custodian routes, and per-block limits)",
           "url": "https://docs.ethena.fi/solution-design/minting-usde/mint-and-redeem-key-functions"
+        },
+        {
+          "label": "Ethena weekly PoR at 2026-10-30T04:03:46Z: Harris & Trotter, Chainlink and LlamaRisk confirmed deltaNeutral and overCollateralized (body SHA-256 9c2d3268da85ceb57332f474f45ebbfb40c9df5f8663c99f9c99e100b3ed2437; read 2026-11-04)",
+          "url": "https://app.ethena.fi/api/por"
+        },
+        {
+          "label": "Ethena collateral positions at 2026-11-04T15:59:52Z: Liquid Cash strategy basket and crypto positions (body SHA-256 1229778f746ab096e3d83f7f870b137d7075ec070cc626e045e5a98c290bc204; read 2026-11-04)",
+          "url": "https://app.ethena.fi/api/positions/current/collateral"
+        },
+        {
+          "label": "Ethena collateral breakdown read 2026-11-04: Liquid Stables, DeFi Lending, Institutional Lending and RWA are distinct categories; response has no upstream timestamp (body SHA-256 7f44e7f2b9c9dc61880025d2925efb62581e05191688ece7cd9503e1389e6f83)",
+          "url": "https://app.ethena.fi/api/collateral-breakdown"
         }
       ],
-      "notes": "Reviewed 2026-07-20 using the same current parent-system evidence already accepted for the live sUSDe mechanism review. hedgeCoverageRatio 1 is an attested policy-state value: Ethena's 2026-07-17 weekly PoR marks deltaNeutral=true and overCollateralized=true with confirmations from Harris & Trotter, Chainlink, and LlamaRisk; position-level notionals are not published. The collateralization API snapshot at 2026-07-20 16:00:16 UTC reports $4,012,242,125.44 backing against $4,008,043,480.5194864 token supply, giving marginBufferPct 0.104755 as the protocol-wide excess-backing buffer, not per-venue margin headroom. Reserve Fund assets of $62,095,100.46669457 divided by supply give lossAbsorptionShare 0.015493. Ethena documents off-exchange custody with providers including Copper and Ceffu, programmatic hedge adjustment as supply changes, dynamic allocation during adverse funding, a Reserve Fund that absorbs negative revenue before core backing, and bounded atomic mint/redeem operations. Those current measurements and independent weekly confirmations support adequate ratings across the six reviewed components, consistent with the same-system sUSDe precedent. NOT established: per-venue hedge notionals and shares, account-level segregation and legal treatment at each custodian, initial/maintenance margin and liquidation thresholds, executable stressed unwind depth, or a guarantee that the Reserve Fund will be replenished (its allocation remains governance-controlled).",
+      "notes": "Reviewed 2026-07-20 using the same current parent-system evidence already accepted for the live sUSDe mechanism review. hedgeCoverageRatio 1 is an attested policy-state value: Ethena's 2026-07-17 weekly PoR marks deltaNeutral=true and overCollateralized=true with confirmations from Harris & Trotter, Chainlink, and LlamaRisk; position-level notionals are not published. The collateralization API snapshot at 2026-07-20 16:00:16 UTC reports $4,012,242,125.44 backing against $4,008,043,480.5194864 token supply, giving marginBufferPct 0.104755 as the protocol-wide excess-backing buffer, not per-venue margin headroom. Reserve Fund assets of $62,095,100.46669457 divided by supply give lossAbsorptionShare 0.015493. Ethena documents off-exchange custody with providers including Copper and Ceffu, programmatic hedge adjustment as supply changes, dynamic allocation during adverse funding, a Reserve Fund that absorbs negative revenue before core backing, and bounded atomic mint/redeem operations. Those current measurements and independent weekly confirmations support adequate ratings across the six reviewed components, consistent with the same-system sUSDe precedent. NOT established: per-venue hedge notionals and shares, account-level segregation and legal treatment at each custodian, initial/maintenance margin and liquidation thresholds, executable stressed unwind depth, or a guarantee that the Reserve Fund will be replenished (its allocation remains governance-controlled). Follow-up reviewed 2026-11-04: the positions API at 2026-11-04T15:59:52Z reports $3,768,088,935.77 of Liquid Cash within $4,617,779,637.77 of position backing (81.599583%). The separate collateral breakdown identifies Liquid Stables, DeFi Lending, Institutional Lending and RWA rather than cash alone; it has no upstream timestamp and is contextual issuer disclosure, not a contemporaneous reconciled allocation or immediate-liquidity measurement. The October 30 weekly PoR freshly confirms the qualitative delta-neutral and overcollateralized state, supporting the component-only hedgeReconciliation review below without treating either boolean as numeric hedge coverage. The July 20 whole-overlay date, dedicated loss-absorption metric and five sibling component clocks remain historical; no venue-margin, custody-allocation, lending-loss or stressed-unwind assurance is renewed by these aggregate surfaces.",
       "metrics": {
         "hedgeCoverageRatio": null,
         "marginBufferPct": null,
@@ -14839,7 +14851,18 @@
           "quality": "adequate"
         },
         "hedgeReconciliation": {
-          "quality": "adequate"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-10-30T04:03:46Z",
+            "reviewer": "Pharos issue 1707 primary-evidence review (2026-11-04)",
+            "rationale": "Ethena's dated October 30 weekly proof-of-reserves observation reports deltaNeutral=true and overCollateralized=true, with confirmations from Harris & Trotter, Chainlink and LlamaRisk. Those named independent confirmations support adequate qualitative hedge reconciliation for the reported system state. They publish neither reconciled hedge notionals nor numeric whole-book hedge coverage, margin headroom, funding stress or executable unwind capacity. This component-only review retains the source observation time; it does not renew the July 20 whole overlay, metrics or sibling components, and does not classify the Liquid Cash strategy basket as immediately liquid cash.",
+            "sources": [
+              {
+                "label": "Ethena weekly PoR at 2026-10-30T04:03:46Z: Harris & Trotter, Chainlink and LlamaRisk confirmed deltaNeutral and overCollateralized (body SHA-256 9c2d3268da85ceb57332f474f45ebbfb40c9df5f8663c99f9c99e100b3ed2437; read 2026-11-04)",
+                "url": "https://app.ethena.fi/api/por"
+              }
+            ]
+          }
         },
         "fundingBasisStress": {
           "quality": "adequate"
