@@ -169,6 +169,9 @@
         "contractAddress": "GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq",
         "representationId": "solana:FmeHf1FQJhXUWHVfLACCHJ8KvAJ7jpiDvukz8ZHP7XLq",
         "protocol": "LayerZero OFT",
+        "providerKeys": [
+          "layerzero"
+        ],
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-validated-network",
@@ -182,6 +185,10 @@
           {
             "label": "Nest nOPAL integration guide",
             "url": "https://docs.nest.credit/developers/integration-guides/nopal/"
+          },
+          {
+            "label": "Nest LayerZero OFT cross-chain architecture (accessed 2026-11-04)",
+            "url": "https://docs.nest.credit/about/cross-chain"
           },
           {
             "label": "Nest current nOPAL vault registry",

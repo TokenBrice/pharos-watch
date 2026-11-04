@@ -116,6 +116,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x7f4546ef315efc65336187fe3765ea779ac90183",
         "protocol": "Securitize native issuance",
+        "providerKeys": [
+          "wormhole"
+        ],
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
@@ -143,6 +146,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x14d72634328c4d03bba184a48081df65f1911279",
         "protocol": "Securitize native issuance",
+        "providerKeys": [
+          "wormhole"
+        ],
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
@@ -170,6 +176,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x2255718832bc9fd3be1caf75084f4803da14ff01",
         "protocol": "Securitize native issuance",
+        "providerKeys": [
+          "wormhole"
+        ],
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",
@@ -197,6 +206,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1",
         "protocol": "Securitize native issuance",
+        "providerKeys": [
+          "wormhole"
+        ],
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",

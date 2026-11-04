@@ -221,6 +221,9 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762",
         "protocol": "Chainlink CCIP",
+        "providerKeys": [
+          "chainlink-ccip"
+        ],
         "issuanceModel": "bridge-representation",
         "routeClass": "third-party",
         "riskTier": "external-lock-mint",

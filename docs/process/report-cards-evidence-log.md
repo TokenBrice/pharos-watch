@@ -6,6 +6,59 @@ These records preserve review dates, scope limits and operator observations form
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
+## Selected Bridge Route Research — 2026-11-04
+
+Issue [#1683](https://github.com/TokenBrice/pharos-watch/issues/1683), first slice: ACRED, nOPAL, sUSDat, syrupUSDG and VBILL. A read-only accepted public report at `clockSec: 1793830786` (`2026-11-04T22:19:46Z`) identified the exact routes carrying `selected-bridge-route-unresolved`; this is a diagnostic observation, not a compiler capture or candidate replay. Its identities were:
+
+- Publication: `report-cards:v9:v1:0d282f442d1f3c4505ba719ee6be003f7f248fb98cbf45953cb1c50f10c320cb`.
+- Base input: `report-cards-input:v1:b3ab321838cedb2b32bfe382ea9c5ebbd2773db66c12de874df02bac7baa426c`.
+- Chain supply: `chain-supply:v1:4ca05bfd9972eccf32c1a00bcaa61c9a93e1198efc866cceccddf8614f795f42`.
+- Registry: `sha256:1c6310b65c38e8381ad2a8b5df4c642720e5773192b135271cb20d04a36c9b17`.
+
+The warning does not imply an unreviewed route classification. `controlSemanticsAreKnown()` also requires known incident state, authority and loss semantics, and no unresolved semantic scoped question. Deployment incident closure requires provider keys, current provider and issuer-surface reviews, and the contributor-matched descriptor/current v2 screening certificate. Provider metadata alone grants none of that closure.
+
+This curation adds eight missing provider-key joins on the exact warning-bearing routes below. Existing classifications, controller evidence, review clocks, incident observations and retired reviews are retained. No new negative-incident review or observation-table record is authored: the required complete evidence packet was not established. No selected-route warning is expected to clear from these keys alone. This is evidence curation under v10.42, with no methodology/version change; a fresh replay and production acceptance remain separate verifier work.
+
+### ACRED — deferred
+
+Routes: `aptos:0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88` and `solana:FubtUcvhSCr3VPXEcxouoQjKQ7NWTCzXyECe76B7L3f8`. Their merged bridge controls end in `6ceb66b9323272b3535f` and `304fae0405987dbe982e`; both retain unknown `incidentState`. The current Wormhole provider review covers ACRED's reviewed EVM routes, not these non-EVM lanes.
+
+The [issuer feed](https://public-feed.securitize.io/asset-info?symbol=ACRED), accessed November 4, still leaves the Aptos/Solana bridge and relayer fields empty and their Wormhole chain IDs zero. The [Wormhole/Securitize deployment announcement](https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized) describes customized platform contracts; it does not bind these exact non-EVM transport programs. No new provider key or controller evidence is inferred. Re-review when exact non-EVM transport/authorization identities and supported lane screening, issuer and provider witnesses are available; neither selected-route reason clears.
+
+### nOPAL — provider identity promoted, closure deferred
+
+Route: `solana:GArhnnDj3GYhmQeApKVXaRv4TQFwhPcs3SNF6FXsTeXq`; authored control `nopal-solana-oft-mint-authority`, merged suffix `7f5dbc1163a4d56f170c`. The missing datum is `incidentState`, not the already reviewed 1-of-2 mint-authority identity. Existing slot `452213105` evidence is retained at its original clock.
+
+Added `providerKeys: ["layerzero"]`, supported by the [exact issuer registry](https://api.nest.credit/v1/vaults/nest-opal-vault) and [Nest's LayerZero OFT architecture](https://docs.nest.credit/about/cross-chain), re-read November 4. There is no covering Solana incident review, issuer-surface review or LayerZero provider review. The current descriptor generator supports EVM emitters and supplies no Solana descriptor/certificate. Re-review after Solana screening support and exact witnesses exist; the selected-route reason remains. Arc/Monad/Robinhood classification and nOPAL's nonmaterial unmatched supply are outside this slice.
+
+### sUSDat — provider identity promoted, closure deferred
+
+Routes: `ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7` and `monad:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25`; merged suffixes `53c8ef57026cadc793ff` and `9fafab941de27b2e47ae`. Both retain unknown incident state. Ethereum also retains the explicit `susdat-ethereum-ccip-lockbox` upstream owner/validator execution question; destination admin histories and bypass scope remain unproved.
+
+Added `providerKeys: ["chainlink-ccip"]` to these two routes. The [current CCIP directory](https://docs.chain.link/ccip/directory/mainnet/token/sUSDat), re-read November 4, binds the exact Ethereum LockRelease pool `0xf3fc7fde5081192177f38895e57a1489e4bd56f2` and Monad BurnMint pool `0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e`. Existing provider review `provider-chainlink-ccip-rmn-set-20261029` already covers both routes; a provider-review renewal is unnecessary. Both descriptor rows remain `no-reviewed-inventory`, and no issuer-surface witness exists. Re-review with complete exact emitter/certificate and issuer evidence plus resolved semantic questions; neither reason clears.
+
+### syrupUSDG — provider identity promoted, closure deferred
+
+Route: `arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762`; merged suffix `70efad03630d893e72a2`. Unknown incident state remains after the route aggregate gained `arbitrum-maple-token-admin`; the old Robinhood/Ethereum reviews do not cover this Arbitrum contributor set.
+
+Added `providerKeys: ["chainlink-ccip"]`. [Maple's exact-product cross-chain table](https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md) and the [CCIP directory](https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG), re-read November 4, identify this token and pool `0x5355292a5c36c4094b93fb62aa1fefca6e28b75f`. The existing Chainlink provider review covers it; the descriptor remains `no-reviewed-inventory` with all five contributors, and an issuer-surface witness is absent. Re-review when that complete screening packet is available; the selected-route reason remains. Pool directory identity does not renew earlier controller or execution observations.
+
+### VBILL — provider identity promoted, authorization deferred
+
+Routes: `avalanche:0x7f4546ef315efc65336187fe3765ea779ac90183`, `bsc:0x14d72634328c4d03bba184a48081df65f1911279`, `ethereum:0x2255718832bc9fd3be1caf75084f4803da14ff01` and `solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1`. Their synthetic transfer controls retain unknown authority, claim impairment, economic loss scope and incident state.
+
+Added `providerKeys: ["wormhole"]` on all four, supported by [Wormhole's exact-product announcement](https://wormhole.com/blog/securitize-announces-wormhole-as-official-interoperability-provider-for-vaneck-vbill) and the issuer launch already cited by `vbill-wormhole-native-transfer-rail`. The [issuer feed](https://public-feed.securitize.io/asset-info?symbol=VBILL) now identifies EVM adapter `0x1fcce143f8a1822466a0012e1e6f70c0894a60be`. Pinned helper reads independently bind each EVM adapter to its exact token, common owner `0x59c1eacec450c57dcb9b8725d0f96635c2b676ee`, implementation `0x242eb2af513d5363aa8856c18ac852111dec0425`, relayer `0x27428dd2d3dd32a4d7f7c497eaaa23130d894911`, unpaused state and reciprocal peers for Wormhole IDs 2/4/6:
+
+| Chain | Block / UTC timestamp | Block hash | Keyless read endpoint |
+| --- | --- | --- | --- |
+| Ethereum | 26344477 / 2026-11-04T22:35:47Z | `0x4b86bbe912659d32440b039afb103064a95e76a6fd0defc45291f7d08b1d4766` | `https://ethereum-rpc.publicnode.com` |
+| BSC | 131705830 / 2026-11-04T22:35:49Z | `0x2ce41bbdf7afa7e6d312113be99ee429444cb84f39a0cd73ff30db67c8da696b` | `https://bsc-dataseed.binance.org` |
+| Avalanche | 99441960 / 2026-11-04T22:35:48Z | `0x974156122d9088f3fc23fb17054c1d90cced3f3767de0d3d878f71ef582ad813` | `https://api.avax.network/ext/bc/C/rpc` |
+
+Observed bridge batches: `2026-11-04T22:36:27.822Z`, `22:36:29.147Z`, `22:36:30.314Z` respectively. Methods were pinned `eth_call` for `owner()`, `paused()`, `dsToken()`, `wormholeRelayer()`, `getImplementationAddress()`, `whChainId()` and `bridgeAddresses(uint16)` (2/4/6), plus `eth_getCode(owner)`. Separate same-block token `getDSService(1)` and trust `getRole(address)` reads returned role 0 (NONE) for every adapter and role 1 (MASTER) for the owner. BSC's public trust-service read (`getDSService(1)`) failed with `missing trie node`; an explicitly selected same-pin Alchemy read at keyless `https://bnb-mainnet.g.alchemy.com/v2/` succeeded, without treating the failed read as evidence.
+
+The [verified adapter](https://eth.blockscout.com/api/v2/smart-contracts/0x242eb2af513d5363aa8856c18ac852111dec0425) burns before dispatch and issues on receive; the [verified Ethereum token implementation](https://eth.blockscout.com/api/v2/smart-contracts/0xaf88485377cca5e690e7dcb1ba81370f0b575156) gates those actions by trust role. Adapter identity and an unpaused flag do not prove current authorized transfer execution. No active bridge-mint or structured owner-control closure is authored. The Solana manager remains unidentified, and exact provider/issuer/screening closure is absent. Re-review on documented active authorization and complete lane witnesses; all four selected-route reasons remain.
+
 ## DOLA and sDOLA Issuer Follow-up — 2026-10-29
 
 Inverse Finance's 28 October answers to the 18 October questionnaire were checked against Ethereum block 26296822 (`2026-10-29T07:12:23Z`). The DOLA reserve adapter now probes the canonical Peg Stability Module (PSM), `0x1d02f2841afa3cc20435a8c804c24deac5f30dfa`, which proposal 343 made canonical and to which the PSM Fed `0x67fc…f9cc` points. It previously probed the drained original. A `fed()` identity pin now fails closed on a retired generation. At the pin the canonical PSM had zero accounted supply and zero reserves, so the redemption route stays excluded. The questionnaire's claim that the enabled Fed pointed to an older PSM had the generations reversed.
