@@ -2,8 +2,8 @@
   {
     "version": "6.72",
     "title": "Separate observed DEX comparison anchors from trusted quote valuation; bound Reserve USD3 pool recovery by a trusted baseline",
-    "date": "2026-11-04",
-    "effectiveAt": 1793750400,
+    "date": "2026-11-05",
+    "effectiveAt": 1793836800,
     "summary": "Measured DEX prices can publish against a fresh observed single-source primary comparison price without admitting that primary as a trusted quote-token valuation or depeg confirmer. Reserve USD3's missing-only Curve USD3/scrvUSD fallback must remain within 3% of a recent trusted published USD3 observation. Its own soft quote cannot create or renew that baseline.",
     "impact": [
       "The DEX source stage keeps a separate target-only primary comparison map. Positive observed high or single-source prices with an original clock inside the existing 1,800-second primary budget may anchor outlier, deviation and display-ratio guards; missing, nominal, cached, fallback, low-confidence, invalid, future and stale observations still withhold. The existing trusted quote-token map and provenance are unchanged.",
@@ -12,7 +12,7 @@
       "The exact Ethereum USD3/scrvUSD pool retains token-identity, 1,000-unit inventory floors, 1-versus-10-USD3 quote-impact checks and the five-minute pool-block and trusted scrvUSD-parent budgets. The older input clock dates the derived USD price, which retains curve-thin-onchain fallback confidence with no replay-safe or standalone depeg authority.",
       "Before admitting that quote, the route selects the newest eligible original USD3 observation from the previous publication or the existing replay-safe price cache. Each candidate needs explicit valid observation and publication-sync clocks, must have qualified as authoritative under the existing depeg-trust policy at its original publication time, and must retain an original observation no older than 24 hours. Reusing or republishing retained cache evidence never refreshes those clocks.",
       "The pool-derived USD value must be within 3% of that baseline, a bounded allowance for slow NAV movement rather than independent pool corroboration. Missing, stale, malformed or untrusted baseline evidence and excessive divergence withhold the fallback with a machine-readable no-quote reason. A curve-thin-onchain observation cannot qualify as or renew its own baseline.",
-      "No RToken oracle-range midpoint is promoted to executable NAV, no usable incumbent is replaced, and supply and market-cap preference remain unchanged. Provisional activation is 2026-11-04 00:00 UTC (1793750400), to be re-dated at release. Local checks and this version entry do not establish production acceptance; acceptance requires observing a qualifying production execution."
+      "No RToken oracle-range midpoint is promoted to executable NAV, no usable incumbent is replaced, and supply and market-cap preference remain unchanged. Activation is 2026-11-05 00:00 UTC (1793836800). Local checks and this version entry do not establish production acceptance; acceptance requires observing a qualifying production execution."
     ],
     "commits": [],
     "reconstructed": false
