@@ -195,7 +195,7 @@ export async function observeWmReviewedDeploymentUnitPartitionAttempt(
     signal: input.signal,
     // Capture non-rewindable finalized accounts before the serial EVM reads.
     alignToSolana: true,
-    identityRuntime: (routeId) => expectedWmDeploymentIdentity(routeId)?.runtime ?? null,
+    identityRuntime: (routeId) => expectedWmDeploymentIdentity(routeId)?.runtime,
     observeEvm: async (route) => {
       const cached = evmObservations.get(route.routeId);
       if (cached) return cached;

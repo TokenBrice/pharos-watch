@@ -181,6 +181,15 @@ describe("buildSafetyScoreV9SupplyReview", () => {
       reviewRouteCount: 2,
       attributionRejectionCode: "chain-rpc-unavailable",
     });
+    for (const rejectionCode of ["deployment-identity-unavailable", "deployment-identity-authored-withholding"]) {
+      const journal = rejected.supplyAttributionJournalById!["wm-m0"][0];
+      const input = { ...rejected, supplyAttributionJournalById: { "wm-m0": [{
+        ...journal, admissionCode: "supply-attribution.admission.rejected-identity-drift", rejectionCode,
+      }] } } as unknown as ReportCardsFixedInput;
+      expect(diagnose(input, "bounded-unknown")).toMatchObject({
+        state: "ambiguous-route-join", responsibility: "integration-missing", attributionRejectionCode: rejectionCode,
+      });
+    }
 
     // No per-chain rows, no runtime partition owed, nothing rejected: there was
     // no route join to be ambiguous about, so the cause is the absent partition.

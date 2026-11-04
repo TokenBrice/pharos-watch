@@ -76,7 +76,8 @@ function diagnosticRejectedAssetIds(
     const outcome = generation.outcomesById[assetId];
     return (
       outcome?.status === "rejected" &&
-      outcome.rejectionCode === "transparency-stale"
+      (outcome.rejectionCode === "transparency-stale" ||
+        outcome.rejectionCode === "deployment-identity-authored-withholding")
     );
   });
 }
@@ -803,6 +804,11 @@ export async function syncSafetyScoreV9SupplyAttribution(
     ...(admission.deferredAssetIds.length || Object.keys(capture.admissionById ?? {}).length
       ? [SUPPLY_ATTRIBUTION_STALE_REFERENCE_REASON] : []),
     ...(progress.length ? ["supply-attribution-bootstrap-in-progress"] : []),
+    ...(diagnosticRejected.some(assetId => {
+      const outcome = generation.outcomesById[assetId];
+      return outcome.status === "rejected" && outcome.rejectionCode === "deployment-identity-authored-withholding";
+    })
+      ? ["supply-attribution-authored-withholding"] : []),
     ...(diagnosticRejected.length ? ["supply-attribution-diagnostic-rejections"] : []),
   ];
   const publication = {

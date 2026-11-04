@@ -145,7 +145,10 @@ export async function observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
     scoringClockSec: input.scoringClockSec,
     signal: input.signal,
     alignToSolana: true,
-    identityRuntime: (routeId) => expectedCentrifugeDeploymentIdentity(input.assetId, routeId)?.runtime ?? null,
+    identityRuntime: (routeId) => {
+      const identity = expectedCentrifugeDeploymentIdentity(input.assetId, routeId);
+      return identity === null ? null : identity?.runtime;
+    },
     observeEvm: (route, observationWindow) => observeCentrifugeEvmDeployment(
       input.assetId,
       route.routeId,

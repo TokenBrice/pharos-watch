@@ -113,6 +113,7 @@ const STALE_ATTRIBUTION_REJECTION_CODES = new Set([
 const INTEGRATION_ATTRIBUTION_REJECTION_CODES = new Set([
   "route-inventory-unavailable",
   "deployment-identity-unavailable",
+  "deployment-identity-authored-withholding",
   "deployment-identity-mismatch",
   "transparency-source-config-unavailable",
 ]);
