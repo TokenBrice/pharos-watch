@@ -209,6 +209,13 @@ export const SupplyChainGuardProvenanceSchema = z.object({
     baselineObservedAt: z.number().int().nonnegative(),
     baselineSource: z.enum(["state", "seed", "list-prev-day"]),
     resolution: z.enum(["onchain-total-supply", "defillama-chain-history", "carried-baseline", "unavailable"]),
+    reviewedExclusion: z.object({
+      reason: z.literal("reviewed-excluded"),
+      reviewedAt: z.number().int().nonnegative(),
+      expiresAt: z.number().int().nonnegative(),
+      quarantinedSince: z.number().int().nonnegative(),
+      evidenceUrl: z.string().url(),
+    }).optional(),
     repairedCurrentUsd: z.number().finite().nonnegative().optional(),
     observedAt: z.number().int().nonnegative().optional(),
     /** Native probes carry a local-read clock; daily chart points carry their upstream observation time. */
