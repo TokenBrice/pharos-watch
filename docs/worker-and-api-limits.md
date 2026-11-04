@@ -97,6 +97,8 @@ Supplemental families run serially; Beefy, Royco and Aave each cap outbound conc
 
 For `sync-stablecoins`, failed upstream responses must still be consumed or canceled before later passes start, which bounds unread bytes, completes transport cleanup and keeps fetch phases deterministic without claiming an unread body still occupies Cloudflare's header-wait slot. The late fallback phase remains `CoinMarketCap` -> `Jupiter` -> `DexScreener`.
 
+Fiat-CoinGecko share partitions drain after the other fiat supplemental reads settle, so fallback/NAV waits cannot consume the partition stage's allowance. Two candidate workers and at most two legs per candidate retain the declared four-connection peak; rotation and deadline behavior are owned by the [supply pipeline](./supply-snapshot.md#supply-pipeline).
+
 Mint/burn conservation audits pool boundary-header, hash-pinned supply and boundary-recheck reads in a serialized pre-pass before contract scans. The three phases consume at most 100 calls per POST from the lane's global request budget, not per-config budgets, with a 45-second pre-pass allowance capped by the lane deadline and a 15-second per-POST timeout capped by the remaining allowance. They add no trigger or parallel connection peak. Each config still reuses fetched logs and independently fences/persists/advances its cursor. Exhausted audit capacity stays unverified rather than retrying without limit or expanding the lane budget. See [Raw Token Conservation](./mint-burn-flows.md#raw-token-conservation).
 
 The same cleanup rule applies to Worker-side integration clients: Telegram delivery, X posting and GitHub feedback submission consume or cancel response bodies before returning, so transports retain no unread streams or unbounded bytes.
