@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "product": "USDP",
   "profile": "usdp-v1",
-  "officialIndexUrl": "https://www.paxos.com/usdp-transparency",
+  "officialIndexUrl": "https://www.paxos.com/transparency/usdp",
   "reportUrl": "https://framerusercontent.com/assets/oeOuRskMln0RvSNGMfgLTDIjQys.pdf",
   "reportSha256": "6f71e376b6a9d45ae7be5422367ea6a2531b892a33955b39271388b66ddb913f",
   "reportByteLength": 510924,

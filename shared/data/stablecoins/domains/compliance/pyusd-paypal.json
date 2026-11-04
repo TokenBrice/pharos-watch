@@ -37,7 +37,7 @@
     "enforcementStatus": "warning-or-notice",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.paxos.com/pyusd-transparency",
+    "reserveDisclosureUrl": "https://www.paxos.com/transparency/pyusd",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "notes": "Paxos Trust Company, N.A. is the PYUSD issuer, not PayPal or Paxos Issuance Europe Oy. The December 12, 2025 OCC decision conditionally approved conversion under existing national-trust-bank authority; current issuer terms and the August 2026 issuer report state that conversion was completed on December 12, 2025. Paxos describes itself as qualifying under GENIUS and PYUSD as adhering to the standards that will apply when the Act is effective. This is issuer-stated positioning, not a regulator-issued section 5 PPSI approval; issuer-announced-intent and the announced OCC/uninsured-national-trust route are retained. No qualifying official GENIUS approval or issuer application was located in the specifically reviewed sources. The regime remains pre-effective; broad DASP offer/sale restrictions do not become active merely because an issuer is not yet PPSI-approved. EnforcementStatus warning-or-notice records the historical August 7, 2025 NYDFS action against the same converting issuer for AML, transaction-monitoring and Binance-related deficiencies: $26.5 million penalty and at least $22 million remediation spending, with continuing remediation imposed by OCC conversion condition 8. It is not a GENIUS violation finding, PYUSD issuance prohibition, or extension of the historical BUSD mint halt. PayPal advertises loyalty rewards, but the opened OCC proposal does not identify a PayPal/PYUSD-specific enforcement or scrutiny decision; the old coin-specific scrutiny assertion is removed. The transparency hub is issuer disclosure; its linked report contains a separate KPMG examination.",
@@ -71,7 +71,7 @@
       },
       {
         "label": "Paxos PYUSD transparency",
-        "url": "https://www.paxos.com/pyusd-transparency",
+        "url": "https://www.paxos.com/transparency/pyusd",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
       },
@@ -149,7 +149,7 @@
         "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
         "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions",
         "https://www.paxos.com/blog/genius-act",
-        "https://www.paxos.com/pyusd-transparency",
+        "https://www.paxos.com/transparency/pyusd",
         "https://www.paypal.com/us/digital-wallet/manage-money/crypto/pyusd",
         "https://www.dfs.ny.gov/system/files/documents/2025/08/ea20250807-co-paxos-trust-co.pdf",
         "https://www.dfs.ny.gov/industry_guidance/enforcement_actions"

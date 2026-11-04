@@ -49,7 +49,7 @@
     "enforcementStatus": "warning-or-notice",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.paxos.com/usdp-transparency",
+    "reserveDisclosureUrl": "https://www.paxos.com/transparency/usdp",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "notes": "Reviewed 2026-10-07. USDP is issued by Paxos Trust Company, N.A. Current issuer disclosures report its December 12, 2025 conversion, and the OCC active national-trust-bank list confirms charter 25379. The current USDP product page expressly states readiness for forthcoming GENIUS requirements, supporting issuer-announced-intent on the federal-qualified-nonbank pathway. The December 2025 charter decision is not a separate GENIUS PPSI approval; no public USDP-specific GENIUS approval or officially acknowledged GENIUS application was located. The August 7, 2025 NYDFS consent order against the same pre-conversion legal entity imposed a penalty and compliance remediation for historical deficiencies, including the Binance relationship. OCC charter condition 8 carries that remediation into 2026-2027. warning-or-notice records this public issuer action; it does not assert a GENIUS violation or a prohibition on USDP issuance. Treasury identifies January 18, 2027 as the expected Act effective date and July 18, 2028 for the later DASP issuer-status restriction. Public reserve and redemption disclosures and monthly independent examination reports remain available.",
@@ -89,7 +89,7 @@
       },
       {
         "label": "Paxos USDP transparency",
-        "url": "https://www.paxos.com/usdp-transparency",
+        "url": "https://www.paxos.com/transparency/usdp",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
       },
