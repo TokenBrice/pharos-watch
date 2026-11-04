@@ -5,7 +5,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import type { TapeEvent } from "@shared/types/tape-event";
 import { renderToString } from "react-dom/server";
 import { makeTapeEvent } from "@shared/test-utils/tape-event";
-import type { ApiMeta } from "@/lib/api";
+import { ApiFetchError, type ApiMeta } from "@/lib/api";
 import type { DepegEvent } from "@shared/types";
 
 type UseEventsResult = {
@@ -858,6 +858,40 @@ describe("TimelineClient", () => {
     const summaryText = summary?.textContent ?? "";
     expect(summaryText.toLowerCase()).toContain("psi");
     expect(summaryText.toLowerCase()).toContain("score");
+  });
+
+  it.each([
+    { body: '{"reason":"flow-claim-retracted"}', retracted: true },
+    { body: '{"reason":"freeze-claim-retracted"}', retracted: true },
+    { body: '{"reason":"event-not-found"}', retracted: false },
+    { body: '{"reason":"unknown"}', retracted: false },
+    { body: 'null', retracted: false },
+    { body: 'invalid JSON', retracted: false },
+    { body: null, retracted: false },
+    { body: null, retracted: false, status: 0 },
+    { body: '{"reason":"flow-claim-retracted"}', retracted: false, status: 500 },
+  ])("renders the permalink notice for body $body and status $status", ({ body, retracted, status = 404 }) => {
+    mockEvents([]);
+    useLatestEventsMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: status ? new ApiFetchError("/api/events?event=evt-missing", status, body) : null,
+      meta: null,
+    });
+    window.history.replaceState(null, "", "/timeline?event=evt-missing");
+
+    render(<TimelineClient />);
+
+    const notice = document.querySelector('[title="evt-missing"]');
+    if (retracted) {
+      expect(notice?.textContent).toBe("⚠ Retracted after its source data changed.");
+      expect(screen.queryByText(/Linked event:/)).toBeNull();
+    } else if (status === 0) {
+      expect(notice?.textContent).toBe("⚠ The linked event isn't in this view. Try widening the filters or removing the time window.");
+    } else {
+      // Any other failed permalink read keeps the shared error notice and no missing-event sentence.
+      expect(notice).toBeNull();
+    }
   });
 
   it.each([false, true])("renders and focuses a PINNED permalink when the filtered feed is empty: %s", (emptyFeed) => {
