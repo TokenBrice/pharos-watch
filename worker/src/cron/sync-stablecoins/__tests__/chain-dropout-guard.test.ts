@@ -1097,6 +1097,7 @@ describe("chain dropout guard", () => {
     { assetId: "dusd-standx", chainId: "solana", chainLabel: "Solana", pegKey: "peggedUSD", baseline: 3_013_043.925487889, current: 786_947.5441566098, reviewDate: "2026-11-03T10:16:00Z" },
     { assetId: "eurs-stasis", chainId: "polygon", chainLabel: "Polygon", pegKey: "peggedEUR", baseline: 2_125_295.460187289, current: 472_657.74823731947, reviewDate: "2026-10-16T06:18:46Z" },
     { assetId: "sbc-brale", chainId: "polygon", chainLabel: "Polygon", pegKey: "peggedUSD", baseline: 3_476_881, current: 365_027, reviewDate: "2026-10-29T10:50:19Z" },
+    { assetId: "tryb-bilira", chainId: "plasma", chainLabel: "Plasma", pegKey: "peggedTRY", baseline: 1_419_521, current: 267_810, reviewDate: "2026-11-04T00:05:26Z" },
   ])("accepts only the dated reviewed $assetId chain reduction, not omitted or later incidents", async ({ assetId, chainId, chainLabel, pegKey, baseline, current, reviewDate }) => {
     const reviewedAt = Date.parse(reviewDate) / 1000;
     const key = JSON.stringify([assetId, chainId]);

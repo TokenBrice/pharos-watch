@@ -127,25 +127,6 @@ function fakeDb(
       }
       return { meta: { changes: 0 } };
     },
-    all: async () => {
-      if (sql.includes("AS last_liveness_at")) {
-        const started_at = Math.floor(Date.now() / 1000);
-        return { results: (JSON.parse(args[0] as string) as string[]).map((job) => ({
-          job,
-          last_success_at: producerPublishedAt ?? started_at,
-          last_liveness_at: producerPublishedAt ?? started_at,
-          last_run_at: started_at,
-          last_status: "ok",
-        })) };
-      }
-      if (sql.startsWith("SELECT key, updated_at FROM cache WHERE key IN")) {
-        return { results: [] };
-      }
-      if (sql.includes("'sync-yield-data'") || sql.includes("'sync-cl-exit-depth'")) {
-        return { results: [] };
-      }
-      return { results: failureRows.filter((row) => row.updated_at >= (args[1] as number)) };
-    },
   });
   return {
     prepare: (sql: string) => {

@@ -97,6 +97,14 @@ const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
     reviewedAt: Date.parse("2026-11-03T10:16:00Z") / 1000,
     evidenceUrl: "https://solscan.io/token/DUSDt4AeLZHWYmcXnVGYdgAzjtzU5mXUVnTMdnSzAttM",
   },
+  // 2026-11-04 00:05 UTC: Plasma block 36808012 (rpc.plasma.to) confirms
+  // 13,372,760.551335 TRYB, matching the lower list level after BiLira's Plasma
+  // burns (blocks 35221462 and 36085454); the $1.42M baseline is pre-burn.
+  {
+    assetId: "tryb-bilira", chainId: "plasma",
+    reviewedAt: Date.parse("2026-11-04T00:05:26Z") / 1000,
+    evidenceUrl: "https://plasmascan.to/token/0x90729a45948c3078890bc80f2a4e7870a2ea4c5e",
+  },
 ];
 
 const TimestampSchema = z.number().int().nonnegative();

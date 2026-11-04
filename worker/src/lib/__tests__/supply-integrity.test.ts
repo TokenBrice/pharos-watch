@@ -76,6 +76,7 @@ function supplyRun(unavailable: number, observed: number, startedAt = NOW - 900)
       priceSourceHealth: {
         active: { supplyCoverage: { complete: unavailable === 0, observedCount: observed, unavailableCount: unavailable } },
       },
+      supplyChainGuard: { quarantinedAssetCount: 8, unavailableAssetCount: 0 },
     }),
   };
 }
@@ -267,6 +268,7 @@ describe("supply integrity", () => {
   it("keeps carry evidence when only the daily-history read fails", async () => {
     const assets = normalAssets();
     assets[0] = { ...assets[0], current: 30, supplyRestored: true };
+    assets[1] = { ...assets[1], current: null, supplyRestored: true };
     const report = await loadSupplyIntegrityReport(database({ assets, historyThrows: true }), NOW);
     expect(report.value.status).toBe("unknown");
     expect(report.value.reason).toBe("supply-history-read-failed");
@@ -559,6 +561,17 @@ describe("supply integrity", () => {
     const condition = buildSupplyIntegrityConditions(report).find((entry) => entry.id === "value-drift")!;
     expect(condition.active).toBe(false);
     expect(condition.unknown).toBe(false);
+  });
+
+  it("honours reviewed re-baselines", async () => {
+    const a = normalAssets();
+    a[0] = { ...a[0], id: "iauon-ondo", current: 1_747_207.06, previous: 3_900_000 };
+    a[1] = { ...a[1], id: "gtusdtp-gauntlet", current: 300_000, previous: 300_000 };
+    const r = await loadSupplyIntegrityReport(database({
+      assets: a,
+      confirmState: { "value-drift": { signature: "x", runs: 2, held: { "iauon-ondo": 3_900_000, "gtusdtp-gauntlet": 2_900_000 } } },
+    }), 1_793_836_800);
+    expect(r.value).toMatchObject({ driftFindings: [], heldDriftFindings: [{ stablecoinId: "gtusdtp-gauntlet" }] });
   });
 
   it("keeps sub-breadth carry, availability and partial-snapshot causes non-degrading", () => {
