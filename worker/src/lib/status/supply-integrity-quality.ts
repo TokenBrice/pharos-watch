@@ -1,10 +1,12 @@
 import {
   STATUS_SUPPLY_VALUE_THRESHOLDS,
+  STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC,
   getActiveAssetServiceBreadthThreshold,
 } from "@shared/lib/status-thresholds";
 import type { StatusCause, StatusHealthValue } from "@shared/types/status";
 import { STABLECOIN_PUBLICATION_GAP_ROUTINE_MAX_SHARE } from "../stablecoin-publication-coverage";
 import type { SupplyIntegrityReport } from "../supply-integrity";
+import { expiringReviews } from "./evaluation-causes";
 
 export interface SupplyIntegrityAssessment {
   status: StatusHealthValue;
@@ -102,32 +104,50 @@ export function assessSupplyIntegrityQuality(
 
   // Carry evidence comes from the stablecoins cache and survives a failed
   // history read, so it is graded even when the value comparison is unknown.
-  if (value.carryIds.length > 0) {
+  if (value.acknowledgedCarryReviews.length > 0) causes.push(cause(
+    "supply_carry_reviews_acknowledged", "info",
+    `Reviewed carried supply: ${value.acknowledgedCarryReviews.map((review) =>
+      `${review.stablecoinId} (expires ${isoInstant(review.expiresAt)})`).join(", ")}. Published values and carry ceilings are unchanged.`,
+  ));
+  if (value.expiredCarryReviewIds.length > 0) causes.push(cause(
+    "supply_carry_reviews_expired", "info",
+    `Expired supply-carry reviews: ${value.expiredCarryReviewIds.join(", ")}; carry gates re-armed.`,
+  ));
+  const expiring = expiringReviews(value.acknowledgedCarryReviews.map((review) => ({
+    id: review.stablecoinId, expiresAt: review.expiresAt,
+  })), report.observedAt);
+  if (expiring.length > 0) causes.push(cause(
+    "supply_carry_reviews_expiring", "info",
+    `Supply-carry review(s) currently acknowledging carried supply expire within 48h: ${expiring.map((review) =>
+      `${review.id} (expires ${isoInstant(review.expiresAt)}, ${Math.floor(review.remainingSec / 3600)}h left)`).join(", ")}. Renew with fresh evidence or let the carry re-alert; expiry re-arms carry gates automatically.`,
+    { metric: "supplyCarryReviewsExpiringSoonestSec", value: expiring[0].remainingSec, threshold: STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC },
+  ));
+  if (value.unacknowledgedCarryIds.length > 0) {
     const carryThreshold = Math.max(
       1,
       Math.ceil(expectedActive * STATUS_SUPPLY_VALUE_THRESHOLDS.activeSupplyShareThreshold),
     );
     const carryBreadth = getActiveAssetServiceBreadthThreshold(expectedActive);
-    const carryStale = value.carryIds.length >= carryThreshold
-      || (value.carryOldestAgeSec != null && value.carryOldestAgeSec > STATUS_SUPPLY_VALUE_THRESHOLDS.carryStaleAfterSec);
+    const carryStale = value.unacknowledgedCarryIds.length >= carryThreshold
+      || (value.unacknowledgedCarryOldestAgeSec != null && value.unacknowledgedCarryOldestAgeSec > STATUS_SUPPLY_VALUE_THRESHOLDS.carryStaleAfterSec);
     if (carryStale) {
       causes.push(cause(
         "supply_carry_stale",
         "warning",
-        `${value.carryIds.length} active asset(s) publish carried supply (${value.carryIds.slice(0, 8).join(", ")}`
-          + `${value.carryIds.length > 8 ? `, +${value.carryIds.length - 8} more` : ""}); oldest `
-          + `${value.carryOldestAgeSec == null ? "age unknown" : `${Math.floor(value.carryOldestAgeSec / 3600)}h`}`
-          + `${value.carryUnclockedCount > 0 ? `, ${value.carryUnclockedCount} without an observation clock` : ""}. `
+        `${value.unacknowledgedCarryIds.length} active asset(s) publish carried supply (${value.unacknowledgedCarryIds.slice(0, 8).join(", ")}`
+          + `${value.unacknowledgedCarryIds.length > 8 ? `, +${value.unacknowledgedCarryIds.length - 8} more` : ""}); oldest `
+          + `${value.unacknowledgedCarryOldestAgeSec == null ? "age unknown" : `${Math.floor(value.unacknowledgedCarryOldestAgeSec / 3600)}h`}`
+          + `${value.unacknowledgedCarryUnclockedCount > 0 ? `, ${value.unacknowledgedCarryUnclockedCount} without an observation clock` : ""}. `
           + `Producer sync-stablecoins, cache generation ${isoInstant(value.cacheUpdatedAt)}; budget `
           + `${Math.round(STATUS_SUPPLY_VALUE_THRESHOLDS.carryStaleAfterSec / 3600)}h or `
           + `${percent(STATUS_SUPPLY_VALUE_THRESHOLDS.activeSupplyShareThreshold)} of active.`,
         {
           metric: "supplyCarryCount",
-          value: value.carryIds.length,
+          value: value.unacknowledgedCarryIds.length,
           threshold: carryThreshold,
         },
       ));
-      if (carryBreadth != null && value.carryIds.length >= carryBreadth) degrade();
+      if (carryBreadth != null && value.unacknowledgedCarryIds.length >= carryBreadth) degrade();
     }
   }
 

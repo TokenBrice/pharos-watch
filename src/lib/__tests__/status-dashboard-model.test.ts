@@ -459,29 +459,24 @@ describe("status dashboard model", () => {
   });
 
   it("excludes standing notices from watch counts", () => {
-    const watch = cause("mint_burn_public_degraded", "info", "availability");
+    const watchCodes = ["mint_burn_public_degraded", "supply_carry_reviews_expired", "supply_carry_reviews_expiring"];
+    const watches = watchCodes.map((code) => cause(code));
     const standing = [
-      { ...cause("active_price_coverage_nominal_reference"), metric: "nominalReferenceCount", value: 1 },
-      cause("reserve_feed_reviews_acknowledged"),
-      cause("active_price_coverage_incomplete"),
-    ];
-    const data: StatusResponse = {
-      ...BASE_STATUS,
-      causes: { overall: [...standing, watch], availability: [watch], dataQuality: standing },
-    };
-
+      "active_price_coverage_nominal_reference", "reserve_feed_reviews_acknowledged",
+      "supply_carry_reviews_acknowledged", "active_price_coverage_incomplete",
+    ].map((code) => cause(code));
+    const data = { ...BASE_STATUS, causes: { overall: [...standing, ...watches], availability: watches, dataQuality: standing } };
     const healthData = makeHealthyHealthResponse();
     healthData.activePriceCoverage = makeActivePriceCoverage(
       ["reviewed", "closed"].map((stablecoinId) => makeMissingActiveAsset({ stablecoinId })),
       { acknowledgedGapIds: ["reviewed"], scheduledClosureGapIds: ["closed"] },
     );
     const model = buildModel(data, { healthData });
-    expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(["mint_burn_public_degraded"]);
-    expect(model.decision.summary).toContain("1 informational watch remains");
+    expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(watchCodes);
+    expect(model.decision.summary).toContain("3 informational watches remain");
     healthData.activePriceCoverage.missingActiveIds.push("first-generation-unacknowledged");
     expect(buildModel(data, { healthData }).issueGroups.watches.map((issue) => issue.code))
-      .toEqual(["active_price_coverage_incomplete", "mint_burn_public_degraded"]);
-    // The by-design cause stays in the status payload it was read from.
+      .toEqual(["active_price_coverage_incomplete", ...watchCodes]);
     expect(data.causes.dataQuality).toEqual(standing);
   });
 

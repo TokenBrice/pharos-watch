@@ -11,9 +11,9 @@ const SEC = 1_700_000_000;
 // raw SQL emitted by the projector, so each pattern only has to be unique
 // enough to disambiguate the projector's two queries.
 const MATCH_FETCH_HISTORY = "is_best = 1 AND recorded_at > ?";
-const MATCH_PRIOR_HISTORY = "SELECT DISTINCT stablecoin_id FROM yield_history";
+const MATCH_PRIOR_HISTORY = "WITH warning_coins(";
 const MATCH_FETCH_DECISIONS = "WHERE created_at > ?";
-const MATCH_PRIOR_DECISIONS = "SELECT DISTINCT stablecoin_id FROM yield_source_decisions";
+const MATCH_PRIOR_DECISIONS = "WITH pys_coins(";
 const MATCH_CACHE = "FROM cache WHERE key";
 
 // Seed the watermark cache so `since > 0`; the prior-row lookup is guarded

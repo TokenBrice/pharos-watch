@@ -297,7 +297,7 @@ Some tracked stablecoins trade at low enough volume that CoinGecko's upstream `l
    market lanes return null, an asset with a registered vault NAV route
    resolves a supply-valuation-only price through `resolveVaultNavSupplyPrice`
    (`worker/src/lib/authoritative-price-sources/erc4626-nav.ts`): the exact protocol-redeem route — parent-trust gate
-   on a run-local parent row (the parent source's own freshness budget, 900 seconds for CoinGecko), live `convertToAssets(1 share)` or sGHO's registered `previewRedeem(1 share)` provider read,
+   on a run-local parent row (source freshness for same-run quotes; the supply-only two-producer-interval budget for a previous-payload observation, as defined in [Supply Pipeline](../supply-snapshot.md#supply-pipeline)), live `convertToAssets(1 share)` or sGHO's registered `previewRedeem(1 share)` provider read,
    and the bounded 24-hour `protocol-redeem-cached-rate` degradation lane — reused pre-intake. The resolved price
    values on-chain total supply only; the row publishes with `price: null` and the live override stage re-prices it in
    the same run. Without a trusted NAV the asset stays out of the payload (fail-closed). For vaults whose config admits
@@ -306,7 +306,7 @@ Some tracked stablecoins trade at low enough volume that CoinGecko's upstream `l
    DefiLlama/CoinGecko dropped on 2026-10-31), the existing
    CoinGecko batch also requests the DefiLlama-owned parent; a positive, reasonable direct `coingecko` quote with a
    fresh upstream clock becomes an unpublished `single-source` parent stub that takes precedence over the previous
-   payload's row. Mirror, low-volume and par values never qualify, and the trust gate is unchanged.
+   payload's row. Mirror, low-volume and par values never qualify; confidence, replay safety and identity gates remain unchanged.
 5. Assets configured for a registered reserve NAV adapter can also use a matched successful snapshot through
    `loadReserveNavSupplyPrice` (`worker/src/lib/reserve-nav-price.ts`) before they have a previous cache row.
    The decoder checks fetch age and source age independently; positive native supply is valued at observed NAV,

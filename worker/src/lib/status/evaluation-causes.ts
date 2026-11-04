@@ -1,4 +1,12 @@
 import type { StatusCause } from "@shared/types/status";
+import { STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC } from "@shared/lib/status-thresholds";
+
+export function expiringReviews(entries: readonly { id: string; expiresAt: number }[], nowSec: number) {
+  return entries
+    .map((entry) => ({ ...entry, remainingSec: entry.expiresAt - nowSec }))
+    .filter((entry) => entry.remainingSec > 0 && entry.remainingSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC)
+    .sort((a, b) => a.expiresAt - b.expiresAt || a.id.localeCompare(b.id));
+}
 
 const OVERALL_CAUSE_PERSISTENCE_LIMIT = 12;
 const DURABLE_ACTIVE_PRICE_CAUSE_CODES = new Set([

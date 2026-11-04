@@ -82,6 +82,47 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
   },
 ];
 
+export interface ReviewedSupplyCarry {
+  stablecoinId: string;
+  reviewedAt: number;
+  expiresAt: number;
+  reason: "defillama-list-fill-default-carry" | "nav-parent-price-gap";
+  evidence: string;
+}
+
+/** Operational acknowledgement only; publication and its carry ceiling are unchanged. */
+export const REVIEWED_SUPPLY_CARRIES: readonly ReviewedSupplyCarry[] = [
+  ...["doc-money-on-chain", "nusd-nexus", "usdnr-nerona"].map((stablecoinId): ReviewedSupplyCarry => ({
+    stablecoinId,
+    reviewedAt: Date.UTC(2026, 10, 4, 16) / 1000,
+    expiresAt: Date.UTC(2026, 10, 11, 16) / 1000,
+    reason: "defillama-list-fill-default-carry",
+    evidence: "DefiLlama stablecoins list fill-price rescale (~5.5e-5) since 2026-11-03 ~02:35Z. The 2026-11-04 native-repair review found bridge custody in raw supply, so no native replacement is admissible (docs/supply-snapshot.md, Coverage Decisions). Owner D1 retains the bounded carried-baseline until expiry or provider recovery.",
+  })),
+  {
+    stablecoinId: "said-gaib",
+    reviewedAt: Date.UTC(2026, 10, 4, 16) / 1000,
+    expiresAt: Date.UTC(2026, 10, 11, 16) / 1000,
+    reason: "nav-parent-price-gap",
+    evidence: "NAV parent aid-gaib has no admissible price; STABLECOIN_PRICE_GAP_REVIEWS in stablecoin-publication-coverage.ts reviews that gap until 2026-11-14T12:37Z. No par valuation or fresh supply is admitted by this acknowledgement.",
+  },
+];
+
+/**
+ * A review covers only the carry mechanism it was written for: a chain-dropout
+ * quarantine carry, or a tracked native-supply restore. A carry produced by any
+ * other path stays unacknowledged.
+ */
+function carryMatchesReview(
+  asset: { supplyChainGuard?: { reason: string; status: string } | null; supplySource?: string | null },
+  review: ReviewedSupplyCarry,
+): boolean {
+  const guard = asset.supplyChainGuard ?? null;
+  return review.reason === "defillama-list-fill-default-carry"
+    ? guard?.reason === "supply-chain-dropout" && guard.status === "quarantined"
+    : guard == null && asset.supplySource === "onchain-total-supply";
+}
+
 function isReviewedValueRebaseline(stablecoinId: string, currentUsd: number, nowSec: number): boolean {
   return REVIEWED_SUPPLY_VALUE_REBASELINES.some((review) =>
     review.stablecoinId === stablecoinId
@@ -119,6 +160,11 @@ export interface SupplyValueIntegrityReport {
   carryIds: string[];
   carryOldestAgeSec: number | null;
   carryUnclockedCount: number;
+  acknowledgedCarryReviews: ReviewedSupplyCarry[];
+  expiredCarryReviewIds: string[];
+  unacknowledgedCarryIds: string[];
+  unacknowledgedCarryOldestAgeSec: number | null;
+  unacknowledgedCarryUnclockedCount: number;
   expectedActiveCount: number;
   cacheUpdatedAt: number | null;
   historyFromDate: number | null;
@@ -258,6 +304,11 @@ function unknownValueIntegrity(reason: string): SupplyValueIntegrityReport {
     carryIds: [],
     carryOldestAgeSec: null,
     carryUnclockedCount: 0,
+    acknowledgedCarryReviews: [],
+    expiredCarryReviewIds: [],
+    unacknowledgedCarryIds: [],
+    unacknowledgedCarryOldestAgeSec: null,
+    unacknowledgedCarryUnclockedCount: 0,
     expectedActiveCount: ACTIVE_IDS.size,
     cacheUpdatedAt: null,
     historyFromDate: null,
@@ -360,12 +411,22 @@ async function loadSupplyValueIntegrity(
     // window expired) is unavailable supply, counted by the availability read.
     if (asset.supplyRestored === true && currentUsd !== null) {
       carryIds.push(asset.id);
+      const review = REVIEWED_SUPPLY_CARRIES.find((entry) => entry.stablecoinId === asset.id);
+      const acknowledged = review != null && nowSec >= review.reviewedAt && nowSec < review.expiresAt
+        && carryMatchesReview(asset, review);
+      if (acknowledged) report.acknowledgedCarryReviews.push(review);
+      else {
+        report.unacknowledgedCarryIds.push(asset.id);
+        if (review != null && nowSec >= review.expiresAt) report.expiredCarryReviewIds.push(asset.id);
+      }
       const observedAt = asset.supplyObservedAt;
       if (typeof observedAt === "number" && Number.isSafeInteger(observedAt) && observedAt > 0) {
         const ageSec = Math.max(0, nowSec - observedAt);
         carryOldestAgeSec = carryOldestAgeSec == null ? ageSec : Math.max(carryOldestAgeSec, ageSec);
+        if (!acknowledged) report.unacknowledgedCarryOldestAgeSec = Math.max(report.unacknowledgedCarryOldestAgeSec ?? 0, ageSec);
       } else {
         carryUnclockedCount++;
+        if (!acknowledged) report.unacknowledgedCarryUnclockedCount++;
       }
     }
 
@@ -466,6 +527,9 @@ async function loadSupplyValueIntegrity(
   effectiveDriftFindings.sort((a, b) => a.ratio - b.ratio || a.stablecoinId.localeCompare(b.stablecoinId));
   heldDriftFindings.sort((a, b) => a.ratio - b.ratio || a.stablecoinId.localeCompare(b.stablecoinId));
   carryIds.sort();
+  report.unacknowledgedCarryIds.sort();
+  report.expiredCarryReviewIds.sort();
+  report.acknowledgedCarryReviews.sort((a, b) => a.expiresAt - b.expiresAt || a.stablecoinId.localeCompare(b.stablecoinId));
   report.checkedCount = checkedCount;
   report.excludedCount = excludedCount;
   report.driftFindings = effectiveDriftFindings;
@@ -767,13 +831,13 @@ export function buildSupplyIntegrityConditions(report: SupplyIntegrityReport): S
     1,
     Math.ceil(expectedActive * STATUS_SUPPLY_VALUE_THRESHOLDS.activeSupplyShareThreshold),
   );
-  const carryActive = value.carryIds.length >= carryThreshold
-    || (value.carryOldestAgeSec != null && value.carryOldestAgeSec > STATUS_SUPPLY_VALUE_THRESHOLDS.carryStaleAfterSec);
+  const carryActive = value.unacknowledgedCarryIds.length >= carryThreshold
+    || (value.unacknowledgedCarryOldestAgeSec != null && value.unacknowledgedCarryOldestAgeSec > STATUS_SUPPLY_VALUE_THRESHOLDS.carryStaleAfterSec);
   const carryLabel = [
-    `${value.carryIds.length} carried asset(s)`,
-    value.carryOldestAgeSec != null ? `oldest ${Math.floor(value.carryOldestAgeSec / 3600)}h` : null,
-    value.carryUnclockedCount > 0 ? `${value.carryUnclockedCount} without an observation clock` : null,
-    value.carryIds.length > 0 ? formatIds(value.carryIds) : null,
+    `${value.unacknowledgedCarryIds.length} carried asset(s)`,
+    value.unacknowledgedCarryOldestAgeSec != null ? `oldest ${Math.floor(value.unacknowledgedCarryOldestAgeSec / 3600)}h` : null,
+    value.unacknowledgedCarryUnclockedCount > 0 ? `${value.unacknowledgedCarryUnclockedCount} without an observation clock` : null,
+    value.unacknowledgedCarryIds.length > 0 ? formatIds(value.unacknowledgedCarryIds) : null,
   ].filter((part): part is string => part != null).join(", ");
 
   const availability = report.availability;
@@ -969,6 +1033,12 @@ export function compactSupplyIntegrityReport(report: SupplyIntegrityReport): Rec
       carryIds: report.value.carryIds.slice(0, MAX_REPORTED_IDS),
       carryOldestAgeSec: report.value.carryOldestAgeSec,
       carryUnclockedCount: report.value.carryUnclockedCount,
+      acknowledgedCarryReviews: report.value.acknowledgedCarryReviews,
+      expiredCarryReviewIds: report.value.expiredCarryReviewIds,
+      unacknowledgedCarryCount: report.value.unacknowledgedCarryIds.length,
+      unacknowledgedCarryIds: report.value.unacknowledgedCarryIds.slice(0, MAX_REPORTED_IDS),
+      unacknowledgedCarryOldestAgeSec: report.value.unacknowledgedCarryOldestAgeSec,
+      unacknowledgedCarryUnclockedCount: report.value.unacknowledgedCarryUnclockedCount,
       cacheUpdatedAt: report.value.cacheUpdatedAt,
     },
     availability: {

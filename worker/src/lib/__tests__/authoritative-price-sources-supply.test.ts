@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import {
   fetchEvmCallHexAtBlockMock,
   freshParent,
@@ -21,7 +22,7 @@ describe("resolveVaultNavSupplyPrice", () => {
     return new Map([["usdc-circle", freshParent("usdc-circle", 0.9999, "coingecko+pyth", { nowSec })]]);
   }
 
-  it("admits AA supply valuation through its exact Idle CDO virtualPrice route", async () => {
+  it("admits AA supply through Idle CDO virtualPrice", async () => {
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${1_115_108n.toString(16).padStart(64, "0")}`);
     const nowSec = Math.floor(Date.now() / 1000);
     const result = await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", previousPayload(nowSec));
@@ -59,7 +60,7 @@ describe("resolveVaultNavSupplyPrice", () => {
     expect(await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", previousPayload(nowSec))).toBeNull();
   });
 
-  it.each([301, 900, 86400])("withholds supply NAV for a %ss-old composite despite a recent sync", async (ageSec) => {
+  it.each([301, 900, 86400])("keeps live source budgets for a %ss-old composite", async (ageSec) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const parent = freshParent("usdc-circle", 0.9999, "coingecko+pyth", {
       nowSec, observedAt: nowSec - ageSec, priceSyncedAt: nowSec - 60,
@@ -68,7 +69,26 @@ describe("resolveVaultNavSupplyPrice", () => {
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 
-  it("resolves a live NAV supply price from the previous payload parent and persists the rate", async () => {
+  it.each([0, 1])("bounds previous supply parents at two cadences + %ss", async (excess) => {
+    const maxAgeSec = 2 * CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec;
+    const nowSec = Math.floor(Date.now() / 1000);
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const parents = previousPayload(nowSec);
+    Object.assign(parents.get("usdc-circle")!, { priceObservedAt: nowSec - maxAgeSec - excess, priceSyncedAt: nowSec - 900 });
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(`0x${1_115_108n.toString(16).padStart(64, "0")}`);
+    const result = await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", parents, undefined, undefined, undefined, parents);
+    expect(result?.price ?? null).toBe(excess ? null : 1.115108 * 0.9999);
+    expect(JSON.parse(log.mock.calls[log.mock.calls.length - 1]![0]).metadata).toMatchObject({
+      accepted: !excess, reason: excess ? "freshness-stale_observed_at" : null,
+      budget: "sync-stablecoins-previous-payload-supply-parent", maxAgeSec,
+      generation: "previous-payload", parentPriceSyncedAt: parents.get("usdc-circle")!.priceSyncedAt,
+    });
+    expect(fetchEvmCallHexAtBlockMock.mock.calls.length).toBe(excess ? 0 : 1);
+    vi.restoreAllMocks();
+  });
+
+  it("persists a live NAV rate from a previous parent", async () => {
     const oneShareUsdcRaw = 1_040_000n.toString(16).padStart(64, "0");
     fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${oneShareUsdcRaw}`);
     const nowSec = Math.floor(Date.now() / 1000);
@@ -117,9 +137,9 @@ describe("resolveVaultNavSupplyPrice", () => {
   });
 
   // The same-run parent shape fiat-cg builds from a direct CoinGecko quote (K-033).
-  function sameRunParent(nowSec: number, ageSec: number, overrides: Partial<PeggedAsset> = {}): ReadonlyMap<string, PeggedAsset> {
-    return new Map([["yzusd-yuzu", {
-      id: "yzusd-yuzu", name: "Yuzu USD", symbol: "YZUSD", price: 1, priceSource: "coingecko",
+  function sameRunParent(nowSec: number, ageSec: number, overrides: Partial<PeggedAsset> = {}, id = "yzusd-yuzu"): ReadonlyMap<string, PeggedAsset> {
+    return new Map([[id, {
+      id, name: id, symbol: id, price: 1, priceSource: "coingecko",
       priceConfidence: "single-source", priceObservedAt: nowSec - ageSec, priceObservedAtMode: "upstream",
       priceSyncedAt: nowSec, ...overrides,
     }]]);
@@ -148,22 +168,19 @@ describe("resolveVaultNavSupplyPrice", () => {
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 
-  describe.each(["sbold-k3-capital", "ybold-yearn"])("%s BOLD parent admission", (id) => {
-    function boldParent(ageSec: number, overrides: Partial<PeggedAsset> = {}): ReadonlyMap<string, PeggedAsset> {
-      const nowSec = Math.floor(Date.now() / 1000);
-      return new Map([["bold-liquity", {
-        ...sameRunParent(nowSec, ageSec).get("yzusd-yuzu")!,
-        id: "bold-liquity", name: "Liquity BOLD", symbol: "BOLD", ...overrides,
-      }]]);
+  describe.each(["sbold-k3-capital", "ybold-yearn", "susn-noon"])("%s single-source parent admission", (id) => {
+    const parentId = id === "susn-noon" ? "usn-noon" : "bold-liquity";
+    function admittedParent(ageSec: number, overrides: Partial<PeggedAsset> = {}): ReadonlyMap<string, PeggedAsset> {
+      return sameRunParent(Math.floor(Date.now() / 1000), ageSec, overrides, parentId);
     }
 
-    it.each([60, 900])("values supply from a %ss-old same-run direct CoinGecko BOLD quote", async (ageSec) => {
+    it.each([60, 900])("values a %ss-old same-run parent", async (ageSec) => {
       fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${(1_087n * 10n ** 15n).toString(16).padStart(64, "0")}`);
       const nowSec = Math.floor(Date.now() / 1000);
-      const override = await resolveVaultNavSupplyPrice(id, boldParent(ageSec));
+      const override = await resolveVaultNavSupplyPrice(id, admittedParent(ageSec));
       expect(override).toMatchObject({
         price: 1.087, source: "coingecko", confidence: "single-source", observedAt: nowSec - ageSec,
-        metadata: { inheritedFrom: "bold-liquity", parentSource: "coingecko", parentReplaySafe: true },
+        metadata: { inheritedFrom: parentId, parentSource: "coingecko", parentReplaySafe: true },
       });
     });
 
@@ -176,57 +193,32 @@ describe("resolveVaultNavSupplyPrice", () => {
       ["low-volume", { priceSource: "coingecko-low-volume", priceConfidence: "fallback" }],
       ["non-replay-safe single-source", { priceSource: "coingecko-onchain" }],
       ["cached", { priceSource: "coingecko+cached", priceConfidence: "high" }],
-    ])("withholds supply NAV for a %s BOLD parent", async (_label, overrides) => {
-      expect(await resolveVaultNavSupplyPrice(id, boldParent(60, overrides))).toBeNull();
+    ])("withholds supply NAV for a %s single-source parent", async (_label, overrides) => {
+      expect(await resolveVaultNavSupplyPrice(id, admittedParent(60, overrides))).toBeNull();
       expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
     });
 
-    it("withholds supply NAV without a BOLD parent", async () => {
+    it("withholds supply NAV without a single-source parent", async () => {
       expect(await resolveVaultNavSupplyPrice(id, new Map())).toBeNull();
       expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
     });
   });
 
-  describe("susn-noon USN parent admission", () => {
-    function usnParent(ageSec: number, overrides: Partial<PeggedAsset> = {}): ReadonlyMap<string, PeggedAsset> {
-      const nowSec = Math.floor(Date.now() / 1000);
-      return new Map([["usn-noon", {
-        ...sameRunParent(nowSec, ageSec).get("yzusd-yuzu")!,
-        id: "usn-noon", name: "Noon USN", symbol: "USN", ...overrides,
-      }]]);
-    }
-
-    it("values sUSN supply from a fresh replay-safe single-source USN quote", async () => {
-      // 1.232847915 USN per sUSN, the reviewed 2026-10-29 convertToAssets read.
-      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${(1_232_847_915n * 10n ** 9n).toString(16).padStart(64, "0")}`);
-      const nowSec = Math.floor(Date.now() / 1000);
-      const override = await resolveVaultNavSupplyPrice("susn-noon", usnParent(60));
-      expect(override).toMatchObject({
-        source: "coingecko", confidence: "single-source", observedAt: nowSec - 60,
-        metadata: {
-          inheritedFrom: "usn-noon", parentSource: "coingecko", parentReplaySafe: true, navMethod: "convertToAssets",
-        },
-      });
-      expect(override?.price).toBeCloseTo(1.232847915, 8);
-      expect(fetchEvmCallHexAtBlockMock.mock.calls[0]).toEqual(expect.arrayContaining([
-        "ethereum", "0xe24a3dc889621612422a64e6388927901608b91d",
-      ]));
+  it("values sUSN supply from a fresh replay-safe single-source USN quote", async () => {
+    // 1.232847915 USN per sUSN, the reviewed 2026-10-29 convertToAssets read.
+    fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${(1_232_847_915n * 10n ** 9n).toString(16).padStart(64, "0")}`);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const override = await resolveVaultNavSupplyPrice("susn-noon", sameRunParent(nowSec, 60, {}, "usn-noon"));
+    expect(override).toMatchObject({
+      source: "coingecko", confidence: "single-source", observedAt: nowSec - 60,
+      metadata: {
+        inheritedFrom: "usn-noon", parentSource: "coingecko", parentReplaySafe: true, navMethod: "convertToAssets",
+      },
     });
-
-    it.each<[string, Partial<PeggedAsset>]>([
-      ["stale", { priceObservedAt: Math.floor(Date.now() / 1000) - 901 }],
-      ["fallback", { priceConfidence: "fallback" }],
-      ["low-volume", { priceSource: "coingecko-low-volume", priceConfidence: "fallback" }],
-      ["cached", { priceSource: "coingecko+cached" }],
-    ])("withholds sUSN supply NAV for a %s USN parent", async (_label, overrides) => {
-      expect(await resolveVaultNavSupplyPrice("susn-noon", usnParent(60, overrides))).toBeNull();
-      expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
-    });
-
-    it("withholds sUSN supply NAV without a USN parent", async () => {
-      expect(await resolveVaultNavSupplyPrice("susn-noon", new Map())).toBeNull();
-      expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
-    });
+    expect(override?.price).toBeCloseTo(1.232847915, 8);
+    expect(fetchEvmCallHexAtBlockMock.mock.calls[0]).toEqual(expect.arrayContaining([
+      "ethereum", "0xe24a3dc889621612422a64e6388927901608b91d",
+    ]));
   });
 
   it("fails closed without a vault config", async () => {

@@ -39,6 +39,8 @@ export interface ValidatePricingSourceFreshnessInput {
   nowSec?: number;
   requireObservedAt?: boolean;
   maxFutureSkewSec?: number;
+  /** Caller-owned read budget; omitted for ordinary live source admission. */
+  maxAgeSec?: number;
 }
 
 function normalizeObservedAt(value: number | null | undefined): number | null {
@@ -118,7 +120,7 @@ export function validatePricingSourceFreshness(
     };
   }
 
-  const maxAgeSec = entry.maxTrustedAgeSec;
+  const maxAgeSec = input.maxAgeSec ?? entry.maxTrustedAgeSec;
   if (typeof maxAgeSec === "number" && Number.isFinite(maxAgeSec) && maxAgeSec > 0) {
     const ageSec = nowSec - observedAt;
     if (ageSec > maxAgeSec) {
