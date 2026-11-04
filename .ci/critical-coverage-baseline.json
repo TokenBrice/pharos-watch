@@ -110,6 +110,7 @@
     "worker/src/cron/sync-stablecoins/supplemental-assets/sui-vault-supply.ts": 100,
     "worker/src/cron/sync-stablecoins/supplemental-assets/usdy-aptos-supply.ts": 100,
     "worker/src/cron/sync-stablecoins/supplemental-assets/usdy-sui-supply.ts": 100,
+    "worker/src/cron/sync-stablecoins/supplemental-assets/xrpl-supply.ts": 100,
     "worker/src/cron/sync-stablecoins/supply-gap-reconciliation.ts": 95.4,
     "worker/src/cron/sync-stablecoins/telegram-tracked-additions.ts": 100,
     "worker/src/cron/sync-stablecoins/zephyr-zsd.ts": 93.5,

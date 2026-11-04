@@ -199,6 +199,7 @@ describe("Safety Score V9 publication payload chunks", () => {
 });
 
 describe("Safety Score V9 sharded publication writer", () => {
+  // Multi-megabyte write/read validation exceeds 20s under weekly V8 coverage.
   it.each([false, true])("by default commits an over-row-limit admitted payload as bounded chunks with its envelope (deferred=%s)", async (deferred) => {
     const { sqlite, db } = database();
     enforceD1ValueLimit(sqlite);
@@ -232,7 +233,7 @@ describe("Safety Score V9 sharded publication writer", () => {
     // A stale writer's batch rolls back its chunk writes with its envelope.
     await expect(persistSafetyScoreV9Publication(db, currentInput(first))).rejects.toThrow();
     expect(chunkKeys()).toEqual(nextKeys);
-  });
+  }, 60_000);
 });
 
 

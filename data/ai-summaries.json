@@ -3019,11 +3019,11 @@
   },
   "roughrider-bnd": {
     "title": "A State Bank's Permissioned Settlement Coin",
-    "text": "Roughrider Coin is the Bank of North Dakota's dollar-backed token for moving money between the state's banks and credit unions, and it is designed to stay inside that network. On October 1 2026 Fiserv put its digital asset platform into production with Roughrider as the first use case. VersaBank USA issues the token and manages custody and reserves, Fireblocks supplies the infrastructure, and transactions settle on Solana. On October 5 the state bank named Gate City Bank, First International Bank & Trust, Capital Credit Union and North Star Community Credit Union as its first pilot partners. Participation is voluntary, limited to approved institutions, and expands in phases with no end date. The public and merchants cannot hold the coin, so there is no market price or circulating supply for Pharos to track. Pharos therefore keeps it in the pre-launch registry while it runs as a bank-to-bank settlement pilot. The durable constraint is access: the coin circulates only among approved institutions, and no public or merchant route has been announced.",
-    "updatedAt": "2026-10-19",
+    "text": "Roughrider Coin is the Bank of North Dakota's dollar-backed token for moving money between the state's banks and credit unions, and it is designed to stay inside that network. On October 1 2026 Fiserv put its digital asset platform into production with Roughrider as the first use case. VersaBank USA issues the token and manages custody and reserves, Fireblocks supplies the infrastructure, and transactions settle on Solana. On October 5 the state bank named Gate City Bank, First International Bank & Trust, Capital Credit Union and North Star Community Credit Union as its first pilot partners. Participation is voluntary, limited to approved institutions, and expands in phases with no end date. BND describes minting against confirmed funding of a designated FBO (for benefit of) account and automatic burning when tokens reach the receiving institution, keeping standing balances low by design. Pharos delisted Roughrider on November 4 2026 because this permissioned interbank instrument has no positive circulating-supply path for admission. The public and merchants cannot hold the coin.",
+    "updatedAt": "2026-11-04",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "gpt-6",
+    "factsAsOf": "2026-11-04"
   },
   "fiusd-fiserv": {
     "title": "Fiserv's Stablecoin After the Partner Pivot",

@@ -13,6 +13,7 @@
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "coingecko",
   "geckoId": "monerium-gbp-emoney",
+  "llamaId": "446",
   "proofOfReserves": {
     "type": "self-reported",
     "url": "https://monerium.com/financial-information/",

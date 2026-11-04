@@ -29,6 +29,7 @@ import {
 describe("Safety Score V9 supply observation primitives", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it.each([null, undefined])("distinguishes authored withholding from missing identity (%s)", async (runtime) => {
@@ -213,6 +214,8 @@ describe("Safety Score V9 supply observation primitives", () => {
   });
 
   it("retries a single Solana endpoint once before rotating to the next endpoint", async () => {
+    // Drive backoff locally so shared-process RPC retries cannot enter this mock.
+    vi.useFakeTimers();
     const fetchMock = mockFetch([{
       match: "api.mainnet-beta.solana.com",
       outcomes: [
@@ -221,12 +224,12 @@ describe("Safety Score V9 supply observation primitives", () => {
       ],
     }]);
 
-    await expect(
-      fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
-        "getSlot",
-        [{ commitment: "finalized" }],
-      ),
-    ).resolves.toEqual({ slot: 42 });
+    const pending = fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
+      "getSlot",
+      [{ commitment: "finalized" }],
+    );
+    await vi.runAllTimersAsync();
+    await expect(pending).resolves.toEqual({ slot: 42 });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       "https://api.mainnet-beta.solana.com",

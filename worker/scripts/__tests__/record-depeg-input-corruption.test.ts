@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { buildInputCorruptionPlan, decodeInputCorruptionImportReceipt, main, parseInputCorruptionArgs } from "../record-depeg-input-corruption";
 import { createRemoteD1Client } from "../lib/remote-d1";
 import type * as RemoteD1Module from "../lib/remote-d1";
@@ -69,7 +70,7 @@ describe("sealed input-corruption operator", () => {
     }
   });
 
-  it("prints exact SQL without creating any D1 client; refuses unreadable/empty evidence", async () => {
+  it("prints exact SQL without D1; refuses unavailable evidence or frozen state", async () => {
     const dir = mkdtempSync(join(tmpdir(), "depeg-erratum-test-"));
     const path = join(dir, "evidence.json");
     const args = [...cli]; args[args.indexOf("--reviewed-evidence") + 1] = path;
@@ -83,6 +84,8 @@ describe("sealed input-corruption operator", () => {
       const output = JSON.parse(String(log.mock.calls[0][0]));
       expect(output).toMatchObject({ dryRun: true, verdict: "disputed", reason: "input_corruption" });
       expect(output.statements).toEqual(buildInputCorruptionPlan({ ...base, evidencePath: path, evidenceSha256: output.evidenceSha256, createdAt: output.createdAt }).statements);
+      vi.spyOn(FROZEN_IDS, "has").mockImplementation(() => { throw new Error("Frozen registry unavailable"); });
+      await expect(main([...args, "--apply", "--remote"])).rejects.toThrow("Frozen registry unavailable");
       expect(createRemoteD1Client).not.toHaveBeenCalled();
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
@@ -95,9 +98,11 @@ describe("sealed input-corruption operator", () => {
     expect(() => decodeInputCorruptionImportReceipt('\u251c Checking if file needs uploading\n[{"success":false,"results":[]}]')).toThrow("d1-query-failed");
   });
 
-  it("reads and prints separate JSON ledger identities after a progress-prefixed import, then refuses reapplication", async () => withSqliteD1(async (db) => {
+  it.each([false, true])("reads ledger identities and refuses reapplication, open frozen event=%s", async (frozen) => withSqliteD1(async (db) => {
     const { incident, prediction } = await sealPredictionFixture(db);
-    db.sqlite.exec("UPDATE depeg_events SET ended_at=200000 WHERE id=1");
+    if (!frozen) db.sqlite.exec("UPDATE depeg_events SET ended_at=200000 WHERE id=1");
+    const frozenLookup = vi.spyOn(FROZEN_IDS, "has").mockReturnValue(frozen);
+    const rawBefore = db.sqlite.prepare("SELECT * FROM depeg_events WHERE id=1").get();
     const dir = mkdtempSync(join(tmpdir(), "depeg-erratum-apply-test-"));
     const path = join(dir, "evidence.json");
     writeFileSync(path, '{"finding":"mixed units"}');
@@ -119,6 +124,15 @@ describe("sealed input-corruption operator", () => {
     });
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     try {
+      if (frozen) {
+        await main(args.filter((arg) => arg !== "--apply" && arg !== "--remote"));
+        frozenLookup.mockReturnValue(false);
+        await expect(main(args)).rejects.toThrow(/CHECK/);
+        expect(db.sqlite.prepare("SELECT COUNT(*) AS n FROM admin_action_audit").get()?.n).toBe(0);
+        expect(db.sqlite.prepare("SELECT COUNT(*) AS n FROM depeg_resolver_prediction_errata").get()?.n).toBe(0);
+        frozenLookup.mockReturnValue(true);
+        executeStatementsRaw.mockClear(); log.mockClear();
+      }
       await main(args);
       const output = JSON.parse(String(log.mock.calls[1][0]));
       expect(output).toMatchObject({ applied: true, readback: [{
@@ -130,6 +144,7 @@ describe("sealed input-corruption operator", () => {
       expect(executeStatementsRaw).toHaveBeenCalledTimes(1);
       expect(queryRaw).toHaveBeenCalledTimes(1);
       expect(queryRaw).toHaveBeenCalledWith(expect.stringContaining("SELECT er.id AS erratum_id"));
+      expect(db.sqlite.prepare("SELECT * FROM depeg_events WHERE id=1").get()).toEqual(rawBefore);
       await expect(main(args)).rejects.toThrow(/CHECK/);
       expect(executeStatementsRaw).toHaveBeenCalledTimes(2);
       expect(queryRaw).toHaveBeenCalledTimes(1);

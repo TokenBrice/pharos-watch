@@ -70,6 +70,18 @@ describe("supportsOnchainSupplyProbe", () => {
     }
   });
 
+  it("requires XRPL issued-currency identity and native amount encoding", () => {
+    const contract = TRACKED_META_BY_ID.get("ousg-ondo-finance")!.contracts!.find(entry => entry.chain === "xrpl")!;
+    expect(onchainSupplyProbeFamily(contract)).toBe("xrpl");
+    for (const invalid of [
+      { ...contract, decimals: 6 },
+      { ...contract, amountEncoding: undefined },
+      { ...contract, amountEncoding: { kind: "fixed-decimal" as const } },
+      ...["OUSG.bad", "XRP.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p", `${contract.address}.extra`]
+        .map(address => ({ ...contract, address })),
+    ]) expect(onchainSupplyProbeFamily(invalid)).toBeNull();
+  });
+
   // Platform extension: non-EVM legs must be able to join a fail-closed
   // aggregate instead of poisoning it for the whole asset.
   it("accepts Starknet felts and ICP canister ids and reports their reader family", () => {
@@ -608,7 +620,7 @@ describe("hasRuntimeOnchainSupplyPath", () => {
 });
 
 
-it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "susdc-spark", "syrupusdc-maple", "susdt-spark", "susds-sky", "sdai-sky"])("covers every supply-reviewed deployment for %s and rejects a missing leg", (id) => {
+it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "susdc-spark", "syrupusdc-maple", "susdt-spark", "susds-sky", "sdai-sky", "scrvusd-curve", "gldon-ondo", "xgld-unitas"])("covers every supply-reviewed deployment for %s and rejects a missing leg", (id) => {
   const meta = TRACKED_META_BY_ID.get(id)!;
   const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
   expect(selected.map(({ contract }) => `${contract.chain}:${contract.address}`).sort()).toEqual(
@@ -616,6 +628,26 @@ it.each(["mre7yield-midas", "cusdo-openeden", "syzusd-yuzu", "susdc-spark", "syr
   );
   for (const { contract } of selected) {
     expect(selectCuratedAggregateOnchainSupplyProbeContracts({ ...meta, contracts: meta.contracts!.filter((entry) => entry !== contract) })).toBeNull();
+  }
+});
+
+it("conserves the reviewed tail's lock/mint stock and sums its direct burn/mint stock", () => {
+  for (const id of ["scrvusd-curve", "gldon-ondo", "xgld-unitas"]) {
+    const meta = TRACKED_META_BY_ID.get(id)!;
+    const routes = meta.bridgeRouteRisk!.routes!;
+    const locked = routes.filter((route) => route.semantics === "lock-mint");
+    const canonical = CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS[id];
+    if (locked.length > 0) {
+      expect(canonical).toBeDefined();
+      expect(locked.every((route) => route.canonicalChain === canonical)).toBe(true);
+    } else {
+      expect(canonical).toBeUndefined();
+    }
+    for (const { contract, config } of selectCuratedAggregateOnchainSupplyProbeContracts(meta)!) {
+      const route = routes.find((entry) => entry.destinationChain === contract.chain && entry.contractAddress === contract.address)!;
+      expect(route.reviewDisposition).toBe("reviewed");
+      if (route.issuanceModel === "bridge-representation") expect(config.allowZeroSupply).toBe(true);
+    }
   }
 });
 

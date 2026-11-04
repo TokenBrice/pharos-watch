@@ -50,6 +50,10 @@ describe("REGISTRY_BY_ID", () => {
 describe("REGISTRY_BY_LLAMA_ID", () => {
   it("maps numeric llamaId to meta", () => {
     expect(REGISTRY_BY_LLAMA_ID.get("1")?.symbol).toBe("USDT");
+    expect(REGISTRY_BY_LLAMA_ID.get("430")?.id).toBe("sofid-sofi");
+    expect(REGISTRY_BY_LLAMA_ID.get("446")?.id).toBe("gbpe-monerium");
+    expect(REGISTRY_BY_LLAMA_ID.has("305")).toBe(false);
+    expect(REGISTRY_BY_LLAMA_ID.has("450")).toBe(false);
   });
 
   it("maps the audited Royal Dollar DefiLlama row", () => {

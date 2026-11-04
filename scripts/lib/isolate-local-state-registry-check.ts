@@ -41,10 +41,6 @@ const MODULE_DECLARATION_START = new RegExp(
   String.raw`(?:^|[;{}][ \t]*)${COMMENT_RUN}(?:export[ \t]+${COMMENT_RUN})?(?:const|let|var)\b`,
   "gmu",
 );
-// A `let` declaration starts its statement or follows another one on the same
-// line; either way its initializer can be of any form.
-// eslint-disable-next-line security/detect-unsafe-regex -- bounded alternative, no nested quantifiers
-const LET_DECLARATION_START = /^(?:export\s+)?let\b|[;{}][ \t]*let\b/;
 const MODULE_STATEMENT_END = /^\S[^\n]*;[ \t]*$/gm;
 const COLUMN_ZERO_LINE = /^\S/m;
 const LEADING_INDENT = /^[ \t]*(?=\S)/gm;
@@ -136,7 +132,7 @@ export function matchesCandidatePrefilter(text: string): boolean {
     const statement = source.slice(start, moduleStatementEnd(source, start));
     if (MUTABLE_CONSTRUCTOR.test(statement) || RECORDER_FACTORY.test(statement)) return true;
     // A `let` declaration is a candidate whatever its initializer looks like.
-    if (LET_DECLARATION_START.test(statement) && statement.includes("=")) return true;
+    if (match[0].endsWith("let") && statement.includes("=")) return true;
     // A literal candidate always names a stateful container, so the cheap
     // vocabulary screens statements before the annotated-match regex runs.
     if (STATEFUL_CONTAINER_NAME.test(statement) && STATEFUL_LITERAL_DECLARATION.test(statement)) return true;

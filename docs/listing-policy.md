@@ -92,6 +92,8 @@ A missing live price does not by itself move an active asset to quarantine or de
 
 Delist when the instrument itself fails scope, including account-only balances, private contractual-par notes, misleading provider artifacts, or assets without a meaningful transferable or redemption claim. A delisted record requires a dated reason and public source.
 
+An out-of-scope pre-launch row follows the same delisting path: retain its sourced catalog record and read-only profile, change its listing class to `excluded`, and remove it from upcoming surfaces. The retained profile preserves its canonical URL.
+
 Freeze only a previously active stablecoin that has effectively ended or failed and whose historical market record belongs in the cemetery. Record the freeze date and sourced obituary, preserve its identity and historical data as a read-only archive, and remove it from live collection and aggregates.
 
 ## Ongoing Runtime Review

@@ -1,8 +1,9 @@
 import { CHAIN_META } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types";
 import type { SupplyUnavailableReason } from "../types/market";
-import { SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
+import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 import { isFixedDecimalDeployment } from "./deployment-amounts";
+import { XrplIssuedCurrencyAmountSchema } from "../types/deployment-amounts";
 
 export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[number];
 export const NAV_SUPPLY_LEDGER_FRESHNESS = { maxAgeSec: 600, maxFutureSkewSec: 60 } as const;
@@ -13,6 +14,8 @@ export interface CuratedOnchainSupplyContractConfig {
   address?: string;
   rpcUrl?: string;
   fallbackRpcUrl?: string;
+  /** Issuer-documented operational holders excluded by XRPL gateway_balances. */
+  hotwallet?: readonly string[];
   /**
    * Some reviewed native deployments are live with zero supply. Keep this
    * opt-in so ordinary aggregate paths still fail closed on empty reads.
@@ -56,7 +59,7 @@ const ICP_CANISTER_ID_RE = /^[a-z2-7]{5}(-[a-z2-7]{5}){3}-[a-z2-7]{3}$/;
 export const EEARN_SUI_COIN_TYPE = "0x34469c8accdd673df02600265cbbad3688577f0e716866e257f88d448d463492::eearn::EEARN";
 export const USDY_SUI_COIN_TYPE = "0x960b531667636f39e85867775f52f6b1f220a058c4de786905bdf761e06a56bb::usdy::USDY";
 
-export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "aptos" | "starknet" | "icp" | "sui" | "stellar" | "noble";
+export type OnchainSupplyProbeFamily = "evm" | "solana" | "movement" | "aptos" | "starknet" | "icp" | "sui" | "stellar" | "noble" | "xrpl";
 
 const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeFamily>> = {
   solana: "solana",
@@ -66,6 +69,7 @@ const NON_EVM_PROBE_FAMILY_BY_CHAIN: Readonly<Record<string, OnchainSupplyProbeF
   icp: "icp",
   stellar: "stellar",
   noble: "noble",
+  xrpl: "xrpl",
 };
 
 /** Owner-reviewed current-token-stock perimeter; pending/retired claims are separate diagnostics. */
@@ -171,6 +175,29 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
   "cdp-enosys": [supplyProbeChain("flare")],
+  // Curve satellites lock Ethereum shares; reallocate, never add their stock.
+  // Reviewed 2026-11-04: canonical stock / CG cap = 0.953799 at $1.11/share.
+  "scrvusd-curve": [
+    { chain: "ethereum" },
+    { chain: "optimism", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("fraxtal", { allowZeroSupply: true }),
+    { chain: "fantom", rpcUrl: PUBLIC_RPC_URLS.fantom, allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true }, { chain: "avalanche", allowZeroSupply: true },
+    { chain: "xdc", allowZeroSupply: true }, supplyProbeChain("sonic", { allowZeroSupply: true }),
+    supplyProbeChain("etherlink", { allowZeroSupply: true }),
+  ],
+  // Native Ethereum/BNB/Solana plus HyperEVM burn/mint stock; no canonical escrow.
+  // Reviewed 2026-11-04: sum / CG implied shares = 0.999454.
+  "gldon-ondo": [
+    { chain: "ethereum" }, { chain: "bsc" }, { chain: "solana" },
+    supplyProbeChain("hyperevm", { allowZeroSupply: true }),
+  ],
+  // XGLDToken OFTs burn/mint their own stock; Ethereum is live at observed zero.
+  // Reviewed 2026-11-04: sum / CG implied units = 1.000011.
+  "xgld-unitas": [
+    { chain: "bsc" }, { chain: "base", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true }, supplyProbeChain("mantle", { allowZeroSupply: true }),
+  ],
   // Reviewed 2026-10-25: all nine EVM issuer registers sum; Solana/Stellar
   // are Ethereum-escrowed representations listed explicitly below, not new stock.
   "jaaa-janus-henderson-anemoy": [
@@ -269,6 +296,14 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "solana", allowZeroSupply: true }, supplyProbeChain("aptos", { allowZeroSupply: true }),
     { chain: "stellar", allowZeroSupply: true }, { chain: "noble", allowZeroSupply: true },
     { chain: "bsc", allowZeroSupply: true }, supplyProbeChain("tempo", { allowZeroSupply: true }),
+  ],
+  // Reviewed issuer-native registers; Polygon/Solana have observed zero stock.
+  // Ondo's manual redemption recipient is operational inventory, not investor float.
+  // https://docs.ondo.finance/addresses
+  "ousg-ondo-finance": [
+    { chain: "ethereum" }, { chain: "polygon", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true },
+    supplyProbeChain("xrpl", { hotwallet: ["rHprwRkvDexV5LF5tzKQmx7U7Ku2836DA1"] }),
   ],
   // Movement USDCx is a Circle xReserve representation. Its fungible-asset
   // supply is admitted only after the Worker reconciles it to the matching
@@ -1162,6 +1197,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
 // the listed lock/mint representations. Reallocate that supply across chains
 // instead of adding representation supplies to the canonical total.
 export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, string>> = {
+  "scrvusd-curve": "ethereum",
   "apyusd-apyx": "ethereum",
   "susn-noon": "ethereum",
   "syrupusdg-maple": "ethereum",
@@ -1290,6 +1326,12 @@ export function onchainSupplyProbeFamily(contract: OnchainSupplyContract): Oncha
         || /^[a-zA-Z0-9]{1,12}-G[A-Z2-7]{55}$/.test(contract.address) ? "stellar" : null;
     case "noble":
       return contract.address === "ausdy" ? "noble" : null;
+    case "xrpl": {
+      const [currency, issuer, extra] = contract.address.split(".");
+      return contract.decimals === null && contract.amountEncoding?.kind === "xrpl-issued-currency"
+        && extra === undefined && XrplIssuedCurrencyAmountSchema.safeParse({ currency, issuer, value: "0" }).success
+        ? "xrpl" : null;
+    }
     default:
       break;
   }

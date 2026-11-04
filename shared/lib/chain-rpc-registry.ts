@@ -81,6 +81,7 @@ export const EXTRA_FALLBACK_RPC_URLS: Readonly<Record<string, readonly string[]>
 // Reviewed supply profile. These fallbacks intentionally differ from the Worker
 // profile (notably Monad and Blast); neither profile implicitly expands the other.
 export const SUPPLY_RPC_DEFAULTS = {
+  "xrpl": { rpcUrl: "https://xrplcluster.com", fallbackRpcUrl: "https://s1.ripple.com:51234" },
   "aptos": { rpcUrl: APTOS_PUBLIC_REST_URL },
   // 0G mainnet (16661 / 0x4115), exact PYUSDx deployment and decimals verified
   // 2026-10-15. Supply-only profile; no archive/log routing is inferred.
