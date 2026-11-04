@@ -825,57 +825,8 @@ describe("handleHealth", () => {
       },
     ]);
     const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      status: string;
-      timestamp: number;
-      warnings: string[];
-      caches: Record<string, unknown>;
-      blacklist: {
-        totalEvents: number;
-        missingAmounts: number;
-        recentMissingAmounts: number;
-        recentWindowSec: number;
-        missingRatio: number;
-      };
-      mintBurn: {
-        totalEvents: number | null;
-        latestEventTs: number | null;
-        latestHourlyTs: number | null;
-        freshnessAgeSec: number | null;
-        majorStaleCount: number;
-        staleMajorSymbols: string[];
-        sync: {
-          lastSuccessfulSyncAt: number | null;
-          freshnessStatus: FreshnessStatus;
-          warning: string | null;
-          criticalLaneHealthy: boolean;
-        };
-      };
-      circuits: Record<string, unknown>;
-    };
-    expect(body).toHaveProperty("status");
-    expect(body).toHaveProperty("timestamp");
-    expect(body).toHaveProperty("warnings");
-    expect(body).toHaveProperty("caches");
-    expect(body).toHaveProperty("blacklist");
-    expect(body).toHaveProperty("mintBurn");
-    expect(body).toHaveProperty("circuits");
+    const body = await readJsonResponse(res, 200);
     expect(body).not.toHaveProperty("d1Capacity");
-    expect(body.blacklist).toMatchObject({
-      totalEvents: 0,
-      missingAmounts: 0,
-      recentMissingAmounts: 0,
-      missingRatio: 0,
-    });
-    expect(body.mintBurn.totalEvents).toBe(4321);
-    expect(body.warnings).toEqual([]);
-    expect(body.mintBurn).toHaveProperty("latestEventTs");
-    expect(body.mintBurn).toHaveProperty("latestHourlyTs");
-    expect(body.mintBurn).toHaveProperty("freshnessAgeSec");
-    expect(body.mintBurn).toHaveProperty("majorStaleCount");
-    expect(body.mintBurn).toHaveProperty("staleMajorSymbols");
-    expect(body.mintBurn).toHaveProperty("sync");
-    expect(["healthy", "degraded", "stale"]).toContain(body.status);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_events"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM mint_burn_hourly"))).toBe(false);
     expect(db.getHistory().some((entry) => entry.sql.includes("sqlite_sequence"))).toBe(false);

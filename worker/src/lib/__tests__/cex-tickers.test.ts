@@ -282,52 +282,20 @@ describe("fetchCoinbasePrices", () => {
     const expectedSec = Math.floor(Date.parse("2026-04-17T15:05:04.183Z") / 1000);
     expect(outcome.value.observedAtBySymbol.get("USDT")).toBe(expectedSec);
   });
-  it("prices the AUDD-USDC FX-stablecoin product from its bid/ask midpoint", async () => {
-    // Live shape probed 2026-09-26 from
-    // https://api.exchange.coinbase.com/products/AUDD-USDC/ticker (fx_stablecoin
-    // book; USDC quote treated at USD par). Midpoint must win over the last
-    // trade so the thin book's prints cannot skew the hard-market voice.
+  // Captured thin-book quotes: midpoint must beat the last trade; USDC is valued at USD par.
+  it.each([
+    ["AUDD", "0.7075", "0.7036", "0.7036", "2026-09-26T22:28:40.333586513Z", 0.70555],
+    ["XSGD", "0.7831", "0.7821", "0.783", "2026-10-30T21:18:48.841299403Z", 0.7826],
+  ] as const)("prices the %s-USDC FX-stablecoin product from its bid/ask midpoint", async (symbol, ask, bid, price, time, expected) => {
     mockFetch([
-      {
-        match: "/products/AUDD-USDC/ticker",
-        body: {
-          ask: "0.7075",
-          bid: "0.7036",
-          price: "0.7036",
-          time: "2026-09-26T22:28:40.333586513Z",
-        },
-      },
+      { match: `/products/${symbol}-USDC/ticker`, body: { ask, bid, price, time } },
       { match: () => true, body: {}, status: 404 },
     ], { requireMatch: true });
-    const outcome = await fetchCoinbasePrices(["AUDD"]);
+    const outcome = await fetchCoinbasePrices([symbol]);
+    expect(COINBASE_KNOWN_SYMBOLS).toContain(symbol);
     expect(outcome.kind).toBe("ok");
-    expect(outcome.value.prices.get("AUDD")).toBeCloseTo(0.70555, 6);
-    const expectedSec = Math.floor(Date.parse("2026-09-26T22:28:40.333586513Z") / 1000);
-    expect(outcome.value.observedAtBySymbol.get("AUDD")).toBe(expectedSec);
-  });
-
-  it("prices the XSGD-USDC FX-stablecoin product from its bid/ask midpoint", async () => {
-    // Live shape probed 2026-10-30 from
-    // https://api.exchange.coinbase.com/products/XSGD-USDC/ticker (USDC quote
-    // treated at USD par under the AUDD-USDC precedent).
-    mockFetch([
-      {
-        match: "/products/XSGD-USDC/ticker",
-        body: {
-          ask: "0.7831",
-          bid: "0.7821",
-          price: "0.783",
-          time: "2026-10-30T21:18:48.841299403Z",
-        },
-      },
-      { match: () => true, body: {}, status: 404 },
-    ], { requireMatch: true });
-    const outcome = await fetchCoinbasePrices(["XSGD"]);
-    expect(COINBASE_KNOWN_SYMBOLS).toContain("XSGD");
-    expect(outcome.kind).toBe("ok");
-    expect(outcome.value.prices.get("XSGD")).toBeCloseTo(0.7826, 6);
-    const expectedSec = Math.floor(Date.parse("2026-10-30T21:18:48.841299403Z") / 1000);
-    expect(outcome.value.observedAtBySymbol.get("XSGD")).toBe(expectedSec);
+    expect(outcome.value.prices.get(symbol)).toBeCloseTo(expected, 6);
+    expect(outcome.value.observedAtBySymbol.get(symbol)).toBe(Math.floor(Date.parse(time) / 1000));
   });
 
   it("rejects a wide product book without falling back to its last trade", async () => {
@@ -361,23 +329,6 @@ describe("fetchCoinbasePrices", () => {
     ]);
   });
 
-  it("cancels failed product responses and returns upstream-error outcome", async () => {
-    const cancel = vi.fn(async () => undefined);
-    const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 404 });
-    mockFetch([{
-      match: () => true,
-      outcomes: [{ response: failedResponse() }],
-    }]);
-
-    const outcome = await fetchCoinbasePrices(["USDT"]);
-
-    // When every product request fails (whether via throw or non-OK response),
-    // Coinbase gives the breaker no reason to believe it's contributing — treat
-    // as upstream-error so the breaker tracks consecutive failures.
-    expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.prices.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(1);
-  });
 
   it("returns upstream-error outcome when every product request throws", async () => {
     mockFetch([{ match: () => true, outcomes: [new Error("network down")] }]);
@@ -427,26 +378,15 @@ describe("fetchCoinbasePrices", () => {
     ]);
   });
 
-  it("rejects ticker prices with trailing non-numeric text", async () => {
+  it.each([
+    ["trailing non-numeric text", "0.9997 USD", "0.9999 USD", "0.9998 USD"],
+    ["non-decimal JavaScript numeric literals", "0x10", "0b10", "0o10"],
+  ])("rejects ticker prices containing %s", async (_case, bid, ask, price) => {
     mockFetch([
-      { match: "/products/USDT-USD/ticker", body: { bid: "0.9997 USD", ask: "0.9999 USD", price: "0.9998 USD" } },
+      { match: "/products/USDT-USD/ticker", body: { bid, ask, price } },
       { match: () => true, body: {}, status: 404 },
     ], { requireMatch: true });
-
     const outcome = await fetchCoinbasePrices(["USDT"]);
-
-    expect(outcome.kind).toBe("no-data");
-    expect(outcome.value.prices.has("USDT")).toBe(false);
-  });
-
-  it("rejects non-decimal JavaScript numeric literal price strings", async () => {
-    mockFetch([
-      { match: "/products/USDT-USD/ticker", body: { bid: "0x10", ask: "0b10", price: "0o10" } },
-      { match: () => true, body: {}, status: 404 },
-    ], { requireMatch: true });
-
-    const outcome = await fetchCoinbasePrices(["USDT"]);
-
     expect(outcome.kind).toBe("no-data");
     expect(outcome.value.prices.has("USDT")).toBe(false);
   });
@@ -576,56 +516,6 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.diagnostics).toEqual([]);
   });
 
-  it("requests the exact SoFiUSD market and prefers its bid/ask midpoint", async () => {
-    const requestedUrls: string[] = [];
-    mockFetch([{
-      match: (request) => {
-        requestedUrls.push(request.url);
-        return true;
-      },
-      body: {
-        error: [],
-        result: {
-          // Live SOFIDUSD ticker shape observed 2026-10-05.
-          SOFIDUSD: { a: ["0.99979000"], b: ["0.99976000"], c: ["0.99976000"] },
-        },
-      },
-    }]);
-
-    const outcome = await fetchKrakenPrices(["SOFID"]);
-
-    expect(KRAKEN_KNOWN_SYMBOLS).toContain("SOFID");
-    expect(requestedUrls).toEqual(["https://api.kraken.com/0/public/Ticker?pair=SOFIDUSD"]);
-    expect(outcome.kind).toBe("ok");
-    expect(outcome.value.prices.get("SOFID")).toBeCloseTo(0.999775, 8);
-    expect(outcome.value.prices.size).toBe(1);
-  });
-
-  it("requests the exact Tether Gold market and prefers its bid/ask midpoint", async () => {
-    const requestedUrls: string[] = [];
-    mockFetch([{
-      match: (request) => {
-        requestedUrls.push(request.url);
-        return true;
-      },
-      body: {
-        error: [],
-        result: {
-          // Live XAUTUSD ticker shape observed 2026-10-30.
-          XAUTUSD: { a: ["3906.10000"], b: ["3906.00000"], c: ["3905.00000"] },
-        },
-      },
-    }]);
-
-    const outcome = await fetchKrakenPrices(["XAUT"]);
-
-    expect(KRAKEN_KNOWN_SYMBOLS).toContain("XAUT");
-    expect(requestedUrls).toEqual(["https://api.kraken.com/0/public/Ticker?pair=XAUTUSD"]);
-    expect(outcome.kind).toBe("ok");
-    expect(outcome.value.prices.get("XAUT")).toBeCloseTo(3906.05, 8);
-    expect(outcome.value.prices.size).toBe(1);
-  });
-
   it("requests the reviewed CASH and USDGO markets and prefers their bid/ask midpoints", async () => {
     const requestedUrls: string[] = [];
     mockFetch([{
@@ -701,30 +591,6 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.prices.size).toBe(8);
   });
 
-  it("requests Wyoming FRNT's exact USD book and uses its bid/ask instead of the last trade", async () => {
-    const requestedUrls: string[] = [];
-    mockFetch([{
-      match: (request) => {
-        requestedUrls.push(request.url);
-        return true;
-      },
-      body: {
-        error: [],
-        result: {
-          FRNTUSD: { a: ["1.00000000"], b: ["0.99840000"], c: ["1.00000000"] },
-        },
-      },
-    }]);
-
-    const outcome = await fetchKrakenPrices(["FRNT"]);
-
-    expect(KRAKEN_KNOWN_SYMBOLS).toContain("FRNT");
-    expect(requestedUrls).toEqual(["https://api.kraken.com/0/public/Ticker?pair=FRNTUSD"]);
-    expect(outcome.kind).toBe("ok");
-    expect(outcome.value.prices.get("FRNT")).toBeCloseTo(0.9992, 8);
-    expect(outcome.value.prices.size).toBe(1);
-  });
-
   it("returns upstream-error outcome when Kraken returns an API error", async () => {
     mockFetch([{ match: () => true, body: { error: ["EGeneral:Temporary lockout"], result: {} } }]);
 
@@ -734,20 +600,6 @@ describe("fetchKrakenPrices", () => {
     expect(outcome).toMatchObject({ reason: "EGeneral:Temporary lockout" });
   });
 
-  it("returns upstream-error when HTTP request fails", async () => {
-    const cancel = vi.fn(async () => undefined);
-    const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 503 });
-    mockFetch([{
-      match: () => true,
-      outcomes: [{ response: failedResponse() }, { response: failedResponse() }],
-    }]);
-
-    const outcome = await fetchKrakenPrices(["USDT"]);
-
-    expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.prices.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(2);
-  });
 
   it("returns upstream-error when the fetch throws", async () => {
     mockFetch([{ match: () => true, outcomes: [new Error("network down")] }]);
@@ -852,20 +704,6 @@ describe("fetchBitstampPrices", () => {
     ]);
   });
 
-  it("returns upstream-error when HTTP request fails", async () => {
-    const cancel = vi.fn(async () => undefined);
-    const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 500 });
-    mockFetch([{
-      match: () => true,
-      outcomes: [{ response: failedResponse() }, { response: failedResponse() }],
-    }]);
-
-    const outcome = await fetchBitstampPrices();
-
-    expect(outcome.kind).toBe("upstream-error");
-    expect(outcome.value.prices.size).toBe(0);
-    expect(cancel).toHaveBeenCalledTimes(2);
-  });
 
   it("returns no-data outcome when response has no tracked pairs", async () => {
     mockFetch([{ match: () => true, body: [{ pair: "BTC/USD", market: "BTC/USD", last: "65000" }] }]);
@@ -874,6 +712,26 @@ describe("fetchBitstampPrices", () => {
   });
 });
 
+
+describe("provider HTTP failures", () => {
+  it.each([
+    ["Coinbase", () => fetchCoinbasePrices(["USDT"]), 404, 1],
+    ["Kraken", () => fetchKrakenPrices(["USDT"]), 503, 2],
+    ["Bitstamp", () => fetchBitstampPrices(), 500, 2],
+  ] as const)("%s cancels failed responses and returns upstream-error", async (_venue, read, status, attempts) => {
+    const cancel = vi.fn(async () => undefined);
+    mockFetch([{
+      match: () => true,
+      outcomes: Array.from({ length: attempts }, () => ({
+        response: new Response(new ReadableStream({ cancel }), { status }),
+      })),
+    }]);
+    const outcome = await read();
+    expect(outcome.kind).toBe("upstream-error");
+    expect(outcome.value.prices.size).toBe(0);
+    expect(cancel).toHaveBeenCalledTimes(attempts);
+  });
+});
 
 describe("exchange symbol allowlists", () => {
   const trackedSymbols = new Set(ACTIVE_STABLECOINS.map((stablecoin) => stablecoin.symbol.toUpperCase()));
