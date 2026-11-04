@@ -1,0 +1,3 @@
+[
+  {"date":"2026-10-29","kind":"methodology-change","label":"HBD supply switches to Hive debt excluding liquid hive.fund treasury HBD","severity":"low","href":"https://github.com/TokenBrice/pharos-watch/pull/1743","note":"Pricing 6.61 adopts current_hbd_supply minus liquid hive.fund HBD; the chart step reflects a supply-perimeter change, while earlier CoinGecko total-basis history remains unchanged."}
+]

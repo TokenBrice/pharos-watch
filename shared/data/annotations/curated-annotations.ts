@@ -173,6 +173,7 @@ import source156 from "./coins/rusd-royal-dollar.json";
 import source157 from "./coins/stkgho-umbrella-aave.json";
 import source158 from "./coins/usdfc-secured-finance.json";
 import source159 from "./coins/vndc-jade-labs.json";
+import source160 from "./coins/hbd-hive.json";
 
 type CuratedAnnotationSource = Readonly<Record<string, unknown>>;
 type CuratedAnnotationSourceAsset = readonly CuratedAnnotationSource[];
@@ -337,6 +338,7 @@ const CURATED_SOURCES: Readonly<Record<string, CuratedAnnotationSourceAsset>> = 
   "stkgho-umbrella-aave": source157,
   "usdfc-secured-finance": source158,
   "vndc-jade-labs": source159,
+  "hbd-hive": source160,
 };
 
 const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);
