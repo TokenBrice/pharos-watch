@@ -18,11 +18,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
-      "sha256": "b478a1e2b0b51f0cc07a70b6ba3c052c94518a979bbb506dc8d1a8b81bacfc69"
+      "sha256": "c1e377992b1e5639f650c2825910a4c247558c4a0e5ee837c977ce4d4196c126"
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
-      "sha256": "bab5d35e02576c55276afed8989d989a6adb6539b18eff3f259112146a089544"
+      "sha256": "88f1b7b90cca585c8e28dcd3685298577f9c8e8c1dd932c3b3e6877e32950cca"
     },
     {
       "path": "shared/data/safety-score-v9/incident-reviews-v1.json",
@@ -46,7 +46,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "6fa5a2be0bd64f8936ba4d4d96f5e02ac4a9421e3905add76aa92f6bb4205080"
+      "sha256": "bbfc8eb3473c116197026f9c08e9221777b49ffa8b6f14fd135522a9bc4d3b79"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -54,7 +54,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
-      "sha256": "a8de030d647fc02fa50539804f10d33d0a0ddd555024a4b78e5b4b1b6688e065"
+      "sha256": "cad7536b52146b7cb0e606264c3460175f2c8693309a76fe4ca1489880184088"
     },
     {
       "path": "shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
@@ -78,15 +78,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "be84214c726567949593a89bca82bd96b2f33b7e6436551aa92de993fd89b1db"
+      "sha256": "c3784e262519218fcc33cefeaa61989f3575aac6873aa5ec62ff96da9c8a48c7"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "7de6e007139a1f8070cf7578cf8348fa72e0a6b4a4b35470b550616bdc3933ee"
+      "sha256": "9a1f80625c7b0a42ed7b99df3d3f9314e1e10249e65cf9157c730c66e5e0d9d1"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "569d54fce74c22e687d091b48ccef0ddf700bfa2bb9ef3352898b22e0c8dfa06"
+      "sha256": "c082fa9113512adc34b410a5468e343019ceac1e88d07ee6c4eb961670256f4b"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -110,7 +110,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chain-rpc-registry.ts",
-      "sha256": "be4a323b812ec0eedacc461b21cd880920ed3d648c5e68ba935c1295b5cb3d21"
+      "sha256": "4393836420526af06bf5e46a4a00ade831cd4068195fdbc389f7b38e50a57bec"
     },
     {
       "path": "shared/lib/circuit-sources.ts",
@@ -450,7 +450,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9-supply-attribution-journal.ts",
-      "sha256": "a16917d09d3723716554af5f99d388413ceccf1bef91f2f334cbbf4952ea1e29"
+      "sha256": "1ec617899fa15bd4f956d7c12a25bc245d5b50c3b6d4ebf59a2db3691fe29b1a"
     },
     {
       "path": "shared/lib/safety-score-v9/access-lookthrough.ts",
@@ -1326,7 +1326,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "bd24a374dfb71d079e73a8941f9e83350afce0826b09160348f9b5859de956c3"
+      "sha256": "553f3ba60bd49c4ec09e8a09e6f8bb4ad3a926a58b011e98b5c214c7e9a2fa1c"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-diagnostics.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-04-block-26341087-shock-coverage.json.gz"
     }
   ],
-  "digest": "8eae19f35c9756ed709b016a559590e31474c64fd512b9c12e9172909cd842f9"
+  "digest": "0f8c5b3f1f35fef6dc17c86495a6ac729e0c84a3e41ef7456357a71197ac10f4"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
