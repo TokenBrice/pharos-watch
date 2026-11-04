@@ -77,6 +77,8 @@ export const SupplyAttributionRejectionCodeSchema = z.enum([
   "deployment-identity-authored-withholding",
   "chain-rpc-unavailable",
   "safe-block-unavailable",
+  "deployment-pin-lag-violation",
+  "deployment-pin-header-mismatch",
   "deployment-state-unavailable",
   "deployment-state-invalid",
   "deployment-identity-mismatch",
@@ -110,6 +112,10 @@ const SUPPLY_ATTRIBUTION_ADMISSION_BY_REJECTION_CODE = {
     "supply-attribution.admission.rejected-upstream",
   "safe-block-unavailable":
     "supply-attribution.admission.rejected-stale",
+  "deployment-pin-lag-violation":
+    "supply-attribution.admission.rejected-invalid-payload",
+  "deployment-pin-header-mismatch":
+    "supply-attribution.admission.rejected-invalid-payload",
   "deployment-state-unavailable":
     "supply-attribution.admission.rejected-upstream",
   "deployment-state-invalid":
@@ -159,6 +165,8 @@ const REVIEWED_DEPLOYMENT_REJECTION_CODES =
     "deployment-identity-authored-withholding",
     "chain-rpc-unavailable",
     "safe-block-unavailable",
+    "deployment-pin-lag-violation",
+    "deployment-pin-header-mismatch",
     "deployment-state-unavailable",
     "deployment-state-invalid",
     "deployment-identity-mismatch",
