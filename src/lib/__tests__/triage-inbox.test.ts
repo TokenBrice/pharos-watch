@@ -92,14 +92,16 @@ describe("buildTriageInbox", () => {
       { code: "reserve_feed_reviews_acknowledged", layer: "data-quality", severity: "info", message: "Reviewed feed exclusions." },
       { code: "active_price_coverage_incomplete", layer: "data-quality", severity: "info", message: "Price coverage diagnostic." },
     ]);
-    const inbox = buildTriageInbox(normalizeStatusIssues(data.causes), data);
+    const firstGeneration = buildTriageInbox(normalizeStatusIssues(data.causes), data);
+    expect(firstGeneration.informational.map((item) => item.issue.code)).toEqual(["active_price_coverage_incomplete"]);
+    expect(buildTriageHeadline(firstGeneration, CURRENT_EVIDENCE).text).toBe("Nothing needs action. Watching 1.");
+    const inbox = buildTriageInbox(normalizeStatusIssues(data.causes, [], true), data);
     expect(inbox.items).toHaveLength(0);
-    expect(inbox.watch).toHaveLength(0);
     expect(inbox.informational).toHaveLength(0);
     expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE)).toEqual({ verdict: "ok", text: "Nothing needs action." });
 
     const warning: StatusCause = { ...data.causes.overall[2], severity: "warning" };
-    const mixed = buildTriageInbox(normalizeStatusIssues(data.causes, [warning]), data);
+    const mixed = buildTriageInbox(normalizeStatusIssues(data.causes, [warning], true), data);
     expect(mixed.watch.map((item) => item.issue.code)).toEqual(["active_price_coverage_incomplete"]);
     expect(buildTriageHeadline(mixed, CURRENT_EVIDENCE)).toEqual({ verdict: "watch", text: "Nothing needs action. Watching 1." });
 

@@ -350,7 +350,10 @@ export function buildStatusDashboardData({ data, healthData, probes, probeLabel 
   const healthDiffersFromStatus = healthData != null && healthData.status !== data.overallStatus;
   const publicHealthNeedsCallout = healthData != null && (healthData.status !== "healthy" || healthDiffersFromStatus);
   const recommendedActions = deriveStatusActionRecommendations({ causes: data.causes, crons: data.crons });
-  const issueGroups = groupDashboardIssues(normalizeStatusIssues(data.causes, buildPublicHealthStatusCauses(healthData)));
+  const coverage = healthData?.activePriceCoverage;
+  const allMissingPricesReviewed = coverage != null && coverage.missingActiveIds.length > 0
+    && coverage.missingActiveIds.every((id) => coverage.acknowledgedGapIds?.includes(id) || coverage.scheduledClosureGapIds?.includes(id));
+  const issueGroups = groupDashboardIssues(normalizeStatusIssues(data.causes, buildPublicHealthStatusCauses(healthData), allMissingPricesReviewed));
   const decision = buildDashboardDecision({ data, healthData, evidence, issueGroups, recommendedActions });
   const overallTone = decision.systemState === "unknown" ? getStatusTone(data.overallStatus) : getStatusTone(decision.systemState);
   const notices = buildDashboardNotices({

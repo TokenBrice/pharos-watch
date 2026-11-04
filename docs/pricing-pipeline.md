@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.69`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.70`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -45,6 +45,8 @@ Pricing v6.67 keeps a provider aggregate history bucket on a chain-dropout carry
 Pricing v6.68 bounds promoted per-protocol DEX lanes by the same co-leg budget as the DEX aggregate, so an hourly lane inside its own 35-minute source budget can no longer age fresh hard agreement past the 30-minute depeg-trust budget, while a lane up to 30 minutes old still backs a hard leg whose fresh peers are missing or diverge only when it lands in that hard leg's agreement group; [Source Weights](#source-weights) owns the rule.
 
 Pricing v6.69 gives Tangent USG its CoinGecko identity (`tangent-usg`), so the ordinary supplemental CoinGecko lane prices it instead of the lone Curve on-chain quote, and makes its keeper-adjusted issuer-native Ethereum stock outrank any CoinGecko market cap; a failed read restores the prior keeper-adjusted packet inside the seven-day ceiling or withholds. `mai-qidao`, `usda-alpha-partner`, `pathusd-bridge` and `wars-argentine-peso` keep no promoted DEX lane: their venues offer one unmapped or normalized protocol family, or families that disagree beyond the 50-bps corroboration threshold, and no hard source, so the existing corroboration, lane-floor and aggregate-withholding rules decide, not a coin-level switch.
+
+Pricing v6.70 refuses supply rescaled by a detected severe DefiLlama fill default without complete native corroboration or a bounded vetted carry; fill-scaled history remains unavailable. The reviewed native repair roster adds MOVEUSD/Solana and rwaUSDi deployments, including a supply-only Pharos state route. Dated USDQ/Quantoz and USDGLO collapse reviews release obsolete baselines; BUIDL/fxUSD Tempo omission reviews publish only the observed remainder with explicit partial coverage until expiry re-arms the guard. The [supply contract](supply-snapshot.md#chain-dropout-guard) owns admission and recovery; the [v6.70 history](https://pharos.watch/methodology/pricing-pipeline-changelog/archive/v6/#changelog-v-6-70) records scope and dates.
 
 ### Release obligations
 

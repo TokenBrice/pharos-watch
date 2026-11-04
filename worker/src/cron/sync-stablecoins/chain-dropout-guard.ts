@@ -769,7 +769,7 @@ export async function guardChainDropouts(input: {
     asset.supplyChainGuard = {
       reason: "supply-chain-dropout", status,
       ...(quarantinedSince != null ? { quarantinedSince } : {}),
-      ...(partialCoverage ? { partialCoverage: true as const } : {}),
+      ...(partialCoverage || exclusions.length > 0 ? { partialCoverage: true as const } : {}),
       ...(ambiguous ? { concurrentGainUsd: gains } : {}),
       chains: affected.map((candidate) => candidate.evidence),
     };

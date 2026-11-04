@@ -384,7 +384,7 @@ export async function runPriceDexRefresh(params: {
   });
   const addressObservations = address.observations;
   const cohortIds = new Set(plan.cohort.map((asset) => asset.id));
-  const diagnosticIds = [...new Set([...plan.targetsById.keys(), ...cohortIds])];
+  const diagnosticIds = [...new Set([...cohortIds, ...plan.targetsById.keys()])];
   const addressTargets = new Map(previous.addressTargets.map((target) => [target.id, target] as const));
   // Only definitive answered misses invalidate hints; capped, blocked and aborted work stays neutral.
   for (const id of address.unresolvedIds) addressTargets.delete(id);

@@ -426,24 +426,20 @@ describe("status dashboard model", () => {
     expect(model.decision.nextStep).toBe("observe-next-run");
   });
 
-  it("does not synthesize active-price warning issues without a health warning", () => {
+  it("keeps first-generation unacknowledged gaps watching without synthesizing warnings", () => {
     const healthData = {
       ...BASE_HEALTH,
       status: "healthy" as const,
       warnings: [],
-      activePriceCoverage: makeActivePriceCoverage([], {
-        pricedActiveCount: 189,
-        missingPriceCount: 1,
-        missingActiveIds: ["test-dollar"],
-        affectedMarketCapUsd: 500_000,
-        maxConsecutiveMissingGenerations: 1,
-      }),
+      activePriceCoverage: makeActivePriceCoverage([makeMissingActiveAsset()]),
     };
 
-    const model = buildModel(BASE_STATUS, { healthData });
+    const cause: StatusCause = { code: "active_price_coverage_incomplete", layer: "data-quality", severity: "info", message: "First missing generation." };
+    const model = buildModel({ ...BASE_STATUS, causes: { overall: [cause], availability: [], dataQuality: [cause] } }, { healthData });
 
     expect(model.issueGroups.warnings.some((issue) => issue.code === "active_price_coverage_incomplete")).toBe(false);
     expect(model.issueGroups.impacting).toHaveLength(0);
+    expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual([cause.code]);
   });
 
   it("maps unknown exact active-price coverage to the stablecoin price surface", () => {
@@ -512,12 +508,17 @@ describe("status dashboard model", () => {
       causes: { overall: [...standing, watch], availability: [watch], dataQuality: standing },
     };
 
-    const issues = normalizeStatusIssues(data.causes);
-    expect(issues.map((issue) => issue.code)).toEqual(["mint_burn_public_degraded"]);
-
-    const model = buildModel(data);
+    const healthData = makeHealthyHealthResponse();
+    healthData.activePriceCoverage = makeActivePriceCoverage(
+      ["reviewed", "closed"].map((stablecoinId) => makeMissingActiveAsset({ stablecoinId })),
+      { acknowledgedGapIds: ["reviewed"], scheduledClosureGapIds: ["closed"] },
+    );
+    const model = buildModel(data, { healthData });
     expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(["mint_burn_public_degraded"]);
     expect(model.decision.summary).toContain("1 informational watch remains");
+    healthData.activePriceCoverage.missingActiveIds.push("first-generation-unacknowledged");
+    expect(buildModel(data, { healthData }).issueGroups.watches.map((issue) => issue.code))
+      .toEqual(["active_price_coverage_incomplete", "mint_burn_public_degraded"]);
     // The by-design cause stays in the status payload it was read from.
     expect(data.causes.dataQuality).toEqual(standing);
   });
