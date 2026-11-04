@@ -23,7 +23,7 @@ import { bdAerodromeProvider } from "./bd-aerodrome";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { swanusdCurvePoolProvider } from "./swanusd-curve-pool";
 import { stbtCurvePoolProvider } from "./stbt-curve-pool";
-import { usd3CurvePoolProvider } from "./usd3-curve-pool";
+import { usd3CurvePoolProvider, type Usd3PriceContext } from "./usd3-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
 import { mentoBrokerProvider } from "./mento-broker";
 import { capCusdProvider } from "./cap-cusd";
@@ -251,7 +251,7 @@ export function createAuthoritativeLivePriceOverrideStats(
   };
 }
 
-export interface AuthoritativeLivePriceOverrideOptions {
+export interface AuthoritativeLivePriceOverrideOptions extends Pick<Usd3PriceContext, "previousAssetsById" | "priceCache"> {
   chainRpcs?: Map<string, ChainRpcConfig>;
   db?: D1Database;
   wallClockBudgetMs?: number;
@@ -306,10 +306,12 @@ export async function fetchAuthoritativeLivePriceOverrides(
   options?: AuthoritativeLivePriceOverrideOptions,
 ): Promise<Map<string, CurrentPriceOverride>> {
   const results = new Map<string, CurrentPriceOverride>();
-  const liveContext: LivePriceContext = {
+  const liveContext: Usd3PriceContext = {
     chainRpcs: options?.chainRpcs,
     assetsById: new Map(assets.map((asset) => [asset.id, { ...asset }])),
     validationReferences,
+    previousAssetsById: options?.previousAssetsById,
+    priceCache: options?.priceCache,
     vaultRateCache: options?.db
       ? await readVaultRateCache(options.db, Math.floor(Date.now() / 1000))
       : undefined,

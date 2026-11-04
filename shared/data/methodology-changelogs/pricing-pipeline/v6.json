@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.72",
+    "title": "Reserve USD3 thin-pool recovery requires a trusted published baseline",
+    "date": "2026-11-04",
+    "effectiveAt": 1793750400,
+    "summary": "Reserve USD3's missing-only Curve USD3/scrvUSD fallback must remain within 3% of a recent trusted published USD3 observation. Its own soft quote cannot create or renew that baseline.",
+    "impact": [
+      "The exact Ethereum USD3/scrvUSD pool retains token-identity, 1,000-unit inventory floors, 1-versus-10-USD3 quote-impact checks and the five-minute pool-block and trusted scrvUSD-parent budgets. The older input clock dates the derived USD price, which retains curve-thin-onchain fallback confidence with no replay-safe or standalone depeg authority.",
+      "Before admitting that quote, the route selects the newest eligible original USD3 observation from the previous publication or the existing replay-safe price cache. Each candidate needs explicit valid observation and publication-sync clocks, must have qualified as authoritative under the existing depeg-trust policy at its original publication time, and must retain an original observation no older than 24 hours. Reusing or republishing retained cache evidence never refreshes those clocks.",
+      "The pool-derived USD value must be within 3% of that baseline, a bounded allowance for slow NAV movement rather than independent pool corroboration. Missing, stale, malformed or untrusted baseline evidence and excessive divergence withhold the fallback with a machine-readable no-quote reason. A curve-thin-onchain observation cannot qualify as or renew its own baseline.",
+      "No RToken oracle-range midpoint is promoted to executable NAV, no usable incumbent is replaced, and supply and market-cap preference remain unchanged. Provisional activation is 2026-11-04 00:00 UTC (1793750400), to be re-dated at release. Local checks and this version entry do not establish production acceptance; acceptance requires observing a qualifying production execution."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.71",
     "title": "Cadence-bounded previous-payload parents for vault supply NAV",
     "date": "2026-11-04",

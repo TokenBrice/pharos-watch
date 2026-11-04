@@ -1,4 +1,7 @@
 import { CIRCUIT_SOURCE } from "../constants";
+import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import type { PriceCacheEntry } from "../db-cache";
+import { classifyPrimaryDepegTrust } from "../depeg-trust-policy";
 import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmRpcBatch } from "../evm-rpc";
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
@@ -21,12 +24,50 @@ const UNIT = 10n ** 18n;
 const MIN_BALANCE = 1_000n * UNIT;
 const MAX_AGE_SEC = 5 * 60;
 const MAX_QUOTE_IMPACT_RATIO = 0.05;
+// USD3 NAV accrues slowly; a 3% daily move needs evidence beyond this thin pool.
+const MAX_NAV_DEVIATION_RATIO = 0.03;
+const MAX_REFERENCE_AGE_SEC = 24 * 60 * 60;
 
-/** Missing-only sell proceeds, valued through the independently admitted scrvUSD parent. */
+export interface Usd3PriceContext extends LivePriceContext {
+  previousAssetsById?: ReadonlyMap<string, PeggedAsset>;
+  priceCache?: ReadonlyMap<string, PriceCacheEntry>;
+}
+
+/** Missing-only sell proceeds, bounded by an original-clock trusted USD3 reference. */
 export async function fetchUsd3CurvePoolPrice(
-  context: LivePriceContext,
+  context: Usd3PriceContext,
   signal?: AbortSignal,
 ): Promise<CurrentPriceOverride | null> {
+  const reject = (reason: string): null => {
+    context.lastRejectionReason = reason;
+    return null;
+  };
+  const nowSec = Math.floor(Date.now() / 1000);
+  const cached = context.priceCache?.get(USD3_ID);
+  const references = [context.previousAssetsById?.get(USD3_ID), cached?.hasExplicitClocks === true && {
+    price: cached.price, priceSource: cached.source, priceConfidence: cached.confidence,
+    priceObservedAt: cached.observedAt, priceObservedAtMode: cached.observedAtMode,
+    priceSyncedAt: cached.syncedAt, agreeSources: cached.agreeSources,
+  }];
+  let reference: { price: number; observedAt: number } | null = null;
+  let referenceReason = cached && cached.hasExplicitClocks !== true ? "usd3-reference-clock-invalid" : "usd3-reference-missing";
+  for (const previous of references) {
+    if (!previous) continue;
+    const observedAt = previous.priceObservedAt;
+    const publishedAt = previous.priceSyncedAt;
+    if (observedAt == null || publishedAt == null || !Number.isSafeInteger(observedAt) ||
+      !Number.isSafeInteger(publishedAt) || observedAt <= 0 || observedAt > publishedAt || publishedAt > nowSec) {
+      referenceReason = "usd3-reference-clock-invalid";
+    } else if (nowSec - observedAt > MAX_REFERENCE_AGE_SEC) {
+      referenceReason = "usd3-reference-stale";
+    } else if (previous.priceSource === SOURCE || classifyPrimaryDepegTrust(previous, publishedAt) !== "authoritative") {
+      referenceReason = "usd3-reference-untrusted";
+    } else if (previous.price != null && (!reference || observedAt > reference.observedAt)) {
+      reference = { price: previous.price, observedAt };
+    }
+  }
+  if (!reference) return reject(referenceReason);
+
   const parent = resolveTrustedOverrideParent(context, SCRVUSD_ID,
     () => `[authoritative-price-sources] ${USD3_ID}: trusted scrvUSD quote dependency unavailable`,
     { allowFreshNonReplaySafeParent: true, allowFreshReplaySafeSingleSourceParent: true },
@@ -65,6 +106,10 @@ export async function fetchUsd3CurvePoolPrice(
   if (Math.floor(Date.now() / 1000) - observedAt > MAX_AGE_SEC) return null;
   const price = smallPrice * parent.trustedParent.price;
   if (!Number.isFinite(price) || price <= 0) return null;
+  if (Math.floor(Date.now() / 1000) - reference.observedAt > MAX_REFERENCE_AGE_SEC) return reject("usd3-reference-stale");
+  if (price < reference.price * (1 - MAX_NAV_DEVIATION_RATIO) || price > reference.price * (1 + MAX_NAV_DEVIATION_RATIO)) {
+    return reject("usd3-nav-deviation");
+  }
   return {
     price, source: SOURCE, confidence: "fallback", observedAt,
     observedAtMode: parent.trustedParent.observedAt < timestamp

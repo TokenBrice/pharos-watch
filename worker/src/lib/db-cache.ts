@@ -289,6 +289,7 @@ export interface PriceCacheEntry {
   observedAt?: number | null;
   observedAtMode?: PriceObservedAtMode | null;
   syncedAt?: number | null;
+  hasExplicitClocks?: boolean;
   agreeSources?: string[];
   consensusSources?: string[];
 }
@@ -328,6 +329,7 @@ export async function getPriceCache(db: D1Database): Promise<Map<string, PriceCa
       observedAt: row.observed_at ?? row.updated_at,
       observedAtMode: row.observed_at_mode ?? null,
       syncedAt: row.synced_at ?? row.updated_at,
+      hasExplicitClocks: row.observed_at != null && row.synced_at != null,
       agreeSources: parseJsonStringArray(row.agree_sources_json),
       consensusSources: parseJsonStringArray(row.consensus_sources_json),
     });

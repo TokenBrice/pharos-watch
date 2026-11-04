@@ -151,6 +151,8 @@ export async function runStablecoinsPricingStage(
       stats: authoritativeOverrideStats,
       chainRpcs: options.chainRpcs,
       previousMissingGenerationsById: options.previousMissingGenerationsById,
+      previousAssetsById: options.previousAssetsById,
+      priceCache: replayPriceCache,
     },
   );
   applyProtocolPriceOverrides({
