@@ -403,7 +403,7 @@ export async function computeDexPrices({
           : "") +
         (retiredCount > 0 ? ` and retired ${retiredCount} stale rows` : "") +
         (withheldStablecoinCount > 0
-          ? `; withheld ${withheldStablecoinCount} asset(s) with no trusted primary price (reason: primary-missing)`
+          ? `; withheld ${withheldStablecoinCount} asset(s) with no admitted primary comparison price (reason: primary-missing)`
           : ""),
     );
   }

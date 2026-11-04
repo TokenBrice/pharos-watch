@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-10-20",
+    "kind": "governance",
+    "label": "Brale-issued USTX launches in the tx wallet",
+    "severity": "med",
+    "href": "https://www.globenewswire.com/fr/news-release/2026/10/20/3384548/0/en/tx-launches-ustx-a-native-stablecoin-built-to-power-its-rwa-ecosystem.html",
+    "note": "TX Labs announced the rollout of Brale-issued USTX to tx wallet users, with minting from USDC on Ethereum, Base, Polygon or Solana and redemption into USDC. The earlier token-creation transaction did not itself establish user availability."
+  }
+]

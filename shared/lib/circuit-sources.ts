@@ -36,6 +36,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   AZND_CURVE_POOL: { key: "aznd-curve-pool", scope: "asset-scoped" },
   SWANUSD_CURVE_POOL: { key: "swanusd-curve-pool", scope: "asset-scoped" },
   STBT_CURVE_POOL: { key: "stbt-curve-pool", scope: "asset-scoped" },
+  USD3_CURVE_POOL: { key: "usd3-curve-pool", scope: "asset-scoped" },
   MENTO_FPMM: { key: "mento-fpmm", scope: "asset-scoped" },
   MENTO_BROKER: { key: "mento-broker", scope: "asset-scoped" },
   BD_AERODROME: { key: "bd-aerodrome", scope: "asset-scoped" },

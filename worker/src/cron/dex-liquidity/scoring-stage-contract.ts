@@ -25,6 +25,8 @@ export interface DexLiquidityDirectApiSourceSummary {
 export interface DexLiquidityScoringSourceState {
   validationReferences: PriceValidationReferences;
   stablecoinPriceById: Map<string, number>;
+  /** Target-only comparison anchors; absent in stages written before Pricing v6.72. */
+  primaryPriceById?: Map<string, number>;
   stablecoinMcapById: Map<string, number>;
   protocolTvlCaps: DataSources["protocolTvlCaps"];
   priceObservations: Map<string, DexPriceObs[]>;

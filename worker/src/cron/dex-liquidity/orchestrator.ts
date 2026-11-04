@@ -411,6 +411,7 @@ type DexLiquidityHistoricalSnapshot = NonNullable<Awaited<ReturnType<typeof writ
 interface DexLiquiditySourceState {
   validationReferences: Awaited<ReturnType<typeof loadPriceValidationReferences>>;
   stablecoinPriceById: Awaited<ReturnType<typeof loadTrackedStablecoinMaps>>["stablecoinPriceById"];
+  primaryPriceById: TrackedStablecoinMaps["primaryPriceById"];
   stablecoinMcapById: Awaited<ReturnType<typeof loadTrackedStablecoinMaps>>["stablecoinMcapById"];
   stablecoinPriceProvenanceById: TrackedStablecoinMaps["stablecoinPriceProvenanceById"];
   dataSources: DexLiquidityDataSources;
@@ -457,6 +458,7 @@ function buildDexLiquidityScoringSourceState(
   return {
     validationReferences: sourceState.validationReferences,
     stablecoinPriceById: sourceState.stablecoinPriceById,
+    primaryPriceById: sourceState.primaryPriceById,
     stablecoinMcapById: sourceState.stablecoinMcapById,
     protocolTvlCaps: sourceState.dataSources.protocolTvlCaps,
     priceObservations: sourceState.priceObservations,
@@ -530,7 +532,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
     loadPriceValidationReferences(ctx.db),
     loadTrackedStablecoinMaps(ctx.db, ctx.syncStartSec),
   ]);
-  const { stablecoinPriceById, stablecoinMcapById, stablecoinPriceProvenanceById } = trackedMaps;
+  const { stablecoinPriceById, primaryPriceById, stablecoinMcapById, stablecoinPriceProvenanceById } = trackedMaps;
   const lookups = buildSymbolLookups();
 
   const directApiFetchers = buildDexDirectApiFetchers({
@@ -724,6 +726,7 @@ async function loadDexLiquiditySourceState(ctx: DexLiquidityRunContext): Promise
   return {
     validationReferences,
     stablecoinPriceById,
+    primaryPriceById,
     stablecoinMcapById,
     stablecoinPriceProvenanceById,
     dataSources,
@@ -1242,13 +1245,14 @@ async function persistDexLiquidityScoreState(
     db: ctx.db,
     retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
     nowSec: ctx.syncStartSec,
-    primaryPrices: sourceState.stablecoinPriceById,
+    primaryPrices: sourceState.primaryPriceById ?? sourceState.stablecoinPriceById,
     references: sourceState.validationReferences,
     signal: ctx.signal,
     exactPriceEvidenceByStablecoin: sourceState.priceObservations,
     generationId: publicationGenerationId,
   });
   sourceState.stablecoinPriceById.clear();
+  sourceState.primaryPriceById?.clear();
   sourceState.priceObservations.clear();
   await ctx.reportDexProgress("persistence-prices-complete", {
     message: "Atomically published the staged DEX price generation", providerFamily: "d1",

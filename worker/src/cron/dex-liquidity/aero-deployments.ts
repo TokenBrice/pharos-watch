@@ -7,9 +7,8 @@
  * deployment registries (`dromos-labs/metadex-public` and
  * `metadex-slipstream-public`, `deployment-addresses/`) and live
  * `allPoolsLength()` reads on 2026-10-23. Arc also carries the pre-merger
- * "Aero Lite" factories, which the DefiLlama Aero listing includes. Ink is
- * omitted: the reviewed Worker RPC profile has no Ink endpoint (and Aero held
- * ~$0 there at launch); GeckoTerminal `aero-slipstream-ink` rows still stage.
+ * "Aero Lite" factories, which the DefiLlama Aero listing includes. Ink's
+ * official state RPCs and CL/basic factories were verified on 2026-11-04.
  */
 export const AERO_DEPLOYMENTS: readonly {
   chain: string;
@@ -23,6 +22,7 @@ export const AERO_DEPLOYMENTS: readonly {
     ["optimism", "0xfeab42d90055db3a0616249f76b6002d72266778"],
     ["arbitrum", "0x88a60ee77392577c355c0acb2a8d476d5a4ec03a"],
     ["robinhood", "0xc63d7338c178e805c544b8f897066bd3bbcbe136"],
+    ["ink", "0x7660bf2adefc687c22906112ca323d60a00358cf"],
   ] as const).map(([chain, clFactory]) => ({
     chain,
     clFactories: [clFactory],

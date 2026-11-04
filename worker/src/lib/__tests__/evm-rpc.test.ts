@@ -223,7 +223,7 @@ describe("evm-rpc helpers", () => {
   it.each([
     ["ink", "unadmitted"], ["ink", "disabled"], ["berachain", "unadmitted"],
     ["berachain", "disabled"], ["monad", "admitted"],
-  ])("preserves the previous CCIP request order and payloads on %s when %s", async (chain, admission) => {
+  ])("preserves CCIP primary requests with reviewed state fallbacks on %s when %s", async (chain, admission) => {
     const chainRpcs = buildChainRpcs("alchemy-key", undefined, admission === "unadmitted" ? undefined : {
       dwellirApiKey: "dwellir-key", dwellirRoutingDisabledChains: admission === "disabled" ? new Set([chain]) : undefined,
     });
@@ -236,7 +236,14 @@ describe("evm-rpc helpers", () => {
     const previous = fetchWithRetryMock.mock.calls.map(([url, init]) => [url, init.headers, init.body]);
     fetchWithRetryMock.mockClear();
     for (const calls of requests) await fetchEvmRpcBatch(chain, calls, { chainRpcs, maxRetries: 0 });
-    expect(fetchWithRetryMock.mock.calls.map(([url, init]) => [url, init.headers, init.body])).toEqual(previous);
+    // Ink's reviewed public routes add state fallback only, without Alchemy auth.
+    const expected = previous.flatMap((request, index) => chain === "ink" && index === 0 ? [
+      request,
+      ...["https://rpc-gel.inkonchain.com", "https://rpc-qnd.inkonchain.com"].map(url => [
+        url, { "Content-Type": "application/json" }, request[2],
+      ]),
+    ] : [request]);
+    expect(fetchWithRetryMock.mock.calls.map(([url, init]) => [url, init.headers, init.body])).toEqual(expected);
     expect(previous.length).toBeGreaterThan(0);
     expect(recordDwellirCreditsMock).not.toHaveBeenCalled();
   });
