@@ -24,6 +24,53 @@ const SUPPLY_INTEGRITY_CONFIRM_RUNS = 2;
 const MAX_REPORTED_IDS = 20;
 /** Bound the held drift baselines kept in confirmation state. */
 const MAX_HELD_DRIFT_BASELINES = 50;
+/** Reviewed levels move daily inside this band; anything wider is an ordinary finding. */
+const REVIEWED_REBASELINE_TOLERANCE = 0.02;
+
+/**
+ * Reviewed one-shot re-baselines for verified real moves. A redemption or a
+ * corrected vault perimeter leaves no in-band value to return to, so the
+ * pre-move baseline would hold the drift finding forever. While a review is
+ * active, an observed value within tolerance of the reviewed level is the
+ * accepted level: it is not a fresh finding and its held baseline is dropped.
+ * Any other value, or an expired review, keeps the ordinary 0.5-2x band.
+ */
+const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
+  stablecoinId: string;
+  baselineUsd: number;
+  reviewedAt: number;
+  expiresAt: number;
+  evidenceUrls: readonly string[];
+  reason: string;
+}[] = [
+  {
+    stablecoinId: "iauon-ondo",
+    baselineUsd: 1_747_207.06,
+    reviewedAt: Date.parse("2026-11-04T00:00:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-18T00:00:00Z") / 1000,
+    evidenceUrls: [
+      "https://defillama.com/rwa/asset/IAUon",
+      "https://www.coingecko.com/en/coins/ishares-gold-trust-ondo-tokenized-stock",
+    ],
+    reason: "Verified redemptions (Ondo GM token burns) took the CoinGecko market cap from $3.90M to $1.76M on Nov 2-3; DefiLlama on-chain AUM now reads $1.75M.",
+  },
+  {
+    stablecoinId: "gtusdtp-gauntlet",
+    baselineUsd: 386_800.93,
+    reviewedAt: Date.parse("2026-11-04T00:00:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-18T00:00:00Z") / 1000,
+    evidenceUrls: ["https://eth.blockscout.com/token/0xf3557AD5E984211ac8A0874A670344f2C3376471"],
+    reason: "The pre-move baseline covered a different vault perimeter; Blockscout values the current Gauntlet USDT Prime V2 stock at $386.8k.",
+  },
+];
+
+function isReviewedValueRebaseline(stablecoinId: string, currentUsd: number, nowSec: number): boolean {
+  return REVIEWED_SUPPLY_VALUE_REBASELINES.some((review) =>
+    review.stablecoinId === stablecoinId
+    && nowSec >= review.reviewedAt
+    && nowSec <= review.expiresAt
+    && Math.abs(currentUsd - review.baselineUsd) <= review.baselineUsd * REVIEWED_REBASELINE_TOLERANCE);
+}
 
 export interface SupplyValueDriftFinding {
   stablecoinId: string;
@@ -330,8 +377,9 @@ async function loadSupplyValueIntegrity(
     currentSum += currentUsd;
     previousSum += previousUsd;
     const ratio = currentUsd / previousUsd;
-    if (ratio < STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor
-      || ratio > STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling) {
+    if ((ratio < STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor
+      || ratio > STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling)
+      && !isReviewedValueRebaseline(asset.id, currentUsd, nowSec)) {
       driftFindings.push({ stablecoinId: asset.id, currentUsd, previousUsd, ratio });
     }
   }
@@ -358,6 +406,9 @@ async function loadSupplyValueIntegrity(
         unresolvedIds.push(stablecoinId);
         continue;
       }
+      // A reviewed real move supersedes the pre-move baseline: the observed
+      // level is the accepted one, so no return to the old baseline is due.
+      if (isReviewedValueRebaseline(stablecoinId, currentUsd, nowSec)) continue;
       const ratio = currentUsd / baselineUsd;
       if (ratio < STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioFloor
         || ratio > STATUS_SUPPLY_VALUE_THRESHOLDS.perAssetRatioCeiling) {

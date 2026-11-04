@@ -76,7 +76,6 @@ function supplyRun(unavailable: number, observed: number, startedAt = NOW - 900)
       priceSourceHealth: {
         active: { supplyCoverage: { complete: unavailable === 0, observedCount: observed, unavailableCount: unavailable } },
       },
-      // Guard bookkeeping is not unavailable supply (quarantines publish a carry).
       supplyChainGuard: { quarantinedAssetCount: 8, unavailableAssetCount: 1 },
     }),
   };
@@ -562,6 +561,17 @@ describe("supply integrity", () => {
     const condition = buildSupplyIntegrityConditions(report).find((entry) => entry.id === "value-drift")!;
     expect(condition.active).toBe(false);
     expect(condition.unknown).toBe(false);
+  });
+
+  it("honours reviewed re-baselines", async () => {
+    const a = normalAssets();
+    a[0] = { ...a[0], id: "iauon-ondo", current: 1_747_207.06, previous: 3_900_000 };
+    a[1] = { ...a[1], id: "gtusdtp-gauntlet", current: 300_000, previous: 300_000 };
+    const r = await loadSupplyIntegrityReport(database({
+      assets: a,
+      confirmState: { "value-drift": { signature: "x", runs: 2, held: { "iauon-ondo": 3_900_000, "gtusdtp-gauntlet": 2_900_000 } } },
+    }), 1_793_836_800);
+    expect(r.value).toMatchObject({ driftFindings: [], heldDriftFindings: [{ stablecoinId: "gtusdtp-gauntlet" }] });
   });
 
   it("keeps sub-breadth carry, availability and partial-snapshot causes non-degrading", () => {
