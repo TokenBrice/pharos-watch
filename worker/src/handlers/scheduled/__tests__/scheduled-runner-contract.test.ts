@@ -32,6 +32,10 @@ function sorted(values: Iterable<string>): string[] {
 
 describe("scheduled runner contract", () => {
   it("binds every canonical chain directly without changing task order or implementations", () => {
+    expect(SCHEDULED_SLOT_PLANS.daily0300Utc.jobChains).toEqual([[
+      "prune-status-probe-runs", "prune-cron-history", "prune-detail-cache",
+      "telegram-inactive-cleanup", "telegram-retention-cleanup", "cron-sentinel",
+    ]]);
     for (const plan of Object.values(SCHEDULED_SLOT_PLANS)) {
       const implementations = Object.fromEntries(
         flattenScheduledSlotPlanJobs(plan).map((job) => [job, async () => ({ status: "ok" as const })]),

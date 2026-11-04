@@ -630,12 +630,12 @@ Chain/task positions below are one-based. Separate chains run independently; tas
 | `digestTriggerPoll` | `telegram-digest-outbox-drain` | side stage, task 1 | budget-only | 1 | 300 | not leased by the scheduled wrapper | every occurrence |
 | `digestTriggerPoll` | `safety-map-producer-kick` | side stage, task 2 | budget-only | 1 | 300 | not leased by the scheduled wrapper | every occurrence |
 | `digestTriggerPoll` | `digest-trigger-poll` | side stage, task 3 | budget-only | 1 | 300 | not leased by the scheduled wrapper | every occurrence |
-| `daily0300Utc` | `cron-sentinel` | chain 1, task 1 | scheduled-job | 1 | 780 | TTL-derived defaults | every occurrence |
-| `daily0300Utc` | `prune-status-probe-runs` | chain 1, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
-| `daily0300Utc` | `prune-cron-history` | chain 1, task 3 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
-| `daily0300Utc` | `prune-detail-cache` | chain 1, task 4 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
-| `daily0300Utc` | `telegram-inactive-cleanup` | chain 1, task 5 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
-| `daily0300Utc` | `telegram-retention-cleanup` | chain 1, task 6 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `prune-status-probe-runs` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `prune-cron-history` | chain 1, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `prune-detail-cache` | chain 1, task 3 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `telegram-inactive-cleanup` | chain 1, task 4 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `telegram-retention-cleanup` | chain 1, task 5 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
+| `daily0300Utc` | `cron-sentinel` | chain 1, task 6 | scheduled-job | 1 | 780 | TTL-derived defaults | every occurrence |
 | `daily0800Utc` | `snapshot-supply` | chain 1, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
 | `daily0800Utc` | `snapshot-safety-grade-history` | chain 2, task 1 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
 | `daily0800Utc` | `snapshot-psi` | chain 2, task 2 | scheduled-job | 0 | 300 | TTL-derived defaults | every occurrence |
