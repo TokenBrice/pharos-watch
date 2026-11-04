@@ -7,7 +7,8 @@ import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { EventCard } from "@/components/tape/event-card";
 import { SEVERITY_LABEL as SEVERITY_LABEL_BARE } from "@shared/lib/classification/tape";
 import type { TapeEvent } from "@shared/types/tape-event";
-import type { ApiMeta } from "@/lib/api";
+import { ApiFetchError, type ApiMeta } from "@/lib/api";
+import { FLOW_CLAIM_RETRACTED_REASON, FREEZE_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
 import type { DepegEvent } from "@shared/types";
 import type { DataHealthInfo } from "@/lib/data-health";
 import type { DigestedDay } from "@/lib/tape-digest";
@@ -97,6 +98,17 @@ export function TimelineFeed({
   sentinelRef,
 }: TimelineFeedProps) {
   const lastEventTs = rawEvents.length > 0 ? rawEvents[0].ts : null;
+  let permalinkRetracted = false;
+  if (permalinkBufferError instanceof ApiFetchError && permalinkBufferError.status === 404 && permalinkBufferError.bodyText) {
+    try {
+      const body: unknown = JSON.parse(permalinkBufferError.bodyText);
+      if (typeof body === "object" && body !== null && "reason" in body) {
+        permalinkRetracted = body.reason === FLOW_CLAIM_RETRACTED_REASON || body.reason === FREEZE_CLAIM_RETRACTED_REASON;
+      }
+    } catch {
+      // An unreadable 404 body cannot establish a retraction.
+    }
+  }
 
   return (
     <>
@@ -115,7 +127,7 @@ export function TimelineFeed({
             hasData,
             meta,
           },
-          ...(permalinkBufferError
+          ...(permalinkBufferError && !permalinkRetracted
             ? [{
                 label: "Linked event",
                 dataUpdatedAt: permalinkBufferDataUpdatedAt,
@@ -127,12 +139,14 @@ export function TimelineFeed({
         ]}
       />
 
-      {permalinkId && !permalinkBufferIsLoading && !permalinkBufferError && !bufferEvent && !permalinkSuppressed && !rawEvents.some((e) => e.id === permalinkId) ? (
+      {permalinkId && !permalinkBufferIsLoading && (!permalinkBufferError || permalinkRetracted) && !bufferEvent && !permalinkSuppressed && !rawEvents.some((e) => e.id === permalinkId) ? (
         <div
           title={permalinkId}
           className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-amber-700 dark:text-amber-400"
         >
-          ⚠ The linked event isn&apos;t in this view. Try widening the filters or removing the time window.
+          {permalinkRetracted
+            ? "⚠ Retracted after its source data changed."
+            : "⚠ The linked event isn't in this view. Try widening the filters or removing the time window."}
         </div>
       ) : null}
 
