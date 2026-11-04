@@ -174,19 +174,15 @@ function dependencies() {
   };
 }
 
-async function observe(
-  overrides: ReturnType<typeof dependencies> = dependencies(),
-) {
-  const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
-    {
-      assetId: ASSET_ID,
-      aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-      registryFingerprint: REGISTRY_FINGERPRINT,
-      scoringClockSec: CLOCK_SEC,
-      chainRpcs: chainRpcs(),
-    },
-    overrides,
-  );
+function observeAttempt(deps = dependencies()) {
+  return observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
+    assetId: ASSET_ID, aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+    registryFingerprint: REGISTRY_FINGERPRINT, scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(),
+  }, deps);
+}
+
+async function observe(deps = dependencies()) {
+  const attempt = await observeAttempt(deps);
   return attempt.status === "accepted" ? attempt.attribution : null;
 }
 
@@ -201,10 +197,7 @@ describe("Centrifuge reviewed deployment observer", () => {
     try {
       const deps = dependencies();
       deps.fetchSolanaObservation.mockResolvedValue(rawSupply === null ? null : { ...solanaObservation(), rawSupply });
-      const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
-        assetId: ASSET_ID, aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT, scoringClockSec: CLOCK_SEC, chainRpcs: chainRpcs(),
-      }, deps);
+      const attempt = await observeAttempt(deps);
       if (rawSupply === "0") expect(attempt.status).toBe("accepted");
       else expect(attempt).toEqual({ status: "rejected",
         rejectionCode: rawSupply === null ? "deployment-state-unavailable" : "packet-reconciliation-failed",
@@ -229,24 +222,27 @@ describe("Centrifuge reviewed deployment observer", () => {
       const pharos = "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040";
       expect(inventory.routes).toHaveLength(currentJtrsyCoin.contracts.length);
       expect(inventory.routes.map(route => route.routeId)).toContain(pharos);
-      expect(expectedCentrifugeDeploymentIdentity(ASSET_ID, pharos)).toBeUndefined();
+      expect(expectedCentrifugeDeploymentIdentity(ASSET_ID, pharos)).toBeNull();
+      expect(expectedCentrifugeDeploymentIdentity(ASSET_ID, "pharos:missing")).toBeUndefined();
       expect(reviewedDeploymentAttributionValidationError({ assetId: ASSET_ID,
         attribution: { ...historical!, routeInventoryDigest: inventory.digest },
         aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT, clockSec: CLOCK_SEC,
       })).toBe(`reviewed deployment identity unavailable for ${ASSET_ID}:${pharos}`);
       const deps = dependencies();
-      const attempt = await observeCentrifugeReviewedDeploymentUnitPartitionAttempt({
-        assetId: ASSET_ID,
-        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-        registryFingerprint: REGISTRY_FINGERPRINT,
-        scoringClockSec: CLOCK_SEC,
-        chainRpcs: chainRpcs(),
-      }, deps);
+      const attempt = await observeAttempt(deps);
       expect(attempt).toEqual({
         status: "rejected",
-        rejectionCode: "deployment-identity-unavailable",
+        rejectionCode: "deployment-identity-authored-withholding",
         failedRouteId: pharos,
       });
+      for (const observation of [null, { ...solanaObservation(), mintAuthority: "wrong-authority" }]) {
+        deps.fetchSolanaObservation.mockResolvedValue(observation);
+        expect(await observeAttempt(deps)).toEqual({
+          status: "rejected", rejectionCode: observation === null
+            ? "deployment-state-unavailable" : "deployment-identity-mismatch",
+          failedRouteId: routeForChain("solana").routeId,
+        });
+      }
     } finally {
       metaById.set(ASSET_ID, reviewed);
     }
@@ -333,33 +329,29 @@ describe("Centrifuge reviewed deployment observer", () => {
           : (`0x${"0".repeat(64)}` as const),
     );
 
-    await expect(
-      observeCentrifugeReviewedDeploymentUnitPartitionAttempt(
-        {
-          assetId: ASSET_ID,
-          aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
-          registryFingerprint: REGISTRY_FINGERPRINT,
-          scoringClockSec: CLOCK_SEC,
-          chainRpcs: chainRpcs(),
-        },
-        proxyDrift,
-      ),
-    ).resolves.toEqual({
+    await expect(observeAttempt(proxyDrift)).resolves.toEqual({
       status: "rejected",
       rejectionCode: "deployment-state-invalid",
       failedRouteId: routeForChain("base").routeId,
     });
   });
 
-  it("reads the pinned Token-2022 mint and direct authority from one finalized context", async () => {
-    const route = routeForChain("solana");
+  it.each(["jtrsy-anemoy", "acrdx-anemoy-apollo"])("reads the rotated Token-2022 authority for %s and rejects its predecessor", async (assetId) => {
+    const route = buildReviewedDeploymentRouteInventory(assetId)!.routes.find(row => row.chainId === "solana")!;
     const identity = expectedCentrifugeDeploymentIdentity(
-      ASSET_ID,
+      assetId,
       route.routeId,
     );
     if (!identity || identity.runtime !== "solana") {
       throw new Error("Missing JTRSY Solana identity");
     }
+    const authority = "BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4";
+    expect(identity).toMatchObject({
+      mintAuthority: authority, controllerAddress: authority,
+      programOwner: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      controllerProgramOwner: "11111111111111111111111111111111",
+    });
+    let observedAuthority = authority;
     const rpc = vi.fn(async (method: string, params: unknown[]) => {
       if (method === "getMultipleAccounts") {
         expect(params).toEqual([
@@ -367,16 +359,17 @@ describe("Centrifuge reviewed deployment observer", () => {
           { commitment: "finalized", encoding: "jsonParsed" },
         ]);
         return {
-          context: { slot: 434_941_163 },
+          context: { slot: 465_239_190 },
           value: [
             {
               owner: identity.programOwner,
               data: {
                 parsed: {
                   info: {
-                    decimals: route.decimals,
+                    decimals: 6,
                     supply: "0",
-                    mintAuthority: identity.mintAuthority,
+                    mintAuthority: observedAuthority,
+                    freezeAuthority: observedAuthority,
                   },
                 },
               },
@@ -390,33 +383,32 @@ describe("Centrifuge reviewed deployment observer", () => {
       }
       if (method === "getBlocks") {
         expect(params).toEqual([
-          434_941_099,
-          434_941_163,
-          { commitment: "finalized", minContextSlot: 434_941_163 },
+          465_239_126,
+          465_239_190,
+          { commitment: "finalized", minContextSlot: 465_239_190 },
         ]);
-        return [434_941_162, 434_941_163];
+        return [465_239_190];
       }
       expect(method).toBe("getBlock");
       return {
-        blockhash: "B".repeat(44),
-        blockTime: CLOCK_SEC - 3,
+        blockhash: "8CyVUSfa6dgiAgAFNQY261sEMYrCSktpSfdsq1UwbMAD",
+        blockTime: 1_793_781_842,
       };
     });
 
-    await expect(
-      fetchSolanaCentrifugeDeploymentObservation(
-        ASSET_ID,
-        route.routeId,
-        route.contractAddress,
-        undefined,
-        rpc as unknown as CentrifugeSolanaRpcFetcher,
-      ),
-    ).resolves.toMatchObject({
+    const fetch = () => fetchSolanaCentrifugeDeploymentObservation(
+      assetId, route.routeId, route.contractAddress, undefined, rpc as unknown as CentrifugeSolanaRpcFetcher,
+    );
+    await expect(fetch()).resolves.toMatchObject({
       rawSupply: "0",
-      blockNumberOrSlot: "434941163",
+      blockNumberOrSlot: "465239190",
+      blockTimeSec: 1_793_781_842,
+      decimals: 6,
       programOwner: identity.programOwner,
       mintAuthority: identity.mintAuthority,
       controllerProgramOwner: identity.controllerProgramOwner,
     });
+    observedAuthority = "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb";
+    await expect(fetch()).resolves.toBeNull();
   });
 });

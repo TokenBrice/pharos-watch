@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -9,7 +10,6 @@ import {
   loadSupplyIntegrityReport,
   SUPPLY_INTEGRITY_CONFIRM_KEY,
   type SupplyIntegrityReport,
-  type SupplyValueIntegrityReport,
 } from "../supply-integrity";
 import { assessSupplyIntegrityQuality } from "../status/supply-integrity-quality";
 import {
@@ -22,6 +22,7 @@ const NOW = 1_790_000_000;
 const TODAY = startOfUtcDaySec(new Date(NOW * 1000));
 const ACTIVE = [...ACTIVE_IDS].slice(0, 14);
 const SUPPLY_SOURCE = "defillama";
+const CHARTS_MAX_AGE_SEC = 2 * CRON_INTERVALS["sync-stablecoin-charts"];
 
 afterEach(() => {
   fixtures.closeAll();
@@ -158,7 +159,88 @@ function normalAssets(): AssetInput[] {
   return ACTIVE.map((id) => ({ id, current: 100, previous: 100 }));
 }
 
+function loadReport(options: Parameters<typeof database>[0]) {
+  return loadSupplyIntegrityReport(database(options), NOW);
+}
+
+function conditionOf(report: SupplyIntegrityReport, id: string) {
+  return buildSupplyIntegrityConditions(report).find((condition) => condition.id === id);
+}
+
+function integrityReport(count = 100): SupplyIntegrityReport {
+  return {
+    observedAt: NOW,
+    value: {
+      status: "ok", reason: null, checkedCount: count, excludedCount: 0,
+      driftFindings: [], heldDriftFindings: [], heldDriftBaselines: {}, heldDriftUnknownReason: null,
+      aggregateCurrentUsd: 100, aggregatePreviousUsd: 100, aggregateRatio: 1, frozen: false,
+      carryIds: [], carryOldestAgeSec: 3 * 86_400, carryUnclockedCount: 0,
+      expectedActiveCount: count, cacheUpdatedAt: NOW - 60, historyFromDate: TODAY - 7 * 86_400,
+    },
+    availability: {
+      status: "ok", reason: null, observedCount: count, unavailableCount: 0, share: 0,
+      consecutiveGenerations: 0, latestRunStartedAt: NOW - 900,
+      charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [], maxAgeSec: CHARTS_MAX_AGE_SEC },
+    },
+    snapshot: {
+      status: "ok", reason: null, expectedDate: TODAY, snapshotDate: TODAY, due: false, current: true,
+      identityVerified: true, expectedActiveCount: count, accountedActiveCount: count,
+      writtenRows: count, persistedRows: count, unavailableActiveIds: [], band: null,
+    },
+  };
+}
+
 describe("supply integrity", () => {
+  it("reads bounded chart publication evidence behind completed buckets without hiding failures", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-stablecoin-charts', ?, 0, ?, ?)",
+    );
+    const run = (metadata: unknown, age = 1800, status = "ok") => ({
+      startedAt: NOW - age, status, metadata: typeof metadata === "string" ? metadata : JSON.stringify(metadata),
+    });
+    const published = run({ cacheWriteMode: "published", lastWriteAdvanced: true }, 3600);
+    const skip = run({ reason: "cadence_bucket_completed" });
+    const truncated = run({ quality: { reason: "chart-history-truncated", codes: ["point-count-drop"] } });
+    const noEvidence = "no-publication-evidence";
+    const stale = "publication-stale";
+    const cases: [ReturnType<typeof run>[], string, string | null, number?, string[]?][] = [
+      [[published, skip], "ok", null, published.startedAt],
+      [[run({ cacheWriteMode: "skipped-newer", lastWriteAdvanced: true }, 3600), skip], "ok", null],
+      [[run({ lastWriteAdvanced: true }, CHARTS_MAX_AGE_SEC), skip], "ok", null],
+      [[run({ lastWriteAdvanced: true }, CHARTS_MAX_AGE_SEC + 1), skip], "unknown", stale],
+      [[run({ lastWriteAdvanced: true }, CHARTS_MAX_AGE_SEC + 1)], "unknown", stale],
+      [[run({ lastWriteAdvanced: true }, -1)], "unknown", stale],
+      [[skip], "unknown", noEvidence],
+      [[run({ reason: "cadence_bucket_completed", cacheWriteMode: "published", lastWriteAdvanced: true })], "unknown", noEvidence],
+      [[published, truncated], "truncated", "chart-history-truncated", undefined, ["point-count-drop"]],
+      [[published, truncated, run({ reason: "cadence_bucket_completed" }, 60)], "truncated", "chart-history-truncated"],
+      [[published, run({}, 2400, "error"), skip], "unknown", "run-error"],
+      [[published, run("unreadable", 2400), skip], "unknown", "metadata-unreadable"],
+      [[published, run(null, 2400), skip], "unknown", "metadata-unavailable"],
+      [[published, run({ cacheWriteMode: "skipped-newer", lastWriteAdvanced: false }, 2400), skip], "unknown", noEvidence],
+      [[published, run({ reason: "cadence_bucket_in_progress" })], "unknown", noEvidence],
+      [[published, run({ reason: "cadence_bucket_completed" }, 900, "error")], "unknown", "run-error"],
+      [[published, ...Array.from({ length: 8 }, (_, i) => run({ reason: "cadence_bucket_completed" }, i * 60))], "unknown", noEvidence],
+    ];
+    for (const [runs, status, reason, runStartedAt, codes] of cases) {
+      sqlite.exec("DELETE FROM cron_runs");
+      for (const row of runs) insert.run(row.startedAt, row.status, row.metadata);
+      const report = await loadSupplyIntegrityReport(db, NOW);
+      expect(report.availability.charts, JSON.stringify(runs)).toMatchObject({
+        status,
+        reason: reason == null || status === "truncated" ? reason : `sync-stablecoin-charts-${reason}`,
+        maxAgeSec: CHARTS_MAX_AGE_SEC,
+        ...(runStartedAt == null ? {} : { runStartedAt }),
+        ...(codes == null ? {} : { codes }),
+      });
+    }
+    const failed = await loadSupplyIntegrityReport(mockD1([
+      { match: "WHERE job = 'sync-stablecoin-charts'", rows: [], throwError: new Error("D1_ERROR") },
+    ]), NOW);
+    expect(failed.availability.charts).toMatchObject({ status: "unknown", reason: "sync-stablecoin-charts-read-failed" });
+  });
+
   it("flags per-asset generation drift and excludes provenance-named carry/repair rows", async () => {
     const assets = normalAssets();
     assets[0] = { ...assets[0], current: 40 };
@@ -166,7 +248,7 @@ describe("supply integrity", () => {
     assets[2] = { ...assets[2], current: 30, supplyRestored: true };
     assets[3] = { ...assets[3], current: 20, previousGuard: true };
     assets[4] = { ...assets[4], current: 20, previousSource: "coingecko-gap-fill" };
-    const report = await loadSupplyIntegrityReport(database({ assets }), NOW);
+    const report = await loadReport({ assets });
 
     expect(report.value.status).toBe("ok");
     expect(report.value.driftFindings.map((finding) => finding.stablecoinId)).toEqual([
@@ -181,25 +263,25 @@ describe("supply integrity", () => {
   });
 
   it("flags a whole-feed frozen cohort only when the comparable sample is representative", async () => {
-    const frozen = await loadSupplyIntegrityReport(database({
+    const frozen = await loadReport({
       assets: [...ACTIVE_IDS].map((id) => ({ id, current: 100, previous: 100 })),
       syncRuns: [supplyRun(0, 12), supplyRun(0, 12)],
-    }), NOW);
+    });
     expect(frozen.value.checkedCount).toBe(ACTIVE_IDS.size);
     expect(frozen.value.frozen).toBe(true);
-    expect(buildSupplyIntegrityConditions(frozen).find((condition) => condition.id === "value-drift")?.active)
+    expect(conditionOf(frozen, "value-drift")?.active)
       .toBe(true);
 
-    const tooFew = await loadSupplyIntegrityReport(database({ assets: normalAssets() }), NOW);
+    const tooFew = await loadReport({ assets: normalAssets() });
     expect(tooFew.value.frozen).toBe(false);
   });
 
   it("marks value drift unknown when no comparable daily history exists", async () => {
-    const report = await loadSupplyIntegrityReport(database({
+    const report = await loadReport({
       assets: normalAssets(),
       marker: marker(),
       syncRuns: [supplyRun(0, 12), supplyRun(0, 12)],
-    }), NOW);
+    });
     expect(report.value.status).toBe("ok");
 
     const noHistory = await loadSupplyIntegrityReport(mockD1([
@@ -213,55 +295,55 @@ describe("supply integrity", () => {
   });
 
   it("requires two consecutive generations above the unavailable-supply budget", async () => {
-    const twoGenerations = await loadSupplyIntegrityReport(database({
+    const twoGenerations = await loadReport({
       assets: normalAssets(),
       syncRuns: [supplyRun(2, 98, NOW - 900), supplyRun(2, 98, NOW - 1800)],
-    }), NOW);
+    });
     expect(twoGenerations.availability).toMatchObject({
       status: "ok",
       unavailableCount: 2,
       observedCount: 98,
       consecutiveGenerations: 2,
     });
-    expect(buildSupplyIntegrityConditions(twoGenerations).find((condition) => condition.id === "availability")?.active)
+    expect(conditionOf(twoGenerations, "availability")?.active)
       .toBe(true);
 
-    const oneGeneration = await loadSupplyIntegrityReport(database({
+    const oneGeneration = await loadReport({
       assets: normalAssets(),
       syncRuns: [supplyRun(2, 98, NOW - 900), supplyRun(0, 100, NOW - 1800)],
-    }), NOW);
+    });
     expect(oneGeneration.availability.consecutiveGenerations).toBe(1);
-    expect(buildSupplyIntegrityConditions(oneGeneration).find((condition) => condition.id === "availability")?.active)
+    expect(conditionOf(oneGeneration, "availability")?.active)
       .toBe(false);
   });
 
   it("flags an overdue daily snapshot and a partial snapshot with persisted-row loss", async () => {
-    const overdue = await loadSupplyIntegrityReport(database({
+    const overdue = await loadReport({
       assets: normalAssets(),
       marker: marker({ snapshotDate: TODAY - 86_400 }),
       syncRuns: [supplyRun(0, 12)],
-    }), NOW);
+    });
     expect(overdue.snapshot).toMatchObject({ current: false, due: true });
-    expect(buildSupplyIntegrityConditions(overdue).find((condition) => condition.id === "snapshot-overdue")?.active)
+    expect(conditionOf(overdue, "snapshot-overdue")?.active)
       .toBe(true);
 
-    const partial = await loadSupplyIntegrityReport(database({
+    const partial = await loadReport({
       assets: normalAssets(),
       marker: marker({ unavailableActiveIds: [ACTIVE[0]], ownedRowIds: ACTIVE.slice(0, 13) }),
       persistedRows: 13,
       syncRuns: [supplyRun(0, 14)],
-    }), NOW);
+    });
     expect(partial.snapshot).toMatchObject({ current: true, band: "elevated", persistedRows: 13, writtenRows: 13 });
-    expect(buildSupplyIntegrityConditions(partial).find((condition) => condition.id === "snapshot-partial")?.active)
+    expect(conditionOf(partial, "snapshot-partial")?.active)
       .toBe(true);
 
-    const rowsMissing = await loadSupplyIntegrityReport(database({
+    const rowsMissing = await loadReport({
       assets: normalAssets(),
       marker: marker(),
       persistedRows: 10,
       syncRuns: [supplyRun(0, 14)],
-    }), NOW);
-    expect(buildSupplyIntegrityConditions(rowsMissing).find((condition) => condition.id === "snapshot-partial")?.label)
+    });
+    expect(conditionOf(rowsMissing, "snapshot-partial")?.label)
       .toContain("persisted 10 of 14");
   });
 
@@ -269,20 +351,20 @@ describe("supply integrity", () => {
     const assets = normalAssets();
     assets[0] = { ...assets[0], current: 30, supplyRestored: true };
     assets[1] = { ...assets[1], current: null, supplyRestored: true };
-    const report = await loadSupplyIntegrityReport(database({ assets, historyThrows: true }), NOW);
+    const report = await loadReport({ assets, historyThrows: true });
     expect(report.value.status).toBe("unknown");
     expect(report.value.reason).toBe("supply-history-read-failed");
     expect(report.value.carryIds).toEqual([assets[0].id]);
     // One carried asset is below the active-cohort share budget; the evidence
     // is retained, not silently converted into a finding.
-    expect(buildSupplyIntegrityConditions(report).find((condition) => condition.id === "carry")?.active).toBe(false);
+    expect(conditionOf(report, "carry")?.active).toBe(false);
   });
 
   it("keeps every dimension unknown when the source reads fail", async () => {
-    const report = await loadSupplyIntegrityReport(database({
+    const report = await loadReport({
       assets: normalAssets(),
       cacheThrows: true,
-    }), NOW);
+    });
     const conditions = buildSupplyIntegrityConditions(report);
     expect(report.value.status).toBe("unknown");
     expect(report.snapshot.status).toBe("unknown");
@@ -317,55 +399,12 @@ describe("supply integrity", () => {
   });
 
   it("grades value/snapshot findings into ops-only data-quality causes", () => {
-    const value = {
-      status: "ok",
-      reason: null,
-      checkedCount: 12,
-      excludedCount: 0,
+    const base = integrityReport(12);
+    Object.assign(base.value, {
       driftFindings: [{ stablecoinId: "usdt-tether", currentUsd: 40, previousUsd: 100, ratio: 0.4 }],
-      heldDriftFindings: [],
-      heldDriftBaselines: {},
-      heldDriftUnknownReason: null,
-      aggregateCurrentUsd: 1_100,
-      aggregatePreviousUsd: 1_200,
-      aggregateRatio: 1.1,
-      frozen: false,
-      carryIds: [],
-      carryOldestAgeSec: null,
-      carryUnclockedCount: 0,
-      expectedActiveCount: 12,
-      cacheUpdatedAt: NOW - 60,
-      historyFromDate: TODAY - 7 * 86_400,
-    } satisfies SupplyValueIntegrityReport;
-    const base: SupplyIntegrityReport = {
-      observedAt: NOW,
-      value,
-      availability: {
-        status: "ok",
-        reason: null,
-        observedCount: 12,
-        unavailableCount: 0,
-        share: 0,
-        consecutiveGenerations: 0,
-        latestRunStartedAt: NOW - 900,
-        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [] },
-      },
-      snapshot: {
-        status: "ok",
-        reason: null,
-        expectedDate: TODAY,
-        snapshotDate: TODAY - 86_400,
-        due: true,
-        current: false,
-        identityVerified: true,
-        expectedActiveCount: 12,
-        accountedActiveCount: 12,
-        writtenRows: 12,
-        persistedRows: null,
-        unavailableActiveIds: [],
-        band: null,
-      },
-    };
+      aggregateCurrentUsd: 1_100, aggregatePreviousUsd: 1_200, aggregateRatio: 1.1, carryOldestAgeSec: null,
+    });
+    Object.assign(base.snapshot, { snapshotDate: TODAY - 86_400, due: true, current: false, persistedRows: null });
     const assessment = assessSupplyIntegrityQuality(base);
     expect(assessment.status).toBe("degraded");
     expect(assessment.causes.map((cause) => cause.code)).toEqual(
@@ -375,54 +414,12 @@ describe("supply integrity", () => {
   });
 
   it("keeps known carry evidence when the value comparison is unknown", () => {
-    const base: SupplyIntegrityReport = {
-      observedAt: NOW,
-      value: {
-        status: "unknown",
-        reason: "supply-history-read-failed",
-        checkedCount: 0,
-        excludedCount: 0,
-        driftFindings: [],
-        heldDriftFindings: [],
-        heldDriftBaselines: {},
-        heldDriftUnknownReason: null,
-        aggregateCurrentUsd: null,
-        aggregatePreviousUsd: null,
-        aggregateRatio: null,
-        frozen: false,
-        carryIds: ["coin-a", "coin-b", "coin-c", "coin-d", "coin-e", "coin-f"],
-        carryOldestAgeSec: 5 * 86_400,
-        carryUnclockedCount: 0,
-        expectedActiveCount: 100,
-        cacheUpdatedAt: NOW - 60,
-        historyFromDate: TODAY - 7 * 86_400,
-      },
-      availability: {
-        status: "ok",
-        reason: null,
-        observedCount: 100,
-        unavailableCount: 0,
-        share: 0,
-        consecutiveGenerations: 0,
-        latestRunStartedAt: NOW - 900,
-        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [] },
-      },
-      snapshot: {
-        status: "ok",
-        reason: null,
-        expectedDate: TODAY,
-        snapshotDate: TODAY,
-        due: false,
-        current: true,
-        identityVerified: true,
-        expectedActiveCount: 100,
-        accountedActiveCount: 100,
-        writtenRows: 100,
-        persistedRows: 100,
-        unavailableActiveIds: [],
-        band: null,
-      },
-    };
+    const base = integrityReport();
+    Object.assign(base.value, {
+      status: "unknown", reason: "supply-history-read-failed", checkedCount: 0,
+      aggregateCurrentUsd: null, aggregatePreviousUsd: null, aggregateRatio: null,
+      carryIds: ["coin-a", "coin-b", "coin-c", "coin-d", "coin-e", "coin-f"], carryOldestAgeSec: 5 * 86_400,
+    });
     const assessment = assessSupplyIntegrityQuality(base);
     // The history read failure only hides the value comparison; the cache still
     // proves the carried cohort, which stays a warning and degrades at breadth.
@@ -437,54 +434,11 @@ describe("supply integrity", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(NOW * 1000));
     const { db } = fixtures.open();
-    const reportWithCarry = (carryIds: string[]): SupplyIntegrityReport => ({
-      observedAt: NOW,
-      value: {
-        status: "ok",
-        reason: null,
-        checkedCount: 100,
-        excludedCount: 0,
-        driftFindings: [],
-        heldDriftFindings: [],
-        heldDriftBaselines: {},
-        heldDriftUnknownReason: null,
-        aggregateCurrentUsd: 100,
-        aggregatePreviousUsd: 100,
-        aggregateRatio: 1,
-        frozen: false,
-        carryIds,
-        carryOldestAgeSec: 3 * 86_400,
-        carryUnclockedCount: 0,
-        expectedActiveCount: 100,
-        cacheUpdatedAt: NOW - 60,
-        historyFromDate: TODAY - 7 * 86_400,
-      },
-      availability: {
-        status: "ok",
-        reason: null,
-        observedCount: 100,
-        unavailableCount: 0,
-        share: 0,
-        consecutiveGenerations: 0,
-        latestRunStartedAt: NOW - 900,
-        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [] },
-      },
-      snapshot: {
-        status: "ok",
-        reason: null,
-        expectedDate: TODAY,
-        snapshotDate: TODAY,
-        due: false,
-        current: true,
-        identityVerified: true,
-        expectedActiveCount: 100,
-        accountedActiveCount: 100,
-        writtenRows: 100,
-        persistedRows: 100,
-        unavailableActiveIds: [],
-        band: null,
-      },
-    });
+    const reportWithCarry = (carryIds: string[]) => {
+      const report = integrityReport();
+      report.value.carryIds = carryIds;
+      return report;
+    };
     const carryOf = (conditions: Awaited<ReturnType<typeof confirmSupplyIntegrityConditions>>) =>
       conditions.find((condition) => condition.id === "carry")!;
     const first = buildSupplyIntegrityConditions(reportWithCarry(["coin-a", "coin-b", "coin-c", "coin-d", "coin-e"]));
@@ -526,15 +480,15 @@ describe("supply integrity", () => {
     // comparison alone would look healthy; the retained pre-drop baseline
     // keeps the finding raised.
     assets[0] = { ...assets[0], current: 13, previous: 13 };
-    const report = await loadSupplyIntegrityReport(database({
+    const report = await loadReport({
       assets,
       confirmState: {
         "value-drift": { signature: "value-drift", runs: 2, held: { [drifted]: 100 } },
       },
-    }), NOW);
+    });
     expect(report.value.driftFindings).toEqual([]);
     expect(report.value.heldDriftFindings.map((finding) => finding.stablecoinId)).toEqual([drifted]);
-    const condition = buildSupplyIntegrityConditions(report).find((entry) => entry.id === "value-drift")!;
+    const condition = conditionOf(report, "value-drift")!;
     expect(condition.active).toBe(true);
     expect(condition.unknown).toBe(false);
     expect(condition.held).toEqual({ [drifted]: 100 });
@@ -547,18 +501,18 @@ describe("supply integrity", () => {
     const assets = normalAssets();
     const drifted = assets[0].id;
     assets[0] = { ...assets[0], current: 100, previous: 13 };
-    const report = await loadSupplyIntegrityReport(database({
+    const report = await loadReport({
       assets,
       confirmState: {
         "value-drift": { signature: "value-drift", runs: 3, held: { [drifted]: 100 } },
       },
-    }), NOW);
+    });
     // The move back to the pre-drop level is recovery evidence, not a new
     // upward finding against the bad snapshot.
     expect(report.value.driftFindings).toEqual([]);
     expect(report.value.heldDriftFindings).toEqual([]);
     expect(report.value.heldDriftBaselines).toEqual({});
-    const condition = buildSupplyIntegrityConditions(report).find((entry) => entry.id === "value-drift")!;
+    const condition = conditionOf(report, "value-drift")!;
     expect(condition.active).toBe(false);
     expect(condition.unknown).toBe(false);
   });
@@ -575,54 +529,10 @@ describe("supply integrity", () => {
   });
 
   it("keeps sub-breadth carry, availability and partial-snapshot causes non-degrading", () => {
-    const report: SupplyIntegrityReport = {
-      observedAt: NOW,
-      value: {
-        status: "ok",
-        reason: null,
-        checkedCount: 100,
-        excludedCount: 0,
-        driftFindings: [],
-        heldDriftFindings: [],
-        heldDriftBaselines: {},
-        heldDriftUnknownReason: null,
-        aggregateCurrentUsd: 100,
-        aggregatePreviousUsd: 100,
-        aggregateRatio: 1,
-        frozen: false,
-        carryIds: ["coin-a"],
-        carryOldestAgeSec: 3 * 86_400,
-        carryUnclockedCount: 0,
-        expectedActiveCount: 100,
-        cacheUpdatedAt: NOW - 60,
-        historyFromDate: TODAY - 7 * 86_400,
-      },
-      availability: {
-        status: "ok",
-        reason: null,
-        observedCount: 99,
-        unavailableCount: 1,
-        share: 0.01,
-        consecutiveGenerations: 2,
-        latestRunStartedAt: NOW - 900,
-        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [] },
-      },
-      snapshot: {
-        status: "ok",
-        reason: null,
-        expectedDate: TODAY,
-        snapshotDate: TODAY,
-        due: true,
-        current: true,
-        identityVerified: true,
-        expectedActiveCount: 100,
-        accountedActiveCount: 100,
-        writtenRows: 100,
-        persistedRows: 100,
-        unavailableActiveIds: ["coin-a"],
-        band: "elevated",
-      },
-    };
+    const report = integrityReport();
+    report.value.carryIds = ["coin-a"];
+    Object.assign(report.availability, { observedCount: 99, unavailableCount: 1, share: 0.01, consecutiveGenerations: 2 });
+    Object.assign(report.snapshot, { due: true, unavailableActiveIds: ["coin-a"], band: "elevated" });
     const assessment = assessSupplyIntegrityQuality(report);
     expect(assessment.status).toBe("healthy");
     expect(assessment.causes.map((cause) => cause.code)).toEqual(expect.arrayContaining([

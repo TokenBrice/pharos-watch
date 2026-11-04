@@ -36,6 +36,7 @@ import type { DexRefreshSummary } from "../../../cron/sync-stablecoins/price-dex
 const dexRefreshSummary = (overrides: Partial<DexRefreshSummary> = {}): DexRefreshSummary => ({
   cohortSize: 0, resolved: 0, attemptedBatches: 0, deferredBatches: 0, unsupportedAssets: 0, missingQuotes: 0,
   acknowledgedGapsSkipped: 0, hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: true, errorClasses: [],
+  assetDiagnostics: [], assetDiagnosticsTruncated: 0, providerDiagnostics: [],
   addressRefresh: { enabled: false, cohortSize: 0, targetCount: 0, resolved: 0, attemptedRequests: 0,
     successfulRequests: 0, cappedTargets: 0, failureClasses: [], circuitOpen: false, timedOut: false },
   contractRefresh: { cohortSize: 0, resolved: 0, failedPasses: [], timedOut: false },

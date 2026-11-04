@@ -219,8 +219,9 @@ const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> =
 
 const CENTRIFUGE_V3_SPOKE_ADDRESS =
   "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab";
+// Issuer rotation: JTRSY slot 462868190, ACRDX slot 462868261; reverified finalized at slot 465239190.
 const CENTRIFUGE_SOLANA_MINT_AUTHORITY =
-  "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb";
+  "BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4";
 const SOLANA_TOKEN_2022_PROGRAM =
   "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 const SOLANA_SYSTEM_PROGRAM = "11111111111111111111111111111111";
@@ -883,8 +884,8 @@ export function expectedWmDeploymentIdentity(routeId: string): WmDeploymentIdent
 export function expectedCentrifugeDeploymentIdentity(
   assetId: string,
   routeId: string,
-): CentrifugeDeploymentIdentity | undefined {
-  return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId] ?? undefined;
+): CentrifugeDeploymentIdentity | null | undefined {
+  return CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES[assetId]?.[routeId];
 }
 
 export function loadReviewedEconomicSupplyPlans(value: unknown) {

@@ -74,6 +74,7 @@ export type SupplyAttributionAdmissionCode = z.infer<
 export const SupplyAttributionRejectionCodeSchema = z.enum([
   "route-inventory-unavailable",
   "deployment-identity-unavailable",
+  "deployment-identity-authored-withholding",
   "chain-rpc-unavailable",
   "safe-block-unavailable",
   "deployment-state-unavailable",
@@ -102,6 +103,8 @@ const SUPPLY_ATTRIBUTION_ADMISSION_BY_REJECTION_CODE = {
   "route-inventory-unavailable":
     "supply-attribution.admission.rejected-route-inventory",
   "deployment-identity-unavailable":
+    "supply-attribution.admission.rejected-identity-drift",
+  "deployment-identity-authored-withholding":
     "supply-attribution.admission.rejected-identity-drift",
   "chain-rpc-unavailable":
     "supply-attribution.admission.rejected-upstream",
@@ -153,6 +156,7 @@ const REVIEWED_DEPLOYMENT_REJECTION_CODES =
   new Set<SupplyAttributionRejectionCode>([
     "route-inventory-unavailable",
     "deployment-identity-unavailable",
+    "deployment-identity-authored-withholding",
     "chain-rpc-unavailable",
     "safe-block-unavailable",
     "deployment-state-unavailable",

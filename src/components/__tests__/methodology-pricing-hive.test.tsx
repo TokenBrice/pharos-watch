@@ -33,7 +33,8 @@ describe("native Hive public methodology", () => {
       "500 HBD per side within 2%", "parent must be within five minutes", "earlier leg",
       "near-par direct CG quote", "SOFID uses exact-identity", "Kraken remains local-fetch",
       "Class assets are never circulating supply", "Quarantine persists",
-      "at most seven days", "Disappearing chain rows cannot release quarantine",
+      "at most seven days", "Disappearing chain rows alone cannot release quarantine",
+      "observed remainder as partial supply", "expiry re-arms the guard", "fill-scaled historical buckets remain unavailable",
       "observed zero stays zero", "14-day as-of budget", "original age",
       "observed flow × ticker confidence 0.55",
     ]) {

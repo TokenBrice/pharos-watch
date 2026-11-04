@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.70",
+    "title": "Reject fill-priced supply and publish reviewed chain remainders explicitly",
+    "date": "2026-11-04",
+    "effectiveAt": 1793750400,
+    "summary": "DefiLlama fill-default prices cannot make rescaled supply observable without complete native corroboration. Reviewed native repair routes expand, confirmed collapses release their obsolete baselines, and dated omitted-chain reviews publish the observed remainder as partial supply.",
+    "impact": [
+      "For USD assets with a detected DefiLlama list fill default below the existing severe-downside ratio, the guard withholds current and historical supply unless complete native evidence admits current supply or an existing bounded quarantine carry preserves the vetted packet. A sub-$1M chain or already-rescaled baseline cannot bypass this refusal; fill-scaled historical buckets remain unavailable even when current native supply is recovered.",
+      "MOVEUSD on Solana and rwaUSDi on Ethereum, Base, Monad, Arbitrum, X Layer, Robinhood and Pharos join the reviewed issuer-native repair roster. The rwaUSDi/Pharos route uses only registered supplemental state-only archive endpoints with no log capability, solely for this supply read; it does not activate general chain routing or log access. Unreadable legs stay unavailable.",
+      "Dated 2026-11-04 reviews release the confirmed USDQ/Quantoz Ethereum and USDGLO Base collapses at observed list current. BUIDL and fxUSD Tempo omissions instead receive scoped exclusions through 2026-11-18 09:03:53 UTC: the list aggregate remains unchanged, Tempo stays null, and chains-unavailable plus partialCoverage marks the observed remainder in both list and detail. No par-NAV valuation or additive bridge stock is invented.",
+      "CoinGecko-fallback supplemental assets gain reviewed native supply perimeters: UTY (Base canonical stock with Avalanche/Katana escrow conservation) and MXNe (Base, Solana and Stellar native registers) can recover from on-chain stock when the CoinGecko cap clock is stale; any unreadable required leg withholds the aggregate. MXNe joins the prefer-on-chain list, restating its supply from the contradicted CoinGecko cap (~1.43M) to measured native stock (~8.79M MXNe). strUSD's reviewed escrow moves to Tori's current lockbox.",
+      "Reviewed omitted-chain exclusions preserve their incident clock and vetted baseline for expiry and recovery. Expiry re-arms the guard; later incidents cannot inherit an older review. Price weights, freshness limits, supply units and ordinary carry ceilings are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.69",
     "title": "USG gains its CoinGecko identity; its keeper-adjusted stock outranks the CoinGecko cap",
     "date": "2026-11-02",

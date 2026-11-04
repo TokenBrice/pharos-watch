@@ -8,7 +8,7 @@ import { recordOutcomeDecision, shouldAttemptFetch } from "../../lib/circuit-bre
 import { dsRateLimit } from "../../lib/dexscreener";
 import { isProviderCircuitAllowed, recoverProviderOnNoCandidates, recordProviderOutcomeSafe } from "../../lib/pricing-provider-lifecycle";
 import { hasPublishableCurrentPrice } from "../../lib/price-publication-state";
-import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import type { PricingAssetAttemptRecord, PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import {
   buildAddressPriceTargets,
   collectAddressPriceProviderQuotes,
@@ -58,6 +58,12 @@ export interface DexRefreshSummary {
   timedOut: boolean;
   cacheWritten: boolean;
   errorClasses: string[];
+  /** Bounded cohort/route evidence; never provider URLs or response bodies. */
+  assetDiagnostics: { assetId: string; publishedSource: string | null; publishedObservedAt: number | null; inCohort: boolean; hinted: boolean;
+    attempt?: PricingAssetAttemptRecord }[];
+  assetDiagnosticsTruncated: number;
+  providerDiagnostics: (Pick<PricingProviderAttemptDiagnostic,
+    "status" | "success" | "candidateCount" | "responseRowCount" | "resolvedCount" | "errorClass"> & { chain: string })[];
   addressRefresh: AddressRefreshSummary;
   contractRefresh: ShortLivedRefreshSummary;
   jupiterRefresh: ShortLivedRefreshSummary;
@@ -377,6 +383,8 @@ export async function runPriceDexRefresh(params: {
     jupiterApiKey: params.jupiterApiKey, chainRpcs: params.chainRpcs, reviewedGapIds,
   });
   const addressObservations = address.observations;
+  const cohortIds = new Set(plan.cohort.map((asset) => asset.id));
+  const diagnosticIds = [...new Set([...cohortIds, ...plan.targetsById.keys()])];
   const addressTargets = new Map(previous.addressTargets.map((target) => [target.id, target] as const));
   // Only definitive answered misses invalidate hints; capped, blocked and aborted work stays neutral.
   for (const id of address.unresolvedIds) addressTargets.delete(id);
@@ -385,6 +393,11 @@ export async function runPriceDexRefresh(params: {
     deferredBatches: plan.allBatchCount, unsupportedAssets: plan.unsupportedAssets, missingQuotes: 0,
     acknowledgedGapsSkipped: plan.acknowledgedGapsSkipped,
     hintedAttempted: 0, hintedResolved: 0, timedOut: false, cacheWritten: false, errorClasses: [],
+    assetDiagnostics: diagnosticIds.slice(0, 20).map((assetId) => ({ assetId,
+      publishedSource: previousAssetsById.get(assetId)?.priceSource ?? null,
+      publishedObservedAt: previousAssetsById.get(assetId)?.priceObservedAt ?? previousAssetsById.get(assetId)?.priceUpdatedAt ?? null,
+      inCohort: cohortIds.has(assetId), hinted: plan.targetsById.has(assetId) })),
+    assetDiagnosticsTruncated: Math.max(0, diagnosticIds.length - 20), providerDiagnostics: [],
     addressRefresh: address.summary, contractRefresh: shortLived.contractRefresh, jupiterRefresh: shortLived.jupiterRefresh };
   const diagnostics: PricingProviderAttemptDiagnostic[] = [];
   const timeout = createTimeoutSignal({ timeoutMs: REFRESH_BUDGET_MS, timeoutReason: new DOMException("DEX refresh deadline", "TimeoutError"), parentSignal: params.signal });
@@ -428,9 +441,13 @@ export async function runPriceDexRefresh(params: {
       summary.attemptedBatches++;
       summary.hintedAttempted += batch.filter(({ entry }) => plan.hintedIds.has(entry.asset.id)).length;
       const rows = result.diagnostics ?? [];
+      summary.providerDiagnostics.push(...rows.map(({ status, success, candidateCount, responseRowCount, resolvedCount, errorClass }) =>
+        ({ chain: batch[0].target.chain, status, success, candidateCount, responseRowCount, resolvedCount, errorClass })));
       if (rows.some((row) => row.success)) successfulBatches++;
       summary.errorClasses.push(...rows.filter((row) => !row.success).map((row) => row.errorClass ?? "upstream-error"));
       for (const attempt of rows.flatMap((row) => row.assetAttempts ?? [])) {
+        const diagnostic = summary.assetDiagnostics.find((row) => row.assetId === attempt.assetId);
+        if (diagnostic) diagnostic.attempt = attempt;
         if (attempt.state === "attempted" && attempt.result === "empty") {
           const hint = plan.targetsById.get(attempt.assetId);
           if (hint && hint.chain === attempt.chain && hint.target === attempt.target) {

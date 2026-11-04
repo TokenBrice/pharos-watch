@@ -155,6 +155,11 @@ const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   // keeper inventory, so it must never replace the adjusted read.
   // https://etherscan.io/token/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1
   "usg-tangent",
+  // Reviewed 2026-11-04 (owner-approved restatement): the complete native
+  // Base + Solana + Stellar registers read 8,786,145.85 MXNe while the
+  // CoinGecko cap implied ~1.43M; the 2026-10-19 risk review already calls
+  // that cap inconsistent with measured supply. Prefer the native stock.
+  "mxne-real-mxn",
 ]);
 
 export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): boolean {
@@ -413,6 +418,20 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "ethereum" },
     supplyProbeChain("monad"),
     supplyProbeChain("pharos"),
+  ],
+  // Reviewed 2026-11-04 (D12): Base vault stock backs the two OFT spokes.
+  // https://docs.yieldpoint.io/protocol/architecture/contracts.md
+  "uty-xsy": [
+    { chain: "base" },
+    { chain: "avalanche", allowZeroSupply: true },
+    supplyProbeChain("katana", { allowZeroSupply: true }),
+  ],
+  // Brale burns on the source register and mints on the destination; no escrow.
+  // https://docs.brale.xyz/guides/stablecoin-to-stablecoin-swap
+  "mxne-real-mxn": [
+    { chain: "base", allowZeroSupply: true },
+    { chain: "solana", allowZeroSupply: true },
+    { chain: "stellar", allowZeroSupply: true },
   ],
   // Reviewed 2026-10-25: Ethereum LockRelease / BSC+Monad BurnMint pools.
   // https://docs.chain.link/ccip/directory/mainnet/token/sUSDat
@@ -1147,6 +1166,7 @@ export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, 
   "susn-noon": "ethereum",
   "syrupusdg-maple": "ethereum",
   "strusd-tori": "ethereum",
+  "uty-xsy": "base",
   "susdat-saturn": "ethereum",
   "dusd-dialectic": "ethereum",
   "gldt-gold-dao": "icp",
@@ -1214,11 +1234,15 @@ export const CURATED_AGGREGATE_ESCROW_RESIDUALS: Readonly<
     escrowAddress: "0xe24a3dc889621612422a64e6388927901608b91d",
     unattributedChainLabel: "sUSN unattributed bridge escrow",
   },
-  // Reviewed 2026-10-25: Tori's Ethereum CCIP lockbox also conserves the new
-  // Arbitrum representation (verified zero), outside the catalog probe roster.
+  // D11, re-pinned 2026-11-04: pool.getLockBox()/getToken() bind this custody.
+  // Unprobed CCIP representations remain in the conserved residual.
   "strusd-tori": {
-    escrowAddress: "0xb12e0794fb2191672ba7a1811edc9713c8c2c38b",
+    escrowAddress: "0xc1a9e4bbb58573b8971c9b3c24e17f9851268f86",
     unattributedChainLabel: "strUSD unattributed CCIP escrow",
+  },
+  "uty-xsy": {
+    escrowAddress: "0xc6fe7c5010621ab3ca5f4c018fad632f78b4d3f1",
+    unattributedChainLabel: "UTY unattributed OFT escrow",
   },
   // Avalanche CCIP LockRelease custody includes the Base, Arbitrum and Movement
   // representations absent from the probe roster. Keep their residual separate

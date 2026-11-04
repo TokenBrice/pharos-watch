@@ -98,7 +98,7 @@ export const SUPPLY_RPC_DEFAULTS = {
   "fraxtal": { rpcUrl: "https://rpc.frax.com", fallbackRpcUrl: "https://fraxtal.drpc.org" },
   "hyperevm": { rpcUrl: "https://rpc.hyperliquid.xyz/evm", fallbackRpcUrl: "https://rpc.hypurrscan.io" },
   "ink": { rpcUrl: "https://rpc-gel.inkonchain.com", fallbackRpcUrl: "https://ink.drpc.org" },
-  "tac": { rpcUrl: "https://rpc.tac.build" },
+  "tac": { rpcUrl: "https://rpc-public.tac.build" },
   "zksync": { rpcUrl: "https://mainnet.era.zksync.io", fallbackRpcUrl: "https://zksync.drpc.org" },
   "sophon": { rpcUrl: "https://rpc.sophon.xyz" },
   "zircuit": { rpcUrl: "https://mainnet.zircuit.com" },

@@ -155,19 +155,19 @@ describe("producer history", () => {
     expect(utcCalendarMonth(januaryEnd + 1)).toBe("2026-02");
   });
 
-  it("overwrites a retried budget error without double-counting history", async () => {
+  it("retains budget-only pricing forensics through retry without double-counting history", async () => {
     const { sqlite, db } = createMigratedDb();
     const producer = {
-      scheduleKey: "digestTriggerPoll",
-      job: "digest-trigger-poll",
-      producerPath: "digestTriggerPoll",
+      scheduleKey: "statusSelfCheckOffset",
+      job: "price-corroboration",
+      producerPath: "statusSelfCheckOffset",
       producerKind: "budget-only",
       invocationId: "budget-invocation-1",
       workerVersion: "version-c",
       slotStartedAt: 1_772_000_000,
     };
     await recordBudgetSurfaceTelemetry(db, {
-      surface: "digest-trigger-poll",
+      surface: "price-corroboration",
       checkedAt: 1_772_000_010,
       durationMs: 1_000,
       dueCount: 1,
@@ -176,13 +176,17 @@ describe("producer history", () => {
       error: "transient D1 failure",
       producer,
     });
+    const metadata = { slotStartedAt: producer.slotStartedAt, dexRefresh: { cohortSize: 1, resolved: 0,
+      hintedAttempted: 1, errorClasses: ["rate-limited"],
+      assetDiagnostics: [{ assetId: "moveusd-cfx", inCohort: true, publishedSource: "dexscreener-exact" }] } };
     await recordBudgetSurfaceTelemetry(db, {
-      surface: "digest-trigger-poll",
+      surface: "price-corroboration",
       checkedAt: 1_772_000_020,
       durationMs: 900,
       dueCount: 1,
       processedCount: 1,
       outcome: "ok",
+      metadata,
       producer,
     });
 
@@ -192,8 +196,10 @@ describe("producer history", () => {
          FROM worker_producer_history
         WHERE idempotency_key = ?`,
       )
-      .all("budget-surface:budget-invocation-1:digest-trigger-poll");
+      .all("budget-surface:budget-invocation-1:price-corroboration");
     expect(history).toEqual([{ outcome: "ok", productive: 1, error: null }]);
+    expect(JSON.parse((sqlite.prepare("SELECT metadata_json FROM worker_producer_history").get() as { metadata_json: string }).metadata_json))
+      .toMatchObject({ surface: "price-corroboration", metadata });
     expect(await loadProducerHeads(db)).toEqual([
       expect.objectContaining({
         lastOutcome: "ok",
@@ -204,7 +210,7 @@ describe("producer history", () => {
     ]);
     const cache = sqlite
       .prepare("SELECT value FROM cache WHERE key = ?")
-      .get("cron:budget-surface:digest-trigger-poll") as { value: string };
+      .get("cron:budget-surface:price-corroboration") as { value: string };
     const payload = JSON.parse(cache.value) as Record<string, unknown>;
     expect(payload).toMatchObject({ outcome: "ok", processedCount: 1 });
     expect(payload).not.toHaveProperty("error");

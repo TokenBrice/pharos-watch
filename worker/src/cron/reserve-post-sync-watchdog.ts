@@ -475,6 +475,7 @@ export async function runReservePostSyncWatchdog(
   }
 
   let activeAlertReasons: string[] = [];
+  let hasBlockingAdapterAlert = false;
   let adapterAlert: {
     assessedAt: number;
     failedSources: ReserveAdapterAlertEvaluation["failedSources"];
@@ -498,7 +499,7 @@ export async function runReservePostSyncWatchdog(
       const [attemptsByCoin, acknowledgedCoinIds, scoringEvidence] = await Promise.all([
         loadReserveAdapterAlertAttempts(db, [...reserveSyncById.keys()]),
         resolveAcknowledgedReserveFeedIds(db, reserveSyncById.values(), nowSec),
-        loadPublishedReserveScoringEvidence(db, reserveSyncById, [...reserveSyncById.keys()]),
+        loadPublishedReserveScoringEvidence(db, reserveSyncById, [...reserveSyncById.keys()], nowSec),
       ]);
       throwIfAborted(signal);
       const evaluation = evaluateReserveAdapterAlerts({
@@ -514,6 +515,16 @@ export async function runReservePostSyncWatchdog(
       const activeRuleIds = new Set<ReserveAdapterAlertRuleId>();
       const alertReasons: string[] = [];
       for (const [coinId, state] of Object.entries(evaluation.state.coins)) {
+        // A review removes current alert reasons, never the raw verdict or persisted flags.
+        if (acknowledgedCoinIds.has(coinId)) continue;
+        const latestAttempt = attemptsByCoin.get(coinId)?.[0];
+        const structuralOnly = scoringEvidence.structuralOnlyIds.has(coinId)
+          && latestAttempt?.status === "degraded" && latestAttempt.failureCategory == null
+          && latestAttempt.attemptedAt === reserveSyncById.get(coinId)?.lastAttemptedAt;
+        if (state.failureRaised || state.clockRaised
+          || (state.scoreIneligibleRaised && !structuralOnly)) {
+          hasBlockingAdapterAlert = true;
+        }
         if (state.failureRaised) {
           activeRuleIds.add("reserve-adapter-failure-sustained");
           alertReasons.push(`reserve-adapter-failure-sustained:${coinId}`);
@@ -527,11 +538,11 @@ export async function runReservePostSyncWatchdog(
           alertReasons.push(`reserve-source-clock-stalled:${coinId}`);
         }
       }
-      if (evaluation.scoreIneligibleUnknownSources.length > 0) {
+      if ([...scoringEvidence.unknownIds].some((coinId) => !acknowledgedCoinIds.has(coinId)
+        || reserveSyncById.get(coinId)?.metadata?.failureCategory == null)) {
         degradedReasons.push("reserve-score-ineligible-evidence-unknown");
       }
-      // Reserve findings stay off Telegram (ADR-42), so the active transition
-      // must instead degrade this source's status with a machine-readable reason.
+      // Completed structural observations remain quality findings (ADR-31/42).
       activeAlertReasons = alertReasons;
       for (const ruleId of activeRuleIds) {
         if (!firedRuleIds.includes(ruleId)) firedRuleIds.push(ruleId);
@@ -557,7 +568,7 @@ export async function runReservePostSyncWatchdog(
     recordCronFailure("reserve-post-sync-watchdog", error, { metadata: { stage: "reserve-adapter-alerts" } });
   }
 
-  if (activeAlertReasons.length > 0) degradedReasons.push("reserve-adapter-alert-raised");
+  if (hasBlockingAdapterAlert) degradedReasons.push("reserve-adapter-alert-raised");
   const activeRuleIds = [...new Set(firedRuleIds)];
   // One quality object carries both findings: the per-coin adapter transitions
   // with their machine reason, plus every fired rule id. A rule already named

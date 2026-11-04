@@ -7,7 +7,7 @@ import {
 } from "./authoritative-price-sources.test-support";
 
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../authoritative-price-sources/erc4626-nav";
+import { resolveVaultNavSupplyPrice } from "../authoritative-price-sources/erc4626-nav";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { CIRCUIT_SOURCE } from "../constants";
@@ -33,13 +33,28 @@ describe("resolveVaultNavSupplyPrice", () => {
     ]));
   });
 
-  it("keeps AA unavailable when its parent is stale or the exact CDO quote is unreadable", async () => {
+  it("values sGHO through previewRedeem with its parent gate", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    const stale = new Map([["usdc-circle", freshParent("usdc-circle", 1, "coingecko+pyth", {
-      nowSec, observedAt: nowSec - 3 * 3600, priceSyncedAt: nowSec - 3 * 3600,
-    })]]);
-    expect(await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", stale)).toBeNull();
+    const parent = freshParent("gho-aave", 0.9999, "coingecko+curve-onchain", { nowSec });
+    const parents = new Map([[parent.id, parent]]);
+    fetchEvmCallHexAtBlockMock.mockResolvedValue(`0x${(102n * 10n ** 16n).toString(16).padStart(64, "0")}`);
+    expect(await resolveVaultNavSupplyPrice("sgho-aave", parents)).toMatchObject({
+      price: 1.02 * 0.9999, metadata: { navMethod: "previewRedeem" },
+    });
+    expect(fetchEvmCallHexAtBlockMock.mock.calls[0]).toEqual(expect.arrayContaining([
+      "ethereum", "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
+      `0x4cdad506${(10n ** 18n).toString(16).padStart(64, "0")}`,
+    ]));
+    fetchEvmCallHexAtBlockMock.mockClear();
+    parents.set(parent.id, { ...parent, priceObservedAt: nowSec - 901 });
+    expect(await resolveVaultNavSupplyPrice("sgho-aave", parents)).toBeNull();
+    parents.set(parent.id, { ...parent, priceSource: "coingecko", priceConfidence: "single-source" });
+    expect(await resolveVaultNavSupplyPrice("sgho-aave", parents)).toBeNull();
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps AA unavailable when the exact CDO quote is unreadable", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
     fetchEvmCallHexAtBlockMock.mockResolvedValue(null);
     expect(await resolveVaultNavSupplyPrice("aa-falconx-mev-capital", previousPayload(nowSec))).toBeNull();
   });
@@ -99,21 +114,6 @@ describe("resolveVaultNavSupplyPrice", () => {
       metadata: { cachedVaultRate: { rate: 1.0392, rateObservedAt: nowSec - 3600 } },
     });
     expect(override?.price).toBeCloseTo(1.0392 * 0.9999, 6);
-  });
-
-  it("exposes only configured fresh single-source NAV parents", () => {
-    expect(getFreshSingleSourceNavParentId("syzusd-yuzu")).toBe("yzusd-yuzu");
-    expect(getFreshSingleSourceNavParentId("senpathusd-sentora")).toBe("pathusd-bridge");
-    expect(getFreshSingleSourceNavParentId("sbold-k3-capital")).toBe("bold-liquity");
-    expect(getFreshSingleSourceNavParentId("ybold-yearn")).toBe("bold-liquity");
-    expect(getFreshSingleSourceNavParentId("susn-noon")).toBe("usn-noon");
-    expect(getFreshSingleSourceNavParentId("savusd-avant")).toBe("avusd-avant");
-    expect(getFreshSingleSourceNavParentId("eearn-ember")).toBe("usdc-circle");
-    expect(getFreshSingleSourceNavParentId("krusdc-keyrock")).toBe("usdc-circle");
-    expect(getFreshSingleSourceNavParentId("arcusdc-galaxy")).toBe("usdc-circle");
-    expect(getFreshSingleSourceNavParentId("susdc-spark-v1")).toBe("usdc-circle");
-    expect(getFreshSingleSourceNavParentId("sgho-aave")).toBeNull();
-    expect(getFreshSingleSourceNavParentId("not-a-vault-token")).toBeNull();
   });
 
   // The same-run parent shape fiat-cg builds from a direct CoinGecko quote (K-033).
@@ -229,23 +229,11 @@ describe("resolveVaultNavSupplyPrice", () => {
     });
   });
 
-  it("fails closed without a parent row, a trusted parent, or a vault config", async () => {
+  it("fails closed without a vault config", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
 
-    expect(await resolveVaultNavSupplyPrice("eearn-ember", new Map())).toBeNull();
-    expect(
-      await resolveVaultNavSupplyPrice("not-a-vault-token", previousPayload(nowSec)),
-    ).toBeNull();
+    expect(await resolveVaultNavSupplyPrice("not-a-vault-token", previousPayload(nowSec))).toBeNull();
 
-    const staleParent: ReadonlyMap<string, PeggedAsset> = new Map([[
-      "usdc-circle",
-      freshParent("usdc-circle", 0.9999, "coingecko+pyth", {
-        nowSec,
-        observedAt: nowSec - 3 * 3600,
-        priceSyncedAt: nowSec - 3 * 3600,
-      }),
-    ]]);
-    expect(await resolveVaultNavSupplyPrice("eearn-ember", staleParent)).toBeNull();
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
   });
 

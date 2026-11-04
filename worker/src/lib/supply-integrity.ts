@@ -1,4 +1,5 @@
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import {
   STATUS_SUPPLY_VALUE_THRESHOLDS,
 } from "@shared/lib/status-thresholds";
@@ -22,6 +23,7 @@ import { getCompletedSupplySnapshot } from "./supply-snapshot-completion";
 export const SUPPLY_INTEGRITY_CONFIRM_KEY = "cron-staleness-watchdog:supply-confirm:v1";
 const SUPPLY_INTEGRITY_CONFIRM_RUNS = 2;
 const MAX_REPORTED_IDS = 20;
+const CHARTS_PUBLICATION_MAX_AGE_SEC = 2 * CRON_INTERVALS["sync-stablecoin-charts"];
 /** Bound the held drift baselines kept in confirmation state. */
 const MAX_HELD_DRIFT_BASELINES = 50;
 /** Reviewed levels move daily inside this band; anything wider is an ordinary finding. */
@@ -119,6 +121,7 @@ export interface SupplyAvailabilityIntegrityReport {
     reason: string | null;
     runStartedAt: number | null;
     codes: string[];
+    maxAgeSec: number;
   };
 }
 
@@ -171,7 +174,8 @@ interface ChartsContinuityEvidence {
   codes: string[];
 }
 
-function parseChartsRun(row: ChartsRunRow | undefined): ChartsContinuityEvidence {
+function parseChartsRuns(rows: ChartsRunRow[], nowSec: number): ChartsContinuityEvidence {
+  const row = rows[0];
   if (!row) return { status: "unknown", reason: "sync-stablecoin-charts-run-unavailable", runStartedAt: null, codes: [] };
   let parsed: unknown;
   try {
@@ -197,11 +201,20 @@ function parseChartsRun(row: ChartsRunRow | undefined): ChartsContinuityEvidence
   if (reason === "chart-history-truncated") {
     return { status: "truncated", reason, runStartedAt: row.started_at, codes };
   }
+  // Completed buckets carry no publishing-run identity; only these successful
+  // no-ops may defer to earlier evidence, without crossing a failed read/run.
+  if (row.status === "ok" && reason === "cadence_bucket_completed" && rows.length > 1) {
+    return parseChartsRuns(rows.slice(1), nowSec);
+  }
   // Only a run that actually published (or confirmed a newer canonical cache)
   // is recovery evidence. A cadence skip, error, or unconfirmed CAS skip is
   // unknown, never a healthy chart generation (R2).
-  const published = metadata.cacheWriteMode === "published" || metadata.lastWriteAdvanced === true;
+  const published = reason !== "cadence_bucket_completed"
+    && (metadata.cacheWriteMode === "published" || metadata.lastWriteAdvanced === true);
   if ((row.status === "ok" || row.status === "degraded") && published) {
+    if (row.started_at > nowSec || nowSec - row.started_at > CHARTS_PUBLICATION_MAX_AGE_SEC) {
+      return { status: "unknown", reason: "sync-stablecoin-charts-publication-stale", runStartedAt: row.started_at, codes };
+    }
     return { status: "ok", reason: null, runStartedAt: row.started_at, codes };
   }
   return {
@@ -244,7 +257,7 @@ function unknownAvailabilityIntegrity(reason: string): SupplyAvailabilityIntegri
     share: null,
     consecutiveGenerations: 0,
     latestRunStartedAt: null,
-    charts: { status: "unknown", reason: null, runStartedAt: null, codes: [] },
+    charts: { status: "unknown", reason: null, runStartedAt: null, codes: [], maxAgeSec: CHARTS_PUBLICATION_MAX_AGE_SEC },
   };
 }
 
@@ -504,6 +517,7 @@ function parseActiveSupplyCoverage(metadata: string | null): { observed: number;
  */
 async function loadSupplyAvailabilityIntegrity(
   db: D1Database,
+  nowSec: number,
 ): Promise<SupplyAvailabilityIntegrityReport> {
   // Sibling reads are independent: a failed charts read must not discard valid
   // supply-coverage evidence, and vice versa (R2/R7).
@@ -526,14 +540,15 @@ async function loadSupplyAvailabilityIntegrity(
              FROM cron_runs
             WHERE job = 'sync-stablecoin-charts'
             ORDER BY started_at DESC, id DESC
-            LIMIT 1`,
+            LIMIT 8`,
         )
         .all<ChartsRunRow>(),
     ).catch(() => null),
   ]);
-  const charts = chartsRows == null
+  const chartsEvidence = chartsRows == null
     ? { status: "unknown" as const, reason: "sync-stablecoin-charts-read-failed", runStartedAt: null, codes: [] }
-    : parseChartsRun(chartsRows.results?.[0]);
+    : parseChartsRuns(chartsRows.results ?? [], nowSec);
+  const charts = { ...chartsEvidence, maxAgeSec: CHARTS_PUBLICATION_MAX_AGE_SEC };
   if (rows == null) return { ...unknownAvailabilityIntegrity("sync-stablecoins-runs-read-failed"), charts };
   const runs = rows.results ?? [];
   const latest = runs[0];
@@ -641,7 +656,7 @@ export async function loadSupplyIntegrityReport(
   const expectedDate = startOfUtcDaySec(new Date(nowSec * 1000));
   const [value, availability, snapshot] = await Promise.all([
     settle(() => loadSupplyValueIntegrity(db, nowSec), unknownValueIntegrity, options.signal),
-    settle(() => loadSupplyAvailabilityIntegrity(db), unknownAvailabilityIntegrity, options.signal),
+    settle(() => loadSupplyAvailabilityIntegrity(db, nowSec), unknownAvailabilityIntegrity, options.signal),
     settle(
       () => loadSupplySnapshotIntegrity(db, nowSec),
       (reason) => unknownSnapshotIntegrity(

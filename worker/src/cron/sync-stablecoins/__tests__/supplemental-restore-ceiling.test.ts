@@ -222,7 +222,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
   });
   it.each([
     ["audx-aussie-dollar-token", "coingecko", 30_551, false],
-    ["mxne-real-mxn", "coingecko", 135_461, false],
+    ["xmd-metal-dollar", "coingecko", 135_461, false],
     ["hbusdt-hyperbeat", "coingecko", 94_041, false],
     ["tryb-bilira", "coingecko-low-volume", 604_800, true],
     ["usdc-circle", "chainlink-nav", 345_600, true],

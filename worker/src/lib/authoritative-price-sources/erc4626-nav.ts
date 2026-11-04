@@ -220,6 +220,7 @@ export async function resolveVaultNavSupplyPrice(
 ): Promise<CurrentPriceOverride | null> {
   const config = ERC4626_NAV_VAULTS_BY_ID.get(stablecoinId);
   const provider = config ? erc4626NavProvider
+    : PREVIEW_REDEEM_VAULTS_BY_ID.has(stablecoinId) ? previewRedeemProvider
     : idleCdoTrancheProvider.matches(stablecoinId) ? idleCdoTrancheProvider : null;
   const parentId = config?.parentId ?? provider?.liveParentByAssetId?.[stablecoinId];
   if (!provider || !parentId) return null;

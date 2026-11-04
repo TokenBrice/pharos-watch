@@ -330,6 +330,19 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: Date.UTC(2026, 10, 3, 23, 48) / 1000,
     expiresAt: Date.UTC(2026, 10, 17, 23, 48) / 1000,
   },
+  {
+    stablecoinId: "hbd-hive",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-04 08:53 UTC: HBD's only admitted price path is the native Hive internal market (hive-native-cg), which requires a non-self trade within 900 seconds plus spread, depth, turnover and a fresh HIVE/USD parent. The book itself is healthy: both approved nodes (api.hive.blog and api.deathwing.me, head block 111364328 at 08:53:00 UTC) return the same newest trades (08:52:45, 08:51:57 and 08:44:48 UTC) and a best bid/ask of 0.044975/0.045027 HBD per HIVE with 3,000/560 HBD on top. But trading is sparse: at 08:23 UTC both nodes' newest non-self trade was 07:53:18 UTC, and a trade-freshness replay of 2026-11-03/04 found 40 of 96 quarter-hour boundaries without a trade inside 900 seconds, so publications intermittently and correctly withhold the price. CoinGecko hive_dollar ($1.63 from Upbit-family BTC/HBD tickers) stays outside the existing $1.19 bound and is correctly rejected; HBD has no reviewed contract deployment for DEX, contract or exact-address recovery. Keep HBD active and its missing runs missing; all admission gates preserved. Owner ops re-reviews the native-trade cadence or establishes another admitted market by this review's expiry, 2026-11-18 08:53 UTC.",
+    sources: [
+      "https://api.hive.blog",
+      "https://api.deathwing.me",
+      "https://api.coingecko.com/api/v3/coins/hive_dollar/tickers",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 4, 8, 53) / 1000,
+    expiresAt: Date.UTC(2026, 10, 18, 8, 53) / 1000,
+  },
 ];
 
 /** Standing source-calendar review, separate from temporary gap acknowledgements.
