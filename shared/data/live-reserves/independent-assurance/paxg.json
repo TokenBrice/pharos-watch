@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "product": "PAXG",
   "profile": "paxg-v1",
-  "officialIndexUrl": "https://www.paxos.com/paxg-transparency",
+  "officialIndexUrl": "https://www.paxos.com/transparency/paxg",
   "reportUrl": "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf",
   "reportSha256": "2611a159b29fc28dd4f438528c5aa38330002e4848e20cbdd8b02ec2864f87a1",
   "reportByteLength": 490005,

@@ -3,7 +3,7 @@ import { linePattern, type CompilerProfile } from "./shared";
 export const PROFILE: CompilerProfile = {
   product: "PAXG",
   profile: "paxg-v1",
-  officialIndexUrl: "https://www.paxos.com/paxg-transparency",
+  officialIndexUrl: "https://www.paxos.com/transparency/paxg",
   reportUrl: "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf",
   reportDate: "2026-09-30",
   reportAsOf: "2026-09-30T17:00:00-04:00",

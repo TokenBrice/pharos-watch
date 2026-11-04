@@ -16,7 +16,7 @@
   "geckoId": "global-dollar",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.paxos.com/usdg-transparency",
+    "url": "https://www.paxos.com/transparency/usdg",
     "provider": "KPMG LLP",
     "attestorTier": "big4",
     "cadence": "monthly",
@@ -103,13 +103,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "usdg-paxos",
     "display": {
-      "url": "https://www.paxos.com/usdg-transparency",
+      "url": "https://www.paxos.com/transparency/usdg",
       "label": "Paxos / KPMG USDG assurance"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://www.paxos.com/usdg-transparency"
+        "url": "https://www.paxos.com/transparency/usdg"
       }
     },
     "params": { "product": "USDG" }

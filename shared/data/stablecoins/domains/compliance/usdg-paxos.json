@@ -55,7 +55,7 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
-    "reserveDisclosureUrl": "https://www.paxos.com/usdg-transparency",
+    "reserveDisclosureUrl": "https://www.paxos.com/transparency/usdg",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
     "notes": "Reviewed 2026-10-07. Current terms and the August 2026 KPMG report identify Paxos Digital Singapore Pte. Ltd. and Paxos Issuance Europe Oy as joint USDG issuers. The existing issuerEntity string remains unchanged and identifies the Singapore issuer; the Finnish co-issuer holds a FIN-FSA EMI authorization. Neither foreign license establishes U.S. GENIUS authorization or a registered foreign exception. The OCC Paxos Trust conversion decision condition 4 requires a separate written non-objection before that U.S. bank makes USDG available through the multi-jurisdictional platform. No public determination satisfying that condition, USDG-specific GENIUS approval or officially acknowledged GENIUS application was located in the scoped review. The ordinary digital-assets pending licensing inventory is not exhaustive. Treasury identifies January 18, 2027 as the expected Act effective date and July 18, 2028 for the later DASP issuer-status restriction. No public enforcement action naming the Singapore issuer was located; the U.S. Paxos Trust consent order is not assigned to this separate entity.",
@@ -76,7 +76,7 @@
       },
       {
         "label": "Paxos USDG transparency",
-        "url": "https://www.paxos.com/usdg-transparency",
+        "url": "https://www.paxos.com/transparency/usdg",
         "sourceKind": "issuer-disclosure",
         "accessedAt": "2026-10-07"
       },

@@ -17,7 +17,7 @@
   "cmcSlug": "paxos-standard",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.paxos.com/usdp-transparency",
+    "url": "https://www.paxos.com/transparency/usdp",
     "provider": "KPMG",
     "attestorTier": "big4",
     "cadence": "monthly",
@@ -94,13 +94,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "usdp-paxos",
     "display": {
-      "url": "https://www.paxos.com/usdp-transparency",
+      "url": "https://www.paxos.com/transparency/usdp",
       "label": "Paxos Transparency"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://www.paxos.com/usdp-transparency"
+        "url": "https://www.paxos.com/transparency/usdp"
       }
     },
     "params": { "product": "USDP" }

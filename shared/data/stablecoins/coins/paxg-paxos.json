@@ -19,7 +19,7 @@
   "protocolSlug": "paxos-gold",
   "proofOfReserves": {
     "type": "independent-audit",
-    "url": "https://www.paxos.com/paxg-transparency",
+    "url": "https://www.paxos.com/transparency/paxg",
     "provider": "KPMG",
     "attestorTier": "big4",
     "cadence": "monthly",
@@ -39,7 +39,7 @@
         },
         {
           "label": "Paxos PAXG transparency reports",
-          "url": "https://www.paxos.com/paxg-transparency"
+          "url": "https://www.paxos.com/transparency/paxg"
         }
       ]
     }
@@ -100,13 +100,13 @@
     "semantics": "attestation-mix",
     "breakerScope": "paxg-paxos",
     "display": {
-      "url": "https://www.paxos.com/paxg-transparency",
+      "url": "https://www.paxos.com/transparency/paxg",
       "label": "Paxos / KPMG gold examination"
     },
     "inputs": {
       "primary": {
         "kind": "http-html",
-        "url": "https://www.paxos.com/paxg-transparency"
+        "url": "https://www.paxos.com/transparency/paxg"
       }
     }
   },
