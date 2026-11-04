@@ -1,7 +1,7 @@
 import { CHAIN_META } from "../types/chain-identity";
 import type { StablecoinMeta } from "../types";
 import type { SupplyUnavailableReason } from "../types/market";
-import { SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
+import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "./chain-rpc-registry";
 import { isFixedDecimalDeployment } from "./deployment-amounts";
 
 export type OnchainSupplyContract = NonNullable<StablecoinMeta["contracts"]>[number];
@@ -171,6 +171,29 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
   "cdp-enosys": [supplyProbeChain("flare")],
+  // Curve satellites lock Ethereum shares; reallocate, never add their stock.
+  // Reviewed 2026-11-04: canonical stock / CG cap = 0.953799 at $1.11/share.
+  "scrvusd-curve": [
+    { chain: "ethereum" },
+    { chain: "optimism", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
+    supplyProbeChain("fraxtal", { allowZeroSupply: true }),
+    { chain: "fantom", rpcUrl: PUBLIC_RPC_URLS.fantom, allowZeroSupply: true },
+    { chain: "bsc", allowZeroSupply: true }, { chain: "avalanche", allowZeroSupply: true },
+    { chain: "xdc", allowZeroSupply: true }, supplyProbeChain("sonic", { allowZeroSupply: true }),
+    supplyProbeChain("etherlink", { allowZeroSupply: true }),
+  ],
+  // Native Ethereum/BNB/Solana plus HyperEVM burn/mint stock; no canonical escrow.
+  // Reviewed 2026-11-04: sum / CG implied shares = 0.999454.
+  "gldon-ondo": [
+    { chain: "ethereum" }, { chain: "bsc" }, { chain: "solana" },
+    supplyProbeChain("hyperevm", { allowZeroSupply: true }),
+  ],
+  // XGLDToken OFTs burn/mint their own stock; Ethereum is live at observed zero.
+  // Reviewed 2026-11-04: sum / CG implied units = 1.000011.
+  "xgld-unitas": [
+    { chain: "bsc" }, { chain: "base", allowZeroSupply: true },
+    { chain: "ethereum", allowZeroSupply: true }, supplyProbeChain("mantle", { allowZeroSupply: true }),
+  ],
   // Reviewed 2026-10-25: all nine EVM issuer registers sum; Solana/Stellar
   // are Ethereum-escrowed representations listed explicitly below, not new stock.
   "jaaa-janus-henderson-anemoy": [
@@ -1162,6 +1185,7 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
 // the listed lock/mint representations. Reallocate that supply across chains
 // instead of adding representation supplies to the canonical total.
 export const CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS: Readonly<Record<string, string>> = {
+  "scrvusd-curve": "ethereum",
   "apyusd-apyx": "ethereum",
   "susn-noon": "ethereum",
   "syrupusdg-maple": "ethereum",
