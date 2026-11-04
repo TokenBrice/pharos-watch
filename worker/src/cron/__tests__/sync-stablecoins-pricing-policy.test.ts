@@ -99,12 +99,12 @@ describe("pricing application policy", () => {
       observedAtMode: "local_fetch",
       observedAtBySource: { bitstamp: nowSec - 40, coingecko: nowSec - 60, kraken: nowSec - 35, "uniswap-v3-dex": nowSec - 1_200 },
     };
-    // Previous-generation MXNE row: an ordinary CoinGecko quote ~40h old at restore time.
+    // Previous-generation supplemental row: an ordinary CoinGecko quote ~40h old at restore time.
     const previousMxne: PeggedAsset = {
-      id: "mxne-real-mxn", name: "MXNe", symbol: "MXNE", pegType: "peggedMXN",
-      price: 0.0567, priceSource: "coingecko", priceConfidence: "single-source",
+      id: "xmd-metal-dollar", name: "XMD", symbol: "XMD", pegType: "peggedUSD",
+      price: 0.9997, priceSource: "coingecko", priceConfidence: "single-source",
       priceObservedAt: nowSec - 144_443, priceObservedAtMode: "upstream", priceSyncedAt: nowSec - 900,
-      agreeSources: ["coingecko"], supplyObservedAt: nowSec - 900, circulating: { peggedMXN: 21_000_000 },
+      agreeSources: ["coingecko"], supplyObservedAt: nowSec - 900, circulating: { peggedUSD: 21_000_000 },
     };
     const restored = restoreMissingTrackedAssets([usdt], new Map([[previousMxne.id, previousMxne]]), nowSec).assets;
     const assets = [usdt, ...restored];
