@@ -51,10 +51,16 @@ const MAX_PREVIOUS_TVL_HISTORY_ROWS = 5_000;
  * database that consumes too many resources within a 10 s window, and
  * back-to-back history reads alone filled one on 2026-11-04 (about 12 s of query
  * time in the minute the loader ran, failing the run and every concurrent
- * producer). A ratio of 2 holds these statements to about a third of any window
- * and leaves the rest to other traffic.
+ * producer). A ratio of 3 holds these statements to about a quarter of any
+ * window and leaves the rest to other traffic; a ratio of 2 still tripped the
+ * window on the 18:55Z run.
  */
-export const YIELD_D1_IDLE_RATIO = 2;
+export const YIELD_D1_IDLE_RATIO = 3;
+
+/** Idempotent loader reads outlast one spent D1 resource window instead of failing the run. */
+function readOutlastingResourceWindow<T>(read: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+  return runWithOverloadRetry(read, 3, signal, { waitOutResourceWindow: true });
+}
 
 const OWNERSHIP_HANDOFF_DELETE_CHUNK_ROWS = 5_000;
 const OWNERSHIP_HANDOFF_DELETE_MAX_ROWS_PER_RUN = 250_000;
@@ -200,7 +206,7 @@ async function loadPreviousBestRowsForChunk(
   const seekChunkSize = Math.max(1, D1_MAX_BOUND_PARAMETERS - exclusion.binds.length - 1);
   for (const coinChunk of chunkArray(idChunk, seekChunkSize)) {
     throwIfAborted(signal);
-    const result = await db
+    const result = await readOutlastingResourceWindow(() => db
       .prepare(
         `WITH requested(stablecoin_id) AS (VALUES ${coinChunk.map(() => "(?)").join(", ")})
          SELECT /* pharos:yield-sync:previous-best-point */
@@ -221,7 +227,7 @@ async function loadPreviousBestRowsForChunk(
          )`,
       )
       .bind(...coinChunk, startSec, ...exclusion.binds)
-      .all<YieldHistorySnapshotRow>();
+      .all<YieldHistorySnapshotRow>(), signal);
     appendRows(rows, result.results ?? []);
   }
   const rowById = new Map(
@@ -300,20 +306,25 @@ export async function loadYieldHistorySnapshots(
     const historyRowKeys = new Set<string>();
 
     for (const read of historyReads) {
-      const readStartedMs = Date.now();
-      const historyResult = await db
-        .prepare(
-          `SELECT /* pharos:yield-sync:history-window */
-             h.stablecoin_id, h.source_key, h.recorded_at, h.is_best, h.apy, h.apy_base, h.source_tvl_usd, h.data_source, h.yield_source, h.yield_type, h.exchange_rate
-           FROM yield_history h INDEXED BY ${read.index}
-           WHERE ${read.predicate}
-             AND h.recorded_at >= ?
-             AND h.recorded_at <= ?
-             AND (h.publication_state IS NULL OR h.publication_state = 'published')`,
-        )
-        .bind(...read.binds, startSec - THIRTY_DAYS_SECONDS, startSec)
-        .all<YieldHistorySnapshotRow>();
-      const readMs = Date.now() - readStartedMs;
+      let readMs = 0;
+      const historyResult = await readOutlastingResourceWindow(async () => {
+        const attemptStartedMs = Date.now();
+        const attempt = await db
+          .prepare(
+            `SELECT /* pharos:yield-sync:history-window */
+               h.stablecoin_id, h.source_key, h.recorded_at, h.is_best, h.apy, h.apy_base, h.source_tvl_usd, h.data_source, h.yield_source, h.yield_type, h.exchange_rate
+             FROM yield_history h INDEXED BY ${read.index}
+             WHERE ${read.predicate}
+               AND h.recorded_at >= ?
+               AND h.recorded_at <= ?
+               AND (h.publication_state IS NULL OR h.publication_state = 'published')`,
+          )
+          .bind(...read.binds, startSec - THIRTY_DAYS_SECONDS, startSec)
+          .all<YieldHistorySnapshotRow>();
+        // Pace on this attempt alone; a waited-out window is already idle time.
+        readMs = Date.now() - attemptStartedMs;
+        return attempt;
+      }, options.signal);
       for (const row of historyResult.results ?? []) {
         if (isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key)) continue;
         const rowKey = `${row.stablecoin_id}\0${row.source_key ?? ""}\0${row.recorded_at}`;
@@ -341,7 +352,7 @@ export async function loadYieldHistorySnapshots(
           0,
           maxPreviousTvlRows - prevTvlRows.length - prevTvlChunkRows.length,
         );
-        const prevTvlResult = await db
+        const prevTvlResult = await readOutlastingResourceWindow(() => db
           .prepare(
             `WITH requested(stablecoin_id, source_key) AS (VALUES ${pairValues.sql})
              SELECT /* pharos:yield-sync:previous-tvl */
@@ -370,7 +381,7 @@ export async function loadYieldHistorySnapshots(
             ...currentExclusion.binds,
             remainingPreviousTvlRows + 1,
           )
-          .all<YieldHistorySnapshotRow>();
+          .all<YieldHistorySnapshotRow>(), options.signal);
         const filteredRows = (prevTvlResult.results ?? []).filter(
           (row) => !isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key),
         );

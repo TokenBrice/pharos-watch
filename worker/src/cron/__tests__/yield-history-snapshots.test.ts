@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DatabaseSync } from "node:sqlite";
 import { DAY_SECONDS, HOUR_SECONDS } from "@shared/lib/time-constants";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
@@ -186,6 +186,31 @@ describe("loadYieldHistorySnapshots", () => {
     expect(snapshots.prevTvlRows).toHaveLength(180);
     expect(snapshots.prevBestRows.map((row) => row.stablecoin_id)).toEqual(ids);
     expect(snapshots.previousTvlRowsTruncated).toBe(false);
+  });
+
+  it("waits out one spent D1 window on an idempotent history read instead of failing the run", async () => {
+    vi.useFakeTimers();
+    try {
+      let tripped = false;
+      const fixture = createLatestSchemaSqlite({ onAll: (sql) => {
+        if (tripped || !sql.includes("history-window")) return;
+        tripped = true;
+        throw new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
+      } });
+      sqlite = fixture.sqlite;
+      insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 100, isBest: 1 });
+      let settled = false;
+      const pending = loadYieldHistorySnapshots(fixture.db, ["coin-a"], 1_000, 300, {
+        sourceKeysByStablecoin: new Map(), yieldToEventLoop: () => Promise.resolve(),
+      }).finally(() => { settled = true; });
+      await vi.advanceTimersByTimeAsync(5_000);
+      // Still inside the spent window: a sub-second backoff would have retried already.
+      expect([tripped, settled]).toEqual([true, false]);
+      await vi.advanceTimersByTimeAsync(6_001);
+      expect((await pending).historyRows).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("caps source-key-scoped previous TVL history rows and reports truncation", async () => {
