@@ -891,22 +891,24 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       .toMatchObject({ acknowledgedGap: { expiresAt: review.expiresAt } });
   });
 
-  it("keeps absent HBD missing and alert-eligible without an authored review despite its last native acceptance", () => {
-    expect(STABLECOIN_PRICE_GAP_REVIEWS.some((review) => review.stablecoinId === "hbd-hive")).toBe(false);
+  it("acknowledges absent HBD only inside its authored review window despite its last native acceptance", () => {
     const id = "hbd-hive";
-    const nowSec = Date.UTC(2026, 9, 26, 20) / 1000;
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id);
+    expect(review && review.expiresAt - review.reviewedAt).toBe(14 * 24 * 3600);
     const accepted = evaluateStablecoinActivePriceCoverage([{
       id, price: 0.99759, priceSource: "hive-native-cg", priceObservedAt: Date.UTC(2026, 9, 24, 14, 15, 43) / 1000,
       priceObservedAtMode: "local_fetch", circulating: { peggedUSD: 32_000_000 },
     }], [id], { nowSec: Date.UTC(2026, 9, 24, 14, 16) / 1000 });
     expect(accepted.pricedActiveIds).toEqual([id]);
-    const first = evaluateStablecoinActivePriceCoverage([], [id], { nowSec: nowSec - 900, previousCoverage: accepted });
-    const absent = evaluateStablecoinActivePriceCoverage([], [id], { nowSec, previousCoverage: first });
-    expect(absent).toMatchObject({
-      missingActiveIds: [id], missingPriceCount: 1, acknowledgedGapIds: [], alertEligibleIds: [id],
+    const absentAt = (nowSec: number) => evaluateStablecoinActivePriceCoverage([], [id], {
+      nowSec, previousCoverage: evaluateStablecoinActivePriceCoverage([], [id], { nowSec: nowSec - 900, previousCoverage: accepted }),
     });
-    expect([...absent.expiredGapReviewIds, ...absent.invalidGapReviewIds]).not.toContain(id);
-    expect(absent.missingActiveAssets[0]).toMatchObject({
+    expect(absentAt(review!.reviewedAt + 3600)).toMatchObject({
+      missingActiveIds: [id], missingPriceCount: 1, acknowledgedGapIds: [id], alertEligibleIds: [],
+    });
+    const expired = absentAt(review!.expiresAt + 900);
+    expect(expired).toMatchObject({ missingActiveIds: [id], acknowledgedGapIds: [], alertEligibleIds: [id] });
+    expect(expired.missingActiveAssets[0]).toMatchObject({
       currentPrice: null, marketCapUsd: null, acknowledgedGap: null, alertEligible: true,
     });
   });
