@@ -66,7 +66,9 @@ describe("loadYieldHistorySnapshots", () => {
     sqlite = fixture.sqlite;
     for (const [stablecoinId, publicationState] of [["coin-a", "published"], ["coin-b", null]] as const) {
       insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt: 100, isBest: 1, apy: 4, sourceTvlUsd: 10, publicationState });
-      insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt: 200, isBest: 1, apy: 99, sourceTvlUsd: 999, publicationState: "staged" });
+      for (const [recordedAt, state] of [[200, "staged"], [300, "failed"]] as const) {
+        insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt, isBest: 1, apy: 99, sourceTvlUsd: 999, publicationState: state });
+      }
     }
     insertHistory(sqlite, { stablecoinId: "staged-only", sourceKey: "source-a", recordedAt: 200, isBest: 1, publicationState: "staged" });
     expect(sqlite.prepare("SELECT publication_state FROM yield_history WHERE stablecoin_id = 'coin-b' AND recorded_at = 100").get()).toEqual({ publication_state: null });
@@ -107,10 +109,11 @@ describe("loadYieldHistorySnapshots", () => {
 
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 100, sourceTvlUsd: 10 });
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, sourceTvlUsd: 20 });
-    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: 150, sourceTvlUsd: 30 });
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: -40 * DAY_SECONDS, sourceTvlUsd: 30 });
     insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: "source-c", recordedAt: 170, sourceTvlUsd: 40 });
     insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: "source-c", recordedAt: 190, sourceTvlUsd: 50 });
 
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 300 });
     const sourceKeysByStablecoin = new Map<string, Set<string>>([
       ["coin-a", new Set(["source-a", "source-b"])],
       ["coin-b", new Set(["source-c"])],
@@ -119,46 +122,22 @@ describe("loadYieldHistorySnapshots", () => {
       sourceKeysByStablecoin,
     });
 
-    expect(
-      snapshots.prevTvlRows.map((row) => ({
-        stablecoinId: row.stablecoin_id,
-        sourceKey: row.source_key,
-        recordedAt: row.recorded_at,
-        tvl: row.source_tvl_usd,
-      })),
-    ).toEqual([
-      { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, tvl: 20 },
-      { stablecoinId: "coin-a", sourceKey: "source-b", recordedAt: 150, tvl: 30 },
-      { stablecoinId: "coin-b", sourceKey: "source-c", recordedAt: 190, tvl: 50 },
+    expect(snapshots.prevTvlRows.map((row) => [row.stablecoin_id, row.source_key, row.recorded_at, row.source_tvl_usd])).toEqual([
+      ["coin-a", "source-a", 200, 20],
+      ["coin-a", "source-b", -40 * DAY_SECONDS, 30],
+      ["coin-b", "source-c", 190, 50],
     ]);
   });
 
-  it("returns one previous-best row per stablecoin", async () => {
+  it("breaks previous-best timestamp ties by latest rowid and excludes the cutoff", async () => {
     const fixture = createDb();
     sqlite = fixture.sqlite;
 
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-old",
-      recordedAt: 100,
-      isBest: 1,
-      sourceTvlUsd: 10,
-    });
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-new",
-      recordedAt: 200,
-      isBest: 1,
-      sourceTvlUsd: 20,
-    });
-    insertHistory(sqlite, {
-      stablecoinId: "coin-b",
-      sourceKey: "source-b",
-      recordedAt: 150,
-      isBest: 1,
-      sourceTvlUsd: 30,
-    });
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-z", recordedAt: 200, isBest: 1, sourceTvlUsd: 10 });
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "source-a", recordedAt: 200, isBest: 1, sourceTvlUsd: 20 });
+    insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: "source-b", recordedAt: 150, isBest: 1, sourceTvlUsd: 30 });
 
+    insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "at-cutoff", recordedAt: 1_000, isBest: 1 });
     const snapshots = await loadYieldHistorySnapshots(
       fixture.db,
       ["coin-a", "coin-b"],
@@ -167,15 +146,9 @@ describe("loadYieldHistorySnapshots", () => {
       { sourceKeysByStablecoin: new Map() },
     );
 
-    expect(
-      snapshots.prevBestRows.map((row) => ({
-        stablecoinId: row.stablecoin_id,
-        sourceKey: row.source_key,
-        recordedAt: row.recorded_at,
-      })),
-    ).toEqual([
-      { stablecoinId: "coin-a", sourceKey: "source-new", recordedAt: 200 },
-      { stablecoinId: "coin-b", sourceKey: "source-b", recordedAt: 150 },
+    expect(snapshots.prevBestRows.map((row) => [row.stablecoin_id, row.source_key, row.recorded_at])).toEqual([
+      ["coin-a", "source-a", 200],
+      ["coin-b", "source-b", 150],
     ]);
   });
 
@@ -183,78 +156,42 @@ describe("loadYieldHistorySnapshots", () => {
     const fixture = createDb();
     sqlite = fixture.sqlite;
 
-    insertHistory(sqlite, {
-      stablecoinId: "usde-ethena",
-      sourceKey: "valid-source",
-      recordedAt: 100,
-      isBest: 1,
-      sourceTvlUsd: 10,
-    });
-    insertHistory(sqlite, {
-      stablecoinId: "usde-ethena",
-      sourceKey: LEGACY_BEST_YIELD_SOURCE_KEY,
-      recordedAt: 200,
-      isBest: 1,
-      sourceTvlUsd: 20,
-    });
+    insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: "valid-source", recordedAt: 100, isBest: 1, sourceTvlUsd: 10 });
+    insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: LEGACY_BEST_YIELD_SOURCE_KEY, recordedAt: 200, isBest: 1, sourceTvlUsd: 20 });
 
     const snapshots = await loadYieldHistorySnapshots(
       fixture.db,
       ["usde-ethena"],
       1_000,
       300,
-      { sourceKeysByStablecoin: new Map() },
+      { sourceKeysByStablecoin: new Map([["usde-ethena", new Set(["valid-source", LEGACY_BEST_YIELD_SOURCE_KEY])]]) },
     );
 
+    expect(snapshots.historyRows.map((row) => row.source_key)).toEqual(["valid-source"]);
+    expect(snapshots.prevTvlRows.map((row) => row.source_key)).toEqual(["valid-source"]);
     expect(snapshots.prevBestRows).toHaveLength(1);
     expect(snapshots.prevBestRows[0]?.source_key).toBe("valid-source");
     expect(snapshots.prevBestRows[0]?.recorded_at).toBe(100);
   });
 
-  it("bounds previous-history materialization without pre-counting old candidates", async () => {
-    const fixture = createDb();
+  it("keeps every read under D1's bind cap across large coin and pair chunks", async () => {
+    const fixture = createLatestSchemaSqlite({ onAll: (sql) => {
+      expect(sql.match(/\?/g)?.length ?? 0).toBeLessThanOrEqual(100);
+    } });
     sqlite = fixture.sqlite;
-
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-a",
-      recordedAt: 100,
-      isBest: 1,
-      sourceTvlUsd: 10,
+    const ids = Array.from({ length: 90 }, (_, i) => `coin-${i}`);
+    for (const stablecoinId of ids) {
+      insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt: 100, isBest: 1, sourceTvlUsd: 10 });
+      insertHistory(sqlite, { stablecoinId, sourceKey: "source-b", recordedAt: 100, isBest: 0, sourceTvlUsd: 5 });
+    }
+    const snapshots = await loadYieldHistorySnapshots(fixture.db, ids, 1_000, 300, {
+      chunkSize: 90,
+      sourceKeysByStablecoin: new Map(ids.map((id) => [id, new Set(["source-a", "source-b"])])),
     });
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-a",
-      recordedAt: 200,
-      isBest: 1,
-      sourceTvlUsd: 20,
-    });
-    insertHistory(sqlite, {
-      stablecoinId: "coin-a",
-      sourceKey: "source-b",
-      recordedAt: 150,
-      isBest: 0,
-      sourceTvlUsd: 30,
-    });
-
-    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a"], 1_000, 300, {
-      sourceKeysByStablecoin: new Map([["coin-a", new Set(["source-a"])]]),
-    });
-
-    expect(
-      snapshots.prevTvlRows.map((row) => ({
-        sourceKey: row.source_key,
-        recordedAt: row.recorded_at,
-      })),
-    ).toEqual([
-      { sourceKey: "source-a", recordedAt: 200 },
-    ]);
-    expect(
-      snapshots.prevBestRows.map((row) => ({
-        sourceKey: row.source_key,
-        recordedAt: row.recorded_at,
-      })),
-    ).toEqual([{ sourceKey: "source-a", recordedAt: 200 }]);
+    expect(snapshots.historyRows).toHaveLength(180);
+    expect(snapshots.prevTvlRows).toHaveLength(180);
+    expect(snapshots.prevBestRows.map((row) => row.stablecoin_id)).toEqual(ids);
+    expect(snapshots.previousTvlRowsTruncated).toBe(false);
   });
 
   it("caps source-key-scoped previous TVL history rows and reports truncation", async () => {

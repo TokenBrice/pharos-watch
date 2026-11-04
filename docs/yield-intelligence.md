@@ -578,6 +578,8 @@ Producer evaluation and live/publish-time API hydration share normalized evidenc
 
 Runtime readers consume authored source configs directly; the adapter manifest is a sorted projection, not a reconstructed runtime registry. Price-derived eligibility remains enforced during resolution. Benchmark loading retains both the readable registry and its cache-readability state.
 
+Snapshot loading separates selected history from requested-source history using their respective composite indexes, then deduplicates and sorts the merged window. Previous-best and non-null previous-TVL anchors use per-coin/per-source indexed seeks with timestamp/rowid descending tie-breaks; publication and ownership exclusions apply before each seek limit. The existing TVL materialization cap and truncation signal remain unchanged.
+
 History input construction and source evaluation expose only awaited cooperative APIs. Their row/coin cadence, per-iteration cancellation checks, and progress-before-yield ordering are shared by runtime and tests; deterministic tests may inject an immediately resolved `yieldToEventLoop` callback without selecting a separate execution mode.
 
 Morpho, Pendle, Yearn Kong and Beefy share only a local candidate-envelope constructor in `sources-optional.ts`: providers pass explicit identity, percent APY, pool, source key, label, yield type and per-row observation time. Optional identity-field presence and provider-specific source-key casing remain intact. Fetch/parser boundaries, budgets, exception handling and cleanup stay provider-owned; `SIMPLE_SUPPLEMENTAL_FAMILIES` remains the family runner authority.
