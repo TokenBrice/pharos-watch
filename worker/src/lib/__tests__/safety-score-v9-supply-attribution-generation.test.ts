@@ -954,6 +954,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     },
   );
 
+  // Finish both cohort sweeps before cleanup can reset the next row's fake clock.
   it.each([180_000, 1])("attempts every tier within N=cohort-size runs under sustained %ims exhaustion", async windowMs => {
     vi.useFakeTimers();
     try {
@@ -1035,7 +1036,7 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         expect(attemptsByRun[1]).toContain("wm-m0");
       }
     } finally { vi.restoreAllMocks(); vi.useRealTimers(); }
-  });
+  }, 60_000);
 
   it("re-derives accepted raw observations against the current aggregate", () => {
     const applied = applySafetyScoreV9SupplyAttributionGeneration(

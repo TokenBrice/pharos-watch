@@ -59,6 +59,7 @@ describe("Horizon pool discovery", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
   it("queries the canonical CODE:ISSUER filter and preserves Stellar identities", async () => {
@@ -141,6 +142,8 @@ describe("Horizon pool discovery", () => {
   });
 
   it("follows the Horizon cursor until a short page proves the query ended", async () => {
+    // Drive pacing locally so shared-process RPC retries cannot enter this mock.
+    vi.useFakeTimers();
     const nextHref = "https://horizon.stellar.org/liquidity_pools?cursor=page2&limit=200";
     const fetchMock = mockFetch([
       {
@@ -151,10 +154,12 @@ describe("Horizon pool discovery", () => {
     ], { requireMatch: true });
     const stageContext = context();
 
-    const result = await crawlHorizonPoolsStage({
+    const pending = crawlHorizonPoolsStage({
       coinTargets: [target()],
       context: stageContext.value,
     });
+    await vi.runAllTimersAsync();
+    const result = await pending;
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(result.providerChecks).toEqual([
