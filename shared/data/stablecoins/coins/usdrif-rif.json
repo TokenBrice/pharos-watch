@@ -89,8 +89,8 @@
       "rifBucket": {
         "address": "0xa27024ed70035e46dba712609fc2afa1c97aa36a",
         "expectedProxyCodeHash": "0x146015dd2944fa6e6d87c95119399290c52ddea7e7a09f62ef54f04ee300463a",
-        "expectedImplementationAddress": "0x5316384be99310fdea0da0b3cc0d0bb9e7f0887f",
-        "expectedImplementationCodeHash": "0xdaf1fdd739f2a2030fe5e92db559631b2c0dabf28e0d97abf6e48446f73da78e",
+        "expectedImplementationAddress": "0xa8bc1c546bb740f720bf35edfd348f0b0bcd98c7",
+        "expectedImplementationCodeHash": "0xf784a3c3541097832eeccdd3b9367cea8bb01fbcad09cdd6d8a4f989be8e46a7",
         "collateralToken": "0x2acc95758f8b5f583470ba265eb685a8f45fc9d5",
         "collateralDecimals": 18,
         "expectedPegContainerProvider": "0xafb1b8c320acc776c1279bcdb24ab8f84ab727a4",
@@ -110,7 +110,13 @@
         "https://github.com/money-on-chain/stable-protocol-roc-v2/tree/64734b2599fd89658d62c15eda805acec7c9e054",
         "https://rootstock.blockscout.com/address/0xa27024ed70035e46dba712609fc2afa1c97aa36a",
         "https://rootstock.blockscout.com/address/0x5316384be99310fdea0da0b3cc0d0bb9e7f0887f?tab=contract",
-        "https://rootstock.blockscout.com/block/9214021"
+        "https://rootstock.blockscout.com/block/9214021",
+        "https://rootstock.blockscout.com/address/0xa8bc1c546bb740f720bf35edfd348f0b0bcd98c7?tab=contract",
+        "https://rootstock.blockscout.com/tx/0x5f6396db692bd8b5aa4343e6d5b2cac26f9172828bcf8fba73b0a20385a7de54",
+        "https://rootstock.blockscout.com/block/9382936",
+        "https://rootstock.blockscout.com/address/0x6f5ff3c5e5ca6b2bb201014b534e1abf2083b7b9?tab=contract",
+        "https://rootstock.blockscout.com/address/0x2bdf2fd2553ee50cb09ac9a98f2c036e0d5d91f8?tab=contract",
+        "https://rootstock.blockscout.com/address/0x4e227debaf627c9c1254806a4969e0b169a9c015?tab=contract"
       ]
     }
   },
