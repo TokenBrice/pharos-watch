@@ -231,6 +231,9 @@ export interface CronResult {
   productivity?: CronProductivity;
 }
 
+/** A completed run's terminal row outlasts one spent D1 resource window instead of misreporting the run. */
+const TERMINAL_ACCOUNTING_RETRY = { waitOutResourceWindow: true } as const;
+
 export class CronTerminalAccountingError extends Error {
   readonly code = "cron-terminal-accounting-failed";
   readonly reason = this.code;
@@ -628,6 +631,9 @@ export async function logCronRun(
           producer.calendarPeriod ?? null,
           degradedReason,
         ).run(),
+        3,
+        undefined,
+        TERMINAL_ACCOUNTING_RETRY,
       );
       stage = "producer-history";
       await recordProducerOutcome(db, {
@@ -665,6 +671,9 @@ export async function logCronRun(
             degradedReason,
           )
           .run(),
+        3,
+        undefined,
+        TERMINAL_ACCOUNTING_RETRY,
       );
     }
     persistingCompletedTelemetry = false;
@@ -729,6 +738,9 @@ export async function logCronRun(
             producer.calendarPeriod ?? null,
             terminalReason,
           ).run(),
+          3,
+          undefined,
+          TERMINAL_ACCOUNTING_RETRY,
         );
         stage = "producer-history";
         await recordProducerOutcome(db, {

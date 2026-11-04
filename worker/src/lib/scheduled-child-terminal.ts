@@ -191,7 +191,8 @@ export async function writeScheduledChildTerminal(
       executionSlotStartedAt: f.slotStartedAt, executionGeneration: f.generation,
       attemptTable: childAttemptTable(f) }),
   ];
-  const results = await runWithOverloadRetry(() => db.batch(statements));
+  // The run's work is done; losing this write would record it as failed.
+  const results = await runWithOverloadRetry(() => db.batch(statements), 3, undefined, { waitOutResourceWindow: true });
   if (results.some((result) => !result.success)) throw new Error("scheduled-child-terminal-batch-failed");
   const terminalReadSql = f.kind === "reserve-continuation"
     ? "SELECT terminal_token FROM reserve_continuation_child_attempts WHERE attempt_key = ?"
