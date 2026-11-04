@@ -900,6 +900,9 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
       if (claim === null) {
         cohort = await readYieldCoinCohort(db, id, signature, Math.floor(Date.now() / 1000));
         if (cohort === null) {
+          cohort = await readYieldCoinCohort(db, id, null, Math.floor(Date.now() / 1000));
+        }
+        if (cohort === null) {
           // The claimant may be a fast builder that publishes within its lease.
           // Wait twice (250 ms, then 500 ms), re-reading only this coin's scoped
           // derivative under the invocation's exact signature each time. The
@@ -941,6 +944,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
           return yieldCoinUnavailable("yield-cohort-preparing", true);
         }
       } else {
+        const buildStartedAt = Date.now();
         logWorkerEvent({
           scope: "api",
           level: "info",
@@ -962,24 +966,35 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
           now = Math.floor(Date.now() / 1000);
           const hydrated = hydrateYieldPayload(ageYieldRankings(full, cached.updatedAt), cached, active);
           const aggregate = YieldCoinCohortSchema.parse({
+            ...hydrated.payload,
             signature, assessedAt: now, validUntil: yieldCohortValidUntil(full, cached.updatedAt, now, active),
             totalCount: full.rankings.length, degradationReasons: hydrated.degradationReasons,
-            warnings: hydrated.payload.warnings, provenance: hydrated.payload.provenance,
-            rankings: hydrated.payload.rankings,
           });
           await publishYieldCoinCohort(db, owner, aggregate);
           cohort = { ...aggregate, rankings: aggregate.rankings.filter((row) => row.id === id) };
+          logWorkerEvent({
+            scope: "api", level: "info", event: "yield-cohort-built", route: "yield-rankings-coin",
+            message: "Published yield coin cohort assessment",
+            metadata: { stablecoinId: id, signaturePrefix: signature.slice(0, 12), leaseOwner: owner,
+              durationMs: Date.now() - buildStartedAt },
+          });
         } finally {
           await releaseYieldCoinCohort(db, owner);
         }
       }
     }
+    if (!hasYieldPublicationContract(cohort) || cohort.publication.updatedAt !== cohort.updatedAt) {
+      return yieldCoinUnavailable("yield-rankings-malformed");
+    }
     if (cohort.validUntil <= Math.floor(Date.now() / 1000)) {
       return yieldCoinUnavailable("yield-cohort-assessment-expired", true);
     }
-    const hydrated = hydrateYieldPayload(ageYieldRankings(selected, cached.updatedAt), cached, active);
+    const previousAssessment = cohort.signature !== signature;
+    const payload = previousAssessment
+      ? YieldRankingsResponseSchema.parse(ageYieldRankings(cohort, cohort.assessedAt))
+      : hydrateYieldPayload(ageYieldRankings(selected, cached.updatedAt), cached, active).payload;
     const comparatorRows = cohort.rankings;
-    const rankings = hydrated.payload.rankings.map((row) => {
+    const rankings = payload.rankings.map((row) => {
       const comparator = comparatorRows.find((entry) => entry.id === row.id);
       if (!comparator) throw new Error("Yield coin comparator missing");
       const { rankChangeAttribution: _localAttribution, liveRank: _localRank, ...fields } = row;
@@ -987,16 +1002,21 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
         ...(comparator.rankChangeAttribution !== undefined ? { rankChangeAttribution: comparator.rankChangeAttribution } : {}) };
     });
     const projected: YieldRankingsCoinResponse = {
-      ...hydrated.payload, rankings, warnings: cohort.warnings,
-      provenance: hydrated.payload.provenance ? {
-        ...hydrated.payload.provenance, liveSafetyHydration: cohort.provenance?.liveSafetyHydration,
-      } : hydrated.payload.provenance,
+      ...payload, rankings, warnings: cohort.warnings,
+      provenance: payload.provenance ? {
+        ...payload.provenance, liveSafetyHydration: cohort.provenance?.liveSafetyHydration,
+      } : payload.provenance,
       projection: {
-        stablecoinId: id, generationId: selected.publication?.generationId ?? null, updatedAt: cached.updatedAt,
+        stablecoinId: id, generationId: payload.publication?.generationId ?? null, updatedAt: payload.updatedAt,
         totalCount: cohort.totalCount, unavailableReason: rankings.length > 0 ? null : "row-not-published",
       },
     };
-    return buildYieldRankingsResponse(projected, cached, cohort.degradationReasons);
+    const response = buildYieldRankingsResponse(projected, { updatedAt: payload.updatedAt }, cohort.degradationReasons);
+    if (previousAssessment) {
+      response.headers.set("Cache-Control", "no-store");
+      response.headers.append("Warning", `199 - "Yield cohort rebuilding; signature=${cohort.signature}; assessedAt=${cohort.assessedAt}; validUntil=${cohort.validUntil}"`);
+    }
+    return response;
   } catch (err) {
     logWorkerEventArgs("api", "warn", "[yield-rankings-coin] Scoped projection unavailable:", err instanceof Error ? err.message : err);
     return yieldCoinUnavailable("yield-coin-projection-unavailable");
