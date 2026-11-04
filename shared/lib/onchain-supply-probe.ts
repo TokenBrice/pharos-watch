@@ -155,6 +155,11 @@ const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
   // keeper inventory, so it must never replace the adjusted read.
   // https://etherscan.io/token/0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1
   "usg-tangent",
+  // Reviewed 2026-11-04 (owner-approved restatement): the complete native
+  // Base + Solana + Stellar registers read 8,786,145.85 MXNe while the
+  // CoinGecko cap implied ~1.43M; the 2026-10-19 risk review already calls
+  // that cap inconsistent with measured supply. Prefer the native stock.
+  "mxne-real-mxn",
 ]);
 
 export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): boolean {

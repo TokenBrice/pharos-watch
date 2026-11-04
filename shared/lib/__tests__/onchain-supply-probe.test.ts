@@ -193,6 +193,7 @@ describe("curated on-chain supply paths", () => {
   it("prefers USG's keeper-adjusted issuer-native stock over a CoinGecko market cap", () => {
     const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
     expect(prefersOnChainSupplyMcap(meta)).toBe(true);
+    expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("mxne-real-mxn")!)).toBe(true);
     expect(selectSingleOnchainSupplyProbeContract(meta)?.chain).toBe("ethereum");
   });
 
