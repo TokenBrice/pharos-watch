@@ -37,10 +37,16 @@ describe("native Hive public methodology", () => {
       "observed remainder as partial supply", "expiry re-arms the guard", "fill-scaled historical buckets remain unavailable",
       "observed zero stays zero", "14-day as-of budget", "original age",
       "observed flow × ticker confidence 0.55",
+      "separates the observed primary price used to check DEX price comparisons",
+      "within the 30-minute primary budget", "This comparison supplies no independent vote",
     ]) {
       expect(text).toContain(rule);
       expect(markdown).toContain(rule);
     }
+    const comparisonParagraph = PRICING_PIPELINE_SECTION_CONTENT.markdownParagraphs.find((paragraph) =>
+      paragraph.includes("separates the observed primary price used to check DEX price comparisons"));
+    expect(comparisonParagraph).toBeDefined();
+    expect([...root.querySelectorAll("p")].filter((node) => node.textContent === comparisonParagraph)).toHaveLength(1);
     const details = [...root.querySelectorAll("details")].find((node) => node.textContent?.includes("Current source admission and exceptions"));
     expect(details?.textContent).toContain("Hive internal market (HBD/HIVE)");
     expect(details?.textContent).toContain("SOFID uses exact-identity");

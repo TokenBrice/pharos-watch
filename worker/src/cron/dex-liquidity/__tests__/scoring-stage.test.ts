@@ -167,6 +167,7 @@ function sourceState(): DexLiquidityScoringSourceState {
       ["major", 1.0001],
       ["minor", 0.9998],
     ]),
+    primaryPriceById: new Map([["major", 1.0001], ["minor", 0.9998], ["soft-only", 0.92]]),
     stablecoinMcapById: new Map([
       ["major", 100_000_000_000],
       ["minor", 5_000_000],
@@ -404,6 +405,8 @@ describe("DEX liquidity scoring stage", () => {
 
     const decoded = decodeDexLiquidityScoringStageChunks(chunks);
     expect([...decoded.sourceState.stablecoinPriceById]).toEqual([...source.stablecoinPriceById]);
+    expect(decoded.sourceState.primaryPriceById).toEqual(source.primaryPriceById);
+    expect(decoded.sourceState.stablecoinPriceById.has("soft-only")).toBe(false);
     expect([...decoded.sourceState.stablecoinMcapById]).toEqual([...source.stablecoinMcapById]);
     expect([...decoded.sourceState.protocolTvlCaps]).toEqual([...source.protocolTvlCaps]);
     expect([...decoded.sourceState.priceObservations]).toEqual([...source.priceObservations]);
@@ -509,6 +512,7 @@ describe("DEX liquidity scoring stage", () => {
       records.findIndex((record) => record.kind === "metric"),
     );
     expect(consumingSource.stablecoinPriceById.size).toBe(0);
+    expect(consumingSource.primaryPriceById?.size).toBe(0);
     expect(consumingSource.stablecoinMcapById.size).toBe(0);
     expect(consumingSource.protocolTvlCaps.size).toBe(0);
     expect(consumingSource.priceObservations.size).toBe(0);
@@ -908,6 +912,18 @@ describe("DEX liquidity scoring stage", () => {
     // Old payloads lack the current volume, registry, provider identity or
     // carried-reference/raw-TVL admission basis; never relabel their evidence.
     const [header, ...rest] = base[0]!.payload.split("\n");
+    const legacyHeader = JSON.parse(header!);
+    delete legacyHeader.source.primaryPrices;
+    expect(decodeDexLiquidityScoringStageChunks([
+      withPayload([JSON.stringify(legacyHeader), ...rest].join("\n")),
+    ]).sourceState.primaryPriceById).toBeUndefined();
+    for (const primaryPrices of [null, {}, [["bad", 0]], [["bad", -1]], [["bad"]], [["same", 1], ["same", 2]]]) {
+      const invalidHeader = JSON.parse(header!);
+      invalidHeader.source.primaryPrices = primaryPrices;
+      expect(() => decodeDexLiquidityScoringStageChunks([
+        withPayload([JSON.stringify(invalidHeader), ...rest].join("\n")),
+      ])).toThrow(/primary price/);
+    }
     for (const schemaVersion of [1, 2, 3, 4, 5, 6]) {
       expect(() =>
         decodeDexLiquidityScoringStageChunks([

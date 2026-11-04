@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.72",
+    "title": "Separate observed DEX comparison anchors from trusted quote valuation",
+    "date": "2026-11-04",
+    "effectiveAt": 1793750400,
+    "summary": "Measured DEX prices can publish against a fresh observed single-source primary comparison price without admitting that primary as a trusted quote-token valuation or depeg confirmer.",
+    "impact": [
+      "The DEX source stage keeps a separate target-only primary comparison map. Positive observed high or single-source prices with an original clock inside the existing 1,800-second primary budget may anchor outlier, deviation and display-ratio guards; missing, nominal, cached, fallback, low-confidence, invalid, future and stale observations still withhold. The existing trusted quote-token map and provenance are unchanged.",
+      "The comparison map survives the scoring-stage handoff. Stages written before this additive field keep the previous trusted-map behavior. DEX pool prices, retained price-evidence TVL, original observation clocks, protocol corroboration, source-family independence and detector floors are unchanged; a comparison anchor contributes no vote and cannot recover or close a depeg event.",
+      "The Celo USDT symbol USD₮ is normalized to USDT through the existing alias registry, allowing the already-mapped wARS/USDT Uniswap V3 market to enter normal source extraction. It remains subject to the existing price and liquidity gates. MAI market disagreement, USDa Alpha's single Pancake family and pathUSD's unreviewed native Tempo orderbook are not waived.",
+      "Provisional activation is 2026-11-04 00:00 UTC (1793750400), to be re-dated at release; no production recovery is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.71",
     "title": "Cadence-bounded previous-payload parents for vault supply NAV",
     "date": "2026-11-04",

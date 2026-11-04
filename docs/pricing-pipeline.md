@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.71`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.72`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -49,6 +49,8 @@ Pricing v6.69 gives Tangent USG its CoinGecko identity (`tangent-usg`), so the o
 Pricing v6.70 refuses supply rescaled by a detected severe DefiLlama fill default without complete native corroboration or a bounded vetted carry; fill-scaled history remains unavailable. The reviewed native repair roster adds MOVEUSD/Solana and rwaUSDi deployments, including a supply-only Pharos state route. Dated USDQ/Quantoz and USDGLO collapse reviews release obsolete baselines; BUIDL/fxUSD Tempo omission reviews publish only the observed remainder with explicit partial coverage until expiry re-arms the guard. The [supply contract](supply-snapshot.md#chain-dropout-guard) owns admission and recovery; the [v6.70 history](https://pharos.watch/methodology/pricing-pipeline-changelog/archive/v6/#changelog-v-6-70) records scope and dates.
 
 Pricing v6.71 gives only pre-intake vault supply valuation a previous-payload parent freshness budget of two stablecoins producer intervals, measured from the original observation. Same-run quotes and live price overrides keep their source budgets; confidence, replay safety, identity and invalid/future-clock checks remain. The [supply contract](supply-snapshot.md#supply-pipeline) owns the budget and generation verdict.
+
+Pricing v6.72 separates target-only DEX comparison anchors from trusted quote-token valuation. A positive observed `high` or `single-source` primary with an original clock inside `DEPEG_PRIMARY_PRICE_MAX_AGE_SEC` may anchor outlier, deviation and display-ratio guards. Missing, nominal, cached, fallback, low-confidence, invalid, future or stale primaries remain unavailable. The source-stage snapshot preserves that comparison map separately; older stages retain the previous trusted-map behavior. A comparison anchor adds no vote, USD conversion or depeg authority. Existing pool admission, freshness, corroboration and liquidity floors still decide whether a measured row can affect consensus or event state.
 
 ### Release obligations
 
