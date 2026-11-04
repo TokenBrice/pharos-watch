@@ -78,11 +78,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "884016bb4cecf67829572cad31c94648f0e2e2d419265d3fe7d82224de66b620"
+      "sha256": "855c8b0ecd7bc1a9162770d57141485f21ccabdbdab495392b9a4fa4fe9c15ac"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "a0ba85ac0b379d3ba3e2c800c5755f1a298508c2864fbfe837c3a286e6432717"
+      "sha256": "b1e825a4b15563b63ce8919b4c8c9cecaefd4fe342a6db3a40de71ffd8274812"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
@@ -110,7 +110,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chain-rpc-registry.ts",
-      "sha256": "c3c903c782f507b95f338f7ca4f10c6c5c54a5c991947aee1afc3876e814b94a"
+      "sha256": "be4a323b812ec0eedacc461b21cd880920ed3d648c5e68ba935c1295b5cb3d21"
     },
     {
       "path": "shared/lib/circuit-sources.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-04-block-26341087-shock-coverage.json.gz"
     }
   ],
-  "digest": "39b85f0e419991b6f41b58a2a7960871e61422eb22bf7ffb177b770af426fb18"
+  "digest": "e03793df473eae0e7810199a2fd4216b359d62cdcbba6992a8e4818fea8a01df"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
