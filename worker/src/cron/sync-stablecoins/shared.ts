@@ -228,6 +228,8 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         priceSourceConfidenceProfile: hasUsablePrice ? (asset.priceSourceConfidenceProfile ?? null) : null,
         ...(hasUsablePrice && priceDerivation.success ? { priceDerivation: priceDerivation.data } : {}),
         ...(supplyObservedAt != null ? { supplyObservedAt } : {}),
+        ...(asset.supplyUnavailableReason === "supply-chain-dropout" && getCirculatingRawOrNull(asset) == null
+          ? { supplyUnavailableReason: "supply-chain-dropout" as const } : {}),
         ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
         ...(asset.supplyRestored === true && asset.supplyRestoreMode === "outage-fallback"
           ? { supplyRestoreMode: "outage-fallback" as const }
