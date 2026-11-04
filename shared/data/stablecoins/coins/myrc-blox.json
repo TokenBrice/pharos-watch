@@ -109,22 +109,6 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "myrc-independent-assurance",
-    "version": 1,
-    "semantics": "attestation-mix",
-    "display": {
-      "url": "https://www.blox.my/myrc/transparency",
-      "label": "BLOX monthly reserve attestations"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://api.blox.my/blox-admin/attestations"
-      }
-    },
-    "params": { "product": "MYRC", "profile": "myrc-v1" }
-  },
   "notices": [
     {
       "type": "info",
