@@ -905,6 +905,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
           const previousSafetyIdentity = previous?.provenance?.liveSafetyHydration?.safetyScoreIdentity;
           if (active.kind === "v9"
             && selected.rankings.some(row => row.id === id)
+            && previous?.rankings.some(row => row.id === id)
             && previous?.yieldMethodologyVersion === YIELD_METHODOLOGY_VERSION
             && isYieldSafetyFallbackWithinWindow(fallbackNow, active.snapshot.updatedAt, fallbackNow)
             && previousSafetyIdentity != null

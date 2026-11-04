@@ -405,19 +405,22 @@ describe("rankings score-index hydration", () => {
     expect(prepare.mock.calls.filter(([sql]) => sql.includes("json_extract(value, '$.signature') = ?"))).toHaveLength(4);
   });
 
-  it.each(["yield", "safety", "index-missing", "held", "scoring-contract", "expired-safety", "pipeline-gap", "unrated", "omitted", "methodology", "unversioned", "safety-build"])("admits previous assessments against current evidence while a new %s signature builds", async changed => {
+  it.each(["yield", "safety", "index-missing", "held", "scoring-contract", "expired-safety", "pipeline-gap", "unrated", "omitted", "methodology", "unversioned", "safety-build", "entering"])("admits previous assessments against current evidence while a new %s signature builds", async changed => {
     const { db, sqlite, input } = await fixture();
     sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.rankings[0].provenance.sourceObservedAt', NULL,
       '$.rankings[0].provenance.sourceAgeSeconds', 120) WHERE key = 'yield-rankings'`).run();
+    if (changed === "entering") sqlite.prepare("UPDATE cache SET value = json_remove(value, '$.rankings[0]') WHERE key = 'yield-rankings'").run();
     const url = (id = "usdc-circle") => new URL(`https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=${id}`);
     vi.setSystemTime((NOW + 5) * 1000);
     const previous = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url())).json());
     const published = readPublishedCohort(sqlite)!;
     vi.setSystemTime((NOW + 20) * 1000);
-    if (["yield", "omitted", "methodology", "unversioned"].includes(changed)) {
+    if (["yield", "omitted", "methodology", "unversioned", "entering"].includes(changed)) {
       sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.publication.generationId', 'next-yield',
         '$.updatedAt', ?, '$.publication.updatedAt', ?, '$.publication.cutoffAt', ?, '$.rankings[0].currentApy', 99),
         updated_at = ? WHERE key = 'yield-rankings'`).run(NOW + 20, NOW + 20, NOW + 20, NOW + 20);
+      if (changed === "entering") sqlite.prepare("UPDATE cache SET value = json_insert(value, '$.rankings[#]', json(?)) WHERE key = 'yield-rankings'")
+        .run(JSON.stringify(makeYieldRanking({ provenance: makeYieldProvenance({ sourceObservedAt: NOW }) })));
       if (changed === "omitted") sqlite.prepare("UPDATE cache SET value = json_remove(value, '$.rankings[0]') WHERE key = 'yield-rankings'").run();
       if (["methodology", "unversioned"].includes(changed)) sqlite.prepare(`UPDATE cache SET value =
         json_set(json_patch(value, ?), '$.rankings[0].rankChangeAttribution', json('{"previousRank":2}')) WHERE key = ?`)
@@ -468,7 +471,8 @@ describe("rankings score-index hydration", () => {
       const next = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url())).json());
       expect(next.rankings).toEqual(full.rankings.filter(row => row.id === "usdc-circle"));
       expect(next.provenance).toEqual(full.provenance);
-      if (changed === "omitted") expect(next.projection.unavailableReason).toBe("row-not-published");
+      if (changed === "entering") expect(next.projection.unavailableReason).toBeNull();
+      else if (changed === "omitted") expect(next.projection.unavailableReason).toBe("row-not-published");
       else if (["methodology", "unversioned", "safety-build"].includes(changed)) expect(next.rankings[0]).not.toHaveProperty("rankChangeAttribution");
       else expect(next.provenance?.liveSafetyHydration?.reason).toContain(changed === "index-missing" ? "safety-score-index-missing"
         : changed === "held" ? "v9-publication-held" : changed === "expired-safety" ? "safety-publication-clock-out-of-budget"
