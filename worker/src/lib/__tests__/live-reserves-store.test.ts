@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
+import { LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES } from "@shared/lib/live-reserve-reliability";
 import {
   LIVE_SLICES,
   makeReservesDb,
@@ -653,47 +654,39 @@ describe("live-reserves-store", () => {
   });
 
   it("judges published scoring ineligibility from the composition's own warnings", async () => {
-    const attemptId = "attempt-published";
-    const syncById = new Map([["iusd-infinifi", reserveSyncStateInput(attemptId, {
-      // A withheld fallback records this on the sync row but writes no snapshot.
-      warnings: [{
-        code: "fallback-withheld-score-grade-retained", message: "withheld", severity: "warning", effect: "degraded",
-      }],
-      warningCount: 1,
-    })]]);
-    const published = (warnings?: string) => reserveCompositionRow({
-      attempt_id: attemptId,
-      ...(warnings ? { warnings, warning_count: 1 } : {}),
-    });
-
-    const ineligible = await loadPublishedReserveScoringEvidence(
-      mockD1([{
-        match: "reserve_composition",
-        rows: [published(JSON.stringify([{
-          code: "undated-portfolio", message: "Undated portfolio", severity: "warning", effect: "degraded",
-        }]))],
-      }]),
-      syncById,
-      ["iusd-infinifi"],
+    const id = "iusd-infinifi", attemptId = "attempt-published";
+    const warn = (code: string) => ({ code, message: code, severity: "warning", effect: "degraded" } as const);
+    const inspect = (warnings = "[]", row = {}, state = {}, now = 1_200) => loadPublishedReserveScoringEvidence(
+      mockD1([{ match: "reserve_composition", rows: [reserveCompositionRow({
+        attempt_id: attemptId, warnings, warning_count: 1,
+        metadata: JSON.stringify({ freshnessMode: "not-applicable" }), ...row,
+      })] }]),
+      new Map([[id, reserveSyncStateInput(attemptId, { lastStatus: "degraded", ...state })]]), [id], now,
     );
-    expect([...ineligible.scoreIneligibleIds]).toEqual(["iusd-infinifi"]);
-    expect([...ineligible.unknownIds]).toEqual([]);
-
-    const retained = await loadPublishedReserveScoringEvidence(
-      mockD1([{ match: "reserve_composition", rows: [published()] }]),
-      syncById,
-      ["iusd-infinifi"],
-    );
+    // Latest-attempt warnings cannot contaminate a clean retained composition.
+    const withheld = { warningCount: 1, warnings: [warn("fallback-withheld-score-grade-retained")] };
+    const ineligible = await inspect(JSON.stringify([warn("undated-portfolio")]), {}, withheld);
+    expect([...ineligible.scoreIneligibleIds]).toEqual([id]);
+    const retained = await inspect("[]", { warning_count: 0 }, withheld);
     expect([...retained.scoreIneligibleIds]).toEqual([]);
     expect([...retained.unknownIds]).toEqual([]);
-
-    const unreadable = await loadPublishedReserveScoringEvidence(
-      mockD1([{ match: "reserve_composition", rows: [published("{not-json")] }]),
-      syncById,
-      ["iusd-infinifi"],
-    );
+    const unreadable = await inspect("{not-json");
     expect([...unreadable.scoreIneligibleIds]).toEqual([]);
-    expect([...unreadable.unknownIds]).toEqual(["iusd-infinifi"]);
+    expect([...unreadable.unknownIds]).toEqual([id]);
+    for (const code of LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES) {
+      const warnings = [warn(code)];
+      const assess = (row: Record<string, unknown> = {}, state = {}, now = 1_200) => inspect(JSON.stringify(warnings), row, state, now);
+      expect([...(await assess()).structuralOnlyIds]).toEqual(["iusd-infinifi"]);
+      expect([...(await assess({}, {}, 1_000_000)).structuralOnlyIds]).toEqual([]);
+      for (const [row, state] of [
+        [{ config_fingerprint: null }, {}], [{ fetched_at: 1 }, {}],
+        [{ warnings: "{not-json" }, {}], [{}, { metadata: { uncertainWrite: true } }],
+        [{}, { lastStatus: "error" }], [{}, { lastError: "unread cause" }],
+        [{}, { metadata: { failureCategory: "upstream-http" } }],
+        [{ warnings: JSON.stringify([...warnings, { ...warnings[0], code: "new-failure" }]), warning_count: 2 }, {}],
+        [{ warnings: JSON.stringify([{ ...warnings[0], effect: "fatal" }]) }, {}],
+      ] as const) expect([...(await assess(row, state)).structuralOnlyIds]).toEqual([]);
+    }
   });
 
   it("includes lastError in sync view when sync state has an error", async () => {

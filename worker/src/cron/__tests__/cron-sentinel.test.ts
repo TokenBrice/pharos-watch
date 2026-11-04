@@ -98,6 +98,7 @@ describe("runCronSentinel", () => {
     ]);
   });
   it("lifts a reserve source quality finding into the sentinel run summary", async () => {
+    const db = emptyDb();
     mocks.reserve.mockResolvedValueOnce({
       status: "ok",
       itemCount: 1,
@@ -106,7 +107,7 @@ describe("runCronSentinel", () => {
         quality: { reasons: ["reserve-score-ineligible-sustained"] },
       }),
     });
-    const result = await runCronSentinel(emptyDb(), { mode: "reserve-post-sync", nowSec: 500 });
+    const result = await runCronSentinel(db, { mode: "reserve-post-sync", nowSec: 500 });
     expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
     expect(metadata.quality).toEqual({
@@ -117,6 +118,9 @@ describe("runCronSentinel", () => {
       "sentinel-source-findings",
       "reserve-post-sync:reserve-score-ineligible-sustained",
     ]);
+    const retained = await runCronSentinel(db, { mode: "status", nowSec: 600 });
+    expect(retained.status).toBe("ok");
+    expect(JSON.parse(retained.metadata!).quality).toEqual(metadata.quality);
   });
 
   it("persists thrown source errors and rejects an older successful overwrite", async () => {
