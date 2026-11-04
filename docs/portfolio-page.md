@@ -8,7 +8,9 @@
 
 The holdings editor waits only for URL/local-storage initialization, not report cards. Report cards are enabled only when initialized holdings exist. Pending enrichment has an explicit loading state beside the still-editable holdings; it never implies a zero-risk portfolio.
 
-The initialization placeholder reserves separate hero, editor and first-visit empty-state areas so the footer does not enter the viewport before the workspace appears.
+The first-visit hero, editor and empty state prerender with their existing copy and layout. Before the workspace is parsed, synchronous same-origin `public/portfolio-bootstrap.js` sets `data-portfolio-pending` when a shared URL or nonempty stored array exists. CSS selects the reserved loading areas for returning/shared visits until initialization, avoiding an empty-state flash.
+
+The external script is allowed by the static CSP's `script-src 'self'` and bypasses Pages Functions. It only selects presentation; holdings validation and writeback remain owned by `usePortfolio`. Initialized content no longer depends on the selector.
 
 Coin options derive from `CLIENT_ACTIVE_STABLECOINS`, excluding every other lifecycle state, not by subtracting cemetery rows. Static logos and local holdings introduce no new server data source.
 

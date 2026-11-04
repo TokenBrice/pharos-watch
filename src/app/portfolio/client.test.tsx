@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 
 import { render, screen, waitFor } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { readFileSync } from "node:fs";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PortfolioClient } from "./client";
@@ -38,6 +40,7 @@ const reportCardsState: {
   meta: {},
 };
 const reportQueryOptions = vi.hoisted(() => vi.fn());
+const bootstrapScript = readFileSync("public/portfolio-bootstrap.js", "utf8");
 
 vi.mock("@/hooks/api-hooks", () => ({
   useReportCardsV9Table: (options: { enabled: boolean }) => {
@@ -139,6 +142,31 @@ describe("PortfolioClient URL sync", () => {
     expect(screen.getByText("portfolio-empty-state")).toBeTruthy();
   });
 
+  it("prerenders the first-visit workspace before storage initialization", () => {
+    portfolioState.initialized = false;
+    const html = renderToString(<PortfolioClient />);
+    expect(html).toContain("portfolio-empty-state");
+    expect(html).toContain("Add holdings manually or load a starter mix below.");
+    expect(html).toContain("[html[data-portfolio-pending]_&amp;]:hidden");
+    expect(html).toContain("hidden [html[data-portfolio-pending]_&amp;]:block");
+    expect(reportQueryOptions).toHaveBeenLastCalledWith({ enabled: false });
+  });
+
+  it("stops using the pre-paint selector once holdings initialize", () => {
+    portfolioState.initialized = false;
+    document.documentElement.setAttribute("data-portfolio-pending", "");
+    const { container, rerender } = render(<PortfolioClient />);
+    const root = container.firstElementChild;
+    expect(container.children).toHaveLength(1);
+    portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }] };
+    rerender(<PortfolioClient />);
+    expect(container.firstElementChild).toBe(root);
+    expect(container.innerHTML).not.toContain("data-portfolio-pending");
+    expect(screen.queryByText("portfolio-empty-state")).toBeNull();
+    expect(screen.getByText("Total portfolio value")).toBeTruthy();
+    document.documentElement.removeAttribute("data-portfolio-pending");
+  });
+
   it("keeps holdings editable while risk enrichment is pending", () => {
     portfolioState = { ...basePortfolioState(), holdings: [{ coinId: "usdc-circle", amount: 100 }] };
     reportCardsState.isLoading = true;
@@ -215,5 +243,40 @@ describe("PortfolioClient URL sync", () => {
     render(<PortfolioClient />);
     expect(screen.getByRole("alert").textContent).toContain("portfolio-card-unavailable");
     expect(screen.getByLabelText("Safety grade A-, score 80")).toBeTruthy();
+  });
+});
+
+describe("portfolio pre-paint selector", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    document.documentElement.removeAttribute("data-portfolio-pending");
+    window.history.replaceState(null, "", "/portfolio/");
+  });
+
+  it.each([null, "[]", "not json", "{}"])("keeps the static empty state for storage %s", (stored) => {
+    if (stored !== null) window.localStorage.setItem("pharos:portfolio", stored);
+    new Function(bootstrapScript)();
+    expect(document.documentElement.hasAttribute("data-portfolio-pending")).toBe(false);
+  });
+
+  it.each(["", "?p=usdc-circle:100", "?coins=usdc-circle"])("hides the empty state for saved/shared holdings (%s)", (search) => {
+    window.history.replaceState(null, "", `/portfolio/${search}`);
+    if (!search) window.localStorage.setItem("pharos:portfolio", '[{"coinId":"usdc-circle","amount":100}]');
+    new Function(bootstrapScript)();
+    expect(document.documentElement.hasAttribute("data-portfolio-pending")).toBe(true);
+  });
+
+  it("keeps first visits visible when storage access is blocked", () => {
+    const read = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked"); });
+    try {
+      expect(() => new Function(bootstrapScript)()).not.toThrow();
+      expect(document.documentElement.hasAttribute("data-portfolio-pending")).toBe(false);
+      window.history.replaceState(null, "", "/portfolio/?p=usdc-circle:100");
+      new Function(bootstrapScript)();
+      expect(document.documentElement.hasAttribute("data-portfolio-pending")).toBe(true);
+    } finally {
+      read.mockRestore();
+      document.documentElement.removeAttribute("data-portfolio-pending");
+    }
   });
 });

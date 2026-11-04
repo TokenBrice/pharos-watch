@@ -17,6 +17,9 @@ const route = createClientFeaturePage({
     },
   },
   loadClient: () => import("./client").then((m) => ({ default: m.PortfolioClient })),
+  // The selector must run before the workspace is parsed to avoid an empty-state flash.
+  // eslint-disable-next-line @next/next/no-sync-scripts
+  beforeClient: <script src="/portfolio-bootstrap.js" />,
   loading: <Skeleton className="h-[400px] w-full rounded-xl" />,
   shell: {
     breadcrumbName: "Portfolio",
