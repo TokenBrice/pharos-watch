@@ -205,11 +205,11 @@ describe("runDexScreenerPass", () => {
   });
 
   it.each([
-    { label: "both observed sub-floor Polygon pools", liquidity: 46_409.29, symbol: "PHT", price: "0.01587", resolves: false },
-    { label: "threshold pool with PHP reference despite sparse turnover", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "0.01587", resolves: true },
-    { label: "wrong token symbol", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHOENIX", price: "0.01587", resolves: false },
-    { label: "dollar-par quote for a PHP token", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "1", resolves: false },
-  ])("applies existing exact-PHT liquidity, identity and FX guards: $label", async ({ liquidity, symbol, price, resolves }) => {
+    { label: "both observed sub-floor Polygon pools", liquidity: 46_409.29, symbol: "PHT", price: "0.01587", reason: "missing-liquidity" },
+    { label: "threshold pool with PHP reference despite sparse turnover", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "0.01587", reason: null },
+    { label: "wrong token symbol", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHOENIX", price: "0.01587", reason: "symbol-mismatch" },
+    { label: "dollar-par quote for a PHP token", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "1", reason: "price-rejected" },
+  ])("applies existing exact-PHT liquidity, identity and FX guards: $label", async ({ liquidity, symbol, price, reason }) => {
     const address = "0xe75220cb014dfb2d354bb59be26d7458bb8d0706";
     const pool = {
       ...exactPool(address, "0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08", price, liquidity),
@@ -233,12 +233,13 @@ describe("runDexScreenerPass", () => {
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
       "polygon", address, expect.any(AbortSignal), expect.any(Number), 0,
     );
-    expect(result.resolved).toBe(resolves ? 1 : 0);
-    if (resolves) {
+    expect(result.resolved).toBe(reason ? 0 : 1);
+    if (!reason) {
       expect(asset).toMatchObject({ price: 0.01587, priceSource: "dexscreener-exact", priceConfidence: "fallback" });
     } else {
       expect(asset.price).toBeNull();
       expect(asset.priceSource).toBe("missing");
+      expect(result.diagnostics?.[0].assetAttempts?.[0].rejectionClass).toBe(reason);
     }
   });
 
@@ -248,6 +249,7 @@ describe("runDexScreenerPass", () => {
       pairs: [
         exactPool("0xaaa", "0xpair-a", "0.99"),
         exactPool("0xbbb", "0xpair-b", "1.01"),
+        exactPool("0xbad", "0xpair-invalid", "invalid"),
       ],
     });
 
@@ -266,7 +268,10 @@ describe("runDexScreenerPass", () => {
       circulating: { peggedUSD: 1_000_000 },
     });
 
-    const result = await runDexScreenerPass([multiChain, singleChain], undefined, undefined);
+    const result = await runDexScreenerPass([multiChain, singleChain,
+      makeMissingAsset({ id: "invalid", address: "0xbad", chains: ["Base"] }),
+      makeMissingAsset({ id: "absent", address: "0xabsent", chains: ["Base"] }),
+    ], undefined, undefined);
 
     expect(result.resolved).toBe(2);
     expect(multiChain.price).toBe(0.99);
@@ -274,11 +279,15 @@ describe("runDexScreenerPass", () => {
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledTimes(1);
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
       "base",
-      "0xaaa,0xbbb",
+      "0xaaa,0xabsent,0xbad,0xbbb",
       expect.any(AbortSignal),
       expect.any(Number),
       0,
     );
+    expect(result.diagnostics?.[0].assetAttempts).toEqual(expect.arrayContaining([
+      expect.objectContaining({ assetId: "invalid", rejectionClass: "invalid-price" }),
+      expect.objectContaining({ assetId: "absent", rejectionClass: "identity-mismatch" }),
+    ]));
   });
 
   it("prioritizes a longer-streak asset under the 30-address batch cap", async () => {

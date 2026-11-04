@@ -100,6 +100,9 @@ describe("DEX refresh continuity", () => {
     });
     const summary = await runPriceDexRefresh({ db, syncStartSec: now });
     expect(summary).toMatchObject({ resolved: 0, attemptedBatches: 1, errorClasses: [] });
+    expect(summary.assetDiagnostics).toEqual([expect.objectContaining({ assetId: asset.id, inCohort: true, hinted: true,
+      attempt: expect.objectContaining({ result: "empty", rejectionClass: response === "under-liquidity" ? "missing-liquidity" : "empty-response" }) })]);
+    expect(summary.providerDiagnostics).toEqual([expect.objectContaining({ status: response === "404" ? 404 : 200, success: true })]);
     const state = JSON.parse((await getCache(db, DEX_REFRESH_CACHE_KEY))!.value);
     expect(state.targets).toEqual([]);
     expect(planDexRefresh([asset], state.targets, 0).batches[0][0].target).toEqual(reviewed[0]);
@@ -194,6 +197,7 @@ describe("DEX refresh continuity", () => {
   });
 
   it("probes a missing-price row in the same slot as already-priced refreshes", async () => {
+    vi.setSystemTime(now * 1000);
     prepareRefresh().mockRestore();
     const priced = ethereumDexPricedRows(7 * 30);
     const missing = makePeggedAsset({ id: "moveusd-cfx", symbol: "MOVEUSD", price: null });
@@ -224,6 +228,19 @@ describe("DEX refresh continuity", () => {
       expect.objectContaining({ id: "moveusd-cfx", source: "dexscreener-exact", price: 0.9993 }),
     ]);
     expect(state.cursor).toBe(6);
+    // Publication adopts the fetched source; the next refresh must keep the now-priced row.
+    Object.assign(missing, { price: state.observations[0].price, priceSource: "dexscreener-exact",
+      priceObservedAt: state.observations[0].observedAt, priceObservedAtMode: "local_fetch", priceConfidence: "fallback" });
+    vi.mocked(shared.loadPreviousStablecoinsById).mockResolvedValue({ previousAssetsById: new Map([[missing.id, missing]]), cacheState: { state: "ok" } });
+    vi.setSystemTime((now + 900) * 1000);
+    expect(await runPriceDexRefresh({ db, syncStartSec: now + 900 })).toMatchObject({
+      resolved: 1, hintedAttempted: 1, assetDiagnostics: [expect.objectContaining({
+        assetId: missing.id, inCohort: true, publishedSource: "dexscreener-exact", attempt: expect.objectContaining({ result: "resolved" }),
+      })],
+    });
+    const next = await loadPriceCorroborationObservations(db, now + 1260);
+    expect(next.byId.get(missing.id)?.[0].observedAt).toBe(now + 900);
+    expect((await loadPriceCorroborationObservations(db, now + 1800)).byId.has(missing.id)).toBe(false);
   });
 
   it("bounds batches and advances fairly under overflow", () => {
