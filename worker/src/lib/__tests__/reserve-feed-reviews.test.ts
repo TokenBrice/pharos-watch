@@ -8,29 +8,6 @@ import { evaluateReserveCompositionStatus } from "../status/evaluation-rules";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 
 const review = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "yzusd-yuzu")!;
-// Release B authors these registry entries; the matcher is exercised on fixtures until then.
-const MTBILL_REVIEW: Review = {
-  stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", failureCategory: "upstream-http",
-  warningCodes: [], errorPrefix: null, errorClass: "http-403",
-  owner: "ops", reason: "Keyless issuer historical-portfolio GET observed 2026-11-04T09:04:08Z at the production checkpoint query token=mTBILL&timestamp=2026-11-03T14%3A00 returned HTTP 403, cf-mitigated: challenge (CF-RAY a55273140eb11778-BEG; body SHA256 e2a9bdf8098311cb99023323f057571445e79165ce565eba7d66bcf4f8e626be). The 09:03:22Z production projection records upstream-http and midas-mtbill:source-egress-blocked: HTTP 403 for the same endpoint. Acknowledge only that stable HTTP-403 class, adapter and empty warning set, allowing the historical timestamp query to vary. Other HTTP status/cause/endpoint or new warnings remain unacknowledged; failed evidence stays quarantined, with no composition, clock or scoring exception.",
-  sources: [
-    { url: "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-11-03T14%3A00", evidenceDate: "2026-11-04" },
-    { url: "https://pharos.watch/_site-data/stablecoin-reserves/mtbill-midas", evidenceDate: "2026-11-04" },
-  ],
-  reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
-  expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
-};
-const ZSD_REVIEW: Review = {
-  stablecoinId: "zsd-zephyr-protocol", adapterKey: "zephyr-scanner", failureCategory: null,
-  warningCodes: ["stale-source-data"], errorPrefix: null, sourceTimestamp: 1792250105,
-  owner: "ops", reason: "Issuer reservesnapshots GET observed 2026-11-04T09:02:40Z still returns height 887405, capturedAt 2026-10-17T15:17:42.772Z and material pricing timestamp 1792250105 (2026-10-17T15:15:05Z). Production projection rechecked 09:03:21Z retains stale-source-data and the original clock. Acknowledge only this frozen scanner/clock and exact warning set; no timestamp-free livestats substitution or freshness/scoring exception. If still frozen, the feed qualifies for retirement on 2026-11-16 under owner decision D6; this seven-day review expires first and requires fresh evidence to renew.",
-  sources: [
-    { url: "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc", evidenceDate: "2026-11-04" },
-    { url: "https://pharos.watch/_site-data/stablecoin-reserves/zsd-zephyr-protocol", evidenceDate: "2026-11-04" },
-  ],
-  reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
-  expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
-};
 const accountable = "primary:http-json: Accountable ";
 const http = "primary:onchain-evm: HTTP 403 for https://api-prod.midas.app/api/transparency/by-timestamp?token=[redacted]&timestamp=changed";
 function state(r = review, overrides: Partial<State> = {}): State {
@@ -122,7 +99,7 @@ describe("reserve feed review policy", () => {
     expect(RESERVE_FEED_REVIEWS.some((r) => r.stablecoinId === "gusd-gemini")).toBe(false);
   });
   it("pins HTTP classes to the primary endpoint", async () => {
-    const r = MTBILL_REVIEW;
+    const r = RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "mtbill-midas")!;
     const s = state(r);
     await check(s, r);
     await check({ ...s, lastError: http.replace("HTTP 403", "midas-mtbill:source-egress-blocked: HTTP 403") }, r);
@@ -135,7 +112,7 @@ describe("reserve feed review policy", () => {
     await check({ ...s, ...skipped }, r, r, history(r));
   });
   it("pins verified stalled clocks, including clean ok attempts", async () => {
-    const r = { ...ZSD_REVIEW, warningCodes: [] };
+    const r = { ...RESERVE_FEED_REVIEWS.find((r) => r.stablecoinId === "zsd-zephyr-protocol")!, warningCodes: [] };
     const s = state(r, { lastStatus: "ok" });
     await check(s, r);
     for (const metadata of [{ ...s.metadata, sourceTimestamp: r.sourceTimestamp! + 1 }, { ...s.metadata, freshnessMode: "unverified" as const }]) {

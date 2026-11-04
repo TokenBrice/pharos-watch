@@ -16,6 +16,59 @@ export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
     reviewedAt: Date.UTC(2026, 10, 4, 8, 24, 37) / 1000,
     expiresAt: Date.UTC(2026, 10, 11, 8, 24, 37) / 1000,
   },
+  {
+    stablecoinId: "nwisdom-nest", adapterKey: "nest-vault-positions", failureCategory: null,
+    warningCodes: ["stale-source-data"], errorPrefix: null, sourceTimestamp: 1793302678,
+    owner: "ops", reason: "Keyless issuer GETs observed 2026-11-04T09:02:39Z (positions and last-price-update), with price at 09:02:40Z: latest accountant updatedAt remains 1793302678 (2026-10-29T19:37:58Z). Settled positions total $15,749.82659297394, including $15,707.79 unidentified nUSDR (99.7331%); the production projection read at 09:03:20Z retains unknownExposurePct 99.73310925836635 and stale-source-data. This dated review acknowledges that exact stalled clock and degraded warning set, not nUSDR identity, holdings quality or fresh backing. Keep stale evidence quarantined, original clocks and scoring refusal unchanged; clock advancement or any different warning/cause requires a new assessment.",
+    sources: [
+      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/positions", evidenceDate: "2026-11-04" },
+      { url: "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update", evidenceDate: "2026-11-04" },
+      { url: "https://pharos.watch/_site-data/stablecoin-reserves/nwisdom-nest", evidenceDate: "2026-11-04" },
+    ],
+    reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
+    expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
+  },
+  {
+    stablecoinId: "zsd-zephyr-protocol", adapterKey: "zephyr-scanner", failureCategory: null,
+    warningCodes: ["stale-source-data"], errorPrefix: null, sourceTimestamp: 1792250105,
+    owner: "ops", reason: "Issuer reservesnapshots GET observed 2026-11-04T09:02:40Z still returns height 887405, capturedAt 2026-10-17T15:17:42.772Z and material pricing timestamp 1792250105 (2026-10-17T15:15:05Z). Production projection rechecked 09:03:21Z retains stale-source-data and the original clock. Acknowledge only this frozen scanner/clock and exact warning set; no timestamp-free livestats substitution or freshness/scoring exception. If still frozen, the feed qualifies for retirement on 2026-11-16 under owner decision D6; this seven-day review expires first and requires fresh evidence to renew.",
+    sources: [
+      { url: "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc", evidenceDate: "2026-11-04" },
+      { url: "https://pharos.watch/_site-data/stablecoin-reserves/zsd-zephyr-protocol", evidenceDate: "2026-11-04" },
+    ],
+    reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
+    expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
+  },
+  {
+    stablecoinId: "zys-zephyr-protocol", adapterKey: "zephyr-scanner", failureCategory: null,
+    warningCodes: ["stale-source-data"], errorPrefix: null, sourceTimestamp: 1792250105,
+    owner: "ops", reason: "Issuer reservesnapshots GET observed 2026-11-04T09:02:40Z still returns the underlying ZSD reserve height 887405, capturedAt 2026-10-17T15:17:42.772Z and material pricing clock 2026-10-17T15:15:05Z. ZYS production projection rechecked 09:03:22Z retains that clock and stale-source-data. Acknowledge only the frozen underlying scanner/clock and exact warning set; wrapper share NAV cannot establish fresh underlying backing. Raw evidence remains quarantined with unchanged clocks and scoring refusal. If still frozen, retirement qualifies on 2026-11-16 (D6); renew this earlier-expiring review only against fresh evidence.",
+    sources: [
+      { url: "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc", evidenceDate: "2026-11-04" },
+      { url: "https://pharos.watch/_site-data/stablecoin-reserves/zys-zephyr-protocol", evidenceDate: "2026-11-04" },
+    ],
+    reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
+    expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
+  },
+  {
+    stablecoinId: "m-m0", adapterKey: "m0", failureCategory: null,
+    warningCodes: ["minter-collateral-reconciliation"], errorPrefix: null,
+    owner: "ops", reason: "Keyless production reserve projection GET observed 2026-11-04T09:03:22Z: sourceTimestamp 1793778131 (07:42:11Z), attempt 1793779933 (08:12:13Z), global collateral $220,896,523.037063 versus four-minter sum $193,515,313.204742, a $27,381,209.832321 discrepancy (12.39549%, rounded 12.40%). This is production evidence, not an independent upstream replay: the configured M0 GraphQL API requires Wrangler-managed M0_API_KEY and was not called. Acknowledge only the null-category degraded minter-collateral-reconciliation finding; keep the reconciliation guard, raw evidence quarantine, source clocks and scoring refusal. No discrepancy value is accepted as reconciled backing and no fallback/source admission changes.",
+    sources: [{ url: "https://pharos.watch/_site-data/stablecoin-reserves/m-m0", evidenceDate: "2026-11-04" }],
+    reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
+    expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
+  },
+  {
+    stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", failureCategory: "upstream-http",
+    warningCodes: [], errorPrefix: null, errorClass: "http-403",
+    owner: "ops", reason: "Keyless issuer historical-portfolio GET observed 2026-11-04T09:04:08Z at the production checkpoint query token=mTBILL&timestamp=2026-11-03T14%3A00 returned HTTP 403, cf-mitigated: challenge (CF-RAY a55273140eb11778-BEG; body SHA256 e2a9bdf8098311cb99023323f057571445e79165ce565eba7d66bcf4f8e626be). The 09:03:22Z production projection records upstream-http and midas-mtbill:source-egress-blocked: HTTP 403 for the same endpoint. Acknowledge only that stable HTTP-403 class, adapter and empty warning set, allowing the historical timestamp query to vary. Other HTTP status/cause/endpoint or new warnings remain unacknowledged; failed evidence stays quarantined, with no composition, clock or scoring exception.",
+    sources: [
+      { url: "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-11-03T14%3A00", evidenceDate: "2026-11-04" },
+      { url: "https://pharos.watch/_site-data/stablecoin-reserves/mtbill-midas", evidenceDate: "2026-11-04" },
+    ],
+    reviewedAt: Date.UTC(2026, 10, 4, 9, 4, 8) / 1000,
+    expiresAt: Date.UTC(2026, 10, 11, 9, 4, 8) / 1000,
+  },
 ];
 
 export function resolveReserveFeedReviews(
