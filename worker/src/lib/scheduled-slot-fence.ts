@@ -743,6 +743,10 @@ async function finishScheduledSlotExecution(
       )
       .bind(resultStatus, nowSec, nowSec, metadata, slotKey, slotStartedAt, owner, executionGeneration)
       .run(),
+    3,
+    undefined,
+    // Losing the finish write leaves a finished slot to the abandonment reconciler.
+    { waitOutResourceWindow: true },
   );
   return (result.meta.changes ?? 0) === 1;
 }

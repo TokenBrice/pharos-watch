@@ -66,6 +66,7 @@ import {
 import {
   buildHistoryKey,
   pruneYieldTables,
+  YIELD_D1_IDLE_RATIO,
 } from "./history";
 import {
   TRACKED_META_BY_ID,
@@ -111,6 +112,7 @@ import {
 } from "../../lib/cron-result";
 import {
   rethrowIfAborted,
+  sleepWithSignal,
   throwIfAborted,
 } from "../../lib/abort";
 
@@ -494,7 +496,18 @@ export async function publishYieldRowsAtomically(
       .bind(getFreshnessSentinelCacheKey("yield-data"), sentinelValue, input.startSec, input.generationId),
   ];
 
-  const results = await runWithOverloadRetry(() => db.batch(buildStatements()), 3, input.signal);
+  let batchMs = 0;
+  const results = await runWithOverloadRetry(async () => {
+    const attemptStartedMs = Date.now();
+    const batch = await db.batch(buildStatements());
+    batchMs = Date.now() - attemptStartedMs;
+    return batch;
+  }, 3, input.signal, { waitOutResourceWindow: true });
+  // The atomic batch writes every history row across all its indexes in one
+  // burst; the prune and terminal accounting that follow must not land in the
+  // same spent D1 window (2026-11-04 16:56Z). The batch has committed, so an
+  // abort must not turn this idle into a misreported failed publication.
+  await sleepWithSignal(Math.round(batchMs * YIELD_D1_IDLE_RATIO));
   let written = Number(results[0]?.meta?.changes ?? 0) > 0;
   let appliedByPriorAttempt = false;
   if (!written) {

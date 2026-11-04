@@ -46,14 +46,15 @@ const STALE_YIELD_DELETE_FIXED_BIND_COUNT = 1;
 const YIELD_HISTORY_LOAD_CHUNK_SIZE = 30;
 const MAX_PREVIOUS_TVL_HISTORY_ROWS = 5_000;
 /**
- * Idle time after each history-window read, as a multiple of that read's wall
- * time. D1 rejects a database that consumes too many resources within a 10 s
- * window, and back-to-back history reads alone filled one on 2026-11-04 (about
- * 12 s of query time in the minute the loader ran, failing the run and every
- * concurrent producer). A ratio of 2 holds these reads to about a third of any
- * window and leaves the rest to other traffic.
+ * Idle time after a heavy yield D1 statement (each history-window read, the
+ * atomic publication batch), as a multiple of its wall time. D1 rejects a
+ * database that consumes too many resources within a 10 s window, and
+ * back-to-back history reads alone filled one on 2026-11-04 (about 12 s of query
+ * time in the minute the loader ran, failing the run and every concurrent
+ * producer). A ratio of 2 holds these statements to about a third of any window
+ * and leaves the rest to other traffic.
  */
-const YIELD_HISTORY_READ_IDLE_RATIO = 2;
+export const YIELD_D1_IDLE_RATIO = 2;
 
 const OWNERSHIP_HANDOFF_DELETE_CHUNK_ROWS = 5_000;
 const OWNERSHIP_HANDOFF_DELETE_MAX_ROWS_PER_RUN = 250_000;
@@ -259,7 +260,7 @@ export async function loadYieldHistorySnapshots(
   const idChunks = chunkArray(resolvedIds, chunkSize);
   const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
   const paceHistoryRead = options.paceHistoryRead ?? ((readMs: number, signal?: AbortSignal) =>
-    sleepWithSignal(Math.round(readMs * YIELD_HISTORY_READ_IDLE_RATIO), signal));
+    sleepWithSignal(Math.round(readMs * YIELD_D1_IDLE_RATIO), signal));
 
   const reportProgress = async (chunksDone: number, resolvedIdsDone: number) => {
     await options.onProgress?.({

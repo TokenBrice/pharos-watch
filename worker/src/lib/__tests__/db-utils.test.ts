@@ -17,6 +17,7 @@ import {
   writeFreshnessSentinel,
 } from "../db-cache";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
+import { D1_RESOURCE_WINDOW_MS, runWithOverloadRetry } from "../d1-overload-retry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -181,6 +182,18 @@ describe("db utility helpers", () => {
     expect(batch).toHaveBeenCalledTimes(2);
     expect(batch).toHaveBeenNthCalledWith(1, statements);
     expect(batch).toHaveBeenNthCalledWith(2, statements);
+  });
+
+  it("waits out one spent D1 resource window only when the caller opts in", async () => {
+    const windowError = new Error("D1_ERROR: D1 DB is overloaded. Too many resources consumed within a 10 second window");
+    for (const optIn of [true, false]) {
+      const fn = vi.fn().mockRejectedValueOnce(windowError).mockResolvedValueOnce("ok");
+      const pending = runWithOverloadRetry(fn, 3, undefined, { waitOutResourceWindow: optIn });
+      await vi.advanceTimersByTimeAsync(D1_RESOURCE_WINDOW_MS - 1);
+      expect(fn).toHaveBeenCalledTimes(optIn ? 1 : 2);
+      await vi.advanceTimersByTimeAsync(1_001);
+      await expect(pending).resolves.toBe("ok");
+    }
   });
 
   it("packs multi-row inserts under the D1 bind limit", () => {
