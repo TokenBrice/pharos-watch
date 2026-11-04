@@ -522,6 +522,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
     }
   });
 
+  // Cold evaluator admission exceeds 20s under weekly V8 coverage.
   it("keeps an asset rated while an unreadable foreign provider review blocks only its lane", async () => {
     const assetId = "frnt-wyoming";
     const clockSec = 1_793_404_800;
@@ -585,7 +586,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
       vi.doUnmock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
       vi.resetModules();
     }
-  });
+  }, 60_000);
 
   it("closes only with all three witnesses and writes derived coverage", () => {
     const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });

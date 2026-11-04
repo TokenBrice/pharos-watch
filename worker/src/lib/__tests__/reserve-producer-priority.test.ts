@@ -343,8 +343,10 @@ describe("bounded reserve producer lease waiting", () => {
     // must still attempt while the caller's admission budget holds.
     const platformSetTimeout = globalThis.setTimeout;
     vi.spyOn(globalThis, "setTimeout").mockImplementation(
-      ((handler: () => void, delayMs?: number) => platformSetTimeout(handler, (delayMs ?? 0) + 1)) as typeof setTimeout,
+      ((handler: (...callbackArgs: unknown[]) => void, delayMs?: number, ...args: unknown[]) => platformSetTimeout(handler, (delayMs ?? 0) + 1, ...args)) as typeof setTimeout,
     );
+    const callback = vi.fn();
+    setTimeout(callback, 1, "parser timer argument");
     const work = vi.fn(async () => "published");
     const pending = runCronWithLease(fixture.db, "sync-live-reserves", work, {
       owner: "requester", acquisitionWait: { deadlineMs: Date.now() + 145000 },
@@ -352,6 +354,7 @@ describe("bounded reserve producer lease waiting", () => {
     await vi.advanceTimersByTimeAsync(32000);
     expect(await pending).toMatchObject({ status: "ok", leaseOwner: "requester" });
     expect(work).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledWith("parser timer argument");
   });
 
   it("acquires on the next poll when a live blocker releases early", async () => {

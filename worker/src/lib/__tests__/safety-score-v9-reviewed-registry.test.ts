@@ -27,6 +27,7 @@ import { assessV9Publication } from "../safety-score-v9/publication-assessment";
 import supplyRegistry from "@shared/data/safety-score-v9/supply-attribution-reviews-v1.json";
 
 describe("reviewed registry provenance identity", () => {
+  // Full authored-registry admission exceeds 20s under weekly V8 coverage.
   it("keeps all four full-file digest identities from eager schema admission", () => {
     expect(computeSafetyScoreV9AccessClaimGraphReviewsDigest()).toBe(domainDigest("safety-score-v9.access-lookthrough-reviews.v1", V9AccessLookthroughOverlaySchema.parse(access)));
     // Authored providers have no assetId. The current runtime pipeline admits
@@ -35,7 +36,7 @@ describe("reviewed registry provenance identity", () => {
     expect(SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST).toBe(eagerIncidents.digest);
     expect(SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.mechanism-review-overlays.v1", overlays: SafetyScoreV9MechanismReviewOverlayFileSchema.parse(mechanism) })));
     expect(computeSafetyScoreV9ReviewedTransferFactsDigest()).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.reviewed-transfer-overlays.v1", schemaVersion: 1, reviews: SafetyScoreV9ReviewedTransferFileSchema.parse(transfer).reviews.sort((a, b) => compareText(a.assetId, b.assetId)) })));
-  });
+  }, 60_000);
 
   it("preserves sorted evidence, schema defaults and trimmed fields without admitting malformed rows", () => {
     const authored = {
