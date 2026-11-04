@@ -144,6 +144,12 @@ function parseEnvExampleKeys(filePath: string) {
  */
 const FORBIDDEN_ENV_EXAMPLE_KEYS = ["DB", "TELEGRAM_ADOPTION_IP_HASH_SECRET"] as const;
 const FORBIDDEN_ENV_EXAMPLE_KEY_PREFIXES = ["VAULTS_FYI_"] as const;
+// Keep these operator examples required even if their manifest example metadata is removed.
+const REQUIRED_ENV_EXAMPLE_KEYS = [
+  "NEXT_PUBLIC_API_BASE",
+  "SELECTOR_SNAPSHOT_IP_HASH_SECRET",
+  "SITE_API_SHARED_SECRET",
+] as const;
 /** The example must show the canonical origin, not a placeholder that a copied
  * `.env.local` could turn into a silent upstream. */
 const REQUIRED_ENV_EXAMPLE_VALUES: Readonly<Record<string, string>> = {
@@ -160,6 +166,9 @@ export function findEnvExamplePolicyErrors(text: string): string[] {
   for (const key of keys) {
     const prefix = FORBIDDEN_ENV_EXAMPLE_KEY_PREFIXES.find((candidate) => key.startsWith(candidate));
     if (prefix) errors.push(`.env.example must not document retired ${prefix}* keys (found ${key})`);
+  }
+  for (const key of REQUIRED_ENV_EXAMPLE_KEYS) {
+    if (!keys.has(key)) errors.push(`.env.example must document ${key}`);
   }
   for (const [key, expected] of Object.entries(REQUIRED_ENV_EXAMPLE_VALUES)) {
     const actual = values.get(key);
