@@ -274,12 +274,12 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
             .map((stablecoin_id) => ({ stablecoin_id })) as T[],
         };
       }
-      if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")) {
+      if (sql.includes("pharos:dews:orphan-ids:stress_signals")) {
         return {
           results: (opts.signalIds ?? ["usdt-tether"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
         };
       }
-      if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signal_history")) {
+      if (sql.includes("pharos:dews:orphan-ids:stress_signal_history")) {
         return {
           results: (opts.historyIds ?? ["usdt-tether"]).map((stablecoin_id) => ({ stablecoin_id })) as T[],
         };
