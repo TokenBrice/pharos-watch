@@ -1,3 +1,4 @@
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { getCache, setCacheIfNewer } from "../lib/db-cache";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
@@ -71,7 +72,6 @@ export interface SyncStablecoinChartsOptions {
   scheduledAtSec?: number;
 }
 
-const CHART_CADENCE_SEC = 60 * 60;
 const CHART_CADENCE_KEY = "stablecoin-charts:cadence";
 const CHART_STALE_CLAIM_SEC = 25 * 60;
 
@@ -85,7 +85,7 @@ export async function syncStablecoinCharts(
   const scheduledAtSec = options.scheduledAtSec ?? syncStartSec;
   return runCadenceBucketPublication(db, {
     key: CHART_CADENCE_KEY,
-    cadenceSec: CHART_CADENCE_SEC,
+    cadenceSec: CRON_INTERVALS["sync-stablecoin-charts"],
     staleClaimAfterSec: CHART_STALE_CLAIM_SEC,
     scheduledAtSec,
     startedAtSec: syncStartSec,
