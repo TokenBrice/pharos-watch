@@ -15,6 +15,7 @@ import {
   chunkArray,
 } from "../../lib/collections";
 import {
+  sleepWithSignal,
   throwIfAborted,
   yieldToEventLoop as defaultYieldToEventLoop,
 } from "../../lib/abort";
@@ -44,6 +45,15 @@ const D1_SAFE_SQL_IN_CHUNK_SIZE = 90;
 const STALE_YIELD_DELETE_FIXED_BIND_COUNT = 1;
 const YIELD_HISTORY_LOAD_CHUNK_SIZE = 30;
 const MAX_PREVIOUS_TVL_HISTORY_ROWS = 5_000;
+/**
+ * Idle time after each history-window read, as a multiple of that read's wall
+ * time. D1 rejects a database that consumes too many resources within a 10 s
+ * window, and back-to-back history reads alone filled one on 2026-11-04 (about
+ * 12 s of query time in the minute the loader ran, failing the run and every
+ * concurrent producer). A ratio of 2 holds these reads to about a third of any
+ * window and leaves the rest to other traffic.
+ */
+const YIELD_HISTORY_READ_IDLE_RATIO = 2;
 
 const OWNERSHIP_HANDOFF_DELETE_CHUNK_ROWS = 5_000;
 const OWNERSHIP_HANDOFF_DELETE_MAX_ROWS_PER_RUN = 250_000;
@@ -126,6 +136,8 @@ export interface LoadYieldHistorySnapshotOptions {
   signal?: AbortSignal;
   chunkSize?: number;
   yieldToEventLoop?: (signal?: AbortSignal) => Promise<void>;
+  /** Idles after a history-window read that took `readMs` of wall time. */
+  paceHistoryRead?: (readMs: number, signal?: AbortSignal) => Promise<void>;
   onProgress?: (progress: YieldHistorySnapshotProgress) => void | Promise<void>;
   sourceKeysByStablecoin: Map<string, ReadonlySet<string>>;
   maxPreviousTvlRows?: number;
@@ -246,6 +258,8 @@ export async function loadYieldHistorySnapshots(
   let previousTvlRowsTruncated = false;
   const idChunks = chunkArray(resolvedIds, chunkSize);
   const yieldToEventLoop = options.yieldToEventLoop ?? defaultYieldToEventLoop;
+  const paceHistoryRead = options.paceHistoryRead ?? ((readMs: number, signal?: AbortSignal) =>
+    sleepWithSignal(Math.round(readMs * YIELD_HISTORY_READ_IDLE_RATIO), signal));
 
   const reportProgress = async (chunksDone: number, resolvedIdsDone: number) => {
     await options.onProgress?.({
@@ -285,6 +299,7 @@ export async function loadYieldHistorySnapshots(
     const historyRowKeys = new Set<string>();
 
     for (const read of historyReads) {
+      const readStartedMs = Date.now();
       const historyResult = await db
         .prepare(
           `SELECT /* pharos:yield-sync:history-window */
@@ -297,6 +312,7 @@ export async function loadYieldHistorySnapshots(
         )
         .bind(...read.binds, startSec - THIRTY_DAYS_SECONDS, startSec)
         .all<YieldHistorySnapshotRow>();
+      const readMs = Date.now() - readStartedMs;
       for (const row of historyResult.results ?? []) {
         if (isSuppressedYieldHistoryRow(row.stablecoin_id, row.source_key)) continue;
         const rowKey = `${row.stablecoin_id}\0${row.source_key ?? ""}\0${row.recorded_at}`;
@@ -304,6 +320,7 @@ export async function loadYieldHistorySnapshots(
         historyRowKeys.add(rowKey);
         historyChunkRows.push(row);
       }
+      await paceHistoryRead(readMs, options.signal);
     }
     throwIfAborted(options.signal);
     await yieldToEventLoop(options.signal);

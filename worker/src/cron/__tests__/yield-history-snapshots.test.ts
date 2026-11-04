@@ -138,13 +138,7 @@ describe("loadYieldHistorySnapshots", () => {
     insertHistory(sqlite, { stablecoinId: "coin-b", sourceKey: "source-b", recordedAt: 150, isBest: 1, sourceTvlUsd: 30 });
 
     insertHistory(sqlite, { stablecoinId: "coin-a", sourceKey: "at-cutoff", recordedAt: 1_000, isBest: 1 });
-    const snapshots = await loadYieldHistorySnapshots(
-      fixture.db,
-      ["coin-a", "coin-b"],
-      1_000,
-      300,
-      { sourceKeysByStablecoin: new Map() },
-    );
+    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["coin-a", "coin-b"], 1_000, 300, { sourceKeysByStablecoin: new Map() });
 
     expect(snapshots.prevBestRows.map((row) => [row.stablecoin_id, row.source_key, row.recorded_at])).toEqual([
       ["coin-a", "source-a", 200],
@@ -159,13 +153,9 @@ describe("loadYieldHistorySnapshots", () => {
     insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: "valid-source", recordedAt: 100, isBest: 1, sourceTvlUsd: 10 });
     insertHistory(sqlite, { stablecoinId: "usde-ethena", sourceKey: LEGACY_BEST_YIELD_SOURCE_KEY, recordedAt: 200, isBest: 1, sourceTvlUsd: 20 });
 
-    const snapshots = await loadYieldHistorySnapshots(
-      fixture.db,
-      ["usde-ethena"],
-      1_000,
-      300,
-      { sourceKeysByStablecoin: new Map([["usde-ethena", new Set(["valid-source", LEGACY_BEST_YIELD_SOURCE_KEY])]]) },
-    );
+    const snapshots = await loadYieldHistorySnapshots(fixture.db, ["usde-ethena"], 1_000, 300, {
+      sourceKeysByStablecoin: new Map([["usde-ethena", new Set(["valid-source", LEGACY_BEST_YIELD_SOURCE_KEY])]]),
+    });
 
     expect(snapshots.historyRows.map((row) => row.source_key)).toEqual(["valid-source"]);
     expect(snapshots.prevTvlRows.map((row) => row.source_key)).toEqual(["valid-source"]);
@@ -184,10 +174,14 @@ describe("loadYieldHistorySnapshots", () => {
       insertHistory(sqlite, { stablecoinId, sourceKey: "source-a", recordedAt: 100, isBest: 1, sourceTvlUsd: 10 });
       insertHistory(sqlite, { stablecoinId, sourceKey: "source-b", recordedAt: 100, isBest: 0, sourceTvlUsd: 5 });
     }
+    const pacedReads: number[] = [];
     const snapshots = await loadYieldHistorySnapshots(fixture.db, ids, 1_000, 300, {
       chunkSize: 90,
+      paceHistoryRead: async (readMs) => { pacedReads.push(readMs); },
       sourceKeysByStablecoin: new Map(ids.map((id) => [id, new Set(["source-a", "source-b"])])),
     });
+    // One idle gap per history-window read: the selected read and four pair chunks.
+    expect(pacedReads).toHaveLength(5);
     expect(snapshots.historyRows).toHaveLength(180);
     expect(snapshots.prevTvlRows).toHaveLength(180);
     expect(snapshots.prevBestRows.map((row) => row.stablecoin_id)).toEqual(ids);
