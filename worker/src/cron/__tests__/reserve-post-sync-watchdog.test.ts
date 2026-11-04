@@ -56,6 +56,18 @@ function attempt(overrides: Partial<ReserveAdapterAlertAttempt> & { attemptedAt:
   };
 }
 
+const cycleTimes = [NOW, NOW - 14_400, NOW - 28_800];
+const failureState = { failureRaised: true, scoreIneligibleRaised: false, clockRaised: false };
+const scoreState = { failureRaised: false, scoreIneligibleRaised: true, clockRaised: false };
+const priorState = (state: ReserveAdapterAlertState["coins"][string]): ReserveAdapterAlertState =>
+  ({ version: 1, coins: { [COIN]: state } });
+const failedAttempts = () => cycleTimes.map(attemptedAt => attempt({ attemptedAt }));
+const degraded = (attemptedAt: number) => attempt({ attemptedAt, status: "degraded", failureCategory: null });
+const scoringEvidence = (scoreIneligibleIds: string[] = [], unknownIds: string[] = []) => ({
+  structuralOnlyIds: new Set<string>(), scoreIneligibleIds: new Set(scoreIneligibleIds), unknownIds: new Set(unknownIds),
+});
+const emptyDrift = () => ({ driftCoins: [], fallbackCoins: [], observedIds: [], liveReserveMap: new Map() });
+
 function evaluate(
   attempts: ReserveAdapterAlertAttempt[],
   options: {
@@ -87,21 +99,14 @@ describe("evaluateReserveAdapterAlerts", () => {
     expect(two.raised).toEqual([]);
     expect(two.state.coins[COIN] ?? null).toBeNull();
 
-    const three = evaluate([
-      attempt({ attemptedAt: NOW }),
-      attempt({ attemptedAt: NOW - 14_400 }),
-      attempt({ attemptedAt: NOW - 28_800 }),
-    ]);
+    const three = evaluate(failedAttempts());
     expect(three.raised).toEqual(["reserve-adapter-failure-sustained"]);
     expect(three.failedSources).toEqual([{ stablecoinId: COIN, failedCycles: 3 }]);
-    expect(three.state.coins[COIN]).toEqual({ failureRaised: true, scoreIneligibleRaised: false, clockRaised: false });
+    expect(three.state.coins[COIN]).toEqual(failureState);
   });
 
   it("does not re-raise a sustained failure and recovers exactly once", () => {
-    const prior: ReserveAdapterAlertState = {
-      version: 1,
-      coins: { [COIN]: { failureRaised: true, scoreIneligibleRaised: false, clockRaised: false } },
-    };
+    const prior = priorState(failureState);
     const stillFailing = evaluate([
       attempt({ attemptedAt: NOW }),
       attempt({ attemptedAt: NOW - 14_400 }),
@@ -129,19 +134,15 @@ describe("evaluateReserveAdapterAlerts", () => {
     const prior: ReserveAdapterAlertState = {
       version: 1,
       coins: {
-        [COIN]: { failureRaised: true, scoreIneligibleRaised: false, clockRaised: false },
-        [other]: { failureRaised: true, scoreIneligibleRaised: false, clockRaised: false },
+        [COIN]: failureState,
+        [other]: failureState,
       },
     };
     const result = evaluateReserveAdapterAlerts({
       nowSec: NOW,
       attemptsByCoin: new Map([
         [COIN, [attempt({ attemptedAt: NOW, status: "ok", failureCategory: null })]],
-        [other, [
-          attempt({ attemptedAt: NOW }),
-          attempt({ attemptedAt: NOW - 14_400 }),
-          attempt({ attemptedAt: NOW - 28_800 }),
-        ]],
+        [other, failedAttempts()],
       ]),
       sourceAgeBudgetByCoin: new Map([[COIN, 7_200], [other, 7_200]]),
       scoreIneligibleCoinIds: new Set(),
@@ -178,11 +179,7 @@ describe("evaluateReserveAdapterAlerts", () => {
   });
 
   it("keeps an exact-failure acknowledgement from raising, then raises once it lapses", () => {
-    const attempts = [
-      attempt({ attemptedAt: NOW }),
-      attempt({ attemptedAt: NOW - 14_400 }),
-      attempt({ attemptedAt: NOW - 28_800 }),
-    ];
+    const attempts = failedAttempts();
     const acknowledged = evaluate(attempts, { acknowledged: [COIN] });
     expect(acknowledged.raised).toEqual([]);
     expect(acknowledged.failedSources).toHaveLength(1);
@@ -193,15 +190,8 @@ describe("evaluateReserveAdapterAlerts", () => {
   });
 
   it("never treats an acknowledgement as recovery for an already-raised failure", () => {
-    const prior: ReserveAdapterAlertState = {
-      version: 1,
-      coins: { [COIN]: { failureRaised: true, scoreIneligibleRaised: false, clockRaised: false } },
-    };
-    const result = evaluate([
-      attempt({ attemptedAt: NOW }),
-      attempt({ attemptedAt: NOW - 14_400 }),
-      attempt({ attemptedAt: NOW - 28_800 }),
-    ], { prior, acknowledged: [COIN] });
+    const prior = priorState(failureState);
+    const result = evaluate(failedAttempts(), { prior, acknowledged: [COIN] });
     expect(result.recovered).toEqual([]);
     expect(result.state.coins[COIN]?.failureRaised).toBe(true);
   });
@@ -235,13 +225,11 @@ describe("evaluateReserveAdapterAlerts", () => {
   });
 
   it("raises the score-ineligible rule at the third consecutive degraded success, not before", () => {
-    const degraded = (attemptedAt: number) =>
-      attempt({ attemptedAt, status: "degraded", failureCategory: null });
     const two = evaluate([degraded(NOW), degraded(NOW - 14_400)]);
     expect(two.raised).toEqual([]);
     expect(two.state.coins[COIN] ?? null).toBeNull();
 
-    const three = evaluate([degraded(NOW), degraded(NOW - 14_400), degraded(NOW - 28_800)]);
+    const three = evaluate(cycleTimes.map(degraded));
     expect(three.raised).toEqual(["reserve-score-ineligible-sustained"]);
     expect(three.scoreIneligibleSources).toEqual([{ stablecoinId: COIN, degradedCycles: 3 }]);
     expect(three.state.coins[COIN]).toMatchObject({ scoreIneligibleRaised: true });
@@ -257,17 +245,14 @@ describe("evaluateReserveAdapterAlerts", () => {
     // the retained snapshot untouched; it is not a degraded success.
     const withheld = (attemptedAt: number) =>
       attempt({ attemptedAt, status: "degraded", failureCategory: "upstream-http" });
-    const result = evaluate([withheld(NOW), withheld(NOW - 14_400), withheld(NOW - 28_800)]);
+    const result = evaluate(cycleTimes.map(withheld));
     expect(result.raised).toEqual([]);
     expect(result.scoreIneligibleSources).toEqual([]);
     expect(result.state.coins[COIN] ?? null).toBeNull();
   });
 
   it("holds a raised score-ineligible alert while an interrupted streak still publishes ineligible evidence", () => {
-    const prior: ReserveAdapterAlertState = {
-      version: 1,
-      coins: { [COIN]: { failureRaised: false, scoreIneligibleRaised: true, clockRaised: false } },
-    };
+    const prior = priorState(scoreState);
     const result = evaluate([attempt({ attemptedAt: NOW, status: "error" })], { prior });
     expect(result.raised).toEqual([]);
     expect(result.recovered).toEqual([]);
@@ -275,10 +260,7 @@ describe("evaluateReserveAdapterAlerts", () => {
   });
 
   it("holds a raised score-ineligible alert while the published evidence is unreadable", () => {
-    const prior: ReserveAdapterAlertState = {
-      version: 1,
-      coins: { [COIN]: { failureRaised: false, scoreIneligibleRaised: true, clockRaised: false } },
-    };
+    const prior = priorState(scoreState);
     const result = evaluate([attempt({ attemptedAt: NOW, status: "ok", failureCategory: null })],
       { prior, scoreIneligible: false, scoreIneligibleUnknown: true });
     expect(result.raised).toEqual([]);
@@ -288,9 +270,7 @@ describe("evaluateReserveAdapterAlerts", () => {
   });
 
   it("does not call a degraded success score-ineligible without a scoring-degraded warning", () => {
-    const degraded = (attemptedAt: number) =>
-      attempt({ attemptedAt, status: "degraded", failureCategory: null });
-    const result = evaluate([degraded(NOW), degraded(NOW - 14_400), degraded(NOW - 28_800)],
+    const result = evaluate(cycleTimes.map(degraded),
       { scoreIneligible: false });
     expect(result.raised).toEqual([]);
     expect(result.scoreIneligibleSources).toEqual([]);
@@ -325,18 +305,12 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     vi.clearAllMocks();
     SYNC_ORDERED_CONFIGURED_COINS.splice(1);
     cache.clear();
-    mocks.drift.mockResolvedValue({
-      driftCoins: [], fallbackCoins: [], observedIds: [], liveReserveMap: new Map(),
-    });
+    mocks.drift.mockResolvedValue(emptyDrift());
     mocks.overview.mockResolvedValue({ ...emptyReserveCompositionOverview() });
     mocks.maxAge.mockResolvedValue(0);
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "error" }]]));
     mocks.acknowledged.mockResolvedValue(new Set<string>());
-    mocks.scoringEvidence.mockResolvedValue({
-      structuralOnlyIds: new Set<string>(),
-      scoreIneligibleIds: new Set<string>(),
-      unknownIds: new Set<string>(),
-    });
+    mocks.scoringEvidence.mockResolvedValue(scoringEvidence());
   });
 
   function historyDb(rows: Array<Record<string, unknown>>): D1Database {
@@ -356,6 +330,11 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
       freshness_mode: null,
     };
   }
+
+  const historyRows = (status: string) => cycleTimes.map(at => historyRow(at, status));
+  const composition = (names: Array<[string, number]>) => ({
+    ...emptyDrift(), liveReserveMap: new Map([[COIN, names.map(([name, pct]) => ({ name, pct, risk: "low" as const }))]]),
+  });
 
   async function readAlert(rows: Array<Record<string, unknown>>) {
     const result = await runReservePostSyncWatchdog(historyDb(rows));
@@ -381,18 +360,14 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     const nowSpy = vi.spyOn(Date, "now");
     try {
       nowSpy.mockReturnValue(t0 * 1000);
-      mocks.drift.mockResolvedValue({
-        driftCoins: [], fallbackCoins: [], observedIds: [COIN], liveReserveMap: new Map(),
-      });
+      mocks.drift.mockResolvedValue({ ...emptyDrift(), observedIds: [COIN] });
       await runReservePostSyncWatchdog(historyDb([]));
       const healthy = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as { observedSince: Record<string, number> };
       expect(healthy.observedSince[COIN]).toBe(t0);
 
       // The watchdog's own four-hourly slot runs, but no cohort member was observed.
       nowSpy.mockReturnValue((t0 + interval) * 1000);
-      mocks.drift.mockResolvedValue({
-        driftCoins: [], fallbackCoins: [COIN], observedIds: [], liveReserveMap: new Map(),
-      });
+      mocks.drift.mockResolvedValue({ ...emptyDrift(), fallbackCoins: [COIN] });
       const gapResult = await runReservePostSyncWatchdog(historyDb([]));
       const gapMetadata = JSON.parse(gapResult.metadata ?? "{}") as { degradedReasons: string[] };
       expect(gapMetadata.degradedReasons).toContain("reserve-drift-census-empty");
@@ -411,8 +386,8 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
 
       nowSpy.mockReturnValue((t0 + 2 * interval) * 1000);
       mocks.drift.mockResolvedValue({
+        ...emptyDrift(), observedIds: [COIN],
         driftCoins: [{ id: COIN, liveScore: 40, curatedScore: 60, delta: 20 }],
-        fallbackCoins: [], observedIds: [COIN], liveReserveMap: new Map(),
       });
       await runReservePostSyncWatchdog(historyDb([]));
       const recovery = JSON.parse(cache.get(SNAPSHOT_KEYS.reserve)!) as { observedSince: Record<string, number> };
@@ -429,9 +404,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect(second.reserveAdapterAlert?.raised).toEqual([]);
     expect(second.firedRuleIds).not.toContain("reserve-adapter-failure-sustained");
 
-    const third = await readAlert([
-      historyRow(NOW, "error"), historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error"),
-    ]);
+    const third = await readAlert(historyRows("error"));
     expect(third.reserveAdapterAlert?.raised).toEqual(["reserve-adapter-failure-sustained"]);
     expect(third.firedRuleIds).toContain("reserve-adapter-failure-sustained");
 
@@ -449,9 +422,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
   });
 
   it("degrades the reserve source with machine reasons while an adapter alert is active", async () => {
-    const result = await runReservePostSyncWatchdog(historyDb([
-      historyRow(NOW, "error"), historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error"),
-    ]));
+    const result = await runReservePostSyncWatchdog(historyDb(historyRows("error")));
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(result.status).toBe("degraded");
     expect(metadata.reason).toBe("reserve-adapter-alert-raised");
@@ -464,7 +435,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
   });
 
   it("keeps an acknowledged adapter failure out of the status cause", async () => {
-    const rows = [historyRow(NOW, "error"), historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error")];
+    const rows = historyRows("error");
     await readAlert(rows);
     mocks.acknowledged.mockResolvedValue(new Set([COIN]));
     const result = await runReservePostSyncWatchdog(historyDb(rows));
@@ -484,7 +455,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded", lastAttemptedAt: NOW }]]));
     const evidence = { structuralOnlyIds: new Set([COIN]), scoreIneligibleIds: new Set([COIN]), unknownIds: new Set<string>() };
     mocks.scoringEvidence.mockResolvedValue(evidence);
-    const rows = [NOW, NOW - 14_400, NOW - 28_800].map((at) => historyRow(at, "degraded"));
+    const rows = historyRows("degraded");
     const result = await runReservePostSyncWatchdog(historyDb(rows));
     expect(result.status).toBe("ok");
     const metadata = JSON.parse(result.metadata!);
@@ -510,37 +481,23 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
 
   it("does not charge a degraded attempt that wrote no snapshot as a degraded success", async () => {
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded" }]]));
-    mocks.scoringEvidence.mockResolvedValue({
-      structuralOnlyIds: new Set<string>(),
-      scoreIneligibleIds: new Set([COIN]),
-      unknownIds: new Set<string>(),
-    });
+    mocks.scoringEvidence.mockResolvedValue(scoringEvidence([COIN]));
     const withheld = (attemptedAt: number) => ({
       ...historyRow(attemptedAt, "degraded"),
       failure_category: "upstream-http",
     });
-    const result = await readAlert([withheld(NOW), withheld(NOW - 14_400), withheld(NOW - 28_800)]);
+    const result = await readAlert(cycleTimes.map(withheld));
     expect(result.reserveAdapterAlert?.raised).toEqual([]);
     expect(result.reserveAdapterAlert?.scoreIneligibleSources).toEqual([]);
   });
 
   it("holds a raised score-ineligible alert when the published snapshot becomes unreadable", async () => {
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded" }]]));
-    mocks.scoringEvidence.mockResolvedValue({
-      structuralOnlyIds: new Set<string>(),
-      scoreIneligibleIds: new Set([COIN]),
-      unknownIds: new Set<string>(),
-    });
-    const raised = await readAlert([
-      historyRow(NOW, "degraded"), historyRow(NOW - 14_400, "degraded"), historyRow(NOW - 28_800, "degraded"),
-    ]);
+    mocks.scoringEvidence.mockResolvedValue(scoringEvidence([COIN]));
+    const raised = await readAlert(historyRows("degraded"));
     expect(raised.reserveAdapterAlert?.raised).toEqual(["reserve-score-ineligible-sustained"]);
 
-    mocks.scoringEvidence.mockResolvedValue({
-      structuralOnlyIds: new Set<string>(),
-      scoreIneligibleIds: new Set<string>(),
-      unknownIds: new Set([COIN]),
-    });
+    mocks.scoringEvidence.mockResolvedValue(scoringEvidence([], [COIN]));
     const held = await readAlert([historyRow(NOW + 14_400, "error")]);
     expect(held.reserveAdapterAlert?.recovered).toEqual([]);
     expect(held.reserveAdapterAlert?.scoreIneligibleUnknownSources).toEqual([
@@ -553,22 +510,12 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
   it("raises the census rule when a published composition changes shape", async () => {
     // A configured state map makes the adapter stage run; this test only reads the census stage.
     mocks.states.mockResolvedValue(new Map());
-    const slices = (names: Array<[string, number]>) =>
-      names.map(([name, pct]) => ({ name, pct, risk: "low" as const }));
-    const first = await (async () => {
-      mocks.drift.mockResolvedValue({
-        driftCoins: [], fallbackCoins: [], observedIds: [],
-        liveReserveMap: new Map([[COIN, slices([["T-bills", 60], ["Custody cash", 40]])]]),
-      });
-      return readAlert([]);
-    })();
+    mocks.drift.mockResolvedValue(composition([["T-bills", 60], ["Custody cash", 40]]));
+    const first = await readAlert([]);
     expect(first.firedRuleIds).not.toContain("reserve-composition-census-drift");
     expect(first.compositionCensus).toEqual({ observedCoins: 1, findings: [] });
 
-    mocks.drift.mockResolvedValue({
-      driftCoins: [], fallbackCoins: [], observedIds: [],
-      liveReserveMap: new Map([[COIN, slices([["T-bills", 30], ["Custody cash", 40], ["Repo", 30]])]]),
-    });
+    mocks.drift.mockResolvedValue(composition([["T-bills", 30], ["Custody cash", 40], ["Repo", 30]]));
     const second = await readAlert([]);
     expect(second.compositionCensus?.findings).toEqual([expect.objectContaining({
       stablecoinId: COIN, added: ["Repo"], removed: [], shareDriftPct: 30,
@@ -579,12 +526,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
 
   it("reports an unreadable retained census instead of silently reseeding a clean baseline", async () => {
     mocks.states.mockResolvedValue(new Map());
-    const slices = (names: Array<[string, number]>) =>
-      names.map(([name, pct]) => ({ name, pct, risk: "low" as const }));
-    mocks.drift.mockResolvedValue({
-      driftCoins: [], fallbackCoins: [], observedIds: [],
-      liveReserveMap: new Map([[COIN, slices([["T-bills", 60], ["Custody cash", 40]])]]),
-    });
+    mocks.drift.mockResolvedValue(composition([["T-bills", 60], ["Custody cash", 40]]));
     cache.set("reserve-post-sync-watchdog:composition-census:v1", "{not-json");
 
     const corrupt = await readAlert([]);

@@ -10,6 +10,10 @@ import {
 const NOW = 1_700_000_000;
 const CURRENT_EVIDENCE = { state: "current" as const, staleLabels: [], missingLabels: [] };
 
+function cause(code: string, severity: StatusCause["severity"] = "info", layer: StatusCause["layer"] = "data-quality"): StatusCause {
+  return { code, severity, layer, message: code };
+}
+
 const cronCause: StatusCause = {
   code: "unhealthy_crons_present",
   layer: "availability",
@@ -45,15 +49,14 @@ function withCauses(causes: StatusCause[], timeline: StatusTransition[] = []): S
 }
 
 describe("buildTriageInbox", () => {
-  it("reports nothing to do on a clean status and refuses to answer on stale evidence", () => {
+  it("answers only with current evidence", () => {
     const data = withCauses([]);
     const inbox = buildTriageInbox([], data);
     expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE)).toEqual({ verdict: "ok", text: "Nothing needs action." });
     expect(buildTriageHeadline(inbox, { state: "stale", staleLabels: ["Public health"], missingLabels: [] }).verdict).toBe(
       "unavailable",
     );
-    // Partial evidence that includes a never-loaded required source is not an
-    // answerable read, even with no stale label.
+    // Never-loaded required evidence is not answerable.
     expect(
       buildTriageHeadline(inbox, { state: "partial", staleLabels: [], missingLabels: ["Public health"] }),
     ).toEqual({ verdict: "unavailable", text: "Cannot answer: Public health unavailable. Showing the last good read." });
@@ -63,9 +66,7 @@ describe("buildTriageInbox", () => {
     "active_price_coverage_incomplete", "ddr_repair_debt_present",
     "reserve_sync_write_uncertain", "reserve_sync_budget_truncated",
   ])("does not promote incidental %s warnings to act", (code) => {
-    const gap: StatusCause = {
-      code, layer: "data-quality", severity: "warning", message: "An operator diagnostic remains open.",
-    };
+    const gap = cause(code, "warning");
     const data = withCauses([gap], [600, 1200, 1800].map((age) =>
       transition(NOW - age, [gap, cronCause]),
     ));
@@ -74,11 +75,11 @@ describe("buildTriageInbox", () => {
     expect(inbox.watch[0]).toMatchObject({ verdict: "watch", recurrence: 3 });
   });
 
-  it("watches bounded listing and mint/burn notices alongside small unwaived price gaps", () => {
+  it("watches listing, mint/burn and price notices", () => {
     const data = withCauses([
-      { code: "stablecoin_publication_incomplete", layer: "data-quality", severity: "info", message: "1 of 396 listings missing." },
-      { code: "mint_burn_public_degraded", layer: "availability", severity: "info", message: "Fresh healthy lane; execution notice." },
-      { code: "active_price_coverage_incomplete", layer: "data-quality", severity: "warning", message: "2 unacknowledged price gaps." },
+      cause("stablecoin_publication_incomplete"),
+      cause("mint_burn_public_degraded", "info", "availability"),
+      cause("active_price_coverage_incomplete", "warning"),
     ]);
     const inbox = buildTriageInbox(normalizeStatusIssues(data.causes), data);
     expect(inbox.act).toHaveLength(0);
@@ -86,11 +87,11 @@ describe("buildTriageInbox", () => {
     expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE).verdict).toBe("watch");
   });
 
-  it("keeps standing notices out of Watching while review reminders and alert-eligible gaps stay queued", () => {
+  it("filters standing notices but queues reminders and alert-eligible gaps", () => {
     const data = withCauses([
-      { code: "active_price_coverage_nominal_reference", layer: "data-quality", severity: "info", message: "Reviewed nominal references, not observed market prices. These are not missing-price gaps." },
-      { code: "reserve_feed_reviews_acknowledged", layer: "data-quality", severity: "info", message: "Reviewed feed exclusions." },
-      { code: "active_price_coverage_incomplete", layer: "data-quality", severity: "info", message: "Price coverage diagnostic." },
+      cause("active_price_coverage_nominal_reference"),
+      cause("reserve_feed_reviews_acknowledged"),
+      cause("active_price_coverage_incomplete"),
     ]);
     const firstGeneration = buildTriageInbox(normalizeStatusIssues(data.causes), data);
     expect(firstGeneration.informational.map((item) => item.issue.code)).toEqual(["active_price_coverage_incomplete"]);
@@ -110,9 +111,7 @@ describe("buildTriageInbox", () => {
       "price_gap_reviews_expired", "reserve_feed_reviews_expired",
       "price_gap_reviews_invalid", "reserve_feed_reviews_invalid",
     ];
-    const reminders = withCauses(reviewCodes.map((code) => ({
-      code, layer: "data-quality", severity: "info", message: "Review needs attention.",
-    })));
+    const reminders = withCauses(reviewCodes.map((code) => cause(code)));
     const reminderInbox = buildTriageInbox(normalizeStatusIssues(reminders.causes), reminders);
     expect(reminderInbox.informational.map((item) => item.issue.code).sort()).toEqual([...reviewCodes].sort());
     expect(buildTriageHeadline(reminderInbox, CURRENT_EVIDENCE).text).toBe("Nothing needs action. Watching 6.");
@@ -120,7 +119,7 @@ describe("buildTriageInbox", () => {
 
   it.each(["stablecoin_publication_unknown", "stablecoin_publication_incomplete", "mint_burn_public_stale", "db_unhealthy"])(
     "keeps genuine %s service impact actionable", (code) => {
-      const data = withCauses([{ code, layer: "availability", severity: "warning", message: "Service impact." }]);
+      const data = withCauses([cause(code, "warning", "availability")]);
       expect(buildTriageInbox(normalizeStatusIssues(data.causes), data).act).toHaveLength(1);
     },
   );
