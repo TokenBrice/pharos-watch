@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   asset,
   fetchEvmCallHexAtBlockMock,
+  fetchEvmRpcBatchMock,
+  fetchEvmBlockTimestampMock,
   freshParent,
   fetchLiveOverrides,
   makeHistoricalPriceSeries,
@@ -12,6 +14,7 @@ import {
 } from "./authoritative-price-sources.test-support";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
+import { usd3CurvePoolProvider } from "../authoritative-price-sources/usd3-curve-pool";
 import type { LivePriceContext } from "../authoritative-price-sources/helpers";
 import { CACHED_VAULT_RATE_MAX_AGE_SEC } from "../authoritative-price-sources/helpers";
 import { idleCdoTrancheProvider } from "../authoritative-price-sources/idle-cdo-tranche";
@@ -25,6 +28,39 @@ const historicalParent = vi.hoisted(() => vi.fn());
 vi.mock("../historical-market-prices", () => ({
   fetchMarketBackfillPriceSeries: historicalParent,
 }));
+
+describe("USD3 exact Curve fallback", () => {
+  it("recovers only missing USD3 from an identity/depth/impact checked pool and the older trusted parent clock", async () => {
+    resetAuthoritativePriceSourceMocks();
+    const id = "usd3-reserve-protocol";
+    const parent = freshParent("scrvusd-curve", 1.11, "curve-onchain", { priceObservedAtMode: "local_fetch" });
+    const context = { assetsById: new Map([[parent.id, parent]]) };
+    const uint = (n: bigint) => `0x${encodeUint256(n)}`;
+    // Ethereum block 26343848: exact USD3/scrvUSD inventory and 1/10-token sell proceeds.
+    const pool = [uint(BigInt("0x0d86883faf4ffd7aeb116390af37746f45b6f378")), uint(BigInt("0x0655977feb2f289a4ab78af67bab0d17aab84367")),
+      uint(156101562328671154958659n), uint(196897201958399343897365n), uint(1011115724994965921n), uint(10111154486828596482n)];
+    fetchEvmRpcBatchMock.mockResolvedValue(pool);
+    const result = await fetchLiveOverrides([unpricedChild(id), parent]);
+    expect(result.get(id)).toMatchObject({ price: 1.0111157249949658 * 1.11, source: "curve-thin-onchain", confidence: "fallback", observedAt: parent.priceObservedAt, observedAtMode: "local_fetch" });
+    expect(fetchEvmRpcBatchMock.mock.calls[0][1]).toHaveLength(6);
+    expect(fetchEvmRpcBatchMock.mock.calls[0][1].every((call: { params: unknown[] }) => call.params[1] === "0x1fca055")).toBe(true);
+    for (const [index, value] of [[0, pool[1]], [1, pool[0]], [2, uint(999n * 10n ** 18n)], [3, uint(0n)], [4, uint(0n)], [5, uint(8n * 10n ** 18n)], [4, "0xzz"], [4, null], [4, `${pool[4]}00`]] as const) {
+      const invalid = [...pool] as unknown[];
+      invalid[index] = value;
+      fetchEvmRpcBatchMock.mockResolvedValue(invalid);
+      await expect(usd3CurvePoolProvider.fetchLivePrice!(unpricedChild(id), context)).resolves.toBeNull();
+    }
+    fetchEvmRpcBatchMock.mockResolvedValue(pool);
+    fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1000) - 301);
+    await expect(usd3CurvePoolProvider.fetchLivePrice!(unpricedChild(id), context)).resolves.toBeNull();
+    resetAuthoritativePriceSourceMocks();
+    parent.priceObservedAt! -= 301;
+    await expect(usd3CurvePoolProvider.fetchLivePrice!(unpricedChild(id), context)).resolves.toBeNull();
+    await expect(usd3CurvePoolProvider.fetchLivePrice!(unpricedChild(id), { assetsById: new Map() })).resolves.toBeNull();
+    await expect(usd3CurvePoolProvider.fetchLivePrice!(asset(id, { price: 1.12 }), context)).resolves.toBeNull();
+    expect(usd3CurvePoolProvider.matches("usd3-3jane")).toBe(false);
+  });
+});
 
 describe("capCusdProvider", () => {
   function quote(outputUsdcRaw: bigint): `0x${string}` {

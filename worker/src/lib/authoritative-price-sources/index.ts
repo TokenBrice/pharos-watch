@@ -23,6 +23,7 @@ import { bdAerodromeProvider } from "./bd-aerodrome";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
 import { swanusdCurvePoolProvider } from "./swanusd-curve-pool";
 import { stbtCurvePoolProvider } from "./stbt-curve-pool";
+import { usd3CurvePoolProvider } from "./usd3-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
 import { mentoBrokerProvider } from "./mento-broker";
 import { capCusdProvider } from "./cap-cusd";
@@ -65,6 +66,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   azndCurvePoolProvider,
   swanusdCurvePoolProvider,
   stbtCurvePoolProvider,
+  usd3CurvePoolProvider,
   bdAerodromeProvider,
   usdvJupiterProvider,
   susdSolayerNavProvider,
