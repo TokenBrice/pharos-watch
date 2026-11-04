@@ -9,19 +9,22 @@ Triggered by `StatusCause.code`:
 - `reserve_feed_reviews_expiring`
 - `reserve_feed_reviews_expired`
 - `reserve_feed_reviews_invalid`
+- `supply_carry_reviews_expiring`
+- `supply_carry_reviews_expired`
 
 ## Symptom
 
-An operational review that acknowledges a missing live price or a matched stale/erroring reserve feed is approaching expiry, has expired, or is invalid. The `*_expiring` causes are admin-only informational watches: they fire only while a review is currently acknowledging a gap or feed, with `0 < expiresAt - nowSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` (48 hours, inclusive, in `shared/lib/status-thresholds.ts`). The message lists stablecoin IDs by soonest expiry, the UTC ISO expiry, and whole hours left; its metric records the exact remaining seconds for the soonest review.
+An operational review that acknowledges a missing live price, matched stale/erroring reserve feed or carried supply value is approaching expiry, has expired, or is invalid. The `*_expiring` causes are admin-only informational watches: they fire only while a review is currently acknowledging a gap, feed or carry, with `0 < expiresAt - nowSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` (48 hours, inclusive, in `shared/lib/status-thresholds.ts`). The message lists stablecoin IDs by soonest expiry, the UTC ISO expiry, and whole hours left; its metric records the exact remaining seconds for the soonest review.
 
-These notices do not change health status, create a status transition, or enter public incident history. An acknowledgement is not a price, fresh reserve evidence, a successful sync, or a scoring exception. Existing missing-price and reserve-health gates remain independent.
+These notices do not change health status, create a status transition, or enter public incident history. An acknowledgement is not a price, fresh reserve evidence, a successful sync, or a scoring exception. Existing missing-price, reserve-health and supply-carry gates remain independent.
 
 ## First checks
 
 1. Open Admin triage → **Informational watch**, identify the lane and stablecoin IDs, and follow the review's expiry and evidence. If an overall cause list is crowded, inspect `causes.dataQuality` on admin `GET /api/status?refresh=live`; it retains the lane-specific cause.
 2. **Price gap:** inspect `/api/health.activePriceCoverage.missingActiveAssets[].acknowledgedGap` for owner, reason, HTTPS sources, review date, and expiry. The gap remains in `missingActiveIds`; `expiredGapReviewIds` and `invalidGapReviewIds` name reviews that acknowledge nothing. Active-price coverage is not exposed on `/api/status`.
 3. **Reserve feed:** inspect `/api/status.reserveComposition.acknowledgedFeeds` for matched reviews, plus `expiredFeedReviewIds` and `invalidFeedReviewIds`. Check the asset's raw reserve evidence and latest attempt category, warning codes, and error text before deciding whether the existing review still describes the failure. An unmatched new failure must not inherit the old acknowledgement.
-4. Re-read the official evidence. Decide whether the source has recovered, whether a fresh dated review is justified, or whether the missing-price listing needs a freeze/delist decision. Do not advance an expiry merely to keep the dashboard green.
+4. **Supply carry:** inspect the cause IDs/expiries, `REVIEWED_SUPPLY_CARRIES` in `worker/src/lib/supply-integrity.ts`, and `/api/stablecoins` for `supplyRestored`, the available value, original observation clock and guard reason. Recovered or unavailable assets use no carry acknowledgement or reminder.
+5. Re-read the official evidence. Decide whether the source has recovered, whether a fresh dated review is justified, or whether the missing-price listing needs a freeze/delist decision. Do not advance an expiry merely to keep the dashboard green.
 
 ## Renewal procedure
 
@@ -60,12 +63,16 @@ This is a status-model change, owner-approved 2026-11-04: matched acknowledgemen
 
 Run the owning registry and status suites for any renewal, review the changed evidence, and deploy the approved registry before expiry through the normal release process. Never mutate production review state or reset leases/checkpoints as a renewal shortcut.
 
+### Supply-carry reviews
+
+Edit `REVIEWED_SUPPLY_CARRIES` in `worker/src/lib/supply-integrity.ts` only after rechecking the exact active asset, machine-readable reason and evidence. Set a nonfuture `reviewedAt < expiresAt`, with at most the existing 14-day review window; a dependent price-gap review must support the whole interval. A review applies only while `supplyRestored === true` and a value is available. It changes alert classification only: preserve published supply, original clocks, quarantine and carry ceilings. Renew from fresh evidence or let the ordinary carry gate re-arm; never extend a carry itself.
+
 ## At expiry
 
-At `nowSec >= expiresAt`, the registry ignores the acknowledgement automatically. Price gaps remain missing and their normal alert eligibility and duration gates re-arm; matched reserve exclusions stop applying and the unchanged reserve-health gates re-arm. `*_reviews_expired` remains an informational diagnostic, while the underlying unacknowledged gap or feed can independently warn or degrade health. Invalid reviews acknowledge nothing and emit `*_reviews_invalid`. The `*_expiring` reminder disappears at expiry, including if an old payload still carries a past expiry.
+At `nowSec >= expiresAt`, the registry ignores the acknowledgement automatically. Price gaps remain missing and their normal alert eligibility and duration gates re-arm; matched reserve exclusions stop applying and the unchanged reserve-health gates re-arm. A still-carried supply value immediately rejoins the ordinary carry count/age gate and emits `supply_carry_reviews_expired`. `*_reviews_expired` remains an informational diagnostic, while the underlying unacknowledged gap or feed can independently warn or degrade health. Invalid reviews acknowledge nothing and emit `*_reviews_invalid`. The `*_expiring` reminder disappears at expiry, including if an old payload still carries a past expiry.
 
 ## Prevention
 
 - Use the 48-hour informational watch to schedule a fresh evidence review and deploy before the deadline. There is no automatic renewal or separate webhook delivery.
-- Reminders cover in-use acknowledgements only. Priced assets and recovered/unmatched feeds do not trigger a reminder merely because a registry entry is near expiry.
+- Reminders cover in-use acknowledgements only. Priced assets, recovered/unmatched feeds and assets no longer carrying a value do not trigger a reminder merely because a registry entry is near expiry.
 - Renew only when current evidence supports the same narrowly scoped acknowledgement. Otherwise let alerts re-arm and address the source or catalog decision.

@@ -24,6 +24,7 @@ import type { OnchainDataQualityAssessment } from "./onchain-data-quality";
 import type { SupplyIntegrityAssessment } from "./supply-integrity-quality";
 import { SCHEDULED_DELIVERY_LAG_SIGNAL, type CronFindingJobs, type ScheduledDeliveryLagSummary } from "./cron-health";
 import { getSourceFailureMessage } from "./section-errors";
+import { expiringReviews } from "./evaluation-causes";
 import { SAFETY_PUBLICATION_SIZE_HEADROOM_WARN_RATIO, SAFETY_PUBLICATION_SIZE_RAW_HEADROOM_WARN_BYTES, type SafetyPublicationSizeObservation } from "./safety-publication-size";
 
 
@@ -222,13 +223,6 @@ export interface DataQualityEvaluationInput {
 
 function ruleResult(status: StatusHealthValue, causes: StatusCause[] = []): Partial<StatusRuleEvaluation> | null {
   return status === "healthy" && causes.length === 0 ? null : { status, causes };
-}
-
-function expiringReviews(entries: readonly { id: string; expiresAt: number }[], nowSec: number) {
-  return entries
-    .map((entry) => ({ ...entry, remainingSec: entry.expiresAt - nowSec }))
-    .filter((entry) => entry.remainingSec > 0 && entry.remainingSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC)
-    .sort((a, b) => a.expiresAt - b.expiresAt || a.id.localeCompare(b.id));
 }
 
 function evaluateCacheDiagnostics(input: AvailabilityEvaluationInput): Partial<StatusRuleEvaluation> | null {
@@ -1225,6 +1219,8 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   onchain_monitor_unavailable: `${RUNBOOK_BASE}/mint-burn-integrity.md`,
   supply_value_drift: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   supply_carry_stale: `${RUNBOOK_BASE}/stablecoins-cache.md`,
+  supply_carry_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
+  supply_carry_reviews_expired: `${RUNBOOK_BASE}/review-renewal.md`,
   supply_availability_degraded: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   supply_snapshot_overdue: `${RUNBOOK_BASE}/stablecoins-cache.md`,
   supply_snapshot_partial: `${RUNBOOK_BASE}/stablecoins-cache.md`,
