@@ -488,7 +488,7 @@ describe("status dashboard model", () => {
     else expect(notice?.detail).not.toContain("Public /api/health differs from /api/status");
   });
 
-  it("keeps reviewed nominal price references out of the dashboard issues and watch count", () => {
+  it("keeps standing notices out of the dashboard issues and watch count", () => {
     const nominal: StatusCause = {
       code: "active_price_coverage_nominal_reference",
       layer: "data-quality",
@@ -503,9 +503,13 @@ describe("status dashboard model", () => {
       severity: "info",
       message: "Fresh healthy lane; execution notice.",
     };
+    const standing: StatusCause[] = [nominal,
+      { code: "reserve_feed_reviews_acknowledged", layer: "data-quality", severity: "info", message: "Reviewed feed exclusions: example until 2026-11-18." },
+      { code: "active_price_coverage_incomplete", layer: "data-quality", severity: "info", message: "Acknowledged and market-closed price gaps remain unavailable." },
+    ];
     const data: StatusResponse = {
       ...BASE_STATUS,
-      causes: { overall: [nominal, watch], availability: [watch], dataQuality: [nominal] },
+      causes: { overall: [...standing, watch], availability: [watch], dataQuality: standing },
     };
 
     const issues = normalizeStatusIssues(data.causes);
@@ -515,7 +519,7 @@ describe("status dashboard model", () => {
     expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(["mint_burn_public_degraded"]);
     expect(model.decision.summary).toContain("1 informational watch remains");
     // The by-design cause stays in the status payload it was read from.
-    expect(data.causes.dataQuality).toEqual([nominal]);
+    expect(data.causes.dataQuality).toEqual(standing);
   });
 
   it("surfaces missing Comms telemetry as Unavailable attention", () => {
