@@ -592,6 +592,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
   it.each([
     "deployment-identity-authored-withholding", "deployment-identity-unavailable",
     "deployment-identity-mismatch", "chain-rpc-unavailable", "deployment-state-unavailable",
+    "deployment-pin-lag-violation", "deployment-pin-header-mismatch",
   ] as const)("classifies JTRSY %s beside accepted XAUT without admitting its packet", async (rejectionCode) => {
     const { sqlite, db } = openDb();
     const centrifugeSpy = vi.spyOn(centrifugeObserver, "observeCentrifugeReviewedDeploymentUnitPartitionAttempt");

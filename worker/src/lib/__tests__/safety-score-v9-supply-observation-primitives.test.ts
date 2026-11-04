@@ -319,7 +319,12 @@ describe("Safety Score V9 supply observation primitives", () => {
       multicall: "present" | "absent" | "unavailable";
       requiredFailure?: boolean;
       mismatch?: "number" | "hash";
+      mismatchAt?: number;
+      chainId?: "ethereum" | "pharos";
+      safeBlockLag?: number;
+      rejectHashPins?: boolean;
     }) {
+      const chainId = input.chainId ?? "ethereum";
       const requests: Array<{ method: string; params: unknown[] }> = [];
       let headers = 0;
       // ABI aggregate3 response: supply, decimals, then an optional reverted read.
@@ -337,13 +342,13 @@ describe("Safety Score V9 supply observation primitives", () => {
         requests.push(request);
         let result: unknown;
         let error: unknown;
-        if (request.method === "eth_blockNumber") result = "0x11";
+        if (request.method === "eth_blockNumber") result = chainId === "pharos" ? "0x1f" : "0x11";
         if (request.method === "eth_getBlockByNumber") {
           headers += 1;
           result = {
-            number: headers > 1 && input.mismatch === "number" ? "0xf" : "0x10",
+            number: headers >= (input.mismatchAt ?? 2) && input.mismatch === "number" ? "0xf" : "0x10",
             timestamp: "0x64",
-            hash: headers > 1 && input.mismatch === "hash" ? `0x${"b".repeat(64)}` : blockHash,
+            hash: headers >= (input.mismatchAt ?? 2) && input.mismatch === "hash" ? `0x${"b".repeat(64)}` : blockHash,
           };
         }
         if (request.method === "eth_getCode") {
@@ -361,11 +366,15 @@ describe("Safety Score V9 supply observation primitives", () => {
             error = { code: 3, message: "execution reverted" };
           } else result = call.data === "0x18160ddd" ? supply : decimals;
         }
+        if (input.rejectHashPins && ["eth_call", "eth_getCode", "eth_getStorageAt"].includes(request.method) &&
+            typeof request.params[request.params.length - 1] === "object") {
+          error = { code: -32602, message: "hash selector unsupported" };
+        }
         return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, ...(error ? { error } : { result }) }));
       }));
       const observe = () => observeReviewedEvmDeployment({
-        routeId: `ethereum:${contractAddress}`,
-        chainId: "ethereum",
+        routeId: `${chainId}:${contractAddress}`,
+        chainId,
         contractAddress,
         scoringClockSec: 100,
         chainRpcs: new Map<string, ChainRpcConfig>(),
@@ -374,7 +383,7 @@ describe("Safety Score V9 supply observation primitives", () => {
           fetchEvmCodeAtBlock, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmStorageAtBlock,
         },
         identity: () => ({}),
-        safeBlockLag: () => 1,
+        safeBlockLag: () => input.safeBlockLag ?? (chainId === "pharos" ? 15 : 1),
         extraRpcUrls: () => ["https://rpc.example"],
         protocolCalls: () => [{
           label: "optional-paused", target: contractAddress, callData: protocolSelector,
@@ -387,6 +396,48 @@ describe("Safety Score V9 supply observation primitives", () => {
       });
       return { requests, observe };
     }
+
+    it("brackets Pharos chain 1672 hex-number state reads with matching headers", async () => {
+      const pharos = fixture({ multicall: "present", chainId: "pharos", rejectHashPins: true });
+      expect(await pharos.observe()).toMatchObject({
+        status: "accepted", observation: { rawSupply: "42", blockNumberOrSlot: "16", blockHash },
+      });
+      const methods = pharos.requests.map(request => request.method);
+      const state = pharos.requests.filter(request => ["eth_call", "eth_getCode", "eth_getStorageAt"].includes(request.method));
+      expect(new Set(state.map(request => request.method))).toEqual(new Set(["eth_call", "eth_getCode", "eth_getStorageAt"]));
+      expect(state.every(request => request.params[request.params.length - 1] === "0x10")).toBe(true);
+      const headers = methods.flatMap((method, index) => method === "eth_getBlockByNumber" ? [index] : []);
+      expect(headers).toHaveLength(3);
+      expect(pharos.requests.slice(headers[1]! + 1, headers[2])).toEqual(state);
+      expect(methods[methods.length - 1]).toBe("eth_getBlockByNumber");
+    });
+
+    it.each([2, 3])("withholds Pharos on header hash mismatch at bracket read %s", async mismatchAt => {
+      const pharos = fixture({ multicall: "present", chainId: "pharos", mismatch: "hash", mismatchAt });
+      expect(await pharos.observe()).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-pin-header-mismatch",
+      });
+      expect(pharos.requests.some(request => request.method === "eth_call")).toBe(mismatchAt === 3);
+    });
+
+    it("withholds Pharos before state reads when its reviewed lag is below 15 blocks", async () => {
+      const pharos = fixture({ multicall: "present", chainId: "pharos", safeBlockLag: 14 });
+      expect(await pharos.observe()).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-pin-lag-violation",
+      });
+      expect(pharos.requests.map(request => request.method)).toEqual(["eth_blockNumber"]);
+    });
+
+    it("never relaxes hash pinning on other chains when EIP-1898 is unsupported", async () => {
+      const ethereum = fixture({ multicall: "present", rejectHashPins: true });
+      expect(await ethereum.observe()).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-state-unavailable",
+      });
+      const state = ethereum.requests.filter(request => ["eth_call", "eth_getCode", "eth_getStorageAt"].includes(request.method));
+      expect(state.length).toBeGreaterThan(0);
+      expect(state.every(request => JSON.stringify(request.params[request.params.length - 1]) ===
+        JSON.stringify({ blockHash, requireCanonical: true }))).toBe(true);
+    });
 
     it("produces the same observations by direct calls, including allowed failures", async () => {
       const multicall = fixture({ multicall: "present" });
