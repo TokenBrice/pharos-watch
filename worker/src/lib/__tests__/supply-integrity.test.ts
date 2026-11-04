@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { startOfUtcDaySec } from "@shared/lib/time-buckets";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
@@ -22,6 +23,7 @@ const NOW = 1_790_000_000;
 const TODAY = startOfUtcDaySec(new Date(NOW * 1000));
 const ACTIVE = [...ACTIVE_IDS].slice(0, 14);
 const SUPPLY_SOURCE = "defillama";
+const CHARTS_MAX_AGE_SEC = 2 * CRON_INTERVALS["sync-stablecoin-charts"];
 
 afterEach(() => {
   fixtures.closeAll();
@@ -159,6 +161,55 @@ function normalAssets(): AssetInput[] {
 }
 
 describe("supply integrity", () => {
+  it("reads bounded chart publication evidence behind completed buckets without hiding failures", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(
+      "INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('sync-stablecoin-charts', ?, 0, ?, ?)",
+    );
+    const run = (metadata: unknown, age = 1800, status = "ok") => ({
+      startedAt: NOW - age, status, metadata: typeof metadata === "string" ? metadata : JSON.stringify(metadata),
+    });
+    const published = run({ cacheWriteMode: "published", lastWriteAdvanced: true }, 3600);
+    const skip = run({ reason: "cadence_bucket_completed" });
+    const truncated = run({ quality: { reason: "chart-history-truncated", codes: ["point-count-drop"] } });
+    const cases = [
+      { runs: [published, skip], status: "ok", reason: null, startedAt: published.startedAt },
+      { runs: [run({ cacheWriteMode: "skipped-newer", lastWriteAdvanced: true }, 3600), skip], status: "ok", reason: null },
+      { runs: [run({ lastWriteAdvanced: true }, CHARTS_MAX_AGE_SEC), skip], status: "ok", reason: null },
+      { runs: [run({ lastWriteAdvanced: true }, CHARTS_MAX_AGE_SEC + 1), skip], status: "unknown", reason: "publication-stale" },
+      { runs: [run({ lastWriteAdvanced: true }, CHARTS_MAX_AGE_SEC + 1)], status: "unknown", reason: "publication-stale" },
+      { runs: [run({ lastWriteAdvanced: true }, -1)], status: "unknown", reason: "publication-stale" },
+      { runs: [skip], status: "unknown", reason: "no-publication-evidence" },
+      { runs: [run({ reason: "cadence_bucket_completed", cacheWriteMode: "published", lastWriteAdvanced: true })], status: "unknown", reason: "no-publication-evidence" },
+      { runs: [published, truncated], status: "truncated", reason: "chart-history-truncated", codes: ["point-count-drop"] },
+      { runs: [published, truncated, run({ reason: "cadence_bucket_completed" }, 60)], status: "truncated", reason: "chart-history-truncated" },
+      { runs: [published, run({}, 2400, "error"), skip], status: "unknown", reason: "run-error" },
+      { runs: [published, run("unreadable", 2400), skip], status: "unknown", reason: "metadata-unreadable" },
+      { runs: [published, run(null, 2400), skip], status: "unknown", reason: "metadata-unavailable" },
+      { runs: [published, run({ cacheWriteMode: "skipped-newer", lastWriteAdvanced: false }, 2400), skip], status: "unknown", reason: "no-publication-evidence" },
+      { runs: [published, run({ reason: "cadence_bucket_in_progress" })], status: "unknown", reason: "no-publication-evidence" },
+      { runs: [published, run({ reason: "cadence_bucket_completed" }, 900, "error")], status: "unknown", reason: "run-error" },
+      { runs: [published, ...Array.from({ length: 8 }, (_, i) => run({ reason: "cadence_bucket_completed" }, i * 60))], status: "unknown", reason: "no-publication-evidence" },
+    ];
+    for (const entry of cases) {
+      sqlite.exec("DELETE FROM cron_runs");
+      for (const row of entry.runs) insert.run(row.startedAt, row.status, row.metadata);
+      const report = await loadSupplyIntegrityReport(db, NOW);
+      expect(report.availability.charts, JSON.stringify(entry)).toMatchObject({
+        status: entry.status,
+        reason: entry.reason == null || entry.status === "truncated"
+          ? entry.reason : `sync-stablecoin-charts-${entry.reason}`,
+        maxAgeSec: CHARTS_MAX_AGE_SEC,
+        ...(entry.startedAt == null ? {} : { runStartedAt: entry.startedAt }),
+        ...(entry.codes == null ? {} : { codes: entry.codes }),
+      });
+    }
+    const failed = await loadSupplyIntegrityReport(mockD1([
+      { match: "WHERE job = 'sync-stablecoin-charts'", rows: [], throwError: new Error("D1_ERROR") },
+    ]), NOW);
+    expect(failed.availability.charts).toMatchObject({ status: "unknown", reason: "sync-stablecoin-charts-read-failed" });
+  });
+
   it("flags per-asset generation drift and excludes provenance-named carry/repair rows", async () => {
     const assets = normalAssets();
     assets[0] = { ...assets[0], current: 40 };
@@ -348,7 +399,7 @@ describe("supply integrity", () => {
         share: 0,
         consecutiveGenerations: 0,
         latestRunStartedAt: NOW - 900,
-        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [] },
+        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [], maxAgeSec: CHARTS_MAX_AGE_SEC },
       },
       snapshot: {
         status: "ok",
@@ -405,7 +456,7 @@ describe("supply integrity", () => {
         share: 0,
         consecutiveGenerations: 0,
         latestRunStartedAt: NOW - 900,
-        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [] },
+        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [], maxAgeSec: CHARTS_MAX_AGE_SEC },
       },
       snapshot: {
         status: "ok",
@@ -467,7 +518,7 @@ describe("supply integrity", () => {
         share: 0,
         consecutiveGenerations: 0,
         latestRunStartedAt: NOW - 900,
-        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [] },
+        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [], maxAgeSec: CHARTS_MAX_AGE_SEC },
       },
       snapshot: {
         status: "ok",
@@ -605,7 +656,7 @@ describe("supply integrity", () => {
         share: 0.01,
         consecutiveGenerations: 2,
         latestRunStartedAt: NOW - 900,
-        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [] },
+        charts: { status: "ok", reason: null, runStartedAt: NOW - 600, codes: [], maxAgeSec: CHARTS_MAX_AGE_SEC },
       },
       snapshot: {
         status: "ok",
