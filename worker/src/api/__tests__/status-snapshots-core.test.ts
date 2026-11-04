@@ -2,7 +2,7 @@ import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
-import { StatusCronDetailResponseSchema, StatusResponseSchema } from "@shared/types/status";
+import { StatusCronDetailResponseSchema, StatusResponseSchema, type StatusResponse } from "@shared/types/status";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 import { summarizeCronStatus, projectCronRunOutcome, CRON_STATUS_LATEST_FACT_KEYS } from "../../lib/status/cron-status-summary";
@@ -872,17 +872,14 @@ describe("handleStatus", () => {
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
 
-    const body = (await readJsonResponse(res, 200)) as {
-      sectionErrors: Record<string, unknown>;
-      producerHeads: Array<{ observed: boolean; invocationCount: number; productiveCount: number }>;
-    };
+    const body = (await readJsonResponse(res, 200)) as StatusResponse;
     for (const key of [
       "timestamp", "dbHealthy", "overallStatus", "caches", "crons", "dataQuality", "telegramBot", "sectionErrors",
       "datasetFreshness", "state", "priceSourceHealth", "coingeckoPriceDiff", "d1Usage", "liquidityHealth", "yieldHealth",
       "publicationHealth", "dependencyHealth", "providerCircuitHealth", "canaries", "mintBurnReconciliation", "reserveComposition",
     ]) expect(body).toHaveProperty(key);
-    expect(body.producerHeads.length).toBeGreaterThan(0);
-    expect(body.producerHeads.every((head) =>
+    expect(body.producerHeads!.length).toBeGreaterThan(0);
+    expect(body.producerHeads!.every((head) =>
       !head.observed && head.invocationCount === 0 && head.productiveCount === 0,
     )).toBe(true);
     expect(body.sectionErrors).not.toHaveProperty("producerHistory");
