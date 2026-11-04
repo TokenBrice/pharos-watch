@@ -73,6 +73,7 @@ describe("Pages function routes", () => {
     "/api/__next._tree.txt",
     "/api/__next._head.txt",
     "/critical-css-loader.js",
+    "/portfolio-bootstrap.js",
     "/media/defi-dad.jpg",
     "/openapi.json",
   ])("serves public static asset %s without Functions", (path) => {

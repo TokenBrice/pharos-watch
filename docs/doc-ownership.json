@@ -1638,6 +1638,7 @@
         "public/datasets/stablecoin-cemetery.*",
         "public/llms.txt",
         "public/og-cemetery.png",
+        "public/portfolio-bootstrap.js",
         "shared/lib/public-docs.ts",
         "shared/lib/og-route-cards.ts",
         "shared/lib/og-route-glyphs.ts",
@@ -1717,6 +1718,12 @@
       ],
       "alsoRead": ["src/AGENTS.md"],
       "rules": ["Static export means route metadata, sitemap, and crawlability can matter even for simple UI changes."],
+      "testOwnership": [
+        {
+          "sources": ["public/portfolio-bootstrap.js"],
+          "tests": ["src/app/portfolio/client.test.tsx"]
+        }
+      ],
       "checks": ["npx vitest run src"]
     },
     {
