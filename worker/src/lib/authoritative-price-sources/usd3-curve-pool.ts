@@ -34,7 +34,7 @@ export interface Usd3PriceContext extends LivePriceContext {
 }
 
 /** Missing-only sell proceeds, bounded by an original-clock trusted USD3 reference. */
-export async function fetchUsd3CurvePoolPrice(
+async function fetchUsd3CurvePoolPrice(
   context: Usd3PriceContext,
   signal?: AbortSignal,
 ): Promise<CurrentPriceOverride | null> {
