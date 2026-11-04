@@ -148,12 +148,25 @@ describe("check-env-contract runtime env reads", () => {
 
 describe("check-env-contract .env.example content policy", () => {
   it("rejects retired example keys and a non-canonical site API origin", () => {
-    expect(findEnvExamplePolicyErrors([
+    const requiredEntries = [
+      "NEXT_PUBLIC_API_BASE=",
+      "SELECTOR_SNAPSHOT_IP_HASH_SECRET=",
+      "SITE_API_SHARED_SECRET=",
+    ];
+    const validEntries = [
+      ...requiredEntries,
       "SITE_API_ORIGIN=https://site-api.pharos.watch",
       "CORS_ORIGIN=https://pharos.watch",
-    ].join("\n"))).toEqual([]);
+    ];
+    expect(findEnvExamplePolicyErrors(validEntries.join("\n"))).toEqual([]);
+    for (const entry of requiredEntries) {
+      expect(findEnvExamplePolicyErrors(validEntries.filter((line) => line !== entry).join("\n"))).toEqual([
+        `.env.example must document ${entry.slice(0, -1)}`,
+      ]);
+    }
 
     expect(findEnvExamplePolicyErrors([
+      ...requiredEntries,
       "DB=local-d1",
       "VAULTS_FYI_TOKEN=secret",
       "TELEGRAM_ADOPTION_IP_HASH_SECRET=secret",
@@ -165,6 +178,9 @@ describe("check-env-contract .env.example content policy", () => {
       '.env.example must document SITE_API_ORIGIN=https://site-api.pharos.watch (found "http://localhost:8787")',
     ]);
     expect(findEnvExamplePolicyErrors("# empty example\n")).toEqual([
+      ".env.example must document NEXT_PUBLIC_API_BASE",
+      ".env.example must document SELECTOR_SNAPSHOT_IP_HASH_SECRET",
+      ".env.example must document SITE_API_SHARED_SECRET",
       ".env.example must document SITE_API_ORIGIN=https://site-api.pharos.watch (found no entry)",
     ]);
   });

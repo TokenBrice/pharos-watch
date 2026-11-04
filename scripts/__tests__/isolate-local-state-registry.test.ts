@@ -97,6 +97,8 @@ describe("isolate-local state registry", () => {
     // `export` and the keyword, and a declaration that follows another
     // statement or a block boundary on the same line.
     ["a comment between `export` and the keyword", "export /* seeded */ const responseCache = new Map();"],
+    ["a comment between `export` and `let`", "export /* seeded */ let responseCache = loadCache();"],
+    ["a leading comment before `let`", "/* seeded */ let responseCache = loadCache();"],
     ["a preceding statement on the same line", "seed(); const responseCache = new Map();"],
     ["a preceding block on the same line", "if (seed) { seed(); } const responseCache = new Map();"],
   ])("detects a stateful declaration with %s", (_label, declaration) => {
