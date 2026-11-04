@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.71",
+    "title": "Cadence-bounded previous-payload parents for vault supply NAV",
+    "date": "2026-11-04",
+    "effectiveAt": 1793750400,
+    "summary": "Pre-intake vault NAV supply valuation admits a trusted previous-payload parent observation within two stablecoins producer intervals, while same-run and live-price source budgets remain unchanged.",
+    "impact": [
+      "Pre-intake vault NAV supply valuation admits a trusted parent read from the previous published payload when its original price observation is at most two stablecoins producer intervals old (1,800 seconds). Confidence, replay-safe source parts, parent identity, timestamp validity and future-skew checks remain unchanged. Same-run single-source quotes still require the existing vault opt-in, and live price publication keeps its source budgets.",
+      "The trust verdict names the supply-parent budget, its maximum age, the previous-payload generation, the parent price-sync time when available, the original observation time and the rejection reason. Re-publishing an old price never renews its observation.",
+      "sUSDf, AA FalconX/MEV Capital and sGHO can resume fresh native supply when their parent and vault reads pass. sAID remains unavailable without an admissible AID/USD parent; no nominal or FX reference substitutes for NAV."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.70",
     "title": "Reject fill-priced supply and publish reviewed chain remainders explicitly",
     "date": "2026-11-04",

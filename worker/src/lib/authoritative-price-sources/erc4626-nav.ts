@@ -51,18 +51,9 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   defineRegistryErc4626NavVault({ id: "gtusdcp-gauntlet", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "yvusdc-yearn", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "autousd-auto-finance", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
-  // eearn/arc USDC vaults lost every own-market quote on 2026-10-31 ~06:45 UTC
-  // (DefiLlama coins dropped their contract/mirror keys; no geckoId or a stale
-  // CG ticker), so intake's only supply valuation is this NAV. Without this
-  // flag the USDC parent row comes from the previous 15-minute publication and
-  // misses the composite freshness window at intake time, dropping supply to
-  // the 7-day carry (publication gaps since 2026-10-31).
+  // Missing own-market quotes: admit fresh direct USDC with its single-source confidence.
   defineRegistryErc4626NavVault({ id: "eearn-ember", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN, allowFreshReplaySafeSingleSourceParent: true }),
-  // avUSD's CG ticker is fresh, but savUSD's own CG ticker died 2026-08-09, so
-  // intake's only supply valuation is this vault NAV. Without this flag the
-  // parent quote comes from the previous 15-minute publication and misses the
-  // composite's 900s coingecko freshness window at intake time, dropping the
-  // coin after the 7d restore ceiling (publication gap since 2026-11-02).
+  // Missing own-market quote: inherit fresh direct avUSD without upgrading its confidence.
   defineRegistryErc4626NavVault({ id: "savusd-avant", parentId: AVUSD_AVANT_ID, chain: "avalanche", allowFreshReplaySafeSingleSourceParent: true }),
   // USN prices single-source from CoinGecko. Inherit that fresh replay-safe
   // quote and its confidence instead of the sUSN last trade.
@@ -84,9 +75,7 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   // leg's source, single-source confidence and clock instead of upgrading it.
   defineRegistryErc4626NavVault({ id: "senpathusd-sentora", parentId: "pathusd-bridge", chain: "tempo", allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "skymoneyusdtsavings-sky", parentId: USDT_TETHER_ID, chain: ETHEREUM_CHAIN }),
-  // Same 2026-10-31 quote loss as eearn-ember: the arc vaults' only supply
-  // valuation is this NAV, and the previous-payload USDC parent misses the
-  // composite freshness window at intake time.
+  // Same direct USDC single-source admission as eearn-ember.
   defineRegistryErc4626NavVault({ id: "krusdc-keyrock", parentId: USDC_CIRCLE_ID, chain: "arc", allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "senpyusdpst-sentora", parentId: "pyusd-paypal", chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "senpyusdmwin-sentora", parentId: "pyusd-paypal", chain: ETHEREUM_CHAIN }),
@@ -206,7 +195,7 @@ export function getFreshSingleSourceNavParentId(stablecoinId: string): string | 
  * before this run's enrichment prices exist, so the parent row comes from the
  * caller's run-local map: an admitted same-run parent observation or the
  * previous published payload. This reuses the exact protocol-redeem route —
- * parent-trust gate (incl. its source freshness budget), live
+ * parent-trust gate (a cadence budget only for a previous-payload supply read), live
  * registered ERC-4626 convertToAssets or Idle CDO virtualPrice read, and the bounded cached-rate degradation lane — so no
  * freshness policy is bypassed. The result values supply only; the live
  * override stage re-prices the published row in the same run.
@@ -217,6 +206,7 @@ export async function resolveVaultNavSupplyPrice(
   db?: D1Database,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
+  previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
 ): Promise<CurrentPriceOverride | null> {
   const config = ERC4626_NAV_VAULTS_BY_ID.get(stablecoinId);
   const provider = config ? erc4626NavProvider
@@ -230,6 +220,7 @@ export async function resolveVaultNavSupplyPrice(
 
   const nowSec = Math.floor(Date.now() / 1000);
   const context: LivePriceContext = {
+    supplyPreviousPayloadParent: previousAssetsById?.get(parentId) === parentAsset,
     assetsById: new Map([[parentId, { ...parentAsset }]]),
     chainRpcs,
     vaultRateCache: db ? await readVaultRateCache(db, nowSec) : undefined,
