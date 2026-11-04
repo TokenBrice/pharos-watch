@@ -248,13 +248,16 @@ const SCHEDULED_SLOT_PLAN_INPUTS = {
   },
   daily0300Utc: {
     worker: "public",
+    // Retention must finish before an observer can exhaust the invocation.
+    // It preserves the sentinel's seven-day history and active repair debt;
+    // mint/burn growth reads tables owned by the producer's separate retention.
     jobChains: [[
-      "cron-sentinel",
       "prune-status-probe-runs",
       "prune-cron-history",
       "prune-detail-cache",
       "telegram-inactive-cleanup",
       "telegram-retention-cleanup",
+      "cron-sentinel",
     ]],
     taskPolicies: { "cron-sentinel": SENTINEL_TASK_POLICY },
   },
