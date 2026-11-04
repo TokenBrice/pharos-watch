@@ -4,7 +4,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
-import { YieldRankingsResponseSchema, YieldRankingsCoinResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
+import { YieldRankingsResponseSchema, YieldRankingsCoinResponseSchema, YieldCoinCohortSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import type { YieldRankingsSummaryResponse } from "@shared/types/yield-summary";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "../../lib/__tests__/safety-score-v9-publication-store.test-support";
@@ -19,9 +19,12 @@ import { projectSafetyGrades } from "@shared/types/report-cards-v9";
 import * as opportunitySafety from "@shared/lib/yield-opportunity-risk";
 import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary";
 import * as abort from "../../lib/abort";
+import * as dbCache from "../../lib/db-cache";
+import * as cohortCache from "../../lib/yield-rankings-coin-cache";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 
 const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;
-const COHORT_CACHE_KEY = "yield-rankings:coin-cohort:v1";
+const COHORT_CACHE_KEY = "yield-rankings:coin-cohort:v2";
 const databases: DatabaseSync[] = [];
 afterEach(() => { vi.restoreAllMocks(); vi.useRealTimers(); for (const db of databases.splice(0)) db.close(); });
 
@@ -43,8 +46,9 @@ function readPublishedCohort(sqlite: DatabaseSync) {
 
 function replaceWithStalledLease(sqlite: DatabaseSync, signature: string, owner = "other-owner") {
   const leaseUntil = Math.floor(Date.now() / 1000) + 30;
-  sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?")
-    .run(JSON.stringify({ signature, owner, leaseUntil }), COHORT_CACHE_KEY);
+  sqlite.prepare("DELETE FROM cache WHERE key = ?").run(COHORT_CACHE_KEY);
+  sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .run(`${COHORT_CACHE_KEY}:lease`, JSON.stringify({ signature, owner, leaseUntil }), Math.floor(Date.now() / 1000));
 }
 
 async function fixture(held = false, pipelineGap = false, safetyPublishedAt = NOW) {
@@ -88,7 +92,7 @@ async function fixture(held = false, pipelineGap = false, safetyPublishedAt = NO
       publicationAttempt: { ...input.publicationAttempt, outcome: "held", publicationGenerationId: null, attemptedAtSec: heldAt },
     });
   }
-  return { sqlite, db };
+  return { sqlite, db, input };
 }
 
 describe("rankings score-index hydration", () => {
@@ -345,13 +349,18 @@ describe("rankings score-index hydration", () => {
     expect(prepare.mock.calls.filter(([sql]) => sql === "SELECT value, updated_at FROM cache WHERE key = ?")).toHaveLength(1);
   });
 
-  it("logs one bounded diagnostic when a request claims the cohort preparation lease", async () => {
+  it("logs the lease claim and measured build duration once, without logging warm reads", async () => {
     const { db, sqlite } = await fixture();
     const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
     const log = vi.spyOn(structuredLog, "logWorkerEvent").mockImplementation(() => {});
+    const getCache = dbCache.getCache;
+    vi.spyOn(dbCache, "getCache").mockImplementationOnce(async (...args) => {
+      vi.setSystemTime(NOW * 1000 + 1234);
+      return getCache(...args);
+    });
     expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
     const signature = readPublishedCohort(sqlite)!.signature;
-    expect(log).toHaveBeenCalledOnce();
+    expect(log).toHaveBeenCalledTimes(2);
     expect(log).toHaveBeenCalledWith({
       scope: "api",
       level: "info",
@@ -362,17 +371,28 @@ describe("rankings score-index hydration", () => {
         stablecoinId: "usdc-circle", signaturePrefix: signature.slice(0, 12), leaseOwner: expect.any(String), leaseUntil: NOW + 30,
       },
     });
+    expect(log).toHaveBeenLastCalledWith(expect.objectContaining({
+      event: "yield-cohort-built",
+      metadata: { stablecoinId: "usdc-circle", signaturePrefix: signature.slice(0, 12),
+        leaseOwner: expect.any(String), durationMs: 1234 },
+    }));
     // Warm reads never claim or re-log.
     expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
-    expect(log).toHaveBeenCalledOnce();
+    expect(log).toHaveBeenCalledTimes(2);
   });
 
-  it("bounds waiter reads and keeps retryable unavailability when the lease holder stalls", async () => {
+  it.each(["missing", "expired", "future"])("bounds waiter reads when the previous assessment is %s", async previous => {
     const { db, sqlite } = await fixture();
     const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
     expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
-    const signature = readPublishedCohort(sqlite)!.signature;
+    const published = readPublishedCohort(sqlite)!;
+    const signature = published.signature;
     replaceWithStalledLease(sqlite, signature);
+    if (previous !== "missing") {
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(COHORT_CACHE_KEY,
+        JSON.stringify({ ...published, signature: "previous-signature",
+          ...(previous === "expired" ? { validUntil: NOW } : { assessedAt: NOW + 1 }) }), NOW);
+    }
     const sleep = vi.spyOn(abort, "sleep");
     const prepare = vi.spyOn(db, "prepare");
     const response = await settleWithFakeTimers(handleYieldRankingsCoin(db, url));
@@ -383,6 +403,133 @@ describe("rankings score-index hydration", () => {
     expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([250, 500]);
     // Initial read, immediate re-read, then one scoped read per bounded wait.
     expect(prepare.mock.calls.filter(([sql]) => sql.includes("json_extract(value, '$.signature') = ?"))).toHaveLength(4);
+  });
+
+  it.each(["yield", "safety", "index-missing", "held", "scoring-contract", "expired-safety", "pipeline-gap", "unrated", "omitted", "methodology", "unversioned", "safety-build", "entering"])("admits previous assessments against current evidence while a new %s signature builds", async changed => {
+    const { db, sqlite, input } = await fixture();
+    sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.rankings[0].provenance.sourceObservedAt', NULL,
+      '$.rankings[0].provenance.sourceAgeSeconds', 120) WHERE key = 'yield-rankings'`).run();
+    if (changed === "entering") sqlite.prepare("UPDATE cache SET value = json_remove(value, '$.rankings[0]') WHERE key = 'yield-rankings'").run();
+    const url = (id = "usdc-circle") => new URL(`https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=${id}`);
+    vi.setSystemTime((NOW + 5) * 1000);
+    const previous = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url())).json());
+    const published = readPublishedCohort(sqlite)!;
+    vi.setSystemTime((NOW + 20) * 1000);
+    if (["yield", "omitted", "methodology", "unversioned", "entering"].includes(changed)) {
+      sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.publication.generationId', 'next-yield',
+        '$.updatedAt', ?, '$.publication.updatedAt', ?, '$.publication.cutoffAt', ?, '$.rankings[0].currentApy', 99),
+        updated_at = ? WHERE key = 'yield-rankings'`).run(NOW + 20, NOW + 20, NOW + 20, NOW + 20);
+      if (changed === "entering") sqlite.prepare("UPDATE cache SET value = json_insert(value, '$.rankings[#]', json(?)) WHERE key = 'yield-rankings'")
+        .run(JSON.stringify(makeYieldRanking({ provenance: makeYieldProvenance({ sourceObservedAt: NOW }) })));
+      if (changed === "omitted") sqlite.prepare("UPDATE cache SET value = json_remove(value, '$.rankings[0]') WHERE key = 'yield-rankings'").run();
+      if (["methodology", "unversioned"].includes(changed)) sqlite.prepare(`UPDATE cache SET value =
+        json_set(json_patch(value, ?), '$.rankings[0].rankChangeAttribution', json('{"previousRank":2}')) WHERE key = ?`)
+        .run(JSON.stringify({ yieldMethodologyVersion: changed === "methodology" ? "8.53" : null }), COHORT_CACHE_KEY);
+    } else if (changed === "index-missing") {
+      sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
+    } else if (changed === "held") {
+      await persistSafetyScoreV9Publication(db, {
+        publicationClockSec: NOW + 20,
+        publicationHealth: { ...input.publicationHealth, status: "held", attemptedAtSec: NOW + 20,
+          heldSinceSec: NOW + 20, reasons: [{ code: "dex-stale" }] },
+        publicationAttempt: { ...input.publicationAttempt, outcome: "held", publicationGenerationId: null, attemptedAtSec: NOW + 20 },
+      });
+    } else {
+      const active = await scoreIndex.loadActiveSafetyScoreIndex(db);
+      if (active.kind === "error") throw new Error(active.reason);
+      vi.spyOn(scoreIndex, "loadActiveSafetyScoreIndex").mockResolvedValue({ ...active, snapshot: { ...active.snapshot,
+        updatedAt: changed === "expired-safety" ? NOW - 86401 : NOW + 20,
+        safetyScoreIdentity: { ...active.snapshot.safetyScoreIdentity, publicationGenerationId: "next-safety",
+          ...(changed === "scoring-contract" ? { methodologyVersion: "999.0" } : {}),
+          ...(changed === "safety-build" ? { evaluationBuildDigest: "f".repeat(64) } : {}) },
+        cards: active.snapshot.cards.map(card => changed === "pipeline-gap"
+          ? { ...card, score: null, grade: null, ratingStatus: "pipeline-gap" as const }
+          : changed === "unrated" ? { ...card, score: null, grade: "NR" as const } : { ...card, score: 20, grade: "D" }),
+      } });
+    }
+    let start!: () => void;
+    let finish!: () => void;
+    const started = new Promise<void>(resolve => { start = resolve; });
+    const gate = new Promise<void>(resolve => { finish = resolve; });
+    const getCache = dbCache.getCache;
+    vi.spyOn(dbCache, "getCache").mockImplementationOnce(async (...args) => { start(); await gate; return getCache(...args); });
+    const builder = handleYieldRankingsCoin(db, url("usdt-tether"));
+    await started;
+    const sleep = vi.spyOn(abort, "sleep");
+    const mayFallback = changed === "yield" || changed === "safety";
+    const contender = handleYieldRankingsCoin(db, url());
+    const response = mayFallback ? await contender : await settleWithFakeTimers(contender);
+    finish();
+    expect((await builder).status).toBe(200);
+    if (!mayFallback) {
+      expect(response.status).toBe(503);
+      expect(response.headers.get("Retry-After")).toBe("1");
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(await response.json()).toMatchObject({ reason: "yield-cohort-preparing" });
+      expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([250, 500]);
+      const full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+      const next = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url())).json());
+      expect(next.rankings).toEqual(full.rankings.filter(row => row.id === "usdc-circle"));
+      expect(next.provenance).toEqual(full.provenance);
+      if (changed === "entering") expect(next.projection.unavailableReason).toBeNull();
+      else if (changed === "omitted") expect(next.projection.unavailableReason).toBe("row-not-published");
+      else if (["methodology", "unversioned", "safety-build"].includes(changed)) expect(next.rankings[0]).not.toHaveProperty("rankChangeAttribution");
+      else expect(next.provenance?.liveSafetyHydration?.reason).toContain(changed === "index-missing" ? "safety-score-index-missing"
+        : changed === "held" ? "v9-publication-held" : changed === "expired-safety" ? "safety-publication-clock-out-of-budget"
+        : changed === "scoring-contract" ? "safety-identity-mismatch" : "low-row-safety-coverage");
+      if (["index-missing", "pipeline-gap", "unrated"].includes(changed)) expect(next.rankings[0].safetyScore).toBeNull();
+      return;
+    }
+    expect(response.status).toBe(200);
+    const body = YieldRankingsCoinResponseSchema.parse(await response.json());
+    expect(body.projection).toEqual(previous.projection);
+    expect(body.publication).toEqual(previous.publication);
+    expect(body.provenance?.liveSafetyHydration).toEqual(previous.provenance?.liveSafetyHydration);
+    expect(body.rankings[0]).toMatchObject({ currentApy: 5, safetyScore: 80, liveRank: previous.rankings[0].liveRank,
+      provenance: { sourceAgeSeconds: 140 } });
+    expect(body.warnings).toEqual(previous.warnings);
+    expect(body._meta).toMatchObject({ updatedAt: NOW, ageSeconds: 20, assessedAt: NOW + 20, freshBudgetSec: 21600 });
+    expect(response.headers.get("Warning")).toContain(`signature=${published.signature}; assessedAt=${NOW + 5}; validUntil=${published.validUntil}`);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("X-Data-Age")).toBe("20");
+    expect(sleep).not.toHaveBeenCalled();
+    const next = await handleYieldRankingsCoin(db, url());
+    expect(next.status).toBe(200);
+    expect(next.headers.get("Warning") ?? "").not.toContain("Yield cohort rebuilding");
+    expect(readPublishedCohort(sqlite)!.signature).not.toBe(published.signature);
+    expect(YieldCoinCohortSchema.parse(readPublishedCohort(sqlite)).yieldMethodologyVersion).toBe(YIELD_METHODOLOGY_VERSION);
+  });
+
+  it("fences stale owners from publication and release without destroying the complete assessment", async () => {
+    const { db, sqlite } = await fixture();
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    const published = YieldCoinCohortSchema.parse(readPublishedCohort(sqlite));
+    expect(await cohortCache.claimYieldCoinCohort(db, published.signature, "redundant", NOW)).toBeNull();
+    expect(await cohortCache.claimYieldCoinCohort(db, "next", "old-owner", NOW)).not.toBeNull();
+    expect(await cohortCache.claimYieldCoinCohort(db, "next", "new-owner", NOW + 30)).not.toBeNull();
+    const next = { ...published, signature: "next", assessedAt: NOW + 30 };
+    await expect(cohortCache.publishYieldCoinCohort(db, "old-owner", next)).rejects.toThrow("lease lost");
+    await cohortCache.releaseYieldCoinCohort(db, "old-owner");
+    expect(await cohortCache.readYieldCoinCohortLease(db)).toMatchObject({ owner: "new-owner" });
+    expect(readPublishedCohort(sqlite)).toEqual(published);
+    await cohortCache.publishYieldCoinCohort(db, "new-owner", next);
+    await cohortCache.releaseYieldCoinCohort(db, "new-owner");
+    expect(readPublishedCohort(sqlite)).toEqual(next);
+  });
+
+  it.each(["incomplete", "clock-mismatch"])("rejects a previous assessment with an %s publication envelope", async invalid => {
+    const { db, sqlite } = await fixture();
+    const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
+    expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
+    const published = YieldCoinCohortSchema.parse(readPublishedCohort(sqlite));
+    replaceWithStalledLease(sqlite, published.signature);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(COHORT_CACHE_KEY,
+      JSON.stringify({ ...published, signature: "previous-signature",
+        publication: invalid === "incomplete" ? {} : { ...published.publication, updatedAt: NOW - 1 } }), NOW);
+    const response = await handleYieldRankingsCoin(db, url);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ reason: "yield-rankings-malformed" });
   });
 
   it("logs one preparing diagnostic naming the reason, signature prefix and lease holder", async () => {
@@ -445,7 +592,7 @@ describe("rankings score-index hydration", () => {
     }));
   });
 
-  it("never serves a different-signature cohort published while waiting", async () => {
+  it("keeps a cold waiter bound to its captured signature when another signature publishes later", async () => {
     const { db, sqlite } = await fixture();
     const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
     expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
@@ -454,8 +601,8 @@ describe("rankings score-index hydration", () => {
     const otherSignatureCohort = { ...published, signature: "other-evidence-signature" };
     const sleep = vi.spyOn(abort, "sleep").mockImplementation(async (ms) => {
       if (ms === 250) {
-        sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?")
-          .run(JSON.stringify(otherSignatureCohort), COHORT_CACHE_KEY);
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+          .run(COHORT_CACHE_KEY, JSON.stringify(otherSignatureCohort), NOW);
       }
     });
     const response = await handleYieldRankingsCoin(db, url);
@@ -473,8 +620,8 @@ describe("rankings score-index hydration", () => {
     const expiredCohort = { ...published, validUntil: Math.floor(Date.now() / 1000) };
     const sleep = vi.spyOn(abort, "sleep").mockImplementation(async (ms) => {
       if (ms === 250) {
-        sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?")
-          .run(JSON.stringify(expiredCohort), COHORT_CACHE_KEY);
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+          .run(COHORT_CACHE_KEY, JSON.stringify(expiredCohort), NOW);
       }
     });
     const response = await handleYieldRankingsCoin(db, url);
@@ -597,7 +744,7 @@ describe("rankings score-index hydration", () => {
     const { db, sqlite } = await fixture();
     const url = new URL("https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=usdc-circle");
     expect((await handleYieldRankingsCoin(db, url)).status).toBe(200);
-    sqlite.prepare("UPDATE cache SET value = json_set(value, '$.warnings', 42) WHERE key = 'yield-rankings:coin-cohort:v1'").run();
+    sqlite.prepare("UPDATE cache SET value = json_set(value, '$.warnings', 42) WHERE key = ?").run(COHORT_CACHE_KEY);
     const repaired = await handleYieldRankingsCoin(db, url);
     expect(repaired.status).toBe(200);
     const body = YieldRankingsCoinResponseSchema.parse(await repaired.json());
