@@ -140,7 +140,9 @@ export async function loadLatestNonSkippedReserveAttempt(
     try {
       const warnings: unknown = JSON.parse(row.warnings);
       if (!Array.isArray(warnings) || warnings.some((warning: unknown) =>
-        warning == null || typeof warning !== "object" || !("code" in warning) || typeof warning.code !== "string")) return null;
+        warning == null || typeof warning !== "object" || !("code" in warning) || typeof warning.code !== "string"
+        || ("effect" in warning && (warning.effect === "fatal"
+          || !LIVE_RESERVE_WARNING_EFFECT_VALUES.some((effect) => effect === warning.effect))))) return null;
     } catch { return null; }
   }
   return mapTimelineRow(row);

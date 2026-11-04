@@ -3,7 +3,8 @@ import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-fres
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import type { LiveReserveAdapterValidationPolicy } from "@shared/types/live-reserve-core";
+import { LIVE_RESERVE_FRESHNESS_MODE_VALUES, type LiveReserveAdapterValidationPolicy } from "@shared/types/live-reserve-core";
+import { ReserveSyncStatusSchema } from "@shared/types/live-reserves";
 import { buildAlertReserveSourceEnvelope } from "../lib/alert-reserve-source-cache";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { checkCollateralDrift, type CollateralDriftCheckResult } from "../lib/collateral-drift";
@@ -224,25 +225,23 @@ export function evaluateReserveAdapterAlerts(params: {
 
 function parseReserveAdapterAlertState(value: string | null | undefined): ReserveAdapterAlertState {
   if (!value) return { version: 1, coins: {} };
-  try {
-    const parsed = JSON.parse(value) as { coins?: unknown };
-    if (!parsed || typeof parsed !== "object" || !parsed.coins || typeof parsed.coins !== "object") {
-      return { version: 1, coins: {} };
+  const parsed = JSON.parse(value) as { version?: unknown; coins?: unknown };
+  if (!parsed || typeof parsed !== "object" || parsed.version !== 1 || !parsed.coins || typeof parsed.coins !== "object"
+    || Array.isArray(parsed.coins)) throw new Error("reserve-adapter-alert-state-unreadable");
+  const coins: Record<string, ReserveAdapterAlertCoinState> = {};
+  for (const [coinId, entry] of Object.entries(parsed.coins as Record<string, unknown>)) {
+    if (!entry || typeof entry !== "object") throw new Error("reserve-adapter-alert-state-unreadable");
+    const { failureRaised, scoreIneligibleRaised, clockRaised } = entry as Record<string, unknown>;
+    if (typeof failureRaised !== "boolean" || typeof clockRaised !== "boolean"
+      || (scoreIneligibleRaised !== undefined && typeof scoreIneligibleRaised !== "boolean")) {
+      throw new Error("reserve-adapter-alert-state-unreadable");
     }
-    const coins: Record<string, ReserveAdapterAlertCoinState> = {};
-    for (const [coinId, entry] of Object.entries(parsed.coins as Record<string, unknown>)) {
-      if (!entry || typeof entry !== "object") continue;
-      const { failureRaised, scoreIneligibleRaised, clockRaised } = entry as Record<string, unknown>;
-      if (typeof failureRaised !== "boolean" || typeof clockRaised !== "boolean") continue;
-      // Older state entries predate the score-ineligible rule; absent means not raised.
-      const scoreRaised = typeof scoreIneligibleRaised === "boolean" && scoreIneligibleRaised;
-      if (!failureRaised && !scoreRaised && !clockRaised) continue;
-      coins[coinId] = { failureRaised, scoreIneligibleRaised: scoreRaised, clockRaised };
-    }
-    return { version: 1, coins };
-  } catch {
-    return { version: 1, coins: {} };
+    // Older state entries predate the score-ineligible rule; absent means not raised.
+    const scoreRaised = typeof scoreIneligibleRaised === "boolean" && scoreIneligibleRaised;
+    if (!failureRaised && !scoreRaised && !clockRaised) continue;
+    coins[coinId] = { failureRaised, scoreIneligibleRaised: scoreRaised, clockRaised };
   }
+  return { version: 1, coins };
 }
 
 interface ReserveAdapterAlertAttemptRow {
@@ -280,7 +279,12 @@ async function loadReserveAdapterAlertAttempts(
     ).bind(...inClause.binds, RESERVE_ALERT_ATTEMPT_SCAN_LIMIT).all<ReserveAdapterAlertAttemptRow>());
     for (const row of rows.results ?? []) {
       if (typeof row.stablecoin_id !== "string" || !Number.isFinite(row.attempted_at)
-        || typeof row.status !== "string") continue;
+        || !ReserveSyncStatusSchema.safeParse(row.status).success
+        || (row.failure_category != null && typeof row.failure_category !== "string")
+        || (row.source_timestamp != null && (!Number.isFinite(row.source_timestamp) || row.source_timestamp <= 0))
+        || (row.freshness_mode != null && !LIVE_RESERVE_FRESHNESS_MODE_VALUES.some((mode) => mode === row.freshness_mode))) {
+        throw new Error("reserve-adapter-alert-attempt-history-unreadable");
+      }
       const attempts = attemptsByCoin.get(row.stablecoin_id) ?? [];
       attempts.push({
         attemptedAt: row.attempted_at,
@@ -293,6 +297,9 @@ async function loadReserveAdapterAlertAttempts(
       });
       attemptsByCoin.set(row.stablecoin_id, attempts);
     }
+  }
+  if (stablecoinIds.some((id) => !attemptsByCoin.has(id))) {
+    throw new Error("reserve-adapter-alert-attempt-history-incomplete");
   }
   return attemptsByCoin;
 }
@@ -462,6 +469,7 @@ export async function runReservePostSyncWatchdog(
     throwIfAborted(signal);
     const configuredIds = SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id);
     reserveSyncById = await loadReserveSyncStateMap(db, configuredIds);
+    if (configuredIds.some((id) => !reserveSyncById.has(id))) degradedReasons.push("reserve-sync-state-missing");
     throwIfAborted(signal);
     syncDegradedCoinCount = configuredIds.filter((id) => {
       const status = reserveSyncById.get(id)?.lastStatus;
@@ -475,6 +483,7 @@ export async function runReservePostSyncWatchdog(
   }
 
   let activeAlertReasons: string[] = [];
+  let hasBlockingAdapterAlert = false;
   let adapterAlert: {
     assessedAt: number;
     failedSources: ReserveAdapterAlertEvaluation["failedSources"];
@@ -498,7 +507,7 @@ export async function runReservePostSyncWatchdog(
       const [attemptsByCoin, acknowledgedCoinIds, scoringEvidence] = await Promise.all([
         loadReserveAdapterAlertAttempts(db, [...reserveSyncById.keys()]),
         resolveAcknowledgedReserveFeedIds(db, reserveSyncById.values(), nowSec),
-        loadPublishedReserveScoringEvidence(db, reserveSyncById, [...reserveSyncById.keys()]),
+        loadPublishedReserveScoringEvidence(db, reserveSyncById, [...reserveSyncById.keys()], nowSec),
       ]);
       throwIfAborted(signal);
       const evaluation = evaluateReserveAdapterAlerts({
@@ -514,6 +523,16 @@ export async function runReservePostSyncWatchdog(
       const activeRuleIds = new Set<ReserveAdapterAlertRuleId>();
       const alertReasons: string[] = [];
       for (const [coinId, state] of Object.entries(evaluation.state.coins)) {
+        // A review removes current alert reasons, never the raw verdict or persisted flags.
+        if (acknowledgedCoinIds.has(coinId)) continue;
+        const latestAttempt = attemptsByCoin.get(coinId)?.[0];
+        const structuralOnly = scoringEvidence.structuralOnlyIds.has(coinId)
+          && latestAttempt?.status === "degraded" && latestAttempt.failureCategory == null
+          && latestAttempt.attemptedAt === reserveSyncById.get(coinId)?.lastAttemptedAt;
+        if (state.failureRaised || state.clockRaised
+          || (state.scoreIneligibleRaised && !structuralOnly)) {
+          hasBlockingAdapterAlert = true;
+        }
         if (state.failureRaised) {
           activeRuleIds.add("reserve-adapter-failure-sustained");
           alertReasons.push(`reserve-adapter-failure-sustained:${coinId}`);
@@ -527,11 +546,11 @@ export async function runReservePostSyncWatchdog(
           alertReasons.push(`reserve-source-clock-stalled:${coinId}`);
         }
       }
-      if (evaluation.scoreIneligibleUnknownSources.length > 0) {
+      if ([...scoringEvidence.unknownIds].some((coinId) => !acknowledgedCoinIds.has(coinId)
+        || reserveSyncById.get(coinId)?.metadata?.failureCategory == null)) {
         degradedReasons.push("reserve-score-ineligible-evidence-unknown");
       }
-      // Reserve findings stay off Telegram (ADR-42), so the active transition
-      // must instead degrade this source's status with a machine-readable reason.
+      // Completed structural observations remain quality findings (ADR-31/42).
       activeAlertReasons = alertReasons;
       for (const ruleId of activeRuleIds) {
         if (!firedRuleIds.includes(ruleId)) firedRuleIds.push(ruleId);
@@ -557,7 +576,7 @@ export async function runReservePostSyncWatchdog(
     recordCronFailure("reserve-post-sync-watchdog", error, { metadata: { stage: "reserve-adapter-alerts" } });
   }
 
-  if (activeAlertReasons.length > 0) degradedReasons.push("reserve-adapter-alert-raised");
+  if (hasBlockingAdapterAlert) degradedReasons.push("reserve-adapter-alert-raised");
   const activeRuleIds = [...new Set(firedRuleIds)];
   // One quality object carries both findings: the per-coin adapter transitions
   // with their machine reason, plus every fired rule id. A rule already named

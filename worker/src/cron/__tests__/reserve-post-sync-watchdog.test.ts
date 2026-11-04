@@ -22,6 +22,10 @@ vi.mock("../../lib/live-reserves/store", () => ({
 vi.mock("../../lib/reserve-feed-reviews", () => ({
   resolveAcknowledgedReserveFeedIds: mocks.acknowledged,
 }));
+vi.mock("../sync-live-reserves-shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../sync-live-reserves-shared")>();
+  return { ...actual, SYNC_ORDERED_CONFIGURED_COINS: actual.SYNC_ORDERED_CONFIGURED_COINS.filter((coin) => coin.id === "iusd-infinifi") };
+});
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(async (_db: D1Database, key: string) =>
     cache.has(key) ? { value: cache.get(key)!, updatedAt: 0 } : null),
@@ -37,6 +41,7 @@ import {
   type ReserveAdapterAlertState,
 } from "../reserve-post-sync-watchdog";
 import { SNAPSHOT_KEYS } from "../telegram/sources/telegram-alert-snapshots";
+import { SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 
 const COIN = "iusd-infinifi";
 const NOW = 1_000_000;
@@ -318,6 +323,7 @@ describe("evaluateReserveAdapterAlerts", () => {
 describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    SYNC_ORDERED_CONFIGURED_COINS.splice(1);
     cache.clear();
     mocks.drift.mockResolvedValue({
       driftCoins: [], fallbackCoins: [], observedIds: [], liveReserveMap: new Map(),
@@ -327,6 +333,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "error" }]]));
     mocks.acknowledged.mockResolvedValue(new Set<string>());
     mocks.scoringEvidence.mockResolvedValue({
+      structuralOnlyIds: new Set<string>(),
       scoreIneligibleIds: new Set<string>(),
       unknownIds: new Set<string>(),
     });
@@ -449,8 +456,6 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect(result.status).toBe("degraded");
     expect(metadata.reason).toBe("reserve-adapter-alert-raised");
     expect(metadata.degradedReasons).toContain("reserve-adapter-alert-raised");
-    // One quality object carries the per-coin transition and the fired rule ids;
-    // the adapter rule is not repeated as a bare id next to its per-coin reason.
     expect(metadata.quality).toEqual({
       reason: "reserve-adapter-alert-raised",
       reasons: ["reserve-adapter-failure-sustained:iusd-infinifi", "reserve-sync-degraded"],
@@ -459,51 +464,61 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
   });
 
   it("keeps an acknowledged adapter failure out of the status cause", async () => {
+    const rows = [historyRow(NOW, "error"), historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error")];
+    await readAlert(rows);
     mocks.acknowledged.mockResolvedValue(new Set([COIN]));
-    const result = await runReservePostSyncWatchdog(historyDb([
-      historyRow(NOW, "error"), historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error"),
-    ]));
+    const result = await runReservePostSyncWatchdog(historyDb(rows));
     const metadata = JSON.parse(result.metadata ?? "{}");
     expect(result.status).toBe("ok");
-    // The acknowledged adapter transition contributes no quality reason; the
-    // independently fired `reserve-sync-degraded` finding still does (union).
     expect(metadata.quality?.reason).toBeUndefined();
     expect(metadata.quality?.reasons).toEqual(["reserve-sync-degraded"]);
     expect(metadata.activeAdapterAlertReasons).toEqual([]);
+    expect(metadata.reserveAdapterAlert.recovered).toEqual([]);
+    mocks.acknowledged.mockResolvedValue(new Set());
+    expect((await readAlert(rows)).activeAdapterAlertReasons).toEqual([`reserve-adapter-failure-sustained:${COIN}`]);
   });
 
-  it("publishes fired findings as operator quality reasons", async () => {
+  it("keeps structural findings as quality and fails closed on mixed/incomplete work", async () => {
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "ok" }]]));
-    const clean = await readAlert([]);
-    expect(clean.firedRuleIds).toEqual([]);
-    expect(clean.quality).toBeUndefined();
-
-    mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded" }]]));
-    mocks.scoringEvidence.mockResolvedValue({
-      scoreIneligibleIds: new Set([COIN]),
-      unknownIds: new Set<string>(),
-    });
-    const failing = await readAlert([
-      historyRow(NOW, "degraded"), historyRow(NOW - 14_400, "degraded"), historyRow(NOW - 28_800, "degraded"),
-    ]);
-    expect(failing.reserveAdapterAlert?.scoreIneligibleSources).toEqual([
-      { stablecoinId: COIN, degradedCycles: 3 },
-    ]);
-    expect(failing.firedRuleIds).toEqual(expect.arrayContaining([
-      "reserve-sync-degraded",
-      "reserve-score-ineligible-sustained",
-    ]));
-    // The active transition is named per coin, so the bare rule id is not repeated.
-    expect(failing.quality?.reasons).toEqual([
-      "reserve-score-ineligible-sustained:iusd-infinifi",
-      "reserve-sync-degraded",
-    ]);
-    expect(failing.activeAdapterAlertReasons).toEqual(["reserve-score-ineligible-sustained:iusd-infinifi"]);
+    expect((await readAlert([])).quality).toBeUndefined();
+    mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded", lastAttemptedAt: NOW }]]));
+    const evidence = { structuralOnlyIds: new Set([COIN]), scoreIneligibleIds: new Set([COIN]), unknownIds: new Set<string>() };
+    mocks.scoringEvidence.mockResolvedValue(evidence);
+    const rows = [NOW, NOW - 14_400, NOW - 28_800].map((at) => historyRow(at, "degraded"));
+    const result = await runReservePostSyncWatchdog(historyDb(rows));
+    expect(result.status).toBe("ok");
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.activeAdapterAlertReasons).toEqual([`reserve-score-ineligible-sustained:${COIN}`]);
+    expect(metadata.reserveAdapterAlert.scoreIneligibleSources).toEqual([{ stablecoinId: COIN, degradedCycles: 3 }]);
+    expect(metadata.quality.reasons).toEqual([`reserve-score-ineligible-sustained:${COIN}`, "reserve-sync-degraded"]);
+    expect((await runReservePostSyncWatchdog(historyDb([]))).status).toBe("degraded");
+    for (const status of ["error", "degraded"]) {
+      mocks.scoringEvidence.mockResolvedValue(status === "degraded" ? { ...evidence, structuralOnlyIds: new Set() } : evidence);
+      expect((await runReservePostSyncWatchdog(historyDb(rows.map((row) => historyRow(row.attempted_at, status))))).status).toBe("degraded");
+    }
+    mocks.scoringEvidence.mockResolvedValue({ ...evidence, unknownIds: new Set([COIN]) });
+    expect((await runReservePostSyncWatchdog(historyDb(rows))).status).toBe("degraded");
+    mocks.scoringEvidence.mockResolvedValue(evidence);
+    const stalled = rows.map((row) => ({ ...row, source_timestamp: 1, freshness_mode: "verified" }));
+    expect((await runReservePostSyncWatchdog(historyDb(stalled))).status).toBe("degraded");
+    mocks.acknowledged.mockResolvedValue(new Set([COIN]));
+    const acknowledged = await readAlert(stalled);
+    expect(acknowledged.activeAdapterAlertReasons).toEqual([]);
+    expect(acknowledged.reserveAdapterAlert?.recovered).toEqual([]);
+    mocks.acknowledged.mockResolvedValue(new Set());
+    SYNC_ORDERED_CONFIGURED_COINS.push({ ...SYNC_ORDERED_CONFIGURED_COINS[0], id: "missing-feed" });
+    expect((await runReservePostSyncWatchdog(historyDb(rows))).status).toBe("degraded");
+    SYNC_ORDERED_CONFIGURED_COINS.pop();
+    expect((await runReservePostSyncWatchdog(historyDb([{ ...rows[0], failure_category: 4 }]))).status).toBe("degraded");
+    cache.set("reserve-post-sync-watchdog:adapter-alerts:v1", "{not-json");
+    expect((await runReservePostSyncWatchdog(historyDb(rows))).status).toBe("degraded");
   });
+
 
   it("does not charge a degraded attempt that wrote no snapshot as a degraded success", async () => {
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded" }]]));
     mocks.scoringEvidence.mockResolvedValue({
+      structuralOnlyIds: new Set<string>(),
       scoreIneligibleIds: new Set([COIN]),
       unknownIds: new Set<string>(),
     });
@@ -519,6 +534,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
   it("holds a raised score-ineligible alert when the published snapshot becomes unreadable", async () => {
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded" }]]));
     mocks.scoringEvidence.mockResolvedValue({
+      structuralOnlyIds: new Set<string>(),
       scoreIneligibleIds: new Set([COIN]),
       unknownIds: new Set<string>(),
     });
@@ -528,6 +544,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect(raised.reserveAdapterAlert?.raised).toEqual(["reserve-score-ineligible-sustained"]);
 
     mocks.scoringEvidence.mockResolvedValue({
+      structuralOnlyIds: new Set<string>(),
       scoreIneligibleIds: new Set<string>(),
       unknownIds: new Set([COIN]),
     });

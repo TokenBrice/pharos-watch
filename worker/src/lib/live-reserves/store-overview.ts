@@ -1,6 +1,7 @@
 import { emptyReserveCompositionOverview, ReserveContinuationExecutionStatusSchema } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
+import { LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES } from "@shared/lib/live-reserve-reliability";
 import { percentileNearestRank } from "@shared/lib/stats";
 import { WORKER_TRACKED_META_BY_ID, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./store-shared";
@@ -430,6 +431,8 @@ export async function computeReserveCompositionOverview(
 export interface PublishedReserveScoringEvidence {
   /** Published snapshot warnings the coin's scoring policy does not excuse. */
   scoreIneligibleIds: Set<string>;
+  /** Current, readable snapshots whose only admission rejection is structural warnings. */
+  structuralOnlyIds: Set<string>;
   /** A configured independent adapter publishes no decodable, consistent snapshot. */
   unknownIds: Set<string>;
 }
@@ -444,11 +447,13 @@ export async function loadPublishedReserveScoringEvidence(
   db: D1Database,
   syncById: ReadonlyMap<string, ReserveSyncStateRecord>,
   stablecoinIds: readonly string[],
+  now = Math.floor(Date.now() / 1000),
 ): Promise<PublishedReserveScoringEvidence> {
   const scopedIds = new Set(stablecoinIds);
   const compositionById = await loadReserveCompositionRowMap(db, [...scopedIds]);
   const evidence: PublishedReserveScoringEvidence = {
     scoreIneligibleIds: new Set(),
+    structuralOnlyIds: new Set(),
     unknownIds: new Set(),
   };
   for (const coin of getConfiguredLiveReserveCoins()) {
@@ -470,6 +475,17 @@ export async function loadPublishedReserveScoringEvidence(
     }
     if (selectScoringDegradedWarnings(record.warnings, config).length > 0) {
       evidence.scoreIneligibleIds.add(coin.id);
+      const admission = evaluateLiveReserveAdmission(record, syncState, coin, now);
+      const structuralCodes: readonly string[] = LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES;
+      if (syncState?.lastStatus === "degraded" && syncState.lastAttemptedAt === syncState.lastSuccessAt
+        && syncState.lastError == null && syncState.metadata.failureCategory == null
+        && !hasUncertainWriteState(syncState) && !syncState.warningIntegrityIssue
+        && syncState.warningCount === syncState.warnings.length
+        && admission.reasons.length === 1 && admission.reasons[0] === "degraded-snapshot"
+        && [...record.warnings, ...syncState.warnings].every((warning) =>
+          warning.effect === "info" || (warning.effect === "degraded" && structuralCodes.includes(warning.code)))) {
+        evidence.structuralOnlyIds.add(coin.id);
+      }
     }
   }
   return evidence;
