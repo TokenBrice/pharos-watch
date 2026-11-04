@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEvent, logWorkerEventArgs } from "../lib/structured-log";
 import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-publication";
-import { safetyScorePublicationIdentitiesShareScoringContract } from "@shared/lib/safety-score-publication";
+import { safetyScorePublicationIdentitiesAreComparable, safetyScorePublicationIdentitiesShareScoringContract } from "@shared/lib/safety-score-publication";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { isYieldSafetyFallbackWithinWindow, YIELD_SAFETY_STALE_COHERENT_MAX_AGE_SEC } from "@shared/lib/yield-safety-fallback";
 import {
@@ -904,9 +904,11 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
           const previous = await readYieldCoinCohort(db, id, null, fallbackNow);
           const previousSafetyIdentity = previous?.provenance?.liveSafetyHydration?.safetyScoreIdentity;
           if (active.kind === "v9"
+            && selected.rankings.some(row => row.id === id)
+            && previous?.yieldMethodologyVersion === YIELD_METHODOLOGY_VERSION
             && isYieldSafetyFallbackWithinWindow(fallbackNow, active.snapshot.updatedAt, fallbackNow)
             && previousSafetyIdentity != null
-            && safetyScorePublicationIdentitiesShareScoringContract(previousSafetyIdentity, active.snapshot.safetyScoreIdentity)
+            && safetyScorePublicationIdentitiesAreComparable(previousSafetyIdentity, active.snapshot.safetyScoreIdentity)
             && (!previous?.rankings.some(row => row.safetyScore != null)
               || active.snapshot.cards.some(card => card.id === id && card.ratingStatus !== "pipeline-gap"
                 && card.score != null && card.grade !== "NR"))) {
@@ -978,6 +980,7 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
           const hydrated = hydrateYieldPayload(ageYieldRankings(full, cached.updatedAt), cached, active);
           const aggregate = YieldCoinCohortSchema.parse({
             ...hydrated.payload,
+            yieldMethodologyVersion: YIELD_METHODOLOGY_VERSION,
             signature, assessedAt: now, validUntil: yieldCohortValidUntil(full, cached.updatedAt, now, active),
             totalCount: full.rankings.length, degradationReasons: hydrated.degradationReasons,
           });

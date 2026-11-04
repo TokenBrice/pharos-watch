@@ -21,6 +21,7 @@ import { projectYieldRankingsSummary } from "@shared/lib/yield-rankings-summary"
 import * as abort from "../../lib/abort";
 import * as dbCache from "../../lib/db-cache";
 import * as cohortCache from "../../lib/yield-rankings-coin-cache";
+import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 
 const NOW = Date.parse("2026-04-23T12:00:00Z") / 1000;
 const COHORT_CACHE_KEY = "yield-rankings:coin-cohort:v2";
@@ -404,7 +405,7 @@ describe("rankings score-index hydration", () => {
     expect(prepare.mock.calls.filter(([sql]) => sql.includes("json_extract(value, '$.signature') = ?"))).toHaveLength(4);
   });
 
-  it.each(["yield", "safety", "index-missing", "held", "scoring-contract", "expired-safety", "pipeline-gap", "unrated"])("admits previous assessments against current Safety while a new %s signature builds", async changed => {
+  it.each(["yield", "safety", "index-missing", "held", "scoring-contract", "expired-safety", "pipeline-gap", "unrated", "omitted", "methodology", "unversioned", "safety-build"])("admits previous assessments against current evidence while a new %s signature builds", async changed => {
     const { db, sqlite, input } = await fixture();
     sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.rankings[0].provenance.sourceObservedAt', NULL,
       '$.rankings[0].provenance.sourceAgeSeconds', 120) WHERE key = 'yield-rankings'`).run();
@@ -413,10 +414,14 @@ describe("rankings score-index hydration", () => {
     const previous = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url())).json());
     const published = readPublishedCohort(sqlite)!;
     vi.setSystemTime((NOW + 20) * 1000);
-    if (changed === "yield") {
+    if (["yield", "omitted", "methodology", "unversioned"].includes(changed)) {
       sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.publication.generationId', 'next-yield',
         '$.updatedAt', ?, '$.publication.updatedAt', ?, '$.publication.cutoffAt', ?, '$.rankings[0].currentApy', 99),
         updated_at = ? WHERE key = 'yield-rankings'`).run(NOW + 20, NOW + 20, NOW + 20, NOW + 20);
+      if (changed === "omitted") sqlite.prepare("UPDATE cache SET value = json_remove(value, '$.rankings[0]') WHERE key = 'yield-rankings'").run();
+      if (["methodology", "unversioned"].includes(changed)) sqlite.prepare(`UPDATE cache SET value =
+        json_set(json_patch(value, ?), '$.rankings[0].rankChangeAttribution', json('{"previousRank":2}')) WHERE key = ?`)
+        .run(JSON.stringify({ yieldMethodologyVersion: changed === "methodology" ? "8.53" : null }), COHORT_CACHE_KEY);
     } else if (changed === "index-missing") {
       sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
     } else if (changed === "held") {
@@ -432,7 +437,8 @@ describe("rankings score-index hydration", () => {
       vi.spyOn(scoreIndex, "loadActiveSafetyScoreIndex").mockResolvedValue({ ...active, snapshot: { ...active.snapshot,
         updatedAt: changed === "expired-safety" ? NOW - 86401 : NOW + 20,
         safetyScoreIdentity: { ...active.snapshot.safetyScoreIdentity, publicationGenerationId: "next-safety",
-          ...(changed === "scoring-contract" ? { methodologyVersion: "999.0" } : {}) },
+          ...(changed === "scoring-contract" ? { methodologyVersion: "999.0" } : {}),
+          ...(changed === "safety-build" ? { evaluationBuildDigest: "f".repeat(64) } : {}) },
         cards: active.snapshot.cards.map(card => changed === "pipeline-gap"
           ? { ...card, score: null, grade: null, ratingStatus: "pipeline-gap" as const }
           : changed === "unrated" ? { ...card, score: null, grade: "NR" as const } : { ...card, score: 20, grade: "D" }),
@@ -462,7 +468,9 @@ describe("rankings score-index hydration", () => {
       const next = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url())).json());
       expect(next.rankings).toEqual(full.rankings.filter(row => row.id === "usdc-circle"));
       expect(next.provenance).toEqual(full.provenance);
-      expect(next.provenance?.liveSafetyHydration?.reason).toContain(changed === "index-missing" ? "safety-score-index-missing"
+      if (changed === "omitted") expect(next.projection.unavailableReason).toBe("row-not-published");
+      else if (["methodology", "unversioned", "safety-build"].includes(changed)) expect(next.rankings[0]).not.toHaveProperty("rankChangeAttribution");
+      else expect(next.provenance?.liveSafetyHydration?.reason).toContain(changed === "index-missing" ? "safety-score-index-missing"
         : changed === "held" ? "v9-publication-held" : changed === "expired-safety" ? "safety-publication-clock-out-of-budget"
         : changed === "scoring-contract" ? "safety-identity-mismatch" : "low-row-safety-coverage");
       if (["index-missing", "pipeline-gap", "unrated"].includes(changed)) expect(next.rankings[0].safetyScore).toBeNull();
@@ -485,6 +493,7 @@ describe("rankings score-index hydration", () => {
     expect(next.status).toBe(200);
     expect(next.headers.get("Warning") ?? "").not.toContain("Yield cohort rebuilding");
     expect(readPublishedCohort(sqlite)!.signature).not.toBe(published.signature);
+    expect(YieldCoinCohortSchema.parse(readPublishedCohort(sqlite)).yieldMethodologyVersion).toBe(YIELD_METHODOLOGY_VERSION);
   });
 
   it("fences stale owners from publication and release without destroying the complete assessment", async () => {
