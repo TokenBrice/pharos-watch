@@ -38,8 +38,8 @@ const SYMBOLS: Record<string, string> = { [USDC]: "USDC", [USDT]: "USDT", [WETH]
 
 type Responder = (label: string, target: string, options?: EvmRpcOptions) => `0x${string}` | null;
 
-function mockBase(respond: Responder) {
-  vi.mocked(fetchEvmBlockNumber).mockImplementation(async (chain) => (chain === "base" ? 100 : null));
+function mockBase(respond: Responder, selectedChain = "base") {
+  vi.mocked(fetchEvmBlockNumber).mockImplementation(async (chain) => (chain === selectedChain ? 100 : null));
   vi.mocked(fetchEvmBlockHeader).mockResolvedValue({ number: 100, hash: "0xabc", timestamp: 1 } as never);
   vi.mocked(fetchEvmMulticall3Aggregate3AtBlock).mockImplementation(async (_chain, calls, _block, options) => calls.map((call) => {
     const returnData = call.label.endsWith("-symbol")
@@ -63,16 +63,19 @@ describe("aeroBaseFeeBps", () => {
 });
 
 describe("fetchAeroSlipstreamPools", () => {
-  it("enumerates the CL factory, keeps tracked pools and buckets by the tick-spacing base fee", async () => {
+  it.each([
+    ["base", CL_FACTORY],
+    ["ink", "0x7660bf2adefc687c22906112ca323d60a00358cf"],
+  ])("enumerates the %s CL factory, keeps tracked pools and buckets by the tick-spacing base fee", async (chain, factory) => {
     const pools = [CL_POOL, CL_UNTRACKED];
     mockBase((label, target, options) => {
-      if (label.startsWith("count-")) return uint(target === CL_FACTORY ? 2 : 0);
-      if (target === CL_FACTORY && label.startsWith(`${CL_FACTORY}-`)) return address(pools[Number(label.split("-").pop())]!);
+      if (label.startsWith("count-")) return uint(target === factory ? 2 : 0);
+      if (target === factory && label.startsWith(`${factory}-`)) return address(pools[Number(label.split("-").pop())]!);
       if (label === `${CL_POOL}-token0`) return address(USDC);
       if (label === `${CL_POOL}-token1`) return address(USDT);
       if (label === `${CL_UNTRACKED}-token0`) return address(WETH);
       if (label === `${CL_UNTRACKED}-token1`) return address(OTHER);
-      if (label === "cl-0-factory") return address(CL_FACTORY);
+      if (label === "cl-0-factory") return address(factory);
       if (label === "cl-0-token0") return address(USDC);
       if (label === "cl-0-token1") return address(USDT);
       if (label === "cl-0-tickSpacing") return encode("int24", [1]);
@@ -85,14 +88,20 @@ describe("fetchAeroSlipstreamPools", () => {
       // different (300bp) tier from the lagging backend.
       if (label === "fee-1") return encode("uint24", [options?.stateBlockHash === "0xabc" ? 100 : 30_000]);
       return null;
-    });
+    }, chain);
 
-    const result = await fetchAeroSlipstreamPools({ chainAddressToId, trackedStablecoinPrices });
+    const result = await fetchAeroSlipstreamPools({
+      chainAddressToId: new Map([
+        [buildChainAddressKey(chain, USDC), "usdc-circle"],
+        [buildChainAddressKey(chain, USDT), "usdt-tether"],
+      ]),
+      trackedStablecoinPrices,
+    });
 
     expect(result.pools).toHaveLength(1);
     expect(result.pools[0]).toMatchObject({
       source: "aero-slipstream",
-      chain: "base",
+      chain,
       poolAddress: CL_POOL,
       poolType: "aero-slipstream-1bp",
       feeRate: 0.0001,
@@ -111,7 +120,7 @@ describe("fetchAeroSlipstreamPools", () => {
     // Chains without a block are reported per chain, not hidden behind ok.
     expect(result.ok).toBe(true);
     expect(result.degraded).toBe(true);
-    expect(result.errors).toEqual(AERO_CHAINS.filter((chain) => chain !== "base").map((chain) => `${chain}:block-unavailable`));
+    expect(result.errors).toEqual(AERO_CHAINS.filter((other) => other !== chain).map((other) => `${other}:block-unavailable`));
   });
 
   it("reads only the oldest bounded pools of an oversized factory and names the degradation", async () => {

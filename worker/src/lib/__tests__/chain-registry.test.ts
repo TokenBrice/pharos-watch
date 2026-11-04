@@ -96,12 +96,24 @@ describe("buildChainRpcs", () => {
           // Pharos deliberately has keyless state-only supplemental readers;
           // non-Dwellir supplemental endpoints are no longer all Alchemy.
           expect(endpoint).toMatchObject({
-            operator: config.chainId === "pharos" ? "public" : "alchemy",
-            stateHistory: "archive", logsHistory: "none",
+            operator: ["pharos", "ink"].includes(config.chainId) ? "public" : "alchemy",
+            stateHistory: config.chainId === "ink" ? "unknown" : "archive", logsHistory: "none",
           });
         }
       }
     }
+  });
+
+  it.each(KEY_COMBINATIONS)("keeps Ink public state reads outside archive/log inventory ($label)", ({ alchemyApiKey, drpcApiKey }) => {
+    const ink = buildChainRpcs(alchemyApiKey, drpcApiKey).get("ink")!;
+    expect(supplementalRpcEndpoints(ink)).toEqual([
+      "https://rpc-gel.inkonchain.com", "https://rpc-qnd.inkonchain.com",
+    ].map(url => ({
+      url, operator: "public", keyed: false, position: "supplemental",
+      stateHistory: "unknown", logsHistory: "none", verifiedAt: "2026-11-04",
+    })));
+    expect(hasRegistryRpc(ink)).toBe(Boolean(alchemyApiKey));
+    expect(logScanRpcEndpoints(ink).map(endpoint => endpoint.operator)).toEqual(alchemyApiKey ? ["alchemy"] : []);
   });
 
   it("keeps Pharos public state readers available without credentials and outside log inventories", () => {
