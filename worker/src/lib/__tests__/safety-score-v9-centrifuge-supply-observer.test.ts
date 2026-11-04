@@ -1,5 +1,5 @@
 import "../../test-helpers/reviewed-deployment-catalog.test-support";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import type { ReviewedDeploymentSupplyObservation } from "@shared/types/safety-score-v9-supply-attribution";
@@ -35,6 +35,7 @@ const RAW_BY_CHAIN: Record<string, bigint> = {
   bsc: 4_837_361_464_973_825_379_103n,
   plume: 32_320_262_971_888_335_278_993_277n,
   monad: 9_837_361_464_973_825_379_103_908n,
+  pharos: 3_419_937_985_239n,
 };
 
 const BLOCK_BY_CHAIN: Record<string, number> = {
@@ -45,6 +46,7 @@ const BLOCK_BY_CHAIN: Record<string, number> = {
   bsc: 52_000_000,
   plume: 83_072_568,
   monad: 89_944_923,
+  pharos: 22_124_698,
 };
 
 const TIME_BY_CHAIN: Record<string, number> = {
@@ -55,6 +57,7 @@ const TIME_BY_CHAIN: Record<string, number> = {
   bsc: CLOCK_SEC - 10,
   plume: CLOCK_SEC - 7,
   monad: CLOCK_SEC - 4,
+  pharos: CLOCK_SEC - 5,
 };
 
 const EVM_CHAINS = [
@@ -65,6 +68,7 @@ const EVM_CHAINS = [
   "bsc",
   "plume",
   "monad",
+  "pharos",
 ] as const;
 
 function uint256(value: bigint): `0x${string}` {
@@ -187,7 +191,14 @@ async function observe(deps = dependencies()) {
 }
 
 describe("Centrifuge reviewed deployment observer", () => {
-  it.each(["0", "1", null])("admits an unreviewed Solana route only at observed zero within the historical pinned inventory (%s)", async (rawSupply) => {
+  const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
+  const historical = metaById.get(ASSET_ID)!;
+  beforeEach(() => metaById.set(ASSET_ID, {
+    ...historical, contracts: currentJtrsyCoin.contracts, bridgeRouteRisk: structuredClone(currentJtrsyRisk.bridgeRouteRisk),
+  } as unknown as StablecoinMeta));
+  afterEach(() => metaById.set(ASSET_ID, historical));
+
+  it.each(["0", "1", null])("admits an unreviewed Solana route only at observed zero within the current inventory (%s)", async (rawSupply) => {
     const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
     const reviewed = metaById.get(ASSET_ID)!;
     metaById.set(ASSET_ID, { ...reviewed, bridgeRouteRisk: { ...reviewed.bridgeRouteRisk!,
@@ -207,46 +218,23 @@ describe("Centrifuge reviewed deployment observer", () => {
       metaById.set(ASSET_ID, reviewed);
     }
   });
-  it("withholds the complete current JTRSY inventory pending Pharos identity review", async () => {
-    const historical = await observe();
-    expect(historical).not.toBeNull();
-    const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
-    const reviewed = metaById.get(ASSET_ID)!;
-    metaById.set(ASSET_ID, {
-      ...reviewed,
-      contracts: currentJtrsyCoin.contracts,
-      bridgeRouteRisk: currentJtrsyRisk.bridgeRouteRisk,
-    } as unknown as StablecoinMeta);
-    try {
-      const inventory = buildReviewedDeploymentRouteInventory(ASSET_ID)!;
-      const pharos = "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040";
-      expect(inventory.routes).toHaveLength(currentJtrsyCoin.contracts.length);
-      expect(inventory.routes.map(route => route.routeId)).toContain(pharos);
-      expect(expectedCentrifugeDeploymentIdentity(ASSET_ID, pharos)).toBeNull();
-      expect(expectedCentrifugeDeploymentIdentity(ASSET_ID, "pharos:missing")).toBeUndefined();
-      expect(reviewedDeploymentAttributionValidationError({ assetId: ASSET_ID,
-        attribution: { ...historical!, routeInventoryDigest: inventory.digest },
-        aggregateSupplyUsd: AGGREGATE_SUPPLY_USD, registryFingerprint: REGISTRY_FINGERPRINT, clockSec: CLOCK_SEC,
-      })).toBe(`reviewed deployment identity unavailable for ${ASSET_ID}:${pharos}`);
-      const deps = dependencies();
-      const attempt = await observeAttempt(deps);
-      expect(attempt).toEqual({
-        status: "rejected",
-        rejectionCode: "deployment-identity-authored-withholding",
-        failedRouteId: pharos,
-      });
-      expect(deps.fetchEvmBlockNumber.mock.calls.map(([chainId]) => chainId)).not.toContain("pharos");
-      for (const observation of [null, { ...solanaObservation(), mintAuthority: "wrong-authority" }]) {
-        deps.fetchSolanaObservation.mockResolvedValue(observation);
-        expect(await observeAttempt(deps)).toEqual({
-          status: "rejected", rejectionCode: observation === null
-            ? "deployment-state-unavailable" : "deployment-identity-mismatch",
-          failedRouteId: routeForChain("solana").routeId,
-        });
-      }
-    } finally {
-      metaById.set(ASSET_ID, reviewed);
-    }
+  it("accepts the current JTRSY packet with positive Pharos supply on its reviewed provider route", async () => {
+    const pharos = routeForChain("pharos");
+    const review = ACTIVE_META_BY_ID.get(ASSET_ID)!.bridgeRouteRisk!.routes!.find(row => row.id === pharos.routeId)!;
+    expect(review).toMatchObject({
+      reviewDisposition: "reviewed", semantics: "burn-mint", issuanceModel: "bridge-representation",
+      routeClass: "third-party", providerKeys: ["layerzero", "chainlink-ccip"], controllerChain: "pharos",
+    });
+    expect(review.rail).toBeUndefined();
+    const attempt = await observeAttempt();
+    expect(attempt.status).toBe("accepted");
+    if (attempt.status !== "accepted") throw new Error("Expected complete JTRSY attribution");
+    expect(attempt.attribution.deployments.find(row => row.chainId === "pharos"))
+      .toMatchObject({ rawSupply: RAW_BY_CHAIN.pharos!.toString() });
+    expect(reviewedDeploymentAttributionValidationError({
+      assetId: ASSET_ID, attribution: attempt.attribution, aggregateSupplyUsd: AGGREGATE_SUPPLY_USD,
+      registryFingerprint: REGISTRY_FINGERPRINT, clockSec: CLOCK_SEC,
+    })).toBeNull();
   });
 
   it("finishes finalized Solana first and rewinds newer EVM pins into its actual clock window", async () => {
@@ -282,7 +270,7 @@ describe("Centrifuge reviewed deployment observer", () => {
     const attribution = await observe(deps);
 
     expect(attribution).not.toBeNull();
-    expect(attribution!.deployments).toHaveLength(8);
+    expect(attribution!.deployments).toHaveLength(currentJtrsyCoin.contracts.length);
     expect(
       attribution!.deployments.reduce(
         (sum, row) => sum + row.currentSupplyUsd,

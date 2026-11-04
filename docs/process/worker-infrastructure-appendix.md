@@ -1003,7 +1003,7 @@ The 2026-10-05T23:26Z two-target diagnostic rerun reproduced failures on the fir
 
 Single EVM RPC outcomes preserve data, observed execution revert and unavailable evidence. Direct Multicall fallback tolerates only observed optional reverts, never exhausted provider or admission failures; numbered/hash selectors and the closing-header fence remain unchanged. Byte, uint and aggregate decoding reject malformed output before endpoint selection completes, allowing the next eligible provider within the existing admission, credit and deadline policy.
 
-Reviewed deployment supply observers require EIP-1898 `{ blockHash, requireCanonical: true }` for state reads on every chain except Pharos mainnet (1672). Its explicit allowlist entry permits `0x`-hex block-number selectors for `eth_call`, `eth_getCode` and `eth_getStorageAt` at head minus at least 15 blocks, with further rewind allowed for scoring-clock/Solana alignment. After selecting the pin, reread its numbered header immediately before the state batch and again after all state reads; both must match the expected number, hash and timestamp. Missing or changed headers reject as `deployment-pin-header-mismatch`; insufficient lag rejects as `deployment-pin-lag-violation`. No packet survives either failure. Other chains never retry unsupported hash reads with numbered/latest state. The Pharos path retains aggregate3 and fails closed if it is unavailable; it enables no direct-call fallback. JTRSY's Pharos identity remains explicitly withheld; this capability activates no deployment or RPC inventory. Identity pins do not certify unresolved route semantics or admit positive supply on an unreviewed route.
+Reviewed deployment supply observers require EIP-1898 `{ blockHash, requireCanonical: true }` for state reads on every chain except Pharos mainnet (1672). Its explicit allowlist entry permits `0x`-hex block-number selectors for `eth_call`, `eth_getCode` and `eth_getStorageAt` at head minus at least 15 blocks, with further rewind allowed for scoring-clock/Solana alignment. After selecting the pin, reread its numbered header immediately before the state batch and again after all state reads; both must match the expected number, hash and timestamp. Missing or changed headers reject as `deployment-pin-header-mismatch`; insufficient lag rejects as `deployment-pin-lag-violation`. No packet survives either failure. Other chains never retry unsupported hash reads with numbered/latest state. The Pharos path retains aggregate3 and fails closed if it is unavailable; it enables no direct-call fallback. JTRSY's reviewed Pharos deployment uses the observer-local `SUPPLY_ATTRIBUTION_RPC_URLS.pharos` endpoint; the shared RPC registry and other supply readers are unchanged. Identity pins do not certify unresolved route semantics or admit positive supply on an unreviewed route.
 
 
 Timestamp-only reads reuse strict numbered-header admission, without adding a default freshness floor. Batched timestamp reads validate one complete `{number, hash, timestamp}` per requested block before projecting cache entries; duplicate IDs invalidate their member, out-of-range IDs are ignored, and malformed/missing members use the existing bounded retries. Expected log hashes still gate admission; a later timestamp cannot inherit an earlier response's hash.
@@ -1016,9 +1016,9 @@ Parity token-state freshness requires a same-head hash match or adjacent-head pa
 
 Capped inclusive Etherscan log ranges split sequentially; exhausted request budgets return incomplete `budget-exhausted` results and recursion beyond depth 8 returns `max-recursion-depth`. A capped singleton returns `etherscan-result-cap-unsplittable`, including when its parent spans two adjacent blocks.
 
-### Pending JTRSY Pharos identity evidence
+### JTRSY Pharos identity evidence
 
-These observations are retained evidence, not an admitted deployment identity or route review. `CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES` deliberately keeps the Pharos entry `null`, so the observer returns `deployment-identity-authored-withholding` and the producer retains its non-blocking diagnostic treatment. The bracketed-read capability alone must not change that disposition.
+These original runtime observations retain their original pin and clock. The later route review below supplements them with the exact Spoke/pool/share-class binding; it does not redate these reads. The runtime identity is admitted only when each new capture matches its reviewed code and Spoke ward under the Pharos pinning rules.
 
 | Pinned fact | Observation |
 | --- | --- |
@@ -1034,10 +1034,127 @@ These observations are retained evidence, not an admitted deployment identity or
 | Implementation slot | EIP-1967 implementation storage word was zero |
 | Header bracket | Number, hash and timestamp matched before and after the hexadecimal-number state reads |
 
-The [deployment registry](https://docs.centrifuge.io/developer/protocol/deployments/) lists the exact Pharos JTRSY address. The [share bridge guide](https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/) documents generic EVM burn/mint transfers through Spoke; the [release-pinned Spoke source](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/spoke/Spoke.sol) resolves transfers through its configured pool/share-class token binding. These documents and token ward reads do not authenticate that deployed Pharos Spoke runtime or its exact pool/share-class and hub binding. A further pinned controller read was unavailable in the implementation sandbox (DNS resolution failed); it was not recorded as an observed absence.
+### JTRSY Pharos route review 20261104
 
-Activation requires a primary-evidence-backed review of the existing Pharos `bridgeRouteRisk.routes[]` row in `shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json`: establish the deployed Spoke/token/pool/share-class and canonical hub relationship, then author the supported `reviewDisposition`, `issuanceModel`, `semantics`, `routeClass` and `scope`. Retain unresolved adapter, authority, cap and incident claims separately; those control-scope reviews are not the route-model gate. Do not copy another chain's controller/runtime or claim a quorum or incident clearance from `wards(Spoke)=1`. Only after that route review may the verified runtime identity and reviewed RPC be activated and complete same-generation attribution be tested.
+Review `jtrsy-pharos-route-20261104` admits the exact Pharos route as `bridge-representation` / `burn-mint`, `third-party`, `external-validated-network`, `peripheral`, with the Ethereum hub and Pharos Spoke bound by the lead-supplied block 22133080 reads. This supports complete deployment-unit attribution with positive Pharos supply under the existing freshness, inventory and conservation gates. `jtrsy-pharos-runtime-admission-20261104` adopts the separately pinned runtime identity above; future captures still reread it.
 
+The [deployment registry](https://docs.centrifuge.io/developer/protocol/deployments/) identifies the two observed addresses as the **LayerZero Adapter** and **Chainlink Adapter**. The [pinned Chainlink adapter](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/adapters/ChainlinkAdapter.sol) identifies CCIP. Following the ACRDX Monad route precedent, omit `rail: "issuer-operated"` and author `providerKeys: ["layerzero", "chainlink-ccip"]`: Centrifuge owns protocol messaging contracts, while third-party transports verify the cross-chain messages. This schema's issuer-operated exception means the issuer is the provider, not merely that the issuer authorizes minting.
+
+The [pinned Spoke](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/spoke/Spoke.sol) burns source shares and mints destination shares through the exact mapped token. [HubHandler](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/hub/HubHandler.sol) increases target-chain issuance and decreases origin-chain issuance by the same amount before forwarding the transfer. This is the existing Centrifuge protocol-burn/mint accounting family, not a lock/mint claim backed by duplicated escrow balances, a new circulation override or proof of settled in-flight transfers.
+
+`quorum(1,poolId)=2` and the adapter enumeration prove two configured adapters. The [pinned MultiAdapter](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/messaging/MultiAdapter.sol) uses a separate `threshold` value to admit messages; **2-of-2 confirmation is not established by the supplied reads**. Threshold, recovery index, detailed transport security configuration, signer independence, cap authority and incident state remain unresolved. Provider reviews, issuer-surface review and the matching screening certificate are required for incident clearance, not for this supply-partition admission. No negative incident review or provider clearance is authored here, and no sibling review date is renewed.
+
+The route schema retains inline source links rather than incident-review IDs. These new review IDs and content-addressed observation records provide immutable provenance without introducing another runtime schema. IDs are `source:` plus the first 24 hex characters of SHA-256 over recursively key-sorted compact JSON of `value`. A changed observation must receive a new ID; preserve existing cited values. Exact clocks omitted by the lead stay null rather than being reconstructed from the block height.
+
+```json
+{
+  "reviewIds": [
+    "jtrsy-pharos-route-20261104",
+    "jtrsy-pharos-runtime-admission-20261104"
+  ],
+  "assetId": "jtrsy-anemoy",
+  "routeId": "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040",
+  "reviewDate": "2026-11-04",
+  "reviewer": "Codex route review using lead-supplied pinned RPC results and retrieved primary source",
+  "sourceRefs": [
+    "source:baa2cb8d0e6ee8d8cc92b5e6",
+    "source:3df61c28982ee3dce6edf6b3",
+    "source:11403f1b15fc3d9a25e82a6b"
+  ],
+  "sourceObservations": [
+    {
+      "id": "source:baa2cb8d0e6ee8d8cc92b5e6",
+      "value": {
+        "kind": "onchain-runtime-observation",
+        "url": "https://rpc.pharos.xyz",
+        "observedAt": "2026-11-04T20:29:46.061999+00:00",
+        "head": 22124698,
+        "block": {
+          "number": 22124683,
+          "hash": "0x82e135d6fdc7411cb8038c5eefbee37a3a3885d3023a1d3d3d0b93e1fa65d757",
+          "timestamp": 1793824170
+        },
+        "closingBlock": {
+          "number": 22124683,
+          "hash": "0x82e135d6fdc7411cb8038c5eefbee37a3a3885d3023a1d3d3d0b93e1fa65d757",
+          "timestamp": 1793824170
+        },
+        "token": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "runtimeCodeSha256": "a0dcca3d830ffd0f877005e7018f67f691629ab600bb65809818057c0a76b3a6",
+        "rawSupply": "3419937985239",
+        "decimals": 6,
+        "spokeWard": "1",
+        "implementationStorageWord": "0x0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    {
+      "id": "source:3df61c28982ee3dce6edf6b3",
+      "value": {
+        "kind": "lead-supplied-onchain-observation",
+        "url": "https://rpc.pharos.xyz",
+        "observationDate": "2026-11-04",
+        "observedAt": null,
+        "blockTimeSec": null,
+        "chainId": 1672,
+        "blockNumber": 22133080,
+        "blockSelector": "0x151b958",
+        "blockHash": "0x6e2fb16cbc6eb5fb1a58737eaaef3678a1623491b298e3018aae4f3d46ced03a",
+        "headerBracketMatched": true,
+        "provenance": "Decoded read-only RPC results supplied by the lead in this task; exact observation clock and block timestamp were not supplied. Not independently refetched by this sandbox.",
+        "spoke": {
+          "address": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+          "shareTokenDetails": {
+            "token": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+            "poolId": "0x0001000000000006",
+            "shareClassId": "0x00010000000000060000000000000001"
+          },
+          "reverseShareToken": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+          "gateway": "0x19a524d03aa94ecee41a80341537bcfcb47d3172",
+          "sender": "0xf837a22883e004f705e0d7e1dee08e295df30b27",
+          "poolEscrowFactory": "0x5187a505c485e22f0b8a5fbdf69ef1c29c478ce3",
+          "hubCall": "reverted; no exposed getter"
+        },
+        "gatewayAdapter": "0x35c837f0a54b715a23d193e1476bfc9bc30073be",
+        "multiAdapter": {
+          "localCentrifugeId": 12,
+          "remoteCentrifugeId": 1,
+          "poolId": "0x0001000000000006",
+          "quorum": 2,
+          "adapters": [
+            "0xd517bc7ba17271a8d87be7355b2523bf5c750295",
+            "0x39cf679eb0ac9075cfb5f94930a367ba1557d955"
+          ],
+          "adapterIndex2": "reverted",
+          "threshold": null,
+          "recoveryIndex": null,
+          "globalPoolSameAdaptersAndQuorum": true
+        }
+      }
+    },
+    {
+      "id": "source:11403f1b15fc3d9a25e82a6b",
+      "value": {
+        "kind": "primary-document-and-source-review",
+        "accessDate": "2026-11-04",
+        "releaseCommit": "6b9d36eabee48728486f377ea2766a5cd233c555",
+        "deploymentUrl": "https://docs.centrifuge.io/developer/protocol/deployments/",
+        "providerAddressBindings": {
+          "0xd517bc7ba17271a8d87be7355b2523bf5c750295": "layerzero",
+          "0x39cf679eb0ac9075cfb5f94930a367ba1557d955": "chainlink-ccip"
+        },
+        "sourceLocations": {
+          "Spoke.sol": "src/core/spoke/Spoke.sol: crosschainTransferShares, executeTransferShares, shareTokenDetails, shareToken",
+          "HubHandler.sol": "src/core/hub/HubHandler.sol: initiateTransferShares moves the same amount from origin issuance to target issuance",
+          "PoolId.sol": "src/core/types/PoolId.sol: centrifugeId = poolId >> 48",
+          "MultiAdapter.sol": "src/core/messaging/MultiAdapter.sol: quorum is adapter count; threshold is a separate getter and admission field",
+          "ChainlinkAdapter.sol": "src/adapters/ChainlinkAdapter.sol: Chainlink CCIP routing adapter"
+        },
+        "assertion": "The supplied exact pool/token binding supports the documented burn/mint accounting family. Provider identities are LayerZero and Chainlink CCIP; no confirmation threshold, signer independence or incident clearance is inferred."
+      }
+    }
+  ]
+}
+```
 
 ## Event-entry recovery details
 

@@ -78,11 +78,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "855c8b0ecd7bc1a9162770d57141485f21ccabdbdab495392b9a4fa4fe9c15ac"
+      "sha256": "fe43f93e6582e347ebadc8aedf60567a9e334efe8ea73d025e58b4354818efec"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "b1e825a4b15563b63ce8919b4c8c9cecaefd4fe342a6db3a40de71ffd8274812"
+      "sha256": "5b0c0e0bd1465ae655b663dfd85ead596f922e14d3bea00c78f28ab1696f5632"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
@@ -110,7 +110,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chain-rpc-registry.ts",
-      "sha256": "c3c903c782f507b95f338f7ca4f10c6c5c54a5c991947aee1afc3876e814b94a"
+      "sha256": "3ebdb398fbf03ef559999eda0f382996ed32d40fcecbb8549c434c8dfd5b7e9f"
     },
     {
       "path": "shared/lib/circuit-sources.ts",
@@ -1326,7 +1326,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-contract.ts",
-      "sha256": "a3189b050d2bb3fda8491d9edf31e70878a13890813f40d39376adc42ee20a47"
+      "sha256": "553f3ba60bd49c4ec09e8a09e6f8bb4ad3a926a58b011e98b5c214c7e9a2fa1c"
     },
     {
       "path": "worker/src/lib/safety-score-v9/supply-attribution-diagnostics.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-04-block-26341087-shock-coverage.json.gz"
     }
   ],
-  "digest": "ee1174c1a6f22b0d22f84d967cce1cae72aa0e300000da5e4e8ea8d91fae984a"
+  "digest": "b8e07ddf3e03ba54acf60319493f100abb38928d2502f146870d974215cd0200"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

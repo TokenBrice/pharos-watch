@@ -140,4 +140,5 @@ export const SUPPLY_RPC_DEFAULTS = {
 export const SUPPLY_ATTRIBUTION_RPC_URLS = {
   plume: [PUBLIC_RPC_URLS.plume],
   monad: [PUBLIC_RPC_URLS.monad, "https://rpc1.monad.xyz"],
+  pharos: ["https://rpc.pharos.xyz"],
 } as const;

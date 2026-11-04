@@ -289,8 +289,16 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
       safeBlockLag: 10,
       extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.monad,
     },
-    // Keep diagnostic withholding until the route is reviewed; verified pins remain pending in the Worker infrastructure appendix.
-    "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040": null,
+    // Runtime pin 22124683; pool/share-class and transport binding pin 22133080 (jtrsy-pharos-route-20261104).
+    "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "a0dcca3d830ffd0f877005e7018f67f691629ab600bb65809818057c0a76b3a6",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: PHAROS_REVIEWED_DEPLOYMENT_MIN_BLOCK_LAG,
+      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.pharos,
+    },
     "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj": {
       runtime: "solana",
       liabilityModel: "protocol-burn-mint",
