@@ -397,7 +397,7 @@
     "ussd-sonic-labs": "cash-equivalent",
     "frnt-wyoming": "core-stablecoin",
     "usdpt-western-union": "core-stablecoin",
-    "roughrider-bnd": "core-stablecoin",
+    "roughrider-bnd": "excluded",
     "fiusd-fiserv": "core-stablecoin",
     "eur-qivalis": "core-stablecoin",
     "pusd-polaris": "core-stablecoin",

@@ -3,13 +3,13 @@
   "name": "Roughrider Coin",
   "symbol": "ROUGHRIDER",
   "brand": "Bank of North Dakota",
-  "oneLiner": "Roughrider is the pre-launch Bank of North Dakota / Fiserv bank-to-bank pilot stablecoin, planned 1:1 USD-backed by deposits and short U.S. Treasury notes.",
+  "oneLiner": "Roughrider is VersaBank USA's permissioned dollar token deposit for North Dakota interbank settlement, delisted by Pharos as outside listing scope.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Planned Bank of North Dakota / Fiserv reserve backing with deposits and U.S. Treasury notes with maturities no longer than 93 days, maintained 1:1 with the stablecoin during the bank-to-bank beta",
-  "pegMechanism": "Pre-launch bank-to-bank payment stablecoin pilot: BND and Fiserv plan a 1:1 USD-denominated token for North Dakota financial institutions, with public access and production contract details still unavailable",
+  "collateral": "Bank of North Dakota describes one-to-one U.S. dollar backing through participating institutions' FBO (for benefit of) VersaBank custody accounts and an FBO VersaBank concentration account held at BND.",
+  "pegMechanism": "Permissioned Solana Token-2022 interbank token issued by VersaBank USA with freeze and clawback controls. Minting follows confirmed fiat funding of a designated FBO account; tokens burn automatically on arrival in the receiving institution's wallet, keeping standing balances low by design. Public and merchant access is unavailable.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
@@ -29,7 +29,15 @@
   "jurisdiction": {
     "country": "United States"
   },
-  "status": "pre-launch",
+  "status": "delisted",
+  "listingStatusReview": {
+    "changedAt": "2026-11-04",
+    "reason": "Out of scope: BND describes a permissioned interbank token deposit issued by VersaBank USA. Minting against a designated FBO account and automatic burning on receipt keep standing supply near zero by design, leaving no positive circulating-supply path for admission.",
+    "source": {
+      "label": "Bank of North Dakota Roughrider architecture and mint/burn mechanics",
+      "url": "https://bnd.nd.gov/roughrider/"
+    }
+  },
   "announcedDate": "2025-10",
   "expectedLaunchDate": "2026",
   "dateHistory": [
