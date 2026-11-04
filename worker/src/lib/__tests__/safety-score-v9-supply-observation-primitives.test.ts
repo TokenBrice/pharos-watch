@@ -24,6 +24,12 @@ import {
   findEvmBlockHeaderInTimestampWindow,
 } from "../safety-score-v9/supply-observation-primitives";
 
+function solanaConfig(url: string) {
+  return new Map<string, ChainRpcConfig>([["solana", {
+    chainId: "solana", chainName: "Solana", type: "other", explorerUrl: "https://solscan.io",
+    endpoints: [{ url, operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" }],
+  }]]);
+}
 
 
 describe("Safety Score V9 supply observation primitives", () => {
@@ -46,23 +52,16 @@ describe("Safety Score V9 supply observation primitives", () => {
     expect(observeSolana).not.toHaveBeenCalled();
   });
 
-  it("stops at the first in-window hash-bearing header", async () => {
-    const initialHeader = { number: 1000, timestamp: 2000, hash: `0x${"a".repeat(64)}` as const };
-    const fetchHeader = vi.fn(async (number: number) => ({ ...initialHeader, number, timestamp: 2000 - (1000 - number) * 12 }));
-    const result = await findEvmBlockHeaderInTimestampWindow({
-      initialHeader, earliestTimestamp: 1800, latestTimestamp: 1920, fetchHeader,
-    });
-    expect(result).toEqual({ ...initialHeader, number: 992, timestamp: 1904 });
-    expect(fetchHeader.mock.calls.map(([number]) => number)).toEqual([999, 998, 996, 992]);
-  });
-
-  it("refines an overshot window without selecting an older or newer pin", async () => {
+  it.each([
+    ["stops at the first in-window hash-bearing header", 1800, 1920, 992, 1904, [999, 998, 996, 992]],
+    ["refines an overshot window without selecting an older or newer pin", 1930, 1940, 995, 1940, [999, 998, 996, 992, 994, 995]],
+  ] as const)("%s", async (_title, earliestTimestamp, latestTimestamp, number, timestamp, lookups) => {
     const initialHeader = { number: 1000, timestamp: 2000, hash: `0x${"a".repeat(64)}` as const };
     const fetchHeader = vi.fn(async (number: number) => ({ ...initialHeader, number, timestamp: 2000 - (1000 - number) * 12 }));
     expect(await findEvmBlockHeaderInTimestampWindow({
-      initialHeader, earliestTimestamp: 1930, latestTimestamp: 1940, fetchHeader,
-    })).toEqual({ ...initialHeader, number: 995, timestamp: 1940 });
-    expect(fetchHeader.mock.calls.map(([number]) => number)).toEqual([999, 998, 996, 992, 994, 995]);
+      initialHeader, earliestTimestamp, latestTimestamp, fetchHeader,
+    })).toEqual({ ...initialHeader, number, timestamp });
+    expect(fetchHeader.mock.calls.map(([number]) => number)).toEqual(lookups);
   });
 
   it.each(["missing", "wrong number", "nonmonotonic", "no block in window"] as const)(
@@ -104,26 +103,29 @@ describe("Safety Score V9 supply observation primitives", () => {
     expect(decodeEvmHexBytes("0x0")).toBeNull();
   });
 
-  it("preserves ordered Solana RPC failover without retrying one endpoint", async () => {
+  it.each([
+    ["preserves ordered Solana RPC failover without retrying one endpoint", 1, false,
+      ["https://api.mainnet-beta.solana.com", "https://api.mainnet.solana.com"]],
+    ["retries a single Solana endpoint once before rotating to the next endpoint", 1, true,
+      ["https://api.mainnet-beta.solana.com", "https://api.mainnet-beta.solana.com"]],
+    ["falls through to the independent Pocket Network Solana endpoint", 2, false,
+      ["https://api.mainnet-beta.solana.com", "https://api.mainnet.solana.com", "https://solana.api.pocket.network"]],
+  ] as const)("%s", async (_title, failures, retry, urls) => {
+    // Drive backoff locally so shared-process RPC retries cannot enter this mock.
+    vi.useFakeTimers();
     const fetchMock = mockFetch([{
-      match: () => true,
+      match: retry ? "api.mainnet-beta.solana.com" : () => true,
       outcomes: [
-        { body: { error: { code: -32000, message: "unavailable" } } },
+        ...Array.from({ length: failures }, () => retry ? new Error("network flake")
+          : { body: { error: { code: -32000, message: "unavailable" } } }),
         { body: { result: { slot: 42 } } },
       ],
     }]);
-
-    await expect(
-      fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
-        "getSlot",
-        [{ commitment: "finalized" }],
-      ),
-    ).resolves.toEqual({ slot: 42 });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://api.mainnet-beta.solana.com",
-      "https://api.mainnet.solana.com",
-    ]);
+    const pending = fetchSafetyScoreV9SolanaRpc<{ slot: number }>("getSlot", [{ commitment: "finalized" }]);
+    await vi.runAllTimersAsync();
+    await expect(pending).resolves.toEqual({ slot: 42 });
+    expect(fetchMock).toHaveBeenCalledTimes(urls.length);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(urls);
     expect(
       JSON.parse(fetchMock.mock.calls[0]![1]!.body as string),
     ).toEqual({
@@ -140,23 +142,7 @@ describe("Safety Score V9 supply observation primitives", () => {
       match: configuredUrl,
       outcomes: [{ body: { result: { slot: 42 } } }],
     }]);
-    const configured = new Map<string, ChainRpcConfig>([[
-      "solana",
-      {
-        chainId: "solana",
-        chainName: "Solana",
-        type: "other",
-        endpoints: [{
-          url: configuredUrl,
-          operator: "public",
-          keyed: false,
-          position: "registry",
-          stateHistory: "archive",
-          logsHistory: "full",
-        }],
-        explorerUrl: "https://solscan.io",
-      } satisfies ChainRpcConfig,
-    ]]);
+    const configured = solanaConfig(configuredUrl);
 
     await expect(
       fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
@@ -179,23 +165,7 @@ describe("Safety Score V9 supply observation primitives", () => {
       match: configuredUrl,
       outcomes: [{ body: { result: {} } }],
     }]);
-    const configured = new Map<string, ChainRpcConfig>([[
-      "solana",
-      {
-        chainId: "solana",
-        chainName: "Solana",
-        type: "other",
-        endpoints: [{
-          url: configuredUrl,
-          operator: "public",
-          keyed: false,
-          position: "registry",
-          stateHistory: "archive",
-          logsHistory: "full",
-        }],
-        explorerUrl: "https://solscan.io",
-      } satisfies ChainRpcConfig,
-    ]]);
+    const configured = solanaConfig(configuredUrl);
 
     await expect(fetchReviewedDeploymentSolanaObservation({
       routeId: "solana:mint",
@@ -211,53 +181,6 @@ describe("Safety Score V9 supply observation primitives", () => {
     })).resolves.toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]![0]).toBe(configuredUrl);
-  });
-
-  it("retries a single Solana endpoint once before rotating to the next endpoint", async () => {
-    // Drive backoff locally so shared-process RPC retries cannot enter this mock.
-    vi.useFakeTimers();
-    const fetchMock = mockFetch([{
-      match: "api.mainnet-beta.solana.com",
-      outcomes: [
-        new Error("network flake"),
-        { body: { result: { slot: 42 } } },
-      ],
-    }]);
-
-    const pending = fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
-      "getSlot",
-      [{ commitment: "finalized" }],
-    );
-    await vi.runAllTimersAsync();
-    await expect(pending).resolves.toEqual({ slot: 42 });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://api.mainnet-beta.solana.com",
-      "https://api.mainnet-beta.solana.com",
-    ]);
-  });
-
-  it("falls through to the independent Pocket Network Solana endpoint", async () => {
-    const fetchMock = mockFetch([{
-      match: () => true,
-      outcomes: [
-        { body: { error: { code: -32000, message: "unavailable" } } },
-        { body: { error: { code: -32000, message: "unavailable" } } },
-        { body: { result: { slot: 42 } } },
-      ],
-    }]);
-
-    await expect(
-      fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
-        "getSlot",
-        [{ commitment: "finalized" }],
-      ),
-    ).resolves.toEqual({ slot: 42 });
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://api.mainnet-beta.solana.com",
-      "https://api.mainnet.solana.com",
-      "https://solana.api.pocket.network",
-    ]);
   });
 
   it.each(["supplemental", "registry", "unadmitted"] as const)("rejects a Dwellir-only %s config without reviewed extras", async position => {

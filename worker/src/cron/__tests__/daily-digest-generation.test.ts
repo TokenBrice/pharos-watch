@@ -37,7 +37,7 @@ import { runTelegramDigestDeliveryWithPermit } from "../digest/telegram-transpor
 import { recordOutcomeSafe, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import { DEPEG_LIFECYCLE_FLAGS_CACHE_KEY } from "../../lib/depeg-lifecycle";
 import { ANTHROPIC_OK_TEXT, getInsertDigestBinds, makeDailyDigestScenario, makeRefusalResponse, makeStreamResponse, styleGateModeTables, VALID_CAPTURE_MAP_SUMMARY, VALID_DAILY_EXTENDED, withClauseDash, type DailyDigestScenario } from "./daily-digest.test-support";
-import { publishedGaugePayload, publishedGaugeTable } from "./daily-digest.test-support";
+import { makeResumeDigestDb, publishedGaugePayload, publishedGaugeTable } from "./daily-digest.test-support";
 
 const supplyMemberFingerprint = createHash("sha256")
   .update('["core-stablecoins-v1",["usdc-circle","usdt-tether"]]').digest("hex");
@@ -324,67 +324,24 @@ describe("generateDailyDigest publication contract", () => {
     vi.mocked(postDigestTweet).mockRejectedValueOnce(new Error("twitter down")); vi.mocked(deliverTelegramDigestEdition).mockRejectedValueOnce(new Error("telegram down")); const social = await invoke(); expect(social).toMatchObject({ itemCount: 1, status: "degraded" }); expect(getInsertDigestBinds(scenario.db as MockD1Database)).toBeDefined();
   });
 
-  it("retains the pending depeg lifecycle queue when the active-depeg read fails", async () => {
+  it.each([
+    ["active-depeg read fails", "active-depegs-query", "usx-dforce", "USX"],
+    ["stablecoins cache is stale", "stablecoins-cache-stale", "usdt-tether", "USDT"],
+    ["open USD event has no current reference", "active-depeg-reference-unavailable", "usdt-tether", "USDT"],
+  ])("retains the pending depeg lifecycle queue when the %s", async (_case, reason, stablecoinId, symbol) => {
     const nowSec = Math.floor(Date.now() / 1000);
     const { sqlite, db } = createLatestSchemaSqlite({
       onAll: (sql) => {
-        if (sql.includes("FROM depeg_events e LEFT JOIN depeg_event_provenance")) throw new Error("D1 read failed");
+        if (reason === "active-depegs-query" && sql.includes("FROM depeg_events e LEFT JOIN depeg_event_provenance")) {
+          throw new Error("D1 read failed");
+        }
       },
     });
     try {
-      // A prior digest run flagged a stalled collapse; the owner has not
-      // reviewed it yet. This is the row the runbook reads.
       const priorUpdatedAt = nowSec - 86_400;
-      const priorFlags = [{
-        stablecoinId: "usx-dforce", symbol: "USX", kind: "stalled-collapse",
-        currentBps: -6_200, ageDays: 27, mcapUsd: 12_000_000,
-      }];
+      const priorFlags = [{ stablecoinId, symbol, kind: "stalled-collapse", currentBps: -6_200, ageDays: 27, mcapUsd: 12_000_000 }];
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
-        DEPEG_LIFECYCLE_FLAGS_CACHE_KEY,
-        JSON.stringify({ updatedAt: priorUpdatedAt, flags: priorFlags }),
-        priorUpdatedAt,
-      );
-
-      const components = JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 });
-      const todayTs = nowSec - (nowSec % 86_400);
-      sqlite.prepare(
-        "INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)",
-      ).run(nowSec - 600, 91.2, "BEDROCK", components, "{}");
-      sqlite.prepare(
-        "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)",
-      ).run(todayTs, 89.5, "STEADY", components, "{}");
-
-      const result = await generateDailyDigest(db, "anthropic-key", null, false, null);
-      // The collector failure is non-fatal, so the run still publishes.
-      expect(result.itemCount).toBe(1);
-      expect(result.metadata).toContain("active-depegs-query");
-
-      const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-        .get(DEPEG_LIFECYCLE_FLAGS_CACHE_KEY) as { value: string; updated_at: number } | undefined;
-      expect(row).toBeDefined();
-      const persisted = JSON.parse(String(row!.value)) as { updatedAt?: number; flags?: unknown };
-      // R2: an unreadable active-depeg set may not be restated as a fresh
-      // "nothing is pending" observation.
-      expect(persisted).toEqual({ updatedAt: priorUpdatedAt, flags: priorFlags });
-      expect(row!.updated_at).toBe(priorUpdatedAt);
-    } finally {
-      sqlite.close();
-    }
-  });
-
-  it("retains the pending depeg lifecycle queue when the stablecoins cache is stale", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const priorUpdatedAt = nowSec - 86_400;
-      const priorFlags = [{
-        stablecoinId: "usdt-tether", symbol: "USDT", kind: "stalled-collapse",
-        currentBps: -6_200, ageDays: 27, mcapUsd: 12_000_000,
-      }];
-      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
-        DEPEG_LIFECYCLE_FLAGS_CACHE_KEY,
-        JSON.stringify({ updatedAt: priorUpdatedAt, flags: priorFlags }),
-        priorUpdatedAt,
+        DEPEG_LIFECYCLE_FLAGS_CACHE_KEY, JSON.stringify({ updatedAt: priorUpdatedAt, flags: priorFlags }), priorUpdatedAt,
       );
       const components = JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 });
       const todayTs = nowSec - (nowSec % 86_400);
@@ -394,78 +351,34 @@ describe("generateDailyDigest publication contract", () => {
       sqlite.prepare(
         "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)",
       ).run(todayTs, 89.5, "STEADY", components, "{}");
-      // A missed quarter-hourly sync: the cached price is outside the 600 s
-      // public budget, so no open event has a live deviation.
-      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-        ...scenario.sourcePayload,
-        updatedAt: nowSec - 3_600,
-      } as typeof scenario.sourcePayload);
-
+      if (reason === "stablecoins-cache-stale") {
+        vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+          ...scenario.sourcePayload, updatedAt: nowSec - 3_600,
+        } as typeof scenario.sourcePayload);
+      } else if (reason === "active-depeg-reference-unavailable") {
+        sqlite.prepare(`INSERT INTO depeg_events
+          (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
+          VALUES (201, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -150, ?, 0.998, 0.998, 1, 'live')`)
+          .run(nowSec - 3 * 86_400);
+        const source = scenario.sourcePayload as Extract<typeof scenario.sourcePayload, { kind: "ok" }>;
+        vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
+          ...source, payload: { ...source.payload, peggedAssets: source.payload.peggedAssets.map((asset) =>
+            asset.id === "usdt-tether" ? { ...asset, price: null } : asset) },
+        });
+      }
       const result = await generateDailyDigest(db, "anthropic-key", null, false, null);
       expect(result.itemCount).toBe(1);
-      expect(result.metadata).toContain("stablecoins-cache-stale");
-
+      if (reason === "active-depeg-reference-unavailable") {
+        const stored = sqlite.prepare("SELECT input_data FROM daily_digest ORDER BY generated_at DESC LIMIT 1")
+          .get() as { input_data: string } | undefined;
+        expect((JSON.parse(String(stored!.input_data)) as { degradedSources?: string[] }).degradedSources).toContain(reason);
+      } else {
+        expect(result.metadata).toContain(reason);
+      }
       const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
         .get(DEPEG_LIFECYCLE_FLAGS_CACHE_KEY) as { value: string; updated_at: number } | undefined;
       expect(row).toBeDefined();
-      expect(JSON.parse(String(row!.value))).toEqual({ updatedAt: priorUpdatedAt, flags: priorFlags });
-      expect(row!.updated_at).toBe(priorUpdatedAt);
-    } finally {
-      sqlite.close();
-    }
-  });
-
-  it("retains the pending depeg lifecycle queue when an open USD event has no current reference", async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    const { sqlite, db } = createLatestSchemaSqlite();
-    try {
-      const priorUpdatedAt = nowSec - 86_400;
-      const priorFlags = [{
-        stablecoinId: "usdt-tether", symbol: "USDT", kind: "stalled-collapse",
-        currentBps: -6_200, ageDays: 27, mcapUsd: 12_000_000,
-      }];
-      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
-        DEPEG_LIFECYCLE_FLAGS_CACHE_KEY,
-        JSON.stringify({ updatedAt: priorUpdatedAt, flags: priorFlags }),
-        priorUpdatedAt,
-      );
-      const components = JSON.stringify({ severity: 2, breadth: 1, trend: 0, stressBreadth: 0 });
-      const todayTs = nowSec - (nowSec % 86_400);
-      sqlite.prepare(
-        "INSERT INTO stability_index_samples (stored_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)",
-      ).run(nowSec - 600, 91.2, "BEDROCK", components, "{}");
-      sqlite.prepare(
-        "INSERT INTO stability_index (computed_at, score, band, components, input_snapshot) VALUES (?, ?, ?, ?, ?)",
-      ).run(todayTs, 89.5, "STEADY", components, "{}");
-      sqlite.prepare(`INSERT INTO depeg_events
-        (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peak_price, peg_reference, source)
-        VALUES (201, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -150, ?, 0.998, 0.998, 1, 'live')`)
-        .run(nowSec - 3 * 86_400);
-      // A fresh cache whose USDT quote is unusable cannot witness a current
-      // reference: the open event keeps its mcap but has no live deviation.
-      const source = scenario.sourcePayload as Extract<typeof scenario.sourcePayload, { kind: "ok" }>;
-      vi.mocked(loadStablecoinsCache).mockResolvedValueOnce({
-        ...source,
-        payload: {
-          ...source.payload,
-          peggedAssets: source.payload.peggedAssets.map((asset) =>
-            asset.id === "usdt-tether" ? { ...asset, price: null } : asset,
-          ),
-        },
-      });
-
-      const result = await generateDailyDigest(db, "anthropic-key", null, false, null);
-      expect(result.itemCount).toBe(1);
-      const stored = sqlite.prepare("SELECT input_data FROM daily_digest ORDER BY generated_at DESC LIMIT 1")
-        .get() as { input_data: string } | undefined;
-      expect((JSON.parse(String(stored!.input_data)) as { degradedSources?: string[] }).degradedSources)
-        .toContain("active-depeg-reference-unavailable");
-
-      const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
-        .get(DEPEG_LIFECYCLE_FLAGS_CACHE_KEY) as { value: string; updated_at: number } | undefined;
-      expect(row).toBeDefined();
-      // R2: a run that cannot measure the open event may not restate the queue
-      // as a fresh "nothing is pending" observation.
+      // R2: an unreadable cohort must not renew or clear the pending queue.
       expect(JSON.parse(String(row!.value))).toEqual({ updatedAt: priorUpdatedAt, flags: priorFlags });
       expect(row!.updated_at).toBe(priorUpdatedAt);
     } finally {
@@ -531,20 +444,18 @@ describe("delivery boundaries and resume", () => {
   });
 
   it("resumes a retryable X ledger and leaves the sent Telegram edition alone", async () => {
-    const db = mockD1([
-      { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: {
-        generated_at: 1_772_798_400, digest_text: "Stored digest body.", digest_title: "Stored Title",
-        digest_extended: "Stored extended body.", digest_meta: JSON.stringify({ leadSignalId: "depeg:usdt-tether:active", lead: "depeg", coins: ["USDT"] }),
-        input_data: JSON.stringify({ totalMcapUsd: 100e9 }),
-      } },
-      { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+    const db = makeResumeDigestDb([
       { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: { state: "sent" } },
       { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: { value: JSON.stringify({
         schemaVersion: 1, state: "failed", attempts: 1, createdAt: 1, updatedAt: 1,
       }) } },
       { match: "INSERT OR IGNORE INTO cache", rows: [] },
       { match: "UPDATE cache SET value = ?", rows: [] },
-    ]);
+    ], {
+      generated_at: 1_772_798_400, digest_text: "Stored digest body.", digest_title: "Stored Title",
+      digest_extended: "Stored extended body.", digest_meta: JSON.stringify({ leadSignalId: "depeg:usdt-tether:active", lead: "depeg", coins: ["USDT"] }),
+      input_data: JSON.stringify({ totalMcapUsd: 100e9 }),
+    });
     const resumed = await resumeDailyDigestDelivery(db, CREDS, TG, validMap());
     expect(resumed).toEqual({ kind: "resumed", tweetStatus: "ok", telegramStatus: "outbox-sent", deliveryComplete: true });
     expect(postDigestTweet).toHaveBeenCalledWith("Stored Title", "Stored digest body.", expect.any(Object), 187, expect.any(String), null, expect.any(Object));
@@ -556,14 +467,12 @@ describe("delivery boundaries and resume", () => {
 
   it.each(["pending", "sending", "sent", "execution_unknown", "failed_permanent"])(
     "never regenerates an existing daily %s payload when the map changes", async (state) => {
-      const db = mockD1([
-        { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: {
-          generated_at: 1_772_798_400, digest_text: "Stored copy.", digest_title: "Stored", digest_extended: "Stored extended.",
-          input_data: JSON.stringify({ safetyContext: { status: "available" }, safetyMap: { manifest: { date: "2026-03-05" } } }),
-        } },
-        { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+      const db = makeResumeDigestDb([
         { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: { state } },
-      ]);
+      ], {
+        generated_at: 1_772_798_400, digest_text: "Stored copy.", digest_title: "Stored", digest_extended: "Stored extended.",
+        input_data: JSON.stringify({ safetyContext: { status: "available" }, safetyMap: { manifest: { date: "2026-03-05" } } }),
+      });
       const result = await resumeDailyDigestDelivery(db, null, TG, validMap());
       expect(result).toMatchObject({ telegramStatus: `outbox-${state}`, deliveryComplete: state === "sent" });
       expect(prepareTelegramDigestAppendices).not.toHaveBeenCalled();
@@ -574,11 +483,7 @@ describe("delivery boundaries and resume", () => {
 
   it.each([null, JSON.stringify({ schemaVersion: 1, state: "execution_unknown", attempts: 1, createdAt: 1, updatedAt: 1 })])(
     "refuses daily X resume without known retryable ledger evidence (%s)", async (value) => {
-      const db = mockD1([
-        { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: {
-          generated_at: 1_772_798_400, digest_text: "Stored copy.", digest_title: "Stored", digest_extended: "Stored extended.",
-        } },
-        { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+      const db = makeResumeDigestDb([
         { match: "SELECT value FROM cache WHERE key = ?", rows: [], first: value == null ? null : { value } },
       ]);
       expect(await resumeDailyDigestDelivery(db, CREDS, null, null)).toMatchObject({
@@ -614,11 +519,7 @@ describe("delivery boundaries and resume", () => {
   });
 
   it("preserves resume appendix failures and missing-credential diagnostics", async () => {
-    const db = mockD1([
-      { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: {
-        generated_at: 1_772_798_400, digest_text: "Stored copy.", digest_title: "Stored", digest_extended: "Stored extended.",
-      } },
-      { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+    const db = makeResumeDigestDb([
       { match: "SELECT state FROM telegram_digest_outbox", rows: [], first: null },
     ]);
     vi.mocked(prepareTelegramDigestAppendices).mockRejectedValueOnce(new Error("appendix store down"));
