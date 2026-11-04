@@ -1,0 +1,18 @@
+[
+  {
+    "date": "2026-10-08",
+    "kind": "governance",
+    "label": "Polkadot activates dotUSD and its Asset Hub liquidity pool",
+    "severity": "med",
+    "href": "https://pcf.network/news/dotusd-approved/",
+    "note": "The Polkadot Community Foundation reported that referendum 1944 took effect on October 8, creating dotUSD and its initial Asset Hub pool. Initial minting and redemption use USDT; DOT-collateral vaults were a later phase."
+  },
+  {
+    "date": "2026-10-30",
+    "kind": "governance",
+    "label": "Referendum 1961 repairs dotUSD recorded supply",
+    "severity": "med",
+    "href": "https://polkadot.subsquare.io/referenda/1961",
+    "note": "Referendum 1961 executed on October 30, recalculating recorded dotUSD issuance from balances after the XCM accounting discrepancy and restoring the previous Snowbridge weights. The repair did not change holders' token balances."
+  }
+]

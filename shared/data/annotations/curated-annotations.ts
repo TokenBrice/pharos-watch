@@ -173,6 +173,13 @@ import source156 from "./coins/rusd-royal-dollar.json";
 import source157 from "./coins/stkgho-umbrella-aave.json";
 import source158 from "./coins/usdfc-secured-finance.json";
 import source159 from "./coins/vndc-jade-labs.json";
+import source160 from "./coins/eurr-revolut.json";
+import source161 from "./coins/ousd-open-standard.json";
+import source162 from "./coins/roughrider-bnd.json";
+import source163 from "./coins/dotusd-polkadot.json";
+import source164 from "./coins/jpydf-deltaforesight.json";
+import source165 from "./coins/ustx-tx.json";
+import source166 from "./coins/swanusd-swan.json";
 
 type CuratedAnnotationSource = Readonly<Record<string, unknown>>;
 type CuratedAnnotationSourceAsset = readonly CuratedAnnotationSource[];
@@ -337,6 +344,13 @@ const CURATED_SOURCES: Readonly<Record<string, CuratedAnnotationSourceAsset>> = 
   "stkgho-umbrella-aave": source157,
   "usdfc-secured-finance": source158,
   "vndc-jade-labs": source159,
+  "eurr-revolut": source160,
+  "ousd-open-standard": source161,
+  "roughrider-bnd": source162,
+  "dotusd-polkadot": source163,
+  "jpydf-deltaforesight": source164,
+  "ustx-tx": source165,
+  "swanusd-swan": source166,
 };
 
 const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);
