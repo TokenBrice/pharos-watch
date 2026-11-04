@@ -4,7 +4,7 @@ import { CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS, onchainSupplyProbeFamily, s
 
 describe("NAV native supply rosters", () => {
   for (const meta of TRACKED_META_BY_ID.values()) {
-    if (!meta.id.endsWith("-spiko") && meta.id !== "safo-spiko-usd" && meta.id !== "usdy-ondo-finance") continue;
+    if (!meta.id.endsWith("-spiko") && meta.id !== "safo-spiko-usd" && meta.id !== "usdy-ondo-finance" && meta.id !== "ousg-ondo-finance") continue;
     it(`requires every reviewed ${meta.symbol} leg or exact IBC representation accounting`, () => {
       const selected = selectCuratedAggregateOnchainSupplyProbeContracts(meta)!;
       const excluded = CURATED_AGGREGATE_EXCLUDED_REPRESENTATIONS[meta.id] ?? [];

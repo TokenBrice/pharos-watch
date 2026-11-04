@@ -8,6 +8,8 @@ import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
 import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/onchain-supply-exclusions";
 import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
+import { fetchXrplSupply } from "../xrpl-supply";
+import xrplFixture from "./fixtures/ousg-xrpl.json";
 
 const DWELLIR_TEST_KEY = "supply-rpc-test-key";
 const ROBINHOOD_DWELLIR = "https://api-robinhood-mainnet-archive.n.dwellir.com";
@@ -32,6 +34,7 @@ function keyedChainRpcs(): Map<string, ChainRpcConfig> {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("supplemental on-chain supply RPC routing", () => {
@@ -190,5 +193,185 @@ describe("supplemental on-chain supply RPC routing", () => {
         mcap: 375,
         chainCirculating: { HyperEVM: { current: 375, chainId: "hyperevm" } },
       });
+  });
+});
+
+describe("XRPL issued-currency supply", () => {
+  const meta = TRACKED_META_BY_ID.get("ousg-ondo-finance")!;
+  const contract = meta.contracts!.find(entry => entry.chain === "xrpl")!;
+  const currency = contract.address.split(".")[0];
+  const observedAt = Date.parse(xrplFixture.ledgerClosedAt) / 1000;
+  const read = (signal = new AbortController().signal) => fetchXrplSupply(
+    contract.address, signal, xrplFixture.source, xrplFixture.source, xrplFixture.hotwallet,
+  );
+  const fixtureFetcher = (gateway: unknown = xrplFixture.gateway, ledger: unknown = xrplFixture.ledger) =>
+    vi.fn(async (_url: string, init?: RequestInit) =>
+      Response.json(JSON.parse(String(init?.body)).method === "ledger" ? ledger : gateway));
+  const setClock = (age = 10) => { vi.useFakeTimers(); vi.setSystemTime((observedAt + age) * 1000); };
+
+  it("reads captured obligations without a fixed scale and pins the validated close clock", async () => {
+    setClock();
+    const fetchMock = fixtureFetcher(); vi.stubGlobal("fetch", fetchMock);
+    expect(await read()).toEqual({ supply: 1584220.172977231, observedAt });
+    expect(fetchMock.mock.calls.map(([url, init]) => [url, JSON.parse(String(init?.body))])).toEqual([
+      [xrplFixture.source, { method: "gateway_balances", params: [{
+        account: xrplFixture.gateway.result.account, strict: true, ledger_index: "validated", hotwallet: xrplFixture.hotwallet,
+      }] }],
+      [xrplFixture.source, { method: "ledger", params: [{
+        ledger_hash: xrplFixture.gateway.result.ledger_hash, transactions: false, expand: false,
+      }] }],
+    ]);
+    const single = { ...meta, id: "xrpl-supply-fixture", contracts: [contract] };
+    expect(await fetchOnChainMcap(single, 117.14)).toMatchObject({
+      mcap: 1584220.172977231 * 117.14, observedAt, chain: "xrpl",
+      chainCirculating: { "XRP Ledger": { current: 1584220.172977231 * 117.14, chainId: "xrpl" } },
+    });
+  });
+
+  it("preserves explicit zero, scientific notation and both freshness boundaries", async () => {
+    for (const value of ["0", "1584220172977231e-9"]) {
+      for (const age of [600, -60, 601, -61]) {
+        setClock(age);
+        const gateway = structuredClone(xrplFixture.gateway);
+        gateway.result.obligations = { ...gateway.result.obligations, [currency]: value };
+        vi.stubGlobal("fetch", fixtureFetcher(gateway));
+        if (age === 601 || age === -61) await expect(read()).rejects.toThrow("xrpl-ledger-stale-or-future");
+        else expect(await read()).toEqual({ supply: Number(value), observedAt });
+      }
+    }
+  });
+
+  it("sums the full OUSG perimeter and partitions an admitted cap only after every leg succeeds", async () => {
+    setClock();
+    let xrplAvailable = true;
+    const fetchMock = vi.fn(async (_url: string, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body));
+      if (request.method === "gateway_balances") return Response.json(xrplAvailable
+        ? xrplFixture.gateway : { result: { status: "error", error: "actNotFound" } });
+      if (request.method === "ledger") return Response.json(xrplFixture.ledger);
+      if (request.method === "getTokenSupply") return Response.json({ jsonrpc: "2.0", id: 1,
+        result: { context: { slot: 465436215 }, value: { amount: "0", decimals: 6, uiAmount: 0 } },
+      });
+      const raw = request.params[0].to.toLowerCase() === meta.contracts!.find(entry => entry.chain === "ethereum")!.address
+        ? 1121340573244524372905069n : 0n;
+      return Response.json({ jsonrpc: "2.0", id: 1, result: `0x${raw.toString(16).padStart(64, "0")}` });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const price = 117.14;
+    const total = (1121340.5732445243 + 1584220.172977231) * price;
+    const aggregate = await fetchCuratedAggregateOnChainMcap(meta, price, keyedChainRpcs());
+    expect(aggregate).toMatchObject({
+      observedAt,
+      chainCirculating: {
+        Ethereum: { chainId: "ethereum" },
+        Polygon: { current: 0, chainId: "polygon" }, Solana: { current: 0, chainId: "solana" },
+        "XRP Ledger": { current: 1584220.172977231 * price, chainId: "xrpl" },
+      },
+    });
+    expect(aggregate!.mcap).toBeCloseTo(total, 6);
+    expect(aggregate!.chainCirculating!.Ethereum.current).toBeCloseTo(1121340.5732445243 * price, 6);
+    const partition = await fetchOnChainSupplyPartition(meta, total * 1.05, price, undefined, keyedChainRpcs());
+    expect(partition).toMatchObject({ chainPartition: { admission: "entered", observedAt } });
+    if (!("chainCirculating" in partition)) throw new Error("expected a complete OUSG partition");
+    expect(Object.values(partition.chainCirculating!).reduce((sum, row) => {
+      if (typeof row.current !== "number") throw new Error("expected observed numeric chain stock");
+      return sum + row.current;
+    }, 0)).toBeCloseTo(total * 1.05, 6);
+    xrplAvailable = false;
+    expect(await fetchCuratedAggregateOnChainMcap(meta, price, keyedChainRpcs())).toBeNull();
+    expect(await fetchOnChainSupplyPartition(meta, total, price, undefined, keyedChainRpcs()))
+      .toEqual({ reason: "partition-invalid", ratio: null });
+  });
+
+  it("withholds malformed, unvalidated or mismatched gateway and ledger evidence", async () => {
+    setClock();
+    const badGateways = [
+      null, {}, { result: { ...xrplFixture.gateway.result, validated: false } },
+      { result: { ...xrplFixture.gateway.result, validated: undefined } },
+      { result: { ...xrplFixture.gateway.result, account: "wrong-issuer" } },
+      { result: { ...xrplFixture.gateway.result, obligations: { USD: "1" } } },
+      { result: { ...xrplFixture.gateway.result, obligations: undefined } },
+      { result: { ...xrplFixture.gateway.result, status: "error", error: "actNotFound" } },
+      ...["-1", "invalid", "1e1000", "1.1234567890123456"].map(value => ({
+        result: { ...xrplFixture.gateway.result, obligations: { [currency]: value } },
+      })),
+      ...["0", "1"].flatMap(value => [
+        { result: { ...xrplFixture.gateway.result, locked: { [currency]: value } } },
+        { result: { ...xrplFixture.gateway.result, frozen_balances: { holder: [{ currency, value }] } } },
+      ]),
+    ];
+    for (const gateway of badGateways) {
+      const fetchMock = fixtureFetcher(gateway); vi.stubGlobal("fetch", fetchMock);
+      await expect(read()).rejects.toThrow();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    }
+    const { result } = xrplFixture.ledger;
+    for (const ledger of [
+      { result: { ...result, validated: false } }, { result: { ...result, validated: undefined } },
+      { result: { ...result, ledger_hash: "A".repeat(64) } },
+      { result: { ...result, ledger_index: result.ledger_index + 1 } },
+      ...[{ closed: false }, { close_time: undefined }, { close_time: 0 }, { close_flags: 1 },
+        { ledger_hash: "A".repeat(64) }, { ledger_index: "1" }].map(patch => ({
+        result: { ...result, ledger: { ...result.ledger, ...patch } },
+      })),
+    ]) {
+      vi.stubGlobal("fetch", fixtureFetcher(xrplFixture.gateway, ledger));
+      await expect(read()).rejects.toThrow();
+    }
+  });
+
+  it("bounds both response bodies and rejects RPC/HTTP errors before fallback", async () => {
+    setClock();
+    for (const method of ["gateway_balances", "ledger"]) {
+      const body = method === "ledger" ? xrplFixture.ledger : xrplFixture.gateway;
+      for (const makeResponse of [
+        () => Response.json({ ...body, padding: "x".repeat(64 * 1024) }),
+        () => Response.json(body, { headers: { "Content-Length": String(64 * 1024 + 1) } }),
+        () => new Response("{"),
+        () => Response.json({ result: { status: "error", error: "lgrNotFound" } }),
+        () => new Response("unavailable", { status: 503 }),
+      ]) {
+        vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) =>
+          JSON.parse(String(init?.body)).method === method ? makeResponse() : Response.json(xrplFixture.gateway)));
+        await expect(read()).rejects.toThrow();
+      }
+    }
+  });
+
+  it("restarts the full observation on the fallback after draining a failed primary body", async () => {
+    setClock();
+    let failedBody: Response | undefined;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      const { method } = JSON.parse(String(init?.body));
+      if (url === SUPPLY_RPC_DEFAULTS.xrpl.rpcUrl && method === "ledger") {
+        failedBody = Response.json({ result: { status: "error" } });
+        return failedBody;
+      }
+      if (url === SUPPLY_RPC_DEFAULTS.xrpl.fallbackRpcUrl) expect(failedBody?.bodyUsed).toBe(true);
+      return Response.json(method === "ledger" ? xrplFixture.ledger : xrplFixture.gateway);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await fetchXrplSupply(contract.address, new AbortController().signal)).toEqual({ supply: 1584220.172977231, observedAt });
+    expect(fetchMock.mock.calls.map(([url, init]) => [url, JSON.parse(String(init?.body)).method])).toEqual([
+      [SUPPLY_RPC_DEFAULTS.xrpl.rpcUrl, "gateway_balances"], [SUPPLY_RPC_DEFAULTS.xrpl.rpcUrl, "ledger"],
+      [SUPPLY_RPC_DEFAULTS.xrpl.fallbackRpcUrl, "gateway_balances"], [SUPPLY_RPC_DEFAULTS.xrpl.fallbackRpcUrl, "ledger"],
+    ]);
+    fetchMock.mockImplementation(async (url: string) => url === SUPPLY_RPC_DEFAULTS.xrpl.rpcUrl
+      ? Response.json({ result: { ...xrplFixture.gateway.result, validated: false } })
+      : new Response("unavailable", { status: 503 }));
+    expect(await fetchOnChainSupplyPartition({ ...meta, id: "xrpl-supply-fixture", contracts: [contract] },
+      1, 1, undefined)).toEqual({ reason: "partition-invalid", ratio: null });
+  });
+
+  it("cancels stalled bodies and does not start a pre-cancelled read", async () => {
+    setClock();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(new ReadableStream({ start() {} })));
+    vi.stubGlobal("fetch", fetchMock);
+    const rejected = expect(read()).rejects.toThrow();
+    await vi.advanceTimersByTimeAsync(10_001); await rejected;
+    const controller = new AbortController(); controller.abort(new Error("cancelled"));
+    const count = fetchMock.mock.calls.length;
+    await expect(read(controller.signal)).rejects.toThrow("cancelled");
+    expect(fetchMock).toHaveBeenCalledTimes(count);
   });
 });

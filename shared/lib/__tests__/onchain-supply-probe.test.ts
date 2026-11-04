@@ -70,6 +70,18 @@ describe("supportsOnchainSupplyProbe", () => {
     }
   });
 
+  it("requires XRPL issued-currency identity and native amount encoding", () => {
+    const contract = TRACKED_META_BY_ID.get("ousg-ondo-finance")!.contracts!.find(entry => entry.chain === "xrpl")!;
+    expect(onchainSupplyProbeFamily(contract)).toBe("xrpl");
+    for (const invalid of [
+      { ...contract, decimals: 6 },
+      { ...contract, amountEncoding: undefined },
+      { ...contract, amountEncoding: { kind: "fixed-decimal" as const } },
+      ...["OUSG.bad", "XRP.rHuiXXjHLpMP8ZE9sSQU5aADQVWDwv6h5p", `${contract.address}.extra`]
+        .map(address => ({ ...contract, address })),
+    ]) expect(onchainSupplyProbeFamily(invalid)).toBeNull();
+  });
+
   // Platform extension: non-EVM legs must be able to join a fail-closed
   // aggregate instead of poisoning it for the whole asset.
   it("accepts Starknet felts and ICP canister ids and reports their reader family", () => {
