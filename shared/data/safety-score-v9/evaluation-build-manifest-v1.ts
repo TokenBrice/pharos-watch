@@ -78,15 +78,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "be84214c726567949593a89bca82bd96b2f33b7e6436551aa92de993fd89b1db"
+      "sha256": "855c8b0ecd7bc1a9162770d57141485f21ccabdbdab495392b9a4fa4fe9c15ac"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "7de6e007139a1f8070cf7578cf8348fa72e0a6b4a4b35470b550616bdc3933ee"
+      "sha256": "b1e825a4b15563b63ce8919b4c8c9cecaefd4fe342a6db3a40de71ffd8274812"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "569d54fce74c22e687d091b48ccef0ddf700bfa2bb9ef3352898b22e0c8dfa06"
+      "sha256": "2fa9b99e55121c8516d6f242e947d051edf956218076532a4a082abd182cac6f"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -110,11 +110,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/chain-rpc-registry.ts",
-      "sha256": "be4a323b812ec0eedacc461b21cd880920ed3d648c5e68ba935c1295b5cb3d21"
+      "sha256": "c3c903c782f507b95f338f7ca4f10c6c5c54a5c991947aee1afc3876e814b94a"
     },
     {
       "path": "shared/lib/circuit-sources.ts",
-      "sha256": "9b342cc24c390eb04ab4d9bfea0352617900e1bc865c9f9ca9a7f212efc16152"
+      "sha256": "fc3021d7b1aa0d50e96c764765f7659f94463baf39d9864fd96b5fbbba0a31d8"
     },
     {
       "path": "shared/lib/classification/resolve-implementation-launch-date.ts",
@@ -1106,7 +1106,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/db-cache.ts",
-      "sha256": "9bf9b84099c45bb28fe8198c81758b167fc1179c3d9c358c38cd69d5db7a5a6c"
+      "sha256": "c0bd68217364c5ed47c52906338858372dc3d2fca68c352852dc25cf53d07337"
     },
     {
       "path": "worker/src/lib/db.ts",
@@ -1371,7 +1371,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-11-04-block-26341087-shock-coverage.json.gz"
     }
   ],
-  "digest": "4ed2fd2bf32e8e191581668f705326e7530a55d1e9326c2e42a77b6a87163944"
+  "digest": "e24cfd6cdc3936a7f2281504610e00edc67e6cb48fa979bd7d8231736c27d532"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

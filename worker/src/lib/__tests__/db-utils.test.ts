@@ -365,6 +365,7 @@ describe("db utility helpers", () => {
       observedAt: 1700000000,
       observedAtMode: null,
       syncedAt: 1700000000,
+      hasExplicitClocks: false,
       agreeSources: [],
       consensusSources: [],
     });
@@ -376,6 +377,7 @@ describe("db utility helpers", () => {
       observedAt: 1700000100,
       observedAtMode: null,
       syncedAt: 1700000100,
+      hasExplicitClocks: false,
       agreeSources: [],
       consensusSources: [],
     });

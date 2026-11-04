@@ -204,7 +204,7 @@ export async function syncViaCoingeckoFallback(
   const authoritativeOverrideStats = createAuthoritativeLivePriceOverrideStats();
   const authoritativeOverrides = await fetchAuthoritativeLivePriceOverrides(
     assets, signal, validationReferences,
-    { db, stats: authoritativeOverrideStats, chainRpcs, previousMissingGenerationsById },
+    { db, stats: authoritativeOverrideStats, chainRpcs, previousMissingGenerationsById, previousAssetsById, priceCache: replayPriceCache },
   );
   applyProtocolPriceOverrides({
     assets, overrides: authoritativeOverrides, previousTrustedPrices, validationContexts,
