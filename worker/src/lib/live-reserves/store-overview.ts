@@ -1,7 +1,7 @@
 import { emptyReserveCompositionOverview, ReserveContinuationExecutionStatusSchema } from "@shared/types/live-reserves";
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
-import { LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES } from "@shared/lib/live-reserve-reliability";
+import { LIVE_RESERVE_STRUCTURAL_SCORE_INELIGIBLE_WARNING_CODES } from "@shared/lib/live-reserve-reliability";
 import { percentileNearestRank } from "@shared/lib/stats";
 import { WORKER_TRACKED_META_BY_ID, type WorkerLiveReserveStablecoinMeta } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { ReserveCompositionOverview, ReserveCompositionRecord, ReserveSnapshotMetadataRecord } from "./store-shared";
@@ -476,7 +476,7 @@ export async function loadPublishedReserveScoringEvidence(
     if (selectScoringDegradedWarnings(record.warnings, config).length > 0) {
       evidence.scoreIneligibleIds.add(coin.id);
       const admission = evaluateLiveReserveAdmission(record, syncState, coin, now);
-      const structuralCodes: readonly string[] = LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES;
+      const structuralCodes: readonly string[] = LIVE_RESERVE_STRUCTURAL_SCORE_INELIGIBLE_WARNING_CODES;
       if (syncState?.lastStatus === "degraded" && syncState.lastAttemptedAt === syncState.lastSuccessAt
         && syncState.lastError == null && syncState.metadata.failureCategory == null
         && !hasUncertainWriteState(syncState) && !syncState.warningIntegrityIssue
