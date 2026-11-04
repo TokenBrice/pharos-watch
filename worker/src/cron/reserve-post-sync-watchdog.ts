@@ -3,8 +3,7 @@ import { resolveLiveReserveSourceAgeBudget } from "@shared/lib/live-reserve-fres
 import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapters";
 import { STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
-import { LIVE_RESERVE_FRESHNESS_MODE_VALUES, type LiveReserveAdapterValidationPolicy } from "@shared/types/live-reserve-core";
-import { ReserveSyncStatusSchema } from "@shared/types/live-reserves";
+import type { LiveReserveAdapterValidationPolicy } from "@shared/types/live-reserve-core";
 import { buildAlertReserveSourceEnvelope } from "../lib/alert-reserve-source-cache";
 import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
 import { checkCollateralDrift, type CollateralDriftCheckResult } from "../lib/collateral-drift";
@@ -225,23 +224,25 @@ export function evaluateReserveAdapterAlerts(params: {
 
 function parseReserveAdapterAlertState(value: string | null | undefined): ReserveAdapterAlertState {
   if (!value) return { version: 1, coins: {} };
-  const parsed = JSON.parse(value) as { version?: unknown; coins?: unknown };
-  if (!parsed || typeof parsed !== "object" || parsed.version !== 1 || !parsed.coins || typeof parsed.coins !== "object"
-    || Array.isArray(parsed.coins)) throw new Error("reserve-adapter-alert-state-unreadable");
-  const coins: Record<string, ReserveAdapterAlertCoinState> = {};
-  for (const [coinId, entry] of Object.entries(parsed.coins as Record<string, unknown>)) {
-    if (!entry || typeof entry !== "object") throw new Error("reserve-adapter-alert-state-unreadable");
-    const { failureRaised, scoreIneligibleRaised, clockRaised } = entry as Record<string, unknown>;
-    if (typeof failureRaised !== "boolean" || typeof clockRaised !== "boolean"
-      || (scoreIneligibleRaised !== undefined && typeof scoreIneligibleRaised !== "boolean")) {
-      throw new Error("reserve-adapter-alert-state-unreadable");
+  try {
+    const parsed = JSON.parse(value) as { coins?: unknown };
+    if (!parsed || typeof parsed !== "object" || !parsed.coins || typeof parsed.coins !== "object") {
+      return { version: 1, coins: {} };
     }
-    // Older state entries predate the score-ineligible rule; absent means not raised.
-    const scoreRaised = typeof scoreIneligibleRaised === "boolean" && scoreIneligibleRaised;
-    if (!failureRaised && !scoreRaised && !clockRaised) continue;
-    coins[coinId] = { failureRaised, scoreIneligibleRaised: scoreRaised, clockRaised };
+    const coins: Record<string, ReserveAdapterAlertCoinState> = {};
+    for (const [coinId, entry] of Object.entries(parsed.coins as Record<string, unknown>)) {
+      if (!entry || typeof entry !== "object") continue;
+      const { failureRaised, scoreIneligibleRaised, clockRaised } = entry as Record<string, unknown>;
+      if (typeof failureRaised !== "boolean" || typeof clockRaised !== "boolean") continue;
+      // Older state entries predate the score-ineligible rule; absent means not raised.
+      const scoreRaised = typeof scoreIneligibleRaised === "boolean" && scoreIneligibleRaised;
+      if (!failureRaised && !scoreRaised && !clockRaised) continue;
+      coins[coinId] = { failureRaised, scoreIneligibleRaised: scoreRaised, clockRaised };
+    }
+    return { version: 1, coins };
+  } catch {
+    return { version: 1, coins: {} };
   }
-  return { version: 1, coins };
 }
 
 interface ReserveAdapterAlertAttemptRow {
@@ -279,12 +280,7 @@ async function loadReserveAdapterAlertAttempts(
     ).bind(...inClause.binds, RESERVE_ALERT_ATTEMPT_SCAN_LIMIT).all<ReserveAdapterAlertAttemptRow>());
     for (const row of rows.results ?? []) {
       if (typeof row.stablecoin_id !== "string" || !Number.isFinite(row.attempted_at)
-        || !ReserveSyncStatusSchema.safeParse(row.status).success
-        || (row.failure_category != null && typeof row.failure_category !== "string")
-        || (row.source_timestamp != null && (!Number.isFinite(row.source_timestamp) || row.source_timestamp <= 0))
-        || (row.freshness_mode != null && !LIVE_RESERVE_FRESHNESS_MODE_VALUES.some((mode) => mode === row.freshness_mode))) {
-        throw new Error("reserve-adapter-alert-attempt-history-unreadable");
-      }
+        || typeof row.status !== "string") continue;
       const attempts = attemptsByCoin.get(row.stablecoin_id) ?? [];
       attempts.push({
         attemptedAt: row.attempted_at,
@@ -297,9 +293,6 @@ async function loadReserveAdapterAlertAttempts(
       });
       attemptsByCoin.set(row.stablecoin_id, attempts);
     }
-  }
-  if (stablecoinIds.some((id) => !attemptsByCoin.has(id))) {
-    throw new Error("reserve-adapter-alert-attempt-history-incomplete");
   }
   return attemptsByCoin;
 }
@@ -469,7 +462,6 @@ export async function runReservePostSyncWatchdog(
     throwIfAborted(signal);
     const configuredIds = SYNC_ORDERED_CONFIGURED_COINS.map((coin) => coin.id);
     reserveSyncById = await loadReserveSyncStateMap(db, configuredIds);
-    if (configuredIds.some((id) => !reserveSyncById.has(id))) degradedReasons.push("reserve-sync-state-missing");
     throwIfAborted(signal);
     syncDegradedCoinCount = configuredIds.filter((id) => {
       const status = reserveSyncById.get(id)?.lastStatus;

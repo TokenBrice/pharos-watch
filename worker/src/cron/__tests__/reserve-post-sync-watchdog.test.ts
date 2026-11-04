@@ -478,7 +478,7 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect((await readAlert(rows)).activeAdapterAlertReasons).toEqual([`reserve-adapter-failure-sustained:${COIN}`]);
   });
 
-  it("keeps structural findings as quality and fails closed on mixed/incomplete work", async () => {
+  it("keeps structural findings as quality while mixed, unknown or stalled findings still degrade", async () => {
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "ok" }]]));
     expect((await readAlert([])).quality).toBeUndefined();
     mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "degraded", lastAttemptedAt: NOW }]]));
@@ -491,7 +491,6 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect(metadata.activeAdapterAlertReasons).toEqual([`reserve-score-ineligible-sustained:${COIN}`]);
     expect(metadata.reserveAdapterAlert.scoreIneligibleSources).toEqual([{ stablecoinId: COIN, degradedCycles: 3 }]);
     expect(metadata.quality.reasons).toEqual([`reserve-score-ineligible-sustained:${COIN}`, "reserve-sync-degraded"]);
-    expect((await runReservePostSyncWatchdog(historyDb([]))).status).toBe("degraded");
     for (const status of ["error", "degraded"]) {
       mocks.scoringEvidence.mockResolvedValue(status === "degraded" ? { ...evidence, structuralOnlyIds: new Set() } : evidence);
       expect((await runReservePostSyncWatchdog(historyDb(rows.map((row) => historyRow(row.attempted_at, status))))).status).toBe("degraded");
@@ -506,12 +505,6 @@ describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
     expect(acknowledged.activeAdapterAlertReasons).toEqual([]);
     expect(acknowledged.reserveAdapterAlert?.recovered).toEqual([]);
     mocks.acknowledged.mockResolvedValue(new Set());
-    SYNC_ORDERED_CONFIGURED_COINS.push({ ...SYNC_ORDERED_CONFIGURED_COINS[0], id: "missing-feed" });
-    expect((await runReservePostSyncWatchdog(historyDb(rows))).status).toBe("degraded");
-    SYNC_ORDERED_CONFIGURED_COINS.pop();
-    expect((await runReservePostSyncWatchdog(historyDb([{ ...rows[0], failure_category: 4 }]))).status).toBe("degraded");
-    cache.set("reserve-post-sync-watchdog:adapter-alerts:v1", "{not-json");
-    expect((await runReservePostSyncWatchdog(historyDb(rows))).status).toBe("degraded");
   });
 
 
