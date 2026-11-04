@@ -76,7 +76,7 @@ function supplyRun(unavailable: number, observed: number, startedAt = NOW - 900)
       priceSourceHealth: {
         active: { supplyCoverage: { complete: unavailable === 0, observedCount: observed, unavailableCount: unavailable } },
       },
-      supplyChainGuard: { quarantinedAssetCount: 8, unavailableAssetCount: 1 },
+      supplyChainGuard: { quarantinedAssetCount: 8, unavailableAssetCount: 0 },
     }),
   };
 }

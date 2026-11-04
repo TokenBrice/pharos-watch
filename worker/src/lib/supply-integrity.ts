@@ -476,6 +476,7 @@ function parseActiveSupplyCoverage(metadata: string | null): { observed: number;
   if (!parsed || typeof parsed !== "object") return null;
   const record = parsed as {
     priceSourceHealth?: { active?: { supplyCoverage?: unknown; totalAssets?: unknown }; supplyCoverage?: unknown };
+    supplyChainGuard?: { unavailableAssetCount?: unknown };
   };
   const coverage = record.priceSourceHealth?.active?.supplyCoverage
     ?? record.priceSourceHealth?.supplyCoverage;
@@ -485,12 +486,14 @@ function parseActiveSupplyCoverage(metadata: string | null): { observed: number;
     || Number(observedCount) < 0 || Number(unavailableCount) < 0) {
     return null;
   }
-  // The run's final coverage is the published surface. Chain-guard counts are
-  // intake bookkeeping: quarantined rows publish a carry (graded as carried
-  // supply) and later lanes restore some intake-unavailable rows.
+  // Guard quarantines publish a carry (graded as carried supply), so they are
+  // not unavailable supply. The guard's own unavailable count stays a floor:
+  // the final coverage tallies priced assets only.
+  const guardUnavailable = record.supplyChainGuard?.unavailableAssetCount;
   return {
     observed: Number(observedCount),
-    unavailable: Number(unavailableCount),
+    unavailable: Math.max(Number(unavailableCount),
+      Number.isInteger(guardUnavailable) && Number(guardUnavailable) >= 0 ? Number(guardUnavailable) : 0),
   };
 }
 
