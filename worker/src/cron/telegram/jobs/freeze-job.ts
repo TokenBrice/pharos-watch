@@ -125,10 +125,13 @@ export async function detectTelegramFreezeJobs(db: D1Database, nowSec: number): 
 
 /** Source suppression wins until the send boundary: retracted claims cancel queued rows. */
 export async function cancelRetractedFreezeDeliveries(db: D1Database, nowSec: number): Promise<number> {
-  const retractedJobPredicate = `EXISTS (
+  // Strip the job prefix instead of prefixing every tape event id, so each
+  // candidate is one idx_tape_event_id seek rather than a tape_events scan
+  // (14.7M rows read in one minute on 2026-11-04 with freeze jobs planning).
+  const retractedJobPredicate = `substr(%JOB%, 1, 7) = 'freeze:' AND EXISTS (
     SELECT 1 FROM tape_events AS t
       LEFT JOIN blacklist_events AS b ON t.source_table = 'blacklist_events' AND b.id = t.source_row_id
-     WHERE 'freeze:' || t.event_id = %JOB%
+     WHERE t.event_id = substr(%JOB%, 8)
        AND (t.suppressed_at IS NOT NULL OR b.suppression_reason IS NOT NULL)
   )`;
   const results = await executeAtomicBatch(db, [
@@ -136,13 +139,13 @@ export async function cancelRetractedFreezeDeliveries(db: D1Database, nowSec: nu
       `UPDATE telegram_deliveries
           SET state = 'cancelled', done_at = ?, body = NULL, reason = 'freeze-claim-retracted'
         WHERE kind = 'freeze' AND state IN ('pending', 'retry')
-          AND ${retractedJobPredicate.replace("%JOB%", "telegram_deliveries.job_id")}`,
+          AND ${retractedJobPredicate.replaceAll("%JOB%", "telegram_deliveries.job_id")}`,
     ).bind(nowSec),
     db.prepare(
       `UPDATE telegram_jobs
           SET state = 'cancelled', completed_at = ?, error = 'freeze-claim-retracted'
         WHERE kind = 'freeze' AND state = 'planning'
-          AND ${retractedJobPredicate.replace("%JOB%", "telegram_jobs.job_id")}`,
+          AND ${retractedJobPredicate.replaceAll("%JOB%", "telegram_jobs.job_id")}`,
     ).bind(nowSec),
   ], { returnResults: true });
   return Number(results[0]?.meta?.changes ?? 0);

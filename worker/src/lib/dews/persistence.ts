@@ -66,7 +66,22 @@ async function deleteOrphansForTable(
   const existingIds = await runWithOverloadRetry(() =>
     db
       // SAFETY: validated against DEWS_TABLES allowlist above.
-      .prepare(`/* pharos:dews:orphan-ids:${table} */ SELECT DISTINCT stablecoin_id FROM ${table}`)
+      .prepare(
+        // Recursive skip-scan instead of `SELECT DISTINCT`, which walked every
+        // index entry (~53k/run, ~15.5M/day for stress_signal_history). Every
+        // DEWS table leads an index with stablecoin_id (idx_stress_coin_date, and
+        // the stress_signal_history / stress_signals_latest primary keys), so
+        // this costs one index seek per distinct id.
+        `/* pharos:dews:orphan-ids:${table} */
+         WITH RECURSIVE ids(stablecoin_id) AS (
+           SELECT MIN(stablecoin_id) FROM ${table}
+           UNION ALL
+           SELECT (SELECT MIN(stablecoin_id) FROM ${table} WHERE stablecoin_id > ids.stablecoin_id)
+             FROM ids
+            WHERE ids.stablecoin_id IS NOT NULL
+         )
+         SELECT stablecoin_id FROM ids WHERE stablecoin_id IS NOT NULL`,
+      )
       .all<{ stablecoin_id: string }>(),
     3,
     options.signal,

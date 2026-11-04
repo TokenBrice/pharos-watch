@@ -59,7 +59,7 @@ export const handleDexLiquidity = async (
         `SELECT stablecoin_id, total_tvl_usd, snapshot_date, coverage_class, coverage_confidence, methodology_version
          FROM dex_liquidity_history
          WHERE snapshot_date >= ?${coinFilter}
-         ORDER BY stablecoin_id, snapshot_date DESC`,
+         ORDER BY snapshot_date DESC, stablecoin_id`,
       )
       .bind(Math.floor(Date.now() / 1000) - 8 * 86_400, ...coinBindings)
       .all<DexHistoryRow>(),
@@ -121,7 +121,9 @@ export const handleDexLiquidity = async (
     dexPriceById.set(row.stablecoin_id, row);
   }
 
-  // Build historical TVL lookup: stablecoin_id → sorted snapshots (newest first)
+  // Build historical TVL lookup: stablecoin_id → sorted snapshots (newest first).
+  // The read is date-ordered so the 8-day window seeks idx_dex_hist_snapshot_date;
+  // a coin-first ORDER BY walked the whole history index on every request.
   const histByCoin = new Map<string, DexHistoryRow[]>();
   for (const row of histResult.results ?? []) {
     const arr = histByCoin.get(row.stablecoin_id) ?? [];

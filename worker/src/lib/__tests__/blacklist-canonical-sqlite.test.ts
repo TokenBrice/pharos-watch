@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-import { blacklistCanonicalEventFilterSql, blacklistEventIdentitySql } from "@shared/lib/blacklist-event-order";
+import { blacklistCanonicalEventCountSql, blacklistCanonicalEventFilterSql, blacklistEventIdentitySql } from "@shared/lib/blacklist-event-order";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { insertBlacklistRows } from "../../cron/blacklist/persistence";
 import { makePendingBlacklistRow } from "../../cron/blacklist/__tests__/blacklist.test-support";
@@ -30,6 +30,8 @@ describe("indexed canonical blacklist exclusion", () => {
         expect.stringMatching(new RegExp(`^SEARCH peer USING INDEX ${INDEX} \\(<expr>=\\?\\)$`)),
       ]);
     }
+    const countPlan = sqlite.prepare(`EXPLAIN QUERY PLAN ${blacklistCanonicalEventCountSql()}`).all() as Array<{ detail: string }>;
+    expect(countPlan.map((row) => row.detail)).toEqual(["CO-ROUTINE (subquery-1)", `SCAN blacklist_events USING INDEX ${INDEX}`, "SCAN (subquery-1)"]);
     // The production migration is idempotent, not just an equivalent test-only index.
     sqlite.exec(migrationSql);
   });
@@ -98,6 +100,7 @@ describe("indexed canonical blacklist exclusion", () => {
     const reference = select(referencePredicate);
     expect(reference.map((row) => row.id)).toEqual(expectedIds);
     expect(select(blacklistCanonicalEventFilterSql())).toEqual(reference);
+    expect(sqlite.prepare(blacklistCanonicalEventCountSql()).get()).toEqual({ total: reference.length });
 
     sqlite.exec(`DROP INDEX ${INDEX}`);
     expect(select(blacklistCanonicalEventFilterSql())).toEqual(reference);

@@ -110,7 +110,7 @@ describe("handleDigestPromo", () => {
     expect(promo.previousEditions).toEqual([]);
   });
 
-  it("reads bodies only for the latest visible edition, outside the numbering window", async () => {
+  it("reads titles and bodies only for the visible page, outside the numbering window", async () => {
     const { sqlite, insert } = createDigestDatabase();
     for (let index = 1; index <= 4; index++) insert.run(`Copy ${index}`, `Title ${index}`, index, "Large prior body".repeat(10_000), null);
     let selectedSql = "";
@@ -118,13 +118,10 @@ describe("handleDigestPromo", () => {
     const response = await handleDigestPromo(db);
     expect(response.status).toBe(200);
     const selected = sqlite.prepare(selectedSql).all();
-    expect(selected).toHaveLength(3);
-    expect(selected[0]).toMatchObject({ digest_text: "Copy 4" });
-    expect(selected.slice(1)).toEqual([
-      expect.objectContaining({ digest_text: null, digest_extended: null, digest_title: "Title 3" }),
-      expect.objectContaining({ digest_text: null, digest_extended: null, digest_title: "Title 2" }),
+    expect(selected.map(({ digest_title, digest_text }) => [digest_title, digest_text])).toEqual([
+      ["Title 4", "Copy 4"], ["Title 3", "Copy 3"], ["Title 2", "Copy 2"],
     ]);
-    expect(selectedSql.slice(0, selectedSql.indexOf("), visible AS"))).not.toMatch(/digest_text|digest_extended/);
+    expect(selectedSql.slice(0, selectedSql.indexOf("), visible AS"))).not.toMatch(/digest_text|digest_extended|digest_title/);
   });
 
   it("keeps a successfully empty projection unavailable without inventing a producer clock", async () => {

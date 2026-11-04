@@ -150,10 +150,10 @@ function makeDb(): D1Database {
       if (sql.includes("pharos:dews:stress-history-daily-ids")) {
         return { results: fixtures.map((f) => ({ stablecoin_id: f.id })) as T[] };
       }
-      if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signals")) {
+      if (sql.includes("pharos:dews:orphan-ids:stress_signals")) {
         return { results: fixtures.map((f) => ({ stablecoin_id: f.id })) as T[] };
       }
-      if (sql.includes("SELECT DISTINCT stablecoin_id FROM stress_signal_history")) {
+      if (sql.includes("pharos:dews:orphan-ids:stress_signal_history")) {
         return { results: fixtures.map((f) => ({ stablecoin_id: f.id })) as T[] };
       }
       if (/FROM dex_liquidity(?!_history)/.test(sql)) {

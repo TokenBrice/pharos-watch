@@ -35,12 +35,11 @@ describe("handleBlacklist", () => {
     const body = (await res.json()) as { total: number; totalExact: boolean };
     expect(body.total).toBe(42);
     expect(body.totalExact).toBe(true);
-    expect(db.getHistory().some((entry) => entry.sql.includes("COUNT(*)"))).toBe(true);
+    expect(db.getHistory().some((entry) => entry.sql.includes("GROUP BY"))).toBe(true);
   });
 
   it("includes methodology version metadata", async () => {
     const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [row] },
     ]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
@@ -62,7 +61,6 @@ describe("handleBlacklist", () => {
       methodology_version: "3.0",
     });
     const db = mockD1([
-      { match: "COUNT", rows: [{ total: 2 }] },
       { match: "blacklist_events", rows: [historicalRow, newerRow] },
     ]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?sortBy=stablecoin&sortDirection=asc"));
@@ -73,7 +71,6 @@ describe("handleBlacklist", () => {
 
   it("maps snake_case DB columns to camelCase", async () => {
     const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [row] },
     ]);
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist"));
@@ -101,7 +98,6 @@ describe("handleBlacklist", () => {
 
   it("returns 200 with empty results when no data", async () => {
     const emptyDb = mockD1([
-      { match: "COUNT", rows: [{ total: 0 }] },
       { match: "blacklist_events", rows: [] },
     ]);
     const res = await handleBlacklist(emptyDb, new URL("https://x/api/blacklist"));
@@ -119,7 +115,6 @@ describe("handleBlacklist", () => {
   it("accepts first-wave stablecoin symbol filters", async () => {
     for (const symbol of ["usdg", "rlusd", "u", "usdtb", "a7a5", "fdusd", "brz", "ausd", "euri", "usdq", "usdo", "usdx", "aid", "tgbp", "eurc", "buidl"]) {
       const db = mockD1([
-        { match: "COUNT", rows: [{ total: 0 }] },
         { match: "blacklist_events", rows: [] },
       ]);
       const res = await handleBlacklist(db, new URL(`https://x/api/blacklist?stablecoin=${symbol}`));
@@ -131,7 +126,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([{ match: "blacklist_events", rows: [] }]);
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?stablecoin=usdt"));
-    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
+    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"))?.binds ?? [];
     expect(res.status).toBe(200);
     expect(dataBinds).toContain("USDT");
     expect(dataBinds).not.toContain("usdt");
@@ -147,7 +142,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([{ match: "blacklist_events", rows: [] }]);
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?chainId=Ethereum"));
-    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
+    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"))?.binds ?? [];
     expect(res.status).toBe(200);
     expect(dataBinds).toContain("ethereum");
     expect(dataBinds).not.toContain("Ethereum");
@@ -181,7 +176,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([{ match: "blacklist_events", rows: [] }]);
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?eventType=destroy"));
-    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
+    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"))?.binds ?? [];
     expect(res.status).toBe(200);
     expect(dataBinds).toContain("destroy");
   });
@@ -232,7 +227,6 @@ describe("handleBlacklist", () => {
     const now = Math.floor(Date.now() / 1000);
     const eventTs = now - 14 * 86400;
     const db = mockD1([
-      { match: "COUNT", rows: [{ total: 1 }] },
       { match: "blacklist_events", rows: [makeBlacklistRow({ timestamp: eventTs })] },
       { match: "cron_runs", rows: [], first: { started_at: now - 30 } },
     ]);
@@ -281,7 +275,7 @@ describe("handleBlacklist", () => {
     const db = mockD1([{ match: "blacklist_events", rows: [] }]);
 
     const res = await handleBlacklist(db, new URL("https://x/api/blacklist?limit=0"));
-    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
+    const dataBinds = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"))?.binds ?? [];
     expect(res.status).toBe(200);
     // Cursor-capable feeds request one look-ahead row to decide nextCursor.
     expect(dataBinds).toContain(1001);
@@ -296,7 +290,7 @@ describe("handleBlacklist", () => {
       acceptedDb,
       new URL("https://x/api/blacklist?offset=25000"),
     );
-    const dataBinds = acceptedDb.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events") && !entry.sql.includes("COUNT("))?.binds ?? [];
+    const dataBinds = acceptedDb.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"))?.binds ?? [];
     expect(accepted.status).toBe(200);
     expect(dataBinds).toContain(25_000);
   });
