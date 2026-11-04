@@ -137,6 +137,8 @@ describe("curated on-chain supply paths", () => {
     { id: "stac-securitize", chains: ["ethereum", "solana"], zero: [] },
     { id: "syrupusdg-maple", chains: ["ethereum", "robinhood", "arbitrum", "ink", "solana"], zero: ["ink", "solana"], canonical: "ethereum" },
     { id: "strusd-tori", chains: ["ethereum", "monad", "pharos"], zero: [], canonical: "ethereum" },
+    { id: "uty-xsy", chains: ["base", "avalanche", "katana"], zero: ["avalanche", "katana"], canonical: "base" },
+    { id: "mxne-real-mxn", chains: ["base", "solana", "stellar"], zero: ["base", "solana", "stellar"] },
     { id: "susdat-saturn", chains: ["ethereum", "bsc", "monad"], zero: [], canonical: "ethereum" },
     { id: "wsrusd-reservoir", chains: ["ethereum", "base", "berachain", "sonic", "arbitrum", "bsc", "avalanche", "unichain", "plume", "sei", "worldchain", "katana", "hyperevm", "linea", "monad", "pharos", "solana", "plasma", "megaeth", "tempo", "xdc"], zero: ["megaeth"], canonical: "ethereum" },
     { id: "brlv-crown", chains: ["base", "ethereum", "tempo"], zero: ["ethereum", "tempo"] },
@@ -243,7 +245,7 @@ describe("curated on-chain supply paths", () => {
 
   it("keeps unprobed strUSD representations in a noncanonical CCIP escrow residual", () => {
     const residual = CURATED_AGGREGATE_ESCROW_RESIDUALS["strusd-tori"];
-    expect(residual?.escrowAddress).toBe("0xb12e0794fb2191672ba7a1811edc9713c8c2c38b");
+    expect(residual?.escrowAddress).toBe("0xc1a9e4bbb58573b8971c9b3c24e17f9851268f86");
     expect(resolveChainId(residual!.unattributedChainLabel)).toBeNull();
   });
 
@@ -550,6 +552,7 @@ describe("curated on-chain supply paths", () => {
     expect(CURATED_AGGREGATE_CANONICAL_SUPPLY_CHAINS["mre7yield-midas"]).toBeUndefined();
     expect(mre7?.find((entry) => entry.config.chain === "etherlink")?.config.rpcUrl)
       .toBe("https://node.mainnet.etherlink.com");
+    expect(mre7?.find((entry) => entry.config.chain === "tac")?.config.rpcUrl).toBe("https://rpc-public.tac.build");
     // The Starknet reader carries its own endpoints, so the leg pins none.
     expect(mre7?.find((entry) => entry.config.chain === "starknet")?.config.rpcUrl).toBeUndefined();
 

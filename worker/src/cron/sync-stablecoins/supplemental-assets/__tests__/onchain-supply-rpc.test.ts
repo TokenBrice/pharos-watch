@@ -71,7 +71,7 @@ describe("supplemental on-chain supply RPC routing", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]).toEqual([
       admission === "admitted" ? DWELLIR_NATIVE_ENDPOINTS.find((endpoint) => endpoint.network === "starknet")!.baseUrl
-        : "https://api.cartridge.gg/x/starknet/mainnet",
+        : "https://starknet-rpc.publicnode.com",
       expect.anything(),
     ]);
   });

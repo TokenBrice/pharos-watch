@@ -209,7 +209,9 @@ export async function fetchFiatCoinGeckoTokens(
           if (reserveNav && navUsdRate != null) navSupplyPrice = reserveNav.price * navUsdRate;
         }
         if (navLikeAsset && !priceResolution && navSupplyPrice == null) {
-          const navOverride = await resolveVaultNavSupplyPrice(meta.id, navParentAssetsById, db, signal, chainRpcs);
+          // A same-run single-source quote must not displace a trusted composite for stricter vaults.
+          const navParents = getFreshSingleSourceNavParentId(meta.id) ? navParentAssetsById : previousAssetsById ?? new Map();
+          const navOverride = await resolveVaultNavSupplyPrice(meta.id, navParents, db, signal, chainRpcs);
           if (navOverride) {
             navSupplyPrice = navOverride.price;
             logWorkerEventArgs(
