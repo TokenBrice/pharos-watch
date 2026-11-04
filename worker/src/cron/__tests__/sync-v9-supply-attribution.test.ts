@@ -31,6 +31,9 @@ import { SUPPLY_ATTRIBUTION_CAPTURE_BUDGET } from "@shared/lib/safety-score-v9-s
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import * as economicObserver from "../../lib/safety-score-v9/economic-supply-observer";
 import * as xautObserver from "../../lib/safety-score-v9/xaut-supply-observer";
+import * as centrifugeObserver from "../../lib/safety-score-v9/centrifuge-supply-observer";
+import { deriveXautRepresentationGroupSupplyAttribution } from "../../lib/safety-score-v9/xaut-supply-attribution-contract";
+import { makeXautObservation } from "../../test-helpers/v9-fixed-input-observations";
 import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
 import { DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET, type DeploymentSupplyCensusEvmDependencies } from "../../lib/safety-score-v9/deployment-supply-census-evm";
 import {
@@ -594,6 +597,57 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       expect(generation.attributionById).toEqual({});
       expect(generation.outcomesById[assetId]).toMatchObject({ status: "rejected", diagnostics });
     } finally { sqlite.close(); }
+  });
+
+  it.each([
+    "deployment-identity-authored-withholding", "deployment-identity-unavailable",
+    "deployment-identity-mismatch", "chain-rpc-unavailable", "deployment-state-unavailable",
+  ] as const)("classifies JTRSY %s beside accepted XAUT without admitting its packet", async (rejectionCode) => {
+    const { sqlite, db } = openDb();
+    const centrifugeSpy = vi.spyOn(centrifugeObserver, "observeCentrifugeReviewedDeploymentUnitPartitionAttempt");
+    const xautSpy = vi.spyOn(xautObserver, "observeXautRepresentationGroupSupplyAttributionAttempt");
+    try {
+      const source = xautSourceFixture();
+      source.activeAssetIds = ["jtrsy-anemoy", "xaut-tether"];
+      source.aggregateCirculatingById["jtrsy-anemoy"] = {
+        circulating: { peggedUSD: 100 }, observedAtSec: source.clockSec,
+      };
+      const nowSec = source.clockSec + 60;
+      vi.setSystemTime(nowSec * 1_000);
+      insertSourceInput(sqlite, source);
+      centrifugeSpy.mockResolvedValue({ status: "rejected", rejectionCode,
+        failedRouteId: "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040" });
+      const attribution = deriveXautRepresentationGroupSupplyAttribution({
+        aggregateSupplyUsd: 2_480_000_000, registryFingerprint: source.registryFingerprint,
+        scoringClockSec: nowSec, observation: makeXautObservation({ clockSec: nowSec }),
+      })!;
+      xautSpy.mockResolvedValue({ status: "accepted", attribution });
+      const actual = await vi.importActual<typeof SupplyAttributionCaptureModule>("../../lib/safety-score-v9/supply-attribution-capture");
+      mocks.capture.mockImplementation(actual.captureSafetyScoreV9SupplyAttribution);
+      const result = await syncSafetyScoreV9SupplyAttribution(db, new Map([["ethereum", {
+        chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
+      }]]));
+      const diagnostic = rejectionCode === "deployment-identity-authored-withholding";
+      expect(result.status, result.metadata).toBe(diagnostic ? "ok" : "degraded");
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(metadata).toMatchObject({
+        acceptedCount: 1, rejectedAssetIds: ["jtrsy-anemoy"],
+        diagnosticRejectedAssetIds: diagnostic ? ["jtrsy-anemoy"] : [],
+        blockingRejectedAssetIds: diagnostic ? [] : ["jtrsy-anemoy"],
+      });
+      if (diagnostic) expect(metadata.quality.reason).toBe("supply-attribution-authored-withholding");
+      const cached = sqlite.prepare("SELECT value FROM cache WHERE key=?")
+        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY) as { value: string };
+      const generation = parseSafetyScoreV9SupplyAttributionGeneration(cached.value);
+      expect(generation.outcomesById["jtrsy-anemoy"]).toMatchObject({ status: "rejected", rejectionCode });
+      expect(generation.attributionById["jtrsy-anemoy"]).toBeUndefined();
+      expect(generation.acceptedAssetIds).toEqual(["xaut-tether"]);
+      expect(JSON.parse(String(sqlite.prepare(
+        "SELECT payload_json FROM safety_score_v9_supply_attribution_journal WHERE asset_id=?",
+      ).get("jtrsy-anemoy")!.payload_json))).toMatchObject({
+        rejectionCode, fallbackCode: "supply-attribution.fallback.aggregate-only",
+      });
+    } finally { centrifugeSpy.mockRestore(); xautSpy.mockRestore(); sqlite.close(); }
   });
 
   it("keeps blocking rejected generations degraded", async () => {

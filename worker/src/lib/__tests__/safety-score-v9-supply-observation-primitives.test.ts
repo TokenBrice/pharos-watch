@@ -20,6 +20,7 @@ import {
   fetchReviewedDeploymentSolanaObservation,
   fetchSafetyScoreV9SolanaRpc,
   observeReviewedEvmDeployment,
+  observeReviewedDeploymentUnitPartitionAttempt,
   findEvmBlockHeaderInTimestampWindow,
 } from "../safety-score-v9/supply-observation-primitives";
 
@@ -28,6 +29,20 @@ import {
 describe("Safety Score V9 supply observation primitives", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it.each([null, undefined])("distinguishes authored withholding from missing identity (%s)", async (runtime) => {
+    const observeEvm = vi.fn(), observeSolana = vi.fn();
+    expect(await observeReviewedDeploymentUnitPartitionAttempt({
+      assetId: "jtrsy-anemoy", aggregateSupplyUsd: 100, registryFingerprint: "a".repeat(64),
+      scoringClockSec: 1_793_781_842, identityRuntime: () => runtime,
+      observeEvm, observeSolana, identityValidationError: () => null,
+    })).toMatchObject({
+      status: "rejected", rejectionCode: runtime === null
+        ? "deployment-identity-authored-withholding" : "deployment-identity-unavailable",
+    });
+    expect(observeEvm).not.toHaveBeenCalled();
+    expect(observeSolana).not.toHaveBeenCalled();
   });
 
   it("stops at the first in-window hash-bearing header", async () => {

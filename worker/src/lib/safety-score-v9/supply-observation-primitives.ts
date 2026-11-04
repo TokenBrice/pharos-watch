@@ -35,6 +35,7 @@ const EIP1967_IMPLEMENTATION_SLOT =
 export type ReviewedDeploymentObservationRejectionCode =
   | "route-inventory-unavailable"
   | "deployment-identity-unavailable"
+  | "deployment-identity-authored-withholding"
   | "chain-rpc-unavailable"
   | "safe-block-unavailable"
   | "deployment-state-unavailable"
@@ -270,7 +271,8 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
   scoringClockSec: number;
   signal?: AbortSignal;
   alignToSolana?: boolean;
-  identityRuntime: (routeId: string) => "evm" | "solana" | null;
+  /** Null is an authored withholding; undefined is an accidentally missing identity. */
+  identityRuntime: (routeId: string) => "evm" | "solana" | null | undefined;
   observeEvm: (route: {
     routeId: string;
     chainId: string;
@@ -298,7 +300,7 @@ export async function observeReviewedDeploymentUnitPartitionAttempt(input: {
     if (!runtime) {
       return {
         status: "rejected",
-        rejectionCode: "deployment-identity-unavailable",
+        rejectionCode: runtime === null ? "deployment-identity-authored-withholding" : "deployment-identity-unavailable",
         failedRouteId: route.routeId,
       };
     }
