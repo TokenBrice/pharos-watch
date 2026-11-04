@@ -43,6 +43,7 @@ interface AssetInput {
   currentSource?: string;
   previousSource?: string;
   previousGuard?: boolean;
+  guard?: boolean;
 }
 
 function asset(input: AssetInput) {
@@ -55,6 +56,7 @@ function asset(input: AssetInput) {
     supplyObservedAt: input.supplyObservedAt ?? NOW - 3600,
     ...(input.supplyRestored ? { supplyRestored: true } : {}),
     ...(input.unavailableReason ? { supplyUnavailableReason: input.unavailableReason } : {}),
+    ...(input.guard ? { supplyChainGuard: { reason: "supply-chain-dropout", status: "quarantined", chains: [] } } : {}),
     circulating: input.current == null ? {} : { peggedUSD: input.current },
   };
 }
@@ -183,7 +185,8 @@ describe("supply integrity", () => {
     expect(reviews.find(r => r.stablecoinId === "said-gaib")!.expiresAt)
       .toBeLessThanOrEqual(STABLECOIN_PRICE_GAP_REVIEWS.find(r => r.stablecoinId === "aid-gaib")!.expiresAt);
     const { reviewedAt, expiresAt } = reviews[0];
-    const carried = reviews.map(r => ({ id: r.stablecoinId, current: 0, previous: 100, supplyRestored: true }));
+    const carried = reviews.map(r => ({ id: r.stablecoinId, current: 0, previous: 100, supplyRestored: true,
+      guard: r.reason === "defillama-list-fill-default-carry", currentSource: r.reason === "nav-parent-price-gap" ? "onchain-total-supply" : "defillama" }));
     const read = (now: number, assets: AssetInput[] = carried) => loadSupplyIntegrityReport(database({ assets }), now);
     const codes = (report: SupplyIntegrityReport) => assessSupplyIntegrityQuality(report).causes.map(c => c.code);
     const active = await read(reviewedAt);
@@ -206,7 +209,9 @@ describe("supply integrity", () => {
       expect(codes(report).includes("supply_carry_stale")).toBe(offset === 0);
     }
     expect((await read(reviewedAt - 1)).value.acknowledgedCarryReviews).toEqual([]);
-    for (const assets of [carried.map(a => ({ ...a, current: null })), carried.map(a => ({ ...a, supplyRestored: false }))]) {
+    // A carry from another mechanism (guard swapped) never inherits the review.
+    for (const assets of [carried.map(a => ({ ...a, current: null })), carried.map(a => ({ ...a, supplyRestored: false })),
+      carried.map(a => ({ ...a, guard: !a.guard, currentSource: a.guard ? "onchain-total-supply" : "defillama" }))]) {
       const report = await read(expiresAt - 1, assets);
       expect(report.value.acknowledgedCarryReviews).toEqual([]);
       expect(codes(report).some(code => code.startsWith("supply_carry_reviews_"))).toBe(false);

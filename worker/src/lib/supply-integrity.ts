@@ -108,6 +108,21 @@ export const REVIEWED_SUPPLY_CARRIES: readonly ReviewedSupplyCarry[] = [
   },
 ];
 
+/**
+ * A review covers only the carry mechanism it was written for: a chain-dropout
+ * quarantine carry, or a tracked native-supply restore. A carry produced by any
+ * other path stays unacknowledged.
+ */
+function carryMatchesReview(
+  asset: { supplyChainGuard?: { reason: string; status: string } | null; supplySource?: string | null },
+  review: ReviewedSupplyCarry,
+): boolean {
+  const guard = asset.supplyChainGuard ?? null;
+  return review.reason === "defillama-list-fill-default-carry"
+    ? guard?.reason === "supply-chain-dropout" && guard.status === "quarantined"
+    : guard == null && asset.supplySource === "onchain-total-supply";
+}
+
 function isReviewedValueRebaseline(stablecoinId: string, currentUsd: number, nowSec: number): boolean {
   return REVIEWED_SUPPLY_VALUE_REBASELINES.some((review) =>
     review.stablecoinId === stablecoinId
@@ -397,7 +412,8 @@ async function loadSupplyValueIntegrity(
     if (asset.supplyRestored === true && currentUsd !== null) {
       carryIds.push(asset.id);
       const review = REVIEWED_SUPPLY_CARRIES.find((entry) => entry.stablecoinId === asset.id);
-      const acknowledged = review != null && nowSec >= review.reviewedAt && nowSec < review.expiresAt;
+      const acknowledged = review != null && nowSec >= review.reviewedAt && nowSec < review.expiresAt
+        && carryMatchesReview(asset, review);
       if (acknowledged) report.acknowledgedCarryReviews.push(review);
       else {
         report.unacknowledgedCarryIds.push(asset.id);
