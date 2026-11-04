@@ -22,7 +22,8 @@ import gtusdcp from "@shared/data/stablecoins/coins/gtusdcp-gauntlet.json";
 const mocks = vi.hoisted(() => ({ read: vi.fn(), escrow: vi.fn(), partitionRead: vi.fn() }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
-  stablecoins: [ftusd, { ...aa, geckoId: "fixture-aa" }, susde, ustb, gtusdcp].map((meta) => ({
+  stablecoins: [ftusd, { ...aa, geckoId: "fixture-aa" }, susde,
+    { ...aa, id: "backlog-fixture", geckoId: "backlog-fixture" }, ustb, gtusdcp].map((meta) => ({
     ...meta, detailProvider: "coingecko", flags: { ...meta.flags, pegCurrency: "USD" },
   })),
 }));
@@ -87,11 +88,12 @@ vi.mock("@shared/lib/onchain-supply-probe", async (importOriginal) => {
 
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS, ONCHAIN_PARTITION_STAGE_BUDGET_MS } from "../fiat-cg";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition } from "../onchain-supply";
-import { mergeSupplementalLastKnownGood, restoreMissingTrackedAssets } from "../../shared";
+import { mergeSupplementalLastKnownGood, restoreCuratedAggregateChainPartition, restoreMissingTrackedAssets } from "../../shared";
 
 const NOW_SEC = 1_790_000_000;
 const excludedMetas = FIAT_CG_METAS.filter((meta) => [ustb.id, gtusdcp.id].includes(meta.id));
-const fixtureMetas = FIAT_CG_METAS.filter((meta) => !excludedMetas.includes(meta));
+const backlogMeta = FIAT_CG_METAS.find((meta) => meta.id === "backlog-fixture")!;
+const fixtureMetas = FIAT_CG_METAS.filter((meta) => !excludedMetas.includes(meta) && meta !== backlogMeta);
 const ftMeta = fixtureMetas.find((meta) => meta.id === ftusd.id)!;
 const aaMeta = fixtureMetas.find((meta) => meta.id === aa.id)!;
 const susdeMeta = fixtureMetas.find((meta) => meta.id === susde.id)!;
@@ -696,15 +698,21 @@ describe("CoinGecko on-chain share partitions", () => {
     mockSusdeSupply();
     const [previousSusde] = await fetchFiatCoinGeckoTokens(cgData(1_000, 1, susdeMeta));
     const previousById = new Map([previousFt, previousAa, previousSusde].map((asset) => [asset.id, asset]));
-    const backlogMeta = { ...aaMeta, id: "backlog-fixture", geckoId: "backlog-fixture" };
     const metas = [...fixtureMetas, backlogMeta];
     previousById.set(backlogMeta.id, { ...previousAa, id: backlogMeta.id, chainPartition: { ...previousAa.chainPartition! } });
     const offset = (Math.floor(NOW_SEC / CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec)
       * 2) % metas.length;
     const uncarriedId = metas[(offset + 3) % metas.length].id;
+    const previous = previousById.get(uncarriedId)!;
+    const current = { ...previous, chainCirculating: {} };
+    expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC, true))
+      .toMatchObject({ expired: false, asset: { chainPartition: { admission: "carried" } } });
     if (reason === "missing") previousById.delete(uncarriedId);
     else if (reason === "expired") previousById.get(uncarriedId)!.chainPartition!.observedAt = NOW_SEC - SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1;
     else previousById.get(uncarriedId)!.chainCirculating = {};
+    const invalidated = restoreCuratedAggregateChainPartition(current, previousById.get(uncarriedId), NOW_SEC, true);
+    if (reason === "expired") expect(invalidated).toMatchObject({ expired: true });
+    else expect(invalidated).toBeNull();
     FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...metas);
     mocks.partitionRead.mockClear();
     mocks.read.mockResolvedValue(null);
