@@ -27,14 +27,31 @@
     "attestorTier": "self",
     "cadence": "real-time",
     "latestReport": {
-      "publishedAt": "2026-10-01",
+      "periodEnd": "2026-11-04",
+      "publishedAt": "2026-11-04",
       "publishedAtBasis": "explicit",
       "assuranceMethod": "self-verification",
       "scope": "unknown",
       "liabilityReconciliation": "unknown",
-      "reviewer": "Sol NR wave 2026-10-02 (NrMtbill)",
+      "reviewer": "Issue resolver reserve renewals 2026-11-04: authenticated November 4 SAVE aggregate and matching historical issuer portfolio; unsigned composition and unknown liability scope retained",
       "confidence": "verified",
       "sources": [
+        {
+          "label": "Midas mTBILL SAVE checkpoint for 4 November 2026 15:00 UTC, published 18:31:35 UTC; issuer-signed aggregate only",
+          "url": "https://ipfs.filebase.io/ipfs/Qme2q7vZQFwCnbkRLkPWPfgvkTBZzL6XgdqLJqEiDSYCS4"
+        },
+        {
+          "label": "Exact 4 November 2026 15:00 issuer portfolio matching the signed SAVE aggregate; unsigned composition",
+          "url": "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-11-04T15:00"
+        },
+        {
+          "label": "Read-only relay retrieval of the exact historical issuer portfolio, observed 4 November 2026 22:04:05 UTC; direct issuer access returned HTTP 403",
+          "url": "https://r.jina.ai/https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-11-04T15:00"
+        },
+        {
+          "label": "Ethereum block 26344315: authorized mTBILL SAVE registry root and publisher, 4 November 2026 22:03:11 UTC",
+          "url": "https://etherscan.io/block/26344315"
+        },
         {
           "label": "Midas signed SAVE checkpoint: created October 1, 2026; issuer claims, not an independent financial opinion",
           "url": "https://gateway.pinata.cloud/ipfs/QmUSSdWVKkCDh4sGGm2PBT6tmrPNen36F2S7YjFj376h67"
