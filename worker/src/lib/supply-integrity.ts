@@ -64,6 +64,22 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
     evidenceUrls: ["https://eth.blockscout.com/token/0xf3557AD5E984211ac8A0874A670344f2C3376471"],
     reason: "The pre-move baseline covered a different vault perimeter; Blockscout values the current Gauntlet USDT Prime V2 stock at $386.8k.",
   },
+  {
+    stablecoinId: "usdq-quantoz",
+    baselineUsd: 3_001_518.8,
+    reviewedAt: Date.parse("2026-11-04T12:30:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-18T12:30:00Z") / 1000,
+    evidenceUrls: ["https://etherscan.io/token/0xc83e27f270cce0a3a3a29521173a83f402c1768b"],
+    reason: "Reviewed collapse release: finalized Ethereum block 26340352 confirms 2M USDQ, down from the frozen 7M carry; with XRPL and Polygon the published total is $3.00M.",
+  },
+  {
+    stablecoinId: "usdglo-glo",
+    baselineUsd: 852_329.33,
+    reviewedAt: Date.parse("2026-11-04T12:30:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-18T12:30:00Z") / 1000,
+    evidenceUrls: ["https://basescan.org/token/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"],
+    reason: "Reviewed collapse release: finalized Base block 53496375 confirms 91.4k USDGLO, down from the $1.018M carry; the eight-chain published total is $852.3k.",
+  },
 ];
 
 function isReviewedValueRebaseline(stablecoinId: string, currentUsd: number, nowSec: number): boolean {
@@ -326,6 +342,7 @@ async function loadSupplyValueIntegrity(
   report.cacheUpdatedAt = cache.updatedAt;
   const driftFindings: SupplyValueDriftFinding[] = [];
   const currentValues: Record<string, number> = {};
+  const quarantinedIds = new Set<string>();
   const carryIds: string[] = [];
   let carryOldestAgeSec: number | null = null;
   let carryUnclockedCount = 0;
@@ -338,6 +355,7 @@ async function loadSupplyValueIntegrity(
     if (!ACTIVE_IDS.has(asset.id)) continue;
 
     const currentUsd = getCirculatingRawOrNull(asset);
+    if (currentUsd === null && asset.supplyUnavailableReason != null) quarantinedIds.add(asset.id);
     // A carry publishes an older value. A restored row with no value (its carry
     // window expired) is unavailable supply, counted by the availability read.
     if (asset.supplyRestored === true && currentUsd !== null) {
@@ -416,7 +434,9 @@ async function loadSupplyValueIntegrity(
       const currentUsd = currentValues[stablecoinId];
       if (currentUsd == null) {
         heldDriftBaselines[stablecoinId] = baselineUsd;
-        unresolvedIds.push(stablecoinId);
+        // A named quarantine publishes no value to drift (R8) and the
+        // availability read owns it; the baseline waits for its return.
+        if (!quarantinedIds.has(stablecoinId)) unresolvedIds.push(stablecoinId);
         continue;
       }
       // A reviewed real move supersedes the pre-move baseline: the observed

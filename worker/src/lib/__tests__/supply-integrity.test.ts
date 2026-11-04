@@ -35,6 +35,7 @@ interface AssetInput {
   current: number | null;
   previous: number | null;
   supplyRestored?: boolean;
+  unavailableReason?: string;
   supplyObservedAt?: number;
   currentSource?: string;
   previousSource?: string;
@@ -50,6 +51,7 @@ function asset(input: AssetInput) {
     supplySource: input.currentSource ?? SUPPLY_SOURCE,
     supplyObservedAt: input.supplyObservedAt ?? NOW - 3600,
     ...(input.supplyRestored ? { supplyRestored: true } : {}),
+    ...(input.unavailableReason ? { supplyUnavailableReason: input.unavailableReason } : {}),
     circulating: input.current == null ? {} : { peggedUSD: input.current },
   };
 }
@@ -515,6 +517,20 @@ describe("supply integrity", () => {
     const condition = conditionOf(report, "value-drift")!;
     expect(condition.active).toBe(false);
     expect(condition.unknown).toBe(false);
+  });
+
+  it("keeps a quarantined asset's held baseline without marking value drift unknown", async () => {
+    for (const unavailableReason of ["supply-chain-dropout", undefined]) {
+      const assets = normalAssets();
+      const drifted = assets[0].id;
+      assets[0] = { ...assets[0], current: null, unavailableReason };
+      const report = await loadReport({
+        assets, confirmState: { "value-drift": { signature: "value-drift", runs: 3, held: { [drifted]: 100 } } },
+      });
+      expect(report.value.heldDriftBaselines).toEqual({ [drifted]: 100 });
+      expect(report.value.heldDriftUnknownReason).toBe(unavailableReason ? null : "held-drift-value-unavailable");
+      expect(conditionOf(report, "value-drift")).toMatchObject({ active: false, unknown: !unavailableReason, held: { [drifted]: 100 } });
+    }
   });
 
   it("honours reviewed re-baselines", async () => {
