@@ -900,7 +900,18 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
       if (claim === null) {
         cohort = await readYieldCoinCohort(db, id, signature, Math.floor(Date.now() / 1000));
         if (cohort === null) {
-          cohort = await readYieldCoinCohort(db, id, null, Math.floor(Date.now() / 1000));
+          const fallbackNow = Math.floor(Date.now() / 1000);
+          const previous = await readYieldCoinCohort(db, id, null, fallbackNow);
+          const previousSafetyIdentity = previous?.provenance?.liveSafetyHydration?.safetyScoreIdentity;
+          if (active.kind === "v9"
+            && isYieldSafetyFallbackWithinWindow(fallbackNow, active.snapshot.updatedAt, fallbackNow)
+            && previousSafetyIdentity != null
+            && safetyScorePublicationIdentitiesShareScoringContract(previousSafetyIdentity, active.snapshot.safetyScoreIdentity)
+            && (!previous?.rankings.some(row => row.safetyScore != null)
+              || active.snapshot.cards.some(card => card.id === id && card.ratingStatus !== "pipeline-gap"
+                && card.score != null && card.grade !== "NR"))) {
+            cohort = previous;
+          }
         }
         if (cohort === null) {
           // The claimant may be a fast builder that publishes within its lease.

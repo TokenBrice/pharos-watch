@@ -91,7 +91,7 @@ async function fixture(held = false, pipelineGap = false, safetyPublishedAt = NO
       publicationAttempt: { ...input.publicationAttempt, outcome: "held", publicationGenerationId: null, attemptedAtSec: heldAt },
     });
   }
-  return { sqlite, db };
+  return { sqlite, db, input };
 }
 
 describe("rankings score-index hydration", () => {
@@ -404,8 +404,8 @@ describe("rankings score-index hydration", () => {
     expect(prepare.mock.calls.filter(([sql]) => sql.includes("json_extract(value, '$.signature') = ?"))).toHaveLength(4);
   });
 
-  it.each(["yield", "safety"])("serves the previous complete assessment while a new %s signature builds", async changed => {
-    const { db, sqlite } = await fixture();
+  it.each(["yield", "safety", "index-missing", "held", "scoring-contract", "expired-safety", "pipeline-gap", "unrated"])("admits previous assessments against current Safety while a new %s signature builds", async changed => {
+    const { db, sqlite, input } = await fixture();
     sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.rankings[0].provenance.sourceObservedAt', NULL,
       '$.rankings[0].provenance.sourceAgeSeconds', 120) WHERE key = 'yield-rankings'`).run();
     const url = (id = "usdc-circle") => new URL(`https://site-api.pharos.watch/api/yield-rankings-coin?stablecoin=${id}`);
@@ -417,12 +417,25 @@ describe("rankings score-index hydration", () => {
       sqlite.prepare(`UPDATE cache SET value = json_set(value, '$.publication.generationId', 'next-yield',
         '$.updatedAt', ?, '$.publication.updatedAt', ?, '$.publication.cutoffAt', ?, '$.rankings[0].currentApy', 99),
         updated_at = ? WHERE key = 'yield-rankings'`).run(NOW + 20, NOW + 20, NOW + 20, NOW + 20);
+    } else if (changed === "index-missing") {
+      sqlite.prepare("DELETE FROM cache WHERE key = ?").run(SAFETY_SCORE_V9_CACHE_KEYS.scoreIndex);
+    } else if (changed === "held") {
+      await persistSafetyScoreV9Publication(db, {
+        publicationClockSec: NOW + 20,
+        publicationHealth: { ...input.publicationHealth, status: "held", attemptedAtSec: NOW + 20,
+          heldSinceSec: NOW + 20, reasons: [{ code: "dex-stale" }] },
+        publicationAttempt: { ...input.publicationAttempt, outcome: "held", publicationGenerationId: null, attemptedAtSec: NOW + 20 },
+      });
     } else {
       const active = await scoreIndex.loadActiveSafetyScoreIndex(db);
       if (active.kind === "error") throw new Error(active.reason);
       vi.spyOn(scoreIndex, "loadActiveSafetyScoreIndex").mockResolvedValue({ ...active, snapshot: { ...active.snapshot,
-        updatedAt: NOW + 20, safetyScoreIdentity: { ...active.snapshot.safetyScoreIdentity, publicationGenerationId: "next-safety" },
-        cards: active.snapshot.cards.map(card => ({ ...card, score: 20, grade: "D" })),
+        updatedAt: changed === "expired-safety" ? NOW - 86401 : NOW + 20,
+        safetyScoreIdentity: { ...active.snapshot.safetyScoreIdentity, publicationGenerationId: "next-safety",
+          ...(changed === "scoring-contract" ? { methodologyVersion: "999.0" } : {}) },
+        cards: active.snapshot.cards.map(card => changed === "pipeline-gap"
+          ? { ...card, score: null, grade: null, ratingStatus: "pipeline-gap" as const }
+          : changed === "unrated" ? { ...card, score: null, grade: "NR" as const } : { ...card, score: 20, grade: "D" }),
       } });
     }
     let start!: () => void;
@@ -434,9 +447,27 @@ describe("rankings score-index hydration", () => {
     const builder = handleYieldRankingsCoin(db, url("usdt-tether"));
     await started;
     const sleep = vi.spyOn(abort, "sleep");
-    const response = await handleYieldRankingsCoin(db, url());
+    const mayFallback = changed === "yield" || changed === "safety";
+    const contender = handleYieldRankingsCoin(db, url());
+    const response = mayFallback ? await contender : await settleWithFakeTimers(contender);
     finish();
     expect((await builder).status).toBe(200);
+    if (!mayFallback) {
+      expect(response.status).toBe(503);
+      expect(response.headers.get("Retry-After")).toBe("1");
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(await response.json()).toMatchObject({ reason: "yield-cohort-preparing" });
+      expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([250, 500]);
+      const full = YieldRankingsResponseSchema.parse(await (await handleYieldRankings(db)).json());
+      const next = YieldRankingsCoinResponseSchema.parse(await (await handleYieldRankingsCoin(db, url())).json());
+      expect(next.rankings).toEqual(full.rankings.filter(row => row.id === "usdc-circle"));
+      expect(next.provenance).toEqual(full.provenance);
+      expect(next.provenance?.liveSafetyHydration?.reason).toContain(changed === "index-missing" ? "safety-score-index-missing"
+        : changed === "held" ? "v9-publication-held" : changed === "expired-safety" ? "safety-publication-clock-out-of-budget"
+        : changed === "scoring-contract" ? "safety-identity-mismatch" : "low-row-safety-coverage");
+      if (["index-missing", "pipeline-gap", "unrated"].includes(changed)) expect(next.rankings[0].safetyScore).toBeNull();
+      return;
+    }
     expect(response.status).toBe(200);
     const body = YieldRankingsCoinResponseSchema.parse(await response.json());
     expect(body.projection).toEqual(previous.projection);
