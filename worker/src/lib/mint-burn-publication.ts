@@ -206,9 +206,9 @@ export function mintBurnPublicationDisabled(
 }
 
 /**
- * R8/ADR-35: an admitted leg whose accepted frontier exceeds the shared publication
- * freshness budget leaves the common watermark instead of freezing every coin. The
- * caller pauses the returned keys; only the existing reactivation catch-up resumes them.
+ * R8/ADR-35: missing or stale accepted frontiers are isolation candidates. The
+ * caller must prove a surviving common hour before pausing the returned candidates;
+ * only the existing reactivation catch-up resumes them.
  */
 export function selectMintBurnStalledFrontiers(
   configs: readonly MintBurnContractConfig[],
@@ -220,8 +220,8 @@ export function selectMintBurnStalledFrontiers(
     const key = mintBurnConfigKey(config);
     const proof = (segments.get(key) ?? []).filter((row) => row.dirty_hour_ts == null);
     const frontier = Math.max(legacy.get(key)?.end ?? 0, ...proof.map((row) => row.to_timestamp));
-    // Hour-aligned like the watermark, so a leg is quarantined exactly when it alone would stale it.
-    return frontier > 0 && now - Math.floor(frontier / 3600) * 3600 > freshnessBudgetSec;
+    // Compare closed hours under the same freshness budget as the common watermark.
+    return frontier === 0 || now - Math.floor(frontier / 3600) * 3600 > freshnessBudgetSec;
   });
 }
 
