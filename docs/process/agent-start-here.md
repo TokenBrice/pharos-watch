@@ -40,6 +40,8 @@ Use ignored `agents/<YYYY-MM-DD>-<slug>/` only when useful. [Artifact placement]
 
 See root [Working rules](../../AGENTS.md#working-rules) and [Verify and ship](../../AGENTS.md#verify-and-ship) for concurrent-tree, credential and release authority.
 
+For authorized separate checkouts, use [verified worktree bootstrap](../scripts.md#verified-worktree-bootstrap); for reviewed uncommitted lane deltas, use [lane landing and recovery](../scripts.md#reviewed-lane-landing). The [optional worktree flow](../deployment-process.md#optional-worktree-flow) keeps detached lanes separate from protected-main publishing.
+
 ## 6. Verification
 
 [Testing](../testing.md#smallest-adequate-check-per-area) owns check selection; [Pre-push readiness](../testing.md#pre-push-readiness) owns authoring feedback versus hosted readiness. [Workflow incidents](../runbooks/workflow-incidents.md) owns failed-leaf diagnosis and replacement-push evidence.
