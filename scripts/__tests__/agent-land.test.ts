@@ -22,7 +22,7 @@ const empty:ReturnType<typeof plan>["review"]["artifacts"]={
 ids:[],checkIds:[],outputs:[],generate:[],check:[],pending:[],validatorOutputs:["v"],
 }
 function repo(run:(f:ReturnType<typeof setup>)=>void,ids:string[]=[]){
-return withTempRepo("land",{"t/a":base,"t/bin":Buffer.from([0,255]),"t/v":"same","t/del":"old","t/module/index.ts":"old","t/.gitignore":"node_modules\ni\nv\n.cache/\n*.tsbuildinfo\n",msg:"x\n",
+withTempRepo("land",{"t/a":base,"t/v":"same","t/del":"old","t/module/index.ts":"old","t/.gitignore":"node_modules\ni\nv\n.cache/\n*.tsbuildinfo\n",msg:"x\n",
 "t/scripts/ci/select-generated-artifacts.mts":`export const selectChangedGeneratedArtifactIds=p=>p.join()==='a'?${JSON.stringify(ids)}:[];`,
 "t/scripts/lib/automation-registry.mjs":`export const selectGeneratedArtifacts=({only})=>{if(!only.length)throw Error('all');return (only.includes('leaf')?['dep',...only]:only).map(id=>({id,bootstrap:id!=='live',checkable:id!=='dep',outputPaths:[id+'.out']}))};`,
 "t/scripts/maintenance/run-generated-artifacts.ts":"export const buildGeneratedArtifactExecutionPhases=o=>[o];",
@@ -30,6 +30,7 @@ return withTempRepo("land",{"t/a":base,"t/bin":Buffer.from([0,255]),"t/v":"same"
 }
 function setup(root:string){
 const t=j(root,"t"),l=j(root,"l"),msg=j(root,"msg")
+put(j(t,"bin"),Buffer.of(0,255))
 const git=(cwd:string,...args:string[])=>execFileSync("git",["-c","core.hooksPath=/dev/null","-c","diff.autoRefreshIndex=false",...args],
 {cwd,encoding:"utf8",env:{...process.env,GIT_OPTIONAL_LOCKS:"0"}})
 git(t,"init","-q")
