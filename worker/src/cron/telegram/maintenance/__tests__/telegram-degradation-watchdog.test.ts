@@ -24,13 +24,13 @@ const {
   mockGetCache,
   mockSetCache,
   mockDeleteCache,
-  mockLoadActiveAlertSafetySourceAssessment,
+  mockLoadSafetySource,
 } = vi.hoisted(() => ({
   mockDeliverOperatorAlert: vi.fn(),
   mockGetCache: vi.fn(),
   mockSetCache: vi.fn(),
   mockDeleteCache: vi.fn(),
-  mockLoadActiveAlertSafetySourceAssessment: vi.fn(),
+  mockLoadSafetySource: vi.fn(),
 }));
 
 vi.mock("../../../../lib/db-cache", () => ({
@@ -46,7 +46,7 @@ vi.mock("../../../../lib/alert-safety-source-cache", async (importOriginal) => {
   return {
     ...actual,
     loadActiveAlertSafetySourceAssessment:
-      mockLoadActiveAlertSafetySourceAssessment,
+      mockLoadSafetySource,
   };
 });
 
@@ -166,10 +166,10 @@ beforeEach(() => {
   mockGetCache.mockReset();
   mockSetCache.mockReset();
   mockDeleteCache.mockReset();
-  mockLoadActiveAlertSafetySourceAssessment.mockReset();
+  mockLoadSafetySource.mockReset();
   mockDeliverOperatorAlert.mockReset().mockResolvedValue({ ok: true });
   vi.mocked(recordOperatorAlertReceipt).mockClear();
-  mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+  mockLoadSafetySource.mockResolvedValue({
     ...safetyDiagnostics(),
     state: "ok",
     ageSeconds: 60,
@@ -272,7 +272,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
   ])("$name", async ({ codes }) => {
     const store = installCacheStore();
     const nowSec = Math.floor(Date.now() / 1000);
-    mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+    mockLoadSafetySource.mockResolvedValue({
       ...safetyDiagnostics(), state: "corrupt", ageSeconds: null, generation: null,
       envelope: null, failureReason: "v9-publication-held",
       heldSinceSec: nowSec - 7200, holdReasonCodes: codes,
@@ -316,7 +316,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
   ])("%s", async (_name, age) => {
     const store = installCacheStore();
     const since = Math.floor(Date.now() / 1000) - age;
-    mockLoadActiveAlertSafetySourceAssessment.mockResolvedValue({
+    mockLoadSafetySource.mockResolvedValue({
       ...safetyDiagnostics(), state: "missing", ageSeconds: null, generation: null,
       envelope: null, failureReason: "v9-snapshot-unavailable",
     });
@@ -375,7 +375,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       triggered: phase === "sustained" || phase === "pending-masked",
       recovered: phase === "recovered",
     });
-    expect(mockLoadActiveAlertSafetySourceAssessment).not.toHaveBeenCalled();
+    expect(mockLoadSafetySource).not.toHaveBeenCalled();
     if (phase === "newly-tripped") expect(meta.safetySource.detail).toBe("state=corrupt (newly tripped)");
     if (phase === "pending-masked") {
       expect(meta.pendingBacklog.triggered).toBe(true);
@@ -579,12 +579,12 @@ describe("delivery notifications", () => {
     expect(recordOperatorAlertReceipt).not.toHaveBeenCalled();
   });
 
-  it.each(["raise", "recovery", "batched", "write-failed"])("replays failed %s history through unknown evidence and a later breach", async (phase) => {
+  it.each(["raise", "recovery", "batched", "write-failed", "credentials"])("replays failed %s history through unknown evidence and a later breach", async (phase) => {
     await useRealCache();
     const { sqlite, db } = fixtures.open();
     const signal = new AbortController().signal;
-    const firstAccepted = phase === "recovery" || phase === "write-failed";
-    const run = () => runTelegramDegradationWatchdog(db, signal, { operatorTelegramCreds });
+    const firstAccepted = !["raise", "batched"].includes(phase);
+    const run = (configured = true) => runTelegramDegradationWatchdog(db, signal, { operatorTelegramCreds: configured ? operatorTelegramCreds : null });
     const state = () => JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(WATCHDOG_KEYS.notifications)!.value as string);
     const onset = () => sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(WATCHDOG_KEYS.pendingSince);
     const originalPrepare = db.prepare.bind(db);
@@ -608,10 +608,15 @@ describe("delivery notifications", () => {
       expect(state()).toEqual(initial);
       expect(onset()).toBeDefined();
     }
-    const recovered = await run();
-    expect(JSON.parse(recovered.metadata!).reason).toBe("operator-alert-delivery-failed");
+    const recovered = await run(phase !== "credentials");
+    const reason = phase === "credentials" ? "operator-alert-credentials-missing" : "operator-alert-delivery-failed";
+    expect(recovered.status).toBe("degraded");
+    expect(JSON.parse(recovered.metadata!).reason).toBe(reason);
+    expect(recordOperatorAlertReceipt).toHaveBeenLastCalledWith(db, "telegramDelivery",
+      expect.objectContaining({ pending: true, delivered: false, reason }), signal);
     expect(onset()).toBeUndefined();
     const history = state().pending;
+    const { active, observedAt, detail } = history[0];
     expect(history).toMatchObject([{ condition: "backlog", active: !firstAccepted, latest: { active: false }, transitionCount: firstAccepted ? 1 : 2 }]);
     if (!firstAccepted) {
       expect(history[0].observedAt).toBe(initial.pending[0].observedAt);
@@ -629,6 +634,7 @@ describe("delivery notifications", () => {
     if (phase === "batched") { capacity = {}; await run(); }
     expect(state().acknowledged).toEqual(initial.acknowledged);
     const summary = state().pending[0];
+    expect(summary).toMatchObject({ active, observedAt, detail });
     expect(state().pending).toHaveLength(1);
     const count = phase === "batched" ? 4 : phase === "raise" ? 3 : 2;
     expect(summary.transitionCount).toBe(count);
@@ -640,7 +646,7 @@ describe("delivery notifications", () => {
       `${event.active ? "RAISED" : "RECOVERED"} backlog observed ${new Date(event.observedAt * 1000).toISOString()}: ${escapeHtml(event.detail)}`;
     const text = mockDeliverOperatorAlert.mock.lastCall![1];
     expect(text.split("\n").slice(1)).toEqual([
-      `backlog: ${count} transitions (${count - 2} intervening)`, line(summary), `Latest: ${line(summary.latest)}`,
+      `backlog: ${count} transitions (${count - 2} intervening)`, line({ active, observedAt, detail }), `Latest: ${line(summary.latest)}`,
     ]);
     expect(text.length).toBeLessThan(4096);
     expect(recordOperatorAlertReceipt).toHaveBeenLastCalledWith(db, "telegramDelivery",
