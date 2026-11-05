@@ -41,6 +41,7 @@ const PRUNE_ERROR_TEXT_LIMIT = 500;
 
 /** One capped retention statement: its own SQL, binds, batch size and run budget. */
 export interface CappedPruneStatement {
+  key?: string;
   sql: string;
   bindsForLimit: (limit: number) => unknown[];
   batchLimit: number;
@@ -58,15 +59,62 @@ export async function deleteCappedGroup(
   const results: CappedDeleteResult[] = [];
   for (let offset = 0; offset < statements.length; offset += RETENTION_STATEMENTS_PER_BATCH) {
     const group = statements.slice(offset, offset + RETENTION_STATEMENTS_PER_BATCH);
-    const passes = await runBoundedPruneGroup(
-      group,
-      (batches) => db.batch(batches.map(({ index, limit }) => {
-        const statement = group[index];
-        return db.prepare(statement.sql).bind(...statement.bindsForLimit(limit));
-      })),
-      signal,
-    );
-    results.push(...passes.map((pass) => ({ pruned: pass.deleted, cappedAtLimit: pass.truncated })));
+    const startedAtMs = Date.now();
+    const completed = group.map((statement, index) => ({
+      key: (statement.key ?? String(offset + index)).slice(0, 100),
+      pruned: 0 as number | null,
+      rowsRead: 0 as number | null,
+      rowsWritten: 0 as number | null,
+      d1DurationMs: 0 as number | null,
+    }));
+    let completedRounds = 0;
+    let batchOutcomeUnknown = false;
+    let status = "ok";
+    let error: string | null = null;
+    try {
+      const passes = await runBoundedPruneGroup(
+        group,
+        async (batches) => {
+          const round = await db.batch(batches.map(({ index, limit }) => {
+            const statement = group[index];
+            return db.prepare(statement.sql).bind(...statement.bindsForLimit(limit));
+          })).catch((caught: unknown) => {
+            batchOutcomeUnknown = true;
+            throw caught;
+          });
+          if (round.length !== batches.length) {
+            batchOutcomeUnknown = true;
+            throw new Error("Retention batch result count mismatch");
+          }
+          completedRounds += 1;
+          for (let index = 0; index < batches.length; index += 1) {
+            const work = completed[batches[index].index];
+            const meta = round[index].meta;
+            const add = (total: number | null, value: number | undefined) =>
+              total !== null && typeof value === "number" && Number.isFinite(value) ? total + value : null;
+            work.pruned = add(work.pruned, meta?.changes);
+            work.rowsRead = add(work.rowsRead, meta?.rows_read);
+            work.rowsWritten = add(work.rowsWritten, meta?.rows_written);
+            work.d1DurationMs = add(work.d1DurationMs, meta?.duration);
+          }
+          return round;
+        },
+        signal,
+      );
+      results.push(...passes.map((pass) => ({ pruned: pass.deleted, cappedAtLimit: pass.truncated })));
+    } catch (caught) {
+      status = signal?.aborted || (caught instanceof Error && caught.name === "AbortError") ? "aborted" : "error";
+      error = toErrorMessage(caught).slice(0, PRUNE_ERROR_TEXT_LIMIT);
+      throw caught;
+    } finally {
+      // Only acknowledged rounds are costs/counts; a failed binding can have an unknown outcome.
+      const diagnostic = JSON.stringify({
+        completed, completedRounds, batchOutcomeUnknown, status, error,
+        durationMs: Math.max(0, Date.now() - startedAtMs),
+      });
+      if (status === "ok") console.info("[retention-group]", diagnostic);
+      else console.error("[retention-group]", diagnostic);
+    }
   }
   return results;
 }
@@ -98,7 +146,7 @@ export async function runRetentionPolicies<Key extends string>(
       const policy = policies[key];
       const statement = retentionDeleteStatement(policy, nowSec);
       if (policy.budgetGroup) statement.runLimit = Math.max(0, policy.runLimit - (used.get(policy.budgetGroup) ?? 0));
-      return statement;
+      return { ...statement, key };
     });
     const passes = await deleteCappedGroup(db, statements, signal);
     for (let index = 0; index < group.length; index += 1) {
