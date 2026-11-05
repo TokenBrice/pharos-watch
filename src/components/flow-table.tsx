@@ -244,6 +244,7 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 <TableCell className="w-[126px] max-w-[126px] overflow-hidden sm:w-[150px] sm:max-w-[150px]">
                   <Link
                     href={buildStablecoinUrl(coin.stablecoinId)}
+                    prefetch={false}
                     aria-label={`Open ${label} flow detail`}
                     className="pharos-focus-ring block min-w-0 rounded-md"
                   >

@@ -354,6 +354,7 @@ function ChainsLeaderboardTable({
               <TableCell>
                 <Link
                   href={`/chains/${chain.id}/`}
+                  prefetch={false}
                   aria-label={`${chain.name} — ${formatCompactUsd(chain.totalUsd)} supply`}
                   data-chain-identity-link
                   className="pharos-focus-ring flex items-center gap-2 rounded-md"

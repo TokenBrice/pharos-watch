@@ -98,6 +98,7 @@ export function StablecoinTable({
             <TableCell>
               <Link
                 href={buildStablecoinUrl(coin.id)}
+                prefetch={false}
                 aria-label={`${coin.name} (${coin.symbol}) — ${formatCompactUsdOrSubDollar(coin.supplyUsd)} on chain`}
                 className="pharos-focus-ring flex items-center gap-2 rounded-md font-medium group-hover:text-primary"
               >

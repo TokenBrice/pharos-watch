@@ -172,6 +172,7 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
               <TableCell className="w-[122px] max-w-[122px] overflow-hidden sm:w-[150px] sm:max-w-[150px] xl:w-[170px] xl:max-w-none">
                 <Link
                   href={buildStablecoinUrl(row.meta.id)}
+                  prefetch={false}
                   aria-label={`Open ${row.meta.symbol} liquidity detail`}
                   className="pharos-focus-ring block min-w-0 rounded-md"
                 >
