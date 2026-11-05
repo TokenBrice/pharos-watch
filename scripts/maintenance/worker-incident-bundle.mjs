@@ -82,7 +82,12 @@ export async function captureWorkerIncidentBundle(args, { env = process.env, now
   const select = (key, sql, fields) => {
     try { const rows = query(sql).map((row) => pick(row, fields)); sources[key] = label(rows); return rows; }
     catch (error) {
-      let cause = error instanceof Error ? `${error.name}: ${error.message}` : "UnknownError";
+      const detail = error && typeof error === "object" ? error : {};
+      const classification = error instanceof Error ? error.message.match(/\b(?:7429|7500|overloaded|timeout|D1_ERROR)\b/i)?.[0].toLowerCase() : undefined;
+      let cause = [error instanceof Error ? error.name : "UnknownError",
+        Number.isInteger(detail.status) ? `status=${detail.status}` : null,
+        typeof detail.signal === "string" && /^SIG[A-Z]+$/.test(detail.signal) ? `signal=${detail.signal}` : null,
+        classification ? `classification=${classification}` : null].filter(Boolean).join("; ");
       for (const [name, value] of Object.entries(env)) if (/TOKEN|SECRET|PASSWORD|KEY|CREDENTIAL|AUTH/i.test(name) && value) cause = cause.replaceAll(value, "[redacted]");
       cause = cause.replace(/Bearer\s+\S+/gi, "Bearer [redacted]").replace(/[\r\n]/g, " ").slice(0, 1000);
       sources[key] = { ...label([], `${key}-read-failed`), cause };

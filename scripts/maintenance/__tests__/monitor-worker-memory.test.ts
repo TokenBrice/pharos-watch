@@ -309,8 +309,8 @@ function roleDay(workerRole: "heavy" | "public", memoryP99: number | null, query
 }
 const killsOk = () => (["heavy", "public"] as const).map((workerRole) => ({ workerRole, requests: 0, complete: true }));
 const memoryOk = () => [roleDay("heavy", 1048576), roleDay("public", 1048576)];
-function headroom(rows: ReturnType<typeof scheduledRows>, complete = true, roleDays = memoryOk()) {
-  return buildCapacityHeadroom({ roleDays, kills: killsOk(), scheduled: [{ workerRole: "heavy", rows, complete }] });
+function headroom(rows: ReturnType<typeof scheduledRows>, complete = true, roleDays = memoryOk(), kills = killsOk(), window = reportWindow) {
+  return buildCapacityHeadroom({ window, roleDays, kills, scheduled: [{ workerRole: "heavy", rows, complete }] });
 }
 const reportWindow = { from, to, fromInclusive: true as const, toExclusive: true as const, mode: "default" as const };
 
@@ -332,7 +332,7 @@ describe("capacity headroom against platform limits", () => {
         $workers: { scriptName, eventType: "scheduled", cpuTimeMs: 12.5, outcome: "exceededCpu" } }]);
     } });
     expect(report.capacity.triggers[0]).toMatchObject({ samples: 4, p50Us: 12500, exceededCpu: 4, status: "warn" });
-    expect(report.capacity.triggers[1]?.samples).toBe(4);
+    expect(report.capacity.triggers.find((row) => row.workerRole === "public" && row.cron === "16 * * * *")?.samples).toBe(4);
     expect(report.sources.find((source) => source.kind === "scheduled")?.samplingBasis).toBe("workers-logs-head-sampled");
     expect(renderCapacityMarkdown(report.capacity, report.window)).toContain("public=10%");
     expect(joinScheduledMemory([adaptive()], [{ ...scheduled, scheduledDatetime: null }], "heavy")[0]?.lane).toBeNull();
@@ -363,24 +363,22 @@ describe("capacity headroom against platform limits", () => {
       cpuClass: "hourly-or-longer", limitUs: 300_000_000, p99Ratio: 210_000_001 / 300_000_000, status: "warn",
     });
   });
-  it("warns on an exceededCpu outcome below the p99 threshold", () => {
-    const rows = [...scheduledRows("16 * * * *", 100, 1_000_000), ...scheduledRows("16 * * * *", 1, 2_000_000, "exceededCpu")];
-    expect(headroom(rows).triggers[0]).toMatchObject({ samples: 101, exceededCpu: 1, status: "warn", reason: "cpu-exceeded-cpu-observed" });
+  it.each([
+    [scheduledRows("0 8 * * *", 3, 500_000), { samples: 3, p99Us: 500_000, status: "insufficient-samples", reason: "insufficient-samples" }],
+    [scheduledRows("0 8 * * *", 1, 240_000_000), { samples: 1, p99Ratio: 0.8, status: "insufficient-samples", reason: "insufficient-samples" }],
+    [scheduledRows("0 8 * * *", 1, 1_000_000, "exceededCpu"), { samples: 1, exceededCpu: 1, status: "warn", reason: "cpu-exceeded-cpu-observed" }],
+    [[...scheduledRows("16 * * * *", 100, 1_000_000), ...scheduledRows("16 * * * *", 1, 2_000_000, "exceededCpu")],
+      { samples: 101, exceededCpu: 1, status: "warn", reason: "cpu-exceeded-cpu-observed" }],
+  ])("preserves sample floors and CPU outcomes (%#)", (rows, expected) => {
+    expect(headroom(rows).triggers[0]).toMatchObject(expected);
   });
-  it("reports small-N triggers without a headroom verdict", () => {
-    expect(headroom(scheduledRows("0 8 * * *", 3, 500_000)).triggers[0]).toMatchObject({
-      samples: 3, p99Us: 500_000, status: "insufficient-samples", reason: "insufficient-samples",
-    });
-    expect(headroom(scheduledRows("0 8 * * *", 1, 240_000_000)).triggers[0]).toMatchObject({
-      samples: 1, p99Ratio: 240_000_000 / 300_000_000, status: "insufficient-samples", reason: "insufficient-samples",
-    });
-    expect(headroom(scheduledRows("0 8 * * *", 1, 1_000_000, "exceededCpu")).triggers[0]).toMatchObject({
-      samples: 1, exceededCpu: 1, status: "warn", reason: "cpu-exceeded-cpu-observed",
-    });
-  });
-  it("never reports an aggregate ok while a trigger has no headroom verdict", () => {
+  it("never clears capacity with missing due triggers", () => {
     expect(headroom(scheduledRows("55 */2 * * *", 12, 1_000_000)).status).toBe("unavailable");
-    expect(headroom(scheduledRows("0 8 * * *", 20, 1_000_000)).status).toBe("ok");
+    const capacity = headroom(scheduledRows("16 * * * *", 20, 1000));
+    expect(capacity.triggers.find((row) => row.cron === "22 * * * *")).toMatchObject({ status: "unavailable", reason: "trigger-logs-absent" });
+    expect(capacity.triggers.some((row) => row.cron === "0 6 1 * *")).toBe(false);
+    expect(capacity.status).toBe("unavailable");
+    expect(headroom([], true, memoryOk(), killsOk(), { ...reportWindow, from: "2026-10-14T00:07:59Z", to: "2026-10-14T00:08:00Z" }).triggers).toHaveLength(0);
   });
   it("never reports ok for partial or unclassifiable CPU evidence", () => {
     expect(headroom(scheduledRows("16 * * * *", 50, 1_000_000), false).triggers[0]).toMatchObject({ samples: 50, status: "unavailable", reason: "cpu-source-error" });
@@ -398,10 +396,8 @@ describe("capacity headroom against platform limits", () => {
     expect(headroom([], true, [roleDay("heavy", p99, complete), roleDay("public", null)]).memory[0]).toMatchObject(expected);
   });
   it.each([0, 1])("preserves partial memory evidence (%s kills)", (requests) => {
-    const capacity = buildCapacityHeadroom({
-      kills: [{ workerRole: "heavy", requests, complete: false }, killsOk()[1]!], scheduled: [],
-      roleDays: [{ ...roleDay("heavy", null, false), from: "2026-10-13T00:00:00Z", to: from }, ...memoryOk()],
-    });
+    const capacity = headroom([], true, [{ ...roleDay("heavy", null, false), from: "2026-10-13T00:00:00Z", to: from }, ...memoryOk()],
+      [{ workerRole: "heavy", requests, complete: false }, killsOk()[1]!]);
     expect(capacity.memory[0]).toMatchObject({ p99Bytes: 1048576, status: requests ? "warn" : "unavailable",
       reason: requests ? "memory-exceeded-memory-observed" : "memory-kills-source-incomplete" });
     expect(capacity.status).toBe(requests ? "warn" : "unavailable");
@@ -411,20 +407,16 @@ describe("capacity headroom against platform limits", () => {
   });
   it.each(["heavy", "public"] as const)("uses %s kills independently of p99", (workerRole) => {
     for (const complete of [true, false]) for (const requests of [0, 1]) {
-      const row = buildCapacityHeadroom({ roleDays: memoryOk(), scheduled: [], kills: [{ workerRole, requests, complete }] }).memory.find((value) => value.workerRole === workerRole)!;
+      const row = headroom([], true, memoryOk(), [{ workerRole, requests, complete }]).memory.find((value) => value.workerRole === workerRole)!;
       expect(row).toMatchObject({ killsComplete: complete, status: requests ? "warn" : complete ? "ok" : "unavailable",
         reason: requests ? "memory-exceeded-memory-observed" : complete ? null : "memory-kills-source-incomplete" });
     }
   });
   it("renders unavailable evidence instead of a zero statistic", () => {
-    const markdown = renderCapacityMarkdown(buildCapacityHeadroom({
-      kills: killsOk(),
-      roleDays: [roleDay("heavy", null), roleDay("public", null)],
-      scheduled: [{ workerRole: "heavy", rows: [], complete: false }],
-    }), reportWindow);
+    const markdown = renderCapacityMarkdown(headroom([], false, [roleDay("heavy", null), roleDay("public", null)]), reportWindow);
     expect(markdown).toContain("| Role | Cron trigger |");
-    expect(markdown).toContain("| heavy | all triggers | unknown | 0 | unavailable | unavailable | unavailable | unavailable | unavailable | 0 | unavailable (cpu-source-error) |");
-    expect(markdown).not.toContain("0.00");
+    expect(markdown).toContain("| heavy | 8 * * * * | hourly-or-longer | 0 | unavailable | unavailable | unavailable | 300.00 | unavailable | 0 | unavailable (cpu-source-error) |");
+    expect(markdown).not.toContain("| 0.00 |");
   });
   it("retains capacity JSON and Markdown", async () => {
     const report = await capture([adaptive()]);

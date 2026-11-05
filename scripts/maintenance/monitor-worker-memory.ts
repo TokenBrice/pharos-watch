@@ -8,6 +8,7 @@ import { SCHEDULED_SLOT_PLANS_BY_SCHEDULE, SCHEDULED_TASK_DESCRIPTORS } from "..
 import { getCronSlotStartedAtForTrigger } from "../../shared/lib/cron-jobs";
 import { assertCliUsage, parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { parseAssignments } from "../lib/wrangler-toml.mjs";
+import { parseWranglerCronTriggers } from "../ci/check-cron-schedule-sync";
 
 export const WORKER_MEMORY_TELEMETRY_POLICY = {
   schemaVersion: 1, scheduleIntervalSec: 3600, ingestionLagAllowanceSec: 900,
@@ -51,6 +52,10 @@ export const WORKER_CAPACITY_POLICY = {
 } as const;
 const TARGETS = { heavy: "stablecoin-heavy", public: "stablecoin-api" } as const;
 type Role = keyof typeof TARGETS;
+const configuredTriggers = {
+  public: parseWranglerCronTriggers(readFileSync(new URL(WORKER_CPU_LIMIT_CONFIGS[0], import.meta.url), "utf8")),
+  heavy: parseWranglerCronTriggers(readFileSync(new URL(WORKER_CPU_LIMIT_CONFIGS[1], import.meta.url), "utf8")),
+};
 type Kind = "kills" | "scheduled" | "samples" | "role-day";
 const numeric = z.number().finite().nonnegative();
 const metric = numeric.nullish().transform((value) => value ?? null);
@@ -319,18 +324,18 @@ export function buildDailyLaneSamples(samples: JoinedRow[], scheduled: { role: R
   });
 }
 
-function expandCronField(field: string, size: number): number[] | null {
+function expandCronField(field: string, size: number, minimum = 0): number[] | null {
   const values = new Set<number>();
   for (const part of field.split(",")) {
     const [range, rawStep, ...rest] = part.split("/");
     if (rest.length || range === undefined) return null;
     const step = rawStep === undefined ? 1 : /^\d+$/.test(rawStep) ? Number(rawStep) : 0;
     if (step < 1) return null;
-    const bounds = range === "*" ? ["0", String(size - 1)] : range.split("-");
+    const bounds = range === "*" ? [String(minimum), String(size - 1)] : range.split("-");
     if (bounds.length > 2 || !bounds.every((bound) => /^\d+$/.test(bound))) return null;
     const from = Number(bounds[0]);
     const to = bounds.length === 2 ? Number(bounds[1]) : rawStep === undefined ? from : null;
-    if (to === null || from > to || to >= size) return null;
+    if (to === null || from < minimum || from > to || to >= size) return null;
     for (let value = from; value <= to; value += step) values.add(value);
   }
   return values.size ? [...values].sort((a, b) => a - b) : null;
@@ -357,43 +362,63 @@ function nearestRank(sorted: readonly number[], q: number) {
   return sorted[Math.max(0, Math.ceil(q * sorted.length) - 1)]!;
 }
 
+function triggerDue(cron: string, window: { from: string; to: string }): boolean | null {
+  const fields = cron.trim().split(/\s+/);
+  if (fields.length !== 5) return null;
+  const ranges = fields.map((field, i) => expandCronField(field, [60, 24, 32, 13, 8][i]!, i < 2 ? 0 : 1));
+  if (ranges.some((range) => range === null)) return null;
+  for (let at = Math.ceil(Date.parse(window.from) / 60_000) * 60_000; at < Date.parse(window.to); at += 60_000) {
+    const date = new Date(at);
+    const values = [date.getUTCMinutes(), date.getUTCHours(), date.getUTCDate(), date.getUTCMonth() + 1, date.getUTCDay() + 1];
+    if (ranges.every((range, i) => range!.includes(values[i]!))) return true;
+  }
+  return false;
+}
+
 /**
  * Per-trigger CPU from invocation logs; sampled role/day memory is information
  * only. Independently filtered Adaptive outcomes are the memory warn authority.
  */
 export function buildCapacityHeadroom(input: {
+  window: { from: string; to: string };
   roleDays: WorkerMemoryReport["roleDays"];
   scheduled: { workerRole: Role; rows: ScheduledRow[]; complete: boolean; reason?: string }[];
   kills: { workerRole: Role; requests: number; complete: boolean }[];
 }): CapacityHeadroom {
   const policy = WORKER_CAPACITY_POLICY;
   const triggers: CapacityTrigger[] = [];
-  for (const source of input.scheduled) {
+  for (const workerRole of ["heavy", "public"] as const) {
+    const source = input.scheduled.find((read) => read.workerRole === workerRole)
+      ?? { workerRole, rows: [], complete: false, reason: "cpu-source-missing" };
+    const due = new Map(configuredTriggers[source.workerRole].map((cron) => [cron, triggerDue(cron, input.window)]));
     const byCron = new Map<string, ScheduledRow[]>();
     for (const row of source.rows) {
+      if (due.get(row.cron) === false) continue;
       const bucket = byCron.get(row.cron);
       if (bucket) bucket.push(row);
       else byCron.set(row.cron, [row]);
     }
-    if (!byCron.size) {
-      triggers.push({ workerRole: source.workerRole, cron: "", cpuClass: null, limitUs: null, samples: 0, p50Us: null, p99Us: null, maxUs: null, exceededCpu: 0, p99Ratio: null, status: "unavailable", reason: source.complete ? "scheduled-logs-absent" : source.reason ?? "cpu-source-error" });
-      continue;
+    const crons = [...byCron.keys()].sort();
+    for (const [cron, expected] of due) if (expected !== false && !byCron.has(cron)) {
+      byCron.set(cron, []);
+      crons.push(cron);
     }
-    for (const [cron, rows] of [...byCron].sort(([a], [b]) => a.localeCompare(b))) {
+    for (const cron of crons) {
+      const rows = byCron.get(cron)!;
       const sorted = rows.map((row) => row.cpuTimeUs).sort((a, b) => a - b);
       const cpuClass = classifyCronCpuClass(cron);
       const limitUs = cpuClass === null ? null : policy.cpuLimitUs[cpuClass];
-      const p99Us = nearestRank(sorted, 0.99);
-      const p99Ratio = limitUs === null ? null : p99Us / limitUs;
+      const p99Us = sorted.length ? nearestRank(sorted, 0.99) : null;
+      const p99Ratio = limitUs === null || p99Us === null ? null : p99Us / limitUs;
       const exceededCpu = rows.filter((row) => row.status === "exceededCpu").length;
-      const status: CapacityStatus = !source.complete || limitUs === null ? "unavailable"
+      const status: CapacityStatus = !source.complete || limitUs === null || due.get(cron) === null || !sorted.length ? "unavailable"
         : exceededCpu > 0 ? "warn"
           : sorted.length < policy.minSamples ? "insufficient-samples"
             : p99Ratio! > policy.warnRatio ? "warn" : "ok";
       triggers.push({ workerRole: source.workerRole, cron, cpuClass, limitUs, samples: sorted.length,
-        p50Us: nearestRank(sorted, 0.5), p99Us, maxUs: sorted[sorted.length - 1]!, exceededCpu, p99Ratio, status,
+        p50Us: sorted.length ? nearestRank(sorted, 0.5) : null, p99Us, maxUs: sorted[sorted.length - 1] ?? null, exceededCpu, p99Ratio, status,
         reason: status === "warn" ? (exceededCpu > 0 ? "cpu-exceeded-cpu-observed" : "cpu-p99-over-warn-threshold")
-          : status === "unavailable" ? (source.complete ? "cpu-class-unknown" : source.reason ?? "cpu-source-error")
+          : status === "unavailable" ? (!source.complete ? source.reason ?? "cpu-source-error" : due.get(cron) === null ? "trigger-schedule-unsupported" : limitUs === null ? "cpu-class-unknown" : source.rows.length ? "trigger-logs-absent" : "scheduled-logs-absent")
             : status === "insufficient-samples" ? "insufficient-samples" : null });
     }
   }
@@ -621,6 +646,7 @@ export async function collectWorkerMemory({ from, to, token, accountId, now = ne
     }),
     exceededMemory: { groups: kills, complete, returnedGroups: complete ? kills.length : null, reportedRequests: complete ? knownRequests : null, knownReturnedGroups: kills.length, knownReportedRequests: knownRequests, reasons: [...new Set(killSources.flatMap((source) => source.failures.map((failure) => failure.reason)))] },
     capacity: buildCapacityHeadroom({
+      window,
       roleDays,
       kills: (["heavy", "public"] as const).map((workerRole) => ({ workerRole, requests: kills.filter((row) => row.workerRole === workerRole).reduce((sum, row) => sum + row.adaptive.sum.requests, 0), complete: killSources.filter((source) => source.workerRole === workerRole).every((source) => source.queryComplete) })),
       scheduled: (["heavy", "public"] as const).map((role) => {
