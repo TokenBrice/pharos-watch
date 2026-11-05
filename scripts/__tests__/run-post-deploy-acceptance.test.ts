@@ -264,22 +264,6 @@ describe("runPostDeployAcceptance", () => {
     expect(run.probes.map((probe) => probe.id)).toEqual(["worker-health", "worker-route-sweep"]);
   });
 
-  it("fails acceptance as operational when a swept public route returns 5xx", async () => {
-    const run = await runPostDeployAcceptance({
-      ...dependencies({ routes: { "/api/depeg-events": routeResponse("/api/depeg-events", 503) } }),
-      workerDeployed: true,
-      expectedWorkerVersion: WORKER_VERSION,
-      observedWorkerVersion: WORKER_VERSION,
-      apiKey: "ci-key",
-    });
-
-    expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "operational" });
-    expect(run.acceptance.reason).toContain("/api/depeg-events");
-    expect(run.acceptance.reason).toContain("http-5xx");
-    expect(run.summary).toContain("| worker-route-sweep | worker | failed |");
-    expect(run.exitCode).toBe(1);
-  });
-
   it("retries a single 5xx once before passing the route sweep", async () => {
     const deps = dependencies();
     let attempts = 0;
@@ -302,14 +286,13 @@ describe("runPostDeployAcceptance", () => {
     expect(run.exitCode).toBe(0);
   });
 
-  it("fails when a 5xx persists after one retry", async () => {
-    const deps = dependencies();
-    let attempts = 0;
-    deps.fetchJson.mockImplementation(async (_args: unknown, path: string) => {
-      if (path !== "/api/depeg-events") return routeResponse(path);
-      attempts += 1;
-      return routeResponse(path, 503);
-    });
+  it.each([
+    [503, 2, "failed", 1, "http-5xx"],
+    [429, 1, "pending", 0, "rate-limited"],
+    [404, 1, "failed", 1, "unexpected-status"],
+  ] as const)("reports a required route's HTTP %s", async (status, attempts, outcome, exit, reason) => {
+    const path = "/api/depeg-events";
+    const deps = dependencies({ routes: { [path]: routeResponse(path, status) } });
     const run = await runPostDeployAcceptance({
       ...deps,
       workerDeployed: true,
@@ -318,34 +301,19 @@ describe("runPostDeployAcceptance", () => {
       apiKey: "ci-key",
     });
 
-    expect(attempts).toBe(2);
-    expect(run.probes.find((probe) => probe.id === "worker-route-sweep")).toMatchObject({ outcome: "failed" });
-    expect(run.acceptance).toMatchObject({ outcome: "failed", failureKind: "operational" });
-    expect(run.acceptance.reason).toContain("http-5xx");
-    expect(run.exitCode).toBe(1);
-  });
-
-  it("keeps a rate-limited route unknown instead of passing or failing the release", async () => {
-    const deps = dependencies();
-    let attempts = 0;
-    deps.fetchJson.mockImplementation(async (_args: unknown, path: string) => {
-      if (path !== "/api/depeg-events") return routeResponse(path);
-      attempts += 1;
-      return routeResponse(path, 429);
-    });
-    const run = await runPostDeployAcceptance({
-      ...deps,
-      workerDeployed: true,
-      expectedWorkerVersion: WORKER_VERSION,
-      observedWorkerVersion: WORKER_VERSION,
-      apiKey: "ci-key",
-    });
-
-    expect(attempts).toBe(1);
-    expect(run.probes.find((probe) => probe.id === "worker-route-sweep")).toMatchObject({ outcome: "pending" });
-    expect(run.acceptance.outcome).toBe("pending");
-    expect(run.exitCode).toBe(0);
-    expect(run.summary).toContain("rate-limited");
+    expect(deps.fetchJson.mock.calls.filter(([, route]) => route === path)).toHaveLength(attempts);
+    expect(run.probes[0].outcome).toBe("passed");
+    expect(run.probes.find((probe) => probe.id === "worker-route-sweep")).toMatchObject({ outcome });
+    expect(run.acceptance.outcome).toBe(outcome);
+    expect(run.exitCode).toBe(exit);
+    expect(run.summary).toContain(`| worker-route-sweep | worker | ${outcome} |`);
+    expect(run.summary).toContain(`${path} (${reason}, HTTP ${status})`);
+    if (outcome === "failed") {
+      expect(run.acceptance.failureKind).toBe("operational");
+      expect(run.acceptance.reason).toContain(path);
+      expect(run.acceptance.reason).toContain(reason);
+      expect(run.acceptance.reason).toContain(`HTTP ${status}`);
+    }
   });
 
   it("fails the route sweep when the CI API key is missing instead of treating anonymous 401s as healthy", async () => {

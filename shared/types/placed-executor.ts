@@ -26,3 +26,4 @@ export const PlacedProjectTapeResultSchema = z.object({
   error: z.string().optional(),
   productivity: z.object({ productive: z.boolean(), reason: z.string().optional() }).strict().optional(),
 }).strict();
+export type PlacedProjectTapeResult = z.output<typeof PlacedProjectTapeResultSchema>;
