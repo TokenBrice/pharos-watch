@@ -3,11 +3,12 @@ import { BaseCoverageProvider } from "vitest/coverage";
 
 const INSTALLED = Symbol.for("pharos.critical-coverage-filter");
 // Plain repo-relative paths only: no glob, escape, quote, dot-segment or absolute spelling.
-const PLAIN_RELATIVE_PATH = /^[\w-][\w.-]*(?:\/[\w-][\w.-]*)*$/;
+const PLAIN_SEGMENT = /^[\w-][\w.-]*$/;
 
 /** Enrolled include paths when every one is plain; null leaves matching to Vitest alone. */
 function literalIncludes(include: string[] | undefined): string[] | null {
-  return include?.length && include.every((pattern) => PLAIN_RELATIVE_PATH.test(pattern)) ? include : null;
+  const plain = (pattern: string) => pattern.split("/").every((segment) => PLAIN_SEGMENT.test(segment));
+  return include?.length && include.every(plain) ? include : null;
 }
 
 /**
