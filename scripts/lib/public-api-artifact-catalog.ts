@@ -293,7 +293,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "peg-summary",
     summary: "Peg summary",
-    description: "Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggregate peg-monitoring summary. Since v6.31, `unknownCoverageSeconds` excludes merged blind spans from occupancy/penalties; wholly blind `pegPct`/`recent90d.pegPct` stay null. Recent `observedDays` excludes blind spans (`coverageLimited`). `currentDeviationBps`/`pegReference` ignore the $1M floor. `coinsAtPeg` uses raw canonical thresholds; row deviations stay rounded. Optional nullable `observationStartedAt`: earliest observed history, without PegScore age/audit/four-year clamps.",
+    description: "Per-coin peg scores, reference evidence, coverage-aware recent metrics, and aggregate peg-monitoring summary. Since v6.31, `unknownCoverageSeconds` excludes merged blind spans from occupancy/penalties; wholly blind `pegPct`/`recent90d.pegPct` stay null. Recent `observedDays` excludes blind spans (`coverageLimited`). `currentDeviationBps`/`pegReference` ignore the $1M floor. `coinsAtPeg` uses raw canonical thresholds; row deviations stay rounded. Optional nullable `observationStartedAt`: earliest observed history, without PegScore age/audit/four-year clamps. Optional nullable `price`: the live quote behind `currentDeviationBps` and its provenance, null when that observation is unavailable.",
     tags: ["Peg Monitoring"],
     responseSchema: "PegSummaryResponse",
   },
