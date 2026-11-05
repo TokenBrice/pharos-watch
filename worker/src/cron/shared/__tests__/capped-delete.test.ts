@@ -151,6 +151,7 @@ describe("runCappedPruneFamily", () => {
 
 const databases: DatabaseSync[] = [];
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const sqlite of databases.splice(0)) sqlite.close();
 });
 
@@ -159,8 +160,9 @@ function fixture() {
   databases.push(sqlite);
   sqlite.exec("CREATE TABLE alpha (observed_at INTEGER); CREATE TABLE beta (observed_at INTEGER)");
   const db = createSqliteD1(sqlite);
+  const execute = db.batch;
   const batch = vi.spyOn(db, "batch");
-  return { sqlite, db, batch };
+  return { sqlite, db, batch, execute };
 }
 
 const policy = (table: string): WindowedRetentionPolicy => ({
@@ -171,6 +173,7 @@ const policy = (table: string): WindowedRetentionPolicy => ({
 describe("batched registry retention", () => {
   it("drains independent entries in shared rounds with separate partial caps and strict cutoffs", async () => {
     const { sqlite, db, batch } = fixture();
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
     sqlite.exec("INSERT INTO alpha VALUES (1), (2), (3), (4), (90); INSERT INTO beta VALUES (1), (90)");
     const results = await runRetentionPolicies(db, { alpha: policy("alpha"), beta: policy("beta") }, 100);
     expect(results).toEqual({
@@ -179,6 +182,13 @@ describe("batched registry retention", () => {
     expect(sqlite.prepare("SELECT observed_at FROM alpha ORDER BY observed_at").all()).toEqual([{ observed_at: 4 }, { observed_at: 90 }]);
     expect(sqlite.prepare("SELECT observed_at FROM beta").all()).toEqual([{ observed_at: 90 }]);
     expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual([2, 1]);
+    expect(JSON.parse(log.mock.calls[0][1])).toMatchObject({
+      status: "ok", completedRounds: 2, batchOutcomeUnknown: false, durationMs: expect.any(Number),
+      completed: [
+        { key: "alpha", pruned: 3, rowsRead: null, rowsWritten: 3, d1DurationMs: null },
+        { key: "beta", pruned: 1, rowsRead: null, rowsWritten: 1, d1DurationMs: null },
+      ],
+    });
   });
 
   it("retains the retired-key shared run ceiling and declaration priority", async () => {
@@ -214,18 +224,36 @@ describe("batched registry retention", () => {
     expect(batch).toHaveBeenCalledTimes(calls);
   });
 
-  it("does not admit a binding call for an already-aborted invocation", async () => {
-    const { db, batch } = fixture();
+  it.each(["before", "after", "failed"])("preserves cause, commits and restart after %s interruption", async (when) => {
+    const { sqlite, db, batch, execute } = fixture();
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    sqlite.exec("INSERT INTO alpha VALUES (1), (2), (3), (4)");
     const controller = new AbortController();
-    controller.abort(new Error("retention-cancelled"));
-    await expect(runRetentionPolicies(db, { alpha: policy("alpha") }, 100, controller.signal)).rejects.toThrow("retention-cancelled");
-    expect(batch).not.toHaveBeenCalled();
+    const cause = new Error("x".repeat(900));
+    if (when === "before") controller.abort(cause);
+    else {
+      batch.mockImplementationOnce(async (statements) => {
+        const result = await execute(statements);
+        if (when === "after") controller.abort(cause);
+        return result;
+      }).mockRejectedValueOnce(cause);
+    }
+    await expect(runRetentionPolicies(db, { alpha: policy("alpha") }, 100, controller.signal)).rejects.toBe(cause);
+    expect(batch).toHaveBeenCalledTimes(when === "before" ? 0 : when === "after" ? 1 : 2);
+    if (when !== "before") expect(JSON.parse(log.mock.calls[0][1])).toMatchObject({
+      status: when === "after" ? "aborted" : "error", error: "x".repeat(500),
+      completedRounds: 1, batchOutcomeUnknown: when === "failed", completed: [{ key: "alpha", pruned: 2 }],
+    });
+    batch.mockRestore();
+    expect((await runRetentionPolicies(db, { alpha: policy("alpha") }, 100)).alpha.pruned).toBe(when === "before" ? 3 : 2);
   });
 
-  it("rolls back an entire failed group rather than publishing partial success", async () => {
+  it("keeps prior groups committed but rolls back an entire failed later group", async () => {
     const { sqlite, db } = fixture();
-    sqlite.exec("INSERT INTO alpha VALUES (1)");
-    await expect(runRetentionPolicies(db, { alpha: policy("alpha"), missing: policy("missing") }, 100)).rejects.toThrow();
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM alpha").get()).toEqual({ n: 1 });
+    sqlite.exec("INSERT INTO alpha VALUES (1); INSERT INTO beta VALUES (1)");
+    const first = Object.fromEntries(Array.from({ length: 5 }, (_, i) => [`first${i}`, policy("alpha")]));
+    await expect(runRetentionPolicies(db, { ...first, beta: policy("beta"), missing: policy("missing") }, 100)).rejects.toThrow();
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM alpha").get()).toEqual({ n: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM beta").get()).toEqual({ n: 1 });
   });
 });

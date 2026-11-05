@@ -35,11 +35,14 @@ function toUtcDateString(timestampSec: number): string {
 }
 
 describe("runPruneCronHistory", () => {
-  it("executes the nineteen registry entries in five binding calls and reports every cap", async () => {
+  it("isolates history groups and reports every cap", async () => {
     const { db } = createTestDb();
     const batch = vi.spyOn(db, "batch");
+    const log = vi.spyOn(console, "info").mockImplementation(() => {});
     const result = await runPruneCronHistory(db);
-    expect(batch).toHaveBeenCalledTimes(5);
+    expect(batch).toHaveBeenCalledTimes(6);
+    expect(log.mock.calls.slice(0, 2).map(([, detail]) => JSON.parse(detail).completed.map(({ key }: { key: string }) => key)))
+      .toEqual([["cronRuns"], ["producerHistory"]]);
     const metadata = JSON.parse(result.metadata!);
     expect(Object.keys(metadata.retentionTruncated)).toEqual(expect.arrayContaining([
       "cronRuns", "producerHistory", "repairTasks", "canaryRuns", "recoveryCheckpoints",
@@ -50,6 +53,32 @@ describe("runPruneCronHistory", () => {
       "selfServeRequestRateLimits", "selfServeIssuanceRateLimits",
     ]));
     expect(Object.values(metadata.retentionTruncated).every((flag) => flag === false)).toBe(true);
+  });
+
+  it("retains producer boundaries and counters across slices", async () => {
+    const { db, sqlite } = createTestDb();
+    const now = Math.floor(Date.now() / 1000);
+    const row = `INSERT INTO worker_producer_history
+      (idempotency_key, schedule_key, job, producer_path, producer_kind, invocation_id,
+       invoked_at, completed_at, outcome, productive, calendar_period, created_at)`;
+    sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < 10001)
+      ${row} SELECT 'old-' || id, 's', 'j', 'p', 'scheduled-job', 'old-' || id, 1, ?, 'ok', id % 2, NULL, 1 FROM n`)
+      .run(now - 31 * 86400);
+    for (const [days, kind, calendar] of [[30, "scheduled-job", null], [90, "budget-only", null], [550, "budget-only", "2024-01"]] as const) {
+      for (const offset of [-1, 0, 1]) {
+        const id = `${days}/${offset}`;
+        insert(sqlite, `${row} VALUES (?, 's', 'j', 'p', ?, ?, 1, ?, 'ok', 1, ?, 1)`, id, kind, id, now - days * 86400 + offset, calendar);
+      }
+    }
+    const result = await runPruneCronHistory(db);
+    expect(result.itemCount).toBe(10004);
+    expect(JSON.parse(result.metadata!).producerHistoryDeleted).toBe(10004);
+    expect(select(sqlite, "SELECT idempotency_key AS id FROM worker_producer_history ORDER BY id")).toEqual(
+      ["30/0", "30/1", "550/0", "550/1", "90/0", "90/1"].map((id) => ({ id })),
+    );
+    expect(select(sqlite, "SELECT producer_kind, invocation_count, productive_count FROM worker_producer_retained_counts ORDER BY producer_kind"))
+      .toEqual(select(sqlite, `SELECT producer_kind, COUNT(*) AS invocation_count, SUM(productive) AS productive_count
+        FROM worker_producer_history GROUP BY producer_kind ORDER BY producer_kind`));
   });
 
   it.each([
@@ -137,26 +166,26 @@ describe("runPruneCronHistory", () => {
     const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
     const cutoff = now - TWO_DAYS_SEC;
-    sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < ?)
-      INSERT INTO api_key_request_rate_limit_v2 (scope, subject_hash, bucket_start, last_seen_at)
-      SELECT 'submission_ip', printf('request-%06d', id), ?, ? FROM n`).run(requestRows, cutoff - 1, now);
-    if (issuanceRows > 0) {
-      sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < ?)
-        INSERT INTO api_key_self_serve_issuance_limits (scope, subject_hash, bucket_start, updated_at)
-        SELECT 'submission_ip_daily', printf('issuance-%06d', id), ?, ? FROM n`).run(issuanceRows, cutoff - 1, now);
+    const tables = [
+      ["api_key_request_rate_limit_v2", "submission_ip", "last_seen_at", requestRows, requestsLeft],
+      ["api_key_self_serve_issuance_limits", "submission_ip_daily", "updated_at", issuanceRows, issuanceLeft],
+    ] as const;
+    for (const [table, scope, clock, count] of tables) {
+      if (count > 0) sqlite.prepare(`WITH RECURSIVE n(id) AS (SELECT 1 UNION ALL SELECT id + 1 FROM n WHERE id < ?)
+        INSERT INTO ${table} (scope, subject_hash, bucket_start, ${clock})
+        SELECT ?, printf('subject-%06d', id), ?, ? FROM n`).run(count, scope, cutoff - 1, now);
+      insert(sqlite, `INSERT INTO ${table} (scope, subject_hash, bucket_start, ${clock}) VALUES (?, 'boundary', ?, ?)`, scope, cutoff, now);
     }
-    insert(sqlite, "INSERT INTO api_key_request_rate_limit_v2 (scope, subject_hash, bucket_start, last_seen_at) VALUES ('submission_ip', 'boundary', ?, ?)", cutoff, now);
-    insert(sqlite, "INSERT INTO api_key_self_serve_issuance_limits (scope, subject_hash, bucket_start, updated_at) VALUES ('submission_ip_daily', 'boundary', ?, ?)", cutoff, now);
 
     const result = await runPruneCronHistory(db);
     expect(JSON.parse(result.metadata!)).toMatchObject({
       selfServeRateLimitsDeleted: deleted,
       retentionTruncated: { selfServeRateLimits: truncated },
     });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_request_rate_limit_v2 WHERE bucket_start < ?").get(cutoff)).toEqual({ count: requestsLeft });
-    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM api_key_self_serve_issuance_limits WHERE bucket_start < ?").get(cutoff)).toEqual({ count: issuanceLeft });
-    expect(sqlite.prepare("SELECT subject_hash FROM api_key_request_rate_limit_v2 WHERE bucket_start = ?").all(cutoff)).toEqual([{ subject_hash: "boundary" }]);
-    expect(sqlite.prepare("SELECT subject_hash FROM api_key_self_serve_issuance_limits WHERE bucket_start = ?").all(cutoff)).toEqual([{ subject_hash: "boundary" }]);
+    for (const [table, , , , count] of tables) {
+      expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table} WHERE bucket_start < ?`).get(cutoff)).toEqual({ count });
+      expect(sqlite.prepare(`SELECT subject_hash FROM ${table} WHERE bucket_start = ?`).all(cutoff)).toEqual([{ subject_hash: "boundary" }]);
+    }
   });
 
   it("throws before D1 work when the cron signal is already aborted", async () => {
@@ -261,8 +290,8 @@ describe("runPruneCronHistory", () => {
     {
       label: "removes cron_runs older than 7 days and keeps newer rows",
       seed: (sqlite: DatabaseSync, now: number) => {
-        insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC - 1, 1, "ok");
-        insert(sqlite, "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES (?, ?, ?, ?)", "sync-stablecoins", now - ONE_WEEK_SEC, 1, "ok");
+        for (const offset of [-1, 0]) insert(sqlite,
+          "INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('sync-stablecoins', ?, 1, 'ok')", now - ONE_WEEK_SEC + offset);
       },
       remaining: (sqlite: DatabaseSync) => select<{ started_at: number }>(sqlite, "SELECT started_at FROM cron_runs"),
       expected: (now: number) => [{ started_at: now - ONE_WEEK_SEC }],
@@ -273,8 +302,8 @@ describe("runPruneCronHistory", () => {
     {
       label: "removes cron_slot_executions older than 14 days and keeps newer rows",
       seed: (sqlite: DatabaseSync, now: number) => {
-        insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - TWO_WEEKS_SEC - 3600, "finished", "test", now, now);
-        insert(sqlite, "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "quarterHourly", now - 3600, "finished", "test", now, now);
+        for (const age of [TWO_WEEKS_SEC + 3600, 3600]) insert(sqlite,
+          "INSERT INTO cron_slot_executions (slot_key, slot_started_at, state, execution_owner, started_at, updated_at) VALUES ('quarterHourly', ?, 'finished', 'test', ?, ?)", now - age, now, now);
       },
       remaining: (sqlite: DatabaseSync) => select<{ slot_started_at: number }>(sqlite, "SELECT slot_started_at FROM cron_slot_executions"),
       expected: (now: number) => [{ slot_started_at: now - 3600 }],
@@ -298,8 +327,8 @@ describe("runPruneCronHistory", () => {
     {
       label: "removes block timestamp cache rows older than 14 days and keeps newer rows",
       seed: (sqlite: DatabaseSync, now: number) => {
-        insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 1, now, now - TWO_WEEKS_SEC - 3600);
-        insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES (?, ?, ?, ?)", "ethereum", 2, now, now - 3600);
+        for (const [block, age] of [[1, TWO_WEEKS_SEC + 3600], [2, 3600]]) insert(sqlite,
+          "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES ('ethereum', ?, ?, ?)", block, now, now - age);
       },
       remaining: (sqlite: DatabaseSync) => select<{ updated_at: number }>(sqlite, "SELECT updated_at FROM block_timestamp_cache"),
       expected: (now: number) => [{ updated_at: now - 3600 }],
@@ -307,45 +336,25 @@ describe("runPruneCronHistory", () => {
       cutoffKey: "cutoffBlockTimestampCacheSec",
       cutoff: (now: number) => now - TWO_WEEKS_SEC,
     },
-    {
-      label: "removes Worker request attribution older than 35 days and reports the count",
+    ...[
+      ["Worker", "api_request_consumer_stats", "apiRequestConsumerStatsDeleted", "lane, consumer_class", "'public-api', 'external'"],
+      ["Pages", "site_data_request_stats", "siteDataRequestStatsDeleted", "delivery_path, upstream_lane", "'pages-cache-hit', ''"],
+      ["per-key", "api_key_request_stats", "apiKeyRequestStatsDeleted", "api_key_id", "1"],
+    ].map(([label, table, deletedKey, columns, dimensions]) => ({
+      label: `removes ${label} request attribution older than 35 days and reports the count`,
       seed: (sqlite: DatabaseSync, now: number) => {
-        const row = "INSERT INTO api_request_consumer_stats (bucket_start, route_key, route_path, lane, consumer_class, request_count) VALUES (?, ?, ?, ?, ?, ?)";
-        insert(sqlite, row, now - THIRTY_FIVE_DAYS_SEC - 1, "old", "/api/old", "public-api", "external", 1);
-        insert(sqlite, row, now - THIRTY_FIVE_DAYS_SEC, "boundary", "/api/boundary", "public-api", "external", 1);
+        const extra = label === "per-key" ? "" : ", route_key, route_path";
+        const row = `INSERT INTO ${table} (bucket_start${extra}, ${columns}, request_count)
+          VALUES (?${extra ? ", ?, ?" : ""}, ${dimensions}, 1)`;
+        for (const [offset, id] of [[-1, "old"], [0, "boundary"]] as const) {
+          insert(sqlite, row, now - THIRTY_FIVE_DAYS_SEC + offset, ...(extra ? [id, `/api/${id}`] : []));
+        }
       },
-      remaining: (sqlite: DatabaseSync) => select<{ bucket_start: number }>(sqlite, "SELECT bucket_start FROM api_request_consumer_stats"),
+      remaining: (sqlite: DatabaseSync) => select(sqlite, `SELECT bucket_start FROM ${table}`),
       expected: (now: number) => [{ bucket_start: now - THIRTY_FIVE_DAYS_SEC }],
-      deletedKey: "apiRequestConsumerStatsDeleted",
-      cutoffKey: "cutoffRequestTelemetrySec",
+      deletedKey, cutoffKey: "cutoffRequestTelemetrySec",
       cutoff: (now: number) => now - THIRTY_FIVE_DAYS_SEC,
-    },
-    {
-      label: "removes Pages request attribution older than 35 days and reports the count",
-      seed: (sqlite: DatabaseSync, now: number) => {
-        const row = "INSERT INTO site_data_request_stats (bucket_start, route_key, route_path, delivery_path, upstream_lane, request_count) VALUES (?, ?, ?, ?, ?, ?)";
-        insert(sqlite, row, now - THIRTY_FIVE_DAYS_SEC - 1, "old", "/api/old", "pages-cache-hit", "", 1);
-        insert(sqlite, row, now - THIRTY_FIVE_DAYS_SEC, "boundary", "/api/boundary", "pages-cache-hit", "", 1);
-      },
-      remaining: (sqlite: DatabaseSync) => select<{ bucket_start: number }>(sqlite, "SELECT bucket_start FROM site_data_request_stats"),
-      expected: (now: number) => [{ bucket_start: now - THIRTY_FIVE_DAYS_SEC }],
-      deletedKey: "siteDataRequestStatsDeleted",
-      cutoffKey: "cutoffRequestTelemetrySec",
-      cutoff: (now: number) => now - THIRTY_FIVE_DAYS_SEC,
-    },
-    {
-      label: "removes per-key request attribution older than 35 days and reports the count",
-      seed: (sqlite: DatabaseSync, now: number) => {
-        const row = "INSERT INTO api_key_request_stats (api_key_id, bucket_start, request_count) VALUES (?, ?, ?)";
-        insert(sqlite, row, 1, now - THIRTY_FIVE_DAYS_SEC - 1, 1);
-        insert(sqlite, row, 1, now - THIRTY_FIVE_DAYS_SEC, 1);
-      },
-      remaining: (sqlite: DatabaseSync) => select<{ bucket_start: number }>(sqlite, "SELECT bucket_start FROM api_key_request_stats"),
-      expected: (now: number) => [{ bucket_start: now - THIRTY_FIVE_DAYS_SEC }],
-      deletedKey: "apiKeyRequestStatsDeleted",
-      cutoffKey: "cutoffRequestTelemetrySec",
-      cutoff: (now: number) => now - THIRTY_FIVE_DAYS_SEC,
-    },
+    })),
   ])("$label", async ({ seed, remaining, expected, deletedKey, cutoffKey, cutoff }) => {
     const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
@@ -360,53 +369,44 @@ describe("runPruneCronHistory", () => {
     expect(result.status).toBe("ok");
   });
 
-  it("removes terminal repair tasks older than 7 days and keeps active or newer rows", async () => {
+  it.each([
+    {
+      label: "removes terminal repair tasks older than 7 days and keeps active or newer rows",
+      table: "worker_repair_tasks", columns: "task_id, kind, subject_id, state, created_at, updated_at",
+      rows: (now: number) => [
+        ["closed", "test", "closed", "closed", now, now - ONE_WEEK_SEC - 3600],
+        ["open", "test", "open", "open", now, now - ONE_WEEK_SEC - 3600],
+        ["cancelled", "test", "cancelled", "cancelled", now, now - 3600],
+      ],
+      projection: "state, updated_at", order: "task_id", deletedKey: "repairTasksDeleted", deleted: 1,
+      expected: (now: number) => [{ state: "cancelled", updated_at: now - 3600 }, { state: "open", updated_at: now - ONE_WEEK_SEC - 3600 }],
+    },
+    {
+      label: "removes worker_canary_runs older than 14 days and keeps newer rows",
+      table: "worker_canary_runs", columns: "id, check_id, idempotency_key, status, severity, observed_at",
+      rows: (now: number) => [
+        ["old", "test", "old", "ok", "info", now - WORKER_CANARY_RUN_RETENTION_SEC - 3600],
+        ["new", "test", "new", "ok", "info", now - 3600],
+      ],
+      projection: "observed_at", order: "id", deletedKey: "canaryRunsDeleted", deleted: 1,
+      expected: (now: number) => [{ observed_at: now - 3600 }],
+    },
+    {
+      label: "removes terminal recovery checkpoints older than 14 days without deleting recoverable work",
+      table: "worker_scheduled_checkpoints",
+      columns: "schedule_key, slot_started_at, job, attempt_no, invocation_id, queue_hash, state, created_at, updated_at",
+      rows: (now: number) => ["completed", "platform_abandoned", "ready", "failed"].map((state, index) =>
+        ["test", now + index, state, 1, state, "hash", state, now, now - (index === 3 ? 3600 : TWO_WEEKS_SEC + 3600)]),
+      projection: "state, updated_at", order: "slot_started_at", deletedKey: "recoveryCheckpointsDeleted", deleted: 2,
+      expected: (now: number) => [{ state: "ready", updated_at: now - TWO_WEEKS_SEC - 3600 }, { state: "failed", updated_at: now - 3600 }],
+    },
+  ])("$label", async ({ table, columns, rows, projection, order, deletedKey, deleted, expected }) => {
     const { db, sqlite } = createTestDb();
     const now = Math.floor(Date.now() / 1000);
-    insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "closed", "test", "closed", "closed", now, now - ONE_WEEK_SEC - 3600);
-    insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "open", "test", "open", "open", now, now - ONE_WEEK_SEC - 3600);
-    insert(sqlite, "INSERT INTO worker_repair_tasks (task_id, kind, subject_id, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)", "cancelled", "test", "cancelled", "cancelled", now, now - 3600);
-
+    for (const row of rows(now)) insert(sqlite, `INSERT INTO ${table} (${columns}) VALUES (${row.map(() => "?")})`, ...row);
     const result = await runPruneCronHistory(db);
-
-    expect(select<{ state: string; updated_at: number }>(sqlite, "SELECT state, updated_at FROM worker_repair_tasks ORDER BY task_id")).toEqual([
-      { state: "cancelled", updated_at: now - 3600 },
-      { state: "open", updated_at: now - ONE_WEEK_SEC - 3600 },
-    ]);
-    const metadata = JSON.parse(result.metadata!) as { repairTasksDeleted: number };
-    expect(metadata.repairTasksDeleted).toBe(1);
-  });
-
-  it("removes worker_canary_runs older than 14 days and keeps newer rows", async () => {
-    const { db, sqlite } = createTestDb();
-    const now = Math.floor(Date.now() / 1000);
-    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "old", "test", "old", "ok", "info", now - WORKER_CANARY_RUN_RETENTION_SEC - 3600);
-    insert(sqlite, "INSERT INTO worker_canary_runs (id, check_id, idempotency_key, status, severity, observed_at) VALUES (?, ?, ?, ?, ?, ?)", "new", "test", "new", "ok", "info", now - 3600);
-
-    const result = await runPruneCronHistory(db);
-
-    expect(select<{ observed_at: number }>(sqlite, "SELECT observed_at FROM worker_canary_runs")).toEqual([{ observed_at: now - 3600 }]);
-    const metadata = JSON.parse(result.metadata!) as { canaryRunsDeleted: number };
-    expect(metadata.canaryRunsDeleted).toBe(1);
-  });
-
-  it("removes terminal recovery checkpoints older than 14 days without deleting recoverable work", async () => {
-    const { db, sqlite } = createTestDb();
-    const now = Math.floor(Date.now() / 1000);
-    const checkpoint = "INSERT INTO worker_scheduled_checkpoints (schedule_key, slot_started_at, job, attempt_no, invocation_id, queue_hash, state, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    insert(sqlite, checkpoint, "test", now, "completed", 1, "completed", "hash", "completed", now, now - TWO_WEEKS_SEC - 3600);
-    insert(sqlite, checkpoint, "test", now + 1, "platform_abandoned", 1, "platform_abandoned", "hash", "platform_abandoned", now, now - TWO_WEEKS_SEC - 3600);
-    insert(sqlite, checkpoint, "test", now + 2, "ready", 1, "ready", "hash", "ready", now, now - TWO_WEEKS_SEC - 3600);
-    insert(sqlite, checkpoint, "test", now + 3, "failed", 1, "failed", "hash", "failed", now, now - 3600);
-
-    const result = await runPruneCronHistory(db);
-
-    expect(select<{ state: string; updated_at: number }>(sqlite, "SELECT state, updated_at FROM worker_scheduled_checkpoints ORDER BY slot_started_at")).toEqual([
-      { state: "ready", updated_at: now - TWO_WEEKS_SEC - 3600 },
-      { state: "failed", updated_at: now - 3600 },
-    ]);
-    const metadata = JSON.parse(result.metadata!) as { recoveryCheckpointsDeleted: number };
-    expect(metadata.recoveryCheckpointsDeleted).toBe(2);
+    expect(select(sqlite, `SELECT ${projection} FROM ${table} ORDER BY ${order}`)).toEqual(expected(now));
+    expect(JSON.parse(result.metadata!)[deletedKey]).toBe(deleted);
   });
 
   it("returns ok with zero counts when no rows are past either cutoff", async () => {
