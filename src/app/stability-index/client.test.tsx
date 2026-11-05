@@ -23,7 +23,12 @@ const refetch = vi.fn();
 const fullHistoryQuery = vi.fn();
 let reducedMotion = false;
 let area: { isAnimationActive?: boolean; animationDuration?: number; onAnimationEnd?: () => void };
-vi.mock("@/hooks/use-prefers-reduced-motion", () => ({ usePrefersReducedMotion: () => reducedMotion }));
+vi.mock("@/hooks/use-prefers-reduced-motion", () => ({
+  usePrefersReducedMotion: (options: unknown) => {
+    expect(options).toEqual({ ssrDefault: true });
+    return reducedMotion;
+  },
+}));
 let cachedFullHistoryData: typeof stabilityState.data;
 
 vi.mock("@/hooks/api-hooks", () => ({
@@ -283,8 +288,7 @@ describe("StabilityIndexClient", () => {
   });
 
   it("keeps a retained coherent generation through a failed refetch and recovers", () => {
-    const meta = { updatedAt: 1_710_000_000, ageSeconds: 60, status: "fresh" };
-    stabilityState.meta = meta;
+    stabilityState.meta = { updatedAt: 1_710_000_000, ageSeconds: 60, status: "fresh" };
     const view = render(<StabilityIndexClient />);
     expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
 
@@ -292,13 +296,10 @@ describe("StabilityIndexClient", () => {
     view.rerender(<StabilityIndexClient />);
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
-    expect(screen.getByText("Top contributors")).toBeTruthy();
-    expect(screen.getByText("score-chart-3")).toBeTruthy();
+    for (const text of ["Top contributors", "score-chart-3"]) expect(screen.getByText(text)).toBeTruthy();
     const banner = screen.getByTestId("psi-stale-banner");
     // The shared banner owns material-age warnings; the producer clock is unchanged.
-    expect(banner.dataset.hasData).toBe("true");
-    expect(banner.dataset.error).toBe("true");
-    expect(banner.dataset.updatedAt).toBe("1710000000");
+    expect(banner.dataset).toMatchObject({ hasData: "true", error: "true", updatedAt: "1710000000" });
 
     stabilityState = { ...stabilityState, isError: false, error: null };
     view.rerender(<StabilityIndexClient />);
@@ -306,26 +307,16 @@ describe("StabilityIndexClient", () => {
     expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
   });
 
-  it("still withholds an incoherent retained generation during a failed refetch", () => {
-    stabilityState.data!.headlineAggregates!.computedAt -= 1;
+  it.each(["incoherent", "missing"])("withholds %s data during a failed refetch", (state) => {
+    if (state === "missing") {
+      stabilityState.data = { ...stabilityState.data!, current: null, history: [] };
+      stabilityState.dataUpdatedAt = 0;
+    } else {
+      stabilityState.data!.headlineAggregates!.computedAt -= 1;
+    }
     stabilityState = { ...stabilityState, isError: true, error: new Error("psi down") };
     render(<StabilityIndexClient />);
     expect(screen.getByRole("alert").textContent).toContain("psi down");
     expect(screen.queryByTestId("psi-beacon")).toBeNull();
-  });
-
-  it("shows the query error notice when the PSI detail query fails without data", () => {
-    stabilityState = {
-      data: { current: null, history: [], methodology: { versionLabel: "v1.0", currentVersionLabel: "v1.0", changelogPath: "/methodology/stability-index-changelog/", isCurrent: true } },
-      isLoading: false,
-      isError: true,
-      error: new Error("psi down"),
-      dataUpdatedAt: 0,
-      meta: {},
-    };
-
-    render(<StabilityIndexClient />);
-
-    expect(screen.getByRole("alert").textContent).toContain("psi down");
   });
 });

@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { createElement } from "react";
 import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
 import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest } from "@/test-utils/frontend";
 import { usePrefersReducedMotion } from "../use-prefers-reduced-motion";
+import { useChartShell } from "../use-chart-shell";
 
 function mockMatchMedia(media: { matches: boolean }) {
   const listeners: (() => void)[] = [];
@@ -19,22 +21,35 @@ function MotionProbe({ ssrDefault = false }) {
   return createElement("span", null, usePrefersReducedMotion({ ssrDefault }) ? "reduced" : "full");
 }
 
+function ShellProbe() {
+  return createElement("span", null, useChartShell().animProps.isAnimationActive ? "full" : "reduced");
+}
+
 describe("usePrefersReducedMotion", () => {
+  beforeEach(() => {
+    const restore = [document.documentElement, document.body].map((root) => {
+      const value = root.dataset.motion;
+      return () => { if (value === undefined) delete root.dataset.motion; else root.dataset.motion = value; };
+    });
+    return () => restore.forEach((fn) => fn());
+  });
   afterEach(() => {
     cleanupFrontendTest();
     localStorage.clear();
   });
 
-  it.each([false, true])("hydrates with SSR default %s", async (ssrDefault) => {
+  it.each([[MotionProbe, false], [MotionProbe, true], [ShellProbe, true]] as const)("hydrates %s, SSR %s", async (Probe, ssrDefault) => {
     mockMatchMedia({ matches: true });
     const container = document.createElement("div");
-    container.innerHTML = `<span>${ssrDefault ? "reduced" : "full"}</span>`;
+    const probe = createElement(Probe, { ssrDefault });
+    container.innerHTML = renderToString(probe);
+    expect(container.textContent).toBe(ssrDefault ? "reduced" : "full");
     document.body.appendChild(container);
     const errors: unknown[] = [];
 
     let root: ReturnType<typeof hydrateRoot>;
     await act(async () => {
-      root = hydrateRoot(container, createElement(MotionProbe, { ssrDefault }), {
+      root = hydrateRoot(container, probe, {
         onRecoverableError: (error) => errors.push(error),
       });
     });
