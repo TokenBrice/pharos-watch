@@ -2,9 +2,9 @@
 
 ## Symptom
 
-Use this procedure for missing subscriber alerts, a growing or expiring delivery backlog, Telegram 429 storms, bot-wide send failures, preset resolution failures, or an admin broadcast. Commands and callbacks that disappear belong to [webhook incidents](./telegram-webhook.md). Unresolved digest photo/text effects belong to [digest outbox recovery](./telegram-digest-outbox.md).
+Use this procedure for missing subscriber alerts, delayed operator notices, a growing or expiring delivery backlog, Telegram 429 storms, bot-wide send failures, preset resolution failures, or an admin broadcast. Commands and callbacks that disappear belong to [webhook incidents](./telegram-webhook.md). Unresolved digest photo/text effects belong to [digest outbox recovery](./telegram-digest-outbox.md).
 
-Every send is a row in `telegram_deliveries` (one per job, chat and chunk) under a `telegram_jobs` row (one per alert detection, freeze event, freeze batch, roll-up or broadcast). [Delivery persistence](../telegram-alerts.md#delivery-persistence) owns the semantics. Start with the [read-only incident entry](#read-only-incident-entry). Query access does not authorize mutation or replay.
+Subscriber and broadcast sends use `telegram_deliveries` rows (one per job, chat and chunk) under a `telegram_jobs` row (one per alert detection, freeze event, freeze batch, roll-up or broadcast). [Delivery persistence](../telegram-alerts.md#delivery-persistence) owns the semantics. Start with the [read-only incident entry](#read-only-incident-entry). Query access does not authorize mutation or replay.
 
 | Observation | Branch |
 | --- | --- |
@@ -21,21 +21,26 @@ Compare at least two five-minute runs. Per-run counters come from the Access-pro
 
 1. **Provider breaker?** `/api/health.circuits["telegram-api"]`. While it is open the run reports `drainStoppedReason: "circuit-open"`. Detection and fan-out continue; only sends are skipped. Do not clear the circuit to force delivery.
 2. **Job stuck in `planning`?** `deliveryV2.jobsFailedClosed > 0` or `presetFailure: true` means a fan-out page threw. See [preset resolution failure](#preset-resolution-failure).
-3. **Planning stage failed?** A `degraded` run with `deliveryV2.planningErrors` had freeze detection, alert detection, retraction or fan-out throw; drain and sweep still ran. If retraction failed, `heldKinds` lists `freeze`/`freeze_batch` rows held until a later run's check succeeds.
+3. **Planning stage failed?** A `degraded` run with `deliveryV2.planningErrors` had source loading, freeze detection, alert detection, retraction or fan-out throw. `source-loading` preserves dependent baselines under the [dispatch failure contract](../telegram-architecture.md#5-dispatch--fan-out); [unread source diagnostics](../telegram-alerts.md#admin-visibility) stay null while independent delivery stages continue. If retraction failed, `heldKinds` lists `freeze`/`freeze_batch` rows held until a later run's check succeeds.
 4. **Suppressed, not lost?** `suppressedDuplicate` counts rows whose identical body reached the same chat within 24 h (the anti-flap). A flapping coin produces these by design.
 5. **Unknown effects?** `unknown` rows (timeout, network error, or claim expiry after a crash) are never re-sent. Inspect them with [rows for one chat](#delivery-rows-for-one-chat). There is no operator resend.
 6. **Safety-only silence?** Read `cron.runs[0].metadata.safetySource` from `GET /api/status-cron-detail?job=telegram-degradation-watchdog`. `failureReason` distinguishes `v9-publication-held`, `v9-snapshot-read-failed` and `v9-snapshot-invalid`.
 7. **Snapshot seed?** `snapshotSeeded: true` means the run reseeded instead of alerting ([snapshot behavior](../telegram-alerts.md#first-run--stale-snapshot-behavior)). If it persists across three runs, inspect the `alert:*-snapshot` cache keys.
 8. **Single chat?** Use [subscriber controls](#subscriber-delivery-controls) and [rows for one chat](#delivery-rows-for-one-chat). The row `reason` tells the story: `subscriber_missing`, `chat_snoozed` (deferred to the snooze end; `4102444800` is the `/pause` sentinel), `coin_snoozed`, `duplicate_prior_delivery`, `predecessor_failed`, `ambiguous_send`, `claim_expired`, `max_attempts`, or a transport error class. `consecutive_block_count >= 2` means repeated 403s auto-disabled the chat's follows. A chat over the per-chat cap gets no row; its overflow appears in the next daily roll-up.
 9. **Webhook secret?** Failed validation returns `200 ok` without dispatch. [Secret rotation](./telegram-webhook.md#secret-rotation) owns recovery.
+10. **Delayed turnover notice?** Compare `pendingAlert.generationId` in `dex-exit-route-turnover-watchdog:snapshot:v1` with `operator-alert:receipt:turnover:v1` and the acknowledgement cache `dex-exit-route-turnover-watchdog:alert:v1`. New comparisons and route recovery retain the [historical notice](../telegram-alerts.md#digest-vs-subscriber-alerts). Verify that receipt `pendingSince` stays fixed through failed or unconfigured attempts and clears after accepted transport is durably acknowledged.
+11. **Delivery-risk recovery?** Inspect watchdog `metadata.alertTransitions` and `telegram:degradation:notifications:v1`. Near-TTL clearance does not recover backlog while another threshold remains breached. Failed recovery-notification persistence retains the onset until retry saves that history ([notification contract](../telegram-alerts.md#alerting-on-degraded-delivery)); do not delete the detector key to force recovery.
 
 ## Remediation
 
-- **No raw clear, replay or TTL extension.** Do not delete, re-insert or re-time rows. `sending` and `unknown` rows are never returned to the queue. A replay would need a separately reviewed, audited control.
+- **No raw clear, replay or TTL extension.** Do not delete, re-insert or re-time `telegram_jobs` or `telegram_deliveries` rows. `sending` and `unknown` rows are never returned to the queue. A replay would need a separately reviewed, audited control.
 - **Protect risk work.** Stop admin broadcasts during 429 pressure or expiry risk. Broadcast rows have priority 90, behind every risk family.
 - **User-side fixes.** A blocked user unblocks the bot and re-subscribes; `/start` alone does not restore follows that auto-disable cleared. Snooze and quiet hours are user choices (`/pause off`, settings).
 - **Registration drift.** Inspect `budgetOnlySurfaces` for `telegram-registration-reconciliation`. Force `npx tsx scripts/maintenance/register-telegram.ts --action webhook` only when automatic repair cannot wait.
 - **Emergency stop.** There is no operator pause. Use a Worker rollback.
+- **Preserve operator evidence.** Retain turnover pending payloads, acknowledgement state, delivery-risk notification history and receipts during rollback.
+- **Paired rollout.** Deploy public and heavy Workers together; verify `TELEGRAM_BOT_TOKEN` and `TELEGRAM_OPERATOR_CHAT_ID` on both. Observe the first relevant watchdog execution, [genuine receipts](./cron-delivery-stall.md#evidence-and-prerequisite), an admitted turnover evaluation, stable pending age, acknowledgement clearing and steady silence. If no natural event occurs, record transport acceptance as unexercised.
+- **Invalid watchdog state.** Repeated malformed-JSON/schema errors require inspecting and retaining the exact `cache` value and `updated_at` for the affected key: `telegram:degradation:notifications:v1` for delivery notifications; `dex-exit-route-turnover-watchdog:snapshot:v1` or `dex-exit-route-turnover-watchdog:alert:v1` for turnover. First verify that the deployed Worker supports the stored schema: a valid newer payload rejected after rollback needs compatible code, not deletion. For confirmed malformed state, an operator authorized to mutate D1 may delete only that specific state key, matching the inspected value and `updated_at` to avoid deleting a concurrent repair. The next scheduled evaluation re-baselines it. This resets alert memory and can lose undelivered history or repeat a notice. Do not apply this reset to valid pending history. Confirm the invalid-state error stops and the producer receipt advances. Never clear subscriber delivery rows, receipts, or the global send-backoff key as part of this repair.
 
 ## Backlog and Expiration
 
@@ -48,6 +53,8 @@ Compare at least two five-minute runs. Per-run counters come from the Access-pro
 | `deliveryV2.sweepExpired > 0` | Rows passed `expires_at` and were marked `expired`; check why the drain did not reach them (deadline, circuit, global backoff). |
 
 A run claims pages of 100 rows until the four-minute soft deadline (`drainStoppedReason: "deadline"`), sending to four distinct chats at a time.
+
+A recovery notice held only by the operator cooldown remains visible in `alertTransitions`, but does not degrade an otherwise successful evaluation. Top-level cron reasons retain detector evidence; delivery failures or missing credentials degrade only when required operator delivery cannot complete.
 
 ## Rate-Limit Storm
 

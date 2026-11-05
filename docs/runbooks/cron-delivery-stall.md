@@ -8,6 +8,8 @@
 
 `schedulerLiveness.expectedLanes` covers every slot plan whose 3x cadence fits `CRON_SLOT_EXECUTIONS_RETENTION_SEC` (warn at 2x, stale at 3x; the monthly audit is excluded). The hourly external monitor warns on a degraded expected lane and fails/upserts this incident on any stale or unavailable lane, so a never-delivered daily/4-hourly slot cannot stay silent behind a watch-tier info cause. The top-level `operatorAlerts` field carries the operator-alert receipt (`operatorConfigured`, `pendingSince`, `pendingAgeSec`, 24h budget); the same monitor fails when the channel is unconfigured, pending past budget, unreadable, or a producer stops writing receipts, and warns without opening an incident while the field is absent from a pre-deploy snapshot.
 
+The receipt roster is `freshness`, `digest`, `turnover` and `telegramDelivery` (`OPERATOR_ALERT_RECEIPT_KEYS` in `worker/src/lib/status/operator-alert-health.ts`), under `operator-alert:receipt:<producer>:v1`. Missing or malformed receipts remain unavailable during bootstrap; never seed a healthy row. Turnover starts only after an admitted heavy-Worker evaluation; a skipped upstream publication is not receipt evidence. Observe real writers for every producer before declaring the operator channel operational ([health contract](../status-dashboard.md#synthetic-self-check)).
+
 For platform evidence, provide `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_WORKERS_ANALYTICS_API_TOKEN` (the generic name wins when both are set) in the environment with Cloudflare Analytics read permission for the account. Never print the token or scrape Wrangler OAuth files. Optional `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_WORKER_NAME` select another explicit target. The D1 source uses ordinary Wrangler auth and a read-only SELECT.
 
 ```bash
