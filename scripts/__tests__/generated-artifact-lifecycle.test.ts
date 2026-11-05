@@ -5,7 +5,7 @@ import { cachedGlobMatcher } from "../lib/glob-matcher.mts";
 import { collectModuleSpecifiers, resolveModuleSpecifier } from "../lib/pr-import-graph.mts";
 import { V9_SCORE_INPUT_DATA_PATHS } from "../lib/safety-score-v9-evaluation-inputs.mts";
 import { describe, expect, it } from "vitest";
-import { buildGeneratedArtifactPhases as phases, GENERATED_ARTIFACT_REGISTRY, selectCheckableArtifactIds, selectGeneratedArtifacts } from "../lib/automation-registry.mjs";
+import { buildGeneratedArtifactPhases as phases, GENERATED_ARTIFACT_REGISTRY, selectCheckableArtifactIds } from "../lib/automation-registry.mjs";
 
 interface Artifact {
   id: string;
@@ -18,7 +18,8 @@ interface Artifact {
 }
 
 const registry = GENERATED_ARTIFACT_REGISTRY as Artifact[];
-const selectedIds = (options: Record<string, unknown>) => selectGeneratedArtifacts(options).map((a) => a.id);
+const selectedIds = (options: Record<string, unknown>) =>
+  (phases(options) as { artifacts: { id: string }[] }[]).flatMap(({ artifacts }) => artifacts.map((a) => a.id));
 
 const catalog = "stablecoin-catalog", detail = "stablecoin-detail-snapshots", manifest = "safety-score-v9-evaluation-build";
 const projection = "stablecoin-client-projections";
