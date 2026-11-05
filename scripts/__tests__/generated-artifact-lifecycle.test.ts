@@ -26,6 +26,17 @@ const selectedIds = (options: Record<string, unknown>) => ids(selectGeneratedArt
 const catalog = "stablecoin-catalog", detail = "stablecoin-detail-snapshots", manifest = "safety-score-v9-evaluation-build";
 const projection = "stablecoin-client-projections";
 
+describe("PR dataset integrity commands", () => {
+  it.each([[false, false], [false, true], [true, false], [true, true]])(
+    "commands for check=%s integrityOnly=%s", (check, integrityOnly) => {
+      const plan = (integrityOnly = false) => buildGeneratedArtifactPhases({ check, integrityOnly, only: ["public-datasets", "runbook-index"] })
+        .flatMap(({ artifacts }) => artifacts);
+      expect(plan(integrityOnly).map(({ command }) => command)).toEqual(plan().map(({ id, command }) =>
+        command + (check && integrityOnly && id === "public-datasets" ? " --integrity-only" : "")));
+    },
+  );
+});
+
 describe("generated artifact lifecycle", () => {
   it("uses offline snapshots for bootstrap and live generation only after refresh", () => {
     const snapshot = (options: Record<string, unknown>) => phases(options)

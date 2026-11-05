@@ -20,6 +20,19 @@ const names = (commands: readonly { name: string }[]) => commands.map((command) 
 const staticNames = (files: readonly string[], options?: Parameters<typeof buildPrStaticCheckPlan>[1]) =>
   names(buildPrStaticCheckPlan(files, options).commands);
 
+describe("PR dataset integrity selection", () => {
+  it.each(["public/_redirects", "scripts/maintenance/generate-runbook-index.ts", "docs/testing.md"])(
+    "selects dataset integrity for %s", (file) => {
+      for (const group of [undefined, "guards", "compile"] as const) {
+        const command = buildPrStaticCheckPlan([file], { group }).commands
+          .find(({ name }) => name === "check:generated-artifacts");
+        expect(command?.args?.includes("--integrity-only") ?? false)
+          .toBe(group !== "compile" && file === "public/_redirects");
+      }
+    },
+  );
+});
+
 describe("adaptive PR checks", () => {
   it("selects the homepage health-copy guard only for authored homepage surfaces", () => {
     for (const file of [
@@ -131,7 +144,7 @@ describe("adaptive PR checks", () => {
     expect(automatic).not.toContain("postman");
     expect(automatic).not.toContain("stablecoin-catalog");
     expect(buildPrStaticCheckPlan(files).commands.find((command) => command.name === "check:generated-artifacts")?.args)
-      .toEqual(automatic.length ? [`--only=${automatic.join(",")}`] : undefined);
+      .toEqual(automatic.length ? [`--only=${automatic.join(",")}`, ...(automatic.includes("public-datasets") ? ["--integrity-only"] : [])] : undefined);
   });
 
   // Ordinary internal docs do not select a checkable artifact; generated output

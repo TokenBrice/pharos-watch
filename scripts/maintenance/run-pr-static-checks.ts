@@ -321,7 +321,10 @@ export function selectPrBaselineChecks(changedFiles: readonly string[]) {
   }
   const artifactIds = selectCheckableArtifactIds(selectChangedGeneratedArtifactIds(changedFiles));
   if (artifactIds.length > 0) {
-    commands.push({ name: "check:generated-artifacts", args: [`--only=${artifactIds.join(",")}`] });
+    commands.push({ name: "check:generated-artifacts", args: [
+      `--only=${artifactIds.join(",")}`,
+      ...(artifactIds.includes("public-datasets") ? ["--integrity-only"] : []),
+    ] });
   }
   if (classification.workerChanged) {
     commands.push(

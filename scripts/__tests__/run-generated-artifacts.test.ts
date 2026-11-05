@@ -3,8 +3,30 @@ import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { runGeneratedArtifacts } from "../maintenance/run-generated-artifacts";
+import {
+  buildGeneratedArtifactExecutionUnits,
+  runGeneratedArtifacts,
+} from "../maintenance/run-generated-artifacts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+
+describe("PR dataset integrity runner", () => {
+  it.each([[[]], [["--bootstrap"]]])("rejects generation %s before children", async (args) => {
+    const runCommandImpl = vi.fn(async () => 0);
+    await expect(runGeneratedArtifacts({ argv: ["--integrity-only", ...args], runCommandImpl }))
+      .rejects.toThrow("--integrity-only requires --check");
+    expect(() => buildGeneratedArtifactExecutionUnits({ integrityOnly: true })).toThrow("requires --check");
+    expect(runCommandImpl).not.toHaveBeenCalled();
+  });
+
+  it.each([false, true])("threads CLI and execution units: integrityOnly=%s", async (integrityOnly) => {
+    const units = buildGeneratedArtifactExecutionUnits({ check: true, integrityOnly, only: ["public-datasets"] });
+    const runCommandImpl = vi.fn(async (_command: string) => 0);
+    await runGeneratedArtifacts({ argv: ["--check", "--only=public-datasets", ...(integrityOnly ? ["--integrity-only"] : [])], log: () => {}, runCommandImpl });
+    expect(runCommandImpl.mock.calls.map(([command]) => command)).toEqual(units.flatMap(({ commands }) => commands));
+    expect(units.find(({ id }) => id === "public-datasets")?.commands)
+      .toEqual([`tsx scripts/maintenance/generate-public-datasets.ts --check${integrityOnly ? " --integrity-only" : ""}`]);
+  });
+});
 
 describe("contracts workspace generated-artifact inputs", () => {
   it.each(["shared/contracts/api-meta.ts", "scripts/lib/public-api-response-schemas.ts"])(
