@@ -95,7 +95,9 @@ export async function readMintBurnWindowContext(
     prepareMintBurnPublicationPolicy(db),
     ...(transitionActive ? [prepareMintBurnLegacyEvidence(db, configs)] : []),
   ]);
-  const segments = decodeMintBurnScanCoverage(results[0] as D1Result<MintBurnScanSegment>);
+  const scanRows = results[0] as D1Result<MintBurnScanSegment>;
+  const segments = decodeMintBurnScanCoverage(scanRows);
+  const previouslyScanned = new Set(scanRows.results.filter((row) => row.dirty_hour_ts == null).map((row) => row.config_key));
   const legacy = transitionActive ? buildMintBurnLegacySpans(
     configs.filter(isGrandfatheredMintBurnConfig), results[3].results as MintBurnLegacyRow[], segments, expectedBlockTimeSec,
   ) : new Map<string, MintBurnLegacySpan>();
@@ -119,7 +121,10 @@ export async function readMintBurnWindowContext(
   const completeRoster = MINT_BURN_CONFIGS.every((config) => !WORKER_ACTIVE_IDS.has(config.stablecoinId)
     || rosterKeys.has(mintBurnConfigKey(config)));
   const active = existing.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId));
-  const stalled = selectMintBurnStalledFrontiers(active, segments, legacy, nowSec, MINT_BURN_WATERMARK_MAX_AGE_SEC);
+  // Grandfathered membership and legacy cursors alone cannot turn bootstrap gaps into quarantine.
+  const proven = active.filter((config) => previouslyScanned.has(mintBurnConfigKey(config))
+    || admissions.some((row) => row.config_key === mintBurnConfigKey(config)));
+  const stalled = selectMintBurnStalledFrontiers(proven, segments, legacy, nowSec, MINT_BURN_WATERMARK_MAX_AGE_SEC);
   const stalledPairs = new Set(stalled.map((config) => `${config.stablecoinId}|${config.chain.chainId}`));
   const survivors = active.filter((config) => !stalledPairs.has(`${config.stablecoinId}|${config.chain.chainId}`));
   const survivorWatermark = resolveMintBurnWatermark(nowSec, survivors, segments, legacy);
