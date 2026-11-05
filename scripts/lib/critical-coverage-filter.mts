@@ -7,7 +7,7 @@ const GLOB_SYNTAX = /[*?[\]{}()!+@|]/;
 /** Unescaped literal include paths, or null when any include is a glob or a relative spelling. */
 function literalIncludes(include: string[] | undefined): string[] | null {
   if (!include?.length || include.some((pattern) => GLOB_SYNTAX.test(pattern.replace(/\\./g, "")))) return null;
-  const literals = include.map((pattern) => pattern.replace(/\\(.)/g, "$1").replace(/^\.\//, ""));
+  const literals = include.map((pattern) => pattern.replace(/\\(.)/g, "$1").replace(/^(?:\.\/)+/, ""));
   return literals.some((path) => path.startsWith("../") || path.includes("/../") || path.includes("/./")) ? null : literals;
 }
 
