@@ -64,13 +64,14 @@ export interface PostDeployRouteProbe {
 }
 
 /**
- * `http-5xx`, transport and auth failures fail acceptance. `rate-limited`
- * (429) is unknown evidence: it neither passes nor fails the release by itself.
+ * Required routes must answer 2xx. `rate-limited` (429) is unknown evidence:
+ * it neither passes nor fails the release by itself.
  */
 export type PostDeployRouteSweepFailureReason =
   | "http-5xx"
   | "transport-error"
   | "auth-rejected"
+  | "unexpected-status"
   | "rate-limited"
   | "sweep-not-run";
 
@@ -96,6 +97,9 @@ export function classifyPostDeployRouteProbe(probe: PostDeployRouteProbe): PostD
   }
   if (probe.status >= 500 && probe.status <= 599) {
     return { path: probe.path, status: probe.status, reason: "http-5xx" };
+  }
+  if (probe.status < 200 || probe.status > 299) {
+    return { path: probe.path, status: probe.status, reason: "unexpected-status" };
   }
   return null;
 }
@@ -125,7 +129,7 @@ export function summarizePostDeployRouteSweep(probes: readonly PostDeployRoutePr
     .map((failure) => `${failure.path} (${failure.reason}, HTTP ${failure.status})`).join("; ")
     + (failures.length > 8 ? `; +${failures.length - 8} more` : "");
   const detail = failures.length === 0
-    ? `${probes.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length} public GET routes answered without a persistent 5xx${retryNote}.`
+    ? `${probes.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length} public GET routes answered HTTP 200–299${retryNote}.`
     : hardFailures.length > 0
       ? `${failures.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length} public GET routes failed or were unverified${retryNote}: ${listed}`
       : `${failures.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length} public GET routes were rate-limited (unknown, not failed)${retryNote}: ${listed}`;
@@ -180,7 +184,7 @@ export function selectPostDeployProbes({
       id: "worker-route-sweep",
       kind: "smoke",
       surface: "worker",
-      description: "GET every public status-probe route once (one 5xx retry); a persistent 5xx fails the release; a 429 is unknown.",
+      description: "GET every public status-probe route once (one 5xx retry); require HTTP 200–299; a 429 is unknown.",
     });
   }
 
