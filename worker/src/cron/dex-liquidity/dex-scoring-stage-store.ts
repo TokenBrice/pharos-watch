@@ -246,17 +246,28 @@ export async function loadConfidentHistoryStability(db: D1Database): Promise<{
   while (true) {
     const historyResult = await db
       .prepare(
-        `SELECT stablecoin_id, snapshot_date, total_tvl_usd, total_volume_24h_usd, coverage_class, coverage_confidence,
+        // Walk history IDs until one page is covered; expired-only coins add no rows.
+        `WITH RECURSIVE ids(id, seen) AS (
+           SELECT MIN(stablecoin_id), 0 FROM dex_liquidity_history WHERE stablecoin_id >= ?2
+           UNION ALL
+           SELECT (SELECT MIN(stablecoin_id) FROM dex_liquidity_history WHERE stablecoin_id > ids.id),
+                  seen + (SELECT COUNT(*) FROM (
+                    SELECT 1 FROM dex_liquidity_history
+                    WHERE stablecoin_id = ids.id AND snapshot_date >= ?1
+                      AND (stablecoin_id, snapshot_date) > (?2, ?3) LIMIT ?4
+                  ))
+           FROM ids WHERE id IS NOT NULL AND seen < ?4
+         )
+         SELECT stablecoin_id, snapshot_date, total_tvl_usd, total_volume_24h_usd, coverage_class, coverage_confidence,
                 volume_availability_json, methodology_version
-         FROM dex_liquidity_history
-         WHERE snapshot_date >= ?
-           AND (stablecoin_id > ? OR (stablecoin_id = ? AND snapshot_date > ?))
+         FROM ids CROSS JOIN dex_liquidity_history
+         WHERE ids.seen < ?4 AND stablecoin_id = ids.id AND snapshot_date >= ?1
+           AND (stablecoin_id, snapshot_date) > (?2, ?3)
          ORDER BY stablecoin_id, snapshot_date
-         LIMIT ?`,
+         LIMIT ?4`,
       )
       .bind(
         thirtyDaysAgo,
-        cursorStablecoinId,
         cursorStablecoinId,
         cursorSnapshotDate,
         HISTORY_STABILITY_BATCH_SIZE,
