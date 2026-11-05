@@ -341,7 +341,7 @@ describe("critical execution contracts", () => {
     installCriticalCoverageFilter();
     const cwd = mkdtempSync(join(tmpdir(), "pharos-critical-coverage-"));
     temporaryDirectories.push(cwd);
-    const provider = Object.assign(new BaseCoverageProvider(), { roots: [cwd], coverageFilesDirectory: cwd, options: { include: ["kept.ts"], exclude: [], allowExternal: false } });
+    const provider = Object.assign(new BaseCoverageProvider(), { roots: [cwd], coverageFilesDirectory: cwd, options: { include: ["./kept.ts"], exclude: [], allowExternal: false } });
     const script = (file: string) => ({ url: pathToFileURL(join(cwd, file)).href, functions: [{ ranges: [{ startOffset: 0, endOffset: 9, count: 2 }] }] });
     provider.onAfterSuiteRun({ coverage: { result: [script("kept.ts"), script("registry.json")] }, testFiles: ["a.test.ts"], environment: "ssr" } as never);
     await Promise.all(provider.pendingPromises);

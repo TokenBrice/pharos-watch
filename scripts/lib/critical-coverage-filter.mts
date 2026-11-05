@@ -4,10 +4,11 @@ import { BaseCoverageProvider } from "vitest/coverage";
 const INSTALLED = Symbol.for("pharos.critical-coverage-filter");
 const GLOB_SYNTAX = /[*?[\]{}()!+@|]/;
 
-/** Unescaped literal include paths, or null when any include is a real glob. */
+/** Unescaped literal include paths, or null when any include is a glob or a relative spelling. */
 function literalIncludes(include: string[] | undefined): string[] | null {
   if (!include?.length || include.some((pattern) => GLOB_SYNTAX.test(pattern.replace(/\\./g, "")))) return null;
-  return include.map((pattern) => pattern.replace(/\\(.)/g, "$1"));
+  const literals = include.map((pattern) => pattern.replace(/\\(.)/g, "$1").replace(/^\.\//, ""));
+  return literals.some((path) => path.startsWith("../") || path.includes("/../") || path.includes("/./")) ? null : literals;
 }
 
 /**
@@ -31,7 +32,8 @@ export default function installCriticalCoverageFilter(): void {
     const literals = literalIncludes(this.options.include);
     const result = coverage.result.filter((entry) => {
       const file = fileURLToPath(entry.url);
-      return (literals === null || literals.some((path) => file.includes(path))) && this.isIncluded(file);
+      const slashed = file.replaceAll("\\", "/");
+      return (literals === null || literals.some((path) => slashed.includes(path))) && this.isIncluded(file);
     });
     return persist.call(this, { ...meta, coverage: { ...coverage, result } });
   };
