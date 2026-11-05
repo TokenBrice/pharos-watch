@@ -653,7 +653,7 @@
   }
 
   .pharos-focus-ring {
-    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
     transition:
       box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
       background-color var(--motion-duration-fast) var(--motion-ease-standard),
@@ -686,7 +686,7 @@
       center / contain no-repeat;
   }
   .pharos-source-list a {
-    @apply rounded-sm underline underline-offset-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none;
+    @apply rounded-sm underline underline-offset-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none;
   }
   .pharos-source-list a + span {
     @apply ml-2 text-muted-foreground/80;
@@ -1430,7 +1430,7 @@
      `pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground`
      string it replaces. */
   .pharos-prose-link {
-    @apply rounded-sm underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply rounded-sm underline underline-offset-4 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
     transition:
       box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
       background-color var(--motion-duration-fast) var(--motion-ease-standard),

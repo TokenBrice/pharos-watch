@@ -171,8 +171,8 @@ export const NOTICE_TONE_COLORS: Record<"unavailable" | "network" | "error", Not
 
 /** Text color classes keyed by price-source confidence level. */
 export const CONFIDENCE_LEVEL_COLORS: Record<"high" | "single-source" | "low" | "fallback", string> = {
-  high: "text-emerald-600 dark:text-emerald-400",
-  "single-source": "text-amber-600 dark:text-amber-400",
+  high: "text-emerald-700 dark:text-emerald-400",
+  "single-source": "text-amber-700 dark:text-amber-400",
   low: "text-rose-600 dark:text-rose-400",
   fallback: "text-muted-foreground",
 };
