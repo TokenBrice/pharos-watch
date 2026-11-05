@@ -576,3 +576,13 @@ export const VALID_CAPTURE_MAP_SUMMARY = {
     { tier: "F" as const, range: "0-59", count: 2, mcapUsd: 2_000_000_000, sharePct: 2, leaders: [] },
   ],
 };
+
+export function makeResumeDigestDb(tables: MockTableConfig[], row: Record<string, unknown> = {
+  generated_at: 1_772_798_400, digest_text: "Stored copy.", digest_title: "Stored", digest_extended: "Stored extended.",
+}): MockD1Database {
+  return mockD1([
+    { match: "SELECT generated_at, digest_text, digest_title, digest_extended, digest_meta, input_data FROM daily_digest", rows: [], first: row },
+    { match: "SELECT COUNT(*) as cnt FROM daily_digest", rows: [{ cnt: 187 }] },
+    ...tables,
+  ]);
+}

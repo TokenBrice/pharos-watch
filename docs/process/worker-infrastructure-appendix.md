@@ -426,7 +426,25 @@ Safety Score table/per-coin transports use the same fenced, immutable-byte/live-
 
 The site-only `GET /api/dex-liquidity-coin?stablecoin=<id>`, `/api/redemption-backstop-coin?stablecoin=<id>` and `/api/yield-rankings-coin?stablecoin=<id>` retain query-bearing edge identities and separate frontend keys from their full-cohort APIs. They use the existing authenticated website-data lane, have no public probes or OpenAPI/Postman enrollment, and validate the scoped response before query-cache admission. Each carries `projection` metadata naming the coin, producer generation/time, full dataset count and explicit `row-not-published` reason for absent rows; dataset count is never the one-row display length.
 
-DEX selects its row and full published census in one SQL snapshot; generation and freshness use that row's original producer clock, with null identity for legacy generationless evidence. Redemption selects one immutable completed-run row alongside its manifest/census and likewise uses the selected row's own clock, not a newer sibling's. Yield selects its complete coin before validation, aging and live Safety hydration. Its shared D1 comparator census is bound to the yield generation/clock and exact live Safety identity/health: global ranks, attribution, warnings and coverage are built once per evidence state, not for every coin URL. The census expires at the next source/anchor/benchmark/fallback eligibility transition; per-coin ages continue advancing from original observations. A durable pre-build lease coalesces cold readers. A losing contender keeps its existing immediate scoped re-read, then waits at most 750 ms in two bounded steps (250 ms, then 500 ms) and re-reads only its requested coin under the invocation's exact signature at the current wall clock; that is at most two added serial D1 reads plus one lease-metadata read only when reporting exhaustion, with no extra full-cache read, claim, write, provider fetch or unbounded loop. Exhausted or abandoned leases still return the retryable `503 yield-cohort-preparing` with `Retry-After: 1`, so contention shorter than the bound can recover and every other failure stays visibly unavailable. A successful claim and an exhausted waiter each emit one bounded `logWorkerEvent` naming the coin, the cohort signature prefix, the lease owner and `leaseUntil`; on exhaustion it adds the machine-readable reason and, when readable, the current lease's own signature prefix, owner and deadline, without changing status, wait, lease or cache behaviour. The independent yield-history reader also selects only its requested complete row.
+DEX selects its row and full published census in one SQL snapshot; generation and freshness use that row's original producer clock, with null identity for legacy generationless evidence. Redemption selects one immutable completed-run row alongside its manifest/census and likewise uses the selected row's own clock, not a newer sibling's. Yield selects its complete coin before validation, aging and live Safety hydration. Its shared D1 cohort assessment is bound to the yield publication/clock, yield methodology version and exact live Safety identity/clock/health or unavailable/held reason: global ranks, attribution, warnings and coverage are built once per evidence state, not for every coin URL. The assessment expires at the next source/anchor/benchmark/fallback eligibility transition; per-coin ages continue advancing from original observations.
+
+The versioned complete assessment and its durable pre-build lease occupy separate cache rows; claiming a rebuild preserves the last complete response envelope and rows. Publication atomically requires the current lease owner and signature. After losing a claim, a reader re-reads its exact signature, then selects only its coin from the most recent complete assessment. A prior signature is usable only while `assessedAt <= now < validUntil`, both the current publication and retained assessment contain the coin, and the assessment's stored `yieldMethodologyVersion` equals the runtime version used to compute it. This build version is independent of the producer's `methodology` envelope; legacy assessments without the build version can satisfy exact-signature reads but cannot serve fallback. The current canonical Safety index must be admitted, non-held and within its original accepted-clock budget, and its identity must be comparable to the retained live-hydration identity, including evaluator-build equality. A retained Safety rating also requires a current rated card for the requested coin; pipeline gaps, NR and missing scores cannot retain the old rating. Failed admission keeps the exact-signature waiter. An admitted fallback supplies the entire retained row, global metadata, publication generation/clock and Safety identity/clock, without mixing in the new signature's inputs. Ages advance from that assessment's clock; `_meta`, freshness headers and `projection` retain the original producer clock. These fallback responses use `Cache-Control: no-store` and add HTTP Warning 199 with the served `signature`, `assessedAt` and `validUntil`; the JSON response contract is unchanged.
+
+Every exact-signature input has an explicit fallback boundary:
+
+| Signature input | Fallback admission or retained-snapshot invariant |
+| --- | --- |
+| Format namespace literal | Fixed namespace and versioned cache format; never used as a freshness clock. |
+| Yield publication `generationId`, `updatedAt`, `cutoffAt`, `schemaVersion`, `status` | Both envelopes require a complete published schema-1 contract. Current and retained membership are required; generation and clocks may advance, but every served field retains the prior publication envelope. |
+| Cache `updatedAt` | Must match the current payload and publication clocks. Fallback freshness uses the retained payload's matching clock. |
+| Runtime `YIELD_METHODOLOGY_VERSION` | Exact equality with the persisted assessment build version; missing or older versions cannot fall back. |
+| Safety `kind`, error reason, held reason | Only admitted current `v9` is eligible; errors and holds cannot reuse a prior positive assessment. |
+| Safety identity `model`, `schemaVersion`, `methodologyVersion`, `policyId`, `policyDigest`, `evaluationBuildDigest` | Canonical comparable-identity equality. Fallback does not recompute scores, so it cannot use normal hydration's evaluator-build exception. |
+| Safety identity `baseInputGenerationId`, `publicationGenerationId` | May advance within a comparable series; the retained scores, attribution and coverage keep their original complete identity. |
+| Safety snapshot `updatedAt` | Current accepted clock must fit the shared Safety budget; the retained assessment independently expires at its own evidence deadlines. |
+| Safety `publicationHealth` | The canonical loader admits schema, accepted generation/time, status, hold clock and reasons together. Current health has no hold/reasons; a valid `attemptedAtSec` change cannot affect retained values, which use accepted clocks. |
+
+If no valid complete assessment exists, the reader retains the bounded 250 ms then 500 ms waiter, re-reading only its coin under the invocation's exact signature at the current wall clock. Exhausted or abandoned leases return retryable `503 yield-cohort-preparing` with `Retry-After: 1`; there is no additional full-cache read, claim, write, provider fetch or unbounded loop. A claim logs `yield-cohort-lease-claimed` with the signature prefix, owner and deadline; successful publication logs `yield-cohort-built` with `durationMs` measured from the claim through publication. Exhaustion logs `yield-cohort-preparing` with its reason and the lease holder when readable. The independent yield-history reader also selects only its requested complete row.
 
 `GET /api/dex-liquidity-table` is the separate site-only homepage table transport. It reads only score/coverage admission/clock/methodology columns plus producer advisories, omitting histories, prices, deployments and pool JSON. Rows contain `liquidityScore` plus warning/unavailable/producer identity fields; the table uses the same nullable score for display, sorting and CSV export. Full cohort endpoints remain available for actual cohort consumers. No new migration or producer cadence is required.
 
@@ -1003,7 +1021,9 @@ The 2026-10-05T23:26Z two-target diagnostic rerun reproduced failures on the fir
 
 Single EVM RPC outcomes preserve data, observed execution revert and unavailable evidence. Direct Multicall fallback tolerates only observed optional reverts, never exhausted provider or admission failures; numbered/hash selectors and the closing-header fence remain unchanged. Byte, uint and aggregate decoding reject malformed output before endpoint selection completes, allowing the next eligible provider within the existing admission, credit and deadline policy.
 
-Supplemental XRPL supply uses keyless `gateway_balances` with `ledger_index: "validated"` and `strict: true`, followed by a `ledger` read pinned to the returned hash/index for its close time. Both responses must explicitly report `validated: true`; issuer/currency and ledger identity mismatches withhold the leg. Issued amounts validate their decimal-string encoding before valuation, with no invented fixed decimals. Each response is capped at 64 KiB; `NAV_SUPPLY_LEDGER_FRESHNESS` owns the 600-second age and 60-second future-skew limits. The supply profile tries `xrplcluster.com` then `s1.ripple.com:51234` sequentially, draining each body before the next read or fallback. One in-flight request per leg preserves the existing connection peak and schedule; [Supply](../supply-snapshot.md#supply-pipeline) owns perimeter and publication admission.
+Supplemental XRPL supply uses keyless `gateway_balances` with `ledger_index: "validated"` and `strict: true`, followed by a `ledger` read pinned to the returned hash/index for its close time. Both responses must explicitly report `validated: true`; issuer/currency and ledger identity mismatches withhold the leg. Issued amounts validate their decimal-string encoding before valuation, with no invented fixed decimals. Each response is capped at 64 KiB; `NAV_SUPPLY_LEDGER_FRESHNESS` owns the 600-second age and 60-second future-skew limits. The supply profile tries `xrplcluster.com` then `rpc.ankr.com/xrp_mainnet` sequentially, draining each body before the next read or fallback. One in-flight request per leg preserves the existing connection peak and schedule; [Supply](../supply-snapshot.md#supply-pipeline) owns perimeter and publication admission.
+
+Reviewed deployment supply observers require EIP-1898 `{ blockHash, requireCanonical: true }` for state reads on every chain except Pharos mainnet (1672). Its explicit allowlist entry permits `0x`-hex block-number selectors for `eth_call`, `eth_getCode` and `eth_getStorageAt` at head minus at least 15 blocks, with further rewind allowed for scoring-clock/Solana alignment. After selecting the pin, reread its numbered header immediately before the state batch and again after all state reads; both must match the expected number, hash and timestamp. Missing or changed headers reject as `deployment-pin-header-mismatch`; insufficient lag rejects as `deployment-pin-lag-violation`. No packet survives either failure. Other chains never retry unsupported hash reads with numbered/latest state. The Pharos path retains aggregate3 and fails closed if it is unavailable; it enables no direct-call fallback. JTRSY's reviewed Pharos deployment uses the observer-local `SUPPLY_ATTRIBUTION_RPC_URLS.pharos` endpoint; the shared RPC registry and other supply readers are unchanged. Identity pins do not certify unresolved route semantics or admit positive supply on an unreviewed route.
 
 Timestamp-only reads reuse strict numbered-header admission, without adding a default freshness floor. Batched timestamp reads validate one complete `{number, hash, timestamp}` per requested block before projecting cache entries; duplicate IDs invalidate their member, out-of-range IDs are ignored, and malformed/missing members use the existing bounded retries. Expected log hashes still gate admission; a later timestamp cannot inherit an earlier response's hash.
 
@@ -1014,6 +1034,146 @@ CCIP pages use the first eligible provider's span, independent of state history;
 Parity token-state freshness requires a same-head hash match or adjacent-head parent-hash link; a larger head advance is indeterminate (`bracket-ancestry-gap`) without extra RPC requests. This cannot establish token freshness even beside a fresh sentinel. Retained runs stay time-ordered, and each chain's latest pointer accepts only equal/newer run timestamps, so late completion cannot rewind the reported observation; same-slot replacement and seven-day retention remain unchanged.
 
 Capped inclusive Etherscan log ranges split sequentially; exhausted request budgets return incomplete `budget-exhausted` results and recursion beyond depth 8 returns `max-recursion-depth`. A capped singleton returns `etherscan-result-cap-unsplittable`, including when its parent spans two adjacent blocks.
+
+### JTRSY Pharos identity evidence
+
+These original runtime observations retain their original pin and clock. The later route review below supplements them with the exact Spoke/pool/share-class binding; it does not redate these reads. The runtime identity is admitted only when each new capture matches its reviewed code and Spoke ward under the Pharos pinning rules.
+
+| Pinned fact | Observation |
+| --- | --- |
+| Chain / token | Pharos mainnet (1672), `0xc18e6f730896971a79d748e8dea61067a9bc6040` |
+| Keyless endpoint | `https://rpc.pharos.xyz` |
+| Observed at | `2026-11-04T20:29:46.061999Z` |
+| Observed head / pin | 22,124,698 / 22,124,683 (`0x151988b`), 15-block lag |
+| Pin hash | `0x82e135d6fdc7411cb8038c5eefbee37a3a3885d3023a1d3d3d0b93e1fa65d757` |
+| Pin timestamp | `2026-11-04T20:29:30Z` (1793824170) |
+| Token runtime SHA-256 | `a0dcca3d830ffd0f877005e7018f67f691629ab600bb65809818057c0a76b3a6` |
+| Spoke authorization | `wards(0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab) = 1` |
+| Issued share units | `totalSupply() = 3419937985239`, `decimals() = 6`: 3,419,937.985239 shares |
+| Implementation slot | EIP-1967 implementation storage word was zero |
+| Header bracket | Number, hash and timestamp matched before and after the hexadecimal-number state reads |
+
+### JTRSY Pharos route review 20261104
+
+Review `jtrsy-pharos-route-20261104` admits the exact Pharos route as `bridge-representation` / `burn-mint`, `third-party`, `external-validated-network`, `peripheral`, with the Ethereum hub and Pharos Spoke bound by the lead-supplied block 22133080 reads. This supports complete deployment-unit attribution with positive Pharos supply under the existing freshness, inventory and conservation gates. `jtrsy-pharos-runtime-admission-20261104` adopts the separately pinned runtime identity above; future captures still reread it.
+
+The [deployment registry](https://docs.centrifuge.io/developer/protocol/deployments/) identifies the two observed addresses as the **LayerZero Adapter** and **Chainlink Adapter**. The [pinned Chainlink adapter](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/adapters/ChainlinkAdapter.sol) identifies CCIP. Following the ACRDX Monad route precedent, omit `rail: "issuer-operated"` and author `providerKeys: ["layerzero", "chainlink-ccip"]`: Centrifuge owns protocol messaging contracts, while third-party transports verify the cross-chain messages. This schema's issuer-operated exception means the issuer is the provider, not merely that the issuer authorizes minting.
+
+The [pinned Spoke](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/spoke/Spoke.sol) burns source shares and mints destination shares through the exact mapped token. [HubHandler](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/hub/HubHandler.sol) increases target-chain issuance and decreases origin-chain issuance by the same amount before forwarding the transfer. This is the existing Centrifuge protocol-burn/mint accounting family, not a lock/mint claim backed by duplicated escrow balances, a new circulation override or proof of settled in-flight transfers.
+
+`quorum(1,poolId)=2` and the adapter enumeration prove two configured adapters. The [pinned MultiAdapter](https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/messaging/MultiAdapter.sol) uses a separate `threshold` value to admit messages; **2-of-2 confirmation is not established by the supplied reads**. Threshold, recovery index, detailed transport security configuration, signer independence, cap authority and incident state remain unresolved. Provider reviews, issuer-surface review and the matching screening certificate are required for incident clearance, not for this supply-partition admission. No negative incident review or provider clearance is authored here, and no sibling review date is renewed.
+
+The route schema retains inline source links rather than incident-review IDs. These new review IDs and content-addressed observation records provide immutable provenance without introducing another runtime schema. IDs are `source:` plus the first 24 hex characters of SHA-256 over recursively key-sorted compact JSON of `value`. A changed observation must receive a new ID; preserve existing cited values. Exact clocks omitted by the lead stay null rather than being reconstructed from the block height.
+
+```json
+{
+  "reviewIds": [
+    "jtrsy-pharos-route-20261104",
+    "jtrsy-pharos-runtime-admission-20261104"
+  ],
+  "assetId": "jtrsy-anemoy",
+  "routeId": "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040",
+  "reviewDate": "2026-11-04",
+  "reviewer": "Codex route review using lead-supplied pinned RPC results and retrieved primary source",
+  "sourceRefs": [
+    "source:baa2cb8d0e6ee8d8cc92b5e6",
+    "source:3df61c28982ee3dce6edf6b3",
+    "source:11403f1b15fc3d9a25e82a6b"
+  ],
+  "sourceObservations": [
+    {
+      "id": "source:baa2cb8d0e6ee8d8cc92b5e6",
+      "value": {
+        "kind": "onchain-runtime-observation",
+        "url": "https://rpc.pharos.xyz",
+        "observedAt": "2026-11-04T20:29:46.061999+00:00",
+        "head": 22124698,
+        "block": {
+          "number": 22124683,
+          "hash": "0x82e135d6fdc7411cb8038c5eefbee37a3a3885d3023a1d3d3d0b93e1fa65d757",
+          "timestamp": 1793824170
+        },
+        "closingBlock": {
+          "number": 22124683,
+          "hash": "0x82e135d6fdc7411cb8038c5eefbee37a3a3885d3023a1d3d3d0b93e1fa65d757",
+          "timestamp": 1793824170
+        },
+        "token": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "runtimeCodeSha256": "a0dcca3d830ffd0f877005e7018f67f691629ab600bb65809818057c0a76b3a6",
+        "rawSupply": "3419937985239",
+        "decimals": 6,
+        "spokeWard": "1",
+        "implementationStorageWord": "0x0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    },
+    {
+      "id": "source:3df61c28982ee3dce6edf6b3",
+      "value": {
+        "kind": "lead-supplied-onchain-observation",
+        "url": "https://rpc.pharos.xyz",
+        "observationDate": "2026-11-04",
+        "observedAt": null,
+        "blockTimeSec": null,
+        "chainId": 1672,
+        "blockNumber": 22133080,
+        "blockSelector": "0x151b958",
+        "blockHash": "0x6e2fb16cbc6eb5fb1a58737eaaef3678a1623491b298e3018aae4f3d46ced03a",
+        "headerBracketMatched": true,
+        "provenance": "Decoded read-only RPC results supplied by the lead in this task; exact observation clock and block timestamp were not supplied. Not independently refetched by this sandbox.",
+        "spoke": {
+          "address": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+          "shareTokenDetails": {
+            "token": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+            "poolId": "0x0001000000000006",
+            "shareClassId": "0x00010000000000060000000000000001"
+          },
+          "reverseShareToken": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+          "gateway": "0x19a524d03aa94ecee41a80341537bcfcb47d3172",
+          "sender": "0xf837a22883e004f705e0d7e1dee08e295df30b27",
+          "poolEscrowFactory": "0x5187a505c485e22f0b8a5fbdf69ef1c29c478ce3",
+          "hubCall": "reverted; no exposed getter"
+        },
+        "gatewayAdapter": "0x35c837f0a54b715a23d193e1476bfc9bc30073be",
+        "multiAdapter": {
+          "localCentrifugeId": 12,
+          "remoteCentrifugeId": 1,
+          "poolId": "0x0001000000000006",
+          "quorum": 2,
+          "adapters": [
+            "0xd517bc7ba17271a8d87be7355b2523bf5c750295",
+            "0x39cf679eb0ac9075cfb5f94930a367ba1557d955"
+          ],
+          "adapterIndex2": "reverted",
+          "threshold": null,
+          "recoveryIndex": null,
+          "globalPoolSameAdaptersAndQuorum": true
+        }
+      }
+    },
+    {
+      "id": "source:11403f1b15fc3d9a25e82a6b",
+      "value": {
+        "kind": "primary-document-and-source-review",
+        "accessDate": "2026-11-04",
+        "releaseCommit": "6b9d36eabee48728486f377ea2766a5cd233c555",
+        "deploymentUrl": "https://docs.centrifuge.io/developer/protocol/deployments/",
+        "providerAddressBindings": {
+          "0xd517bc7ba17271a8d87be7355b2523bf5c750295": "layerzero",
+          "0x39cf679eb0ac9075cfb5f94930a367ba1557d955": "chainlink-ccip"
+        },
+        "sourceLocations": {
+          "Spoke.sol": "src/core/spoke/Spoke.sol: crosschainTransferShares, executeTransferShares, shareTokenDetails, shareToken",
+          "HubHandler.sol": "src/core/hub/HubHandler.sol: initiateTransferShares moves the same amount from origin issuance to target issuance",
+          "PoolId.sol": "src/core/types/PoolId.sol: centrifugeId = poolId >> 48",
+          "MultiAdapter.sol": "src/core/messaging/MultiAdapter.sol: quorum is adapter count; threshold is a separate getter and admission field",
+          "ChainlinkAdapter.sol": "src/adapters/ChainlinkAdapter.sol: Chainlink CCIP routing adapter"
+        },
+        "assertion": "The supplied exact pool/token binding supports the documented burn/mint accounting family. Provider identities are LayerZero and Chainlink CCIP; no confirmation threshold, signer independence or incident clearance is inferred."
+      }
+    }
+  ]
+}
+```
 
 ## Event-entry recovery details
 
@@ -1083,7 +1243,7 @@ Module state: `buildChainRpcs()` registers/clears credentials in `RPC_AUTH_BY_OR
 
 Redemption `applyOutputDependencyResolution()` uses a run-local index and immutable completed snapshot/configuration map. No global clock-keyed join may cross-contaminate concurrent runs sharing a clock.
 
-`shared/lib/chain-rpc-registry.ts` keeps RPC profiles separate. `DWELLIR_ONLY_REGISTRY_CHAINS` in `worker/src/lib/chain-registry.ts` owns the reviewed Dwellir-only registry scope. `buildChainRpcs()` retains those configs without an admitted key; `hasRegistryRpc()` describes static required inventory, while `registryRpcEndpoints()`, `registryRpcUrls()` and `primaryRpcUrl()` expose admitted routes and exclude disabled endpoints. Missing key, ledger/circuit denial or a disabled route must produce an unavailable required read, never an omitted aggregate leg. Other supplemental presence does not establish registry membership. [ADR-40](../architecture.md#adr-40) prefers eligible Dwellir without reordering incumbents.
+`shared/lib/chain-rpc-registry.ts` keeps RPC profiles separate. Reviewed keyless state-only routes in `REVIEWED_PUBLIC_ENDPOINTS` remain supplemental when archive/log inventory is unproven; [Ink Aero admission](dex-liquidity-appendix.md#ink-rpc-admission) records the official endpoint probes. `DWELLIR_ONLY_REGISTRY_CHAINS` in `worker/src/lib/chain-registry.ts` owns the reviewed Dwellir-only registry scope. `buildChainRpcs()` retains those configs without an admitted key; `hasRegistryRpc()` describes static required inventory, while `registryRpcEndpoints()`, `registryRpcUrls()` and `primaryRpcUrl()` expose admitted routes and exclude disabled endpoints. Missing key, ledger/circuit denial or a disabled route must produce an unavailable required read, never an omitted aggregate leg. Other supplemental presence does not establish registry membership. [ADR-40](../architecture.md#adr-40) prefers eligible Dwellir without reordering incumbents.
 
 The static scope uses the seven-day parity gates passed on 2026-10-28. HyperEVM (stale `latest`), XDC (insufficient freshness checks), Flow EVM (head lag), and Chiliz/Viction (no parity history) remain supplemental. Re-admission requires resolving that failure, a fresh complete seven-day gate with sufficient freshness samples and passing head-lag, common-block state and log comparisons, then an explicit reviewed constant edit. Runtime parity never changes membership. Its ten-block log comparison does not certify 10,000-block completeness; scanners retain their own range/frontier and incomplete-scan gates. Parity comparators, chain-dropout corroboration, blacklist balance independence and yield `resolveRpcUrls` retain their deliberate Dwellir exclusions (yield: 1 failed deterministic read in 4,408 over the seven days to 2026-11-04; Dwellir-first would first need per-chain latest-state freshness admission and deadline-aware failover, [#1726](https://github.com/TokenBrice/pharos-watch/issues/1726)); V9 retains its separately reviewed observation scope.
 

@@ -1,3 +1,4 @@
 [
-  {"date":"2026-04-10","kind":"regulatory","label":"HKMA grants HSBC stablecoin licence, the first batch (HK Ordinance)","severity":"high","href":"https://www.about.hsbc.com.hk/news-and-media/hsbc-welcomes-hkmas-grant-of-a-hong-kong-stablecoin-issuer-licence"}
+  {"date":"2026-04-10","kind":"regulatory","label":"HKMA grants HSBC stablecoin licence, the first batch (HK Ordinance)","severity":"high","href":"https://www.about.hsbc.com.hk/news-and-media/hsbc-welcomes-hkmas-grant-of-a-hong-kong-stablecoin-issuer-licence"},
+  {"date":"2026-10-23","kind":"governance","label":"HSBC launches RedCoin through PayMe","severity":"med","href":"https://www.about.hsbc.com.hk/news-and-media/hsbc-redcoin-launches-today","note":"HSBC announced the launch of its Hong Kong dollar stablecoin RCHKD through PayMe, with wallet activation rolling out to users over the following days. This is the live retail transition after the April issuer licence."}
 ]

@@ -96,18 +96,37 @@ describe("loadTrackedStablecoinMaps", () => {
     expect(stablecoinMcapById).toEqual(new Map([["usdc-circle", 1_000_000]]));
   });
 
-  it("still rejects a soft price without fresh multi-source agreement", async () => {
+  it("admits fresh observed soft primaries only as comparison anchors", async () => {
     loadStablecoinsCache.mockResolvedValue({
       kind: "ok",
       updatedAt: NOW_SEC,
       payload: {
-        peggedAssets: [makeAsset({ id: "slvon-ondo", price: 31.42 })],
+        peggedAssets: [
+          makeAsset({ id: "mai-qidao", price: 0.996 }),
+          makeAsset({ id: "usda-alpha-partner", price: 0.92, priceObservedAt: NOW_SEC - 1_800 }),
+          makeAsset({ id: "pathusd-bridge", price: 0.999 }),
+          makeAsset({ id: "wars-argentine-peso", price: 0.0006 }),
+          makeAsset({ id: "stale", price: 1, priceObservedAt: NOW_SEC - 1_801 }),
+          makeAsset({ id: "future", price: 1, priceObservedAt: NOW_SEC + 1 }),
+          makeAsset({ id: "unclocked", price: 1, priceObservedAt: undefined, priceUpdatedAt: undefined }),
+          makeAsset({ id: "nominal", price: 1, priceSource: "protocol-par" }),
+          makeAsset({ id: "invalid", price: Number.NaN }),
+          makeAsset({ id: "zero", price: 0 }),
+          makeAsset({ id: "fallback", price: 1, priceConfidence: "fallback" }),
+          makeAsset({ id: "cached", price: 1, priceSource: "cached" }),
+        ],
       },
     });
 
-    const { stablecoinPriceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+    const { stablecoinPriceById, primaryPriceById, stablecoinPriceProvenanceById } =
+      await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
 
-    expect(stablecoinPriceById.has("slvon-ondo")).toBe(false);
+    expect(primaryPriceById).toEqual(new Map([
+      ["mai-qidao", 0.996], ["usda-alpha-partner", 0.92],
+      ["pathusd-bridge", 0.999], ["wars-argentine-peso", 0.0006],
+    ]));
+    expect(stablecoinPriceById.size).toBe(0);
+    expect(stablecoinPriceProvenanceById.size).toBe(0);
   });
 
   it("admits a fresh guarded protocol-redeem NAV price for a navToken", async () => {
@@ -254,7 +273,8 @@ describe("loadTrackedStablecoinMaps", () => {
   it("returns empty price, provenance and market-cap maps when the cache is unavailable", async () => {
     loadStablecoinsCache.mockResolvedValue({ kind: "missing" });
     expect(await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC)).toEqual({
-      stablecoinPriceById: new Map(), stablecoinMcapById: new Map(), stablecoinPriceProvenanceById: new Map(),
+      stablecoinPriceById: new Map(), primaryPriceById: new Map(),
+      stablecoinMcapById: new Map(), stablecoinPriceProvenanceById: new Map(),
     });
   });
 });

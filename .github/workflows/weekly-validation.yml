@@ -72,7 +72,9 @@ jobs:
 
   all-critical-ratchet:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 40
+    # A passing run reports V8 coverage for every critical source (~30 min after
+    # ~10 min of tests); failing runs skip reporting and finish early.
+    timeout-minutes: 75
     permissions:
       contents: read
     env:

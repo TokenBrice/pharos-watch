@@ -9,14 +9,10 @@ import {
   trackedExactAmmOutputValuationFields,
 } from "@shared/lib/p4-exit-route-amm-simulation";
 import {
-  type DexMeasuredExecutionTarget,
-} from "@shared/types/measured-execution";
-import {
   getDexExecutionCapabilityRegistration,
   isDexExecutionProfileAdmittedForScoring,
 } from "@shared/lib/p4-exit-route-capability-policy";
 import { buildPoolFingerprint, initSourcePoolGraph } from "../pool-helpers";
-import { buildEvmV2RegisteredExecutionTarget } from "../execution-targets/evm-v2";
 import {
   EVM_V2_EXECUTION_DEPLOYMENTS,
   attachEvmV2CandidateToRetainedPool,
@@ -29,15 +25,11 @@ import {
   EVM_V2_RETAINED_TVL_USD,
   addressWord as fixtureAddressWord,
   buildReviewedV2Profile,
-  replayCandidate,
-  replayMulticallResults,
-  replayPool,
   replayTarget,
-  type EvmV2ReplayCase,
 } from "./fixtures/evm-v2-fixtures";
-import { captureRpcs, replayTokenLookups } from "./constant-product-v2.test-support";
+import { captureRpcs, word, addressWord, reservesWord, blockHeader, makeCandidate, makeAerodromeCandidate, runV2PriceLegScenario, targetForReplay, runReplay } from "./constant-product-v2.test-support";
 import type { ChainRpcConfig } from "../../../lib/chain-registry";
-import type { EvmMulticall3Result, EvmRpcOptions } from "../../../lib/evm-rpc";
+import type { EvmRpcOptions } from "../../../lib/evm-rpc";
 
 const U = "0xce24439f2d9c6a2289f741120fe202248b666666" as const;
 const WBNB = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c" as const;
@@ -53,241 +45,6 @@ const USDC_BSC = "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d" as const;
 const SPUSD_USDC_PAIR = "0x1111111111111111111111111111111111111111" as const;
 const KAG = "0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e" as const;
 const XAUT = "0x68749665ff8d2d112fa859aa293f07a622782f38" as const;
-const KAG_XAUT_PAIR = "0x2222222222222222222222222222222222222222" as const;
-
-function word(value: bigint): `0x${string}` {
-  return `0x${value.toString(16).padStart(64, "0")}`;
-}
-
-function addressWord(address: string): `0x${string}` {
-  return `0x${address.slice(2).toLowerCase().padStart(64, "0")}`;
-}
-
-function reservesWord(reserve0: bigint, reserve1: bigint): `0x${string}` {
-  return `0x${reserve0.toString(16).padStart(64, "0")}${reserve1.toString(16).padStart(64, "0")}${"0".repeat(64)}`;
-}
-
-function blockHeader(blockNumber: number) {
-  return {
-    number: blockNumber,
-    timestamp: 1_700_000_000,
-    hash: `0x${"ab".repeat(32)}` as `0x${string}`,
-  };
-}
-
-function makeCandidate() {
-  return buildEvmV2ExecutionCandidate({
-    chain: "bsc",
-    protocol: "pancakeswap",
-    poolType: "ds-amm",
-    poolAddress: PAIR,
-    tokenAddresses: [U, WBNB],
-    tokenSymbols: ["U", "WBNB"],
-  })!;
-}
-
-function makeAerodromeCandidate() {
-  return buildEvmV2ExecutionCandidate({
-    chain: "base",
-    protocol: "aerodrome",
-    poolType: "aerodrome-volatile",
-    poolAddress: AERODROME_PAIR,
-    tokenAddresses: [USDC_BASE, WETH_BASE],
-    tokenSymbols: ["USDC", "WETH"],
-  })!;
-}
-
-async function runV2PriceLegScenario({
-  chainAddressToId,
-  stablecoinPriceById,
-  candidateTokenAddresses = [KAG, XAUT],
-  candidateTokenSymbols = ["KAG", "XAUt"],
-  actualToken0 = KAG,
-  actualToken1 = XAUT,
-  candidateDecimals0 = 18n,
-  candidateDecimals1 = 6n,
-  actualReserve0 = 14n * 10n ** 18n,
-  actualReserve1 = 1n * 10n ** 6n,
-}: {
-  chainAddressToId: Map<string, string>;
-  stablecoinPriceById: Map<string, number>;
-  candidateTokenAddresses?: readonly string[];
-  candidateTokenSymbols?: readonly string[];
-  actualToken0?: string;
-  actualToken1?: string;
-  candidateDecimals0?: bigint;
-  candidateDecimals1?: bigint;
-  actualReserve0?: bigint;
-  actualReserve1?: bigint;
-}) {
-  const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find((entry) => entry.source === "uniswap-v2")!;
-  const candidate = buildEvmV2ExecutionCandidate({
-    chain: "ethereum",
-    protocol: "uniswap-v2",
-    poolType: "generic",
-    poolAddress: KAG_XAUT_PAIR,
-    tokenAddresses: candidateTokenAddresses,
-    tokenSymbols: candidateTokenSymbols,
-  })!;
-  const metric = initSourcePoolGraph("kag-kinesis", "KAG");
-  metric.pools.push({
-    poolId: canonicalExitRouteAssetKey("ethereum", KAG_XAUT_PAIR),
-    project: "uniswap-v2",
-    chain: "Ethereum",
-    tvlUsd: 1_519,
-    symbol: candidateTokenSymbols.join(" / "),
-    volumeUsd1d: 200,
-    poolType: "cg-amm",
-    source: "cg_onchain",
-    extra: { evmV2ExecutionCandidate: candidate },
-  });
-  await enrichEvmV2ExecutionModels({
-    nowSec: 1_700_000_000,
-    sourceGenerationId: "dex-stage:fixture",
-    metrics: new Map([[metric.stablecoinId, metric]]),
-    chainAddressToId,
-    contractMetaByChainAddress: new Map(),
-    stablecoinPriceById,
-    chainRpcs: captureRpcs("ethereum", "Ethereum"),
-    dependencies: {
-      fetchBlockNumber: vi.fn(async () => 21_000_000),
-      fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
-        blockHeader(blockNumber as number)),
-      fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
-      fetchMulticall: vi.fn(async (_chain: string, calls: readonly { label: string }[]) =>
-        calls.map((call) => ({
-          label: call.label,
-          success: true,
-          returnData: call.label.endsWith("-pair")
-            ? addressWord(KAG_XAUT_PAIR)
-            : call.label.endsWith("-token0")
-              ? addressWord(actualToken0)
-              : call.label.endsWith("-token1")
-                ? addressWord(actualToken1)
-                : call.label.endsWith("-reserves")
-                  ? reservesWord(actualReserve0, actualReserve1)
-                  : call.label.endsWith("-decimals0")
-                    ? word(candidateDecimals0)
-                    : call.label.endsWith("-decimals1")
-                      ? word(candidateDecimals1)
-                      : word(6n),
-        })),
-      ) as never,
-      hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
-    },
-  });
-  return metric;
-}
-
-function targetForReplay(replay: EvmV2ReplayCase): DexMeasuredExecutionTarget {
-  const { chainAddressToId, contractMetaByChainAddress } = replayTokenLookups(replay);
-  const output = buildEvmV2RegisteredExecutionTarget({
-    context: {
-      chainAddressToId,
-      stablecoinPriceById: new Map([
-        [replay.assetId, 1],
-        [replay.counterAssetId, 1],
-      ]),
-      measuredTargetCapturedAt: 1_700_000_000,
-      contractMetaByChainAddress,
-    },
-    identity: {
-      chainNorm: "bsc",
-      protocol: "pancakeswap",
-      pool: {
-        pool: replay.poolAddress,
-        project: "pancakeswap",
-        symbol: `${replay.stablecoinSymbol} / ${replay.counterSymbol}`,
-        underlyingTokens: [replay.stablecoinAddress, replay.counterAddress],
-      },
-    },
-    enrichment: {
-      resolvedPoolType: "cg-amm",
-      rawContribTvl: EVM_V2_RETAINED_TVL_USD,
-    },
-    stablecoinId: replay.assetId,
-  } as never);
-  const target = output?.measuredExecutionTarget;
-  if (!target) throw new Error(`V2 fixture target was not built for ${replay.assetId}`);
-  return target;
-}
-
-async function runReplay(
-  replay: EvmV2ReplayCase,
-  options: {
-    blockNumber?: number;
-    serveOnlyBlock?: number;
-    mutateResults?: (results: EvmMulticall3Result[]) => void;
-    reorgOnConfirmation?: boolean;
-    headerTimestamp?: number;
-  } = {},
-) {
-  const candidate = replayCandidate(replay);
-  const metric = initSourcePoolGraph(replay.assetId, replay.stablecoinSymbol);
-  const pool = replayPool(replay, candidate);
-  metric.pools.push(pool);
-  const { chainAddressToId, contractMetaByChainAddress } = replayTokenLookups(replay);
-  const pinnedBlock = options.blockNumber ?? EVM_V2_REPLAY_BLOCK;
-  const fetchBlockNumber = vi.fn(async () => pinnedBlock);
-  const fetchCodeAtBlock = vi.fn(async () => "0x6000" as const);
-  const fetchMulticall = vi.fn(
-    async (
-      _chain: string,
-      calls: readonly { label: string; target: string }[],
-      blockNumber: number,
-    ) => {
-      if (options.serveOnlyBlock != null && blockNumber !== options.serveOnlyBlock) return null;
-      const results: EvmMulticall3Result[] = replayMulticallResults(replay, calls);
-      options.mutateResults?.(results);
-      return results;
-    },
-  );
-  const deployment = EVM_V2_EXECUTION_DEPLOYMENTS.find(
-    (entry) => entry.source === "pancakeswap-v2",
-  )!;
-
-  let headerReads = 0;
-  await enrichEvmV2ExecutionModels({
-    nowSec: 1_700_000_000,
-    sourceGenerationId: "dex-stage:fixture",
-    metrics: new Map([[metric.stablecoinId, metric]]),
-    chainAddressToId,
-    contractMetaByChainAddress,
-    stablecoinPriceById: new Map([
-      [replay.assetId, 1],
-      [replay.counterAssetId, 1],
-    ]),
-    stablecoinPriceProvenanceById: new Map([
-      [replay.assetId, { referencePriceSourceId: "stablecoins-cache:fixture", referencePriceObservedAt: 1_699_999_880 }],
-      [replay.counterAssetId, { referencePriceSourceId: "stablecoins-cache:fixture", referencePriceObservedAt: 1_699_999_880 }],
-    ]),
-    chainRpcs: captureRpcs("bsc", "BSC"),
-    dependencies: {
-      fetchBlockNumber,
-      fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") => {
-        const header = blockHeader(blockNumber as number);
-        if (options.headerTimestamp != null) header.timestamp = options.headerTimestamp;
-        if (options.reorgOnConfirmation && headerReads++ > 0) {
-          header.hash = `0x${"cd".repeat(32)}`;
-        }
-        return header;
-      }),
-      fetchCodeAtBlock,
-      fetchMulticall: fetchMulticall as never,
-      hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
-    },
-  });
-
-  return {
-    metric,
-    pool,
-    candidate,
-    fetchBlockNumber,
-    fetchCodeAtBlock,
-    fetchMulticall,
-    contractMetaByChainAddress,
-  };
-}
 
 const U5_REPLAY_ASSET_IDS = new Set(["idrt-rupiah-token", "stusd-stoneyield"]);
 

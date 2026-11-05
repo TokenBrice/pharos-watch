@@ -462,6 +462,32 @@
         "conclusion": "not-applicable",
         "governingInstrument": "PYUSD Redemption Assets Report August 31, 2026, Management Assertion and Exhibit B cash; expressly applied Public Law 119-27 section 4(a)(1)(A)(ii)",
         "allInScope": true
+      },
+      {
+        "factKey": "pyusd-paypal:cash-demand-deposits:maturity-applicability:2026-09-30",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:78d2dcff04be18da849b2698"
+        },
+        "asOfSec": 1790802000,
+        "publisher": "Paxos Trust Company, National Association / KPMG LLP",
+        "sourceUrls": [
+          "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf",
+          "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf"
+        ],
+        "assertion": "KPMG-examined September 2026 PYUSD Redemption Assets Report, signed October 23, Management Assertion p.3 applies GENIUS Act section 4(a)(1)(A) to all Exhibit B redemption assets. Exhibit B p.7 identifies USD 100,413,388 cash held in bank accounts for token holders at September 30, 2026 17:00 Eastern (21:00 UTC), including USD 100,160,089 uninsured demand deposits. Public Law 119-27 section 4(a)(1)(A)(ii), re-read p.7, limits the deposit category to demand deposits or other deposits withdrawable upon request at any time. The report-wide applied criterion, rather than extrapolation from the uninsured subset, supports the whole cash claim as an on-demand bank deposit without a fixed repayment maturity. This makes no bank-solvency, stressed-settlement or allocation claim. contentDigest is the SHA-256 of the retrieved September report PDF.",
+        "contentDigest": "dbcfc9da93f15c2b172e7ee570c9b79ab7062d262ae5a6b33191da55badf6245",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-04",
+          "reviewer": "Issue 1707 fresh primary-evidence review 2026-11-04",
+          "confidence": "high"
+        },
+        "claimId": "paxos-independent-assurance:pyusd:cash at September 30, 2026 21:00 UTC",
+        "conclusion": "not-applicable",
+        "governingInstrument": "PYUSD Redemption Assets Report September 30, 2026, Management Assertion p.3 and Exhibit B cash p.7; expressly applied Public Law 119-27 section 4(a)(1)(A)(ii)",
+        "allInScope": true
       }
     ],
     "jtrsy-anemoy": [
@@ -1557,6 +1583,32 @@
         "claimId": "PAXG complete allocated physical-gold reserve / reserve:bb342ba2193c0fceb94f272f / 431,313 fine troy ounces at August 31, 2026 21:00 UTC",
         "conclusion": "not-applicable",
         "governingInstrument": "PAX Gold Terms and Conditions, last modified December 12, 2025, sections 1.1, 4.2-4.3, 5.1-5.3; KPMG-examined August 31, 2026 PAXG Redemption Assets Report Exhibit B p.6",
+        "allInScope": true
+      },
+      {
+        "factKey": "paxg-paxos:allocated-gold:maturity-not-applicable:2026-09-30",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "reserve:bb342ba2193c0fceb94f272f"
+        },
+        "asOfSec": 1790802000,
+        "publisher": "Paxos Trust Company, N.A.; KPMG LLP examined PAXG Redemption Assets Report",
+        "sourceUrls": [
+          "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf",
+          "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"
+        ],
+        "assertion": "KPMG-examined PAXG Redemption Assets Report as of September 30, 2026 17:00 Eastern (21:00 UTC), signed October 23, Exhibit B p.6, identifies the entire 435,306 fine-troy-ounce reserve as allocated London Good Delivery physical gold; Exhibits A and C reconcile 435,306 redeemable tokens to those ounces. The re-read PAX Gold Terms and Conditions remain last modified December 12, 2025; sections 1.1, 4.2-4.3 and 5.1-5.3 define allocated bars and fractional beneficial ownership. The exact immediate reserve is physical inventory without a debt repayment maturity, so maturity is structurally not applicable to the whole exposure. This establishes no realization horizon, provider shares, fee cap or delivery settlement. contentDigest is the SHA-256 of the retrieved September report PDF.",
+        "contentDigest": "2611a159b29fc28dd4f438528c5aa38330002e4848e20cbdd8b02ec2864f87a1",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-04",
+          "reviewer": "Issue 1707 fresh primary-evidence review 2026-11-04",
+          "confidence": "high"
+        },
+        "claimId": "PAXG complete allocated physical-gold reserve / reserve:bb342ba2193c0fceb94f272f / 435,306 fine troy ounces at September 30, 2026 21:00 UTC",
+        "conclusion": "not-applicable",
+        "governingInstrument": "PAX Gold Terms and Conditions, last modified December 12, 2025, sections 1.1, 4.2-4.3, 5.1-5.3; KPMG-examined September 30, 2026 PAXG Redemption Assets Report Exhibit B p.6",
         "allInScope": true
       }
     ],

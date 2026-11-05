@@ -290172,6 +290172,243 @@
       ],
       "nextReviewTrigger": "Integration lead: restore read-only capture access and run two accepted fixed-clock baseline/candidate replays at least 90 minutes apart after the 2026-10-26 evidence is admitted; re-review immediately on issuer register, implementation, authority or route-semantic change.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "MINT_AUTHORITY:meusd-mezo",
+      "taskIds": [
+        "V9G-7c32ce74f89df572"
+      ],
+      "workType": "MINT_AUTHORITY",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Pharos issue 1707 fresh-evidence review",
+      "evidence": [
+        "Accepted baseline 2026-11-04T21:17:00Z; baseInputGenerationId report-cards-input:v1:98d52f32ffae12c23ae3ef033d4ee0492ca833e5b00893fd5340df21f245c1e4; source queue digest 267e1cc4560393e547b5349e0da3f430ac0f76e1c6bcab276aa508b2c44edc94",
+        "https://mezo-mainnet.boar.network — Mezo block 13003328, hash 0x1bf2d441833c77a8e11ab51c0fffe45dd32634be5efc46471a48e1cd9466ab3a, 2026-11-04T21:08:30Z; retrieved 2026-11-04T22:03:15.920Z; threshold 4, seven owners, empty terminal module pagination, zero guard, unchanged singleton/fallback runtime and MUSD/ProxyAdmin ownership."
+      ],
+      "rationale": "The owner-Safe execution review is freshly pinned and its narrative now distinguishes current 4-of-7 state from retained historical 5-of-9 provenance. This is scoped progress, not resolution of the typed claim group: the only baseline MINT_AUTHORITY task requires reconciliation of every authorized mint path and token liability to debt/collateral. Safe quorum, runtime correspondence and ownership reads establish no such whole-book reconciliation, independent signer custody, cap or delay. Existing unknown reconciliation and independent deployment-control gaps remain; no closure or production admission is claimed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/mint-authority/meusd-mezo.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "meusd-mezo:gap:economic-control:mint::reconciliation",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Keep the existing November 7, 2026 review trigger, or earlier exact block/time reconciliation of all deployment liabilities, authorized mint/debt paths and collateral; the release verifier must inspect the original typed sentinel on a fresh accepted capture.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:paxg-paxos",
+      "taskIds": [
+        "V9G-4519cb33dc99b36d"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Pharos issue 1707 fresh-evidence review",
+      "evidence": [
+        "Accepted baseline 2026-11-04T21:17:00Z; baseInputGenerationId report-cards-input:v1:98d52f32ffae12c23ae3ef033d4ee0492ca833e5b00893fd5340df21f245c1e4; source queue digest 267e1cc4560393e547b5349e0da3f430ac0f76e1c6bcab276aa508b2c44edc94",
+        "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf — September 30, 2026 PAXG report signed October 23; retrieved November 4; PDF SHA-256 2611a159b29fc28dd4f438528c5aa38330002e4848e20cbdd8b02ec2864f87a1; 435,306 allocated fine troy ounces.",
+        "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions — whole allocated-gold ownership and redemption terms re-read November 4, 2026."
+      ],
+      "rationale": "The genuinely new September report supports an additional period-bound maturity-not-applicable fact while preserving the August fact and immutable source observations. The active whole-gold liquidity nondisclosure review is rebound to this fresh report. Neither the report nor terms guarantees a funded or enforceable USD realization deadline for the entire allocated-gold position, so the sole typed liquidity task remains open. Physical inventory, token transfer, market quotes and a renewed report do not measure whole-book executable liquidity. No publication closure is claimed.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
+        "shared/data/stablecoins/domains/reserves/paxg-paxos.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "paxg-paxos:gap:reserve:reserve:bb342ba2193c0fceb94f272f:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Re-review on issuer publication of a binding full-position USD realization obligation or an admitted whole-position liquidity observation; otherwise review by December 4, 2026, preserving the exact liquidity sentinel.",
+      "factsClosed": 0,
+      "unpark": {
+        "rationale": "The September 30 KPMG report, signed October 23 and newly reviewed November 4, is new primary evidence beyond the August report retained by prior decisions. It reopens only the report-bound scope review; the unchanged liquidity deficiency is not treated as resolved.",
+        "evidence": [
+          "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf — September 30, 2026 PAXG report signed October 23; retrieved November 4; PDF SHA-256 2611a159b29fc28dd4f438528c5aa38330002e4848e20cbdd8b02ec2864f87a1; 435,306 allocated fine troy ounces.",
+          "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions — whole allocated-gold ownership and redemption terms re-read November 4, 2026."
+        ]
+      }
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:fidd-fidelity",
+      "taskIds": [
+        "V9G-15fbf7f2586c68b1"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Pharos issue 1707 fresh-evidence review",
+      "evidence": [
+        "Accepted baseline 2026-11-04T21:17:00Z; baseInputGenerationId report-cards-input:v1:98d52f32ffae12c23ae3ef033d4ee0492ca833e5b00893fd5340df21f245c1e4; source queue digest 267e1cc4560393e547b5349e0da3f430ac0f76e1c6bcab276aa508b2c44edc94",
+        "https://fwc.widen.net/content/azzc1igqzr/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---September-2026.pdf?u=5lvvtn&download=true — September 30, 2026 reserve report examined October 26; PDF pp.8-9 cash and note 4; USD 20,789,144.46 cash at segregated BNY Mellon deposit accounts."
+      ],
+      "rationale": "Fresh September evidence renews the supported whole-book BNY Mellon provider/segregation finding and the source-scoped cash maturity nondisclosure review. The report separates cash from the Treasury CUSIP maturity roster and does not specify a contractual maximum tenor or characterize all deposits as demand accounts. The bank claim therefore retains its missing maturityDaysMax; neither liquid cash nor the Treasury mandate supplies a zero-day deposit maturity. Bankruptcy-remoteness, rehypothecation and the typed maturity gap remain unresolved, with no publication closure.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
+        "shared/data/stablecoins/domains/reserves/fidd-fidelity.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "fidd-fidelity:gap:reserve:reserve:680c1bc3d8d777289ef65a58:maturity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Fidelity or BNY Mellon publishes exact all-account contractual maturity or demand-deposit terms; otherwise review by December 4, 2026. Verify the exact maturity sentinel on a fresh accepted capture.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:tusd-trueusd",
+      "taskIds": [
+        "V9G-ff91b5fb5ab371fb",
+        "V9G-c856f0642f7dfb28"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Pharos issue 1707 fresh-evidence review",
+      "evidence": [
+        "Accepted baseline 2026-11-04T21:17:00Z; baseInputGenerationId report-cards-input:v1:98d52f32ffae12c23ae3ef033d4ee0492ca833e5b00893fd5340df21f245c1e4; source queue digest 267e1cc4560393e547b5349e0da3f430ac0f76e1c6bcab276aa508b2c44edc94",
+        "https://widget.verinumus.io/api/v1/tusd/report — signed Moore CPA report as of November 4, 2026 16:30:30 HKT (08:30:30 UTC); PDF SHA-256 5df7a227c39da0e341fb9142fe747a9e59927c62b93f6fd7edca5fa7e81ffa37; USD 501,850,000 FDT fund at cost, USD 78,900.88 cash, zero T-bills."
+      ],
+      "rationale": "The November 4 signed report supports refreshing report/composition provenance and stale provider wording in lockstep. It retains the same concentrated FDT fund at cost and the exclusions of fund fair value and internal-control assurance. Management illiquidity/litigation disclosures and its alternative-liquidity claim establish neither the full fund instrument maturity roster nor enforceable whole-position cash realization. Both baseline reserve-factor tasks stay open, and original factor-classification dates remain unchanged. No numerical supply override, liquidity credit or publication closure follows from this report renewal.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/tusd-trueusd.json",
+        "shared/data/stablecoins/domains/reserves/tusd-trueusd.json"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "tusd-trueusd:gap:reserve:reserve:2c93128ac557f3ca84751b14:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "tusd-trueusd:gap:reserve:reserve:2c93128ac557f3ca84751b14:maturity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "Current complete FDT instrument roster with maximum maturities plus enforceable whole-position realization/recovery terms; keep the existing November 20, 2026 review date if no such disclosure appears.",
+      "factsClosed": 0,
+      "unpark": {
+        "rationale": "A new signed November 4 Moore report with independently recorded PDF bytes permits a fresh report-scope comparison beyond the October 20 report in the prior decision. Its unchanged missing factor disclosures remain explicit; this is not a claim that the prior full-resolution trigger fired.",
+        "evidence": [
+          "https://widget.verinumus.io/api/v1/tusd/report — signed Moore CPA report as of November 4, 2026 16:30:30 HKT (08:30:30 UTC); PDF SHA-256 5df7a227c39da0e341fb9142fe747a9e59927c62b93f6fd7edca5fa7e81ffa37; USD 501,850,000 FDT fund at cost, USD 78,900.88 cash, zero T-bills."
+        ]
+      }
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:rusd-reservoir",
+      "taskIds": [
+        "V9G-152c135da2324c10",
+        "V9G-ec282eb3a3400cdd",
+        "V9G-0e2069383e831c6b"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Pharos issue 1707 fresh-evidence review",
+      "evidence": [
+        "Accepted baseline 2026-11-04T21:17:00Z; baseInputGenerationId report-cards-input:v1:98d52f32ffae12c23ae3ef033d4ee0492ca833e5b00893fd5340df21f245c1e4; source queue digest 267e1cc4560393e547b5349e0da3f430ac0f76e1c6bcab276aa508b2c44edc94",
+        "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw — captured 2026-11-04T22:01:31Z; issuer payload has no upstream composition timestamp; Gauntlet USDG Premium USD 3,305,763.144757 and Steakhouse USDG Pro USD 839,951.408258.",
+        "https://api-arbitrum-mainnet-archive.n.dwellir.com — Arbitrum block 521297920, hash 0x75165f6a788e538c08918480d9744d30e57b590963d6c62b4f355045e7ed4087, 2026-11-04T21:57:16Z; exact Gauntlet 0x390c1bb01f3f627144a40617e287d4ce3d5abcfa and Steakhouse 0xbeeff72b77e7584a450e887125f25e8d8819016a vault asset() returns native USDG 0x004b506865409877c9fa29bfb1eba929984b9bbc; positive Reservoir adapter holdings.",
+        "https://app.morpho.org/arbitrum/vault/0xbeeff72b77e7584a450e887125f25e8d8819016a/steakhouse-usdg-pro — exact chain-and-vault identity."
+      ],
+      "rationale": "The old Gauntlet mapping already existed. Fresh exact-vault reads support adding Steakhouse USDG Pro to the adapter and curated slice as a USDG-backed protocol position; current source weights are 2.664356591801944% Gauntlet and 0.676978347627514% Steakhouse. Mapping is structured but a new admitted producer/scoring generation has not been observed. The typed group comprises liquidityHorizon gaps for Gauntlet, Steakhouse and Agua; asset() and holdings prove no whole-position cash-realization bound, and Agua receives no new review. All three liquidity gaps, credit/counterparty/smart-contract risks and unknown liquidity remain explicit. No facts are booked closed.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/reserves/rusd-reservoir.json",
+        "worker/src/cron/reserve-adapters/reservoir.ts",
+        "worker/src/cron/reserve-adapters/__tests__/reservoir.test.ts"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "rusd-reservoir:gap:reserve:reserve:0dea1428107a74c0434887c2:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "rusd-reservoir:gap:reserve:reserve:3e87330f42759fd0be9b2a99:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "rusd-reservoir:gap:reserve:reserve:2b97ddd7cbbf041c9ef6fe45:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "First admitted Reservoir producer generation after deployment must preserve the exact USDG mapping; full closure separately requires binding or methodology-admitted whole-position liquidity evidence for each vault. Re-review by November 20, 2026 if the prerequisite remains unavailable.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:trusd-tori",
+      "taskIds": [
+        "V9G-c083f8d51a228d4e",
+        "V9G-31e020a72996ae74",
+        "V9G-beae69c9b96ef1d1",
+        "V9G-8693682fa882d071",
+        "V9G-00099b150d76beda"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-11-04",
+      "reviewer": "Pharos issue 1707 fresh-evidence review",
+      "evidence": [
+        "Accepted baseline 2026-11-04T21:17:00Z; baseInputGenerationId report-cards-input:v1:98d52f32ffae12c23ae3ef033d4ee0492ca833e5b00893fd5340df21f245c1e4",
+        "https://app.tori.finance/api/solvency — issuer discloses 0xD07d31698E9689Af5954698b08e0c963ad9c00eb as DeFi Operator; reviewed November 4, 2026.",
+        "https://cache.accountable.capital/dashboard/tori — data.ts 1793829660182 (2026-11-04T22:01:00.182Z), reserves.nested_split.Monad exact AUSD - Morpho (Tori token collateral) USD 3,312,442.963488275.",
+        "https://api.morpho.org/graphql — userByAddress(chainId:143,address:0xD07d31698E9689Af5954698b08e0c963ad9c00eb) identifies held SharpByte vault 0x790e4f829fe865d432c4ea83b8b15f8871415b6c and direct market 0x58532a6ef16789d5e93f6728e1f53db9ee9a1e4163059c9515684d10b49af464; both identify Agora AUSD underlying 0x00000000efe302beaa2b3e6e1b18d08d69a9012a.",
+        "https://monadscan.com/address/0x790e4f829fe865d432c4ea83b8b15f8871415b6c#code — now exact-match verified SharpByte AUSD Tori Ecosystem VaultV2 source; source verified November 4, 2026.",
+        "https://api-monad-mainnet-full.n.dwellir.com — Monad block 119439360, hash 0x5d0c345fbcea34640698410fa71b42ca57ea2b647a55a6be9cb380e5a08f90f8, 2026-11-04T21:57:11Z; asset() returns tracked Agora AUSD; operator balance 2295393810272793563062193 raw vault shares and convertToAssets 2314953747798 raw AUSD at 6 decimals."
+      ],
+      "rationale": "The original exact-reserve-binding prerequisite has now fired: issuer-disclosed DeFi Operator, Accountable category, Morpho account positions, newly verified vault source and pinned underlying/holdings join the Monad AUSD-Morpho claim to tracked Agora AUSD. The existing 3.181078468840847% slice and exact live adapter category receive the collateral dependency link; October 27 composition weights, review dates and compositionAsOf remain unchanged because the current off-chain source cannot renew that historical book in lockstep. SourceKey identity is retained. This is scoped identity progress, not whole-group closure: the five typed tasks for this one Monad slice retain liquidity/maturity obligations, Tori-token collateral/circular-credit/concentration/smart-contract risks remain, and the other 24 baseline RESERVE_SLICE tasks receive no new review. An admitted producer/scoring generation consuming the exact mapping has not been observed. No facts are booked closed.",
+      "changeRefs": [
+        "shared/data/stablecoins/coins/trusd-tori.json",
+        "shared/data/stablecoins/domains/reserves/trusd-tori.json",
+        "worker/src/cron/reserve-adapters/__tests__/accountable.test.ts"
+      ],
+      "sentinels": [
+        {
+          "doneWhenGapIdAbsent": "trusd-tori:gap:reserve:reserve:cfb2c9b48e8e5ca1fee49dab",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "trusd-tori:gap:reserve:reserve:cfb2c9b48e8e5ca1fee49dab:assetClass",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "trusd-tori:gap:reserve:reserve:cfb2c9b48e8e5ca1fee49dab:liquidity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "trusd-tori:gap:reserve:reserve:cfb2c9b48e8e5ca1fee49dab:maturity",
+          "doneWhenScoreReasonAbsent": null
+        },
+        {
+          "doneWhenGapIdAbsent": "trusd-tori:gap:reserve:reserve:cfb2c9b48e8e5ca1fee49dab:obligorConcentration",
+          "doneWhenScoreReasonAbsent": null
+        }
+      ],
+      "nextReviewTrigger": "After deployment, inspect the first admitted exact-source Accountable/Tori reserve and scoring generation for this mapping. Retain liquidity and maturity gaps until exact whole-position withdrawal/realization or contractual maturity evidence is published; retain the November 10, 2026 review date for remaining scopes.",
+      "factsClosed": 0,
+      "unpark": {
+        "rationale": "The prior parked group explicitly required an exact issuer/account-to-token/vault binding with pinned confirmation. New issuer DeFi Operator disclosure plus Morpho account inventory, newly verified SharpByte source and Monad block 119439360 now establish that binding. This reopens only the identified Monad AUSD-Morpho slice; it does not close liquidity or maturity.",
+        "evidence": [
+          "https://app.tori.finance/api/solvency — issuer discloses 0xD07d31698E9689Af5954698b08e0c963ad9c00eb as DeFi Operator; reviewed November 4, 2026.",
+          "https://cache.accountable.capital/dashboard/tori — data.ts 1793829660182 (2026-11-04T22:01:00.182Z), reserves.nested_split.Monad exact AUSD - Morpho (Tori token collateral) USD 3,312,442.963488275.",
+          "https://api.morpho.org/graphql — userByAddress(chainId:143,address:0xD07d31698E9689Af5954698b08e0c963ad9c00eb) identifies held SharpByte vault 0x790e4f829fe865d432c4ea83b8b15f8871415b6c and direct market 0x58532a6ef16789d5e93f6728e1f53db9ee9a1e4163059c9515684d10b49af464; both identify Agora AUSD underlying 0x00000000efe302beaa2b3e6e1b18d08d69a9012a.",
+          "https://monadscan.com/address/0x790e4f829fe865d432c4ea83b8b15f8871415b6c#code — now exact-match verified SharpByte AUSD Tori Ecosystem VaultV2 source; source verified November 4, 2026.",
+          "https://api-monad-mainnet-full.n.dwellir.com — Monad block 119439360, hash 0x5d0c345fbcea34640698410fa71b42ca57ea2b647a55a6be9cb380e5a08f90f8, 2026-11-04T21:57:11Z; asset() returns tracked Agora AUSD; operator balance 2295393810272793563062193 raw vault shares and convertToAssets 2314953747798 raw AUSD at 6 decimals."
+        ]
+      }
     }
   ]
 }

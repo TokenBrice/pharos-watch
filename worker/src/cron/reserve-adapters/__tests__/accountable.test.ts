@@ -1171,27 +1171,31 @@ describe("adaptAccountableDashboard", () => {
   });
 
   it("maps the Monad AUSD/Morpho leaf instead of publishing the raw chain path", () => {
-    const capture = structuredClone(toriCapture);
-    const monadUsd = 2_306_059.568;
-    const onChain = capture.data.assetBreakdown["On-chain Liquidity"] as Record<string, unknown>;
-    onChain.Monad = monadUsd;
-    (capture.data.reserves.nested_split as Record<string, Record<string, unknown>>).Monad = {
-      "AUSD - Morpho": monadUsd,
-    };
-    (capture.data.reserves.total_reserves as { value: number }).value += monadUsd;
-    (capture.data.reserves.total_supply as { value: number }).value += monadUsd;
-    capture.data.collateralization = 1.007476;
+    for (const label of ["AUSD - Morpho", "AUSD - Morpho (Tori token collateral)"]) {
+      const capture = structuredClone(toriCapture);
+      const monadUsd = 2_306_059.568;
+      const onChain = capture.data.assetBreakdown["On-chain Liquidity"] as Record<string, unknown>;
+      onChain.Monad = monadUsd;
+      (capture.data.reserves.nested_split as Record<string, Record<string, unknown>>).Monad = {
+        [label]: monadUsd,
+      };
+      (capture.data.reserves.total_reserves as { value: number }).value += monadUsd;
+      (capture.data.reserves.total_supply as { value: number }).value += monadUsd;
+      capture.data.collateralization = 1.007476;
 
-    const result = adaptAccountableDashboard(capture, toriParams);
-    const slice = result.slices.find((row) => row.sourceKey === "accountable:tori:monad:ausd-morpho-unverified");
-    expect(slice).toMatchObject({
-      name: "Unverified AUSD Morpho position on Monad",
-      risk: "high",
-    });
-    expect(slice?.coinId).toBeUndefined();
-    expect(slice?.pct).toBeCloseTo(monadUsd / 80_791_901.218 * 100, 8);
-    expect(result.metadata?.unknownBucketCount).toBeUndefined();
-    expect(result.slices.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100, 10);
+      const result = adaptAccountableDashboard(capture, toriParams);
+      const slice = result.slices.find((row) => row.sourceKey === "accountable:tori:monad:ausd-morpho-unverified");
+      expect(slice).toMatchObject({
+        name: "AUSD supplied to Morpho on Monad (Tori token collateral)",
+        risk: "high",
+        coinId: "ausd-agora",
+        depType: "collateral",
+      });
+      expect(result.slices.filter((row) => row.sourceKey === slice?.sourceKey)).toHaveLength(1);
+      expect(slice?.pct).toBeCloseTo(monadUsd / 80_791_901.218 * 100, 8);
+      expect(result.metadata?.unknownBucketCount).toBeUndefined();
+      expect(result.slices.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100, 10);
+    }
   });
 
   it("rejects missing or inconsistent nested constituents instead of restoring an aggregate link", () => {

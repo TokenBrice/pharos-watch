@@ -101,13 +101,18 @@ const CCIP_ARCHIVE_ALCHEMY_CHAINS: Readonly<Record<string, string>> = {
   berachain: "berachain-mainnet",
 };
 
-/** Existing supply-profile RPC; 10,000-block historical ramp logs and canonical
- * hash-pinned pool code verified 2026-10-06. No new credential is required. */
-const CCIP_ARCHIVE_PUBLIC_ENDPOINTS: Readonly<Record<string, readonly RpcEndpoint[]>> = {
+/** Reviewed keyless routes; state-only probes do not admit archive/log inventory. */
+const REVIEWED_PUBLIC_ENDPOINTS: Readonly<Record<string, readonly RpcEndpoint[]>> = {
+  // 10,000-block historical ramp logs and canonical pool code verified 2026-10-06.
   berachain: [{
     url: "https://rpc.berachain.com", operator: "public", keyed: false, position: "registry",
     stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-06",
   }],
+  // Aero canonical hash reads and 150-subcall aggregate3 verified 2026-11-04.
+  ink: ["https://rpc-gel.inkonchain.com", "https://rpc-qnd.inkonchain.com"].map(url => ({
+    url, operator: "public", keyed: false, position: "supplemental",
+    stateHistory: "unknown", logsHistory: "none", verifiedAt: "2026-11-04",
+  })),
 };
 
 export type RpcAuthProvider = "alchemy" | "dwellir";
@@ -361,9 +366,9 @@ export function buildChainRpcs(
   for (const config of configs) {
     map.set(config.chainId, config);
   }
-  // Reviewed keyless archive routes are static inventory: an unrelated
+  // Reviewed keyless routes are static inventory: an unrelated
   // credential's absence must not delete them from the registry.
-  for (const [chainId, endpoints] of Object.entries(CCIP_ARCHIVE_PUBLIC_ENDPOINTS)) {
+  for (const [chainId, endpoints] of Object.entries(REVIEWED_PUBLIC_ENDPOINTS)) {
     const existing = map.get(chainId);
     if (existing) {
       existing.endpoints = [...existing.endpoints, ...endpoints];

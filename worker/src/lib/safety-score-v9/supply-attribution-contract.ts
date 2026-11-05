@@ -219,6 +219,7 @@ const WM_DEPLOYMENT_IDENTITIES: Readonly<Record<string, WmDeploymentIdentity>> =
 
 const CENTRIFUGE_V3_SPOKE_ADDRESS =
   "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab";
+export const PHAROS_REVIEWED_DEPLOYMENT_MIN_BLOCK_LAG = 15;
 // Issuer rotation: JTRSY slot 462868190, ACRDX slot 462868261; reverified finalized at slot 465239190.
 const CENTRIFUGE_SOLANA_MINT_AUTHORITY =
   "BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4";
@@ -288,8 +289,16 @@ const CENTRIFUGE_BURN_MINT_DEPLOYMENT_IDENTITIES: Readonly<
       safeBlockLag: 10,
       extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.monad,
     },
-    // Withheld until Pharos runtime, Spoke and safe-block/RPC evidence is reviewed.
-    "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040": null,
+    // Runtime pin 22124683; pool/share-class and transport binding pin 22133080 (jtrsy-pharos-route-20261104).
+    "pharos:0xc18e6f730896971a79d748e8dea61067a9bc6040": {
+      runtime: "evm",
+      liabilityModel: "protocol-burn-mint",
+      runtimeCodeSha256:
+        "a0dcca3d830ffd0f877005e7018f67f691629ab600bb65809818057c0a76b3a6",
+      controllerAddress: CENTRIFUGE_V3_SPOKE_ADDRESS,
+      safeBlockLag: PHAROS_REVIEWED_DEPLOYMENT_MIN_BLOCK_LAG,
+      extraRpcUrls: SUPPLY_ATTRIBUTION_RPC_URLS.pharos,
+    },
     "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj": {
       runtime: "solana",
       liabilityModel: "protocol-burn-mint",

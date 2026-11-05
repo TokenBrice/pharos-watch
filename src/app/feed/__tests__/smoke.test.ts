@@ -145,7 +145,7 @@ describe("feed routes smoke", () => {
 
   it("methodology feed dates entries on their authored date and never advertises a future build time", async () => {
     vi.useFakeTimers();
-    const now = Date.UTC(2026, 10, 4, 12); // 2026-11-04T12:00:00Z, after the newest authored date
+    const now = Date.UTC(2026, 10, 5, 12); // 2026-11-05T12:00:00Z, after the newest authored date
     vi.setSystemTime(now);
     try {
       const loaded = await loadRoutes();

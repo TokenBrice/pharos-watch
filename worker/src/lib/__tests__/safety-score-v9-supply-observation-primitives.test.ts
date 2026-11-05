@@ -24,6 +24,12 @@ import {
   findEvmBlockHeaderInTimestampWindow,
 } from "../safety-score-v9/supply-observation-primitives";
 
+function solanaConfig(url: string) {
+  return new Map<string, ChainRpcConfig>([["solana", {
+    chainId: "solana", chainName: "Solana", type: "other", explorerUrl: "https://solscan.io",
+    endpoints: [{ url, operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full" }],
+  }]]);
+}
 
 
 describe("Safety Score V9 supply observation primitives", () => {
@@ -46,23 +52,16 @@ describe("Safety Score V9 supply observation primitives", () => {
     expect(observeSolana).not.toHaveBeenCalled();
   });
 
-  it("stops at the first in-window hash-bearing header", async () => {
-    const initialHeader = { number: 1000, timestamp: 2000, hash: `0x${"a".repeat(64)}` as const };
-    const fetchHeader = vi.fn(async (number: number) => ({ ...initialHeader, number, timestamp: 2000 - (1000 - number) * 12 }));
-    const result = await findEvmBlockHeaderInTimestampWindow({
-      initialHeader, earliestTimestamp: 1800, latestTimestamp: 1920, fetchHeader,
-    });
-    expect(result).toEqual({ ...initialHeader, number: 992, timestamp: 1904 });
-    expect(fetchHeader.mock.calls.map(([number]) => number)).toEqual([999, 998, 996, 992]);
-  });
-
-  it("refines an overshot window without selecting an older or newer pin", async () => {
+  it.each([
+    ["stops at the first in-window hash-bearing header", 1800, 1920, 992, 1904, [999, 998, 996, 992]],
+    ["refines an overshot window without selecting an older or newer pin", 1930, 1940, 995, 1940, [999, 998, 996, 992, 994, 995]],
+  ] as const)("%s", async (_title, earliestTimestamp, latestTimestamp, number, timestamp, lookups) => {
     const initialHeader = { number: 1000, timestamp: 2000, hash: `0x${"a".repeat(64)}` as const };
     const fetchHeader = vi.fn(async (number: number) => ({ ...initialHeader, number, timestamp: 2000 - (1000 - number) * 12 }));
     expect(await findEvmBlockHeaderInTimestampWindow({
-      initialHeader, earliestTimestamp: 1930, latestTimestamp: 1940, fetchHeader,
-    })).toEqual({ ...initialHeader, number: 995, timestamp: 1940 });
-    expect(fetchHeader.mock.calls.map(([number]) => number)).toEqual([999, 998, 996, 992, 994, 995]);
+      initialHeader, earliestTimestamp, latestTimestamp, fetchHeader,
+    })).toEqual({ ...initialHeader, number, timestamp });
+    expect(fetchHeader.mock.calls.map(([number]) => number)).toEqual(lookups);
   });
 
   it.each(["missing", "wrong number", "nonmonotonic", "no block in window"] as const)(
@@ -104,26 +103,29 @@ describe("Safety Score V9 supply observation primitives", () => {
     expect(decodeEvmHexBytes("0x0")).toBeNull();
   });
 
-  it("preserves ordered Solana RPC failover without retrying one endpoint", async () => {
+  it.each([
+    ["preserves ordered Solana RPC failover without retrying one endpoint", 1, false,
+      ["https://api.mainnet-beta.solana.com", "https://api.mainnet.solana.com"]],
+    ["retries a single Solana endpoint once before rotating to the next endpoint", 1, true,
+      ["https://api.mainnet-beta.solana.com", "https://api.mainnet-beta.solana.com"]],
+    ["falls through to the independent Pocket Network Solana endpoint", 2, false,
+      ["https://api.mainnet-beta.solana.com", "https://api.mainnet.solana.com", "https://solana.api.pocket.network"]],
+  ] as const)("%s", async (_title, failures, retry, urls) => {
+    // Drive backoff locally so shared-process RPC retries cannot enter this mock.
+    vi.useFakeTimers();
     const fetchMock = mockFetch([{
-      match: () => true,
+      match: retry ? "api.mainnet-beta.solana.com" : () => true,
       outcomes: [
-        { body: { error: { code: -32000, message: "unavailable" } } },
+        ...Array.from({ length: failures }, () => retry ? new Error("network flake")
+          : { body: { error: { code: -32000, message: "unavailable" } } }),
         { body: { result: { slot: 42 } } },
       ],
     }]);
-
-    await expect(
-      fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
-        "getSlot",
-        [{ commitment: "finalized" }],
-      ),
-    ).resolves.toEqual({ slot: 42 });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://api.mainnet-beta.solana.com",
-      "https://api.mainnet.solana.com",
-    ]);
+    const pending = fetchSafetyScoreV9SolanaRpc<{ slot: number }>("getSlot", [{ commitment: "finalized" }]);
+    await vi.runAllTimersAsync();
+    await expect(pending).resolves.toEqual({ slot: 42 });
+    expect(fetchMock).toHaveBeenCalledTimes(urls.length);
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(urls);
     expect(
       JSON.parse(fetchMock.mock.calls[0]![1]!.body as string),
     ).toEqual({
@@ -140,23 +142,7 @@ describe("Safety Score V9 supply observation primitives", () => {
       match: configuredUrl,
       outcomes: [{ body: { result: { slot: 42 } } }],
     }]);
-    const configured = new Map<string, ChainRpcConfig>([[
-      "solana",
-      {
-        chainId: "solana",
-        chainName: "Solana",
-        type: "other",
-        endpoints: [{
-          url: configuredUrl,
-          operator: "public",
-          keyed: false,
-          position: "registry",
-          stateHistory: "archive",
-          logsHistory: "full",
-        }],
-        explorerUrl: "https://solscan.io",
-      } satisfies ChainRpcConfig,
-    ]]);
+    const configured = solanaConfig(configuredUrl);
 
     await expect(
       fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
@@ -179,23 +165,7 @@ describe("Safety Score V9 supply observation primitives", () => {
       match: configuredUrl,
       outcomes: [{ body: { result: {} } }],
     }]);
-    const configured = new Map<string, ChainRpcConfig>([[
-      "solana",
-      {
-        chainId: "solana",
-        chainName: "Solana",
-        type: "other",
-        endpoints: [{
-          url: configuredUrl,
-          operator: "public",
-          keyed: false,
-          position: "registry",
-          stateHistory: "archive",
-          logsHistory: "full",
-        }],
-        explorerUrl: "https://solscan.io",
-      } satisfies ChainRpcConfig,
-    ]]);
+    const configured = solanaConfig(configuredUrl);
 
     await expect(fetchReviewedDeploymentSolanaObservation({
       routeId: "solana:mint",
@@ -211,53 +181,6 @@ describe("Safety Score V9 supply observation primitives", () => {
     })).resolves.toBeNull();
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]![0]).toBe(configuredUrl);
-  });
-
-  it("retries a single Solana endpoint once before rotating to the next endpoint", async () => {
-    // Drive backoff locally so shared-process RPC retries cannot enter this mock.
-    vi.useFakeTimers();
-    const fetchMock = mockFetch([{
-      match: "api.mainnet-beta.solana.com",
-      outcomes: [
-        new Error("network flake"),
-        { body: { result: { slot: 42 } } },
-      ],
-    }]);
-
-    const pending = fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
-      "getSlot",
-      [{ commitment: "finalized" }],
-    );
-    await vi.runAllTimersAsync();
-    await expect(pending).resolves.toEqual({ slot: 42 });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://api.mainnet-beta.solana.com",
-      "https://api.mainnet-beta.solana.com",
-    ]);
-  });
-
-  it("falls through to the independent Pocket Network Solana endpoint", async () => {
-    const fetchMock = mockFetch([{
-      match: () => true,
-      outcomes: [
-        { body: { error: { code: -32000, message: "unavailable" } } },
-        { body: { error: { code: -32000, message: "unavailable" } } },
-        { body: { result: { slot: 42 } } },
-      ],
-    }]);
-
-    await expect(
-      fetchSafetyScoreV9SolanaRpc<{ slot: number }>(
-        "getSlot",
-        [{ commitment: "finalized" }],
-      ),
-    ).resolves.toEqual({ slot: 42 });
-    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-      "https://api.mainnet-beta.solana.com",
-      "https://api.mainnet.solana.com",
-      "https://solana.api.pocket.network",
-    ]);
   });
 
   it.each(["supplemental", "registry", "unadmitted"] as const)("rejects a Dwellir-only %s config without reviewed extras", async position => {
@@ -322,7 +245,12 @@ describe("Safety Score V9 supply observation primitives", () => {
       multicall: "present" | "absent" | "unavailable";
       requiredFailure?: boolean;
       mismatch?: "number" | "hash";
+      mismatchAt?: number;
+      chainId?: "ethereum" | "pharos";
+      safeBlockLag?: number;
+      rejectHashPins?: boolean;
     }) {
+      const chainId = input.chainId ?? "ethereum";
       const requests: Array<{ method: string; params: unknown[] }> = [];
       let headers = 0;
       // ABI aggregate3 response: supply, decimals, then an optional reverted read.
@@ -340,13 +268,13 @@ describe("Safety Score V9 supply observation primitives", () => {
         requests.push(request);
         let result: unknown;
         let error: unknown;
-        if (request.method === "eth_blockNumber") result = "0x11";
+        if (request.method === "eth_blockNumber") result = chainId === "pharos" ? "0x1f" : "0x11";
         if (request.method === "eth_getBlockByNumber") {
           headers += 1;
           result = {
-            number: headers > 1 && input.mismatch === "number" ? "0xf" : "0x10",
+            number: headers >= (input.mismatchAt ?? 2) && input.mismatch === "number" ? "0xf" : "0x10",
             timestamp: "0x64",
-            hash: headers > 1 && input.mismatch === "hash" ? `0x${"b".repeat(64)}` : blockHash,
+            hash: headers >= (input.mismatchAt ?? 2) && input.mismatch === "hash" ? `0x${"b".repeat(64)}` : blockHash,
           };
         }
         if (request.method === "eth_getCode") {
@@ -364,11 +292,15 @@ describe("Safety Score V9 supply observation primitives", () => {
             error = { code: 3, message: "execution reverted" };
           } else result = call.data === "0x18160ddd" ? supply : decimals;
         }
+        if (input.rejectHashPins && ["eth_call", "eth_getCode", "eth_getStorageAt"].includes(request.method) &&
+            typeof request.params[request.params.length - 1] === "object") {
+          error = { code: -32602, message: "hash selector unsupported" };
+        }
         return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, ...(error ? { error } : { result }) }));
       }));
       const observe = () => observeReviewedEvmDeployment({
-        routeId: `ethereum:${contractAddress}`,
-        chainId: "ethereum",
+        routeId: `${chainId}:${contractAddress}`,
+        chainId,
         contractAddress,
         scoringClockSec: 100,
         chainRpcs: new Map<string, ChainRpcConfig>(),
@@ -377,7 +309,7 @@ describe("Safety Score V9 supply observation primitives", () => {
           fetchEvmCodeAtBlock, fetchEvmMulticall3Aggregate3AtBlock, fetchEvmStorageAtBlock,
         },
         identity: () => ({}),
-        safeBlockLag: () => 1,
+        safeBlockLag: () => input.safeBlockLag ?? (chainId === "pharos" ? 15 : 1),
         extraRpcUrls: () => ["https://rpc.example"],
         protocolCalls: () => [{
           label: "optional-paused", target: contractAddress, callData: protocolSelector,
@@ -390,6 +322,48 @@ describe("Safety Score V9 supply observation primitives", () => {
       });
       return { requests, observe };
     }
+
+    it("brackets Pharos chain 1672 hex-number state reads with matching headers", async () => {
+      const pharos = fixture({ multicall: "present", chainId: "pharos", rejectHashPins: true });
+      expect(await pharos.observe()).toMatchObject({
+        status: "accepted", observation: { rawSupply: "42", blockNumberOrSlot: "16", blockHash },
+      });
+      const methods = pharos.requests.map(request => request.method);
+      const state = pharos.requests.filter(request => ["eth_call", "eth_getCode", "eth_getStorageAt"].includes(request.method));
+      expect(new Set(state.map(request => request.method))).toEqual(new Set(["eth_call", "eth_getCode", "eth_getStorageAt"]));
+      expect(state.every(request => request.params[request.params.length - 1] === "0x10")).toBe(true);
+      const headers = methods.flatMap((method, index) => method === "eth_getBlockByNumber" ? [index] : []);
+      expect(headers).toHaveLength(3);
+      expect(pharos.requests.slice(headers[1]! + 1, headers[2])).toEqual(state);
+      expect(methods[methods.length - 1]).toBe("eth_getBlockByNumber");
+    });
+
+    it.each([2, 3])("withholds Pharos on header hash mismatch at bracket read %s", async mismatchAt => {
+      const pharos = fixture({ multicall: "present", chainId: "pharos", mismatch: "hash", mismatchAt });
+      expect(await pharos.observe()).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-pin-header-mismatch",
+      });
+      expect(pharos.requests.some(request => request.method === "eth_call")).toBe(mismatchAt === 3);
+    });
+
+    it("withholds Pharos before state reads when its reviewed lag is below 15 blocks", async () => {
+      const pharos = fixture({ multicall: "present", chainId: "pharos", safeBlockLag: 14 });
+      expect(await pharos.observe()).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-pin-lag-violation",
+      });
+      expect(pharos.requests.map(request => request.method)).toEqual(["eth_blockNumber"]);
+    });
+
+    it("never relaxes hash pinning on other chains when EIP-1898 is unsupported", async () => {
+      const ethereum = fixture({ multicall: "present", rejectHashPins: true });
+      expect(await ethereum.observe()).toMatchObject({
+        status: "rejected", rejectionCode: "deployment-state-unavailable",
+      });
+      const state = ethereum.requests.filter(request => ["eth_call", "eth_getCode", "eth_getStorageAt"].includes(request.method));
+      expect(state.length).toBeGreaterThan(0);
+      expect(state.every(request => JSON.stringify(request.params[request.params.length - 1]) ===
+        JSON.stringify({ blockHash, requireCanonical: true }))).toBe(true);
+    });
 
     it("produces the same observations by direct calls, including allowed failures", async () => {
       const multicall = fixture({ multicall: "present" });

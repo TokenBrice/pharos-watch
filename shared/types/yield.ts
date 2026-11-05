@@ -329,14 +329,16 @@ export const YieldRankingsCoinResponseSchema = YieldRankingsResponseSchema.exten
 });
 export type YieldRankingsCoinResponse = z.infer<typeof YieldRankingsCoinResponseSchema>;
 
-/** Internal generation-bound comparator census; coin readers admit only their row. */
-export const YieldCoinCohortSchema = YieldRankingsResponseSchema.pick({ provenance: true, warnings: true }).extend({
+/** Internal complete assessment; coin readers admit only their row and original envelope. */
+export const YieldCoinCohortSchema = YieldRankingsResponseSchema.extend({
+  publication: YieldPublicationMetadataSchema,
   signature: z.string().min(1),
+  // Legacy assessments lack the build version and cannot serve cross-signature fallback.
+  yieldMethodologyVersion: z.string().min(1).optional(),
   assessedAt: z.number().nonnegative(),
   validUntil: z.number().nonnegative(),
   totalCount: z.number().int().nonnegative(),
   degradationReasons: z.array(z.string()),
-  rankings: z.array(YieldRankingSchema.pick({ id: true, liveRank: true, rankChangeAttribution: true })),
 });
 export type YieldCoinCohort = z.infer<typeof YieldCoinCohortSchema>;
 

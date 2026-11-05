@@ -43,7 +43,7 @@ export interface ReservoirReservesResponse {
   equity: string;
 }
 
-type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "agua" | "rusd" | "prime" | "prime-unverified" | "usdat" | "usdg";
+type ReservoirBucketKey = "usd1" | "pyusd" | "rlusd" | "ausd" | "gho" | "usdt" | "usdc" | "agua" | "rusd" | "prime" | "prime-unverified" | "usdat" | "usdg" | "steakhouse-usdg";
 
 
 // Stable buckets that provide broader balance-sheet liquidity context. This
@@ -72,6 +72,16 @@ const RESERVOIR_BUCKETS: readonly ValueBucketRule<ReservoirBalanceItem, Reservoi
     depType: "collateral",
     match: (item) => item.chainId === 42161
       && item.address?.toLowerCase() === "0x390c1bb01f3f627144a40617e287d4ce3d5abcfa",
+  },
+  {
+    key: "steakhouse-usdg",
+    name: "USDG deposited in Morpho Steakhouse USDG Pro vault",
+    risk: "high",
+    sourceKey: "reservoir:steakhouse-usdg-pro",
+    coinId: "usdg-paxos",
+    depType: "collateral",
+    match: (item) => item.chainId === 42161
+      && item.address?.toLowerCase() === "0xbeeff72b77e7584a450e887125f25e8d8819016a",
   },
   {
     key: "prime",
