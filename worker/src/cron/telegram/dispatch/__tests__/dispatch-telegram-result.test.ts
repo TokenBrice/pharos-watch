@@ -1,6 +1,4 @@
-import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
-import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { readTelegramPendingCapacity } from "../../../../telegram/outbox/pending-capacity";
 import {
@@ -13,20 +11,11 @@ import {
 import { TelegramSendOriginatedError } from "../../../../telegram/delivery/transport-errors";
 
 describe("shouldRecordTelegramDispatchFailure", () => {
-  it("does not attribute a snapshot write failure after a successful drain to Telegram", () => {
-    expect(shouldRecordTelegramDispatchFailure(
-      new Error("snapshot write failed"),
-      undefined,
-      true,
-    )).toBe(false);
-  });
-
-  it("records only errors thrown by the Telegram send call", () => {
-    expect(shouldRecordTelegramDispatchFailure(
-      new TelegramSendOriginatedError("send threw"),
-      undefined,
-      true,
-    )).toBe(true);
+  it.each([
+    [new Error("snapshot write failed"), false],
+    [new TelegramSendOriginatedError("send threw"), true],
+  ])("attributes only transport-originated errors (%s)", (error, recorded) => {
+    expect(shouldRecordTelegramDispatchFailure(error, undefined, true)).toBe(recorded);
   });
 });
 
@@ -48,10 +37,13 @@ describe("capacity projections", () => {
   it("publishes the flattened fields on the built result", () => {
     const result = buildDispatchResult({
       snapshotSeeded: false,
+      sourcesLoaded: true,
       capacity: { before: emptyPendingCapacitySnapshot(), after: observed },
     });
 
     expect(result).toMatchObject({
+      suppressedSafetyChangesAtSeed: 0,
+      eventsDetected: { dews: 0, freeze: 0 },
       pendingTotal: 5,
       pendingDue: 3,
       pendingDeferredCount: 1,
@@ -72,6 +64,12 @@ describe("capacity projections", () => {
     expect(result.pendingCapacityBefore).toEqual(emptyPendingCapacitySnapshot());
     expect(result.pendingCapacityAfter).toEqual(emptyPendingCapacitySnapshot());
     expect(result.pendingTotal).toBe(0);
+    expect(result).toMatchObject({ chatsWithActiveSnooze: null, suppressedSafetyChangesAtSeed: null,
+      safetyAlertSourceState: null, reserveAlertSourceState: null, reserveSourceUnavailable: true,
+      safetyAlertsSuppressed: true, reserveAlertsSuppressed: true });
+    expect(result.eventsDetected).toEqual({ dews: null, depeg: null, depegTriggered: null,
+      depegResolved: null, depegWorsening: null, safety: null, launch: null, reserve: null,
+      suppressedMethodologyChanges: null, freeze: 0 });
   });
 
   it("publishes real pending work without synthetic fresh-send or family metrics", () => {
@@ -88,14 +86,9 @@ describe("capacity projections", () => {
   });
 });
 
-function setup(): { sqlite: DatabaseSync; db: D1Database } {
-  const sqlite = createLatestSchemaSqlite().sqlite;
-  return { sqlite, db: createSqliteD1(sqlite) };
-}
-
 describe("Telegram delivery lifecycle capacity SQL", () => {
   it("separates claimable, deferred, sending, execution-unknown, cleanup, and expired work in telegram_deliveries", async () => {
-    const { sqlite, db } = setup();
+    const { sqlite, db } = createLatestSchemaSqlite();
     const now = 2_000_000;
     try {
       const insertDelivery = sqlite.prepare(
