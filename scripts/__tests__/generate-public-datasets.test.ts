@@ -92,7 +92,7 @@ async function writeBundle(root: string, date = DATE) {
   return dirs;
 }
 
-function runGenerator(root: string, args: string[] = [], env: NodeJS.ProcessEnv = {}) {
+function runGenerator(root: string, args: string[] = [], env: Partial<NodeJS.ProcessEnv> = {}) {
   return execFileAsync(process.execPath, ["--import", "tsx", "scripts/maintenance/generate-public-datasets.ts", ...args], {
     cwd: root, timeout: 15_000,
     env: { ...process.env, API_BASE_URL: "", SMOKE_API_BASE: "", PUBLIC_DATASETS_API_URL: "",
@@ -891,13 +891,13 @@ describe("PR mirror integrity mode", () => {
   it.each([
     ["redirect", "redirects", " 200\n", " 301\n", "200 rewrite"],
     ["Sheets chain", "redirects", "/sheets/top-stablecoins.csv /datasets/top-stablecoins/2026-05-16.csv", "/sheets/top-stablecoins.csv /datasets/top-stablecoins/latest.csv", "rewrite directly"],
-    ...["csv", "json", "ndjson"].map((ext) => [`${ext} preamble`, ext, "", "broken", "missing preamble"]),
+    ...["csv", "json", "ndjson"].map((ext) => [`${ext} preamble`, ext, "", "broken", "missing preamble"] as const),
     ["rowCount type", "json", '"rowCount": 493', '"rowCount": "493"', "numeric _meta.rowCount"],
     ["projection", "scores", '"version": 2', '"version": 1', "displayProjection"],
     ["module mismatch", "module", "", "wrong", "does not match"],
     ["module missing", "module", "", null, "missing"],
     ["artifact missing", "csv", "", null, "missing"],
-  ])("retains %s validation in both modes", async (_, file, from, to, reason) => {
+  ] as const)("retains %s validation in both modes", async (_, file, from, to, reason) => {
     const root = await makeRoot();
     const dirs = await writeBundle(root);
     vi.useFakeTimers();
@@ -905,11 +905,8 @@ describe("PR mirror integrity mode", () => {
     const target = file === "redirects" ? dirs.redirectsPath : file === "module" ? dirs.currentDatasetModulePath
       : path.join(dirs.datasetsDir, file === "scores" ? "scores-latest" : "top-stablecoins", `${DATE}.${file === "scores" ? "json" : file}`);
     if (to === null) await rm(target);
-    else {
-      const contents = from ? (await readFile(target, "utf8")).replace(from, to!) : to!;
-      await writeFile(target, contents);
-    }
-    for (const mode of [false, true]) expect(checkAllTopics(dirs, mode)).toMatchObject({ ok: false, reason: expect.stringContaining(reason!) });
+    else await writeFile(target, from ? (await readFile(target, "utf8")).replace(from, to) : to);
+    for (const mode of [false, true]) expect(checkAllTopics(dirs, mode)).toMatchObject({ ok: false, reason: expect.stringContaining(reason) });
   });
 
   it("keeps CLI checks read-only and generation/fallback strict", async () => {
