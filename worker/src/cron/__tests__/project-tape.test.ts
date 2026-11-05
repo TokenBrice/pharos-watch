@@ -56,6 +56,7 @@ function baseTables(): MockTableConfig[] {
     ...["events", "flows", "scan_coverage", "admission", "publication_policy", "hourly"].map((table) => ({
       match: `FROM mint_burn_${table}`, rows: [],
     })),
+    { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
     { match: "FROM yield_history", rows: [] },
     { match: "FROM yield_source_decisions", rows: [] },
   ];
