@@ -108,7 +108,7 @@ describe("evaluation manifest scheduling", () => {
       });
       expect((await run([only, ...(mode ? [mode] : [])], child)).status).toBe(failure);
       expect(child).toHaveBeenCalledTimes(count);
-      if (!failure && count) expect(child.mock.lastCall?.[0]).toBe(`tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts${mode ? ` ${mode}` : ""}`);
+      if (!failure && count) expect(child.mock.lastCall?.[0]).toBe(["tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts", mode].filter(Boolean).join(" "));
       if (failure) expect(child.mock.calls.some(([cmd]) => cmd.includes("evaluation-build-manifest"))).toBe(false);
     },
   );
