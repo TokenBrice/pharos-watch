@@ -32,7 +32,10 @@ Choose semantic roles by meaning: surfaces/text/borders for hierarchy; [UI state
 #### Contrast and interaction baseline
 
 - Metadata and helper text must remain readable on pale surfaces. Use semantic text roles, not unscoped light palette stops; dark-only surfaces are explicit exceptions.
-- Keyboard focus uses the shared visible ring in both themes. DEWS radar guides use theme-tuned `--dews-radar-*` tokens; dark mode must not make spokes disappear.
+- Keyboard focus uses full-opacity `focus-visible:ring-ring` in `.pharos-focus-ring`, source-list links, prose links and the Digest archive controls; opacity modifiers are not permitted. The design-invariant suite resolves the actual `--ring` and surface aliases in both themes and requires at least 3:1 against base (`--background`), card (`--card`) and raised (`--surface-raised`) surfaces.
+- The high and single-source confidence labels require at least 4.5:1 against base and card surfaces in both themes. Their shared classification entries use emerald-700 and amber-700 in light mode and retain the 400 stops in dark mode; tests read the Pharos palette overrides rather than stock Tailwind values. Source calculations do not replace rendered focus/clipping and tinted/hover-background checks.
+- Navigable tables retain native row semantics; link/button roles belong on controls inside cells, not `tr`, `TableRow` or `InteractiveTableRow`. The design-invariant scan includes both Chains route tables.
+- DEWS radar guides use theme-tuned `--dews-radar-*` tokens; dark mode must not make spokes disappear.
 - Dense controls use `--control-pill-*`. `.pharos-control-pill-active`, on-state toggle pills and `.pharos-pill-tab-active` share elevated-neutral active fill, primary text and a hairline ring; never solid ink or a local `.dark` hex override. Navigation's frost-lit rail is separate.
 - Secondary mode/view/window switches use `.pharos-segmented` with `.pharos-segmented-item`, selection exposed through `aria-pressed` / `aria-selected`; `ControlPillToggle` supports `variant="segmented"`.
 - Sticky table headers and anchor scroll padding use `--table-header-top`, the bottom edge of site chrome, rather than independent offsets.

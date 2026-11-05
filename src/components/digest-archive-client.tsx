@@ -447,7 +447,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
                   aria-label="Filter by month"
                   value={activeMonth ?? ""}
                   onChange={(event) => setParam("month", event.target.value)}
-                  className="min-h-10 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-8 md:py-1"
+                  className="min-h-10 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background md:min-h-8 md:py-1"
                 >
                   {monthOptions.map((month) => (
                     <option key={month.key} value={month.key} className="bg-background text-foreground">
@@ -471,7 +471,7 @@ function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | n
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="Search the archive"
                 aria-label="Search digest title and body"
-                className="min-h-10 w-full rounded-md border border-border bg-background py-2 pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="min-h-10 w-full rounded-md border border-border bg-background py-2 pl-9 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               />
               {searchQuery && (
                 <button
