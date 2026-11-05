@@ -210,6 +210,42 @@ export const PUBLIC_DEPEG_EVENTS_SQL = `(
     FROM depeg_events_with_provenance events
 )`;
 
+/** Disjoint top-K branches; limit includes the caller's lookahead row. */
+export function buildPublicDepegEventsPageQuery(
+  where: string,
+  bindings: (string | number)[],
+  limit: number,
+  offset: number,
+): { sql: string; bindings: (string | number)[] } {
+  const ordinaryWhere = where.replace(/\beffective_started_at\b/g, "started_at");
+  const sql = `SELECT * FROM (
+  WITH effective_ids AS MATERIALIZED (
+    SELECT DISTINCT ${effectiveCurrentEventSql("canonical")} AS effective_event_id
+      FROM depeg_resolver_incidents canonical
+      ${effectiveAliasJoinSql("canonical")}
+     WHERE canonical.incident_state = 'active'
+  ), ordinary AS (
+    SELECT events.*, events.started_at AS effective_started_at
+      FROM depeg_events_with_provenance events
+      ${ordinaryWhere}${ordinaryWhere ? " AND" : "WHERE"} id NOT IN (SELECT effective_event_id FROM effective_ids)
+     ORDER BY started_at DESC, id DESC LIMIT ?
+  ), overlay AS (
+    SELECT * FROM (
+      SELECT events.*, ${effectiveStartedAtSql("events")} AS effective_started_at
+        FROM effective_ids
+        CROSS JOIN depeg_events_with_provenance events ON events.id = effective_ids.effective_event_id
+    )${where}
+     ORDER BY effective_started_at DESC, id DESC LIMIT ?
+  )
+  SELECT * FROM ordinary UNION ALL SELECT * FROM overlay
+  )
+   ORDER BY effective_started_at DESC, id DESC LIMIT ? OFFSET ?`;
+  // Each branch must contain the whole offset prefix before the final merge.
+  const candidates = offset + limit;
+  // Static projection/exclusion fragments contain no '?'; repeat only caller bindings.
+  return { sql, bindings: [...bindings, candidates, ...bindings, candidates, limit, offset] };
+}
+
 export type PublicDepegRow = DepegRow & { effective_started_at: number };
 
 export function prepareActiveIncidentProjections(db: D1Database, stablecoinId: string | null): D1PreparedStatement {
