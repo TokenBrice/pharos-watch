@@ -19,6 +19,17 @@ function selectedIds(options: Record<string, unknown>): string[] {
 
 const registry = GENERATED_ARTIFACT_REGISTRY as RegistryArtifact[];
 
+describe("PR dataset integrity commands", () => {
+  it.each([[false, false], [false, true], [true, false], [true, true]])(
+    "commands for check=%s integrityOnly=%s", (check, integrityOnly) => {
+      const plan = (integrityOnly = false) => buildGeneratedArtifactPhases({ check, integrityOnly, only: ["public-datasets", "runbook-index"] })
+        .flatMap(({ artifacts }) => artifacts);
+      expect(plan(integrityOnly).map(({ command }) => command)).toEqual(plan().map(({ id, command }) =>
+        command + (check && integrityOnly && id === "public-datasets" ? " --integrity-only" : "")));
+    },
+  );
+});
+
 describe("generated artifact lifecycle", () => {
   it("uses offline snapshots for bootstrap and live generation only after refresh", () => {
     const snapshot = (options: Record<string, unknown>) => buildGeneratedArtifactPhases(options)

@@ -576,6 +576,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "public-datasets",
     buildLifecycle: "maintenance-only",
     checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
+    integrityCheckCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check --integrity-only",
     command: "tsx scripts/maintenance/generate-public-datasets.ts",
     dependsOn: ["report-card-registry-fingerprint"],
     outputPaths: ["public/_redirects", "public/datasets/**", "src/lib/datasets/public-dataset-current.ts"],
@@ -894,11 +895,12 @@ export function selectGeneratedArtifacts({
   return GENERATED_ARTIFACT_REGISTRY.filter((artifact) => selectedIds.has(artifact.id));
 }
 
-/** @param {{ bootstrap?: boolean, buildLifecycles?: string[], check?: boolean, only?: string[], phases?: number[] }} [options] */
+/** @param {{ bootstrap?: boolean, buildLifecycles?: string[], check?: boolean, integrityOnly?: boolean, only?: string[], phases?: number[] }} [options] */
 export function buildGeneratedArtifactPhases({
   bootstrap = false,
   buildLifecycles = [],
   check = false,
+  integrityOnly = false,
   only = [],
   phases: phaseFilters = [],
 } = {}) {
@@ -906,7 +908,7 @@ export function buildGeneratedArtifactPhases({
 
   for (const artifact of selectGeneratedArtifacts({ bootstrap, buildLifecycles, check, only, phases: phaseFilters })) {
     const command = check && artifact.checkCommand
-      ? artifact.checkCommand
+      ? (integrityOnly ? artifact.integrityCheckCommand ?? artifact.checkCommand : artifact.checkCommand)
       : (bootstrap ? artifact.bootstrapCommand ?? artifact.command : artifact.command);
     const phaseArtifacts = phaseGroups.get(artifact.phase) ?? [];
     phaseArtifacts.push({ ...artifact, command });
