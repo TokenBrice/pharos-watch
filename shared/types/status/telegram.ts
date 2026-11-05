@@ -449,8 +449,7 @@ export type ReserveAlertSourceState = (typeof RESERVE_ALERT_SOURCE_STATE_VALUES)
 
 /**
  * The four nullable safety-alert source fields shared by the Telegram dispatch
- * cron metadata and Telegram health summary surfaces. The cron *result* type
- * has a non-null `safetyAlertSourceState`, so it cannot share this shape.
+ * cron result, cron metadata and Telegram health summary surfaces.
  */
 export interface SafetyAlertFieldsNullable {
   safetyAlertSourceState: SafetyAlertSourceState | null;
@@ -466,7 +465,7 @@ export interface ReserveAlertFieldsNullable {
   reserveAlertSourceGeneration: string | null;
 }
 
-export interface TelegramDispatchCronResult {
+export interface TelegramDispatchCronResult extends SafetyAlertFieldsNullable, ReserveAlertFieldsNullable {
   subscribersNotified: number;
   messagesSent: number;
   blockedUsersCleanedUp: number;
@@ -490,15 +489,7 @@ export interface TelegramDispatchCronResult {
   pendingRetryAfterSec: number | null;
   pendingEnqueued: number;
   pendingExpired: number;
-  chatsWithActiveSnooze: number;
-  safetyAlertSourceState: SafetyAlertSourceState;
-  safetyAlertSourceAgeSeconds: number | null;
-  safetyAlertsSuppressed: boolean;
-  safetyAlertSourceGeneration: string | null;
-  reserveAlertSourceState: ReserveAlertSourceState;
-  reserveAlertSourceAgeSeconds: number | null;
-  reserveAlertsSuppressed: boolean;
-  reserveAlertSourceGeneration: string | null;
+  chatsWithActiveSnooze: number | null;
   presetQueryFailures: number;
   presetResolutionFailures: number;
   presetFailure: boolean;
@@ -509,8 +500,8 @@ export interface TelegramDispatchCronResult {
    * non-zero value signals real downgrades hidden by the seed and is a cue
    * for operators to inspect the safety-grade history directly.
    */
-  suppressedSafetyChangesAtSeed: number;
-  eventsDetected: TelegramDispatchEventsDetected;
+  suppressedSafetyChangesAtSeed: number | null;
+  eventsDetected: ParsedTelegramDispatchEventsDetected;
 }
 
 type ParsedTelegramDispatchEventsDetected = {

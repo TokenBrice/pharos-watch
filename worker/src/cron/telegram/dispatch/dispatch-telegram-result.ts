@@ -28,7 +28,7 @@ export interface DispatchCapacityMetadata {
   fanoutTotalMs: number;
   authoritativePlanning: {
     sourceEventId: string | null;
-    sourceEventFamilies: string[];
+    sourceEventFamilies: string[] | null;
     sourcePresetResolutionMs: number;
     sourcePresetPagesCompleted: number;
     candidateHorizonQueryMs: number;
@@ -145,20 +145,21 @@ export function shouldRecordTelegramDispatchFailure(
   return error instanceof TelegramSendOriginatedError;
 }
 
-function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): DispatchResult {
+function emptyResult(snapshotSeeded: boolean, sourcesLoaded: boolean, chatsWithActiveSnooze: number | null): DispatchResult {
   const emptyCapacity = emptyPendingCapacitySnapshot();
+  const sourceCount = sourcesLoaded ? 0 : null;
   return {
     eventsDetected: {
-      dews: 0,
-      depeg: 0,
-      depegTriggered: 0,
-      depegResolved: 0,
-      depegWorsening: 0,
-      safety: 0,
-      launch: 0,
-      reserve: 0,
+      dews: sourceCount,
+      depeg: sourceCount,
+      depegTriggered: sourceCount,
+      depegResolved: sourceCount,
+      depegWorsening: sourceCount,
+      safety: sourceCount,
+      launch: sourceCount,
+      reserve: sourceCount,
       freeze: 0,
-      suppressedMethodologyChanges: 0,
+      suppressedMethodologyChanges: sourceCount,
     },
     subscribersNotified: 0,
     messagesSent: 0,
@@ -184,11 +185,11 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     pendingCapacityAfter: emptyCapacity,
     freezeTargetCount: 0,
     chatsWithActiveSnooze,
-    safetyAlertSourceState: "missing",
+    safetyAlertSourceState: null,
     safetyAlertSourceAgeSeconds: null,
     safetyAlertsSuppressed: true,
     safetyAlertSourceGeneration: null,
-    reserveAlertSourceState: "missing",
+    reserveAlertSourceState: null,
     reserveAlertSourceAgeSeconds: null,
     reserveAlertsSuppressed: true,
     reserveAlertSourceGeneration: null,
@@ -200,7 +201,7 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
     fanoutTotalMs: 0,
     authoritativePlanning: {
       sourceEventId: null,
-      sourceEventFamilies: [],
+      sourceEventFamilies: sourcesLoaded ? [] : null,
       sourcePresetResolutionMs: 0,
       sourcePresetPagesCompleted: 0,
       candidateHorizonQueryMs: 0,
@@ -227,14 +228,15 @@ function emptyResult(snapshotSeeded: boolean, chatsWithActiveSnooze = 0): Dispat
       handoffPageCount: 0,
       coordinatorStepCount: 0,
     },
-    suppressedSafetyChangesAtSeed: 0,
-    reserveSourceUnavailable: false,
+    suppressedSafetyChangesAtSeed: sourceCount,
+    reserveSourceUnavailable: true,
   };
 }
 
 export function buildDispatchResult(args: {
   snapshotSeeded: boolean;
-  chatsWithActiveSnooze?: number;
+  sourcesLoaded?: boolean;
+  chatsWithActiveSnooze?: number | null;
   eventOverrides?: Partial<DispatchResult["eventsDetected"]>;
   pendingLifecycle?: {
     drainResult: PendingDrainResult;
@@ -255,7 +257,7 @@ export function buildDispatchResult(args: {
   };
   overrides?: Partial<DispatchResult>;
 }): DispatchResult {
-  const result = emptyResult(args.snapshotSeeded, args.chatsWithActiveSnooze);
+  const result = emptyResult(args.snapshotSeeded, args.sourcesLoaded ?? false, args.chatsWithActiveSnooze ?? null);
   if (args.eventOverrides) {
     result.eventsDetected = { ...result.eventsDetected, ...args.eventOverrides };
   }
