@@ -28,6 +28,8 @@ Treat release preparation as ordered state transitions. Passing a check against 
 
 Use this only when the maintainer explicitly asks for a separate worktree or branch.
 
+For an authorized detached implementation lane, preview `npm run agent:worktree -- --path P --base REF`, then apply with its printed immutable SHA and `--apply`. [Verified worktree bootstrap](./scripts.md#verified-worktree-bootstrap) owns isolated installation, exactly-once preparation and retained failures; v1 copies no credentials. Detached lanes do not push directly: pause writers, review and apply their uncommitted delta with [agent:land](./scripts.md#reviewed-lane-landing) into the lead's authorized integration checkout. The lead runs final integration checks and uses the protected branch/PR path below to publish. The manual branch flow remains available:
+
 1. Create a worktree from `origin/main`.
 
 ```bash
