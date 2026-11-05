@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 
 vi.mock("../../lib/db", async (importOriginal) => {
@@ -234,74 +235,55 @@ describe("dex-liquidity scoring", () => {
     ]);
   });
 
-  it("quarantines invalid durability history without losing valid samples", async () => {
-    const rows = Array.from({ length: 8 }, (_, index) => ({
-      stablecoin_id: "usdc-circle", snapshot_date: index + 1,
-      total_tvl_usd: index === 7 ? 1_000_000_000 : 1_000_000,
-      total_volume_24h_usd: 100_000, coverage_class: "primary",
-      coverage_confidence: index === 7 ? 1.1 : 1,
-    }));
-    const db = makeNoopD1({
-      prepare: () => ({
-        bind: () => ({ all: async () => ({ results: rows, success: true, meta: {} }) }),
-      }),
-    });
-    expect((await loadConfidentHistoryStability(db)).tvlStabilityMap).toEqual(new Map([["usdc-circle", 1]]));
-  });
-
-  it("loads confidence history in bounded keyset pages without changing stability", async () => {
-    const historyRows = Array.from({ length: 1_025 }, (_, index) => ({
-      stablecoin_id: index < 700 ? "usdc-circle" : "usdt-tether",
-      snapshot_date: index < 700 ? index + 1 : index - 699,
-      total_tvl_usd: index < 700 ? 1_000_000 : 2_000_000,
-      total_volume_24h_usd: index < 700 ? 100_000 : 200_000,
-      coverage_confidence: 1,
-      coverage_class: "primary",
-    }));
-    let queryCount = 0;
-    const db = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (
-          _thirtyDaysAgo: number,
-          cursorStablecoinId: string,
-          _sameCursorStablecoinId: string,
-          cursorSnapshotDate: number,
-          limit: number,
-        ) => ({
-          all: async () => {
-            queryCount++;
-            return {
-              results: historyRows
-                .filter(
-                  (row) =>
-                    row.stablecoin_id > cursorStablecoinId ||
-                    (row.stablecoin_id === cursorStablecoinId && row.snapshot_date > cursorSnapshotDate),
-                )
-                .slice(0, limit),
-              success: true,
-              meta: {},
-            };
-          },
-        }),
-        sql,
-      }),
-    });
-
-    const result = await loadConfidentHistoryStability(db);
-
-    expect(queryCount).toBe(3);
-    expect(result.tvlStabilityMap).toEqual(
-      new Map([
-        ["usdc-circle", 1],
-        ["usdt-tether", 1],
-      ]),
-    );
-    expect(result.volumeStabilityMap).toEqual(
-      new Map([
-        ["usdc-circle", 1],
-        ["usdt-tether", 1],
-      ]),
-    );
+  it.each([0, 8, 512, 1_024, 1_025])("preserves ordered history and stability over %i rows", async (count) => {
+    vi.spyOn(Date, "now").mockReturnValue(SCORING_CLOCK_SEC * 1000);
+    const fixtures = createLatestSchemaFixtureTracker();
+    const { sqlite } = fixtures.open();
+    const cutoff = Math.floor(SCORING_CLOCK_SEC / 86_400) * 86_400 - 30 * 86_400;
+    const split = count === 1_024 ? 512 : 700;
+    try {
+      const insert = sqlite.prepare(`INSERT INTO dex_liquidity_history
+        (stablecoin_id, snapshot_date, total_tvl_usd, total_volume_24h_usd, coverage_class, coverage_confidence)
+        VALUES (?, ?, ?, ?, 'primary', ?)`);
+      for (const id of ["aaa-expired", "usdc-circle", "usdd-expired", "zzzz-expired"])
+        insert.run(id, cutoff - 1, 1_000_000_000, 1, 1);
+      for (let i = 0; i < count; i++) {
+        const tvl = i < split ? 1_000_000 : 2_000_000;
+        const rejected = [7, 511, 512].includes(i);
+        insert.run(i < split ? "usdc-circle" : "zz-history-only", cutoff + (i < split ? i : i - split),
+          rejected ? 1_000_000_000 : tvl, tvl / 10, rejected ? (i === 512 ? 0.74 : 1.1) : 1);
+      }
+      const scan = async (legacy: boolean) => {
+        const rows: unknown[] = [], pages: number[] = [];
+        const db = makeNoopD1({ prepare: (sql: string) => ({
+          bind: (since: number, coin: string, date: number, limit: number) => ({ all: async () => {
+            const query = legacy ? `SELECT stablecoin_id, snapshot_date, total_tvl_usd,
+              total_volume_24h_usd, coverage_class, coverage_confidence, volume_availability_json, methodology_version
+              FROM dex_liquidity_history WHERE snapshot_date >= ?1
+              AND (stablecoin_id > ?2 OR (stablecoin_id = ?2 AND snapshot_date > ?3))
+              ORDER BY stablecoin_id, snapshot_date LIMIT ?4` : sql;
+            const args = [since, coin, date, limit];
+            if (!legacy) expect(sqlite.prepare("EXPLAIN QUERY PLAN " + query).all(...args).map((row) => row.detail))
+              .toEqual(expect.arrayContaining([
+                "SEARCH dex_liquidity_history USING INDEX idx_dex_hist_coin_date_unique (stablecoin_id=? AND snapshot_date>?)",
+                "SEARCH dex_liquidity_history USING COVERING INDEX idx_dex_hist_coin_date_unique (stablecoin_id=? AND snapshot_date>?)",
+              ]));
+            const results = sqlite.prepare(query).all(...args);
+            rows.push(...results);
+            pages.push(results.length);
+            return { results, success: true, meta: {} };
+          } }),
+        }) });
+        return { stability: await loadConfidentHistoryStability(db), rows, pages };
+      };
+      const current = await scan(false);
+      expect(current).toEqual(await scan(true));
+      expect(current.rows).toHaveLength(count);
+      expect(current.pages).toEqual([...Array(Math.floor(count / 512)).fill(512), count % 512]);
+      const expected = new Map(count ? [["usdc-circle", 1], ...(count > split ? [["zz-history-only", 1] as const] : [])] : []);
+      expect(current.stability.tvlStabilityMap).toEqual(expected);
+      expect(current.stability.volumeStabilityMap).toEqual(expected);
+    } finally { fixtures.closeAll(); }
   });
 
   it("feeds coverage-qualified admitted turnover into volume consistency and skips days below the floor", async () => {
@@ -337,14 +319,7 @@ describe("dex-liquidity scoring", () => {
       ...Array.from({ length: 3 }, (_, index) => row("usdt-tether", index + 1, 100_000, null)),
       ...Array.from({ length: 5 }, (_, index) => row("usdt-tether", index + 4, 4_000, belowFloor)),
     ];
-    const db = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (_since: number, cursorStablecoinId: string) => ({
-          all: async () => ({ results: cursorStablecoinId === "" ? historyRows : [], success: true, meta: {} }),
-        }),
-        sql,
-      }),
-    });
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: historyRows }]);
 
     const result = await loadConfidentHistoryStability(db);
 
@@ -377,14 +352,7 @@ describe("dex-liquidity scoring", () => {
       row("jpyc-jpyc", 1, 31_000_000, "6.9"),
       row("jpyc-jpyc", 2, 2_600_000, "6.92"),
     ];
-    const db = makeNoopD1({
-      prepare: (sql: string) => ({
-        bind: (_since: number, cursorStablecoinId: string) => ({
-          all: async () => ({ results: cursorStablecoinId === "" ? historyRows : [], success: true, meta: {} }),
-        }),
-        sql,
-      }),
-    });
+    const db = makeQueryDb([{ match: "FROM dex_liquidity_history", all: historyRows }]);
 
     const result = await loadConfidentHistoryStability(db);
 
