@@ -36,7 +36,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   } = results;
   const selfServeRateLimitsDeleted = results.selfServeRequestRateLimits.pruned + results.selfServeIssuanceRateLimits.pruned;
   const selfServeRateLimitsTruncated = results.selfServeRequestRateLimits.cappedAtLimit || results.selfServeIssuanceRateLimits.cappedAtLimit;
-  const cutoff = (key: string) => now - policies[key].windowSec;
+  const cutoff = (key: keyof typeof policies) => now - policies[key].windowSec;
   const selectorSnapshotDailyQuotaCutoffDate = new Date(cutoff("selectorSnapshotDailyQuota") * 1000).toISOString().slice(0, 10);
 
   return createCronResult({
