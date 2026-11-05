@@ -406,7 +406,7 @@ There is no repository pre-commit or pre-push hook. Custom hook paths remain use
 
 ### Reviewed Lane Landing
 
-`npm run agent:land -- --lane L --target T --review review.json --message-file msg [--apply]` lands an uncommitted lane delta. Both this command and [worktree bootstrap](#verified-worktree-bootstrap) use `parseStrictCliArgs`, `runDirectCli` and argument-array subprocesses: `-h` / `--help` exits `0`, invalid usage exits `2`, and runtime failures exit nonzero with the failing stage and child status/signal. Help and previews perform no writes, including Git index refresh (`GIT_OPTIONAL_LOCKS=0`). These helpers grant no branch, worktree or release authorization; follow [deployment policy](./deployment-process.md#optional-worktree-flow).
+`npm run agent:land -- --lane L --target T --review review.json --message-file msg [--apply]` lands an uncommitted lane delta. Both this command and [worktree bootstrap](#verified-worktree-bootstrap) use `parseStrictCliArgs`, `runDirectCli` and argument-array subprocesses: `-h` / `--help` exits `0`, invalid usage exits `2`, and runtime failures exit nonzero with the failing stage and child status/signal. Help, previews and preflight rejection perform no writes, including Git index refresh (`GIT_OPTIONAL_LOCKS=0` and `diff.autoRefreshIndex=false`). These helpers grant no branch, worktree or release authorization; follow [deployment policy](./deployment-process.md#optional-worktree-flow).
 
 `agent:land` guards reviewed content against accidental or concurrent changes by generators, validators and other writers; it cannot defend against malicious code executed during generation, which already runs with the user's privileges.
 

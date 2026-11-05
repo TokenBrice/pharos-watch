@@ -1,5 +1,5 @@
 import{execFileSync,spawnSync} from "node:child_process"
-import{chmodSync,mkdirSync,readFileSync as r,readlinkSync,renameSync,rmSync,symlinkSync,writeFileSync as put} from "node:fs"
+import{chmodSync,mkdirSync,readFileSync as r,readlinkSync,renameSync,rmSync,symlinkSync,utimesSync,writeFileSync as put} from "node:fs"
 import{join as j,resolve} from "node:path"
 import{afterEach,expect as e,it,vi} from "vitest"
 import{buildLandingPlan as plan,parseAgentLandArgs as parse,runAgentLand as run} from "../maintenance/agent-land"
@@ -22,7 +22,7 @@ const empty:ReturnType<typeof plan>["review"]["artifacts"]={
 ids:[],checkIds:[],outputs:[],generate:[],check:[],pending:[],validatorOutputs:["v"],
 }
 function repo(run:(f:ReturnType<typeof setup>)=>void,ids:string[]=[]){
-return withTempRepo("land",{"t/a":base,"t/v":"same","t/del":"old","t/module/index.ts":"old","t/.gitignore":"node_modules\ni\nv\n.cache/\n*.tsbuildinfo\n",msg:"x\n",
+withTempRepo("land",{"t/a":base,"t/v":"same","t/del":"old","t/module/index.ts":"old","t/.gitignore":"node_modules\ni\nv\n.cache/\n*.tsbuildinfo\n",msg:"x\n",
 "t/scripts/ci/select-generated-artifacts.mts":`export const selectChangedGeneratedArtifactIds=p=>p.join()==='a'?${JSON.stringify(ids)}:[];`,
 "t/scripts/lib/automation-registry.mjs":`export const selectGeneratedArtifacts=({only})=>{if(!only.length)throw Error('all');return (only.includes('leaf')?['dep',...only]:only).map(id=>({id,bootstrap:id!=='live',checkable:id!=='dep',outputPaths:[id+'.out']}))};`,
 "t/scripts/maintenance/run-generated-artifacts.ts":"export const buildGeneratedArtifactExecutionPhases=o=>[o];",
@@ -30,7 +30,8 @@ return withTempRepo("land",{"t/a":base,"t/v":"same","t/del":"old","t/module/inde
 }
 function setup(root:string){
 const t=j(root,"t"),l=j(root,"l"),msg=j(root,"msg")
-const git=(cwd:string,...args:string[])=>execFileSync("git",["-c","core.hooksPath=/dev/null",...args],
+put(j(t,"bin"),Buffer.of(0,255))
+const git=(cwd:string,...args:string[])=>execFileSync("git",["-c","core.hooksPath=/dev/null","-c","diff.autoRefreshIndex=false",...args],
 {cwd,encoding:"utf8",env:{...process.env,GIT_OPTIONAL_LOCKS:"0"}})
 git(t,"init","-q")
 for(const [k,v] of [["user.name","F"],["user.email","f@x"],["commit.gpgSign","false"]]) git(t,"config",k,v)
@@ -72,6 +73,7 @@ symlinkSync(f.t,j(f.l,"d l"))
 if(g==="fl") symlinkSync("a",j(f.l,"del"))
 if(g==="fd"){mkdirSync(j(f.l,"del"));f.w("del/index.ts","n");}
 if(g==="df"){rmSync(j(f.l,"module"),{recursive:true});f.w("module","n");}
+for(const c of [f.l,f.t]) utimesSync(j(c,"bin"),1,1)
 const index=f.index(f.l),old=r(index)
 run(f.av,f.rt);e(r(index)).toEqual(old);e(f.rt.runCommand).not.toHaveBeenCalled()
 const ps=f.save();f.apply();vi.unstubAllEnvs()
@@ -89,6 +91,7 @@ if(g==="df") e(r(j(f.t,"module"),"utf8")).toBe("n")
 it.each(["content","path","mode","message","head","branch","remote","detach","index","lane-index","same","other","ahead","empty","dirty","untracked",
 ...["MERGE_HEAD","CHERRY_PICK_HEAD","rebase-merge","rebase-apply"].flatMap(m=>["l:"+m,"t:"+m])])("reject %s",k=>repo(f=>{
 if(k==="remote") f.git(f.t,"checkout","-qb","origin/main")
+if(k==="empty") f.git(f.t,"config","diff.autoRefreshIndex","true")
 f.save()
 if(k==="remote"){
 const ref="refs/remotes/origin/main"
@@ -107,12 +110,16 @@ f.w("a","s",cwd);f.git(cwd,"add","a");f.w("a",cwd===f.t?base :lane,cwd)
 if(k==="same") f.av[3]=f.l
 if(k==="other"){const p=j(f.t,"..","o");f.git(f.t,"clone","-q",f.t,p);f.av[3]=p;}
 if(k==="ahead"){f.commit(f.l);f.w("a","n");}
-if(k==="empty") f.w("a",base)
+if(k==="empty"){
+f.w("a",base);for(const cwd of [f.l,f.t]) utimesSync(j(cwd,"a"),1,1)
+vi.stubEnv("GIT_OPTIONAL_LOCKS","1")
+}
 if(k==="dirty"||k==="untracked") f.w(k==="dirty"?"a" :"u","x",f.t)
 if(k.includes(":")){const [x,m]=k.split(":"),p=j(f.index(x==="l"?f.l :f.t),"..",m);if(m.startsWith("rebase")) mkdirSync(p);else put(p,f.sha());}
 const old=f.snap(),why=k.endsWith("index")?"git diff" :k==="same"||k==="other"?"Require distinct" :k==="ahead"?"git merge-base"
 :k==="remote"?"Expected local branch":k==="empty"?"Empty lane" :k.includes(":")?"In-progress" :k==="dirty"||k==="untracked"?"Target must be clean" :"Review"
 e(f.apply).toThrow(why);e(f.rt.runCommand).not.toHaveBeenCalled();e(f.snap()).toEqual(old)
+e(child.mock.calls.every(([, ,opts])=>opts?.env?.GIT_OPTIONAL_LOCKS==="0")).toBe(true)
 }))
 it("conflict",()=>repo(f=>{
 f.w("a","t\n",f.t);f.commit()
