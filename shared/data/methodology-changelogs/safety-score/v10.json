@@ -1,5 +1,21 @@
 [
   {
+    "version": "10.43",
+    "title": "Per-lane incident closure for global native controls",
+    "date": "2026-11-05",
+    "effectiveAt": 1793923200,
+    "summary": "A global-scope bridge fact may close its own native or issuer-operated lane through the existing three-witness incident join: a current issuer-surface review naming that lane, current reviews for every authored rail provider or an explicit issuer-operated rail, and the newest admitted v2 certificate for that lane's own screening set. Global issuer-operated lanes additionally require current provider disclosure reviews for their contributor providers and apply OQ-1 without requiring those reviews to cover the lane. Deployment-scope closure and diagnostics are unchanged. Current-data replay closes FRNT's three issuer-operated lanes with no measured score change. Owner-approved for release on 2026-11-05.",
+    "impact": [
+      "Scope extends only to global bridge facts whose route is native or explicitly issuer-operated. The route id still binds the fact, descriptor, issuer/provider coverage and certificate; a sibling lane, another asset, mint/oracle/global root control or a global third-party route cannot inherit closure. Conflicting issuer-operated/provider authority remains rejected.",
+      "Every existing witness gate remains: current non-retired required issuer/provider witnesses, exact contributor parity, frozen screening policy, reviewed emitter pins and families, no-material-admin-event, contiguous coverage and the 30-day certificate window-end budget. Removing or expiring any required witness keeps the lane unknown; provider and issuer reviews alone close nothing.",
+      "Owner decision 2026-11-05 extends OQ-1 only on the new global issuer-operated path. Resolve each contributor's provider identities from protocol:, messaging: and verification: keys or an explicit control providerKey against the canonical provider vocabulary. Every resolved key requires a current non-retired provider disclosure review somewhere; the review need not cover this lane. Unresolved identities or missing current reviews keep closure unknown and report a lane-level incidentClosureFailures diagnostic, never a scopeDiagnostics authority failure. Check every current disclosure from the earliest issuer/provider witness start through evaluation, including reviews that do not cover the lane and exposure after witness windows. Verifier compromise blocks without a pinned exposure-time configuration exemption or later-deployment proof; no observed exploit is not an exemption. Other incident classes' affected routes may not be covered lanes. Deployment-scope closure and diagnostics remain unchanged.",
+      "Expected effect is closure of FRNT Arbitrum, Base and Optimism's three issuer-operated lanes, with no score change measured on current data. Full-local-registry replays of two production captures 119 minutes apart (2026-11-05 07:18Z and 09:17Z) change zero scores, grades, rating statuses or pillar scores across 386 cards. Only FRNT changes evidence classification: open local cause gaps 53 → 47 and six fewer selected-bridge-route-unresolved control reasons; its score remains 59, C. Downward score movement occurs only where the resolved status binds. FRNT Ethereum is already closed by an existing exact review. yUSD Ethereum remains open despite its sourced Chainlink CCIP key: the issuer's current interface reports suspended minting and redemption pending Saga remediation, so no negative issuer-surface review is authored. Fresh witnesses and same-lane v2 certificates remain necessary; screening coverage alone grants no closure.",
+      "Release: the owner approved shipping on 2026-11-05 after two fixed-clock production captures 119 minutes apart, prospective mover declarations (no grade or rating-status transitions), and three independent scope-review rounds with witness-removal probes. By owner decision the OQ-1 extension stays scoped to global issuer-operated lanes; the seven deployment-scope issuer-operated lanes keep v10.39 behaviour (none has a third-party provider identity today). First accepted production-cycle verification follows activation."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.42",
     "title": "Discount-only active-depeg caps and 0.25× premiums",
     "date": "2026-11-02",

@@ -403,7 +403,7 @@ A curated negative incident review is a separate claim kind from a mechanism-ove
 quality claim: it resolves a control's `incidentState`, not a component quality. Its
 authoring contract stays in
 [Incident-Review Authoring And Research](report-cards-appendix.md#incident-review-authoring-and-research);
-this section records only what v10.38 admits.
+this section tracks current closure rules; authored identity admission began in v10.38.
 
 - `conclusion: "no-known-incident"` asserts **no known control-domain incident on the
   named scope inside the stated window**: compromise of a key, signer, verifier or admin;
@@ -421,12 +421,15 @@ this section records only what v10.38 admits.
 - The runtime registry keys a row by `(assetId, reviewId)`. A provider-wide review is
   authored once per provider and fanned out at build time to one row per covered asset
   while keeping its `reviewId`; every authored lane must survive the fan-out.
-- v10.39 closes no lane yet, even with v2 certificates. FRNT Arbitrum/Base/Optimism
-  are global-scope native facts, excluded by the deployment-scope router; FRNT Ethereum
-  is already closed by an existing review. yUSD Ethereum lacks provider keys and an
-  issuer-surface review. Of 40 issuer-operated lanes, 33 are global-scope. Scope is unchanged;
+- Since v10.43, a global-scope bridge fact may use the incident join only on its own
+  native or explicitly issuer-operated route. Global mint/oracle controls, global
+  third-party routes and sibling lanes gain no closure. FRNT Arbitrum/Base/Optimism
+  become eligible when all witnesses hold; FRNT Ethereum is already closed by an exact
+  review. yUSD Ethereum remains open: its sourced Chainlink CCIP key provides rail
+  identity, but the issuer's current mint/redemption suspension prevents a negative
+  issuer-surface review. Release remains held for owner approval and fresh mover measurement;
   the five-lane catalog is screening coverage, not closure authority.
-- Deployment-scope closure needs current provider reviews per authored provider key (or the
+- Each eligible lane's closure needs current provider reviews per authored provider key (or the
   issuer surface for `rail: "issuer-operated"`), a current issuer surface naming the lane,
   descriptor/fact contributor parity and the newest v2 certificate for
   `(subjectDeploymentKey, screeningSetId)`: `no-material-admin-event`, contiguous coverage
