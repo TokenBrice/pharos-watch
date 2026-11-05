@@ -151,7 +151,8 @@ async function notifyDeliveryTransitions(
 ) {
   const { pendingBacklog, zeroSend } = result;
   const observations: Array<[DeliveryCondition, boolean | null, string | null]> = [
-    ["backlog", pendingBacklog.availability === "available" ? pendingBacklog.triggered : null, pendingBacklog.detail],
+    ["backlog", pendingBacklog.availability === "available" && (pendingBacklog.triggered || pendingBacklog.recovered)
+      ? pendingBacklog.triggered : null, pendingBacklog.detail],
     ["near-ttl", pendingBacklog.availability === "available"
       ? pendingBacklog.triggered && pendingBacklog.nearTtl != null && pendingBacklog.nearTtl > 0 : null, pendingBacklog.detail],
     ["zero-send", zeroSend.availability === "available" && zeroSend.runIdentity != null
@@ -165,8 +166,9 @@ async function notifyDeliveryTransitions(
     if (active) state.observed.push(condition);
     changed = true;
   }
-  // Persist captured history independently of detector keys and before transport.
+  // Keep recovery evidence until its notification history is durable.
   if (changed) await setCache(db, WATCHDOG_KEYS.notifications, JSON.stringify(state), signal);
+  if (pendingBacklog.recovered) await deleteCache(db, WATCHDOG_KEYS.pendingSince);
   const transitions = state.pending.slice(0, 3);
   const cooldown = transitions.length > 0 && state.lastDeliveredAt != null &&
     nowSec - state.lastDeliveredAt < DELIVERY_ALERT_COOLDOWN_SEC;
@@ -435,11 +437,7 @@ async function evaluatePendingBacklog(
   }
 
   if (flagSince != null) {
-    const cleared = await clearEpisode(
-      db,
-      WATCHDOG_KEYS.pendingSince,
-    );
-    outcome.recovered = cleared.recovered;
+    outcome.recovered = true;
     outcome.detail = `pending=${count}, recovered`;
   }
   return outcome;
