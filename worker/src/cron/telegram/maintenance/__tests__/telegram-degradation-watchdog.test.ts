@@ -637,7 +637,7 @@ describe("delivery notifications", () => {
       await run();
       const batch = queued.slice(offset, offset + 3), remaining = queued.slice(offset + 3);
       expect(state().pending).toEqual(remaining);
-      expect(state().acknowledged).toEqual(batch.at(-1)!.active ? ["backlog"] : []);
+      expect(state().acknowledged).toEqual(batch[batch.length - 1].active ? ["backlog"] : []);
       const text = mockDeliverOperatorAlert.mock.lastCall![1];
       expect(text.split("\n").slice(1)).toEqual(batch.map((event) =>
         `${event.active ? "RAISED" : "RECOVERED"} ${event.condition} observed ${new Date(event.observedAt * 1000).toISOString()}: ${escapeHtml(event.detail)}`));
