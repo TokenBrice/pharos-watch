@@ -72,8 +72,4 @@ For worker behavior changes, also run:
 npm run typecheck:worker
 ```
 
-Before pushing endpoint changes, use [Pre-push readiness](./testing.md#pre-push-readiness) for focused authoring feedback; hosted CI is the readiness authority and local receipts are optional diagnostics:
-
-```bash
-npm run check:pr
-```
+Before pushing endpoint changes, run focused authoring checks under [Pre-push readiness](./testing.md#pre-push-readiness); `npm run check:pr` is optional broader feedback. Hosted CI owns readiness; local receipts are optional diagnostics.
