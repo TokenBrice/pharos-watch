@@ -187,12 +187,15 @@ describe("getMintBurnReconciliation verified conservation", () => {
 
   it("retains quarantined SQLite mismatches until a covering pass and propagates failed reads", async () => {
     const { db, sqlite } = fixtures.open();
-    const bad = byId("usds-sky")[0], good = byId("usdt-tether")[0];
+    const bad = byId("usds-sky")[0];
     await syncMintBurnPublicationPolicy(db, [], NOW);
-    sqlite.prepare(`INSERT INTO mint_burn_scan_coverage
-      (config_key, config_fingerprint, chain_id, from_block, to_block, from_timestamp, to_timestamp,
-       finality_tag, finalized_block, accepted_at) VALUES (?, ?, ?, 1, 100, ?, ?, 'finalized', 100, ?)`)
-      .run(mintBurnConfigKey(good), mintBurnScanFingerprint(good), good.chain.chainId, NOW - 3600, NOW, NOW);
+    for (const config of MINT_BURN_CONFIGS) {
+      const end = NOW - (config === bad ? 86400 : 0);
+      sqlite.prepare(`INSERT INTO mint_burn_scan_coverage
+        (config_key, config_fingerprint, chain_id, from_block, to_block, from_timestamp, to_timestamp,
+         finality_tag, finalized_block, accepted_at) VALUES (?, ?, ?, 1, 100, ?, ?, 'finalized', 100, ?)`)
+        .run(mintBurnConfigKey(config), mintBurnScanFingerprint(config), config.chain.chainId, end - 3600, end, NOW);
+    }
     const mismatch = { ...conservationFixture(bad), status: "mismatch" as const, supplyDeltaRaw: "99", residualRaw: "1" };
     await conservationModule.persistMintBurnConservation(db, mismatch);
     const row = async () => (await getMintBurnReconciliation(db, NOW)).rows.find((entry) => entry.stablecoinId === bad.stablecoinId)!;

@@ -117,7 +117,9 @@ describe("mint/burn durable publication admission", () => {
       await readScope(db, end, roster);
       await syncMintBurnPublicationPolicy(db, [], end, roster.map(mintBurnConfigKey));
       const paused = pausedKeys(sqlite);
-      sqlite.prepare("DELETE FROM mint_burn_scan_coverage").run();
+      sqlite.prepare("DELETE FROM mint_burn_scan_coverage WHERE config_key != ?").run(mintBurnConfigKey(siblings[1]));
+      if (defect === "stale-sibling") sqlite.prepare("DELETE FROM mint_burn_scan_coverage").run();
+      else roster[1] = siblings[1] = { ...siblings[1], decimals: siblings[1].decimals + 1 };
       await proofFor(db, siblings[0], 1);
       if (defect === "stale") await proof(db, 1, end - day);
       else if (defect === "dirty") {
@@ -254,7 +256,8 @@ describe("mint/burn durable publication admission", () => {
     const now = state === "grandfathered" ? end + 120 : end + day;
     const stale = await readContext(db, now, roster);
     expect(stale.configs).toEqual(entry === config ? [] : [config]);
-    expect(stale.publication.legs.find((leg) => leg.configKey === entryKey)?.reason).toBe("reactivation-pending");
+    expect(stale.publication.legs.find((leg) => leg.configKey === entryKey))
+      .toMatchObject({ status: "pending-admission", reason: "reactivation-pending" });
     if (state === "grandfathered") expect(stale.watermark).toMatchObject({ timestamp: end, ageSec: 120, unavailableReason: null });
     expect(pausedKeys(sqlite)).toContain(entryKey);
     await proofFor(db, entry, 1, Math.floor(now / 3600) * 3600, 101, 200);
