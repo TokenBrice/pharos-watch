@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
-  loadV9CandidateMethodologyPolicy,
   loadV9MethodologyPolicy,
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import {
   V9LaneIncidentCertificateSchema,
   type V9LaneIncidentCertificate,
@@ -43,11 +43,8 @@ function certificate(input: {
     certificateId: `lane-cert:${input.fromBlock}-${input.toBlock}`,
     evidenceClass: "explorer-events",
     subjectDeploymentKey: LANE,
-    fromBlock: input.fromBlock,
-    toBlock: input.toBlock,
+    ...input,
     toBlockHash: BLOCK_HASH,
-    windowStartSec: input.windowStartSec,
-    windowEndSec: input.windowEndSec,
     observedAtSec: input.windowEndSec + 60,
     screeningPolicyDigest: SHA256,
     logDigest: SHA256,
@@ -74,6 +71,10 @@ function chain(): V9LaneIncidentCertificate[] {
   ];
 }
 
+function rows(...certificates: V9LaneIncidentCertificate[]) {
+  return certificates.map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] }));
+}
+
 function target() {
   return { deploymentKey: LANE, screeningSetId: laneIncidentCertificateScreeningSetId({
     ...chain()[0], contributorControlIds: ["fixture-owner"],
@@ -87,20 +88,46 @@ function expectCurrent(read: LaneIncidentCertificateRead) {
 }
 
 describe("lane incident certificate store", () => {
-  it("selects only the requested set even when a foreign set has a newer head", async () => {
+  it("rejects invalid key components and clocks", async () => {
+    const input = { ...chain()[0], contributorControlIds: ["fixture-owner"] };
+    for (const fromBlock of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(() => laneIncidentCertificateCacheKey({ ...input, fromBlock })).toThrow("non-negative safe integer");
+    }
+    expect(() => laneIncidentCertificateCacheKey({ ...input, subjectDeploymentKey: "bad|lane" })).toThrow("separator");
+    await expect(loadLaneIncidentCertificate(mockD1(), target(), { nowSec: -1 })).rejects.toThrow("clock");
+  });
+
+  it.each(["bad", "9007199254740992-0000000000000001"])("rejects malformed window key %s", async (window) => {
+    const key = `lane-incident-certificate:v1|${LANE}|${target().screeningSetId}|${window}|0000000000000001-0000000000000002`;
+    const db = mockD1([{ match: "SELECT key FROM cache WHERE key >=", rows: [{ key }] }]);
+    expect(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).toMatchObject({
+      state: "malformed-row", cacheKey: key, detail: "cache key is not a lane incident certificate identity",
+    });
+  });
+
+  it("fails closed when a scanned row disappears", async () => {
+    const key = laneIncidentCertificateCacheKey({ ...chain()[0], contributorControlIds: ["fixture-owner"] });
+    const db = mockD1([
+      { match: "SELECT key FROM cache WHERE key >=", rows: [{ key }] },
+      { match: "SELECT key, value, updated_at FROM cache WHERE key IN", rows: [] },
+    ]);
+    expect(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).toMatchObject({
+      state: "malformed-row", cacheKey: key, detail: expect.stringContaining("disappeared"),
+    });
+  });
+
+  it("ignores newer foreign sets", async () => {
     const { db } = fixtures.open();
     const [current] = chain();
     const foreign = { ...chain()[1], screeningPolicyDigest: "f".repeat(64), toBlock: 999 };
-    await persistLaneIncidentCertificates(db, [current, foreign].map((certificate) => ({
-      certificate, contributorControlIds: ["fixture-owner"],
-    })), NOW);
+    await persistLaneIncidentCertificates(db, rows(current, foreign), NOW);
     expect(expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).certificate).toEqual(current);
     expect((await loadLaneIncidentCertificate(db, { ...target(), screeningSetId: "0".repeat(64) }, { nowSec: NOW })).state).toBe("missing");
   });
-  it("round trips one certificate as a canonical cache row", async () => {
+  it("round trips a canonical row", async () => {
     const { db, sqlite } = fixtures.open();
     const [first] = chain();
-    await expect(persistLaneIncidentCertificates(db, [first].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW))
+    await expect(persistLaneIncidentCertificates(db, rows(first), NOW))
       .resolves.toEqual({ written: 1, pruned: 0 });
 
     const row = sqlite.prepare("SELECT key, value, updated_at FROM cache").get() as {
@@ -118,12 +145,13 @@ describe("lane incident certificate store", () => {
     expect(read.coveredThroughSec).toBe(NOW - 3_000);
     expect(read.windowCount).toBe(1);
     expect(read.expiresAtSec).toBe(NOW - 3_000 + 2_592_000);
+    expect((await loadLaneIncidentCertificate(db, target(), { nowSec: NOW - 4_000 })).state).toBe("future-window");
   });
 
-  it("accepts a contiguous chain and reports its full coverage", async () => {
+  it("reports contiguous coverage", async () => {
     const { db } = fixtures.open();
     const [first, second] = chain();
-    await persistLaneIncidentCertificates(db, [first, second].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
+    await persistLaneIncidentCertificates(db, rows(first, second), NOW);
 
     const read = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW }));
     expect(read.certificate).toEqual(second);
@@ -132,7 +160,7 @@ describe("lane incident certificate store", () => {
     expect(read.windowCount).toBe(2);
   });
 
-  it("rejects a lane whose retained windows leave an unscreened gap", async () => {
+  it("rejects unscreened gaps", async () => {
     const { db } = fixtures.open();
     const [first] = chain();
     const afterGap = certificate({
@@ -141,85 +169,56 @@ describe("lane incident certificate store", () => {
       windowStartSec: NOW - 1_999,
       windowEndSec: NOW - 1_000,
     });
-    await persistLaneIncidentCertificates(db, [first, afterGap].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
+    await persistLaneIncidentCertificates(db, rows(first, afterGap), NOW);
 
     const read = await loadLaneIncidentCertificate(db, target(), { nowSec: NOW });
-    expect(read.state).toBe("coverage-gap");
-    if (read.state !== "coverage-gap") throw new Error(`Expected a coverage gap, got ${read.state}`);
-    expect(read.gapFromBlock).toBe(200);
-    expect(read.gapToBlock).toBe(202);
-    expect(read.certificate).toEqual(afterGap);
+    expect(read).toEqual(expect.objectContaining({ state: "coverage-gap", gapFromBlock: 200, gapToBlock: 202, certificate: afterGap }));
   });
 
-  it("expires strictly after the pinned window end plus the supplied budget and never re-dates the row", async () => {
+  it.each([3_600, 2_592_000])("expires after budget %i without re-dating", async (maxAgeSec) => {
     const { db, sqlite } = fixtures.open();
-    const policy = (() => {
-      const raw = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
-      raw.semantic.evidence.laneIncidentCertificateMaxAgeSec = 3_600;
-      return loadV9MethodologyPolicy(raw, NOW);
-    })();
-    const only = certificate({
-      fromBlock: 100,
-      toBlock: 200,
-      windowStartSec: NOW - 7_200,
-      windowEndSec: NOW - 3_600,
-    });
-    await persistLaneIncidentCertificates(db, [only].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
-    const before = sqlite.prepare("SELECT value, updated_at FROM cache").get();
-
-    const atBoundary = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW, policy }));
-    expect(atBoundary.expiresAtSec).toBe(NOW);
-
-    const expired = await loadLaneIncidentCertificate(db, target(), { nowSec: NOW + 1, policy });
-    expect(expired.state).toBe("expired");
-    if (expired.state !== "expired") throw new Error(`Expected expiry, got ${expired.state}`);
-    expect(expired.expiredBySec).toBe(1);
-    expect(expired.expiresAtSec).toBe(NOW);
-    expect(sqlite.prepare("SELECT value, updated_at FROM cache").get()).toEqual(before);
-  });
-
-  it("uses the candidate policy budget when no envelope is supplied", async () => {
-    const { db } = fixtures.open();
-    const maxAgeSec = resolveLaneIncidentCertificateMaxAgeSec(
-      loadV9CandidateMethodologyPolicy(NOW),
-      NOW,
-    );
-    expect(maxAgeSec).toBe(2_592_000);
+    const raw = structuredClone(V9_CANDIDATE_POLICY_V1.policy);
+    raw.semantic.evidence.laneIncidentCertificateMaxAgeSec = maxAgeSec;
+    const policy = maxAgeSec === 3_600 ? loadV9MethodologyPolicy(raw, NOW) : undefined;
+    expect(resolveLaneIncidentCertificateMaxAgeSec(policy, NOW)).toBe(maxAgeSec);
     const only = certificate({
       fromBlock: 100,
       toBlock: 200,
       windowStartSec: NOW - maxAgeSec - 1_000,
       windowEndSec: NOW - maxAgeSec,
     });
-    await persistLaneIncidentCertificates(db, [only].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
+    await persistLaneIncidentCertificates(db, rows(only), NOW);
+    const before = sqlite.prepare("SELECT value, updated_at FROM cache").get();
 
-    expect(expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).expiresAtSec)
-      .toBe(NOW);
-    expect((await loadLaneIncidentCertificate(db, target(), { nowSec: NOW + 1 })).state).toBe("expired");
+    const atBoundary = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW, policy }));
+    expect(atBoundary.expiresAtSec).toBe(NOW);
+
+    const expired = await loadLaneIncidentCertificate(db, target(), { nowSec: NOW + 1, policy });
+    expect(expired).toMatchObject({ state: "expired", expiredBySec: 1, expiresAtSec: NOW });
+    expect(sqlite.prepare("SELECT value, updated_at FROM cache").get()).toEqual(before);
   });
 
-  it("fails a lane closed on a malformed stored row", async () => {
+  it("rejects malformed stored values", async () => {
     const { db, sqlite } = fixtures.open();
-    const only = certificate({
-      fromBlock: 100,
-      toBlock: 200,
-      windowStartSec: NOW - 2_000,
-      windowEndSec: NOW - 1_000,
-    });
+    const [only] = chain();
     const key = laneIncidentCertificateCacheKey({ ...only, contributorControlIds: ["fixture-owner"] });
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
 
     insert.run(key, JSON.stringify({ schemaVersion: 1 }), NOW);
     const invalidSchema = await loadLaneIncidentCertificate(db, target(), { nowSec: NOW });
-    expect(invalidSchema.state).toBe("malformed-row");
-    if (invalidSchema.state !== "malformed-row") throw new Error(`Expected malformed row, got ${invalidSchema.state}`);
-    expect(invalidSchema.cacheKey).toBe(key);
-
-    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run("{not json", key);
-    expect((await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).state).toBe("malformed-row");
+    expect(invalidSchema).toMatchObject({ state: "malformed-row", cacheKey: key });
+    for (const [value, detail] of [
+      ["{not json", "not valid JSON"],
+      [JSON.stringify(only), "not canonical"],
+      [stableJsonStringifyV1({ ...only, toBlock: 201 }), "does not match"],
+    ]) {
+      sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(value, key);
+      expect(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW }))
+        .toMatchObject({ state: "malformed-row", cacheKey: key, detail: expect.stringContaining(detail) });
+    }
   });
 
-  it("throws when the D1 read fails instead of reporting a clean lane", async () => {
+  it("throws on failed D1 reads", async () => {
     const db = mockD1([{
       match: "SELECT key FROM cache WHERE key >=",
       rows: [],
@@ -229,30 +228,27 @@ describe("lane incident certificate store", () => {
       .rejects.toThrow("d1 unavailable");
   });
 
-  it("refuses to store a certificate that fails the C3 schema", async () => {
+  it("rejects invalid and conflicting writes", async () => {
     const { db, sqlite } = fixtures.open();
-    const only = certificate({
-      fromBlock: 100,
-      toBlock: 200,
-      windowStartSec: NOW - 2_000,
-      windowEndSec: NOW - 1_000,
-    });
+    const [only] = chain();
     const broken = { ...only, toBlockHash: "0x1234" } as unknown as V9LaneIncidentCertificate;
-    await expect(persistLaneIncidentCertificates(db, [broken].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW)).rejects.toThrow();
+    await expect(persistLaneIncidentCertificates(db, rows(broken), NOW)).rejects.toThrow();
+    await expect(persistLaneIncidentCertificates(db, rows(only, { ...only, logDigest: "c".repeat(64) }), NOW))
+      .rejects.toThrow("Conflicting");
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 0 });
   });
 
-  it("reports missing for an unpersisted lane inside the batch map", async () => {
+  it("reports missing lanes in batch reads", async () => {
     const { db } = fixtures.open();
     const [first] = chain();
-    await persistLaneIncidentCertificates(db, [first].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
+    await persistLaneIncidentCertificates(db, rows(first), NOW);
 
     const reads = await loadLaneIncidentCertificates(db, [target(), { ...target(), deploymentKey: OTHER_LANE }], { nowSec: NOW });
     expect(reads.get(LANE)?.state).toBe("current");
     expect(reads.get(OTHER_LANE)).toEqual({ state: "missing", deploymentKey: OTHER_LANE });
   });
 
-  it("prunes only the oldest windows of a contiguous group and keeps serving the chain", async () => {
+  it("prunes oldest contiguous windows", async () => {
     const { db } = fixtures.open();
     const windows = Array.from({ length: LANE_INCIDENT_CERTIFICATE_MAX_WINDOWS_PER_GROUP + 2 }, (_, index) =>
       certificate({
@@ -263,7 +259,7 @@ describe("lane incident certificate store", () => {
       }),
     );
     for (const [index, window] of windows.entries()) {
-      const result = await persistLaneIncidentCertificates(db, [window].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
+      const result = await persistLaneIncidentCertificates(db, rows(window), NOW);
       if (index >= LANE_INCIDENT_CERTIFICATE_MAX_WINDOWS_PER_GROUP) expect(result.pruned).toBe(1);
     }
 

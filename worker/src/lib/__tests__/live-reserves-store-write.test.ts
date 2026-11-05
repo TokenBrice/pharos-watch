@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { D1_SAFE_IN_CLAUSE_BIND_LIMIT } from "../collections";
 import {
@@ -12,7 +12,9 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { finalizeReserveSuccess, reserveSyncAttemptInput, reserveSyncStateInput } from "./live-reserves-store.test-support";
 
 describe("cleanupStaleLiveReserveArtifacts", () => {
-  it("chunks stale artifact deletes under the D1 IN-clause bind limit", async () => {
+  const deletes = ["reserve_sync_state", "reserve_composition", "cache WHERE key"]
+    .map((table) => ({ match: `DELETE FROM ${table}`, rows: [], runMeta: { changes: 1 } }));
+  it("chunks deletes below the bind limit", async () => {
     const staleIds = Array.from({ length: D1_SAFE_IN_CLAUSE_BIND_LIMIT + 11 }, (_, index) => `stale-${index}`);
     const staleBreakerKeys = staleIds.map((id) => `circuit:live-reserves:${id}`);
     const db = mockD1([
@@ -28,9 +30,7 @@ describe("cleanupStaleLiveReserveArtifacts", () => {
         match: "SELECT key FROM cache WHERE key LIKE 'circuit:live-reserves:%'",
         rows: staleBreakerKeys.map((key) => ({ key })),
       },
-      { match: "DELETE FROM reserve_sync_state", rows: [], runMeta: { changes: 1 } },
-      { match: "DELETE FROM reserve_composition", rows: [], runMeta: { changes: 1 } },
-      { match: "DELETE FROM cache WHERE key", rows: [], runMeta: { changes: 1 } },
+      ...deletes,
     ]);
 
     const result = await cleanupStaleLiveReserveArtifacts(db, [], new Set());
@@ -48,16 +48,14 @@ describe("cleanupStaleLiveReserveArtifacts", () => {
     );
   });
 
-  it("retains active asset state and breaker caches while deleting only stale identities", async () => {
+  it("deletes only stale identities", async () => {
     const db = mockD1([
       { match: "SELECT stablecoin_id FROM reserve_sync_state", rows: [{ stablecoin_id: "active" }, { stablecoin_id: "stale" }] },
       { match: "SELECT stablecoin_id FROM reserve_composition", rows: [{ stablecoin_id: "active" }, { stablecoin_id: "stale" }] },
       { match: "SELECT key FROM cache WHERE key LIKE", rows: [
         { key: "circuit:live-reserves:active" }, { key: "circuit:live-reserves:stale" },
       ] },
-      { match: "DELETE FROM reserve_sync_state", rows: [], runMeta: { changes: 1 } },
-      { match: "DELETE FROM reserve_composition", rows: [], runMeta: { changes: 1 } },
-      { match: "DELETE FROM cache WHERE key", rows: [], runMeta: { changes: 1 } },
+      ...deletes,
     ]);
 
     expect(await cleanupStaleLiveReserveArtifacts(db, ["active"], new Set(["live-reserves:active"])))
@@ -69,7 +67,7 @@ describe("cleanupStaleLiveReserveArtifacts", () => {
 
 describe("pruneLiveReserveHistory limits", () => {
   it.each(["deadline", "batch-budget"] as const)(
-    "preserves unprocessed history at the %s boundary and can resume it",
+    "resumes history after %s exhaustion",
     async (limit) => {
       const { sqlite, db } = createLatestSchemaSqlite();
       try {
@@ -91,10 +89,10 @@ describe("pruneLiveReserveHistory limits", () => {
           cutoff: 9_000, compositionHistoryDeleted: deleted,
           attemptHistoryDeleted: deleted, truncated: true,
         });
-        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition_history").get())
-          .toEqual({ count: 2 - deleted });
-        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_attempt_history").get())
-          .toEqual({ count: 2 - deleted });
+        const tables = ["reserve_composition_history", "reserve_sync_attempt_history"];
+        for (const table of tables) {
+          expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({ count: 2 - deleted });
+        }
 
         expect(await pruneLiveReserveHistory(db, 10_000, {
           retentionSec: 1_000, batchSize: 1, maxBatches: 3,
@@ -102,10 +100,9 @@ describe("pruneLiveReserveHistory limits", () => {
           cutoff: 9_000, compositionHistoryDeleted: 2 - deleted,
           attemptHistoryDeleted: 2 - deleted, truncated: false,
         });
-        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_composition_history").get())
-          .toEqual({ count: 0 });
-        expect(sqlite.prepare("SELECT COUNT(*) AS count FROM reserve_sync_attempt_history").get())
-          .toEqual({ count: 0 });
+        for (const table of tables) {
+          expect(sqlite.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get()).toEqual({ count: 0 });
+        }
       } finally {
         sqlite.close();
       }
@@ -114,7 +111,28 @@ describe("pruneLiveReserveHistory limits", () => {
 });
 
 describe("reserve attempt authoritative readback", () => {
-  it("requires a matching published snapshot, not merely a pending or failed attempt", async () => {
+  it.each([false, true])("preserves failed writes when readback fails: %s", async (unreadable) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      await beginReserveSyncAttempt(db, reserveSyncAttemptInput("pending"));
+      const error = new Error("write failed");
+      vi.spyOn(db, "batch").mockRejectedValueOnce(error);
+      const prepare = db.prepare.bind(db);
+      if (unreadable) vi.spyOn(db, "prepare").mockImplementation((sql) => {
+        if (sql.includes("SELECT 1 AS finalized")) throw new Error("readback failed");
+        return prepare(sql);
+      });
+      await expect(finalizeReserveSyncAttempt(db, reserveSyncStateInput("pending", { lastStatus: "error" })))
+        .rejects.toBe(error);
+      expect(sqlite.prepare("SELECT pending_attempt_id, last_status FROM reserve_sync_state").get())
+        .toEqual({ pending_attempt_id: "pending", last_status: "skipped" });
+      expect(sqlite.prepare("SELECT * FROM reserve_sync_attempt_history").all()).toEqual([]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("requires matching published snapshot authority", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
       await beginReserveSyncAttempt(db, reserveSyncAttemptInput("failed-attempt"));
