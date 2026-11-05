@@ -208,32 +208,24 @@ describe("doc-ownership registry integrity", () => {
     }
   });
 
-  it("routes price-gap review coverage to the pricing owner and its active-coverage appendix", () => {
-    const file = "worker/src/lib/stablecoin-publication-coverage.ts";
-    const pricing = mappings.find((mapping) => mapping.id === "pricing-pipeline");
-    expect(pricing && matchesAny(file, pricing.sources)).toBe(true);
-    const selector = pricing!.reading?.find((entry) => matchesAny(file, entry.sources));
-    expect(selector?.local).toContainEqual({
-      path: "docs/process/pricing-pipeline-appendix.md", anchor: "active-price-coverage-health",
-    });
-    expect(pricing!.required).toContainEqual({ path: "docs/architecture.md", anchor: "adr-3" });
-  });
-
-  it("routes the generated llms index to bounded frontend discovery sections", () => {
-    const file = "public/llms.txt";
-    const frontend = mappings.find((mapping) => mapping.id === "frontend-routes");
-    expect(frontend && matchesAny(file, frontend.sources)).toBe(true);
-    const selector = frontend!.reading?.find((entry) => matchesAny(file, entry.sources));
-    expect(selector?.local).toContainEqual({ path: "docs/architecture.md", anchor: "frontend-runtime-and-seo-surface" });
-    expect(selector?.local).toContainEqual({ path: "docs/stablecoin-detail-page.md", anchor: "route-shape" });
-  });
-
-  it("routes the public licence text and About principles copy to the About contract", () => {
-    const about = mappings.find((mapping) => mapping.id === "about-page");
-    expect(about).toBeDefined();
-    for (const file of ["LICENSE", "src/lib/about-principles-content.ts"]) {
-      expect(about && matchesAny(file, about.sources), file).toBe(true);
+  it.each([
+    ["pricing-pipeline", ["worker/src/lib/stablecoin-publication-coverage.ts"], [
+      { path: "docs/process/pricing-pipeline-appendix.md", anchor: "active-price-coverage-health" },
+    ]],
+    ["frontend-routes", ["public/llms.txt"], [
+      { path: "docs/architecture.md", anchor: "frontend-runtime-and-seo-surface" },
+      { path: "docs/stablecoin-detail-page.md", anchor: "route-shape" },
+    ]],
+    ["about-page", ["LICENSE", "src/lib/about-principles-content.ts"], []],
+  ] as const)("routes %s sources to their selected owner sections", (id, files, docs) => {
+    const owner = mappings.find((mapping) => mapping.id === id);
+    expect(owner).toBeDefined();
+    for (const file of files) {
+      expect(matchesAny(file, owner!.sources), file).toBe(true);
+      const selector = owner!.reading?.find((entry) => matchesAny(file, entry.sources));
+      for (const doc of docs) expect(selector?.local).toContainEqual(doc);
     }
+    if (id === "pricing-pipeline") expect(owner!.required).toContainEqual({ path: "docs/architecture.md", anchor: "adr-3" });
   });
 
   it("keeps Functions in CI check ownership while selecting runtime and applicable proxy contracts", () => {

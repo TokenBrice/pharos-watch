@@ -120,6 +120,15 @@
           "local": [
             { "path": "docs/process/adding-a-stablecoin.md", "anchor": "additionevidence-handoff-packet" }
           ]
+        },
+        {
+          "sources": ["shared/data/stablecoins/coins/**"],
+          "local": [
+            { "path": "docs/stablecoin-data.md", "anchor": "registry-editing-entry" },
+            { "path": "docs/classification.md", "anchor": "classification-entry" },
+            { "path": "docs/process/adding-a-stablecoin.md", "anchor": "source-of-truth" },
+            "docs/process/stablecoin-research-sidecars.md"
+          ]
         }
       ],
       "testOwnership": [
@@ -159,6 +168,7 @@
       "label": "Pricing and supply pipelines",
       "risk": "high",
       "sources": [
+        "worker/src/cron/sync-stablecoins.ts",
         "worker/src/cron/sync-stablecoins/**",
         "worker/src/cron/snapshot-supply.ts",
         "worker/src/cron/snapshot-chain-supply.ts",
@@ -1338,6 +1348,32 @@
         {"path": "docs/scripts.md", "anchor": "worker-incident-evidence-and-status-profile"},
         { "path": "docs/runbooks/dated-source-age-caps.md", "anchor": "scheduled-boundaries", "runbook": { "label": "Dated-source scheduled renewal boundaries", "kind": "procedure" } }
       ],
+      "reading": [
+        {
+          "sources": ["src/lib/status/**", "src/lib/status-dashboard-model.ts"],
+          "local": [
+            { "path": "docs/status-dashboard.md", "anchor": "frontend-flow" },
+            { "path": "docs/status-dashboard.md", "anchor": "public-status-projection" },
+            { "path": "docs/status-dashboard.md", "anchor": "rendering-and-refresh-contract" }
+          ],
+          "contract": [
+            { "path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus" },
+            { "path": "docs/status-dashboard.md", "anchor": "timestamp-admission" },
+            { "path": "docs/status-dashboard.md", "anchor": "overall-status" }
+          ]
+        },
+        {
+          "sources": ["worker/src/lib/status/derived-data.ts"],
+          "local": [
+            { "path": "docs/status-dashboard.md", "anchor": "backend-contract-get-apistatus" },
+            { "path": "docs/status-dashboard.md", "anchor": "timestamp-admission" },
+            { "path": "docs/status-dashboard.md", "anchor": "mintburn-reconciliation-card" }
+          ],
+          "contract": [
+            { "path": "docs/status-dashboard.md", "anchor": "public-status-projection" }
+          ]
+        }
+      ],
       "background": [
         { "path": "docs/status-dashboard.md", "anchor": "cron-metadata-persistence-budget" },
         { "path": "docs/architecture.md", "anchor": "adr-9" },
@@ -1473,6 +1509,7 @@
       "risk": "medium",
       "sources": [
         "scripts/**",
+        "public/og-editorial-*.png",
         "public/critical-css-loader.js",
         "public/datasets/top-stablecoins/**",
         "public/datasets/depeg-history/**",
@@ -1673,6 +1710,10 @@
             { "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" },
             { "path": "docs/stablecoin-detail-page.md", "anchor": "route-shape" }
           ]
+        },
+        {
+          "sources": ["src/components/ui/**"],
+          "local": []
         }
       ],
       "background": [
@@ -1813,6 +1854,7 @@
     {
       "id": "shared-runtime",
       "required": [
+        { "path": "docs/architecture.md", "anchor": "typescript-target-constraints" },
         { "path": "docs/architecture.md", "anchor": "adr-28" },
         { "path": "docs/architecture.md", "anchor": "adr-29" },
         { "path": "docs/architecture.md", "anchor": "adr-30" },

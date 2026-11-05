@@ -32,4 +32,4 @@ Applies to GitHub Actions workflows and their shared workspace setup.
 
 ## Common Checks
 
-- Run `npm run check:pr` for focused authoring feedback before pushing; hosted CI is the readiness authority and local receipts are optional diagnostics. Artifact/profile helpers: `npm run check:pages-artifact`, `npm run check:pages-release`, `npm run check:worker-config`.
+- Use focused authoring checks before pushing; `npm run check:pr` is optional broader feedback ([Pre-push readiness](../../docs/testing.md#pre-push-readiness)). Hosted CI owns readiness; local receipts are optional diagnostics. Artifact/profile helpers: `npm run check:pages-artifact`, `npm run check:pages-release`, `npm run check:worker-config`.
