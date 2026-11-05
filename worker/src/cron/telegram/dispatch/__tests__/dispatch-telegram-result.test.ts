@@ -48,10 +48,13 @@ describe("capacity projections", () => {
   it("publishes the flattened fields on the built result", () => {
     const result = buildDispatchResult({
       snapshotSeeded: false,
+      sourcesLoaded: true,
       capacity: { before: emptyPendingCapacitySnapshot(), after: observed },
     });
 
     expect(result).toMatchObject({
+      suppressedSafetyChangesAtSeed: 0,
+      eventsDetected: { dews: 0, freeze: 0 },
       pendingTotal: 5,
       pendingDue: 3,
       pendingDeferredCount: 1,
@@ -72,6 +75,10 @@ describe("capacity projections", () => {
     expect(result.pendingCapacityBefore).toEqual(emptyPendingCapacitySnapshot());
     expect(result.pendingCapacityAfter).toEqual(emptyPendingCapacitySnapshot());
     expect(result.pendingTotal).toBe(0);
+    expect(result).toMatchObject({ chatsWithActiveSnooze: null, suppressedSafetyChangesAtSeed: null,
+      safetyAlertSourceState: null, reserveAlertSourceState: null, reserveSourceUnavailable: true,
+      safetyAlertsSuppressed: true, reserveAlertsSuppressed: true });
+    expect(Object.values(result.eventsDetected).filter((value) => value !== null)).toEqual([0]);
   });
 
   it("publishes real pending work without synthetic fresh-send or family metrics", () => {

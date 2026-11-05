@@ -1,4 +1,4 @@
-import { throwIfAborted } from "../../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../../lib/abort";
 import type { CronProgressReporter } from "../../../lib/cron-logger";
 import { reportCronProgress } from "../../../lib/cron-progress";
 import { shouldAttemptFetch, recordOutcome } from "../../../lib/circuit-breaker";
@@ -75,14 +75,7 @@ export async function dispatchTelegramAlerts(
     itemsDone: 0,
     itemsTotal: 1,
   });
-  const sourceData = await loadDispatchSourceData(db);
-  const snapshotState = buildDispatchSnapshotState(sourceData, nowSec);
-  const { currentSnapshots, mustSeedSnapshots, safetySnapshotNeedsSeed, safetySourceAssessment } = snapshotState;
-  assignSharedDispatchState(sharedState, { safetySourceAssessment });
-  const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
-  throwIfAborted(signal);
-
-  // Planning failures (freeze/alert detection, fan-out) are isolated: they are
+  // Planning failures (source loading, freeze/alert detection, fan-out) are isolated: they are
   // recorded and the run ends degraded, but drain and the sweep still
   // run, so already-queued deliveries keep flowing.
   const planningErrors: string[] = [];
@@ -90,7 +83,7 @@ export async function dispatchTelegramAlerts(
     try {
       return await run();
     } catch (error) {
-      if (signal?.aborted) throw error;
+      rethrowIfAborted(error, signal);
       planningErrors.push(`${stage}:${classifyTelegramLogError(error)}`);
       logTelegramEvent({
         level: "error",
@@ -102,6 +95,18 @@ export async function dispatchTelegramAlerts(
       return fallback;
     }
   };
+
+  const source = await isolate("source-loading", null, async () => {
+    throwIfAborted(signal);
+    const sourceData = await loadDispatchSourceData(db);
+    const snapshotState = buildDispatchSnapshotState(sourceData, nowSec);
+    const suppressedSafetyChangesAtSeed = countSuppressedSafetyChangesAtSeed(snapshotState, getSymbol);
+    throwIfAborted(signal);
+    return { sourceData, snapshotState, suppressedSafetyChangesAtSeed };
+  });
+  if (source) {
+    assignSharedDispatchState(sharedState, { safetySourceAssessment: source.snapshotState.safetySourceAssessment });
+  }
 
   const freeze: FreezeJobDetection = await isolate("freeze-detection", {
     state: "idle",
@@ -115,12 +120,15 @@ export async function dispatchTelegramAlerts(
   let eventOverrides: Partial<DispatchResult["eventsDetected"]> = {};
   let alertJobCreated = false;
   let alertJobId: string | null = null;
-  let alertFamilies: string[] = [];
+  let alertFamilies: string[] | null = source ? [] : null;
   let eventless = false;
   // Both flags describe committed evidence: the seed write and the eventless
   // baseline rewrite each publish only after their batch resolves.
   let snapshotSeedCommitted = false;
   await isolate("alert-detection", undefined, async () => {
+    if (!source) return;
+    const { sourceData, snapshotState } = source;
+    const { currentSnapshots, mustSeedSnapshots } = snapshotState;
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
       snapshotSeedCommitted = true;
@@ -257,20 +265,24 @@ export async function dispatchTelegramAlerts(
   };
   const result = buildDispatchResult({
     snapshotSeeded: snapshotSeedCommitted,
-    chatsWithActiveSnooze: sourceData.chatsWithActiveSnooze,
+    sourcesLoaded: source != null,
+    chatsWithActiveSnooze: source?.sourceData.chatsWithActiveSnooze,
     eventOverrides: { ...eventOverrides, freeze: freeze.observed },
     pendingLifecycle: { drainResult, expiredCount: sweep.expired, pendingEnqueued: fanout.deliveriesPlanned },
     capacity: { before: capacityAfter, after: capacityAfter },
-    reserve: { assessment: snapshotState.reserveSourceAssessment, unavailable: snapshotState.reserveSourceUnavailable },
-    safety: {
-      assessment: safetySourceAssessment,
-      suppressed: safetySourceAssessment.state !== "ok" || safetySnapshotNeedsSeed,
-    },
+    reserve: source ? {
+      assessment: source.snapshotState.reserveSourceAssessment,
+      unavailable: source.snapshotState.reserveSourceUnavailable,
+    } : undefined,
+    safety: source ? {
+      assessment: source.snapshotState.safetySourceAssessment,
+      suppressed: source.snapshotState.safetySourceAssessment.state !== "ok" || source.snapshotState.safetySnapshotNeedsSeed,
+    } : undefined,
     overrides: {
       ...(transportAllowed ? {} : { skipped: "circuit-open" }),
       ...(eventless ? { eventlessFastPath: true } : {}),
       subscribersNotified: drain?.acceptedChats ?? 0,
-      suppressedSafetyChangesAtSeed,
+      suppressedSafetyChangesAtSeed: source?.suppressedSafetyChangesAtSeed ?? null,
       presetQueryFailures: fanout.presetQueryFailures,
       presetResolutionFailures: fanout.presetResolutionFailures,
       presetFailure: presetRunFailures > 0,
@@ -332,7 +344,7 @@ export async function dispatchTelegramAlerts(
       jobsDone: sweep.jobsDone,
       planningErrors,
     },
-    noWorkRun: reasons.length === 0 && !mustSeedSnapshots && attempted === 0 && fanout.deliveriesPlanned === 0 && sweep.expired === 0
+    noWorkRun: reasons.length === 0 && !source?.snapshotState.mustSeedSnapshots && attempted === 0 && fanout.deliveriesPlanned === 0 && sweep.expired === 0
       && !alertJobCreated && freeze.observed === 0,
   };
   await reportCronProgress(reportProgress, {
