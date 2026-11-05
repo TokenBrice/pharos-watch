@@ -334,23 +334,33 @@ describe("XRPL issued-currency supply", () => {
     }
   });
 
-  it("restarts the full observation on the fallback after draining a failed primary body", async () => {
+  it("restarts on the validation-capable fallback after draining primary quota or ledger failures", async () => {
     let failedBody: Response | undefined;
+    let failureMethod = "gateway_balances";
     const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
       const { method } = JSON.parse(String(init?.body));
-      if (url === xrplRpc.rpcUrl && method === "ledger") {
-        failedBody = Response.json({ result: { status: "error" } });
+      if (url === xrplRpc.rpcUrl && method === failureMethod) {
+        failedBody = Response.json({ result: { status: "error", error: "slowDown", error_code: 10 } });
         return failedBody;
       }
-      if (url === xrplRpc.fallbackRpcUrl) expect(failedBody?.bodyUsed).toBe(true);
+      if (url !== xrplRpc.rpcUrl) {
+        expect(url).toBe("https://rpc.ankr.com/xrp_mainnet");
+        expect(failedBody?.bodyUsed).toBe(true);
+      }
       return Response.json(method === "ledger" ? ledgerFixture : gatewayFixture);
     });
     vi.stubGlobal("fetch", fetchMock);
-    expect(await fetchXrplSupply(contract.address, new AbortController().signal)).toEqual({ supply: 1584220.172977231, observedAt });
-    expect(fetchMock.mock.calls.map(([url, init]) => [url, JSON.parse(String(init?.body)).method])).toEqual([
-      [xrplRpc.rpcUrl, "gateway_balances"], [xrplRpc.rpcUrl, "ledger"],
-      [xrplRpc.fallbackRpcUrl, "gateway_balances"], [xrplRpc.fallbackRpcUrl, "ledger"],
-    ]);
+    for (failureMethod of ["gateway_balances", "ledger"]) {
+      fetchMock.mockClear();
+      failedBody = undefined;
+      expect(await fetchXrplSupply(contract.address, new AbortController().signal, undefined, undefined, hotwallet))
+        .toEqual({ supply: 1584220.172977231, observedAt });
+      expect(fetchMock.mock.calls.map(([url, init]) => [url, JSON.parse(String(init?.body)).method])).toEqual([
+        [xrplRpc.rpcUrl, "gateway_balances"],
+        ...(failureMethod === "ledger" ? [[xrplRpc.rpcUrl, "ledger"]] : []),
+        [xrplRpc.fallbackRpcUrl, "gateway_balances"], [xrplRpc.fallbackRpcUrl, "ledger"],
+      ]);
+    }
     fetchMock.mockImplementation(async (url: string) => url === xrplRpc.rpcUrl
       ? Response.json(gatewayWith({ validated: false }))
       : new Response("unavailable", { status: 503 }));
