@@ -628,7 +628,7 @@ export async function runTelegramDegradationWatchdog(
     metadata: {
       ...result,
       alertTransitions,
-      reason: alertTransitions.pending > 0 ? alertTransitions.reason
+      reason: alertTransitions.pending > 0 && alertTransitions.reason !== null ? alertTransitions.reason
         : pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
           : pendingBacklog.triggered ? "pending-backlog-threshold"
             : safetySource.triggered ? "safety-source-unavailable"
