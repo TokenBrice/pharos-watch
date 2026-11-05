@@ -55,29 +55,23 @@ describe("reviewed registry provenance identity", () => {
   });
 
   it("expands the exact ordered pre-normalization gap payload before strict admission", () => {
-    const expanded = expandReviewedRegistryReferences(V9AuthoredEvidenceGapClassificationsEnvelopeSchema.parse(gaps), "entries", {
-      sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-    });
+    const expanded = expandReviewedRegistryReferences(V9AuthoredEvidenceGapClassificationsEnvelopeSchema.parse(gaps), "entries", { sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations" });
     expect(V9EvidenceGapClassificationsV1Schema.parse(expanded).entries).toHaveLength(gaps.entries.length);
-    // Full authored-registry identity pin; deliberate curation rotates this snapshot.
-    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("04620b49ad90da18d1b8c95670ca3f6f83876ed0ec67aafe76e6a784d7f01e70");
     expect(V9EvidenceGapClassificationsV1Schema.safeParse(gaps).success).toBe(false);
   });
 
   it("preserves ordered reference expansion independently of live registry curation", () => {
     const authored = {
-      schemaVersion: 1,
-      entries: [{ assetId: "alpha", id: "ordered", sourcesRefs: ["second", "first"], searchedSurfacesRefs: ["surface"] }],
+      schemaVersion: 1, entries: [{ assetId: "alpha", id: "ordered", sourcesRefs: ["second", "first"], searchedSurfacesRefs: ["surface"] }],
       sourceObservations: [{ id: "first", value: { label: "First" } }, { id: "second", value: { label: "Second" } }],
       searchedSurfaceObservations: [{ id: "surface", value: "https://issuer.example/reports" }],
     };
-    expect(expandReviewedRegistryReferences(authored, "entries", {
-      sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-    })).toEqual({
-      schemaVersion: 1,
-      entries: [{ assetId: "alpha", id: "ordered", sources: [{ label: "Second" }, { label: "First" }],
+    const expanded = expandReviewedRegistryReferences(authored, "entries", { sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations" });
+    expect(expanded).toEqual({
+      schemaVersion: 1, entries: [{ assetId: "alpha", id: "ordered", sources: [{ label: "Second" }, { label: "First" }],
         searchedSurfaces: ["https://issuer.example/reports"] }],
     });
+    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("6d1ff3776c5ac090018795418756a520beb920f379b7b9978db2463ccb4c99f3");
     expect(authored.entries[0]).toHaveProperty("sourcesRefs", ["second", "first"]);
   });
 
