@@ -29,7 +29,7 @@ const projection = "stablecoin-client-projections";
 describe("PR dataset integrity commands", () => {
   it.each([[false, false], [false, true], [true, false], [true, true]])(
     "commands for check=%s integrityOnly=%s", (check, integrityOnly) => {
-      const plan = (integrityOnly = false) => buildGeneratedArtifactPhases({ check, integrityOnly, only: ["public-datasets", "runbook-index"] })
+      const plan = (integrityOnly = false) => phases({ check, integrityOnly, only: ["public-datasets", "runbook-index"] })
         .flatMap(({ artifacts }) => artifacts);
       expect(plan(integrityOnly).map(({ command }) => command)).toEqual(plan().map(({ id, command }) =>
         command + (check && integrityOnly && id === "public-datasets" ? " --integrity-only" : "")));
