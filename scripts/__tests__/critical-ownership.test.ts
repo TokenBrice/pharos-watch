@@ -1,7 +1,9 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
+import { BaseCoverageProvider } from "vitest/coverage";
 
 import {
   assertExecutableTestFiles,
@@ -15,6 +17,7 @@ import {
   WORKER_SHARED_ISOLATED_OVERRIDES,
   WORKER_SHARED_TEST_FILES,
 } from "../lib/critical-ownership.mts";
+import installCriticalCoverageFilter from "../lib/critical-coverage-filter.mts";
 import { buildCriticalCoverageArgs } from "../lib/critical-test-files.mts";
 
 const temporaryDirectories: string[] = [];
@@ -332,5 +335,16 @@ describe("critical execution contracts", () => {
     const args = buildCriticalCoverageArgs([], { criticalFiles: [...ownership.keys()], ownership, changedFiles: ["src/first.ts"], exists: () => true });
     expect(args.filter((arg) => arg.startsWith("--coverage.include="))).toEqual(["--coverage.include=src/first.ts"]);
     expect(args.filter((arg) => arg.endsWith(".test.ts"))).toEqual(["src/first.test.ts", "src/second.test.ts"]);
+  });
+
+  it("persists only enrolled sources' V8 results", async () => {
+    installCriticalCoverageFilter();
+    const cwd = mkdtempSync(join(tmpdir(), "pharos-critical-coverage-"));
+    temporaryDirectories.push(cwd);
+    const provider = Object.assign(new BaseCoverageProvider(), { roots: [cwd], coverageFilesDirectory: cwd, options: { include: ["kept.ts"], exclude: [], allowExternal: false } });
+    const script = (file: string) => ({ url: pathToFileURL(join(cwd, file)).href, functions: [{ ranges: [{ startOffset: 0, endOffset: 9, count: 2 }] }] });
+    provider.onAfterSuiteRun({ coverage: { result: [script("kept.ts"), script("registry.json")] }, testFiles: ["a.test.ts"], environment: "ssr" } as never);
+    await Promise.all(provider.pendingPromises);
+    expect(JSON.parse(readFileSync(join(cwd, readdirSync(cwd)[0]!), "utf8"))).toEqual({ result: [script("kept.ts")] });
   });
 });
