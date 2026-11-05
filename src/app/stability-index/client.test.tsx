@@ -17,17 +17,13 @@ let stabilityState: {
   error: Error | null;
   dataUpdatedAt: number;
   meta: Record<string, unknown>;
-} = {
-  data: undefined,
-  isLoading: false,
-  isError: false,
-  error: null,
-  dataUpdatedAt: 0,
-  meta: {},
 };
 
 const refetch = vi.fn();
 const fullHistoryQuery = vi.fn();
+let reducedMotion = false;
+let area: { isAnimationActive?: boolean; animationDuration?: number; onAnimationEnd?: () => void };
+vi.mock("@/hooks/use-prefers-reduced-motion", () => ({ usePrefersReducedMotion: () => reducedMotion }));
 let cachedFullHistoryData: typeof stabilityState.data;
 
 vi.mock("@/hooks/api-hooks", () => ({
@@ -80,7 +76,7 @@ vi.mock("@/components/chart-primitives/axes", () => ({
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   AreaChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  Area: () => <div />,
+  Area: (props: typeof area) => { if (props.onAnimationEnd) area = props; return <div />; },
   YAxis: () => null,
 }));
 
@@ -147,15 +143,19 @@ vi.mock("@/lib/analytics", () => ({
   trackEvent: vi.fn(),
 }));
 
+function keepHistoryOffscreen() {
+  vi.stubGlobal("IntersectionObserver", class {
+    observe() {}
+    disconnect() {}
+    unobserve() {}
+  });
+}
+
 describe("StabilityIndexClient", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("keeps offscreen history behind its reserved viewport gate without delaying headline statistics", () => {
-    vi.stubGlobal("IntersectionObserver", class {
-      observe() {}
-      disconnect() {}
-      unobserve() {}
-    });
+    keepHistoryOffscreen();
     const { container } = render(<StabilityIndexClient />);
     expect(screen.queryByText("score-chart-3")).toBeNull();
     expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
@@ -165,11 +165,7 @@ describe("StabilityIndexClient", () => {
   });
 
   it("keeps chart mounting bounded and expands only after selecting All", () => {
-    vi.stubGlobal("IntersectionObserver", class {
-      observe() {}
-      disconnect() {}
-      unobserve() {}
-    });
+    keepHistoryOffscreen();
     const { container } = render(<StabilityIndexClient />);
     const gate = container.querySelector('[aria-label="PSI history"] > div')!;
     act(() => gate.dispatchEvent(new Event("pharos:lazy-section-reveal")));
@@ -199,6 +195,7 @@ describe("StabilityIndexClient", () => {
   });
 
   beforeEach(() => {
+    reducedMotion = false;
     refetch.mockReset();
     fullHistoryQuery.mockReset();
     cachedFullHistoryData = undefined;
@@ -238,13 +235,26 @@ describe("StabilityIndexClient", () => {
   });
 
 
+  it("gates dimmer motion without replay after completion", () => {
+    const view = render(<StabilityIndexClient />);
+    expect(area.animationDuration).toBe(800);
+    for (const completed of [false, true]) {
+      if (completed) act(() => area.onAnimationEnd!());
+      for (const reduced of [true, false]) {
+        reducedMotion = reduced;
+        view.rerender(<StabilityIndexClient />);
+        expect(area.isAnimationActive).toBe(!reduced && !completed);
+        expect(screen.getAllByRole("figure").length).toBeGreaterThan(0);
+      }
+    }
+  });
+
   it("renders the current PSI state, contributors, and methodology section", () => {
     render(<StabilityIndexClient />);
 
-    expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("rolling 24h avg").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("STEADY").length).toBeGreaterThan(0);
-    expect(screen.getByText("Top contributors")).toBeTruthy();
+    for (const text of ["89.4", "rolling 24h avg", "STEADY"]) {
+      expect(screen.getAllByText(text).length).toBeGreaterThan(0);
+    }
     expect(screen.getAllByText("USDC").length).toBeGreaterThan(0);
     const contributorsTable = screen.getByRole("table", {
       name: "Stablecoins currently contributing to PSI score reduction",
@@ -254,33 +264,22 @@ describe("StabilityIndexClient", () => {
     const contributorsShell = screen.getByTestId("stability-index-top-contributors-table");
     expect(contributorsShell.getAttribute("data-table-id")).toBe("stability-index-top-contributors");
     expect(contributorsShell.className).toContain("pharos-density-compact");
-    expect(screen.getByText("Methodology")).toBeTruthy();
-    expect(screen.getByText("score-chart-3")).toBeTruthy();
+    for (const text of ["Top contributors", "Methodology", "score-chart-3"]) expect(screen.getByText(text)).toBeTruthy();
   });
 
-  it("draws the beacon lit when the sample is fresh", () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    stabilityState.data!.current!.computedAt = nowSec;
-    stabilityState.data!.headlineAggregates!.computedAt = nowSec;
-    stabilityState.meta = { updatedAt: nowSec, ageSeconds: 0, status: "fresh" };
+  it.each([
+    ["fresh", 0, "current", "lit"],
+    ["stale", 8 * 3600, "retained", "outline"],
+  ] as const)("draws the %s beacon", (status, ageSeconds, state, paint) => {
+    const computedAt = Math.floor(Date.now() / 1000) - ageSeconds;
+    stabilityState.data!.current!.computedAt = computedAt;
+    stabilityState.data!.headlineAggregates!.computedAt = computedAt;
+    stabilityState.meta = { updatedAt: computedAt, ageSeconds, status };
     render(<StabilityIndexClient />);
-
     const beacon = screen.getByTestId("psi-beacon");
-    expect(beacon.dataset.state).toBe("current");
-    expect(beacon.dataset.paint).toBe("lit");
-  });
-
-  it("draws a retained beacon without band hue when the sample is stale", () => {
-    const nowSec = Math.floor(Date.now() / 1000);
-    stabilityState.data!.current!.computedAt = nowSec - 8 * 3600;
-    stabilityState.data!.headlineAggregates!.computedAt = nowSec - 8 * 3600;
-    stabilityState.meta = { updatedAt: nowSec - 8 * 3600, ageSeconds: 8 * 3600, status: "stale" };
-    render(<StabilityIndexClient />);
-
-    const beacon = screen.getByTestId("psi-beacon");
-    expect(beacon.dataset.state).toBe("retained");
-    expect(beacon.dataset.paint).toBe("outline");
-    expect(beacon.querySelector("svg[role='img']")?.getAttribute("aria-label")).toMatch(/^Retained observation as of /);
+    expect(beacon.dataset.state).toBe(state);
+    expect(beacon.dataset.paint).toBe(paint);
+    if (ageSeconds) expect(beacon.querySelector("svg[role='img']")?.getAttribute("aria-label")).toMatch(/^Retained observation as of /);
   });
 
   it("keeps a retained coherent generation through a failed refetch and recovers", () => {

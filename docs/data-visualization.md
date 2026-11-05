@@ -100,7 +100,7 @@ Do not announce decorative labels or duplicate the same data through several liv
 
 Prefer CSS keyframes and transitions over JavaScript animation loops for ambient effects. Data-dependent durations or positions may flow through CSS custom properties.
 
-All nonessential motion must be gated by `prefers-reduced-motion`. The reduced-motion state must set explicit static visibility and preserve every fact communicated by motion. Do not leave a mark transparent because its reveal animation no longer runs.
+All nonessential motion must honor the effective motion preference. JavaScript animation uses `usePrefersReducedMotion`, including the persisted reduced/full override; explicit full motion overrides the system preference. Shared chart draw-in and PSI beam dimmers use conservative SSR (`ssrDefault: true`): static data is visible during hydration, and full motion enables the 800ms draw only until completion, without replaying completed animations. The reduced-motion state must set explicit static visibility and preserve every fact communicated by motion. Do not leave a mark transparent because its reveal animation no longer runs.
 
 ## Responsive Behavior
 

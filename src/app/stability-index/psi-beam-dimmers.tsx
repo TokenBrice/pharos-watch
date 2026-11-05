@@ -7,6 +7,7 @@ import { MethodologyLabel } from "@/components/methodology-hint";
 import { TimeRangeButtons } from "@/components/time-range-buttons";
 import { useTimeRangeFilter } from "@/hooks/use-time-range-filter";
 import { trackEvent } from "@/lib/analytics";
+import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { CHART_DRAW_IN, CHART_NO_ANIM } from "@/lib/chart-animation";
 import { CHART_AMBER, CHART_GREEN, CHART_ORANGE, CHART_RED, CHART_SLATE } from "@/lib/chart-colors";
 import { cn } from "@/lib/utils";
@@ -75,6 +76,7 @@ export function PsiBeamDimmers({
   density?: "default" | "compact";
 }) {
   const { range, setRange, filteredData, options } = useTimeRangeFilter(series ?? [], "ts");
+  const reducedMotion = usePrefersReducedMotion({ ssrDefault: true });
   const [shouldAnimate, setShouldAnimate] = useState(true);
   const handleAnimationEnd = useCallback(() => setShouldAnimate(false), []);
 
@@ -84,7 +86,7 @@ export function PsiBeamDimmers({
   // Trend mode (sparkline + range control) needs a real series to draw against;
   // before history exists we fall back to the current-pressure bar snapshot.
   const hasTrend = (series?.length ?? 0) > 1;
-  const animProps = shouldAnimate ? CHART_DRAW_IN : CHART_NO_ANIM;
+  const animProps = shouldAnimate && !reducedMotion ? CHART_DRAW_IN : CHART_NO_ANIM;
 
   const gridClass =
     columns === 2
