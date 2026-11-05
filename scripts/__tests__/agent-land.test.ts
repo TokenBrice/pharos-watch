@@ -15,7 +15,7 @@ return{...fs,readFileSync:vi.fn(fs.readFileSync)}
 })
 const child=vi.mocked(spawnSync),real=child.getMockImplementation()!
 const read=vi.mocked(r).getMockImplementation()!
-afterEach(()=>{vi.resetAllMocks();})
+afterEach(()=>{vi.resetAllMocks();vi.unstubAllEnvs();})
 const base="a\nb\nc\nd\ne\nf\n",lane=base.replace("a","l"),late="safety-score-v9-evaluation-build"
 const cache="tsconfig.typecheck.tsbuildinfo",focused="focused checks",node=process.execPath
 const empty:ReturnType<typeof plan>["review"]["artifacts"]={
@@ -50,11 +50,16 @@ const snap=()=>[av[1],av[3]].map(c=>[sha(c),r(index(c)),git(c,"diff","--binary",
 git(c,"ls-files","-o","--exclude-standard","-z").split("\0").filter(Boolean).map(p=>[p,r(j(c,p))])])
 return{t,l,msg,git,av,w,rt,save,apply,index,sha,commit,snap}
 }
-it.each([false,true,"i","fd","df","fl",cache,"cold","worker"])("land %s",g=>repo(f=>{
+it.each([false,true,"i","fd","df","fl",cache,"cold","worker","shim"])("land %s",g=>repo(f=>{
 const o=g==="i"?"i" :"out"
 if(g) f.rt.planArtifacts=()=>({...empty,ids:["f"],outputs:[o]})
 f.rt.runCommand.mockImplementation(c=>{
 if(c.stage==="generation") f.w(o,"ok",f.t)
+if(c.stage==="generation"&&g==="shim"){
+const bin=j(f.t,"node_modules/.bin"),p=j(bin,"git")
+rmSync(j(f.t,"node_modules"));mkdirSync(bin,{recursive:true});put(p,"#!/bin/sh\nexit 91\n");chmodSync(p,0o755)
+vi.stubEnv("PATH",bin+":"+process.env.PATH)
+}
 if(c.stage!==focused) return
 if(g===cache) f.w(cache,"x",f.t)
 if(g==="cold"){f.w("tmp",r(j(f.t,"v")),f.t);renameSync(j(f.t,"tmp"),j(f.t,"v"));}
@@ -69,7 +74,7 @@ if(g==="fd"){mkdirSync(j(f.l,"del"));f.w("del/index.ts","n");}
 if(g==="df"){rmSync(j(f.l,"module"),{recursive:true});f.w("module","n");}
 const index=f.index(f.l),old=r(index)
 run(f.av,f.rt);e(r(index)).toEqual(old);e(f.rt.runCommand).not.toHaveBeenCalled()
-const ps=f.save();f.apply()
+const ps=f.save();f.apply();vi.unstubAllEnvs()
 e(f.rt.runCommand).toHaveBeenCalledWith({stage:focused,executable:"npm",cwd:f.t,args:["run","check:focused","--",
 ...[...ps,...(g?[o] :[])].sort().flatMap(p=>["--file",p])]})
 e(r(j(f.t,"a"),"utf8")).toBe(lane.replace("f","t"))
@@ -139,21 +144,24 @@ it.each([
 if(cmd===node) f.rt.planArtifacts=()=>({...empty,ids:["f"],checkIds:["f"]})
 if(cmd==="git") f.w("extra","n")
 f.save();const sha=f.sha()
-child.mockImplementation((exe,args,opts)=>exe==="git"&&!(cmd==="git"&&args?.includes("--no-index"))?real(exe,args,opts)
+child.mockImplementation((exe,args,opts)=>exe.endsWith("/git")&&!(cmd==="git"&&args?.includes("--no-index"))?real(exe,args,opts)
 :{pid:0,output:[],stdout:Buffer.alloc(0),stderr:Buffer.from("x"),status:skip-- > 0?0 :status,
 signal,error:status===0&&!signal?Error() :undefined})
 e(()=>run([...f.av,"--apply"],{planArtifacts:f.rt.planArtifacts,log:f.rt.log}))
 .toThrow(`${stage}: ${cmd} failed (status ${status}, signal ${signal ?? "none"})`)
 e(f.sha()).toBe(sha)
 }))
-it.each(["head","branch","detach","async","filter","gen-branch","gen-source","gen-mode","gen-delete","index","source","outputs","message","review","output","plan","ignored-write","ignored-validator","v"])("retains %s",k=>repo(f=>{
-let n=0;const gen=k.startsWith("gen-"),scope=gen||["async","filter","output","plan","ignored-write"].includes(k)
+it.each(["head","branch","detach","async","filter","attrs","gen-branch","gen-source","gen-mode","gen-delete","index","source","outputs","message","review","output","plan","ignored-write","ignored-validator","v"])("retains %s",k=>repo(f=>{
+const attr=j(f.t,"..","attrs")
+if(k==="attrs"){put(attr,"");f.git(f.t,"config","core.attributesFile",attr)}
+let n=0;const gen=k.startsWith("gen-"),scope=gen||["async","filter","attrs","output","plan","ignored-write"].includes(k)
 f.rt.planArtifacts=()=>({...empty,ids:["f"],outputs:gen?[]:[k==="plan"&&n++ > 2?"other" :k.startsWith("ignored")?"out" :"i"]})
 const path=k==="index"?f.index(f.t) :k==="message"?f.msg :k==="review"?f.av[5] :j(f.t,k==="v"?"v" :k==="outputs"||k==="ignored-validator"?"i" :"a")
 const state=()=>k==="head"?f.sha() :r(path)
 let kept:ReturnType<typeof state>
 f.rt.runCommand.mockImplementation(c=>{
 if(c.stage==="generation"){
+if(k==="attrs") put(attr,"a text")
 if(k==="async") vi.mocked(r).mockImplementation((p,o)=>{if(p===j(f.t,"i")&&!n++) f.w("a","evil",f.t);return read(p,o)})
 if(k==="filter"){
 put(j(f.t,".git/info/attributes"),"a filter=evil")
@@ -173,7 +181,7 @@ kept=state()
 })
 if(k==="ignored-write") f.w(cache,"old",f.t)
 f.save();const sha=f.sha()
-e(f.apply).toThrow(k==="gen-branch"||k==="filter"?"Target identity after generation":gen?"Reviewed source after generation":k==="plan"?"Combined artifact ownership" :k==="output"||k==="ignored-write"?"Undeclared output write" :k==="v"?"Validator artifact content" :undefined)
+e(f.apply).toThrow(["gen-branch","filter","attrs"].includes(k)?"Target identity after generation":gen?"Reviewed source after generation":k==="plan"?"Combined artifact ownership" :k==="output"||k==="ignored-write"?"Undeclared output write" :k==="v"?"Validator artifact content" :undefined)
 if(scope) e(f.rt.runCommand).toHaveBeenCalledTimes(k==="plan"?0 :1)
 if(kept! !== undefined) e(state()).toEqual(kept!)
 e(f.sha()).toBe(k==="head"?kept! :sha)
