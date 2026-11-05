@@ -76,13 +76,14 @@ if(g==="fl") e(readlinkSync(j(f.t,"del"))).toBe("a")
 if(g==="fd") e(r(j(f.t,"del/index.ts"),"utf8")).toBe("n")
 if(g==="df") e(r(j(f.t,"module"),"utf8")).toBe("n")
 }))
-it.each(["content","path","mode","message","head","index","lane-index","same","other","ahead","empty","dirty","untracked",
+it.each(["content","path","mode","message","head","branch","detach","index","lane-index","same","other","ahead","empty","dirty","untracked",
 ...["MERGE_HEAD","CHERRY_PICK_HEAD","rebase-merge","rebase-apply"].flatMap(m=>["l:"+m,"t:"+m])])("reject %s",k=>repo(f=>{
 f.save()
 if(k==="content"||k==="path") f.w(k==="content"?"a" :"extra","n")
 if(k==="mode") chmodSync(j(f.l,"a"),0o755)
 if(k==="message") put(f.msg,"y\n")
 if(k==="head") f.git(f.t,"commit","--allow-empty","-qm","moved")
+if(k==="branch"||k==="detach") f.git(f.t,"checkout",...(k==="branch"?["-qb","other"]:["--detach"]))
 if(k.endsWith("index")){
 const cwd=k==="index"?f.t :f.l
 f.w("a","s",cwd);f.git(cwd,"add","a");f.w("a",cwd===f.t?base :lane,cwd)
@@ -134,23 +135,29 @@ e(()=>run([...f.av,"--apply"],{planArtifacts:f.rt.planArtifacts,log:f.rt.log}))
 .toThrow(`${stage}: ${cmd} failed (status ${status}, signal ${signal ?? "none"})`)
 e(f.sha()).toBe(sha)
 }))
-it.each(["head","index","source","outputs","message","review","output","plan","ignored-write","ignored-validator","v"])("retains %s",k=>repo(f=>{
-let n=0;const scope=k==="output"||k==="plan"||k==="ignored-write"
-f.rt.planArtifacts=()=>({...empty,ids:["f"],outputs:[k==="plan"&&n++ > 2?"other" :k.startsWith("ignored")?"out" :"i"]})
+it.each(["head","branch","detach","gen-branch","gen-source","gen-mode","gen-delete","index","source","outputs","message","review","output","plan","ignored-write","ignored-validator","v"])("retains %s",k=>repo(f=>{
+let n=0;const gen=k.startsWith("gen-"),scope=gen||k==="output"||k==="plan"||k==="ignored-write"
+f.rt.planArtifacts=()=>({...empty,ids:["f"],outputs:gen?[]:[k==="plan"&&n++ > 2?"other" :k.startsWith("ignored")?"out" :"i"]})
 const path=k==="index"?f.index(f.t) :k==="message"?f.msg :k==="review"?f.av[5] :j(f.t,k==="v"?"v" :k==="outputs"||k==="ignored-validator"?"i" :"a")
 const state=()=>k==="head"?f.sha() :r(path)
 let kept:ReturnType<typeof state>
 f.rt.runCommand.mockImplementation(c=>{
-if(c.stage==="generation") f.w(k==="output"?"rogue" :k==="ignored-write"?cache :k==="ignored-validator"?"out" :"i","ok",f.t)
+if(c.stage==="generation"){
+if(k==="gen-branch") f.git(f.t,"checkout","-qb","other")
+else if(k==="gen-mode") chmodSync(path,0o755)
+else if(k==="gen-delete") rmSync(path)
+else f.w(gen?"a":k==="output"?"rogue" :k==="ignored-write"?cache :k==="ignored-validator"?"out" :"i","ok",f.t)
+}
 if(c.stage !== focused||scope) return
 if(k==="head") f.commit()
+else if(k==="branch"||k==="detach") f.git(f.t,"checkout",...(k==="branch"?["-qb","other"]:["--detach"]))
 else if(k==="index") f.git(f.t,"update-index","--chmod=+x","a")
 else put(path,k==="review"?"{}" :"mutated")
 kept=state()
 })
 if(k==="ignored-write") f.w(cache,"old",f.t)
 f.save();const sha=f.sha()
-e(f.apply).toThrow(k==="plan"?"Combined artifact ownership" :k==="output"||k==="ignored-write"?"Undeclared output write" :k==="v"?"Validator artifact content" :undefined)
+e(f.apply).toThrow(k==="gen-branch"?"Target identity before staging":gen?"Reviewed source after generation":k==="plan"?"Combined artifact ownership" :k==="output"||k==="ignored-write"?"Undeclared output write" :k==="v"?"Validator artifact content" :undefined)
 if(scope) e(f.rt.runCommand).toHaveBeenCalledTimes(k==="plan"?0 :1)
 if(kept! !== undefined) e(state()).toEqual(kept!)
 e(f.sha()).toBe(k==="head"?kept! :sha)
