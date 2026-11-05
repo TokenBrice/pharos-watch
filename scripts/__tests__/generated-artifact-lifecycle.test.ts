@@ -18,10 +18,7 @@ interface Artifact {
 }
 
 const registry = GENERATED_ARTIFACT_REGISTRY as Artifact[];
-const ids = (artifacts: Artifact[]) => artifacts.map((a) => a.id);
-const outputs = (entries = registry) => entries.flatMap((a) => a.outputPaths);
-const artifact = (id: string) => registry.find((a) => a.id === id)!;
-const selectedIds = (options: Record<string, unknown>) => ids(selectGeneratedArtifacts(options));
+const selectedIds = (options: Record<string, unknown>) => selectGeneratedArtifacts(options).map((a) => a.id);
 
 const catalog = "stablecoin-catalog", detail = "stablecoin-detail-snapshots", manifest = "safety-score-v9-evaluation-build";
 const projection = "stablecoin-client-projections";
@@ -37,17 +34,17 @@ describe("generated artifact lifecycle", () => {
     );
     expect(snapshot({ check: true }).command).toContain("PHAROS_DETAIL_SNAPSHOT_CHECK=1");
     expect(selectedIds({ only: [detail] })).toEqual([catalog, detail]);
-    expect(outputs(registry.filter((a) => a.bootstrap))
+    expect(registry.filter((a) => a.bootstrap).flatMap((a) => a.outputPaths)
       .filter((path) => /[*?\[\]{}]/.test(path))).toEqual([]);
   });
 
   it("leaves authored root instructions outside generated artifact ownership", () => {
-    for (const path of ["AGENTS.md", "CLAUDE.md"]) expect(outputs()).not.toContain(path);
+    for (const path of ["AGENTS.md", "CLAUDE.md"]) expect(registry.flatMap((a) => a.outputPaths)).not.toContain(path);
   });
 
   it("records the atomic writer as a source of every artifact that publishes through it", () => {
     for (const id of [catalog, "stablecoin-client-registry"]) {
-      expect(artifact(id).sourcePaths).toContain("scripts/lib/atomic-artifact-write.mts");
+      expect(registry.find((a) => a.id === id)?.sourcePaths).toContain("scripts/lib/atomic-artifact-write.mts");
     }
   });
 
@@ -67,24 +64,24 @@ describe("check-mode artifact selection", () => {
       projection, "depeg-event-search-data",
       "case-study-client-index", "llms-txt", "changelog-registry",
     ];
-    expect(ids(registry.filter((a) => a.ciDriftCheck === false)).sort())
+    expect(registry.filter((a) => a.ciDriftCheck === false).map((a) => a.id).sort())
       .toEqual([...projections, manifest].sort());
     expect(selectCheckableArtifactIds([...projections, "runbook-index", manifest]))
       .toEqual(["runbook-index"]);
     for (const id of projections) {
-      expect(artifact(id)).toMatchObject({ bootstrap: true, checkable: true });
-      expect(ids(selectGeneratedArtifacts({ check: true, only: [id] }))).toContain(id);
+      expect(registry.find((a) => a.id === id)).toMatchObject({ bootstrap: true, checkable: true });
+      expect(selectedIds({ check: true, only: [id] })).toContain(id);
       expect(selectedIds({ bootstrap: true })).toContain(id);
     }
   });
 
   it("does not pull an unverifiable artifact in as a check-mode dependency", () => {
-    const unverifiable = new Set(ids(registry.filter((a) => a.checkable === false)));
+    const unverifiable = new Set(registry.filter((a) => a.checkable === false).map((a) => a.id));
     expect(selectedIds({ check: true }).filter((id) => unverifiable.has(id))).toEqual([]);
   });
 });
 
-// shortcut: require/computed/fs edges need explicit guards like the hashes below.
+// shortcut: guard require/computed/fs inputs when added.
 function producerEdges(artifacts = registry, read = (file: string) => readFileSync(file, "utf8")) {
   const owner = (file: string) => artifacts.find((a) => a.outputPaths.some((p) =>
     file === p || file.startsWith(`${p}/`) || cachedGlobMatcher(p)(file)));
@@ -138,7 +135,7 @@ describe("cold-output producer deps", () => {
     expect(producerEdges()).toEqual([]);
   });
 
-  // Collapsed closures: c21e7bb1b^, 323475db5^.
+  // Frozen closures: c21e7bb1b^, 323475db5^.
   it.each([[0, [], 2], [1, [catalog], 1], [1, [projection], 1]] as const)(
     "checks frozen sitemap phase %s", (phase, dependsOn, failures) => {
       const script = "scripts/maintenance/generate-sitemap-dates.ts";
