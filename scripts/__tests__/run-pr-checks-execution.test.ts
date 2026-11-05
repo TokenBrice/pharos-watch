@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { inspectPrCheckout, runPrChecks, type RunPrChecksOptions } from "../maintenance/run-pr-checks.ts";
 import { writePrCheckReceipt, type PrCheckReceipt } from "../lib/pr-check-receipt.mts";
@@ -9,6 +9,7 @@ import { assertFaithfulResourceReport, assertRequiredResourceCases, decideV9Cont
 import type * as ChangedFilesModule from "../lib/changed-files.mts";
 import type * as CriticalOwnershipModule from "../lib/critical-ownership.mts";
 import { RESOURCE_HARNESS_REVISION, RESOURCE_PHASES } from "../../worker/scripts/lib/v9-resource-policy";
+import { V9_EVALUATION_BUILD_SOURCE_PATHS, runV9EvaluationBuildManifestGenerator as runManifest } from "../maintenance/generate-safety-score-v9-evaluation-build-manifest";
 
 const fixture = vi.hoisted(() => ({ changedFiles: [] as string[] }));
 vi.mock("../lib/changed-files.mts", async (importOriginal) => ({
@@ -30,7 +31,7 @@ const tempDirectory = () => {
   directories.push(directory);
   return directory;
 };
-afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
+afterEach(() => { vi.restoreAllMocks(); for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
 const outputOf = (writer: { write: { mock: { calls: [string][] } } }) => writer.write.mock.calls.map(([chunk]) => chunk).join("");
 const readText = (directory: string, name: string) => readFileSync(resolve(directory, name), "utf8");
 const readJson = (directory: string, name: string) => JSON.parse(readText(directory, name));
@@ -154,7 +155,7 @@ describe("isolated V9 resource execution", () => {
     const check = (value: unknown = faithful, cycles = 2, id = "previous-run") =>
       () => assertFaithfulResourceReport(value, id, cycles);
     expect(check(faithful, 2, "current-run")).toThrow("stale-resource-report");
-    expect(check(faithful)).not.toThrow();
+    expect(() => assertFaithfulResourceReport(faithful, "previous-run")).not.toThrow();
     expect(check(faithful, 1)).toThrow("resource-cycle-count-mismatch");
     expect(check({ ...faithful, publicationCycles: 1 }, 1)).not.toThrow();
     expect(check({ ...faithful, publicationCycles: 1 }, 2)).toThrow("resource-cycle-count-mismatch");
@@ -475,23 +476,24 @@ describe("readiness execution", () => {
 });
 
 describe("local prepare execution", () => {
-  it.each(["stale input", "missing prerequisite"])("collects prepare failures and later diagnostics after %s without repair", async (reason) => {
+  it("collects independent prepare failures before later diagnostics without repair", async () => {
+    const reason = "prepare failed";
     fixture.changedFiles = ["shared/data/stablecoins/canonical-order.json"];
     const prepare = ["test-corpus-budget", "incident-review-keys", "new-asset-evidence-packet", "safety-score-v9-evaluation-build"];
     const settled: string[] = [];
+    const starts: string[][] = [];
     h.runCommandImpl.mockImplementation(async (command) => {
       if (command.cmd.startsWith("git ")) return commandResult(command.cmd);
+      starts.push([...settled]);
       const id = prepare.find((id) => command.cmd.includes(id));
-      if (!id) {
-        expect(settled).toEqual(prepare);
-        return commandResult(command.cmd);
-      }
+      if (!id) return commandResult(command.cmd);
       await Promise.resolve();
       settled.push(id);
       if (id === "incident-review-keys") throw new Error("spawn ENOENT");
       return commandResult(command.cmd, 1, reason);
     });
     expect(await h.run(["--base=moving-base", "--head=moving-head", "--with-pages", "--json"])).toBe(1);
+    expect(starts).toEqual(starts.map((_, i) => prepare.slice(0, Math.min(i, prepare.length))));
     expect(settled).toEqual(prepare);
     expect(h.receipt).toMatchObject({ baseSha, headSha, outcome: "failed" });
     expect(h.receipt.leaves.filter((leaf) => prepare.includes(leaf.id)).map((leaf) => [leaf.id, leaf.status, leaf.firstError]))
@@ -505,6 +507,29 @@ describe("local prepare execution", () => {
       expect(h.commands).toContain(`npm run check:${id} -- --base=${baseSha} --head=${headSha}`);
     }
     expect(h.commands.some((cmd) => /generate:|git (add|commit)|--(write|update|override)/.test(cmd))).toBe(false);
+  });
+
+  it.each([false, true])("refuses invalid manifest prerequisites read-only (missing: %s)", (missing) => {
+    const root = tempDirectory();
+    for (const path of V9_EVALUATION_BUILD_SOURCE_PATHS) {
+      const file = resolve(root, path);
+      mkdirSync(dirname(file), { recursive: true });
+      writeFileSync(file, "{}");
+    }
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(process, "exit").mockImplementation((code) => { throw new Error(`exit ${code}`); });
+    runManifest([], root);
+    const output = resolve(root, "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts");
+    runManifest(["--check"], root);
+    const input = resolve(root, "shared/data/stablecoins/coins.worker-full.generated.json");
+    if (missing) unlinkSync(input);
+    else writeFileSync(input, '{"changed":true}');
+    const bytes = () => [readFileSync(output), existsSync(input) ? readFileSync(input) : null];
+    const before = bytes();
+    expect(() => runManifest(["--check"], root))
+      .toThrow(missing ? "Missing Safety Score v9 evaluation-build sources:" : "exit 1");
+    expect(bytes()).toEqual(before);
   });
 });
 
