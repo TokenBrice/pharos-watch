@@ -21,15 +21,11 @@ import type { ChangeContract, RouteContextDocumentCache } from "../ci/pharos-cha
 import { runCliEntrypoint } from "../lib/cli-args.mjs";
 import { analyzeShellCommand } from "../lib/shell-command-analysis.ts";
 import type * as RoutingRegistry from "../lib/doc-ownership-registry.mts";
-import { buildFocusedCheckPlan } from "../maintenance/run-focused-checks.ts";
 // Match the router's lazy module boundary when extending the routing fixture.
-const { PATH_FAMILIES, DECLARED_TEST_OWNERSHIP } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
+const { PATH_FAMILIES, DECLARED_TEST_OWNERSHIP, createOwnershipGlobMatcher } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
+const { buildFocusedCheckPlan } = createRequire(import.meta.url)("../maintenance/run-focused-checks.ts") as typeof import("../maintenance/run-focused-checks.ts");
 
-/**
- * Off-by-default routed-Markdown enlargement. The budget case below patches
- * only reads of `docs/architecture.md` while it is armed, so every other read
- * in this file (and fixture writes) passes through unchanged.
- */
+// Enlarge only armed architecture reads; other reads and fixture writes pass through.
 const routedReadPatch = vi.hoisted(() => ({ enlargeArchitectureBytes: 0, architectureReads: 0 }));
 vi.mock("node:fs", async (importOriginal) => {
   const actual = await importOriginal<typeof import("node:fs")>();
@@ -54,6 +50,14 @@ function requireBlockingReason(output: unknown): string {
   return output.reason;
 }
 
+function preToolCommand(command: string) {
+  return buildPreToolUseHookOutput({ tool_input: { command } });
+}
+
+function commandBlockingReason(command: string): string {
+  return requireBlockingReason(preToolCommand(command));
+}
+
 type HookMode = "pre-tool-use" | "permission-request" | "session-start";
 
 function runHookCliProcess(
@@ -74,11 +78,7 @@ function runHookCliProcess(
   };
 }
 
-/**
- * Routed Markdown is immutable for the duration of this suite. Sharing the
- * parsed snapshot keeps repeated route builds byte-identical without reading
- * the same documents again for every fixture and in-process CLI invocation.
- */
+// Immutable parsed snapshots are shared; selected ranges remain route-local.
 const routeDocuments: RouteContextDocumentCache = new Map();
 
 interface InProcessCliResult {
@@ -87,7 +87,6 @@ interface InProcessCliResult {
   stderr: string;
 }
 
-/** Exercise the real CLI dispatcher in-process: same parser, output and exit codes. */
 async function runContractCli(
   argv: readonly string[],
   { readStdin, env = {}, documents = routeDocuments }: {
@@ -138,16 +137,17 @@ function docKeys(contract: { docs: Array<{ anchor?: string; path: string }> }): 
   return contract.docs.map((doc) => doc.anchor ? `${doc.path}#${doc.anchor}` : doc.path);
 }
 
+function expectDocs(contract: Pick<ChangeContract, "docs">, keys: readonly string[]) {
+  expect(docKeys(contract)).toEqual(expect.arrayContaining([...keys]));
+}
+
 function expectIntegrityObligations(contract: Pick<ChangeContract, "docs">, methodology: boolean) {
   const keys = Array.from({ length: 8 }, (_, index) => `docs/architecture.md#adr-${index + 28}`);
   if (methodology) keys.push("docs/architecture.md#adr-3");
-  expect(docKeys(contract)).toEqual(expect.arrayContaining(keys));
+  expectDocs(contract, keys);
 }
 
-// Exact measured byte ceilings, not rounded class allowances, reported as
-// advisory warnings rather than failures. Lower these when reading shrinks;
-// never regenerate them automatically or trade away obligations. Manually
-// ratcheted after moving implementation inventories/details into linked appendices.
+// Advisory measured ceilings: lower manually when reading shrinks, never regenerate or remove obligations to fit.
 const ROUTE_FIXTURES = [
   ["src/components/stablecoin-table.tsx", 21_706, 21_706],
   ["src/app/yield/page.tsx", 50_065, 50_065],
@@ -156,14 +156,12 @@ const ROUTE_FIXTURES = [
   ["shared/lib/safety-score-v9/evaluate-asset.ts", 60_904, 60_904],
   ["shared/lib/classification.ts", 46_435, 46_435],
   ["functions/safety-scores/map.json.ts", 24_468, 29_549],
-  ["shared/data/stablecoins/coins/usdt-tether.json", 46_435, 46_435],
+  ["shared/data/stablecoins/coins/usdt-tether.json", 38_368, 38_368],
   ["worker/src/telegram/webhook/telegram-webhook.ts", 46_593, 46_593],
   ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 26_618, 26_618],
 ] as const;
 
-// Two representatives: the largest single-route reading and the only route whose
-// auto/contract fixture ceilings differ. The enumeration below measures every
-// mapped reading signature, so the remaining rows repeat the same branch.
+// Sample the largest reading and the only mode-dependent ceiling; enumeration covers all signatures.
 const ROUTE_FIXTURE_SAMPLES = ROUTE_FIXTURES.filter(([file]) =>
   file === "worker/src/api/yield-history.ts" || file === "functions/safety-scores/map.json.ts",
 );
@@ -176,7 +174,6 @@ interface ReadingSignature {
 }
 
 function enumerateReadingSignatures() {
-  const { createOwnershipGlobMatcher } = createRequire(import.meta.url)("../lib/doc-ownership-registry.mts") as typeof RoutingRegistry;
   const matchers = PATH_FAMILIES.map((family) => ({
     family,
     sources: family.sourceGlobs.map(createOwnershipGlobMatcher),
@@ -200,8 +197,7 @@ function enumerateReadingSignatures() {
   return [...representatives.values()];
 }
 
-// Classification stays cheap; only one representative of each complete
-// family/selector/scoped-guide/mode/class signature opens Markdown documents.
+// Parse Markdown once per complete routing signature.
 let readingSignatures: ReadingSignature[] | undefined;
 
 function withSqlFixture<T>(sql: string, callback: (path: string) => T): T {
@@ -362,12 +358,19 @@ describe("reading selectors and context modes", () => {
     ["worker/src/telegram/webhook/telegram-webhook.ts", false],
     ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", false],
     ["functions/safety-scores/map.json.ts", true],
+    ["shared/lib/supply.ts", false],
+    ["worker/src/cron/sync-stablecoins.ts", true],
+    ["worker/src/lib/status/derived-data.ts", false],
   ] as const)("keeps integrity ADRs primary and undemoted for %s", (file, methodology) => {
-    const contract = classifyChangedFiles([file]);
-    expectIntegrityObligations(contract, methodology);
-    const keys = Array.from({ length: 8 }, (_, index) => `docs/architecture.md#adr-${index + 28}`);
-    if (methodology) keys.push("docs/architecture.md#adr-3");
-    expect(docKeys({ docs: contract.background }).filter((key) => keys.includes(key))).toEqual([]);
+    for (const mode of ["auto", "contract"] as const) {
+      const contract = classifyChangedFiles([file], mode);
+      const keys = Array.from({ length: 8 }, (_, index) => `docs/architecture.md#adr-${index + 28}`);
+      if (methodology) keys.push("docs/architecture.md#adr-3");
+      if (file.startsWith("shared/")) keys.push("docs/architecture.md#typescript-target-constraints");
+      expectDocs(contract, keys);
+      expectDocs({ docs: contract.requiredDocs }, keys);
+      expect(docKeys({ docs: contract.background }).filter((key) => keys.includes(key))).toEqual([]);
+    }
   });
 
   function withReadingFamily(callback: () => void) {
@@ -480,6 +483,10 @@ describe("reading selectors and context modes", () => {
     "functions/safety-scores/map.json.ts", "shared/data/stablecoins/coins/usdt-tether.json",
     "worker/src/telegram/webhook/telegram-webhook.ts", "worker/migrations/0268_telegram_planning_lookup_indexes.sql",
     "scripts/maintenance/worker-evidence-report.mjs",
+    "src/components/ui/button.tsx", "src/app/layout.tsx", "data/failure-scenarios.json",
+    "src/lib/status-dashboard-model.ts", "src/lib/status/probe-model.ts",
+    "worker/src/lib/status/derived-data.ts", "worker/src/lib/status/evaluation-context.ts",
+    "worker/src/cron/sync-stablecoins.ts", "worker/src/cron/sync-stablecoins/stages.ts",
   ])("keeps the emitted check plan byte-identical across modes for %s", async (file) => {
     const outputs = [];
     for (const context of ["auto", "contract"] as const) {
@@ -494,14 +501,72 @@ describe("reading selectors and context modes", () => {
     expect(outputs[1].contextMode).toEqual({ requested: "contract", effective: "contract", reasons: ["Explicit contract context"] });
   });
 
+  it.each(["auto", "contract"] as const)("bounds domain reading and preserves mixed defaults in %s", (mode) => {
+    const route = (files: string[]) => classifyChangedFiles(files, mode);
+    const catalog = "shared/data/stablecoins/coins/usdt-tether.json";
+    const frontend = "src/lib/status-dashboard-model.ts", loader = "worker/src/lib/status/derived-data.ts";
+    for (const [file, id, path, local, extra] of [
+      ["src/components/ui/button.tsx", "frontend-routes", "docs/architecture.md", [], []],
+      ["src/app/layout.tsx", "frontend-routes", "docs/architecture.md", ["frontend-runtime-and-seo-surface"], []],
+      [frontend, "status-and-runbooks", "docs/status-dashboard.md", ["frontend-flow", "public-status-projection", "rendering-and-refresh-contract"], ["backend-contract-get-apistatus", "timestamp-admission", "overall-status"]],
+      [loader, "status-and-runbooks", "docs/status-dashboard.md", ["backend-contract-get-apistatus", "timestamp-admission", "mintburn-reconciliation-card"], ["public-status-projection"]],
+    ] as const) {
+      const contract = route([file]);
+      expect(contract.mappings.map((mapping) => mapping.id)).toContain(id);
+      expect(contract.docs.filter((doc) => doc.path === path).map((doc) => doc.anchor)).toEqual([...local, ...(mode === "contract" ? extra : [])]);
+    }
+    for (const [id, files] of [
+      ["stablecoin-registry", ["data/failure-scenarios.json"]],
+      ["stablecoin-registry", [catalog, "data/failure-scenarios.json"]],
+      ["status-and-runbooks", [frontend, loader, "scripts/maintenance/worker-incident-bundle.mjs"]],
+      ["status-and-runbooks", ["worker/src/lib/status/evaluation-context.ts"]],
+      ["status-and-runbooks", ["scripts/maintenance/worker-incident-bundle.mjs"]],
+    ] as const) {
+      const family = PATH_FAMILIES.find((entry) => entry.id === id)!;
+      const contract = route([...files]);
+      expectDocs({ docs: [...contract.docs, ...contract.background] }, docKeys(family));
+      if (files.length === 1) {
+        const reading = family.reading;
+        try { family.reading = undefined; expect(route([...files])).toEqual(contract); }
+        finally { family.reading = reading; }
+      }
+    }
+    const registry = PATH_FAMILIES.find((family) => family.id === "stablecoin-registry")!;
+    const failure = "docs/process/failure-scenarios.md";
+    expect(route([catalog]).mappings.map((mapping) => mapping.id)).toContain(registry.id);
+    expectDocs(route([catalog]), docKeys(registry).filter((key) => key !== failure));
+    expect(docKeys(route([catalog]))).not.toContain(failure);
+    const file = "worker/src/cron/sync-stablecoins.ts", stage = "worker/src/cron/sync-stablecoins/stages.ts";
+    const contract = route([file]), peer = route([stage]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["pricing-pipeline", "worker-cron", "worker-runtime"]);
+    for (const field of ["docs", "requiredDocs", "background", "hardRules", "deploy"] as const) expect(contract[field]).toEqual(peer[field]);
+    const plan = buildFocusedCheckPlan([file]);
+    expect(plan.checks.map((check) => check.command.replaceAll(file, stage))).toEqual(buildFocusedCheckPlan([stage]).checks.map((check) => check.command));
+    const pricing = PATH_FAMILIES.find((family) => family.id === "pricing-pipeline")!, sources = pricing.sourceGlobs;
+    try {
+      pricing.sourceGlobs = sources.filter((source) => source !== file);
+      const before = buildFocusedCheckPlan([file]), extra = plan.checks.filter((check) => check.source === pricing.id);
+      expect(extra.map((check) => check.command)).toEqual(["npm run audit:pricing-providers", "npx vitest run worker/src/lib"]);
+      const index = before.checks.findIndex((check) => check.source === "worker-cron");
+      expect(plan.checks).toEqual([...before.checks.slice(0, index), ...extra, ...before.checks.slice(index)]);
+      expect(plan.classification.deploy).toEqual(before.classification.deploy);
+    } finally { pricing.sourceGlobs = sources; }
+    for (const file of ["public/og-editorial-about.png", "public/og-cemetery.png", "scripts/maintenance/state/og-editorial-signatures.json", "scripts/maintenance/state/og-cemetery-signature.json"]) {
+      const contract = route([file]);
+      expect(contract.unmappedPaths).toEqual([]);
+      expect(contract.mappings.map((mapping) => mapping.id)).toEqual([file === "public/og-cemetery.png" ? "frontend-routes" : "scripts-tooling"]);
+      expect(buildFocusedCheckPlan([file]).checks.length).toBeGreaterThan(0);
+    }
+  });
+
   it.each(["auto", "contract"] as const)("keeps evaluator %s reading at the scoring seam, not consumer implementations", (mode) => {
     const contract = classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"], mode);
     expect(contract.contextMode.effective).toBe("contract");
-    expect(docKeys(contract)).toEqual(expect.arrayContaining([
+    expectDocs(contract, [
       "docs/report-cards.md#v10-model",
       "docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation",
       "docs/report-cards.md#api", "docs/report-cards.md#consumers",
-    ]));
+    ]);
     expect(docKeys({ docs: [...contract.docs, ...contract.background] }))
       .not.toContain("docs/digest-pipeline.md#generation");
     expect([...contract.docs, ...contract.background].some((doc) => doc.path === "docs/safety-score-map.md")).toBe(false);
@@ -517,99 +582,32 @@ describe("reading selectors and context modes", () => {
   ])("routes a lone scoring publication path %s through the contract seam", (file) => {
     const contract = classifyChangedFiles([file]);
     expect(contract.contextMode.effective).toBe("contract");
-    expect(docKeys(contract)).toEqual(expect.arrayContaining(["docs/report-cards.md#api", "docs/report-cards.md#consumers"]));
+    expectDocs(contract, ["docs/report-cards.md#api", "docs/report-cards.md#consumers"]);
   });
 
-  it("routes AI-summary data to editorial authoring and the actual-file claim validator", () => {
-    const file = "data/ai-summaries.json";
-    const contract = classifyChangedFiles([file]);
-    expect(contract.unmappedPaths).toEqual([]);
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("stablecoin-registry");
-    expect(docKeys(contract)).toEqual(expect.arrayContaining([
-      "docs/process/adding-a-stablecoin.md#6b-editorial-summary",
-      "docs/editorial-style.md#registers-by-surface",
-    ]));
-    expectIntegrityObligations(contract, false);
-    const commands = buildFocusedCheckPlan([file]).checks.map((check) => check.command);
-    expect(commands.join("\n")).toContain("shared/lib/__tests__/ai-summary-claims.test.ts");
-  });
-
-  it("routes the compliance model to the compliance owner's primary references", () => {
-    const file = "src/lib/compliance-model.ts";
-    const contract = classifyChangedFiles([file]);
-    expect(contract.unmappedPaths).toEqual([]);
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("compliance");
-    expect(docKeys(contract)).toEqual(expect.arrayContaining([
-      "docs/compliance-page.md#data-projection",
-      "docs/mica-tracker.md#status-criteria",
-      "docs/genius-tracker.md#sourcing--source-kinds",
-    ]));
-  });
-
-  it("routes the browser CSS loader to its build contract and runtime tests", () => {
-    const file = "public/critical-css-loader.js";
-    const contract = classifyChangedFiles([file]);
-    expect(contract.unmappedPaths).toEqual([]);
-    expect(docKeys(contract)).toContain("docs/scripts.md#build-and-generated-artifacts");
-    expect(DECLARED_TEST_OWNERSHIP.find((entry) => entry.sources.includes(file))?.tests)
-      .toContain("scripts/__tests__/inline-homepage-critical-css.test.ts");
-  });
-
-  it("routes the generated llms index to bounded frontend discovery docs", () => {
-    const file = "public/llms.txt";
-    const contract = classifyChangedFiles([file]);
-    expect(contract.unmappedPaths).toEqual([]);
-    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["frontend-routes"]);
-    expect(docKeys(contract)).toEqual([
-      "docs/architecture.md#frontend-runtime-and-seo-surface",
-      "docs/stablecoin-detail-page.md#route-shape",
-    ]);
-    warnIfOverBudget("public llms discovery", buildRouteContext(contract, { documents: routeDocuments }));
-  });
-
+  const datasetDocs = ["docs/scripts.md#build-and-generated-artifacts", "docs/api-reference.md#surface-split"];
   it.each([
-    "public/datasets/top-stablecoins/2026-10-28.json",
-    "public/datasets/depeg-history/2026-10-28.json",
-    "public/datasets/scores-latest/2026-10-28.json",
-    "public/datasets/peg-mechanism-distribution/2026-10-28.json",
-  ])("routes the dated dataset output %s to its generation and public-surface contracts", (file) => {
+    ["data/ai-summaries.json", "stablecoin-registry", ["docs/process/adding-a-stablecoin.md#6b-editorial-summary", "docs/editorial-style.md#registers-by-surface"], false, []],
+    ["src/lib/compliance-model.ts", "compliance", ["docs/compliance-page.md#data-projection", "docs/mica-tracker.md#status-criteria", "docs/genius-tracker.md#sourcing--source-kinds"], false, []],
+    ["public/critical-css-loader.js", "", ["docs/scripts.md#build-and-generated-artifacts"], false, ["scripts/__tests__/inline-homepage-critical-css.test.ts"]],
+    ["public/llms.txt", "frontend-routes", ["docs/architecture.md#frontend-runtime-and-seo-surface", "docs/stablecoin-detail-page.md#route-shape"], true, []],
+    ...["top-stablecoins", "depeg-history", "scores-latest", "peg-mechanism-distribution"].map((name) =>
+      [`public/datasets/${name}/2026-10-28.json`, "scripts-tooling", datasetDocs, true, []] as const),
+    ...["scripts/maintenance/generate-public-datasets.ts", "scripts/lib/public-dataset-artifacts.ts", "src/lib/datasets/public-dataset-current.ts"].map((file) =>
+      [file, "", datasetDocs, false, []] as const),
+    ["worker/src/lib/dexscreener.ts", "methodology-scoring", ["docs/dex-liquidity.md#discovery-cron", "docs/process/dex-liquidity-appendix.md#methodology-versioning"], false,
+      ["worker/src/lib/__tests__/dexscreener.test.ts", "worker/src/cron/dex-discovery/__tests__/dexscreener-census.test.ts"]],
+  ] as const)("routes %s to its domain docs and declared tests", (file, owner, docs, exact, tests) => {
     const contract = classifyChangedFiles([file]);
     expect(contract.unmappedPaths).toEqual([]);
-    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["scripts-tooling"]);
-    expect(docKeys(contract)).toEqual([
-      "docs/scripts.md#build-and-generated-artifacts",
-      "docs/api-reference.md#surface-split",
-    ]);
-    warnIfOverBudget(`dated dataset ${file}`, buildRouteContext(contract, { documents: routeDocuments }));
-  });
-
-  it.each([
-    "scripts/maintenance/generate-public-datasets.ts",
-    "scripts/lib/public-dataset-artifacts.ts",
-    "src/lib/datasets/public-dataset-current.ts",
-  ])("selects the generated-dataset contracts for %s", (file) => {
-    const contract = classifyChangedFiles([file]);
-    expect(contract.unmappedPaths).toEqual([]);
-    expect(docKeys(contract)).toEqual(expect.arrayContaining([
-      "docs/scripts.md#build-and-generated-artifacts",
-      "docs/api-reference.md#surface-split",
-    ]));
-    warnIfOverBudget(`generated dataset ${file}`, buildRouteContext(contract, { documents: routeDocuments }));
-  });
-
-  it("routes the DexScreener parser to DEX discovery docs and its parser/census tests", () => {
-    const file = "worker/src/lib/dexscreener.ts";
-    const contract = classifyChangedFiles([file]);
-    expect(contract.unmappedPaths).toEqual([]);
-    expect(contract.mappings.map((mapping) => mapping.id)).toContain("methodology-scoring");
-    expect(docKeys(contract)).toEqual(expect.arrayContaining([
-      "docs/dex-liquidity.md#discovery-cron",
-      "docs/process/dex-liquidity-appendix.md#methodology-versioning",
-    ]));
-    expect(DECLARED_TEST_OWNERSHIP.find((entry) => entry.sources.includes(file))?.tests).toEqual(expect.arrayContaining([
-      "worker/src/lib/__tests__/dexscreener.test.ts",
-      "worker/src/cron/dex-discovery/__tests__/dexscreener-census.test.ts",
-    ]));
+    if (owner) expect(contract.mappings.map((mapping) => mapping.id)).toEqual(exact ? [owner] : expect.arrayContaining([owner]));
+    expect(docKeys(contract)).toEqual(exact ? docs : expect.arrayContaining([...docs]));
+    if (tests.length) expect(DECLARED_TEST_OWNERSHIP.find((entry) => entry.sources.includes(file))?.tests).toEqual(expect.arrayContaining([...tests]));
+    if (file === "data/ai-summaries.json") {
+      expectIntegrityObligations(contract, false);
+      expect(buildFocusedCheckPlan([file]).checks.map((check) => check.command).join("\n")).toContain("shared/lib/__tests__/ai-summary-claims.test.ts");
+    }
+    if (file === "public/llms.txt" || docs === datasetDocs) warnIfOverBudget(file, buildRouteContext(contract, { documents: routeDocuments }));
   });
 
   it.each([
@@ -620,7 +618,7 @@ describe("reading selectors and context modes", () => {
     ["shared/lib/safety-score-v9/__tests__/control-bridge-join.test.ts", "bridge-in-flight-accounting"],
   ])("retains the accounting contract for %s", (file, anchor) => {
     const contract = classifyChangedFiles([file]);
-    expect(docKeys(contract)).toContain(`docs/process/report-cards-appendix.md#${anchor}`);
+    expectDocs(contract, [`docs/process/report-cards-appendix.md#${anchor}`]);
     expect(contract.requiredDocs).toContainEqual({ path: "docs/process/report-cards-appendix.md", anchor });
   });
 
@@ -633,11 +631,9 @@ describe("reading selectors and context modes", () => {
       "docs/safety-score-map.md#serving",
     ]);
     expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["validation-ci-policy", "safety-score-v9"]);
-    expect(docKeys(contract)).toEqual(expect.arrayContaining(
-      Array.from({ length: 8 }, (_, index) => `docs/architecture.md#adr-${index + 28}`),
-    ));
+    expectDocs(contract, Array.from({ length: 8 }, (_, index) => `docs/architecture.md#adr-${index + 28}`));
     expect(docKeys(contract)).not.toContain("docs/testing.md#ci-pipeline");
-    expect(docKeys({ docs: contract.background })).toContain("docs/deployment-process.md#ci-deploy-sequence");
+    expectDocs({ docs: contract.background }, ["docs/deployment-process.md#ci-deploy-sequence"]);
     warnIfOverBudget(`Functions map.${extension}`, buildRouteContext(contract, { documents: routeDocuments }));
   });
 
@@ -649,7 +645,7 @@ describe("reading selectors and context modes", () => {
     const contract = classifyChangedFiles([file]);
     expect(docKeys(contract)[0]).toBe(`docs/safety-score-map.md#${anchor}`);
     expect(docKeys(contract)).not.toContain("docs/safety-score-map.md");
-    if (anchor === "publication") expect(docKeys(contract)).toContain("docs/testing.md#ci-pipeline");
+    if (anchor === "publication") expectDocs(contract, ["docs/testing.md#ci-pipeline"]);
   });
 
   it.each([
@@ -662,14 +658,14 @@ describe("reading selectors and context modes", () => {
     "scripts/ci/check-live-api-cache-policy.mjs",
   ])("routes performance tooling %s to its guardrail contract and focused suites", (file) => {
     const contract = classifyChangedFiles([file]);
-    expect(docKeys(contract)).toContain("docs/testing.md#performance-guardrails");
+    expectDocs(contract, ["docs/testing.md#performance-guardrails"]);
     expect(contract.checks.join("\n")).toContain("scripts/maintenance/__tests__/probe-page-performance.test.ts");
     expect(contract.checks.join("\n")).toContain("scripts/maintenance/__tests__/report-build-size.test.ts");
   });
 
   it.each(["worker/src/cron/daily-digest.ts", "worker/src/cron/digest-publication-watchdog.ts"])(
     "retains generation for digest producer %s", (file) => {
-      expect(docKeys(classifyChangedFiles([file]))).toContain("docs/digest-pipeline.md#generation");
+      expectDocs(classifyChangedFiles([file]), ["docs/digest-pipeline.md#generation"]);
     },
   );
 
@@ -680,7 +676,7 @@ describe("reading selectors and context modes", () => {
     ["docs/process/report-cards-evidence-log.md", "docs/process/report-cards-appendix.md#scoped-evidence-and-exit-evaluation"],
   ])("selects scoring documentation %s without the broad family fallback", (file, owner) => {
     const contract = classifyChangedFiles([file]);
-    expect(docKeys(contract)).toContain(owner);
+    expectDocs(contract, [owner]);
     expect(docKeys(contract)).not.toContain("docs/digest-pipeline.md#generation");
     expect(docKeys(contract)).not.toContain("docs/process/report-cards-appendix.md#supply-attribution-and-in-flight-accounting");
   });
@@ -688,21 +684,21 @@ describe("reading selectors and context modes", () => {
   it.each(["worker/src/cron/dex-liquidity/orchestrator.ts", "worker/src/api/yield-history.ts"])(
     "accounts for unconditional bounded Worker obligations on %s", (file) => {
       const contract = classifyChangedFiles([file]);
-      expect(docKeys(contract)).toEqual(expect.arrayContaining([
+      expectDocs(contract, [
         "docs/worker-infrastructure.md#module-initialization",
         "docs/worker-and-api-limits.md#connection-budget-operating-assumption",
-      ]));
+      ]);
       if (file.includes("/cron/")) {
-        expect(docKeys(contract)).toEqual(expect.arrayContaining([
+        expectDocs(contract, [
           "docs/process/cron-trigger-policy.md#source-of-truth",
           "docs/process/cron-trigger-policy.md#target",
           "docs/worker-infrastructure.md#event-entry-lifecycle-and-admission",
           "docs/dex-liquidity.md#discovery-cron",
-        ]));
+        ]);
         expect(docKeys(contract)).not.toContain("docs/process/cron-trigger-policy.md");
       } else {
-        expect(docKeys(contract)).toContain("docs/worker-infrastructure.md#http-request-handling-entry");
-        expect(docKeys(contract)).toContain("docs/api-reference.md#get-apiyield-history");
+        expectDocs(contract, ["docs/worker-infrastructure.md#http-request-handling-entry"]);
+        expectDocs(contract, ["docs/api-reference.md#get-apiyield-history"]);
         expect(docKeys(contract)).not.toContain("docs/api-reference.md#public-endpoints");
       }
     },
@@ -712,25 +708,29 @@ describe("reading selectors and context modes", () => {
     const ids: Record<string, true> = {
       "safety-score-v9": true, "validation-ci-policy": true, "methodology-scoring": true,
       "worker-cron": true, "worker-runtime": true, "worker-api-auth": true,
+      "stablecoin-registry": true, "frontend-routes": true, "status-and-runbooks": true,
     };
     const families = PATH_FAMILIES.filter((family) => ids[family.id]);
     readingSignatures ??= enumerateReadingSignatures();
     const files = readingSignatures.filter((entry) => entry.mode === "auto" &&
       entry.signature.some((family) => ids[family.id] && family.selectors.length > 0)).map((entry) => entry.file);
     expect(files.length).toBeGreaterThan(0);
-    // The focused planner consumes changed paths and ordered mapping IDs, then
-    // reads source globs/checks/tier from the unchanged families. Baseline,
-    // deploy and lint selectors use those same paths, never reading refs.
-    function plannerInputs(file: string) {
-      const { changedFiles, mappings, checks, unmappedPaths, deploy } = classifyChangedFiles([file]);
-      return { changedFiles, mappings, checks, unmappedPaths, deploy };
+    // Reading selectors must preserve ordered planner inputs and complete check plans.
+    function plannerInputs(files: string[]) {
+      const { changedFiles, mappings, checks, unmappedPaths, deploy, hardRules } = classifyChangedFiles(files);
+      return { changedFiles, mappings, checks, unmappedPaths, deploy, hardRules, plan: buildFocusedCheckPlan(files).checks };
     }
-    const selectedInputs = files.map(plannerInputs);
+    const batches = [...files.map((file) => [file]),
+      ["shared/data/stablecoins/coins/usdt-tether.json", "data/failure-scenarios.json"],
+      ["src/components/ui/button.tsx", "src/app/layout.tsx"],
+      ["src/lib/status-dashboard-model.ts", "worker/src/lib/status/derived-data.ts", "scripts/maintenance/worker-incident-bundle.mjs"],
+    ];
+    const selectedInputs = batches.map(plannerInputs);
     const selectors = families.map((family) => family.reading);
     try {
       for (const family of families) family.reading = undefined;
-      files.forEach((file, index) => {
-        expect(JSON.stringify(plannerInputs(file)), file).toBe(JSON.stringify(selectedInputs[index]));
+      batches.forEach((batch, index) => {
+        expect(plannerInputs(batch), batch.join(", ")).toEqual(selectedInputs[index]);
       });
     } finally {
       families.forEach((family, index) => { family.reading = selectors[index]; });
@@ -738,7 +738,6 @@ describe("reading selectors and context modes", () => {
   });
 });
 
-/** Labelled advisory byte-budget warnings (measured, ceiling, excess) for one route. */
 function routeBudgetWarnings(label: string, bytes: number, ceiling: number): string[] {
   return bytes > ceiling ? [`${label}: ${bytes} bytes > ${ceiling} (excess ${bytes - ceiling})`] : [];
 }
@@ -747,7 +746,6 @@ function reportBudgetWarnings(warnings: readonly string[]): void {
   for (const warning of warnings) console.warn(`[route-context-budget] ${warning}`);
 }
 
-/** Byte budgets are advisory: report an over-budget route without failing the suite. */
 function warnIfOverBudget(
   label: string,
   context: { ceiling: number; status: string; total: { bytes: number } },
@@ -781,10 +779,7 @@ describe("route context budget warnings and fixture ratchets", () => {
     const warnings: string[] = [];
     expect(new Set(readingSignatures.map((entry) => entry.mode))).toEqual(new Set(["auto", "contract"]));
     for (const { file, mode, contract } of readingSignatures) {
-      // Selector signatures can select identical reading sets. Measure their
-      // union once, but report every signature against its own class ceiling.
-      // An unreadable document or anchor is reported and enumeration continues;
-      // it is never treated as zero bytes or as a pass.
+      // Cache identical unions; report every signature and unreadable reference independently.
       try {
         const key = JSON.stringify([
           [...contract.scopedContext].sort(),
@@ -868,9 +863,7 @@ describe("route context budget warnings and fixture ratchets", () => {
   });
 
   it("warns on an enlarged required section without removing its reference or coupling hooks/checks to size", async () => {
-    // Patch only routed reads of one document: no repository files or authored
-    // obligations change, and the real CLI path still sees the enlarged ADR-28
-    // section. A private document cache keeps the enlargement out of other cases.
+    // The real CLI sees enlarged ADR-28; a private cache isolates other cases.
     const documents: RouteContextDocumentCache = new Map();
     const files = ["shared/lib/safety-score-v9/evaluate-asset.ts"];
     routedReadPatch.enlargeArchitectureBytes = 200_000;
@@ -1246,7 +1239,7 @@ describe("hard-block hook outputs", () => {
       "opaque shell construct",
     ],
   ])("blocks %s with its denial category", (_name, command, reason) => {
-    const output = buildPreToolUseHookOutput({ tool_input: { command } });
+    const output = preToolCommand(command);
     expect(output).toMatchObject({
       decision: "block",
       hookSpecificOutput: { permissionDecision: "deny" },
@@ -1262,7 +1255,7 @@ describe("hard-block hook outputs", () => {
       "npx --no-install wrangler d1 execute stablecoin-db --remote --command 'delete from cache'",
     ].join("\n");
 
-    const preToolUse = buildPreToolUseHookOutput({ tool_input: { command } });
+    const preToolUse = preToolCommand(command);
     expect(preToolUse).toMatchObject({ hookSpecificOutput: { permissionDecision: "deny" } });
     expect(requireBlockingReason(preToolUse)).toContain("Remote D1 mutation commands");
     expect(buildPermissionRequestHookOutput({ tool_input: { command } })).toMatchObject({
@@ -1298,7 +1291,7 @@ describe("hard-block hook outputs", () => {
     ],
     ["help output for a deploy-shaped command", "npx --no-install wrangler pages deploy --help"],
   ])("allows %s", (_name, command) => {
-    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    expect(preToolCommand(command)).toEqual({});
   });
 
   it.each([
@@ -1328,25 +1321,6 @@ describe("hard-block hook outputs", () => {
     });
     expect(requireBlockingReason(output)).toContain(reason);
   });
-
-  it.each([
-    ["production deploys", "npx wrangler versions deploy", "Production deploy permission is denied"],
-    [
-      "remote D1 mutations",
-      "npx wrangler d1 execute stablecoin-db --remote --command 'update prices set value = 1'",
-      "Remote D1 mutation permission is denied",
-    ],
-  ])("denies %s as permission requests", (_name, command, message) => {
-    expect(buildPermissionRequestHookOutput({ tool_input: { command } })).toEqual({
-      hookSpecificOutput: {
-        hookEventName: "PermissionRequest",
-        decision: {
-          behavior: "deny",
-          message: expect.stringContaining(message),
-        },
-      },
-    });
-  });
 });
 
 describe("W2.7 opaque shell guards", () => {
@@ -1373,9 +1347,7 @@ describe("W2.7 opaque shell guards", () => {
   ] as const;
 
   it.each(blockedOpaqueCommands)("blocks a guarded %s construct", (_label, command) => {
-    const output = buildPreToolUseHookOutput({ tool_input: { command } });
-
-    expect(requireBlockingReason(output)).toContain("opaque shell construct around a guarded command; run it directly");
+    expect(commandBlockingReason(command)).toContain("opaque shell construct around a guarded command; run it directly");
   });
 
   it.each([
@@ -1412,7 +1384,7 @@ describe("W2.7 opaque shell guards", () => {
   ] as const;
 
   it.each(allowedOpaqueCommands)("allows an unguarded %s construct", (_label, command) => {
-    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    expect(preToolCommand(command)).toEqual({});
   });
 });
 
@@ -1430,9 +1402,7 @@ describe("W2.7 shell indirection guards", () => {
   ] as const;
 
   it.each(blockedIndirectionCommands)("blocks %s", (command) => {
-    const output = buildPreToolUseHookOutput({ tool_input: { command } });
-
-    expect(requireBlockingReason(output)).toMatch(/(?:git reset --hard|unresolved shell indirection|opaque shell construct)/);
+    expect(commandBlockingReason(command)).toMatch(/(?:git reset --hard|unresolved shell indirection|opaque shell construct)/);
   });
 
   const allowedIndirectionCommands = [
@@ -1448,7 +1418,7 @@ describe("W2.7 shell indirection guards", () => {
   ] as const;
 
   it.each(allowedIndirectionCommands)("allows an unguarded %s", (command) => {
-    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    expect(preToolCommand(command)).toEqual({});
   });
 });
 
@@ -1470,9 +1440,7 @@ describe("W2.7 deploy wrappers and previews", () => {
   ] as const;
 
   it.each(blockedDeployWrappers)("blocks %s", (command) => {
-    const output = buildPreToolUseHookOutput({ tool_input: { command } });
-
-    expect(requireBlockingReason(output)).toContain("Raw production deploy commands");
+    expect(commandBlockingReason(command)).toContain("Raw production deploy commands");
   });
 
   it.each([
@@ -1489,7 +1457,7 @@ describe("W2.7 deploy wrappers and previews", () => {
   ] as const)(
     "allows a non-deploy package wrapper: %s",
     (command) => {
-      expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+      expect(preToolCommand(command)).toEqual({});
     },
   );
 
@@ -1505,7 +1473,7 @@ describe("W2.7 deploy wrappers and previews", () => {
   ] as const;
 
   it.each(allowedPreviewCommands)("allows the safe preview %s", (command) => {
-    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    expect(preToolCommand(command)).toEqual({});
   });
 
   it("keeps Pages branch deployment blocked without a dry-run", () => {
@@ -1529,9 +1497,7 @@ describe("W2.7 deploy wrappers and previews", () => {
   ] as const;
 
   it.each(blockedVersionQualifiedDeploys)("blocks the version-qualified deploy %s", (command) => {
-    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
-      "Raw production deploy commands",
-    );
+    expect(commandBlockingReason(command)).toContain("Raw production deploy commands");
   });
 
   const blockedVersionQualifiedRemoteD1 = [
@@ -1541,9 +1507,7 @@ describe("W2.7 deploy wrappers and previews", () => {
   ] as const;
 
   it.each(blockedVersionQualifiedRemoteD1)("blocks the version-qualified remote D1 mutation %s", (command) => {
-    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
-      "Remote D1 mutation commands",
-    );
+    expect(commandBlockingReason(command)).toContain("Remote D1 mutation commands");
   });
 
   it.each([
@@ -1552,7 +1516,7 @@ describe("W2.7 deploy wrappers and previews", () => {
     "npx wrangler@4 deploy --help",
     "npx wrangler@4 --version",
   ] as const)("allows the safe version-qualified invocation %s", (command) => {
-    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    expect(preToolCommand(command)).toEqual({});
   });
 });
 
@@ -1571,7 +1535,7 @@ SELECT 1"`,
   ] as const;
 
   it.each(allowedReadOnlyCommands)("allows read-only remote D1 SQL: %s", (command) => {
-    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    expect(preToolCommand(command)).toEqual({});
   });
 
   const blockedMutationCommands = [
@@ -1592,22 +1556,18 @@ SELECT 1"`,
 
   it.each(blockedMutationCommands)("blocks mutating remote D1 SQL: %s", (sql) => {
     const command = `npx wrangler d1 execute stablecoin-db --remote --command ${JSON.stringify(sql)}`;
-    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
-      "Remote D1 mutation commands",
-    );
+    expect(commandBlockingReason(command)).toContain("Remote D1 mutation commands");
   });
 
   it("parses an existing remote D1 SQL file statement by statement", () => {
     withSqlFixture("-- delete\nSELECT 'update';", (sqlPath) => {
       const command = `npx wrangler d1 execute stablecoin-db --remote --file ${JSON.stringify(sqlPath)}`;
-      expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+      expect(preToolCommand(command)).toEqual({});
     });
 
     withSqlFixture("SELECT 1; DROP TABLE prices;", (sqlPath) => {
       const command = `npx wrangler d1 execute stablecoin-db --remote --file ${JSON.stringify(sqlPath)}`;
-      expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
-        "Remote D1 mutation commands",
-      );
+      expect(commandBlockingReason(command)).toContain("Remote D1 mutation commands");
     });
   });
 
@@ -1617,9 +1577,7 @@ SELECT 1"`,
     rmSync(missingRoot, { force: true, recursive: true });
     const command = `npx wrangler d1 execute stablecoin-db --remote --file ${JSON.stringify(missingPath)}`;
 
-    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toContain(
-      "Remote D1 mutation commands",
-    );
+    expect(commandBlockingReason(command)).toContain("Remote D1 mutation commands");
   });
 });
 
@@ -1666,7 +1624,7 @@ describe("W2.7 protected command writes", () => {
   ] as const;
 
   it.each(blockedWrites)("blocks protected %s writes", (_label, command) => {
-    const output = buildPreToolUseHookOutput({ tool_input: { command } });
+    const output = preToolCommand(command);
 
     expect(output).toMatchObject({
       decision: "block",
@@ -1687,7 +1645,7 @@ describe("W2.7 protected command writes", () => {
   ] as const;
 
   it.each(allowedWrites)("allows non-protected %s writes", (_label, command) => {
-    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    expect(preToolCommand(command)).toEqual({});
   });
 });
 
@@ -1700,9 +1658,7 @@ describe("W2.7 Python and Node one-line writes", () => {
   ] as const;
 
   it.each(blockedInlineWrites)("blocks an inline write to a protected path: %s", (command) => {
-    expect(requireBlockingReason(buildPreToolUseHookOutput({ tool_input: { command } }))).toMatch(
-      /Direct writes to/,
-    );
+    expect(commandBlockingReason(command)).toMatch(/Direct writes to/);
   });
 
   const allowedInlineCommands = [
@@ -1713,7 +1669,7 @@ describe("W2.7 Python and Node one-line writes", () => {
   ] as const;
 
   it.each(allowedInlineCommands)("allows a non-writing or non-protected inline command: %s", (command) => {
-    expect(buildPreToolUseHookOutput({ tool_input: { command } })).toEqual({});
+    expect(preToolCommand(command)).toEqual({});
   });
 });
 
@@ -1908,64 +1864,27 @@ describe("hook diagnostics", () => {
 
 describe("W2.7 PermissionRequest parity", () => {
   it.each([
-    ["git reset", "git reset --hard HEAD"],
-    ["git clean", "git clean -fd"],
-    ["protected command write", "rm .env.local"],
-  ] as const)("denies %s through the full PreToolUse policy", (_label, command) => {
-    const output = buildPermissionRequestHookOutput({ tool_input: { command } });
-
-    expect(output).toMatchObject({
+    ["production deploys", { command: "npx wrangler versions deploy" }, "Production deploy permission is denied"],
+    ["remote D1 mutations", { command: "npx wrangler d1 execute stablecoin-db --remote --command 'update prices set value = 1'" }, "Remote D1 mutation permission is denied"],
+    ["git reset", { command: "git reset --hard HEAD" }, ""],
+    ["git clean", { command: "git clean -fd" }, ""],
+    ["protected command write", { command: "rm .env.local" }, ""],
+    ["unsafe migration SQL", { file_path: "worker/migrations/9999_permission.sql", content: "DROP TABLE stablecoin_snapshots;" }, ""],
+    ["opaque guarded commands", { command: "echo $(git reset --hard HEAD)" }, "opaque shell construct around a guarded command; run it directly"],
+  ] as const)("denies %s through the full PreToolUse policy", (_label, tool_input, message) => {
+    expect(buildPermissionRequestHookOutput({ tool_input })).toEqual({
       hookSpecificOutput: {
         hookEventName: "PermissionRequest",
-        decision: { behavior: "deny" },
+        decision: { behavior: "deny", message: message ? expect.stringContaining(message) : expect.any(String) },
       },
     });
   });
 
-  it("denies unsafe migration SQL through PermissionRequest", () => {
-    const output = buildPermissionRequestHookOutput({
-      tool_input: {
-        file_path: "worker/migrations/9999_permission.sql",
-        content: "DROP TABLE stablecoin_snapshots;",
-      },
-    });
-
-    expect(output).toMatchObject({
-      hookSpecificOutput: {
-        hookEventName: "PermissionRequest",
-        decision: { behavior: "deny" },
-      },
-    });
-  });
-
-  it("denies opaque guarded commands through PermissionRequest", () => {
-    const output = buildPermissionRequestHookOutput({
-      tool_input: { command: "echo $(git reset --hard HEAD)" },
-    });
-
-    expect(output).toMatchObject({
-      hookSpecificOutput: {
-        hookEventName: "PermissionRequest",
-        decision: {
-          behavior: "deny",
-          message: expect.stringContaining("opaque shell construct around a guarded command; run it directly"),
-        },
-      },
-    });
-  });
-
-  it("keeps safe previews and read-only D1 requests allowed", () => {
-    expect(
-      buildPermissionRequestHookOutput({
-        tool_input: { command: "git clean -fd --dry-run" },
-      }),
-    ).toEqual({});
-    expect(
-      buildPermissionRequestHookOutput({
-        tool_input: { command: "npx wrangler d1 execute stablecoin-db --remote --command 'select 1'" },
-      }),
-    ).toEqual({});
-  });
+  it.each(["git clean -fd --dry-run", "npx wrangler d1 execute stablecoin-db --remote --command 'select 1'"])(
+    "keeps safe previews and read-only D1 requests allowed: %s", (command) => {
+      expect(buildPermissionRequestHookOutput({ tool_input: { command } })).toEqual({});
+    },
+  );
 });
 
 describe("repo Claude hook config", () => {

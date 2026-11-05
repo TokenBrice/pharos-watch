@@ -7,7 +7,7 @@ Applies to `shared/data/stablecoins/`.
 - `docs/stablecoin-data.md` § “Source Files” is the sole generated-output inventory and wins over local summaries.
 - `docs/process/stablecoin-research-sidecars.md` § “Domain Ownership” owns sidecar semantics and migrations.
 - `docs/process/adding-a-stablecoin.md` § “Guardrails” owns listing decisions, runtime admission, logos, summaries, and checked-in artifact coupling.
-- `docs/classification.md`; `docs/shadow-stablecoins.md` for PSI-only exclusions.
+- `docs/classification.md#classification-entry` plus the affected taxonomy section; `docs/shadow-stablecoins.md` only for PSI exclusions.
 
 ## Rules
 
