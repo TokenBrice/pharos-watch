@@ -26,7 +26,7 @@ function parsePool(pool: RawPool): ParsedPool {
 
 function buildNewPool({ parsed, price }: BuildNewPoolArgs<unknown>): GtNewPool {
   return {
-    address: parsed.poolAddress, project: parsed.dexId, chain: "ethereum", dexId: parsed.dexId,
+    address: parsed.poolAddress, chain: "ethereum", dexId: parsed.dexId,
     name: parsed.poolName, symbol: parsed.poolName, tvlUsd: parsed.tvlUsd,
     volume24hUsd: parsed.volume24hUsd, qualityMultiplier: 1, maturityDays: 1,
     price, poolType: "generic", sourceFamily: "gecko_terminal",
@@ -100,7 +100,7 @@ describe("crawlTokenPools", () => {
         throw new Error("should not fetch");
       },
       parsePool: () => null,
-      buildNewPool: () => ({}) as GtNewPool,
+      buildNewPool,
     });
 
     expect(result.stoppedEarly).toBe(true);

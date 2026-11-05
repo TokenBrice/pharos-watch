@@ -817,18 +817,18 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(result.pools[0]).toMatchObject({ poolId: "zksync:0xpool", priceUsd: 1.0018122159 });
   });
 
-  it.each([
+  it.each<readonly [string, unknown, boolean]>([
     ["null row", null, false], ["throwing parse", {}, false],
     ["dex type", 7, false], ["dex blank", " ", false],
-    ...["dex", "pool", "base_token", "quote_token"].map((field) => ["identity", field, false]),
-    ...[null, undefined, "bad", "NaN", "Infinity", "-1"].map((tvl) => ["TVL", tvl, false]),
+    ...["dex", "pool", "base_token", "quote_token"].map((field) => ["identity", field, false] as const),
+    ...[null, undefined, "bad", "NaN", "Infinity", "-1"].map((tvl) => ["TVL", tvl, false] as const),
     ["known invalid", "bad", true], ["mixed valid/unreadable", "mixed", false],
     ["zero", "0", false], ["sub-floor", "999", false],
     ["blocked venue", "blocked", false], ["explicit empty", "empty", false],
   ])("inspects CG required evidence before census/dedupe: %s %s", async (kind, tvl, known) => {
     const row = coinGeckoPool();
     Object.assign(row.attributes, { reserve_in_usd: kind === "identity" ? "75000" : tvl });
-    if (String(kind).startsWith("dex ")) {
+    if (kind.startsWith("dex ")) {
       row.attributes.reserve_in_usd = "75000";
       Object.assign(row.relationships.dex.data, { id: tvl });
     }
@@ -842,7 +842,7 @@ describe("crawlCoin DexScreener hardening", () => {
     }
     const pools = kind === "null row" ? [null] : kind === "throwing parse" ? [{}]
       : tvl === "empty" ? [] : tvl === "mixed" ? [null, coinGeckoPool()] : [row];
-    const degraded = !["zero", "sub-floor", "blocked venue", "explicit empty"].includes(String(kind));
+    const degraded = !["zero", "sub-floor", "blocked venue", "explicit empty"].includes(kind);
     vi.mocked(fetchCgTokenPoolsWithStatus).mockResolvedValue({
       transportOk: true, schemaDegraded: false, complete: true, pools: pools as never,
     });
