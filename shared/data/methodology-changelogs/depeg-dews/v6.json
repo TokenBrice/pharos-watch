@@ -2,8 +2,8 @@
   {
     "version": "6.44",
     "title": "Original aggregate clocks qualify affirmative DEX evidence",
-    "date": "2026-11-07",
-    "effectiveAt": 1794009600,
+    "date": "2026-11-06",
+    "effectiveAt": 1793927760,
     "summary": "Live depeg, pending confirmation, DEWS divergence and public DEX availability require the aggregate's original contributor clock, preventing a fresh publication from renewing old evidence while preserving conservative vetoes.",
     "impact": [
       "Affirmative aggregate DEX admission validates aggregateObservedAt evidence before protocol filtering. Legacy nonempty price_sources_json arrays use the oldest repeated clock; the {aggregateObservedAt,sources:[]} envelope preserves independent aggregate time when no display lane qualifies, without creating a protocol source. Missing, invalid, nonpositive, nonfinite or future clocks fail closed. Publication updated_at and surviving 35-minute protocol lanes cannot supply or renew that clock.",

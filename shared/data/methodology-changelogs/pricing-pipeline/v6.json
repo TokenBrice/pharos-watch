@@ -2,8 +2,8 @@
   {
     "version": "6.73",
     "title": "Original DEX and AZND dependency clocks govern price admission",
-    "date": "2026-11-07",
-    "effectiveAt": 1794009600,
+    "date": "2026-11-06",
+    "effectiveAt": 1793927760,
     "summary": "Aggregate DEX quotes retain their oldest original contributor clock through primary consensus, co-leg admission and public comparisons. AZND's Curve cross-rate also inherits its older USDC parent or block clock and enforces the route's existing five-minute budget on both.",
     "impact": [
       "Affirmative aggregate admission validates original clock evidence in price_sources_json before protocol filtering. Nonempty legacy source arrays retain repeated aggregateObservedAt values and reduce them to the oldest; when no display lane qualifies, the writer stores {aggregateObservedAt,sources:[]} without inventing a protocol source. Missing, invalid, nonpositive, nonfinite or future clock evidence withholds the quote. Publication updated_at and surviving protocol lanes cannot renew it; public priceSources projects the empty envelope as [].",
