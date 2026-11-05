@@ -4,7 +4,9 @@ import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import type { ResearchEvidence } from "@shared/types/safety-score-v9-research-evidence";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { compareText } from "@shared/lib/safety-score-v9/primitives";
-import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
+import type { V9EconomicControlReviewV2, V9LaneIncidentClosureFailure } from "@shared/types/safety-score-v9-facts";
+import type { BridgeRouteControl } from "@shared/types/core";
+import { normalizeDeploymentId } from "@shared/types/deployment-id";
 import {
   V9ReviewedIncidentRegistryEnvelopeSchema,
   V9ReviewedIncidentSchema,
@@ -266,6 +268,8 @@ export interface LaneIncidentClosureInputs {
   descriptors: readonly V9LaneEmitterDescriptor[];
   certificates: ReadonlyMap<string, LaneIncidentCertificateView>;
   routes: ReadonlyMap<string, LaneRouteAuthority>;
+  contributorControls?: readonly Pick<BridgeRouteControl, "id" | "routeRefs" | "authorityType" | "failureDomainKeys" | "providerKey">[];
+  incidentClosureFailures?: V9LaneIncidentClosureFailure[];
   unreadableProviders?: ReadonlyMap<string, readonly string[]>;
 }
 
@@ -295,6 +299,45 @@ function laneContributorIds(control: ControlOverlay): readonly string[] | null {
     : ["*"];
 }
 
+/** Resolve each authored contributor; prose and merged authority cannot prove provider identity. */
+const PROVIDER_IDENTITY_ALIASES: Readonly<Record<string, string>> = {
+  ccip: "chainlink-ccip", cctp: "circle-cctp", stargate: "layerzero",
+};
+
+export function laneContributorProviderKeys(
+  control: ControlOverlay,
+  contributors: LaneIncidentClosureInputs["contributorControls"],
+): string[] | null {
+  const keys = new Set<string>();
+  const ids = laneContributorIds(control);
+  if (ids === null) return null;
+  for (const id of ids) {
+    const contributor = contributors?.find((row) => row.id === id &&
+      row.routeRefs.some((routeId) => normalizeDeploymentId(routeId) === control.deploymentKey));
+    if (contributor === undefined) return null;
+    let identified = false;
+    if (contributor.providerKey !== undefined) {
+      const provider = V9ProviderIncidentReviewScopeSchema.shape.providerKey.safeParse(contributor.providerKey);
+      if (!provider.success) return null;
+      keys.add(provider.data);
+      identified = true;
+    }
+    for (const key of contributor.failureDomainKeys ?? []) {
+      const [kind, identity] = key.split(":");
+      if (kind !== "protocol" && kind !== "messaging" && kind !== "verification") continue;
+      // Registry protocol identities add bounded prefixes/suffixes to provider names.
+      const identities = [identity, ...(identity?.split("-").map((token) => PROVIDER_IDENTITY_ALIASES[token]) ?? [])];
+      const providers = V9ProviderIncidentReviewScopeSchema.shape.providerKey.options.filter(
+        (provider) => identities.some((value) => `-${value}-`.includes(`-${provider}-`)));
+      if (providers.length === 0) return null;
+      for (const provider of providers) keys.add(provider);
+      identified = true;
+    }
+    if (contributor.authorityType === "validator-quorum" && !identified) return null;
+  }
+  return [...keys].sort(compareText);
+}
+
 /**
  * OQ-1: a `verifier-compromise` the lane could have depended on from the
  * earliest witness start through evaluation blocks closure unless it carries a
@@ -309,6 +352,7 @@ function providerExposureBlocksLane(
   routeId: string,
   windowStartSec: number,
   clockSec: number,
+  checkAffectedRoutes: boolean,
 ): boolean {
   const exempted = new Set<string>();
   for (const review of covering) {
@@ -322,8 +366,10 @@ function providerExposureBlocksLane(
   }
   return reviews.some((review) => (review.providerIncidents ?? []).some((incident) => {
     if (!V9ProviderIncidentDisclosureSchema.safeParse(incident).success) return true;
-    return incident.class === "verifier-compromise" &&
-      v9ProviderExposureIntersectsWindow(incident, windowStartSec, clockSec) &&
+    if (incident.class !== "verifier-compromise") {
+      return checkAffectedRoutes && incident.affectedRoutes.some((ref) => ref.assetId === assetId && ref.routeId === routeId);
+    }
+    return v9ProviderExposureIntersectsWindow(incident, windowStartSec, clockSec) &&
       !exempted.has(incident.incidentKey);
   }));
 }
@@ -349,10 +395,13 @@ function laneIncidentClosureWitnesses(
   reviews: readonly NegativeIncidentScope[],
   inputs: LaneIncidentClosureInputs,
 ): LaneClosureWitnesses | null {
-  if (control.controlKind !== "bridge" || control.scope !== "deployment") return null;
+  if (control.controlKind !== "bridge") return null;
+  if (control.scope !== "deployment" && control.scope !== "global") return null;
   const routeId = control.deploymentKey;
   const route = inputs.routes.get(routeId);
   if (route === undefined) return null;
+  // Global native/issuer facts still require this exact lane's three witnesses.
+  if (control.scope === "global" && route.routeClass !== "native" && route.rail !== "issuer-operated") return null;
   // Conflicting authorities must not select the issuer-only branch.
   if (route.rail === "issuer-operated" &&
       (route.providerKeys.length > 0 || route.routeClass === "third-party")) return null;
@@ -398,22 +447,31 @@ function laneIncidentClosureWitnesses(
   if (issuerReview === undefined) return null;
 
   const providerReviewIds = new Set<string>();
-  if (route.rail !== "issuer-operated") {
-    if (route.providerKeys.length === 0) return null;
-    for (const providerKey of route.providerKeys) {
-      if (inputs.unreadableProviders?.has(providerKey)) return null;
-      const providerReviews = current.filter((review) => review.scope.kind === "provider" &&
-        review.scope.providerKey === providerKey);
-      const covering = providerReviews.filter((review) => review.scope.kind === "provider" &&
-        review.scope.coveredRoutes.some((ref) => ref.assetId === assetId && ref.routeId === routeId));
-      if (covering.length === 0) return null;
-      const windowStartSec = Math.min(issuerReview.windowStartSec, ...covering.map((review) => review.windowStartSec));
-      // A disclosure remains relevant even if its review does not cover this lane
-      // or its exposure begins after the absence witnesses' review windows.
-      if (providerExposureBlocksLane(providerReviews, covering, assetId, routeId, windowStartSec, clockSec)) return null;
-      for (const review of covering) {
-        providerReviewIds.add(review.reviewId);
-      }
+  const issuerOperated = route.rail === "issuer-operated";
+  const globalIssuer = issuerOperated && control.scope === "global";
+  const providerKeys = globalIssuer ? laneContributorProviderKeys(control, inputs.contributorControls) : route.providerKeys;
+  if (providerKeys === null) {
+    inputs.incidentClosureFailures?.push({ deploymentRouteKey: routeId, code: "contributor-provider-identity-unresolved" });
+    return null;
+  }
+  if (!issuerOperated && providerKeys.length === 0) return null;
+  for (const providerKey of providerKeys) {
+    if (inputs.unreadableProviders?.has(providerKey)) return null;
+    const providerReviews = current.filter((review) => review.scope.kind === "provider" &&
+      review.scope.providerKey === providerKey);
+    if (globalIssuer && providerReviews.length === 0) {
+      inputs.incidentClosureFailures?.push({ deploymentRouteKey: routeId, providerKey, code: "provider-incident-review-unavailable" });
+      return null;
+    }
+    const covering = providerReviews.filter((review) => review.scope.kind === "provider" &&
+      review.scope.coveredRoutes.some((ref) => ref.assetId === assetId && ref.routeId === routeId));
+    if (!issuerOperated && covering.length === 0) return null;
+    const windowStartSec = Math.min(issuerReview.windowStartSec, ...covering.map((review) => review.windowStartSec));
+    // A disclosure remains relevant even if its review does not cover this lane
+    // or its exposure begins after the absence witnesses' review windows.
+    if (providerExposureBlocksLane(providerReviews, covering, assetId, routeId, windowStartSec, clockSec, globalIssuer)) return null;
+    for (const review of covering) {
+      providerReviewIds.add(review.reviewId);
     }
   }
   return {
@@ -427,6 +485,7 @@ function laneIncidentClosureWitnesses(
 export function getSafetyScoreV9NegativeIncidentReviews(
   assetId: string,
   clockSec: number,
+  referencedProviderKeys: readonly string[] = [],
 ): NegativeIncidentReviewRead {
   if (!Number.isFinite(clockSec) || clockSec < 0) {
     throw new Error("Safety Score v9 negative incident-review clock must be finite and non-negative");
@@ -435,7 +494,8 @@ export function getSafetyScoreV9NegativeIncidentReviews(
     review.retired === undefined && negativeIncidentReviewIsCurrent(review, clockSec));
   const reviews = new Map(local.map((review) => [review.reviewId, review]));
   const unreadableProviders = new Map<string, string[]>();
-  const providerKeys = new Set(local.flatMap((review) => review.scope.kind === "provider" ? [review.scope.providerKey] : []));
+  const providerKeys = new Set([...referencedProviderKeys,
+    ...local.flatMap((review) => review.scope.kind === "provider" ? [review.scope.providerKey] : [])]);
   for (const providerKey of providerKeys) {
     for (const providerAssetId of PROVIDER_REVIEW_ASSETS_BY_KEY.get(providerKey) ?? []) {
       if (providerAssetId === assetId) continue;

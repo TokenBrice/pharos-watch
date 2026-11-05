@@ -672,6 +672,7 @@ const BridgeRouteControlSchema = /* @__PURE__ */ (() => z
         message: "Expected a kebab-case bridge control id",
       }),
     routeRefs: z.array(DeploymentIdSchema).min(1),
+    providerKey: z.enum(BRIDGE_ROUTE_PROVIDER_KEY_VALUES).optional(),
     capabilities: z
       .array(z.enum(BRIDGE_ROUTE_CONTROL_CAPABILITY_VALUES))
       .min(1)

@@ -415,6 +415,88 @@ Manifest IDs must be unique/nonempty, grade/status transitions supported/coheren
 
 Use this mode only after the expected set is derived from reviewed behavior and before looking at the candidate output. Do not turn an unexpected flip into a declaration merely to make the gate green. Multi-grade releases keep the same capture identity, fixed-clock replay, two-capture sampling, and artifact-hygiene rules as the equivalence harness; replace the empty-diff assertion with the declared-movers gate for each capture.
 
+### Full local-registry mover comparison
+
+Use this for an intentional code-plus-curation release such as the v10.43
+global-native incident join. An ordinary accepted-capture replay uses its embedded
+registry and can silently omit newly authored route metadata from the comparison.
+The candidate must pass `--allow-registry-mismatch` to evaluate the complete local
+registry. Keep captured redemption and enrichment; do not pass
+`--rederive-current-redemption`, `--registry-ref` or a cohort filter.
+
+Run from the candidate checkout. `baseline_tree` must name an existing clean
+checkout of the exact production revision whose build/policy matches the capture;
+record both revisions and retain the uncommitted candidate diff if applicable.
+The plan command below reads production without computing/publishing scenarios.
+
+```sh
+baseline_tree=/absolute/path/to/reviewed-production-checkout
+candidate_tree="$PWD"
+date_stamp="$(date -u +%Y%m%d-%H%M)"
+release_dir="$candidate_tree/agents/v9-captures/v10.43-$date_stamp"
+mkdir -p "$release_dir"
+( set -a; . ./.env.local; set +a
+  node --import tsx worker/scripts/compute-dependency-scenarios.ts \
+    --mode plan --out-dir "$release_dir" )
+clock_sec="$(jq -r '.fixedInput.clockSec' "$release_dir/capture.json")"
+jq '.fixedInput | {sourceGeneration, baseInputGenerationId, clockSec}' \
+  "$release_dir/capture.json" > "$release_dir/capture-identity.json"
+( cd "$baseline_tree"
+  npm run safety-score-v9:replay -- \
+    --input "$release_dir/capture.json" --published-at "$clock_sec" \
+    --output "$release_dir/baseline.replay.json" )
+jq '{pipeline:{candidate:{cards:.cards}}}' "$release_dir/publication.json" \
+  > "$release_dir/accepted-cards.json"
+# Restore publication-time grade hysteresis with the exact baseline helper.
+( cd "$baseline_tree"
+  node --import tsx --input-type=module - \
+    "$release_dir/baseline.replay.json" "$release_dir/baseline-cards.json" <<'NODE'
+import { readFileSync, writeFileSync } from "node:fs";
+import { applySafetyScoreV9GradeHysteresis } from "./shared/lib/safety-score-v9/grade-hysteresis.ts";
+import { resolveV9PublicWitnessTexts } from "./shared/types/safety-score-v9-public-witness-texts.ts";
+const [inputPath, outputPath] = process.argv.slice(2);
+const replay = JSON.parse(readFileSync(inputPath, "utf8"));
+if (replay.sourceAdmissionBaseline === undefined) throw new Error("accepted-publication-replay-baseline-unavailable");
+const candidate = applySafetyScoreV9GradeHysteresis(replay.pipeline.candidate, replay.sourceAdmissionBaseline);
+writeFileSync(outputPath, JSON.stringify({ pipeline: { candidate: { cards: candidate.cards.map(resolveV9PublicWitnessTexts) } } }));
+NODE
+)
+npm run safety-score-v9:diff -- \
+  --baseline "$release_dir/accepted-cards.json" \
+  --candidate "$release_dir/baseline-cards.json" --assert-empty
+# Stop on a reproduction mismatch; verify build/policy/registry identity separately.
+# Before candidate replay, author the prospective reviewed expected-movers.json here.
+npm run safety-score-v9:replay -- \
+  --input "$release_dir/capture.json" --published-at "$clock_sec" \
+  --allow-registry-mismatch --output "$release_dir/candidate-local.replay.json"
+# Intentional drift makes this diff exit 1; retain and review its complete output.
+npm run safety-score-v9:diff -- \
+  --baseline "$release_dir/baseline.replay.json" \
+  --candidate "$release_dir/candidate-local.replay.json" \
+  > "$release_dir/full.diff.json"
+npm run safety-score-v9:movers -- \
+  --before "$release_dir/baseline.replay.json" \
+  --after "$release_dir/candidate-local.replay.json" \
+  --manifest "$release_dir/expected-movers.json" \
+  --json "$release_dir/movers.json" --markdown --assert-declared \
+  > "$release_dir/movers.md"
+```
+
+Inspect every mover, quarantine, appeared/disappeared card, declared-but-absent
+transition and same-grade score/pillar/cap change. Attribute code and curation
+separately; unknown drift stops release. For v10.43 the prospective new closure
+family is FRNT Arbitrum/Base/Optimism only while all same-lane witnesses remain
+current; FRNT Ethereum is already reviewed. yUSD Ethereum remains open because
+its current mint/redemption suspension prevents a negative issuer-surface review,
+even after its Chainlink CCIP key is sourced. Expected effect is closure of FRNT's
+three issuer-operated lanes, with no score change measured on current data
+([replay attribution](https://pharos.watch/methodology/scoring-changelog/#scoring-v10-43)).
+Downward score movement occurs only where the resolved status binds.
+Repeat the complete sequence on a second independent capture at least 90 minutes
+later, with a different `sourceGeneration`. Hold the release for owner review,
+scope-rule review and witness-removal probes; after approval, section (e)'s first
+accepted-cycle equivalence remains separate production acceptance.
+
 ## (d) Pre-activation sweep
 
 One capture proves the candidate stack reproduces one market state. It does not prove the change is neutral across the input variation the producer actually sees, so activation requires **two captures taken a few production cycles apart**.
