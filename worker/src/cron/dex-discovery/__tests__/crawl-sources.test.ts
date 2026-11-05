@@ -897,6 +897,7 @@ describe("crawlCoin DexScreener hardening", () => {
       },
     ]);
 
+    vi.mocked(recordOutcome).mockClear();
     const crawl = await crawlCoin(
       createMockDb(),
       "usdc-circle",
