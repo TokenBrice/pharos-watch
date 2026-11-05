@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { CEMETERY_ENTRIES } from "@shared/lib/cemetery-merged";
 import { FROZEN_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { PlacedProjectTapeResultSchema as TapeResult } from "@shared/types/placed-executor";
 import { projectTape } from "../project-tape";
 import { TAPE_PROJECTOR_JOBS } from "../../lib/tape-projectors/registry";
 import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "../../lib/tape-projectors/__tests__/test-support";
@@ -52,8 +53,9 @@ function baseTables(): MockTableConfig[] {
     { match: MATCH_SAFETY, rows: [] },
     { match: "FROM stability_index_samples", rows: [] },
     { match: "FROM stress_signals", rows: [] },
-    { match: "FROM mint_burn_events", rows: [] },
-    { match: "FROM mint_burn_flows", rows: [] },
+    ...["events", "flows", "scan_coverage", "admission", "publication_policy", "hourly"].map((table) => ({
+      match: `FROM mint_burn_${table}`, rows: [],
+    })),
     { match: "FROM yield_history", rows: [] },
     { match: "FROM yield_source_decisions", rows: [] },
   ];
@@ -101,41 +103,12 @@ describe("projectTape", () => {
       },
     });
     try {
-      const result = await projectTape(db);
-      expect(result).toMatchObject({ status: "degraded", itemCount: 1 });
+      const result = TapeResult.parse(await projectTape(db));
+      expect(result).toMatchObject({ status: "degraded", itemCount: 1,
+        productivity: { productive: false, reason: "tape-projector-failed" } });
       expect(assertCost(result)).toMatchObject({ queries: 4, bindingCalls: 3, batchCalls: 1 });
-      expect(JSON.parse(result.metadata!)).toMatchObject({ perClass: { "test.sql": 1, "test.failure": -1 } });
-    } finally {
-      jobs.splice(0, jobs.length, ...originalJobs);
-    }
-  });
-
-  it("returns degraded when a projector fails", async () => {
-    const jobs = TAPE_PROJECTOR_JOBS as unknown as Array<(typeof TAPE_PROJECTOR_JOBS)[number]>;
-    const originalJobs = [...jobs];
-    jobs.splice(
-      0,
-      jobs.length,
-      { name: "test.success", run: async () => ({ projected: 2, advanced: null }) },
-      {
-        name: "test.failure",
-        run: async () => {
-          throw new Error("projector failed");
-        },
-      },
-    );
-
-    try {
-      const result = await projectTape(mockTapeD1([]) as MockD1Database);
-
-      expect(result.status).toBe("degraded");
-      expect(result.itemCount).toBe(2);
-      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-        perClass: {
-          "test.success": 2,
-          "test.failure": -1,
-        },
-      });
+      expect(JSON.parse(result.metadata)).toMatchObject({ reason: "tape-projector-failed",
+        perClass: { "test.sql": 1, "test.failure": -1 } });
     } finally {
       jobs.splice(0, jobs.length, ...originalJobs);
     }
@@ -174,7 +147,13 @@ describe("projectTape", () => {
       ],
     });
 
-    await projectTape(db);
+    const result = TapeResult.parse(await projectTape(db));
+    expect(result).toMatchObject({ status: "ok",
+      productivity: { productive: true, reason: "tape-projection-current" } });
+    const historical = TapeResult.extend({
+      productivity: TapeResult.shape.productivity.unwrap().omit({ reason: true }).optional(),
+    });
+    expect(historical.safeParse(result).success).toBe(false);
     const inserts = tapeInsertBindsForType(db, "depeg.opened");
     expect(inserts).toHaveLength(2);
     // bind order: eventId, type, severity, ts, ends_at, coin_id, issuer_id, peg_currency, ...
@@ -519,9 +498,10 @@ describe("projectTape quiet publication", () => {
       let quietResult: CronResult | void | null = null;
       for (const offset of [HALF_HOUR, HALF_HOUR * 2, HALF_HOUR * 3]) {
         vi.setSystemTime((NOW + offset) * 1000);
-        quietResult = await logCronRun(db, "project-tape", () => projectTape(db));
+        quietResult = await logCronRun(db, "project-tape", async () => TapeResult.parse(await projectTape(db)));
       }
-      expect(quietResult).toMatchObject({ status: "ok", itemCount: 0 });
+      expect(quietResult).toMatchObject({ status: "ok", itemCount: 0,
+        productivity: { productive: true, reason: "tape-projection-current" } });
 
       const lastTick = NOW + HALF_HOUR * 3;
       await expect(getLatestSuccessfulCronTimestampResult(db, "project-tape"))
