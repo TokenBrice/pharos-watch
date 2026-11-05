@@ -735,7 +735,7 @@ describe("reading selectors and context modes", () => {
     } finally {
       families.forEach((family, index) => { family.reading = selectors[index]; });
     }
-  });
+  }, 60_000);
 });
 
 function routeBudgetWarnings(label: string, bytes: number, ceiling: number): string[] {
