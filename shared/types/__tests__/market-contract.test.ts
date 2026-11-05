@@ -16,6 +16,15 @@ import {
 
 import { makeStablecoin } from "../../test-utils/stablecoin";
 import { isObservedPrice } from "../../lib/pricing-source-policy";
+import { PegSummaryCoinSchema } from "../peg";
+
+describe("peg summary quote identity", () => {
+  it("preserves legacy quote absence", () => expect(PegSummaryCoinSchema.pick({ price: true }).parse({})).toEqual({}));
+  it.each([undefined, null, 0.99, 0, -1, NaN, Infinity])("admits only legacy absence, null or a finite positive price: %s", (price) => {
+    expect(PegSummaryCoinSchema.pick({ price: true }).safeParse({ price }).success)
+      .toBe(price == null || (Number.isFinite(price) && price > 0));
+  });
+});
 
 describe("chain partition provenance contract", () => {
   const provenance = {

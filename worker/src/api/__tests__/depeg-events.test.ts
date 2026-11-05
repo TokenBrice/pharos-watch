@@ -649,88 +649,56 @@ describe("handleDepegEvents", () => {
     expect(dataQuery?.binds).toContain(first.id);
   });
 
-  it.each([
-    { label: "trusted pool evidence", count: 2, tvl: 5_000_000, dexAvailable: true },
-    { label: "ticker-only price evidence", count: 1, tvl: 0, dexAvailable: false },
-    { label: "absent TVL evidence", count: 1, tvl: null, dexAvailable: false },
-    { label: "malformed TVL evidence", count: 1, tvl: "5000000", dexAvailable: false },
-  ])("derives pending confirmation categories from $label", async ({ count, tvl, dexAvailable }) => {
-    const nowSec = 1_800_000_000;
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(nowSec * 1000));
-
-    try {
-      const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "depeg_events", rows: [] }, {
-        match: "FROM depeg_pending",
-        rows: [
-          {
-            id: 10,
-            stablecoin_id: "usdt-tether",
-            symbol: "USDT",
-            peg_type: "peggedUSD",
-            direction: "below",
-            first_seen_bps: -180,
-            first_seen_at: nowSec - 600,
-            first_price: 0.982,
-            last_seen_bps: -240,
-            last_seen_at: nowSec - 120,
-            last_price: 0.976,
-            peak_seen_bps: -310,
-            peak_price: 0.969,
-            peg_reference: 1,
-            reason: "large-cap+low-confidence",
-            updated_at: nowSec - 120,
-          },
-        ],
-      },
-      {
-        match: "FROM dex_prices",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            source_pool_count: count,
-            source_total_tvl: tvl,
-            updated_at: nowSec - 60,
-          },
-        ],
-      },
-      {
-        match: "FROM dex_price_challenger_snapshots",
-        rows: [
-          {
-            stablecoin_id: "usdt-tether",
-            snapshot_at: nowSec - 60,
-            has_rows: 0,
-          },
-        ],
-      },]);
-
-      const res = await handleDepegEvents(
-        db,
-        new URL("https://x/api/depeg-events?includeTotal=false&includePending=true"),
-      );
-
-      const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
-      expect(body.pending).toEqual([
-        {
-          stablecoinId: "usdt-tether",
-          symbol: "USDT",
-          direction: "below",
-          firstSeenAt: nowSec - 600,
-          lastSeenAt: nowSec - 120,
-          firstSeenBps: -180,
-          lastSeenBps: -240,
-          peakSeenBps: -310,
-          reason: "large-cap+low-confidence",
-          ageSec: 600,
+  describe("aggregate original-clock availability", () => {
+    it.each([
+      ["trusted pool evidence", 2, 5_000_000, 60, true],
+      ["ticker-only price evidence", 1, 0, 60, false],
+      ["absent TVL evidence", 1, null, 60, false],
+      ["malformed TVL evidence", 1, "5000000", 60, false],
+      ["six-hour original", 2, 5_000_000, 21_600, false],
+      ["missing original", 2, 5_000_000, null, false],
+      ["original age boundary", 2, 5_000_000, 4500, false],
+      ["inside original budget", 2, 5_000_000, 4499, true],
+    ] as const)("derives pending confirmation categories from %s", async (_label, count, tvl, age, dexAvailable) => {
+      const nowSec = 1_800_000_000;
+      vi.useFakeTimers();
+      vi.setSystemTime(nowSec * 1000);
+      const db = mockD1([
+        { match: "pharos:depeg-event-projection:active-incidents", rows: [] },
+        { match: "depeg_events", rows: [] },
+        { match: "FROM depeg_pending", rows: [{
+          id: 10, stablecoin_id: "usdt-tether", symbol: "USDT", peg_type: "peggedUSD", direction: "below",
+          first_seen_bps: -180, first_seen_at: nowSec - 600, first_price: 0.982,
+          last_seen_bps: -240, last_seen_at: nowSec - 120, last_price: 0.976,
+          peak_seen_bps: -310, peak_price: 0.969, peg_reference: 1,
+          reason: "large-cap+low-confidence", updated_at: nowSec - 120,
+        }] },
+        { match: "FROM dex_prices", rows: [{
+          stablecoin_id: "usdt-tether", source_pool_count: count, source_total_tvl: tvl, updated_at: nowSec - 60,
+          price_sources_json: JSON.stringify({ aggregateObservedAt: age == null ? null : nowSec - age, sources: [] }),
+        }] },
+        { match: "FROM dex_price_challenger_snapshots", rows: [{
+          stablecoin_id: "usdt-tether", snapshot_at: nowSec - 60, has_rows: 0,
+        }] },
+      ]);
+      for (const filter of ["", "&stablecoin=usdt-tether"]) {
+        const res = await handleDepegEvents(db,
+          new URL(`https://x/api/depeg-events?includeTotal=false&includePending=true${filter}`));
+        const body = DepegEventsResponseSchema.parse(await readJsonResponse(res, 200));
+        expect(db.getHistory().find(({ sql }) => sql.includes("pharos:depeg-events:dex-availability"))).toMatchObject({
+          sql: expect.stringContaining("price_sources_json FROM dex_prices\n         WHERE stablecoin_id IN (SELECT value FROM json_each(?))"),
+          binds: [JSON.stringify(["usdt-tether"])],
+        });
+        expect(body.pending).toEqual([{
+          stablecoinId: "usdt-tether", symbol: "USDT", direction: "below",
+          firstSeenAt: nowSec - 600, lastSeenAt: nowSec - 120, firstSeenBps: -180, lastSeenBps: -240,
+          peakSeenBps: -310, reason: "large-cap+low-confidence", ageSec: 600,
           expiresAt: nowSec - 600 + (45 * 60),
           availableConfirmationCategories: dexAvailable ? ["offchain", "dex"] : ["offchain"],
           missingConfirmationCategories: dexAvailable ? ["pool"] : ["dex", "pool"],
-        },
-      ]);
-    } finally {
-      vi.useRealTimers();
-    }
+        }]);
+      }
+    });
   });
 
   it("reports pending pool availability from accepted v2 membership, retaining v1 only before a head exists", async () => {

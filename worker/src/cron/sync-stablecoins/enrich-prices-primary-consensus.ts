@@ -4,7 +4,7 @@ import {
   buildPriceValidationContext,
   type PriceValidationReferences,
 } from "../../lib/price-validation";
-import { isTrustedDexPriceRow } from "../../lib/depeg-trust-policy";
+import { getDexAggregateRejectionReason } from "../../lib/depeg-trust-policy";
 import { computePriceConsensus, type SourcePrice } from "../../lib/price-consensus";
 import { DIVERGENCE_THRESHOLD_BPS } from "@shared/lib/pricing-pipeline-constants";
 import { isHardPricingTrustTier, isListAggregatorOnlyPair } from "@shared/lib/pricing-source-policy";
@@ -33,7 +33,14 @@ function isPrimaryPublicationDexAggregateEligible(
   nowSec: number,
 ): boolean {
   const trustTier = assetId === VUSD_PRIMARY_DEX_AGGREGATE_ID ? "ui" : "depeg";
-  return isTrustedDexPriceRow(row, nowSec, trustTier);
+  const reason = getDexAggregateRejectionReason(row, nowSec, trustTier);
+  if (reason != null) logWorkerEventArgs("handler", "info",
+    `[primary-prices] dex-aggregate-filter ${JSON.stringify({
+      stablecoinId: assetId, reason, tier: trustTier, updatedAt: row.updated_at,
+      aggregateObservedAt: row.aggregateObservedAt ?? null, sourceTotalTvl: row.source_total_tvl,
+    })}`,
+  );
+  return reason == null;
 }
 
 export function buildPrimaryConsensusResults(params: {
@@ -125,7 +132,7 @@ export function buildPrimaryConsensusResults(params: {
     if (
       eligibleDexAggregate &&
       (sourceBuild.sources.length === 0 ||
-        isDexLegWithinCoLegBudget(eligibleDexAggregate.updated_at, sourceBuild.sources, params.nowSec))
+        isDexLegWithinCoLegBudget(eligibleDexAggregate.aggregateObservedAt!, sourceBuild.sources, params.nowSec))
     ) {
       collectedQuotes.dexAggregateQuote = eligibleDexAggregate;
       sourceBuild = buildPrimarySourceCandidates(asset, collectedQuotes, sourceBuildOptions);

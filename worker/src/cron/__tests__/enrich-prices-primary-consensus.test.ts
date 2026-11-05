@@ -226,6 +226,11 @@ describe("fetchPrimaryPrices", () => {
             updated_at: testCase.updatedAt,
           },
         ],
+        poolSources: [{
+          stablecoin_id: testCase.asset.id,
+          updated_at: testCase.updatedAt,
+          price_sources_json: JSON.stringify([{ aggregateObservedAt: testCase.updatedAt }]),
+        }],
       });
 
       const { results } = await fetchPrimaryPrices([testCase.asset], db);

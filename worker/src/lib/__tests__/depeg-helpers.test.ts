@@ -230,6 +230,20 @@ describe("original DEX source observation admission", () => {
       ageSec: 35 * 60 + 1, maxAgeSec: 35 * 60 }]);
     expect(collectDexProtocolCorroborations(loaded.dexPriceSources.get("usdt-tether"), 1, 100, "below", mode)).toHaveLength(2);
     expect(loaded.dexPriceRows.get("usdt-tether")?.updated_at).toBe(observedAt - 1);
+    expect(loaded.dexPriceRows.get("usdt-tether")?.aggregateObservedAt).toBe(aggregateObservedAt);
+  });
+  it.each([60, 21_600, null])("retains aggregate clock %s without surviving protocol lanes", async (age) => {
+    const now = 1_700_000_000;
+    const clock = age == null ? null : now - age;
+    const db = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [{
+      stablecoin_id: "usdt-tether", updated_at: now, dex_price_usd: 1,
+      price_sources_json: JSON.stringify([0, 1].map((i) => ({
+        observedAt: now - 21_600, aggregateObservedAt: clock == null ? undefined : clock + i,
+      }))),
+    }] }) }) });
+    const loaded = await loadDexPrices(db, now);
+    expect(loaded.dexPriceRows.get("usdt-tether")?.aggregateObservedAt).toBe(clock);
+    expect(loaded.dexPriceSources.size).toBe(0);
   });
 });
 

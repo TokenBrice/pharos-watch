@@ -287,7 +287,9 @@ export async function computeDexPrices({
           Math.round(totalTvl),
           deviationBps,
           primaryPrice,
-          JSON.stringify(protocolSources),
+          JSON.stringify(protocolSources.length === 0 && aggregateObservedAt != null
+            ? { aggregateObservedAt, sources: [] }
+            : protocolSources),
           nowSec,
           generationId,
         ),
