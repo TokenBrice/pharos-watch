@@ -451,7 +451,9 @@ export function computeDexLiquidityDriftSummary(params: {
       const flag = `${SOURCE_FAMILY_DROP_FLAG_PREFIX}${family}`;
       const previousCandidate = previousCandidatesByFlag.get(flag);
       let evidence = previousCandidate?.sourceFamilyTvlEvidence;
-      if (previousCandidate) {
+      // Reviewed dispositions accept only legacy candidates opened before TVL evidence existed;
+      // a candidate admitted with evidence is a new loss even when its pool baseline repeats.
+      if (previousCandidate && evidence === undefined) {
         const disposition = REVIEWED_SOURCE_FAMILY_DISPOSITIONS.find(
           (entry) => entry.flag === flag && entry.baselineValue === previousCandidate.baselineValue,
         );

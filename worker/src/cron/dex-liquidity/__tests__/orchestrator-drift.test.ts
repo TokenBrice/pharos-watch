@@ -409,12 +409,13 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
   });
 
   it.each([
-    ["dexscreener", 338, true], ["gecko_terminal", 23, true],
-    ["dexscreener", 339, false], ["gecko_terminal", 338, false],
-  ] as const)("accepts only reviewed legacy %s baseline %s", (family, baselineValue, accepted) => {
+    ["dexscreener", 338, true, false], ["gecko_terminal", 23, true, false],
+    ["dexscreener", 339, false, false], ["gecko_terminal", 338, false, false], ["dexscreener", 338, false, true],
+  ] as const)("accepts only reviewed legacy %s baseline %s", (family, baselineValue, accepted, withEvidence) => {
     const flag = `source-family-drop:${family}`;
+    const sourceFamilyTvlEvidence = { explanation: "evaluated", baselineTvlUsd: 9e6, currentTvlUsd: 0, unexplainedLossUsd: 9e6 } as const;
     const summary = drift({
-      previousCandidates: [{ flag, baselineValue, observedValue: 0, consecutiveRuns: 7 }],
+      previousCandidates: [{ flag, baselineValue, observedValue: 0, consecutiveRuns: 7, ...(withEvidence ? { sourceFamilyTvlEvidence } : {}) }],
       currentSourceFamilyPools: {}, previousSourceMixById: new Map(),
     });
     expect(summary.cohortDriftFlags).toEqual(accepted ? [] : [flag]);
