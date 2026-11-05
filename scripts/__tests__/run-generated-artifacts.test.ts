@@ -1,13 +1,16 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readdirSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import {
   buildGeneratedArtifactExecutionUnits,
   runGeneratedArtifacts,
 } from "../maintenance/run-generated-artifacts";
 import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
+import pkg from "../../package.json";
+import { withTempRepo } from "./helpers/test-state";
+import * as v9 from "../maintenance/generate-safety-score-v9-evaluation-build-manifest";
+import * as shock from "../maintenance/generate-safety-score-v9-shock-coverage-registry";
 
 describe("PR dataset integrity runner", () => {
   it.each([[[]], [["--bootstrap"]]])("rejects generation %s before children", async (args) => {
@@ -48,15 +51,12 @@ const run = (argv: string[], runCommandImpl: (command: string) => Promise<number
 
 describe("generated-artifact runner lifecycle selection", () => {
   const refreshArgv = ["--build-lifecycle=post-refresh"];
-  const upstreamScript = "generate-stablecoin-per-coin-asset";
   const ids = ["stablecoin-catalog", "depeg-event-search-data", "report-card-registry-fingerprint", "stablecoin-detail-snapshots", "llms-txt"];
-  const downstream = ids.slice(2).map((id) => `${id.startsWith("stablecoin-") ? "build" : "generate"}-${id}`);
   const rejectsDownstream = (calls: [string, ...unknown[]][]) => {
-    for (const script of downstream) expect(calls.some(([cmd]) => cmd.includes(script))).toBe(false);
+    for (const script of ids.slice(2)) expect(calls.some(([cmd]) => cmd.includes(script))).toBe(false);
   };
   it.each(["runbook-index,sitemap-dates"])("rejects CLI request %s without filesystem writes", (ids) => {
-    const cwd = mkdtempSync(join(tmpdir(), "pharos-uncheckable-"));
-    try {
+    withTempRepo("uncheckable", {}, (cwd) => {
       const result = spawnSync(process.execPath, [
         "--import", resolve("node_modules/tsx/dist/loader.mjs"),
         resolve("scripts/maintenance/run-generated-artifacts.ts"),
@@ -65,9 +65,7 @@ describe("generated-artifact runner lifecycle selection", () => {
       expect(result.status).toBe(2);
       expect(result.stderr).toContain("bootstrap:generated:history");
       expect(readdirSync(cwd)).toEqual([]);
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
+    });
   });
 
   it.each(["sitemap-dates", "runbook-index,sitemap-dates"])("rejects explicit uncheckable selection %s before any child executes", async (ids) => {
@@ -90,7 +88,7 @@ describe("generated-artifact runner lifecycle selection", () => {
     const upstream = Promise.withResolvers<number>();
     const entered = Promise.withResolvers<void>();
     const child = vi.fn(async (command: string) => {
-      if (command.includes(upstreamScript)) {
+      if (command.includes("per-coin-asset")) {
         entered.resolve();
         return upstream.promise;
       }
@@ -109,29 +107,52 @@ describe("generated-artifact runner lifecycle selection", () => {
     ["stops later phases after an upstream failure", false],
     ["retains the failure and propagates transitive taint without tainting independent artifacts", true],
   ] as const)("%s", async (_name, continued) => {
-    const child = vi.fn(async (command: string) => command.includes(upstreamScript) ? 7 : 0);
+    const child = vi.fn(async (command: string) => command.includes("per-coin-asset") ? 7 : 0);
     const result = await run([...refreshArgv, ...(continued ? ["--continue-on-error"] : [])], child);
     expect(result.status).toBe(7);
     if (!continued) rejectsDownstream(child.mock.calls);
     else {
       expect(result.results.map(({ id, statusLabel, taintedBy }) => [id, statusLabel, taintedBy]))
-        .toEqual(ids.map((id, i) => [id, i === 0 ? "failed" : i === 1 ? "passed" : "tainted", i > 1 ? [ids[0]] : []]));
+        .toEqual(ids.map((id, i) => [id, ["failed", "passed"][i] ?? "tainted", i > 1 ? [ids[0]] : []]));
       expect(result.failures.map(({ status }) => status)).toEqual([7]);
     }
   });
 });
 
 describe("evaluation manifest scheduling", () => {
-  const only = "--only=safety-score-v9-evaluation-build";
+  const id = "safety-score-v9-evaluation-build", only = `--only=${id}`;
   it.each([["", 0, 7], ["--check", 0, 7], ["--dry-run", 0, 0], ["--check", 1, 6]] as const)(
     "forwards mode %s with prerequisite status %s", async (mode, failure, count) => {
+      expect(pkg.scripts[`generate:${id}`]).toBe(`node --import tsx scripts/maintenance/run-generated-artifacts.ts ${only}`);
       const child = vi.fn(async (cmd: string) => {
         if (mode === "--check") expect(cmd).toMatch(/ --check$/);
         return cmd.includes("lane-emitter-descriptors") ? failure : 0;
       });
       expect((await run([only, ...(mode ? [mode] : [])], child)).status).toBe(failure);
       expect(child).toHaveBeenCalledTimes(count);
+      if (!failure && count) expect(child.mock.lastCall?.[0]).toBe(`tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts${mode ? ` ${mode}` : ""}`);
       if (failure) expect(child.mock.calls.some(([cmd]) => cmd.includes("evaluation-build-manifest"))).toBe(false);
     },
   );
+  it.each(["missing", "stale", "current"])("converges; %s check preserves bytes", (state) => {
+    const source = shock.collectShockCoverageCaptureSources()[0]!,
+      files = Object.fromEntries(v9.V9_EVALUATION_BUILD_SOURCE_PATHS.map((p) => [p, "{}"]));
+    files[relative(process.cwd(), source.summaryPath)] = JSON.stringify(source.summary);
+    withTempRepo("v9", files, (root) => {
+      const paths = [shock.SHOCK_COVERAGE_REGISTRY_PATH, "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts"].map((p) => join(root, p)),
+        bytes = () => paths.map((p) => existsSync(p) ? readFileSync(p) : null),
+        generate = (args: string[]) => { shock.runShockCoverageMeasurementRegistryGenerator(args, root); v9.runV9EvaluationBuildManifestGenerator(args, root); };
+      generate([]);
+      let before = bytes();
+      generate([]);
+      expect(bytes()).toEqual(before);
+      if (state === "missing") rmSync(paths[0]);
+      if (state === "stale") writeFileSync(paths[0], "{}");
+      before = bytes();
+      using _exit = vi.spyOn(process, "exit").mockImplementation((code) => { throw new Error(`exit ${code}`); });
+      if (state === "current") expect(() => generate(["--check"])).not.toThrow();
+      else expect(() => generate(["--check"])).toThrow("exit 1");
+      expect(bytes()).toEqual(before);
+    });
+  });
 });
