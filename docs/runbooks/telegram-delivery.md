@@ -33,13 +33,14 @@ Compare at least two five-minute runs. Per-run counters come from the Access-pro
 
 ## Remediation
 
-- **No raw clear, replay or TTL extension.** Do not delete, re-insert or re-time rows. `sending` and `unknown` rows are never returned to the queue. A replay would need a separately reviewed, audited control.
+- **No raw clear, replay or TTL extension.** Do not delete, re-insert or re-time `telegram_jobs` or `telegram_deliveries` rows. `sending` and `unknown` rows are never returned to the queue. A replay would need a separately reviewed, audited control.
 - **Protect risk work.** Stop admin broadcasts during 429 pressure or expiry risk. Broadcast rows have priority 90, behind every risk family.
 - **User-side fixes.** A blocked user unblocks the bot and re-subscribes; `/start` alone does not restore follows that auto-disable cleared. Snooze and quiet hours are user choices (`/pause off`, settings).
 - **Registration drift.** Inspect `budgetOnlySurfaces` for `telegram-registration-reconciliation`. Force `npx tsx scripts/maintenance/register-telegram.ts --action webhook` only when automatic repair cannot wait.
 - **Emergency stop.** There is no operator pause. Use a Worker rollback.
 - **Preserve operator evidence.** Retain turnover pending payloads, acknowledgement state, delivery-risk notification history and receipts during rollback.
 - **Paired rollout.** Deploy public and heavy Workers together; verify `TELEGRAM_BOT_TOKEN` and `TELEGRAM_OPERATOR_CHAT_ID` on both. Observe the first relevant watchdog execution, [genuine receipts](./cron-delivery-stall.md#evidence-and-prerequisite), an admitted turnover evaluation, stable pending age, acknowledgement clearing and steady silence. If no natural event occurs, record transport acceptance as unexercised.
+- **Invalid watchdog state.** Repeated malformed-JSON/schema errors require inspecting and retaining the exact `cache` value and `updated_at` for the affected key: `telegram:degradation:notifications:v1` for delivery notifications; `dex-exit-route-turnover-watchdog:snapshot:v1` or `dex-exit-route-turnover-watchdog:alert:v1` for turnover. First verify that the deployed Worker supports the stored schema: a valid newer payload rejected after rollback needs compatible code, not deletion. For confirmed malformed state, an operator authorized to mutate D1 may delete only that specific state key, matching the inspected value and `updated_at` to avoid deleting a concurrent repair. The next scheduled evaluation re-baselines it. This resets alert memory and can lose undelivered history or repeat a notice. Do not apply this reset to valid pending history. Confirm the invalid-state error stops and the producer receipt advances. Never clear subscriber delivery rows, receipts, or the global send-backoff key as part of this repair.
 
 ## Backlog and Expiration
 
@@ -52,6 +53,8 @@ Compare at least two five-minute runs. Per-run counters come from the Access-pro
 | `deliveryV2.sweepExpired > 0` | Rows passed `expires_at` and were marked `expired`; check why the drain did not reach them (deadline, circuit, global backoff). |
 
 A run claims pages of 100 rows until the four-minute soft deadline (`drainStoppedReason: "deadline"`), sending to four distinct chats at a time.
+
+A recovery notice held only by the operator cooldown remains visible in `alertTransitions`, but does not degrade an otherwise successful evaluation. Top-level cron reasons retain detector evidence; delivery failures or missing credentials degrade only when required operator delivery cannot complete.
 
 ## Rate-Limit Storm
 

@@ -155,8 +155,8 @@ async function useRealCache() {
   mockDeleteCache.mockImplementation(cache.deleteCache);
 }
 
-async function evaluate(db: D1Database) {
-  const result = await runTelegramDegradationWatchdog(db);
+async function evaluate(db: D1Database, options?: Parameters<typeof runTelegramDegradationWatchdog>[2]) {
+  const result = await runTelegramDegradationWatchdog(db, undefined, options);
   return { result, meta: JSON.parse(result.metadata ?? "{}") };
 }
 
@@ -238,9 +238,10 @@ describe("runTelegramDegradationWatchdog · pending backlog", () => {
     expect(meta.pendingBacklog).toMatchObject({ triggered: true, ...fields });
     expect(meta.pendingBacklog.detail).toContain(detail);
     expect(result.status).toBe("degraded");
-    expect(meta.reason).toBe("operator-alert-credentials-missing");
+    expect(meta.reason).toBe("pending-backlog-threshold");
+    expect(meta.alertTransitions.reason).toBe("operator-alert-credentials-missing");
     expect(recordOperatorAlertReceipt).toHaveBeenLastCalledWith(expect.anything(), "telegramDelivery",
-      expect.objectContaining({ operatorConfigured: false, pending: true, delivered: false, reason: meta.reason }), undefined);
+      expect.objectContaining({ operatorConfigured: false, pending: true, delivered: false, reason: "operator-alert-credentials-missing" }), undefined);
   });
 
   it("triggers near-TTL escalation after onset, including one created this run", async () => {
@@ -278,8 +279,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     });
     seedOnset(store, WATCHDOG_KEYS.safetySourceSince, nowSec - 8000);
     const db = makeDb();
-    const first = await runTelegramDegradationWatchdog(db, undefined, { operatorTelegramCreds });
-    const meta = JSON.parse(first.metadata!);
+    const { meta } = await evaluate(db, { operatorTelegramCreds });
     expect(meta.safetySource).toMatchObject({
       triggered: true, heldSinceSec: nowSec - 7200, holdAgeSec: 7200, holdReasonCodes: codes,
     });
@@ -287,8 +287,8 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
       `state=corrupt, sustainedSec=8000, heldSinceSec=${nowSec - 7200}, holdAgeSec=7200, holdReasonCodes=${codes.join("|")}`,
     );
     mockSetCache.mockClear();
-    const second = await runTelegramDegradationWatchdog(db, undefined, { operatorTelegramCreds });
-    expect(JSON.parse(second.metadata!).safetySource).toMatchObject({ triggered: true, detail: meta.safetySource.detail });
+    const { meta: second } = await evaluate(db, { operatorTelegramCreds });
+    expect(second.safetySource).toMatchObject({ triggered: true, detail: meta.safetySource.detail });
     expect(store.values.get(WATCHDOG_KEYS.safetySourceSince)?.value).toBe(String(nowSec - 8000));
     expect(mockSetCache.mock.calls.some(([, key]) => key === WATCHDOG_KEYS.safetySourceSince)).toBe(false);
     expect(deliverOperatorAlert).not.toHaveBeenCalled();
@@ -301,10 +301,10 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     const envelope = buildAlertSafetyV9SourceEnvelopeFromParts({
       cards: response.cards, safetyScoreIdentity: response.safetyScoreIdentity, publishedAt: response.updatedAt,
     });
-    const result = await runTelegramDegradationWatchdog(makeDb(), undefined, {
+    const { meta } = await evaluate(makeDb(), {
       safetySourceAssessment: assessAlertSafetyEnvelope(envelope, nowSec),
     });
-    expect(JSON.parse(result.metadata ?? "{}").safetySource).toMatchObject({
+    expect(meta.safetySource).toMatchObject({
       state: "corrupt", failureReason: "v9-snapshot-future", ageSeconds: null,
       triggered: false, detail: "state=corrupt (newly tripped)",
     });
@@ -366,8 +366,7 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
     };
     if (phase !== "newly-tripped") seedOnset(store, WATCHDOG_KEYS.safetySourceSince, nowSec - 8_000);
     if (phase === "pending-masked") seedOnset(store, WATCHDOG_KEYS.pendingSince, nowSec - 8_000);
-    const result = await runTelegramDegradationWatchdog(makeDb({ pendingCount: phase === "pending-masked" ? PENDING_BACKLOG_THRESHOLD + 1 : 0 }), undefined, { safetySourceAssessment: assessment });
-    const meta = JSON.parse(result.metadata ?? "{}");
+    const { result, meta } = await evaluate(makeDb({ pendingCount: phase === "pending-masked" ? PENDING_BACKLOG_THRESHOLD + 1 : 0 }), { safetySourceAssessment: assessment });
     expect(meta.safetySource).toMatchObject({
       state: assessment.state, ageSeconds: 1_200, generation: assessment.generation,
       sourcePublicationGenerationId: "source-generation", acceptedPublicationGenerationId: "accepted-generation",
@@ -620,8 +619,9 @@ describe("delivery notifications", () => {
     }
     expect(state().acknowledged).toEqual(initial.acknowledged);
     capacity = { capacityError: true };
-    await run();
+    const unknown = await run();
     expect(state().pending).toEqual(history);
+    expect(JSON.parse(unknown.metadata!).reason).toBe("pending-backlog-unavailable");
     capacity = { pendingCount: 700 };
     await run();
     vi.advanceTimersByTime(PENDING_BACKLOG_SUSTAINED_SEC * 1000);
@@ -703,8 +703,11 @@ describe("delivery notifications", () => {
     await run({ pendingCount: 600 });
     expect(cached()).toEqual(nearTtlRecovery);
     vi.advanceTimersByTime(60_000);
-    const cooldown = await run({});
-    expect(JSON.parse(cooldown.metadata!).alertTransitions).toMatchObject({ sent: false, cooldown: true, pending: 2 });
+    const cooldown = await run({ dispatchRunId: 2, dispatchMetadata: dispatchWork({}, 1) });
+    const meta = JSON.parse(cooldown.metadata!);
+    expect(cooldown.status).toBe("ok");
+    expect(meta.reason).toBe("watchdog-completed");
+    expect(meta.alertTransitions).toMatchObject({ sent: false, cooldown: true, pending: 3 });
     expect(store.values.has(WATCHDOG_KEYS.pendingSince)).toBe(false);
     expect(JSON.parse(cached().value).pending[1])
       .toMatchObject({ condition: "backlog", active: false, observedAt: Math.floor(Date.now() / 1000) });

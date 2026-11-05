@@ -226,6 +226,7 @@ async function notifyDeliveryTransitions(
     : !creds ? "operator-alert-credentials-missing"
       : cooldown ? "operator-alert-cooldown" : "operator-alert-pending";
   let sent = false;
+  let deliveryFailed = false;
   const receipt = () => recordOperatorAlertReceipt(db, "telegramDelivery", {
     nowSec, operatorConfigured: creds != null, pending: state.pending.length > 0, delivered: sent, reason,
   }, signal);
@@ -244,6 +245,7 @@ async function notifyDeliveryTransitions(
     } catch {
       throwIfAborted(signal);
     }
+    deliveryFailed = !sent;
     if (sent) {
       for (const transition of transitions) {
         state.acknowledged = state.acknowledged.filter((condition) => condition !== transition.condition);
@@ -260,7 +262,7 @@ async function notifyDeliveryTransitions(
   return {
     raised: transitions.filter((transition) => transition.latest.active).map((transition) => transition.condition),
     recovered: transitions.filter((transition) => !transition.latest.active).map((transition) => transition.condition),
-    sent, cooldown, pending: state.pending.length, reason,
+    sent, cooldown, deliveryFailed, pending: state.pending.length, reason,
   };
 }
 
@@ -661,11 +663,13 @@ export async function runTelegramDegradationWatchdog(
   const zeroSend = await evaluateZeroSendStreak(db);
 
   const result: WatchdogResult = { pendingBacklog, safetySource, zeroSend };
+  const creds = options.operatorTelegramCreds ?? null;
   const alertTransitions = await notifyDeliveryTransitions(
-    db, notificationState, result, nowSec, options.operatorTelegramCreds ?? null, signal,
+    db, notificationState, result, nowSec, creds, signal,
   );
+  const operatorAlertDegraded = alertTransitions.deliveryFailed || (alertTransitions.pending > 0 && creds == null);
   const degraded =
-    alertTransitions.pending > 0 ||
+    operatorAlertDegraded ||
     pendingBacklog.availability === "unknown" ||
     zeroSend.availability === "unknown" ||
     pendingBacklog.triggered ||
@@ -677,12 +681,13 @@ export async function runTelegramDegradationWatchdog(
     metadata: {
       ...result,
       alertTransitions,
-      reason: alertTransitions.pending > 0 && alertTransitions.reason !== null ? alertTransitions.reason
-        : pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
-          : pendingBacklog.triggered ? "pending-backlog-threshold"
-            : safetySource.triggered ? "safety-source-unavailable"
-              : zeroSend.availability === "unknown" ? "dispatch-evidence-unavailable"
-                : zeroSend.triggered ? "zero-send-streak" : "watchdog-completed",
+      reason: pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
+        : pendingBacklog.triggered ? "pending-backlog-threshold"
+          : safetySource.triggered ? "safety-source-unavailable"
+            : zeroSend.availability === "unknown" ? "dispatch-evidence-unavailable"
+              : zeroSend.triggered ? "zero-send-streak"
+                : alertTransitions.deliveryFailed ? "operator-alert-delivery-failed"
+                  : operatorAlertDegraded ? "operator-alert-credentials-missing" : "watchdog-completed",
     },
   });
 }
