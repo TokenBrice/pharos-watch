@@ -43,7 +43,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 ## Verify and ship
 
 - Focused checks are authoring feedback, never readiness proof (`docs/testing.md#smallest-adequate-check-per-area`); an unmapped production path's zero-plan is a routing failure.
-- Run `npm run check:pr` for focused authoring feedback before pushing; hosted CI is the readiness authority ([Pre-push readiness](docs/testing.md#pre-push-readiness)). Local receipts are optional diagnostics, not a push prerequisite.
+- Use focused authoring checks before pushing; `npm run check:pr` is optional broader feedback ([Pre-push readiness](docs/testing.md#pre-push-readiness)). Hosted CI owns readiness; local receipts are optional diagnostics.
 - CI failures: collect every failed leaf, fix all causal defects in one revision, rerun focused checks, then push once ([workflow incidents](docs/runbooks/workflow-incidents.md)). `check:release` is only an explicit production rehearsal; GitHub Actions owns the release gate.
 - Commit thematically with a descriptive subject and a why-focused body. There are no Git hooks: regenerate affected artifacts explicitly (`npm run check:generated-artifacts` names stale ones) and commit them with their source; hosted CI enforces freshness (`docs/scripts.md#operational-notes`).
 - Do not create a branch, worktree, or PR unless asked. A request to push/publish/release authorizes the protected-main PR path; never push `main` directly. Merge release PRs with `gh pr merge --merge`; never squash or rebase them.
@@ -51,7 +51,7 @@ Static Next.js 16 export on Cloudflare Pages; API on a Cloudflare Worker + D1. L
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 

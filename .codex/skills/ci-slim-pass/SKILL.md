@@ -32,7 +32,7 @@ Select baseline refresh only, backlog production (phases 1–4), backlog applica
 
 ## Checks Owned By The Verifier
 
-Authoring feedback is not readiness. Run every touched suite (`npx vitest run …`), `npm run check:critical-coverage-completeness`, `npm run check:unused-code`, the typechecks the touched packages need, `npx eslint <changed files>`, `git diff --check`, plus `npm run check:doc-sync` and `npm run check:agent-skills` when docs or this skill changed; use `npm run check:pr` for focused feedback under [Pre-push readiness](../../../docs/testing.md#pre-push-readiness). Hosted CI is the readiness authority. Fail closed: select or run more, never less, and reject any deletion that loses the last PR-tier coverage of a protected class even when it is faster.
+Authoring feedback is not readiness. Run every touched suite (`npx vitest run …`), `npm run check:critical-coverage-completeness`, `npm run check:unused-code`, the typechecks the touched packages need, `npx eslint <changed files>`, `git diff --check`, plus `npm run check:doc-sync` and `npm run check:agent-skills` when docs or this skill changed; use focused authoring checks under [Pre-push readiness](../../../docs/testing.md#pre-push-readiness), with `npm run check:pr` as optional broader feedback. Hosted CI owns readiness; local receipts are optional diagnostics. Fail closed: select or run more, never less, and reject any deletion that loses the last PR-tier coverage of a protected class even when it is faster.
 
 ## Completion Evidence
 
