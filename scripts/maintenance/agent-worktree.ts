@@ -4,7 +4,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { parseStrictCliArgs, requireCliString, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
 import { assertPinnedRuntime } from "../lib/runtime-guard.mts";
 
-const USAGE = "agent:worktree --path P --base REF [--apply]\nPreview is read-only. Apply using the printed SHA to reproduce a preview. No fetch or credential copying.";
+const USAGE = "agent:worktree --path P --base REF [--apply]\nPreview is read-only. Apply using the printed SHA to reproduce a preview. No fetch or credential-file copying. Runtime/install children inherit only allowlisted runtime, home, temporary-directory and locale variables; lifecycle code retains filesystem access.";
 const PREPARE = "node --import tsx scripts/maintenance/prepare-workspace.ts";
 
 interface WorktreeArgs {
@@ -163,12 +163,14 @@ export function runAgentWorktree(argv = process.argv.slice(2), options: Worktree
 
     stage = "verify checkout";
     verify();
-    const installEnv = { ...(options.env ?? process.env) };
-    for (const name of ["CI", "GITHUB_ACTIONS", "PHAROS_PREPARE_BOOTSTRAP"]) delete installEnv[name];
-    // npm run can carry the caller's prefix/workspace selection into a new checkout.
-    for (const name of Object.keys(installEnv)) {
-      if (/^npm_config_(prefix|local_prefix|global|location|workspace|workspaces)$/i.test(name)) delete installEnv[name];
-    }
+    // Lifecycle code must not inherit provider secrets or donor npm configuration.
+    const parentEnv = options.env ?? process.env;
+    // Next's required NODE_ENV type does not apply to an allowlisted child.
+    const installEnv = Object.fromEntries([
+      "PATH", "HOME", "USERPROFILE", "SystemRoot", "PATHEXT", "COMSPEC", "TMPDIR", "TMP", "TEMP",
+      "LANG", "LANGUAGE", "LC_ALL", "LC_CTYPE", "TZ", "NVM_DIR", "NVM_BIN", "NVM_INC",
+      "MISE_DATA_DIR", "MISE_CONFIG_DIR", "MISE_CACHE_DIR", "XDG_DATA_HOME", "XDG_CONFIG_HOME", "XDG_CACHE_HOME",
+    ].filter(name => parentEnv[name] !== undefined).map(name => [name, parentEnv[name]])) as NodeJS.ProcessEnv;
     stage = "runtime";
     assertPinnedRuntime({
       node: run(stage, "node", ["--version"], destination, installEnv),

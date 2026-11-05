@@ -72,7 +72,7 @@ function execute(command: Command, input?: Buffer, allowed = [0]): Buffer {
     cwd: command.cwd, env: environment(), input, maxBuffer: 128 * 1024 * 1024,
   });
   if (result.error || result.signal || !allowed.includes(result.status ?? -1) ||
-    (result.status === 1 && (!result.stdout?.length || result.stderr?.length))) {
+    (result.status === 1 && (result.stderr?.length || (command.args.includes("--no-index") && !result.stdout?.length)))) {
     throw new Error(`${command.stage}: ${command.executable} failed (status ${result.status}, signal ${result.signal ?? "none"})` +
       `\n${result.error?.message ?? ""}${result.stdout?.toString() ?? ""}${result.stderr?.toString() ?? ""}`);
   }
@@ -165,7 +165,9 @@ function identity(path: string) {
   if (realpathSync(git(root, ["rev-parse", "--show-toplevel"]).toString().trim()) !== root) {
     throw new Error(`Expected checkout root: ${path}`);
   }
+  const symbolicRef = git(root, ["symbolic-ref", "--short", "-q", "HEAD"], undefined, [0, 1]).toString().trim() || null;
   return { root, commonDir: realpathSync(git(root, ["rev-parse", "--path-format=absolute", "--git-common-dir"]).toString().trim()),
+    symbolicRef, detached: symbolicRef === null,
     head: git(root, ["rev-parse", "--verify", "HEAD^{commit}"]).toString().trim() };
 }
 
@@ -363,9 +365,10 @@ function outputInventory(root: string, outputs: string[]) {
   return sorted([...files]).map(path => fileState(root, path));
 }
 
-function commit(root: string, message: string, parent: string, diff: Buffer, paths: string[]) {
-  same(identity(root).head, parent, "HEAD before commit");
+function commit(expected: ReturnType<typeof identity>, message: string, diff: Buffer, paths: string[]) {
+  const { root, head: parent } = expected;
   same(stagedDiff(root, paths), diff, "Index before commit");
+  same(identity(root), expected, "Identity before commit");
   // Hooks can rewrite the reviewed index; landing commits must use exactly that index.
   git(root, ["-c", "core.hooksPath=/dev/null", "commit", "-F", message], undefined, undefined, "git commit");
   const head = identity(root).head;
@@ -391,11 +394,12 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
   same(buildLandingPlan(options, runtime).review, reviewed, "Immediate pre-stage review");
   same(JSON.parse(readInput(options.review).toString()), reviewed, "Saved review");
   const { lane, target, paths, artifacts, messageSha256 } = plan.review;
+  same(identity(lane.root), lane, "Lane identity before staging");
   stage(lane.root, paths);
   same(hash(stagedDiff(lane.root, paths)), plan.review.diffSha256, "Staged lane delta");
   same(snapshot(lane.root).files, plan.review.files.map((file) => ({ ...file, untracked: false })), "Lane content");
   same(hash(readInput(options.messageFile)), messageSha256, "Message");
-  const sourceCommit = commit(lane.root, options.messageFile, lane.head, plan.diff, paths);
+  const sourceCommit = commit(lane, options.messageFile, plan.diff, paths);
   log(`Lane commit: ${sourceCommit}`);
   same(identity(target.root), target, "Target identity");
   idle(target.root);
@@ -403,13 +407,17 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
   if (changedPaths(target.root).length) throw new Error("Target changed before cherry-pick");
   git(target.root, ["-c", "rerere.enabled=false", "-c", "rerere.autoupdate=false", "cherry-pick", "--no-commit", sourceCommit],
     undefined, undefined, "git cherry-pick");
+  const reviewedSource = paths.filter(path => !artifacts.outputs.some(pattern => ownsPath(path, pattern)))
+    .map(path => fileState(target.root, path, true));
   same((runtime.planArtifacts ?? planArtifacts)(target.root, paths), artifacts, "Combined artifact ownership");
   allowedPaths(changedPaths(target.root), paths, artifacts.outputs);
   const run = runtime.runCommand ?? ((command: Command) => { const out = execute(command); if (out.length) log(out.toString()); });
   const beforeOutputs = outputInventory(target.root, artifacts.outputs);
   const beforeFiles = repositoryInventory(target.root);
   const generation = plan.commands.find((command) => command.stage === "generation");
+  same(identity(target.root), target, "Target identity before generation");
   if (generation) run(generation);
+  same(reviewedSource.map(({ path }) => fileState(target.root, path, true)), reviewedSource, "Reviewed source after generation");
   const afterOutputs = outputInventory(target.root, artifacts.outputs);
   const afterFiles = repositoryInventory(target.root);
   allowedPaths(inventoryChanges(beforeFiles, afterFiles), paths, artifacts.outputs);
@@ -417,6 +425,7 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
     .filter(path => !isDeepStrictEqual(beforeOutputs.find(file => file.path === path), afterOutputs.find(file => file.path === path)));
   const generated = snapshot(target.root);
   allowedPaths(generated.paths, paths, artifacts.outputs);
+  same(identity(target.root), target, "Target identity before staging");
   stage(target.root, generated.paths);
   const combined = snapshot(target.root);
   same(repositoryInventory(target.root), afterFiles, "Repository files after staging");
@@ -424,7 +433,10 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
   same(staged, combined.diff, "Staged target delta");
   const validatorArtifacts = outputInventory(target.root, artifacts.validatorOutputs);
   for (const command of commands(target.root, sorted([...paths, ...combined.paths, ...outputChanges]), artifacts)) {
-    if (command.stage !== "generation") run(command);
+    if (command.stage !== "generation") {
+      same(identity(target.root), target, "Target identity before validation");
+      run(command);
+    }
   }
   same(identity(target.root), target, "Target identity after validators");
   idle(target.root);
@@ -436,7 +448,7 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
   same(stagedDiff(target.root, combined.paths), staged, "Index after validators");
   same(hash(readInput(options.messageFile)), messageSha256, "Message");
   same(JSON.parse(readInput(options.review).toString()), reviewed, "Saved review");
-  const targetCommit = commit(target.root, options.messageFile, target.head, staged, combined.paths);
+  const targetCommit = commit(target, options.messageFile, staged, combined.paths);
   log(`Lane applied: ${sourceCommit} -> ${targetCommit}; final integration validation still required.`);
   return { sourceCommit, targetCommit };
 }

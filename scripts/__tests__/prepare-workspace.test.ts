@@ -51,7 +51,7 @@ const old=snap(),read=vi.spyOn(fs,"readFileSync")
 sync()
 const go=(apply=false)=>run([...av,...(apply?["--apply"]:[])],{
 cwd,output:(text:string)=>{out+=text;},
-env:{NODE_ENV:"test",CI:"1",GITHUB_ACTIONS:"1",PHAROS_PREPARE_BOOTSTRAP:"1"},
+env:{NODE_ENV:"test",PATH:process.env.PATH,CI:"1",GITHUB_ACTIONS:"1",PHAROS_PREPARE_BOOTSTRAP:"1",PHAROS_API_KEY:"sentinel",CLOUDFLARE_API_TOKEN:"sentinel",NODE_OPTIONS:"sentinel",npm_config_prefix:"sentinel"},
 runCommand(cmd,argv,opts){
 if(cmd==="git"){
 if(ready&&[3,4].includes(n)) throw Error("late verification")
@@ -60,7 +60,8 @@ if(ready&&argv.includes(k)) return{status:0,stdout:cwd}
 return spawnSync(cmd,argv,opts)
 }
 calls.push(line(cmd,argv));e(opts.cwd).toBe(p)
-for(const name of ["CI","GITHUB_ACTIONS","PHAROS_PREPARE_BOOTSTRAP"]) e(opts.env[name]).toBeUndefined()
+for(const name of ["CI","GITHUB_ACTIONS","PHAROS_PREPARE_BOOTSTRAP","PHAROS_API_KEY","CLOUDFLARE_API_TOKEN","NODE_OPTIONS","npm_config_prefix"]) e(opts.env[name]).toBeUndefined()
+e(opts.env.PATH).toBe(process.env.PATH)
 if(argv[0]==="--version") return{status:0,stdout:cmd==="node"?(k==="runtime"?"0":process.version):"11.0"}
 ready=true
 if(k!=="node_modules") fs.mkdirSync(at("node_modules"))
