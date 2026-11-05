@@ -67,13 +67,22 @@ describe("post-deploy route sweep", () => {
     ]);
   });
 
-  it("passes a sweep whose routes answer below 500", () => {
+  it.each([
+    [200, true], [204, true], [299, true],
+    [199, false], [300, false], [400, false], [404, false], [405, false], [410, false],
+  ] as const)("requires 2xx for Telegram (HTTP %s)", (status, passed) => {
     const result = summarizePostDeployRouteSweep(
-      POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({ path, status: path === "/api/telegram-pulse" ? 404 : 200 })),
+      POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({ path, status: path === "/api/telegram-pulse" ? status : 200 })),
     );
-    expect(result.outcome).toBe("passed");
-    expect(result.failures).toEqual([]);
-    expect(result.detail).toContain(`${POST_DEPLOY_ROUTE_SWEEP_PATHS.length}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length}`);
+    expect(result.outcome).toBe(passed ? "passed" : "failed");
+    expect(result.failures).toEqual(passed ? [] : [{ path: "/api/telegram-pulse", status, reason: "unexpected-status" }]);
+    expect(result.detail).toContain(`${passed ? POST_DEPLOY_ROUTE_SWEEP_PATHS.length : 1}/${POST_DEPLOY_ROUTE_SWEEP_PATHS.length}`);
+  });
+
+  it("fails when every required route returns 404", () => {
+    const result = summarizePostDeployRouteSweep(POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({ path, status: 404 })));
+    expect(result.outcome).toBe("failed");
+    expect(result.failures).toEqual(POST_DEPLOY_ROUTE_SWEEP_PATHS.map((path) => ({ path, status: 404, reason: "unexpected-status" })));
   });
 
   it("records a 429 as unknown, neither a pass nor a release failure", () => {
