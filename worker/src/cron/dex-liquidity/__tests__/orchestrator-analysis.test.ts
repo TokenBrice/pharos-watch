@@ -3,6 +3,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { makeCompleteVolumeAvailability } from "../../__tests__/dex-liquidity-persistence.test-support";
 import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { analyzeDexLiquidityPostScoring } from "../orchestrator-analysis";
+import type { DexLiquidityDriftCandidate } from "../orchestrator-drift";
 import { isDexLiquidityDegraded } from "../orchestrator-metadata";
 import type { FullScoreResult, GlobalAgg } from "../types";
 import { processPoolMetrics } from "../process-pools";
@@ -131,7 +132,54 @@ function makeCronMetadata(params: {
   });
 }
 
+function cliffAnalysisDb(previousTvl: number, candidates: DexLiquidityDriftCandidate[] = []) {
+  return mockAnalysisDb([
+    { match: "COUNT(*) as cnt FROM dex_liquidity", rows: [], first: { cnt: 1 } },
+    { match: "SELECT total_tvl_usd, updated_at", rows: [], first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 } },
+    { match: "ORDER BY total_tvl_usd DESC", rows: [{ stablecoin_id: "usds-sky", total_tvl_usd: previousTvl }] },
+    { match: "FROM cron_runs", rows: [{ started_at: 1_784_000_000, status: "ok", metadata: makeCronMetadata({
+      dlProtocolsAvailable: true, currentGlobalTvl: 6_000_000_000, currentCoverage: 1,
+      stagedPoolsMerged: 0, stagedPoolsSkipped: 0, priceObservationCoins: 0,
+      measuredBalanceCoveragePct: 0, weakCoverageCoins: 0, qualityDriftCandidates: candidates,
+    }) }] },
+  ]);
+}
+
 describe("analyzeDexLiquidityPostScoring", () => {
+  it.each([
+    [null, true], ["{", true], ["{}", true], ["failed", true], ["partial", true],
+    [JSON.stringify({ dexscreener: { poolCount: 21, tvlUsd: -1 } }), true],
+    [JSON.stringify({ cg_onchain: { poolCount: 21, tvlUsd: 500_000 } }), true],
+    [JSON.stringify({ dexscreener: { poolCount: 21, tvlUsd: 1_000_000 } }), false],
+  ])("confirms first loss despite unavailable source evidence %s", async (source_mix_json, unavailable) => {
+    const flag = "source-family-drop:dexscreener";
+    const metadata = JSON.parse(makeCronMetadata({
+      dlProtocolsAvailable: true, currentGlobalTvl: 1_000_000, stagedPoolsMerged: 0, stagedPoolsSkipped: 0,
+      priceObservationCoins: 0, measuredBalanceCoveragePct: 0, weakCoverageCoins: 0,
+    }));
+    metadata.sourceCoverage.retainedPoolCountBySourceFamily = { dexscreener: 21 };
+    const rows = ACTIVE_STABLECOINS.map(({ id }) => ({
+      stablecoin_id: id, total_tvl_usd: id === "usdt-tether" ? 1_000_000 : 0,
+      source_mix_json: id === "usdt-tether" ? source_mix_json : null,
+    }));
+    for (const run of [1, 2]) {
+      const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({ db: mockAnalysisDb([
+        { match: "FROM cron_runs", rows: [{ status: "ok", metadata: JSON.stringify(metadata) }] },
+        { match: "FROM dex_liquidity_run_rows r", rows: source_mix_json === "partial" ? [] : rows,
+          throwError: source_mix_json === "failed" ? new Error("read failed") : undefined },
+      ]), scoreResults: new Map([["usdt-tether", { ...BASE_SCORE_RESULT, sourceMix: {
+        cg_onchain: { poolCount: 21, tvlUsd: 1_000_000 },
+      } }]]) }));
+      expect(analysis.sourceCoverage.cohortDriftFlags).toEqual(unavailable && run === 2 ? [flag] : []);
+      const candidates = analysis.sourceCoverage.qualityDriftCandidates;
+      metadata.sourceCoverage.qualityDriftCandidates = candidates;
+      expect(candidates.map((candidate) => candidate.sourceFamilyTvlEvidence)).toEqual(unavailable ? [{
+        explanation: "unavailable", baselineTvlUsd: null, currentTvlUsd: 0, unexplainedLossUsd: null,
+      }] : []);
+      metadata.sourceCoverage.retainedPoolCountBySourceFamily = {};
+    }
+  });
+
   it.each(["full-pool", "base-pool-excluded"] as const)(
     "keeps Curve %s balance telemetry consistent with scoring coverage",
     async (balanceTvlScope) => {
@@ -622,57 +670,12 @@ describe("analyzeDexLiquidityPostScoring", () => {
 
   it("records a first-run coin TVL cliff as a candidate and reports it only on the second run", async () => {
     const collapsedTvl = 13_720_000;
-    const makeDb = (candidates?: Array<{ flag: string; consecutiveRuns: number; baselineValue: number; observedValue: number }>) =>
-      mockD1([
-        {
-          match: "COUNT(*) as cnt FROM dex_liquidity",
-          rows: [],
-          first: { cnt: 1 },
-        },
-        {
-          match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
-          rows: [],
-          first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
-        },
-        {
-          match: "GROUP BY coverage_class",
-          rows: [],
-        },
-        {
-          match: "ORDER BY total_tvl_usd DESC",
-          rows: [{ stablecoin_id: "usds-sky", total_tvl_usd: 152_000_000 }],
-        },
-        {
-          match: "FROM cron_runs",
-          rows: [
-            {
-              started_at: 1_784_000_000,
-              status: "ok",
-              metadata: makeCronMetadata({
-                dlProtocolsAvailable: true,
-                currentGlobalTvl: 6_000_000_000,
-                currentCoverage: 1,
-                stagedPoolsMerged: 0,
-                stagedPoolsSkipped: 0,
-                priceObservationCoins: 0,
-                measuredBalanceCoveragePct: 0,
-                weakCoverageCoins: 0,
-                qualityDriftCandidates: candidates,
-              }),
-            },
-          ],
-        },
-        {
-          match: "WHERE stablecoin_id IN",
-          rows: [],
-        },
-      ], { assertMatchesUsed: true });
     const scoreResults = new Map([
       ["usds-sky", { ...BASE_SCORE_RESULT, tvl: collapsedTvl, effectiveTvl: collapsedTvl }],
     ]);
 
     const first = await analyzeDexLiquidityPostScoring(
-      makeAnalysisInput({ db: makeDb(), scoreResults }),
+      makeAnalysisInput({ db: cliffAnalysisDb(152_000_000), scoreResults }),
     );
 
     expect(first.sourceCoverage.qualityDriftFlags).toEqual([]);
@@ -688,7 +691,7 @@ describe("analyzeDexLiquidityPostScoring", () => {
 
     const second = await analyzeDexLiquidityPostScoring(
       makeAnalysisInput({
-        db: makeDb(first.sourceCoverage.qualityDriftCandidates),
+        db: cliffAnalysisDb(152_000_000, first.sourceCoverage.qualityDriftCandidates),
         scoreResults,
       }),
     );
@@ -699,58 +702,9 @@ describe("analyzeDexLiquidityPostScoring", () => {
   });
 
   it("keeps a confirmed cliff after the published baseline row was overwritten", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) as cnt FROM dex_liquidity",
-        rows: [],
-        first: { cnt: 1 },
-      },
-      {
-        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
-        rows: [],
-        first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
-      },
-      {
-        match: "GROUP BY coverage_class",
-        rows: [],
-      },
-      {
-        // The row the comparison used to read now carries the collapsed value.
-        match: "ORDER BY total_tvl_usd DESC",
-        rows: [{ stablecoin_id: "usds-sky", total_tvl_usd: 13_700_000 }],
-      },
-      {
-        match: "FROM cron_runs",
-        rows: [
-          {
-            started_at: 1_784_000_000,
-            status: "ok",
-            metadata: makeCronMetadata({
-              dlProtocolsAvailable: true,
-              currentGlobalTvl: 6_000_000_000,
-              currentCoverage: 1,
-              stagedPoolsMerged: 0,
-              stagedPoolsSkipped: 0,
-              priceObservationCoins: 0,
-              measuredBalanceCoveragePct: 0,
-              weakCoverageCoins: 0,
-              qualityDriftCandidates: [
-                {
-                  flag: "major-tvl-cliff:usds-sky",
-                  consecutiveRuns: 2,
-                  baselineValue: 152_000_000,
-                  observedValue: 13_720_000,
-                },
-              ],
-            }),
-          },
-        ],
-      },
-      {
-        match: "WHERE stablecoin_id IN",
-        rows: [],
-      },
-    ], { assertMatchesUsed: true });
+    const db = cliffAnalysisDb(13_700_000, [{
+      flag: "major-tvl-cliff:usds-sky", consecutiveRuns: 2, baselineValue: 152_000_000, observedValue: 13_720_000,
+    }]);
 
     const analysis = await analyzeDexLiquidityPostScoring(
       makeAnalysisInput({

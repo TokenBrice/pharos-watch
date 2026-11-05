@@ -1,5 +1,6 @@
 import { round4 } from "@shared/lib/math";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import type { LiquiditySourceMix } from "@shared/types/market";
 import type { DexLiquidityCronMetadata } from "../../lib/schemas";
 import type { DexPriceObs, FullScoreResult } from "./types";
 
@@ -45,12 +46,9 @@ export type PreviousDexLiquiditySummary = {
  * still present stays reported after the publication that overwrote the row it
  * was first measured against.
  */
-export interface DexLiquidityDriftCandidate {
-  flag: string;
-  consecutiveRuns: number;
-  baselineValue: number;
-  observedValue: number;
-}
+export type DexLiquidityDriftCandidate = NonNullable<
+  DexLiquidityCronMetadata["sourceCoverage"]["qualityDriftCandidates"]
+>[number];
 
 /**
  * A confirmed condition accepted as the new level. `runs` counts every
@@ -115,10 +113,21 @@ const MAJOR_TVL_CLIFF_MIN_PREVIOUS_USD = 5_000_000;
  * exactly the condition an operator must resolve, not a new accepted level.
  */
 const COHORT_DROP_RATIO = 0.1;
-const COHORT_CHAIN_MIN_PREVIOUS_TVL_USD = 1_000_000;
+const COHORT_MIN_PREVIOUS_TVL_USD = 1_000_000;
 const COHORT_SOURCE_FAMILY_MIN_PREVIOUS_POOLS = 5;
 const CHAIN_TVL_DROP_FLAG_PREFIX = "chain-tvl-drop:";
 export const SOURCE_FAMILY_DROP_FLAG_PREFIX = "source-family-drop:";
+
+export const REVIEWED_SOURCE_FAMILY_DISPOSITIONS = [
+  {
+    flag: "source-family-drop:gecko_terminal", baselineValue: 23, reviewedAt: "2026-11-05",
+    reason: "All 16 lost pools were USDC dust worth $449.57 total, pruned by the 2026-11-05 00:06Z discovery cleanup.",
+  },
+  {
+    flag: "source-family-drop:dexscreener", baselineValue: 338, reviewedAt: "2026-11-05",
+    reason: "Re-attribution after the 2026-11-05 06:06Z discovery stale-pool refresh: e.g. USD1's $23.09M of DexScreener pools reappeared under cg_onchain with coin TVL unchanged; residual DexScreener TVL moves were immaterial.",
+  },
+] as const satisfies NonNullable<DexLiquidityCronMetadata["sourceCoverage"]["qualityDriftAccepted"]>;
 
 const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";
 
@@ -149,6 +158,7 @@ export interface DexLiquidityDriftSummary {
    */
   cohortDriftFlags: string[];
   qualityDriftCandidates: DexLiquidityDriftCandidate[];
+  qualityDriftAccepted: NonNullable<DexLiquidityCronMetadata["sourceCoverage"]["qualityDriftAccepted"]>;
   qualityDriftRebaselined: DexLiquidityDriftRebaseline[];
   qualityDriftSeverity: "none" | "medium" | "high";
   qualityDriftMetrics: {
@@ -218,12 +228,15 @@ export function computeDexLiquidityDriftSummary(params: {
   /** Previous retained pool count per source family; omitted/unknown skips the comparison. */
   previousSourceFamilyPools?: Record<string, number> | null;
   currentSourceFamilyPools?: Record<string, number>;
+  /** Already-read previous published rows; null/omitted means unavailable, not empty. */
+  previousSourceMixById?: Map<string, LiquiditySourceMix> | null;
 }): DexLiquidityDriftSummary {
   const previousCandidatesByFlag = new Map(params.previousCandidates.map((candidate) => [candidate.flag, candidate]));
   const candidates: DexLiquidityDriftCandidate[] = [];
   const qualityDriftFlags: string[] = [];
   const cohortDriftFlags: string[] = [];
   const qualityDriftRebaselined: DexLiquidityDriftRebaseline[] = [];
+  const qualityDriftAccepted: DexLiquidityDriftSummary["qualityDriftAccepted"] = [];
 
   const confirmCondition = (
     flag: string,
@@ -257,10 +270,11 @@ export function computeDexLiquidityDriftSummary(params: {
     naturalBaseline: number,
     observedValue: number,
     conditionHolds: (baselineValue: number) => boolean,
+    sourceFamilyTvlEvidence?: DexLiquidityDriftCandidate["sourceFamilyTvlEvidence"],
   ): void => {
     const advanced = advanceDriftCandidate(previousCandidatesByFlag.get(flag), naturalBaseline, conditionHolds);
     if (!advanced) return;
-    candidates.push({ flag, ...advanced, observedValue });
+    candidates.push({ flag, ...advanced, observedValue, ...(sourceFamilyTvlEvidence ? { sourceFamilyTvlEvidence } : {}) });
     if (advanced.consecutiveRuns >= DRIFT_CONFIRMATION_RUNS) {
       qualityDriftFlags.push(flag);
       cohortDriftFlags.push(flag);
@@ -415,7 +429,7 @@ export function computeDexLiquidityDriftSummary(params: {
     for (const [chain, baseline] of cohortBaselines(
       params.previousChainTvl,
       CHAIN_TVL_DROP_FLAG_PREFIX,
-      COHORT_CHAIN_MIN_PREVIOUS_TVL_USD,
+      COHORT_MIN_PREVIOUS_TVL_USD,
     )) {
       const currentTvl = params.currentChainTvl[chain] ?? 0;
       confirmCohortCondition(
@@ -427,18 +441,65 @@ export function computeDexLiquidityDriftSummary(params: {
     }
   }
 
-  if (params.currentSourceFamilyPools != null && Object.keys(params.currentSourceFamilyPools).length > 0) {
+  if (params.currentSourceFamilyPools != null) {
     for (const [family, baseline] of cohortBaselines(
       params.previousSourceFamilyPools,
       SOURCE_FAMILY_DROP_FLAG_PREFIX,
       COHORT_SOURCE_FAMILY_MIN_PREVIOUS_POOLS,
     )) {
       const currentPools = params.currentSourceFamilyPools[family] ?? 0;
+      const flag = `${SOURCE_FAMILY_DROP_FLAG_PREFIX}${family}`;
+      const previousCandidate = previousCandidatesByFlag.get(flag);
+      let evidence = previousCandidate?.sourceFamilyTvlEvidence;
+      // Reviewed dispositions accept only legacy candidates opened before TVL evidence existed;
+      // a candidate admitted with evidence is a new loss even when its pool baseline repeats.
+      if (previousCandidate && evidence === undefined) {
+        const disposition = REVIEWED_SOURCE_FAMILY_DISPOSITIONS.find(
+          (entry) => entry.flag === flag && entry.baselineValue === previousCandidate.baselineValue,
+        );
+        if (disposition) {
+          qualityDriftAccepted.push(disposition);
+          continue;
+        }
+      }
+      // Admit once against the pre-loss generation; later publications already contain the loss.
+      if (!previousCandidate) {
+        let baselineTvlUsd = 0;
+        let unexplainedLossUsd = 0;
+        for (const [stablecoinId, previousMix] of params.previousSourceMixById ?? []) {
+          const previousTvl = previousMix[family]?.tvlUsd ?? 0;
+          baselineTvlUsd += previousTvl;
+          const currentMix: LiquiditySourceMix = params.scoreResults.get(stablecoinId)?.sourceMix ?? {};
+          const loss = Math.max(0, previousTvl - (currentMix[family]?.tvlUsd ?? 0));
+          let gains = 0;
+          let losses = 0;
+          for (const source of new Set([...Object.keys(previousMix), ...Object.keys(currentMix)])) {
+            const delta = (currentMix[source]?.tvlUsd ?? 0) - (previousMix[source]?.tvlUsd ?? 0);
+            gains += Math.max(0, delta);
+            losses += Math.max(0, -delta);
+          }
+          unexplainedLossUsd += loss * (losses > 0 ? 1 - Math.min(1, gains / losses) : 0);
+        }
+        const available = params.previousSourceMixById != null;
+        if (available && (baselineTvlUsd < COHORT_MIN_PREVIOUS_TVL_USD || unexplainedLossUsd < baselineTvlUsd * COHORT_DROP_RATIO)) continue;
+        const currentTvlUsd = Array.from(params.scoreResults.values())
+          .reduce((sum, score) => {
+            const mix: LiquiditySourceMix = score.sourceMix;
+            return sum + (mix[family]?.tvlUsd ?? 0);
+          }, 0);
+        evidence = {
+          explanation: available ? "evaluated" : "unavailable",
+          baselineTvlUsd: available ? baselineTvlUsd : null,
+          currentTvlUsd,
+          unexplainedLossUsd: available ? unexplainedLossUsd : null,
+        };
+      }
       confirmCohortCondition(
-        `${SOURCE_FAMILY_DROP_FLAG_PREFIX}${family}`,
+        flag,
         baseline,
         currentPools,
         (baselineValue) => currentPools < baselineValue * (1 - COHORT_DROP_RATIO),
+        evidence,
       );
     }
   }
@@ -461,6 +522,7 @@ export function computeDexLiquidityDriftSummary(params: {
     qualityDriftFlags,
     cohortDriftFlags,
     qualityDriftCandidates: candidates,
+    qualityDriftAccepted,
     qualityDriftRebaselined,
     qualityDriftSeverity,
     qualityDriftMetrics: {
