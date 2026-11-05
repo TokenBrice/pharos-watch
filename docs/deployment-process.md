@@ -13,14 +13,14 @@ This document defines the production deploy flow, the GitHub Actions release gat
    Auxiliary publication follows the same rule: the Dependency Scenarios `scenarios` job, Safety Map `plan` job, Curation Expiry Sweep `sweep` job and the credential-bearing Shock Coverage Refresh `targets`/`measure`/`refresh` jobs require `refs/heads/main` before checkout or credential use. Non-main manual dispatch skips those jobs; main dispatch and scheduled execution remain enabled. Safety Map plans and conditionally renders/publishes within that one job; browser setup and rendering require `steps.plan.outputs.should_render == 'true'`.
 2. Agents and routine maintenance default to the current `main` checkout. Do not create a branch, worktree, or PR unless the maintainer explicitly asks for one. A request to push, publish, release, or take work to production is authorization to use the required protected-main branch/PR path; it is not authorization for a direct `main` push.
 3. Merge release pull requests with a merge commit (`gh pr merge --merge`), never with squash or rebase merge. Before declaring the release merged, verify the resulting `main` commit has two parents and contains the recorded PR head SHA.
-4. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Run `npm run check:pr` for focused authoring feedback before pushing; GitHub Actions owns the authoritative protected release gate.
+4. Heavy feature/refactor work may use a dedicated worktree branch when the maintainer chooses that workflow. Use focused authoring checks before pushing; `npm run check:pr` is optional broader feedback under [Pre-push readiness](./testing.md#pre-push-readiness). GitHub Actions owns the authoritative protected release gate.
 
 ## Release Snapshot State Machine
 
 Treat release preparation as ordered state transitions. Passing a check against an earlier state does not validate a later commit, generated diff, or environment profile.
 
 1. **Classify** — inspect committed/staged/worktree/untracked state, identify Pages and Worker impact, and preserve unrelated work.
-2. **Prepare the release** — create logical source commits, keep generated artifacts with their owning sources, and run `npm run check:pr` for focused authoring feedback under [Pre-push readiness](./testing.md#pre-push-readiness). Local receipts are optional diagnostics; hosted CI is the readiness authority. `check:release` remains an explicitly requested rehearsal.
+2. **Prepare the release** — create logical source commits, keep generated artifacts with their owning sources, and run focused authoring checks, with `npm run check:pr` as optional broader feedback under [Pre-push readiness](./testing.md#pre-push-readiness). Local receipts are optional diagnostics; hosted CI is the readiness authority. `check:release` remains an explicitly requested rehearsal.
 3. **Publish** — push a release branch, wait for the authoritative protected `PR gate`, merge through GitHub, and map the PR head SHA to the resulting `main` SHA and deployment run. Do not attempt direct `main` first.
 4. **Prove deployment and operation separately** — verify Worker activation and/or the immutable Pages marker. Cron, scheduler, ingestion, memory, and migration changes also require the first relevant production execution or observation under [Operational Acceptance](#operational-acceptance) before being called operationally complete.
 
@@ -35,7 +35,7 @@ git fetch origin
 git worktree add ".worktrees/$FEATURE_NAME" -b "$BRANCH_NAME" origin/main
 ```
 
-2. Implement with focused feedback and use `npm run check:pr` under [pre-push readiness](./testing.md#pre-push-readiness) before pushing.
+2. Implement with focused authoring checks before pushing; `npm run check:pr` is optional broader feedback under [Pre-push readiness](./testing.md#pre-push-readiness).
 3. Push the branch and open a pull request into `main`. Hosted CI judges readiness for both first and replacement pushes.
 
 ```bash
@@ -431,9 +431,9 @@ If an explicit local `check:release` rehearsal fails:
 
 1. Do not treat the local rehearsal as green.
 2. Confirm the exact `.nvmrc` runtime, check lane, snapshot cleanliness, environment profile, and local concurrency before changing code. A release-only failure is not disproved by `npm run check:pr`, and a globally exported Pages flag does not reproduce job-scoped CI.
-3. For a small change, fix the failing command directly. For a large batch, run `npm run check:pr -- --base=<ref>` and read its final summary.
+3. For a small change, fix the failing command directly. For a large batch, optionally run `npm run check:pr -- --base=<ref>` for broader feedback and read its final summary.
 4. Fix all blocking root failures and rerun their focused commands while editing. If local parallel load is suspect, run the focused command alone or set `PR_STATIC_MAX_PARALLEL=1`; do not loosen timeouts solely from a contended run.
-5. After focused fixes, use `npm run check:pr` for authoring feedback under [Pre-push readiness](./testing.md#pre-push-readiness).
+5. After fixes, rerun focused authoring checks; `npm run check:pr` is optional broader feedback under [Pre-push readiness](./testing.md#pre-push-readiness).
 6. Rerun an explicitly requested `check:release` rehearsal after its failure is resolved. Publish only through the protected PR gate; GitHub Actions remains authoritative.
 
 If a production deployment fails after mutation:
