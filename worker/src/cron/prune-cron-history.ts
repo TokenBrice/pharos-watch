@@ -20,7 +20,13 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     },
     { safetyScoreJournalSec: SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC },
   );
-  const results = await runRetentionPolicies(db, policies, now, signal);
+  const { cronRuns: cronPolicy, producerHistory: producerPolicy, ...remainingPolicies } = policies;
+  // Isolate the trigger-maintained history cost without changing its row budgets.
+  const results = {
+    ...await runRetentionPolicies(db, { cronRuns: cronPolicy }, now, signal),
+    ...await runRetentionPolicies(db, { producerHistory: producerPolicy }, now, signal),
+    ...await runRetentionPolicies(db, remainingPolicies, now, signal),
+  };
   const {
     cronRuns, producerHistory, repairTasks, canaryRuns, recoveryCheckpoints,
     selectorSnapshotDailyQuota, blockTimestampCache, slotExecutions,
@@ -30,7 +36,7 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   } = results;
   const selfServeRateLimitsDeleted = results.selfServeRequestRateLimits.pruned + results.selfServeIssuanceRateLimits.pruned;
   const selfServeRateLimitsTruncated = results.selfServeRequestRateLimits.cappedAtLimit || results.selfServeIssuanceRateLimits.cappedAtLimit;
-  const cutoff = (key: string) => now - policies[key].windowSec;
+  const cutoff = (key: keyof typeof policies) => now - policies[key].windowSec;
   const selectorSnapshotDailyQuotaCutoffDate = new Date(cutoff("selectorSnapshotDailyQuota") * 1000).toISOString().slice(0, 10);
 
   return createCronResult({

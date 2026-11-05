@@ -15,6 +15,7 @@ import type { TelegramDispatchSharedState } from "../../cron/telegram/dispatch/d
 import type * as TelegramRegistrationModule from "../../telegram/webhook/webhook-registration";
 import { recordBudgetSurfaceTelemetry } from "../../lib/budget-surface-telemetry";
 import { createD1CostTracker } from "../../lib/d1-cost";
+import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
 import {
   getRuntimeProducerIdentity,
   runRuntimeBudgetOnlyTask,
@@ -183,6 +184,7 @@ function buildTelegramSlotGroups(
       run: async (signal) => {
         const { runTelegramDegradationWatchdog } = await import("../../cron/telegram/maintenance/telegram-degradation-watchdog");
         return runTelegramDegradationWatchdog(runtime.db, signal, {
+          operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),
           pendingCapacitySnapshot: sharedTelegramState.pendingCapacitySnapshot,
           safetySourceAssessment: sharedTelegramState.safetySourceAssessment,
         });

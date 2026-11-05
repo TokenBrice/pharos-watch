@@ -4,8 +4,8 @@ Applies to `shared/`; `shared/data/stablecoins/AGENTS.md` is the more specific s
 
 ## Read First
 
-- `docs/architecture.md` § “File Tree Guide” and § “TypeScript Target Constraints”.
-- `docs/classification.md` for stablecoin or taxonomy work; `docs/methodology-page.md` for scoring work.
+- `docs/architecture.md#file-tree-guide` and `#typescript-target-constraints`.
+- Stablecoin or taxonomy work: `docs/classification.md#classification-entry` plus the affected taxonomy section. Scoring: `docs/methodology-page.md#methodology-editing-entry`, `#section--source-mapping` and `#update-rules`.
 
 ## Rules and owners
 

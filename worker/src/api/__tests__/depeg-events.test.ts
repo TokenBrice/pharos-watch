@@ -218,7 +218,8 @@ describe("handleDepegEvents", () => {
         expect(body.events[0]?.startedAt).toBe(onset);
         expect(body.methodology?.asOf).toBe(onset);
         expect(body.totalExact).toBe(includeTotal);
-        if (includeTotal) expect(body.total).toBe(4);
+        expect(body.total).toBe(includeTotal ? 4 : id === 105 ? 1 : 2);
+        if (body.nextCursor) expect(JSON.parse(atob(body.nextCursor))).toEqual({ v: 2, values: [onset, id] });
         if (id === 102) expect(body.events[0]?.constituentEventCount).toBe(2);
         ids.push(body.events[0]!.id);
         cursor = body.nextCursor ?? null;
@@ -226,7 +227,9 @@ describe("handleDepegEvents", () => {
       }
       expect(ids).toEqual([103, 104, 102, 105]);
       const offset = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?limit=1&offset=2&includeTotal=${includeTotal}${filter}`));
-      expect(DepegEventsResponseSchema.parse(await readJsonResponse(offset, 200)).events[0]?.id).toBe(102);
+      const offsetBody = DepegEventsResponseSchema.parse(await readJsonResponse(offset, 200));
+      expect(offsetBody.events[0]?.id).toBe(102);
+      expect(offsetBody.total).toBe(4);
     }
   });
 
@@ -239,8 +242,7 @@ describe("handleDepegEvents", () => {
     const advance = () => {
       if (advanced) return;
       sqlite.exec("BEGIN IMMEDIATE");
-      // The migrated current-pointer guard requires membership even when the
-      // referenced event itself is missing; preserve that real schema guard.
+      // Membership is required even for a dangling current pointer.
       sqlite.prepare(`INSERT OR IGNORE INTO depeg_resolver_incident_event_links
         (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1700002000)`).run(key, nextId);
       sqlite.prepare(`UPDATE depeg_resolver_incidents SET current_event_id = ?, current_started_at = 1700002000
@@ -248,17 +250,23 @@ describe("handleDepegEvents", () => {
       sqlite.exec("COMMIT");
       advanced = true;
     };
-    // Before the fix this commits after the standalone projection read. With an
-    // atomic batch the writer can commit only before or after the whole snapshot.
+    const executed: string[] = [];
     const db = createSqliteD1(sqlite, { onAll: (sql) => {
       if (sql.includes("pharos:depeg-event-projection:active-incidents")) advance();
-    } });
+    }, onRun: (sql) => { executed.push(sql); } });
     const batch = db.batch.bind(db);
-    vi.spyOn(db, "batch").mockImplementation((statements) => {
+    const batchSpy = vi.spyOn(db, "batch").mockImplementation((statements) => {
+      expect(statements).toHaveLength(includeTotal ? 4 : 2);
       advance();
       return batch(statements);
     });
     const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?active=true&includeTotal=${includeTotal}`));
+    expect(batchSpy).toHaveBeenCalledTimes(1);
+    expect(executed.map((sql) => sql.match(/pharos:[\w:-]+/)?.[0])).toEqual([
+      "pharos:depeg-event-projection:active-incidents",
+      ...(includeTotal ? ["pharos:depeg-events:count-summary", "pharos:depeg-events:count"] : []),
+      "pharos:depeg-events:page",
+    ]);
     expect(advanced).toBe(true);
     if (nextId === 999) {
       expect(await readJsonResponse(res, 503)).toEqual({
@@ -651,15 +659,15 @@ describe("handleDepegEvents", () => {
 
   describe("aggregate original-clock availability", () => {
     it.each([
-      ["trusted pool evidence", 2, 5_000_000, 60, true],
-      ["ticker-only price evidence", 1, 0, 60, false],
-      ["absent TVL evidence", 1, null, 60, false],
-      ["malformed TVL evidence", 1, "5000000", 60, false],
-      ["six-hour original", 2, 5_000_000, 21_600, false],
-      ["missing original", 2, 5_000_000, null, false],
-      ["original age boundary", 2, 5_000_000, 4500, false],
-      ["inside original budget", 2, 5_000_000, 4499, true],
-    ] as const)("derives pending confirmation categories from %s", async (_label, count, tvl, age, dexAvailable) => {
+      { label: "trusted pool evidence", count: 2, tvl: 5_000_000, age: 60, dexAvailable: true },
+      { label: "ticker-only price evidence", count: 1, tvl: 0, age: 60, dexAvailable: false },
+      { label: "absent TVL evidence", count: 1, tvl: null, age: 60, dexAvailable: false },
+      { label: "malformed TVL evidence", count: 1, tvl: "5000000", age: 60, dexAvailable: false },
+      { label: "six-hour original", count: 2, tvl: 5_000_000, age: 21_600, dexAvailable: false },
+      { label: "missing original", count: 2, tvl: 5_000_000, age: null, dexAvailable: false },
+      { label: "original age boundary", count: 2, tvl: 5_000_000, age: 4500, dexAvailable: false },
+      { label: "inside original budget", count: 2, tvl: 5_000_000, age: 4499, dexAvailable: true },
+    ])("derives pending confirmation categories from $label", async ({ count, tvl, age, dexAvailable }) => {
       const nowSec = 1_800_000_000;
       vi.useFakeTimers();
       vi.setSystemTime(nowSec * 1000);
