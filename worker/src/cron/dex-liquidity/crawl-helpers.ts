@@ -167,7 +167,8 @@ export async function crawlTokenPools<TRawPool, TNewPool extends GtNewPool>(
           unparsedRowCount++;
           continue;
         }
-        if (!parsed) {
+        if (!parsed || typeof parsed.dexId !== "string" || !parsed.dexId.trim() ||
+          !Number.isFinite(parsed.tvlUsd) || parsed.tvlUsd < 0) {
           unparsedRowCount++;
           continue;
         }
