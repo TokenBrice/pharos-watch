@@ -33,42 +33,28 @@ function target(stablecoinId: string, chain: string): ContractDeployment {
   return { chain, address: addresses[stablecoinId]!, decimals: 6 };
 }
 
-/**
- * A completed page whose rows lost the venue identity in the relationship
- * envelope (partial/schema-change response). `parseGtPool` rejects every row
- * because it cannot name the DEX, while the token legs and attributes are
- * intact.
- */
+// Unreadable rows include thrown parses and missing/empty venue identities.
 function malformedGtPage(): GtPool[] {
-  return [1, 2, 3].map((index) => {
-    const pool = coinGeckoPool({
-      address: `0x${String(index).repeat(40)}`,
-      network: "eth",
-      baseToken: "0xabc",
-      quoteToken: "0xquote",
-      reserve: "75210",
-      volume: "18400",
-    });
-    return {
-      ...pool,
-      relationships: {
-        ...pool.relationships,
-        dex: index === 2 ? { data: { id: "", type: "dex" } } : { data: null },
-      },
-    } as unknown as GtPool;
-  });
+  return [null, {}, coinGeckoPool({ reserve: "bad" }), ...[null, { id: "", type: "dex" }, null, { id: 7 }, { id: " " }].map((data, index) => ({
+    ...coinGeckoPool({ address: `0x${String(index + 1).repeat(40)}`, reserve: "75210", volume: "18400" }),
+    relationships: { ...coinGeckoPool().relationships, dex: { data } },
+  }))] as GtPool[];
 }
 
 describe("supplemental GeckoTerminal deployment discovery", () => {
   it.each([
-    { tvl: null, price: "1", known: false, usable: false, poolCount: 0 },
-    { tvl: "75000", price: "", known: false, usable: false, poolCount: 1 },
-    { tvl: "49999", price: "1", known: false, usable: false, poolCount: 1 },
-    { tvl: "50000", price: "1", known: false, usable: true, poolCount: 1 },
-    { tvl: "75000", price: "99", known: false, usable: false, poolCount: 0 },
-    { tvl: "75000", price: "1", known: true, usable: true, poolCount: 0 },
-  ])("retains GT's helper price-admission decision: %j", async ({ tvl, price, known, usable, poolCount }) => {
+    ...[null, undefined, "bad", "NaN", "Infinity", "-1"].map((tvl) => [tvl, "1", false, false, 0, true] as const),
+    ["bad", "1", true, false, 0, true],
+    ...["0", "999", "blocked", "empty"].map((tvl) => [tvl, "1", false, false, 0, false] as const),
+    ["75000", "", false, false, 1, false],
+    ["49999", "1", false, false, 1, false],
+    ["50000", "1", false, true, 1, false],
+    ["75000", "99", false, false, 0, false],
+    ["75000", "1", true, true, 0, false],
+  ] as const)("retains GT admission/census for TVL=%s price=%s known=%s", async (tvl, price, known, usable, poolCount, degraded) => {
     const stageContext = context("usdc-circle");
+    const row = coinGeckoPool({ network: "eth", basePrice: price, dex: tvl === "blocked" ? "near-intents" : undefined });
+    Object.assign(row.attributes, { reserve_in_usd: tvl === "blocked" ? "75000" : tvl });
     if (known) stageContext.knownPoolIds.add(knownPoolIdKey("usdc-circle", "ethereum:0xpool"));
     const result = await crawlGeckoTerminalPoolsStage({
       coinTargets: [{ chain: "ethereum", address: "0xabc", decimals: 6 }],
@@ -77,7 +63,7 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
       dependencies: {
         crawlTokenPools,
         fetchGtTokenPools: vi.fn<typeof fetchGtTokenPools>(async () => ({
-          rows: tvl == null ? [] : [coinGeckoPool({ network: "eth", reserve: tvl, basePrice: price })],
+          rows: tvl === "empty" ? [] : [row],
           complete: true, cappedAtMaxPages: false, failedAfterRows: null,
         })),
         sleepWithSignal: vi.fn<typeof sleepWithSignal>(async () => {}),
@@ -85,21 +71,29 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
     });
     expect(stageContext.hasUsablePoolPrice).toBe(usable);
     expect(stageContext.pools).toHaveLength(poolCount);
-    expect(result.providerChecks).toEqual([
-      expect.objectContaining({ status: "success", paginationComplete: true }),
-    ]);
+    expect(result.providerChecks).toEqual([expect.objectContaining({
+      status: degraded ? "degraded" : "success", paginationComplete: true,
+    })]);
+    expect(classifyDexDeploymentOutcomes({
+      stablecoinId: "usdc-circle", deployments: [{ chain: "ethereum", address: "0xabc", decimals: 6 }],
+      pools: stageContext.pools, providerChecks: result.providerChecks, nowSec: 1_800_000_000,
+    })[0]).toMatchObject({
+      outcome: poolCount ? "observed_pools" : degraded ? "provider_inaccessible" : "verified_no_pools",
+      ...(degraded ? { reason: "Provider census is not exhaustive for this chain" } : {}),
+    });
   });
 
-  it("degrades a completed page whose rows cannot be parsed, so it cannot certify an empty census", async () => {
+  it.each([false, true])("degrades a completed page whose rows cannot be parsed, so it cannot certify an empty census (mixed=%s)", async (mixed) => {
     const deployment: ContractDeployment = { chain: "ethereum", address: "0xabc", decimals: 6 };
+    const stageContext = context("usdc-circle");
     const stage = await crawlGeckoTerminalPoolsStage({
       coinTargets: [deployment],
       cgPriceObservationTargets: new Set(),
-      context: context("usdc-circle"),
+      context: stageContext,
       dependencies: {
         crawlTokenPools,
         fetchGtTokenPools: vi.fn<typeof fetchGtTokenPools>(async () => ({
-          rows: malformedGtPage(),
+          rows: [...malformedGtPage(), ...(mixed ? [coinGeckoPool()] : [])],
           complete: true,
           cappedAtMaxPages: false,
           failedAfterRows: null,
@@ -116,11 +110,15 @@ describe("supplemental GeckoTerminal deployment discovery", () => {
     const [outcome] = classifyDexDeploymentOutcomes({
       stablecoinId: "usdc-circle",
       deployments: [deployment],
-      pools: [],
+      pools: stageContext.pools,
       providerChecks: stage.providerChecks,
       nowSec: 1_800_000_000,
     });
-    expect(outcome).toMatchObject({ outcome: "provider_inaccessible", observedPoolCount: 0 });
+    expect(stageContext.hasUsablePoolPrice).toBe(mixed);
+    expect(outcome).toMatchObject({
+      outcome: mixed ? "observed_pools" : "provider_inaccessible", observedPoolCount: mixed ? 1 : 0,
+      ...(mixed ? {} : { reason: "Provider census is not exhaustive for this chain" }),
+    });
   });
 
   it.each([true, false])(

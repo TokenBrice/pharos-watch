@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as conservationModule from "../../mint-burn-conservation";
-import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
+import { getMintBurnConfigsForStablecoin as byId, MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { MintBurnConservationRecordSchema, MintBurnReconciliationSummarySchema } from "@shared/types/status";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getDatasetCadenceSec } from "@shared/lib/status-dataset-freshness";
@@ -12,21 +12,20 @@ import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data"
 import { makeMintBurnScanSegments } from "../../../test-helpers/__shared/mint-burn";
 import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
-import { isGrandfatheredMintBurnConfig } from "../../mint-burn-publication";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../mint-burn-publication";
 
 const NOW = 1_800_000_000;
+const fixtures = createLatestSchemaFixtureTracker();
 
-// Per-scenario stored sync cursors. `lagging` puts the cursor far below the audited window, so the
-// record-scoped clauses demote it. `lagging-but-covered` is the production shape: 301 Ethereum blocks
-// (one hour, > the 300-block threshold) behind the snapshot head, yet at or after the audited window's
-// own opening block and inside the snapshot's observed head.
+// A covered audited window can pass even when its flow cursor trails the head by 301 blocks.
 const LAST_BLOCK_BY_COVERAGE: Readonly<Record<string, number>> = {
   lagging: 90_000_000,
   "lagging-but-covered": 99_999_699,
   quiet: 99_999_925,
 };
 
-function conservationFixture(config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usds-sky")!) {
+function conservationFixture(config = byId("usds-sky")[0]) {
   return {
     version: 1 as const, key: conservationModule.mintBurnConservationCacheKey(config),
     configFingerprint: conservationModule.mintBurnConservationFingerprint(config),
@@ -41,10 +40,10 @@ function conservationFixture(config = MINT_BURN_CONFIGS.find((entry) => entry.st
 }
 
 async function reconcile(options: {
-  id?: string; records?: unknown[]; coverage?: string; admittedTron?: boolean; disabledKeys?: string[];
+  id?: string; records?: unknown[]; coverage?: string; admittedTron?: boolean; disabledKeys?: string[]; paused?: boolean;
 } = {}) {
   const id = options.id ?? "usds-sky";
-  const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === id);
+  const configs = byId(id);
   const records = options.records ?? configs.map(conservationFixture);
   vi.spyOn(conservationModule, "readMintBurnConservationRecords").mockResolvedValue(new Map(
     configs.map((config, index) => [conservationModule.mintBurnConservationCacheKey(config), records[index]]),
@@ -56,9 +55,11 @@ async function reconcile(options: {
         admitted_at: NOW - 1, baseline_from: NOW - 90 * 86400, baseline_to: NOW - 1,
       })) : [] },
     { match: "FROM mint_burn_publication_policy", rows: [{
-      disabled_keys: JSON.stringify(options.disabledKeys ?? []), paused_keys: "[]",
+      disabled_keys: JSON.stringify(options.disabledKeys ?? []), paused_keys: JSON.stringify(options.paused ? configs.map(mintBurnConfigKey) : []),
     }] },
-    { match: "pharos:mint-burn-scan-coverage:read", rows: makeMintBurnScanSegments(Math.floor(NOW / 3600) * 3600) },
+    { match: "pharos:mint-burn-scan-coverage:read", rows: makeMintBurnScanSegments(NOW, 90,
+      MINT_BURN_CONFIGS.filter((config) => isGrandfatheredMintBurnConfig(config) || (options.admittedTron && config.chain.chainId === "tron")))
+      .filter((row) => !options.paused || !configs.some((config) => mintBurnConfigKey(config) === row.config_key)) },
     { match: "pharos:mint-burn-legacy-evidence", rows: [] },
     { match: "FROM mint_burn_sync_state", rows: options.coverage === "missing-cursor" ? [] : MINT_BURN_CONFIGS.map((config) => ({
       config_key: `${config.chain.chainId}-${config.contractAddress}`, last_block: LAST_BLOCK_BY_COVERAGE[options.coverage ?? ""] ?? 99_999_999,
@@ -75,12 +76,12 @@ async function reconcile(options: {
   expect(db.getHistory().some((entry) => entry.sql.includes("mint-burn-24h") || entry.sql.includes("key = ?"))).toBe(false);
   expect(result.conservationVersion).toBe(1);
   if (!options.disabledKeys) {
-    // Only admitted configs reach reconciliation; post-gate additions stay pending until admitted.
     const admittedTron = (config: (typeof MINT_BURN_CONFIGS)[number]) => !!options.admittedTron && config.chain.chainId === "tron";
     expect(result.rows).toHaveLength(new Set(MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId)
       && (isGrandfatheredMintBurnConfig(config) || admittedTron(config))).map((config) => config.stablecoinId)).size);
   }
-  return { ...result, rows: result.rows.filter((row) => row.stablecoinId === id) };
+  return { ...result, rows: result.rows.filter((row) => row.stablecoinId === id),
+    readConfigs: vi.mocked(conservationModule.readMintBurnConservationRecords).mock.lastCall![1] };
 }
 
 describe("conservation compatibility schema", () => {
@@ -120,8 +121,7 @@ describe("getMintBurnReconciliation verified conservation", () => {
     expect(ACTIVE_IDS.has(id)).toBe(false);
     const result = await reconcile({ id });
     expect(result.rows).toEqual([]);
-    const readConfigs = vi.mocked(conservationModule.readMintBurnConservationRecords).mock.calls[0][1];
-    expect(readConfigs?.some((config) => config.stablecoinId === id)).toBe(false);
+    expect(result.readConfigs.some((config) => config.stablecoinId === id)).toBe(false);
   });
 
   it("uses native evidence without reading circulating supply or USD-flow comparisons", async () => {
@@ -156,29 +156,24 @@ describe("getMintBurnReconciliation verified conservation", () => {
     ["no logs but issuance", { logCount: 0 }],
     ["unavailable", { status: "unavailable", reason: "RPC failed" }],
   ])("fails closed for %s evidence", async (_label, patch) => {
-    const result = await reconcile({ records: [patch === undefined ? undefined : { ...conservationFixture(), ...patch }] });
-    expect(result.rows[0].status).toBe("insufficient-source");
-    expect(result.criticalCount).toBe(0);
-    expect(result.rows[0].conservation?.[0].status).not.toBe("ok");
+    for (const paused of [false, true]) {
+      const result = await reconcile({ paused, records: [patch === undefined ? undefined : { ...conservationFixture(), ...patch }] });
+      expect(result.rows[0].status).toBe("insufficient-source");
+      expect(result.criticalCount).toBe(0);
+      expect(result.rows[0].conservation?.[0].status).not.toBe("ok");
+    }
   });
 
   it.each(["stale", "error", "missing-cursor", "lagging"])("gates positive evidence on %s scan coverage", async (coverage) => {
     expect((await reconcile({ coverage })).rows[0].status).toBe("insufficient-source");
   });
 
-  it("keeps a verified pass whose audited window is covered while the coin's flow cursor reads lagging", async () => {
-    // Head 100_000_000 vs cursor 99_999_699 => 301 blocks, past the 300-block Ethereum coverage budget,
-    // so the row's coverageStatus is "lagging" — the by-design extended-lane deferral shape. The audited
-    // window is still inside [cursor, snapshot head], so the conservation verdict must stay verified.
-    const record = { ...conservationFixture(), fromBlock: 99_999_600, toBlock: 99_999_699 };
-    const result = await reconcile({ records: [record], coverage: "lagging-but-covered" });
-    expect(result.rows[0]).toMatchObject({ status: "ok", coverageStatus: "lagging" });
-  });
-
-  it("accepts a completed quiet scan whose replay-safe cursor intentionally trails its audited end", async () => {
-    const record = { ...conservationFixture(), fromBlock: 99_999_900,
-      mintRaw: "0", burnRaw: "0", supplyDeltaRaw: "0", residualRaw: "0", logCount: 0 };
-    expect((await reconcile({ records: [record], coverage: "quiet" })).rows[0].status).toBe("ok");
+  it.each([
+    ["lagging-but-covered", { fromBlock: 99_999_600, toBlock: 99_999_699 }, "lagging"],
+    ["quiet", { fromBlock: 99_999_900, mintRaw: "0", burnRaw: "0", supplyDeltaRaw: "0", residualRaw: "0", logCount: 0 }, "full"],
+  ] as const)("verifies %s audited blocks independently of flow backlog", async (coverage, patch, coverageStatus) => {
+    const result = await reconcile({ records: [{ ...conservationFixture(), ...patch }], coverage });
+    expect(result.rows[0]).toMatchObject({ status: "ok", coverageStatus });
   });
 
   it("keeps a verified historical mismatch unresolved when cron or evidence age degrades", async () => {
@@ -190,20 +185,52 @@ describe("getMintBurnReconciliation verified conservation", () => {
   });
 
 
-  it("requires every configured BUIDL contract to pass", async () => {
-    const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock");
+  it("retains quarantined SQLite mismatches until a covering pass and propagates failed reads", async () => {
+    const { db, sqlite } = fixtures.open();
+    const bad = byId("usds-sky")[0];
+    await syncMintBurnPublicationPolicy(db, [], NOW);
+    for (const config of MINT_BURN_CONFIGS) {
+      const end = NOW - (config === bad ? 86400 : 0);
+      sqlite.prepare(`INSERT INTO mint_burn_scan_coverage
+        (config_key, config_fingerprint, chain_id, from_block, to_block, from_timestamp, to_timestamp,
+         finality_tag, finalized_block, accepted_at) VALUES (?, ?, ?, 1, 100, ?, ?, 'finalized', 100, ?)`)
+        .run(mintBurnConfigKey(config), mintBurnScanFingerprint(config), config.chain.chainId, end - 3600, end, NOW);
+    }
+    const mismatch = { ...conservationFixture(bad), status: "mismatch" as const, supplyDeltaRaw: "99", residualRaw: "1" };
+    await conservationModule.persistMintBurnConservation(db, mismatch);
+    const row = async () => (await getMintBurnReconciliation(db, NOW)).rows.find((entry) => entry.stablecoinId === bad.stablecoinId)!;
+    expect((await row()).status).toBe("critical");
+    const policy = sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy").get() as { paused_keys: string };
+    expect(JSON.parse(policy.paused_keys)).toContain(mintBurnConfigKey(bad));
+    const pass = { ...mismatch, status: "ok" as const, supplyDeltaRaw: "100", residualRaw: "0" };
+    expect(await conservationModule.persistMintBurnConservation(db, { ...pass, fromBlock: pass.fromBlock + 1 })).toEqual({ written: false });
+    expect((await row()).status).toBe("critical");
+    expect(await conservationModule.persistMintBurnConservation(db, pass)).toEqual({ written: true });
+    expect((await row()).status).toBe("insufficient-source");
+    sqlite.prepare("INSERT INTO mint_burn_sync_state VALUES (?, ?)").run(mintBurnConfigKey(bad), pass.toBlock);
+    sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES (?, ?, 1, 'ok', ?)")
+      .run(bad.tier === "extended" ? "sync-mint-burn-extended" : "sync-mint-burn", NOW,
+        JSON.stringify({ chainHeads: { ethereum: pass.toBlock } }));
+    expect((await row()).status).toBe("ok");
+    vi.spyOn(conservationModule, "readMintBurnConservationRecords").mockRejectedValueOnce(new Error("read failed"));
+    await expect(getMintBurnReconciliation(db, NOW)).rejects.toThrow("read failed");
+  });
+
+  it.each([
+    ["all passing", "ok", false, "ok"],
+    ["missing sibling", "ok", true, "insufficient-source"],
+    ["mismatch and missing sibling", "mismatch", true, "critical"],
+    ["opposite residuals and intervals", "mismatch", false, "critical"],
+  ] as const)("requires every BUIDL contract independently: %s", async (_label, status, missing, expected) => {
+    const configs = byId("buidl-blackrock");
     expect(configs).toHaveLength(2);
-    expect((await reconcile({ id: "buidl-blackrock", records: [conservationFixture(configs[0]), undefined] })).rows[0].status)
-      .toBe("insufficient-source");
-    expect((await reconcile({ id: "buidl-blackrock" })).rows[0].status).toBe("ok");
+    const records = configs.map((config, i) => missing && i ? undefined : {
+      ...conservationFixture(config), status,
+      supplyDeltaRaw: status === "ok" ? "100" : i ? "101" : "99", residualRaw: status === "ok" ? "0" : i ? "-1" : "1",
+      fromBlock: 99_999_980 + i * 5, toBlock: 99_999_981 + i * 5,
+    });
+    expect((await reconcile({ id: "buidl-blackrock", records })).rows[0].status).toBe(expected);
   });
-
-  it("keeps a valid mismatch critical even when another configured contract is missing", async () => {
-    const config = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "buidl-blackrock")!;
-    const record = { ...conservationFixture(config), status: "mismatch", supplyDeltaRaw: "99", residualRaw: "1" };
-    expect((await reconcile({ id: "buidl-blackrock", records: [record, undefined] })).rows[0].status).toBe("critical");
-  });
-
 
   it("rejects positive evidence for a currently unsupported rebasing config", async () => {
     expect((await reconcile({ id: "m-m0" })).rows[0].status).toBe("insufficient-source");
@@ -213,16 +240,13 @@ describe("getMintBurnReconciliation verified conservation", () => {
     const result = await reconcile({ id: "usdt-tether" });
     expect(result.rows[0]).toMatchObject({ status: "ok", coverageStatus: "full" });
     expect(result.rows[0].conservation?.map((record) => record.chainId)).toEqual(["ethereum"]);
-    const readConfigs = vi.mocked(conservationModule.readMintBurnConservationRecords).mock.calls[0][1];
-    expect(readConfigs.some((config) => config.chain.chainId === "tron")).toBe(false);
+    expect(result.readConfigs.some((config) => config.chain.chainId === "tron")).toBe(false);
   });
 
-  it("excludes operator-disabled legs instead of reading their stale conservation evidence", async () => {
-    const ethereum = MINT_BURN_CONFIGS.find((config) => config.stablecoinId === "usdt-tether" && config.chain.chainId === "ethereum")!;
-    const result = await reconcile({ id: "usdt-tether", disabledKeys: [mintBurnConfigKey(ethereum)] });
+  it.each(["usdt-tether", "buidl-blackrock"])("excludes explicit and shared-bucket disables for %s", async (id) => {
+    const result = await reconcile({ id, disabledKeys: [mintBurnConfigKey(byId(id)[0])], paused: true });
     expect(result.rows).toEqual([]);
-    const readConfigs = vi.mocked(conservationModule.readMintBurnConservationRecords).mock.calls[0][1];
-    expect(readConfigs.some((config) => config.stablecoinId === "usdt-tether")).toBe(false);
+    expect(result.readConfigs.some((config) => config.stablecoinId === id)).toBe(false);
   });
 
   it("keeps admitted unsupported Tron visible with its reason without degrading USDT", async () => {
@@ -243,7 +267,7 @@ describe("getMintBurnReconciliation verified conservation", () => {
       const eligibility = conservationModule.getMintBurnConservationEligibility;
       vi.spyOn(conservationModule, "getMintBurnConservationEligibility").mockImplementation((config) =>
         config.chain.chainId === "tron" ? { supported: true } : eligibility(config));
-      const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdt-tether");
+      const configs = byId("usdt-tether");
       const records = configs.map((config) => ({ ...conservationFixture(config),
         ...(config.chain.chainId === "tron" ? { address } : {}) }));
       const result = await reconcile({ id: "usdt-tether", records, admittedTron: true });
@@ -252,18 +276,10 @@ describe("getMintBurnReconciliation verified conservation", () => {
       });
     },
   );
-
-  it("does not cancel opposite residuals on separate contracts or intervals", async () => {
-    const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock");
-    const records = configs.map((config, index) => ({ ...conservationFixture(config),
-      status: "mismatch", supplyDeltaRaw: index ? "101" : "99", residualRaw: index ? "-1" : "1",
-      fromBlock: 99_999_980 + index * 5, toBlock: 99_999_981 + index * 5,
-    }));
-    expect((await reconcile({ id: "buidl-blackrock", records })).rows[0].status).toBe("critical");
-  });
 });
 
 afterEach(() => {
+  fixtures.closeAll();
   vi.useRealTimers();
   vi.restoreAllMocks();
 });
@@ -284,9 +300,8 @@ function publishedPointer(updatedAt: number) {
 }
 
 describe("getDatasetFreshness", () => {
+  beforeEach(() => { vi.useFakeTimers(); vi.setSystemTime(new Date(NOW * 1000)); });
   it("fails closed for safety freshness without an accepted canonical publication instead of reading legacy history", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
     const db = mockD1([]);
     const freshness = await getDatasetFreshness(db);
     expect(freshness.safetyGrades).toBeNull();
@@ -295,8 +310,6 @@ describe("getDatasetFreshness", () => {
   });
 
   it("keeps other dataset freshness available when the canonical publication read fails", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
     vi.spyOn(safetySourceModule, "loadActiveSafetyScoreIndex").mockRejectedValue(new Error("publication unavailable"));
     const freshness = await getDatasetFreshness(mockD1([
       { match: "SELECT MAX(updated_at) as latest FROM cache", rows: [], first: { latest: NOW - 60 } },
@@ -306,8 +319,6 @@ describe("getDatasetFreshness", () => {
   });
 
   it.each(["v9", "held"] as const)("uses the canonical %s publication clock with the publication producer budget", async (kind) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
     const updatedAt = NOW - 2 * 86400;
     const snapshot = makeWorkerReportCardsV9Response({ updatedAt });
     vi.spyOn(safetySourceModule, "loadActiveSafetyScoreIndex").mockResolvedValue(
@@ -327,8 +338,6 @@ describe("getDatasetFreshness", () => {
     [Number.POSITIVE_INFINITY, "invalid-timestamp"],
     [null, "missing-timestamp"],
   ] as const)("rejects dataset clock %s with a per-dataset machine reason", async (clock, reason) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
     if (clock != null) {
       vi.spyOn(safetySourceModule, "loadActiveSafetyScoreIndex").mockResolvedValue({
         kind: "v9", snapshot: { ...makeWorkerReportCardsV9Response(), updatedAt: clock },
@@ -347,8 +356,6 @@ describe("getDatasetFreshness", () => {
   });
 
   it("preserves an admitted observed zero timestamp", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
     const freshness = await getDatasetFreshness(mockD1([
       { match: "SELECT MAX(updated_at) as latest FROM cache", rows: [], first: { latest: 0 } },
     ]));
@@ -356,46 +363,16 @@ describe("getDatasetFreshness", () => {
     expect(freshness.unavailableReasons?.stablecoins).toBeUndefined();
   });
 
-  it("uses the DEWS publication pointer and never a newer partial table timestamp", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
+  it.each([true, false])("uses only valid DEWS publication evidence: %s", async (published) => {
     const publishedAt = NOW - 300;
-    const pointer = publishedPointer(publishedAt);
+    const pointer = published ? publishedPointer(publishedAt) : null;
     const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["dews:published-generation"],
-        rows: [pointer],
-        first: pointer,
-      },
-      {
-        match: "FROM stress_signals",
-        first: { latest: NOW - 10 },
-        rows: [],
-      },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"],
+        rows: pointer ? [pointer] : [], first: pointer },
+      { match: "FROM stress_signals", first: { latest: NOW - 10 }, rows: [] },
     ]);
-
     const freshness = await getDatasetFreshness(db);
-
-    expect(freshness.dews).toBe(publishedAt);
-    expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
-  });
-
-  it("reports DEWS freshness as unavailable without valid publication evidence", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(NOW * 1000));
-    const db = mockD1([
-      {
-        match: "FROM cache WHERE key = ?",
-        matchBinds: ["dews:published-generation"],
-        rows: [],
-        first: null,
-      },
-    ]);
-
-    const freshness = await getDatasetFreshness(db);
-
-    expect(freshness.dews).toBeNull();
+    expect(freshness.dews).toBe(published ? publishedAt : null);
     expect(db.getHistory().some((entry) => entry.sql.includes("FROM stress_signals"))).toBe(false);
   });
 });

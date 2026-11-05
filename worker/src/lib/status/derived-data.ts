@@ -294,7 +294,7 @@ export async function getMintBurnReconciliation(
   now: number,
 ): Promise<MintBurnReconciliationSummary> {
   const activeConfigs = MINT_BURN_CONFIGS.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId));
-  let admittedConfigs: MintBurnContractConfig[];
+  let diagnosticConfigs: MintBurnContractConfig[];
   let lastBlocks: Map<string, number>;
   let cronSnapshot: MintBurnCronSnapshot;
   let extendedSnapshot: MintBurnCronSnapshot;
@@ -302,13 +302,13 @@ export async function getMintBurnReconciliation(
   let conservationRecords: Map<string, unknown>;
   try {
     const context = await readMintBurnWindowContext(db, now, activeConfigs);
-    admittedConfigs = context.configs;
+    diagnosticConfigs = context.diagnosticConfigs;
     scanSegments = context.segments;
     [lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
-      readMintBurnSyncStateBatch(db, admittedConfigs),
+      readMintBurnSyncStateBatch(db, diagnosticConfigs),
       readMintBurnCronSnapshot(db),
       readMintBurnCronSnapshot(db, "sync-mint-burn-extended"),
-      readMintBurnConservationRecords(db, admittedConfigs),
+      readMintBurnConservationRecords(db, diagnosticConfigs),
     ]);
   } catch (err) {
     logWorkerEvent({
@@ -327,7 +327,7 @@ export async function getMintBurnReconciliation(
   }
 
   const configsByStablecoin = new Map<string, MintBurnContractConfig[]>();
-  for (const config of admittedConfigs) {
+  for (const config of diagnosticConfigs) {
     const configs = configsByStablecoin.get(config.stablecoinId) ?? [];
     configs.push(config);
     configsByStablecoin.set(config.stablecoinId, configs);
@@ -340,7 +340,7 @@ export async function getMintBurnReconciliation(
       freshHeads.set(chainId, Math.max(freshHeads.get(chainId) ?? 0, head));
     }
   }
-  const conservationConfigs = admittedConfigs.filter((config) => getMintBurnConservationEligibility(config).supported);
+  const conservationConfigs = diagnosticConfigs.filter((config) => getMintBurnConservationEligibility(config).supported);
   const coverageMap = buildCoinCoverageMap(now, scanSegments, lastBlocks, freshHeads, null, conservationConfigs);
 
   const rows = [...configsByStablecoin.entries()]

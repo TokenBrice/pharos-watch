@@ -58,7 +58,7 @@ function fixtureMockD1(
     { match: "FROM mint_burn_hourly INDEXED BY idx_mbh_ts", rows: [] },
     { match: "FROM mint_burn_admission", rows: [] },
     { match: "FROM mint_burn_publication_policy", rows: [] },
-    { match: "FROM mint_burn_scan_coverage", rows: [] },
+    { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
     { match: "pharos:mint-burn-legacy-evidence", rows: [] },
     { match: "FROM (VALUES", rows: [] },
     { match: "SELECT MAX(snapshot_date) as latest FROM supply_history", rows: [], first: null },

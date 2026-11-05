@@ -95,7 +95,9 @@ export async function readMintBurnWindowContext(
     prepareMintBurnPublicationPolicy(db),
     ...(transitionActive ? [prepareMintBurnLegacyEvidence(db, configs)] : []),
   ]);
-  const segments = decodeMintBurnScanCoverage(results[0] as D1Result<MintBurnScanSegment>);
+  const scanRows = results[0] as D1Result<MintBurnScanSegment>;
+  const segments = decodeMintBurnScanCoverage(scanRows);
+  const previouslyScanned = new Set(scanRows.results.filter((row) => row.dirty_hour_ts == null).map((row) => row.config_key));
   const legacy = transitionActive ? buildMintBurnLegacySpans(
     configs.filter(isGrandfatheredMintBurnConfig), results[3].results as MintBurnLegacyRow[], segments, expectedBlockTimeSec,
   ) : new Map<string, MintBurnLegacySpan>();
@@ -113,14 +115,22 @@ export async function readMintBurnWindowContext(
   const existing = configs.filter((config) => !mintBurnPublicationDisabled(config, configs, admissions, disabledKeys)
     && !pausedPairs.has(`${config.stablecoinId}|${config.chain.chainId}`)
     && mintBurnPreviouslyAdmitted(config, admissions));
-  // R8 post-admission gate: a stalled admitted leg is quarantined below the common
-  // watermark and paused for reactivation catch-up instead of freezing every coin.
-  // Only active-roster coins join that watermark; retained detail for an inactive
-  // quarantined coin keeps its own frontier. A roster-wide stall is a producer outage,
-  // not a bad asset: it keeps the stale verdict and pauses nothing.
+  // Close over indivisible hourly buckets before proving the surviving roster.
+  // Only the complete active roster may isolate; roster-wide outages retain their verdict.
+  const rosterKeys = new Set(configs.map(mintBurnConfigKey));
+  const completeRoster = MINT_BURN_CONFIGS.every((config) => !WORKER_ACTIVE_IDS.has(config.stablecoinId)
+    || rosterKeys.has(mintBurnConfigKey(config)));
   const active = existing.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId));
-  const stalled = selectMintBurnStalledFrontiers(active, segments, legacy, nowSec, MINT_BURN_WATERMARK_MAX_AGE_SEC);
-  const quarantineKeys = new Set(stalled.length < active.length ? stalled.map(mintBurnConfigKey) : []);
+  // Grandfathered membership and legacy cursors alone cannot turn bootstrap gaps into quarantine.
+  const proven = active.filter((config) => previouslyScanned.has(mintBurnConfigKey(config))
+    || admissions.some((row) => row.config_key === mintBurnConfigKey(config)));
+  const stalled = selectMintBurnStalledFrontiers(proven, segments, legacy, nowSec, MINT_BURN_WATERMARK_MAX_AGE_SEC);
+  const stalledPairs = new Set(stalled.map((config) => `${config.stablecoinId}|${config.chain.chainId}`));
+  const survivors = active.filter((config) => !stalledPairs.has(`${config.stablecoinId}|${config.chain.chainId}`));
+  const survivorWatermark = resolveMintBurnWatermark(nowSec, survivors, segments, legacy);
+  const quarantineKeys = new Set(completeRoster && survivorWatermark.unavailableReason == null
+    ? active.filter((config) => stalledPairs.has(`${config.stablecoinId}|${config.chain.chainId}`)).map(mintBurnConfigKey)
+    : []);
   const current = resolveMintBurnWatermark(nowSec,
     existing.filter((config) => !quarantineKeys.has(mintBurnConfigKey(config))), segments, legacy);
   // A new leg must cover the incumbent window, so admission cannot move its frontier backwards.
@@ -161,6 +171,10 @@ export async function readMintBurnWindowContext(
     segments,
     legacy,
     configs: scope.configs,
+    // Automatic pauses withhold flows, never unresolved operator conservation evidence.
+    diagnosticConfigs: configs.filter((config) => scope.configs.includes(config)
+      || (mintBurnPreviouslyAdmitted(config, admissions)
+        && !mintBurnPublicationDisabled(config, configs, admissions, disabledKeys))),
     publication: scope.publication,
     policy,
   };
