@@ -7,6 +7,7 @@ import { CopyButton } from "@/components/copy-button";
 import { DataTableShell } from "@/components/data-table-shell";
 import { EmptyStateSurface } from "@/components/empty-state-surface";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
+import { createPortal } from "react-dom";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { MobileSortPills } from "@/components/mobile-sort-pills";
 import { QueryStateNotice } from "@/components/query-state-notice";
@@ -264,6 +265,7 @@ describe("InteractiveTableRow", () => {
       <InteractiveTableRow id="coin-row" onActivate={activate} onHover={hover}>
         <td>Coin<a href="#coin">Open</a><button><svg><path /></svg></button>
           <span onClick={(event) => event.preventDefault()}>Prevented</span>
+          {createPortal(<p>Dialog<button>Close</button></p>, document.body)}
         </td>
       </InteractiveTableRow>
     </tbody></table></div>);
@@ -276,6 +278,7 @@ describe("InteractiveTableRow", () => {
     for (const options of [{ button: 1 }, { button: 2 }, { ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }]) fireEvent.click(row, options);
     for (const target of row.querySelectorAll("td > *, svg, path")) expect(fireEvent.click(target)).toBe(target.textContent !== "Prevented");
     for (const key of ["Enter", " ", "ArrowDown"]) expect(fireEvent.keyDown(row, { key })).toBe(true);
+    for (const target of [screen.getByText("Dialog"), screen.getByRole("button", { name: "Close" })]) fireEvent.click(target);
     fireEvent.focus(screen.getByRole("link", { name: "Open" }));
     expect(hover).toHaveBeenCalledTimes(1);
     fireEvent.mouseEnter(row);

@@ -23,6 +23,8 @@ export function InteractiveTableRow({
       className={`cursor-pointer ${className}`}
       onClick={(event) => {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        // React bubbles clicks from portals (dialogs, sheets) through the row; only DOM descendants activate it.
+        if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
         const control = event.target instanceof Element
           ? event.target.closest('a,button,input,select,textarea,summary,[role="button"],[role="link"],[contenteditable]:not([contenteditable="false"]),[tabindex]')
           : null;
