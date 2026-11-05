@@ -25,6 +25,9 @@ import {
 } from "../../../telegram/outbox/pending-capacity";
 import { throwIfAborted } from "../../../lib/abort";
 import { parseJson } from "../../../lib/json-parse";
+import { recordOperatorAlertReceipt } from "../../../lib/status/operator-alert-health";
+import { deliverOperatorAlert } from "../../cron-sentinel-rules";
+import { escapeHtml, type TelegramCreds } from "../../../telegram/delivery/telegram";
 
 /**
  * Telegram dispatch degradation watchdog. Reads fresh signals after each
@@ -36,11 +39,13 @@ import { parseJson } from "../../../lib/json-parse";
 export const PENDING_BACKLOG_THRESHOLD = 500;
 export const PENDING_BACKLOG_SUSTAINED_SEC = 20 * 60;
 export const ZERO_SEND_STREAK_THRESHOLD = 3;
+export const DELIVERY_ALERT_COOLDOWN_SEC = 30 * 60;
 
 export const WATCHDOG_KEYS = {
   pendingSince: "telegram:degradation:pending-since",
   safetySourceSince: "telegram:degradation:safety-source-since",
   zeroSendStreak: "telegram:degradation:zero-send-streak",
+  notifications: "telegram:degradation:notifications:v1",
 } as const;
 
 type WatchdogOutcome = {
@@ -87,8 +92,123 @@ type WatchdogResult = {
 };
 
 export interface TelegramDegradationWatchdogOptions {
+  operatorTelegramCreds?: TelegramCreds | null;
   pendingCapacitySnapshot?: TelegramPendingCapacitySnapshot | null;
   safetySourceAssessment?: AlertSafetySourceAssessment | null;
+}
+
+const DELIVERY_CONDITIONS = ["backlog", "near-ttl", "zero-send"] as const;
+type DeliveryCondition = typeof DELIVERY_CONDITIONS[number];
+interface DeliveryTransition {
+  condition: DeliveryCondition;
+  active: boolean;
+  observedAt: number;
+  detail: string;
+}
+interface NotificationState {
+  version: 1;
+  observed: DeliveryCondition[];
+  acknowledged: DeliveryCondition[];
+  pending: DeliveryTransition[];
+  lastDeliveredAt: number | null;
+}
+
+function isDeliveryCondition(value: unknown): value is DeliveryCondition {
+  return DELIVERY_CONDITIONS.some((condition) => condition === value);
+}
+
+async function readNotificationState(db: D1Database, signal?: AbortSignal): Promise<NotificationState> {
+  const cached = await getCache(db, WATCHDOG_KEYS.notifications, signal);
+  if (!cached) return { version: 1, observed: [], acknowledged: [], pending: [], lastDeliveredAt: null };
+  const parsed = parseJson(cached.value);
+  const state = parsed.ok ? readMetadataRecord(parsed.value) : null;
+  if (
+    state?.version !== 1 ||
+    !Array.isArray(state.observed) || !state.observed.every(isDeliveryCondition) ||
+    !Array.isArray(state.acknowledged) || !state.acknowledged.every(isDeliveryCondition) ||
+    !Array.isArray(state.pending) || !state.pending.every((entry): entry is DeliveryTransition => {
+      const transition = readMetadataRecord(entry);
+      return transition != null && isDeliveryCondition(transition.condition) && typeof transition.active === "boolean" &&
+        typeof transition.observedAt === "number" && Number.isSafeInteger(transition.observedAt) &&
+        transition.observedAt >= 0 && typeof transition.detail === "string";
+    }) ||
+    !(state.lastDeliveredAt === null ||
+      (typeof state.lastDeliveredAt === "number" && Number.isSafeInteger(state.lastDeliveredAt) && state.lastDeliveredAt >= 0))
+  ) throw new Error("telegram delivery notification state invalid");
+  return {
+    version: 1, observed: state.observed, acknowledged: state.acknowledged,
+    pending: state.pending, lastDeliveredAt: state.lastDeliveredAt,
+  };
+}
+
+async function notifyDeliveryTransitions(
+  db: D1Database,
+  state: NotificationState,
+  result: WatchdogResult,
+  nowSec: number,
+  creds: TelegramCreds | null,
+  signal?: AbortSignal,
+) {
+  const { pendingBacklog, zeroSend } = result;
+  const observations: Array<[DeliveryCondition, boolean | null, string | null]> = [
+    ["backlog", pendingBacklog.availability === "available" ? pendingBacklog.triggered : null, pendingBacklog.detail],
+    ["near-ttl", pendingBacklog.availability === "available"
+      ? pendingBacklog.triggered && pendingBacklog.nearTtl != null && pendingBacklog.nearTtl > 0 : null, pendingBacklog.detail],
+    ["zero-send", zeroSend.availability === "available" && zeroSend.runIdentity != null
+      ? zeroSend.triggered : null, zeroSend.detail],
+  ];
+  let changed = false;
+  for (const [condition, active, detail] of observations) {
+    if (active == null || state.observed.includes(condition) === active) continue;
+    state.pending.push({ condition, active, observedAt: nowSec, detail: detail ?? "threshold cleared" });
+    state.observed = state.observed.filter((value) => value !== condition);
+    if (active) state.observed.push(condition);
+    changed = true;
+  }
+  // Persist captured history independently of detector keys and before transport.
+  if (changed) await setCache(db, WATCHDOG_KEYS.notifications, JSON.stringify(state), signal);
+  const transitions = state.pending.slice(0, 3);
+  const cooldown = transitions.length > 0 && state.lastDeliveredAt != null &&
+    nowSec - state.lastDeliveredAt < DELIVERY_ALERT_COOLDOWN_SEC;
+  const unknownReason = pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
+    : zeroSend.availability === "unknown" ? "dispatch-evidence-unavailable" : null;
+  let reason = transitions.length === 0 ? unknownReason
+    : !creds ? "operator-alert-credentials-missing"
+      : cooldown ? "operator-alert-cooldown" : "operator-alert-pending";
+  let sent = false;
+  const receipt = () => recordOperatorAlertReceipt(db, "telegramDelivery", {
+    nowSec, operatorConfigured: creds != null, pending: state.pending.length > 0, delivered: sent, reason,
+  }, signal);
+  await receipt();
+  if (transitions.length > 0 && creds && !cooldown) {
+    const text = [
+      "<b>Telegram delivery-risk transitions</b>",
+      ...transitions.map((transition) =>
+        `${transition.active ? "RAISED" : "RECOVERED"} ${transition.condition} observed ${new Date(transition.observedAt * 1000).toISOString()}: ${escapeHtml(transition.detail.slice(0, 160))}`),
+    ].join("\n");
+    try {
+      sent = (await deliverOperatorAlert(creds, text, signal)).ok;
+    } catch {
+      throwIfAborted(signal);
+    }
+    if (sent) {
+      for (const transition of transitions) {
+        state.acknowledged = state.acknowledged.filter((condition) => condition !== transition.condition);
+        if (transition.active) state.acknowledged.push(transition.condition);
+      }
+      state.pending.splice(0, transitions.length);
+      state.lastDeliveredAt = nowSec;
+      await setCache(db, WATCHDOG_KEYS.notifications, JSON.stringify(state), signal);
+    }
+    reason = !sent ? "operator-alert-delivery-failed"
+      : state.pending.length > 0 ? "operator-alert-cooldown" : unknownReason;
+    await receipt();
+  }
+  return {
+    raised: transitions.filter((transition) => transition.active).map((transition) => transition.condition),
+    recovered: transitions.filter((transition) => !transition.active).map((transition) => transition.condition),
+    sent, cooldown, pending: state.pending.length, reason,
+  };
 }
 
 function emptyOutcome(): WatchdogOutcome {
@@ -485,13 +605,18 @@ export async function runTelegramDegradationWatchdog(
   throwIfAborted(signal);
 
   const nowSec = Math.floor(Date.now() / 1000);
+  const notificationState = await readNotificationState(db, signal);
 
   const pendingBacklog = await evaluatePendingBacklog(db, nowSec, options.pendingCapacitySnapshot);
   const safetySource = await evaluateSafetySource(db, nowSec, options.safetySourceAssessment);
   const zeroSend = await evaluateZeroSendStreak(db);
 
   const result: WatchdogResult = { pendingBacklog, safetySource, zeroSend };
+  const alertTransitions = await notifyDeliveryTransitions(
+    db, notificationState, result, nowSec, options.operatorTelegramCreds ?? null, signal,
+  );
   const degraded =
+    alertTransitions.pending > 0 ||
     pendingBacklog.availability === "unknown" ||
     zeroSend.availability === "unknown" ||
     pendingBacklog.triggered ||
@@ -502,11 +627,13 @@ export async function runTelegramDegradationWatchdog(
     status: degraded ? "degraded" : "ok",
     metadata: {
       ...result,
-      reason: pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
-        : pendingBacklog.triggered ? "pending-backlog-threshold"
-          : safetySource.triggered ? "safety-source-unavailable"
-            : zeroSend.availability === "unknown" ? "dispatch-evidence-unavailable"
-              : zeroSend.triggered ? "zero-send-streak" : "watchdog-completed",
+      alertTransitions,
+      reason: alertTransitions.pending > 0 ? alertTransitions.reason
+        : pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
+          : pendingBacklog.triggered ? "pending-backlog-threshold"
+            : safetySource.triggered ? "safety-source-unavailable"
+              : zeroSend.availability === "unknown" ? "dispatch-evidence-unavailable"
+                : zeroSend.triggered ? "zero-send-streak" : "watchdog-completed",
     },
   });
 }
