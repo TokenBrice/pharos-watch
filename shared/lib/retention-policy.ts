@@ -60,7 +60,7 @@ export function producerHistoryRetentionPolicy(limits: RetentionLimits): Windowe
 export function cronHistoryRetentionPolicies(
   limits: RetentionLimits & { smallBatchLimit: number; smallRunLimit: number },
   evidence: { safetyScoreJournalSec: number },
-): Record<string, WindowedRetentionPolicy> {
+) {
   const policy = (
     table: string, timestampColumn: string, windowSec: number,
     options: Partial<WindowedRetentionPolicy> = {},

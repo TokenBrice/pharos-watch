@@ -218,7 +218,8 @@ describe("handleDepegEvents", () => {
         expect(body.events[0]?.startedAt).toBe(onset);
         expect(body.methodology?.asOf).toBe(onset);
         expect(body.totalExact).toBe(includeTotal);
-        if (includeTotal) expect(body.total).toBe(4);
+        expect(body.total).toBe(includeTotal ? 4 : id === 105 ? 1 : 2);
+        if (body.nextCursor) expect(JSON.parse(atob(body.nextCursor))).toEqual({ v: 2, values: [onset, id] });
         if (id === 102) expect(body.events[0]?.constituentEventCount).toBe(2);
         ids.push(body.events[0]!.id);
         cursor = body.nextCursor ?? null;
@@ -226,7 +227,9 @@ describe("handleDepegEvents", () => {
       }
       expect(ids).toEqual([103, 104, 102, 105]);
       const offset = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?limit=1&offset=2&includeTotal=${includeTotal}${filter}`));
-      expect(DepegEventsResponseSchema.parse(await readJsonResponse(offset, 200)).events[0]?.id).toBe(102);
+      const offsetBody = DepegEventsResponseSchema.parse(await readJsonResponse(offset, 200));
+      expect(offsetBody.events[0]?.id).toBe(102);
+      expect(offsetBody.total).toBe(4);
     }
   });
 
@@ -239,8 +242,7 @@ describe("handleDepegEvents", () => {
     const advance = () => {
       if (advanced) return;
       sqlite.exec("BEGIN IMMEDIATE");
-      // The migrated current-pointer guard requires membership even when the
-      // referenced event itself is missing; preserve that real schema guard.
+      // Membership is required even for a dangling current pointer.
       sqlite.prepare(`INSERT OR IGNORE INTO depeg_resolver_incident_event_links
         (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1700002000)`).run(key, nextId);
       sqlite.prepare(`UPDATE depeg_resolver_incidents SET current_event_id = ?, current_started_at = 1700002000
@@ -248,17 +250,23 @@ describe("handleDepegEvents", () => {
       sqlite.exec("COMMIT");
       advanced = true;
     };
-    // Before the fix this commits after the standalone projection read. With an
-    // atomic batch the writer can commit only before or after the whole snapshot.
+    const executed: string[] = [];
     const db = createSqliteD1(sqlite, { onAll: (sql) => {
       if (sql.includes("pharos:depeg-event-projection:active-incidents")) advance();
-    } });
+    }, onRun: (sql) => { executed.push(sql); } });
     const batch = db.batch.bind(db);
-    vi.spyOn(db, "batch").mockImplementation((statements) => {
+    const batchSpy = vi.spyOn(db, "batch").mockImplementation((statements) => {
+      expect(statements).toHaveLength(includeTotal ? 4 : 2);
       advance();
       return batch(statements);
     });
     const res = await handleDepegEvents(db, new URL(`https://x/api/depeg-events?active=true&includeTotal=${includeTotal}`));
+    expect(batchSpy).toHaveBeenCalledTimes(1);
+    expect(executed.map((sql) => sql.match(/pharos:[\w:-]+/)?.[0])).toEqual([
+      "pharos:depeg-event-projection:active-incidents",
+      ...(includeTotal ? ["pharos:depeg-events:count-summary", "pharos:depeg-events:count"] : []),
+      "pharos:depeg-events:page",
+    ]);
     expect(advanced).toBe(true);
     if (nextId === 999) {
       expect(await readJsonResponse(res, 503)).toEqual({
@@ -622,31 +630,6 @@ describe("handleDepegEvents", () => {
     const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
     expect(body).not.toHaveProperty("counts");
     expect(db.getHistory().some((entry) => entry.sql.includes("threshold-crossing-count"))).toBe(false);
-  });
-
-  it("emits and accepts a keyset cursor", async () => {
-    const first = { ...makeDepegRow({ id: 3, started_at: 1_700_000_003 }), effective_started_at: 1_700_000_003 };
-    const second = { ...makeDepegRow({ id: 2, started_at: 1_700_000_002 }), effective_started_at: 1_700_000_002 };
-    const db = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "depeg_events", rows: [first, second] }, ]) as MockD1Database;
-
-    const firstRes = await handleDepegEvents(db, new URL("https://x/api/depeg-events?limit=1&includeTotal=false"));
-    const firstBody = (await firstRes.json()) as { events: unknown[]; nextCursor: string | null };
-    expect(firstBody.events).toHaveLength(1);
-    expect(firstBody.nextCursor).toBeTypeOf("string");
-    expect(JSON.parse(atob(firstBody.nextCursor!))).toEqual({ v: 2, values: [1_700_000_003, 3] });
-
-    const cursorDb = mockD1([{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }, { match: "depeg_events", rows: [second] }, ]) as MockD1Database;
-    const cursorRes = await handleDepegEvents(
-      cursorDb,
-      new URL(`https://x/api/depeg-events?limit=1&includeTotal=false&cursor=${firstBody.nextCursor}`),
-    );
-
-    expect(cursorRes.status).toBe(200);
-    const dataQuery = cursorDb.getHistory().find((entry) => entry.sql.includes("FROM depeg_events"));
-    expect(dataQuery?.sql).toContain("effective_started_at < ?");
-    expect(dataQuery?.sql).toContain("id < ?");
-    expect(dataQuery?.binds).toContain(first.started_at);
-    expect(dataQuery?.binds).toContain(first.id);
   });
 
   it.each([

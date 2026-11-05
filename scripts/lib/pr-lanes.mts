@@ -53,6 +53,14 @@ export interface PrLaneCommandContext {
   shardCount?: number;
 }
 
+/** Local read-only prepare feedback; hosted prepare keeps its workflow wiring. */
+export const PR_PREPARE_COMMANDS = [
+  { id: "test-corpus-budget", program: "npm", args: ["run", "check:test-corpus-budget", "--"] },
+  { id: "incident-review-keys", program: "npm", args: ["run", "check:incident-review-keys"] },
+  { id: "new-asset-evidence-packet", program: "npm", args: ["run", "check:new-asset-evidence-packet", "--"] },
+  { id: "safety-score-v9-evaluation-build", program: "npm", args: ["run", "check:generated-artifacts", "--", "--only=safety-score-v9-evaluation-build"] },
+] as const satisfies readonly PrLaneCommandDefinition[];
+
 /** Shared by docs-only inline validation and mixed-PR static guards. */
 export const PR_DOC_COMMANDS: readonly PrLaneCommandDefinition[] = [
   { id: "verified-doc-links", program: "npm", args: ["run", "check:verified-doc-links"] },
@@ -155,6 +163,8 @@ export function buildPrLaneCommandArgs(
     case "pr-static":
     case "pr-static-compile":
     case "pr-static-guards":
+    case "test-corpus-budget":
+    case "new-asset-evidence-packet":
       if (context.base) args.push(`--base=${context.base}`);
       if (context.head) args.push(`--head=${context.head}`);
       break;

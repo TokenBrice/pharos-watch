@@ -18,6 +18,7 @@ interface GeneratedArtifactOptions {
   bootstrap?: boolean;
   buildLifecycles?: readonly string[];
   check?: boolean;
+  integrityOnly?: boolean;
   only?: readonly string[];
   phases?: readonly number[];
 }
@@ -72,10 +73,11 @@ export function buildGeneratedArtifactExecutionUnits({
   bootstrap = false,
   buildLifecycles = [],
   check = false,
+  integrityOnly = false,
   only = [],
   phases = [],
 }: GeneratedArtifactOptions = {}): ArtifactExecutionUnit[] {
-  return buildGeneratedArtifactExecutionPhases({ bootstrap, buildLifecycles, check, only, phases }).flatMap(
+  return buildGeneratedArtifactExecutionPhases({ bootstrap, buildLifecycles, check, integrityOnly, only, phases }).flatMap(
     ({ units }) => units,
   );
 }
@@ -84,13 +86,16 @@ export function buildGeneratedArtifactExecutionPhases({
   bootstrap = false,
   buildLifecycles = [],
   check = false,
+  integrityOnly = false,
   only = [],
   phases = [],
 }: GeneratedArtifactOptions = {}): ArtifactExecutionPhase[] {
+  if (integrityOnly && !check) throw new CliUsageError("--integrity-only requires --check");
   const registryPhases: GeneratedArtifactPhase[] = buildGeneratedArtifactPhases({
     bootstrap,
     buildLifecycles: [...buildLifecycles],
     check,
+    integrityOnly,
     only: [...only],
     phases: [...phases],
   });
@@ -125,6 +130,7 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
   bootstrap: boolean;
   buildLifecycles: string[];
   check: boolean;
+  integrityOnly: boolean;
   continueOnError: boolean;
   dryRun: boolean;
   help: boolean;
@@ -135,6 +141,7 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
     bootstrap: boolean;
     buildLifecycles: string[];
     check: boolean;
+    integrityOnly: boolean;
     continueOnError: boolean;
     dryRun: boolean;
     help: boolean;
@@ -144,6 +151,7 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
     bootstrap: false,
     buildLifecycles: [],
     check: false,
+    integrityOnly: false,
     continueOnError: false,
     dryRun: false,
     help: false,
@@ -159,6 +167,10 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
     }
     if (arg === "--check") {
       options.check = true;
+      continue;
+    }
+    if (arg === "--integrity-only") {
+      options.integrityOnly = true;
       continue;
     }
     if (arg === "--build-lifecycle") {
@@ -210,6 +222,7 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
     throw new Error(`Unknown generated-artifacts option: ${arg}`);
   }
 
+  if (options.integrityOnly && !options.check) throw new CliUsageError("--integrity-only requires --check");
   if (options.check) {
     // Check mode remains the authoritative freshness mode by default; it ignores
     // bootstrap narrowing unless the caller provides explicit --only/--phase filters.
@@ -224,12 +237,13 @@ export function parseGeneratedArtifactsArgs(argv: readonly string[] = []): {
 
 export function printGeneratedArtifactsHelp(log = console.log) {
   log(
-    "Usage: npm run prebuild -- [--bootstrap|--check] [--build-lifecycle name[,name]] [--continue-on-error] [--only id[,id]] [--phase n[,n]] [--dry-run|--help]",
+    "Usage: npm run prebuild -- [--bootstrap|--check [--integrity-only]] [--build-lifecycle name[,name]] [--continue-on-error] [--only id[,id]] [--phase n[,n]] [--dry-run|--help]",
   );
   log("");
   log("Options:");
   log("  --bootstrap       Run only bootstrap-safe generators (ignored in --check mode).");
   log("  --check           Verify generated artifacts instead of writing them.");
+  log("  --integrity-only  With --check, waive only public dataset maximum age (PR integrity checks).");
   log("  --build-lifecycle <names>  Run artifacts in one or more declared build lifecycle groups.");
   log("  --continue-on-error  Diagnostic mode: retain all failures and continue through dependency phases.");
   log("  --only <ids>      Run one or more artifact ids and their declared dependencies.");
@@ -249,7 +263,7 @@ export async function runGeneratedArtifacts({
   log?: (message: string) => unknown;
   runCommandImpl?: CommandImplementation;
 } = {}): Promise<GeneratedArtifactsResult> {
-  const { bootstrap, buildLifecycles, check, continueOnError: cliContinueOnError, dryRun, help, only, phases } =
+  const { bootstrap, buildLifecycles, check, integrityOnly, continueOnError: cliContinueOnError, dryRun, help, only, phases } =
     parseGeneratedArtifactsArgs(argv);
   const continueOnError = cliContinueOnError || env.GENERATED_ARTIFACTS_CONTINUE_ON_ERROR === "1";
   if (help) {
@@ -266,6 +280,7 @@ export async function runGeneratedArtifacts({
     bootstrap,
     buildLifecycles,
     check,
+    integrityOnly,
     only,
     phases,
   });
