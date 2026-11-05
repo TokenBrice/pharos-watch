@@ -315,7 +315,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     command: "tsx scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
     bootstrap: true,
     // The packed score-input bytes must exist before their identity is hashed.
-    dependsOn: ["stablecoin-worker-full-catalog", "safety-score-v9-incident-runtime"],
+    dependsOn: [
+      "stablecoin-worker-full-catalog", "safety-score-v9-incident-runtime", "stablecoin-client-registry",
+      "safety-score-v9-shock-coverage-registry", "safety-score-v9-lane-emitter-descriptors",
+    ],
     outputPaths: ["shared/data/safety-score-v9/evaluation-build-manifest-v1.ts"],
     phase: 2,
     script: "scripts/maintenance/generate-safety-score-v9-evaluation-build-manifest.ts",
@@ -505,6 +508,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "stablecoin-detail-snapshots",
+    importExceptions: [{
+      outputPath: "src/lib/datasets/public-dataset-current.ts",
+      reason: "Reads the committed dataset module; release refresh owns live acquisition before this phase.",
+    }],
     buildLifecycle: "post-refresh",
     checkCommand: "PHAROS_DETAIL_SNAPSHOT_CHECK=1 node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
     command: "node --import tsx scripts/build-data/build-stablecoin-detail-snapshots.ts",
@@ -576,6 +583,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     id: "public-datasets",
     buildLifecycle: "maintenance-only",
     checkCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check",
+    integrityCheckCommand: "tsx scripts/maintenance/generate-public-datasets.ts --check --integrity-only",
     command: "tsx scripts/maintenance/generate-public-datasets.ts",
     dependsOn: ["report-card-registry-fingerprint"],
     outputPaths: ["public/_redirects", "public/datasets/**", "src/lib/datasets/public-dataset-current.ts"],
@@ -585,6 +593,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "llms-txt",
+    importExceptions: [{
+      outputPath: "src/lib/datasets/public-dataset-current.ts",
+      reason: "Reads the committed dataset module; release refresh owns live acquisition before this phase.",
+    }],
     buildLifecycle: "post-refresh",
     ciDriftCheck: false,
     bootstrap: true,
@@ -653,6 +665,10 @@ export const GENERATED_ARTIFACT_REGISTRY = [
   }),
   generatedArtifact({
     id: "editorial-style",
+    importExceptions: [{
+      outputPath: "shared/lib/editorial-style.generated.ts",
+      reason: "Deliberately reads its committed policy to validate generation and check mode.",
+    }],
     buildLifecycle: "compile-input",
     checkCommand: "node --import tsx scripts/maintenance/generate-editorial-style.ts --check",
     command: "node --import tsx scripts/maintenance/generate-editorial-style.ts",
@@ -728,7 +744,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     command: "node --import tsx scripts/maintenance/build-og-cemetery.ts",
     // The card embeds the committed logo atlas, so it regenerates after the atlas does. Freshness is an input
     // signature (the rendered document's hash), so the check needs no browser and a no-change run writes nothing.
-    dependsOn: ["cemetery-logo-atlas"],
+    dependsOn: ["cemetery-logo-atlas", "case-study-client-index"],
     outputPaths: ["public/og-cemetery.png", "scripts/maintenance/state/og-cemetery-signature.json"],
     phase: 3,
     script: "scripts/maintenance/build-og-cemetery.ts",
@@ -894,11 +910,12 @@ export function selectGeneratedArtifacts({
   return GENERATED_ARTIFACT_REGISTRY.filter((artifact) => selectedIds.has(artifact.id));
 }
 
-/** @param {{ bootstrap?: boolean, buildLifecycles?: string[], check?: boolean, only?: string[], phases?: number[] }} [options] */
+/** @param {{ bootstrap?: boolean, buildLifecycles?: string[], check?: boolean, integrityOnly?: boolean, only?: string[], phases?: number[] }} [options] */
 export function buildGeneratedArtifactPhases({
   bootstrap = false,
   buildLifecycles = [],
   check = false,
+  integrityOnly = false,
   only = [],
   phases: phaseFilters = [],
 } = {}) {
@@ -906,7 +923,7 @@ export function buildGeneratedArtifactPhases({
 
   for (const artifact of selectGeneratedArtifacts({ bootstrap, buildLifecycles, check, only, phases: phaseFilters })) {
     const command = check && artifact.checkCommand
-      ? artifact.checkCommand
+      ? (integrityOnly ? artifact.integrityCheckCommand ?? artifact.checkCommand : artifact.checkCommand)
       : (bootstrap ? artifact.bootstrapCommand ?? artifact.command : artifact.command);
     const phaseArtifacts = phaseGroups.get(artifact.phase) ?? [];
     phaseArtifacts.push({ ...artifact, command });
