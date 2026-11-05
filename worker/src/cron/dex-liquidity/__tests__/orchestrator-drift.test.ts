@@ -3,6 +3,7 @@ import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata } from ".
 import {
   computeDexLiquidityDriftSummary,
   DRIFT_REBASELINE_RUNS,
+  REVIEWED_SOURCE_FAMILY_DISPOSITIONS,
   readPreviousDexLiquidityDriftCandidates,
   type DexLiquidityDriftCandidate,
   type DexLiquidityDriftSummary,
@@ -10,14 +11,8 @@ import {
 import type { FullScoreResult } from "../types";
 import { makeCompleteVolumeAvailability } from "../../__tests__/dex-liquidity-persistence.test-support";
 
-// The aggregate guards in orchestrator-analysis abort the run only when global
-// or top-10 TVL lands below 60% of the prior publication. On 2026-08-20 USDS
-// shed roughly 91% of its measured TVL to a partial pool inventory while both
-// aggregates stayed inside every bound, so the run published normally and the
-// next digest read the hole as news. This flag makes the per-coin hole visible,
-// but only once a second productive run confirms it: one hour of measurement
-// noise fires and self-silences a single-generation diff, because the collapsed
-// value becomes the next baseline as soon as it publishes.
+// Per-coin cliffs expose partial inventory admitted by aggregate guards.
+// Confirmation must retain pre-event baselines through overwritten publications.
 
 function scoreResult(tvl: number, poolCount = 1): FullScoreResult {
   return {
@@ -41,6 +36,15 @@ function scoreResult(tvl: number, poolCount = 1): FullScoreResult {
   };
 }
 
+function drift(input: Partial<Parameters<typeof computeDexLiquidityDriftSummary>[0]>) {
+  return computeDexLiquidityDriftSummary({
+    previousSummary: null, previousCandidates: [], priceObservations: new Map(),
+    stagedMergedCount: 0, stagedSkippedCount: 0, weakCoverageCoinsBeforeFallback: 0,
+    measuredBalanceCoveragePct: 1, watchlistPreviousById: new Map(),
+    scoreResults: new Map(), previousMajorTvlById: new Map(), ...input,
+  });
+}
+
 function cliff(input: {
   /** `null` when the coin is no longer among the previous run's ten largest. */
   previousTvl: number | null;
@@ -48,15 +52,8 @@ function cliff(input: {
   previousCandidates?: DexLiquidityDriftCandidate[];
   hasScoreRow?: boolean;
 }): DexLiquidityDriftSummary {
-  return computeDexLiquidityDriftSummary({
-    previousSummary: null,
+  return drift({
     previousCandidates: input.previousCandidates ?? [],
-    priceObservations: new Map(),
-    stagedMergedCount: 0,
-    stagedSkippedCount: 0,
-    weakCoverageCoinsBeforeFallback: 0,
-    measuredBalanceCoveragePct: 1,
-    watchlistPreviousById: new Map(),
     scoreResults:
       input.hasScoreRow === false ? new Map() : new Map([["usds-sky", scoreResult(input.currentTvl)]]),
     previousMajorTvlById: new Map<string, number>(input.previousTvl == null ? [] : [["usds-sky", input.previousTvl]]),
@@ -65,29 +62,13 @@ function cliff(input: {
 
 /** Writes the drift fields to cron metadata JSON and reads them back the way the next run does. */
 function persistDriftSummary(summary: DexLiquidityDriftSummary): DexLiquidityCronMetadata {
-  const json = JSON.stringify({
-    sourceCoverage: {
-      qualityDriftFlags: summary.qualityDriftFlags,
-      qualityDriftCandidates: summary.qualityDriftCandidates,
-      qualityDriftRebaselined: summary.qualityDriftRebaselined,
-      qualityDriftSeverity: summary.qualityDriftSeverity,
-    },
-  });
-  return DexLiquidityCronMetadataSchema.parse(JSON.parse(json));
+  return DexLiquidityCronMetadataSchema.parse(JSON.parse(JSON.stringify({ sourceCoverage: summary })));
 }
 
 describe("computeDexLiquidityDriftSummary major TVL cliffs", () => {
   it.each([true, false])("drops archived cliffs even with carried candidates (prior row: %s)", (hasPriorRow) => {
-    const summary = computeDexLiquidityDriftSummary({
-      previousSummary: null,
+    const summary = drift({
       previousCandidates: [{ flag: "major-tvl-cliff:cdxusd-cod3x", consecutiveRuns: 2, baselineValue: 86_583_463, observedValue: 0 }],
-      priceObservations: new Map(),
-      stagedMergedCount: 0,
-      stagedSkippedCount: 0,
-      weakCoverageCoinsBeforeFallback: 0,
-      measuredBalanceCoveragePct: 1,
-      watchlistPreviousById: new Map(),
-      scoreResults: new Map(),
       previousMajorTvlById: new Map(hasPriorRow ? [["cdxusd-cod3x", 86_583_463]] : []),
     });
     expect(summary.majorTvlCliffs).toEqual([]);
@@ -151,17 +132,12 @@ describe("computeDexLiquidityDriftSummary major TVL cliffs", () => {
 });
 
 describe("computeDexLiquidityDriftSummary rebaseline of lasting drift", () => {
-  // A confirmed condition is reported on runs 2 through DRIFT_REBASELINE_RUNS
-  // (6). The run that finds it holding a seventh consecutive time accepts the
-  // lasting step as the new level, so an explained change cannot warn forever.
-  // Each run reads its candidates back from persisted metadata, the same path
-  // the cron takes between hourly runs.
+  // Read back persisted candidates each run, including after rebaselining.
   function runLastingCliff(runCount: number): DexLiquidityDriftSummary[] {
     const summaries: DexLiquidityDriftSummary[] = [];
     let previousCandidates: DexLiquidityDriftCandidate[] = [];
     for (let run = 1; run <= runCount; run += 1) {
-      // After the first collapsed publication the coin drops out of the
-      // previous top ten, so only the carried candidate keeps its baseline.
+      // Only the candidate survives a top-ten exit.
       const summary = cliff({ previousTvl: run === 1 ? 152_000_000 : null, currentTvl: 13_700_000, previousCandidates });
       summaries.push(summary);
       previousCandidates = readPreviousDexLiquidityDriftCandidates(persistDriftSummary(summary));
@@ -215,31 +191,16 @@ describe("computeDexLiquidityDriftSummary rebaseline of lasting drift", () => {
 });
 
 describe("computeDexLiquidityDriftSummary watchlist pool counts", () => {
-  const watchlistPreviousById = new Map([
-    [
-      "usdc-circle",
-      {
-        stablecoin_id: "usdc-circle",
-        pool_count: 151,
-        coverage_confidence: 0.9,
-        total_tvl_usd: 1_000_000,
-        balance_measured_tvl_usd: 1_000_000,
-      },
-    ],
-  ]);
+  const watchlistPreviousById = new Map([["usdc-circle", {
+    stablecoin_id: "usdc-circle", pool_count: 151, coverage_confidence: 0.9,
+    total_tvl_usd: 1_000_000, balance_measured_tvl_usd: 1_000_000,
+  }]]);
 
   function watchlist(currentPublishedPools: number, previousCandidates: DexLiquidityDriftCandidate[] = []) {
-    return computeDexLiquidityDriftSummary({
-      previousSummary: null,
+    return drift({
       previousCandidates,
-      priceObservations: new Map(),
-      stagedMergedCount: 0,
-      stagedSkippedCount: 0,
-      weakCoverageCoinsBeforeFallback: 0,
-      measuredBalanceCoveragePct: 1,
       watchlistPreviousById,
       scoreResults: new Map([["usdc-circle", scoreResult(1_000_000, currentPublishedPools)]]),
-      previousMajorTvlById: new Map(),
     });
   }
 
@@ -292,7 +253,7 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
     previousCandidates: DexLiquidityDriftCandidate[] = [],
     previousStagedPoolsMerged = 1_352,
   ) {
-    return computeDexLiquidityDriftSummary({
+    return drift({
       previousSummary: {
         stagedPoolsMerged: previousStagedPoolsMerged,
         stagedPoolsSkipped: 0,
@@ -302,14 +263,8 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
         retainedPoolCountBySourceFamily: null,
       },
       previousCandidates,
-      priceObservations: new Map(),
       stagedMergedCount,
-      stagedSkippedCount: 0,
-      weakCoverageCoinsBeforeFallback: 0,
       measuredBalanceCoveragePct: 0,
-      watchlistPreviousById: new Map(),
-      scoreResults: new Map(),
-      previousMajorTvlById: new Map(),
     });
   }
 
@@ -341,8 +296,7 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
     const flaggedRuns: number[] = [];
     let summary = merged(623);
     for (let run = 1; run <= DRIFT_REBASELINE_RUNS + 1; run += 1) {
-      // The published summary moves to the collapsed value after run 1; the
-      // carried candidate keeps the pre-event baseline until acceptance.
+      // The candidate holds the baseline through acceptance.
       summary = merged(623, previousCandidates, run === 1 ? 1_352 : 623);
       if (summary.qualityDriftFlags.length > 0) flaggedRuns.push(run);
       previousCandidates = summary.qualityDriftCandidates;
@@ -362,60 +316,39 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
 });
 
 describe("computeDexLiquidityDriftSummary cohort drops", () => {
-  function cohort(input: {
-    previousCandidates?: DexLiquidityDriftCandidate[];
-    previousChainTvl?: Record<string, number> | null;
-    currentChainTvl?: Record<string, number>;
-    previousSourceFamilyPools?: Record<string, number> | null;
-    currentSourceFamilyPools?: Record<string, number>;
-  }): DexLiquidityDriftSummary {
-    return computeDexLiquidityDriftSummary({
-      previousSummary: null,
-      previousCandidates: input.previousCandidates ?? [],
-      priceObservations: new Map(),
-      stagedMergedCount: 0,
-      stagedSkippedCount: 0,
-      weakCoverageCoinsBeforeFallback: 0,
-      measuredBalanceCoveragePct: 1,
-      watchlistPreviousById: new Map(),
-      scoreResults: new Map(),
-      previousMajorTvlById: new Map(),
-      previousChainTvl: input.previousChainTvl,
-      currentChainTvl: input.currentChainTvl,
-      previousSourceFamilyPools: input.previousSourceFamilyPools,
-      currentSourceFamilyPools: input.currentSourceFamilyPools,
-    });
-  }
-
-  it("confirms a chain TVL drop on the second run against the pre-event baseline", () => {
-    const first = cohort({
-      previousChainTvl: { ethereum: 10_000_000 },
-      currentChainTvl: { ethereum: 8_000_000 },
+  it.each<{ previousChainTvl: Record<string, number> | null; current: number }>([
+    { previousChainTvl: { base: 8_000_000 }, current: 7_800_000 },
+    { previousChainTvl: { base: 500_000 }, current: 500_000 },
+    { previousChainTvl: { ethereum: 20_000_000 }, current: 0 },
+    { previousChainTvl: null, current: 500_000 },
+  ])("confirms chain loss with overwritten baseline $previousChainTvl", ({ previousChainTvl, current }) => {
+    const first = drift({
+      previousChainTvl: { base: 10_000_000, ethereum: 20_000_000 },
+      currentChainTvl: { base: current, ethereum: 20_000_000 },
     });
     expect(first.cohortDriftFlags).toEqual([]);
     expect(first.qualityDriftCandidates).toEqual([
-      { flag: "chain-tvl-drop:ethereum", consecutiveRuns: 1, baselineValue: 10_000_000, observedValue: 8_000_000 },
+      { flag: "chain-tvl-drop:base", consecutiveRuns: 1, baselineValue: 10_000_000, observedValue: current },
     ]);
-
-    const confirmed = cohort({
-      previousCandidates: first.qualityDriftCandidates,
-      previousChainTvl: { ethereum: 8_000_000 },
-      currentChainTvl: { ethereum: 7_800_000 },
+    const confirmed = drift({
+      previousCandidates: readPreviousDexLiquidityDriftCandidates(persistDriftSummary(first)),
+      previousChainTvl,
+      currentChainTvl: { base: current, ethereum: 20_000_000 },
     });
-    expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:ethereum"]);
-    expect(confirmed.cohortDriftFlags).toEqual(["chain-tvl-drop:ethereum"]);
+    expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:base"]);
+    expect(confirmed.cohortDriftFlags).toEqual(["chain-tvl-drop:base"]);
     expect(confirmed.qualityDriftSeverity).toBe("high");
   });
 
   it("keeps a lasting chain loss flagged instead of rebaselining it", () => {
-    const first = cohort({
+    const first = drift({
       previousChainTvl: { base: 5_000_000 },
       currentChainTvl: { base: 3_000_000 },
     });
     let previousCandidates = first.qualityDriftCandidates;
     let summary = first;
     for (let run = 1; run <= DRIFT_REBASELINE_RUNS + 2; run += 1) {
-      summary = cohort({
+      summary = drift({
         previousCandidates,
         previousChainTvl: { base: 3_000_000 },
         currentChainTvl: { base: 3_000_000 },
@@ -426,82 +359,85 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     expect(summary.qualityDriftRebaselined).toEqual([]);
   });
 
-  it("confirms a source-family pool-count drop and ignores sub-material cohorts", () => {
-    const first = cohort({
-      previousSourceFamilyPools: { gecko_terminal: 40, dl: 3 },
-      currentSourceFamilyPools: { gecko_terminal: 20, dl: 0 },
+  const mix = (tvlUsd: number, other = 17_440_000) => ({
+    dexscreener: { poolCount: 21, tvlUsd }, cg_onchain: { poolCount: 595, tvlUsd: other },
+  });
+  const flag = "source-family-drop:dexscreener";
+  it.each([
+    ["dust", 449.57, 0, 0, false, false, 21],
+    ["USD1 re-attribution", 23_090_000, 50_000, 23_140_000, false, false, 21],
+    ["real loss at materiality floor", 1_000_000, 0, 0, false, true, 21],
+    ["exact 10% unexplained loss", 1_000_000, 900_000, 0, false, true, 21],
+    ["below 10% unexplained loss", 1_000_000, 900_001, 0, false, false, 21],
+    ["gains on another coin", 23_090_000, 50_000, 23_140_000, true, true, 21],
+    ["too few pools", 1_000_000, 0, 0, false, false, 3],
+  ] as const)("screens new candidates: %s", (_, baseline, current, gain, otherCoin, admitted, pools) => {
+    const summary = drift({
+      previousSourceFamilyPools: { dexscreener: pools },
+      currentSourceFamilyPools: { dexscreener: 0 },
+      previousSourceMixById: new Map([["usd1", mix(baseline)], ["other", mix(0)]]),
+      scoreResults: new Map([
+        ["usd1", { ...scoreResult(current), sourceMix: mix(current, 17_440_000 + (otherCoin ? 0 : gain)) }],
+        ["other", { ...scoreResult(gain), sourceMix: mix(0, 17_440_000 + (otherCoin ? gain : 0)) }],
+      ]),
     });
-    expect(first.qualityDriftCandidates).toEqual([
-      { flag: "source-family-drop:gecko_terminal", consecutiveRuns: 1, baselineValue: 40, observedValue: 20 },
-    ]);
-    const confirmed = cohort({
-      previousCandidates: first.qualityDriftCandidates,
-      previousSourceFamilyPools: { gecko_terminal: 20, dl: 3 },
-      currentSourceFamilyPools: { gecko_terminal: 18, dl: 0 },
-    });
-    expect(confirmed.cohortDriftFlags).toEqual(["source-family-drop:gecko_terminal"]);
+    expect(summary.qualityDriftCandidates.map((candidate) => candidate.flag)).toEqual(admitted ? [flag] : []);
+    expect(summary.cohortDriftFlags).toEqual([]);
   });
 
-  it("confirms a chain loss that collapses below the materiality floor after the first run", () => {
-    const first = cohort({
-      previousChainTvl: { base: 5_000_000 },
-      currentChainTvl: { base: 500_000 },
-    });
-    expect(first.qualityDriftCandidates).toEqual([
-      { flag: "chain-tvl-drop:base", consecutiveRuns: 1, baselineValue: 5_000_000, observedValue: 500_000 },
-    ]);
-
-    const confirmed = cohort({
-      previousCandidates: first.qualityDriftCandidates,
-      previousChainTvl: { base: 500_000 },
-      currentChainTvl: { base: 500_000 },
-    });
-    expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:base"]);
-    expect(confirmed.cohortDriftFlags).toEqual(["chain-tvl-drop:base"]);
+  it("persists real loss evidence, confirms after two runs, stays until pool recovery", () => {
+    let previousCandidates: DexLiquidityDriftCandidate[] = [];
+    for (let run = 1; run <= DRIFT_REBASELINE_RUNS + 2; run++) {
+      const summary = drift({
+        previousCandidates,
+        previousSourceFamilyPools: { dexscreener: run === 1 ? 21 : 0 },
+        currentSourceFamilyPools: {},
+        previousSourceMixById: new Map([["usd1", mix(run === 1 ? 23_090_000 : 0)]]),
+        scoreResults: new Map(),
+      });
+      expect(summary.cohortDriftFlags).toEqual(run === 1 ? [] : [flag]);
+      expect(summary.qualityDriftRebaselined).toEqual([]);
+      previousCandidates = readPreviousDexLiquidityDriftCandidates(persistDriftSummary(summary));
+      expect(previousCandidates[0]).toMatchObject({
+        baselineValue: 21, observedValue: 0, consecutiveRuns: run,
+        sourceFamilyTvlEvidence: { explanation: "evaluated", baselineTvlUsd: 23_090_000, currentTvlUsd: 0, unexplainedLossUsd: 23_090_000 },
+      });
+    }
+    const recovered = drift({ previousCandidates, currentSourceFamilyPools: { dexscreener: 21 } });
+    expect(recovered.qualityDriftCandidates).toEqual([]);
+    expect(recovered.qualityDriftFlags).toEqual([]);
   });
 
-  it("keeps a carried chain candidate when the chain vanishes from the published map", () => {
-    const first = cohort({
-      previousChainTvl: { base: 5_000_000, ethereum: 20_000_000 },
-      currentChainTvl: { base: 500_000, ethereum: 20_000_000 },
+  it.each([
+    ["dexscreener", 338, true, false], ["gecko_terminal", 23, true, false],
+    ["dexscreener", 339, false, false], ["gecko_terminal", 338, false, false], ["dexscreener", 338, false, true],
+  ] as const)("accepts only reviewed legacy %s baseline %s", (family, baselineValue, accepted, withEvidence) => {
+    const flag = `source-family-drop:${family}`;
+    const sourceFamilyTvlEvidence = { explanation: "evaluated", baselineTvlUsd: 9e6, currentTvlUsd: 0, unexplainedLossUsd: 9e6 } as const;
+    const summary = drift({
+      previousCandidates: [{ flag, baselineValue, observedValue: 0, consecutiveRuns: 7, ...(withEvidence ? { sourceFamilyTvlEvidence } : {}) }],
+      currentSourceFamilyPools: {}, previousSourceMixById: new Map(),
     });
-    const confirmed = cohort({
-      previousCandidates: first.qualityDriftCandidates,
-      previousChainTvl: { ethereum: 20_000_000 },
-      currentChainTvl: { ethereum: 20_000_000 },
-    });
-    expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:base"]);
+    expect(summary.cohortDriftFlags).toEqual(accepted ? [] : [flag]);
+    expect(summary.qualityDriftCandidates.map((candidate) => candidate.consecutiveRuns)).toEqual(accepted ? [] : [8]);
+    expect(persistDriftSummary(summary).sourceCoverage.qualityDriftAccepted).toEqual(
+      accepted ? [REVIEWED_SOURCE_FAMILY_DISPOSITIONS.find((entry) => entry.flag === flag)] : [],
+    );
   });
 
-  it("keeps a carried chain candidate when the previous published map is unavailable", () => {
-    const first = cohort({
-      previousChainTvl: { base: 5_000_000 },
-      currentChainTvl: { base: 500_000 },
+  it("allocates one coin's gains across both losing families once", () => {
+    const first = drift({
+      previousSourceFamilyPools: { dl: 10, dexscreener: 10 }, currentSourceFamilyPools: {},
+      previousSourceMixById: new Map([["usd1", { dl: { poolCount: 10, tvlUsd: 10_000_000 }, ...mix(10_000_000, 0) }]]),
+      scoreResults: new Map([["usd1", { ...scoreResult(10_000_000), sourceMix: mix(0, 10_000_000) }]]),
     });
-    const confirmed = cohort({
-      previousCandidates: first.qualityDriftCandidates,
-      previousChainTvl: null,
-      currentChainTvl: { base: 500_000 },
-    });
-    expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:base"]);
-  });
-
-  it("confirms a source-family collapse that falls below the materiality floor after the first run", () => {
-    const first = cohort({
-      previousSourceFamilyPools: { gecko_terminal: 40, dl: 3 },
-      currentSourceFamilyPools: { gecko_terminal: 3, dl: 0 },
-    });
-    const confirmed = cohort({
-      previousCandidates: first.qualityDriftCandidates,
-      previousSourceFamilyPools: { gecko_terminal: 3, dl: 0 },
-      currentSourceFamilyPools: { gecko_terminal: 3, dl: 0 },
-    });
-    expect(confirmed.qualityDriftFlags).toEqual(["source-family-drop:gecko_terminal"]);
-    expect(confirmed.cohortDriftFlags).toEqual(["source-family-drop:gecko_terminal"]);
+    expect(first.qualityDriftCandidates.map((candidate) => candidate.sourceFamilyTvlEvidence?.unexplainedLossUsd)).toEqual([5_000_000, 5_000_000]);
+    const second = drift({ previousCandidates: first.qualityDriftCandidates, currentSourceFamilyPools: {} });
+    expect(second.cohortDriftFlags).toEqual(["source-family-drop:dl", flag]);
   });
 
   it("skips the comparison when prior evidence is unavailable", () => {
-    const summary = cohort({
+    const summary = drift({
       previousChainTvl: null,
       currentChainTvl: { ethereum: 1 },
       previousSourceFamilyPools: null,

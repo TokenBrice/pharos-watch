@@ -16,6 +16,7 @@ import {
 } from "./orchestrator-drift";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { DexLiquidityBaselineReadFailure } from "@shared/types/status/yield-liquidity";
+import { LiquiditySourceMixSchema, type LiquiditySourceMix } from "@shared/types/market";
 
 
 type ParsedPreviousCronRow = {
@@ -44,6 +45,7 @@ type PreviousCoinTvlRow = {
   stablecoin_id: string;
   total_tvl_usd: number;
   protocol_tvl_json: string | null;
+  source_mix_json: string | null;
 };
 
 type CoverageClasses = {
@@ -431,7 +433,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       }>(),
     params.db
       .prepare(
-        `SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json
+        `SELECT r.stablecoin_id, r.total_tvl_usd, r.protocol_tvl_json, r.source_mix_json
          FROM dex_liquidity_run_rows r
          JOIN dex_liquidity_publication_generations g ON g.generation_id = r.generation_id
          WHERE g.state = 'published' AND r.stablecoin_id != '__global__'
@@ -474,6 +476,34 @@ export async function analyzeDexLiquidityPostScoring(params: {
   const previousWatchlistRows = watchlistRead.status === "fulfilled" ? watchlistRead.value.results : [];
   const previousCoinTvlRows = coinTvlRead.status === "fulfilled" ? coinTvlRead.value.results : [];
   const coinTvlStepBaselineUnavailable = coinTvlRead.status === "rejected";
+  const previousCoinIds = new Set((previousCoinTvlRows ?? []).map((row) => row.stablecoin_id));
+  let previousSourceMixById: Map<string, LiquiditySourceMix> | null =
+    coinTvlRead.status === "fulfilled" && coinTvlRead.value.success &&
+    previousCoinIds.size === ACTIVE_IDS.size && [...ACTIVE_IDS].every((id) => previousCoinIds.has(id))
+      ? new Map() : null;
+  for (const row of previousCoinTvlRows ?? []) {
+    if (previousSourceMixById == null) break;
+    // Published zero-TVL placeholders have no source mix or retained liquidity.
+    if (row.source_mix_json == null && row.total_tvl_usd === 0) continue;
+    try {
+      const mix = LiquiditySourceMixSchema.parse(JSON.parse(row.source_mix_json ?? ""));
+      const entries = Object.values(mix);
+      const mixTvl = entries.reduce((sum, entry) => sum + entry.tvlUsd, 0);
+      // Family grouping and pool-by-pool totals have different floating-point accumulation.
+      const tolerance = 2 * Number.EPSILON * Math.max(1, row.total_tvl_usd) *
+        Math.max(1, entries.reduce((sum, entry) => sum + entry.poolCount, 0));
+      if (!Number.isFinite(row.total_tvl_usd) || row.total_tvl_usd < 0 || !Number.isFinite(mixTvl) ||
+        Math.abs(mixTvl - row.total_tvl_usd) > tolerance ||
+        entries.some((entry) => entry.tvlUsd < 0 || !Number.isSafeInteger(entry.poolCount) || entry.poolCount < 0)) {
+        previousSourceMixById = null;
+        break;
+      }
+      previousSourceMixById.set(row.stablecoin_id, mix);
+    } catch {
+      previousSourceMixById = null;
+      break;
+    }
+  }
 
   const parsedPreviousCronRows = parsePreviousCronRows(previousCronRows ?? []);
 
@@ -747,6 +777,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
     currentChainTvl: params.globalAgg.chainTvl,
     previousSourceFamilyPools: previousDriftBaseline.summary?.retainedPoolCountBySourceFamily ?? null,
     currentSourceFamilyPools: retainedPoolCountBySourceFamily,
+    previousSourceMixById,
   });
 
   return {
@@ -823,6 +854,7 @@ export async function analyzeDexLiquidityPostScoring(params: {
       qualityDriftFlags: driftSummary.qualityDriftFlags,
       cohortDriftFlags: driftSummary.cohortDriftFlags,
       qualityDriftCandidates: driftSummary.qualityDriftCandidates,
+      qualityDriftAccepted: driftSummary.qualityDriftAccepted,
       qualityDriftRebaselined: driftSummary.qualityDriftRebaselined,
       qualityDriftSeverity: driftSummary.qualityDriftSeverity,
       qualityDriftMetrics: driftSummary.qualityDriftMetrics,

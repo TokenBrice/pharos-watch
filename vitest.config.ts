@@ -89,7 +89,12 @@ export default defineConfig({
     // or replay migrations when it is unavailable.
     // Absolute path: vitest resolves relative setup paths against the
     // invocation cwd, which may be worker/.
-    globalSetup: VITEST_GLOBAL_SETUP_FILES.map((file) => path.resolve(__dirname, file)),
+    // The critical coverage runner sets PHAROS_CRITICAL_COVERAGE_FILTER to
+    // persist only enrolled sources' V8 results (scripts/lib/critical-coverage-filter.mts).
+    globalSetup: [
+      ...VITEST_GLOBAL_SETUP_FILES,
+      ...(process.env.PHAROS_CRITICAL_COVERAGE_FILTER === "1" ? ["scripts/lib/critical-coverage-filter.mts"] : []),
+    ].map((file) => path.resolve(__dirname, file)),
     projects: [
       {
         extends: true,

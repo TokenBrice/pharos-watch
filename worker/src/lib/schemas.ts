@@ -311,9 +311,21 @@ export const DexLiquidityCronMetadataSchema = z.object({
             consecutiveRuns: z.number(),
             baselineValue: z.number(),
             observedValue: z.number(),
+            sourceFamilyTvlEvidence: z.object({
+              explanation: z.enum(["evaluated", "unavailable"]),
+              baselineTvlUsd: z.number().nonnegative().nullable(),
+              currentTvlUsd: z.number().nonnegative(),
+              unexplainedLossUsd: z.number().nonnegative().nullable(),
+            }).optional(),
           }),
         )
         .optional(),
+      qualityDriftAccepted: z.array(z.object({
+        flag: z.string(),
+        baselineValue: z.number(),
+        reviewedAt: z.string(),
+        reason: z.string(),
+      })).optional(),
       qualityDriftRebaselined: z
         .array(
           z.object({

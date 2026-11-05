@@ -11,9 +11,7 @@ describe("Worker evidence literal reporting", () => {
   it("keeps every stored status and unknown productivity separate", () => {
     const summary = summarizeWorkerEvidence(["ok", "degraded", "error", "skipped_neutral", "skipped_locked", "future-status"].map((status) => ({ status })));
     expect(summary.counts).toEqual({ ok: 1, degraded: 1, error: 1, skipped_neutral: 1, skipped_locked: 1, skipped_duplicate: 0, skipped_running: 0, "future-status": 1 });
-    expect(summary.productiveUnknown).toBe(6);
-    expect(summary.publicationCount).toBe(0);
-    expect(summary.publicationUnknown).toBe(6);
+    expect(summary).toMatchObject({ productiveUnknown: 6, publicationCount: 0, publicationUnknown: 6 });
     expect(renderWorkerEvidenceTable(summary)).toContain("| degraded | 1 |");
     expect(renderWorkerEvidenceTable(summary)).toContain("| skipped_neutral | 1 |");
   });
@@ -23,9 +21,7 @@ describe("Worker evidence literal reporting", () => {
       job: `job-${index}`, status: "error", synthetic_reason: "stale-slot-reconciled", child_disposition,
       invocation_id: "invocation", schedule_key: "lane", slot_started_at: 100, productive: 0, publication_count: 0,
     })));
-    expect(summary.counts.error).toBe(3);
-    expect(summary.counts.degraded).toBe(0);
-    expect(summary.synthetic).toBe(3);
+    expect(summary).toMatchObject({ counts: { error: 3, degraded: 0 }, synthetic: 3 });
     expect(summary.syntheticInvocations).toHaveLength(1);
     expect(summary.syntheticInvocations[0].presentation).toBe("1 started + 2 not-started");
   });
@@ -38,13 +34,19 @@ describe("Worker evidence literal reporting", () => {
 
   it("keeps productive terminals and publication manifests independent of status", () => {
     const summary = summarizeWorkerEvidence([{ status: "degraded", productive: 1, publication_count: 2 }, { status: "ok", productive: 0, publication_count: 0 }], { dex: [{ state: "published" }, { state: "failed" }] });
-    expect(summary.productive).toBe(1);
-    expect(summary.publicationCount).toBe(2);
+    expect(summary).toMatchObject({ productive: 1, publicationCount: 2 });
     expect(summary.publicationStates.dex).toEqual({ published: 1, failed: 1 });
   });
 });
 
 describe("21-day incident evidence", () => {
+  const emptySources = () => ({ query: vi.fn().mockReturnValue([]), env: {}, now: new Date("2026-10-18T01:17:00Z"),
+    deliveryReader: vi.fn().mockResolvedValue({ rows: [] }) });
+  const delivery = { scriptName: "stablecoin-api", cron: "0 * * * *", scheduledDatetime: "2026-10-18T00:00:00Z" };
+  const child = { job: "job", schedule_key: "lane", slot_started_at: Date.parse(delivery.scheduledDatetime) / 1000,
+    invocation_id: "invocation", worker_version: "version", output_published_at: 100 };
+  const deployment = { scriptName: delivery.scriptName, id: "deploy", versions: [{ id: "version" }] };
+  const definitions = { lane: { schedule: delivery.cron } };
   it("bounds daily shards and names missing history rather than inventing zero incidents", () => {
     const end = 30 * DAY;
     const day = (from: number) => ({ schemaVersion: 1, from, to: from + DAY, sources: {} });
@@ -83,10 +85,7 @@ describe("21-day incident evidence", () => {
     }));
     writeFileSync(join(archiveDir, "bundle.json"), JSON.stringify({ schemaVersion: 1, days }));
     try {
-      await captureWorkerIncidentBundle({ outDir, archiveDir, database: "db", remote: true }, {
-        query: vi.fn().mockReturnValue([]), env: {}, now: new Date("2026-10-18T01:17:00Z"),
-        deliveryReader: vi.fn().mockResolvedValue({ rows: [] }),
-      });
+      await captureWorkerIncidentBundle({ outDir, archiveDir, database: "db", remote: true }, emptySources());
       const bundle = JSON.parse(readFileSync(join(outDir, "bundle.json"), "utf8"));
       expect(bundle.days[0].sources.archive).toMatchObject({
         coverage: "partial", reason: "previous-artifact-unreadable",
@@ -95,7 +94,7 @@ describe("21-day incident evidence", () => {
     } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
-  it("keeps the current shard authoritative when the restored archive has malformed days", async () => {
+  it("quarantines malformed archive days and preserves the current shard", async () => {
     const root = mkdtempSync(join(tmpdir(), "worker-incidents-archive-"));
     const archiveDir = join(root, "archive");
     const outDir = join(root, "out");
@@ -105,10 +104,7 @@ describe("21-day incident evidence", () => {
       schemaVersion: 1, days: [null, { schemaVersion: 1, from: to - 2 * DAY, to: to - DAY }],
     }));
     try {
-      const result = await captureWorkerIncidentBundle({ outDir, archiveDir, database: "db", remote: true }, {
-        query: vi.fn().mockReturnValue([]), env: {}, now: new Date("2026-10-18T01:17:00Z"),
-        deliveryReader: vi.fn().mockResolvedValue({ rows: [] }),
-      });
+      const result = await captureWorkerIncidentBundle({ outDir, archiveDir, database: "db", remote: true }, emptySources());
       expect(result.quarantinedDayCount).toBe(2);
       const bundle = JSON.parse(readFileSync(join(outDir, "bundle.json"), "utf8"));
       expect(bundle.days).toHaveLength(1);
@@ -119,10 +115,6 @@ describe("21-day incident evidence", () => {
   });
 
   it("joins only singleton invocation/version evidence and retains duplicate delivery uncertainty", () => {
-    const delivery = { scriptName: "stablecoin-api", cron: "0 * * * *", scheduledDatetime: "2026-10-18T00:00:00Z" };
-    const child = { job: "job", schedule_key: "lane", slot_started_at: Date.parse(delivery.scheduledDatetime) / 1000, invocation_id: "invocation", worker_version: "version", output_published_at: 100 };
-    const deployment = { scriptName: delivery.scriptName, id: "deploy", versions: [{ id: "version" }] };
-    const definitions = { lane: { schedule: delivery.cron } };
     const joined = joinIncidentEvidence([delivery], [child], [deployment], [{ published_at: 100 }], definitions);
     expect(joined[0].join).toBe("singleton-version-match");
     expect(joined[0].publications[0].correlation).toBe("timestamp-only-not-causal-proof");
@@ -134,49 +126,45 @@ describe("21-day incident evidence", () => {
     { worker_version: null }, { worker_version: undefined }, { worker_version: "" }, { worker_version: " " },
     { invocation_id: "other-invocation" }, { worker_version: "other-version" },
   ])("leaves the whole delivery unattributed when a child has incomplete or mixed identity %j", (unknownIdentity) => {
-    const delivery = { scriptName: "stablecoin-api", cron: "0 * * * *", scheduledDatetime: "2026-10-18T00:00:00Z" };
-    const child = { job: "first", schedule_key: "lane", slot_started_at: Date.parse(delivery.scheduledDatetime) / 1000,
-      invocation_id: "invocation", worker_version: "version", output_published_at: 100 };
-    const children = [child, { ...child, job: "second", ...unknownIdentity }];
-    const deployment = { scriptName: delivery.scriptName, id: "deploy", versions: [{ id: "version" }] };
-    const joined = joinIncidentEvidence([delivery], children, [deployment], [{ published_at: 100 }], { lane: { schedule: delivery.cron } });
+    const first = { ...child, job: "first" };
+    const children = [first, { ...first, job: "second", ...unknownIdentity }];
+    const joined = joinIncidentEvidence([delivery], children, [deployment], [{ published_at: 100 }], definitions);
     expect(joined[0]).toMatchObject({
       join: "unattributed", reason: "missing-or-ambiguous-identity",
       deployment: null, invocationId: null, children: [], publications: [],
     });
   });
 
-  it("joins multiple fully identified children of one invocation and exact deployment version", () => {
-    const delivery = { scriptName: "stablecoin-api", cron: "0 * * * *", scheduledDatetime: "2026-10-18T00:00:00Z" };
-    const children = ["first", "second"].map((job) => ({
-      job, schedule_key: "lane", slot_started_at: Date.parse(delivery.scheduledDatetime) / 1000,
-      invocation_id: "invocation", worker_version: "version", output_published_at: 100,
-    }));
-    const deployment = { scriptName: delivery.scriptName, id: "deploy", versions: [{ id: "version" }] };
-    const joined = joinIncidentEvidence([delivery], children, [deployment], [{ published_at: 100 }], { lane: { schedule: delivery.cron } });
+  it("joins identified children to the exact deployment version", () => {
+    const children = ["first", "second"].map((job) => ({ ...child, job }));
+    const joined = joinIncidentEvidence([delivery], children, [deployment], [{ published_at: 100 }], definitions);
     expect(joined[0]).toMatchObject({ join: "singleton-version-match", invocationId: "invocation", deployment: "deploy", children });
     expect(joined[0].publications).toEqual([{ published_at: 100, correlation: "timestamp-only-not-causal-proof" }]);
     expect(joinIncidentEvidence([delivery], children, [{ ...deployment, versions: [{ id: "other-version" }] }], [],
-      { lane: { schedule: delivery.cron } })[0].join).toBe("unattributed");
+      definitions)[0].join).toBe("unattributed");
   });
 
-  it("writes partial evidence after source failures without retaining error secrets or arbitrary metadata", async () => {
+  it("records safe D1 failure fields without command or SQL text", async () => {
     const outDir = mkdtempSync(join(tmpdir(), "worker-incidents-"));
     try {
       const query = vi.fn().mockImplementation((sql: string) => {
         expect(sql.trim()).toMatch(/^SELECT/i);
         if (sql.includes("FROM cron_runs")) return [{ job: "job", status: "error", error: "secret-error", metadata: "secret-metadata" }];
-        throw new Error("secret-error");
+        throw Object.assign(new Error(`Command failed: npx wrangler d1 execute --command "${sql}"\nsecret-stderr Bearer secret-token [code: 7429] overloaded`), { status: 1, signal: "SIGTERM", stderr: "secret-stderr" });
       });
+      const offline = vi.fn().mockRejectedValue(new Error("secret-token"));
       const result = await captureWorkerIncidentBundle({ outDir, database: "db", remote: true }, {
-        query, env: {}, now: new Date("2026-10-18T01:17:00Z"), deliveryReader: vi.fn().mockRejectedValue(new Error("secret-token")),
+        ...emptySources(), query, env: { CLOUDFLARE_API_TOKEN: "secret-token" }, fetchImpl: offline, deliveryReader: offline,
       });
       expect(result.collectionFailed).toBe(true);
       const text = readFileSync(join(outDir, "bundle.json"), "utf8");
       expect(text).not.toContain("secret-");
+      const day = JSON.parse(text).days[0];
+      expect(day.sources.surfacePublications.cause).toBe("Error; status=1; signal=SIGTERM; classification=7429");
+      expect(text).not.toMatch(/Command failed|wrangler|SELECT|--command|stderr/);
       expect(text).toContain("scheduled-invocations-unavailable");
-      expect(JSON.parse(text).days[0].summary.counts.error).toBe(1);
-      expect(JSON.parse(text).days[0].sources.children.rows).toEqual([
+      expect(day.summary.counts.error).toBe(1);
+      expect(day.sources.children.rows).toEqual([
         expect.objectContaining({ job: "job", status: "error", invocation_id: null, worker_version: null }),
       ]);
     } finally { rmSync(outDir, { recursive: true, force: true }); }
