@@ -25,15 +25,15 @@ import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/a
 
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types";
+import type { StablecoinAiSummary, StablecoinMeta } from "@shared/types";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 
-// The parity check reads the profile fold's text rows, not its chain logos.
+// Contract parity only needs text rows.
 vi.mock("next/image", () => ({ default: () => null }));
 
-const claimedSummary = {
+const claimedSummary: StablecoinAiSummary = {
   title: "Summary", text: "Holds a {{grade}} grade.", updatedAt: "2026-09-01",
-  claimTokens: [{ token: "grade", placeholder: "{{grade}}", source: "report-card.grade" as const, factsAsOf: "2026-09-01" }],
+  claimTokens: [{ token: "grade", placeholder: "{{grade}}", source: "report-card.grade", factsAsOf: "2026-09-01" }],
 };
 
 afterEach(() => { vi.restoreAllMocks(); });
