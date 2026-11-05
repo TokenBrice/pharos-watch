@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { DatabaseSync } from "node:sqlite";
-import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
+import { getCronJobMeta } from "@shared/lib/cron-jobs";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { CONFIRMED_CRON_OUTPUT_AT_SQL as OUTPUT, LATEST_CONFIRMED_CRON_OUTPUT_SQL as LATEST } from "../../cron-output";
 import {
   classifyFreshness,
   loadProducerFreshnessFacts,
-  type FreshnessPolicy,
+  type FreshnessThreshold,
   type ProducerFreshnessFact,
 } from "../freshness-oracle";
 
@@ -17,28 +18,28 @@ const FACT: ProducerFreshnessFact = {
   lastStatus: "ok",
 };
 
-function atAge(ageSec: number | null): ProducerFreshnessFact {
-  return { ...FACT, lastSuccessAt: ageSec == null ? null : NOW - ageSec };
-}
-
 describe("classifyFreshness parity boundaries", () => {
-  const legacyPolicies: Array<[string, FreshnessPolicy, number, number]> = [
-    ["status x2", { watchAt: { multiplier: 2 }, staleAt: { multiplier: 2 } }, 1_800, 1_800],
-    ["watchdog x2/x3", { watchAt: { multiplier: 2 }, staleAt: { multiplier: 3 } }, 1_800, 2_700],
-    ["canary 4h", { watchAt: { absoluteSec: 14_400 }, staleAt: { absoluteSec: 14_400 } }, 14_400, 14_400],
-    ["canary 48h", { watchAt: { absoluteSec: 172_800 }, staleAt: { absoluteSec: 172_800 } }, 172_800, 172_800],
-    ["digest 8.5h due-after", { watchAt: { absoluteSec: 30_599 }, staleAt: { absoluteSec: 30_599 } }, 30_599, 30_599],
-    ["DEWS 2h", { watchAt: { absoluteSec: 7_200 }, staleAt: { absoluteSec: 7_200 } }, 7_200, 7_200],
-  ];
+  const policy = (watchAt: FreshnessThreshold, staleAt = watchAt) => ({ watchAt, staleAt });
+  const policies = [
+    ["status x2", policy({ multiplier: 2 }), 1_800, 1_800],
+    ["watchdog x2/x3", policy({ multiplier: 2 }, { multiplier: 3 }), 1_800, 2_700],
+    ["canary 4h", policy({ absoluteSec: 14_400 }), 14_400, 14_400],
+    ["canary 48h", policy({ absoluteSec: 172_800 }), 172_800, 172_800],
+    ["digest 8.5h due-after", policy({ absoluteSec: 30_599 }), 30_599, 30_599],
+    ["DEWS 2h", policy({ absoluteSec: 7_200 }), 7_200, 7_200],
+  ] as const;
 
-  it.each(legacyPolicies)("matches %s immediately around each threshold", (_name, policy, watchAt, staleAt) => {
-    expect(classifyFreshness(atAge(watchAt), policy, NOW).state).toBe("fresh");
+  it.each(policies)("matches %s immediately around each threshold", (_name, policy, watchAt, staleAt) => {
+    const state = (age: number | null) => classifyFreshness({
+      ...FACT, lastSuccessAt: age == null ? null : NOW - age,
+    }, policy, NOW).state;
+    expect(state(watchAt)).toBe("fresh");
     if (staleAt > watchAt) {
-      expect(classifyFreshness(atAge(watchAt + 1), policy, NOW).state).toBe("watch");
-      expect(classifyFreshness(atAge(staleAt), policy, NOW).state).toBe("watch");
+      expect(state(watchAt + 1)).toBe("watch");
+      expect(state(staleAt)).toBe("watch");
     }
-    expect(classifyFreshness(atAge(staleAt + 1), policy, NOW).state).toBe("stale");
-    expect(classifyFreshness(atAge(null), policy, NOW).state).toBe("stale");
+    expect(state(staleAt + 1)).toBe("stale");
+    expect(state(null)).toBe("stale");
   });
 
   it.each([
@@ -49,91 +50,74 @@ describe("classifyFreshness parity boundaries", () => {
     [NaN, "stale", "invalid-timestamp"],
     [null, "stale", "missing-timestamp"],
   ] as const)("admits timestamp %s without inventing a fresh age", (lastSuccessAt, state, timestampReason) => {
-    const result = classifyFreshness({ ...FACT, lastSuccessAt }, legacyPolicies[0][1], NOW);
-    expect(result).toMatchObject({ state, timestampReason, ageSec: timestampReason == null ? 0 : null });
+    expect(classifyFreshness({ ...FACT, lastSuccessAt }, policies[0][1], NOW)).toMatchObject({ state, timestampReason, ageSec: timestampReason == null ? 0 : null });
   });
 
-  it("allows overlapping publications against read time while preserving captured-run age", () => {
-    expect(classifyFreshness({ ...FACT, lastSuccessAt: NOW + 120 }, legacyPolicies[0][1], NOW, {
-      readAtSec: NOW + 120,
-    })).toMatchObject({ state: "fresh", ageSec: 0, timestampReason: null });
-    expect(classifyFreshness({ ...FACT, lastSuccessAt: NOW + 181 }, legacyPolicies[0][1], NOW, {
-      readAtSec: NOW + 120,
-    })).toMatchObject({ state: "stale", ageSec: null, timestampReason: "future-timestamp" });
-    expect(classifyFreshness({ ...FACT, lastSuccessAt: NOW + 120 }, legacyPolicies[0][1], NOW, {
-      allowedFutureSkewSec: 120,
-    }).state).toBe("fresh");
+  it.each([
+    [120, NOW + 120, undefined, "fresh", 0, null],
+    [181, NOW + 120, undefined, "stale", null, "future-timestamp"],
+    [120, undefined, 120, "fresh", 0, null],
+  ] as const)("admits overlap +%s (read %s, skew %s)", (offset, readAtSec, allowedFutureSkewSec, state, ageSec, timestampReason) => {
+    expect(classifyFreshness({ ...FACT, lastSuccessAt: NOW + offset }, policies[0][1], NOW, {
+      readAtSec, allowedFutureSkewSec,
+    })).toMatchObject({ state, ageSec, timestampReason });
   });
 });
 
 describe("loadProducerFreshnessFacts", () => {
-  it("loads all producer facts with one statement and retains missing producers", async () => {
-    const all = vi.fn(async () => ({ results: [{
-      job: "alpha",
-      last_success_at: NOW - 10,
-      last_run_at: NOW - 5,
-      last_status: "error",
-    }] }));
-    const bind = vi.fn(() => ({ all }));
-    const prepare = vi.fn((_sql: string) => ({ bind }));
-    const db = { prepare } as unknown as D1Database;
-    const facts = await loadProducerFreshnessFacts(db, NOW, [
-      {
-        job: "alpha", label: "Alpha", group: "other", intervalSec: 60,
-        scheduleKey: "daily0300Utc", schedule: "0 3 * * *", triggerMode: "isolated", statusImpact: "watch",
-        freshnessSurface: "consumer",
-      },
-      {
-        job: "beta", label: "Beta", group: "other", intervalSec: 120,
-        scheduleKey: "daily0300Utc", schedule: "0 3 * * *", triggerMode: "isolated", statusImpact: "watch",
-        freshnessSurface: "consumer",
-      },
-    ]);
-
-    expect(prepare).toHaveBeenCalledTimes(1);
-    expect(prepare.mock.calls[0]?.[0]).toContain("last_liveness_at");
-    expect(all).toHaveBeenCalledTimes(1);
-    expect(facts).toEqual([
-      {
-        job: "alpha", lastSuccessAt: NOW - 10, lastLivenessAt: null, lastRunAt: NOW - 5,
-        expectedIntervalSec: 60, lastStatus: "error",
-      },
-      {
-        job: "beta", lastSuccessAt: null, lastLivenessAt: null, lastRunAt: null,
-        expectedIntervalSec: 120, lastStatus: null,
-      },
-    ]);
-  });
-
-  it("selects the latest status and latest successful clock from real SQLite", async () => {
-    const sqlite = new DatabaseSync(":memory:");
-    sqlite.exec(`CREATE TABLE cron_runs (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      job TEXT NOT NULL,
-      started_at INTEGER NOT NULL,
-      status TEXT NOT NULL,
-      item_count INTEGER,
-      duration_ms INTEGER NOT NULL DEFAULT 0,
-      metadata TEXT
-    )`);
-    sqlite.prepare("INSERT INTO cron_runs (job, started_at, status, item_count) VALUES (?, ?, ?, ?)")
-      .run("alpha", NOW - 30, "ok", 1);
-    sqlite.prepare("INSERT INTO cron_runs (job, started_at, status, item_count) VALUES (?, ?, ?, ?)")
-      .run("alpha", NOW - 10, "error", 0);
-    // An overlapping older run's later clock wins.
-    sqlite.prepare("INSERT INTO cron_runs (job, started_at, status, duration_ms, metadata) VALUES ('alpha', ?, 'ok', 9e5, ?)")
-      .run(NOW - 900, JSON.stringify({ outputPublishedAt: NOW - 20 }));
-    const [fact] = await loadProducerFreshnessFacts(createSqliteD1(sqlite), NOW, [{
-      job: "alpha", label: "Alpha", group: "other", intervalSec: 60,
-      scheduleKey: "daily0300Utc", schedule: "0 3 * * *", triggerMode: "isolated", statusImpact: "watch",
-      freshnessSurface: "consumer",
-    }]);
-    sqlite.close();
-
-    expect(fact).toMatchObject({
-      lastSuccessAt: NOW - 20,
-      lastRunAt: NOW - 10,
-      lastStatus: "error",
-    });
+  it("range-prunes MAX history without changing facts", async () => {
+    const sql: string[] = [];
+    const { sqlite, db } = createLatestSchemaSqlite({ onAll: (query) => sql.push(query) });
+    try {
+      sqlite.prepare(`WITH RECURSIVE n(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM n WHERE x<10000)
+        INSERT INTO cron_runs(job,started_at,duration_ms,status,item_count)
+        SELECT 'alpha', ?-86400-x, 0, 'ok', 1 FROM n`).run(NOW);
+      const insert = sqlite.prepare("INSERT INTO cron_runs(job,started_at,duration_ms,status,item_count,metadata) VALUES (?,?,?,?,1,?)");
+      insert.run("alpha", NOW - 30, 0, "ok", null);
+      insert.run("alpha", NOW - 10, 0, "error", null);
+      // Older overlapping publication wins.
+      insert.run("alpha", NOW - 900, 900000, "ok", JSON.stringify({ outputPublishedAt: NOW - 20 }));
+      insert.run("other", NOW, 0, "ok", null);
+      const jobs = ["alpha", "beta"];
+      const prepare = vi.spyOn(db, "prepare");
+      const facts = await loadProducerFreshnessFacts(db, NOW, jobs.map((job, i) => ({
+        ...getCronJobMeta("snapshot-supply")!, job, intervalSec: 60 * (i + 1),
+      })));
+      expect(prepare).toHaveBeenCalledTimes(1);
+      expect(sql).toHaveLength(1);
+      expect(sql[0]).toContain("last_liveness_at");
+      expect(facts).toEqual([
+        { job: "alpha", lastSuccessAt: NOW - 20, lastLivenessAt: NOW - 30, lastRunAt: NOW - 10,
+          expectedIntervalSec: 60, lastStatus: "error" },
+        { job: "beta", lastSuccessAt: null, lastLivenessAt: null, lastRunAt: null,
+          expectedIntervalSec: 120, lastStatus: null },
+      ]);
+      // Frozen 588fe3bd8^ shapes; shared output evidence.
+      const legacy = `SELECT job,started_at AS last_run_at,status AS last_status,last_success_at,last_liveness_at
+FROM (SELECT job,started_at,status,MAX(${OUTPUT}) OVER (PARTITION BY job) AS last_success_at,
+MAX(CASE WHEN status IN ('ok','degraded') AND COALESCE(json_extract(
+CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END,'$.childDisposition'),'')!='not_started'
+THEN started_at END) OVER (PARTITION BY job) AS last_liveness_at,
+ROW_NUMBER() OVER (PARTITION BY job ORDER BY started_at DESC,id DESC) AS row_number
+FROM cron_runs WHERE job IN (?,?)) WHERE row_number=1`;
+      const scalar = `SELECT MAX(${OUTPUT}) AS started_at FROM cron_runs WHERE job = ?1`;
+      expect(sqlite.prepare(legacy).all(...jobs)).toEqual(
+        sqlite.prepare(sql[0]).all(JSON.stringify(jobs)).filter((row) => row.last_run_at != null),
+      );
+      // Match MAX history, never the floor_run seek.
+      const range = /SEARCH cron_runs USING INDEX idx_cron_runs_job_started \(job=\? AND started_at>\?\)/;
+      const plan = (query: string, ...bindings: string[]) => sqlite.prepare(`EXPLAIN QUERY PLAN ${query}`)
+        .all(...bindings).some((row) => range.test(String(row.detail)));
+      expect(plan(sql[0], JSON.stringify(jobs))).toBe(true);
+      expect(plan(legacy, ...jobs)).toBe(false);
+      for (const job of [...jobs, "other"]) {
+        expect(sqlite.prepare(LATEST).get(job)).toEqual(sqlite.prepare(scalar).get(job));
+        expect(plan(LATEST, job)).toBe(true);
+        expect(plan(scalar, job)).toBe(false);
+      }
+    } finally {
+      vi.restoreAllMocks();
+      sqlite.close();
+    }
   });
 });
