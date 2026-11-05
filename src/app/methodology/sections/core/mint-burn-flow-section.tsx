@@ -128,8 +128,8 @@ export function MintBurnFlowMethodologySection() {
                 gauge weights. Existing contracts sharing a chain bucket must be disabled together; a new
                 sibling contract waits for independently attributable history. The frozen 137 pre-gate config keys are grandfathered for membership;
                 source-field edits retain that membership, while current-fingerprint coverage remains required.
-                An active admitted leg with missing proof or a frontier beyond the 8-hour watermark budget
-                can be quarantined from the common watermark with its shared bucket only when the complete
+                An active leg with a durable admission or prior native scan evidence, but missing proof or a
+                frontier beyond the 8-hour watermark budget, can be quarantined from the common watermark with its shared bucket only when the complete
                 active roster leaves nonempty survivors proving a fresh common complete hour. Otherwise the
                 unavailable or stale watermark remains and no new pause is recorded. Isolated outputs stay unavailable rather
                 than zero; publication reports pending-admission / reactivation-pending until catch-up, and

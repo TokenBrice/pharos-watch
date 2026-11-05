@@ -3,10 +3,10 @@
     "version": "6.34",
     "title": "Prove surviving publication scope and retain quarantined integrity incidents",
     "date": "2026-11-05",
-    "effectiveAt": 1793911200,
+    "effectiveAt": 1793917500,
     "summary": "Missing-current-proof legs can leave publication only when the remaining incumbent buckets prove a fresh common complete hour; automatic pauses retain enabled prior members in operator conservation diagnostics.",
     "impact": [
-      "A zero accepted frontier is an isolation candidate alongside a stale frontier. Candidates expand to all existing siblings sharing a stablecoin/chain bucket before survivor admission. A nonempty incumbent roster must prove a common complete closed hour within the unchanged 8-hour watermark budget; individual fresh tails alone cannot authorize quarantine.",
+      "A zero accepted frontier is an isolation candidate alongside a stale frontier only for keys with a durable admission or accepted native scan-ledger evidence; grandfathered membership, bootstrap absence and legacy cursors alone cannot authorize isolation. Candidates expand to all existing siblings sharing a stablecoin/chain bucket before survivor admission. A nonempty incumbent roster must prove a common complete closed hour within the unchanged 8-hour watermark budget; individual fresh tails alone cannot authorize quarantine.",
       "Only a complete active-roster evaluation may persist isolation pauses; partial readers cannot authorize them. When survivors are empty, stale, dirty, gapped or lack a common hour, no new pause is persisted and the whole-roster unavailable or stale verdict remains. Explicit disables, initial admission and valuation gates are unchanged.",
       "Isolation pauses every existing sibling in the shared bucket. Every paused sibling needs current-fingerprint proof of the incumbent closed hour to resume; one lagging sibling keeps the whole pair reactivation-pending. A config edit with missing current-fingerprint proof takes that leg and its bucket out of publication when the remaining roster qualifies, until the new fingerprint catches up. This supersedes v6.31's edited-BUIDL in-scope behavior while retaining durable membership.",
       "Reconciliation reads currently admitted members plus enabled previously admitted or grandfathered members from the same policy/admission snapshot, including automatic pauses. Explicit and shared-bucket disables, never-admitted pending legs and inactive coins remain outside that diagnostic scope; public flow consumers retain publication scope.",
