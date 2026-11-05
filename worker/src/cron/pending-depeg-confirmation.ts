@@ -90,6 +90,7 @@ export interface CollectedConfirmationEvidence {
   offchainSourceKey: string | null;
   offchainPeakCandidate: PeakCandidate | null;
   dexStatus: DirectionalSignalStatus;
+  dexConfirmationVeto?: boolean;
   dexPeakCandidates: PeakCandidate[];
   dexConfirmationKeys: string[];
   cexStatus: DirectionalSignalStatus;

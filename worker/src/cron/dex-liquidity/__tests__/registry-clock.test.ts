@@ -83,25 +83,31 @@ async function score(db: D1Database, metrics: Map<string, SourcePoolGraph>, regi
 
 describe("registry read-consumption clock", () => {
   it.each([
-    { oldPrice: 0.4, aggregateAge: 6 * 3600 },
-    { oldPrice: 0.1, aggregateAge: 60 },
-  ])("ages only actual aggregate contributors for old price $oldPrice", async ({ oldPrice, aggregateAge }) => {
+    [0.4, 21_600, false], [0.1, 60, false], [0.4, 60, true], [0.4, 21_600, true],
+  ] as const)("ages actual contributors at %s, age %s, aggregate-only %s", async (oldPrice, aggregateAge, aggregateOnly) => {
     const harness = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
     openDatabases.push(harness.sqlite);
     const pools = [
-      makePool({ poolId: "base:old", project: "orca", price: oldPrice, priceObservedAt: READ_CLOCK - 6 * 3600 }),
+      makePool({ poolId: "base:old", project: "orca", price: oldPrice,
+        priceObservedAt: READ_CLOCK - (aggregateOnly ? aggregateAge : 21_600) }),
       makePool({ poolId: "base:fresh1", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 60 }),
       makePool({ poolId: "base:fresh2", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 30 }),
-    ];
+    ].slice(0, aggregateOnly ? 1 : 3);
     await computeDexPrices({ db: harness.db, retainedPoolsByStablecoin: new Map([["usdc-circle", pools]]),
       nowSec: READ_CLOCK, generationId: harness.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
     const row = harness.sqlite.prepare(
       "SELECT price_sources_json FROM dex_prices WHERE stablecoin_id = 'usdc-circle'",
     ).get() as { price_sources_json: string };
-    expect(JSON.parse(row.price_sources_json)).toEqual([
+    expect(JSON.parse(row.price_sources_json)).toEqual(aggregateOnly ? { aggregateObservedAt: READ_CLOCK - aggregateAge, sources: [] } : [
       expect.objectContaining({ protocol: "curve", observedAt: READ_CLOCK - 60,
         aggregateObservedAt: READ_CLOCK - aggregateAge }),
     ]);
+    const loaded = await loadDexPrices(harness.db, READ_CLOCK);
+    expect(loaded.dexPriceRows.get("usdc-circle")?.aggregateObservedAt).toBe(READ_CLOCK - aggregateAge);
+    if (aggregateOnly) {
+      expect(loaded.dexPriceRows.get("usdc-circle")).toMatchObject({ dex_price_usd: 0.4, source_total_tvl: 5_000_000 });
+      expect(loaded.dexPriceSources.has("usdc-circle")).toBe(false);
+    }
   });
 
   it("replays a retained six-hour quote through scoring-stage storage and fresh publication without renewing it", async () => {

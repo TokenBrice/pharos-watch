@@ -10,6 +10,7 @@ import { WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } fr
 import type { StablecoinData } from "@shared/types/market";
 import type { PegSummaryCoin } from "@shared/types/peg";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { addFreshnessHeaders } from "../lib/api-freshness";
 import { errorResponse, jsonResponse } from "../lib/api-response";
 import { buildMethodologyEnvelope } from "../lib/api-methodology";
@@ -17,7 +18,7 @@ import { getDepegThresholdBpsForPegCurrency } from "../lib/constants";
 import { loadStablecoinsCache } from "../lib/stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../lib/peg-analytics";
 import { countPegEventDays, loadPegAnalyticsCache } from "../lib/peg-analytics-cache";
-import { classifyPrimaryDepegTrust, isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
+import { classifyPrimaryDepegTrust, isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "../lib/depeg-trust-policy";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import { deriveCurrentPegObservationMap } from "../lib/current-peg-observations";
 import {
@@ -170,6 +171,7 @@ type DexPriceRow = {
   source_pool_count: number;
   source_total_tvl: number;
   updated_at: number;
+  price_sources_json: string | null;
 };
 
 type DexPriceReadResult =
@@ -193,7 +195,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
   // 2. Load DEX prices + shared peg analytics snapshot
   // Narrower aggregate-only column set than the dex-liquidity endpoint.
   const [dexPriceResult, pegAnalyticsCache] = await Promise.all([
-    db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at FROM dex_prices")
+    db.prepare("SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices")
       .all<DexPriceRow>()
       .then((result): DexPriceReadResult => ({ kind: "ok", results: result.results ?? [] }))
       .catch((err): DexPriceReadResult => {
@@ -263,9 +265,7 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
 
   // Build DEX price lookup. A failed read is represented separately from a
   // successful empty result so consumers can distinguish absence from outage.
-  const dexPrices = new Map(
-    dexPriceResult.results.map((r) => [r.stablecoin_id, r])
-  );
+  const dexPrices = new Map(dexPriceResult.results.map((r) => [r.stablecoin_id, r]));
 
   // 3. Build lookup maps
   const priceById = new Map(peggedAssets.map((a) => [a.id, a]));
@@ -313,7 +313,10 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
     const supply = getCirculatingRawOrNull(asset);
     if (
       observation?.pegReferenceUnavailable !== true &&
-      dexRow && supply !== null && supply >= DEPEG_EVENT_MIN_SUPPLY_USD && isTrustedDexPriceRow(dexRow, now, "ui")
+      dexRow && supply !== null && supply >= DEPEG_EVENT_MIN_SUPPLY_USD &&
+      isTrustedDexPriceRow(dexRow, now, "ui") && isAffirmativeDexPriceRow({
+        ...dexRow, aggregateObservedAt: readDexAggregateObservedAt(dexRow.price_sources_json, now),
+      }, now, "ui")
     ) {
       // NAV / yield-bearing tokens accrue above their peg unit by design
       // (sUSDe trades near $1.25), so DEX-vs-peg would report thousands of bps
@@ -368,6 +371,8 @@ export const handlePegSummary = async (db: D1Database): Promise<Response> => {
       depegEventCoverageLimited: pegData.depegEventCoverageLimited,
       ...(observation?.currentSupplyUnavailable ? { currentSupplyUnavailable: true } : {}),
       pegScore: pegData.pegScore,
+      price: observation?.currentPriceUnavailable === false && asset && isObservedPrice(asset) &&
+        asset.price != null && Number.isFinite(asset.price) && asset.price > 0 ? asset.price : null,
       priceSource: asset?.priceSource ?? undefined,
       priceConfidence: asset?.priceConfidence ?? null,
       priceObservedAt: asset?.priceObservedAt ?? null,

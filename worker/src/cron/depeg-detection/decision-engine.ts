@@ -25,6 +25,7 @@ import {
 import {
   classifyPrimaryDepegTrust,
   hasFreshMultiSourcePrimaryAgreement,
+  isAffirmativeDexPriceRow,
   isTrustedDexPriceRow,
 } from "../../lib/depeg-trust-policy";
 import {
@@ -85,6 +86,7 @@ interface DecisionContext {
   primarySupportsRecovery: boolean;
   pendingReason: PendingDepegReason;
   nativeSignal: DepegSignal | null;
+  nativeVetoSignal: DepegSignal | null;
   nativePegPrice: number | null;
   nativePegCurrency: string | undefined;
   /** Set when this run's native quote was withheld from admission. */
@@ -282,6 +284,7 @@ function deriveDexEvidence(params: {
   });
   const dexSupportsDirection =
     dexSignal != null &&
+    input.dexRow != null && isAffirmativeDexPriceRow(input.dexRow, now, "depeg") &&
     signalCrossesThreshold(dexSignal, threshold) &&
     signalsShareDirection(dexSignal, direction) &&
     dexDirectionProtocolCount >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN;
@@ -474,8 +477,10 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       pegType: asset.pegType,
     });
   const withheldNativeQuote =
-    nativeQuoteImplausibility != null && !nativeQuoteCorroborated ? nativeQuoteImplausibility : null;
+    nativeQuoteImplausibility != null && !(nativeQuoteCorroborated && input.dexRow != null &&
+      isAffirmativeDexPriceRow(input.dexRow, now, "depeg")) ? nativeQuoteImplausibility : null;
   const nativeSignal = withheldNativeQuote == null ? rawNativeSignal : null;
+  const nativeVetoSignal = nativeQuoteImplausibility == null || nativeQuoteCorroborated ? rawNativeSignal : null;
   const tieredMarketCapRequiresConfirmation = requiresTieredMarketCapConfirmation({
     supply,
     sourceDepth,
@@ -524,6 +529,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
       primarySupportsRecovery,
       pendingReason,
       nativeSignal,
+      nativeVetoSignal,
       nativePegPrice: nativeSignal == null ? null : input.nativePegQuote?.price ?? null,
       nativePegCurrency: input.nativePegQuote?.pegCurrency ?? meta.flags.pegCurrency,
       nativeQuoteImplausibility: withheldNativeQuote,
@@ -742,7 +748,8 @@ function decideRecovery(
       (isDexFresh(dexRow, dexAbsBps, now) && dexSupportsExistingDirection) || poolRecoveryVeto,
   });
 
-  const trustedAggregateDexLane = isDexFresh(dexRow, dexAbsBps, now) && dexRow != null;
+  // Publication-fresh aggregates retain vetoes, but only original clocks can prove recovery.
+  const trustedAggregateDexLane = dexRow != null && isAffirmativeDexPriceRow(dexRow, now, "depeg");
   const aggregateDexRecovery = trustedAggregateDexLane && dexSupportsRecovery;
   // Challenger snapshots retain their publication clock, not the original
   // pool-price observation clock. They can veto recovery conservatively but
@@ -830,13 +837,15 @@ function withPriceCoverage(
   const trustedOffPeg = ctx != null && signal != null &&
     signal.direction === input.existing.direction &&
     !signalIsWithinThreshold(signal, ctx.recoveryThreshold) &&
-    (native || ctx.primarySupportsRecovery || ctx.dexSupportsExistingDirection) &&
+    (native || ctx.primarySupportsRecovery || (ctx.dexSupportsExistingDirection &&
+      ctx.dexRow != null && isAffirmativeDexPriceRow(ctx.dexRow, input.now, "depeg"))) &&
     // A native quote that contradicts the USD reading cannot sustain that reading.
     (ctx.nativeSignal == null || !signalIsWithinThreshold(ctx.nativeSignal, ctx.recoveryThreshold));
   const trustedAtPar = ctx != null && signal != null &&
     signalIsWithinThreshold(signal, ctx.recoveryThreshold) &&
     (native || (
-      (ctx.primarySupportsRecovery || (ctx.dexSupportsRecovery && isDexFresh(ctx.dexRow, ctx.dexAbsBps, input.now))) &&
+      (ctx.primarySupportsRecovery || (ctx.dexSupportsRecovery && ctx.dexRow != null &&
+        isAffirmativeDexPriceRow(ctx.dexRow, input.now, "depeg"))) &&
       !ctx.poolRecoveryVeto && !(ctx.dexSupportsExistingDirection && isDexFresh(ctx.dexRow, ctx.dexAbsBps, input.now))
     )) &&
     (native || ctx.nativeSignal == null || signalIsWithinThreshold(ctx.nativeSignal, ctx.recoveryThreshold));
@@ -879,9 +888,10 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
   // The native-quote veto protects the USD primary path. A native-domain row is
   // decided by its own native quote, so it must still reach the existing-event
   // peak, direction and recovery rules.
+  const nativeVetoContext = { ...ctx, nativeSignal: ctx.nativeVetoSignal };
   const nativeVeto = input.existing != null && isNativePegEvent(input.existing)
     ? null
-    : applyNativeQuoteVeto(ctx, input.existing);
+    : applyNativeQuoteVeto(nativeVetoContext, input.existing);
   if (nativeVeto) {
     return withPriceCoverage({
       ...nativeVeto,
@@ -889,7 +899,7 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
       diagnostics: withheldNativeDiagnostic
         ? [withheldNativeDiagnostic, ...nativeVeto.diagnostics]
         : nativeVeto.diagnostics,
-    }, input, ctx);
+    }, input, nativeVetoContext);
   }
 
   const nativeOpening = input.existing ? null : decideNewNativePegDepeg(ctx);

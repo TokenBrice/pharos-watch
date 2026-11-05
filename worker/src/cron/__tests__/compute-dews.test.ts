@@ -864,51 +864,20 @@ describe("computeAndStoreDEWS", () => {
     expect(metadata.sourceFailures.map((failure) => failure.source)).toContain("dex-prices");
   });
 
-  it("ignores stale dex price rows when building the DEWS divergence input", async () => {
+  it.each([
+    ["ignores stale dex price rows when building the DEWS divergence input", 7200, 2_000_000],
+    ["ignores fresh dex price rows that do not satisfy the live depeg trust floor", 60, 250_000],
+  ] as const)("%s", async (_label, age, source_total_tvl) => {
     const sqlSeen: string[] = [];
     const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeDb(sqlSeen, {
-      dexPriceRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          dex_price_usd: 0.97,
-          source_total_tvl: 2_000_000,
-          updated_at: nowSec - 7200,
-        },
-      ],
-    });
-
-    await computeAndStoreDEWS(db);
-
+    const dexPriceRows = [{
+      stablecoin_id: "usdt-tether", dex_price_usd: 0.97, source_total_tvl, updated_at: nowSec - age,
+      price_sources_json: JSON.stringify([{ aggregateObservedAt: nowSec - 60 }]),
+    }];
+    await computeAndStoreDEWS(makeDb(sqlSeen, { dexPriceRows }));
+    expect(sqlSeen.find((sql) => sql.includes("FROM dex_prices"))).toContain("price_sources_json");
     expect(computeDEWS).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stablecoinId: "usdt-tether",
-        dexPriceUsd: null,
-      }),
-    );
-  });
-
-  it("ignores fresh dex price rows that do not satisfy the live depeg trust floor", async () => {
-    const sqlSeen: string[] = [];
-    const nowSec = Math.floor(Date.now() / 1000);
-    const db = makeDb(sqlSeen, {
-      dexPriceRows: [
-        {
-          stablecoin_id: "usdt-tether",
-          dex_price_usd: 0.97,
-          source_total_tvl: 250_000,
-          updated_at: nowSec - 60,
-        },
-      ],
-    });
-
-    await computeAndStoreDEWS(db);
-
-    expect(computeDEWS).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stablecoinId: "usdt-tether",
-        dexPriceUsd: null,
-      }),
+      expect.objectContaining({ stablecoinId: "usdt-tether", dexPriceUsd: null }),
     );
   });
 

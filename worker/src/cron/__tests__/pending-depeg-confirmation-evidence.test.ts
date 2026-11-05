@@ -61,7 +61,7 @@ function noOffchain(overrides: Partial<ConfirmationEvidenceInput> = {}): Confirm
   return input({ asset: makeAsset({ id: COIN_ID, symbol: "USDT", geckoId: undefined, price: 0.98 }), meta: undefined, ...overrides });
 }
 function dexRows(updatedAt = NOW_SEC - 30, price = 0.95): DexPriceRowsByCoin {
-  return new Map([[COIN_ID, { stablecoin_id: COIN_ID, dex_price_usd: price, deviation_from_primary_bps: null, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: updatedAt }]]);
+  return new Map([[COIN_ID, { stablecoin_id: COIN_ID, dex_price_usd: price, deviation_from_primary_bps: null, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: updatedAt, aggregateObservedAt: updatedAt }]]);
 }
 function dexSources(updatedAt = NOW_SEC - 30, price = 0.95): DexPriceSourcesByCoin {
   return new Map([[COIN_ID, [{ protocol: "curve", sourceFamily: "curve", chain: "ethereum", price, tvl: 3_000_000, updatedAt }, { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: price - 0.001, tvl: 2_000_000, updatedAt }]]]);
@@ -169,28 +169,47 @@ describe("collectConfirmationEvidence DEX source grouping and freshness", () => 
   it.each([
     { label: "legacy unclocked", clock: undefined },
     { label: "six-hour original", clock: NOW_SEC - 6 * 3600 },
+    { label: "inclusive lane boundary with mixed clocks", clock: NOW_SEC - DEX_FRESHNESS_SEC },
   ])("cannot confirm or prove recovery from $label sources in a fresh aggregate", async ({ clock }) => {
+    const boundary = clock === NOW_SEC - DEX_FRESHNESS_SEC;
     for (const price of [0.95, 0.997]) {
       const db = mockD1Strict([{
         match: "SELECT stablecoin_id, dex_price_usd, deviation_from_primary_bps, source_pool_count, source_total_tvl, updated_at, price_sources_json FROM dex_prices",
         rows: [{
           ...dexRows(NOW_SEC, price).get(COIN_ID)!,
-          price_sources_json: JSON.stringify(["curve", "uniswap"].map((protocol) => ({
+          price_sources_json: JSON.stringify(["curve", "uniswap"].map((protocol, i) => ({
             protocol, sourceFamily: protocol, chain: "ethereum", price, tvl: 3_000_000,
             updatedAt: NOW_SEC,
-            ...(clock === undefined ? {} : { observedAt: clock, aggregateObservedAt: clock }),
+            ...(clock === undefined ? {} : {
+              observedAt: boundary ? NOW_SEC - 30 : clock,
+              aggregateObservedAt: boundary && i ? NOW_SEC - 30 : clock,
+            }),
           }))),
         }],
       }]);
       const loaded = await loadDexPrices(db, NOW_SEC);
-      expect(loaded.dexPriceSources.size).toBe(0);
+      expect(loaded.dexPriceSources.size).toBe(boundary ? 1 : 0);
       const evidence = await collect(noOffchain({ db, ...loaded }));
       expect(evidence.dexStatus).toBe("insufficient");
       expect(evidence.dexConfirmationKeys).toEqual([]);
       expect(evidence.dexPeakCandidates).toEqual([]);
       expect(evidence.confirmingSources).toEqual([]);
       expect(evidence.hardOpposingSources).toEqual([]);
+      expect(evidence.dexConfirmationVeto === true).toBe(boundary && price === 0.95);
     }
+  });
+
+  it.each([0.95, 0.997, 1.02])("keeps only a same-direction rejection veto from an old aggregate at %s", async (price) => {
+    const rows = dexRows(NOW_SEC - 30, price);
+    rows.get(COIN_ID)!.aggregateObservedAt = NOW_SEC - 6 * 3600;
+    const evidence = await collect(noOffchain({ dexPriceRows: rows, dexPriceSources: dexSources(NOW_SEC - 30, price) }));
+    expect(evidence.dexStatus).toBe("insufficient");
+    expect(evidence.dexPeakCandidates).toEqual([]);
+    expect(evidence.confirmingSources).toEqual([]);
+    expect(evidence.opposingSources).toEqual([]);
+    expect(evidence.hardOpposingSources).toEqual([]);
+    expect(evidence.dexConfirmationVeto === true).toBe(price === 0.95);
+    expect(evidence.unavailableSources).toContain("dex:aggregate-clock-stale");
   });
 });
 

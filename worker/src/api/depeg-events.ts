@@ -32,7 +32,7 @@ import { toMethodologyVersionLabel } from "@shared/lib/methodology-versions/base
 import { WORKER_ACTIVE_META_BY_ID as ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import type { DepegEvent, DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { isTrustedDexPriceRow } from "../lib/depeg-trust-policy";
+import { isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "../lib/depeg-trust-policy";
 import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cache";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
@@ -59,6 +59,7 @@ interface DexAvailabilityRow {
   stablecoin_id: string;
   source_total_tvl: number | null;
   updated_at: number | null;
+  price_sources_json: string | null;
 }
 
 interface PoolAvailabilityRow {
@@ -77,24 +78,26 @@ function isFreshTimestamp(timestamp: number | null | undefined, nowSec: number, 
 
 async function loadDexAvailability(
   db: D1Database,
-  stablecoinId: string | null,
+  stablecoinIds: string[],
   nowSec: number,
 ): Promise<Map<string, boolean>> {
   try {
-    const where = stablecoinId ? " WHERE stablecoin_id = ?" : "";
-    const stmt = db
+    const result = await db
       .prepare(
         `SELECT /* pharos:depeg-events:dex-availability */
-           stablecoin_id, source_total_tvl, updated_at FROM dex_prices${where}`,
-      );
-    const result = stablecoinId
-      ? await stmt.bind(stablecoinId).all<DexAvailabilityRow>()
-      : await stmt.all<DexAvailabilityRow>();
+           stablecoin_id, source_total_tvl, updated_at, price_sources_json FROM dex_prices
+         WHERE stablecoin_id IN (SELECT value FROM json_each(?))`,
+      ).bind(JSON.stringify(stablecoinIds)).all<DexAvailabilityRow>();
     return new Map((result.results ?? []).map((row) => [
       row.stablecoin_id,
       typeof row.updated_at === "number" &&
         typeof row.source_total_tvl === "number" &&
-        isTrustedDexPriceRow({ updated_at: row.updated_at, source_total_tvl: row.source_total_tvl }, nowSec, "depeg"),
+        isTrustedDexPriceRow({ updated_at: row.updated_at, source_total_tvl: row.source_total_tvl }, nowSec, "depeg") &&
+        isAffirmativeDexPriceRow({
+          updated_at: row.updated_at,
+          source_total_tvl: row.source_total_tvl,
+          aggregateObservedAt: readDexAggregateObservedAt(row.price_sources_json, nowSec),
+        }, nowSec, "depeg"),
     ]));
   } catch (err) {
     const msg = toErrorMessage(err);
@@ -191,7 +194,7 @@ async function loadPendingIncidents(
   if (rows.length === 0) return [];
 
   const [dexAvailability, poolAvailability] = await Promise.all([
-    loadDexAvailability(db, stablecoinId, nowSec),
+    loadDexAvailability(db, rows.map((row) => row.stablecoin_id), nowSec),
     loadPoolAvailability(db, stablecoinId, nowSec),
   ]);
 

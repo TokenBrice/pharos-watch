@@ -136,7 +136,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
   }
 
   const statuses = [evidence.offchainStatus, evidence.dexStatus, evidence.cexStatus, evidence.poolStatus];
-  const hasSameDirectionConfirmation = statuses.includes("confirm");
+  const hasSameDirectionConfirmation = statuses.includes("confirm") || evidence.dexConfirmationVeto === true;
   const hasOpposingEvidence =
     statuses.some(isOpposingConfirmationStatus) ||
     (isNativeOrigin && isOpposingConfirmationStatus(primaryStatus));

@@ -11,6 +11,7 @@ import {
 } from "../lib/depeg-helpers";
 import {
   chooseIndependentOffchainDepegConfirmer,
+  getDexAggregateRejectionReason,
   isTrustedDexPriceRow,
   type OffchainDepegConfirmerKey,
 } from "../lib/depeg-trust-policy";
@@ -237,6 +238,7 @@ export async function collectConfirmationEvidence(
     offchainSourceKey: args.evidence.offchainSourceKey,
     offchainPeakCandidate: args.evidence.offchainPeakCandidate,
     dexStatus: args.evidence.dexStatus,
+    dexConfirmationVeto: args.evidence.dexConfirmationVeto,
     dexPeakCandidates: [...args.evidence.dexPeakCandidates],
     dexConfirmationKeys: [...args.evidence.dexConfirmationKeys],
     cexStatus: args.evidence.cexStatus,
@@ -331,6 +333,9 @@ export async function collectConfirmationEvidence(
   if (isNativeOrigin) {
     addSource(evidence.unavailableSources, "dex:usd-native-origin");
   } else if (dexRow != null && isTrustedDexPriceRow(dexRow, now, "depeg")) {
+    const aggregateRejectionReason = getDexAggregateRejectionReason(dexRow, now, "depeg");
+    const affirmative = aggregateRejectionReason == null;
+    if (!affirmative) addSource(evidence.unavailableSources, `dex:${aggregateRejectionReason}`);
     const dexSignal = deriveDepegSignal(dexRow.dex_price_usd, pegReference);
     const aggregateDexStatus = classifyDirectionalSignal(dexSignal, threshold, pendingState.direction);
     const protocolSources = dexPriceSources.get(row.stablecoin_id);
@@ -356,19 +361,24 @@ export async function collectConfirmationEvidence(
       "contradict",
     );
     if (aggregateDexStatus === "confirm" && confirmGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
-      evidence.dexStatus = "confirm";
-      evidence.dexConfirmationKeys = buildDexConfirmationKeys(confirmGroups.map((group) => group.key));
-      addSources(evidence.confirmingSources, evidence.dexConfirmationKeys);
-      evidence.dexPeakCandidates = [
-        { bps: dexSignal?.bps, price: dexRow.dex_price_usd, quoteDomain: "usd" },
-        ...confirmGroups.map((group) => ({ bps: group.signal.bps, price: group.source.price, quoteDomain: "usd" as const })),
-      ];
-    } else if (aggregateDexStatus === "recover" && recoverGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+      if (affirmative) {
+        evidence.dexStatus = "confirm";
+        evidence.dexConfirmationKeys = buildDexConfirmationKeys(confirmGroups.map((group) => group.key));
+        addSources(evidence.confirmingSources, evidence.dexConfirmationKeys);
+        evidence.dexPeakCandidates = [
+          { bps: dexSignal?.bps, price: dexRow.dex_price_usd, quoteDomain: "usd" },
+          ...confirmGroups.map((group) => ({ bps: group.signal.bps, price: group.source.price, quoteDomain: "usd" as const })),
+        ];
+      } else {
+        // Publication-fresh agreement can veto rejection without proving confirmation.
+        evidence.dexConfirmationVeto = true;
+      }
+    } else if (affirmative && aggregateDexStatus === "recover" && recoverGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
       evidence.dexStatus = "recover";
       const keys = buildDexConfirmationKeys(recoverGroups.map((group) => group.key));
       addSources(evidence.opposingSources, keys);
       addSources(evidence.hardOpposingSources, recoverGroups.map((group) => `dex-family:${group.key}`));
-    } else if (aggregateDexStatus === "contradict" && contradictGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
+    } else if (affirmative && aggregateDexStatus === "contradict" && contradictGroups.length >= DEPEG_DEX_PROTOCOL_CORROBORATION_MIN) {
       evidence.dexStatus = "contradict";
       const keys = buildDexConfirmationKeys(contradictGroups.map((group) => group.key));
       addSources(evidence.opposingSources, keys);
@@ -387,6 +397,8 @@ export async function collectConfirmationEvidence(
         deviationBps: dexSignal?.absBps ?? "n/a",
         thresholdBps: threshold,
         aggregateStatus: aggregateDexStatus,
+        aggregateRejectionReason,
+        vetoOnly: evidence.dexConfirmationVeto === true,
         confirmGroupCount: confirmGroups.length,
         recoverGroupCount: recoverGroups.length,
         contradictGroupCount: contradictGroups.length,
