@@ -2,8 +2,9 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
-import { isAbsolute, join, matchesGlob, resolve } from "node:path";
+import { accessSync, constants, existsSync, lstatSync, readdirSync, readFileSync, readlinkSync, realpathSync } from "node:fs";
+import { homedir } from "node:os";
+import { delimiter, isAbsolute, join, matchesGlob, resolve, sep } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { parseStrictCliArgs, requireCliString, runDirectCli } from "../lib/cli-args.mjs";
 
@@ -67,8 +68,37 @@ function environment() {
   return { ...env, GIT_OPTIONAL_LOCKS: "0", GIT_LITERAL_PATHSPECS: "1", TSX_DISABLE_CACHE: "1" };
 }
 
+const executables = new Map<string, string>();
+
+function pinExecutables(roots: string[]) {
+  for (const name of ["git", "npm"]) {
+    if (executables.has(name)) continue;
+    for (const directory of (process.env.PATH ?? "").split(delimiter)) {
+      const path = resolve(directory, name);
+      try {
+        accessSync(path, constants.X_OK);
+        if (!lstatSync(realpathSync(path)).isFile()) continue;
+        executables.set(name, path);
+        break;
+      } catch (error) {
+        if (!["ENOENT", "ENOTDIR", "EACCES"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
+      }
+    }
+    if (!executables.has(name)) throw new Error(`Executable not found on startup PATH: ${name}`);
+  }
+  for (const root of roots.map(path => realpathSync(path))) {
+    const modules = join(root, "node_modules");
+    const excluded = [root, ...(existsSync(modules) ? [realpathSync(modules)] : [])];
+    for (const executable of executables.values()) {
+      if ([executable, realpathSync(executable)].some(path => excluded.some(base => path === base || path.startsWith(`${base}${sep}`)))) {
+        throw new Error(`Executable must be outside repositories and their node_modules: ${executable}`);
+      }
+    }
+  }
+}
+
 function execute(command: Command, input?: Buffer, allowed = [0]): Buffer {
-  const result = spawnSync(command.executable, command.args, {
+  const result = spawnSync(executables.get(command.executable) ?? command.executable, command.args, {
     cwd: command.cwd, env: environment(), input, maxBuffer: 128 * 1024 * 1024,
   });
   if (result.error || result.signal || !allowed.includes(result.status ?? -1) ||
@@ -81,7 +111,7 @@ function execute(command: Command, input?: Buffer, allowed = [0]): Buffer {
 
 function git(root: string, args: string[], input?: Buffer, allowed?: number[], stage = `git ${args[0]}`) {
   return execute({ stage, cwd: root, executable: "git",
-    args: ["-c", "core.filemode=true", "-c", "core.quotePath=true", ...args] }, input, allowed);
+    args: ["--no-replace-objects", "-c", "core.filemode=true", "-c", "core.quotePath=true", ...args] }, input, allowed);
 }
 
 const hash = (content: Buffer | string) => createHash("sha256").update(content).digest("hex");
@@ -168,10 +198,13 @@ function identity(path: string) {
   const symbolicRef = git(root, ["symbolic-ref", "-q", "HEAD"], undefined, [0, 1]).toString().trim() || null;
   if (symbolicRef !== null && !symbolicRef.startsWith("refs/heads/")) throw new Error("Expected local branch or detached HEAD");
   const attributes = git(root, ["rev-parse", "--path-format=absolute", "--git-path", "info/attributes"]).toString().trim();
+  const globalAttributes = resolve(root, git(root, ["config", "--path", "--get", "core.attributesFile"], undefined, [0, 1]).toString().trim()
+    || join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "git", "attributes"));
   return { root, commonDir: realpathSync(git(root, ["rev-parse", "--path-format=absolute", "--git-common-dir"]).toString().trim()),
     symbolicRef, detached: symbolicRef === null,
     configSha256: hash(git(root, ["config", "--null", "--list"])),
     attributesSha256: existsSync(attributes) ? hash(readInput(attributes)) : null,
+    globalAttributes: { path: globalAttributes, sha256: existsSync(globalAttributes) ? hash(readInput(realpathSync(globalAttributes))) : null },
     head: git(root, ["rev-parse", "--verify", "HEAD^{commit}"]).toString().trim() };
 }
 
@@ -261,6 +294,7 @@ function commands(root: string, paths: string[], artifacts: ArtifactPlan): Comma
 }
 
 export function buildLandingPlan(options: LandArgs, runtime: Runtime = {}) {
+  pinExecutables([options.lane, options.target, resolve(import.meta.dirname, "../..")]);
   const lane = identity(options.lane);
   const target = identity(options.target);
   if (lane.root === target.root || lane.commonDir !== target.commonDir) throw new Error("Require distinct roots sharing a Git common directory");
