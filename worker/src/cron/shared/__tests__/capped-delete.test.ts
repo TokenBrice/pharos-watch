@@ -171,22 +171,27 @@ const policy = (table: string): WindowedRetentionPolicy => ({
 });
 
 describe("batched registry retention", () => {
-  it("drains independent entries in shared rounds with separate partial caps and strict cutoffs", async () => {
-    const { sqlite, db, batch } = fixture();
+  it.each([false, true])("reports retention and bounded costs (%s)", async (costs) => {
+    const { sqlite, db, batch, execute } = fixture();
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(Date, "now").mockReturnValueOnce(100).mockReturnValue(137);
+    const key = "a".repeat(101);
+    if (costs) batch.mockImplementation(async (statements) => (await execute(statements)).map((result, i) => {
+      const n = batch.mock.calls.length * 10 + i;
+      return { ...result, meta: { ...result.meta, rows_read: n, rows_written: n + 1, duration: n + 2 } };
+    }));
     sqlite.exec("INSERT INTO alpha VALUES (1), (2), (3), (4), (90); INSERT INTO beta VALUES (1), (90)");
-    const results = await runRetentionPolicies(db, { alpha: policy("alpha"), beta: policy("beta") }, 100);
-    expect(results).toEqual({
-      alpha: { pruned: 3, cappedAtLimit: true }, beta: { pruned: 1, cappedAtLimit: false },
+    expect(await runRetentionPolicies(db, { [key]: policy("alpha"), beta: policy("beta") }, 100)).toEqual({
+      [key]: { pruned: 3, cappedAtLimit: true }, beta: { pruned: 1, cappedAtLimit: false },
     });
     expect(sqlite.prepare("SELECT observed_at FROM alpha ORDER BY observed_at").all()).toEqual([{ observed_at: 4 }, { observed_at: 90 }]);
     expect(sqlite.prepare("SELECT observed_at FROM beta").all()).toEqual([{ observed_at: 90 }]);
     expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual([2, 1]);
     expect(JSON.parse(log.mock.calls[0][1])).toMatchObject({
-      status: "ok", completedRounds: 2, batchOutcomeUnknown: false, durationMs: expect.any(Number),
+      status: "ok", completedRounds: 2, batchOutcomeUnknown: false, durationMs: 37,
       completed: [
-        { key: "alpha", pruned: 3, rowsRead: null, rowsWritten: 3, d1DurationMs: null },
-        { key: "beta", pruned: 1, rowsRead: null, rowsWritten: 1, d1DurationMs: null },
+        { key: "a".repeat(100), pruned: 3, rowsRead: costs ? 30 : null, rowsWritten: costs ? 32 : 3, d1DurationMs: costs ? 34 : null },
+        { key: "beta", pruned: 1, rowsRead: costs ? 11 : null, rowsWritten: costs ? 12 : 1, d1DurationMs: costs ? 13 : null },
       ],
     });
   });
