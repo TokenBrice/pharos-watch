@@ -15,7 +15,8 @@
  * Runs on the `26,56 * * * *` DEWS/PSI lane. Projection is D1-only;
  * the placed-fetch canary driver separately reserves one service-binding call.
  */
-import { recordCronFailure, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
+import type { PlacedProjectTapeResult } from "@shared/types/placed-executor";
+import { recordCronFailure, type CronProgressReporter } from "../lib/cron-logger";
 import { TAPE_PROJECTOR_JOBS } from "../lib/tape-projectors/registry";
 import { throwIfAborted } from "../lib/abort";
 import { createD1CostTracker } from "../lib/d1-cost";
@@ -24,7 +25,7 @@ export async function projectTape(
   db: D1Database,
   signal?: AbortSignal,
   reportProgress?: CronProgressReporter,
-): Promise<CronResult> {
+): Promise<PlacedProjectTapeResult> {
   const d1Cost = createD1CostTracker(db, ["outer-cron-lifecycle-excluded"]);
   db = d1Cost.db;
   const perClass: Record<string, number> = {};
