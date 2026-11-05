@@ -9,6 +9,7 @@ import { localBin } from "../lib/local-bin.mts";
 import { parseVitestFileList, selectPrTestFiles } from "../lib/pr-test-selection.mts";
 import { createPrTestPlan } from "../lib/pr-test-plan.mts";
 import { classifyChangedFiles, type DeployClassification } from "../ci/classify-deploy-changes.ts";
+import { selectChangedGeneratedArtifactIds } from "../ci/select-generated-artifacts.mts";
 import { collectChangedFiles, parseChangedFileArgs } from "../lib/changed-files.mts";
 import {
   createSpawnCommand,
@@ -21,10 +22,11 @@ import {
   reportGateResult,
   type OutputWriter,
 } from "../lib/report-violations.mts";
-import { PR_DOC_COMMANDS, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
+import { PR_DOC_COMMANDS, PR_PREPARE_COMMANDS, buildPrLaneCommandArgs, getPrLane } from "../lib/pr-lanes.mts";
 import { parseStrictCliArgs, runDirectCli } from "../lib/cli-args.mjs";
 
 const DOC_CHECK_LANES = PR_DOC_COMMANDS.map((command) => command.id as PrCheckLane);
+const PREPARE_LANES = PR_PREPARE_COMMANDS.map((command) => command.id as PrCheckLane);
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface PrCheckFlags {
@@ -36,6 +38,7 @@ export interface PrCheckFlags {
 }
 
 export type PrCheckLane =
+  | typeof PR_PREPARE_COMMANDS[number]["id"]
   | "classifier-smoke"
   | "gitleaks"
   | "verified-doc-links"
@@ -95,11 +98,14 @@ export function extractPrCheckFlags(rest: readonly string[]): PrCheckFlags {
 }
 
 export function buildPrCheckPlan(
-  _changedFiles: readonly string[],
+  changedFiles: readonly string[],
   classification: PrCheckClassification,
   flags: Pick<PrCheckFlags, "withPages">,
 ): PrCheckLane[] {
-  const lanes: PrCheckLane[] = ["classifier-smoke", "gitleaks"];
+  // Select the manifest before automatic drift filtering excludes it.
+  const manifestSelected = selectChangedGeneratedArtifactIds(changedFiles).includes("safety-score-v9-evaluation-build");
+  const lanes: PrCheckLane[] = PREPARE_LANES.filter((lane) => lane !== "safety-score-v9-evaluation-build" || manifestSelected);
+  lanes.push("classifier-smoke", "gitleaks");
 
   if (classification.docsOnly) {
     return [...lanes, ...DOC_CHECK_LANES];
@@ -185,7 +191,7 @@ export function createLaneCommand(
   });
 
   // Local check:pr runs the ungrouped static command, preserving its full plan.
-  const manifestCommand = lane === "pr-static"
+  const manifestCommand = PR_PREPARE_COMMANDS.find((command) => command.id === lane) ?? (lane === "pr-static"
     ? { ...getPrLane("static-compile").commands[0], id: "pr-static", args: ["run", "check:pr:static", "--"] }
     : (DOC_CHECK_LANES.includes(lane) ? PR_DOC_COMMANDS : getPrLane(
         ["classifier-smoke", "gitleaks"].includes(lane)
@@ -195,11 +201,11 @@ export function createLaneCommand(
             : lane === "v9-resource"
               ? "v9-resource"
               : "pages-artifact",
-      ).commands).find((command) => command.id === lane);
+      ).commands).find((command) => command.id === lane));
   if (!manifestCommand) throw new Error(`Missing PR lane command: ${lane}`);
   const command = manifestCommand.program === "npm"
     ? createSpawnCommand("npm", buildPrLaneCommandArgs(manifestCommand, {
-        base,
+        base: PREPARE_LANES.includes(lane) ? resolvedBaseSha : base,
         forwardedTestArgs,
         head,
       }))
@@ -225,6 +231,10 @@ export function createLaneCommand(
     case "doc-ownership-invariants":
       return withLane(command, { PR_BASE_SHA: resolvedBaseSha, PR_HEAD_SHA: head });
     case "pr-static":
+    case "test-corpus-budget":
+    case "incident-review-keys":
+    case "new-asset-evidence-packet":
+    case "safety-score-v9-evaluation-build":
     case "v9-resource":
     case "pages-artifact":
       return withLane(command);
@@ -421,13 +431,16 @@ export async function runPrChecks(
       const failed = result.status !== 0 || Boolean(result.error);
       log(`[check:pr] ${failed ? "failed" : "passed"}: ${command.lane}`);
       if (result.output) log(result.output.trimEnd());
+      if (failed && command.lane === "safety-score-v9-evaluation-build") {
+        log("[check:pr] Remedy: npm run generate:safety-score-v9-evaluation-build");
+      }
       return {
         id: command.lane, command: command.cmd, status: failed ? "failed" : "passed",
         durationMs: Math.max(0, now() - leafStarted),
         ...(failed ? { firstError: firstActionableError(result.output, result.error?.message ?? `Command exited ${result.status}${result.signal ? ` (${result.signal})` : ""}`) } : {}),
       };
     };
-    // All independent leaves execute, including after thrown/spawn failures.
+    // Prepare settles first; all independent leaves execute after failures.
     // Vitest lanes and the read-only secret/docs/static leaves run as two
     // concurrent serial tracks. pages-artifact overlays release data into the
     // checkout and deletes .next/out, so it runs alone after both finish.
@@ -437,9 +450,11 @@ export async function runPrChecks(
     };
     const testTrack = commands.filter((command) => command.lane === "pr-tests" || command.lane === "v9-resource");
     const pagesTrack = commands.filter((command) => command.lane === "pages-artifact");
+    const prepareTrack = commands.filter((command) => PREPARE_LANES.includes(command.lane as PrCheckLane));
+    await runTrack(prepareTrack);
     await Promise.all([
       runTrack(testTrack),
-      runTrack(commands.filter((command) => !testTrack.includes(command) && !pagesTrack.includes(command))),
+      runTrack(commands.filter((command) => !prepareTrack.includes(command) && !testTrack.includes(command) && !pagesTrack.includes(command))),
     ]);
     await runTrack(pagesTrack);
     leaves.push(...commands.map((command) => executed.get(command)!));
