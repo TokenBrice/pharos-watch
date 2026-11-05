@@ -165,9 +165,13 @@ function identity(path: string) {
   if (realpathSync(git(root, ["rev-parse", "--show-toplevel"]).toString().trim()) !== root) {
     throw new Error(`Expected checkout root: ${path}`);
   }
-  const symbolicRef = git(root, ["symbolic-ref", "--short", "-q", "HEAD"], undefined, [0, 1]).toString().trim() || null;
+  const symbolicRef = git(root, ["symbolic-ref", "-q", "HEAD"], undefined, [0, 1]).toString().trim() || null;
+  if (symbolicRef !== null && !symbolicRef.startsWith("refs/heads/")) throw new Error("Expected local branch or detached HEAD");
+  const attributes = git(root, ["rev-parse", "--path-format=absolute", "--git-path", "info/attributes"]).toString().trim();
   return { root, commonDir: realpathSync(git(root, ["rev-parse", "--path-format=absolute", "--git-common-dir"]).toString().trim()),
     symbolicRef, detached: symbolicRef === null,
+    configSha256: hash(git(root, ["config", "--null", "--list"])),
+    attributesSha256: existsSync(attributes) ? hash(readInput(attributes)) : null,
     head: git(root, ["rev-parse", "--verify", "HEAD^{commit}"]).toString().trim() };
 }
 
@@ -293,6 +297,16 @@ function stagedDiff(root: string, paths: string[]) {
   return Buffer.concat(paths.map(path => entries.get(path)!.body));
 }
 
+function indexEntries(root: string, paths: string[], tree?: string) {
+  const entries = new Map(nul(git(root, tree ? ["ls-tree", "-r", "-z", tree, "--"] : ["ls-files", "--stage", "-z"]))
+    .map(entry => {
+      const tab = entry.indexOf("\t"), [mode, middle, last] = entry.slice(0, tab).split(" ");
+      if (!tree && last !== "0") throw new Error("Unmerged index while pinning reviewed blobs");
+      return [entry.slice(tab + 1), { mode, oid: tree ? last : middle }] as const;
+    }));
+  return paths.map(path => ({ path, ...(entries.get(path) ?? { mode: "000000", oid: null }) }));
+}
+
 function repositoryInventory(root: string) {
   const files = new Map<string, string>();
   function visit(directory: string) {
@@ -365,13 +379,16 @@ function outputInventory(root: string, outputs: string[]) {
   return sorted([...files]).map(path => fileState(root, path));
 }
 
-function commit(expected: ReturnType<typeof identity>, message: string, diff: Buffer, paths: string[]) {
+function commit(expected: ReturnType<typeof identity>, message: string, diff: Buffer, paths: string[], pinned: ReturnType<typeof indexEntries>) {
   const { root, head: parent } = expected;
   same(stagedDiff(root, paths), diff, "Index before commit");
+  same(indexEntries(root, pinned.map(file => file.path)), pinned, "Reviewed index before commit");
   same(identity(root), expected, "Identity before commit");
   // Hooks can rewrite the reviewed index; landing commits must use exactly that index.
   git(root, ["-c", "core.hooksPath=/dev/null", "commit", "-F", message], undefined, undefined, "git commit");
   const head = identity(root).head;
+  same(indexEntries(root, pinned.map(file => file.path), head), pinned, "Reviewed commit tree");
+  same(identity(root), { ...expected, head }, "Identity after commit");
   same(git(root, ["rev-parse", `${head}^`]).toString().trim(), parent, "Commit parent");
   return head;
 }
@@ -385,7 +402,7 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
   if (reviewed !== null) same(plan.review, reviewed, "Review");
   log(plan.diff.toString("utf8"));
   log("Stages: stage reviewed literal lane paths; commit lane with -F message; cherry-pick --no-commit; " +
-    "recheck artifact ownership; generate; stage concrete source/output paths; validate; commit target with -F message.");
+    "recheck artifact ownership; pin reviewed index blobs; generate; stage concrete output paths; validate; commit target with -F message.");
   log(`Command plan:\n${JSON.stringify(plan.commands, null, 2)}`);
   log(`Review proposal (save this JSON):\n${JSON.stringify(plan.review, null, 2)}`);
   log(`Pending final integration-head generation/check: ${DEFERRED}`);
@@ -399,7 +416,7 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
   same(hash(stagedDiff(lane.root, paths)), plan.review.diffSha256, "Staged lane delta");
   same(snapshot(lane.root).files, plan.review.files.map((file) => ({ ...file, untracked: false })), "Lane content");
   same(hash(readInput(options.messageFile)), messageSha256, "Message");
-  const sourceCommit = commit(lane, options.messageFile, plan.diff, paths);
+  const sourceCommit = commit(lane, options.messageFile, plan.diff, paths, indexEntries(lane.root, paths));
   log(`Lane commit: ${sourceCommit}`);
   same(identity(target.root), target, "Target identity");
   idle(target.root);
@@ -409,6 +426,7 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
     undefined, undefined, "git cherry-pick");
   const reviewedSource = paths.filter(path => !artifacts.outputs.some(pattern => ownsPath(path, pattern)))
     .map(path => fileState(target.root, path, true));
+  const pinned = indexEntries(target.root, paths);
   same((runtime.planArtifacts ?? planArtifacts)(target.root, paths), artifacts, "Combined artifact ownership");
   allowedPaths(changedPaths(target.root), paths, artifacts.outputs);
   const run = runtime.runCommand ?? ((command: Command) => { const out = execute(command); if (out.length) log(out.toString()); });
@@ -417,6 +435,7 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
   const generation = plan.commands.find((command) => command.stage === "generation");
   same(identity(target.root), target, "Target identity before generation");
   if (generation) run(generation);
+  same(identity(target.root), target, "Target identity after generation");
   same(reviewedSource.map(({ path }) => fileState(target.root, path, true)), reviewedSource, "Reviewed source after generation");
   const afterOutputs = outputInventory(target.root, artifacts.outputs);
   const afterFiles = repositoryInventory(target.root);
@@ -426,7 +445,7 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
   const generated = snapshot(target.root);
   allowedPaths(generated.paths, paths, artifacts.outputs);
   same(identity(target.root), target, "Target identity before staging");
-  stage(target.root, generated.paths);
+  stage(target.root, generated.paths.filter(path => !paths.includes(path) && artifacts.outputs.some(pattern => ownsPath(path, pattern))));
   const combined = snapshot(target.root);
   same(repositoryInventory(target.root), afterFiles, "Repository files after staging");
   const staged = stagedDiff(target.root, combined.paths);
@@ -448,7 +467,7 @@ export function runAgentLand(argv: readonly string[] = process.argv.slice(2), ru
   same(stagedDiff(target.root, combined.paths), staged, "Index after validators");
   same(hash(readInput(options.messageFile)), messageSha256, "Message");
   same(JSON.parse(readInput(options.review).toString()), reviewed, "Saved review");
-  const targetCommit = commit(target, options.messageFile, staged, combined.paths);
+  const targetCommit = commit(target, options.messageFile, staged, combined.paths, pinned);
   log(`Lane applied: ${sourceCommit} -> ${targetCommit}; final integration validation still required.`);
   return { sourceCommit, targetCommit };
 }
