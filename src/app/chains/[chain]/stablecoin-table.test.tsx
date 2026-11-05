@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { RatioSchema } from "@shared/types/ratio";
 import { makeCoin } from "@/hooks/__tests__/chain-profile-fixtures";
 import { StablecoinTable } from "./stablecoin-table";
+
+vi.mock("next/link", async () => (await import("@/test-utils/frontend")).createNextLinkMock());
 
 const push = vi.fn();
 
@@ -17,82 +19,59 @@ vi.mock("@/components/stablecoin-logo", () => ({
   StablecoinLogo: ({ name }: { name: string }) => <span>{name}</span>,
 }));
 
+function renderCoins(coins = [makeCoin()], backingFilter: "crypto-backed" | null = null) {
+  render(<StablecoinTable coins={coins} backingFilter={backingFilter} />);
+}
+
 describe("Chain detail StablecoinTable", () => {
-  beforeEach(() => {
-    push.mockReset();
-  });
-
-
   it("renders the filtered table with its caption and coin supply values", () => {
-    render(
-      <StablecoinTable
-        coins={[
-          makeCoin(),
-          makeCoin({
-            id: "dai-maker",
-            name: "DAI",
-            symbol: "DAI",
-            supplyUsd: 400_000_000,
-            chainShare: RatioSchema.parse(0.4),
-            backing: "crypto-backed",
-          }),
-        ]}
-        backingFilter="crypto-backed"
-      />,
-    );
+    renderCoins([
+      makeCoin(),
+      makeCoin({
+        id: "dai-maker",
+        name: "DAI",
+        symbol: "DAI",
+        supplyUsd: 400_000_000,
+        chainShare: RatioSchema.parse(0.4),
+        backing: "crypto-backed",
+      }),
+    ], "crypto-backed");
 
     expect(screen.getByRole("table")).toBeTruthy();
-    expect(screen.getByText("Stablecoins deployed on this chain")).toBeTruthy();
+    for (const text of ["Stablecoins deployed on this chain", "$500.0M", "$400.0M"]) expect(screen.getByText(text)).toBeTruthy();
     expect(screen.getByText("All Stablecoins").textContent).toContain("Crypto");
-    expect(screen.getByText("$500.0M")).toBeTruthy();
-    expect(screen.getByText("$400.0M")).toBeTruthy();
   });
 
-  it("preserves clickable row link behavior and keyboard activation", () => {
-    render(<StablecoinTable coins={[makeCoin()]} backingFilter={null} />);
-
-    const row = screen.getByRole("link", { name: /USD Coin \(USDC\).*on chain/i });
-
-    expect(row.getAttribute("tabindex")).toBe("0");
-
-    fireEvent.click(row);
-    expect(push).toHaveBeenLastCalledWith("/stablecoin/usdc-circle/");
-
+  it("keeps native table semantics and one identity link per row", () => {
     push.mockClear();
-    fireEvent.keyDown(row, { key: "Enter" });
-    expect(push).toHaveBeenLastCalledWith("/stablecoin/usdc-circle/");
-
-    push.mockClear();
-    fireEvent.keyDown(row, { key: " " });
-    expect(push).toHaveBeenLastCalledWith("/stablecoin/usdc-circle/");
+    renderCoins();
+    const link = screen.getByRole("link", { name: /USD Coin \(USDC\).*on chain/i });
+    const row = link.closest("tr")!;
+    expect(link.getAttribute("href")).toBe("/stablecoin/usdc-circle/");
+    expect(screen.getByRole("link")).toBe(link);
+    expect(screen.getAllByRole("row")).toContain(row);
+    expect(screen.getAllByRole("columnheader")).toHaveLength(6);
+    expect(screen.getAllByRole("cell")).toHaveLength(6);
+    expect(row.getAttribute("tabindex")).toBeNull();
+    fireEvent.click(row.cells[0]);
+    expect(push).toHaveBeenCalledExactlyOnceWith("/stablecoin/usdc-circle/");
   });
 
   it("prints a nonzero share below 0.05% as <0.1%, not 0.0%", () => {
-    render(
-      <StablecoinTable
-        coins={[makeCoin({
-          id: "trusd-tori",
-          name: "trUSD",
-          symbol: "trUSD",
-          supplyUsd: 71_571_257.67,
-          chainShare: RatioSchema.parse(0.0004967482853156454),
-        })]}
-        backingFilter={null}
-      />,
-    );
+    renderCoins([makeCoin({
+      id: "trusd-tori",
+      name: "trUSD",
+      symbol: "trUSD",
+      supplyUsd: 71_571_257.67,
+      chainShare: RatioSchema.parse(0.0004967482853156454),
+    })]);
 
-    expect(screen.getByText("<0.1%")).toBeTruthy();
+    for (const text of ["<0.1%", "$71.6M"]) expect(screen.getByText(text)).toBeTruthy();
     expect(screen.queryByText("0.0%")).toBeNull();
-    expect(screen.getByText("$71.6M")).toBeTruthy();
   });
 
   it("prints a positive sub-dollar supply as <$1, not $0", () => {
-    render(
-      <StablecoinTable
-        coins={[makeCoin({ id: "pyusd-paypal", name: "PYUSD", symbol: "PYUSD", supplyUsd: 0.2309, chainShare: RatioSchema.parse(0.0001) })]}
-        backingFilter={null}
-      />,
-    );
+    renderCoins([makeCoin({ id: "pyusd-paypal", name: "PYUSD", symbol: "PYUSD", supplyUsd: 0.2309, chainShare: RatioSchema.parse(0.0001) })]);
 
     expect(screen.queryByText("$0")).toBeNull();
     expect(screen.getByText("<$1")).toBeTruthy();

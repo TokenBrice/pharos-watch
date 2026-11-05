@@ -1,7 +1,12 @@
+// @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import type { MintBurnCoinFlow } from "@shared/types";
 import { FlowTable } from "@/components/flow-table";
 import { makeMintBurnCoinValuation } from "@/test-utils/mint-burn-fixtures";
+
+vi.mock("next/link", async () => (await import("@/test-utils/frontend")).createNextLinkMock());
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -11,9 +16,8 @@ vi.mock("@/lib/logos", () => ({
   logosById: {},
 }));
 
-vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
-  usePrefetchStablecoin: () => vi.fn(),
-}));
+const prefetch = vi.fn();
+vi.mock("@/hooks/use-prefetch-stablecoin", () => ({ usePrefetchStablecoin: () => prefetch }));
 
 const coin = {
   stablecoinId: "usdt-tether",
@@ -47,69 +51,65 @@ const coin = {
   },
 };
 
+const table = (coins: MintBurnCoinFlow[]) => renderToStaticMarkup(<FlowTable coins={coins} isLoading={false} />);
+
 describe("FlowTable", () => {
   it("exposes legacy pre-cutover scan provenance on the coin pressure tooltip", () => {
-    const html = renderToStaticMarkup(<FlowTable coins={[{
+    const html = table([{
       ...coin, coverage: { ...coin.coverage, provenance: "legacy-pre-cutover" },
-    }]} isLoading={false} />);
+    }]);
     expect(html).toContain('title="24h scan evidence uses legacy pre-cutover coverage, not durable-v2 scan proof."');
   });
 
   it("uses the window-specific provenance before the coin-wide fallback", () => {
     const durable = { complete: true, unavailableReason: null, provenance: "durable-v2" } as const;
-    const html = renderToStaticMarkup(<FlowTable coins={[{
+    const html = table([{
       ...coin, coverage: { ...coin.coverage, provenance: "legacy-pre-cutover",
         windows: { window24h: durable, window7d: durable, window30d: durable, window90d: durable } },
-    }]} isLoading={false} />);
+    }]);
     expect(html).not.toContain("not durable-v2 scan proof");
   });
 
   it("labels colliding tickers by registry identity even when only one collision member is shown", () => {
-    const html = renderToStaticMarkup(<FlowTable coins={[{ ...coin, stablecoinId: "ousd-open-standard", symbol: "OUSD" }]} isLoading={false} />);
+    const html = table([{ ...coin, stablecoinId: "ousd-open-standard", symbol: "OUSD" }]);
     expect(html).toContain("OUSD (Open USD)");
     expect(html).toContain('aria-label="Open OUSD (Open USD) flow detail"');
   });
 
   it("renders coverage badge and partial long-window indicators", () => {
-    const html = renderToStaticMarkup(<FlowTable coins={[coin]} isLoading={false} />);
-
+    const { container } = render(<FlowTable coins={[coin]} isLoading={false} />);
+    const link = screen.getByRole("link", { name: "Open USDT flow detail" }), row = link.closest("tr")!;
+    expect(link.getAttribute("href")).toBe("/stablecoin/usdt-tether/");
+    expect(within(row).getAllByRole("link")).toHaveLength(1);
+    expect(screen.getAllByRole("row")).toContain(row);
+    expect(screen.getAllByRole("columnheader")).toHaveLength(9);
+    expect(within(row).getAllByRole("cell")).toHaveLength(9);
+    expect(row.getAttribute("tabindex")).toBeNull();
+    fireEvent.focus(link);
+    fireEvent.mouseEnter(row);
+    expect(prefetch.mock.calls).toEqual([[coin.stablecoinId], [coin.stablecoinId]]);
+    const html = container.innerHTML;
     expect(html).toContain("Partial history");
     expect((html.match(/partial/g) ?? []).length).toBeGreaterThanOrEqual(2);
   });
 
   it("renders a burn-side partial 24h net as an upper bound and its incomplete volume as a lower bound", () => {
-    const partialCoin = {
+    const html = table([{
       ...coin,
-      valuation: {
-        window24h: {
-          completeness: "partial" as const,
-          mintCompleteness: "complete" as const,
-          burnCompleteness: "partial" as const,
-          unpricedMintEventCount: 0,
-          unpricedBurnEventCount: 3,
-        },
-        baseline: "complete" as const,
-        netFlow7d: "partial" as const,
-        netFlow30d: "complete" as const,
-        netFlow90d: "complete" as const,
-      },
-    };
-    const html = renderToStaticMarkup(<FlowTable coins={[partialCoin]} isLoading={false} />);
+      valuation: makeMintBurnCoinValuation(
+        { completeness: "partial", burnCompleteness: "partial", unpricedBurnEventCount: 3 },
+        { netFlow7d: "partial" },
+      ),
+    }]);
 
     // Only burns are unpriced, so the known net is a ceiling: shown as "≤", never as the net itself.
-    expect(html).toContain("≤ -$12.00M");
+    for (const text of ["≤ -$12.00M", "Upper bound: 0 mint / 3 burn events unpriced; unpriced burns can only lower the net", "≥ $20.00M", "-$30.00M"]) expect(html).toContain(text);
+    for (const text of ["-$15.00M", "≥ $8.00M"]) expect(html).not.toContain(text);
     expect(html.replaceAll("≤ -$12.00M", "")).not.toContain("-$12.00M");
-    expect(html).not.toContain("-$15.00M");
-    expect(html).toContain("Upper bound: 0 mint / 3 burn events unpriced; unpriced burns can only lower the net");
-    expect(html).toContain("≥ $20.00M");
-    expect(html).not.toContain("≥ $8.00M");
-    expect(html).toContain("-$30.00M");
   });
 
   it("renders a null net as unavailable instead of $0", () => {
-    const html = renderToStaticMarkup(
-      <FlowTable coins={[{ ...coin, netFlow24hUsd: null, netFlowDirection24h: null }]} isLoading={false} />,
-    );
+    const html = table([{ ...coin, netFlow24hUsd: null, netFlowDirection24h: null }]);
 
     expect(html).not.toContain("$0.00");
     expect(html).toContain("Signed net unavailable");
@@ -132,18 +132,14 @@ describe("FlowTable", () => {
       netFlow90dUsd: null,
       valuation: makeMintBurnCoinValuation(),
     };
-    const html = renderToStaticMarkup(
-      <FlowTable coins={[unknown, { ...unknown, stablecoinId: "usdc-circle", symbol: "USDC", has24hActivity: false, netFlow24hUsd: 0 }]} isLoading={false} />,
-    );
-    expect(html).toContain('aria-label="Open USDT flow detail"');
+    const html = table([unknown, { ...unknown, stablecoinId: "usdc-circle", symbol: "USDC", has24hActivity: false, netFlow24hUsd: 0 }]);
+    for (const text of ['aria-label="Open USDT flow detail"', 'data-reason-codes="activity-unknown"', "signed net unavailable"]) expect(html).toContain(text);
     expect(html).not.toContain('aria-label="Open USDC flow detail"');
-    expect(html).toContain('data-reason-codes="activity-unknown"');
-    expect(html).toContain("signed net unavailable");
   });
 
   it.each([0, 100])("labels fully priced unscanned gross volumes (%i) as observed lower bounds", (volume) => {
     const incomplete = { complete: false, unavailableReason: "scan-coverage-incomplete" as const };
-    const html = renderToStaticMarkup(<FlowTable coins={[{
+    const html = table([{
       ...coin,
       has24hActivity: null,
       observed24hActivity: volume > 0,
@@ -156,24 +152,17 @@ describe("FlowTable", () => {
       coverage: { ...coin.coverage, has24hWindow: false, windows: {
         window24h: incomplete, window7d: incomplete, window30d: incomplete, window90d: incomplete,
       } },
-    }]} isLoading={false} />);
-    expect(html).toContain(`≥ $${volume.toFixed(2)}`);
-    expect(html).toContain("≥ $0.00");
-    expect(html).toContain("Observed subtotal, lower bound: scan coverage incomplete");
+    }]);
+    for (const text of [`≥ $${volume.toFixed(2)}`, "≥ $0.00", "Observed subtotal, lower bound: scan coverage incomplete"]) expect(html).toContain(text);
     expect(html).not.toContain("events unpriced");
   });
 
   it("ranks worst pressure against the 30-day norm first, with NR last", () => {
-    const html = renderToStaticMarkup(
-      <FlowTable
-        coins={[
-          { ...coin, stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: 12, pressureShiftState: "improving" },
-          { ...coin, stablecoinId: "dai-makerdao", symbol: "DAI", pressureShiftScore: null, pressureShiftState: "nr" },
-          { ...coin, stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: -60, pressureShiftState: "worsening" },
-        ]}
-        isLoading={false}
-      />,
-    );
+    const html = table([
+      { ...coin, stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: 12, pressureShiftState: "improving" },
+      { ...coin, stablecoinId: "dai-makerdao", symbol: "DAI", pressureShiftScore: null, pressureShiftState: "nr" },
+      { ...coin, pressureShiftScore: -60 },
+    ]);
 
     const order = ["USDT", "USDC", "DAI"].map((symbol) => html.indexOf(`Open ${symbol} flow detail`));
     expect(order.every((index) => index >= 0)).toBe(true);
@@ -182,7 +171,7 @@ describe("FlowTable", () => {
 
   it("names coverage-unknown nets once per column instead of a * on each cell", () => {
     // A payload without `valuation` is coverage-unknown on every window.
-    const html = renderToStaticMarkup(<FlowTable coins={[coin]} isLoading={false} />);
+    const html = table([coin]);
 
     expect((html.match(/data-reason-codes="valuation-unknown"/g) ?? []).length).toBe(4);
     expect(html).toContain("Unverified");

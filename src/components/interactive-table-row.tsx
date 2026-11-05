@@ -7,10 +7,6 @@ interface InteractiveTableRowProps {
   onActivate: () => void;
   onHover?: () => void;
   className?: string;
-  role?: React.AriaRole;
-  ariaLabel?: string;
-  ariaControls?: string;
-  ariaExpanded?: boolean;
   children: React.ReactNode;
 }
 
@@ -19,30 +15,22 @@ export function InteractiveTableRow({
   onActivate,
   onHover,
   className = "",
-  role = "button",
-  ariaLabel,
-  ariaControls,
-  ariaExpanded,
   children,
 }: InteractiveTableRowProps) {
   return (
     <TableRow
       id={id}
-      className={`cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${className}`}
-      onClick={onActivate}
+      className={`cursor-pointer ${className}`}
+      onClick={(event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const control = event.target instanceof Element
+          ? event.target.closest('a,button,input,select,textarea,summary,[role="button"],[role="link"],[contenteditable]:not([contenteditable="false"]),[tabindex]')
+          : null;
+        if (control && event.currentTarget.contains(control)) return;
+        onActivate();
+      }}
       onMouseEnter={onHover}
       onFocus={onHover}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onActivate();
-        }
-      }}
-      tabIndex={0}
-      role={role}
-      aria-label={ariaLabel}
-      aria-controls={ariaControls}
-      aria-expanded={ariaExpanded}
     >
       {children}
     </TableRow>
