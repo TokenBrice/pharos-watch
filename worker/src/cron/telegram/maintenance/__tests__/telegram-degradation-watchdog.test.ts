@@ -78,15 +78,11 @@ function seedOnset(store: CacheStore, key: string, since: number) {
 
 function installCacheStore(): CacheStore {
   const store: CacheStore = { values: new Map() };
-  mockGetCache.mockImplementation(async (_db: unknown, key: string) => {
-    return store.values.get(key) ?? null;
-  });
+  mockGetCache.mockImplementation(async (_db: unknown, key: string) => store.values.get(key) ?? null);
   mockSetCache.mockImplementation(async (_db: unknown, key: string, value: string) => {
     store.values.set(key, { value, updatedAt: Math.floor(Date.now() / 1000) });
   });
-  mockDeleteCache.mockImplementation(async (_db: unknown, key: string) => {
-    store.values.delete(key);
-  });
+  mockDeleteCache.mockImplementation(async (_db: unknown, key: string) => { store.values.delete(key); });
   return store;
 }
 
@@ -391,48 +387,48 @@ describe("runTelegramDegradationWatchdog · safety source", () => {
   });
 });
 
-function dispatchWork(events: Record<string, number> = { dews: 1 }, messagesSent = 0, plannedTargetCount = 1) {
+function dispatchWork(events: Record<string, number> = { dews: 1 }, messagesSent = 0, plannedTargetCount = 1, sourceEventId: string | null = "source-1", sourceEventFamilies = Object.keys(events)) {
   return {
     eventsDetected: { dews: 0, depeg: 0, safety: 0, launch: 0, ...events }, messagesSent,
-    authoritativePlanning: { sourceEventId: "source-1", sourceEventFamilies: Object.keys(events), plannedTargetCount },
+    authoritativePlanning: { sourceEventId, sourceEventFamilies, plannedTargetCount },
   };
 }
 
 describe("runTelegramDegradationWatchdog · zero-send streak", () => {
   it.each([
     { reason: "read-failed", streak: 0, metadata: null },
-    { reason: "read-failed", streak: 3, metadata: null },
-    { reason: "missing-metadata", streak: 3, metadata: null },
-    { reason: "invalid-json", streak: 3, metadata: "{" },
-    { reason: "invalid-shape", streak: 3, metadata: "[]" },
-    { reason: "malformed-count", streak: 3, metadata: '{"eventsDetected":{"dews":"bad"}}' },
-    { reason: "missing-count", streak: 3, metadata: '{"eventsDetected":{"dews":0}}' },
+    { reason: "read-failed", metadata: null },
+    { reason: "missing-metadata", metadata: null },
+    { reason: "invalid-json", metadata: "{" },
+    { reason: "invalid-shape", metadata: "[]" },
+    { reason: "malformed-count", metadata: '{"eventsDetected":{"dews":"bad"}}' },
+    { reason: "missing-count", metadata: '{"eventsDetected":{"dews":0}}' },
     {
-      reason: "missing-planned-target-count", streak: 3,
-      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0}',
+      reason: "missing-planned-target-count",
+      metadata: JSON.stringify({ ...dispatchWork(), authoritativePlanning: undefined }),
     },
     {
-      reason: "missing-freeze-target-count", streak: 3,
-      metadata: '{"eventsDetected":{"dews":0,"depeg":0,"safety":0,"launch":0,"freeze":1},"messagesSent":0}',
+      reason: "missing-freeze-target-count",
+      metadata: JSON.stringify({ ...dispatchWork({ freeze: 1 }), authoritativePlanning: undefined }),
     },
     {
-      reason: "missing-planned-target-count", streak: 3,
-      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0,"freshCandidateChats":0}',
+      reason: "missing-planned-target-count",
+      metadata: JSON.stringify({ ...dispatchWork(), authoritativePlanning: undefined, freshCandidateChats: 0 }),
     },
     {
-      reason: "source-workload-not-applicable", streak: 3,
-      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0,"authoritativePlanning":{"sourceEventId":"another-family","sourceEventFamilies":["reserve"],"plannedTargetCount":0}}',
+      reason: "source-workload-not-applicable",
+      metadata: JSON.stringify(dispatchWork(undefined, 0, 0, "another-family", ["reserve"])),
     },
     {
-      reason: "source-workload-not-applicable", streak: 3,
-      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0,"authoritativePlanning":{"sourceEventId":null,"sourceEventFamilies":["dews"],"plannedTargetCount":0}}',
+      reason: "source-workload-not-applicable",
+      metadata: JSON.stringify(dispatchWork(undefined, 0, 0, null)),
     },
     {
-      reason: "missing-planned-target-count", streak: 3,
-      metadata: '{"eventsDetected":{"dews":1,"depeg":0,"safety":0,"launch":0},"messagesSent":0,"authoritativePlanning":{"sourceEventId":"source-18","sourceEventFamilies":["dews"],"plannedTargetCount":-1}}',
+      reason: "missing-planned-target-count",
+      metadata: JSON.stringify(dispatchWork(undefined, 0, -1, "source-18")),
     },
     {
-      reason: "planning-incomplete", streak: 3,
+      reason: "planning-incomplete",
       metadata: JSON.stringify({
         eventsDetected: {
           dews: 0, depeg: 0, depegTriggered: 0, depegResolved: 0, depegWorsening: 0,
@@ -446,7 +442,7 @@ describe("runTelegramDegradationWatchdog · zero-send streak", () => {
         deliveryV2: { planningErrors: ["alert-detection:d1"] },
       }),
     },
-  ])("preserves durable episode state for $reason at streak $streak", async ({ reason, streak, metadata }) => {
+  ].map((row) => ({ streak: 3, ...row })))("preserves durable episode state for $reason at streak $streak", async ({ reason, streak, metadata }) => {
     await useRealCache();
     const { sqlite, db: baseDb } = fixtures.open();
     const nowSec = Math.floor(Date.now() / 1000);
@@ -575,7 +571,7 @@ describe("delivery notifications", () => {
     }
   });
 
-  it.each(["{", '{"version":2}'])("holds invalid notification state %s without sending or overwriting it", async (value) => {
+  it.each(["{", '{"version":3}'])("holds invalid notification state %s without sending or overwriting it", async (value) => {
     const store = installCacheStore();
     store.values.set(WATCHDOG_KEYS.notifications, { value, updatedAt: 1 });
     await expect(runTelegramDegradationWatchdog(makeDb())).rejects.toThrow("notification state invalid");
@@ -617,8 +613,11 @@ describe("delivery notifications", () => {
     expect(JSON.parse(recovered.metadata!).reason).toBe("operator-alert-delivery-failed");
     expect(onset()).toBeUndefined();
     const history = state().pending;
-    expect(history.map((event: { active: boolean }) => event.active)).toEqual(firstAccepted ? [false] : [true, false]);
-    expect(history.slice(0, initial.pending.length)).toEqual(initial.pending);
+    expect(history).toMatchObject([{ condition: "backlog", active: !firstAccepted, latest: { active: false }, transitionCount: firstAccepted ? 1 : 2 }]);
+    if (!firstAccepted) {
+      expect(history[0].observedAt).toBe(initial.pending[0].observedAt);
+      expect(history[0].detail).toBe(initial.pending[0].detail);
+    }
     expect(state().acknowledged).toEqual(initial.acknowledged);
     capacity = { capacityError: true };
     await run();
@@ -629,26 +628,54 @@ describe("delivery notifications", () => {
     await run();
     if (phase === "batched") { capacity = {}; await run(); }
     expect(state().acknowledged).toEqual(initial.acknowledged);
-    const queued: Array<{ condition: string; active: boolean; observedAt: number; detail: string }> = state().pending;
-    expect(queued).toHaveLength(phase === "batched" ? 4 : phase === "raise" ? 3 : 2);
+    const summary = state().pending[0];
+    expect(state().pending).toHaveLength(1);
+    const count = phase === "batched" ? 4 : phase === "raise" ? 3 : 2;
+    expect(summary.transitionCount).toBe(count);
     mockDeliverOperatorAlert.mockResolvedValue({ ok: true });
-    for (let offset = 0; offset < queued.length; offset += 3) {
-      if (offset) vi.advanceTimersByTime(DELIVERY_ALERT_COOLDOWN_SEC * 1000);
-      await run();
-      const batch = queued.slice(offset, offset + 3), remaining = queued.slice(offset + 3);
-      expect(state().pending).toEqual(remaining);
-      expect(state().acknowledged).toEqual(batch[batch.length - 1].active ? ["backlog"] : []);
-      const text = mockDeliverOperatorAlert.mock.lastCall![1];
-      expect(text.split("\n").slice(1)).toEqual(batch.map((event) =>
-        `${event.active ? "RAISED" : "RECOVERED"} ${event.condition} observed ${new Date(event.observedAt * 1000).toISOString()}: ${escapeHtml(event.detail)}`));
-      expect(text.length).toBeLessThan(4096);
-      expect(recordOperatorAlertReceipt).toHaveBeenLastCalledWith(db, "telegramDelivery",
-        expect.objectContaining({ delivered: true, pending: remaining.length > 0, reason: remaining.length ? "operator-alert-cooldown" : null }), signal);
-    }
+    await run();
+    expect(state().pending).toEqual([]);
+    expect(state().acknowledged).toEqual(summary.latest.active ? ["backlog"] : []);
+    const line = (event: { active: boolean; observedAt: number; detail: string }) =>
+      `${event.active ? "RAISED" : "RECOVERED"} backlog observed ${new Date(event.observedAt * 1000).toISOString()}: ${escapeHtml(event.detail)}`;
+    const text = mockDeliverOperatorAlert.mock.lastCall![1];
+    expect(text.split("\n").slice(1)).toEqual([
+      `backlog: ${count} transitions (${count - 2} intervening)`, line(summary), `Latest: ${line(summary.latest)}`,
+    ]);
+    expect(text.length).toBeLessThan(4096);
+    expect(recordOperatorAlertReceipt).toHaveBeenLastCalledWith(db, "telegramDelivery",
+      expect.objectContaining({ delivered: true, pending: false, reason: null }), signal);
     mockDeliverOperatorAlert.mockClear();
     capacity = { pendingCount: 800 };
     await run();
     expect(deliverOperatorAlert).not.toHaveBeenCalled();
+  });
+
+  it.each([true, false])("bounds flapping history and delivers a new zero-send warning (transport succeeds %s)", async (accepted) => {
+    const store = installCacheStore();
+    const state = () => JSON.parse(store.values.get(WATCHDOG_KEYS.notifications)!.value);
+    const now = Math.floor(Date.now() / 1000);
+    const run = (config: FakeDbConfig) => runTelegramDegradationWatchdog(makeDb({ pendingCount: 600, ...config }), undefined, { operatorTelegramCreds });
+    seedOnset(store, WATCHDOG_KEYS.pendingSince, now - 3600);
+    if (!accepted) store.values.set(WATCHDOG_KEYS.notifications, {
+      value: JSON.stringify({ version: 1, observed: [], acknowledged: [], lastDeliveredAt: null,
+        pending: [true, false, true, false].map((active, i) => ({ condition: "near-ttl", active, observedAt: now - 600 + i, detail: `old-${i}` })),
+      }), updatedAt: now,
+    });
+    mockDeliverOperatorAlert.mockResolvedValue({ ok: accepted });
+    for (let i = 0; i < 144; i++) {
+      await run({ nearTtl: i % 2 });
+      expect(state().pending.length).toBeLessThanOrEqual(3);
+      vi.advanceTimersByTime(300_000);
+    }
+    const near = state().pending.find((entry: { condition: string }) => entry.condition === "near-ttl");
+    expect(near).toMatchObject({ active: true, transitionCount: accepted ? 5 : 147, latest: { active: true } });
+    if (!accepted) expect(near).toMatchObject({ observedAt: now - 600, detail: "old-0" });
+    store.values.set(WATCHDOG_KEYS.zeroSendStreak, { value: "2", updatedAt: now });
+    mockDeliverOperatorAlert.mockResolvedValue({ ok: true });
+    await run({ nearTtl: 1, dispatchMetadata: dispatchWork() });
+    expect(mockDeliverOperatorAlert.mock.lastCall![1]).toContain("RAISED zero-send");
+    expect(state().pending).toEqual([]);
   });
 
   it.each([0, 3600])("groups stable identities, holds unknowns, and retains cooldown recovery after onset deletion (onset age %s)", async (onsetAge) => {

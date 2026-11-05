@@ -99,17 +99,23 @@ export interface TelegramDegradationWatchdogOptions {
 
 const DELIVERY_CONDITIONS = ["backlog", "near-ttl", "zero-send"] as const;
 type DeliveryCondition = typeof DELIVERY_CONDITIONS[number];
-interface DeliveryTransition {
-  condition: DeliveryCondition;
+interface DeliveryObservation {
   active: boolean;
   observedAt: number;
   detail: string;
 }
+interface DeliveryTransition extends DeliveryObservation {
+  condition: DeliveryCondition;
+}
+interface PendingCondition extends DeliveryTransition {
+  latest: DeliveryObservation;
+  transitionCount: number;
+}
 interface NotificationState {
-  version: 1;
+  version: 2;
   observed: DeliveryCondition[];
   acknowledged: DeliveryCondition[];
-  pending: DeliveryTransition[];
+  pending: PendingCondition[];
   lastDeliveredAt: number | null;
 }
 
@@ -117,28 +123,70 @@ function isDeliveryCondition(value: unknown): value is DeliveryCondition {
   return DELIVERY_CONDITIONS.some((condition) => condition === value);
 }
 
+function isDeliveryObservation(value: unknown): value is DeliveryObservation {
+  const observation = readMetadataRecord(value);
+  return observation != null && typeof observation.active === "boolean" &&
+    typeof observation.observedAt === "number" && Number.isSafeInteger(observation.observedAt) &&
+    observation.observedAt >= 0 && typeof observation.detail === "string";
+}
+
+function isDeliveryTransition(value: unknown): value is DeliveryTransition {
+  return isDeliveryObservation(value) && isDeliveryCondition(readMetadataRecord(value)?.condition);
+}
+
+function isPendingCondition(value: unknown): value is PendingCondition {
+  const entry = readMetadataRecord(value);
+  return entry != null && isDeliveryTransition(value) && isDeliveryObservation(entry.latest) &&
+    typeof entry.transitionCount === "number" && Number.isSafeInteger(entry.transitionCount) && entry.transitionCount > 0;
+}
+
+function captureTransition(pending: PendingCondition[], transition: DeliveryTransition): void {
+  const { condition, active, observedAt, detail } = transition;
+  const latest = { active, observedAt, detail };
+  const prior = pending.find((entry) => entry.condition === condition);
+  if (prior) {
+    prior.latest = latest;
+    prior.transitionCount++;
+  } else {
+    pending.push({ condition, ...latest, latest, transitionCount: 1 });
+  }
+}
+
 async function readNotificationState(db: D1Database, signal?: AbortSignal): Promise<NotificationState> {
   const cached = await getCache(db, WATCHDOG_KEYS.notifications, signal);
-  if (!cached) return { version: 1, observed: [], acknowledged: [], pending: [], lastDeliveredAt: null };
+  if (!cached) return { version: 2, observed: [], acknowledged: [], pending: [], lastDeliveredAt: null };
   const parsed = parseJson(cached.value);
   const state = parsed.ok ? readMetadataRecord(parsed.value) : null;
   if (
-    state?.version !== 1 ||
+    (state?.version !== 1 && state?.version !== 2) ||
     !Array.isArray(state.observed) || !state.observed.every(isDeliveryCondition) ||
     !Array.isArray(state.acknowledged) || !state.acknowledged.every(isDeliveryCondition) ||
-    !Array.isArray(state.pending) || !state.pending.every((entry): entry is DeliveryTransition => {
-      const transition = readMetadataRecord(entry);
-      return transition != null && isDeliveryCondition(transition.condition) && typeof transition.active === "boolean" &&
-        typeof transition.observedAt === "number" && Number.isSafeInteger(transition.observedAt) &&
-        transition.observedAt >= 0 && typeof transition.detail === "string";
-    }) ||
+    !Array.isArray(state.pending) ||
     !(state.lastDeliveredAt === null ||
       (typeof state.lastDeliveredAt === "number" && Number.isSafeInteger(state.lastDeliveredAt) && state.lastDeliveredAt >= 0))
   ) throw new Error("telegram delivery notification state invalid");
-  return {
-    version: 1, observed: state.observed, acknowledged: state.acknowledged,
-    pending: state.pending, lastDeliveredAt: state.lastDeliveredAt,
+  const pending: PendingCondition[] = [];
+  if (state.version === 1) {
+    if (!state.pending.every(isDeliveryTransition)) throw new Error("telegram delivery notification state invalid");
+    for (const transition of state.pending) captureTransition(pending, transition);
+  } else {
+    if (!state.pending.every(isPendingCondition) ||
+      new Set(state.pending.map((entry) => entry.condition)).size !== state.pending.length
+    ) throw new Error("telegram delivery notification state invalid");
+    pending.push(...state.pending);
+  }
+  const normalized: NotificationState = {
+    version: 2, observed: state.observed, acknowledged: state.acknowledged,
+    pending, lastDeliveredAt: state.lastDeliveredAt,
   };
+  // Upgrade the existing durable key before transport; older writers fail closed on v2.
+  if (state.version === 1) await setCache(db, WATCHDOG_KEYS.notifications, JSON.stringify(normalized), signal);
+  return normalized;
+}
+
+function formatTransition(condition: DeliveryCondition, observation: DeliveryObservation): string {
+  // Leave room for six HTML-escaped observations plus counts in one Telegram message.
+  return `${observation.active ? "RAISED" : "RECOVERED"} ${condition} observed ${new Date(observation.observedAt * 1000).toISOString()}: ${escapeHtml(observation.detail.slice(0, 96))}`;
 }
 
 async function notifyDeliveryTransitions(
@@ -161,7 +209,7 @@ async function notifyDeliveryTransitions(
   let changed = false;
   for (const [condition, active, detail] of observations) {
     if (active == null || state.observed.includes(condition) === active) continue;
-    state.pending.push({ condition, active, observedAt: nowSec, detail: detail ?? "threshold cleared" });
+    captureTransition(state.pending, { condition, active, observedAt: nowSec, detail: detail ?? "threshold cleared" });
     state.observed = state.observed.filter((value) => value !== condition);
     if (active) state.observed.push(condition);
     changed = true;
@@ -169,7 +217,7 @@ async function notifyDeliveryTransitions(
   // Keep recovery evidence until its notification history is durable.
   if (changed) await setCache(db, WATCHDOG_KEYS.notifications, JSON.stringify(state), signal);
   if (pendingBacklog.recovered) await deleteCache(db, WATCHDOG_KEYS.pendingSince);
-  const transitions = state.pending.slice(0, 3);
+  const transitions = state.pending;
   const cooldown = transitions.length > 0 && state.lastDeliveredAt != null &&
     nowSec - state.lastDeliveredAt < DELIVERY_ALERT_COOLDOWN_SEC;
   const unknownReason = pendingBacklog.availability === "unknown" ? "pending-backlog-unavailable"
@@ -185,8 +233,11 @@ async function notifyDeliveryTransitions(
   if (transitions.length > 0 && creds && !cooldown) {
     const text = [
       "<b>Telegram delivery-risk transitions</b>",
-      ...transitions.map((transition) =>
-        `${transition.active ? "RAISED" : "RECOVERED"} ${transition.condition} observed ${new Date(transition.observedAt * 1000).toISOString()}: ${escapeHtml(transition.detail.slice(0, 160))}`),
+      ...transitions.flatMap((transition) => [
+        `${transition.condition}: ${transition.transitionCount} transitions (${transition.transitionCount > 2 ? transition.transitionCount - 2 : 0} intervening)`,
+        formatTransition(transition.condition, transition),
+        ...(transition.transitionCount > 1 ? [`Latest: ${formatTransition(transition.condition, transition.latest)}`] : []),
+      ]),
     ].join("\n");
     try {
       sent = (await deliverOperatorAlert(creds, text, signal)).ok;
@@ -196,9 +247,9 @@ async function notifyDeliveryTransitions(
     if (sent) {
       for (const transition of transitions) {
         state.acknowledged = state.acknowledged.filter((condition) => condition !== transition.condition);
-        if (transition.active) state.acknowledged.push(transition.condition);
+        if (transition.latest.active) state.acknowledged.push(transition.condition);
       }
-      state.pending.splice(0, transitions.length);
+      state.pending = [];
       state.lastDeliveredAt = nowSec;
       await setCache(db, WATCHDOG_KEYS.notifications, JSON.stringify(state), signal);
     }
@@ -207,8 +258,8 @@ async function notifyDeliveryTransitions(
     await receipt();
   }
   return {
-    raised: transitions.filter((transition) => transition.active).map((transition) => transition.condition),
-    recovered: transitions.filter((transition) => !transition.active).map((transition) => transition.condition),
+    raised: transitions.filter((transition) => transition.latest.active).map((transition) => transition.condition),
+    recovered: transitions.filter((transition) => !transition.latest.active).map((transition) => transition.condition),
     sent, cooldown, pending: state.pending.length, reason,
   };
 }
