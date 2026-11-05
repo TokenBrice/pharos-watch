@@ -12,7 +12,7 @@ import {
   type ParamSpec,
 } from "./api-params";
 import { errorResponse, jsonFreshResponse } from "./api-response";
-import { PUBLIC_DEPEG_EVENTS_SQL } from "./depeg-event-projection";
+import { buildPublicDepegEventsPageQuery, PUBLIC_DEPEG_EVENTS_SQL } from "./depeg-event-projection";
 
 const PAGINATED_TABLES = new Set([
   "blacklist_events",
@@ -259,6 +259,14 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
       throw new Error(`Invalid orderBy direction: ${orderDirection}`);
     }
   }
+  if (config.tableName === "depeg_events_public") {
+    const columns = config.cursor?.columns;
+    if (
+      normalizedOrderBy !== "effective_started_at DESC, id DESC" || columns?.length !== 2 ||
+      columns.some((column, i) => column.column !== ["effective_started_at", "id"][i] ||
+        column.direction !== "DESC" || column.type !== "number")
+    ) throw new Error("Public depeg pagination requires effective_started_at DESC, id DESC and matching numeric cursor columns");
+  }
 
   const dataConditions = [...config.conditions];
   const dataFilterBindings = [...config.filterBindings];
@@ -281,9 +289,16 @@ export async function fetchPaginatedEvents<TRow, TEvent>(
   });
 
   // SAFETY: `tableName` and every `ORDER BY` clause token are validated against allowlists above.
-  const dataSql =
-    `SELECT ${buildSqlComment(config.queryComment, "page")}* FROM ${fromClause}${dataWhere} ORDER BY ${normalizedOrderBy}${limitClause}${offsetClause}`;
-  const dataStatement = db.prepare(dataSql).bind(...dataFilterBindings, ...paginationBindings);
+  const dataQuery = config.tableName === "depeg_events_public"
+    ? buildPublicDepegEventsPageQuery(dataWhere, dataFilterBindings, dataLimit, config.cursorValues ? 0 : config.offset)
+    : {
+        sql: `SELECT ${buildSqlComment(config.queryComment, "page")}* FROM ${fromClause}${dataWhere} ORDER BY ${normalizedOrderBy}${limitClause}${offsetClause}`,
+        bindings: [...dataFilterBindings, ...paginationBindings],
+      };
+  const dataSql = config.tableName === "depeg_events_public"
+    ? dataQuery.sql.replace(/^SELECT /, `SELECT ${buildSqlComment(config.queryComment, "page")}`)
+    : dataQuery.sql;
+  const dataStatement = db.prepare(dataSql).bind(...dataQuery.bindings);
 
   let total: number | null = null;
   let dataBatch: D1Result<TRow>;
