@@ -6,6 +6,7 @@ import {
   defaultDispatchCaches,
   dispatchTelegramAlerts,
   mockRecordOutcome,
+  mockRunTelegramRollupStep,
   mockShouldAttemptFetch,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
@@ -19,16 +20,15 @@ import {
   WORKER_TRACKED_META_BY_ID,
   hasWorkerLiveReserves,
 } from "@shared/lib/stablecoins/worker-runtime-registry";
-import { D1_BATCH_SIZE } from "../../../../lib/constants";
+import { CIRCUIT_SOURCE, D1_BATCH_SIZE } from "../../../../lib/constants";
 import { makeNoopD1 } from "../../../../test-helpers/noop-d1";
 import { buildTelegramChangeLogStatements } from "../../rollup/change-log";
 import * as dbCache from "../../../../lib/db-cache";
 import * as freezeJob from "../../jobs/freeze-job";
+import { TELEGRAM_DISPATCH_SOFT_DEADLINE_MS } from "../../../../telegram/common/constants";
 
 function seedFreezeTapeObservation(harness: DispatchHarness, now: number): void {
-  // A fresh project-tape run plus a cursor behind one parseable freeze row makes
-  // the dedicated outbox observe exactly one event without queueing anything
-  // (the fixture has no freeze audience).
+  // Fresh Tape input exercises independent freeze detection without a live audience.
   harness.sqlite
     .prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('project-tape', ?, 1, 'ok')")
     .run(now - 5);
@@ -128,39 +128,49 @@ describe("dispatchTelegramAlerts", () => {
     expect(telegramDeliveryTranscript).toEqual([]);
   });
 
-  it.each(["snooze", "cache"])("drains queued work despite a %s source failure and freeze hold", async (failure) => {
+  it.each(["snooze", "cache", "deadline"])("continues independent stages after %s source failure", async (failure) => {
+    const sent = failure === "deadline" ? 0 : 1;
     const error = new Error("D1_ERROR: source load failed");
     const harness = createDispatchHarness(failure === "snooze" ? [{ operation: "active-snoozes", error }] : []);
     healthySources(harness);
     harness.seed({ subscribers: [{ chatId: "12345" }] });
     seedQueuedDelivery(harness);
     seedQueuedDelivery(harness, "freeze");
+    harness.sqlite.exec(`UPDATE telegram_jobs SET state = 'planning',
+      payload_json = '{"scope":"all","messageHtml":"queued notice"}' WHERE kind = 'broadcast'`);
     seedFreezeTapeObservation(harness, Math.floor(Date.now() / 1000));
     const baselines = () => harness.sqlite.prepare("SELECT * FROM cache WHERE key LIKE '%snapshot' ORDER BY key").all();
     const before = baselines();
     const getCache = dbCache.getCache;
-    if (failure === "cache") vi.spyOn(dbCache, "getCache").mockImplementation((db, key) =>
-      key === "alert:dews-snapshot" ? Promise.reject(error) : getCache(db, key));
+    if (failure !== "snooze") vi.spyOn(dbCache, "getCache").mockImplementation((db, key) => {
+      if (key !== "alert:dews-snapshot") return getCache(db, key);
+      if (!sent) vi.setSystemTime(Date.now() + TELEGRAM_DISPATCH_SOFT_DEADLINE_MS);
+      return Promise.reject(error);
+    });
     vi.spyOn(freezeJob, "cancelRetractedFreezeDeliveries").mockRejectedValue(error);
     const result = await dispatchTelegramAlerts(harness.db, "bot-token");
     const metadata = JSON.parse(result.metadata);
 
-    expect(result).toMatchObject({ status: "degraded", itemCount: 1 });
+    expect(result).toMatchObject({ status: "degraded", itemCount: sent });
     expect(metadata).toMatchObject({ reason: "telegram-planning-failed", noWorkRun: false,
-      snapshotSeeded: false, pendingAttempted: 1, pendingDrained: 1, pendingTotal: 1,
+      snapshotSeeded: false, pendingAttempted: sent, pendingDrained: sent, pendingTotal: 2 - sent,
       chatsWithActiveSnooze: null, suppressedSafetyChangesAtSeed: null,
       safetyAlertSourceState: null, reserveAlertSourceState: null,
       safetyAlertsSuppressed: true, reserveAlertsSuppressed: true,
       eventsDetected: { dews: null, depeg: null, safety: null, reserve: null, freeze: 1 } });
     expect(metadata.authoritativePlanning.sourceEventFamilies).toBeNull();
     expect(metadata.deliveryV2).toMatchObject({ heldKinds: ["freeze", "freeze_batch"],
+      fanoutPages: sent, jobsDone: sent, drainStoppedReason: sent ? "empty" : "deadline",
       planningErrors: [expect.stringMatching(/^source-loading:/), expect.stringMatching(/^freeze-retraction:/)] });
     expect(baselines()).toEqual(before);
     expect(harness.sqlite.prepare("SELECT kind FROM telegram_change_log").all()).toEqual([{ kind: "freeze" }]);
     expect(harness.sqlite.prepare("SELECT state FROM telegram_deliveries WHERE kind = 'freeze'").get())
       .toEqual({ state: "pending" });
-    expect(mockRecordOutcome).toHaveBeenCalledWith(harness.db, expect.any(String), true);
-    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
+    expect(harness.sqlite.prepare("SELECT state FROM telegram_jobs WHERE kind = 'broadcast'").get())
+      .toEqual({ state: sent ? "done" : "planning" });
+    expect(mockRunTelegramRollupStep).toHaveBeenCalledTimes(1);
+    expect(mockRecordOutcome.mock.calls).toEqual([[harness.db, CIRCUIT_SOURCE.TELEGRAM_API, true]]);
+    expect(telegramDeliveryTranscript).toEqual(sent ? [expect.objectContaining({ chatId: "12345" })] : []);
   });
 
   it("seeds snapshots on first run", async () => {
