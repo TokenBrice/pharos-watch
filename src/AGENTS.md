@@ -4,7 +4,7 @@ Applies to `src/`.
 
 ## Read First
 
-- Read the routed owning sections and `docs/architecture.md#frontend-runtime-and-seo-surface`.
+- Read the routed owning sections. For route, shell, runtime or crawl changes (including leaf components with those effects), also read `docs/architecture.md#frontend-runtime-and-seo-surface`.
 - Design work: start with `docs/design-language.md#context`; token changes also use `docs/design-tokens.md#usage-guidelines` and its matching layer section.
 
 ## Rules
