@@ -111,7 +111,8 @@ function execute(command: Command, input?: Buffer, allowed = [0]): Buffer {
 
 function git(root: string, args: string[], input?: Buffer, allowed?: number[], stage = `git ${args[0]}`) {
   return execute({ stage, cwd: root, executable: "git",
-    args: ["--no-replace-objects", "-c", "core.filemode=true", "-c", "core.quotePath=true", ...args] }, input, allowed);
+    args: ["--no-replace-objects", "-c", "diff.autoRefreshIndex=false",
+      "-c", "core.filemode=true", "-c", "core.quotePath=true", ...args] }, input, allowed);
 }
 
 const hash = (content: Buffer | string) => createHash("sha256").update(content).digest("hex");
@@ -157,8 +158,17 @@ function fileState(root: string, path: string, deleted = false) {
 
 function trackedDiff(root: string, cached = false) {
   const base = ["diff", ...(cached ? ["--cached"] : [])];
-  const raw = nul(git(root, [...base, "--raw", "--no-abbrev", "--no-renames", "--no-ext-diff", "--no-textconv", "--no-color",
+  const output = nul(git(root, [...base, "--raw", "--numstat", "--no-abbrev", "--no-renames", "--no-ext-diff", "--no-textconv", "--no-color",
     "--ignore-submodules=none", "-z", "HEAD", "--"]));
+  let rawEnd = 0;
+  while (output[rawEnd]?.startsWith(":")) rawEnd += 2;
+  const raw = output.slice(0, rawEnd);
+  // Without auto-refresh, raw records include stat-only changes; numstat checks content.
+  const changed = new Set(output.slice(rawEnd).flatMap(row => {
+    const path = safePath(row.slice(row.indexOf("\t", row.indexOf("\t") + 1) + 1));
+    // Binary numstat rows still need a patch check to discard stat-only changes.
+    return !row.startsWith("-\t-\t") || git(root, [...base, ...DIFF, "HEAD", "--", path]).length ? [path] : [];
+  }));
   const patch = git(root, [...base, ...DIFF, "HEAD", "--"]);
   const chunks: Buffer[] = [];
   if (patch.length && patch.indexOf("diff --git ") !== 0) throw new Error("Unsupported Git patch header");
@@ -172,6 +182,7 @@ function trackedDiff(root: string, cached = false) {
   let offset = 0;
   const entries = new Map<string, { deleted: boolean; body: Buffer }>();
   for (let index = 0; index < raw.length; index += 2) {
+    if (!changed.has(raw[index + 1])) continue;
     const header = raw[index].split(" ");
     if (header[0] === ":160000" || header[1] === "160000") throw new Error("Unsupported gitlink in lane delta");
     const status = header.at(-1);
@@ -181,6 +192,7 @@ function trackedDiff(root: string, cached = false) {
     offset += count;
   }
   if (offset !== chunks.length) throw new Error("Git patch/path count changed");
+  same(sorted([...entries.keys()]), sorted([...changed]), "Diff paths");
   return entries;
 }
 
@@ -217,7 +229,7 @@ function idle(root: string) {
 }
 
 function changedPaths(root: string) {
-  return sorted([...nul(git(root, ["diff", "--name-only", "--no-renames", "--ignore-submodules=none", "-z", "HEAD", "--"])),
+  return sorted([...trackedDiff(root).keys(),
     ...nul(git(root, ["ls-files", "--others", "--exclude-standard", "-z"]))]).map(safePath);
 }
 
