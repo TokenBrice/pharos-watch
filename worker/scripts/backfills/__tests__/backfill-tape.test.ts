@@ -24,7 +24,7 @@ function emptyDb(): MockD1Database {
     { match: "FROM mint_burn_events", rows: [] },
     { match: "FROM mint_burn_admission", rows: [] },
     { match: "FROM mint_burn_publication_policy", rows: [] },
-    { match: "FROM mint_burn_scan_coverage", rows: [] },
+    { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
     { match: "pharos:mint-burn-legacy-evidence", rows: [] },
     { match: "FROM stress_signals", rows: [] },
     { match: "FROM stability_index_samples", rows: [] },

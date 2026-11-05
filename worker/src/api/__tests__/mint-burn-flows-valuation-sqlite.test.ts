@@ -18,6 +18,8 @@ import { rebuildRetainedLegacyValuationHours } from "../../cron/mint-burn/valuat
 import { MINT_BURN_EVENT_RETENTION_SEC } from "../../cron/mint-burn/retention";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { compactMintBurnPublication, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
+import { checkMintBurnPublicationCoverage } from "../../lib/canary-checks-mintburn";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
 import { drainMintBurnMaterializationDebt } from "../../lib/mint-burn-pipeline/materialization-debt";
 
@@ -408,9 +410,15 @@ describe("mint/burn valuation completeness on real SQLite", () => {
       .run(...MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock").map(mintBurnConfigKey));
     const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock");
     expect(configs).toHaveLength(2);
+    await syncMintBurnPublicationPolicy(db, [], NOW);
     const end = Math.floor(NOW / HOUR) * HOUR;
-    const read = async () => buildCoinSummaries(await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24)),
-      new Map([["buidl-blackrock", 100]]), null).coins.find((coin) => coin.stablecoinId === "buidl-blackrock")!;
+    const paused = () => (sqlite.prepare("SELECT paused_keys FROM mint_burn_publication_policy").get() as { paused_keys: string }).paused_keys;
+    const read = async () => {
+      const coin = buildCoinSummaries(await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24)),
+        new Map([["buidl-blackrock", 100]]), null).coins.find((coin) => coin.stablecoinId === "buidl-blackrock")!;
+      expect(paused()).toBe("[]");
+      return coin;
+    };
     const unknown = { netFlow24hUsd: null, netFlow7dUsd: null, netFlow30dUsd: null, netFlow90dUsd: null,
       has24hActivity: null, netFlowDirection24h: null, pressureShiftScore: null };
     expect(await read()).toMatchObject(unknown);
@@ -432,6 +440,22 @@ describe("mint/burn valuation completeness on real SQLite", () => {
     expect(quiet.coverage.windows?.window24h).toMatchObject({ complete: true, unavailableReason: null, provenance: "durable-v2" });
     sqlite.prepare("UPDATE mint_burn_scan_coverage SET to_timestamp = ? WHERE config_key = ?").run(end - 1, mintBurnConfigKey(configs[1]!));
     expect((await read()).coverage.has24hWindow).toBe(true); // Common watermark retreats one hour.
+    sqlite.prepare("UPDATE mint_burn_scan_coverage SET to_timestamp = ? WHERE config_key = ?").run(end - 9 * HOUR, mintBurnConfigKey(configs[0]));
+    const data = await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
+    const summaries = buildCoinSummaries(data, new Map([["buidl-blackrock", 100]]), null);
+    expect(summaries.coins.find((coin) => coin.stablecoinId === "buidl-blackrock")).toBeUndefined();
+    expect(summaries.gaugeInputs).toEqual([]);
+    expect(JSON.parse(paused()).sort()).toEqual(configs.map(mintBurnConfigKey).sort());
+    const publication = compactMintBurnPublication(data.publication);
+    expect(publication.legsScope).toBe("non-admitted");
+    expect(publication.legs.filter((leg) => leg.stablecoinId === "buidl-blackrock"))
+      .toMatchObject(configs.map((config) => ({ configKey: mintBurnConfigKey(config),
+        status: "pending-admission", reason: "reactivation-pending" })));
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24),
+      JSON.stringify({ publication, coins: summaries.coins, gauge: { score: null }, window: { watermark: data.watermark } }), NOW);
+    expect(await checkMintBurnPublicationCoverage(db, NOW)).toMatchObject({ status: "degraded", executionStatus: "completed",
+      metadata: { coinCount: summaries.coins.length, admittedCoinCount: summaries.coins.length,
+        quarantinedConfigs: configs.map(mintBurnConfigKey) } });
   });
 
   it.each([7, 30, 90])("does not bridge missing blocks in the %i-day window while 24h is proven", async (days) => {

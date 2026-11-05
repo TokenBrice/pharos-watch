@@ -187,6 +187,8 @@ export interface MintBurnScanSegment {
   to_timestamp: number;
   /** A debt row is evidence against admission, never a scan segment. */
   dirty_hour_ts?: number | null;
+  /** Raw-read provenance only; older fingerprints cannot certify current coverage. */
+  current_fingerprint?: number;
 }
 
 /** Include proof and materialization debt in the same snapshot as the certified data. */
@@ -198,15 +200,14 @@ export function prepareMintBurnScanCoverage(
   const identitiesJson = JSON.stringify(identities);
   return db.prepare(`
     SELECT /* pharos:mint-burn-scan-coverage:read */
-      config_key, from_block, to_block, from_timestamp, to_timestamp, NULL AS dirty_hour_ts
-    FROM mint_burn_scan_coverage
-    WHERE (config_key, config_fingerprint, chain_id) IN (
-      SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]'), json_extract(value, '$[2]')
-      FROM json_each(?)
-    ) AND finality_tag = 'finalized' AND finalized_block >= to_block
+      c.config_key, c.from_block, c.to_block, c.from_timestamp, c.to_timestamp, NULL AS dirty_hour_ts,
+      c.config_fingerprint = json_extract(i.value, '$[1]') AS current_fingerprint
+    FROM json_each(?) i JOIN mint_burn_scan_coverage c
+      ON c.config_key = json_extract(i.value, '$[0]') AND c.chain_id = json_extract(i.value, '$[2]')
+    WHERE finality_tag = 'finalized' AND finalized_block >= to_block
       AND accepted_at >= to_timestamp AND to_timestamp >= ? AND from_timestamp <= ?
     UNION ALL
-    SELECT json_extract(i.value, '$[0]') AS config_key, 0, 0, d.hour_ts, d.hour_ts, d.hour_ts AS dirty_hour_ts
+    SELECT json_extract(i.value, '$[0]') AS config_key, 0, 0, d.hour_ts, d.hour_ts, d.hour_ts AS dirty_hour_ts, 1
     FROM json_each(?) i JOIN mint_burn_dirty_hours d
       ON d.stablecoin_id = json_extract(i.value, '$[3]') AND d.chain_id = json_extract(i.value, '$[2]')
     WHERE d.hour_ts >= ? AND d.hour_ts < ?
@@ -219,9 +220,11 @@ export function decodeMintBurnScanCoverage(
 ): Map<string, MintBurnScanSegment[]> {
   const segments = new Map<string, MintBurnScanSegment[]>();
   for (const row of result.results) {
-    const existing = segments.get(row.config_key) ?? [];
-    existing.push(row);
-    segments.set(row.config_key, existing);
+    if (row.current_fingerprint === 0) continue;
+    const { current_fingerprint: _currentFingerprint, ...segment } = row;
+    const existing = segments.get(segment.config_key) ?? [];
+    existing.push(segment);
+    segments.set(segment.config_key, existing);
   }
   return segments;
 }
