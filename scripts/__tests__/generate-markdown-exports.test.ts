@@ -264,6 +264,7 @@ describe("stablecoin markdown", () => {
     );
     const md = renderStablecoinDetail("usdt-tether", {});
     expect(md).toContain('canonical: "https://pharos.watch/stablecoin/usdt-tether/"');
+    expect(md).not.toContain("https://api.pharos.watch/api/stablecoin/");
     const redirects = readFileSync(new URL("../../public/_redirects", import.meta.url), "utf8");
     for (const topic of ["top-stablecoins", "scores-latest", "depeg-history"]) {
       const dated = `/datasets/${topic}/${actual.PUBLIC_DATASET_CURRENT_DATE}.json`;
