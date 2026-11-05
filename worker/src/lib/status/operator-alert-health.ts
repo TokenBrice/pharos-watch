@@ -10,6 +10,8 @@ import { getCache, getCaches, setCache } from "../db-cache";
 export const OPERATOR_ALERT_RECEIPT_KEYS = {
   freshness: "operator-alert:receipt:freshness:v1",
   digest: "operator-alert:receipt:digest:v1",
+  turnover: "operator-alert:receipt:turnover:v1",
+  telegramDelivery: "operator-alert:receipt:telegramDelivery:v1",
 } as const;
 
 export type OperatorAlertProducer = keyof typeof OPERATOR_ALERT_RECEIPT_KEYS;
