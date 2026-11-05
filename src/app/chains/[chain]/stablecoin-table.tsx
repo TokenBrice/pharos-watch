@@ -2,6 +2,7 @@
 
 import { ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { BACKING_LABELS_SHORT } from "@shared/lib/classification";
 import { formatCompactUsdOrSubDollar, formatSignedPercent } from "@shared/lib/format";
 import { InteractiveTableRow } from "@/components/interactive-table-row";
@@ -90,19 +91,21 @@ export function StablecoinTable({
         {coins.map((coin, index) => (
           <InteractiveTableRow
             key={coin.id}
-            role="link"
-            ariaLabel={`${coin.name} (${coin.symbol}) — ${formatCompactUsdOrSubDollar(coin.supplyUsd)} on chain`}
             className="group transition-colors hover:bg-muted/40"
             onActivate={() => router.push(buildStablecoinUrl(coin.id))}
           >
             <TableCell className="tabular-nums text-muted-foreground">{index + 1}</TableCell>
             <TableCell>
-              <span className="flex items-center gap-2 font-medium group-hover:text-primary">
+              <Link
+                href={buildStablecoinUrl(coin.id)}
+                aria-label={`${coin.name} (${coin.symbol}) — ${formatCompactUsdOrSubDollar(coin.supplyUsd)} on chain`}
+                className="pharos-focus-ring flex items-center gap-2 rounded-md font-medium group-hover:text-primary"
+              >
                 <StablecoinLogo src={getLogoSrc(logosById, coin.id)} name={coin.name} size={24} />
                 <span className="hidden sm:inline">{coin.name}</span>
                 <span className="text-muted-foreground">({coin.symbol})</span>
                 <ChevronRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-hover:opacity-50" />
-              </span>
+              </Link>
             </TableCell>
             <TableCell className="text-right font-mono tabular-nums">{formatCompactUsdOrSubDollar(coin.supplyUsd)}</TableCell>
             <TableCell className="text-right">

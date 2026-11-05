@@ -258,63 +258,28 @@ describe("RowSparkline", () => {
 });
 
 describe("InteractiveTableRow", () => {
-  it("defaults focusable rows to button semantics with an action name", () => {
-    const onActivate = vi.fn();
-
-    render(
-      <table>
-        <tbody>
-          <InteractiveTableRow onActivate={onActivate} ariaLabel="Expand USDT yield history">
-            <td>USDT</td>
-          </InteractiveTableRow>
-        </tbody>
-      </table>,
-    );
-
-    const row = screen.getByRole("button", { name: "Expand USDT yield history" });
-    fireEvent.keyDown(row, { key: "Enter" });
-
-    expect(onActivate).toHaveBeenCalledTimes(1);
-  });
-
-  it("passes link semantics and expanded state through to table row callers", () => {
-    render(
-      <table>
-        <tbody>
-          <InteractiveTableRow
-            onActivate={() => {}}
-            role="link"
-            ariaLabel="Open USDC liquidity detail"
-            ariaControls="usdc-panel"
-            ariaExpanded
-          >
-            <td>USDC</td>
-          </InteractiveTableRow>
-        </tbody>
-      </table>,
-    );
-
-    const row = screen.getByRole("link", { name: "Open USDC liquidity detail" });
-    expect(row.getAttribute("aria-controls")).toBe("usdc-panel");
-    expect(row.getAttribute("aria-expanded")).toBe("true");
-  });
-
-  it("activates once for click and Space, but not other keys or hover", () => {
-    const onActivate = vi.fn();
-    const onHover = vi.fn();
-    render(<table><tbody><InteractiveTableRow onActivate={onActivate} onHover={onHover} ariaLabel="Open coin"><td>Coin</td></InteractiveTableRow></tbody></table>);
-    const row = screen.getByRole("button", { name: "Open coin" });
+  it("keeps native rows and guarded pointer activation with bubbling hover/focus", () => {
+    const activate = vi.fn(), hover = vi.fn();
+    render(<div tabIndex={-1}><table><tbody>
+      <InteractiveTableRow id="coin-row" onActivate={activate} onHover={hover}>
+        <td>Coin<a href="#coin">Open</a><button><svg><path /></svg></button>
+          <span onClick={(event) => event.preventDefault()}>Prevented</span>
+        </td>
+      </InteractiveTableRow>
+    </tbody></table></div>);
+    const row = screen.getByRole("row");
+    expect(row.id).toBe("coin-row");
+    expect(row.getAttribute("tabindex")).toBeNull();
     fireEvent.click(row);
-    expect(onActivate).toHaveBeenCalledTimes(1);
-    onActivate.mockClear();
-    expect(fireEvent.keyDown(row, { key: " ", cancelable: true })).toBe(false);
-    expect(onActivate).toHaveBeenCalledTimes(1);
-    onActivate.mockClear();
-    expect(fireEvent.keyDown(row, { key: "ArrowDown", cancelable: true })).toBe(true);
-    fireEvent.focus(row);
-    expect(onHover).toHaveBeenCalledTimes(1);
+    expect(activate).toHaveBeenCalledTimes(1);
+    activate.mockClear();
+    for (const options of [{ button: 1 }, { button: 2 }, { ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }]) fireEvent.click(row, options);
+    for (const target of row.querySelectorAll("td > *, svg, path")) expect(fireEvent.click(target)).toBe(target.textContent !== "Prevented");
+    for (const key of ["Enter", " ", "ArrowDown"]) expect(fireEvent.keyDown(row, { key })).toBe(true);
+    fireEvent.focus(screen.getByRole("link", { name: "Open" }));
+    expect(hover).toHaveBeenCalledTimes(1);
     fireEvent.mouseEnter(row);
-    expect(onHover).toHaveBeenCalledTimes(2);
-    expect(onActivate).not.toHaveBeenCalled();
+    expect(hover).toHaveBeenCalledTimes(2);
+    expect(activate).not.toHaveBeenCalled();
   });
 });

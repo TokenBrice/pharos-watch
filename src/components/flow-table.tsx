@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   TableCell,
   TableRow,
@@ -238,33 +239,37 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                 key={coin.stablecoinId}
                 onActivate={() => router.push(buildStablecoinUrl(coin.stablecoinId))}
                 onHover={() => prefetch(coin.stablecoinId)}
-                role="link"
-                ariaLabel={`Open ${label} flow detail`}
                 className="h-11 sm:h-auto"
               >
                 <TableCell className="w-[126px] max-w-[126px] overflow-hidden sm:w-[150px] sm:max-w-[150px]">
-                  <StablecoinIdentity
-                    logoSrc={logos?.[coin.stablecoinId]}
-                    name={name}
-                    symbol={label}
-                    logoSize={24}
-                    className="min-w-0"
-                    textClassName="flex min-w-0 flex-col items-start gap-0.5"
-                    symbolRowClassName="min-w-0 gap-1.5"
-                    symbolClassName="whitespace-normal break-words"
-                    details={
-                      coverageBadge ? (
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full border px-1.5 py-0.5 text-xs font-medium leading-none",
-                            coverageBadge.className,
-                          )}
-                        >
-                          {coverageBadge.label}
-                        </span>
-                      ) : null
-                    }
-                  />
+                  <Link
+                    href={buildStablecoinUrl(coin.stablecoinId)}
+                    aria-label={`Open ${label} flow detail`}
+                    className="pharos-focus-ring block min-w-0 rounded-md"
+                  >
+                    <StablecoinIdentity
+                      logoSrc={logos?.[coin.stablecoinId]}
+                      name={name}
+                      symbol={label}
+                      logoSize={24}
+                      className="min-w-0"
+                      textClassName="flex min-w-0 flex-col items-start gap-0.5"
+                      symbolRowClassName="min-w-0 gap-1.5"
+                      symbolClassName="whitespace-normal break-words"
+                      details={
+                        coverageBadge ? (
+                          <span
+                            className={cn(
+                              "inline-flex rounded-full border px-1.5 py-0.5 text-xs font-medium leading-none",
+                              coverageBadge.className,
+                            )}
+                          >
+                            {coverageBadge.label}
+                          </span>
+                        ) : null
+                      }
+                    />
+                  </Link>
                 </TableCell>
                 <TableCell className="text-right">
                   <span
