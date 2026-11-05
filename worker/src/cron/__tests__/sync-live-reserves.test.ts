@@ -2,6 +2,17 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+// Register shared mocks before importing cron modules that capture them.
+import {
+  checkpointIdentity as makeCheckpointIdentity,
+  checkpointTable as makeCheckpointTable,
+  getReserveAdapterMock,
+  mockLiveReserveAdapterRegistry,
+  mockLiveReserveD1,
+  recordOutcomeSafeMock,
+  recoverNoCandidateMock,
+  shouldAttemptFetchMock,
+} from "./live-reserves.test-support";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
@@ -31,16 +42,6 @@ import { getReserveSyncState } from "../../lib/live-reserves/store-read";
 import { adaptMakinaStrategyReserves } from "../reserve-adapters/makina-strategy";
 import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
 import type { ReserveSyncStateRecord } from "../../lib/live-reserves/store";
-import {
-  checkpointIdentity as makeCheckpointIdentity,
-  checkpointTable as makeCheckpointTable,
-  getReserveAdapterMock,
-  mockLiveReserveAdapterRegistry,
-  mockLiveReserveD1,
-  recordOutcomeSafeMock,
-  recoverNoCandidateMock,
-  shouldAttemptFetchMock,
-} from "./live-reserves.test-support";
 
 const mockD1 = mockLiveReserveD1;
 const mockAdapterRegistry = mockLiveReserveAdapterRegistry;
@@ -116,8 +117,10 @@ function collectParamChainIds(value: unknown, chains: Set<string>): void {
 
 describe("syncLiveReserves", () => {
   const fixtures = createLatestSchemaFixtureTracker();
+  let runController: AbortController;
   let replacedStore = false;
   afterEach(() => {
+    runController.abort();
     fixtures.closeAll();
     vi.useRealTimers();
     vi.restoreAllMocks();
@@ -178,15 +181,17 @@ describe("syncLiveReserves", () => {
       invocationId: identity.invocationId,
     });
     await advanceLiveReserveCheckpoint(db, identity, { nextItemKey: coinId, itemsDone: index });
-    return sync(db, new AbortController().signal, {}, undefined, { maxCoinsPerSlice: 2, ...budget }, identity);
+    return sync(db, runController.signal, {}, undefined, { maxCoinsPerSlice: 2, ...budget }, identity);
   }
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useRealTimers();
+    // Budget clocks and D1 timeout guards advance only when the test asks.
+    vi.useFakeTimers();
+    runController = new AbortController();
     shouldAttemptFetchMock.mockResolvedValue(true);
     recordOutcomeSafeMock.mockResolvedValue(undefined);
-    recoverNoCandidateMock.mockClear();
+    recoverNoCandidateMock.mockReset();
   });
 
   it("keeps public RPC live-reserve inputs resolvable", () => {
@@ -233,7 +238,7 @@ describe("syncLiveReserves", () => {
 
     await expect(syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       undefined,
@@ -249,7 +254,7 @@ describe("syncLiveReserves", () => {
 
     await expect(syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       undefined,
@@ -292,7 +297,7 @@ describe("syncLiveReserves", () => {
 
     await expect(syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       undefined,
@@ -316,7 +321,7 @@ describe("syncLiveReserves", () => {
     });
     try {
       const { syncLiveReserves } = await import("../sync-live-reserves");
-      await syncLiveReserves(mockD1(), new AbortController().signal, {}, undefined, { runBudgetMs: 720_000 });
+      await syncLiveReserves(mockD1(), runController.signal, {}, undefined, { runBudgetMs: 720_000 });
       expect(fetch).toHaveBeenCalledWith(
         expect.anything(), expect.anything(), expect.anything(),
         expect.objectContaining({ nowSec: Math.floor(startedMs / 1_000) + 180 }),
@@ -334,7 +339,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const { db, sqlite } = fixtures.open();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
 
     expect(adapterFetch).toHaveBeenCalledTimes(sharedSourceInvocationCount);
     expect(sharedSourceInvocationCount).toBeLessThan(configuredCoinCount);
@@ -414,7 +419,7 @@ describe("syncLiveReserves", () => {
     try {
       const { syncLiveReserves } = await import("../sync-live-reserves");
       const { db, sqlite } = fixtures.open();
-      await syncLiveReserves(db, new AbortController().signal, {});
+      await syncLiveReserves(db, runController.signal, {});
       // Reading back through the persisted row proves the orchestrator wrote
       // three distinct snapshots rather than one shared result.
       const rows = sqlite
@@ -468,7 +473,7 @@ describe("syncLiveReserves", () => {
         key: adapterKey,
         fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => {
           if (coin.id === "usdcx-movement") {
-            return fetchEscrowBalanceReserves(coin, config, new AbortController().signal, { chainRpcs: network.chainRpcs });
+            return fetchEscrowBalanceReserves(coin, config, runController.signal, { chainRpcs: network.chainRpcs });
           }
           return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
         },
@@ -574,7 +579,7 @@ describe("syncLiveReserves", () => {
         fetch: async (coin: ReserveAdapterCoin, config: LiveReservesConfig) => coin.id === "crvusd-curve"
           ? fetchCrvUsdReserves(coin, {
             ...config, inputs: { primary: { kind: "http-json", url: "https://curve.example/markets" } },
-          }, new AbortController().signal, { chainRpcs: network.chainRpcs })
+          }, runController.signal, { chainRpcs: network.chainRpcs })
           : { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] },
       }));
       const { db, sqlite } = fixtures.open();
@@ -638,7 +643,7 @@ describe("syncLiveReserves", () => {
         if (coin.id !== id) return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
         const fetcher = adapter === "frax-fpi-collateral" ? fetchFraxFpiCollateralReserves : fetchFlyingTulipFtUsdReserves;
         return fetcher(coin, { ...config, inputs: { primary: { kind: "http-json", url: endpoint } } },
-          new AbortController().signal, { chainRpcs: network.chainRpcs });
+          runController.signal, { chainRpcs: network.chainRpcs });
       },
     }));
     const { db, sqlite } = fixtures.open();
@@ -712,7 +717,7 @@ describe("syncLiveReserves", () => {
         return fetcher(coin, {
           ...config, inputs: { primary: { kind: "http-json", url: endpoint } },
           ...(adapter === "jupusd" ? { params: { snapshotsUrl: "https://jupusd.example/snapshots" } } : {}),
-        }, new AbortController().signal, { nowSec: Math.floor(nowMs / 1000) });
+        }, runController.signal, { nowSec: Math.floor(nowMs / 1000) });
       },
     }));
     const { db, sqlite } = fixtures.open();
@@ -759,7 +764,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
     const metadata = JSON.parse(result?.metadata ?? "{}") as { warningCount?: number };
 
     // Warnings remain metadata; unacknowledged failures determine execution status.
@@ -785,7 +790,7 @@ describe("syncLiveReserves", () => {
         updated_at: Math.floor(Date.now() / 1000),
       })),
     }]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
 
     // An all-circuit-open run synced nothing but had no genuine failures and no
     // budget-deferred tail; this is healthy recovery behavior, surfaced as
@@ -806,7 +811,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await syncLiveReserves(db, runController.signal, {});
 
     const callsByKey = new Map<string, number>();
     for (const call of recordOutcomeSafeMock.mock.calls) {
@@ -861,7 +866,7 @@ describe("syncLiveReserves", () => {
         rows: closedBreakerRows.map((row) => ({ ...row, updated_at: 1_700_000_000 })),
       },
     ]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
     const metadata = JSON.parse(result?.metadata ?? "{}") as {
       breakerOutcomesRecorded?: number;
       breakerOutcomesSkippedClosedSuccess?: number;
@@ -915,7 +920,7 @@ describe("syncLiveReserves", () => {
         rows: closedBreakerRows.map((row) => ({ ...row, updated_at: 1_700_000_000 })),
       },
     ]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
     const metadata = JSON.parse(result?.metadata ?? "{}") as {
       breakerOutcomesRecorded?: number;
       breakerOutcomesSkippedClosedSuccess?: number;
@@ -948,7 +953,7 @@ describe("syncLiveReserves", () => {
         throwError: new Error("bulk breaker read unavailable"),
       },
     ]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
     const metadata = JSON.parse(result?.metadata ?? "{}") as {
       breakerOutcomesRecorded?: number;
       breakerOutcomesSkippedClosedSuccess?: number;
@@ -985,7 +990,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
     const metadata = JSON.parse(result?.metadata ?? "{}") as {
       breakerOutcomesRecorded?: number;
       breakerOutcomeWriteFailures?: number;
@@ -1008,7 +1013,7 @@ describe("syncLiveReserves", () => {
       const db = mockD1();
       const result = await syncLiveReserves(
         db,
-        new AbortController().signal,
+        runController.signal,
         {},
         async (update) => { if (update.stage === "finalizing") nowMs += 10_000; },
         {
@@ -1065,7 +1070,7 @@ describe("syncLiveReserves", () => {
       },
     ]);
 
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await syncLiveReserves(db, runController.signal, {});
 
     const deleteStateRows = db.getHistory().filter((entry) => (
       entry.sql.includes("DELETE FROM reserve_sync_state WHERE stablecoin_id IN")
@@ -1110,7 +1115,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
     const metadata = JSON.parse(result?.metadata ?? "{}") as {
       artifactCleanup?: unknown;
       artifactCleanupWarningCount?: number;
@@ -1167,7 +1172,7 @@ describe("syncLiveReserves", () => {
       },
     ]);
 
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await syncLiveReserves(db, runController.signal, {});
 
     const staleRecoveryCalls = recoverNoCandidateMock.mock.calls.filter((call) => call[1] === staleBreakerKey);
     expect(staleRecoveryCalls).toHaveLength(1);
@@ -1203,7 +1208,7 @@ describe("syncLiveReserves", () => {
       ]);
       const result = await syncLiveReserves(
         db,
-        new AbortController().signal,
+        runController.signal,
         {},
         undefined,
         {
@@ -1246,7 +1251,7 @@ describe("syncLiveReserves", () => {
         rows: [{ key: "circuit:live-reserves:removed-adapter-key", value: staleState }],
       },
     ]);
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
 
     expect(result?.status).toBe("ok");
     expect(recoverNoCandidateMock).toHaveBeenCalledTimes(1);
@@ -1278,7 +1283,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
     const metadata = JSON.parse(result?.metadata ?? "{}") as {
       historyPrune?: unknown;
       historyPruneSkipped?: boolean;
@@ -1307,7 +1312,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await syncLiveReserves(db, runController.signal, {});
 
     const attemptInsert = db.getHistory().find((entry) => entry.sql.includes("reserve_sync_attempt_history"));
     expect(attemptInsert).toBeDefined();
@@ -1319,7 +1324,6 @@ describe("syncLiveReserves", () => {
   });
 
   it("records timed out write finalization as a non-authoritative storage failure", async () => {
-    vi.useFakeTimers();
     mockAdapterRegistry(
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
@@ -1341,7 +1345,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const runPromise = syncLiveReserves(db, new AbortController().signal, {});
+    const runPromise = syncLiveReserves(db, runController.signal, {});
 
     await vi.advanceTimersByTimeAsync(30_100);
     const result = await runPromise;
@@ -1372,7 +1376,6 @@ describe("syncLiveReserves", () => {
   });
 
   it("accepts a timed out write finalization when authoritative readback proves success", async () => {
-    vi.useFakeTimers();
     mockAdapterRegistry(
       async () => ({ slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] }),
     );
@@ -1392,7 +1395,7 @@ describe("syncLiveReserves", () => {
     const db = mockD1();
     const runPromise = syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       {
@@ -1429,7 +1432,6 @@ describe("syncLiveReserves", () => {
   });
 
   it("hard-times out a non-cooperative adapter attempt", async () => {
-    vi.useFakeTimers();
     const adapterFetch = mockAdapterRegistry(
       async () => await new Promise<never>(() => undefined),
     );
@@ -1438,7 +1440,7 @@ describe("syncLiveReserves", () => {
     const db = mockD1();
     const runPromise = syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       {
@@ -1474,7 +1476,6 @@ describe("syncLiveReserves", () => {
   });
 
   it("bounds non-cooperative fallback chains without treating the local deadline as source failure", async () => {
-    vi.useFakeTimers();
     const target = SYNC_ORDERED_CONFIGURED_COINS.find((coin) =>
       (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) >= 2
       && coin.liveReservesConfig?.adapter !== "hive-hbd-protocol");
@@ -1489,7 +1490,7 @@ describe("syncLiveReserves", () => {
       nextItemKey: target.id, itemsDone: SYNC_ORDERED_CONFIGURED_COINS.findIndex((coin) => coin.id === target.id),
     }), { match: "UPDATE worker_scheduled_checkpoints", rows: [] }]);
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    const pending = syncLiveReserves(db, new AbortController().signal, {}, undefined, {
+    const pending = syncLiveReserves(db, runController.signal, {}, undefined, {
       runBudgetMs: 60_000, adapterTimeoutMs: 20_000, d1FinalizeTimeoutMs: 30_000, finalizationMarginMs: 5_000,
     }, identity);
     await vi.advanceTimersByTimeAsync(25_001);
@@ -1535,7 +1536,7 @@ describe("syncLiveReserves", () => {
     const reportProgress = vi.fn(async (_update: unknown) => undefined);
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {}, reportProgress as never);
+    await syncLiveReserves(db, runController.signal, {}, reportProgress as never);
 
     expect(reportProgress).toHaveBeenCalled();
     const progressCalls = reportProgress.mock.calls as Array<[{
@@ -1578,7 +1579,7 @@ describe("syncLiveReserves", () => {
     const db = mockD1();
     const result = await syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       { runBudgetMs: 1, adapterTimeoutMs: 20_000 },
@@ -1615,13 +1616,13 @@ describe("syncLiveReserves", () => {
     });
     const { db, sqlite } = fixtures.open();
     const { syncLiveReserves } = await import("../sync-live-reserves");
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await syncLiveReserves(db, runController.signal, {});
     const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(review.stablecoinId);
     expect(snapshot).toBeDefined();
     const originalSuccess = sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(review.stablecoinId);
     now += 60;
     fail = true;
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
     expect(result.status).toBe("ok");
     expect(JSON.parse(result.metadata!)).toMatchObject({
       failed: 1, unacknowledgedFailed: 0,
@@ -1638,7 +1639,7 @@ describe("syncLiveReserves", () => {
     const config = coin.liveReservesConfig!;
     const db = mockD1([{ match: "UPDATE reserve_sync_state", rows: [], runMeta: { changes } }]);
     const result = await syncReserveCoin({
-      db, coin, signal: new AbortController().signal,
+      db, coin, signal: runController.signal,
       adapter: { ...LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter], fetch: vi.fn() },
       runAdapter: async () => { throw new Error("issuer failure"); },
       breakerCanFetch: new Map([[breakerKeyForConfig(config), true]]), previousState: null,
@@ -1909,7 +1910,7 @@ describe("syncLiveReserves", () => {
 
     const result = await syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       {
@@ -1942,7 +1943,7 @@ describe("syncLiveReserves", () => {
     const db = mockD1();
     const result = await syncLiveReserves(
       db,
-      new AbortController().signal,
+      runController.signal,
       {},
       undefined,
       {
@@ -1977,7 +1978,7 @@ describe("syncLiveReserves", () => {
     });
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    await syncLiveReserves(db, new AbortController().signal, {});
+    await syncLiveReserves(db, runController.signal, {});
 
     const hiveCalls = adapterFetch.mock.calls.filter(([coin]) => coin.id === "hbd-hive");
     expect(hiveCalls).toHaveLength(1);
@@ -2016,7 +2017,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
 
     const successAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_sync_attempt_history")
@@ -2077,7 +2078,7 @@ describe("syncLiveReserves", () => {
 
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const db = mockD1();
-    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    const result = await syncLiveReserves(db, runController.signal, {});
 
     const fallbackAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_sync_attempt_history")

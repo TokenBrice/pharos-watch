@@ -337,7 +337,7 @@ describe("critical execution contracts", () => {
     expect(args.filter((arg) => arg.endsWith(".test.ts"))).toEqual(["src/first.test.ts", "src/second.test.ts"]);
   });
 
-  it.each(["kept.ts", "././kept.ts"])("persists only enrolled sources' V8 results (%s)", async (include) => {
+  it.each([["kept.ts", ["kept.ts"]], ["././kept.ts", ["kept.ts", "registry.json"]]])("persists enrolled sources' V8 results (%s)", async (include, kept) => {
     installCriticalCoverageFilter();
     const cwd = mkdtempSync(join(tmpdir(), "pharos-critical-coverage-"));
     temporaryDirectories.push(cwd);
@@ -345,6 +345,6 @@ describe("critical execution contracts", () => {
     const script = (file: string) => ({ url: pathToFileURL(join(cwd, file)).href, functions: [{ ranges: [{ startOffset: 0, endOffset: 9, count: 2 }] }] });
     provider.onAfterSuiteRun({ coverage: { result: [script("kept.ts"), script("registry.json")] }, testFiles: ["a.test.ts"], environment: "ssr" } as never);
     await Promise.all(provider.pendingPromises);
-    expect(JSON.parse(readFileSync(join(cwd, readdirSync(cwd)[0]!), "utf8"))).toEqual({ result: [script("kept.ts")] });
+    expect(JSON.parse(readFileSync(join(cwd, readdirSync(cwd)[0]!), "utf8"))).toEqual({ result: kept.map(script) });
   });
 });
