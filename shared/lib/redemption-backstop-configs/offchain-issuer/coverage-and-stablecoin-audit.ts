@@ -315,13 +315,13 @@ const spikoCashAndCarrySettlementReview = (): RedemptionV9RouteReviewTerms => ({
   settlementModel: "days",
   scoringDisposition: "bounded-terms-gap",
   missingScoringFields: ["settlement"],
-  rationale: "The product article's ordinary cash-and-carry redemption window does not establish an unconditional maximum to completed exact-endpoint payment.",
-  reviewedAt: "2026-10-07",
+  rationale: "The October 19, 2026 Cash & Carry prospectus p13 centralizes redemption orders on D-1 before 11:00 Paris time, executes on D and pays on D+1 (working day). France, UK and US holidays and TARGET/CME closures defer centralization/NAV. Article 3 settles redemptions within a maximum of five days following share valuation; the discretionary 10% net-redemption gate carries unexecuted orders to later centralizations without priority. These are conditional payment terms after eligible registered-share requests, not an unconditional request-to-completion maximum. No matching reviewed calendar exists, and no business-day or elapsed-second scalar is inferred.",
+  reviewedAt: "2026-11-06",
   docs: [
     sourceRef(
-      "Spiko Cash & Carry product article",
-      "https://www.spiko.io/blog/spiko-cash-carry-everything-you-need-to-know-about-our-new-product",
-      ["route"],
+      "Spiko Cash & Carry prospectus, October 19, 2026, pp13-16 and Article 3: conditional payment and gates",
+      "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf",
+      ["route", "settlement"],
     ),
   ],
 });
@@ -378,7 +378,12 @@ const SPIKO_FUNDS: readonly {
     shareClassId: "USTBL",
     productRef: null,
     note: "Modeled as account-gated fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: () => spikoProspectusSettlementReview(true),
+    settlementReview: () => ({
+      ...spikoProspectusSettlementReview(true),
+      rationale: "The September 1, 2026 SICAV prospectus p21 settles USTBL redemptions on D for registered-share orders cleared before 11:30 Paris time; later orders roll to the next business day. France/US holidays and Paris/New York exchange closures defer clearing/NAV. Electronic-money-token transfer may not start on centralization day and may be refused in favor of bank transfer. The discretionary 10% net-assets gate and suspensions can defer requests; unexecuted orders carry forward without priority. Ordinary D settlement is conditional, and no matching reviewed calendar or unconditional final-receipt scalar is established.",
+      reviewedAt: "2026-11-06",
+      docs: [sourceRef("Spiko SICAV prospectus, September 1, 2026, pp21-23: USTBL settlement and gates", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", ["route", "settlement"])],
+    }),
   },
   {
     id: "safo-spiko-usd",
@@ -386,7 +391,12 @@ const SPIKO_FUNDS: readonly {
     shareClassId: "SAFO",
     productRef: sourceRef("Spiko dollar fund", "https://www.spiko.io/spiko-dollar", ["capacity", "fees", "access"]),
     note: "Modeled as account-gated Spiko / Amundi fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: () => spikoProspectusSettlementReview(true),
+    settlementReview: () => ({
+      ...spikoProspectusSettlementReview(true),
+      rationale: "The September 1, 2026 SICAV prospectus p61 settles SAFO redemptions on D+1 (business day) after registered-share orders cleared before 15:00 Paris time; later orders roll forward. NAV/centralization requires at least one of Paris or New York open for a full session. If the relevant currency market is closed on D+1, settlement moves to its next open day. The discretionary 25% net-assets gate and suspensions can defer requests; unexecuted orders carry forward without priority. These conditional payment terms lack a matching reviewed calendar and do not establish an unconditional final-receipt scalar.",
+      reviewedAt: "2026-11-06",
+      docs: [sourceRef("Spiko SICAV prospectus, September 1, 2026, pp61-63: SAFO conditional settlement and 25% gate", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", ["route", "settlement"])],
+    }),
   },
   {
     id: "spkcc-spiko",
@@ -406,7 +416,12 @@ const SPIKO_FUNDS: readonly {
       "access",
     ]),
     note: "Modeled as account-gated GBP money-market fund-share redemption at NAV; cutoff times and bank rails make the backstop slower than on-chain stablecoin liquidity.",
-    settlementReview: spikoProspectusSettlementReview,
+    settlementReview: () => ({
+      ...spikoProspectusSettlementReview(),
+      rationale: "The September 1, 2026 SICAV prospectus p44 settles UKTBL redemptions on D for registered-share orders cleared before 11:30 Paris time; later orders roll to the next business day. France/UK holidays and Paris/London exchange closures defer clearing/NAV. The discretionary 10% net-assets gate and suspensions can defer requests; unexecuted orders carry forward without priority. Ordinary D settlement is conditional, and no matching reviewed calendar or unconditional final-receipt scalar is established.",
+      reviewedAt: "2026-11-06",
+      docs: [sourceRef("Spiko SICAV prospectus, September 1, 2026, pp44-46: UKTBL settlement and gates", "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf", ["route", "settlement"])],
+    }),
   },
   {
     id: "gbpsafo-spiko",

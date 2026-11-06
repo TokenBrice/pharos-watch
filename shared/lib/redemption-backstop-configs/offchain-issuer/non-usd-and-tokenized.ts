@@ -787,6 +787,13 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     costModel: undisclosedReviewedFee(
       "Redeemable 1:1 in EUR directly with SG-FORGE; public fee schedule not disclosed",
     ),
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["settlement"],
+      rationale: "The September 30, 2026 white paper I.07 grants EEA-resident holders redemption at par. Five Business Days bounds acknowledgement only. After successful KYC/AML, sanctions and other controls and applicable token delivery, the issuer will transfer Euro to the holder's cash account no later than the last Business Day of the month following the month controls completed. Controls have no published completion maximum. This conditional month-end payment commitment cannot be represented by a fixed businessDays or elapsed-second value; no scalar or unconditional request-to-completion guarantee is inferred.",
+      reviewedAt: "2026-11-06",
+      docs: [sourceRef("EURCV white paper v2.2, September 30, 2026, I.07: conditional month-end cash-account payment", "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf", ["route", "access", "settlement"])],
+    },
     docs: [
       sourceRefRouteCapacity("SG-FORGE CoinVertible", "https://www.sgforge.com/product/coinvertible/"),
       sourceRef(
