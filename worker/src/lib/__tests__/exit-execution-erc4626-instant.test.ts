@@ -65,7 +65,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         let redeemed = false;
         const receipt = innerCalls.map((entry) => {
           const innerSelector = entry.callData.slice(0, 10);
-          if ([toFunctionSelector("convertToAssets(uint256)"), toFunctionSelector("previewRedeem(uint256)")].includes(innerSelector)) {
+          if ([toFunctionSelector("convertToAssets(uint256)"), toFunctionSelector("previewRedeem(uint256)")].includes(innerSelector as `0x${string}`)) {
             const amount = BigInt("0x" + entry.callData.slice(10, 74));
             const preview = innerSelector === toFunctionSelector("previewRedeem(uint256)");
             return { success: !preview || !(state.preview === "revert" || state.preview === "liquidity" && amount > state.liquidity),

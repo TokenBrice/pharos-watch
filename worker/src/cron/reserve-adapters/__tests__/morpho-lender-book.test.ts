@@ -231,7 +231,7 @@ describe("Morpho NAV-accounted lender-book producer", () => {
   it("rejects duplicate canonical chain:vault identities before I/O", async () => {
     const f = fixture();
     const contracts = [...f.coin.contracts!, { ...f.coin.contracts![0], address: f.vault.toUpperCase().replace("0X", "0x") }];
-    vi.spyOn(WORKER_TRACKED_META_BY_ID, "get").mockReturnValueOnce({ ...f.coin, contracts });
+    vi.spyOn(WORKER_TRACKED_META_BY_ID, "get").mockReturnValueOnce({ ...f.coin, contracts } as never);
     const { result, network } = await observe({ ...f, coin: { ...f.coin, contracts } });
     expect(result).toMatchObject({ status: "unavailable", reason: "identity-mismatch", failedDeploymentKey: null });
     expect(network.fetchSpy).not.toHaveBeenCalled();
