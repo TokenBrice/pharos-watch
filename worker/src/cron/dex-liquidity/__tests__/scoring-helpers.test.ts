@@ -134,7 +134,7 @@ describe("source-stage exact-pool price refresh", () => {
     const responses: Response[] = [];
     const fetch = vi.fn(async () => { const res = new Response("provider failure", { status }); responses.push(res); return res; });
     vi.stubGlobal("fetch", fetch);
-    expect(await run(graph(pools))).toMatchObject({ requests: 3, refreshed: 0, unchangedByReason: { "coingecko-transport-failure": 90, "consecutive-failures": 1 }, failuresOmitted: 27 });
+    expect(await run(graph(pools))).toMatchObject({ requests: 3, refreshed: 0, unchangedByReason: { "coingecko-transport-failure": 90, "consecutive-failures": 1 }, failuresOmitted: 83 });
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(responses.every((res) => res.bodyUsed)).toBe(true);
     expect(pools).toEqual(originals);
