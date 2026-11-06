@@ -11,7 +11,7 @@ import {
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
-import { buildUpsertPendingDepegStmt, normalizePendingDepegRow } from "../depeg-pending";
+import { buildUpsertPendingDepegStmt, normalizePendingDepegRow, type PendingDepegUpsertParams } from "../depeg-pending";
 import { isExtremeMovePending, parsePendingReason } from "../depeg-helpers";
 import { computePegScore } from "@shared/lib/peg-score";
 import { mergeDepegSeconds, mergeUnknownDepegSeconds } from "@shared/lib/peg-utils";
@@ -192,26 +192,27 @@ describe("collectDexProtocolCorroborations", () => {
 });
 
 describe("original DEX source observation admission", () => {
+  const now = 1_700_000_000;
+  const database = (row: Record<string, unknown>) =>
+    makeNoopD1({ prepare: () => ({ all: async () => ({ results: [row] }) }) });
   it.each(["confirm", "recover"] as const)("admits %s groups using their original clock, never a compatibility clock", async (mode) => {
-    const now = 1_700_000_000;
     const observedAt = now - 60;
     const price = mode === "confirm" ? 0.98 : 1;
     const sources = ["curve", "uniswap"].map((protocol) => ({
       protocol, sourceFamily: protocol, chain: "ethereum", price, tvl: 2_000_000,
       observedAt, aggregateObservedAt: observedAt, updatedAt: now + 100,
     }));
-    const db = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [{
+    const db = database({
       stablecoin_id: "usdt-tether", dex_price_usd: price, source_total_tvl: 4_000_000,
       source_pool_count: 2, deviation_from_primary_bps: 0, updated_at: now,
       price_sources_json: JSON.stringify(sources),
-    }] }) }) });
+    });
     const loaded = await loadDexPrices(db, now);
     const admitted = loaded.dexPriceSources.get("usdt-tether");
     expect(admitted?.map((source) => source.updatedAt)).toEqual([observedAt, observedAt]);
     expect(collectDexProtocolCorroborations(admitted, 1, 100, "below", mode)).toHaveLength(2);
   });
   it.each(["confirm", "recover"] as const)("admits %s at original-clock boundaries despite an expired run-start row", async (mode) => {
-    const now = 1_700_000_000;
     const observedAt = now - 35 * 60;
     const aggregateObservedAt = now - 75 * 60;
     const price = mode === "confirm" ? 0.98 : 1;
@@ -219,11 +220,11 @@ describe("original DEX source observation admission", () => {
       protocol, sourceFamily: protocol, chain: "ethereum", price, tvl: 2_000_000,
       observedAt, aggregateObservedAt, updatedAt: now,
     }));
-    const db = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [{
+    const db = database({
       stablecoin_id: "usdt-tether", dex_price_usd: price, source_total_tvl: 4_000_000,
       source_pool_count: 2, deviation_from_primary_bps: 0, updated_at: observedAt - 1,
       price_sources_json: JSON.stringify(sources),
-    }] }) }) });
+    });
     const telemetry = { staleRows: [], malformedRows: [] };
     const loaded = await loadDexPrices(db, now, 35 * 60, telemetry);
     expect(telemetry.staleRows).toEqual([{ stablecoinId: "usdt-tether", updatedAt: observedAt - 1,
@@ -233,14 +234,13 @@ describe("original DEX source observation admission", () => {
     expect(loaded.dexPriceRows.get("usdt-tether")?.aggregateObservedAt).toBe(aggregateObservedAt);
   });
   it.each([60, 21_600, null])("retains aggregate clock %s without surviving protocol lanes", async (age) => {
-    const now = 1_700_000_000;
     const clock = age == null ? null : now - age;
-    const db = makeNoopD1({ prepare: () => ({ all: async () => ({ results: [{
+    const db = database({
       stablecoin_id: "usdt-tether", updated_at: now, dex_price_usd: 1,
       price_sources_json: JSON.stringify([0, 1].map((i) => ({
         observedAt: now - 21_600, aggregateObservedAt: clock == null ? undefined : clock + i,
       }))),
-    }] }) }) });
+    });
     const loaded = await loadDexPrices(db, now);
     expect(loaded.dexPriceRows.get("usdt-tether")?.aggregateObservedAt).toBe(clock);
     expect(loaded.dexPriceSources.size).toBe(0);
@@ -329,49 +329,29 @@ describe("normalizePendingDepegRow", () => {
 });
 
 describe("buildUpsertPendingDepegStmt", () => {
-  function makePreparedStatementRecorder() {
-    return makeNoopD1({
-      prepare(sql: string) {
-        return {
-          sql,
-          bind(...boundValues: unknown[]) {
-            return { sql, boundValues };
-          },
-        };
-      },
-    });
-  }
+  const makePreparedStatementRecorder = () => makeNoopD1({
+    prepare: (sql: string) => ({
+      sql,
+      bind: (...boundValues: unknown[]) => ({ sql, boundValues }),
+    }),
+  });
 
   it("refreshes same-direction rows and resets opposite-direction rows when executed", async () => {
     const sqlite = createLatestSchemaSqlite().sqlite;
 
     const d1Recorder = makePreparedStatementRecorder();
 
-    const firstStmt = buildUpsertPendingDepegStmt(d1Recorder, {
-      stablecoinId: "usdt-tether",
-      symbol: "USDT",
-      pegType: "peggedUSD",
-      direction: "below",
-      bps: -200,
-      seenAt: 1_700_000_000,
-      price: 0.98,
-      pegReference: 1,
-      reason: "large-cap",
-    }) as unknown as { sql: string; boundValues: unknown[] };
-    sqlite.prepare(firstStmt.sql).run(...(firstStmt.boundValues as never[]));
-
-    const worsenStmt = buildUpsertPendingDepegStmt(d1Recorder, {
-      stablecoinId: "usdt-tether",
-      symbol: "USDT",
-      pegType: "peggedUSD",
-      direction: "below",
-      bps: -350,
-      seenAt: 1_700_000_900,
-      price: 0.965,
-      pegReference: 1,
-      reason: "large-cap",
-    }) as unknown as { sql: string; boundValues: unknown[] };
-    sqlite.prepare(worsenStmt.sql).run(...(worsenStmt.boundValues as never[]));
+    const upsert = (overrides: Partial<PendingDepegUpsertParams>) => {
+      const stmt = buildUpsertPendingDepegStmt(d1Recorder, {
+        stablecoinId: "usdt-tether", symbol: "USDT", pegType: "peggedUSD",
+        direction: "below", bps: -200, seenAt: 1_700_000_000, price: 0.98,
+        pegReference: 1, reason: "large-cap", ...overrides,
+      }) as unknown as { sql: string; boundValues: unknown[] };
+      sqlite.prepare(stmt.sql).run(...(stmt.boundValues as never[]));
+      return stmt;
+    };
+    upsert({});
+    const worsenStmt = upsert({ bps: -350, seenAt: 1_700_000_900, price: 0.965 });
 
     const sameDirectionRow = sqlite
       .prepare("SELECT direction, first_seen_bps, first_seen_at, first_price, last_seen_bps, last_seen_at, last_price, peak_seen_bps, peak_price FROM depeg_pending WHERE stablecoin_id = ?")
@@ -422,18 +402,7 @@ describe("buildUpsertPendingDepegStmt", () => {
       peak_seen_bps: -280,
     });
 
-    const flipStmt = buildUpsertPendingDepegStmt(d1Recorder, {
-      stablecoinId: "usdt-tether",
-      symbol: "USDT",
-      pegType: "peggedUSD",
-      direction: "above",
-      bps: 180,
-      seenAt: 1_700_003_900,
-      price: 1.018,
-      pegReference: 1,
-      reason: "low-confidence",
-    }) as unknown as { sql: string; boundValues: unknown[] };
-    sqlite.prepare(flipStmt.sql).run(...(flipStmt.boundValues as never[]));
+    upsert({ direction: "above", bps: 180, seenAt: 1_700_003_900, price: 1.018, reason: "low-confidence" });
 
     const flippedRow = sqlite
       .prepare("SELECT direction, first_seen_bps, first_seen_at, first_price, last_seen_bps, last_seen_at, last_price, peak_seen_bps, peak_price, reason FROM depeg_pending WHERE stablecoin_id = ?")
