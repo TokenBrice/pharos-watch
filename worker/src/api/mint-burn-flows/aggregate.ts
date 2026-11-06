@@ -53,6 +53,7 @@ import {
   MINT_BURN_CRON_JOB,
   mintBurnPairKey,
   mintBurnHourlyWindow,
+  mintBurnScanWindow,
   readMintBurnCronSnapshotResult,
   selectLargestEvents,
   readMintBurnWindowContext,
@@ -85,6 +86,7 @@ export interface AggregateData {
   configs: MintBurnContractConfig[];
   publication: Awaited<ReturnType<typeof readMintBurnWindowContext>>["publication"];
   publicationPolicy: string;
+  partialCoinIds: Set<string>;
   hourlyRows: HourlyRow[];
   hourly24hRows: HourlyRow[];
   net7dMap: Map<string, WindowNetFlow>;
@@ -164,7 +166,7 @@ export async function fetchAggregateData(
   db: D1Database,
   requestedParams: AggregateQueryParams,
 ): Promise<AggregateData> {
-  const { watermark, legacy, configs, publication, policy } = await readMintBurnWindowContext(db, requestedParams.nowSec, ACTIVE_MINT_BURN_CONFIGS);
+  const { watermark, legacy, configs, publication, policy, partialCoinIds } = await readMintBurnWindowContext(db, requestedParams.nowSec, ACTIVE_MINT_BURN_CONFIGS);
   const params = buildAggregateQueryParams(
     watermark.timestamp ?? requestedParams.windowEnd,
     (requestedParams.windowEnd - requestedParams.windowStart) / 3600,
@@ -314,7 +316,7 @@ export async function fetchAggregateData(
   }
 
   return {
-    configs, publication, publicationPolicy: policy,
+    configs, publication, publicationPolicy: policy, partialCoinIds,
     hourlyRows,
     hourly24hRows,
     net7dMap: buildGroupedNetFlowMap((batchResults[1].results ?? []) as GroupedNetFlowRow[], trackedPairs),
@@ -346,8 +348,10 @@ export async function fetchAggregateData(
  * flight-to-quality are published only when missing valuation cannot alter
  * them. Pressure needs a complete 24h window and a baseline that is not
  * partial. A weighted coin whose pressure is withheld for that reason (and
- * could otherwise score: 24h activity and at least the minimum baseline
- * history) leaves the gauge, which then re-weights over the scored coins. It is
+ * could otherwise score: observed or unproven activity and the minimum baseline
+ * history) leaves the gauge, which then re-weights over the scored coins. An
+ * established leg outside publication also withholds pressure and makes the
+ * published coin coverage partial, retaining the admitted-leg USD subtotals. It is
  * disclosed in `partialValuationInputs` with its weight in
  * `partialValuationMcapUsd`, beside the weight actually scored
  * (`scoredMcapUsd`), so consumers can bound what the withheld weight could do
@@ -368,7 +372,7 @@ export function buildCoinSummaries(
   flightToQualityExcludedIds: string[];
   trackedMcapUsd: number;
   mcapUnavailableCoins: number;
-  /** Weighted coins that could score but whose pressure was withheld for incomplete valuation. */
+  /** Weighted coins that could score but whose pressure was withheld for incomplete valuation or established-leg coverage. */
   partialValuationInputs: number;
   /** Sum of those coins' observed weights. */
   partialValuationMcapUsd: number;
@@ -401,6 +405,8 @@ export function buildCoinSummaries(
 
     const coverage = data.coverageMap.get(id);
     const has24hWindow = coverage?.has24hWindow === true;
+    const partialScope = data.partialCoinIds.has(id);
+    const complete24hWindow = has24hWindow && !partialScope;
     const knownNetFlow24h = agg?.netFlow ?? 0;
     const observedActivity = (agg?.mintCount ?? 0) > 0
       || (agg?.burnCount ?? 0) > 0
@@ -410,8 +416,8 @@ export function buildCoinSummaries(
     const valuation24h = summarizeMintBurnValuation(agg?.valuation ?? emptyMintBurnValuationTally());
     // No baseline means no pressure input from it: vacuously complete.
     const baselineValuation = baseline?.valuation ?? "complete";
-    const valuationAdmitsPressure = valuation24h.completeness === "complete" && baselineValuation !== "partial";
-    const pressureShiftScore = has24hWindow && has24hActivity && baseline && valuationAdmitsPressure
+    const inputsAdmitPressure = !partialScope && valuation24h.completeness === "complete" && baselineValuation !== "partial";
+    const pressureShiftScore = has24hWindow && has24hActivity && baseline && inputsAdmitPressure
       ? computeFlowIntensity({
           currentDailyNet: knownNetFlow24h,
           baselineDailyNet: baseline.avgNet,
@@ -425,7 +431,7 @@ export function buildCoinSummaries(
       gaugeInputs.push({ intensity: pressureShiftScore, mcap });
       if (pressureShiftScore !== null) scoredMcapUsd += mcap;
       // A baseline shorter than the minimum history is NR whatever the valuation.
-      if (has24hWindow && has24hActivity && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !valuationAdmitsPressure) {
+      if (has24hWindow && (has24hActivity || partialScope) && baseline && baseline.dataDays >= FLOW_INTENSITY_MIN_DATA_DAYS && !inputsAdmitPressure) {
         partialValuationInputs += 1;
         partialValuationMcapUsd += mcap;
       }
@@ -433,9 +439,9 @@ export function buildCoinSummaries(
 
     if (gradeClassification) {
       const flow = {
-        knownNetUsd: has24hWindow ? knownNetFlow24h : null,
+        knownNetUsd: complete24hWindow ? knownNetFlow24h : null,
         valuation: valuation24h,
-        window24hComplete: has24hWindow,
+        window24hComplete: complete24hWindow,
       };
       if (gradeClassification.safeIds.has(id) || gradeClassification.riskyIds.has(id)) {
         classifiedFlowsById.set(id, flow);
@@ -462,13 +468,13 @@ export function buildCoinSummaries(
       symbol: config.symbol,
       pressureShiftScore,
       pressureShiftState: getPressureShiftState(pressureShiftScore),
-      netFlowDirection24h: has24hWindow ? provenNetFlowDirection24h({
+      netFlowDirection24h: complete24hWindow ? provenNetFlowDirection24h({
         knownNetUsd: knownNetFlow24h,
         has24hActivity: has24hActivity === true,
         valuation: valuation24h,
       }) : null,
       // PR-B readers use this null gate before reconstructing bounds from gross subtotals.
-      has24hActivity: has24hWindow ? has24hActivity : null,
+      has24hActivity: complete24hWindow ? has24hActivity : null,
       observed24hActivity: observedActivity,
       baselineDailyNetUsd: baseline?.avgNet ?? null,
       baselineDailyAbsUsd: baseline?.avgAbs ?? null,
@@ -486,7 +492,17 @@ export function buildCoinSummaries(
       largestEvent24h: largest && largest.amount_usd != null && (largest.direction === "mint" || largest.direction === "burn")
         ? { direction: largest.direction, amountUsd: largest.amount_usd, txHash: largest.tx_hash, timestamp: largest.timestamp }
         : null,
-      coverage,
+      coverage: partialScope ? {
+        ...coverage,
+        has24hWindow: false, has7dWindow: false, has30dWindow: false, has90dWindow: false,
+        isPartial: true,
+        status: "partial-history",
+        unavailableReason: coverage.unavailableReason ?? "scan-coverage-incomplete",
+        windows: {
+          window24h: mintBurnScanWindow(false), window7d: mintBurnScanWindow(false),
+          window30d: mintBurnScanWindow(false), window90d: mintBurnScanWindow(false),
+        },
+      } : coverage,
       valuation: {
         window24h: valuation24h,
         baseline: baselineValuation,

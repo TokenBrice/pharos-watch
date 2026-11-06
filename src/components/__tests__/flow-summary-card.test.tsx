@@ -15,39 +15,37 @@ vi.mock("@/hooks/use-mint-burn-flows", () => ({
   useMintBurnFlows: useMintBurnFlowsMock,
 }));
 
+const missing = { complete: false, unavailableReason: "scan-coverage-incomplete" } as const;
+
 describe("FlowSummaryCard", () => {
-  it("qualifies an incomplete 30-day window as partial", () => {
+  it.each([false, true])("qualifies incomplete windows as partial (established leg=%s)", (established) => {
     useMintBurnFlowsMock.mockReturnValue({
       data: {
         coins: [
           makeMintBurnFlowCoin({
             coverage: {
-              startBlock: 1,
-              lastSyncedBlock: 2,
-              lagBlocks: 0,
-              historyStartAt: 1_700_000_000,
-              has24hWindow: true,
-              has30dWindow: false,
-              has90dWindow: true,
+              startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: 1_700_000_000,
+              has24hWindow: !established, has7dWindow: !established, has30dWindow: false, has90dWindow: !established,
+              ...(established ? { windows: { window24h: missing, window7d: missing, window30d: missing, window90d: missing } } : {}),
               isPartial: true,
               status: "partial-history",
             },
           }),
         ],
       },
-      dataUpdatedAt: 1_700_000_000_000,
-      error: null,
-      isLoading: false,
-      refetch: vi.fn(),
+      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
     });
 
     render(<FlowSummaryCard stablecoinId="usdc-circle" />);
 
-    expect(screen.getByText("partial")).toBeTruthy();
+    if (established) {
+      expect(screen.getAllByText("partial")).toHaveLength(4);
+      expect(screen.getByText("-$3.00M")).toBeTruthy();
+    } else expect(screen.getByText("partial")).toBeTruthy();
     expect(
       screen.getByTitle("30-day window is incomplete; value reflects the covered portion only."),
     ).toBeTruthy();
-    expect(screen.queryByTitle(/90-day window is incomplete/)).toBeNull();
+    if (!established) expect(screen.queryByTitle(/90-day window is incomplete/)).toBeNull();
   });
 
   it("renders a partial 24h window as unavailable instead of a burning net and pressure reading", () => {
@@ -62,15 +60,11 @@ describe("FlowSummaryCard", () => {
           }),
         ],
       },
-      dataUpdatedAt: 1_700_000_000_000,
-      error: null,
-      isLoading: false,
-      refetch: vi.fn(),
+      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
     });
 
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
 
-    // Unpriced mints could lift the -$3M known net above zero: it renders only as a floor, and "burning" is not claimed.
     expect(container.textContent).toContain("≥ -$3.00M");
     expect(container.textContent?.replaceAll("≥ -$3.00M", "")).not.toContain("-$3.00M");
     expect(screen.queryByText("Burning")).toBeNull();
@@ -80,14 +74,11 @@ describe("FlowSummaryCard", () => {
       .toBeGreaterThan(0);
     expect(container.textContent).not.toContain("-42");
     expect(screen.getByText(/pressure shift unavailable/i)).toBeTruthy();
-    // Baseline average daily net is withheld when the baseline valuation is partial.
     expect(container.textContent).not.toContain("+$1.00M");
-    // v6.27: a balance of lower-bound volumes is NR with its reason, never a dial reading.
     expect(screen.getByText("Minting pressure not rated")).toBeTruthy();
     expect(screen.getByText(/4 mint \/ 0 burn events unpriced, so the volumes are lower bounds/i)).toBeTruthy();
     expect(container.querySelector('[data-reason-codes="valuation-partial"]')).toBeTruthy();
     expect(screen.queryByRole("img", { name: /Minting pressure gauge at/ })).toBeNull();
-    // Complete 7d window keeps its value.
     expect(container.textContent).toContain("-$5.00M");
   });
 
@@ -111,17 +102,14 @@ describe("FlowSummaryCard", () => {
           coverage: { startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: null,
             has24hWindow: false, has30dWindow: false, has90dWindow: false, isPartial: true, status: "unknown",
             windows: {
-              window24h: { complete: false, unavailableReason: "scan-coverage-incomplete" },
-              window7d: { complete: false, unavailableReason: "scan-coverage-incomplete" },
-              window30d: { complete: false, unavailableReason: "scan-coverage-incomplete" },
-              window90d: { complete: false, unavailableReason: "scan-coverage-incomplete" },
+              window24h: missing,
+              window7d: missing,
+              window30d: missing,
+              window90d: missing,
             } },
         })],
       },
-      dataUpdatedAt: 1_700_000_000_000,
-      error: null,
-      isLoading: false,
-      refetch: vi.fn(),
+      dataUpdatedAt: 1_700_000_000_000, error: null, isLoading: false, refetch: vi.fn(),
     });
     const { container } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
     expect(screen.getByText("Direction unavailable")).toBeTruthy();
@@ -147,7 +135,6 @@ it.each([
   const { container, rerender } = render(<FlowSummaryCard stablecoinId="usdc-circle" />);
   const producerTime = meta.updatedAt != null ? new Date(meta.updatedAt * 1000).toISOString() : null;
   expect(container.querySelector("time")?.getAttribute("datetime")).toBe(producerTime);
-  // A source advisory over a current generation is operator signal; only stale or missing data is public.
   if (state) expect(container.querySelector(`[data-health-state="${state}"]`)).toBeTruthy();
   else expect(container.querySelector("[data-health-state]")).toBeNull();
   useMintBurnFlowsMock.mockReturnValue({ ...query, dataUpdatedAt: receipt + 30_000 });

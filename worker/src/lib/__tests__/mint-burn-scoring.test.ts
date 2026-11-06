@@ -245,20 +245,19 @@ describe("detectFlightToQualityFromValuedNets", () => {
   });
 
   it("keeps a proven-inactive verdict when missing valuation cannot activate it", () => {
-    // Risky mints are unbounded upward only; burns are complete, so the risky net cannot fall below -$50M.
     expect(detectFlightToQualityFromValuedNets({
       safe: [{ knownNetUsd: 500_000_000, valuation: complete }],
       risky: [{ knownNetUsd: -50_000_000, valuation: mintPartial }],
     })).toEqual({ active: false, intensity: 0, safeNet24h: 500_000_000, riskyNet24h: -50_000_000, exact: false });
   });
 
-  it("returns unavailable when missing valuation could change the verdict", () => {
+  it.each([null, 500_000_000])("returns unavailable for undecidable valuation or scope (%s)", (knownNetUsd) => {
     expect(detectFlightToQualityFromValuedNets({
       safe: [{ knownNetUsd: 500_000_000, valuation: complete }],
       risky: [{ knownNetUsd: -50_000_000, valuation: burnPartial }],
     })).toBeNull();
     expect(detectFlightToQualityFromValuedNets({
-      safe: [{ knownNetUsd: null, valuation: complete }],
+      safe: [{ knownNetUsd, valuation: complete, window24hComplete: knownNetUsd === null ? undefined : false }],
       risky: [{ knownNetUsd: -600_000_000, valuation: complete }],
     })).toBeNull();
   });
@@ -315,9 +314,9 @@ describe("buildFlightToQualityCohorts", () => {
 describe("getFlightToQualityUnavailableReason", () => {
   const complete = { mintCompleteness: "complete", burnCompleteness: "complete" } as const;
 
-  it("names an incomplete scan window instead of valuation", () => {
+  it.each([null, 250_000_000])("names an incomplete scan window instead of valuation (%s)", (knownNetUsd) => {
     expect(getFlightToQualityUnavailableReason({
-      safe: [{ knownNetUsd: null, valuation: complete, window24hComplete: false }],
+      safe: [{ knownNetUsd, valuation: complete, window24hComplete: false }],
       risky: [{ knownNetUsd: -150_000_000, valuation: complete, window24hComplete: true }],
       unpublishedIds: [],
     })).toBe("flow-window-unavailable");

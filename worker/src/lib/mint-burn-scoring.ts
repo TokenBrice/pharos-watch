@@ -229,7 +229,7 @@ export function getFlightToQualityUnavailableReason(
 ): MintBurnFtqUnavailableReason {
   if (cohorts.unpublishedIds.length > 0) return "cohort-member-unpublished";
   const windowIncomplete = [...cohorts.safe, ...cohorts.risky]
-    .some((coin) => coin.knownNetUsd === null && coin.window24hComplete !== true);
+    .some((coin) => coin.window24hComplete === false || (coin.knownNetUsd === null && coin.window24hComplete !== true));
   return windowIncomplete ? "flow-window-unavailable" : "valuation-incomplete";
 }
 
@@ -249,7 +249,7 @@ export function detectFlightToQualityFromValuedNets(input: {
     let lowerUsd = 0;
     let upperUsd = 0;
     for (const coin of coins) {
-      if (coin.knownNetUsd === null) {
+      if (coin.knownNetUsd === null || coin.window24hComplete === false) {
         lowerUsd = Number.NEGATIVE_INFINITY;
         upperUsd = Number.POSITIVE_INFINITY;
         continue;

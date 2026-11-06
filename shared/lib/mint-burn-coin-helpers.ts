@@ -43,11 +43,17 @@ export function hasCompleteCoinScan(coin: MintBurnCoinFlow, window: MintBurnNetW
   return coin.coverage?.windows?.[key].complete ?? coin.totalsSemantics !== "observed-subtotals";
 }
 
-/** Signed net for one window, gated by that window's valuation completeness (absent → `unknown`). */
-export function resolveCoinNetFlow(coin: MintBurnCoinFlow, window: MintBurnNetWindow): MintBurnSignedNetView {
+/** Window net gated by valuation; partial coverage is opt-in only for cells rendering a partial qualifier. */
+export function resolveCoinNetFlow(coin: MintBurnCoinFlow, window: MintBurnNetWindow, allowPartialCoverage = false): MintBurnSignedNetView {
   const scanWindow = coin.coverage?.windows?.[
     window === "24h" ? "window24h" : window === "7d" ? "window7d" : window === "30d" ? "window30d" : "window90d"
   ];
+  // An explicit partial-history net is the producer's admitted-leg subtotal.
+  if (allowPartialCoverage && scanWindow?.complete === false && coin.coverage?.status === "partial-history") {
+    const value = { "24h": coin.netFlow24hUsd, "7d": coin.netFlow7dUsd, "30d": coin.netFlow30dUsd, "90d": coin.netFlow90dUsd }[window];
+    if (value != null) return resolveMintBurnSignedNet(value, window === "24h" ? coin.valuation?.window24h.completeness
+      : window === "7d" ? coin.valuation?.netFlow7d : window === "30d" ? coin.valuation?.netFlow30d : coin.valuation?.netFlow90d);
+  }
   if (scanWindow?.complete === false) return {
     valueUsd: null,
     completeness: resolveMintBurnValuation(coin.valuation?.window24h).completeness,
