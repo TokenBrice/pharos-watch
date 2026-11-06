@@ -79,7 +79,6 @@ function fixedInput(assetId: string, aggregateUsd: number) {
   };
 }
 
-/** EVM dependencies: one `totalSupply()` per deployment address, decimals 6. */
 function evm(
   supplies: Readonly<Record<string, bigint>>,
   observeOptions?: (options: { maxResponseBytes?: number; maxRetries?: number }) => void,
@@ -127,10 +126,16 @@ function run(
   routes: readonly RouteFacts[],
   aggregateUsd: number,
   dependencies: DeploymentSupplyCensusAssemblyDependencies = {},
+  chainUsd: Readonly<Record<string, number>> = {},
 ) {
   return observeSafetyScoreV9DeploymentSupplyCensusGeneration({
-    fixedInput: fixedInput("wi-mirror", aggregateUsd),
-    observationClockSec: fixedInput("wi-mirror", aggregateUsd).clockSec,
+    fixedInput: {
+      ...fixedInput("wi-mirror", aggregateUsd),
+      chainCirculatingById: {
+        "wi-mirror": Object.fromEntries(Object.entries(chainUsd).map(([chain, current]) => [chain, { current }])),
+      },
+    },
+    observationClockSec: CLOCK,
     assetIds: ["wi-mirror"],
     chainRpcs: CHAIN_RPCS,
     metaById: new Map([["wi-mirror", meta("wi-mirror", routes)]]),
@@ -138,12 +143,23 @@ function run(
 }
 
 describe("deployment supply census lock-mint mirror", () => {
-  it("counts a lock-mint representation once by netting it out of the canonical deployment", async () => {
+  it.each([
+    [1, 99, null], [0.99, 99, "ethereum"], [1, 98, "megaeth"],
+  ] as const)("nets mirrors before checking chain bounds %s/%s", async (ethereum, megaeth, breached) => {
     const generation = await run(LOCK_MINT_ROUTES, 100, {
       evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: 99_000_000n }),
-    });
+    }, { ethereum, megaeth });
 
     const packet = generation.censusById["wi-mirror"]!;
+    if (breached !== null) {
+      expect(packet.conservation.conserved).toBe(false);
+      expect(packet.deployments).toEqual([]);
+      expect(packet.rejected).toEqual([{
+        routeId: `${breached}:${breached === "ethereum" ? CANONICAL : MIRROR}`,
+        code: "census-rejected:conservation-breach",
+      }]);
+      return;
+    }
     expect(packet.conservation).toMatchObject({ conserved: true });
     expect(packet.rejected).toEqual([]);
     expect(packet.deployments.map(row => row.routeId)).toEqual([
@@ -160,32 +176,20 @@ describe("deployment supply census lock-mint mirror", () => {
     expect(canonical.shareUpper + mirror.shareUpper).toBeCloseTo(1, 9);
   });
 
-  it("does not net a burn-mint representation: destroyed canonical supply is not escrow", async () => {
+  it.each([
+    ["burn-mint", 99_000_000n, 100], ["lock-mint", 120_000_000n, 200],
+  ] as const)("rejects %s overcounting or mirrors exceeding canonical supply", async (semantics, mirrored, aggregate) => {
     const generation = await run([
       LOCK_MINT_ROUTES[0]!,
-      { chain: "megaeth", address: MIRROR, scope: "peripheral", semantics: "burn-mint" },
-    ], 100, { evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: 99_000_000n }) });
+      { chain: "megaeth", address: MIRROR, scope: "peripheral", semantics },
+    ], aggregate, { evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: mirrored }) });
 
     const packet = generation.censusById["wi-mirror"]!;
-    expect(packet.conservation).toMatchObject({ conserved: false, rosterComplete: true });
+    expect(packet.conservation).toMatchObject({ conserved: false, rosterComplete: true, measuredSupplyUsd: 0 });
     expect(packet.deployments).toEqual([]);
     expect(packet.rejected).toEqual([
       { routeId: `ethereum:${CANONICAL}`, code: "census-rejected:conservation-breach" },
       { routeId: `megaeth:${MIRROR}`, code: "census-rejected:conservation-breach" },
-    ]);
-  });
-
-  it("fails closed when the mirrors claim more than the canonical deployment holds", async () => {
-    const generation = await run(LOCK_MINT_ROUTES, 200, {
-      evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: 120_000_000n }),
-    });
-
-    const packet = generation.censusById["wi-mirror"]!;
-    // No clamp to zero and no partial row: the reads cannot form a partition.
-    expect(packet.conservation).toMatchObject({ conserved: false, measuredSupplyUsd: 0 });
-    expect(packet.deployments).toEqual([]);
-    expect(packet.rejected.map(entry => entry.code)).toEqual([
-      "census-rejected:conservation-breach", "census-rejected:conservation-breach",
     ]);
   });
 });
