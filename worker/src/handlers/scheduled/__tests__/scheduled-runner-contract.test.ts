@@ -104,7 +104,7 @@ describe("scheduled runner contract", () => {
   it("keeps heavy inline DEX recovery within the existing connection peak", () => {
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find(
       (entry) => entry.job === "sync-dex-liquidity" && entry.scheduleKey === "halfHourlyChartsOffset",
-    )).toMatchObject({ maxConnections: 5 });
+    )).toMatchObject({ maxConnections: 4 });
   });
   it("owns only the three revised heavy plans and their expressions", () => {
     expect(Object.values(SCHEDULED_SLOT_PLANS).filter((plan) => plan.worker === "heavy")

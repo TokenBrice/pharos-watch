@@ -1,10 +1,10 @@
 /**
  * Hourly trigger (10 * * * *):
- *   sync-dex-liquidity-stage (5)
+ *   sync-dex-liquidity-stage (4)
  *
  * Dedicated DEX source and pool-construction lane. The exact scoring input is
  * stored as bounded, generation-fenced D1 chunks for the 16/46 consumer.
- * Connection budget: 5/6 peak (nested direct-API phase; still within the repo policy)
+ * Connection budget: 4/6 peak (Curve/subgraphs); serial price refresh peaks at 1.
  */
 import { stageDexLiquidityScoring } from "../../cron/dex-liquidity/orchestrator";
 import type { ScheduledRuntimeContext } from "./context";

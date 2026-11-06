@@ -5,7 +5,7 @@ describe("check-cron-connection-budget", () => {
   const reviewedReport = evaluateCronConnectionBudget();
   it("keeps the reviewed registry within its per-trigger budget", () => {
     expect(reviewedReport.failed).toBe(false);
-    expect(reviewedReport.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).toContain("halfHourlyOffset");
+    expect(reviewedReport.headroomFullTriggers.map((trigger) => trigger.scheduleKey)).not.toContain("halfHourlyOffset");
     for (const trigger of reviewedReport.triggerReports) {
       expect(trigger.totalConnections, trigger.scheduleKey).toBeLessThanOrEqual(reviewedReport.budget.maxPerTrigger);
     }
@@ -26,8 +26,8 @@ describe("check-cron-connection-budget", () => {
     ["depegResolverOffset", ["compute-depeg-resolver"], 0],
     ["v9PublicationOffset", ["compute-safety-score-v9"], 0],
     // The D1-only consumer's bounded inline stage-recovery re-run reuses the
-    // stage job's nested direct-API peak, so the serial chain peaks at 5.
-    ["halfHourlyChartsOffset", ["sync-dex-liquidity", "cron-sentinel", "prepare-safety-score-v9-input", "sync-stablecoin-charts"], 5],
+    // stage job's Curve/subgraph peak, so the serial chain peaks at 4.
+    ["halfHourlyChartsOffset", ["sync-dex-liquidity", "cron-sentinel", "prepare-safety-score-v9-input", "sync-stablecoin-charts"], 4],
   ] as const)("preserves reviewed %s serial topology", (scheduleKey, jobs, peak) => {
     const trigger = reviewedReport.triggerReports.find((entry) => entry.scheduleKey === scheduleKey);
     expect(trigger?.chains).toEqual([{ chainKey: "chain-1", jobs, peak }]);

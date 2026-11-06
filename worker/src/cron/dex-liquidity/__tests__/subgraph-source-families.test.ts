@@ -456,7 +456,7 @@ describe("subgraph source families", () => {
       respond: async (request) => {
         inFlight++;
         maxInFlight = Math.max(maxInFlight, inFlight);
-        if (inFlight === 5) waveStarted.resolve(undefined);
+        if (inFlight === 4) waveStarted.resolve(undefined);
         await releaseWave.promise;
         inFlight--;
         if (request.url.endsWith(UNIV3_SUBGRAPHS.celo)) {
@@ -509,12 +509,12 @@ describe("subgraph source families", () => {
     );
     const pending = fetchUniV3Data("graph-key", new Map(), chainAddressToId);
     void pending.catch((error: unknown) => waveStarted.reject(error));
-    // Failure-only watchdog: release blocked work even if the concurrency cap regresses below five.
+    // Failure-only watchdog: release blocked work even if the concurrency cap regresses below four.
     const deadlockGuard = setTimeout(() => waveStarted.reject(new Error("First wave did not start")), 1000);
     try {
       await waveStarted.promise;
-      expect(fetchMock).toHaveBeenCalledTimes(5);
-      expect(inFlight).toBe(5);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      expect(inFlight).toBe(4);
     } finally {
       clearTimeout(deadlockGuard);
       releaseWave.resolve(undefined);
@@ -523,7 +523,7 @@ describe("subgraph source families", () => {
     const result = await pending;
 
     expect(fetchMock).toHaveBeenCalledTimes(configuredChains.length);
-    expect(maxInFlight).toBe(5);
+    expect(maxInFlight).toBe(4);
     expect(fetchMock.getHistory().some(({ url }) => url.endsWith(UNIV3_SUBGRAPHS.bsc))).toBe(true);
     expect(result.uniV3ExecutionCandidates.size).toBe(configuredChains.length);
     const bscKey = buildUniV3ExecutionCandidateKey("bsc", [token0, token1], 3000);
@@ -608,7 +608,7 @@ describe("subgraph source families", () => {
       respond: async () => {
         inFlight++;
         maxInFlight = Math.max(maxInFlight, inFlight);
-        if (inFlight === 5) waveStarted.resolve(undefined);
+        if (inFlight === 4) waveStarted.resolve(undefined);
         await releaseWave.promise;
         inFlight--;
         return {
@@ -648,8 +648,8 @@ describe("subgraph source families", () => {
     const deadlockGuard = setTimeout(() => waveStarted.reject(new Error("First wave did not start")), 1000);
     try {
       await waveStarted.promise;
-      expect(fetchMock).toHaveBeenCalledTimes(5);
-      expect(inFlight).toBe(5);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      expect(inFlight).toBe(4);
     } finally {
       clearTimeout(deadlockGuard);
       releaseWave.resolve(undefined);
@@ -657,7 +657,7 @@ describe("subgraph source families", () => {
     }
     const result = await pending;
     expect(fetchMock).toHaveBeenCalledTimes(5);
-    expect(maxInFlight).toBe(5);
+    expect(maxInFlight).toBe(4);
     const key = buildUniswapV4ExecutionCandidateKey(
       "ethereum",
       [token0, token1],

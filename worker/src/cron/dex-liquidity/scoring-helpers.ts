@@ -319,6 +319,15 @@ export function filterRetainedPools(
   });
 }
 
+export function isP4OnlyPausedBalancerPool(pool: PoolEntry): boolean {
+  const gate = pool.extra?.executionCapabilityGate;
+  return gate?.family === "balancer-amm" && gate.reason === "paused-or-swap-disabled";
+}
+
+export function hasDexPricePrimaryReference(price: number | null | undefined): price is number {
+  return price != null && price > 0;
+}
+
 function isProtocolTvlFallbackSource(source: LiquidityMetrics["topPools"][number]["source"]): boolean {
   return source === "cg_onchain" ||
     source === "gecko_terminal" ||
@@ -650,6 +659,7 @@ export function projectRetainedPoolPrice(pool: LiquidityMetrics["topPools"][numb
 export function buildDexPriceObservationsFromRetainedPools(
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>,
   exactPriceEvidenceByStablecoin?: Map<string, DexPriceObs[]>,
+  logRejections = true,
 ): Map<string, DexPriceObs[]> {
   const observations = new Map<string, DexPriceObs[]>();
 
@@ -701,7 +711,7 @@ export function buildDexPriceObservationsFromRetainedPools(
       }
     }
 
-    if (rejectedPriceEvidenceCount > 0) {
+    if (logRejections && rejectedPriceEvidenceCount > 0) {
       logWorkerEvent({
         scope: "handler",
         level: "warn",
