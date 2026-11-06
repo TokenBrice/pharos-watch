@@ -61922,6 +61922,33 @@
       ]
     },
     {
+      "id": "xnd-20261106-a7a5-old-vector-capacity",
+      "assetId": "a7a5-old-vector",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:a7a5-old-vector:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:8173bb4496f37a72c21b3955",
+        "source:4f1dfce50a422f309f2ab857",
+        "source:b1590f1df2e94d5e3065dd52"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:5e9cbe2d4dee3aade074a5a6",
+        "surface:1c667b6e961b167efdc47729",
+        "surface:b2cfe898595d97615ef38523"
+      ],
+      "rationale": "The issuer documents A7A5 corporate sales after compliance and bank-account linkage and publishes \"\u0434\u043e 600 \u0442\u044b\u0441/\u043c\u0435\u0441 \u0432 \u043a\u0430\u0436\u0434\u0443\u044e \u0441\u0442\u043e\u0440\u043e\u043d\u0443\" for the PSB MIR retail card branch. That retail monthly ceiling (currency unspecified in the bullet) is not the corporate route's issuer-wide funded executable capacity; the searched surfaces publish no such funded amount or guaranteed aggregate throughput."
+    },
+    {
       "id": "xnd-20261106-acrdx-anemoy-apollo-capacity",
       "assetId": "acrdx-anemoy-apollo",
       "scope": {
@@ -62000,6 +62027,33 @@
         "surface:67000cba26dd9718f7eec616"
       ],
       "rationale": "The exact Aster asUSDF-to-USDF route is a request/claim withdrawal queue. The tutorial labels the two-hour processing estimate approximately. These reviewed issuer docs disclose no executable withdrawal amount, quantitative limit, funded facility size or committed completion bound; wrapper NAV and backing balances are not capacity."
+    },
+    {
+      "id": "xnd-20261106-audd-novatti-capacity",
+      "assetId": "audd-novatti",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:audd-novatti:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:9408b69e950bfe532f4be6d0",
+        "source:e347ab46bbb36862068f225c",
+        "source:df06a15afaa90ba303ef2b97"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:4bc39a476ee0a7c625859b32",
+        "surface:42899dc7ede1d8ccc79cb5d0",
+        "surface:5b705b214611d9aad406e1e3"
+      ],
+      "rationale": "AUDD terms document conversion to AUD and withdrawal, while the Company Pro AUD Withdrawal table publishes \"10,000,000\" without a reset period. This account-tier ceiling and acceptance-conditioned conversion timing do not quantify issuer-wide funded executable AUDD payout capacity."
     },
     {
       "id": "xnd-20261106-audf-forte-capacity",
@@ -62287,6 +62341,35 @@
       "rationale": "CADD terms establish direct Canadian-dollar issuer redemption after registration. The effort-based four-Business-Hour processing target and reserve stress-test scenarios do not disclose executable redemption capacity, a funded facility amount or a committed end-to-end SLA."
     },
     {
+      "id": "xnd-20261106-cash-phantom-capacity",
+      "assetId": "cash-phantom",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:cash-phantom:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:7fcd8b54d302a1c0651a472f",
+        "source:c3606723ad9855cae3bbe077",
+        "source:d89840bf5f2ecea561e0bc15",
+        "source:8dcc2d5bbaa189736ff72017"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:3fa7174cf6deb42eec4b9aff",
+        "surface:5d2e1df6790b5a8a2117d42c",
+        "surface:88f84cf1ac96d7edddb3e520",
+        "surface:baec80af71243b9042157315"
+      ],
+      "rationale": "CASH is redeemable to USD via Bridge, whose ACH documentation states \"the same day ACH transaction limit is $1 million\" and publishes bank/cutoff-dependent settlement timing. This payment-rail transaction ceiling and compliant-order processing commitment do not establish CASH-specific issuer-wide funded executable capacity; reserves are not an execution facility."
+    },
+    {
       "id": "xnd-20261106-cgo-comtech-capacity",
       "assetId": "cgo-comtech",
       "scope": {
@@ -62476,6 +62559,33 @@
       "rationale": "The exact EURe issuer rail burns e-money and pays EUR through SEPA after onboarding. White-paper rights, no per-customer limit and full backing disclose no executable aggregate amount, numerical payout limit, committed funded facility or completed-payment SLA. The business terms expressly disclaim third-party execution timing; no capacity is inferred from reserves."
     },
     {
+      "id": "xnd-20261106-eurq-quantoz-capacity",
+      "assetId": "eurq-quantoz",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:eurq-quantoz:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:1dd45b4be1ea7c32be1a6d83",
+        "source:b939e9e87a6b0822b45c63ca",
+        "source:e1888df5a30787e96c71d4d9"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:3d3c031ea5267c5d0c26a51b",
+        "surface:2a84fc68ae361f71789f39ac",
+        "surface:fb772e77c68a53592b73bb02"
+      ],
+      "rationale": "Quantoz documents direct EURQ redemption and states \"For amounts less than \u20ac1M: Requests will be processed within 1 business day\", with 3/5/20-business-day higher bands and separate notice requirements. These processing bands and the disclosed post-suspension \"2% per wallet and 5% of total reserves\" ceilings do not quantify an issuer-wide funded executable payout floor or guarantee final bank receipt."
+    },
+    {
       "id": "xnd-20261106-eurs-stasis-capacity",
       "assetId": "eurs-stasis",
       "scope": {
@@ -62499,6 +62609,35 @@
         "surface:7b51931c75aafe0501e8c311"
       ],
       "rationale": "The exact STASIS EURS issuer terms establish EUR 1 par redemption after customer registration. The reviewed terms and product page publish no executable amount/limit, funded redemption facility size or committed completion SLA. Unlimited-transaction marketing and reserve assets are not guaranteed payout capacity."
+    },
+    {
+      "id": "xnd-20261106-eursafo-spiko-capacity",
+      "assetId": "eursafo-spiko",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:eursafo-spiko:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:8474fad8b18585c081dd72a3",
+        "source:69ae806c2fc3763b67d2f33b",
+        "source:ba4d2df8113fe23290553f20",
+        "source:e06c4d893d3017f611c06d3d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:b8cf5bfa4d7d9023dd62974c",
+        "surface:a2bf59c431bf0e7c32cfa765",
+        "surface:a3f535818bd155b9eb6f1f48",
+        "surface:81eb80f3da6d7d0638f99a0b"
+      ],
+      "rationale": "Spiko documents eurSAFO bank withdrawal and states \"Instant transfers are supported for amounts up to \u20ac500,000 per day\". This investor/share-class allowance depends on remaining allowance and destination-bank support, while the governing terms qualify instant timing; no issuer-wide funded executable capacity is quantified."
     },
     {
       "id": "xnd-20261106-eusd-telcoin-capacity",
@@ -62526,6 +62665,35 @@
       "rationale": "Telcoin Digital Asset Bank eUSD identity and direct verified-account USD redemption are confirmed. Timing is expressly typical, may take longer, and is subject to discretionary delays. Neither reviewed issuer agreement publishes executable redemption amount/limit, funded facility size or committed completed-payment SLA. Full backing is not executable capacity."
     },
     {
+      "id": "xnd-20261106-eutbl-spiko-capacity",
+      "assetId": "eutbl-spiko",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:eutbl-spiko:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:8474fad8b18585c081dd72a3",
+        "source:69ae806c2fc3763b67d2f33b",
+        "source:ba4d2df8113fe23290553f20",
+        "source:e06c4d893d3017f611c06d3d"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:b8cf5bfa4d7d9023dd62974c",
+        "surface:a2bf59c431bf0e7c32cfa765",
+        "surface:a3f535818bd155b9eb6f1f48",
+        "surface:81eb80f3da6d7d0638f99a0b"
+      ],
+      "rationale": "Spiko documents EUTBL bank withdrawal and states \"Instant transfers are supported for amounts up to \u20ac500,000 per day\". This investor/share-class allowance depends on remaining allowance and destination-bank support, while the governing terms qualify instant timing; no issuer-wide funded executable capacity is quantified."
+    },
+    {
       "id": "xnd-20261106-fdusd-first-digital-capacity",
       "assetId": "fdusd-first-digital",
       "scope": {
@@ -62551,6 +62719,31 @@
         "surface:f8c015bf67fd30c4b31ba2ba"
       ],
       "rationale": "FDUSD issued by FD121 (BVI) Limited is documented as redeemable through an eligible account for USD at par. Current terms allow cancellation, suspension, deferral and unspecified individual/aggregate limits, without an executable amount, funded payout facility size or committed completion SLA. Reserve balances and general 24/7 marketing are not redemption capacity."
+    },
+    {
+      "id": "xnd-20261106-fidd-fidelity-capacity",
+      "assetId": "fidd-fidelity",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:fidd-fidelity:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:b365694ac79ee110b1e5dfbf",
+        "source:d445247925847efa334d772e"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:af87affc68c9bade4cf93c8c",
+        "surface:5590316971a6f3bead3c99bc"
+      ],
+      "rationale": "FIDD issuer terms establish eligible-account dollar redemption, while Fidelity Crypto publishes \"$5,000,000\" as the maximum FIDD trade-order size subject to market/network conditions. That broker order ceiling is not issuer-wide funded executable redemption capacity; the issuer's generally-instant/two-business-day timing expressly permits additional time and quantifies no funded buffer."
     },
     {
       "id": "xnd-20261106-frnt-wyoming-capacity",
@@ -62658,6 +62851,37 @@
       "rationale": "The GGBR dealer route documents physical redemption and a 10,000-GGBR minimum, but no executable upper amount, funded dealer facility or committed final-delivery SLA. The published processing timing and in-situ reserve quantity do not establish capacity. The minimum differs from the repository's older 1,000-GGBR observation; no capacity is inferred from either."
     },
     {
+      "id": "xnd-20261106-gldon-ondo-capacity",
+      "assetId": "gldon-ondo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:gldon-ondo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:ad14aa025a914344edd183f5",
+        "source:07b06761db67b6d7d6083cfb",
+        "source:53da33f87519f253c67c99e0",
+        "source:f314ab2ec2cc970d08df07c7",
+        "source:2807f42f805efa9224410938"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:acfed728e72f92ad5131c878",
+        "surface:15c03005eb0957062ab94fe6",
+        "surface:2f01c67a38eb1f4afd535168",
+        "surface:95d008ed72fcf7cb3101fedb",
+        "surface:bba074c619c7f6be80bef336"
+      ],
+      "rationale": "Ondo publishes GLDon regular-session \"maxActiveNotionalValue\":\"4000000\" and defines session limits as \"per-user, not global\", alongside a documented redemption right and liquidity-conditioned USDC conversion. The theoretical user/session ceiling is not issuer-wide funded executable payout capacity; no authenticated remaining global/sell-side headroom or funded token-specific buffer was observed."
+    },
+    {
       "id": "xnd-20261106-gusd-gate-capacity",
       "assetId": "gusd-gate",
       "scope": {
@@ -62686,6 +62910,37 @@
       "rationale": "The Gate GUSD rail documents account-based par conversion. Public timing statements are informational and differ by product presentation; no quantitative fast-channel capacity, funded redemption facility or binding amount-backed completion SLA is supplied. Minting caps, account fee allowances and reserve marketing are not redemption capacity."
     },
     {
+      "id": "xnd-20261106-iauon-ondo-capacity",
+      "assetId": "iauon-ondo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:iauon-ondo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:e696ea305cb0cfea261d19dd",
+        "source:07b06761db67b6d7d6083cfb",
+        "source:53da33f87519f253c67c99e0",
+        "source:f314ab2ec2cc970d08df07c7",
+        "source:2807f42f805efa9224410938"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:acfed728e72f92ad5131c878",
+        "surface:15c03005eb0957062ab94fe6",
+        "surface:2f01c67a38eb1f4afd535168",
+        "surface:95d008ed72fcf7cb3101fedb",
+        "surface:bba074c619c7f6be80bef336"
+      ],
+      "rationale": "Ondo publishes IAUon regular-session \"maxActiveNotionalValue\":\"5000000\" and defines session limits as \"per-user, not global\", alongside a documented redemption right and liquidity-conditioned USDC conversion. The theoretical user/session ceiling is not issuer-wide funded executable payout capacity; no authenticated remaining global/sell-side headroom or funded token-specific buffer was observed."
+    },
+    {
       "id": "xnd-20261106-idrt-rupiah-token-capacity",
       "assetId": "idrt-rupiah-token",
       "scope": {
@@ -62711,6 +62966,33 @@
         "surface:849ff1b80f80a7ea7aafe66d"
       ],
       "rationale": "The IDRT issuer route documents bank payout and a withdrawal fee. Its advertised timing depends on the queue; no executable amount, processing ceiling, funded facility size or committed completion SLA is stated. Circulating supply and backing do not establish payout capacity."
+    },
+    {
+      "id": "xnd-20261106-idrx-idrx-capacity",
+      "assetId": "idrx-idrx",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:idrx-idrx:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:b96cd0882287e0967683e558",
+        "source:b6026c7b09e66858d3bbab63",
+        "source:d0d1b71997922685b02fec58"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:570e696c2132c0f1da6c1abb",
+        "surface:a6de7b4d3bab446c8edb4b87",
+        "surface:4624fd76534730486dd799d9"
+      ],
+      "rationale": "IDRX terms publish \"Maximum transaction: IDR 1,000,000,000 per transaction\", while the current guide documents reviewed bank payout and release within 24 hours of confirmed burn. This per-transaction limit and processing/release timing do not establish an issuer-wide funded executable payout amount; requests above the limit require support."
     },
     {
       "id": "xnd-20261106-jpysc-sbi-startale-capacity",
@@ -63239,6 +63521,66 @@
       "rationale": "Trevee documents the exact scUSD withdrawal queue and scAsset redemption, with inconsistent three-day and five-day cooldown statements. Neither cooldown promises maximum time to completed payout or discloses a funded amount/queue throughput. Strategy TVL and portfolio deposit limits are not redemption capacity."
     },
     {
+      "id": "xnd-20261106-slvon-ondo-capacity",
+      "assetId": "slvon-ondo",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:slvon-ondo:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:61c6119784cf302fe39a1f55",
+        "source:07b06761db67b6d7d6083cfb",
+        "source:53da33f87519f253c67c99e0",
+        "source:f314ab2ec2cc970d08df07c7",
+        "source:2807f42f805efa9224410938"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:acfed728e72f92ad5131c878",
+        "surface:15c03005eb0957062ab94fe6",
+        "surface:2f01c67a38eb1f4afd535168",
+        "surface:95d008ed72fcf7cb3101fedb",
+        "surface:bba074c619c7f6be80bef336"
+      ],
+      "rationale": "Ondo publishes SLVon regular-session \"maxActiveNotionalValue\":\"4000000\" and defines session limits as \"per-user, not global\", alongside a documented redemption right and liquidity-conditioned USDC conversion. The theoretical user/session ceiling is not issuer-wide funded executable payout capacity; no authenticated remaining global/sell-side headroom or funded token-specific buffer was observed."
+    },
+    {
+      "id": "xnd-20261106-sofid-sofi-capacity",
+      "assetId": "sofid-sofi",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:sofid-sofi:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:9400f7ae22981b5ba68c2caa",
+        "source:7223a3eae0eb16034f964fa2",
+        "source:1f37c45d962a0cfa84f2edff"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:80db88ca3b574e392d733eed",
+        "surface:93c84a167713d644a1d866a0",
+        "surface:4daa8a8570788a398fe4a0b3",
+        "surface:aeea89519756efbccdb364e3",
+        "surface:2efe132c53f25f54fd78a50f"
+      ],
+      "rationale": "The current BitGo guide includes SoFi USD (SOFID) among available redeemable assets, and the Mint FAQ states \"Maximum is $100M per transaction\". This qualified-client platform transaction ceiling, approval workflow and approximate timing do not establish a SoFiUSD-specific issuer-wide funded executable payout facility."
+    },
+    {
       "id": "xnd-20261106-stac-securitize-capacity",
       "assetId": "stac-securitize",
       "scope": {
@@ -63263,6 +63605,35 @@
         "surface:610f00319827aee95bfa88ee"
       ],
       "rationale": "Securitize identifies STAC and publishes daily redemptions plus GP-discretionary liquidity-pool access. Liquidation timing is expressly not guaranteed. The reviewed product and issuer announcement disclose no executable amount, pool funding commitment or completion SLA; AUM and the planned anchor allocation are not capacity."
+    },
+    {
+      "id": "xnd-20261106-stbt-matrixdock-capacity",
+      "assetId": "stbt-matrixdock",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:stbt-matrixdock:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:f2395455d349948ceaa62a49",
+        "source:0ed3abf82cddbc6e6ec57120",
+        "source:3758eaea50203c4d16bdc03b"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:8fce02d781559a1cd8da4a86",
+        "surface:253362bf88aad34eedc91055",
+        "surface:f6da0105e7927fc7c41dd35d",
+        "surface:695eccd99de35b52e72aa2ae",
+        "surface:d976d15826d2ae568c188efd"
+      ],
+      "rationale": "STBT holder terms establish restricted redemption, and Matrixdock publishes \"T+0 days redemption available for daily global limit of $1M\" alongside ordinary T+2 processing. This global service ceiling is not an available funded buffer, guaranteed remaining daily allowance or issuer-wide executable lower bound."
     },
     {
       "id": "xnd-20261106-susd1plus-lorenzo-capacity",
@@ -63579,6 +63950,58 @@
       "rationale": "MegaUSD terms establish the exact direct USDm redemption to USDC or other supported assets for whitelisted Mint Users. Limits may be imposed, and service availability and timeliness are expressly unguaranteed. No numeric executable allowance, funded payout facility or committed completion bound is published in the re-opened agreement and terms; backing is not capacity."
     },
     {
+      "id": "xnd-20261106-usdm-moneta-capacity",
+      "assetId": "usdm-moneta",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:usdm-moneta:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:187d96dbd75a9d38f3f45bcd",
+        "source:cf2a18924875ca7d37daad18"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:19df9ccd77fac9a1c6e3fc1a",
+        "surface:580504dbead17fb74124c720"
+      ],
+      "rationale": "Moneta documents USDM-to-USD redemption for approved institutional accounts and states \"The default limit is 10,000 USD per day\". This customer mint/burn quota and contact-based higher limits do not quantify issuer-wide funded executable capacity, and the governing terms disclaim processing-time warranties."
+    },
+    {
+      "id": "xnd-20261106-usdo-openeden-capacity",
+      "assetId": "usdo-openeden",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:usdo-openeden:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:117f3b10baed23ff67419e0a",
+        "source:d843f9fb961c3ebb893966e2",
+        "source:ae18d4f6ecb8e3e93051b990"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:16ede89a5ca41a32b2322a91",
+        "surface:5fae7133a9a69a2ddbd96c0c",
+        "surface:ab9ae6e42df993feccfab74d"
+      ],
+      "rationale": "USDO terms commit to processing and transmission \"within T+2 U.S. business days\" after acceptance, subject to the agreement, and current documentation identifies USDC as the primary redemption output. This conditional processing/transmission timeline is not a quantitative issuer-wide funded executable amount or a submission-to-final-receipt guarantee; reserves do not supply that missing capacity datum."
+    },
+    {
       "id": "xnd-20261106-usdpt-western-union-capacity",
       "assetId": "usdpt-western-union",
       "scope": {
@@ -63603,6 +64026,33 @@
         "surface:b8f4b8b0395aa7541e37a76d"
       ],
       "rationale": "Western Union identifies Anchorage as the USDPT issuer and the direct USD par-redemption right; Anchorage terms make redemption client-only and subject to discretionary limits and liquidity-related delay. These surfaces publish no executable amount, funded facility size or completed-payout SLA. Western Union retail cash-out marketing and reserves are not issuer redemption capacity."
+    },
+    {
+      "id": "xnd-20261106-usdq-quantoz-capacity",
+      "assetId": "usdq-quantoz",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:usdq-quantoz:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:1dd45b4be1ea7c32be1a6d83",
+        "source:b939e9e87a6b0822b45c63ca",
+        "source:150a72c2c78b3663286f13d6"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:3d3c031ea5267c5d0c26a51b",
+        "surface:2a84fc68ae361f71789f39ac",
+        "surface:0542cebcfc88d3426c1bbbb9"
+      ],
+      "rationale": "Quantoz documents direct USDQ redemption and states \"For amounts less than \u20ac1M: Requests will be processed within 1 business day\", with 3/5/20-business-day higher bands and separate notice requirements. These processing bands and the disclosed post-suspension \"2% per wallet and 5% of total reserves\" ceilings do not quantify an issuer-wide funded executable payout floor or guarantee final bank receipt."
     },
     {
       "id": "xnd-20261106-usdsui-sui-capacity",
@@ -63939,6 +64389,56 @@
         "surface:3a51a2983b2afe9cc39b8e84"
       ],
       "rationale": "The issuer and product match MoonPay-issued XO Cash on Solana. MoonPay documents conditional USD redemption and reasonable efforts under an unspecified schedule. No executable redemption amount/limit, funded facility size or committed completion SLA is published on these surfaces. Reserve backing and separate in-app withdrawal mechanisms are not issuer-route capacity."
+    },
+    {
+      "id": "xnd-20261106-xsgd-straitsx-capacity",
+      "assetId": "xsgd-straitsx",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:xsgd-straitsx:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:d4b9fded8b43bf35519e31e1",
+        "source:de3b60b70903923ee46c06f4"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:66729893b6bd38da62c9f10b",
+        "surface:f6aa7b81a362c5477e5b68d1"
+      ],
+      "rationale": "StraitsX documents XSGD-to-SGD bank withdrawal and publishes \"200,000 (via FAST)\" per transaction, with personal \"500,000 per day\" and business \"1,000,000 per day\" ceilings. These platform account/rail limits do not quantify issuer-wide funded executable XSGD capacity or remaining account allowance, and are not the separate direct issuer channel's capacity."
+    },
+    {
+      "id": "xnd-20261106-xusd-straitsx-capacity",
+      "assetId": "xusd-straitsx",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:xusd-straitsx:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:38:42Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-xnd2 (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:5a77d43fb5d13d510427b239",
+        "source:abfaf4a79078cc4a14bfc2f6"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:a647b9c2f763bc92e2baade1",
+        "surface:c0c7ca822bbad6c2bf5e7c5c"
+      ],
+      "rationale": "StraitsX documents XUSD-to-USD platform bank withdrawal and publishes \"200,000\" per transaction and \"Maximum 500,000 USD per day\" for personal accounts. These account-scoped ceilings do not establish issuer-wide funded executable XUSD capacity, current remaining allowance or the separate direct issuer channel's capacity."
     },
     {
       "id": "xnd-20261106-ylds-figure-capacity",
@@ -95680,6 +96180,501 @@
         "excerpt": "BlockTower provides no guarantee in relation to the Redemption processing period.",
         "assertion": "The agreement declines a processing-period guarantee; Schedule 1 gives a R10,000 minimum instruction and R20 minimum fee, not maximum capacity."
       }
+    },
+    {
+      "id": "source:8173bb4496f37a72c21b3955",
+      "value": {
+        "url": "https://docs.a7a5.tech/znakomstvo-s-a7a5/ekosistema.md",
+        "observedAt": "2026-11-06T19:27:18Z",
+        "datumAsOf": null,
+        "location": "Ecosystem / official fiat site",
+        "excerpt": "\u043f\u043e\u043a\u0443\u043f\u043a\u0430 \u0438 \u043f\u0440\u043e\u0434\u0430\u0436\u0430 \u043f\u043e \u043a\u0430\u0440\u0442\u0430\u043c \u041c\u0418\u0420 \u041f\u0421\u0411 \u0434\u043e 600 \u0442\u044b\u0441/\u043c\u0435\u0441 \u0432 \u043a\u0430\u0436\u0434\u0443\u044e \u0441\u0442\u043e\u0440\u043e\u043d\u0443",
+        "assertion": "The PSB MIR retail card branch publishes a 600-thousand monthly ceiling in each direction without labeling the currency in this bullet."
+      }
+    },
+    {
+      "id": "source:4f1dfce50a422f309f2ab857",
+      "value": {
+        "url": "https://docs.a7a5.tech/kak-prodat-a7a5/yuridicheskim-licam.md",
+        "observedAt": "2026-11-06T19:27:18Z",
+        "datumAsOf": null,
+        "location": "Sale / legal entities",
+        "excerpt": "\u042e\u0440\u0438\u0434\u0438\u0447\u0435\u0441\u043a\u0438\u0435 \u043b\u0438\u0446\u0430-**\u043d\u0435\u0440\u0435\u0437\u0438\u0434\u0435\u043d\u0442\u044b** \u0420\u0424 \u043c\u043e\u0433\u0443\u0442 \u043f\u0440\u043e\u0434\u0430\u0442\u044c \u0442\u043e\u043a\u0435\u043d \u04107\u04105 \u0432 \u0441\u043e\u043e\u0442\u0432\u0435\u0442\u0441\u0442\u0432\u0443\u044e\u0449\u0435\u0439 \u0432\u043a\u043b\u0430\u0434\u043a\u0435 \u0432 \u043b\u0438\u0447\u043d\u043e\u043c \u043a\u0430\u0431\u0438\u043d\u0435\u0442\u0435 \u043d\u0430 \u043d\u0430\u0448\u0435\u043c \u0441\u0430\u0439\u0442\u0435.",
+        "assertion": "Non-resident companies can sell A7A5 through the issuer account after company verification and bank-account linkage; no funded corporate-route capacity is quantified."
+      }
+    },
+    {
+      "id": "source:b1590f1df2e94d5e3065dd52",
+      "value": {
+        "url": "https://docs.a7a5.tech/znakomstvo-s-a7a5/adresa-smart-kontraktov.md",
+        "observedAt": "2026-11-06T19:27:18Z",
+        "datumAsOf": null,
+        "location": "Smart-contract addresses / Ethereum A7A5",
+        "excerpt": "0x6fA0BE17e4beA2fCfA22ef89BF8ac9aab0AB0fc9",
+        "assertion": "The issuer separately identifies the tracked Ethereum A7A5 deployment and wA7A5."
+      }
+    },
+    {
+      "id": "source:9408b69e950bfe532f4be6d0",
+      "value": {
+        "url": "https://audddigital.tawk.help/article/what-are-my-account-limits",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": null,
+        "location": "Transactions in AUD / Company Pro / AUD Withdrawal",
+        "excerpt": "Pro $1,000,000 10,000,000",
+        "assertion": "The AUD withdrawal table publishes 10,000,000 for Company Pro, without a reset period or funded aggregate payout amount."
+      }
+    },
+    {
+      "id": "source:e347ab46bbb36862068f225c",
+      "value": {
+        "url": "https://www.audd.digital/audd-digital-terms-and-conditions/",
+        "observedAt": "2026-11-06T19:27:21Z",
+        "datumAsOf": "2026-06-01",
+        "location": "AUDD Digital terms / approved services",
+        "excerpt": "convert AUDD into AUD, withdraw AUD following conversion of AUDD into AUD",
+        "assertion": "Approved AUDD Digital services include AUDD conversion and AUD withdrawal; account and service approval remain required."
+      }
+    },
+    {
+      "id": "source:df06a15afaa90ba303ef2b97",
+      "value": {
+        "url": "https://www.audd.digital/audd-mint-terms-conditions/",
+        "observedAt": "2026-11-06T19:27:21Z",
+        "datumAsOf": "2026-06-01",
+        "location": "AUDD Mint terms / AUDD Conversion",
+        "excerpt": "immediately upon acceptance by AUDC of the request to enter into an AUDD Conversion.",
+        "assertion": "The Mint conversion timing is acceptance-conditioned; it does not quantify an issuer-wide funded AUD withdrawal buffer."
+      }
+    },
+    {
+      "id": "source:7fcd8b54d302a1c0651a472f",
+      "value": {
+        "url": "https://apidocs.bridge.xyz/platform/orchestration/more/cutoffs",
+        "observedAt": "2026-11-06T19:27:18Z",
+        "datumAsOf": "2026-11-06",
+        "location": "Destination rails / USD Same Day ACH",
+        "excerpt": "Please note the same day ACH transaction limit is $1 million and availability depends on the recipient bank.",
+        "assertion": "Bridge publishes a per-transaction ACH ceiling and recipient-bank condition, alongside cutoff-based settlement statements; it does not quantify CASH-specific funded aggregate capacity. The page's own dateModified is 2026-11-06T02:53:09.131Z."
+      }
+    },
+    {
+      "id": "source:c3606723ad9855cae3bbe077",
+      "value": {
+        "url": "https://help.phantom.com/articles/cash-general-faq-44800866087443",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": null,
+        "location": "Cash FAQ / Bridge partner",
+        "excerpt": "Bridge is Phantom's payments partner and powers bank deposits and withdrawals.",
+        "assertion": "Phantom identifies Bridge as the partner for the CASH bank deposit and withdrawal workflow."
+      }
+    },
+    {
+      "id": "source:d89840bf5f2ecea561e0bc15",
+      "value": {
+        "url": "https://www.usecash.xyz/",
+        "observedAt": "2026-11-06T19:27:24Z",
+        "datumAsOf": null,
+        "location": "CASH / fully backed and regulated",
+        "excerpt": "Every CASH is redeemable \u2460:\u2460 for USD via Bridge",
+        "assertion": "The CASH issuer-linked surface identifies the CASH-to-USD Bridge redemption route; reserves are backing, not a quantified execution facility."
+      }
+    },
+    {
+      "id": "source:8dcc2d5bbaa189736ff72017",
+      "value": {
+        "url": "https://withbridge.com/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "observedAt": "2026-11-06T19:31:16Z",
+        "datumAsOf": null,
+        "location": "Stablecoin terms / section 5.11",
+        "excerpt": "the right to redeem Bridge Stablecoins for an equivalent amount of U.S. dollars from Bridge so long as the holder of such Bridge Stablecoins is eligible to, and does, become a User.",
+        "assertion": "The governing issuer terms establish an eligibility-conditioned redemption right; section 3 retains compliant-order processing timing and external-delay qualifications."
+      }
+    },
+    {
+      "id": "source:1dd45b4be1ea7c32be1a6d83",
+      "value": {
+        "url": "https://www.quantoz.com/documents/terms-of-service-q-s-30-4-2026.pdf",
+        "observedAt": "2026-11-06T19:27:50Z",
+        "datumAsOf": "2026-04-30",
+        "location": "Terms / 27.2 processing timelines",
+        "excerpt": "(a) For amounts less than \u20ac1M: Requests will be processed within 1 business day.",
+        "assertion": "The terms date themselves 30-4-2026 and publish processing bands of 1/3/5/20 business days below EUR1M / EUR1M\u201310M / EUR10M\u2013100M / above EUR100M, plus notice requirements; these are not funded aggregate capacity."
+      }
+    },
+    {
+      "id": "source:b939e9e87a6b0822b45c63ca",
+      "value": {
+        "url": "https://www.quantoz.com/token-redemption/",
+        "observedAt": "2026-11-06T19:27:48Z",
+        "datumAsOf": null,
+        "location": "Direct redemption / claim to payout",
+        "excerpt": "Redeem directly with Quantoz Payments at face value in the token's currency, with payout to a verified bank account in your name.",
+        "assertion": "Quantoz documents a direct holder redemption route after token receipt and compliance verification, distinct from venue sales."
+      }
+    },
+    {
+      "id": "source:e1888df5a30787e96c71d4d9",
+      "value": {
+        "url": "https://www.quantoz.com/documents/eurq-wp-1.4-30-4-2026.pdf",
+        "observedAt": "2026-11-06T19:27:50Z",
+        "datumAsOf": "2026-04-30",
+        "location": "EURQ whitepaper / phased restoration",
+        "excerpt": "Redemptions capped at 2% per wallet and 5% of total reserves;",
+        "assertion": "The EURQ whitepaper amended 30 April 2026 discloses post-suspension ceilings, not a guaranteed funded payout floor."
+      }
+    },
+    {
+      "id": "source:8474fad8b18585c081dd72a3",
+      "value": {
+        "url": "https://docs.spiko.io/documentation/account_management/deposits_withdrawals/",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": null,
+        "location": "Instant withdrawals / EUR only",
+        "excerpt": "Instant transfers are supported for amounts up to \u20ac500,000 per day .",
+        "assertion": "Spiko publishes the EUR instant-withdrawal ceiling and sends excess through standard withdrawal; this is not fund-wide funded capacity."
+      }
+    },
+    {
+      "id": "source:69ae806c2fc3763b67d2f33b",
+      "value": {
+        "url": "https://docs.spiko.io/direct/recipes/withdrawal/",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": null,
+        "location": "Create withdrawal / instant withdrawals",
+        "excerpt": "Instant withdrawals are only available from the EUTBL and eurSAFO share classes at the moment.",
+        "assertion": "Spiko identifies the exact EUTBL and eurSAFO share classes eligible for instant bank withdrawals."
+      }
+    },
+    {
+      "id": "source:ba4d2df8113fe23290553f20",
+      "value": {
+        "url": "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility/",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": null,
+        "location": "Instant eligibility / availableAmount",
+        "excerpt": "the investor can instantly withdraw today",
+        "assertion": "The eligibility endpoint describes remaining EUR allowance for an investor and share class and destination-bank support, rather than a fund-wide balance."
+      }
+    },
+    {
+      "id": "source:e06c4d893d3017f611c06d3d",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf",
+        "observedAt": "2026-11-06T19:31:16Z",
+        "datumAsOf": "2026-06-30",
+        "location": "Terms 2.2 / article 12 instant withdrawal",
+        "excerpt": "Spiko Finance does not guarantee the instant nature of the withdrawal",
+        "assertion": "The terms updated 30 June 2026 govern the service and qualify instant withdrawal timing; no funded aggregate amount is quantified in the reviewed service clause."
+      }
+    },
+    {
+      "id": "source:b365694ac79ee110b1e5dfbf",
+      "value": {
+        "url": "https://www.fidelity.com/crypto/help/trading/trading-basics",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": null,
+        "location": "Maximum crypto trade order size",
+        "excerpt": "$5,000,000 for bitcoin (BTC), ethereum (ETH), and Fidelity Digital Dollar \u2120 (FIDD)",
+        "assertion": "Fidelity Crypto accounts and IRAs publish a FIDD order ceiling subject to market and network conditions; this is an order limit, not issuer-wide funded redemption inventory."
+      }
+    },
+    {
+      "id": "source:d445247925847efa334d772e",
+      "value": {
+        "url": "https://www.fidelitydigitalassets.com/fidd-terms",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": "2026-04-13",
+        "location": "FIDD terms / redemption",
+        "excerpt": "In some cases, redemption may require additional time.",
+        "assertion": "FIDD issuer terms updated 13 April 2026 establish dollar redemption for eligible Crypto Accounts and describe generally instantaneous/no-later-than-two-business-day redemption with an express additional-time qualification; no funded aggregate amount is quantified."
+      }
+    },
+    {
+      "id": "source:ad14aa025a914344edd183f5",
+      "value": {
+        "url": "https://status.ondo.finance/api/limits/session",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": "2026-11-06",
+        "location": "Session limits / GLDon / regular",
+        "excerpt": "{\"symbol\":\"GLDon\",\"premarket\":{\"tradable\":true,\"maxAttestationCount\":\"500\",\"maxActiveNotionalValue\":\"1000000\"},\"regular\":{\"tradable\":true,\"maxAttestationCount\":\"500\",\"maxActiveNotionalValue\":\"4000000\"},\"postmarket\":{\"tradable\":true,\"maxAttestationCount\":\"500\",\"maxActiveNotionalValue\":\"1000000\"},\"overnight\":{\"tradable\":true,\"maxAttestationCount\":\"500\",\"maxActiveNotionalValue\":\"3000000\"},\"offhours\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"1000000\"}}",
+        "assertion": "GLDon regular-session per-user maxActiveNotionalValue is 4000000, maxAttestationCount is 500; source timestamp 1793993183222 (2026-11-06T19:26:23.222Z). This is a static ceiling, not funded global remaining capacity."
+      }
+    },
+    {
+      "id": "source:07b06761db67b6d7d6083cfb",
+      "value": {
+        "url": "https://docs.ondo.finance/api-reference/limits/get-session-limits.md",
+        "observedAt": "2026-11-06T19:27:20Z",
+        "datumAsOf": null,
+        "location": "Get session limits / definition",
+        "excerpt": "These limits are per-user, not global.",
+        "assertion": "Ondo defines session ceilings as theoretical static per-user limits, separately from dynamic real-time limits."
+      }
+    },
+    {
+      "id": "source:53da33f87519f253c67c99e0",
+      "value": {
+        "url": "https://docs.ondo.finance/api-reference/limits/get-trading-limits.md",
+        "observedAt": "2026-11-06T19:27:20Z",
+        "datumAsOf": null,
+        "location": "Get trading limits / definition",
+        "excerpt": "Provides real-time trading limits based on global, user, and asset-specific exposure limits.",
+        "assertion": "The authenticated trading-limits service is distinct from the public static session limits; no authenticated remaining headroom was observed."
+      }
+    },
+    {
+      "id": "source:f314ab2ec2cc970d08df07c7",
+      "value": {
+        "url": "https://docs.ondo.finance/ondo-stocks/investing-and-redeeming.md",
+        "observedAt": "2026-11-06T19:28:34Z",
+        "datumAsOf": null,
+        "location": "Redeeming / payout currencies",
+        "excerpt": "The redemption to USDon will always be instant; redemptions to USDC will be instant provided there is enough liquidity in the stablecoin swapper.",
+        "assertion": "Ondo documents redemption to USDon and liquidity-conditioned USDC conversion, not a published token-specific funded USDC facility size."
+      }
+    },
+    {
+      "id": "source:2807f42f805efa9224410938",
+      "value": {
+        "url": "https://www.mfsa.mt/wp-content/uploads/2025/12/Ondo-Global-Markets-BVI-Limited-Base-Prospectus-Document-dated-11-November-2025.pdf",
+        "observedAt": "2026-11-06T19:31:17Z",
+        "datumAsOf": "2025-11-11",
+        "location": "Base prospectus / redemption terms",
+        "excerpt": "Such Redemption Order or Purchaser Put Option can be placed by the Purchaser at any time",
+        "assertion": "The issuer prospectus dated 11 November 2025 provides purchaser redemption subject to permitted suspensions/postponements; a documentary right is not a current funded buffer."
+      }
+    },
+    {
+      "id": "source:e696ea305cb0cfea261d19dd",
+      "value": {
+        "url": "https://status.ondo.finance/api/limits/session",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": "2026-11-06",
+        "location": "Session limits / IAUon / regular",
+        "excerpt": "{\"symbol\":\"IAUon\",\"premarket\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"2000000\"},\"regular\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"5000000\"},\"postmarket\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"2000000\"},\"overnight\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"3000000\"},\"offhours\":{\"tradable\":false,\"maxAttestationCount\":\"0\",\"maxActiveNotionalValue\":\"0\"}}",
+        "assertion": "IAUon regular-session per-user maxActiveNotionalValue is 5000000, maxAttestationCount is 1500; source timestamp 1793993183222 (2026-11-06T19:26:23.222Z). This is a static ceiling, not funded global remaining capacity."
+      }
+    },
+    {
+      "id": "source:b96cd0882287e0967683e558",
+      "value": {
+        "url": "https://app.idrx.co/assets/docs/idrx-terms-n-condition-en.pdf",
+        "observedAt": "2026-11-06T19:31:55Z",
+        "datumAsOf": "2026-05-04",
+        "location": "Version 3 / H(1)(b), PDF page 25",
+        "excerpt": "Maximum transaction: IDR 1,000,000,000 per transaction.",
+        "assertion": "The issuer terms effective 4 May 2026 cap ordinary IDRX redemption per transaction and refer larger requests to support; they also retain acceptance-conditioned execution timing. Direct HTTP was blocked; the primary PDF clause was read via the web reader."
+      }
+    },
+    {
+      "id": "source:b6026c7b09e66858d3bbab63",
+      "value": {
+        "url": "https://docs.idrx.co/services/redeem-idr.md",
+        "observedAt": "2026-11-06T19:28:33Z",
+        "datumAsOf": null,
+        "location": "Redeem IDR / review and payout release",
+        "excerpt": "Payouts are released within 24 hours of the burn being confirmed.",
+        "assertion": "The current issuer guide documents reviewed IDRX-to-IDR bank payouts and release timing, without a funded aggregate amount."
+      }
+    },
+    {
+      "id": "source:d0d1b71997922685b02fec58",
+      "value": {
+        "url": "https://docs.idrx.co/api/transaction-api/post-api-transaction-redeem-request.md",
+        "observedAt": "2026-11-06T19:28:33Z",
+        "datumAsOf": null,
+        "location": "Redeem API / large IDRX requests",
+        "excerpt": "For large IDRX amounts, send your request to <support@idrx.co> to be processed.",
+        "assertion": "The API retains support processing for large IDRX requests; other-stablecoin limits are not IDRX capacity."
+      }
+    },
+    {
+      "id": "source:61c6119784cf302fe39a1f55",
+      "value": {
+        "url": "https://status.ondo.finance/api/limits/session",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": "2026-11-06",
+        "location": "Session limits / SLVon / regular",
+        "excerpt": "{\"symbol\":\"SLVon\",\"premarket\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"1000000\"},\"regular\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"4000000\"},\"postmarket\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"1000000\"},\"overnight\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"4000000\"},\"offhours\":{\"tradable\":true,\"maxAttestationCount\":\"1500\",\"maxActiveNotionalValue\":\"1000000\"}}",
+        "assertion": "SLVon regular-session per-user maxActiveNotionalValue is 4000000, maxAttestationCount is 1500; source timestamp 1793993183222 (2026-11-06T19:26:23.222Z). This is a static ceiling, not funded global remaining capacity."
+      }
+    },
+    {
+      "id": "source:9400f7ae22981b5ba68c2caa",
+      "value": {
+        "url": "https://support.bitgo.com/support/solutions/articles/158000440951-intro-to-bitgo-mint",
+        "observedAt": "2026-11-06T19:27:19Z",
+        "datumAsOf": null,
+        "location": "Mint FAQ / transaction limits",
+        "excerpt": "Minimum mint and redeem is $100 per transaction. Maximum is $100M per transaction.",
+        "assertion": "BitGo publishes per-transaction platform bounds, account/asset qualification and approximate redemption timing; no SoFiUSD funded aggregate facility size is stated."
+      }
+    },
+    {
+      "id": "source:7223a3eae0eb16034f964fa2",
+      "value": {
+        "url": "https://support.bitgo.com/support/solutions/articles/158000472160-mint-and-redeem-user-guide",
+        "observedAt": "2026-11-06T19:28:34Z",
+        "datumAsOf": null,
+        "location": "User guide / assets available today",
+        "excerpt": "Some assets available today include USD1, SoFi USD (SOFID), and USDC.",
+        "assertion": "The current BitGo guide names SoFi USD as available to qualified Bank & Trust clients and describes redeem orders routed for Trust-team approval."
+      }
+    },
+    {
+      "id": "source:1f37c45d962a0cfa84f2edff",
+      "value": {
+        "url": "https://www.bitgo.com/legal/bitgo-coin-minting-services-terms/",
+        "observedAt": "2026-11-06T19:31:17Z",
+        "datumAsOf": "2026-03-25",
+        "location": "Minting and redemption terms / transaction limits",
+        "excerpt": "BitGo reserves the right to impose transaction limits, in its sole discretion",
+        "assertion": "The terms updated 25 March 2026 govern client redemption requests and retain compliance/finality conditions and discretionary transaction limits."
+      }
+    },
+    {
+      "id": "source:f2395455d349948ceaa62a49",
+      "value": {
+        "url": "https://www.matrixdock.com/stbt",
+        "observedAt": "2026-11-06T19:27:50Z",
+        "datumAsOf": null,
+        "location": "Mint, redeem and yield flows",
+        "excerpt": "STBT redemptions are processed in T+2 days (T+0 days redemption available for daily global limit of $1M).",
+        "assertion": "Matrixdock publishes a global T+0 service ceiling and ordinary T+2 processing; the ceiling does not establish funded available inventory or remaining allowance."
+      }
+    },
+    {
+      "id": "source:0ed3abf82cddbc6e6ec57120",
+      "value": {
+        "url": "https://docs.matrixdock.com/english/treasury-bill-token-stbt/minting-and-redeeming.md",
+        "observedAt": "2026-11-06T19:28:34Z",
+        "datumAsOf": null,
+        "location": "Minting and redeeming / issuer website",
+        "excerpt": "settlement time will be within T+2 days (T+0 for limited quota).",
+        "assertion": "The issuer instructions require accredited-investor verification and a whitelisted wallet for STBT redemption, retaining limited T+0 quota."
+      }
+    },
+    {
+      "id": "source:3758eaea50203c4d16bdc03b",
+      "value": {
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32",
+        "observedAt": "2026-11-06T19:31:16Z",
+        "datumAsOf": "2025-01-20",
+        "location": "STBT terms / section 5.1",
+        "excerpt": "Prometheus will, at the option of the holder of any STBT Token, redeem such STBT Tokens at any time, subject to the restrictions set forth herein.",
+        "assertion": "The terms revised 20 January 2025 establish restricted holder redemption for tokens in the issuer account; the right does not quantify funded available capacity."
+      }
+    },
+    {
+      "id": "source:187d96dbd75a9d38f3f45bcd",
+      "value": {
+        "url": "https://moneta.global/resources/faq/",
+        "observedAt": "2026-11-06T19:27:48Z",
+        "datumAsOf": null,
+        "location": "Embedded FAQPage / mint-burn limit",
+        "excerpt": "The default limit is 10,000 USD per day. Contact Us if you require higher limits.",
+        "assertion": "The issuer's embedded FAQ publishes a default customer mint/burn quota, not aggregate funded USDM redemption capacity."
+      }
+    },
+    {
+      "id": "source:cf2a18924875ca7d37daad18",
+      "value": {
+        "url": "https://moneta.global/terms-of-service.pdf",
+        "observedAt": "2026-11-06T19:27:50Z",
+        "datumAsOf": "2026-07-22",
+        "location": "USDM terms / 1.6.3.3",
+        "excerpt": "Redeeming USDM: If you wish to exchange your USDM for US dollars, set up a Moneta Account, and send the USDM to the designated address.",
+        "assertion": "Terms updated 22 July 2026 establish account-based USDM redemption and disclaim processing-time warranties; the current FAQ limits fiat redemption to KYB-approved institutions."
+      }
+    },
+    {
+      "id": "source:117f3b10baed23ff67419e0a",
+      "value": {
+        "url": "https://1846699559-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNjlMezbFeyn4pWdMN4xV%2Fuploads%2F6KSopl2YVcjSeb8gqeao%2FUSDO%20-%20User%20Agreement%20-%2020261014.pdf?alt=media&token=cf474fc9-af48-41fa-8f6f-756613bbb64c",
+        "observedAt": "2026-11-06T19:27:51Z",
+        "datumAsOf": null,
+        "location": "USDO agreement / 2.4.7(c)",
+        "excerpt": "within T+2 U.S. business days from the date such redemptions are accepted for processing on the Platform.",
+        "assertion": "The agreement promises processing and transmission after acceptance subject to its terms/abnormal conditions, without a quantified funded payout amount; the attachment filename 20261014 is not treated as a body effective date."
+      }
+    },
+    {
+      "id": "source:d843f9fb961c3ebb893966e2",
+      "value": {
+        "url": "https://docs.openeden.com/usdo/usdo-token/redemption-workflow.md",
+        "observedAt": "2026-11-06T19:27:49Z",
+        "datumAsOf": null,
+        "location": "USDO redemption workflow",
+        "excerpt": "USDC",
+        "assertion": "The issuer workflow describes USDO redemption to USDC; no funded issuer-wide amount is quantified in this surface."
+      }
+    },
+    {
+      "id": "source:ae18d4f6ecb8e3e93051b990",
+      "value": {
+        "url": "https://docs.openeden.com/usdo/faq.md",
+        "observedAt": "2026-11-06T19:27:49Z",
+        "datumAsOf": null,
+        "location": "FAQ / is USDO redeemable to USD",
+        "excerpt": "There is no option to redeem USDO directly to USD fiat at the moment.",
+        "assertion": "The primary route is USDC redemption for onboarded KYC users, distinct from the unavailable USD-fiat feature."
+      }
+    },
+    {
+      "id": "source:150a72c2c78b3663286f13d6",
+      "value": {
+        "url": "https://www.quantoz.com/documents/usdq-wp-1.4-30-04-2026.pdf",
+        "observedAt": "2026-11-06T19:27:50Z",
+        "datumAsOf": "2026-04-30",
+        "location": "USDQ whitepaper / phased restoration",
+        "excerpt": "Redemptions capped at 2% per wallet and 5% of total reserves;",
+        "assertion": "The USDQ whitepaper amended 30 April 2026 discloses post-suspension ceilings, not a guaranteed funded payout floor."
+      }
+    },
+    {
+      "id": "source:d4b9fded8b43bf35519e31e1",
+      "value": {
+        "url": "https://support.straitsx.com/support/solutions/articles/157000366412-sgd-deposit-and-withdrawal-limits",
+        "observedAt": "2026-11-06T19:27:50Z",
+        "datumAsOf": null,
+        "location": "SGD withdrawal / personal and business tables",
+        "excerpt": "SGD Bank Transfer Out 10 200,000 (via FAST) 1,000,000 per day S$ 1",
+        "assertion": "The business account ceiling is SGD1,000,000/day and SGD200,000 per FAST transaction; personal accounts publish SGD500,000/day. The page shows March13 without a year, so no exact datum date is assigned."
+      }
+    },
+    {
+      "id": "source:de3b60b70903923ee46c06f4",
+      "value": {
+        "url": "https://support.straitsx.com/support/solutions/articles/157000363433-what-is-xsgd-",
+        "observedAt": "2026-11-06T19:27:50Z",
+        "datumAsOf": "2025-08-21",
+        "location": "XSGD / collateral and redemption",
+        "excerpt": "It can always be redeemed at a 1:1 ratio with SGD on the StraitsX platform.",
+        "assertion": "The FAQ dated 21 August 2025 links XSGD platform bank withdrawal to equivalent SGD, without quantifying funded issuer-wide capacity."
+      }
+    },
+    {
+      "id": "source:5a77d43fb5d13d510427b239",
+      "value": {
+        "url": "https://support.straitsx.com/support/solutions/articles/157000366404-comprehensive-list-of-straitsx-transaction-limits-for-personal-accounts",
+        "observedAt": "2026-11-06T19:27:50Z",
+        "datumAsOf": null,
+        "location": "Personal-account limits / USD bank transfer out",
+        "excerpt": "USD Bank Transfer Out 100 200,000 Maximum 500,000 USD per day",
+        "assertion": "The personal-account table publishes a USD200,000 transaction ceiling and USD500,000 daily maximum, not aggregate funded capacity; its April28 display omits a year."
+      }
+    },
+    {
+      "id": "source:abfaf4a79078cc4a14bfc2f6",
+      "value": {
+        "url": "https://support.straitsx.com/support/solutions/articles/157000366324-what-is-xusd-",
+        "observedAt": "2026-11-06T19:27:50Z",
+        "datumAsOf": "2025-08-21",
+        "location": "XUSD / collateral and redemption",
+        "excerpt": "You can redeem XUSD at a 1:1 ratio with USD directly on the StraitsX platform.",
+        "assertion": "The FAQ dated 21 August 2025 identifies XUSD-to-USD platform bank withdrawal, without quantifying issuer-wide funded capacity."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -110002,6 +110997,126 @@
     {
       "id": "surface:091c002a8748c694c34a74d7",
       "value": "https://docs.zarpstablecoin.com/zarp-stablecoin/token-redemption"
+    },
+    {
+      "id": "surface:5e9cbe2d4dee3aade074a5a6",
+      "value": "https://docs.a7a5.tech/znakomstvo-s-a7a5/ekosistema.md"
+    },
+    {
+      "id": "surface:1c667b6e961b167efdc47729",
+      "value": "https://docs.a7a5.tech/kak-prodat-a7a5/yuridicheskim-licam.md"
+    },
+    {
+      "id": "surface:b2cfe898595d97615ef38523",
+      "value": "https://docs.a7a5.tech/znakomstvo-s-a7a5/adresa-smart-kontraktov.md"
+    },
+    {
+      "id": "surface:4bc39a476ee0a7c625859b32",
+      "value": "https://audddigital.tawk.help/article/what-are-my-account-limits"
+    },
+    {
+      "id": "surface:42899dc7ede1d8ccc79cb5d0",
+      "value": "https://www.audd.digital/audd-digital-terms-and-conditions/"
+    },
+    {
+      "id": "surface:5b705b214611d9aad406e1e3",
+      "value": "https://www.audd.digital/audd-mint-terms-conditions/"
+    },
+    {
+      "id": "surface:3fa7174cf6deb42eec4b9aff",
+      "value": "https://apidocs.bridge.xyz/platform/orchestration/more/cutoffs"
+    },
+    {
+      "id": "surface:5d2e1df6790b5a8a2117d42c",
+      "value": "https://help.phantom.com/articles/cash-general-faq-44800866087443"
+    },
+    {
+      "id": "surface:88f84cf1ac96d7edddb3e520",
+      "value": "https://www.usecash.xyz/"
+    },
+    {
+      "id": "surface:b8cf5bfa4d7d9023dd62974c",
+      "value": "https://docs.spiko.io/documentation/account_management/deposits_withdrawals/"
+    },
+    {
+      "id": "surface:a2bf59c431bf0e7c32cfa765",
+      "value": "https://docs.spiko.io/direct/recipes/withdrawal/"
+    },
+    {
+      "id": "surface:a3f535818bd155b9eb6f1f48",
+      "value": "https://docs.spiko.io/developers/distributor_api/reference/withdrawal-orders-get-instant-withdrawal-eligibility/"
+    },
+    {
+      "id": "surface:81eb80f3da6d7d0638f99a0b",
+      "value": "https://cdn.spiko.finance/legal_docs/EN/Terms_of_Use_EN.pdf"
+    },
+    {
+      "id": "surface:af87affc68c9bade4cf93c8c",
+      "value": "https://www.fidelity.com/crypto/help/trading/trading-basics"
+    },
+    {
+      "id": "surface:acfed728e72f92ad5131c878",
+      "value": "https://status.ondo.finance/api/limits/session"
+    },
+    {
+      "id": "surface:15c03005eb0957062ab94fe6",
+      "value": "https://docs.ondo.finance/api-reference/limits/get-session-limits.md"
+    },
+    {
+      "id": "surface:2f01c67a38eb1f4afd535168",
+      "value": "https://docs.ondo.finance/api-reference/limits/get-trading-limits.md"
+    },
+    {
+      "id": "surface:bba074c619c7f6be80bef336",
+      "value": "https://www.mfsa.mt/wp-content/uploads/2025/12/Ondo-Global-Markets-BVI-Limited-Base-Prospectus-Document-dated-11-November-2025.pdf"
+    },
+    {
+      "id": "surface:4624fd76534730486dd799d9",
+      "value": "https://docs.idrx.co/api/transaction-api/post-api-transaction-redeem-request.md"
+    },
+    {
+      "id": "surface:80db88ca3b574e392d733eed",
+      "value": "https://support.bitgo.com/support/solutions/articles/158000440951-intro-to-bitgo-mint"
+    },
+    {
+      "id": "surface:93c84a167713d644a1d866a0",
+      "value": "https://support.bitgo.com/support/solutions/articles/158000472160-mint-and-redeem-user-guide"
+    },
+    {
+      "id": "surface:253362bf88aad34eedc91055",
+      "value": "https://docs.matrixdock.com/english/treasury-bill-token-stbt/minting-and-redeeming.md"
+    },
+    {
+      "id": "surface:695eccd99de35b52e72aa2ae",
+      "value": "https://docs.matrixdock.com/docs/stbt"
+    },
+    {
+      "id": "surface:d976d15826d2ae568c188efd",
+      "value": "https://docs.matrixdock.com/english/legal/token-terms-and-conditions/stbt-terms-and-conditions.md"
+    },
+    {
+      "id": "surface:16ede89a5ca41a32b2322a91",
+      "value": "https://1846699559-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNjlMezbFeyn4pWdMN4xV%2Fuploads%2F6KSopl2YVcjSeb8gqeao%2FUSDO%20-%20User%20Agreement%20-%2020261014.pdf?alt=media&token=cf474fc9-af48-41fa-8f6f-756613bbb64c"
+    },
+    {
+      "id": "surface:ab9ae6e42df993feccfab74d",
+      "value": "https://docs.openeden.com/usdo/faq.md"
+    },
+    {
+      "id": "surface:66729893b6bd38da62c9f10b",
+      "value": "https://support.straitsx.com/support/solutions/articles/157000366412-sgd-deposit-and-withdrawal-limits"
+    },
+    {
+      "id": "surface:f6aa7b81a362c5477e5b68d1",
+      "value": "https://support.straitsx.com/support/solutions/articles/157000363433-what-is-xsgd-"
+    },
+    {
+      "id": "surface:a647b9c2f763bc92e2baade1",
+      "value": "https://support.straitsx.com/support/solutions/articles/157000366404-comprehensive-list-of-straitsx-transaction-limits-for-personal-accounts"
+    },
+    {
+      "id": "surface:c0c7ca822bbad6c2bf5e7c5c",
+      "value": "https://support.straitsx.com/support/solutions/articles/157000366324-what-is-xusd-"
     }
   ]
 }
