@@ -25600,13 +25600,13 @@
         "source:b416768d686f7a90f19318cc"
       ],
       "searchedSurfacesRefs": [
-        "surface:3c4ebf5cb0b5136feb3161f5",
+        "surface:1947227684ba0f6424666319",
         "surface:fb3fa0a1b3516fe60298cfdf",
         "surface:f7193056590306339e1786f5",
         "surface:e0b3593f484a1d610fc42186",
         "surface:5e5705dcb72037ba72e89331",
-        "surface:0a62b9017dd1ea626156b8ae",
-        "surface:a9db33d5d786ecfed33f72b3"
+        "surface:965a7f38bf48ac6886c9eb7a",
+        "surface:ed3dac811a3de565bdb8707e"
       ],
       "retired": {
         "reviewedAt": "2026-11-01",
@@ -25662,13 +25662,13 @@
         "source:b416768d686f7a90f19318cc"
       ],
       "searchedSurfacesRefs": [
-        "surface:3c4ebf5cb0b5136feb3161f5",
+        "surface:1947227684ba0f6424666319",
         "surface:fb3fa0a1b3516fe60298cfdf",
         "surface:f7193056590306339e1786f5",
         "surface:e0b3593f484a1d610fc42186",
         "surface:5e5705dcb72037ba72e89331",
         "surface:9eb9a8bd873a7986c0e08be9",
-        "surface:a9db33d5d786ecfed33f72b3"
+        "surface:ed3dac811a3de565bdb8707e"
       ]
     },
     {
@@ -25704,14 +25704,14 @@
         "source:ca69985217a0ab4957615028"
       ],
       "searchedSurfacesRefs": [
-        "surface:635f3235118f2ae29e90c3fa",
+        "surface:d6bfb4d30ba5fc7b8551c927",
         "surface:eaf30bea735c80574bdd90b0",
         "surface:bcd82d2214b4ea39251ca607",
         "surface:cd264a0ae13c0cea4a1c6b6a",
         "surface:4fc48ee0e0e949f1d2b8a90a",
         "surface:bbff9a65e7cdca2d6cd0a963",
-        "surface:e305175caba39d650bd3f056",
-        "surface:6749175406d6e1246066b343"
+        "surface:855bc2d91be6a76cea77e412",
+        "surface:33f723276da604a7b3b85399"
       ]
     },
     {
@@ -25918,7 +25918,7 @@
         "surface:b62231e58a87b3e8d8a5f109",
         "surface:e2c6f634d7d2579b5356ffd0",
         "surface:2953010b1425b162c47d6b0e",
-        "surface:76eec736c80fc9dd381567e7"
+        "surface:d7370f28939d9c9e92e9e58e"
       ]
     },
     {
@@ -25947,7 +25947,7 @@
         "surface:41cfb7c6641e97cdd4c6184e",
         "surface:61f81160a0045b16e6026eef",
         "surface:62e70282aebd3637fdb36d4c",
-        "surface:8d2ad0ff7d7b3dff65cfe4f8",
+        "surface:af23c503718dce124d741aeb",
         "surface:96a10a2bd77c33383517555b"
       ],
       "sourcesRefs": [
@@ -79437,7 +79437,7 @@
       }
     },
     {
-      "id": "surface:3c4ebf5cb0b5136feb3161f5",
+      "id": "surface:1947227684ba0f6424666319",
       "value": {
         "kind": "issuer-status",
         "url": "https://status.circle.com/api/v2/incidents.json",
@@ -79477,7 +79477,7 @@
       }
     },
     {
-      "id": "surface:0a62b9017dd1ea626156b8ae",
+      "id": "surface:965a7f38bf48ac6886c9eb7a",
       "value": {
         "kind": "explorer-events",
         "url": "https://eth.blockscout.com/address/0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -79493,7 +79493,7 @@
       }
     },
     {
-      "id": "surface:a9db33d5d786ecfed33f72b3",
+      "id": "surface:ed3dac811a3de565bdb8707e",
       "value": {
         "kind": "incident-tracker",
         "url": "https://api.llama.fi/hacks",
@@ -79501,7 +79501,7 @@
       }
     },
     {
-      "id": "surface:635f3235118f2ae29e90c3fa",
+      "id": "surface:d6bfb4d30ba5fc7b8551c927",
       "value": {
         "kind": "issuer-announcements",
         "url": "https://docs.maple.finance/technical-resources/security/security.md",
@@ -79549,7 +79549,7 @@
       }
     },
     {
-      "id": "surface:e305175caba39d650bd3f056",
+      "id": "surface:855bc2d91be6a76cea77e412",
       "value": {
         "kind": "explorer-events",
         "url": "https://solscan.io/token/AvZZF1YaZDziPY2RCK4oJrRVrbN3mTD9NL24hPeaZeUj",
@@ -79557,7 +79557,7 @@
       }
     },
     {
-      "id": "surface:6749175406d6e1246066b343",
+      "id": "surface:33f723276da604a7b3b85399",
       "value": {
         "kind": "incident-tracker",
         "url": "https://api.llama.fi/hacks",
@@ -79805,7 +79805,7 @@
       }
     },
     {
-      "id": "surface:76eec736c80fc9dd381567e7",
+      "id": "surface:d7370f28939d9c9e92e9e58e",
       "value": {
         "kind": "social",
         "url": "https://x.com/apacx_io",
@@ -79845,7 +79845,7 @@
       }
     },
     {
-      "id": "surface:8d2ad0ff7d7b3dff65cfe4f8",
+      "id": "surface:af23c503718dce124d741aeb",
       "value": {
         "kind": "incident-tracker",
         "url": "https://layerzero.network/blog/layerzero-labs-kelpdao-incident-report",
