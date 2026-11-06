@@ -884,6 +884,57 @@
         "evidence": "At Avalanche block 92981687 on 2026-08-16, fixed EIP-1167 representation 0xcfc37a6ab183dd4aed08c204d1c2773c0b1bdf46 reported MINTER_ROLE for controller 0xc05e61d0e7a63d27546389b7ad62fdff5a91aace. getRoleAdmin(MINTER_ROLE) returned DEFAULT_ADMIN_ROLE; the current default-role holder(s) were not enumerable in this read."
       },
       {
+        "id": "nusd-avalanche-legacy-multisig-minter-admin",
+        "label": "NUSD Avalanche legacy multisig direct minter and token role administrator",
+        "routeRefs": [
+          "avalanche:0xcfc37a6ab183dd4aed08c204d1c2773c0b1bdf46"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "admin"
+        ],
+        "controllerChain": "avalanche",
+        "controllerAddress": "0xd7ada77aa0f82e6b3cf5bf9208b0e5e1826cd79c",
+        "failureDomainKeys": [
+          "multisig:avalanche:0xd7ada77aa0f82e6b3cf5bf9208b0e5e1826cd79c",
+          "contract:avalanche:0xcfc37a6ab183dd4aed08c204d1c2773c0b1bdf46",
+          "synapse:nusd-liquidity"
+        ],
+        "authorityType": "multisig",
+        "threshold": 2,
+        "signerCount": 3,
+        "modulesOrGuardsStatus": "not-applicable",
+        "routeChecks": {
+          "pausersAdminsUpgraders": "At Avalanche block 99607040, getRoleMemberCount(MINTER_ROLE)=2 and getRoleMember enumerated SynapseBridge 0xc05e61d0e7a63d27546389b7ad62fdff5a91aace plus this legacy multisig. getRoleMemberCount(DEFAULT_ADMIN_ROLE)=1 and getRoleMember(DEFAULT_ADMIN_ROLE,0)=this multisig. The bridge itself was unpaused; that state is not incident clearance.",
+          "caps": "The verified SynapseERC20.mint(address,uint256) checks MINTER_ROLE and calls _mint without a numeric ceiling. The legacy multisig's dailyLimit()=0 concerns its ETH-only empty-calldata shortcut, not token issuance. Its required()=2 and getOwners() enumerated exactly 0x381f401acab6736389ebf01452cc8c62b817d601, 0x9ce9dc8b12e264f00e80f35326040c75201c38f3 and 0xb3dad3c24a861b84fdf380b212662620627d4e15. No signer independence or key custody is asserted."
+        },
+        "observedAt": "2026-11-06",
+        "observedBlock": 99607040,
+        "sources": [
+          {
+            "label": "Synapse issuer deployment: exact Avalanche nUSD clone address and ABI; read 2026-11-06",
+            "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/deployments/avalanche/nUSD.json"
+          },
+          {
+            "label": "Synapse issuer deployment: SynapseERC20 implementation runtime and source metadata; pinned runtime matched exactly",
+            "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/deployments/avalanche/SynapseERC20.json"
+          },
+          {
+            "label": "Synapse issuer deployment: DevMultisigLegacy address and ABI; read 2026-11-06",
+            "url": "https://raw.githubusercontent.com/synapsecns/synapse-contracts/master/deployments/avalanche/DevMultisigLegacy.json"
+          },
+          {
+            "label": "Exact Avalanche legacy multisig verified MultiSigWalletWithDailyLimit source (v0.4.26); read 2026-11-06",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0xd7ada77aa0f82e6b3cf5bf9208b0e5e1826cd79c"
+          },
+          {
+            "label": "Pinned Avalanche role, clone/runtime, legacy multisig owner/quorum and bridge pause reads at block 99607040, 2026-11-06T18:24:10Z",
+            "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc"
+          }
+        ],
+        "evidence": "Safety unknowns campaign 2026-11-06 — k-mia: Avalanche block 99607040, hash 0x3a7302f24dac9ffcc27d1866bb6b6895c2b8853782f429b404f505176932b19b, timestamp 2026-11-06T18:24:10Z; role/admin/quorum reads observed respectively 2026-11-06T18:27:13.881Z, 18:27:49.549Z, 18:28:30.292Z and 18:29:06.003Z. Token runtime is the fixed EIP-1167 clone of 0x1bfe50bb2a8a75fefa46892db10313898ddbff8f, whose pinned runtime equals the issuer-published SynapseERC20.deployedBytecode byte-for-byte. Exact role enumeration establishes an additional direct mint/admin path beyond the separately authored SynapseBridge controller. Issuer registry identifies it as DevMultisigLegacy; its address-verified MultiSigWalletWithDailyLimit source and pinned required/getOwners/dailyLimit reads establish the nominal 2-of-3 topology. Legacy multisig decoded runtime SHA-256 is d73b0265917a75a51277f5d626623785d67e4979fbedfe75fa06d70ad3cae349. Execution scope, current incident history, human signer independence, key custody and reconciled liability shares are not certified. Existing observations and reviews retain their original dates."
+      },
+      {
         "id": "nusd-blast-minter-role",
         "label": "NUSD Blast SynapseERC20 MINTER_ROLE controller",
         "routeRefs": [

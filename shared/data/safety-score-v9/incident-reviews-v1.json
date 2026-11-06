@@ -26733,6 +26733,44 @@
         "source:9d7caf3b04d933c205da4439",
         "source:76332a7da5333425f20e0a75"
       ]
+    },
+    {
+      "reviewId": "k-mia-wars-celo-route-negative-20261106",
+      "assetId": "wars-argentine-peso",
+      "scope": {
+        "kind": "control",
+        "routeId": "celo:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+        "controlId": "*"
+      },
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — k-mia",
+      "windowStartSec": 1780336203,
+      "windowEndSec": 1793989508,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:440d0de89e23460ab0a6fc23",
+        "surface:36fd9cc1d1af95bbe0d43438",
+        "surface:cc168b79c0bf6166721b4b79",
+        "surface:4fabdaa6e7b8077870232e59",
+        "surface:ac45cbc2ffb1bfc707d69e2b",
+        "surface:8189b076557b1e09b0ab3d4c"
+      ],
+      "sourcesRefs": [
+        "source:1cdca65807881768372e0c49",
+        "source:e32d8c745a6a3616dc7f3c08",
+        "source:a9ea5413924cbc0e97bb9e7d",
+        "source:632b39dc1c0dde79ada0d377",
+        "source:03cc8b5bf7ac8ea1f74df077",
+        "source:0c2c06e51b2f917e490a5bb5",
+        "source:47597bc335f32dd9e40618a7",
+        "source:506ca349a564522a02147852",
+        "source:9fe85f9a012ebc887cddb39e",
+        "source:412268c4f44c9452e6f231ba",
+        "source:e8eb42d4ac8be0b91c41b32e",
+        "source:e9827e7231df73c00a6238ec",
+        "source:0f8c787eb417866dbfb619d1",
+        "source:1fc1b0e8dd067e43d757d42d"
+      ]
     }
   ],
   "sourceObservations": [
@@ -64815,6 +64853,146 @@
         "location": "Retrieved current index plus site:rekt.news \"EUROT\" indexed search on 2026-11-06",
         "excerpt": "No exact EUROT incident article was identified on the consulted index/search surface. The homepage and indexed query are not a complete lifetime corpus."
       }
+    },
+    {
+      "id": "source:1cdca65807881768372e0c49",
+      "value": {
+        "label": "Issuer exact Celo wARS deployment launch",
+        "url": "https://action.ripio.com/en/blog/wfiat-stablecoins-now-live-on-celo",
+        "observedAt": "2026-11-06T18:33:14.016Z",
+        "location": "Technical Details, July31,2026 issuer announcement",
+        "excerpt": "The July31,2026 issuer Celo launch announcement names exact wARS Celo token0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d. This independently binds issuer and asset identity; it does not assert absence of later incidents or immutable bridge conservation."
+      }
+    },
+    {
+      "id": "source:e32d8c745a6a3616dc7f3c08",
+      "value": {
+        "label": "Issuer issue and pull-request adverse-lead research",
+        "url": "https://api.github.com/repos/ripio/latam-stables/issues?state=all&per_page=100",
+        "observedAt": "2026-11-06T18:36:04.487Z",
+        "location": "All13 returned issue/PR objects; exact PR5/6/8 metadata and PR6 source diff retained",
+        "excerpt": "All13 public issue/PR objects were read. Adverse source-history lead PR6(created and mergedDecember30,2025) describes feeCollector=0 plus a specified fulfillment fee omitting the fee mint. Its exact source diff changes the fee-bearing fulfillment branch. The exact currently deployed Celo runtime/source instead exposes six-argument fulfillBridgeMint without that fee parameter/branch, and current feeCollector is nonzero0x2b839174fe62466067c22e2a4c8054071f9d8d68. No live exploitation, affected Celo deployment or outstanding holder loss is disclosed by that PR. Open PR8 is an unmerged AI-audit draft with design/configuration findings, not a live incident report or assurance proof; open issues10/11 concern deployment-verifier/network-selection tooling and explicitly state no verified live-chain impact. None is silently treated as a clean deployed-security certificate; authority/cap/upgrade/custody uncertainty remains unchanged."
+      }
+    },
+    {
+      "id": "source:a9ea5413924cbc0e97bb9e7d",
+      "value": {
+        "label": "Exact source-history fee-conservation adverse lead",
+        "url": "https://api.github.com/repos/ripio/latam-stables/pulls/6/files",
+        "observedAt": "2026-11-06T18:36:46.175Z",
+        "location": "PR6 BridgeDeposit.sol source diff; merged2025-12-30T14:38:04Z",
+        "excerpt": "This diff changes a fee-bearing fulfillBridgeMint branch to mint its fee to a nonzero feeCollector or recipient. The exact Celo runtime-matched verified source has no fulfillment fee argument/branch; current feeCollector is separately pinned nonzero. The PR is retained as an adverse source-history lead, not attributed as an observed Celo incident or used to claim no other flaws."
+      }
+    },
+    {
+      "id": "source:632b39dc1c0dde79ada0d377",
+      "value": {
+        "label": "Full incident corpus search",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-11-06T18:26:41.539Z",
+        "location": "All1340 returned rows searched in full; exact aliases and addresses retained",
+        "excerpt": "All1340 returned DefiLlama hacks records were searched across full serialized objects for Ripio, wARS, WARS, wFIAT and the exact token, BridgeDeposit, LimitedMinterBridge, Safe and Celo role-holder addresses. No matching record was returned. This is a searched incident corpus, not proof that every incident is disclosed or that generic chain incidents affected this exact route."
+      }
+    },
+    {
+      "id": "source:03cc8b5bf7ac8ea1f74df077",
+      "value": {
+        "label": "Verified exact Celo LimitedMinterBridge source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x46167cb034fec6cec46caed4f61281f5aa0eb0e6",
+        "observedAt": "2026-11-06T18:27:04.906Z",
+        "location": "LimitedMinterBridge verified source, ABI and deployed_bytecode",
+        "excerpt": "The verified4894-byte deployed runtime exactly matches the pinned Celo runtime (SHA-256 c3de4616cb470f913d6b3cabc3fbda31dd8c5a11fda614ea98fd0ee28220f665). It exposes pause, per-token registration, UTC daily limits and direct MINTER_ROLE mintTo; token default admins can replace the limit. A daily limit is not immutable conservation or no-power proof."
+      }
+    },
+    {
+      "id": "source:0c2c06e51b2f917e490a5bb5",
+      "value": {
+        "label": "Verified exact Celo BridgeDeposit source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x465e642387d3d73a57cdc1368ffa53a800ba5d47",
+        "observedAt": "2026-11-06T18:26:18.821Z",
+        "location": "BridgeDeposit verified source, ABI and deployed_bytecode",
+        "excerpt": "The verified6924-byte deployed runtime exactly matches the pinned Celo runtime (SHA-256 d0ac01d846a5b79f37133521ae1d30b117819043a617b34e193adbd8d0a8b035). Source exposes admin-controlled pause/routes/minter replacement and operator-controlled fulfillment. This is issuer-operated fulfillment, not independently validated conservation."
+      }
+    },
+    {
+      "id": "source:47597bc335f32dd9e40618a7",
+      "value": {
+        "label": "Verified exact Celo LatamStable implementation source",
+        "url": "https://celo.blockscout.com/api/v2/smart-contracts/0xba0030bba7112171a8a5bcc417ee1994051321b9",
+        "observedAt": "2026-11-06T18:26:18.811Z",
+        "location": "LatamStable verified source and ABI; exact implementation slot read at Celo82088750",
+        "excerpt": "Verified Celo implementation defines role-controlled mint, pause, compliance and UUPS replacement. The current token implementation slot is exactly0xba0030bba7112171a8a5bcc417ee1994051321b9. This source identifies emergency/admin events for the bounded log search; it does not establish independent key custody."
+      }
+    },
+    {
+      "id": "source:506ca349a564522a02147852",
+      "value": {
+        "label": "Pinned Celo origin, current route/controller state and bounded event research",
+        "url": "https://forno.celo.org",
+        "observedAt": "2026-11-06T18:30:44.246Z",
+        "location": "agents/out/gbpa-wars: wars-celo-creation-block.json, celo-current-batch.json, celo-roster-v2.json, celo-all-logs.json and celo-safe-logs.json; exact methods/params/pins retained",
+        "excerpt": "Numbered Celo block 68435445, hash 0x781b06181ba2a93fab9de35bae06e3623c78c02881e5c6661f5a18ed105b447d, 2026-06-01T17:50:03Z, contains creation transaction 0xb0e485969045835436dfe04afa1f934e2ad794bfdbc5c20f565da481916018a4 from 0xdf202429911c19a517cbf2ff6afc37d3836208dc with nonce1 and to=null. CREATE-address derivation is exactly the reviewed wARS address; init data names implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9. The separate receipt call returned null and is retained as unavailable receipt evidence, not absence proof. The full pinned block body independently authenticates the creation transaction identity and its deployment timestamp. Celo 82038750-82088750 was read in full for the exact wARS token 0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d, BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6: 1981 logs, all 1900 Transfer and 81 Approval; no admin, upgrade, pause or limiter event was returned in this bounded 50001-block range. A separate same-range Safe query returned an explicitly empty result, which is not absence or completeness proof. At end block hash 0x9bf4a41cd64144ad50e7292ab11d46b135c999606ec60295802d3d2fa9a4c95b, 2026-11-06T18:25:08Z, all three contracts report paused=false and the token reports enforceBlocklist=false. BridgeDeposit points to the exact live minter; the token has granted that minter MINTER_ROLE. Registration exists=true, dailyMaxMint=30000000000000000000000000 raw token units and mintedToday=0. Exact enumerable bridge/minter roles were read; the Safe is 4-of-7 with no modules, zero guard and fallback 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The Celo minter also authorizes 0x5ca3f8eeba12d83408fc097c2dad79212456f20f directly, so no bridge-only conservation inference is made. These observations do not certify lifetime event completeness or no undiscovered incident."
+      }
+    },
+    {
+      "id": "source:9fe85f9a012ebc887cddb39e",
+      "value": {
+        "label": "Exact issuer-owned rail published security advisories",
+        "url": "https://github.com/ripio/latam-stables/security/advisories",
+        "observedAt": "2026-11-06T18:34:18.709Z",
+        "location": "Rendered security-advisory list; matching public API response retained",
+        "excerpt": "The exact issuer-owned latam-stables security-advisories page and public API were both read: no published advisories, API[]. Ripio/security README directs responsible disclosure to HackerOne; the issuer security page contains generic security practices and vulnerability-prevention claims, not a route incident chronology. Private/unpublished reports are unexposed. Source-matched Celo BridgeDeposit implements issuer-operated offchain role-based fulfillment; no external verifier-provider identity is inferred from the analyst planning hint. These searched issuer security surfaces disclose no exact Celo wARS control incident, but do not establish that all security reports are public."
+      }
+    },
+    {
+      "id": "source:412268c4f44c9452e6f231ba",
+      "value": {
+        "label": "Issuer security-reporting policy",
+        "url": "https://raw.githubusercontent.com/ripio/security/master/README.md",
+        "observedAt": "2026-11-06T18:34:30.818Z",
+        "location": "Full Security Team Public Repository README",
+        "excerpt": "Read issuer-owned security policy: disclosure is directed to HackerOne and reporters are asked to withhold public disclosure until resolution. This limits public incident-search completeness; no controller-specific signing or no-incident assurance is inferred."
+      }
+    },
+    {
+      "id": "source:e8eb42d4ac8be0b91c41b32e",
+      "value": {
+        "label": "Rekt primary published post-index search with scoped generic hits",
+        "url": "https://rekt.news/_next/static/chunks/pages/_app-b28a15efa0a1e32f.js",
+        "observedAt": "2026-11-06T18:35:03.116Z",
+        "location": "Module56426 English index; retained rekt-english-post-index.json; full articles /dystopian-diaries and /curve-wars read",
+        "excerpt": "Primary rekt.news published English index was recovered from module56426 of its actual _app-b28a15efa0a1e32f.js bundle:554 post metadata objects, index timestamp2026-11-06T15:00:23.270Z. All metadata fields were searched for Ripio, wARS/WARS, wFIAT and exact token/bridge/minter addresses. Only generic word wars matched Dystopian Diaries(May7,2025) and Curve Wars(July8,2021); both full articles were read and concern AI/surveillance and Curve governance respectively, not this issuer/token/bridge. No exact relevant indexed lead was found. This is metadata-index coverage, not a full-article-body census. Direct /sitemap.xml and /search?q=Ripio returned500 and are explicitly unavailable, never clean-negative evidence."
+      }
+    },
+    {
+      "id": "source:e9827e7231df73c00a6238ec",
+      "value": {
+        "label": "Issuer incident disclosures including resolved generic Celo deposit outage",
+        "url": "https://status.ripio.com/api/v2/incidents.json?page=1",
+        "observedAt": "2026-11-06T18:29:14.536Z",
+        "location": "All50 returned incident objects and updates; page2 duplication retained",
+        "excerpt": "The issuer status API returned50 incident records from2026-06-17 through2026-10-15; page2 duplicated page1, so earlier or later archive completeness is not asserted. Full returned objects were searched for wARS, WARS, wFIAT, Ripio bridge/puente, hack/exploit/breach, security/seguridad, pause/freeze and exact token/controller addresses. The resolved2026-07-11 generic Celo exchange-deposit outage affects Ripio Wallet/Trade send-receive components; it does not disclose a wARS control-integrity failure or still-current token/bridge pause. No exact wARS bridge-control incident was disclosed in the returned records."
+      }
+    },
+    {
+      "id": "source:0f8c787eb417866dbfb619d1",
+      "value": {
+        "label": "Issuer local stablecoins release chronology",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "observedAt": "2026-11-06T18:29:15.732Z",
+        "location": "Releases and Updates",
+        "excerpt": "The issuer release chronology identifies its January11,2026 bridge launch and March3,2026 chain expansion; the July31,2026 issuer Celo launch announcement independently names exact wARS Celo token 0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d. No control-integrity failure on this exact route was disclosed in those read issuer pages. These announcements are not an exhaustive incident archive."
+      }
+    },
+    {
+      "id": "source:1fc1b0e8dd067e43d757d42d",
+      "value": {
+        "label": "Issuer security page searched for route incident disclosures",
+        "url": "https://www.ripio.com/es/seguridad",
+        "observedAt": "2026-11-06T18:34:57.594Z",
+        "location": "Full issuer security page",
+        "excerpt": "The retrieved issuer security page presents security/monitoring practices and routes users to status and support; it supplies no dated Celo wARS route incident postmortem. Generic certification and vulnerability-prevention claims are not controller custody or incident-clearance proof."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -80000,6 +80178,54 @@
         "kind": "explorer-events",
         "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc",
         "finding": "Exact verified-ABI admin/emergency event topics scanned over Avalanche blocks 99557179-99607178 (50000 inclusive; five completed 10000-block chunks), ending at hash 0xe8ac2f8186b04e1f629b41a671bf18ba527e5eda9f046707150ff97755310b11, 2026-11-06T18:26:14.000Z; no matching logs. Exact paused() returned false at that pin; first deployment is independently receipt-bound to block 34499661, 2023-08-29T00:38:56.000Z. No holder-specific freeze or unobserved counterpart health conclusion is made."
+      }
+    },
+    {
+      "id": "surface:440d0de89e23460ab0a6fc23",
+      "value": {
+        "kind": "issuer-status",
+        "url": "https://status.ripio.com/api/v2/incidents.json?page=1",
+        "finding": "The issuer status API returned50 incident records from2026-06-17 through2026-10-15; page2 duplicated page1, so earlier or later archive completeness is not asserted. Full returned objects were searched for wARS, WARS, wFIAT, Ripio bridge/puente, hack/exploit/breach, security/seguridad, pause/freeze and exact token/controller addresses. The resolved2026-07-11 generic Celo exchange-deposit outage affects Ripio Wallet/Trade send-receive components; it does not disclose a wARS control-integrity failure or still-current token/bridge pause. No exact wARS bridge-control incident was disclosed in the returned records."
+      }
+    },
+    {
+      "id": "surface:36fd9cc1d1af95bbe0d43438",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://www.ripio.com/en/cryptos/local-stablecoins",
+        "finding": "The issuer release chronology identifies its January11,2026 bridge launch and March3,2026 chain expansion; the July31,2026 issuer Celo launch announcement independently names exact wARS Celo token 0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d. No control-integrity failure on this exact route was disclosed in those read issuer pages. These announcements are not an exhaustive incident archive."
+      }
+    },
+    {
+      "id": "surface:cc168b79c0bf6166721b4b79",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://forno.celo.org",
+        "finding": "Numbered Celo block 68435445, hash 0x781b06181ba2a93fab9de35bae06e3623c78c02881e5c6661f5a18ed105b447d, 2026-06-01T17:50:03Z, contains creation transaction 0xb0e485969045835436dfe04afa1f934e2ad794bfdbc5c20f565da481916018a4 from 0xdf202429911c19a517cbf2ff6afc37d3836208dc with nonce1 and to=null. CREATE-address derivation is exactly the reviewed wARS address; init data names implementation 0xba0030bba7112171a8a5bcc417ee1994051321b9. The separate receipt call returned null and is retained as unavailable receipt evidence, not absence proof. The full pinned block body independently authenticates the creation transaction identity and its deployment timestamp. Celo 82038750-82088750 was read in full for the exact wARS token 0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d, BridgeDeposit 0x465e642387d3d73a57cdc1368ffa53a800ba5d47 and LimitedMinterBridge 0x46167cb034fec6cec46caed4f61281f5aa0eb0e6: 1981 logs, all 1900 Transfer and 81 Approval; no admin, upgrade, pause or limiter event was returned in this bounded 50001-block range. A separate same-range Safe query returned an explicitly empty result, which is not absence or completeness proof. At end block hash 0x9bf4a41cd64144ad50e7292ab11d46b135c999606ec60295802d3d2fa9a4c95b, 2026-11-06T18:25:08Z, all three contracts report paused=false and the token reports enforceBlocklist=false. BridgeDeposit points to the exact live minter; the token has granted that minter MINTER_ROLE. Registration exists=true, dailyMaxMint=30000000000000000000000000 raw token units and mintedToday=0. Exact enumerable bridge/minter roles were read; the Safe is 4-of-7 with no modules, zero guard and fallback 0xfd0732dc9e303f09fcef3a7388ad10a83459ec99. The Celo minter also authorizes 0x5ca3f8eeba12d83408fc097c2dad79212456f20f directly, so no bridge-only conservation inference is made. These observations do not certify lifetime event completeness or no undiscovered incident."
+      }
+    },
+    {
+      "id": "surface:4fabdaa6e7b8077870232e59",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "All1340 returned DefiLlama hacks records were searched across full serialized objects for Ripio, wARS, WARS, wFIAT and the exact token, BridgeDeposit, LimitedMinterBridge, Safe and Celo role-holder addresses. No matching record was returned. This is a searched incident corpus, not proof that every incident is disclosed or that generic chain incidents affected this exact route."
+      }
+    },
+    {
+      "id": "surface:ac45cbc2ffb1bfc707d69e2b",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://rekt.news/_next/static/chunks/pages/_app-b28a15efa0a1e32f.js",
+        "finding": "Primary rekt.news published English index was recovered from module56426 of its actual _app-b28a15efa0a1e32f.js bundle:554 post metadata objects, index timestamp2026-11-06T15:00:23.270Z. All metadata fields were searched for Ripio, wARS/WARS, wFIAT and exact token/bridge/minter addresses. Only generic word wars matched Dystopian Diaries(May7,2025) and Curve Wars(July8,2021); both full articles were read and concern AI/surveillance and Curve governance respectively, not this issuer/token/bridge. No exact relevant indexed lead was found. This is metadata-index coverage, not a full-article-body census. Direct /sitemap.xml and /search?q=Ripio returned500 and are explicitly unavailable, never clean-negative evidence."
+      }
+    },
+    {
+      "id": "surface:8189b076557b1e09b0ab3d4c",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://github.com/ripio/latam-stables/security/advisories",
+        "finding": "The exact issuer-owned latam-stables security-advisories page and public API were both read: no published advisories, API[]. Ripio/security README directs responsible disclosure to HackerOne; the issuer security page contains generic security practices and vulnerability-prevention claims, not a route incident chronology. Private/unpublished reports are unexposed. Source-matched Celo BridgeDeposit implements issuer-operated offchain role-based fulfillment; no external verifier-provider identity is inferred from the analyst planning hint. These searched issuer security surfaces disclose no exact Celo wARS control incident, but do not establish that all security reports are public. All13 public issue/PR objects were read. Adverse source-history lead PR6(created and mergedDecember30,2025) describes feeCollector=0 plus a specified fulfillment fee omitting the fee mint. Its exact source diff changes the fee-bearing fulfillment branch. The exact currently deployed Celo runtime/source instead exposes six-argument fulfillBridgeMint without that fee parameter/branch, and current feeCollector is nonzero0x2b839174fe62466067c22e2a4c8054071f9d8d68. No live exploitation, affected Celo deployment or outstanding holder loss is disclosed by that PR. Open PR8 is an unmerged AI-audit draft with design/configuration findings, not a live incident report or assurance proof; open issues10/11 concern deployment-verifier/network-selection tooling and explicitly state no verified live-chain impact. None is silently treated as a clean deployed-security certificate; authority/cap/upgrade/custody uncertainty remains unchanged."
       }
     }
   ]
