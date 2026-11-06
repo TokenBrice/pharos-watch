@@ -2210,10 +2210,22 @@ export async function publishYieldCoordinatorResults(params: {
       params.degradationReasons.push("yield-publication:payload-oversize");
     }
     throwIfAborted(params.signal);
-    await pruneYieldTables(params.db, params.startSec, {
-      allowDestructiveCleanup: params.degradationReasons.length === 0 && !params.safetySnapshotHeld,
-      signal: params.signal,
-    });
+    try {
+      await pruneYieldTables(params.db, params.startSec, {
+        allowDestructiveCleanup: params.degradationReasons.length === 0 && !params.safetySnapshotHeld,
+        signal: params.signal,
+      });
+    } catch (error) {
+      if (params.signal?.aborted) throw error;
+      // Retention runs after the publication committed and resumes next run, so
+      // a spent D1 window defers it instead of failing the published run.
+      params.degradationReasons.push("yield-retention:deferred");
+      logWorkerEvent({
+        scope: "lib", level: "warn", event: "yield-retention-deferred", job: "sync-yield-data",
+        message: "[sync-yield-data] Retention prune deferred after a committed publication",
+        metadata: { generationId, error: error instanceof Error ? error.message.slice(0, 200) : String(error).slice(0, 200) },
+      });
+    }
 
     return {
       ok: true,
