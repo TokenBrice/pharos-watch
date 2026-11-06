@@ -300258,6 +300258,135 @@
       ],
       "nextReviewTrigger": "A dated, complete source-backed reserve composition including the exact legacy RDOC source key becomes available, or a sanctioned independently dated classification review can bind that exposure; recheck 2026-12-06.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:iusd-initia",
+      "taskIds": [
+        "V9G-f6d5d37c67891277"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — release verification",
+      "evidence": [
+        "https://rest.initia.xyz/cosmos/bank/v1beta1/balances/init1l44qwk2gg2k96agpla2jgwhlqmj0ny0nyzpghcz6gkgfwq29ay9qjkdyct — iUSD vault bank balances on interwoven-1 at height 23552430: one denom (AUSD0), equal to pinned iUSD supply, as-of 2026-11-06T22:46:16Z"
+      ],
+      "rationale": "Supersedes the earlier promote. An independent pre-release verification found the iUSD reserve inventory publicly measurable on-chain through Initia's own LCD: the vault's registered-collateral table has one entry (AUSD0) and its balance equals pinned iUSD supply. The gap is public-but-uncurated reserve data, not issuer non-disclosure, so the C researched-nondisclosure classification was withdrawn before release and the gap stays unresearched.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        "iusd-initia:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Curate the vault's on-chain reserve composition from pinned LCD reads (explicit height, hash and time) in the next reserve curation pass.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_COMPOSITION:susd-solayer",
+      "taskIds": [
+        "V9G-1a2ac93120c1ec08"
+      ],
+      "workType": "RESERVE_COMPOSITION",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — release verification",
+      "evidence": [
+        "https://docs.solayer.org/susd/decentralized-rfq-protocol/stakeholders — states cUSDO exclusivity after the 2025-11-02 TBILL migration, without amounts or weights; checked 2026-11-06",
+        "https://app.solayer.org/api/info — aggregate sUSD TVL only; checked 2026-11-06"
+      ],
+      "rationale": "Supersedes the earlier promote. Independent pre-release verification could not inspect the issuer's sUSD app view (Cloudflare-blocked) and found the issuer states cUSDO exclusivity; an on-chain portfolio reconstruction was not attempted. A retrieval gap cannot establish cause C, so the classification was withdrawn before release and the gap stays unresearched.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        "susd-solayer:gap:reserve-composition"
+      ],
+      "nextReviewTrigger": "Re-run the disclosure check with the app view and an on-chain holdings read of the sUSD reserve accounts.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:hyusd-hylo",
+      "taskIds": [
+        "V9G-d3c6cbdaaee273ea"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — release verification",
+      "evidence": [
+        "https://docs.near-intents.org/security-compliance/terms-of-service.md — identifies Intents Technology Ltd. as PoA bridge operator, as-of 2026-10-07",
+        "https://github.com/Near-One/bridge-sdk-js/blob/37baf09fedb0e4d37901125727325dbcc78a0735/.changeset/nzec-bridge-near-to-zec-omft-near.md — binds the Solana ZEC wrapper to zec.omft.near (PoA), as-of 2026-08-31"
+      ],
+      "rationale": "Supersedes the obligor half of the earlier promote; the liquidity-horizon classification (V9G-acbdbb4500c1a2b5) stands. Independent pre-release verification identified the serial exposure's parties from public sources (Near One/Omni Bridge for the Solana wrapper, Intents Technology/PoA upstream), so issuer non-disclosure overstated the gap. The obligor classification was withdrawn before release; the gap stays unresearched.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        "hyusd-hylo:gap:reserve:reserve:7b798c35431173eb578d871f:obligorConcentration"
+      ],
+      "nextReviewTrigger": "Curate the ZEC slice's obligor identity from the cited bridge sources in the next reserve curation pass.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:iusd-infinifi",
+      "taskIds": [
+        "V9G-00fcac19b4548a41",
+        "V9G-239e8c6ed770091a",
+        "V9G-51d14fac57335587",
+        "V9G-777a8b72a8aed0aa",
+        "V9G-dddf432d4831bf34"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — release verification",
+      "evidence": [
+        "https://eth-api.infinifi.xyz/api/protocol/data — identifies the JetStream farm, its ~USD 3.00M exposure and offsetting cash-market/perpetual positions; checked 2026-11-06",
+        "https://www.jetstream.markets/blog/jetstream-what-is-global-basis-plus — counterparty fund structure, manager and withdrawal epochs, as-of 2026-09-01"
+      ],
+      "rationale": "Supersedes the earlier promote. Independent pre-release verification found the issuer discloses the exact farm, its exposure and strategy and names JetStream as counterparty, while the counterparty publishes fund structure, manager and settlement timing. Recording all five datums as issuer non-disclosure overstated the gap, and the issuer site/app was blocked to the verifier. The classifications were withdrawn before release; the gaps stay unresearched.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1",
+        "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1:assetClass",
+        "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1:liquidity",
+        "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1:maturity",
+        "iusd-infinifi:gap:reserve:reserve:15a8d74e068e7a3789bc12c1:obligorConcentration"
+      ],
+      "nextReviewTrigger": "Curate the JetStream exposure (instrument, class, obligor, liquidity and maturity) from issuer and counterparty sources in the next reserve curation pass.",
+      "factsClosed": 0
+    },
+    {
+      "claimGroupId": "RESERVE_SLICE:nopal-nest",
+      "taskIds": [
+        "V9G-251474abc8809960",
+        "V9G-ad5bf0a21492d151"
+      ],
+      "workType": "RESERVE_SLICE",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — release verification",
+      "evidence": [
+        "https://api.nest.credit/v1/vaults/nest-opal-vault/liquidity-schedule — aggregate vault liquidity schedule; checked 2026-11-06",
+        "https://docs.nest.credit/about/available-vaults/ — 45-day average receivable maturity; links an issuer LiquidStone II risk assessment that could not be inspected; checked 2026-11-06"
+      ],
+      "rationale": "Supersedes the earlier promote. Independent pre-release verification could not inspect the issuer-linked LiquidStone II risk assessment or the transparency board, which plausibly carry liquidity or maturity limits. An incomplete search cannot establish cause C, so both classifications were withdrawn before release and the gaps stay unresearched.",
+      "changeRefs": [
+        "shared/data/safety-score-v9/evidence-gap-classifications-v1.json"
+      ],
+      "sentinels": [
+        "nopal-nest:gap:reserve:reserve:bc62d3fb832faf05e1ca56e7:liquidity",
+        "nopal-nest:gap:reserve:reserve:bc62d3fb832faf05e1ca56e7:maturity"
+      ],
+      "nextReviewTrigger": "Re-run the disclosure check once the linked LiquidStone II risk assessment and transparency board are retrievable.",
+      "factsClosed": 0
     }
   ]
 }
