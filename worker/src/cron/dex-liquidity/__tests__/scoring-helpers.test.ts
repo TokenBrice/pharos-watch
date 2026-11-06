@@ -27,7 +27,7 @@ import type { DexPriceObs, PoolEntry } from "../types";
 describe("source-stage exact-pool price refresh", () => {
   const now = 1_800_000_000;
   const address = (i: number) => `0x${i.toString(16).padStart(40, "0")}`;
-  const token = (id: string) => WORKER_TRACKED_META_BY_ID.get(id)!.contracts!.find((row) => row.chain === "ethereum")!.address.toLowerCase();
+  const token = (id: string, chain = "ethereum") => WORKER_TRACKED_META_BY_ID.get(id)!.contracts!.find((row) => row.chain === chain)!.address;
   const pool = (i: number, overrides: Partial<PoolEntry> = {}) => makePool({
     chain: "ethereum", poolId: `ethereum:${address(i)}`, price: 0.99, priceObservedAt: now - 6 * 3600,
     tvlUsd: 100_000, priceEvidenceTvlUsd: 30_000,
@@ -142,7 +142,7 @@ describe("source-stage exact-pool price refresh", () => {
 
   it.each(["budget", "key", "circuit", "unmapped", "unaddressable"] as const)("retains contributors when %s prevents acquisition", async (mode) => {
     const original = pool(0, mode === "unmapped" ? { chain: "unknown", poolId: `unknown:${address(0)}` }
-      : mode === "unaddressable" ? { poolId: "ethereum:opaque-uuid" } : {});
+      : mode === "unaddressable" ? { poolId: "ethereum:unsafe/id" } : {});
     const before = structuredClone(original);
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
@@ -207,10 +207,30 @@ describe("source-stage exact-pool price refresh", () => {
   });
 
   it.each([
-    ["ethereum", "1".repeat(32)], ["ethereum", `0x${"a".repeat(64)}`],
-    ["solana", address(1)], ["solana", "z".repeat(44)], ["sui", "1".repeat(32)], ["tron", "1".repeat(34)],
-  ])("never sends malformed %s pool id %s", async (chain, id) => {
-    const p = pool(0, { chain, poolId: `${chain}:${id}`, project: "uniswap-v4" });
+    ["ethereum", "eth", `0x${"Ab".repeat(20)}`, true],
+    ["ethereum", "eth", `0x${"Ab".repeat(32)}`, true],
+    ["near", "near", "refv1-4512", false],
+    ["near", "near", "refv2-AbC:Token.NEAR:2000", false],
+    ["cardano", "cardano", "f5808c2c990d86da54bfc97d89cee6efa20cd8461616359478d96b4c4c414a51eac26e5f913a91265c2882e013e1d74dab9a5fe2f875f7df7c9bb4c1", false],
+    ["celo", "celo", `0x${"Ab".repeat(20)}-2045`, true],
+    ["ethereum", "eth", "Opaque_Pool.1", false],
+    ["ethereum", "eth", "X".repeat(200), false],
+  ] as const)("refreshes indexed %s id %s/%s with safe encoding", async (chain, network, id, lowercase) => {
+    const expected = lowercase ? id.toLowerCase() : id;
+    const p = pool(0, { chain, poolId: `${chain}:${id}` }), response = row(0);
+    response.id = `${network}_${expected}`;
+    response.attributes.address = address(900); // Indexed IDs can differ from the contract address.
+    response.relationships.base_token.data.id = `${network}_${token("usdc-circle", chain)}`;
+    response.relationships.quote_token.data.id = `${network}_${address(100)}`;
+    const fetch = vi.fn(async (_url: string) => reply([response]));
+    vi.stubGlobal("fetch", fetch);
+    expect(await run(graph([p]))).toMatchObject({ requests: 1, refreshed: 1, unchangedByReason: {} });
+    expect(new URL(fetch.mock.calls[0]![0]).pathname.split("/multi/")[1]).toBe(encodeURIComponent(expected));
+    expect(p).toMatchObject({ price: 1.002, priceObservedAt: now });
+  });
+
+  it.each(["bad,id", "bad/id", "", ".", "..", "a".repeat(201), "bad?id", "bad#id", " bad-id", "bad id", "orderbook:exchange:coin", "orderbook-exchange"])("never sends unsafe pool id %s", async (id) => {
+    const p = pool(0, { poolId: `ethereum:${id}` });
     const before = structuredClone(p), fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
     expect(await run(graph([p]))).toMatchObject({ requests: 0, unchangedByReason: { "unaddressable-pool": 1 } });
@@ -305,78 +325,20 @@ describe("classifyCoverage", () => {
     expect(classifyCoverage(makeCoverageInput(mix, tvl)).coverageClass).toBe(expected);
   });
 
-  it("returns primary when all TVL is from direct_api source", () => {
-    const { coverageClass, coverageConfidence } = classifyCoverage(
-      makeCoverageInput({ direct_api: { poolCount: 2, tvlUsd: 5_000_000 } }, 5_000_000),
-    );
-    expect(coverageClass).toBe("primary");
-    expect(coverageConfidence).toBe(0.6);
-  });
-
-  it("returns unobserved when totalTvlUsd is zero", () => {
-    const { coverageClass, coverageConfidence } = classifyCoverage(makeCoverageInput({}, 0));
-    expect(coverageClass).toBe("unobserved");
-    expect(coverageConfidence).toBe(0);
-  });
-
-
-  it("caps coverageConfidence at 1 for fully measured broad primary coverage", () => {
-    const { coverageClass, coverageConfidence } = classifyCoverage(
-      makeCoverageInput(
-        { dl: { poolCount: 10, tvlUsd: 100 } },
-        100,
-        {
-          protocolCount: 10,
-          sourceFamilyCount: 10,
-          balanceMeasuredTvlUsd: 100,
-          organicMeasuredTvlUsd: 100,
-          measuredPriceTvlUsd: 100,
-        },
-      ),
-    );
-
-    expect(coverageClass).toBe("primary");
-    expect(coverageConfidence).toBe(1);
-  });
-
-  it("floors coverageConfidence at 0 when fallback coverage is fully synthetic and decayed", () => {
-    const { coverageClass, coverageConfidence } = classifyCoverage(
-      makeCoverageInput(
-        { cg_onchain: { poolCount: 1, tvlUsd: 100 } },
-        100,
-        {
-          syntheticTvlUsd: 100,
-          decayedTvlUsd: 100,
-        },
-      ),
-    );
-
-    expect(coverageClass).toBe("fallback");
-    expect(coverageConfidence).toBe(0);
-  });
-
-  it("blends coverageConfidence for mixed measured and fallback evidence", () => {
-    const { coverageClass, coverageConfidence } = classifyCoverage(
-      makeCoverageInput(
-        {
-          dl: { poolCount: 2, tvlUsd: 60 },
-          cg_onchain: { poolCount: 1, tvlUsd: 40 },
-        },
-        100,
-        {
-          protocolCount: 2,
-          sourceFamilyCount: 2,
-          balanceMeasuredTvlUsd: 50,
-          organicMeasuredTvlUsd: 25,
-          measuredPriceTvlUsd: 20,
-          syntheticTvlUsd: 10,
-          decayedTvlUsd: 20,
-        },
-      ),
-    );
-
-    expect(coverageClass).toBe("mixed");
-    expect(coverageConfidence).toBeCloseTo(0.61, 6);
+  it.each<[string, LiquiditySourceMixByFamily, number, Partial<Parameters<typeof classifyCoverage>[0]>, string, number]>([
+    ["returns primary when all TVL is from direct_api source", { direct_api: { poolCount: 2, tvlUsd: 5_000_000 } }, 5_000_000, {}, "primary", 0.6],
+    ["returns unobserved when totalTvlUsd is zero", {}, 0, {}, "unobserved", 0],
+    ["caps coverageConfidence at 1 for fully measured broad primary coverage", { dl: { poolCount: 10, tvlUsd: 100 } }, 100,
+      { protocolCount: 10, sourceFamilyCount: 10, balanceMeasuredTvlUsd: 100, organicMeasuredTvlUsd: 100, measuredPriceTvlUsd: 100 }, "primary", 1],
+    ["floors coverageConfidence at 0 when fallback coverage is fully synthetic and decayed", { cg_onchain: { poolCount: 1, tvlUsd: 100 } }, 100,
+      { syntheticTvlUsd: 100, decayedTvlUsd: 100 }, "fallback", 0],
+    ["blends coverageConfidence for mixed measured and fallback evidence", { dl: { poolCount: 2, tvlUsd: 60 }, cg_onchain: { poolCount: 1, tvlUsd: 40 } }, 100,
+      { protocolCount: 2, sourceFamilyCount: 2, balanceMeasuredTvlUsd: 50, organicMeasuredTvlUsd: 25, measuredPriceTvlUsd: 20, syntheticTvlUsd: 10, decayedTvlUsd: 20 }, "mixed", 0.61],
+  ])("%s", (name, mix, tvl, overrides, expectedClass, confidence) => {
+    const { coverageClass, coverageConfidence } = classifyCoverage(makeCoverageInput(mix, tvl, overrides));
+    expect(coverageClass).toBe(expectedClass);
+    if (name.startsWith("blends")) expect(coverageConfidence).toBeCloseTo(confidence, 6);
+    else expect(coverageConfidence).toBe(confidence);
   });
 });
 
@@ -465,124 +427,48 @@ describe("collapseDuplicateObservations", () => {
 });
 
 describe("buildDexPriceObservationsFromRetainedPools", () => {
+  const build = (pools: PoolEntry[], evidence?: DexPriceObs[], id = "test-dollar") => buildDexPriceObservationsFromRetainedPools(
+    new Map([[id, pools]]), evidence && new Map([[id, evidence]]),
+  );
   it("joins exact direct evidence to an unpriced retained primary pool", () => {
-    const pool = makePool({
-      poolId: "ethereum:0xtest",
-      project: "balancer",
-      tvlUsd: 52_000,
-      price: undefined,
-      source: "dl",
-    });
-    const result = buildDexPriceObservationsFromRetainedPools(
-      new Map([["test-dollar", [pool]]]),
-      new Map([
-        [
-          "test-dollar",
-          [
-            makeObs({
-              price: 0.919816,
-              tvl: 53_000,
-              chain: "ethereum",
-              protocol: "balancer",
-              poolKey: "ethereum:0xtest",
-              identityConfidence: "exact",
-              sourceFamily: "direct_api",
-            }),
-          ],
-        ],
-      ]),
-    );
-
+    const pool = makePool({ poolId: "ethereum:0xtest", project: "balancer", tvlUsd: 52_000, price: undefined, source: "dl" });
+    const result = build([pool], [makeObs({
+      price: 0.919816, tvl: 53_000, chain: "ethereum", protocol: "balancer", poolKey: "ethereum:0xtest",
+      identityConfidence: "exact", sourceFamily: "direct_api",
+    })]);
     expect(result.get("test-dollar")).toEqual([
-      expect.objectContaining({
-        price: 0.919816,
-        tvl: 52_000,
-        poolKey: "ethereum:0xtest",
-        sourceFamily: "direct_api",
-      }),
+      expect.objectContaining({ price: 0.919816, tvl: 52_000, poolKey: "ethereum:0xtest", sourceFamily: "direct_api" }),
     ]);
   });
 
   it("does not join derived, mismatched, or sub-threshold evidence", () => {
     const pool = makePool({ poolId: "ethereum:0xretained", tvlUsd: 52_000, price: undefined });
-    const result = buildDexPriceObservationsFromRetainedPools(
-      new Map([["test-dollar", [pool]]]),
-      new Map([
-        [
-          "test-dollar",
-          [
-            makeObs({
-              poolKey: "ethereum:0xretained",
-              identityConfidence: "derived_unique",
-            }),
-            makeObs({
-              poolKey: "ethereum:0xother",
-              identityConfidence: "exact",
-            }),
-            makeObs({
-              poolKey: "ethereum:0xretained",
-              identityConfidence: "exact",
-              tvl: 49_999,
-            }),
-          ],
-        ],
-      ]),
-    );
-
+    const result = build([pool], [
+      makeObs({ poolKey: "ethereum:0xretained", identityConfidence: "derived_unique" }),
+      makeObs({ poolKey: "ethereum:0xother", identityConfidence: "exact" }),
+      makeObs({ poolKey: "ethereum:0xretained", identityConfidence: "exact", tvl: 49_999 }),
+    ]);
     expect(result.has("test-dollar")).toBe(false);
   });
 
   it("does not join exact evidence from non-direct sources", () => {
     const pool = makePool({ poolId: "ethereum:0xretained", tvlUsd: 52_000, price: undefined });
-    const result = buildDexPriceObservationsFromRetainedPools(
-      new Map([["usp-pareto-credit", [pool]]]),
-      new Map([
-        [
-          "usp-pareto-credit",
-          [
-            makeObs({
-              poolKey: "ethereum:0xretained",
-              identityConfidence: "exact",
-              sourceFamily: "dexscreener",
-            }),
-          ],
-        ],
-      ]),
-    );
-
+    const result = build([pool], [makeObs({
+      poolKey: "ethereum:0xretained", identityConfidence: "exact", sourceFamily: "dexscreener",
+    })], "usp-pareto-credit");
     expect(result.has("usp-pareto-credit")).toBe(false);
   });
 
   it("attributes a cross-source price to the family that observed it with capped TVL weight", () => {
     const hybrid = makePool({
-      poolId: "ethereum:0xhybrid",
-      project: "uniswap-v3",
-      tvlUsd: 200_000,
-      price: 0.998,
-      source: "dl",
-      priceSource: "cg_onchain",
-      priceEvidenceTvlUsd: 100_000,
-      priceObservedAt: 1_000,
+      poolId: "ethereum:0xhybrid", project: "uniswap-v3", tvlUsd: 200_000, price: 0.998, source: "dl",
+      priceSource: "cg_onchain", priceEvidenceTvlUsd: 100_000, priceObservedAt: 1_000,
     });
-    const sameSource = makePool({
-      poolId: "ethereum:0xsame",
-      project: "curve",
-      tvlUsd: 80_000,
-      price: 0.999,
-      source: "cg_onchain",
-    });
-    const result = buildDexPriceObservationsFromRetainedPools(
-      new Map([["test-dollar", [hybrid, sameSource]]]),
-    );
-
+    const sameSource = makePool({ poolId: "ethereum:0xsame", project: "curve", tvlUsd: 80_000, price: 0.999, source: "cg_onchain" });
+    const result = build([hybrid, sameSource]);
     expect(result.get("test-dollar")).toEqual([
-      expect.objectContaining({
-        price: 0.998,
-        observedAt: 1_000,
-        // Weighted at the price row's own $100K claim, not the dl row's $200K.
-        tvl: 100_000,
-        sourceFamily: "cg_onchain",
-      }),
+      // Weight follows the price row's own $100K claim, not the DL row's $200K.
+      expect.objectContaining({ price: 0.998, observedAt: 1_000, tvl: 100_000, sourceFamily: "cg_onchain" }),
       expect.objectContaining({ price: 0.999, tvl: 80_000, sourceFamily: "cg_onchain" }),
     ]);
   });

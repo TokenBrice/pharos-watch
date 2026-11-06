@@ -2,9 +2,8 @@ import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { canonicalEvmAddress } from "@shared/lib/evm-address";
 import { WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
-import { canonicalTronAddress } from "@shared/lib/tron-address";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { canonicalExitRouteChain, canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
+import { canonicalExitRouteChain, canonicalExitRouteScopedId } from "@shared/types/exit-route-identity";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CG_CHAIN_MAP } from "../../lib/chain-registry";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
@@ -16,8 +15,7 @@ import { parseCgPool } from "./coingecko-onchain-shared";
 import { evaluatePoolPriceCoherence } from "./pool-price-coherence";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { applyPoolVolumeEligibility, buildDexPriceObservationsFromRetainedPools, filterRetainedPools, hasDexPricePrimaryReference, isP4OnlyPausedBalancerPool, oldestPriceObservation, quarantineProtocolTvlOutliers } from "./scoring-helpers";
-import { suiCoinType, suiObjectId } from "./sui/identity";
-import { publicKeyBytes } from "./solana/program-address";
+import { suiCoinType } from "./sui/identity";
 import type { DexPriceObs, PoolEntry, SourcePoolGraph } from "./types";
 
 const PRICE_REFRESH_POLICY = {
@@ -66,15 +64,14 @@ function oldestBatchFirst(a: Batch, b: Batch): number {
   return oldestFirst(a.candidates[0]!, b.candidates[0]!) || a.network.localeCompare(b.network);
 }
 
-function isAddressablePool(chain: string, address: string): boolean {
-  if (CHAIN_META[chain]?.type === "evm") return canonicalEvmAddress(address) !== null;
-  if (chain === "solana") {
-    try { publicKeyBytes(address); return true; } catch { return false; }
-  }
-  if (["sui", "iota", "aptos", "movement", "initia"].includes(chain)) return /^0x[\da-f]{64}$/i.test(address) && suiObjectId(address) !== null;
-  if (chain === "tron") return /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(address) && canonicalTronAddress(address) !== null;
-  // shortcut: other native forms stay unaddressable until their exact-pool indexing and validator are verified.
-  return false;
+// Provider pool IDs include bytes32, suffixed EVM and case-sensitive native identifiers.
+function canonicalPoolId(chain: string, id: string): string {
+  return CHAIN_META[chain]?.type === "evm" && /^0x(?:[\da-f]{40}|[\da-f]{64})(?:[._:-]|$)/i.test(id)
+    ? id.toLowerCase() : id;
+}
+
+function cgPoolId(chain: string, network: string, id: string): string | null {
+  return id.startsWith(`${network}_`) ? canonicalPoolId(chain, id.slice(network.length + 1)) : null;
 }
 
 function cgScopedId(chain: string, network: string, id: string): string | null {
@@ -144,10 +141,13 @@ function planPriceRefresh(input: RefreshGraph) {
       const contributor = { stablecoinId, pool, evidence: observation };
       const chain = canonicalExitRouteChain(pool.chain);
       const network = CG_CHAIN_MAP[chain] ?? CHAIN_META[chain]?.providers?.coingecko;
-      const key = canonicalExitRouteScopedKey(chain, pool.poolId);
-      const address = key.slice(chain.length + 1);
+      const separator = pool.poolId.indexOf(":");
+      const id = separator >= 0 && canonicalExitRouteChain(pool.poolId.slice(0, separator)) === chain
+        ? pool.poolId.slice(separator + 1) : pool.poolId;
+      const address = canonicalPoolId(chain, id);
+      const key = `${chain}:${address}`;
       const reason = !network ? "unmapped-network"
-        : !isAddressablePool(chain, address)
+        : (!/^[A-Za-z0-9._:-]{1,200}$/.test(address) || /\s/.test(pool.poolId) || /^(?:orderbook(?:[:.-]|$)|\.{1,2}$)/i.test(address))
           ? "unaddressable-pool" : null;
       if (reason || !network) {
         unsupported.push({ ...contributor, reason: reason! });
@@ -338,14 +338,16 @@ export async function refreshPoolPrices(input: RefreshGraph & {
       transportReason = "batch-rejected";
     }
     for (const candidate of batch.candidates) {
-      const rows = result.pools.filter((row) =>
-        canonicalExitRouteScopedId(candidate.chain, row.attributes.address) === candidate.address);
+      const exactRows = result.pools.filter((row) => cgPoolId(candidate.chain, batch.network, row.id) === candidate.address);
+      // Attribute-only matches diagnose wrong IDs; only the indexed network/pool ID admits a quote.
+      const rows = exactRows.length ? exactRows : result.pools.filter((row) =>
+        canonicalPoolId(candidate.chain, row.attributes.address) === candidate.address);
       const row = rows.length === 1 ? rows[0] : undefined;
       const parsed = row && parseCgPool(row, candidate.chain);
       const tokenIds = row ? [row.relationships.base_token, row.relationships.quote_token].map((leg) =>
         leg.data.type === "token" ? cgScopedId(candidate.chain, batch.network, leg.data.id) : null) : [];
       const identityOk = row && row.type === "pool" &&
-        cgScopedId(candidate.chain, batch.network, row.id) === candidate.address &&
+        cgPoolId(candidate.chain, batch.network, row.id) === candidate.address &&
         tokenIds.every((id) => id && (CHAIN_META[candidate.chain]?.type === "evm" ? canonicalEvmAddress(id)
           : candidate.chain === "sui" ? suiCoinType(id) : true));
       for (const contributor of candidate.contributors) {
