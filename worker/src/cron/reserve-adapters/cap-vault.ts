@@ -252,7 +252,7 @@ export function adaptCapVaultState(args: {
     0,
   );
   const outputValuation = buildOutputValuation({
-    assets: activeAssets,
+    assets: args.assets,
     totalReserveUsd,
     supplyUsd: args.supplyUsd,
   });

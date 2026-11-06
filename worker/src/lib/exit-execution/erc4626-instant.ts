@@ -289,9 +289,15 @@ export async function observeErc4626InstantExit(args: {
     // redemption of the ENTIRE simulated balance establishes exact-complete;
     // when that balance is the clamp no point can be exact-complete.
     let amount = simulated;
-    let quote = await batch([{ to: vault, data: calldata("convertToAssets", [amount]) }, { to: vault, data: calldata("previewRedeem", [amount]) }]);
-    let gross = uint(quote[0]!); let preview = uint(quote[1]!);
-    if (preview === 0n || preview > gross) throw new Error("erc4626-preview-max-inconsistent");
+    // A liquidity-reverted preview must not hide the canonical redeem or its bounded fallback.
+    const quote = await batch([{ to: HOLDER, data: encodeFunctionData({ abi: MULTICALL_ABI, functionName: "aggregate3", args: [[
+      { target: vault, allowFailure: false, callData: calldata("convertToAssets", [amount]) },
+      { target: vault, allowFailure: true, callData: calldata("previewRedeem", [amount]) },
+    ]] }) }]);
+    const quoted = decodeFunctionResult({ abi: MULTICALL_ABI, functionName: "aggregate3", data: quote[0] as `0x${string}` });
+    if (quoted.length !== 2 || !quoted[0]!.success) throw new Error("erc4626-quote-invalid");
+    let gross = uint(quoted[0]!.returnData); let preview = quoted[1]!.success ? uint(quoted[1]!.returnData) : null;
+    if (preview !== null && (preview === 0n || preview > gross)) throw new Error("erc4626-preview-max-inconsistent");
     const calls = [
       { target: underlying, allowFailure: false, callData: calldata("balanceOf", [HOLDER]) },
       { target: shareToken, allowFailure: false, callData: calldata("balanceOf", [HOLDER]) },
@@ -362,14 +368,17 @@ export async function observeErc4626InstantExit(args: {
         if (provenShares < simulated && provenShares > candidate) candidate = provenShares;
       }
       if (candidate > 0n && candidate < simulated) {
-        amount = candidate;
-        quote = await batch([{ to: vault, data: calldata("convertToAssets", [amount]) }, { to: vault, data: calldata("previewRedeem", [amount]) }]);
-        gross = uint(quote[0]!); preview = uint(quote[1]!);
-        if (preview === 0n || preview > gross || (config.maxFunctions === "binding" && preview > maxWithdraw)) throw new Error("erc4626-preview-max-inconsistent");
-        calls[2]!.callData = redeemCalldata(amount);
-        const retry = await batch([{ to: HOLDER, data: encodeFunctionData({ abi: MULTICALL_ABI, functionName: "aggregate3", args: [calls] }) }], simulated);
-        results = decodeFunctionResult({ abi: MULTICALL_ABI, functionName: "aggregate3", data: retry[0] as `0x${string}` });
-        if (results.length !== calls.length || results.some((entry, index) => index !== 2 && !entry.success)) throw new Error("erc4626-simulation-invalid");
+        const quote = await batch([{ to: vault, data: calldata("convertToAssets", [candidate]) }, { to: vault, data: calldata("previewRedeem", [candidate]) }]);
+        const candidateGross = uint(quote[0]!); const candidatePreview = uint(quote[1]!);
+        if (candidatePreview > candidateGross || (config.maxFunctions === "binding" && candidatePreview > maxWithdraw)) throw new Error("erc4626-preview-max-inconsistent");
+        // Idle dust can round to zero assets; continue the existing probes without replacing the receipt.
+        if (candidatePreview > 0n) {
+          amount = candidate; gross = candidateGross; preview = candidatePreview;
+          calls[2]!.callData = redeemCalldata(amount);
+          const retry = await batch([{ to: HOLDER, data: encodeFunctionData({ abi: MULTICALL_ABI, functionName: "aggregate3", args: [calls] }) }], simulated);
+          results = decodeFunctionResult({ abi: MULTICALL_ABI, functionName: "aggregate3", data: retry[0] as `0x${string}` });
+          if (results.length !== calls.length || results.some((entry, index) => index !== 2 && !entry.success)) throw new Error("erc4626-simulation-invalid");
+        }
       }
       if (config.maxFunctions === "reviewed-non-binding-zero" ||
           (deferredReceipt && !externalShares && maxRedeem > 0n && maxWithdraw > 0n)) {
@@ -421,7 +430,7 @@ export async function observeErc4626InstantExit(args: {
     const received = after >= before ? after - before : 0n;
     const supplyAfter = uint(results[5]!.returnData);
     if (sharesBefore !== simulated || sharesAfter > sharesBefore || sharesBefore - sharesAfter !== amount ||
-        after < before || received > gross || received === 0n ||
+        after < before || received > gross || received === 0n || preview === null ||
         (config.redeemReturns === "gross-before-fee" ? returned !== gross : returned !== received) ||
         (config.previewRedeem !== "gross-before-fee" && received < preview)) {
       if (amount === simulated) throw new Erc4626CanonicalAttemptError(canonicalAttempt);
