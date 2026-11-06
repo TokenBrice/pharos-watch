@@ -1,6 +1,6 @@
 import type { CronResult } from "../lib/cron-logger";
 import { CRON_TIMEOUT_MS } from "../lib/cron-timeouts";
-import { runWithOverloadRetry } from "../lib/d1-overload-retry";
+import { D1_HEAVY_STATEMENT_IDLE_RATIO, runWithOverloadRetry } from "../lib/d1-overload-retry";
 import { sleepWithSignal, throwIfAborted } from "../lib/abort";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { STALE_SLOT_ERROR } from "../lib/scheduled-slot-reconciliation";
@@ -178,19 +178,21 @@ function readDiagnosticMetadata(value: string | null): Record<string, unknown> {
 /**
  * Seven days of run metadata is well over 100 MB, so one batched pass spent
  * D1's rolling 10 s resource window and failed with an overload. Each read now
- * runs alone, waits out the window once on overload, and idles as long as a
- * slow read ran so the database is never saturated.
+ * runs alone, outlasts one spent window, and idles for a multiple of its own
+ * wall time (the yield-history precedent).
  */
 async function pacedRead<T>(read: () => Promise<D1Result<T>>, signal?: AbortSignal): Promise<D1Result<T>> {
-  const result = await runWithOverloadRetry(read, 3, signal, { waitOutResourceWindow: true });
-  const durationMs = result.meta?.duration;
-  if (typeof durationMs === "number" && durationMs >= PACED_READ_MIN_IDLE_MS) {
-    await sleepWithSignal(Math.min(durationMs, PACED_READ_MAX_IDLE_MS), signal);
-  }
+  let readMs = 0;
+  const result = await runWithOverloadRetry(async () => {
+    const startedMs = Date.now();
+    const attempt = await read();
+    // Pace on this attempt alone; a waited-out window is already idle time.
+    readMs = Date.now() - startedMs;
+    return attempt;
+  }, 3, signal, { waitOutResourceWindow: true });
+  await sleepWithSignal(Math.round(readMs * D1_HEAVY_STATEMENT_IDLE_RATIO), signal);
   return result;
 }
-const PACED_READ_MIN_IDLE_MS = 250;
-const PACED_READ_MAX_IDLE_MS = 5_000;
 
 async function loadDurationDiagnostics(
   db: D1Database,
