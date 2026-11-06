@@ -39,13 +39,23 @@ export async function deleteCapped(
 /** Every retention envelope publishes the same bounded failure text. */
 const PRUNE_ERROR_TEXT_LIMIT = 500;
 
-/** One capped retention statement: its own SQL, binds, batch size and run budget. */
+/** One retention entry; its ordered windows share the batch size and run budget. */
 export interface CappedPruneStatement {
   key?: string;
   sql: string;
   bindsForLimit: (limit: number) => unknown[];
   batchLimit: number;
   runLimit: number;
+  windows?: readonly (Pick<CappedPruneStatement, "sql" | "bindsForLimit"> & { window: string })[];
+}
+
+export class RetentionGroupError extends Error {
+  constructor(
+    readonly failedRetentionGroup: { key: string; window?: string }[],
+    readonly cause: unknown,
+  ) {
+    super(`Retention group ${failedRetentionGroup.map(({ key, window }) => window ? `${key} [${window}]` : key).join(", ")}: ${toErrorMessage(cause)}`);
+  }
 }
 
 /** Up to five independent statements share one binding call per drain round. */
@@ -71,45 +81,67 @@ export async function deleteCappedGroup(
     let batchOutcomeUnknown = false;
     let status = "ok";
     let error: string | null = null;
+    let failedRetentionGroup: { key: string; window?: string }[] = completed.map(({ key }) => ({ key }));
     try {
-      const passes = await runBoundedPruneGroup(
-        group,
-        async (batches) => {
-          const round = await db.batch(batches.map(({ index, limit }) => {
-            const statement = group[index];
-            return db.prepare(statement.sql).bind(...statement.bindsForLimit(limit));
-          })).catch((caught: unknown) => {
-            batchOutcomeUnknown = true;
-            throw caught;
-          });
-          if (round.length !== batches.length) {
-            batchOutcomeUnknown = true;
-            throw new Error("Retention batch result count mismatch");
-          }
-          completedRounds += 1;
-          for (let index = 0; index < batches.length; index += 1) {
-            const work = completed[batches[index].index];
-            const meta = round[index].meta;
-            const add = (total: number | null, value: number | undefined) =>
-              total !== null && typeof value === "number" && Number.isFinite(value) ? total + value : null;
-            work.pruned = add(work.pruned, meta?.changes);
-            work.rowsRead = add(work.rowsRead, meta?.rows_read);
-            work.rowsWritten = add(work.rowsWritten, meta?.rows_written);
-            work.d1DurationMs = add(work.d1DurationMs, meta?.duration);
-          }
-          return round;
-        },
-        signal,
-      );
-      results.push(...passes.map((pass) => ({ pruned: pass.deleted, cappedAtLimit: pass.truncated })));
+      const passes = group.map(() => ({ pruned: 0, cappedAtLimit: false }));
+      const windowCount = Math.max(1, ...group.map((statement) => statement.windows?.length ?? 1));
+      for (let windowIndex = 0; windowIndex < windowCount; windowIndex += 1) {
+        const current = group.map((statement) => statement.windows
+          ? statement.windows[windowIndex] : windowIndex === 0 ? statement : undefined);
+        const windowPasses = await runBoundedPruneGroup(
+          group.map((statement, index) => ({
+            batchLimit: statement.batchLimit,
+            runLimit: current[index] ? Math.max(0, statement.runLimit - passes[index].pruned) : 0,
+          })),
+          async (batches) => {
+            failedRetentionGroup = batches.map(({ index }) => ({
+              key: completed[index].key,
+              ...(group[index].windows ? { window: group[index].windows![windowIndex].window.slice(0, 100) } : {}),
+            }));
+            const round = await db.batch(batches.map(({ index, limit }) => {
+              const statement = current[index]!;
+              return db.prepare(statement.sql).bind(...statement.bindsForLimit(limit));
+            })).catch((caught: unknown) => {
+              batchOutcomeUnknown = true;
+              throw caught;
+            });
+            if (round.length !== batches.length) {
+              batchOutcomeUnknown = true;
+              throw new Error("Retention batch result count mismatch");
+            }
+            completedRounds += 1;
+            for (let index = 0; index < batches.length; index += 1) {
+              const work = completed[batches[index].index];
+              const meta = round[index].meta;
+              const add = (total: number | null, value: number | undefined) =>
+                total !== null && typeof value === "number" && Number.isFinite(value) ? total + value : null;
+              work.pruned = add(work.pruned, meta?.changes);
+              work.rowsRead = add(work.rowsRead, meta?.rows_read);
+              work.rowsWritten = add(work.rowsWritten, meta?.rows_written);
+              work.d1DurationMs = add(work.d1DurationMs, meta?.duration);
+            }
+            return round;
+          },
+          signal,
+        );
+        for (let index = 0; index < group.length; index += 1) {
+          if (!current[index]) continue;
+          passes[index].pruned += windowPasses[index].deleted;
+          passes[index].cappedAtLimit ||= windowPasses[index].truncated;
+        }
+      }
+      results.push(...passes);
     } catch (caught) {
-      status = signal?.aborted || (caught instanceof Error && caught.name === "AbortError") ? "aborted" : "error";
+      status = signal?.aborted || (typeof caught === "object" && caught !== null && "name" in caught && caught.name === "AbortError")
+        ? "aborted" : "error";
       error = toErrorMessage(caught).slice(0, PRUNE_ERROR_TEXT_LIMIT);
-      throw caught;
+      if (status === "aborted") throw caught;
+      throw new RetentionGroupError(failedRetentionGroup, caught);
     } finally {
       // Only acknowledged rounds are costs/counts; a failed binding can have an unknown outcome.
       const diagnostic = JSON.stringify({
         completed, completedRounds, batchOutcomeUnknown, status, error,
+        ...(status === "ok" ? {} : { failedRetentionGroup }),
         durationMs: Math.max(0, Date.now() - startedAtMs),
       });
       if (status === "ok") console.info("[retention-group]", diagnostic);
@@ -146,7 +178,12 @@ export async function runRetentionPolicies<Key extends string>(
       const policy = policies[key];
       const statement = retentionDeleteStatement(policy, nowSec);
       if (policy.budgetGroup) statement.runLimit = Math.max(0, policy.runLimit - (used.get(policy.budgetGroup) ?? 0));
-      return { ...statement, key };
+      return {
+        ...statement, key,
+        windows: policy.windows?.map((window) => ({
+          ...retentionDeleteStatement(policy, nowSec, window), window: window.predicate,
+        })),
+      };
     });
     const passes = await deleteCappedGroup(db, statements, signal);
     for (let index = 0; index < group.length; index += 1) {
