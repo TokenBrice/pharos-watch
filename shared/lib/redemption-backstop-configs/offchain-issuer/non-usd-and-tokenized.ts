@@ -190,7 +190,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "axcnh-anchorx": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    holderEligibility: "unknown",
+    accessModel: "issuer-api",
+    holderEligibility: "whitelisted-primary",
     settlementModel: "days",
     costModel: undisclosedReviewedFee(
       "Direct 1:1 AnchorX redemption for CNH; the Terms of Service reserve the right to implement fees and publish no all-in fee bound",
@@ -210,6 +211,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     docs: [
       sourceRef("AnchorX Terms of Service (undated; reviewed 2026-10-02)", "https://www.anchorx.org/terms", ["route", "access", "fees"]),
       sourceRef("AnchorX transparency disclosure", "https://www.anchorx.org/transparency", ["route"]),
+      sourceRef("AnchorX served Terms, sections 2-4: Professional Investors under SFO Schedule 1 Part 1 only, age 18 or older, account credentials (undated; access reviewed 2026-11-06)", "https://anchorx.org/assets/index-58bf9fd6.js", ["access"]),
+      sourceRef("AnchorX authenticated subscription/redemption portal (undated; access reviewed 2026-11-06)", "https://onlineportal.anchorx.org/login", ["access"]),
     ],
     notes: [
       "AnchorX Group's public Terms of Service limit platform subscription and redemption services to Professional Investors as defined in Part 1 of Schedule 1 of the Hong Kong SFO; this is not an ordinary-holder access guarantee.",
@@ -422,7 +425,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
   "sbc-brale": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
-    holderEligibility: "unknown",
+    accessModel: "issuer-api",
+    holderEligibility: "verified-customer",
     settlementModel: "days",
     costModel: documentedVariableFee(
       "Brale publishes 0 bps on standard money movement and bank-payout usage fees of $0.25 per ACH, $2 per RTP and $20 per wire. Onchain transfers cost actual gas plus 20%. The Business User Agreement retains account-specific fees and discretionary pricing changes; no uniform all-in basis-point fee or maximum is established",
@@ -442,6 +446,8 @@ export const NON_USD_AND_TOKENIZED_OFFCHAIN_CONFIGS: Record<string, RedemptionBa
     docs: [
       sourceRefRouteCapacity("SBC stablecoin page", "https://brale.xyz/stablecoins/SBC"),
       sourceRef("Brale pricing", "https://brale.xyz/pricing", ["fees"]),
+      sourceRef("Brale Business User Agreement, May 27, 2026, sections 2.1-2.5 and 3.2: accepted and verified incorporated US businesses where authorized; individuals and sole proprietors excluded (access reviewed 2026-11-06)", "https://brale.xyz/legal/business-user-agreement", ["access"]),
+      sourceRef("Brale API Services Schedule, May 27, 2026: opted-in Program Partners use authenticated API or Portal (access reviewed 2026-11-06)", "https://brale.xyz/legal/api-services-schedule", ["access"]),
     ],
   },
   "m-m0": {
