@@ -182,8 +182,11 @@ function buildCronSentinelResult(
         ...(state !== "current" ? { reason: `source-state-${state}`, lastStatus: result.status ?? null } : {}),
         ...(result.attempt ? { attempt: result.attempt } : {}),
         ...(result.status === "error" ? {
-          retryBackoffSec: SOURCE_ERROR_BACKOFF_SEC,
-          nextRetryAt: observedAt == null ? null : lastAttemptAt(result, observedAt) + SOURCE_ERROR_BACKOFF_SEC,
+          // Only daily sources have a cross-mode retry; the rest re-run at their native cadence.
+          ...(SOURCES_BY_MODE.daily.includes(source) ? {
+            retryBackoffSec: SOURCE_ERROR_BACKOFF_SEC,
+            nextRetryAt: observedAt == null ? null : lastAttemptAt(result, observedAt) + SOURCE_ERROR_BACKOFF_SEC,
+          } : {}),
           ...(state === "current" ? { reason: "source-evaluation-error" } : {}),
         } : {}),
         itemCount: result.itemCount ?? 0,

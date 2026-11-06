@@ -64,7 +64,7 @@ describe("cron sentinel persisted source state", () => {
     });
     expect(JSON.parse(expired.metadata!).sources[source]).toMatchObject({
       status: "expired", lastStatus: "error", observedAt, maxAgeSec: budget, reason: "source-state-expired",
-      nextRetryAt: observedAt + budget + 901,
+      ...(budget === 172_800 ? { nextRetryAt: observedAt + budget + 901 } : {}),
       attempt: { count: 3, attemptedAt: observedAt + budget + 1, status: "skipped_locked" },
     });
     const recovered = await runCronSentinelSources(db, "daily", [
