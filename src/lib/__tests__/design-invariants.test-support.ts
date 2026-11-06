@@ -11,19 +11,6 @@ export function isComponentSourceFile(path: string): boolean {
 
 const COMPILER_OPTIONS: ts.CompilerOptions = { noLib: true, noResolve: true };
 
-function parseSource(path: string, source: string): ts.SourceFile {
-  return ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, getScriptKind(path));
-}
-
-/** One Program (and checker) shared by every file in the tree scan. */
-function createTreeProgram(sourceFiles: ReadonlyMap<string, ts.SourceFile>): ts.Program {
-  const host = ts.createCompilerHost(COMPILER_OPTIONS);
-  host.getSourceFile = (name) => sourceFiles.get(name);
-  host.fileExists = (name) => sourceFiles.has(name);
-  host.readFile = (name) => sourceFiles.get(name)?.text;
-  return ts.createProgram([...sourceFiles.keys()], COMPILER_OPTIONS, host);
-}
-
 function inspectSourceFile(sourceFile: ts.SourceFile, checker: ts.TypeChecker): ComponentStyleViolation[] {
   const violations = new Set<ComponentStyleViolation>();
   const classBuilders = new Set(["cn", "clsx", "cva", "twMerge"]);
@@ -64,11 +51,17 @@ function inspectSourceFile(sourceFile: ts.SourceFile, checker: ts.TypeChecker): 
   }
 
   function visit(node: ts.Node): void {
-    if (/^src\/(components\/(interactive-table-row|liquidity-table|flow-table)|app\/chains\/(client|\[chain\]\/stablecoin-table))\.tsx$/.test(sourceFile.fileName) &&
+    if (/^src\/.*\.tsx$/.test(sourceFile.fileName) &&
       (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
       /^(tr|TableRow|InteractiveTableRow)$/.test(node.tagName.getText(sourceFile))) {
       for (const attr of node.attributes.properties) {
-        if (!ts.isJsxAttribute(attr) || attr.name.getText(sourceFile) !== "role") continue;
+        if (!ts.isJsxAttribute(attr)) continue;
+        const name = attr.name.getText(sourceFile);
+        // Only the directory's active virtual cursor gets a roving row tab stop.
+        const roving = sourceFile.fileName === "src/components/stablecoin-table-row.tsx" &&
+          attr.initializer?.getText(sourceFile) === "{isCursor ? 0 : undefined}";
+        if ((name === "tabIndex" && !roving) || name === "onKeyDown") violations.add("interactive-row");
+        if (name !== "role") continue;
         const value = attr.initializer && ts.isJsxExpression(attr.initializer) ? attr.initializer.expression : attr.initializer;
         if (!value || !ts.isStringLiteralLike(value) || value.text !== "row") violations.add("interactive-row");
       }
@@ -93,32 +86,27 @@ function inspectSourceFile(sourceFile: ts.SourceFile, checker: ts.TypeChecker): 
   return [...violations].sort();
 }
 
-/** Inspect executable styling expressions, never comments or unrelated display text. */
 export function inspectComponentStyles(path: string, source: string): ComponentStyleViolation[] {
-  if (!isComponentSourceFile(path)) return [];
-  const sourceFile = parseSource(path, source);
-  const host = ts.createCompilerHost(COMPILER_OPTIONS);
-  host.getSourceFile = (name) => name === path ? sourceFile : undefined;
-  const checker = ts.createProgram([path], COMPILER_OPTIONS, host).getTypeChecker();
-  return inspectSourceFile(sourceFile, checker);
+  return inspectComponentTree([{ path, source }]).get(path) ?? [];
 }
 
-/**
- * Whole-tree variant of `inspectComponentStyles`: every source is parsed and
- * bound once by a single Program instead of one Program per file.
- */
+/** Parse and bind the source tree once. */
 export function inspectComponentTree(
   files: ReadonlyArray<{ path: string; source: string }>,
 ): Map<string, ComponentStyleViolation[]> {
   const sourceFiles = new Map<string, ts.SourceFile>();
   for (const { path, source } of files) {
-    if (isComponentSourceFile(path)) sourceFiles.set(path, parseSource(path, source));
+    if (isComponentSourceFile(path)) sourceFiles.set(path,
+      ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, getScriptKind(path)));
   }
-  const checker = createTreeProgram(sourceFiles).getTypeChecker();
+  const host = ts.createCompilerHost(COMPILER_OPTIONS);
+  host.getSourceFile = (name) => sourceFiles.get(name);
+  host.fileExists = (name) => sourceFiles.has(name);
+  host.readFile = (name) => sourceFiles.get(name)?.text;
+  const checker = ts.createProgram([...sourceFiles.keys()], COMPILER_OPTIONS, host).getTypeChecker();
   return new Map([...sourceFiles].map(([path, sourceFile]) => [path, inspectSourceFile(sourceFile, checker)]));
 }
 
-/** Bounded source resolver: unknown color syntax, missing aliases and cycles fail closed. */
 export function tokenColors(sources: string[], dark: boolean) {
   const base: Record<string, string> = {}, overrides: Record<string, string> = {};
   for (const source of sources) {

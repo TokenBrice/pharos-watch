@@ -1,12 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("../fetch-retry", () => ({
-  fetchWithRetry: vi.fn(),
-}));
-
-vi.mock("../abort", () => ({
-  sleepWithSignal: vi.fn(async () => undefined),
-}));
+vi.mock("../fetch-retry", () => ({ fetchWithRetry: vi.fn() }));
+vi.mock("../abort", () => ({ sleepWithSignal: vi.fn(async () => undefined) }));
 
 import { RATE_LIMITS } from "../rate-limit";
 import { sleepWithSignal } from "../abort";
@@ -22,13 +17,9 @@ const validPool = {
   id: "pool-1",
   type: "pool",
   attributes: {
-    address: "0xpool",
-    name: "USDC / USDT",
-    pool_created_at: null,
-    base_token_price_usd: "1",
-    quote_token_price_usd: "1",
-    reserve_in_usd: "100000",
-    volume_usd: { h24: "10000" },
+    address: "0xpool", name: "USDC / USDT", pool_created_at: null,
+    base_token_price_usd: "1", quote_token_price_usd: "1",
+    reserve_in_usd: "100000", volume_usd: { h24: "10000" },
   },
   relationships: {
     base_token: { data: { id: "eth_0xbase", type: "token" } },
@@ -57,45 +48,17 @@ describe("coingecko-onchain", () => {
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
       new Response(JSON.stringify({ data: [validPool, missingAttributes] }), { status: 200 }),
     );
-    await expect(fetchCgTokenPoolsWithStatus("eth", "0xdef")).resolves.toEqual({
-      transportOk: true,
-      schemaDegraded: true,
-      complete: true,
-      pools: [validPool],
-    });
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xdef")).resolves.toEqual({ transportOk: true, schemaDegraded: true, complete: true, pools: [validPool] });
   });
 
   it("marks all-invalid and malformed relationship responses as schema-degraded", async () => {
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: [{ id: "pool-1" }] }), { status: 200 }),
-    );
-    await expect(fetchCgTokenPoolsWithStatus("eth", "0xall-invalid")).resolves.toEqual({
-      transportOk: true,
-      schemaDegraded: true,
-      complete: true,
-      pools: [],
-    });
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({
-          data: [{
-            ...validPool,
-            relationships: {
-              ...validPool.relationships,
-              dex: { data: { id: "uniswap-v3", type: 1 } },
-            },
-          }],
-        }),
-        { status: 200 },
-      ),
-    );
-    await expect(fetchCgTokenPoolsWithStatus("eth", "0xmalformed-relationship")).resolves.toEqual({
-      transportOk: true,
-      schemaDegraded: true,
-      complete: true,
-      pools: [],
-    });
+    for (const [address, data] of [
+      ["0xall-invalid", [{ id: "pool-1" }]],
+      ["0xmalformed-relationship", [{ ...validPool, relationships: { ...validPool.relationships, dex: { data: { id: "uniswap-v3", type: 1 } } } }]],
+    ] as const) {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify({ data }), { status: 200 }));
+      await expect(fetchCgTokenPoolsWithStatus("eth", address)).resolves.toEqual({ transportOk: true, schemaDegraded: true, complete: true, pools: [] });
+    }
   });
 
   it("accepts production-shaped CoinGecko Pro pool payloads with omitted optional attributes", async () => {
@@ -121,52 +84,22 @@ describe("coingecko-onchain", () => {
       new Response(JSON.stringify({ data: [capturedPool] }), { status: 200 }),
     );
 
-    await expect(fetchCgTokenPoolsWithStatus("eth", "0xa0b8")).resolves.toEqual({
-      transportOk: true,
-      schemaDegraded: false,
-      complete: true,
-      pools: [capturedPool],
-    });
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xa0b8")).resolves.toEqual({ transportOk: true, schemaDegraded: false, complete: true, pools: [capturedPool] });
   });
 
   it("separates transport health from malformed payloads for circuit breaker accounting", async () => {
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 500 }));
-    await expect(fetchCgTokenPoolsWithStatus("eth", "0xghi")).resolves.toEqual({
-      transportOk: false,
-      schemaDegraded: false,
-      complete: false,
-      pools: [],
-    });
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: [] }), { status: 200 }),
-    );
-    await expect(fetchCgTokenPoolsWithStatus("eth", "0xempty")).resolves.toEqual({
-      transportOk: true,
-      schemaDegraded: false,
-      complete: true,
-      pools: [],
-    });
-
-    vi.mocked(fetchWithRetry).mockResolvedValueOnce(
-      new Response(JSON.stringify({ data: { bad: true } }), { status: 200 }),
-    );
-    await expect(fetchCgTokenPoolsWithStatus("eth", "0xnon-array")).resolves.toEqual({
-      transportOk: true,
-      schemaDegraded: true,
-      complete: false,
-      pools: [],
-    });
+    for (const [address, data, status, transportOk, schemaDegraded, complete] of [
+      ["0xghi", {}, 500, false, false, false], ["0xempty", { data: [] }, 200, true, false, true],
+      ["0xnon-array", { data: { bad: true } }, 200, true, true, false],
+    ] as const) {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify(data), { status }));
+      await expect(fetchCgTokenPoolsWithStatus("eth", address)).resolves.toEqual({ transportOk, schemaDegraded, complete, pools: [] });
+    }
   });
 
   it("treats CoinGecko onchain lookup misses as source-healthy empty results", async () => {
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("{}", { status: 404 }));
-    await expect(fetchCgTokenPoolsWithStatus("eth", "0xmissing")).resolves.toEqual({
-      transportOk: true,
-      schemaDegraded: false,
-      complete: true,
-      pools: [],
-    });
+    await expect(fetchCgTokenPoolsWithStatus("eth", "0xmissing")).resolves.toEqual({ transportOk: true, schemaDegraded: false, complete: true, pools: [] });
 
     expect(fetchWithRetry).toHaveBeenLastCalledWith(
       expect.any(String),
@@ -231,49 +164,19 @@ describe("coingecko-onchain", () => {
     expect(fetchWithRetry).toHaveBeenCalledTimes(3);
   });
 
-  it("parses pool volume from flat, nested, and invalid payloads", () => {
-    expect(
-      parseCgPoolVolume({
-        address: "0x1",
-        name: "Pool",
-        pool_created_at: null,
-        base_token_price_usd: null,
-        quote_token_price_usd: null,
-        reserve_in_usd: null,
-        h24_volume_usd: "123.45",
-        pool_fee_percentage: null,
-        locked_liquidity_percentage: null,
-      }),
-    ).toBe(123.45);
+  it.each(["", ".", "..", "bad,id", "bad/id", "bad?id", "bad#id", "bad id", ":".repeat(1800)])("rejects unsafe id %s without losing siblings", async (id) => {
+    vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify({ data: [validPool] })));
+    await expect(fetchCgPoolsByAddressesWithStatus("eth", [id, "safe_1.2:-"]))
+      .resolves.toEqual({ transportOk: true, schemaDegraded: false, pools: [validPool], rejectedAddresses: [id] });
+    expect(vi.mocked(fetchWithRetry).mock.calls[0]![0]).toContain("/multi/safe_1.2%3A-?");
+  });
 
-    expect(
-      parseCgPoolVolume({
-        address: "0x2",
-        name: "Pool",
-        pool_created_at: null,
-        base_token_price_usd: null,
-        quote_token_price_usd: null,
-        reserve_in_usd: null,
-        h24_volume_usd: null,
-        pool_fee_percentage: null,
-        locked_liquidity_percentage: null,
-        volume_usd: { h24: "77" },
-      }),
-    ).toBe(77);
-
-    expect(
-      parseCgPoolVolume({
-        address: "0x3",
-        name: "Pool",
-        pool_created_at: null,
-        base_token_price_usd: null,
-        quote_token_price_usd: null,
-        reserve_in_usd: null,
-        h24_volume_usd: "bad",
-        pool_fee_percentage: null,
-        locked_liquidity_percentage: null,
-        volume_usd: { h24: "0" },
-      }),
-    ).toBe(0);
+  it.each([
+    ["0x1", "123.45", undefined, 123.45], ["0x2", null, { h24: "77" }, 77], ["0x3", "bad", { h24: "0" }, 0],
+  ] as const)("parses pool volume from flat, nested, and invalid payloads (%s)", (address, h24_volume_usd, volume_usd, expected) => {
+    expect(parseCgPoolVolume({
+      address, name: "Pool", pool_created_at: null, base_token_price_usd: null, quote_token_price_usd: null,
+      reserve_in_usd: null, h24_volume_usd, pool_fee_percentage: null, locked_liquidity_percentage: null, ...(volume_usd && { volume_usd }),
+    })).toBe(expected);
   });
 });
