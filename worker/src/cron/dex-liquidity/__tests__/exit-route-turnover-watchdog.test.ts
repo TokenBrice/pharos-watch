@@ -453,13 +453,13 @@ describe("DEX exit-route turnover watchdog", () => {
     sendToChatMock.mockImplementation(async () => {
       expect(snapshot().pendingAlert.generationId).toBe(SUSTAINED);
       expect(receipt().pendingSince).toBe(1_800_000_000);
-      return { ok: false, errorClass: "chat_not_found" };
+      return { ok: false };
     });
     const failed = await run();
     expect(failed.status).toBe("degraded");
     expect(metadataOf(failed)).toMatchObject({
       reason: "operator-alert-delivery-failed",
-      operatorAlert: { episodeActive: true, sent: false, deliveryFailed: true, deliveryErrorClass: "chat_not_found" },
+      operatorAlert: { episodeActive: true, sent: false, deliveryFailed: true, deliveryErrorClass: "unknown" },
     });
     const original = snapshot().pendingAlert;
     const pendingReceipt = receipt();
