@@ -2,6 +2,31 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "id": "c2-2-u-united-stables-live-aggregate-asset-class-20261106",
+      "assetId": "u-united-stables",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "assetClass",
+        "routeKey": null,
+        "exposureId": "reserve:9f11b68634c98d9720d24b43",
+        "requiredDatum": "assetClass"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T19:22:03Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c2-2",
+      "sourcesRefs": [
+        "source:da53c0e58ba989b21270f827",
+        "source:2891001dab8a0beeb32f3126"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:6f1dc2014a8cda128d6d1784",
+        "surface:798d4d04055f9c33909f54bd"
+      ],
+      "rationale": "The required datum is the assetClass of the captured live aggregate reserve:9f11b68634c98d9720d24b43, not the separate dated four-category curated composition. Section 3.2 of the 27 July 2026 terms leaves the cash, Treasury-bill and stablecoin proportions discretionary and disclaims exact composition assurance. The public PoR response checked on 6 November supplies aggregate reserve/token totals only, with no instrument allocation. No single class or current split can be established for this aggregate. This records issuer non-disclosure only; no reserve weight, date, maturity, liquidity or obligor identity is inferred."
+    },
+    {
       "id": "erc4626-deployed-liquidity-bbqusdc-steakhouse-v2",
       "assetId": "bbqusdc-steakhouse-v2",
       "scope": {
@@ -64021,6 +64046,28 @@
   ],
   "sourceObservations": [
     {
+      "id": "source:da53c0e58ba989b21270f827",
+      "value": {
+        "url": "https://u.tech/resources/legal-policy/terms/",
+        "observedAt": "2026-11-06T19:20:49Z",
+        "datumAsOf": "2026-07-27",
+        "location": "Section 3.2 Reserves; terms last updated 27 July 2026",
+        "excerpt": "The composition, custody arrangements, allocation, and rebalancing of the Reserves may vary and may be updated at any time without notice.",
+        "assertion": "The issuer retains discretion over the cash, Treasury-bill and stablecoin mix and disclaims assurance of exact reserve composition; these terms do not establish a single asset class for the current aggregate reserve slice."
+      }
+    },
+    {
+      "id": "source:2891001dab8a0beeb32f3126",
+      "value": {
+        "url": "https://u.tech/u-client-api/v1/public/u/por",
+        "observedAt": "2026-11-06T19:20:49Z",
+        "datumAsOf": null,
+        "location": "Public PoR JSON response; updatedAt is a response clock, not a holdings-composition date",
+        "excerpt": "{\"accountName\":\"United Stables\",\"totalReserve\":\"1630487659.04\",\"totalToken\":\"1611644734.63\",\"updatedAt\":\"2026-11-06T19:20:30.499Z\",\"ripcord\":false,\"ripcordDetails\":[]}",
+        "assertion": "The United Stables response reports aggregate reserves and tokens without instrument amounts or an asset-class allocation. It does not classify the captured live aggregate."
+      }
+    },
+    {
       "id": "source:dda71e95c984dfeb5e60826b",
       "value": {
         "url": "https://morpho.org/terms-of-use/",
@@ -95636,6 +95683,10 @@
     }
   ],
   "searchedSurfaceObservations": [
+    {
+      "id": "surface:6f1dc2014a8cda128d6d1784",
+      "value": "https://u.tech/resources/legal-policy/terms/"
+    },
     {
       "id": "surface:02104660b92fdb0837bc2da7",
       "value": "https://morpho.org/terms-of-use/"

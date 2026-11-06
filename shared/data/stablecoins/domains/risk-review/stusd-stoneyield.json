@@ -39,5 +39,56 @@
     "evidence": "STUSD has a live holder-selective lock-extension and lock-revival control on its sole tracked BSC deployment 0x806dd21af6de051fb811760a5768d04a99160eb9. At BSC block 128510562 (2026-10-19T07:00:40Z; hash 0x718358e2c7285a3dd062c93f608b0fefad7696f04a9cda980b05513805868a95), its immutable wrapper was 0xb4d3c1bb59be7b419af4e10e9b240f425782b22a, with live owner 0x9ab82f8e97bf3202173b92e06e6593f336b76ccf and token MINTER_ROLE assigned to that wrapper. The verified v2.0.1 token and v3.0.1 wrapper runtime exactly matched their deployed code. STUSD._update checks the sender's wrapper lock before ordinary transfers. The owner/operator's wrapWithLock(to,amount,unlockTime) increases the recipient's stored locked amount and can extend its expiry without the recipient's consent. The amount is never cleared when expiry passes: getLockInfo merely returns zero while expired. Sending a new dust locked issuance can therefore revive the historical amount against a pre-existing unlocked holder balance. The current owner address itself demonstrates the state: 5951938122217323694533 raw STUSD balance, an expired stored lock of 10000000000000000000000 until 1764953363, and getLockInfo=(0,0). Nonadmin 0x9896862b7282d4730facd3934e5c13c3a3f28afc currently holds 771000000000000000000 raw units under a lock ending 1797281445; a later issuer mint can extend that same existing balance's lock. The same authority owns upstream sUSDC, is permanently unlocked there, and can mint funding dust using recordReward; that owner-sender call succeeded non-persistently at the pin. There is no claim that a relock transaction was executed. STUSD and its wrapper remain non-proxy contracts with no token-level blacklist or global pause, but their deployed external lock hook already supplies a live holder-targeted intervention path, so Yes applies rather than Possible. Upstream sUSDC remains a separate proxy at 0xad66385c6db496258771b5fd8ac376e3dd0d1536 using implementation 0xe1bf9310f23db3fd05931aa89879d5247bb2a678; it was unpaused and retains holder-lock, forced-transfer and burn functions. The declared USDC lineage is secondary because the direct control decides the verdict. Verified source governs deployed behavior where issuer documentation differs; missing public audit or reserve publications are not used as access-control evidence.",
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
+  },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "StoneYield's direct accounting path uses 1:1 USDC-to-sUSDC-to-STUSD amounts and the Venus vUSDC exchangeRateStored share rate; the issuer excludes direct external price feeds while expressly retaining Venus's native implementations.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c2-2",
+      "rationale": "The issuer's mainnet register identifies the tracked STUSD and wrapper plus SUSDC, StrategyRouter and VenusUSDCVault. Its security model states that StoneYield exclusively supplies and never borrows; the reviewed repository sources use amount-for-amount mint/wrap accounting and Venus's exchangeRateStored accounting rate, not a StoneYield collateral-price liquidation engine. Venus's native oracle remains an upstream venue dependency; these repository sources are not a new deployed-bytecode equivalence proof.",
+      "sources": [
+        {
+          "label": "StoneYield security model, issuer docs commit 52dcad6 (2026-08-08)",
+          "url": "https://github.com/stoneyield-org/stoneyield-docs/blob/52dcad692f6bad4f373ff93a8778f976ff58ec15/content/docs/whitepaper/security-model.md"
+        },
+        {
+          "label": "StoneYield mainnet contract register, issuer docs commit 52dcad6 (2026-08-08)",
+          "url": "https://github.com/stoneyield-org/stoneyield-docs/blob/52dcad692f6bad4f373ff93a8778f976ff58ec15/content/docs/github/smart-contracts.md"
+        },
+        {
+          "label": "StoneYield protocol architecture, issuer docs commit 52dcad6 (2026-08-08)",
+          "url": "https://github.com/stoneyield-org/stoneyield-docs/blob/52dcad692f6bad4f373ff93a8778f976ff58ec15/content/docs/whitepaper/protocol-architecture.md"
+        },
+        {
+          "label": "StoneYield 1:1 wrapper and accounting sources, commit ef8dcb7 (2026-08-08)",
+          "url": "https://github.com/stoneyield-org/stoneyield-contracts/tree/ef8dcb7065053df103634e1aa5a0e20e7cfa9b3d/contracts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c2-2",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "StoneYield security model, issuer docs commit 52dcad6 (2026-08-08)",
+        "url": "https://github.com/stoneyield-org/stoneyield-docs/blob/52dcad692f6bad4f373ff93a8778f976ff58ec15/content/docs/whitepaper/security-model.md"
+      },
+      {
+        "label": "StoneYield mainnet contract register, issuer docs commit 52dcad6 (2026-08-08)",
+        "url": "https://github.com/stoneyield-org/stoneyield-docs/blob/52dcad692f6bad4f373ff93a8778f976ff58ec15/content/docs/github/smart-contracts.md"
+      },
+      {
+        "label": "StoneYield protocol architecture, issuer docs commit 52dcad6 (2026-08-08)",
+        "url": "https://github.com/stoneyield-org/stoneyield-docs/blob/52dcad692f6bad4f373ff93a8778f976ff58ec15/content/docs/whitepaper/protocol-architecture.md"
+      },
+      {
+        "label": "StoneYield 1:1 wrapper and accounting sources, commit ef8dcb7 (2026-08-08)",
+        "url": "https://github.com/stoneyield-org/stoneyield-contracts/tree/ef8dcb7065053df103634e1aa5a0e20e7cfa9b3d/contracts"
+      }
+    ]
   }
 }

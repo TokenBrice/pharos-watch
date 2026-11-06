@@ -1,38 +1,63 @@
 {
   "id": "usd3-3jane",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
-    "summary": "USD3 nav values idle USDC plus waUSDC shares converted at their ERC4626 rate, with suppliedWaUSDC derived from MorphoCredit expected supply assets. report is externally callable without a role modifier; syncTrancheShare is keeper-gated. No direct external price feed is called in nav, but the complete live market parameters, markdown/impairment authority and waUSDC input protection were not established. Generic issuer statements about Chainlink redundancy or TWAP guards do not prove their wiring to USD3 NAV, and deterministic internal accounting alone does not prove discretionary privileged pricing. Terminal oracle classification remains unresolved research.",
-    "reviewedAt": "2026-10-22",
-    "reviewer": "Pharos v10.30 oracle/control primary-source research",
-    "confidence": "limited",
+    "summary": "USD3 nav values idle USDC and waUSDC shares using internal MorphoCredit expected-supply accounting. The live CreditLine mm points to the owner-gated MarkdownController, whose setEnableMarkdown changes impairment recognition and hence market supply assets feeding USD3 NAV. This is privileged internal pricing; generic Chainlink or TWAP statements do not establish an external USD3 NAV feed.",
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c2-2",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Verified deployed USD3 implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd1f1c3f485063712873285bf4ef25ab068f13893"
       },
       {
-        "label": "USD3 proxy and implementation mapping",
-        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc"
-      },
-      {
-        "label": "MorphoCredit proxy and implementation mapping",
-        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xde6e08ac208088cc62812ba30608d852c6b0ecbc"
-      },
-      {
-        "label": "MarkdownController source, live USD3 ownership/wiring not established",
+        "label": "Verified MarkdownController source (verified 2025-11-28); owner-gated markdown",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf0eae71092f3c9411a9eab8f81e7d91d29726214"
-      },
-      {
-        "label": "3Jane general supplier risks",
-        "url": "https://docs.3jane.xyz/risks.md"
       },
       {
         "label": "3Jane deployed addresses and permissions",
         "url": "https://docs.3jane.xyz/developers/addresses.md"
+      },
+      {
+        "label": "Verified MorphoCredit implementation (verified 2025-12-30); credit-limit health and markdown supply accounting",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb326c390a607b4317a1d205dff4afb1a42ca7157"
+      },
+      {
+        "label": "Pinned USD3/MorphoCredit implementation slots, marketParams, morphoCredit, CreditLine.mm and MarkdownController owner/marketId/fullMarkdownDuration; Ethereum 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; observed 2026-11-06T19:20:24.736Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
-    ]
+    ],
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c2-2",
+      "rationale": "At Ethereum block 26350000 (hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701; 2026-11-05T17:02:47Z), USD3 marketParams returned loanToken 0xd4fa2d31b7968e448877f69a96de69f5de8cd23e, collateralToken USDC, oracle zero, irm 0x1d434d2899f81f3c3fdf52c814a6e23318f9c7df, lltv 999999999999999999 and CreditLine 0x26389b03298ba5da0664ffd6bf78cf3a7820c6a9. CreditLine.mm returned 0xf0eae71092f3c9411a9eab8f81e7d91d29726214; its owner was 0x1dccd4628d48a50c1a7adea3848bcc869f08f8c2, marketId 0xc2c3e4b656f4b82649c8adbe82b3284c85cc7dc57c6dc8df6ca3dad7d2740d75 and fullMarkdownDuration 63072000 seconds. The pinned proxy implementations match the reviewed USD3 and MorphoCredit sources. MorphoCredit treats collateral as a credit limit, ignores collateral price in health, and subtracts MarkdownController impairment from totalSupplyAssets. The applicable path is USD3 NAV accounting, not price-triggered collateral liquidation; the issuer separately identifies the two LCC margin oracles as LCC facilities. No borrower-level markdownEnabled state or realized impairment is asserted.",
+      "sources": [
+        {
+          "label": "Verified deployed USD3 implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd1f1c3f485063712873285bf4ef25ab068f13893"
+        },
+        {
+          "label": "Verified MarkdownController source (verified 2025-11-28); owner-gated markdown",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf0eae71092f3c9411a9eab8f81e7d91d29726214"
+        },
+        {
+          "label": "3Jane deployed addresses and permissions",
+          "url": "https://docs.3jane.xyz/developers/addresses.md"
+        },
+        {
+          "label": "Verified MorphoCredit implementation (verified 2025-12-30); credit-limit health and markdown supply accounting",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb326c390a607b4317a1d205dff4afb1a42ca7157"
+        },
+        {
+          "label": "Pinned USD3/MorphoCredit implementation slots, marketParams, morphoCredit, CreditLine.mm and MarkdownController owner/marketId/fullMarkdownDuration; Ethereum 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; observed 2026-11-06T19:20:24.736Z",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        }
+      ]
+    }
   },
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
