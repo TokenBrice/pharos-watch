@@ -9,7 +9,7 @@ import type { DexPriceObs, LiquidityMetrics } from "./types";
 import { dexPriceConfidenceForSourceFamily } from "./constants";
 import { isPlausibleDexObservationPrice } from "./price-sanity";
 import { dexPriceEvidenceWeight } from "./coingecko-tickers-shared";
-import { aggregateProtocolSources, buildDexPriceObservationsFromRetainedPools, collapseDuplicateObservations, oldestPriceObservation } from "./scoring-helpers";
+import { aggregateProtocolSources, buildDexPriceObservationsFromRetainedPools, collapseDuplicateObservations, hasDexPricePrimaryReference, oldestPriceObservation } from "./scoring-helpers";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, assertCurrentDexScoringGeneration, flushScoringStatements, pruneExpiredDexPriceStages, type DexPriceStageRetentionResult } from "./dex-scoring-stage-store";
 
 const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
@@ -195,7 +195,7 @@ export async function computeDexPrices({
     // from broken Sophon pools. Withhold the row with a machine-readable
     // reason instead of publishing as if the guards had passed.
     const primaryPrice = primaryPrices.get(id);
-    if (primaryPrice == null || !(primaryPrice > 0)) {
+    if (!hasDexPricePrimaryReference(primaryPrice)) {
       withheldStablecoinCount++;
       if (withheldByStablecoin.length < MAX_DEX_PRICE_REJECTION_ASSETS) {
         withheldByStablecoin.push({

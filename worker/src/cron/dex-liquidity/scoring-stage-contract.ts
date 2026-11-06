@@ -11,6 +11,7 @@ import type { TargetEnrichmentTelemetry } from "./route-telemetry";
 import type { UniV3CandidateCarryForwardTelemetry } from "./univ3-candidate-snapshot";
 import type { UniswapV4CandidateCarryForwardTelemetry } from "./uniswap-v4-candidate-snapshot";
 import type { SubgraphFailureTelemetry } from "./orchestrator-phases/subgraph-enrichment";
+import type { PriceRefreshSummary } from "./price-refresh";
 
 export interface DexLiquidityDirectApiSourceSummary {
   circuitEvents: DirectApiFetchPhaseResult["circuitEvents"];
@@ -56,6 +57,8 @@ export interface DexLiquidityScoringSourceState {
 }
 
 export interface DexLiquidityPoolState {
+  /** Quote-only acquisition diagnostics, persisted with the exact source generation. */
+  priceRefresh?: PriceRefreshSummary;
   /** Wall clock captured after the registry SELECT; frozen for every consumer. */
   registryEvaluatedAtSec: number;
   fallback: { weakCoverageCoinsBeforeFallback: number };

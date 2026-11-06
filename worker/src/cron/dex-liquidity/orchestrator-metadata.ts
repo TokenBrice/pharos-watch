@@ -63,7 +63,7 @@ export function buildDexLiquidityCronMetadata(params: {
     "stagedSkippedByAuthoritativeProtocolCount" | "stagedSkipDimensions" |
     "registryRowsRead" | "registryMultiSourcePools" |
     "registryFamilyBySource" | "stagedWritebackRows" | "stagedWritebackSkippedUntrustedIds" |
-    "poolRejections" | "deadPoolUnindexedChainSkips"> & {
+    "poolRejections" | "deadPoolUnindexedChainSkips" | "priceRefresh"> & {
     registryEvaluatedAtSec?: number;
     directApiIntegration: Pick<DexLiquidityPoolState["directApiIntegration"],
       "acceptedByProtocolChain" | "excludedByReason">;
@@ -119,6 +119,7 @@ export function buildDexLiquidityCronMetadata(params: {
     stagedPoolsSkippedByAuthoritativeProtocol: poolState.stagedSkippedByAuthoritativeProtocolCount,
     stagedPoolSkipDimensions: poolState.stagedSkipDimensions,
     stagedWritebackRows: poolState.stagedWritebackRows,
+    priceRefresh: poolState.priceRefresh,
     stagedWritebackSkippedUntrustedIds: poolState.stagedWritebackSkippedUntrustedIds,
     registryEvaluation: poolState.registryEvaluatedAtSec == null ? undefined : {
       evaluatedAtSec: poolState.registryEvaluatedAtSec,

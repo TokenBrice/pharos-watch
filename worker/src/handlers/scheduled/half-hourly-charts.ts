@@ -1,6 +1,6 @@
 /**
  * Half-hourly charts trigger (physical 16 * * * * and 46 * * * * aliases):
- *   sync-dex-liquidity (0 normally, 5 during source recovery) → cron-sentinel turnover source (0)
+ *   sync-dex-liquidity (0 normally, 4 during source recovery) → cron-sentinel turnover source (0)
  *   → prepare-safety-score-v9-input (3; hourly at :16, or :46 after a late publication
  *     or when the hour's :16 capture never committed, for the :52 second chance)
  *   sync-stablecoin-charts (1), failure-independent and serial
@@ -8,12 +8,11 @@
  * publication, not the calendar minute, drives turnover. Heavy has Graph
  * credentials for terminal/missing-stage reconstruction under the source lease
  * and inherited deadline. A live producer still yields a neutral wait.
- * The serial chain peaks at 3 normally and 5 during bounded recovery.
- * The registry/checker therefore treats this slot as headroom-full.
+ * The serial chain peaks at 3 normally and 4 during bounded recovery.
  * Scheduled deliveries share one retryable publication bucket per hour.
  */
 import { consumeDexLiquidityScoringStage } from "../../cron/dex-liquidity/orchestrator";
-import { DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON } from "../../cron/dex-liquidity/lifecycle/source-slot";
+import { DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON, DEX_SCORING_STAGE_READY_WAIT_MS } from "../../cron/dex-liquidity/lifecycle/source-slot";
 import {
   CRON_SCHEDULE_CADENCES,
   DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC,
@@ -38,8 +37,6 @@ import type { CronResult } from "../../lib/cron-logger";
 import { tryParseJson } from "../../lib/json-parse";
 import type { ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
-
-const DEX_SCORING_STAGE_READY_WAIT_MS = 90_000;
 
 interface DexPublication {
   status: NonNullable<CronResult["status"]>;

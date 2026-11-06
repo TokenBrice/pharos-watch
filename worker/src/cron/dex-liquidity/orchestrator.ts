@@ -28,6 +28,7 @@ import {
   processPoolMetrics,
 } from "./process-pools";
 import { mergeStagedPools } from "./staging-merge";
+import { captureObservedPoolPrices, refreshPoolPrices } from "./price-refresh";
 import {
   computeStablecoinScores,
   publishStablecoinScoreTargets,
@@ -94,6 +95,7 @@ import { boundMeasuredTargetFunnelGroups, boundTelemetryEntries } from "./route-
 import { consumeDexLiquidityStage, type DexLiquidityStageConsumerOptions, type DexLiquidityStageLifecycle } from "./lifecycle/consume";
 import { DEX_D1_COST_EXCLUSIONS } from "./lifecycle/d1-cost";
 import type { DexLiquidityStageRecoveryOutcome } from "./lifecycle/recovery";
+import { dexLiquidityStageReadyDeadlineMs } from "./lifecycle/source-slot";
 
 const DEX_LIQUIDITY_PERSISTENCE_BLOCKING_FAILURES = new Set(["defillama-yields", "defillama-protocols"]);
 
@@ -190,6 +192,7 @@ export async function stageDexLiquidityScoring(
   reportProgress?: CronProgressReporter,
   sourceSlotStartedAt?: number,
   deadline?: SlotDeadline,
+  readinessDeadlineMs?: number,
 ): Promise<CronResult> {
   const syncStartSec = Math.floor(Date.now() / 1000);
   const d1Cost = createD1CostTracker(db, DEX_D1_COST_EXCLUSIONS);
@@ -210,6 +213,7 @@ export async function stageDexLiquidityScoring(
     syncStartSec,
     sourceSlotStartedAt,
     deadline,
+    readinessDeadlineMs: readinessDeadlineMs ?? dexLiquidityStageReadyDeadlineMs(sourceSlotStartedAt ?? syncStartSec),
     fallbackCounters,
     phaseTimingsMs,
   };
@@ -266,6 +270,7 @@ export async function stageDexLiquidityScoring(
       d1Cost: d1Cost.snapshot(),
       phaseTimingsMs,
       stagedWritebackRows: poolState.stagedWritebackRows ?? null,
+      priceRefresh: poolState.priceRefresh,
       generationId: stored.generationId,
       sourceSlotStartedAt: stored.sourceSlotStartedAt,
       syncStartSec,
@@ -388,6 +393,7 @@ export interface DexLiquidityRunContext {
   /** Source-stage slot identity; execution budgets use the event deadline. */
   sourceSlotStartedAt?: number;
   deadline?: SlotDeadline;
+  readinessDeadlineMs?: number;
   signal?: AbortSignal;
   coingeckoApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -871,6 +877,7 @@ async function buildDexLiquidityPoolState(
   // backfills arrive from dex_pool_registry, so writing them back would advance
   // refreshed_at every hour and no row would ever age out (immortal registry).
   const stagedWriteback = buildStagedPoolWriteback(metrics, ctx.syncStartSec);
+  const observedThisRun = captureObservedPoolPrices({ metrics, priceObservations: sourceState.priceObservations }, ctx.syncStartSec);
   const staged = await mergeStagedPools(
     ctx.db,
     metrics,
@@ -902,7 +909,7 @@ async function buildDexLiquidityPoolState(
     }));
   }
   // Disjoint V3/Slipstream and V4 pool families each issue serial RPCs. Their
-  // bounded pair peaks at two, below the existing five-connection reservation.
+  // bounded pair peaks at two, below the four-connection reservation.
   // Keep Curve rate -> factory ordering and direct provider intake unchanged.
   const [quoterResult, v4Result] = await Promise.allSettled([
     enrichQuoterV2ExecutionTargets({
@@ -968,6 +975,18 @@ async function buildDexLiquidityPoolState(
     stablecoinPriceById: sourceState.stablecoinPriceById,
     capturedAt: ctx.syncStartSec,
   });
+  // Resolve the registry first so trust-first selection cannot restore an older native quote.
+  const priceRefresh = await refreshPoolPrices({
+    db: ctx.db, metrics, priceObservations: sourceState.priceObservations, observedThisRun,
+    protocolTvlCaps: sourceState.dataSources.protocolTvlCaps, registryEvaluatedAtSec: staged.registryEvaluatedAtSec,
+    primaryPrices: sourceState.primaryPriceById ?? sourceState.stablecoinPriceById,
+    sourceStartedAtSec: ctx.syncStartSec, apiKey: ctx.coingeckoApiKey,
+    references: sourceState.validationReferences, signal: ctx.signal, deadline: ctx.deadline, readinessDeadlineMs: ctx.readinessDeadlineMs,
+  });
+  await ctx.reportDexProgress("pool-price-refresh-complete", {
+    message: "Completed exact-pool price refresh", providerFamily: "cg-onchain",
+    counts: { requests: priceRefresh.requests, refreshed: priceRefresh.refreshed },
+  });
   sourceState.lookups.chainAddressToId = new Map();
   sourceState.lookups.contractMetaByChainAddress = new Map();
   // Staged dedup is the final identity consumer. Release its multi-map index
@@ -1003,6 +1022,7 @@ async function buildDexLiquidityPoolState(
   });
 
   return {
+    priceRefresh,
     registryEvaluatedAtSec: staged.registryEvaluatedAtSec,
     targetEnrichment: [...(quoterEnrichment?.telemetry ?? []), ...(v4Enrichment ?? [])],
     graphApiKeyConfigured: Boolean(ctx.graphApiKey),

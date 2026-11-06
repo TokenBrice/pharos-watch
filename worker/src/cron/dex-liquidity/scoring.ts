@@ -18,6 +18,7 @@ import {
   quarantineProtocolTvlOutliers,
   classifyCoverage,
   filterRetainedPools,
+  isP4OnlyPausedBalancerPool,
   rebuildMetricsFromPools,
   summarizeRetainedPoolVolume,
   type DeadPoolExclusionTally,
@@ -42,11 +43,6 @@ export {
   selectDexRouteObservations,
 };
 export type { DexPricePersistenceDiagnostics };
-
-function isP4OnlyPausedBalancerPool(pool: LiquidityMetrics["topPools"][number]): boolean {
-  const gate = pool.extra?.executionCapabilityGate;
-  return gate?.family === "balancer-amm" && gate.reason === "paused-or-swap-disabled";
-}
 
 interface ScoreDiagnostics {
   protocolTvlQuarantine: DexLiquidityProtocolTvlQuarantine;

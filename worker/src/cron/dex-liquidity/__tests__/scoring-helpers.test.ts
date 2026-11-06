@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 import {
   accumulateGlobalAggregate,
   aggregateProtocolSources,
@@ -12,10 +12,232 @@ import {
   type GlobalPoolAggregateEntry,
 } from "../scoring-helpers";
 import { DEX_DEAD_POOL_TVL_MIN_USD, DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
-import { initLiquidityFallbackCounters } from "../pool-helpers";
+import { computeLiquidityScore, initLiquidityFallbackCounters } from "../pool-helpers";
 import { isPlausibleDexObservationPrice } from "../price-sanity";
 import type { LiquiditySourceMixByFamily } from "../types";
-import { makeObs, makePool } from "./scoring-test-builders";
+import { makeObs, makePool, scorePoolGraph, withCompleteVolume } from "./scoring-test-builders";
+import { captureObservedPoolPrices, measurePriceRefreshDemand, refreshPoolPrices } from "../price-refresh";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import * as cg from "../../../lib/coingecko-onchain";
+import * as breaker from "../../../lib/circuit-breaker";
+import { createSlotDeadline } from "../../../lib/cron-timeouts";
+import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import type { DexPriceObs, PoolEntry } from "../types";
+
+describe("source-stage exact-pool price refresh", () => {
+  const now = 1_800_000_000;
+  const address = (i: number) => `0x${i.toString(16).padStart(40, "0")}`;
+  const token = (id: string) => WORKER_TRACKED_META_BY_ID.get(id)!.contracts!.find((row) => row.chain === "ethereum")!.address.toLowerCase();
+  const pool = (i: number, overrides: Partial<PoolEntry> = {}) => makePool({
+    chain: "ethereum", poolId: `ethereum:${address(i)}`, price: 0.99, priceObservedAt: now - 6 * 3600,
+    tvlUsd: 100_000, priceEvidenceTvlUsd: 30_000,
+    volumeReading: { volume24hUsd: 1_000_000, volume7dUsd: 7_000_000, observedAtSec: now - 30 },
+    extra: { measurement: { priceMeasured: true }, balanceRatio: 0.9, effectiveTvl: 90_000,
+      executionCapabilityGate: { family: "measured-execution", reason: "budget-deferred" }, measuredExecutionPhysicalPoolId: address(i) }, ...overrides,
+  });
+  function graph(pools: PoolEntry[], quotePools: PoolEntry[] = []) {
+    return new Map([
+      ["usdc-circle", { stablecoinId: "usdc-circle", symbol: "USDC", pools }],
+      ["usdt-tether", { stablecoinId: "usdt-tether", symbol: "USDT", pools: quotePools }],
+    ]);
+  }
+  const context = (metrics: ReturnType<typeof graph>) => ({ metrics, primaryPrices: new Map([...metrics.keys()].map((id) => [id, 1])), protocolTvlCaps: new Map<string, number>(), registryEvaluatedAtSec: now });
+  function row(i: number, attributes = {}, relationships = {}): cg.CgPool {
+    return {
+      id: `eth_${address(i)}`, type: "pool",
+      attributes: { address: address(i), name: "USDC / USDT", reserve_in_usd: "80000", base_token_price_usd: "1.002", quote_token_price_usd: "0.998", ...attributes },
+      relationships: {
+        base_token: { data: { id: `eth_${token("usdc-circle")}`, type: "token" } },
+        quote_token: { data: { id: `eth_${token("usdt-tether")}`, type: "token" } },
+        dex: { data: { id: "uniswap-v3", type: "dex" } }, ...relationships,
+      },
+    };
+  }
+  const reply = (data: unknown) => new Response(JSON.stringify({ data }));
+  const run = (metrics: ReturnType<typeof graph>, extra: Partial<Parameters<typeof refreshPoolPrices>[0]> = {}) =>
+    refreshPoolPrices({ ...context(metrics), db: makeNoopD1(), sourceStartedAtSec: now - 60, apiKey: "test", ...extra });
+  beforeEach(() => {
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    vi.spyOn(cg, "onchainRateLimit").mockResolvedValue();
+    vi.spyOn(breaker, "shouldAttemptFetch").mockResolvedValue(true);
+    const closed: breaker.CircuitRecord = { state: "closed", consecutiveFailures: 0, lastFailureAt: null, lastSuccessAt: null, openedAt: null };
+    vi.spyOn(breaker, "recordOutcome").mockResolvedValue({ before: closed, after: closed });
+  });
+  afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  it("deduplicates the complete hidden-contributor graph into 30+1 requests and preserves fixed-input Liquidity scores", async () => {
+    const pools = Array.from({ length: 31 }, (_, i) => pool(i));
+    const quote = pool(0, { priceEvidenceTvlUsd: 200_000, source: "direct_api" });
+    const metrics = graph(pools, [quote]);
+    const score = () => computeLiquidityScore(withCompleteVolume({ ...scorePoolGraph(metrics.get("usdc-circle")!), totalVolume24hUsd: 31e6 }), 60, 1e9);
+    const before = score();
+    const originals = structuredClone([...pools, quote]);
+    const fetch = vi.fn(async (url: string) => reply(url.includes(address(30)) ? [row(30)] : pools.slice(0, 30).map((_, i) => row(i))));
+    vi.stubGlobal("fetch", fetch);
+    expect(measurePriceRefreshDemand(context(metrics))).toMatchObject({ pools: 31, requests: 2, networks: [{ network: "eth", pools: 31, requests: 2 }] });
+    expect(measurePriceRefreshDemand(context(graph([pool(0, { chain: "sui", poolId: `sui:0x${"a".repeat(64)}`, project: "cetus" })]))).networks)
+      .toEqual([{ network: "sui-network", pools: 1, requests: 1 }]);
+    const result = await run(metrics);
+    expect(result).toMatchObject({ requests: 2, breakerWrites: 2, refreshed: 32, unchangedByReason: {} });
+    expect(fetch.mock.calls.map(([url]) => url.split("/multi/")[1]!.split("?")[0]!.split(",").length)).toEqual([30, 1]);
+    expect(cg.onchainRateLimit).toHaveBeenNthCalledWith(2, 1, undefined);
+    [...pools, quote].forEach((value, i) => expect(value).toEqual({
+      ...originals[i], price: i === 31 ? 0.998 : 1.002, priceObservedAt: now, priceSource: "cg_onchain", priceEvidenceTvlUsd: i === 31 ? 80_000 : 30_000,
+    }));
+    expect(score()).toEqual(before);
+    expect(before.score).not.toBeNull();
+  });
+
+  it("includes exact direct fallbacks and skips only quote identities captured in this invocation", async () => {
+    const fresh = pool(0, { priceObservedAt: now - 30 });
+    const fallback = pool(1, { price: undefined });
+    const unobservedRecent = pool(2, { priceObservedAt: now - 10 });
+    const metrics = graph([fresh, fallback]);
+    const priceObservations = new Map<string, DexPriceObs[]>([["usdc-circle", [makeObs({
+      poolKey: fallback.poolId, identityConfidence: "exact", sourceFamily: "direct_api", observedAt: now - 1000, tvl: 60_000,
+    })]]]);
+    const observedThisRun = captureObservedPoolPrices({ metrics, priceObservations }, now - 60);
+    metrics.get("usdc-circle")!.pools.push(unobservedRecent);
+    vi.stubGlobal("fetch", vi.fn(async () => reply([row(1), row(2)])));
+    expect(measurePriceRefreshDemand({ ...context(metrics), priceObservations, observedThisRun })).toMatchObject({ pools: 2, observedThisRun: 1, requests: 1 });
+    expect(await run(metrics, { priceObservations, observedThisRun })).toMatchObject({ refreshed: 2 });
+    expect(fresh.priceObservedAt).toBe(now - 30);
+    expect(fallback).toMatchObject({ price: 1.002, priceEvidenceTvlUsd: 60_000, priceObservedAt: now, source: "dl" });
+    expect(buildDexPriceObservationsFromRetainedPools(new Map([["usdc-circle", [fallback]]]), priceObservations).get("usdc-circle"))
+      .toEqual([expect.objectContaining({ price: 1.002, observedAt: now, sourceFamily: "cg_onchain", tvl: 60_000 })]);
+  });
+
+  it.each([
+    ["not-returned", () => []],
+    ["malformed-payload", () => [{ invalid: true }]],
+    ["identity-mismatch", () => [{ ...row(1), id: `bsc_${address(1)}` }]],
+    ["identity-mismatch", () => [row(1, {}, { base_token: { data: { id: `bsc_${token("usdc-circle")}`, type: "token" } } })]],
+    ["identity-mismatch", () => [row(1, {}, { quote_token: { data: { id: `eth_invalid_${token("usdt-tether")}`, type: "token" } } })]],
+    ["tracked-leg-mismatch", () => [row(1, {}, { base_token: { data: { id: `eth_${address(100)}`, type: "token" } } })]],
+    ["invalid-price", () => [row(1, { base_token_price_usd: "NaN" })]],
+    ["invalid-support-tvl", () => [row(1, { reserve_in_usd: "999" })]],
+    ["incoherent-price", () => [row(1, { base_token_price_quote_token: "0" })]],
+    ["implausible-price", () => [row(1, { base_token_price_usd: "1000" })]],
+  ] as const)("keeps all original fields for %s while publishing a healthy sibling", async (reason, rows) => {
+    const pools = [pool(0), pool(1)];
+    const original = structuredClone(pools[1]);
+    vi.stubGlobal("fetch", vi.fn(async () => reply([row(0), ...rows()])));
+    const result = await run(graph(pools));
+    expect(result).toMatchObject({ refreshed: 1, unchangedByReason: { [reason]: 1 }, failures: [expect.objectContaining({ poolId: pools[1]!.poolId, observedAt: original!.priceObservedAt, reason })] });
+    expect(pools[0]!.priceObservedAt).toBe(now);
+    expect(pools[1]).toEqual(original);
+  });
+
+  it.each([429, 500])("preserves clocks on HTTP %i, consumes bodies and stops after three failures", async (status) => {
+    const pools = Array.from({ length: 91 }, (_, i) => pool(i));
+    const originals = structuredClone(pools);
+    const responses: Response[] = [];
+    const fetch = vi.fn(async () => { const res = new Response("provider failure", { status }); responses.push(res); return res; });
+    vi.stubGlobal("fetch", fetch);
+    expect(await run(graph(pools))).toMatchObject({ requests: 3, refreshed: 0, unchangedByReason: { "coingecko-transport-failure": 90, "consecutive-failures": 1 }, failuresOmitted: 27 });
+    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(responses.every((res) => res.bodyUsed)).toBe(true);
+    expect(pools).toEqual(originals);
+  });
+
+  it.each(["budget", "key", "circuit", "unmapped", "unaddressable"] as const)("retains contributors when %s prevents acquisition", async (mode) => {
+    const original = pool(0, mode === "unmapped" ? { chain: "unknown", poolId: `unknown:${address(0)}` }
+      : mode === "unaddressable" ? { poolId: "ethereum:opaque-uuid" } : {});
+    const before = structuredClone(original);
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    vi.mocked(breaker.shouldAttemptFetch).mockResolvedValue(mode !== "circuit");
+    const reason = { budget: "budget-exhausted", key: "missing-api-key", circuit: "circuit-open", unmapped: "unmapped-network", unaddressable: "unaddressable-pool" }[mode]!;
+    const result = await run(graph([original]), { apiKey: mode === "key" ? null : "test", deadline: mode === "budget" ? createSlotDeadline(now * 1000, now * 1000 + 25_000) : undefined });
+    expect(result.unchangedByReason).toEqual({ [reason]: 1 });
+    expect(original).toEqual(before);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it.each([125, 126])("bounds %i planned batches at 125 requests", async (batches) => {
+    const pools = Array.from({ length: 30 * (batches - 1) + 1 }, (_, i) => pool(i));
+    const fetch = vi.fn(async () => reply([]));
+    vi.stubGlobal("fetch", fetch);
+    const result = await run(graph(pools));
+    expect(fetch).toHaveBeenCalledTimes(125);
+    expect(result.stopReason).toBe(batches === 125 ? "completed" : "request-cap");
+    expect(pools.every((p) => p.priceObservedAt === now - 6 * 3600)).toBe(true);
+  });
+
+  it.each(["budget", "deadline"] as const)("stops on the %s after a successful first batch", async (kind) => {
+    const pools = Array.from({ length: 31 }, (_, i) => pool(i));
+    const elapsed = kind === "budget" ? 90_000 : 3_000;
+    const fetch = vi.fn(async () => { vi.mocked(Date.now).mockReturnValue(now * 1000 + elapsed); return reply([row(0)]); });
+    vi.stubGlobal("fetch", fetch);
+    const result = await run(graph(pools), { readinessDeadlineMs: kind === "deadline" ? now * 1000 + 30_000 : undefined });
+    expect(result).toMatchObject({ requests: 1, refreshed: 1, elapsedMs: elapsed, stopReason: kind, unchangedByReason: { "budget-exhausted": 1 } });
+    expect(pools[0]!.priceObservedAt).toBe(now);
+    expect(pools[30]!.priceObservedAt).toBe(now - 6 * 3600);
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("orders unknown and oldest clocks across networks, batches and coin attributions", async () => {
+    const pools = Array.from({ length: 31 }, (_, i) => pool(i, { priceObservedAt: now - (i === 30 ? 500 : 100) }));
+    pools.push(pool(90, { chain: "polygon", poolId: `polygon:${address(90)}`, priceObservedAt: null }));
+    const fetch = vi.fn(async (_url: string) => reply([]));
+    vi.stubGlobal("fetch", fetch);
+    await run(graph(pools, [pool(0, { priceObservedAt: now - 1_000 })]));
+    const urls = fetch.mock.calls.map(([url]) => url);
+    expect(urls.map((url) => url.split("/networks/")[1]!.split("/")[0])).toEqual(["polygon_pos", "eth", "eth"]);
+    expect(urls[1]!.split("/multi/")[1]!.split(",").slice(0, 2)).toEqual([address(0), address(30)]);
+    expect(urls[2]).toContain(address(29));
+  });
+
+  it.each([false, true])("splits a rejected400 once and preserves failed half clocks (%s)", async (rejectHalf) => {
+    const pools = [0, 1, 2, 3].map((i) => pool(i));
+    const responses: Response[] = [];
+    const fetch = vi.fn(async () => {
+      const call = responses.length;
+      const response = call === 0 || (rejectHalf && call === 1) ? new Response("batch rejected", { status: 400 })
+        : reply((call === 1 ? [0, 1] : [2, 3]).map((i) => row(i)));
+      responses.push(response); return response;
+    });
+    vi.stubGlobal("fetch", fetch);
+    const result = await run(graph(pools));
+    expect(result).toMatchObject({ requests: 3, batchSplits: 1, refreshed: rejectHalf ? 2 : 4,
+      batchFailures: { "coingecko-batch-rejected": 1, ...(rejectHalf ? { "split-batch-rejected": 1 } : {}) } });
+    expect(result.unchangedByReason).toEqual(rejectHalf ? { "batch-rejected": 2 } : {});
+    expect(pools.map((p) => p.priceObservedAt)).toEqual(pools.map((_, i) => rejectHalf && i < 2 ? now - 6 * 3600 : now));
+    expect(responses.every((res) => res.bodyUsed)).toBe(true);
+  });
+
+  it.each([
+    ["ethereum", "1".repeat(32)], ["ethereum", `0x${"a".repeat(64)}`],
+    ["solana", address(1)], ["solana", "z".repeat(44)], ["sui", "1".repeat(32)], ["tron", "1".repeat(34)],
+  ])("never sends malformed %s pool id %s", async (chain, id) => {
+    const p = pool(0, { chain, poolId: `${chain}:${id}`, project: "uniswap-v4" });
+    const before = structuredClone(p), fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    expect(await run(graph([p]))).toMatchObject({ requests: 0, unchangedByReason: { "unaddressable-pool": 1 } });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(p).toEqual(before);
+  });
+
+  it.each(["ratio", "large", "dead", "paused", "quarantine", "inactive", "primary-missing"])("plans only publisher-retained contributors: %s", async (gate) => {
+    const bad = pool(0, gate === "large" ? { tvlUsd: 1e9, volumeReading: undefined }
+      : gate === "dead" ? { tvlUsd: DEX_DEAD_POOL_TVL_MIN_USD, volumeReading: { volume24hUsd: 0, volume7dUsd: null, observedAtSec: now, deadPoolSignature: true } }
+        : gate === "ratio" ? { volumeReading: { volume24hUsd: 1e9, volume7dUsd: null, observedAtSec: now } }
+          : gate === "paused" ? { extra: { executionCapabilityGate: { family: "balancer-amm", reason: "paused-or-swap-disabled" } } }
+            : gate === "quarantine" ? { source: "cg_onchain" } : {});
+    const metrics = graph([...(gate === "inactive" || gate === "primary-missing" ? [] : [bad]), pool(1)]);
+    if (gate === "inactive") metrics.set("retired", { stablecoinId: "retired", symbol: "OLD", pools: [bad] });
+    if (gate === "primary-missing") metrics.get("usdt-tether")!.pools.push(bad);
+    if (gate === "quarantine") {
+      metrics.get("usdt-tether")!.pools.push({ ...bad, tvlUsd: 200_000 });
+      metrics.get("usdc-circle")!.pools[1]!.project = "uniswap-v3";
+    }
+    const before = structuredClone(bad), fetch = vi.fn(async (_url: string) => reply([row(1)]));
+    vi.stubGlobal("fetch", fetch);
+    expect(await run(metrics, { primaryPrices: new Map([["usdc-circle", 1], ["retired", 1]]), protocolTvlCaps: new Map(gate === "quarantine" ? [["balancer", 150_000]] : []) })).toMatchObject({ refreshed: 1, demand: { pools: 1 } });
+    expect(fetch.mock.calls[0]![0]).not.toContain(address(0));
+    expect(bad).toEqual(before);
+  });
+});
 
 describe("protocol price evidence admission", () => {
   it("omits a zero-weight cross-source price while retaining healthy protocols", () => {
