@@ -148,8 +148,12 @@ describe("DEX trust policy", () => {
   const nowSec = 1_700_000_000;
 
   it.each([undefined, null, 0, -1, NaN, Infinity, nowSec + 1])("rejects contributor clock %s", (clock) => {
-    expect(getDexAggregateObservedAt([{ aggregateObservedAt: nowSec }, { aggregateObservedAt: clock }], nowSec)).toBeNull();
-    expect(getDexAggregateObservedAt({ aggregateObservedAt: clock, sources: [] }, nowSec)).toBeNull();
+    const reason = clock == null ? "aggregate-clock-unavailable" : Number.isFinite(clock) && clock > nowSec ? "aggregate-clock-future" : "aggregate-clock-invalid";
+    for (const payload of [[{ aggregateObservedAt: nowSec }, { aggregateObservedAt: clock }], { aggregateObservedAt: clock, sources: [] }]) {
+      const parsed = getDexAggregateObservedAt(payload, nowSec);
+      expect(parsed).toEqual({ aggregateObservedAt: null, aggregateClockReason: reason });
+      expect(getDexAggregateRejectionReason({ updated_at: nowSec, source_total_tvl: 5e6, ...parsed }, nowSec, "depeg")).toBe(reason);
+    }
   });
   it.each([null, undefined, "{", "{}", "[]", "[null]"])("fails closed on clock JSON %s", (json) => {
     expect(readDexAggregateObservedAt(json, nowSec)).toBeNull();
@@ -158,7 +162,8 @@ describe("DEX trust policy", () => {
     expect(readDexAggregateObservedAt(JSON.stringify([60, 300].map((age) => ({
       aggregateObservedAt: nowSec - age, observedAt: nowSec - 21_600,
     }))), nowSec)).toBe(nowSec - 300);
-    expect(getDexAggregateObservedAt({ aggregateObservedAt: nowSec - 60, sources: [] }, nowSec)).toBe(nowSec - 60);
+    expect(getDexAggregateObservedAt({ aggregateObservedAt: nowSec - 60, sources: [] }, nowSec))
+      .toEqual({ aggregateObservedAt: nowSec - 60, aggregateClockReason: null });
   });
   it.each(["ui", "depeg"] as const)("keeps %s aggregate age strict and TVL inclusive without weakening vetoes", (tier) => {
     const { maxAgeSec, minTvlUsd } = getDexTrustPolicy(tier);

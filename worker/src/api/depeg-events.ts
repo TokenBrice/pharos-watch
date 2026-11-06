@@ -1,4 +1,4 @@
-import { DEPEG_PENDING_EXPIRY_SEC, DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { resolveOrReject, parseBooleanParam } from "../lib/api-params";
@@ -8,6 +8,7 @@ import { jsonResponse } from "../lib/api-response";
 
 import {
   normalizePendingDepegRow,
+  getPendingExpiryLimitSec,
   SELECT_PENDING_DEPEGS_SQL,
   type PendingDepegRow,
 } from "../lib/depeg-pending";
@@ -34,6 +35,7 @@ import type { DepegEvent, DepegPendingIncident } from "@shared/types/market";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { isAffirmativeDexPriceRow, isTrustedDexPriceRow, readDexAggregateObservedAt } from "../lib/depeg-trust-policy";
 import { prepareDepegEventsCountStatements } from "../lib/depeg-events-count-cache";
+import { isExtremeMovePending } from "../lib/depeg-helpers";
 
 type ConfirmationCategory = "offchain" | "dex" | "pool";
 
@@ -212,7 +214,12 @@ async function loadPendingIncidents(
       peakSeenBps: pending.peakSeenBps,
       reason: pending.reason,
       ageSec: Math.max(0, nowSec - pending.firstSeenAt),
-      expiresAt: pending.firstSeenAt + DEPEG_PENDING_EXPIRY_SEC,
+      expiresAt: pending.firstSeenAt + getPendingExpiryLimitSec({
+        primarySameDirectionDepegged: false,
+        isExtremeMove: isExtremeMovePending(pending.reason),
+        unavailableSources: categories.missing,
+        circuitOpenSources: [],
+      }),
       availableConfirmationCategories: categories.available,
       missingConfirmationCategories: categories.missing,
     };

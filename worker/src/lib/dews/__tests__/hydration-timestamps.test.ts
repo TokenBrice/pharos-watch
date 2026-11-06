@@ -259,6 +259,7 @@ describe("DEWS hydration timestamp admission", () => {
         ["boundary", 4500, 2_000_000, 1], ["missing", null, 2_000_000, 1],
         ["stale-publication", 60, 2_000_000, 36_000], ["invalid-publication", 60, 2_000_000, null],
         ["malformed", "{", 2_000_000, 1],
+        ["future", -1, 2_000_000, 1], ["invalid", RUN_AT, 2_000_000, 1],
       ] as const).map(([id, age, tvl, publicationAge]) => ({
         stablecoin_id: id, dex_price_usd: id === "crash" ? 0.4 : 1, source_total_tvl: tvl,
         updated_at: publicationAge == null ? null : RUN_AT - publicationAge,
@@ -271,7 +272,8 @@ describe("DEWS hydration timestamp admission", () => {
     });
     expect(db.getHistory()[0].sql).toContain("price_sources_json");
     expect(registerMalformedPersistedInput.mock.calls.map(([row]) => [row.stablecoinId, row.reason, row.degradesRun]))
-      .toEqual([["missing", "invalid-shape", false], ["malformed", "json-parse-failed", false]]);
+      .toEqual([["missing", "aggregate-clock-unavailable", false], ["malformed", "json-parse-failed", false],
+        ["future", "aggregate-clock-future", false], ["invalid", "aggregate-clock-invalid", false]]);
     expect([...hydrated.dexPriceMap]).toEqual([
       ["trusted", { dexPriceUsd: 1, sourceTotalTvl: 2_000_000, updatedAt: RUN_AT - 60 }],
       ["crash", { dexPriceUsd: 0.4, sourceTotalTvl: 5_000_000, updatedAt: RUN_AT - 60 }],
@@ -281,8 +283,8 @@ describe("DEWS hydration timestamp admission", () => {
       ["trusted", 60], ["old", 36_000], ["thin", 60], ["crash", 60], ["boundary", 4500],
       ["stale-publication", 60], ["invalid-publication", 60],
     ]);
-    expect([...hydrated.dexPriceStaleIds]).toEqual(["old", "boundary", "missing", "stale-publication", "invalid-publication", "malformed"]);
-    expect(hydrated.staleCount).toBe(6);
+    expect([...hydrated.dexPriceStaleIds]).toEqual(["old", "boundary", "stale-publication"]);
+    expect(hydrated.staleCount).toBe(3);
 
     const registerSourceFailure = vi.fn();
     const failed = await hydrateDexPrices({

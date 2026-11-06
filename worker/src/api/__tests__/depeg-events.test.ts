@@ -7,6 +7,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeDepegRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleDepegEvents } from "../depeg-events";
+import { DEPEG_PENDING_EXPIRY_SEC, DEPEG_PENDING_EXTENDED_EXPIRY_SEC, DEPEG_PENDING_SEVERE_EXPIRY_SEC } from "@shared/lib/depeg-config";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -653,16 +654,19 @@ describe("handleDepegEvents", () => {
 
   describe("aggregate original-clock availability", () => {
     it.each([
-      { label: "trusted pool evidence", count: 2, tvl: 5_000_000, age: 60, dexAvailable: true },
-      { label: "ticker-only price evidence", count: 1, tvl: 0, age: 60, dexAvailable: false },
-      { label: "absent TVL evidence", count: 1, tvl: null, age: 60, dexAvailable: false },
-      { label: "malformed TVL evidence", count: 1, tvl: "5000000", age: 60, dexAvailable: false },
-      { label: "six-hour original", count: 2, tvl: 5_000_000, age: 21_600, dexAvailable: false },
-      { label: "missing original", count: 2, tvl: 5_000_000, age: null, dexAvailable: false },
-      { label: "original age boundary", count: 2, tvl: 5_000_000, age: 4500, dexAvailable: false },
-      { label: "inside original budget", count: 2, tvl: 5_000_000, age: 4499, dexAvailable: true },
-    ])("derives pending confirmation categories from $label", async ({ count, tvl, age, dexAvailable }) => {
-      const nowSec = 1_800_000_000;
+      ["trusted pool evidence", 2, 5_000_000, 60, true],
+      ["ticker-only price evidence", 1, 0, 60, false],
+      ["absent TVL evidence", 1, null, 60, false],
+      ["malformed TVL evidence", 1, "5000000", 60, false],
+      ["six-hour original", 2, 5_000_000, 21_600, false],
+      ["missing original", 2, 5_000_000, null, false],
+      ["original age boundary", 2, 5_000_000, 4500, false],
+      ["inside original budget", 2, 5_000_000, 4499, true],
+      ["future original", 2, 5_000_000, -1, false],
+      ["all families available", 2, 5_000_000, 60, true, true],
+      ["severe unavailable families", 2, 5_000_000, null, false, false, true],
+    ] as const)("derives pending confirmation categories from %s", async (_label, count, tvl, age, dexAvailable, pool = false, extreme = false) => {
+      const nowSec = 1_800_000_000, reason = extreme ? "extreme-move" : "large-cap+low-confidence";
       vi.useFakeTimers();
       vi.setSystemTime(nowSec * 1000);
       const db = mockEvents([], null, [{ match: "FROM depeg_pending", rows: [{
@@ -670,12 +674,12 @@ describe("handleDepegEvents", () => {
           first_seen_bps: -180, first_seen_at: nowSec - 600, first_price: 0.982,
           last_seen_bps: -240, last_seen_at: nowSec - 120, last_price: 0.976,
           peak_seen_bps: -310, peak_price: 0.969, peg_reference: 1,
-          reason: "large-cap+low-confidence", updated_at: nowSec - 120,
+          reason, updated_at: nowSec - 120,
         }] }, { match: "FROM dex_prices", rows: [{
           stablecoin_id: "usdt-tether", source_pool_count: count, source_total_tvl: tvl, updated_at: nowSec - 60,
           price_sources_json: JSON.stringify({ aggregateObservedAt: age == null ? null : nowSec - age, sources: [] }),
         }] }, { match: "FROM dex_price_challenger_snapshots", rows: [{
-          stablecoin_id: "usdt-tether", snapshot_at: nowSec - 60, has_rows: 0,
+          stablecoin_id: "usdt-tether", snapshot_at: nowSec - 60, has_rows: pool ? 1 : 0,
         }] }]);
       for (const filter of ["", "&stablecoin=usdt-tether"]) {
         const res = await handleDepegEvents(db,
@@ -688,10 +692,11 @@ describe("handleDepegEvents", () => {
         expect(body.pending).toEqual([{
           stablecoinId: "usdt-tether", symbol: "USDT", direction: "below",
           firstSeenAt: nowSec - 600, lastSeenAt: nowSec - 120, firstSeenBps: -180, lastSeenBps: -240,
-          peakSeenBps: -310, reason: "large-cap+low-confidence", ageSec: 600,
-          expiresAt: nowSec - 600 + (45 * 60),
-          availableConfirmationCategories: dexAvailable ? ["offchain", "dex"] : ["offchain"],
-          missingConfirmationCategories: dexAvailable ? ["pool"] : ["dex", "pool"],
+          peakSeenBps: -310, reason, ageSec: 600,
+          expiresAt: nowSec - 600 + (extreme ? DEPEG_PENDING_SEVERE_EXPIRY_SEC :
+            dexAvailable && pool ? DEPEG_PENDING_EXPIRY_SEC : DEPEG_PENDING_EXTENDED_EXPIRY_SEC),
+          availableConfirmationCategories: ["offchain", ...(dexAvailable ? ["dex"] : []), ...(pool ? ["pool"] : [])],
+          missingConfirmationCategories: [...(dexAvailable ? [] : ["dex"]), ...(pool ? [] : ["pool"])],
         }]);
       }
     });

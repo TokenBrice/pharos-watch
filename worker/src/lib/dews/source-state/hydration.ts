@@ -304,10 +304,12 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
       .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number; price_sources_json: string | null }>();
     for (const row of dexPriceRows.results ?? []) {
       const decoded = decodeJsonString<number, PersistedJsonDecodeReason>(row.price_sources_json, {
-        updatedAt: row.updated_at, missingReason: "missing", parseErrorReason: "json-parse-failed",
+        updatedAt: row.updated_at, missingReason: "aggregate-clock-unavailable", parseErrorReason: "json-parse-failed",
         normalize: (payload) => {
           const clock = getDexAggregateObservedAt(payload, ctx.nowSec);
-          return clock == null ? { ok: false, reason: "invalid-shape" } : { ok: true, payload: clock };
+          return clock.aggregateClockReason != null
+            ? { ok: false, reason: clock.aggregateClockReason }
+            : { ok: true, payload: clock.aggregateObservedAt! };
         },
       });
       if (!decoded.ok) ctx.registerMalformedPersistedInput({
@@ -318,8 +320,8 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
       const ageSec = getRowAgeSec(aggregateObservedAt, ctx.nowSec);
       const publicationAgeSec = getRowAgeSec(row.updated_at, ctx.nowSec);
       if (ageSec != null) dexPriceAgeSecById.set(row.stablecoin_id, ageSec);
-      if (ageSec == null || ageSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec ||
-        publicationAgeSec == null || publicationAgeSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec) {
+      if (ageSec != null && (ageSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec ||
+        (publicationAgeSec != null && publicationAgeSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec))) {
         dexPriceStaleIds.add(row.stablecoin_id);
       }
       if (!isAffirmativeDexPriceRow({ ...row, aggregateObservedAt }, ctx.nowSec, "depeg")) continue;

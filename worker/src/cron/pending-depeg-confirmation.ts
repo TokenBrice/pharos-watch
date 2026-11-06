@@ -1,8 +1,5 @@
 import {
-  DEPEG_PENDING_EXPIRY_SEC,
-  DEPEG_PENDING_EXTENDED_EXPIRY_SEC,
   DEPEG_PENDING_MIN_AGE_SEC,
-  DEPEG_PENDING_SEVERE_EXPIRY_SEC,
   DEPEG_PRIMARY_PRICE_MAX_AGE_SEC,
 } from "@shared/lib/depeg-config";
 import { logWorkerEventArgs } from "../lib/structured-log";
@@ -41,6 +38,7 @@ import {
   classifyNativeQuoteImplausibility,
   type NativeQuoteImplausibility,
 } from "../lib/native-quote-plausibility";
+export { getPendingExpiryLimitSec } from "../lib/depeg-pending";
 
 const CONFIRMATION_TIMESTAMP_FUTURE_SKEW_SEC = 5 * 60;
 
@@ -323,26 +321,6 @@ function expectsNativePegQuote(meta: ReturnType<typeof ACTIVE_META_BY_ID.get>): 
     meta.geckoId.length > 0 &&
     normalizeSupportedPegCurrency(meta.flags.pegCurrency) != null
   );
-}
-
-export function getPendingExpiryLimitSec(params: {
-  primarySameDirectionDepegged: boolean;
-  isExtremeMove: boolean;
-  unavailableSources: string[];
-  circuitOpenSources: string[];
-}): number {
-  let expirySec = DEPEG_PENDING_EXPIRY_SEC;
-  if (
-    params.primarySameDirectionDepegged ||
-    params.unavailableSources.length > 0 ||
-    params.circuitOpenSources.length > 0
-  ) {
-    expirySec = Math.max(expirySec, DEPEG_PENDING_EXTENDED_EXPIRY_SEC);
-  }
-  if (params.isExtremeMove) {
-    expirySec = Math.max(expirySec, DEPEG_PENDING_SEVERE_EXPIRY_SEC);
-  }
-  return expirySec;
 }
 
 export function buildConfirmationPlan(input: ConfirmationPlanInput): ConfirmationPlan {
