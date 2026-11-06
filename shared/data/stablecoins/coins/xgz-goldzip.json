@@ -117,8 +117,8 @@
     },
     {
       "type": "warning",
-      "title": "Issuer change and special redemption deadline",
-      "message": "GoldZip's 15 October 2026 notice announces BVI GoldZip Company Limited (2056034) replacing Singapore GoldZip Pte Limited (202119587H), subject to lawful implementation. The Ethereum contract is unchanged; no swap is required. Object and elect the optional entire-balance special exit by 5 November 2026 at 23:59 UTC. No minimum applies, but only verified self-custody Ethereum wallets qualify. Settlement is in USDT on Ethereum within 14 Business Days after the objection deadline, subject to lawful identity checks, wallet verification and token delivery. Administration and redemption fees are waived; instructed transfer fees are refunded or credited. Valuation uses XGZ's own weighted-average traded price on the deadline date (Hong Kong calendar day), from trading data the issuer selects, or an issuer-determined fair price if data are insufficient; sources and methodology remain confidential."
+      "title": "Issuer change and special exit",
+      "message": "GoldZip's 15 October 2026 notice names BVI GoldZip Company Limited (2056034) as successor to Singapore GoldZip Pte Limited (202119587H), subject to lawful implementation; HKGX now also names the BVI issuer. The Ethereum contract is unchanged; no swap is required. The optional entire-balance special exit closed on 5 November 2026 at 23:59 UTC. Settlement is in USDT on Ethereum within 14 Business Days after that deadline, subject to lawful identity checks, wallet verification and token delivery. Valuation uses XGZ's own weighted-average traded price on the deadline date (Hong Kong calendar day), from trading data the issuer selects, or an issuer-determined fair price if data are insufficient; sources and methodology remain confidential."
     }
   ]
 }
