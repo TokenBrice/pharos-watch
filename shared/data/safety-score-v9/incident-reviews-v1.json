@@ -26705,6 +26705,34 @@
         "surface:4697bbbc7d223c44e7ce3036",
         "surface:20d01dffa87d58b05ee2827d"
       ]
+    },
+    {
+      "reviewId": "k-mib-eurot-avalanche-external-transfer-20261106",
+      "assetId": "eurot-token-teknoloji",
+      "scope": {
+        "kind": "control",
+        "routeId": "avalanche:0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "controlId": "eurot-avalanche-external-transfer-controller"
+      },
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — k-mib",
+      "windowStartSec": 1693269536,
+      "windowEndSec": 1793989574,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:a2aec907cd2c313da7fb5487",
+        "surface:7ee72d2d43dcd22757213bc6",
+        "surface:61ea1a284a9a61f6d8db73d5",
+        "surface:7f226f321cd6c47d280842d3"
+      ],
+      "sourcesRefs": [
+        "source:27b2ad0a9d74818bb74ca0e4",
+        "source:0c67f1823c3c8c0c60766ec5",
+        "source:9a4149e1bc959578188c9ac1",
+        "source:ec7b04d892752fb0575ce794",
+        "source:9d7caf3b04d933c205da4439",
+        "source:76332a7da5333425f20e0a75"
+      ]
     }
   ],
   "sourceObservations": [
@@ -64727,6 +64755,66 @@
         "location": "getAccountInfo at minContextSlot 463256733 (finalized context slot 463256903); mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q, authority Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm; getSignaturesForAddress(authority, limit 1000)",
         "excerpt": "mintAuthority Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm; supply 1999000000 (9 decimals; 1,999 FUSD); freezeAuthority E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C; SPL Token program. The authority is a 1-of-3 native multisig: numRequiredSigners 1, numValidSigners 3, signers DeSV2k6LkxEWTL4U4FFrd5na8LJWqAMEEy48KMqkkf3j, E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C and GmFB41nws8Egtb9mQAqR1i82XPcEJXAzBPZW2t3hsKVr. Authority signature page: 5 signatures, newest slot 411820456 (2026-04-08…), oldest slot 396018464 (2026-01-26…), 1 error; the mint's creation is older than the page, so the range is bounded."
       }
+    },
+    {
+      "id": "source:27b2ad0a9d74818bb74ca0e4",
+      "value": {
+        "label": "EUROT Avalanche creation, exact emergency state and bounded admin-event observations",
+        "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc",
+        "observedAt": "2026-11-06T18:31:33.720Z",
+        "location": "agents/out/k-mib-evidence/eurot-{creation-pinned,state-99607178,adminlogs-99607178}.json; state pin 99607178, hash 0xe8ac2f8186b04e1f629b41a671bf18ba527e5eda9f046707150ff97755310b11, timestamp 2026-11-06T18:26:14.000Z; creation pin 34499661, hash 0x5110a731637905f54a0cc48764f465820a3602d8da757b786b960bdc5a8ae016, timestamp 2023-08-29T00:38:56.000Z",
+        "excerpt": "Creation receipt 0x307330bd45e42690940710a7f8ef0873902d22e71345cacf0f5e7b96f3c8f872 binds the exact Avalanche EUROT contract at block 34499661. At block 99607178, owner() and supplyManager() return 0xff80b391b286887d446b1124820f87d5b049b4fb; complianceManager() returns 0xd61c0129f6c35a675db6e2a067b31e75b2573077; enforcementManager() returns 0xff80b391b286887d446b1124820f87d5b049b4fb; proposedOwner() is zero and paused() is false. Verified-ABI Pause/Paused/Unpause/Unpaused, Freeze/Unfreeze, Wipe, owner/manager and role-event topics return no matches over blocks 99557179-99607178, five completed inclusive 10000-block chunks. This is bounded observation, not proof of lifetime absence or every holder's freeze status. No state overrides or latest-state substitution were used."
+      }
+    },
+    {
+      "id": "source:0c67f1823c3c8c0c60766ec5",
+      "value": {
+        "label": "Exact Avalanche EUROT explorer-verified StableCoin source and ABI",
+        "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x14eb40fb7900185c01adc6a5b8ac506d8a600e3c",
+        "observedAt": "2026-11-06T18:31:33.720Z",
+        "location": "ContractName StableCoin; compiler v0.8.7+commit.e28d00a7; Proxy=0; contracts/StableCoin.sol",
+        "excerpt": "The verified source binds EURO Token/EUROT and exposes owner-or-supply-manager externalTransfer/externalTransferFrom, compliance-manager-or-owner pause/unpause, owner-settable managers and account-specific freeze roles. No separate validator/provider or proxy emergency getter is exposed in this contract. This source inspection does not establish the economics or health of unobserved counterpart routes."
+      }
+    },
+    {
+      "id": "source:9a4149e1bc959578188c9ac1",
+      "value": {
+        "label": "Issuer homepage and bounded announcement search",
+        "url": "https://www.token.com.tr/",
+        "observedAt": "2026-11-06T18:31:33.720Z",
+        "location": "Retrieved homepage/navigation plus indexed issuer-domain EUROT hack/exploit/incident/pause and saldiri/durduruldu searches on 2026-11-06",
+        "excerpt": "No exact Avalanche EUROT control-domain incident announcement was found on the consulted issuer surfaces. This is not an exhaustive archive or an absence certificate."
+      }
+    },
+    {
+      "id": "source:ec7b04d892752fb0575ce794",
+      "value": {
+        "label": "Issuer EUROT product and network identity",
+        "url": "https://www.token.com.tr/en/reserve-tokens/euro-token-eurot-2/",
+        "observedAt": "2026-11-06T18:31:33.720Z",
+        "location": "Euro Token (EUROT) product disclosure; undated current page retrieved 2026-11-06",
+        "excerpt": "Issuer identifies Euro Token (EUROT) on Avalanche C-Chain, Polygon and Ethereum. The product page does not provide a dated incident-history certificate."
+      }
+    },
+    {
+      "id": "source:9d7caf3b04d933c205da4439",
+      "value": {
+        "label": "DefiLlama retrieved hacks corpus searched for exact asset and issuer terms",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-11-06T18:31:33.720Z",
+        "location": "All 1340 retrieved rows, all row fields searched for eurot, token teknoloji and token.com.tr",
+        "excerpt": "No row matched the exact asset or issuer terms. This corpus search is not proof of absence and generic Avalanche incidents are not attributed to this controller."
+      }
+    },
+    {
+      "id": "source:76332a7da5333425f20e0a75",
+      "value": {
+        "label": "Rekt retrieved index and bounded indexed exact-asset search",
+        "url": "https://rekt.news/",
+        "observedAt": "2026-11-06T18:31:33.720Z",
+        "location": "Retrieved current index plus site:rekt.news \"EUROT\" indexed search on 2026-11-06",
+        "excerpt": "No exact EUROT incident article was identified on the consulted index/search surface. The homepage and indexed query are not a complete lifetime corpus."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -79880,6 +79968,38 @@
         "kind": "explorer-events",
         "url": "https://solscan.io/token/51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q",
         "finding": "Pinned chain-equivalent read at finalized slot 463,256,903: mint authority is the 1-of-3 native multisig Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm, the mint is initialized on the SPL Token program with supply 1,999 and freeze authority E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C. The authority's signature page holds 5 signatures (newest 2026-04-08, oldest 2026-01-26; one errored), a bounded recent page; no lifetime absence or creation-signature claim is made."
+      }
+    },
+    {
+      "id": "surface:a2aec907cd2c313da7fb5487",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://www.token.com.tr/",
+        "finding": "Searched current issuer homepage/product and bounded indexed EUROT/Token Teknoloji incident, exploit, hack, pause and Turkish attack/suspension terms on 2026-11-06; no exact Avalanche external-transfer control incident announcement found. No complete archive claim. The verified contract exposes issuer-controlled external transfers, rather than an identified third-party verifier whose history could stand in for this scope."
+      }
+    },
+    {
+      "id": "surface:7ee72d2d43dcd22757213bc6",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "All 1340 retrieved rows searched across all fields for eurot, token teknoloji and token.com.tr; no exact asset or issuer match. No inference from generic chain incidents or empty corpus matches."
+      }
+    },
+    {
+      "id": "surface:61ea1a284a9a61f6d8db73d5",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://rekt.news/",
+        "finding": "Retrieved current index and performed bounded site:rekt.news \"EUROT\" search on 2026-11-06; no exact asset incident article identified. Search scope is bounded, not exhaustive lifetime absence."
+      }
+    },
+    {
+      "id": "surface:7f226f321cd6c47d280842d3",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-avalanche-mainnet-archive.n.dwellir.com/ext/bc/C/rpc",
+        "finding": "Exact verified-ABI admin/emergency event topics scanned over Avalanche blocks 99557179-99607178 (50000 inclusive; five completed 10000-block chunks), ending at hash 0xe8ac2f8186b04e1f629b41a671bf18ba527e5eda9f046707150ff97755310b11, 2026-11-06T18:26:14.000Z; no matching logs. Exact paused() returned false at that pin; first deployment is independently receipt-bound to block 34499661, 2023-08-29T00:38:56.000Z. No holder-specific freeze or unobserved counterpart health conclusion is made."
       }
     }
   ]
