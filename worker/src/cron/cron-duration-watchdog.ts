@@ -1,7 +1,7 @@
 import type { CronResult } from "../lib/cron-logger";
 import { CRON_TIMEOUT_MS } from "../lib/cron-timeouts";
-import { runWithOverloadRetry } from "../lib/d1-overload-retry";
-import { throwIfAborted } from "../lib/abort";
+import { D1_HEAVY_STATEMENT_IDLE_RATIO, runWithOverloadRetry } from "../lib/d1-overload-retry";
+import { sleepWithSignal, throwIfAborted } from "../lib/abort";
 import { SCHEDULED_SLOT_PLANS } from "@shared/lib/scheduled-runner-registry";
 import { STALE_SLOT_ERROR } from "../lib/scheduled-slot-reconciliation";
 
@@ -175,6 +175,25 @@ function readDiagnosticMetadata(value: string | null): Record<string, unknown> {
   }
 }
 
+/**
+ * Seven days of run metadata is well over 100 MB, so one batched pass spent
+ * D1's rolling 10 s resource window and failed with an overload. Each read now
+ * runs alone, outlasts one spent window, and idles for a multiple of its own
+ * wall time (the yield-history precedent).
+ */
+async function pacedRead<T>(read: () => Promise<D1Result<T>>, signal?: AbortSignal): Promise<D1Result<T>> {
+  let readMs = 0;
+  const result = await runWithOverloadRetry(async () => {
+    const startedMs = Date.now();
+    const attempt = await read();
+    // Pace on this attempt alone; a waited-out window is already idle time.
+    readMs = Date.now() - startedMs;
+    return attempt;
+  }, 3, signal, { waitOutResourceWindow: true });
+  await sleepWithSignal(Math.round(readMs * D1_HEAVY_STATEMENT_IDLE_RATIO), signal);
+  return result;
+}
+
 async function loadDurationDiagnostics(
   db: D1Database,
   breachingStats: readonly JobDurationStats[],
@@ -184,7 +203,7 @@ async function loadDurationDiagnostics(
   const diagnostics: DurationDiagnostic[] = [];
   for (const stats of breachingStats) {
     throwIfAborted(signal);
-    const stageRows = await runWithOverloadRetry(
+    const stageRows = await pacedRead(
       () =>
         db
           .prepare(
@@ -244,11 +263,10 @@ async function loadDurationDiagnostics(
             stats.timeoutMs,
           )
           .all<DurationStageBreakdownRow>(),
-      3,
       signal,
     );
     throwIfAborted(signal);
-    const sampleRows = await runWithOverloadRetry(
+    const sampleRows = await pacedRead(
       () =>
         db
           .prepare(
@@ -280,7 +298,6 @@ async function loadDurationDiagnostics(
           )
           .bind(stats.job, sinceSec, STALE_SLOT_CHILD_ERROR, STALE_SLOT_METADATA_REASON, stats.timeoutMs)
           .all<DurationSampleRow>(),
-      3,
       signal,
     );
     diagnostics.push({
@@ -391,7 +408,8 @@ export async function runCronDurationWatchdog(
         STALE_SLOT_METADATA_REASON,
       ),
   );
-  const results = await runWithOverloadRetry(() => db.batch<StatsRow>(statements), 3, signal);
+  const results: D1Result<StatsRow>[] = [];
+  for (const statement of statements) results.push(await pacedRead(() => statement.all<StatsRow>(), signal));
   throwIfAborted(signal);
 
   const stats: JobDurationStats[] = watchedJobs.map(([job, timeoutMs], index) => {
@@ -413,7 +431,7 @@ export async function runCronDurationWatchdog(
     };
   });
 
-  const slotRows = await runWithOverloadRetry(
+  const slotRows = await pacedRead(
     () =>
       db
         .prepare(
@@ -447,7 +465,6 @@ export async function runCronDurationWatchdog(
         )
         .bind(STALE_SLOT_ERROR, STALE_SLOT_ERROR, sinceSec)
         .all<SlotStatsRow>(),
-    3,
     signal,
   );
   throwIfAborted(signal);
