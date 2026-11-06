@@ -249,7 +249,7 @@ export async function fetchCgPoolsByAddressesWithStatus(
     throw new RangeError(`pools/multi accepts at most ${CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES} addresses, got ${addresses.length}`);
   }
   const url = cgUrl(
-    `/onchain/networks/${network}/pools/multi/${addresses.join(",")}?include=base_token,quote_token`,
+    `/onchain/networks/${network}/pools/multi/${addresses.map(encodeURIComponent).join(",")}?include=base_token,quote_token`,
     apiKey,
   );
   const res = await fetchWithRetry(url, {
