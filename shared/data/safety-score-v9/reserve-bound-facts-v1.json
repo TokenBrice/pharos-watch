@@ -1660,6 +1660,35 @@
         "allInScope": true
       }
     ],
+    "acred-apollo-securitize": [
+      {
+        "factKey": "acred-apollo-securitize:adcf-class-i:open-ended-maturity:2026-04-29",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "chainlink-nav:token:0x17418038ecf73ba4026c4f428547bf099706f27b"
+        },
+        "asOfSec": 1777420800,
+        "publisher": "Apollo Diversified Credit Fund; Securitize",
+        "sourceUrls": [
+          "https://www.sec.gov/Archives/edgar/data/1676197/000119312523095109/d479263dex99a1.htm",
+          "https://www.sec.gov/Archives/edgar/data/1676197/000119312526192295/d335502d486bpos.htm",
+          "https://securitize.io/primary-market/apollo-diversified-credit-securitize-fund"
+        ],
+        "assertion": "Apollo Diversified Credit Fund's April 29, 2026 registration statement describes its life as expected to be indefinite and incorporates the March 2, 2023 Declaration of Trust at Item 25, Exhibit a(1). Article IX, Section 2 states: \"Unless dissolved as provided herein, the Trust shall have perpetual existence.\" Securitize's ACRED page identifies the underlying Apollo Diversified Credit Fund investment and Class I expenses. The exact underlying fund-share claim has open-ended contractual duration rather than a finite maturity maximum. This does not establish the feeder's own term, portfolio maturity or redemption horizon. contentDigest fingerprints canonical JSON of the ordered source URL, source date and excerpt observations retained by this review.",
+        "contentDigest": "8ea946c5683071f4b32151a4982183c6213ed0f6cad2b41d1899aff245edf9ee",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — c2-4",
+          "confidence": "medium"
+        },
+        "claimId": "Apollo Diversified Credit Fund Class I shares underlying ACRED",
+        "conclusion": "open-ended",
+        "governingInstrument": "Apollo Diversified Credit Fund registration statement filed April 29, 2026, fund-life disclosure and Item 25 Exhibit a(1); incorporated Declaration of Trust dated March 2, 2023, Article IX Section 2",
+        "allInScope": true
+      }
+    ],
     "fiusd-sygnum": [
       {
         "factKey": "fiusd-sygnum:chainlink-nav:token:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9:maturity-applicability-20261106",
