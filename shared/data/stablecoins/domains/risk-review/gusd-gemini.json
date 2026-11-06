@@ -18,11 +18,31 @@
       {
         "label": "Ethereum pinned proxy/custodian/store reads",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "GUSD canonical proxy exact verified source (retrieved 2026-11-06)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x056fd409e1d7a124bd7017459dfea2f387b6d5cd?fields=all"
+      },
+      {
+        "label": "Current GUSD implementation exact verified source and runtime (verified 2026-10-16, read 2026-11-06)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x483a1e7f16f46266400f1baf7abdf445c8d140a2?fields=all"
+      },
+      {
+        "label": "Current GUSD PrintLimiter exact verified source and runtime (verified 2026-10-16, read 2026-11-06)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x342c1b88c2108f159a4ef37e322b4170b18c42f6?fields=all"
+      },
+      {
+        "label": "Ethereum fixed block 26354000: proxy, store, implementation, limiter and authority reads",
+        "url": "https://eth-mainnet.g.alchemy.com/v2/"
+      },
+      {
+        "label": "Gemini Trust User Agreement dated 2026-11-04: GUSD contract modifications and seizure/destruction",
+        "url": "https://www.gemini.com/legal/gemini-trust-user-agreement"
       }
     ],
-    "evidence": "Reviewed 2026-10-19. GUSD is 100% Ethereum (census). At Ethereum block 26224787, proxy 0x056fd409e1d7a124bd7017459dfea2f387b6d5cd returns erc20Impl()=0x6704ba24b8640BCcEe6BF2fd276a6a1b8EdF4Ade and custodian()=0x39dC6ED3e8D762F69A84AaCBD31c4ee872b0699c (an EOA); the implementation's erc20Store() is 0xc42B14e49744538e3C239f8ae48A1Eaaf35e68a0, and the store also returns custodian 0x39dC6E.... The verified ERC20Impl ABI contains no blacklist, denylist, freeze, seizure, transfer-pause or arbitrary-burn selector. The sweeper 0xd24400ae8bfebb18ca49be86258a3c749cf46853 can enable and replay sweeps only for accounts that signed or previously delegated, which is not unilateral seizure. The custodian can confirm replacement of the proxy/store implementation through the requestImplChange/confirmImplChange callbacks after a 172,800 s default (604,800 s extended) delay, so an upgrade could add holder controls. That is a direct Possible (admin-upgradeable implementation), not an active Yes.",
-    "reviewer": "FreezeWatch full-dataset review 2026-10-19",
-    "reviewedAt": "2026-10-19"
+    "evidence": "Verified 2026-11-06 at Ethereum block 26354000, hash 0xac7f6cd39eb44e8b59ff0923c05ddbdbc010f292faa62a07c3fc0c1aea10164e, timestamp 2026-11-06T06:24:59Z, using pinned https://eth-mainnet.g.alchemy.com/v2/ reads observed 2026-11-06T20:22:08.592Z through 2026-11-06T20:23:26.004Z. Canonical proxy 0x056fd409e1d7a124bd7017459dfea2f387b6d5cd now returns erc20Impl()=0x483a1e7f16f46266400f1baf7abdf445c8d140a2, not the historical 2026-10-19 implementation 0x6704ba24b8640bccee6bf2fd276a6a1b8edf4ade. The active implementation and PrintLimiter 0x342c1b88c2108f159a4ef37e322b4170b18c42f6 exactly match Sourcify verified deployed runtime bytes. The implementation returns erc20Proxy()=the canonical proxy, erc20Store()=0xc42b14e49744538e3c239f8ae48a1eaaf35e68a0 and custodian()=that PrintLimiter; the store returns the same active implementation. Current ERC20 transfer paths enforce balance/allowance and nonzero recipient checks without an address blacklist or transfer pause. The new implementation additionally exposes burn(address,uint256), callable only by its custodian, which reduces an arbitrary holder balance without allowance. The limiter exposes limitedBurn(address,uint256) only to limitedPrinter 0xd24400ae8bfebb18ca49be86258a3c749cf46853 and currently returns seizureLimit()=0. Its custodian 0x57fe1bfffcd7e2211d2b58a9e2a222f43b3ea31b can confirm a requested seizure-limit increase through existing code; the zero current budget is therefore a dormant configurable seizure surface, not an active positive seizure allowance or renunciation. Proxy/store custodian remains 0x39dc6ed3e8d762f69a84aacbd31c4ee872b0699c with implementation-replacement reach. Possible is retained under the dormant-configurable-control and upgrade tests, without asserting current blacklist enforcement, a seizure event, signer independence, or reviewed NEAR transfer mechanics. Gemini Trust User Agreement dated 2026-11-04 separately reserves contract modification and GUSD seizure/destruction rights. Historical observation retained verbatim: Reviewed 2026-10-19. GUSD is 100% Ethereum (census). At Ethereum block 26224787, proxy 0x056fd409e1d7a124bd7017459dfea2f387b6d5cd returns erc20Impl()=0x6704ba24b8640BCcEe6BF2fd276a6a1b8EdF4Ade and custodian()=0x39dC6ED3e8D762F69A84AaCBD31c4ee872b0699c (an EOA); the implementation's erc20Store() is 0xc42B14e49744538e3C239f8ae48A1Eaaf35e68a0, and the store also returns custodian 0x39dC6E.... The verified ERC20Impl ABI contains no blacklist, denylist, freeze, seizure, transfer-pause or arbitrary-burn selector. The sweeper 0xd24400ae8bfebb18ca49be86258a3c749cf46853 can enable and replay sweeps only for accounts that signed or previously delegated, which is not unilateral seizure. The custodian can confirm replacement of the proxy/store implementation through the requestImplChange/confirmImplChange callbacks after a 172,800 s default (604,800 s extended) delay, so an upgrade could add holder controls. That is a direct Possible (admin-upgradeable implementation), not an active Yes.",
+    "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 F-ACCESS",
+    "reviewedAt": "2026-11-06"
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
