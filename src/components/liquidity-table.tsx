@@ -2,6 +2,8 @@
 
 import type { ReactNode } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { TableCell } from "@/components/table";
 import { DataTableEmptyRow, DataTableShell, type DataTableColumn } from "@/components/data-table-shell";
 import { StablecoinIdentity } from "@/components/stablecoin-identity";
@@ -161,8 +163,6 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
               key={row.meta.id}
               onActivate={() => onRowClick(row.meta.id)}
               onHover={() => prefetch(row.meta.id)}
-              role="link"
-              ariaLabel={`Open ${row.meta.symbol} liquidity detail`}
               className="h-11 sm:h-auto"
             >
               <TableCell className="px-2 text-right text-muted-foreground text-xs pharos-numeric sm:px-3">
@@ -170,26 +170,33 @@ export function LiquidityTable({ rows, logos, searchQuery, onRowClick, toolbar }
                 {liq.liquidityScore != null ? pageStartIndex + index + 1 : "—"}
               </TableCell>
               <TableCell className="w-[122px] max-w-[122px] overflow-hidden sm:w-[150px] sm:max-w-[150px] xl:w-[170px] xl:max-w-none">
-                <StablecoinIdentity
-                  logoSrc={logos?.[row.meta.id]}
-                  name={row.meta.name}
-                  symbol={row.meta.symbol}
-                  logoSize={24}
-                  className="min-w-0"
-                  textClassName="min-w-0"
-                  symbolRowClassName="min-w-0 gap-1.5"
-                  symbolClassName="truncate"
-                  badge={
-                    <Badge
-                      variant="outline"
-                      className={`text-3xs ${coverageBadge.className} ${coverageBadge.label === "Mixed" || coverageBadge.label === "Primary" ? "hidden sm:inline-flex" : ""}`}
-                      title={liq.unavailableReason ?? formatLiquiditySourceMix(liq.sourceMix)}
-                    >
-                      {coverageBadge.label}
-                    </Badge>
-                  }
-                  nameClassName="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline"
-                />
+                <Link
+                  href={buildStablecoinUrl(row.meta.id)}
+                  prefetch={false}
+                  aria-label={`Open ${row.meta.symbol} liquidity detail`}
+                  className="pharos-focus-ring block min-w-0 rounded-md"
+                >
+                  <StablecoinIdentity
+                    logoSrc={logos?.[row.meta.id]}
+                    name={row.meta.name}
+                    symbol={row.meta.symbol}
+                    logoSize={24}
+                    className="min-w-0"
+                    textClassName="min-w-0"
+                    symbolRowClassName="min-w-0 gap-1.5"
+                    symbolClassName="truncate"
+                    badge={
+                      <Badge
+                        variant="outline"
+                        className={`text-3xs ${coverageBadge.className} ${coverageBadge.label === "Mixed" || coverageBadge.label === "Primary" ? "hidden sm:inline-flex" : ""}`}
+                        title={liq.unavailableReason ?? formatLiquiditySourceMix(liq.sourceMix)}
+                      >
+                        {coverageBadge.label}
+                      </Badge>
+                    }
+                    nameClassName="truncate max-w-[140px] text-xs text-muted-foreground hidden xl:inline"
+                  />
+                </Link>
               </TableCell>
               <TableCell className="text-right pharos-numeric">
                 {liq.liquidityScore != null ? (
