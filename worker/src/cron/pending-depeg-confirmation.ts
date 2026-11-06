@@ -38,7 +38,6 @@ import {
   classifyNativeQuoteImplausibility,
   type NativeQuoteImplausibility,
 } from "../lib/native-quote-plausibility";
-export { getPendingExpiryLimitSec } from "../lib/depeg-pending";
 
 const CONFIRMATION_TIMESTAMP_FUTURE_SKEW_SEC = 5 * 60;
 

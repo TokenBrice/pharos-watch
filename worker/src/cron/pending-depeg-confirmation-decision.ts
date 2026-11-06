@@ -18,12 +18,12 @@ import {
   buildPendingOutcomeStmt,
   buildPoolConfirmationKey,
   confirmationSourceList,
-  getPendingExpiryLimitSec,
   isOpposingConfirmationStatus,
   pendingPeakQuoteDomain,
   pickPeakCandidate,
   type PromotionDecisionInput,
 } from "./pending-depeg-confirmation";
+import { getPendingExpiryLimitSec } from "../lib/depeg-pending";
 
 const TEMPORAL_CONFIRMATION_LABEL = `temporal:${Math.round(DEPEG_PENDING_MIN_AGE_SEC / 60)}m`;
 

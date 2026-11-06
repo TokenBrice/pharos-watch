@@ -13,7 +13,7 @@ import { dexPriceEvidenceWeight } from "./coingecko-tickers-shared";
 import { aggregateProtocolSources, buildDexPriceObservationsFromRetainedPools, collapseDuplicateObservations, hasDexPricePrimaryReference, oldestPriceObservation } from "./scoring-helpers";
 import { DEX_LIQUIDITY_SCORING_BATCH_SIZE, assertCurrentDexScoringGeneration, flushScoringStatements, pruneExpiredDexPriceStages, type DexPriceStageRetentionResult } from "./dex-scoring-stage-store";
 
-export const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
+const PRIMARY_PRICE_OUTLIER_MAX_DEVIATION_RATIO = 2.5;
 const DISPLAY_PRICE_RATIO_MIN = 0.5,
   DISPLAY_PRICE_RATIO_MAX = 2.0;
 
@@ -272,8 +272,8 @@ export async function computeDexPrices({
       const ratio = obs.price / primaryPrice;
       return ratio >= DISPLAY_PRICE_RATIO_MIN && ratio <= DISPLAY_PRICE_RATIO_MAX;
     });
-    // Keep the aggregate's actual median contributors separate from display-source filtering.
-    const aggregateObservedAt = oldestPriceObservation(medianInputObs);
+    // The clock covers every published input (price, count, TVL), not the display-source filter.
+    const aggregateObservedAt = oldestPriceObservation(publishedObservations);
     const protocolSources = aggregateProtocolSources(sanePriceObs);
     if (aggregateObservedAt != null) {
       for (const source of protocolSources) source.aggregateObservedAt = aggregateObservedAt;

@@ -283,8 +283,9 @@ describe("DEWS hydration timestamp admission", () => {
       ["trusted", 60], ["old", 36_000], ["thin", 60], ["crash", 60], ["boundary", 4500],
       ["stale-publication", 60], ["invalid-publication", 60],
     ]);
-    expect([...hydrated.dexPriceStaleIds]).toEqual(["old", "boundary", "stale-publication"]);
-    expect(hydrated.staleCount).toBe(3);
+    expect([...hydrated.dexPriceStaleIds]).toEqual(["old", "boundary", "missing", "stale-publication",
+      "invalid-publication", "malformed", "future", "invalid"]);
+    expect(hydrated.staleCount).toBe(8);
 
     const registerSourceFailure = vi.fn();
     const failed = await hydrateDexPrices({

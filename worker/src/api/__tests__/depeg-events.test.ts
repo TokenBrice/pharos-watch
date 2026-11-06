@@ -665,7 +665,7 @@ describe("handleDepegEvents", () => {
       ["future original", 2, 5_000_000, -1, false],
       ["all families available", 2, 5_000_000, 60, true, true],
       ["severe unavailable families", 2, 5_000_000, null, false, false, true],
-    ] as const)("derives pending confirmation categories from %s", async (_label, count, tvl, age, dexAvailable, pool = false, extreme = false) => {
+    ] as const)("derives pending confirmation categories from %s", async (_label, count, tvl, age, dexAvailable, pool: boolean = false, extreme: boolean = false) => {
       const nowSec = 1_800_000_000, reason = extreme ? "extreme-move" : "large-cap+low-confidence";
       vi.useFakeTimers();
       vi.setSystemTime(nowSec * 1000);
