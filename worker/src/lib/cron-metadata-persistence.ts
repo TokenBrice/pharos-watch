@@ -37,7 +37,7 @@ const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEnt
   "sourceDistribution", "confidenceDistribution", "sourceDepthDistribution", "supplyCoverage", "priceHealth",
   "priceSourceHealth", "onchainPartition", "probePlanes", "internalExternalDiscrepancy", "freshnessDiagnostics",
   "activePriceCoverage", "activePublicationCoverage", "missingActiveState", "coverageOutcomeCounts", "persistence",
-  "publicationStats", "apiErrorConfigs",
+  "publicationStats", "apiErrorConfigs", "priceRefresh",
   "adapterTelemetryProgress", "adapterFailureBudget", "cohortGrading",
   "publicationAbortCause", "publicationPhaseElapsedMs", "publicationSubphaseElapsedMs", "publicMaterialization", "publicationPhaseTimingBasis",
   "executorMode", "executorColo", "executorColoSource", "cfPlacement", "executorWorkerVersion", "executionGeneration",

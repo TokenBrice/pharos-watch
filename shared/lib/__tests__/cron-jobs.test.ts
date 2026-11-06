@@ -21,6 +21,8 @@ function isHourlyCpuTrigger(schedule: string): boolean {
   return /^(?:[0-5]?\d) \* \* \* \*$/.test(schedule);
 }
 
+const findJob = (job: string) => CRON_JOB_DEFINITIONS.find((definition) => definition.job === job);
+
 describe("cron job schedule metadata", () => {
   it("resolves only the artifact-proven supplemental catch-up identity", () => {
     expect(isProvenSatisfiedNeutralSkipReason("supplemental-catch-up-not-due")).toBe(true);
@@ -40,7 +42,7 @@ describe("cron job schedule metadata", () => {
   });
 
   it("retains the durable reserve identity on five-minute polls that are all config opportunities", () => {
-    expect(CRON_JOB_DEFINITIONS.find((job) => job.job === "reserve-recovery")).toMatchObject({
+    expect(findJob("reserve-recovery")).toMatchObject({
       intervalSec: 300, group: "five-minute", scheduleKey: "fiveMinuteReserveRecovery",
     });
     expect(V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-live-reserves"]).toBe(14400);
@@ -54,7 +56,7 @@ describe("cron job schedule metadata", () => {
   });
 
   it("accounts for optional concurrent D1 telemetry without changing status aliases or the later peak", () => {
-    expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "status-self-check")).toMatchObject({ maxConnections: 2 });
+    expect(findJob("status-self-check")).toMatchObject({ maxConnections: 2 });
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "status-self-check")).toMatchObject({ maxConnections: 2 });
     expect(CRON_CONNECTION_BUDGET_ENTRIES.find((definition) => definition.job === "price-corroboration")).toMatchObject({ maxConnections: 4 });
   });
@@ -69,9 +71,10 @@ describe("cron job schedule metadata", () => {
 
 
   it("declares the bounded nested Curve discovery fan-out", () => {
-    expect(CRON_JOB_DEFINITIONS.find((definition) => definition.job === "sync-dex-discovery")).toMatchObject({
-      maxConnections: 2,
-    });
+    expect(findJob("sync-dex-discovery")).toMatchObject({ maxConnections: 2 });
+  });
+  it.each(["sync-dex-liquidity-stage", "sync-dex-liquidity"])("reserves peak four for %s", (job) => {
+    expect(findJob(job)).toMatchObject({ maxConnections: 4 });
   });
 
   it("requires an explicit CPU placement policy on every logical schedule", () => {
@@ -210,43 +213,26 @@ describe("cron job schedule metadata", () => {
   });
 
   it("captures V9 supply attribution before its dedicated publication trigger", () => {
-    expect(
-      CRON_JOB_DEFINITIONS.find(
-        (definition) =>
-          definition.job === "sync-v9-supply-attribution",
-      ),
-    ).toMatchObject({
+    expect(findJob("sync-v9-supply-attribution")).toMatchObject({
       scheduleKey: "v9SupplyAttributionOffset",
       intervalSec: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
       triggerMode: "isolated",
       connectionGroup: "v9-supply-attribution-chain",
     });
-    expect(
-      CRON_JOB_DEFINITIONS.find(
-        (definition) => definition.job === "compute-depeg-resolver",
-      ),
-    ).toMatchObject({
+    expect(findJob("compute-depeg-resolver")).toMatchObject({
       scheduleKey: "depegResolverOffset",
       intervalSec: 15 * 60,
       triggerMode: "isolated",
       connectionGroup: "depeg-resolver-chain",
     });
-    expect(
-      CRON_JOB_DEFINITIONS.find(
-        (definition) =>
-          definition.job === "compute-safety-score-v9",
-      ),
-    ).toMatchObject({
+    expect(findJob("compute-safety-score-v9")).toMatchObject({
       scheduleKey: "v9PublicationOffset",
       intervalSec: SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC,
       triggerMode: "isolated",
       connectionGroup: "v9-publication-chain",
     });
-    expect(
-      CRON_JOB_DEFINITIONS.filter(
-        (definition) => definition.scheduleKey === "quarterHourly",
-      ).map((definition) => definition.job),
-    ).not.toContain("sync-v9-supply-attribution");
+    expect(CRON_JOB_DEFINITIONS.filter((definition) => definition.scheduleKey === "quarterHourly")
+      .map((definition) => definition.job)).not.toContain("sync-v9-supply-attribution");
   });
 
   it.each(["* * * * *", "*/5 * * * *", "0,30 * * * *", "0-30 * * * *", "60 * * * *", "5 */2 * * *"])(

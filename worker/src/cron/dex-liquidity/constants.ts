@@ -332,10 +332,10 @@ export const SUBGRAPH_PER_CHAIN_TIMEOUT_MS = 30_000;
 
 /**
  * Default per-family chain fan-out. Six reviewed sources still fit the
- * five-connection source-stage budget because the final chain is only
+ * four-connection source-stage budget because the next chain is only
  * scheduled once a prior response has released its header-wait slot.
  */
-export const SUBGRAPH_FAMILY_MAX_CONCURRENCY = 5;
+export const SUBGRAPH_FAMILY_MAX_CONCURRENCY = 4;
 
 /**
  * Longest a chain's last successfully fetched Uni V3 execution-candidate set
