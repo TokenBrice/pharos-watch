@@ -102,10 +102,17 @@ export async function computeDexPrices({
   signal,
   exactPriceEvidenceByStablecoin,
   generationId = `dex-liquidity-${nowSec}`,
+  admissionNowSec = nowSec,
 }: {
   db: D1Database;
   retainedPoolsByStablecoin: Map<string, LiquidityMetrics["topPools"]>;
   nowSec: number;
+  /**
+   * Publication wall clock for contributor admission. The exact-pool refresh
+   * stamps contributors after `nowSec` (the sync start), so admitting against
+   * `nowSec` rejected every refreshed pool as future-dated.
+   */
+  admissionNowSec?: number;
   primaryPrices: ReadonlyMap<string, number>;
   references?: PriceValidationReferences;
   signal?: AbortSignal;
@@ -217,10 +224,11 @@ export async function computeDexPrices({
     }
     observedIds.add(id);
 
+    const admittedAtSec = Math.max(nowSec, admissionNowSec);
     const inBudgetObservations = plausibleObservations.filter((observation) =>
       typeof observation.observedAt === "number" && Number.isFinite(observation.observedAt) &&
-      observation.observedAt > 0 && observation.observedAt <= nowSec &&
-      nowSec - observation.observedAt < DEX_FRESHNESS_SEC
+      observation.observedAt > 0 && observation.observedAt <= admittedAtSec &&
+      admittedAtSec - observation.observedAt < DEX_FRESHNESS_SEC
     );
     // With no current contributor, preserve the full blend for conservative vetoes.
     const aggregateObservations = inBudgetObservations.length > 0 ? inBudgetObservations : plausibleObservations;

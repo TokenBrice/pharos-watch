@@ -1265,6 +1265,7 @@ async function persistDexLiquidityScoreState(
     db: ctx.db,
     retainedPoolsByStablecoin: scoreState.retainedPoolsByStablecoin,
     nowSec: ctx.syncStartSec,
+    admissionNowSec: Math.floor(Date.now() / 1000),
     primaryPrices: sourceState.primaryPriceById ?? sourceState.stablecoinPriceById,
     references: sourceState.validationReferences,
     signal: ctx.signal,

@@ -89,13 +89,13 @@ describe("registry read-consumption clock", () => {
     const h = seedPublishedDexGeneration({ nowSec: READ_CLOCK });
     openDatabases.push(h.sqlite);
     const pools = [
-      makePool({ poolId: "base:old", project: "orca", price: oldPrice, tvlUsd: aggregateOnly ? 5_000_000 : 50_000_000,
+      makePool({ poolId: "base:old", project: "orca", price: oldPrice, tvlUsd: aggregateOnly ? 5e6 : 5e7,
         priceObservedAt: READ_CLOCK - age }),
       makePool({ poolId: "base:fresh1", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 60 }),
       makePool({ poolId: "base:fresh2", project: "curve", price: 1, priceObservedAt: READ_CLOCK - 30 }),
     ].slice(0, aggregateOnly ? 1 : 3);
     const diagnostics = await computeDexPrices({ db: h.db, retainedPoolsByStablecoin: new Map([["usdc-circle", pools]]),
-      nowSec: READ_CLOCK, generationId: h.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
+      nowSec: SOURCE_CLOCK, admissionNowSec: READ_CLOCK, generationId: h.generationId, primaryPrices: new Map([["usdc-circle", 1]]) });
     const clock = READ_CLOCK - (aggregateOnly ? age : 60);
     const [row] = readPublicPriceRows(h.sqlite);
     expect(JSON.parse(row.price_sources_json!)).toEqual(aggregateOnly ? { aggregateObservedAt: clock, sources: [] } : [
@@ -109,9 +109,9 @@ describe("registry read-consumption clock", () => {
     const loaded = await loadDexPrices(h.db, READ_CLOCK);
     expect(loaded.dexPriceRows.get("usdc-circle")?.aggregateObservedAt).toBe(clock);
     expect(row).toMatchObject({ dex_price_usd: aggregateOnly ? 0.4 : 1,
-      source_pool_count: aggregateOnly ? 1 : 2, source_total_tvl: aggregateOnly ? 5_000_000 : 10_000_000 });
+      source_pool_count: aggregateOnly ? 1 : 2, source_total_tvl: aggregateOnly ? 5e6 : 1e7 });
     if (aggregateOnly) {
-      expect(loaded.dexPriceRows.get("usdc-circle")).toMatchObject({ dex_price_usd: 0.4, source_total_tvl: 5_000_000 });
+      expect(loaded.dexPriceRows.get("usdc-circle")).toMatchObject({ dex_price_usd: 0.4, source_total_tvl: 5e6 });
       expect(loaded.dexPriceSources.has("usdc-circle")).toBe(false);
     }
   });
