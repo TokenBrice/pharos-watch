@@ -1,4 +1,5 @@
 import type { TelegramCreds } from "../telegram/delivery/telegram";
+import type { DailyCronSentinelOptions } from "./cron-sentinel-daily";
 import type { CronResult } from "../lib/cron-logger";
 import type { WorkerCanaryMode } from "../lib/worker-canary-mode";
 import { runCronStalenessWatchdog } from "./cron-staleness-watchdog";
@@ -10,13 +11,12 @@ import { runCronSentinelSources, type CronSentinelMode } from "./cron-sentinel-r
 /** `daily` is reached only through `runDailyCronSentinel`, never dispatched here. */
 export type CronSentinelDispatchMode = Exclude<CronSentinelMode, "daily">;
 
-export interface CronSentinelOptions {
+export interface CronSentinelOptions extends Omit<DailyCronSentinelOptions, "nowSec"> {
   mode: CronSentinelDispatchMode;
   nowSec?: number;
   operatorTelegramCreds?: TelegramCreds | null;
   /** Active canary cohort read by the status-mode freshness watchdog. */
   workerCanaryMode?: WorkerCanaryMode;
-  signal?: AbortSignal;
 }
 
 export async function runCronSentinel(
@@ -56,5 +56,8 @@ export async function runCronSentinel(
     });
   }
 
-  return runCronSentinelSources(db, options.mode, sources, nowSec, options.signal);
+  return runCronSentinelSources(db, options.mode, sources, nowSec, options.signal, async (source) => {
+    const { getDailyCronSentinelSources } = await import("./cron-sentinel-daily");
+    return getDailyCronSentinelSources(db, { ...options, nowSec }).find((entry) => entry.source === source)!.run();
+  });
 }

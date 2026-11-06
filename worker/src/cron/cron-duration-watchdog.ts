@@ -439,7 +439,8 @@ export async function runCronDurationWatchdog(
                    CASE WHEN json_extract(metadata, '$.error') = ? THEN 1 ELSE 0 END
                  ELSE 0
                END AS is_abandoned
-             FROM cron_slot_executions
+             -- GROUP BY otherwise favors the slot-key index and scans all retained history.
+             FROM cron_slot_executions INDEXED BY idx_cron_slot_executions_slot_started_at_prune
              WHERE slot_started_at > ?
            )
            GROUP BY slot_key`,

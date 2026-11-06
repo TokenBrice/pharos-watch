@@ -19,22 +19,17 @@ function makeScriptedD1(script: {
   first?: (call: RecordedCall) => FirstOutcome;
 }): { db: D1Database; calls: RecordedCall[] } {
   const calls: RecordedCall[] = [];
+  const invoke = (method: "run" | "first", sql: string, binds: unknown[]) => {
+    const call = { sql, binds };
+    calls.push(call);
+    const outcome = script[method]?.(call) ?? (method === "run" ? 0 : null);
+    if (outcome instanceof Error) throw outcome;
+    return method === "run" ? { success: true, meta: { changes: outcome } } : outcome;
+  };
   const statement = (sql: string, binds: unknown[]): unknown => ({
     bind: (...next: unknown[]) => statement(sql, next),
-    run: async () => {
-      const call = { sql, binds };
-      calls.push(call);
-      const outcome = script.run?.(call) ?? 0;
-      if (outcome instanceof Error) throw outcome;
-      return { success: true, meta: { changes: outcome } };
-    },
-    first: async () => {
-      const call = { sql, binds };
-      calls.push(call);
-      const outcome = script.first?.(call) ?? null;
-      if (outcome instanceof Error) throw outcome;
-      return outcome;
-    },
+    run: async () => invoke("run", sql, binds),
+    first: async () => invoke("first", sql, binds),
   });
   const db = makeNoopD1({ prepare: (sql: string) => statement(sql, []) });
   return { db, calls };
@@ -82,52 +77,27 @@ describe("runCappedPruneFamily", () => {
   it("runs every statement before its probes and reports counts, cap and probe rows", async () => {
     let alphaRuns = 0;
     const { db, calls } = makeScriptedD1({
-      run: (call) => {
-        if (!call.sql.includes("alpha")) return 5;
-        alphaRuns += 1;
-        return alphaRuns === 1 ? 2 : 1;
-      },
+      run: (call) => call.sql.includes("alpha") ? (++alphaRuns === 1 ? 2 : 1) : 5,
       first: (call) => (call.sql.includes("remaining") ? { oldest_remaining_at: 17 } : null),
     });
-    const family = await runCappedPruneFamily({
-      db,
-      statements: { alpha, beta },
-      probes: {
-        remaining: { sql: "SELECT MIN(ts) AS oldest_remaining_at FROM alpha /* remaining */" },
-        eligible: { sql: "SELECT ts AS oldest_eligible_at FROM alpha", binds: [99] },
-      },
-    });
+    const probes = {
+      remaining: { sql: "SELECT MIN(ts) AS oldest_remaining_at FROM alpha /* remaining */" },
+      eligible: { sql: "SELECT ts AS oldest_eligible_at FROM alpha", binds: [99] },
+    };
+    const family = await runCappedPruneFamily({ db, statements: { alpha, beta }, probes });
 
-    expect(family).toMatchObject({
-      changedRows: 8,
-      changed: { alpha: 3, beta: 5 },
-      cappedAtLimit: true,
-      error: null,
-    });
+    expect(family).toMatchObject({ changedRows: 8, changed: { alpha: 3, beta: 5 }, cappedAtLimit: true, error: null });
     expect(family.probes.remaining.oldest_remaining_at ?? null).toBe(17);
     expect(family.probes.eligible.oldest_eligible_at ?? null).toBeNull();
-    expect(calls.map((call) => call.sql)).toEqual([
-      alpha.sql,
-      alpha.sql,
-      beta.sql,
-      "SELECT MIN(ts) AS oldest_remaining_at FROM alpha /* remaining */",
-      "SELECT ts AS oldest_eligible_at FROM alpha",
-    ]);
+    expect(calls.map((call) => call.sql)).toEqual([alpha.sql, alpha.sql, beta.sql, probes.remaining.sql, probes.eligible.sql]);
     expect(calls[4].binds).toEqual([99]);
   });
 
   it("rethrows a shutdown abort instead of reporting it as a prune error", async () => {
     const controller = new AbortController();
-    const { db } = makeScriptedD1({
-      run: () => {
-        controller.abort();
-        return new Error("statement interrupted");
-      },
-    });
+    const { db } = makeScriptedD1({ run: () => { controller.abort(); return new Error("statement interrupted"); } });
 
-    await expect(
-      runCappedPruneFamily({ db, signal: controller.signal, statements: { alpha } }),
-    ).rejects.toThrow();
+    await expect(runCappedPruneFamily({ db, signal: controller.signal, statements: { alpha } })).rejects.toThrow();
   });
 
   it("bounds a statement failure to 500 characters and keeps the counts already collected", async () => {
@@ -171,7 +141,18 @@ const policy = (table: string): WindowedRetentionPolicy => ({
 });
 
 describe("batched registry retention", () => {
-  it.each([false, true])("reports retention and bounded costs (%s)", async (costs) => {
+  it("attributes a later window failure while retaining earlier commits", async () => {
+    const { sqlite, db } = fixture();
+    sqlite.exec("INSERT INTO alpha VALUES (1)");
+    const failedRetentionGroup = [{ key: "alpha", window: "missing = 1" }];
+    await expect(runRetentionPolicies(db, { alpha: { ...policy("alpha"), windows: [
+      { windowSec: 10, predicate: "1 = 1" }, { windowSec: 20, predicate: "missing = 1" },
+    ] } }, 100)).rejects.toMatchObject({ failedRetentionGroup, message: expect.stringContaining("alpha [missing = 1]") });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM alpha").get()).toEqual({ n: 0 });
+  });
+
+  it.each([false, true, "windows"])("reports retention and bounded costs (%s)", async (mode) => {
+    const costs = mode === true, windowed = mode === "windows";
     const { sqlite, db, batch, execute } = fixture();
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     vi.spyOn(Date, "now").mockReturnValueOnce(100).mockReturnValue(137);
@@ -181,14 +162,19 @@ describe("batched registry retention", () => {
       return { ...result, meta: { ...result.meta, rows_read: n, rows_written: n + 1, duration: n + 2 } };
     }));
     sqlite.exec("INSERT INTO alpha VALUES (1), (2), (3), (4), (90); INSERT INTO beta VALUES (1), (90)");
-    expect(await runRetentionPolicies(db, { [key]: policy("alpha"), beta: policy("beta") }, 100)).toEqual({
+    const alphaPolicy = { ...policy("alpha"), windows: windowed ? [
+      { windowSec: 90, predicate: "observed_at < 3" },
+      { windowSec: 10, predicate: "observed_at = 3" },
+      { windowSec: 1, predicate: "observed_at > 3" },
+    ] : undefined };
+    expect(await runRetentionPolicies(db, { [key]: alphaPolicy, beta: policy("beta") }, 100)).toEqual({
       [key]: { pruned: 3, cappedAtLimit: true }, beta: { pruned: 1, cappedAtLimit: false },
     });
     expect(sqlite.prepare("SELECT observed_at FROM alpha ORDER BY observed_at").all()).toEqual([{ observed_at: 4 }, { observed_at: 90 }]);
     expect(sqlite.prepare("SELECT observed_at FROM beta").all()).toEqual([{ observed_at: 90 }]);
-    expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual([2, 1]);
+    expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual(windowed ? [2, 1, 1] : [2, 1]);
     expect(JSON.parse(log.mock.calls[0][1])).toMatchObject({
-      status: "ok", completedRounds: 2, batchOutcomeUnknown: false, durationMs: 37,
+      status: "ok", completedRounds: windowed ? 3 : 2, batchOutcomeUnknown: false, durationMs: 37,
       completed: [
         { key: "a".repeat(100), pruned: 3, rowsRead: costs ? 30 : null, rowsWritten: costs ? 32 : 3, d1DurationMs: costs ? 34 : null },
         { key: "beta", pruned: 1, rowsRead: costs ? 11 : null, rowsWritten: costs ? 12 : 1, d1DurationMs: costs ? 13 : null },
@@ -196,27 +182,21 @@ describe("batched registry retention", () => {
     });
   });
 
-  it("retains the retired-key shared run ceiling and declaration priority", async () => {
+  it.each([
+    { label: "retains the retired-key shared run ceiling and declaration priority", alphaRows: 2, betaRows: 3, alphaPruned: 2, betaPruned: 1, left: 2, batches: 3 },
+    { label: "reports a skipped sibling as truncated when the shared ceiling is exhausted", alphaRows: 3, betaRows: 1, alphaPruned: 3, betaPruned: 0, left: 1, batches: 2 },
+  ])("$label", async ({ alphaRows, betaRows, alphaPruned, betaPruned, left, batches }) => {
     const { sqlite, db, batch } = fixture();
-    sqlite.exec("INSERT INTO alpha VALUES (1), (2); INSERT INTO beta VALUES (1), (2), (3)");
-    const results = await runRetentionPolicies(db, {
-      alpha: { ...policy("alpha"), budgetGroup: "shared" },
-      beta: { ...policy("beta"), budgetGroup: "shared" },
-    }, 100);
-    expect(results).toEqual({ alpha: { pruned: 2, cappedAtLimit: false }, beta: { pruned: 1, cappedAtLimit: true } });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM beta").get()).toEqual({ n: 2 });
-    expect(batch).toHaveBeenCalledTimes(3);
-  });
-
-  it("reports a skipped sibling as truncated when the shared ceiling is exhausted", async () => {
-    const { sqlite, db } = fixture();
-    sqlite.exec("INSERT INTO alpha VALUES (1), (2), (3); INSERT INTO beta VALUES (1)");
-    const results = await runRetentionPolicies(db, {
-      alpha: { ...policy("alpha"), budgetGroup: "shared" },
-      beta: { ...policy("beta"), budgetGroup: "shared" },
-    }, 100);
-    expect(results.beta).toEqual({ pruned: 0, cappedAtLimit: true });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM beta").get()).toEqual({ n: 1 });
+    for (const [table, count] of [["alpha", alphaRows], ["beta", betaRows]] as const) {
+      for (let n = 1; n <= count; n++) sqlite.prepare(`INSERT INTO ${table} VALUES (?)`).run(n);
+    }
+    const results = await runRetentionPolicies(db, Object.fromEntries(["alpha", "beta"].map((table) =>
+      [table, { ...policy(table), budgetGroup: "shared" }])), 100);
+    expect(results).toEqual({
+      alpha: { pruned: alphaPruned, cappedAtLimit: alphaPruned === 3 }, beta: { pruned: betaPruned, cappedAtLimit: true },
+    });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM beta").get()).toEqual({ n: left });
+    expect(batch).toHaveBeenCalledTimes(batches);
   });
 
   it.each([[20, 4], [50, 10]])("packs %i independent empty statements into %i binding calls", async (count, calls) => {
@@ -229,12 +209,12 @@ describe("batched registry retention", () => {
     expect(batch).toHaveBeenCalledTimes(calls);
   });
 
-  it.each(["before", "after", "failed"])("preserves cause, commits and restart after %s interruption", async (when) => {
+  it.each(["before", "after", "failed", "abort-object"])("preserves cause, commits and restart after %s interruption", async (when) => {
     const { sqlite, db, batch, execute } = fixture();
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     sqlite.exec("INSERT INTO alpha VALUES (1), (2), (3), (4)");
     const controller = new AbortController();
-    const cause = new Error("x".repeat(900));
+    const cause = when === "abort-object" ? { name: "AbortError", message: "x".repeat(900) } : new Error("x".repeat(900));
     if (when === "before") controller.abort(cause);
     else {
       batch.mockImplementationOnce(async (statements) => {
@@ -243,11 +223,13 @@ describe("batched registry retention", () => {
         return result;
       }).mockRejectedValueOnce(cause);
     }
-    await expect(runRetentionPolicies(db, { alpha: policy("alpha") }, 100, controller.signal)).rejects.toBe(cause);
+    const pass = expect(runRetentionPolicies(db, { alpha: policy("alpha") }, 100, controller.signal)).rejects;
+    if (when === "failed") await pass.toMatchObject({ cause, failedRetentionGroup: [{ key: "alpha" }] });
+    else await pass.toBe(cause);
     expect(batch).toHaveBeenCalledTimes(when === "before" ? 0 : when === "after" ? 1 : 2);
     if (when !== "before") expect(JSON.parse(log.mock.calls[0][1])).toMatchObject({
-      status: when === "after" ? "aborted" : "error", error: "x".repeat(500),
-      completedRounds: 1, batchOutcomeUnknown: when === "failed", completed: [{ key: "alpha", pruned: 2 }],
+      status: when === "failed" ? "error" : "aborted", error: "x".repeat(500),
+      completedRounds: 1, batchOutcomeUnknown: when !== "after", completed: [{ key: "alpha", pruned: 2 }],
     });
     batch.mockRestore();
     expect((await runRetentionPolicies(db, { alpha: policy("alpha") }, 100)).alpha.pruned).toBe(when === "before" ? 3 : 2);

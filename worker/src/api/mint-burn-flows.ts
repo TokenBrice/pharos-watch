@@ -154,7 +154,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const gaugeScore = computeGaugeScore(gaugeInputs);
   const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
   const hourly = buildHourlyFlowSeries(data.hourlyRows, (ts) =>
-    mintBurnWindowCoverage(data.configs, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark).complete);
+    data.partialCoinIds.size === 0
+      && mintBurnWindowCoverage(data.configs, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark).complete);
   const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
   // Per-chain 24h net flow over the same tracked-pair universe as `coins`, so
   // consumers of the published payload (daily digest) never re-derive a chain
@@ -163,7 +164,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const chains = [...aggregateHourlyRowsByChain(data.hourly24hRows).entries()]
     .map(([chainId, aggregate]) => {
       const valuation = summarizeMintBurnValuation(aggregate.valuation).completeness;
-      const scanCoverage = mintBurnWindowCoverage(
+      const scanCoverage = data.partialChainIds.has(chainId) ? mintBurnScanWindow(false) : mintBurnWindowCoverage(
         data.configs.filter((config) => config.chain.chainId === chainId),
         data.scanSegments, data.legacy, data.windowEnd - 24 * 3600, data.windowEnd, data.watermark,
       );
@@ -444,8 +445,8 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       };
     });
 
-    const hourly = buildHourlyFlowSeries(rows, (ts) =>
-      mintBurnWindowCoverage(configs, scanSegments, context.legacy, ts, ts + 3600, context.watermark).complete);
+    const hourly = buildHourlyFlowSeries(rows, (ts) => !context.partialCoinIds.has(stablecoinId)
+      && mintBurnWindowCoverage(configs, scanSegments, context.legacy, ts, ts + 3600, context.watermark).complete);
 
     // Totals
     let totalMint = 0;
@@ -477,7 +478,7 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       chains,
       hourly,
       valuation,
-      scanCoverage,
+      scanCoverage: context.partialCoinIds.has(stablecoinId) ? mintBurnScanWindow(false) : scanCoverage,
       totalsSemantics: "observed-subtotals",
       updatedAt,
       windowHours: hours,
