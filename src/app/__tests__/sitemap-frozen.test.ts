@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -15,6 +15,12 @@ import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-cu
 import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 import sitemapDates from "@/generated/sitemap-dates.json";
 
+// The checked-in scores-latest mirror ages out of the dated preview after
+// PUBLIC_DATASET_MAX_AGE_DAYS; assess the bake at its own capture instant so
+// these assertions do not depend on the calendar.
+const scoresMeta = PUBLIC_DATASET_CURRENT_EXPORTS["scores-latest"]._meta as { displayProjection: { capturedAtSec: number } };
+vi.setSystemTime(scoresMeta.displayProjection.capturedAtSec * 1000);
+afterAll(() => vi.useRealTimers());
 const entries = sitemap();
 const urls = new Set(entries.map((entry) => entry.url));
 const entriesByUrl = new Map(entries.map((entry) => [entry.url, entry]));
