@@ -11,6 +11,7 @@
  * The serial chain peaks at 3 normally and 4 during bounded recovery.
  * Scheduled deliveries share one retryable publication bucket per hour.
  */
+import { resolveDdrRepairTaskRunnerConfig } from "../../lib/env";
 import { consumeDexLiquidityScoringStage } from "../../cron/dex-liquidity/orchestrator";
 import { DEX_SCORING_STAGE_PRODUCER_RUNNING_REASON, DEX_SCORING_STAGE_READY_WAIT_MS } from "../../cron/dex-liquidity/lifecycle/source-slot";
 import {
@@ -250,6 +251,9 @@ export function buildHalfHourlyChartsSlotGroups(runtime: ScheduledRuntimeContext
           });
         }
         return runCronSentinel(runtime.db, {
+          repairRunnerEnabled: resolveDdrRepairTaskRunnerConfig(runtime.env).enabled,
+          mintBurnDisabledIds: runtime.mintBurnDisabledIds,
+          mintBurnDisabledSymbols: runtime.mintBurnDisabledSymbols,
           mode: "turnover",
           signal,
           operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),

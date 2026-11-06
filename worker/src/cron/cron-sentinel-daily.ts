@@ -1,34 +1,37 @@
-import { runWorkerRepairTaskRunner } from "../lib/repair-tasks";
-import { runCronDurationWatchdog } from "./cron-duration-watchdog";
-import { runMintBurnGrowthWatchdog } from "./mint-burn-growth-watchdog";
 import { runCronSentinelSources } from "./cron-sentinel-result";
 
-export async function runDailyCronSentinel(
-  db: D1Database,
-  options: {
-    nowSec: number;
-    repairRunnerEnabled?: boolean;
-    signal?: AbortSignal;
-    mintBurnDisabledIds?: readonly string[];
-    mintBurnDisabledSymbols?: readonly string[];
-  },
-) {
-  return runCronSentinelSources(db, "daily", [
+export interface DailyCronSentinelOptions {
+  nowSec: number;
+  repairRunnerEnabled?: boolean;
+  signal?: AbortSignal;
+  mintBurnDisabledIds?: readonly string[];
+  mintBurnDisabledSymbols?: readonly string[];
+}
+
+export function getDailyCronSentinelSources(db: D1Database, options: DailyCronSentinelOptions) {
+  return [
     {
       source: "growth",
-      run: () => runMintBurnGrowthWatchdog(db, options.signal, {
+      run: async () => (await import("./mint-burn-growth-watchdog")).runMintBurnGrowthWatchdog(db, options.signal, {
         disabledIds: options.mintBurnDisabledIds,
         disabledSymbols: options.mintBurnDisabledSymbols,
       }),
     },
-    { source: "duration", run: () => runCronDurationWatchdog(db, options.signal) },
+    {
+      source: "duration",
+      run: async () => (await import("./cron-duration-watchdog")).runCronDurationWatchdog(db, options.signal),
+    },
     {
       source: "repair-debt",
-      run: () => runWorkerRepairTaskRunner(db, {
+      run: async () => (await import("../lib/repair-tasks")).runWorkerRepairTaskRunner(db, {
         nowSec: options.nowSec,
         signal: options.signal,
         enabled: options.repairRunnerEnabled,
       }),
     },
-  ], options.nowSec, options.signal);
+  ] satisfies Parameters<typeof runCronSentinelSources>[2];
+}
+
+export async function runDailyCronSentinel(db: D1Database, options: DailyCronSentinelOptions) {
+  return runCronSentinelSources(db, "daily", getDailyCronSentinelSources(db, options), options.nowSec, options.signal);
 }
