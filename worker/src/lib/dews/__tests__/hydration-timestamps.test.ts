@@ -254,12 +254,12 @@ describe("DEWS hydration timestamp admission", () => {
   it("hydrates only trusted fresh dex prices and never turns a failed read into a zero count", async () => {
     const registerMalformedPersistedInput = vi.fn();
     const db = mockD1([{ match: "FROM dex_prices", rows: ([
-        ["trusted", 60, 2_000_000, 1], ["old", 36_000, 2_000_000, 1], ["thin", 60, 10, 1],
+        ["trusted", 60, 2e6, 1], ["old", 36_000, 2e6, 1], ["thin", 60, 10, 1],
         ["crash", 60, 5_000_000, 1],
-        ["boundary", 4500, 2_000_000, 1], ["missing", null, 2_000_000, 1],
-        ["stale-publication", 60, 2_000_000, 36_000], ["invalid-publication", 60, 2_000_000, null],
-        ["malformed", "{", 2_000_000, 1],
-        ["future", -1, 2_000_000, 1], ["invalid", RUN_AT, 2_000_000, 1],
+        ["boundary", 4500, 2e6, 1], ["missing", null, 2e6, 1],
+        ["stale-publication", 60, 2e6, 36_000], ["invalid-publication", 60, 2e6, null],
+        ["malformed", "{", 2e6, 1],
+        ["future", -1, 2e6, 1], ["invalid", RUN_AT, 2e6, 1],
       ] as const).map(([id, age, tvl, publicationAge]) => ({
         stablecoin_id: id, dex_price_usd: id === "crash" ? 0.4 : 1, source_total_tvl: tvl,
         updated_at: publicationAge == null ? null : RUN_AT - publicationAge,
