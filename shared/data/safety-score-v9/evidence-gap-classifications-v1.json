@@ -13849,7 +13849,7 @@
       "reviewedAt": "2026-10-30T21:45:00Z",
       "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
       "sourcesRefs": [
-        "source:42a653d03689a893a78f7e17"
+        "source:0f9bd4c0fb257b878ab5f930"
       ],
       "searchedSurfacesRefs": [
         "surface:5d1720fd9e6f2124d3a15e6c",
@@ -13878,7 +13878,7 @@
       "reviewedAt": "2026-10-30T21:45:00Z",
       "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
       "sourcesRefs": [
-        "source:42a653d03689a893a78f7e17"
+        "source:0f9bd4c0fb257b878ab5f930"
       ],
       "searchedSurfacesRefs": [
         "surface:5d1720fd9e6f2124d3a15e6c",
@@ -13907,7 +13907,7 @@
       "reviewedAt": "2026-10-30T21:45:00Z",
       "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
       "sourcesRefs": [
-        "source:42a653d03689a893a78f7e17"
+        "source:0f9bd4c0fb257b878ab5f930"
       ],
       "searchedSurfacesRefs": [
         "surface:5d1720fd9e6f2124d3a15e6c",
@@ -13936,7 +13936,7 @@
       "reviewedAt": "2026-10-30T21:45:00Z",
       "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
       "sourcesRefs": [
-        "source:42a653d03689a893a78f7e17"
+        "source:0f9bd4c0fb257b878ab5f930"
       ],
       "searchedSurfacesRefs": [
         "surface:5d1720fd9e6f2124d3a15e6c",
@@ -70156,7 +70156,7 @@
       }
     },
     {
-      "id": "source:42a653d03689a893a78f7e17",
+      "id": "source:0f9bd4c0fb257b878ab5f930",
       "value": {
         "url": "https://learn.anchorage.com/09.30.26_USDGO-Stablecoin-Attestation-Report-signed.pdf",
         "observedAt": "2026-10-30T21:40:00Z",
