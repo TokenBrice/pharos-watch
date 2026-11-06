@@ -3,7 +3,7 @@
     "version": "6.35",
     "title": "Partial-qualified coin totals while an established leg is isolated",
     "date": "2026-11-06",
-    "effectiveAt": 1793923200,
+    "effectiveAt": 1793955000,
     "summary": "Coins with surviving admitted legs keep their USD totals when an established leg leaves publication, with partial coverage and complete-only signal inputs withheld.",
     "impact": [
       "An isolated or paused previously admitted or grandfathered leg makes every surviving coin flow window incomplete with scan-coverage-incomplete, coverage.isPartial true and partial-history status. Admitted-leg net and gross subtotals remain published; unavailable admitted scan evidence and partial USD valuation retain their existing null gates. Never-admitted additions do not make an incumbent coin partial.",

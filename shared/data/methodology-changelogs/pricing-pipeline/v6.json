@@ -3,7 +3,7 @@
     "version": "6.73",
     "title": "Original DEX and AZND dependency clocks govern price admission",
     "date": "2026-11-06",
-    "effectiveAt": 1793927760,
+    "effectiveAt": 1793964000,
     "summary": "Aggregate DEX medians use plausible contributors younger than the existing 75-minute depeg budget, then apply the existing outlier filter. The selected subset retains its oldest original clock through primary consensus, co-leg admission and public comparisons. AZND's Curve cross-rate also inherits its older USDC parent or block clock and enforces the route's existing five-minute budget on both.",
     "impact": [
       "The publisher selects deduplicated plausible contributors with valid, non-future original clocks strictly younger than DEX_FRESHNESS_SEC (75 minutes), then applies the existing outlier filter within that subset. Price-source count, source TVL and displayed protocol provenance describe the actual median inputs. Diagnostics record in-budget and total contributor counts and no-in-budget-contributors when none qualify; that fallback preserves the full-blend median and its oldest clock for conservative vetoes. Refreshing a pool cannot renew an exchange ticker clock. Affirmative aggregate admission validates original clock evidence in price_sources_json before protocol filtering. Nonempty legacy source arrays retain repeated aggregateObservedAt values and reduce them to the oldest; when no display lane qualifies, the writer stores {aggregateObservedAt,sources:[]} without inventing a protocol source. Missing, invalid, nonpositive, nonfinite or future clock evidence withholds the quote. Publication updated_at and surviving protocol lanes cannot renew it; public priceSources projects the empty envelope as [].",
