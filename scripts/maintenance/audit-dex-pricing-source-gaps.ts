@@ -7,6 +7,7 @@ import { getPricingSourceRegistryEntry } from "@shared/lib/pricing-source-regist
 import { splitCompositePriceSource } from "@shared/lib/pricing-sources";
 import { isRecord, numberValue, stringValue } from "@shared/lib/type-guards";
 import { runDirectCli } from "../lib/cli-args.mjs";
+import { getDexPriceSourceEntries } from "@shared/lib/dex-price-sources";
 import {
   circulatingForStablecoinRow,
   parseCoverageAuditCliArgs,
@@ -200,9 +201,9 @@ function deploymentCount(row: DexGapStablecoinRow): number {
 function parseProtocolSources(row: DexGapDexPriceRow, warnings: string[]): DexProtocolSourceSnapshot[] {
   if (!row.price_sources_json) return [];
   try {
-    const parsed = JSON.parse(row.price_sources_json) as unknown;
-    if (!Array.isArray(parsed)) {
-      warnings.push(`${row.stablecoin_id}: price_sources_json is not an array.`);
+    const parsed = getDexPriceSourceEntries(JSON.parse(row.price_sources_json));
+    if (parsed == null) {
+      warnings.push(`${row.stablecoin_id}: price_sources_json has an invalid source list.`);
       return [];
     }
     return parsed.filter(isRecord).flatMap((entry) => {

@@ -121,12 +121,13 @@ for (const consumer of consumers) {
         }
       } });
       const loaded = await consumer.load(db);
-      expect(loaded.dexPriceRows).toEqual(new Map([
-        ["usdt-tether", { stablecoin_id: "usdt-tether", dex_price_usd: 0.98, deviation_from_primary_bps: 0, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: BOUNDARY }],
-        ["stale", { stablecoin_id: "stale", dex_price_usd: 0.98, deviation_from_primary_bps: 0, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: BOUNDARY - 1 }],
-        ["null", { stablecoin_id: "null", dex_price_usd: 0.98, deviation_from_primary_bps: 0, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: BOUNDARY - 1 }],
-        ["malformed", { stablecoin_id: "malformed", dex_price_usd: 0.98, deviation_from_primary_bps: 0, source_pool_count: 2, source_total_tvl: 5_000_000, updated_at: NOW }],
-      ]));
+      expect(loaded.dexPriceRows).toEqual(new Map(([
+        ["usdt-tether", BOUNDARY, BOUNDARY], ["stale", BOUNDARY - 1, BOUNDARY - 1],
+        ["null", BOUNDARY - 1, null], ["malformed", NOW, null],
+      ] as const).map(([stablecoin_id, updated_at, aggregateObservedAt]) => [stablecoin_id, {
+        stablecoin_id, dex_price_usd: 0.98, deviation_from_primary_bps: 0, source_pool_count: 2,
+        source_total_tvl: 5_000_000, updated_at, aggregateObservedAt,
+      }])));
       expect(loaded.dexPriceSources).toEqual(new Map([["usdt-tether", sources.map((source) => ({
         ...source, updatedAt: BOUNDARY, observedAt: BOUNDARY, aggregateObservedAt: BOUNDARY,
       }))]]));

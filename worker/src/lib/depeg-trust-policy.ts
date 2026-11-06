@@ -9,6 +9,8 @@ import {
 } from "@shared/lib/pricing-source-policy";
 import { DEX_PRICE_CHECK_FRESHNESS_SEC, DEX_PRICE_CHECK_UI_MIN_TVL_USD } from "./constants";
 import { normalizePricingSourceKeys } from "@shared/lib/pricing-sources";
+import { getDexPriceSourceEntries } from "@shared/lib/dex-price-sources";
+export { getDexPriceSourceEntries } from "@shared/lib/dex-price-sources";
 
 export type DexPriceTrustTier = "ui" | "depeg";
 
@@ -158,6 +160,69 @@ export function isTrustedDexPriceRow(
 
   const policy = getDexTrustPolicy(tier);
   return (nowSec - row.updated_at) < policy.maxAgeSec && row.source_total_tvl >= policy.minTvlUsd;
+}
+
+export type DexAggregateClockReason = "aggregate-clock-unavailable" | "aggregate-clock-invalid" | "aggregate-clock-future";
+export interface DexAggregateClock {
+  aggregateObservedAt: number | null;
+  aggregateClockReason: DexAggregateClockReason | null;
+}
+
+/** Every repeated clock and the optional independent header must validate. */
+export function getDexAggregateObservedAt(payload: unknown, nowSec: number): DexAggregateClock {
+  const sources = getDexPriceSourceEntries(payload);
+  const unavailable: DexAggregateClock = { aggregateObservedAt: null, aggregateClockReason: "aggregate-clock-unavailable" };
+  if (sources == null) return unavailable;
+  const contributors = Array.isArray(payload) ? sources : [payload, ...sources];
+  if (contributors.length === 0) return unavailable;
+  let oldest = Infinity;
+  for (const source of contributors) {
+    const clock = source != null && typeof source === "object" && "aggregateObservedAt" in source
+      ? source.aggregateObservedAt : null;
+    if (clock == null) return unavailable;
+    if (typeof clock !== "number" || !Number.isFinite(clock) || clock <= 0) {
+      return { aggregateObservedAt: null, aggregateClockReason: "aggregate-clock-invalid" };
+    }
+    if (clock > nowSec) return { aggregateObservedAt: null, aggregateClockReason: "aggregate-clock-future" };
+    oldest = Math.min(oldest, clock);
+  }
+  return { aggregateObservedAt: oldest, aggregateClockReason: null };
+}
+
+export function readDexAggregateObservedAt(json: string | null | undefined, nowSec: number): number | null {
+  try {
+    return getDexAggregateObservedAt(JSON.parse(json ?? "null"), nowSec).aggregateObservedAt;
+  } catch {
+    return null;
+  }
+}
+
+export function getDexAggregateRejectionReason(
+  row: { updated_at: number; source_total_tvl: number; aggregateObservedAt?: number | null; aggregateClockReason?: DexAggregateClockReason | null },
+  nowSec: number,
+  tier: DexPriceTrustTier,
+): string | null {
+  const { maxAgeSec, minTvlUsd } = getDexTrustPolicy(tier);
+  if (!Number.isSafeInteger(row.updated_at) || row.updated_at <= 0) return "publication-invalid";
+  if (row.updated_at > nowSec) return "publication-future";
+  if (nowSec - row.updated_at >= maxAgeSec) return "publication-stale";
+  if (!Number.isFinite(row.source_total_tvl) || row.source_total_tvl < 0) return "tvl-invalid";
+  if (row.source_total_tvl < minTvlUsd) return "insufficient-tvl";
+  if (row.aggregateClockReason) return row.aggregateClockReason;
+  const clock = row.aggregateObservedAt;
+  if (clock == null) return "aggregate-clock-unavailable";
+  if (typeof clock !== "number" || !Number.isFinite(clock) || clock <= 0) return "aggregate-clock-invalid";
+  if (clock > nowSec) return "aggregate-clock-future";
+  return nowSec - clock >= maxAgeSec ? "aggregate-clock-stale" : null;
+}
+
+/** Publication/TVL alone remains available for conservative vetoes. */
+export function isAffirmativeDexPriceRow(
+  row: Parameters<typeof getDexAggregateRejectionReason>[0],
+  nowSec: number,
+  tier: DexPriceTrustTier,
+): boolean {
+  return getDexAggregateRejectionReason(row, nowSec, tier) == null;
 }
 
 export function hasFreshMultiSourcePrimaryAgreement(

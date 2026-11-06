@@ -1,5 +1,21 @@
 [
   {
+    "version": "6.73",
+    "title": "Original DEX and AZND dependency clocks govern price admission",
+    "date": "2026-11-06",
+    "effectiveAt": 1793962500,
+    "summary": "Aggregate DEX medians use plausible contributors younger than the existing 75-minute depeg budget, then apply the existing outlier filter. The selected subset retains its oldest original clock through primary consensus, co-leg admission and public comparisons. AZND's Curve cross-rate also inherits its older USDC parent or block clock and enforces the route's existing five-minute budget on both.",
+    "impact": [
+      "The publisher selects deduplicated plausible contributors with valid, non-future original clocks strictly younger than DEX_FRESHNESS_SEC (75 minutes), then applies the existing outlier filter within that subset. Price-source count, source TVL and displayed protocol provenance describe the actual median inputs. Diagnostics record in-budget and total contributor counts and no-in-budget-contributors when none qualify; that fallback preserves the full-blend median and its oldest clock for conservative vetoes. Refreshing a pool cannot renew an exchange ticker clock. Affirmative aggregate admission validates original clock evidence in price_sources_json before protocol filtering. Nonempty legacy source arrays retain repeated aggregateObservedAt values and reduce them to the oldest; when no display lane qualifies, the writer stores {aggregateObservedAt,sources:[]} without inventing a protocol source. Missing, invalid, nonpositive, nonfinite or future clock evidence withholds the quote. Publication updated_at and surviving protocol lanes cannot renew it; public priceSources projects the empty envelope as [].",
+      "The existing strict freshness and TVL gates remain: depeg aggregates need age below 75 minutes and at least $1M source TVL; public comparisons and the reviewed VUSD primary tier need age below two hourly producer intervals plus the stage lead and at least $250K. Beside other primary legs, the original aggregate clock also governs the existing co-leg budget. Protocol-source 35/75-minute inclusive gates, weights, corroboration and independence are unchanged.",
+      "AZND keeps its reviewed Curve pool, pinned calldata, inventory, impact and incumbent protections. The USDC parent must also fit the existing five-minute route budget, checked again after awaited reads; the result carries the older dependency clock and its observation mode rather than a fresh block timestamp.",
+      "Peg-summary adds optional nullable price from the same admitted live observation used for current deviation and provenance, including retained-history paths. Unavailable or nominal live observations emit null even if the raw asset contains a positive number; an observed NAV quote can remain present while current deviation is null. Invalid or nonpositive prices emit null, and legacy responses without price remain accepted. Historical analytics are not rewritten.",
+      "Conservative aggregate and challenger vetoes retain their separate policies; rejected old evidence cannot become a new vote, confirmation, recovery, coverage claim or public agreement. Original-clock refusals retain machine-readable primary and pending diagnostics, and malformed DEWS evidence retains decoder telemetry. Public readers apply cheap freshness and TVL gates before parsing; pending availability reads only candidate IDs. Fixed-clock producer replay and qualifying production observations remain required; this entry claims neither."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.72",
     "title": "Separate observed DEX comparison anchors from trusted quote valuation; bound Reserve USD3 pool recovery by a trusted baseline",
     "date": "2026-11-05",

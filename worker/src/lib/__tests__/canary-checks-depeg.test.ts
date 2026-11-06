@@ -19,6 +19,15 @@ afterEach(() => {
 });
 
 const NOW = 1_775_900_000;
+const recoverySources = [
+  { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
+  { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
+];
+
+function suppressionRow(stablecoin_id: string, price_sources_json: string, candidate_count: number) {
+  return { stablecoin_id, price_sources_json, candidate_count, dex_price_usd: 0.999,
+    primary_price_at_calc: 0.985, deviation_from_primary_bps: 142, source_total_tvl: 9_000_000 };
+}
 
 const USD_IDS = [...PSI_ELIGIBLE_META_BY_ID]
   .filter(([, meta]) => meta.flags.pegCurrency === "USD")
@@ -508,26 +517,13 @@ describe("depeg canary checks", () => {
     });
   });
 
-  it("flags a fresh DEX recovery-band suppression with two corroborating protocol groups", async () => {
+  it.each([false, true])("flags a fresh DEX recovery-band suppression with two corroborating protocol groups (envelope=%s)", async (envelope) => {
     const stablecoinId = USD_IDS[0]!;
-    const sources = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-      { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-    ]);
+    const sources = JSON.stringify(envelope ? { aggregateObservedAt: NOW - 60, sources: recoverySources } : recoverySources);
     const db = mockD1([
       {
         match: "pharos:depeg-dex-suppression-canary",
-        rows: [
-          {
-            stablecoin_id: stablecoinId,
-            dex_price_usd: 0.999,
-            primary_price_at_calc: 0.985,
-            deviation_from_primary_bps: 142,
-            source_total_tvl: 9_000_000,
-            price_sources_json: sources,
-            candidate_count: 1,
-          },
-        ],
+        rows: [suppressionRow(stablecoinId, sources, 1)],
       },
     ]);
 
@@ -544,29 +540,17 @@ describe("depeg canary checks", () => {
   });
 
   it("ignores a single-protocol DEX row, a stale protocol clock, and non-USD pegs", async () => {
-    const singleProtocol = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-    ]);
-    const staleProtocol = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 4_000, aggregateObservedAt: NOW - 60 },
-      { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 4_000, aggregateObservedAt: NOW - 60 },
-    ]);
-    const row = (stablecoinId: string, priceSourcesJson: string, candidateCount: number) => ({
-      stablecoin_id: stablecoinId,
-      dex_price_usd: 0.999,
-      primary_price_at_calc: 0.985,
-      deviation_from_primary_bps: 142,
-      source_total_tvl: 9_000_000,
-      price_sources_json: priceSourcesJson,
-      candidate_count: candidateCount,
-    });
+    const singleProtocol = JSON.stringify(recoverySources.slice(0, 1));
+    const staleProtocol = JSON.stringify(recoverySources.map((source) => ({ ...source, observedAt: NOW - 4_000 })));
     const db = mockD1([
       {
         match: "pharos:depeg-dex-suppression-canary",
         rows: [
-          row(USD_IDS[0]!, singleProtocol, 3),
-          row(USD_IDS[1]!, staleProtocol, 3),
-          ...(NON_USD_ID ? [row(NON_USD_ID, singleProtocol, 3)] : []),
+          suppressionRow(USD_IDS[0]!, singleProtocol, 5),
+          suppressionRow(USD_IDS[1]!, staleProtocol, 5),
+          suppressionRow(USD_IDS[2]!, JSON.stringify({ aggregateObservedAt: NOW, sources: [] }), 5),
+          suppressionRow(USD_IDS[3]!, "{}", 5),
+          ...(NON_USD_ID ? [suppressionRow(NON_USD_ID, singleProtocol, 5)] : []),
         ],
       },
     ]);
@@ -577,24 +561,13 @@ describe("depeg canary checks", () => {
   });
 
   it("escalates a broad DEX suppression cohort to error", async () => {
-    const sources = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-      { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-    ]);
+    const sources = JSON.stringify(recoverySources);
     const ids = USD_IDS.slice(0, 10);
     expect(ids).toHaveLength(10);
     const db = mockD1([
       {
         match: "pharos:depeg-dex-suppression-canary",
-        rows: ids.map((stablecoinId) => ({
-          stablecoin_id: stablecoinId,
-          dex_price_usd: 0.999,
-          primary_price_at_calc: 0.985,
-          deviation_from_primary_bps: 142,
-          source_total_tvl: 9_000_000,
-          price_sources_json: sources,
-          candidate_count: ids.length,
-        })),
+        rows: ids.map((id) => suppressionRow(id, sources, ids.length)),
       },
     ]);
 
@@ -608,24 +581,13 @@ describe("depeg canary checks", () => {
   });
 
   it("names a saturated DEX suppression cohort as a lower bound", async () => {
-    const sources = JSON.stringify([
-      { protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum", price: 0.999, tvl: 5_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-      { protocol: "curve", sourceFamily: "curve", chain: "ethereum", price: 1.001, tvl: 4_000_000, observedAt: NOW - 60, aggregateObservedAt: NOW - 60 },
-    ]);
+    const sources = JSON.stringify(recoverySources);
     const ids = USD_IDS.slice(0, 50);
     expect(ids).toHaveLength(50);
     const db = mockD1([
       {
         match: "pharos:depeg-dex-suppression-canary",
-        rows: ids.map((stablecoinId) => ({
-          stablecoin_id: stablecoinId,
-          dex_price_usd: 0.999,
-          primary_price_at_calc: 0.985,
-          deviation_from_primary_bps: 142,
-          source_total_tvl: 9_000_000,
-          price_sources_json: sources,
-          candidate_count: 60,
-        })),
+        rows: ids.map((id) => suppressionRow(id, sources, 60)),
       },
     ]);
 

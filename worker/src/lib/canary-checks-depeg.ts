@@ -27,6 +27,7 @@ import {
   loadDepegCensusRuns,
 } from "./depeg-ledger-clock";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { getDexPriceSourceEntries } from "./depeg-trust-policy";
 
 type DepegCanaryFinding = {
   status: "ok" | "degraded" | "error";
@@ -490,8 +491,7 @@ function parseDexSources(value: string | null, observedAt: number): DexPoolSourc
   } catch {
     return [];
   }
-  if (!Array.isArray(parsed)) return [];
-  return parsed.filter((entry): entry is DexPoolSource => {
+  return (getDexPriceSourceEntries(parsed) ?? []).filter((entry): entry is DexPoolSource => {
     if (entry == null || typeof entry !== "object" || Array.isArray(entry)) return false;
     const source = entry as Partial<DexPoolSource>;
     if (typeof source.protocol !== "string" || typeof source.price !== "number" || !Number.isFinite(source.price)) return false;

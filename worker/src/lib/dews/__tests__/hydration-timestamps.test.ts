@@ -252,21 +252,40 @@ describe("DEWS hydration timestamp admission", () => {
   );
 
   it("hydrates only trusted fresh dex prices and never turns a failed read into a zero count", async () => {
+    const registerMalformedPersistedInput = vi.fn();
+    const db = mockD1([{ match: "FROM dex_prices", rows: ([
+        ["trusted", 60, 2e6, 1], ["old", 36_000, 2e6, 1], ["thin", 60, 10, 1],
+        ["crash", 60, 5_000_000, 1],
+        ["boundary", 4500, 2e6, 1], ["missing", null, 2e6, 1],
+        ["stale-publication", 60, 2e6, 36_000], ["invalid-publication", 60, 2e6, null],
+        ["malformed", "{", 2e6, 1],
+        ["future", -1, 2e6, 1], ["invalid", RUN_AT, 2e6, 1],
+      ] as const).map(([id, age, tvl, publicationAge]) => ({
+        stablecoin_id: id, dex_price_usd: id === "crash" ? 0.4 : 1, source_total_tvl: tvl,
+        updated_at: publicationAge == null ? null : RUN_AT - publicationAge,
+        price_sources_json: typeof age === "string" ? age :
+          JSON.stringify(id === "crash" ? { aggregateObservedAt: RUN_AT - 60, sources: [] } :
+            [{ aggregateObservedAt: age == null ? null : RUN_AT - age }]),
+      })) }]);
     const hydrated = await hydrateDexPrices({
-      db: mockD1([{ match: "FROM dex_prices", rows: [
-        { stablecoin_id: "trusted", dex_price_usd: 1, source_total_tvl: 2_000_000, updated_at: RUN_AT - 60 },
-        { stablecoin_id: "old", dex_price_usd: 1, source_total_tvl: 2_000_000, updated_at: RUN_AT - 10 * 3600 },
-        { stablecoin_id: "thin", dex_price_usd: 1, source_total_tvl: 10, updated_at: RUN_AT - 60 },
-      ] }]),
-      nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+      db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput,
     });
+    expect(db.getHistory()[0].sql).toContain("price_sources_json");
+    expect(registerMalformedPersistedInput.mock.calls.map(([row]) => [row.stablecoinId, row.reason, row.degradesRun]))
+      .toEqual([["missing", "aggregate-clock-unavailable", false], ["malformed", "json-parse-failed", false],
+        ["future", "aggregate-clock-future", false], ["invalid", "aggregate-clock-invalid", false]]);
     expect([...hydrated.dexPriceMap]).toEqual([
       ["trusted", { dexPriceUsd: 1, sourceTotalTvl: 2_000_000, updatedAt: RUN_AT - 60 }],
+      ["crash", { dexPriceUsd: 0.4, sourceTotalTvl: 5_000_000, updatedAt: RUN_AT - 60 }],
     ]);
-    expect(hydrated.trustedCount).toBe(1);
-    expect([...hydrated.dexPriceAgeSecById]).toEqual([["trusted", 60], ["old", 36_000], ["thin", 60]]);
-    expect([...hydrated.dexPriceStaleIds]).toEqual(["old"]);
-    expect(hydrated.staleCount).toBe(1);
+    expect(hydrated.trustedCount).toBe(2);
+    expect([...hydrated.dexPriceAgeSecById]).toEqual([
+      ["trusted", 60], ["old", 36_000], ["thin", 60], ["crash", 60], ["boundary", 4500],
+      ["stale-publication", 60], ["invalid-publication", 60],
+    ]);
+    expect([...hydrated.dexPriceStaleIds]).toEqual(["old", "boundary", "missing", "stale-publication",
+      "invalid-publication", "malformed", "future", "invalid"]);
+    expect(hydrated.staleCount).toBe(8);
 
     const registerSourceFailure = vi.fn();
     const failed = await hydrateDexPrices({

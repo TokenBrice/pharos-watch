@@ -2,6 +2,7 @@ import { decodeJsonString } from "../../lib/cache-json";
 import { DEX_LIQUIDITY_PUBLISHED_ROW_FILTER } from "../../lib/dex-liquidity";
 import { logMalformedJsonPath } from "../../lib/json-decode-observability";
 import type { DexPriceChallengerLoadRow } from "./challenger-types";
+import { getDexPriceSourceEntries } from "../../lib/depeg-trust-policy";
 
 interface LegacyDexPoolSource {
   protocol: string;
@@ -35,9 +36,12 @@ function decodeLegacyJsonArray<T>(
     updatedAt: options.updatedAt,
     missingReason: "missing",
     parseErrorReason: "json-parse-failed",
-    normalize: (parsed) => Array.isArray(parsed)
-      ? { ok: true, payload: parsed as T[] }
-      : { ok: false, reason: "invalid-shape" },
+    normalize: (parsed) => {
+      const sources = options.source === "dex_prices" ? getDexPriceSourceEntries(parsed) : parsed;
+      return Array.isArray(sources)
+        ? { ok: true, payload: sources as T[] }
+        : { ok: false, reason: "invalid-shape" };
+    },
   });
   if (!decoded.ok) {
     logMalformedJsonPath({

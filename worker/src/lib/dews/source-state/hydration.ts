@@ -23,7 +23,7 @@ import {
   getBlacklistConfigByContract,
   getBlacklistConfigByKey,
 } from "../../blacklist-contracts";
-import { getDexTrustPolicy, isTrustedDexPriceRow } from "../../depeg-trust-policy";
+import { getDexAggregateObservedAt, getDexTrustPolicy, isAffirmativeDexPriceRow } from "../../depeg-trust-policy";
 import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
 import { readPublishedMintBurnGauge } from "../../mint-burn-published-gauge";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
@@ -300,19 +300,36 @@ export async function hydrateDexPrices(ctx: HydrationContext): Promise<DexPriceH
   let succeeded = false;
   try {
     const dexPriceRows = await ctx.db
-      .prepare("SELECT stablecoin_id, dex_price_usd, source_total_tvl, updated_at FROM dex_prices")
-      .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number }>();
+      .prepare("SELECT stablecoin_id, dex_price_usd, source_total_tvl, updated_at, price_sources_json FROM dex_prices")
+      .all<{ stablecoin_id: string; dex_price_usd: number; source_total_tvl: number; updated_at: number; price_sources_json: string | null }>();
     for (const row of dexPriceRows.results ?? []) {
-      const ageSec = getRowAgeSec(row.updated_at, ctx.nowSec);
+      const decoded = decodeJsonString<number, PersistedJsonDecodeReason>(row.price_sources_json, {
+        updatedAt: row.updated_at, missingReason: "missing", parseErrorReason: "json-parse-failed",
+        normalize: (payload) => {
+          const clock = getDexAggregateObservedAt(payload, ctx.nowSec);
+          return clock.aggregateClockReason != null
+            ? { ok: false, reason: clock.aggregateClockReason }
+            : { ok: true, payload: clock.aggregateObservedAt! };
+        },
+      });
+      if (!decoded.ok) ctx.registerMalformedPersistedInput({
+        source: "dex_prices", context: "dex_prices.price_sources_json", stablecoinId: row.stablecoin_id,
+        updatedAt: row.updated_at, reason: decoded.reason, degradesRun: false,
+      });
+      const aggregateObservedAt = decoded.ok ? decoded.payload : null;
+      const ageSec = getRowAgeSec(aggregateObservedAt, ctx.nowSec);
+      const publicationAgeSec = getRowAgeSec(row.updated_at, ctx.nowSec);
       if (ageSec != null) dexPriceAgeSecById.set(row.stablecoin_id, ageSec);
-      if (ageSec == null || ageSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec) {
+      // An unreadable aggregate or publication clock is never fresh evidence.
+      if (ageSec == null || publicationAgeSec == null || ageSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec ||
+        publicationAgeSec >= DEWS_DEX_PRICE_TRUST_POLICY.maxAgeSec) {
         dexPriceStaleIds.add(row.stablecoin_id);
       }
-      if (!isTrustedDexPriceRow(row, ctx.nowSec, "depeg")) continue;
+      if (!isAffirmativeDexPriceRow({ ...row, aggregateObservedAt }, ctx.nowSec, "depeg")) continue;
       dexPriceMap.set(row.stablecoin_id, {
         dexPriceUsd: row.dex_price_usd,
         sourceTotalTvl: row.source_total_tvl,
-        updatedAt: row.updated_at,
+        updatedAt: aggregateObservedAt!,
       });
     }
     succeeded = true;

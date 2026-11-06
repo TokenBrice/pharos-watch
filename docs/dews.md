@@ -8,7 +8,7 @@ Per-coin, forward-looking stress score (0-100) for depeg stress. It is not a cal
 
 DEWS shares its methodology versioning with the Depeg Tracker pipeline. Both resolve their published version and changelog through `shared/lib/methodology-versions/registry.ts`.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.43`<!-- GENERATED-END: methodology-version-depeg-dews -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-depeg-dews -->`v6.44`<!-- GENERATED-END: methodology-version-depeg-dews -->
 - **Public changelog page:** `/methodology/depeg-changelog/`
 - **Canonical constants:** `shared/lib/methodology-versions/constants.ts`
 
@@ -132,14 +132,15 @@ Max of: primary deviation from peg, DEX deviation from peg, cross-source spread 
 
 The primary price must pass `isObservedPrice(...)`. Nominal par references are not observations and enter DEWS as `null`. Primary and independently admitted DEX deviations are evaluated separately against the admitted peg reference; cross-source spread exists only when both legs are observed, finite and positive. With neither valid leg, divergence is unavailable rather than a measured calm zero. A stressed DEX-only leg qualifies as `market-price` evidence and is not WATCH-capped merely because the primary observation is missing.
 
-- DEX input comes only from `dex_prices` rows refreshed within the live depeg trust window (`DEX_FRESHNESS_SEC = 4500`, currently 75 minutes) **and** backed by at least `$1M` of aggregate source TVL, matching the live depeg trust floor
+- The publisher selects deduplicated plausible contributors strictly younger than `DEX_FRESHNESS_SEC` (75 minutes), then applies its existing outlier filter. The aggregate uses the oldest selected median-input clock; price-source count, TVL and protocol provenance cover those inputs. If none are in budget, the full blend retains its oldest clock for conservative vetoes.
+- DEX input requires both publication and original aggregate ages strictly below the live depeg budget (`DEX_FRESHNESS_SEC = 4500`, currently 75 minutes) **and** at least `$1M` aggregate source TVL. The shared reader validates the oldest repeated `aggregateObservedAt` from legacy nonempty arrays or the independent `{aggregateObservedAt,sources:[]}` envelope before protocol filtering; any missing, invalid, nonpositive, nonfinite or future clock fails admission. Hydrated source ages and snapshots use that original clock, never publication time or surviving protocol lanes; clock-unavailable rows remain unavailable rather than stale, with canonical `aggregate-clock-*` decoder reasons; malformed eligible JSON retains decoder telemetry
 - **Anchors:** `[0bps, 0] → [25bps, 10] → [50bps, 25] → [75bps, 50] → [100bps, 75] → [200bps, 90] → [500bps, 100]`
 - **Non-USD peg dampening:** `value *= 0.7`
 - Averaged with the previous reading only when that reading was available.
 
 Historical `stress_signal_history` rows do not retain the underlying DEX trust metadata (`source_total_tvl`, per-row freshness context) needed to replay this gate exactly. The Wave 5.9 repair path therefore refreshes current rows and prunes unrecomputable daily history from the Mar 9, 2026 trust-floor boundary onward instead of pretending those stored snapshots can be deterministically recomputed.
 
-The aggregate divergence input is distinct from affirmative protocol-family corroboration in depeg detection and pending confirmation. Those source groups require original family `observedAt` within 35 minutes and aggregate-contributor `aggregateObservedAt` within 75 minutes, not merely a fresh `dex_prices.updated_at`. Legacy unclocked sources cannot prove current corroboration or positive recovery; separately supported challenger vetoes remain conservative negative evidence, never fresh affirmative evidence. The shared Depeg/DEWS release changes new admission only and does not relabel stored scores, event history or sealed generations.
+Aggregate admission is independent of protocol-family corroboration in depeg detection and pending confirmation: a valid aggregate survives absent protocol lanes. Those source groups retain their inclusive original family `observedAt` 35-minute and `aggregateObservedAt` 75-minute gates. Legacy unclocked sources cannot prove current corroboration or positive recovery; publication-fresh raw aggregates and challenger vetoes retain their separate conservative policies. Rejecting affirmative evidence cannot turn unavailable divergence into measured calm. The shared Depeg/DEWS release changes new admission only and does not relabel stored scores, event history or sealed generations.
 
 ### S_black — Blacklist Activity
 

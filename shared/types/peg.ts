@@ -95,6 +95,8 @@ export const PegSummaryCoinSchema = z.object({
   currentSupplyUnavailable: z.boolean().optional(),
   depegEventCoverageLimited: z.boolean().optional(),
   pegScore: z.number().nullable(),
+  /** Live quote used for current deviation and provenance; absent on legacy rows. */
+  price: z.number().finite().positive().nullable().optional(),
   priceSource: z.string().optional(),
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
   priceUpdatedAt: z.number().nullable().optional(),

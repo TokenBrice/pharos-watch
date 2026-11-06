@@ -30,6 +30,7 @@ import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
 import { STAGED_POOL_PRICE_MAX_AGE_HOURS } from "../lib/dex-cron-constants";
 import { readCoinProjectionId } from "../lib/api-coin-projection";
 import type { DexLiquidityData, DexLiquidityTableMap } from "@shared/types/market";
+import { getDexPriceSourceEntries } from "../lib/depeg-trust-policy";
 
 export const handleDexLiquidity = async (
   db: D1Database,
@@ -276,11 +277,11 @@ export const handleDexLiquidity = async (
       dexDeviationBps: dexPrice?.deviation_from_primary_bps ?? null,
       priceSourceCount: dexPrice?.source_pool_count ?? null,
       priceSourceTvl: dexPrice?.source_total_tvl ?? null,
-      priceSources: safeJsonParse<DexLiquidityData["priceSources"]>(
+      priceSources: getDexPriceSourceEntries(safeJsonParse<unknown>(
         dexPrice?.price_sources_json,
         null,
         `dex-liquidity:${id}:price_sources_json`,
-      ),
+      )) as DexLiquidityData["priceSources"],
       // v2 fields
       effectiveTvlUsd: evidence?.effectiveTvlUsd ?? row.effective_tvl_usd ?? 0,
       avgPoolStress: row.avg_pool_stress ?? null,

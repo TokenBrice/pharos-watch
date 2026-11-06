@@ -19,6 +19,7 @@ import {
 import { isMissingTableError } from "./db";
 import { logMalformedJsonPath } from "./json-decode-observability";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { getDexAggregateObservedAt, getDexPriceSourceEntries, type DexAggregateClock } from "./depeg-trust-policy";
 
 /** D1 row shape for the depeg_events table (snake_case columns) */
 export interface DepegRow {
@@ -77,6 +78,8 @@ export interface DexPriceRow {
   source_pool_count: number;
   source_total_tvl: number;
   updated_at: number;
+  aggregateObservedAt?: number | null;
+  aggregateClockReason?: DexAggregateClock["aggregateClockReason"];
 }
 
 export type PendingDepegReasonFlag = "confirmation-window" | "large-cap" | "low-confidence" | "extreme-move";
@@ -312,6 +315,7 @@ export async function loadDexPrices(
         source_pool_count: row.source_pool_count,
         source_total_tvl: row.source_total_tvl,
         updated_at: row.updated_at,
+        aggregateObservedAt: null,
       });
       // Match the old source SELECT: NULL is absent, not malformed or stale.
       if (row.price_sources_json == null) continue;
@@ -325,16 +329,18 @@ export async function loadDexPrices(
           maxAgeSec,
         });
       }
-      const decoded = decodeJsonString<DexPoolSource[], DexJsonDecodeReason>(row.price_sources_json, {
+      const decoded = decodeJsonString<{ sources: DexPoolSource[] } & DexAggregateClock, DexJsonDecodeReason>(row.price_sources_json, {
         updatedAt: row.updated_at,
         missingReason: "missing",
         parseErrorReason: "json-parse-failed",
-        normalize: (parsed) => Array.isArray(parsed) &&
+        normalize: (parsed) => {
+          const sources = getDexPriceSourceEntries(parsed);
           // A null/primitive element is not a DexPoolSource and would throw in
           // the per-source clock filter; quarantine the row instead (R8).
-          parsed.every((source) => source != null && typeof source === "object" && !Array.isArray(source))
-          ? { ok: true, payload: parsed as DexPoolSource[] }
-          : { ok: false, reason: "invalid-shape" },
+          return sources != null && sources.every((source) => source != null && typeof source === "object" && !Array.isArray(source))
+            ? { ok: true, payload: { sources: sources as DexPoolSource[], ...getDexAggregateObservedAt(parsed, nowSec) } }
+            : { ok: false, reason: "invalid-shape" };
+        },
       });
       if (!decoded.ok) {
         telemetry?.malformedRows.push({
@@ -353,8 +359,10 @@ export async function loadDexPrices(
         });
         continue;
       }
-      if (decoded.payload.length === 0) continue;
-      const sources = decoded.payload
+      const priceRow = dexPriceRows.get(row.stablecoin_id)!;
+      priceRow.aggregateObservedAt = decoded.payload.aggregateObservedAt;
+      if (decoded.payload.aggregateClockReason) priceRow.aggregateClockReason = decoded.payload.aggregateClockReason;
+      const sources = decoded.payload.sources
         .filter((source) => {
           if (typeof source.observedAt !== "number" || !Number.isFinite(source.observedAt) || source.observedAt <= 0 ||
             typeof source.aggregateObservedAt !== "number" || !Number.isFinite(source.aggregateObservedAt) || source.aggregateObservedAt <= 0) return false;

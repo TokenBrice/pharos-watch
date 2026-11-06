@@ -18,12 +18,12 @@ import {
   buildPendingOutcomeStmt,
   buildPoolConfirmationKey,
   confirmationSourceList,
-  getPendingExpiryLimitSec,
   isOpposingConfirmationStatus,
   pendingPeakQuoteDomain,
   pickPeakCandidate,
   type PromotionDecisionInput,
 } from "./pending-depeg-confirmation";
+import { getPendingExpiryLimitSec } from "../lib/depeg-pending";
 
 const TEMPORAL_CONFIRMATION_LABEL = `temporal:${Math.round(DEPEG_PENDING_MIN_AGE_SEC / 60)}m`;
 
@@ -136,7 +136,7 @@ export function evaluatePromotionDecision(args: PromotionDecisionInput): D1Prepa
   }
 
   const statuses = [evidence.offchainStatus, evidence.dexStatus, evidence.cexStatus, evidence.poolStatus];
-  const hasSameDirectionConfirmation = statuses.includes("confirm");
+  const hasSameDirectionConfirmation = statuses.includes("confirm") || evidence.dexConfirmationVeto === true;
   const hasOpposingEvidence =
     statuses.some(isOpposingConfirmationStatus) ||
     (isNativeOrigin && isOpposingConfirmationStatus(primaryStatus));

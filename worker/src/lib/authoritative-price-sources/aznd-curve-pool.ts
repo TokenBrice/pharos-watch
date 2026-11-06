@@ -74,6 +74,7 @@ export async function fetchAzndCurvePoolPrice(
     },
   );
   if (!quoteParent) return null;
+  if (Math.floor(Date.now() / 1000) - quoteParent.trustedParent.observedAt > MAX_BLOCK_AGE_SEC) return null;
 
   // Configured Worker RPCs first; public endpoints are only the fallback tail.
   const rpcOptions = { signal, chainRpcs: context.chainRpcs, extraRpcUrls: getPublicFallbackRpcUrls(CHAIN) };
@@ -125,12 +126,16 @@ export async function fetchAzndCurvePoolPrice(
   if (smallPrice == null || impactPrice == null) return null;
   if (Math.abs(impactPrice - smallPrice) / smallPrice > MAX_QUOTE_IMPACT_RATIO) return null;
 
+  // Multiplication must preserve the older dependency clock under this route's budget.
+  const parentClockSelected = quoteParent.trustedParent.observedAt < blockTimestamp;
+  const observedAt = parentClockSelected ? quoteParent.trustedParent.observedAt : blockTimestamp;
+  if (Math.floor(Date.now() / 1000) - observedAt > MAX_BLOCK_AGE_SEC) return null;
   return {
     price: smallPrice * quoteParent.trustedParent.price,
     source: AZND_CURVE_SOURCE,
     confidence: "fallback",
-    observedAt: blockTimestamp,
-    observedAtMode: "upstream",
+    observedAt,
+    observedAtMode: parentClockSelected ? quoteParent.trustedParent.observedAtMode ?? "upstream" : "upstream",
   };
 }
 
