@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useChains } from "@/hooks/use-chains";
 import { useSort } from "@/hooks/use-sort";
@@ -269,7 +270,7 @@ function ChainsHero({ data, meta, dataUpdatedAt, retained }: { data: ChainsRespo
 
 /**
  * The leaderboard: the harbor's equivalent data surface. Row hover/focus lights the matching berth; the harbor's
- * "Show in table" scrolls to the row (smoothly only when motion is allowed), focuses it and highlights it.
+ * "Show in table" scrolls to the row (smoothly only when motion is allowed), focuses its link and highlights it.
  */
 function ChainsLeaderboardTable({
   data,
@@ -294,7 +295,7 @@ function ChainsLeaderboardTable({
         const row = document.getElementById(`chain-row-${chainId}`);
         if (!row) return;
         row.scrollIntoView({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
-        row.focus({ preventScroll: true });
+        row.querySelector<HTMLAnchorElement>("[data-chain-identity-link]")?.focus({ preventScroll: true });
       }),
     [registerRevealRow, reducedMotion],
   );
@@ -342,8 +343,6 @@ function ChainsLeaderboardTable({
             <InteractiveTableRow
               key={chain.id}
               id={`chain-row-${chain.id}`}
-              role="link"
-              ariaLabel={`${chain.name} — ${formatCompactUsd(chain.totalUsd)} supply`}
               className={cn(
                 "group h-11 border-l-2 border-l-transparent transition-all duration-150 hover:border-l-frost-blue hover:bg-muted/30 hover:translate-x-[1px] data-[state=selected]:border-l-frost-blue sm:h-auto",
                 revealedChainId === chain.id ? "border-l-frost-blue bg-muted/40" : "",
@@ -353,7 +352,13 @@ function ChainsLeaderboardTable({
             >
               <TableCell className="pharos-numeric text-right text-muted-foreground">{rank}</TableCell>
               <TableCell>
-                <div className="flex items-center gap-2">
+                <Link
+                  href={`/chains/${chain.id}/`}
+                  prefetch={false}
+                  aria-label={`${chain.name} — ${formatCompactUsd(chain.totalUsd)} supply`}
+                  data-chain-identity-link
+                  className="pharos-focus-ring flex items-center gap-2 rounded-md"
+                >
                   {chain.logoPath ? (
                     <Image
                       src={resolveCompactLogoSrc(chain.logoPath, 20)!}
@@ -370,7 +375,7 @@ function ChainsLeaderboardTable({
                   <span className="hidden sm:inline-flex">
                     <ChainTypeBadge type={chain.type} />
                   </span>
-                </div>
+                </Link>
               </TableCell>
               <TableCell className="text-right pharos-numeric">
                 {/* a sub-dollar observed supply is not an observed zero */}
