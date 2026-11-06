@@ -115,8 +115,9 @@ describe("publishYieldCoordinatorResults", () => {
     return JSON.parse(String(entry?.binds[index] ?? "[]")) as T;
   }
 
-  function makePublicationDb(options?: { cacheWriteError?: Error; finalizeError?: Error }) {
+  function makePublicationDb(options?: { cacheWriteError?: Error; finalizeError?: Error; pruneError?: Error }) {
     return mockD1([
+      { match: "abandoned-staged-generation-finalize", rows: [], throwError: options?.pruneError },
       { match: "FROM cache WHERE key = ?", matchBinds: ["yield-rankings"], rows: [], first: null },
       {
         match: "INSERT INTO cache (key, value, updated_at)",
@@ -557,6 +558,11 @@ describe("publishYieldCoordinatorResults", () => {
     expect(rows[0]?.publication_state).toBe("published");
   });
 
+  it("keeps a committed publication when retention is deferred", async () => {
+    const result = await publishYieldCoordinatorResults(makePublishParams({ db: makePublicationDb({ pruneError: Error("prune") }) }));
+    expect(result).toMatchObject({ ok: true, cacheWriteSkipped: false, degradationReasons: ["yield-retention:deferred"] });
+  });
+
   it("writes bounded selected-source decision evidence with rejected-source reasons", async () => {
     const db = makePublicationDb();
     const best = makeEvaluatedSource({
@@ -948,19 +954,9 @@ describe("publishYieldCoordinatorResults", () => {
     }));
     try {
       const result = await publishYieldCoordinatorResults({
-        db,
-        previewRankingsPayload: buildPayloadWithObservedAt(startSec),
-        evaluatedSources: [source],
+        ...makePublishParams({ db, evaluatedSources: [source],
+          bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]) }),
         anchorOnlySources: seeds,
-        publicationViews: makePublicationViews([source], new Map([[source.id, source.sourceKey]]), startSec),
-        startSec,
-        degradationReasons: [],
-        safetySnapshotHeld: false,
-        resolvedCount: 1,
-        rowsRejected: 0,
-        divergenceFlags: 0,
-        sourceSwitches: 0,
-        previousYieldPublicationSnapshot: { status: "missing", rankings: [], malformed: false },
       });
       expect(result.ok).toBe(true);
       if (!result.ok) throw new Error(`publication failed: ${result.result.status}`);
@@ -988,11 +984,6 @@ describe("publishYieldCoordinatorResults", () => {
       symbol: "sDAI",
       sourceKey: "defillama:sdai-sky",
     });
-    const publicationViews = makePublicationViews(
-      [source],
-      new Map([[source.id, source.sourceKey]]),
-      startSec,
-    );
     let batchAttempts = 0;
     // The first publication batch commits, then its response is lost; the
     // retry replays the same statements against the already-written rows.
@@ -1011,20 +1002,12 @@ describe("publishYieldCoordinatorResults", () => {
     } as unknown as D1Database;
 
     try {
-      const result = await publishYieldCoordinatorResults({
+      const result = await publishYieldCoordinatorResults(makePublishParams({
         db: retryingDb,
         previewRankingsPayload,
         evaluatedSources: [source],
-        publicationViews,
-        startSec,
-        degradationReasons: [],
-        safetySnapshotHeld: false,
-        resolvedCount: 1,
-        rowsRejected: 0,
-        divergenceFlags: 0,
-        sourceSwitches: 0,
-        previousYieldPublicationSnapshot: { status: "missing", rankings: [], malformed: false },
-      });
+        bestSourceKeyByCoin: new Map([[source.id, source.sourceKey]]),
+      }));
 
       expect(batchAttempts).toBeGreaterThanOrEqual(2);
       expect(result.ok).toBe(true);

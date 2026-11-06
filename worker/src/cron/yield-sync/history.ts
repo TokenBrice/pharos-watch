@@ -921,8 +921,9 @@ export async function pruneYieldTables(
     signal?: AbortSignal;
   },
 ): Promise<void> {
-  // Cleanup is idempotent; retry transient overload without replaying publication.
-  await runWithOverloadRetry(() => pruneYieldTablesOnce(db, startSec, options), 3, options?.signal);
+  // Cleanup is idempotent; outlast one spent D1 window without replaying publication.
+  await runWithOverloadRetry(() => pruneYieldTablesOnce(db, startSec, options), 3, options?.signal,
+    { waitOutResourceWindow: true });
 }
 
 /**
