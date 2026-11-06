@@ -5,12 +5,7 @@ import { TableRow } from "@/components/table";
 import { StablecoinTableRowCells } from "@/components/stablecoin-table-row-cells";
 import { buildStablecoinTableRowModel } from "@/components/stablecoin-table-row-model";
 import type { StablecoinVirtualRowProps } from "@/components/stablecoin-table-row-types";
-
-function isNestedInteractiveTarget(target: EventTarget | null, currentTarget: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  const interactiveAncestor = target.closest('a,button,input,select,textarea,[role="button"],[role="link"]');
-  return interactiveAncestor != null && interactiveAncestor !== currentTarget;
-}
+import { isRowActivation } from "@/lib/row-activation";
 
 function StablecoinVirtualRowBase({
   virtualIndex,
@@ -42,8 +37,7 @@ function StablecoinVirtualRowBase({
       data-row-striped={isStriped ? "true" : undefined}
       tabIndex={isCursor ? 0 : undefined}
       onClick={(event) => {
-        if (isNestedInteractiveTarget(event.target, event.currentTarget)) return;
-        onNavigate(row.coin.id);
+        if (isRowActivation(event)) onNavigate(row.coin.id);
       }}
       onMouseEnter={() => {
         if (virtualIndex != null) onCursorMouseEnter?.(virtualIndex);

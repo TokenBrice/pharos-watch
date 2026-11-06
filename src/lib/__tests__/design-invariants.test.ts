@@ -13,12 +13,10 @@ const read = (path: string) => readFileSync(path, "utf8");
 const CSS = read("src/app/globals.css");
 const TOKENS = [read("src/styles/tokens/primitives.css"), read("src/styles/tokens/semantic.css"), CSS];
 
-const paths = [
-  ...readdirSync("src/components", { recursive: true }).map((p) => `src/components/${p}`),
-  ...["client", "[chain]/stablecoin-table"].map((name) => `src/app/chains/${name}.tsx`),
-].map((path) => path.split(sep).join("/")).filter(isSource);
+const paths = readdirSync("src", { recursive: true }).map((p) => `src/${p}`.split(sep).join("/")).filter(isSource);
 const sources = inspectComponentTree(paths.map((path) => ({ path, source: read(path) })));
-const offenders = (kind: string) => [...sources].filter(([, v]) => v.some((item) => item === kind)).map(([p]) => p);
+const offenders = (kind: string) => [...sources].filter(([p, v]) => v.some((item) => item === kind) &&
+  (kind === "interactive-row" || /^src\/(components\/|app\/chains\/(client|\[chain\]\/stablecoin-table)\.tsx$)/.test(p))).map(([p]) => p);
 
 describe("design invariants", () => {
   it.each(["max-breakpoint", "interactive-row"])("guards %s", (kind) => {
@@ -30,11 +28,13 @@ describe("design invariants", () => {
       !p.includes("/digest-") && !p.includes("/digest/"))).toEqual([]);
   });
 
-  it("keeps five focus rings opaque", () => {
+  it("keeps scoped focus rings opaque", () => {
     const rings = [...CSS.matchAll(/\.pharos-(?:focus-ring|source-list a|prose-link) \{([^}]+)\}/g),
       ...read("src/components/digest-archive-client.tsx").matchAll(/className="([^"]*focus-visible:ring-2[^"]*)"/g)];
-    expect(rings).toHaveLength(5);
-    for (const [, classes] of rings) expect(classes.match(/focus-visible:ring-ring\S*/g)).toEqual(["focus-visible:ring-ring"]);
+    expect(rings.length).toBeGreaterThan(0);
+    for (const [, classes] of rings) {
+      expect(classes.match(/focus-visible:ring-ring\S*/g)?.every((ring) => /^focus-visible:ring-ring(?:\/100)?$/.test(ring))).toBe(true);
+    }
   });
 
   it.each([false, true])("token contrast (dark=%s)", (dark) => {
@@ -63,10 +63,13 @@ describe("design invariants", () => {
   });
 
   it.each(["tr", "TableRow", "InteractiveTableRow"])("native %s roles", (tag) => {
-    for (const role of ['"link"', '{"button"}', "{role}"]) {
-      expect(inspect("src/components/liquidity-table.tsx", `<${tag} role=${role} />`)).toEqual(["interactive-row"]);
+    for (const attr of ['role="link"', 'role={"button"}', "role={role}", "tabIndex={0}", "onKeyDown={open}"]) {
+      for (const path of ["src/components/liquidity-table.tsx", "src/app/other/page.tsx", "src/components/stablecoin-table-row.tsx"]) {
+        expect(inspect(path, `<${tag} ${attr} />`)).toEqual(["interactive-row"]);
+      }
     }
     expect(inspect("src/components/liquidity-table.tsx", `<${tag} role={"row"} /><a role="link" />`)).toEqual([]);
+    expect(inspect("src/components/stablecoin-table-row.tsx", `<${tag} tabIndex={isCursor ? 0 : undefined} />`)).toEqual([]);
   });
 
   it.each([

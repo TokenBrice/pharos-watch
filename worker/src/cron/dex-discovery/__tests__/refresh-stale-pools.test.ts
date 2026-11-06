@@ -465,5 +465,7 @@ describe("planStalePoolRefreshBatches", () => {
 
     expect(planStalePoolRefreshBatches(ordered, 2, 2).map((batch) => batch.candidates.map((entry) => entry.poolId)))
       .toEqual([["a1", "a2"], ["b1"]]);
+    expect(planStalePoolRefreshBatches(Array.from({ length: 3 }, () => candidate(":".repeat(200), "a")), 3)
+      .map((batch) => batch.candidates.length)).toEqual([2, 1]);
   });
 });
