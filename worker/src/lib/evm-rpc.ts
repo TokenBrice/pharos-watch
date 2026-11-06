@@ -389,6 +389,8 @@ function validRecentPin(pin: RecentFinalizedRpcPin, chainId?: string): boolean {
 
 function supportsRead(endpoint: RpcEndpoint, requirement: EvmRpcReadRequirement, chainId?: string): boolean {
   if (endpoint.operator === "dwellir" && (endpoint.routingDisabled || requirement.kind === "unsupported")) return false;
+  // HyperEVM Dwellir backends served `latest` ~47 min behind their own head (#1724); pins fail closed instead.
+  if (chainId === "hyperevm" && endpoint.operator === "dwellir" && requirement.kind === "current-state") return false;
   if (requirement.kind === "current-state" && requirement.finalizedTag && endpoint.finalizedTagUnsupported) return false;
   if (requirement.kind === "historical-state" || requirement.kind === "recent-pinned-state") {
     // The reviewed HyperEVM Alchemy numeric-state mispin cannot be cured by retrying it.

@@ -718,6 +718,24 @@ async function probeTokenFreshness(
     freshness.numericValues!.push({ block, value });
     if (value === freshness.latestValue && freshness.matchedBlock === null) freshness.matchedBlock = block;
   }
+  // A stable-head miss may come from a backend ahead of H2, so read A = end+1 before
+  // claiming stale. Stored windows keep their [first, end] shape: the store decoder pins
+  // referenceEndBlock to max(H2, R), and A counts against the same ten-reference cap.
+  let aheadValue: string | null = null;
+  if (freshness.matchedBlock === null && headAfter === headBefore) {
+    if (endBlock - firstBlock + 1 === RPC_PARITY_LATEST_MAX_NUMERIC_CALLS) {
+      freshness.reason = "bracket-too-wide";
+      return "none";
+    }
+    const ahead = await call("eth_call", [freshness.call!, toHexQuantity(endBlock + 1)]);
+    if (ahead.status === "deadline" || ahead.status === "aborted") return ahead.status;
+    if (ahead.errorClass === "reference-unavailable") {
+      freshness.reason = "reference-unavailable";
+      return "none";
+    }
+    aheadValue = normalizeRpcQuantity(ahead.result);
+    if (ahead.status !== "ok" || aheadValue === null) return "none";
+  }
   const confirmed = await call("eth_getBlockByNumber", [toHexQuantity(headAfter), false]);
   if (confirmed.status === "deadline" || confirmed.status === "aborted") return confirmed.status;
   if (confirmed.status !== "ok" || !isRpcParityBlockHeader(confirmed.result)) return "none";
@@ -733,6 +751,10 @@ async function probeTokenFreshness(
     // Separate latest/numeric reads may straddle a reorg while the head moves.
     // A stable H2 alone does not prove that it descends from the original H1.
     freshness.reason = "moving-bracket-no-match";
+  } else if (aheadValue === freshness.latestValue) {
+    freshness.reason = "served-block-ahead";
+    freshness.matchedBlock = endBlock + 1;
+    freshness.discriminating = false;
   } else {
     freshness.verdict = "stale";
     freshness.reason = "no-bracket-match";

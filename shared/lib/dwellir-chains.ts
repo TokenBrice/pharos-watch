@@ -39,6 +39,7 @@ export const DWELLIR_CHAINS: readonly DwellirChainEntry[] = [
   { chainId: "optimism", host: "api-optimism-mainnet-archive", evmChainId: 10, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
   { chainId: "polygon", host: "api-polygon-mainnet", evmChainId: 137, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
   { chainId: "avalanche", host: "api-avalanche-mainnet-archive", pathSuffix: "/ext/bc/C/rpc", evmChainId: 43114, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
+  // 2026-11-05 vendor answer (#1724): full node only, no archive host yet; state stays recent-only.
   { chainId: "bsc", host: "api-bsc-mainnet-full", evmChainId: 56, stateHistory: "recent", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
   { chainId: "gnosis", host: "api-gnosis-mainnet", evmChainId: 100, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
   { chainId: "celo", host: "api-celo-mainnet-archive", evmChainId: 42220, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
