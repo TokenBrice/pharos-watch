@@ -62477,6 +62477,31 @@
       "rationale": "The exact GTSA physical-gold delivery channel is established by current terms and FAQ. Neither inspected disclosure commits an executable processing amount/limit, funded facility size or end-to-end completion SLA; co-owned gold inventory and delivery minimums do not establish capacity."
     },
     {
+      "id": "xnd-20261106-emxn-telcoin-capacity",
+      "assetId": "emxn-telcoin",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:emxn-telcoin:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:55:26Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:9a611561a7fac42752bc8a0d",
+        "source:d164d83c90a61e7102241bad"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e51814293ed9decacd12b8b8",
+        "surface:9037ba0d972993bb9451aae1"
+      ],
+      "rationale": "The current eXYZ terms establish an eligible-holder redemption entitlement. They disclose a compliance-qualified $2,000 per-transaction ceiling and allow requests above $2,000, plus discretionary daily/monthly limits; these are investor/transaction controls, not issuer-wide executable throughput. The processing windows are not completed-payout guarantees. No aggregate funded capacity, issuer-wide executable limit or completion SLA is published on the two inspected issuer surfaces. Reserve/attestation marketing is not capacity. Under C-XND3 ruling, record capacity C and retain settlement unknown."
+    },
+    {
       "id": "xnd-20261106-eurau-allunity-capacity",
       "assetId": "eurau-allunity",
       "scope": {
@@ -62531,6 +62556,32 @@
       "rationale": "Current Circle EURC materials disclose par redemption and customer-specific limits, whose numerical values are private. The new fee structure retires the former $10M tier limit; conditional processing excludes bank settlement. No current universal executable amount/limit, funded facility size or committed completion SLA is published in the inspected surfaces."
     },
     {
+      "id": "xnd-20261106-eurcv-societe-generale-forge-capacity",
+      "assetId": "eurcv-societe-generale-forge",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:eurcv-societe-generale-forge:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:56:15Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:88a02d00a6b4fe126b70bf4e",
+        "source:6a3ec14cbc6fd52238c90b3b",
+        "source:df88d2e3f3aed4f5c72a81b9"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:2bd69ae733358d68a2ad2624",
+        "surface:61138a3114fc8892ad3e71b3"
+      ],
+      "rationale": "September30 terms establish an EEA-holder right, five-Business-Day acknowledgement (not completion), KYC/AML, sanctions and other controls. After successful controls payment transfer is due by last Business Day of the month following the month controls completed. Controls themselves have no completion maximum. Recovery may impose liquidity fees, an unspecified daily quantity limit, suspension and reserve changes. No issuer-wide executable amount/facility is disclosed; preserve conditional payment commitment in rationale."
+    },
+    {
       "id": "xnd-20261106-eure-monerium-capacity",
       "assetId": "eure-monerium",
       "scope": {
@@ -62557,6 +62608,60 @@
         "surface:d06a40e0744bc641e86377cd"
       ],
       "rationale": "The exact EURe issuer rail burns e-money and pays EUR through SEPA after onboarding. White-paper rights, no per-customer limit and full backing disclose no executable aggregate amount, numerical payout limit, committed funded facility or completed-payment SLA. The business terms expressly disclaim third-party execution timing; no capacity is inferred from reserves."
+    },
+    {
+      "id": "xnd-20261106-euri-banking-circle-capacity",
+      "assetId": "euri-banking-circle",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:euri-banking-circle:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:56:12Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:c98855fa2cee499c1169b4b5",
+        "source:862651846ae0d37661559a00",
+        "source:2e6bb0c7a8902e3fc0ea31e7"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:df406d5b5f98201c378f3e75",
+        "surface:5492c197f55320aec11a7fe1",
+        "surface:a2056b7c702df4fc47d94775"
+      ],
+      "rationale": "The legal five-Luxembourg-Business-Day payment commitment is already curated, with completed KYC and burn-wallet delivery as prerequisites. No issuer-wide executable amount/funded facility was found. The 20m purchaser subscription maximum is not redemption capacity. Do not claim no payout SLA; distinguish conditional initial request from the eligible post-prerequisite commitment."
+    },
+    {
+      "id": "xnd-20261106-europ-schuman-capacity",
+      "assetId": "europ-schuman",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:europ-schuman:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:56:12Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:a53554899312316881fd9deb",
+        "source:65c4dd560f6b715d8c7f065f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:1d3e0acbd0f4ebf453cc7919",
+        "surface:4e2a5010548847fe324e871c",
+        "surface:fecff302f6d02ed3dfd14cc2",
+        "surface:ef9b4b7e6f7c61061c82db5b"
+      ],
+      "rationale": "EUROP terms grant holder redemption at par, preserve it despite automation thresholds and document bank transfer. Client-dependent automated/manual tiers are unquantified and can entail longer review/suspension/cancellation; no issuer-wide executable limit or funded capacity is published. Next-Business-Day order execution is expressly conditional on AML/CTF and complete information and is not bank-credit completion."
     },
     {
       "id": "xnd-20261106-eurq-quantoz-capacity",
@@ -62638,6 +62743,31 @@
         "surface:81eb80f3da6d7d0638f99a0b"
       ],
       "rationale": "Spiko documents eurSAFO bank withdrawal and states \"Instant transfers are supported for amounts up to \u20ac500,000 per day\". This investor/share-class allowance depends on remaining allowance and destination-bank support, while the governing terms qualify instant timing; no issuer-wide funded executable capacity is quantified."
+    },
+    {
+      "id": "xnd-20261106-eurspkcc-spiko-capacity",
+      "assetId": "eurspkcc-spiko",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:eurspkcc-spiko:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:55:22Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:2886a002d48dace6b7793b6e",
+        "source:0e15284b4c258509fb4db519"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e80ccfa23d1e0eece1ed68ba",
+        "surface:cf8261eab010bc234804a3d0"
+      ],
+      "rationale": "The current primary prospectus and exact-class KID establish holder redemption at NAV. The published 10% gate is discretionary and can defer requests; it is not an executable capacity commitment. No issuer-wide executable amount, funded facility size, or unconditional same-notional request-to-payment SLA is disclosed. AUM, reserve assets and borrowing permissions are not capacity."
     },
     {
       "id": "xnd-20261106-eusd-telcoin-capacity",
@@ -62746,6 +62876,33 @@
       "rationale": "FIDD issuer terms establish eligible-account dollar redemption, while Fidelity Crypto publishes \"$5,000,000\" as the maximum FIDD trade-order size subject to market/network conditions. That broker order ceiling is not issuer-wide funded executable redemption capacity; the issuer's generally-instant/two-business-day timing expressly permits additional time and quantifies no funded buffer."
     },
     {
+      "id": "xnd-20261106-filqa-fidelity-international-capacity",
+      "assetId": "filqa-fidelity-international",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:filqa-fidelity-international:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:57:11Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:9566e9456c497511ae7d1993",
+        "source:c8b947ea49e866b15bdbee6c"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:122f2b5ea7ca92778aa72f17",
+        "surface:1c69a065b4a0678aca9e8409",
+        "surface:2c41b10e49f6fb501ebe6a31",
+        "surface:f3dcbc8b83dfd72a408da445"
+      ],
+      "rationale": "The exact USD Digital Liquidity Fund SP prospectus establishes cash redemption rights for identified shareholders with complete documents and whitelisted wallets. Requests exceeding 10% may be deferred for a period not normally exceeding 20 Valuation Days; this discretionary gate is not guaranteed throughput. Facility and liquidity-provider capacity is explicitly limiting, but no executable issuer-wide amount, facility size or unconditional completed-payout maximum is published. Normal/usually settlement and as-soon-as-technically-practicable wording are not binding completion deadlines. NAV and fund size are not capacity."
+    },
+    {
       "id": "xnd-20261106-frnt-wyoming-capacity",
       "assetId": "frnt-wyoming",
       "scope": {
@@ -62771,6 +62928,33 @@
         "surface:6e859770226ffd6ba39c38c4"
       ],
       "rationale": "The exact Commission FRNT direct-LSP redemption right is confirmed. Current rules require submission within two Business Days subject to exceptions; the public LSP template describes wire initiation and privately communicated limits but is not an executed agreement. Neither is a funded executable amount/limit/facility or a committed completed-payment SLA. Reserve balances and the reserve-policy Liquidity Fund are not inferred as redemption capacity."
+    },
+    {
+      "id": "xnd-20261106-fusd-finchain-capacity",
+      "assetId": "fusd-finchain",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:fusd-finchain:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:56:10Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:5596ea3bc0b057dd9c154cfd",
+        "source:fae4335e82ff6bbfe37ad5ee",
+        "source:0096a231d1e9428606bac806"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:4bcfae5909d492f9125f2a0a",
+        "surface:c8c35b0ef13a2b9ec13a72b2",
+        "surface:37f9b2bba447e9efcdb68d01"
+      ],
+      "rationale": "Eligible FUSD customers can redeem for USDT after KYC/KYB/account settings and funded order. Universal completion target and08:00 HongKong cutoff are already authored; instant liquidity is limited and depends on pool reserves/processing without quantities. Neither reserves nor the operational three-day target supplies issuer-wide executable capacity."
     },
     {
       "id": "xnd-20261106-gbpa-agant-capacity",
@@ -62908,6 +63092,37 @@
         "surface:cd3e7a32910ba0be46515fd8"
       ],
       "rationale": "The Gate GUSD rail documents account-based par conversion. Public timing statements are informational and differ by product presentation; no quantitative fast-channel capacity, funded redemption facility or binding amount-backed completion SLA is supplied. Minting caps, account fee allowances and reserve marketing are not redemption capacity."
+    },
+    {
+      "id": "xnd-20261106-hbusdt-hyperbeat-capacity",
+      "assetId": "hbusdt-hyperbeat",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:hbusdt-hyperbeat:queue-redeem",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:56:11Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:9a83947d275e184a7d3817ea",
+        "source:88c693499f1b9b53867f1704",
+        "source:c4296aee465ac00e23989e70",
+        "source:442fd4d2bddafea76ade7131",
+        "source:251e1d5ec2562b7fc0bd0f11"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:6e4cf7ea202062aebea1555b",
+        "surface:2f90412d7926ac15ddf85d2a",
+        "surface:94e58807a694621d0bafe64f",
+        "surface:022eecb90e32f7617e18effe",
+        "surface:9588cc54fd7f88e62343515a"
+      ],
+      "rationale": "Terms provide withdrawal of all/part after lock/cooldown and release net assets to linked wallet; underlying protocols may impose unspecified limits or pauses and delays. Exact token matches current app and integration. No quantified queue/epoch/facility is published on inspected pages. Preserve48h processing/automatic-send language and conflicting current1day UI; neither proves unconditional completed receipt."
     },
     {
       "id": "xnd-20261106-iauon-ondo-capacity",
@@ -63494,6 +63709,31 @@
       "rationale": "Multipli identifies rwaUSDi as the permissioned illiquid credit class, with redemptions aligned to asset cash flows and separate timelines. These reviewed product/risk surfaces publish no executable amount, committed facility or concrete completion bound for the configured route. Asset values, generic schedules and liquidity-class design do not establish capacity."
     },
     {
+      "id": "xnd-20261106-safo-spiko-usd-capacity",
+      "assetId": "safo-spiko-usd",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:safo-spiko-usd:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:55:23Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:5779f795110c45aac415c41d",
+        "source:d7c5007a03bf0f8f4c7630e3"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:8c28b0b0f02c92e6914c7973",
+        "surface:685932c8782cbe657df24918"
+      ],
+      "rationale": "The current primary prospectus and exact-class KID establish holder redemption at NAV. The published 25% gate is discretionary and can defer requests; it is not an executable capacity commitment. No issuer-wide executable amount, funded facility size, or unconditional same-notional request-to-payment SLA is disclosed. AUM, reserve assets and borrowing permissions are not capacity. The gate is 25%, not the T-bills sub-funds’ 10% trigger; its application may last 20 valuation days over 3 months."
+    },
+    {
       "id": "xnd-20261106-scusd-rings-capacity",
       "assetId": "scusd-rings",
       "scope": {
@@ -63579,6 +63819,31 @@
         "surface:2efe132c53f25f54fd78a50f"
       ],
       "rationale": "The current BitGo guide includes SoFi USD (SOFID) among available redeemable assets, and the Mint FAQ states \"Maximum is $100M per transaction\". This qualified-client platform transaction ceiling, approval workflow and approximate timing do not establish a SoFiUSD-specific issuer-wide funded executable payout facility."
+    },
+    {
+      "id": "xnd-20261106-spkcc-spiko-capacity",
+      "assetId": "spkcc-spiko",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:spkcc-spiko:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:55:22Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:2886a002d48dace6b7793b6e",
+        "source:6af72a2492fce51d12153849"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:e80ccfa23d1e0eece1ed68ba",
+        "surface:9310d5babf3b7864fcf74fbf"
+      ],
+      "rationale": "The current primary prospectus and exact-class KID establish holder redemption at NAV. The published 10% gate is discretionary and can defer requests; it is not an executable capacity commitment. No issuer-wide executable amount, funded facility size, or unconditional same-notional request-to-payment SLA is disclosed. AUM, reserve assets and borrowing permissions are not capacity."
     },
     {
       "id": "xnd-20261106-stac-securitize-capacity",
@@ -63822,6 +64087,31 @@
       "rationale": "Direct TrueUSD bank-wire redemption is documented, but the reviewed homepage and whitepaper publish no maximum executable payout amount, funded facility or completion SLA. The $1,000 minimum and general wire-initiation timing do not establish capacity; reserve and secondary trading figures are not capacity."
     },
     {
+      "id": "xnd-20261106-uktbl-spiko-capacity",
+      "assetId": "uktbl-spiko",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:uktbl-spiko:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:55:23Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:22e6e899c14097135b1403f2",
+        "source:9cdbfd2f6cb3c4654558e127"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:8c28b0b0f02c92e6914c7973",
+        "surface:8d9ae3ff629afa9362b86f14"
+      ],
+      "rationale": "The current primary prospectus and exact-class KID establish holder redemption at NAV. The published 10% gate is discretionary and can defer requests; it is not an executable capacity commitment. No issuer-wide executable amount, funded facility size, or unconditional same-notional request-to-payment SLA is disclosed. AUM, reserve assets and borrowing permissions are not capacity. The gate may apply for 20 net asset values over a 3-month period, subject to a maximum duration of 1 month; this is not guaranteed executable throughput."
+    },
+    {
       "id": "xnd-20261106-umint-ubs-capacity",
       "assetId": "umint-ubs",
       "scope": {
@@ -63898,6 +64188,32 @@
         "surface:31dbbe3c3d257effcd390d15"
       ],
       "rationale": "Anzens USDA redemption credits the account before a separate USD withdrawal. Terms and issuer risk disclosures publish no route-wide executable payout capacity, committed facility size or completion SLA. The foreign-bank $100,000 threshold is a minimum; reserves and indicative processing times are not capacity. Corridor-specific partner limits found by the analyst have not been reverified and are not adopted."
+    },
+    {
+      "id": "xnd-20261106-usdcv-societe-generale-forge-capacity",
+      "assetId": "usdcv-societe-generale-forge",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:usdcv-societe-generale-forge:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:56:18Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:d92af5cd31956dec06edc601",
+        "source:773ec1579e843728c1db313f",
+        "source:df88d2e3f3aed4f5c72a81b9"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:2bd69ae733358d68a2ad2624",
+        "surface:f2b30d730b4b543999be79bb"
+      ],
+      "rationale": "September30 terms establish an EEA-holder right, five-Business-Day acknowledgement (not completion), KYC/AML, sanctions and other controls. After successful controls payment transfer is due by last Business Day of the month following the month controls completed. Controls themselves have no completion maximum. Recovery may impose liquidity fees, an unspecified daily quantity limit, suspension and reserve changes. No issuer-wide executable amount/facility is disclosed; preserve conditional payment commitment in rationale."
     },
     {
       "id": "xnd-20261106-usdgo-osl-capacity",
@@ -64181,6 +64497,31 @@
         "surface:29e12a56d53cc805a04030f7"
       ],
       "rationale": "USP queue documentation establishes redemption using liquid balances and liquidation of backing for larger requests; governing terms preserve a contractual right but permit delays for illiquidity and at platform discretion. No quantitative executable allowance, funded buffer size or committed completion bound is published in the re-opened queue docs and terms. Reserves and general buffer descriptions are not capacity."
+    },
+    {
+      "id": "xnd-20261106-ustbl-spiko-capacity",
+      "assetId": "ustbl-spiko",
+      "scope": {
+        "pillar": "exit",
+        "componentKey": "exit-route",
+        "factorKey": "capacity",
+        "routeKey": "redemption:redemption:773e5b69-eb19-468d-9fc1-7733da6d7634:redemption:ustbl-spiko:offchain-issuer",
+        "exposureId": null,
+        "requiredDatum": "capacity"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-11-06T20:55:23Z",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-xnd (owner exit-capacity ruling)",
+      "sourcesRefs": [
+        "source:d12060e8b32c22b5c7d531ea",
+        "source:3bcffb3d18b12bd4e19ce894"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:8c28b0b0f02c92e6914c7973",
+        "surface:b673f8471349176d445f37cc"
+      ],
+      "rationale": "The current primary prospectus and exact-class KID establish holder redemption at NAV. The published 10% gate is discretionary and can defer requests; it is not an executable capacity commitment. No issuer-wide executable amount, funded facility size, or unconditional same-notional request-to-payment SLA is disclosed. AUM, reserve assets and borrowing permissions are not capacity. The gate may apply for 20 net asset values over a 3-month period, subject to a maximum duration of 1 month; this is not guaranteed executable throughput."
     },
     {
       "id": "xnd-20261106-uty-xsy-capacity",
@@ -96675,6 +97016,347 @@
         "excerpt": "You can redeem XUSD at a 1:1 ratio with USD directly on the StraitsX platform.",
         "assertion": "The FAQ dated 21 August 2025 identifies XUSD-to-USD platform bank withdrawal, without quantifying issuer-wide funded capacity."
       }
+    },
+    {
+      "id": "source:9a611561a7fac42752bc8a0d",
+      "value": {
+        "url": "https://www.telco.in/en/terms-of-use",
+        "observedAt": "2026-11-06T20:55:26Z",
+        "datumAsOf": "2026-06-30",
+        "location": "XXIX eXYZ terms, sections 24 and 26: Redemption Fees, Additional Redemption Policies",
+        "excerpt": "Maximum redemption amount: $2,000 per transaction (or as determined by compliance requirements)",
+        "assertion": "Telcoin LLC commits to redeem eXYZ reference-currency value for eligible verified users. The $2,000 transaction ceiling is qualified by compliance and a separate larger-redemption exception; it is not funded aggregate capacity. Processing is 1–3 business days, while larger requests can require 3–5 business days or longer. Daily/monthly limits are discretionary and unquantified; no committed final payment SLA or issuer-wide facility amount is published."
+      }
+    },
+    {
+      "id": "source:d164d83c90a61e7102241bad",
+      "value": {
+        "url": "https://www.telco.in/en/digital-cash",
+        "observedAt": "2026-11-06T20:55:26Z",
+        "datumAsOf": null,
+        "location": "Digital Cash is now live in the Telcoin Wallet, Mexican Peso listing",
+        "excerpt": "Mexican Peso",
+        "assertion": "The issuer identifies eMXN as Mexican Peso Digital Cash live on Polygon and links 0x68727e573d21a49c767c3c86a92d9f24bd933c99, matching the tracked exact product. Its attestations/reserve marketing supplies no executable redemption amount or facility."
+      }
+    },
+    {
+      "id": "source:88a02d00a6b4fe126b70bf4e",
+      "value": {
+        "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
+        "observedAt": "2026-11-06T20:56:15Z",
+        "datumAsOf": "2026-09-30",
+        "location": "I.07; D.1 holder right and payout; D.4 recovery options",
+        "excerpt": "Holders that are EEA residents have, at all times, a claim against the Issuer",
+        "assertion": "Current September30 white paper grants EEA holders a direct par redemption right, conditional on controls and token transfer; no amount or size for recovery daily limits is published."
+      }
+    },
+    {
+      "id": "source:6a3ec14cbc6fd52238c90b3b",
+      "value": {
+        "url": "https://www.sgforge.com/wp-content/uploads/2026/09/EURCV-WP-Ethereum_Solana_XRPL_Stellar_Canton_2026-09-30.pdf",
+        "observedAt": "2026-11-06T20:56:15Z",
+        "datumAsOf": "2026-09-30",
+        "location": "D.1 Redemption at option of holder — completed controls and cash-account transfer",
+        "excerpt": "cash account at the latest on the last Business Day of the month following the month the controls were successfully completed.",
+        "assertion": "Issuer promises transfer to holder cash account by this month-relative deadline after successful controls; initial KYC/AML/sanctions/other controls have no published completion maximum."
+      }
+    },
+    {
+      "id": "source:df88d2e3f3aed4f5c72a81b9",
+      "value": {
+        "url": "https://www.sgforge.com/product/coinvertible/",
+        "observedAt": "2026-11-06T20:56:13Z",
+        "datumAsOf": null,
+        "location": "Redemption workflow and FAQ",
+        "excerpt": "USD CoinVertible or EUR CoinVertible can be redeemed 1:1 against fiat USD (for USD CoinVertible ) or EUR (for EUR CoinVertible)",
+        "assertion": "The exact SG-FORGE USD/EUR products and fiat redemption identity are confirmed; live reserves are backing rather than executable redemption capacity."
+      }
+    },
+    {
+      "id": "source:c98855fa2cee499c1169b4b5",
+      "value": {
+        "url": "https://www.eurite.com/wp-content/uploads/2024/07/EUR-TCs-Final-clean.pdf",
+        "observedAt": "2026-11-06T20:56:12Z",
+        "datumAsOf": null,
+        "location": "Conditions7.1(a)-(b)",
+        "excerpt": "5 Business Days following receipt of a Redemption Request and subject to the completion of the Tokenholder KYC and the transfer of the EURI into the Banking Circle Burn Wallet",
+        "assertion": "Governing terms promise payment of par Redemption Amount after required KYC/burn delivery; incomplete KYC permits suspension/termination and has no initial-request completion bound."
+      }
+    },
+    {
+      "id": "source:862651846ae0d37661559a00",
+      "value": {
+        "url": "https://www.eurite.com/wp-content/uploads/2024/08/EURI-white-paper.html",
+        "observedAt": "2026-11-06T20:56:12Z",
+        "datumAsOf": "2024-07-16",
+        "location": "Cover; D rights",
+        "excerpt": "Eurite Euro Token (EURI) Euro Stablecoin White Paper E-Money Token 16 July 2024",
+        "assertion": "The official EURI white paper establishes exact product identity and directs redemption to Banking Circle; subscription maximum is not redemption capacity."
+      }
+    },
+    {
+      "id": "source:2e6bb0c7a8902e3fc0ea31e7",
+      "value": {
+        "url": "https://www.eurite.com/",
+        "observedAt": "2026-11-06T20:56:12Z",
+        "datumAsOf": null,
+        "location": "Product redemption statement",
+        "excerpt": "Fully redeemable at no fee",
+        "assertion": "Issuer marketing confirms EURI redeemability but publishes no aggregate executable redemption amount/facility."
+      }
+    },
+    {
+      "id": "source:a53554899312316881fd9deb",
+      "value": {
+        "url": "https://schuman.io/wp-content/uploads/2026.06.03%20B%20Platform%20T%26Cs%20v1.1.pdf",
+        "observedAt": "2026-11-06T20:56:11Z",
+        "datumAsOf": null,
+        "location": "§7.1-7.2 Automated Processing and Operational Limits",
+        "excerpt": "The current applicable limits depend on the client current and expected activity.",
+        "assertion": "Platform terms preserve statutory par redemption rights and use unquantified client-specific automated/manual processing thresholds; these are not guaranteed throughput."
+      }
+    },
+    {
+      "id": "source:65c4dd560f6b715d8c7f065f",
+      "value": {
+        "url": "https://schuman.io/wp-content/uploads/2026.06.03%20E%20Payment%20T%26Cs%20v1.0.pdf",
+        "observedAt": "2026-11-06T20:56:12Z",
+        "datumAsOf": null,
+        "location": "§6 Redemption of Electronic Money",
+        "excerpt": "Redemption orders are executed no later than the end of the next Business Day following valid receipt of the Holder’s request, subject to AML/CTF checks and the availability of complete information.",
+        "assertion": "Payment terms establish direct holder par redemption and payout to holder IBAN but the next-day clause binds order execution, not completed bank-account receipt."
+      }
+    },
+    {
+      "id": "source:2886a002d48dace6b7793b6e",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf",
+        "observedAt": "2026-11-06T20:55:22Z",
+        "datumAsOf": "2026-10-19",
+        "location": "pp. 14–16 and 22: redemption entitlement, settlement and discretionary gate",
+        "excerpt": "net redemption requests (redemptions less subscriptions, based on the last known net asset value) exceed a threshold of 10%.",
+        "assertion": "The exact fund permits holder redemption at NAV and a discretionary 10% net-redemption gate. The trigger is not guaranteed throughput; unexecuted orders carry forward without priority over subsequent requests. No issuer-wide executable payout quantity or funded facility size is published."
+      }
+    },
+    {
+      "id": "source:0e15284b4c258509fb4db519",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_eurSPKCC_EN.pdf",
+        "observedAt": "2026-11-06T20:55:22Z",
+        "datumAsOf": "2026-10-19",
+        "location": "p. 1: product identity; p. 3: early redemption",
+        "excerpt": "EUR SHARE ISIN: FR0014010ON7",
+        "assertion": "Identifies the exact tracked share class and documents holder redemption requests with cutoff, calendar and gating qualifications; publishes no executable amount or funded redemption facility."
+      }
+    },
+    {
+      "id": "source:9566e9456c497511ae7d1993",
+      "value": {
+        "url": "https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf",
+        "observedAt": "2026-11-06T20:57:11Z",
+        "datumAsOf": "2026-09-14",
+        "location": "p. 10 Selling Shares; pp. 33 and 40 peak requests; p. 48 facilities",
+        "excerpt": "capacity provided by any credit facility",
+        "assertion": "The fund pays redemption proceeds to identified shareholders in base-currency cash, subject to complete investor documentation and wallet whitelisting. Credit facilities and liquidity providers constrain volume, with no published facility amount; >10% requests may be deferred and a normal 20-Valuation-Day period is not a maximum."
+      }
+    },
+    {
+      "id": "source:c8b947ea49e866b15bdbee6c",
+      "value": {
+        "url": "https://www.sygnum.com/filq/",
+        "observedAt": "2026-11-06T20:57:11Z",
+        "datumAsOf": null,
+        "location": "FILQ FAQs: subscriptions and redemptions",
+        "excerpt": "transactions may be queued or subject to fees depending on conditions.",
+        "assertion": "The authorized token distributor confirms redemption after onboarding, typically near-instant market-hours settlement and conditional liquidity-facility support outside hours; no numerical facility size or binding completion guarantee is given."
+      }
+    },
+    {
+      "id": "source:5596ea3bc0b057dd9c154cfd",
+      "value": {
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/introduction/structuring.md",
+        "observedAt": "2026-11-06T20:56:10Z",
+        "datumAsOf": null,
+        "location": "Structuring",
+        "excerpt": "FUSD is issued by Finchain Holdings Bermuda Limited",
+        "assertion": "Exact Bermuda issuer and eligible-customer product identity confirmed."
+      }
+    },
+    {
+      "id": "source:fae4335e82ff6bbfe37ad5ee",
+      "value": {
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/redeem.md",
+        "observedAt": "2026-11-06T20:56:10Z",
+        "datumAsOf": null,
+        "location": "Universal Redemption; Instant Redemption",
+        "excerpt": "Redemption is typically completed within 1 business day, but may take up to 3 business days (UTC+8).",
+        "assertion": "Universal FUSD-to-USDT redemption has KYC/account setup, funded order and burn prerequisites; instant route liquidity depends on unquantified pool reserves and processing capacity."
+      }
+    },
+    {
+      "id": "source:0096a231d1e9428606bac806",
+      "value": {
+        "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusd-token/cut-off-time.md",
+        "observedAt": "2026-11-06T20:56:10Z",
+        "datumAsOf": null,
+        "location": "Cut-Off Time",
+        "excerpt": "The daily deadline is 8:00 AM Hong Kong time (UTC+8).",
+        "assertion": "Requests after daily cutoff roll to next Hong Kong business day; no executable redemption amount/facility is published."
+      }
+    },
+    {
+      "id": "source:9a83947d275e184a7d3817ea",
+      "value": {
+        "url": "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault",
+        "observedAt": "2026-11-06T20:56:09Z",
+        "datumAsOf": null,
+        "location": "FAQ Can I withdraw?",
+        "excerpt": "Yes, you can withdraw from the Hyperbeat USDT vault.",
+        "assertion": "Issuer docs establish the hbUSDT holder withdrawal rail; instant redemptions depend on sufficient liquidity and classic processing is two days."
+      }
+    },
+    {
+      "id": "source:88c693499f1b9b53867f1704",
+      "value": {
+        "url": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt",
+        "observedAt": "2026-11-06T20:56:09Z",
+        "datumAsOf": null,
+        "location": "Additional Information; Classic Redeem",
+        "excerpt": "Classic redemption requests will be processed within 48 hours. The assets are automatically sent to the user's wallet upon processing.",
+        "assertion": "Older Midas integration connects processing to automatic payout but does not establish current completed receipt; exact hbUSDT proxy and redemption contract are documented."
+      }
+    },
+    {
+      "id": "source:c4296aee465ac00e23989e70",
+      "value": {
+        "url": "https://hyperbeat.org/dapp/vaults/usdt",
+        "observedAt": "2026-11-06T20:56:10Z",
+        "datumAsOf": null,
+        "location": "Vault details",
+        "excerpt": "Withdrawal period Up to 1 day",
+        "assertion": "Current app shows Hyperbeat Core infrastructure for same hbUSDT proxy and advertises a conflicting shorter period."
+      }
+    },
+    {
+      "id": "source:442fd4d2bddafea76ade7131",
+      "value": {
+        "url": "https://hyperbeat.org/terms",
+        "observedAt": "2026-11-06T20:56:11Z",
+        "datumAsOf": "2026-03-01",
+        "location": "Unstaking or Withdrawing Digital Assets from the Staking Feature or from Vaults",
+        "excerpt": "Subject to any minimum lock up, cool-down or staking period, you may request to withdraw all or any part of your staked or deposited Digital Assets from the Staking Feature or Vaults.",
+        "assertion": "Governing terms provide withdrawal entitlement and say corresponding assets released to linked wallet, while protocols may impose unspecified withdrawal limits/pauses and delays."
+      }
+    },
+    {
+      "id": "source:251e1d5ec2562b7fc0bd0f11",
+      "value": {
+        "url": "https://docs.hyperbeat.org/resources/addresses",
+        "observedAt": "2026-11-06T20:56:09Z",
+        "datumAsOf": null,
+        "location": "HyperEVM Vaults USDT Vault",
+        "excerpt": "USDT Vault https://hyperevmscan.io/address/0x5e105266db42f78fa814322bce7f388b4c2e61eb",
+        "assertion": "Exact tracked hbUSDT identity matches current app and older integration."
+      }
+    },
+    {
+      "id": "source:5779f795110c45aac415c41d",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "observedAt": "2026-11-06T20:55:23Z",
+        "datumAsOf": "2026-09-01",
+        "location": "pp. 61–63: redemption entitlement, settlement and discretionary gate",
+        "excerpt": "a threshold of 25% of net assets",
+        "assertion": "The exact fund permits holder redemption at NAV and a discretionary 25% net-redemption gate. The trigger is not guaranteed throughput; unexecuted orders carry forward without priority over subsequent requests. No issuer-wide executable payout quantity or funded facility size is published."
+      }
+    },
+    {
+      "id": "source:d7c5007a03bf0f8f4c7630e3",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_SAFO_EN.pdf",
+        "observedAt": "2026-11-06T20:55:21Z",
+        "datumAsOf": "2026-09-01",
+        "location": "p. 1: product identity; p. 3: early redemption",
+        "excerpt": "ISIN: FR0014015LE1",
+        "assertion": "Identifies the exact tracked share class and documents holder redemption requests with cutoff, calendar and gating qualifications; publishes no executable amount or funded redemption facility."
+      }
+    },
+    {
+      "id": "source:6af72a2492fce51d12153849",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_SPKCC_EN.pdf",
+        "observedAt": "2026-11-06T20:55:22Z",
+        "datumAsOf": "2026-10-19",
+        "location": "p. 1: product identity; p. 3: early redemption",
+        "excerpt": "USD SHARE ISIN: FR0014010OM9",
+        "assertion": "Identifies the exact tracked share class and documents holder redemption requests with cutoff, calendar and gating qualifications; publishes no executable amount or funded redemption facility."
+      }
+    },
+    {
+      "id": "source:22e6e899c14097135b1403f2",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "observedAt": "2026-11-06T20:55:23Z",
+        "datumAsOf": "2026-09-01",
+        "location": "pp. 44–46: redemption entitlement, settlement and discretionary gate",
+        "excerpt": "a threshold of 10% of net assets",
+        "assertion": "The exact fund permits holder redemption at NAV and a discretionary 10% net-redemption gate. The trigger is not guaranteed throughput; unexecuted orders carry forward without priority over subsequent requests. No issuer-wide executable payout quantity or funded facility size is published."
+      }
+    },
+    {
+      "id": "source:9cdbfd2f6cb3c4654558e127",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_UKTBL_EN.pdf",
+        "observedAt": "2026-11-06T20:55:22Z",
+        "datumAsOf": "2026-09-01",
+        "location": "p. 1: product identity; p. 3: early redemption",
+        "excerpt": "GBP SHARE ISIN: FR0014012MN7",
+        "assertion": "Identifies the exact tracked share class and documents holder redemption requests with cutoff, calendar and gating qualifications; publishes no executable amount or funded redemption facility."
+      }
+    },
+    {
+      "id": "source:d92af5cd31956dec06edc601",
+      "value": {
+        "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+        "observedAt": "2026-11-06T20:56:18Z",
+        "datumAsOf": "2026-09-30",
+        "location": "I.07; D.1 holder right and payout; D.4 recovery options",
+        "excerpt": "Holder that are EEA-residents have, at all times, a claim against the Issuer",
+        "assertion": "Current September30 white paper grants EEA holders a direct par redemption right, conditional on controls and token transfer; no amount or size for recovery daily limits is published."
+      }
+    },
+    {
+      "id": "source:773ec1579e843728c1db313f",
+      "value": {
+        "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf",
+        "observedAt": "2026-11-06T20:56:18Z",
+        "datumAsOf": "2026-09-30",
+        "location": "D.1 Redemption at option of holder — completed controls and cash-account transfer",
+        "excerpt": "cash account at the latest on the last Business Day of the month following the month the controls were successfully completed.",
+        "assertion": "Issuer promises transfer to holder cash account by this month-relative deadline after successful controls; initial KYC/AML/sanctions/other controls have no published completion maximum."
+      }
+    },
+    {
+      "id": "source:d12060e8b32c22b5c7d531ea",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_Spiko_SICAV_EN.pdf",
+        "observedAt": "2026-11-06T20:55:23Z",
+        "datumAsOf": "2026-09-01",
+        "location": "pp. 21–23: redemption entitlement, settlement and discretionary gate",
+        "excerpt": "a threshold of 10% of net assets",
+        "assertion": "The exact fund permits holder redemption at NAV and a discretionary 10% net-redemption gate. The trigger is not guaranteed throughput; unexecuted orders carry forward without priority over subsequent requests. No issuer-wide executable payout quantity or funded facility size is published."
+      }
+    },
+    {
+      "id": "source:3bcffb3d18b12bd4e19ce894",
+      "value": {
+        "url": "https://cdn.spiko.finance/legal_docs/EN/KID_USTBL_EN.pdf",
+        "observedAt": "2026-11-06T20:55:22Z",
+        "datumAsOf": "2026-09-01",
+        "location": "p. 1: product identity; p. 3: early redemption",
+        "excerpt": "USD SHARE ISIN: FR001400ODM9",
+        "assertion": "Identifies the exact tracked share class and documents holder redemption requests with cutoff, calendar and gating qualifications; publishes no executable amount or funded redemption facility."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -111117,6 +111799,54 @@
     {
       "id": "surface:c0c7ca822bbad6c2bf5e7c5c",
       "value": "https://support.straitsx.com/support/solutions/articles/157000366324-what-is-xusd-"
+    },
+    {
+      "id": "surface:1d3e0acbd0f4ebf453cc7919",
+      "value": "https://schuman.io/legal-center/"
+    },
+    {
+      "id": "surface:4e2a5010548847fe324e871c",
+      "value": "https://schuman.io/wp-content/uploads/2026.06.03%20B%20Platform%20T%26Cs%20v1.1.pdf"
+    },
+    {
+      "id": "surface:fecff302f6d02ed3dfd14cc2",
+      "value": "https://schuman.io/wp-content/uploads/2026.06.03%20E%20Payment%20T%26Cs%20v1.0.pdf"
+    },
+    {
+      "id": "surface:ef9b4b7e6f7c61061c82db5b",
+      "value": "https://schuman.io/wp-content/uploads/2026.06.03%20A%20EUROP%20T%26Cs%20v1.1.pdf"
+    },
+    {
+      "id": "surface:e80ccfa23d1e0eece1ed68ba",
+      "value": "https://cdn.spiko.finance/legal_docs/EN/Prospectus_SPKCC_EN.pdf"
+    },
+    {
+      "id": "surface:f3dcbc8b83dfd72a408da445",
+      "value": "https://r.jina.ai/https://www.sygnum.com/filq/"
+    },
+    {
+      "id": "surface:6e4cf7ea202062aebea1555b",
+      "value": "https://docs.hyperbeat.org/hyperbeat-earn/usdt-vault"
+    },
+    {
+      "id": "surface:2f90412d7926ac15ddf85d2a",
+      "value": "https://docs.hyperbeat.org/hyperbeat-builder-codes/vaults/hyperbeat-usdt"
+    },
+    {
+      "id": "surface:9588cc54fd7f88e62343515a",
+      "value": "https://docs.hyperbeat.org/resources/addresses"
+    },
+    {
+      "id": "surface:685932c8782cbe657df24918",
+      "value": "https://cdn.spiko.finance/legal_docs/EN/KID_SAFO_EN.pdf"
+    },
+    {
+      "id": "surface:8d9ae3ff629afa9362b86f14",
+      "value": "https://cdn.spiko.finance/legal_docs/EN/KID_UKTBL_EN.pdf"
+    },
+    {
+      "id": "surface:b673f8471349176d445f37cc",
+      "value": "https://cdn.spiko.finance/legal_docs/EN/KID_USTBL_EN.pdf"
     }
   ]
 }

@@ -5,7 +5,7 @@ import { resolveReviewedRedemptionSettlementDelay } from "../redemption-backstop
 import { resolveRedemptionCostBpsAtNotional, resolveV9RedemptionRouteCostBpsAtNotional } from "../redemption-backstop-configs/shared";
 import { COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS as familyConfigs } from "../redemption-backstop-configs/offchain-issuer/coverage-and-stablecoin-audit";
 
-const clock = Date.parse("2026-10-08T12:00:00Z") / 1000;
+const clock = Date.parse("2026-11-07T12:00:00Z") / 1000;
 const spikoIds = ["ustbl-spiko", "safo-spiko-usd", "spkcc-spiko", "uktbl-spiko", "gbpsafo-spiko", "eutbl-spiko", "eursafo-spiko", "eurspkcc-spiko"];
 const midasIds = ["mf-one-midas", "mglobal-midas-fasanara", "mhyper-midas", "mmev-midas", "mapollo-midas"];
 
