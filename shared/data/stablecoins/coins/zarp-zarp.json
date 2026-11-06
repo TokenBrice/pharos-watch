@@ -24,10 +24,12 @@
     "attestorLicense": "IRBA-registered auditors",
     "latestReport": {
       "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-13",
+      "publishedAtBasis": "explicit",
       "assuranceMethod": "agreed-upon-procedures",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
-      "reviewer": "Pharos production health reserve review 2026-10-13; October 1 report date is not an independently established publication date",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c2-3; Kempen's publication page independently dates the October 1 report to October 13, 2026",
       "confidence": "verified",
       "sources": [
         {
@@ -37,6 +39,10 @@
         {
           "label": "ZARP transparency report index",
           "url": "https://www.zarpstablecoin.com/transparency/"
+        },
+        {
+          "label": "Kempen publication page: October 13, 2026, linking the October 1 signed ZARP agreed-upon-procedures report",
+          "url": "https://kempengroup.co.za/zarp-stablecoin-digital-report-october-2026/"
         }
       ]
     }
