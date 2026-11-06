@@ -39,15 +39,15 @@ function classificationMeta(): V9ExtensionRegistryMeta {
     reserveReview: {
       reviewedAt: "2026-09-30", reviewer: "fixture", confidence: "manual-review",
       sources: [{ label: "Pooled protocol holdings", url: "https://example.com/reserves" }],
-      rationale: "Class identities are reviewed; holder-level liability attribution is unavailable.",
-      compositionBasis: "Pooled holdings, not attributable tranche backing.",
+      rationale: "Class identities reviewed; holder attribution unavailable.",
+      compositionBasis: "Unattributed pooled holdings.",
       compositionAsOf: "2026-09-30", scope: "classification-only",
-      knownUnknownExposure: "The whole pooled book lacks holder-level liability attribution.",
+      knownUnknownExposure: "No liability attribution.",
       knownUnknownExposurePct: 100,
       nonLinkDispositions: REVIEWED_ROWS.map((row, reserveIndex) => ({
         reserveIndex, reserveName: row.name, pct: row.pct,
         disposition: "insufficient-evidence",
-        rationale: "Pooled quantity cannot establish a token-specific dependency weight.",
+        rationale: "No token-specific dependency weight.",
       })),
     },
   };
@@ -104,8 +104,7 @@ describe("classification-qualified reserve reviews", () => {
       expect(exposure.factorStatuses?.assetClass).toMatchObject({ observationState: "known", gapIds: [] });
     }
 
-    // Resolving identities cannot make the pooled reviewed percentages usable
-    // as standalone composition when the live observation disappears.
+    // Classification-only rows never become fallback composition.
     const withoutLive = compiledFixture(meta, []);
     expect(withoutLive.reserveExposures).toEqual([]);
     expect(withoutLive.reserveStatus.observationState).toBe("missing");
@@ -125,12 +124,17 @@ describe("classification-qualified reserve reviews", () => {
 
   it.each([
     "missing-live-key", "missing-reviewed-key", "mismatched-key", "duplicate-live-key",
-    "duplicate-reviewed-key", "expired-review", "unknown-confidence", "future-review",
-  ] as const)("fails closed for classification-only %s", (failure) => {
+    "duplicate-reviewed-key", "expired-review", "unknown-confidence", "future-review", "unkeyed-zero-metadata",
+  ] as const)("rejects unmatched metadata: %s", (failure) => {
     const meta = classificationMeta();
     meta.reserves = [structuredClone(REVIEWED_ROWS[1]!)];
     delete meta.reserveReview!.nonLinkDispositions;
     const live: ReserveSlice[] = [{ ...LIVE_ROWS[1]!, name: "Pooled Beta", pct: 100 }];
+    if (failure === "unkeyed-zero-metadata") {
+      meta.reserveReview!.scope = "full-composition";
+      meta.reserves[0]!.pct = 0;
+      delete live[0]!.sourceKey;
+    }
     if (failure === "missing-live-key") delete live[0]!.sourceKey;
     if (failure === "missing-reviewed-key") delete meta.reserves[0]!.sourceKey;
     if (failure === "mismatched-key") live[0]!.sourceKey = "fixture:token:other";

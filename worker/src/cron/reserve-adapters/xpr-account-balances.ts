@@ -189,6 +189,7 @@ function adaptBatch(batch: XprReadBatch, params: XprAccountBalancesParams): Adap
   const slices = slicesFromValues(
     [
       ...measured.map((entry) => ({
+        sourceKey: `xpr:${batch.chainInfo.chainId}:${params.balanceCode}:${entry.symbol.toLowerCase()}`,
         value: entry.value,
         name: entry.name,
         risk: entry.risk,
