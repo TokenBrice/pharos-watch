@@ -202,6 +202,13 @@ describe("evm-rpc helpers", () => {
     expect(recordDwellirCreditsMock.mock.calls).toEqual([[2], [1]]);
   });
 
+  it.each([["latest", "alchemy"], [100, "dwellir"]] as const)("routes HyperEVM %s state via %s", async (block, operator) => {
+    const chainRpcs = buildChainRpcs("alchemy-key", undefined, { dwellirApiKey: "dwellir-key" });
+    fetchWithRetryMock.mockResolvedValue(rpcResponse({ result: "0x2a" }));
+    await fetchEvmCallHexAtBlock("hyperevm", "0xToken", "0x1234", block, { chainRpcs });
+    expect(attemptedUrls()[0]).toBe(chainRpcs.get("hyperevm")!.endpoints.find(e => e.operator === operator)!.url);
+  });
+
   it.each(["ink", "berachain"])("falls back from CCIP Dwellir to Alchemy then public on %s without exceeding endpoint log spans", async (chain) => {
     const dwellir = { ...dwellirEndpoint(`https://${chain}.ccip-dwellir.example`), maxLogBlockSpan: 10_000 };
     const alchemy = { ...registryEndpoint(`https://${chain}.ccip-alchemy.example`, "alchemy"), maxLogBlockSpan: 1_000 };
@@ -844,9 +851,9 @@ describe("evm-rpc helpers", () => {
   });
 
 
-  it("falls back when first eth_call result is empty hex", async () => {
+  it.each(["0x", "not-hex"])("falls back when the first eth_call result is %s", async (first) => {
     fetchWithRetryMock
-      .mockResolvedValueOnce(rpcResponse({ result: "0x" }))
+      .mockResolvedValueOnce(rpcResponse({ result: first }))
       .mockResolvedValueOnce(rpcResponse({ result: "0x2a" }));
 
     const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
@@ -870,19 +877,6 @@ describe("evm-rpc helpers", () => {
       params: Array<{ gas?: string }>;
     };
     expect(body.params[0]?.gas).toBe("0xF4240");
-  });
-
-  it("falls back when eth_call returns an invalid hex result", async () => {
-    fetchWithRetryMock
-      .mockResolvedValueOnce(rpcResponse({ result: "not-hex" }))
-      .mockResolvedValueOnce(rpcResponse({ result: "0x2a" }));
-
-    const result = await fetchEvmCallHexAtBlock(undefined, "0xToken", "0x1234", "latest", {
-      extraRpcUrls: ["https://rpc.primary", "https://rpc.fallback"],
-    });
-
-    expect(result).toBe("0x2a");
-    expect(fetchWithRetryMock).toHaveBeenCalledTimes(2);
   });
 
   it("returns null when eth_call returns only invalid results", async () => {
