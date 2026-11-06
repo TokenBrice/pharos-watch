@@ -17,6 +17,7 @@ import {
 } from "../probe";
 import { RPC_PARITY_TARGETS, type RpcParityTarget } from "../../../lib/rpc-provider-parity/targets";
 import { buildRpcParityChainSummary } from "../../../lib/rpc-provider-parity/report";
+import { decodeRpcParityStoreRow, encodeRpcParityStoreRow, mergeRpcParityRun } from "../../../lib/rpc-provider-parity/store";
 import { stepFailures } from "../../../lib/rpc-provider-parity/__tests__/rpc-parity-test-support";
 
 const API_KEY = "dwellir-parity-test-key";
@@ -850,34 +851,31 @@ describe("rpc parity probe", () => {
     expect(summary.gate.failing).not.toContain("latest-state-freshness");
   });
 
-  it("rejects frozen token latest state even when heads and the block sentinel are fresh", async () => {
-    const checkedTarget = target("base");
+  it.each([
+    ["different", "stale", "no-bracket-match"], ["matched", "indeterminate", "served-block-ahead"],
+    ["not-found", "indeterminate", "reference-unavailable"], ["capped", "indeterminate", "bracket-too-wide"],
+  ])("reads one block past a stable token miss (%s)", async (mode, verdict, reason) => {
     const transport = createFakeTransport((call) => {
       if (call.method === "eth_blockNumber") return rpcResult("0x64");
       if (call.method === "eth_getBlockByNumber") return rpcBlockHeader(call.params[0]);
-      if (call.method === "eth_call") {
-        if ((call.params[0] as { data: string }).data === "0x42cbb15c") return rpcResult("0x64");
-        return rpcResult(call.params[1] === "latest" ? "0x1" : "0x2");
+      if (call.method !== "eth_call") return rpcResult([]);
+      if ((call.params[0] as { data: string }).data === "0x42cbb15c") return rpcResult("0x64");
+      if (call.params[1] === "0x65" && mode === "not-found") {
+        return { kind: "json", body: { jsonrpc: "2.0", id: 1, error: { code: -32603, message: "HeaderNotFound" } } };
       }
-      return rpcResult([]);
+      return rpcResult(call.params[1] === "latest" || (call.params[1] === "0x65" && mode === "matched") ? "0x1" : "0x2");
     });
-    const { samples: [sample] } = await runProbe({ targets: [checkedTarget], fetchText: transport.fetchText });
-    expect(sample.sentinelFreshness).toMatchObject({ verdict: "fresh", servedBlock: 100 });
+    const targets = [{ ...target("base"), ...(mode === "capped" ? { blockTimeSec: 2 / 3 } : {}) }];
+    const { samples: [sample] } = await runProbe({ targets, fetchText: transport.fetchText });
     expect(sample.tokenFreshness).toMatchObject({
-      verdict: "stale", reason: "no-bracket-match", headBefore: 100, headAfter: 100,
-      referenceEndBlock: 100, toleranceBlocks: 3,
-      call: { to: checkedTarget.contract, data: "0x18160ddd" },
+      verdict, reason, referenceEndBlock: 100,
+      matchedBlock: mode === "matched" ? 101 : null, discriminating: mode === "different",
     });
-    expect(sample.tokenFreshness?.numericValues?.map((entry) => entry.block)).toEqual([100, 99, 98, 97]);
-    expect(sample.latestFreshness?.verdict).toBe("stale");
-    const summary = buildRpcParityChainSummary({
-      chainId: checkedTarget.chainId, runs: [{ atSec: 0, samples: [sample] }], latest: null,
-      dwellirHost: sample.dwellirHost, fallbackComparator: sample.comparator, blockTimeSec: checkedTarget.blockTimeSec,
-      logsHistoryIsNone: false,
-    });
-    expect(summary.latestFreshness.sentinel.fresh).toBe(1);
-    expect(summary.latestFreshness.tokenState.stale).toBe(1);
-    expect(summary.gate.failing).toContain("latest-state-freshness");
+    expect(sample.tokenFreshness?.numericValues).toHaveLength(mode === "capped" ? 10 : 4);
+    expect(transport.calls.filter((call) => call.params[1] === "0x65")).toHaveLength(mode === "capped" ? 0 : 1);
+    const stored = decodeRpcParityStoreRow(encodeRpcParityStoreRow(
+      mergeRpcParityRun(null, { atSec: 1_800_000_000, samples: [sample] }, { nowSec: 1_800_000_000 }).row));
+    expect(stored?.runs[0].samples[0].tokenFreshness?.reason).toBe(reason);
   });
 
   it.each(["available", "unknown-block"])("includes HyperEVM's H2+2 sentinel state in its token window (%s)", async (mode) => {
