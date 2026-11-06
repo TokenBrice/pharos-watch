@@ -1,7 +1,7 @@
 import { cronHistoryRetentionPolicies } from "@shared/lib/retention-policy";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC } from "@shared/lib/safety-score-capture-archive";
 import type { CronResult } from "../lib/cron-logger";
-import { rethrowIfAborted, throwIfAborted } from "../lib/abort";
+import { throwIfAborted } from "../lib/abort";
 import { createCronResult } from "../lib/cron-result";
 import {
   RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT,
@@ -30,8 +30,8 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       ...await runRetentionPolicies(db, remainingPolicies, now, signal),
     };
   } catch (error) {
-    rethrowIfAborted(error, signal);
-    if (!(error instanceof RetentionGroupError)) throw error;
+    // Aborts and unattributed failures propagate verbatim, as before the group envelope.
+    if (signal?.aborted || !(error instanceof RetentionGroupError)) throw error;
     return createCronResult({
       status: "error", error: error.message,
       metadata: { reason: "retention-group-failed", failedRetentionGroup: error.failedRetentionGroup },

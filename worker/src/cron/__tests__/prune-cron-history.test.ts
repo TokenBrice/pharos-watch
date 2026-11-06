@@ -159,6 +159,9 @@ describe("runPruneCronHistory", () => {
     expect(JSON.parse(result.metadata!)).toEqual({
       reason: "retention-group-failed", failedRetentionGroup: [{ key: "producerHistory", window }],
     });
+    const cancelled = { name: "AbortError", message: "cancelled by runtime" };
+    vi.mocked(db.batch).mockRejectedValueOnce(cancelled);
+    await expect(runPruneCronHistory(db)).rejects.toBe(cancelled);
   });
 
   it("preserves the smaller repair-task ceiling and leaves failed tasks untouched", async () => {
