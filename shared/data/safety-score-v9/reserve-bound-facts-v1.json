@@ -1210,6 +1210,32 @@
         "conclusion": "open-ended",
         "governingInstrument": "Ondo Global Markets Final Terms Product 1 / ISIN VGG7001AAA21 November 11, 2025, Contractual Terms Maturity Date",
         "allInScope": true
+      },
+      {
+        "factKey": "zchf-frankencoin:collateral-positions-api:sgg:maturity-applicability-20261106",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "collateral-positions-api:sgg"
+        },
+        "asOfSec": 1790208000,
+        "publisher": "Swissgrams AG",
+        "sourceUrls": [
+          "https://swissgrams.com/token-terms",
+          "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+        ],
+        "assertion": "Swissgrams Gold token terms last updated September 24, 2026, sections 1 and 2, identify SGG as the token holders' proportional co-ownership of reserve gold coins, not a debt repayment claim. The issuer's Token Address link identifies Ethereum 0x2bd214946806dbee88dd3b44b26a21759723d8a2, matching the SGG collateral token in Frankencoin's positions API. The whole keyed SGG reserve is the same physical-gold ownership instrument. Borrower-position expiration, optional issuer redemption and auction realization time do not establish the token's maturity or a cash-liquidity guarantee.",
+        "contentDigest": "36b242a653860af43f551d07af39fb7b5cbe31891a6fd6190890b1df139cec0b",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-resv",
+          "confidence": "high"
+        },
+        "claimId": "ethereum:0x2bd214946806dbee88dd3b44b26a21759723d8a2",
+        "conclusion": "not-applicable",
+        "governingInstrument": "Swissgrams Gold Token Terms, September 24, 2026, sections 1, 2 and 5",
+        "allInScope": true
       }
     ],
     "cusd-cap": [
@@ -1218,7 +1244,7 @@
         "kind": "maturity-applicability",
         "scope": {
           "kind": "exposure",
-          "exposureKey": "reserve:05b4dbd0d8f8ac6ece9620b2"
+          "exposureKey": "cap-vault:0x434558cb1ebe9950e8a66f1ef8a15a473dce7d8c"
         },
         "asOfSec": 1791187868,
         "publisher": "WisdomTree Digital Trust SAI revised August 14, 2026, General Description",
@@ -1631,6 +1657,34 @@
         "claimId": "Amundi Euro Government Bond 0-6 M UCITS ETF Acc shares / ISIN FR0010754200 / bC3M reserve:5b88ab39ffe7a05d24df56b5",
         "conclusion": "open-ended",
         "governingInstrument": "Amundi Prospectus et Reglement updated April 16, 2026, Prospectus sections I and III.1 and Reglement Articles 1 and 11",
+        "allInScope": true
+      }
+    ],
+    "fiusd-sygnum": [
+      {
+        "factKey": "fiusd-sygnum:chainlink-nav:token:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9:maturity-applicability-20261106",
+        "kind": "maturity-applicability",
+        "scope": {
+          "kind": "exposure",
+          "exposureKey": "chainlink-nav:token:0x2ab105a3ead22731082b790ca9a00d9a3a7627f9"
+        },
+        "asOfSec": 1788480000,
+        "publisher": "FIL Investment Management (Luxembourg) S.\u00e0 r.l. Ireland Branch",
+        "sourceUrls": [
+          "https://fidelity.priips-document.com/Fidelity-International/IE00BNKLND78/en/eu/",
+          "https://forum.arbitrum.foundation/t/sygnum-bank-ag-fidelity-international-fiusd-step-2-application/28779"
+        ],
+        "assertion": "The September 4, 2026 Key Information Document identifies The United States Dollar Fund Class G Accumulating Shares, ISIN IE00BNKLND78. Its Term section states that the fund is open-ended; the management company cannot unilaterally terminate it, while the fund board may liquidate or merge it. Sygnum's March 20, 2025 issuer application identifies FIUSD as Fidelity ILF USD Fund Class G Acc and links the zkSync token 0x2ab105a3ead22731082b790ca9a00d9a3a7627f9. The exact native-fund-share reserve claim has no scheduled contractual repayment maturity. Portfolio WAM, recommended holding period and optional redemption are not share-maturity maxima.",
+        "contentDigest": "478950e6844513d9debb7f2871244eb5be00f14058b23cf02151f365adbca10f",
+        "provenance": {
+          "kind": "reviewed-research",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 c-resv",
+          "confidence": "high"
+        },
+        "claimId": "Fidelity ILF United States Dollar Fund Class G Accumulating Shares, ISIN IE00BNKLND78",
+        "conclusion": "open-ended",
+        "governingInstrument": "Fidelity PRIIPs Key Information Document, publication date September 4, 2026, page 1, Product and Term",
         "allInScope": true
       }
     ]

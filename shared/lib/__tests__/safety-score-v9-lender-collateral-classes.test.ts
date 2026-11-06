@@ -8,23 +8,20 @@ import legacyPolicy from "./fixtures/lender-collateral-classes-policy-v10.28.jso
 
 const legacyRows = legacyPolicy.semantic.backing.lenderCollateralBook.collateralClasses;
 
-function classMapping(rows: readonly { chain: string; address: string; class: string }[]) {
-  return Object.fromEntries(rows.map((row) => [`${row.chain}:${row.address}`, row.class]));
-}
-
 describe("reviewed lender collateral class registry", () => {
   it("preserves the pre-extraction mapping and original evidence", () => {
     const admitted = getLenderCollateralClassesRegistry();
-    expect(classMapping(admitted.registry.reviews)).toEqual(classMapping(legacyRows));
-    expect(admitted.registry.reviews.map(({ reviewer: _reviewer, ...row }) => row)).toEqual(legacyRows);
     for (const row of legacyRows) {
-      expect(admitted.get(`${row.chain}:${row.address}`)?.class).toBe(row.class);
+      const { reviewer: _reviewer, ...retained } = admitted.get(`${row.chain}:${row.address}`)!;
+      expect(retained).toEqual(row);
     }
     expect(policyJson.semantic.backing.lenderCollateralBook).not.toHaveProperty("collateralClasses");
   });
 
   it("retains exact-chain lookup, receipt identity and explicit bounded-unknown classifications", () => {
     const admitted = getLenderCollateralClassesRegistry();
+    expect(admitted.get("base:0xcbd06e5a2b0c65597161de254aa074e489deb510")?.class).toBe("major-alt-l1");
+    expect(admitted.get("base:0xcb17c9db87b595717c857a08468793f5bab6445f")?.class).toBe("major-alt-l1");
     expect(admitted.get("ethereum:0x232128844e5af56fd4b3f8bf97e08ab477282ab5")?.class).toBe("yield-bearing-stable");
     expect(admitted.get("ethereum:0x7f47c3e6b2c00fc4eb4d5ae50d0ab0ab6888eb4d")?.class).toBe("principal-token");
     expect(admitted.get("monad:0xee8c0e9f1bffb4eb878d8f15f368a02a35481242")?.class).toBe("other-unknown");
