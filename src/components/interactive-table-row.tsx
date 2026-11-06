@@ -1,6 +1,7 @@
 "use client";
 
 import { TableRow } from "@/components/table";
+import { isRowActivation } from "@/lib/row-activation";
 
 interface InteractiveTableRowProps {
   id?: string;
@@ -22,14 +23,7 @@ export function InteractiveTableRow({
       id={id}
       className={`cursor-pointer ${className}`}
       onClick={(event) => {
-        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-        // React bubbles clicks from portals (dialogs, sheets) through the row; only DOM descendants activate it.
-        if (!(event.target instanceof Node) || !event.currentTarget.contains(event.target)) return;
-        const control = event.target instanceof Element
-          ? event.target.closest('a,button,input,select,textarea,summary,[role="button"],[role="link"],[contenteditable]:not([contenteditable="false"]),[tabindex]')
-          : null;
-        if (control && event.currentTarget.contains(control)) return;
-        onActivate();
+        if (isRowActivation(event)) onActivate();
       }}
       onMouseEnter={onHover}
       onFocus={onHover}

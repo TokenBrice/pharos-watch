@@ -138,6 +138,16 @@ export function MintBurnFlowMethodologySection() {
                 90-day gate; every paused sibling must prove that hour before shared buckets resume together.
               </p>
               <p>
+                When an established leg is isolated or paused, surviving admitted-leg net and
+                gross totals remain published with partial windows and coverage. Never-admitted additions
+                do not make the incumbent partial. A partial coin has no full-coin direction or pressure;
+                its otherwise eligible admitted-chain weight is withheld from the gauge and disclosed with
+                the existing partial inputs, while the score re-weights over scored coins. FTQ keeps the
+                partial coin as an unbounded cohort input: only a provably inactive verdict survives,
+                otherwise the verdict is unavailable with flow-window-unavailable. Existing Partial
+                treatment applies without additional captions.
+              </p>
+              <p>
                 USDT Tron joins through that admission gate in the critical lane. Only Issue/Redeem count;
                 their paired zero-address Transfers would duplicate the same flow. Scans stop at a fresh
                 solidified head. Historical conservation remains unsupported because Tron cannot supply the

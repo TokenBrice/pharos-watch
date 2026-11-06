@@ -85,6 +85,7 @@
 | 0295     | `0295_safety_history_change_clock_indexes.sql`              | Add partial grade-change clock indexes for the tape-class liveness canary so each Safety change clock is one seek; no row mutation. |
 | 0296     | `0296_mint_burn_roundtrip_sweep_index.sql`                  | Add the group-ordered covering index the post-run roundtrip sweep streams instead of a temporary B-tree over every retained standard event; no row mutation. |
 | 0297     | `0297_daily_digest_read_numbering_index.sql`                | Cover the public digest archive, promo and edition-count passes so they number history from generated_at/rowid/digest_meta instead of every wide digest body; the body is joined by rowid for the returned page only; no row mutation. |
+| 0298     | `0298_producer_history_retention_index.sql`                | Add a partial non-calendar completion-clock index for per-window producer-history retention; reuse existing calendar/kind indexes and preserve all rows and older Worker reads/writes. |
 
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
@@ -398,6 +399,8 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - The deploy workflow reruns `npm run check:migrations`, applies remote D1 migrations, deploys once with `wrangler deploy --strict`, and verifies that the SHA-tagged deployment owns 100% of production traffic.
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
 - Worker rollback is an explicit operator action. It restores Worker code traffic but does not undo D1 schema or data changes.
+
+Migration `0298` adds only a non-unique partial completion-clock index for non-calendar producer history. Apply before the Worker; old reads/writes and all existing indexes remain compatible. Retain the verified pre-window Time Travel bookmark, ledger and Worker versions. Worker rollback leaves the index installed. Measure D1 rows read for all three window statements and observe the first daily prune/backlog drain separately from migration success.
 
 Migration `0288` adds empty mint/burn admission and publication-policy tables. Apply before the Worker; old readers/writers ignore them. Retain the pre-window Time Travel bookmark, ledger and Worker versions. Worker rollback preserves the tables but restores old publication semantics; an active disable policy requires the new reader as rollback floor. First-run scope and policy verification remain separate from schema application.
 

@@ -89,6 +89,7 @@ export async function runPruneDetailCache(db: D1Database, signal?: AbortSignal):
   }
 
   const hygiene = await deleteCappedGroup(db, CACHE_RETENTION_POLICIES.map((policy) => ({
+    key: policy.name,
     sql: `DELETE FROM cache WHERE rowid IN (
       SELECT rowid FROM cache WHERE key ${policy.match === "prefix" ? "GLOB" : "="} ?
       ${policy.windowSec == null ? "" : "AND updated_at < ?"}

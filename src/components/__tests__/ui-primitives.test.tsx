@@ -124,8 +124,6 @@ describe("PreferredSourcePrompt", () => {
 
     const link = screen.getByRole("link", { name: /add pharos watch in google/i });
     expect(link.getAttribute("href")).toBe(PREFERRED_SOURCE_URL);
-    // Opens in a new tab because the deeplink cannot return the reader to
-    // their scroll position the way Google's scripted flow does.
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel") ?? "").toContain("noopener");
   });
@@ -161,9 +159,7 @@ describe("EmptyStateSurface", () => {
         steps={steps}
       />,
     );
-    expect(screen.getByText("Step one")).toBeTruthy();
-    expect(screen.getByText("Do the first thing.")).toBeTruthy();
-    expect(screen.getByText("Step two")).toBeTruthy();
+    for (const text of ["Step one", "Do the first thing.", "Step two"]) expect(screen.getByText(text)).toBeTruthy();
   });
 
   it("does not render steps list when no steps provided", () => {
@@ -278,6 +274,17 @@ describe("InteractiveTableRow", () => {
     for (const options of [{ button: 1 }, { button: 2 }, { ctrlKey: true }, { metaKey: true }, { shiftKey: true }, { altKey: true }]) fireEvent.click(row, options);
     for (const target of row.querySelectorAll("td > *, svg, path")) expect(fireEvent.click(target)).toBe(target.textContent !== "Prevented");
     for (const key of ["Enter", " ", "ArrowDown"]) expect(fireEvent.keyDown(row, { key })).toBe(true);
+    expect(fireEvent.contextMenu(row)).toBe(true);
+    const selection = window.getSelection()!, range = document.createRange();
+    range.selectNodeContents(row);
+    selection.addRange(range);
+    fireEvent.click(row);
+    expect(activate).not.toHaveBeenCalled();
+    selection.collapseToStart();
+    fireEvent.click(row);
+    expect(activate).toHaveBeenCalledTimes(1);
+    selection.removeAllRanges();
+    activate.mockClear();
     for (const target of [screen.getByText("Dialog"), screen.getByRole("button", { name: "Close" })]) fireEvent.click(target);
     fireEvent.focus(screen.getByRole("link", { name: "Open" }));
     expect(hover).toHaveBeenCalledTimes(1);

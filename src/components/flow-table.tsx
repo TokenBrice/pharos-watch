@@ -298,15 +298,12 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                       )}
                   </span>
                 </TableCell>
-                <TableCell className="text-right">
-                  <FlowSignedNetValue
-                    net={resolveCoinNetFlow(coin, "24h")}
-                    format={formatSignedCurrency}
-                    colorClassName={getNetColor}
-                    className="pharos-numeric text-sm font-semibold"
-                    unknownMarker="sr-only"
-                  />
-                </TableCell>
+                <FlowNetCell
+                  net={resolveCoinNetFlow(coin, "24h", true)}
+                  hasWindow={coin.coverage?.has24hWindow}
+                  cellClassName="text-right pharos-numeric text-sm font-semibold"
+                  windowLabel="24h"
+                />
                 <TableCell className="hidden text-right pharos-numeric sm:table-cell">
                   <FlowVolumeValue
                     valueUsd={coin.mintVolume24hUsd}
@@ -325,22 +322,20 @@ export function FlowTable({ coins, isLoading }: FlowTableProps) {
                     format={formatCurrency}
                   />
                 </TableCell>
-                <TableCell className="hidden text-right pharos-numeric md:table-cell">
-                  <FlowSignedNetValue
-                    net={resolveCoinNetFlow(coin, "7d")}
-                    format={formatSignedCurrency}
-                    colorClassName={getNetColor}
-                    unknownMarker="sr-only"
-                  />
-                </TableCell>
                 <FlowNetCell
-                  net={resolveCoinNetFlow(coin, "30d")}
+                  net={resolveCoinNetFlow(coin, "7d", true)}
+                  hasWindow={coin.coverage?.has7dWindow}
+                  cellClassName="hidden text-right pharos-numeric md:table-cell"
+                  windowLabel="7-day"
+                />
+                <FlowNetCell
+                  net={resolveCoinNetFlow(coin, "30d", true)}
                   hasWindow={coin.coverage?.has30dWindow}
                   cellClassName="hidden text-right pharos-numeric lg:table-cell"
                   windowLabel="30-day"
                 />
                 <FlowNetCell
-                  net={resolveCoinNetFlow(coin, "90d")}
+                  net={resolveCoinNetFlow(coin, "90d", true)}
                   hasWindow={coin.coverage?.has90dWindow}
                   cellClassName="hidden text-right pharos-numeric xl:table-cell"
                   windowLabel="90-day"

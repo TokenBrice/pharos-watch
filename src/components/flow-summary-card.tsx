@@ -179,10 +179,10 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
   // Cell labels are the bare windows ("24H", "7D", …) — the quadrant header
   // already says "Net" (Figma coin template).
   const netCells: { label: string; net: MintBurnSignedNetView; hasWindow?: boolean }[] = [
-    { label: "24h", net: resolveCoinNetFlow(coin, "24h") },
-    { label: "7d", net: resolveCoinNetFlow(coin, "7d") },
-    { label: "30d", net: resolveCoinNetFlow(coin, "30d"), hasWindow: coin.coverage?.has30dWindow },
-    { label: "90d", net: resolveCoinNetFlow(coin, "90d"), hasWindow: coin.coverage?.has90dWindow },
+    { label: "24h", net: resolveCoinNetFlow(coin, "24h", true), hasWindow: coin.coverage?.has24hWindow },
+    { label: "7d", net: resolveCoinNetFlow(coin, "7d", true), hasWindow: coin.coverage?.has7dWindow },
+    { label: "30d", net: resolveCoinNetFlow(coin, "30d", true), hasWindow: coin.coverage?.has30dWindow },
+    { label: "90d", net: resolveCoinNetFlow(coin, "90d", true), hasWindow: coin.coverage?.has90dWindow },
   ];
 
   return (
@@ -265,7 +265,7 @@ export function FlowSummaryCard({ stablecoinId }: FlowSummaryCardProps) {
                   )}
                   title={
                     isPartial
-                      ? `${cell.label === "30d" ? "30-day" : "90-day"} window is incomplete; value reflects the covered portion only.`
+                      ? `${cell.label === "24h" ? "24h" : cell.label.replace("d", "-day")} window is incomplete; value reflects the covered portion only.`
                       : undefined
                   }
                 >

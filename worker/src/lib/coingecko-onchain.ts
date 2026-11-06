@@ -64,6 +64,8 @@ export interface CgTokenPoolsResult {
 export interface CgPoolsByAddressResult {
   transportOk: boolean;
   schemaDegraded: boolean;
+  /** Invalid request identities were excluded before any provider read. */
+  rejectedAddresses?: string[];
   /** A rejected multi-address request is not evidence of per-pool absence. */
   batchRejected?: true;
   pools: CgPool[];
@@ -75,7 +77,17 @@ export interface CgPoolsByAddressResult {
  * key's tier.
  */
 export const CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES = 30;
+export const CG_ONCHAIN_MULTI_POOL_MAX_PATH_LENGTH = 1_800;
 export const CG_ONCHAIN_MIN_RESERVE_USD = 1_000;
+
+function cgPoolsMultiPath(network: string, addresses: readonly string[]): string {
+  return `/onchain/networks/${network}/pools/multi/${addresses.map(encodeURIComponent).join(",")}?include=base_token,quote_token`;
+}
+
+export function fitsCgPoolBatch(network: string, addresses: readonly string[]): boolean {
+  return addresses.length <= CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES &&
+    cgPoolsMultiPath(network, addresses).length <= CG_ONCHAIN_MULTI_POOL_MAX_PATH_LENGTH;
+}
 
 const CG_ONCHAIN_LOOKUP_MISS_STATUSES = new Set([400, 404]);
 const CG_ONCHAIN_DEFAULT_TIMEOUT_MS = 15_000;
@@ -245,13 +257,17 @@ export async function fetchCgPoolsByAddressesWithStatus(
   options?: CgFetchOptions,
 ): Promise<CgPoolsByAddressResult> {
   if (addresses.length === 0) return { transportOk: true, schemaDegraded: false, pools: [] };
-  if (addresses.length > CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES) {
-    throw new RangeError(`pools/multi accepts at most ${CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES} addresses, got ${addresses.length}`);
+  const validAddresses: string[] = [], rejectedAddresses: string[] = [];
+  for (const address of addresses) {
+    (/^[A-Za-z0-9._:-]+$/.test(address) && address !== "." && address !== ".." && fitsCgPoolBatch(network, [address])
+      ? validAddresses : rejectedAddresses).push(address);
   }
-  const url = cgUrl(
-    `/onchain/networks/${network}/pools/multi/${addresses.map(encodeURIComponent).join(",")}?include=base_token,quote_token`,
-    apiKey,
-  );
+  const rejected = rejectedAddresses.length ? { rejectedAddresses } : {};
+  if (!validAddresses.length) return { transportOk: true, schemaDegraded: false, pools: [], ...rejected };
+  if (!fitsCgPoolBatch(network, validAddresses)) {
+    throw new RangeError("pools/multi batch exceeds its address or encoded-path limit");
+  }
+  const url = cgUrl(cgPoolsMultiPath(network, validAddresses), apiKey);
   const res = await fetchWithRetry(url, {
     headers: cgHeaders({ "User-Agent": USER_AGENT, Accept: "application/json" }, apiKey),
     signal,
@@ -263,24 +279,24 @@ export async function fetchCgPoolsByAddressesWithStatus(
     if (res && CG_ONCHAIN_LOOKUP_MISS_STATUSES.has(res.status)) {
       await cancelResponseBodyQuietly(res);
       return res.status === 400
-        ? { transportOk: false, schemaDegraded: false, batchRejected: true, pools: [] }
-        : { transportOk: true, schemaDegraded: false, pools: [] };
+        ? { transportOk: false, schemaDegraded: false, batchRejected: true, pools: [], ...rejected }
+        : { transportOk: true, schemaDegraded: false, pools: [], ...rejected };
     }
-    return { transportOk: false, schemaDegraded: false, pools: [] };
+    return { transportOk: false, schemaDegraded: false, pools: [], ...rejected };
   }
   const json = await readCgOnchainJsonBody<{ data?: unknown }>(
     res,
     options?.timeoutMs ?? CG_ONCHAIN_DEFAULT_TIMEOUT_MS,
     signal,
   );
-  if (!Array.isArray(json.data)) return { transportOk: true, schemaDegraded: true, pools: [] };
+  if (!Array.isArray(json.data)) return { transportOk: true, schemaDegraded: true, pools: [], ...rejected };
   let schemaDegraded = false;
   const pools = json.data.filter((pool): pool is CgPool => {
     const valid = isCgPool(pool);
     if (!valid) schemaDegraded = true;
     return valid;
   });
-  return { transportOk: true, schemaDegraded, pools };
+  return { transportOk: true, schemaDegraded, pools, ...rejected };
 }
 
 /**

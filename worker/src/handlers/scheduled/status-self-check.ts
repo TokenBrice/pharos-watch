@@ -11,7 +11,7 @@ import { runDataInvariantCanary } from "../../cron/data-invariant-canary";
 import { runStatusSelfCheck } from "../../cron/status-self-check";
 import { runCronSentinel } from "../../cron/cron-sentinel";
 import { buildTelegramOperatorCreds } from "../../lib/runtime-credentials";
-import { resolveCloudflareD1StatusConfig } from "../../lib/env";
+import { resolveCloudflareD1StatusConfig, resolveDdrRepairTaskRunnerConfig } from "../../lib/env";
 import { normalizeWorkerCanaryMode } from "../../lib/canary-checks";
 import { getRuntimeProducerIdentity, runRuntimeBudgetOnlyTask, type ScheduledRuntimeContext } from "./context";
 import { bindScheduledSlotPlan, runScheduledSlotGroups } from "./slot-groups";
@@ -43,6 +43,9 @@ export function buildStatusSelfCheckSlotGroups(runtime: ScheduledRuntimeContext)
           signal,
         }),
       "cron-sentinel": (signal) => runCronSentinel(runtime.db, {
+        repairRunnerEnabled: resolveDdrRepairTaskRunnerConfig(runtime.env).enabled,
+        mintBurnDisabledIds: runtime.mintBurnDisabledIds,
+        mintBurnDisabledSymbols: runtime.mintBurnDisabledSymbols,
         mode: "status",
         nowSec: Math.floor(Date.now() / 1_000),
         operatorTelegramCreds: buildTelegramOperatorCreds(runtime.env),

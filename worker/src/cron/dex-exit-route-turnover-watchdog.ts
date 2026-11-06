@@ -336,6 +336,7 @@ export async function runDexExitRouteTurnoverWatchdog(
   let alertState = parseAlertState(alertStateCache?.value);
   let alertSent = false;
   let alertDeliveryFailed = false;
+  let alertDeliveryErrorClass: string | null = null;
   // Legacy snapshots may retain an already acknowledged episode payload.
   let pendingAlert = alertState.active ? undefined : comparable?.pendingAlert;
   const finish = async (
@@ -366,6 +367,7 @@ export async function runDexExitRouteTurnoverWatchdog(
         options.operatorTelegramCreds, buildTurnoverAlertMessage(pendingAlert), signal,
       );
       alertDeliveryFailed = !delivery.ok;
+      alertDeliveryErrorClass = delivery.ok ? null : delivery.errorClass ?? "unknown";
       if (delivery.ok) {
         alertState = { active: true, generationId: pendingAlert.generationId, sentAtSec: nowSec };
         await setCache(db, DEX_EXIT_ROUTE_TURNOVER_ALERT_STATE_CACHE_KEY, JSON.stringify(alertState), signal);
@@ -384,6 +386,8 @@ export async function runDexExitRouteTurnoverWatchdog(
       episodeActive: pendingAlert != null || alertState.active,
       sent: alertSent,
       deliveryFailed: alertDeliveryFailed,
+      // Provider class (auth, chat_not_found, formatting...) names why Telegram refused it.
+      ...(alertDeliveryFailed ? { deliveryErrorClass: alertDeliveryErrorClass } : {}),
     };
     metadata.pendingAlertCleared = comparable?.pendingAlert != null && pendingAlert == null;
     if (alertDeliveryFailed) metadata.reason = "operator-alert-delivery-failed";

@@ -16,11 +16,20 @@ export type CronSentinelMode = "status" | "daily" | "turnover" | "reserve-post-s
 
 export interface CronSentinelSourceResult {
   source: CronSentinelRuleSource;
-  result: CronResult;
+  result: StoredSourceResult;
   observedAt?: number;
   state: "current" | "expired" | "missing" | "disabled";
   maxAgeSec: number;
 }
+
+type StoredSourceResult = CronResult & {
+  attempt?: {
+    count: number;
+    attemptedAt: number;
+    mode: CronSentinelMode;
+    status: CronResult["status"] | "incomplete";
+  };
+};
 
 const SOURCES_BY_MODE: Record<CronSentinelMode, readonly CronSentinelRuleSource[]> = {
   status: ["freshness", "digest-publication"],
@@ -43,6 +52,7 @@ const SOURCE_INTERVAL_SEC: Record<CronSentinelRuleSource, number> = {
   turnover: TURNOVER_INTERVAL_SEC,
   "reserve-post-sync": CRON_SCHEDULE_CADENCES.fourHourlyReserveSync.intervalSec,
 };
+const SOURCE_ERROR_BACKOFF_SEC = CRON_SCHEDULE_CADENCES.statusSelfCheckOffset.intervalSec;
 const SOURCE_STATE_MAX_AGE_SEC = 48 * 60 * 60;
 const SOURCE_STATE_INTERVAL_MULTIPLIER = 2;
 
@@ -66,6 +76,26 @@ function parseMetadata(metadata: string | undefined): unknown {
   } catch {
     return metadata;
   }
+}
+
+function parseSourceResult(value: string): StoredSourceResult {
+  try {
+    const result = JSON.parse(value) as StoredSourceResult;
+    if (!result || !["ok", "degraded", "error"].includes(result.status ?? "") ||
+      typeof result.itemCount !== "number" || !Number.isFinite(result.itemCount)) throw new Error("Invalid source state");
+    if (result.attempt && (!Number.isSafeInteger(result.attempt.count) || result.attempt.count < 1
+      || !Number.isFinite(result.attempt.attemptedAt) || !Object.prototype.hasOwnProperty.call(SOURCES_BY_MODE, result.attempt.mode))) {
+      throw new Error("Invalid source attempt");
+    }
+    return result;
+  } catch {
+    return { status: "error", itemCount: 0, error: "Invalid persisted sentinel source state" };
+  }
+}
+
+function lastAttemptAt(result: StoredSourceResult, observedAt: number): number {
+  return result.attempt && Number.isFinite(result.attempt.attemptedAt)
+    ? Math.max(observedAt, result.attempt.attemptedAt) : observedAt;
 }
 
 function worstStatus(results: readonly CronResult[]): CronResult["status"] {
@@ -150,6 +180,15 @@ function buildCronSentinelResult(
         maxAgeSec,
         status: state === "current" ? result.status ?? "ok" : state,
         ...(state !== "current" ? { reason: `source-state-${state}`, lastStatus: result.status ?? null } : {}),
+        ...(result.attempt ? { attempt: result.attempt } : {}),
+        ...(result.status === "error" ? {
+          // Only daily sources have a cross-mode retry; the rest re-run at their native cadence.
+          ...(SOURCES_BY_MODE.daily.includes(source) ? {
+            retryBackoffSec: SOURCE_ERROR_BACKOFF_SEC,
+            nextRetryAt: observedAt == null ? null : lastAttemptAt(result, observedAt) + SOURCE_ERROR_BACKOFF_SEC,
+          } : {}),
+          ...(state === "current" ? { reason: "source-evaluation-error" } : {}),
+        } : {}),
         itemCount: result.itemCount ?? 0,
         metadata: parseMetadata(result.metadata),
         ...(result.error ? { error: result.error } : {}),
@@ -165,28 +204,9 @@ export async function runCronSentinelSources(
   sources: readonly { source: CronSentinelRuleSource; run: () => Promise<CronResult> }[],
   nowSec: number,
   signal?: AbortSignal,
+  retryDailySource?: (source: CronSentinelRuleSource) => Promise<CronResult>,
 ): Promise<CronResult> {
-  for (const { source, run } of sources) {
-    throwIfAborted(signal);
-    let result: CronResult;
-    try {
-      result = await run();
-    } catch (error) {
-      rethrowIfAborted(error, signal);
-      result = { status: "error", error: stripSensitive(toErrorMessage(error)) };
-    }
-    if (result.status === "skipped_neutral" || result.status === "skipped_locked" || result.aborted) continue;
-    const metadata = sanitizeBoundedMetadata(parseMetadata(result.metadata), {
-      maxStringChars: 500, maxStackChars: 500, maxKeys: 40, maxArrayItems: 40,
-      maxDepth: SOURCE_METADATA_MAX_DEPTH[source] ?? 4,
-    });
-    await setCacheIfNewer(db, `cron-sentinel:source:${source}`, JSON.stringify({
-      status: result.status ?? "ok",
-      itemCount: result.itemCount ?? 0,
-      metadata: JSON.stringify(metadata),
-      ...(result.error ? { error: stripSensitive(result.error).slice(0, 500) } : {}),
-    }), nowSec, signal);
-  }
+  throwIfAborted(signal);
   const allSources = [...new Set(Object.values(SOURCES_BY_MODE).flat())];
   const keys = allSources.map((source) => `cron-sentinel:source:${source}`);
   let saved = await getCaches(db, keys);
@@ -219,6 +239,62 @@ export async function runCronSentinelSources(
     seeded = true;
   }
   if (seeded) saved = await getCaches(db, keys);
+  const evaluations = [...sources];
+  // One extra, oldest failed daily source per invocation; producer-adjacent
+  // sources retain their native execution points. All modes share the job lease.
+  if (retryDailySource) {
+    const due = SOURCES_BY_MODE.daily.filter((source) => {
+      const row = saved.get(`cron-sentinel:source:${source}`);
+      if (!row || sources.some((entry) => entry.source === source)) return false;
+      const result = parseSourceResult(row.value);
+      return result.status === "error" && nowSec >= lastAttemptAt(result, row.updatedAt) + SOURCE_ERROR_BACKOFF_SEC;
+    }).sort((a, b) => {
+      const aRow = saved.get(`cron-sentinel:source:${a}`)!;
+      const bRow = saved.get(`cron-sentinel:source:${b}`)!;
+      return lastAttemptAt(parseSourceResult(aRow.value), aRow.updatedAt) - lastAttemptAt(parseSourceResult(bRow.value), bRow.updatedAt);
+    });
+    if (due[0]) evaluations.push({ source: due[0], run: () => retryDailySource(due[0]) });
+  }
+  for (const { source, run } of evaluations) {
+    throwIfAborted(signal);
+    const key = `cron-sentinel:source:${source}`;
+    const row = saved.get(key);
+    const previous = row ? parseSourceResult(row.value) : null;
+    const attempt: NonNullable<StoredSourceResult["attempt"]> = {
+      count: previous?.status === "error" ? (previous.attempt?.count ?? 1) + 1 : 1,
+      attemptedAt: nowSec, mode, status: "incomplete",
+    };
+    // Persist admission before retry work: cancellation or a neutral/locked
+    // result cannot hot-loop, and never renews the failed observation's clock.
+    if (previous?.status === "error" && row) {
+      await setCacheIfNewer(db, key, JSON.stringify({ ...previous, attempt }), row.updatedAt, signal);
+    }
+    let result: CronResult;
+    try {
+      result = await run();
+    } catch (error) {
+      rethrowIfAborted(error, signal);
+      result = { status: "error", error: stripSensitive(toErrorMessage(error)) };
+    }
+    attempt.status = result.aborted ? "incomplete" : result.status ?? "ok";
+    if (result.status === "skipped_neutral" || result.status === "skipped_locked" || result.aborted) {
+      if (previous?.status === "error" && row) {
+        await setCacheIfNewer(db, key, JSON.stringify({ ...previous, attempt }), row.updatedAt, signal);
+      }
+      continue;
+    }
+    const metadata = sanitizeBoundedMetadata(parseMetadata(result.metadata), {
+      maxStringChars: 500, maxStackChars: 500, maxKeys: 40, maxArrayItems: 40,
+      maxDepth: SOURCE_METADATA_MAX_DEPTH[source] ?? 4,
+    });
+    await setCacheIfNewer(db, key, JSON.stringify({
+      status: result.status ?? "ok", attempt,
+      itemCount: result.itemCount ?? 0,
+      metadata: JSON.stringify(metadata),
+      ...(result.error ? { error: stripSensitive(result.error).slice(0, 500) } : {}),
+    }), nowSec, signal);
+  }
+  saved = await getCaches(db, keys);
   throwIfAborted(signal);
   const results: CronSentinelSourceResult[] = [];
   for (const source of allSources) {
@@ -228,14 +304,7 @@ export async function runCronSentinelSources(
       results.push({ source, result: { status: "skipped_neutral" }, state: "missing", maxAgeSec });
       continue;
     }
-    let result: CronResult;
-    try {
-      result = JSON.parse(row.value) as CronResult;
-      if (!result || !["ok", "degraded", "error"].includes(result.status ?? "") ||
-        typeof result.itemCount !== "number" || !Number.isFinite(result.itemCount)) throw new Error("Invalid source state");
-    } catch {
-      result = { status: "error", itemCount: 0, error: "Invalid persisted sentinel source state" };
-    }
+    const result = parseSourceResult(row.value);
     const metadata = parseMetadata(result.metadata);
     const disabled = source === "repair-debt" && metadata != null && typeof metadata === "object"
       && "enabled" in metadata && metadata.enabled === false;

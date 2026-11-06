@@ -364,9 +364,8 @@ describe("half-hourly charts scheduling", () => {
     );
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
-      mode: "turnover",
-      signal: expect.any(AbortSignal),
-      operatorTelegramCreds: null,
+      mode: "turnover", repairRunnerEnabled: true, mintBurnDisabledIds: [], mintBurnDisabledSymbols: [],
+      signal: expect.any(AbortSignal), operatorTelegramCreds: null,
     });
   });
 
@@ -398,9 +397,8 @@ describe("half-hourly charts scheduling", () => {
       },
     );
     expect(mocks.runCronSentinel).toHaveBeenCalledWith(scheduledRuntime.db, {
-      mode: "turnover",
-      signal: expect.any(AbortSignal),
-      operatorTelegramCreds: null,
+      mode: "turnover", repairRunnerEnabled: true, mintBurnDisabledIds: [], mintBurnDisabledSymbols: [],
+      signal: expect.any(AbortSignal), operatorTelegramCreds: null,
     });
   });
 

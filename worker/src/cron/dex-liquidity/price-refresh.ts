@@ -7,7 +7,7 @@ import { canonicalExitRouteChain, canonicalExitRouteScopedId } from "@shared/typ
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CG_CHAIN_MAP } from "../../lib/chain-registry";
 import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
-import { CG_ONCHAIN_MIN_RESERVE_USD, CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES, fetchCgPoolsByAddressesWithStatus, onchainRateLimit, type CgPoolsByAddressResult } from "../../lib/coingecko-onchain";
+import { CG_ONCHAIN_MIN_RESERVE_USD, fetchCgPoolsByAddressesWithStatus, fitsCgPoolBatch, onchainRateLimit, type CgPoolsByAddressResult } from "../../lib/coingecko-onchain";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import type { SlotDeadline } from "../../lib/cron-timeouts";
 import type { PriceValidationReferences } from "../../lib/price-validation";
@@ -66,6 +66,7 @@ function oldestBatchFirst(a: Batch, b: Batch): number {
 
 // Provider pool IDs include bytes32, suffixed EVM and case-sensitive native identifiers.
 function canonicalPoolId(chain: string, id: string): string {
+  if (chain === "sui") return canonicalExitRouteScopedId(chain, id);
   return CHAIN_META[chain]?.type === "evm" && /^0x(?:[\da-f]{40}|[\da-f]{64})(?:[._:-]|$)/i.test(id)
     ? id.toLowerCase() : id;
 }
@@ -147,7 +148,7 @@ function planPriceRefresh(input: RefreshGraph) {
       const address = canonicalPoolId(chain, id);
       const key = `${chain}:${address}`;
       const reason = !network ? "unmapped-network"
-        : (!/^[A-Za-z0-9._:-]{1,200}$/.test(address) || /\s/.test(pool.poolId) || /^(?:orderbook(?:[:.-]|$)|\.{1,2}$)/i.test(address))
+        : (address.length > 200 || /^orderbook(?:[:.-]|$)/i.test(address))
           ? "unaddressable-pool" : null;
       if (reason || !network) {
         unsupported.push({ ...contributor, reason: reason! });
@@ -169,7 +170,14 @@ function planPriceRefresh(input: RefreshGraph) {
   const batches: Batch[] = [];
   for (const [network, pools] of networks) {
     pools.sort(oldestFirst);
-    for (let i = 0; i < pools.length; i += CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES) batches.push({ network, candidates: pools.slice(i, i + CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES) });
+    let batch: Batch | undefined;
+    for (const candidate of pools) {
+      if (!batch || !fitsCgPoolBatch(network, [...batch.candidates.map((row) => row.address), candidate.address])) {
+        batch = { network, candidates: [] };
+        batches.push(batch);
+      }
+      batch.candidates.push(candidate);
+    }
   }
   batches.sort(oldestBatchFirst);
   return { candidates: [...candidates.values()], batches, unsupported, observedThisRun };
@@ -180,7 +188,7 @@ export function measurePriceRefreshDemand(input: RefreshGraph, plan = planPriceR
   const counts = new Map<string, number>();
   for (const candidate of plan.candidates) counts.set(candidate.network, (counts.get(candidate.network) ?? 0) + 1);
   const networks = [...counts].sort(([a], [b]) => a.localeCompare(b)).map(([network, pools]) => ({
-    network, pools, requests: Math.ceil(pools / CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES),
+    network, pools, requests: plan.batches.filter((batch) => batch.network === network).length,
   }));
   return {
     networks,
@@ -304,6 +312,11 @@ export async function refreshPoolPrices(input: RefreshGraph & {
     } finally {
       timeout.dispose();
     }
+    if (result.rejectedAddresses?.length === batch.candidates.length) {
+      summary.requests--;
+      for (const candidate of batch.candidates) for (const contributor of candidate.contributors) unchanged(contributor, "unaddressable-pool");
+      continue;
+    }
     if (input.signal?.aborted) {
       transportReason = "aborted";
       blockedReason = "aborted";
@@ -351,7 +364,8 @@ export async function refreshPoolPrices(input: RefreshGraph & {
         tokenIds.every((id) => id && (CHAIN_META[candidate.chain]?.type === "evm" ? canonicalEvmAddress(id)
           : candidate.chain === "sui" ? suiCoinType(id) : true));
       for (const contributor of candidate.contributors) {
-        let reason = !result.transportOk ? transportReason
+        let reason = result.rejectedAddresses?.includes(candidate.address) ? "unaddressable-pool"
+          : !result.transportOk ? transportReason
           : rows.length > 1 ? "ambiguous-pool-identity"
             : !row ? result.schemaDegraded ? "malformed-payload" : "not-returned"
             : !parsed ? "malformed-pool" : !identityOk ? "identity-mismatch" : null;

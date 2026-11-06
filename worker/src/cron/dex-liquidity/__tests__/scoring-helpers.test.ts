@@ -209,6 +209,7 @@ describe("source-stage exact-pool price refresh", () => {
   it.each([
     ["ethereum", "eth", `0x${"Ab".repeat(20)}`, true],
     ["ethereum", "eth", `0x${"Ab".repeat(32)}`, true],
+    ["sui", "sui-network", "0xAbC", false],
     ["near", "near", "refv1-4512", false],
     ["near", "near", "refv2-AbC:Token.NEAR:2000", false],
     ["cardano", "cardano", "f5808c2c990d86da54bfc97d89cee6efa20cd8461616359478d96b4c4c414a51eac26e5f913a91265c2882e013e1d74dab9a5fe2f875f7df7c9bb4c1", false],
@@ -216,17 +217,29 @@ describe("source-stage exact-pool price refresh", () => {
     ["ethereum", "eth", "Opaque_Pool.1", false],
     ["ethereum", "eth", "X".repeat(200), false],
   ] as const)("refreshes indexed %s id %s/%s with safe encoding", async (chain, network, id, lowercase) => {
-    const expected = lowercase ? id.toLowerCase() : id;
+    const expected = chain === "sui" ? `0x${id.slice(2).toLowerCase().padStart(64, "0")}` : lowercase ? id.toLowerCase() : id;
     const p = pool(0, { chain, poolId: `${chain}:${id}` }), response = row(0);
-    response.id = `${network}_${expected}`;
+    response.id = `${network}_${chain === "sui" ? "0xaBc" : expected}`;
     response.attributes.address = address(900); // Indexed IDs can differ from the contract address.
     response.relationships.base_token.data.id = `${network}_${token("usdc-circle", chain)}`;
-    response.relationships.quote_token.data.id = `${network}_${address(100)}`;
+    response.relationships.quote_token.data.id = `${network}_${chain === "sui" ? "0x2::sui::SUI" : address(100)}`;
     const fetch = vi.fn(async (_url: string) => reply([response]));
     vi.stubGlobal("fetch", fetch);
     expect(await run(graph([p]))).toMatchObject({ requests: 1, refreshed: 1, unchangedByReason: {} });
     expect(new URL(fetch.mock.calls[0]![0]).pathname.split("/multi/")[1]).toBe(encodeURIComponent(expected));
     expect(p).toMatchObject({ price: 1.002, priceObservedAt: now });
+  });
+
+  it("splits long encoded ids before HTTP 414", async () => {
+    const pools = Array.from({ length: 8 }, (_, i) => pool(i, { poolId: `ethereum:${i}${":".repeat(199)}` }));
+    const fetch = vi.fn(async (url: string) => {
+      if (new URL(url).pathname.length > cg.CG_ONCHAIN_MULTI_POOL_MAX_PATH_LENGTH) return new Response("too long", { status: 414 });
+      return reply(decodeURIComponent(url.split("/multi/")[1]!.split("?")[0]!).split(",").map((id) => ({ ...row(0), id: `eth_${id}` })));
+    });
+    vi.stubGlobal("fetch", fetch);
+    expect(measurePriceRefreshDemand(context(graph(pools)))).toMatchObject({ pools: 8, requests: 4 });
+    expect(await run(graph(pools))).toMatchObject({ requests: 4, refreshed: 8, stopReason: "completed", unchangedByReason: {} });
+    expect(fetch).toHaveBeenCalledTimes(4);
   });
 
   it.each(["bad,id", "bad/id", "", ".", "..", "a".repeat(201), "bad?id", "bad#id", " bad-id", "bad id", "orderbook:exchange:coin", "orderbook-exchange"])("never sends unsafe pool id %s", async (id) => {
@@ -280,16 +293,11 @@ describe("protocol price evidence admission", () => {
 });
 
 describe("isPlausibleDexObservationPrice guards peg", () => {
-  it("rejects extreme off-peg prices for usdc-circle", () => {
-    // Below the reference lower bound (1% of peg = $0.01)
-    expect(isPlausibleDexObservationPrice("usdc-circle", 0.005)).toBe(false);
-    expect(isPlausibleDexObservationPrice("usdc-circle", 0)).toBe(false);
-    expect(isPlausibleDexObservationPrice("usdc-circle", -1)).toBe(false);
+  it.each([0.005, 0, -1])("rejects extreme off-peg prices for usdc-circle (%s)", (price) => {
+    expect(isPlausibleDexObservationPrice("usdc-circle", price)).toBe(false);
   });
-
-  it("accepts near-peg prices for usdc-circle", () => {
-    expect(isPlausibleDexObservationPrice("usdc-circle", 1.0001)).toBe(true);
-    expect(isPlausibleDexObservationPrice("usdc-circle", 0.995)).toBe(true);
+  it.each([1.0001, 0.995])("accepts near-peg prices for usdc-circle (%s)", (price) => {
+    expect(isPlausibleDexObservationPrice("usdc-circle", price)).toBe(true);
   });
 });
 

@@ -4,6 +4,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import {
   CACHE_RETENTION_POLICIES, RETENTION_NON_APPEND_TABLES, retentionPolicyRegistry,
+  producerHistoryRetentionPolicy, retentionDeleteStatement,
 } from "@shared/lib/retention-policy";
 import {
   RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT,
@@ -17,10 +18,24 @@ const registry = retentionPolicyRegistry({
   batchLimit: RETENTION_DELETE_BATCH_LIMIT, runLimit: RETENTION_DELETE_RUN_LIMIT,
   smallBatchLimit: RETENTION_SMALL_DELETE_BATCH_LIMIT, smallRunLimit: RETENTION_SMALL_DELETE_RUN_LIMIT,
 }, { safetyScoreJournalSec: 120 * 86_400 });
+const registered = (table: string) => registry.find((policy) => policy.table === table);
 const tables = readFileSync(path.join(root, "worker/migrations/EXPECTED_SCHEMA.txt"), "utf8")
   .split("\n").filter((line) => line.startsWith("table\t")).map((line) => line.split("\t")[1]);
 
 describe("retention policy registry", () => {
+  it("builds separate producer windows and preserves single-window SQL", () => {
+    const policy = producerHistoryRetentionPolicy({ batchLimit: 10_000, runLimit: 100_000 });
+    for (const window of policy.windows!) {
+      const statement = retentionDeleteStatement(policy, 1_793_926_980, window);
+      expect(statement.sql).not.toContain(" OR ");
+      expect(statement.bindsForLimit(10_000)).toEqual([1_793_926_980 - window.windowSec, 10_000]);
+    }
+    const single = retentionDeleteStatement({ ...policy, windows: undefined, table: "cron_runs",
+      timestampColumn: "started_at", windowSec: 10 }, 100);
+    expect(single.sql).toBe("DELETE FROM cron_runs WHERE rowid IN (SELECT rowid FROM cron_runs WHERE (1 = 1 AND started_at < ?) ORDER BY started_at ASC LIMIT ?)");
+    expect(single.bindsForLimit(2)).toEqual([90, 2]);
+  });
+
   it("registers every append-only timestamped schema table exactly once, with explicit non-append exclusions", () => {
     const entries = registry.map((policy) => policy.table);
     expect(new Set(entries).size).toBe(entries.length);
@@ -41,10 +56,9 @@ describe("retention policy registry", () => {
       expect(columns, policy.table).toContain(policy.timestampColumn);
       if (!policy.permanent && "execution" in policy) {
         expect(existsSync(path.join(root, policy.owner)), policy.table).toBe(true);
-        expect(policy.windowSec.authority).toBe(policy.owner);
-        expect(policy.predicate.authority).toBe(policy.owner);
-        expect(policy.batchLimit.authority).toBe(policy.owner);
-        expect(policy.runLimit.authority).toBe(policy.owner);
+        for (const part of [policy.windowSec, policy.predicate, policy.batchLimit, policy.runLimit]) {
+          expect(part.authority).toBe(policy.owner);
+        }
       } else if (!policy.permanent) {
         expect(policy.batchLimit, policy.table).toBeGreaterThan(0);
         expect(policy.runLimit, policy.table).toBeGreaterThanOrEqual(policy.batchLimit);
@@ -54,43 +68,37 @@ describe("retention policy registry", () => {
 
   it("keeps permanent product histories but preserves existing yield and DEX age pruners", () => {
     for (const table of ["supply_history", "tape_events", "depeg_events", "mint_burn_scan_coverage"]) {
-      expect(registry.find((policy) => policy.table === table)).toMatchObject({ permanent: true, windowSec: null });
+      expect(registered(table)).toMatchObject({ permanent: true, windowSec: null });
     }
     for (const table of ["yield_source_decisions", "dex_liquidity_history", "yield_history"]) {
-      expect(registry.find((policy) => policy.table === table)).toMatchObject({ permanent: false, execution: "owner" });
+      expect(registered(table)).toMatchObject({ permanent: false, execution: "owner" });
     }
   });
 
   it("keeps unresolved materialization debt outside age-based retention", () => {
     // Debt protects raw siblings until the atomic rebuild consumes its key.
-    expect(registry.some((policy) => policy.table === "mint_burn_dirty_hours")).toBe(false);
+    expect(!!registered("mint_burn_dirty_hours")).toBe(false);
     expect(RETENTION_NON_APPEND_TABLES.mint_burn_dirty_hours).toContain("atomic rebuild");
   });
 
   it("assigns challenger lifecycle retention to its publisher without age-pruning current heads or child rows independently", () => {
-    expect(registry.find((policy) => policy.table === "dex_price_challenger_publications_v2")).toMatchObject({
+    expect(registered("dex_price_challenger_publications_v2")).toMatchObject({
       execution: "owner", permanent: false, timestampColumn: "published_at",
       owner: "worker/src/cron/dex-liquidity/challenger-publish.ts",
     });
     for (const table of ["dex_price_challenger_heads_v2", "dex_price_challenger_payloads_v2"]) {
-      expect(registry.some((policy) => policy.table === table)).toBe(false);
+      expect(!!registered(table)).toBe(false);
       expect(RETENTION_NON_APPEND_TABLES[table]).toBeTruthy();
     }
   });
 
   it("keeps both sampled stores on the small daily budget and legacy/key stores draining at 35 days", () => {
-    for (const table of ["api_request_source_samples", "site_data_request_samples"]) {
-      expect(registry.find((policy) => policy.table === table)).toMatchObject({
-        owner: "prune-cron-history", windowSec: 35 * 86_400, timestampColumn: "bucket_start",
-        batchLimit: RETENTION_SMALL_DELETE_BATCH_LIMIT, runLimit: RETENTION_SMALL_DELETE_RUN_LIMIT,
-      });
-    }
-    for (const table of ["api_request_consumer_stats", "site_data_request_stats", "api_key_request_stats"]) {
-      expect(registry.find((policy) => policy.table === table)).toMatchObject({
-        owner: "prune-cron-history", windowSec: 35 * 86_400,
-        batchLimit: RETENTION_DELETE_BATCH_LIMIT, runLimit: RETENTION_DELETE_RUN_LIMIT,
-      });
-    }
+    for (const [tables, batchLimit, runLimit] of [
+      [["api_request_source_samples", "site_data_request_samples"], RETENTION_SMALL_DELETE_BATCH_LIMIT, RETENTION_SMALL_DELETE_RUN_LIMIT],
+      [["api_request_consumer_stats", "site_data_request_stats", "api_key_request_stats"], RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT],
+    ] as const) for (const table of tables) expect(registered(table)).toMatchObject({
+      owner: "prune-cron-history", windowSec: 35 * 86_400, timestampColumn: "bucket_start", batchLimit, runLimit,
+    });
   });
 
   it("has no remaining runtime reader or writer of a retired cache version", () => {

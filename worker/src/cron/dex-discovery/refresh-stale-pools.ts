@@ -9,6 +9,7 @@ import { recordOutcome, shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   CG_ONCHAIN_MULTI_POOL_MAX_ADDRESSES,
   fetchCgPoolsByAddressesWithStatus,
+  fitsCgPoolBatch,
   type CgPool,
   type CgPoolsByAddressResult,
 } from "../../lib/coingecko-onchain";
@@ -407,7 +408,8 @@ export function planStalePoolRefreshBatches(
   const openByNetwork = new Map<string, StalePoolRefreshBatch>();
   for (const candidate of candidates) {
     let batch = openByNetwork.get(candidate.network);
-    if (!batch || batch.candidates.length >= addressesPerRequest) {
+    if (!batch || batch.candidates.length >= addressesPerRequest ||
+      !fitsCgPoolBatch(candidate.network, [...batch.candidates.map((row) => row.address), candidate.address])) {
       batch = { network: candidate.network, candidates: [] };
       batches.push(batch);
       openByNetwork.set(candidate.network, batch);
@@ -538,6 +540,11 @@ export async function refreshStaleRegistryPools({
           result = { transportOk: false, schemaDegraded: false, pools: [] };
           succeeded = classifyCoinGeckoThrownError(err).retryable !== true;
         }
+        if (result.rejectedAddresses?.length === batch.candidates.length) {
+          summary.requests--;
+          for (const candidate of batch.candidates) attemptOutcomes.set(candidate.poolId, "invalidRow");
+          continue;
+        }
         const circuit = await dependencies.recordOutcome(db, CIRCUIT_SOURCE.CG_ONCHAIN, succeeded);
         consecutiveFailures = succeeded ? 0 : consecutiveFailures + 1;
 
@@ -557,6 +564,7 @@ export async function refreshStaleRegistryPools({
             summary.rowsWritten += await upsertStagedPools(db, classified.staged, signal);
           }
           for (const [poolId, outcome] of classified.outcomes) attemptOutcomes.set(poolId, outcome);
+          for (const candidate of batch.candidates) if (result.rejectedAddresses?.includes(candidate.address)) attemptOutcomes.set(candidate.poolId, "invalidRow");
         } else {
           for (const candidate of batch.candidates) attemptOutcomes.set(candidate.poolId, "transport");
         }

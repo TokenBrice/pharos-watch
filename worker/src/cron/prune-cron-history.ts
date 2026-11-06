@@ -8,7 +8,7 @@ import {
   RETENTION_SMALL_DELETE_BATCH_LIMIT, RETENTION_SMALL_DELETE_RUN_LIMIT,
 } from "../lib/bounded-prune";
 import { SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC } from "../lib/safety-score-v9/publication-journal";
-import { runRetentionPolicies } from "./shared/capped-delete";
+import { RetentionGroupError, runRetentionPolicies } from "./shared/capped-delete";
 
 export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
@@ -22,11 +22,21 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   );
   const { cronRuns: cronPolicy, producerHistory: producerPolicy, ...remainingPolicies } = policies;
   // Isolate the trigger-maintained history cost without changing its row budgets.
-  const results = {
-    ...await runRetentionPolicies(db, { cronRuns: cronPolicy }, now, signal),
-    ...await runRetentionPolicies(db, { producerHistory: producerPolicy }, now, signal),
-    ...await runRetentionPolicies(db, remainingPolicies, now, signal),
-  };
+  let results;
+  try {
+    results = {
+      ...await runRetentionPolicies(db, { cronRuns: cronPolicy }, now, signal),
+      ...await runRetentionPolicies(db, { producerHistory: producerPolicy }, now, signal),
+      ...await runRetentionPolicies(db, remainingPolicies, now, signal),
+    };
+  } catch (error) {
+    // Aborts and unattributed failures propagate verbatim, as before the group envelope.
+    if (signal?.aborted || !(error instanceof RetentionGroupError)) throw error;
+    return createCronResult({
+      status: "error", error: error.message,
+      metadata: { reason: "retention-group-failed", failedRetentionGroup: error.failedRetentionGroup },
+    });
+  }
   const {
     cronRuns, producerHistory, repairTasks, canaryRuns, recoveryCheckpoints,
     selectorSnapshotDailyQuota, blockTimestampCache, slotExecutions,

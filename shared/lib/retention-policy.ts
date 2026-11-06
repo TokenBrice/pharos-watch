@@ -109,22 +109,23 @@ export function cronHistoryRetentionPolicies(
   };
 }
 
-/** Only registry-owned identifiers/fragments may reach this builder; values stay bound. */
-export function retentionDeleteStatement(policy: WindowedRetentionPolicy, nowSec: number): {
+/** Registry-owned SQL only; callers drain windows under one shared budget. Values stay bound. */
+export function retentionDeleteStatement(
+  policy: WindowedRetentionPolicy,
+  nowSec: number,
+  window: Pick<WindowedRetentionPolicy, "windowSec" | "predicate"> = policy.windows?.[0] ?? policy,
+): {
   sql: string;
   bindsForLimit: (limit: number) => unknown[];
   batchLimit: number;
   runLimit: number;
 } {
-  const windows = policy.windows ?? [{ windowSec: policy.windowSec, predicate: policy.predicate }];
-  const cutoffs = windows.map(({ windowSec }) => {
-    const cutoff = nowSec - windowSec;
-    return policy.clockFormat === "utc-date" ? new Date(cutoff * 1000).toISOString().slice(0, 10) : cutoff;
-  });
-  const where = windows.map(({ predicate }) => `(${predicate} AND ${policy.timestampColumn} < ?)`).join(" OR ");
+  const cutoff = nowSec - window.windowSec;
+  const boundCutoff = policy.clockFormat === "utc-date" ? new Date(cutoff * 1000).toISOString().slice(0, 10) : cutoff;
+  const where = `(${window.predicate} AND ${policy.timestampColumn} < ?)`;
   return {
     sql: `DELETE FROM ${policy.table} WHERE rowid IN (SELECT rowid FROM ${policy.table} WHERE ${where} ORDER BY ${policy.orderBy ?? `${policy.timestampColumn} ASC`} LIMIT ?)`,
-    bindsForLimit: (limit) => [...cutoffs, limit],
+    bindsForLimit: (limit) => [boundCutoff, limit],
     batchLimit: policy.batchLimit,
     runLimit: policy.runLimit,
   };
