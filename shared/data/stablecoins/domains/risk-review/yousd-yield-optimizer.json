@@ -163,5 +163,115 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Ethereum yoUSD share conversions consume updater-pushed YoOracle prices; the complete cross-chain pricing inventory remains unresolved.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c2-4",
+      "rationale": "The Ethereum share-price consumer and source correspondence are pinned, but Base and Arbitrum NAV consumers and the issuer-listed swap-pricing paths have not been joined to their current source, authority and failure behavior. No complete all-chain pricing or liquidation-branch census is claimed.",
+      "sources": [
+        {
+          "label": "YO contract registry (undated; read 2026-11-06): yoUSD EVM vaults, YO Oracle and YoChainlinkOracle",
+          "url": "https://docs.yo.xyz/protocol/contract-addresses"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c2-4",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "YO contract registry (undated; read 2026-11-06): yoUSD EVM vaults, YO Oracle and YoChainlinkOracle",
+        "url": "https://docs.yo.xyz/protocol/contract-addresses"
+      },
+      {
+        "label": "Ethereum verified YoOracle source (verified 2026-02-05); bytecode matched at block 26350000",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6E879d0CcC85085A709eBf5539224f53d0D396B0"
+      },
+      {
+        "label": "Ethereum verified YoVault source (verified 2026-09-21); bytecode matched at block 26350000",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
+      },
+      {
+        "label": "Ethereum Dwellir eth_getStorageAt, eth_getCode and eth_call: block 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; read 2026-11-06",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Cantina core-v2 review, engagement 2026-06-14 through 2026-06-25: updater computes off-chain NAV",
+        "url": "https://cantina.xyz/portfolio/b46b0446-99c2-4484-8a19-1ab363b3ca1c"
+      }
+    ],
+    "paths": [
+      {
+        "id": "yousd-ethereum-nav",
+        "chain": "ethereum",
+        "address": "0x6e879d0ccc85085a709ebf5539224f53d0d396b0",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — c2-4",
+          "confidence": "verified",
+          "rationale": "At Ethereum block 26350000 (hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701; 2026-11-05T17:02:47Z), yoUSD 0x0000000f2eb9f69274678c76222b35eec7588a65 resolves through its EIP-1967 slot to YoVault 0xc84a6e01bff58996540f1abc22355a9dfe0d78dc. Both that implementation and YoOracle bytecodes equal the cited verified-source bytecodes. YoVault hardcodes ORACLE_ADDRESS 0x6E879d0CcC85085A709eBf5539224f53d0D396B0; _convertToShares and _convertToAssets read getLatestPrice(_oracleAsset()), reject zero and discard its timestamp. YoOracle accepts updateSharePrice only from updater, returns the stored price without a freshness check, and lets owner rotate updater and per-vault guards. Pinned owner is 0x38ce5e45d0f5d03e83863bb19b3b1a272c186f48 and updater is 0x1571bd48c0bc598c440966568058e02f2373162f. yoUSD oracleData has windowSeconds 86400 and maxChangeBps 1000000 against BPS_DENOMINATOR 1000000000; these are not an independent feed or on-chain holdings reconciliation. Cantina identifies off-chain NAV computation as the updater trust boundary. This reviews the Ethereum top-level share-pricing path only.",
+          "sources": [
+            {
+              "label": "YO contract registry (undated; read 2026-11-06): yoUSD EVM vaults, YO Oracle and YoChainlinkOracle",
+              "url": "https://docs.yo.xyz/protocol/contract-addresses"
+            },
+            {
+              "label": "Ethereum verified YoOracle source (verified 2026-02-05); bytecode matched at block 26350000",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6E879d0CcC85085A709eBf5539224f53d0D396B0"
+            },
+            {
+              "label": "Ethereum verified YoVault source (verified 2026-09-21); bytecode matched at block 26350000",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc84a6e01bff58996540f1abc22355a9dfe0d78dc"
+            },
+            {
+              "label": "Ethereum Dwellir eth_getStorageAt, eth_getCode and eth_call: block 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; read 2026-11-06",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            },
+            {
+              "label": "Cantina core-v2 review, engagement 2026-06-14 through 2026-06-25: updater computes off-chain NAV",
+              "url": "https://cantina.xyz/portfolio/b46b0446-99c2-4484-8a19-1ab363b3ca1c"
+            }
+          ]
+        }
+      },
+      {
+        "id": "yousd-base-nav-unresolved",
+        "chain": "base",
+        "address": "0x6e879d0ccc85085a709ebf5539224f53d0d396b0",
+        "pricingAuthority": "unknown"
+      },
+      {
+        "id": "yousd-arbitrum-nav-unresolved",
+        "chain": "arbitrum",
+        "address": "0x6e879d0ccc85085a709ebf5539224f53d0d396b0",
+        "pricingAuthority": "unknown"
+      },
+      {
+        "id": "yousd-ethereum-swap-pricing-unresolved",
+        "chain": "ethereum",
+        "address": "0x2800fc940a9b3bcb2cde3c70797b21296becbf07",
+        "pricingAuthority": "unknown"
+      },
+      {
+        "id": "yousd-base-swap-pricing-unresolved",
+        "chain": "base",
+        "address": "0x2800fc940a9b3bcb2cde3c70797b21296becbf07",
+        "pricingAuthority": "unknown"
+      },
+      {
+        "id": "yousd-arbitrum-swap-pricing-unresolved",
+        "chain": "arbitrum",
+        "address": "0x2800fc940a9b3bcb2cde3c70797b21296becbf07",
+        "pricingAuthority": "unknown"
+      }
+    ]
   }
 }
