@@ -25964,7 +25964,12 @@
         "source:79790e17d8becd886f78a1a2",
         "source:6c35ecbebc8d3ea9e365da00",
         "source:2e16b8ea8b257a5b44452607"
-      ]
+      ],
+      "retired": {
+        "reviewedAt": "2026-11-06",
+        "reviewer": "Safety unknowns campaign 2026-11-06 — k-ttr",
+        "reason": "The covered Plume route has a currently paused Portal, so this issuer-surface no-known-incident review no longer supports every named lane. Pinned eth_call paused() (0x5c975abb) on Plume Portal 0x36f586a30502ae3afb555b8aa4dcc05d233c2ece at block 104100000, hash 0xf011eb7f2f2db0013c74ab4362087aa6eac4809c129d9452080398ad16cc01d0 (2026-11-06T16:44:41Z), returned true via https://rpc.plume.org, observed 2026-11-06T18:26:32.375Z. Independent storage read at the same pin confirms the Pausable bool slot equals 1. Retire this aggregate witness without inventing pause onset, a control compromise, holder loss, or freshly reviewed coverage for the other routes. At the same pin, supportedBridgingPath(wM,1,wM)=true and bridge()=0x51dce104e5ba88fabc19a2c519f955bb834b0dc3, binding the paused Portal to this exact authored lane."
+      }
     },
     {
       "reviewId": "ir-iss-m-frnt-wyoming-ethereum-native-minter-20261030",
