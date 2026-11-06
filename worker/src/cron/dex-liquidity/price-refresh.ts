@@ -20,7 +20,7 @@ import { suiCoinType, suiObjectId } from "./sui/identity";
 import { publicKeyBytes } from "./solana/program-address";
 import type { DexPriceObs, PoolEntry, SourcePoolGraph } from "./types";
 
-export const PRICE_REFRESH_POLICY = {
+const PRICE_REFRESH_POLICY = {
   budgetMs: 90_000,
   persistenceReserveMs: 20_000,
   requestTimeoutMs: 8_000,

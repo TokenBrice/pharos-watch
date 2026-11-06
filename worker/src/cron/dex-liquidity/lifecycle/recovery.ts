@@ -50,7 +50,7 @@ export interface DexLiquidityStageRecoveryOutcome {
 
 const DEX_LIQUIDITY_STAGE_RECOVERY_JOB = "sync-dex-liquidity-stage";
 const DEX_LIQUIDITY_STAGE_RECOVERY_LEASE_TTL_SEC = 14 * 60;
-export const DEX_LIQUIDITY_RECOVERY_CONSUMER_RESERVE_MS = 120_000;
+const DEX_LIQUIDITY_RECOVERY_CONSUMER_RESERVE_MS = 120_000;
 
 /**
  * Wait for the exact source slot through the shared readiness primitive, but
