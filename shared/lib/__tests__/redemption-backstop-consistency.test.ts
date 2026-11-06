@@ -3,7 +3,6 @@ import { buildRedemptionBackstopRegistry, type RedemptionBackstopConfigManifestE
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { resolveReviewedRedemptionSettlementDelay } from "@shared/lib/redemption-backstop-configs/settlement";
 import {
-  resolveDefaultHolderEligibility,
   resolveRedemptionCostBpsAtNotional,
   resolveRedemptionPercentageFeeBps,
 } from "@shared/lib/redemption-backstop-configs/shared";
@@ -54,20 +53,16 @@ describe("redemption backstop config consistency", () => {
   });
 
   it.each([
-    "wars-argentine-peso",
-    "qcad-stablecorp",
-    "vbill-vaneck",
-    "jaaa-janus-henderson-anemoy",
-    "axcnh-anchorx",
-    "mxnb-juno",
-    "sbc-brale",
-    "brla-brla-digital",
-    "xo-exodus",
-  ])("%s publishes its settlement-withheld review conservatively", (id) => {
-    const config = REDEMPTION_BACKSTOP_CONFIGS[id]!;
-    expect(config.v9RouteReviewTerms?.missingScoringFields).toContain("settlement");
-    expect(resolveReviewedRedemptionSettlement(config, CLOCK_SEC)).toBe("days");
-    expect(config.holderEligibility ?? resolveDefaultHolderEligibility(config)).toBe("unknown");
+    ["unknown", "wars-argentine-peso vbill-vaneck jaaa-janus-henderson-anemoy mxnb-juno"],
+    ["whitelisted-primary", "axcnh-anchorx"],
+    ["verified-customer", "qcad-stablecorp sbc-brale brla-brla-digital xo-exodus"],
+  ])("retains %s access and withheld settlement", (eligibility, ids) => {
+    for (const id of ids.split(" ")) {
+      const config = REDEMPTION_BACKSTOP_CONFIGS[id]!;
+      expect(config.v9RouteReviewTerms?.missingScoringFields).toContain("settlement");
+      expect(resolveReviewedRedemptionSettlement(config, CLOCK_SEC)).toBe("days");
+      expect(config.holderEligibility).toBe(eligibility);
+    }
   });
 
   it("keeps withheld settlement reviews off every faster-than-days issuer default", () => {

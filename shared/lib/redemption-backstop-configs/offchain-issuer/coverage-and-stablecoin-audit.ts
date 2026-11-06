@@ -582,7 +582,8 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
   "qcad-stablecorp": {
     ...issuerBase,
     ...documentedBoundSupplyFull(REVIEWED_COVERAGE_EXPANSION_AT),
-    holderEligibility: "unknown",
+    accessModel: "manual",
+    holderEligibility: "verified-customer",
     settlementModel: "days",
     costModel: fixedFee(
       0,
@@ -610,6 +611,16 @@ export const COVERAGE_AND_STABLECOIN_AUDIT_OFFCHAIN_CONFIGS: Record<string, Rede
       ],
     },
     docs: [
+      sourceRef(
+        "QCAD filed Terms (undated), Sections 2.4-2.7 and 4.1-4.5: own-account institutional agreement or retail account, portal KYC application, Servicer approval and CAD account in Canada; manual redemption request (access reviewed 2026-11-06)",
+        "https://www.sedarplus.ca/csa-party/records/document.html?id=194b25dd3a2d2a8d59e108b3cf223b2fc41d68e33507899cbb350a659a9fea0a",
+        ["access"],
+      ),
+      sourceRef(
+        "OSC QCAD decision (2025-11-20), definitions and representations 24-25: institutional and retail Qualified Holders only; direct redemption remains conditional on CTP sale being impractical or impossible (access reviewed 2026-11-06)",
+        "https://www.osc.ca/en/securities-law/orders-rulings-decisions/qcad-digital-trust",
+        ["access"],
+      ),
       sourceRefFull("Stablecorp transparency", "https://stablecorp.ca/transparency"),
       sourceRef("Stablecorp balances API", "https://api.sdc.stablecorp.ca/reports/balances?type=unformatted_json", [
         "capacity",
