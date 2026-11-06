@@ -87,6 +87,7 @@ export interface AggregateData {
   publication: Awaited<ReturnType<typeof readMintBurnWindowContext>>["publication"];
   publicationPolicy: string;
   partialCoinIds: Set<string>;
+  partialChainIds: Set<string>;
   hourlyRows: HourlyRow[];
   hourly24hRows: HourlyRow[];
   net7dMap: Map<string, WindowNetFlow>;
@@ -166,7 +167,7 @@ export async function fetchAggregateData(
   db: D1Database,
   requestedParams: AggregateQueryParams,
 ): Promise<AggregateData> {
-  const { watermark, legacy, configs, publication, policy, partialCoinIds } = await readMintBurnWindowContext(db, requestedParams.nowSec, ACTIVE_MINT_BURN_CONFIGS);
+  const { watermark, legacy, configs, publication, policy, partialCoinIds, partialChainIds } = await readMintBurnWindowContext(db, requestedParams.nowSec, ACTIVE_MINT_BURN_CONFIGS);
   const params = buildAggregateQueryParams(
     watermark.timestamp ?? requestedParams.windowEnd,
     (requestedParams.windowEnd - requestedParams.windowStart) / 3600,
@@ -316,7 +317,7 @@ export async function fetchAggregateData(
   }
 
   return {
-    configs, publication, publicationPolicy: policy, partialCoinIds,
+    configs, publication, publicationPolicy: policy, partialCoinIds, partialChainIds,
     hourlyRows,
     hourly24hRows,
     net7dMap: buildGroupedNetFlowMap((batchResults[1].results ?? []) as GroupedNetFlowRow[], trackedPairs),

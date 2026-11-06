@@ -258,7 +258,7 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
       flowDataAgeDays: 0.1, flowValuation24h: snapshot.valuation24h, flowBurnBaselineValuation: snapshot.burnBaselineValuation,
     }))).toMatchObject({ available: false, unavailableReason: "mint-burn-valuation-partial" });
   });
-  it.each(["ethereum", "tron"])("keeps partial-qualified totals after established %s isolation", async (chain) => {
+  it.each(["ethereum", "tron"])("keeps partial totals after %s isolation", async (chain) => {
     const { db, sqlite } = await provenFixture();
     const id = "usdt-tether", risk = "usdai-usd-ai";
     const incomplete = { complete: false, unavailableReason: "scan-coverage-incomplete" };
@@ -267,8 +267,8 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
       event(risk, "arbitrum", "burn", NOW - HOUR, 200_000_000)]);
     const classification = { safeIds: new Set([id]), riskyIds: new Set([risk]),
       safetyScoreIdentity: makeWorkerReportCardsV9Response().safetyScoreIdentity };
-    const read = async () => buildCoinSummaries(await fetchAggregateData(db, buildAggregateQueryParams(NOW, 24)),
-      new Map([[id, 100], [risk, 10]]), classification);
+    const data = () => fetchAggregateData(db, buildAggregateQueryParams(NOW, 24));
+    const read = async () => buildCoinSummaries(await data(), new Map([[id, 100], [risk, 10]]), classification);
     const before = await read();
     expect(before.flightToQuality?.active).toBe(true);
     const leg = MINT_BURN_CONFIGS.find((c) => c.stablecoinId === id && c.chain.chainId === chain)!;
@@ -276,12 +276,12 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
       .run(Math.floor(NOW / HOUR) * HOUR - 9 * HOUR, mintBurnConfigKey(leg));
     const result = await read();
     const coin = result.coins.find((c) => c.stablecoinId === id)!;
-    const net = chain === "tron" ? 200_000_000 : 400_000_000;
+    const net = chain === "tron" ? 2e8 : 4e8;
     expect(coin).toMatchObject({ netFlow24hUsd: net, netFlow7dUsd: net, netFlow30dUsd: net, netFlow90dUsd: net,
       mintVolume24hUsd: net, netFlowDirection24h: null, pressureShiftScore: null,
       coverage: { isPartial: true, status: "partial-history", unavailableReason: "scan-coverage-incomplete" } });
-    for (const window of Object.values(coin.coverage.windows!))
-      expect(window).toEqual(incomplete);
+    expect(Object.values(coin.coverage.windows!)).toEqual(Array(4).fill(incomplete));
+    expect((await data()).partialChainIds).toEqual(new Set([chain]));
     expect(result).toMatchObject({ partialValuationInputs: 1, partialValuationMcapUsd: 100, scoredMcapUsd: 10,
       flightToQuality: null, flightToQualityReason: "flow-window-unavailable" });
     const complete = result.coins.find((c) => c.stablecoinId === risk)!;
@@ -289,8 +289,7 @@ VALUES ('usdt-tether', 'ethereum', ${baselineHour}, 1, 0, 0, 0, 5000000, 0, 5000
     expect(computeGaugeScore(result.gaugeInputs)).toBe(complete.pressureShiftScore);
     for (const window of ["24h", "7d", "30d", "90d"] as const) expect(resolveCoinNetFlow(coin, window, true).valueUsd).toBe(net);
     expect(aggregateCoinFlows24h([coin, complete]).net.valueUsd).toBeNull();
-    const response = await handleMintBurnFlows(db, new URL("https://api.test/api/mint-burn-flows?stablecoin=usdt-tether"));
-    const detail = MintBurnPerCoinResponseSchema.parse(await response.json());
+    const detail = MintBurnPerCoinResponseSchema.parse(await (await handleMintBurnFlows(db, new URL(`https://api.test/api/mint-burn-flows?stablecoin=${id}`))).json());
     expect(detail).toMatchObject({ netFlowUsd: net, scanCoverage: incomplete });
     expect(detail.hourly[0]?.scanCoverage).toEqual(incomplete);
   });

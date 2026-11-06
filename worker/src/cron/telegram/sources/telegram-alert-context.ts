@@ -149,12 +149,14 @@ async function loadFlowRows(
       try {
         const cached = await getCache(db, perCoinFlowCacheKey(id, 24));
         if (!cached) return null;
-        const parsed = safeJsonParse<{ netFlowUsd?: unknown; updatedAt?: unknown } | null>(
+        const parsed = safeJsonParse<{ netFlowUsd?: unknown; updatedAt?: unknown; scanCoverage?: { complete?: unknown } } | null>(
           cached.value,
           null,
           "telegram-context-flow",
         );
-        if (!parsed || typeof parsed.netFlowUsd !== "number" || !Number.isFinite(parsed.netFlowUsd)) {
+        // A partial-coverage subtotal is not the coin's 24h flow.
+        if (!parsed || typeof parsed.netFlowUsd !== "number" || !Number.isFinite(parsed.netFlowUsd)
+          || parsed.scanCoverage?.complete === false) {
           return null;
         }
         const updatedAt = typeof parsed.updatedAt === "number" ? parsed.updatedAt : cached.updatedAt;

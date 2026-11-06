@@ -163,6 +163,11 @@ export async function readMintBurnWindowContext(
       leg.admittedAt = null;
     }
   }
+  // Never-admitted additions and deliberate disables do not make the incumbent coin partial.
+  const partialLegs = configs.filter((config) => !scope.configs.includes(config)
+    && scope.configs.some((admitted) => admitted.stablecoinId === config.stablecoinId)
+    && mintBurnPreviouslyAdmitted(config, admissions)
+    && !mintBurnPublicationDisabled(config, configs, admissions, disabledKeys));
   await persistMintBurnAdmissions(db, scope.newAdmissions);
   await persistMintBurnQuarantines(db, [...quarantineKeys], policy);
   await persistMintBurnResumptions(db, scope.resumedKeys, policy);
@@ -171,10 +176,9 @@ export async function readMintBurnWindowContext(
     segments,
     legacy,
     configs: scope.configs,
-    // Never-admitted additions do not make the incumbent coin partial.
-    partialCoinIds: new Set(configs.filter((config) => !scope.configs.includes(config)
-      && scope.configs.some((admitted) => admitted.stablecoinId === config.stablecoinId)
-      && mintBurnPreviouslyAdmitted(config, admissions)).map((config) => config.stablecoinId)),
+    partialCoinIds: new Set(partialLegs.map((config) => config.stablecoinId)),
+    /** Chains whose aggregate nets lost an established leg. */
+    partialChainIds: new Set(partialLegs.map((config) => config.chain.chainId)),
     // Automatic pauses withhold flows, never unresolved operator conservation evidence.
     diagnosticConfigs: configs.filter((config) => scope.configs.includes(config)
       || (mintBurnPreviouslyAdmitted(config, admissions)

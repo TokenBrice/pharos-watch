@@ -138,7 +138,7 @@ export function MintBurnFlowMethodologySection() {
                 90-day gate; every paused sibling must prove that hour before shared buckets resume together.
               </p>
               <p>
-                When an established leg is isolated, paused or disabled, surviving admitted-leg net and
+                When an established leg is isolated or paused, surviving admitted-leg net and
                 gross totals remain published with partial windows and coverage. Never-admitted additions
                 do not make the incumbent partial. A partial coin has no full-coin direction or pressure;
                 its otherwise eligible admitted-chain weight is withheld from the gauge and disclosed with

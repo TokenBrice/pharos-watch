@@ -65,12 +65,12 @@ const _compareFlowRows = createTableComparator<FlowTableSortKey, MintBurnCoinFlo
   // The net columns render a signed value, so ranking them by magnitude put a
   // large burn above a smaller mint in descending order. Unavailable nets (null
   // or partial valuation) sort last instead of ranking as zero.
-  net24h: (r) => resolveCoinNetFlow(r, "24h").valueUsd,
+  net24h: (r) => resolveCoinNetFlow(r, "24h", true).valueUsd,
   mint24h: (r) => r.mintVolume24hUsd,
   burn24h: (r) => r.burnVolume24hUsd,
-  net7d: (r) => resolveCoinNetFlow(r, "7d").valueUsd,
-  net30d: (r) => resolveCoinNetFlow(r, "30d").valueUsd,
-  net90d: (r) => resolveCoinNetFlow(r, "90d").valueUsd,
+  net7d: (r) => resolveCoinNetFlow(r, "7d", true).valueUsd,
+  net30d: (r) => resolveCoinNetFlow(r, "30d", true).valueUsd,
+  net90d: (r) => resolveCoinNetFlow(r, "90d", true).valueUsd,
   largest: (r) => r.largestEvent24h?.amountUsd ?? null,
   pressure: (r) => getPressureScore(r),
 });

@@ -164,8 +164,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const chains = [...aggregateHourlyRowsByChain(data.hourly24hRows).entries()]
     .map(([chainId, aggregate]) => {
       const valuation = summarizeMintBurnValuation(aggregate.valuation).completeness;
-      const scanCoverage = data.configs.some((config) => config.chain.chainId === chainId && data.partialCoinIds.has(config.stablecoinId))
-        ? mintBurnScanWindow(false) : mintBurnWindowCoverage(
+      const scanCoverage = data.partialChainIds.has(chainId) ? mintBurnScanWindow(false) : mintBurnWindowCoverage(
         data.configs.filter((config) => config.chain.chainId === chainId),
         data.scanSegments, data.legacy, data.windowEnd - 24 * 3600, data.windowEnd, data.watermark,
       );
