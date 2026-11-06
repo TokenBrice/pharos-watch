@@ -252,5 +252,72 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "bC3M is a Backed Assets (JE) Limited tracker certificate. The 8 May 2026 base prospectus assigns valuation to the Issuer using Reference Sources, including exchange prices or underlying-issuer NAV. The issuer-deployed bC3M Price Feed at 0x83Ec02059F686E747392A22ddfED7833bA0d7cE3 uses BackedOracle 0xb239bd2216D1c8476f601e0d9b5FfAD556C59Cc4; the current implementation slot and exact runtime were verified at Ethereum block 26357851 (2026-11-06T19:18:11Z). Its values are pushed through UPDATER_ROLE, not independently aggregated. The 12 July 2023 factory deployment names bC3M and grants the initial updater 0x17603dDb4A4F8D7a7E1FC45fa0059aDc906c8600; this is historical, not a current signer census. latestRoundData() still returns round 920 with updatedAt 1776937321 (2026-04-23T09:42:01Z), so this feed does not establish a current executable redemption price. This review classifies issuer valuation and privileged publication, without asserting that redemption consumes that feed or that downstream borrower integrations are covered.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c2-3",
+      "rationale": "The issuer terms value a tracker-certificate claim from the underlying ETF reference value. This is top-level certificate valuation, not a borrower-collateral liquidation engine. The named onchain publication artefact is separately identity-bound; neither a downstream lending-branch inventory nor use of that stale feed for current redemption is asserted.",
+      "sources": [
+        {
+          "label": "Backed bC3M tracker-certificate identity, page last updated 2025-05-30",
+          "url": "https://assets.backed.fi/products/bc3m"
+        },
+        {
+          "label": "Backed Assets base prospectus dated 2026-05-08, sections 4.6.6 and VII.i: Issuer valuation from Reference Sources",
+          "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf"
+        },
+        {
+          "label": "BackedOracleFactory bC3M deployment, 2023-07-12T09:18:59Z: description and privileged updater",
+          "url": "https://eth.blockscout.com/api/v2/transactions/0x09ea8d407d7bfa53edf3bd63fc9373210bc72f9274a5d28812b081981845f67d"
+        },
+        {
+          "label": "Verified BackedOracle implementation, verified 2024-06-12: UPDATER_ROLE and rate limits",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb239bd2216D1c8476f601e0d9b5FfAD556C59Cc4"
+        },
+        {
+          "label": "Verified BackedOracleFactory source, verified 2026-04-03: owner-deployed feed and updater role grant",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xC01A836eFd6d2F0D247191112c41adF0f9088A15"
+        },
+        {
+          "label": "Ethereum block 26357851, hash 0x3a4d219828f8982315e9398ba9da5e292ff15a4e2ec1440c9906c58601d6a08c, 2026-11-06T19:18:11Z; approved pinned eth_call, eth_getStorageAt and eth_getCode reads via https://ethereum-rpc.publicnode.com",
+          "url": "https://etherscan.io/block/26357851"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c2-3",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Backed bC3M tracker-certificate identity, page last updated 2025-05-30",
+        "url": "https://assets.backed.fi/products/bc3m"
+      },
+      {
+        "label": "Backed Assets base prospectus dated 2026-05-08, sections 4.6.6 and VII.i: Issuer valuation from Reference Sources",
+        "url": "https://cdn.prod.website-files.com/655f3efc4be468487052e35a/6a748b81c9b1aca19a11c102_Backed_Assets_Base%20Prospectus_20260727.pdf"
+      },
+      {
+        "label": "BackedOracleFactory bC3M deployment, 2023-07-12T09:18:59Z: description and privileged updater",
+        "url": "https://eth.blockscout.com/api/v2/transactions/0x09ea8d407d7bfa53edf3bd63fc9373210bc72f9274a5d28812b081981845f67d"
+      },
+      {
+        "label": "Verified BackedOracle implementation, verified 2024-06-12: UPDATER_ROLE and rate limits",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb239bd2216D1c8476f601e0d9b5FfAD556C59Cc4"
+      },
+      {
+        "label": "Verified BackedOracleFactory source, verified 2026-04-03: owner-deployed feed and updater role grant",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xC01A836eFd6d2F0D247191112c41adF0f9088A15"
+      },
+      {
+        "label": "Ethereum block 26357851, hash 0x3a4d219828f8982315e9398ba9da5e292ff15a4e2ec1440c9906c58601d6a08c, 2026-11-06T19:18:11Z; approved pinned eth_call, eth_getStorageAt and eth_getCode reads via https://ethereum-rpc.publicnode.com",
+        "url": "https://etherscan.io/block/26357851"
+      }
+    ]
   }
 }
