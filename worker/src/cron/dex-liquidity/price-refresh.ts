@@ -235,7 +235,9 @@ export async function refreshPoolPrices(input: RefreshGraph & {
       const coin = summary.byCoin[contributor.stablecoinId] ??= {};
       coin[reason] = (coin[reason] ?? 0) + 1;
     } else omittedCoins.add(contributor.stablecoinId);
-    if (summary.failures.length < 64) summary.failures.push({
+    // Samples only: counts live in unchangedByReason/byCoin, and 64 samples (~10 KB)
+    // crowded the run's diagnostics out of the 16 KiB sync-dex-liquidity metadata budget.
+    if (summary.failures.length < 8) summary.failures.push({
       stablecoinId: contributor.stablecoinId, poolId: contributor.pool.poolId,
       observedAt: contributor.evidence.observedAt ?? null, reason,
     });
