@@ -1009,7 +1009,8 @@ describe("chain dropout guard", () => {
     ["satusd-river", "ethereum", "Ethereum", "peggedUSD", 8_377_639.753921411, 932_368.8165761745, "2026-11-03T10:09:23Z"],
     ["dusd-standx", "solana", "Solana", "peggedUSD", 3_013_043.925487889, 786_947.5441566098, "2026-11-03T10:16:00Z"],
     ["eurs-stasis", "polygon", "Polygon", "peggedEUR", 2_125_295.460187289, 472_657.74823731947, "2026-10-16T06:18:46Z"],
-    ["sbc-brale", "polygon", "Polygon", "peggedUSD", 3_476_881, 365_027, "2026-10-29T10:50:19Z"],
+    ["sbc-brale", "polygon", "Polygon", "peggedUSD", 1_846_461.79, 362_696.62, "2026-11-06T18:42:00Z"],
+    ["europ-schuman", "solana", "Solana", "peggedEUR", 5_470_671.34, 2_397_116.59, "2026-11-06T18:42:00Z"],
     ["tryb-bilira", "plasma", "Plasma", "peggedTRY", 1_419_521, 267_810, "2026-11-04T00:05:26Z"],
     ["usdq-quantoz", "ethereum", "Ethereum", "peggedUSD", 7_000_000, 2_000_000, "2026-11-04T09:03:51Z"],
     ["usdglo-glo", "base", "Base", "peggedUSD", 1_018_000, 91_319.484821, "2026-11-04T09:03:51Z"],
@@ -1017,8 +1018,6 @@ describe("chain dropout guard", () => {
     const reviewedAt = Date.parse(reviewDate) / 1000;
     const key = JSON.stringify([assetId, chainId]);
     const makeState = (quarantinedSince = reviewedAt - DAY): ChainDropoutState => (savedState(assetId, { chainId, chainLabel, baselineUsd: baseline, baselineObservedAt: quarantinedSince - 900, quarantinedSince, ambiguousSince: quarantinedSince, heldTotalUsd: 20_000_000 }));
-    // The healthy companion chain must differ from the reviewed chain, or the
-    // omitted-chain scenario would still carry the reviewed chain's row.
     const companionLabel = chainLabel === "Ethereum" ? "Avalanche" : "Ethereum";
     const makeAsset = (includeChain = true): PeggedAsset => ({
       id: assetId, name: assetId, symbol: assetId, pegType: pegKey, supplySource: "defillama",
