@@ -43,5 +43,48 @@
     "evidence": "Ethereum is the sole tracked deployment (100% census supply), receipt 0xc26a6fa2c37b38e549a4a1807543801db684f99c. At ethereum@26224759 (2026-10-19T06:13:59+00:00), minter() remains CDO proxy 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d, whose current implementation is 0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8. Verified IdleCDOTranche burn(address,uint256) requires this minter, and current CDO _withdrawOps supplies msg.sender; an allowance-free arbitrary-holder seizure path is not established by that primitive. Ordinary receipt transfer/transferFrom have no blacklist. Nevertheless current CDO requestWithdraw requires isWalletAllowed(msg.sender): keyring()=0x6a6a91c7c7c05f9f6b8bc9f6e5ea231e460450e3, policyId=18, isWalletAllowed(0xdead)=false while isWalletAllowed(CDO owner 0xfb3bd022d5dacf95ee28a6b07825d4ff9c5b3814)=true. Owner/manager can setKeyringParams. This is active address-sensitive redemption control (Yes under the holder-exit gate interpretation), separate from ordinary transfer permissionlessness. allowAAWithdrawRequest() was false at the pin, so the observation does not claim any holder could request a withdrawal at that instant. CDO ProxyAdmin 0x9438904abc7d8944a6e2a89671fef51c629af351 is owned by 0xda86e15d0cda3a05db930b248d7a2f775e575a44, an additional mutable privileged-burn path (Possible independently). Declared USDC parent remains additional upstream risk, not the direct verdict basis.",
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "FalconX AA share value is privileged internal credit-vault accounting.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c2-1",
+      "rationale": "The sole tracked receipt is Ethereum 0xc26a6fa2c37b38e549a4a1807543801db684f99c. At block 26350000, its minter() is 0x433d5b175148da32ffe1e1a37a939e1b7e79be4d; that CDO returns the same AATranche(), USDC token() 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48, strategy() 0x17e9ab2992dfecbe779a06a92a6cdb9fe6aeeef3 and EIP-1967 implementation 0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8. isProgrammableBorrower() is false. The issuer guide and verified source establish one borrower receivable and top-level tranche accounting, not a borrower-collateral price/liquidation branch. virtualPrice uses internal strategy-token NAV; stopEpoch is owner/manager-gated, accepts the next APR and an interest override subject to its repayment and parameter checks, and updates tranche accounting. finalizeDefault writes recovered AA/BB NAV under the same owner/manager gate. This establishes privileged internal valuation rather than an independent external feed; it grants no reconciliation, recovery, redemption or signer-independence claim.",
+      "sources": [
+        {
+          "label": "Pareto Credit Vaults integrator guide: epoch share accounting, single borrower and fixed-price strategy receipt (undated standing documentation; accessed 2026-11-06)",
+          "url": "https://docs.pareto.credit/developers/integrators/smart-contract.md"
+        },
+        {
+          "label": "Verified IdleCDOEpochVariant implementation and inherited IdleCDOCreditVault/IdleCreditVault sources; verified 2026-09-22, accessed 2026-11-06",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8"
+        },
+        {
+          "label": "Dwellir pinned eth_call and EIP-1967 reads: Ethereum block 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; observed 2026-11-06T19:19:30.597Z and 2026-11-06T19:23:23.149Z",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c2-1",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pareto Credit Vaults integrator guide: epoch share accounting, single borrower and fixed-price strategy receipt (undated standing documentation; accessed 2026-11-06)",
+        "url": "https://docs.pareto.credit/developers/integrators/smart-contract.md"
+      },
+      {
+        "label": "Verified IdleCDOEpochVariant implementation and inherited IdleCDOCreditVault/IdleCreditVault sources; verified 2026-09-22, accessed 2026-11-06",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x67f839a44e8b6d2cd403d9cb14f3862f2b85e9f8"
+      },
+      {
+        "label": "Dwellir pinned eth_call and EIP-1967 reads: Ethereum block 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; observed 2026-11-06T19:19:30.597Z and 2026-11-06T19:23:23.149Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      }
+    ]
   }
 }
