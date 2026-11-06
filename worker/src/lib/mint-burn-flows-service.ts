@@ -171,6 +171,10 @@ export async function readMintBurnWindowContext(
     segments,
     legacy,
     configs: scope.configs,
+    // Never-admitted additions do not make the incumbent coin partial.
+    partialCoinIds: new Set(configs.filter((config) => !scope.configs.includes(config)
+      && scope.configs.some((admitted) => admitted.stablecoinId === config.stablecoinId)
+      && mintBurnPreviouslyAdmitted(config, admissions)).map((config) => config.stablecoinId)),
     // Automatic pauses withhold flows, never unresolved operator conservation evidence.
     diagnosticConfigs: configs.filter((config) => scope.configs.includes(config)
       || (mintBurnPreviouslyAdmitted(config, admissions)

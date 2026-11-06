@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.35",
+    "title": "Partial-qualified coin totals while an established leg is isolated",
+    "date": "2026-11-06",
+    "effectiveAt": 1793923200,
+    "summary": "Coins with surviving admitted legs keep their USD totals when an established leg leaves publication, with partial coverage and complete-only signal inputs withheld.",
+    "impact": [
+      "An isolated or paused previously admitted or grandfathered leg makes every surviving coin flow window incomplete with scan-coverage-incomplete, coverage.isPartial true and partial-history status. Admitted-leg net and gross subtotals remain published; unavailable admitted scan evidence and partial USD valuation retain their existing null gates. Never-admitted additions do not make an incumbent coin partial.",
+      "Partial coins publish no full-coin direction or pressure. Their admitted-chain supply weight remains visible, but does not enter the gauge score. Otherwise eligible withheld coins and their observed admitted-chain weight join partialValuationInputs and partialValuationMcapUsd; scoredMcapUsd covers only scored coins and the gauge re-weights over them.",
+      "A partial classified coin stays in its flight-to-quality cohort as an unbounded input, including cached reclassification. It is not silently dropped or treated as zero. A verdict survives only when the existing range logic proves inactivity; otherwise it is unavailable with flow-window-unavailable. Fully isolated pending coins keep the existing explicit cohort exclusion.",
+      "Per-coin detail and hourly coverage, aggregate hourly coverage and affected chain nets retain partial semantics. Pages reuse their existing Partial treatment; no new reader text, reason vocabulary, admission threshold or scoring formula is introduced."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.34",
     "title": "Prove surviving publication scope and retain quarantined integrity incidents",
     "date": "2026-11-05",
