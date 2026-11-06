@@ -14149,9 +14149,17 @@
         {
           "label": "Ethereum PublicNode RPC used for pinned sfrxUSD reads",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Frax Core Team FIP-430, published 2025-04-21: separate sfrxUSD balance sheet and no newly minted frxUSD or guaranteed redemption for strategy/AMO losses",
+          "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
+        },
+        {
+          "label": "Frax Core Team FIP-434, published 2025-09-05: confirms DAO adoption of FIP-430 and the upgraded separate sfrxUSD balance sheet",
+          "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786"
         }
       ],
-      "notes": "Wrapper-local review refreshed 2026-08-08; the pinned on-chain measurement remains Ethereum block 25572046. Frax documents sfrxUSD as an ERC-4626-like share redeemable for frxUSD without price impact and a Benchmark Yield Strategy that can move the entire vault among carry-trade, DeFi AMO, or IORB/T-bill venues. At the pin, the canonical vault reported 27,033,030.85 shares, 32,511,533.23 frxUSD totalAssets, and 1.202659569 frxUSD per share. Fund claim/seniority is limited because the technical wrapper claim is verified but is indirect through frxUSD and no holder-level legal seniority terms were found. NAV is limited because the on-chain exchange-rate method is reproducible but not independently administered. Duration/liquidity is limited because redemption and the short-dated Treasury leg are documented, while the active strategy allocation and WAM are not. No strategy-level loss waterfall or enforceable recapitalization commitment is published, so loss recovery is unavailable.",
+      "notes": "Wrapper-local review refreshed 2026-08-08; the pinned on-chain measurement remains Ethereum block 25572046. Frax documents sfrxUSD as an ERC-4626-like share redeemable for frxUSD without price impact and a Benchmark Yield Strategy that can move the entire vault among carry-trade, DeFi AMO, or IORB/T-bill venues. At the pin, the canonical vault reported 27,033,030.85 shares, 32,511,533.23 frxUSD totalAssets, and 1.202659569 frxUSD per share. Fund claim/seniority is limited because the technical wrapper claim is verified but is indirect through frxUSD and no holder-level legal seniority terms were found. NAV is limited because the on-chain exchange-rate method is reproducible but not independently administered. Duration/liquidity is limited because redemption and the short-dated Treasury leg are documented, while the active strategy allocation and WAM are not. FIP-430 (2025-04-21), whose separate sfrxUSD architecture FIP-434 (2025-09-05) confirms was approved, expressly excludes minting new frxUSD into sfrxUSD and guaranteed sfrxUSD redemption following yield-strategy or AMO losses, so the documented loss-recovery design is weak.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -14164,9 +14172,22 @@
           "quality": "limited"
         },
         "lossRecoveryDesign": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed sfrxUSD and frxUSD disclosures do not publish how Benchmark Yield Strategy losses at carry-trade, DeFi AMO, or RWA venues are allocated to sfrxUSD holders or any enforceable recapitalization commitment.",
-          "sourceUrl": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+          "quality": "weak",
+          "review": {
+            "reviewedAt": "2026-11-06",
+            "reviewer": "Safety unknowns campaign 2026-11-06 — c2-5",
+            "rationale": "Reopened the dated Frax Core Team FIP-430 (2025-04-21) and FIP-434 (2025-09-05) on 2026-11-06. FIP-430 explicitly rules out minting new frxUSD into sfrxUSD and guaranteed sfrxUSD redemptions following yield-strategy or AMO losses, while retaining a core-team-managed frxUSD liquidity buffer with most capital deployed. FIP-434 confirms that the DAO approved the separate sfrxUSD balance sheet under FIP-430. This is a documented adverse recovery design, not a grade inferred solely from missing disclosure, an incurred loss, or a zero-recovery assertion. The current product page describes ordinary redemption without addressing the strategy-loss exception. Only this component is reviewed; prior measurements, sibling grades and the whole-overlay clock remain unchanged.",
+            "sources": [
+              {
+                "label": "Frax Core Team FIP-430, published 2025-04-21: separate sfrxUSD balance sheet and no newly minted frxUSD or guaranteed redemption for strategy/AMO losses",
+                "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
+              },
+              {
+                "label": "Frax Core Team FIP-434, published 2025-09-05: confirms DAO adoption of FIP-430 and the upgraded separate sfrxUSD balance sheet",
+                "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786"
+              }
+            ]
+          }
         }
       }
     },
