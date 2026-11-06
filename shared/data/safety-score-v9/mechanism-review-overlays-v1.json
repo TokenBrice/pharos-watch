@@ -25471,6 +25471,51 @@
           "quality": "limited"
         }
       }
+    },
+    {
+      "assetId": "busd0-usual",
+      "archetype": "tbill",
+      "reviewedAt": "2026-11-06",
+      "sources": [
+        {
+          "label": "Usual bUSD0 fact sheet, last updated 2026-02-16: fixed notional, June 11 2028 maturity, separate rt-bUSD0 and both tracked deployments",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0.md"
+        },
+        {
+          "label": "Usual bUSD0 product mechanics: recombination, maturity redemption and conditional floor redemption; retrieved 2026-11-06",
+          "url": "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0.md"
+        },
+        {
+          "label": "Verified Ethereum Usd0PP implementation bound by EIP-1967 storage at block 26356384",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9F2BD21bF8012fce0D5845537c1DefF3a89BC85B"
+        },
+        {
+          "label": "Pinned Ethereum reads: bUSD0 implementation, getEndTime, getFloorPrice, paused, totalSupply and USD0 balanceOf(bUSD0)",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Usual deployment registry: Ethereum bond and Arbitrum L2 token and OFT adapters; retrieved 2026-11-06",
+          "url": "https://tech.usual.money/smart-contracts/contract-deployments.md"
+        },
+        {
+          "label": "Sourcify exact-match Arbitrum L2Usd0PP implementation, verified 2025-05-19; runtime matched to pinned block 521378800",
+          "url": "https://sourcify.dev/server/v2/contract/42161/0x1eacc08c0a4a059d1567a587ed9d0a52eac2a88f?fields=all"
+        },
+        {
+          "label": "Pinned Arbitrum EIP-1967 implementation and runtime reads at block 521378800",
+          "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+        }
+      ],
+      "notes": "Safety unknowns campaign 2026-11-06 — c-mech. Review scope is the local fixed-notional USD0 bond, not the USD0 reserve portfolio. The issuer fact sheet's own update date is 2026-02-16 (retrieved-byte SHA-256 12d9bcd78809488f021cf5181ed6c1ed702d8b7eaa066204fabb8820ded38dc7); the product page retrieved 2026-11-06 has SHA-256 0a4344bbab6ab8ddc48e2dbfe4883ad318ef0d0b6431d9adf350609042b0ff2c. At Ethereum block 26356384, hash 0x3446bf04643238930fe9c3cab19e71311768b3a637a801c204928d9ad83e6b7f, timestamp 2026-11-06T14:23:47Z, observed 2026-11-06T18:23:11.502Z, the registered bUSD0 proxy 0x35d8949372d46b7a3d5a56006ae77b215fc69bc0 points to verified Usd0PP 0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b. getEndTime() = 1844335800 (2028-06-11T11:30:00Z), getFloorPrice() = 920000000000000000 and paused() = false. bUSD0 totalSupply and the USD0 token 0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5 balanceOf(bUSD0) both equal 503865326279163896642888072 raw 18-decimal units; nominal equality is not USD solvency or independent financial assurance. NAV VALUATION limited: the issuer explicitly distinguishes 1 USD0 maturity notional, secondary-market discount and early-exit value; the deployed implementation corroborates the USD0-denominated valuation through getFloorPrice, reconstruct and _unwrap. This is fixed-notional accounting, not a daily independently struck fund NAV or a claim that bUSD0 is currently worth one dollar. DURATION AND LIQUIDITY limited: the dated series terms and getEndTime agree on June 11 2028. reconstruct burns equal bUSD0 and rt-bUSD0 and transfers equal USD0 before maturity; _unwrap requires maturity, burns the holder's bUSD0 and transfers equal USD0. Floor redemption is governance-set at 0.92 USD0 at this pin; its code burns bUSD0, pays floor-valued USD0 and transfers the difference to the treasury. These entrypoints are pause-gated. Secondary liquidity and availability of rt-bUSD0 remain conditional, not a guaranteed early par exit. Arbitrum scope is distinct: at block 521378800, hash 0x7c62c4788e290b89d6262aeb4cc7861e70cb16ae908efc6db33c421936ab8865, timestamp 2026-11-05T04:41:11Z, EIP-1967 storage of tracked token 0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f resolves to 0x1eacc08c0a4a059d1567a587ed9d0a52eac2a88f; pinned runtime exactly matches Sourcify's L2Usd0PP source. That contract has role-gated mint/burn and pausable transfers, with no local bond redemption or maturity function; the official deployment registry identifies its OFT adapter separately. The bond series terms do not establish a bounded bridge-return settlement time. Both component grades stop at limited issuer structure plus deployment anchors; no independent valuation cadence, unconditional liquidity, legal seniority or stressed default waterfall is inferred. fundClaimAndSeniority and lossRecoveryDesign remain uncurated. Pinned read receipts and original source bytes are retained in agents/research/.",
+      "metrics": {},
+      "components": {
+        "navValuation": {
+          "quality": "limited"
+        },
+        "durationAndLiquidity": {
+          "quality": "limited"
+        }
+      }
     }
   ]
 }
