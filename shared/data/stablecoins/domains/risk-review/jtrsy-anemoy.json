@@ -250,8 +250,6 @@
         "riskTier": "opaque-or-unknown",
         "semantics": "unknown",
         "scope": "unknown",
-        "controllerChain": "solana",
-        "controllerAddress": "3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb",
         "reviewDisposition": "unresolved",
         "reviewNote": "Official Centrifuge deployment registry identifies this mint, but the EVM share bridge guide excludes Solana targets. Finalized joint mint/authority/multisig observation at slot 452524950 (2026-10-02; block hash 4zyMTBniC7n4tmKLK47FbBiUpCARjvZ6qk2J26goge8c) confirms Token-2022, 6 decimals, zero supply, default-frozen accounts, and mint/freeze/permanent-delegate/metadata-update authority 3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb. Although its account is System-owned with no data, that authority is an off-curve Squads v4 vault PDA (index 0, bump 255) of multisig F8uKD1uQ4o2NVizM8VfNvBMNoL18WXXbhTjKqfzvBTSX. The multisig is owned by SQDS4ep65T869zMMBKyuUq6aD6EgTu8psMjkvj52pCf, has threshold 2, eight members but only six Vote-enabled signers, zero timelock and zero config authority; signer independence is unknown. Seven returned mint-history transactions include creation and authority transfers from Eg37TXi7ojfPT4kQPFUu6umtvz3cCN2Xif5TgQKDd68C, with no mint/burn instruction. Metadata-pointer authority remains Eg37. This proves control capability, not a current issuer-native liability accounting or Ethereum-to-Solana transfer path; those semantics remain unresolved. Wave-2 diagnostic census by Sol curation campaign 2026-10-09 (W2L18Secured), observed 2026-10-09T11:52:43Z: one atomic finalized getMultipleAccounts response from https://api.mainnet-beta.solana.com has context slot 454858260, joined to that exact finalized slot's getBlock hash Hjv9jAhg5cVj42G2seueWvFCwHZsWGS11zYjxCZWv1dB and block timestamp 2026-10-09T11:52:15Z. This new response again has zero raw supply, six decimals, the same four extensions and recorded authorities; no transfer-hook or confidential-mint extension is returned. Its Squads bytes decode under the cited af94153 layout to threshold 2, eight members, six Vote-enabled, six Execute-enabled and seven Initiate-enabled members, zero timelock, zero config authority, transaction index 58 and stale index 50. The endpoint's response context slot is the observation pin; minContextSlot 452524950 was only a lower bound, not a requested historical pin. Solana's permanent-delegate specification permits transfer or burn from any account for this mint and holders cannot revoke that delegate. No deployed-program runtime/source match, exhaustive reachable execution certificate, holder-liability/legal burn mapping or negative incident census is established, so capAuthority, claimImpairment, incidentState and route architecture remain unresolved. This direct keyless read is diagnostic source recovery because the supplemental Dwellir helper has no Solana method; it is not a helper-admitted execution certificate or a production supply-attribution packet.",
         "mappingVersion": "bridge-route-facts-v1",
@@ -292,8 +290,7 @@
           }
         ],
         "failureDomainKeys": [
-          "protocol:centrifuge-v3",
-          "authority:solana:3JiU6sJt94WcD6r7EFTUnJo6By9DJ9WJxovRGfY9oseb"
+          "protocol:centrifuge-v3"
         ]
       },
       {
@@ -360,6 +357,70 @@
         "failureDomainKeys": [
           "protocol:centrifuge-v3",
           "contract:pharos:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
+      }
+    ],
+    "controls": [
+      {
+        "id": "jtrsy-solana-token-authority",
+        "routeRefs": [
+          "solana:JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj"
+        ],
+        "label": "JTRSY Solana Token-2022 external signature authority",
+        "authorityType": "eoa",
+        "capabilities": [
+          "bridge-mint"
+        ],
+        "controllerChain": "solana",
+        "controllerAddress": "BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4",
+        "canRaiseCap": "unknown",
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "authority:solana:BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4"
+        ],
+        "observedAt": "2026-11-06",
+        "observedBlock": 466100000,
+        "sources": [
+          {
+            "label": "Centrifuge exact JTRSY deployment registry; undated, retrieved 2026-11-06",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Alchemy Account Archive: exact JTRSY mint and BUo4 authority at finalized slot 466100000, hash 7A1LndoD6qnDiMVtR4VcEsf41wSdfY7omKHARMrfYrma, 2026-11-06T11:54:34Z; verified 2026-11-06",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Solana Token-2022 mint layout, release program@v10.0.0; retrieved 2026-11-06",
+            "url": "https://github.com/solana-program/token-2022/blob/program%40v10.0.0/interface/src/state.rs"
+          },
+          {
+            "label": "Solana Token-2022 permanent-delegate layout, release program@v10.0.0; retrieved 2026-11-06",
+            "url": "https://github.com/solana-program/token-2022/blob/program%40v10.0.0/interface/src/extension/permanent_delegate.rs"
+          },
+          {
+            "label": "Solana permanent-delegate transfer/burn and rotation semantics; undated, retrieved 2026-11-06",
+            "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
+          }
+        ],
+        "evidence": "Safety unknowns campaign 2026-11-06 — k-cfg. Separate control observation reviewed 2026-11-06: exact-slot Alchemy Account Archive getAccountInfo(base64, slot=466100000, commitment=finalized) for JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj and BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4, each bracketed by matching finalized getBlock headers, binds block hash 7A1LndoD6qnDiMVtR4VcEsf41wSdfY7omKHARMrfYrma and time 2026-11-06T11:54:34Z. The mint is owned by TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, initialized, six decimals, raw supply 0. Mint authority, freeze authority, permanent delegate and metadata authorities decode to BUo4. The authority is on the Ed25519 curve, System-owned, non-executable and zero-data: an external on-chain signature authority, not the previously observed Squads PDA or an SPL multisig account. This supersedes only the current controller binding; the October route observations remain historical evidence. The mint-authority field establishes the token mint permission; the freeze and permanent-delegate fields are retained observations, not a complete execution inventory. The bridge-mint vocabulary does not establish the unresolved transfer architecture. Off-chain key custody, human approval quorum, executable-program/source equivalence, complete reachable powers, liability/legal impairment, caps and incident state remain unproved. Observed zero token supply is not a materialSupplyShare or absence-of-risk claim."
+      }
+    ],
+    "scopedQuestions": [
+      {
+        "controlRef": "jtrsy-solana-token-authority",
+        "subject": "authority-semantics",
+        "question": "The exact-slot token and external-signature authority observations do not establish deployed-program/source equivalence, the complete reachable authority and upgrade graph, an enforceable economic cap, or the legal/holder-liability consequences of delegate transfer, burn and additional minting. Solana transfer architecture and incident history remain unresolved; no complete execution scope, current liability share or key-custody independence is claimed.",
+        "reviewedAt": "2026-11-06",
+        "reviewer": "Safety unknowns campaign 2026-11-06 — k-cfg",
+        "sources": [
+          {
+            "label": "Alchemy Account Archive: exact JTRSY mint and BUo4 authority at finalized slot 466100000, hash 7A1LndoD6qnDiMVtR4VcEsf41wSdfY7omKHARMrfYrma, 2026-11-06T11:54:34Z; verified 2026-11-06",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Centrifuge share-transfer guide excludes Solana targets; undated, retrieved 2026-11-06",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          }
         ]
       }
     ]
