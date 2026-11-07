@@ -67,11 +67,13 @@ describe("handleYieldAdapterManifest", () => {
         .filter((entry) => entry.effectiveAt < latestEntry.effectiveAt)
         .map((entry) => entry.effectiveAt),
     );
-    const newestReviewSec = Math.max(
+    // Reviews dated after the serve clock are not yet registry revisions.
+    const newestReviewSec = Math.max(0,
       ...YIELD_ADAPTER_MANIFEST.flatMap((entry) => entry.strategies
         .map((strategy) => strategy.lifecycleReason?.since)
         .filter((since): since is string => typeof since === "string")
-        .map((since) => Math.floor(Date.parse(`${since}T00:00:00Z`) / 1000))),
+        .map((since) => Math.floor(Date.parse(`${since}T00:00:00Z`) / 1000))
+        .filter((since) => since < latestEntry.effectiveAt)),
     );
     vi.useFakeTimers();
     vi.setSystemTime((latestEntry.effectiveAt - 1) * 1000);
