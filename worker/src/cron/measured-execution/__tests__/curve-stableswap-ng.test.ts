@@ -8,7 +8,6 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
-  buildDexMeasuredExecutionTargetId,
   getDexMeasuredExecutionFreshnessMaxSec,
   validateDexMeasuredExecutionProfile,
   getDexMeasuredExecutionProbeNotionals,
@@ -158,16 +157,6 @@ function target(
     referencePriceUsd: 1,
   };
   return makeMeasuredTarget({
-    targetId: buildDexMeasuredExecutionTargetId({
-      adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
-      stablecoinId: policy.stablecoinId,
-      chain: policy.chain,
-      protocol: "curve",
-      poolId,
-      tokenInAddress: tokenIn.address,
-      tokenOutAddress: tokenOut.address,
-      poolTokenAddresses,
-    }),
     stablecoinId: policy.stablecoinId,
     adapterProfileId: CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
     protocol: "curve",

@@ -73,6 +73,7 @@ import {
   makeV3Target,
 } from "./measured-execution.test-support";
 import {
+  makeCurve3PoolReserve,
   makeFlatProvenanceCases,
   makeJoinPoints,
   makeJoinPool,
@@ -215,16 +216,7 @@ describe("measured execution join activation", () => {
         quoteGenerationId: "v4-quote-generation",
         targetGenerationId: "v4-target-generation",
         publishedAt: 1_060,
-        byTargetId: new Map([[measuredTarget.targetId, {
-          quotedTarget: measuredTarget,
-          status: "measured",
-          failureReason: null,
-          profile,
-          quoteGenerationId: "v4-quote-generation",
-          targetGenerationId: "v4-target-generation",
-          resolution: "latest",
-          latestFailureReason: null,
-        }]]),
+        byTargetId: new Map([[measuredTarget.targetId, makeJoinQuote(measuredTarget, profile)]]),
       },
       nowSec: 1_060,
     });
@@ -237,8 +229,9 @@ describe("measured execution join activation", () => {
     expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 0 });
   });
 
-  it("keeps all ten reviewed metapool quotes display-only behind the activation gate", () => {
-    for (const policy of CURVE_R3_METAPOOL_POLICIES) {
+  it.each([...CURVE_R3_METAPOOL_POLICIES, CURVE_USD1_METAPOOL_POLICY, CURVE_NXUSD_METAPOOL_POLICY])(
+    "keeps the reviewed $stablecoinId metapool quote display-only behind the activation gate",
+    (policy) => {
       const { measuredTarget, profile } = makeCurveCompositeRoute(policy);
       const pool: PoolEntry = {
         poolId: measuredTarget.poolId,
@@ -286,103 +279,17 @@ describe("measured execution join activation", () => {
         "shadow-score-ineligible",
       );
       expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 1 });
-    }
-  });
-
-  it("keeps the reviewed USD1 and NXUSD metapool adapters shadow-only", () => {
-    for (const policy of [CURVE_USD1_METAPOOL_POLICY, CURVE_NXUSD_METAPOOL_POLICY]) {
-      const { measuredTarget, profile } = makeCurveCompositeRoute(policy);
-      const pool: PoolEntry = {
-        poolId: measuredTarget.poolId,
-        project: "curve",
-        chain: policy.chain,
-        tvlUsd: measuredTarget.retainedTvlUsd,
-        symbol: `${measuredTarget.tokenIn.symbol}-${measuredTarget.tokenOut.symbol}`,
-        volumeUsd1d: 10_000,
-        poolType: "curve-metapool",
-        source: "dl",
-        extra: { measuredExecutionTarget: measuredTarget },
-      };
-      const diagnostics = joinDexMeasuredExecutionEvidence({
-        poolsByStablecoin: new Map([[policy.stablecoinId, [pool]]]),
-        evidence: {
-          quoteGenerationId: "curve-composite-quote-generation",
-          targetGenerationId: "curve-composite-target-generation",
-          publishedAt: 1_060,
-          byTargetId: new Map([[
-            measuredTarget.targetId,
-            {
-              quotedTarget: measuredTarget,
-              status: "measured",
-              failureReason: null,
-              profile,
-              quoteGenerationId: "curve-composite-quote-generation",
-              targetGenerationId: "curve-composite-target-generation",
-              resolution: "latest",
-              latestFailureReason: null,
-            },
-          ]]),
-        },
-        nowSec: 1_060,
-      });
-
-      expect(pool.extra?.measuredExecution).toMatchObject({
-        targetId: measuredTarget.targetId,
-        adapterProfileId: policy.adapterProfileId,
-      });
-      expect(pool.extra?.executionCapabilityGate).toEqual({
-        family: "measured-execution",
-        reason: "activation-pending",
-      });
-      expect(pool.extra?.measuredExecutionDiagnostic?.detail).toContain(
-        "shadow-score-ineligible",
-      );
-      expect(diagnostics).toMatchObject({ targetCount: 1, measuredCount: 1, gatedCount: 1 });
-    }
-  });
+    },
+  );
 
   it("attaches the reviewed Curve StableSwap directions only as one atomic packet", () => {
     const { targets, profiles } = makeCurve3PoolPacket();
-    const pool: PoolEntry = {
-      poolId: "defillama-3pool-row",
-      project: "curve",
-      chain: "ethereum",
-      tvlUsd: 160_000_000,
-      symbol: "DAI-USDC-USDT",
-      volumeUsd1d: 11_000_000,
-      poolType: "curve-stableswap-high-a",
-      source: "dl",
-      extra: {
-        measuredExecutionTargets: targets,
-        ammExecutionModel: {
-          source: "curve",
-          invariant: "stableswap",
-          trackedTokenIndex: 2,
-          feeRate: 0.001,
-          amplification: 4_000 / 9,
-          tokens: CURVE_3POOL_STABLESWAP_POLICY.poolTokens.map((token, index) => ({
-            ...token,
-            balance: 50_000_000,
-            referencePriceUsd: 1,
-            referencePriceSource: "source-token-usd" as const,
-            trackedAssetId: ["dai-makerdao", "usdc-circle", "usdt-tether"][index],
-          })),
-        },
-      },
-    };
+    const pool = makeCurve3PoolReserve(targets);
     const byTargetId = new Map(targets.map((measuredTarget, index) => [
       measuredTarget.targetId,
-      {
-        quotedTarget: measuredTarget,
-        status: "measured" as const,
-        failureReason: null,
-        profile: profiles[index]!,
-        quoteGenerationId: "curve-quote-generation",
-        targetGenerationId: "curve-target-generation",
-        resolution: "latest" as const,
-        latestFailureReason: null,
+      makeJoinQuote(measuredTarget, profiles[index]!, {
         observationHistory: makeObservationHistory(profiles[index]!),
-      },
+      }),
     ]));
 
     const diagnostics = joinDexMeasuredExecutionEvidence({
@@ -440,21 +347,15 @@ describe("measured execution join activation", () => {
     const { targets, profiles } = makeCurve3PoolPacket();
     const byTargetId = new Map(targets.map((measuredTarget, index) => [
       measuredTarget.targetId,
-      {
-        quotedTarget: measuredTarget,
-        status: "measured" as const,
-        failureReason: null,
-        profile: profiles[index]!,
-        quoteGenerationId: "curve-quote-generation",
-        targetGenerationId: "curve-target-generation",
-        resolution: "last-known-good" as const,
+      makeJoinQuote(measuredTarget, profiles[index]!, {
+        resolution: "last-known-good",
         latestFailureReason: "rpc-failure",
         observationHistory: makeObservationHistory(profiles[index]!, {
           completeProducerCycleCount: 3,
           successfulObservationCount: 3,
           latestOperationalFailureAt: 1_060,
         }),
-      },
+      }),
     ]));
     const evidence = {
       quoteGenerationId: "latest-operational-failure",
@@ -923,16 +824,7 @@ describe("measured execution join activation", () => {
         quoteGenerationId: "quote-generation",
         targetGenerationId: "target-generation",
         publishedAt: 1_060,
-        byTargetId: new Map([[measuredTarget.targetId, {
-          quotedTarget: measuredTarget,
-          status: "measured" as const,
-          failureReason: null,
-          profile,
-          quoteGenerationId: "quote-generation",
-          targetGenerationId: "target-generation",
-          resolution: "latest" as const,
-          latestFailureReason: null,
-        }]]),
+        byTargetId: new Map([[measuredTarget.targetId, makeJoinQuote(measuredTarget, profile)]]),
       },
       nowSec: 1_060,
     };
@@ -1200,33 +1092,7 @@ describe("measured execution join AMM invariants", () => {
 
   it("keeps reserve evidence available when one StableSwap direction is missing", () => {
     const { targets, profiles } = makeCurve3PoolPacket();
-    const pool: PoolEntry = {
-      poolId: "defillama-3pool-row",
-      project: "curve",
-      chain: "ethereum",
-      tvlUsd: 160_000_000,
-      symbol: "DAI-USDC-USDT",
-      volumeUsd1d: 11_000_000,
-      poolType: "curve-stableswap-high-a",
-      source: "dl",
-      extra: {
-        measuredExecutionTargets: targets,
-        ammExecutionModel: {
-          source: "curve",
-          invariant: "stableswap",
-          trackedTokenIndex: 2,
-          feeRate: 0.001,
-          amplification: 4_000 / 9,
-          tokens: CURVE_3POOL_STABLESWAP_POLICY.poolTokens.map((token, index) => ({
-            ...token,
-            balance: 50_000_000,
-            referencePriceUsd: 1,
-            referencePriceSource: "source-token-usd" as const,
-            trackedAssetId: ["dai-makerdao", "usdc-circle", "usdt-tether"][index],
-          })),
-        },
-      },
-    };
+    const pool = makeCurve3PoolReserve(targets);
     const diagnostics = joinDexMeasuredExecutionEvidence({
       poolsByStablecoin: new Map([["usdt-tether", [pool]]]),
       evidence: {
@@ -1235,16 +1101,7 @@ describe("measured execution join AMM invariants", () => {
         publishedAt: 1_060,
         byTargetId: new Map([[
           targets[0]!.targetId,
-          {
-            quotedTarget: targets[0]!,
-            status: "measured",
-            failureReason: null,
-            profile: profiles[0]!,
-            quoteGenerationId: "curve-quote-generation",
-            targetGenerationId: "curve-target-generation",
-            resolution: "latest",
-            latestFailureReason: null,
-          },
+          makeJoinQuote(targets[0]!, profiles[0]!),
         ]]),
       },
       nowSec: 1_060,

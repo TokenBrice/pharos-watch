@@ -62,19 +62,7 @@ export function makeCurve3PoolPacket() {
       retainedPoolPriceUsd: 1,
       capturedAt: 1_000,
     };
-    return {
-      ...base,
-      targetId: buildDexMeasuredExecutionTargetId({
-        adapterProfileId: base.adapterProfileId,
-        stablecoinId: base.stablecoinId,
-        chain: base.chain,
-        protocol: base.protocol,
-        poolId: base.poolId,
-        tokenInAddress: base.tokenIn.address,
-        tokenOutAddress: base.tokenOut.address,
-        poolTokenAddresses: CURVE_3POOL_TOKEN_ADDRESSES,
-      }),
-    };
+    return makeMeasuredTarget(base);
   });
   const profiles = targets.map((measuredTarget) => {
     const inputIndex = measuredTarget.poolTokenAddresses!.indexOf(measuredTarget.tokenIn.address);

@@ -3,6 +3,7 @@ import type { PoolEntry } from "../../dex-liquidity/types";
 import type { LoadedDexMeasuredQuoteEvidence } from "../evidence-reader";
 import { buildDexMeasuredExecutionProfile, type DexMeasuredRawQuotePoint } from "../profiles";
 import { getDexMeasuredExecutionDeployment } from "../registry";
+import { CURVE_3POOL_STABLESWAP_POLICY } from "../curve-stableswap";
 import { makeV3Target } from "./measured-execution.test-support";
 
 type EvidenceEntry = LoadedDexMeasuredQuoteEvidence["byTargetId"] extends Map<string, infer T> ? T : never;
@@ -30,6 +31,36 @@ export function makeJoinPool(target: DexMeasuredExecutionTarget, overrides: Part
   return { poolId: target.poolId, project: target.protocol, chain: target.chain,
     tvlUsd: target.retainedTvlUsd, symbol: "USDC-USDT", volumeUsd1d: 0,
     poolType: "uniswap-v3-1bp", source: "dl", extra: { measuredExecutionTarget: target }, ...overrides };
+}
+
+export function makeCurve3PoolReserve(targets: DexMeasuredExecutionTarget[]): PoolEntry {
+  return {
+    poolId: "defillama-3pool-row",
+    project: "curve",
+    chain: "ethereum",
+    tvlUsd: 160_000_000,
+    symbol: "DAI-USDC-USDT",
+    volumeUsd1d: 11_000_000,
+    poolType: "curve-stableswap-high-a",
+    source: "dl",
+    extra: {
+      measuredExecutionTargets: targets,
+      ammExecutionModel: {
+        source: "curve",
+        invariant: "stableswap",
+        trackedTokenIndex: 2,
+        feeRate: 0.001,
+        amplification: 4_000 / 9,
+        tokens: CURVE_3POOL_STABLESWAP_POLICY.poolTokens.map((token, index) => ({
+          ...token,
+          balance: 50_000_000,
+          referencePriceUsd: 1,
+          referencePriceSource: "source-token-usd" as const,
+          trackedAssetId: ["dai-makerdao", "usdc-circle", "usdt-tether"][index],
+        })),
+      },
+    },
+  };
 }
 
 export function makeJoinQuote(target: DexMeasuredExecutionTarget, profile: DexMeasuredExecutionProfile,

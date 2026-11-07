@@ -13,7 +13,6 @@ vi.mock("../../../lib/rpc-provider-budget", () => ({ recordDwellirCredits }));
 
 import {
   DEX_MEASURED_ADAPTER_PROFILE_IDS,
-  buildDexMeasuredExecutionTargetId,
   type DexMeasuredExecutionRegistryBindingProof,
   type DexMeasuredExecutionTarget,
 } from "@shared/types/measured-execution";
@@ -34,6 +33,7 @@ import { buildChainRpcs } from "../../../lib/chain-registry";
 import { executeCurveGetDyMulticall } from "../curve-stableswap-execution-pipeline";
 import type { EvmMulticall3Call } from "../../../lib/evm-rpc";
 import { makeMeasuredTarget } from "@shared/test-utils/measured-execution.test-support";
+import { poolCoinProof, tokenDecimalsProof } from "./curve-proof.test-support";
 
 const POOL_ABI = parseAbi([
   "function coins(uint256) view returns (address)",
@@ -89,29 +89,12 @@ function registryProof(): DexMeasuredExecutionRegistryBindingProof {
     }).toLowerCase() as `0x${string}`,
     poolCoinsProof: policy.poolTokens.map((token, index) => ({
       index,
-      callData: encodeFunctionData({
-        abi: POOL_ABI,
-        functionName: "coins",
-        args: [BigInt(index)],
-      }).toLowerCase() as `0x${string}`,
-      returnData: encodeFunctionResult({
-        abi: POOL_ABI,
-        functionName: "coins",
-        result: token.address,
-      }).toLowerCase() as `0x${string}`,
+      ...poolCoinProof(index, token.address),
     })),
     tokenDecimalsProof: policy.poolTokens.map((token) => ({
       tokenAddress: token.address,
       decimals: token.decimals,
-      callData: encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: "decimals",
-      }).toLowerCase() as `0x${string}`,
-      returnData: encodeFunctionResult({
-        abi: ERC20_ABI,
-        functionName: "decimals",
-        result: token.decimals,
-      }).toLowerCase() as `0x${string}`,
+      ...tokenDecimalsProof(token.decimals),
     })),
   };
 }
@@ -146,16 +129,6 @@ function target(inputIndex: number, outputIndex: number): DexMeasuredExecutionTa
   };
   const poolTokenAddresses = policy.poolTokens.map((token) => token.address);
   return makeMeasuredTarget({
-    targetId: buildDexMeasuredExecutionTargetId({
-      adapterProfileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
-      stablecoinId: stablecoinIds[inputIndex]!,
-      chain: policy.chain,
-      protocol: "curve",
-      poolId,
-      tokenInAddress: tokenIn.address,
-      tokenOutAddress: tokenOut.address,
-      poolTokenAddresses,
-    }),
     stablecoinId: stablecoinIds[inputIndex]!,
     adapterProfileId: CURVE_STABLESWAP_ADAPTER_PROFILE_ID,
     protocol: "curve",

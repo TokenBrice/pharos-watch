@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { jsonResponse } from "@shared/test-utils/mock-fetch";
 import { mockRegistry } from "../../../../test-helpers/cron";
 import type * as FetchRetry from "../../../../lib/fetch-retry";
 import usdy from "@shared/data/stablecoins/coins/usdy-ondo-finance.json";
@@ -200,12 +201,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   it("publishes USDY from its configured supplemental source when the DefiLlama list omits it", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const marketCap = 2_356_848_686.3214035;
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
 
     const result = await fetchFiatCoinGeckoTokens({
       "ondo-us-dollar-yield": {
@@ -235,12 +231,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
     [usp.id, usp.geckoId, 1.15, 4_855_649.434067997],
   ])("publishes DefiLlama-delisted %s from its CoinGecko supplemental source", async (id, geckoId, price, marketCap) => {
     const nowSec = Math.floor(Date.now() / 1000);
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
 
     const result = await fetchFiatCoinGeckoTokens({
       [geckoId!]: { usd: price, usd_market_cap: marketCap, last_updated_at: nowSec },
@@ -258,12 +249,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   it("values USYC from its complete four-chain native roster instead of the CoinGecko cap", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const coinGeckoCap = 2_388_281_169.538671;
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
       const chain = input.kind === "onchain-solana" ? "solana" : input.chain;
       if (chain === "ethereum") return 1_900_000_000_000_000n;
@@ -306,12 +292,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   it("withholds USYC's supply instead of republishing its contradicted CoinGecko cap", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const coinGeckoCap = 2_388_281_169.538671;
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
 
     const result = await fetchFiatCoinGeckoTokens({
       [usyc.geckoId!]: { usd: 1.14, usd_market_cap: coinGeckoCap, last_updated_at: nowSec },
@@ -336,12 +317,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   });
 
   it("does not invent USDY supply or par when its current market observations are unavailable", async () => {
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
 
     const result = await fetchFiatCoinGeckoTokens({});
 
@@ -376,12 +352,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
 
   it("keeps fresh CoinGecko market cap when its on-chain partition cannot be read", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
 
     const result = await fetchFiatCoinGeckoTokens({
       "flying-tulip-usd": {
@@ -410,12 +381,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
 
   it("uses curated aggregate on-chain supply when CoinGecko market cap is stale", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
       if (input.chain === "ethereum") return 1_884_739_402_999n;
       if (input.chain === "sonic") return 37_578_423_196n;
@@ -452,12 +418,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
 
   it("publishes DefiLlama-delisted USD3 from its Ethereum-canonical roster when the CoinGecko cap is stale", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) => {
       if (input.chain === "ethereum") return 1_557_829_462_801_000_000_000_000n;
       if (input.chain === "base") return 14_928_115_493_000_000_000_000n;
@@ -482,9 +443,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
 
   it.each([0n, null])("requires FIUSD's complete native stock despite a fresh positive CG cap (Arbitrum=%s)", async (arbitrumSupply) => {
     const nowSec = Math.floor(Date.now() / 1000);
-    fetchWithRetryMock.mockResolvedValueOnce(new Response(JSON.stringify({ coins: {} }), {
-      status: 200, headers: { "Content-Type": "application/json" },
-    }));
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
       input.chain === "zksync" ? 151_766n : null,
     );
@@ -533,12 +492,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   });
 
   it("skips NAV supply fallback when the price lane is missing instead of par-valuing", async () => {
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
 
     const result = await fetchFiatCoinGeckoTokens({
       susds: { usd_market_cap: 0 },
@@ -578,12 +532,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   });
 
   it("admits a NAV token from the protocol-redeem supply fallback without publishing a price", async () => {
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
     probeTrackedTokenSupplyMock.mockImplementation(async (_meta, input) =>
       input.chain === "ethereum" ? 3_000_000_000_000_000_000_000_000n : null,
     );
@@ -618,12 +567,7 @@ describe("fetchFiatCoinGeckoTokens", () => {
   });
 
   it("keeps the NAV token out when the supply fallback resolves nothing", async () => {
-    fetchWithRetryMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ coins: {} }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      }),
-    );
+    fetchWithRetryMock.mockResolvedValueOnce(jsonResponse({ coins: {} }));
     const previousAssetsById = new Map([["usdc-circle", { id: "usdc-circle", name: "USDC", symbol: "USDC" }]]);
 
     const result = await fetchFiatCoinGeckoTokens(
