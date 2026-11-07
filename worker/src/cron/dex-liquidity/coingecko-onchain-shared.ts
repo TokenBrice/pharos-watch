@@ -38,39 +38,16 @@ export function classifyCgPool(
   const lockedLiquidityPct = parseOptionalFiniteNumber(rawAttrs.locked_liquidity_percentage);
 
   if (feePercentage != null) {
-    if (feePercentage <= 0.01) {
-      return {
-        qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-1bp"]!,
-        poolType: "cg-cl-1bp",
-        feePercentage,
-        lockedLiquidityPct,
-        balanceRatio: null,
-      };
-    }
-
-    if (feePercentage <= 0.05) {
-      return {
-        qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-5bp"]!,
-        poolType: "cg-cl-5bp",
-        feePercentage,
-        lockedLiquidityPct,
-        balanceRatio: null,
-      };
-    }
-
-    if (feePercentage <= 0.3) {
-      return {
-        qualityMultiplier: QUALITY_MULTIPLIERS["uniswap-v3-30bp"]!,
-        poolType: "cg-cl-30bp",
-        feePercentage,
-        lockedLiquidityPct,
-        balanceRatio: null,
-      };
-    }
-
+    const tier = feePercentage <= 0.01
+      ? "1bp"
+      : feePercentage <= 0.05
+        ? "5bp"
+        : feePercentage <= 0.3
+          ? "30bp"
+          : null;
     return {
-      qualityMultiplier: QUALITY_MULTIPLIERS["generic"]!,
-      poolType: "cg-wide-fee",
+      qualityMultiplier: QUALITY_MULTIPLIERS[tier ? `uniswap-v3-${tier}` : "generic"]!,
+      poolType: tier ? `cg-cl-${tier}` : "cg-wide-fee",
       feePercentage,
       lockedLiquidityPct,
       balanceRatio: null,
