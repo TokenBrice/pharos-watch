@@ -30,12 +30,14 @@ const CAPACITY_DEFERRED_REASONS = new Set([
 
 export function resolveMintBurnResumeConfigKey(
   configBreakdown: ReadonlyArray<{ key: string; skippedReason: string | null }>,
+  pendingKeys?: ReadonlySet<string>,
 ): string | null {
   if (configBreakdown.length === 0) return null;
-  const firstDeferred = configBreakdown.find(
+  const deferred = configBreakdown.filter(
     (summary) => summary.skippedReason != null && CAPACITY_DEFERRED_REASONS.has(summary.skippedReason),
   );
-  return firstDeferred?.key ?? configBreakdown[0]!.key;
+  return deferred.find((summary) => !pendingKeys?.has(summary.key))?.key
+    ?? deferred[0]?.key ?? configBreakdown[0]!.key;
 }
 
 export function normalizeDisabledConfigIdSet(values?: Iterable<string>): Set<string> {

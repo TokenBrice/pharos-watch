@@ -257,6 +257,8 @@
         "shared/types/reserve-continuation.ts",
         "shared/lib/live-reserve*.ts",
         "worker/src/lib/live-reserves/**",
+        "worker/src/lib/collateral-drift.ts",
+        "worker/src/lib/__tests__/collateral-drift.test.ts",
         "worker/src/lib/accepted-reserve-generation.ts",
         "worker/src/lib/reserve-continuation*.ts",
         "worker/src/handlers/reserve-continuation.ts",

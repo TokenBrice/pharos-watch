@@ -192,6 +192,23 @@ describe("chain dropout guard", () => {
       .toEqual(incumbentUrls);
   });
 
+  it.each([false, true])("requires rwaUSDi's healthy small legs in its full native repair (missing: %s)", async (missing) => {
+    const amounts = { ethereum: 150_000_000, base: 145_000_000, monad: 100_000_000, arbitrum: 75_000_000, pharos: 3_000_000, xlayer: 4_000_000, robinhood: 5_000_000 };
+    const asset: PeggedAsset = { ...usdg(), id: "rwausdi-multipli", circulating: { peggedUSD: 700 },
+      chainCirculating: Object.fromEntries(Object.keys(amounts).map((chain) => [CHAIN_META[chain].name, { current: 100, circulatingPrevDay: 200_000 }])) };
+    const state = savedState(asset.id, { chainId: "ethereum", chainLabel: "Ethereum", baselineUsd: 150_000_000,
+      baselineObservedAt: NOW - DAY, quarantinedSince: NOW - DAY, ambiguousSince: NOW - DAY, heldTotalUsd: 479_000_000 });
+    const chainCirculating = Object.fromEntries(Object.entries(amounts).filter(([chain]) => !missing || chain !== "robinhood")
+      .map(([chainId, current]) => [CHAIN_META[chainId].name, { chainId, current }]));
+    mocks.nativeAggregate.mockResolvedValue({ mcap: Object.values(chainCirculating).reduce((sum, row) => sum + row.current, 0),
+      supplySource: "onchain-total-supply", observedAt: NOW, chainCirculating });
+    const result = await runGuard(asset, { state });
+    expect(asset.supplyRestored).toBe(missing ? true : undefined);
+    expect(getCirculatingRawOrNull(asset)).toBe(missing ? 479_000_000 : 482_000_000);
+    expect(result.state.pairs[JSON.stringify([asset.id, "ethereum"])].ambiguousSince).toBe(missing ? NOW - DAY : undefined);
+    if (!missing) expect(asset.chainCirculating![CHAIN_META.xlayer.name].current).toBe(4_000_000);
+  });
+
   it("repairs today's USDG current chains from fresh daily charts, preserving historical buckets and wire provenance", async () => {
     const asset = usdg();
     const values: Record<string, number> = { "X Layer": 1_428_126_998.38, Ink: 63_474_779.8, "Hyperliquid L1": 1_209_462.75 };
@@ -1010,6 +1027,8 @@ describe("chain dropout guard", () => {
     ["dusd-standx", "solana", "Solana", "peggedUSD", 3_013_043.925487889, 786_947.5441566098, "2026-11-03T10:16:00Z"],
     ["eurs-stasis", "polygon", "Polygon", "peggedEUR", 2_125_295.460187289, 472_657.74823731947, "2026-10-16T06:18:46Z"],
     ["sbc-brale", "polygon", "Polygon", "peggedUSD", 1_846_461.79, 362_696.62, "2026-11-06T18:42:00Z"],
+    ["sbc-brale", "solana", "Solana", "peggedUSD", 15_916_420.30, 7_797_825.36, "2026-11-07T19:45:46Z"],
+    ["gbpa-agant", "ethereum", "Ethereum", "peggedGBP", 1_338_734.83, 136.06, "2026-11-07T19:45:46Z"],
     ["europ-schuman", "solana", "Solana", "peggedEUR", 5_470_671.34, 2_397_116.59, "2026-11-06T18:42:00Z"],
     ["tryb-bilira", "plasma", "Plasma", "peggedTRY", 1_419_521, 267_810, "2026-11-04T00:05:26Z"],
     ["usdq-quantoz", "ethereum", "Ethereum", "peggedUSD", 7_000_000, 2_000_000, "2026-11-04T09:03:51Z"],
@@ -1046,6 +1065,22 @@ describe("chain dropout guard", () => {
       expect(scenario.asset.chainCirculating![chainLabel].current).toBeNull();
       expect(held.state.pairs[key].releasedAt).toBeUndefined();
     }
+  });
+
+  it.each([0, 14 * DAY])("expires frxUSD's reviewed omitted HyperEVM identity after 14 days (%s)", async (offset) => {
+    const reviewedAt = Date.parse("2026-11-07T19:45:46Z") / 1000;
+    const asset: PeggedAsset = { ...usdg(), id: "frxusd-frax", circulating: { peggedUSD: 91_508_143.55 },
+      chainCirculating: { Ethereum: { current: 91_465_070.06 }, "Hyperliquid L1": { current: 43_073.49 } } };
+    const state = savedState(asset.id, { chainId: "hyperevm", chainLabel: "HyperEVM", baselineUsd: 3_749_116.70,
+      baselineObservedAt: reviewedAt - 29 * DAY, quarantinedSince: reviewedAt - 24 * DAY });
+    const result = await runGuard(asset, { now: reviewedAt + offset, state });
+    expect(getCirculatingRawOrNull(asset)).toBe(91_508_143.55);
+    expect(asset.supplyRestored).toBeUndefined();
+    expect(asset.chainCirculating!.HyperEVM.current).toBeNull();
+    expect(result.quarantinedAssetIds).toEqual(offset ? [asset.id] : []);
+    const review = asset.supplyChainGuard?.chains[0].reviewedExclusion;
+    if (offset) expect(review).toBeUndefined();
+    else expect(review?.expiresAt).toBe(reviewedAt + 14 * DAY);
   });
 
   it("keeps low same-provider chart evidence quarantined and caches attempts hourly", async () => {

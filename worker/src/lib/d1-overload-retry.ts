@@ -31,7 +31,7 @@ export const D1_RESOURCE_WINDOW_MS = 10_000;
  */
 export const D1_HEAVY_STATEMENT_IDLE_RATIO = 3;
 
-function isD1ResourceWindowError(err: unknown): boolean {
+export function isD1ResourceWindowError(err: unknown): boolean {
   return String(err).includes("consumed within a 10 second window");
 }
 

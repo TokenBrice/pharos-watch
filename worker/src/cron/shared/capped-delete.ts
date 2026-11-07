@@ -1,5 +1,5 @@
-import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
-import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
+import { D1_HEAVY_STATEMENT_IDLE_RATIO, D1_RESOURCE_WINDOW_MS, isD1ResourceWindowError, runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { runBoundedPrune, runBoundedPruneGroup } from "../../lib/bounded-prune";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { retentionDeleteStatement, type WindowedRetentionPolicy } from "@shared/lib/retention-policy";
@@ -53,6 +53,9 @@ export class RetentionGroupError extends Error {
   constructor(
     readonly failedRetentionGroup: { key: string; window?: string }[],
     readonly cause: unknown,
+    readonly completedResults: Record<string, CappedDeleteResult> = {},
+    /** Policies not started because the run's soft deadline passed; not failures. */
+    readonly deferredKeys: readonly string[] = [],
   ) {
     super(`Retention group ${failedRetentionGroup.map(({ key, window }) => window ? `${key} [${window}]` : key).join(", ")}: ${toErrorMessage(cause)}`);
   }
@@ -98,6 +101,7 @@ export async function deleteCappedGroup(
               key: completed[index].key,
               ...(group[index].windows ? { window: group[index].windows![windowIndex].window.slice(0, 100) } : {}),
             }));
+            const roundStartedAtMs = Date.now();
             const round = await db.batch(batches.map(({ index, limit }) => {
               const statement = current[index]!;
               return db.prepare(statement.sql).bind(...statement.bindsForLimit(limit));
@@ -120,6 +124,9 @@ export async function deleteCappedGroup(
               work.rowsWritten = add(work.rowsWritten, meta?.rows_written);
               work.d1DurationMs = add(work.d1DurationMs, meta?.duration);
             }
+            // Yield D1's rolling resource budget after each acknowledged round; a
+            // failed attempt goes straight to the overload retry's own backoff.
+            await sleepWithSignal(Math.max(0, Date.now() - roundStartedAtMs) * D1_HEAVY_STATEMENT_IDLE_RATIO, signal);
             return round;
           },
           signal,
@@ -151,47 +158,58 @@ export async function deleteCappedGroup(
   return results;
 }
 
-/** Execute registry entries, preserving shared-budget priority in declaration order. */
+/** Drain policies serially; isolate failures while preserving shared-budget priority. */
 export async function runRetentionPolicies<Key extends string>(
   db: D1Database,
   policies: Record<Key, WindowedRetentionPolicy>,
   nowSec: number,
   signal?: AbortSignal,
+  options: { deadlineMs?: number } = {},
 ): Promise<Record<Key, CappedDeleteResult>> {
   const results = {} as Record<Key, CappedDeleteResult>;
   const used = new Map<string, number>();
-  const keys = Object.keys(policies) as Key[];
-  let offset = 0;
-  while (offset < keys.length) {
+  const failures: RetentionGroupError[] = [];
+  const failedBudgets = new Set<string>();
+  const deferredKeys: Key[] = [];
+  for (const key of Object.keys(policies) as Key[]) {
     throwIfAborted(signal);
-    const group: Key[] = [];
-    const budgets = new Set<string>();
-    while (offset < keys.length && group.length < RETENTION_STATEMENTS_PER_BATCH) {
-      const key = keys[offset];
-      const budget = policies[key].budgetGroup;
-      if (budget && budgets.has(budget)) break;
-      group.push(key);
-      if (budget) budgets.add(budget);
-      offset += 1;
+    // Past the soft deadline, leave the remaining backlog to the next run.
+    if (options.deadlineMs != null && Date.now() >= options.deadlineMs) {
+      deferredKeys.push(key);
+      continue;
     }
-    const statements = group.map((key) => {
-      const policy = policies[key];
-      const statement = retentionDeleteStatement(policy, nowSec);
-      if (policy.budgetGroup) statement.runLimit = Math.max(0, policy.runLimit - (used.get(policy.budgetGroup) ?? 0));
-      return {
+    const policy = policies[key];
+    const budget = policy.budgetGroup;
+    if (budget && failedBudgets.has(budget)) {
+      failures.push(new RetentionGroupError([{ key }], new Error("Shared retention budget has an unconfirmed outcome")));
+      continue;
+    }
+    const statement = retentionDeleteStatement(policy, nowSec);
+    if (budget) statement.runLimit = Math.max(0, policy.runLimit - (used.get(budget) ?? 0));
+    try {
+      const [pass] = await deleteCappedGroup(db, [{
         ...statement, key,
         windows: policy.windows?.map((window) => ({
           ...retentionDeleteStatement(policy, nowSec, window), window: window.predicate,
         })),
-      };
-    });
-    const passes = await deleteCappedGroup(db, statements, signal);
-    for (let index = 0; index < group.length; index += 1) {
-      const key = group[index];
-      const budget = policies[key].budgetGroup;
-      results[key] = passes[index];
-      if (budget) used.set(budget, (used.get(budget) ?? 0) + passes[index].pruned);
+      }], signal);
+      results[key] = pass;
+      if (budget) used.set(budget, (used.get(budget) ?? 0) + pass.pruned);
+    } catch (caught) {
+      if (signal?.aborted || !(caught instanceof RetentionGroupError)) throw caught;
+      failures.push(caught);
+      if (budget) failedBudgets.add(budget);
+      // An exhausted window must expire before admitting an independent policy.
+      if (isD1ResourceWindowError(caught.cause)) {
+        await sleepWithSignal(D1_RESOURCE_WINDOW_MS, signal);
+      }
     }
+  }
+  if (failures.length > 0 || deferredKeys.length > 0) {
+    throw new RetentionGroupError(
+      [...failures.flatMap((failure) => failure.failedRetentionGroup), ...deferredKeys.map((key) => ({ key }))],
+      failures[0]?.cause ?? new Error("Retention run soft deadline reached"), results, deferredKeys,
+    );
   }
   return results;
 }

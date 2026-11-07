@@ -28,6 +28,8 @@ import {
 } from "./depeg-ledger-clock";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { getDexPriceSourceEntries } from "./depeg-trust-policy";
+import type { DepegObservationCensus } from "../cron/depeg-detection/types";
+import { resolveStablecoinMarketHours, resolveStablecoinPriceGapReviews } from "./stablecoin-publication-coverage";
 
 type DepegCanaryFinding = {
   status: "ok" | "degraded" | "error";
@@ -71,6 +73,56 @@ function unavailableShare(census: { eligibleCount: number; unavailableCount: num
   return census.eligibleCount > 0 ? census.unavailableCount / census.eligibleCount : null;
 }
 
+/** Operator completeness only: source facts never acknowledge detection or event blindness. */
+export function assessDepegObservationGaps(census: DepegObservationCensus, observedAt: number) {
+  const acknowledgedUnavailableIds = {
+    reviewedNominalReference: [] as string[],
+    scheduledMarketClosure: [] as string[],
+    reviewedPriceGap: [] as string[],
+  };
+  // Identities exist only for primary-unusable gaps; a census without any has nothing to acknowledge.
+  const primaryUnusableCount = census.reasonCounts["primary-unusable"] ?? 0;
+  const assets = census.unavailableAssets ?? (primaryUnusableCount === 0 ? [] : undefined);
+  const unavailableIdsComplete = census.unavailableIdsTruncated !== true && !census.unavailableIdsDropped
+    && assets != null && new Set(assets.map((asset) => asset.id)).size === assets.length
+    && assets.filter((asset) => asset.reason === "primary-unusable").length === primaryUnusableCount;
+  if (!unavailableIdsComplete) {
+    return { unavailableIdsComplete: false, acknowledgedUnavailableCount: 0,
+      actionableUnavailableCount: census.unavailableCount, acknowledgedUnavailableIds,
+      actionableUnavailableIds: null, actionableReasonCounts: census.reasonCounts };
+  }
+  const ids = assets.map((asset) => asset.id);
+  const marketHours = resolveStablecoinMarketHours(ids, census.evaluatedAt);
+  const reviews = resolveStablecoinPriceGapReviews(ids, observedAt);
+  const actionableUnavailableIds: string[] = [];
+  for (const asset of assets) {
+    if (asset.reason === "primary-unusable") {
+      if (asset.reviewedNominalReference) {
+        acknowledgedUnavailableIds.reviewedNominalReference.push(asset.id);
+        continue;
+      }
+      if (marketHours.alertSuppressedIds.has(asset.id)) {
+        acknowledgedUnavailableIds.scheduledMarketClosure.push(asset.id);
+        continue;
+      }
+      if (reviews.activeById.has(asset.id)) {
+        acknowledgedUnavailableIds.reviewedPriceGap.push(asset.id);
+        continue;
+      }
+    }
+    actionableUnavailableIds.push(asset.id);
+  }
+  const acknowledgedUnavailableCount = Object.values(acknowledgedUnavailableIds).reduce((sum, list) => sum + list.length, 0);
+  const actionableReasonCounts: DepegObservationCensus["reasonCounts"] = { ...census.reasonCounts };
+  if (primaryUnusableCount > acknowledgedUnavailableCount) {
+    actionableReasonCounts["primary-unusable"] = primaryUnusableCount - acknowledgedUnavailableCount;
+  } else {
+    delete actionableReasonCounts["primary-unusable"];
+  }
+  return { unavailableIdsComplete, acknowledgedUnavailableIds, actionableUnavailableIds, actionableReasonCounts,
+    acknowledgedUnavailableCount, actionableUnavailableCount: census.unavailableCount - acknowledgedUnavailableCount };
+}
+
 /**
  * The detection census is computed per run and stamped with
  * `capabilities.depegPipeline`; a run that evaluates almost no assets is
@@ -100,6 +152,11 @@ export async function checkDepegDetectionCensus(db: D1Database, observedAt: numb
     ) ?? null;
     const share = unavailableShare(census);
     const priorShare = prior?.census == null ? null : unavailableShare(prior.census);
+    const gaps = assessDepegObservationGaps(census, observedAt);
+    const priorGaps = prior?.census == null ? null : assessDepegObservationGaps(prior.census, observedAt);
+    const actionableShare = unavailableShare({ eligibleCount: census.eligibleCount, unavailableCount: gaps.actionableUnavailableCount });
+    const priorActionableShare = prior?.census == null || priorGaps == null ? null
+      : unavailableShare({ eligibleCount: prior.census.eligibleCount, unavailableCount: priorGaps.actionableUnavailableCount });
     const metadata = {
       producerJob: DEPEG_CENSUS_PRODUCER_JOB,
       runStartedAt: latest.runStartedAt,
@@ -113,18 +170,21 @@ export async function checkDepegDetectionCensus(db: D1Database, observedAt: numb
       reasonCounts: census.reasonCounts,
       unavailableShare: share,
       priorUnavailableShare: priorShare,
+      ...gaps,
+      actionableUnavailableShare: actionableShare,
+      priorActionableUnavailableShare: priorActionableShare,
       priorRunStartedAt: prior?.runStartedAt ?? null,
     };
     if (ageSec > maxAgeSec) {
       return degradedFinding(`depeg detection census is ${ageSec}s old`, metadata);
     }
     if (
-      share != null && priorShare != null
-      && share > STATUS_DEPEG_DETECTION_THRESHOLDS.unavailableShareMax
-      && priorShare > STATUS_DEPEG_DETECTION_THRESHOLDS.unavailableShareMax
+      actionableShare != null && priorActionableShare != null
+      && actionableShare > STATUS_DEPEG_DETECTION_THRESHOLDS.unavailableShareMax
+      && priorActionableShare > STATUS_DEPEG_DETECTION_THRESHOLDS.unavailableShareMax
     ) {
       return degradedFinding(
-        `depeg observation unavailable for ${census.unavailableCount}/${census.eligibleCount} eligible assets in two consecutive runs`,
+        `depeg observation actionable unavailable for ${gaps.actionableUnavailableCount}/${census.eligibleCount} eligible assets in two consecutive runs`,
         metadata,
       );
     }

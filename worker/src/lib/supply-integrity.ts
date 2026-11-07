@@ -80,6 +80,48 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
     evidenceUrls: ["https://basescan.org/token/0x4f604735c1cf31399c6e711d5962b2b3e0225ad3"],
     reason: "Reviewed collapse release: finalized Base block 53496375 confirms 91.4k USDGLO, down from the $1.018M carry; the eight-chain published total is $852.3k.",
   },
+  ...[
+    {
+      stablecoinId: "sparkusdtbc-spark",
+      baselineUsd: 850_692.45,
+      evidenceUrls: [
+        "https://eth.blockscout.com/tx/0xe0a239b8708cc3955a18e4e568fc1b972369ae8e7fc2958abdb289ee9b8fc8ff",
+        "https://eth.blockscout.com/token/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+      ],
+      reason: "Verified November 6 vault redemptions: Ethereum block 26365071 confirms 835,854.472234 shares and 851,338.899178 USDT totalAssets, supporting the published $850.7k rather than the pre-redemption $50.3M baseline.",
+    },
+    {
+      stablecoinId: "frnt-wyoming",
+      baselineUsd: 397_773.24,
+      evidenceUrls: [
+        "https://stablecoins.llama.fi/stablecoin/441",
+        "https://etherscan.io/token/0x5e817f2abccb9095585d26c2a3ce234a440574fc?a=0x3994d1bBb6a96671804D996915AAbE8b1569712E",
+      ],
+      reason: "Corrected DefiLlama circulating perimeter: six pinned EVM reads confirm 569,895 FRNT in its configured unreleased wallet. Net EVM stock plus finalized Solana supply is 398,052.919913 FRNT; the old $967.4k daily row counted that inventory.",
+    },
+    {
+      stablecoinId: "wmxn-ripio",
+      baselineUsd: 176_488.15,
+      evidenceUrls: [
+        "https://stablecoins.llama.fi/stablecoin/383",
+        "https://etherscan.io/token/0x337e7456b420bd3481e7fa61fa9850343d610d34?a=0xB6C9e6451A4B4F65249f60dE4fD12Da1088A2807",
+      ],
+      reason: "Corrected DefiLlama circulating perimeter: seven hash-pinned native totals minus its configured unreleased wallet reconcile to 3,269,392.897505 MXN, excluding 9,092,861.065585 MXN. The old $663.1k daily level reflected gross stock, not a 73% circulating redemption.",
+    },
+    {
+      stablecoinId: "wcop-ripio",
+      baselineUsd: 193_650.25,
+      evidenceUrls: [
+        "https://stablecoins.llama.fi/stablecoin/382",
+        "https://etherscan.io/token/0x8a1d45e102e886510e891d2ec656a708991e2d76?a=0xB6C9e6451A4B4F65249f60dE4fD12Da1088A2807",
+      ],
+      reason: "Corrected DefiLlama circulating perimeter: seven hash-pinned native totals minus its configured unreleased wallet reconcile to 620,785,461.758091 COP, excluding 1,132,848,349.038808 COP. The old $544.9k daily level reflected gross stock, not a 64% circulating redemption.",
+    },
+  ].map((review) => ({
+    ...review,
+    reviewedAt: Date.parse("2026-11-07T19:48:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-14T19:48:00Z") / 1000,
+  })),
 ];
 
 export interface ReviewedSupplyCarry {

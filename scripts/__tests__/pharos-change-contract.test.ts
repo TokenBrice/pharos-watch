@@ -361,6 +361,7 @@ describe("reading selectors and context modes", () => {
     ["shared/lib/supply.ts", false],
     ["worker/src/cron/sync-stablecoins.ts", true],
     ["worker/src/lib/status/derived-data.ts", false],
+    ["worker/src/lib/collateral-drift.ts", false],
   ] as const)("keeps integrity ADRs primary and undemoted for %s", (file, methodology) => {
     for (const mode of ["auto", "contract"] as const) {
       const contract = classifyChangedFiles([file], mode);

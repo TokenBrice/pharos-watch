@@ -1,5 +1,5 @@
 import { round4 } from "@shared/lib/math";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import type { LiquiditySourceMix } from "@shared/types/market";
 import type { DexLiquidityCronMetadata } from "../../lib/schemas";
 import type { DexPriceObs, FullScoreResult } from "./types";
@@ -124,6 +124,18 @@ export const REVIEWED_SOURCE_FAMILY_DISPOSITIONS = [
   },
 ] as const satisfies NonNullable<DexLiquidityCronMetadata["sourceCoverage"]["qualityDriftAccepted"]>;
 
+export const REVIEWED_CHAIN_TVL_DISPOSITIONS = [{
+  flag: "chain-tvl-drop:blast", baselineValue: 9_232_068.94230654, observedValue: 26_138.05097650291,
+  retiredStablecoinId: "usdb-blast", reviewedAt: "2026-11-07T20:31:00Z", expiresAt: "2026-11-21T20:31:00Z",
+  evidenceUrls: ["https://x.com/blast/status/2106032805280891073"],
+  reason: "USDB was frozen on 2026-11-02 after Blast's L2 wind-down; its archived $9.232M is excluded from live aggregation.",
+}, {
+  flag: "chain-tvl-drop:mezo", baselineValue: 5_292_320.059906746, observedValue: 255_927.62449999998,
+  retiredStablecoinId: null, reviewedAt: "2026-11-07T20:31:00Z", expiresAt: "2026-11-21T20:31:00Z",
+  evidenceUrls: ["https://api.llama.fi/protocol/mezo-tigris", "https://api.geckoterminal.com/api/v2/networks/mezo/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186/pools?page=1"],
+  reason: "Mezo Tigris MUSD TVL fell from $11.806M to $1.408M on Nov 5-6; current observed token pools total $276k, corroborating the retained $256k.",
+}] as const;
+
 const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";
 
 export type DexLiquidityDriftWatchlistDelta = NonNullable<DexLiquiditySourceCoverage["topAssetCoverageDeltas"]>[number];
@@ -167,6 +179,7 @@ function advanceDriftCandidate(
 }
 
 export function computeDexLiquidityDriftSummary(params: {
+  nowSec?: number;
   previousSummary: PreviousDexLiquiditySummary | null;
   previousCandidates: DexLiquidityDriftCandidate[];
   priceObservations: Map<string, DexPriceObs[]>;
@@ -202,6 +215,7 @@ export function computeDexLiquidityDriftSummary(params: {
   const cohortDriftFlags: string[] = [];
   const qualityDriftRebaselined: DexLiquidityDriftRebaseline[] = [];
   const qualityDriftAccepted: DexLiquidityDriftSummary["qualityDriftAccepted"] = [];
+  const nowSec = params.nowSec ?? Date.now() / 1000;
 
   const confirmCondition = (
     flag: string,
@@ -397,12 +411,30 @@ export function computeDexLiquidityDriftSummary(params: {
       COHORT_MIN_PREVIOUS_TVL_USD,
     )) {
       const currentTvl = params.currentChainTvl[chain] ?? 0;
+      const flag = `${CHAIN_TVL_DROP_FLAG_PREFIX}${chain}`;
       confirmCohortCondition(
-        `${CHAIN_TVL_DROP_FLAG_PREFIX}${chain}`,
+        flag,
         baseline,
         currentTvl,
         (baselineValue) => currentTvl < baselineValue * (1 - COHORT_DROP_RATIO),
       );
+      const candidate = candidates.find((entry) => entry.flag === flag);
+      const review = REVIEWED_CHAIN_TVL_DISPOSITIONS.find((entry) => entry.flag === flag
+        && entry.baselineValue === candidate?.baselineValue
+        && (entry.retiredStablecoinId == null || FROZEN_IDS.has(entry.retiredStablecoinId))
+        && nowSec >= Date.parse(entry.reviewedAt) / 1000 && nowSec < Date.parse(entry.expiresAt) / 1000
+        // Archived liquidity of a frozen coin only winds down; growth past the band reopens it.
+        && (entry.retiredStablecoinId != null
+          ? currentTvl <= entry.observedValue * 1.02
+          : Math.abs(currentTvl - entry.observedValue) <= entry.observedValue * 0.02));
+      if (review) {
+        // Keep the held baseline diagnostic so expiry or a changed level reopens the finding.
+        qualityDriftAccepted.push({ ...review, evidenceUrls: [...review.evidenceUrls] });
+        for (const flags of [qualityDriftFlags, cohortDriftFlags]) {
+          const index = flags.indexOf(flag);
+          if (index >= 0) flags.splice(index, 1);
+        }
+      }
     }
   }
 

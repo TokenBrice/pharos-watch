@@ -40,7 +40,8 @@ describe("runPruneCronHistory", () => {
     const batch = vi.spyOn(db, "batch");
     const log = vi.spyOn(console, "info").mockImplementation(() => {});
     const result = await runPruneCronHistory(db);
-    expect(batch).toHaveBeenCalledTimes(8);
+    expect(batch).toHaveBeenCalledTimes(21);
+    expect(batch.mock.calls.every(([statements]) => statements.length === 1)).toBe(true);
     expect(log.mock.calls.slice(0, 2).map(([, detail]) => JSON.parse(detail).completed.map(({ key }: { key: string }) => key)))
       .toEqual([["cronRuns"], ["producerHistory"]]);
     const metadata = JSON.parse(result.metadata!);
@@ -139,10 +140,12 @@ describe("runPruneCronHistory", () => {
   it("surfaces a missing repair table rather than treating the failed batch as empty", async () => {
     const { db, sqlite } = createTestDb();
     sqlite.exec("DROP TABLE worker_repair_tasks");
+    insert(sqlite, "INSERT INTO block_timestamp_cache (chain_id, block_number, timestamp, updated_at) VALUES ('ethereum', 1, 1, 1)");
     const result = await runPruneCronHistory(db);
-    expect(result).toMatchObject({ status: "error", error: expect.stringContaining("worker_repair_tasks") });
+    expect(result).toMatchObject({ status: "degraded", itemCount: 1, error: expect.stringContaining("worker_repair_tasks") });
     expect(JSON.parse(result.metadata!)).toMatchObject({
       reason: "retention-group-failed", failedRetentionGroup: expect.arrayContaining([{ key: "repairTasks" }]),
+      repairTasksDeleted: null, blockTimestampCacheDeleted: 1, retentionTruncated: { repairTasks: null },
     });
     expect(result.error).toContain("repairTasks");
   });
@@ -155,8 +158,8 @@ describe("runPruneCronHistory", () => {
       ? Promise.reject(new Error("window failed")) : execute(statements));
     const result = await runPruneCronHistory(db);
     const window = "calendar_period IS NULL AND producer_kind = 'budget-only'";
-    expect(result).toMatchObject({ status: "error", error: expect.stringContaining(`producerHistory [${window}]: window failed`) });
-    expect(JSON.parse(result.metadata!)).toEqual({
+    expect(result).toMatchObject({ status: "degraded", error: expect.stringContaining(`producerHistory [${window}]: window failed`) });
+    expect(JSON.parse(result.metadata!)).toMatchObject({
       reason: "retention-group-failed", failedRetentionGroup: [{ key: "producerHistory", window }],
     });
     const cancelled = { name: "AbortError", message: "cancelled" };

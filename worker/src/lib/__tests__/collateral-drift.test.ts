@@ -21,11 +21,11 @@ describe("collateral score delta detection", () => {
       .toEqual({ driftCoins: expected, fallbackCoins: [], observedIds: ["drift-coin"] });
   });
 
-  it("skips one-slice live snapshots in the drift watch", () => {
+  it.each(["chainlink-por", "accountable"])("skips one-slice %s live snapshots in the drift watch", (adapter) => {
     const stablecoins = [{
       id: "tusd-trueusd",
       reserves: [{ name: "Opaque fund investments", pct: 99, risk: "very-high" }],
-      liveReservesConfig: { adapter: "chainlink-por" },
+      liveReservesConfig: { adapter },
     }] as unknown as StablecoinMeta[];
 
     const result = summarizeCollateralDriftFromLiveReserveMap(
@@ -37,6 +37,7 @@ describe("collateral score delta detection", () => {
 
     expect(result.driftCoins).toEqual([]);
     expect(result.fallbackCoins).toEqual([]);
+    expect(result.observedIds).toEqual([]);
   });
 
   it("still reports drift for comparable multi-slice live mixes", () => {

@@ -76,6 +76,7 @@ describe("dex liquidity cron metadata", () => {
     params.sourceState.failedSources = ["uni-v4:ethereum", "uni-v4:arbitrum", "uni-v4:ethereum"];
     params.sourceState.degradedSources = ["orca:solana", "orca:solana"];
     params.sourceState.directApiSourceSummary.sourceWarnings = ["orca: some pools were unavailable"];
+    params.sourceState.subgraphFailures = [{ source: "uniswap-v4-subgraph", chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false }];
 
     const metadata = buildDexLiquidityCronMetadata(params);
     const reasons = [
@@ -92,6 +93,10 @@ describe("dex liquidity cron metadata", () => {
     }));
     expect(compacted.compacted).toBe(true);
     expect(getCronQualityReasons(JSON.parse(compacted.metadata!))).toEqual(reasons);
+    expect(JSON.parse(compacted.metadata!)).toMatchObject({
+      subgraphFailures: params.sourceState.subgraphFailures,
+      directApiSourceSummary: params.sourceState.directApiSourceSummary,
+    });
   });
 
   it("omits findings for a clean publication or an ordinary fallback", () => {

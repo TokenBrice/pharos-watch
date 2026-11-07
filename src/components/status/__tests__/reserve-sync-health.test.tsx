@@ -41,6 +41,7 @@ describe("ReserveSyncHealthCard", () => {
           status: "degraded",
           freshCoins: 74,
           degradedCoins: 71,
+          healthDegradedCoins: 3,
           deferredCoins: 48,
           freshCoverageRatio: 0.7365,
           authoritativeFreshCoverageRatio: 0.7329,
@@ -54,6 +55,7 @@ describe("ReserveSyncHealthCard", () => {
     );
 
     expect(screen.getByText("Report-card inputs are conservative")).toBeTruthy();
+    expect(screen.getByText("Degraded").parentElement?.textContent).toBe("Degraded3");
     expect(screen.getByText(/Safety scoring only trusts score-grade reserve evidence/)).toBeTruthy();
     expect(screen.getByText("73.7% fresh")).toBeTruthy();
     expect(screen.getByText("73.3% score-grade")).toBeTruthy();

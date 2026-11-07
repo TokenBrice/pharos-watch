@@ -56,7 +56,7 @@ export function isDexLiquidityDegraded(params: Parameters<typeof dexLiquidityDeg
 export function buildDexLiquidityCronMetadata(params: {
   sourceState: Pick<DexLiquidityScoringSourceState,
     "primaryRawPoolCount" | "failedSources" | "degradedSources" |
-    "fallbackSignals" | "directApiSourceSummary">;
+    "fallbackSignals" | "directApiSourceSummary" | "subgraphFailures">;
   poolState: Pick<DexLiquidityPoolState,
     "stagedMergedCount" | "stagedSkippedCount" | "stagedSkippedByExactIdentityCount" |
     "stagedSkippedByUniqueDerivedIdentityCount" | "stagedSkippedByOptionalWildcardIdentityCount" |
@@ -148,6 +148,7 @@ export function buildDexLiquidityCronMetadata(params: {
       challengerSnapshotsSkipped: challengerPublication.skippedStablecoins,
     },
     failedSources: [...new Set(sourceState.failedSources)],
+    subgraphFailures: sourceState.subgraphFailures ?? [],
     degradedSources: [...new Set(sourceState.degradedSources ?? [])],
     dexPriceDiagnostics,
     fallbackMode: [...new Set(sourceState.fallbackSignals)],

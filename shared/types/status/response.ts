@@ -138,6 +138,7 @@ const StatusReserveCompositionSchema = z.union([
     healthConfiguredCoins: z.null().optional(),
     healthFreshCoins: z.null().optional(),
     healthAuthoritativeFreshCoins: z.null().optional(),
+    healthDegradedCoins: z.null().optional(),
     acknowledgedFeedIds: z.null().optional(),
     acknowledgedFeeds: z.null().optional(),
     expiredFeedReviewIds: z.null().optional(),

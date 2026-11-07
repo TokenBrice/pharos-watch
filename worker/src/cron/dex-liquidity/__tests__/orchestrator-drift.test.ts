@@ -3,6 +3,7 @@ import { DexLiquidityCronMetadataSchema, type DexLiquidityCronMetadata } from ".
 import {
   computeDexLiquidityDriftSummary,
   DRIFT_REBASELINE_RUNS,
+  REVIEWED_CHAIN_TVL_DISPOSITIONS,
   REVIEWED_SOURCE_FAMILY_DISPOSITIONS,
   readPreviousDexLiquidityDriftCandidates,
   type DexLiquidityDriftCandidate,
@@ -316,6 +317,26 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
 });
 
 describe("computeDexLiquidityDriftSummary cohort drops", () => {
+  it.each([
+    [0, "2026-11-08", 1, 1, true], [0, "2026-11-07", 1, 1, false],
+    [0, "2026-11-21T20:31:00Z", 1, 1, false], [0, "2026-11-08", 1.01, 1, false], [0, "2026-11-08", 1, 0.9, true], [1, "2026-11-08", 1, 0.9, false],
+    [0, "2026-11-08", 1, 1.019, true], [0, "2026-11-08", 1, 1.021, false],
+    [1, "2026-11-08", 1, 1, true],
+  ] as const)("bounds chain review %s at %s (%s, %s)", (index, date, baselineScale, observedScale, accepted) => {
+    const review = REVIEWED_CHAIN_TVL_DISPOSITIONS[index];
+    const summary = drift({
+      nowSec: Date.parse(date) / 1000,
+      previousCandidates: [{ flag: review.flag, baselineValue: review.baselineValue * baselineScale, observedValue: review.observedValue, consecutiveRuns: 122 }],
+      currentChainTvl: { [review.flag.split(":")[1]]: review.observedValue * observedScale },
+    });
+    expect(summary.cohortDriftFlags).toEqual(accepted ? [] : [review.flag]);
+    expect(summary.qualityDriftFlags).toEqual(summary.cohortDriftFlags);
+    expect(summary.qualityDriftCandidates[0]?.consecutiveRuns).toBe(123);
+    expect(persistDriftSummary(summary).sourceCoverage.qualityDriftAccepted).toEqual(accepted ? [expect.objectContaining({
+      flag: review.flag, expiresAt: review.expiresAt, evidenceUrls: [...review.evidenceUrls],
+    })] : []);
+  });
+
   it.each<{ previousChainTvl: Record<string, number> | null; current: number }>([
     { previousChainTvl: { base: 8_000_000 }, current: 7_800_000 },
     { previousChainTvl: { base: 500_000 }, current: 500_000 },

@@ -175,6 +175,8 @@ export class MintBurnRun {
     // retain the earlier protection as well.
     const pendingAdmissionKeys = new Set(publicationContext.publication.legs
       .filter((leg) => leg.status === "pending-admission").map((leg) => leg.configKey));
+    const reactivationKeys = new Set(publicationContext.publication.legs
+      .filter((leg) => leg.reason === "reactivation-pending").map((leg) => leg.configKey));
     const grandfatheredKeys = new Set(allActiveConfigs.filter(isGrandfatheredMintBurnConfig).map(configKey));
     const pendingRetentionKeys = new Set(publicationContext.publication.legs
       .filter((leg) => leg.status === "pending-admission"
@@ -331,6 +333,7 @@ export class MintBurnRun {
       pendingCursorUpdates,
       pendingScanCoverage,
       pendingAdmissionKeys,
+      reactivationKeys,
       maxScanRange: MAX_SCAN_RANGE,
       criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
       criticalBridgeConfigBudgetLimit: CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT,
@@ -363,7 +366,7 @@ export class MintBurnRun {
       observedAt: runTimestamp,
       configBreakdown: phaseResult.configBreakdown as unknown as ReadonlyArray<Record<string, unknown>>,
     });
-    const resumeConfigKey = resolveMintBurnResumeConfigKey(phaseResult.configBreakdown);
+    const resumeConfigKey = resolveMintBurnResumeConfigKey(phaseResult.configBreakdown, pendingAdmissionKeys);
 
     await reportCronProgress(reportProgress, {
       stage: "recalc-hours",

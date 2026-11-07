@@ -324,6 +324,8 @@ export const DexLiquidityCronMetadataSchema = z.object({
         flag: z.string(),
         baselineValue: z.number(),
         reviewedAt: z.string(),
+        expiresAt: z.string().optional(),
+        evidenceUrls: z.array(z.string()).optional(),
         reason: z.string(),
       })).optional(),
       qualityDriftRebaselined: z

@@ -105,6 +105,29 @@ describe("pending-admission catch-up budget", () => {
     expect(args.budget.count).toBe(199);
   });
 
+  it.each([false, true])("shares extended capacity with reactivation and preserves the admitted tail after expiry=%s", async (expired) => {
+    const args = input();
+    const roster = [3, 4, 5, 6].map((id) => ({ ...admitted, tier: "extended" as const,
+      contractAddress: `0x${String(id).repeat(40)}` }));
+    const returning = { ...pending, tier: "extended" as const };
+    const cold = { ...returning, contractAddress: `0x${"7".repeat(40)}` };
+    args.configs = [cold, returning, ...roster];
+    args.pendingAdmissionKeys = new Set([configKey(returning), configKey(cold)]);
+    args.reactivationKeys = new Set([configKey(returning)]);
+    args.lane = "extended";
+    args.budget.limit = 50;
+    if (expired) args.reportProgress = async (progress) => {
+      if (progress.metadata?.configKey === configKey(roster[1]!)) vi.setSystemTime((NOW + 330) * 1000);
+    };
+    const result = await runMintBurnConfigPhase(args);
+    expect(vi.mocked(syncMintBurnConfigWithRetries).mock.calls.map(([scan]) => scan.key)).toEqual(
+      (expired ? roster.slice(0, 3) : [...roster.slice(0, 2), returning]).map(configKey));
+    expect(result.configBreakdown.find((row) => row.key === configKey(returning))).toMatchObject(
+      expired ? { attempted: false, skippedReason: "runtime-budget-exhausted" } : { attempted: true });
+    expect(args.pendingCursorUpdates.has(configKey(cold))).toBe(false);
+    expect(args.budget.count).toBeLessThanOrEqual(50);
+  });
+
   it("does not degrade admitted coverage when only pending work misses the deadline", async () => {
     const args = input();
     args.preparePendingConfigs = vi.fn();
@@ -255,7 +278,7 @@ describe("pending-admission catch-up budget", () => {
     await expect(runMintBurnConfigPhase(args)).rejects.toBe(stop);
   });
 
-  it("isolates pending chain preparation exceptions and exhausts their remaining allowance", async () => {
+  it("isolates pending chain preparation exceptions without spending admitted allowance", async () => {
     const args = input();
     args.preparePendingConfigs = async (budget) => {
       budget.count++;
@@ -265,7 +288,7 @@ describe("pending-admission catch-up budget", () => {
     expect(result.configBreakdown[1]).toMatchObject({ attempted: false, errors: 1, skippedReason: "pending-chain-context-failed" });
     expect(result.criticalContractsSatisfied).toBe(1);
     expect(result.criticalContractsUnsatisfied).toBe(0);
-    expect(args.budget.count).toBe(args.budget.limit);
+    expect(args.budget.count).toBeLessThan(args.budget.limit);
     expect(args.pendingCursorUpdates.get(configKey(admitted))).toBe(50_000);
     expect(args.pendingCursorUpdates.has(configKey(pending))).toBe(false);
     expect(syncMintBurnConfigWithRetries).toHaveBeenCalledTimes(1);

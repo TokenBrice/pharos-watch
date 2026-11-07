@@ -97,6 +97,7 @@ export async function runMintBurnConfigPhase(input: {
   db: D1Database;
   configs: MintBurnContractConfig[];
   pendingAdmissionKeys?: ReadonlySet<string>;
+  reactivationKeys?: ReadonlySet<string>;
   preparePendingConfigs?: (budget: { limit: number; count: number }, deadlineMs: number) => Promise<void>;
   lane: "all" | "critical" | "extended";
   jobName: string;
@@ -139,7 +140,19 @@ export async function runMintBurnConfigPhase(input: {
 
   const configBreakdown: MintBurnConfigSummary[] = [];
   const isPending = (config: MintBurnContractConfig) => input.pendingAdmissionKeys?.has(configKey(config)) === true;
-  const configs = [...input.configs.filter((config) => !isPending(config)), ...input.configs.filter(isPending)];
+  const admittedConfigs = input.configs.filter((config) => !isPending(config));
+  const pendingConfigs = input.configs.filter(isPending);
+  const extendedConfigs = admittedConfigs.filter((config) => configTier(config) === "extended");
+  const halfExtended = Math.ceil(extendedConfigs.length / 2);
+  const isReactivating = (config: MintBurnContractConfig) => input.reactivationKeys?.has(configKey(config)) === true;
+  // Give returning legs a bounded turn after the admitted half-pass, before its tail spends every request.
+  const configs = input.lane === "extended" ? [
+    ...admittedConfigs.filter((config) => configTier(config) === "critical"),
+    ...extendedConfigs.slice(0, halfExtended),
+    ...pendingConfigs.filter(isReactivating),
+    ...extendedConfigs.slice(halfExtended),
+    ...pendingConfigs.filter((config) => !isReactivating(config)),
+  ] : [...admittedConfigs, ...pendingConfigs];
   const affectedHours = input.affectedHours;
   const deadlineMs = input.deadlineMs ?? Date.now() + MINT_BURN_RUNTIME_BUDGET_MS;
   // Pending catch-up must leave time for admitted commits, retention and cache publication.
@@ -210,9 +223,9 @@ export async function runMintBurnConfigPhase(input: {
         await input.preparePendingConfigs?.(input.budget, configDeadlineMs);
       } catch (error) {
         rethrowIfAborted(error, input.signal);
+        // A thrown loader can hide request accounting: skip every pending leg, but
+        // never spend admitted legs' budget now that reactivation runs mid-roster.
         pendingPreparationFailed = true;
-        // A thrown loader can hide request accounting; stop this pending batch.
-        input.budget.count = input.budget.limit;
         logWorkerEventArgs("handler", "warn", "[sync-mint-burn] pending-chain-context-failed", error);
       }
       pendingPrepared = true;
@@ -222,6 +235,13 @@ export async function runMintBurnConfigPhase(input: {
       Date.now() + minimumConfigWindowMs >= configDeadlineMs
     ) {
       runtimeBudgetHit = true;
+      if (pending) {
+        const summary = createMintBurnConfigSummary(configs[i]!, configKey(configs[i]!), configTier(configs[i]!));
+        summary.skippedReason = "runtime-budget-exhausted";
+        contractsSkipped++;
+        configBreakdown.push(summary);
+        continue;
+      }
       for (let remainingIndex = i; remainingIndex < configs.length; remainingIndex++) {
         const remainingConfig = configs[remainingIndex]!;
         const remainingKey = configKey(remainingConfig);

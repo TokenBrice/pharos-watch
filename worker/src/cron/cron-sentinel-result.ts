@@ -60,7 +60,11 @@ const SOURCE_STATE_INTERVAL_MULTIPLIER = 2;
 // metadata.durationDiagnostics[].{stageBreakdown,samples}[], one object level
 // deeper than the generic bound; without the extra depth every stage and
 // sample object collapses into the truncation placeholder.
-const SOURCE_METADATA_MAX_DEPTH: Partial<Record<CronSentinelRuleSource, number>> = { duration: 6 };
+const SOURCE_METADATA_MAX_DEPTH: Partial<Record<CronSentinelRuleSource, number>> = {
+  duration: 6,
+  // Census findings need their added/removed identity arrays for diagnosis.
+  "reserve-post-sync": 5,
+};
 
 function sourceStateMaxAgeSec(source: CronSentinelRuleSource): number {
   return Math.min(

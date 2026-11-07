@@ -206,6 +206,7 @@ describe("curated on-chain supply paths", () => {
     const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
     expect(prefersOnChainSupplyMcap(meta)).toBe(true);
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("mxne-real-mxn")!)).toBe(true);
+    expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("jtrsy-anemoy")!)).toBe(true);
     expect(selectSingleOnchainSupplyProbeContract(meta)?.chain).toBe("ethereum");
   });
 
@@ -339,6 +340,8 @@ describe("curated on-chain supply paths", () => {
 
   it.each([
     { id: "yusd-yieldfi", chains: ["ethereum", "arbitrum", "base", "optimism", "sonic", "plume", "katana", "bsc", "avalanche", "plasma"] },
+    { id: "rwausdi-multipli", chains: ["ethereum", "base", "monad", "arbitrum", "xlayer", "robinhood", "pharos"],
+      endpoints: { pharos: "https://rpc.pharos.xyz" }, fallback: { pharos: undefined }, runtime: true },
     { id: "savusd-avant", chains: ["avalanche", "ethereum", "linea", "plasma", "berachain", "bsc", "monad", "katana", "megaeth", "sei"],
       canonical: "avalanche", zero: ["katana"], endpoints: { megaeth: "https://mainnet.megaeth.com/rpc" } },
     { id: "cusdo-openeden", chains: ["ethereum", "base", "bsc", "solana", "klaytn"], mint: "BnANu5CtUogLqcvBNByJuwaRvRxNtVuDcAytwjsUUtqs" },

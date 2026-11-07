@@ -151,6 +151,13 @@ describe("batched registry retention", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM alpha").get()).toEqual({ n: 0 });
   });
 
+  it("defers policies past the soft deadline without failing them", async () => {
+    const { db, batch } = fixture();
+    await expect(runRetentionPolicies(db, { alpha: policy("alpha") }, 100, undefined, { deadlineMs: 0 }))
+      .rejects.toMatchObject({ deferredKeys: ["alpha"], failedRetentionGroup: [{ key: "alpha" }], completedResults: {} });
+    expect(batch).not.toHaveBeenCalled();
+  });
+
   it.each([false, true, "windows"])("reports retention and bounded costs (%s)", async (mode) => {
     const costs = mode === true, windowed = mode === "windows";
     const { sqlite, db, batch, execute } = fixture();
@@ -172,14 +179,39 @@ describe("batched registry retention", () => {
     });
     expect(sqlite.prepare("SELECT observed_at FROM alpha ORDER BY observed_at").all()).toEqual([{ observed_at: 4 }, { observed_at: 90 }]);
     expect(sqlite.prepare("SELECT observed_at FROM beta").all()).toEqual([{ observed_at: 90 }]);
-    expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual(windowed ? [2, 1, 1] : [2, 1]);
+    expect(batch.mock.calls.map(([statements]) => statements.length)).toEqual(windowed ? [1, 1, 1, 1] : [1, 1, 1]);
     expect(JSON.parse(log.mock.calls[0][1])).toMatchObject({
       status: "ok", completedRounds: windowed ? 3 : 2, batchOutcomeUnknown: false, durationMs: 37,
       completed: [
         { key: "a".repeat(100), pruned: 3, rowsRead: costs ? 30 : null, rowsWritten: costs ? 32 : 3, d1DurationMs: costs ? 34 : null },
-        { key: "beta", pruned: 1, rowsRead: costs ? 11 : null, rowsWritten: costs ? 12 : 1, d1DurationMs: costs ? 13 : null },
       ],
     });
+    expect(JSON.parse(log.mock.calls[1][1]).completed).toEqual([
+      { key: "beta", pruned: 1, rowsRead: costs ? 30 : null, rowsWritten: costs ? 31 : 1, d1DurationMs: costs ? 32 : null },
+    ]);
+  });
+
+  it.each([false, true])("paces acknowledged rounds, not failed attempts (overload=%s)", async (overload) => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(0);
+      const { sqlite, db, batch, execute } = fixture();
+      sqlite.exec("INSERT INTO alpha VALUES (1), (2)");
+      const starts: number[] = [];
+      batch.mockImplementation(async (statements) => {
+        starts.push(Date.now());
+        vi.setSystemTime(Date.now() + 10);
+        if (overload && starts.length > 3 && starts.length < 8) throw new Error("D1 DB is overloaded. Too many resources consumed within a 10 second window");
+        return execute(statements);
+      });
+      const pass = runRetentionPolicies(db, { alpha: { ...policy("alpha"), batchLimit: 1, windows: [
+        { windowSec: 10, predicate: "1 = 1" }, { windowSec: 20, predicate: "missing = 1" },
+      ] }, beta: policy("beta") }, 100).catch((error) => error);
+      await vi.runAllTimersAsync();
+      expect((await pass).completedResults).toEqual({ beta: { pruned: 0, cappedAtLimit: false } });
+      if (overload) expect(starts[7] - starts[6]).toBeGreaterThanOrEqual(10_010);
+      else expect(starts).toEqual([0, 40, 80, 120, 130]);
+    } finally { vi.useRealTimers(); }
   });
 
   it.each([
@@ -235,12 +267,23 @@ describe("batched registry retention", () => {
     expect((await runRetentionPolicies(db, { alpha: policy("alpha") }, 100)).alpha.pruned).toBe(when === "before" ? 3 : 2);
   });
 
-  it("keeps prior groups committed but rolls back an entire failed later group", async () => {
+  it("keeps independent policies committed after an earlier failure", async () => {
     const { sqlite, db } = fixture();
     sqlite.exec("INSERT INTO alpha VALUES (1); INSERT INTO beta VALUES (1)");
     const first = Object.fromEntries(Array.from({ length: 5 }, (_, i) => [`first${i}`, policy("alpha")]));
-    await expect(runRetentionPolicies(db, { ...first, beta: policy("beta"), missing: policy("missing") }, 100)).rejects.toThrow();
+    await expect(runRetentionPolicies(db, { ...first, missing: policy("missing"), beta: policy("beta") }, 100))
+      .rejects.toMatchObject({ completedResults: { beta: { pruned: 1, cappedAtLimit: false } } });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM alpha").get()).toEqual({ n: 0 });
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM beta").get()).toEqual({ n: 1 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM beta").get()).toEqual({ n: 0 });
+  });
+
+  it("does not spend a shared budget after an unconfirmed sibling", async () => {
+    const { db, batch } = fixture();
+    batch.mockRejectedValueOnce(new Error("unknown outcome"));
+    await expect(runRetentionPolicies(db, { alpha: { ...policy("alpha"), budgetGroup: "shared" },
+      beta: { ...policy("beta"), budgetGroup: "shared" } }, 100)).rejects.toMatchObject({
+      failedRetentionGroup: [{ key: "alpha" }, { key: "beta" }], completedResults: {},
+    });
+    expect(batch).toHaveBeenCalledTimes(1);
   });
 });
