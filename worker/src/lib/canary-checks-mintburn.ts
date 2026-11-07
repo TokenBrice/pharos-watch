@@ -1,4 +1,6 @@
 import { getCache, setCache } from "./db-cache";
+import { tryParseJson as parseJson } from "./json-parse";
+import { readRecord as asRecord } from "@shared/lib/type-guards";
 import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION } from "./blacklist-cache-keys";
 import { aggregateFlowCacheKey } from "./mint-burn-flow-cache-keys";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC } from "./mint-burn-flows-service";
@@ -44,26 +46,12 @@ function failedResult(reason: string, metadata?: Record<string, unknown>): Canar
   };
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value != null && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
 function asNonNegativeInt(value: unknown): number | null {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 function asFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function parseJson(value: string): unknown {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
 }
 
 interface RosterBaseline {

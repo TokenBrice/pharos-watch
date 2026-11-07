@@ -2,6 +2,7 @@ import type { ReserveContinuationMessage } from "@shared/types/reserve-continuat
 import type { CronTerminalAccountingStage, SchedulerSummaryOutcome } from "@shared/types/status/cron";
 import { CronTerminalAccountingError, resolveCronDegradedReason, type CronProgressReporter, type CronResult } from "../../lib/cron-logger";
 import { describeError } from "@shared/lib/error-utils";
+import { parseJsonObject as readMetadataObject } from "../../lib/json-parse";
 import { stripSensitive } from "../../lib/safe-error-message";
 import type { ScheduledRuntimeContext } from "./context";
 import { foldScheduledOutcomes, projectCronResultOutcome } from "../../lib/cron-outcomes";
@@ -39,19 +40,6 @@ export type ScheduledSlotSummary = {
 
 function truncateSummaryText(value: unknown): string {
   return String(value).slice(0, 300);
-}
-
-function readMetadataObject(metadata: string | undefined): Record<string, unknown> | null {
-  if (!metadata) return null;
-  try {
-    const parsed = JSON.parse(metadata) as unknown;
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed as Record<string, unknown>;
-    }
-  } catch {
-    return null;
-  }
-  return null;
 }
 
 function extractNeutralSkipReason(result: CronResult | null | void): string {

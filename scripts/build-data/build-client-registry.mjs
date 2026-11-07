@@ -30,6 +30,7 @@ import {
 import { resolveMintAuthorityStatusKind } from "../../shared/lib/classification/mint-authority.ts";
 import { resolveMechanismArchetype } from "../../shared/lib/classification/resolve-mechanism-archetype.ts";
 import { getHeroPegLabel } from "../../shared/lib/classification.ts";
+import { isRecord as isPlainObject } from "../../shared/lib/type-guards.ts";
 import { atomicWriteFileSync } from "../lib/atomic-artifact-write.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
@@ -274,10 +275,6 @@ function projectGeniusNegativeEvidenceReview(value) {
     projected.references = references;
   }
   return projected;
-}
-
-function isPlainObject(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function projectLinks(links) {

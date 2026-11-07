@@ -90,17 +90,14 @@ const YieldSourceRiskFieldSchemas = YieldSourceRiskSchema.shape;
 type YieldSourceRiskField = keyof typeof YieldSourceRiskFieldSchemas;
 const YIELD_SOURCE_RISK_FIELDS = Object.keys(YieldSourceRiskFieldSchemas) as YieldSourceRiskField[];
 
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
-}
-
 export function normalizeYieldSourceRisk(value: unknown): YieldSourceRisk | null {
-  if (!isPlainRecord(value)) return null;
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
 
   const normalized: Record<string, unknown> = {};
   for (const field of YIELD_SOURCE_RISK_FIELDS) {
-    if (!Object.prototype.hasOwnProperty.call(value, field)) continue;
-    const parsed = YieldSourceRiskFieldSchemas[field].safeParse(value[field]);
+    if (!Object.prototype.hasOwnProperty.call(record, field)) continue;
+    const parsed = YieldSourceRiskFieldSchemas[field].safeParse(record[field]);
     if (parsed.success && parsed.data !== undefined) {
       normalized[field] = parsed.data;
     }

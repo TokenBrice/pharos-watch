@@ -39,6 +39,7 @@ import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
+import { isRecord } from "@shared/lib/type-guards";
 import type { DepegEvent, SupplyObservationProvenance } from "@shared/types/market";
 import { getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { formatUtcDateOnly } from "@shared/lib/format";
@@ -467,10 +468,6 @@ const ScoresLatestDisplayProjectionSchema = z
 interface ScoresLatestProjection {
   rows: ScoreLatestRow[];
   displayProjection: ScoresLatestDisplayProjection | null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function sameSafetyIdentity(left: unknown, right: unknown): boolean {

@@ -1,4 +1,5 @@
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { readRecord as asRecord } from "@shared/lib/type-guards";
 import { getActiveAssetServiceBreadthThreshold } from "@shared/lib/status-thresholds";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { CanaryCheckResult } from "./canary-checks";
@@ -59,10 +60,6 @@ function failedResult(reason: string, metadata?: Record<string, unknown>): Canar
 
 function unavailableResult(error: unknown): CanaryFinding {
   return failedResult("canary-source-unavailable", { error: boundedText(toErrorMessage(error)) });
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : null;
 }
 
 function integerOrNull(value: unknown): number | null {
