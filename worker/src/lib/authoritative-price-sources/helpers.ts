@@ -327,6 +327,30 @@ export type HistoricalBlockPriceResolver = (
   signal?: AbortSignal,
 ) => Promise<number | null>;
 
+export function decodeAddressWord(value: `0x${string}` | null): string | null {
+  if (!value || value.length < 66) return null;
+  return `0x${value.slice(26, 66)}`.toLowerCase();
+}
+
+export function decimalFromRaw(value: bigint, decimals: number): number {
+  const scale = 10n ** BigInt(decimals);
+  return Number(value / scale) + Number(value % scale) / Number(scale);
+}
+
+export function encodeIndexedCall(selector: string, index: number): string {
+  return `${selector}${encodeUint256(index)}`;
+}
+
+const USDC_QUOTE_DECIMALS = 6;
+
+/** Per-token price of a pool quote paid out in USDC; null unless finite and positive. */
+export function quoteUsdcPrice(outputRaw: bigint | null, inputTokens: number): number | null {
+  if (outputRaw == null || outputRaw <= 0n) return null;
+  const output = decimalFromRaw(outputRaw, USDC_QUOTE_DECIMALS);
+  const price = output / inputTokens;
+  return Number.isFinite(price) && price > 0 ? price : null;
+}
+
 export function decodeUint256WordBigInt(result: `0x${string}`, wordIndex = 0): bigint | null {
   const start = 2 + wordIndex * 64;
   const end = start + 64;
