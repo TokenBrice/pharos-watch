@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
-import { LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES } from "@shared/lib/live-reserve-reliability";
+import { LIVE_RESERVE_STRUCTURAL_SCORE_INELIGIBLE_WARNING_CODES } from "@shared/lib/live-reserve-reliability";
 import {
   LIVE_SLICES,
   makeReservesDb,
@@ -673,8 +673,16 @@ describe("live-reserves-store", () => {
     const unreadable = await inspect("{not-json");
     expect([...unreadable.scoreIneligibleIds]).toEqual([]);
     expect([...unreadable.unknownIds]).toEqual([id]);
-    for (const code of LIVE_RESERVE_STRUCTURAL_DEGRADED_WARNING_CODES) {
+    for (const code of LIVE_RESERVE_STRUCTURAL_SCORE_INELIGIBLE_WARNING_CODES) {
       const warnings = [warn(code)];
+      for (const [extra, now, operational] of [[[], 1_200, 0], [[warn("new-failure")], 1_200, 1], [[], 1_000_000, 1]] as const) {
+        const raw = { warnings: JSON.stringify([...warnings, ...extra]), warning_count: 1 + extra.length };
+        const overview = await computeReserveCompositionOverview(mockD1([
+          { match: "reserve_composition", rows: [reserveCompositionRow({ ...raw, metadata: JSON.stringify({ freshnessMode: "not-applicable" }) })] },
+          { match: "reserve_sync_state", rows: [reserveSyncRow({ ...raw, last_status: "degraded" })] },
+        ]), now, resolveScheduledSlotPolicy("fourHourlyReserveSync"));
+        expect([overview.degradedCoins, overview.healthDegradedCoins]).toEqual([1, operational]);
+      }
       const assess = (row: Record<string, unknown> = {}, state = {}, now = 1_200) => inspect(JSON.stringify(warnings), row, state, now);
       expect([...(await assess()).structuralOnlyIds]).toEqual(["iusd-infinifi"]);
       expect([...(await assess({}, {}, 1_000_000)).structuralOnlyIds]).toEqual([]);
