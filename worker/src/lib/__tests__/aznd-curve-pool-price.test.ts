@@ -16,6 +16,7 @@ import {
   azndCurvePoolProvider,
   fetchAzndCurvePoolPrice,
 } from "../authoritative-price-sources/aznd-curve-pool";
+import type { LivePriceContext } from "../authoritative-price-sources/helpers";
 
 const AZND = "0x52c66b5e7f8fde20843de900c5c8b4b0f23708a0";
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
@@ -141,6 +142,14 @@ describe("AZND exact Curve pool price", () => {
     await expect(azndCurvePoolProvider.fetchLivePrice?.(asset, {
       assetsById: new Map([...context().assetsById, [asset.id, asset]]),
     })).resolves.toBeNull();
+    expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unpriced USDC parent before spending block or pool reads", async () => {
+    const unpriced: LivePriceContext = { assetsById: new Map([["usdc-circle", { ...trustedUsdc(), price: null }]]) };
+
+    await expect(fetchAzndCurvePoolPrice(unpriced)).resolves.toBeNull();
+    expect(unpriced.lastUntrustedParent).toEqual({ parentId: "usdc-circle", reason: "parent-price-missing" });
     expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
   });
 });
