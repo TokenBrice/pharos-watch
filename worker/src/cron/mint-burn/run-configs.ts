@@ -223,9 +223,9 @@ export async function runMintBurnConfigPhase(input: {
         await input.preparePendingConfigs?.(input.budget, configDeadlineMs);
       } catch (error) {
         rethrowIfAborted(error, input.signal);
+        // A thrown loader can hide request accounting: skip every pending leg, but
+        // never spend admitted legs' budget now that reactivation runs mid-roster.
         pendingPreparationFailed = true;
-        // A thrown loader can hide request accounting; stop this pending batch.
-        input.budget.count = input.budget.limit;
         logWorkerEventArgs("handler", "warn", "[sync-mint-burn] pending-chain-context-failed", error);
       }
       pendingPrepared = true;
