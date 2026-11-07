@@ -40,7 +40,7 @@ function conservationFixture(config = byId("usds-sky")[0]) {
 }
 
 async function reconcile(options: {
-  id?: string; records?: unknown[]; coverage?: string; admittedTron?: boolean; disabledKeys?: string[]; paused?: boolean;
+  id?: string; records?: unknown[]; coverage?: string; scanAgeSec?: number; admittedTron?: boolean; disabledKeys?: string[]; paused?: boolean;
 } = {}) {
   const id = options.id ?? "usds-sky";
   const configs = byId(id);
@@ -66,7 +66,7 @@ async function reconcile(options: {
     })) },
     ...["sync-mint-burn", "sync-mint-burn-extended"].map((job) => ({
       match: "FROM cron_runs", matchBinds: [job], rows: [{
-        started_at: options.coverage === "stale" ? NOW - 86400 : NOW,
+        started_at: NOW - (options.scanAgeSec ?? (options.coverage === "stale" ? 86400 : 0)),
         status: options.coverage === "error" ? "error" : "ok",
         metadata: JSON.stringify({ chainHeads: { ethereum: 100_000_000 } }),
       }],
@@ -137,8 +137,8 @@ describe("getMintBurnReconciliation verified conservation", () => {
   it.each([
     ["missing", undefined],
     ["malformed", { status: "bad" }],
-    ["stale", { checkedAt: NOW - 4501 }],
-    ["old block", { toTimestamp: NOW - 4501, fromTimestamp: NOW - 4600 }],
+    ["stale", { checkedAt: NOW - 5401, toTimestamp: NOW - 5413, fromTimestamp: NOW - 5521 }],
+    ["old block", { toTimestamp: NOW - 5401, fromTimestamp: NOW - 5521 }],
     ["future", { checkedAt: NOW + 1 }],
     ["configuration changed", { configFingerprint: "different" }],
     ["missing internal fingerprint", { configFingerprint: undefined }],
@@ -166,6 +166,16 @@ describe("getMintBurnReconciliation verified conservation", () => {
 
   it.each(["stale", "error", "missing-cursor", "lagging"])("gates positive evidence on %s scan coverage", async (coverage) => {
     expect((await reconcile({ coverage })).rows[0].status).toBe("insufficient-source");
+  });
+
+  it.each([["usds-sky", 5400], ["fdusd-first-digital", 10800]] as const)("uses three producer intervals for %s proof and scans", async (id, maxAgeSec) => {
+    for (const age of [maxAgeSec, maxAgeSec + 1]) {
+      const result = await reconcile({ id, scanAgeSec: age, records: [{ ...conservationFixture(byId(id)[0]),
+        checkedAt: NOW - age, toTimestamp: NOW - age, fromTimestamp: NOW - age - 120 }] });
+      expect(result.rows[0].status).toBe(age === maxAgeSec ? "ok" : "insufficient-source");
+      expect(MintBurnReconciliationSummarySchema.parse(result).rows[0].conservation?.[0].maxAgeSec).toBe(maxAgeSec);
+    }
+    expect((await reconcile({ id, scanAgeSec: maxAgeSec + 1 })).rows[0].status).toBe("insufficient-source");
   });
 
   it.each([

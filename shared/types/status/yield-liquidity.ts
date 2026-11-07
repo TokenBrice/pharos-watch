@@ -347,6 +347,7 @@ export const MintBurnConservationRecordSchema = z.object({
   address: z.union([z.string().regex(ConservationEvmAddressPattern), z.string().regex(ConservationTronAddressPattern)]),
   decimals: z.number().int().min(0).max(255),
   checkedAt: ConservationBlockSchema,
+  maxAgeSec: z.number().positive().optional(),
   status: z.enum(["ok", "mismatch", "unavailable", "unsupported"]),
   reason: z.string().optional(),
   fromBlock: ConservationBlockSchema.nullable(),
