@@ -134,6 +134,14 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
     ],
     reason: "Corrected DefiLlama circulating perimeter: BiLira identifies 0x75950B957009fe615c8AE02fBAac8AaA6da91B2D as its redemption sweep awaiting burn. Pinned Ethereum block 26365294 and the other nine deployments net to 36,124,961.095158 TRYB ($698,792.67); the newly excluded sweep holds 17,676,620.201490 TRYB across Ethereum/BSC/Avalanche, not a fresh circulating redemption against the old $2.22M daily baseline.",
   },
+  {
+    stablecoinId: "gbpa-agant",
+    baselineUsd: 1_191_268.85,
+    reviewedAt: Date.parse("2026-11-07T21:10:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-14T21:10:00Z") / 1000,
+    evidenceUrls: ["https://etherscan.io/token/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b#balances"],
+    reason: "Follow-on to the reviewed Ethereum collapse release: block 26365071 shows 1,001,981.18 GBPA total supply with 1,001,879.18 in the detail feed's unreleased inventory, leaving 102 circulating. The released aggregate publishes $1.191M; the earlier daily row counted that inventory, so its comparison is obsolete.",
+  },
 ];
 
 export interface ReviewedSupplyCarry {

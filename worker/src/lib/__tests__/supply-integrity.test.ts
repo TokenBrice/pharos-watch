@@ -473,6 +473,7 @@ describe("supply integrity", () => {
       ["wmxn-ripio", 176_488.15, 663_063.37],
       ["wcop-ripio", 193_650.25, 544_889.08],
       ["tryb-bilira", 698_792.67, 2_219_652.08, Date.parse("2026-11-07T20:27:00Z") / 1000],
+      ["gbpa-agant", 1_191_268.85, 2_481_810, Date.parse("2026-11-07T21:10:00Z") / 1000],
     ] as const) {
       for (const [now, value, accepted] of [
         [reviewStart - 1, current, false], [reviewStart, current, true],
