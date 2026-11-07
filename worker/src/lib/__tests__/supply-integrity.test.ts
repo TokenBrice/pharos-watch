@@ -466,6 +466,25 @@ describe("supply integrity", () => {
       confirmState: { "value-drift": { signature: "x", runs: 2, held: { "iauon-ondo": 3_900_000, "gtusdtp-gauntlet": 2_900_000 } } },
     }), 1_793_836_800);
     expect(r.value).toMatchObject({ driftFindings: [], heldDriftFindings: [{ stablecoinId: "gtusdtp-gauntlet" }] });
+    const reviewedAt = Date.parse("2026-11-07T19:48:00Z") / 1000;
+    for (const [id, current, previous] of [
+      ["sparkusdtbc-spark", 850_692.45, 50_307_247.03],
+      ["frnt-wyoming", 397_773.24, 967_404.4],
+      ["wmxn-ripio", 176_488.15, 663_063.37],
+      ["wcop-ripio", 193_650.25, 544_889.08],
+    ] as const) {
+      for (const [now, value, accepted] of [
+        [reviewedAt - 1, current, false], [reviewedAt, current, true],
+        [reviewedAt, current * 0.97, false], [reviewedAt + 7 * 86400 + 1, current, false],
+      ] as const) {
+        const report = await loadSupplyIntegrityReport(database({
+          assets: [{ id, current: value, previous }],
+          confirmState: { "value-drift": { signature: "x", runs: 2, held: { [id]: previous } } },
+        }), now);
+        expect(report.value.driftFindings.length + report.value.heldDriftFindings.length).toBe(accepted ? 0 : 1);
+        expect(report.value.heldDriftBaselines[id]).toBe(accepted ? undefined : previous);
+      }
+    }
   });
 
   it("keeps sub-breadth carry, availability and partial-snapshot causes non-degrading", () => {

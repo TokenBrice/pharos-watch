@@ -59,7 +59,7 @@ function syrupChainCirculating(
 }
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
-  it.each(["usg-tangent", "usyc-hashnote"].map((id) => {
+  it.each(["usg-tangent", "usyc-hashnote", "jtrsy-anemoy"].map((id) => {
     const meta = ACTIVE_STABLECOINS.find((entry) => entry.id === id);
     if (!meta) throw new Error(`missing preferred supply fixture: ${id}`);
     return meta;
