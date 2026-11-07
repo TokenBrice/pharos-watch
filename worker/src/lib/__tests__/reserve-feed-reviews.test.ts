@@ -66,7 +66,7 @@ describe("reserve feed review policy", () => {
     expectTypeOf<"adapter-timeout" | "run-budget-exhausted">().not.toExtend<Review["failureCategory"]>();
     for (const overrides of [
       { reviewedAt: now + 1 }, { owner: " " }, { sources: [{ url: "http://example.com", evidenceDate: "2026-11-04" }] },
-      ...["2026-02-30", "2026-11-05"].map((evidenceDate) => ({ sources: [{ url: "https://example.com", evidenceDate }] })),
+      ...["2026-02-30", "2026-11-08"].map((evidenceDate) => ({ sources: [{ url: "https://example.com", evidenceDate }] })),
       { expiresAt: review.reviewedAt }, { expiresAt: review.reviewedAt + 14 * 86400 + 1 },
       { failureCategory: "" }, { adapterKey: "m0" }, { failureCategory: null, errorPrefix: null },
       { errorClass: "http-403" }, { errorClass: "http-200", failureCategory: "upstream-http", errorPrefix: null },
@@ -83,8 +83,8 @@ describe("reserve feed review policy", () => {
     }
   });
   it("keeps Yuzu dated and its exact error/category boundary", async () => {
-    expect([review.reviewedAt, review.expiresAt]).toEqual(["2026-11-04T08:24:37Z", "2026-11-11T08:24:37Z"].map((s) => Date.parse(s) / 1000));
-    expect(review.sources).toEqual([{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-11-04" }]);
+    expect([review.reviewedAt, review.expiresAt]).toEqual(["2026-11-07T19:46:52Z", "2026-11-14T19:46:52Z"].map((s) => Date.parse(s) / 1000));
+    expect(review.sources).toEqual([{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-11-07" }]);
     expect(review.failureCategory).toBe("unknown");
     expect(review.errorPrefix).toBe(accountable + "exposure_split has no contemporaneous timeline reserve total for reconciliation");
     for (const lastError of [
