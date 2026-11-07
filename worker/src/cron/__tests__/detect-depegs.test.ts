@@ -319,6 +319,12 @@ describe("detectDepegEvents", () => {
         unavailableCount: 3,
         belowFloorCount: 1,
         reasonCounts: { "primary-unusable": 1, "supply-unavailable": 1, "asset-absent": 1 },
+        unavailableIdsTruncated: false,
+        unavailableAssets: [
+          { id: "usdc-circle", reason: "primary-unusable", reviewedNominalReference: false },
+          { id: "eurc-circle", reason: "supply-unavailable", reviewedNominalReference: false },
+          { id: "a7a5-old-vector", reason: "asset-absent", reviewedNominalReference: false },
+        ],
       },
     });
     // Unavailable supply keeps the open event's lifecycle untouched; nothing new opens.
@@ -341,6 +347,15 @@ describe("detectDepegEvents", () => {
       status: "completed",
       census: { eligibleCount: 5, observedCount: 0, belowFloorCount: 0, unavailableCount: 5, reasonCounts: { "asset-absent": 5 } },
     });
+  });
+
+  it.each([true, false])("records reviewed nominal source facts (reviewed=%s)", async (reviewed) => {
+    const reference = { price: 1, source: "protocol-par", mode: "nominal_reference" as const };
+    const result = await detectDepegEvents(sqliteFixtures.open().db, [{
+      ...makeAsset({ id: "usdc-circle", symbol: "USDC", price: 1, priceSource: "protocol-par" }),
+      ...(reviewed ? { nominalPriceReference: reference } : {}),
+    }]);
+    expect(result.census?.unavailableAssets).toContainEqual({ id: "usdc-circle", reason: "primary-unusable", reviewedNominalReference: reviewed });
   });
 
   it("excludes an absent historical member from the census but still flags a missing active member", async () => {

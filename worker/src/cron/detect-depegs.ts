@@ -1,6 +1,7 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
-import type { PegAssetBase } from "@shared/types/core";
+import { NominalPriceReferenceSchema, type PegAssetBase } from "@shared/types/core";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { rowPriceCoverage } from "../lib/depeg-helpers";
 import { throwIfAborted } from "../lib/abort";
@@ -21,6 +22,7 @@ import type {
   DepegObservationOutcome,
   DepegPersistenceCommand,
 } from "./depeg-detection/types";
+import { DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT } from "./depeg-detection/types";
 
 const CENSUS_ELIGIBLE_IDS: readonly string[] = [...PSI_ELIGIBLE_META_BY_ID]
   .filter(([, meta]) => !meta.flags.navToken)
@@ -34,8 +36,10 @@ const CENSUS_ELIGIBLE_IDS: readonly string[] = [...PSI_ELIGIBLE_META_BY_ID]
  */
 function buildObservationCensus(
   outcomes: ReadonlyMap<string, DepegObservationOutcome>,
+  nominalReferenceIds: ReadonlySet<string>,
   evaluatedAt: number,
 ): DepegObservationCensus {
+  const unavailableAssets: NonNullable<DepegObservationCensus["unavailableAssets"]> = [];
   const census: DepegObservationCensus = {
     scope: "psi-non-nav-before-supply-floor",
     evaluatedAt,
@@ -44,6 +48,8 @@ function buildObservationCensus(
     unavailableCount: 0,
     belowFloorCount: 0,
     reasonCounts: {},
+    unavailableAssets,
+    unavailableIdsTruncated: false,
   };
   for (const id of CENSUS_ELIGIBLE_IDS) {
     const supplied = outcomes.get(id);
@@ -57,6 +63,11 @@ function buildObservationCensus(
     } else {
       census.unavailableCount++;
       census.reasonCounts[outcome.reason] = (census.reasonCounts[outcome.reason] ?? 0) + 1;
+      if (unavailableAssets.length < DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT) {
+        unavailableAssets.push({ id, reason: outcome.reason, reviewedNominalReference: nominalReferenceIds.has(id) });
+      } else {
+        census.unavailableIdsTruncated = true;
+      }
     }
   }
   return census;
@@ -99,6 +110,7 @@ export async function detectDepegEvents(
   const trackedCoinIds = new Set<string>(PSI_ELIGIBLE_META_BY_ID.keys());
   const commands: DepegPersistenceCommand[] = [];
   const observations = new Map<string, DepegObservationOutcome>();
+  const nominalReferenceIds = new Set<string>();
 
   for (const asset of assets) {
     throwIfAborted(signal);
@@ -122,6 +134,9 @@ export async function detectDepegEvents(
     }
     if (decision.observation && !observations.has(asset.id)) {
       observations.set(asset.id, decision.observation);
+      if (!isObservedPrice(asset) && NominalPriceReferenceSchema.safeParse(asset.nominalPriceReference).success) {
+        nominalReferenceIds.add(asset.id);
+      }
     }
     for (const eventId of decision.seenEventIds) {
       seen.add(eventId);
@@ -133,7 +148,7 @@ export async function detectDepegEvents(
     commands.push(...decision.commands);
   }
 
-  const census = buildObservationCensus(observations, hydrated.now);
+  const census = buildObservationCensus(observations, nominalReferenceIds, hydrated.now);
 
   // Entirely omitted assets are coverage gaps too; keeping the lifecycle open
   // must never extend the last trusted off-peg interval.

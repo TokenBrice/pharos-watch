@@ -32,6 +32,8 @@ export type DepegObservationOutcome =
   | { kind: "below-floor" }
   | { kind: "unavailable"; reason: DepegObservationGapReason };
 
+export const DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT = 64;
+
 /**
  * Coverage receipt over the non-NAV PSI-eligible universe (historical members
  * only when they supply a row), counted before the live-event supply floor.
@@ -45,6 +47,10 @@ export interface DepegObservationCensus {
   unavailableCount: number;
   belowFloorCount: number;
   reasonCounts: Partial<Record<DepegObservationGapReason, number>>;
+  /** Source facts only; acknowledgements are resolved by operator canaries. */
+  unavailableAssets?: { id: string; reason: DepegObservationGapReason; reviewedNominalReference: boolean }[];
+  unavailableIdsTruncated?: boolean;
+  unavailableIdsDropped?: boolean;
 }
 
 /** Why a sync run has no census: detection held or failed before building one. */

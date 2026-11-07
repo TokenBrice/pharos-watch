@@ -444,6 +444,8 @@ function sizeGuardMetadataForRung(
 // an oversized payload whose global persistence compaction would silently
 // drop the same evidence without any marker.
 function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Record<string, unknown> {
+  const quality = guard.metadata.quality as Record<string, unknown> | undefined;
+  const census = quality?.depegObservation as DepegObservationCensus | null | undefined;
   return {
     reason: "stablecoins-metadata-over-budget",
     metadataCompactedBySizeGuard: true,
@@ -460,7 +462,9 @@ function sizeGuardTerminalMetadata(guard: StablecoinsMetadataSizeGuardInput): Re
     depegHeldReason: guard.metadata.depegHeldReason,
     stalenessCheckFailed: guard.metadata.stalenessCheckFailed,
     supplyChainGuard: guard.metadata.supplyChainGuard,
-    quality: guard.metadata.quality,
+    quality: census?.unavailableAssets ? { ...quality,
+      depegObservation: { ...census, unavailableAssets: undefined, unavailableIdsDropped: true },
+    } : quality,
     activePublicationCoverage: {
       complete: guard.publicationCoverage.complete,
       expectedActiveCount: guard.publicationCoverage.expectedActiveCount,
@@ -783,11 +787,11 @@ export function buildFallbackStablecoinsSyncResult(input: {
   const persistedActivePriceCoverage = input.activePriceCoverage.missingActiveAssets.length > 20
     ? compactStablecoinActivePriceCoverage(input.activePriceCoverage, 20)
     : input.activePriceCoverage;
-  const priceSourceAttemptLedger = compactPriceSourceAttemptLedger(buildPriceSourceAttemptLedger({
+  const priceSourceAttemptLedger = buildPriceSourceAttemptLedger({
     missingActiveIds: input.activePriceCoverage.missingActiveIds,
     providerDiagnostics: input.providerDiagnostics,
     authoritativeOverrideStats: input.authoritativeOverrideStats,
-  }));
+  });
 
   const degradedReason = resolveSyncDegradedReason({
     ...input,
@@ -798,7 +802,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
   const qualityReasons = [...(degradedReason ? [degradedReason] : []), ...depegObservation.reasons,
     ...(preferredNativeSupply ? [preferredNativeSupply.reason] : [])];
 
-  return {
+  const result: CronResult = {
     status: degradedReason ? "degraded" : "ok",
     itemCount: input.assets.length,
     metadata: buildSyncMetadata({
@@ -841,7 +845,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
       depegPipelineSucceeded: !input.depegHeldReason && input.depegErrorCount === 0,
       activePublicationCoverage: publicationCoverage,
       activePriceCoverage: persistedActivePriceCoverage,
-      priceSourceAttemptLedger,
+      priceSourceAttemptLedger: compactPriceSourceAttemptLedger(priceSourceAttemptLedger),
     }, {
       cacheWriteMode: "published",
       capabilities: {
@@ -850,6 +854,17 @@ export function buildFallbackStablecoinsSyncResult(input: {
       },
     }),
   };
+  if (serializedByteLength(result.metadata!) >= MAX_STABLECOINS_CRON_METADATA_BYTES) {
+    result.metadata = buildSizeGuardedStablecoinsSyncMetadata({
+      metadata: JSON.parse(result.metadata!),
+      publicationCoverage,
+      activePriceCoverage: input.activePriceCoverage,
+      priceSourceAttemptLedger,
+      capabilities: { stablecoinsCache: publicationGap !== "systemic", depegPipeline: !input.depegHeldReason && input.depegErrorCount === 0 },
+      originalMetadataBytes: serializedByteLength(result.metadata!),
+    });
+  }
+  return result;
 }
 
 // The census is a quality finding only: it never changes execution status or
