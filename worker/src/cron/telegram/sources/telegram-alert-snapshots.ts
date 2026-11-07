@@ -82,11 +82,8 @@ export function parseSnapshotMap<T extends Record<string, unknown>>(
   cached: { value: string; updatedAt: number } | null,
 ): T | null {
   if (!cached) return null;
-  try {
-    return parseJsonObject<T>(cached.value);
-  } catch { /* expected: corrupted or legacy cache format */
-    return null;
-  }
+  // Corrupted or legacy cache values parse to null.
+  return parseJsonObject<T>(cached.value);
 }
 
 export function isSnapshotMissingOrStale(

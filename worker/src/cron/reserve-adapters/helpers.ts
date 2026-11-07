@@ -172,6 +172,7 @@ export {
   isEvmContract,
   isTronContract,
   pinnedEvmTokenReader,
+  unscopedOmissionWarnings,
   type MultichainSupplyAggregate,
   type MultichainSupplyContribution,
   type ScopedLiabilitySupply,

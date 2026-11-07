@@ -599,7 +599,8 @@ const eslintConfig = defineConfig([
     files: [...NON_WORKER_SOURCE_GLOBS, "worker/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"],
     ignores: [
       "**/__tests__/**", "**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
-      "**/test-helpers/**", "**/test-utils/**", "**/fixtures/**",
+      "**/test-helpers/**", "**/test-utils/**", "**/fixtures/**", "**/__mocks__/**",
+      "**/*test-support.*", "scripts/test/**", "src/test/**",
       "**/generated/**", "**/*.generated.*", "src/generated/**", "shared/data/**",
       // Pinned Safety Score evaluator inputs: editing them rotates the
       // evaluation-build identity and needs the equivalence replay, so their

@@ -14,9 +14,9 @@ import {
   makeOnchainCallers,
   requireOnchainInput,
   reserveDegradedWarning,
+  unscopedOmissionWarnings,
   type MultichainSupplyAggregate,
 } from "./helpers";
-import { unscopedOmissionWarnings } from "./multichain-supply";
 import { validateDecimals } from "./slice-math";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 

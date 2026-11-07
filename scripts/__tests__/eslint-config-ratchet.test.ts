@@ -175,6 +175,18 @@ describe("ESLint config ratchets", () => {
       rule: "pharos/no-arbitrary-radius", name, source, count,
       filePath: filePath ?? "src/components/__radius-fixture.tsx",
     })),
+    ...([
+      ["Worker guard and parser copies", 3, "worker/src/lib/__helper-copy-fixture.ts"],
+      ["frontend guard copy", 1, "src/lib/__helper-copy-fixture.ts"],
+      ["canonical guards pass", 0, "shared/lib/type-guards.ts"],
+      ["shared/types local guards pass", 0, "shared/types/__helper-copy-fixture.ts"],
+      ["canonical parsers pass", 1, "worker/src/lib/json-parse.ts"],
+      ["pinned evaluator input passes", 0, "shared/lib/safety-score-v9/policy.ts"],
+      ["test files pass", 0, "worker/src/lib/__tests__/__helper-copy-fixture.test.ts"],
+    ] satisfies Array<[string, number, string]>).map(([name, count, filePath]) => ({
+      rule: "pharos/no-local-helper-copies", name, count, filePath,
+      source: "function isRecord() {} const parseJson = () => null; const tryParseJson = function () {};",
+    })),
   ];
 
   it.each(styleProbes)("$rule rejects $name", async ({ rule, source, count, filePath }) => {
