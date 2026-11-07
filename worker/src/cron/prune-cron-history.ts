@@ -10,6 +10,13 @@ import {
 import { SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC } from "../lib/safety-score-v9/publication-journal";
 import { RetentionGroupError, runRetentionPolicies, type CappedDeleteResult } from "./shared/capped-delete";
 
+/**
+ * Stop starting new policies well inside the default five-minute task timeout
+ * (paced rounds take about four times their D1 time); an abort would discard
+ * the completed counts, while a deferred tail simply resumes tomorrow.
+ */
+const PRUNE_CRON_HISTORY_SOFT_DEADLINE_MS = 3 * 60_000;
+
 export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
   const now = Math.floor(Date.now() / 1000);
@@ -23,7 +30,9 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
   let results: Partial<Record<keyof typeof policies, CappedDeleteResult>>;
   let failure: RetentionGroupError | undefined;
   try {
-    results = await runRetentionPolicies(db, policies, now, signal);
+    results = await runRetentionPolicies(db, policies, now, signal, {
+      deadlineMs: Date.now() + PRUNE_CRON_HISTORY_SOFT_DEADLINE_MS,
+    });
   } catch (error) {
     // Aborts and unattributed failures propagate verbatim, as before the group envelope.
     if (signal?.aborted || !(error instanceof RetentionGroupError)) throw error;
@@ -89,6 +98,11 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     ...result,
     status: Object.keys(results).length > 0 ? "degraded" : "error",
     error: failure.message,
-    metadata: { ...result.metadata, reason: "retention-group-failed", failedRetentionGroup: failure.failedRetentionGroup },
+    metadata: {
+      ...result.metadata,
+      reason: failure.deferredKeys.length === failure.failedRetentionGroup.length ? "retention-deadline-deferred" : "retention-group-failed",
+      failedRetentionGroup: failure.failedRetentionGroup,
+      deferredRetentionPolicies: failure.deferredKeys,
+    },
   }) : createCronResult({ ...result, status: "ok" });
 }

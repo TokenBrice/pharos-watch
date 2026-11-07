@@ -1,5 +1,5 @@
 import { rethrowIfAborted, sleepWithSignal, throwIfAborted } from "../../lib/abort";
-import { D1_HEAVY_STATEMENT_IDLE_RATIO, D1_RESOURCE_WINDOW_MS, runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { D1_HEAVY_STATEMENT_IDLE_RATIO, D1_RESOURCE_WINDOW_MS, isD1ResourceWindowError, runWithOverloadRetry } from "../../lib/d1-overload-retry";
 import { runBoundedPrune, runBoundedPruneGroup } from "../../lib/bounded-prune";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { retentionDeleteStatement, type WindowedRetentionPolicy } from "@shared/lib/retention-policy";
@@ -54,6 +54,8 @@ export class RetentionGroupError extends Error {
     readonly failedRetentionGroup: { key: string; window?: string }[],
     readonly cause: unknown,
     readonly completedResults: Record<string, CappedDeleteResult> = {},
+    /** Policies not started because the run's soft deadline passed; not failures. */
+    readonly deferredKeys: readonly string[] = [],
   ) {
     super(`Retention group ${failedRetentionGroup.map(({ key, window }) => window ? `${key} [${window}]` : key).join(", ")}: ${toErrorMessage(cause)}`);
   }
@@ -100,34 +102,32 @@ export async function deleteCappedGroup(
               ...(group[index].windows ? { window: group[index].windows![windowIndex].window.slice(0, 100) } : {}),
             }));
             const roundStartedAtMs = Date.now();
-            try {
-              const round = await db.batch(batches.map(({ index, limit }) => {
-                const statement = current[index]!;
-                return db.prepare(statement.sql).bind(...statement.bindsForLimit(limit));
-              })).catch((caught: unknown) => {
-                batchOutcomeUnknown = true;
-                throw caught;
-              });
-              if (round.length !== batches.length) {
-                batchOutcomeUnknown = true;
-                throw new Error("Retention batch result count mismatch");
-              }
-              completedRounds += 1;
-              for (let index = 0; index < batches.length; index += 1) {
-                const work = completed[batches[index].index];
-                const meta = round[index].meta;
-                const add = (total: number | null, value: number | undefined) =>
-                  total !== null && typeof value === "number" && Number.isFinite(value) ? total + value : null;
-                work.pruned = add(work.pruned, meta?.changes);
-                work.rowsRead = add(work.rowsRead, meta?.rows_read);
-                work.rowsWritten = add(work.rowsWritten, meta?.rows_written);
-                work.d1DurationMs = add(work.d1DurationMs, meta?.duration);
-              }
-              return round;
-            } finally {
-              // Yield D1's rolling resource budget between rounds, windows and policies.
-              await sleepWithSignal(Math.max(0, Date.now() - roundStartedAtMs) * D1_HEAVY_STATEMENT_IDLE_RATIO, signal);
+            const round = await db.batch(batches.map(({ index, limit }) => {
+              const statement = current[index]!;
+              return db.prepare(statement.sql).bind(...statement.bindsForLimit(limit));
+            })).catch((caught: unknown) => {
+              batchOutcomeUnknown = true;
+              throw caught;
+            });
+            if (round.length !== batches.length) {
+              batchOutcomeUnknown = true;
+              throw new Error("Retention batch result count mismatch");
             }
+            completedRounds += 1;
+            for (let index = 0; index < batches.length; index += 1) {
+              const work = completed[batches[index].index];
+              const meta = round[index].meta;
+              const add = (total: number | null, value: number | undefined) =>
+                total !== null && typeof value === "number" && Number.isFinite(value) ? total + value : null;
+              work.pruned = add(work.pruned, meta?.changes);
+              work.rowsRead = add(work.rowsRead, meta?.rows_read);
+              work.rowsWritten = add(work.rowsWritten, meta?.rows_written);
+              work.d1DurationMs = add(work.d1DurationMs, meta?.duration);
+            }
+            // Yield D1's rolling resource budget after each acknowledged round; a
+            // failed attempt goes straight to the overload retry's own backoff.
+            await sleepWithSignal(Math.max(0, Date.now() - roundStartedAtMs) * D1_HEAVY_STATEMENT_IDLE_RATIO, signal);
+            return round;
           },
           signal,
         );
@@ -164,13 +164,20 @@ export async function runRetentionPolicies<Key extends string>(
   policies: Record<Key, WindowedRetentionPolicy>,
   nowSec: number,
   signal?: AbortSignal,
+  options: { deadlineMs?: number } = {},
 ): Promise<Record<Key, CappedDeleteResult>> {
   const results = {} as Record<Key, CappedDeleteResult>;
   const used = new Map<string, number>();
   const failures: RetentionGroupError[] = [];
   const failedBudgets = new Set<string>();
+  const deferredKeys: Key[] = [];
   for (const key of Object.keys(policies) as Key[]) {
     throwIfAborted(signal);
+    // Past the soft deadline, leave the remaining backlog to the next run.
+    if (options.deadlineMs != null && Date.now() >= options.deadlineMs) {
+      deferredKeys.push(key);
+      continue;
+    }
     const policy = policies[key];
     const budget = policy.budgetGroup;
     if (budget && failedBudgets.has(budget)) {
@@ -193,13 +200,16 @@ export async function runRetentionPolicies<Key extends string>(
       failures.push(caught);
       if (budget) failedBudgets.add(budget);
       // An exhausted window must expire before admitting an independent policy.
-      if (String(caught.cause).includes("consumed within a 10 second window")) {
+      if (isD1ResourceWindowError(caught.cause)) {
         await sleepWithSignal(D1_RESOURCE_WINDOW_MS, signal);
       }
     }
   }
-  if (failures.length > 0) {
-    throw new RetentionGroupError(failures.flatMap((failure) => failure.failedRetentionGroup), failures[0].cause, results);
+  if (failures.length > 0 || deferredKeys.length > 0) {
+    throw new RetentionGroupError(
+      [...failures.flatMap((failure) => failure.failedRetentionGroup), ...deferredKeys.map((key) => ({ key }))],
+      failures[0]?.cause ?? new Error("Retention run soft deadline reached"), results, deferredKeys,
+    );
   }
   return results;
 }

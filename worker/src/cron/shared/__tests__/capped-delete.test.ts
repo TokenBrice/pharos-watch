@@ -151,6 +151,13 @@ describe("batched registry retention", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM alpha").get()).toEqual({ n: 0 });
   });
 
+  it("defers policies past the soft deadline without failing them", async () => {
+    const { db, batch } = fixture();
+    await expect(runRetentionPolicies(db, { alpha: policy("alpha") }, 100, undefined, { deadlineMs: 0 }))
+      .rejects.toMatchObject({ deferredKeys: ["alpha"], failedRetentionGroup: [{ key: "alpha" }], completedResults: {} });
+    expect(batch).not.toHaveBeenCalled();
+  });
+
   it.each([false, true, "windows"])("reports retention and bounded costs (%s)", async (mode) => {
     const costs = mode === true, windowed = mode === "windows";
     const { sqlite, db, batch, execute } = fixture();
@@ -184,7 +191,7 @@ describe("batched registry retention", () => {
     ]);
   });
 
-  it.each([false, true])("paces rounds, windows and policies after failure (overload=%s)", async (overload) => {
+  it.each([false, true])("paces acknowledged rounds, not failed attempts (overload=%s)", async (overload) => {
     vi.useFakeTimers();
     try {
       vi.setSystemTime(0);
@@ -202,8 +209,8 @@ describe("batched registry retention", () => {
       ] }, beta: policy("beta") }, 100).catch((error) => error);
       await vi.runAllTimersAsync();
       expect((await pass).completedResults).toEqual({ beta: { pruned: 0, cappedAtLimit: false } });
-      if (overload) expect(starts[7] - starts[6]).toBeGreaterThanOrEqual(10_040);
-      else expect(starts).toEqual([0, 40, 80, 120, 160]);
+      if (overload) expect(starts[7] - starts[6]).toBeGreaterThanOrEqual(10_010);
+      else expect(starts).toEqual([0, 40, 80, 120, 130]);
     } finally { vi.useRealTimers(); }
   });
 
