@@ -135,57 +135,30 @@ export function buildMeasuredExecutionTargetValue(
   };
 }
 
-interface TwoTokenTargetBuilderInput {
+export function buildPancakeMeasuredExecutionTargets(input: {
   pools: readonly DexApiPool[];
   chainAddressToId: Map<string, string>;
   symbolToChainScopedIds: Map<string, Map<string, string[]>>;
   validationReferences?: PriceValidationReferences;
   stablecoinPriceById?: Map<string, number>;
   capturedAt: number;
-}
-
-interface TwoTokenPoolMaterialization {
-  adapterProfileId: string;
-  protocol: string;
-  feePips?: number;
-}
-
-function buildTwoTokenMeasuredExecutionTargets(
-  input: TwoTokenTargetBuilderInput,
-  spec: {
-    source: DexApiPool["source"];
-    materializePool(input: {
-      pool: DexApiPool;
-      chain: string;
-      poolAddress: `0x${string}`;
-      tokenAddresses: [`0x${string}`, `0x${string}`];
-    }): TwoTokenPoolMaterialization | null;
-    validateTokens?(tokens: DexApiPool["tokens"]): boolean;
-    hasCoherentSpot?(input: {
-      pool: DexApiPool;
-      inputIndex: number;
-      inputReferencePriceUsd: number;
-      outputReferencePriceUsd: number;
-    }): boolean;
-  },
-): Map<string, DexMeasuredExecutionTarget> {
+}): Map<string, DexMeasuredExecutionTarget> {
   const targets = new Map<string, DexMeasuredExecutionTarget>();
   for (const pool of input.pools) {
-    if (pool.source !== spec.source || pool.tokens.length !== 2) continue;
+    if (pool.source !== "pancakeswap" || pool.tokens.length !== 2) continue;
     const poolAddress = normalizeEvmAddress(pool.poolAddress);
     const tokenAddresses = pool.tokens.map((token) => normalizeEvmAddress(token.address));
     if (
       poolAddress == null ||
       tokenAddresses.some((address) => address == null) ||
       !Number.isFinite(pool.tvlUsd) ||
-      pool.tvlUsd <= 0 ||
-      (spec.validateTokens && !spec.validateTokens(pool.tokens))
+      pool.tvlUsd <= 0
     ) continue;
     const canonicalTokens = tokenAddresses as [`0x${string}`, `0x${string}`];
     if (canonicalTokens[0] === canonicalTokens[1]) continue;
     const chain = canonicalExitRouteChain(pool.chain);
-    const materialization = spec.materializePool({ pool, chain, poolAddress, tokenAddresses: canonicalTokens });
-    if (materialization == null) continue;
+    const feePips = pool.feeRate == null ? null : Math.round(pool.feeRate * 1_000_000);
+    if (feePips == null || !Number.isInteger(feePips) || feePips <= 0 || feePips > 1_000_000) continue;
     const poolId = canonicalExitRouteAssetKey(chain, poolAddress);
 
     for (let inputIndex = 0; inputIndex < 2; inputIndex += 1) {
@@ -213,18 +186,13 @@ function buildTwoTokenMeasuredExecutionTargets(
         input.capturedAt,
       );
       if (inputPrice == null || outputPrice == null || inputPrice <= 0 || outputPrice <= 0) continue;
-      if (spec.hasCoherentSpot && !spec.hasCoherentSpot({
-        pool,
-        inputIndex,
-        inputReferencePriceUsd: inputPrice,
-        outputReferencePriceUsd: outputPrice,
-      })) continue;
+      if (!hasCoherentPancakeSpotPrice(pool, inputIndex, inputPrice, outputPrice)) continue;
       const outputStablecoinId = input.chainAddressToId.get(buildChainAddressKey(chain, tokenOut.address));
       if (outputStablecoinId === stablecoinId) continue;
       const target = buildMeasuredExecutionTargetValue({
         stablecoinId,
-        adapterProfileId: materialization.adapterProfileId,
-        protocol: materialization.protocol,
+        adapterProfileId: "pancakeswap-v3-quoter-v2",
+        protocol: "pancakeswap",
         chain,
         poolId,
         poolTokenAddresses: canonicalTokens,
@@ -242,7 +210,7 @@ function buildTwoTokenMeasuredExecutionTargets(
           referencePriceUsd: outputPrice,
           ...(outputStablecoinId ? { trackedAssetId: outputStablecoinId } : {}),
         },
-        ...(materialization.feePips != null ? { feePips: materialization.feePips } : {}),
+        feePips,
         retainedTvlUsd: pool.tvlUsd,
         retainedPoolPriceUsd: inputPrice,
         capturedAt: input.capturedAt,
@@ -251,27 +219,6 @@ function buildTwoTokenMeasuredExecutionTargets(
     }
   }
   return targets;
-}
-
-export function buildPancakeMeasuredExecutionTargets(input: {
-  pools: readonly DexApiPool[];
-  chainAddressToId: Map<string, string>;
-  symbolToChainScopedIds: Map<string, Map<string, string[]>>;
-  validationReferences?: PriceValidationReferences;
-  stablecoinPriceById?: Map<string, number>;
-  capturedAt: number;
-}): Map<string, DexMeasuredExecutionTarget> {
-  return buildTwoTokenMeasuredExecutionTargets(input, {
-    source: "pancakeswap",
-    materializePool: ({ pool }) => {
-      const feePips = pool.feeRate == null ? null : Math.round(pool.feeRate * 1_000_000);
-      return feePips != null && Number.isInteger(feePips) && feePips > 0 && feePips <= 1_000_000
-        ? { adapterProfileId: "pancakeswap-v3-quoter-v2", protocol: "pancakeswap", feePips }
-        : null;
-    },
-    hasCoherentSpot: ({ pool, inputIndex, inputReferencePriceUsd, outputReferencePriceUsd }) =>
-      hasCoherentPancakeSpotPrice(pool, inputIndex, inputReferencePriceUsd, outputReferencePriceUsd),
-  });
 }
 
 interface ClMeasuredExecutionTargetInput {
