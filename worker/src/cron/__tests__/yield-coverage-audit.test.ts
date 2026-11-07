@@ -836,6 +836,13 @@ describe("runYieldCoverageAudit", () => {
 });
 
 describe("identifyCoverageGaps", () => {
+  it("does not recommend owner-excluded opportunities", () => {
+    const gaps = identifyCoverageGaps([lendingPool({ project: "loopscale-lending", tvlUsd: 50_000_000 })], new Set());
+    expect(gaps.unmatchedHighTvlPools).toEqual([]);
+    expect(gaps.missingProtocols).toEqual([]);
+    expect(gaps.venueRiskConfigMissing).toEqual([]);
+  });
+
   it("identifies high-TVL stablecoin pools not matched", () => {
     const dlPools: DlPool[] = [makeDlYieldPool({
       pool: "unknown-pool",

@@ -9,6 +9,7 @@ import {
   isAutoLendingCollisionBlockedForStablecoin,
   LENDING_PROTOCOL_ALLOWLIST,
   LENDING_PROTOCOL_LABELS,
+  YIELD_OPPORTUNITY_EXCLUSIONS,
 } from "../../lib/yield-config/yield-config-lending-protocols";
 import {
   ON_CHAIN_RATE_CONFIGS,
@@ -69,6 +70,17 @@ function hasRuntimeYieldStrategy(stablecoinId: string, navToken: boolean) {
 }
 
 describe("yield config registry", () => {
+  it("bounds opportunity exclusion re-reviews to fourteen days with owner and evidence", () => {
+    for (const entry of YIELD_OPPORTUNITY_EXCLUSIONS) {
+      const span = Date.parse(entry.nextReviewAt) - Date.parse(entry.reviewedAt);
+      expect(span).toBeGreaterThan(0);
+      expect(span).toBeLessThanOrEqual(14 * 86_400_000);
+      expect(Date.parse(entry.since)).toBeLessThanOrEqual(Date.parse(entry.reviewedAt));
+      expect(entry.owner).toBe("ops");
+      expect(entry.reason).toContain("https://");
+    }
+  });
+
   const activeYieldCoins = TRACKED_STABLECOINS.filter(
     (coin) => coin.flags.yieldBearing && isActiveStablecoinMeta(coin),
   );

@@ -3,6 +3,7 @@ import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-he
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import { buildComparisonAnchorFreshnessMeta, buildYieldDegradationReasons, buildYieldSafetySnapshotMeta, buildYieldSyncMetadata } from "../yield-sync/coordinator";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-config-lending-protocols";
 import type { YieldEnvelopeRejection } from "../yield-sync/types";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 
@@ -285,7 +286,7 @@ describe("buildYieldDegradationReasons", () => {
 });
 
 describe("buildYieldSyncMetadata", () => {
-  it.each(["pendle", "aaveV3"] as const)("preserves %s quality diagnostics separately from publication health and bounded telemetry", (family) => {
+  it.each(["pendle", "aaveV3", "exclusion-due"] as const)("preserves %s quality diagnostics separately from publication health and bounded telemetry", (family) => {
     const comparisonAnchorFreshness = buildComparisonAnchorFreshnessMeta({
       startSec: START_SEC,
       evaluatedSources: [
@@ -301,6 +302,7 @@ describe("buildYieldSyncMetadata", () => {
 
     const metadata = JSON.parse(
       buildYieldSyncMetadata({
+        startSec: Date.parse(family === "exclusion-due" ? "2026-11-21T00:00:00Z" : "2026-11-20T23:59:59Z") / 1000,
         rowsRead: 1,
         safetySnapshotHeld: true,
         rowsWritten: 1,
@@ -368,7 +370,7 @@ describe("buildYieldSyncMetadata", () => {
           consecutiveAllFailRuns: 0,
           consecutiveMaskedAllFailRuns: 0,
         },
-        qualityReasons: family === "pendle" ? [] : [`yield-supplemental:family-degraded:${family}:upstream-unavailable`],
+        qualityReasons: family === "aaveV3" ? [`yield-supplemental:family-degraded:${family}:upstream-unavailable`] : [],
         validationFailures: 0,
         riskFreeRate: 4,
         cacheWriteSkipped: false,
@@ -412,7 +414,9 @@ describe("buildYieldSyncMetadata", () => {
     const reason = `yield-supplemental:family-degraded:${family}:upstream-unavailable`;
     expect(metadata.quality).toEqual({
       degraded: family !== "pendle",
-      reasons: family === "pendle" ? [] : [reason],
+      reasons: family === "exclusion-due"
+        ? YIELD_OPPORTUNITY_EXCLUSIONS.map((entry) => `yield-opportunity-exclusion-review-due:${entry.projects[0]}`)
+        : family === "pendle" ? [] : [reason],
       advisoryReasons: family === "pendle" ? ["safety-snapshot-held", reason] : ["safety-snapshot-held"],
     });
     expect(metadata.sourceCoverage.onChainEnvelopeRejectionCount).toBe(26);
