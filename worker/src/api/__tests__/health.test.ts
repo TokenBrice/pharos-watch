@@ -910,7 +910,10 @@ describe("handleHealth", () => {
     },
   );
 
-  it("warns without degrading when a complete active publication has alert-eligible missing prices", async () => {
+  it.each([
+    ["warns without degrading when a complete active publication has alert-eligible missing prices", 2, true],
+    ["does not degrade public health for a transient (non-alert-eligible) price miss", 1, false],
+  ] as const)("%s", async (_name, consecutiveMissingGenerations, alertEligible) => {
     const now = Math.floor(Date.now() / 1000);
     const activeIds = [...ACTIVE_IDS];
     const missingId = activeIds[0]!;
@@ -930,13 +933,13 @@ describe("handleHealth", () => {
           marketCapUsd: 88_000_000,
           currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
           lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
-          consecutiveMissingGenerations: 2,
+          consecutiveMissingGenerations,
           rejectionReason: "no-accepted-price",
-          alertEligible: true,
+          alertEligible,
         }],
-        alertEligibleCount: 1,
-        alertEligibleIds: [missingId],
-        maxConsecutiveMissingGenerations: 2,
+        alertEligibleCount: alertEligible ? 1 : 0,
+        alertEligibleIds: alertEligible ? [missingId] : [],
+        maxConsecutiveMissingGenerations: consecutiveMissingGenerations,
       }),
     });
 
@@ -949,68 +952,28 @@ describe("handleHealth", () => {
         status: string;
         missingActiveIds: string[];
         alertEligibleIds: string[];
-      };
-    };
-
-    expect(body.status).toBe("healthy");
-    expect(body.stablecoinPublication.status).toBe("complete");
-    expect(body.activePriceCoverage).toMatchObject({
-      status: "incomplete",
-      missingActiveIds: [missingId],
-      alertEligibleIds: [missingId],
-    });
-    expect(body.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
-  });
-
-  it("does not degrade public health for a transient (non-alert-eligible) price miss", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const activeIds = [...ACTIVE_IDS];
-    const missingId = activeIds[0]!;
-    const db = makeHealthyHealthDb(now, {
-      publicationEntry: completePublicationEntry(now, {
-        complete: false,
-        expectedActiveCount: activeIds.length,
-        presentActiveCount: activeIds.length,
-        pricedActiveCount: activeIds.length - 1,
-        missingPriceCount: 1,
-        pricedActiveIds: activeIds.filter((stablecoinId) => stablecoinId !== missingId),
-        missingActiveIds: [missingId],
-        affectedMarketCapUsd: 88_000_000,
-        missingActiveAssets: [{
-          stablecoinId: missingId,
-          symbol: "MISS",
-          marketCapUsd: 88_000_000,
-          currentPrice: null, currentSource: null, currentObservedAt: null, currentConfidence: null,
-          lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
-          consecutiveMissingGenerations: 1,
-          rejectionReason: "no-accepted-price",
-          alertEligible: false,
-        }],
-        alertEligibleCount: 0,
-        alertEligibleIds: [],
-        maxConsecutiveMissingGenerations: 1,
-      }),
-    });
-
-    const res = await handleHealth(db);
-    const body = (await readJsonResponse(res, 200)) as {
-      status: "healthy" | "degraded" | "stale";
-      warnings: string[];
-      activePriceCoverage: {
-        status: string;
-        missingActiveIds: string[];
         alertEligibleCount: number;
       };
     };
 
     expect(body.status).toBe("healthy");
-    expect(body.warnings.some((warning) => warning.startsWith("active-price-coverage-incomplete"))).toBe(false);
-    // The public JSON payload keeps the exact miss for observability.
-    expect(body.activePriceCoverage).toMatchObject({
-      status: "incomplete",
-      missingActiveIds: [missingId],
-      alertEligibleCount: 0,
-    });
+    if (alertEligible) {
+      expect(body.stablecoinPublication.status).toBe("complete");
+      expect(body.activePriceCoverage).toMatchObject({
+        status: "incomplete",
+        missingActiveIds: [missingId],
+        alertEligibleIds: [missingId],
+      });
+      expect(body.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
+    } else {
+      expect(body.warnings.some((warning) => warning.startsWith("active-price-coverage-incomplete"))).toBe(false);
+      // The public JSON payload keeps the exact miss for observability.
+      expect(body.activePriceCoverage).toMatchObject({
+        status: "incomplete",
+        missingActiveIds: [missingId],
+        alertEligibleCount: 0,
+      });
+    }
   });
 
   it("returns the bounded realtime Cache-Control profile", async () => {
@@ -1493,7 +1456,12 @@ describe("handleHealth", () => {
     expect(body.warnings.some((warning) => warning.includes("cached fallback FX rates"))).toBe(true);
   });
 
-  it("degrades when three or more circuit groups are open", async () => {
+  it.each([
+    ["degrades when three or more circuit groups are open",
+      ["circuit:defillama-stablecoins", "circuit:coingecko-prices", "circuit:dexscreener-prices"], "degraded"],
+    ["keeps public health healthy when only live-reserve circuit groups are open",
+      ["circuit:live-reserves:ethena", "circuit:live-reserves:feusd-felix", "circuit:live-reserves:mtbill-midas"], "healthy"],
+  ] as const)("%s", async (_name, circuitKeys, expectedStatus) => {
     const now = Math.floor(Date.now() / 1000);
     const openCircuitValue = (openedAt: number) =>
       JSON.stringify({
@@ -1508,9 +1476,9 @@ describe("handleHealth", () => {
         {
           match: "key LIKE 'circuit:%'",
           rows: [
-            { key: "circuit:defillama-stablecoins", value: openCircuitValue(now - 600) },
-            { key: "circuit:coingecko-prices", value: openCircuitValue(now - 540) },
-            { key: "circuit:dexscreener-prices", value: openCircuitValue(now - 480) },
+            { key: circuitKeys[0], value: openCircuitValue(now - 600) },
+            { key: circuitKeys[1], value: openCircuitValue(now - 540) },
+            { key: circuitKeys[2], value: openCircuitValue(now - 480) },
           ],
         },
       ],
@@ -1522,40 +1490,7 @@ describe("handleHealth", () => {
       circuits: Record<string, { state: string }>;
     };
 
-    expect(body.status).toBe("degraded");
-    expect(Object.values(body.circuits).filter((circuit) => circuit.state === "open")).toHaveLength(3);
-  });
-
-  it("keeps public health healthy when only live-reserve circuit groups are open", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const openCircuitValue = (openedAt: number) =>
-      JSON.stringify({
-        state: "open",
-        consecutiveFailures: 3,
-        lastFailureAt: openedAt - 30,
-        lastSuccessAt: null,
-        openedAt,
-      });
-    const db = makeHealthyHealthDb(now, {
-      extras: [
-        {
-          match: "key LIKE 'circuit:%'",
-          rows: [
-            { key: "circuit:live-reserves:ethena", value: openCircuitValue(now - 600) },
-            { key: "circuit:live-reserves:feusd-felix", value: openCircuitValue(now - 540) },
-            { key: "circuit:live-reserves:mtbill-midas", value: openCircuitValue(now - 480) },
-          ],
-        },
-      ],
-    });
-
-    const res = await handleHealth(db);
-    const body = (await res.json()) as {
-      status: "healthy" | "degraded" | "stale";
-      circuits: Record<string, { state: string }>;
-    };
-
-    expect(body.status).toBe("healthy");
+    expect(body.status).toBe(expectedStatus);
     expect(Object.values(body.circuits).filter((circuit) => circuit.state === "open")).toHaveLength(3);
   });
 

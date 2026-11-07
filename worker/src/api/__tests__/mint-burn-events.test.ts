@@ -85,15 +85,17 @@ describe("handleMintBurnEvents", () => {
     expect(event).not.toHaveProperty("stablecoin_id");
   });
 
-  it("rejects invalid direction with 400", async () => {
+  it.each([
+    ["rejects invalid direction with 400", "direction=delete"],
+    ["rejects chain filters outside the tracked scope for the requested stablecoin", "chain=base"],
+    ["rejects invalid burnType with 400", "burnType=foo"],
+    ["rejects invalid scope with 400", "scope=debug"],
+  ])("%s", async (_name, query) => {
     const db = mockD1([]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&direction=delete"));
-    expect(res.status).toBe(400);
-  });
-
-  it("rejects chain filters outside the tracked scope for the requested stablecoin", async () => {
-    const db = mockD1([]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&chain=base"));
+    const res = await handleMintBurnEvents(
+      db,
+      new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&${query}`),
+    );
     expect(res.status).toBe(400);
   });
 
@@ -136,12 +138,6 @@ describe("handleMintBurnEvents", () => {
       total: 1,
       events: [{ id: "usdt-tron", chainId: "tron", explorerTxUrl }],
     });
-  });
-
-  it("rejects invalid burnType with 400", async () => {
-    const db = mockD1([]);
-    const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&burnType=foo"));
-    expect(res.status).toBe(400);
   });
 
   it("accepts valid bridge_burn filter", async () => {
@@ -196,15 +192,6 @@ describe("handleMintBurnEvents", () => {
     expect(body.events[0]?.flowType).toBe("bridge_transfer");
   });
 
-  it("rejects invalid scope with 400", async () => {
-    const db = mockD1([]);
-    const res = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&scope=debug"),
-    );
-    expect(res.status).toBe(400);
-  });
-
   it.each([
     ["scope=counted", ["priced", "unpriced", "effective"]],
     ["minAmount=1000000", ["priced", "atomic", "bridge", "effective"]],
@@ -224,34 +211,18 @@ describe("handleMintBurnEvents", () => {
     expect(body.total).toBe(expected.length);
   });
 
-  it("rejects malformed minAmount with 400", async () => {
+  it.each([
+    ["rejects malformed minAmount with 400", "minAmount=oops", "Invalid minAmount: must be a number"],
+    ["rejects out-of-range limit values instead of clamping them", "limit=999", "Invalid limit: must be between 1 and 500"],
+    ["rejects offsets above the endpoint cap", "offset=25001", "Invalid offset: must be between 0 and 25000"],
+  ])("%s", async (_name, query, error) => {
     const db = mockD1([]);
     const res = await handleMintBurnEvents(
       db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&minAmount=oops"),
+      new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&${query}`),
     );
     expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Invalid minAmount: must be a number" });
-  });
-
-  it("rejects out-of-range limit values instead of clamping them", async () => {
-    const db = mockD1([]);
-    const res = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&limit=999"),
-    );
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Invalid limit: must be between 1 and 500" });
-  });
-
-  it("rejects offsets above the endpoint cap", async () => {
-    const db = mockD1([]);
-    const res = await handleMintBurnEvents(
-      db,
-      new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&offset=25001"),
-    );
-    expect(res.status).toBe(400);
-    await expect(res.json()).resolves.toEqual({ error: "Invalid offset: must be between 0 and 25000" });
+    await expect(res.json()).resolves.toEqual({ error });
   });
 
   it("can skip exact total counts for cursor-style callers", async () => {
