@@ -508,7 +508,7 @@ Repeat the measurement-and-backlog campaign with the [`ci-slim-pass`](../.codex/
 
 [`eslint.config.mjs`](../eslint.config.mjs) and [`eslint.typed.config.mjs`](../eslint.typed.config.mjs) own scopes, rules and exclusions; do not duplicate their rule tables, allowlists or ignored-path arrays. Typed unsafe-value and promise rules remain blocking in configured scopes. Decode external data as `unknown` and validate it at the typed boundary.
 
-`pharos/no-local-helper-copies` reserves record-guard names for `shared/lib/type-guards.ts` and Worker JSON-parser names for `worker/src/lib/json-parse.ts` in production code.
+`pharos/no-local-helper-copies` reserves record-guard names and exact object/non-null/non-array guard bodies for `shared/lib/type-guards.ts` and Worker JSON-parser names for `worker/src/lib/json-parse.ts` in production code.
 
 The inherited Next plugin scope includes CommonJS source files so global React Hooks rule overrides always resolve their plugin. Frozen, compiled compatibility-reader fixtures are excluded from source linting to preserve their historical bytes; config regression tests cover both boundaries.
 

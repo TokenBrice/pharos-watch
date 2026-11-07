@@ -136,6 +136,50 @@ const localJsonParseNames = new Set([
   "parseJson", "tryParseJson", "parseJsonObject", "parseJsonStringArray", "parseJsonObjectWithSchema",
 ]);
 
+function isRecordGuardCopy(fn) {
+  if (fn.params.length !== 1 || fn.params[0].type !== "Identifier") return false;
+  const isParam = (node) => node?.type === "Identifier" && node.name === fn.params[0].name;
+  let expr = fn.body;
+  if (expr?.type === "BlockStatement") {
+    if (expr.body.length !== 1 || expr.body[0].type !== "ReturnStatement") return false;
+    expr = expr.body[0].argument;
+  }
+  if (expr?.type === "ConditionalExpression") {
+    let value = expr.consequent;
+    while (["TSAsExpression", "TSTypeAssertion", "TSNonNullExpression"].includes(value.type)) value = value.expression;
+    if (!isParam(value) || expr.alternate.type !== "Literal" || expr.alternate.value !== null) return false;
+    expr = expr.test;
+  }
+  function conjuncts(node) {
+    return node?.type === "LogicalExpression" && node.operator === "&&"
+      ? [...conjuncts(node.left), ...conjuncts(node.right)] : [node];
+  }
+  const parts = conjuncts(expr);
+  if (parts.length !== 3) return false;
+  const kinds = parts.map((node) => {
+    if (isParam(node) || (node?.type === "UnaryExpression" && node.operator === "!"
+      && node.argument.type === "UnaryExpression" && node.argument.operator === "!" && isParam(node.argument.argument))) return "non-null";
+    if (node?.type === "BinaryExpression") {
+      const pairs = [[node.left, node.right], [node.right, node.left]];
+      if (["===", "=="].includes(node.operator) && pairs.some(([a, b]) =>
+        a.type === "UnaryExpression" && a.operator === "typeof" && isParam(a.argument)
+        && b.type === "Literal" && b.value === "object")) return "object";
+      if (["!==", "!="].includes(node.operator) && pairs.some(([a, b]) =>
+        isParam(a) && b.type === "Literal" && b.value === null)) return "non-null";
+    }
+    if (node?.type === "UnaryExpression" && node.operator === "!") {
+      const call = node.argument;
+      const member = call.callee;
+      if (call.type === "CallExpression" && !call.optional && call.arguments.length === 1 && isParam(call.arguments[0])
+        && member.type === "MemberExpression" && !member.computed && !member.optional
+        && member.object.type === "Identifier" && member.object.name === "Array"
+        && member.property.type === "Identifier" && member.property.name === "isArray") return "array";
+    }
+    return null;
+  });
+  return kinds.includes("object") && kinds.includes("non-null") && kinds.includes("array");
+}
+
 const pharosBoundaryPlugin = {
   rules: {
     "shared-types-imports": {
@@ -252,9 +296,9 @@ const pharosBoundaryPlugin = {
       },
       create(context) {
         const filename = relative(repoRoot, context.filename).replaceAll("\\", "/");
-        function check(node, name) {
+        function check(node, name, fn = node) {
           // shared/types and shared/contracts may not import shared/lib, so they keep local guards.
-          if (localRecordGuardNames.has(name) && filename !== "shared/lib/type-guards.ts"
+          if ((localRecordGuardNames.has(name) || isRecordGuardCopy(fn)) && filename !== "shared/lib/type-guards.ts"
             && !filename.startsWith("shared/types/") && !filename.startsWith("shared/contracts/")) {
             context.report({ node, messageId: "record" });
           }
@@ -266,9 +310,8 @@ const pharosBoundaryPlugin = {
         return {
           FunctionDeclaration: (node) => check(node, node.id?.name),
           VariableDeclarator(node) {
-            if (node.parent.kind === "const" && node.id.type === "Identifier"
-              && (node.init?.type === "ArrowFunctionExpression" || node.init?.type === "FunctionExpression")) {
-              check(node, node.id.name);
+            if (node.init?.type === "ArrowFunctionExpression" || node.init?.type === "FunctionExpression") {
+              check(node, node.id.name, node.init);
             }
           },
         };
