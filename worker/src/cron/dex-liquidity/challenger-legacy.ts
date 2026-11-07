@@ -63,14 +63,8 @@ export async function loadLegacyDexPoolChallengers(
   minPoolTvlUsd: number,
   maxAgeSec: number,
   nowSec: number,
-): Promise<{
-  challengersByStablecoin: Map<string, DexPriceChallengerLoadRow[]>;
-  topPoolCoins: Set<string>;
-  fallbackCoins: Set<string>;
-}> {
+): Promise<Map<string, DexPriceChallengerLoadRow[]>> {
   const challengersByStablecoin = new Map<string, DexPriceChallengerLoadRow[]>();
-  const topPoolCoins = new Set<string>();
-  const fallbackCoins = new Set<string>();
 
   const cutoffSec = nowSec - maxAgeSec;
   const rows = await db
@@ -161,7 +155,6 @@ export async function loadLegacyDexPoolChallengers(
 
     if (qualifying.length > 0) {
       challengersByStablecoin.set(row.stablecoin_id, qualifying);
-      topPoolCoins.add(row.stablecoin_id);
     }
   }
 
@@ -211,9 +204,8 @@ export async function loadLegacyDexPoolChallengers(
     }
     if (qualifying.length > 0) {
       challengersByStablecoin.set(row.stablecoin_id, qualifying);
-      fallbackCoins.add(row.stablecoin_id);
     }
   }
 
-  return { challengersByStablecoin, topPoolCoins, fallbackCoins };
+  return challengersByStablecoin;
 }

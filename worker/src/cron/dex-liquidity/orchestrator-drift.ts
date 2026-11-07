@@ -39,6 +39,8 @@ export type PreviousDexLiquiditySummary = {
   retainedPoolCountBySourceFamily: Record<string, number> | null;
 };
 
+type DexLiquiditySourceCoverage = DexLiquidityCronMetadata["sourceCoverage"];
+
 /**
  * Pending or confirmed drift condition carried between runs. `baselineValue`
  * is the pre-event baseline — the last run whose value was not itself flagged —
@@ -46,20 +48,13 @@ export type PreviousDexLiquiditySummary = {
  * still present stays reported after the publication that overwrote the row it
  * was first measured against.
  */
-export type DexLiquidityDriftCandidate = NonNullable<
-  DexLiquidityCronMetadata["sourceCoverage"]["qualityDriftCandidates"]
->[number];
+export type DexLiquidityDriftCandidate = NonNullable<DexLiquiditySourceCoverage["qualityDriftCandidates"]>[number];
 
 /**
  * A confirmed condition accepted as the new level. `runs` counts every
  * consecutive run the condition held, including the accepting run.
  */
-export interface DexLiquidityDriftRebaseline {
-  flag: string;
-  baselineValue: number;
-  acceptedValue: number;
-  runs: number;
-}
+export type DexLiquidityDriftRebaseline = NonNullable<DexLiquiditySourceCoverage["qualityDriftRebaselined"]>[number];
 
 
 function pctDelta(current: number, previous: number): number | null {
@@ -131,23 +126,9 @@ export const REVIEWED_SOURCE_FAMILY_DISPOSITIONS = [
 
 const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";
 
-export interface DexLiquidityDriftWatchlistDelta {
-  stablecoinId: string;
-  previousPoolCount: number;
-  currentPoolCount: number;
-  poolCountPctDelta: number | null;
-  previousCoverageConfidence: number | null;
-  currentCoverageConfidence: number | null;
-  previousMeasuredShare: number | null;
-  currentMeasuredShare: number | null;
-}
+export type DexLiquidityDriftWatchlistDelta = NonNullable<DexLiquiditySourceCoverage["topAssetCoverageDeltas"]>[number];
 
-export interface DexLiquidityMajorTvlCliff {
-  stablecoinId: string;
-  previousTvlUsd: number;
-  currentTvlUsd: number;
-  tvlPctDelta: number | null;
-}
+export type DexLiquidityMajorTvlCliff = NonNullable<DexLiquiditySourceCoverage["majorTvlCliffs"]>[number];
 
 export interface DexLiquidityDriftSummary {
   qualityDriftFlags: string[];
@@ -161,23 +142,7 @@ export interface DexLiquidityDriftSummary {
   qualityDriftAccepted: NonNullable<DexLiquidityCronMetadata["sourceCoverage"]["qualityDriftAccepted"]>;
   qualityDriftRebaselined: DexLiquidityDriftRebaseline[];
   qualityDriftSeverity: "none" | "medium" | "high";
-  qualityDriftMetrics: {
-    previousPriceObservationCoins: number | null;
-    currentPriceObservationCoins: number;
-    priceObservationPctDelta: number | null;
-    previousMeasuredBalanceCoveragePct: number | null;
-    currentMeasuredBalanceCoveragePct: number;
-    measuredBalanceCoverageDelta: number | null;
-    previousStagedPoolsMerged: number | null;
-    currentStagedPoolsMerged: number;
-    stagedPoolsMergedPctDelta: number | null;
-    previousStagedPoolsSkipped: number | null;
-    currentStagedPoolsSkipped: number;
-    stagedPoolsSkippedPctDelta: number | null;
-    previousWeakCoverageCoins: number | null;
-    currentWeakCoverageCoins: number;
-    weakCoverageDelta: number | null;
-  };
+  qualityDriftMetrics: Required<NonNullable<DexLiquiditySourceCoverage["qualityDriftMetrics"]>>;
   topAssetCoverageDeltas: DexLiquidityDriftWatchlistDelta[];
   majorTvlCliffs: DexLiquidityMajorTvlCliff[];
 }
