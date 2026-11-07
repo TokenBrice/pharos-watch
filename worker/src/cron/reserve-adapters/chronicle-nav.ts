@@ -1,7 +1,7 @@
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
-import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { DECIMALS_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
@@ -14,9 +14,9 @@ import {
   makeOnchainCallers,
   requireOnchainInput,
   reserveDegradedWarning,
-  reserveInfoWarning,
   type MultichainSupplyAggregate,
 } from "./helpers";
+import { unscopedOmissionWarnings } from "./multichain-supply";
 import { validateDecimals } from "./slice-math";
 import { MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC } from "@shared/lib/live-reserve-freshness";
 
@@ -91,35 +91,6 @@ async function aggregateChronicleSupply(
   });
 }
 
-function supplyAggregateWarnings(supply: ChronicleNavSupplyAggregate): LiveReserveWarning[] {
-  const warnings: LiveReserveWarning[] = [];
-  if (supply.omittedNonEvmChains.length > 0) {
-    warnings.push(
-      reserveInfoWarning(
-        "por-supply-chain-omitted",
-        `Supply aggregation omits non-EVM chains: ${supply.omittedNonEvmChains.join(", ")}`,
-      ),
-    );
-  }
-  if (supply.omittedNoRpcChains.length > 0) {
-    warnings.push(
-      reserveInfoWarning(
-        "por-supply-chain-omitted",
-        `Supply aggregation omits chains with no RPC configured: ${supply.omittedNoRpcChains.join(", ")}`,
-      ),
-    );
-  }
-  if (supply.omittedReadFailureChains.length > 0) {
-    warnings.push(
-      reserveDegradedWarning(
-        "partial-supply-read-failure",
-        `Supply aggregation omits chains whose totalSupply() read failed: ${supply.omittedReadFailureChains.join(", ")}`,
-      ),
-    );
-  }
-  return warnings;
-}
-
 export function adaptChronicleNavResponse(data: ChronicleNavData, params: ChronicleNavParams): AdapterResult {
   if (data.navPerToken <= 0n) {
     throw new Error("chronicle-nav: readWithAge() reported zero or negative NAV per token");
@@ -130,7 +101,7 @@ export function adaptChronicleNavResponse(data: ChronicleNavData, params: Chroni
     throw new Error("chronicle-nav: observed zero token supply across readable chains");
   }
 
-  const warnings = supplyAggregateWarnings(data.supply);
+  const warnings = unscopedOmissionWarnings(data.supply);
   const mixedDecimals = data.supply.contributions.some(
     (contribution) => contribution.decimals !== data.tokenDecimals,
   );

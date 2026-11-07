@@ -252,46 +252,22 @@ export async function fetchHliquityHederaReserves(
   const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1_000);
 
   const block = await fetchHederaLatestBlock(mirrorBaseUrl, signal, ctx);
+  const readContract = (to: string, data: string) => callHederaContractAtBlock(
+    mirrorBaseUrl,
+    { to, data, blockNumber: block.number },
+    signal,
+    ctx,
+  );
 
   // Sequential pinned reads keep the attempt inside the orchestrator's
   // shared connection budget; every call runs through the adapter I/O limiter
   // and all six address the same pinned block for a same-block census.
-  const troveCollateralRaw = decodeUint256Word(await callHederaContractAtBlock(
-    mirrorBaseUrl,
-    { to: TROVE_MANAGER_EVM_ADDRESS, data: GET_ENTIRE_SYSTEM_COLL_SELECTOR, blockNumber: block.number },
-    signal,
-    ctx,
-  ));
-  const debtRaw = decodeUint256Word(await callHederaContractAtBlock(
-    mirrorBaseUrl,
-    { to: TROVE_MANAGER_EVM_ADDRESS, data: GET_ENTIRE_SYSTEM_DEBT_SELECTOR, blockNumber: block.number },
-    signal,
-    ctx,
-  ));
-  const stabilityPoolCollateralRaw = decodeUint256Word(await callHederaContractAtBlock(
-    mirrorBaseUrl,
-    { to: STABILITY_POOL_EVM_ADDRESS, data: STABILITY_POOL_GET_ETH_SELECTOR, blockNumber: block.number },
-    signal,
-    ctx,
-  ));
-  const mcrRaw = decodeUint256Word(await callHederaContractAtBlock(
-    mirrorBaseUrl,
-    { to: TROVE_MANAGER_EVM_ADDRESS, data: MCR_SELECTOR, blockNumber: block.number },
-    signal,
-    ctx,
-  ));
-  const protocolPriceRaw = decodeUint256Word(await callHederaContractAtBlock(
-    mirrorBaseUrl,
-    { to: PRICE_FEED_EVM_ADDRESS, data: FETCH_PRICE_SELECTOR, blockNumber: block.number },
-    signal,
-    ctx,
-  ));
-  const supplyRaw = decodeUint256Word(await callHederaContractAtBlock(
-    mirrorBaseUrl,
-    { to: HCHF_TOKEN_EVM_ADDRESS, data: TOTAL_SUPPLY_SELECTOR, blockNumber: block.number },
-    signal,
-    ctx,
-  ));
+  const troveCollateralRaw = decodeUint256Word(await readContract(TROVE_MANAGER_EVM_ADDRESS, GET_ENTIRE_SYSTEM_COLL_SELECTOR));
+  const debtRaw = decodeUint256Word(await readContract(TROVE_MANAGER_EVM_ADDRESS, GET_ENTIRE_SYSTEM_DEBT_SELECTOR));
+  const stabilityPoolCollateralRaw = decodeUint256Word(await readContract(STABILITY_POOL_EVM_ADDRESS, STABILITY_POOL_GET_ETH_SELECTOR));
+  const mcrRaw = decodeUint256Word(await readContract(TROVE_MANAGER_EVM_ADDRESS, MCR_SELECTOR));
+  const protocolPriceRaw = decodeUint256Word(await readContract(PRICE_FEED_EVM_ADDRESS, FETCH_PRICE_SELECTOR));
+  const supplyRaw = decodeUint256Word(await readContract(HCHF_TOKEN_EVM_ADDRESS, TOTAL_SUPPLY_SELECTOR));
 
   if (troveCollateralRaw == null || troveCollateralRaw <= 0n) {
     throw new Error(`${ADAPTER_KEY}: getEntireSystemColl() returned zero/unreadable collateral`);
@@ -309,11 +285,9 @@ export async function fetchHliquityHederaReserves(
   // getTCR takes the protocol price word, so the gate call is composed after
   // the feed read; both are pinned to the same block as the reserve reads.
   const tcrRaw = protocolPriceRaw != null && protocolPriceRaw > 0n
-    ? decodeUint256Word(await callHederaContractAtBlock(
-        mirrorBaseUrl,
-        { to: TROVE_MANAGER_EVM_ADDRESS, data: `${GET_TCR_SELECTOR}${protocolPriceRaw.toString(16).padStart(64, "0")}`, blockNumber: block.number },
-        signal,
-        ctx,
+    ? decodeUint256Word(await readContract(
+        TROVE_MANAGER_EVM_ADDRESS,
+        `${GET_TCR_SELECTOR}${protocolPriceRaw.toString(16).padStart(64, "0")}`,
       ))
     : null;
 
