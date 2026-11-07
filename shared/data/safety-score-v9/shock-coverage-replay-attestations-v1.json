@@ -6,7 +6,7 @@
     "version": "1",
     "mode": "offline-byte-identical"
   },
-  "attestedAt": "2026-11-05",
+  "attestedAt": "2026-11-07",
   "attestations": [
     {
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-08-21-block-50259336-shock-coverage.json",
@@ -316,6 +316,14 @@
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-11-05-block-53543783-shock-coverage.json",
       "journalSha256": "34c23290941af75abd06a828c7fe63079637ba9232911b7f27f49a65ad5906d6",
       "attestedAt": "2026-11-05",
+      "exactReplayPassed": true,
+      "callsConsumed": 218,
+      "codePinsConsumed": 92
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bd-basedollar/2026-11-07-block-54283403-shock-coverage.json",
+      "journalSha256": "4ff1921e34fb81ffae55bccf91e8c589ba5095b6bc298ea0ff51cb3d98a404c2",
+      "attestedAt": "2026-11-07",
       "exactReplayPassed": true,
       "callsConsumed": 218,
       "codePinsConsumed": 92
@@ -772,6 +780,14 @@
       "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-11-05-block-26348270-shock-coverage.json",
       "journalSha256": "5672cd7099ca6e51b68ea7039d858262ccde8d0708ce2692c198e9094b6c0e80",
       "attestedAt": "2026-11-05",
+      "exactReplayPassed": true,
+      "callsConsumed": 686,
+      "codePinsConsumed": 56
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/bold-liquity/2026-11-07-block-26362358-shock-coverage.json",
+      "journalSha256": "da4b534024bbc0cdaf67912f8a6280f5d9ad93a6a15610c57c2f5dd36500bc23",
+      "attestedAt": "2026-11-07",
       "exactReplayPassed": true,
       "callsConsumed": 686,
       "codePinsConsumed": 56
@@ -1254,6 +1270,14 @@
       "attestedAt": "2026-11-05",
       "exactReplayPassed": true,
       "callsConsumed": 217,
+      "codePinsConsumed": 14
+    },
+    {
+      "journalPath": "shared/data/safety-score-v9/mechanism-measurements/lusd-liquity/2026-11-07-block-26362358-shock-coverage.json",
+      "journalSha256": "5982f157c062506d7543c8631eb1d0923f9fe77ec1f693c65eb1b33e1a7c3926",
+      "attestedAt": "2026-11-07",
+      "exactReplayPassed": true,
+      "callsConsumed": 220,
       "codePinsConsumed": 14
     }
   ]
