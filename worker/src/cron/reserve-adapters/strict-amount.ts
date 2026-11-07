@@ -1,3 +1,5 @@
+import { isUnsignedDecimalLiteral } from "@shared/lib/decimal-literal";
+
 export interface StrictAmountEntry {
   amount?: number | string;
 }
@@ -35,33 +37,7 @@ function isGroupedDecimal(value: string): boolean {
 }
 
 function isUngroupedDecimal(value: string): boolean {
-  let index = value[0] === "+" || value[0] === "-" ? 1 : 0;
-  let hasDigit = false;
-  let hasDecimalPoint = false;
-  while (index < value.length) {
-    const code = value.charCodeAt(index);
-    if (code >= 48 && code <= 57) {
-      hasDigit = true;
-    } else if (code === 46 && !hasDecimalPoint) {
-      hasDecimalPoint = true;
-    } else {
-      break;
-    }
-    index++;
-  }
-  if (!hasDigit) return false;
-  if (index === value.length) return true;
-  if (value[index] !== "e" && value[index] !== "E") return false;
-
-  index++;
-  if (value[index] === "+" || value[index] === "-") index++;
-  const exponentStart = index;
-  while (index < value.length) {
-    const code = value.charCodeAt(index);
-    if (code < 48 || code > 57) return false;
-    index++;
-  }
-  return index > exponentStart;
+  return isUnsignedDecimalLiteral(value[0] === "+" || value[0] === "-" ? value.slice(1) : value);
 }
 
 /**
