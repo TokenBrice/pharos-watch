@@ -123,25 +123,10 @@ export function summarizeInvalidRows(
 // Risk-free rate (benchmark) payload normalization — single benchmark.
 // ---------------------------------------------------------------------------
 
-interface RiskFreeRateCachePayload {
-  key?: YieldBenchmarkKey;
-  label?: string;
-  currency?: string;
-  rate: number;
-  recordDate: string | null;
-  fetchedAt: number | null;
-  source: string;
-  isFallback: boolean;
-  fallbackMode: string | null;
-  isProxy?: boolean;
-  lastMarketRate: number | null;
-  lastMarketRecordDate: string | null;
-  lastMarketFetchedAt: number | null;
-  lastMarketSource: string | null;
-  lastRejectedMarketRate?: number | null;
-  lastRejectedMarketRecordDate?: string | null;
-  lastRejectedMarketFetchedAt?: number | null;
-}
+type RiskFreeRateCachePayload = Omit<
+  ParsedYieldBenchmarkMeta,
+  "ageSeconds" | "maxFetchAgeSec" | "maxRecordAgeSec" | "recordAgeSec"
+>;
 
 interface RiskFreeRatesCachePayload {
   version: 1;

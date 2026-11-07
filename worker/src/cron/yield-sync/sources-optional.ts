@@ -2203,36 +2203,20 @@ export async function fetchRoycoDawnSources(signal?: AbortSignal): Promise<Royco
           if (marketTvlUsd == null || marketTvlUsd < ROYCO_DAWN_MIN_MARKET_TVL_USD) continue;
           if (market.listingType !== "verified") continue;
 
-          const seniorVault = market.seniorVault ?? null;
-          if (seniorVault) {
-            const trackedAsset = resolveVaultDepositToken(seniorVault, chain, trackedByAddress);
-            if (trackedAsset) {
-              const candidate = buildTrancheCandidate({
-                side: "senior",
-                market,
-                vault: seniorVault,
-                chain,
-                trackedAsset,
-                observedAt,
-              });
-              if (candidate) results.push(candidate);
-            }
-          }
-
-          const juniorVault = market.juniorVault ?? null;
-          if (juniorVault) {
-            const trackedAsset = resolveVaultDepositToken(juniorVault, chain, trackedByAddress);
-            if (trackedAsset) {
-              const candidate = buildTrancheCandidate({
-                side: "junior",
-                market,
-                vault: juniorVault,
-                chain,
-                trackedAsset,
-                observedAt,
-              });
-              if (candidate) results.push(candidate);
-            }
+          for (const side of ["senior", "junior"] as const) {
+            const vault = (side === "senior" ? market.seniorVault : market.juniorVault) ?? null;
+            if (!vault) continue;
+            const trackedAsset = resolveVaultDepositToken(vault, chain, trackedByAddress);
+            if (!trackedAsset) continue;
+            const candidate = buildTrancheCandidate({
+              side,
+              market,
+              vault,
+              chain,
+              trackedAsset,
+              observedAt,
+            });
+            if (candidate) results.push(candidate);
           }
         }
       }

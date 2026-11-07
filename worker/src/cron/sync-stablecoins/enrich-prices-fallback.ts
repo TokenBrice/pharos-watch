@@ -157,17 +157,18 @@ export async function runEnrichmentPasses(context: EnrichmentPassContext): Promi
 
   for (const [passIndex, pass] of FALLBACK_PRICE_PASSES.entries()) {
     const missingBeforePass = context.assets.filter(hasMissingPrice).length;
-    await context.onProgress?.({
-      phase: "pass-start",
+    const emitProgress = (phase: EnrichmentPassProgress["phase"]) => context.onProgress?.({
+      phase,
       passKey: pass.key,
       passLabel: pass.label,
       passIndex,
       passTotal: FALLBACK_PRICE_PASSES.length,
       missingBeforePass,
-      missingAfterPass: missingBeforePass,
+      missingAfterPass: phase === "pass-start" ? missingBeforePass : context.assets.filter(hasMissingPrice).length,
       counts,
       failedPasses: [...failedPasses],
     });
+    await emitProgress("pass-start");
     try {
       const result = await pass.run(context);
       for (const [key, value] of Object.entries(result.counts) as Array<[keyof EnrichmentPassCounts, number | undefined]>) {
@@ -181,34 +182,14 @@ export async function runEnrichmentPasses(context: EnrichmentPassContext): Promi
       if (result.diagnostics?.length) {
         providerDiagnostics.push(...result.diagnostics);
       }
-      await context.onProgress?.({
-        phase: "pass-complete",
-        passKey: pass.key,
-        passLabel: pass.label,
-        passIndex,
-        passTotal: FALLBACK_PRICE_PASSES.length,
-        missingBeforePass,
-        missingAfterPass: context.assets.filter(hasMissingPrice).length,
-        counts,
-        failedPasses: [...failedPasses],
-      });
+      await emitProgress("pass-complete");
     } catch (err) {
       if (context.signal?.aborted) throw err instanceof Error ? err : new Error(String(err));
       logWorkerEventArgs("handler", "warn", `[sync-stablecoins] ${pass.label} enrichment failed:`, err);
       if (pass.failureLabel) {
         failedPasses.push(pass.failureLabel);
       }
-      await context.onProgress?.({
-        phase: "pass-failed",
-        passKey: pass.key,
-        passLabel: pass.label,
-        passIndex,
-        passTotal: FALLBACK_PRICE_PASSES.length,
-        missingBeforePass,
-        missingAfterPass: context.assets.filter(hasMissingPrice).length,
-        counts,
-        failedPasses: [...failedPasses],
-      });
+      await emitProgress("pass-failed");
     }
   }
 
