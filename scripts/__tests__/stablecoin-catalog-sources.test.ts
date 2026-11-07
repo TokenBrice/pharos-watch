@@ -461,7 +461,7 @@ describe("real stablecoin catalog composed records", () => {
     ]);
     expect(coin.custodyProfile?.segregation).toBe("unknown");
     expect(coin.notices?.map((notice) => notice.type)).toEqual(["warning"]);
-    expect(domainFields(coin, "risk-review")).toEqual(["blacklistabilityReview"]);
+    expect(domainFields(coin, "risk-review")).toEqual(["blacklistabilityReview", "oracleRisk"]);
   });
 
   it("keeps every composed wrapper's authority and observed wrapper slice tied to its variant parent", () => {

@@ -28,9 +28,10 @@ const HASH = `0x${"1".repeat(64)}`;
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
 const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
   feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null as bigint | null,
-  deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false,
+  deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false, zeroPreviewAt: 0n, preview: "ok",
   totalSupply: 1_000_000_000_000_000n, totalSupplyReadFails: false,
   feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }));
+const initialState = { ...state };
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
 vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
   default: { schemaVersion: 1, get reviews() { return [review]; } },
@@ -56,6 +57,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         const decoded = decodeFunctionData({ abi: MULTICALL, data: tx.data });
         const innerCalls = decoded.args![0];
         const redeem = innerCalls.find((entry) => entry.callData.slice(0, 10) === toFunctionSelector("redeem(uint256,address,address)"));
+        if (innerCalls.length === 2 && state.preview === "unavailable") { errors.push({ index }); results.push(undefined); continue; }
         const executed = redeem ? BigInt("0x" + redeem.callData.slice(10, 74)) : 0n;
         const succeeds = !state.redeemFails && (state.deferIlliquid || executed <= state.liquidity) && !(state.rejectPartial && executed < shares);
         const received = state.deferIlliquid && executed > state.liquidity ? 0n
@@ -63,6 +65,12 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         let redeemed = false;
         const receipt = innerCalls.map((entry) => {
           const innerSelector = entry.callData.slice(0, 10);
+          if ([toFunctionSelector("convertToAssets(uint256)"), toFunctionSelector("previewRedeem(uint256)")].includes(innerSelector as `0x${string}`)) {
+            const amount = BigInt("0x" + entry.callData.slice(10, 74));
+            const preview = innerSelector === toFunctionSelector("previewRedeem(uint256)");
+            return { success: !preview || !(state.preview === "revert" || state.preview === "liquidity" && amount > state.liquidity),
+              returnData: preview && state.preview === "malformed" ? "0x" as `0x${string}` : word(amount === state.zeroPreviewAt ? 0n : preview && !state.grossPreview ? amount * (10_000n - state.feeBps) / 10_000n : amount) };
+          }
           if (innerSelector === toFunctionSelector("redeem(uint256,address,address)")) {
             redeemed = succeeds;
             return { success: succeeds, returnData: succeeds ? word(state.grossReturn ? executed : received) : "0x" as `0x${string}` };
@@ -97,9 +105,9 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         [toFunctionSelector("balanceOf(address)")]: tx.to === TOKEN ? state.idleLiquidity ?? state.liquidity : state.override === "ignored" ? 0n : shares,
         [toFunctionSelector("maxRedeem(address)")]: state.nonBinding ? 0n : quotedMaximum,
         [toFunctionSelector("maxWithdraw(address)")]: state.nonBinding ? 0n : quotedMaximum,
-        [toFunctionSelector("convertToAssets(uint256)")]: amount,
+        [toFunctionSelector("convertToAssets(uint256)")]: amount === state.zeroPreviewAt ? 0n : amount,
         [toFunctionSelector("convertToShares(uint256)")]: amount > state.inverseOffset ? amount - state.inverseOffset : 0n,
-        [toFunctionSelector("previewRedeem(uint256)")]: state.grossPreview ? amount : amount * (10_000n - state.feeBps) / 10_000n,
+        [toFunctionSelector("previewRedeem(uint256)")]: amount === state.zeroPreviewAt ? 0n : state.grossPreview ? amount : amount * (10_000n - state.feeBps) / 10_000n,
         [toFunctionSelector("paused()")]: state.paused ? 1n : 0n,
       };
       if (!(selector in values)) throw new Error(`unexpected fixture selector ${selector}`);
@@ -120,10 +128,8 @@ const inputReference: ExitExecutionCertificate["inputReference"] = { assetKey: "
   unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "observed-price", sourceGenerationId: "fixture-price", observedAtSec: CLOCK };
 const outputReference = { ...inputReference, assetKey: "fixture-underlying", deployment: `ethereum:${TOKEN}` };
 const args = { review, inputReference, outputReference, requests: [{ requestedNotionalUsd: 100_000, maxCostBps: 200 }] };
-beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, idleLiquidity: null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
-  deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false,
-  feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null, feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n,
-  totalSupply: 1_000_000_000_000_000n, totalSupplyReadFails: false }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
+const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
+beforeEach(() => { Object.assign(state, initialState); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
 describe("reviewed synchronous ERC4626 exact execution", () => {
@@ -181,11 +187,16 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     state.maxBps = maxBps;
     expect((await observeErc4626InstantExit(args)).points[0]).toMatchObject({ executableUsd: 100_000, certification: "exact-complete", executedRawInput: "100000000000" });
   });
-  it("keeps liquidity-limited execution at its exact 0.4 completion without claiming exhaustion", async () => {
-    state.liquidity = 40_000_000_000n;
+  it.each(["ok", "liquidity"])("keeps 0.4 completion with %s preview without claiming exhaustion", async (preview) => {
+    state.liquidity = 40_000_000_000n; state.preview = preview;
     const point = (await observeErc4626InstantExit(args)).points[0]!;
     expect(point).toMatchObject({ executableUsd: 40_000, executedRawInput: "40000000000", certification: "exact-lower-bound", reason: "erc4626-liquidity-limited" });
     expect(point.executableUsd / point.requestedNotionalUsd).toBe(0.4);
+    expect(point.canonicalAttempt?.outcome).toBe("reverted");
+  });
+  it.each([["unavailable", "read-unavailable"], ["malformed", "read-invalid"], ["revert", "realized-output-inconsistent"]])("rejects %s preview without a separately previewed receipt", async (preview, reason) => {
+    state.preview = preview;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow(`erc4626-${reason}`);
   });
   it("clamps an ask larger than the issued supply to a measured lower bound of the stress ask", async () => {
     state.totalSupply = 50_000_000_000n;
@@ -313,33 +324,30 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
   });
   it("admits Morpho V2's reviewed non-binding zero max functions only with successful actual execution", async () => {
     state.nonBinding = true;
-    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
     expect((await observeErc4626InstantExit({ ...args, review: v2Review })).points[0]!.certification).toBe("exact-complete");
     state.redeemFails = true;
     expect((await observeErc4626InstantExit({ ...args, review: v2Review })).points[0]).toMatchObject({ executableUsd: 0, certification: "diagnostic", reason: "erc4626-redeem-reverted" });
   });
   it("measures V2's smaller idle-backed execution after a full request reverts, never granting idle alone", async () => {
     state.nonBinding = true; state.liquidity = 40_000_000_000n;
-    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
     expect((await observeErc4626InstantExit({ ...args, review: v2Review })).points[0]).toMatchObject({ executableUsd: 40_000, certification: "exact-lower-bound", reason: "erc4626-liquidity-limited" });
     state.redeemFails = true;
     expect((await observeErc4626InstantExit({ ...args, review: v2Review })).points[0]).toMatchObject({ executableUsd: 0, certification: "diagnostic", reason: "erc4626-redeem-reverted" });
   });
-  it("proves a near-complete V2 adapter-funded receipt even with zero idle and zero max functions", async () => {
-    state.nonBinding = true; state.idleLiquidity = 0n; state.liquidity = 97_000_000_000n;
-    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
+  it.each([0n, 1n])("proves a V2 receipt with zero/dust idle %s and zero max functions", async (idle) => {
+    state.nonBinding = true; state.idleLiquidity = idle; state.zeroPreviewAt = idle; state.liquidity = 97_000_000_000n;
     const result = await observeErc4626InstantExit({ ...args, review: v2Review });
     expect(result.points[0]).toMatchObject({
       requestedRawInput: "100000000000", executedRawInput: "96875000000",
       executableUsd: 96_875, certification: "exact-lower-bound",
       reason: "erc4626-liquidity-limited", outputs: [{ rawUnits: "96875000000" }],
+      canonicalAttempt: { outcome: "reverted", receivedRawOutput: "0" },
     });
     state.realizedMismatch = true;
     await expect(observeErc4626InstantExit({ ...args, review: v2Review })).rejects.toThrow("erc4626-realized-output-inconsistent");
   });
   it("re-measures a proven V2 ladder amount for larger requests when liquidity is in adapters, not idle", async () => {
     state.nonBinding = true; state.idleLiquidity = 0n; state.liquidity = 1_000_000_000_000n;
-    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
     const requests = [100_000, 1_000_000, 10_000_000, 25_000_000].map(requestedNotionalUsd => ({ requestedNotionalUsd, maxCostBps: 200 }));
     const points = (await observeErc4626InstantExit({ ...args, review: v2Review, requests })).points;
     expect(points.map(point => point.certification)).toEqual(["exact-complete", "exact-complete", "exact-lower-bound", "exact-lower-bound"]);
@@ -348,15 +356,13 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
   });
   it("does not transplant an earlier V2 success when redeem fails with the larger holder balance", async () => {
     state.nonBinding = true; state.idleLiquidity = 0n; state.liquidity = 1_000_000_000_000n; state.rejectPartial = true;
-    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
     const requests = [1_000_000, 10_000_000].map(requestedNotionalUsd => ({ requestedNotionalUsd, maxCostBps: 200 }));
     const points = (await observeErc4626InstantExit({ ...args, review: v2Review, requests })).points;
     expect(points[0]!.certification).toBe("exact-complete");
     expect(points[1]).toMatchObject({ executedRawInput: "0", executableUsd: 0, certification: "diagnostic", reason: "erc4626-redeem-reverted", outputs: [] });
   });
-  it("keeps an all-failing zero-idle V2 ladder diagnostic instead of inferring executable liquidity", async () => {
-    state.nonBinding = true; state.idleLiquidity = 0n; state.liquidity = 0n;
-    const v2Review = { ...review, producer: { ...review.producer, maxFunctions: "reviewed-non-binding-zero" } } as ExitExecutionModelReview;
+  it.each([0n, 1n])("keeps all-failing V2 probes diagnostic with zero/dust idle %s", async (idle) => {
+    state.nonBinding = true; state.idleLiquidity = idle; state.zeroPreviewAt = idle; state.liquidity = 0n;
     const requests = [100_000, 1_000_000].map(requestedNotionalUsd => ({ requestedNotionalUsd, maxCostBps: 200 }));
     const points = (await observeErc4626InstantExit({ ...args, review: v2Review, requests })).points;
     expect(points.every(point => point.executableUsd === 0 && point.certification === "diagnostic" && point.reason === "erc4626-redeem-reverted")).toBe(true);

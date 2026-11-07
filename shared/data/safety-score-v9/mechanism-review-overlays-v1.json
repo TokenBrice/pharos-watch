@@ -4947,6 +4947,10 @@
         {
           "label": "Archived current issuer application bundle containing the rendered binding legal texts (observed 2026-09-05)",
           "url": "https://gold.tether.to/assets/index-CzdxJ7of.js"
+        },
+        {
+          "label": "BDO Tether Gold Reserves Report as of September 30, 2026, 11:59 PM UTC (signed and authorised October 30; re-verified November 6, 2026)",
+          "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.09.2026_RC187322026DV0235.pdf"
         }
       ],
       "notes": "Reviewed 2026-09-05 against the current rendered Tether Gold Terms of Sale and Service (last updated 2025-09-09), their incorporated Risk Disclosure Statement (last updated 2025-01-27), and the existing BDO ISAE 3000R report signed 2026-07-31 for the 2026-06-30 reporting point. The custodyContinuity grade is weak because the contract explicitly leaves the holder to finance and pursue custody-loss recovery personally: Terms 4.7 and Risk Statement 6 state that Tether Gold will not pursue claims for holders or indemnify custody loss, while Risk Statement 7 expressly denies any legal obligation to monitor the custodian. Terms 4.4 allocate losses to holders assigned to the affected bullion bars. Terms 4.7 further state that the custodian chooses insurance whose coverage is not expected to cover all Gold Reserves and Tether cannot dictate it; Risk Statement 8 describes potential insolvency access freezes and reductions from unpaid custodian fees. These are affirmative limits to custody oversight and recovery continuity, not an inference that undisclosed provider identities are weak and not a claim that a custody loss or insolvency has occurred. Legal title and intended third-party-beneficiary claims against the custodian are retained under Terms 4.3/4.7; the grading does not erase those rights or treat the missing custody agreement as zero recovery. The June 30 report remains a distinct adequate assurance claim: BDO verified inventory procedures and accounting-to-blockchain liability reconciliation and gave an unmodified reasonable-assurance conclusion; the report itself is point-in-time and expressly refers holders to the risk disclosure. Existing limited title/allocation and physical-redemption grades are retained; Terms 4.3 and 5.1-5.5 support allocated title and conditional Swiss physical delivery without providing an unconditional recovery guarantee. No reserve percentage or report date is refreshed. Issuer legal bundle SHA-256 37cda0e72e00bfe16dbbadf7a44d286798db29f6a5ec0d48dd796bf9adb44442; source-declared legal version dates are separate from the September 5 observation/review date. The date-only overlay becomes admissible after September 5 UTC ends.",
@@ -4959,7 +4963,18 @@
           "quality": "weak"
         },
         "assuranceAndReconciliation": {
-          "quality": "adequate"
+          "quality": "adequate",
+          "review": {
+            "reviewedAt": "2026-11-06",
+            "reviewer": "Safety unknowns campaign 2026-11-06 — c2-4",
+            "rationale": "BDO Advisory Services S.r.l.'s ISAE 3000R reasonable-assurance opinion RC187322026DV0235 covers TG Commodities, S.A. de C.V.'s Tether Gold Reserves Report at September 30, 2026, 11:59 PM UTC and is signed October 30, 2026. BDO verifies gold inventory and management's accounting-ledger-to-blockchain liability reconciliation and gives an unmodified conclusion. The report records 827,417.630 fine troy ounces and 827,417.630000 XAUT in circulation/minted, including 709,323.660000 sold and 118,093.970000 available for sale. Quarterly independent component-specific assurance supports adequate, not monthly strong; the opinion expressly covers only that historical snapshot. This review renews only assuranceAndReconciliation and does not assert current deployment coverage, custody continuity or liquidity.",
+            "sources": [
+              {
+                "label": "BDO Tether Gold Reserves Report as of September 30, 2026, 11:59 PM UTC (signed and authorised October 30; re-verified November 6, 2026)",
+                "url": "https://gold.tether.to/docs/reports/attestations/ISAE_3000R_-_Opinion_TGRR_30.09.2026_RC187322026DV0235.pdf"
+              }
+            ]
+          }
         },
         "physicalRedemption": {
           "quality": "limited"
@@ -14149,9 +14164,17 @@
         {
           "label": "Ethereum PublicNode RPC used for pinned sfrxUSD reads",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "Frax Core Team FIP-430, published 2025-04-21: separate sfrxUSD balance sheet and no newly minted frxUSD or guaranteed redemption for strategy/AMO losses",
+          "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
+        },
+        {
+          "label": "Frax Core Team FIP-434, published 2025-09-05: confirms DAO adoption of FIP-430 and the upgraded separate sfrxUSD balance sheet",
+          "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786"
         }
       ],
-      "notes": "Wrapper-local review refreshed 2026-08-08; the pinned on-chain measurement remains Ethereum block 25572046. Frax documents sfrxUSD as an ERC-4626-like share redeemable for frxUSD without price impact and a Benchmark Yield Strategy that can move the entire vault among carry-trade, DeFi AMO, or IORB/T-bill venues. At the pin, the canonical vault reported 27,033,030.85 shares, 32,511,533.23 frxUSD totalAssets, and 1.202659569 frxUSD per share. Fund claim/seniority is limited because the technical wrapper claim is verified but is indirect through frxUSD and no holder-level legal seniority terms were found. NAV is limited because the on-chain exchange-rate method is reproducible but not independently administered. Duration/liquidity is limited because redemption and the short-dated Treasury leg are documented, while the active strategy allocation and WAM are not. No strategy-level loss waterfall or enforceable recapitalization commitment is published, so loss recovery is unavailable.",
+      "notes": "Wrapper-local review refreshed 2026-08-08; the pinned on-chain measurement remains Ethereum block 25572046. Frax documents sfrxUSD as an ERC-4626-like share redeemable for frxUSD without price impact and a Benchmark Yield Strategy that can move the entire vault among carry-trade, DeFi AMO, or IORB/T-bill venues. At the pin, the canonical vault reported 27,033,030.85 shares, 32,511,533.23 frxUSD totalAssets, and 1.202659569 frxUSD per share. Fund claim/seniority is limited because the technical wrapper claim is verified but is indirect through frxUSD and no holder-level legal seniority terms were found. NAV is limited because the on-chain exchange-rate method is reproducible but not independently administered. Duration/liquidity is limited because redemption and the short-dated Treasury leg are documented, while the active strategy allocation and WAM are not. FIP-430 (2025-04-21), whose separate sfrxUSD architecture FIP-434 (2025-09-05) confirms was approved, expressly excludes minting new frxUSD into sfrxUSD and guaranteed sfrxUSD redemption following yield-strategy or AMO losses, so the documented loss-recovery design is weak.",
       "metrics": {},
       "components": {
         "fundClaimAndSeniority": {
@@ -14164,9 +14187,22 @@
           "quality": "limited"
         },
         "lossRecoveryDesign": {
-          "applicability": "unavailable",
-          "rationale": "The reviewed sfrxUSD and frxUSD disclosures do not publish how Benchmark Yield Strategy losses at carry-trade, DeFi AMO, or RWA venues are allocated to sfrxUSD holders or any enforceable recapitalization commitment.",
-          "sourceUrl": "https://docs.frax.com/protocol/assets/frxusd/sfrxusd"
+          "quality": "weak",
+          "review": {
+            "reviewedAt": "2026-11-06",
+            "reviewer": "Safety unknowns campaign 2026-11-06 — c2-5",
+            "rationale": "Reopened the dated Frax Core Team FIP-430 (2025-04-21) and FIP-434 (2025-09-05) on 2026-11-06. FIP-430 explicitly rules out minting new frxUSD into sfrxUSD and guaranteed sfrxUSD redemptions following yield-strategy or AMO losses, while retaining a core-team-managed frxUSD liquidity buffer with most capital deployed. FIP-434 confirms that the DAO approved the separate sfrxUSD balance sheet under FIP-430. This is a documented adverse recovery design, not a grade inferred solely from missing disclosure, an incurred loss, or a zero-recovery assertion. The current product page describes ordinary redemption without addressing the strategy-loss exception. Only this component is reviewed; prior measurements, sibling grades and the whole-overlay clock remain unchanged.",
+            "sources": [
+              {
+                "label": "Frax Core Team FIP-430, published 2025-04-21: separate sfrxUSD balance sheet and no newly minted frxUSD or guaranteed redemption for strategy/AMO losses",
+                "url": "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698"
+              },
+              {
+                "label": "Frax Core Team FIP-434, published 2025-09-05: confirms DAO adoption of FIP-430 and the upgraded separate sfrxUSD balance sheet",
+                "url": "https://gov.frax.finance/t/fip-434-sfrxusd-amo-deployments-future-strategies/3786"
+              }
+            ]
+          }
         }
       }
     },
@@ -25468,6 +25504,51 @@
           "quality": "limited"
         },
         "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
+    },
+    {
+      "assetId": "busd0-usual",
+      "archetype": "tbill",
+      "reviewedAt": "2026-11-06",
+      "sources": [
+        {
+          "label": "Usual bUSD0 fact sheet, last updated 2026-02-16: fixed notional, June 11 2028 maturity, separate rt-bUSD0 and both tracked deployments",
+          "url": "https://docs.usual.money/resources-and-ecosystem/fact-sheets/usual-products/busd0.md"
+        },
+        {
+          "label": "Usual bUSD0 product mechanics: recombination, maturity redemption and conditional floor redemption; retrieved 2026-11-06",
+          "url": "https://docs.usual.money/usual-products/yield-products/usd-products/bond-usd0.md"
+        },
+        {
+          "label": "Verified Ethereum Usd0PP implementation bound by EIP-1967 storage at block 26356384",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9F2BD21bF8012fce0D5845537c1DefF3a89BC85B"
+        },
+        {
+          "label": "Pinned Ethereum reads: bUSD0 implementation, getEndTime, getFloorPrice, paused, totalSupply and USD0 balanceOf(bUSD0)",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Usual deployment registry: Ethereum bond and Arbitrum L2 token and OFT adapters; retrieved 2026-11-06",
+          "url": "https://tech.usual.money/smart-contracts/contract-deployments.md"
+        },
+        {
+          "label": "Sourcify exact-match Arbitrum L2Usd0PP implementation, verified 2025-05-19; runtime matched to pinned block 521378800",
+          "url": "https://sourcify.dev/server/v2/contract/42161/0x1eacc08c0a4a059d1567a587ed9d0a52eac2a88f?fields=all"
+        },
+        {
+          "label": "Pinned Arbitrum EIP-1967 implementation and runtime reads at block 521378800",
+          "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+        }
+      ],
+      "notes": "Safety unknowns campaign 2026-11-06 — c-mech. Review scope is the local fixed-notional USD0 bond, not the USD0 reserve portfolio. The issuer fact sheet's own update date is 2026-02-16 (retrieved-byte SHA-256 12d9bcd78809488f021cf5181ed6c1ed702d8b7eaa066204fabb8820ded38dc7); the product page retrieved 2026-11-06 has SHA-256 0a4344bbab6ab8ddc48e2dbfe4883ad318ef0d0b6431d9adf350609042b0ff2c. At Ethereum block 26356384, hash 0x3446bf04643238930fe9c3cab19e71311768b3a637a801c204928d9ad83e6b7f, timestamp 2026-11-06T14:23:47Z, observed 2026-11-06T18:23:11.502Z, the registered bUSD0 proxy 0x35d8949372d46b7a3d5a56006ae77b215fc69bc0 points to verified Usd0PP 0x9f2bd21bf8012fce0d5845537c1deff3a89bc85b. getEndTime() = 1844335800 (2028-06-11T11:30:00Z), getFloorPrice() = 920000000000000000 and paused() = false. bUSD0 totalSupply and the USD0 token 0x73a15fed60bf67631dc6cd7bc5b6e8da8190acf5 balanceOf(bUSD0) both equal 503865326279163896642888072 raw 18-decimal units; nominal equality is not USD solvency or independent financial assurance. NAV VALUATION limited: the issuer explicitly distinguishes 1 USD0 maturity notional, secondary-market discount and early-exit value; the deployed implementation corroborates the USD0-denominated valuation through getFloorPrice, reconstruct and _unwrap. This is fixed-notional accounting, not a daily independently struck fund NAV or a claim that bUSD0 is currently worth one dollar. DURATION AND LIQUIDITY limited: the dated series terms and getEndTime agree on June 11 2028. reconstruct burns equal bUSD0 and rt-bUSD0 and transfers equal USD0 before maturity; _unwrap requires maturity, burns the holder's bUSD0 and transfers equal USD0. Floor redemption is governance-set at 0.92 USD0 at this pin; its code burns bUSD0, pays floor-valued USD0 and transfers the difference to the treasury. These entrypoints are pause-gated. Secondary liquidity and availability of rt-bUSD0 remain conditional, not a guaranteed early par exit. Arbitrum scope is distinct: at block 521378800, hash 0x7c62c4788e290b89d6262aeb4cc7861e70cb16ae908efc6db33c421936ab8865, timestamp 2026-11-05T04:41:11Z, EIP-1967 storage of tracked token 0x2b65f9d2e4b84a2df6ff0525741b75d1276a9c2f resolves to 0x1eacc08c0a4a059d1567a587ed9d0a52eac2a88f; pinned runtime exactly matches Sourcify's L2Usd0PP source. That contract has role-gated mint/burn and pausable transfers, with no local bond redemption or maturity function; the official deployment registry identifies its OFT adapter separately. The bond series terms do not establish a bounded bridge-return settlement time. Both component grades stop at limited issuer structure plus deployment anchors; no independent valuation cadence, unconditional liquidity, legal seniority or stressed default waterfall is inferred. fundClaimAndSeniority and lossRecoveryDesign remain uncurated. Pinned read receipts and original source bytes are retained in agents/research/.",
+      "metrics": {},
+      "components": {
+        "navValuation": {
+          "quality": "limited"
+        },
+        "durationAndLiquidity": {
           "quality": "limited"
         }
       }

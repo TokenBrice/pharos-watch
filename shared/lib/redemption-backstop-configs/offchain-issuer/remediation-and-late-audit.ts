@@ -389,7 +389,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "brla-brla-digital": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
-    holderEligibility: "unknown",
+    accessModel: "issuer-api",
+    holderEligibility: "verified-customer",
     settlementModel: "days",
     costModel: undisclosedReviewedFee(
       "Avenia (formerly BRLA Digital) documents 1:1 BRLA mint and redemption against BRL after KYC; public docs reviewed do not publish a fixed numeric redemption fee",
@@ -413,6 +414,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
       sourceRef("Avenia documentation", "https://docs.avenia.io/", ["route", "access"]),
       sourceRef("Avenia platform terms, sections 2.1 and 5.3-5.6", "https://app.avenia.io/Avenia-TC.pdf", ["route", "access", "settlement"]),
       sourceRef("Avenia PIX payout outcomes and account-specific quotes", "https://integration-guide.avenia.io/docs/Operations/quotesAndTickets/", ["route", "access", "settlement"]),
+      sourceRef("Avenia terms v4.0, October 30, 2026, sections 1.1, 2.1-2.9 and 5.3-5.4: approved KYC/KYB individuals or entities outside restricted jurisdictions, adult individuals, matching PIX beneficiary (access reviewed 2026-11-06)", "https://app.avenia.io/Avenia-TC.pdf", ["access"]),
+      sourceRef("Avenia authenticated quote/ticket API (undated; access reviewed 2026-11-06)", "https://integration-guide.avenia.io/docs/Operations/quotesAndTickets/", ["access"]),
     ],
     notes: [
       "Native multichain fiat-backed BRL stablecoin; KYC-gated primary mint and redeem rail via Avenia",
@@ -441,7 +444,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "xo-exodus": {
     ...issuerBase,
     ...documentedBoundSupplyFull("2026-04-16"),
-    holderEligibility: "unknown",
+    accessModel: "issuer-api",
+    holderEligibility: "verified-customer",
     settlementModel: "days",
     costModel: fixedFee(
       0,
@@ -464,6 +468,8 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     docs: [
       sourceRefRouteCapacity("Exodus Pay", "https://www.exodus.com/exodus-pay"),
       sourceRef("MoonPay Stablecoin Terms", "https://www.moonpay.com/legal/stablecoin_terms", ["route", "fees"]),
+      sourceRef("MoonPay Stablecoin Terms, January 25, 2026, sections 1.1 and 3.1-3.2: onboarded Customers through MoonPay Platform; Canada, New York, Colorado and EEA excluded (access reviewed 2026-11-06)", "https://www.moonpay.com/legal/stablecoin_terms", ["access"]),
+      sourceRef("Exodus Pay guide, October 26, 2026: XO Cash issued with MoonPay (identity reviewed 2026-11-06)", "https://www.exodus.com/support/en/articles/12626651-getting-started-with-exodus-pay", ["access"]),
     ],
     notes: [
       "Solana SPL Token-2022 mint with pausable, permanent-delegate, and transfer-hook authorities held by MoonPay",

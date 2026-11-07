@@ -13,16 +13,19 @@ const CUSTODIAN = "0x0000000000000000000000000000000000000011";
 const SHARE = "0x0000000000000000000000000000000000000012";
 const OUTPUT = "0x0000000000000000000000000000000000000013";
 const FEED = "0x0000000000000000000000000000000000000014";
+const IMPLEMENTATION = "0x0000000000000000000000000000000000000015";
+const SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
 const HASH = `0x${"1".repeat(64)}`;
 const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailure,bytes callData)[] calls) payable returns ((bool success,bytes returnData)[] returnData)"]);
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
 const state = vi.hoisted(() => ({ approval: true, realizedMismatch: false, nativeAge: 0, nativeAnswer: 300_000_000_000n, gasFails: false, gasWrongBlock: false, ignoredOverride: false, changedShareCode: false, pins: [] as unknown[][] }));
+const initialState = { ...state };
 vi.mock("../evm-rpc", () => ({
   MULTICALL3_ADDRESS: "0xca11bde05977b3631167028862be2a173976ca11",
   fetchEvmBlockNumber: async () => 100,
   fetchEvmBlockHeader: async () => ({ number: 100, hash: HASH, timestamp: CLOCK }),
   fetchEvmCodeAtBlock: async (_chain: string, address: string) => address === SHARE && state.changedShareCode ? "0x6001" : "0x6000",
-  fetchEvmStorageAtBlock: async () => word(0n),
+  fetchEvmStorageAtBlock: async (_chain: string, address: string, slot: string) => word(address === CUSTODIAN && slot === SLOT ? BigInt(IMPLEMENTATION) : 0n),
   fetchEvmRpcBatchDetailed: async (_chain: string, calls: { method: string; params: unknown[] }[]) => {
     const results: unknown[] = []; const errors: { index: number }[] = [];
     for (const [index, call] of calls.entries()) {
@@ -47,6 +50,11 @@ vi.mock("../evm-rpc", () => ({
       const amount = tx.data.length >= 74 ? BigInt("0x" + tx.data.slice(10, 74)) : 0n;
       if (selector === toFunctionSelector("aggregate3((address,bool,bytes)[])")) {
         const outer = decodeFunctionData({ abi: MULTICALL, data: tx.data }).args![0];
+        if (outer.length === 2) {
+          results.push(encodeAbiParameters(parseAbiParameters("(bool success,bytes returnData)[]"), [outer.map(({ callData }, i) => ({
+            success: true, returnData: word(BigInt("0x" + callData.slice(10, 74)) * (i === 0 ? 1000n : 995n) / 1000n),
+          }))])); continue;
+        }
         const nested = decodeFunctionData({ abi: MULTICALL, data: outer[2]!.callData }).args![0];
         expect(nested[0]!.target.toLowerCase()).toBe(SHARE);
         expect(nested[0]!.callData.slice(0, 10)).toBe(toFunctionSelector("approve(address,uint256)"));
@@ -91,6 +99,7 @@ const review: ExitExecutionModelReview = {
   evidenceIds: ["verified-external-share-layout"], sourceUrls: ["https://example.com/verified-custodian"],
   producer: { kind: "erc4626-instant", chain: "ethereum", chainId: 1, contract: CUSTODIAN, outputToken: OUTPUT,
     inputDecimals: 6, outputDecimals: 6, codeSha256: sha256Hex("0x6000"), multicallCodeSha256: sha256Hex("0x6000"),
+    implementation: { address: IMPLEMENTATION, slot: SLOT, codeSha256: sha256Hex("0x6000") },
     balanceStorage: { slot: word(0n), keyOrder: "account-slot" }, maxFunctions: "binding", unrestrictedGateSelectors: [],
     externalShareToken: { address: SHARE, codeSha256: sha256Hex("0x6000"), identitySelector: toFunctionSelector("frxUSD()"),
       primaryRedemptionRouteId: "redemption:fixture-custodian:stablecoin-redeem", nativeUsdFeed: { address: FEED, codeSha256: sha256Hex("0x6000"), maxAgeSec: 3600 } },
@@ -100,11 +109,11 @@ const inputReference: ExitExecutionCertificate["inputReference"] = { assetKey: "
   unitValueUsd: 1, expectedUnitValueUsd: 1, sourceId: "observed-price", sourceGenerationId: "fixture-price", observedAtSec: CLOCK };
 const outputReference = { ...inputReference, assetKey: "fixture-output", deployment: `ethereum:${OUTPUT}` };
 const args = { review, inputReference, outputReference, requests: [{ requestedNotionalUsd: 100_000, maxCostBps: 200 }] };
-beforeEach(() => { Object.assign(state, { approval: true, realizedMismatch: false, nativeAge: 0, nativeAnswer: 300_000_000_000n, gasFails: false, gasWrongBlock: false, ignoredOverride: false, changedShareCode: false, pins: [] }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
+beforeEach(() => { Object.assign(state, initialState, { pins: [] }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
 describe("exact external-share custodian runtime witness", () => {
-  it("binds the exact requested units, approval, burn, output and priced gas to one block", async () => {
+  it("binds proxy execution, external-share approval/burn, output and priced gas to one block", async () => {
     expect(ExitExecutionModelReviewSchema.safeParse(review).success).toBe(true);
     const result = await observeErc4626InstantExit(args);
     expect(result.points[0]).toMatchObject({ certification: "exact-complete", requestedRawInput: "100000000000", executedRawInput: "100000000000",

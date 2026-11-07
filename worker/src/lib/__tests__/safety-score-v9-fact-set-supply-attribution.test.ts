@@ -42,7 +42,7 @@ import {
 
 // The fixture consumes October destination reviews directly from the sidecar,
 // independently of the generated registry's older review clock.
-const XAUT_FACT_SET_CLOCK_SEC = Date.parse("2026-10-05T12:00:00Z") / 1_000;
+const XAUT_FACT_SET_CLOCK_SEC = Date.parse("2026-11-07T12:00:00Z") / 1_000;
 
 // v10.38 per-source ceilings are authored in policy; the fact set must age the
 // chain-supply evidence against them, not against a worker interval literal.

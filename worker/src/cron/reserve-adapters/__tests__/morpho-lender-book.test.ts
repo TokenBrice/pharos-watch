@@ -6,6 +6,7 @@ import { fetchErc4626SingleAssetReserves } from "../erc4626-single-asset";
 import { LenderBookObservationSchema } from "@shared/types/safety-score-v9-lender-book";
 import { lenderBookAdmissionReason } from "@shared/lib/safety-score-v9/lender-book-registry";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { MULTICALL3_ADDRESS } from "../../../lib/evm-rpc";
 import { encodeUint256 } from "../../../lib/evm-selectors";
 import { createAdapterIoLimiter } from "../concurrency";
@@ -26,8 +27,7 @@ const ADAPTER = "0x1d511811aca9d8817a3e50f29cadff6243a02902";
 const INNER = "0x1111111111111111111111111111111111111111";
 const PIN = { number: 26191269, timestamp: 1791987287, hash: "0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7" };
 const SMOKE_PIN = { number: 26192161, timestamp: 1791997991, hash: "0x27fcd55ab33c6575b688fa27e4da4f5fb67127946805cb9ec532876c8c319540" };
-// KPK USDC Yield also has a verified Base VaultV2 deployment; the producer
-// observes every configured deployment, not just the primary Ethereum one.
+// KPK USDC Yield secondary Base VaultV2.
 const BASE_VAULT = "0x392b3ccf36c8adb8094f45573346b457414cd752";
 const BASE_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const WAD = 10n ** 18n;
@@ -84,21 +84,14 @@ function fixture(rows = [market(100n)], assetId = "kpkusdcprime-kpk", mode: "dir
   const code = Object.fromEntries([vault, ADAPTER, INNER, LOAN, CORE, IRM, MULTICALL3_ADDRESS.toLowerCase()].map(address => [address, "0x60006000"]));
   return { spec: { rpc, code, block: PIN }, coin, config, vault, rpc };
 }
-/** KPK USDC Yield's verified Base VaultV2 deployment, modelled as a synthetic
- * exhaustive zero-adapter book with all NAV held as idle Base USDC. */
-function addBaseDeployment(f: ReturnType<typeof fixture>): void {
-  const total = 1n;
-  f.rpc[`${BASE_VAULT}:adaptersLength()`] = 0n;
-  f.rpc[`${BASE_VAULT}:asset()`] = BASE_USDC;
-  f.rpc[`${BASE_VAULT}:totalAssets()`] = total;
-  f.rpc[`${BASE_VAULT}:totalSupply()`] = total;
-  f.rpc[`${BASE_VAULT}:MORPHO()`] = null;
-  f.rpc[`${BASE_VAULT}:_totalAssets()`] = total;
-  f.rpc[`${BASE_VAULT}:lastUpdate()`] = BigInt(PIN.timestamp);
-  f.rpc[`${BASE_VAULT}:maxRate()`] = 0n;
-  f.rpc[`${BASE_USDC}:${data("balanceOf(address)", BASE_VAULT.slice(2).padStart(64, "0"))}`] = total;
-  f.spec.code![BASE_VAULT] = "0x60006000";
-  f.spec.code![BASE_USDC] = "0x60006000";
+/** Synthetic complete idle book for a configured secondary vault. */
+function addIdleDeployment(f: ReturnType<typeof fixture>, vault = BASE_VAULT, loan = BASE_USDC): void {
+  for (const signature of ["totalAssets()", "totalSupply()", "_totalAssets()"])
+    f.rpc[`${vault}:${signature}`] = 1n;
+  Object.assign(f.rpc, { [`${vault}:adaptersLength()`]: 0n, [`${vault}:MORPHO()`]: null,
+    [`${vault}:asset()`]: loan, [`${vault}:lastUpdate()`]: BigInt(PIN.timestamp), [`${vault}:maxRate()`]: 0n,
+    [`${loan}:${data("balanceOf(address)", vault.slice(2).padStart(64, "0"))}`]: 1n });
+  f.spec.code![vault] = f.spec.code![loan] = "0x60006000";
 }
 async function observe(f = fixture(), signal = new AbortController().signal) {
   const network = installAdapterNetwork(f.spec);
@@ -107,12 +100,13 @@ async function observe(f = fixture(), signal = new AbortController().signal) {
   const result = await observeMorphoLenderBook(f.coin, f.config, signal, ctx);
   return { result, network, ctx };
 }
+async function unavailable(reason: string, ...args: Parameters<typeof observe>) {
+  expect((await observe(...args)).result).toMatchObject({ status: "unavailable", reason, deployments: null });
+}
 beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue((PIN.timestamp + 60) * 1000); });
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
-// Exact source tuples and expected claims at block 26191269, census-prime.md
-// §1C. The state/position fixture below uses the PIN's stored balances, not a
-// naive conversion of those balances into current claims.
+// census-prime.md §1C, block 26191269: stored balances and exact current claims.
 const primeRows: MarketFixture[] = [
   ["0xae78736cd615f374d3085123a210448e74fc6393", "0x36cb058364a811636685ef15a71e8ea99043f815", 860000000000000000n, 3129335529826n, 3138811475719n, 3076320092711625883n, 2823771989077n, 2760616124948291325n, 1791958979n, 3066922906134260971n],
   ["0x856c4efb76c1d1ae02e20ceb03a2a6a08b0b8dc3", "0xe8adff9117151fb5ad7313873780b87cc56eedb0", 860000000000000000n, 2401512502632n, 10626063365428n, 10162106120573574188n, 9581226161315n, 9115567832980333907n, 1791979535n, 2296618323023697461n],
@@ -166,16 +160,14 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     const signal = new AbortController().signal;
     const first = await observeMorphoLenderBook(f.coin, f.config, signal, ctx);
     expect(first.status).toBe("ok");
-    // Forty exact tuple/position/accounting calls fit two <=32-call waves,
-    // rather than eight independent per-market requests.
+    // Forty tuple/position/accounting calls fit two <=32-call waves.
     expect(io.mock.calls.filter(([label]) => label === "lender-book-batch:ethereum")).toHaveLength(7);
     expect(io.mock.calls.filter(([label]) => label === `lender-book-code:ethereum:${MULTICALL3_ADDRESS}`)).toHaveLength(1);
     const firstRequests = network.requests.length;
     io.mockClear();
     const second = await observeMorphoLenderBook(f.coin, f.config, signal, ctx);
     expect(second).toEqual(first);
-    // Re-reading the same immutable book still rechecks its header; it cannot
-    // reuse the final canonicality check merely because the payload is cached.
+    // Cached immutable state still needs a fresh canonicality check.
     expect(network.requests.length - firstRequests).toBe(1);
     expect(io.mock.calls.map(([label]) => label)).toEqual(["lender-book-recheck:ethereum"]);
     requestCache.clear();
@@ -204,11 +196,10 @@ describe("Morpho NAV-accounted lender-book producer", () => {
   });
 
   it("does not add four off-NAV one-unit Yield residuals to its seven current claims", async () => {
-    // Exact claim amounts from census-yield.md §2.2; synthetic immutable market
-    // tuples intentionally isolate current enumeration from historical positions.
+    // census-yield.md §2.2 claims; synthetic tuples isolate current enumeration.
     const amounts = [55489558n, 455553278361n, 6198058117175n, 900750407987n, 1312328375771n, 3387753291335n, 1000607668589n];
     const f = fixture(amounts.map((amount, index) => market(amount, index + 1)), "kpkusdcyield-kpk");
-    addBaseDeployment(f);
+    addIdleDeployment(f);
     for (let i = 20; i < 24; i++) {
       const row = market(1n, i);
       f.rpc[`${ADAPTER}:${data("expectedSupplyAssets(bytes32)", row.id.slice(2))}`] = 1n;
@@ -221,6 +212,29 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     expect(ethereum.totalAssetsRaw).toBe("13255106628776");
     expect(ethereum.markets).toHaveLength(7);
     expect(network.rpcCalls.filter(row => row.selector === toFunctionSelector("expectedSupplyAssets(bytes32)"))).toHaveLength(7);
+  });
+  it("requires every chain:vault book, including both Base vaults, with exact conservation", async () => {
+    const f = fixture([market(100n)], "gtusdcp-gauntlet");
+    const contracts = f.coin.contracts!;
+    for (const { chain, address } of contracts.filter(row => row.chain !== "ethereum"))
+      addIdleDeployment(f, address, chain === "base" ? BASE_USDC : "0xaf88d065e77c8cc2239327c5edb3a432268e5831");
+    const { result } = await observe(f);
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") throw new Error("Expected complete deployment census");
+    expect(result.deployments.map(row => `${row.chain}:${row.vault}`).sort())
+      .toEqual(contracts.map(row => `${row.chain}:${row.address}`).sort());
+    for (const supplied of [contracts.slice(0, -1), [...contracts.slice(0, -1), contracts[0]]])
+      await unavailable("identity-mismatch", { ...f, coin: { ...f.coin, contracts: supplied } });
+    f.rpc[`${contracts[3].address}:totalAssets()`] = 2n;
+    await unavailable("unreconciled", f);
+  });
+  it("rejects duplicate canonical chain:vault identities before I/O", async () => {
+    const f = fixture();
+    const contracts = [...f.coin.contracts!, { ...f.coin.contracts![0], address: f.vault.toUpperCase().replace("0X", "0x") }];
+    vi.spyOn(WORKER_TRACKED_META_BY_ID, "get").mockReturnValueOnce({ ...f.coin, contracts } as never);
+    const { result, network } = await observe({ ...f, coin: { ...f.coin, contracts } });
+    expect(result).toMatchObject({ status: "unavailable", reason: "identity-mismatch", failedDeploymentKey: null });
+    expect(network.fetchSpy).not.toHaveBeenCalled();
   });
   it.each([
     ["wrong parent", "parentVault()", LOAN, "identity-mismatch"],
@@ -278,27 +292,27 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     if (signature === "DECIMALS_OFFSET()") {
       f.rpc["fee()"] = 0n; f.rpc["lastTotalAssets()"] = 100n; f.rpc[`${ADAPTER}:allocation()`] = 100n;
     }
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "malformed" });
+    await unavailable("malformed", f);
   });
   it("reports zero NAV as unavailable, not an all-idle success", async () => {
-    expect((await observe(fixture([]))).result).toMatchObject({ status: "unavailable", reason: "zero-nav", deployments: null });
+    await unavailable("zero-nav", fixture([]));
   });
   it("rejects non-lender positions and duplicate claims", async () => {
     const row = market(100n, 1, { position: packed([100_000_000n, 1n, 0n]) });
-    expect((await observe(fixture([row]))).result).toMatchObject({ status: "unavailable", reason: "position-not-lender-only" });
+    await unavailable("position-not-lender-only", fixture([row]));
     const postedCollateral = market(100n, 1, { position: packed([100_000_000n, 0n, 1n]) });
-    expect((await observe(fixture([postedCollateral]))).result).toMatchObject({ status: "unavailable", reason: "position-not-lender-only" });
-    expect((await observe(fixture([market(100n), market(100n)]))).result).toMatchObject({ status: "unavailable", reason: "incomplete-census" });
+    await unavailable("position-not-lender-only", fixture([postedCollateral]));
+    await unavailable("incomplete-census", fixture([market(100n), market(100n)]));
   });
   it("requires every market tuple and position; failed reads cannot become zero", async () => {
     const f = fixture(); const row = market(100n);
     f.rpc[`${CORE}:${data("market(bytes32)", row.id.slice(2))}`] = null;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "incomplete-census" });
+    await unavailable("incomplete-census", f);
   });
   it("rejects a tuple/core identity whose hash does not match its enumerated ID", async () => {
     const row = market(100n); const f = fixture([row]);
     f.rpc[`${CORE}:${data("idToMarketParams(bytes32)", row.id.slice(2))}`] = market(100n, 2).params;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "identity-mismatch" });
+    await unavailable("identity-mismatch", f);
   });
   it("observes changed/new adapter enumeration rather than an authored allowlist", async () => {
     const f = fixture(); const replacement = "0x2222222222222222222222222222222222222222";
@@ -313,9 +327,8 @@ describe("Morpho NAV-accounted lender-book producer", () => {
   });
   it("enforces the adapter count and global included-market cap", async () => {
     const f = fixture(); f.rpc[`${f.vault}:adaptersLength()`] = 17n;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "census-limit" });
-    expect((await observe(fixture(Array.from({ length: 129 }, (_, i) => market(1n, i + 1))))).result)
-      .toMatchObject({ status: "unavailable", reason: "census-limit" });
+    await unavailable("census-limit", f);
+    await unavailable("census-limit", fixture(Array.from({ length: 129 }, (_, i) => market(1n, i + 1))));
   });
   it("accepts the inclusive 128-market bound and splits queue reads into at most 32-call requests", async () => {
     const { result, network } = await observe(fixture(Array.from({ length: 128 }, (_, index) => market(1n, index + 1))));
@@ -343,8 +356,7 @@ describe("Morpho NAV-accounted lender-book producer", () => {
       const request = new Request(...args);
       const body = await request.clone().json() as { method: string; params: { data?: string }[] };
       const response = await fetch(request);
-      // Malformed aggregate responses now try the next eligible endpoint.
-      // Corrupt every attempt so this remains an exhausted-provider regression.
+      // Corrupt every provider so aggregate fallback remains exhausted.
       if (body.method === "eth_call" && body.params[0]?.data?.startsWith("0x82ad56cb")) {
         const payload = await response.json() as { result: `0x${string}` };
         const abi = [{ type: "tuple[]", components: [{ type: "bool" }, { type: "bytes" }] }] as const;
@@ -361,11 +373,11 @@ describe("Morpho NAV-accounted lender-book producer", () => {
   });
   it("rechecks the hash before admitting state", async () => {
     const f = fixture(); f.rpc[`eth_getBlockByNumber:0x${PIN.number.toString(16)}`] = { hash: `0x${"f".repeat(64)}` };
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "block-changed" });
+    await unavailable("block-changed", f);
   });
   it("returns explicit cancellation and unsupported-chain outcomes", async () => {
     const control = new AbortController(); control.abort();
-    expect((await observe(fixture(), control.signal)).result).toMatchObject({ status: "unavailable", reason: "aborted" });
+    await unavailable("aborted", fixture(), control.signal);
     const f = fixture();
     expect(await observeMorphoLenderBook(f.coin, f.config, new AbortController().signal, { chainRpcs: new Map() }))
       .toMatchObject({ status: "unavailable", reason: "unsupported-chain" });
@@ -376,7 +388,7 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     expect(result.status).toBe("ok");
     if (result.status === "ok") expect(result.deployments[0]).toMatchObject({ idleAssetsRaw: "100", markets: [] });
     f.rpc[`${f.vault}:adaptersLength()`] = null;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "incomplete-census" });
+    await unavailable("incomplete-census", f);
   });
   it("omits unsupported census capabilities and bounds the supported reader deadline", async () => {
     const f = fixture();
@@ -403,8 +415,7 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     });
     expect(reserve.metadata).not.toHaveProperty("lenderBookObservation");
     expect(reserve.warnings?.some(row => row.code.includes("lender-book"))).not.toBe(true);
-    // Advance the wall clock while the finalized-header RPC settles; the
-    // reader must reject before opening a state request under the expired pin.
+    // Expire the budget during the finalized-header read, before state I/O.
     const start = Date.now();
     vi.spyOn(Date, "now").mockImplementation(() => start);
     const expired = fixture();
@@ -451,8 +462,7 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     const f = fixture();
     f.rpc["paused()"] = false;
     f.rpc["convertToAssets(uint256)"] = 100n;
-    // Keep the supported Morpho capability while limiting ordinary redemption
-    // to its independently observed idle balance.
+    // Morpho book remains supported; ordinary redemption uses observed idle.
     f.rpc["liquidityAdapter()"] = ZERO;
     let ordinaryStarted = false;
     f.rpc["totalAssets()"] = async () => {
@@ -575,12 +585,12 @@ describe("Morpho NAV-accounted lender-book producer", () => {
       .toEqual(rows.map(row => row.assets.toString()).sort());
     expect(LenderBookObservationSchema.safeParse(result).success).toBe(true);
     f.rpc[`${f.vault}:totalAssets()`] = 35313917080661n;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "unreconciled" });
+    await unavailable("unreconciled", f);
     f.rpc[`${f.vault}:totalAssets()`] = 35320724763404n;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "unreconciled" });
+    await unavailable("unreconciled", f);
     f.rpc[`${f.vault}:totalAssets()`] = 35313917080660n;
     f.rpc[`${ADAPTER}:realAssets()`] = 35320589205440n;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "unreconciled" });
+    await unavailable("unreconciled", f);
   });
 });
 
@@ -605,7 +615,7 @@ describe("MetaMorpho source-defined integer accrual", () => {
     expect(result.deployments[0]).toMatchObject({ totalAssetsRaw: "3150377586784",
       idleAssetsRaw: "0", reconciledAssetsRaw: "3150377586784", reconciliationResidualRaw: "0" });
     f.rpc["balanceOf(address)"] = null;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "incomplete-census" });
+    await unavailable("incomplete-census", f);
   });
   it("uses the pinned borrowRateView and fee shares through the real mocked RPC path", async () => {
     const feeShares = 2_103_333n * 200_000_001_000_000n / 208_413_334n;
@@ -671,7 +681,7 @@ describe("MetaMorpho source-defined integer accrual", () => {
     const row = market(100n, 1, { state: packed([100n, 100_000_000n, 50n, 50_000_000n, BigInt(PIN.timestamp - 100), 0n]) });
     const f = fixture([row], "bbqusdc-steakhouse", "meta");
     f.rpc["borrowRateView((address,address,address,address,uint256),(uint128,uint128,uint128,uint128,uint128,uint128))"] = null;
-    expect((await observe(f)).result).toMatchObject({ status: "unavailable", reason: "unsupported-irm" });
+    await unavailable("unsupported-irm", f);
   });
   it("includes only a nested adapter's partial inner ownership with actual virtual-share conversion", async () => {
     const f = fixture([market(100n)], "kpkusdcprime-kpk", "nested");
@@ -682,8 +692,7 @@ describe("MetaMorpho source-defined integer accrual", () => {
     f.rpc["DECIMALS_OFFSET()"] = 0n; f.rpc["fee()"] = 0n; f.rpc["lastTotalAssets()"] = 100n;
     f.rpc[`${ADAPTER}:allocation()`] = 50n; f.rpc["previewRedeem(uint256)"] = 50n;
     const { result } = await observe(f);
-    // Exact per-claim rounding yields 49 versus adapter's 50, so the book is
-    // unavailable rather than assigning a one-unit residual to invented idle.
+    // Rounded claims total 49 versus adapter's 50; never plug the residual.
     expect(result).toMatchObject({ status: "unavailable", reason: "unreconciled" });
     f.rpc[`${INNER}:totalSupply()`] = 999_999n;
     const exact = await observe(f);

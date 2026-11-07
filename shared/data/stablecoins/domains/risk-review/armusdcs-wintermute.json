@@ -905,10 +905,10 @@
         "pricingAuthority": "none",
         "applicability": {
           "disposition": "not-applicable",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Refine07",
-          "confidence": "probable",
-          "rationale": "The referenced VaultV2 share accounting computes NAV from underlying assets and adapter realAssets, without a separate external price input on the deposit/mint/redeem accounting path. This exemption does not cover borrower collateral liquidation or nested-vault valuation. Exact-deployment verification caveats remain.",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+          "confidence": "verified",
+          "rationale": "Exact deployed VaultV2 and its sole MorphoMarketV1AdapterV2 match the verified source byte-for-byte at Ethereum block 26355000 (hash 0x289c2cbba1a950342537bebceb566995949821882a05a247570ad91f36606a71, 2026-11-06T09:45:35Z). Vault asset is USDC; adaptersLength is 1 and adapters(0) is 0x3b9e060a2b05588126fda01b95e9485687fc91d7. deposit/mint/withdraw/redeem accrue asset-denominated accounting from USDC balance plus adapter realAssets, capped by maxRate, without an independent price input at this share-accounting boundary. The adapter enumerates the same eight markets represented by the existing collateral branches. This path exemption does not exempt those borrower-collateral valuations or nested internal NAV pricing.",
           "sources": [
             {
               "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; complete market, gate and direct/nested configuration census",
@@ -929,6 +929,18 @@
             {
               "label": "Pinned VaultV2 share-accounting and adapter-return NAV source",
               "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
+            },
+            {
+              "label": "Dwellir pinned Ethereum block 26355000, hash 0x289c2cbba1a950342537bebceb566995949821882a05a247570ad91f36606a71, 2026-11-06T09:45:35Z; observed 2026-11-06; exact runtime equality, sole adapter, eight-market enumeration and immutable oracle input reads",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            },
+            {
+              "label": "Exact VaultV2 verified source and runtime; accrueInterestView and share entry/exit accounting, retrieved 2026-11-06",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd"
+            },
+            {
+              "label": "Exact sole MorphoMarketV1AdapterV2 verified source and runtime; realAssets sums expectedSupplyAssets, retrieved 2026-11-06",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3b9e060a2b05588126fda01b95e9485687fc91d7"
             }
           ]
         }
@@ -1157,17 +1169,33 @@
         "branchId": "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
         "applicability": {
           "disposition": "branches-required",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Sol curation campaign 2026-10-09 (W2L16Agant)",
-          "confidence": "limited",
-          "rationale": "The current registered lending market prices 3Jane USD3 through its upgradeable ERC-4626 conversion rate. Absence of external feeds does not make borrower collateral pricing inapplicable.",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+          "confidence": "verified",
+          "rationale": "At Ethereum block 26355000 (hash 0x289c2cbba1a950342537bebceb566995949821882a05a247570ad91f36606a71, 2026-11-06T09:45:35Z), the complete eight-market adapter enumeration includes market 0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7. Its same-pin Morpho tuple binds USDC loan, 3Jane USD3 collateral 0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc, oracle 0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06 and LLTV 915000000000000000. The oracle matches its verified runtime byte-for-byte: BASE_VAULT is that USD3, conversion sample is 1000000, QUOTE_VAULT and all four feed addresses are zero. price() consumes BASE_VAULT.convertToAssets(1000000). The pinned USD3 implementation is 0xd1f1c3f485063712873285bf4ef25ab068f13893, delegating standard share conversion to runtime-matched TokenizedStrategy 0xd377919fa87120584b21279a491f82d5265a139c and its stored reported totalAssets. This positively establishes an applicable internal-price collateral branch, not an oracleless exemption or independent external valuation; existing control and branch review clocks are not renewed.",
           "sources": [
             {
               "label": "Ethereum block 26197390, hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, 2026-10-15T10:43:11Z; complete market, gate and direct/nested configuration census",
               "url": "https://eth-mainnet.g.alchemy.com/v2/"
             },
             {"label": "Pinned seven-market and parameter census, block 26154200", "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"},
-            {"label": "Exact USD3 Morpho oracle and rate-input source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06"}
+            {"label": "Exact USD3 Morpho oracle and rate-input source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06"},
+            {
+              "label": "Dwellir pinned Ethereum block 26355000, hash 0x289c2cbba1a950342537bebceb566995949821882a05a247570ad91f36606a71, 2026-11-06T09:45:35Z; observed 2026-11-06; exact runtime equality, sole adapter, eight-market enumeration and immutable oracle input reads",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            },
+            {
+              "label": "Exact USD3 Morpho oracle verified source and runtime; immutable vault/feed inputs and price() consumer, retrieved 2026-11-06",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68b4c2b2b2e245ab54a3bd55dfd5a9d84f029c06"
+            },
+            {
+              "label": "Exact USD3 implementation verified source and runtime; delegated TokenizedStrategy boundary, retrieved 2026-11-06",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd1f1c3f485063712873285bf4ef25ab068f13893"
+            },
+            {
+              "label": "Exact TokenizedStrategy verified source and runtime; convertToAssets uses stored reported totalAssets, retrieved 2026-11-06",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd377919fa87120584b21279a491f82d5265a139c"
+            }
           ]
         }
       },

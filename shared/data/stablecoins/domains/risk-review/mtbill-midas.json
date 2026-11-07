@@ -180,5 +180,189 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Ethereum primary issuance and instant redemption consume issuer-administered NAV pricing; the other catalogued deployment paths remain unresolved.",
+    "branchApplicability": {
+      "disposition": "unresolved",
+      "reviewedAt": "2026-11-06",
+      "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+      "rationale": "The reviewed Ethereum NAV path is price-sensitive, but a complete deployed per-chain pricing and authority inventory remains unresolved. The issuer registry and current contracts repository also expose additional deployment leads; no oracleless exemption or complete multichain review is claimed.",
+      "sources": [
+        {
+          "label": "Midas current smart-contract registry (undated; read 2026-11-06)",
+          "url": "https://docs.midas.app/resources/smart-contracts-registry"
+        },
+        {
+          "label": "Midas NAV calculation and internal pricing validation (undated; read 2026-11-06)",
+          "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+        },
+        {
+          "label": "Midas NAV oracle pipeline and minter/redeemer consumer (undated; read 2026-11-06)",
+          "url": "https://docs.midas.app/transparency/oracle-architecture"
+        }
+      ]
+    },
+    "reviewedAt": "2026-11-06",
+    "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Midas current smart-contract registry (undated; read 2026-11-06)",
+        "url": "https://docs.midas.app/resources/smart-contracts-registry"
+      },
+      {
+        "label": "Midas NAV calculation and internal pricing validation (undated; read 2026-11-06)",
+        "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+      },
+      {
+        "label": "Midas NAV oracle pipeline and minter/redeemer consumer (undated; read 2026-11-06)",
+        "url": "https://docs.midas.app/transparency/oracle-architecture"
+      },
+      {
+        "label": "Ethereum pinned reads: block 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; eth_call and EIP-1967 slots",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Verified MTBillDataFeed implementation 0x703020e5df5190ee2531ff507ae2f9618e31f404; DataFeed._getDataInBase18 and mutable aggregator/freshness/bounds",
+        "url": "https://eth.blockscout.com/api?module=contract&action=getsourcecode&address=0x703020e5df5190ee2531ff507ae2f9618e31f404"
+      },
+      {
+        "label": "Verified MTBillCustomAggregatorFeed implementation; setRoundData and optional setRoundDataSafe checks",
+        "url": "https://etherscan.io/address/0xe6792edb139b8bf83ededf05c03e91b0c7775007#code"
+      },
+      {
+        "label": "Verified Ethereum deposit-vault implementation; primary mint mTokenDataFeed consumer",
+        "url": "https://etherscan.io/address/0xc8af8477f3caa89f60fe9d1f48eee5433c55982b#code"
+      },
+      {
+        "label": "Verified Ethereum instant-redemption implementation; mTokenDataFeed consumer",
+        "url": "https://etherscan.io/address/0x489a797714708cf088d158714a376d8ff740d701#code"
+      }
+    ],
+    "paths": [
+      {
+        "id": "mtbill-ethereum-nav",
+        "chain": "ethereum",
+        "address": "0xfcee9754e8c375e145303b7ce7beca3201734a2b",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+          "confidence": "verified",
+          "rationale": "At Ethereum block 26350000 (hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701; 2026-11-05T17:02:47Z), issuance vault 0x99361435420711723af805f08187c9e6bf796683 and instant redeemer 0x569d7dccbf6923350521ecbc28a555a500c4f0ec both return DataFeed 0xfcee9754e8c375e145303b7ce7beca3201734a2b. Its aggregator is 0x056339c044055819e8db84e71f5f2e1f536b2e5b, described onchain as mTBILL/USD with 8 decimals. DataFeed healthyDiff is 2592000 seconds; minExpectedAnswer is 90000000 and maxExpectedAnswer is 111000000. Both feedAdminRole reads return 0x1082007de1a74e6fd3a41711e0de78a15fefc346dbafdebc6a72059a491690fe through accessControl 0x0312a9d1ff2372ddedcbb21e4b6389afc919ac4b. Pinned EIP-1967 implementations match the cited verified sources. DataFeed rejects deprecated, stale or out-of-bound values; its administrator can change the aggregator, freshness and bounds. The custom feed administrator can call setRoundData directly without setRoundDataSafe's deviation and one-hour checks. Issuer documentation assigns final NAV validation to Midas after strategy-manager inputs; its operational co-signing description is not proof of an onchain quorum or independent valuation. This establishes internal top-level pricing on the reviewed Ethereum path, not an exhaustive administrator or multichain inventory.",
+          "sources": [
+            {
+              "label": "Midas NAV calculation and internal pricing validation (undated; read 2026-11-06)",
+              "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+            },
+            {
+              "label": "Midas NAV oracle pipeline and minter/redeemer consumer (undated; read 2026-11-06)",
+              "url": "https://docs.midas.app/transparency/oracle-architecture"
+            },
+            {
+              "label": "Ethereum pinned reads: block 26350000, hash 0x78740ac6c16054f593fabd642a978a1e7cf89509a04ce3e36aab854b657c8701, 2026-11-05T17:02:47Z; eth_call and EIP-1967 slots",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            },
+            {
+              "label": "Verified MTBillDataFeed implementation 0x703020e5df5190ee2531ff507ae2f9618e31f404; DataFeed._getDataInBase18 and mutable aggregator/freshness/bounds",
+              "url": "https://eth.blockscout.com/api?module=contract&action=getsourcecode&address=0x703020e5df5190ee2531ff507ae2f9618e31f404"
+            },
+            {
+              "label": "Verified MTBillCustomAggregatorFeed implementation; setRoundData and optional setRoundDataSafe checks",
+              "url": "https://etherscan.io/address/0xe6792edb139b8bf83ededf05c03e91b0c7775007#code"
+            },
+            {
+              "label": "Verified Ethereum deposit-vault implementation; primary mint mTokenDataFeed consumer",
+              "url": "https://etherscan.io/address/0xc8af8477f3caa89f60fe9d1f48eee5433c55982b#code"
+            },
+            {
+              "label": "Verified Ethereum instant-redemption implementation; mTokenDataFeed consumer",
+              "url": "https://etherscan.io/address/0x489a797714708cf088d158714a376d8ff740d701#code"
+            }
+          ]
+        }
+      },
+      {
+        "id": "mtbill-base-pricing-unresolved",
+        "chain": "base",
+        "address": "0x70e58b7a1c884fffe7dbce5249337603a28b8422",
+        "pricingAuthority": "unknown",
+        "applicability": {
+          "disposition": "unresolved",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+          "confidence": "limited",
+          "rationale": "The issuer registry lists this base mTBILL/USD oracle, but its deployed consumer, current implementation, updater and administrator census, freshness/failure behavior and fallback paths have not been independently joined at a pinned block. The Ethereum review does not establish these facts.",
+          "sources": [
+            {
+              "label": "Midas current smart-contract registry (undated; read 2026-11-06)",
+              "url": "https://docs.midas.app/resources/smart-contracts-registry"
+            }
+          ]
+        }
+      },
+      {
+        "id": "mtbill-rootstock-pricing-unresolved",
+        "chain": "rootstock",
+        "address": "0x0ca36af4915a73daf06912dd256b8a4737131ae7",
+        "pricingAuthority": "unknown",
+        "applicability": {
+          "disposition": "unresolved",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+          "confidence": "limited",
+          "rationale": "The issuer registry lists this rootstock mTBILL/USD oracle, but its deployed consumer, current implementation, updater and administrator census, freshness/failure behavior and fallback paths have not been independently joined at a pinned block. The Ethereum review does not establish these facts.",
+          "sources": [
+            {
+              "label": "Midas current smart-contract registry (undated; read 2026-11-06)",
+              "url": "https://docs.midas.app/resources/smart-contracts-registry"
+            }
+          ]
+        }
+      },
+      {
+        "id": "mtbill-plume-pricing-unresolved",
+        "chain": "plume",
+        "address": "0xb701abea3e4b6eadac4f56696904c5f551d2617b",
+        "pricingAuthority": "unknown",
+        "applicability": {
+          "disposition": "unresolved",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+          "confidence": "limited",
+          "rationale": "The issuer registry lists this plume mTBILL/USD oracle, but its deployed consumer, current implementation, updater and administrator census, freshness/failure behavior and fallback paths have not been independently joined at a pinned block. The Ethereum review does not establish these facts.",
+          "sources": [
+            {
+              "label": "Midas current smart-contract registry (undated; read 2026-11-06)",
+              "url": "https://docs.midas.app/resources/smart-contracts-registry"
+            }
+          ]
+        }
+      },
+      {
+        "id": "mtbill-etherlink-pricing-unresolved",
+        "chain": "etherlink",
+        "address": "0x80da45b66c4cbab140ae53c9accb01be4f41b7dd",
+        "pricingAuthority": "unknown",
+        "applicability": {
+          "disposition": "unresolved",
+          "reviewedAt": "2026-11-06",
+          "reviewer": "Safety unknowns campaign 2026-11-06 — c-oramint",
+          "confidence": "limited",
+          "rationale": "The issuer registry lists this etherlink mTBILL/USD oracle, but its deployed consumer, current implementation, updater and administrator census, freshness/failure behavior and fallback paths have not been independently joined at a pinned block. The Ethereum review does not establish these facts.",
+          "sources": [
+            {
+              "label": "Midas current smart-contract registry (undated; read 2026-11-06)",
+              "url": "https://docs.midas.app/resources/smart-contracts-registry"
+            }
+          ]
+        }
+      }
+    ]
   }
 }

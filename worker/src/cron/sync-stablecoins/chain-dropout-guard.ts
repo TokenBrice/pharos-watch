@@ -73,12 +73,21 @@ const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
     reviewedAt: Date.parse("2026-10-16T06:18:46Z") / 1000,
     evidenceUrl: "https://polygonscan.com/token/0xe111178a87a3bff0c8d18decba5798827539ae99",
   },
-  // 2026-10-29 10:50 UTC: finalized Polygon block 96377093 confirms
-  // 365,027.867025281274675608 SBC, matching the list's lower 365,027 stock.
+  // 2026-11-06: Polygon block 96823850 confirms 363,068.694747281274675608 SBC
+  // at the held baseline's own clock. Block 96856472 has 463,068.694747281274675608;
+  // both disprove the held $1.846M level. Accept the provider's lower observation unchanged.
   {
     assetId: "sbc-brale", chainId: "polygon",
-    reviewedAt: Date.parse("2026-10-29T10:50:19Z") / 1000,
+    reviewedAt: Date.parse("2026-11-06T18:42:00Z") / 1000,
     evidenceUrl: "https://polygonscan.com/token/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
+  },
+  // Finalized Solana slot 466212454 confirms 2,153,029.477071 EUROP, matching
+  // detail native supply. Ethereum block 26357578 has 9,824,599.672717 tokens;
+  // the lower Solana stock is real, without claiming a matched cross-chain migration.
+  {
+    assetId: "europ-schuman", chainId: "solana",
+    reviewedAt: Date.parse("2026-11-06T18:42:00Z") / 1000,
+    evidenceUrl: "https://solscan.io/token/euro5sNHrZC2wu2RoLvy6xxoVMc3Qnd1vjxoWf4MftA",
   },
   // 2026-11-03 10:09 UTC: BOB block 40419289 (rpc.gobob.xyz) confirms
   // 1,322,822.22 satUSD, matching the lower list level after River's BOB

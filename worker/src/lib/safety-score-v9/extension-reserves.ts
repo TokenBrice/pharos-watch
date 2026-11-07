@@ -59,6 +59,8 @@ function normalizedReserveName(value: string): string {
 }
 
 function reserveSlicesMatch(live: ReserveSlice, reviewed: ReserveSlice): boolean {
+  // Metadata-only rows cannot use historical name matching.
+  if (reviewed.pct === 0 && !live.sourceKey) return false;
   if (live.sourceKey) return reviewed.sourceKey === live.sourceKey;
   const normalizedName = normalizedReserveName(live.name);
   const sameName = normalizedName.length > 0 && normalizedName === normalizedReserveName(reviewed.name);

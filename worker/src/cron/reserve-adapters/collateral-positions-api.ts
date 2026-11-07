@@ -583,7 +583,7 @@ async function fetchBridgeBasketImmediateRedeemableUsd(
             observedAt: valuationTimestamps.sourceTimestamp!,
             unitValueUsd: observedUnitValueUsd,
             expectedUnitValueUsd: eurUsdReference,
-            basketWeights: weightedInventories.map((inventory) => ({
+            basketWeights: bridgeInventories.map((inventory) => ({
               assetId: DEURO_OUTPUT_ASSET_KEY_BY_LABEL[inventory.label]!,
               weight: inventory.inventoryEur / capacityEur,
             })),
