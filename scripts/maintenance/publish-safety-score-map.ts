@@ -102,7 +102,7 @@ function extractJson(raw: Buffer, opening: "[" | "{"): unknown {
   return JSON.parse(text.slice(start, end + 1)) as unknown;
 }
 
-function asObject(value: unknown, message: string): Record<string, unknown> {
+function requireObject(value: unknown, message: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(message);
   return value as Record<string, unknown>;
 }
@@ -157,7 +157,7 @@ export class WranglerSafetyMapKvAdapter implements SafetyMapKvAdapter {
 }
 
 function readState(path: string): SafetyMapPublishState {
-  return asObject(JSON.parse(readFileSync(path, "utf8")), `Invalid publication state at ${path}`) as unknown as SafetyMapPublishState;
+  return requireObject(JSON.parse(readFileSync(path, "utf8")), `Invalid publication state at ${path}`) as unknown as SafetyMapPublishState;
 }
 
 function writeState(path: string, state: SafetyMapPublishState): void {
@@ -171,7 +171,7 @@ function utcDate(seconds: number): string {
 
 function parseManifest(raw: Buffer): Record<string, unknown> {
   try {
-    return asObject(extractJson(raw, "{"), "manifest is not a JSON object");
+    return requireObject(extractJson(raw, "{"), "manifest is not a JSON object");
   } catch (error) {
     throw new Error(`${MANIFEST_KEY} exists but did not read back as JSON. Refusing to publish over an unknown state.`, { cause: error });
   }
@@ -281,7 +281,7 @@ function buildManifest(outDir: string): { manifest: SafetyMapManifest; manifestP
   const png = join(outDir, "latest.png");
   const alt = join(outDir, "latest.alt.json");
   const renderManifest = join(outDir, "latest.manifest.json");
-  const meta = asObject(JSON.parse(readFileSync(renderManifest, "utf8")), "latest.manifest.json must be an object");
+  const meta = requireObject(JSON.parse(readFileSync(renderManifest, "utf8")), "latest.manifest.json must be an object");
   const required = ["date", "asOfSec", "renderedAtSec", "edition", "counts"];
   const absent = required.filter((key) => meta[key] === undefined || meta[key] === null);
   if (absent.length > 0) throw new Error(`latest.manifest.json is missing ${absent.join(", ")}. The generator output contract changed.`);
@@ -298,7 +298,7 @@ function buildManifest(outDir: string): { manifest: SafetyMapManifest; manifestP
     publicationStatus: meta.publicationStatus ?? null,
     updatedAt: meta.updatedAt ?? null,
     publicationHealth: meta.publicationHealth ?? null,
-    counts: asObject(meta.counts, "latest.manifest.json counts must be an object"),
+    counts: requireObject(meta.counts, "latest.manifest.json counts must be an object"),
     ...(meta.mapSummary === undefined ? {} : { mapSummary: meta.mapSummary }),
     bytes: { png: statSync(png).size, alt: statSync(alt).size, webp: statSync(join(outDir, "latest.webp")).size },
   };

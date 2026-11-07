@@ -6,6 +6,7 @@ import type {
 import type { StatusHealthValue } from "@shared/types/status/core";
 import { isRecord, numberValue as readNumber } from "@shared/lib/type-guards";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { parseJsonObject as parseDetails } from "./json-parse";
 import {
   buildStatusProbeRunIdempotencyKey,
   reportStatusPersistenceIssue,
@@ -37,16 +38,6 @@ function readStatus(value: unknown): StatusProbePlaneSummary["status"] | null {
 
 function readStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
-function parseDetails(detailsJson: string | null): Record<string, unknown> | null {
-  if (!detailsJson) return null;
-  try {
-    const parsed = JSON.parse(detailsJson) as unknown;
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
 }
 
 function parseProbePlaneSummary(value: unknown): StatusProbePlaneSummary | null {

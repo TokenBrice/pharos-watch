@@ -44,4 +44,20 @@ describe("supply publication contracts", () => {
       expect(allowed.messages.some((message) => message.ruleId === "pharos/no-zero-coercing-supply-helpers")).toBe(false);
     }
   });
+
+  it.each([
+    ["worker/src/lib/__helper-probe.ts", 3],
+    ["src/lib/__helper-probe.ts", 1],
+    ["shared/lib/type-guards.ts", 0],
+    ["worker/src/lib/json-parse.ts", 1],
+    ["shared/lib/safety-score-v9/policy.ts", 0],
+    ["worker/src/lib/__tests__/__helper-probe.test.ts", 0],
+  ])("reserves canonical record-guard and Worker JSON-parser names in %s", async (filePath, expected) => {
+    const eslint = new ESLint({ cache: false, cwd: process.cwd(), overrideConfigFile: "eslint.config.mjs" });
+    const [result] = await eslint.lintText(
+      "function isRecord() {} const parseJson = () => null; const tryParseJson = function () {};",
+      { filePath },
+    );
+    expect(result.messages.filter((message) => message.ruleId === "pharos/no-local-helper-copies")).toHaveLength(expected);
+  });
 });

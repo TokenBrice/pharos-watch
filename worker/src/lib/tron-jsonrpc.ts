@@ -1,4 +1,5 @@
 import { canonicalTronAddress } from "@shared/lib/tron-address";
+import { isRecord as record } from "@shared/lib/type-guards";
 import {
   isTronJsonRpcRead, tronRpcQuantity, tronRpcResponseByteLimit, TRON_RPC_MAX_BLOCK_SPAN,
   TRON_SOLID_HEAD_MAX_AGE_MS, TRON_SOLID_HEAD_MAX_FUTURE_MS,
@@ -29,7 +30,6 @@ export class TronRpcError extends Error {
 
 const hex = (number: number) => `0x${number.toString(16)}`;
 const hash = (value: unknown): value is string => typeof value === "string" && /^0x[0-9a-f]{64}$/i.test(value);
-const record = (value: unknown): value is Record<string, unknown> => value != null && typeof value === "object" && !Array.isArray(value);
 
 function solidHeadFreshnessReason(timestampMs: number): string | null {
   const ageMs = Date.now() - timestampMs;

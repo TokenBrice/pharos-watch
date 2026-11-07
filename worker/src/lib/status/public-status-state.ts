@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tryParseJson as parseJson } from "../json-parse";
 import {
   applyPublicStatusHysteresis,
   getPublicComponentStateRank,
@@ -71,15 +72,6 @@ const PersistedTransitionSchema = z.object({
   componentHistoryStartedAt: z.record(z.string(), z.number()).optional(),
   components: z.array(PublicStatusTransitionComponentSchema),
 });
-
-function parseJson(text: string | null): unknown {
-  if (!text) return null;
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
-}
 
 export interface PublicStatusReconciliation {
   projection: PublicStatusProjection;

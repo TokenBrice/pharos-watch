@@ -126,6 +126,16 @@ const deletedSupplyHelperNames = {
   "sumPegBuckets": true,
 };
 
+// Names that shadow or restate the canonical helpers. A local helper with
+// different semantics takes a name that says so (e.g. asRecordOrArray).
+const localRecordGuardNames = new Set([
+  "asRecord", "isRecord", "readRecord", "isPlainObject", "isPlainRecord",
+  "isObjectRecord", "isUnknownRecord", "asObject", "toRecord",
+]);
+const localJsonParseNames = new Set([
+  "parseJson", "tryParseJson", "parseJsonObject", "parseJsonStringArray", "parseJsonObjectWithSchema",
+]);
+
 const pharosBoundaryPlugin = {
   rules: {
     "shared-types-imports": {
@@ -227,6 +237,37 @@ const pharosBoundaryPlugin = {
           },
           "MemberExpression[computed=true] > Literal.property"(node) {
             if (Object.hasOwn(deletedSupplyHelperNames, node.value)) context.report({ node, messageId: "unavailable" });
+          },
+        };
+      },
+    },
+    "no-local-helper-copies": {
+      meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+          record: "Use isRecord/readRecord from shared/lib/type-guards.ts instead of declaring a local record guard.",
+          json: "Use the canonical parsers from worker/src/lib/json-parse.ts instead of declaring a local JSON parser.",
+        },
+      },
+      create(context) {
+        const filename = relative(repoRoot, context.filename).replaceAll("\\", "/");
+        function check(node, name) {
+          if (localRecordGuardNames.has(name) && filename !== "shared/lib/type-guards.ts") {
+            context.report({ node, messageId: "record" });
+          }
+          if (localJsonParseNames.has(name) && filename.startsWith("worker/")
+            && filename !== "worker/src/lib/json-parse.ts") {
+            context.report({ node, messageId: "json" });
+          }
+        }
+        return {
+          FunctionDeclaration: (node) => check(node, node.id?.name),
+          VariableDeclarator(node) {
+            if (node.parent.kind === "const" && node.id.type === "Identifier"
+              && (node.init?.type === "ArrowFunctionExpression" || node.init?.type === "FunctionExpression")) {
+              check(node, node.id.name);
+            }
           },
         };
       },
@@ -551,6 +592,20 @@ const eslintConfig = defineConfig([
     rules: {
       "pharos/no-zero-coercing-supply-helpers": "error",
     },
+  },
+  {
+    files: [...NON_WORKER_SOURCE_GLOBS, "worker/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"],
+    ignores: [
+      "**/__tests__/**", "**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "**/test-helpers/**", "**/test-utils/**", "**/fixtures/**",
+      "**/generated/**", "**/*.generated.*", "src/generated/**", "shared/data/**",
+      // Pinned Safety Score evaluator inputs: editing them rotates the
+      // evaluation-build identity and needs the equivalence replay, so their
+      // local copies wait for the next evaluator release.
+      "shared/lib/safety-score-v9/policy.ts", "worker/src/lib/live-reserves/store-row-decoding.ts",
+    ],
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: { "pharos/no-local-helper-copies": "error" },
   },
   {
     // Worker tests additionally sign fixtures with throwaway private keys.

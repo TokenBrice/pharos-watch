@@ -6,7 +6,7 @@ import {
 import type {
   TelegramDispatchCronMetadata,
 } from "../types/status";
-import { coerceFiniteNumber } from "./type-guards";
+import { coerceFiniteNumber, readRecord as readMetadataRecord } from "./type-guards";
 
 /**
  * Maps each tracked cache key to the primary upstream provider whose outage
@@ -26,11 +26,7 @@ export const CACHE_UPSTREAM_PROVIDER: Record<string, string> = {
   dews: "Internal compute",
 };
 
-export function readMetadataRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
+export { readMetadataRecord };
 
 export function readMetadataNumber(value: unknown): number | null {
   return coerceFiniteNumber(value);
