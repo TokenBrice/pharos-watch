@@ -283,26 +283,6 @@ function buildMachineAccounting(args: {
     : undefined;
 }
 
-/** Machine accounting read from the same Multicall3 batch as the redeemer route. */
-function readMachineAccountingFromBatch(args: {
-  reads: Parameters<typeof multicallResultByLabel>[0];
-  accountingDecimals: number;
-  blockHeader: EvmBlockHeader | null;
-  blockNumber: number;
-  nowSec: number;
-}): MakinaMachineAccounting | undefined {
-  return buildMachineAccounting({
-    accountingDecimals: args.accountingDecimals,
-    machineAumRaw: decodeUint256Word(multicallResultByLabel(args.reads, "machine-last-total-aum")),
-    machineAccountedAt: readSafeOnchainNumber(decodeUint256Word(
-      multicallResultByLabel(args.reads, "machine-last-global-accounting-time"),
-    )),
-    blockHeader: args.blockHeader,
-    blockNumber: args.blockNumber,
-    nowSec: args.nowSec,
-  });
-}
-
 export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
   return {
     ...buildRedemptionSnapshotMetadata({
@@ -424,12 +404,15 @@ async function fetchMakinaRedemptionState(
     const accountingDecimals = params.accountingTokenDecimals ?? DEFAULT_ACCOUNTING_DECIMALS;
     // The Machine accounting read is part of the same batch and does not need
     // the reviewed AsyncRedeemer: keep it when only the redeemer proof fails.
-    const machineAccounting = readMachineAccountingFromBatch({
-      reads,
+    const machineAccounting = buildMachineAccounting({
       accountingDecimals,
       blockHeader,
       blockNumber,
       nowSec: ctx?.nowSec ?? Math.floor(Date.now() / 1000),
+      machineAumRaw: decodeUint256Word(multicallResultByLabel(reads, "machine-last-total-aum")),
+      machineAccountedAt: readSafeOnchainNumber(decodeUint256Word(
+        multicallResultByLabel(reads, "machine-last-global-accounting-time"),
+      )),
     });
 
     const redeemerMachine = decodeAddressWord(multicallResultByLabel(reads, "redeemer-machine"));

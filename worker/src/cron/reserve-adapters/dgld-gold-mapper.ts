@@ -48,10 +48,6 @@ interface DgldGoldMapperState {
 
 type DgldGoldMapperParams = LiveReserveAdapterParamsByKey["dgld-gold-mapper"];
 
-function readParams(config: LiveReservesConfig): DgldGoldMapperParams {
-  return parseLiveReserveAdapterParams(ADAPTER_KEY, config.params);
-}
-
 export function adaptDgldGoldMapperState(
   state: DgldGoldMapperState,
   params: DgldGoldMapperParams,
@@ -200,7 +196,7 @@ export async function fetchDgldGoldMapperReserves(
   signal: AbortSignal,
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
-  const params = readParams(config);
+  const params = parseLiveReserveAdapterParams(ADAPTER_KEY, config.params);
   const input = requireJsonInput(config.inputs.primary, ADAPTER_KEY);
   const baseUrl = input.url.replace(/\/+$/, "");
 
