@@ -116,22 +116,6 @@ function knownMetadataForToken(tokenAddress: string, tokenId: string): { symbol:
   return KNOWN_TEZOS_TOKEN_METADATA[`${tokenAddress}:${tokenId}`] ?? null;
 }
 
-function metadataForToken(
-  tokenAddress: string,
-  tokenId: string,
-  symbol: string | null,
-  decimals: number | null,
-): {
-  symbol: string | null;
-  decimals: number | null;
-} {
-  const known = knownMetadataForToken(tokenAddress, tokenId);
-  return {
-    symbol: known?.symbol ?? symbol,
-    decimals: known?.decimals ?? decimals,
-  };
-}
-
 function parseTokenBalance(value: unknown): ParsedTokenBalance | null {
   const row = asRecordOrArray(value);
   if (!row) return null;
@@ -148,14 +132,14 @@ function parseTokenBalance(value: unknown): ParsedTokenBalance | null {
   const symbol = typeof rawSymbol === "string" && rawSymbol.trim() ? rawSymbol.trim() : null;
   const decimals = parseDecimals(metadata?.decimals);
   if (!account || !balance || !tokenAddress || tokenId == null) return null;
-  const resolvedMetadata = metadataForToken(tokenAddress, tokenId, symbol, decimals);
+  const known = knownMetadataForToken(tokenAddress, tokenId);
   return {
     account,
     tokenAddress,
     tokenId,
     balance,
-    symbol: resolvedMetadata.symbol,
-    decimals: resolvedMetadata.decimals,
+    symbol: known?.symbol ?? symbol,
+    decimals: known?.decimals ?? decimals,
     raw: value,
   };
 }
