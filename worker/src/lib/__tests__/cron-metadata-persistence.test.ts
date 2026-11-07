@@ -191,6 +191,8 @@ describe("compactCronMetadataForPersistence", () => {
       activePublicationCoverage: { missingActiveIds: ["coin-a"], complete: false },
       publicationStats: { pysInputsPersistedCount: 3, pysInputsNullCount: 1 },
       apiErrorConfigs: [{ configKey: "ethereum-test" }],
+      subgraphFailures: [{ source: "uniswap-v4-subgraph", chain: "ethereum", phase: "exact", reason: "graphql", timedOut: false }],
+      directApiSourceSummary: { sourceWarnings: ["meteora: malformed pool row"], pagination: [] },
     };
     const result = compactCronMetadataForPersistence(JSON.stringify({ ...evidence,
       adapterLatency: { groups: Array.from({ length: 1_000 }, () => ({ adapterKey: "test", elapsedMs: 10 })) },

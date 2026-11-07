@@ -798,6 +798,7 @@ describe("dex liquidity scoring stage cycle", () => {
 
     const stageResult = await stageSource();
     const stageQuality = getCronQualityReasons(readMetadata(stageResult));
+    expect(readMetadata(stageResult).directApiSourceSummary.sourceWarnings).toEqual(["pancakeswap-api: bsc: The operation was aborted due to timeout"]);
     expect(stageResult.status).toBe("ok");
     expect(stageQuality).toEqual(["source-partial:pancakeswap-api:bsc", "direct-api-source-warnings"]);
     const result = await consumeScoringStage(db);
