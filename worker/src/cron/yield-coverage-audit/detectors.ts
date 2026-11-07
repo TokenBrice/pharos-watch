@@ -13,7 +13,7 @@ import { AUTO_LENDING_POOL_MAP, LENDING_PROTOCOL_ALLOWLIST } from "../../lib/yie
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
 import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
-import { selectVariantDlPool } from "../yield-helpers";
+import { isBlockedYieldOpportunitySource, selectVariantDlPool } from "../yield-helpers";
 import { resolveYieldSourceKeyRoute } from "../yield-sync/family-registry";
 import { explainDeterministicAutoLendingEligibility, type AutoLendingEligibilityReasonCode } from "../yield-sync/resolve";
 import type { DlPool } from "../yield-sync/types";
@@ -754,6 +754,7 @@ export function identifyCoverageGaps(
   const venueRiskConfigMissingPools: CoverageGapPool[] = [];
 
   for (const pool of dlPools) {
+    if (isBlockedYieldOpportunitySource(pool)) continue;
     const protocolCategory = protocolCategoriesByProject.get(normalizeProtocolProjectKey(pool.project)) ?? null;
     const poolEntry = buildCoverageGapPool(pool, protocolCategory);
     const coveredByProtocolOrExactPool = supportedProtocols.has(pool.project) || coveredPools.has(pool.pool);

@@ -1,4 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-config-lending-protocols";
 
 /**
  * Yield Pipeline — Pure Computation Functions
@@ -126,10 +127,18 @@ export function detectWarningSignals(input: WarningInput): YieldWarningSignalKey
 }
 
 export function isBlockedYieldOpportunitySource(params: {
+  project?: string | null;
+  pool?: string | null;
   yieldSource?: string | null;
   poolMeta?: string | null;
   symbol?: string | null;
 }): boolean {
+  if (YIELD_OPPORTUNITY_EXCLUSIONS.some((entry) =>
+    entry.poolIds
+      ? entry.poolIds.includes(params.pool ?? "")
+      : entry.projects.includes(params.project?.trim().toLowerCase() ?? "")
+  )) return true;
+
   const searchText = [params.yieldSource, params.poolMeta, params.symbol]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .join(" ");
@@ -479,7 +488,7 @@ export function findBestLendingPool(
 
   const baseCandidates = dlPools.filter((p) =>
     meetsLendingPoolCoreEligibility(p, { allowlist, minApy, minTvlUsd }) &&
-    !isBlockedYieldOpportunitySource({ poolMeta: p.poolMeta, symbol: p.symbol }) &&
+    !isBlockedYieldOpportunitySource(p) &&
     !reservedPoolIds.has(p.pool) &&
     !options?.isBlockedPool?.(p) &&
     isChainAllowed(chainFilter, p.chain)

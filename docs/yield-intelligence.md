@@ -306,6 +306,8 @@ Discovery evaluates the candidate venue's chain, not the stablecoin's first depl
 
 **Explicit venue exclusion:** Even when a pool clears the generic quality gates above, published lending-opportunity suggestions exclude venues whose DeFiLlama `poolMeta` or supplemental source label identifies them as Resolv / `USR`, `stUSR`, or `wstUSR` linked.
 
+Owner-reviewed operational holds also exclude the exact venues or pools recorded in `YIELD_OPPORTUNITY_EXCLUSIONS`, across discovery, curated pins and supplemental candidates. Their dates and recovery triggers are maintained in the [operations guide](https://github.com/TokenBrice/pharos-watch/blob/main/docs/yield-intelligence-operations.md#dated-opportunity-exclusions). A missed review keeps the hold closed and surfaces operator-only quality findings; it does not resume publication.
+
 **Yield type:** `lending-opportunity` — distinguishes these from native yield coins on the frontend. The direct Aave v3 on-chain supply-rate path uses the same classification so rankings/cache schema validation stays aligned across deterministic and auto-discovered lending rows.
 
 **Data source:** `defillama-auto` — distinguishes from static-mapped `defillama` pools.
