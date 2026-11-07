@@ -435,7 +435,7 @@ export async function guardChainDropouts(input: {
   if (input.previousAssetsById) recoverStateFromPublication(state, input.previousAssetsById, now);
   const result: SupplyChainGuardResult = { flagged: 0, repaired: 0, quarantinedAssetIds: [], unavailableAssetIds: [], historyFetches: 0, stateReadFailed: input.stateReadFailed ?? false, state };
   const candidates: Candidate[] = [];
-  const fillDefaultAssets = new Set<PeggedAsset>();
+  const fillDefaultAssets = new Map<PeggedAsset, number>();
   // Per asset: same-run gains on healthy chains, and the pre-run vetted whole-asset total
   // (each chain at its persisted/seed/prev-day reference, before this run moves any baseline).
   const conservation = new Map<PeggedAsset, { gains: number; vettedTotal: number; vettedComplete: boolean }>();
@@ -453,7 +453,7 @@ export async function guardChainDropouts(input: {
     if (!pegKey) continue;
     if (getCirculatingRawOrNull(asset) == null) continue;
     if (meta.flags.pegCurrency === "USD" && asset.priceListFillDefault
-      && asset.priceListFillDefault.value < FIXED_PEG_SEVERE_DOWNSIDE_RATIO) fillDefaultAssets.add(asset);
+      && asset.priceListFillDefault.value < FIXED_PEG_SEVERE_DOWNSIDE_RATIO) fillDefaultAssets.set(asset, getCirculatingRawOrNull(asset)!);
     conservation.set(asset, { gains: 0, vettedTotal: 0, vettedComplete: true });
     const rows = asset.chainCirculating ?? (asset.chainCirculating = {});
     const groups = new Map<string, { chainId?: string; labels: string[] }>();
@@ -811,7 +811,7 @@ export async function guardChainDropouts(input: {
   }
   // The same fill price rescales every list bucket, including history. A sub-$1M chain or an
   // already-rescaled baseline cannot detect that collapse; admit only native evidence or bounded guard carry.
-  for (const asset of fillDefaultAssets) {
+  for (const [asset, listTotal] of fillDefaultAssets) {
     asset.circulatingPrevDay = null;
     asset.circulatingPrevWeek = null;
     asset.circulatingPrevMonth = null;
@@ -835,15 +835,22 @@ export async function guardChainDropouts(input: {
     const selected = meta && selectCuratedAggregateOnchainSupplyProbeContracts(meta);
     const nativeTotal = native.reduce((sum, candidate) => sum + candidate.evidence.repairedCurrentUsd!, 0);
     const missingBaseline = missing.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd, 0);
+    const missingListShare = listTotal > 0 && missing.every((candidate) => candidate.evidence.listCurrentUsd != null)
+      ? missing.reduce((sum, candidate) => sum + candidate.evidence.listCurrentUsd!, 0) / listTotal
+      : null;
     if (asset.supplyChainGuard?.status === "chains-unavailable" && asset.supplyChainGuard.concurrentGainUsd == null
       && selected?.length === affected.length && rows.length === affected.length
       && selected.every(({ config }) => affected.some((candidate) => candidate.state.chainId === config.chain))
       && missing.length > 0 && native.length + missing.length === affected.length && nativeTotal > 0
+      && missingListShare != null && missingListShare <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio
       && missingBaseline <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio * (nativeTotal + missingBaseline)) {
       asset.circulating = { [affected[0].pegKey]: nativeTotal };
       asset.supplyObservedAt = Math.min(...native.map((candidate) => candidate.evidence.observedAt!));
       asset.supplyChainGuard.partialCoverage = true;
       asset.supplyChainGuard.quarantinedSince = Math.min(...missing.map((candidate) => candidate.firstFlaggedAt));
+      warn("supply-list-fill-default-partial-native", "Publishing only the observed native remainder of a fill-default asset", {
+        assetId: asset.id, missingChainIds: missing.map((candidate) => candidate.state.chainId), missingListShare,
+      });
       continue;
     }
     asset.circulating = {};

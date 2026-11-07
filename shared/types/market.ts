@@ -191,8 +191,8 @@ export const SupplyChainGuardProvenanceSchema = z.object({
   status: z.enum(["repaired", "quarantined", "unavailable", "chains-unavailable"]),
   quarantinedSince: z.number().int().nonnegative().optional(),
   /**
-   * Past the carry ceiling, a minority-share material quarantine publishes the observed remainder with
-   * `status: "chains-unavailable"`: the published aggregate excludes the unavailable chains.
+   * A bounded minority-share quarantine, reviewed exclusion, or fill-default native remainder publishes
+   * `status: "chains-unavailable"`: the aggregate excludes unavailable chains; fill-default uses native reads only.
    */
   partialCoverage: z.literal(true).optional(),
   /**

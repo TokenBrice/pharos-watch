@@ -115,10 +115,11 @@ describe("chain dropout guard", () => {
       chainCirculating: { Solana: { current: 114853902.359254 } }, supplyChainGuard: { status: "repaired" } });
   });
 
-  it.each(["small", "low-chart", "large", "ambiguous", "chart"])("keeps only permitted native remainder after a fill-default read failure (%s)", async (mode) => {
+  it.each(["small", "low-chart", "large", "list-share", "ambiguous", "chart"])("keeps only permitted native remainder after a fill-default read failure (%s)", async (mode) => {
     const amounts = { ethereum: 150_000_000, base: 145_000_000, monad: 100_000_000, arbitrum: 75_000_000, pharos: 3_000_000, xlayer: 4_000_000, robinhood: mode === "large" ? 50_000_000 : 5_000_000 };
     const asset: PeggedAsset = { ...usdg(), id: "rwausdi-multipli", priceListFillDefault: { value: 0.000055, upstreamSource: null },
-      circulating: { peggedUSD: 700 }, chainCirculating: Object.fromEntries(Object.keys(amounts).map((chain) => [CHAIN_META[chain].name, { current: 100 }])) };
+      circulating: { peggedUSD: Object.values(amounts).reduce((a, b) => a + b) / 1e6 + (mode === "list-share" ? 45 : 0) },
+      chainCirculating: Object.fromEntries(Object.entries(amounts).map(([chain, amount]) => [CHAIN_META[chain].name, { current: mode === "list-share" && chain === "robinhood" ? 50 : amount / 1e6 }])) };
     const state = savedState(asset.id, ...Object.entries(amounts).map(([chainId, baselineUsd]) => ({ chainId,
       chainLabel: CHAIN_META[chainId].name, baselineUsd, baselineObservedAt: NOW - 8 * DAY, quarantinedSince: NOW - 8 * DAY,
       ...(mode === "ambiguous" ? { ambiguousSince: NOW - DAY, heldTotalUsd: null } : {}) })));
