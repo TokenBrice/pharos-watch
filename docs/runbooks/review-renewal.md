@@ -1,6 +1,7 @@
 # Runbook: Review Renewal
 
 Triggered by `StatusCause.code`:
+- `depeg_blind_event_reviews_expiring`
 - `price_gap_reviews_expiring`
 - `price_gap_reviews_expired`
 - `price_gap_reviews_invalid`
@@ -14,7 +15,7 @@ Triggered by `StatusCause.code`:
 
 ## Symptom
 
-An operational review that acknowledges a missing live price, matched stale/erroring reserve feed or carried supply value is approaching expiry, has expired, or is invalid. The `*_expiring` causes are admin-only informational watches: they fire only while a review is currently acknowledging a gap, feed or carry, with `0 < expiresAt - nowSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` (48 hours, inclusive, in `shared/lib/status-thresholds.ts`). The message lists stablecoin IDs by soonest expiry, the UTC ISO expiry, and whole hours left; its metric records the exact remaining seconds for the soonest review.
+An operational review that acknowledges a missing live price, matched stale/erroring reserve feed, carried supply value or blind open-event coverage is approaching expiry, has expired, or is invalid. The `*_expiring` causes are admin-only informational watches: they fire only while a review is currently acknowledging a gap, feed or carry, with `0 < expiresAt - nowSec <= STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC` (48 hours, inclusive, in `shared/lib/status-thresholds.ts`). The message lists stablecoin IDs by soonest expiry, the UTC ISO expiry, and whole hours left; its metric records the exact remaining seconds for the soonest review.
 
 These notices do not change health status, create a status transition, or enter public incident history. An acknowledgement is not a price, fresh reserve evidence, a successful sync, or a scoring exception. Existing missing-price, reserve-health and supply-carry gates remain independent.
 
@@ -62,6 +63,12 @@ Edit `RESERVE_FEED_REVIEWS` in `worker/src/lib/reserve-feed-reviews.ts`:
 This is a status-model change, owner-approved 2026-11-04: matched acknowledgements remove current sentinel alert reasons, including for previously raised conditions, while retained findings and alert state remain inspectable. The [live-reserve status contract](../status-dashboard.md#live-reserve-sync-health) owns execution treatment; expiry still re-arms the unchanged alert predicates and the 48-hour reminder remains unchanged.
 
 Run the owning registry and status suites for any renewal, review the changed evidence, and deploy the approved registry before expiry through the normal release process. Never mutate production review state or reset leases/checkpoints as a renewal shortcut.
+
+### Blind-event reviews
+
+Edit `DEPEG_BLIND_EVENT_REVIEWS` in `worker/src/lib/canary-checks-depeg.ts` only after checking that the event remains open and blind and that its primary still needs corroboration without an authoritative alternative or an admitted $1M/two-family DEX aggregate. Record the actual source family, priced-contributor TVL, family count and displayed deviation with HTTPS evidence, `owner: "ops"`, a nonfuture `reviewedAt`, and `reviewedAt < expiresAt <= reviewedAt + 14 days`. Malformed, duplicate, future or expired reviews acknowledge nothing. Never infer trusted coverage or recovery from the displayed quote.
+
+Inspect `canaries.checks["depeg-open-coverage"].metadata`: raw blind counts stay truthful, while acknowledged/actionable counts grade only unreviewed blindness. `acknowledgedBlindReviewIds` is complete even when event details are truncated. The status standing notice and 48-hour reminder require fresh completed canary evidence and a review valid at read time; recovered events use neither. Expiry re-arms the next canary finding without changing events, DDR, DEWS, closure or alerts. Renew only from fresh coverage evidence.
 
 ### Supply-carry reviews
 

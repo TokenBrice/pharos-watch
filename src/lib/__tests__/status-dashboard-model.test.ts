@@ -459,11 +459,11 @@ describe("status dashboard model", () => {
   });
 
   it("excludes standing notices from watch counts", () => {
-    const watchCodes = ["mint_burn_public_degraded", "supply_carry_reviews_expired", "supply_carry_reviews_expiring"];
+    const watchCodes = ["depeg_blind_event_reviews_expiring", "mint_burn_public_degraded", "supply_carry_reviews_expired", "supply_carry_reviews_expiring"];
     const watches = watchCodes.map((code) => cause(code));
     const standing = [
       "active_price_coverage_nominal_reference", "reserve_feed_reviews_acknowledged",
-      "supply_carry_reviews_acknowledged", "active_price_coverage_incomplete",
+      "supply_carry_reviews_acknowledged", "depeg_blind_event_reviews_acknowledged", "active_price_coverage_incomplete",
     ].map((code) => cause(code));
     const data = { ...BASE_STATUS, causes: { overall: [...standing, ...watches], availability: watches, dataQuality: standing } };
     const healthData = makeHealthyHealthResponse();
@@ -473,7 +473,7 @@ describe("status dashboard model", () => {
     );
     const model = buildModel(data, { healthData });
     expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(watchCodes);
-    expect(model.decision.summary).toContain("3 informational watches remain");
+    expect(model.decision.summary).toContain("4 informational watches remain");
     healthData.activePriceCoverage.missingActiveIds.push("first-generation-unacknowledged");
     expect(buildModel(data, { healthData }).issueGroups.watches.map((issue) => issue.code))
       .toEqual(["active_price_coverage_incomplete", ...watchCodes]);

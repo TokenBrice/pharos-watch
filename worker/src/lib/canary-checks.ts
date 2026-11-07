@@ -860,7 +860,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "depeg-open-coverage",
     label: "Depeg open-event price coverage",
-    description: "Every open depeg event of a non-frozen coin keeps a trusted price observation inside the shared continuous-coverage gap budget.",
+    description: "Open depeg events of non-frozen coins have no unreviewed trusted-price gaps beyond the shared continuous-coverage budget.",
     run: checkDepegOpenCoverage,
   },
   {

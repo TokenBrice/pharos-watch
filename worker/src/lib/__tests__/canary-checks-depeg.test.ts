@@ -11,6 +11,9 @@ import {
   checkDepegDexSuppression,
   checkDepegOpenCoverage,
   checkDepegPendingConfirmation,
+  DEPEG_BLIND_EVENT_REVIEWS,
+  DepegBlindEventReviewSchema,
+  resolveDepegBlindEventReviews,
 } from "../canary-checks-depeg";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -370,6 +373,7 @@ describe("depeg canary checks", () => {
             last_trusted_price_at: NOW - 2_000,
             price_coverage_gap_started_at: NOW - 1_800,
             total_count: 1,
+            acknowledged_count: 0, acknowledged_ids_json: "[]",
           },
         ],
       },
@@ -385,6 +389,36 @@ describe("depeg canary checks", () => {
         events: [{ eventId: 7, stablecoinId: "usdt-tether", blindAgeSec: 1_800 }],
       },
     });
+  });
+
+  it.each(["reviewed", "unreviewed", "expired", "future"])("grades only actionable blind events: %s", async (kind) => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
+    const now = kind === "expired" ? review.expiresAt : review.reviewedAt - (kind === "future" ? 1 : 0);
+    const id = kind === "unreviewed" ? "usdt-tether" : review.stablecoinId;
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare(`INSERT INTO depeg_events
+      (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, last_trusted_price_at)
+      VALUES (?, 'COIN', 'peggedUSD', 'below', 150, ?, 0.985, 1, ?)`).run(id, now - 5000, now - 2000);
+    const acknowledged = kind === "reviewed" ? 1 : 0;
+    expect(await checkDepegOpenCoverage(db, now)).toMatchObject({ status: acknowledged ? "ok" : "degraded",
+      metadata: { blindEventCount: 1, acknowledgedBlindEventCount: acknowledged, actionableBlindEventCount: 1 - acknowledged,
+        acknowledgedBlindEvents: acknowledged ? [expect.objectContaining({ stablecoinId: id })] : [],
+        actionableBlindEvents: acknowledged ? [] : [expect.objectContaining({ stablecoinId: id })] } });
+  });
+
+  it.each([{ owner: "" }, { reason: " " }, { sources: [] }, { sources: ["http://example.com"] }, { sources: ["https://"] },
+    { reviewedAt: NaN }, { stablecoinId: "unknown" }, { expiresAt: DEPEG_BLIND_EVENT_REVIEWS[0].reviewedAt + 14 * 86400 + 1 },
+  ])("ignores malformed blind reviews: %j", (overrides) => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
+    expect(resolveDepegBlindEventReviews(review.reviewedAt, [{ ...review, ...overrides }]).size).toBe(0);
+  });
+
+  it("validates the blind review registry and rejects duplicates", () => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
+    for (const entry of DEPEG_BLIND_EVENT_REVIEWS) expect(DepegBlindEventReviewSchema.safeParse(entry).success).toBe(true);
+    expect(resolveDepegBlindEventReviews(review.reviewedAt).size).toBe(DEPEG_BLIND_EVENT_REVIEWS.length);
+    expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, review]).size).toBe(0);
+    expect(resolveDepegBlindEventReviews(review.reviewedAt, [review, { ...review, reason: "" }]).size).toBe(0);
   });
 
   it("uses the newer trusted clock when an old continuity gap survives a fresh at-par observation", async () => {
@@ -426,6 +460,7 @@ describe("depeg canary checks", () => {
   });
 
   it("reports the full blind cohort while capping the event detail list", async () => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare(
       `INSERT INTO depeg_events
@@ -434,15 +469,17 @@ describe("depeg canary checks", () => {
        VALUES (?, ?, 'peggedUSD', 'below', 150, ?, NULL, 0.985, 1, ?, NULL)`,
     );
     for (let index = 0; index < 30; index++) {
-      insert.run(`coin-${index}`, `C${index}`, NOW - 5_000, NOW - 2_000 - index);
+      insert.run(index === 0 ? review.stablecoinId : `coin-${index}`, `C${index}`, NOW - 5_000, NOW - 2_000 - index);
     }
 
-    const result = await checkDepegOpenCoverage(db, NOW);
+    const result = await checkDepegOpenCoverage(db, review.reviewedAt);
 
     expect(result).toMatchObject({
       status: "degraded",
-      metadata: { blindEventCount: 30 },
+      metadata: { blindEventCount: 30, acknowledgedBlindEventCount: 1, actionableBlindEventCount: 29,
+        acknowledgedBlindReviewIds: [review.stablecoinId], acknowledgedBlindEventsTruncated: true },
     });
+    expect(JSON.stringify(result.metadata).length).toBeLessThan(3500);
     expect((result.metadata as { events: unknown[] }).events).toHaveLength(10);
   });
 
