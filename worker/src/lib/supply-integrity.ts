@@ -122,6 +122,18 @@ const REVIEWED_SUPPLY_VALUE_REBASELINES: readonly {
     reviewedAt: Date.parse("2026-11-07T19:48:00Z") / 1000,
     expiresAt: Date.parse("2026-11-14T19:48:00Z") / 1000,
   })),
+  {
+    stablecoinId: "tryb-bilira",
+    baselineUsd: 698_792.67,
+    reviewedAt: Date.parse("2026-11-07T20:27:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-14T20:27:00Z") / 1000,
+    evidenceUrls: [
+      "https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1742983312-tryb-yaratma-ve-yakma-surecinin-seffafligi",
+      "https://github.com/DefiLlama/peggedassets-server/blob/66e24e7adc31b49c37b7fe03c98996ef40546030/src/peggedData/peggedData.ts",
+      "https://stablecoins.llama.fi/stablecoin/300",
+    ],
+    reason: "Corrected DefiLlama circulating perimeter: BiLira identifies 0x75950B957009fe615c8AE02fBAac8AaA6da91B2D as its redemption sweep awaiting burn. Pinned Ethereum block 26365294 and the other nine deployments net to 36,124,961.095158 TRYB ($698,792.67); the newly excluded sweep holds 17,676,620.201490 TRYB across Ethereum/BSC/Avalanche, not a fresh circulating redemption against the old $2.22M daily baseline.",
+  },
 ];
 
 export interface ReviewedSupplyCarry {
