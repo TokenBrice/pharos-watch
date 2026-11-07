@@ -85,6 +85,7 @@ const YIELD_SOURCE_URLS: Record<string, string> = {
   "Yo Protocol": "https://yo.xyz/",
   "Clearpool Lending": "https://app.clearpool.finance/",
   "3Jane": "https://3jane.xyz/",
+  "Hyperliquid Earn": "https://app.hyperliquid.xyz/earn",
   HyperLend: "https://app.hyperlend.finance/",
   "Zest v2": "https://app.zestprotocol.com/",
   "Liquity v2": "https://www.liquity.org/",

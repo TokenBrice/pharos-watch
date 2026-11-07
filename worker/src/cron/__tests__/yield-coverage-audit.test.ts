@@ -1162,15 +1162,15 @@ describe("identifyDeadCuratedPins", () => {
   it("separates a dead config from a coverage outage and clears resolved pins", () => {
     const pins = identifyDeadCuratedPins(
       [makeDlYieldPool({ pool: YIELD_POOL_MAP["susde-ethena"], project: "ethena", symbol: "sUSDe" })],
-      { publishedStablecoinIds: new Set(["usdn-smardex"]) },
+      { publishedStablecoinIds: new Set(["yusd-aegis"]) },
     );
 
     expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "susde-ethena"))
       .toBeUndefined();
-    expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "usdn-smardex"))
+    expect(pins.find((pin) => pin.registry === "native-pool" && pin.stablecoinId === "yusd-aegis"))
       .toMatchObject({
-        pin: YIELD_POOL_MAP["usdn-smardex"],
-        missingPoolIds: [YIELD_POOL_MAP["usdn-smardex"]],
+        pin: YIELD_POOL_MAP["yusd-aegis"],
+        missingPoolIds: [YIELD_POOL_MAP["yusd-aegis"]],
         reasons: ["missing-pool"],
         coverage: "dead-config",
       });
