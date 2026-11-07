@@ -175,6 +175,13 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
   "cdp-enosys": [supplyProbeChain("flare")],
+  // Reviewed issuer-native registers (risk-review sidecar); no bridge/inventory subtraction.
+  // 2026-11-07 pinned seven-chain stock: 487,442,380 units. Read every leg to clear ambiguity.
+  "rwausdi-multipli": [
+    { chain: "ethereum" }, { chain: "base" }, supplyProbeChain("monad"), { chain: "arbitrum" },
+    supplyProbeChain("xlayer"), supplyProbeChain("robinhood"),
+    supplyProbeChain("pharos", { rpcUrl: "https://rpc.pharos.xyz", fallbackRpcUrl: undefined }),
+  ],
   // Curve satellites lock Ethereum shares; reallocate, never add their stock.
   // Reviewed 2026-11-04: canonical stock / CG cap = 0.953799 at $1.11/share.
   "scrvusd-curve": [

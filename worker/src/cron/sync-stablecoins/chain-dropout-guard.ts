@@ -81,6 +81,20 @@ const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
     reviewedAt: Date.parse("2026-11-06T18:42:00Z") / 1000,
     evidenceUrl: "https://polygonscan.com/token/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
   },
+  // Finalized Solana slot 466634085 confirms 7,808,083.761641852 SBC, matching
+  // the price-adjusted list's $7.798M rather than the held $15.916M baseline.
+  {
+    assetId: "sbc-brale", chainId: "solana",
+    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
+    evidenceUrl: "https://solscan.io/token/DBAzBUXaLj1qANCseUPZz4sp9F8d2sc78C4vKjhbTGMA",
+  },
+  // Ethereum block 26365071: 1,001,981.18 GBPA total; Etherscan holders confirms
+  // the detail feed's 1,001,879.18 unreleased balance, leaving 102 circulating.
+  {
+    assetId: "gbpa-agant", chainId: "ethereum",
+    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
+    evidenceUrl: "https://etherscan.io/token/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b#balances",
+  },
   // Finalized Solana slot 466212454 confirms 2,153,029.477071 EUROP, matching
   // detail native supply. Ethereum block 26357578 has 9,824,599.672717 tokens;
   // the lower Solana stock is real, without claiming a matched cross-chain migration.
@@ -156,6 +170,14 @@ const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
     reviewedAt: Date.parse("2026-11-04T09:03:53Z") / 1000,
     excludeOmittedUntil: Date.parse("2026-11-18T09:03:53Z") / 1000,
     evidenceUrl: "https://explorer.tempo.xyz/token/0x20c000000000000000000000850e533bd762b72c",
+  },
+  // HyperEVM block 50654180 reads 43,067.502661 frxUSD, already included under
+  // the provider's Hyperliquid L1 row; exclude the omitted old $3.749M identity.
+  {
+    assetId: "frxusd-frax", chainId: "hyperevm",
+    reviewedAt: Date.parse("2026-11-07T19:45:46Z") / 1000,
+    excludeOmittedUntil: Date.parse("2026-11-21T19:45:46Z") / 1000,
+    evidenceUrl: "https://purrsec.com/token/0x80eede496655fb9047dd39d9f418d5483ed600df",
   },
 ];
 
