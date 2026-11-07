@@ -84,9 +84,9 @@ export function cronHistoryRetentionPolicies(
     reserveContinuationExecutions: policy("reserve_continuation_executions", "finished_at", 14 * DAY, {
       predicate: "state = 'finished'", batchLimit: limits.smallBatchLimit, runLimit: limits.smallRunLimit,
     }),
-    apiRequestConsumerStats: policy("api_request_consumer_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY),
-    siteDataRequestStats: policy("site_data_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY),
-    apiKeyRequestStats: policy("api_key_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY),
+    apiRequestConsumerStats: policy("api_request_consumer_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
+    siteDataRequestStats: policy("site_data_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
+    apiKeyRequestStats: policy("api_key_request_stats", "bucket_start", REQUEST_ATTRIBUTION_RETENTION_DAYS * DAY, { batchLimit: limits.smallBatchLimit }),
     safetyScoreJournal: policy("safety_score_publication_journal", "published_at", evidence.safetyScoreJournalSec),
     safetyScoreAttempts: policy("safety_score_publication_attempts", "attempted_at", evidence.safetyScoreJournalSec),
     safetyScoreCaptureArchive: policy("safety_score_capture_archive", "published_at", SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC, {

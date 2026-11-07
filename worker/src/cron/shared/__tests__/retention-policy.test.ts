@@ -95,7 +95,7 @@ describe("retention policy registry", () => {
   it("keeps both sampled stores on the small daily budget and legacy/key stores draining at 35 days", () => {
     for (const [tables, batchLimit, runLimit] of [
       [["api_request_source_samples", "site_data_request_samples"], RETENTION_SMALL_DELETE_BATCH_LIMIT, RETENTION_SMALL_DELETE_RUN_LIMIT],
-      [["api_request_consumer_stats", "site_data_request_stats", "api_key_request_stats"], RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT],
+      [["api_request_consumer_stats", "site_data_request_stats", "api_key_request_stats"], RETENTION_SMALL_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT],
     ] as const) for (const table of tables) expect(registered(table)).toMatchObject({
       owner: "prune-cron-history", windowSec: 35 * 86_400, timestampColumn: "bucket_start", batchLimit, runLimit,
     });
