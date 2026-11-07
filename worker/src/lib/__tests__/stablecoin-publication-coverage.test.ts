@@ -447,7 +447,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["wusd-worldwide", "pht-pht"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["wusd-worldwide", "pht-pht", "bd-basedollar"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = evaluateStablecoinActivePriceCoverage(
@@ -670,7 +670,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     const ids = ["tryb-bilira", "pht-pht"];
     const reviews = STABLECOIN_PRICE_GAP_REVIEWS.filter((entry) => ids.includes(entry.stablecoinId));
     expect(reviews.map((review) => review.stablecoinId).sort()).toEqual(["pht-pht"]);
-    const nowSec = Date.UTC(2026, 9, 29, 12) / 1000;
+    const nowSec = reviews[0]!.reviewedAt;
     const coverage = evaluateStablecoinActivePriceCoverage(
       ids.map((id) => ({ id, price: id === "tryb-bilira" ? 0.0203935242416747 : null })),
       ids,
@@ -773,22 +773,22 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(idrt).toMatchObject({ complete: true, pricedActiveIds: ["idrt-rupiah-token"], missingPriceCount: 0 });
   });
 
-  it("corrects PHT's short evidence review and names the open holder-exit decision at its expiry", () => {
+  it("renews PHT evidence without extending its holder-exit deadline", () => {
     const id = "pht-pht";
     const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === id)!;
     expect(coin).toBeDefined();
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     expect(review).toMatchObject({
       owner: "ops",
-      reviewedAt: Date.UTC(2026, 9, 29, 11, 1) / 1000,
-      expiresAt: Date.UTC(2026, 10, 10, 11, 1) / 1000,
+      reviewedAt: Date.UTC(2026, 10, 7, 19, 45) / 1000,
+      expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
     });
     expect(review.expiresAt - review.reviewedAt).toBeLessThanOrEqual(14 * 86_400);
-    expect(review.reason).toContain("2026-10-29 11:01 UTC");
+    expect(review.reason).toContain("2026-11-07 19:45 UTC");
     expect(review.reason).toContain("2026-08-14 17:36:40 UTC");
-    expect(review.reason).toContain("$45,272.89");
+    expect(review.reason).toContain("$46,444.38");
     expect(review.reason).toContain("$50K per-pool liquidity floor");
-    expect(review.reason).toContain("HTTP 404");
+    expect(review.reason).toContain("HTTP 400");
     expect(review.reason).toContain("Open holder-exit question");
     expect(review.reason).toContain("2026-11-10 11:01 UTC");
     expect(review.sources).toContain("https://docs.apacx.io/user-guides/pht-onramp-and-offramp.md");

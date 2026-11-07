@@ -17,6 +17,8 @@ In-use price-gap acknowledgements emit the admin-only info cause `price_gap_revi
 
 An acknowledgement does not establish that a rejected or dislocated quote is harmless. A bounded review can record unresolved venue divergence (including HBD's native/centralized-market disagreement) only while retaining the rejection, missing-price state, source-depth requirements and explicit owner decision deadline; it cannot admit the rejected quote, conversion parity or an under-depth alternative source.
 
+For source re-review and separate lifecycle/holder-exit deadlines, follow [price-gap review renewal](../runbooks/review-renewal.md#price-gap-reviews).
+
 Continuity reads distinguish an absent prior generation from a failed read or malformed prior metadata. Only successful absence starts a new missing streak at one. Read failures persist `consecutiveMissingGenerations: null` with `streakUnavailableReason` (`previous-coverage-read-failed` or `previous-coverage-malformed`), including in compact state; subsequent missing generations retain that uncertainty until a priced generation establishes a new boundary. Current measured counts remain available. Unknown continuity conservatively makes unacknowledged missing assets alert-eligible and projects escalation priority into the provider queues, without treating that priority as a measured streak. Valid acknowledgements still suppress escalation. Material gaps with unknown duration retain a degraded warning but never claim a week-long critical duration. The shared `ActivePriceCoverageHealthSchema` owns the public contract; missing, failed, or malformed current coverage reads publish null counts, affected market cap and maximum streak with `unavailableReason`, never synthetic zero.
 
 Compact tuples (including legacy six-slot entries) project into the verbose detail decoder: compact state has no current quote and uses the registry symbol. Both readers build the same compact-first detail map, with later duplicate entries winning and verbose entries overriding compact ones. Schema admission and exact missing-ID selection remain reader-specific: continuity requires every selected detail, while health tolerates absent details and falls back to detail-map IDs only when the missing-ID list is empty. Neither path trusts persisted acknowledgement decisions.
@@ -340,6 +342,8 @@ Some tracked stablecoins trade at low enough volume that CoinGecko's upstream `l
    with trusted FX conversion for non-USD classes. Primary reserve-NAV consensus supplies the published live price.
 
 `LOW_VOLUME_CG_FALLBACK_IDS` in `worker/src/cron/sync-stablecoins/enrich-prices-coingecko-low-volume-pass.ts` owns the reviewed fallback cohort, including USDFC. It fills only still-missing prices after earlier passes, preserves admitted supply and original clocks, and never overwrites an accepted price.
+
+FXD uses this lane for its observed secondary-market quote; its wind-down redemption entitlement is not substituted for that quote. Lifecycle review remains separate from price admission.
 
 Timestamped low-volume fallback quotes must pass `isFreshFallbackObservedAt`: the registered seven-day age budget and at most 120 seconds of future skew. Present invalid clocks are rejected, not converted to local fetch time; only absent upstream clocks retain local-fetch behavior.
 
