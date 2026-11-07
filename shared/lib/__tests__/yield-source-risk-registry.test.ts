@@ -54,7 +54,7 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
   it("resolves every variant child identity to a reviewed lending venue", () => {
     // Venues whose review has not landed yet publish their issuing protocol and
     // stay `unknown` (PYS-neutral) until the coverage queue clears them.
-    const UNREVIEWED_VENUES = new Set(["avant", "frax", "noon-capital", "ethena", "reservoir-protocol"]);
+    const UNREVIEWED_VENUES = new Set(["frax"]);
     const children = Object.entries(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS);
     expect(children.length).toBeGreaterThan(0);
     for (const [childId, venue] of children) {
