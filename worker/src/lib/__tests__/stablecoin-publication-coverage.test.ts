@@ -447,7 +447,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["wusd-worldwide", "pht-pht", "bd-basedollar"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["wusd-worldwide", "pht-pht", "bd-basedollar", "moveusd-cfx"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = evaluateStablecoinActivePriceCoverage(

@@ -134,6 +134,11 @@ export const REVIEWED_CHAIN_TVL_DISPOSITIONS = [{
   retiredStablecoinId: null, reviewedAt: "2026-11-07T20:31:00Z", expiresAt: "2026-11-21T20:31:00Z",
   evidenceUrls: ["https://api.llama.fi/protocol/mezo-tigris", "https://api.geckoterminal.com/api/v2/networks/mezo/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186/pools?page=1"],
   reason: "Mezo Tigris MUSD TVL fell from $11.806M to $1.408M on Nov 5-6; current observed token pools total $276k, corroborating the retained $256k.",
+}, {
+  flag: "chain-tvl-drop:plasma", baselineValue: 24_510_038.23121091, observedValue: 19_633_877.97846795,
+  retiredStablecoinId: null, reviewedAt: "2026-11-07T21:04:19Z", expiresAt: "2026-11-21T21:04:19Z",
+  evidenceUrls: ["https://api.fluid.instadapp.io/v2/9745/dexes/0x080574d224e960c272e005aa03efbe793f317640/historical-stats", "https://api.llama.fi/protocol/fluid-dex"],
+  reason: "Fluid GHO/USDT0 supply and borrow shares burned about 43% in the Nov 3 04h window; reconstructed gross notional fell $8.33M -> $4.77M -> $3.68M, explaining the dominant chain loss. About $325k of the later chain loss remains unattributed.",
 }] as const;
 
 const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";

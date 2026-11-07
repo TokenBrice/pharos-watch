@@ -602,7 +602,7 @@ export function explainDeterministicAutoLendingEligibility(params: {
   if (!LENDING_PROTOCOL_ALLOWLIST.has(params.pool.project)) reasonCodes.push("protocol-allowlist");
   if (params.pool.apy < MIN_LENDING_POOL_APY) reasonCodes.push("apy-floor");
   if (params.pool.tvlUsd < requiredMinTvlUsd) reasonCodes.push("tvl-floor");
-  if (isBlockedYieldOpportunitySource({ poolMeta: params.pool.poolMeta, symbol: params.pool.symbol })) {
+  if (isBlockedYieldOpportunitySource(params.pool)) {
     reasonCodes.push("source-blocked");
   }
 
@@ -801,7 +801,11 @@ function appendResolvedYieldCandidates(
   for (const entry of entries) {
     if (
       isExternalYieldOpportunityType(entry.yield.yieldType) &&
-      isBlockedYieldOpportunitySource({ yieldSource: entry.yield.yieldSource })
+      isBlockedYieldOpportunitySource({
+        project: entry.yield.project ?? entry.yield.venueProtocol,
+        pool: entry.yield.sourcePool,
+        yieldSource: entry.yield.yieldSource,
+      })
     ) {
       blockedDrops += 1;
       continue;
@@ -1509,7 +1513,7 @@ export async function resolveTrackedYieldSources(params: {
       }
 
       const fullPool = dlPoolByPoolId.get(dlPool.pool);
-      if (!fullPool) continue;
+      if (!fullPool || isBlockedYieldOpportunitySource({ project: fullPool.project, pool: fullPool.pool })) continue;
 
       const variant = YIELD_VARIANT_MAP[id];
       const isNativePool = dlPool.pool === YIELD_POOL_MAP[id];
@@ -1714,6 +1718,14 @@ export async function resolveYieldSources(params: ResolveYieldSourcesParams): Pr
     resolved: trackedResolution.resolved,
     supplementalCandidates,
   });
+
+  // Exact pins and supplemental sources obey the same reviewed holds as discovery.
+  trackedResolution.resolved = trackedResolution.resolved.filter(({ yield: source }) =>
+    !source || !isBlockedYieldOpportunitySource({
+      project: source.project ?? source.venueProtocol,
+      pool: source.sourcePool,
+    })
+  );
 
   const linkedVariantSourceCount = appendLinkedVariantParentYieldSources(trackedResolution.resolved);
   if (linkedVariantSourceCount > 0) {

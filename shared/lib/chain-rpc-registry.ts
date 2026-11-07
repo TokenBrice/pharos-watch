@@ -123,7 +123,8 @@ export const SUPPLY_RPC_DEFAULTS = {
   "klaytn": { rpcUrl: "https://public-en.node.kaia.io" },
   "stable": { rpcUrl: "https://rpc.stable.xyz", fallbackRpcUrl: "https://stable.drpc.org" },
   "codex": { rpcUrl: "https://rpc.codex.xyz", fallbackRpcUrl: "https://81224.rpc.thirdweb.com" },
-  "robinhood": { rpcUrl: PUBLIC_RPC_URLS["robinhood"] },
+  // Public endpoint rate-limits Worker egress (HTTP 429, 2026-11-07); publicnode verified chain 4663 and totalSupply reads.
+  "robinhood": { rpcUrl: PUBLIC_RPC_URLS["robinhood"], fallbackRpcUrl: "https://robinhood-rpc.publicnode.com" },
   "tempo": { rpcUrl: PUBLIC_RPC_URLS["tempo"] },
   // Official keyless endpoints, eth_chainId/totalSupply/decimals verified
   // 2026-10-03. Keep these latest-state supply profiles out of PUBLIC_RPC_URLS:

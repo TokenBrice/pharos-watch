@@ -220,6 +220,20 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
   },
   {
+    stablecoinId: "moveusd-cfx",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-07 20:55 UTC: an admissible market exists, but production cannot read it. The exact Solana mint 3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm trades in Orca MOVEUSD/USDC pool 63DFX4pkJkDs4LV5s1x1Z1658rkx8yvt7MY9XXGsBMUh ($0.9993 mark, $103,088.41 liquidity, $0.10 24h volume from a non-production read), and the last accepted dexscreener-exact price was $0.9993 at 2026-11-07 18:24:57 UTC. DexScreener refused 7 of the 10 Nov 5-7 production discovery runs with HTTP 429 / Cloudflare 1015, five on their first request, while refresh requests stay serial, paced and retry-free. No independent admitted path exists: Jupiter v3's quote is about 40 hours old (block 466279122) and fails its slot-freshness proof; CoinGecko on-chain reports only $5,620.98 token-side reserves, below its unchanged $50K floor; CoinGecko search has no listing. Owner decision O1 acknowledges this provider-access gap only: the price stays missing while refused, publishes again on the first admitted refresh, and owner ops resolves DexScreener production access or an approved alternative by 2026-11-21 20:55 UTC.",
+    sources: [
+      "https://api.dexscreener.com/token-pairs/v1/solana/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm",
+      "https://api.geckoterminal.com/api/v2/networks/solana/tokens/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm/pools",
+      "https://api.jup.ag/price/v3?ids=3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm",
+      "https://api.coingecko.com/api/v3/search?query=moveusd",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 7, 20, 55) / 1000,
+    expiresAt: Date.UTC(2026, 10, 21, 20, 55) / 1000,
+  },
+  {
     stablecoinId: "aid-gaib",
     owner: "ops",
     reason:

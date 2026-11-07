@@ -54,7 +54,7 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
   it("resolves every variant child identity to a reviewed lending venue", () => {
     // Venues whose review has not landed yet publish their issuing protocol and
     // stay `unknown` (PYS-neutral) until the coverage queue clears them.
-    const UNREVIEWED_VENUES = new Set(["avant", "frax", "noon-capital", "ethena", "reservoir-protocol"]);
+    const UNREVIEWED_VENUES = new Set(["frax"]);
     const children = Object.entries(YIELD_VARIANT_CHILD_VENUE_PROTOCOLS);
     expect(children.length).toBeGreaterThan(0);
     for (const [childId, venue] of children) {
@@ -108,11 +108,10 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
   });
 
   it("resolves reviewer-set dependency concentration by stablecoin id", () => {
-    // yvUSDC's dominant risk (single-ecosystem Sky coupling) is captured here,
-    // not via the per-venue tier — the canonical case the signal exists for.
+    // Sky remains yvUSDC's largest ecosystem after allocation diversification.
     const yvusdc = resolveDependencyConcentration("yvusdc-yearn");
     expect(yvusdc?.ecosystem).toBe("Sky");
-    expect(yvusdc?.severity).toBe("medium");
+    expect(yvusdc?.severity).toBe("low");
     expect(resolveDependencyConcentration("usdc-circle")).toBeNull();
     expect(resolveDependencyConcentration(null)).toBeNull();
   });

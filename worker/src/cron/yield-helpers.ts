@@ -1,4 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
+import { INTENTIONAL_GAP_REASONS } from "../lib/yield-config/yield-config-rate-sources";
 
 /**
  * Yield Pipeline — Pure Computation Functions
@@ -126,10 +128,18 @@ export function detectWarningSignals(input: WarningInput): YieldWarningSignalKey
 }
 
 export function isBlockedYieldOpportunitySource(params: {
+  project?: string | null;
+  pool?: string | null;
   yieldSource?: string | null;
   poolMeta?: string | null;
   symbol?: string | null;
 }): boolean {
+  if (YIELD_OPPORTUNITY_EXCLUSIONS.some((entry) =>
+    entry.poolIds
+      ? entry.poolIds.includes(params.pool ?? "")
+      : entry.projects.includes(params.project?.trim().toLowerCase() ?? "")
+  )) return true;
+
   const searchText = [params.yieldSource, params.poolMeta, params.symbol]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .join(" ");
@@ -333,7 +343,7 @@ export function matchAllDlPools(
   // An underlying address proves the deposit asset, not receipt ownership. Require
   // the tracked instrument's own symbol as well; differently named tranches need
   // a curated pin or their separately typed supplemental lane.
-  if (!nativeId && found.length === 0 && !options?.skipBaseSymbolFallback) {
+  if (!nativeId && found.length === 0 && !options?.skipBaseSymbolFallback && INTENTIONAL_GAP_REASONS[stablecoinId] == null) {
     const sym = normalizeDexSymbol(symbol);
     if (sym.length >= 4) {
       const baseCandidates = dlPools.filter(
@@ -479,7 +489,7 @@ export function findBestLendingPool(
 
   const baseCandidates = dlPools.filter((p) =>
     meetsLendingPoolCoreEligibility(p, { allowlist, minApy, minTvlUsd }) &&
-    !isBlockedYieldOpportunitySource({ poolMeta: p.poolMeta, symbol: p.symbol }) &&
+    !isBlockedYieldOpportunitySource(p) &&
     !reservedPoolIds.has(p.pool) &&
     !options?.isBlockedPool?.(p) &&
     isChainAllowed(chainFilter, p.chain)

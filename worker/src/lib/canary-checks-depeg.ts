@@ -5,9 +5,10 @@ import {
 } from "@shared/lib/depeg-config";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
-import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { STATUS_DEPEG_DETECTION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { z } from "zod";
 import {
   getDepegRecoveryThresholdBps,
   getDepegThresholdBps,
@@ -367,6 +368,110 @@ export async function checkDdrEligibleUnsealed(db: D1Database, observedAt: numbe
   }
 }
 
+const DEPEG_BLIND_EVENT_REVIEW_MAX_AGE_SEC = 14 * 86_400;
+const reviewClockSchema = z.number().int().positive().max(8_640_000_000_000);
+export const DepegBlindEventReviewSchema = z.object({
+  eventId: z.number().int().positive(),
+  stablecoinId: z.string().refine((id) => ACTIVE_IDS.has(id)),
+  owner: z.literal("ops"),
+  reason: z.string().trim().min(1),
+  sources: z.array(z.string().url().startsWith("https://")).min(1),
+  reviewedAt: reviewClockSchema,
+  expiresAt: reviewClockSchema,
+}).refine((review) => review.expiresAt > review.reviewedAt
+  && review.expiresAt - review.reviewedAt <= DEPEG_BLIND_EVENT_REVIEW_MAX_AGE_SEC);
+
+/** O2: acknowledge only operator blind-coverage findings, never depeg evidence or lifecycle. */
+export const DEPEG_BLIND_EVENT_REVIEWS: readonly z.infer<typeof DepegBlindEventReviewSchema>[] = [
+  {
+    eventId: 90793, stablecoinId: "xagm-matrixdock", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: CoinGecko-only primary; DEX priced contributors $71,745 in one cg_onchain family ($71,661 currently), below the unchanged $1M/two-family floor. Displayed deviation +179 bps at 19:31 UTC; event 90793 remains open and blind. No authoritative primary or admissible independent market was verified. Review only structural blind coverage; no recovery or price-trust claim.",
+    sources: ["https://api.pharos.watch/api/depeg-events?active=true", "https://api.pharos.watch/api/dex-liquidity", "https://api.coingecko.com/api/v3/coins/matrixdock-silver/tickers"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 90786, stablecoinId: "hollar-hydrated", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: CoinGecko-only primary, no admitted DEX price or contributor families (published priced TVL $0 in the prior census), below the unchanged $1M/two-family floor. Displayed deviation -32 bps at 19:31 UTC; event 90786 remains open and blind. Hydration EMA 1.00266293 USDC/HOLLAR at block 16621877 lacks resolved freshness, executable depth and independent USDC conversion; conditional HSM buyback is not an authoritative primary. Review only structural blind coverage.",
+    sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://docs.hydration.net/products/hollar/"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 90748, stablecoinId: "mai-qidao", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: CoinGecko-only primary; $3,483,705.56 retained DEX TVL supplies only $127,488 priced contributors in one direct_api family, below the unchanged $1M/two-family floor. Displayed deviation -40 bps at 19:31 UTC; event 90748 remains open and blind. Pinned Aerodrome 0.980675 USDC/MAI versus Balancer 0.995692 USDC.e/MAI differ by about 153 bps before USD conversion; no authoritative primary was verified. Review only structural blind coverage.",
+    sources: ["https://api.pharos.watch/api/dex-liquidity", "https://basescan.org/address/0x2a1463CeBE85315224c536AfD389b381B43F3206", "https://polygonscan.com/address/0x06Df3b2bbB68adc8B0e302443692037ED9f91b42"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 84563, stablecoinId: "uusd-youves", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: DefiLlama-only primary, no admitted DEX price or contributor families (published priced TVL $0 in the prior census), below the unchanged $1M/two-family floor. Displayed deviation +31 bps at 19:31 UTC; event 84563 remains open and blind. Tezos/TzKT pool discovery is supported but reserve-ratio crawling is not an independent admitted market-price producer; no authoritative primary was verified. Review only structural blind coverage.",
+    sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://api.pharos.watch/api/depeg-events?active=true"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 90804, stablecoinId: "wars-argentine-peso", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: CoinGecko-only primary; $1,110,473.73 retained DEX TVL has no admitted aggregate or contributor families (Celo V3 retained liquidity $106,558; large rows unpriced). Displayed deviation -640 bps at 19:31 UTC; event 90804 remains open and blind. Ten CoinGecko tickers are DEX markets; ARS references and backing reports are not executable token prices. No authoritative primary or unchanged $1M/two-family corroboration was verified. Review only structural blind coverage.",
+    sources: ["https://api.pharos.watch/api/dex-liquidity", "https://api.coingecko.com/api/v3/coins/argentine-peso/tickers", "https://api.pharos.watch/api/depeg-events?active=true"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 90808, stablecoinId: "vnxau-vnx", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: CoinGecko-only primary; DEX priced contributors $428,655 ($428,408 currently), all one direct_api family across Raydium/Aero/Orca, below the unchanged $1M/two-family floor. Displayed deviation -103 bps at 19:31 UTC; event 90808 remains open and blind. XT's ticker was stale at 2026-11-06 22:26:53 UTC; VNX disclaims trading services. No authoritative primary was verified. Review only structural blind coverage.",
+    sources: ["https://api.pharos.watch/api/dex-liquidity", "https://api.coingecko.com/api/v3/coins/vnx-gold/tickers", "https://vnx.li/vnxau"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 90773, stablecoinId: "usda-alpha-partner", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: CoinGecko-only primary; DEX priced contributors $16,063,488 ($16,146,046 currently) exceed $1M but have only one cg_onchain family. Displayed deviation -937 bps at 19:31 UTC; event 90773 remains open and blind. USDA/USDT V3 holds only $8,395.90; existing BSC V2 capture implies $0.9070177983/USDA from pinned reserves and an observed USDT mark but is execution evidence, not a second admitted price producer or authoritative primary. Review only structural blind coverage.",
+    sources: ["https://api.pharos.watch/api/dex-liquidity", "https://bscscan.com/address/0xde66f1b24002c1d743ad1ef13cd4b2474295a6f6", "https://api.pharos.watch/api/depeg-events?active=true"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 90802, stablecoinId: "pathusd-bridge", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: CoinGecko-only primary; $70,537,705 priced DEX TVL ($70,520,756 currently) exceeds $1M but tempo and uniswap-v4 both have cg_onchain provenance, one independent family. Displayed deviation +14 bps at 19:31 UTC; event 90802 remains open and blind. Convertible V4 pathUSD/USDC.e and USDT0/pathUSD pools hold only $12,539.59 and $3,448.09; Tempo has no registered CLOB price producer or authoritative primary. Review only structural blind coverage; protocol labels do not establish recovery.",
+    sources: ["https://api.pharos.watch/api/dex-liquidity", "https://tempo.xyz/developers/docs/protocol/exchange/spec.md", "https://apidocs.bridge.xyz/platform/issuance/faq.md"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 90807, stablecoinId: "xaum-matrixdock", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: CoinGecko-only primary; $726,605 priced DEX TVL ($726,509 currently) across cg_onchain and direct_api is below the unchanged $1M floor despite two families. Displayed deviation +25 bps at 19:31 UTC; event 90807 remains open and blind. KuCoin XAUM/USDT 4075.93 at 19:57:02 UTC is outside existing direct CEX producers, and issuer gold references are not observed token prices. No authoritative primary was verified. Review only structural blind coverage.",
+    sources: ["https://api.pharos.watch/api/dex-liquidity", "https://api.coingecko.com/api/v3/coins/matrixdock-gold/tickers", "https://data.chain.link/feeds/bsc/mainnet/xaum-reference-rate"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 91037, stablecoinId: "usdr-rise", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: prior DefiLlama-only primary displayed +81 bps at 19:31 UTC with no admitted aggregate despite $8,138,708.23 retained TVL. Current primary is dex-promoted/single-source at $1.01700048; priced TVL $8,089,757 is one cg_onchain family, still lacking the unchanged second independent family. Event 91037 remains open and blind. Pinned six-word Icarus CLPool slot0 gives 1.0001713483 USDC.e/USDR, not independently valued USD or an admitted authoritative primary. Review only structural blind coverage.",
+    sources: ["https://api.pharos.watch/api/stablecoins", "https://api.pharos.watch/api/dex-liquidity", "https://explorer.risechain.com/address/0xCBc0c0d2782f97077A6309e28B9B70Dc73a934D2"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+  {
+    eventId: 91038, stablecoinId: "brz-transfero", owner: "ops",
+    reason: "Reviewed dpg/dpg3 evidence and 2026-11-07 20:57 UTC public reads: CoinGecko-only primary; $775,653.03 retained DEX TVL and $461,426 priced contributors ($461,338 currently) stay below the unchanged $1M floor despite two dl/cg_onchain families. Displayed deviation -240 bps at 19:31 UTC; event 91038 remains open and blind. Current CoinGecko tickers are DEX markets; BRL references and single-asset reserve evidence do not provide an executable redemption mark or authoritative primary. Review only structural blind coverage.",
+    sources: ["https://api.pharos.watch/api/dex-liquidity", "https://api.coingecko.com/api/v3/coins/brz/tickers", "https://api.pharos.watch/api/depeg-events?active=true"],
+    reviewedAt: Date.UTC(2026, 10, 7, 21) / 1000, expiresAt: Date.UTC(2026, 10, 14, 21) / 1000,
+  },
+];
+
+export function resolveDepegBlindEventReviews(nowSec: number, reviews: readonly unknown[] = DEPEG_BLIND_EVENT_REVIEWS) {
+  const activeById = new Map<number, z.infer<typeof DepegBlindEventReviewSchema>>();
+  if (!reviewClockSchema.safeParse(nowSec).success) return activeById;
+  const seen = new Set<number>();
+  for (const entry of reviews) {
+    const id = typeof entry === "object" && entry !== null && "eventId" in entry ? entry.eventId : null;
+    if (typeof id === "number") {
+      if (seen.has(id)) {
+        activeById.delete(id);
+        continue;
+      }
+      seen.add(id);
+    }
+    const parsed = DepegBlindEventReviewSchema.safeParse(entry);
+    if (!parsed.success) continue;
+    const review = parsed.data;
+    if (review.reviewedAt <= nowSec && nowSec < review.expiresAt) activeById.set(review.eventId, review);
+  }
+  return activeById;
+}
+
 interface BlindOpenEventRow {
   id: number;
   stablecoin_id: string;
@@ -374,6 +479,8 @@ interface BlindOpenEventRow {
   last_trusted_price_at: number | null;
   price_coverage_gap_started_at: number | null;
   total_count: number | null;
+  acknowledged_count: number | null;
+  acknowledged_ids_json: string | null;
 }
 
 /**
@@ -387,46 +494,70 @@ interface BlindOpenEventRow {
  */
 export async function checkDepegOpenCoverage(db: D1Database, observedAt: number) {
   try {
+    const reviews = resolveDepegBlindEventReviews(observedAt);
     const blindBefore = observedAt - STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec;
     const rows = await runWithOverloadRetry(() =>
       db
         .prepare(
-          `SELECT /* pharos:depeg-open-coverage-canary */
+          `WITH blind AS (SELECT /* pharos:depeg-open-coverage-canary */
              id, stablecoin_id, symbol, last_trusted_price_at, price_coverage_gap_started_at,
-             COUNT(*) OVER () AS total_count
+             CASE WHEN EXISTS (SELECT 1 FROM json_each(?) AS review
+               WHERE depeg_events.id = json_extract(review.value, '$.eventId')
+                 AND depeg_events.stablecoin_id = json_extract(review.value, '$.stablecoinId')) THEN 1 ELSE 0 END AS acknowledged
            FROM depeg_events
            WHERE ended_at IS NULL
              AND stablecoin_id NOT IN (SELECT value FROM json_each(?))
              AND (last_trusted_price_at IS NOT NULL OR price_coverage_gap_started_at IS NOT NULL)
              AND MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) < ?
-           ORDER BY MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) ASC
+           )
+           SELECT *, COUNT(*) OVER () AS total_count, SUM(acknowledged) OVER () AS acknowledged_count,
+             (SELECT JSON_GROUP_ARRAY(DISTINCT id) FROM blind WHERE acknowledged = 1) AS acknowledged_ids_json
+           FROM blind
+           ORDER BY acknowledged ASC, MAX(COALESCE(last_trusted_price_at, 0), COALESCE(price_coverage_gap_started_at, 0)) ASC
            LIMIT 25`,
         )
-        .bind(JSON.stringify([...FROZEN_IDS]), blindBefore)
+        .bind(JSON.stringify([...reviews.values()].map(({ eventId, stablecoinId }) => ({ eventId, stablecoinId }))),
+          JSON.stringify([...FROZEN_IDS]), blindBefore)
         .all<BlindOpenEventRow>(),
     );
     const blind = rows.results ?? [];
     const blindEventCount = blind.length === 0 ? 0 : blind[0].total_count;
-    if (blindEventCount == null || !Number.isInteger(blindEventCount)) {
+    const acknowledgedBlindEventCount = blind.length === 0 ? 0 : blind[0].acknowledged_count;
+    const acknowledgedBlindReviewIds = blind.length === 0 ? []
+      : z.array(z.number().int().positive()).parse(JSON.parse(blind[0].acknowledged_ids_json ?? "null"));
+    if (blindEventCount == null || !Number.isSafeInteger(blindEventCount) || blindEventCount < blind.length
+      || acknowledgedBlindEventCount == null || !Number.isSafeInteger(acknowledgedBlindEventCount)
+      || acknowledgedBlindEventCount < 0 || acknowledgedBlindEventCount > blindEventCount
+      || acknowledgedBlindReviewIds.length !== acknowledgedBlindEventCount
+      || new Set(acknowledgedBlindReviewIds).size !== acknowledgedBlindReviewIds.length
+      || (acknowledgedBlindEventCount > 0 && acknowledgedBlindReviewIds.length === 0)
+      || !acknowledgedBlindReviewIds.every((id) => reviews.has(id))) {
       return failedFinding("depeg-open-coverage-aggregate-unavailable");
     }
+    const actionableBlindEventCount = blindEventCount - acknowledgedBlindEventCount;
+    // Partition the existing detail sample so counts/review IDs survive the canary metadata cap.
+    const events = blind.slice(0, 10).map((row) => ({
+      eventId: row.id, stablecoinId: row.stablecoin_id, symbol: row.symbol,
+      blindAgeSec: Math.max(0, observedAt - Math.max(row.last_trusted_price_at ?? 0, row.price_coverage_gap_started_at ?? 0)),
+    }));
+    const acknowledgedBlindEvents = events.filter((event) => reviews.get(event.eventId)?.stablecoinId === event.stablecoinId);
+    const actionableBlindEvents = events.filter((event) => reviews.get(event.eventId)?.stablecoinId !== event.stablecoinId);
     const metadata = {
       blindEventCount,
+      acknowledgedBlindEventCount,
+      actionableBlindEventCount,
+      acknowledgedBlindReviewIds,
+      acknowledgedBlindEvents,
+      actionableBlindEvents,
+      acknowledgedBlindEventsTruncated: acknowledgedBlindEventCount > acknowledgedBlindEvents.length,
+      actionableBlindEventsTruncated: actionableBlindEventCount > actionableBlindEvents.length,
       blindMaxAgeSec: STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec,
-      events: blind.slice(0, 10).map((row) => {
-        const clock = Math.max(row.last_trusted_price_at ?? 0, row.price_coverage_gap_started_at ?? 0);
-        return {
-          eventId: row.id,
-          stablecoinId: row.stablecoin_id,
-          symbol: row.symbol,
-          blindAgeSec: Math.max(0, observedAt - clock),
-        };
-      }),
+      events,
     };
-    if (blindEventCount === 0) return okFinding(metadata);
+    if (actionableBlindEventCount === 0) return okFinding(metadata);
     return degradedFinding(
-      `${blindEventCount} open depeg event(s) have no trusted price observation within ${STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec}s: ` +
-        blind.slice(0, 5).map((row) => `${row.symbol}(${row.stablecoin_id})`).join(", "),
+      `${actionableBlindEventCount} unreviewed open depeg event(s) have no trusted price observation within ${STATUS_DEPEG_DETECTION_THRESHOLDS.openEventBlindMaxAgeSec}s: ` +
+        actionableBlindEvents.slice(0, 5).map((event) => `${event.symbol}(${event.stablecoinId})`).join(", "),
       metadata,
     );
   } catch (error) {

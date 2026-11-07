@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { runYieldCoordinatorPersistStage, type YieldCoordinatorPersistStageParams } from "../coordinator";
 import { publishYieldCoordinatorResults } from "../publication";
 
+// Runs at a 2027 clock; curated hold review dates are covered by the coordinator metadata suite.
+vi.mock("../../../lib/yield-config/yield-opportunity-exclusions", () => ({ YIELD_OPPORTUNITY_EXCLUSIONS: [] }));
+
 vi.mock("../publication", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../publication")>();
 

@@ -99,6 +99,8 @@ const LENDING_PROTOCOLS = {
   "inverse-finance-firm": { label: "Inverse Finance FiRM" },
   "segment-finance": { label: "Segment Finance" },
   "save": { label: "Save" },
+  // 2026-11-07 queue review: HyperCore USDC borrower interest, not HLP strategy returns.
+  "hyperliquid-earn": { label: "Hyperliquid Earn" },
   // YIELD_ALLOWLIST_AUDIT_QUEUE_ANCHOR
   // Future allowlist rounds start from the monthly yield-coverage-audit
   // operatorQueue.recommendationCandidates entries with kind "lending-allowlist".
