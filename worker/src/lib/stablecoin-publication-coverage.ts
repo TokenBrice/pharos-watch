@@ -189,7 +189,7 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     stablecoinId: "pht-pht",
     owner: "ops",
     reason:
-      "Re-reviewed 2026-10-29 11:01 UTC: CoinGecko pht-stablecoin remains $0.01607427 dated 2026-08-14 17:36:40 UTC with zero tickers, 76 days beyond the unchanged seven-day budget. Exact Polygon DexScreener is de-indexed (empty). GeckoTerminal's Polygon read returns only QuickSwap V3 PHT/USDC 0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08 ($45,272.89 reserves, $0.0156482 mark, zero 24h trades and volume) and an empty PHT/WPOL pool; $45,272.89 stays below the unchanged $50K per-pool liquidity floor, and Balancer PHT/USDC 0x9d4d778575160653e331f1597138a71c7c9a2595 now answers HTTP 404. Ethereum and Tron exact DexScreener reads are empty; the only Ethereum GeckoTerminal pool holds $25.15. MEXC PHTUSDT has no 24h ticker (HTTP 404). APACX's on-ramp/off-ramp page still advertises redeeming PHT through MoneyBees OTC for PHP, but documents no observed acceptance, rate, depth or limit, and that advertised route is not an observed PHT market. Open holder-exit question: whether an ordinary holder can in fact convert PHT to PHP at a verifiable rate and depth; owner ops must resolve it by 2026-11-10 11:01 UTC, this review's expiry. Keep PHT active and the price missing; all admission gates preserved; sparse turnover is not an extra volume floor and an undated FX index is not a PHT price.",
+      "Re-reviewed 2026-11-07 19:45 UTC: CoinGecko pht-stablecoin remains $0.01607427 dated 2026-08-14 17:36:40 UTC with zero tickers. Exact Polygon DexScreener now lists QuickSwap V3 PHT/USDC 0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08 at $0.01588 with $46,444.38 liquidity; GeckoTerminal reports $46,295.18 reserves and $1.54 daily volume for that pool, below the unchanged $50K per-pool liquidity floor. Ethereum and Tron exact DexScreener reads are empty; the only Ethereum GeckoTerminal pool holds $25.15. MEXC PHTUSDT returns HTTP 400 (Invalid symbol). APACX still advertises MoneyBees OTC redemption but documents no observed acceptance, rate, depth or limit. Open holder-exit question: whether an ordinary holder can convert PHT to PHP at a verifiable rate and depth; owner ops must still resolve it by the original 2026-11-10 11:01 UTC deadline. This source review neither satisfies nor extends that lifecycle decision. Keep PHT active and the price missing; all admission gates preserved. Source acknowledgement expires 2026-11-21 19:45 UTC.",
     sources: [
       "https://api.coingecko.com/api/v3/simple/price?ids=pht-stablecoin&vs_currencies=usd&include_last_updated_at=true",
       "https://api.coingecko.com/api/v3/coins/pht-stablecoin/tickers",
@@ -198,12 +198,26 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
       "https://api.dexscreener.com/token-pairs/v1/tron/TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
       "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0xbe370ad45d44eb45174c4ec60b88839fef32c077/pools",
       "https://api.geckoterminal.com/api/v2/networks/polygon_pos/tokens/0xe75220cb014dfb2d354bb59be26d7458bb8d0706/pools",
-      "https://api.geckoterminal.com/api/v2/networks/polygon_pos/pools/0x9d4d778575160653e331f1597138a71c7c9a2595",
       "https://api.mexc.com/api/v3/ticker/24hr?symbol=PHTUSDT",
       "https://docs.apacx.io/user-guides/pht-onramp-and-offramp.md",
     ],
-    reviewedAt: Date.UTC(2026, 9, 29, 11, 1) / 1000,
-    expiresAt: Date.UTC(2026, 10, 10, 11, 1) / 1000,
+    reviewedAt: Date.UTC(2026, 10, 7, 19, 45) / 1000,
+    expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
+  },
+  {
+    stablecoinId: "bd-basedollar",
+    owner: "ops",
+    reason:
+      "Reviewed 2026-11-07 19:45 UTC: the existing aerodrome-exact adapter correctly rejects inventory. At Base block 54451146 (hash 0xf15f11a772be79e3f39e6e3f684c421b8e9f621e6c6771d7605f83eec680dcd8), reviewed Aero BD/USDC pool 0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f holds 11,990.64 BD and 9,204.12 USDC with balances matching reserves, below the unchanged 10,000 USDC output-inventory floor. GeckoTerminal reports $20,999.95 pool reserves and a $0.99493853 mark; DexScreener's legacy BD/USDC pool holds only $295.25. The larger BOARDED/BD pool has no trusted dollar quote leg and cannot replace the reviewed route. CoinGecko search returns no listing. The protocol's nominal collateral-redemption entitlement is not an observed dollar quote. Keep BD active and the price missing; all admission gates preserved. Owner ops rechecks inventory or an admissible alternate market by 2026-11-21 19:45 UTC.",
+    sources: [
+      "https://basescan.org/address/0x11cc6f32930c20e3cfb01fc35bd37ed20d3ed82f#readContract",
+      "https://api.coingecko.com/api/v3/search?query=base%20dollar",
+      "https://api.dexscreener.com/token-pairs/v1/base/0x252d36f435582ecb01686448d21e8c9ea0b2ca65",
+      "https://api.geckoterminal.com/api/v2/networks/base/tokens/0x252d36f435582ecb01686448d21e8c9ea0b2ca65/pools",
+      "https://docs.basedollar.org/",
+    ],
+    reviewedAt: Date.UTC(2026, 10, 7, 19, 45) / 1000,
+    expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
   },
   {
     stablecoinId: "aid-gaib",

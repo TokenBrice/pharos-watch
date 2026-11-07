@@ -81,7 +81,7 @@ describe("runCoingeckoLowVolumePass", () => {
     ["expired quote", -7 * 86400 - 1, false],
     ["invalid zero clock", null, false],
     ["absent upstream clock", undefined, true],
-  ] as const)("admits only valid low-volume observation clocks: %s", async (_name, offset, accepted) => {
+  ] as const)("admits FXD only with valid observation clocks: %s", async (_name, offset, accepted) => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
       "../../../lib/coingecko-simple-price",
     );
@@ -91,15 +91,15 @@ describe("runCoingeckoLowVolumePass", () => {
     vi.setSystemTime(nowSec * 1000);
     const observedAt = offset === undefined ? undefined : offset === null ? 0 : nowSec + offset;
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({
-      "smardex-usdn": { usd: 1.01, ...(observedAt === undefined ? {} : { last_updated_at: observedAt }) },
+      "fathom-dollar": { usd: 0.842295, ...(observedAt === undefined ? {} : { last_updated_at: observedAt }) },
     })));
-    const asset = makePeggedAsset({ id: "usdn-smardex", price: null });
+    const asset = makePeggedAsset({ id: "fxd-fathom", price: null });
     expect(await runCoingeckoLowVolumePass([asset], null, undefined)).toEqual({
       resolved: accepted ? 1 : 0, failures: [],
     });
     if (accepted) {
       expect(asset).toMatchObject({
-        price: 1.01, priceSource: "coingecko-low-volume",
+        price: 0.842295, priceSource: "coingecko-low-volume",
         priceObservedAt: observedAt ?? nowSec,
         priceObservedAtMode: observedAt == null ? "local_fetch" : "upstream",
       });
