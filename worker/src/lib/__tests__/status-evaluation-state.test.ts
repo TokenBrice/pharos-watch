@@ -716,14 +716,7 @@ describe("status cause text", () => {
       ],
     });
 
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition, })).causes;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ reserveComposition })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -919,14 +912,7 @@ describe("status cause text", () => {
         { eventId: 42, reason: "incident-conflict" },
         { eventId: 43, reason: "incident-conflict" },
       ],
-    }),
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(), })).causes;
+    }) })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
@@ -976,21 +962,8 @@ describe("status cause text", () => {
         observedAt: null,
       },
     });
-    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality,
-    activePriceCoverageImpactStatus: "healthy",
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessment: { status: "healthy", causes: [], representative: false },
-    reserveCompositionStatus: "healthy", })).status;
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality,
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(), })).causes;
+    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality })).status;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality })).causes;
 
     expect(status).toBe("degraded");
     expect(causes).toContainEqual(
@@ -1131,21 +1104,8 @@ describe("status cause text", () => {
       alertEligibleIds: ["coin-b"],
     };
 
-    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverageImpactStatus: "healthy",
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessment: { status: "healthy", causes: [], representative: false },
-    reserveCompositionStatus: "healthy", })).status;
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(), })).causes;
+    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput()).status;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ activePriceCoverage })).causes;
 
     expect(status).toBe("healthy");
     expect(causes).toContainEqual(
@@ -1208,17 +1168,7 @@ describe("status cause text", () => {
       alertEligibleIds: ["coin-b"],
     };
 
-    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
-      dataQuality: makeDataQuality(),
-      activePriceCoverage,
-      activePriceCoverageImpactStatus: "healthy",
-      missingPriceRatio: 0,
-      blacklistMissingRatio: 0,
-      blacklistRecentMissing: 0,
-      onchainAssessmentCauses: [],
-      reserveCompositionQueryFailed: false,
-      reserveComposition: makeReserveComposition(),
-    }));
+    const result = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ activePriceCoverage }));
 
     expect(result.status).toBe("healthy");
     expect(result.causes.some((cause) => cause.code === "active_price_coverage_duration_degraded")).toBe(false);
@@ -1263,21 +1213,8 @@ describe("status cause text", () => {
     // transient miss, so the admin dataQualityStatus floor no longer degrades on
     // it either. The cause is still emitted for observability, but at info
     // severity so it is neither public-impacting nor durable.
-    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverageImpactStatus: "healthy",
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessment: { status: "healthy", causes: [], representative: false },
-    reserveCompositionStatus: "healthy", })).status;
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition: makeReserveComposition(), })).causes;
+    const status = evaluateDataQualityStatus(makeDataQualityEvaluationInput()).status;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ activePriceCoverage })).causes;
 
     expect(status).toBe("healthy");
     expect(causes).toContainEqual(
@@ -1301,14 +1238,7 @@ describe("status cause text", () => {
       }),
     } as StatusResponse["reserveComposition"];
 
-    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ dataQuality: makeDataQuality(),
-    activePriceCoverage: makePublicHealth().activePriceCoverage,
-    missingPriceRatio: 0,
-    blacklistMissingRatio: 0,
-    blacklistRecentMissing: 0,
-    onchainAssessmentCauses: [],
-    reserveCompositionQueryFailed: false,
-    reserveComposition, })).causes;
+    const causes = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ reserveComposition })).causes;
 
     expect(causes).toContainEqual(
       expect.objectContaining({
