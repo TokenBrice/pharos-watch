@@ -108,11 +108,10 @@ describe("yield-source-risk-registry (shared/lib structural integrity)", () => {
   });
 
   it("resolves reviewer-set dependency concentration by stablecoin id", () => {
-    // yvUSDC's dominant risk (single-ecosystem Sky coupling) is captured here,
-    // not via the per-venue tier — the canonical case the signal exists for.
+    // Sky remains yvUSDC's largest ecosystem after allocation diversification.
     const yvusdc = resolveDependencyConcentration("yvusdc-yearn");
     expect(yvusdc?.ecosystem).toBe("Sky");
-    expect(yvusdc?.severity).toBe("medium");
+    expect(yvusdc?.severity).toBe("low");
     expect(resolveDependencyConcentration("usdc-circle")).toBeNull();
     expect(resolveDependencyConcentration(null)).toBeNull();
   });

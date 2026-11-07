@@ -18,27 +18,34 @@
     "Aave V3 upstream audits (Trail of Bits, OpenZeppelin, Certora) cover the shared codebase",
     "ChainSecurity audit (SparkLend customizations, 2023)",
     "Live since May 2023 with multi-hundred-million-USD to billion-USD TVL",
-    "Operated through Sky / MakerDAO governance and the SubDAO framework"
+    "Operated through Sky / MakerDAO governance and the SubDAO framework",
+    "2026-11-07 re-review: eight upstream reports plus ChainSecurity's Spark-specific review remain published (https://github.com/sparkdotfi/sparklend-v1-core/tree/master/audits); security scope includes core, oracle, cap-automator and governance components (https://docs.spark.finance/dev/security/security-and-audits). Governance records August 27 Risk Council removal, facilitator review, SPK votes and Sky spell execution (https://docs.spark.finance/governance/). DeFiLlama reports $5.03B TVL, including $197K residual Gnosis balances (https://api.llama.fi/protocol/sparklend); Gnosis was deprecated in September and remains withdraw-only (https://docs.spark.finance/products/sparklend). No new incident was established in the reviewed issuer security/product/governance records; this is not an exhaustive incident attestation."
   ],
   "spark-savings": [
     "Sky / Maker governance controls the savings-rate policy and Spark Savings wrapper parameters",
-    "Spark Savings yield is issuer/governance-set rather than borrower-market or strategy-vault yield",
-    "SparkLend and Sky integrations share the mature Spark/Maker operational stack"
+    "The family includes legacy Sky-rate savings wrappers, Vaults V2 approved-strategy yield and stUSDS SKY-collateralized lending; the mechanisms are distinct.",
+    "SparkLend and Sky integrations share the mature Spark/Maker operational stack",
+    "2026-11-07 re-review: Cantina and ChainSecurity reports cover Vaults V2 v1.0.0/v1.0.1 (https://github.com/sparkdotfi/spark-vaults-v2/tree/dev/audits) and sUSDS (https://github.com/sky-ecosystem/sdai/tree/susds/audit). Product docs distinguish legacy sUSDC, V2 liquidity-layer strategies and stUSDS borrowing exposure (https://docs.spark.finance/products/spark-savings); Data Hub labels V1 deprecated (https://data.spark.finance/savings). DeFiLlama reports $1.25B across eight chains (https://api.llama.fi/protocol/spark-savings); sub-scores unchanged. No new incident was established in the reviewed issuer security/product/governance records."
   ],
   "maple": [
     "Maple pools expose lenders to borrower and pool-delegate credit underwriting risk",
     "The protocol has a post-2022 recovery and redesign history after credit-market defaults",
-    "Stablecoin yield can vary by pool mandate, borrower concentration, and withdrawal queue conditions"
+    "Stablecoin yield can vary by pool mandate, borrower concentration, and withdrawal queue conditions",
+    "2026-11-07 re-review: Maple lists September Sherlock and October Cantina audits for its November shared-strategy release (https://docs.maple.finance/technical-resources/security/security.md); trust assumptions retain delegated redemptions, discretionary impairment and managed-wallet recovery dependence (https://docs.maple.finance/technical-resources/security/list-of-assumptions). Governor calls are timelocked but Security Admin upgrades can bypass scheduling (https://docs.maple.finance/technical-resources/admin-functions/timelocks). DeFiLlama reports $2.36B TVL including published borrower collateral on Ethereum, Bitcoin and XRP Ledger, separately from $1.80B outstanding loans (https://api.llama.fi/protocol/maple). No new venue-loss event was established in reviewed issuer security disclosures and updates (https://maple.finance/insights/maple-memo-september-2026; https://maple.finance/insights/maple-q3-ecosystem-update).",
+    "2026-11-07 dependency re-review: syrupusdc-maple and syrupusdt-maple retain informational Maple delegate concentration. Current docs distinguish Pool Delegates, Strategy Delegates, Operational Admin and GovernorTimelock rather than proving one EOA controls 97% of current books (https://docs.maple.finance/technical-resources/security/list-of-assumptions; https://docs.maple.finance/technical-resources/admin-functions/timelocks). Both pools still depend on Maple underwriting and redemption processing; the venue score already prices that control."
   ],
   "yearn": [
     "Yearn vaults have operated across multiple market cycles since 2020",
     "Yearn strategy and vault code has repeated independent audit coverage",
-    "Stablecoin vault yields are strategy-vault yields with visible vault-level accounting"
+    "Stablecoin vault yields are strategy-vault yields with visible vault-level accounting",
+    "2026-11-07 re-review: security repository includes June 2026 V3.1 vault and TokenizedStrategy reports (https://github.com/yearn/yearn-security/tree/master/audits); October's yvUSDC report documents 6-of-9 ySafe control, seven-day strategy-addition delay and no V3 incident through that report's snapshot (https://curation.yearn.fi/report/yearn-yvusdc/). Security disclosures route through Immunefi/Sherlock (https://github.com/yearn/yearn-security/blob/master/SECURITY.md). DeFiLlama reports $148.9M across Ethereum, Katana, Base, Optimism, Polygon, Arbitrum and Fantom (https://api.llama.fi/protocol/yearn-finance); shared venue sub-scores unchanged.",
+    "2026-11-07 dependency re-review, yvusdc-yearn: API confirms yvUSDC-1 v3.0.2 at 0xBe53A109B494E5c9f97b9Cd39Fe969BE68BF6204, $18.38M funded debt split 34.697% Sky, 32.991% Cap Pawn Broker and 32.311% Yearn USDC Morpho (https://ydaemon.yearn.fi/1/vaults/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204). October 13 research independently documents diversification and the Pawn Broker's default-queue exclusion/seven-day debt-call window (https://curation.yearn.fi/report/yearn-yvusdc/). Sky concentration moves medium to low; the dated queue observation was not re-read today."
   ],
   "yearn-finance": [
     "Yearn Finance is the DeFiLlama project slug for the Yearn vault family",
     "Yearn vaults have operated across multiple market cycles since 2020",
-    "Stablecoin vault yields are strategy-vault yields with visible vault-level accounting"
+    "Stablecoin vault yields are strategy-vault yields with visible vault-level accounting",
+    "2026-11-07 re-review: security repository includes June 2026 V3.1 vault and TokenizedStrategy reports (https://github.com/yearn/yearn-security/tree/master/audits); October's yvUSDC report documents 6-of-9 ySafe control, seven-day strategy-addition delay and no V3 incident through that report's snapshot (https://curation.yearn.fi/report/yearn-yvusdc/). Security disclosures route through Immunefi/Sherlock (https://github.com/yearn/yearn-security/blob/master/SECURITY.md). DeFiLlama reports $148.9M across Ethereum, Katana, Base, Optimism, Polygon, Arbitrum and Fantom (https://api.llama.fi/protocol/yearn-finance); shared venue sub-scores unchanged."
   ],
   "morpho": [
     "Morpho Blue is the canonical reviewed medium-risk Morpho lending primitive",
@@ -85,17 +92,19 @@
     "2026-11-07 re-review: official FAQ retains CertiK/Trail of Bits coverage (https://docs.goldfinch.finance/goldfinch/goldfinch-v1/general-faq), governance documents 6-of-10 Council upgrade/pause authority (https://docs.goldfinch.finance/goldfinch/goldfinch-v1/governance), and GIP-85 records the $330K 2025-12-02 legacy test-contract exploit and disablement (https://gov.goldfinch.finance/t/gip-85-goldfinch-hack-response/2183); DeFiLlama reports $2.07M Ethereum TVL (https://api.llama.fi/protocol/goldfinch)."
   ],
   "3jane-lending": [
-    "Four dedicated audits (Veridise, Sherlock x2, Electisec) plus an inherited Morpho Blue base and Certora coverage; high finding volume and no live bug bounty keep audits above pristine",
-    "3-of-5 multisig with a 24h timelock on upgradeable proxies; signers anonymous and privileged roles unsplit; loan origination is a heavy off-chain credit operation",
-    "Unsecured lending vs off-chain cash flows (zkTLS/Plaid/EigenLayer stack); a first-loss sUSD3 tranche (~$6.4M) plus a ~$1M insurance fund and on-chain ERC-4626 pricing partially offset default risk",
-    "Redemption via Aave idle reserves at ~44% utilization with a throttling queue; USDC-denominated; small TVL (~$17-35M)",
-    "Doxxed founder (ex-Ribbon/Aevo) and a $5.2M seed (Paradigm, Coinbase Ventures) with strong docs, offset by an undisclosed broader team and no named legal entity"
+    "Dedicated audits cover USD3/sUSD3 and LCC components alongside inherited Morpho code; audit scope does not remove unsecured underwriting risk.",
+    "September 2026 research documents anonymous 3-of-5 control, seven-day upgrades, 24-hour configuration delays and separate emergency powers; origination remains offchain.",
+    "Unsecured lending against offchain cash flows uses a junior sUSD3 loss buffer, insurance and ERC-4626 accounting; buffer amounts vary and were not re-aggregated in this review.",
+    "Redemption depends on idle reserves and a throttling queue; reported $11.11M idle TVL excludes $103.89M active loans.",
+    "Doxxed founder (ex-Ribbon/Aevo) and a $5.2M seed (Paradigm, Coinbase Ventures) with strong docs, offset by an undisclosed broader team and no named legal entity",
+    "2026-11-07 re-review: official audit list adds the May 2026 USD3/sUSD3 review and August/October Guardian LCC reports (https://docs.3jane.xyz/resources/audits); Yearn's September 5 review confirms seven-day upgrade and 24-hour configuration timelocks and July/August reserve compression without shutdown (https://curation.yearn.fi/report/3jane-usd3/); DeFiLlama reports $11.11M idle TVL separately from $103.89M active loans on Ethereum (https://api.llama.fi/protocol/3jane-lending)."
   ],
   "centrifuge": [
-    "21 independent audits (15 in 2025) incl. Cantina/Spearbit; CertiK Skynet AA; live since 2017, bug bounty",
+    "Independent V3.3 audits and formal verification appear in the issuer security index; its security overview dates mainnet operation to 2019.",
     "CP171 moved DAO to Foundation-led (CNF) governance; DAO can reassume; V3 multichain upgradeable",
-    "Tokenized RWA private credit/CLOs/treasuries; offchain default exposure; ~$1.45B TVL",
-    "RWA vaults have redemption/epoch constraints; capital tied to illiquid assets"
+    "Tokenized RWA private credit, CLOs and Treasuries retain offchain default exposure; current RWA active AUM is distinct from unavailable protocol TVL.",
+    "RWA vaults have redemption/epoch constraints; capital tied to illiquid assets",
+    "2026-11-07 re-review: issuer audit roster lists July token-bridge review, July-September V3.3 BurraSec/Sherlock reviews and August-September core formal verification (https://docs.centrifuge.io/developer/security/audits/); immutable Root privilege escalation uses a 48-hour timelock, with separate protocol and ops Safes and Cantina transaction verification (https://docs.centrifuge.io/developer/security/guardian/). CP171 Foundation oversight remains documented; September 29 issuer CP172 FAQ says no structural decision is complete until governance and legal steps approve it (https://centrifuge.io/blog/centrifuge-releases-cp172-faqs). DeFiLlama https://defillama.com/protocol/centrifuge-protocol reports $669.77M RWA active AUM and fees on Ethereum, Avalanche, Plume, Base, Monad and Pharos; https://api.llama.fi/protocol/centrifuge-protocol returns no current TVL series. Issuer security overview reports zero exploits and a $250K Cantina bounty (https://docs.centrifuge.io/developer/security/overview/)."
   ],
   "flux-finance": [
     "Code4rena audit (January 2023) on Compound V2 changes; built on audited Compound V2 base; official docs state a $550K Immunefi bounty",
@@ -105,10 +114,11 @@
     "2026-11-07 re-review: dedicated Code4rena audit is January 2023, with Compound V2 audit inheritance and a stated $550K bounty (https://docs.fluxfinance.com/trust-and-security); ONDO governance uses a three-day vote/one-day timelock with delegated pause controls (https://docs.fluxfinance.com/governance); OUSG liquidations require KYC/whitelisting (https://docs.fluxfinance.com/protocol/liquidations); DeFiLlama $43.6M Ethereum TVL (https://api.llama.fi/protocol/flux-finance)."
   ],
   "cap": [
-    "Sherlock (Jul 2025) + Certora (EigenLayer integration); Certora: no single critical centralized actor",
+    "Sherlock and Certora reports have integration-specific scopes; current multisig, configuration and operator powers remain centralized.",
     "Delegators/operators initially whitelisted; restaking permissionless slashing, no veto; live Aug 2025",
-    "cUSD 1:1 reserve-backed, idle to Aave V3; yield from operator credit; slashing covers default",
-    "cUSD redeemable, ~$500M TVL with Aave buffer; operator credit-recovery delay"
+    "cUSD reserve accounting includes operator principal; underwriter collateral and slashing do not make all reserves immediately liquid.",
+    "Redemption depends on reserve liquidity and utilization; protocol TVL includes restaker collateral and is not cUSD exit liquidity.",
+    "2026-11-07 re-review: public repository lists September 26 Octane upgrade report (https://github.com/cap-labs-dev/cap-audits); issuer access-control docs specify multisig admin and minimum 86,400-second timelock (https://docs.cap.app/concepts/access-controls.md). October 13 Yearn review identifies the October 5 addition of a 3-of-6 cancellation Safe, direct configuration powers outside the delay, and only 24.82% of USDC reserve accounting outside operator principal (https://curation.yearn.fi/report/cap-stcusd/). Cap's October 26 fee announcement introduces zero-fee USDC mint/redeem access (https://www.cap.app/blog/introducing-zero-deposit-fees). DeFiLlama https://api.llama.fi/protocol/cap latest point 1794078527: $183,133,896 TVL including restaker collateral, $53,581,349 borrowed, Ethereum only; issuer risk docs retain shared-security, collateral, idle-Aave/Morpho and utilization-dependent redemption risks (https://docs.cap.app/overview/risks.md)."
   ],
   "avantis": [
     "Legacy Zellic/Zokyo and v1.5 Zellic/Sherlock reviews have distinct scopes; Guardian published the Veranta V2 review in October 2026",
@@ -138,10 +148,11 @@
     "2026-11-07 re-review: V2 is a Vyper 0.4.3 refactor with live Ethereum/Optimism factories, DAO-controlled oracle/borrow caps and audits still unpublished (https://docs.curve.finance/developer/llamalend-v2/overview/); October operations include the first LP-collateral V2 market (https://news.curve.finance/curve-monthly-recap-october-2026/); legacy CRV-long withdrawals remain impaired in the published recovery mechanism (https://news.curve.finance/building-recovery-in-public-and-building-stronger-systems-next/); DeFiLlama reports $96.1M across four listed chains (https://api.llama.fi/protocol/curve-llamalend)."
   ],
   "fluid-lending": [
-    "6 audits; Instadapp 6 years no protocol hack; shared liquidity layer is a single concentrated surface",
-    "Guardian multisig can pause subprotocol credit lines; permissioned credit lines; IP moving to Cayman foundation",
+    "Audits cover the EVM shared liquidity layer and separate Sui components; cross-module dependencies remain concentrated.",
+    "Current Ethereum calls confirm a one-day timelock and a 6-of-12 guardian with pause powers; controls do not remove collateral-issuer dependency.",
     "Shared liquidity layer concentrates risk; absorbed Resolv upstream bad debt; overcollateralized vaults",
-    "Deep shared layer generally instant; $1.8B+ TVL; multichain; solvent IR during Resolv cleanup"
+    "Withdrawals obey Liquidity Layer limits and available balances; current reported lending TVL is about $618.5M, not guaranteed exit liquidity.",
+    "2026-11-07 re-review: audits include EVM and OtterSec/Certora Sui components (https://docs.fluid.instadapp.io/audits-and-security.html); DeFiLlama reports $618.5M across Ethereum, Arbitrum, Plasma, Base, Polygon and a $47 Sui deployment (https://api.llama.fi/protocol/fluid-lending). Yearn's September 29 report records about $214M debt behind USDai peg assumptions, July sUSDS borrowing-market wind-down and Resolv-debt cleanup (https://curation.yearn.fi/report/fluid/). Same-day eth_call through https://ethereum-rpc.publicnode.com confirms Timelock delay 86400 at 0x2386DC45AdDed673317eF068992F19421B481F4c, Guardian threshold 6/12 at 0x4F6F977aCDD1177DCD81aB83074855EcB9C2D49e, and oracle 0x08E954EfD116563894dec499EFF1Ed34F4B1Ef4e returning only capped-rate source 0xC5D27C5d356479b681328351F1583c63051E76a0. Withdrawals obey Liquidity Layer limits and available balances (https://github.com/Instadapp/fluid-contracts-public/blob/main/contracts/protocols/lending/fToken/main.sol). Centralization/fundsManagement/liquidity rise 2 to 3; the $214M figure remains the dated September observation."
   ],
   "dolomite": [
     "Primary docs distinguish inherited OpenZeppelin/Bramah core scope from SECBIT/Cyfrin lending work and Zokyo/Guardian/Cyfrin modules",
@@ -361,45 +372,52 @@
     "2026-11-07 re-review: November 6 issuer statement confirms about $412K undercollateralized borrowing, a separate ~$521K disproportionate redemption path halted per issuer, and continuing vault-withdrawal/USDC Genesis repayment restrictions; its no-depositor-loss claim is not an independently reconciled recovery total (https://x.com/Loopscale/status/2118502123705159769, read via https://api.fxtwitter.com/Loopscale/status/2118502123705159769). Current docs list periphery audits through May 2026, private V1 reports and a $250K bounty (https://docs.loopscale.com/resources/audits), 3-of-5 upgrades plus AWS co-signing (https://docs.loopscale.com/partners/curators/security), and Formation/Orca merger with unchanged program authority (https://docs.loopscale.com/resources/formation). DeFiLlama $89.0M parent TVL (https://api.llama.fi/protocol/loopscale); fundsManagement 3 to 4, liquidity/operational 3 to 5."
   ],
   "navi-lending": [
-    "OtterSec + MoveBit (Move-specialist, formal verification) audits; no reported exploit",
-    "veToken governance launched 2025; mint/freeze controls reportedly remain with the team; MSafe multisig",
+    "Independent Move audit scopes include E-Mode and Pyth Pro oracle components; product audits must not be counted as one core-lending audit.",
+    "Published lending code uses OwnerCap for pause, caps and risk parameters; current capability ownership and signer threshold were not independently read onchain.",
     "Overcollateralized SUI/USDC/USDT/wETH/wBTC with health-factor liquidations and isolated pools",
-    "Largest Sui TVL ~$400M+; unified liquidity pool instant within utilization; young chain limits dispersion"
+    "Current lending TVL is about $126.8M on Sui; available withdrawal liquidity depends on utilization, not total TVL.",
+    "2026-11-07 re-review: NAVI's public audit index lists 2026 E-Mode and Pyth Pro oracle reviews (https://github.com/naviprotocol/navi-smart-contracts/tree/main/audits); OwnerCap controls set_pause, supply/borrow caps and LTV in published code (https://raw.githubusercontent.com/naviprotocol/navi-smart-contracts/main/lending_core/sources/storage.move); the issuer status archive reports no August-October incidents (https://navi-protocol.betteruptime.com/incidents). DeFiLlama https://api.llama.fi/protocol/navi-lending latest point 1794075575: $126,801,894 TVL and $62,752,550 borrowed, Sui only. The April 2026 Volo vault key compromise is a separate venue, not evidence of a NAVI lending-contract loss (https://api.llama.fi/hacks)."
   ],
   "zest-v2": [
-    "Least Authority (2023) + Coinfabrik (2024) audits; Immunefi bounty; no bad debt over 1500+ liquidations",
-    "V2 multisig governance with timelock (threshold/delay undisclosed); ZEST governance token",
-    "Overcollateralized BTC/sBTC/STX/USDC; new BitVM-verified Bitcoin Collateral Vaults are novel/unproven",
-    "Thin Stacks/Bitcoin-L2 liquidity ~$100M peak; cross-chain borrow adds settlement latency"
+    "Stacks V2 docs list Clarity Alliance and Greybeard reviews; separate strategy-vault and Bitcoin Collateral Vault reviews have distinct scopes.",
+    "Normal multisig proposals wait one day, urgent proposals bypass it, and implementation updates wait seven days; signer threshold is unverified and token governance remains planned.",
+    "Stacks V2 overcollateralized lending is separate from the Ethereum Bitcoin Collateral Vault demo.",
+    "About $44.4M TVL on Stacks; issuer acknowledged an April 2024 V1 collateral-list exploit (https://www.zestprotocol.com/blog/zest-protocol-security-update).",
+    "2026-11-07 re-review: V2 audit roster and reports dated October-December 2025 (https://docs.zestprotocol.com/stacks/market/contracts/audits); DAO multisig docs specify normal one-day delay, urgent bypass and seven-day implementation-update timelock, without a verified current signer threshold (https://docs.zestprotocol.com/stacks/market/contracts/dao/multisig); ZEST governance/staking are planned rather than active (https://docs.zestprotocol.com/zest-token). The September 15, 2026 Bitcoin Collateral Vault review covers demo Ethereum contracts, all six findings marked resolved, separately from Stacks V2 (https://docs.zestprotocol.com/bitcoin-collateral-vaults/security). DeFiLlama https://api.llama.fi/protocol/zest-v2 latest point 1794078203: $44,384,981 TVL, $24,770,080 borrowed, Stacks only."
   ],
   "resupply": [
     "Audited yet hit a Jun-2025 ~$9.6M donation/oracle exploit (empty-vault price flaw); bad debt fully repaid",
     "Convex/Yearn sub-DAO with RSUP governance; coordinated DAO crisis response; upgrade delay not documented",
-    "reUSD backed by yield-bearing stablecoin CDP collateral (other protocols' LP/vault tokens — composability risk)",
-    "reUSD liquidity declined post-exploit; ~$38M insurance pool backstopped the recovery"
+    "reUSD backed by yield-bearing stablecoin CDP collateral (other protocols' LP/vault tokens \u2014 composability risk)",
+    "reUSD liquidity declined post-exploit; ~$38M insurance pool backstopped the recovery",
+    "2026-11-07 re-review: eight official audit PDFs cover the core, inflation fixes, sreUSD and CurveLend operators (https://github.com/resupplyfi/resupply/tree/main/audits); the current docs retain the 2025 core-audit list (https://docs.resupply.finance/faq/audits), and describe Curve Lend/Curve Lend v2/Fraxlend receipt collateral (https://docs.resupply.finance/); DeFiLlama reports $47.87M Ethereum TVL (https://api.llama.fi/protocol/resupply)."
   ],
   "termmax": [
-    "Multiple audit rounds (93% DeFiSafety); Immunefi + Cantina; Hypernative monitoring; no exploit since Apr-2025",
-    "4-of-6 multisig with timelock on critical changes; TMX governance planned but not live",
+    "Official TermMax audits include four ABDK reports and a Cantina competition; this does not establish an exhaustive incident-free history.",
+    "Administrative control is documented as 4-of-6; vault timelocks default to one day, while current token-governance rollout is unconfirmed.",
     "Fixed-rate isolated markets with curator-managed vaults; exotic tokenized-equity (Ondo) collateral",
-    "~$30-50M TVL multichain; fixed maturities create term lockups"
+    "Current reported TVL is about $687K across seven nonzero chains; the October 23 USPC collateral reduction does not measure a proportionate change in the lending book or exit liquidity.",
+    "2026-11-07 re-review: official audits include ABDK phases 1/2/3, TMX-token and Cantina reports (https://github.com/term-structure/audits/tree/main/TermMax); docs describe 4-of-6 administration (https://docs.ts.finance/security-and-risks/best-security-practices) and a one-day default vault timelock (https://docs.ts.finance/security-and-risks/timelock-protection). DeFiLlama reports $687K TVL across nine listed chains, seven nonzero; October 22-23 USPC units fell from 24,997,361.67246 to 49.94744 while active loans stayed $21.051M to $21.046M and Ethereum USDC units stayed 55,999.79066 (https://api.llama.fi/protocol/termmax). The adapter counts collateral/cash separately from loans and excludes Safe-backed custom pools and specified uBTC loop markets (https://github.com/DefiLlama/DefiLlama-Adapters/blob/main/projects/term-structure/index.js); its latest file commit is August 4. Retain liquidity 3 and partial confidence pending exact-market collateral reconciliation."
   ],
   "upshift": [
-    "Hacken, OtterSec, ChainSecurity, Sigma Prime, Zellic audits; hit by $292M Kelp/LayerZero bridge contagion freeze",
-    "Multisig under 4 signers, no documented timelock; role-based operator sets APR/loans",
+    "Audits cover separate vault and chain components; an upstream bridge incident's gross loss is not an Upshift vault-loss measurement.",
+    "ProxyAdmin is generally 4-of-6; selected parameters are timelocked but upgrades and owner emergency asset transfers are not.",
     "Credit lending to KYC'd market makers via August prime broker; offchain/CeFi strategies and custody exposure",
-    "Loans have terms/durations with redemption queues; ~$550M peak TVL, strategy-dependent unwinds"
+    "Loans have terms/durations with redemption queues; ~$550M peak TVL, strategy-dependent unwinds",
+    "2026-11-07 re-review: 11 reports include Halborn Stellar Vault and Hacken Atomic Vault reviews in April 2026 (https://docs.upshift.finance/resources/audits); ProxyAdmin is generally 4-of-6, selected parameters are timelocked, upgrades are not, and owner emergencyWithdraw can send held vault assets to an unrestricted receiver (https://docs.upshift.finance/vault-architecture/risk-controls); DeFiLlama reports $460.65M TVL across 15 listed chains, 12 with nonzero TVL (https://api.llama.fi/protocol/upshift)."
   ],
   "tectonic": [
-    "CertiK + SlowMist audits; Chainlink + Band oracles; no major exploit found; mature since 2021",
+    "Official audit docs list SlowMist and BlockSec reports from 2021-2023, before the realized August 2026 TONIC collateral manipulation.",
     "TONIC/xTONIC governance; isolated pools (Main/Veno/DeFi); Cronos-team-adjacent control, threshold undisclosed",
     "Overcollateralized Compound-style market with a community insurance pool for bad debt",
-    "~$120M+ TVL concentrated on Cronos; smaller-cap isolated pools thinner"
+    "Current reported TVL is about $18.15M on Cronos after the August 30 attack and chain rollback; gross outflows are distinct from final unrecovered loss.",
+    "2026-11-07 re-review: Bitquery's archived-chain reconstruction measures $120.38M of market outflows, documents TONIC price manipulation and the Cronos rollback (https://www.bitquery.io/investigations/tectonic-exploit-120-million); official audit docs list SlowMist/BlockSec reports from 2021-2023 (https://tectonic.gitbook.io/docs/developer/smart-contracts-and-security/external-audits); DeFiLlama reports $18.15M Cronos TVL versus $121.58M on August 29 (https://api.llama.fi/protocol/tectonic)."
   ],
   "openeden-usdo": [
-    "Chainlink CCIP + Proof-of-Reserve; S&P AA+f and Moody's A fund ratings; onchain PoR",
-    "BMA-licensed issuer (OpenEden Digital); EDEN governance; issuer can pause/freeze and controls mint/redeem",
-    "RWA-backed by tokenized US Treasuries with BNY custodian (offchain custody dependency)",
-    "24/7 instant TBILL mint/redeem ~$277M TVL; T-bill settlement adds some latency"
+    "ChainSecurity USDO September 2024 and Express March 2025 reviews cover separate token and instant-redemption components.",
+    "Central issuer controls mint/redeem eligibility and blocked addresses; a governance token does not remove those issuer powers.",
+    "USDO has offchain Treasury/RWA reserve dependency; separate TBILL fund ratings and AUM do not measure USDO liquidity.",
+    "Primary redemption requires onboarding; instant exits are liquidity-bounded and manual exits take up to two business days.",
+    "2026-11-07 re-review: issuer audit page retains USDO September 2024 and USDO Express March 2025 reports (https://docs.openeden.com/usdo/risks/smart-contract-risk); ChainSecurity confirms Express completed March 6, 2025 and all raised minor issues addressed (https://www.chainsecurity.com/security-audit/openeden-usdoexpress). Issuer retains blocked-address and account-termination authority (https://docs.openeden.com/usdo/risks); KYC onboarding and USDC-only primary redemption apply (https://docs.openeden.com/usdo/faq); manual settlement can take two business days, instant settlement is liquidity-bounded (https://docs.openeden.com/usdo/usdo-token/redemption-workflow). DeFiLlama USDO page reports $12.72M RWA active AUM and Base/Ethereum footprint (https://defillama.com/protocol/openeden-usdo); https://api.llama.fi/protocol/openeden-usdo returns empty TVL arrays, which cannot prove zero liquidity. Issuer FAQ separately lists native USDO on Ethereum/Base/BNB/Kaia and cUSDO also on Solana."
   ]
 }
