@@ -308,138 +308,138 @@ export const YIELD_RISK_CONFIG = {
       "Scallop is an audited Sui money market with a bug bounty; limited admin disclosure, smaller liquidity and legacy-contract incident history constrain its venue scores. 2026-11-07 re-review: the audit catalog separates lending-core, sCoin and veSCA reports, including Asymptotic alongside Zellic, OtterSec and MoveBit. The issuer reported a 150K SUI sSUI rewards-side-contract exploit on April 26, separate from the lending core; DeFiLlama TVL is $8.98M on Sui versus $15.6M on June 15. Existing sub-scores and partial confidence remain.",
   },
   "echelon-market": {
-    scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 4 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Echelon is a fast-growing Aptos lender with isolated markets and Chainlink oracles; a very young DAO and unitemized audits keep it at medium.",
+      "Echelon is an overcollateralized Move lending venue with isolated markets and asset-specific oracle dependencies; listings and admin terms remain partly team-dependent or incompletely verified. 2026-11-07 re-review: nine scoped reports name OtterSec, Zellic, Quantstamp, Zenith and Plainshift, supporting audits 2; $5.39M DeFiLlama TVL replaces the prior hundreds-of-millions assumption and raises liquidity to 4, while the October 31 DNS compromise raises operational to 4; the issuer reported restoration that evening.",
   },
   "blend-pools-v2": {
-    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 3, operational: 3 },
+    scores: { audits: 3, centralization: 2, fundsManagement: 4, liquidity: 4, operational: 4 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Blend is an immutable, governance-minimized Stellar lending primitive with backstop insurance; thin-chain liquidity is the main residual risk, keeping it at low.",
+      "Blend V2 has immutable isolated Stellar lending pools, but its shared Comet backstop dependency was impaired; incumbent V2 and the separately deployed V2.1 recovery pools require distinct operational treatment. 2026-11-07 re-review: the protocol-repository recovery record describes unusable incumbent Comet backing, on-ice V2 pools and blocked LP operations; DeFiLlama's adapter still reads incumbent V2 addresses rather than V2.1, so audits rises to 3 and funds, liquidity and operational to 4 despite $117.65M aggregate Stellar TVL.",
   },
   "jupiter-lend": {
-    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 2 },
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Jupiter Lend is a deep, well-audited Solana lender but young, with rehypothecation undercutting isolation claims; timelocked admin keeps it at low-medium.",
+      "Jupiter Lend is an overcollateralized Solana lender with a shared Earn, Borrow and Multiply liquidity layer, timelocked market-admin parameters and withdrawals constrained by utilization and dynamic ceilings. 2026-11-07 re-review: developer docs list 2026 Certora/Code4rena core Lend work and separately scoped Lend AMM assessments; the issuer confirmed an October 30 USDC withdrawal liquidity crunch and recovery that evening, raising liquidity to 3 despite $928.21M Solana TVL; other sub-scores remain unchanged.",
   },
   "hyperlend-pooled": {
     scores: { audits: 3, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 4 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "HyperLend is a well-audited but young Aave-fork on the thin, exploit-prone HyperEVM; admin opacity and kHYPE concentration place it at medium.",
+      "HyperLend is an overcollateralized HyperEVM lender with Aave-derived pooled markets, documented audit and monitoring programs, and concentrated chain exposure; live governance quorum and effective timelock delays remain incompletely verified. 2026-11-07 re-review: the audit directory lists core and integration-specific Pashov, Cantina, Ackee, Nethermind and CD Security work through April 2026, and docs publish governance, emergency-admin and timelock addresses; $304.19M TVL remains on Hyperliquid L1, while live quorum and delays remain unverified, so sub-scores and partial confidence are unchanged.",
   },
   curvance: {
-    scores: { audits: 4, centralization: 4, fundsManagement: 3, liquidity: 4, operational: 4 },
-    confidence: "low",
-    reviewedAt: "2026-06-15",
+    scores: { audits: 2, centralization: 3, fundsManagement: 4, liquidity: 3, operational: 4 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Curvance is a brand-new Monad lender with tiny TVL and unitemized audits; scored conservatively across the board for lack of track record, placing it high.",
+      "Curvance is a Monad lender with isolated market accounting, independently reviewed lending contracts and scoped governance/emergency controls; collateral-issuer failures, local liquidity and operational incident history remain material. 2026-11-07 re-review: six named public reports and documented delayed DAO/scoped emergency controls replace the unitemized-audit assessment, and $135.56M TVL replaces tiny-scale assumptions, moving audits, centralization and liquidity to 2/3/3; funds rises to 4 after the Echo collateral incident, eBTC/WBTC remains paused, and operational stays 4.",
   },
   "sovryn-dex": {
-    scores: { audits: 4, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 3 },
+    scores: { audits: 5, centralization: 3, fundsManagement: 4, liquidity: 5, operational: 5 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Sovryn is a mature Bitcoin-DeFi lender, but a prior partially-unrecovered lending exploit and thin Rootstock liquidity place it at medium.",
+      "Sovryn combines Rootstock lending and AMM exposure with prior exploit history and limited exit depth. 2026-11-07 re-review: the official 3 November report confirms new lending/margin and AMM attacks, paused lending withdrawals and unfinished loss reconciliation; SIP-0097 proposes further restrictions. Audits, funds management, liquidity and operational scores rise for the unresolved incident; DeFiLlama reports $5.74M on Rootstock and BOB.",
   },
   // ── FU3 Wave 2 venues (yield v8.292, reviewed 2026-06-15) ──────────────────
   truefi: {
-    scores: { audits: 3, centralization: 3, fundsManagement: 5, liquidity: 4, operational: 3 },
+    scores: { audits: 3, centralization: 3, fundsManagement: 5, liquidity: 5, operational: 4 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "TrueFi is uncollateralized DeFi credit; trust-based borrower accounting and realized default history put it in the high tier despite a DAO-timelocked admin.",
+      "TrueFi's legacy uncollateralized credit pools retain borrower-default and repayment-dependent exit exposure during the transition to Brila. 2026-11-07 re-review: current documentation redirects to Brila and TFIP-42 proposes replacing legacy Timelock control with a 4-of-7 Safe; execution was not established. DeFiLlama reports $21.7K remaining TVL on Ethereum and Arbitrum; liquidity and operational scores rise for the residual credit book and governance transition.",
   },
   "radiant-v2": {
     scores: { audits: 5, centralization: 5, fundsManagement: 4, liquidity: 5, operational: 5 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Radiant Capital suffered a ~$50M unrecovered Oct-2024 exploit and is in wind-down; it scores near-worst across audits, centralization, liquidity, and operational.",
+      "Radiant Capital retains unresolved losses from its October 2024 exploit and has ended active development in favor of maintenance and recovery. 2026-11-07 re-review: Radiant's 1 June sunset notice disables borrowing and emissions, ends active development and retains position management and recovery support; DeFiLlama reports $501K across four chains. Existing severe sub-scores remain unchanged.",
   },
   "wildcat-protocol": {
-    scores: { audits: 3, centralization: 2, fundsManagement: 5, liquidity: 5, operational: 3 },
+    scores: { audits: 3, centralization: 4, fundsManagement: 5, liquidity: 5, operational: 3 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Wildcat is undercollateralized credit with borrower-defined terms; its low protocol-admin surface is outweighed by maximal funds/liquidity trust risk, placing it high.",
+      "Wildcat is undercollateralized credit with borrower-defined terms; borrower default and withdrawal restrictions dominate funds and liquidity risk. 2026-11-07 re-review: V2 reports itemize Code4rena and alpeh_v reviews, while SphereX documentation confirms team-controlled transaction filtering can freeze the protocol if compromised. Centralization rises to 4; other sub-scores remain unchanged, with $2.69M DeFiLlama TVL on Ethereum and Plasma.",
   },
   "gains-network": {
-    scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Gains Network (gTrade) is a leveraged-perps vault, not a money market; a 14-day timelock and overcollateralization buffer keep it at low-medium.",
+      "Gains Network gToken vaults backstop leveraged-trader PnL and use timelocked upgrades and epoch-based withdrawal queues. 2026-11-07 re-review: v10 docs disclose a 10-hour emergency code/role timelock, lifting centralization to 3; the product changelog records a MegaETH new-position pause with closes available. Pashov's module report identifies reviewed and fixes commits; DeFiLlama reports $6.69M across five chains. Other sub-scores remain unchanged.",
   },
   "venus-core-pool": {
-    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    scores: { audits: 3, centralization: 2, fundsManagement: 3, liquidity: 2, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Venus Core Pool is an established overcollateralized BNB-chain money market; its 2025 $27M incident was user phishing (fully recovered), not a contract flaw — low venue risk.",
+      "Venus Core Pool is a governed Compound-derived money market with realized bad debt from collateral-accounting and price-manipulation failures. 2026-11-07 re-review: the documented March THE donation/cap bypass left about $2.15M bad debt; current documents add scoped September/October audits and 48h normal/6h fast governance routes, while DeFiLlama reports $1.08B TVL, predominantly BNB; audits, fundsManagement and operational rise to 3.",
   },
   "moonwell-lending": {
-    scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
+    scores: { audits: 4, centralization: 3, fundsManagement: 4, liquidity: 5, operational: 4 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Moonwell is an overcollateralized multichain Compound-fork; a Mar-2026 governance-attack vector lifts centralization to 3, keeping it at low.",
+      "Moonwell's Compound-derived core markets have repeated oracle/accounting failures and unresolved Base withdrawal impairment. 2026-11-07 re-review: August's MAMO donation/oracle exploit left about $9.13M residual debt at the incident cutoff; the November 6 market report still shows zero Base borrow caps and 100% utilization in USDC and EURC, so audits/fundsManagement/operational rise to 4 and liquidity to 5.",
   },
   "silo-v2": {
     scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Silo v2 is overcollateralized isolated-pair lending with immutable per-market silos; permissionless market creation and thin newer markets raise funds/liquidity risk to medium.",
+      "Silo v2 is overcollateralized isolated-pair lending; permissionless market creation and market-specific collateral, oracle and liquidity exposure remain the main constraints. 2026-11-07 re-review: the audit index retains V2-specific Certora, Enigma Dark, Cantina and Sigma Prime reports separately from V3; V2 documentation retains permissionless deployment and oracle-specific isolated risk, with $3.92M DeFiLlama TVL across four chains; sub-scores unchanged.",
   },
   "sturdy-v2": {
-    scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
-    confidence: "verified",
-    reviewedAt: "2026-06-15",
+    scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Sturdy v2 is an overcollateralized two-tier silo + aggregator design; a v1 hack history, manager trust, and no bad-debt reserves keep it at medium.",
+      "Sturdy v2 combines isolated lending pairs with managed aggregation; external lender, allocation and privileged-control dependencies accompany thin residual liquidity. 2026-11-07 re-review: the V2 security index still lists 2023 Zellic, ChainSecurity and Spearbit reviews, with ChainSecurity excluding the vault and silo implementations; DeFiLlama TVL is $218K across six reported chains, so liquidity rises to 4 while current privileged controls remain partially verified.",
   },
   vesper: {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 3 },
-    confidence: "verified",
-    reviewedAt: "2026-06-15",
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Vesper is a yield aggregator (not a money market) routing into external protocols; composed strategy risk and a 2021 oracle-hack history put it at medium.",
+      "Vesper aggregates external yield strategies; pool governance, keepers and underlying protocol or vault exit constraints remain material dependencies. 2026-11-07 re-review: September Quantstamp Concrete-strategy and October collaborative strategy reports add bounded audit coverage while retaining external-vault, keeper and withdrawal constraints; DeFiLlama parent TVL is $90.0M, and current multisig/deployed-version details remain partially verified; sub-scores unchanged.",
   },
   "convex-finance": {
     scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Convex is a Curve LP-boosting / veCRV staking layer (NOT a lending/credit venue); immutable contracts, never exploited, with blue-chip Curve LP underlying — low venue risk.",
+      "Convex stakes Curve/Frax LP positions and concentrates governance through its multisig; underlying pool and integration risk remains separate from contract immutability. 2026-11-07 re-review: the audit index separates core, wrapper and sidechain reports, and current docs retain a 3-of-5 multisig with fee, pool-manager and deposit-pause powers. DeFiLlama reports $505M across four chains; sub-scores unchanged.",
   },
   liqwid: {
-    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 4, operational: 2 },
-    confidence: "verified",
-    reviewedAt: "2026-06-15",
+    scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Liqwid is the mature Cardano lending leader with a no-admin DAO design; thin eUTXO liquidity and LQ-heavy collateral are the main residual risks, keeping it at low.",
+      "Liqwid's Cardano markets depend on thin onchain liquidity, oracle controls and team-operated transaction batching. 2026-11-07 re-review: public audit evidence covers V1/Agora, while V2 source release and bounty cancellation remain governance proposals; team batching/guardian powers contradict the prior no-admin claim. The November NIGHT proposal recounts bridge-related emergency caps, and TVL is $8.73M; audits, centralization, funds management and operational scores rise to 3.",
   },
   "lista-lending": {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Lista Lending is a well-audited Binance-adjacent BNB-chain CDP/isolated lender with a documented timelock and deep liquidity — the lowest-risk venue in the Wave 2 set.",
+      "Lista's Moolah lending markets use collateral-specific and curator-set controls, with separately documented credit-broker contracts. 2026-11-07 re-review: October reports cover V3 collateral, market creation and liquidators, and vault timelocks vary by curator; Credit Phase 1 has concluded and public credit vaults remain planned. DeFiLlama reports $914M on BNB Chain and Ethereum; no reviewed evidence establishes unsecured exposure in the published lending sources, so sub-scores remain unchanged.",
   },
   loopscale: {
-    scores: { audits: 4, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
+    scores: { audits: 4, centralization: 4, fundsManagement: 4, liquidity: 5, operational: 5 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Loopscale recovered fully from an Apr-2025 ~$5.8M oracle exploit but remains young, tokenless, and team-controlled with exotic collateral — high tier.",
+      "Loopscale's Solana credit and vault infrastructure retains team-controlled upgrades, collateral-pricing and vault-accounting exposure after the recovered April 2025 exploit. 2026-11-07 re-review: Loopscale's November 6 statement confirms a new collateral-pricing attack and a vault-NAV attack, with vault withdrawals and USDC Genesis-funded repayments still restricted. Audits list later periphery reviews, but repeat accounting failures raise funds management to 4 and liquidity/operational to 5; DeFiLlama parent TVL is $89.0M, not available exit liquidity.",
   },
   "navi-lending": {
     scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
