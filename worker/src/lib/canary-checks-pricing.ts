@@ -6,6 +6,9 @@ import type { CanaryCheckResult } from "./canary-checks";
 import type { CanaryCheckContext, CanaryCheckDefinition } from "./canary-checks";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { boundedJson, parseObjectMetadata } from "./json-metadata";
+import { parseDepegObservationCensus as parseCensus } from "./depeg-ledger-clock";
+import { assessDepegObservationGaps } from "./canary-checks-depeg";
+import type { DepegObservationCensus } from "../cron/depeg-detection/types";
 
 /**
  * Pricing and FX canaries read the producer's already-persisted cron metadata
@@ -28,14 +31,6 @@ interface StablecoinsRunRow {
   started_at: number;
   status: string | null;
   metadata: string | null;
-}
-
-interface DepegObservationCensusSnapshot {
-  eligibleCount: number;
-  observedCount: number;
-  unavailableCount: number;
-  belowFloorCount: number;
-  reasonCounts: Record<string, number>;
 }
 
 function boundedText(value: string, maxChars = MAX_CANARY_ERROR_CHARS): string {
@@ -261,31 +256,13 @@ async function checkStablecoinsActivePriceCoverage(
   }
 }
 
-function parseCensus(value: unknown): DepegObservationCensusSnapshot | null {
-  const census = asRecord(value);
-  if (!census) return null;
-  const eligibleCount = integerOrNull(census.eligibleCount);
-  const observedCount = integerOrNull(census.observedCount);
-  const unavailableCount = integerOrNull(census.unavailableCount);
-  const belowFloorCount = integerOrNull(census.belowFloorCount);
-  if (eligibleCount == null || observedCount == null || unavailableCount == null || belowFloorCount == null) {
-    return null;
-  }
-  const reasonCounts: Record<string, number> = {};
-  for (const [reason, count] of Object.entries(asRecord(census.reasonCounts) ?? {})) {
-    const parsed = integerOrNull(count);
-    if (parsed != null && parsed > 0) reasonCounts[reason] = parsed;
-  }
-  return { eligibleCount, observedCount, unavailableCount, belowFloorCount, reasonCounts };
-}
-
 function reasonDelta(
-  previous: DepegObservationCensusSnapshot,
-  current: DepegObservationCensusSnapshot,
+  previous: DepegObservationCensus["reasonCounts"],
+  current: DepegObservationCensus["reasonCounts"],
 ): Record<string, number> {
   const delta: Record<string, number> = {};
-  for (const [reason, count] of Object.entries(current.reasonCounts)) {
-    const increase = count - (previous.reasonCounts[reason] ?? 0);
+  for (const [reason, count] of Object.entries(current)) {
+    const increase = count - (previous[reason as keyof typeof previous] ?? 0);
     if (increase > 0) delta[reason] = increase;
   }
   return delta;
@@ -296,8 +273,7 @@ function reasonDelta(
  * and is named; a census that stops observing previously observed assets (for
  * example a non-USD fiat peg losing its authoritative FX reference) is a
  * machine-readable shrunken cohort. Comparing against the previous published
- * generation keeps permanent exclusions (VAR/OTHER, reviewed gaps) out of the
- * finding instead of inventing an expected reason baseline.
+ * generation grades only unacknowledged gaps, preserving raw census evidence.
  */
 async function checkDepegObservationCoverage(
   db: D1Database,
@@ -342,12 +318,15 @@ async function checkDepegObservationCoverage(
     const census = parseCensus(censusValue);
     if (!census) return failedResult("depeg-observation-census-invalid", finding);
     if (census.eligibleCount <= 0) return failedResult("depeg-observation-cohort-unknown", finding);
+    const gaps = assessDepegObservationGaps(census, observedAt);
     Object.assign(finding, {
       eligibleCount: census.eligibleCount,
       observedCount: census.observedCount,
       unavailableCount: census.unavailableCount,
       belowFloorCount: census.belowFloorCount,
       reasonCounts: census.reasonCounts,
+      unavailableShare: census.unavailableCount / census.eligibleCount,
+      ...gaps,
     });
     if (census.observedCount + census.unavailableCount + census.belowFloorCount !== census.eligibleCount) {
       return degradedResult(
@@ -356,19 +335,21 @@ async function checkDepegObservationCoverage(
         finding,
       );
     }
-    if (census.observedCount === 0) {
+    if (census.observedCount === 0 && gaps.actionableUnavailableCount > 0) {
       return errorResult(`depeg observation observed 0 of ${census.eligibleCount} eligible assets`, finding);
     }
     const previous = rows[1] ? parseCensus(asRecord(parseObjectMetadata(rows[1].metadata)?.quality)?.depegObservation) : null;
     if (!previous) return okResult(finding);
     finding.baselineAvailable = true;
-    if (census.unavailableCount > previous.unavailableCount) {
-      const delta = reasonDelta(previous, census);
+    const priorGaps = assessDepegObservationGaps(previous, observedAt);
+    if (gaps.actionableUnavailableCount > priorGaps.actionableUnavailableCount) {
+      const delta = reasonDelta(priorGaps.actionableReasonCounts, gaps.actionableReasonCounts);
       const reasons = Object.entries(delta).map(([name, count]) => `${name}+${count}`).join(",") || "no-reason";
       return degradedResult(
-        `depeg observation cohort shrank: unavailable ${previous.unavailableCount} -> ${census.unavailableCount} ` +
+        `depeg observation cohort shrank: actionable unavailable ${priorGaps.actionableUnavailableCount} -> ${gaps.actionableUnavailableCount} ` +
         `(${reasons})`,
-        { ...finding, unavailableDelta: census.unavailableCount - previous.unavailableCount, reasonDelta: delta },
+        { ...finding, unavailableDelta: census.unavailableCount - previous.unavailableCount,
+          actionableUnavailableDelta: gaps.actionableUnavailableCount - priorGaps.actionableUnavailableCount, reasonDelta: delta },
       );
     }
     return okResult(finding);
@@ -387,7 +368,7 @@ export const PRICING_CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "depeg-observation-coverage",
     label: "Depeg observation coverage",
-    description: "The latest sync-stablecoins run reports a complete depeg observation census whose unavailable cohort did not grow against the previous generation.",
+    description: "The latest sync-stablecoins run reports a depeg observation census whose unacknowledged unavailable cohort did not grow against the previous generation.",
     run: checkDepegObservationCoverage,
   },
 ] as const;

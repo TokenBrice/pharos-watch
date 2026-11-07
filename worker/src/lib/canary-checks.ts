@@ -848,7 +848,7 @@ const CANARY_CHECKS: readonly CanaryCheckDefinition[] = [
   {
     checkId: "depeg-detection-census",
     label: "Depeg detection census",
-    description: "The depeg ledger advances with a completed observation census covering at least 95% of eligible assets in two consecutive runs.",
+    description: "The depeg ledger advances with a completed observation census and unacknowledged gaps at or below 5% of eligible assets in two consecutive runs.",
     run: checkDepegDetectionCensus,
   },
   {

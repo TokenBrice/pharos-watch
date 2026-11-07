@@ -4,6 +4,7 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { STABLECOIN_PRICE_GAP_REVIEWS } from "../stablecoin-publication-coverage";
 import {
   checkDdrEligibleUnsealed,
   checkDepegDetectionCensus,
@@ -142,6 +143,41 @@ describe("depeg canary checks", () => {
       executionStatus: "failed",
       executionFailureReason: "canary-source-unavailable",
     });
+  });
+
+  it.each([
+    ["nominal", true, "primary-unusable", 0, {}, 0],
+    ["unreviewed", false, "primary-unusable", 0, {}, 1],
+    ["reviewed", false, "primary-unusable", 0, {}, 0],
+    ["expired", false, "primary-unusable", 1, {}, 1],
+    ["future", false, "primary-unusable", -1, {}, 1],
+    ["wrong mechanism", true, "supply-unavailable", 0, {}, 1],
+    ["truncated", true, "primary-unusable", 0, { unavailableIdsTruncated: true }, 1],
+    ["dropped", true, "primary-unusable", 0, { unavailableIdsDropped: true }, 1],
+    ["legacy", true, "primary-unusable", 0, { unavailableAssets: undefined }, 1],
+    ["malformed", true, "primary-unusable", 0, { unavailableIdsDropped: "invalid" }, 1],
+    ["incomplete", true, "primary-unusable", 0, { unavailableAssets: [] }, 1],
+    ["closure", false, "primary-unusable", 0, {}, 0],
+    ["reopening wait", false, "primary-unusable", 0, {}, 0],
+    ["reopened", false, "primary-unusable", 0, {}, 1],
+  ] as const)("grades actionable census gaps: %s", async (kind, nominal, reason, reviewClock, overrides, actionable) => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS[0];
+    const reopen = Date.UTC(2026, 10, 8, 23) / 1000;
+    const market = ["closure", "reopening wait", "reopened"].includes(kind);
+    const now = market ? reopen + 1_801
+      : reviewClock > 0 ? review.expiresAt : reviewClock < 0 ? review.reviewedAt - 1 : review.reviewedAt + 60;
+    const evaluatedAt = market ? reopen + (kind === "closure" ? -1 : kind === "reopened" ? 1_800 : 1_799) : now;
+    const id = market ? "audm-mento" : kind === "unreviewed" ? "unreviewed" : review.stablecoinId;
+    const row = censusRow({ started_at: now - 60, census_json: censusJson({ evaluatedAt, eligibleCount: 10,
+      observedCount: 9, unavailableCount: 1, reasonCounts: { [reason]: 1 }, unavailableIdsTruncated: false,
+      unavailableAssets: [{ id, reason, reviewedNominalReference: nominal }], ...overrides }) });
+    const result = await checkDepegDetectionCensus(mockD1([{ match: "pharos:depeg-census-runs",
+      rows: [row, { ...row, started_at: now - 960 }] }]), now);
+    expect(result).toMatchObject({ status: actionable ? "degraded" : "ok", metadata: {
+      unavailableCount: 1, unavailableShare: 0.1, acknowledgedUnavailableCount: 1 - actionable,
+      actionableUnavailableCount: actionable, actionableUnavailableIds: "unavailableAssets" in overrides
+        || "unavailableIdsTruncated" in overrides || "unavailableIdsDropped" in overrides ? null : actionable ? [id] : [],
+    } });
   });
 
   it("projects the census from persisted cron_runs metadata", async () => {

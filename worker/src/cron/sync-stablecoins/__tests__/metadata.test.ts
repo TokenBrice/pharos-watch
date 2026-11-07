@@ -369,6 +369,8 @@ describe("stablecoins pricing metadata", () => {
       unavailableCount: 1,
       belowFloorCount: 1,
       reasonCounts: { "supply-unavailable": 1 },
+      unavailableAssets: [{ id: "gap", reason: "supply-unavailable" as const, reviewedNominalReference: false }],
+      unavailableIdsTruncated: false,
     };
     const assets = (): PeggedAsset[] => ACTIVE_STABLECOINS.map((asset) => ({
       id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
@@ -424,7 +426,16 @@ describe("stablecoins pricing metadata", () => {
       const { guard } = allMissingSizeGuardFixture();
       const quality = { reason: "depeg-observation-incomplete", depegObservation: { ...census, syncStartSec: 1 } };
       guard.metadata.quality = quality;
-      expect(JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget)).quality).toEqual(quality);
+      const metadata = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget));
+      expect(metadata.quality).toEqual(budget === 2_000 ? { ...quality, depegObservation: {
+        ...quality.depegObservation, unavailableAssets: undefined, unavailableIdsDropped: true,
+      } } : quality);
+    });
+
+    it("guards fallback census evidence before scheduler persistence", () => {
+      const metadata = build("fallback", { depegObservation: census, enrichStats: { padding: "x".repeat(70_000) } }).metadata!;
+      expect(new TextEncoder().encode(metadata).byteLength).toBeLessThan(MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES);
+      expect(JSON.parse(metadata)).toMatchObject({ metadataCompactedBySizeGuard: true, quality: { depegObservation: census } });
     });
   });
 
