@@ -190,6 +190,19 @@ export async function fetchAggregateData(
                SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]')
                  FROM json_each(?)
              )`;
+  const prepareNetWindow = (tag: "net-7d" | "net-30d" | "net-90d", windowStart: number) =>
+    db
+      .prepare(
+        `SELECT stablecoin_id, chain_id,
+                  /* pharos:mint-burn-flows:${tag} */
+                  SUM(net_flow_usd) as net_flow_usd,
+                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
+           FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
+           WHERE ${hourlyPairFilter}
+             AND hour_ts >= ? AND hour_ts < ?
+           GROUP BY stablecoin_id, chain_id`,
+      )
+      .bind(trackedPairsJson, windowStart, params.windowEnd);
 
   const [batchResults, [lastBlocks, latestCronSnapshotResult]] = await Promise.all([
     db.batch([
@@ -204,42 +217,9 @@ export async function fetchAggregateData(
             ORDER BY hour_ts ASC`,
         )
         .bind(trackedPairsJson, hourlyScanStart, params.windowEnd),
-      db
-        .prepare(
-          `SELECT stablecoin_id, chain_id,
-                  /* pharos:mint-burn-flows:net-7d */
-                  SUM(net_flow_usd) as net_flow_usd,
-                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
-           FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
-           WHERE ${hourlyPairFilter}
-             AND hour_ts >= ? AND hour_ts < ?
-           GROUP BY stablecoin_id, chain_id`,
-        )
-        .bind(trackedPairsJson, params.window7d, params.windowEnd),
-      db
-        .prepare(
-          `SELECT stablecoin_id, chain_id,
-                  /* pharos:mint-burn-flows:net-30d */
-                  SUM(net_flow_usd) as net_flow_usd,
-                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
-           FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
-           WHERE ${hourlyPairFilter}
-             AND hour_ts >= ? AND hour_ts < ?
-           GROUP BY stablecoin_id, chain_id`,
-        )
-        .bind(trackedPairsJson, params.window30d, params.windowEnd),
-      db
-        .prepare(
-          `SELECT stablecoin_id, chain_id,
-                  /* pharos:mint-burn-flows:net-90d */
-                  SUM(net_flow_usd) as net_flow_usd,
-                  ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
-           FROM mint_burn_hourly INDEXED BY idx_mbh_chain_coin_hour
-           WHERE ${hourlyPairFilter}
-             AND hour_ts >= ? AND hour_ts < ?
-           GROUP BY stablecoin_id, chain_id`,
-        )
-        .bind(trackedPairsJson, params.window90d, params.windowEnd),
+      prepareNetWindow("net-7d", params.window7d),
+      prepareNetWindow("net-30d", params.window30d),
+      prepareNetWindow("net-90d", params.window90d),
       db
         .prepare(
           `SELECT stablecoin_id, chain_id,
