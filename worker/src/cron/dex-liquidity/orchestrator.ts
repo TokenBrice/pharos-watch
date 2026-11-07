@@ -287,6 +287,7 @@ export async function stageDexLiquidityScoring(
       uniV3CandidateCarryForward: scoringSourceState.uniV3CandidateCarryForward ?? [],
       uniswapV4CandidateCarryForward: scoringSourceState.uniswapV4CandidateCarryForward ?? [],
       subgraphFailures: scoringSourceState.subgraphFailures ?? [],
+      directApiSourceSummary: scoringSourceState.directApiSourceSummary,
       fallbackSignals: scoringSourceState.fallbackSignals,
       poolRejections: poolState.poolRejections,
       poolRejectionMateriality: {

@@ -71,7 +71,7 @@ describe("fetchMeteoraPools", () => {
     expect(result.degraded).toBe(false);
   });
 
-  it("marks a bounded head as a warning when more pages remain", async () => {
+  it("reports bounded pagination when more pages remain", async () => {
     const page = (currentPage: number) => ({
       body: {
         pages: 127,
@@ -88,7 +88,8 @@ describe("fetchMeteoraPools", () => {
 
     expect(result.pools).toHaveLength(1500);
     expect(result.errors).toEqual([]);
-    expect(result.warnings).toContain("bounded sample: stopped at page 3 with more pages advertised");
+    expect(result.warnings).toEqual([]);
+    expect(result.pagination).toEqual({ state: "partial", headRefreshed: true, pagesFetched: 3, cursor: "4", cycleCompleted: false });
   });
 
   it("returns a degraded result when Meteora returns invalid JSON", async () => {
@@ -105,10 +106,13 @@ describe("fetchMeteoraPools", () => {
     expect(result.errors[0]).toContain("invalid JSON");
   });
 
-  it("returns a degraded result when Meteora returns a null root", async () => {
+  it.each([
+    ["null", "non-object JSON root"],
+    [JSON.stringify({ pages: 1, current_page: 1, data: {} }), "malformed body"],
+  ])("rejects malformed Meteora body %s", async (body, error) => {
     mockFetch([{
       match: "api.meteora.ag",
-      outcomes: [{ body: "null" }],
+      outcomes: [{ body }],
     }], { requireMatch: true });
 
     const result = await fetchMeteoraPools();
@@ -116,7 +120,8 @@ describe("fetchMeteoraPools", () => {
     expect(result.pools).toHaveLength(0);
     expect(result.ok).toBe(false);
     expect(result.degraded).toBe(true);
-    expect(result.errors[0]).toContain("non-object JSON root");
+    expect(result.errors[0]).toContain(error);
+    expect(result.pagination?.cycleCompleted).toBe(false);
   });
 
   it("skips malformed Meteora rows while preserving valid rows from the same page", async () => {

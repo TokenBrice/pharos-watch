@@ -24,7 +24,7 @@ export function getCronMetadataBudgetBytes(job?: string): number {
 const MAX_DIAGNOSTIC_STRING_CHARS = 500;
 const MAX_NESTED_SCALARS = 24;
 // Audited readers: cron-output, cron-health, freshness oracle, status supplements,
-// public-health reads, cron-metadata-summary and the measured-execution ledger.
+// public-health reads, cron-metadata-summary, operator cron detail and the measured-execution ledger.
 // Scalars remain top-level too. These collections must NEVER turn into counts.
 const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEntries([
   "reason", "reasons", "degradedReason", "degradedReasons", "quality", "outputPublishedAt",
@@ -37,7 +37,7 @@ const CONSUMER_METADATA_KEYS: Readonly<Record<string, boolean>> = Object.fromEnt
   "sourceDistribution", "confidenceDistribution", "sourceDepthDistribution", "supplyCoverage", "priceHealth",
   "priceSourceHealth", "onchainPartition", "probePlanes", "internalExternalDiscrepancy", "freshnessDiagnostics",
   "activePriceCoverage", "activePublicationCoverage", "missingActiveState", "coverageOutcomeCounts", "persistence",
-  "publicationStats", "apiErrorConfigs", "priceRefresh",
+  "publicationStats", "apiErrorConfigs", "priceRefresh", "subgraphFailures", "directApiSourceSummary",
   "adapterTelemetryProgress", "adapterFailureBudget", "cohortGrading",
   "publicationAbortCause", "publicationPhaseElapsedMs", "publicationSubphaseElapsedMs", "publicMaterialization", "publicationPhaseTimingBasis",
   "executorMode", "executorColo", "executorColoSource", "cfPlacement", "executorWorkerVersion", "executionGeneration",
