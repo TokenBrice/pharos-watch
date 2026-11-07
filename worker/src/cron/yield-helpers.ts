@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
+import { INTENTIONAL_GAP_REASONS } from "../lib/yield-config/yield-config-rate-sources";
 
 /**
  * Yield Pipeline — Pure Computation Functions
@@ -342,7 +343,7 @@ export function matchAllDlPools(
   // An underlying address proves the deposit asset, not receipt ownership. Require
   // the tracked instrument's own symbol as well; differently named tranches need
   // a curated pin or their separately typed supplemental lane.
-  if (!nativeId && found.length === 0 && !options?.skipBaseSymbolFallback) {
+  if (!nativeId && found.length === 0 && !options?.skipBaseSymbolFallback && INTENTIONAL_GAP_REASONS[stablecoinId] == null) {
     const sym = normalizeDexSymbol(symbol);
     if (sym.length >= 4) {
       const baseCandidates = dlPools.filter(

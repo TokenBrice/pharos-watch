@@ -754,7 +754,7 @@ export function identifyCoverageGaps(
   const venueRiskConfigMissingPools: CoverageGapPool[] = [];
 
   for (const pool of dlPools) {
-    if (isBlockedYieldOpportunitySource(pool)) continue;
+    if (isBlockedYieldOpportunitySource({ project: pool.project, pool: pool.pool })) continue;
     const protocolCategory = protocolCategoriesByProject.get(normalizeProtocolProjectKey(pool.project)) ?? null;
     const poolEntry = buildCoverageGapPool(pool, protocolCategory);
     const coveredByProtocolOrExactPool = supportedProtocols.has(pool.project) || coveredPools.has(pool.pool);
