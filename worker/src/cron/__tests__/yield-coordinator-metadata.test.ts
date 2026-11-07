@@ -3,7 +3,7 @@ import { COMPARISON_ANCHOR_STALE_THRESHOLD_MS } from "../../lib/yield-ranking-he
 import { buildHardcodedUsdBenchmark } from "../yield-sync/benchmarks";
 import { buildComparisonAnchorFreshnessMeta, buildYieldDegradationReasons, buildYieldSafetySnapshotMeta, buildYieldSyncMetadata } from "../yield-sync/coordinator";
 import type { EvaluatedYieldSource } from "../yield-sync/evaluation";
-import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-config-lending-protocols";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
 import type { YieldEnvelopeRejection } from "../yield-sync/types";
 import { makeReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 

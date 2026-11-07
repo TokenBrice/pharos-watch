@@ -9,8 +9,8 @@ import {
   isAutoLendingCollisionBlockedForStablecoin,
   LENDING_PROTOCOL_ALLOWLIST,
   LENDING_PROTOCOL_LABELS,
-  YIELD_OPPORTUNITY_EXCLUSIONS,
 } from "../../lib/yield-config/yield-config-lending-protocols";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
 import {
   ON_CHAIN_RATE_CONFIGS,
   PRICE_DERIVED_FALLBACK_IDS,

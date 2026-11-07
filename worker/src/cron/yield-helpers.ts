@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-config-lending-protocols";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../lib/yield-config/yield-opportunity-exclusions";
 
 /**
  * Yield Pipeline — Pure Computation Functions

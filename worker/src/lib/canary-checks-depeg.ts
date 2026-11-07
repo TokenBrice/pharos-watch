@@ -368,7 +368,7 @@ export async function checkDdrEligibleUnsealed(db: D1Database, observedAt: numbe
   }
 }
 
-export const DEPEG_BLIND_EVENT_REVIEW_MAX_AGE_SEC = 14 * 86_400;
+const DEPEG_BLIND_EVENT_REVIEW_MAX_AGE_SEC = 14 * 86_400;
 const reviewClockSchema = z.number().int().positive().max(8_640_000_000_000);
 export const DepegBlindEventReviewSchema = z.object({
   stablecoinId: z.string().refine((id) => ACTIVE_IDS.has(id)),

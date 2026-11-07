@@ -87,7 +87,7 @@ import {
   parseYieldHistoryWriterPause,
 } from "../../lib/yield-history-cleanup";
 import { ON_CHAIN_RATE_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
-import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-config-lending-protocols";
+import { YIELD_OPPORTUNITY_EXCLUSIONS } from "../../lib/yield-config/yield-opportunity-exclusions";
 import {
   createYieldProgressReporter,
 } from "../yield-progress";
