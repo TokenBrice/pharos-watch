@@ -91,7 +91,7 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           <CountTile label="Fresh" value={health.freshCoins} tone="text-state-positive" />
           <CountTile label="Error" value={health.errorCoins} tone="text-state-danger" />
           <CountTile label="Corrupt" value={health.corruptCoins} tone="text-state-danger" />
-          <CountTile label="Degraded" value={health.degradedCoins} tone="text-state-warn" />
+          <CountTile label="Degraded" value={health.healthDegradedCoins ?? health.degradedCoins} tone="text-state-warn" />
           <CountTile label="Stale" value={health.staleCoins} tone="text-state-warn" />
           <CountTile label="Missing" value={health.missingCoins} tone="text-state-danger" />
           <CountTile label="Deferred" value={health.deferredCoins} tone="text-state-warn" />

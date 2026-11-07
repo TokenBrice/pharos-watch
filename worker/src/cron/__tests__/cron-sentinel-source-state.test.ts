@@ -11,6 +11,21 @@ const evaluation = (source: CronSentinelRuleSource, status: CronResult["status"]
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(fixtures.closeAll);
 describe("cron sentinel persisted source state", () => {
+  it("retains reserve census identities with bounded arrays across modes", async () => {
+    const { db } = fixtures.open();
+    const added = Array.from({ length: 41 }, (_, i) => `slice:${i}`);
+    const removed = ["sky-makercore:module:stablecoins-residual"];
+    await runCronSentinelSources(db, "reserve-post-sync", [{ source: "reserve-post-sync", run: async () => ({
+      status: "ok", metadata: JSON.stringify({ compositionCensus: { findings: [{
+        stablecoinId: "usds-sky", added, removed, shareDriftPct: 0.01,
+      }] } }),
+    }) }], 100);
+    const result = await runCronSentinelSources(db, "status", [], 200);
+    expect(JSON.parse(result.metadata!).sources["reserve-post-sync"].metadata.compositionCensus.findings).toEqual([{
+      stablecoinId: "usds-sky", added: [...added.slice(0, 40), "[1 more]"], removed, shareDriftPct: 0.01,
+    }]);
+  });
+
   it("bootstraps the last evaluated source, survives other modes, and clears on fresh recovery", async () => {
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare("INSERT INTO cron_runs (job, started_at, duration_ms, status, metadata) VALUES ('cron-sentinel', ?, 1, ?, ?)");
