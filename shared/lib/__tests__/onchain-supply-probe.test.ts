@@ -206,6 +206,7 @@ describe("curated on-chain supply paths", () => {
     const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
     expect(prefersOnChainSupplyMcap(meta)).toBe(true);
     expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("mxne-real-mxn")!)).toBe(true);
+    expect(prefersOnChainSupplyMcap(TRACKED_META_BY_ID.get("jtrsy-anemoy")!)).toBe(true);
     expect(selectSingleOnchainSupplyProbeContract(meta)?.chain).toBe("ethereum");
   });
 
