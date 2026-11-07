@@ -319,7 +319,7 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
 describe("computeDexLiquidityDriftSummary cohort drops", () => {
   it.each([
     [0, "2026-11-08", 1, 1, true], [0, "2026-11-07", 1, 1, false],
-    [0, "2026-11-21T20:31:00Z", 1, 1, false], [0, "2026-11-08", 1.01, 1, false], [0, "2026-11-08", 1, 0.9, false],
+    [0, "2026-11-21T20:31:00Z", 1, 1, false], [0, "2026-11-08", 1.01, 1, false], [0, "2026-11-08", 1, 0.9, true], [1, "2026-11-08", 1, 0.9, false],
     [0, "2026-11-08", 1, 1.019, true], [0, "2026-11-08", 1, 1.021, false],
     [1, "2026-11-08", 1, 1, true],
   ] as const)("bounds chain review %s at %s (%s, %s)", (index, date, baselineScale, observedScale, accepted) => {

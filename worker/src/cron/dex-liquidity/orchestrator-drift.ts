@@ -423,7 +423,10 @@ export function computeDexLiquidityDriftSummary(params: {
         && entry.baselineValue === candidate?.baselineValue
         && (entry.retiredStablecoinId == null || FROZEN_IDS.has(entry.retiredStablecoinId))
         && nowSec >= Date.parse(entry.reviewedAt) / 1000 && nowSec < Date.parse(entry.expiresAt) / 1000
-        && Math.abs(currentTvl - entry.observedValue) <= entry.observedValue * 0.02);
+        // Archived liquidity of a frozen coin only winds down; growth past the band reopens it.
+        && (entry.retiredStablecoinId != null
+          ? currentTvl <= entry.observedValue * 1.02
+          : Math.abs(currentTvl - entry.observedValue) <= entry.observedValue * 0.02));
       if (review) {
         // Keep the held baseline diagnostic so expiry or a changed level reopens the finding.
         qualityDriftAccepted.push({ ...review, evidenceUrls: [...review.evidenceUrls] });
