@@ -269,7 +269,7 @@ function setChainCurrent(candidate: Candidate, value: number | null): void {
   const weights = candidate.labels.map((label) => normalizeChainSupplyValue(rows[label].circulatingPrevDay) ?? 0);
   const weightTotal = weights.reduce((sum, weight) => sum + weight, 0);
   candidate.labels.forEach((label, index) => {
-    rows[label].current = value == null ? null : weightTotal > 0 ? value * weights[index] / weightTotal : index === 0 ? value : 0;
+    rows[label].current = value == null ? null : weightTotal > 0 ? value * (weights[index] / weightTotal) : index === 0 ? value : 0;
   });
 }
 type ChainHistoryBucket = "circulatingPrevDay" | "circulatingPrevWeek" | "circulatingPrevMonth";
@@ -307,7 +307,8 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
   const { assetId, chainId } = candidate.state;
   if (!CHAIN_DROPOUT_ONCHAIN_ROSTER.some((entry) => entry.assetId === assetId && entry.chainId === chainId)) return null;
   if (!chainId || !CHAIN_META[chainId]) return null;
-  const contracts = ACTIVE_META_BY_ID.get(assetId)?.contracts?.filter((contract) => contract.chain === chainId) ?? [];
+  const meta = ACTIVE_META_BY_ID.get(assetId);
+  const contracts = meta?.contracts?.filter((contract) => contract.chain === chainId) ?? [];
   const config = chainRpcs.get(chainId);
   // Reviewed Pharos state-only routes are admitted solely for this roster's supply reads.
   const endpoints = assetId === "rwausdi-multipli" && chainId === "pharos"
@@ -315,6 +316,9 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
       && endpoint.logsHistory === "none" && !endpoint.routingDisabled) ?? []
     : registryRpcEndpoints(config);
   const urls = endpoints.filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
+  const supplyFallback = meta && selectCuratedAggregateOnchainSupplyProbeContracts(meta)
+    ?.find(({ config: profile }) => profile.chain === chainId)?.config.fallbackRpcUrl;
+  const fallbackUrl = urls[1] ?? (supplyFallback !== urls[0] ? supplyFallback : undefined);
   const priceUsd = getPegReferencePriceUsd(assetId, candidate.pegKey);
   if (contracts.length !== 1 || urls.length === 0 || priceUsd == null) return null;
   const contract = contracts[0];
@@ -325,8 +329,8 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
       ? AbortSignal.any([parentSignal, AbortSignal.timeout(CHAIN_DROPOUT_POLICY.solanaReadTimeoutMs)])
       : parentSignal;
     const raw = chainId === "solana"
-      ? await fetchSolanaTokenSupply(contract.address, readSignal, undefined, urls[0], urls[1])
-      : await fetchErc20TotalSupply({ kind: "onchain-evm", chain: chainId, rpcMode: "public-rpc" }, contract.address, readSignal, undefined, urls[0], urls[1]);
+      ? await fetchSolanaTokenSupply(contract.address, readSignal, undefined, urls[0], fallbackUrl)
+      : await fetchErc20TotalSupply({ kind: "onchain-evm", chain: chainId, rpcMode: "public-rpc" }, contract.address, readSignal, undefined, urls[0], fallbackUrl);
     throwIfAborted(readSignal);
     if (raw == null) return null;
     const usd = Number(raw) / 10 ** contract.decimals * priceUsd;
@@ -698,7 +702,7 @@ export async function guardChainDropouts(input: {
     const material = deficit > 0 && deficit >= CHAIN_DROPOUT_POLICY.quarantineDeficitRatio * (aggregate + deficit);
     // Only immaterial chain-only holds can accept a later low daily observation. Assess materiality
     // before any release so same-provider history can never release a quarantined aggregate.
-    if (!material) {
+    if (!material && !fillDefaultAssets.has(asset)) {
       for (const candidate of unrepaired) {
         const point = candidate.state.chartPoint;
         const firstFlaggedAt = candidate.state.quarantinedSince!;
@@ -806,7 +810,7 @@ export async function guardChainDropouts(input: {
     };
   }
   // The same fill price rescales every list bucket, including history. A sub-$1M chain or an
-  // already-rescaled baseline cannot detect that collapse; only complete native evidence can admit it.
+  // already-rescaled baseline cannot detect that collapse; admit only native evidence or bounded guard carry.
   for (const asset of fillDefaultAssets) {
     asset.circulatingPrevDay = null;
     asset.circulatingPrevWeek = null;
@@ -823,6 +827,25 @@ export async function guardChainDropouts(input: {
         && chain.repairedCurrentUsd != null && chain.repairedCurrentUsd === normalizeChainSupplyValue(row.current)))
       && Math.abs(rows.reduce((sum, [, row]) => sum + normalizeChainSupplyValue(row.current)!, 0) - getCirculatingRawOrNull(asset)!) <= 0.01);
     if (nativeComplete) continue;
+    // A reviewed census may lose a small leg; publish only its native remainder, never the rescaled list residue.
+    const affected = candidates.filter((candidate) => candidate.asset === asset);
+    const native = affected.filter((candidate) => candidate.evidence.resolution === "onchain-total-supply");
+    const missing = affected.filter((candidate) => !candidate.resolved);
+    const meta = ACTIVE_META_BY_ID.get(String(asset.id));
+    const selected = meta && selectCuratedAggregateOnchainSupplyProbeContracts(meta);
+    const nativeTotal = native.reduce((sum, candidate) => sum + candidate.evidence.repairedCurrentUsd!, 0);
+    const missingBaseline = missing.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd, 0);
+    if (asset.supplyChainGuard?.status === "chains-unavailable" && asset.supplyChainGuard.concurrentGainUsd == null
+      && selected?.length === affected.length && rows.length === affected.length
+      && selected.every(({ config }) => affected.some((candidate) => candidate.state.chainId === config.chain))
+      && missing.length > 0 && native.length + missing.length === affected.length && nativeTotal > 0
+      && missingBaseline <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio * (nativeTotal + missingBaseline)) {
+      asset.circulating = { [affected[0].pegKey]: nativeTotal };
+      asset.supplyObservedAt = Math.min(...native.map((candidate) => candidate.evidence.observedAt!));
+      asset.supplyChainGuard.partialCoverage = true;
+      asset.supplyChainGuard.quarantinedSince = Math.min(...missing.map((candidate) => candidate.firstFlaggedAt));
+      continue;
+    }
     asset.circulating = {};
     for (const [, row] of rows) row.current = null;
     delete asset.supplyRestored;
