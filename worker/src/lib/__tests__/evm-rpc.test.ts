@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildChainRpcs, registerRpcAuth, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
+import { word, encodeBytes, encodeAggregate3Return } from "../../test-helpers/__shared/evm-multicall.test-support";
 import { FetchRequestNotStartedError } from "../abort";
 
 const fetchWithRetryMock = vi.fn();
@@ -65,30 +66,6 @@ function rpcResponse(body: unknown): Response {
 
 function blockResult(number: number, timestamp: string) {
   return { number: `0x${number.toString(16)}`, timestamp, hash: `0x${"a".repeat(64)}` };
-}
-
-function word(value: bigint | number): string {
-  const bigintValue = typeof value === "bigint" ? value : BigInt(value);
-  return bigintValue.toString(16).padStart(64, "0");
-}
-
-function encodeBytes(value: string): string {
-  const body = value.startsWith("0x") ? value.slice(2) : value;
-  const paddedByteLength = Math.ceil(body.length / 2 / 32) * 32;
-  return `${word(body.length / 2)}${body.padEnd(paddedByteLength * 2, "0")}`;
-}
-
-function encodeAggregate3Return(results: Array<{ success: boolean; returnData: string }>): `0x${string}` {
-  const encodedResults = results.map(
-    (result) => `${word(result.success ? 1 : 0)}${word(64)}${encodeBytes(result.returnData)}`,
-  );
-  let nextOffset = results.length * 32;
-  const offsets = encodedResults.map((encodedResult) => {
-    const offset = word(nextOffset);
-    nextOffset += encodedResult.length / 2;
-    return offset;
-  });
-  return `0x${word(32)}${word(results.length)}${offsets.join("")}${encodedResults.join("")}` as `0x${string}`;
 }
 
 describe("evm-rpc helpers", () => {
