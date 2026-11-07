@@ -44,7 +44,14 @@ import { CHAIN_DROPOUT_SEED, CHAIN_DROPOUT_SEED_VALID_UNTIL } from "../chain-dro
 
 const NOW = Date.parse("2026-10-09T06:00:00Z") / 1000;
 const DAY = 86400;
+const AFTER_SEED = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
 const xlayerContract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
+
+const XLAYER_SCALE = 10n ** BigInt(xlayerContract.decimals!);
+
+function leg(current: number, circulatingPrevDay = current) {
+  return { current, circulatingPrevDay };
+}
 
 function usdg(): PeggedAsset {
   return {
@@ -54,12 +61,12 @@ function usdg(): PeggedAsset {
     circulatingPrevDay: { peggedUSD: 3_134_000_000 }, circulatingPrevWeek: { peggedUSD: 3_000_000_000 }, circulatingPrevMonth: { peggedUSD: 2_900_000_000 },
     chains: ["X Layer", "Ink", "Hyperliquid L1", "Ethereum", "Robinhood", "Solana"],
     chainCirculating: {
-      "X Layer": { current: 0, circulatingPrevDay: 1_427_900_000 },
-      Ink: { current: 0, circulatingPrevDay: 63_600_000 },
-      "Hyperliquid L1": { current: 0, circulatingPrevDay: 1_200_000 },
-      Ethereum: { current: 321_300_000, circulatingPrevDay: 321_300_000 },
-      Robinhood: { current: 696_500_000, circulatingPrevDay: 696_500_000 },
-      Solana: { current: 627_500_000, circulatingPrevDay: 627_500_000 },
+      "X Layer": leg(0, 1_427_900_000),
+      Ink: leg(0, 63_600_000),
+      "Hyperliquid L1": leg(0, 1_200_000),
+      Ethereum: leg(321_300_000),
+      Robinhood: leg(696_500_000),
+      Solana: leg(627_500_000),
     },
   };
 }
@@ -97,6 +104,36 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("chain dropout guard", () => {
+  it("preserves MOVEUSD's exact native amount without a market price", async () => {
+    const asset: PeggedAsset = { ...usdg(), id: "moveusd-cfx", price: null,
+      priceListFillDefault: { value: 0.000055, upstreamSource: null }, circulating: { peggedUSD: 6345.816067559877 },
+      chainCirculating: { Solana: leg(6345.816067559877, 6251.530916353546) } };
+    mocks.solana.mockResolvedValue(114853902359254n);
+    await runGuard(asset, { chainRpcs: buildChainRpcs("test-placeholder"), state: savedState(asset.id,
+      { chainId: "solana", chainLabel: "Solana", baselineUsd: 113931826.59636584, baselineObservedAt: NOW - DAY, quarantinedSince: NOW - DAY }) });
+    expect(asset).toMatchObject({ circulating: { peggedUSD: 114853902.359254 },
+      chainCirculating: { Solana: { current: 114853902.359254 } }, supplyChainGuard: { status: "repaired" } });
+  });
+
+  it.each(["small", "low-chart", "large", "ambiguous", "chart"])("keeps only permitted native remainder after a fill-default read failure (%s)", async (mode) => {
+    const amounts = { ethereum: 150_000_000, base: 145_000_000, monad: 100_000_000, arbitrum: 75_000_000, pharos: 3_000_000, xlayer: 4_000_000, robinhood: mode === "large" ? 50_000_000 : 5_000_000 };
+    const asset: PeggedAsset = { ...usdg(), id: "rwausdi-multipli", priceListFillDefault: { value: 0.000055, upstreamSource: null },
+      circulating: { peggedUSD: 700 }, chainCirculating: Object.fromEntries(Object.keys(amounts).map((chain) => [CHAIN_META[chain].name, { current: 100 }])) };
+    const state = savedState(asset.id, ...Object.entries(amounts).map(([chainId, baselineUsd]) => ({ chainId,
+      chainLabel: CHAIN_META[chainId].name, baselineUsd, baselineObservedAt: NOW - 8 * DAY, quarantinedSince: NOW - 8 * DAY,
+      ...(mode === "ambiguous" ? { ambiguousSince: NOW - DAY, heldTotalUsd: null } : {}) })));
+    mocks.onchain.mockImplementation(async ({ chain }: { chain: keyof typeof amounts }) => chain === "robinhood" ? null : BigInt(amounts[chain]) * 10n ** 6n);
+    if (mode === "chart") mocks.chart.mockResolvedValue(chartPoint(5_000_000, NOW));
+    if (mode === "low-chart") mocks.chart.mockResolvedValue(chartPoint(100, NOW));
+    const result = await runGuard(asset, { state });
+    const partial = mode === "small" || mode === "low-chart";
+    expect(getCirculatingRawOrNull(asset)).toBe(partial ? 477_000_000 : null);
+    expect(result.unavailableAssetIds).toEqual(partial ? [] : [asset.id]);
+    if (partial) expect(asset).toMatchObject({ supplyObservedAt: NOW,
+      supplyChainGuard: { status: "chains-unavailable", partialCoverage: true, quarantinedSince: NOW - 8 * DAY },
+      chainCirculating: { "Robinhood Chain": { current: null }, Ethereum: { current: 150_000_000 } } });
+  });
+
   it.each([
     ["fusd-finchain", ["Ethereum"], 950_000, false, false, false],
     ["fusd-finchain", ["Ethereum", "Avalanche"], 950_000, false, false, false],
@@ -110,7 +147,7 @@ describe("chain dropout guard", () => {
     const asset: PeggedAsset = {
       ...usdg(), id, priceListFillDefault: { value: 0.000055, upstreamSource: null },
       circulating: { peggedUSD: 50 * labels.length },
-      chainCirculating: Object.fromEntries(labels.map((label) => [label, { current: 50, circulatingPrevDay: baseline }])),
+      chainCirculating: Object.fromEntries(labels.map((label) => [label, leg(50, baseline)])),
     };
     const incoming = structuredClone(asset);
     if (native) mocks.solana.mockResolvedValue(114_000_000n * 10n ** 6n);
@@ -195,7 +232,7 @@ describe("chain dropout guard", () => {
   it.each([false, true])("requires rwaUSDi's healthy small legs in its full native repair (missing: %s)", async (missing) => {
     const amounts = { ethereum: 150_000_000, base: 145_000_000, monad: 100_000_000, arbitrum: 75_000_000, pharos: 3_000_000, xlayer: 4_000_000, robinhood: 5_000_000 };
     const asset: PeggedAsset = { ...usdg(), id: "rwausdi-multipli", circulating: { peggedUSD: 700 },
-      chainCirculating: Object.fromEntries(Object.keys(amounts).map((chain) => [CHAIN_META[chain].name, { current: 100, circulatingPrevDay: 200_000 }])) };
+      chainCirculating: Object.fromEntries(Object.keys(amounts).map((chain) => [CHAIN_META[chain].name, leg(100, 200_000)])) };
     const state = savedState(asset.id, { chainId: "ethereum", chainLabel: "Ethereum", baselineUsd: 150_000_000,
       baselineObservedAt: NOW - DAY, quarantinedSince: NOW - DAY, ambiguousSince: NOW - DAY, heldTotalUsd: 479_000_000 });
     const chainCirculating = Object.fromEntries(Object.entries(amounts).filter(([chain]) => !missing || chain !== "robinhood")
@@ -304,7 +341,7 @@ describe("chain dropout guard", () => {
       circulatingPrevWeek: { peggedUSD: 1_998_000_000 },
       circulatingPrevMonth: { peggedUSD: 1_989_000_000 },
       chains: ["Ethereum"],
-      chainCirculating: { Ethereum: { current: 2_007_537_545.52, circulatingPrevDay: 2_007_537_545.52 } },
+      chainCirculating: { Ethereum: leg(2_007_537_545.52) },
     };
     const state: ChainDropoutState = savedState("buidl-blackrock", { chainLabel: "Solana", chainId: "solana", baselineUsd: 107_427_733.81, baselineObservedAt: NOW - DAY, quarantinedSince: null });
 
@@ -403,7 +440,7 @@ describe("chain dropout guard", () => {
   });
 
   it.each([false, true])("keeps carried history only while its chain bucket equals the baseline (aged day: %s)", async (aged) => {
-    const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+    const now = AFTER_SEED;
     const state: ChainDropoutState = { version: 1, pairs: {} };
     if (aged) state.pairs[JSON.stringify(["usdg-paxos", "xlayer"])] = {
       assetId: "usdg-paxos", chainLabel: "X Layer", chainId: "xlayer",
@@ -417,7 +454,7 @@ describe("chain dropout guard", () => {
       circulatingPrevMonth: { peggedUSD: 1_000_000_000 },
       chains: ["Ethereum", "X Layer"],
       chainCirculating: {
-        Ethereum: { current: 900_000_000, circulatingPrevDay: 900_000_000 },
+        Ethereum: leg(900_000_000),
         "X Layer": {
           current: 0,
           circulatingPrevDay: aged ? 0 : 100_000_000,
@@ -441,8 +478,8 @@ describe("chain dropout guard", () => {
     const initial: PeggedAsset = {
       ...usdg(), id: "usdc-circle", circulating: { peggedUSD: 20_000_000 },
       chainCirculating: {
-        Ethereum: { current: 20_000_000, circulatingPrevDay: 20_000_000 },
-        Sonic: { current: 0, circulatingPrevDay: 80_000_000 },
+        Ethereum: leg(20_000_000),
+        Sonic: leg(0, 80_000_000),
       },
     };
     // Pin the vetted fixture baseline; the incident seed has a different
@@ -452,7 +489,7 @@ describe("chain dropout guard", () => {
     expect(getCirculatingRawOrNull(initial)).toBe(100_000_000);
     const omitted = (): PeggedAsset => ({
       ...usdg(), id: "usdc-circle", circulating: { peggedUSD: emptyMap ? 0 : 20_000_000 },
-      chainCirculating: emptyMap ? {} : { Ethereum: { current: 20_000_000, circulatingPrevDay: 20_000_000 } },
+      chainCirculating: emptyMap ? {} : { Ethereum: leg(20_000_000) },
     });
     const next = omitted();
     const second = await runGuard(next, { now: NOW + 900, state: first.state });
@@ -483,12 +520,12 @@ describe("chain dropout guard", () => {
     const hyperevmKey = JSON.stringify(["usdg-paxos", "hyperevm"]);
     // frxUSD-shaped: a persisted ambiguous hold on an omitted chain with no recovered observation.
     function setup(baselineUsd: number, quarantinedAgoSec: number) {
-      const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+      const now = AFTER_SEED;
       const quarantinedSince = now - quarantinedAgoSec;
       const state: ChainDropoutState = savedState("usdg-paxos", { chainLabel: "HyperEVM", chainId: "hyperevm", baselineUsd, baselineObservedAt: quarantinedSince - 5 * DAY, quarantinedSince, ambiguousSince: quarantinedSince, heldTotalUsd: 95_000_000 + baselineUsd });
       const asset: PeggedAsset = {
         ...usdg(), supplyObservedAt: now - 600, circulating: { peggedUSD: 95_000_000 },
-        chains: ["Ethereum"], chainCirculating: { Ethereum: { current: 95_000_000, circulatingPrevDay: 95_000_000 } },
+        chains: ["Ethereum"], chainCirculating: { Ethereum: leg(95_000_000) },
       };
       return { now, quarantinedSince, state, asset };
     }
@@ -539,7 +576,7 @@ describe("chain dropout guard", () => {
     it("leaves full coverage unchanged", async () => {
       const asset: PeggedAsset = {
         ...usdg(), circulating: { peggedUSD: 95_000_000 }, supplyObservedAt: NOW - 600,
-        chains: ["Ethereum"], chainCirculating: { Ethereum: { current: 95_000_000, circulatingPrevDay: 95_000_000 } },
+        chains: ["Ethereum"], chainCirculating: { Ethereum: leg(95_000_000) },
       };
       await runGuard(asset);
       expect(asset.supplyChainGuard).toBeUndefined();
@@ -582,7 +619,7 @@ describe("chain dropout guard", () => {
   });
 
   it("publishes the native amount, not the disproven list zero, when native supply corroborates a low-but-positive collapse", async () => {
-    mocks.onchain.mockResolvedValue(40_000_000n * 10n ** BigInt(xlayerContract.decimals!));
+    mocks.onchain.mockResolvedValue(40_000_000n * XLAYER_SCALE);
     const asset = usdgXlayer();
     asset.supplyObservedAt = NOW - 900;
     const before = getCirculatingRawOrNull(asset)!;
@@ -611,7 +648,7 @@ describe("chain dropout guard", () => {
       circulating: { peggedUSD: 46_000_000 + (listCurrent ?? 0) }, supplyObservedAt: now - 900,
       chains: ["Ethereum", ...(listCurrent == null ? [] : ["Solana"])],
       chainCirculating: {
-        Ethereum: { current: 46_000_000, circulatingPrevDay: 46_000_000 },
+        Ethereum: leg(46_000_000),
         ...(listCurrent == null ? {} : { Solana: { current: listCurrent } }),
       },
     };
@@ -735,15 +772,15 @@ describe("chain dropout guard", () => {
     ["native zero", 0, 0, 25_000_000],
     ["native below list", 30_000_000, 10_000_000, 35_000_000],
   ])("keeps a %s confirmation despite a concurrent healthy-chain gain", async (_case, listUsd, nativeUsd, expectedTotal) => {
-    const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
-    mocks.onchain.mockResolvedValue(BigInt(nativeUsd) * 10n ** BigInt(xlayerContract.decimals!));
+    const now = AFTER_SEED;
+    mocks.onchain.mockResolvedValue(BigInt(nativeUsd) * XLAYER_SCALE);
     const state: ChainDropoutState = savedState("usdg-paxos", { chainLabel: "X Layer", chainId: "xlayer", baselineUsd: 100_000_000, baselineObservedAt: now - 900, quarantinedSince: null }, { chainLabel: "Ethereum", chainId: "ethereum", baselineUsd: 20_000_000, baselineObservedAt: now - 900, quarantinedSince: null });
     const asset: PeggedAsset = {
       ...usdg(),
       circulating: { peggedUSD: 25_000_000 + listUsd },
       chainCirculating: {
-        Ethereum: { current: 25_000_000, circulatingPrevDay: 20_000_000 },
-        "X Layer": { current: listUsd, circulatingPrevDay: 100_000_000 },
+        Ethereum: leg(25_000_000, 20_000_000),
+        "X Layer": leg(listUsd, 100_000_000),
       },
     };
     const result = await runGuard(asset, { now, state });
@@ -755,14 +792,14 @@ describe("chain dropout guard", () => {
   });
 
   it("publishes unavailable, not a partial held total, when an ambiguous asset has a chain with no reference or current", async () => {
-    const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+    const now = AFTER_SEED;
     const state: ChainDropoutState = savedState("usdg-paxos", { chainLabel: "X Layer", chainId: "xlayer", baselineUsd: 100_000_000, baselineObservedAt: now - 900, quarantinedSince: null }, { chainLabel: "Ethereum", chainId: "ethereum", baselineUsd: 20_000_000, baselineObservedAt: now - 900, quarantinedSince: null });
     const asset: PeggedAsset = {
       ...usdg(),
       circulating: { peggedUSD: 25_000_000 },
       chainCirculating: {
-        Ethereum: { current: 25_000_000, circulatingPrevDay: 20_000_000 },
-        "X Layer": { current: 0, circulatingPrevDay: 100_000_000 },
+        Ethereum: leg(25_000_000, 20_000_000),
+        "X Layer": leg(0, 100_000_000),
         Ink: { current: null },
       },
     };
@@ -774,8 +811,8 @@ describe("chain dropout guard", () => {
   });
 
   it("makes a persisted ambiguous hold unknown, never a clamped zero, when another chain is later natively confirmed", async () => {
-    const now = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
-    mocks.onchain.mockResolvedValue(0n * 10n ** BigInt(xlayerContract.decimals!));
+    const now = AFTER_SEED;
+    mocks.onchain.mockResolvedValue(0n * XLAYER_SCALE);
     // Frozen $100M packet held for Solana (B=$80M) when X Layer (A) was $20M; A then grew to $100M
     // as an independent baseline before burning to a natively confirmed zero.
     const state: ChainDropoutState = savedState("usdg-paxos", { chainLabel: "Solana", chainId: "solana", baselineUsd: 80_000_000, baselineObservedAt: now - 2 * DAY, quarantinedSince: now - DAY, ambiguousSince: now - DAY, heldTotalUsd: 100_000_000 }, { chainLabel: "X Layer", chainId: "xlayer", baselineUsd: 100_000_000, baselineObservedAt: now - 900, quarantinedSince: null });
@@ -783,8 +820,8 @@ describe("chain dropout guard", () => {
       ...usdg(),
       circulating: { peggedUSD: 0 },
       chainCirculating: {
-        Solana: { current: 0, circulatingPrevDay: 0 },
-        "X Layer": { current: 0, circulatingPrevDay: 100_000_000 },
+        Solana: leg(0),
+        "X Layer": leg(0, 100_000_000),
       },
     };
     const result = await runGuard(asset, { now, state });
@@ -797,7 +834,7 @@ describe("chain dropout guard", () => {
   });
 
   it.each([[undefined, 0], [NOW - 900, 0], [NOW - 900, 0.5]] as const)("uses only epoch repair clocks (incoming %s, run offset %s)", async (listObservedAt, offset) => {
-    mocks.onchain.mockResolvedValue(1_409_030_000n * 10n ** BigInt(xlayerContract.decimals!));
+    mocks.onchain.mockResolvedValue(1_409_030_000n * XLAYER_SCALE);
     const asset = usdgXlayer();
     if (listObservedAt != null) asset.supplyObservedAt = listObservedAt;
     await runGuard(asset, { now: NOW + offset });
@@ -824,7 +861,7 @@ describe("chain dropout guard", () => {
       "X Layer": asset.chainCirculating!["X Layer"],
       Ink: asset.chainCirculating!.Ink,
     };
-    mocks.onchain.mockResolvedValueOnce(1_409_030_000n * 10n ** BigInt(xlayerContract.decimals!));
+    mocks.onchain.mockResolvedValueOnce(1_409_030_000n * XLAYER_SCALE);
     mocks.chart.mockResolvedValue(chartPoint(63_474_779.8, NOW - 6 * 3600));
     await runGuard(asset);
     expect(asset.supplyChainGuard?.chains.find((chain) => chain.chainId === "xlayer"))
@@ -850,8 +887,8 @@ describe("chain dropout guard", () => {
       ...usdg(),
       circulating: { peggedUSD: 321_300_000 },
       chainCirculating: {
-        Ethereum: { current: 321_300_000, circulatingPrevDay: 321_300_000 },
-        Solana: { current: 0, circulatingPrevDay: prevDay },
+        Ethereum: leg(321_300_000),
+        Solana: leg(0, prevDay),
       },
     });
     const day1 = outage(627_500_000);
@@ -901,13 +938,13 @@ describe("chain dropout guard", () => {
     ["partial", 85_000_000],
   ])("never double-counts a %s source reattribution of a dropped destination, across two persisted runs", async (_case, source) => {
     // Past the incident seed so baselines come only from the asset's own healthy history.
-    const start = CHAIN_DROPOUT_SEED_VALID_UNTIL + DAY;
+    const start = AFTER_SEED;
     const bridged = (sourceUsd: number, destinationUsd: number): PeggedAsset => ({
       ...usdg(),
       circulating: { peggedUSD: sourceUsd + destinationUsd },
       chainCirculating: {
-        Ethereum: { current: sourceUsd, circulatingPrevDay: 80_000_000 },
-        "X Layer": { current: destinationUsd, circulatingPrevDay: 20_000_000 },
+        Ethereum: leg(sourceUsd, 80_000_000),
+        "X Layer": leg(destinationUsd, 20_000_000),
       },
     });
     // A chart lane that would "repair" the destination to its true $20M.
@@ -935,11 +972,11 @@ describe("chain dropout guard", () => {
   });
 
   it("keeps the first-detection clock when a native-low release is withheld for a concurrent healthy-chain gain", async () => {
-    mocks.onchain.mockResolvedValue(40_000_000n * 10n ** BigInt(xlayerContract.decimals!));
+    mocks.onchain.mockResolvedValue(40_000_000n * XLAYER_SCALE);
     const asset = usdg();
     asset.chainCirculating = {
       "X Layer": asset.chainCirculating!["X Layer"],
-      Ethereum: { current: 330_000_000, circulatingPrevDay: 321_300_000 },
+      Ethereum: leg(330_000_000, 321_300_000),
     };
     asset.circulating = { peggedUSD: 330_000_000 };
     const result = await runGuard(asset);
@@ -969,7 +1006,7 @@ describe("chain dropout guard", () => {
   it.each([-DAY, 0, DAY])("releases an immaterial pair only after a later low daily point (offset=%s)", async (pointOffset) => {
     const asset: PeggedAsset = {
       ...usdg(), id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 70_000_000_000 },
-      chainCirculating: { Tempo: { current: 44_854_806.82, circulatingPrevDay: 94_886_012 } },
+      chainCirculating: { Tempo: leg(44_854_806.82, 94_886_012) },
     };
     const lowPoint = (date: number) => (chartPoint(44_854_806.82, date));
     mocks.chart.mockResolvedValue(lowPoint(NOW));
@@ -981,7 +1018,7 @@ describe("chain dropout guard", () => {
     mocks.chart.mockResolvedValue(lowPoint(NOW + pointOffset));
     const later: PeggedAsset = {
       ...usdg(), id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 70_000_000_000 },
-      chainCirculating: { Tempo: { current: 44_854_806.82, circulatingPrevDay: 44_854_806.82 } },
+      chainCirculating: { Tempo: leg(44_854_806.82) },
     };
     const result = await runGuard(later, { now: NOW + DAY, state });
     expect(later.circulating).toEqual({ peggedUSD: 70_000_000_000 });
@@ -1007,7 +1044,7 @@ describe("chain dropout guard", () => {
   it("never releases a material dropout from the same later low daily chart evidence", async () => {
     const makeTempo = (): PeggedAsset => ({
       ...usdg(), id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 80_000_000 },
-      chainCirculating: { Tempo: { current: 44_854_806.82, circulatingPrevDay: 94_886_012 } },
+      chainCirculating: { Tempo: leg(44_854_806.82, 94_886_012) },
     });
     const first = await runGuard(makeTempo());
     mocks.chart.mockResolvedValue(chartPoint(44_854_806.82, NOW + DAY));
@@ -1043,7 +1080,7 @@ describe("chain dropout guard", () => {
       circulating: { [pegKey]: 4_000_000 + (includeChain ? current : 0) },
       circulatingPrevDay: { [pegKey]: 4_000_000 + baseline },
       chainCirculating: {
-        [companionLabel]: { current: 4_000_000, circulatingPrevDay: 3_000_000 },
+        [companionLabel]: leg(4_000_000, 3_000_000),
         ...(includeChain ? { [chainLabel]: { current, circulatingPrevDay: current } } : {}),
       },
     });
@@ -1096,7 +1133,7 @@ describe("chain dropout guard", () => {
 
   it("prioritizes deficits and caps sequential fresh chart attempts at eight", async () => {
     const asset = usdg();
-    asset.chainCirculating = Object.fromEntries(Array.from({ length: 10 }, (_, index) => [`Unknown ${index}`, { current: 0, circulatingPrevDay: (index + 1) * 1_000_000 }]));
+    asset.chainCirculating = Object.fromEntries(Array.from({ length: 10 }, (_, index) => [`Unknown ${index}`, leg(0, (index + 1) * 1_000_000)]));
     let inflight = 0;
     let peak = 0;
     mocks.chart.mockImplementation(async () => { inflight++; peak = Math.max(peak, inflight); await Promise.resolve(); inflight--; return null; });
@@ -1108,7 +1145,7 @@ describe("chain dropout guard", () => {
 
   it("bootstraps from prevDay after seed expiry and respects threshold boundaries", async () => {
     const asset = usdg();
-    asset.chainCirculating = { "X Layer": { current: 500_000, circulatingPrevDay: 1_000_000 }, Ink: { current: 0, circulatingPrevDay: 999_999 } };
+    asset.chainCirculating = { "X Layer": leg(500_000, 1_000_000), Ink: leg(0, 999_999) };
     await runGuard(asset, { now: CHAIN_DROPOUT_SEED_VALID_UNTIL + 1 });
     expect(asset.supplyChainGuard?.chains).toHaveLength(1);
     expect(asset.supplyChainGuard?.chains[0]).toMatchObject({ baselineSource: "list-prev-day", baselineUsd: 1_000_000 });
@@ -1117,7 +1154,7 @@ describe("chain dropout guard", () => {
 
   it("retains seeds for noncanonical chain labels", async () => {
     const seed = CHAIN_DROPOUT_SEED.find((entry) => entry.chainLabel === "XDC")!;
-    const asset: PeggedAsset = { ...usdg(), id: seed.assetId, chainCirculating: { XDC: { current: 0, circulatingPrevDay: 0 } } };
+    const asset: PeggedAsset = { ...usdg(), id: seed.assetId, chainCirculating: { XDC: leg(0) } };
     await runGuard(asset);
     expect(asset.supplyChainGuard?.chains[0]).toMatchObject({ chainLabel: "XDC", baselineUsd: seed.baselineUsd, baselineSource: "seed" });
   });
@@ -1141,7 +1178,7 @@ describe("chain dropout guard", () => {
     expect(CHAIN_DROPOUT_SEED).toHaveLength(39);
     expect(ChainDropoutStateSchema.parse({ version: 1, pairs: {} })).toEqual({ version: 1, pairs: {} } satisfies ChainDropoutState);
     const rows = Object.fromEntries(CHAIN_DROPOUT_ONCHAIN_ROSTER.filter((pair) => pair.assetId === "rwausdi-multipli")
-      .map(({ chainId }) => [chainId, { current: 1, circulatingPrevDay: 24_000_000 }]));
+      .map(({ chainId }) => [chainId, leg(1, 24_000_000)]));
     const incoming: PeggedAsset = { ...usdg(), id: "rwausdi-multipli", circulating: { peggedUSD: 7 }, chainCirculating: rows,
       priceListFillDefault: { value: 0.000055, upstreamSource: null } };
     const asset = structuredClone(incoming);
@@ -1151,6 +1188,7 @@ describe("chain dropout guard", () => {
     expect(asset).toMatchObject({ circulating: { peggedUSD: 84_000_000 }, supplySource: "defillama-chain-repair" });
     expect(asset.supplyRestored).toBeUndefined();
     expect(mocks.onchain.mock.calls.find(([config]) => config.chain === "pharos")?.slice(4)).toEqual(["https://rpc.pharos.xyz", "https://api.zan.top/public/pharos-mainnet"]);
+    expect(mocks.onchain.mock.calls.find(([config]) => config.chain === "robinhood")?.slice(4)).toEqual(["https://rpc.mainnet.chain.robinhood.com", "https://robinhood-rpc.publicnode.com"]);
     rpcs.get("pharos")!.endpoints = rpcs.get("pharos")!.endpoints.map((endpoint) => ({ ...endpoint, routingDisabled: true }));
     const failed = await runGuard(incoming, { chainRpcs: rpcs });
     expect(failed.repaired).toBe(6);

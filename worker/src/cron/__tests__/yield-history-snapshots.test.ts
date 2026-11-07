@@ -682,9 +682,8 @@ describe("yield coordinator history", () => {
   it("normalizes source, legacy, on-chain, TVL, and previous-best history inputs", async () => {
     const result = await buildYieldHistoryEvaluationInputsCooperative({
       historyRows: [
-        row({ stablecoin_id: "coin-a", source_key: "source-a" }),
+        row({}),
         row({
-          stablecoin_id: "coin-a",
           source_key: null,
           data_source: "onchain",
           exchange_rate: 1.01,
@@ -697,12 +696,12 @@ describe("yield coordinator history", () => {
         }),
       ],
       prevTvlRows: [
-        row({ stablecoin_id: "coin-a", source_key: "source-a", source_tvl_usd: 9_000 }),
-        row({ stablecoin_id: "coin-a", source_key: null, source_tvl_usd: 7_000 }),
-        row({ stablecoin_id: "coin-a", source_key: "source-a", source_tvl_usd: 8_000 }),
+        row({ source_tvl_usd: 9_000 }),
+        row({ source_key: null, source_tvl_usd: 7_000 }),
+        row({ source_tvl_usd: 8_000 }),
       ],
       prevBestRows: [
-        row({ stablecoin_id: "coin-a", source_key: "source-a", is_best: 1 }),
+        row({ is_best: 1 }),
       ],
     }, { yieldToEventLoop: () => Promise.resolve() });
 
@@ -722,28 +721,28 @@ describe("yield coordinator history", () => {
 
     // Durable runs: A A B B A A -> two switches.
     expect(await switchesFor([
-      row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ is_best: 1, recorded_at: 200 }),
       row({ source_key: "source-b", is_best: 1, recorded_at: 300 }),
       row({ source_key: "source-b", is_best: 1, recorded_at: 400 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 500 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 600 }),
+      row({ is_best: 1, recorded_at: 500 }),
+      row({ is_best: 1, recorded_at: 600 }),
     ])).toBe(2);
 
     // B2: a one-publication out-and-back is a fetch gap, not two switches.
     expect(await switchesFor([
-      row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ is_best: 1, recorded_at: 200 }),
       row({ source_key: "source-b", is_best: 1, recorded_at: 300 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 400 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 500 }),
+      row({ is_best: 1, recorded_at: 400 }),
+      row({ is_best: 1, recorded_at: 500 }),
     ])).toBe(0);
 
     // Non-best rows never participate in the selected-source series.
     expect(await switchesFor([
-      row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
-      row({ source_key: "source-b", is_best: 0, recorded_at: 200 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 300 }),
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ source_key: "source-b", recorded_at: 200 }),
+      row({ is_best: 1, recorded_at: 300 }),
     ])).toBe(0);
   });
 
@@ -758,25 +757,25 @@ describe("yield coordinator history", () => {
     expect(await switchesFor([
       row({ source_key: "legacy-best", is_best: 1, recorded_at: 100 }),
       row({ source_key: "legacy-best", is_best: 1, recorded_at: 200 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 300 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 400 }),
+      row({ is_best: 1, recorded_at: 300 }),
+      row({ is_best: 1, recorded_at: 400 }),
     ])).toBe(0);
 
     // A durable legacy era between two runs of one real source is an unchanged
     // source, not two switches.
     expect(await switchesFor([
-      row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ is_best: 1, recorded_at: 200 }),
       row({ source_key: "legacy-best", is_best: 1, recorded_at: 300 }),
       row({ source_key: "legacy-best", is_best: 1, recorded_at: 400 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 500 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 600 }),
+      row({ is_best: 1, recorded_at: 500 }),
+      row({ is_best: 1, recorded_at: 600 }),
     ])).toBe(0);
 
     // A real switch still counts once when it straddles a legacy era.
     expect(await switchesFor([
-      row({ source_key: "source-a", is_best: 1, recorded_at: 100 }),
-      row({ source_key: "source-a", is_best: 1, recorded_at: 200 }),
+      row({ is_best: 1, recorded_at: 100 }),
+      row({ is_best: 1, recorded_at: 200 }),
       row({ source_key: "legacy-best", is_best: 1, recorded_at: 300 }),
       row({ source_key: "source-b", is_best: 1, recorded_at: 400 }),
       row({ source_key: "source-b", is_best: 1, recorded_at: 500 }),

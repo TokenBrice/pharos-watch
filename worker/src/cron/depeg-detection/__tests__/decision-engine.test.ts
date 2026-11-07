@@ -138,7 +138,6 @@ function assertNativeOpening({
       symbol: "BRZ",
       price: 0.191187,
       priceSource: "coingecko",
-      priceUpdatedAt: 1_750_000_000 - 60,
       pegType: "peggedREAL",
       circulating,
     }),
@@ -407,7 +406,6 @@ describe("decideDepegAsset", () => {
       asset: makeAsset({
         price: 0.975,
         circulating: { ethereum: 999_000_000 },
-        priceSource: "pyth",
         agreeSources: ["pyth"],
       }),
       meta: usdMeta,
@@ -473,7 +471,6 @@ describe("decideDepegAsset", () => {
         priceSource: "coingecko+defillama-list",
         priceConfidence: "high",
         agreeSources: ["coingecko", "defillama-list"],
-        priceUpdatedAt: 1_750_000_000 - 60,
         circulating: { ethereum: 20_000_000 },
       }),
       meta: {
@@ -509,7 +506,6 @@ describe("decideDepegAsset", () => {
         priceSource: "coingecko+coingecko-low-volume",
         priceConfidence: "high",
         agreeSources: ["coingecko", "coingecko-low-volume"],
-        priceUpdatedAt: 1_750_000_000 - 60,
         circulating: { ethereum: 20_000_000 },
       }),
       meta: usdMeta,
@@ -616,7 +612,6 @@ describe("decideDepegAsset", () => {
         symbol: "BRZ",
         price: 0.191187,
         priceSource: "coingecko",
-        priceUpdatedAt: 1_750_000_000 - 60,
         pegType: "peggedREAL",
         circulating: { gnosis: 22_000_000 },
       }),
@@ -646,7 +641,6 @@ describe("decideDepegAsset", () => {
         symbol: "BRZ",
         price: 0.191187,
         priceSource: "coingecko",
-        priceUpdatedAt: 1_750_000_000 - 60,
         pegType: "peggedREAL",
         circulating: { gnosis: 22_000_000 },
       }),
@@ -699,7 +693,6 @@ describe("decideDepegAsset", () => {
         symbol: "EURm",
         price: 1.16,
         priceSource: "coingecko",
-        priceUpdatedAt: 1_750_000_000 - 60,
         pegType: "peggedEUR",
         circulating: { celo: 22_000_000 },
       }),
@@ -1126,7 +1119,7 @@ describe("decideDepegAsset", () => {
   it("keeps an ongoing event open when only the aggregate DEX price disagrees", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,
-      asset: makeAsset({ price: 0.98 }),
+      asset: makeAsset(),
       meta: usdMeta,
       existing: makeExistingEvent({
         stablecoin_id: "usdt-tether",
@@ -1164,7 +1157,7 @@ describe("decideDepegAsset", () => {
   it("suppresses a new event when independent DEX protocols show recovery", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,
-      asset: makeAsset({ price: 0.98 }),
+      asset: makeAsset(),
       meta: usdMeta,
       ...usdPeg,
       dexRow: {
@@ -1347,7 +1340,7 @@ describe("decideDepegAsset", () => {
   it("clears recovery progress when the primary price returns to the depeg", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_900,
-      asset: makeAsset({ price: 0.98 }),
+      asset: makeAsset(),
       meta: usdMeta,
       existing: makeExistingEvent({
         stablecoin_id: "usdt-tether",
@@ -1765,12 +1758,10 @@ describe("decideDepegAsset", () => {
         symbol: "USDB",
         price: 0.9998628369821569,
         priceSource: "coingecko",
-        priceConfidence: "single-source",
         agreeSources: ["coingecko"],
         priceUpdatedAt: now - 107,
         priceObservedAt: now - 107,
         priceObservedAtMode: "upstream",
-        pegType: "peggedUSD",
         circulating: { blast: 11_348_078.487122247 },
       }),
       meta: { ...usdMeta, id: "usdb-blast", name: "USDB Blast", symbol: "USDB", geckoId: "usdb" },
@@ -1815,7 +1806,6 @@ describe("decideDepegAsset", () => {
         symbol: "VNXAU",
         price: 137.80559627497053,
         priceSource: "coingecko",
-        priceConfidence: "single-source",
         agreeSources: ["coingecko"],
         priceUpdatedAt: now - 77,
         priceObservedAt: now - 77,
@@ -1870,7 +1860,6 @@ describe("decideDepegAsset", () => {
         priceUpdatedAt: now - 77,
         priceObservedAt: now - 77,
         priceObservedAtMode: "upstream",
-        pegType: "peggedUSD",
         circulating: { hydration: 12_833_596.24937689 },
       }),
       meta: { ...usdMeta, id: "hollar-hydrated", name: "Hydrated Dollar", symbol: "HOLLAR", geckoId: "hydrated-dollar" },
@@ -1919,7 +1908,6 @@ describe("decideDepegAsset", () => {
         symbol: "AUDF",
         price: 0.7030877342041957,
         priceSource: "coingecko",
-        priceConfidence: "single-source",
         agreeSources: ["coingecko"],
         priceUpdatedAt: now - 77,
         priceObservedAt: now - 77,
@@ -1973,7 +1961,6 @@ describe("decideDepegAsset", () => {
           symbol: "DUSD",
           price: 0.9995,
           priceSource: "coingecko",
-          priceConfidence: "single-source",
           agreeSources: ["coingecko"],
           priceUpdatedAt: now - 60,
           priceObservedAt: now - 60,
@@ -2036,7 +2023,6 @@ describe("decideDepegAsset", () => {
         symbol: "DUSD",
         price: 1.0005,
         priceSource: "coingecko",
-        priceConfidence: "single-source",
         agreeSources: ["coingecko"],
         priceUpdatedAt: now - 60,
         priceObservedAt: now - 60,
