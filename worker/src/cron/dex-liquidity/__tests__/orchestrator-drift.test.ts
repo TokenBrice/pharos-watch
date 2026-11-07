@@ -322,6 +322,8 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     [0, "2026-11-21T20:31:00Z", 1, 1, false], [0, "2026-11-08", 1.01, 1, false], [0, "2026-11-08", 1, 0.9, true], [1, "2026-11-08", 1, 0.9, false],
     [0, "2026-11-08", 1, 1.019, true], [0, "2026-11-08", 1, 1.021, false],
     [1, "2026-11-08", 1, 1, true],
+    [2, "2026-11-08", 1, 1, true], [2, "2026-11-08", 1, 0.979, false], [2, "2026-11-08", 1.01, 1, false],
+    [2, "2026-11-21T21:04:19Z", 1, 1, false],
   ] as const)("bounds chain review %s at %s (%s, %s)", (index, date, baselineScale, observedScale, accepted) => {
     const review = REVIEWED_CHAIN_TVL_DISPOSITIONS[index];
     const summary = drift({
