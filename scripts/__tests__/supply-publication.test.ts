@@ -49,6 +49,7 @@ describe("supply publication contracts", () => {
     ["worker/src/lib/__helper-probe.ts", 3],
     ["src/lib/__helper-probe.ts", 1],
     ["shared/lib/type-guards.ts", 0],
+    ["shared/types/__helper-probe.ts", 0],
     ["worker/src/lib/json-parse.ts", 1],
     ["shared/lib/safety-score-v9/policy.ts", 0],
     ["worker/src/lib/__tests__/__helper-probe.test.ts", 0],

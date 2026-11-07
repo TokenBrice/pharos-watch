@@ -253,7 +253,9 @@ const pharosBoundaryPlugin = {
       create(context) {
         const filename = relative(repoRoot, context.filename).replaceAll("\\", "/");
         function check(node, name) {
-          if (localRecordGuardNames.has(name) && filename !== "shared/lib/type-guards.ts") {
+          // shared/types and shared/contracts may not import shared/lib, so they keep local guards.
+          if (localRecordGuardNames.has(name) && filename !== "shared/lib/type-guards.ts"
+            && !filename.startsWith("shared/types/") && !filename.startsWith("shared/contracts/")) {
             context.report({ node, messageId: "record" });
           }
           if (localJsonParseNames.has(name) && filename.startsWith("worker/")

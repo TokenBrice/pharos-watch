@@ -169,8 +169,6 @@ export interface DexPoolVolumeReading {
   deadPoolSignature?: true;
 }
 
-export type DexPoolVolumeObservation = NonNullable<DexLiquidityPool["volumeObservation"]>;
-
 export interface PoolEntry extends Omit<DexLiquidityPool, "source" | "extra"> {
   poolId: string;
   /** Candidate metadata only; never an exact aggregate or physical identity. */

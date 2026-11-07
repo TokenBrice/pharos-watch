@@ -533,7 +533,7 @@ describe("buildCurveLookups", () => {
     ]);
     pool.coins[0]!.poolBalance = "120000000000";
     pool.coins[1]!.poolBalance = "80000000000";
-    const curvePayloads = [{ data: { poolData: [pool] } }];
+    const curvePayloads = [{ data: { poolData: [pool] } }] as CurveApiPayload[];
     const symbolToIds = new Map([
       ["USDC", ["usd-coin"]],
       ["USDT", ["tether"]],

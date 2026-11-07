@@ -3,7 +3,7 @@ import { isValidIsoDateOnly } from "./date-primitives";
 
 // shared/types must stay dependency-free of shared/lib (ESLint pharos/shared-types-imports), so the
 // record guard is local here rather than imported from @shared/lib/type-guards.
-function isRecordOrArray(value: unknown): value is Record<string, unknown> {
+function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
@@ -139,10 +139,10 @@ const readerInteger = /* @__PURE__ */ (() => mapFields.nonnegative.refine(Number
 const readerCoverage = /* @__PURE__ */ (() => mapFields.coverage.extend({
   observedCount: readerInteger, unavailableCount: readerInteger,
   // Legacy JSON readers accepted array-shaped reason records too; preserve that admission.
-  unavailableById: z.custom<Record<string, string>>((value) => isRecordOrArray(value)
+  unavailableById: z.custom<Record<string, string>>((value) => isRecord(value)
     && Object.values(value).every((reason) => typeof reason === "string")),
 }).refine((coverage) => coverage.complete === (coverage.unavailableCount === 0)
-  && isRecordOrArray(coverage.unavailableById) && Object.keys(coverage.unavailableById).length === coverage.unavailableCount))();
+  && isRecord(coverage.unavailableById) && Object.keys(coverage.unavailableById).length === coverage.unavailableCount))();
 const readerSummaryFields = /* @__PURE__ */ (() => ({
   ...summaryFields, methodologyVersion: readerText, supplyCoverage: readerCoverage.optional(),
   asOfSec: readerInteger, gradedCount: readerInteger, notRatedCount: readerInteger,
@@ -208,7 +208,7 @@ export function parseDigestSafetyMapSummary(value: unknown, profile: DigestSafet
 export function parseDigestSafetyMapManifest(value: unknown, _profile: "canonical"): DigestSafetyMapManifest | null {
   const result = CanonicalReaderManifestSchema.safeParse(value);
   if (!result.success) return null;
-  const summary = isRecordOrArray(value) ? parseDigestSafetyMapSummary(value.mapSummary, "canonical") : null;
+  const summary = isRecord(value) ? parseDigestSafetyMapSummary(value.mapSummary, "canonical") : null;
   return summary && summary.date === result.data.date && summary.asOfSec === result.data.asOfSec
     ? { ...result.data, mapSummary: summary }
     : result.data;
@@ -221,7 +221,7 @@ export function parseDigestSafetyMapCapture(value: unknown, profile: DigestSafet
     const result = CanonicalReaderCaptureSchema.safeParse(value);
     return result.success ? result.data : null;
   }
-  if (!isRecordOrArray(value) || !isRecordOrArray(value.manifest)) return null;
+  if (!isRecord(value) || !isRecord(value.manifest)) return null;
   const result = ArchiveReaderCaptureSchema.safeParse({
     ...value, manifest: { ...value.manifest, mapSummary: value.manifest.mapSummary ?? value.mapSummary ?? value.summary },
   });
