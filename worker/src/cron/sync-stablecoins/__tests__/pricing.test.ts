@@ -12,6 +12,7 @@ import {
   getPrimaryCandidatePricesForCurrentAsset,
   settleNominalPriceReferences,
   type ProtocolPriceOverride,
+  type PreviousTrustedPrice,
 } from "../pricing";
 import type { PeggedAsset, PrimaryPriceResult } from "../enrich-prices";
 import { normalizeStablecoinsPayload } from "../shared";
@@ -100,7 +101,16 @@ describe("getPostEnrichmentCandidatePricesForCurrentAsset", () => {
     });
   }
 
-  it("merges a same-run primary quote with the current fallback quote", () => {
+  it.each([
+    {
+      name: "merges a same-run primary quote with the current fallback quote",
+      price: 0.390247, source: "coingecko", confidence: "single-source",
+    },
+    {
+      name: "adds the current fallback even when primary metadata already matches it",
+      price: 0.3904, source: "dexscreener-exact", confidence: "fallback",
+    },
+  ] as const)("$name", ({ price, source, confidence }) => {
     const asset = makeAsset({
       id: "usx-dforce",
       price: 0.3904,
@@ -111,34 +121,7 @@ describe("getPostEnrichmentCandidatePricesForCurrentAsset", () => {
       [
         "usx-dforce",
         makePrimaryPriceResult({
-          price: 0.390247,
-          source: "coingecko",
-          confidence: "single-source",
-          allPrices: { coingecko: 0.390247 },
-        }),
-      ],
-    ]);
-
-    expect(getPostEnrichmentCandidatePricesForCurrentAsset(asset, results)).toEqual({
-      coingecko: 0.390247,
-      "dexscreener-exact": 0.3904,
-    });
-  });
-
-  it("adds the current fallback even when primary metadata already matches it", () => {
-    const asset = makeAsset({
-      id: "usx-dforce",
-      price: 0.3904,
-      priceSource: "dexscreener-exact",
-      priceConfidence: "fallback",
-    });
-    const results = new Map([
-      [
-        "usx-dforce",
-        makePrimaryPriceResult({
-          price: 0.3904,
-          source: "dexscreener-exact",
-          confidence: "fallback",
+          price, source, confidence,
           allPrices: { coingecko: 0.390247 },
         }),
       ],
@@ -252,120 +235,53 @@ describe("buildPreviousTrustedPriceLookup", () => {
     expect(entry?.source).toBe("pyth");
   });
 
-  it("prefers replay-cache row when its observedAt is later than previous-cache", () => {
-    const previous = new Map<string, PeggedAsset>([
-      [
-        "usdt-tether",
-        makeAsset({
-          price: 1.0,
-          priceObservedAt: NOW_SEC - 300,
-          priceUpdatedAt: NOW_SEC - 300,
-        }),
-      ],
-    ]);
-    const replay = new Map<string, PriceCacheEntry>([
-      [
-        "usdt-tether",
-        makeCacheEntry({
-          price: 0.9987,
-          observedAt: NOW_SEC - 30,
-          updatedAt: NOW_SEC - 30,
-        }),
-      ],
-    ]);
+  it.each([
+    {
+      name: "prefers replay-cache row when its observedAt is later than previous-cache",
+      publication: { price: 1.0, priceObservedAt: NOW_SEC - 300, priceUpdatedAt: NOW_SEC - 300 },
+      replay: { price: 0.9987, observedAt: NOW_SEC - 30, updatedAt: NOW_SEC - 30 },
+      assertEntry: (entry: PreviousTrustedPrice | undefined) => {
+        expect(entry?.price).toBe(0.9987);
+        expect(entry?.observedAt).toBe(NOW_SEC - 30);
+      },
+    },
+    {
+      name: "keeps previous-cache row when its observedAt is later than replay-cache",
+      publication: { price: 1.0003, priceObservedAt: NOW_SEC - 30, priceUpdatedAt: NOW_SEC - 30 },
+      replay: { price: 0.9987, observedAt: NOW_SEC - 300, updatedAt: NOW_SEC - 300 },
+      assertEntry: (entry: PreviousTrustedPrice | undefined) => {
+        expect(entry?.price).toBe(1.0003);
+        expect(entry?.observedAt).toBe(NOW_SEC - 30);
+      },
+    },
+    {
+      name: "uses replay-cache row regardless of observedAt when previous-cache is non-authoritative (low confidence)",
+      publication: { price: 1.02, priceConfidence: "low", priceObservedAt: NOW_SEC - 30, priceUpdatedAt: NOW_SEC - 30 },
+      replay: { price: 0.9987, observedAt: NOW_SEC - 300, updatedAt: NOW_SEC - 300 },
+      assertEntry: (entry: PreviousTrustedPrice | undefined) => {
+        // Previous is filtered out (non-authoritative); replay wins despite older observedAt.
+        expect(entry?.price).toBe(0.9987);
+        expect(entry?.source).toBe("pyth");
+      },
+    },
+    {
+      name: "keeps previous-cache row when both have equal observedAt (first-writer wins; previousAssetsById is iterated before replay)",
+      // previousAssetsById is iterated first, then replayPriceCache. On ties, the
+      // existing-lookup strict-gte short-circuit prevents replay from overwriting.
+      publication: { price: 1.0, priceObservedAt: NOW_SEC - 60, priceUpdatedAt: NOW_SEC - 60 },
+      replay: { price: 0.997, observedAt: NOW_SEC - 60, updatedAt: NOW_SEC - 60 },
+      assertEntry: (entry: PreviousTrustedPrice | undefined) => {
+        // previousAssetsById is inserted first; equal observedAt means replay does NOT overwrite.
+        expect(entry?.price).toBe(1.0);
+      },
+    },
+  ] as const)("$name", ({ publication, replay, assertEntry }) => {
+    const previous = new Map<string, PeggedAsset>([["usdt-tether", makeAsset(publication)]]);
+    const replayCache = new Map<string, PriceCacheEntry>([["usdt-tether", makeCacheEntry(replay)]]);
 
-    const lookup = buildPreviousTrustedPriceLookup(previous, NOW_SEC, replay);
+    const lookup = buildPreviousTrustedPriceLookup(previous, NOW_SEC, replayCache);
 
-    expect(lookup.get("usdt-tether")?.price).toBe(0.9987);
-    expect(lookup.get("usdt-tether")?.observedAt).toBe(NOW_SEC - 30);
-  });
-
-  it("keeps previous-cache row when its observedAt is later than replay-cache", () => {
-    const previous = new Map<string, PeggedAsset>([
-      [
-        "usdt-tether",
-        makeAsset({
-          price: 1.0003,
-          priceObservedAt: NOW_SEC - 30,
-          priceUpdatedAt: NOW_SEC - 30,
-        }),
-      ],
-    ]);
-    const replay = new Map<string, PriceCacheEntry>([
-      [
-        "usdt-tether",
-        makeCacheEntry({
-          price: 0.9987,
-          observedAt: NOW_SEC - 300,
-          updatedAt: NOW_SEC - 300,
-        }),
-      ],
-    ]);
-
-    const lookup = buildPreviousTrustedPriceLookup(previous, NOW_SEC, replay);
-
-    expect(lookup.get("usdt-tether")?.price).toBe(1.0003);
-    expect(lookup.get("usdt-tether")?.observedAt).toBe(NOW_SEC - 30);
-  });
-
-  it("uses replay-cache row regardless of observedAt when previous-cache is non-authoritative (low confidence)", () => {
-    const previous = new Map<string, PeggedAsset>([
-      [
-        "usdt-tether",
-        makeAsset({
-          price: 1.02,
-          priceConfidence: "low",
-          priceObservedAt: NOW_SEC - 30,
-          priceUpdatedAt: NOW_SEC - 30,
-        }),
-      ],
-    ]);
-    const replay = new Map<string, PriceCacheEntry>([
-      [
-        "usdt-tether",
-        makeCacheEntry({
-          price: 0.9987,
-          observedAt: NOW_SEC - 300,
-          updatedAt: NOW_SEC - 300,
-        }),
-      ],
-    ]);
-
-    const lookup = buildPreviousTrustedPriceLookup(previous, NOW_SEC, replay);
-
-    // Previous is filtered out (non-authoritative); replay wins despite older observedAt.
-    expect(lookup.get("usdt-tether")?.price).toBe(0.9987);
-    expect(lookup.get("usdt-tether")?.source).toBe("pyth");
-  });
-
-  it("keeps previous-cache row when both have equal observedAt (first-writer wins; previousAssetsById is iterated before replay)", () => {
-    // previousAssetsById is iterated first, then replayPriceCache. On ties, the
-    // existing-lookup strict-gte short-circuit prevents replay from overwriting.
-    const previous = new Map<string, PeggedAsset>([
-      [
-        "usdt-tether",
-        makeAsset({
-          price: 1.0,
-          priceObservedAt: NOW_SEC - 60,
-          priceUpdatedAt: NOW_SEC - 60,
-        }),
-      ],
-    ]);
-    const replay = new Map<string, PriceCacheEntry>([
-      [
-        "usdt-tether",
-        makeCacheEntry({
-          price: 0.997,
-          observedAt: NOW_SEC - 60,
-          updatedAt: NOW_SEC - 60,
-        }),
-      ],
-    ]);
-
-    const lookup = buildPreviousTrustedPriceLookup(previous, NOW_SEC, replay);
-
-    // previousAssetsById is inserted first; equal observedAt means replay does NOT overwrite.
-    expect(lookup.get("usdt-tether")?.price).toBe(1.0);
+    assertEntry(lookup.get("usdt-tether"));
   });
 });
 
