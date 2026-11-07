@@ -44,6 +44,7 @@ Read the affected endpoint's section in [API Reference](./api-reference.md#publi
 8. For integration-facing public `GET` routes, give the artifact catalogue entry a canonical `responseSchema` from `scripts/lib/public-api-response-schemas.ts`; new entries without one fail closed. Keep the generator's operation order and OpenAPI/Postman outputs aligned with runtime metadata.
 9. Add or update handler tests in `worker/src/api/__tests__/`. Include critical suites in `npm run test:critical-contracts` only when they belong on the critical path. Set `strictContract: true` in `shared/lib/api-endpoints/definitions.ts` for frontend-critical routes: `worker/src/api/__tests__/router-contract.test.ts` checks every strict path with `getRouteMatch()` without executing handlers. Its registry/method sweep uses sentinel public handlers and unauthenticated admin requests; dedicated tests must prove payload shape, authenticated behavior, freshness and handler failures.
    Public smoke paths/assertions derive from strict metadata excluding `publicApiAccess: "site-only"`; router-contract coverage still includes those routes.
+   Browser public probes intersect the registered public probe cohort with site-data admission. Keyed-only routes such as full DEX liquidity history remain in server self-checks and keyed post-deploy sweeps; an operator's Access session does not authorize the public API-key lane.
 
 ## Auth And Lanes
 
