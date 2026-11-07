@@ -8,7 +8,7 @@ import {
   RETENTION_SMALL_DELETE_BATCH_LIMIT, RETENTION_SMALL_DELETE_RUN_LIMIT,
 } from "../lib/bounded-prune";
 import { SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC } from "../lib/safety-score-v9/publication-journal";
-import { RetentionGroupError, runRetentionPolicies } from "./shared/capped-delete";
+import { RetentionGroupError, runRetentionPolicies, type CappedDeleteResult } from "./shared/capped-delete";
 
 export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal): Promise<CronResult> {
   throwIfAborted(signal);
@@ -20,71 +20,59 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
     },
     { safetyScoreJournalSec: SAFETY_SCORE_PUBLICATION_JOURNAL_RETENTION_SEC },
   );
-  const { cronRuns: cronPolicy, producerHistory: producerPolicy, ...remainingPolicies } = policies;
-  // Isolate the trigger-maintained history cost without changing its row budgets.
-  let results;
+  let results: Partial<Record<keyof typeof policies, CappedDeleteResult>>;
+  let failure: RetentionGroupError | undefined;
   try {
-    results = {
-      ...await runRetentionPolicies(db, { cronRuns: cronPolicy }, now, signal),
-      ...await runRetentionPolicies(db, { producerHistory: producerPolicy }, now, signal),
-      ...await runRetentionPolicies(db, remainingPolicies, now, signal),
-    };
+    results = await runRetentionPolicies(db, policies, now, signal);
   } catch (error) {
     // Aborts and unattributed failures propagate verbatim, as before the group envelope.
     if (signal?.aborted || !(error instanceof RetentionGroupError)) throw error;
-    return createCronResult({
-      status: "error", error: error.message,
-      metadata: { reason: "retention-group-failed", failedRetentionGroup: error.failedRetentionGroup },
-    });
+    failure = error;
+    results = error.completedResults;
   }
-  const {
-    cronRuns, producerHistory, repairTasks, canaryRuns, recoveryCheckpoints,
-    selectorSnapshotDailyQuota, blockTimestampCache, slotExecutions,
-    apiRequestConsumerStats, siteDataRequestStats, apiKeyRequestStats,
-    apiRequestSourceSamples, siteDataRequestSamples,
-    safetyScoreJournal, safetyScoreAttempts, safetyScoreCaptureArchive,
-  } = results;
-  const selfServeRateLimitsDeleted = results.selfServeRequestRateLimits.pruned + results.selfServeIssuanceRateLimits.pruned;
-  const selfServeRateLimitsTruncated = results.selfServeRequestRateLimits.cappedAtLimit || results.selfServeIssuanceRateLimits.cappedAtLimit;
+  const deleted = (key: keyof typeof policies) => results[key]?.pruned ?? null;
+  const truncated = (key: keyof typeof policies) => results[key]?.cappedAtLimit ?? null;
+  const requests = results.selfServeRequestRateLimits, issuance = results.selfServeIssuanceRateLimits;
+  const selfServeRateLimitsDeleted = requests && issuance ? requests.pruned + issuance.pruned : null;
+  const selfServeRateLimitsTruncated = requests && issuance ? requests.cappedAtLimit || issuance.cappedAtLimit : null;
   const cutoff = (key: keyof typeof policies) => now - policies[key].windowSec;
   const selectorSnapshotDailyQuotaCutoffDate = new Date(cutoff("selectorSnapshotDailyQuota") * 1000).toISOString().slice(0, 10);
 
-  return createCronResult({
-    status: "ok",
+  const result = {
     itemCount: Object.values(results).reduce((total, result) => total + result.pruned, 0),
     metadata: {
-      cronRunsDeleted: cronRuns.pruned,
-      producerHistoryDeleted: producerHistory.pruned,
-      safetyScoreJournalDeleted: safetyScoreJournal.pruned,
-      safetyScoreAttemptsDeleted: safetyScoreAttempts.pruned,
-      safetyScoreJournalCappedAtLimit: safetyScoreJournal.cappedAtLimit,
-      safetyScoreAttemptsCappedAtLimit: safetyScoreAttempts.cappedAtLimit,
+      cronRunsDeleted: deleted("cronRuns"),
+      producerHistoryDeleted: deleted("producerHistory"),
+      safetyScoreJournalDeleted: deleted("safetyScoreJournal"),
+      safetyScoreAttemptsDeleted: deleted("safetyScoreAttempts"),
+      safetyScoreJournalCappedAtLimit: truncated("safetyScoreJournal"),
+      safetyScoreAttemptsCappedAtLimit: truncated("safetyScoreAttempts"),
       cutoffSafetyScoreJournalSec: cutoff("safetyScoreJournal"),
-      safetyScoreCaptureArchiveDeleted: safetyScoreCaptureArchive.pruned,
-      safetyScoreCaptureArchiveCappedAtLimit: safetyScoreCaptureArchive.cappedAtLimit,
+      safetyScoreCaptureArchiveDeleted: deleted("safetyScoreCaptureArchive"),
+      safetyScoreCaptureArchiveCappedAtLimit: truncated("safetyScoreCaptureArchive"),
       cutoffSafetyScoreCaptureArchiveSec: now - SAFETY_SCORE_CAPTURE_ARCHIVE_RETENTION_SEC,
-      repairTasksDeleted: repairTasks.pruned,
-      canaryRunsDeleted: canaryRuns.pruned,
-      recoveryCheckpointsDeleted: recoveryCheckpoints.pruned,
+      repairTasksDeleted: deleted("repairTasks"),
+      canaryRunsDeleted: deleted("canaryRuns"),
+      recoveryCheckpointsDeleted: deleted("recoveryCheckpoints"),
       selfServeRateLimitsDeleted,
       retentionTruncated: {
-        ...Object.fromEntries(Object.entries(results).map(([key, result]) => [key, result.cappedAtLimit])),
+        ...Object.fromEntries((Object.keys(policies) as (keyof typeof policies)[]).map((key) => [key, truncated(key)])),
         selfServeRateLimits: selfServeRateLimitsTruncated,
       },
-      selectorSnapshotDailyQuotaDeleted: selectorSnapshotDailyQuota.pruned,
-      blockTimestampCacheDeleted: blockTimestampCache.pruned,
-      slotExecutionsDeleted: slotExecutions.pruned,
-      apiRequestConsumerStatsDeleted: apiRequestConsumerStats.pruned,
-      siteDataRequestStatsDeleted: siteDataRequestStats.pruned,
-      apiKeyRequestStatsDeleted: apiKeyRequestStats.pruned,
-      apiRequestSourceSamplesDeleted: apiRequestSourceSamples.pruned,
-      siteDataRequestSamplesDeleted: siteDataRequestSamples.pruned,
+      selectorSnapshotDailyQuotaDeleted: deleted("selectorSnapshotDailyQuota"),
+      blockTimestampCacheDeleted: deleted("blockTimestampCache"),
+      slotExecutionsDeleted: deleted("slotExecutions"),
+      apiRequestConsumerStatsDeleted: deleted("apiRequestConsumerStats"),
+      siteDataRequestStatsDeleted: deleted("siteDataRequestStats"),
+      apiKeyRequestStatsDeleted: deleted("apiKeyRequestStats"),
+      apiRequestSourceSamplesDeleted: deleted("apiRequestSourceSamples"),
+      siteDataRequestSamplesDeleted: deleted("siteDataRequestSamples"),
       requestTelemetryCappedAtLimit: {
-        apiRequestConsumerStats: apiRequestConsumerStats.cappedAtLimit,
-        siteDataRequestStats: siteDataRequestStats.cappedAtLimit,
-        apiKeyRequestStats: apiKeyRequestStats.cappedAtLimit,
-        apiRequestSourceSamples: apiRequestSourceSamples.cappedAtLimit,
-        siteDataRequestSamples: siteDataRequestSamples.cappedAtLimit,
+        apiRequestConsumerStats: truncated("apiRequestConsumerStats"),
+        siteDataRequestStats: truncated("siteDataRequestStats"),
+        apiKeyRequestStats: truncated("apiKeyRequestStats"),
+        apiRequestSourceSamples: truncated("apiRequestSourceSamples"),
+        siteDataRequestSamples: truncated("siteDataRequestSamples"),
       },
       cutoffCronRunsSec: cutoff("cronRuns"),
       cutoffRepairTasksSec: cutoff("repairTasks"),
@@ -96,5 +84,11 @@ export async function runPruneCronHistory(db: D1Database, signal?: AbortSignal):
       cutoffSlotExecutionsSec: cutoff("slotExecutions"),
       cutoffRequestTelemetrySec: cutoff("apiRequestConsumerStats"),
     },
-  });
+  };
+  return failure ? createCronResult({
+    ...result,
+    status: Object.keys(results).length > 0 ? "degraded" : "error",
+    error: failure.message,
+    metadata: { ...result.metadata, reason: "retention-group-failed", failedRetentionGroup: failure.failedRetentionGroup },
+  }) : createCronResult({ ...result, status: "ok" });
 }
