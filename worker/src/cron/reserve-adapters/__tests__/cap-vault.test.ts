@@ -110,32 +110,22 @@ describe("adaptCapVaultState", () => {
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: 100,
       assets: [
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          name: "USDC",
-          risk: "low",
+        makeCapAsset({
           coinId: "usdc-circle",
           depType: "collateral",
-          decimals: 6,
           totalSupplied: 70,
           totalBorrowed: 20,
           available: 50,
-          paused: false,
-          pausedStatusUnavailable: false,
-        },
-        {
+        }),
+        makeCapAsset({
           address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
           name: "USDT",
-          risk: "low",
           coinId: "usdt-tether",
           depType: "collateral",
-          decimals: 6,
           totalSupplied: 30,
-          totalBorrowed: 0,
           available: 30,
           paused: true,
-          pausedStatusUnavailable: false,
-        },
+        }),
       ],
     });
 
@@ -246,17 +236,14 @@ describe("adaptCapVaultState", () => {
         contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
         supplyUsd: 100,
         assets: [
-          {
+          makeCapAsset({
             address: "0x4200000000000000000000000000000000000006",
             name: "WETH",
             risk: "medium",
             decimals: 18,
             totalSupplied: 1,
-            totalBorrowed: 0,
             available: 1,
-            paused: false,
-            pausedStatusUnavailable: false,
-          },
+          }),
         ],
       }),
     ).toThrow(/missing priceUsd/);
@@ -267,30 +254,18 @@ describe("adaptCapVaultState", () => {
       contractAddress: "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc",
       supplyUsd: null,
       assets: [
-        {
-          address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-          name: "USDC",
-          risk: "low",
-          decimals: 6,
+        makeCapAsset({
           totalSupplied: 50,
-          totalBorrowed: 0,
           available: 50,
-          paused: false,
-          pausedStatusUnavailable: false,
           priceUsd: 1,
-        },
-        {
+        }),
+        makeCapAsset({
           address: "0x7712c34205737192402172409a8f7ccef8aa2aec",
           name: "BUIDL",
-          risk: "low",
-          decimals: 6,
           totalSupplied: 20,
-          totalBorrowed: 0,
           available: 20,
-          paused: false,
-          pausedStatusUnavailable: false,
           priceUsd: 1.05,
-        },
+        }),
       ],
     });
 

@@ -161,23 +161,104 @@ describe("adaptAttestationPdfIndex", () => {
     expect(result.slices).toEqual(slices);
   });
 
-  it("uses end-of-month freshness for month-only report dates", () => {
-    const html = `
+  it.each([
+    [
+      "uses end-of-month freshness for month-only report dates",
+      `
       <a href="/attestations/2026_january.pdf">View January report</a>
       <a href="/attestations/2026_february.pdf">View February report</a>
       <a href="/attestations/2025_december.pdf">View December report</a>
-    `;
-
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
+        reportDate: "2026-02-28",
+        reportDateLabel: "February 28, 2026",
+        reportDatePrecision: "month",
+        reportPeriod: "February 2026",
+        reportPdfPath: "/attestations/2026_february.pdf",
+      },
+    ],
+    [
+      "uses the href date before link text publication dates",
+      `
+      <a href="/reports/reserve-report-2026-02-28.pdf">
+        Published March 4, 2026
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
+        reportDate: "2026-02-28",
+        reportDateSource: "href",
+      },
+    ],
+    [
+      "prefers an explicit day in a URL over the surrounding month-year text",
+      `
+      <a href="/reports/XSGD%20Reserve%20Account%20Report%20(15%20Mar%202026)%20(1).pdf">
+        XSGD Attestation Report Mar 2026
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 2, 15) / 1000,
+        reportDate: "2026-03-15",
+        reportDateLabel: "March 15, 2026",
+        reportDatePrecision: "day",
+      },
+    ],
+    [
+      "parses day-first numeric report dates from PDF filenames before upload-path months",
+      `
+      <a href="https://issuer.example/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf">
+        Download as .pdf
+      </a>
+      <a href="https://issuer.example/wp-content/uploads/2025/07/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
+        Download as .pdf
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
+        reportDate: "2026-03-31",
+        reportDateLabel: "March 31, 2026",
+        reportDatePrecision: "day",
+        reportDateSource: "href",
+      },
+    ],
+    [
+      "normalizes two-digit years in day-first numeric PDF filenames",
+      `
+      <a href="/reports/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
+        Download as .pdf
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2025, 5, 30) / 1000,
+        reportDate: "2025-06-30",
+        reportDateLabel: "June 30, 2025",
+        reportDatePrecision: "day",
+      },
+    ],
+    [
+      "parses compact YYYYMMDD report dates in PDF filenames",
+      `
+      <a href="https://action.ripio.com/hubfs/2025/wFIAT/ATTESTATION/31_12_2025__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">
+        wBRL certification
+      </a>
+    `,
+      {
+        sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
+        reportDate: "2026-03-31",
+        reportDateLabel: "March 31, 2026",
+        reportDatePrecision: "day",
+        reportDateSource: "href",
+        reportPdfPath: "/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
+      },
+    ],
+  ] as const)("%s", (_name, html, expectedMetadata) => {
     const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
-      reportDate: "2026-02-28",
-      reportDateLabel: "February 28, 2026",
-      reportDatePrecision: "month",
-      reportPeriod: "February 2026",
-      reportPdfPath: "/attestations/2026_february.pdf",
-    });
+    expect(result.metadata).toMatchObject(expectedMetadata);
   });
 
   it("falls back to link text when the PDF href itself is not dated", () => {
@@ -198,99 +279,6 @@ describe("adaptAttestationPdfIndex", () => {
       reportPdfPath: "/transparency/latest-attestation.pdf",
       reportPdfUrl: "https://issuer.example/transparency/latest-attestation.pdf",
       reportLinkText: "March 31, 2026 independent attestation",
-    });
-  });
-
-  it("uses the href date before link text publication dates", () => {
-    const html = `
-      <a href="/reports/reserve-report-2026-02-28.pdf">
-        Published March 4, 2026
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 1, 28) / 1000,
-      reportDate: "2026-02-28",
-      reportDateSource: "href",
-    });
-  });
-
-  it("prefers an explicit day in a URL over the surrounding month-year text", () => {
-    const html = `
-      <a href="/reports/XSGD%20Reserve%20Account%20Report%20(15%20Mar%202026)%20(1).pdf">
-        XSGD Attestation Report Mar 2026
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 2, 15) / 1000,
-      reportDate: "2026-03-15",
-      reportDateLabel: "March 15, 2026",
-      reportDatePrecision: "day",
-    });
-  });
-
-  it("parses day-first numeric report dates from PDF filenames before upload-path months", () => {
-    const html = `
-      <a href="https://issuer.example/wp-content/uploads/2026/04/SALVUS_Attestation_relative_au_nombre_de_jetons_EUROP_31_03_2026.pdf">
-        Download as .pdf
-      </a>
-      <a href="https://issuer.example/wp-content/uploads/2025/07/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
-        Download as .pdf
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
-      reportDate: "2026-03-31",
-      reportDateLabel: "March 31, 2026",
-      reportDatePrecision: "day",
-      reportDateSource: "href",
-    });
-  });
-
-  it("normalizes two-digit years in day-first numeric PDF filenames", () => {
-    const html = `
-      <a href="/reports/Attestation_regarding_the_number_of_EUROP_tokens_as_of_30_06_25.pdf">
-        Download as .pdf
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2025, 5, 30) / 1000,
-      reportDate: "2025-06-30",
-      reportDateLabel: "June 30, 2025",
-      reportDatePrecision: "day",
-    });
-  });
-
-  it("parses compact YYYYMMDD report dates in PDF filenames", () => {
-    const html = `
-      <a href="https://action.ripio.com/hubfs/2025/wFIAT/ATTESTATION/31_12_2025__wBRL__Token-Certification.pdf">
-        wBRL certification
-      </a>
-      <a href="https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf">
-        wBRL certification
-      </a>
-    `;
-
-    const result = adaptAttestationPdfIndex(html, CONFIGURED_PARAMS);
-
-    expect(result.metadata).toMatchObject({
-      sourceTimestamp: Date.UTC(2026, 2, 31) / 1000,
-      reportDate: "2026-03-31",
-      reportDateLabel: "March 31, 2026",
-      reportDatePrecision: "day",
-      reportDateSource: "href",
-      reportPdfPath: "/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf",
     });
   });
 
