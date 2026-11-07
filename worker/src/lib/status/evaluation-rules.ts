@@ -1194,7 +1194,7 @@ export function evaluateDepegBlindReviewCauses(canaries: Pick<CanaryStatus, "che
   if (!check || check.executionStatus !== "completed" || !["ok", "degraded"].includes(check.status)
     || !Number.isFinite(check.observedAt) || check.observedAt <= 0 || check.observedAt > nowSec
     || !Number.isFinite(canaries.maxAgeSec) || canaries.maxAgeSec <= 0 || nowSec - check.observedAt > canaries.maxAgeSec
-    || !Array.isArray(ids) || !ids.every((id) => typeof id === "string")) return [];
+    || !Array.isArray(ids) || !ids.every((id) => typeof id === "number" && Number.isSafeInteger(id) && id > 0)) return [];
   // Re-resolve at read time: retained canary metadata cannot renew an expired review.
   const active = resolveDepegBlindEventReviews(nowSec);
   const reviews = [...new Set(ids)].flatMap((id) => {
@@ -1204,8 +1204,8 @@ export function evaluateDepegBlindReviewCauses(canaries: Pick<CanaryStatus, "che
   if (reviews.length === 0) return [];
   const causes = [makeCause("data-quality", "depeg_blind_event_reviews_acknowledged", "info",
     `Reviewed blind open-event coverage: ${reviews.map((review) =>
-      `${review.stablecoinId} (expires ${new Date(review.expiresAt * 1000).toISOString()})`).join(", ")}. Raw blindness, events and trusted-price rules are unchanged.`)];
-  const expiring = expiringReviews(reviews.map((review) => ({ id: review.stablecoinId, expiresAt: review.expiresAt })), nowSec);
+      `${review.stablecoinId}(${review.eventId}) (expires ${new Date(review.expiresAt * 1000).toISOString()})`).join(", ")}. Raw blindness, events and trusted-price rules are unchanged.`)];
+  const expiring = expiringReviews(reviews.map((review) => ({ id: `${review.stablecoinId}(${review.eventId})`, expiresAt: review.expiresAt })), nowSec);
   if (expiring.length > 0) causes.push(makeCause("data-quality", "depeg_blind_event_reviews_expiring", "info",
     `Blind-event review(s) currently acknowledging open-event coverage expire within 48h: ${expiring.map((review) =>
       `${review.id} (expires ${new Date(review.expiresAt * 1000).toISOString()}, ${Math.floor(review.remainingSec / 3600)}h left)`).join(", ")}. Renew with fresh evidence or let blind coverage re-alert.`,

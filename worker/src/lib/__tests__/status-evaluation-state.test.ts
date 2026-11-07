@@ -1383,7 +1383,7 @@ describe("review expiry reminders", () => {
     const now = review.expiresAt - remaining;
     const check = { checkId: "depeg-open-coverage", label: "", description: "", status: "ok" as const,
       severity: "info" as const, executionStatus: "completed" as const, observedAt: now - 1, durationMs: 1,
-      metadata: { acknowledgedBlindReviewIds: [review.stablecoinId] } };
+      metadata: { acknowledgedBlindReviewIds: [review.eventId] } };
     const input = { maxAgeSec: 1800, checks: { [check.checkId]: check } };
     const causes = evaluateDepegBlindReviewCauses(input, now);
     expect(causes.map((cause) => cause.code)).toEqual(remaining <= 0 ? [] : ["depeg_blind_event_reviews_acknowledged",

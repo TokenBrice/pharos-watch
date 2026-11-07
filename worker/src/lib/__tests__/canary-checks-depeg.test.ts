@@ -391,14 +391,14 @@ describe("depeg canary checks", () => {
     });
   });
 
-  it.each(["reviewed", "unreviewed", "expired", "future"])("grades only actionable blind events: %s", async (kind) => {
+  it.each(["reviewed", "unreviewed", "new-event", "expired", "future"])("grades only actionable blind events: %s", async (kind) => {
     const review = DEPEG_BLIND_EVENT_REVIEWS[0];
     const now = kind === "expired" ? review.expiresAt : review.reviewedAt - (kind === "future" ? 1 : 0);
     const id = kind === "unreviewed" ? "usdt-tether" : review.stablecoinId;
     const { db, sqlite } = fixtures.open();
     sqlite.prepare(`INSERT INTO depeg_events
-      (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, last_trusted_price_at)
-      VALUES (?, 'COIN', 'peggedUSD', 'below', 150, ?, 0.985, 1, ?)`).run(id, now - 5000, now - 2000);
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, last_trusted_price_at)
+      VALUES (?, ?, 'COIN', 'peggedUSD', 'below', 150, ?, 0.985, 1, ?)`).run(review.eventId + (kind === "new-event" ? 1 : 0), id, now - 5000, now - 2000);
     const acknowledged = kind === "reviewed" ? 1 : 0;
     expect(await checkDepegOpenCoverage(db, now)).toMatchObject({ status: acknowledged ? "ok" : "degraded",
       metadata: { blindEventCount: 1, acknowledgedBlindEventCount: acknowledged, actionableBlindEventCount: 1 - acknowledged,
@@ -464,12 +464,12 @@ describe("depeg canary checks", () => {
     const { db, sqlite } = fixtures.open();
     const insert = sqlite.prepare(
       `INSERT INTO depeg_events
-         (stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
+         (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
           start_price, peg_reference, last_trusted_price_at, price_coverage_gap_started_at)
-       VALUES (?, ?, 'peggedUSD', 'below', 150, ?, NULL, 0.985, 1, ?, NULL)`,
+       VALUES (?, ?, ?, 'peggedUSD', 'below', 150, ?, NULL, 0.985, 1, ?, NULL)`,
     );
     for (let index = 0; index < 30; index++) {
-      insert.run(index === 0 ? review.stablecoinId : `coin-${index}`, `C${index}`, NOW - 5_000, NOW - 2_000 - index);
+      insert.run(review.eventId + index, index < 2 ? review.stablecoinId : `coin-${index}`, `C${index}`, NOW - 5_000 - index, NOW - 2_000 - index);
     }
 
     const result = await checkDepegOpenCoverage(db, review.reviewedAt);
@@ -477,7 +477,7 @@ describe("depeg canary checks", () => {
     expect(result).toMatchObject({
       status: "degraded",
       metadata: { blindEventCount: 30, acknowledgedBlindEventCount: 1, actionableBlindEventCount: 29,
-        acknowledgedBlindReviewIds: [review.stablecoinId], acknowledgedBlindEventsTruncated: true },
+        acknowledgedBlindReviewIds: [review.eventId], acknowledgedBlindEventsTruncated: true },
     });
     expect(JSON.stringify(result.metadata).length).toBeLessThan(3500);
     expect((result.metadata as { events: unknown[] }).events).toHaveLength(10);

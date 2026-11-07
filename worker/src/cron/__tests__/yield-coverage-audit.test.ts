@@ -843,11 +843,11 @@ describe("identifyCoverageGaps", () => {
     expect(gaps.venueRiskConfigMissing).toEqual([]);
   });
 
-  it("identifies high-TVL stablecoin pools not matched", () => {
+  it.each(["NEW_STABLE", "USR"])("identifies unmatched high-TVL pools despite symbol keywords: %s", (symbol) => {
     const dlPools: DlPool[] = [makeDlYieldPool({
       pool: "unknown-pool",
       project: "new-protocol",
-      symbol: "NEW_STABLE",
+      symbol,
       tvlUsd: 50_000_000,
     })];
     const gaps = identifyCoverageGaps(dlPools, new Set());
