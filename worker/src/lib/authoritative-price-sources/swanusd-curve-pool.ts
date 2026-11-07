@@ -4,8 +4,12 @@ import { fetchEvmBlockNumber, fetchEvmBlockTimestamp, fetchEvmRpcBatch, isHexRes
 import { hasPublishableCurrentPrice } from "../price-publication-state";
 import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
+  decodeAddressWord,
   decodeUint256WordBigInt,
+  decimalFromRaw,
+  encodeIndexedCall,
   encodeUint256,
+  quoteUsdcPrice,
   resolveTrustedOverrideParent,
   type CurrentPriceOverride,
   type LivePriceContext,
@@ -38,30 +42,9 @@ const MIN_USDC_BALANCE = 1_000;
 const MAX_QUOTE_IMPACT_RATIO = 0.05;
 const MAX_BLOCK_AGE_SEC = 5 * 60;
 
-function decodeAddressWord(value: `0x${string}` | null): string | null {
-  if (!value || value.length < 66) return null;
-  return `0x${value.slice(26, 66)}`.toLowerCase();
-}
-
-function decimalFromRaw(value: bigint, decimals: number): number {
-  const scale = 10n ** BigInt(decimals);
-  return Number(value / scale) + Number(value % scale) / Number(scale);
-}
-
-function encodeIndexedCall(selector: string, index: number): string {
-  return `${selector}${encodeUint256(index)}`;
-}
-
 function encodeGetDy(inputTokens: number): string {
   const inputRaw = BigInt(inputTokens) * 10n ** BigInt(SWANUSD_DECIMALS);
   return `${GET_DY_SELECTOR}${encodeUint256(SWANUSD_INDEX)}${encodeUint256(USDC_INDEX)}${encodeUint256(inputRaw)}`;
-}
-
-function quotePrice(outputRaw: bigint | null, inputTokens: number): number | null {
-  if (outputRaw == null || outputRaw <= 0n) return null;
-  const output = decimalFromRaw(outputRaw, USDC_DECIMALS);
-  const price = output / inputTokens;
-  return Number.isFinite(price) && price > 0 ? price : null;
 }
 
 /**
@@ -138,11 +121,11 @@ export async function fetchSwanusdCurvePoolPrice(
     return null;
   }
 
-  const smallPrice = quotePrice(
+  const smallPrice = quoteUsdcPrice(
     smallQuoteRaw ? decodeUint256WordBigInt(smallQuoteRaw) : null,
     SMALL_QUOTE_SWANUSD,
   );
-  const impactPrice = quotePrice(
+  const impactPrice = quoteUsdcPrice(
     impactQuoteRaw ? decodeUint256WordBigInt(impactQuoteRaw) : null,
     IMPACT_QUOTE_SWANUSD,
   );

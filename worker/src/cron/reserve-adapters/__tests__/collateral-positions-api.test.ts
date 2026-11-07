@@ -89,10 +89,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [{ collateralBalance: "90000000" }],
         },
         "0xunk": {
@@ -245,10 +242,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [
             {
               collateralBalance: "100000000",
@@ -281,10 +275,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [{ collateralBalance: "100000000", minted: "not-an-integer", zchf: "0xZCHF", zchfDecimals: 18 }],
         },
       },
@@ -307,10 +298,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [{ collateralBalance: "100000000" }],
         },
       },
@@ -340,10 +328,7 @@ describe("adaptCollateralPositions", () => {
     const result = adaptCollateralPositions(
       {
         "0xbtc": {
-          address: "0xBTC",
-          name: "Wrapped BTC",
-          symbol: "WBTC",
-          decimals: 8,
+          ...COLLATERAL_POSITIONS_BY_ASSET["0xbtc"],
           positions: [{ collateralBalance: "100000000" }],
         },
       },

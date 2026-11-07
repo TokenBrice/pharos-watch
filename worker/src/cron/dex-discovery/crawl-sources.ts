@@ -148,20 +148,7 @@ export async function crawlCoin(
     const stage = await providerLeaves[leaf]();
     providerChecks.push(...stage.providerChecks);
     if (stage.unresolvedChains) unresolvedChains = stage.unresolvedChains;
-    if (stage.stoppedEarly) {
-      return await finalizeOwnRun({
-        pools,
-        unresolvedChains,
-        deploymentOutcomes: classifyDexDeploymentOutcomes({
-          stablecoinId,
-          deployments: coinTargets,
-          pools,
-          providerChecks,
-          nowSec,
-        }),
-        checkedDeploymentKeys: checkedDeploymentKeys(providerChecks),
-      });
-    }
+    if (stage.stoppedEarly) break;
     if (leaf === "dexscreener") {
       if ((pools.length === 0 || !context.hasUsablePoolPrice) && stablecoinMeta?.geckoId && !context.timeExceeded()) {
         await onProviderStage?.("cg-tickers");

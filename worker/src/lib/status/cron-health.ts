@@ -1,3 +1,4 @@
+import { parseJsonObject } from "../json-parse";
 import { chunkArray } from "@shared/lib/collections";
 import {
   CRON_INTERVALS,
@@ -152,15 +153,7 @@ const CRON_HISTORY_MODE_SQL_FILTER: Readonly<Record<CronHistoryQueryMode, string
 };
 
 function parseMetadataObject(value: string | null | undefined): Record<string, unknown> | undefined {
-  if (!value) return undefined;
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : undefined;
-  } catch {
-    return undefined;
-  }
+  return parseJsonObject(value) ?? undefined;
 }
 
 function parseCronEvent(value: string | null | undefined): CronEvent | null {

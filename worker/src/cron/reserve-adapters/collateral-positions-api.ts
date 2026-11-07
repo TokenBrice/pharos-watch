@@ -105,10 +105,6 @@ interface BridgeBasketProbe {
   }>;
 }
 
-function readParams(config: LiveReservesConfig): PositionsApiParams {
-  return parseLiveReserveAdapterParams("collateral-positions-api", config.params);
-}
-
 /**
  * Protocol-specific assets used as collateral in Frankencoin / dEURO
  * that are too niche for the canonical risk map.
@@ -652,7 +648,7 @@ export async function fetchCollateralPositionsApiReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "collateral-positions-api");
-  const params = readParams(config);
+  const params = parseLiveReserveAdapterParams("collateral-positions-api", config.params);
 
   const timeout = 12_000;
   const [details, prices] = await Promise.all([

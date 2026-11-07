@@ -1,4 +1,6 @@
 import { getCache, setCache } from "./db-cache";
+import { tryParseJson } from "./json-parse";
+import { readRecord as asRecord } from "@shared/lib/type-guards";
 import { BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION } from "./blacklist-cache-keys";
 import { aggregateFlowCacheKey } from "./mint-burn-flow-cache-keys";
 import { MINT_BURN_WATERMARK_MAX_AGE_SEC } from "./mint-burn-flows-service";
@@ -44,26 +46,12 @@ function failedResult(reason: string, metadata?: Record<string, unknown>): Canar
   };
 }
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value != null && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-}
-
 function asNonNegativeInt(value: unknown): number | null {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 function asFiniteNumber(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function parseJson(value: string): unknown {
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
 }
 
 interface RosterBaseline {
@@ -80,7 +68,7 @@ async function readBaseline(
   try {
     const cached = await getCache(db, key);
     if (!cached) return { baseline: null, readFailed: false };
-    const parsed = asRecord(parseJson(cached.value));
+    const parsed = asRecord(tryParseJson(cached.value));
     const count = asNonNegativeInt(parsed?.[countField]);
     const storedAt = asNonNegativeInt(parsed?.observedAt);
     if (count == null || storedAt == null || storedAt > observedAt
@@ -123,7 +111,7 @@ export async function checkMintBurnPublicationCoverage(
     const cached = await getCache(db, cacheKey);
     if (!cached) return degradedResult("mint-burn-publication-cache-missing", { cacheKey });
 
-    const body = asRecord(parseJson(cached.value));
+    const body = asRecord(tryParseJson(cached.value));
     if (!body) return failedResult("mint-burn-publication-payload-unusable", { cacheKey });
     const publication = asRecord(body.publication);
     const gauge = asRecord(body.gauge);
@@ -273,7 +261,7 @@ export async function checkBlacklistRosterCoverage(
     const cached = await getCache(db, BLACKLIST_SUMMARY_SNAPSHOT_CACHE_KEY);
     if (!cached) return failedResult("blacklist-summary-snapshot-unavailable");
 
-    const snapshot = asRecord(parseJson(cached.value));
+    const snapshot = asRecord(tryParseJson(cached.value));
     if (snapshot?.version !== BLACKLIST_SUMMARY_SNAPSHOT_CACHE_VERSION) {
       return failedResult("blacklist-summary-snapshot-unusable", {
         version: snapshot?.version ?? null,

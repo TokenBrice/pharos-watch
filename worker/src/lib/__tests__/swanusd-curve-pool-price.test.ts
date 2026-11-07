@@ -185,4 +185,15 @@ describe("swanUSD exact Curve pool price", () => {
     })).resolves.toBeNull();
     expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
   });
+
+  it("rejects an unpriced USDC parent for a missing swanUSD price before spending block or pool reads", async () => {
+    const asset = { id: "swanusd-swan", symbol: "swanUSD", price: null } as unknown as PeggedAsset;
+    const context: LivePriceContext = {
+      assetsById: new Map([[asset.id, asset], ["usdc-circle", { ...trustedUsdc(), price: null }]]),
+    };
+
+    await expect(swanusdCurvePoolProvider.fetchLivePrice?.(asset, context)).resolves.toBeNull();
+    expect(context.lastUntrustedParent).toEqual({ parentId: "usdc-circle", reason: "parent-price-missing" });
+    expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
+  });
 });

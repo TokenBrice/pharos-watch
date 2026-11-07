@@ -403,7 +403,7 @@ function isScopedLiabilitySupply(
   return "scope" in supply;
 }
 
-function unscopedOmissionWarnings(supply: MultichainSupplyAggregate): LiveReserveWarning[] {
+export function unscopedOmissionWarnings(supply: MultichainSupplyAggregate): LiveReserveWarning[] {
   const warnings: LiveReserveWarning[] = [];
   if (supply.omittedNonEvmChains.length > 0) {
     warnings.push(reserveInfoWarning(

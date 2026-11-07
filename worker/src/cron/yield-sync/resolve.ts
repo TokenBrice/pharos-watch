@@ -1705,45 +1705,14 @@ interface ResolveYieldSourcesParams {
   onOptionalSourceOutcome?: (outcome: YieldOptionalSourceOutcome) => void;
 }
 
-export async function resolveYieldSources({
-  db,
-  startSec,
-  sevenDaysAgoSec,
-  dlPools,
-  onChainRates,
-  safetyScores,
-  safetySnapshotAvailable,
-  riskFreeRates,
-  signal,
-  chainRpcs,
-  coingeckoApiKey,
-  supplementalCandidates = [],
-  stablecoinSupplyById,
-  stablecoinSupplyMapState,
-  onOptionalSourceOutcome,
-}: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
-  const trackedResolution = await resolveTrackedYieldSources({
-    db,
-    startSec,
-    sevenDaysAgoSec,
-    dlPools,
-    onChainRates,
-    safetyScores,
-    riskFreeRates,
-    signal,
-    chainRpcs,
-    coingeckoApiKey,
-    onOptionalSourceOutcome,
-  });
+export async function resolveYieldSources(params: ResolveYieldSourcesParams): Promise<YieldResolutionResult> {
+  const { supplementalCandidates = [], ...sourceParams } = params;
+  const trackedResolution = await resolveTrackedYieldSources(sourceParams);
 
   appendPoolFamilyYieldSources({
+    ...sourceParams,
     resolved: trackedResolution.resolved,
-    dlPools,
     supplementalCandidates,
-    safetyScores,
-    safetySnapshotAvailable,
-    stablecoinSupplyById,
-    stablecoinSupplyMapState,
   });
 
   const linkedVariantSourceCount = appendLinkedVariantParentYieldSources(trackedResolution.resolved);
@@ -1751,7 +1720,7 @@ export async function resolveYieldSources({
     logWorkerEventArgs("handler", "info", `[sync-yield-data] Linked variant projection: ${linkedVariantSourceCount} parent sources`);
   }
 
-  enforceExternalOpportunityTvlEligibility(trackedResolution.resolved, stablecoinSupplyById);
+  enforceExternalOpportunityTvlEligibility(trackedResolution.resolved, sourceParams.stablecoinSupplyById);
 
   return trackedResolution;
 }

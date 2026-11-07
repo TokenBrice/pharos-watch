@@ -126,6 +126,60 @@ const deletedSupplyHelperNames = {
   "sumPegBuckets": true,
 };
 
+// Names that shadow or restate the canonical helpers. A local helper with
+// different semantics takes a name that says so (e.g. asRecordOrArray).
+const localRecordGuardNames = new Set([
+  "asRecord", "isRecord", "readRecord", "isPlainObject", "isPlainRecord",
+  "isObjectRecord", "isUnknownRecord", "asObject", "toRecord",
+]);
+const localJsonParseNames = new Set([
+  "parseJson", "tryParseJson", "parseJsonObject", "parseJsonStringArray", "parseJsonObjectWithSchema",
+]);
+
+function isRecordGuardCopy(fn) {
+  if (fn.params.length !== 1 || fn.params[0].type !== "Identifier") return false;
+  const isParam = (node) => node?.type === "Identifier" && node.name === fn.params[0].name;
+  let expr = fn.body;
+  if (expr?.type === "BlockStatement") {
+    if (expr.body.length !== 1 || expr.body[0].type !== "ReturnStatement") return false;
+    expr = expr.body[0].argument;
+  }
+  if (expr?.type === "ConditionalExpression") {
+    let value = expr.consequent;
+    while (["TSAsExpression", "TSTypeAssertion", "TSNonNullExpression"].includes(value.type)) value = value.expression;
+    if (!isParam(value) || expr.alternate.type !== "Literal" || expr.alternate.value !== null) return false;
+    expr = expr.test;
+  }
+  function conjuncts(node) {
+    return node?.type === "LogicalExpression" && node.operator === "&&"
+      ? [...conjuncts(node.left), ...conjuncts(node.right)] : [node];
+  }
+  const parts = conjuncts(expr);
+  if (parts.length !== 3) return false;
+  const kinds = parts.map((node) => {
+    if (isParam(node) || (node?.type === "UnaryExpression" && node.operator === "!"
+      && node.argument.type === "UnaryExpression" && node.argument.operator === "!" && isParam(node.argument.argument))) return "non-null";
+    if (node?.type === "BinaryExpression") {
+      const pairs = [[node.left, node.right], [node.right, node.left]];
+      if (["===", "=="].includes(node.operator) && pairs.some(([a, b]) =>
+        a.type === "UnaryExpression" && a.operator === "typeof" && isParam(a.argument)
+        && b.type === "Literal" && b.value === "object")) return "object";
+      if (["!==", "!="].includes(node.operator) && pairs.some(([a, b]) =>
+        isParam(a) && b.type === "Literal" && b.value === null)) return "non-null";
+    }
+    if (node?.type === "UnaryExpression" && node.operator === "!") {
+      const call = node.argument;
+      const member = call.callee;
+      if (call.type === "CallExpression" && !call.optional && call.arguments.length === 1 && isParam(call.arguments[0])
+        && member.type === "MemberExpression" && !member.computed && !member.optional
+        && member.object.type === "Identifier" && member.object.name === "Array"
+        && member.property.type === "Identifier" && member.property.name === "isArray") return "array";
+    }
+    return null;
+  });
+  return kinds.includes("object") && kinds.includes("non-null") && kinds.includes("array");
+}
+
 const pharosBoundaryPlugin = {
   rules: {
     "shared-types-imports": {
@@ -227,6 +281,38 @@ const pharosBoundaryPlugin = {
           },
           "MemberExpression[computed=true] > Literal.property"(node) {
             if (Object.hasOwn(deletedSupplyHelperNames, node.value)) context.report({ node, messageId: "unavailable" });
+          },
+        };
+      },
+    },
+    "no-local-helper-copies": {
+      meta: {
+        type: "problem",
+        schema: [],
+        messages: {
+          record: "Use isRecord/readRecord from shared/lib/type-guards.ts instead of declaring a local record guard.",
+          json: "Use the canonical parsers from worker/src/lib/json-parse.ts instead of declaring a local JSON parser.",
+        },
+      },
+      create(context) {
+        const filename = relative(repoRoot, context.filename).replaceAll("\\", "/");
+        function check(node, name, fn = node) {
+          // shared/types and shared/contracts may not import shared/lib, so they keep local guards.
+          if ((localRecordGuardNames.has(name) || isRecordGuardCopy(fn)) && filename !== "shared/lib/type-guards.ts"
+            && !filename.startsWith("shared/types/") && !filename.startsWith("shared/contracts/")) {
+            context.report({ node, messageId: "record" });
+          }
+          if (localJsonParseNames.has(name) && filename.startsWith("worker/")
+            && filename !== "worker/src/lib/json-parse.ts") {
+            context.report({ node, messageId: "json" });
+          }
+        }
+        return {
+          FunctionDeclaration: (node) => check(node, node.id?.name),
+          VariableDeclarator(node) {
+            if (node.init?.type === "ArrowFunctionExpression" || node.init?.type === "FunctionExpression") {
+              check(node, node.id.name, node.init);
+            }
           },
         };
       },
@@ -551,6 +637,21 @@ const eslintConfig = defineConfig([
     rules: {
       "pharos/no-zero-coercing-supply-helpers": "error",
     },
+  },
+  {
+    files: [...NON_WORKER_SOURCE_GLOBS, "worker/**/*.{ts,tsx,js,jsx,mjs,cjs,mts,cts}"],
+    ignores: [
+      "**/__tests__/**", "**/*.{test,spec}.{ts,tsx,js,jsx,mjs,cjs,mts,cts}",
+      "**/test-helpers/**", "**/test-utils/**", "**/fixtures/**", "**/__mocks__/**",
+      "**/*test-support.*", "scripts/test/**", "src/test/**",
+      "**/generated/**", "**/*.generated.*", "src/generated/**", "shared/data/**",
+      // Pinned Safety Score evaluator inputs: editing them rotates the
+      // evaluation-build identity and needs the equivalence replay, so their
+      // local copies wait for the next evaluator release.
+      "shared/lib/safety-score-v9/policy.ts", "worker/src/lib/live-reserves/store-row-decoding.ts",
+    ],
+    plugins: { pharos: pharosBoundaryPlugin },
+    rules: { "pharos/no-local-helper-copies": "error" },
   },
   {
     // Worker tests additionally sign fixtures with throwaway private keys.

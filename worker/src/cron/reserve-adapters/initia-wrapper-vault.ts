@@ -128,7 +128,7 @@ interface TransportFailure {
   reason: string;
 }
 
-function readRecord(value: unknown, label: string): Record<string, unknown> {
+function requireRecord(value: unknown, label: string): Record<string, unknown> {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${ADAPTER}: ${label} is missing or malformed`);
   }
@@ -145,9 +145,9 @@ function parseMoveResource(value: unknown, label: string): ParsedMoveResource {
   } catch {
     throw new Error(`${ADAPTER}: ${label} move_resource is not valid JSON`);
   }
-  const resource = readRecord(decoded, `${label} move_resource`);
+  const resource = requireRecord(decoded, `${label} move_resource`);
   const type = resource.type;
-  const data = readRecord(resource.data, `${label} move_resource.data`);
+  const data = requireRecord(resource.data, `${label} move_resource.data`);
   if (typeof type !== "string" || type.length === 0) {
     throw new Error(`${ADAPTER}: ${label} move_resource.type is missing`);
   }
@@ -160,7 +160,7 @@ function assertResourceIdentity(
   expectedStructTag: string,
   label: string,
 ): ParsedMoveResource {
-  const resource = readRecord(response.resource, `${label} resource`);
+  const resource = requireRecord(response.resource, `${label} resource`);
   if (resource.address !== expectedAddress) {
     throw new Error(
       `${ADAPTER}: ${label} address mismatch (expected ${expectedAddress}, got ${String(resource.address)})`,
@@ -211,7 +211,7 @@ function parseViewBalance(response: InitiaViewResponse): bigint {
 }
 
 function parseBankSupply(response: InitiaSupplyResponse, expectedDenom: string): bigint {
-  const amount = readRecord(response.amount, "bank supply amount");
+  const amount = requireRecord(response.amount, "bank supply amount");
   if (amount.denom !== expectedDenom) {
     throw new Error(
       `${ADAPTER}: iUSD denom mismatch (expected ${expectedDenom}, got ${String(amount.denom)})`,
@@ -346,8 +346,8 @@ function identityParamsOnly(params: Record<string, unknown>): Record<string, unk
 }
 
 function parseNodeInfoChainId(value: unknown): string {
-  const nodeInfo = readRecord(
-    readRecord(value, "node info").default_node_info,
+  const nodeInfo = requireRecord(
+    requireRecord(value, "node info").default_node_info,
     "node info default_node_info",
   );
   const network = nodeInfo.network;
@@ -358,8 +358,8 @@ function parseNodeInfoChainId(value: unknown): string {
 }
 
 function parseLatestBlockHeader(value: unknown, expectedChainId: string): BlockHeaderObservation {
-  const block = readRecord(readRecord(value, "latest block").block, "latest block body");
-  const header = readRecord(block.header, "latest block header");
+  const block = requireRecord(requireRecord(value, "latest block").block, "latest block body");
+  const header = requireRecord(block.header, "latest block header");
   if (header.chain_id !== expectedChainId) {
     throw new Error(
       `${ADAPTER}: latest block chain id does not match the reviewed ${expectedChainId} (got ${String(header.chain_id)})`,

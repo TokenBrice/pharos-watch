@@ -38,6 +38,10 @@ const candidate: CurveStableswapRateInputExecutionCandidate = {
   ],
 };
 
+function ok(label: string, returnData: `0x${string}`) {
+  return { label, success: true, returnData };
+}
+
 function stateResults(calls: readonly { label: string }[], overrides: {
   balances?: bigint[];
   rates?: bigint[];
@@ -51,60 +55,36 @@ function stateResults(calls: readonly { label: string }[], overrides: {
   const coinAddresses = overrides.coinAddresses ?? [SFRXUSD, FRXUSD];
   return calls.map((call) => {
     if (call.label.endsWith("-balances")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({
-          abi: POOL_ABI,
-          functionName: "get_balances",
-          result: overrides.balances ?? PINNED_BALANCES,
-        }),
-      };
+      return ok(call.label, encodeFunctionResult({
+        abi: POOL_ABI,
+        functionName: "get_balances",
+        result: overrides.balances ?? PINNED_BALANCES,
+      }));
     }
     if (call.label.endsWith("-rates")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "stored_rates", result: rates }),
-      };
+      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "stored_rates", result: rates }));
     }
     if (call.label.endsWith("-A")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "A", result: PINNED_AMPLIFICATION }),
-      };
+      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "A", result: PINNED_AMPLIFICATION }));
     }
     if (call.label.endsWith("-fee")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({ abi: POOL_ABI, functionName: "fee", result: fee }),
-      };
+      return ok(call.label, encodeFunctionResult({ abi: POOL_ABI, functionName: "fee", result: fee }));
     }
     if (call.label.endsWith("-offpeg-fee-multiplier")) {
-      return {
-        label: call.label,
-        success: true,
-        returnData: encodeFunctionResult({
-          abi: POOL_ABI,
-          functionName: "offpeg_fee_multiplier",
-          result: offpegFeeMultiplier,
-        }),
-      };
+      return ok(call.label, encodeFunctionResult({
+        abi: POOL_ABI,
+        functionName: "offpeg_fee_multiplier",
+        result: offpegFeeMultiplier,
+      }));
     }
     const match = call.label.match(/-coin-(\d+)$/);
     if (!match) throw new Error(`unexpected call ${call.label}`);
     const index = Number(match[1]);
-    return {
-      label: call.label,
-      success: true,
-      returnData: encodeFunctionResult({
-        abi: POOL_ABI,
-        functionName: "coins",
-        result: coinAddresses[index]!,
-      }),
-    };
+    return ok(call.label, encodeFunctionResult({
+      abi: POOL_ABI,
+      functionName: "coins",
+      result: coinAddresses[index]!,
+    }));
   });
 }
 

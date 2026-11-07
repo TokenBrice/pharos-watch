@@ -67,8 +67,26 @@ describe("runDexScreenerPass", () => {
     vi.useRealTimers();
   });
 
-  it("records thrown exact lookups as failed provider outcomes", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockRejectedValueOnce(new Error("dns failed"));
+  it.each([
+    {
+      name: "records thrown exact lookups as failed provider outcomes",
+      setup: () => vi.mocked(fetchDsTokenPoolsWithStatus).mockRejectedValueOnce(new Error("dns failed")),
+      diagnostic: { errorClass: "Error", errorMessage: "dns failed" },
+    },
+    {
+      name: "includes DexScreener response status details in exact lookup diagnostics",
+      setup: () => vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
+        ok: false,
+        pairs: [],
+        status: 429,
+        contentType: "text/html",
+        error: "HTTP 429 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: rate limited",
+        hardRefusal: true,
+      }),
+      diagnostic: { status: 429, errorClass: "rate-limited", errorMessage: expect.stringContaining("HTTP 429") },
+    },
+  ])("$name", async ({ setup, diagnostic }) => {
+    setup();
     const db = circuitClosedDb();
 
     const result = await runDexScreenerPass(
@@ -93,8 +111,7 @@ describe("runDexScreenerPass", () => {
           endpoint: "api.dexscreener.com/tokens/v1/base/0xabc",
           ok: false,
           success: false,
-          errorClass: "Error",
-          errorMessage: "dns failed",
+          ...diagnostic,
         }),
       ],
     });
@@ -109,54 +126,6 @@ describe("runDexScreenerPass", () => {
     const circuitWrites = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
     const exactWrite = circuitWrites.find((entry) => entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
 
-    expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
-      state: "closed",
-      consecutiveFailures: 1,
-    });
-  });
-
-  it("includes DexScreener response status details in exact lookup diagnostics", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
-      ok: false,
-      pairs: [],
-      status: 429,
-      contentType: "text/html",
-      error: "HTTP 429 for https://api.dexscreener.com/tokens/v1/base/0xabc; body starts with: rate limited",
-      hardRefusal: true,
-    });
-    const db = circuitClosedDb();
-
-    const result = await runDexScreenerPass(
-      [
-        makeMissingAsset({
-          id: "exact-usd",
-          symbol: "EXACT",
-          address: "0xabc",
-          chains: ["Base"],
-        }),
-      ],
-      undefined,
-      db,
-    );
-
-    expect(result).toMatchObject({
-      resolved: 0,
-      failures: [],
-      diagnostics: [
-        expect.objectContaining({
-          source: "dexscreener-exact",
-          endpoint: "api.dexscreener.com/tokens/v1/base/0xabc",
-          status: 429,
-          ok: false,
-          success: false,
-          errorClass: "rate-limited",
-          errorMessage: expect.stringContaining("HTTP 429"),
-        }),
-      ],
-    });
-
-    const circuitWrites = db.getHistory().filter((entry) => entry.sql.includes("INSERT INTO cache"));
-    const exactWrite = circuitWrites.find((entry) => entry.binds[0] === `circuit:${CIRCUIT_SOURCE.DEXSCREENER_PRICES}`);
     expect(JSON.parse(String(exactWrite?.binds[1]))).toMatchObject({
       state: "closed",
       consecutiveFailures: 1,

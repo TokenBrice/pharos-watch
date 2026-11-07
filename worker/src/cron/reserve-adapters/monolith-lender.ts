@@ -22,7 +22,6 @@ import {
   executeEvmObservationPlan,
   pinnedBlockPlan,
   uint256Observation,
-  type AnyEvmObservationField,
 } from "./evm-observation-plan";
 import {
   buildRedemptionSnapshotMetadata,
@@ -92,29 +91,6 @@ function decodeFeedPrice(raw: `0x${string}`): { price: bigint; updatedAt: bigint
   }
 }
 
-async function readPinnedValues<const Fields extends readonly AnyEvmObservationField[]>(options: {
-  fields: Fields;
-  chain: string;
-  signal: AbortSignal;
-  ctx?: AdapterContext;
-  rpcUrl?: string;
-  fallbackRpcUrl?: string;
-}): Promise<Awaited<ReturnType<typeof executeEvmObservationPlan<Fields>>>> {
-  return executeEvmObservationPlan({
-    adapterKey: ADAPTER_KEY,
-    fields: options.fields,
-    read: (calls) => fetchOnchainMulticall3({
-      calls,
-      chain: options.chain,
-      signal: options.signal,
-      ctx: options.ctx,
-      rpcUrl: options.rpcUrl,
-      fallbackRpcUrl: options.fallbackRpcUrl,
-      timeoutMs: RPC_TIMEOUT_MS,
-    }),
-  });
-}
-
 export async function fetchMonolithLenderReserves(
   coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
@@ -151,7 +127,8 @@ export async function fetchMonolithLenderReserves(
   // rescales decimals and carries no fee or pause branch.
   const sellProbeIn = 10n ** BigInt(COIN_DECIMALS);
   const expectedSellOut = 10n ** BigInt(params.psmAsset.decimals);
-  const plan = await readPinnedValues({
+  const plan = await executeEvmObservationPlan({
+    adapterKey: ADAPTER_KEY,
     fields: [
       // Wiring identities. The Lender's wiring is immutable constructor state,
       // so any drift means the reviewed route no longer describes this contract.
@@ -243,11 +220,15 @@ export async function fetchMonolithLenderReserves(
           : `getSellAmountOut(${sellProbeIn}) returned ${value} instead of ${expectedSellOut}, so the PSM sell is no longer a 1:1 conversion`,
       }),
     ] as const,
-    chain: input.chain,
-    signal,
-    ctx: blockPlan.ctx,
-    rpcUrl,
-    fallbackRpcUrl,
+    read: (calls) => fetchOnchainMulticall3({
+      calls,
+      chain: input.chain,
+      signal,
+      ctx: blockPlan.ctx,
+      rpcUrl,
+      fallbackRpcUrl,
+      timeoutMs: RPC_TIMEOUT_MS,
+    }),
   });
   const values = plan.values;
 

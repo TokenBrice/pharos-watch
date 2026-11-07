@@ -10,6 +10,7 @@ import {
   COINBASE_PRODUCTS,
   KRAKEN_MARKETS,
 } from "@shared/lib/pricing-provider-config";
+import { isUnsignedDecimalLiteral } from "@shared/lib/decimal-literal";
 import { CEX_MAX_BID_ASK_SPREAD_BPS } from "@shared/lib/pricing-source-policy";
 import { USER_AGENT } from "./constants";
 import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
@@ -55,43 +56,6 @@ export interface BinanceFetchSession {
 export function createBinanceFetchSession(): BinanceFetchSession {
   return {};
 }
-function isAsciiDigit(char: string): boolean {
-  return char >= "0" && char <= "9";
-}
-
-function isDecimalPriceLiteral(value: string): boolean {
-  let index = 0;
-  let hasMantissaDigit = false;
-
-  while (index < value.length && isAsciiDigit(value[index])) {
-    hasMantissaDigit = true;
-    index++;
-  }
-
-  if (value[index] === ".") {
-    index++;
-    while (index < value.length && isAsciiDigit(value[index])) {
-      hasMantissaDigit = true;
-      index++;
-    }
-  }
-
-  if (!hasMantissaDigit) return false;
-  if (index === value.length) return true;
-  if (value[index] !== "e" && value[index] !== "E") return false;
-
-  index++;
-  if (value[index] === "+" || value[index] === "-") index++;
-
-  let hasExponentDigit = false;
-  while (index < value.length && isAsciiDigit(value[index])) {
-    hasExponentDigit = true;
-    index++;
-  }
-
-  return hasExponentDigit && index === value.length;
-}
-
 function parseCexPrice(value: unknown): number | null {
   if (typeof value === "number") {
     return Number.isFinite(value) && value > 0 ? value : null;
@@ -99,7 +63,7 @@ function parseCexPrice(value: unknown): number | null {
   if (typeof value !== "string") return null;
 
   const trimmed = value.trim();
-  if (!isDecimalPriceLiteral(trimmed)) return null;
+  if (!isUnsignedDecimalLiteral(trimmed)) return null;
 
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;

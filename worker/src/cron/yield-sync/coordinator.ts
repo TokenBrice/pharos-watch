@@ -1222,26 +1222,6 @@ export async function guardPublishedYieldCoverage(params: {
   );
   const currentPublishedRankingCount = countPreviewRankings(params.previewRankingsPayload);
 
-  if (previousRankingsState.malformed) {
-    return {
-      qualityReasons: [],
-      result: createCronResult({
-        status: "degraded",
-        itemCount: currentPublishedYieldBearingCount,
-        metadata: {
-          reason: "previous-yield-rankings-cache-invalid",
-          ...(params.inputDiagnostics ? { inputDiagnostics: params.inputDiagnostics } : {}),
-        },
-      }),
-      previousPublishedYieldBearingCount: null,
-      currentPublishedYieldBearingCount,
-      previousPublishedOpportunityCount: null,
-      currentPublishedOpportunityCount,
-      previousPublishedRankingCount: null,
-      currentPublishedRankingCount,
-    };
-  }
-
   // An unreadable prior generation is an unavailable observation, not a
   // measured zero; recovery may still publish a valid replacement (R1/R2).
   const previousCountsUnavailable = params.previousYieldPublicationSnapshot.malformed;

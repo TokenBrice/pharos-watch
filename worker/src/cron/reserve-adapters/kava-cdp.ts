@@ -80,33 +80,11 @@ const KavaBankSupplySchema = z.object({
   amount: KavaAmountSchema,
 });
 
-export interface KavaCdpTotalsPayload {
-  total_collateral: Array<{ collateral_type: string; amount: { denom: string; amount: string } }>;
-}
-
-export interface KavaCdpPrincipalPayload {
-  total_principal: Array<{ collateral_type: string; amount: { denom: string; amount: string } }>;
-}
-
-export interface KavaCdpParamsPayload {
-  params: {
-    collateral_params: Array<{
-      denom: string;
-      type: string;
-      spot_market_id: string;
-      conversion_factor: string;
-      liquidation_ratio: string;
-    }>;
-  };
-}
-
-export interface KavaPricefeedPricesPayload {
-  prices: Array<{ market_id: string; price: string }>;
-}
-
-export interface KavaBankSupplyPayload {
-  amount: { denom: string; amount: string };
-}
+export type KavaCdpTotalsPayload = z.infer<typeof KavaCdpTotalsSchema>;
+export type KavaCdpPrincipalPayload = z.infer<typeof KavaCdpPrincipalSchema>;
+export type KavaCdpParamsPayload = z.infer<typeof KavaCdpParamsSchema>;
+export type KavaPricefeedPricesPayload = z.infer<typeof KavaPricefeedPricesSchema>;
+export type KavaBankSupplyPayload = z.infer<typeof KavaBankSupplySchema>;
 
 export type { KavaBlockPayload } from "../../lib/kava-lcd";
 

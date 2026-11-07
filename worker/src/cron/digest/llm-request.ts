@@ -30,7 +30,7 @@ import {
   type AnthropicRefusalCategory,
   type AnthropicStreamResult,
 } from "./anthropic-stream";
-import { tryParseJson } from "../../lib/json-parse";
+import { parseJsonObject as decodeMetaObject, tryParseJson } from "../../lib/json-parse";
 import type { DigestLlmProfile } from "@shared/types/digest";
 import {
   buildDigestLlmTelemetry,
@@ -769,12 +769,4 @@ async function requestDigestCopyWithinDeadline(
 
 function countHardIssues(issues: readonly { severity: string }[]): number {
   return issues.filter((issue) => issue.severity === "hard").length;
-}
-
-function decodeMetaObject(digestMeta: string | null): Record<string, unknown> | null {
-  if (!digestMeta) return null;
-  const decoded = tryParseJson(digestMeta, { onFailure: () => undefined });
-  return decoded && typeof decoded === "object" && !Array.isArray(decoded)
-    ? decoded as Record<string, unknown>
-    : null;
 }

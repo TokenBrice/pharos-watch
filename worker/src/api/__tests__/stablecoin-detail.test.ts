@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
-import { readJsonResponse } from "../../test-helpers/__shared/auth";
+import { makeExecutionContext as makeCtx, readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
@@ -102,22 +102,6 @@ vi.mock("../../lib/fetch-retry", async (importOriginal) => {
 
 const { handleStablecoinDetail, resetStablecoinDetailStateForTests } = await import("../stablecoin-detail");
 
-type TestExecutionContext = ExecutionContext & {
-  waitUntilPromises: Promise<unknown>[];
-};
-
-/** Minimal ExecutionContext stub that captures waitUntil calls */
-function makeCtx(): TestExecutionContext {
-  const waitUntilPromises: Promise<unknown>[] = [];
-  return {
-    waitUntil: vi.fn((promise: Promise<unknown>) => {
-      waitUntilPromises.push(Promise.resolve(promise));
-    }),
-    passThroughOnException: vi.fn(),
-    waitUntilPromises,
-  } as unknown as TestExecutionContext;
-}
-
 /** Helper to build a DefiLlama-style detail response body */
 function makeDLDetailBody(overrides: Partial<{ tokens: unknown[]; price: number }> = {}) {
   return JSON.stringify({
@@ -194,7 +178,7 @@ describe("handleStablecoinDetail", () => {
     "does not refresh providers for inactive catalog record %s",
     async (stablecoinId) => {
       const db = mockD1([{ match: "cache", rows: [] }]);
-      const ctx = makeCtx();
+      const { ctx } = makeCtx();
 
       const res = await handleStablecoinDetail(db, stablecoinId, ctx);
 
@@ -211,7 +195,7 @@ describe("handleStablecoinDetail", () => {
       rows: [],
       first: { value: makeDLDetailBody(), updated_at: now - 3_600 },
     }]);
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
 
     const res = await handleStablecoinDetail(db, "bfusd-binance", ctx);
 
@@ -236,7 +220,7 @@ describe("handleStablecoinDetail", () => {
     const db = mockD1([{ match: "cache", rows: [] }]);
     queueFetch(new Response(dlBody, { status: 200 }));
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "reusd-resupply", ctx);
 
     const body = (await readJsonResponse(res, 200)) as { address?: string };
@@ -265,7 +249,7 @@ describe("handleStablecoinDetail", () => {
       },
     ]);
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "reusd-resupply", ctx);
 
     expect(fetchSpy).not.toHaveBeenCalled();
@@ -285,7 +269,7 @@ describe("handleStablecoinDetail", () => {
       },
     ]);
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     // Should NOT call fetch when cache is fresh
@@ -305,7 +289,7 @@ describe("handleStablecoinDetail", () => {
       sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)")
         .run("detail:usdt-tether", makeDLDetailBody(), now + skew);
       queueFetch(new Response("unavailable", { status: 503 }));
-      const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+      const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx().ctx);
       if (skew === 60) {
         expect(response.status).toBe(200);
         expect(response.headers.get("X-Data-Age")).toBe("0");
@@ -339,7 +323,7 @@ describe("handleStablecoinDetail", () => {
       }[scenario];
       const { db, sqlite } = fixtures.open();
       queueFetch(new Response(JSON.stringify(upstream)));
-      const ctx = makeCtx();
+      const { ctx } = makeCtx();
       const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
       expect(response.status).toBe(502);
       expect(await response.json()).toMatchObject({ error: expect.any(String) });
@@ -361,7 +345,7 @@ describe("handleStablecoinDetail", () => {
       price: 0.5, pegMechanism: "fiat-backed",
       tokens: [{ date: upstreamDate, circulating: { peggedUSD: 100 }, minted: 0 }],
     })));
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
     expect(response.headers.get("X-Data-Updated-At")).toBe(String(observedAt));
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -385,7 +369,7 @@ describe("handleStablecoinDetail", () => {
     sqlite.prepare("INSERT INTO cache(key, value, updated_at) VALUES (?, ?, ?)")
       .run("detail:usdt-tether", value, now - 18_000);
     queueFetch(new Response(JSON.stringify({ tokens: [{ date: now }] })));
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
     expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - 18_000));
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -409,7 +393,7 @@ describe("handleStablecoinDetail", () => {
     insert.run("usdt-tether", now + 3600, 999, 2);
     // Malformed provider history must still find an admitted observed-zero rescue.
     queueFetch(new Response(JSON.stringify({ price: 1 })));
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Data-Updated-At")).toBe(String(now));
@@ -432,7 +416,7 @@ describe("handleStablecoinDetail", () => {
       })) },
     ]);
     queueFetch(new Response(JSON.stringify({ tokens: [] })));
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
     expect(response.status).toBe(502);
     expect(ctx.waitUntil).not.toHaveBeenCalled();
@@ -446,7 +430,7 @@ describe("handleStablecoinDetail", () => {
 
     queueFetch(new Response("Not Found", { status: 404 }));
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     const body = (await readJsonResponse(res, 502)) as { error: string };
@@ -464,7 +448,7 @@ describe("handleStablecoinDetail", () => {
 
     queueFetch(new Response("Server Error", { status: 500 }));
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     const body = (await readJsonResponse(res, 200)) as { tokens: Array<{ totalCirculatingUSD?: Record<string, number> }> };
@@ -491,7 +475,7 @@ describe("handleStablecoinDetail", () => {
 
     queueFetch(new Response(freshUpstreamBody, { status: 200 }));
 
-    const ctx = makeCtx();
+    const { ctx, waits } = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.headers.get("Cache-Control")).toBe("no-store");
@@ -502,8 +486,8 @@ describe("handleStablecoinDetail", () => {
     expect(body.tokens).toHaveLength(1);
     expect(body.tokens[0]?.totalCirculatingUSD?.peggedUSD).toBe(80_000_000);
     expect(ctx.waitUntil).toHaveBeenCalled();
-    await Promise.all(ctx.waitUntilPromises);
-    const refreshed = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    await Promise.all(waits);
+    const refreshed = await handleStablecoinDetail(db, "usdt-tether", makeCtx().ctx);
     expect(await refreshed.json()).toMatchObject(JSON.parse(freshUpstreamBody));
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
@@ -519,12 +503,12 @@ describe("handleStablecoinDetail", () => {
         { date: now, totalCirculatingUSD: { peggedUSD: 120_000_000 }, totalCirculating: { peggedUSD: 120_000_000 } },
       ] });
       queueFetch(new Response(freshBody, { status: 200 }));
-      const ctx = makeCtx();
+      const { ctx, waits } = makeCtx();
       const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
       expect(response.headers.get("X-Data-Updated-At")).toBe(String(now));
       expect(response.headers.get("Warning")).toBeNull();
       expect(await response.json()).toMatchObject(JSON.parse(freshBody));
-      await Promise.all(ctx.waitUntilPromises);
+      await Promise.all(waits);
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     } finally {
       clock.mockRestore();
@@ -539,7 +523,7 @@ describe("handleStablecoinDetail", () => {
       { match: "supply_history", rows: [] },
     ]);
     queueFetch(new Response("Server Error", { status: 500 }));
-    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx().ctx);
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - 18_000));
     expect(response.headers.get("X-Data-Freshness")).toBe("stale");
@@ -559,7 +543,7 @@ describe("handleStablecoinDetail", () => {
       { match: "supply_history", rows: [] },
     ]);
     queueFetch(new Response("Server Error", { status: 500 }));
-    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx().ctx);
     expect(response.status).toBe(200);
     expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - age));
     expect(response.headers.get("X-Data-Freshness")).toBe(status);
@@ -582,13 +566,13 @@ describe("handleStablecoinDetail", () => {
 
     queueFetch(new Response("Server Error", { status: 500 }));
 
-    const ctx = makeCtx();
+    const { ctx, waits } = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     const body = (await readJsonResponse(res, 200)) as { tokens: unknown[] };
     expect(body.tokens).toHaveLength(1);
     expect(res.headers.get("X-Data-Updated-At")).toBe(String(now - 600));
-    await Promise.allSettled(ctx.waitUntilPromises);
+    await Promise.allSettled(waits);
   });
 
   it("does not serve detail cache older than the max stale window when refresh fails", async () => {
@@ -611,7 +595,7 @@ describe("handleStablecoinDetail", () => {
 
     queueFetch(new Response("Server Error", { status: 500 }));
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(502);
@@ -639,8 +623,8 @@ describe("handleStablecoinDetail", () => {
       entered();
     }));
 
-    const ctxA = makeCtx();
-    const ctxB = makeCtx();
+    const { ctx: ctxA, waits: waitsA } = makeCtx();
+    const { ctx: ctxB, waits: waitsB } = makeCtx();
     const resA = await handleStablecoinDetail(db, "usdt-tether", ctxA);
     const resB = await handleStablecoinDetail(db, "usdt-tether", ctxB);
 
@@ -649,7 +633,7 @@ describe("handleStablecoinDetail", () => {
     await fetchEntered;
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     resolveFetch(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
-    await Promise.allSettled([...ctxA.waitUntilPromises, ...ctxB.waitUntilPromises]);
+    await Promise.allSettled([...waitsA, ...waitsB]);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -668,7 +652,7 @@ describe("handleStablecoinDetail", () => {
       entered();
     }));
 
-    const ctxA = makeCtx();
+    const { ctx: ctxA, waits: waitsA } = makeCtx();
     const first = await handleStablecoinDetail(db, "usdt-tether", ctxA);
     expect(first.status).toBe(200);
     expect(first.headers.get("X-Data-Updated-At")).toBe(String(now - 600));
@@ -678,7 +662,7 @@ describe("handleStablecoinDetail", () => {
     // Simulate another isolate: clear only the in-memory single-flight Map.
     resetStablecoinDetailStateForTests();
 
-    const ctxB = makeCtx();
+    const { ctx: ctxB } = makeCtx();
     const second = await handleStablecoinDetail(db, "usdt-tether", ctxB);
     expect(second.status).toBe(200);
     expect(second.headers.get("X-Data-Updated-At")).toBe(String(now - 600));
@@ -686,7 +670,7 @@ describe("handleStablecoinDetail", () => {
     expect(ctxB.waitUntil).not.toHaveBeenCalled();
 
     resolveFetch(new Response(makeDLDetailBody({ price: 1 }), { status: 200 }));
-    await Promise.allSettled(ctxA.waitUntilPromises);
+    await Promise.allSettled(waitsA);
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache WHERE key = 'detail-refresh:usdt-tether'").get())
       .toEqual({ count: 0 });
   });
@@ -717,14 +701,14 @@ describe("handleStablecoinDetail", () => {
       entered();
     }));
 
-    const backgroundCtx = makeCtx();
+    const { ctx: backgroundCtx, waits: backgroundWaits } = makeCtx();
     const staleRes = await handleStablecoinDetail(staleDb, "usdt-tether", backgroundCtx);
     expect(staleRes.status).toBe(200);
     expect(staleRes.headers.get("Warning")).toBeNull();
     expect(staleRes.headers.get("X-Data-Freshness")).toBe("fresh");
     expect(backgroundCtx.waitUntil).toHaveBeenCalledTimes(1);
 
-    const syncCtx = makeCtx();
+    const { ctx: syncCtx } = makeCtx();
     const syncResponse = handleStablecoinDetail(coldDb, "usdt-tether", syncCtx);
     await fetchEntered;
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -738,18 +722,18 @@ describe("handleStablecoinDetail", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(syncCtx.waitUntil).not.toHaveBeenCalled();
 
-    await Promise.allSettled(backgroundCtx.waitUntilPromises);
+    await Promise.allSettled(backgroundWaits);
   });
 
   it("publishes fresh tokens that a later detail request reads without fetching", async () => {
     const dlBody = makeDLDetailBody();
     const { db } = fixtures.open();
     queueFetch(new Response(dlBody, { status: 200 }));
-    const ctx = makeCtx();
+    const { ctx, waits } = makeCtx();
     const first = await handleStablecoinDetail(db, "usdt-tether", ctx);
     expect(await readJsonResponse(first, 200)).toMatchObject(JSON.parse(dlBody));
-    await Promise.all(ctx.waitUntilPromises);
-    const later = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    await Promise.all(waits);
+    const later = await handleStablecoinDetail(db, "usdt-tether", makeCtx().ctx);
     expect(await readJsonResponse(later, 200)).toMatchObject(JSON.parse(dlBody));
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
@@ -762,7 +746,7 @@ describe("handleStablecoinDetail", () => {
     const newBody = makeDLDetailBody({ tokens: [{ date: 2, totalCirculatingUSD: { peggedUSD: 120 } }] });
     await publishDetailCacheGeneration(db, "detail:usdt-tether", newBody, newClaim);
     await publishDetailCacheGeneration(db, "detail:usdt-tether", oldBody, oldClaim);
-    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx().ctx);
     expect(await readJsonResponse(response, 200)).toMatchObject(JSON.parse(newBody));
     expect(fetchSpy).not.toHaveBeenCalled();
   });
@@ -775,7 +759,7 @@ describe("handleStablecoinDetail", () => {
 
     queueFetch(new Response("upstream unavailable", { status: 503 }));
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "usdt-tether", ctx);
 
     expect(res.status).toBe(502);
@@ -812,7 +796,7 @@ describe("handleStablecoinDetail", () => {
       return new Response("Not Found", { status: 404 });
     });
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "xaut-tether", ctx, "cg-pro-key");
 
     const body = await readJsonResponse(res, 200) as { tokens: Array<{ totalCirculating: unknown; totalCirculatingUSD: unknown }> };
@@ -837,7 +821,7 @@ describe("handleStablecoinDetail", () => {
 
     queueFetch(new Response(dlBody, { status: 200 }));
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "eurc-circle", ctx);
 
     const body = (await readJsonResponse(res, 200)) as {
@@ -864,7 +848,7 @@ describe("handleStablecoinDetail", () => {
       new Response(JSON.stringify({ tvl: [] }), { status: 200 }),
     );
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, "xaut-tether", ctx);
 
     expect(await readJsonResponse(res, 502)).toEqual({ error: "Failed to fetch commodity token data" });
@@ -890,7 +874,7 @@ describe("handleStablecoinDetail", () => {
     // CoinGecko returns empty market_caps
     queueFetch(new Response(JSON.stringify({ market_caps: [], prices: [] }), { status: 200 }));
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, geckoOnlyId!, ctx);
     expect(fetchSpy).toHaveBeenCalledWith(
       expect.stringContaining("/market_chart?vs_currency=usd&days=max"),
@@ -922,7 +906,7 @@ describe("handleStablecoinDetail", () => {
       prices: [[staleTsMs, 1.05]],
     }), { status: 200 }));
 
-    const ctx = makeCtx();
+    const { ctx } = makeCtx();
     const res = await handleStablecoinDetail(db, geckoOnlyId!, ctx);
 
     const body = (await readJsonResponse(res, 200)) as {

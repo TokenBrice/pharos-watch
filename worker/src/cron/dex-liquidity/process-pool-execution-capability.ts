@@ -716,53 +716,33 @@ export function buildPoolExecutionCapability(
           context.chainAddressToId,
         )
       : { executionModel: null, gate: null };
+  const curveMeasuredTargetInput = {
+    curveData,
+    chain: chainNorm,
+    stablecoinId,
+    chainAddressToId: context.chainAddressToId,
+    stablecoinPriceById: context.stablecoinPriceById,
+    retainedTvlUsd: rawContribTvl,
+    capturedAt: context.measuredTargetCapturedAt,
+  };
   const curveCryptoSwapMeasuredTarget =
     protocol === "curve" && curveMeasuredRouteData
       ? buildCurveCryptoSwapMeasuredExecutionTarget({
+          ...curveMeasuredTargetInput,
           curveData: curveMeasuredRouteData,
-          chain: chainNorm,
-          stablecoinId,
-          chainAddressToId: context.chainAddressToId,
-          stablecoinPriceById: context.stablecoinPriceById,
-          retainedTvlUsd: rawContribTvl,
-          capturedAt: context.measuredTargetCapturedAt,
         })
       : null;
   const curveStableSwapMeasuredTargets =
     protocol === "curve" && curveAddressMatch
-      ? buildCurveStableSwapMeasuredExecutionTargets({
-          curveData,
-          chain: chainNorm,
-          stablecoinId,
-          chainAddressToId: context.chainAddressToId,
-          stablecoinPriceById: context.stablecoinPriceById,
-          retainedTvlUsd: rawContribTvl,
-          capturedAt: context.measuredTargetCapturedAt,
-        })
+      ? buildCurveStableSwapMeasuredExecutionTargets(curveMeasuredTargetInput)
       : [];
   const curveStableSwapNgMeasuredTarget =
     protocol === "curve" && curveAddressMatch
-      ? buildCurveStableSwapNgMeasuredExecutionTarget({
-          curveData,
-          chain: chainNorm,
-          stablecoinId,
-          chainAddressToId: context.chainAddressToId,
-          stablecoinPriceById: context.stablecoinPriceById,
-          retainedTvlUsd: rawContribTvl,
-          capturedAt: context.measuredTargetCapturedAt,
-        })
+      ? buildCurveStableSwapNgMeasuredExecutionTarget(curveMeasuredTargetInput)
       : null;
   const curveCompositeMeasuredTarget =
     protocol === "curve" && curveAddressMatch
-      ? buildCurveCompositeMeasuredExecutionTarget({
-          curveData,
-          chain: chainNorm,
-          stablecoinId,
-          chainAddressToId: context.chainAddressToId,
-          stablecoinPriceById: context.stablecoinPriceById,
-          retainedTvlUsd: rawContribTvl,
-          capturedAt: context.measuredTargetCapturedAt,
-        })
+      ? buildCurveCompositeMeasuredExecutionTarget(curveMeasuredTargetInput)
       : null;
   const curveStableSwapPhysicalPoolId =
     protocol === "curve" && curveAddressMatch

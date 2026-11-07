@@ -1,6 +1,7 @@
 import { TELEGRAM_PENDING_PRIORITY } from "@shared/lib/telegram-delivery-policy";
 import { chunkArray, D1_MAX_BOUND_PARAMETERS, executeAtomicBatch } from "../../lib/db";
 import { D1_BATCH_SIZE } from "../../lib/constants";
+import { parseJsonObject } from "../../lib/json-parse";
 import { fnv1a32 } from "@shared/lib/fnv1a";
 import { TELEGRAM_SPLIT_VERSION } from "../common/constants";
 import type { LinkPreviewOptions } from "./telegram";
@@ -264,15 +265,7 @@ export async function enqueueTelegramJob(
 }
 
 export function parseTelegramDeliveryOptions(raw: string | null): TelegramDeliveryOptions {
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as TelegramDeliveryOptions
-      : {};
-  } catch {
-    return {};
-  }
+  return parseJsonObject(raw) ?? {};
 }
 
 /**

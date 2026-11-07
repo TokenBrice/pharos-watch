@@ -1,6 +1,6 @@
 import type { ReserveSlice, ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReserveWarning, LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { getCanonicalReserveAssetRisk } from "@shared/lib/reserve-asset-risk";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -22,12 +22,6 @@ interface BtcfiHandlerRow {
   id: number;
   symbol: string;
   isStable: boolean;
-}
-
-type BtcfiParams = LiveReserveAdapterParamsByKey["btcfi"];
-
-function readParams(config: LiveReservesConfig): BtcfiParams {
-  return parseLiveReserveAdapterParams("btcfi", config.params);
 }
 
 const UNMAPPED_BTC_SLICE_NAME = "Unmapped BTC variants";
@@ -179,7 +173,7 @@ export async function fetchBtcfiReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireJsonInput(config.inputs.primary, "btcfi");
-  const params = readParams(config);
+  const params = parseLiveReserveAdapterParams("btcfi", config.params);
   const timeout = 12_000;
   const [market, handlers] = await Promise.all([
     fetchJsonWithRetry<BtcfiMarketRow[]>(input.url, signal, timeout, ctx),

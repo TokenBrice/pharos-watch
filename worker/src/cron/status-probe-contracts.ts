@@ -1,5 +1,6 @@
 import { API_FRESHNESS_MAX_AGE_SEC, isFreshnessWarningHeader } from "@shared/lib/api-freshness";
 import { API_PATHS } from "@shared/lib/api-endpoints";
+import { isRecord } from "@shared/lib/type-guards";
 
 /**
  * Payload contracts for probe paths whose HTTP status alone cannot prove the
@@ -36,10 +37,6 @@ export function isStatusLevelOnlyProbePath(path: string): boolean {
   const queryStart = path.indexOf("?");
   const pathname = queryStart === -1 ? path : path.slice(0, queryStart);
   return STATUS_LEVEL_ONLY_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return !!value && typeof value === "object" && !Array.isArray(value);
 }
 
 export function evaluateStatusProbePayload(

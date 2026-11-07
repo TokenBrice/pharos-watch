@@ -261,7 +261,7 @@ function jsonString(value: unknown, name: string): string {
   return text;
 }
 
-function parseJson(value: string, name: string): unknown {
+function parseRequiredJson(value: string, name: string): unknown {
   try {
     return JSON.parse(value) as unknown;
   } catch {
@@ -269,8 +269,8 @@ function parseJson(value: string, name: string): unknown {
   }
 }
 
-function parseJsonObject(value: string, name: string): Record<string, unknown> {
-  const parsed = parseJson(value, name);
+function parseRequiredJsonObject(value: string, name: string): Record<string, unknown> {
+  const parsed = parseRequiredJson(value, name);
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error(`${name} must be a JSON object`);
   }
@@ -278,7 +278,7 @@ function parseJsonObject(value: string, name: string): Record<string, unknown> {
 }
 
 function parsePositiveIntegerArrayJson(value: string, name: string): number[] {
-  const parsed = parseJson(value, name);
+  const parsed = parseRequiredJson(value, name);
   if (!Array.isArray(parsed)) {
     throw new Error(`${name} must be a JSON array`);
   }
@@ -291,7 +291,7 @@ function parsePositiveIntegerArrayJson(value: string, name: string): number[] {
 }
 
 function parseStringRecordJson(value: string, name: string): Record<string, string> {
-  const parsed = parseJsonObject(value, name);
+  const parsed = parseRequiredJsonObject(value, name);
   for (const [key, recordValue] of Object.entries(parsed)) {
     if (typeof recordValue !== "string") {
       throw new Error(`${name}.${key} must be a string`);
@@ -315,7 +315,7 @@ function admitSealedPayload(payload: Record<string, unknown>, outcomeKind: DdrPu
 }
 
 function mapSealedPublicPrediction(row: SealedPublicPredictionRow): DdrSealedPublicPrediction {
-  const sealedPayload = admitSealedPayload(parseJsonObject(row.sealed_payload_json, "sealedPayloadJson"), row.outcome_kind);
+  const sealedPayload = admitSealedPayload(parseRequiredJsonObject(row.sealed_payload_json, "sealedPayloadJson"), row.outcome_kind);
   const metadata: DdrSealedPublicPredictionMetadata = {
     id: row.id,
     incidentKey: row.incident_key,
@@ -388,7 +388,7 @@ async function mapCompressedPublicationManifest(
     maximumUncompressedBytes: DDR_PUBLICATION_MAX_UNCOMPRESSED_BYTES,
     expectedUncompressedBytes: row.base_payload_bytes,
   });
-  parseJsonObject(basePayloadJson, "basePayloadJson");
+  parseRequiredJsonObject(basePayloadJson, "basePayloadJson");
   return mapPublicationManifest({ ...row, base_payload_json: basePayloadJson });
 }
 
@@ -444,7 +444,7 @@ function applyPublicationPayloadClock(
 }
 
 function parsePublicationPayloadClock(value: string): DdrPublicationPayloadClock {
-  const parsed = parseJsonObject(value, "basePayloadClockJson");
+  const parsed = parseRequiredJsonObject(value, "basePayloadClockJson");
   const clock: DdrPublicationPayloadClock = {};
   if (typeof parsed.methodologyAsOf === "number") clock.methodologyAsOf = parsed.methodologyAsOf;
   const trainingWindow = readRecord(parsed.lineageTrainingWindow);
@@ -870,7 +870,7 @@ async function mapReferencedPublicationManifest(
     );
   }
   const sourceManifest = await mapCompressedPublicationManifest(source);
-  const { content } = splitPublicationPayloadClock(parseJsonObject(sourceManifest.basePayloadJson, "basePayloadJson"));
+  const { content } = splitPublicationPayloadClock(parseRequiredJsonObject(sourceManifest.basePayloadJson, "basePayloadJson"));
   const payload = applyPublicationPayloadClock(content, parsePublicationPayloadClock(row.base_payload_clock_json));
   if (stableJsonHashV1(DDR_HASH_DOMAINS.publicationManifest, payload) !== row.base_payload_hash) {
     throw new Error(`Publication manifest ${row.snapshot_token} payload reconstruction does not match its published hash`);
