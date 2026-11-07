@@ -71,37 +71,37 @@ export const YIELD_RISK_CONFIG = {
   sparklend: {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 1 },
     confidence: "verified",
-    reviewedAt: "2026-07-01",
+    reviewedAt: "2026-11-07",
     rationale:
-      "SparkLend is an Aave V3 fork operated by the Sky (formerly MakerDAO) ecosystem; it inherits the upstream Aave V3 audit surface, runs significant TVL, and is governed through the Sky framework.",
+      "SparkLend is an Aave V3 fork operated by the Sky (formerly MakerDAO) ecosystem; it inherits the upstream Aave V3 audit surface, runs significant TVL, and is governed through the Sky framework. 2026-11-07 re-review: the core repository retains eight upstream reports plus ChainSecurity's Spark-specific review; DeFiLlama reports $5.03B TVL, almost entirely on Ethereum, with residual balances on the September-deprecated, withdraw-only Gnosis deployment. Spark's August removal of its Risk Council leaves facilitator review, SPK voting and Sky spell execution; sub-scores unchanged.",
   },
   "spark-savings": {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 1, operational: 1 },
     confidence: "verified",
-    reviewedAt: "2026-07-01",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Spark Savings wrappers route yield through the Sky/Spark savings stack rather than an external credit venue; the reviewed surface inherits Sky governance, issuer-level rate setting, and Spark operational controls.",
+      "Spark Savings wrappers inherit Sky governance, issuer-level rate setting, and Spark operational controls; the family includes distinct savings, lending and liquidity-layer mechanisms. 2026-11-07 re-review: Spark lists Cantina and ChainSecurity reports for Vaults V2 and sUSDS, and DeFiLlama reports $1.25B across eight chains. V1 sUSDC is legacy, V2 uses approved strategies, and stUSDS backs SKY-collateralized borrowing; these are distinct from the plain Sky savings rate. Sub-scores unchanged.",
   },
   maple: {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-07-01",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Maple is an institutional credit venue whose lender pools depend on delegate underwriting, borrower performance, and loan recovery mechanics; that credit-underwriting surface is materially broader than low-risk money-market venues.",
+      "Maple is an institutional credit venue whose lender pools depend on delegate underwriting, borrower performance, and loan recovery mechanics. 2026-11-07 re-review: Maple lists September Sherlock and October Cantina audits for its November shared-strategy release; its trust assumptions retain delegate-controlled redemptions and discretionary loss recognition despite Governor timelocks. DeFiLlama reports $2.36B TVL including published borrower collateral, separately from $1.80B outstanding loans; sub-scores unchanged.",
   },
   yearn: {
     scores: YEARN_VENUE_SCORES,
     confidence: "verified",
-    reviewedAt: "2026-07-01",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Yearn is a mature strategy-vault venue with long production history and repeated audits; vault strategy risk remains, but the reviewed stablecoin vault surface is operationally established.",
+      "Yearn is a mature strategy-vault venue with long production history and repeated audits; vault strategy risk remains, but the reviewed stablecoin vault surface is operationally established. 2026-11-07 re-review: the security repository includes June 2026 V3.1 vault and TokenizedStrategy reports; October's yvUSDC report documents a 6-of-9 ySafe and seven-day strategy-addition timelock. DeFiLlama reports $148.9M across seven chains; shared venue sub-scores unchanged.",
   },
   "yearn-finance": {
     scores: YEARN_VENUE_SCORES,
     confidence: "verified",
-    reviewedAt: "2026-07-01",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Yearn Finance maps to the same mature strategy-vault family as Yearn; stablecoin vault risk is reviewed as low after accounting for its production history, audit cadence, and vault-level accounting.",
+      "Yearn Finance maps to the same mature strategy-vault family as Yearn. 2026-11-07 re-review: the security repository includes June 2026 V3.1 vault and TokenizedStrategy reports; October's yvUSDC report documents a 6-of-9 ySafe and seven-day strategy-addition timelock. DeFiLlama reports $148.9M across seven chains; both venue aliases retain the shared sub-scores.",
   },
   morpho: {
     scores: MORPHO_VENUE_SCORES,
@@ -161,16 +161,16 @@ export const YIELD_RISK_CONFIG = {
   "3jane-lending": {
     scores: { audits: 4, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-07-01",
+    reviewedAt: "2026-11-07",
     rationale:
-      "3Jane is an unsecured on-chain credit venue whose core risk is uncollateralized lending against off-chain cash flows with off-chain legal recovery; a 3-of-5 multisig with anonymous signers and heavy off-chain credit operations keep it in the high tier despite real audit coverage. Aligned to Yearn's published USD3 risk report (3.5/5 'Medium — enhanced monitoring', 2026-07-01 cross-check).",
+      "3Jane makes unsecured credit decisions against offchain financial evidence with legal recovery; anonymous multisig control and offchain underwriting retain substantial venue risk despite dedicated audits. 2026-11-07 re-review: official audits add Guardian LCC reviews dated August 27 and October 27; Yearn's September 5 review distinguishes seven-day upgrades from 24-hour configuration changes and records summer reserve compression. DeFiLlama reports $11.11M idle TVL separately from $103.89M active loans on Ethereum; sub-scores unchanged.",
   },
   centrifuge: {
     scores: { audits: 1, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-07-01",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Centrifuge is mature, heavily-audited RWA tokenization; the medium tier reflects offchain asset-performance exposure and redemption/epoch gating rather than contract risk.",
+      "Centrifuge's RWA tokenization exposes lenders to offchain asset performance and redemption/epoch gating. 2026-11-07 re-review: V3.3 has July-September BurraSec and Sherlock reviews plus core formal verification; guardian privilege escalation retains a 48-hour timelock and separate protocol/operations Safes. The issuer's September 29 FAQ still describes CP172 restructuring as proposed. DeFiLlama reports $669.77M RWA active AUM and fees across six chains, without a current TVL series; sub-scores unchanged.",
   },
   "flux-finance": {
     scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
@@ -182,9 +182,9 @@ export const YIELD_RISK_CONFIG = {
   cap: {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-07-01",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Cap routes a 1:1-reserve stablecoin into restaking-backed credit to whitelisted institutional operators; strong audits offset by youth and operator credit risk.",
+      "Cap routes stablecoin reserves into restaking-backed institutional credit; reserve accounting includes operator principal rather than entirely liquid assets. 2026-11-07 re-review: the repository adds September's Octane upgrade audit; one-day timelocked multisig administration retains direct risk powers outside the delay. October's Yearn report records a new 3-of-6 cancellation Safe and 24.8% of USDC reserves outside operator principal. DeFiLlama's $183.1M Ethereum TVL includes restaker collateral, not just redemption liquidity; sub-scores unchanged.",
   },
   avantis: {
     scores: { audits: 3, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
@@ -216,11 +216,11 @@ export const YIELD_RISK_CONFIG = {
       "Curve LlamaLend is battle-tested but the complex LLAMMA soft-liquidation design and a 2025 bad-debt event keep funds/liquidity risk at low-medium.",
   },
   "fluid-lending": {
-    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-07-01",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Fluid's capital-efficient shared liquidity layer concentrates cross-module risk; Guardian pause powers and a recent bad-debt sweep put it at low-medium.",
+      "Fluid's shared liquidity layer combines cross-module, collateral-oracle and withdrawal-limit risk. 2026-11-07 re-review: current calls confirm a one-day timelock, 6-of-12 guardian and single capped-rate sUSDai/USDC oracle source; Yearn's September 29 report identifies about $214M debt behind USDai peg assumptions. Short-delay controls, issuer-dependent collateral valuation and bounded exits raise centralization, funds management and liquidity to 3. Current audits include Sui components; DeFiLlama reports $618.5M lending TVL across six chains, including a $47 Sui deployment.",
   },
   dolomite: {
     scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
@@ -444,51 +444,51 @@ export const YIELD_RISK_CONFIG = {
   "navi-lending": {
     scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "NAVI is the largest Sui lender with strong Move audits; team-retained mint/freeze controls and young-chain risk cap it at low.",
+      "NAVI is an overcollateralized Sui lender with independent Move audits and capability-controlled pause, reserve and risk parameters. 2026-11-07 re-review: the audit index includes 2026 MoveBit and Veridise E-Mode reviews and MoveBit's Pyth Pro oracle review; published code retains OwnerCap controls, and DeFiLlama reports $126.8M TVL on Sui. The issuer status archive reports no August-October incidents; sub-scores unchanged.",
   },
   "zest-v2": {
     scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 3 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Zest is the largest Stacks BTC lender with a timelocked multisig; novel unproven BitVM vaults and thin Bitcoin-L2 liquidity raise it to medium.",
+      "Zest V2 is a Stacks overcollateralized lending market with multisig control, thin single-chain liquidity and a prior V1 exploit. 2026-11-07 re-review: V2 docs list Clarity Alliance and Greybeard reviews, a one-day proposal delay with an urgent bypass and seven-day implementation updates; token-holder governance remains planned. DeFiLlama reports $44.4M TVL on Stacks. September's Bitcoin Collateral Vault audit covers a separate Ethereum demo; sub-scores and partial confidence remain.",
   },
   resupply: {
     scores: { audits: 4, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Resupply (Convex/Yearn sub-DAO) recovered fully from a Jun-2025 ~$9.6M oracle exploit; composable stablecoin-CDP collateral and the preventable flaw keep it at medium.",
+      "Resupply's June 2025 oracle exploit and its use of other lending protocols' collateral receipts retain contract and composability risk after recovery. 2026-11-07 re-review: the official repository publishes eight reports covering the core, inflation fixes, savings reUSD and CurveLend operators; DeFiLlama reports $47.87M TVL on Ethereum. The post-exploit review record does not remove the prior oracle failure or external-market exposure, so sub-scores are unchanged.",
   },
   termmax: {
     scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 3 },
-    confidence: "verified",
-    reviewedAt: "2026-06-15",
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
     rationale:
-      "TermMax is a well-audited 4-of-6-multisig fixed-rate isolated lender; tokenized-equity/RWA collateral and maturity lockups raise it to medium.",
+      "TermMax uses fixed-term isolated markets, curator-managed vaults and documented 4-of-6 administrative control. 2026-11-07 re-review: the official repository lists four ABDK reports and a March 2025 Cantina competition; docs retain a one-day default vault timelock. Reported TVL is about $687K, but October's $25.78M USPC collateral reduction coincided with almost unchanged $21.05M active loans. The TVL decline does not establish a proportionate change in lending or exit liquidity; sub-scores remain and confidence is partial pending collateral reconciliation.",
   },
   upshift: {
     scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 4, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Upshift is an institutional credit-vault provider lending to KYC'd market makers via a prime broker; a sub-4-signer multisig, no timelock, and offchain counterparty exposure put it high.",
+      "Upshift combines curator-directed DeFi and institutional-credit strategies with operator-reported NAV and queued redemptions. 2026-11-07 re-review: official docs list 11 audits through April 2026, generally 4-of-6 ProxyAdmin control and timelocks on selected parameters; upgrades and owner emergency asset transfers remain untimelocked. DeFiLlama reports $460.65M TVL across 15 listed chains, 12 with nonzero balances. These controls retain substantial centralization and counterparty risk; sub-scores unchanged.",
   },
   tectonic: {
-    scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 3, operational: 3 },
+    scores: { audits: 4, centralization: 3, fundsManagement: 4, liquidity: 4, operational: 4 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Tectonic is a mature audited Compound-fork on Cronos; overcollateralized but single-chain concentration and an opaque admin threshold keep it at medium.",
+      "Tectonic is a Compound-derived Cronos lender whose August 2026 TONIC collateral manipulation drained markets and prompted a network halt and rollback. 2026-11-07 re-review: Bitquery's archived-chain reconstruction measures about $120.4M gross market outflows before the rollback; this is not the final net loss. DeFiLlama now reports $18.15M TVL on Cronos versus $121.58M before the attack. The realized valuation failure and liquidity contraction raise audits, funds management, liquidity and operational risk; admin and remediation evidence remains partial.",
   },
   "openeden-usdo": {
     scores: { audits: 2, centralization: 3, fundsManagement: 4, liquidity: 2, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "OpenEden USDO is a regulated T-bill-backed stablecoin venue; strong ratings/custody are offset by offchain RWA dependency and centralized issuer mint/redeem control — medium.",
+      "OpenEden USDO is a centrally issued Treasury-backed yield venue with offchain reserve dependency, issuer blocklisting and eligibility-gated primary redemptions. 2026-11-07 re-review: ChainSecurity publishes September 2024 USDO and March 2025 Express reviews; instant redemptions remain liquidity-bounded and manual exits take up to two business days. DeFiLlama reports $12.72M RWA active AUM, while its API has no current TVL series; these distinct measures do not establish a change to the sub-scores.",
   },
 } satisfies Record<string, YieldRiskConfigEntry>;
 
@@ -615,13 +615,13 @@ export function resolveReviewedYieldRiskConfig(venueProtocol: string | null | un
  * neutral. See the source-risk section of `docs/yield-intelligence.md`.
  */
 const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentration> = {
-  // Penalty-worthy: a LOW venue tier (yearn-finance) hides a real single-ecosystem
-  // (Sky) coupling — the canonical case the signal exists for.
+  // The former near-total Sky allocation has diversified; retain its identity
+  // as the largest ecosystem without a concentration penalty.
   "yvusdc-yearn": {
     ecosystem: "Sky",
-    severity: "medium",
-    note: "Funded debt sits almost entirely in Sky-governed venues (sUSDS savings plus Spark Lend); a Sky incident would affect both legs simultaneously. Matches Yearn's own risk report flagging ~100% Sky-governance coupling.",
-    reviewedAt: "2026-06-15",
+    severity: "low",
+    note: "Sky remains the largest funded ecosystem but no longer dominates the vault. 2026-11-07 re-review: Yearn's API reports about $18.38M funded debt split 34.7% Sky, 33.0% Cap-backed Pawn Broker and 32.3% Yearn-curated Morpho. October's risk report identifies the Pawn Broker's exclusion from the default withdrawal queue and a seven-day debt-call repayment window; the former near-total Sky concentration no longer applies.",
+    reviewedAt: "2026-11-07",
   },
   // Informational (severity low = no added penalty): single-curator MetaMorpho
   // vaults whose apparent market-level diversification is bounded by one curator +
@@ -657,23 +657,19 @@ const YIELD_DEPENDENCY_CONCENTRATION: Record<string, YieldDependencyConcentratio
     note: "All exposure is Morpho lending markets allocated by a single curator (Steakhouse); apparent market diversification is bounded by one curator. Morpho protocol risk is already priced by the venue tier, so this is surfaced without an added penalty. 2026-09-23 re-review: the Morpho app still attributes the vault to Steakhouse with the vault live at about $86M deposits.",
     reviewedAt: "2026-09-23",
   },
-  // syrupUSDC/USDT yield is originated by a single off-chain Pool Delegate EOA
-  // ("Maple Direct") controlling ~97% of AUM loan origination/impairments with no
-  // on-chain governance gate. Surfaced at LOW severity (informational, no penalty)
-  // because the `maple` venue tier already prices the credit/delegate risk — a HIGH
-  // entry would double-count it. Matches the single-curator Morpho chips above.
-  // Source: Yearn maple-syrupUSDC dependency graph (2026-07-01 cross-check).
+  // Maple-managed delegate/strategy concentration is already priced by the venue
+  // score; keep it informational rather than charging the same exposure twice.
   "syrupusdc-maple": {
     ecosystem: "Maple (Pool Delegate)",
     severity: "low",
-    note: "syrupUSDC's yield is originated by a single off-chain Pool Delegate EOA ('Maple Direct') that controls loan origination and impairments for ~97% of AUM with no on-chain governance gate. Surfaced without an added penalty because the medium `maple` venue tier already prices the credit/delegate risk.",
-    reviewedAt: "2026-07-01",
+    note: "syrupUSDC depends on Maple-managed delegates for underwriting, allocations and redemption processing; the medium maple venue tier already prices that control. 2026-11-07 re-review: Maple's shared-strategy documentation adds Strategy Delegates and an Operational Admin alongside Pool Delegates, with discretionary impairment and redemption processing. Concentration remains informational without an added penalty.",
+    reviewedAt: "2026-11-07",
   },
   "syrupusdt-maple": {
     ecosystem: "Maple (Pool Delegate)",
     severity: "low",
-    note: "syrupUSDT shares syrupUSDC's single off-chain Pool Delegate ('Maple Direct') for loan origination and impairments. Surfaced without an added penalty because the medium `maple` venue tier already prices the credit/delegate risk.",
-    reviewedAt: "2026-07-01",
+    note: "syrupUSDT shares Maple-managed delegate, underwriting and redemption infrastructure with syrupUSDC; the medium maple venue tier already prices that control. 2026-11-07 re-review: shared strategies add Strategy Delegates and an Operational Admin, while Pool Delegates retain redemption discretion. Separate loan books do not diversify Maple's operational control; concentration remains informational without an added penalty.",
+    reviewedAt: "2026-11-07",
   },
 };
 
