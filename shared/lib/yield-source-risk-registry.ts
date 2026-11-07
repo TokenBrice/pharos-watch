@@ -131,32 +131,32 @@ export const YIELD_RISK_CONFIG = {
   pendle: {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-09",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Pendle is a mature yield-tokenization venue with isolated markets and a long audit trail; reviewed stablecoin principal/yield markets are low venue risk when market and maturity data remain observable.",
+      "Pendle is a mature yield-tokenization venue with isolated markets and a long audit trail; reviewed stablecoin principal/yield markets are low venue risk when market and maturity data remain observable. 2026-11-07 re-review: the public audit repository includes PT-looping, Market V7 and sPENDLE reviews alongside the V2 core reports; DeFiLlama reports $1.00B TVL across 13 funded chains. PPP voting uses sPENDLE, while market and underlying-asset risks remain distinct; sub-scores unchanged.",
   },
   beefy: {
     scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-09",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Beefy is a multi-chain strategy-vault aggregator; reviewed yield rows inherit additional strategy, chain, bridge, and integration risk beyond canonical lending venues.",
+      "Beefy is a multi-chain strategy-vault aggregator; reviewed yield rows inherit additional strategy, chain, bridge, and integration risk beyond canonical lending venues. 2026-11-07 re-review: the audit repository retains wrapper, Zap and CLM reports; current controls are a 3-of-6 developer multisig and six-hour strategy timelock. DeFiLlama reports $97.1M TVL across 22 funded chains; October notices retire Sonic products and describe ongoing Stream recovery and Aero migration, supporting unchanged strategy and operational sub-scores.",
   },
   // ── Phase 2 long-tail venues (yield v8.292, reviewed 2026-06-15) ──────────────
   // Uncollateralized / RWA credit (high tier — where `unknown`=0 was most wrong)
   clearpool: {
     scores: { audits: 3, centralization: 5, fundsManagement: 5, liquidity: 4, operational: 3 },
-    confidence: "verified",
-    reviewedAt: "2026-06-15",
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Clearpool is uncollateralized institutional credit; a sub-4-signer multisig with no timelock and direct lender default exposure place it in the high venue-risk tier.",
+      "Clearpool is uncollateralized institutional credit; upgradeable admin controls and direct lender default exposure place it in the high venue-risk tier. 2026-11-07 re-review: the current catalog separates Dynamic, Prime, Credit Vault and T-Pool audits, and the Prime review documents owner-controlled upgrades and membership parameters. DeFiLlama reports $18.0M TVL across seven funded chains, concentrated on Flare; Dynamic lender withdrawals still depend on utilization. Sub-scores remain conservative; current signer and timelock configuration was not independently confirmed.",
   },
   goldfinch: {
     scores: { audits: 2, centralization: 4, fundsManagement: 5, liquidity: 4, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Goldfinch is uncollateralized RWA credit with realized multi-million-dollar loan losses; strong audits do not offset offchain borrower-default exposure.",
+      "Goldfinch is uncollateralized RWA credit with realized multi-million-dollar loan losses; strong audits do not offset offchain borrower-default exposure. 2026-11-07 re-review: CertiK and Trail of Bits coverage and the 6-of-10 Council remain documented; DeFiLlama reports $2.07M on Ethereum. GIP-85 records a $330K December 2025 exploit of an unaudited pre-launch test contract, separate from the lending contracts; legacy credit-recovery and liquidity risks support unchanged sub-scores.",
   },
   "3jane-lending": {
     scores: { audits: 4, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
@@ -175,9 +175,9 @@ export const YIELD_RISK_CONFIG = {
   "flux-finance": {
     scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Flux Finance is a Compound V2 fork lending against tokenized Treasuries; overcollateralized but admin-upgradeable with permissioned liquidations.",
+      "Flux Finance is a Compound V2 fork lending against tokenized Treasuries; overcollateralized but admin-upgradeable with permissioned liquidations. 2026-11-07 re-review: official security docs date the dedicated Code4rena audit to January 2023, and ONDO governance documents a three-day vote with a one-day timelock plus delegated emergency controls. DeFiLlama reports $43.6M TVL on Ethereum; OUSG liquidations remain permissioned, supporting unchanged sub-scores.",
   },
   cap: {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
@@ -189,9 +189,9 @@ export const YIELD_RISK_CONFIG = {
   avantis: {
     scores: { audits: 3, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Avantis is a perp-DEX LP vault where depositors backstop leveraged traders' PnL; single audit, upgradeable, and market (not credit) principal risk.",
+      "Avantis, renamed Veranta, is a perp-DEX LP vault where depositors backstop leveraged traders' PnL; upgradeable contracts and trusted keepers add control risk. 2026-11-07 re-review: Guardian's October V2 report covers tranche, vault and trading contracts, with all four critical findings resolved but four high findings acknowledged; DeFiLlama reports $10.6M TVL on Base, and the market-risk and control sub-scores remain unchanged.",
   },
   // EVM money markets / CDPs
   "euler-v2": {
@@ -204,16 +204,16 @@ export const YIELD_RISK_CONFIG = {
   gearbox: {
     scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Gearbox is a well-audited leverage/credit-account protocol; the leverage and curator-credit model lifts funds and liquidity risk above plain money markets.",
+      "Gearbox is a well-audited leverage/credit-account protocol; the leverage and curator-credit model lifts funds and liquidity risk above plain money markets. 2026-11-07 re-review: the security repository includes ChainSecurity's 2025 V3.1, permissionless and account-migration reports; current curator docs require at least a 24-hour timelock, and DeFiLlama reports $22.1M TVL across 11 listed chains, 92% on Ethereum; sub-scores unchanged.",
   },
   "curve-llamalend": {
-    scores: { audits: 2, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
+    scores: { audits: 3, centralization: 2, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Curve LlamaLend is battle-tested but the complex LLAMMA soft-liquidation design and a 2025 bad-debt event keep funds/liquidity risk at low-medium.",
+      "Curve LlamaLend combines V1 and V2 lending markets with LLAMMA soft liquidations; complex accounting, collateral-specific oracle risk and impaired legacy markets constrain its venue scores. 2026-11-07 re-review: live Llamalend V2 rewrites the lending contracts, while Curve's developer docs still report no public final audits; audits rises from 2 to 3. DeFiLlama reports $96.1M across four listed chains, and legacy CRV-long withdrawal impairment remains documented.",
   },
   "fluid-lending": {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
@@ -225,87 +225,87 @@ export const YIELD_RISK_CONFIG = {
   dolomite: {
     scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Dolomite is well-audited but a 2/3 (sub-4-signer) multisig with a sub-48h timelock and very broad asset support drive its centralization risk up to medium.",
+      "Dolomite's audited lending core uses evolving modules; concentrated admin authority, emergency bypasses and broad collateral support keep venue risk medium. 2026-11-07 re-review: core and module audit scopes remain distinct; the issuer's November 2 notice keeps Ethereum borrowing disabled after the Binance incident while deposits, withdrawals and repayments remain available; this does not establish a Dolomite exploit or blocked withdrawals. DeFiLlama reports $142.2M across seven listed chains; sub-scores unchanged.",
   },
   exactly: {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 3, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Exactly is a multiply-audited fixed+variable-rate lender with timelocked governance; smaller scale and maturity-pool fragmentation keep it at low.",
+      "Exactly is a multiply-audited fixed+variable-rate lender with timelocked governance; smaller scale and maturity-pool fragmentation keep it at low. 2026-11-07 re-review: the audit repository adds ABDK reviews of 2026 cross-chain EXA, non-collateral markets and flash-loan/oracle adapters; access-control docs retain a 24-hour timelock and 3-of-6 executor. DeFiLlama reports $12.2M across three listed chains, concentrated on Base and Optimism; sub-scores unchanged.",
   },
   "fraxlend-v2": {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Fraxlend v2 is an audited isolated-pair lender; the FRAX-priced-at-$1 assumption and a 2025 WFRAX bad-debt event lift funds/liquidity risk to low-medium.",
+      "Fraxlend v2 uses isolated lending pairs; collateral and oracle selection plus pair utilization constrain liquidations and lender exits. 2026-11-07 re-review: the Frax audit index retains the 2022-2023 Fraxlend reports; DeFiLlama records $20.65M across Ethereum, Fraxtal and Arbitrum, versus $20.10M on June 15, and a September IRM proposal remains pair-specific; sub-scores unchanged.",
   },
   "aave-v4": {
     scores: { audits: 1, centralization: 3, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Aave v4 carries best-in-class audits but fresh Mar-2026 hub-and-spoke code plus a live Dec-2025 governance crisis raise centralization/operational risk; still low overall.",
+      "Aave v4 combines hub-and-spoke lending with DAO upgrades, delegated stewards and guardian emergency controls; its younger architecture retains operational risk. 2026-11-07 re-review: the security index adds tokenization-spoke verification and a May Sherlock report; DeFiLlama records $809.66M across four chains, versus $119.39M on June 15. The October 29 precautionary reserve freeze was reversed by October 31; the reported exploit position was on V3, and sub-scores remain unchanged.",
   },
   "compound-v2": {
     scores: { audits: 1, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Compound v2 is battle-tested with 2-day-timelock governance; legacy/deprecated status (superseded by Compound III) is the only material lift, keeping it low.",
+      "Compound v2 is a mature lending venue with two-day-timelock governance; its live legacy Ethereum deployment and older codebase retain operational risk. 2026-11-07 re-review: current V2 docs retain Trail of Bits/OpenZeppelin audits, Certora verification and Governor Bravo's two-day timelock; DeFiLlama records $95.04M on Ethereum versus $92.08M on June 15, and the current app still links V2 markets; sub-scores unchanged.",
   },
   "felix-cdp": {
     scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Felix is an audited Liquity-v2 fork on Hyperliquid; youth, single-chain concentration, and HYPE/LST collateral with USDC oracle dependency place it at medium.",
+      "Felix is an audited Liquity-v2 fork on Hyperliquid; youth, single-chain concentration, and HYPE/LST collateral with USDC oracle dependency place it at medium. 2026-11-07 re-review: issuer docs and Dedaub retain upgradeable contracts, a three-day upgrade timelock and admin-controlled temporary shutdown; DeFiLlama CDP TVL is $20.85M on Hyperliquid versus $41.87M on June 15. The existing medium liquidity and operational scores continue to reflect the limited scale and controls; sub-scores unchanged.",
   },
   frankencoin: {
     scores: { audits: 2, centralization: 1, fundsManagement: 3, liquidity: 3, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Frankencoin is an immutable, oracle-free CHF stablecoin with strong decentralization; slower auction-based liquidation of volatile collateral keeps funds/liquidity risk at low.",
+      "Frankencoin's immutable, oracle-free core and modular veto governance support its low venue tier; multi-day auctions retain volatile-collateral liquidation risk. 2026-11-07 re-review: issuer docs identify the July ChainSecurity FCS/FPS2 review and a subsequently unified >1% voting quorum; modular veto governance and multi-day auctions remain, with CCIP and voting-snapshot dependencies. DeFiLlama records $59.39M on Ethereum versus $64.20M on June 15; sub-scores unchanged.",
   },
   // App-chain / non-EVM lenders
   "kamino-lend": {
     scores: { audits: 1, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 1 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Kamino is the strongest-record Solana lender in the set; oracle and large-supplier concentration are the only soft risks, keeping it low.",
+      "Kamino is an audited Solana lender with formal verification; market-level oracle, curator and supplier concentrations remain material. 2026-11-07 re-review: the audit repository includes lending reviews through versions 1.16/1.17; June opsec docs specify 5-of-10 upgrades with a 24-hour delay and a 2-of-7 emergency council without delay. DeFiLlama reports $1.19B on Solana, versus $1.10B on June 15. The issuer reported a precautionary SOL/BTC borrowing pause on October 29 and resumption October 30; sub-scores unchanged.",
   },
   justlend: {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "JustLend is a mature Tron lender with a timelocked DAO; concentrated voting power and Tron/USDD ecosystem exposure temper but do not lift it above low.",
+      "JustLend is a mature Tron lender with a timelocked DAO; concentrated voting power and Tron/USDD ecosystem exposure temper but do not lift it above low. 2026-11-07 re-review: current docs retain the Supply/Borrow audit and document Governor Bravo with a 48-hour timelock, distinguishing the new V2 market surface. DeFiLlama reports $6.58B TVL on Tron versus $3.07B on June 15; concentrated voting and ecosystem exposures still support the existing sub-scores.",
   },
   "benqi-lending": {
     scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
     confidence: "verified",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "BENQI is an established Avalanche lender with a strong audit cadence and a QI safety module; multisig-only admin keeps it at low.",
+      "BENQI is an established overcollateralized Avalanche lender; multisig upgrades and emergency controls remain residual risks within its low venue tier. 2026-11-07 re-review: official docs separate Halborn lending coverage from staking, Ignite and isolated-market reports, and retain multisig upgrades and emergency pause powers. DeFiLlama lending TVL is $99.5M on Avalanche versus $87.4M on June 15; sub-scores unchanged.",
   },
   "aries-markets": {
-    scores: { audits: 3, centralization: 5, fundsManagement: 3, liquidity: 3, operational: 4 },
+    scores: { audits: 3, centralization: 5, fundsManagement: 3, liquidity: 5, operational: 4 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Aries Markets is the top Aptos lender but a sub-4-signer multisig with no timelock, anonymous team, and a ~90% TVL collapse place it in the high tier.",
+      "Aries Markets is an Aptos lending and margin venue; limited current admin disclosure and a reduced operating footprint keep venue risk high. 2026-11-07 re-review: the issuer still links its November 2022 OtterSec audit of lending, borrowing and leveraged swaps, without a current signer/timelock disclosure. DeFiLlama reports $71K TVL on Aptos versus $5.67M on June 15 and $55K on August 9; sustained minimal depth raises liquidity from 3 to 5, with partial confidence retained.",
   },
   "scallop-lend": {
     scores: { audits: 2, centralization: 3, fundsManagement: 2, liquidity: 3, operational: 3 },
     confidence: "partial",
-    reviewedAt: "2026-06-15",
+    reviewedAt: "2026-11-07",
     rationale:
-      "Scallop is a solid Sui lender with three reputable audits and a bounty; an undisclosed multisig config and thinner Sui liquidity keep it at low-medium.",
+      "Scallop is an audited Sui money market with a bug bounty; limited admin disclosure, smaller liquidity and legacy-contract incident history constrain its venue scores. 2026-11-07 re-review: the audit catalog separates lending-core, sCoin and veSCA reports, including Asymptotic alongside Zellic, OtterSec and MoveBit. The issuer reported a 150K SUI sSUI rewards-side-contract exploit on April 26, separate from the lending core; DeFiLlama TVL is $8.98M on Sui versus $15.6M on June 15. Existing sub-scores and partial confidence remain.",
   },
   "echelon-market": {
     scores: { audits: 3, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
