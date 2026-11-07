@@ -2,11 +2,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchMeteoraPools } from "../fetch-meteora";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 
-function validMeteoraPool(index: number) {
+function validMeteoraPool(index: number, tokenX = `TokenX${index}`, tokenY = `TokenY${index}`) {
   return {
     address: `Pool${index}`,
-    token_x: { address: `TokenX${index}`, symbol: "SOL", decimals: 9, price: 90 },
-    token_y: { address: `TokenY${index}`, symbol: "USDC", decimals: 6, price: 1 },
+    token_x: { address: tokenX, symbol: "SOL", decimals: 9, price: 90 },
+    token_y: { address: tokenY, symbol: "USDC", decimals: 6, price: 1 },
     token_x_amount: 100,
     token_y_amount: 9000,
     current_price: 90,
@@ -29,19 +29,7 @@ describe("fetchMeteoraPools", () => {
       outcomes: [
         {
           body: {
-            data: [{
-              address: "Pool111",
-              token_x: { address: "So111", symbol: "SOL", decimals: 9, price: 90 },
-              token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
-              token_x_amount: 100,
-              token_y_amount: 9000,
-              current_price: 90,
-              tvl: 18000,
-              volume: { "24h": 25000 },
-              pool_config: { base_fee_pct: 0.01 },
-              dynamic_fee_pct: 0.002,
-              is_blacklisted: false,
-            }],
+            data: [validMeteoraPool(111, "So111", "USDC111")],
           },
         },
         { body: { data: [] } },
@@ -143,19 +131,7 @@ describe("fetchMeteoraPools", () => {
             token_y_amount: 100,
             tvl: 20_000,
           },
-          {
-            address: "Pool111",
-            token_x: { address: "So111", symbol: "SOL", decimals: 9, price: 90 },
-            token_y: { address: "USDC111", symbol: "USDC", decimals: 6, price: 1 },
-            token_x_amount: 100,
-            token_y_amount: 9000,
-            current_price: 90,
-            tvl: 18_000,
-            volume: { "24h": 25_000 },
-            pool_config: { base_fee_pct: 0.01 },
-            dynamic_fee_pct: 0.002,
-            is_blacklisted: false,
-          },
+          validMeteoraPool(111, "So111", "USDC111"),
         ],
       },
     }], { requireMatch: true });

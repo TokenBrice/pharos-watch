@@ -68,6 +68,26 @@ function mockAnalysisDb(overrides: MockTableConfig[] = []) {
   ], { assertMatchesUsed: true });
 }
 
+function mockStrictAnalysisDb(
+  count: MockTableConfig["first"],
+  global: MockTableConfig["first"],
+  topTen: MockTableConfig["rows"],
+  cronHistory: MockTableConfig["rows"],
+) {
+  return mockD1([
+    { match: "COUNT(*) as cnt FROM dex_liquidity", rows: [], first: count },
+    {
+      match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
+      rows: [],
+      first: global,
+    },
+    { match: "GROUP BY coverage_class", rows: [] },
+    { match: "ORDER BY total_tvl_usd DESC", rows: topTen },
+    { match: "FROM cron_runs", rows: cronHistory },
+    { match: "WHERE stablecoin_id IN", rows: [] },
+  ], { assertMatchesUsed: true });
+}
+
 function makeAnalysisInput(overrides: Partial<Parameters<typeof analyzeDexLiquidityPostScoring>[0]> = {}) {
   return {
     db: mockAnalysisDb(),
@@ -523,52 +543,30 @@ describe("analyzeDexLiquidityPostScoring", () => {
   });
 
   it("ignores a source-incomplete persisted value baseline and uses the last source-complete cron baseline", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) as cnt FROM dex_liquidity",
-        rows: [],
-        first: { cnt: 159 },
-      },
-      {
-        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
-        rows: [],
-        first: { total_tvl_usd: 12_703_104_619, updated_at: 1_776_323_404 },
-      },
-      {
-        match: "GROUP BY coverage_class",
-        rows: [],
-      },
-      {
-        match: "ORDER BY total_tvl_usd DESC",
-        rows: [{ stablecoin_id: "usdt-tether", total_tvl_usd: 6_000_000_000 }],
-      },
-      {
-        match: "FROM cron_runs",
-        rows: [
-          {
-            started_at: 1_776_323_404,
-            status: "degraded",
-            metadata: makeCronMetadata({
-              dlProtocolsAvailable: false,
-              currentGlobalTvl: 12_703_104_619,
-              failedSources: ["defillama-protocols"],
-            }),
-          },
-          {
-            started_at: 1_776_321_604,
-            status: "ok",
-            metadata: makeCronMetadata({
-              dlProtocolsAvailable: true,
-              currentGlobalTvl: 7_025_252_002,
-            }),
-          },
-        ],
-      },
-      {
-        match: "WHERE stablecoin_id IN",
-        rows: [],
-      },
-    ], { assertMatchesUsed: true });
+    const db = mockStrictAnalysisDb(
+      { cnt: 159 },
+      { total_tvl_usd: 12_703_104_619, updated_at: 1_776_323_404 },
+      [{ stablecoin_id: "usdt-tether", total_tvl_usd: 6_000_000_000 }],
+      [
+        {
+          started_at: 1_776_323_404,
+          status: "degraded",
+          metadata: makeCronMetadata({
+            dlProtocolsAvailable: false,
+            currentGlobalTvl: 12_703_104_619,
+            failedSources: ["defillama-protocols"],
+          }),
+        },
+        {
+          started_at: 1_776_321_604,
+          status: "ok",
+          metadata: makeCronMetadata({
+            dlProtocolsAvailable: true,
+            currentGlobalTvl: 7_025_252_002,
+          }),
+        },
+      ],
+    );
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -584,75 +582,53 @@ describe("analyzeDexLiquidityPostScoring", () => {
   });
 
   it("uses the latest productive run for drift instead of a synthetic failed row", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) as cnt FROM dex_liquidity",
-        rows: [],
-        first: { cnt: 255 },
-      },
-      {
-        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
-        rows: [],
-        first: { total_tvl_usd: 6_020_380_715, updated_at: 1_784_146_228 },
-      },
-      {
-        match: "GROUP BY coverage_class",
-        rows: [],
-      },
-      {
-        match: "ORDER BY total_tvl_usd DESC",
-        rows: [],
-      },
-      {
-        match: "FROM cron_runs",
-        rows: [
-          {
-            started_at: 1_784_148_027,
-            status: "error",
-            metadata: JSON.stringify({
-              reason: "stale-slot-reconciled",
-              progressStage: "direct-api-fetch",
-            }),
-          },
-          {
-            started_at: 1_784_147_427,
-            status: "ok",
-            metadata: JSON.stringify({}),
-          },
-          {
-            started_at: 1_784_146_827,
-            status: "degraded",
-            metadata: makeCronMetadata({
-              dlProtocolsAvailable: true,
-              currentGlobalTvl: 6_020_380_715,
-              stagedPoolsMerged: 0,
-              stagedPoolsSkipped: 0,
-              priceObservationCoins: 0,
-              measuredBalanceCoveragePct: 0,
-              weakCoverageCoins: 0,
-              persistenceSkipped: true,
-            }),
-          },
-          {
-            started_at: 1_784_146_227,
-            status: "ok",
-            metadata: makeCronMetadata({
-              dlProtocolsAvailable: true,
-              currentGlobalTvl: 6_020_380_715,
-              stagedPoolsMerged: 2_614,
-              stagedPoolsSkipped: 1_850,
-              priceObservationCoins: 0,
-              measuredBalanceCoveragePct: 1,
-              weakCoverageCoins: 300,
-            }),
-          },
-        ],
-      },
-      {
-        match: "WHERE stablecoin_id IN",
-        rows: [],
-      },
-    ], { assertMatchesUsed: true });
+    const db = mockStrictAnalysisDb(
+      { cnt: 255 },
+      { total_tvl_usd: 6_020_380_715, updated_at: 1_784_146_228 },
+      [],
+      [
+        {
+          started_at: 1_784_148_027,
+          status: "error",
+          metadata: JSON.stringify({
+            reason: "stale-slot-reconciled",
+            progressStage: "direct-api-fetch",
+          }),
+        },
+        {
+          started_at: 1_784_147_427,
+          status: "ok",
+          metadata: JSON.stringify({}),
+        },
+        {
+          started_at: 1_784_146_827,
+          status: "degraded",
+          metadata: makeCronMetadata({
+            dlProtocolsAvailable: true,
+            currentGlobalTvl: 6_020_380_715,
+            stagedPoolsMerged: 0,
+            stagedPoolsSkipped: 0,
+            priceObservationCoins: 0,
+            measuredBalanceCoveragePct: 0,
+            weakCoverageCoins: 0,
+            persistenceSkipped: true,
+          }),
+        },
+        {
+          started_at: 1_784_146_227,
+          status: "ok",
+          metadata: makeCronMetadata({
+            dlProtocolsAvailable: true,
+            currentGlobalTvl: 6_020_380_715,
+            stagedPoolsMerged: 2_614,
+            stagedPoolsSkipped: 1_850,
+            priceObservationCoins: 0,
+            measuredBalanceCoveragePct: 1,
+            weakCoverageCoins: 300,
+          }),
+        },
+      ],
+    );
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -728,43 +704,21 @@ describe("analyzeDexLiquidityPostScoring", () => {
   });
 
   it("keeps hard value guard behavior for source-complete table baselines", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) as cnt FROM dex_liquidity",
-        rows: [],
-        first: { cnt: 159 },
-      },
-      {
-        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
-        rows: [],
-        first: { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
-      },
-      {
-        match: "GROUP BY coverage_class",
-        rows: [],
-      },
-      {
-        match: "ORDER BY total_tvl_usd DESC",
-        rows: [{ stablecoin_id: "usdt-tether", total_tvl_usd: 6_000_000_000 }],
-      },
-      {
-        match: "FROM cron_runs",
-        rows: [
-          {
-            started_at: 1_776_321_604,
-            status: "ok",
-            metadata: makeCronMetadata({
-              dlProtocolsAvailable: true,
-              currentGlobalTvl: 10_000_000_000,
-            }),
-          },
-        ],
-      },
-      {
-        match: "WHERE stablecoin_id IN",
-        rows: [],
-      },
-    ], { assertMatchesUsed: true });
+    const db = mockStrictAnalysisDb(
+      { cnt: 159 },
+      { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
+      [{ stablecoin_id: "usdt-tether", total_tvl_usd: 6_000_000_000 }],
+      [
+        {
+          started_at: 1_776_321_604,
+          status: "ok",
+          metadata: makeCronMetadata({
+            dlProtocolsAvailable: true,
+            currentGlobalTvl: 10_000_000_000,
+          }),
+        },
+      ],
+    );
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -777,45 +731,23 @@ describe("analyzeDexLiquidityPostScoring", () => {
   });
 
   it("measures the coverage guard against the trailing median, not the row it just overwrote", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) as cnt FROM dex_liquidity",
-        rows: [],
-        first: { cnt: 288 },
-      },
-      {
-        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
-        rows: [],
-        first: { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
-      },
-      {
-        match: "GROUP BY coverage_class",
-        rows: [],
-      },
-      {
-        match: "ORDER BY total_tvl_usd DESC",
-        rows: [],
-      },
-      {
-        match: "FROM cron_runs",
-        // A slow six-run slide: the previous-run comparison stays inside the
-        // band at every step, which is how the 2026-09-04 crawl collapse
-        // published as `ok`.
-        rows: [305, 300, 296, 292, 288, 284].map((currentCoverage, index) => ({
-          started_at: 1_784_000_000 - index * 3_600,
-          status: "ok",
-          metadata: makeCronMetadata({
-            dlProtocolsAvailable: true,
-            currentGlobalTvl: 6_000_000_000,
-            currentCoverage,
-          }),
-        })),
-      },
-      {
-        match: "WHERE stablecoin_id IN",
-        rows: [],
-      },
-    ], { assertMatchesUsed: true });
+    const db = mockStrictAnalysisDb(
+      { cnt: 288 },
+      { total_tvl_usd: 6_000_000_000, updated_at: 1_784_000_000 },
+      [],
+      // A slow six-run slide: the previous-run comparison stays inside the
+      // band at every step, which is how the 2026-09-04 crawl collapse
+      // published as `ok`.
+      [305, 300, 296, 292, 288, 284].map((currentCoverage, index) => ({
+        started_at: 1_784_000_000 - index * 3_600,
+        status: "ok",
+        metadata: makeCronMetadata({
+          dlProtocolsAvailable: true,
+          currentGlobalTvl: 6_000_000_000,
+          currentCoverage,
+        }),
+      })),
+    );
 
     const analysis = await analyzeDexLiquidityPostScoring(
       makeAnalysisInput({
@@ -838,34 +770,12 @@ describe("analyzeDexLiquidityPostScoring", () => {
   });
 
   it("records guard state on a run with a critical source failure", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) as cnt FROM dex_liquidity",
-        rows: [],
-        first: { cnt: 165 },
-      },
-      {
-        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
-        rows: [],
-        first: { total_tvl_usd: 6_000_000_000, updated_at: 1_777_556_412 },
-      },
-      {
-        match: "GROUP BY coverage_class",
-        rows: [],
-      },
-      {
-        match: "ORDER BY total_tvl_usd DESC",
-        rows: [],
-      },
-      {
-        match: "FROM cron_runs",
-        rows: [],
-      },
-      {
-        match: "WHERE stablecoin_id IN",
-        rows: [],
-      },
-    ], { assertMatchesUsed: true });
+    const db = mockStrictAnalysisDb(
+      { cnt: 165 },
+      { total_tvl_usd: 6_000_000_000, updated_at: 1_777_556_412 },
+      [],
+      [],
+    );
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -884,48 +794,26 @@ describe("analyzeDexLiquidityPostScoring", () => {
   });
 
   it("discounts low-effective previous top rows before hard-failing major coverage recovery", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) as cnt FROM dex_liquidity",
-        rows: [],
-        first: { cnt: 274 },
-      },
-      {
-        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
-        rows: [],
-        first: { total_tvl_usd: 7_000_000_000, updated_at: 1_781_889_009 },
-      },
-      {
-        match: "GROUP BY coverage_class",
-        rows: [],
-      },
-      {
-        match: "ORDER BY total_tvl_usd DESC",
-        rows: [
-          { stablecoin_id: "xaum-matrixdock", total_tvl_usd: 9_153_768_423, effective_tvl_usd: 156_624 },
-          { stablecoin_id: "usdc-circle", total_tvl_usd: 5_519_710_397, effective_tvl_usd: 944_522_429 },
-          { stablecoin_id: "dai-makerdao", total_tvl_usd: 3_810_439_079, effective_tvl_usd: 57_710_429 },
-          { stablecoin_id: "usdt-tether", total_tvl_usd: 2_631_921_285, effective_tvl_usd: 760_880_605 },
-        ],
-      },
-      {
-        match: "FROM cron_runs",
-        rows: [
-          {
-            started_at: 1_781_889_009,
-            status: "ok",
-            metadata: makeCronMetadata({
-              dlProtocolsAvailable: true,
-              currentGlobalTvl: 7_000_000_000,
-            }),
-          },
-        ],
-      },
-      {
-        match: "WHERE stablecoin_id IN",
-        rows: [],
-      },
-    ], { assertMatchesUsed: true });
+    const db = mockStrictAnalysisDb(
+      { cnt: 274 },
+      { total_tvl_usd: 7_000_000_000, updated_at: 1_781_889_009 },
+      [
+        { stablecoin_id: "xaum-matrixdock", total_tvl_usd: 9_153_768_423, effective_tvl_usd: 156_624 },
+        { stablecoin_id: "usdc-circle", total_tvl_usd: 5_519_710_397, effective_tvl_usd: 944_522_429 },
+        { stablecoin_id: "dai-makerdao", total_tvl_usd: 3_810_439_079, effective_tvl_usd: 57_710_429 },
+        { stablecoin_id: "usdt-tether", total_tvl_usd: 2_631_921_285, effective_tvl_usd: 760_880_605 },
+      ],
+      [
+        {
+          started_at: 1_781_889_009,
+          status: "ok",
+          metadata: makeCronMetadata({
+            dlProtocolsAvailable: true,
+            currentGlobalTvl: 7_000_000_000,
+          }),
+        },
+      ],
+    );
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,
@@ -947,34 +835,12 @@ describe("analyzeDexLiquidityPostScoring", () => {
   });
 
   it("falls back to the table baseline when cron metadata is not parseable", async () => {
-    const db = mockD1([
-      {
-        match: "COUNT(*) as cnt FROM dex_liquidity",
-        rows: [],
-        first: { cnt: 159 },
-      },
-      {
-        match: "SELECT total_tvl_usd, updated_at, chain_tvl_json FROM dex_liquidity WHERE stablecoin_id = '__global__'",
-        rows: [],
-        first: { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
-      },
-      {
-        match: "GROUP BY coverage_class",
-        rows: [],
-      },
-      {
-        match: "ORDER BY total_tvl_usd DESC",
-        rows: [],
-      },
-      {
-        match: "FROM cron_runs",
-        rows: [{ started_at: 1_776_321_604, status: "ok", metadata: "{not-json" }],
-      },
-      {
-        match: "WHERE stablecoin_id IN",
-        rows: [],
-      },
-    ], { assertMatchesUsed: true });
+    const db = mockStrictAnalysisDb(
+      { cnt: 159 },
+      { total_tvl_usd: 10_000_000_000, updated_at: 1_776_321_604 },
+      [],
+      [{ started_at: 1_776_321_604, status: "ok", metadata: "{not-json" }],
+    );
 
     const analysis = await analyzeDexLiquidityPostScoring(makeAnalysisInput({
       db,

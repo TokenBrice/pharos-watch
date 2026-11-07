@@ -570,9 +570,13 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
     expect(index.confirmedExactKeysByProtocol.get("balancer")).toEqual(new Set([ETHEREUM_POOL_KEY]));
   });
 
-  it("fails open when the authoritative fetch has a real failure", () => {
-    const index = buildAuthoritativeStagedPoolConfirmationIndex([
-      {
+  it.each<{
+    name: string;
+    entry: Parameters<typeof buildAuthoritativeStagedPoolConfirmationIndex>[0][number];
+  }>([
+    {
+      name: "fails open when the authoritative fetch has a real failure",
+      entry: {
         name: "Balancer",
         circuitKey: "balancer-api",
         normalizedProtocol: "balancer",
@@ -586,15 +590,10 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
           errors: ["partial"],
         },
       },
-    ]);
-
-    expect(index.enforcedChainsByProtocol.size).toBe(0);
-    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
-  });
-
-  it("fails open when the authoritative fetch has mixed warnings and real failures", () => {
-    const index = buildAuthoritativeStagedPoolConfirmationIndex([
-      {
+    },
+    {
+      name: "fails open when the authoritative fetch has mixed warnings and real failures",
+      entry: {
         name: "Balancer",
         circuitKey: "balancer-api",
         normalizedProtocol: "balancer",
@@ -609,15 +608,10 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
           warnings: ["page 1 skipped 1 malformed pool rows"],
         },
       },
-    ]);
-
-    expect(index.enforcedChainsByProtocol.size).toBe(0);
-    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
-  });
-
-  it("fails open while a paginated authoritative inventory is incomplete", () => {
-    const index = buildAuthoritativeStagedPoolConfirmationIndex([
-      {
+    },
+    {
+      name: "fails open while a paginated authoritative inventory is incomplete",
+      entry: {
         name: "PancakeSwap",
         circuitKey: "pancakeswap-api",
         normalizedProtocol: "pancakeswap",
@@ -638,17 +632,12 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
           },
         },
       },
-    ]);
-
-    expect(index.enforcedChainsByProtocol.size).toBe(0);
-    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
-  });
-
-  // ODR-B1b `pools-lost-before-scoring`: three ways a census with no authority
-  // over a staged pool was nonetheless allowed to veto it.
-  it("never enforces from a bounded-sample census", () => {
-    const index = buildAuthoritativeStagedPoolConfirmationIndex([
-      {
+    },
+    // ODR-B1b `pools-lost-before-scoring`: three ways a census with no authority
+    // over a staged pool was nonetheless allowed to veto it.
+    {
+      name: "never enforces from a bounded-sample census",
+      entry: {
         name: "Meteora",
         circuitKey: "meteora-api",
         normalizedProtocol: "meteora",
@@ -662,15 +651,10 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
           errors: [],
         },
       },
-    ]);
-
-    expect(index.enforcedChainsByProtocol.size).toBe(0);
-    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
-  });
-
-  it("never enforces when the census produced no identity at all", () => {
-    const index = buildAuthoritativeStagedPoolConfirmationIndex([
-      {
+    },
+    {
+      name: "never enforces when the census produced no identity at all",
+      entry: {
         name: "Aerodrome Slipstream",
         circuitKey: "aerodrome-slipstream-api",
         normalizedProtocol: "aerodrome",
@@ -684,18 +668,13 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
           errors: [],
         },
       },
-    ]);
-
-    expect(index.enforcedChainsByProtocol.size).toBe(0);
-    expect(index.confirmedExactKeysByProtocol.size).toBe(0);
-  });
-
-  it("never enforces from the compacted tracked-token pool list", () => {
+    },
     // `result.pools` is filtered down to tracked tokens during compaction, so it
     // must never stand in for the raw census. Without a raw key set there is
     // nothing to confirm against and the protocol must not veto.
-    const index = buildAuthoritativeStagedPoolConfirmationIndex([
-      {
+    {
+      name: "never enforces from the compacted tracked-token pool list",
+      entry: {
         name: "Orca",
         circuitKey: "orca-api",
         normalizedProtocol: "orca",
@@ -724,7 +703,9 @@ describe("buildAuthoritativeStagedPoolConfirmationIndex", () => {
           errors: [],
         },
       },
-    ]);
+    },
+  ])("$name", ({ entry }) => {
+    const index = buildAuthoritativeStagedPoolConfirmationIndex([entry]);
 
     expect(index.enforcedChainsByProtocol.size).toBe(0);
     expect(index.confirmedExactKeysByProtocol.size).toBe(0);

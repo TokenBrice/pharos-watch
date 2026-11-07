@@ -527,46 +527,13 @@ describe("buildCurveLookups", () => {
   });
 
   it("uses one computed Curve USD balance surface for ratio and balance details", async () => {
-    const curvePayloads = [
-      {
-        data: {
-          poolData: [
-            {
-              address: "0x1111111111111111111111111111111111111111",
-              name: "USDC/USDT",
-              amplificationCoefficient: "1000",
-              coins: [
-                {
-                  symbol: "USDC",
-                  address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-                  poolBalance: "120000000000",
-                  usdPrice: 1,
-                  decimals: "6",
-                },
-                {
-                  symbol: "USDT",
-                  address: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-                  poolBalance: "80000000000",
-                  usdPrice: 1,
-                  decimals: "6",
-                },
-              ],
-              usdTotal: 200_000,
-              isMetaPool: false,
-              assetTypeName: "USD",
-              totalSupply: 0,
-              registryId: "factory-stable-ng",
-              isBroken: false,
-              virtualPrice: "1",
-              usdTotalExcludingBasePool: 0,
-              creationTs: 123,
-              basePoolAddress: null,
-              gaugeCrvApy: null,
-            },
-          ],
-        },
-      },
-    ];
+    const pool = makeApiPool("0x1111111111111111111111111111111111111111", [
+      { symbol: "USDC", address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" },
+      { symbol: "USDT", address: "0xdac17f958d2ee523a2206206994597c13d831ec7" },
+    ]);
+    pool.coins[0]!.poolBalance = "120000000000";
+    pool.coins[1]!.poolBalance = "80000000000";
+    const curvePayloads = [{ data: { poolData: [pool] } }];
     const symbolToIds = new Map([
       ["USDC", ["usd-coin"]],
       ["USDT", ["tether"]],
