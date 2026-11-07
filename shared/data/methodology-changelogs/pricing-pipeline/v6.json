@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.74",
+    "title": "Bounded native remainders during DefiLlama fill defaults",
+    "date": "2026-11-07",
+    "effectiveAt": 1794092005,
+    "summary": "A complete reviewed native roster may publish only its observed native remainder during a DefiLlama fill default when unresolved legs stay within the existing 5% bound by both frozen baseline and current list share. Missing supply is never added.",
+    "impact": [
+      "This extends v6.70 current-supply admission beyond complete native corroboration or an existing bounded vetted carry. Every reviewed deployment must be flagged and resolve either to an admitted native repair or an unresolved leg; attribution ambiguity, any chart repair, an unaccounted deployment or a leg below the $1M flagging floor rejects the exception. Unresolved baselines must be at most 5% of native repairs plus those baselines, and their observed current list amounts must be at most 5% of the original list aggregate. Missing list amounts or a nonpositive list total cannot establish that bound.",
+      "The published aggregate is exactly the native-repaired sum, dated by its oldest read, with chains-unavailable, partialCoverage and the original unresolved quarantine clock. Unreadable chains stay null; no frozen baseline or fill-priced list residue is added. Fill-scaled historical buckets remain unavailable. The operator warning names the asset, missing chain IDs and current list missing share.",
+      "Single-chain native repairs preserve their exact observed value rather than a subtract-and-add rounding residue. Per-pair native reads may use the existing reviewed supply-profile fallback when a second registry RPC route is absent. Fill-default incidents cannot release low baselines using the same provider's rescaled chart. Price admission, supply units, native-roster accounting, carry ceilings and the 5% policy bound are unchanged. Production acceptance requires the first qualifying stablecoins publication after deployment."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.73",
     "title": "Original DEX and AZND dependency clocks govern price admission",
     "date": "2026-11-06",
