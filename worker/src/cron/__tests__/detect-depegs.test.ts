@@ -320,11 +320,7 @@ describe("detectDepegEvents", () => {
         belowFloorCount: 1,
         reasonCounts: { "primary-unusable": 1, "supply-unavailable": 1, "asset-absent": 1 },
         unavailableIdsTruncated: false,
-        unavailableAssets: [
-          { id: "usdc-circle", reason: "primary-unusable", reviewedNominalReference: false },
-          { id: "eurc-circle", reason: "supply-unavailable", reviewedNominalReference: false },
-          { id: "a7a5-old-vector", reason: "asset-absent", reviewedNominalReference: false },
-        ],
+        unavailableAssets: [{ id: "usdc-circle", reason: "primary-unusable", reviewedNominalReference: false }],
       },
     });
     // Unavailable supply keeps the open event's lifecycle untouched; nothing new opens.

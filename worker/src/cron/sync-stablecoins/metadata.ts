@@ -787,11 +787,11 @@ export function buildFallbackStablecoinsSyncResult(input: {
   const persistedActivePriceCoverage = input.activePriceCoverage.missingActiveAssets.length > 20
     ? compactStablecoinActivePriceCoverage(input.activePriceCoverage, 20)
     : input.activePriceCoverage;
-  const priceSourceAttemptLedger = buildPriceSourceAttemptLedger({
+  const priceSourceAttemptLedger = compactPriceSourceAttemptLedger(buildPriceSourceAttemptLedger({
     missingActiveIds: input.activePriceCoverage.missingActiveIds,
     providerDiagnostics: input.providerDiagnostics,
     authoritativeOverrideStats: input.authoritativeOverrideStats,
-  });
+  }));
 
   const degradedReason = resolveSyncDegradedReason({
     ...input,
@@ -802,7 +802,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
   const qualityReasons = [...(degradedReason ? [degradedReason] : []), ...depegObservation.reasons,
     ...(preferredNativeSupply ? [preferredNativeSupply.reason] : [])];
 
-  const result: CronResult = {
+  return {
     status: degradedReason ? "degraded" : "ok",
     itemCount: input.assets.length,
     metadata: buildSyncMetadata({
@@ -845,7 +845,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
       depegPipelineSucceeded: !input.depegHeldReason && input.depegErrorCount === 0,
       activePublicationCoverage: publicationCoverage,
       activePriceCoverage: persistedActivePriceCoverage,
-      priceSourceAttemptLedger: compactPriceSourceAttemptLedger(priceSourceAttemptLedger),
+      priceSourceAttemptLedger,
     }, {
       cacheWriteMode: "published",
       capabilities: {
@@ -854,17 +854,6 @@ export function buildFallbackStablecoinsSyncResult(input: {
       },
     }),
   };
-  if (serializedByteLength(result.metadata!) >= MAX_STABLECOINS_CRON_METADATA_BYTES) {
-    result.metadata = buildSizeGuardedStablecoinsSyncMetadata({
-      metadata: JSON.parse(result.metadata!),
-      publicationCoverage,
-      activePriceCoverage: input.activePriceCoverage,
-      priceSourceAttemptLedger,
-      capabilities: { stablecoinsCache: publicationGap !== "systemic", depegPipeline: !input.depegHeldReason && input.depegErrorCount === 0 },
-      originalMetadataBytes: serializedByteLength(result.metadata!),
-    });
-  }
-  return result;
 }
 
 // The census is a quality finding only: it never changes execution status or

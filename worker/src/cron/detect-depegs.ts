@@ -40,6 +40,7 @@ function buildObservationCensus(
   evaluatedAt: number,
 ): DepegObservationCensus {
   const unavailableAssets: NonNullable<DepegObservationCensus["unavailableAssets"]> = [];
+  let unavailableIdsTruncated = false;
   const census: DepegObservationCensus = {
     scope: "psi-non-nav-before-supply-floor",
     evaluatedAt,
@@ -48,8 +49,6 @@ function buildObservationCensus(
     unavailableCount: 0,
     belowFloorCount: 0,
     reasonCounts: {},
-    unavailableAssets,
-    unavailableIdsTruncated: false,
   };
   for (const id of CENSUS_ELIGIBLE_IDS) {
     const supplied = outcomes.get(id);
@@ -63,12 +62,18 @@ function buildObservationCensus(
     } else {
       census.unavailableCount++;
       census.reasonCounts[outcome.reason] = (census.reasonCounts[outcome.reason] ?? 0) + 1;
+      // Only primary-unusable gaps can be acknowledged, so only they carry identities.
+      if (outcome.reason !== "primary-unusable") continue;
       if (unavailableAssets.length < DEPEG_CENSUS_UNAVAILABLE_ID_LIMIT) {
         unavailableAssets.push({ id, reason: outcome.reason, reviewedNominalReference: nominalReferenceIds.has(id) });
       } else {
-        census.unavailableIdsTruncated = true;
+        unavailableIdsTruncated = true;
       }
     }
+  }
+  if (unavailableAssets.length > 0 || unavailableIdsTruncated) {
+    census.unavailableAssets = unavailableAssets;
+    census.unavailableIdsTruncated = unavailableIdsTruncated;
   }
   return census;
 }

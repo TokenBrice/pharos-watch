@@ -432,11 +432,6 @@ describe("stablecoins pricing metadata", () => {
       } } : quality);
     });
 
-    it("guards fallback census evidence before scheduler persistence", () => {
-      const metadata = build("fallback", { depegObservation: census, enrichStats: { padding: "x".repeat(70_000) } }).metadata!;
-      expect(new TextEncoder().encode(metadata).byteLength).toBeLessThan(MAX_CRON_METADATA_BEFORE_SCHEDULER_ENRICHMENT_BYTES);
-      expect(JSON.parse(metadata)).toMatchObject({ metadataCompactedBySizeGuard: true, quality: { depegObservation: census } });
-    });
   });
 
   it.each(["kava-pricefeed"])(

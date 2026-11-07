@@ -80,11 +80,12 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
     scheduledMarketClosure: [] as string[],
     reviewedPriceGap: [] as string[],
   };
-  const assets = census.unavailableAssets;
-  const unavailableIdsComplete = census.unavailableIdsTruncated === false && !census.unavailableIdsDropped
-    && assets != null && assets.length === census.unavailableCount
-    && new Set(assets.map((asset) => asset.id)).size === assets.length
-    && assets.every((asset) => assets.filter((entry) => entry.reason === asset.reason).length === census.reasonCounts[asset.reason]);
+  // Identities exist only for primary-unusable gaps; a census without any has nothing to acknowledge.
+  const primaryUnusableCount = census.reasonCounts["primary-unusable"] ?? 0;
+  const assets = census.unavailableAssets ?? (primaryUnusableCount === 0 ? [] : undefined);
+  const unavailableIdsComplete = census.unavailableIdsTruncated !== true && !census.unavailableIdsDropped
+    && assets != null && new Set(assets.map((asset) => asset.id)).size === assets.length
+    && assets.filter((asset) => asset.reason === "primary-unusable").length === primaryUnusableCount;
   if (!unavailableIdsComplete) {
     return { unavailableIdsComplete: false, acknowledgedUnavailableCount: 0,
       actionableUnavailableCount: census.unavailableCount, acknowledgedUnavailableIds,
@@ -94,7 +95,6 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
   const marketHours = resolveStablecoinMarketHours(ids, census.evaluatedAt);
   const reviews = resolveStablecoinPriceGapReviews(ids, observedAt);
   const actionableUnavailableIds: string[] = [];
-  const actionableReasonCounts: DepegObservationCensus["reasonCounts"] = {};
   for (const asset of assets) {
     if (asset.reason === "primary-unusable") {
       if (asset.reviewedNominalReference) {
@@ -111,11 +111,16 @@ export function assessDepegObservationGaps(census: DepegObservationCensus, obser
       }
     }
     actionableUnavailableIds.push(asset.id);
-    actionableReasonCounts[asset.reason] = (actionableReasonCounts[asset.reason] ?? 0) + 1;
+  }
+  const acknowledgedUnavailableCount = Object.values(acknowledgedUnavailableIds).reduce((sum, list) => sum + list.length, 0);
+  const actionableReasonCounts: DepegObservationCensus["reasonCounts"] = { ...census.reasonCounts };
+  if (primaryUnusableCount > acknowledgedUnavailableCount) {
+    actionableReasonCounts["primary-unusable"] = primaryUnusableCount - acknowledgedUnavailableCount;
+  } else {
+    delete actionableReasonCounts["primary-unusable"];
   }
   return { unavailableIdsComplete, acknowledgedUnavailableIds, actionableUnavailableIds, actionableReasonCounts,
-    acknowledgedUnavailableCount: census.unavailableCount - actionableUnavailableIds.length,
-    actionableUnavailableCount: actionableUnavailableIds.length };
+    acknowledgedUnavailableCount, actionableUnavailableCount: census.unavailableCount - acknowledgedUnavailableCount };
 }
 
 /**
