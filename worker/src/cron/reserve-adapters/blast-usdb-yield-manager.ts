@@ -1,6 +1,6 @@
 import type { ReserveAdapterCoin } from "@shared/types/core";
 import type { LiveReservesConfig } from "@shared/types/live-reserves";
-import { parseLiveReserveAdapterParams, type LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-adapters";
+import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR, TOTAL_VALUE_SELECTOR } from "../../lib/evm-selectors";
 import type { AdapterContext, AdapterResult } from "./types";
 import {
@@ -10,12 +10,6 @@ import {
   requireOnchainInput,
 } from "./helpers";
 
-type BlastUsdbYieldManagerParams = LiveReserveAdapterParamsByKey["blast-usdb-yield-manager"];
-
-function readParams(config: LiveReservesConfig): BlastUsdbYieldManagerParams {
-  return parseLiveReserveAdapterParams("blast-usdb-yield-manager", config.params);
-}
-
 export async function fetchBlastUsdbYieldManagerReserves(
   _coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
@@ -23,7 +17,7 @@ export async function fetchBlastUsdbYieldManagerReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "blast-usdb-yield-manager");
-  const params = readParams(config);
+  const params = parseLiveReserveAdapterParams("blast-usdb-yield-manager", config.params);
   const timeoutMs = 12_000;
   const managerOnchain = makeOnchainCallers(input, {
     signal,

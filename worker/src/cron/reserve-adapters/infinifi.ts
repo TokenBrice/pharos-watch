@@ -33,39 +33,6 @@ import {
 } from "./evm-observation-plan";
 import { cefiPositionMeta, wrapperAssetMeta } from "./wrapper-assets";
 
-interface InfiniFiFarm {
-  name: string;
-  label: string;
-  assetsNormalized: number;
-  type: "LIQUID" | "ILLIQUID" | "PROTOCOL";
-  underlyingAssetSymbol?: string;
-}
-
-export interface InfiniFiProtocolData {
-  code: string;
-  data: {
-    stats: {
-      asset: {
-        totalTVLAssetNormalized: number;
-        totalLiquidAssetNormalized?: number;
-        totalIlliquidAssetNormalized?: number;
-        pendingRedemptionsAssetNormalized?: number;
-      };
-      staked?: {
-        exchangeRateNormalized?: number;
-      };
-      receipt?: {
-        totalSupplyNormalized?: number;
-      };
-    };
-    /** Pre-2026-08 payload shape; the live feed nests receipt under `stats`. */
-    receipt?: {
-      totalSupplyNormalized?: number;
-    };
-    farms: InfiniFiFarm[];
-  };
-}
-
 const infiniFiFarmSchema = z.object({
   name: z.string().min(1),
   label: z.string().min(1),
@@ -98,6 +65,10 @@ const infiniFiProtocolDataSchema = z.object({
     farms: z.array(infiniFiFarmSchema),
   }),
 });
+
+export type InfiniFiProtocolData = Omit<z.output<typeof infiniFiProtocolDataSchema>, "code"> & {
+  code: string;
+};
 
 function readReceiptSupply(payload: InfiniFiProtocolData): number | undefined {
   return payload.data.stats.receipt?.totalSupplyNormalized ?? payload.data.receipt?.totalSupplyNormalized;

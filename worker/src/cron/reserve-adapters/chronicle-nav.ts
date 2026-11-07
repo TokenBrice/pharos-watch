@@ -54,10 +54,6 @@ export function decodeChronicleReadWithAge(raw: string): { value: bigint; age: n
   return { value, age };
 }
 
-function readChronicleNavParams(config: LiveReservesConfig): ChronicleNavParams {
-  return parseLiveReserveAdapterParams("chronicle-nav", config.params);
-}
-
 /**
  * Aggregate totalSupply across every registry-typed EVM + Tron chain in
  * coin.contracts, mirroring chainlink-por/usd1-bundle-oracle's multichain
@@ -169,7 +165,7 @@ export async function fetchChronicleNavReserves(
   ctx?: AdapterContext,
 ): Promise<AdapterResult> {
   const input = requireOnchainInput(config.inputs.primary, "chronicle-nav");
-  const params = readChronicleNavParams(config);
+  const params = parseLiveReserveAdapterParams("chronicle-nav", config.params);
   const onchain = makeOnchainCallers(input, {
     signal,
     ctx,
