@@ -18,6 +18,7 @@ import { maxStatus } from "../status-reliability-shared";
 import {
   evaluateAvailabilityStatus,
   evaluateDataQualityStatus,
+  evaluateDepegBlindReviewCauses,
   evaluateReserveCompositionStatus,
   readRedemptionCapacityCoverage,
   type AvailabilityEvaluationInput,
@@ -28,6 +29,7 @@ import {
   STABLECOIN_PRICE_GAP_REVIEWS,
   type StablecoinPriceGapReview,
 } from "../stablecoin-publication-coverage";
+import { DEPEG_BLIND_EVENT_REVIEWS } from "../canary-checks-depeg";
 
 function makeReserveComposition(
   overrides?: Partial<Exclude<StatusResponse["reserveComposition"], { status: "unavailable" }>>,
@@ -1446,6 +1448,24 @@ describe("status rule-set behavior at policy boundaries", () => {
 });
 
 describe("review expiry reminders", () => {
+  it.each([172800, 172801, 0, -1])("reminds only for in-use blind reviews (%i seconds)", (remaining) => {
+    const review = DEPEG_BLIND_EVENT_REVIEWS[0];
+    const now = review.expiresAt - remaining;
+    const check = { checkId: "depeg-open-coverage", label: "", description: "", status: "ok" as const,
+      severity: "info" as const, executionStatus: "completed" as const, observedAt: now - 1, durationMs: 1,
+      metadata: { acknowledgedBlindReviewIds: [review.stablecoinId] } };
+    const input = { maxAgeSec: 1800, checks: { [check.checkId]: check } };
+    const causes = evaluateDepegBlindReviewCauses(input, now);
+    expect(causes.map((cause) => cause.code)).toEqual(remaining <= 0 ? [] : ["depeg_blind_event_reviews_acknowledged",
+      ...(remaining <= 172800 ? ["depeg_blind_event_reviews_expiring"] : [])]);
+    if (remaining === 172800) expect(causes[1]).toMatchObject({ severity: "info", value: remaining,
+      threshold: 172800, runbookUrl: expect.stringContaining("review-renewal.md") });
+    for (const change of [{ observedAt: now - 1801 }, { observedAt: now + 1 },
+      { executionStatus: "failed" as const }, { metadata: {} }, { metadata: { acknowledgedBlindReviewIds: [] } }]) {
+      expect(evaluateDepegBlindReviewCauses({ ...input, checks: { [check.checkId]: { ...check, ...change } } }, now)).toEqual([]);
+    }
+  });
+
   const nowSec = 1_700_000_000;
   const runbookUrl = "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/review-renewal.md";
 
