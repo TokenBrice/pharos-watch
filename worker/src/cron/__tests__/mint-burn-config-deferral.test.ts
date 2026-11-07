@@ -101,6 +101,16 @@ describe("shouldDeferConfig", () => {
   });
 });
 
+describe("resolveMintBurnResumeConfigKey", () => {
+  it.each(["runtime-budget-exhausted", "extended-deferred-under-pressure"])("rotates the admitted tail past a pending %s", (skippedReason) => {
+    const rows = ["returning", "tail"].map((key) => ({ key, skippedReason }));
+    const pending = new Set(["returning"]);
+    expect(resolveMintBurnResumeConfigKey(rows, pending)).toBe("tail");
+    expect(resolveMintBurnResumeConfigKey(rows)).toBe("returning");
+    expect(resolveMintBurnResumeConfigKey(rows.slice(0, 1), pending)).toBe("returning");
+  });
+});
+
 describe("loadDeferredConfigs", () => {
   it("returns only deferrals whose persisted expiry is after now", async () => {
     const { sqlite, db } = fixtures.open();
