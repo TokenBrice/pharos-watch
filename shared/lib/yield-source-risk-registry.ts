@@ -490,6 +490,168 @@ export const YIELD_RISK_CONFIG = {
     rationale:
       "OpenEden USDO is a centrally issued Treasury-backed yield venue with offchain reserve dependency, issuer blocklisting and eligibility-gated primary redemptions. 2026-11-07 re-review: ChainSecurity publishes September 2024 USDO and March 2025 Express reviews; instant redemptions remain liquidity-bounded and manual exits take up to two business days. DeFiLlama reports $12.72M RWA active AUM, while its API has no current TVL series; these distinct measures do not establish a change to the sub-scores.",
   },
+  // Venue reviews from the November 2026 coverage-audit queue.
+  "sky-lending": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 4, liquidity: 3, operational: 2 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Sky Lending combines audited sDAI/sUSDS savings modules with stUSDS risk capital for SKY-backed borrowing. Delayed SKY governance and repeated module reviews reduce control and contract risk, while upgrades, appointed rate setters, governance slashing, endogenous-collateral bad debt and utilization-dependent withdrawals keep the family in the medium venue tier. This review covers the broader family rather than treating stUSDS as equivalent to savings.",
+  },
+  "ethena": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 2 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Ethena USDe/sUSDe has repeated minting and staking audits and a live bug bounty. Centralized hedge execution, OES/exchange counterparties and a backing mix that now includes DeFi, institutional lending and RWA exposure remain material; multisig/admin powers, whitelisted direct redemption and adjustable sUSDe cooldowns keep the current ethena and ethena-usde attribution paths in the medium venue tier. This product review does not equate standalone USDtb, tsUSDe, Ethena Pay or whitelabel venues.",
+  },
+  "ondo-yield-assets": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Ondo combines audited RWA contracts with issuer-controlled minting, pricing, freezes and eligibility. OUSG holds several offchain-managed funds, while USDY now spans legacy LLC obligations and Ondo Global Markets issuance; capped instant exits, issuer-dependent settlement and recent migrations support a medium venue assessment.",
+  },
+  "ethena-usde": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 2 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Ethena USDe/sUSDe has repeated minting and staking audits and a live bug bounty. Centralized hedge execution, OES/exchange counterparties and a backing mix that now includes DeFi, institutional lending and RWA exposure remain material; multisig/admin powers, whitelisted direct redemption and adjustable sUSDe cooldowns keep the current ethena and ethena-usde attribution paths in the medium venue tier. This product review does not equate standalone USDtb, tsUSDe, Ethena Pay or whitelabel venues.",
+  },
+  "justlend-v1": {
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: JustLend V1 is the established Compound-V2-style jToken lending market, governed through a documented 48-hour timelock. CertiK reviewed the lending code; pooled collateral, oracle dependencies and cash-dependent withdrawals remain. V1 continues alongside V2, while individual legacy markets and the announced USD1 offboarding require separate eligibility checks.",
+  },
+  "usual-usd0": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: The active bUSD0 source locks RWA-backed USD0 until June 2028, with early par exit requiring a separate redemption-right token. Repeated audits and 8-of-15 admin Safes support the contract/control assessment, while RWA custody, adjustable exit terms and the January 2025 redemption episode keep venue risk medium under the five-category methodology.",
+  },
+  "usd-ai": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 4, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: The active sUSDai vault earns from GPU-backed credit and idle USDai reserves. Core audit coverage and the canonical 3-of-3 Safe with a 48-hour upgrade timelock reduce contract/control risk, while offchain escrow and enforcement, physical collateral and cash-limited 30-day redemption cycles remain material. Base USDai's liquid PYUSD backing does not make the sUSDai investment instantly redeemable.",
+  },
+  "invesco-ustb": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: USTB is Invesco's short-duration Treasury fund on Superstate's upgradeable, permissioned token infrastructure. Public token and redemption audits support technical assurance, while centralized administration, offchain custody and NAV, liquidity-dependent USDC exits, and 2026 manager and infrastructure changes retain medium venue risk.",
+  },
+  "pareto-credit": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 5, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Pareto Credit lends directly to individual institutional borrowers through manager-operated credit vaults. Repeated scoped audits and published governance roles mitigate contract and administration risk, while borrower default exposure and epoch-based repayment determine principal recovery and withdrawals. Live administrator thresholds and borrower recovery terms were not independently reconciled.",
+  },
+  "avant": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Avant is the local attribution key for the same avUSD/savUSD senior savings venue reviewed under avant-avusd. Avant USD is an actively managed strategy venue with team-controlled minting and MPC custody. Independent contract reviews, transaction policies and a junior loss buffer mitigate some exposure, while leveraged arbitrage, external protocols and private liquidity deals retain strategy and counterparty risk. savUSD unstaking and base-token redemption have separate waiting periods; live admin thresholds, allocation limits and buffer sufficiency were not independently verified.",
+  },
+  "reservoir-protocol": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Reservoir allocates stablecoin reserves across governed external asset adapters and exposes savings holders to strategy, counterparty and available-PSM-liquidity risk. Halborn reviews and contract solvency checks provide controls, but managers can change ratio thresholds and asset destinations, while older legal disclosures describe unsecured fund exposure. Live role holders, reserve allocation and cross-chain audit coverage remain unverified.",
+  },
+  "avant-avusd": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Avant USD is an actively managed strategy venue with team-controlled minting and MPC custody. Independent contract reviews, transaction policies and a junior loss buffer mitigate some exposure, while leveraged arbitrage, external protocols and private liquidity deals retain strategy and counterparty risk. savUSD unstaking and base-token redemption have separate waiting periods; live admin thresholds, allocation limits and buffer sufficiency were not independently verified.",
+  },
+  "noon-capital": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 4, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Noon combines governed DeFi and off-chain reserve strategies, including private credit and leveraged yield. Repeated scoped audits, multisig administration and documented timelocks mitigate contract and control risk. Seven-day unstaking, verified-user direct redemption and a confidential liquidity arrangement for private credit leave material exit and counterparty dependence; live controls and redemption capacity were not independently verified.",
+  },
+  "zerobase-cedefi": {
+    scores: { audits: 3, centralization: 4, fundsManagement: 4, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: ZEROBASE uses custodial hedge-fund strategies with privileged vault fund movement and liquidity-dependent exits. Published 2024 audits cover the vault code; current implementation matching and a complete operating history remain incomplete.",
+  },
+  "falcon-finance": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Falcon combines exchange and off-exchange trading with team-run custody and a KYC-gated seven-day redemption process. Its contract audit trail is documented; token-holder governance remains pending and strategy/custody execution remains centralized.",
+  },
+  "yuzu-money": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 4, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Yuzu Alpha deploys stablecoin backing into leveraged curated strategies under team-managed MPC controls. Senior wrapper unstaking is liquid, while underlying redemption is screened and delayed. Published contract reviews do not validate portfolio choices or establish complete current control and operating evidence.",
+  },
+  "inverse-finance-firm": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 2, operational: 3 },
+    confidence: "verified",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: FiRM and sDOLA have independent audit coverage and segregated collateral custody; sDOLA principal is not lent out and can be unwrapped to DOLA without a waiting period. Governor Mills and working-group multisigs still control parameters, supply operations, and emergency actions, and an executed January 2026 proposal introduced discretionary oracle switching with an initial zero delay. DOLA backing, integrated collateral and oracle dependencies, the predecessor lending venue's 2022 losses, and subsequent market and bridge shutdowns support a medium venue tier.",
+  },
+  "bitwise-uscc": {
+    scores: { audits: 2, centralization: 4, fundsManagement: 4, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: USCC combines Superstate's audited but centrally administered share-token infrastructure with Bitwise-managed crypto basis trades, staking and futures-venue exposure. Offchain custody, margin and valuation dependencies, plus T+1/T+2 redemptions, support medium venue risk above the simpler Treasury-only USTB fund.",
+  },
+  "liquity-v2": {
+    scores: { audits: 2, centralization: 1, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Liquity V2 has immutable core contracts, multiple independent audits and formal verification. Stability Pool deposits absorb liquidated debt in exchange for ETH or liquid-staking collateral, retaining oracle and collateral-loss exposure. The February 2025 Stability Pool issue required a patched May 2025 redeployment; deposits have no contractual lock, but liquidation proceeds are in-kind. DeFiLlama reports $87.2M protocol TVL on Ethereum.",
+  },
+  "crvusd": {
+    scores: { audits: 2, centralization: 2, fundsManagement: 2, liquidity: 2, operational: 2 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: the published scrvUSD source uses an audited Yearn V3 vault holding idle crvUSD without lending deposited assets. Borrower fees fund rewards and native Ethereum redemptions have no lock. Curve governance controls the fee distribution, while crvUSD retains collateral, oracle and LLAMMA liquidation risk. ChainSecurity reviewed scrvUSD in December 2024; current role-holder verification remains incomplete.",
+  },
+  "yo-protocol": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "verified",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: YO's EVM vaults have several independent audit scopes, and its V2 framework constrains allocations through immutable adapters, allowlisted routes, timelocked approval limits and a 4-of-6 multisig with a 48-hour upgrade delay. The team still selects integrations and runs allocation operations; exits can require unwinding positions. A January 2026 harvesting error created a $3.7M shortfall and temporarily paused yoUSD; YO reports full treasury reimbursement that day. Strategy dependencies, execution risk and conditional withdrawal liquidity support a medium venue tier despite the controls.",
+  },
+  "liquity-v1": {
+    scores: { audits: 1, centralization: 1, fundsManagement: 3, liquidity: 3, operational: 2 },
+    confidence: "verified",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: Liquity V1 has immutable contracts without admin keys, two Trail of Bits reviews and a Coinspect audit. Stability Pool depositors exchange LUSD for liquidated ETH, retaining flash-crash and oracle exposure. Withdrawals have no lock but stop while liquidatable troves remain. V1 continues alongside V2; DeFiLlama reports $156.5M protocol TVL on Ethereum.",
+  },
+  "origin-dollar": {
+    scores: { audits: 2, centralization: 3, fundsManagement: 3, liquidity: 3, operational: 3 },
+    confidence: "partial",
+    reviewedAt: "2026-11-07",
+    rationale:
+      "2026-11-07 review: OUSD routes USDC through Morpho on Ethereum, Base and Hyperliquid plus a Curve liquidity strategy. Yearn manages allocations within Origin's limits; current rebalancing is manual. Governance upgrades have a two-day timelock, but two-signature guardians can rebalance and pause capital. Redemptions take ten minutes to 24 hours and depend on strategy liquidity. Repeated audits follow the $7M November 2020 exploit; current cross-chain audit-scope verification remains incomplete.",
+  },
 } satisfies Record<string, YieldRiskConfigEntry>;
 
 export type YieldRiskConfigProtocol = keyof typeof YIELD_RISK_CONFIG;
@@ -579,9 +741,8 @@ export const YIELD_VARIANT_CHILD_VENUE_PROTOCOLS: Readonly<Record<string, string
   "susds-sky": "spark-savings",
   "stcusd-cap": "cap",
   "scrvusd-curve": "curve-llamalend",
-  // Children whose wrapper venue is not yet reviewed: they publish the issuing
-  // protocol so the row carries a real venue instead of `null`. Tier stays
-  // `unknown` (PYS-neutral) until their review lands via the coverage queue.
+  // Issuer-wrapper identities resolve against the independent venue reviews
+  // above; protocols without a review retain an unknown tier.
   "savusd-avant": "avant",
   "sfrxusd-frax": "frax",
   "susn-noon": "noon-capital",
