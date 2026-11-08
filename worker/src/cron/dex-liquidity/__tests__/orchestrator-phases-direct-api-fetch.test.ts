@@ -351,7 +351,7 @@ describe("runDirectApiFetchPhase", () => {
     }
   });
 
-  it("rethrows a parent abort without recording a provider failure", async () => {
+  it.each(["throw", "failure", "success"])("rethrows a parent abort without recording a provider failure (%s)", async (outcome) => {
     const controller = new AbortController();
     let started!: () => void;
     const operationStarted = new Promise<void>((resolve) => {
@@ -359,9 +359,10 @@ describe("runDirectApiFetchPhase", () => {
     });
     const resultPromise = runDirectApiFetchPhase({} as D1Database, [makeFetcher("aborted", async (signal) => {
       started();
-      return await new Promise((_resolve, reject) => {
-        signal?.addEventListener("abort", () => reject(signal.reason), { once: true });
+      await new Promise<void>((resolve, reject) => {
+        signal?.addEventListener("abort", () => outcome === "throw" ? reject(signal.reason) : resolve(), { once: true });
       });
+      return makeDexApiFetchResult([], { ok: outcome === "success", degraded: outcome === "failure", errors: [] });
     })], defaultLookups, controller.signal);
 
     await operationStarted;

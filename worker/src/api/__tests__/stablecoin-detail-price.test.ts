@@ -8,6 +8,7 @@ import { handleStablecoinDetail, resetStablecoinDetailStateForTests } from "../s
 import { routeStablecoinDetail } from "../stablecoin-detail/router";
 import { handleStablecoinLiveSummary } from "../stablecoin-live-summary";
 import { publishDetailCacheGeneration } from "../../lib/detail-cache-generation";
+import { makeExecutionContext as makeCtx } from "../../test-helpers/__shared/auth";
 
 vi.mock("../stablecoin-detail/router", () => ({ routeStablecoinDetail: vi.fn() }));
 vi.mock("../../lib/detail-cache-generation", () => ({
@@ -441,6 +442,20 @@ describe("detail response paths", () => {
     expect(result.headers.get("X-Data-Updated-At")).toBe(String(NOW - 60));
     await Promise.all(pending);
     expect(vi.mocked(publishDetailCacheGeneration).mock.calls[0]?.[2]).toBe(JSON.stringify({ tokens }));
+  });
+
+  it.each(["public, max-age=30", "no-store"])("releases fresh acquisitions independently of cache profile %s", async (cacheControl) => {
+    const db = makeDb({}, NOW - 60, 18_000);
+    const { ctx, waits } = makeCtx();
+    vi.mocked(routeStablecoinDetail).mockImplementation(async (_config, helper) => {
+      const response = helper.createFreshResponseFromTokens(tokens);
+      response.headers.set("Cache-Control", cacheControl);
+      return response;
+    });
+    const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
+    await Promise.all(waits);
+    expect(response.headers.get("Cache-Control")).toBe(cacheControl);
+    expect(db.getHistory().some(({ sql, binds }) => sql.startsWith("DELETE FROM cache") && binds[0] === "detail-refresh:usdt-tether")).toBe(true);
   });
 
   it("does not enrich retained inactive records", async () => {
