@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
-import { enrichMissingDetailPrice } from "../stablecoin-detail/price";
+import { overlayCanonicalDetail } from "../stablecoin-detail/price";
 import { projectStablecoinLiveSummary } from "@shared/lib/stablecoin-live-summary";
 import { StablecoinDetailResponseSchema } from "@shared/types/market";
 import { handleStablecoinDetail, resetStablecoinDetailStateForTests } from "../stablecoin-detail";
@@ -61,7 +61,7 @@ describe("missing detail price enrichment", () => {
     const history = [0, 1, 7, 30].map((days) => ({
       date: NOW - days * 86_400, totalCirculatingUSD: { peggedUSD: 900_000 }, totalCirculating: { peggedUSD: 800_000 },
     }));
-    const result = await enrichMissingDetailPrice(makeDb({
+    const result = await overlayCanonicalDetail(makeDb({
       id: "stac-securitize", circulating: {}, supplySource: "onchain-supply-withheld", price: 1.12,
     }), "stac-securitize", makeResponse(JSON.stringify({
       tokens: history, currentCirculatingUSD: { peggedUSD: 900_000 }, currentCirculatingPrevDayUSD: { peggedUSD: 890_000 },
@@ -86,7 +86,7 @@ describe("missing detail price enrichment", () => {
   });
 
   it("preserves the economic-float refusal through detail and summary despite positive provider overlays/history", async () => {
-    const result = await enrichMissingDetailPrice(makeDb({
+    const result = await overlayCanonicalDetail(makeDb({
       id: "sfrax-frax", circulating: {}, supplySource: "onchain-supply-withheld", supplyUnavailableReason: "economic-float-unreconciled",
     }), "sfrax-frax", makeResponse(JSON.stringify({
       tokens, currentCirculatingUSD: { peggedUSD: 64_000_000 }, currentCirculatingPrevDayUSD: { peggedUSD: 63_000_000 },
@@ -107,7 +107,7 @@ describe("missing detail price enrichment", () => {
 
   it("publishes admitted current list supply without rewriting the older native history", async () => {
     const nativeHistory = [{ date: NOW - 86_400, totalCirculating: { peggedUSD: 454_459_687.73 } }];
-    const result = await enrichMissingDetailPrice(makeDb({
+    const result = await overlayCanonicalDetail(makeDb({
       circulating: { peggedUSD: 477_309_888.38 }, circulatingPrevDay: {},
     }), "usdt-tether", makeResponse(JSON.stringify({ tokens: nativeHistory, price: null })));
     const body = await result.json() as Record<string, unknown>;
@@ -120,7 +120,7 @@ describe("missing detail price enrichment", () => {
 
   it.each([true, false])("carries only canonical supply restoration provenance (%s)", async (restored) => {
     const observedAt = NOW - 3 * 86_400;
-    const result = await enrichMissingDetailPrice(makeDb({
+    const result = await overlayCanonicalDetail(makeDb({
       circulating: { peggedUSD: 100 }, supplyObservedAt: observedAt, supplyRestored: restored,
     }), "usdt-tether", makeResponse(JSON.stringify({ tokens, currentSupplyRestored: !restored })));
     const body = await result.json() as Record<string, unknown>;
@@ -130,13 +130,13 @@ describe("missing detail price enrichment", () => {
   });
 
   it("does not accept a provider restoration marker without an admitted canonical overlay", async () => {
-    const result = await enrichMissingDetailPrice(makeDb({ price: null }), "usdt-tether",
+    const result = await overlayCanonicalDetail(makeDb({ price: null }), "usdt-tether",
       makeResponse(JSON.stringify({ tokens, currentSupplyRestored: true })));
     expect(await result.json()).toEqual({ tokens });
   });
 
   it("publishes observed zero supply independently of withheld price", async () => {
-    const result = await enrichMissingDetailPrice(makeDb({
+    const result = await overlayCanonicalDetail(makeDb({
       circulating: { peggedUSD: 0 }, price: null,
     }), "usdt-tether", makeResponse());
     const body = await result.json() as Record<string, unknown>;
@@ -144,32 +144,37 @@ describe("missing detail price enrichment", () => {
     expect(body.price).toBeUndefined();
   });
 
-  it("overlays current supply even when provider price needs no enrichment and bounds stale reuse", async () => {
-    const result = await enrichMissingDetailPrice(makeDb({
+  it("overlays current supply and price over a provider quote and bounds stale reuse", async () => {
+    const result = await overlayCanonicalDetail(makeDb({
       circulating: { peggedUSD: 477_309_888.38 }, supplyObservedAt: NOW - 7000,
     }, NOW - 6000), "usdt-tether", makeResponse(JSON.stringify({ tokens, price: 0.98 })));
     const body = await result.json() as Record<string, unknown>;
     expect(body.currentCirculatingUSD).toEqual({ peggedUSD: 477_309_888.38 });
     expect(body.currentSupplyObservedAt).toBe(NOW - 7000);
-    expect(body.price).toBe(0.98);
+    expect(body.price).toBe(0.997);
     expect(body.tokens).toEqual(tokens);
     expect(result.headers.get("Cache-Control")).toBe("no-store");
     expect(result.headers.get("Warning")).toContain("Response is stale");
   });
 
 
-  it("forwards a nominal reference without inventing an observed price", async () => {
+  // Without an observed publication, a provider discount stays beside the separate par reference.
+  it.each([undefined, 0.98])("forwards a nominal reference beside provider price %s without inventing an observation", async (price) => {
     const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" };
-    const result = await enrichMissingDetailPrice(makeDb({
+    const result = await overlayCanonicalDetail(makeDb({
       price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
       nominalPriceReference,
-    }), "usdt-tether", makeResponse());
-    expect(await result.json()).toEqual({ tokens, providerField: "preserved", nominalPriceReference });
+    }), "usdt-tether", makeResponse(JSON.stringify({ tokens, providerField: "preserved", price })));
+    expect(await result.json()).toEqual({ tokens, providerField: "preserved", price, nominalPriceReference });
   });
 
-  it.each([undefined, null, 0, -1, "1"])("fills absent/invalid price %s without changing history or supply", async (price) => {
-    const response = makeResponse(JSON.stringify({ tokens, price }));
-    const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", response);
+  // One price authority: the quote peg summary measures replaces any provider quote and reference (LUSD 1.0132 vs 1.0236).
+  it.each([
+    [undefined, {}], [null, {}], [0, {}], [-1, {}], ["1", {}], [1.0132, { priceConfidence: "low" }],
+    [1.0132, { priceSource: "cached", priceConfidence: "fallback" }],
+  ])("replaces provider price %s with the published %j quote without changing history or supply", async (price, overrides) => {
+    const response = makeResponse(JSON.stringify({ tokens, price, nominalPriceReference: { price: 42 } }));
+    const result = await overlayCanonicalDetail(makeDb(overrides), "usdt-tether", response);
     expect(result.status).toBe(200);
     expect(result.headers.get("Cache-Control")).toBe(response.headers.get("Cache-Control"));
     expect(await result.json()).toEqual({
@@ -178,6 +183,7 @@ describe("missing detail price enrichment", () => {
       priceSource: "coingecko+defillama-list", priceConfidence: "high",
       priceUpdatedAt: NOW - 70, priceObservedAt: NOW - 90, priceObservedAtMode: "upstream",
       priceSyncedAt: NOW - 60, consensusSources: ["coingecko", "defillama-list"], agreeSources: ["coingecko"],
+      ...overrides,
     });
   });
 
@@ -186,14 +192,14 @@ describe("missing detail price enrichment", () => {
       inheritedFrom: "pathusd-bridge", parentSource: "coingecko", parentConfidence: "single-source",
       parentObservedAt: NOW - 90, parentObservedAtMode: "upstream", parentReplaySafe: true, navMethod: "convertToAssets",
     };
-    const overlaid = await enrichMissingDetailPrice(makeDb({ priceSource: "coingecko", priceConfidence: "single-source", priceDerivation }),
+    const overlaid = await overlayCanonicalDetail(makeDb({ priceSource: "coingecko", priceConfidence: "single-source", priceDerivation }),
       "usdt-tether", makeResponse());
     const overlaidBody = StablecoinDetailResponseSchema.parse(await overlaid.json());
     expect(overlaidBody).toMatchObject({ price: 0.997, priceSource: "coingecko", priceDerivation });
     expect(projectStablecoinLiveSummary(overlaidBody).priceDerivation).toEqual(priceDerivation);
 
-    // A provider-owned quote wins: neither canonical nor provider-supplied derivation is attached to it.
-    const provider = await enrichMissingDetailPrice(makeDb({ priceDerivation }), "usdt-tether",
+    // A provider quote survives only without a published price, and never carries a derivation.
+    const provider = await overlayCanonicalDetail(makeDb({ price: null, priceDerivation }), "usdt-tether",
       makeResponse(JSON.stringify({ tokens, price: 0.98, priceDerivation })));
     expect(await provider.json()).toEqual({ tokens, price: 0.98 });
   });
@@ -207,51 +213,40 @@ describe("missing detail price enrichment", () => {
     expect(summary).not.toHaveProperty("priceDerivation");
   });
 
-  it("preserves a valid provider discount while forwarding the separate nominal reference", async () => {
-    const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" };
-    const response = makeResponse(JSON.stringify({ tokens, price: 0.98 }));
-    const result = await enrichMissingDetailPrice(makeDb({ nominalPriceReference }), "usdt-tether", response);
-    expect(await result.json()).toEqual({ tokens, price: 0.98, nominalPriceReference });
-  });
-
   it.each([
-    { price: null }, { price: 0 }, { price: -1 }, { price: "1" },
-    { priceConfidence: "low" }, { priceConfidence: "fallback" }, { priceConfidence: null },
-    { priceSource: "cached" }, { priceSource: "" },
-    { priceObservedAt: NOW + 1 },
-    { priceObservedAt: null, priceUpdatedAt: null }, { frozen: true }, { id: "usdc-circle" },
+    { price: null }, { price: 0 }, { price: -1 }, { price: "1" }, { frozen: true }, { id: "usdc-circle" },
   ])("leaves the original response unchanged for unusable canonical data %j", async (overrides) => {
     const response = makeResponse();
-    expect(await enrichMissingDetailPrice(makeDb(overrides), "usdt-tether", response)).toBe(response);
+    expect(await overlayCanonicalDetail(makeDb(overrides), "usdt-tether", response)).toBe(response);
     expect(await response.text()).toBe(detailBody);
   });
 
   it.each([NOW + 1, Number.NaN])("rejects future/invalid publication %s", async (updatedAt) => {
     const response = makeResponse();
-    expect(await enrichMissingDetailPrice(makeDb({}, updatedAt), "usdt-tether", response)).toBe(response);
+    expect(await overlayCanonicalDetail(makeDb({}, updatedAt), "usdt-tether", response)).toBe(response);
   });
 
   it("accepts a fresh single-source quote and preserves the legacy observation timestamp fallback", async () => {
-    const result = await enrichMissingDetailPrice(makeDb({ priceConfidence: "single-source", priceObservedAt: null }), "usdt-tether", makeResponse());
+    const result = await overlayCanonicalDetail(makeDb({ priceConfidence: "single-source", priceObservedAt: null }), "usdt-tether", makeResponse());
     expect(await result.json()).toMatchObject({ price: 0.997, priceConfidence: "single-source", priceObservedAt: NOW - 70 });
   });
 
   it.each([null, "{bad-json", JSON.stringify({ peggedAssets: [] })])("fails closed for missing/corrupt/empty cache %s", async (value) => {
     const db = mockD1([{ match: "cache", rows: [], first: value == null ? null : { value, updated_at: NOW } }]);
     const response = makeResponse();
-    expect(await enrichMissingDetailPrice(db, "usdt-tether", response)).toBe(response);
+    expect(await overlayCanonicalDetail(db, "usdt-tether", response)).toBe(response);
     expect(response.bodyUsed).toBe(false);
   });
 
   it("keeps a successful historical response when the canonical read fails", async () => {
     const db = mockD1([{ match: "cache", rows: [], throwError: new Error("unavailable") }]);
     const response = makeResponse();
-    expect(await enrichMissingDetailPrice(db, "usdt-tether", response)).toBe(response);
+    expect(await overlayCanonicalDetail(db, "usdt-tether", response)).toBe(response);
     expect(await response.text()).toBe(detailBody);
   });
 
   it("also bounds TTL by canonical publication freshness", async () => {
-    const result = await enrichMissingDetailPrice(makeDb({}, NOW - API_FRESHNESS_MAX_AGE_SEC.stablecoins + 4), "usdt-tether", makeResponse());
+    const result = await overlayCanonicalDetail(makeDb({}, NOW - API_FRESHNESS_MAX_AGE_SEC.stablecoins + 4), "usdt-tether", makeResponse());
     expect(result.headers.get("Cache-Control")).toBe("public, s-maxage=4, max-age=4");
   });
 
@@ -260,24 +255,24 @@ describe("missing detail price enrichment", () => {
     response.headers.set("X-Data-Updated-At", String(NOW - age));
     // A stale transport age must not be used to manufacture an absolute timestamp.
     response.headers.set("X-Data-Age", "999");
-    const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", response);
+    const result = await overlayCanonicalDetail(makeDb(), "usdt-tether", response);
     expect(result.headers.get("X-Data-Updated-At")).toBe(String(NOW - Math.max(age, 60)));
   });
 
   it("does not invent an origin clock for a legacy response without one", async () => {
-    const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", makeResponse());
+    const result = await overlayCanonicalDetail(makeDb(), "usdt-tether", makeResponse());
     expect(result.headers.has("X-Data-Updated-At")).toBe(false);
   });
 
   it.each(["", ".5", "5.", "1..2", "0x10", "1e3"])("does not repair a malformed origin header (%s)", async (sourceClock) => {
     const response = makeResponse();
     response.headers.set("X-Data-Updated-At", sourceClock);
-    const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", response);
+    const result = await overlayCanonicalDetail(makeDb(), "usdt-tether", response);
     expect(result.headers.get("X-Data-Updated-At")).toBe(sourceClock);
   });
 
   it("keeps a stale published quote visible while warning and disabling reuse", async () => {
-    const result = await enrichMissingDetailPrice(makeDb({}, NOW - 6000), "usdt-tether", makeResponse());
+    const result = await overlayCanonicalDetail(makeDb({}, NOW - 6000), "usdt-tether", makeResponse());
     expect(await result.json()).toMatchObject({ price: 0.997 });
     expect(result.headers.get("Cache-Control")).toBe("no-store");
     expect(result.headers.get("Warning")).toContain("Response is stale");
@@ -286,13 +281,13 @@ describe("missing detail price enrichment", () => {
 
   it("preserves errors without querying or consuming them", async () => {
     const response = new Response("unavailable", { status: 503 });
-    expect(await enrichMissingDetailPrice(mockD1([]), "usdt-tether", response)).toBe(response);
+    expect(await overlayCanonicalDetail(mockD1([]), "usdt-tether", response)).toBe(response);
     expect(response.bodyUsed).toBe(false);
   });
 
   it.each(["{invalid", "null", "[]"])("preserves a successful unusable detail body %s", async (body) => {
     const response = makeResponse(body);
-    const result = await enrichMissingDetailPrice(mockD1([]), "usdt-tether", response);
+    const result = await overlayCanonicalDetail(mockD1([]), "usdt-tether", response);
     expect(result.status).toBe(200);
     expect(result.bodyUsed).toBe(false);
     expect(await result.text()).toBe(body);
@@ -304,7 +299,7 @@ describe("missing detail price enrichment", () => {
       "Cache-Control": "no-store",
       Warning: '110 - "Historical detail is stale"',
     } });
-    const result = await enrichMissingDetailPrice(makeDb(), "usdt-tether", response);
+    const result = await overlayCanonicalDetail(makeDb(), "usdt-tether", response);
     expect(result.headers.has("Content-Length")).toBe(false);
     expect(result.headers.get("Cache-Control")).toBe("no-store");
     expect(result.headers.get("Warning")).toBe('110 - "Historical detail is stale"');
@@ -326,7 +321,7 @@ describe("missing detail price enrichment", () => {
     };
 
     it("keeps current supply unavailable through detail and projection despite positive provider history", async () => {
-      const result = await enrichMissingDetailPrice(makeDb(expiredQuarantine), "usdt-tether", makeResponse());
+      const result = await overlayCanonicalDetail(makeDb(expiredQuarantine), "usdt-tether", makeResponse());
       const body = await result.json() as Record<string, unknown>;
       expect(body.currentSupplyUnavailableReason).toBe("supply-chain-dropout");
       expect(body.currentCirculatingUSD).toBeUndefined();
@@ -347,7 +342,7 @@ describe("missing detail price enrichment", () => {
           baselineObservedAt: quarantinedSince, baselineSource: "state", resolution: "unavailable",
         }] },
       };
-      const result = await enrichMissingDetailPrice(makeDb(partial), "usdt-tether", makeResponse());
+      const result = await overlayCanonicalDetail(makeDb(partial), "usdt-tether", makeResponse());
       const body = await result.json() as Record<string, unknown>;
       expect(body.currentSupplyExcludedChains).toEqual(["HyperEVM"]);
       expect(body.currentSupplyRestored).toBe(false);
@@ -355,13 +350,13 @@ describe("missing detail price enrichment", () => {
       expect(summary).toMatchObject({ circulating: { peggedUSD: 97_500_000 }, supplyExcludedChains: ["HyperEVM"] });
       expect(summary.supplyRestored).toBeUndefined();
 
-      const forged = await enrichMissingDetailPrice(makeDb({ circulating: { peggedUSD: 100 } }), "usdt-tether",
+      const forged = await overlayCanonicalDetail(makeDb({ circulating: { peggedUSD: 100 } }), "usdt-tether",
         makeResponse(JSON.stringify({ tokens, currentSupplyExcludedChains: ["Ethereum"] })));
       expect(await forged.json()).not.toHaveProperty("currentSupplyExcludedChains");
     });
 
     it("ignores a provider-supplied unavailability marker when canonical supply is observed", async () => {
-      const result = await enrichMissingDetailPrice(makeDb({ circulating: { peggedUSD: 100 } }), "usdt-tether",
+      const result = await overlayCanonicalDetail(makeDb({ circulating: { peggedUSD: 100 } }), "usdt-tether",
         makeResponse(JSON.stringify({ tokens, currentSupplyUnavailableReason: "supply-chain-dropout" })));
       const body = await result.json() as Record<string, unknown>;
       expect(body.currentSupplyUnavailableReason).toBeUndefined();
@@ -462,13 +457,13 @@ describe("detail response paths", () => {
 
 describe("legacy Solomon detail identity", () => {
   it.each(["defillama", "coingecko"])("sanitizes cached %s alias data without changing legacy history", async (source) => {
-    const response = await enrichMissingDetailPrice(makeDb({ id: "usdv-solomon", priceSource: source }), "usdv-solomon",
+    const response = await overlayCanonicalDetail(makeDb({ id: "usdv-solomon", priceSource: source }), "usdv-solomon",
       makeResponse(JSON.stringify({ tokens, price: 0.99994, gecko_id: "solomon-usdv", geckoId: "solomon-usdv" })));
     expect(await response.json()).toEqual({ tokens });
   });
 
   it("fills a sanitized legacy cache with a fresh canonical exact-mint quote", async () => {
-    const response = await enrichMissingDetailPrice(makeDb({ id: "usdv-solomon", priceSource: "jupiter", price: 0.9988,
+    const response = await overlayCanonicalDetail(makeDb({ id: "usdv-solomon", priceSource: "jupiter", price: 0.9988,
       priceConfidence: "single-source", consensusSources: ["jupiter"], agreeSources: ["jupiter"] }), "usdv-solomon",
       makeResponse(JSON.stringify({ tokens, price: 0.99994, gecko_id: "solomon-usdv" })));
     const body = await response.json() as Record<string, unknown>;

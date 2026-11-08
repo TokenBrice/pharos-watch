@@ -22,13 +22,13 @@ const detail = {
   research: "never transferred",
 };
 
-function makeDb(options: { detailBody?: string; age?: number; marker?: boolean; publication?: boolean; healthyUsdc?: boolean } = {}) {
+function makeDb(options: { detailBody?: string; age?: number; marker?: boolean; publication?: boolean; healthyUsdc?: boolean; canonical?: object } = {}) {
   const canonical = {
     id: "usdt-tether", name: "Tether", symbol: "USDT", pegType: "peggedUSD", pegMechanism: "fiat-backed",
     price: 0.997, priceSource: "coingecko", priceConfidence: "high", priceUpdatedAt: NOW - 70,
     priceObservedAt: NOW - 90, priceObservedAtMode: "upstream", priceSyncedAt: NOW - 60,
     circulating: { peggedUSD: 100 }, circulatingPrevDay: { peggedUSD: 99 },
-    chainCirculating: {}, chains: ["Ethereum"], consensusSources: ["coingecko"], agreeSources: ["coingecko"],
+    chainCirculating: {}, chains: ["Ethereum"], consensusSources: ["coingecko"], agreeSources: ["coingecko"], ...options.canonical,
   };
   return mockD1([
     { match: "cache", matchBinds: ["stablecoins"], rows: [], first: options.publication === false ? null : {
@@ -115,7 +115,7 @@ describe("cache-only detail snapshot inputs", () => {
 
   it.each(["liveSummary", "supplyHistory"] as const)("isolates an unproven %s clock without weakening available entries", async (lane) => {
     if (lane === "liveSummary") {
-      vi.spyOn(detailPrice, "enrichMissingDetailPrice").mockResolvedValueOnce(Response.json({ price: 1 }));
+      vi.spyOn(detailPrice, "overlayCanonicalDetail").mockResolvedValueOnce(Response.json({ price: 1 }));
     } else {
       vi.spyOn(supplyHistoryApi, "handleSupplyHistory").mockResolvedValueOnce(Response.json([], {
         headers: { Date: new Date(NOW * 1000).toUTCString() },
@@ -157,7 +157,8 @@ describe("cache-only detail snapshot inputs", () => {
   });
 
   it("quarantines oversized projected inputs and accounts for unknown ids", async () => {
-    const response = await handleDetailSnapshotInputs(makeDb({ detailBody: JSON.stringify({ ...detail, price: 1, priceSource: "coingecko", consensusSources: ["x".repeat(140_000)] }) }),
+    // The published quote and its provenance replace any provider copy before projection.
+    const response = await handleDetailSnapshotInputs(makeDb({ canonical: { consensusSources: ["x".repeat(140_000)] } }),
       new URL(API_PATHS.stablecoinDetailSnapshotInputs(["usdt-tether", "unknown-coin"]), "https://site-api.pharos.watch"));
     expect(await response.json()).toMatchObject({ entries: [
       { id: "usdt-tether", status: "unavailable", reason: "entry-too-large" },

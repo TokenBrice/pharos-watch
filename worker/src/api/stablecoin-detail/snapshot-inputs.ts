@@ -17,7 +17,7 @@ import { loadStablecoinsCache } from "../../lib/stablecoins-cache";
 import { getCompletedSupplySnapshot } from "../../lib/supply-snapshot-completion";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { handleSupplyHistory } from "../supply-history";
-import { enrichMissingDetailPrice } from "./price";
+import { overlayCanonicalDetail } from "./price";
 import { CACHE_TTL_SECONDS, DETAIL_STALE_CACHE_MAX_AGE_SECONDS, createFreshCacheHitResponse } from "./shared";
 
 /**
@@ -82,7 +82,7 @@ export async function handleDetailSnapshotInputs(db: D1Database, url: URL): Prom
       // and schema/projection as the per-coin route, but never call its refresh router.
       let detailResponse = createFreshCacheHitResponse(cached.value, age, cached.updatedAt);
       if (isActiveStablecoinMeta(meta)) {
-        detailResponse = await enrichMissingDetailPrice(db, id, detailResponse, publication);
+        detailResponse = await overlayCanonicalDetail(db, id, detailResponse, publication);
       }
       const detail: unknown = await detailResponse.json();
       const historyResponse = await handleSupplyHistory(
