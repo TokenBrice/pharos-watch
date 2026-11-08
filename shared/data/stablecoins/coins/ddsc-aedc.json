@@ -40,7 +40,7 @@
   },
   "status": "pre-launch",
   "announcedDate": "2025-04-28",
-  "launchPhaseDetail": "DDSC is issued on ADI Chain mainnet, but ADI Chain is not in Pharos's chain registry, so Pharos records no launch phase and its deployment and supply cannot enter runtime data. IHC, ADQ and First Abu Dhabi Bank announced a CBUAE-regulated dirham stablecoin on the ADI blockchain on April 28 2025, then to be issued by FAB. The October 2025 white paper names the issuer AEDC Stable Coin L.L.C., owned by Sirius Investment Holding (34%), IHC Capital Holding (33%) and 1968B SPV (33%), and records CBUAE in-principle approval on September 1 2025. The DDSC site now names AEDC Stable Coin Network and Distribution L.L.C. as the licensed issuer, holding Stored Value Facilities licence 05.01.01.018.2026.01 and Payment Token Services licence 09.01.01.004.2026.01. The CBUAE approved DDSC to go live on February 11 2026, and the ADI Chain explorer shows the first mint on February 16 2026 at token contract 0x1211f0cfe66739433c1330e21f4951b80e813479 (6 decimals). Authorized Distribution Partners onboard holders after KYC/KYB checks. IHC reported an AED 110 million DDSC transaction on May 21 2026, and a CBUAE no-objection certificate of July 3 2026 allows DDSC on selected VARA-regulated exchanges once its requirements are met; no platform was named. On November 1 2026 on-chain supply was 48,280,499 DDSC across 87 addresses, matching the issuer's transparency feed, which shows 657 DDSC in the issuance vault; the contract had minted 345,731,009 DDSC and burned 297,450,510 since February 2026. DDSC has no CoinGecko or DefiLlama listing. Its white paper calls it the Digital Dirham StableCoin, a separate instrument from the CBUAE's Digital Dirham CBDC.",
+  "launchPhaseDetail": "DDSC is issued on ADI Chain mainnet, but ADI Chain is not in Pharos's chain registry, so Pharos records no launch phase and its deployment and supply cannot enter runtime data. IHC, ADQ and First Abu Dhabi Bank announced a CBUAE-regulated dirham stablecoin on the ADI blockchain on April 28 2025, then to be issued by FAB. The October 2025 white paper names the issuer AEDC Stable Coin L.L.C., owned by Sirius Investment Holding (34%), IHC Capital Holding (33%) and 1968B SPV (33%), and records CBUAE in-principle approval on September 1 2025. The DDSC site now names AEDC Stable Coin Network and Distribution L.L.C. as the licensed issuer, holding Stored Value Facilities licence 05.01.01.018.2026.01 and Payment Token Services licence 09.01.01.004.2026.01. The CBUAE approved DDSC to go live on February 11 2026, and the ADI Chain explorer shows the first mint on February 16 2026 at token contract 0x1211f0cfe66739433c1330e21f4951b80e813479 (6 decimals). Authorized Distribution Partners onboard holders after KYC/KYB checks. IHC reported an AED 110 million DDSC transaction on May 21 2026, and a CBUAE no-objection certificate of July 3 2026 allows DDSC on selected VARA-regulated exchanges once its requirements are met; no platform was named. On November 1 2026 on-chain supply was 48,280,499 DDSC across 87 addresses, matching the issuer's transparency feed, which shows 657 DDSC in the issuance vault; the contract had minted 345,731,009 DDSC and burned 297,450,510 since February 2026. DefiLlama lists DDSC as stablecoin 458 at the exact ADI contract, but its price is shared by many unrelated assets and is not a DDSC quote; CoinGecko has no listing. Its white paper calls it the Digital Dirham StableCoin, a separate instrument from the CBUAE's Digital Dirham CBDC.",
   "featuredContent": [
     {
       "type": "article",
@@ -62,6 +62,13 @@
       "title": "DDSC Receives Central Bank Approval to Partner with Selected VARA-Regulated Exchange Platforms",
       "description": "The July 3 2026 release on the CBUAE no-objection certificate for selected VARA-regulated exchanges, reporting more than AED 150 million transacted.",
       "source": "IHC"
+    },
+    {
+      "type": "article",
+      "url": "https://network.global/ksa/en/about-us/press-and-media/news/network-international-launches-uae-s-first-in-store-ddsc-payment-pilot-for-aed-backed-stablecoin-transactions",
+      "title": "DDSC retail payment pilot announcement",
+      "description": "Network International's September 9 2026 release identifies Marks & Spencer in Dubai Festival City and LuLu Hypermarket in Khalidiyah Mall as pilot locations.",
+      "source": "Network International"
     }
   ],
   "milestones": [
@@ -106,6 +113,13 @@
       "title": "CBUAE grants DDSC a no-objection certificate for VARA-regulated exchanges",
       "description": "The Central Bank of the UAE issues a no-objection certificate allowing DDSC to go live on selected VARA-regulated exchange platforms, subject to meeting its requirements, to extend DDSC beyond institutional settlement to retail, merchant and business payments. IHC reports more than AED 150 million transacted since launch; no platform is named.",
       "sourceUrl": "https://apigateway.adx.ae/adx/cdn/1.0/content/download/5093906"
+    },
+    {
+      "date": "2026-09-09",
+      "type": "partnership",
+      "title": "Network International pilots DDSC payments at two UAE retailers",
+      "description": "Network International announced an in-store DDSC payment pilot at Marks & Spencer in Dubai Festival City and LuLu Hypermarket in Abu Dhabi's Khalidiyah Mall.",
+      "sourceUrl": "https://network.global/ksa/en/about-us/press-and-media/news/network-international-launches-uae-s-first-in-store-ddsc-payment-pilot-for-aed-backed-stablecoin-transactions"
     }
   ]
 }

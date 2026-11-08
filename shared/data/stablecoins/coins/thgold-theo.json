@@ -12,7 +12,7 @@
     "navToken": false
   },
   "collateral": "Physical gold, per Theo's current documentation held in Theo's allocated vault account or leased to institutional counterparties on short or longer tenors; all thGOLD backing may be lent, whether or not it is staked. The January 2026 announcement instead described exposure to the MG999 Onchain Gold Fund of gold-denominated retailer loans run by FundBridge Capital with Libeara tokenization",
-  "pegMechanism": "One thGOLD is documented as one troy ounce of gold that does not rebase or accrue; lease income goes only to the separate sthGOLD ERC-4626 vault, which has a 5-day redemption lockup. Direct mint and redemption against physical metal are not yet open, so the token is currently obtainable only on secondary venues",
+  "pegMechanism": "One thGOLD is documented as one troy ounce of gold that does not rebase or accrue; lease income goes only to the separate sthGOLD ERC-4626 vault, which has a 5-day redemption lockup. Direct mint and redemption against physical metal are not yet open, and Theo says the token is available on secondary venues, although both current holders are issuer wallets",
   "detailProvider": "coingecko",
   "geckoId": "thgold",
   "links": [
@@ -26,7 +26,7 @@
     },
     {
       "label": "Twitter",
-      "url": "https://x.com/Theo_Network"
+      "url": "https://x.com/theo_xyz"
     },
     {
       "label": "Docs",
@@ -49,7 +49,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-01-27",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "Theo announced thGOLD on January 27 2026 as a yield-bearing gold product tracking the MG999 Onchain Gold Fund (FundBridge Capital, Libeara tokenization), and that gold-leasing fund already backs thUSD's carry strategy. The token contract was deployed on Ethereum on September 15 2026 (0x610F0E33b0A6b3802ff29D3Cf6bBd9A0ACF784ed, 6 decimals, about 15,279 thGOLD supply on October 19 2026). Theo's current documentation, read October 19 2026, redefines the token: one thGOLD is one fixed troy ounce of physical gold held allocated or leased to institutional counterparties, it does not accrue, and lease income goes only to the separate sthGOLD vault. The 4-of-6 Operator Safe holds the minter role and a Timelock owns the UUPS proxies. Direct mint and redemption are documented as coming soon, with thGOLD meanwhile available on secondary venues. CoinGecko's thgold listing carries no contract or price, so Pharos has no usable public price feed and keeps the coin pre-launch.",
+  "launchPhaseDetail": "Theo announced thGOLD on January 27 2026 as a yield-bearing gold product tracking the MG999 Onchain Gold Fund (FundBridge Capital, Libeara tokenization), and that gold-leasing fund already backs thUSD's carry strategy. The token contract was deployed on Ethereum on September 15 2026 (0x610F0E33b0A6b3802ff29D3Cf6bBd9A0ACF784ed, 6 decimals, about 15,279 thGOLD supply on October 19 2026). Theo's current documentation, read October 19 2026, redefines the token: one thGOLD is one fixed troy ounce of physical gold held allocated or leased to institutional counterparties, it does not accrue, and lease income goes only to the separate sthGOLD vault. The 4-of-6 Operator Safe holds the minter role and a Timelock owns the UUPS proxies. Direct mint and redemption are documented as coming soon, and Theo claims thGOLD is available on secondary venues. Both current thGOLD holders are issuer wallets according to Theo's deployed-addresses page, so independent public circulation has not been established. CoinGecko's thgold listing carries no contract or price, so Pharos has no usable public price feed and keeps the coin pre-launch.",
   "featuredContent": [
     {
       "type": "article",

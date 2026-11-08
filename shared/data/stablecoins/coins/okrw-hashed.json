@@ -29,7 +29,7 @@
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
   "status": "pre-launch",
-  "announcedDate": "2026-05",
+  "announcedDate": "2026-01",
   "expectedLaunchDate": "2026",
   "launchPhase": "testnet",
   "launchPhaseDetail": "First sovereign L1 blockchain (Maroo) purpose-built for KRW stablecoins; testnet live May 2026; dual-track regulated and open paths; mainnet targeted before end of 2026; OKRW is planned as a won-pegged stablecoin, but no issuer has been named and Tiger Research reported on September 17 2026 that issuer eligibility was still under discussion",
@@ -51,7 +51,7 @@
       "sourceUrl": "https://www.theblock.co/news/markets/2026-01-21-hashed-layer-1-south-korean-stablecoin-386622"
     },
     {
-      "date": "2026-05-06",
+      "date": "2026-05-07",
       "type": "testnet",
       "title": "Maroo L1 testnet launches with OKRW as native KRW stablecoin",
       "description": "First sovereign L1 blockchain purpose-built for KRW stablecoins; dual-track regulated and open paths.",

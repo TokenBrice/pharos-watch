@@ -2987,11 +2987,11 @@
   },
   "thgold-theo": {
     "title": "One-Ounce Gold Token Backed by Leased Metal",
-    "text": "thGOLD is Theo's tokenized gold, deployed on Ethereum on September 15 2026, and its design has shifted since the January 27 2026 announcement. That post framed it as a {{term:yield-bearing}}yield-bearing{{/term}} share tracking the MG999 Onchain Gold Fund, a Singapore sub-fund run by FundBridge Capital with Libeara tokenization that lends gold to retailers and already backs thUSD's gold carry. Theo's current documentation instead makes one thGOLD one troy ounce of physical gold that never rebases or accrues. Lease income goes only to stakers in a separate sthGOLD vault with a 5-day exit lockup. Staking sets lease tenor and income rights, yet Theo may lend all thGOLD backing to institutional lessees, so holders who never stake still carry lease-counterparty and recall risk without the income. A 4-of-6 operator Safe holds the sole minter role, and a Timelock owns the upgradeable contracts. Direct mint and {{term:redemption}}redemption{{/term}} against metal are still marked coming soon, so the token is obtainable only on secondary venues. With no public price feed on record, Pharos keeps thGOLD pre-launch. Until redemption opens, nothing on record shows how quickly a holder could turn a token back into a recalled ounce.",
-    "updatedAt": "2026-10-19",
+    "text": "thGOLD is Theo's tokenized gold, deployed on Ethereum on September 15 2026, and its design has shifted since the January 27 2026 announcement. That post framed it as a {{term:yield-bearing}}yield-bearing{{/term}} share tracking the MG999 Onchain Gold Fund, a Singapore sub-fund run by FundBridge Capital with Libeara tokenization that lends gold to retailers and already backs thUSD's gold carry. Theo's current documentation instead makes one thGOLD one troy ounce of physical gold that never rebases or accrues. Lease income goes only to stakers in a separate sthGOLD vault with a 5-day exit lockup. Staking sets lease tenor and income rights, yet Theo may lend all thGOLD backing to institutional lessees, so holders who never stake still carry lease-counterparty and recall risk without the income. A 4-of-6 operator Safe holds the sole minter role, and a Timelock owns the upgradeable contracts. Direct mint and {{term:redemption}}redemption{{/term}} against metal are still marked coming soon. Theo claims secondary-venue availability, but both current holders are issuer wallets according to its deployed-addresses page, leaving independent public circulation unestablished. With no public price feed on record, Pharos keeps thGOLD pre-launch. Until redemption opens, nothing on record shows how quickly a holder could turn a token back into a recalled ounce.",
+    "updatedAt": "2026-11-08",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "openai-codex/gpt-6.1-sol",
+    "factsAsOf": "2026-11-08"
   },
   "usdp-parallel": {
     "title": "Parallelizer Basket Dollar",
@@ -3051,11 +3051,11 @@
   },
   "pusd-polaris": {
     "title": "Pre-Launch pETH CDP Dollar With Earn Pool Yield",
-    "text": "USDp (formerly pUSD) is Polaris's pre-launch Liquity-style {{term:cdp}}CDP{{/term}} stablecoin on Ethereum, minted against pETH collateral at a 115% minimum collateral ratio. Polaris's documentation describes an immutable core with no admin privileges and no freeze or blacklist function. A bounded Stewardship role still sits above it: Stewardship can change interest rate splits and flow recipients and replace faulty oracle feeds, and its decisions run through sPOLAR (formerly vePOLAR) stakers with no timelock disclosed. The {{term:yield-bearing}}yield-bearing{{/term}} angle comes from inside the protocol. USDp deposited in the Earn Pool absorbs liquidations and earns a share of minter interest plus pETH liquidation gains, so each liquidation converts part of a deposit's dollars into ETH exposure. Holder yield therefore tracks borrowing demand and liquidation activity rather than Treasury rates. A public testnet runs on Sepolia, the app is labelled Alpha, and Polaris's docs say no production addresses, audit status or launch status can be inferred from testnet values. Polaris's former roadmap placed professional audits ahead, and a $1M angel round reported in September 2026 came without a mainnet date. Until mainnet contracts and audits exist, USDp's design claims cannot be checked against deployed code.",
-    "updatedAt": "2026-11-01",
+    "text": "USDp (formerly pUSD) is Polaris's pre-launch Liquity-style {{term:cdp}}CDP{{/term}} stablecoin on Ethereum, minted against pETH collateral at a 115% minimum collateral ratio. Polaris's documentation describes an immutable core with no admin privileges and no freeze or blacklist function. A bounded Stewardship role can still change interest rate splits and flow recipients and replace faulty oracle feeds. Its decisions run through sPOLAR stakers, with no timelock disclosed. USDp deposited in the Earn Pool absorbs liquidations and earns a share of minter interest plus pETH liquidation gains. Each liquidation converts part of a deposit's dollars into ETH exposure, so holder yield depends on borrowing demand and liquidation activity. A public testnet runs on Sepolia and the app is labelled Alpha. On October 26 2026 Polaris said four audits were underway, without naming auditors, publishing reports or announcing a mainnet date. The phase has advanced to auditing, but the design claims still await published audit reports and deployed mainnet contracts.",
+    "updatedAt": "2026-11-08",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-11-01"
+    "model": "openai-codex/gpt-6.1-sol",
+    "factsAsOf": "2026-11-08"
   },
   "pgold-polaris": {
     "title": "Synthetic Gold Minted Against pETH",
@@ -3535,11 +3535,11 @@
   },
   "rgbp-revolut": {
     "title": "Revolut Pre-Launch Sterling Stablecoin",
-    "text": "Revolut's proposed sterling stablecoin is still a sandbox test, waiting on UK rules that have softened but are not yet final.\n\nThe FCA picked Revolut for its stablecoin sandbox cohort in February 2026, and testing began that quarter. Revolut received its full UK banking licence in March, yet any GBP coin would come from Revolut Ltd, its e-money entity, because proposed Bank of England rules restrict issuance across affiliated subsidiaries. The BoE's June 2026 policy statement removed the main commercial blockers: the proposed £20,000 individual holding cap gave way to a temporary per-coin issuance cap of roughly £40bn, and the share of reserves allowed in short-dated UK Treasury bills rose from 60% to 70%. The remainder sits at the Bank, holders receive no yield, and par {{term:redemption}}redemption{{/term}} within 24 hours is mandatory. Rules are due to be finalised by end-2026, and the FCA regime starts in October 2027. Revolut's priority use case, per its House of Lords testimony, is the UK-to-India remittance corridor rather than retail payments. Its first live stablecoin, the euro EURR launched in August 2026, is issued by Stripe's Bridge under MiCA rather than by a Revolut entity, which says nothing direct about who would issue sterling. No contract, reserve report or redemption terms exist yet; until the UK rules are final, RGBP exists only inside the sandbox.",
-    "updatedAt": "2026-10-19",
+    "text": "Revolut's proposed sterling stablecoin is still a sandbox test, with no confirmed launch date.\n\nThe FCA picked Revolut for its stablecoin sandbox cohort in February 2026, and testing began that quarter. Revolut received its full UK banking licence in March, yet any GBP coin would come from Revolut Ltd, its e-money entity, because proposed Bank of England rules restrict issuance across affiliated subsidiaries. The BoE's June 2026 policy statement removed the main commercial blockers: the proposed £20,000 individual holding cap gave way to a temporary per-coin issuance cap of roughly £40bn, and the share of reserves allowed in short-dated UK Treasury bills rose from 60% to 70%. The remainder sits at the Bank, holders receive no yield, and par {{term:redemption}}redemption{{/term}} within 24 hours is mandatory. Rules are due to be finalised by end-2026, and the FCA regime starts on October 25 2027. The June 30 BoE/FCA paper says firms issuing earlier should be FCA-registered; the regime start is not Revolut's launch date. Revolut's priority use case, per its House of Lords testimony, is the UK-to-India remittance corridor rather than retail payments. Its first live stablecoin, the euro EURR launched in August 2026, is issued by Stripe's Bridge under MiCA rather than by a Revolut entity, which says nothing direct about who would issue sterling. No contract, reserve report or redemption terms exist yet, and Revolut has not set a sterling launch date.",
+    "updatedAt": "2026-11-08",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "openai-codex/gpt-6.1-sol",
+    "factsAsOf": "2026-11-08"
   },
   "ausdt-tether-alloy": {
     "title": "Gold Collateral, Dollar Target",
@@ -4507,11 +4507,11 @@
   },
   "krw-imbank": {
     "title": "Bank-Led Won Pilot on Kaia",
-    "text": "KRW-iM is iM Bank's pre-launch won stablecoin, which Pharos records as South Korea's first bank-led KRW proof of concept. The original May 2026 pilot with Finger on Kaia leaned on BTQ Technologies' post-quantum cryptography, a security feature rather than a reserve or {{term:redemption}}redemption{{/term}} term. The token itself, iMKRW, has since been issued and transacted on Kaia in two closed pilots: OpenAsset's full-lifecycle test in May, covering issuance, QR payment, merchant settlement and burn, and a Coocon and Beatoz payment-ecosystem test in July. In June iM Bank also joined the Korea-EU Pangea project testing KRW-EUR stablecoin exchange, though iMKRW was not named there. Pharos marks the phase as testnet, but these are private pilots rather than a public network. Production mint, redemption and reserve reporting terms are unpublished, and the production ticker is unconfirmed. Commercial launch is gated on the Digital Asset Basic Act, whose September public hearing fell through after the government bill was delayed.",
-    "updatedAt": "2026-10-19",
+    "text": "KRW-iM is iM Bank's pre-launch won stablecoin, which Pharos records as South Korea's first bank-led KRW proof of concept. The original May 2026 pilot with Finger on Kaia leaned on BTQ Technologies' post-quantum cryptography, a security feature rather than a reserve or {{term:redemption}}redemption{{/term}} term. The token iMKRW was issued and transacted on Kaia in OpenAsset's full-lifecycle test in May, covering issuance, QR payment, merchant settlement and burn. The separate Coocon payment-ecosystem test in July used BEATOZ blockchain and CPG technology; its release did not identify Kaia or name the token iMKRW. In June iM Bank also joined the Korea-EU Pangea project testing KRW-EUR stablecoin exchange, though iMKRW was not named there. Pharos marks the phase as testnet, but these are private pilots rather than a public network. Production mint, redemption and reserve reporting terms are unpublished, and the production ticker is unconfirmed. Commercial launch is gated on the Digital Asset Basic Act, whose September public hearing fell through after the government bill was delayed.",
+    "updatedAt": "2026-11-08",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "openai-codex/gpt-6.1-sol",
+    "factsAsOf": "2026-11-08"
   },
   "gldy-streamex": {
     "title": "The Yield-Bearing Gold Ounce",
@@ -5443,11 +5443,11 @@
   },
   "brl-itau": {
     "title": "Brazil's Biggest Private Bank, Still Undecided",
-    "text": "Itau Unibanco, Brazil's largest private bank by assets, confirmed in April 2025 that it was evaluating its own stablecoin; Head of Digital Assets Guto Antunes told a Sao Paulo industry event the bank is 'always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. That remains the extent of the public commitment. Brazil's virtual-asset framework, finalised as BCB Resolutions 519 to 521, took effect on February 2, 2026, and Resolution 561, effective October 1, 2026, bars authorised FX providers from settling cross-border remittances in stablecoins. Neither produced an Itau decision. In August 2026 Antunes argued that stablecoins and tokenized deposits must coexist, and in September he described the bank as closely tracking stablecoins as potential payment enablers, with no issuance decision, peg choice, ticker or date. The Drex wholesale pilot, which gave Itau distribution-rail experience, has ended. Pharos tracks the placeholder as BRL-denominated because Brazil's retail base makes a real-denominated first launch the more likely design, though a USD option has not been ruled out, and Pharos removed its 2026 launch expectation in September. The rules Itau was waiting on are in force; the remaining constraint is the bank's own product decision.",
-    "updatedAt": "2026-10-19",
+    "text": "Itau Unibanco, Brazil's largest private bank by assets, confirmed in April 2025 that it was evaluating its own stablecoin; Head of Digital Assets Guto Antunes told a Sao Paulo industry event the bank is 'always open to understanding whether it makes sense for our clients to have a stablecoin, even one in real, within Itau'. That remains the extent of the public commitment. Brazil's virtual-asset framework, finalised as BCB Resolutions 519 to 521, took effect on February 2, 2026, and Resolution 561, effective October 1, 2026, bars virtual assets in payments or receipts between an eFX provider and its foreign counterparty. Neither produced an Itau decision. In August 2026 Antunes argued that stablecoins and tokenized deposits must coexist, and in September he described the bank as closely tracking stablecoins as potential payment enablers, with no issuance decision, peg choice, ticker or date. The Drex wholesale pilot, which gave Itau distribution-rail experience, has ended. Pharos tracks the placeholder as BRL-denominated because Brazil's retail base makes a real-denominated first launch the more likely design, though a USD option has not been ruled out, and Pharos removed its 2026 launch expectation in September. The rules Itau was waiting on are in force; the remaining constraint is the bank's own product decision.",
+    "updatedAt": "2026-11-08",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "openai-codex/gpt-6.1-sol",
+    "factsAsOf": "2026-11-08"
   },
   "moveusd-cfx": {
     "title": "CFX's Solana Deposit Dollar",
@@ -6123,11 +6123,11 @@
   },
   "eurr-revolut": {
     "title": "The Neobank That Rented Its Own Coin",
-    "text": "EURR is live, and Pharos tracks it pre-launch anyway. Revolut launched it on August 26 2026 as the first product of its stablecoin programme, in euro rather than the dollar or sterling tokens it had been expected to ship first, phased into Denmark, Poland and Portugal with wider EEA availability targeted later in 2026. The issuer is Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge, which holds the EMI licence and MiCA authorisation from the CSSF; Revolut Digital Assets Europe distributes the token under its CySEC MiCA licence. Revolut built the distribution and outsourced the balance sheet. Supply passed 1.67 million EURR in early September and stood near 1.69 million on October 25; the Polygon deployment holds three. Bridge's reserve page reports reserves equal to supply, held entirely as cash deposits at credit institutions, and the white paper commits to par {{term:redemption}}redemption{{/term}} to an EEA IBAN within two business days. Ernst & Young issued a reasonable-assurance {{term:attestation}}attestation{{/term}} on the reserves as of August 31 2026, though custodian names remain unpublished. No accepted price source resolves the token, and that missing price path is what keeps EURR outside the tracked set.",
-    "updatedAt": "2026-10-25",
+    "text": "EURR is Revolut's live euro stablecoin, issued by Bridge Building S.A., the Luxembourg arm of Stripe-owned Bridge. Revolut launched it on August 26 2026, initially in Denmark, Poland and Portugal. Bridge holds the CSSF EMI licence and MiCA authorisation, while Revolut Digital Assets Europe distributes the token under its CySEC MiCA licence. Reserve management and issuer obligations sit with Bridge. Its white paper commits to par {{term:redemption}}redemption{{/term}} to an EEA IBAN within two business days at no fee. Ernst & Young S.A.'s reasonable-assurance report, signed October 30 2026, names Banking Circle in Luxembourg as the bank holding the euro cash and cash equivalents backing EURR as of September 30. Ethereum supply is observable, with a small Polygon deployment also recorded. No accepted source returns a fetchable EURR price, so Pharos retains the pre-launch tracking status despite the token's public issuance.",
+    "updatedAt": "2026-11-08",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-25"
+    "model": "openai-codex/gpt-6.1-sol",
+    "factsAsOf": "2026-11-08"
   },
   "usdv-solomon-v2": {
     "title": "Solomon’s Separate Reserve Dollar",
@@ -6138,9 +6138,9 @@
     "factsAsOf": "2026-09-15"
   },
   "usd-bank-consortium": {
-    "title": "The 21-Bank Consortium Dollar",
+    "title": "The 21-Institution Consortium Dollar",
     "text": "On September 1 2026 twenty-one financial institutions led by Bank of America, Citi, Goldman Sachs, Deutsche Bank, Santander, and UBS announced they will found a joint company, name to be announced, to issue a dollar stablecoin spanning wholesale, institutional, and retail payments, with a euro token as the next priority. The company is to be established in H2 2026, subject to closing conditions, with market entry targeted for H1 2027 and GENIUS Act and MiCA compliance intended where applicable. The commitment extends exploration that began with ten banks in October 2025 around a 1:1 reserve-backed digital money for public blockchains. Everything Pharos measures is still absent: no company name, ticker, chain, contracts, reserve composition, custodian, or attestation. Until those land, this entry records intent by named institutions rather than a measurable issuer.",
-    "updatedAt": "2026-09-27",
+    "updatedAt": "2026-11-08",
     "authoredBy": "ai",
     "model": "glm-5.3",
     "factsAsOf": "2026-09-27"
