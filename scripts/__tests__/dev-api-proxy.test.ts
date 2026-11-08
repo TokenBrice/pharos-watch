@@ -1,9 +1,9 @@
 import { spawn, type ChildProcess } from "node:child_process";
-import { once } from "node:events";
+import { EventEmitter, once } from "node:events";
 import { createServer } from "node:http";
 import { networkInterfaces } from "node:os";
 import { resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { allocatePort } from "../lib/smoke-runtime.mjs";
 
 const nonLoopbackAddress = Object.values(networkInterfaces()).flat()
@@ -40,6 +40,36 @@ async function stopProxy(child: ChildProcess): Promise<void> {
 }
 
 describe("dev-api-proxy", () => {
+  it.each([[0, false], [1, false], [1, true]] as const)("signals survivors before child %i spawn failure exits (proxy skipped: %s)", async (failed, skipped) => {
+    const children = [0, 1].map(() => Object.assign(new EventEmitter(), { kill: vi.fn() }));
+    const stopped = new Error("supervisor exited");
+    vi.resetModules();
+    vi.doMock("node:child_process", () => ({ spawn: vi.fn().mockReturnValueOnce(children[0]).mockReturnValueOnce(children[1]) }));
+    vi.spyOn(process, "on").mockReturnValue(process);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const exit = vi.spyOn(process, "exit").mockImplementation(() => {
+      children.forEach((child, index) => {
+        if (index === failed || (index === 0 && skipped)) expect(child.kill).not.toHaveBeenCalled();
+        else expect(child.kill).toHaveBeenCalledExactlyOnceWith("SIGTERM");
+      });
+      throw stopped;
+    });
+    try {
+      await import("../maintenance/dev");
+      if (skipped) {
+        children[0].emit("exit", 0, null);
+        expect(exit).not.toHaveBeenCalled();
+        expect(children[1].kill).not.toHaveBeenCalled();
+      }
+      expect(() => children[failed].emit("error", new Error("spawn unavailable"))).toThrow(stopped);
+      expect(exit).toHaveBeenCalledExactlyOnceWith(1);
+    } finally {
+      vi.doUnmock("node:child_process");
+      vi.restoreAllMocks();
+      vi.resetModules();
+    }
+  });
+
   it("forwards allowlisted GETs but denies internal build inputs and non-admitted methods before adding credentials", async () => {
     const requests: Array<{ url: string | undefined; secret: string | string[] | undefined }> = [];
     const upstream = createServer((req, res) => {

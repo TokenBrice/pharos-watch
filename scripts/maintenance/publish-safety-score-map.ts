@@ -423,7 +423,7 @@ export function buildSafetyMapSummary(state: SafetyMapPublishState | null, jobSt
   } else if (jobStatus === "success" && state?.phase === "published" && manifest) {
     lines.push("### Published keys", "", ...safetyMapPublicationEntries(state, dirname(state.manifestPath ?? "")).map(({ key }) => `- \`${key}\`${key === MANIFEST_KEY ? " — manifest, written last" : key === `safety-map:${manifest.date}.png` ? " — the URL the digest embeds" : ""}`));
   } else {
-    lines.push("### Nothing was committed", "", "The run did not reach the manifest write, so `safety-map:latest.json` still", "points at the previous complete key set and consumers are unaffected.", "", "The digest is not blocked by this miss; it may carry forward a recent dated map", "within its bounded continuity window and labels the date it depicts.");
+    lines.push("### Publication incomplete or unverified", "", "This run did not confirm a complete publication. Live keys may have changed,", "including dated images referenced by the previous manifest. The manifest may", "also have been written before a failed acknowledgement or local state save.", "", "Inspect the publish logs and live KV to verify the served key set.", "", "The digest is not blocked by this miss; it may carry forward a recent dated map", "within its bounded continuity window and labels the date it depicts.");
   }
   return `${lines.join("\n")}\n`;
 }

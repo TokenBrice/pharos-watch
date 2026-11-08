@@ -13,6 +13,8 @@ on:
     - cron: "45 5 * * 2"
   workflow_dispatch:
 
+concurrency: {group: curation-expiry-sweep-publication, cancel-in-progress: false}
+
 permissions:
   contents: read
 

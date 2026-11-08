@@ -5,6 +5,8 @@ on:
     - cron: "15 7 * * 1"
   workflow_dispatch:
 
+concurrency: {group: agent-maintenance-candidates-publication, cancel-in-progress: false}
+
 permissions:
   contents: read
   issues: write

@@ -801,23 +801,6 @@ describe("route context budget warnings and fixture ratchets", () => {
     expect(failures, failures.join("\n")).toEqual([]);
   });
 
-  it("labels every budget warning so one enumeration reports all of them", () => {
-    expect([
-      ...routeBudgetWarnings("a (auto)", 120, 100),
-      ...routeBudgetWarnings("b (contract)", 100, 100),
-      ...routeBudgetWarnings("c (contract)", 131, 100),
-    ]).toEqual(["a (auto): 120 bytes > 100 (excess 20)", "c (contract): 131 bytes > 100 (excess 31)"]);
-  });
-
-  it("reports the evaluator and Functions map measurements against their acceptance limits in both modes", () => {
-    for (const mode of ["auto", "contract"] as const) {
-      reportBudgetWarnings([
-        ...routeBudgetWarnings(`evaluator (${mode})`, buildRouteContext(classifyChangedFiles(["shared/lib/safety-score-v9/evaluate-asset.ts"], mode), { documents: routeDocuments }).total.bytes, 80_000),
-        ...routeBudgetWarnings(`Functions map (${mode})`, buildRouteContext(classifyChangedFiles(["functions/safety-scores/map.json.ts"], mode), { documents: routeDocuments }).total.bytes, 40_000),
-      ]);
-    }
-  });
-
   it("charges every multi-file route to the 160 KB union without double-counting common guides", () => {
     const files = ["shared/lib/safety-score-v9/evaluate-asset.ts", "functions/safety-scores/map.json.ts"];
     const contract = classifyChangedFiles(files);

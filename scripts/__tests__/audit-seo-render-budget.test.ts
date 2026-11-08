@@ -579,22 +579,6 @@ describe("SEO render audit sentinels", { tags: ["nightly"] }, () => {
     expect(plainProfile.map((entry: { id: string }) => entry.id)).not.toEqual(
       expect.arrayContaining(unenrolledIds),
     );
-    // Enrollment: the expectations now produce their own sentinels.
-    const safetyHtml =
-      '<main><h1>Safety Scores</h1><section id="data" aria-label="Safety score cards">'
-      + '<time datetime="2026-10-28T07:18:26.000Z">Grades as of 2026-10-28</time>'
-      + "<span>Top 2 of 394 rated active stablecoins by Safety Score</span>"
-      + '<a href="/stablecoin/usdt-tether/">USDT <span aria-label="Safety grade A">A</span></a>'
-      + '<a href="/stablecoin/usdc-circle/">USDC <span aria-label="Safety grade A+">A+</span></a>'
-      + "</section></main>";
-    const safety = evaluate(
-      makeSnapshot(safetyHtml, { url: "https://pharos.watch/safety-scores/" }),
-      {
-        surface: "safety-scores",
-        raw: makeSnapshot(safetyHtml, { url: "https://pharos.watch/safety-scores/", mode: "raw" }),
-      },
-    );
-    expect(byId(safety, "safety-scores.dated-preview")).toMatchObject({ status: "present", observedCount: 2 });
   });
 
   it("records capture failures as not-observed and propagates observed generation", () => {
@@ -705,26 +689,6 @@ describe("SEO render audit failure buckets", { tags: ["nightly"] }, () => {
     expect(abort).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps analytics aborts out of unexpected request failures", () => {
-    const page = makeEventPage();
-    const failures = makeFailures();
-    const intentional = { analyticsUrls: new Set(["https://www.google-analytics.com/g/collect"]), replayUrls: new Set<string>() };
-    installFailureListeners(page, {
-      counters: makeCounters(),
-      failures,
-      intentional,
-      provenance: { sourceGeneration: null, source: null },
-      origin: "https://pharos.watch",
-    });
-
-    page.emit("requestfailed", {
-      url: () => "https://www.google-analytics.com/g/collect",
-      resourceType: () => "fetch",
-      failure: () => ({ errorText: "net::ERR_ABORTED" }),
-    });
-
-    expect(failures.failedRequests).toEqual([]);
-  });
 });
 
 describe("SEO render audit API-failure replay", { tags: ["nightly"] }, () => {

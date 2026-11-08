@@ -398,6 +398,8 @@ Night Watch attributes D1 rows only to their explicit matching `schedule_key`; i
 
 ### Local Workspace Preparation
 
+`npm run dev` supervises Next.js and the optional local API proxy. A child spawn error signals surviving children with `SIGTERM` before exiting `1`; a successful proxy exit (missing secret or occupied port) leaves Next.js running. `SIGINT` and `SIGTERM` are forwarded to active children.
+
 The npm `prepare` script runs `scripts/maintenance/prepare-workspace.ts`. Local installs materialize bootstrap-safe generated inputs, then the history-derived projections with `npm run bootstrap:generated:history`. GitHub Actions skips implicit preparation and uses `.github/actions/setup-workspace/action.yml`, opting into full-history projections per job with `bootstrap-history`. `PHAROS_PREPARE_BOOTSTRAP=1` forces ordinary bootstrap in CI without enabling history bootstrap.
 
 Heading IDs use `rehype-slug`; keep its transitive `github-slugger` lockfile entry without declaring `github-slugger` as a direct dependency.

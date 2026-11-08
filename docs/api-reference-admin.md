@@ -603,7 +603,7 @@ This section owns the live report, freshness, retention and comparison contract.
     "runsRetained": 24,
     "chains": [{
       "chainId": "base",
-      "routing": { "statePlacement": "primary", "logScan": true },
+      "routing": { "statePlacement": "preferred", "logScan": true },
       "headLagBlocks": { "p50": 0, "p95": 1, "samples": 24 },
       "stateParity": { "checked": 24, "matched": 24, "mismatched": 0, ... },
       "gate": { "passed": true, "failing": [] },
