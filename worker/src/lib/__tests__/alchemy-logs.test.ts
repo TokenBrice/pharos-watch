@@ -198,7 +198,11 @@ describe("single-URL JSON-RPC transport contracts", () => {
     expect(network).toHaveBeenCalledTimes(4);
   });
 
-  it.each(["single", "batch", "noBatch"] as const)("preserves ordered admission/meter/network/demotion traces for %s", async mode => {
+  it.each([
+    ["single", "network"], ["batch", "network"], ["noBatch", "network"],
+    ["single", "body"], ["batch", "body"], ["noBatch", "body"],
+    ["single", "timeout"], ["batch", "timeout"], ["noBatch", "timeout"],
+  ] as const)("preserves ordered admission/meter/network/demotion traces for %s with %s failure", async (mode, terminalFailure) => {
     vi.useFakeTimers();
     const primary = "https://trace.dwellir.invalid", fallback = "https://trace-public.invalid";
     registerRpcAuth("dwellir", primary, { "X-Api-Key": "trace-key" });
@@ -212,18 +216,20 @@ describe("single-URL JSON-RPC transport contracts", () => {
       onRpcRequest: ({ rpcCalls }) => trace.push(`admitted:${rpcCalls}`),
     }]]);
     vi.spyOn(rpcCredits, "recordDwellirCredits").mockImplementation(count => { trace.push(`meter:${count}`); });
-    let failure: "none" | "http" | "network" = "none", denyRetry = false, attempts = 0;
+    let failure: "none" | "http" | "network" | "body" | "timeout" = "none", denyRetry = false, attempts = 0;
     const network = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
       const payload = JSON.parse(String(init?.body));
       trace.push(`network:${url === primary ? "primary" : "fallback"}:${Array.isArray(payload) ? "batch" : payload.id}`);
       if (url === primary) expect(new Headers(init?.headers).get("X-Api-Key")).toBe("trace-key");
       if (failure === "network" && url === primary) throw new TypeError("network failure");
       if (failure === "http" && url === primary) return Response.json({ error: "busy" }, { status: 503 });
+      if (failure === "body" && url === primary) return new Response("x".repeat(129));
+      if (failure === "timeout" && url === primary) return new Response(new ReadableStream());
       const row = (request: { id: number }) => ({ id: request.id, result: "0x10" });
       return Response.json(Array.isArray(payload) ? payload.map(row) : row(payload));
     });
     const invoke = () => {
-      const options = { chainRpcs, maxRetries: 1, beforeRequest: (url: string) => {
+      const options = { chainRpcs, maxRetries: 1, maxResponseBytes: 128, beforeRequest: (url: string) => {
         trace.push(`before:${url === primary ? "primary" : "fallback"}`);
         trace.push(`demoted:${!usableCcipRpcEndpoints("trace", chainRpcs, { kind: "logs", fromBlock: 1, toBlock: 1 }).some(row => row.url === primary)}`);
         return !denyRetry || attempts++ === 0;
@@ -242,24 +248,34 @@ describe("single-URL JSON-RPC transport contracts", () => {
     expect(await invoke()).toEqual(mode === "single" ? 16 : ["0x10", "0x10"]);
     const admitted = (id: number) => ["before:primary", "demoted:false", `meter:${mode === "batch" ? 2 : 1}`,
       `admitted:${mode === "batch" ? 2 : 1}`, `network:primary:${mode === "batch" ? "batch" : id}`];
+    const fallbackTrace = (demoted: boolean) => ["before:fallback", `demoted:${demoted}`,
+      `admitted:${mode === "single" ? 1 : 2}`, `network:fallback:${mode === "single" ? 1 : "batch"}`];
     expect(trace).toEqual(mode === "noBatch" ? [...admitted(1), ...admitted(2)] : admitted(1));
     trace.length = 0;
     failure = "http";
     expect(await invoke()).toEqual(mode === "single" ? 16 : ["0x10", "0x10"]);
-    expect(trace).toEqual([...admitted(1), "before:fallback", "demoted:false",
-      `admitted:${mode === "single" ? 1 : 2}`, `network:fallback:${mode === "single" ? 1 : "batch"}`]);
+    expect(trace).toEqual([...admitted(1), ...fallbackTrace(false)]);
     trace.length = 0;
-    failure = "network";
-    denyRetry = true;
+    failure = terminalFailure;
+    denyRetry = failure === "network";
+    const demoted = failure === "network" || (failure === "timeout" && mode !== "single");
     const pending = invoke();
     await vi.runAllTimersAsync();
-    expect(await pending).toBeNull();
-    expect(trace).toEqual([...admitted(1), "before:primary", "demoted:false"]);
+    if (failure === "network") {
+      expect(await pending).toBeNull();
+      expect(trace).toEqual([...admitted(1), "before:primary", "demoted:false"]);
+    } else {
+      expect(await pending).toEqual(mode === "single" ? 16 : ["0x10", "0x10"]);
+      expect(trace).toEqual([...admitted(1), ...fallbackTrace(demoted)]);
+    }
     trace.length = 0;
     denyRetry = false;
+    failure = "none";
     expect(await invoke()).toEqual(mode === "single" ? 16 : ["0x10", "0x10"]);
-    expect(trace).toEqual(["before:fallback", "demoted:true", `admitted:${mode === "single" ? 1 : 2}`, `network:fallback:${mode === "single" ? 1 : "batch"}`]);
-    expect(network).toHaveBeenCalledTimes(mode === "noBatch" ? 6 : 5);
+    expect(trace).toEqual(demoted ? fallbackTrace(true) : mode === "noBatch" ? [...admitted(1), ...admitted(2)] : admitted(1));
+    expect(network).toHaveBeenCalledTimes(mode === "noBatch"
+      ? terminalFailure === "network" ? 6 : terminalFailure === "body" ? 8 : 7
+      : terminalFailure === "network" ? 5 : 6);
   });
 });
 

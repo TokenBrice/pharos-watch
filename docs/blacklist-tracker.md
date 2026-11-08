@@ -129,6 +129,8 @@ Tracked frozen totals are contract-scoped, last-known successful balance snapsho
 
 A failed refresh preserves the last successful amount, including observed zero, and its original successful-observation clock. A failed first read supplies no successful value. For gold, substituting a positive event-native amount requires an actual observed zero balance and explicit substitution provenance; a null provider read cannot trigger it. Fresh coin-specific prices may value current non-USD balances, never historical events.
 
+Tron current-balance reads try JSON-RPC before REST; the REST fallback requires remaining request budget. If an unavailable JSON-RPC read consumes the last allowance, the balance remains unavailable.
+
 ### Cursor State
 
 Scan progress uses EVM block numbers or Tron millisecond timestamps. A frontier advances only through contiguous complete evidence; partial progress cannot claim current coverage or renew full-coverage freshness.
