@@ -2722,5 +2722,61 @@
         }
       ]
     }
+  },
+  {
+    "id": "fxd-fathom",
+    "capturedAt": "2026-11-08T08:33:59.528Z",
+    "peggedAssetRow": {
+      "id": "fxd-fathom",
+      "name": "Fathom Dollar",
+      "symbol": "FXD",
+      "geckoId": "fathom-dollar",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.8422947409678576,
+      "priceSource": "coingecko-low-volume",
+      "priceConfidence": "fallback",
+      "priceUpdatedAt": 1794011475,
+      "priceObservedAt": 1794011475,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1794126621,
+      "consensusSources": [
+        "coingecko-low-volume"
+      ],
+      "agreeSources": [
+        "coingecko-low-volume"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 779733.801760538
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 779733.801760538
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 779733.801760538
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 779733.801760538
+      },
+      "chainCirculating": {
+        "XDC": {
+          "current": 779733.801760538,
+          "circulatingPrevDay": 779733.801760538,
+          "circulatingPrevWeek": 779733.801760538,
+          "circulatingPrevMonth": 779733.801760538
+        }
+      },
+      "chains": [
+        "XDC"
+      ],
+      "contracts": [
+        {
+          "chain": "xdc",
+          "address": "0x49d3f7543335cf38fa10889ccff10207e22110b5",
+          "decimals": 18
+        }
+      ]
+    }
   }
 ]

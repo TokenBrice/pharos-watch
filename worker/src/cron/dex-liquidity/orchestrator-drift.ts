@@ -105,7 +105,7 @@ const MAJOR_TVL_CLIFF_MIN_PREVIOUS_USD = 5_000_000;
  * pre-event baseline is reported as `chain-tvl-drop:<chain>` /
  * `source-family-drop:<family>` and is the only drift series that does not
  * rebaseline after `DRIFT_REBASELINE_RUNS`: a lasting chain or source loss is
- * exactly the condition an operator must resolve, not a new accepted level.
+ * exactly the condition an operator must resolve or explicitly accept once.
  */
 const COHORT_DROP_RATIO = 0.1;
 const COHORT_MIN_PREVIOUS_TVL_USD = 1_000_000;
@@ -139,6 +139,24 @@ export const REVIEWED_CHAIN_TVL_DISPOSITIONS = [{
   retiredStablecoinId: null, reviewedAt: "2026-11-07T21:04:19Z", expiresAt: "2026-11-21T21:04:19Z",
   evidenceUrls: ["https://api.fluid.instadapp.io/v2/9745/dexes/0x080574d224e960c272e005aa03efbe793f317640/historical-stats", "https://api.llama.fi/protocol/fluid-dex"],
   reason: "Fluid GHO/USDT0 supply and borrow shares burned about 43% in the Nov 3 04h window; reconstructed gross notional fell $8.33M -> $4.77M -> $3.68M, explaining the dominant chain loss. About $325k of the later chain loss remains unattributed.",
+}, {
+  flag: "chain-tvl-drop:klaytn", baselineValue: 1_699_411.1784671757, observedValue: 1_199_935.2276710786,
+  acceptsLevel: true,
+  retiredStablecoinId: null, reviewedAt: "2026-11-08T08:39:00Z", expiresAt: "2026-11-22T08:39:00Z",
+  evidenceUrls: ["https://api.geckoterminal.com/api/v2/networks/kaia/tokens/0xd077a400968890eacc75cdc901f0356c943e4fdb/pools?page=1", "https://yields.llama.fi/pools"],
+  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: both material DragonSwap stablecoin pools in the independent current list are present in the consumed source generation. Historical loss attribution remains unavailable.",
+}, {
+  flag: "chain-tvl-drop:near", baselineValue: 17_095_846.766649283, observedValue: 9_759_494.531214733,
+  acceptsLevel: true,
+  retiredStablecoinId: null, reviewedAt: "2026-11-08T08:39:00Z", expiresAt: "2026-11-22T08:39:00Z",
+  evidenceUrls: ["https://api.rhea.finance/list-pools", "https://yields.llama.fi/pools"],
+  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: all five material tracked-stablecoin Rhea V1 pools are represented in the consumed source generation, including pool 1910's pair projections. Historical loss attribution remains unavailable.",
+}, {
+  flag: "chain-tvl-drop:ink", baselineValue: 9_417_160.702347133, observedValue: 7_357_082.845894352,
+  acceptsLevel: true,
+  retiredStablecoinId: null, reviewedAt: "2026-11-08T08:39:00Z", expiresAt: "2026-11-22T08:39:00Z",
+  evidenceUrls: ["https://api.geckoterminal.com/api/v2/networks/ink/pools?page=1", "https://pro-api.coingecko.com/api/v3/onchain/networks/ink/tokens/0x0200c29006150606b650577bbe7b6248f58470c1/pools?page=1", "https://yields.llama.fi/pools"],
+  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: all eight material stablecoin pools in the independent USDC, USDT0 and USDG lists are present in the consumed source generation. Historical loss attribution remains unavailable.",
 }] as const;
 
 const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";
@@ -246,8 +264,8 @@ export function computeDexLiquidityDriftSummary(params: {
   };
 
   /**
-   * Cohort series share the confirmation window but never rebaseline: a lasting
-   * chain or source-family loss must keep the finding visible until recovery.
+   * Cohort series never automatically rebaseline: only an exact reviewed
+   * chain disposition below can explicitly accept a new level.
    */
   const confirmCohortCondition = (
     flag: string,
@@ -432,9 +450,17 @@ export function computeDexLiquidityDriftSummary(params: {
         && (entry.retiredStablecoinId != null
           ? currentTvl <= entry.observedValue * 1.02
           : Math.abs(currentTvl - entry.observedValue) <= entry.observedValue * 0.02));
-      if (review) {
-        // Keep the held baseline diagnostic so expiry or a changed level reopens the finding.
+      if (review && candidate) {
         qualityDriftAccepted.push({ ...review, evidenceUrls: [...review.evidenceUrls] });
+        if ("acceptsLevel" in review && review.acceptsLevel) {
+          qualityDriftRebaselined.push({
+            flag, baselineValue: candidate.baselineValue, acceptedValue: currentTvl, runs: candidate.consecutiveRuns,
+            reviewedAt: review.reviewedAt, expiresAt: review.expiresAt,
+            evidenceUrls: [...review.evidenceUrls], reason: review.reason,
+          });
+          // The next run compares with the published level; the exact old baseline cannot match again.
+          candidates.splice(candidates.indexOf(candidate), 1);
+        }
         for (const flags of [qualityDriftFlags, cohortDriftFlags]) {
           const index = flags.indexOf(flag);
           if (index >= 0) flags.splice(index, 1);

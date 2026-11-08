@@ -67,13 +67,16 @@ describe("registry universes", () => {
     expect(coin?.obituary).toBeUndefined();
   });
 
-  it("preserves USDKG as a readable frozen identity, not an active producer", () => {
-    expect(FROZEN_IDS.has("usdkg-gold-dollar")).toBe(true);
-    expect(READABLE_IDS.has("usdkg-gold-dollar")).toBe(true);
-    expect(ACTIVE_IDS.has("usdkg-gold-dollar")).toBe(false);
-    expect(FROZEN_STABLECOINS.find((coin) => coin.id === "usdkg-gold-dollar")).toMatchObject({
-      frozenAt: "2026-10-19",
-      obituary: { causeOfDeath: "regulatory", deathDate: "2026-10-05" },
+  it.each([
+    ["usdkg-gold-dollar", "2026-10-19", "regulatory", "2026-10-05"],
+    ["fxd-fathom", "2026-11-08", "abandoned", "2026-08-26"],
+  ])("preserves %s as a readable frozen identity, not an active producer", (id, frozenAt, causeOfDeath, deathDate) => {
+    expect(FROZEN_IDS.has(id)).toBe(true);
+    expect(READABLE_IDS.has(id)).toBe(true);
+    expect(ACTIVE_IDS.has(id)).toBe(false);
+    expect(FROZEN_SNAPSHOTS_BY_ID.has(id)).toBe(true);
+    expect(FROZEN_STABLECOINS.find((coin) => coin.id === id)).toMatchObject({
+      frozenAt, obituary: { causeOfDeath, deathDate },
     });
   });
 

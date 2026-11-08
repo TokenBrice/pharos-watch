@@ -31,7 +31,7 @@ const RAW_BY_CHAIN: Record<string, bigint> = {
   ethereum: 378_869_494_500_836_268_665_209n,
   arbitrum: 19_837_361_464_973_825_379_103n,
   avalanche: 8_837_361_464_973_825_379_103n,
-  base: 0n,
+  base: 0n, xlayer: 0n, arc: 0n,
   bsc: 4_837_361_464_973_825_379_103n,
   plume: 32_320_262_971_888_335_278_993_277n,
   monad: 9_837_361_464_973_825_379_103_908n,
@@ -47,6 +47,8 @@ const BLOCK_BY_CHAIN: Record<string, number> = {
   plume: 83_072_568,
   monad: 89_944_923,
   pharos: 22_124_698,
+  xlayer: 75_356_641,
+  arc: 30_150_645,
 };
 
 const TIME_BY_CHAIN: Record<string, number> = {
@@ -58,17 +60,12 @@ const TIME_BY_CHAIN: Record<string, number> = {
   plume: CLOCK_SEC - 7,
   monad: CLOCK_SEC - 4,
   pharos: CLOCK_SEC - 5,
+  xlayer: CLOCK_SEC - 4,
+  arc: CLOCK_SEC - 2,
 };
 
 const EVM_CHAINS = [
-  "ethereum",
-  "arbitrum",
-  "avalanche",
-  "base",
-  "bsc",
-  "plume",
-  "monad",
-  "pharos",
+  "ethereum", "arbitrum", "avalanche", "base", "bsc", "plume", "monad", "pharos", "xlayer", "arc",
 ] as const;
 
 function uint256(value: bigint): `0x${string}` {
@@ -76,21 +73,16 @@ function uint256(value: bigint): `0x${string}` {
 }
 
 function chainRpcs(): Map<string, ChainRpcConfig> {
-  return makeChainRpcs(["ethereum", "arbitrum", "avalanche", "base", "bsc"]);
+  return makeChainRpcs(["ethereum", "arbitrum", "avalanche", "base", "bsc", "xlayer", "arc"]);
 }
 
 function routeForChain(chainId: string) {
-  return buildReviewedDeploymentRouteInventory(ASSET_ID)!.routes.find(
-    (route) => route.chainId === chainId,
-  )!;
+  return buildReviewedDeploymentRouteInventory(ASSET_ID)!.routes.find(route => route.chainId === chainId)!;
 }
 
 function solanaObservation(): ReviewedDeploymentSupplyObservation {
   const route = routeForChain("solana");
-  const identity = expectedCentrifugeDeploymentIdentity(
-    ASSET_ID,
-    route.routeId,
-  );
+  const identity = expectedCentrifugeDeploymentIdentity(ASSET_ID, route.routeId);
   if (!identity || identity.runtime !== "solana") {
     throw new Error("Missing JTRSY Solana identity");
   }
@@ -199,7 +191,6 @@ describe("Centrifuge reviewed deployment observer", () => {
   afterEach(() => metaById.set(ASSET_ID, historical));
 
   it.each(["0", "1", null])("admits an unreviewed Solana route only at observed zero within the current inventory (%s)", async (rawSupply) => {
-    const metaById = ACTIVE_META_BY_ID as Map<string, StablecoinMeta>;
     const reviewed = metaById.get(ASSET_ID)!;
     metaById.set(ASSET_ID, { ...reviewed, bridgeRouteRisk: { ...reviewed.bridgeRouteRisk!,
       routes: reviewed.bridgeRouteRisk!.routes!.map(route => route.destinationChain === "solana"
@@ -271,18 +262,10 @@ describe("Centrifuge reviewed deployment observer", () => {
 
     expect(attribution).not.toBeNull();
     expect(attribution!.deployments).toHaveLength(currentJtrsyCoin.contracts.length);
-    expect(
-      attribution!.deployments.reduce(
-        (sum, row) => sum + row.currentSupplyUsd,
-        0,
-      ),
-    ).toBe(AGGREGATE_SUPPLY_USD);
+    expect(attribution!.deployments.reduce((sum, row) => sum + row.currentSupplyUsd, 0)).toBe(AGGREGATE_SUPPLY_USD);
     expect(
       attribution!.deployments.filter((row) => row.rawSupply === "0"),
-    ).toEqual([
-      expect.objectContaining({ chainId: "base", currentSupplyUsd: 0 }),
-      expect.objectContaining({ chainId: "solana", currentSupplyUsd: 0 }),
-    ]);
+    ).toEqual(["arc", "base", "solana", "xlayer"].map(chainId => expect.objectContaining({ chainId, currentSupplyUsd: 0 })));
   });
 
   it("rejects the whole packet when Spoke authorization or Solana is unavailable", async () => {

@@ -15,6 +15,7 @@ import {
   SCHEDULED_SLOT_PLANS,
 } from "@shared/lib/scheduled-runner-registry";
 import { CronRunStatusSchema } from "@shared/types/status";
+import { getPublicProducerGraceBudget } from "@shared/lib/public-health";
 import type { CronEvent, CronInFlight, CronRunDetail, CronStaleArtifact, CronStatusDetail } from "@shared/types/status";
 import { cronEventCacheKey } from "../cron-logger";
 import { confirmedCronOutputAt, CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
@@ -196,7 +197,7 @@ function parseCronRunStatus(status: string): CronRunDetail["status"] {
   return parsed.success ? parsed.data : "error";
 }
 
-function isFreshCronRun(run: CronRunDetail | null | undefined, now: number, interval: number): run is CronRunDetail {
+function isFreshCronRun(run: CronRunDetail | null | undefined, now: number, interval: number, maxAgeSec = interval * 2): run is CronRunDetail {
   if (run == null) return false;
   return classifyFreshness(
     {
@@ -206,17 +207,17 @@ function isFreshCronRun(run: CronRunDetail | null | undefined, now: number, inte
       expectedIntervalSec: interval,
       lastStatus: run.status,
     },
-    { watchAt: { multiplier: 2 }, staleAt: { multiplier: 2 } },
+    { watchAt: { absoluteSec: maxAgeSec }, staleAt: { absoluteSec: maxAgeSec } },
     now,
   ).state === "fresh";
 }
 
-function hasFreshOutput(job: string, run: CronRunDetail | null, now: number, interval: number): boolean {
+function hasFreshOutput(job: string, run: CronRunDetail | null, now: number, interval: number, maxAgeSec = interval * 2): boolean {
   if (!run) return false;
   // Control-plane jobs have no consumer output clock; a completed observation
   // remains available independently of its diagnostic finding.
   if (getCronJobMeta(job)?.freshnessSurface === "none") {
-    return isFreshCronRun(run, now, interval) && (run.status === "ok" || run.status === "degraded");
+    return isFreshCronRun(run, now, interval, maxAgeSec) && (run.status === "ok" || run.status === "degraded");
   }
   if (run.status !== "ok" && run.status !== "degraded") return false;
   const outputAt = confirmedCronOutputAt(
@@ -224,7 +225,24 @@ function hasFreshOutput(job: string, run: CronRunDetail | null, now: number, int
     run.metadata ?? null,
     run.startedAt + Math.ceil(run.durationMs / 1000),
   );
-  return outputAt != null && outputAt <= now && now - outputAt <= interval * 2;
+  return outputAt != null && outputAt <= now && now - outputAt <= maxAgeSec;
+}
+
+function hasLiveLeaseBlocker(job: string, run: CronRunDetail, now: number, interval: number): boolean {
+  const blocker = run.metadata?.blockedBy;
+  if (run.metadata?.reason !== "lease-locked" || !blocker || typeof blocker !== "object" || Array.isArray(blocker)) return false;
+  const { leaseJob, leaseOwner, holderJob, observedAt, heartbeatAt, leaseUntil } = blocker as Record<string, unknown>;
+  return leaseJob === job
+    && typeof run.metadata.leaseOwner === "string" && run.metadata.leaseOwner.length > 0
+    && typeof leaseOwner === "string" && leaseOwner.length > 0 && leaseOwner !== run.metadata?.leaseOwner
+    && typeof holderJob === "string" && getCronJobMeta(holderJob) != null
+    && typeof observedAt === "number" && Number.isFinite(observedAt)
+    && observedAt >= run.startedAt && observedAt <= run.startedAt + Math.ceil(run.durationMs / 1000) && observedAt <= now
+    && typeof heartbeatAt === "number" && Number.isFinite(heartbeatAt) && heartbeatAt > 0 && heartbeatAt <= observedAt
+    // The holder renews on its own cadence: judge the heartbeat when the skip saw it;
+    // current liveness comes from the unexpired lease and the fresh skip itself.
+    && observedAt - heartbeatAt <= Math.max(CRON_IN_FLIGHT_STALE_FLOOR_SEC, interval)
+    && typeof leaseUntil === "number" && Number.isFinite(leaseUntil) && leaseUntil >= now;
 }
 
 function buildCronHistoryQuery(jobCount: number, mode: CronHistoryQueryMode = "display"): string {
@@ -894,13 +912,21 @@ export async function loadCronHealth(
     const latestExecutedAttemptCompleted = latestExecutedRun?.status === "ok" || latestExecutedRun?.status === "degraded";
     const hasFreshRequiredAvailability = latestExecutedRunFresh && latestExecutedAttemptCompleted
       && (hasFreshOutput(job, latestExecutedRun, now, interval) || hasFreshConfirmedOutput);
+    // A live sibling can own the shared lease across multiple poll slots; it
+    // proves bounded contention, never a new completion or publication clock.
+    const producerGraceSec = getPublicProducerGraceBudget(interval).delayedAfterSec;
+    const liveContentionWithinGrace = lastRun?.status === "skipped_locked"
+      && hasLiveLeaseBlocker(job, lastRun, now, interval)
+      && latestExecutedRun?.status === "ok"
+      && isFreshCronRun(latestExecutedRun, now, interval, producerGraceSec)
+      && hasFreshOutput(job, latestExecutedRun, now, interval, producerGraceSec);
     const availabilityHealthyFromLastRun =
       isFresh &&
       lastRun != null &&
       (((lastRun.status === "ok" || lastRun.status === "degraded")
           && (hasFreshOutput(job, lastRun, now, interval) || hasFreshConfirmedOutput)) ||
         (lastRun.status === NEUTRAL_CRON_RUN_STATUS && (hasFreshRequiredAvailability || periodSatisfiedSinceRequiredAttempt)) ||
-        (lastRun.status === "skipped_locked" && hasFreshOk));
+        (lastRun.status === "skipped_locked" && (hasFreshOk || liveContentionWithinGrace)));
     const statusImpact = getCronStatusImpact(job);
     // Bootstrap = no required attempt yet. Watch-tier crons can legitimately
     // have no rows or one neutral admission skip while a just-deployed

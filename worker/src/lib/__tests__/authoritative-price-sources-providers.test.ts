@@ -1,22 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   asset,
-  fetchEvmCallHexAtBlockMock,
-  fetchEvmRpcBatchMock,
+  fetchEvmCallHexAtBlockMock as evmCall,
+  fetchEvmRpcBatchMock as evmBatch,
   fetchEvmBlockTimestampMock,
   fetchEvmBlockNumberMock,
   freshParent,
   fetchLiveOverrides,
-  makeHistoricalPriceSeries,
-  makeHistoricalMeta,
-  resetAuthoritativePriceSourceMocks,
-  resolveClosestBlockAtOrBeforeTimestampMock,
+  makeHistoricalPriceSeries as historicalPrices,
+  makeHistoricalMeta as historicalMeta,
+  resetAuthoritativePriceSourceMocks as resetMocks,
+  resolveClosestBlockAtOrBeforeTimestampMock as closestBlock,
   unpricedChild,
 } from "./authoritative-price-sources.test-support";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
 import { capCusdProvider } from "../authoritative-price-sources/cap-cusd";
 import { usd3CurvePoolProvider, type Usd3PriceContext } from "../authoritative-price-sources/usd3-curve-pool";
-import { createAuthoritativeLivePriceOverrideStats } from "../authoritative-price-sources";
+import { createAuthoritativeLivePriceOverrideStats as overrideStats } from "../authoritative-price-sources";
 import { buildPriceValidationContext } from "../price-validation";
 import { validatePublishedAssetPrice } from "../price-publish-policy";
 import { getPriceCache } from "../db-cache";
@@ -29,6 +29,72 @@ import { iusdInfinifiProvider } from "../authoritative-price-sources/infinifi-iu
 import { createProtocolRedeemProvider } from "../authoritative-price-sources/protocol-redeem-provider";
 import { encodeUint256 } from "../evm-selectors";
 import * as extraction from "../historical-depeg-extraction";
+import { moveusdOrcaProvider } from "../authoritative-price-sources/moveusd-orca";
+import { fetchSolanaAccounts, SOLANA_TOKEN_PROGRAM } from "../../cron/reserve-adapters/solana";
+import { publicKeyBytes } from "../../cron/dex-liquidity/solana/program-address";
+import { ORCA_WHIRLPOOL_PROGRAM_ID } from "../../cron/dex-liquidity/solana/whirlpool-quote";
+
+vi.mock("../../cron/reserve-adapters/solana", async (original) => ({
+  ...await original<typeof import("../../cron/reserve-adapters/solana")>(), fetchSolanaAccounts: vi.fn(),
+}));
+
+describe("MOVEUSD reviewed Orca mark", () => {
+  const read = vi.mocked(fetchSolanaAccounts);
+  const id = "moveusd-cfx";
+  let bank: Awaited<ReturnType<typeof fetchSolanaAccounts>>;
+  beforeEach(() => {
+    read.mockReset().mockImplementation(async (addresses) => {
+      const [pool, a, b, va, vb] = addresses;
+      const data = [653, 82, 82, 165, 165].map((size) => new Uint8Array(size));
+      data[0].set([63, 149, 209, 12, 225, 128, 99, 9]);
+      data[0][41] = data[0][43] = data[0][49] = data[0][73] = 1;
+      for (const [offset, address] of [[101, a], [133, va], [181, b], [213, vb]] as const) data[0].set(publicKeyBytes(address), offset);
+      for (const i of [1, 2]) { data[i][44] = 6; data[i][45] = 1; }
+      for (const i of [3, 4]) {
+        data[i].set(publicKeyBytes(i === 3 ? a : b)); data[i].set(publicKeyBytes(pool), 32); data[i][108] = 1;
+        new DataView(data[i].buffer).setBigUint64(64, 25_000_000_000n, true);
+      }
+      return bank ??= { accounts: new Map(addresses.map((address, i) => [address,
+        { owner: i ? SOLANA_TOKEN_PROGRAM : ORCA_WHIRLPOOL_PROGRAM_ID, data: data[i] }])),
+        observedBlock: { chain: "solana", number: 1, timestamp: Math.floor(Date.now() / 1000) - 5 } };
+    });
+    bank = undefined!;
+  });
+  const context = () => { const p = freshParent("usdc-circle", 1, "coingecko"); return { assetsById: new Map([[p.id, p]]) }; };
+  const price = (ctx = context()) => moveusdOrcaProvider.fetchLivePrice!(unpricedChild(id), ctx);
+  it("keeps the inventory floor, parent rate and original clock", async () => {
+    const ctx = context();
+    expect((await fetchLiveOverrides([unpricedChild(id), ...ctx.assetsById.values()])).get(id)).toMatchObject({ price: 1, source: "orca-exact", confidence: "fallback", observedAt: ctx.assetsById.get("usdc-circle")!.priceObservedAt });
+    ctx.assetsById.get("usdc-circle")!.price = 1.02;
+    ctx.assetsById.get("usdc-circle")!.priceObservedAtMode = "local_fetch";
+    expect(await price(ctx)).toMatchObject({ price: 1.02, observedAtMode: "local_fetch" });
+    expect(await moveusdOrcaProvider.fetchLivePrice!(freshParent(id, 1, "coingecko"), ctx)).toBeNull();
+    expect(read).toHaveBeenCalledTimes(2);
+  });
+  it.each([[0, 0, 0], [0, 101, 0], [0, 133, 0], [1, 44, 9], [2, 45, 0], [3, 108, 2], [4, 32, 0], [4, 66, 0]])(
+    "rejects invalid identity or inventory (%s/%s)", async (index, offset, value) => {
+      await price();
+      [...bank.accounts.values()][index]!.data[offset] = value;
+      expect(await price()).toBeNull();
+    });
+  it.each([-900, 1, NaN])("rejects stale, future or malformed bank time (%s)", async (age) => {
+    await price(); bank.observedBlock.timestamp = Math.floor(Date.now() / 1000) + age;
+    expect(await price()).toBeNull();
+  });
+  it("withholds on RPC failure and missing parent", async () => {
+    read.mockRejectedValue(new Error("unavailable"));
+    expect(await price()).toBeNull();
+    expect(await price({ assetsById: new Map() })).toBeNull();
+  });
+  it("rechecks the parent's native freshness after RPC", async () => {
+    await price();
+    const ctx = context(), now = Date.now();
+    Object.assign(ctx.assetsById.get("usdc-circle")!, { priceSource: "bitstamp", priceObservedAt: Math.floor(now / 1000) - 599 });
+    const clock = vi.spyOn(Date, "now");
+    read.mockImplementationOnce(async () => { clock.mockReturnValue(now + 2000); return bank; });
+    try { expect(await price(ctx)).toBeNull(); } finally { clock.mockRestore(); }
+  });
+});
 
 const historicalParent = vi.hoisted(() => vi.fn());
 vi.mock("../historical-market-prices", () => ({
@@ -48,8 +114,8 @@ describe("USD3 exact Curve fallback", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(1793827200 * 1000);
-    resetAuthoritativePriceSourceMocks();
-    fetchEvmRpcBatchMock.mockReset().mockResolvedValue(pool);
+    resetMocks();
+    evmBatch.mockReset().mockResolvedValue(pool);
     parent = freshParent("scrvusd-curve", 1.11, "curve-onchain", { priceObservedAtMode: "local_fetch" });
     previous = freshParent(id, 1.12, "curve-onchain", { priceSyncedAt: Math.floor(Date.now() / 1000) });
     context = { assetsById: new Map([[parent.id, parent]]), previousAssetsById: new Map([[id, previous]]) };
@@ -62,30 +128,30 @@ describe("USD3 exact Curve fallback", () => {
     const validationContext = buildPriceValidationContext({ stablecoinId: id });
     expect(validationContext.navToken).toBe(true);
     expect(validatePublishedAssetPrice({ asset: { price: quote.price, priceSource: quote.source, priceConfidence: quote.confidence }, validationContext }).accepted).toBe(true);
-    expect(fetchEvmRpcBatchMock.mock.calls[0][1]).toHaveLength(6);
-    expect(fetchEvmRpcBatchMock.mock.calls[0][1].every((call: { params: unknown[] }) => call.params[1] === "0x1fca055")).toBe(true);
+    expect(evmBatch.mock.calls[0][1]).toHaveLength(6);
+    expect(evmBatch.mock.calls[0][1].every((call: { params: unknown[] }) => call.params[1] === "0x1fca055")).toBe(true);
     for (const [index, value] of [[0, pool[1]], [1, pool[0]], [2, uint(999n * 10n ** 18n)], [3, uint(0n)], [4, uint(0n)], [5, uint(8n * 10n ** 18n)], [4, "0xzz"], [4, null], [4, `${pool[4]}00`]] as const) {
       const invalid = [...pool] as unknown[];
       invalid[index] = value;
-      fetchEvmRpcBatchMock.mockResolvedValue(invalid);
+      evmBatch.mockResolvedValue(invalid);
       await expect(livePrice()).resolves.toBeNull();
     }
-    fetchEvmRpcBatchMock.mockResolvedValue(pool);
+    evmBatch.mockResolvedValue(pool);
     fetchEvmBlockTimestampMock.mockResolvedValue(Math.floor(Date.now() / 1000) - 301);
     await expect(livePrice()).resolves.toBeNull();
-    resetAuthoritativePriceSourceMocks();
+    resetMocks();
     parent.priceObservedAt! -= 301;
     await expect(livePrice()).resolves.toBeNull();
     await expect(livePrice(unpricedChild(id), { ...context, assetsById: new Map() })).resolves.toBeNull();
     expect(usd3CurvePoolProvider.matches("usd3-3jane")).toBe(false);
   });
   it.each([100000000000000000n, 950000000000000000n, 1050000000000000000n])("rejects a deep but skewed pool (%s) with real USD3 NAV publication policy", async (small) => {
-    fetchEvmRpcBatchMock.mockResolvedValue([...pool.slice(0, 4), uint(small), uint(small * 10n)]);
+    evmBatch.mockResolvedValue([...pool.slice(0, 4), uint(small), uint(small * 10n)]);
     const validationContext = buildPriceValidationContext({ stablecoinId: id });
     expect(validationContext.navToken).toBe(true);
     expect(validatePublishedAssetPrice({ asset: { price: 0.111, priceSource: "curve-thin-onchain", priceConfidence: "fallback" }, validationContext,
       previousTrustedPrice: { price: 1.12, source: "curve-onchain", confidence: "high", observedAt: previous.priceObservedAt!, agreeSources: ["curve-onchain"] } }).accepted).toBe(true);
-    const stats = createAuthoritativeLivePriceOverrideStats();
+    const stats = overrideStats();
     expect(await fetchLiveOverrides([unpricedChild(id), parent], { ...context, stats })).toEqual(new Map());
     expect(stats.assetAttempts).toContainEqual(expect.objectContaining({ assetId: id, rejectionClass: "usd3-nav-deviation" }));
   });
@@ -103,11 +169,11 @@ describe("USD3 exact Curve fallback", () => {
       expect(context.lastRejectionReason).toBe(reason);
     }
     expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
-    expect(fetchEvmRpcBatchMock).not.toHaveBeenCalled();
+    expect(evmBatch).not.toHaveBeenCalled();
   });
   it.each([970000000000000000n, 1030000000000000000n])("admits the inclusive 3% NAV boundary (%s)", async (small) => {
     previous.price = 1.11;
-    fetchEvmRpcBatchMock.mockResolvedValue([...pool.slice(0, 4), uint(small), uint(small * 10n)]);
+    evmBatch.mockResolvedValue([...pool.slice(0, 4), uint(small), uint(small * 10n)]);
     await expect(livePrice()).resolves.toMatchObject({ source: "curve-thin-onchain" });
   });
   it("retains the trusted cached baseline's original age across pool fallback publications", async () => {
@@ -132,14 +198,14 @@ describe("USD3 exact Curve fallback", () => {
     else {
       expect(result).toBeNull();
       expect(context.lastRejectionReason).toBe("usd3-reference-clock-invalid");
-      expect(fetchEvmRpcBatchMock).not.toHaveBeenCalled();
+      expect(evmBatch).not.toHaveBeenCalled();
     }
   });
   it("withholds when the trusted reference expires during pool reads", async () => {
     const now = Math.floor(Date.now() / 1000);
     previous.priceObservedAt = now - 86400;
     previous.priceSyncedAt = previous.priceObservedAt + 60;
-    fetchEvmRpcBatchMock.mockImplementationOnce(async () => {
+    evmBatch.mockImplementationOnce(async () => {
       vi.setSystemTime((now + 1) * 1000);
       return pool;
     });
@@ -149,23 +215,21 @@ describe("USD3 exact Curve fallback", () => {
   it("skips a complete incumbent with a healthy parent/pool both directly and in scheduler filtering", async () => {
     const incumbent = freshParent(id, 1.12, "coingecko", { priceConfidence: "single-source", priceSyncedAt: Math.floor(Date.now() / 1000) });
     await expect(livePrice(incumbent)).resolves.toBeNull();
-    const stats = createAuthoritativeLivePriceOverrideStats();
+    const stats = overrideStats();
     expect(await fetchLiveOverrides([incumbent, parent], { ...context, stats })).toEqual(new Map());
     expect(stats).toMatchObject({ candidateCount: 0, attemptedCount: 0 });
     expect(fetchEvmBlockNumberMock).not.toHaveBeenCalled();
-    expect(fetchEvmRpcBatchMock).not.toHaveBeenCalled();
+    expect(evmBatch).not.toHaveBeenCalled();
   });
 });
 
 describe("capCusdProvider", () => {
-  function quote(outputUsdcRaw: bigint): `0x${string}` {
-    return `0x${outputUsdcRaw.toString(16).padStart(64, "0")}`;
-  }
+  const quote = (raw: bigint) => `0x${encodeUint256(raw)}` as const;
 
   const context = { assetsById: new Map<string, PeggedAsset>() };
 
   beforeEach(() => {
-    resetAuthoritativePriceSourceMocks();
+    resetMocks();
     context.assetsById.clear();
     context.assetsById.set("usdc-circle", freshParent("usdc-circle", 1, "coingecko+pyth"));
     historicalParent.mockReset();
@@ -181,7 +245,7 @@ describe("capCusdProvider", () => {
     { supply: 200_000_000, output: 980_000_000_000n },
     { supply: undefined, output: 980_000_000_000n },
   ])("decodes a supply-sized redemption quote at supply $supply", async ({ supply, output }) => {
-    fetchEvmCallHexAtBlockMock.mockResolvedValue(quote(output));
+    evmCall.mockResolvedValue(quote(output));
 
     await expect(capCusdProvider.fetchLivePrice!(
       asset("cusd-cap", supply === undefined ? {} : { circulating: { peggedUSD: supply } }),
@@ -192,12 +256,12 @@ describe("capCusdProvider", () => {
   it("sizes historical redemption from the nearest historical supply, not the current maximum", async () => {
     const nearestSupply = vi.spyOn(extraction, "findNearestSupply");
     const timestamp = 1_710_000_000;
-    resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValue(22_874_100);
-    fetchEvmCallHexAtBlockMock.mockResolvedValue(quote(1_960_000_000n));
-    historicalParent.mockResolvedValue(makeHistoricalPriceSeries([{ timestamp, price: 1 }]));
+    closestBlock.mockResolvedValue(22_874_100);
+    evmCall.mockResolvedValue(quote(1_960_000_000n));
+    historicalParent.mockResolvedValue(historicalPrices([{ timestamp, price: 1 }]));
 
     await expect(capCusdProvider.fetchHistoricalPrices!(
-      makeHistoricalMeta("cusd-cap", "Cap cUSD", "CUSD"),
+      historicalMeta("cusd-cap", "Cap cUSD", "CUSD"),
       {
         candidateTimestamps: [timestamp],
         supplySnapshots: [
@@ -216,20 +280,20 @@ describe("capCusdProvider", () => {
   it.each([null, "0x", `0x${"0".repeat(64)}`, `0x${"z".repeat(64)}`])(
     "does not publish an unavailable, zero or malformed redemption quote (%s)",
     async (result) => {
-      fetchEvmCallHexAtBlockMock.mockResolvedValue(result);
+      evmCall.mockResolvedValue(result);
       await expect(capCusdProvider.fetchLivePrice!(asset("cusd-cap"), context)).resolves.toBeNull();
     },
   );
 
   it("propagates an RPC failure rather than substituting a par price", async () => {
     const error = new Error("redemption RPC unavailable");
-    fetchEvmCallHexAtBlockMock.mockRejectedValue(error);
+    evmCall.mockRejectedValue(error);
     await expect(capCusdProvider.fetchLivePrice!(asset("cusd-cap"), context)).rejects.toBe(error);
   });
 
   it.each([0.90, 1.02])("converts the USDC settlement ratio at the actual parent USD rate %s", async (parentPrice) => {
     context.assetsById.set("usdc-circle", freshParent("usdc-circle", parentPrice, "coingecko+pyth"));
-    fetchEvmCallHexAtBlockMock.mockResolvedValue(quote(1_000_000_000_000n));
+    evmCall.mockResolvedValue(quote(1_000_000_000_000n));
     const result = await capCusdProvider.fetchLivePrice!(asset("cusd-cap"), context);
     expect(result).toMatchObject({ price: parentPrice, source: "protocol-redeem", metadata: { inheritedFrom: "usdc-circle" } });
   });
@@ -240,7 +304,7 @@ describe("capCusdProvider", () => {
     if (kind !== "missing") context.assetsById.set("usdc-circle", freshParent("usdc-circle", 0.9,
       kind === "untrusted" ? "cached" : "coingecko+pyth", { nowSec, observedAt: nowSec - (kind === "stale" ? 86400 : 60) }));
     await expect(capCusdProvider.fetchLivePrice!(asset("cusd-cap"), context)).resolves.toBeNull();
-    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    expect(evmCall).not.toHaveBeenCalled();
   });
 
   it("waits for a same-run USDC parent producer before reading the child quote", async () => {
@@ -251,7 +315,7 @@ describe("capCusdProvider", () => {
       events.push("parent");
       return { price: 0.9, source: "protocol-redeem", confidence: "high", observedAt: Math.floor(Date.now() / 1000), observedAtMode: "upstream" };
     });
-    fetchEvmCallHexAtBlockMock.mockImplementation(async () => { events.push("child"); return quote(1_000_000_000_000n); });
+    evmCall.mockImplementation(async () => { events.push("child"); return quote(1_000_000_000_000n); });
     try {
       const overrides = await fetchLiveOverrides([asset("cusd-cap"), asset("usdc-circle")]);
       expect(overrides.get("cusd-cap")?.price).toBe(0.9);
@@ -264,21 +328,21 @@ describe("capCusdProvider", () => {
 
   it.each([0.90, 1.02])("uses timestamp-aligned historical USDC/USD %s rather than par", async (parentPrice) => {
     const timestamp = 1_710_000_000;
-    historicalParent.mockResolvedValue(makeHistoricalPriceSeries([{ timestamp, price: parentPrice }]));
-    resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValue(22_874_100);
-    fetchEvmCallHexAtBlockMock.mockResolvedValue(quote(1_000_000_000_000n));
-    await expect(capCusdProvider.fetchHistoricalPrices!(makeHistoricalMeta("cusd-cap", "Cap", "CUSD"), {
+    historicalParent.mockResolvedValue(historicalPrices([{ timestamp, price: parentPrice }]));
+    closestBlock.mockResolvedValue(22_874_100);
+    evmCall.mockResolvedValue(quote(1_000_000_000_000n));
+    await expect(capCusdProvider.fetchHistoricalPrices!(historicalMeta("cusd-cap", "Cap", "CUSD"), {
       candidateTimestamps: [timestamp],
     })).resolves.toEqual([{ timestamp, price: parentPrice }]);
   });
 
   it.each([[[]], [[{ timestamp: 1_710_000_000 - 3601, price: 0.9 }]], [[{ timestamp: 1_710_000_000 + 1, price: 0.9 }]]])("fails closed without aligned historical parent observations: %j", async (prices) => {
-    historicalParent.mockResolvedValue(makeHistoricalPriceSeries(prices));
-    resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValue(22_874_100);
-    await expect(capCusdProvider.fetchHistoricalPrices!(makeHistoricalMeta("cusd-cap", "Cap", "CUSD"), {
+    historicalParent.mockResolvedValue(historicalPrices(prices));
+    closestBlock.mockResolvedValue(22_874_100);
+    await expect(capCusdProvider.fetchHistoricalPrices!(historicalMeta("cusd-cap", "Cap", "CUSD"), {
       candidateTimestamps: [1_710_000_000],
     })).resolves.toBeNull();
-    expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    expect(evmCall).not.toHaveBeenCalled();
   });
 });
 
@@ -286,14 +350,14 @@ describe("iusdInfinifiProvider", () => {
   const context = { assetsById: new Map<string, PeggedAsset>() };
 
   beforeEach(() => {
-    resetAuthoritativePriceSourceMocks();
+    resetMocks();
     context.assetsById.clear();
     context.assetsById.set("usdc-circle", freshParent("usdc-circle", 1, "coingecko+pyth"));
     historicalParent.mockReset();
   });
 
   it("converts six-decimal USDC settlement for an eighteen-decimal receipt into the live USD quote", async () => {
-    fetchEvmCallHexAtBlockMock.mockResolvedValue(`0x${encodeUint256(973_456n)}`);
+    evmCall.mockResolvedValue(`0x${encodeUint256(973_456n)}`);
 
     await expect(iusdInfinifiProvider.fetchLivePrice!(
       asset("iusd-infinifi", { circulating: { peggedUSD: 180_000_000 } }),
@@ -304,18 +368,18 @@ describe("iusdInfinifiProvider", () => {
   it("publishes different historical receipt conversion rates at their requested blocks", async () => {
     const firstTimestamp = 1_710_000_000;
     const secondTimestamp = firstTimestamp + 3_600;
-    resolveClosestBlockAtOrBeforeTimestampMock.mockImplementation(async (_chain, timestamp) =>
+    closestBlock.mockImplementation(async (_chain, timestamp) =>
       timestamp === firstTimestamp ? 22_874_100 : 22_874_400,
     );
-    fetchEvmCallHexAtBlockMock.mockImplementation(async (_chain, _target, _calldata, block) =>
+    evmCall.mockImplementation(async (_chain, _target, _calldata, block) =>
       `0x${encodeUint256(block === 22_874_100 ? 973_456n : 987_654n)}`,
     );
-    historicalParent.mockResolvedValue(makeHistoricalPriceSeries([
+    historicalParent.mockResolvedValue(historicalPrices([
       { timestamp: firstTimestamp, price: 0.9 }, { timestamp: secondTimestamp, price: 1.02 },
     ]));
 
     await expect(iusdInfinifiProvider.fetchHistoricalPrices!(
-      makeHistoricalMeta("iusd-infinifi", "infiniFi USD", "iUSD"),
+      historicalMeta("iusd-infinifi", "infiniFi USD", "iUSD"),
       { candidateTimestamps: [secondTimestamp, firstTimestamp] },
     )).resolves.toEqual([
       { timestamp: firstTimestamp, price: 0.973456 * 0.9 },
@@ -326,7 +390,7 @@ describe("iusdInfinifiProvider", () => {
   it.each([null, "0x1234", `0x${encodeUint256(0n)}`, `0x${"g".repeat(64)}`])(
     "returns no price for an unavailable, malformed or zero conversion (%s)",
     async (result) => {
-      fetchEvmCallHexAtBlockMock.mockResolvedValue(result);
+      evmCall.mockResolvedValue(result);
       await expect(iusdInfinifiProvider.fetchLivePrice!(
         asset("iusd-infinifi"), context,
       )).resolves.toBeNull();
@@ -335,7 +399,7 @@ describe("iusdInfinifiProvider", () => {
 
   it("does not fabricate a quote when the redeem controller cannot be read", async () => {
     const error = new Error("redeem controller unavailable");
-    fetchEvmCallHexAtBlockMock.mockRejectedValue(error);
+    evmCall.mockRejectedValue(error);
     await expect(iusdInfinifiProvider.fetchLivePrice!(
       asset("iusd-infinifi"), context,
     )).rejects.toBe(error);
@@ -343,7 +407,7 @@ describe("iusdInfinifiProvider", () => {
 });
 
 describe("createProtocolRedeemProvider", () => {
-  const meta = makeHistoricalMeta("test-redeem", "Test redemption", "TEST");
+  const meta = historicalMeta("test-redeem", "Test redemption", "TEST");
   const timestamps = [1_710_000_000, 1_710_003_600, 1_710_007_200, 1_710_010_800, 1_710_014_400];
   const providerWithQuote = (
     fetchHistoricalQuote: Parameters<typeof createProtocolRedeemProvider>[0]["fetchHistoricalQuote"],
@@ -351,9 +415,9 @@ describe("createProtocolRedeemProvider", () => {
   ) => createProtocolRedeemProvider({ stablecoinId: meta.id, parentId: "usdc-circle", fetchLiveQuote, fetchHistoricalQuote });
 
   beforeEach(() => {
-    resetAuthoritativePriceSourceMocks();
-    resolveClosestBlockAtOrBeforeTimestampMock.mockImplementation(async (_chain, timestamp) => timestamp);
-    historicalParent.mockReset().mockResolvedValue(makeHistoricalPriceSeries(
+    resetMocks();
+    closestBlock.mockImplementation(async (_chain, timestamp) => timestamp);
+    historicalParent.mockReset().mockResolvedValue(historicalPrices(
       timestamps.map((timestamp) => ({ timestamp, price: 1 })),
     ));
   });
@@ -384,7 +448,7 @@ describe("createProtocolRedeemProvider", () => {
   });
 
   it("counts unresolved blocks against historical coverage instead of publishing a selective sample", async () => {
-    resolveClosestBlockAtOrBeforeTimestampMock.mockImplementation(async (_chain, timestamp) =>
+    closestBlock.mockImplementation(async (_chain, timestamp) =>
       timestamp >= timestamps[3] ? null : timestamp,
     );
     const provider = providerWithQuote(async () => 0.97);
@@ -393,7 +457,7 @@ describe("createProtocolRedeemProvider", () => {
   });
 
   it("normalizes timestamps and reuses one block quote so duplicate points cannot change the rate", async () => {
-    resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValue(22_874_100);
+    closestBlock.mockResolvedValue(22_874_100);
     let reads = 0;
     const provider = providerWithQuote(async () => ++reads === 1 ? 0.97 : 1.03);
 
@@ -418,8 +482,8 @@ describe("createProtocolRedeemProvider", () => {
   });
 
   it("reuses a block's token-denominated quote but applies each timestamp's actual parent USD rate", async () => {
-    resolveClosestBlockAtOrBeforeTimestampMock.mockResolvedValue(22_874_100);
-    historicalParent.mockResolvedValue(makeHistoricalPriceSeries([
+    closestBlock.mockResolvedValue(22_874_100);
+    historicalParent.mockResolvedValue(historicalPrices([
       { timestamp: timestamps[0], price: 0.9 }, { timestamp: timestamps[1], price: 1.02 },
     ]));
     const quote = vi.fn(async () => 1);
@@ -437,7 +501,7 @@ describe("idleCdoTrancheProvider", () => {
   const ID = "aa-falconx-mev-capital";
   const NOW = 1_800_000_000;
 
-  function contextWithParent(parent: PeggedAsset = freshParent("usdc-circle", 0.98, "coingecko+pyth", { nowSec: NOW })): LivePriceContext {
+  function contextWithParent(parent: PeggedAsset = freshParent("usdc-circle", 0.98, "coingecko+pyth")): LivePriceContext {
     return {
       assetsById: new Map([[parent.id, parent]]),
       vaultRateWrites: new Map(),
@@ -445,7 +509,7 @@ describe("idleCdoTrancheProvider", () => {
   }
 
   beforeEach(() => {
-    resetAuthoritativePriceSourceMocks();
+    resetMocks();
     vi.useFakeTimers();
     vi.setSystemTime(NOW * 1_000);
   });
@@ -455,7 +519,7 @@ describe("idleCdoTrancheProvider", () => {
   });
 
   it("decodes the six-decimal tranche virtual price, values it with the trusted parent and records the fresh rate", async () => {
-    fetchEvmCallHexAtBlockMock.mockResolvedValue(`0x${encodeUint256(1_234_567n)}`);
+    evmCall.mockResolvedValue(`0x${encodeUint256(1_234_567n)}`);
     const context = contextWithParent();
 
     const result = await idleCdoTrancheProvider.fetchLivePrice!(unpricedChild(ID), context);
@@ -471,8 +535,8 @@ describe("idleCdoTrancheProvider", () => {
   });
 
   it("cannot promote a valid tranche rate when the USDC parent is untrusted", async () => {
-    fetchEvmCallHexAtBlockMock.mockResolvedValue(`0x${encodeUint256(1_234_567n)}`);
-    const context = contextWithParent(freshParent("usdc-circle", 0.98, "cached", { nowSec: NOW }));
+    evmCall.mockResolvedValue(`0x${encodeUint256(1_234_567n)}`);
+    const context = contextWithParent(freshParent("usdc-circle", 0.98, "cached"));
 
     await expect(idleCdoTrancheProvider.fetchLivePrice!(unpricedChild(ID), context)).resolves.toBeNull();
     expect(context.lastUntrustedParent).toMatchObject({ parentId: "usdc-circle" });
@@ -480,7 +544,7 @@ describe("idleCdoTrancheProvider", () => {
   });
 
   it("rescues a missing price after an RPC failure with explicitly degraded cached-rate provenance", async () => {
-    fetchEvmCallHexAtBlockMock.mockRejectedValue(new Error("RPC unavailable"));
+    evmCall.mockRejectedValue(new Error("RPC unavailable"));
     const context = contextWithParent();
     context.vaultRateCache = new Map([[ID, { rate: 1.2, observedAt: NOW - CACHED_VAULT_RATE_MAX_AGE_SEC }]]);
 
@@ -500,7 +564,7 @@ describe("idleCdoTrancheProvider", () => {
 
   it("rejects a cached rate one second beyond its freshness budget and preserves the RPC error", async () => {
     const error = new Error("RPC unavailable");
-    fetchEvmCallHexAtBlockMock.mockRejectedValue(error);
+    evmCall.mockRejectedValue(error);
     const context = contextWithParent();
     context.vaultRateCache = new Map([[ID, { rate: 1.2, observedAt: NOW - CACHED_VAULT_RATE_MAX_AGE_SEC - 1 }]]);
 
@@ -509,17 +573,17 @@ describe("idleCdoTrancheProvider", () => {
 
   it("does not replace an existing usable market price with a cached tranche rate", async () => {
     const error = new Error("RPC unavailable");
-    fetchEvmCallHexAtBlockMock.mockRejectedValue(error);
+    evmCall.mockRejectedValue(error);
     const context = contextWithParent();
     context.vaultRateCache = new Map([[ID, { rate: 1.2, observedAt: NOW - 300 }]]);
 
     await expect(idleCdoTrancheProvider.fetchLivePrice!(
-      freshParent(ID, 1.05, "coingecko", { nowSec: NOW }), context,
+      freshParent(ID, 1.05, "coingecko"), context,
     )).rejects.toBe(error);
   });
 
   it.each([0n, 499_999n, 10_000_001n])("rejects a zero or untrusted virtual price (%s) without publishing a fresh rate", async (raw) => {
-    fetchEvmCallHexAtBlockMock.mockResolvedValue(`0x${encodeUint256(raw)}`);
+    evmCall.mockResolvedValue(`0x${encodeUint256(raw)}`);
     const context = contextWithParent();
 
     await expect(idleCdoTrancheProvider.fetchLivePrice!(unpricedChild(ID), context)).resolves.toBeNull();

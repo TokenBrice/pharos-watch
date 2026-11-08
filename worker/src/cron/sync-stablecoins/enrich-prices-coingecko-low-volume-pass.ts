@@ -65,8 +65,6 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   // staying inside the seven-day fallback budget. Recovery keeps the original
   // clock and fallback confidence and never touches supply.
   "swanusd-swan",
-  // Sparse FXD market observations retain CG's clock, not wind-down redemption par.
-  "fxd-fathom",
 ]);
 
 export async function runCoingeckoLowVolumePass(

@@ -186,25 +186,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 10, 27, 11) / 1000,
   },
   {
-    stablecoinId: "pht-pht",
-    owner: "ops",
-    reason:
-      "Re-reviewed 2026-11-07 19:45 UTC: CoinGecko pht-stablecoin remains $0.01607427 dated 2026-08-14 17:36:40 UTC with zero tickers. Exact Polygon DexScreener now lists QuickSwap V3 PHT/USDC 0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08 at $0.01588 with $46,444.38 liquidity; GeckoTerminal reports $46,295.18 reserves and $1.54 daily volume for that pool, below the unchanged $50K per-pool liquidity floor. Ethereum and Tron exact DexScreener reads are empty; the only Ethereum GeckoTerminal pool holds $25.15. MEXC PHTUSDT returns HTTP 400 (Invalid symbol). APACX still advertises MoneyBees OTC redemption but documents no observed acceptance, rate, depth or limit. Open holder-exit question: whether an ordinary holder can convert PHT to PHP at a verifiable rate and depth; owner ops must still resolve it by the original 2026-11-10 11:01 UTC deadline. This source review neither satisfies nor extends that lifecycle decision. Keep PHT active and the price missing; all admission gates preserved. Source acknowledgement expires 2026-11-21 19:45 UTC.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=pht-stablecoin&vs_currencies=usd&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/pht-stablecoin/tickers",
-      "https://api.dexscreener.com/token-pairs/v1/ethereum/0xbe370ad45d44eb45174c4ec60b88839fef32c077",
-      "https://api.dexscreener.com/token-pairs/v1/polygon/0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
-      "https://api.dexscreener.com/token-pairs/v1/tron/TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0xbe370ad45d44eb45174c4ec60b88839fef32c077/pools",
-      "https://api.geckoterminal.com/api/v2/networks/polygon_pos/tokens/0xe75220cb014dfb2d354bb59be26d7458bb8d0706/pools",
-      "https://api.mexc.com/api/v3/ticker/24hr?symbol=PHTUSDT",
-      "https://docs.apacx.io/user-guides/pht-onramp-and-offramp.md",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 7, 19, 45) / 1000,
-    expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
-  },
-  {
     stablecoinId: "bd-basedollar",
     owner: "ops",
     reason:
@@ -218,20 +199,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     ],
     reviewedAt: Date.UTC(2026, 10, 7, 19, 45) / 1000,
     expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
-  },
-  {
-    stablecoinId: "moveusd-cfx",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-11-07 20:55 UTC: an admissible market exists, but production cannot read it. The exact Solana mint 3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm trades in Orca MOVEUSD/USDC pool 63DFX4pkJkDs4LV5s1x1Z1658rkx8yvt7MY9XXGsBMUh ($0.9993 mark, $103,088.41 liquidity, $0.10 24h volume from a non-production read), and the last accepted dexscreener-exact price was $0.9993 at 2026-11-07 18:24:57 UTC. DexScreener refused 7 of the 10 Nov 5-7 production discovery runs with HTTP 429 / Cloudflare 1015, five on their first request, while refresh requests stay serial, paced and retry-free. No independent admitted path exists: Jupiter v3's quote is about 40 hours old (block 466279122) and fails its slot-freshness proof; CoinGecko on-chain reports only $5,620.98 token-side reserves, below its unchanged $50K floor; CoinGecko search has no listing. Owner decision O1 acknowledges this provider-access gap only: the price stays missing while refused, publishes again on the first admitted refresh, and owner ops resolves DexScreener production access or an approved alternative by 2026-11-21 20:55 UTC.",
-    sources: [
-      "https://api.dexscreener.com/token-pairs/v1/solana/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm",
-      "https://api.geckoterminal.com/api/v2/networks/solana/tokens/3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm/pools",
-      "https://api.jup.ag/price/v3?ids=3AdhVEX6k85yNivHVXDEiY3WyP2WgFQTUZCahGaeC2qm",
-      "https://api.coingecko.com/api/v3/search?query=moveusd",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 7, 20, 55) / 1000,
-    expiresAt: Date.UTC(2026, 10, 21, 20, 55) / 1000,
   },
   {
     stablecoinId: "aid-gaib",

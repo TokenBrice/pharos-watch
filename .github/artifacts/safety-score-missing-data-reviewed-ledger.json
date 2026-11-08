@@ -300387,6 +300387,170 @@
       ],
       "nextReviewTrigger": "Re-run the disclosure check once the linked LiquidStone II risk assessment and transparency board are retrievable.",
       "factsClosed": 0
+    },
+    {
+      "claimGroupId": "DEPLOYMENT_CONTROLS:jtrsy-anemoy",
+      "taskIds": [
+        "V9G-a58b683b9caed0dd",
+        "V9G-80b8c22a32a69c1b",
+        "V9G-fc33531a20212459",
+        "V9G-cb67e95b8da53a94",
+        "V9G-0b21406310cb56b6",
+        "V9G-f57ed9dce9881f1f",
+        "V9G-e010ab2004d7e581",
+        "V9G-d4841d446719ced9",
+        "V9G-14234c44b634a810",
+        "V9G-f84b6406f187dd3a",
+        "V9G-230492e326e7e10d",
+        "V9G-3de131c03f7f7cdf",
+        "V9G-8f5dff32fc257306",
+        "V9G-0d408c6e340e1dac",
+        "V9G-4494966c4efb3372",
+        "V9G-450d48fc2d779a79",
+        "V9G-3f4f3477964a472c",
+        "V9G-2943db923d290635",
+        "V9G-adb516454e60580d",
+        "V9G-83686689662aea97",
+        "V9G-2f220c15dd28f611",
+        "V9G-2880aef2c0c5dff0",
+        "V9G-d70e74e7060f2166",
+        "V9G-e96d62131bf903db",
+        "V9G-6182bf77dc63c178"
+      ],
+      "workType": "DEPLOYMENT_CONTROLS",
+      "resolutionMode": "agent-curation",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-11-08",
+      "reviewer": "ops",
+      "evidence": [
+        "https://docs.centrifuge.io/developer/protocol/deployments/",
+        "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
+        "agents/w3jt-evidence/xlayer-hash-identity.json",
+        "agents/w3jt-evidence/arc-hash-identity.json",
+        "agents/w3jt-evidence/xlayer-transport.json",
+        "agents/w3jt-evidence/arc-transport.json"
+      ],
+      "rationale": "O10 admits two verified EVM burn/mint spokes and pins their runtimes. New routes are reviewed; signer, cap, upgrade, recovery and incident questions remain unproved and are not closed by route identity. The frozen nine-leg packet cannot prove materiality for the eleven-leg roster.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json",
+        "shared/lib/onchain-supply-probe.ts",
+        "worker/src/lib/safety-score-v9/supply-attribution-contract.ts"
+      ],
+      "sentinels": [
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:1bd828dfa149a678ec56:incidentState",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:1bd828dfa149a678ec56:materialSupplyShare",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:3d4ef41402e9f3073f3f:materialSupplyShare",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:4152bb09f523fb044e98:capAuthority",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:4152bb09f523fb044e98:claimImpairment",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:4152bb09f523fb044e98:incidentState",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:4152bb09f523fb044e98:materialSupplyShare",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:7b62b4c33850b4cdf1e6:incidentState",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:7b62b4c33850b4cdf1e6:materialSupplyShare",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:9bc7e0661f9f403b9236:materialSupplyShare",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:a1a1426fb7e4313883f8:incidentState",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:a1a1426fb7e4313883f8:materialSupplyShare",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:b2fa6daa015719ecbc62:materialSupplyShare",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:c73849ed935767eca410:materialSupplyShare",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:d1d1319353254f32ddb0:incidentState",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:d1d1319353254f32ddb0:materialSupplyShare",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:ebdfb805dc060f6283ee:incidentState",
+        "jtrsy-anemoy:gap:control:bridge-meta:jtrsy-anemoy:ebdfb805dc060f6283ee:materialSupplyShare",
+        "jtrsy-anemoy:gap:deployment-control:bridge-meta:jtrsy-anemoy:1bd828dfa149a678ec56",
+        "jtrsy-anemoy:gap:deployment-control:bridge-meta:jtrsy-anemoy:4152bb09f523fb044e98",
+        "jtrsy-anemoy:gap:deployment-control:bridge-meta:jtrsy-anemoy:7b62b4c33850b4cdf1e6",
+        "jtrsy-anemoy:gap:deployment-control:bridge-meta:jtrsy-anemoy:a1a1426fb7e4313883f8",
+        "jtrsy-anemoy:gap:deployment-control:bridge-meta:jtrsy-anemoy:d1d1319353254f32ddb0",
+        "jtrsy-anemoy:gap:deployment-control:bridge-meta:jtrsy-anemoy:ebdfb805dc060f6283ee",
+        "jtrsy-anemoy:gap:deployment-controls"
+      ],
+      "nextReviewTrigger": "First accepted production capture after the expanded eleven-leg roster is deployed; otherwise revisit 2026-11-09.",
+      "factsClosed": 0,
+      "unpark": {
+        "rationale": "Owner O10 authorized exact deployment admission; new 2026-11-08 pinned identity, supply, route and transport evidence is now verified.",
+        "evidence": [
+          "agents/2026-11-07-admin-warnings/decisions.md#O10",
+          "agents/w3jt-evidence/xlayer-hash-identity.json",
+          "agents/w3jt-evidence/arc-hash-identity.json"
+        ]
+      }
+    },
+    {
+      "claimGroupId": "BRIDGE_MATERIALITY:jtrsy-anemoy",
+      "taskIds": [
+        "V9G-3a1d19fbbd2b14b9"
+      ],
+      "workType": "BRIDGE_MATERIALITY",
+      "resolutionMode": "mixed-curation-and-runtime",
+      "decision": "defer",
+      "deferState": "structured-pending-production",
+      "reviewedAt": "2026-11-08",
+      "reviewer": "ops",
+      "evidence": [
+        "https://docs.centrifuge.io/developer/protocol/deployments/",
+        "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
+        "agents/w3jt-evidence/xlayer-hash-identity.json",
+        "agents/w3jt-evidence/arc-hash-identity.json",
+        "agents/w3jt-evidence/xlayer-transport.json",
+        "agents/w3jt-evidence/arc-transport.json"
+      ],
+      "rationale": "The old accepted capture has nine legs, so current-curation replay correctly withholds its obsolete supply partition. Both additional stock reads are observed zero and required, but only a fresh eleven-leg producer packet can close the runtime sentinel.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json",
+        "shared/lib/onchain-supply-probe.ts",
+        "worker/src/lib/safety-score-v9/supply-attribution-contract.ts"
+      ],
+      "sentinels": [
+        "jtrsy-anemoy:gap:bridge-materiality"
+      ],
+      "nextReviewTrigger": "First completed sync-stablecoins and sync-v9-supply-attribution followed by the first accepted Safety publication after deployment; otherwise revisit 2026-11-09.",
+      "factsClosed": 0,
+      "unpark": {
+        "rationale": "Owner O10 authorized exact deployment admission; new 2026-11-08 pinned identity, supply, route and transport evidence is now verified.",
+        "evidence": [
+          "agents/2026-11-07-admin-warnings/decisions.md#O10",
+          "agents/w3jt-evidence/xlayer-hash-identity.json",
+          "agents/w3jt-evidence/arc-hash-identity.json"
+        ]
+      }
+    },
+    {
+      "claimGroupId": "BRIDGE_ROUTE_REVIEW:jtrsy-anemoy",
+      "taskIds": [
+        "V9G-6376fb6beb82b8f2"
+      ],
+      "workType": "BRIDGE_ROUTE_REVIEW",
+      "resolutionMode": "issuer-or-onchain-evidence",
+      "decision": "reject",
+      "reviewedAt": "2026-11-08",
+      "reviewer": "ops",
+      "evidence": [
+        "https://docs.centrifuge.io/developer/protocol/deployments/",
+        "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/",
+        "agents/w3jt-evidence/xlayer-hash-identity.json",
+        "agents/w3jt-evidence/arc-hash-identity.json",
+        "agents/w3jt-evidence/xlayer-transport.json",
+        "agents/w3jt-evidence/arc-transport.json"
+      ],
+      "rationale": "X Layer and Arc are reviewed EVM burn/mint routes. The pre-existing Solana architecture remains unresolved: the current official guide explicitly excludes Solana and Stellar as EVM bridge targets. No evidence authorizes closing that distinct route or adding Stellar stock.",
+      "changeRefs": [
+        "shared/data/stablecoins/domains/risk-review/jtrsy-anemoy.json",
+        "shared/lib/onchain-supply-probe.ts",
+        "worker/src/lib/safety-score-v9/supply-attribution-contract.ts"
+      ],
+      "sentinels": [
+        "jtrsy-anemoy:gap:economic-control:bridge"
+      ],
+      "nextReviewTrigger": "Issuer publishes an exact Solana liability/transfer binding, or new nonzero Solana stock is observed; otherwise re-review on 2026-11-22.",
+      "factsClosed": 0,
+      "unpark": {
+        "rationale": "Owner O10 authorized exact deployment admission; new 2026-11-08 pinned identity, supply, route and transport evidence is now verified.",
+        "evidence": [
+          "agents/2026-11-07-admin-warnings/decisions.md#O10",
+          "agents/w3jt-evidence/xlayer-hash-identity.json",
+          "agents/w3jt-evidence/arc-hash-identity.json"
+        ]
+      }
     }
   ]
 }

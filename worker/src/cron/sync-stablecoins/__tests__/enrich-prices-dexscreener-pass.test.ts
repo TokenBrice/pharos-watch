@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ACTIVE_META_BY_ID, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 vi.mock("../../../lib/dexscreener", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/dexscreener")>();
@@ -179,6 +180,7 @@ describe("runDexScreenerPass", () => {
     { label: "wrong token symbol", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHOENIX", price: "0.01587", reason: "symbol-mismatch" },
     { label: "dollar-par quote for a PHP token", liquidity: DEXSCREENER_MIN_LIQUIDITY_USD, symbol: "PHT", price: "1", reason: "price-rejected" },
   ])("applies existing exact-PHT liquidity, identity and FX guards: $label", async ({ liquidity, symbol, price, reason }) => {
+    vi.spyOn(ACTIVE_META_BY_ID, "get").mockReturnValue(TRACKED_META_BY_ID.get("pht-pht"));
     const address = "0xe75220cb014dfb2d354bb59be26d7458bb8d0706";
     const pool = {
       ...exactPool(address, "0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08", price, liquidity),
@@ -197,7 +199,7 @@ describe("runDexScreenerPass", () => {
     const asset = makeMissingAsset({
       id: "pht-pht", symbol: "PHT", pegType: "peggedPHP", chains: ["Ethereum", "Polygon", "Tron"],
     });
-    // Pin the ordinary rotation to Polygon; use the real registry deployments/symbol check.
+    // Pin Polygon using archived PHT identity; the live registry excludes delisted PHT.
     const result = await runDexScreenerPass([asset], { peggedPHP: 1 / 60.16 }, undefined, undefined, undefined, 3_600_000);
     expect(fetchDsTokenPoolsWithStatus).toHaveBeenCalledWith(
       "polygon", address, expect.any(AbortSignal), expect.any(Number), 0,

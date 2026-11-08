@@ -34,6 +34,7 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "uniswap-v4-exact",
   "raydium-dex",
   "orca-dex",
+  "orca-exact",
   "meteora-dex",
   "pancakeswap-dex",
   "aerodrome-dex",

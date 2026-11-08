@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Centrifuge V3 supports native burn-and-mint share bridging between EVM networks through Spoke. The Pharos route binds the Ethereum pool/share class through Centrifuge Spoke and its configured LayerZero and Chainlink CCIP transports; signer, cap and incident claims remain unresolved. The bridge guide explicitly excludes Solana and Stellar as target networks, so the Solana mint's transfer architecture remains unresolved despite verified mint and freeze authorities.",
+    "summary": "Centrifuge V3 supports native burn-and-mint share bridging between EVM networks through Spoke. The Pharos route binds the Ethereum pool/share class through Centrifuge Spoke and its configured LayerZero and Chainlink CCIP transports; signer, cap and incident claims remain unresolved. X Layer and Arc are reviewed EVM burn/mint spokes of the same Ethereum hub/share class. Stellar is represented by the issuer-identified Ethereum escrow and is not additional native stock. The bridge guide explicitly excludes Solana and Stellar as target networks, so the Solana mint's transfer architecture remains unresolved despite verified mint and freeze authorities.",
     "reviewedAt": "2026-07-24",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); Codex V9 runtime supply audit",
     "confidence": "verified",
@@ -358,6 +358,122 @@
           "protocol:centrifuge-v3",
           "contract:pharos:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
         ]
+      },
+      {
+        "id": "xlayer:0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "sourceChain": "ethereum",
+        "destinationChain": "xlayer",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "protocol": "Centrifuge V3 spoke messaging (LayerZero and Chainlink CCIP)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "xlayer",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "providerKeys": [
+          "layerzero",
+          "chainlink-ccip"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Review jtrsy-xlayer-route-20261108 by ops. Official Centrifuge JTRSY deployments identify this exact token. Pinned xlayer block 75356629, hash 0xd6c675c60245bd7da58e0e36e38e90b0ebd1290d2c4773fedc06e463dbe99e99, timestamp 2026-11-08T08:14:25.000Z; observed 2026-11-08T08:36:54.494Z: 7448-byte runtime, name Janus Henderson Treasury Fund, symbol JTRSY, six decimals, totalSupply 0, wards(Spoke)=1 and wards(BalanceSheet)=1. Spoke shareTokenDetails(token) returns Ethereum-hub poolId 0x0001000000000006 and scId 0x00010000000000060000000000000001; shareToken(poolId,scId) returns this token. Gateway localCentrifugeId=13; its adapter is MultiAdapter 0x35c837f0a54b715a23d193e1476bfc9bc30073be. For Ethereum centrifugeId 1 and this pool, quorum=2 (adapter count), threshold=2 and recoveryIndex=2; adapters are LayerZero 0xd517bc7ba17271a8d87be7355b2523bf5c750295 and Chainlink CCIP 0x39cf679eb0ac9075cfb5f94930a367ba1557d955. Release-pinned Spoke burns source shares before HubHandler transfers conserved per-chain issuance and destination minting: additive burn/mint stock, not Ethereum-escrow-backed lock/mint. Hash-pinned Multicall3 supply succeeds; the independent dRPC endpoint agrees on chain ID, block hash/time and zero supply. These observations establish deployment/route identity, not exhaustive signer, cap, upgrade, recovery or incident closure. Stellar CBHOEKLWTB6HR2A3IXHIIMQG5FOXWXS6EG4Q5YJDRPMXPCX7M24CYR2O is outside this EVM rail; issuer metadata labels Ethereum holder 0x528d8682856e201f014eb63eee519d489dfaf25d as Stellar Escrow JTRSY. That stock stays inside Ethereum totalSupply and must never be added again.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-08",
+        "observedBlock": 75356629,
+        "sources": [
+          {
+            "label": "Centrifuge exact JTRSY deployment registry",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge native mint-and-burn share transfers",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "xlayer pinned token, Spoke and transport reads",
+            "url": "https://rpc.xlayer.tech"
+          },
+          {
+            "label": "Independent dRPC chain and hash-pinned supply verification",
+            "url": "https://xlayer.drpc.org"
+          },
+          {
+            "label": "Centrifuge release-pinned Spoke burn/mint and token binding",
+            "url": "https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/spoke/Spoke.sol"
+          },
+          {
+            "label": "Centrifuge release-pinned HubHandler conserved share transfer",
+            "url": "https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/hub/HubHandler.sol"
+          },
+          {
+            "label": "Issuer metadata identifies Stellar Escrow JTRSY on Ethereum",
+            "url": "https://ipfs.centrifuge.io/ipfs/bafkreifvha4rmdtai5jupdey65jabd3lowvrxn6qq3yz3gxmid6qlui35y"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:xlayer:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
+      },
+      {
+        "id": "arc:0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "sourceChain": "ethereum",
+        "destinationChain": "arc",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+        "protocol": "Centrifuge V3 spoke messaging (LayerZero and Chainlink CCIP)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "arc",
+        "controllerAddress": "0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab",
+        "providerKeys": [
+          "layerzero",
+          "chainlink-ccip"
+        ],
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Review jtrsy-arc-route-20261108 by ops. Official Centrifuge JTRSY deployments identify this exact token. Pinned arc block 30150643, hash 0xaae8e457a390fee0f3305e4c717a7875223eab3f6def5e4409af3a84d8276f83, timestamp 2026-11-08T08:35:16.000Z; observed 2026-11-08T08:36:55.646Z: 7448-byte runtime, name Janus Henderson Treasury Fund, symbol JTRSY, six decimals, totalSupply 0, wards(Spoke)=1 and wards(BalanceSheet)=1. Spoke shareTokenDetails(token) returns Ethereum-hub poolId 0x0001000000000006 and scId 0x00010000000000060000000000000001; shareToken(poolId,scId) returns this token. Gateway localCentrifugeId=14; its adapter is MultiAdapter 0x35c837f0a54b715a23d193e1476bfc9bc30073be. For Ethereum centrifugeId 1 and this pool, quorum=2 (adapter count), threshold=2 and recoveryIndex=2; adapters are LayerZero 0xd517bc7ba17271a8d87be7355b2523bf5c750295 and Chainlink CCIP 0x39cf679eb0ac9075cfb5f94930a367ba1557d955. Release-pinned Spoke burns source shares before HubHandler transfers conserved per-chain issuance and destination minting: additive burn/mint stock, not Ethereum-escrow-backed lock/mint. Hash-pinned Multicall3 supply succeeds; the independent dRPC endpoint agrees on chain ID, block hash/time and zero supply. These observations establish deployment/route identity, not exhaustive signer, cap, upgrade, recovery or incident closure. Stellar CBHOEKLWTB6HR2A3IXHIIMQG5FOXWXS6EG4Q5YJDRPMXPCX7M24CYR2O is outside this EVM rail; issuer metadata labels Ethereum holder 0x528d8682856e201f014eb63eee519d489dfaf25d as Stellar Escrow JTRSY. That stock stays inside Ethereum totalSupply and must never be added again.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-11-08",
+        "observedBlock": 30150643,
+        "sources": [
+          {
+            "label": "Centrifuge exact JTRSY deployment registry",
+            "url": "https://docs.centrifuge.io/developer/protocol/deployments/"
+          },
+          {
+            "label": "Centrifuge native mint-and-burn share transfers",
+            "url": "https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/"
+          },
+          {
+            "label": "arc pinned token, Spoke and transport reads",
+            "url": "https://rpc.mainnet.arc.io"
+          },
+          {
+            "label": "Independent dRPC chain and hash-pinned supply verification",
+            "url": "https://arc.drpc.org"
+          },
+          {
+            "label": "Centrifuge release-pinned Spoke burn/mint and token binding",
+            "url": "https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/spoke/Spoke.sol"
+          },
+          {
+            "label": "Centrifuge release-pinned HubHandler conserved share transfer",
+            "url": "https://github.com/centrifuge/protocol/blob/6b9d36eabee48728486f377ea2766a5cd233c555/src/core/hub/HubHandler.sol"
+          },
+          {
+            "label": "Issuer metadata identifies Stellar Escrow JTRSY on Ethereum",
+            "url": "https://ipfs.centrifuge.io/ipfs/bafkreifvha4rmdtai5jupdey65jabd3lowvrxn6qq3yz3gxmid6qlui35y"
+          }
+        ],
+        "failureDomainKeys": [
+          "protocol:centrifuge-v3",
+          "contract:arc:0xec3582fcdc34078a4b7a8c75a5a3ae46f48525ab"
+        ]
       }
     ],
     "controls": [
@@ -402,7 +518,7 @@
             "url": "https://solana.com/docs/tokens/extensions/permanent-delegate"
           }
         ],
-        "evidence": "Safety unknowns campaign 2026-11-06 — k-cfg. Separate control observation reviewed 2026-11-06: exact-slot Alchemy Account Archive getAccountInfo(base64, slot=466100000, commitment=finalized) for JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj and BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4, each bracketed by matching finalized getBlock headers, binds block hash 7A1LndoD6qnDiMVtR4VcEsf41wSdfY7omKHARMrfYrma and time 2026-11-06T11:54:34Z. The mint is owned by TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, initialized, six decimals, raw supply 0. Mint authority, freeze authority, permanent delegate and metadata authorities decode to BUo4. The authority is on the Ed25519 curve, System-owned, non-executable and zero-data: an external on-chain signature authority, not the previously observed Squads PDA or an SPL multisig account. This supersedes only the current controller binding; the October route observations remain historical evidence. The mint-authority field establishes the token mint permission; the freeze and permanent-delegate fields are retained observations, not a complete execution inventory. The bridge-mint vocabulary does not establish the unresolved transfer architecture. Off-chain key custody, human approval quorum, executable-program/source equivalence, complete reachable powers, liability/legal impairment, caps and incident state remain unproved. Observed zero token supply is not a materialSupplyShare or absence-of-risk claim."
+        "evidence": "Safety unknowns campaign 2026-11-06 \u2014 k-cfg. Separate control observation reviewed 2026-11-06: exact-slot Alchemy Account Archive getAccountInfo(base64, slot=466100000, commitment=finalized) for JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj and BUo4FKP1hSAZ1zcNGzJHTS1V9zcQM8fzUFpYj1NboRK4, each bracketed by matching finalized getBlock headers, binds block hash 7A1LndoD6qnDiMVtR4VcEsf41wSdfY7omKHARMrfYrma and time 2026-11-06T11:54:34Z. The mint is owned by TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, initialized, six decimals, raw supply 0. Mint authority, freeze authority, permanent delegate and metadata authorities decode to BUo4. The authority is on the Ed25519 curve, System-owned, non-executable and zero-data: an external on-chain signature authority, not the previously observed Squads PDA or an SPL multisig account. This supersedes only the current controller binding; the October route observations remain historical evidence. The mint-authority field establishes the token mint permission; the freeze and permanent-delegate fields are retained observations, not a complete execution inventory. The bridge-mint vocabulary does not establish the unresolved transfer architecture. Off-chain key custody, human approval quorum, executable-program/source equivalence, complete reachable powers, liability/legal impairment, caps and incident state remain unproved. Observed zero token supply is not a materialSupplyShare or absence-of-risk claim."
       }
     ],
     "scopedQuestions": [
@@ -411,7 +527,7 @@
         "subject": "authority-semantics",
         "question": "The exact-slot token and external-signature authority observations do not establish deployed-program/source equivalence, the complete reachable authority and upgrade graph, an enforceable economic cap, or the legal/holder-liability consequences of delegate transfer, burn and additional minting. Solana transfer architecture and incident history remain unresolved; no complete execution scope, current liability share or key-custody independence is claimed.",
         "reviewedAt": "2026-11-06",
-        "reviewer": "Safety unknowns campaign 2026-11-06 — k-cfg",
+        "reviewer": "Safety unknowns campaign 2026-11-06 \u2014 k-cfg",
         "sources": [
           {
             "label": "Alchemy Account Archive: exact JTRSY mint and BUo4 authority at finalized slot 466100000, hash 7A1LndoD6qnDiMVtR4VcEsf41wSdfY7omKHARMrfYrma, 2026-11-06T11:54:34Z; verified 2026-11-06",

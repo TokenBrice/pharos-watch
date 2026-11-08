@@ -36,7 +36,6 @@ type LowVolumeRecoveryCase = {
   nowMs: number;
   assetFields: Parameters<typeof makePeggedAsset>[0];
   expiredFields: Parameters<typeof makePeggedAsset>[0];
-  expectedSupply: Parameters<typeof makePeggedAsset>[0];
   fxRates?: Record<string, number>;
   responseJson?: boolean;
 };
@@ -81,7 +80,7 @@ describe("runCoingeckoLowVolumePass", () => {
     ["expired quote", -7 * 86400 - 1, false],
     ["invalid zero clock", null, false],
     ["absent upstream clock", undefined, true],
-  ] as const)("admits FXD only with valid observation clocks: %s", async (_name, offset, accepted) => {
+  ] as const)("admits sparse-market quotes only with valid observation clocks: %s", async (_name, offset, accepted) => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
       "../../../lib/coingecko-simple-price",
     );
@@ -91,9 +90,9 @@ describe("runCoingeckoLowVolumePass", () => {
     vi.setSystemTime(nowSec * 1000);
     const observedAt = offset === undefined ? undefined : offset === null ? 0 : nowSec + offset;
     vi.stubGlobal("fetch", vi.fn(async () => Response.json({
-      "fathom-dollar": { usd: 0.842295, ...(observedAt === undefined ? {} : { last_updated_at: observedAt }) },
+      "freedom-dollar": { usd: 0.842295, ...(observedAt === undefined ? {} : { last_updated_at: observedAt }) },
     })));
-    const asset = makePeggedAsset({ id: "fxd-fathom", price: null });
+    const asset = makePeggedAsset({ id: "fusd-freedom-dollar", price: null });
     expect(await runCoingeckoLowVolumePass([asset], null, undefined)).toEqual({
       resolved: accepted ? 1 : 0, failures: [],
     });
@@ -120,7 +119,6 @@ describe("runCoingeckoLowVolumePass", () => {
         id, geckoId, price, observedAt, nowMs: 1791299423 * 1000, responseJson: false,
         assetFields: { pegType, supplySource: "defillama", circulating: { peggedUSD: 123 } },
         expiredFields: { pegType },
-        expectedSupply: { supplySource: "defillama", circulating: { peggedUSD: 123 } },
         fxRates: { peggedCHF: 1.2 },
       };
     }),
@@ -136,10 +134,6 @@ describe("runCoingeckoLowVolumePass", () => {
         circulating: { [pegType]: 123 },
       },
       expiredFields: { pegType },
-      expectedSupply: {
-        supplyRestored: true, supplySource: "coingecko-fallback", supplyObservedAt: observedAt,
-        circulating: { [pegType]: 123 },
-      },
       fxRates: { peggedMXN: 0.055 },
     })),
     {
@@ -151,10 +145,6 @@ describe("runCoingeckoLowVolumePass", () => {
         supplyObservedAt: Date.UTC(2026, 8, 28, 18, 49, 20) / 1000, circulating: { peggedUSD: 32_677_939 },
       },
       expiredFields: { symbol: "HBD" },
-      expectedSupply: {
-        supplyRestored: true, supplyObservedAt: Date.UTC(2026, 8, 28, 18, 49, 20) / 1000,
-        circulating: { peggedUSD: 32_677_939 },
-      },
     },
     {
       id: "brlv-crown", geckoId: "crown-brlv", price: 0.200255,
@@ -164,9 +154,6 @@ describe("runCoingeckoLowVolumePass", () => {
         supplyObservedAt: 1_791_806_930, circulating: { peggedREAL: 73_888_563 },
       },
       expiredFields: { symbol: "BRLV", pegType: "peggedREAL" },
-      expectedSupply: {
-        supplyRestored: true, supplyObservedAt: 1_791_806_930, circulating: { peggedREAL: 73_888_563 },
-      },
       fxRates: { peggedREAL: 0.2006 },
     },
     ...([
@@ -176,10 +163,9 @@ describe("runCoingeckoLowVolumePass", () => {
       id, geckoId, price, observedAt, nowMs: 1_791_787_489 * 1000,
       assetFields: { supplySource: "defillama", circulating: { peggedUSD: 123 } },
       expiredFields: {},
-      expectedSupply: { supplySource: "defillama", circulating: { peggedUSD: 123 } },
     })),
   ])("recovers reviewed $id price without upgrading supply, confidence, or observation time, then expires it", async ({
-    id, geckoId, price, observedAt, nowMs, assetFields, expiredFields, expectedSupply, fxRates, responseJson = true,
+    id, geckoId, price, observedAt, nowMs, assetFields, expiredFields, fxRates, responseJson = true,
   }) => {
     const actual = await vi.importActual<{ fetchCoingeckoSimplePrices: typeof fetchCoingeckoSimplePrices }>(
       "../../../lib/coingecko-simple-price",
@@ -196,7 +182,7 @@ describe("runCoingeckoLowVolumePass", () => {
     expect(asset).toMatchObject({
       price, priceSource: "coingecko-low-volume", priceConfidence: "fallback",
       priceObservedAt: observedAt, priceObservedAtMode: "upstream",
-      ...expectedSupply,
+      ...assetFields,
     });
     vi.setSystemTime((observedAt + 7 * 86400 + 1) * 1000);
     const expired = makePeggedAsset({ id, price: null, ...expiredFields });
@@ -256,8 +242,8 @@ describe("runCoingeckoLowVolumePass", () => {
     } as const;
     mockCoingeckoPrices(quotes, observedAt);
     const assets = [
-      makePeggedAsset({ id: "btcusd-btcfi", symbol: "BtcUSD", price: null, pegType: "peggedUSD" }),
-      makePeggedAsset({ id: "dllr-sovryn", symbol: "DLLR", price: null, pegType: "peggedUSD" }),
+      makePeggedAsset({ id: "btcusd-btcfi", symbol: "BtcUSD", price: null }),
+      makePeggedAsset({ id: "dllr-sovryn", symbol: "DLLR", price: null }),
       makePeggedAsset({ id: "gbpm-mento", symbol: "GBPm", price: null, pegType: "peggedGBP" }),
       makePeggedAsset({ id: "audm-mento", symbol: "AUDm", price: null, pegType: "peggedAUD" }),
       makePeggedAsset({ id: "copm-mento", symbol: "COPm", price: null, pegType: "peggedCOP" }),

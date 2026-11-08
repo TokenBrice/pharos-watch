@@ -73,7 +73,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "usdu-usdu-finance", dustThreshold: 10_000 },
   { stablecoinId: "zarp-zarp", dustThreshold: 10_000 },
   { stablecoinId: "usdp-parallel", dustThreshold: 10_000 },
-  { stablecoinId: "pht-pht", dustThreshold: 10_000 },
   { stablecoinId: "vchf-vnx", dustThreshold: 10_000 },
   { stablecoinId: "ussd-sonic-labs", dustThreshold: 10_000 },
   { stablecoinId: "cadc-cad-coin", dustThreshold: 10_000 },

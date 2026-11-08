@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:b2464ee6da1ad436a927586ca4b9983e465c1363beb9c0df16f2c316e8c3e03d",
+  "sourceChecksum": "sha256:04e76fbce7867d123a48b0e40184b4ec0f4267c149c647c005c1b1a4606b9183",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,7 +16,7 @@
     },
     {
       "path": "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
-      "checksum": "sha256:f3e2bbb5c63e439638a846b743cf4b42e5fdeab93c431b4e6bdd82df5cb8dea7",
+      "checksum": "sha256:407e8b38e96461715e180cc2479e249e17934c855168557d9427acdcf71ccb7a",
       "role": "Canonical frozen tracked-stablecoin projection merged into cemetery rows."
     },
     {
@@ -26,8 +26,8 @@
     }
   ],
   "recordsOrderedBy": "deathDate descending by year, month, then day (a month-precision date sorts as the start of its month, after that month's day-precision rows; an unparseable date sorts last), then peakMcapUsd descending (rows without a peak after rows with one), then symbol ascending, then id ascending (symbol and id compared by UTF-16 code unit)",
-  "rowCount": 129,
-  "updatedAt": "2026-11-02",
+  "rowCount": 130,
+  "updatedAt": "2026-11-08",
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -501,6 +501,34 @@
       "pharosUrl": "https://pharos.watch/stablecoin/cdxusd-cod3x/",
       "mechanismArchetype": "cdp",
       "recordedAt": "2026-09-23"
+    },
+    {
+      "id": "fxd-fathom",
+      "name": "Fathom Dollar",
+      "symbol": "FXD",
+      "llamaId": "176",
+      "logoUrl": "https://pharos.watch/logos/fxd-fathom.svg",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-08-26",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 3489133,
+      "epitaph": "Fathom shut down its CDP dollar; the residual token kept trading",
+      "obituary": "Fathom's CDP-backed dollar entered shutdown on August 26, 2026, when its documented ShowStopper contract was caged in XDC transaction 0x07a63d9a4f3ad3859b6fff6d35fbe98074980d3bcac8b26f572532d82c67ffc9 at block 106506290. The shutdown disabled ordinary issuance and peg operations; the contract still reports live() = 0 with the same shutdown timestamp. This followed the issuer's recorded August wind-down announcement. FXD remained a residual traded token, with a sparse CoinGecko observation near $0.8423 at the November 8 archive capture. Pharos preserves its market history as a frozen wind-down asset rather than treating residual trading as an operating stablecoin.",
+      "sourceUrl": "https://xdcscan.com/tx/0x07a63d9a4f3ad3859b6fff6d35fbe98074980d3bcac8b26f572532d82c67ffc9",
+      "sourceLabel": "Fathom ShowStopper on-chain shutdown, August 26, 2026",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "xdc",
+          "address": "0x49d3f7543335cf38fa10889ccff10207e22110b5",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/fxd-fathom/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-11-08"
     },
     {
       "id": "xtusd-xt",

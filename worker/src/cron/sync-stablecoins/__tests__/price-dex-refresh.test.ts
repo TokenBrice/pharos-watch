@@ -174,11 +174,11 @@ describe("DEX refresh continuity", () => {
   it("skips missing rows under a reviewed price gap but keeps reviewed rows that are DEX-priced", () => {
     const rows = [
       makePeggedAsset({ id: "wusd-worldwide", price: null }),
-      makePeggedAsset({ id: "pht-pht", price: 0.017, priceSource: "dexscreener-exact", priceObservedAt: now, priceObservedAtMode: "local_fetch", priceConfidence: "fallback" }),
+      makePeggedAsset({ id: "bd-basedollar", price: 0.017, priceSource: "dexscreener-exact", priceObservedAt: now, priceObservedAtMode: "local_fetch", priceConfidence: "fallback" }),
       makePeggedAsset({ id: "usdt-tether", price: null }),
     ];
-    const plan = planDexRefresh(rows, [], 0, new Set(["wusd-worldwide", "pht-pht"]));
-    expect(plan.cohort.map((row) => row.id)).toEqual(["usdt-tether", "pht-pht"]);
+    const plan = planDexRefresh(rows, [], 0, new Set(["wusd-worldwide", "bd-basedollar"]));
+    expect(plan.cohort.map((row) => row.id)).toEqual(["usdt-tether", "bd-basedollar"]);
     expect(plan.acknowledgedGapsSkipped).toBe(1);
   });
 
