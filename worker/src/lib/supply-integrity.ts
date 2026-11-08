@@ -148,7 +148,8 @@ export interface ReviewedSupplyCarry {
   stablecoinId: string;
   reviewedAt: number;
   expiresAt: number;
-  reason: "defillama-list-fill-default-carry" | "nav-parent-price-gap";
+  owner?: "ops";
+  reason: "defillama-list-fill-default-carry" | "nav-parent-price-gap" | "coingecko-cap-carry";
   evidence: string;
 }
 
@@ -168,12 +169,20 @@ export const REVIEWED_SUPPLY_CARRIES: readonly ReviewedSupplyCarry[] = [
     reason: "nav-parent-price-gap",
     evidence: "NAV parent aid-gaib has no admissible price; STABLECOIN_PRICE_GAP_REVIEWS in stablecoin-publication-coverage.ts reviews that gap until 2026-11-14T12:37Z. No par valuation or fresh supply is admitted by this acknowledgement.",
   },
+  {
+    stablecoinId: "wm-m0",
+    reviewedAt: Date.parse("2026-11-08T08:41:00Z") / 1000,
+    expiresAt: Date.parse("2026-11-15T08:41:00Z") / 1000,
+    owner: "ops",
+    reason: "coingecko-cap-carry",
+    evidence: "O6 review: six missing deployments read 39.519543 wM at pinned 2026-11-08 blocks, but Nexus remains unreadable (https://docs.m0.org/resources/addresses/m0-platform; https://3946.rpc.thirdweb.com returns chain ID but rejects token/state reads). Legacy Plume retains 0.000001 wM. No complete native roster or inventory perimeter is admitted. CoinGecko cap publication recovered by 2026-11-08T08:30Z; this review is dormant for fresh supply and covers only a bounded coingecko-fallback restore, never a native or quarantine carry. No value or observation clock is changed.",
+  },
 ];
 
 /**
  * A review covers only the carry mechanism it was written for: a chain-dropout
- * quarantine carry, or a tracked native-supply restore. A carry produced by any
- * other path stays unacknowledged.
+ * quarantine carry, a tracked native-supply restore, or a CoinGecko cap restore.
+ * A carry produced by any other path stays unacknowledged.
  */
 function carryMatchesReview(
   asset: { supplyChainGuard?: { reason: string; status: string } | null; supplySource?: string | null },
@@ -182,7 +191,8 @@ function carryMatchesReview(
   const guard = asset.supplyChainGuard ?? null;
   return review.reason === "defillama-list-fill-default-carry"
     ? guard?.reason === "supply-chain-dropout" && guard.status === "quarantined"
-    : guard == null && asset.supplySource === "onchain-total-supply";
+    : guard == null && asset.supplySource === (review.reason === "coingecko-cap-carry"
+      ? "coingecko-fallback" : "onchain-total-supply");
 }
 
 function isReviewedValueRebaseline(stablecoinId: string, currentUsd: number, nowSec: number): boolean {
@@ -479,7 +489,9 @@ async function loadSupplyValueIntegrity(
       if (acknowledged) report.acknowledgedCarryReviews.push(review);
       else {
         report.unacknowledgedCarryIds.push(asset.id);
-        if (review != null && nowSec >= review.expiresAt) report.expiredCarryReviewIds.push(asset.id);
+        if (review != null && nowSec >= review.expiresAt && carryMatchesReview(asset, review)) {
+          report.expiredCarryReviewIds.push(asset.id);
+        }
       }
       const observedAt = asset.supplyObservedAt;
       if (typeof observedAt === "number" && Number.isSafeInteger(observedAt) && observedAt > 0) {
