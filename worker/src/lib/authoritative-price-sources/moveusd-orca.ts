@@ -47,7 +47,8 @@ export async function fetchMoveusdOrcaPrice(context: LivePriceContext, signal?: 
       || balances.some((balance) => balance <= 0) || inventoryUsd < DEXSCREENER_MIN_LIQUIDITY_USD) return reject("inventory");
     const observedAt = Math.min(observedBlock.timestamp, parent.trustedParent.observedAt);
     const now = Math.floor(Date.now() / 1000);
-    const maxAge = getPricingSourceRegistryEntry(SOURCE)!.maxTrustedAgeSec;
+    const maxAge = getPricingSourceRegistryEntry(SOURCE)?.maxTrustedAgeSec ?? null;
+    if (maxAge == null) return reject("dependency-age");
     if (!validateCompositePricingSourceFreshness({ ...parent.trustedParent, nowSec: now, requireObservedAt: true }).accepted
       || ![observedBlock.timestamp, parent.trustedParent.observedAt].every((time) =>
       Number.isSafeInteger(time) && time > 0 && time <= now && now - time < maxAge)) return reject("dependency-age");
