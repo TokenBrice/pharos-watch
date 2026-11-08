@@ -334,7 +334,7 @@
     "cadc-cad-coin": "core-stablecoin",
     "qcad-stablecorp": "core-stablecoin",
     "cadd-cad-digital": "core-stablecoin",
-    "pht-pht": "core-stablecoin",
+    "pht-pht": "excluded",
     "cetes-etherfuse": "cash-equivalent",
     "syrupusdc-maple": "stablecoin-variant",
     "syrupusdt-maple": "stablecoin-variant",

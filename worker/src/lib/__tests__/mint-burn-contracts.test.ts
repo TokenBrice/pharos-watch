@@ -323,6 +323,11 @@ describe("mint-burn-contracts Ethereum transfer expansion", () => {
 
   it.each(expectedConfigs)("tracks $stablecoinId with the authored event and identity contract", (expected) => {
     const cfg = MINT_BURN_CONFIGS.find((c) => c.chain.chainId === "ethereum" && c.contractAddress === expected.address);
+    if (expected.stablecoinId === "pht-pht") {
+      expect(cfg).toBeUndefined();
+      expect(MINT_BURN_CONFIGS.some((c) => c.stablecoinId === expected.stablecoinId)).toBe(false);
+      return;
+    }
     expect(cfg).toMatchObject({
       stablecoinId: expected.stablecoinId, symbol: expected.symbol, contractAddress: expected.address,
       decimals: expected.decimals, dustThreshold: expected.dustThreshold, startBlock: expected.startBlock,
