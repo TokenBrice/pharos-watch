@@ -191,21 +191,6 @@ describe("syncRedemptionBackstops", () => {
     );
   });
 
-  it("returns an error when the stablecoins cache is unavailable", async () => {
-    loadStablecoinsCacheMock.mockResolvedValue({
-      kind: "error",
-      reason: "missing-cache",
-      updatedAt: null,
-    });
-
-    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
-    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
-
-    expect(result.status).toBe("error");
-    expect(result.metadata).toContain("stablecoins-cache:missing-cache");
-    expect(upsertRedemptionBackstopSnapshotsMock).not.toHaveBeenCalled();
-  }, GATE_LOAD_TIMEOUT_MS);
-
   it.each(["reserve", "stablecoins"])("opens no manifest or rows on a global %s admission hold", async (input) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {

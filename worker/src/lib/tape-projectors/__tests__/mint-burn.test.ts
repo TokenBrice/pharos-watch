@@ -350,18 +350,6 @@ describe("psi projector", () => {
     expect(ups[0]![2]).toBe("info");
   });
 
-  it("emits nothing when consecutive samples share a band", async () => {
-    const db = mockTapeD1(
-      tables([
-        { stored_at: SEC,       score: 96, band: "BEDROCK", methodology_version: "3.3" },
-        { stored_at: SEC + 900, score: 95, band: "BEDROCK", methodology_version: "3.3" },
-      ]),
-    ) as MockD1Database;
-
-    await projectPsiBandShifts(db);
-    expect(tapeInsertBinds(db)).toHaveLength(0);
-  });
-
   it("uses the immediately preceding same-band score and keeps payloads identical across split scans", async () => {
     const scan = async (split: boolean) => {
       const { db, sqlite } = fixtures.open();

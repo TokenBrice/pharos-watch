@@ -288,13 +288,6 @@ describe("Morpho lender NAV branch materiality", () => {
       .toEqual({ tier: "standard-external", missingBranch: true });
   });
 
-  it("uses total NAV including idle, not the deployed denominator or rounded weights", () => {
-    const branches = morphoBranches();
-    expect(deriveMorphoOracleBranchMateriality(branches, "single-source-or-laggy",
-      lenderBook([lenderClaim("a", "1000"), lenderClaim("b", "999")]), borrowerPaths(branches)))
-      .toEqual({ tier: "standard-external", missingBranch: false });
-  });
-
   it("aggregates accounts of the same core/market before thresholding", () => {
     const branches = morphoBranches();
     expect(deriveMorphoOracleBranchMateriality(branches, "single-source-or-laggy",

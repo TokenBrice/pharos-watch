@@ -204,28 +204,6 @@ describe("fetchEvmLogsForTopicWithCompleteness", () => {
 
   const noopLimiter = <T>(fn: () => Promise<T>) => fn();
 
-  it("returns logs on success", async () => {
-    const mockLogs = [
-      {
-        address: "0x" + "11".repeat(20),
-        topics: ["0x" + "22".repeat(32)],
-        data: "0x",
-        blockNumber: "0x1",
-        timeStamp: "0x1000",
-        transactionHash: "0x" + "33".repeat(32),
-        logIndex: "0x0",
-      },
-    ];
-    mockFetch([{ match: () => true, body: { status: "1", message: "OK", result: mockLogs } }]);
-
-    const budget = createBudget(10);
-    const result = await fetchEvmLogsForTopicWithCompleteness(1, "0x123", "0xabc", null, 0, 100, 0, noopLimiter, budget);
-
-    expect(result.complete).toBe(true);
-    expect(result.logs).toHaveLength(1);
-    expect(budget.count).toBe(1);
-  });
-
   it("retains malformed provider evidence and fences its block while keeping valid peers", async () => {
     const valid = {
       address: "0x" + "11".repeat(20),

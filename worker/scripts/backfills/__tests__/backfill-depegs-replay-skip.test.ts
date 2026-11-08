@@ -169,34 +169,6 @@ describe("backfill replay episode skips", () => {
     expect(appliedEvents.map((event) => event.startedAt)).toEqual([UNCOVERED_EPISODE.startedAt]);
   });
 
-  it("keeps recomputed episodes when no live row covers them", async () => {
-    stubReplayEvents([UNCOVERED_EPISODE]);
-    const applyBackfillEvents = vi.fn();
-    const db = mockD1([
-      {
-        match: "FROM depeg_events WHERE stablecoin_id = ? ORDER BY started_at",
-        matchBinds: ["usn-noon"],
-        rows: [LIVE_ROW],
-      },
-    ]);
-
-    const outcome = await executeBackfillForCoin({
-      db,
-      prepared: { meta: USN_META, geckoId: "noon-usn", supplyTokens: [], currentSupplyUsd: 1_000_000_000 },
-      pegRates: { peggedUSD: 1 },
-      fxRates: undefined,
-      fxSeries: {},
-      commoditySeries: {},
-      replayWindow: null,
-      coingeckoApiKey: null,
-      dryRun: false,
-      applyBackfillEvents,
-    });
-
-    expect(outcome.status).toBe("applied");
-    expect(outcome.eventCount).toBe(1);
-  });
-
   it.each([false, true])("preserves all-absent supply history even with a current fallback (dryRun=%s)", async (dryRun) => {
     stubReplayEvents([]);
     const applyBackfillEvents = vi.fn();

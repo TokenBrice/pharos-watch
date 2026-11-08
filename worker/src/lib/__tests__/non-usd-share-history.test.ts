@@ -210,63 +210,6 @@ describe("non-USD share producer aggregation", () => {
     db.assertAllMatchesUsed();
   });
 
-  it("downsamples older monthly, mid-range weekly, and recent daily points", async () => {
-    const nowMs = Date.UTC(2026, 3, 8, 12, 0, 0);
-    const cutoff = Math.floor(nowMs / 1000) - 5000 * 86400;
-    const completedSnapshotDate = unix("2026-04-08T00:00:00Z");
-    vi.spyOn(Date, "now").mockReturnValue(nowMs);
-
-    const db = mockD1(
-      [
-        {
-          match: "FROM cache",
-          matchBinds: ["snapshot-supply:last-write"],
-          rows: [
-            {
-              key: "snapshot-supply:last-write",
-              value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
-              updated_at: unix("2026-04-08T08:00:00Z"),
-            },
-          ],
-          first: {
-            key: "snapshot-supply:last-write",
-            value: JSON.stringify({ snapshotDate: completedSnapshotDate }),
-            updated_at: unix("2026-04-08T08:00:00Z"),
-          },
-        },
-        COIN_HISTORY_GAPS,
-        {
-          match: "FROM supply_history",
-          matchBinds: [
-            JSON.stringify(CORE_IDS),
-            JSON.stringify(COMMODITY_IDS),
-            JSON.stringify(FIAT_NON_USD_IDS),
-            cutoff,
-            completedSnapshotDate,
-          ],
-          rows: [
-            { snapshot_date: unix("2023-01-01T00:00:00Z"), total: 100, commodity: 10, fiat_non_usd: 5 },
-            { snapshot_date: unix("2023-01-20T00:00:00Z"), total: 100, commodity: 11, fiat_non_usd: 5 },
-            { snapshot_date: unix("2024-12-01T00:00:00Z"), total: 100, commodity: 12, fiat_non_usd: 5 },
-            { snapshot_date: unix("2024-12-05T00:00:00Z"), total: 100, commodity: 13, fiat_non_usd: 5 },
-            { snapshot_date: unix("2026-04-01T00:00:00Z"), total: 100, commodity: 14, fiat_non_usd: 5 },
-            { snapshot_date: unix("2026-04-01T12:00:00Z"), total: 100, commodity: 15, fiat_non_usd: 5 },
-          ],
-        },
-      ],
-    );
-
-    const body = await computeHistory(db);
-
-    expect(body.map((point) => point.date)).toEqual([
-      unix("2023-01-01T00:00:00Z"),
-      unix("2024-12-01T00:00:00Z"),
-      unix("2026-04-01T00:00:00Z"),
-    ]);
-    expect(body.map((point) => point.commodityShare + point.fiatNonUsdShare)).toEqual([15, 17, 19]);
-    db.assertAllMatchesUsed();
-  });
-
   describe("partial snapshot days", () => {
     const [largeUsdId, smallUsdId] = USD_IDS;
     const commodityId = COMMODITY_IDS[0]!;

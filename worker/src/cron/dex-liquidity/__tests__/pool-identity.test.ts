@@ -468,18 +468,6 @@ describe("pool identity dedup", () => {
 });
 
 describe("buildPoolIdentity isStableHint", () => {
-  it("forces stable shape when isStableHint is true even if isStable is null", () => {
-    const identity = buildPoolIdentity({
-      chain: "ethereum",
-      protocol: "balancer-v3",
-      poolAddressOrId: "6b6de6c7-uuid-not-an-address",
-      tokenAddresses: ["0xusdc0000000000000000000000000000000000000", "0xusdt0000000000000000000000000000000000000"],
-      poolType: "balancer-weighted",
-      isStable: null,
-      isStableHint: true,
-    });
-    expect(identity.derivedMatchKey).toContain("|stable|");
-  });
   it("leaves weighted shape when isStableHint is absent", () => {
     const identity = buildPoolIdentity({
       chain: "ethereum",

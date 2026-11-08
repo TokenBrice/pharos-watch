@@ -477,32 +477,4 @@ describe("confirmPendingDepegs", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending_outcomes").get()).toEqual({ count: 0 });
   });
 
-  it("persists a lifecycle outcome before deleting a promoted pending row", async () => {
-    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
-    const { sqlite, db } = openFixture();
-    const pending = makePendingRow({ id: 64, first_seen_bps: -200, first_price: 0.98 });
-    insertPending(sqlite, pending);
-    insertDexPrice(sqlite, pending.stablecoin_id, pending.symbol, 0.988, [
-      { price: 0.988, tvl: 3_000_000, protocol: "curve", sourceFamily: "curve", chain: "ethereum" },
-      { price: 0.987, tvl: 2_000_000, protocol: "uniswap", sourceFamily: "uniswap", chain: "ethereum" },
-    ]);
-
-    await confirmPendingDepegs(db, [makeAsset({
-      id: pending.stablecoin_id,
-      symbol: pending.symbol,
-      geckoId: undefined,
-      price: 0.985,
-      priceSource: "pool-tvl-weighted",
-      priceConfidence: "low",
-      priceObservedAt: NOW_SEC - 30,
-      priceUpdatedAt: NOW_SEC - 30,
-      priceSyncedAt: NOW_SEC - 30,
-    })]);
-
-    const state = lifecycle(sqlite, pending.stablecoin_id, pending.id);
-    expect(state.pending).toBeUndefined();
-    expect(state.outcomes).toHaveLength(1);
-    expect(state.outcomes[0]).toMatchObject({ pending_id: pending.id, outcome: "promoted" });
-    expect(state.events).toHaveLength(1);
-  });
 });

@@ -19,7 +19,6 @@ export type PriceValidationMode =
 export type { PriceReferenceType } from "@shared/types/core";
 
 export type { PegClass };
-export { pegTypeFromCurrency as normalizePegTypeFromCurrency };
 
 export interface PriceValidationContext {
   stablecoinId?: string;

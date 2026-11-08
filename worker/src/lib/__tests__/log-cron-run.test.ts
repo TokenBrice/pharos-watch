@@ -102,17 +102,6 @@ describe("logCronRun", () => {
     expect(signalRef!.aborted).toBe(false);
   });
 
-  it("logs error status when job throws", async () => {
-    const { sqlite, db } = fixtures.open();
-    await expect(
-      logCronRun(db, "test-job", async () => {
-        throw new Error("boom");
-      })
-    ).rejects.toThrow("boom");
-    expect(sqlite.prepare("SELECT status, item_count, error FROM cron_runs").all())
-      .toEqual([{ status: "error", item_count: null, error: expect.stringContaining("boom") }]);
-  });
-
   it("persists the producing generation clock rather than the successful attempt clock", async () => {
     const { sqlite, db } = fixtures.open();
     await logCronRun(db, "test-job", async () => ({

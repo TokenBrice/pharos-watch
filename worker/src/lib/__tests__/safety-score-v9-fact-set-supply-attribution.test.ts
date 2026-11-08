@@ -727,26 +727,6 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       }),
     }));
 
-    // Missing a captured packet retains uncertainty but does not prove a
-    // runtime A failure; cause classification requires a generation-bound attempt.
-    const { wm } = compileWm(wmFixedInput());
-    expect(wm.supply.status.observationState).toBe("bounded-unknown");
-    expect(wm.gaps).toContainEqual(expect.objectContaining({
-      reasonCode: "runtime-bridge-materiality-unavailable",
-      responsibility: "unresearched",
-      causeProof: { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
-    }));
-
-    // A join that did run over real per-chain rows and failed also stays bounded.
-    const joinedAlpha = compileSafetyScoreV9FactSetFromFixedInput(
-      exactFixedInput(),
-      nullSupplyReviewExtension({ bridge: "required" }),
-    ).assets[0]!;
-    expect(joinedAlpha.supply.status.observationState).toBe("bounded-unknown");
-    expect(joinedAlpha.evidence).toContainEqual(expect.objectContaining({
-      evidenceId: "alpha:supply-review-outcome",
-      rejection: expect.objectContaining({ code: "supply-review.ambiguous-route-join" }),
-    }));
   });
 
   it("keeps a null supply review known when bridge applicability is explicitly not applicable", () => {

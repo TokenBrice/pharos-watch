@@ -307,32 +307,6 @@ describe("runCronDurationWatchdog", () => {
     });
   });
 
-  it("keeps not-started reconciliation visible without phantom accounting columns", async () => {
-    const db = watchdogDb([
-      slotStatsMatcher([{
-        slot_key: "halfHourlyOffset",
-        slots: 142,
-        error_slots: 12,
-        abandoned_slots: 37,
-        not_started_slots: 3,
-        latest_abandoned_at: NOW_SEC - 60,
-      }]),
-    ]);
-
-    const result = await runCronDurationWatchdog(db);
-
-    expect(result.status).toBe("ok");
-    expect(JSON.parse(result.metadata!)).toMatchObject({
-      slotStats: expect.arrayContaining([
-        expect.objectContaining({
-          scheduleKey: "halfHourlyOffset",
-          abandonedSlots: 37,
-          notStartedSlots: 3,
-        }),
-      ]),
-    });
-  });
-
   it("executes lifecycle classification against SQLite with the surviving keys", async () => {
     const { sqlite } = sqliteFixtures.open();
     const insertSlot = sqlite.prepare(

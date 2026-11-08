@@ -272,7 +272,7 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
     ],
     tests: [
       "worker/src/lib/__tests__/digest-safety-map.test.ts",
-      "worker/src/cron/__tests__/daily-digest-generation.test.ts",
+      "worker/src/cron/__tests__/daily-digest.test.ts",
       "worker/src/cron/__tests__/digest-publication-watchdog.test.ts",
       "worker/src/cron/__tests__/safety-map-producer-kick.test.ts",
     ],

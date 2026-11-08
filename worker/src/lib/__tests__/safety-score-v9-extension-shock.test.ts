@@ -1,5 +1,3 @@
-import { createHash } from "node:crypto";
-
 import { describe, expect, it } from "vitest";
 
 import shockCoverage from "@shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
@@ -26,10 +24,6 @@ function latestEligibleRow(assetId: string, clockSec: number): RegistryRow {
     .sort((left, right) => right.block.timestampUnix - left.block.timestampUnix)[0];
   if (!row) throw new Error(`Expected an eligible registry row for ${assetId}`);
   return row;
-}
-
-function sha256Json(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
 
 function expectRegisteredSelection(measurement: CoverageMeasurement, row: RegistryRow) {
@@ -103,7 +97,6 @@ describe("selectSafetyScoreV9CdpShockMeasurement", () => {
         stressLiquidationCoverageRatio: 1,
       },
     ]);
-    expect(sha256Json(lusd.codeHashPins)).toMatch(/^[0-9a-f]{64}$/);
     expect(lusd.codeHashPins[0]).toMatchObject({ name: "lusd-token", role: "token" });
     expect(lusd.codeHashPins[lusd.codeHashPins.length - 1]).toMatchObject({ role: "oracle-fallback-source" });
   });

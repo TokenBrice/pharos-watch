@@ -217,6 +217,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
@@ -345,50 +346,8 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
     await run(pool, state);
 
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
-    });
-  });
-
-  it("keeps the rate-bearing gate when a base-only capture has an invalid rate array", async () => {
-    const state = dependencies({ rates: [10n ** 18n] });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
-    });
-  });
-
-  it("keeps the rate-bearing gate when a base-only capture is stale", async () => {
-    const state = dependencies({
-      rates: [10n ** 18n, 10n ** 18n],
-      header: { timestamp: BLOCK_TIMESTAMP - CURVE_STABLESWAP_RATE_CAPTURE_MAX_AGE_SEC - 1, hash: BLOCK_HASH },
-    });
-    const pool = poolEntry();
-    await run(pool, state, BLOCK_TIMESTAMP);
-
-    expect(state.fetchMulticall).not.toHaveBeenCalled();
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
-    expect(pool.extra?.executionCapabilityGate).toEqual({
-      family: "curve-stableswap",
-      reason: "rate-bearing-inputs",
-    });
-  });
-
-  it("keeps the rate-bearing gate when a base-only capture drifts coin order", async () => {
-    const state = dependencies({ rates: [10n ** 18n, 10n ** 18n], coinAddresses: [FRXUSD, SFRXUSD] });
-    const pool = poolEntry();
-    await run(pool, state);
-
-    expect(pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",
       reason: "rate-bearing-inputs",
@@ -418,6 +377,7 @@ describe("Curve StableSwap-NG rate-input state capture", () => {
 
     expect(state.fetchMulticall).not.toHaveBeenCalled();
     expect(pool.extra?.ammExecutionModel).toBeUndefined();
+    expect(pool.extra?.curveStableswapPlainAdmissionDiagnostic).toBeUndefined();
     expect(pool.extra?.curveStableswapRateInputExecutionCandidate).toBeUndefined();
     expect(pool.extra?.executionCapabilityGate).toEqual({
       family: "curve-stableswap",

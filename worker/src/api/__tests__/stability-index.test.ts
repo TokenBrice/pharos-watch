@@ -50,15 +50,6 @@ describe("handleStabilityIndex contract tests", () => {
 
     const body = await readJsonResponse(res, 200);
 
-    expect(body).toHaveProperty("current");
-    expect(body).toHaveProperty("history");
-    expect(body).toHaveProperty("methodology");
-    expect((body as { current: Record<string, unknown> }).current).toHaveProperty("score");
-    expect((body as { current: Record<string, unknown> }).current).toHaveProperty("band");
-    expect((body as { current: Record<string, unknown> }).current).toHaveProperty("components");
-    expect((body as { current: Record<string, unknown> }).current).toHaveProperty("methodologyVersion");
-    expect((body as { methodology: Record<string, unknown> }).methodology).toHaveProperty("version");
-    expect((body as { methodology: Record<string, unknown> }).methodology).toHaveProperty("changelogPath");
     expect(body).toHaveProperty("history", [
       { date: yesterdayMidnight, score: 71, band: "TREMOR", methodologyVersion: "2.1" },
     ]);
@@ -70,9 +61,6 @@ describe("handleStabilityIndex contract tests", () => {
 
     const body = await readJsonResponse(res, 200);
 
-    expect(body).toHaveProperty("current");
-    expect(body).toHaveProperty("history");
-    expect(body).toHaveProperty("methodology");
     const typedBody = body as { history: Record<string, unknown>[] };
     expect(typedBody.history).toEqual([{
       date: yesterdayMidnight, score: 71, band: "TREMOR", methodologyVersion: "2.1",

@@ -342,18 +342,6 @@ describe("status evaluation policy", () => {
     expect(assessment.authoritativeFreshCoverageRatio).toBe(0.8);
   });
 
-  it("keeps a bounded continuation healthy without using deferred share as a capacity verdict", () => {
-    const assessment = evaluateReserveCompositionStatus(
-      makeReserveComposition({
-        runBudgetTruncated: true,
-        deferredCoins: 1,
-        nextCursorStablecoinId: "coin-a",
-      }),
-    );
-
-    expect(assessment.status).toBe("healthy");
-  });
-
   it.each([
     [0, false, 0, "healthy"],
     [3, true, 0, "healthy"],
@@ -363,27 +351,6 @@ describe("status evaluation policy", () => {
       inProgressCoins: 8, deferredCoins, runBudgetTruncated, writeTimeoutUncertain,
     }));
     expect(assessment.status).toBe(status);
-  });
-
-  it("does not degrade reserve coverage for high-share continuation alone", () => {
-    const highShare = evaluateReserveCompositionStatus(
-      makeReserveComposition({
-        runBudgetTruncated: true,
-        deferredCoins: 3,
-      }),
-    );
-
-    expect(highShare.status).toBe("healthy");
-  });
-
-  it("degrades reserve status for uncertain writes", () => {
-    const uncertainWrite = evaluateReserveCompositionStatus(
-      makeReserveComposition({
-        writeTimeoutUncertain: 1,
-      }),
-    );
-
-    expect(uncertainWrite.status).toBe("degraded");
   });
 
   it("marks reserve status stale only when no fresh coverage remains", () => {

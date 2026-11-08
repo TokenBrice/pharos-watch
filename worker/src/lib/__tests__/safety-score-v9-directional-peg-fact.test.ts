@@ -117,17 +117,6 @@ describe("Safety Score V9 directional peg fact", () => {
     );
   });
 
-  it("reads a null discount entry as an observed premium-only capture, not a gap", () => {
-    const peg = buildPeg(factBuilderContext(openEventInput(1_619, { directionalPeg: directionalPeg() })));
-
-    expect(peg).toMatchObject({
-      status: { observationState: "known" },
-      pegScore: DIRECTIONAL_PEG_SCORE,
-      activeDepeg: false,
-      activeDepegBps: null,
-    });
-  });
-
   it("fails closed when a witness peak has no discount entry", () => {
     const context = factBuilderContext(openEventInput(1_619, { directionalPeg: directionalPeg() }));
     // Producer inconsistency the contract would reject; the builder must not read

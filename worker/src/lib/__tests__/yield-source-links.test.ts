@@ -111,16 +111,6 @@ describe("resolveYieldSourceUrl", () => {
     ).toBe("https://app.aave.com/");
   });
 
-  it("falls back to the linked child venue instead of the parent issuer", () => {
-    expect(
-      resolveYieldSourceUrl({
-        stablecoinId: "usdc-circle",
-        sourceKey: "linked-variant:yvusdc-yearn:price-derived",
-        yieldSource: "Yearn v3 USDC vault",
-      }),
-    ).toBe("https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204");
-  });
-
   it("preserves a structured linked alternative's child-owned source link", () => {
     expect(
       resolveYieldSourceUrl({

@@ -760,6 +760,7 @@ describe("buildSafetyScoreV9MechanismReview", () => {
     if (review.archetype !== "fiat-cash") throw new Error("unexpected archetype");
     expect(review.custodyContinuity.status.applicability.state).toBe("required");
     expect(review.custodyContinuity.status.observationState).toBe("bounded-unknown");
+    expect(review.custodyContinuity.status.gapIds).not.toHaveLength(0);
     expect(review.custodyContinuity.status.evidenceRefIds).toHaveLength(1);
     expect(review.custodyContinuity.quality).toBeNull();
 

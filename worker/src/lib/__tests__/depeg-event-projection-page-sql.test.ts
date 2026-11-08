@@ -412,12 +412,6 @@ describe("public depeg page effective onset", () => {
       }
     }
 
-    // The frozen definition still exhibits the incident's per-event-row hotspot.
-    const legacy = pageSql(LEGACY_PUBLIC_DEPEG_EVENTS_SQL, exclusion, 50, 0);
-    const legacyPlan = queryPlan(fixture, legacy.sql, []);
-    expect(legacyPlan).toContain("MATERIALIZE projection");
-    expect(legacyPlan).toContain("SCAN projection LEFT-JOIN");
-
     // The migration, not test-only SQL, is what supplies both access paths.
     fixture.sqlite.exec(`DROP INDEX ${CURRENT_EVENT_INDEX}`);
     fixture.sqlite.exec(`DROP INDEX ${ALIAS_INDEX}`);

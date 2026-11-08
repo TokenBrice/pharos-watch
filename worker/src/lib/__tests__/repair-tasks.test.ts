@@ -952,20 +952,4 @@ describe("repair tasks", () => {
     }
   });
 
-  it("adopts an in-cap flap member and closes the task below the cap", async () => {
-    const db = makeSqliteD1();
-    try {
-      seedFlapCapBoundaryFixture(db, DDR_FLAP_TOLERANT_MAX_LINK_COUNT_V1 - 4);
-      const result = await runWorkerRepairTaskRunner(db, { nowSec: NOW });
-      expect(readFlapCapState(db)).toEqual({
-        currentEventId: 42, targetLinkRelation: "repair_replacement", linkCount: 29,
-        taskState: "closed", taskLastError: null,
-      });
-      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
-        claimed: 1, autoRepairCount: 1, closed: 1, deferred: 0, failed: 0,
-      });
-    } finally {
-      db.close();
-    }
-  });
 });

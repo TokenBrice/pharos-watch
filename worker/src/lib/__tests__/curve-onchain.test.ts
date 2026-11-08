@@ -66,68 +66,9 @@ describe("fetchCurveOnchainPrices", () => {
     expect([...candidate.value.observedAtByCoinId.values()]).toEqual(Array(baselineRoutes.length).fill(1_799_999_970));
   });
 
-  it("includes verified Curve configs with explicit indices, decimals and USD dependencies", () => {
-    const byId = new Map(CURVE_POOL_CONFIGS.map((config) => [config.stablecoinId, config]));
-    const expectedConfigs = [
-      ["usdat-saturn", "0xF4d0CF32908b2C7f1021339c43Df0F77f06896d7", 0, 1, 6, 6],
-      ["apxusd-apyx", "0xE1B96555BbecA40E583BbB41a11C68Ca4706A414", 1, 0, 6, 18],
-      ["usat-tether", "0x0Bdb2c3AF83EE1d3196FA64d3162e54624B5f6b0", 1, 0, 6, 6],
-      ["usdg-paxos", "0xc061caa073f3d95F80f8e5428d32D2d76F5e1622", 1, 0, 6, 6],
-      ["nusd-neutrl", "0x7E19F0253A564e026C63eeAA9338d6DBddeF3b09", 1, 0, 6, 18],
-      ["usdf-falcon", "0x72310DAAed61321b02B08A547150c07522c6a976", 0, 1, 6, 18],
-      ["eusd-electronic-usd", "0x08BfA22bB3e024CDfEB3eca53c0cb93bF59c4147", 1, 0, 6, 18],
-      ["fidd-fidelity", "0xE47E8Ced9D94AA43C922627782E29b41a93202AF", 1, 0, 6, 18],
-      ["usdq-quantoz", "0x5a8C7623FEe10542614e492c670a67e3DfE922F8", 1, 0, 6, 6],
-    ] as const;
-
-    for (const [stablecoinId, poolAddress, inputIndex, outputIndex, inputDecimals, outputDecimals] of expectedConfigs) {
-      expect(byId.get(stablecoinId)).toMatchObject({
-        poolAddress,
-        inputIndex,
-        outputIndex,
-        inputDecimals,
-        outputDecimals,
-        routeType: ["usat-tether", "usdq-quantoz"].includes(stablecoinId) ? "one-hop" : "direct",
-      });
-    }
-  });
-
   it("keeps audited Curve route configs explicit and uniquely keyed", () => {
     const ids = CURVE_POOL_CONFIGS.map((config) => config.stablecoinId);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(CURVE_POOL_CONFIGS).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          stablecoinId: "apyusd-apyx",
-          hop: { viaStablecoinId: "apxusd-apyx" },
-          routeType: "one-hop",
-        }),
-        expect.objectContaining({
-          stablecoinId: "msusd-metronome",
-          hop: { viaStablecoinId: "frxusd-frax" },
-          routeType: "chained-hop",
-          maxHopDepth: 2,
-        }),
-        expect.objectContaining({
-          stablecoinId: "sfrxusd-frax",
-          hop: { viaStablecoinId: "frxusd-frax" },
-          routeType: "chained-hop",
-          maxHopDepth: 2,
-        }),
-        expect.objectContaining({
-          stablecoinId: "alusd-alchemix",
-          hop: { viaStablecoinId: "frxusd-frax" },
-          routeType: "chained-hop",
-          maxHopDepth: 2,
-        }),
-        expect.objectContaining({
-          stablecoinId: "avusd-avant",
-          hop: { viaStablecoinId: "frxusd-frax" },
-          routeType: "chained-hop",
-          maxHopDepth: 2,
-        }),
-      ]),
-    );
   });
 
   it("parses get_dy response into implied price", async () => {

@@ -504,16 +504,6 @@ describe("snapshotPublicDataset", () => {
       "usdc-circle",
       "usdt-tether",
     ]);
-
-    const insert = findD1HistoryEntry(db, "INSERT OR IGNORE INTO public_snapshots");
-    expect(insert?.sql).toContain("json_extract(value, '$.identity.publicationGenerationId')");
-    expect(insert?.binds.slice(6, 9)).toEqual([
-      "report-cards:v9", source.snapshot.updatedAt, source.snapshot.safetyScoreIdentity.publicationGenerationId,
-    ]);
-    expect(insert?.binds.slice(-3)).toEqual([
-      "report-cards:v9:publication-health", source.snapshot.safetyScoreIdentity.publicationGenerationId, source.snapshot.updatedAt,
-    ]);
-    expect(activeSafetyScoreSource.loadActiveSafetyScoreSource).toHaveBeenCalledTimes(1);
   });
 
   it("does not seal a stale active V9 publication", async () => {

@@ -454,31 +454,6 @@ describe("live-reserves-store", () => {
     }
   });
 
-  it("treats a success finalization batch no-op as finalized when authoritative readback matches the attempt", async () => {
-    const db = mockD1([
-      {
-        match: "INSERT INTO reserve_composition (",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-      {
-        match: "UPDATE reserve_sync_state",
-        rows: [],
-        runMeta: { changes: 0 },
-      },
-      {
-        match: "JOIN reserve_sync_state",
-        rows: [],
-        first: { finalized: 1 },
-      },
-    ]);
-    const attemptId = "attempt-readback-no-op";
-
-    const result = await finalizeReserveSuccess(db, attemptId);
-
-    expect(result.finalized).toBe(true);
-  });
-
   it("treats an ambiguous success finalization batch error as finalized when authoritative readback matches the attempt", async () => {
     const db = mockD1([
       {

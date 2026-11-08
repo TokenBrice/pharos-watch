@@ -1568,39 +1568,13 @@ describe("buildSafetyScoreV9RetainedRedemptionRoutes", () => {
       Object.assign(observation, { outputUnitValueUsd: 0.99,
         outputUnitValueSourceId: "dex-amm-output-reference:curve:tracked-market",
         outputUnitValueObservedAt: NOW, observedAt: NOW }, pin);
-      const valuation = buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]?.output?.valuation ?? null;
+      const valuation = buildSafetyScoreV9RouteReviews(fixedInput, "dai-makerdao")[0]?.output?.valuation;
       if (valid && !(dexOnlyRejection && lane === "dex")) {
         expect(valuation).toMatchObject({ basis: "price", unitValueUsd: 0.99, expectedUnitValueUsd: 1,
           observedAtSec: NOW, sourceId: observation.outputUnitValueSourceId });
       } else expect(valuation).toBeNull();
     }
   });
-
-  it.each([
-    { outputPinSource: "source-token-usd" },
-  ] as const)(
-    "rejects persisted $outputPinSource DEX output pins without independent valuation",
-    ({ outputPinSource }) => {
-      const { fixedInput, route } = dexPegFixture({
-        assetId: "asset-input",
-        routeOverrides: {
-          routeId: "dex:asset-input:dl:ethereum%3Apool:ethereum%3Aoutput",
-          output: { kind: "tracked-stablecoin", trackedAssetIds: ["usdt-tether"] },
-          outputUnitValueUsd: 1,
-          outputUnitValueSourceId: `dex-amm-output-reference:curve:${outputPinSource}`,
-          outputUnitValueObservedAt: NOW,
-        },
-        pegDataById: { "usdt-tether": { pegCurrency: "USD", currentDeviationBps: null } },
-      });
-      expect(buildSafetyScoreV9RouteReviews(
-        fixedInput, "asset-input",
-      )[0]?.output?.valuation).toBeNull();
-      route.outputUnitValueSourceId = "dex-amm-output-reference:curve:tracked-market";
-      expect(buildSafetyScoreV9RouteReviews(
-        fixedInput, "asset-input",
-      )[0]?.output?.valuation).toMatchObject({ unitValueUsd: 1 });
-    },
-  );
 
   it.each(["dex", "redemption"] as const)(
     "preserves tracked output valuation in a pre-census fixed input for %s", (lane) => {

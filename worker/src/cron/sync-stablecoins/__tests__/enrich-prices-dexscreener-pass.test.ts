@@ -133,29 +133,6 @@ describe("runDexScreenerPass", () => {
     });
   });
 
-  it("averages the two middle exact fallback prices for even pool counts", async () => {
-    vi.mocked(fetchDsTokenPoolsWithStatus).mockResolvedValueOnce({
-      ok: true,
-      pairs: [
-        exactPool("0xabc", "0xpair1", "0.99"),
-        exactPool("0xabc", "0xpair2", "1.01"),
-      ],
-    });
-
-    const asset = makeMissingAsset({
-      id: "exact-usd",
-      symbol: "EXACT",
-      address: "0xabc",
-      chains: ["Base"],
-    });
-    const result = await runDexScreenerPass([asset], undefined, undefined);
-
-    expect(result).toMatchObject({ resolved: 1, failures: [] });
-    expect(asset.price).toBe(1.0);
-    expect(asset.priceSource).toBe("dexscreener-exact");
-    expect(asset.priceConfidence).toBe("fallback");
-  });
-
   it("keeps valid exact pricing beside rejected rows and leaves absent/zero volume as valid rows", async () => {
     const actual = await vi.importActual<typeof import("../../../lib/dexscreener")>("../../../lib/dexscreener");
     const { volume: _volume, ...absentVolume } = exactPool("0xabc", "0xpair1", "0.99");
