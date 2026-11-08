@@ -536,6 +536,8 @@ The response-ready schema marker is `StablecoinListResponseSchema:v2`; retained 
 
 ## Coverage Decisions
 
+`wm-m0` retains CoinGecko supply: verified deployment candidates on Mantra, 0G, Fluent, Moca, Rise and Optimism do not establish a complete native roster while Nexus state reads remain unavailable (official RPC DNS fails; Thirdweb returns `-32603`). Legacy Plume's observed **0.000001 wM** remains in the required perimeter; Portal hub escrow holds underlying M, not duplicate wM. No new contracts, aggregate preference or inventory perimeter is admitted. `REVIEWED_SUPPLY_CARRIES` in `worker/src/lib/supply-integrity.ts` owns the dated `ops` review of bounded `coingecko-fallback` restores; fresh cap supply leaves it dormant.
+
 Verified redemptions and corrected provider circulating perimeters can use dated `REVIEWED_SUPPLY_VALUE_REBASELINES` in `worker/src/lib/supply-integrity.ts`. Reviews last at most fourteen days and accept only the existing 2% band around the evidenced level; they clear that asset's old drift comparison without changing published supply, history or ordinary drift thresholds. The registry owns review dates, expiry and source evidence.
 
 TRYB's configured exclusion `0x75950B957009fe615c8AE02fBAac8AaA6da91B2D` is BiLira's [redemption sweep](https://cs.bilira.co/hc/bilira-kripto-yardim-merkezi/articles/1742983312-tryb-yaratma-ve-yakma-surecinin-seffafligi): redeemed tokens wait there for periodic burns. Applying that exclusion corrects the circulating perimeter; the resulting provider step is not a new redemption at the time of the correction. A reviewed rebaseline requires the net deployment totals to reconcile with the published level.
