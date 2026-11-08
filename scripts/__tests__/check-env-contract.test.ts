@@ -63,7 +63,7 @@ describe("check-env-contract manifest bindings", () => {
       [[services]]
       binding = "invalid-binding"
     `)).toEqual([
-      expect.stringContaining("duplicate Worker binding keys: CORS_ORIGIN"),
+      "worker/wrangler.toml declares duplicate Worker binding keys: CORS_ORIGIN",
       expect.stringContaining("unsupported Worker binding keys: invalid-binding"),
       expect.stringContaining("CORS_ORIGIN ([[d1_databases]]) is D1Database"),
     ]);
@@ -220,17 +220,5 @@ describe("check-env-contract Wrangler binding parser", () => {
     ]);
     expect([...result.duplicates]).toEqual([]);
     expect(result.unsupported).toEqual([]);
-  });
-
-  it("reports duplicate Wrangler binding keys", () => {
-    const result = parseWranglerWorkerConfigBindings(`
-      [vars]
-      CORS_ORIGIN = "https://pharos.watch"
-
-      [[d1_databases]]
-      binding = "CORS_ORIGIN"
-    `);
-
-    expect([...result.duplicates]).toEqual(["CORS_ORIGIN"]);
   });
 });

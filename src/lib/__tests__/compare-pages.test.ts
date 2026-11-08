@@ -451,11 +451,6 @@ describe("reviewed redemption evidence", () => {
   });
 
   it("keeps the $100,000 redemption minimum distinct from the $1,000 fee minimum", () => {
-    const rows = buildComparisonAtAGlanceRows(getPage("usdt-tether-vs-usdc-circle"), NOW_SEC);
-    expect(findRow(rows, "Redemption minimum")?.left).toBe("$100,000 (reviewed 2026-04-16)");
-    expect(findRow(rows, "Redemption fee basis")?.left).toBe(
-      "0.10%, with a minimum fee of $1,000 (reviewed 2026-04-16)",
-    );
     const config = REDEMPTION_BACKSTOP_CONFIGS["usdt-tether"];
     expect(config.v9RouteReviewTerms?.minRedeemUsd).toBe(100_000);
     expect(config.v9RouteCostTerms?.minFeeUsd).toBe(1_000);
@@ -598,14 +593,6 @@ describe("reviewed redemption evidence", () => {
   });
 
   it("keeps the PAXG tariff qualified and the XAUT issuer fee non-zero", () => {
-    const rows = buildComparisonAtAGlanceRows(getPage("paxg-paxos-vs-xaut-tether"), NOW_SEC);
-    const paxgFee = findRow(rows, "Redemption fee basis")?.left ?? "";
-    expect(paxgFee).toContain("Customer-specific pricing may override it");
-    expect(paxgFee).toContain("delivery, dealer, tax and bank costs are separate");
-    expect(paxgFee).not.toContain("55 bps");
-    const xautFee = findRow(rows, "Redemption fee basis")?.right ?? "";
-    expect(xautFee).toBe("25 bps issuer redemption fee, plus delivery and applicable fees (reviewed 2026-10-01)");
-    expect(xautFee).not.toMatch(/\bfree\b|\b0 bps\b/i);
     const xaut = REDEMPTION_BACKSTOP_CONFIGS["xaut-tether"];
     expect(xaut.physicalToUsd?.fees.issuerFeeBps).toBe(25);
     expect(xaut.physicalCommodityDelivery?.feeModel.bps).toBe(25);

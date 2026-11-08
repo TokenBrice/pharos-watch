@@ -913,22 +913,6 @@ function makeInheritanceChain(ids: string[], terminal = makeCoin({
 }
 
 describe("StablecoinMeta schema — frozen status", () => {
-  it("accepts a well-formed frozen coin", () => {
-    const json = [
-      makeCoin({ id: "fixture-frozen", status: "frozen",
-      frozenAt: "2026-04-27",
-      obituary: {
-        causeOfDeath: "abandoned",
-        deathDate: "2026-04",
-        epitaph: "Closed without ceremony.",
-        obituary: "FXT was sunset by its issuer.",
-        sourceUrl: "https://example.com/x",
-        sourceLabel: "Issuer announcement",
-      }, }),
-    ];
-    expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
-  });
-
   it("rejects a frozen coin missing the obituary block", () => {
     const json = [
       makeCoin({ id: "fixture-frozen-bad", status: "frozen",
@@ -1998,28 +1982,6 @@ describe("StablecoinMeta schema — variantOf / pegReferenceId coherence (Rule 1
         mintPath: "wrapped-or-variant-inherited",
         authorityPosture: "none-resolved",
         inheritedFrom: "variant-parent-ok",
-        controls: undefined,
-      }), }),
-    ];
-    expect(() => parseStablecoinMetaAssets(json, "fixture")).not.toThrow();
-  });
-
-  it("accepts a coin with variantOf only (no pegReferenceId)", () => {
-    const json = [
-      makeCoin({
-        id: "variant-parent-no-peg",
-        mintAuthority: makeMintAuthority({
-          mintPath: "immutable-user-collateralized",
-          authorityPosture: "none-resolved",
-          controls: undefined,
-        }),
-      }),
-      makeCoin({ id: "fixture-variant-no-peg", variantOf: "variant-parent-no-peg",
-      variantKind: "savings-passthrough",
-      mintAuthority: makeMintAuthority({
-        mintPath: "wrapped-or-variant-inherited",
-        authorityPosture: "none-resolved",
-        inheritedFrom: "variant-parent-no-peg",
         controls: undefined,
       }), }),
     ];

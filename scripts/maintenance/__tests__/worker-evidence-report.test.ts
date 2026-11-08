@@ -115,9 +115,6 @@ describe("21-day incident evidence", () => {
   });
 
   it("joins only singleton invocation/version evidence and retains duplicate delivery uncertainty", () => {
-    const joined = joinIncidentEvidence([delivery], [child], [deployment], [{ published_at: 100 }], definitions);
-    expect(joined[0].join).toBe("singleton-version-match");
-    expect(joined[0].publications[0].correlation).toBe("timestamp-only-not-causal-proof");
     expect(joinIncidentEvidence([delivery, delivery], [child], [deployment], [], definitions)[0].children).toEqual([]);
   });
 

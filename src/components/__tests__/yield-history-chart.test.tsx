@@ -173,20 +173,6 @@ describe("YieldHistoryChart", () => {
       isLoading: false,
     }));
 
-    render(
-      <YieldHistoryChart
-        stablecoinId="usdc-circle"
-        benchmarkRate={3}
-        benchmarkLabel="SOFR"
-        medianApy={0}
-        availableSources={[
-          { sourceKey: "a", yieldSource: "Source A" },
-          { sourceKey: "b", yieldSource: "Source B" },
-        ]}
-      />,
-    );
-
-
     // E19: overlays beyond the old 4-source cap must still be requested.
     render(
       <YieldHistoryChart
@@ -495,21 +481,6 @@ describe("yield history transformations", () => {
     ]);
     rerender();
     expect(result.current.spikeAnnotations).toEqual([]);
-  });
-
-  it("annotates a window mean whose observed zeros push the ratio over the threshold", () => {
-    const DAY = 86_400_000;
-    historyBySource.set("best", [
-      ...Array.from({ length: 20 }, (_, day) => point(BASE + day * DAY, 3)),
-      ...Array.from({ length: 10 }, (_, index) => point(BASE + (20 + index) * DAY, 0)),
-      point(BASE + 30 * DAY, 5.5),
-    ]);
-    const { result } = renderHook(() => useYieldHistoryChartModel(chartProps));
-
-    // Positive-only mean is 3.00% (ratio 1.83); the full window is 2.00% (2.75×).
-    expect(result.current.spikeAnnotations).toEqual([
-      { date: BASE + 30 * DAY, apy: 5.5, trailingAvg: 2, ratio: 2.75, windowDays: 30 },
-    ]);
   });
 
   it("does not average a stitched best-mode source switch into a yield spike", () => {

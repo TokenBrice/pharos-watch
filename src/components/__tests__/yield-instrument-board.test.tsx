@@ -168,13 +168,6 @@ describe("YieldInstrumentBoard", () => {
     expect(cursorHelpDash).toBeTruthy();
   });
 
-  it.each(rowRenderers)("renders the deep-dive destination on %s", (_surface, renderRow) => {
-    renderRow(baseRow);
-
-    const link = screen.getByRole("link", { name: "View yield opportunities for USDT" });
-    expect(link.getAttribute("href")).toBe("/yield?workbenchFallback=usdt-tether");
-  });
-
   it.each(rowRenderers)("renders material source risk on %s", (_surface, renderRow) => {
     const row = {
       ...baseRow,

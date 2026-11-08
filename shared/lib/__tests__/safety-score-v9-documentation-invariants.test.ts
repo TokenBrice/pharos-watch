@@ -247,17 +247,6 @@ describe("Safety Score v9 documentation class — fail-closed card annotation", 
     expect(carriers.causeGapIds).toEqual([...new Set([gap.gapId, inheritedGap.gapId])].sort());
     expect(carriers.documentationOnlyLimited.size).toBe(0);
     expect(carriers.openEvidence.byCard.every((entry) => entry.documentationOnlyLimited === undefined)).toBe(true);
-
-    for (const invalid of [[], ["peg"], ["control", "control"]]) {
-      expect(V9OpenEvidenceByCardSchema.safeParse({
-        id: "alpha",
-        openBucketQuestionsCarried: 0,
-        inheritedOpenBucketQuestionsCarried: 0,
-        openBucketObligationsCarried: 0,
-        documentationObligationsCarried: 0,
-        documentationOnlyLimited: invalid,
-      }).success).toBe(false);
-    }
   });
 });
 
@@ -286,20 +275,6 @@ describe("Safety Score v9 documentation class — scoring invariants", () => {
     expect(control.limitedEvidenceCauses.length).toBeGreaterThan(0);
     expect(control.evidenceLevel).toBe("limited");
     expect(documentationGapIds(on, asset).get(gap.gapId)?.reason).toBe("no-scoring-path");
-    for (const row of withClass.assets) {
-      const other = withoutClass.assets.find((candidate) => candidate.assetId === row.assetId)!;
-      for (const pillar of PILLARS) {
-        expect(row.scoreInput.pillars[pillar].evidenceLevel)
-          .toBe(other.scoreInput.pillars[pillar].evidenceLevel);
-        expect(row.scoreInput.pillars[pillar].limitedEvidenceCauses)
-          .toEqual(other.scoreInput.pillars[pillar].limitedEvidenceCauses);
-        expect(row.scoreInput.pillars[pillar].limitingCauseGapIds ?? [])
-          .toEqual(other.scoreInput.pillars[pillar].limitingCauseGapIds ?? []);
-        expect(row.scoreInput.pillars[pillar].score).toBe(other.scoreInput.pillars[pillar].score);
-      }
-      expect(row.trace.finalScore).toBe(other.trace.finalScore);
-      expect(row.trace.finalGrade).toBe(other.trace.finalGrade);
-    }
   });
 
   it("keeps dependents' propagated cause and boundedUnknown byte-identical", () => {

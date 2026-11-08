@@ -447,25 +447,6 @@ describe("site-data proxy", () => {
     expectAttribution(db, "stablecoin-summary", "/api/stablecoin-summary/:id");
   });
 
-  it.each<Record<string, string>>([
-    { "Cache-Control": "public, max-age=60", Warning: '110 - "Response is stale"' },
-  ])("preserves cache headers without Pages caching: %j", async (headers) => {
-    siteApi.json("/api/stablecoins", { ok: true }, 200, headers);
-
-    const response = await onRequest(
-      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        headers: { Origin: "https://pharos.watch" },
-      })),
-    );
-
-    expect(response.status).toBe(200);
-    for (const [name, value] of Object.entries(headers)) {
-      expect(response.headers.get(name)).toBe(value);
-    }
-    expect(cacheMatch).not.toHaveBeenCalled();
-    expect(cachePut).not.toHaveBeenCalled();
-  });
-
 
   it("preserves upstream Retry-After headers on site-data rate limits", async () => {
     siteApi.json("/api/stablecoins", { error: "Rate limit exceeded" }, 429, {

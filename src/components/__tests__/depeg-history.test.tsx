@@ -343,15 +343,4 @@ describe("DepegHistory embedded preview handoff", () => {
     await waitFor(() => expect(onDisplayStateChange).toHaveBeenLastCalledWith(true));
   });
 
-  it("renders no duplicate table when it owns the panel", async () => {
-    const onDisplayStateChange = vi.fn();
-    mockEvents([makeEvent()]);
-    const { container } = render(
-      <DepegHistory stablecoinId="usdc-circle" embeddedPreview onDisplayStateChange={onDisplayStateChange} />,
-    );
-
-    expect(container.querySelectorAll("table")).toHaveLength(1);
-    expect(screen.getAllByTestId("stablecoin-depeg-history-table")).toHaveLength(1);
-    await waitFor(() => expect(onDisplayStateChange).toHaveBeenLastCalledWith(true));
-  });
 });

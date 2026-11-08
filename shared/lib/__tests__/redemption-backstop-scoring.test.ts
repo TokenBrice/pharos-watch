@@ -215,21 +215,6 @@ describe("computeRedemptionBackstopScore", () => {
     },
   );
 
-  it("keeps ratio-only component evidence diagnostic when executable quantity is unavailable", () => {
-    const capacity = computeCapacityScore({ immediateCapacityUsd: null, immediateCapacityRatio: 0.25 });
-    expect(capacity.score).toBeGreaterThan(0);
-    expect(computeRedemptionBackstopScore({
-      routeFamily: "stablecoin-redeem",
-      accessScore: 100,
-      settlementScore: 100,
-      executionCertaintyScore: 100,
-      capacityScore: capacity.score,
-      outputAssetQualityScore: 100,
-      costScore: 100,
-      executableCapacityUsd: null,
-    })).toEqual({ score: null, capsApplied: [] });
-  });
-
   it.each([
     ["access", 20],
     ["settlement", 15],

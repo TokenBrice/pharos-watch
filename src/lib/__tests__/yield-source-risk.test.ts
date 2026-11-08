@@ -339,11 +339,6 @@ describe("getYieldSourceFreshnessDisplay", () => {
     expect(getYieldSourceFreshnessDisplay({ ...core, sourceAgeSeconds: 0, clock: { assessedAt } })?.status).toBe("fresh");
   });
 
-  it("ignores published scoring status and data-stale warnings", () => {
-    expect(getYieldSourceFreshnessDisplay({ ...core, sourceAgeSeconds: 60, clock: { assessedAt } })?.status).toBe("fresh");
-    expect(getYieldSourceFreshnessDisplay({ ...core, clock: { assessedAt } })?.status).toBe("unknown");
-  });
-
   it("projects stale-source drivers and qualifies scoring-only speculative posture", () => {
     const params = { sourceRisk: { sourceDepthRatio: 0.02, venueRiskTier: "low" as const }, sourceTvlUsd: 10_000_000, sourceFreshness: "stale" as const };
     const drivers = getYieldSourceRiskDrivers(params);

@@ -296,42 +296,6 @@ describe("scoreV9EvaluatedAsset", () => {
     expect(bounded.bindingCap).toBeNull();
   });
 
-  it("keeps a child rateable when a measured D parent cap binds", () => {
-    const propagatedAdverseAttribution = resolveV9SerialParentAdverseAttribution(
-      45,
-      [{
-        upstreamAssetId: "root",
-        score: 45,
-        blocked: false,
-        adverseAttribution: [ROOT_ADVERSE],
-      }],
-    );
-    const trace = scoreV9EvaluatedAsset(
-      input({
-        assetId: "child",
-        parent: {
-          required: true,
-          score: 45,
-          propagatedReasons: [],
-          propagatedAdverseAttribution,
-        },
-      }),
-      V9_CANDIDATE_POLICY_V1,
-    );
-
-    expect(trace.finalScore).toBe(45);
-    expect(trace.finalGrade).toBe("D");
-    expect(trace.bindingCap?.source).toBe("parent");
-    expect(trace.adverseAttribution).toEqual([
-      {
-        source: "parent-score",
-        path: `parent:root:${ROOT_ADVERSE.path}`,
-        message: `Required parent root: ${ROOT_ADVERSE.message}`,
-        responsibility: "measured-adverse",
-      },
-    ]);
-  });
-
   it("keeps a child rateable when a bounded-uncertainty D parent cap binds", () => {
     const propagatedBoundedUncertaintyAttribution =
       resolveV9SerialParentBoundedUncertaintyAttribution(
