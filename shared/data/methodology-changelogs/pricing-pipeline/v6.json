@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.75",
+    "title": "Reviewed MOVEUSD Orca pool read directly on Solana",
+    "date": "2026-11-08",
+    "effectiveAt": 1794127086,
+    "summary": "MOVEUSD can recover a missing price from its reviewed Orca MOVEUSD/USDC pool without a DexScreener request.",
+    "impact": [
+      "The exact finalized pool, both six-decimal SPL mints and both initialized vaults must match the reviewed identities in one atomic bank. The Whirlpool square-root price supplies the market mark; actual vault inventory valued through the trusted USDC parent must meet the unchanged $50,000 total-liquidity floor. This is a pool mark, not an executable sell quote.",
+      "The pool block time and trusted USDC observation must each be younger than the existing exact-address 15-minute budget, rechecked after reads. Publication retains the older input clock and its observation mode, fallback confidence, no replay or standalone depeg authority, and all existing weak-source, peg-bound and temporal-jump guards. Failed or rejected reads withhold the quote and never substitute par or a stale price.",
+      "The registered missing-only provider runs within the existing bounded authoritative stage without a new trigger or increased connection peak. MOVEUSD's dated price-gap acknowledgement is retired; renewed gaps remain actionable. Production acceptance requires the first successful post-deploy read and stablecoins publication."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.74",
     "title": "Bounded native remainders during DefiLlama fill defaults",
     "date": "2026-11-07",
