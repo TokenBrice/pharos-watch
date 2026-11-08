@@ -1087,13 +1087,13 @@ describe("RedCoin issuer-disclosure reconciliation", () => {
 
 describe("launched-awaiting-data review reasons", () => {
   it.each([
-    ["dotusd-polkadot", "2026-10-08"],
-    ["usdrf-realfi", "2026-10-01"],
-  ])("keeps %s outside live collection until a market price is admitted", (id, launchDate) => {
+    ["dotusd-polkadot", "2026-10-08", /^Missing lane: price\./],
+    ["usdrf-realfi", "2026-10-01", /^Missing lane: supply\./],
+  ])("keeps %s outside live collection until its missing lane is admitted", (id, launchDate, missingLane) => {
     const coin = TRACKED_META_BY_ID.get(id)!;
     expect(coin).toMatchObject({ status: "pre-launch", launchPhase: "launched", launchDate });
     expect(coin.listingStatusReview).toMatchObject({ changedAt: "2026-10-28", reviewBy: "2026-12-27" });
-    expect(coin.listingStatusReview?.reason).toMatch(/^Missing lane: price\./);
+    expect(coin.listingStatusReview?.reason).toMatch(missingLane);
     expect(coin.milestones?.some((milestone) => milestone.date === launchDate && milestone.sourceUrl)).toBe(true);
     expect(ACTIVE_META_BY_ID.has(id)).toBe(false);
   });

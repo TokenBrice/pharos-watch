@@ -238,6 +238,13 @@
       "title": "HKDAP circulation rises to about 103.1 million",
       "description": "Anchorpoint's weekly transparency figures as of October 30 2026 show 103,102,420 HKDAP in circulation against reserves of 104,206,693, with 103,496,769 issued and 1,501,270 redeemed over the prior 30 days. Ethereum mints of about 87.0 million HKDAP on October 30 account for the rise from about 16.1 million. DefiLlama tracks the same supply but still carries no price for HKDAP.",
       "sourceUrl": "https://anchorpoint.hk/transparency/"
+    },
+    {
+      "date": "2026-11-03",
+      "type": "milestone",
+      "title": "Anchorpoint completes self-hosted wallet verification pilot",
+      "description": "Anchorpoint completed an Open Wallet Verification Framework pilot with Terminal 3 for HKDAP transfers from self-hosted wallets.",
+      "sourceUrl": "https://anchorpoint.hk/uploads/2026/11/Anchorpoint-Completes-Demonstration-of-its-Open-Wallet-Verification-Framework-for-HKDAP-Wallets.pdf"
     }
   ],
   "dateHistory": [

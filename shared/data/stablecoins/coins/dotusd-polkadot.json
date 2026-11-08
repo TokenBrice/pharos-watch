@@ -20,7 +20,7 @@
   "announcedDate": "2026-09-07",
   "launchDate": "2026-10-08",
   "launchPhase": "launched",
-  "launchPhaseDetail": "Polkadot OpenGov referendum 1944 created dotUSD as Asset Hub asset 7873, with 6 decimals, and took effect on October 8 2026. Its first phase allows only capped one-to-one minting and redemption against USDT through a peg stability module, alongside a Treasury-funded DOT/dotUSD pool. DOT-collateral vaults are left to a later phase. On October 26 the Technical Fellowship disclosed an XCM bug that had removed about 4.06 million dotUSD from the recorded supply while the tokens stayed in the pool, and arbitrage against the imbalance cost the Treasury's liquidity position an estimated $1.3 million. Referendum 1961 restored the recorded supply on October 30 without changing any balance. Asset Hub showed 4,212,640.59 dotUSD across 60 accounts on November 1 2026. Pharos tracks dotUSD pre-launch because no admitted source prices it: CoinGecko's dotusd preview has a null price and DefiLlama has no listing.",
+  "launchPhaseDetail": "Polkadot OpenGov referendum 1944 created dotUSD as Asset Hub asset 7873, with 6 decimals, and took effect on October 8 2026. Its first phase allows only capped one-to-one minting and redemption against USDT through a peg stability module, alongside a Treasury-funded DOT/dotUSD pool. DOT-collateral vaults are left to a later phase. On October 26 the Technical Fellowship disclosed an XCM bug that had removed about 4.06 million dotUSD from the recorded supply while the tokens stayed in the pool, and arbitrage against the imbalance cost the Treasury's liquidity position an estimated $1.3 million. Referendum 1961 restored the recorded supply on October 30 without changing any balance. Asset Hub showed 4,212,640.59 dotUSD across 60 accounts on November 1 2026. Pharos tracks dotUSD pre-launch because no admitted source prices it: CoinGecko's dotusd preview has a null price and DefiLlama has no listing. In Parity's November 2 2026 incident review, bkchr estimated the Treasury loss at about $1.381 million in DOT and described dotUSD as fully backed, with no account balance changes.",
   "featuredContent": [
     {
       "type": "article",
@@ -58,6 +58,13 @@
       "title": "Referendum 1961 restores dotUSD's recorded supply and unblocks Snowbridge",
       "description": "OpenGov referendum 1961, submitted on October 27 2026, executed on October 30. The runtime upgrade recalculated dotUSD's recorded supply from existing balances without changing any holder's balance, and restored the Bridge Hub weights whose change had put Snowbridge on hold.",
       "sourceUrl": "https://polkadot.subsquare.io/referenda/1961"
+    },
+    {
+      "date": "2026-11-02",
+      "type": "milestone",
+      "title": "Parity publishes its dotUSD incident review",
+      "description": "Parity's bkchr estimated the Treasury loss at about $1.381 million in DOT and described dotUSD as fully backed, with no changes to account balances.",
+      "sourceUrl": "https://forum.polkadot.network/t/xcm-incident-review-what-happened-and-what-we-learned/19207"
     }
   ],
   "listingStatusReview": {
