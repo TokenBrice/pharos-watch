@@ -187,7 +187,7 @@ async function readTwitterLedgerDelivered(
 
 /**
  * Read the regime-critical degraded sources recorded on the newest published
- * edition of one kind. Returns null when the due row does not exist, so the
+ * edition of one kind. Missing rows remain distinct from unreadable inputs, so the
  * row-presence condition keeps ownership of that failure.
  */
 async function readCriticalDegradedSources(
@@ -197,34 +197,50 @@ async function readCriticalDegradedSources(
   startSec: number,
   nowSec: number,
   signal?: AbortSignal,
-): Promise<string[] | null> {
-  const placeholders = REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES.map(() => "?").join(", ");
-  const row = await readFirst<{ sources_type: string | null; critical_sources: string | null }>(
+): Promise<
+  | { state: "missing" }
+  | { state: "readable"; sources: string[] }
+  | { state: "unreadable"; reason: "digest-input-data-unreadable" }
+> {
+  const parentPath = jsonPath === "$.dataQuality.degradedSources" ? "$.dataQuality" : "$";
+  const row = await readFirst<{
+    input_type: string | null;
+    parent_type: string | null;
+    sources_type: string | null;
+    sources_json: string | null;
+  }>(
     db,
     `SELECT
+       CASE WHEN json_valid(input_data) THEN json_type(input_data) END AS input_type,
+       CASE WHEN json_valid(input_data) THEN json_type(input_data, '${parentPath}') END AS parent_type,
        CASE WHEN json_valid(input_data)
          THEN json_type(input_data, '${jsonPath}')
        END AS sources_type,
        CASE WHEN json_valid(input_data) AND json_type(input_data, '${jsonPath}') = 'array'
-         THEN (SELECT json_group_array(value)
-                 FROM json_each(json_extract(input_data, '${jsonPath}'))
-                WHERE value IN (${placeholders}))
-       END AS critical_sources
+         THEN json_extract(input_data, '${jsonPath}')
+       END AS sources_json
        FROM daily_digest
       WHERE generated_at >= ? AND generated_at <= ?
         AND (${editionFilterSql})
       ORDER BY generated_at DESC, id DESC
       LIMIT 1`,
-    [...REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES, startSec, nowSec],
+    [startSec, nowSec],
     signal,
   );
-  if (!row) return null;
-  if (row.sources_type !== "array" || row.critical_sources == null) return [];
+  if (!row) return { state: "missing" };
+  const unreadable = { state: "unreadable", reason: "digest-input-data-unreadable" } as const;
+  if (row.input_type !== "object" || (row.parent_type != null && row.parent_type !== "object")) return unreadable;
+  if (row.sources_type == null) return { state: "readable", sources: [] };
+  if (row.sources_type !== "array" || row.sources_json == null) return unreadable;
   try {
-    const parsed = JSON.parse(row.critical_sources) as unknown;
-    return Array.isArray(parsed) ? parsed.filter((source): source is string => typeof source === "string") : [];
+    const parsed = JSON.parse(row.sources_json) as unknown;
+    if (!Array.isArray(parsed) || !parsed.every((source) => typeof source === "string")) return unreadable;
+    return {
+      state: "readable",
+      sources: parsed.filter((source) => (REGIME_CRITICAL_DIGEST_DEGRADED_SOURCES as readonly string[]).includes(source)),
+    };
   } catch {
-    return [];
+    return unreadable;
   }
 }
 
@@ -295,12 +311,15 @@ async function readPublicationObservations(
       },
       {
         condition: "daily-inputs",
-        state: criticalInputs && criticalInputs.length > 0 ? "stale" : "ok",
-        detail: criticalInputs == null
+        state: criticalInputs.state === "unreadable"
+          || (criticalInputs.state === "readable" && criticalInputs.sources.length > 0) ? "stale" : "ok",
+        detail: criticalInputs.state === "missing"
           ? "no published row to inspect"
-          : criticalInputs.length > 0
-            ? `degraded: ${criticalInputs.join(", ")}`
-            : "no regime-critical degraded source",
+          : criticalInputs.state === "unreadable"
+            ? criticalInputs.reason
+            : criticalInputs.sources.length > 0
+              ? `degraded: ${criticalInputs.sources.join(", ")}`
+              : "no regime-critical degraded source",
         advisory: false,
       },
     );
@@ -359,12 +378,15 @@ async function readPublicationObservations(
       },
       {
         condition: "weekly-inputs",
-        state: weeklyCriticalInputs && weeklyCriticalInputs.length > 0 ? "stale" : "ok",
-        detail: weeklyCriticalInputs == null
+        state: weeklyCriticalInputs.state === "unreadable"
+          || (weeklyCriticalInputs.state === "readable" && weeklyCriticalInputs.sources.length > 0) ? "stale" : "ok",
+        detail: weeklyCriticalInputs.state === "missing"
           ? "no published row to inspect"
-          : weeklyCriticalInputs.length > 0
-            ? `degraded: ${weeklyCriticalInputs.join(", ")}`
-            : "no regime-critical degraded source",
+          : weeklyCriticalInputs.state === "unreadable"
+            ? weeklyCriticalInputs.reason
+            : weeklyCriticalInputs.sources.length > 0
+              ? `degraded: ${weeklyCriticalInputs.sources.join(", ")}`
+              : "no regime-critical degraded source",
         advisory: false,
       },
     );
