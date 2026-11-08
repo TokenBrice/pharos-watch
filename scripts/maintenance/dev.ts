@@ -30,6 +30,8 @@ function spawnChild(label: string, command: string, args: string[]): void {
 
   child.on("error", (error) => {
     console.error(`[dev:${label}] ${error.message}`);
+    children.delete(child);
+    shutdown("SIGTERM");
     process.exit(1);
   });
 }
