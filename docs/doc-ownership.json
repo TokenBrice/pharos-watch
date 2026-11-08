@@ -307,6 +307,7 @@
         "docs/process/live-reserves-appendix.md",
         "docs/process/protocol-api-mechanism-refresh.md",
         "docs/process/redemption-route-evidence.md",
+        "docs/process/redemption-backstops-appendix.md",
         "docs/redemption-backstops.md"
       ],
       "docs": [
@@ -327,6 +328,12 @@
         {"path": "docs/live-reserves.md", "anchor": "frontend-consumers"},
         "docs/access-lookthrough.md",
         {"path": "docs/redemption-backstops.md", "anchor": "methodology-versioning"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "cron-schedule"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "config-registry"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "docs--notes"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "cost-modeling"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "provider--source-definitions"},
+        {"path": "docs/process/redemption-backstops-appendix.md", "anchor": "database-schema"},
         "docs/process/protocol-api-mechanism-refresh.md",
         {"path": "docs/process/redemption-route-evidence.md", "anchor": "configured-route-bound-evidence"},
         {"path": "docs/process/redemption-route-evidence.md", "anchor": "zero-route-producer-evidence-review-pkt-12-2026-10-14"}
@@ -380,7 +387,7 @@
         { "path": "docs/runbooks/yield-rankings-stale-or-missing.md", "runbook": { "label": "Yield rankings stale or missing", "kind": "symptom" } },
         { "path": "docs/runbooks/yield-supplemental-snapshot.md", "runbook": { "label": "Yield supplemental snapshot failure", "kind": "symptom" } },
         {"path": "docs/yield-intelligence-operations.md", "anchor": "runtime-guardrails"},
-        {"path": "docs/yield-intelligence-operations.md", "anchor": "publication-storage-appendix"},
+        {"path": "docs/yield-intelligence-operations.md", "anchor": "decision-ledger-retention"},
         {"path": "docs/yield-intelligence-operations.md", "anchor": "failure-semantics"}
       ],
       "rules": ["Keep source observation, publication, and read-time freshness distinct; missing yield evidence is not a measured zero."]
