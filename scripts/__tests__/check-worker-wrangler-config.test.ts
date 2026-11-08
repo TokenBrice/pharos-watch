@@ -165,6 +165,9 @@ describe("check-worker-wrangler-config", () => {
       const report = checkWorkerWranglerConfig(publicPath, heavyPath);
       expect(report.failed).toBe(true);
       expect(report.issues.some((issue) => issue.includes("Paired runtime configuration differs") && issue.includes(key))).toBe(true);
+      if (key === "upload_source_maps") {
+        expect(report.issues).toContain("heavy [root].upload_source_maps must be true.");
+      }
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
@@ -178,29 +181,6 @@ describe("check-worker-wrangler-config", () => {
     ]) {
       const report = evaluateWorkerWranglerConfig(mutation, { workerRole });
       expect(report.issues).toContain(`${workerRole} [root].upload_source_maps must be true.`);
-    }
-  });
-  it("rejects a mismatched source-map posture between roles", () => {
-    const directory = mkdtempSync(join(tmpdir(), "pharos-source-maps-"));
-    try {
-      const publicPath = join(directory, "public.toml");
-      const heavyPath = join(directory, "heavy.toml");
-      writeFileSync(publicPath, readFileSync("worker/wrangler.toml", "utf8"));
-      writeFileSync(
-        heavyPath,
-        readFileSync("worker/wrangler.heavy.toml", "utf8")
-          .replace("upload_source_maps = true", "upload_source_maps = false"),
-      );
-      const report = checkWorkerWranglerConfig(publicPath, heavyPath);
-      expect(report.failed).toBe(true);
-      expect(report.issues).toContain("heavy [root].upload_source_maps must be true.");
-      expect(
-        report.issues.some(
-          (issue) => issue.includes("Paired runtime configuration differs") && issue.includes("upload_source_maps"),
-        ),
-      ).toBe(true);
-    } finally {
-      rmSync(directory, { recursive: true, force: true });
     }
   });
   it("rejects a missing lossless Worker catalog alias", () => {

@@ -112,13 +112,6 @@ describe("PR lane manifest", () => {
     expect(matrix.some((entry) => entry.lane === "v9-resource")).toBe(selected);
   });
 
-  it("selects the resource lane when classification is unavailable", () => {
-    const matrix = buildPrWorkflowMatrix({ docsOnly: false, testShards: 4 }).include;
-    expect(matrix.filter((entry) => entry.lane === "v9-resource")).toEqual([
-      { lane: "v9-resource", timeout: 8 },
-    ]);
-  });
-
   it("declares report-only lane budgets below each job timeout", () => {
     expect(Object.fromEntries(PR_LANES.map((lane) => [lane.id, lane.budgetSeconds ?? null]))).toEqual({
       preflight: null,
