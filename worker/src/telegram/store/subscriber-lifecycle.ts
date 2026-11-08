@@ -345,7 +345,14 @@ const MIGRATION_TABLE_DESCRIPTORS: readonly MigrationDescriptor[] = [
       { column: "last_successful_delivery_at", strategy: "nullif-max-zero" },
       { column: "last_successful_reply_at", strategy: "nullif-max-zero" },
       { column: "last_delivery_attempt_at", strategy: "nullif-max-zero" },
-      { column: "recent_failure_class", strategy: "coalesce-old-first" },
+      { column: "recent_failure_class", strategy: { sql: `CASE
+          WHEN telegram_chat_delivery_diagnostics.last_delivery_attempt_at IS NULL
+            OR excluded.last_delivery_attempt_at > telegram_chat_delivery_diagnostics.last_delivery_attempt_at
+            THEN excluded.recent_failure_class
+          WHEN excluded.last_delivery_attempt_at = telegram_chat_delivery_diagnostics.last_delivery_attempt_at
+            THEN COALESCE(excluded.recent_failure_class, telegram_chat_delivery_diagnostics.recent_failure_class)
+          ELSE telegram_chat_delivery_diagnostics.recent_failure_class
+        END` } },
       { column: "updated_at", strategy: "max" },
     ],
   },
@@ -428,7 +435,14 @@ export async function migrateTelegramChatId(
     db.prepare("UPDATE OR IGNORE telegram_deliveries SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_deliveries WHERE chat_id = ?").bind(oldChatId),
     db.prepare("UPDATE telegram_change_log SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
-    db.prepare("UPDATE OR IGNORE telegram_rollup_state SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
+    db.prepare(
+      `INSERT INTO telegram_rollup_state (chat_id, last_rollup_local_date, last_rollup_at)
+       SELECT ?, last_rollup_local_date, last_rollup_at FROM telegram_rollup_state WHERE chat_id = ?
+       ON CONFLICT(chat_id) DO UPDATE SET
+         last_rollup_local_date = excluded.last_rollup_local_date,
+         last_rollup_at = excluded.last_rollup_at
+       WHERE excluded.last_rollup_at > telegram_rollup_state.last_rollup_at`,
+    ).bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_rollup_state WHERE chat_id = ?").bind(oldChatId),
     db.prepare("UPDATE telegram_processed_updates SET chat_id = ? WHERE chat_id = ?").bind(newChatId, oldChatId),
     db.prepare("DELETE FROM telegram_subscriptions WHERE chat_id = ?").bind(oldChatId),

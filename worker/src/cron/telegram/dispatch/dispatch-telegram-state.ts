@@ -12,6 +12,7 @@ import {
   type AlertSafetySourceAssessment,
 } from "../../../lib/alert-safety-source-cache";
 import { getCache, setCache } from "../../../lib/db-cache";
+import { loadPresetQueryFailureCount, PRESET_QUERY_FAILURE_CACHE_KEY } from "../../../lib/status/telegram-preset-failure-count";
 import { loadSafetyScoreV9PublicationAttempt, type V9PublicationAttempt } from "../../../lib/safety-score-v9/publication-attempts";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../../lib/safety-score-v9/consumer-freshness";
 import { logTelegramEvent } from "../../../telegram/common/log";
@@ -41,7 +42,6 @@ import { holdSuppressedSafetyBaselines, planDewsAlerts, reseedSafetyBaseline } f
 type CachedValue = { value: string; updatedAt: number } | null;
 
 const TELEGRAM_DEWS_LATEST_FALLBACK_AGE_SEC = 2 * 3600;
-const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 
 export interface TelegramDispatchSharedState {
   pendingCapacitySnapshot?: PendingCapacitySnapshot;
@@ -56,13 +56,10 @@ export function assignSharedDispatchState(
   Object.assign(sharedState, updates);
 }
 
-/** `null` when the persisted count could not be read: an unavailable read is not zero. */
+/** `null` when the persisted count is malformed or unreadable: unavailable is not zero. */
 export async function readPresetFailureCount(db: D1Database): Promise<number | null> {
   try {
-    const cached = await getCache(db, PRESET_QUERY_FAILURE_CACHE_KEY);
-    if (!cached) return 0;
-    const parsed = Number(cached.value);
-    return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
+    return await loadPresetQueryFailureCount(db);
   } catch {
     return null;
   }

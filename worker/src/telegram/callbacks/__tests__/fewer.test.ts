@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
+import { applyCoinSetting } from "../../webhook/telegram-webhook-settings-mutations";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   handleCallbackQuery,
@@ -31,7 +32,10 @@ async function tapFewer(data: string, seed?: (sqlite: { exec: (sql: string) => v
               depeg_worsening_bps_step, dews_min_band
          FROM telegram_subscriptions WHERE chat_id = '42' AND stablecoin_id = 'usdc-circle'`,
     ).get() as SubscriptionRow | undefined;
-    return { row, toast: lastAckBody().text };
+    return {
+      row, toast: lastAckBody().text,
+      subscriberCount: sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscribers").get()?.count,
+    };
   } finally {
     fixtures.closeAll();
   }
@@ -109,6 +113,30 @@ describe("fewer callback", () => {
     }
   });
 
+  it.each(["ds", "db"])("refuses %s when a quieter edit wins after the read", async (code) => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    const { sqlite, db } = fixtures.open();
+    try {
+      sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at) VALUES ('42', 1, 1);
+        INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_depeg, alert_dews, depeg_worsening_bps_step)
+        VALUES ('42', 'usdc-circle', 1, 1, 100)`);
+      const batch = db.batch.bind(db);
+      db.batch = async (statements) => {
+        db.batch = batch;
+        await applyCoinSetting(db, "42", null, "usdc-circle", code, "0");
+        return batch(statements);
+      };
+      await handleCallbackQuery(db, "fake-token", makeCallbackQuery(`fewer:usdc-circle:${code}:${code === "ds" ? "250" : "W"}`));
+      expect(sqlite.prepare(`SELECT alert_${code === "ds" ? "depeg" : "dews"} AS enabled FROM telegram_subscriptions`).get())
+        .toEqual({ enabled: 0 });
+      expect(sqlite.prepare("SELECT preference_generation FROM telegram_subscribers").get()).toEqual({ preference_generation: 1 });
+      expect(lastAckBody().text).toBe("Settings changed. Please try again.");
+      expect(sqlite.prepare("SELECT outcome FROM telegram_usage_daily WHERE action_detail = 'fewer'").all()).toEqual([{ outcome: "stale" }]);
+    } finally {
+      fixtures.closeAll();
+    }
+  });
+
   it.each([
     ["a raised depeg step", "fewer:usdc-circle:ds:250", "alert_depeg, alert_depeg_override, depeg_worsening_bps_step", "1, 1, 500", { alert_depeg: 1, depeg_worsening_bps_step: 500 }],
     ["depeg turned off", "fewer:usdc-circle:ds:250", "alert_depeg, alert_depeg_override", "0, 1", { alert_depeg: 0 }],
@@ -145,12 +173,17 @@ describe("fewer callback", () => {
     expect(result.row?.alert_freeze_override).toBe(1);
   });
 
-  it.each(["fewer:usdc-circle", "fewer:usdc-circle:lc", "fewer:not-a-coin:ds", "fewer:usdc-circle:ds:x"])(
-    "rejects malformed %s without writing",
-    async (data) => {
-      const result = await tapFewer(data);
+  it.each([
+    ["fewer:usdc-circle", false], ["fewer:usdc-circle:lc", false],
+    ["fewer:not-a-coin:ds", false], ["fewer:usdc-circle:ds:x", false],
+    ["fewer:usdc-circle:ds:250", true],
+  ] as const)(
+    "rejects unrecognized %s without writing (forgotten=%s)",
+    async (data, forgotten) => {
+      const result = await tapFewer(data, forgotten ? (sqlite) => sqlite.exec("DELETE FROM telegram_subscribers") : undefined);
       expect(result.row).toBeUndefined();
       expect(result.toast).toBe("Action not recognized.");
+      expect(result.subscriberCount).toBe(forgotten ? 0 : 1);
     },
   );
 });

@@ -27,7 +27,7 @@ const LIFECYCLE_MIGRATION_FALLBACKS = [
   { match: "UPDATE telegram_jobs SET payload_json", rows: [] },
   { match: "SET cursor = COALESCE", rows: [] },
   { match: "UPDATE telegram_change_log", rows: [] },
-  { match: "UPDATE OR IGNORE telegram_rollup_state", rows: [] },
+  { match: "INSERT INTO telegram_rollup_state", rows: [] },
   { match: "DELETE FROM telegram_rollup_state", rows: [] },
 ];
 

@@ -1,4 +1,5 @@
 import { executeAtomicBatch } from "../../lib/db";
+import { bytesToBase64Url } from "@shared/lib/base64url";
 import type { PresetSubscriptionRow } from "../webhook/telegram-webhook-shared";
 import {
   preparePreferenceGenerationBump,
@@ -103,6 +104,7 @@ export function prepareSubscriberAndPresetPatchStatements(
   presetId: string,
   alertTypes: Partial<Record<"dews" | "depeg" | "safety", boolean>>,
   depegWorseningBpsStep: 100 | 250 | 500 | null | undefined,
+  guard?: { sql: string; binds: unknown[] },
 ): D1PreparedStatement[] {
   const now = unixNow();
   const merged = `WITH patch AS (
@@ -115,7 +117,7 @@ export function prepareSubscriberAndPresetPatchStatements(
       ON p.chat_id = ? AND p.preset_id = ?
   ), admitted AS (
     SELECT dews, depeg, safety, CASE WHEN depeg = 1 THEN step ELSE NULL END AS step
-    FROM patch WHERE dews = 1 OR depeg = 1 OR safety = 1
+    FROM patch WHERE (dews = 1 OR depeg = 1 OR safety = 1)${guard ? ` AND (${guard.sql})` : ""}
   )`;
   const binds = [
     alertTypes.dews !== undefined ? 1 : 0, alertTypes.dews ? 1 : 0,
@@ -123,6 +125,7 @@ export function prepareSubscriberAndPresetPatchStatements(
     alertTypes.safety !== undefined ? 1 : 0, alertTypes.safety ? 1 : 0,
     depegWorseningBpsStep !== undefined ? 1 : 0, depegWorseningBpsStep ?? null,
     chatId, presetId,
+    ...(guard?.binds ?? []),
   ];
   // Every statement sees the same preset until the final write. Invalid
   // last-family removals therefore change neither domain nor first-follow state.
@@ -220,6 +223,78 @@ export async function applyUnsubscribeIntent(
     db,
     appendTelegramOperationStatements(prepareUnsubscribeIntentStatements(db, input), input),
   );
+}
+
+/** Command-state keys share the existing /forget erasure and bounded retention. */
+function setupUndoCacheKey(chatId: string): string {
+  return `telegram:command-cooldown:${chatId}:setup-undo`;
+}
+
+/** Admit a meaningful Follow and its Undo identity inside the same transaction. */
+export async function followPresetForSetup(
+  db: D1Database,
+  chatId: string,
+  username: string | null,
+  presetId: string,
+): Promise<
+  | { kind: "unchanged" }
+  | { kind: "applied"; prior: PresetSubscriptionRow | undefined; generation: number; identity: string }
+> {
+  const now = unixNow();
+  const identity = bytesToBase64Url(crypto.getRandomValues(new Uint8Array(16)));
+  const cacheKey = setupUndoCacheKey(chatId);
+  const results = await executeAtomicBatch(db, [
+    db.prepare(`SELECT preset_id, alert_dews, alert_depeg, alert_safety, depeg_worsening_bps_step
+      FROM telegram_preset_subscriptions WHERE chat_id = ? AND preset_id = ?
+    `).bind(chatId, presetId),
+    db.prepare(`INSERT INTO cache (key, value, updated_at)
+      SELECT ?, ?, ? WHERE NOT EXISTS (
+        SELECT 1 FROM telegram_preset_subscriptions WHERE chat_id = ? AND preset_id = ?
+          AND alert_dews = 1 AND alert_depeg = 1
+      ) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `).bind(cacheKey, identity, now, chatId, presetId),
+    ...prepareSubscriberAndPresetPatchStatements(db, chatId, username, presetId, { dews: true, depeg: true }, undefined,
+      { sql: "EXISTS (SELECT 1 FROM cache WHERE key = ? AND value = ?)", binds: [cacheKey, identity] }),
+    db.prepare("SELECT preference_generation FROM telegram_subscribers WHERE chat_id = ?").bind(chatId),
+  ], { returnResults: true });
+  if (Number(results[1]?.meta?.changes ?? 0) === 0) return { kind: "unchanged" };
+  const { preference_generation: generation } = results[results.length - 1]!.results[0] as { preference_generation: number };
+  return { kind: "applied", prior: results[0]!.results[0] as PresetSubscriptionRow | undefined, generation, identity };
+}
+
+/** Restore and consume setup Undo only while its generation and identity match. */
+export async function restorePresetSubscription(
+  db: D1Database,
+  chatId: string,
+  presetId: string,
+  prior: ReadonlySet<string>,
+  expectedPreferenceGeneration: number,
+  identity: string,
+): Promise<"applied" | "stale"> {
+  const now = unixNow();
+  const guard = `chat_id = ? AND preset_id = ? AND EXISTS (
+    SELECT 1 FROM telegram_subscribers WHERE chat_id = ? AND preference_generation = ?
+  ) AND EXISTS (SELECT 1 FROM cache WHERE key = ? AND value = ?)`;
+  const cacheKey = setupUndoCacheKey(chatId);
+  const binds = [chatId, presetId, chatId, expectedPreferenceGeneration, cacheKey, identity];
+  const restore = prior.size === 0
+    ? db.prepare(`DELETE FROM telegram_preset_subscriptions WHERE ${guard}`).bind(...binds)
+    : db.prepare(`UPDATE telegram_preset_subscriptions SET
+        alert_dews = ?, alert_depeg = ?, alert_safety = ?,
+        depeg_worsening_bps_step = CASE WHEN ? THEN depeg_worsening_bps_step ELSE NULL END,
+        updated_at = ? WHERE ${guard}
+      `).bind(prior.has("dews") ? 1 : 0, prior.has("depeg") ? 1 : 0, prior.has("safety") ? 1 : 0,
+        prior.has("depeg") ? 1 : 0, now, ...binds);
+  const results = await executeAtomicBatch(db, [
+    restore,
+    // changes() fences consumption to the immediately preceding restoration.
+    db.prepare(`UPDATE telegram_subscribers SET
+      preference_generation = preference_generation + 1, last_active_at = ?
+      WHERE chat_id = ? AND preference_generation = ? AND changes() > 0
+    `).bind(now, chatId, expectedPreferenceGeneration),
+    db.prepare("DELETE FROM cache WHERE key = ? AND value = ? AND changes() > 0").bind(cacheKey, identity),
+  ], { returnResults: true });
+  return Number(results[1]?.meta?.changes ?? 0) > 0 ? "applied" : "stale";
 }
 
 export async function removePresetSubscriptions(

@@ -18,6 +18,7 @@ import {
   enqueueTelegramDigestEdition,
 } from "../digest-outbox";
 import { checkDigestSafetyContextForDelivery } from "../../../lib/digest-safety-context";
+import { prepareTelegramDigestAppendices, queuePendingTrackedStablecoinAdditions } from "../../digest/digest-appendices";
 
 interface StoredEdition {
   payload_chunks_json: string;
@@ -90,9 +91,12 @@ async function enqueueWeeklyWithActions(db: D1Database, sqlite: DatabaseSync) {
   ).run(generatedAt, digestMeta);
   sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
     .run("telegram:appendix-pointer", "previous-edition", generatedAt - 60);
+  sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .run("telegram:tracked-stablecoins-pending", '["usdt-tether"]', generatedAt - 60);
   const successActions = [
     { key: "telegram:appendix-pointer", value: "weekly-edition" },
     { key: "telegram:new-appendix-pointer", value: "new-weekly-edition" },
+    { key: "telegram:tracked-stablecoins-consumed", value: '["usdt-tether"]' },
   ];
   await enqueueTelegramDigestEdition(db, {
     editionKey: "weekly:2026-07-10",
@@ -111,8 +115,8 @@ async function enqueueWeeklyWithActions(db: D1Database, sqlite: DatabaseSync) {
 function loadFinalizationEffects(sqlite: DatabaseSync, generatedAt: number) {
   return {
     appendix: sqlite.prepare(
-      "SELECT key, value, updated_at FROM cache WHERE key IN (?, ?) ORDER BY key",
-    ).all("telegram:appendix-pointer", "telegram:new-appendix-pointer"),
+      "SELECT key, value, updated_at FROM cache WHERE key IN (?, ?, ?) ORDER BY key",
+    ).all("telegram:appendix-pointer", "telegram:new-appendix-pointer", "telegram:tracked-stablecoins-pending"),
     weekly: sqlite.prepare("SELECT digest_meta FROM daily_digest WHERE generated_at = ?").get(generatedAt),
   };
 }
@@ -141,6 +145,42 @@ afterEach(() => {
 });
 
 describe("Telegram digest outbox", () => {
+  it.each(["current", "previous", "legacy", "launch"] as const)("preserves later announcements with the %s finalizer/payload", async (mode) => {
+    const { sqlite, db } = fixtures.open();
+    const pendingKey = "telegram:tracked-stablecoins-pending";
+    await prepareTelegramDigestAppendices(db);
+    await queuePendingTrackedStablecoinAdditions(db, ["usdc-circle"], ["usdc-circle", "usdt-tether"]);
+    if (mode === "launch") {
+      sqlite.exec(`UPDATE cache SET value = json_insert(value, '$[#]', 'usdt-tether')
+        WHERE key = 'telegram:prelaunch-stablecoins-snapshot'`);
+    }
+    const prepared = await prepareTelegramDigestAppendices(db);
+    expect(prepared.metadata).toMatchObject({ launchedDetected: mode === "launch" ? 1 : 0, trackedDetected: mode === "launch" ? 0 : 1 });
+    const successActions = prepared.successActions!.map((action) => mode === "legacy"
+      && action.key === "telegram:tracked-stablecoins-consumed"
+      ? { key: pendingKey, value: "[]" } : action);
+    await enqueueDaily(db, { appendixHtml: prepared.appendixHtml, successActions });
+    const stored = loadEdition(sqlite);
+    await queuePendingTrackedStablecoinAdditions(db, ["usdt-tether"], ["usdt-tether", "usdc-circle"]);
+
+    if (mode === "previous") {
+      // Previous Workers apply stored cache actions verbatim.
+      for (const action of successActions) {
+        sqlite.prepare(`INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)
+          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`)
+          .run(action.key, action.value, 1);
+      }
+    } else {
+      mockFetch([{ match: () => true, body: { ok: true } }]);
+      expect((await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10")).outcome).toBe("sent");
+    }
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(pendingKey)).toEqual({
+      value: JSON.stringify(mode === "previous" || mode === "legacy" ? ["usdt-tether", "usdc-circle"] : ["usdc-circle"]),
+    });
+    expect(loadEdition(sqlite).success_actions_json).toBe(stored.success_actions_json);
+    expect(loadEdition(sqlite).payload_chunks_json).toBe(stored.payload_chunks_json);
+  });
+
   it("sends the dated map as a durable photo before the text chunks", async () => {
     const { sqlite, db } = fixtures.open();
     const mapImageUrl = "https://pharos.watch/safety-scores/map.png?date=2026-07-10";
@@ -552,7 +592,7 @@ describe("Telegram digest outbox", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("terminalizes an unreadable stored payload before opening a send claim", async () => {
+  it.each([null, "{}", "[1]", "invalid"])("terminalizes an unreadable stored payload before opening a send claim (%s)", async (consumed) => {
     const { sqlite, db } = fixtures.open();
     await enqueueDaily(db);
     // Rows are immutable delivery input and outlive deploys, so a stored
@@ -563,7 +603,9 @@ describe("Telegram digest outbox", () => {
     }));
     sqlite
       .prepare("UPDATE telegram_digest_outbox SET success_actions_json = ? WHERE edition_key = ?")
-      .run(JSON.stringify(overBoundActions), "daily:2026-07-10");
+      .run(JSON.stringify(consumed == null ? overBoundActions : [
+        { key: "telegram:tracked-stablecoins-consumed", value: consumed },
+      ]), "daily:2026-07-10");
     const fetchMock = mockFetch([], { requireMatch: true });
 
     const result = await deliverTelegramDigestEdition(db, creds, "daily:2026-07-10");
@@ -896,9 +938,18 @@ describe("Telegram digest outbox", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("commits exact-owner appendix actions once with sent, leaving historical weekly metadata inert", async () => {
+  it.each([undefined, null, "{}", "[1]", "invalid"])("commits exact-owner appendix actions once with sent, isolating malformed pending state (%s)", async (pending) => {
     const { sqlite, db } = fixtures.open();
     const { generatedAt, digestMeta } = await enqueueWeeklyWithActions(db, sqlite);
+    if (pending === null) sqlite.prepare("DELETE FROM cache WHERE key = ?").run("telegram:tracked-stablecoins-pending");
+    if (typeof pending === "string") {
+      const batch = db.batch.bind(db);
+      vi.spyOn(db, "batch").mockImplementationOnce(async (statements) => {
+        sqlite.prepare("UPDATE cache SET value = ? WHERE key = 'telegram:tracked-stablecoins-pending'").run(pending);
+        return batch(statements);
+      });
+    }
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     const fetchMock = mockFetch([{ match: () => true, body: { ok: true } }]);
 
     await deliverTelegramDigestEdition(db, creds, "weekly:2026-07-10");
@@ -916,7 +967,9 @@ describe("Telegram digest outbox", () => {
     expect(loadFinalizationEffects(sqlite, generatedAt).appendix).toEqual([
       { key: "telegram:appendix-pointer", value: "weekly-edition", updated_at: generatedAt },
       { key: "telegram:new-appendix-pointer", value: "new-weekly-edition", updated_at: generatedAt },
+      { key: "telegram:tracked-stablecoins-pending", value: pending ?? "[]", updated_at: typeof pending === "string" ? generatedAt - 60 : generatedAt },
     ]);
+    if (typeof pending === "string") expect(warning).toHaveBeenCalledWith(expect.stringContaining('"reason":"invalid_tracked_pending"'));
     const committed = loadFinalizationEffects(sqlite, generatedAt);
     await enqueueDaily(db, {
       successActions: [{ key: "telegram:appendix-pointer", value: "newer-pending-edition" }],

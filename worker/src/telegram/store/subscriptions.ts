@@ -72,6 +72,7 @@ interface SubscriptionUpsertSpec {
    * turning the family off drops the stored step instead of keeping it.
    */
   settingUpdate?: "excluded" | "clear-when-disabled";
+  expectedPreferenceGeneration?: number;
 }
 
 /**
@@ -125,12 +126,15 @@ function buildSubscriptionAlertUpsert(spec: SubscriptionUpsertSpec): BuiltSubscr
     );
   }
 
+  const generationGuard = spec.expectedPreferenceGeneration == null ? null :
+    "EXISTS (SELECT 1 FROM telegram_subscribers WHERE chat_id = ? AND preference_generation = ?)";
+  if (generationGuard) binds.push(spec.chatId, spec.expectedPreferenceGeneration);
   return {
     sql: `
       INSERT INTO telegram_subscriptions (
         ${columns.join(", ")}
       )
-      VALUES (${values.join(", ")})
+      ${generationGuard ? `SELECT ${values.join(", ")} WHERE ${generationGuard}` : `VALUES (${values.join(", ")})`}
       ON CONFLICT(chat_id, stablecoin_id) DO UPDATE SET
         ${assignments.join(",\n        ")}
     `,
@@ -143,8 +147,10 @@ export function buildDewsUpsert(
   stablecoinId: string,
   enabled: boolean,
   minBand: TelegramDewsBand | null,
+  expectedPreferenceGeneration?: number,
 ): BuiltSubscriptionUpsert {
   return buildSubscriptionAlertUpsert({
+    expectedPreferenceGeneration,
     alertType: "dews",
     chatId,
     stablecoinId,
@@ -159,8 +165,10 @@ export function buildSafetyUpsert(
   stablecoinId: string,
   enabled: boolean,
   mode: TelegramSafetyMode | null,
+  expectedPreferenceGeneration?: number,
 ): BuiltSubscriptionUpsert {
   return buildSubscriptionAlertUpsert({
+    expectedPreferenceGeneration,
     alertType: "safety",
     chatId,
     stablecoinId,
@@ -174,8 +182,10 @@ function buildDepegUpsert(
   chatId: string,
   stablecoinId: string,
   enabled: boolean,
+  expectedPreferenceGeneration?: number,
 ): BuiltSubscriptionUpsert {
   return buildSubscriptionAlertUpsert({
+    expectedPreferenceGeneration,
     alertType: "depeg",
     chatId,
     stablecoinId,
@@ -189,8 +199,10 @@ export function buildDepegStepUpsert(
   chatId: string,
   stablecoinId: string,
   step: TelegramDepegStepBps | null,
+  expectedPreferenceGeneration?: number,
 ): BuiltSubscriptionUpsert {
   return buildSubscriptionAlertUpsert({
+    expectedPreferenceGeneration,
     alertType: "depeg",
     chatId,
     stablecoinId,
@@ -206,8 +218,10 @@ function buildPlainAlertUpsert(
   chatId: string,
   stablecoinId: string,
   enabled: boolean,
+  expectedPreferenceGeneration?: number,
 ): BuiltSubscriptionUpsert {
   return buildSubscriptionAlertUpsert({
+    expectedPreferenceGeneration,
     alertType,
     chatId,
     stablecoinId,
@@ -221,18 +235,19 @@ function buildSetCommandSubscriptionUpsert(
   chatId: string,
   stablecoinId: string,
   command: ParsedSetCommand,
+  expectedPreferenceGeneration?: number,
 ): BuiltSubscriptionUpsert {
   switch (command.setting) {
     case "dews":
-      return buildDewsUpsert(chatId, stablecoinId, command.enabled, command.minBand);
+      return buildDewsUpsert(chatId, stablecoinId, command.enabled, command.minBand, expectedPreferenceGeneration);
     case "safety":
-      return buildSafetyUpsert(chatId, stablecoinId, command.enabled, command.mode);
+      return buildSafetyUpsert(chatId, stablecoinId, command.enabled, command.mode, expectedPreferenceGeneration);
     case "depeg":
-      return buildDepegUpsert(chatId, stablecoinId, command.enabled);
+      return buildDepegUpsert(chatId, stablecoinId, command.enabled, expectedPreferenceGeneration);
     case "depeg-step":
-      return buildDepegStepUpsert(chatId, stablecoinId, command.step);
+      return buildDepegStepUpsert(chatId, stablecoinId, command.step, expectedPreferenceGeneration);
     default:
-      return buildPlainAlertUpsert(command.setting, chatId, stablecoinId, command.enabled);
+      return buildPlainAlertUpsert(command.setting, chatId, stablecoinId, command.enabled, expectedPreferenceGeneration);
   }
 }
 
@@ -358,6 +373,7 @@ export function prepareSettingToSubscriptions(
   username: string | null,
   coins: readonly Pick<ResolvedCoin, "id">[],
   command: ParsedSetCommand,
+  expectedPreferenceGeneration?: number,
 ): D1PreparedStatement[] {
   const now = unixNow();
   // `depeg-step` always implies the depeg family; every other setting bumps its
@@ -369,25 +385,42 @@ export function prepareSettingToSubscriptions(
         ? { [command.setting]: 1 }
         : {};
 
+  const guard = expectedPreferenceGeneration == null ? undefined : {
+    sql: "preference_generation = ?", binds: [expectedPreferenceGeneration],
+  };
   const statements: D1PreparedStatement[] = [
     ...(coins.length > 0 && Object.values(perCoinAlertBumps ?? {}).some((flag) => flag === 1)
-      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec: now, feature: "direct" })
+      ? prepareTelegramFirstFollowStatements(db, {
+          chatId, username, nowSec: now, feature: "direct",
+          ...(guard ? { guard, ensureSubscriber: false } : {}),
+        })
       : []),
-    prepareUpsertSubscriberRow(db, {
+    ...(!guard ? [prepareUpsertSubscriberRow(db, {
       chatId,
       username,
       nowSec: now,
       perCoinAlertBumps,
-    }),
+    })] : []),
   ];
 
   for (const coin of coins) {
     statements.push(bindSubscriptionUpsert(
       db,
-      buildSetCommandSubscriptionUpsert(chatId, coin.id, command),
+      buildSetCommandSubscriptionUpsert(chatId, coin.id, command, expectedPreferenceGeneration),
     ));
   }
 
+  if (guard) {
+    // Bump last so every preceding write tests the same generation in this atomic batch.
+    const bumps = Object.keys(perCoinAlertBumps ?? {});
+    statements.push(db.prepare(`
+      UPDATE telegram_subscribers
+         SET username = COALESCE(?, username), last_active_at = ?,
+             ${bumps.map((type) => `alert_${type} = MAX(alert_${type}, 1),`).join(" ")}
+             preference_generation = preference_generation + 1
+       WHERE chat_id = ? AND preference_generation = ?
+    `).bind(username, now, chatId, expectedPreferenceGeneration));
+  }
   return statements;
 }
 
