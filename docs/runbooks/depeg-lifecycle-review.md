@@ -7,42 +7,41 @@ freezing or delisting a coin remains a manual decision with its own runbook
 
 ## Why this exists
 
-An open lifecycle is not proof of a recoverable coin. Closure requires sustained
-recovery inside 50 bps (USD) / 75 bps (non-USD), observed supply under $1M,
-direction supersede, or untracking. A permanent collapse can satisfy none of
-these, so the flags below prompt manual lifecycle review rather than auto-close.
+An open lifecycle is not proof of a recoverable coin. Closure follows the
+detector's [close-reason contract](../depeg-detection.md#database-schema) and
+[recovery thresholds](../depeg-detection.md#thresholds--constants). A permanent
+collapse can satisfy none of these conditions, so the flags below prompt manual
+lifecycle review rather than auto-close.
 
 ## Flags
 
 Computed daily by `worker/src/lib/depeg-lifecycle.ts` inside the digest cron's
 active-depeg collector, before the prompt slice. The collector excludes
 untracked/frozen coins and unavailable market caps. Flags require a fresh live
-price and a positive current authoritative peg reference. USD-quote events use
-that current reference (the same authority `/api/peg-summary` uses, rederived
-from the stablecoins snapshot); native-quote events use the event-native
-reference. The reference latched when the event opened is not used for
-USD-quoted events because FX and commodity references drift; a stale stored
-peak never triggers a freeze review.
-The 21- and 30-day thresholds use a rounded-hourly age that is then floored
-into days, so they can trip up to ~30 minutes early.
+price and a positive current authoritative peg reference; the reference
+latched when the event opened is not used for USD-quoted events because FX
+and commodity references drift, and a stale stored peak never triggers a
+freeze review. Flag thresholds, the current-versus-native reference authority
+and the degraded-evidence gate are owned by
+[the digest pipeline](../digest-pipeline.md#failure-handling). The 21- and
+30-day thresholds use a rounded-hourly age that is then floored into days, so
+they can trip up to ~30 minutes early.
 
-| Flag | Condition | Meaning |
-|------|-----------|---------|
-| `stalled-collapse` | open ≥ 21 days AND absolute live deviation ≥ 2,500 bps | A persistent severe dislocation needs review. Decide: freeze (see the freeze runbook), or document why the coin stays active. |
-| `chronic-shallow` | open ≥ 30 days AND absolute live deviation < 300 bps | The event is technically open (never recovered inside the 50 bps close threshold — half the 100 bps USD trigger, 75 bps for non-USD pegs) but describes a chronic soft peg, not a crisis. Decide: tolerate, or consider a detector-side close/re-baseline. |
+| Flag | Decision |
+|------|----------|
+| `stalled-collapse` | A persistent severe dislocation needs review. Decide: freeze (see the freeze runbook), or document why the coin stays active. |
+| `chronic-shallow` | The event is technically open (never recovered inside the detector's [close threshold](../depeg-detection.md#thresholds--constants)) but describes a chronic soft peg, not a crisis. Decide: tolerate, or consider a detector-side close/re-baseline. |
 
 ## Where to see them
 
 - **Cache:** D1 `cache` table, key `depeg:lifecycle-flags` —
   `{ updatedAt, flags: [{ stablecoinId, symbol, kind, currentBps, ageDays, mcapUsd }] }`,
-  sorted by |deviation| × mcap. A digest run whose active-depeg read failed,
-  whose stablecoins price cache was stale, whose open-event supply was
-  unreadable, or which could not resolve a current reference for an open
-  USD-quote event leaves this key untouched, so `updatedAt` names the last
-  successful read and the prior queue stays pending.
-- **Cron metadata:** the `daily-digest` cron lane's metadata string appends
-  `lifecycle-review: SYMBOL:kind|…` whenever flags exist, so the admin crons
-  view surfaces pending reviews without a new UI surface.
+  sorted by |deviation| × mcap. The cache key, the
+  `lifecycle-review: SYMBOL:kind|…` metadata suffix and the degraded-evidence
+  gate are owned by
+  [the digest pipeline](../digest-pipeline.md#failure-handling); a run with
+  degraded lifecycle evidence leaves `updatedAt` naming the last successful
+  read and the prior queue pending.
 
 ## Review procedure
 

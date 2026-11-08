@@ -25,7 +25,7 @@ Reserve slices may carry a namespace-qualified stable `sourceKey` plus review-us
 
 `proofOfReserves.latestReport` remains inside the base `proofOfReserves` object and is the sole sourced report-date authority. Period end and publication date are separate, independently optional facts; never infer one from the other. A migrated date whose meaning is unproven lives in `reviewReference` with its original review date and `dateKind: "unspecified"`, without filling either date. Sources, reviewer, confidence, assurance method, scope, and reconciliation remain explicit; unknown assurance facts stay `unknown`. Compliance sidecars retain review-qualified evidence in notes and references, not a second authored latest-report date. An `independent-audit` label without a verifiable current report remains valid metadata but is surfaced in the audit backfill queue.
 
-`proofOfReserves.type` describes the linked reporting engagement, not a separate audit at another cadence. Use `agreed-upon-procedures` for procedures that report findings without an assurance opinion, and `attestation` for an independent verification-agent attestation that is neither an audit nor AUP. Neither type enters the V9 `independent-audit` admission or expired-audit fallback paths. The reserve coverage audit counts these types and their missing structured latest reports separately; neither label supplies missing scope, reconciliation, or review evidence.
+`proofOfReserves.type` describes the linked reporting engagement, not a separate audit at another cadence. Use `agreed-upon-procedures` for procedures that report findings without an assurance opinion, and `attestation` for an independent verification-agent attestation that is neither an audit nor AUP. V9 admits an `attestation` report as independent reserve assurance, and `agreed-upon-procedures` only when its `assuranceMethod` is also `agreed-upon-procedures`. The reserve coverage audit counts these types and their missing structured latest reports separately; neither label supplies missing scope, reconciliation, or review evidence.
 
 `dependencyReview` remains base metadata. It is required for manual-only `dependencies`, including a reserve-linked relationship with a reviewed non-default V9 economic role. When present, it must exactly cover those edges plus the implicit `variantOf` wrapper edge, with explicit types and matching weights; a wrapper-only review is valid. Ordinary reserve-derived edges use reserve composition and `reserveReview` provenance, not duplicated per-edge evidence. `shared/lib/stablecoins/schema.ts` owns the distinction.
 
@@ -47,15 +47,11 @@ Route by capability, not controller location or reuse of a Safe. Follow the [nat
 
 1. Check whether `domains/<domain>/<id>.json` exists.
 2. If it exists, edit the sidecar. Do not copy its fields back into `coins/<id>.json`.
-3. If it does not exist, create it. Do not author domain-owned fields in the base file; the migration below exists for legacy layouts, not for new research.
+3. If it does not exist, create it; never author domain-owned fields in the base file. If an old branch or malformed source reintroduces them, use `scripts/maintenance/migrate-stablecoin-sidecar.ts --help` and preview with `--dry-run` before applying: it moves only authored fields and refuses the write unless the complete merged projection, including other domain sidecars and cross-domain refinements, remains deeply equal.
 4. Preserve existing evidence and values unless the task includes reviewed research. A layout migration must not invent or refresh facts.
 5. Run focused schema/loader tests before regenerating artifacts.
 
 Sidecars use strict schemas. Unknown keys, a sidecar ID that differs from its filename/base ID, orphan sidecars, unsupported domain directories, and any base/sidecar domain split are errors.
-
-## Migration Workflow
-
-The catalog migration is complete; new research goes directly into the owning sidecar. If an old branch or malformed source reintroduces domain-owned fields into a base coin file, use `scripts/maintenance/migrate-stablecoin-sidecar.ts --help` and preview with `--dry-run` before applying. The tool moves only authored fields and refuses the write unless the complete merged projection, including other domain sidecars and cross-domain refinements, remains deeply equal.
 
 ## Coordinated Generation
 

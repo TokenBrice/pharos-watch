@@ -68,8 +68,8 @@ Claim-safety rules for every product surface (profiles, OG cards, SEO metadata, 
 
 - No unqualified "safe", "safest", "low-risk", "risk-free", or guarantees (`no-unqualified-safety`).
 - No recommendations to buy, hold, sell, or switch (`no-investment-recommendation`).
-- Rankings and superlatives should name the metric, scope, and date ("highest liquidity score among tracked USD coins, June 2026"). Bare forms trigger advisory review, in product and editorial registers alike, because a scanner cannot determine whether nearby context supplies the qualification safely enough to block publication.
-- Technical risk terms should attribute to a defined methodology or source. Missing attribution is advisory for the same context-dependent reason, in product and editorial registers alike.
+- Rankings and superlatives should name the metric, scope, and date ("highest liquidity score among tracked USD coins, June 2026"). Bare forms trigger advisory review in the product registers and in the daily, weekly, and coin-summary registers, because a scanner cannot determine whether nearby context supplies the qualification safely enough to block publication.
+- Technical risk terms should attribute to a defined methodology or source. Missing attribution is advisory for the same context-dependent reason, in the product registers and in the daily, weekly, and coin-summary registers.
 
 [`docs/design-language.md#context`](./design-language.md#context) owns product posture; this document owns sentences. On mechanics, this document wins.
 
@@ -90,6 +90,7 @@ Two classes. **Hard** rules are exact, scanner-safe, and can block a runtime edi
 - Closer position only (`no-hedged-closer`): "worth watching", "worth monitoring", "bears watching", "for now", "the question is whether". Say what to watch, when, and what it would mean.
 - Decorative dead metaphors in editorial registers (`no-dead-metaphor`): "beneath the calm", "surface calm", "restless depths", "something moving underneath". Literal physical descriptions and ordinary verbs such as "belies" are not in the hard set.
 - Claim-safety patterns above, in product scopes.
+- Empty intensifiers, exclamation marks, and clickbait questions in daily, weekly, and coin-summary (`no-booster-language`); advisory elsewhere.
 
 ### Advisory (review triggers)
 
@@ -100,7 +101,7 @@ Two classes. **Hard** rules are exact, scanner-safe, and can block a runtime edi
 - Broader rhetorical flips beyond the bounded cleft; "not merely X", "isn't just X" used as recategorization rather than fact.
 - Personification of named metrics (regex-detected for the known verb set, advisory because the general case needs judgment).
 - Hedge stacks: two or more qualifiers on one claim ("could potentially", "might arguably"). One warranted "may" is required honesty, not a tell; technical and notice registers must keep it.
-- Empty intensifiers, clickbait questions, nickname titles, slogan closers.
+- Nickname titles and slogan closers (prompt guidance; no scanner rule).
 - Scoped words, advisory in editorial registers and unrestricted elsewhere: "quietly" (for unannounced or gradual change), "meanwhile" (as throat-clearing; legal for real simultaneity), "landscape" (as decoration; "regulatory landscape" in analysis is ordinary diction), "plumbing" (as garnish; literal settlement-infrastructure use is fine).
 - "Obituary", "post-mortem", "carcass", "furniture" as casual market metaphors. Literal cemetery fields, actual obituaries, and published incident post-mortems are exempt by surface.
 - A spaced hyphen used as a clause dash (advisory: it collides with tables, ranges, and arithmetic).

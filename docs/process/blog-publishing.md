@@ -62,8 +62,9 @@ no RSS feed.
   the barrel sorts lexicographically and the archive manifest groups those dates.
 - **One entry per Monday–Sunday week.** `dateRange.from` is a Monday and
   `dateRange.to` the following Sunday (UTC, inclusive). The editorial-content
-  check rejects any other span, and the registry test rejects overlapping
-  weeks; publish a week only once it is complete (on its Sunday or later).
+  check rejects any other span, and duplicate week files are rejected by
+  their filename identity; publish a week only once it is complete (on its
+  Sunday or later).
 - **The commit list is capped; the count is not.** `commits` holds at most the
   20 the card renders, while `stats.totalCommits` is the authoritative
   noise-filtered total for the window and may be larger. Git is the archive —

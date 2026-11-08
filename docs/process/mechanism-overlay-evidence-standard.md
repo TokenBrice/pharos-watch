@@ -35,7 +35,7 @@ are now admissible only under the rules below.
   below. Every component remains applicable; no generic PoR or audit metadata auto-grades
   these families.
 
-fxSAVE illustrates the local-versus-dossier boundary: the standalone July 15 wrapper journal remains `complete:false`, with CDP metrics N/A, at Ethereum block 25,536,894. The reviewed July 20 overlay already attaches dated parent fxUSD mechanism evidence and independently pinned local wrapper accounting at block 25,572,053. Preserve each citation/hash/block clock; local ERC-4626 accounting is not parent solvency, liquidation or stressed-recovery proof, and attaching metadata grants no additional score credit.
+fxSAVE illustrates the local-versus-dossier boundary: local ERC-4626 accounting is not parent solvency, liquidation or stressed-recovery proof, and attaching metadata grants no additional score credit. Preserve the separate original citations, hashes and block clocks for the standalone local capture and reviewed dossier evidence; the [capture README](../../shared/data/safety-score-v9/mechanism-measurements/README.md#local-wrapper-evidence) owns their details.
 
 ## Evidence classes
 
@@ -298,7 +298,7 @@ liabilities/encumbrances with explicit reasons and separate signed derivative le
 packet or producer is admitted here. Later data authoring must be a uniform Mento cohort
 cutover, not an AUDm/CADm-only restoration; token-specific grades may differ under one rule.
 
-This is a future position-feed admission specification, not a disabled producer or flag. Before any packet/admission, resolve two separate exact-token prerequisites: the JPYm reviewed overlay identifies current CDP backing and inactive legacy BiPoolManager supply, so its retained FPMM conversion target is not current backing proof and needs independent evidence of any present exit-diagnostic role; CHFm separately has a CDP label conflicting with N/A/no-independent-vault/conversion-only review reasoning. Reconcile CHFm's actual issuing/backing contracts and liabilities independently; neither copy JPYm's ruling nor invent CDP metrics. Preserve existing bounded reviews while those external evidence questions remain open. A future same-date whole-pool packet must count shared liabilities (including PHPm/NGNm) once, cover every shared-reserve coin uniformly, and establish valuation, encumbrance and current claim identity before prospective movers and accepted-capture equality.
+This is a future position-feed admission specification, not a disabled producer or flag. Before any packet/admission, each coin must resolve its own exact-token backing evidence: JPYm's retained FPMM conversion target is not current CDP-backing proof, and any present exit-diagnostic role needs independent evidence; CHFm's CDP identity and contracts are identified in its own reviewed overlay, but whole-liability reconciliation and stress-executable offset coverage remain unasserted. Neither coin may copy the other's ruling or invent CDP metrics. Preserve existing bounded reviews while external evidence questions remain open. A future same-date whole-pool packet must count shared liabilities (including PHPm/NGNm) once, cover every shared-reserve coin uniformly, and establish valuation, encumbrance and current claim identity before prospective movers and accepted-capture equality.
 
 ## Mixed allocation and legal-layer scope
 
@@ -323,16 +323,18 @@ An idle-custody N/A additionally requires source-bound `idleCustodyProof` naming
 and `mintSourceUrl`, matched to the actual serial dependency and its parent's exact same-chain
 registered token.
 
-The compiler emits private `allocationScopeFacts` for wrappers and nonwrappers and derives
-required contract/entity/holder layers from verified reserve/custody facts. Partial, expired,
-mismatched or incomplete scopes retain fallback risk; reviewed adverse facts remain adverse.
-Synthesized omitted required scopes are `integration-missing` diagnostics, not invented issuer
-nondisclosure findings; authored exhaustive `issuer-undisclosed` findings retain their original
-aggregate charge.
+The compiler no longer emits private `allocationScopeFacts` or derives required
+contract/entity/holder layers from verified reserve/custody facts. Authored per-dimension
+claims remain schema-validated evidence records: their source evidence is published under
+`allocation-scope:<claimKey>` component evidence, but they grant no allocation grade,
+synthesized `integration-missing` diagnostic, fallback-risk effect or issuer-nondisclosure
+charge. Reviewed adverse and `issuer-undisclosed` claims remain adverse in the authored
+review data; they produce no compiler charge.
 Burn-parent/mint-parent idle-token custody absence is a contract-only N/A, not legal segregation
 or bankruptcy protection. Parent claims must match a real dependency edge and remain adverse-only
 diagnostics: they never grant supervision, holder rights, favorable parent Backing, cap relief
-or supply changes. Per-coin facts are deferred to the later authoring wave.
+or supply changes. Per-coin allocation evidence remains authored review data, not a deferred
+compiler fact.
 
 ## Bounded reserve maturity and liquidity facts
 
@@ -423,12 +425,12 @@ this section tracks current closure rules; authored identity admission began in 
   while keeping its `reviewId`; every authored lane must survive the fan-out.
 - Since v10.43, a global-scope bridge fact may use the incident join only on its own
   native or explicitly issuer-operated route. Global mint/oracle controls, global
-  third-party routes and sibling lanes gain no closure. FRNT Arbitrum/Base/Optimism
-  become eligible when all witnesses hold; FRNT Ethereum is already closed by an exact
-  review. yUSD Ethereum remains open: its sourced Chainlink CCIP key provides rail
-  identity, but the issuer's current mint/redemption suspension prevents a negative
-  issuer-surface review. Release remains held for owner approval and fresh mover measurement;
-  the five-lane catalog is screening coverage, not closure authority.
+  third-party routes and sibling lanes gain no closure. Lane eligibility, reviewed closure
+  status and release approval are recorded in the [v10.43 changelog](../../shared/data/methodology-changelogs/safety-score/v10.json);
+  `lane-screening-emitter-inventory-v1.json` owns the catalog count.
+  Fresh mover measurement and the first accepted production
+  cycle remain separate acceptance requirements; screening coverage grants no closure
+  authority.
 - Each eligible lane's closure needs current provider reviews per authored provider key (or the
   issuer surface for `rail: "issuer-operated"`), a current issuer surface naming the lane,
   descriptor/fact contributor parity and the newest v2 certificate for

@@ -8,14 +8,14 @@ Use this runbook for Mini App signed-session failures and for the BotFather-owne
 
 `mini_app_session_invalid` usage events spike in `telegram_usage_daily`, or users report that the Mini App opens but every edit fails with "session expired, please relaunch from Telegram".
 
-- Session reads record `mini_app_session_invalid` with outcomes `stale-auth` (expired but signature-valid) or `rate_limited` (session cooldown exceeded). Stale signed writes record `mini_app_mutation_denied` with failure class `stale-auth` and a normalized `action_detail` (`coin`, `preset`, `quiet_hours`, `chat`, …). Stale-auth events are deduplicated per expired `initData` hash and event type for 7 days, so they count expired launches, not retries; every retry still returns `401 stale-auth`.
+- Session reads record `mini_app_session_invalid` with outcomes `stale-auth` (expired but signature-valid) or `rate_limited` (session cooldown exceeded). Stale signed writes record `mini_app_mutation_denied` with failure class `stale-auth` and a normalized `action_detail` (`coin`, `preset`, `quiet_hours`, `chat`, …). Stale-auth events count expired launches, not retries; the 7-day dedupe and `401 stale-auth` behavior are owned by [Auth model](../telegram-mini-app.md#auth-model).
 - Body-size (`413`), schema (`400 validation-error`), invalid-signature and malformed-auth failures write no usage analytics. Use HTTP status/code and [preauth telemetry](./telegram-webhook.md#preauth-ingress-abuse-controls) for those.
-- `mini_app_mutation_denied` with `failure_class = 'rate_limited'` means a user or script exhausted the mutation budget: 12 attempts per Telegram user in a 30-second window anchored to the first admitted write. This is distinct from Bot API rate limits.
+- `mini_app_mutation_denied` with `failure_class = 'rate_limited'` means a user or script exhausted the burst budget in [Auth model](../telegram-mini-app.md#auth-model). This is distinct from Bot API rate limits.
 
 ### Quick Diagnostic Checklist
 
 1. **Bot token rotation gap?** If `TELEGRAM_BOT_TOKEN` was rotated and `TELEGRAM_BOT_TOKEN_PREVIOUS` is unset or wrong, prior-token `initData` fails signature validation: expect `401` responses but no rise in `mini_app_session_invalid`. Check `cd worker && npx wrangler secret list` and follow [secret rotation](./telegram-webhook.md#secret-rotation).
-2. **Stale clients?** A Mini App left open more than 5 minutes keeps its launch `auth_date`; mutations need a fresh launch, while reads stay valid for 24 hours. The age of the alert or deep link is not the session age.
+2. **Stale clients?** A Mini App left open past its write window keeps its launch `auth_date`; mutations need a fresh launch while reads stay valid, per [Auth model](../telegram-mini-app.md#auth-model). The age of the alert or deep link is not the session age.
 3. **Invalid signatures?** Persistent invalid-signature volume outside a rotation points to malformed launch data, token mismatch or tampering. No mutation reaches D1 before HMAC validation succeeds.
 4. **Request path degraded?** Diagnose the session/mutation handlers and the pulse loader independently. Alert delivery health does not authenticate Mini App requests.
 

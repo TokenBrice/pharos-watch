@@ -18,13 +18,7 @@ Sampled HTTP logs establish request timing; chat/update association comes from D
 
 ## Current Dedupe Model
 
-`telegram_processed_updates` is a plain update-id claim (`worker/src/telegram/store/processed-updates.ts`). The webhook inserts the id as `processing`; when dispatch returns it marks the row `processed` (with an optional `error_class` for handled failures such as a failed callback or command reply). A thrown error deletes the `processing` claim and returns non-2xx, so Telegram's redelivery is processed. A group-to-supergroup migration that hits a transient D1 failure throws for exactly this reason (the batch is idempotent); a deterministic failure such as a constraint conflict is acked as `processed` with `error_class = chat-migration`, so it cannot block later updates. Mark and release only match this request's own claim (`received_at`), so a request that outlives the stale window never touches a redelivery's row.
-
-Processed duplicates return `200 ok`. A duplicate that finds a fresh `processing` claim returns `503 retry` with `Retry-After` (log action `processed-update-dedupe`). A `processing` claim older than `TELEGRAM_PROCESSING_STALE_SEC` (60 s) belongs to a crashed request and is reclaimed by the next delivery, as are legacy `failed` rows and rows left in older effect-fence states such as `planned`.
-
-Replies are not fenced. A crash after a reply but before the processed marker can repeat that reply once on redelivery; this is accepted at the bot's traffic level. Settings and subscription mutations write explicit target values, so a redelivered update reapplies the same state.
-
-Processed rows retain seven days. Daily `telegram-retention-cleanup` owns capped pruning; webhook traffic does not run retention.
+`telegram_processed_updates` is a plain update-id claim (`worker/src/telegram/store/processed-updates.ts`). Behavior and retention are owned by [Update deduplication](../telegram-alerts.md#update-deduplication). Diagnostic deltas: the `503 retry` `Retry-After` derives from `TELEGRAM_PROCESSING_STALE_SEC` (60 s), legacy `failed` rows and older effect-fence states such as `planned` are reclaimed, and mark/release match only this request's own claim (`received_at`), so a request that outlives the stale window never touches a redelivery's row. The fresh-duplicate log action is `processed-update-dedupe`. A processed row's `error_class` names the handled failure (for example a failed callback or command reply), so it was acked rather than redelivered. Group-to-supergroup migration claim handling is owned by [D1 schema](../telegram-architecture.md#d1-schema).
 
 ## Quick Diagnostic Checklist
 
@@ -88,7 +82,7 @@ An over-budget request reads no body, performs no HMAC work, touches no D1, and 
 
 ## Authenticated Flood Control
 
-Commands and callbacks share one fixed-window D1 counter per chat (20 actions / 60 s), owned by `enforceIngressFlood` in `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts`. It runs after the webhook secret check as one conditional `cache` upsert with `RETURNING`, so concurrent deliveries cannot lose increments. A counter failure logs `command-flood` and denies with a best-effort busy reply. The first over-limit action gets one notice; later ones are dropped silently. There are no per-command cooldowns.
+Commands and callbacks share one fixed-window D1 counter per chat, owned by `enforceIngressFlood`; its cap is owned by [Group admin gating](../telegram-alerts.md#group-admin-gating). The implementation is in `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts`. It runs after the webhook secret check as one conditional `cache` upsert with `RETURNING`, so concurrent deliveries cannot lose increments. A counter failure logs `command-flood` and denies with a best-effort busy reply. The first over-limit action gets one notice; later ones are dropped silently. There are no per-command cooldowns.
 
 ## Callback Acknowledgements
 
@@ -122,12 +116,12 @@ Rotate one secret at a time. The webhook secret supports an overlap window; the 
 
 ## Group Admin Gate Rollback
 
-Group admins alone may run `/subscribe`, `/unsubscribe`, `/pause` (and `/unsnooze`) and the mutating buttons ([contract](../telegram-alerts.md#group-admin-gating)). The mode is a code toggle, `TELEGRAM_GROUP_ADMIN_GATING.mode` in `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts`, not an env binding. Hard (default) refuses non-admins; soft (emergency rollback) warns but runs the command. The soft toggle relaxes gated commands only: every mutating callback stays hard-gated and needs a separate code change to relax.
+Group-admin command scope and hard/soft mode semantics are owned by [Group admin gating](../telegram-alerts.md#group-admin-gating); the mode is the `TELEGRAM_GROUP_ADMIN_GATING.mode` code toggle in `worker/src/telegram/webhook/telegram-webhook-ingress-policy.ts`, not an env binding. The soft toggle relaxes gated commands only: every mutating callback stays hard-gated and needs a separate code change to relax.
 
 Flip to soft only when the fresh `getChatMember` lookup (or Telegram's admin API) is denying real admins across many groups, the fix cannot land in the deploy window, and non-admin mutations are judged cheaper than every gated command failing. Return to hard within one deploy cycle.
 
 1. Patch the mode and release through the protected flow in [deployment-process.md](../deployment-process.md). A Wrangler secret change has no effect.
-2. Confirm the split in the audit log; hard emits `outcome = 'denied'`, soft emits `outcome = 'warned'`. `rate_limited` means the per-chat `group-admin-diagnostics` cooldown suppressed diagnostics after a failed lookup; it blocks the command in both modes.
+2. Confirm the split in the audit log; hard emits `outcome = 'denied'`, soft emits `outcome = 'warned'`, and `outcome = 'failure'` with `failure_class = 'admin-lookup-failed'` means the admin lookup itself failed (it blocks the command in both modes).
 
    ```sql
    SELECT day, outcome, SUM(count) AS events

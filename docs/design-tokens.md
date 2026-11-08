@@ -5,13 +5,13 @@ Pharos uses a 3-layer design token architecture that separates raw values from m
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Component Tokens  (card, table, chart, sidebar) │  ← Components reference these
-├─────────────────────────────────────────────────┤
-│  Semantic Tokens   (surfaces, text, severity)    │  ← Purpose-driven aliases
-├─────────────────────────────────────────────────┤
-│  Primitives        (color scales, spacing, type) │  ← Raw, theme-agnostic values
-└─────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────┐
+│  Component Tokens  (card, table, chart, code surface) │  ← Components reference these
+├───────────────────────────────────────────────────────┤
+│  Semantic Tokens   (surfaces, text, severity)         │  ← Purpose-driven aliases
+├───────────────────────────────────────────────────────┤
+│  Primitives        (color scales, spacing, type)      │  ← Raw, theme-agnostic values
+└───────────────────────────────────────────────────────┘
 ```
 
 ### Layer 1: Primitives (`src/styles/tokens/primitives.css`)
@@ -77,7 +77,7 @@ DOM SVG and Recharts paths rendered by the browser can use CSS variables. Litera
 --psi-bedrock-hex: #22c55e; /* JS/Recharts usage */
 ```
 
-Chart accent literals in `chart-colors.ts` match `--chart-*-hex`. Its re-exported `THREAT_BAND_HEX` uses the shared classification palette, not theme-switched `--dews-*-hex`. `severity-colors.ts` emits Tailwind classes; severity hex companions are consumed directly through CSS. Runtime exports do not each have a CSS companion.
+Chart accent literals in `chart-colors.ts` match `--chart-*-hex`. Its re-exported `THREAT_BAND_HEX` uses the shared classification palette, not theme-switched `--dews-*-hex`. `severity-colors.ts` emits Tailwind classes; severity colours are consumed through the `--severity-*` CSS variables (no `-hex` companion is read). Runtime exports do not each have a CSS companion.
 
 ### Layer 3: Component Tokens (in `semantic.css`)
 
@@ -89,7 +89,7 @@ The `--p-text-*` primitives are the single source for Tailwind's `text-*` sizes:
 
 | Utility | Size | Line height | Use |
 | --- | --- | --- | --- |
-| `text-3xs` | 10px | 14px | Dense chart, legend and axis annotations only |
+| `text-3xs` | 10px | 14px | Dense chart, legend and axis annotations; the smallest badges and table meta |
 | `text-2xs` | 11px | 16px | Compact chips, table meta, uppercase eyebrows |
 | `text-xs` | 12px | 16px | Labels (`.pharos-label`), captions, `.pharos-meta` |
 | `text-sm` | 14px | 20px | Body and UI text |
@@ -126,9 +126,9 @@ Label and figure utilities are indexed under [Type scale](#label-and-figure-util
 
 ## JS Token Maps
 
-Use `src/lib/chart-colors.ts` for runtime chart colors/heights/tooltips, `src/lib/severity-colors.ts` for severity/score Tailwind class helpers, and `shared/lib/classification.ts` for published bands and category descriptors. These source exports are the inventory.
+Use `src/lib/chart-colors.ts` for runtime chart colors and heights, and `src/lib/chart-theme.ts` for axis, grid and tooltip-surface values, `src/lib/severity-colors.ts` for severity/score Tailwind class helpers, and `shared/lib/classification.ts` for published bands and category descriptors. These source exports are the inventory.
 
-Chart accents in `chart-colors.ts` match `--chart-*-hex`; its `THREAT_BAND_HEX` comes from classification rather than theme-switched DEWS companions. Freeze-event labels, badges and chart fills derive from one classification descriptor (`EVENT_LABELS`, `EVENT_BADGE_STYLES`, `EVENT_CHART_COLORS`) in both themes. Runtime-only palettes need not acquire a CSS twin without a CSS consumer.
+Runtime-only palettes need not acquire a CSS twin without a CSS consumer.
 
 ## Usage Guidelines
 

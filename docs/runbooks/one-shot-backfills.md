@@ -373,7 +373,7 @@ POST executes the audit or selected delete/repair using the shared parameters an
 - a live event was split by the retired DEX-only auto-close behavior after the earlier row closed near peg, or
 - a backfill row ended without recovery and a live row resumed the same severe move within one sync gap because the historical replay window expired mid-event.
 
-When a repair group ends in a live row, the live tail is kept as the canonical record and inherits the earlier start plus worst peak so future backfills do not recreate the split.
+When a repair group is `source='backfill'` rows ending in the group's only live row, that live tail is kept as the canonical record so future backfills do not recreate the split; otherwise the group keeps its first row. The surviving row always takes the earlier start and worst peak.
 
 `--query 'repair=contradictory-recovery-price'` instead nulls ended-event `recovery_price` values that still sit outside the permitted depeg threshold. This is the bounded repair path for legacy rows closed by a native-quote recovery while the stored USD price still looked depegged.
 

@@ -29,34 +29,17 @@ These are source-owned holds, not automatic calendar reactivation. Access/upload
 
 Escalate a missing report at the end of its window. A discovered newer independent-assurance report is never accepted provisionally: the pinned reviewed report keeps publishing with a degraded `newer-unreviewed-report` warning until its own source-age cap, so verify and update the newer artifact identity before that cap expires. Where a product is bound to a live adapter, its window tracks that adapter's declared source-age tier (`LAGGED_MONTHLY_EXAMINATION_SOURCE_MAX_AGE_SEC` for GUSD, `NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC` for the month-end publishers whose successor lands weeks into the following month, the shared late-monthly tier otherwise), so the escalation deadline and the runtime admission ceiling stay one authority; products without a runtime binding keep their reviewed-manifest publication window.
 
-| Product | Expected publication window | Owner |
-| --- | --- | --- |
-| AUDD | Monthly; by 4,000,000 seconds (46 days 07:06:40) after period end, the exact shared late-monthly runtime ceiling | Reserve evidence maintainer |
-| AUDM | Monthly; shared late-monthly runtime ceiling (`LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC`) | Reserve evidence maintainer |
-| AUDX | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| AUSD | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| BRLA | Monthly; shared late-monthly runtime ceiling (`LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC`) | Reserve evidence maintainer |
-| BRLV | Monthly; shared late-monthly runtime ceiling (`LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC`) | Reserve evidence maintainer |
-| CADD | Monthly; by 70 days after period end (`NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC`) | Reserve evidence maintainer |
-| EUROP | Quarterly; by 150 days after period end | Reserve evidence maintainer |
-| FDUSD | Monthly; by 4,000,000 seconds (46 days 07:06:40) after period end, the exact shared late-monthly runtime ceiling | Reserve evidence maintainer |
-| FIDD | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| GUSD | Monthly; by 75 days after period end | Reserve evidence maintainer |
-| PAXG | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| PGOLD | Ad-hoc reviewed reports; no verified 47-day publication deadline or report-age tier on its `single-asset` adapter | Reserve evidence maintainer |
-| PYUSD | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| RLUSD | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| SBC | Monthly; shared late-monthly runtime ceiling (`LATE_MONTHLY_DISCLOSURE_SOURCE_MAX_AGE_SEC`) | Reserve evidence maintainer |
-| TGBP | Monthly reviewed reports; its suspended `single-asset` feed declares no report-age cap | Reserve evidence maintainer |
-| TRYB | Quarterly reviewed reports; its `single-asset` feed declares no report-age cap | Reserve evidence maintainer |
-| USAT | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| USDG | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| USDGO | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| USDP | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| USDPT | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| USX | Weekly live attestations; 14-day source-age ceiling in `solstice-attestation` | Reserve evidence maintainer |
-| XSGD | Monthly; by 70 days after period end | Reserve evidence maintainer |
-| XUSD | Monthly; by 70 days after period end | Reserve evidence maintainer |
+Every publication window below is owned by the reserve evidence maintainer.
+
+| Product | Expected publication window |
+| --- | --- |
+| EUROP | Quarterly; by 150 days after period end |
+| GUSD | Monthly; by 75 days after period end |
+| PGOLD | Ad-hoc reviewed reports; no verified 47-day publication deadline or report-age tier on its `single-asset` adapter |
+| TGBP | Monthly reviewed reports; its suspended `single-asset` feed declares no report-age cap |
+| TRYB | Quarterly reviewed reports; its `single-asset` feed declares no report-age cap |
+| USX (`usx-solstice`) | Weekly live attestations; 14-day source-age ceiling in `solstice-attestation` |
+| Other dated-report publishers bound to live adapters | Read `proofOfReserves.cadence` and `liveReservesConfig.adapter` in the product's `shared/data/stablecoins/coins/*.json`. Resolve the adapter's `validation.maxSourceAgeSec` through `shared/types/live-reserve-adapter-declarations.ts` and its referenced policy; any coin `liveReservesConfig.scoring.maxSourceAgeSec` may tighten that ceiling. Escalate at the resulting report-age ceiling. |
 
 ## Refresh checklist
 

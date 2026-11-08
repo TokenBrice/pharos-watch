@@ -20,7 +20,7 @@ The response reports the V9 dependency as degraded, stale, or unavailable as app
 
 The frontend chain profile reads `GET /api/chains?chain=<chainId>` through `useChainDetail()`. Its summary, composition, backing breakdown, and stablecoin table use that single Worker-owned generation; it does not fetch or reconcile a separate `/api/stablecoins` snapshot.
 
-`chain_supply_history` is an actively collected forward-only internal baseline, not a live `/api/chains` input. Public history/chart activation requires scope, provenance and bounded capacity approval with an explicit UTC baseline strictly after 2026-04-08. A post-fix date or latest completion marker cannot certify the archive; older rows remain internal and missing days stay gaps.
+`chain_supply_history` is an internal forward-only baseline, not an `/api/chains` input; [Supply Snapshot](./supply-snapshot.md#chain_supply_history) owns collection and the public-activation gate, including approval of an explicit UTC baseline strictly after 2026-04-08.
 
 ## Formula
 
