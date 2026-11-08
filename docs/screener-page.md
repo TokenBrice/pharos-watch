@@ -78,6 +78,8 @@ Current engine invariants (arithmetic/threshold ownership stays in `shared/lib/s
 
 Shortlist cards label the existing spot-price strip `7d price`: its signed geometry is relative to the latest observed price, not a historical peg reference or a peg-deviation score. Constant off-peg samples therefore draw a flat price trajectory, and non-USD FX/commodity price movement remains price movement. Missing samples remain gaps; neither the series math nor engine rankings, hashes or methodology change.
 
+The relaxed-fallback banner names widened constraints without claiming strict candidates are absent; the same copy covers mixed and relaxed-only shortlists.
+
 ## Navigation And Accessibility
 
 Desktop history walks completed wizard steps; mobile commits one result after required inputs. Repair of an over-advanced URL step waits for shared URL readiness; the query-free hydration snapshot must not consume it. Step changes announce politely and focus the active question. Loading exposes `aria-busy`; generation/replay focuses the result summary. Options, skipped/near-miss rows, relaxation and links remain keyboard operable at narrow widths and 200% zoom.
@@ -91,6 +93,8 @@ Desktop history walks completed wizard steps; mobile commits one result after re
 The retained `og-selector-default.png` is a static 1200×630 profile card for `/screener/picker/`. It is intentionally profile-level, not snapshot-level, so recipients of `?sid=...` links never receive a social card containing the frozen shortlist or form answers. No profile/snapshot-specific card is served; [OG images](./og-images.md) owns the asset.
 
 Creation posts only allowlisted inputs. `functions/lib/selector-canonical-snapshot.ts` reloads canonical sources and runs the shared adapter/engine; the Pages handler stores the recomputed projection in `SELECTOR_SNAPSHOTS` KV. Never trust caller scores, identities, hashes or prose. POST validates allowed UI origins and returns `{ sid, ev }`; GET returns verified or explicitly legacy-unverified output, or a typed miss/error. A missing sid-only snapshot is not replaced by current output.
+
+Snapshot creation and clipboard completion share one attempt. Start-over, an input change, unmount or a newer share attempt invalidates late manual-copy fallback writes. Share feedback and fallback URLs reset with the input. Cancelled or superseded attempts preserve newer share feedback without displaying an error. Current clipboard failures retain a labelled, selectable read-only URL for manual copying.
 
 Content-addressed schema-v3 artifacts require matching trusted KV metadata to be Pharos-verified. Legacy bodies without it are client-unverified. Strict recommendations cannot exceed `surviving`; total recommendations cannot exceed `active`. Redistribution/listing counters cover strictly scored rows, not relaxed gaps; relaxed recommendations retain allowed reasons/confidence caps and never also appear as closest near misses.
 

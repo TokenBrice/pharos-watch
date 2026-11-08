@@ -1,8 +1,13 @@
+// @vitest-environment jsdom
+
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { cleanupFrontendTest } from "@/test-utils/frontend";
 import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "@/lib/case-studies";
 import type { CaseStudy } from "@shared/types/editorial-content";
 import { CaseStudyBody } from "../case-study-body";
+import { CaseStudyShare } from "../case-study-share";
 import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
 import { metadata as hubMetadata } from "../page";
 import { generateMetadata } from "../[slug]/page";
@@ -99,5 +104,28 @@ describe("case-study publication metadata", () => {
       renderToStaticMarkup(<CaseStudyArticleJsonLd study={study} />).replace(/^<script[^>]*>|<\/script>$/g, ""),
     ) as { dateModified: string };
     expect(article.dateModified).toBe(study.datePublished);
+  });
+});
+
+describe("case-study sharing", () => {
+  afterEach(cleanupFrontendTest);
+
+  it("keeps confirmation until two seconds after the latest successful copy", async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    render(<CaseStudyShare />);
+    const button = screen.getByRole("button", { name: "Copy link" });
+    const status = screen.getByRole("status");
+    expect(status.getAttribute("aria-live")).toBe("polite");
+    await act(async () => { fireEvent.click(button); });
+    expect(status.textContent).toBe("Link copied");
+    act(() => { vi.advanceTimersByTime(1900); });
+    await act(async () => { fireEvent.click(button); });
+    expect(writeText.mock.calls).toEqual([[window.location.href], [window.location.href]]);
+    act(() => { vi.advanceTimersByTime(1999); });
+    expect(status.textContent).toBe("Link copied");
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(status.textContent).toBe("");
   });
 });

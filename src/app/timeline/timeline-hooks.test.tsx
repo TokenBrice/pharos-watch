@@ -10,7 +10,7 @@ const { themeState } = vi.hoisted(() => ({ themeState: { theme: "system", resolv
 vi.mock("next-themes", () => ({ useTheme: () => ({ ...themeState, setTheme: vi.fn() }) }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 
-describe("useTimelineFeedInteractions sentinel", () => {
+describe("useTimelineFeedInteractions", () => {
   const observers: Array<{ cb: IntersectionObserverCallback; target: Element | null }> = [];
 
   class FakeIntersectionObserver {
@@ -62,8 +62,32 @@ describe("useTimelineFeedInteractions sentinel", () => {
 
   afterEach(() => {
     observers.length = 0;
-    vi.unstubAllGlobals();
+    cleanupFrontendTest();
     vi.clearAllMocks();
+  });
+
+  it.each([
+    ["", false],
+    ["missing", false],
+    ["linked", false],
+    ["replacement", true],
+  ] as const)("clears the previous highlight when target becomes '%s' (resolved=%s)", (permalinkId, permalinkResolved) => {
+    vi.useFakeTimers();
+    const { result, rerender } = renderHook((target) => useTimelineFeedInteractions({
+      filterSignature: "sig", loadedCount: 1, total: 1,
+      fetchNextPage: vi.fn(), hasNextPage: false, isFetchingNextPage: false, nextPageError: false,
+      ...target,
+    }), { initialProps: { permalinkId: "linked", permalinkResolved: true } });
+    act(() => vi.advanceTimersByTime(20));
+    expect(result.current.highlightedId).toBe("linked");
+    act(() => vi.advanceTimersByTime(1_000));
+
+    rerender({ permalinkId, permalinkResolved });
+    expect(result.current.highlightedId).toBeNull();
+    act(() => vi.advanceTimersByTime(20));
+    expect(result.current.highlightedId).toBe(permalinkResolved ? permalinkId : null);
+    act(() => vi.advanceTimersByTime(2_000));
+    expect(result.current.highlightedId).toBeNull();
   });
 
   it("stops auto-loading after a failed next-page fetch until the reader retries", () => {

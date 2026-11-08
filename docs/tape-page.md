@@ -16,7 +16,7 @@ The [Tape special](./design-language.md#tape-special) pointer delegates the rout
 
 `TIMELINE_URL_SCHEMA` and shared URL codec own validation/defaults for type, severity, coin, peg, chain, window, search and event target. Types allow exact and prefix wildcard; canonical coin/chain/peg registries own IDs. Defaults are omitted; clearing restores them. `alltime` is canonical and legacy `all` remains accepted. `notice+` is the default floor; Info drops it. Search is debounced/server-side. Default omission must not lose decoded severity/peg/chain/window values.
 
-An event permalink may be outside ordinary filters. Resolve a loaded-feed miss through the exact `event` API query, pin inside the feed even with zero normal rows, and show filtered-empty explanation separately. Successful resolution scrolls, focuses and briefly highlights with reduced-motion support. Retracted freeze claims return `404` with reason `freeze-claim-retracted`, never an empty event or a substitute target.
+An event permalink may be outside ordinary filters. Resolve a loaded-feed miss through the exact `event` API query, pin inside the feed even with zero normal rows, and show filtered-empty explanation separately. Successful resolution scrolls, focuses and briefly highlights with reduced-motion support. The highlight clears after two seconds or when the target changes, is removed or becomes unresolved. Retracted freeze claims return `404` with reason `freeze-claim-retracted`, never an empty event or a substitute target.
 
 ## API Contract
 

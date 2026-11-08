@@ -16,6 +16,7 @@ import {
 } from "@shared/lib/selector/selector-labels";
 import { SelectorEmblem } from "@/components/home-alt-callouts/selector-emblem";
 import { cn } from "@/lib/utils";
+import { isRequestCancellation } from "@/lib/request";
 
 export interface SelectorSummaryCoverageWarnings {
   sparse?: boolean;
@@ -129,6 +130,7 @@ export function SelectorResultSummary(props: SelectorResultSummaryProps) {
       setShareState("copied");
       shareResetTimer.current = setTimeout(() => setShareState("idle"), 2500);
     } catch (err) {
+      if (isRequestCancellation(err)) return;
       setShareError(err instanceof Error ? err.message : "Failed to create share link");
       setShareState("error");
     }
@@ -367,8 +369,8 @@ function buildResultBanners({
       title: "Relaxed fallback used.",
       message:
         relaxedReasons.length > 0
-          ? `No clean fit survived, so Pharos relaxed: ${relaxedReasons.map(readableRelaxedReason).join(", ")}.`
-          : "No clean fit survived, so Pharos widened one or more soft constraints.",
+          ? `Pharos relaxed: ${relaxedReasons.map(readableRelaxedReason).join(", ")}.`
+          : "Pharos widened one or more soft constraints.",
       tone: "amber",
     });
   }

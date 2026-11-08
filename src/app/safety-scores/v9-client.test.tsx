@@ -406,6 +406,31 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
   });
 
+  it.each([
+    ["loading", 1000], ["failed", 1000], ["failed", 2_147_484_647],
+  ] as const)("expires a mounted preview while ratings remain %s (%i ms before expiry)", (state, delay) => {
+    vi.useFakeTimers();
+    const timeout = vi.spyOn(globalThis, "setTimeout");
+    const preview = makePreview();
+    vi.setSystemTime(new Date(preview.expiresAtSec * 1000 - delay));
+    mocks.useReportCardsV9.mockReturnValue({
+      ...query(undefined), isLoading: state === "loading",
+      error: state === "failed" ? new Error("Ratings unavailable") : null,
+    });
+    mocks.useStablecoins.mockReturnValue(query(undefined));
+    render(<ReportCardsV9Client initialPreview={preview} />);
+    act(() => vi.advanceTimersByTime(0));
+    expect(timeout).toHaveBeenCalledWith(expect.any(Function), Math.min(delay, 2_147_483_647));
+    act(() => vi.advanceTimersByTime(delay - 1));
+    expectPreviewFacts();
+    act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByText(/Grades as of 2026-10-27/)).toBeNull();
+    if (state === "failed") {
+      expect(screen.getByRole("alert").textContent).toContain("V8 ratings are not used as a fallback");
+    }
+    vi.useRealTimers();
+  });
+
   it("drops an expired preview after hydration and falls back to the neutral unavailable state", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-31T00:00:00Z"));
