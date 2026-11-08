@@ -650,7 +650,7 @@ The `dews_downstream_of_dex_liquidity` diagnostic groups the DEX lane's upstream
 
 - `stablecoinsCacheStatus`: `ok | degraded | error`
 - `stablecoinsCacheReason`: machine-readable reason when the stablecoins cache is unavailable or transitional
-- `stablecoinPublication`: active-stablecoin publication coverage (`complete | incomplete | unknown`) with expected/present/waived counts and missing active IDs
+- `stablecoinPublication`: active-stablecoin publication coverage (`complete | incomplete | unknown`) with expected/present/waived counts and missing active IDs. A publication built for a different active catalog (a lifecycle deploy landing between `sync-stablecoins` runs) is reconciled against the deployed catalog through the same row's price-coverage ID partition: retired IDs drop out, newly listed IDs are named as missing, and lists that do not cover the published catalog stay an unreconciled count mismatch
 - `blacklistGapStatus`: `ok | failed`
 - `activeDepegStatus`: `ok | failed`
 - `onchainSupplyQueryStatus`: `ok | failed | unavailable`
