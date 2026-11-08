@@ -396,8 +396,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "solana" },
     { chain: "arc", allowZeroSupply: true },
   ],
-  // Reviewed 2026-10-25: Centrifuge V3 Spoke burn/reissue shares sum, including
-  // Pharos; the issuer issuance API reconciles the EVM stock. Solana is zero.
+  // Reviewed 2026-11-08: Centrifuge Spoke burn/reissue stocks sum; X Layer/Arc
+  // are required observed-zero legs. Stellar is already in Ethereum's issuer escrow.
   // https://docs.centrifuge.io/developer/protocol/guides/bridge-share-tokens/
   "jtrsy-anemoy": [
     { chain: "ethereum" },
@@ -409,6 +409,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("monad"),
     { chain: "solana", allowZeroSupply: true },
     supplyProbeChain("pharos"),
+    supplyProbeChain("xlayer", { allowZeroSupply: true }),
+    supplyProbeChain("arc", { allowZeroSupply: true }),
   ],
   // Reviewed 2026-10-25: Nest local BoringVault shares and source-debited OFTs
   // sum across the complete issuer roster. Plasma is a verified live zero leg.

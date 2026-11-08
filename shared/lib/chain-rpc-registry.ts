@@ -73,6 +73,8 @@ export const EXTRA_FALLBACK_RPC_URLS: Readonly<Record<string, readonly string[]>
   polygon: ["https://polygon.drpc.org"],
   // dRPC as an independent second operator behind rpc.mainnet.arc.io.
   arc: ["https://arc.drpc.org"],
+  // Independent X Layer operator; chain 196 and hash-pinned JTRSY supply verified 2026-11-08.
+  xlayer: ["https://xlayer.drpc.org"],
   // dRPC as an independent second operator behind rpc.hemi.network; verified
   // 2026-09-24 returning the same VCRED totalSupply and Safe balanceOf reads.
   hemi: ["https://hemi.drpc.org"],
@@ -105,7 +107,8 @@ export const SUPPLY_RPC_DEFAULTS = {
   "sophon": { rpcUrl: "https://rpc.sophon.xyz" },
   "zircuit": { rpcUrl: "https://mainnet.zircuit.com" },
   "metis": { rpcUrl: "https://andromeda.metis.io/?owner=1088", fallbackRpcUrl: "https://metis-rpc.publicnode.com" },
-  "xlayer": { rpcUrl: PUBLIC_RPC_URLS["xlayer"] },
+  "xlayer": { rpcUrl: PUBLIC_RPC_URLS["xlayer"], fallbackRpcUrl: EXTRA_FALLBACK_RPC_URLS["xlayer"][0] },
+  "arc": { rpcUrl: PUBLIC_RPC_URLS["arc"], fallbackRpcUrl: EXTRA_FALLBACK_RPC_URLS["arc"][0] },
   "morph-l2": { rpcUrl: PUBLIC_RPC_URLS["morph-l2"], fallbackRpcUrl: "https://morph.drpc.org" },
   "scroll": { rpcUrl: "https://rpc.scroll.io", fallbackRpcUrl: "https://scroll-rpc.publicnode.com" },
   "kava": { rpcUrl: "https://evm.kava.io", fallbackRpcUrl: "https://kava-evm-rpc.publicnode.com" },
