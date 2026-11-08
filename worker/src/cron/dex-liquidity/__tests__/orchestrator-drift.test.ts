@@ -69,9 +69,7 @@ describe("computeDexLiquidityDriftSummary major TVL cliffs", () => {
       previousTvl: 152e6, currentTvl: 137e5,
       previousCandidates: [{ flag: "major-tvl-cliff:usds-sky", consecutiveRuns: 2, baselineValue: 152e6, observedValue: 1372e4 }],
     });
-    const recovered = cliff({
-      previousTvl: 137e5, currentTvl: 15e7, previousCandidates: confirmed.qualityDriftCandidates,
-    });
+    const recovered = cliff({ previousTvl: 137e5, currentTvl: 15e7, previousCandidates: confirmed.qualityDriftCandidates });
     expect(confirmed.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
     expect(recovered.qualityDriftFlags).toEqual([]);
     expect(recovered.qualityDriftCandidates).toEqual([]);
@@ -80,9 +78,7 @@ describe("computeDexLiquidityDriftSummary major TVL cliffs", () => {
 
   it("does not confirm a drop inside the documented methodology-recompute range", () => {
     const first = cliff({ previousTvl: 152e6, currentTvl: 99e6 });
-    const second = cliff({
-      previousTvl: 99e6, currentTvl: 96e6, previousCandidates: first.qualityDriftCandidates,
-    });
+    const second = cliff({ previousTvl: 99e6, currentTvl: 96e6, previousCandidates: first.qualityDriftCandidates });
     expect(first.qualityDriftCandidates).toEqual([]);
     expect(second.qualityDriftFlags).toEqual([]);
     expect(second.qualityDriftCandidates).toEqual([]);
@@ -96,9 +92,7 @@ describe("computeDexLiquidityDriftSummary major TVL cliffs", () => {
 
   it("treats a vanished score row as a total cliff", () => {
     const first = cliff({ previousTvl: 152e6, currentTvl: 0, hasScoreRow: false });
-    const second = cliff({
-      previousTvl: 152e6, currentTvl: 0, hasScoreRow: false, previousCandidates: first.qualityDriftCandidates,
-    });
+    const second = cliff({ previousTvl: 152e6, currentTvl: 0, hasScoreRow: false, previousCandidates: first.qualityDriftCandidates });
     expect(first.qualityDriftFlags).toEqual([]);
     expect(second.qualityDriftFlags).toEqual(["major-tvl-cliff:usds-sky"]);
     expect(second.majorTvlCliffs[0]?.currentTvlUsd).toBe(0);
@@ -163,9 +157,7 @@ describe("computeDexLiquidityDriftSummary watchlist pool counts", () => {
 
   function watchlist(currentPublishedPools: number, previousCandidates: DexLiquidityDriftCandidate[] = []) {
     return drift({
-      previousCandidates,
-      watchlistPreviousById,
-      scoreResults: new Map([["usdc-circle", scoreResult(1e6, currentPublishedPools)]]),
+      previousCandidates, watchlistPreviousById, scoreResults: new Map([["usdc-circle", scoreResult(1e6, currentPublishedPools)]]),
     });
   }
 
@@ -215,9 +207,7 @@ describe("computeDexLiquidityDriftSummary global counters", () => {
         stagedPoolsMerged: previousStagedPoolsMerged, stagedPoolsSkipped: 0, priceObservationCoins: 0, measuredBalanceCoveragePct: 0,
         weakCoverageCoins: 0, retainedPoolCountBySourceFamily: null,
       },
-      previousCandidates,
-      stagedMergedCount,
-      measuredBalanceCoveragePct: 0,
+      previousCandidates, stagedMergedCount, measuredBalanceCoveragePct: 0,
     });
   }
 
@@ -264,7 +254,7 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     [0, "2026-11-08", 1, 1, true], [0, "2026-11-07", 1, 1, false],
     [0, "2026-11-21T20:31:00Z", 1, 1, false], [0, "2026-11-08", 1.01, 1, false], [0, "2026-11-08", 1, 0.9, true], [1, "2026-11-08", 1, 0.9, false],
     [0, "2026-11-08", 1, 1.019, true], [0, "2026-11-08", 1, 1.021, false],
-    [1, "2026-11-08", 1, 1, true],
+    [1, "2026-11-08", 1, 1, false], [1, "2026-11-09", 1, 1, true], [6, "2026-11-09", 1, 1, true],
     [2, "2026-11-08", 1, 1, true], [2, "2026-11-08", 1, 0.979, false], [2, "2026-11-08", 1.01, 1, false],
     [2, "2026-11-21T21:04:19Z", 1, 1, false],
     [3, "2026-11-09", 1, 1, true], [3, "2026-11-09", 1, 1.019, true], [4, "2026-11-09", 1, 1, true], [5, "2026-11-09", 1, 1, true],
@@ -272,22 +262,23 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     const review = REVIEWED_CHAIN_TVL_DISPOSITIONS[index];
     const { flag, baselineValue, observedValue, reviewedAt, expiresAt, evidenceUrls, reason } = review;
     const level = observedValue * observedScale;
+    const chain = flag.split(":")[1];
     const rebase = accepted && "acceptsLevel" in review;
+    const reopens = !rebase || level >= 1e6;
     const summary = drift({
       nowSec: Date.parse(date) / 1000,
-      previousCandidates: [{ flag: flag, baselineValue: baselineValue * baselineScale, observedValue: observedValue, consecutiveRuns: 122 }],
-      currentChainTvl: { [flag.split(":")[1]]: level },
+      previousCandidates: [{ flag, baselineValue: baselineValue * baselineScale, observedValue, consecutiveRuns: 122 }],
+      currentChainTvl: { [chain]: level },
     });
     expect(summary.cohortDriftFlags).toEqual(accepted ? [] : [flag]);
     expect(summary.qualityDriftFlags).toEqual(summary.cohortDriftFlags);
     expect(summary.qualityDriftCandidates[0]?.consecutiveRuns).toBe(rebase ? undefined : 123);
     const persisted = persist(summary).sourceCoverage;
     expect(persisted.qualityDriftAccepted).toEqual(accepted ? [expect.objectContaining({
-      flag: flag, expiresAt: expiresAt, evidenceUrls: [...evidenceUrls],
+      flag, expiresAt, evidenceUrls: [...evidenceUrls],
     })] : []);
     if (!accepted) return;
-    const chain = flag.split(":")[1];
-    const run = (value: number, previous: number, previousCandidates: DexLiquidityDriftCandidate[], date: string = rebase ? reviewedAt : expiresAt) => drift({
+    const run = (value: number, previous: number, previousCandidates: DexLiquidityDriftCandidate[], date = rebase ? reviewedAt : expiresAt) => drift({
       nowSec: Date.parse(date) / 1000, previousCandidates, previousChainTvl: { [chain]: previous }, currentChainTvl: { [chain]: value },
     });
     expect(persisted.qualityDriftRebaselined).toEqual(rebase ? [{
@@ -298,8 +289,8 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     expect(next.qualityDriftRebaselined).toEqual([]);
     const drop = run(observedValue * 0.8, level, next.qualityDriftCandidates);
     expect(drop.cohortDriftFlags.includes(flag)).toBe(!rebase);
-    expect(drop.qualityDriftCandidates[0]?.baselineValue).toBe(rebase ? level : baselineValue);
-    expect(run(observedValue * 0.8, observedValue * 0.8, drop.qualityDriftCandidates).cohortDriftFlags).toEqual([flag]);
+    expect(drop.qualityDriftCandidates[0]?.baselineValue).toBe(reopens ? rebase ? level : baselineValue : undefined);
+    expect(run(observedValue * 0.8, observedValue * 0.8, drop.qualityDriftCandidates).cohortDriftFlags).toEqual(reopens ? [flag] : []);
   });
 
   it.each<{ previousChainTvl: Record<string, number> | null; current: number }>([
@@ -308,17 +299,13 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     { previousChainTvl: { ethereum: 2e7 }, current: 0 },
     { previousChainTvl: null, current: 5e5 },
   ])("confirms chain loss with overwritten baseline $previousChainTvl", ({ previousChainTvl, current }) => {
-    const first = drift({
-      previousChainTvl: { base: 1e7, ethereum: 2e7 }, currentChainTvl: { base: current, ethereum: 2e7 },
-    });
+    const first = drift({ previousChainTvl: { base: 1e7, ethereum: 2e7 }, currentChainTvl: { base: current, ethereum: 2e7 } });
     expect(first.cohortDriftFlags).toEqual([]);
     expect(first.qualityDriftCandidates).toEqual([
       { flag: "chain-tvl-drop:base", consecutiveRuns: 1, baselineValue: 1e7, observedValue: current },
     ]);
     const confirmed = drift({
-      previousCandidates: readCandidates(first),
-      previousChainTvl,
-      currentChainTvl: { base: current, ethereum: 2e7 },
+      previousCandidates: readCandidates(first), previousChainTvl, currentChainTvl: { base: current, ethereum: 2e7 },
     });
     expect(confirmed.qualityDriftFlags).toEqual(["chain-tvl-drop:base"]);
     expect(confirmed.cohortDriftFlags).toEqual(["chain-tvl-drop:base"]);
@@ -326,15 +313,12 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
   });
 
   it("keeps a lasting chain loss flagged instead of rebaselining it", () => {
-    const first = drift({
-      previousChainTvl: { base: 5e6 }, currentChainTvl: { base: 3e6 },
-    });
+    const first = drift({ previousChainTvl: { base: 5e6 }, currentChainTvl: { base: 3e6 } });
     let previousCandidates = first.qualityDriftCandidates;
     let summary = first;
     for (let run = 1; run <= DRIFT_REBASELINE_RUNS + 2; run += 1) {
       summary = drift({
-        previousCandidates,
-        previousChainTvl: { base: 3e6 }, currentChainTvl: { base: 3e6 },
+        previousCandidates, previousChainTvl: { base: 3e6 }, currentChainTvl: { base: 3e6 },
       });
       expect(summary.cohortDriftFlags).toEqual(["chain-tvl-drop:base"]);
       previousCandidates = summary.qualityDriftCandidates;
