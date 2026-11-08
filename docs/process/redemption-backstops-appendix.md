@@ -279,7 +279,7 @@ Stored fields:
 - `details_json`
 - `snapshot_run_id`
 
-The cron writes immutable `redemption_backstop_run_rows` first, marks the run manifest completed only after the immutable row count and bounds are valid, and writes daily history only for that admitted run. A run rejected after completion removes its own history rows and is marked `failed`, so an unadmitted generation never replaces the day's close. The legacy current-mirror refresh is retired: readers (including the depeg-resolver context, which uses a narrow store reader over the latest valid completed run) consume immutable run rows exclusively.
+The cron writes immutable `redemption_backstop_run_rows` first and validates the row count and bounds. One D1 batch then copies that run's rows into daily history with a run-scoped `INSERT ... SELECT` and completes its manifest. Both statements require the manifest to remain `running`; completion is confirmed from the affected-row count. A history or completion failure rolls back both statements, preserving the prior daily closes and keeping the rejected run unreadable. Failed-run accounting cannot downgrade a completed manifest. The legacy current-mirror refresh is retired: readers (including the depeg-resolver context, which uses a narrow store reader over the latest valid completed run) consume immutable run rows exclusively.
 
 ### `redemption_backstop_runs`
 

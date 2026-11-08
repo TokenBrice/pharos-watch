@@ -604,11 +604,11 @@ describe("loadRedemptionBackstopSnapshot", () => {
       runRowsWrittenCount: 1,
       historyWrittenCount: 0,
       writeStatus: "failed",
-      writePhase: "history",
+      writePhase: "complete-manifest",
     });
   });
 
-  it("keeps the prior admitted daily close when a later run fails before its manifest completes", async () => {
+  it.each(["complete-manifest", "history"])("keeps prior daily closes when %s fails", async (phase) => {
     const { sqlite, db } = createLatestSchemaSqlite();
     vi.useFakeTimers();
     try {
@@ -616,28 +616,48 @@ describe("loadRedemptionBackstopSnapshot", () => {
       const dayStartSec = Date.UTC(2026, 9, 30) / 1000;
       const admittedAt = dayStartSec + 8 * 3600;
       vi.setSystemTime(admittedAt * 1000);
+      const records = Array.from({ length: 81 }, (_, index) => makeRedemptionWriteRecord({
+        stablecoinId: index === 0 ? "eurc-circle" : `coin-${index}`, score: 65, updatedAt: admittedAt,
+      }));
       await upsertRedemptionBackstopSnapshots(
         db,
-        [makeRedemptionWriteRecord({ score: 65, updatedAt: admittedAt })],
+        records,
         { runId: "daily-close-admitted", nowSec: admittedAt },
       );
+      const historySql = "SELECT * FROM redemption_backstop_history ORDER BY stablecoin_id";
+      const priorHistory = sqlite.prepare(historySql).all();
 
       const rejectedAt = dayStartSec + 20 * 3600 + 11 * 60;
       vi.setSystemTime(rejectedAt * 1000);
-      sqlite.exec(`
+      sqlite.exec(phase === "complete-manifest" ? `
         CREATE TRIGGER reject_late_run_completion
         BEFORE UPDATE ON redemption_backstop_runs
         WHEN NEW.run_id = 'daily-close-rejected' AND NEW.status = 'completed'
         BEGIN SELECT RAISE(ABORT, 'completion write unavailable'); END;
+      ` : `
+        CREATE TRIGGER reject_late_history_row
+        BEFORE INSERT ON redemption_backstop_history
+        WHEN NEW.snapshot_run_id = 'daily-close-rejected' AND NEW.stablecoin_id = 'coin-80'
+        BEGIN SELECT RAISE(ABORT, 'completion write unavailable'); END;
       `);
+      let completedDuringHistory = false;
+      const writer = createSqliteD1(sqlite, { onRun(sql) {
+        if (sql.startsWith("INSERT OR REPLACE INTO redemption_backstop_history")) {
+          completedDuringHistory ||= sqlite.prepare("SELECT status FROM redemption_backstop_runs WHERE run_id = 'daily-close-rejected'")
+            .get()?.status === "completed";
+        }
+      } });
 
       await expect(
         upsertRedemptionBackstopSnapshots(
-          db,
-          [makeRedemptionWriteRecord({ score: 99, updatedAt: rejectedAt })],
+          writer,
+          records.map((record) => ({ ...record, score: 99, updatedAt: rejectedAt })),
           { runId: "daily-close-rejected", nowSec: rejectedAt },
         ),
       ).rejects.toThrow("completion write unavailable");
+      expect(sqlite.prepare(historySql).all()).toEqual(priorHistory);
+      expect(completedDuringHistory).toBe(false);
+      expect((await loadRedemptionBackstopSnapshot(db)).runId).toBe("daily-close-admitted");
 
       const manifest = sqlite
         .prepare("SELECT status, metadata_json FROM redemption_backstop_runs WHERE run_id = ?")
@@ -669,6 +689,24 @@ describe("loadRedemptionBackstopSnapshot", () => {
       vi.useRealTimers();
       sqlite.close();
     }
+  });
+
+  it.each(["failed", "completed"])("keeps history when the manifest is already %s at publication", async (status) => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      await upsertRedemptionBackstopSnapshots(db, [makeRedemptionWriteRecord()], { runId: "prior" });
+      const historySql = "SELECT * FROM redemption_backstop_history";
+      const priorHistory = sqlite.prepare(historySql).all();
+      const writer = createSqliteD1(sqlite, { onRun(sql) {
+        if (sql.startsWith("INSERT OR REPLACE INTO redemption_backstop_history")) {
+          sqlite.prepare("UPDATE redemption_backstop_runs SET status = ? WHERE run_id = 'superseded'").run(status);
+        }
+      } });
+      await expect(upsertRedemptionBackstopSnapshots(writer, [makeRedemptionWriteRecord({ score: 99 })], { runId: "superseded" }))
+        .rejects.toThrow("Failed to mark redemption backstop run superseded completed");
+      expect(sqlite.prepare(historySql).all()).toEqual(priorHistory);
+      expect(sqlite.prepare("SELECT status FROM redemption_backstop_runs WHERE run_id = 'superseded'").get()).toEqual({ status });
+    } finally { sqlite.close(); }
   });
 
   it("marks a started run as failed when immutable run rows are incomplete", async () => {

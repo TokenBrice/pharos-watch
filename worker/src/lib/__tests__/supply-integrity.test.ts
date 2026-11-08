@@ -449,18 +449,33 @@ describe("supply integrity", () => {
     }
   });
 
-  it("keeps a quarantined asset's held baseline without marking value drift unknown", async () => {
-    for (const unavailableReason of ["supply-chain-dropout", undefined]) {
-      const assets = normalAssets();
-      const drifted = assets[0].id;
-      assets[0] = { ...assets[0], current: null, unavailableReason };
-      const report = await loadReport({
-        assets, confirmState: { "value-drift": { signature: "value-drift", runs: 3, held: { [drifted]: 100 } } },
-      });
-      expect(report.value.heldDriftBaselines).toEqual({ [drifted]: 100 });
-      expect(report.value.heldDriftUnknownReason).toBe(unavailableReason ? null : "held-drift-value-unavailable");
-      expect(conditionOf(report, "value-drift")).toMatchObject({ active: false, unknown: !unavailableReason, held: { [drifted]: 100 } });
+  it.each(["supply-chain-dropout", undefined])("keeps a quarantined asset's held baseline (%s)", async (unavailableReason) => {
+    const { db, sqlite } = timedDatabase();
+    const assets = normalAssets();
+    const drifted = assets[0].id;
+    assets[0] = { ...assets[0], current: null, unavailableReason };
+    const state = { "value-drift": { signature: "value-drift", runs: 3, held: { [drifted]: 100 } } };
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run(SUPPLY_INTEGRITY_CONFIRM_KEY, JSON.stringify(state), NOW);
+    const report = await loadReport({ assets, confirmState: state });
+    expect(report.value.heldDriftBaselines).toEqual({ [drifted]: 100 });
+    expect(report.value.heldDriftUnknownReason).toBe(unavailableReason ? null : "held-drift-value-unavailable");
+    const condition = conditionOf(report, "value-drift")!;
+    expect(condition).toMatchObject({ active: false, unknown: !unavailableReason, held: { [drifted]: 100 } });
+    expect((await confirmSupplyIntegrityConditions(db, [condition]))[0])
+      .toMatchObject({ active: false, unknown: !unavailableReason });
+    const select = sqlite.prepare("SELECT value FROM cache WHERE key = ?");
+    const confirmState = JSON.parse((select.get(SUPPLY_INTEGRITY_CONFIRM_KEY) as { value: string }).value);
+    expect(confirmState["value-drift"]).toMatchObject({ runs: unavailableReason ? 0 : 3, held: { [drifted]: 100 } });
+    for (const current of [13, 100]) {
+      assets[0] = { ...assets[0], current, previous: 13, unavailableReason: undefined };
+      const returned = await loadReport({ assets, confirmState });
+      expect(returned.value.driftFindings).toEqual([]);
+      const returning = conditionOf(returned, "value-drift")!;
+      expect(returning).toMatchObject({ active: current === 13, unknown: false, held: current === 13 ? { [drifted]: 100 } : {} });
+      expect((await confirmSupplyIntegrityConditions(db, [returning]))[0].active).toBe(current === 13 && !unavailableReason);
     }
+    expect(JSON.parse((select.get(SUPPLY_INTEGRITY_CONFIRM_KEY) as { value: string }).value)).toEqual({});
   });
 
   it("honours reviewed re-baselines", async () => {
