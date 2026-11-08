@@ -130,10 +130,11 @@ export const REVIEWED_CHAIN_TVL_DISPOSITIONS = [{
   evidenceUrls: ["https://x.com/blast/status/2106032805280891073"],
   reason: "USDB was frozen on 2026-11-02 after Blast's L2 wind-down; its archived $9.232M is excluded from live aggregation.",
 }, {
-  flag: "chain-tvl-drop:mezo", baselineValue: 5_292_320.059906746, observedValue: 255_927.62449999998,
-  retiredStablecoinId: null, reviewedAt: "2026-11-07T20:31:00Z", expiresAt: "2026-11-21T20:31:00Z",
-  evidenceUrls: ["https://api.llama.fi/protocol/mezo-tigris", "https://api.geckoterminal.com/api/v2/networks/mezo/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186/pools?page=1"],
-  reason: "Mezo Tigris MUSD TVL fell from $11.806M to $1.408M on Nov 5-6; current observed token pools total $276k, corroborating the retained $256k.",
+  flag: "chain-tvl-drop:mezo", baselineValue: 5_292_320.059906746, observedValue: 301_421.8559905,
+  acceptsLevel: true,
+  retiredStablecoinId: null, reviewedAt: "2026-11-08T11:32:23Z", expiresAt: "2026-11-22T11:32:23Z",
+  evidenceUrls: ["https://api.llama.fi/protocol/mezo-tigris", "https://api.geckoterminal.com/api/v2/networks/mezo/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186/pools?page=1", "https://pro-api.coingecko.com/api/v3/onchain/networks/mezo/tokens/0xdd468a1ddc392dcdbef6db6e34e89aa338f9f186/pools?page=2", "https://yields.llama.fi/pools"],
+  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: neither current MUSD token-pool page has a pool >=$250k, and yields has no material tracked-stablecoin DEX pool. This follows the earlier Tigris MUSD withdrawal ($11.806M to $1.408M on Nov 5-6).",
 }, {
   flag: "chain-tvl-drop:plasma", baselineValue: 24_510_038.23121091, observedValue: 19_633_877.97846795,
   retiredStablecoinId: null, reviewedAt: "2026-11-07T21:04:19Z", expiresAt: "2026-11-21T21:04:19Z",
@@ -157,6 +158,12 @@ export const REVIEWED_CHAIN_TVL_DISPOSITIONS = [{
   retiredStablecoinId: null, reviewedAt: "2026-11-08T08:39:00Z", expiresAt: "2026-11-22T08:39:00Z",
   evidenceUrls: ["https://api.geckoterminal.com/api/v2/networks/ink/pools?page=1", "https://pro-api.coingecko.com/api/v3/onchain/networks/ink/tokens/0x0200c29006150606b650577bbe7b6248f58470c1/pools?page=1", "https://yields.llama.fi/pools"],
   reason: "Owner O9 accepts the current level after the Nov 8 coverage check: all eight material stablecoin pools in the independent USDC, USDT0 and USDG lists are present in the consumed source generation. Historical loss attribution remains unavailable.",
+}, {
+  flag: "chain-tvl-drop:rootstock", baselineValue: 2_462_993.2569000004, observedValue: 1_404_440.1986,
+  acceptsLevel: true,
+  retiredStablecoinId: null, reviewedAt: "2026-11-08T11:32:23Z", expiresAt: "2026-11-22T11:32:23Z",
+  evidenceUrls: ["https://pro-api.coingecko.com/api/v3/onchain/networks/rootstock/tokens/0x779ded0c9e1022225f8e0630b35a9b54be713736/pools?page=1", "https://yields.llama.fi/pools", "https://graph-wrapper.sovryn.app/cmc/tvl"],
+  reason: "Owner O9 accepts the current level after the Nov 8 coverage check: all three material pools containing registered stablecoin deployments in the independent current lists are present in the consumed source generation. Sovryn's rUSDT address is outside the tracked registry; historical loss attribution remains unavailable.",
 }] as const;
 
 const MAJOR_TVL_CLIFF_FLAG_PREFIX = "major-tvl-cliff:";
