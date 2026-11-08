@@ -186,25 +186,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 10, 27, 11) / 1000,
   },
   {
-    stablecoinId: "pht-pht",
-    owner: "ops",
-    reason:
-      "Re-reviewed 2026-11-07 19:45 UTC: CoinGecko pht-stablecoin remains $0.01607427 dated 2026-08-14 17:36:40 UTC with zero tickers. Exact Polygon DexScreener now lists QuickSwap V3 PHT/USDC 0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08 at $0.01588 with $46,444.38 liquidity; GeckoTerminal reports $46,295.18 reserves and $1.54 daily volume for that pool, below the unchanged $50K per-pool liquidity floor. Ethereum and Tron exact DexScreener reads are empty; the only Ethereum GeckoTerminal pool holds $25.15. MEXC PHTUSDT returns HTTP 400 (Invalid symbol). APACX still advertises MoneyBees OTC redemption but documents no observed acceptance, rate, depth or limit. Open holder-exit question: whether an ordinary holder can convert PHT to PHP at a verifiable rate and depth; owner ops must still resolve it by the original 2026-11-10 11:01 UTC deadline. This source review neither satisfies nor extends that lifecycle decision. Keep PHT active and the price missing; all admission gates preserved. Source acknowledgement expires 2026-11-21 19:45 UTC.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=pht-stablecoin&vs_currencies=usd&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/pht-stablecoin/tickers",
-      "https://api.dexscreener.com/token-pairs/v1/ethereum/0xbe370ad45d44eb45174c4ec60b88839fef32c077",
-      "https://api.dexscreener.com/token-pairs/v1/polygon/0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
-      "https://api.dexscreener.com/token-pairs/v1/tron/TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0xbe370ad45d44eb45174c4ec60b88839fef32c077/pools",
-      "https://api.geckoterminal.com/api/v2/networks/polygon_pos/tokens/0xe75220cb014dfb2d354bb59be26d7458bb8d0706/pools",
-      "https://api.mexc.com/api/v3/ticker/24hr?symbol=PHTUSDT",
-      "https://docs.apacx.io/user-guides/pht-onramp-and-offramp.md",
-    ],
-    reviewedAt: Date.UTC(2026, 10, 7, 19, 45) / 1000,
-    expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
-  },
-  {
     stablecoinId: "bd-basedollar",
     owner: "ops",
     reason:

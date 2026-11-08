@@ -56,5 +56,15 @@
   "collateralQuality": "exotic",
   "custodyModel": "unknown",
   "governanceQuality": "single-entity",
-  "launchDate": "2025-02-13"
+  "launchDate": "2025-02-13",
+  "status": "delisted",
+  "exitMechanism": "discretionary",
+  "listingStatusReview": {
+    "changedAt": "2026-11-08",
+    "reason": "Owner-approved scope delisting: MoneyBees OTC acceptance is discretionary, with no verified PHT-to-PHP rate or depth for ordinary holders. Borrower repayment is not holder redemption; the stale CoinGecko mark and thin DEX pool do not establish a usable exit.",
+    "source": {
+      "label": "MoneyBees terms: asset acceptance and exchange rates",
+      "url": "https://www.moneybees.ph/terms/"
+    }
+  }
 }

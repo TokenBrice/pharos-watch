@@ -739,27 +739,6 @@
     },
     {
       "chainId": "ethereum",
-      "stablecoinId": "pht-pht",
-      "address": "0xbe370ad45d44eb45174c4ec60b88839fef32c077",
-      "decimals": 18,
-      "disposition": "unsupported",
-      "unsupportedReason": "zero-address-transfer-without-supply-change:transferFrom",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply",
-      "supplyBurnProof": {
-        "directCalls": [
-          {
-            "signature": "burn(address,uint256)",
-            "selector": "0x9dc29fac",
-            "dataWords": 2,
-            "amountSlot": 1,
-            "account": 0
-          }
-        ]
-      }
-    },
-    {
-      "chainId": "ethereum",
       "stablecoinId": "pmusd-precious-metals",
       "address": "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf",
       "decimals": 18,

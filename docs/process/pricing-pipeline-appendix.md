@@ -343,7 +343,7 @@ Some tracked stablecoins trade at low enough volume that CoinGecko's upstream `l
 
 `LOW_VOLUME_CG_FALLBACK_IDS` in `worker/src/cron/sync-stablecoins/enrich-prices-coingecko-low-volume-pass.ts` owns the reviewed fallback cohort, including USDFC. It fills only still-missing prices after earlier passes, preserves admitted supply and original clocks, and never overwrites an accepted price.
 
-FXD uses this lane for its observed secondary-market quote; its wind-down redemption entitlement is not substituted for that quote. Lifecycle review remains separate from price admission.
+Frozen FXD is excluded from this fallback cohort. Its archive preserves the observed secondary-market quote and source clock captured at freezing; wind-down redemption entitlement is not substituted for that quote.
 
 Timestamped low-volume fallback quotes must pass `isFreshFallbackObservedAt`: the registered seven-day age budget and at most 120 seconds of future skew. Present invalid clocks are rejected, not converted to local fetch time; only absent upstream clocks retain local-fetch behavior.
 

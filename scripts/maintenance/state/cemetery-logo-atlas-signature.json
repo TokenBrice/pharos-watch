@@ -4,7 +4,7 @@
   "cellSize": 48,
   "gutter": 2,
   "webp": {
-    "quality": 64,
+    "quality": 63,
     "alphaQuality": 80,
     "effort": 6
   },
@@ -13,10 +13,10 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "48fa1115c5df439c00804043d355e08c87543d80ebdb52d63cb9aec00bac3156",
+  "inputSha256": "27f05b5c86ed66fb618d52ddd21dc27b3892b178d03af30164439f5c3719101e",
   "image": {
-    "sha256": "db9e99924b17488cd13ac85c6f18ae57f9da0a3631276714e5f5518e8daccc1e",
-    "bytes": 149442,
+    "sha256": "e1164d1c4734a61b35c5264b25d40f74a6bf3081e57028a03860fad94a9e68b4",
+    "bytes": 149022,
     "width": 798,
     "height": 798
   },
@@ -204,6 +204,11 @@
     {
       "logo": "/logos/cemetery/fusd.png",
       "sha256": "2ed7505520e4c7488babb4d2991c14588582d6549a147704fe711d7ce8f6a9f3",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/fxd-fathom.svg",
+      "sha256": "585fa67fe2dd5c1dbc350779a9d612ee1ecca3b48a4b8ca88b0e05e8a8599698",
       "kernel": "lanczos3"
     },
     {
@@ -788,6 +793,10 @@
     {
       "id": "fusd-fantom-usd-2022-06",
       "logo": "/logos/cemetery/fusd.png"
+    },
+    {
+      "id": "fxd-fathom",
+      "logo": "/logos/fxd-fathom.svg"
     },
     {
       "id": "grai-gravita-grai-2025-06",

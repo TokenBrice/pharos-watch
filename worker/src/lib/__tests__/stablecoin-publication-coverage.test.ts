@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, ACTIVE_STABLECOINS, READABLE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS,
   STABLECOIN_PUBLICATION_WAIVERS,
@@ -447,7 +447,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(next.missingActiveAssets[0]).toMatchObject({ consecutiveMissingGenerations: null, alertEligible: true });
   });
 
-  it.each(["wusd-worldwide", "pht-pht", "bd-basedollar", "moveusd-cfx"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
+  it.each(["wusd-worldwide", "aid-gaib", "bd-basedollar", "moveusd-cfx"])("keeps %s missing while acknowledged, re-alerts at expiry, and clears on a real price", (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     const ids = [review.stablecoinId, "usdt-tether"];
     const first = evaluateStablecoinActivePriceCoverage(
@@ -666,29 +666,30 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(expired.expiredCalendarIds).toEqual([calendar.calendarId]);
   });
 
-  it("retires the recovered TRYB review while acknowledging active PHT", () => {
+  it("retires the recovered TRYB and delisted PHT reviews", () => {
     const ids = ["tryb-bilira", "pht-pht"];
     const reviews = STABLECOIN_PRICE_GAP_REVIEWS.filter((entry) => ids.includes(entry.stablecoinId));
-    expect(reviews.map((review) => review.stablecoinId).sort()).toEqual(["pht-pht"]);
-    const nowSec = reviews[0]!.reviewedAt;
+    expect(reviews.map((review) => review.stablecoinId).sort()).toEqual([]);
+    const nowSec = Date.UTC(2026, 10, 8) / 1000;
     const coverage = evaluateStablecoinActivePriceCoverage(
       ids.map((id) => ({ id, price: id === "tryb-bilira" ? 0.0203935242416747 : null })),
-      ids,
+      ids.filter((id) => ACTIVE_IDS.has(id)),
       { nowSec, priceGapReviews: reviews },
     );
     expect(coverage).toMatchObject({
       pricedActiveIds: ["tryb-bilira"],
-      missingActiveIds: ["pht-pht"],
-      acknowledgedGapIds: ["pht-pht"],
+      missingActiveIds: [],
+      acknowledgedGapIds: [],
       expiredGapReviewIds: [],
       invalidGapReviewIds: [],
       alertEligibleIds: [],
     });
-    for (const review of reviews) {
-      expect(review.reviewedAt).toBeLessThanOrEqual(nowSec);
-      expect(review.expiresAt - review.reviewedAt).toBeLessThanOrEqual(14 * 86_400);
-      expect(review.expiresAt - nowSec).toBeGreaterThan(48 * 3600);
-    }
+    const retired = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec, [
+      { ...STABLECOIN_PRICE_GAP_REVIEWS[0]!, stablecoinId: "pht-pht" },
+    ]);
+    expect(retired.activeById.size).toBe(0);
+    expect(retired.invalidGapReviewIds).toEqual(["pht-pht"]);
+    expect(coverage.missingPriceCount).toBe(0);
     const firstGap = evaluateStablecoinActivePriceCoverage([{ id: "tryb-bilira", price: null }], ["tryb-bilira"], {
       nowSec, priceGapReviews: [],
     });
@@ -773,25 +774,23 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(idrt).toMatchObject({ complete: true, pricedActiveIds: ["idrt-rupiah-token"], missingPriceCount: 0 });
   });
 
-  it("renews PHT evidence without extending its holder-exit deadline", () => {
-    const id = "pht-pht";
-    const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === id)!;
+  it("closes PHT's holder-exit review with a sourced scope delisting", () => {
+    const id = "pht-pht", coin = TRACKED_META_BY_ID.get(id)!;
     expect(coin).toBeDefined();
-    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
-    expect(review).toMatchObject({
-      owner: "ops",
-      reviewedAt: Date.UTC(2026, 10, 7, 19, 45) / 1000,
-      expiresAt: Date.UTC(2026, 10, 21, 19, 45) / 1000,
-    });
-    expect(review.expiresAt - review.reviewedAt).toBeLessThanOrEqual(14 * 86_400);
-    expect(review.reason).toContain("2026-11-07 19:45 UTC");
-    expect(review.reason).toContain("2026-08-14 17:36:40 UTC");
-    expect(review.reason).toContain("$46,444.38");
-    expect(review.reason).toContain("$50K per-pool liquidity floor");
-    expect(review.reason).toContain("HTTP 400");
-    expect(review.reason).toContain("Open holder-exit question");
-    expect(review.reason).toContain("2026-11-10 11:01 UTC");
-    expect(review.sources).toContain("https://docs.apacx.io/user-guides/pht-onramp-and-offramp.md");
+    expect(ACTIVE_IDS.has(id)).toBe(false);
+    expect(READABLE_IDS.has(id)).toBe(true);
+    expect(coin.status).toBe("delisted");
+    expect(coin.exitMechanism).toBe("discretionary");
+    expect(coin.listingStatusReview?.changedAt).toBe("2026-11-08");
+    expect(coin.listingStatusReview?.source?.url).toBe("https://www.moneybees.ph/terms/");
+    expect(coin.listingStatusReview?.reason).toContain("PHT-to-PHP rate or depth");
+    expect(coin.listingStatusReview?.reason).toContain("discretionary");
+    expect(coin.listingStatusReview?.reviewBy).toBeUndefined();
+    expect(coin.frozenAt).toBeUndefined();
+    expect(coin.obituary).toBeUndefined();
+    expect(STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)).toBeUndefined();
+    expect(evaluateStablecoinActivePriceCoverage([{ id, price: null }], [], { nowSec: 1794096000 }))
+      .toMatchObject({ complete: true, missingPriceCount: 0, acknowledgedGapIds: [] });
     expect(coin.contracts).toHaveLength(3);
   });
 
