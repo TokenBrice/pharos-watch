@@ -121,4 +121,29 @@ describe("useCommandPaletteHistory", () => {
     }
   });
 
+  it.each(["rerender", "remount", "write"])("expires admitted history on %s with a stable snapshot", (boundary) => {
+    vi.useFakeTimers({ now: NOW });
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify([
+      makeStoredItem("fresh", NOW),
+      makeStoredItem("expiring", NOW - HISTORY_RETENTION_MS + 1_000),
+    ]));
+    let hook = renderHook(() => useCommandPaletteHistory());
+    expect(hook.result.current.history.map((item) => item.id)).toEqual(["fresh", "expiring"]);
+
+    act(() => vi.advanceTimersByTime(1_000));
+    if (boundary === "remount") {
+      hook.unmount();
+      hook = renderHook(() => useCommandPaletteHistory());
+    } else if (boundary === "write") {
+      act(() => hook.result.current.addToHistory("fresh", "stablecoin", "FRESH", undefined, "/stablecoin/fresh/"));
+    } else {
+      hook.rerender();
+    }
+
+    expect(hook.result.current.history.map((item) => item.id)).toEqual(["fresh"]);
+    const retained = hook.result.current.history;
+    hook.rerender();
+    expect(hook.result.current.history).toBe(retained);
+  });
+
 });

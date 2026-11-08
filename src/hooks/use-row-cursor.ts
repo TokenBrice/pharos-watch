@@ -114,7 +114,7 @@ export function useRowCursor<T>(opts: UseRowCursorOptions<T>): UseRowCursorResul
       if (key === "k" || key === "ArrowUp") {
         event.preventDefault();
         setCursorActive(true);
-        setCursorIndexState((current) => Math.max(0, current - 1));
+        setCursorIndexState((current) => Math.max(0, Math.min(current, rowsLength - 1) - 1));
         return;
       }
       if (key === "o" || key === "Enter") {

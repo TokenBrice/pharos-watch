@@ -26,6 +26,9 @@ export function useUrlSearchSync(
 ): { searchInput: string; setSearchInput: (v: string) => void; deferredSearch: string } {
   const urlSearch = getParam("q");
   const [searchDraft, setSearchDraft] = useState(() => ({ value: urlSearch, baseUrlSearch: urlSearch }));
+  if (searchDraft.baseUrlSearch !== urlSearch) {
+    setSearchDraft({ value: urlSearch, baseUrlSearch: urlSearch });
+  }
   const searchInput = searchDraft.baseUrlSearch === urlSearch ? searchDraft.value : urlSearch;
   const setSearchInput = useCallback((value: string) => {
     setSearchDraft({ value, baseUrlSearch: urlSearch });

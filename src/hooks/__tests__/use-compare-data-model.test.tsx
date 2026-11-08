@@ -66,6 +66,10 @@ import type { TimeRangeOption } from "@/lib/chart-time-range";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
+import { loadClientStablecoinDetail } from "@shared/lib/stablecoins/client-detail";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+
+vi.mock("@shared/lib/stablecoins/client-detail", () => ({ loadClientStablecoinDetail: vi.fn() }));
 
 function makeQueryResult(overrides: Record<string, unknown> = {}) {
   return {
@@ -80,6 +84,7 @@ function makeQueryResult(overrides: Record<string, unknown> = {}) {
 
 describe("useCompareDataModel", () => {
   beforeEach(() => {
+    vi.mocked(loadClientStablecoinDetail).mockReset().mockResolvedValue(null);
     useQueriesMock.mockReset();
     useBluechipRatingsMock.mockReset();
     useDexLiquidityMock.mockReset();
@@ -119,6 +124,31 @@ describe("useCompareDataModel", () => {
     useMintBurnFlowsMock.mockReturnValue(makeQueryResult({ data: { coins: [] } }));
     supplyHistoryQueryOptionsMock.mockReturnValue({});
     mintBurnFlowsCoinQueryOptionsMock.mockReturnValue({});
+  });
+  it.each([false, true])("isolates failed detail imports and fences superseded=%s batches", async (superseded) => {
+    const ids = ["usdc-circle", "usdt-tether"];
+    const detail = { ...CLIENT_TRACKED_META_BY_ID.get(ids[0])!, reserves: [] };
+    let resolve!: () => void;
+    const pending = new Promise<void>((done) => { resolve = done; });
+    vi.mocked(loadClientStablecoinDetail).mockImplementation((id) => id === ids[0]
+      ? pending.then(() => detail) : Promise.reject(new Error("detail import unavailable")));
+    useStablecoinsMock.mockReturnValue(makeQueryResult({
+      data: { peggedAssets: ids.map((id) => makeStablecoin({ id })), fxFallbackRates: {} },
+    }));
+    const { result, rerender } = renderHook(
+      ({ selectedIds }) => useCompareDataModel({ selectedIds, flowHours: 24, radarCohort: "peg", range: "all" }),
+      { initialProps: { selectedIds: ids } },
+    );
+    expect(result.current.comparisonCoins.map((coin) => coin.meta))
+      .toEqual(ids.map((id) => CLIENT_TRACKED_META_BY_ID.get(id)));
+    if (superseded) {
+      vi.mocked(loadClientStablecoinDetail).mockResolvedValue(null);
+      await act(async () => rerender({ selectedIds: [ids[0]] }));
+    }
+    await act(async () => { resolve(); await pending; });
+    expect(result.current.comparisonCoins.map((coin) => coin.meta)).toEqual(superseded
+      ? [CLIENT_TRACKED_META_BY_ID.get(ids[0])]
+      : [detail, CLIENT_TRACKED_META_BY_ID.get(ids[1])]);
   });
   it("keeps only the selector list active until comparisons are selected", () => {
     const { result, rerender } = renderHook(

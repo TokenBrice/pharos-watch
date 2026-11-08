@@ -22,6 +22,8 @@ Supply uses `getCirculatingRawOrNull()`. Missing assets or absent/empty/invalid 
 
 Palette `screen` commands encode only admitted schema fields, and the preview counts those encoded constraints. Repeated minima take the largest floor; repeated maxima take the smallest ceiling; enum-list values accumulate without duplicates. Contradictory bounds or an unrepresentable scalar produce non-runnable feedback rather than an unfiltered destination. Raising the visible DEWS or supply floor past a non-default URL ceiling clears that ceiling in the same update, so a hidden bound cannot empty the screen. Existing strict-operator aliases remain inclusive, and non-positive supply ceilings remain omitted.
 
+Filter-chip entrance markers last up to 250ms per addition update. Equivalent group arrays preserve the original window; a removal without additions clears markers immediately, and new additions restart the window. Unmount cancels the reset timer, and reduced-motion styling still applies.
+
 ## Loading, Error, And Freshness
 
 Rows wait for the stablecoin list. Toolbar and pagination counts require available primary data, including retained data after refresh failure; pending and unavailable reads show explicit state copy instead of zero counts, and disable export. Successful empty filtered results still disclose zero. `buildQueryFreshnessGroup()` combines all five live sources for shared notices/retry; retained data may remain visible with stale/error metadata. The route invents no local freshness windows.

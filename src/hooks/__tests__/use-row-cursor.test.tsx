@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useRef } from "react";
 import { useRowCursor } from "@/hooks/use-row-cursor";
@@ -26,6 +26,19 @@ function CursorHarness({ onOpen, onStar, onCompare }: Record<"onOpen" | "onStar"
 afterEach(cleanupFrontendTest);
 
 describe("useRowCursor keyboard ownership", () => {
+  it.each(["ArrowUp", "k"])("moves %s from the bounded cursor after rows shrink", (key) => {
+    const initialRows = Array.from({ length: 10 }, (_, id) => ({ id: String(id) }));
+    const { result, rerender } = renderHook(({ rows }) => useRowCursor({ rows, getRowId: (row) => row.id }), {
+      initialProps: { rows: initialRows },
+    });
+    act(() => result.current.activateCursorAtIndex(9));
+    expect(result.current.activeCursorIndex).toBe(9);
+    rerender({ rows: initialRows.slice(0, 2) });
+    expect(result.current.activeCursorIndex).toBe(1);
+    fireEvent.keyDown(window, { key });
+    expect(result.current.activeCursorIndex).toBe(0);
+  });
+
   it("preserves row navigation, open, star and compare shortcuts on a non-interactive row", () => {
     const onOpen = vi.fn(), onStar = vi.fn(), onCompare = vi.fn();
     render(<CursorHarness onOpen={onOpen} onStar={onStar} onCompare={onCompare} />);

@@ -189,6 +189,8 @@ Initial load normalizes the `coins` URL param to the accepted canonical ID list.
 
 Compare composes stablecoins, peg summary, Bluechip, DEX, report cards, redemption, yield, stress and aggregate mint/burn queries plus per-coin supply/flow histories. `useCompareDataModel` owns query/window construction; successful aggregate evidence is required to claim tracking coverage.
 
+Per-coin detail imports settle independently: a failed import keeps that coin's list metadata without inventing evidence or suppressing successful enrichment for other coins. A superseded selection's batch cannot publish late results.
+
 An empty comparison admits only the stablecoin list used by its selector. Metric feeds enable as soon as at least one accepted comparison ID exists, including URL-initialized selections. Empty-state retries do not bypass those gates; pending evidence remains unavailable, not an empty or safe verdict.
 
 Bluechip publication availability is separate from per-coin membership. A pending or failed whole-feed read without retained data leaves only Bluechip unavailable; a successful empty map is a usable publication. Refresh failures keep retained ratings and their original observation dates, with source error/freshness notices intact.
