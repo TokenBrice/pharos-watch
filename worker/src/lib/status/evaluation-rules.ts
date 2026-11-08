@@ -951,8 +951,9 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
               "data-quality",
               "stablecoin_publication_incomplete",
               status === "healthy" ? "info" : "warning",
-              `Stablecoin publication is missing ${missing.length} unwaived active ID(s)` +
-                (examples ? `: ${examples}${missing.length > 12 ? ", ..." : ""}.` : "."),
+              missing.length === 0
+                ? `Stablecoin publication counts do not reconcile with the deployed catalog (${publication.presentActiveCount} present + ${publication.waivedActiveCount} waived of ${publication.expectedActiveCount} expected).`
+                : `Stablecoin publication is missing ${missing.length} unwaived active ID(s): ${examples}${missing.length > 12 ? ", ..." : ""}.`,
               { metric: "missingActiveStablecoins", value: missing.length, threshold: 1 },
             );
           })()

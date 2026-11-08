@@ -115,31 +115,17 @@ describe("stablecoin publication health", () => {
 
   it("falls back to unknown health per evidence kind when payloads are missing or not records", async () => {
     const { sqlite, db } = fixtures.open();
-    insertRun(sqlite, "sync-stablecoins", 100, '["activePublicationCoverage","activePriceCoverage"]');
-    let result = await loadStablecoinCoverageHealth(db, 1_000);
-    expect(result.publication).toMatchObject({ status: "unknown", observedAt: 100 });
-    expect(result.activePriceCoverage).toMatchObject({ status: "unknown", observedAt: 100 });
-
-    insertRun(sqlite, "sync-stablecoins", 200, {
-      activePublicationCoverage: "nope",
-      activePriceCoverage: priceCoverage(),
-    });
-    result = await loadStablecoinCoverageHealth(db, 1_000);
-    expect(result.publication).toMatchObject({ status: "unknown", observedAt: 200 });
-    expect(result.activePriceCoverage).toMatchObject({ status: "complete", observedAt: 200 });
-
-    insertRun(sqlite, "sync-stablecoins", 300, {
-      activePublicationCoverage: publicationCoverage(),
-      activePriceCoverage: null,
-    });
-    result = await loadStablecoinCoverageHealth(db, 1_000);
-    expect(result.publication).toMatchObject({ status: "complete", observedAt: 300 });
-    expect(result.activePriceCoverage).toMatchObject({ status: "unknown", observedAt: 300 });
-
-    insertRun(sqlite, "sync-stablecoins", 400, '{"activePublicationCoverage":oops,"activePriceCoverage":2}');
-    result = await loadStablecoinCoverageHealth(db, 1_000);
-    expect(result.publication).toMatchObject({ status: "unknown", observedAt: 400 });
-    expect(result.activePriceCoverage).toMatchObject({ status: "unknown", observedAt: 400 });
+    for (const [startedAt, metadata, publication, price] of [
+      [100, '["activePublicationCoverage","activePriceCoverage"]', "unknown", "unknown"],
+      [200, { activePublicationCoverage: "nope", activePriceCoverage: priceCoverage() }, "unknown", "complete"],
+      [300, { activePublicationCoverage: publicationCoverage(), activePriceCoverage: null }, "complete", "unknown"],
+      [400, '{"activePublicationCoverage":oops,"activePriceCoverage":2}', "unknown", "unknown"],
+    ] as const) {
+      insertRun(sqlite, "sync-stablecoins", startedAt, metadata);
+      const result = await loadStablecoinCoverageHealth(db, 1_000);
+      expect(result.publication).toMatchObject({ status: publication, observedAt: startedAt });
+      expect(result.activePriceCoverage).toMatchObject({ status: price, observedAt: startedAt });
+    }
   });
 
   it("zeroes publication counts and keeps id lists empty when coverage numbers are absent", async () => {
@@ -188,6 +174,20 @@ describe("stablecoin publication health", () => {
       activePriceCoverage: priceCoverage(),
     });
     expect((await loadStablecoinCoverageHealth(db, 1_000)).publication.status).toBe("complete");
+  });
+
+  it.each([
+    [[...activeIds, "x"], 1, []],
+    [activeIds.slice(1), -1, [activeIds[0]]],
+    [activeIds.slice(1), 1, null],
+  ])("reconciles another catalog's publication (%#)", async (priced, delta, missing) => {
+    const { sqlite, db } = fixtures.open(), n = activeIds.length + delta;
+    insertRun(sqlite, "sync-stablecoins", 100, {
+      activePublicationCoverage: publicationCoverage({ expectedActiveCount: n, presentActiveCount: n }),
+      activePriceCoverage: priceCoverage({ pricedActiveIds: priced }),
+    });
+    expect((await loadStablecoinCoverageHealth(db, 1_000)).publication)
+      .toMatchObject({ status: missing?.length === 0 ? "complete" : "incomplete", missingActiveIds: missing ?? [] });
   });
 
   it.each([
