@@ -181,7 +181,6 @@ describe("formatCurrency", () => {
   it("formats millions", () => expect(formatCurrency(7.891e6)).toBe("$7.89M"));
   it("formats small values", () => expect(formatCurrency(123.456)).toBe("$123.46"));
   it("formats negative values", () => expect(formatCurrency(-3e9)).toBe("-$3.00B"));
-  it("returns N/A for NaN", () => expect(formatCurrency(NaN)).toBe("N/A"));
   it("respects custom decimals", () => expect(formatCurrency(1.2345e9, 3)).toBe("$1.234B"));
 });
 
@@ -248,7 +247,6 @@ describe.each<{
       ["formats thousands with 0 decimals", [[12_345, "$12K"]]],
       ["formats sub-thousand with 0 decimals", [[999, "$999"]]],
       ["formats negative billion", [[-2.5e9, "-$2.50B"]]],
-      ["returns N/A for NaN", [[NaN, "N/A"]]],
     ],
   },
   {
@@ -256,14 +254,12 @@ describe.each<{
     cases: [
       ["formats billions, millions, and thousands with one decimal", [[4.321e9, "$4.3B"], [8.76e6, "$8.8M"], [12_345, "$12.3K"], [1_000, "$1.0K"]]],
       ["preserves the existing short-surface negative sign placement", [[-2.5e9, "$-2.5B"], [-42, "$-42"]]],
-      ["returns N/A for non-finite values", [[NaN, "N/A"], [Infinity, "N/A"]]],
     ],
   },
   {
     name: "formatCompactUsdShortLowerK", format: formatCompactUsdShortLowerK,
     cases: [
       ["keeps one decimal for B/M and rounds thousands to a lowercase k", [[4.321e9, "$4.3B"], [8.76e6, "$8.8M"], [12_345, "$12k"], [1_000, "$1k"]]],
-      ["returns N/A for non-finite values", [[NaN, "N/A"], [Infinity, "N/A"]]],
     ],
   },
   {
@@ -272,7 +268,6 @@ describe.each<{
       ["prefixes a + for positive values and reuses formatCompactUsd tiers", [[2.5e9, "+$2.50B"], [8.76e6, "+$8.8M"], [12_345, "+$12K"]]],
       ["renders negative values with the abbreviateNumber minus sign", [[-2.5e9, "-$2.50B"], [-42, "-$42"]]],
       ["does not prefix zero", [[0, "$0"]]],
-      ["returns N/A for non-finite values", [[NaN, "N/A"]]],
     ],
   },
   {

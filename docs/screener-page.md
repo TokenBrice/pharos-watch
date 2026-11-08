@@ -22,6 +22,8 @@ Supply uses `getCirculatingRawOrNull()`. Missing assets or absent/empty/invalid 
 
 Palette `screen` commands encode only admitted schema fields, and the preview counts those encoded constraints. Repeated minima take the largest floor; repeated maxima take the smallest ceiling; enum-list values accumulate without duplicates. Contradictory bounds or an unrepresentable scalar produce non-runnable feedback rather than an unfiltered destination. Raising the visible DEWS or supply floor past a non-default URL ceiling clears that ceiling in the same update, so a hidden bound cannot empty the screen. Existing strict-operator aliases remain inclusive, and non-positive supply ceilings remain omitted.
 
+Filter-chip entrance markers last up to 250ms per addition update. Equivalent group arrays preserve the original window; a removal without additions clears markers immediately, and new additions restart the window. Unmount cancels the reset timer, and reduced-motion styling still applies.
+
 ## Loading, Error, And Freshness
 
 Rows wait for the stablecoin list. Toolbar and pagination counts require available primary data, including retained data after refresh failure; pending and unavailable reads show explicit state copy instead of zero counts, and disable export. Successful empty filtered results still disclose zero. `buildQueryFreshnessGroup()` combines all five live sources for shared notices/retry; retained data may remain visible with stale/error metadata. The route invents no local freshness windows.
@@ -76,19 +78,23 @@ Current engine invariants (arithmetic/threshold ownership stays in `shared/lib/s
 
 Shortlist cards label the existing spot-price strip `7d price`: its signed geometry is relative to the latest observed price, not a historical peg reference or a peg-deviation score. Constant off-peg samples therefore draw a flat price trajectory, and non-USD FX/commodity price movement remains price movement. Missing samples remain gaps; neither the series math nor engine rankings, hashes or methodology change.
 
+The relaxed-fallback banner names widened constraints without claiming strict candidates are absent; the same copy covers mixed and relaxed-only shortlists.
+
 ## Navigation And Accessibility
 
 Desktop history walks completed wizard steps; mobile commits one result after required inputs. Repair of an over-advanced URL step waits for shared URL readiness; the query-free hydration snapshot must not consume it. Step changes announce politely and focus the active question. Loading exposes `aria-busy`; generation/replay focuses the result summary. Options, skipped/near-miss rows, relaxation and links remain keyboard operable at narrow widths and 200% zoom.
 
 ## Browser Storage
 
-`pharos.selector.callout.v1` stores dismissal in localStorage; the legacy `pharos-selector-callout-v1` is read-only compatibility. `pharos.selector.sessionResult.v1` stores only completed wizard answers (`state`) and save time (`savedAt`) in sessionStorage, not generated output. Older envelopes' extra output is ignored. There is no long-lived result history. Recovery restores answers and regenerates against current data with a banner; it is not frozen replay. [Privacy](./privacy-page.md) owns user-facing categories.
+`pharos.selector.callout.v1` stores dismissal in localStorage; a valid current value takes precedence over the read-only legacy `pharos-selector-callout-v1` fallback, so restoring the callout survives remount even when the legacy key remains dismissed. `pharos.selector.sessionResult.v1` stores only completed wizard answers (`state`) and save time (`savedAt`) in sessionStorage, not generated output. Older envelopes' extra output is ignored. There is no long-lived result history. Recovery restores answers and regenerates against current data with a banner; it is not frozen replay. [Privacy](./privacy-page.md) owns user-facing categories.
 
 ## Snapshot Sharing
 
 The retained `og-selector-default.png` is a static 1200×630 profile card for `/screener/picker/`. It is intentionally profile-level, not snapshot-level, so recipients of `?sid=...` links never receive a social card containing the frozen shortlist or form answers. No profile/snapshot-specific card is served; [OG images](./og-images.md) owns the asset.
 
 Creation posts only allowlisted inputs. `functions/lib/selector-canonical-snapshot.ts` reloads canonical sources and runs the shared adapter/engine; the Pages handler stores the recomputed projection in `SELECTOR_SNAPSHOTS` KV. Never trust caller scores, identities, hashes or prose. POST validates allowed UI origins and returns `{ sid, ev }`; GET returns verified or explicitly legacy-unverified output, or a typed miss/error. A missing sid-only snapshot is not replaced by current output.
+
+Snapshot creation and clipboard completion share one attempt. Start-over, an input change, unmount or a newer share attempt invalidates late manual-copy fallback writes. Share feedback and fallback URLs reset with the input. Cancelled or superseded attempts preserve newer share feedback without displaying an error. Current clipboard failures retain a labelled, selectable read-only URL for manual copying.
 
 Content-addressed schema-v3 artifacts require matching trusted KV metadata to be Pharos-verified. Legacy bodies without it are client-unverified. Strict recommendations cannot exceed `surviving`; total recommendations cannot exceed `active`. Redistribution/listing counters cover strictly scored rows, not relaxed gaps; relaxed recommendations retain allowed reasons/confidence caps and never also appear as closest near misses.
 

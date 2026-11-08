@@ -84,6 +84,7 @@ export function useTimelineFeedInteractions({
       }, HIGHLIGHT_DURATION_MS);
     });
     return () => {
+      setHighlightedId(null);
       window.cancelAnimationFrame(rafId);
       if (timeoutId !== undefined) {
         window.clearTimeout(timeoutId);

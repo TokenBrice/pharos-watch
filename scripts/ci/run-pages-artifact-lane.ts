@@ -197,7 +197,7 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     report(`- Data status: \`${result.dataStatus}\``);
     if (retained) report(`- Release artifact: \`${retained.name}\``);
     if (retiredDepegSlugs.length > 0) report(`- Retired depeg slugs dropped from the replay: ${retiredDepegSlugs.length}`);
-    else report("- Reason: `pages-artifact-data-unavailable`; committed snapshots + offline detail bootstrap. All artifact gates remain required; empty detail lanes are weaker size evidence, not realistic release-data proof.");
+    if (!retained) report("- Reason: `pages-artifact-data-unavailable`; committed snapshots + offline detail bootstrap. All artifact gates remain required; empty detail lanes are weaker size evidence, not realistic release-data proof.");
     const criticalCssScope = criticalCssScopeForLane(process.env);
     report(`- Critical CSS: ${criticalCssScope === "gates" ? "gate-measured routes only" : "full public pass"}`);
     const reusePreparedWorkspace = process.env.PHAROS_PAGES_REUSE_PREPARED_WORKSPACE === "1";

@@ -4,6 +4,8 @@
 
 Pharos serves eight classes of Open Graph / Twitter preview images. They have different generation pipelines and different renewal cadences.
 
+The shared Share menu clears prior feedback timers when an image copy or PNG download starts, keeping its trigger disabled with a loading indicator until the operation settles. Copy success and failure feedback lasts two seconds.
+
 ## 1. Route cards
 
 A route card either states one figure stamped with the generation that produced it, or states no figure at all; it never repeats an undated live-state claim ("LIVE · AS OF …", an open-incident count, a flow verdict) that can go false within hours.

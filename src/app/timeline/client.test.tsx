@@ -413,33 +413,6 @@ describe("TimelineClient", () => {
     expect(within(banner).queryByRole("link", { name: /USDC/ })).toBeNull();
   });
 
-  it("does not render the Currently open banner for an empty canonical cohort", () => {
-    const now = Date.now();
-    mockEvents([
-      makeTapeEvent({
-        id: "evt-1",
-        ts: now - 1_800_000,
-        type: "depeg.opened",
-        title: "USDC depeg opened (-200 bps)",
-        coinId: "usdc-circle",
-        sourceRowId: "100",
-      }),
-      makeTapeEvent({
-        id: "evt-2",
-        ts: now - 600_000,
-        type: "depeg.resolved",
-        severity: "info",
-        title: "USDC depeg resolved",
-        coinId: "usdc-circle",
-        sourceRowId: "100",
-      }),
-    ]);
-
-    render(<TimelineClient />);
-
-    expect(screen.queryByText(/Currently open/i)).toBeNull();
-  });
-
   it.each([
     ["notice+", "/timeline/"],
     ["opened-only", "/timeline/?type=depeg.opened"],

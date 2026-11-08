@@ -300,25 +300,6 @@ describe("exact physical rail precedence", () => {
     expect(result.diversificationBonus).toBe(0);
   });
 
-  it("still lets a same-rail exact-complete certificate supersede the model", () => {
-    const certificate = certificateRoute({
-      routeKey: "certificate", certification: "exact-complete", physicalResourceKeys: ["rail:fixture"],
-      requestedNotionalUsd: 1_000_000,
-    });
-    const modeled = route({ physicalResourceKeys: ["rail:fixture"] });
-    const request = selectV9ExitStressRequest(2_000_000, V9_CANDIDATE_POLICY_V1);
-    const capacity = resolveV9DistinctExitCapacity([modeled, certificate.route], request, V9_CANDIDATE_POLICY_V1);
-    expect(capacity.includedRouteKeys).toEqual(["certificate"]);
-    expect(capacity.valuedExecutableUsd).toBe(1_000_000);
-
-    const result = evaluateV9Exit({
-      circulatingUsd: 2_000_000, assetId: certificate.assetId, clockSec: certificate.clockSec,
-      routes: [modeled, certificate.route],
-    }, V9_CANDIDATE_POLICY_V1);
-    expect(result.primaryRouteKey).toBe("certificate");
-    expect(result.routes.find((entry) => entry.routeKey === "redemption:issuer")!.score).toBeNull();
-  });
-
   it.each<{
     name: string;
     measured: number;

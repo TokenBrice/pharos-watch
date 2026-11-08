@@ -173,6 +173,7 @@ describe("Pages artifact input profile", () => {
     try {
       dataFixture(root);
       vi.stubEnv("PHAROS_PAGES_REPLAY", "1");
+      vi.stubEnv("GITHUB_STEP_SUMMARY", join(root, "summary.md"));
       for (const name of ["GH_TOKEN", "GITHUB_TOKEN", "SITE_API_SHARED_SECRET", "PHAROS_API_KEY", "CLOUDFLARE_API_TOKEN", "npm_config_auth"]) {
         vi.stubEnv(name, "test-credential");
       }
@@ -180,6 +181,9 @@ describe("Pages artifact input profile", () => {
       spawn.mockReturnValue({ status: 0, signal: null });
       const result = await runPagesArtifactLane({ repoRoot: root, acquireReleaseData: false });
       expect(result.dataStatus).toBe("degraded-data");
+      const summary = readFileSync(join(root, "summary.md"), "utf8");
+      expect(summary).toContain("Data status: `degraded-data`");
+      expect(summary).toContain("Reason: `pages-artifact-data-unavailable`");
       expect(spawn.mock.calls.length).toBeGreaterThan(0);
       for (const call of spawn.mock.calls) {
         const childEnv = call[2].env as NodeJS.ProcessEnv;
@@ -209,11 +213,15 @@ describe("Pages artifact input profile", () => {
         schemaVersion: 1, dataStatus: "release-snapshot", artifactName,
       }));
       vi.stubEnv("PAGES_RELEASE_DATA_DIR", acquisition);
+      vi.stubEnv("GITHUB_STEP_SUMMARY", join(root, "summary.md"));
       spawn.mockReset();
       spawn.mockReturnValue({ status: 0, signal: null });
       await expect(runPagesArtifactLane({ repoRoot: candidate })).resolves.toEqual({
         dataStatus: "release-snapshot", artifactName,
       });
+      const summary = readFileSync(join(root, "summary.md"), "utf8");
+      expect(summary).toContain(`Release artifact: \`${artifactName}\``);
+      expect(summary).not.toContain("pages-artifact-data-unavailable");
       expect(spawn.mock.calls.length).toBeGreaterThan(0);
       for (const call of spawn.mock.calls) expect(call[2].env.PHAROS_PAGES_REPLAY).toBe("1");
 

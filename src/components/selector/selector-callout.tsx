@@ -20,8 +20,9 @@ type CalloutState = "default" | "dismissed";
 function readCalloutState(): CalloutState {
   const storage = getWindowStorage("local");
   if (!storage) return "default";
-  return safeStorageGetItem(storage, CALLOUT_KEY) === "dismissed" ||
-    safeStorageGetItem(storage, LEGACY_CALLOUT_KEY) === "dismissed"
+  const current = safeStorageGetItem(storage, CALLOUT_KEY);
+  if (current === "default" || current === "dismissed") return current;
+  return safeStorageGetItem(storage, LEGACY_CALLOUT_KEY) === "dismissed"
     ? "dismissed"
     : "default";
 }

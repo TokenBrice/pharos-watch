@@ -12,6 +12,8 @@ import {
 import { mockFetch, type MockFetchSpy } from "@shared/test-utils/mock-fetch";
 import { baseRecommendation, makePickerQueryData, mockSelectorOutput } from "./picker.test-support";
 import { createVerifiedSelectorSnapshot } from "@shared/lib/selector/snapshot";
+import * as resultPane from "@/components/selector/result-pane";
+import * as request from "@/lib/request";
 
 // ----------------------------------------------------------------------------
 // Engine mock — installed BEFORE the client import so the synchronous engine
@@ -135,6 +137,78 @@ afterEach(() => {
 // ----------------------------------------------------------------------------
 
 describe("SelectorClient — state machine", () => {
+
+  it.each(["aborted", "superseded"] as const)("preserves %s share POST cancellation", async (kind) => {
+    const error = new request.RequestFailure(kind, "/selector-snapshot/", "Cancelled share");
+    const post = vi.spyOn(request, "requestJson").mockRejectedValue(error);
+    const pane = vi.spyOn(resultPane, "ResultPane").mockReturnValue(<></>);
+    try {
+      setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&step=result");
+      render(<SelectorClient />);
+      await act(async () => { await expect(pane.mock.lastCall![0].onCopyShareLink()).rejects.toBe(error); });
+    } finally {
+      post.mockRestore();
+      pane.mockRestore();
+    }
+  });
+
+  it.each(["current", "reset", "relax", "relax-after-failure"])("admits clipboard fallback only for the current input (%s)", async (action) => {
+    const pane = vi.spyOn(resultPane, "ResultPane").mockReturnValue(<></>);
+    let rejectCopy!: (error: Error) => void;
+    const writeText = vi.fn((_text: string) => new Promise<void>((_, reject) => { rejectCopy = reject; }));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    installSnapshotFetch({ sid: "a".repeat(32) });
+    const search = "p=treasury&h=6mplus&d=zero&v=custody&u=any&step=result";
+    setUrlSearch(search);
+    render(<SelectorClient />);
+    let pending!: Promise<void>;
+    try {
+      await act(async () => { pending = pane.mock.lastCall![0].onCopyShareLink().catch(() => {}); });
+      expect(writeText).toHaveBeenCalledTimes(1);
+      if (action === "reset") {
+        act(() => pane.mock.lastCall![0].onStartOver());
+        act(() => {
+          setUrlSearch(search);
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        });
+      }
+      if (action === "relax") act(() => pane.mock.lastCall![0].onRelax("depegTolerance"));
+      await act(async () => {
+        rejectCopy(new Error("Clipboard blocked"));
+        await pending;
+      });
+      expect(pane.mock.lastCall![0].shareFallbackUrl).toBe(action === "reset" || action === "relax" ? null : writeText.mock.calls[0][0]);
+      if (action === "relax-after-failure") {
+        act(() => pane.mock.lastCall![0].onRelax("depegTolerance"));
+        expect(pane.mock.lastCall![0].shareFallbackUrl).toBeNull();
+      }
+    } finally {
+      pane.mockRestore();
+    }
+  });
+
+  it("silently discards a pending snapshot share when Relax changes the input", async () => {
+    const pane = vi.spyOn(resultPane, "ResultPane");
+    let finish!: () => void;
+    const response = new Promise<{ body: { sid: string } }>((resolve) => {
+      finish = () => resolve({ body: { sid: "a".repeat(32) } });
+    });
+    mockFetch([{ match: "/selector-snapshot/", respond: () => response }], { requireMatch: true });
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    try {
+      setUrlSearch("p=treasury&h=6mplus&d=zero&v=custody&u=any&step=result");
+      render(<SelectorClient />);
+      fireEvent.click(await screen.findByRole("button", { name: /Copy share link/i }));
+      act(() => pane.mock.lastCall![0].onRelax("depegTolerance"));
+      await act(async () => { finish(); await response; });
+      expect(writeText).not.toHaveBeenCalled();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.getByRole("button", { name: /Copy share link/i })).toHaveProperty("disabled", false);
+    } finally {
+      pane.mockRestore();
+    }
+  });
 
   it("rehydrates down when URL claims a step beyond what's answerable", () => {
     setUrlSearch("p=treasury&step=5");

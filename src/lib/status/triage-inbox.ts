@@ -183,7 +183,7 @@ export function formatRecurrence(count: number): string | null {
 /** The Triage top line: answers "do I need to act?" before any evidence. */
 export function buildTriageHeadline(
   inbox: TriageInbox,
-  evidence: Pick<DashboardEvidence, "state" | "staleLabels" | "missingLabels">,
+  evidence: Pick<DashboardEvidence, "state" | "staleLabels" | "missingLabels" | "refreshErrorLabels">,
 ): { verdict: OperatorVerdict; text: string } {
   if (evidence.state === "unavailable" || evidence.missingLabels.length > 0) {
     const labels = evidence.missingLabels.join(", ") || "Status evidence";
@@ -193,6 +193,12 @@ export function buildTriageHeadline(
     return {
       verdict: "unavailable",
       text: `Cannot answer: ${evidence.staleLabels.join(", ") || "status evidence"} is out of date. Showing the last good read.`,
+    };
+  }
+  if (evidence.state === "partial") {
+    return {
+      verdict: "unavailable",
+      text: `Cannot answer: ${evidence.refreshErrorLabels.join(", ") || "Status evidence"} refresh failed. Showing the last good read.`,
     };
   }
   const watching = inbox.watch.length + inbox.informational.length;

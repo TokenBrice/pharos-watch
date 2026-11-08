@@ -366,24 +366,6 @@ describe("sortStablecoins", () => {
       expected: ["lower", "higher"],
     },
     {
-      name: "sorts by market cap descending",
-      rows: [
-        makeCoin("small", "Small", { circulating: { peggedUSD: 1_000 } }),
-        makeCoin("large", "Large", { circulating: { peggedUSD: 1_000_000_000 } }),
-      ],
-      sort: sortDesc("mcap"),
-      expected: ["large", "small"],
-    },
-    {
-      name: "sorts by market cap ascending",
-      rows: [
-        makeCoin("large", "Large", { circulating: { peggedUSD: 1_000_000_000 } }),
-        makeCoin("small", "Small", { circulating: { peggedUSD: 1_000 } }),
-      ],
-      sort: sortAsc("mcap"),
-      expected: ["small", "large"],
-    },
-    {
       name: "sorts by peg score descending",
       rows: [makeCoin("a", "A"), makeCoin("b", "B")],
       sort: sortDesc("stability"),

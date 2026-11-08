@@ -209,6 +209,17 @@ describe("YieldAnalysisClient", () => {
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
   });
 
+  it.each([false, true])("keeps the fallback or workbench when optional metadata rejects (ranking: %s)", async (ready) => {
+    setRankingsQuery({ data: makeResponse(ready ? [makeRanking()] : []) });
+    loadClientStablecoinDetailMock.mockRejectedValueOnce(new Error("detail import failed"));
+    renderWorkbench();
+    await act(async () => {});
+    expect(ready
+      ? screen.getByTestId("yield-history-chart")
+      : screen.getByText("Yield tracking is expected for this stablecoin, but the latest ranking snapshot is not available yet.")
+    ).toBeTruthy();
+  });
+
   it.each([
     {
       id: "usdn-smardex",

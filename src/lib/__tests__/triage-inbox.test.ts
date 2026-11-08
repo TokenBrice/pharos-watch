@@ -8,7 +8,7 @@ import {
 } from "@/lib/status/triage-inbox";
 
 const NOW = 1_700_000_000;
-const CURRENT_EVIDENCE = { state: "current" as const, staleLabels: [], missingLabels: [] };
+const CURRENT_EVIDENCE = { state: "current" as const, staleLabels: [], missingLabels: [], refreshErrorLabels: [] };
 
 function cause(code: string, severity: StatusCause["severity"] = "info", layer: StatusCause["layer"] = "data-quality"): StatusCause {
   return { code, severity, layer, message: code };
@@ -53,13 +53,22 @@ describe("buildTriageInbox", () => {
     const data = withCauses([]);
     const inbox = buildTriageInbox([], data);
     expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE)).toEqual({ verdict: "ok", text: "Nothing needs action." });
-    expect(buildTriageHeadline(inbox, { state: "stale", staleLabels: ["Public health"], missingLabels: [] }).verdict).toBe(
+    expect(buildTriageHeadline(inbox, { ...CURRENT_EVIDENCE, state: "stale", staleLabels: ["Public health"] }).verdict).toBe(
       "unavailable",
     );
     // Never-loaded required evidence is not answerable.
     expect(
-      buildTriageHeadline(inbox, { state: "partial", staleLabels: [], missingLabels: ["Public health"] }),
+      buildTriageHeadline(inbox, { ...CURRENT_EVIDENCE, state: "partial", missingLabels: ["Public health"] }),
     ).toEqual({ verdict: "unavailable", text: "Cannot answer: Public health unavailable. Showing the last good read." });
+  });
+
+  it.each([{ causes: [] }, { causes: [cronCause] }])("withholds a verdict after a retained-data refresh failure ($causes)", ({ causes }) => {
+    const data = withCauses(causes);
+    const inbox = buildTriageInbox(normalizeStatusIssues(data.causes), data);
+    const headline = buildTriageHeadline(inbox, { ...CURRENT_EVIDENCE, state: "partial", refreshErrorLabels: ["Public health", "Status API"] });
+    expect(headline.verdict).toBe("unavailable");
+    expect(headline.text).toBe("Cannot answer: Public health, Status API refresh failed. Showing the last good read.");
+    expect(inbox.act).toHaveLength(causes.length);
   });
 
   it.each([

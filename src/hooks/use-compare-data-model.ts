@@ -79,7 +79,7 @@ export function useCompareDataModel({
   useEffect(() => {
     let cancelled = false;
     const ids = selectedIdsSignature ? selectedIdsSignature.split("\u0000") : [];
-    void Promise.all(ids.map((id) => loadClientStablecoinDetail(id))).then((details) => {
+    void Promise.all(ids.map((id) => loadClientStablecoinDetail(id).catch(() => null))).then((details) => {
       if (cancelled) return;
       setClientDetailsById(
         new Map(

@@ -77,11 +77,11 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
   const canAddToCompare = compare.canAdd;
 
   const sourceExplorer = buildYieldSourceExplorerModel(ranking, sourceClock);
-  const effectiveSourceKey = selectedSourceKey ?? sourceExplorer.selectedSource.sourceKey;
   const totalSources = sourceExplorer.allSources.length;
   const { selectedSource } = sourceExplorer;
   const activeSource =
-    sourceExplorer.allSources.find((source) => source.sourceKey === effectiveSourceKey) ?? selectedSource;
+    sourceExplorer.allSources.find((source) => source.sourceKey === selectedSourceKey) ?? selectedSource;
+  const effectiveSourceKey = activeSource.sourceKey;
   const confidenceTier = ranking.provenance?.confidenceTier ?? null;
   const confidenceStyle = confidenceTier ? (YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] ?? null) : null;
   const resolvedBenchmark = resolveYieldRowBenchmark(ranking, benchmarks, riskFreeRate);
@@ -98,9 +98,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
     sourceRole: selectedSource.sourceRole,
     sourceTvlUsd: selectedSource.sourceTvlUsd,
   });
-  const hasAlternateSelected =
-    selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
-  const deepDive = getYieldWorkbenchLink(ranking.id, hasAlternateSelected ? selectedSourceKey : null);
+  const deepDive = getYieldWorkbenchLink(ranking.id, activeSource.isChosen ? null : effectiveSourceKey);
 
   const handleSourceClick = (sourceKey: string) => {
     setSelectedSourceKey(sourceKey);
@@ -349,8 +347,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             <p className="text-xs text-muted-foreground">
               Showing{" "}
               <span className="font-medium text-foreground">
-                {sourceExplorer.allSources.find((source) => source.sourceKey === effectiveSourceKey)?.displayLabel ??
-                  "Best source"}
+                {activeSource.displayLabel}
               </span>
             </p>
             <YieldHistoryChart

@@ -83,6 +83,7 @@ async function executeRequest<T>(
         if (timeout?.isTimedOut()) {
           throw new RequestFailure("timeout", url, `Request timed out after ${timeoutMs}ms`, { cause: error });
         }
+        signal?.throwIfAborted();
       }
       throw new RequestFailure("http", url, `Request failed with status ${response.status}`, {
         status: response.status,
@@ -184,6 +185,11 @@ export class RequestSequence {
         throw new RequestFailure("superseded", "request-sequence", "Request result was superseded");
       }
       return result;
+    } catch (error) {
+      if (version !== this.version) {
+        throw new RequestFailure("superseded", "request-sequence", "Request result was superseded", { cause: error });
+      }
+      throw error;
     } finally {
       if (version === this.version) this.controller = null;
     }

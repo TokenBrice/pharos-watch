@@ -554,6 +554,46 @@ describe("PharosWatchBotMiniAppPage", () => {
     expectMutationRequest(fetchMock, { kind: "undo-bulk-watchlist", expectedPreferenceGeneration: 2, expectedFingerprint: "preview-v1-12-deadbeef", restoreDirectRows: [], removeStablecoinIds: ["usdt-tether", "usd0-usual"] });
   });
 
+  it.each(["preview", "confirm"])("reconciles snackbar Undo with a draft and retains it after a failed %s", async (failure) => {
+    const main = nativeButton();
+    const state = makeMiniAppState({ catalog: rankedCatalog });
+    const undo = {
+      expectedPreferenceGeneration: 2, expectedFingerprint: "preview-v1-12-deadbeef",
+      restoreDirectRows: [{
+        stablecoinId: "usdc-circle", alertDews: true, alertDepeg: true, alertSafety: false, alertLaunch: false, alertReserve: false,
+        overrideDews: false, overrideDepeg: false, overrideSafety: false, overrideLaunch: false, overrideReserve: false,
+        dewsMinBand: "ALERT" as const, safetyMode: null, depegWorseningBpsStep: 250,
+      }], removeStablecoinIds: [],
+    };
+    const fetchMock = mockStateResponses(state);
+    fetchMock.mockResolvedValueOnce(ok({ contractVersion: TELEGRAM_MINI_APP_CONTRACT_VERSION, catalogVersion: TELEGRAM_MINI_APP_CATALOG_VERSION,
+      stateRevision: "removed", state: { ...state, subscriptions: [] }, undo })).mockResolvedValueOnce(ok(state));
+    await renderReadyMiniApp({ fetchImpl: fetchMock, launch: { MainButton: main, initDataUnsafe: { start_param: "coin_usdc-circle" } } });
+    fireEvent.click(screen.getByRole("button", { name: "Remove USDC from my coins" }));
+    await screen.findByText("USDC removed.");
+    fireEvent.click(screen.getByRole("button", { name: "Add coins" }));
+    const search = screen.getByLabelText("Search stablecoins");
+    for (const [symbol, name] of [["USDC", /^USDC /], ["USD0", /^USD0 /]] as const) {
+      fireEvent.change(search, { target: { value: symbol } });
+      fireEvent.click(screen.getByRole("checkbox", { name }));
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    fireEvent.change(search, { target: { value: "usd" } });
+    await waitFor(() => expect(main.text).toBe("Add 1 coin"));
+    expect(screen.getByRole("checkbox", { name: "USDC USD Coin, following" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("checkbox", { name: "USDC USD Coin, following" }));
+    const selection = { addStablecoinIds: ["usd0-usual"], removeStablecoinIds: ["usdc-circle"] };
+    if (failure === "confirm") fetchMock.mockResolvedValueOnce(preview(selection.addStablecoinIds, selection.removeStablecoinIds));
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
+    act(() => main.click());
+    await screen.findByText(/We couldn't confirm that change/);
+    expect(screen.getByRole("checkbox", { name: "USDC USD Coin, will be removed" }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByRole("checkbox", { name: "USD0 Usual USD, will be added" }).getAttribute("aria-checked")).toBe("true");
+    fetchMock.mockResolvedValueOnce(preview(selection.addStablecoinIds, selection.removeStablecoinIds)).mockResolvedValueOnce(ok(state));
+    act(() => main.click());
+    await waitFor(() => expectMutationRequest(fetchMock, { kind: "confirm-bulk-watchlist", ...selection, expectedPreferenceGeneration: 1, previewFingerprint: "preview-v1-12-deadbeef" }));
+  });
+
   it("follows a preset from Follow a preset through the MainButton", async () => {
     const main = nativeButton();
     const fetchMock = await renderReadyMiniApp({ state: makeMiniAppState({ catalog: rankedCatalog }), launch: { MainButton: main } });

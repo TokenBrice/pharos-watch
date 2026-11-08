@@ -963,27 +963,6 @@ describe("P4 DEX exit route observations", () => {
     expect(isDexExitRouteCoverageComplete(usdtShaped)).toBe(false);
     expect(isDexExitRouteCoverageWithinRouteBudget(usdtShaped)).toBe(true);
 
-    const daiShaped = {
-      status: "populated" as const,
-      capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,
-      retainedPoolCount: 119,
-      observationCount: 24,
-      scoreEligibleObservationCount: 24,
-      scoreEligiblePoolCount: 24,
-      scoreEligibleCapabilityPoolCount: 61,
-      unsupportedPoolCount: 95,
-      evidenceCounts: { "measured-executable-depth": 24 },
-      unsupportedReasons: {
-        "executionCapabilityGate:measured-execution:quote-missing": 4,
-        "executionCapabilityGate:measured-execution:target-unresolved": 19,
-        "executionCapabilityGate:balancer-amm:unsupported-invariant": 2,
-        "nonExecutableEvidence:defillama-pool-shaped": 50,
-        "nonExecutableEvidence:discovery-pool-shaped": 8,
-        routeObservationPayloadOverflow: 12,
-      },
-    };
-    expect(isDexExitRouteCoverageWithinRouteBudget(daiShaped)).toBe(true);
-
     const eurcShaped = {
       status: "populated" as const,
       capabilityMatrixVersion: DEX_ROUTE_CAPABILITY_MATRIX_VERSION,

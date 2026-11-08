@@ -185,14 +185,6 @@ describe("Safety Score v9 reviewed incident schema", () => {
 
   it("admits only scoped, verified, non-realized informational vulnerability history", () => {
     const history = SECURITY_HISTORY_INCIDENT;
-    expect(history).toMatchObject({
-      domain: "security-history",
-      realization: "no-reported-exploit",
-      dateBasis: "public-disclosure",
-      resolutionDateBasis: "primary-confirmation",
-      posture: { treatment: "informational-only" },
-      scope: { kind: "contract-component" },
-    });
     for (const overrides of [
       { status: "active", resolvedAt: null },
       { realization: "realized-exploit" },

@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   fetchUpstreamProxy,
   MAX_PROXY_RESPONSE_BODY_BYTES,
-  resolveWildcardProxyPath,
 } from "../lib/upstream-proxy";
 
 const PROXY_OPTIONS = {
@@ -15,21 +14,6 @@ const PROXY_OPTIONS = {
   timeoutMessage: "upstream timed out",
   fetchFailedMessage: "upstream fetch failed",
 };
-
-describe("resolveWildcardProxyPath", () => {
-  it("returns null when the wildcard path is absent", () => {
-    expect(resolveWildcardProxyPath(undefined, "/api/")).toBeNull();
-    expect(resolveWildcardProxyPath([], "/api/")).toBeNull();
-  });
-
-  it.each([
-    ["resource", "/api/resource"],
-    [["coins", "usd"], "/api/coins/usd"],
-    ["", null],
-  ])("resolves wildcard %j", (path, expected) => {
-    expect(resolveWildcardProxyPath(path, "/api/")).toBe(expected);
-  });
-});
 
 describe("fetchUpstreamProxy", () => {
   afterEach(() => {

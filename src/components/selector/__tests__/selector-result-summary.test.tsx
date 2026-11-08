@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { act } from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { SelectorInput } from "@shared/lib/selector";
 
 import {
@@ -11,6 +10,7 @@ import {
 } from "@/components/selector/selector-result-summary";
 import { SelectorSnapshotBanner } from "@/components/selector/selector-snapshot-banner";
 import { SelectorSkippedDisclosure } from "@/components/selector/selector-skipped-disclosure";
+import { RequestFailure } from "@/lib/request";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -57,6 +57,28 @@ function deferred<T>() {
 const shareButton = () => screen.getByRole("button", { name: /Copy share link|Creating link|Link copied/i });
 
 describe("SelectorResultSummary", () => {
+  it.each(["aborted", "superseded"] as const)("ignores a late %s rejection after a newer share completes", async (kind) => {
+    const previous = deferred<void>();
+    const onCopyShareLink = vi.fn().mockImplementationOnce(async () => {
+      await previous.promise;
+      throw new RequestFailure(kind, "/selector-snapshot/", "Cancelled share");
+    }).mockResolvedValue(undefined);
+    render(<SelectorResultSummary {...summaryProps({ onCopyShareLink })} />);
+    act(() => { fireEvent.click(shareButton()); fireEvent.click(shareButton()); });
+    expect(onCopyShareLink).toHaveBeenCalledTimes(2);
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.getByRole("button", { name: /Link copied/i })).toBeTruthy();
+    await act(async () => { previous.resolve(); });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("button", { name: /Link copied/i })).toBeTruthy();
+  });
+
+  it.each([{ surviving: 1, relaxedReasons: ["exit speed"] }, { surviving: 0, relaxedReasons: [] }])("describes relaxed entries without excluding strict fits (%j)", ({ surviving, relaxedReasons }) => {
+    render(<SelectorResultSummary {...summaryProps({ universe: { active: 12, surviving }, usedRelaxedFallback: true, relaxedReasons })} />);
+    expect(screen.queryByText(/No clean fit survived/i)).toBeNull();
+    expect(screen.getByText(/^Pharos (relaxed: exit speed|widened one or more soft constraints)\.$/i)).toBeTruthy();
+  });
+
   it("renders trust banners, handoff chips, answer chips, and blocks a disabled share", () => {
     const onEditAnswer = vi.fn();
     const onCopyShareLink = vi.fn().mockResolvedValue(undefined);

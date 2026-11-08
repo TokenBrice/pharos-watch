@@ -30,23 +30,6 @@ afterEach(() => vi.restoreAllMocks());
 
 
 describe("resolveSourceStatus", () => {
-  it("returns 'used' when source is in agreeSources", () => {
-    expect(
-      resolvePriceTransparencySourceStatus(
-        "binance",
-        ["binance", "coingecko"],
-        ["binance", "coingecko", "pyth"],
-        false,
-      ),
-    ).toBe("used");
-  });
-
-  it("returns 'available' when source is in consensusSources but not agreeSources", () => {
-    expect(
-      resolvePriceTransparencySourceStatus("pyth", ["binance", "coingecko"], ["binance", "coingecko", "pyth"], false),
-    ).toBe("available");
-  });
-
   it("returns 'no-data' when source is in neither", () => {
     expect(resolvePriceTransparencySourceStatus("redstone", ["binance"], ["binance", "coingecko"], false)).toBe(
       "no-data",

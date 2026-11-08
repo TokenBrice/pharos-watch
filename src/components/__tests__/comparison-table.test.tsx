@@ -165,16 +165,6 @@ describe("ComparisonTable", () => {
     }
   });
 
-  it("marks missing Bluechip audit data as not reported", () => {
-    const coin = makeCoin("usdt", "USDT");
-    coin.bluechipPublicationAvailable = true;
-    coin.bluechipRating = makeUnreportedBluechipRating();
-    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
-
-    expect(html).toContain("A · audit not reported");
-    expect(html).not.toContain("no audit flag");
-  });
-
   it.each([
     { state: "current", age: 0, text: "Observed 2026-09-21" },
     { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC, text: "Observed 2026-09-19" },

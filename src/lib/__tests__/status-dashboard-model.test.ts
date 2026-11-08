@@ -329,7 +329,8 @@ describe("status dashboard model", () => {
     ["status", "Status API", "status refresh timed out"],
   ] as const)("retains %s after a failed refresh", (key, label, message) => {
     const model = buildModel(BASE_STATUS, { nowMs: 1_010_000, [`${key}Error`]: new Error(message) });
-    expect(model.evidence).toMatchObject({ state: "partial", refreshErrorLabels: [label] });
+    expect(model.evidence).toMatchObject({ state: "partial", refreshErrorLabels: [label], missingLabels: [] });
+    expect(buildTriageHeadline({ items: [], act: [], watch: [], informational: [] }, model.evidence).verdict).toBe("unavailable");
     if (key === "health") {
       expect(model.querySyncs.find((sync) => sync.key === key)).toMatchObject({
         hasData: true, state: "partial", errorMessage: message, updatedAtMs: 1_000_000,

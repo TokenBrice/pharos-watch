@@ -34,10 +34,13 @@ vi.mock("@/hooks/use-blacklist-events", () => ({
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
-  useUrlFilters: () => ({
-    searchParams: new URLSearchParams(currentSearch),
-    replaceParams: replaceParamsMock,
-  }),
+  useUrlFilters: () => {
+    const search = currentSearch;
+    return {
+      searchParams: new URLSearchParams(search),
+      replaceParams: (updater: (params: URLSearchParams) => void) => replaceParamsMock(updater, search),
+    };
+  },
 }));
 
 vi.mock("@/lib/analytics", () => ({
@@ -132,8 +135,8 @@ describe("useFreezeWatchPageController", () => {
         params,
       };
     });
-    replaceParamsMock.mockImplementation((updater: (params: URLSearchParams) => void) => {
-      const params = new URLSearchParams(currentSearch);
+    replaceParamsMock.mockImplementation((updater: (params: URLSearchParams) => void, search: string) => {
+      const params = new URLSearchParams(search);
       updater(params);
       currentSearch = params.toString() ? `?${params.toString()}` : "";
     });
@@ -264,6 +267,34 @@ describe("useFreezeWatchPageController", () => {
     expect(drilldownEl.scrollIntoView).toHaveBeenCalledTimes(1);
 
     vi.useRealTimers();
+  });
+
+  it.each([false, true])("keeps pending search current across navigation (browser: %s)", (browser) => {
+    vi.useFakeTimers();
+    try {
+      currentSearch = "?coin=usdt&chainId=tron&page=2&q=abc&keep=yes";
+      const { result, rerender } = renderHook(() => useFreezeWatchPageController());
+      act(() => result.current.handleNextPage());
+      act(() => result.current.handleSearchChange("address"));
+      act(() => vi.advanceTimersByTime(299));
+      if (browser) currentSearch = "?coin=usdt&chainId=ethereum&q=back&keep=yes";
+      else act(() => result.current.handleChainChange("ethereum"));
+      rerender();
+      act(() => vi.advanceTimersByTime(1));
+      rerender();
+      const params = new URLSearchParams(currentSearch);
+      expect(result.current.chainFilter).toBe("ethereum");
+      expect(result.current.searchInput).toBe(browser ? "back" : "address");
+      expect(params.get("q")).toBe(browser ? "back" : "address");
+      expect(params.get("coin")).toBe("usdt");
+      expect(params.get("keep")).toBe("yes");
+      expect(params.get("page")).toBeNull();
+      expect(result.current.page).toBe(1);
+      expect(useBlacklistEventsPageMock).toHaveBeenLastCalledWith(expect.objectContaining({ cursor: undefined }));
+      expect(replaceParamsMock).toHaveBeenCalledTimes(browser ? 0 : 2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("walks beyond the former 25000 offset cap with cursors and keeps the exact total", () => {

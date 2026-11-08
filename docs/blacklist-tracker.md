@@ -143,6 +143,8 @@ Complete coverage supports full-cohort shares. Partial coverage qualifies shares
 
 An empty chart means no valued ledger snapshots, not no recorded events. The seismograph headline comes from the summary's authoritative `totalEvents`, and its quarterly points aggregate every symbol key in `perCoinQuarterlyEventTypes`, including retired assets. Missing or failed summary reads remain unavailable. Fresh blacklist evidence cannot renew supply or Safety Score evidence: each source retains its own clock, budget and read outcome. CSV exports describe only the currently loaded server page and keep native units separate from USD-at-event values; unavailable amounts remain empty.
 
+Ledger search waits 300 ms after typing and applies to the latest URL filters, preserving unrelated parameters and legacy aliases. Ledger filter changes reset cursor navigation. Browser navigation to a different search cancels pending typing and restores that search in the input.
+
 ## Blacklist Sync State Semantics
 
 The [coverage rules](#coverage-and-limitations) and [cursor state](#cursor-state) distinguish proven observation from bounded scan progress. Event counts, ledger valuations and exposure classifications retain their own populations and evidence clocks.

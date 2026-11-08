@@ -1,13 +1,15 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EndpointProbeResult } from "@shared/types";
 import { ReliabilityEndpointsPanel } from "../reliability-endpoints-panel";
+import { ReliabilityCopyDiagnostics } from "../reliability-copy-diagnostics";
 import { buildReliabilityWorkspaceModel } from "@/lib/reliability-workspace-issue-builder";
 import { makeHealthyHealthResponse, makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 
 const writeText = vi.fn();
+const previousExecCommand = document.execCommand;
 
 beforeEach(() => {
   Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -16,9 +18,61 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.clearAllMocks();
+  Object.defineProperty(document, "execCommand", { configurable: true, value: previousExecCommand });
 });
 
 describe("ReliabilityEndpointsPanel", () => {
+  it.each(["completed", "pending", "fallback", "failed", "return"])("keeps clipboard and refreshed copy feedback consistent: %s", async (mode) => {
+    let clipboard = "";
+    let finish = () => {};
+    const pending = mode === "pending" || mode === "fallback";
+    writeText.mockImplementation(async (value: string) => { clipboard = value; });
+    const deferredCopy = (value: string) => new Promise<void>((resolve, reject) => {
+      finish = () => {
+        if (mode === "fallback" || mode === "failed") reject(new Error("Clipboard denied"));
+        else { clipboard = value; resolve(); }
+      };
+    });
+    if (mode !== "return") writeText.mockImplementationOnce(deferredCopy);
+    const legacyCopy = vi.fn(() => {
+      if (mode === "failed") return false;
+      clipboard = (document.activeElement as HTMLTextAreaElement).value;
+      return true;
+    });
+    Object.defineProperty(document, "execCommand", { configurable: true, value: legacyCopy });
+    const { rerender } = render(<ReliabilityCopyDiagnostics text="previous diagnostics" />);
+    const copy = screen.getByRole("button", { name: "Copy secret-free reliability diagnostics" });
+    copy.focus();
+    fireEvent.click(copy);
+    expect(document.activeElement).toBe(copy);
+    expect(copy.matches(":enabled")).toBe(true);
+    if (!pending) {
+      await act(async () => finish());
+      if (mode === "failed") expect(screen.getByText("Copy failed").getAttribute("aria-live")).toBe("polite");
+      else expect(copy.textContent).toBe("Copied");
+    }
+    rerender(<ReliabilityCopyDiagnostics text="refreshed diagnostics" />);
+    expect(copy.textContent).toBe("Copy diagnostics");
+    if (mode === "return") writeText.mockImplementationOnce(deferredCopy);
+    fireEvent.click(copy);
+    if (mode === "return") {
+      rerender(<ReliabilityCopyDiagnostics text="previous diagnostics" />);
+      await act(async () => finish());
+      expect({ clipboard, feedback: copy.textContent }).toEqual({ clipboard: "refreshed diagnostics", feedback: "Copy diagnostics" });
+      return;
+    }
+    if (pending) {
+      await act(async () => finish());
+      expect({ clipboard, feedback: copy.textContent }).toEqual({ clipboard: "previous diagnostics", feedback: "Copy diagnostics" });
+      if (mode === "fallback") expect(legacyCopy).toHaveBeenCalledWith("copy");
+      fireEvent.click(copy);
+    }
+    await waitFor(() => expect(copy.textContent).toBe("Copied"));
+    expect(copy.textContent).toBe("Copied");
+    expect(clipboard).toBe("refreshed diagnostics");
+    expect(writeText).toHaveBeenLastCalledWith("refreshed diagnostics");
+  });
+
   it("explains both probe planes, prioritizes failures, collapses healthy rows, and copies safe diagnostics", async () => {
     const data = makeHealthyStatusResponse();
     data.probe = { ...data.probe, sampleCount: 17, passCount: 14, failCount: 0, status: "degraded" };

@@ -68,9 +68,11 @@ describe("body-scoped frontend requests", () => {
     await rejection;
   });
 
-  it.each(["init", "explicit"])("keeps bespoke requests composed with the %s signal after headers", async (source) => {
+  it.each([
+    ["init", 200], ["explicit", 200], ["init", 503], ["explicit", 503],
+  ] as const)("keeps bespoke requests composed with the %s signal after status %i headers", async (source, status) => {
     vi.useFakeTimers();
-    delayedBody();
+    delayedBody(status);
     const init = new AbortController();
     const explicit = new AbortController();
     const rejection = expect(requestJson("/api/test", {

@@ -14,6 +14,8 @@ The `<title>` is the optional search-phrased `metaTitle` (at most 52 characters,
 
 Visible article metadata credits Pharos, links to `/about/#editorial-ai-policy`, and displays authored `datePublished` in UTC alongside reading time. Article JSON-LD agrees with organization authorship. Git modification dates are not human review or substantive-update dates; no individual reviewer is implied. The hub emits ItemList JSON-LD; articles and hub entries share `/og-editorial-learn.png`.
 
+The article's Copy link control copies the current page URL through the shared clipboard helper, including its legacy fallback. Its polite “Link copied” status lasts two seconds after the latest successful copy; repeated copies restart that window.
+
 `CASE_STUDY_BY_DEPEG_SLUG` and `caseStudySlugForEvent(coinId, tsMs)` provide reverse lookups. An optional `depegEventSlug` is a lookup key, not proof that the corresponding event route exists. Client surfaces must use generated `src/lib/case-study-client-index.ts`, not import the full content registry. Its compact coin-id and cemetery-id maps have no server-registry counterpart. Articles, chart widgets and ordinary links remain the supported surfaces; there is no live chart-annotation hook.
 
 ## Mechanisms

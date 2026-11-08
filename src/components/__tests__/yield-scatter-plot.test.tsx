@@ -71,12 +71,27 @@ describe("YieldScatterPlot", () => {
       makeYieldRanking({ id: "rocket", apy30d: 200 }),
       makeYieldRanking({ id: "unscored", safetyScore: null }),
     ];
-    render(<YieldScatterPlot rankings={rankings} benchmarkRate={4.25} />);
+    const { rerender } = render(<YieldScatterPlot rankings={rankings} benchmarkRate={4.25} />);
     expect(screen.getByRole("figure").getAttribute("aria-label")).toContain("15 yield-source rows plotted, including 1 on the upper rail");
     expect(screen.getByText(/1 row without a measured safety score not shown/)).toBeTruthy();
-    showTooltip("rocket");
+    const tooltip = showTooltip("rocket");
     expect(screen.getByText("200.00%")).toBeTruthy();
     expect(screen.getByText(/Chart rail:/)).toBeTruthy();
+    tooltip.unmount();
+    rerender(
+      <YieldScatterPlot
+        rankings={rankings}
+        benchmarkRate={4.25}
+        compact
+        frame="bare"
+        usesDefaultBenchmarkFrame
+      />,
+    );
+    expect(screen.getByText(/outlier pinned above/)).toBeTruthy();
+    expect(screen.getByText("(USD frame)")).toBeTruthy();
+    expect(screen.getByText(/1 row without a measured safety score not shown/)).toBeTruthy();
+    const figure = screen.getByRole("figure");
+    expect(figure.getAttribute("aria-label")).toContain("1 row without a measured safety score not shown");
   });
 
   it.each([
