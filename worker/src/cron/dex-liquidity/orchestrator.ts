@@ -74,7 +74,8 @@ import {
   buildSlipstreamMeasuredExecutionTargets,
   buildUniV3DirectMeasuredExecutionTargets,
 } from "../measured-execution/inventory";
-import { enrichEvmV2ExecutionModels } from "./constant-product-v2";
+import { enrichEvmV2ExecutionModels, refreshUsdaV2Price } from "./constant-product-v2";
+import { refreshTempoPathUsdPrice } from "./tempo-price";
 import { enrichQuoterV2ExecutionTargets } from "./enrich-quoter-v2-targets";
 import { enrichCurveStableswapFactoryExecutionModels } from "./curve-stableswap-factory";
 import { enrichCurveStableswapRateInputExecutionModels } from "./curve-stableswap-rates";
@@ -977,13 +978,22 @@ async function buildDexLiquidityPoolState(
     capturedAt: ctx.syncStartSec,
   });
   // Resolve the registry first so trust-first selection cannot restore an older native quote.
-  const priceRefresh = await refreshPoolPrices({
+  const priceRefresh = { ...await refreshPoolPrices({
     db: ctx.db, metrics, priceObservations: sourceState.priceObservations, observedThisRun,
     protocolTvlCaps: sourceState.dataSources.protocolTvlCaps, registryEvaluatedAtSec: staged.registryEvaluatedAtSec,
     primaryPrices: sourceState.primaryPriceById ?? sourceState.stablecoinPriceById,
     sourceStartedAtSec: ctx.syncStartSec, apiKey: ctx.coingeckoApiKey,
     references: sourceState.validationReferences, signal: ctx.signal, deadline: ctx.deadline, readinessDeadlineMs: ctx.readinessDeadlineMs,
-  });
+  }), native: {
+    usda: refreshUsdaV2Price({ metrics,
+      sourceGenerationId: `dex-liquidity-scoring-stage:${ctx.sourceSlotStartedAt ?? ctx.syncStartSec}`,
+      nowSec: Math.floor(Date.now() / 1000) }),
+    pathUsd: await refreshTempoPathUsdPrice({ sourcePools: metrics,
+      stablecoinPriceById: sourceState.stablecoinPriceById,
+      stablecoinPriceProvenanceById: sourceState.stablecoinPriceProvenanceById,
+      chainRpcs: ctx.chainRpcs, signal: ctx.signal, nowSec: Math.floor(Date.now() / 1000),
+      deadlineMs: Math.min(ctx.deadline?.platformDeadlineMs ?? Infinity, ctx.readinessDeadlineMs ?? Infinity) - 20_000 }),
+  } };
   await ctx.reportDexProgress("pool-price-refresh-complete", {
     message: "Completed exact-pool price refresh", providerFamily: "cg-onchain",
     counts: { requests: priceRefresh.requests, refreshed: priceRefresh.refreshed },
