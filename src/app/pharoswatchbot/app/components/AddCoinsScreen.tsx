@@ -54,7 +54,14 @@ export function AddCoinsScreen({ state, canEdit, busy, pendingOperation, onApply
   const [query, setQuery] = useState("");
   const [adds, setAdds] = useState<string[]>([]);
   const [removes, setRemoves] = useState<string[]>([]);
+  const [previousSubscriptions, setPreviousSubscriptions] = useState(state.subscriptions);
   const followedIds = useMemo(() => new Set(state.subscriptions.map((coin) => coin.stablecoinId)), [state.subscriptions]);
+  // Undo or a refresh can satisfy part of the draft before it is submitted.
+  if (previousSubscriptions !== state.subscriptions) {
+    setPreviousSubscriptions(state.subscriptions);
+    setAdds((current) => current.filter((id) => !followedIds.has(id)));
+    setRemoves((current) => current.filter((id) => followedIds.has(id)));
+  }
   const ranked = useMemo(
     () => [...state.catalog.searchableCoins].sort((left, right) => (left.rank ?? Number.MAX_SAFE_INTEGER) - (right.rank ?? Number.MAX_SAFE_INTEGER)),
     [state.catalog.searchableCoins],
