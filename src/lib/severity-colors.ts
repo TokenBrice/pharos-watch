@@ -1,7 +1,6 @@
 /**
  * Shared deviation severity color mapping.
  *
- * Hex values match --severity-*-hex CSS custom properties in semantic.css.
  * Tailwind classes live in `PEG_DEVIATION_TONE_CLASSES`; the cut-offs
  * (healthy < 50 bps < mild < 200 < moderate < 500 <= severe) and level labels
  * are `PEG_DEVIATION_LEVEL_MIN_BPS` / `getPegDeviationLevel` in classification.
