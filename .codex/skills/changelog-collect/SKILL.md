@@ -40,4 +40,4 @@ npm test -- scripts/__tests__/generate-changelog-registry.test.ts
 npm test -- scripts/__tests__/generate-markdown-exports.test.ts
 ```
 
-Run `npm run check:stablecoin-data` only when citing registry counts. Default handoff reports the path, headline, field notes, labels/tags, total commits, filtered count, and warnings, then stops for review. If `--commit` was authorized and checks pass, commit only the entry, generated barrel, and refreshed fixture as one changelog change; use `pharos-release-runner` for publication.
+Run `npm run check:stablecoin-data` only when citing registry counts. Default handoff reports the path, headline, field notes, labels/tags, total commits, filtered count, and warnings, then stops for review. If `--commit` was authorized and checks pass, commit only the entry as one changelog change; the barrel is an untracked bootstrap projection, and the fixed Markdown examples do not change for a new authored week; use `pharos-release-runner` for publication.

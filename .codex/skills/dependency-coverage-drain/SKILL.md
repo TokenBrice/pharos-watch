@@ -27,11 +27,9 @@ Run the read-only production report:
 npm run audit:coverage -- --domain=dependency-coverage --prod
 ```
 
-Capture the report and static-versus-published reconciliation using the runbook. Record access date, publication generation and timestamp, supply timestamp, report counts, and whether inputs are production, local, or fixture-derived. A held publication can predate current supply and local registry changes. Do not call a static-versus-published difference a missing edge without comparing authored relationships, admitted live reserve mappings, and the accepted publication.
+Capture the report and reconciliation using the runbook; record access date, publication generation/timestamp, supply timestamp, report counts, and whether inputs are production, local, or fixture-derived. A held publication can predate current supply and registry changes.
 
-Retain the validated upstream `provenance.publication` identity, original evaluation/publication clocks, source generations/digests, and health separately from audit `generatedAt` and capturing `checkoutRevision`. Reconciliation names both the audit checkout and current comparison checkout. Missing legacy provenance remains unknown; malformed supplied provenance rejects the report. Never treat a newer capture/check-out clock as renewed held evidence.
-
-If production is unavailable, label the local or fixture snapshot and leave production-only conclusions open. Do not manually mutate production D1 or bypass admission guards.
+Follow the runbook's [three-identity provenance rule](../../../docs/runbooks/dependency-network.md#scope-and-commands): a newer capture or check-out clock never renews held evidence, missing legacy provenance is unknown, and malformed supplied provenance rejects the report. If production is unavailable, label the local or fixture snapshot, leave production-only conclusions open, and never mutate production D1 or bypass admission guards.
 
 ## Monthly Decision Workflow
 
