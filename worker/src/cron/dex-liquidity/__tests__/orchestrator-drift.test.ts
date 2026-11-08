@@ -17,9 +17,7 @@ import { makeCompleteVolumeAvailability } from "../../__tests__/dex-liquidity-pe
 
 function scoreResult(tvl: number, poolCount = 1): FullScoreResult {
   return {
-    tvl,
-    effectiveTvl: tvl,
-    vol24h: tvl / 10,
+    tvl, effectiveTvl: tvl, vol24h: tvl / 10,
     volumeAvailability: makeCompleteVolumeAvailability(tvl / 10, tvl),
     score: 46,
     hhi: 0.1,
@@ -152,12 +150,7 @@ describe("computeDexLiquidityDriftSummary rebaseline of lasting drift", () => {
 
     expect(flaggedRuns).toEqual([2, 3, 4, 5, 6]);
     expect(summaries[DRIFT_REBASELINE_RUNS - 1]?.qualityDriftCandidates).toEqual([
-      {
-        flag: "major-tvl-cliff:usds-sky",
-        consecutiveRuns: DRIFT_REBASELINE_RUNS,
-        baselineValue: 152_000_000,
-        observedValue: 13_700_000,
-      },
+      { flag: "major-tvl-cliff:usds-sky", consecutiveRuns: DRIFT_REBASELINE_RUNS, baselineValue: 152_000_000, observedValue: 13_700_000 },
     ]);
     expect(summaries.slice(0, DRIFT_REBASELINE_RUNS).every((summary) => summary.qualityDriftRebaselined.length === 0)).toBe(true);
 
@@ -224,10 +217,7 @@ describe("computeDexLiquidityDriftSummary watchlist pool counts", () => {
     expect(confirmed.qualityDriftFlags).toEqual(["watchlist-pool-drop:usdc-circle"]);
     expect(confirmed.qualityDriftSeverity).toBe("high");
     expect(confirmed.qualityDriftCandidates[0]).toEqual({
-      flag: "watchlist-pool-drop:usdc-circle",
-      consecutiveRuns: 2,
-      baselineValue: 151,
-      observedValue: 119,
+      flag: "watchlist-pool-drop:usdc-circle", consecutiveRuns: 2, baselineValue: 151, observedValue: 119,
     });
   });
 
@@ -324,6 +314,7 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
     [1, "2026-11-08", 1, 1, true],
     [2, "2026-11-08", 1, 1, true], [2, "2026-11-08", 1, 0.979, false], [2, "2026-11-08", 1.01, 1, false],
     [2, "2026-11-21T21:04:19Z", 1, 1, false],
+    [3, "2026-11-09", 1, 1, true], [4, "2026-11-09", 1, 1, true], [5, "2026-11-09", 1, 1, true],
   ] as const)("bounds chain review %s at %s (%s, %s)", (index, date, baselineScale, observedScale, accepted) => {
     const review = REVIEWED_CHAIN_TVL_DISPOSITIONS[index];
     const summary = drift({
@@ -416,7 +407,6 @@ describe("computeDexLiquidityDriftSummary cohort drops", () => {
         previousSourceFamilyPools: { dexscreener: run === 1 ? 21 : 0 },
         currentSourceFamilyPools: {},
         previousSourceMixById: new Map([["usd1", mix(run === 1 ? 23_090_000 : 0)]]),
-        scoreResults: new Map(),
       });
       expect(summary.cohortDriftFlags).toEqual(run === 1 ? [] : [flag]);
       expect(summary.qualityDriftRebaselined).toEqual([]);
