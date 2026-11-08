@@ -54,7 +54,7 @@ Use `DONOR_API_KEY_MIN_USD` (inclusive threshold), donor rate and reviewed deplo
 
 `src/components/donor-key-claim.tsx` uses injected-wallet account request, route/domain-pinned SIWE with short expiry, personal_sign and public claim endpoint. No wallet library or automatic wallet interaction. Rejection/account change recover. Distinct validation, forbidden, conflict, rate and unavailable responses remain actionable; already-claimed/revoked recovery points privately.
 
-The shared one-time token panel reveals plaintext once with copy/focus handling. Pending unsaved token stays in browser memory across internal/back/palette navigation via `PendingApiKeyRecovery`; copy/acknowledgment clears it. Warn before unload; never persist tokens in localStorage/sessionStorage.
+The shared one-time token panel reveals plaintext once with copy/focus handling. Pending unsaved token stays in browser memory across internal/back/palette navigation via `PendingApiKeyRecovery`; successful copy/acknowledgment clears it. Recovery copy errors belong to the affected token and disappear when it leaves recovery; late copy results for a token no longer in recovery are ignored. Warn before unload; never persist tokens in localStorage/sessionStorage.
 
 ### Activation And Rollback Acceptance
 
@@ -65,6 +65,8 @@ Before announcing, acceptance identifies both deployed versions and the accepted
 ## Reference Tab Contract
 
 Render canonical reference minus admin sections, preserving section/subsection/endpoint-directory anchors and quickstart. Lane guidance separates external `https://api.pharos.watch` plus `X-API-Key`, website `/_site-data/*`, and Access-protected ops hosts. No-key classifications derive from canonical endpoint registry, including anonymous publication reads and separately authenticated Telegram exceptions; examples run from servers/scripts, not browser-key exposure.
+
+Malformed percent-encoded initial fragments are ignored for alignment without rewriting the URL; desktop and mobile navigation remain usable.
 
 Keep the exemption roster only in canonical [Public API Auth](./api-reference.md#public-api-auth); the FAQ links there and Quick facts does not repeat it. The free-grades example remains onboarding guidance, not an exhaustive no-key list. FAQ answer links render through the reference panel's existing inline Markdown renderer; JSON-LD answers retain link text without Markdown syntax or destinations.
 

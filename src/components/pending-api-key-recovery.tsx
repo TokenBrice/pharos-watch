@@ -46,7 +46,7 @@ function subscribe(listener: () => void) {
 export function PendingApiKeyRecovery() {
   const tokens = useSyncExternalStore(subscribe, () => detachedTokens, () => emptyTokens);
   const issuing = useSyncExternalStore(subscribe, () => pendingIssuances > 0, () => false);
-  const [copyError, setCopyError] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   useEffect(() => {
     if (!tokens.length && !issuing) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -62,13 +62,14 @@ export function PendingApiKeyRecovery() {
     <section aria-label="Unsaved API keys" role="region" className="fixed inset-x-4 bottom-4 z-chrome mx-auto max-h-[80vh] max-w-xl overflow-y-auto rounded-xl border border-state-warn-solid/40 bg-background p-5 shadow-xl">
       <h2 className="text-lg font-semibold" tabIndex={-1} ref={(node) => { node?.focus(); }}>Save your API key before closing this tab</h2>
       <p className="mt-2 text-sm text-muted-foreground">You left the issuance page. Your unsaved key is still available here until you copy it or mark it saved.</p>
-      {copyError ? <p role="alert" className="mt-2 text-sm">Copy failed. Select the token and copy it manually, then mark it saved.</p> : null}
       {tokens.map((token) => (
         <div key={token} className="mt-4 space-y-3">
           <code className="block break-all rounded-md bg-muted p-3 text-sm">{token}</code>
+          {copyError === token ? <p role="alert" className="mt-2 text-sm">Copy failed. Select the token and copy it manually, then mark it saved.</p> : null}
           <div className="flex gap-2">
             <Button type="button" onClick={() => void copyText(token).then((result) => {
-              setCopyError(!result.ok);
+              if (pending.get(token) !== false) return;
+              if (!result.ok) setCopyError(token);
               if (result.ok) clearPendingApiKey(token);
             })}>Copy API key</Button>
             <Button type="button" variant="outline" onClick={() => clearPendingApiKey(token)}>I saved this key</Button>

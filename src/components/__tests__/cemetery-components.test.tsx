@@ -503,6 +503,28 @@ describe("CemeteryRegister", () => {
     expect(screen.queryByText("Showing 1 of 30 matching")).toBeNull();
   });
 
+  it.each([false, true])("debounces counts without overwriting a later reveal (reveal=%s)", (reveal) => {
+    vi.useFakeTimers();
+    try {
+      window.history.replaceState(null, "", "/cemetery/?q=USDX");
+      render(<Harness />);
+      act(() => vi.advanceTimersByTime(300));
+      expect(statusText()).toBe("");
+
+      fireEvent.change(screen.getByRole("textbox"), { target: { value: "C2" } });
+      const opened = "Opened autopsy for Coin 2 (C2).";
+      if (reveal) act(() => selection!.revealRecord("coin-2", "chart"));
+      act(() => vi.advanceTimersByTime(299));
+      expect(statusText()).toBe(reveal ? opened : "");
+      act(() => vi.advanceTimersByTime(1));
+      expect(statusText()).toBe(reveal ? opened : "Showing 11 matching of 30 records.");
+      act(() => vi.advanceTimersByTime(1200));
+      expect(statusText()).toBe(reveal ? opened : "Showing 11 matching of 30 records.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("prints the shared peg label instead of the raw peg enum", () => {
     const entries: CemeteryEntry[] = [
       { ...fixture(0), id: "peg-var", pegCurrency: "VAR" },

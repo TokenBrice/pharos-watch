@@ -86,7 +86,7 @@ Desktop history walks completed wizard steps; mobile commits one result after re
 
 ## Browser Storage
 
-`pharos.selector.callout.v1` stores dismissal in localStorage; the legacy `pharos-selector-callout-v1` is read-only compatibility. `pharos.selector.sessionResult.v1` stores only completed wizard answers (`state`) and save time (`savedAt`) in sessionStorage, not generated output. Older envelopes' extra output is ignored. There is no long-lived result history. Recovery restores answers and regenerates against current data with a banner; it is not frozen replay. [Privacy](./privacy-page.md) owns user-facing categories.
+`pharos.selector.callout.v1` stores dismissal in localStorage; a valid current value takes precedence over the read-only legacy `pharos-selector-callout-v1` fallback, so restoring the callout survives remount even when the legacy key remains dismissed. `pharos.selector.sessionResult.v1` stores only completed wizard answers (`state`) and save time (`savedAt`) in sessionStorage, not generated output. Older envelopes' extra output is ignored. There is no long-lived result history. Recovery restores answers and regenerates against current data with a banner; it is not frozen replay. [Privacy](./privacy-page.md) owns user-facing categories.
 
 ## Snapshot Sharing
 

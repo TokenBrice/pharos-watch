@@ -4,6 +4,9 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StabilityIndexClient } from "./client";
+import { downloadChartPng } from "@/lib/chart-export";
+
+vi.mock("@/lib/chart-export", () => ({ downloadChartPng: vi.fn() }));
 
 let stabilityState: {
   data: {
@@ -72,6 +75,8 @@ vi.mock("@/lib/logos", () => ({
 }));
 
 vi.mock("@/components/chart-primitives/axes", () => ({
+  useSvgId: () => "psi-score",
+  ChartAreaGradient: () => null,
   DateTooltip: () => null,
   MonoYAxis: () => null,
   TimeGrid: () => null,
@@ -158,6 +163,32 @@ function keepHistoryOffscreen() {
 
 describe("StabilityIndexClient", () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it.each([false, true])("serializes PNG captures and allows retry after success=%s", async (success) => {
+    const { ScoreChart } = await vi.importActual<typeof import("@/components/psi-history-chart")>("@/components/psi-history-chart");
+    let finish!: (success: boolean) => void;
+    vi.mocked(downloadChartPng).mockReset().mockReturnValue(new Promise<boolean>((resolve) => {
+      finish = resolve;
+    }));
+    render(<ScoreChart data={[{ ts: 1_710_000_000, score: 80 }]} />);
+    const button = screen.getByRole("button", { name: "Save chart as PNG" }) as HTMLButtonElement;
+    button.focus();
+    await act(async () => { fireEvent.click(button); fireEvent.click(button); });
+    expect(downloadChartPng).toHaveBeenCalledTimes(1);
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(button);
+    await act(async () => finish(success));
+    expect(button.getAttribute("aria-disabled")).toBe("false");
+    expect(document.activeElement).toBe(button);
+    expect(screen.queryByRole("alert")?.textContent ?? null).toBe(success ? null : "Chart export failed. Try again from this browser.");
+    vi.mocked(downloadChartPng).mockResolvedValue(true);
+    await act(async () => fireEvent.click(button));
+    expect(downloadChartPng).toHaveBeenCalledTimes(2);
+    expect(downloadChartPng).toHaveBeenLastCalledWith(expect.objectContaining({ current: expect.any(HTMLDivElement) }), "pharos-psi-history");
+    expect(button.disabled).toBe(false);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 
   it("keeps offscreen history behind its reserved viewport gate without delaying headline statistics", () => {
     keepHistoryOffscreen();

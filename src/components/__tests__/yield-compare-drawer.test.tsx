@@ -1,16 +1,18 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 
 import { YieldCompareDrawer } from "@/components/yield-compare-drawer";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { downloadCsvWithPreamble } from "@/lib/exports/csv";
+import { copyText } from "@/lib/clipboard";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 
 vi.mock("@/lib/exports/csv", () => ({
   downloadCsvWithPreamble: vi.fn(),
 }));
+vi.mock("@/lib/clipboard", () => ({ copyText: vi.fn() }));
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div data-testid="sheet">{children}</div> : null,
@@ -68,6 +70,7 @@ class ResizeObserverStub {
 }
 
 beforeEach(() => {
+  vi.mocked(copyText).mockReset();
   window.history.replaceState(null, "", "/yield/");
   vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 });
@@ -78,6 +81,36 @@ afterEach(() => {
 
 
 describe("YieldCompareDrawer", () => {
+  it.each(["selection", "reopen", "current"].flatMap((context) =>
+    ["shared", "copied", "failed"].map((outcome) => [context, outcome]),
+  ))("scopes feedback after %s to its initiating %s attempt", async (context, outcome) => {
+    window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
+    let finish!: () => void;
+    const pending = new Promise<void>((resolve) => { finish = resolve; });
+    const share = vi.fn(() => pending);
+    vi.stubGlobal("navigator", { share: outcome === "shared" ? share : undefined });
+    vi.mocked(copyText).mockImplementationOnce(async () => {
+      await pending;
+      return outcome === "copied" ? { ok: true } : { ok: false, reason: "copy-failed" };
+    });
+    const drawer = (open: boolean) => <YieldCompareDrawer open={open} onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />;
+    const { rerender } = render(drawer(true));
+    fireEvent.click(screen.getByRole("button", { name: "Share comparison" }));
+    if (context === "selection") fireEvent.click(screen.getAllByRole("button", { name: "Remove USDT from compare" })[0]);
+    if (context === "reopen") {
+      rerender(drawer(false));
+      rerender(drawer(true));
+    }
+    await act(async () => { finish(); });
+    const current = context === "current";
+    expect(screen.getByRole("button", { name: current && outcome !== "failed" ? (outcome === "shared" ? "Shared" : "Link copied") : "Share comparison" })).toBeTruthy();
+    expect(Boolean(screen.queryByText("Sharing failed. Check browser permissions and try again."))).toBe(current && outcome === "failed");
+    expect(outcome === "shared" ? share : copyText).toHaveBeenCalledWith(outcome === "shared" ? {
+      title: "Pharos Yield comparison", text: "Compare 2 stablecoin yield opportunities on Pharos.",
+      url: `${window.location.origin}/yield/?compare=usdc-circle%2Cusdt-tether`,
+    } : `${window.location.origin}/yield/?compare=usdc-circle%2Cusdt-tether`);
+  });
+
   it("renders metric rows side-by-side for the selected coins", () => {
     window.history.replaceState(null, "", "/yield/?compare=usdc-circle,usdt-tether");
     render(<YieldCompareDrawer open onOpenChange={vi.fn()} rows={[usdc, usdt]} logos={{}} />);

@@ -567,7 +567,7 @@ The page must preserve these distinctions:
 - a lattice cell selects its stablecoin and chain together in one URL replacement, preserving the other filters and the existing hash-aware URL writer; the combined ledger key resets cursor navigation once;
 - CSV export represents only the currently loaded server page.
 - CSV native amounts serialize the actual finite number without locale grouping or display rounding, with separate native-unit and USD-at-event columns; unavailable or non-finite native values leave an empty cell;
-- stablecoin filters group only explicit per-coin zero event counts as tracked without events; missing keys remain unknown and selectable, and an existing selection stays visible as summary counts change;
+- stablecoin filters group only explicit per-coin zero event counts as tracked without events; missing keys remain unknown and selectable, and an existing selection stays visible as summary counts change; while a zero-event coin is selected, the group stays open and the disclosure is disabled with its existing "Hide … (N)" label;
 - an empty chart means no valued ledger snapshots, not no recorded events; failed summary reads remain unavailable.
 
 Stablecoin detail visibility is derived by `src/lib/stablecoin-detail-view-model.ts`. A tracked symbol needs at least one real, non-suppressed event before the Activity and History blocks appear. The component entrypoints are `src/components/stablecoin-detail/blacklist-section.tsx` and `src/components/stablecoin-detail/blacklist-detail-event-feed.tsx`.

@@ -82,6 +82,7 @@ export function BlacklistFilters({
           <div className="space-y-1.5">
             <button
               type="button"
+              disabled={selectionHiddenByDefault}
               onClick={() => setShowWithoutEvents((v) => !v)}
               aria-expanded={withoutEventsExpanded}
               aria-controls="blacklist-no-events-filter-group"

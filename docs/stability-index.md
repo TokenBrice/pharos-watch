@@ -171,6 +171,7 @@ See the [API Reference](https://pharos.watch/api/) for the full response shape.
 - **Event dates:** timeline labels preserve authored UTC calendar dates, including cross-year ranges; viewer timezone never changes labels or event-window matching.
 - **Bounded initial admission:** the page starts with the recent year and authoritative server-computed band streak. Shared UTC-day semantics count the current row, then stop at the first missing completed UTC day or band change. The streak's `computedAt` must match `current.computedAt`; it is never recounted from the bounded window.
 - **Deferred history:** the reserved chart initially selects 1y; only All enables the separately keyed full-history query. The event timeline uses bounded server aggregates from the shared event-window matcher, preserving older scores without downloading their history. Headline 30d statistics use the bounded window without extending across gaps. Projections and range tick labels remain memoized; exports and the accessible table's bounded-row disclosure are unchanged.
+- **History PNG export:** browser captures run one at a time; the export button exposes `aria-disabled` while pending and retains keyboard focus. Failed captures retain an alert and allow retry; a successful retry clears the alert. Downloads keep the dated `pharos-psi-history-YYYY-MM-DD.png` filename.
 - **Route compatibility:** legacy `/stability-index-alt` redirects to `/stability-index` via `public/_redirects`.
 
 ## Digest Integration

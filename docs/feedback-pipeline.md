@@ -6,6 +6,8 @@ In-app feedback routes to public GitHub Issues, not a private support inbox. `wo
 
 `FeedbackButton`, `MobileUtilityDock` and `FeedbackModal` are global/contextual entrypoints. Global triggers are absent on `/` and feedback is hidden on `/api/` so key requests cannot enter public Issues. Stablecoin hero and Show Your Work contextual triggers attach a canonical stablecoin for data-correction verification; global feedback does not.
 
+The mobile dock appears only when a control is available: feedback after 24px of scroll on eligible routes, or scroll-to-top after 400px. Feedback-suppressed routes keep the capsule hidden until scroll-to-top is available; hidden controls stay out of the tab order.
+
 The accessible dialog collects bug, data-correction or feature-request context and displays server errors inline. Optional contact handles are published in the resulting issue; disclose this before submission. A successful write shows thank-you state. Honeypot input is unfocusable/hidden from accessibility; nonempty traps are silently accepted but discarded.
 
 Submit a collision-resistant Idempotency-Key. Retry the same serialized payload with the same key; changed payload gets a new key. HTTP 500 clears it (explicit GitHub rejection or pre-execution reservation failure); network failures and ambiguous 503 retain it. Production/preview uses the public API lane; local/explicit base settings follow `src/lib/api.ts`, not route-specific URL guesses.

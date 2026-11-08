@@ -240,7 +240,10 @@ export function CemeteryRegister({ rows, filterOptions }: CemeteryRegisterProps)
     announcedResultRef.current = resultLine;
     if (previous === null || previous === resultLine) return;
     if (Date.now() < holdResultAnnouncementUntilRef.current) return;
-    const timer = window.setTimeout(() => setAnnouncement(`${resultLine}.`), RESULT_ANNOUNCE_DELAY_MS);
+    const timer = window.setTimeout(() => {
+      if (Date.now() < holdResultAnnouncementUntilRef.current) return;
+      setAnnouncement(`${resultLine}.`);
+    }, RESULT_ANNOUNCE_DELAY_MS);
     return () => window.clearTimeout(timer);
   }, [isReady, resultLine]);
 

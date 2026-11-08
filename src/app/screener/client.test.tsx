@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
@@ -158,6 +158,31 @@ describe("ScreenerClient freshness notices", () => {
     mocks.useHydrated.mockReturnValue(true);
     view.rerender(<ScreenerClient />);
     expect(view.getByTestId("selector-callout")).toBeTruthy();
+  });
+
+  it.each([null, "dismissed"])("retains Picker restoration across remount with legacy %s", async (legacy) => {
+    const { SelectorCallout } = await vi.importActual<typeof import("@/components/selector/selector-callout")>("@/components/selector/selector-callout");
+    const currentKey = "pharos.selector.callout.v1";
+    const legacyKey = "pharos-selector-callout-v1";
+    localStorage.removeItem(currentKey);
+    localStorage.removeItem(legacyKey);
+    if (legacy) localStorage.setItem(legacyKey, legacy);
+    let view = render(<SelectorCallout />);
+    expect(Boolean(view.queryByRole("link", { name: "Try the Picker" }))).toBe(legacy === null);
+    if (!legacy) fireEvent.click(view.getByRole("button", { name: "Dismiss Picker callout" }));
+    fireEvent.click(view.getByRole("button", { name: /Bring back the Picker/ }));
+    expect(localStorage.getItem(currentKey)).toBe("default");
+    view.unmount();
+    view = render(<SelectorCallout />);
+    expect(view.getByRole("link", { name: "Try the Picker" })).toBeTruthy();
+    fireEvent.click(view.getByRole("button", { name: "Dismiss Picker callout" }));
+    view.unmount();
+    view = render(<SelectorCallout />);
+    expect(view.getByRole("button", { name: /Bring back the Picker/ })).toBeTruthy();
+    expect(localStorage.getItem(currentKey)).toBe("dismissed");
+    expect(localStorage.getItem(legacyKey)).toBe(legacy);
+    localStorage.removeItem(currentKey);
+    localStorage.removeItem(legacyKey);
   });
 
   it("keeps counts and export controls at a fixed footprint across loading and ready states", () => {

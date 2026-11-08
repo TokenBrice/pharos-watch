@@ -4,7 +4,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest";
 import Link from "next/link";
 import { DonorKeyClaim } from "@/components/donor-key-claim";
-import { clearPendingApiKey, PendingApiKeyRecovery } from "@/components/pending-api-key-recovery";
+import { clearPendingApiKey, PendingApiKeyRecovery, retainPendingApiKey } from "@/components/pending-api-key-recovery";
 import { DonorKeyClaimError, claimDonorKey } from "@/lib/donor-key-claim-client";
 
 vi.mock("@/lib/donor-key-claim-client", async (importOriginal) => ({
@@ -82,7 +82,7 @@ describe("DonorKeyClaim one-time reveal", () => {
     expect(afterSave.defaultPrevented).toBe(false);
   });
 
-  it("keeps failed copies recoverable and clears recovery on explicit acknowledgement", async () => {
+  it.each([false, true])("keeps failed copies recoverable without leaking errors to the next token (late retry: %s)", async (lateRetry) => {
     const view = render(<><DonorKeyClaim /><PendingApiKeyRecovery /></>);
     await issueKey();
     view.rerender(<PendingApiKeyRecovery />);
@@ -90,8 +90,22 @@ describe("DonorKeyClaim one-time reveal", () => {
     fireEvent.click(screen.getByRole("button", { name: "Copy API key" }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Copy failed"));
     expect(screen.getByText(token)).toBeTruthy();
+    let rejectCopy!: (error: Error) => void;
+    if (lateRetry) {
+      navigator.clipboard.writeText = vi.fn(() => new Promise<void>((_, reject) => { rejectCopy = reject; }));
+      fireEvent.click(screen.getByRole("button", { name: "Copy API key" }));
+    }
     fireEvent.click(screen.getByRole("button", { name: "I saved this key" }));
     expect(screen.queryByRole("region", { name: "Unsaved API keys" })).toBeNull();
+    const second = `${token}_second`;
+    try {
+      act(() => { retainPendingApiKey(second)(); });
+      if (lateRetry) await act(async () => rejectCopy(new Error("blocked")));
+      expect(screen.getByText(second)).toBeTruthy();
+      expect(screen.queryByRole("alert")).toBeNull();
+    } finally {
+      act(() => clearPendingApiKey(second));
+    }
   });
 
   it("recovers a claim response arriving after the issuance page unmounts", async () => {
