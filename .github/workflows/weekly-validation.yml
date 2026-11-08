@@ -180,7 +180,8 @@ jobs:
 
   ci-report:
     name: Weekly CI report
-    # Main-only and schedule-driven evidence: the job reads run/job history and
+    concurrency: {group: weekly-validation-publication, cancel-in-progress: false}
+    # Scheduled or manually dispatched on main: the job reads run/job history and
     # the tree at the reporting head, so a branch dispatch would publish branch
     # evidence into the single owned issue. It is a sibling of the blocking
     # jobs with no dependents, so a telemetry failure reddens this job alone.
