@@ -15,7 +15,7 @@ const VAULT_A = "D9FfbH2aPw1jWX2kNhsbcsvzWGy28HfeSxLAnVuzYB1R";
 const VAULT_B = "CMZGBm5ZB4dE9rGhnhWhjFJxwiAmr17mGRMuyouKpjks";
 const ADDRESSES = [POOL, MOVEUSD, USDC, VAULT_A, VAULT_B];
 
-export async function fetchMoveusdOrcaPrice(context: LivePriceContext, signal?: AbortSignal) {
+async function fetchMoveusdOrcaPrice(context: LivePriceContext, signal?: AbortSignal) {
   const reject = (reason: string): null => { context.lastRejectionReason = `${SOURCE}:${reason}`; return null; };
   const parent = resolveTrustedOverrideParent(context, USDC_CIRCLE_ID, () => "MOVEUSD: trusted USDC unavailable",
     { allowFreshReplaySafeSingleSourceParent: true });
