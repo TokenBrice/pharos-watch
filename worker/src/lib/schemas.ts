@@ -335,6 +335,10 @@ export const DexLiquidityCronMetadataSchema = z.object({
             baselineValue: z.number(),
             acceptedValue: z.number(),
             runs: z.number(),
+            reviewedAt: z.string().optional(),
+            expiresAt: z.string().optional(),
+            evidenceUrls: z.array(z.string()).optional(),
+            reason: z.string().optional(),
           }),
         )
         .optional(),
