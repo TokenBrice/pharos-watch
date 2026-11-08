@@ -14,7 +14,7 @@ import {
 } from "@shared/lib/supply";
 import { buildChainRpcs, hasRegistryRpc } from "../../../lib/chain-registry";
 import { normalizeStablecoinsPayload } from "../shared";
-import { enrichMissingDetailPrice } from "../../../api/stablecoin-detail/price";
+import { overlayCanonicalDetail } from "../../../api/stablecoin-detail/price";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import type * as FetchRetry from "../../../lib/fetch-retry";
 import type * as Onchain from "../../reserve-adapters/onchain";
@@ -429,7 +429,7 @@ describe("chain dropout guard", () => {
       expect(released.supplyChainGuard).toMatchObject({ status: "chains-unavailable", partialCoverage: true, quarantinedSince: incident,
         chains: [{ resolution: "unavailable", reviewedExclusion: { reason: "reviewed-excluded", reviewedAt, expiresAt, quarantinedSince: incident } }] });
       vi.mocked(Date.now).mockReturnValue(now * 1000);
-      const detail = await enrichMissingDetailPrice({} as D1Database, id, new Response("{}"), {
+      const detail = await overlayCanonicalDetail({} as D1Database, id, new Response("{}"), {
         kind: "ok", updatedAt: now, payload: { peggedAssets: [released] },
       });
       expect(await detail.json()).toMatchObject({ currentCirculatingUSD: released.circulating, currentSupplyExcludedChains: ["Tempo"] });

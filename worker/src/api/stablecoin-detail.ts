@@ -15,7 +15,7 @@ import {
 } from "./stablecoin-detail/shared";
 import { applyCuratedDetailAddress, resetDefiLlamaDetailStateForTests } from "./stablecoin-detail/defillama";
 import { routeStablecoinDetail } from "./stablecoin-detail/router";
-import { enrichMissingDetailPrice } from "./stablecoin-detail/price";
+import { overlayCanonicalDetail } from "./stablecoin-detail/price";
 
 interface SharedDetailRefreshResponse {
   body: ArrayBuffer;
@@ -270,6 +270,6 @@ export const handleStablecoinDetail = async (db: D1Database, id: string, ctx: Ex
   const response = await resolveStablecoinDetail(db, id, ctx, coingeckoApiKey);
   const meta = TRACKED_META_BY_ID.get(id);
   return meta && isActiveStablecoinMeta(meta)
-    ? enrichMissingDetailPrice(db, id, response)
+    ? overlayCanonicalDetail(db, id, response)
     : response;
 };
