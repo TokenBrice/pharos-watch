@@ -1,0 +1,17 @@
+[
+  {
+    "version": "7.0",
+    "title": "Independent native prices for reviewed retained markets",
+    "date": "2026-11-08",
+    "effectiveAt": 1794096000,
+    "summary": "Reviewed native venue observations can price retained USDA and pathUSD markets through the existing direct_api family. The quote token must have an independently admitted current USD price; neither source labels nor a second read of the same physical market create a second contribution.",
+    "impact": [
+      "USDA reuses the current run's factory-verified, block-pinned PancakeSwap V2 USDA/USDT reserves. Its USD price is the reserve ratio times the trusted USDT mark, with support capped by retained TVL and independently valued reserves. No additional RPC reads or target-price feedback are introduced.",
+      "pathUSD reads Tempo's native exchange at a fresh pinned block, verifies the OUSD/pathUSD and USDT/OUSD route identities, and requires two-sided native quotes supporting at least the existing $50K price-observation floor. Support is only the demonstrated USD notional capped by retained TVL; singleton custody, headline book inventory and intermediate OUSD prices never value the route.",
+      "Both observations retain the older venue/quote-parent clock and replace only price provenance and bounded price support after the CoinGecko refresh. Existing pool identity deduplication, freshness, $1M/two-family depeg admission and closure rules remain unchanged. Liquidity weights, retained TVL and volume are unchanged; this is no retained-TVL measurement-epoch break.",
+      "USDR remains unadmitted: the observed RISE Icarus inventory has only one pool above the unchanged $50K floor, and its concrete USDC.e deployment has no independently admitted USD valuation. Its blind-event review remains scoped and dated."
+    ],
+    "commits": [],
+    "reconstructed": false
+  }
+]

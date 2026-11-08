@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 
 import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { DexAmmExecutionModelSchema } from "@shared/types/market";
@@ -18,6 +19,7 @@ import {
   attachEvmV2CandidateToRetainedPool,
   buildEvmV2ExecutionCandidate,
   enrichEvmV2ExecutionModels,
+  refreshUsdaV2Price,
 } from "../constant-product-v2";
 import {
   EVM_V2_REPLAY_BLOCK,
@@ -46,78 +48,40 @@ const SPUSD_USDC_PAIR = "0x1111111111111111111111111111111111111111" as const;
 const KAG = "0x56ba8b58b7d1f6d384a1c4dd553f39ebc8741b8e" as const;
 const XAUT = "0x68749665ff8d2d112fa859aa293f07a622782f38" as const;
 
+function captureContext(metric: ReturnType<typeof initSourcePoolGraph>) {
+  return { nowSec: 1_700_000_000, sourceGenerationId: "dex-stage:fixture", metrics: new Map([[metric.stablecoinId, metric]]),
+    contractMetaByChainAddress: new Map(), chainRpcs: captureRpcs("bsc", "BSC") };
+}
+
+function captureDependencies(fetchMulticall: unknown, codeHash: `0x${string}`, block = 50_000_000) {
+  return {
+    fetchBlockNumber: vi.fn(async () => block),
+    fetchBlockHeader: vi.fn(async (_chain: string, number: number | "finalized") => blockHeader(number as number)),
+    fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
+    fetchMulticall: fetchMulticall as never,
+    hashCode: vi.fn(() => codeHash),
+  };
+}
+
 const U5_REPLAY_ASSET_IDS = new Set(["idrt-rupiah-token", "stusd-stoneyield"]);
 
 describe("constant-product V2 execution", () => {
   it("admits only the reviewed V2 families", () => {
     expect(makeCandidate()).toMatchObject({ source: "pancakeswap-v2", poolAddress: PAIR });
-    expect(
-      buildEvmV2ExecutionCandidate({
-        chain: "bsc",
-        protocol: "pancakeswap-v2-bsc",
-        poolType: "cg-cl-30bp",
-        poolAddress: PAIR,
-        tokenAddresses: [U, WBNB],
-      }),
-    ).toBeNull();
-    expect(
-      buildEvmV2ExecutionCandidate({
-        chain: "bsc",
-        protocol: "pancakeswap-v2-bsc",
-        poolType: "ds-amm",
-        poolAddress: PAIR,
-        tokenAddresses: [U, WBNB],
-      }),
-    ).toMatchObject({ source: "pancakeswap-v2" });
-    expect(
-      buildEvmV2ExecutionCandidate({
-        chain: "bsc",
-        protocol: "pancakeswap-v3",
-        poolType: "gt-concentrated",
-        poolAddress: PAIR,
-        tokenAddresses: [U, WBNB],
-      }),
-    ).toBeNull();
-    expect(
-      buildEvmV2ExecutionCandidate({
-        chain: "ethereum",
-        protocol: "uniswap-v2",
-        poolType: "generic",
-        poolAddress: "0x14d7aab5b4bca6a02e52ac22520b033bf35f4091",
-        tokenAddresses: ["0x6fa0be17e4bea2fcfa22ef89bf8ac9aab0ab0fc9", "0xdac17f958d2ee523a2206206994597c13d831ec7"],
-      }),
-    ).toMatchObject({ source: "uniswap-v2" });
-    expect(makeAerodromeCandidate()).toMatchObject({
-      source: "solidly-v2",
-      poolAddress: AERODROME_PAIR,
-    });
-    expect(
-      buildEvmV2ExecutionCandidate({
-        chain: "base",
-        protocol: "aerodrome",
-        poolType: "aerodrome-volatile",
-        poolAddress: AERODROME_PAIR,
-        tokenAddresses: [USDC_BASE, WETH_BASE],
-      }),
-    ).toMatchObject({ source: "solidly-v2", solidlyProtocol: "aerodrome" });
-    expect(
-      buildEvmV2ExecutionCandidate({
-        chain: "base",
-        protocol: "aerodrome",
-        poolType: "aerodrome-stable",
-        poolAddress: AERODROME_PAIR,
-        tokenAddresses: [USDC_BASE, WETH_BASE],
-      }),
-    ).toMatchObject({ source: "solidly-v2", solidlyProtocol: "aerodrome" });
-    expect(
-      buildEvmV2ExecutionCandidate({
-        chain: "avalanche",
-        protocol: "aerodrome",
-        poolType: "aerodrome-volatile",
-        poolAddress: AERODROME_PAIR,
-        tokenAddresses: [USDC_BASE, WETH_BASE],
-      }),
-    ).toBeNull();
+    expect(makeAerodromeCandidate()).toMatchObject({ source: "solidly-v2", poolAddress: AERODROME_PAIR });
+    const pancake = { chain: "bsc", protocol: "pancakeswap-v2-bsc", poolType: "ds-amm", poolAddress: PAIR, tokenAddresses: [U, WBNB] };
+    const aero = { chain: "base", protocol: "aerodrome", poolType: "aerodrome-volatile", poolAddress: AERODROME_PAIR, tokenAddresses: [USDC_BASE, WETH_BASE] };
+    for (const input of [
+      { ...pancake, poolType: "cg-cl-30bp" },
+      { ...pancake, protocol: "pancakeswap-v3", poolType: "gt-concentrated" },
+      { ...aero, chain: "avalanche" },
+    ]) expect(buildEvmV2ExecutionCandidate(input)).toBeNull();
+    for (const [input, expected] of [
+      [pancake, { source: "pancakeswap-v2" }],
+      [{ chain: "ethereum", protocol: "uniswap-v2", poolType: "generic", poolAddress: A7A5_USDT_PAIR, tokenAddresses: [A7A5, USDT_ETHEREUM] }, { source: "uniswap-v2" }],
+      [aero, { source: "solidly-v2", solidlyProtocol: "aerodrome" }],
+      [{ ...aero, poolType: "aerodrome-stable" }, { source: "solidly-v2", solidlyProtocol: "aerodrome" }],
+    ] as const) expect(buildEvmV2ExecutionCandidate(input)).toMatchObject(expected);
   });
 
   it("transfers an exact staged candidate onto a retained DL fingerprint", () => {
@@ -219,9 +183,7 @@ describe("constant-product V2 execution", () => {
     );
 
     await enrichEvmV2ExecutionModels({
-      nowSec: 1_700_000_000,
-      sourceGenerationId: "dex-stage:fixture",
-      metrics: new Map([[metric.stablecoinId, metric]]),
+      ...captureContext(metric),
       chainAddressToId: new Map([[canonicalExitRouteAssetKey("bsc", U), metric.stablecoinId]]),
       contractMetaByChainAddress: new Map([
         [
@@ -230,15 +192,7 @@ describe("constant-product V2 execution", () => {
         ],
       ]),
       stablecoinPriceById: new Map([[metric.stablecoinId, 1]]),
-      chainRpcs: captureRpcs("bsc", "BSC"),
-      dependencies: {
-        fetchBlockNumber: vi.fn(async () => 50_000_000),
-        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
-          blockHeader(blockNumber as number)),
-        fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
-        fetchMulticall: fetchMulticall as never,
-        hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
-      },
+      dependencies: captureDependencies(fetchMulticall, deployment.expectedFactoryCodeHash),
     });
 
     const retained = metric.pools[0]!;
@@ -316,11 +270,8 @@ describe("constant-product V2 execution", () => {
     })));
 
     await enrichEvmV2ExecutionModels({
-      nowSec: 1_700_000_000,
-      sourceGenerationId: "dex-stage:fixture",
-      metrics: new Map([[metric.stablecoinId, metric]]),
+      ...captureContext(metric),
       chainAddressToId: new Map([[canonicalExitRouteAssetKey("bsc", U), metric.stablecoinId]]),
-      contractMetaByChainAddress: new Map(),
       stablecoinPriceById: new Map([[metric.stablecoinId, 1]]),
       chainRpcs,
       dependencies: {
@@ -391,21 +342,11 @@ describe("constant-product V2 execution", () => {
         extra: { evmV2ExecutionCandidate: candidate },
       });
       await enrichEvmV2ExecutionModels({
-        nowSec: 1_700_000_000,
-        sourceGenerationId: "dex-stage:fixture",
-        metrics: new Map([[metric.stablecoinId, metric]]),
+        ...captureContext(metric),
         chainAddressToId,
-        contractMetaByChainAddress: new Map(),
-        stablecoinPriceById,
+          stablecoinPriceById,
         chainRpcs: chainRpcs as never,
-        dependencies: {
-          fetchBlockNumber: vi.fn(async () => 21_000_000),
-          fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
-            blockHeader(blockNumber as number)),
-          fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
-          fetchMulticall: fetchMulticall as never,
-          hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
-        },
+        dependencies: captureDependencies(fetchMulticall, deployment.expectedFactoryCodeHash, 21_000_000),
       });
       return metric.pools[0]!;
     };
@@ -482,16 +423,12 @@ describe("constant-product V2 execution", () => {
       extra: { evmV2ExecutionCandidate: candidate },
     });
     await enrichEvmV2ExecutionModels({
-      nowSec: 1_700_000_000,
-      sourceGenerationId: "dex-stage:fixture",
-      metrics: new Map([[metric.stablecoinId, metric]]),
+      ...captureContext(metric),
       chainAddressToId: new Map([
         [canonicalExitRouteAssetKey("bsc", SPUSD), "spusd-soulpeg"],
         [canonicalExitRouteAssetKey("bsc", USDC_BSC), "usdc-circle"],
       ]),
-      contractMetaByChainAddress: new Map(),
       stablecoinPriceById: new Map([["usdc-circle", 1]]),
-      chainRpcs: captureRpcs("bsc", "BSC"),
       dependencies: {
         fetchBlockNumber: vi.fn(async () => 50_000_000),
         fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
@@ -509,9 +446,7 @@ describe("constant-product V2 execution", () => {
                   ? addressWord(USDC_BSC)
                   : call.label.endsWith("-reserves")
                     ? reservesWord(4_430n * 10n ** 18n, 4_420n * 10n ** 18n)
-                    : call.label.endsWith("-decimals0")
-                      ? word(18n)
-                      : word(18n),
+                    : word(18n),
           })),
         ) as never,
         hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
@@ -570,12 +505,8 @@ describe("constant-product V2 execution", () => {
       stablecoinPriceById: new Map([["xaut-tether", 4_300]]),
       candidateTokenAddresses: [XAUT, KAG],
       candidateTokenSymbols: ["XAUt", "KAG"],
-      actualToken0: KAG,
-      actualToken1: XAUT,
       candidateDecimals0: 6n,
       candidateDecimals1: 18n,
-      actualReserve0: 14n * 10n ** 18n,
-      actualReserve1: 1n * 10n ** 6n,
     });
 
     const model = DexAmmExecutionModelSchema.parse(metric.pools[0]!.extra?.ammExecutionModel);
@@ -673,21 +604,10 @@ describe("constant-product V2 execution", () => {
     });
 
     await enrichEvmV2ExecutionModels({
-      nowSec: 1_700_000_000,
-      sourceGenerationId: "dex-stage:fixture",
-      metrics: new Map([[metric.stablecoinId, metric]]),
+      ...captureContext(metric),
       chainAddressToId: new Map([[canonicalExitRouteAssetKey("bsc", U), metric.stablecoinId]]),
-      contractMetaByChainAddress: new Map(),
       stablecoinPriceById: new Map([[metric.stablecoinId, 1]]),
-      chainRpcs: captureRpcs("bsc", "BSC"),
-      dependencies: {
-        fetchBlockNumber: vi.fn(async () => 50_000_000),
-        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
-          blockHeader(blockNumber as number)),
-        fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
-        fetchMulticall: fetchMulticall as never,
-        hashCode: vi.fn(() => deployment.expectedFactoryCodeHash),
-      },
+      dependencies: captureDependencies(fetchMulticall, deployment.expectedFactoryCodeHash),
     });
 
     expect(fetchMulticall).toHaveBeenCalledTimes(2);
@@ -711,21 +631,10 @@ describe("constant-product V2 execution", () => {
     const fetchMulticall = vi.fn();
 
     await enrichEvmV2ExecutionModels({
-      nowSec: 1_700_000_000,
-      sourceGenerationId: "dex-stage:fixture",
-      metrics: new Map([[metric.stablecoinId, metric]]),
+      ...captureContext(metric),
       chainAddressToId: new Map(),
-      contractMetaByChainAddress: new Map(),
       stablecoinPriceById: new Map(),
-      chainRpcs: captureRpcs("bsc", "BSC"),
-      dependencies: {
-        fetchBlockNumber: vi.fn(async () => 50_000_000),
-        fetchBlockHeader: vi.fn(async (_chain: string, blockNumber: number | "finalized") =>
-          blockHeader(blockNumber as number)),
-        fetchCodeAtBlock: vi.fn(async () => "0x6000" as const),
-        fetchMulticall: fetchMulticall as never,
-        hashCode: vi.fn(() => `0x${"00".repeat(32)}` as `0x${string}`),
-      },
+      dependencies: captureDependencies(fetchMulticall, `0x${"00".repeat(32)}` as `0x${string}`),
     });
 
     expect(metric.pools[0]!.extra?.ammExecutionModel).toBeUndefined();
@@ -850,55 +759,17 @@ describe("constant-product V2 execution", () => {
     });
   }
 
-  it("rejects a factory result bound to a different pair address", async () => {
-    const replay = EVM_V2_REPLAY_CASES[1]!;
-    const result = await runReplay(replay, {
-      mutateResults: (results) => {
-        results.find((entry) => entry.label.endsWith("-pair"))!.returnData =
-          fixtureAddressWord("0x0000000000000000000000000000000000005bad");
-      },
+  it.each([
+    ["rejects a factory result bound to a different pair address", 1, "pair", fixtureAddressWord("0x0000000000000000000000000000000000005bad"), "exact-pool-join-unresolved"],
+    ["rejects a pair whose token identity is not the staged counter-asset pair", 2, "token0", fixtureAddressWord("0x0000000000000000000000000000000000005bad"), "ambiguous-token-identity"],
+    ["rejects a malformed reserve snapshot instead of producing partial depth", 3, "reserves", `${reservesWord(2_000_000_000n * 10n ** 18n, 2_000_000_000n * 10n ** 18n)}00`, "incomplete-exact-capture"],
+    ["distinguishes observed zero reserves from a failed reserve read", 0, "reserves", reservesWord(0n, 1n), "invalid-invariant-parameters"],
+  ] as const)("%s", async (_name, index, suffix, returnData, reason) => {
+    const result = await runReplay(EVM_V2_REPLAY_CASES[index]!, {
+      mutateResults: (results) => { results.find((row) => row.label.endsWith(`-${suffix}`))!.returnData = returnData; },
     });
-
     expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(result.pool.extra?.executionCapabilityGate).toEqual({
-      family: "constant-product-v2",
-      reason: "exact-pool-join-unresolved",
-    });
-  });
-
-  it("rejects a pair whose token identity is not the staged counter-asset pair", async () => {
-    const replay = EVM_V2_REPLAY_CASES[2]!;
-    const result = await runReplay(replay, {
-      mutateResults: (results) => {
-        results.find((entry) => entry.label.endsWith("-token0"))!.returnData =
-          fixtureAddressWord("0x0000000000000000000000000000000000005bad");
-      },
-    });
-
-    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(result.pool.extra?.executionCapabilityGate).toEqual({
-      family: "constant-product-v2",
-      reason: "ambiguous-token-identity",
-    });
-  });
-
-  it("rejects a malformed reserve snapshot instead of producing partial depth", async () => {
-    const replay = EVM_V2_REPLAY_CASES[3]!;
-    const result = await runReplay(replay, {
-      mutateResults: (results) => {
-        results.find((entry) => entry.label.endsWith("-reserves"))!.returnData =
-          `${reservesWord(
-            2_000_000_000n * 10n ** 18n,
-            2_000_000_000n * 10n ** 18n,
-          )}00`;
-      },
-    });
-
-    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(result.pool.extra?.executionCapabilityGate).toEqual({
-      family: "constant-product-v2",
-      reason: "incomplete-exact-capture",
-    });
+    expect(result.pool.extra?.executionCapabilityGate).toEqual({ family: "constant-product-v2", reason });
   });
 
   for (const suffix of ["decimals0", "decimals1", "reserves"]) {
@@ -916,18 +787,6 @@ describe("constant-product V2 execution", () => {
       });
     });
   }
-
-  it("distinguishes observed zero reserves from a failed reserve read", async () => {
-    const result = await runReplay(EVM_V2_REPLAY_CASES[0]!, {
-      mutateResults: (results) => {
-        results.find((row) => row.label.endsWith("-reserves"))!.returnData = reservesWord(0n, 1n);
-      },
-    });
-    expect(result.pool.extra?.ammExecutionModel).toBeUndefined();
-    expect(result.pool.extra?.executionCapabilityGate).toEqual({
-      family: "constant-product-v2", reason: "invalid-invariant-parameters",
-    });
-  });
 
   it("discards a complete reserve batch when its pinned header reorganizes", async () => {
     const result = await runReplay(EVM_V2_REPLAY_CASES[0]!, { reorgOnConfirmation: true });
@@ -950,5 +809,30 @@ describe("constant-product V2 execution", () => {
       family: "constant-product-v2",
       reason: "transport-unavailable",
     });
+  });
+
+  it.each(["observed", "stale-parent", "future-parent", "implied-parent", "wrong-pool", "old-generation", "missing-capture", "thin"])("USDA native reserve price: %s", async (scenario) => {
+    const result = await runReplay({ ...EVM_V2_REPLAY_CASES[4]!,
+      poolAddress: "0xde66f1b24002c1d743ad1ef13cd4b2474295a6f6", pairTokenOrder: "stable-first" });
+    const model = DexAmmExecutionModelSchema.parse(result.pool.extra?.ammExecutionModel);
+    result.pool.extra!.ammExecutionModel = model;
+    const quote = model.tokens[1]!;
+    quote.referencePriceUsd = 0.998;
+    if (scenario === "stale-parent") quote.referencePriceObservedAt = 1_700_000_000 - DEPEG_PRIMARY_PRICE_MAX_AGE_SEC;
+    if (scenario === "future-parent") quote.referencePriceObservedAt = 1_700_000_001;
+    if (scenario === "implied-parent") quote.referencePriceSource = "pool-implied";
+    if (scenario === "wrong-pool") result.pool.poolId = `bsc:${PAIR}`;
+    if (scenario === "old-generation") model.capture!.sourceGenerationId = "previous";
+    if (scenario === "missing-capture") delete model.capture;
+    if (scenario === "thin") result.pool.tvlUsd = 49_999;
+    const before = { ...result.pool };
+    const observed = refreshUsdaV2Price(captureContext(result.metric));
+    if (scenario === "observed") {
+      expect(observed).toEqual({ status: "observed", priceUsd: 0.998, supportUsd: 3_992_000_000, observedAt: 1_699_999_880 });
+      expect(result.pool).toMatchObject({ price: 0.998, priceSource: "direct_api", priceEvidenceTvlUsd: 3_992_000_000 });
+    } else {
+      expect(observed.status).toBe("unavailable");
+      expect(result.pool).toEqual(before);
+    }
   });
 });
