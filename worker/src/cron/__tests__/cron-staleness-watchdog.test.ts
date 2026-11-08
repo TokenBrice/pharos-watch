@@ -122,7 +122,7 @@ function fakeDb(
       } else if (sql.startsWith("DELETE")) {
         const cutoff = args[1] as number;
         for (let i = failureRows.length - 1; i >= 0; i -= 1) {
-          if (failureRows[i].updated_at < cutoff) failureRows.splice(i, 1);
+          if (failureRows[i].updated_at < cutoff && !WORKER_ACTIVE_IDS.has(failureRows[i].key.slice("detail-write-failure:".length))) failureRows.splice(i, 1);
         }
       }
       return { meta: { changes: 0 } };
@@ -166,7 +166,7 @@ function fakeDb(
           // stay unknown rather than claiming healthy values.
           return { results: [] };
         }
-        return { results: failureRows.filter((row) => row.updated_at >= (args[1] as number)) };
+        return { results: failureRows };
       };
       return {
         ...statement(sql, []),
@@ -682,9 +682,9 @@ describe("cron staleness watchdog", () => {
     expect(sendToChatMock.mock.calls[0]?.[1] ?? "").toContain("Detail cache write failures");
 
     const fetchCountAfterRaise = sendToChatMock.mock.calls.length;
-    // 25h later the marker is past any short freshness window but still inside
-    // its retention, and no detail: row was rewritten.
-    vi.setSystemTime(new Date((startSec + 25 * 3_600) * 1_000));
+    // Past seven days, neither marker expiry nor a missing detail row proves recovery.
+    vi.setSystemTime(new Date((startSec + 8 * 86_400) * 1_000));
+    sqlite.prepare("DELETE FROM cache WHERE key = ?").run("detail:usdt-tether");
     const second = await runCronStalenessWatchdog(db, undefined, options);
     const transitions = JSON.parse(second.metadata ?? "{}").alertTransitions as { recovered: string[] };
 
@@ -693,6 +693,14 @@ describe("cron staleness watchdog", () => {
     expect(transitions.recovered).not.toContain("detail-write:usdt-tether");
     expect(sendToChatMock.mock.calls.slice(fetchCountAfterRaise).map((call) => String(call[1] ?? "")).join("\n"))
       .not.toContain("Detail cache writes recovered");
+    for (const offset of [0, 1]) {
+      insert.run("detail:usdt-tether", "{}", startSec + offset);
+      const recovery = await runCronStalenessWatchdog(db, undefined, options);
+      expect(JSON.parse(recovery.metadata ?? "{}").alertTransitions.recovered.includes("detail-write:usdt-tether"))
+        .toBe(offset > 0);
+      sqlite.prepare("DELETE FROM cache WHERE key = ?").run("detail:usdt-tether");
+    }
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").all("detail-write-failure:usdt-tether")).toEqual([]);
   });
 
   it("alerts a confirmed overdue supply snapshot and its recovery", async () => {
@@ -1055,62 +1063,74 @@ describe("cron staleness watchdog", () => {
   it.each([
     { name: "newer failure", replacementAt: 1_790_000_000 },
     { name: "same-second different-value failure", replacementAt: 1_789_999_400 },
-  ])("retains a $name written after the recovery scan", async ({ replacementAt }) => {
+    { name: "missing recovery evidence", replacementAt: null },
+  ])("keeps an acknowledged failure when recovery races with $name", async ({ replacementAt }) => {
     const nowSec = 1_790_000_000;
+    vi.useFakeTimers();
+    vi.setSystemTime(nowSec * 1_000);
+    mockCacheStatus({});
     const key = "detail-write-failure:usdt-tether";
     const replacement = '{"reason":"value-too-large","bytes":21000000}';
-    const { sqlite } = openFixture();
-    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)")
-      .run(key, nowSec - 600);
-    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)")
-      .run("detail:usdt-tether", nowSec - 60);
+    const { sqlite, db: initialDb } = openFixture();
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
+    insert.run(key, nowSec - 600);
+    const options = { operatorTelegramCreds: { botToken: "bot", chatId: "ops" } };
+    const raised = await runCronStalenessWatchdog(initialDb, undefined, options);
+    expect(JSON.parse(raised.metadata ?? "{}").alertTransitions).toMatchObject({
+      stale: expect.arrayContaining(["detail-write:usdt-tether"]), sent: true,
+    });
+    vi.setSystemTime((nowSec + CRON_STALENESS_ALERT_COOLDOWN_SEC) * 1_000);
+    insert.run("detail:usdt-tether", nowSec - 60);
+    insert.run("detail-write-failure:peer-coin", nowSec - 600);
+    insert.run("detail:peer-coin", nowSec - 60);
     let replaced = false;
     const db = createSqliteD1(sqlite, { onAll: (sql) => {
       if (!replaced && sql.startsWith("SELECT key, updated_at FROM cache")) {
         replaced = true;
-        sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(replacement, replacementAt, key);
+        if (replacementAt == null) sqlite.prepare("DELETE FROM cache WHERE key = ?").run("detail:usdt-tether");
+        else sqlite.prepare("UPDATE cache SET value = ?, updated_at = ? WHERE key = ?").run(replacement, replacementAt, key);
       }
     } });
 
-    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([]);
+    const result = await runCronStalenessWatchdog(db, undefined, options);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata.alertTransitions.recovered).not.toContain("detail-write:usdt-tether");
+    expect(metadata.detailWriteFailures).toEqual([{
+      stablecoinId: "usdt-tether", reason: replacementAt == null ? "unknown" : "value-too-large",
+      bytes: replacementAt == null ? null : 21_000_000,
+      ageSeconds: nowSec + CRON_STALENESS_ALERT_COOLDOWN_SEC - (replacementAt ?? nowSec - 600),
+    }]);
+    expect(sendToChatMock.mock.calls.slice(1).map((call) => String(call[1] ?? "")).join("\n"))
+      .not.toContain("Detail cache writes recovered");
     expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(key))
-      .toEqual({ value: replacement, updated_at: replacementAt });
+      .toEqual({ value: replacementAt == null ? "{}" : replacement, updated_at: replacementAt ?? nowSec - 600 });
     if (replacementAt === nowSec) {
       expect(await loadDetailWriteFailures(db, nowSec)).toEqual([
         { stablecoinId: "usdt-tether", reason: "value-too-large", bytes: 21_000_000, ageSeconds: 0 },
       ]);
     }
-  });
-
-  it("retains a scanned marker when its recovery evidence disappears before cleanup", async () => {
-    const nowSec = 1_790_000_000;
-    const { sqlite } = openFixture();
-    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
-    insert.run("detail-write-failure:usdt-tether", nowSec - 600);
-    insert.run("detail:usdt-tether", nowSec - 60);
-    const db = createSqliteD1(sqlite, { onAll: (sql) => {
-      if (sql.startsWith("SELECT key, updated_at FROM cache")) {
-        sqlite.prepare("DELETE FROM cache WHERE key = ?").run("detail:usdt-tether");
-      }
-    } });
-    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([]);
-    expect(await loadDetailWriteFailures(db, nowSec)).toEqual([
+    if (replacementAt == null) expect(await loadDetailWriteFailures(db, nowSec)).toEqual([
       { stablecoinId: "usdt-tether", reason: "unknown", bytes: null, ageSeconds: 600 },
     ]);
   });
 
-  it("prunes expired detail write-failure markers", async () => {
+  it.each([
+    "old-coin", [...WORKER_READABLE_IDS].find((id) => !WORKER_ACTIVE_IDS.has(id))!,
+  ])("expires %s markers while retaining active-coin failures", async (id) => {
+    expect(id).toBeDefined();
     const nowSec = 1_750_000_000;
     const { sqlite, db } = openFixture();
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
-    insert.run("detail-write-failure:old-coin", nowSec - 8 * 24 * 3600);
+    insert.run(`detail-write-failure:${id}`, nowSec - 8 * 24 * 3600);
     insert.run("detail-write-failure:boundary-coin", nowSec - 7 * 24 * 3600);
-    // Unresolved markers stay visible for the full retention window; only the
-    // marker past retention is pruned.
+    insert.run("detail-write-failure:usdt-tether", nowSec - 8 * 24 * 3600);
     expect(await loadDetailWriteFailures(db, nowSec)).toEqual([
       { stablecoinId: "boundary-coin", reason: "unknown", bytes: null, ageSeconds: 7 * 24 * 3600 },
+      { stablecoinId: "usdt-tether", reason: "unknown", bytes: null, ageSeconds: 8 * 24 * 3600 },
     ]);
-    expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([{ key: "detail-write-failure:boundary-coin" }]);
+    expect(sqlite.prepare("SELECT key FROM cache").all()).toEqual([
+      { key: "detail-write-failure:boundary-coin" }, { key: "detail-write-failure:usdt-tether" },
+    ]);
   });
 
   it("alerts on a canary finding transition and recovers it once the cohort is clean", async () => {

@@ -49,12 +49,14 @@ describe("cache conflict updates", () => {
 
   it("retains inclusive if-newer admission and advances unchanged-payload freshness", async () => {
     const { db } = fixtures.open();
-    await setCacheIfNewer(db, "current", "initial", 200);
+    expect(await setCacheIfNewer(db, "current", "initial", 200))
+      .toEqual({ written: true, skippedBecauseNewer: false });
     expect(await setCacheIfNewer(db, "current", "older", 199))
       .toEqual({ written: false, skippedBecauseNewer: true });
     expect(await getCache(db, "current")).toEqual({ value: "initial", updatedAt: 200 });
     expect(await setCacheIfNewer(db, "current", "equal", 200))
       .toEqual({ written: true, skippedBecauseNewer: false });
+    expect(await getCache(db, "current")).toEqual({ value: "equal", updatedAt: 200 });
     expect(await setCacheIfNewer(db, "current", "equal", 201))
       .toEqual({ written: true, skippedBecauseNewer: false });
     expect(await getCache(db, "current")).toEqual({ value: "equal", updatedAt: 201 });

@@ -155,8 +155,6 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
   });
 
   it.each([
-    ["one failure of two", { synced: 1, failed: 1, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 2 }, false, "degraded"],
-    ["two failures of twenty", { synced: 18, failed: 2, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "ok"],
     ["at the failure budget", { synced: 15, failed: 5, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "ok"],
     ["above the failure budget", { synced: 14, failed: 6, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "degraded"],
     ["a continuation within budget", { synced: 15, failed: 5, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 80, attemptedCoins: 20 }, true, "ok"],

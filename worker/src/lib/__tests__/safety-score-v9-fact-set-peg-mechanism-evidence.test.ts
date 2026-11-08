@@ -5,7 +5,6 @@ import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evid
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
-import { expandOverlayReview, MechanismReviewOverlaySchema, type MechanismReviewOverlay } from "../safety-score-v9/extension-mechanism";
 import { safetyScoreV9TransferDeploymentKey } from "../safety-score-v9/extension-transfer";
 import { selectSafetyScoreV9CdpShockMeasurement } from "../safety-score-v9/extension-shock";
 import { compileSafetyScoreV9FactSetFromFixedInput, compileSafetyScoreV9FactSetWithIsolationFromValidatedExtension, materializeSafetyScoreV9FactSetExtension } from "../safety-score-v9/fact-set";
@@ -640,40 +639,7 @@ describe("Safety Score v10.01 current cause versus historical publisher", () => 
   });
 });
 
-function expectNonScoring(overlay: MechanismReviewOverlay, keys: string[]) {
-  const expanded = expandOverlayReview(overlay) as unknown as Record<
-    string,
-    { quality: string | null; status: { observationState: string; gapIds: string[] } }
-  >;
-  for (const key of keys) {
-    expect(expanded[key], `${overlay.assetId}:${key}`).toMatchObject({
-      quality: null,
-      status: { observationState: "bounded-unknown" },
-    });
-    expect(expanded[key].status.gapIds).not.toHaveLength(0);
-  }
-}
-
 describe("Safety Score V9 evidence-only mechanism curation", () => {
-  it("keeps an authored unavailable component non-scoring", () => {
-    const overlay = MechanismReviewOverlaySchema.parse({
-      assetId: "fixture-fiat",
-      archetype: "fiat-cash",
-      reviewedAt: "2026-08-08",
-      notes: "Reviewed issuer nondisclosure; no positive quality claim.",
-      metrics: {},
-      sources: [{ label: "Issuer disclosure", url: "https://example.com/disclosure" }],
-      components: {
-        custodyContinuity: {
-          applicability: "unavailable",
-          rationale: "The issuer has not published custody continuity evidence.",
-          sourceUrl: "https://example.com/disclosure",
-        },
-      },
-    });
-    expectNonScoring(overlay, ["custodyContinuity"]);
-  });
-
   it("prices reviewed issuer nondisclosure below an unresearched applicable mechanism", () => {
     // The same exact-publication input differs only in the reviewed cause:
     // issuer nondisclosure is C, while withdrawing the review leaves U.

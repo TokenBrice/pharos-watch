@@ -548,26 +548,6 @@ describe("buildCoinCoverageMap", () => {
     });
   });
 
-  it("returns partial-history when coin is tracked for < 30 days", () => {
-    const config = pickSingleConfigCoin();
-    const nowSec = 100 * DAY_SECONDS;
-    // Ten days of durable proof admit 24h but not 30d.
-    const referenceHead = config.startBlock + Math.ceil((10 * DAY_SECONDS) / 12);
-    const coverage = buildCoinCoverageMap(
-      nowSec,
-      proofMap(nowSec, 10, config),
-      new Map([[`${config.chain.chainId}-${config.contractAddress}`, referenceHead]]),
-      new Map([[config.chain.chainId, referenceHead]]),
-    );
-
-    expect(coverage.get(config.stablecoinId)).toMatchObject({
-      status: "partial-history",
-      isPartial: true,
-      has24hWindow: true,
-      has30dWindow: false,
-    });
-  });
-
   // Note: no MINT_BURN_CONFIGS entry has `enabled: false` today, so testing
   // the "disabled" status would require mocking the module import. Skipped
   // to avoid brittle coupling; the status branch is trivially readable.

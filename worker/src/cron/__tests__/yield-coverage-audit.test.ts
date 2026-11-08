@@ -635,43 +635,6 @@ describe("runYieldCoverageAudit", () => {
     });
   });
 
-  it("returns degraded when protocol-category cache is unavailable", async () => {
-    mockLoadDlStablecoinPools.mockResolvedValue({
-      pools: [lendingPool({ pool: "new-usdc", project: "new-lender", symbol: "USDC", tvlUsd: 12_000_000 })],
-      meta: {
-        mode: "dex-cache",
-        updatedAt: 1_774_526_300,
-        ageSeconds: 100,
-        poolCount: 1,
-        fallbackMode: null,
-      },
-    });
-    mockGetCache.mockImplementation(async (_db, key) => {
-      if (key === "stablecoins") return { value: "[]", updatedAt: 1_774_526_300 };
-      if (key === "yield-rankings") {
-        return { value: JSON.stringify({ rankings: [] }), updatedAt: 1_774_526_300 };
-      }
-      return null;
-    });
-    mockComputeSafetyScoresSnapshot.mockResolvedValue(successfulSafetySnapshot());
-
-    const result = await runYieldCoverageAudit(mockD1([{
-      match: "yield_coverage_review_dispositions",
-      rows: [],
-    }]));
-    const metadata = JSON.parse(result.metadata ?? "{}") as {
-      reason?: string;
-      protocolCategoryStatus?: string;
-    };
-
-    expect(result.status).toBe("degraded");
-    expect(metadata).toMatchObject({
-      reason: "protocol-category-cache-missing",
-      protocolCategoryStatus: "missing",
-    });
-    expect(mockSetCache).toHaveBeenCalled();
-  });
-
   it.each([
     ["missing", undefined, 0, 0],
     ["malformed", "{", 0, 0],

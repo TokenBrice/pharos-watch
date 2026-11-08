@@ -151,7 +151,6 @@ function bootstrapObservedCacheKey(producerJob: string): string {
 }
 
 export async function isBootstrapCacheMiss(db: D1Database, path: string, status: number): Promise<boolean> {
-  if (status !== 503) return false;
   const producerJob = BOOTSTRAP_CACHE_PRODUCER_BY_PATH[path];
   if (!producerJob) return false;
   try {
@@ -161,7 +160,7 @@ export async function isBootstrapCacheMiss(db: D1Database, path: string, status:
       .prepare("SELECT COUNT(*) AS cnt FROM cron_runs WHERE job = ?")
       .bind(producerJob)
       .first<{ cnt: number | null }>();
-    if ((row?.cnt ?? 0) === 0) return true;
+    if ((row?.cnt ?? 0) === 0) return status === 503;
     await setCache(db, markerKey, JSON.stringify({
       job: producerJob,
       observedAt: Math.floor(Date.now() / 1_000),

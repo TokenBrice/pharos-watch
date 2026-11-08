@@ -410,17 +410,6 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     expect(prompt).not.toContain("vs yesterday: 0/0/0/0/0");
   });
 
-  it("never prints Infinity for a 7-day change without a baseline", () => {
-    const prompt = buildUserPrompt(dayInput({
-      totalMcapUsd: 1_000_000,
-      mcap7dDelta: 1_000_000,
-      mcap7dDeltaCoverage: { coveredCoins: 1, totalCoins: 3, coveredMcapUsd: 1_000_000 },
-    }));
-    expect(prompt).not.toContain("Infinity");
-    expect(prompt).toContain("n/a (no 7d baseline)");
-    expect(prompt).toContain("baseline covers 1 of 3 core coins");
-  });
-
   it.each([
     [null, undefined],
     [null, { coveredCoins: 0, totalCoins: 3, coveredMcapUsd: 0 }],
@@ -441,6 +430,8 @@ describe("digest publishes unavailable inputs as unavailable", () => {
       totalMcapUsd: 1e6, mcap7dDelta: 1e6, mcap7dDeltaCoverage: { coveredCoins: 1, totalCoins: 3, coveredMcapUsd: 1e6 },
     }));
     expect(zeroBaseline).toContain("7-day market cap change: +$1.00M (n/a (no 7d baseline))");
+    expect(zeroBaseline).not.toContain("Infinity");
+    expect(zeroBaseline).toContain("baseline covers 1 of 3 core coins");
   });
 
   it("keeps a non-finite depeg impact from defusing the regime thresholds", () => {

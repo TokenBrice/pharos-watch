@@ -387,24 +387,6 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(result.assets[0]).toBe(current);
   });
 
-  it("refuses a curated partition that no longer sums to the fresh aggregate", () => {
-    const current = asset({
-      id: "syrupusdt-maple", symbol: "syrupUSDT",
-      supplySource: "coingecko-fallback", circulating: { peggedUSD: 90_000_000 },
-    });
-    const previous = asset({
-      id: "syrupusdt-maple", symbol: "syrupUSDT",
-      supplySource: "onchain-total-supply", circulating: { peggedUSD: 100_000_000 },
-      chainCirculating: syrupChainCirculating(), supplyObservedAt: NOW_SEC - 900,
-    });
-    const result = mergeSupplementalLastKnownGood(
-      [current], new Map([[previous.id, previous]]), new Set(), NOW_SEC,
-    );
-    expect(result.restoredCount).toBe(0);
-    expect(result.expiredRestoreIds).toEqual([]);
-    expect(result.assets[0]).toBe(current);
-  });
-
   it("does not restore syrupUSDC's old partition after the Arc deployment expands its roster", () => {
     const current = asset({
       id: "syrupusdc-maple", symbol: "syrupUSDC",

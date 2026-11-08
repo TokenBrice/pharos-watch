@@ -102,7 +102,7 @@ describe("freeze Telegram source gate", () => {
     }
   });
 
-  it("dead-letters a poison row and advances after the bounded retry limit", async () => {
+  it("returns poison-row cleanup with the cursor after the bounded retry limit", async () => {
     const { sqlite, database, now, rowId } = createPoisonFreezeTape();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -116,6 +116,10 @@ describe("freeze Telegram source gate", () => {
         droppedUnparsed: 1,
         deadLetteredUnparsed: 1,
       });
+      expect(sqlite.prepare(
+        "SELECT value FROM cache WHERE key = 'alert:freeze-tape-row-hold'",
+      ).get()).toEqual({ value: JSON.stringify({ rowId, attempts: 2 }) });
+      await escalated.holdCleanup!.run();
       expect(sqlite.prepare(
         "SELECT value FROM cache WHERE key = 'alert:freeze-tape-row-hold'",
       ).get()).toBeUndefined();

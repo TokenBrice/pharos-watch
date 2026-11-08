@@ -176,6 +176,23 @@ describe("prepareTelegramDigestAppendices", () => {
     ]);
   });
 
+  it.each(["quarantined", "delisted", "frozen"])("consumes a queued %s coin without an empty tracking heading", async (status) => {
+    const coin = TRACKED_STABLECOINS_MOCK[1]!;
+    const previousStatus = coin.status;
+    coin.status = status;
+    try {
+      mockCachedValues({ "telegram:tracked-stablecoins-pending": '["usdx-example"]' });
+      const prepared = await prepareTelegramDigestAppendices({} as D1Database);
+      expect(prepared.appendixHtml).toBeNull();
+      expect(prepared.metadata).toMatchObject({ hasAppendix: false, trackedDetected: 0 });
+      expect(prepared.successActions).toEqual([
+        { key: "telegram:tracked-stablecoins-consumed", value: '["usdx-example"]' },
+      ]);
+    } finally {
+      coin.status = previousStatus;
+    }
+  });
+
   it("uses queued tracked additions when the tracked snapshot is missing", async () => {
     mockCachedValues({
       "telegram:cemetery-snapshot": JSON.stringify([
@@ -212,7 +229,7 @@ describe("prepareTelegramDigestAppendices", () => {
         key: "telegram:tracked-stablecoins-snapshot",
         value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
       },
-      { key: "telegram:tracked-stablecoins-pending", value: "[]" },
+      { key: "telegram:tracked-stablecoins-consumed", value: '["usdx-example"]' },
     ]);
   });
 
@@ -242,7 +259,7 @@ describe("prepareTelegramDigestAppendices", () => {
         key: "telegram:tracked-stablecoins-snapshot",
         value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
       },
-      { key: "telegram:tracked-stablecoins-pending", value: "[]" },
+      { key: "telegram:tracked-stablecoins-consumed", value: '["usdx-example"]' },
     ]);
   });
 
@@ -309,7 +326,7 @@ describe("prepareTelegramDigestAppendices", () => {
         key: "telegram:tracked-stablecoins-snapshot",
         value: JSON.stringify(["usdt-tether", "usdx-example", "eurx-example"]),
       },
-      { key: "telegram:tracked-stablecoins-pending", value: "[]" },
+      { key: "telegram:tracked-stablecoins-consumed", value: '["usdx-example","eurx-example"]' },
     ]);
   });
 
@@ -426,7 +443,7 @@ describe("prepareTelegramDigestAppendices", () => {
     expect(mockSetCache).not.toHaveBeenCalled();
     expect(prepared.successActions).toEqual([
       { key: "telegram:prelaunch-stablecoins-snapshot", value: JSON.stringify(["eurx-example"]) },
-      { key: "telegram:tracked-stablecoins-pending", value: "[]" },
+      { key: "telegram:tracked-stablecoins-consumed", value: '["usdx-example"]' },
     ]);
   });
 });

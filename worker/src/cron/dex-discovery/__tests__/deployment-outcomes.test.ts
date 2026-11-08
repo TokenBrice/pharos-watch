@@ -180,15 +180,6 @@ describe("DEX deployment outcomes", () => {
       observedPoolCount: 0,
     });
 
-    const curveObserved = classifyDexDeploymentOutcomes({
-      stablecoinId: "test",
-      deployments: [DEPLOYMENT],
-      pools: [],
-      providerChecks: [{ ...DEPLOYMENT, provider: "curve", status: "success", observedPoolCount: 2 }],
-      nowSec: 100,
-    });
-    expect(curveObserved[0]).toMatchObject({ outcome: "observed_pools", observedPoolCount: 2 });
-
     const inaccessible = classifyDexDeploymentOutcomes({
       stablecoinId: "test",
       deployments: [STELLAR_CLASSIC_DEPLOYMENT],

@@ -168,8 +168,8 @@ const cronMocks = vi.hoisted(() => ({
       metadata,
     };
   }),
-  getCache: vi.fn(async () => null),
-  setCache: vi.fn(async () => undefined),
+  getCache: vi.fn<typeof import("../lib/db-cache").getCache>(async () => null),
+  setCache: vi.fn<typeof import("../lib/db-cache").setCache>(async () => undefined),
   setCacheIfAbsent: vi.fn(async () => true),
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => undefined),
@@ -429,6 +429,27 @@ describe("worker.scheduled", () => {
 
   it("imports both Worker entrypoints without cron side effects", () => {
     expect(indexImportCronCalls).toEqual([]);
+  });
+
+  it.each([null, "0", "3", "broken"])("runs the watchdog with retained streak %j", async (retained) => {
+    const { runTelegramDegradationWatchdog, WATCHDOG_KEYS } = await vi.importActual<
+      typeof import("../cron/telegram/maintenance/telegram-degradation-watchdog")
+    >("../cron/telegram/maintenance/telegram-degradation-watchdog");
+    vi.spyOn(cronMocks, "getCache").mockImplementation(async (_db, key) =>
+      key === WATCHDOG_KEYS.zeroSendStreak && retained != null ? { value: retained, updatedAt: 1 } : null);
+    cronMocks.runTelegramDegradationWatchdog.mockImplementationOnce(runTelegramDegradationWatchdog);
+    const env = makeScheduledEnv({ DB: mockD1([{ match: "", rows: [] }]), TELEGRAM_BOT_TOKEN: "bot" });
+    const { ctx, waits } = makeExecutionContext();
+    await worker.scheduled({ cron: CRON_TRIGGER_SCHEDULES.fiveMinuteTelegramAlerts[0] } as ScheduledEvent, env, ctx);
+    await Promise.all(waits);
+    const result = await cronMocks.runTelegramDegradationWatchdog.mock.results[0].value;
+    expect(JSON.parse(result.metadata).zeroSend).toMatchObject({
+      availability: retained === "broken" ? "unknown" : "available",
+      reason: retained === "broken" ? "invalid-streak-state" : "no-completed-run",
+      streak: retained === "broken" ? null : Number(retained), evaluated: false, recovered: false,
+    });
+    expect(cronMocks.setCache.mock.calls.some((call) => call[1] === WATCHDOG_KEYS.zeroSendStreak)).toBe(false);
+    expect(cronMocks.publishTelegramPulseSnapshotWithOutcome).toHaveBeenCalledOnce();
   });
 
   it.each([

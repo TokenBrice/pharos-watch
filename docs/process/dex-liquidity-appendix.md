@@ -121,6 +121,8 @@ The reviewed identity inventory includes HOME's issuer-listed Ethereum HOME/USDC
 
 Providers serialize before DL/Curve/subgraphs, normalizing one pool at a time and releasing payloads while retaining raw census evidence. Scheduled resolver/Sugar RPC uses `chainRpcs`, not module defaults. All bodies have explicit caps and timeout-covered consumption; [Response-Body Limits](../worker-and-api-limits.md#response-body-limits) owns values. Over-cap cancels/reports failure, never a truncated successful inventory. Token matching uses immutable run-local chain/address ownership first; unknown addressed tokens drop, addressless symbols require a unique same-chain match. Fetch requires run-local lookups and returns one admitted contract, including empty counts/target inventory for open circuits and exceptions. Integration accepts only those retained pools and counts; it does not normalize or filter a second raw-input mode.
 
+Parent cancellation that precedes the provider timeout propagates without a circuit outcome, including when an adapter returns a result instead of throwing. Provider timeouts still record failures.
+
 Meteora's successful bounded head reports partial pagination with its next page, without an actionable source warning; malformed rows and failed reads retain their diagnostics. Its bounded-sample scope still cannot veto staged pools. Source-stage and consumer metadata preserve `directApiSourceSummary` warning/pagination evidence and `subgraphFailures` phase/reason/timeout evidence through persistence compaction within the existing job budgets.
 
 #### Census authority and durable pagination

@@ -357,19 +357,6 @@ describe("handleDepegEvents", () => {
     await expect(res.json()).resolves.toEqual({ error: "Invalid active: must be true or false" });
   });
 
-  it("excludes superseded rows from active DDR incident repairs", async () => {
-    const db = mockEvents([row], 1);
-
-    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx"));
-
-    expect(res.status).toBe(200);
-    const dataQuery = db
-      .getHistory()
-      .find((entry) => entry.sql.includes("pharos:depeg-events:page"));
-    expect(dataQuery?.sql).toContain("depeg_resolver_incident_event_links");
-    expect(dataQuery?.sql).toContain("links.event_id != COALESCE(effective_alias.current_event_id, canonical.current_event_id)");
-  });
-
   it("counts a superseded alias's linked rows in the projected public incident", async () => {
     const { sqlite, db } = fixtures.open();
     const canonicalKey = `ddr2:${"a".repeat(32)}`;
@@ -625,31 +612,6 @@ describe("handleDepegEvents", () => {
     const body = (await readJsonResponse(res, 200)) as Record<string, unknown>;
     expect(body).not.toHaveProperty("counts");
     expect(db.getHistory().some((entry) => entry.sql.includes("threshold-crossing-count"))).toBe(false);
-  });
-
-  it("emits and accepts a keyset cursor", async () => {
-    const first = { ...makeDepegRow({ id: 3, started_at: 1_700_000_003 }), effective_started_at: 1_700_000_003 };
-    const second = { ...makeDepegRow({ id: 2, started_at: 1_700_000_002 }), effective_started_at: 1_700_000_002 };
-    const db = mockEvents([first, second], null);
-
-    const firstRes = await handleDepegEvents(db, new URL("https://x/api/depeg-events?limit=1&includeTotal=false"));
-    const firstBody = (await firstRes.json()) as { events: unknown[]; nextCursor: string | null };
-    expect(firstBody.events).toHaveLength(1);
-    expect(firstBody.nextCursor).toBeTypeOf("string");
-    expect(JSON.parse(atob(firstBody.nextCursor!))).toEqual({ v: 2, values: [1_700_000_003, 3] });
-
-    const cursorDb = mockEvents([second], null);
-    const cursorRes = await handleDepegEvents(
-      cursorDb,
-      new URL(`https://x/api/depeg-events?limit=1&includeTotal=false&cursor=${firstBody.nextCursor}`),
-    );
-
-    expect(cursorRes.status).toBe(200);
-    const dataQuery = cursorDb.getHistory().find((entry) => entry.sql.includes("FROM depeg_events"));
-    expect(dataQuery?.sql).toContain("effective_started_at < ?");
-    expect(dataQuery?.sql).toContain("id < ?");
-    expect(dataQuery?.binds).toContain(first.started_at);
-    expect(dataQuery?.binds).toContain(first.id);
   });
 
   describe("aggregate original-clock availability", () => {

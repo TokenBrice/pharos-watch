@@ -844,9 +844,9 @@ export interface SupplyIntegrityCondition {
   /** Stable across runs while the same finding persists; confirmation resets when it changes. */
   signature: string;
   /**
-   * Pre-rollover evidence retained while the condition stays raised, so a
-   * changing snapshot baseline is not mistaken for recovery. Omitted when the
-   * evidence read failed and the previous state must stand.
+   * Pre-rollover evidence retained while drifting or quarantined, so a changing
+   * snapshot baseline is not mistaken for recovery. Omitted when the evidence
+   * read failed and the previous state must stand.
    */
   held?: Record<string, number>;
 }
@@ -1009,7 +1009,7 @@ export function buildSupplyIntegrityConditions(report: SupplyIntegrityReport): S
 interface ConfirmationEntry {
   signature: string;
   runs: number;
-  /** Drift baselines retained while the value-drift condition stays raised. */
+  /** Drift baselines retained while drifting or quarantined. */
   held?: Record<string, number>;
 }
 
@@ -1068,7 +1068,13 @@ export async function confirmSupplyIntegrityConditions(
       if (previous[condition.id] != null) next[condition.id] = previous[condition.id];
       return condition;
     }
-    if (!condition.active) return condition;
+    if (!condition.active) {
+      // Keep quarantine evidence without counting an unavailable value as a breach.
+      if (condition.held && Object.keys(condition.held).length > 0) {
+        next[condition.id] = { signature: condition.signature, runs: 0, held: condition.held };
+      }
+      return condition;
+    }
     const runs = previous[condition.id]?.signature === condition.signature
       ? previous[condition.id].runs + 1
       : 1;

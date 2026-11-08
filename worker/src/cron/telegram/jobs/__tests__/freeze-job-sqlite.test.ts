@@ -4,6 +4,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { cancelRetractedFreezeDeliveries, detectTelegramFreezeJobs, FREEZE_CURSOR_KEY } from "../freeze-job";
 import { fanOutPlanningTelegramJobs } from "../run-jobs";
+import { loadFreshFreezeAlerts } from "../../freeze/telegram-alert-freeze";
 
 const NOW = 2_000_000_000;
 const open: DatabaseSync[] = [];
@@ -116,6 +117,36 @@ describe("freeze job detection", () => {
     expect(await detectTelegramFreezeJobs(db, NOW + 1)).toMatchObject({ jobsCreated: 0, skippedNoAudience: 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_jobs").get()).toEqual({ n: 0 });
   });
+
+  it.each(["SELECT DISTINCT sub.stablecoin_id", "INSERT OR IGNORE INTO telegram_jobs", "INSERT INTO cache"])(
+    "retains poison-row retries when %s fails before cursor commit",
+    async (failSql) => {
+      const { sqlite, db, insertFreeze, addChat } = fixture();
+      addChat("1", true);
+      insertFreeze("baseline");
+      await detectTelegramFreezeJobs(db, NOW);
+      // 99 inserts put a separately appended cleanup at the D1 batch boundary.
+      for (let index = 0; index < 98; index += 1) insertFreeze(`event-${index}`);
+      insertFreeze("small", { amount: 10 });
+      insertFreeze("poison");
+      sqlite.prepare("UPDATE tape_events SET payload_json = '{}' WHERE event_id = 'poison'").run();
+      const rowId = sqlite.prepare("SELECT id FROM tape_events WHERE event_id = 'poison'").get()!.id;
+      for (let attempt = 0; attempt < 2; attempt += 1) await loadFreshFreezeAlerts(db, 1, NOW);
+      const fault = (sql: string) => { if (sql.includes(failSql)) throw new Error("injected failure"); };
+      const cache = (key: string) => sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(key);
+
+      await expect(detectTelegramFreezeJobs(createSqliteD1(sqlite, { onAll: fault, onRun: fault }), NOW))
+        .rejects.toThrow("injected failure");
+      expect(cache(FREEZE_CURSOR_KEY)).toEqual({ value: "1" });
+      expect(cache("alert:freeze-tape-row-hold")).toEqual({ value: JSON.stringify({ rowId, attempts: 2 }) });
+
+      expect(await detectTelegramFreezeJobs(db, NOW)).toMatchObject({ observed: 99, droppedUnparsed: 1 });
+      expect(cache(FREEZE_CURSOR_KEY)).toEqual({ value: String(rowId) });
+      expect(cache("alert:freeze-tape-row-hold")).toBeUndefined();
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_jobs").get()).toEqual({ n: 98 });
+      expect(sqlite.prepare("SELECT source_key FROM telegram_change_log").all()).toEqual([{ source_key: "freeze:small" }]);
+    },
+  );
 
   it("fans out to direct and global opt-ins with the right footer, then cancels queued rows on retraction", async () => {
     const { sqlite, db, insertFreeze, addChat } = fixture();

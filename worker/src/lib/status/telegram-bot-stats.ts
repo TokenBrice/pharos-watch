@@ -18,7 +18,7 @@ import {
   type TelegramCurrentLifecycleSnapshot,
 } from "../../telegram/store/usage-analytics";
 import { loadTelegramDeliverySliRollup } from "../../telegram/delivery/delivery-sli";
-import { getCache } from "../db-cache";
+import { loadPresetQueryFailureCount } from "./telegram-preset-failure-count";
 import {
   loadTelegramPendingCapacity,
   toPendingDeliveryBacklog,
@@ -71,7 +71,6 @@ interface OptionalTelegramTelemetry<T> {
   error?: string;
 }
 
-const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
 const INACTIVE_CLEANUP_WINDOW_SEC = 7 * 24 * 60 * 60;
 const INACTIVE_CLEANUP_JOB = "telegram-inactive-cleanup";
 
@@ -272,13 +271,6 @@ async function loadInactiveSubscribersCleanedThisWeek(db: D1Database, now: numbe
   if (!Number.isFinite(runs) || runs <= 0) return null;
   const parsed = Number(row.total ?? 0);
   return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
-}
-
-async function loadPresetQueryFailureCount(db: D1Database): Promise<number> {
-  const row = await getCache(db, PRESET_QUERY_FAILURE_CACHE_KEY);
-  if (!row) return 0;
-  const parsed = Number(row.value);
-  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
 }
 
 export function mapTelegramBotStats(input: {

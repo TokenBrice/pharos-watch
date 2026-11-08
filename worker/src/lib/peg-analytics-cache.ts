@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { deleteCache, getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
+import { getCache, setCacheIfNewer, type CacheWriteResult } from "./db-cache";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { decodeCachedJson } from "./cache-json";
 import { recordJsonParseFailure } from "./api-cache-read";
 import { assessFreshnessTimestamp } from "./api-freshness-age";
@@ -100,7 +101,17 @@ function parsePayload(value: unknown): PegAnalyticsCachePayload | null {
   };
 }
 
-export async function writePegAnalyticsCache(
+async function deleteInspectedPegAnalyticsCache(
+  db: D1Database,
+  row: { value: string; updatedAt: number },
+): Promise<void> {
+  await runWithOverloadRetry(() => db
+    .prepare("DELETE FROM cache WHERE key = ? AND value = ? AND updated_at = ?")
+    .bind(PEG_ANALYTICS_CACHE_KEY, row.value, row.updatedAt)
+    .run());
+}
+
+async function writePegAnalyticsCache(
   db: D1Database,
   payload: PegAnalyticsCachePayload,
 ): Promise<CacheWriteResult> {
@@ -113,8 +124,8 @@ export async function writePegAnalyticsCache(
   const existingTimestamp = existing
     ? assessFreshnessTimestamp(Math.floor(Date.now() / 1000), existing.updatedAt)
     : null;
-  if (existingTimestamp?.reason !== "future-timestamp") return result;
-  await deleteCache(db, PEG_ANALYTICS_CACHE_KEY);
+  if (!existing || existingTimestamp?.reason !== "future-timestamp") return result;
+  await deleteInspectedPegAnalyticsCache(db, existing);
   return setCacheIfNewer(db, PEG_ANALYTICS_CACHE_KEY, body, payload.computedAtSec);
 }
 
@@ -161,8 +172,8 @@ export async function loadPegAnalyticsCache(
   const nowSec = Math.floor(Date.now() / 1000);
   if (assessFreshnessTimestamp(nowSec, row.updatedAt).reason === "future-timestamp") {
     // The row can never age out ahead of its own clock and would reject every
-    // later publish; drop it so the next producer run writes a current one.
-    await deleteCache(db, PEG_ANALYTICS_CACHE_KEY);
+    // later publish; drop only the inspected row, preserving any replacement.
+    await deleteInspectedPegAnalyticsCache(db, row);
     return { kind: "miss", reason: "future-timestamp" };
   }
   if (Date.now() - row.updatedAt * 1000 > maxAgeMs) return { kind: "miss", reason: "stale-cache" };

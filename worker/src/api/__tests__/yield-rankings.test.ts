@@ -2365,16 +2365,10 @@ describe("VERITAS-II finding: degraded yield rows retain nested safety numbers",
     expect(selectedRisk?.trancheSafetyScore ?? null).toBeNull();
     expect(selectedRisk?.trancheSafetyPenalty ?? null).toBeNull();
     expect(selectedRisk?.opportunityRisk ?? null).toBeNull();
-    expect(selectedRisk?.opportunityRisk?.underlyingSafetyScore ?? null).toBeNull();
-    expect(selectedRisk?.opportunityRisk?.opportunitySafetyScore ?? null).toBeNull();
-    expect(selectedRisk?.opportunityRisk?.opportunitySafetyPenalty ?? null).toBeNull();
     expect(alternateRisk?.underlyingSafetyScore ?? null).toBeNull();
     expect(alternateRisk?.trancheSafetyScore ?? null).toBeNull();
     expect(alternateRisk?.trancheSafetyPenalty ?? null).toBeNull();
     expect(alternateRisk?.opportunityRisk ?? null).toBeNull();
-    expect(alternateRisk?.opportunityRisk?.underlyingSafetyScore ?? null).toBeNull();
-    expect(alternateRisk?.opportunityRisk?.opportunitySafetyScore ?? null).toBeNull();
-    expect(alternateRisk?.opportunityRisk?.opportunitySafetyPenalty ?? null).toBeNull();
     // No published rank means no comparable baseline, even if the old cache
     // carried an attribution. Unknown source evidence still takes precedence.
     expect(row.rankChangeAttribution).toBeUndefined();

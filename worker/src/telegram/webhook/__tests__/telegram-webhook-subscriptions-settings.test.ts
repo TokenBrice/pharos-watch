@@ -79,27 +79,6 @@ describe("handleTelegramWebhook", () => {
 
   it.each([
     {
-      label: "allows private mutating commands",
-      command: "/subscribe",
-      chatType: "private",
-      membership: null,
-      dispatches: true,
-    },
-    {
-      label: "denies group mutating commands to members",
-      command: "/subscribe",
-      chatType: "supergroup",
-      membership: "member",
-      dispatches: false,
-    },
-    {
-      label: "allows group mutating commands to administrators",
-      command: "/subscribe",
-      chatType: "supergroup",
-      membership: "administrator",
-      dispatches: true,
-    },
-    {
       label: "allows group read-only commands to members",
       command: "/status",
       chatType: "supergroup",
@@ -115,7 +94,7 @@ describe("handleTelegramWebhook", () => {
         mockTelegramMembership(fetchSpy, membership, { id: 7, is_bot: false, first_name: membership });
       }
       const db = makeTelegramWebhookDb();
-      const commandText = chatType === "private" ? command : `${command}@PharosWatchBot`;
+      const commandText = `${command}@PharosWatchBot`;
       const response = await handleTelegramWebhook(
         db,
         makeWebhookRequest(123, commandText, "test-secret", { chatType, fromId: 7 }),

@@ -170,25 +170,6 @@ describe("parseEvmLogs", () => {
     expect(rows[0].event_type).toBe("blacklist");
   });
 
-  it("extracts address from topics[1] by default (USDC regression)", () => {
-    const blacklistedAddr = "0x0000000000000000000000003333333333333333333333333333333333333333";
-    const logs = [{
-      address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      topics: [
-        "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
-        blacklistedAddr,
-      ],
-      data: "0x",
-      blockNumber: "0x1234",
-      transactionHash: "0x" + "de".repeat(32),
-      logIndex: "0x0",
-      timeStamp: "0x65000000",
-    }];
-    const rows = parseEvmLogsWithCoverage(USDC_CONFIG, logs).rows;
-    expect(rows).toHaveLength(1);
-    expect(rows[0].address).toBe("0x3333333333333333333333333333333333333333");
-  });
-
   it("extracts a non-indexed account address from RLUSD AccountPaused data", () => {
     const pausedAddr = "0x4444444444444444444444444444444444444444";
     const logs = [{

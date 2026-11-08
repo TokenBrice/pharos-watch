@@ -99,10 +99,10 @@ describe("cron progress cleanup", () => {
     }));
 
     expect(
-      sqlite.prepare("SELECT job, error FROM cron_runs ORDER BY job").all(),
+      sqlite.prepare("SELECT job, status, item_count, error FROM cron_runs ORDER BY job").all(),
     ).toEqual([
-      { job: "resolved-error", error: "upstream rejected [url]" },
-      { job: "thrown-error", error: "request failed for [url]" },
+      { job: "resolved-error", status: "error", item_count: null, error: "upstream rejected [url]" },
+      { job: "thrown-error", status: "error", item_count: null, error: "request failed for [url]" },
     ]);
   });
 });

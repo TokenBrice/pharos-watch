@@ -13,7 +13,11 @@ import {
   type TelegramCreds,
 } from "../delivery/telegram";
 import { splitMessage } from "../common/alerts-formatting";
-import type { TelegramDigestSuccessAction } from "../digest/digest-appendices";
+import {
+  TRACKED_CONSUMED_CACHE_KEY,
+  TRACKED_PENDING_CACHE_KEY,
+  type TelegramDigestSuccessAction,
+} from "../digest/digest-appendices";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
   DigestSafetyContextSchema,
@@ -175,7 +179,13 @@ function parseSuccessActions(raw: string): TelegramDigestSuccessAction[] {
   ) {
     throw new Error("Telegram digest success actions are invalid");
   }
-  return parsed as TelegramDigestSuccessAction[];
+  const actions = parsed as TelegramDigestSuccessAction[];
+  for (const action of actions) {
+    if (action.key === TRACKED_CONSUMED_CACHE_KEY) {
+      parseStringArray(action.value, "Telegram digest consumed tracked IDs");
+    }
+  }
+  return actions;
 }
 
 function parseStoredSafetyContext(raw: string): DigestSafetyContext {
@@ -741,15 +751,39 @@ async function finalizeSentEdition(
   const eligibleEdition = `EXISTS (
     SELECT 1 FROM telegram_digest_outbox WHERE ${eligibilityPredicate}
   )`;
-  const statements = claim.successActions.map((action) =>
-    db
+  // Legacy replacements lack an announced-ID baseline; retain notices for a safe repeat.
+  const statements = claim.successActions.filter((action) => action.key !== TRACKED_PENDING_CACHE_KEY).map((action) => {
+    if (action.key === TRACKED_CONSUMED_CACHE_KEY) {
+      return db.prepare(
+        `INSERT INTO cache (key, value, updated_at)
+         SELECT ?, (
+           SELECT CASE
+             WHEN NOT json_valid(pending.value) THEN pending.value
+             WHEN json_type(pending.value) != 'array'
+               OR EXISTS (SELECT 1 FROM json_each(pending.value) WHERE type != 'text')
+             THEN pending.value
+             ELSE (SELECT json_group_array(value) FROM json_each(pending.value)
+               WHERE value NOT IN (SELECT value FROM json_each(?)))
+           END
+           FROM (SELECT COALESCE((SELECT value FROM cache WHERE key = ?), '[]') AS value) pending
+         ), ? WHERE ${eligibleEdition}
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value,
+           updated_at = CASE WHEN cache.value = excluded.value THEN cache.updated_at ELSE excluded.updated_at END
+         RETURNING CASE
+           WHEN NOT json_valid(value) THEN 1
+           WHEN json_type(value) != 'array'
+             OR EXISTS (SELECT 1 FROM json_each(cache.value) WHERE type != 'text') THEN 1
+           ELSE 0 END AS pending_invalid`,
+      ).bind(TRACKED_PENDING_CACHE_KEY, action.value, TRACKED_PENDING_CACHE_KEY, nowSec, ...eligibilityBindings);
+    }
+    return db
       .prepare(
         `INSERT INTO cache (key, value, updated_at)
          SELECT ?, ?, ? WHERE ${eligibleEdition}
          ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
       )
-      .bind(action.key, action.value, nowSec, ...eligibilityBindings)
-  );
+      .bind(action.key, action.value, nowSec, ...eligibilityBindings);
+  });
   statements.push(
     db
       .prepare(
@@ -788,6 +822,10 @@ async function finalizeSentEdition(
     throw new Error(
       `terminal batch strict statement failed (${results.length}/${statements.length} results, index ${failedStrictStatementIndex})`,
     );
+  }
+  if (results.some((result) => result.results?.some((row) => row != null && typeof row === "object"
+    && "pending_invalid" in row && row.pending_invalid === 1))) {
+    logWorkerEvent({ scope: "lib", level: "warn", event: "telegram_digest_pending_unavailable", message: "Preserved invalid tracked announcement queue during digest finalization", metadata: { editionKey: claim.row.edition_key, reason: "invalid_tracked_pending" } });
   }
 }
 

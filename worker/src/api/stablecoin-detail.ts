@@ -18,6 +18,7 @@ import { routeStablecoinDetail } from "./stablecoin-detail/router";
 import { overlayCanonicalDetail } from "./stablecoin-detail/price";
 
 interface SharedDetailRefreshResponse {
+  acquiredFreshData: boolean;
   body: ArrayBuffer;
   status: number;
   statusText: string;
@@ -41,8 +42,9 @@ function responseStatusForbidsBody(status: number): boolean {
   return status === 101 || status === 204 || status === 205 || status === 304;
 }
 
-async function materializeSharedResponse(response: Response): Promise<SharedDetailRefreshResponse> {
+async function materializeSharedResponse(response: Response, acquiredFreshData: boolean): Promise<SharedDetailRefreshResponse> {
   return {
+    acquiredFreshData,
     body: await response.arrayBuffer(),
     status: response.status,
     statusText: response.statusText,
@@ -72,12 +74,14 @@ function startStablecoinDetailRefresh(config: {
   if (existing) return existing;
 
   const refresh = (async () => {
+    let acquiredFreshData = false;
     const detail = createDetailResponseHelpers({
       db: config.db,
       stablecoinId: config.id,
       pegType: config.pegType,
       cached: config.cached,
       execCtx: config.ctx,
+      onFreshAcquisition: () => { acquiredFreshData = true; },
     });
     const response = await routeStablecoinDetail(
       {
@@ -88,7 +92,7 @@ function startStablecoinDetailRefresh(config: {
       },
       detail,
     );
-    return materializeSharedResponse(response);
+    return materializeSharedResponse(response, acquiredFreshData);
   })().finally(() => {
     refreshesInFlight.delete(cacheKey);
   });
@@ -171,7 +175,7 @@ function releaseDetailRefreshLeaseAfterSuccess(
   lease: DetailRefreshLease,
 ): Promise<SharedDetailRefreshResponse> {
   return refresh.then(async (response) => {
-    if (response.status >= 200 && response.status < 300) {
+    if (response.acquiredFreshData) {
       await releaseDetailRefreshLease(db, lease);
     }
     return response;

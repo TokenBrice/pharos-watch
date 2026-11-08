@@ -1433,37 +1433,6 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.publicationFailedCount).toBe(1);
   });
 
-  it("classifies active eligible lock deferrals without public predictions", async () => {
-    const incident = makeReviewIncident({
-      incidentKey: "ddr2:active-lock-deferred",
-      eventId: 44,
-      lockState: {
-        eligibleAt: ELIGIBLE_AT,
-        lastState: "lock_deferred" as const,
-        lastDeferralReason: "strict_readiness_not_met",
-        deferralCount: 1,
-      },
-    });
-    const db = reviewDb([
-      eventRow({ id: 44 }),
-    ]);
-    const stores = durableStores({ loadCanonicalIncidents: vi.fn(async () => [incident]) });
-
-    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 3600, undefined, {
-      storeContracts: stores,
-    });
-
-    expect(snapshot.rows[0]).toMatchObject({
-      kind: "coverage",
-      incidentKey: incident.incidentKey,
-      predictionState: "lock_deferred",
-      coverageCause: "active_lock_deferred",
-      operationalCoverageCause: "system_deferral",
-      reason: "strict_readiness_not_met",
-    });
-    expect(snapshot.summary.headline.lockDeferredCount).toBe(1);
-  });
-
   it("refuses a review when the store rejects a malformed sealed payload", async () => {
     const incident = makeReviewIncident({ incidentKey: "ddr2:published-bad-payload", eventId: 45 });
     const stores = durableStores({

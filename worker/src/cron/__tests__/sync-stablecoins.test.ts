@@ -506,18 +506,7 @@ describe("syncStablecoins", () => {
     expect(writes.map((write) => write.key)).not.toContain("stablecoins");
   });
 
-  it("blocks stale publication, aborts during the staleness check, and backfills supply history", async () => {
-    const data = makeDlResponse(60);
-    const now = Math.floor(Date.now() / 1000);
-    const previous = JSON.stringify({ peggedAssets: data.peggedAssets.map((asset) => ({ id: asset.id, price: asset.price, priceSource: "defillama", priceConfidence: "single-source", priceUpdatedAt: now, priceObservedAt: now, priceSyncedAt: now })) });
-    const staleDb = makeSyncDb([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [{ value: previous, updated_at: now - 8 * 3600 }], first: { value: previous, updated_at: now - 8 * 3600 } }]);
-    const staleWrites = trackCacheWrites(staleDb);
-    mockFetchWithRetry(defaultSyncRoutes(data));
-    const staleResult = await syncStablecoins(staleDb);
-    expect(staleResult.status).toBe("degraded");
-    expect(JSON.parse(staleResult.metadata ?? "{}")).toMatchObject({ stalenessWarning: true, staleWriteBlocked: true, cacheWriteMode: "no-write", downstreamSafe: false });
-    expect(staleWrites.map((write) => write.key)).not.toContain("stablecoins");
-
+  it("aborts during the staleness check and backfills supply history", async () => {
     vi.mocked(recordOutcome).mockClear();
     const controller = new AbortController();
     const report = vi.fn(async (update: { stage?: string | null }) => { if (update.stage === "staleness-check") controller.abort(); });

@@ -23,6 +23,32 @@ describe("producer history", () => {
     await db.batch(statements);
     expect(await loadProducerHeads(db)).toEqual([expect.objectContaining({ invocationCount: 1, productiveCount: 1 })]);
   });
+  it.each([
+    ["worker_producer_heads", false],
+    ["surface_publication_generations", true],
+  ] as const)("rolls back direct accounting on %s failure (retained: %s)", async (table, retained) => {
+    const { sqlite, db } = createMigratedDb();
+    const input = {
+      scheduleKey: "quarterHourly", job: "sync-stablecoins", producerPath: "quarterHourly",
+      producerKind: "scheduled-job", invocationId: "failed", idempotencyKey: "failed",
+      invokedAt: 100, completedAt: 101, outcome: "ok",
+      productivity: { productive: true, publications: ["first", "last"].map((generationId) => ({
+        surface: "stablecoins", generationId, publishedAt: 101,
+      } as const)) },
+    } as const;
+    if (retained) await recordProducerOutcome(db, {
+      ...input, invocationId: "retained", idempotencyKey: "retained", invokedAt: 98, completedAt: 99,
+      productivity: { productive: true, publications: [{ surface: "stablecoins", generationId: "retained", publishedAt: 99 }] },
+    });
+    const tables = ["worker_producer_history", "worker_producer_retained_counts", "worker_producer_heads", "surface_publication_generations"];
+    const snapshot = () => tables.map((name) => sqlite.prepare(`SELECT * FROM ${name}`).all());
+    const before = snapshot();
+    sqlite.exec(`CREATE TEMP TRIGGER fail_projection BEFORE INSERT ON ${table}
+      ${table === "surface_publication_generations" ? "WHEN NEW.generation_id = 'last'" : ""}
+      BEGIN SELECT RAISE(ABORT, 'projection-failed'); END`);
+    await expect(recordProducerOutcome(db, input)).rejects.toThrow("projection-failed");
+    expect(snapshot()).toEqual(before);
+  });
   it("separates latest invocation from latest productive publication without double-counting retries", async () => {
     const { sqlite, db } = createMigratedDb();
     const identity = {

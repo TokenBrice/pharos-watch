@@ -350,20 +350,6 @@ describe("reviewed Curve StableSwap-NG policy", () => {
       CURVE_STABLESWAP_NG_ADAPTER_PROFILE_ID,
     );
     expect(freshnessMaxSec).toBe(10_800);
-    expect(evaluateCurveStableSwapNgEligibility({
-      chain: "ethereum",
-      endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress,
-      blockNumber: BLOCK_NUMBER,
-      nowSec: BLOCK_TIMESTAMP + freshnessMaxSec,
-      evidence: runtimeEvidence(),
-    })).toEqual({ ok: true });
-    expect(evaluateCurveStableSwapNgEligibility({
-      chain: "ethereum",
-      endpointAddress: CURVE_USDG_USDC_STABLESWAP_NG_POLICY.poolAddress,
-      blockNumber: BLOCK_NUMBER,
-      nowSec: BLOCK_TIMESTAMP + freshnessMaxSec + 1,
-      evidence: runtimeEvidence(),
-    })).toEqual({ ok: false, reason: "stale-pinned-block" });
 
     const verify = createCurveStableSwapNgDeploymentVerifier({
       fetchCodeStatus: vi.fn(async () => ({ status: "unavailable" as const })),

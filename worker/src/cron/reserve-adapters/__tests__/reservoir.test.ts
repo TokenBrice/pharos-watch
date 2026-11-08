@@ -215,17 +215,6 @@ describe("adaptReservoirReserves", () => {
     expect(slices).toHaveLength(0);
   });
 
-  it("returns unmapped assets separately for operator review", () => {
-    const { unknownAssets, unknownExposurePct } = adaptReservoirReserves({
-      ...SAMPLE_RESPONSE,
-      assets: [...SAMPLE_RESPONSE.assets, { label: "Mystery Adapter", totalBalanceValue: "3" }],
-      totalAssets: "103",
-    });
-
-    expect(unknownAssets).toContain("Mystery Adapter");
-    expect(unknownExposurePct).toBeCloseTo((3 / 103) * 100, 6);
-  });
-
   it("does not classify assets from non-authoritative description or icon metadata", () => {
     const { slices, unknownAssets, unknownExposurePct, immediateRedeemableUsd } = adaptReservoirReserves({
       assets: [

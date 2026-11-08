@@ -111,9 +111,13 @@ describe("telegram usage analytics", () => {
         quiet_hours_enabled_chats: value + 11, pending_deliveries: value + 12,
       }]);
     }
+    await refreshTelegramLifecycleSnapshotIfStale(db, current.snapshotAt + 1_800, current);
+    expect(sqlite.prepare("SELECT snapshot_at, active_watchers FROM telegram_watcher_lifecycle_daily").get())
+      .toEqual({ snapshot_at: current.snapshotAt + 900, active_watchers: 30 });
     for (const missing of ["newWatchers", "churnedWatchers", "reactivatedWatchers", "presetImpliedCoinFollows", "pendingDeliveries"]) {
       await refreshTelegramLifecycleSnapshotIfStale(db, current.snapshotAt + 1_800, {
-        ...current, ...(missing === "pendingDeliveries" ? { unavailableFields: [missing] } : { [missing]: null }),
+        ...current, snapshotAt: current.snapshotAt + 1_800,
+        ...(missing === "pendingDeliveries" ? { unavailableFields: [missing] } : { [missing]: null }),
       });
       expect(sqlite.prepare("SELECT snapshot_at, active_watchers FROM telegram_watcher_lifecycle_daily").get())
         .toEqual({ snapshot_at: current.snapshotAt + 900, active_watchers: 30 });

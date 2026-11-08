@@ -49,6 +49,7 @@ describe("normalizeTopPools", () => {
     const pool = result[0] as Record<string, unknown>;
     // Allowed top-level keys present
     expect(pool.project).toBe("uniswap-v3");
+    expect(pool.poolType).toBe("generic");
     expect(pool.tvlUsd).toBe(100_000);
     expect(pool.volumeUsd1d).toBe(50_000);
     expect(pool.volumeUsd7d).toBe(300_000);
@@ -64,6 +65,8 @@ describe("normalizeTopPools", () => {
     // Dead extra keys stripped
     expect(extra).not.toHaveProperty("qualityAdjustedTvl");
     expect(extra).not.toHaveProperty("hasMeasuredOrganicFraction");
+    expect(extra).not.toHaveProperty("measuredExecution");
+    expect(extra).not.toHaveProperty("executionCapabilityGate");
   });
 
   it("preserves the optional exact AMM execution model", () => {
@@ -125,33 +128,6 @@ describe("normalizeTopPools", () => {
     }]));
 
     expect((result[0]?.extra as Record<string, unknown>).executionCapabilityGate).toEqual(executionCapabilityGate);
-  });
-
-  it("serves the post-v6 Fluid pool shape without measured-execution fields", () => {
-    // Liquidity Score v6 Phase 3 removed the Fluid measured overlay: producer
-    // rows for Fluid pools no longer carry `measuredExecution` or
-    // `executionCapabilityGate`, while both keys stay in ALLOWED_EXTRA_KEYS
-    // for active EVM measured profiles.
-    const result = normalizeTopPools(JSON.stringify([{
-      project: "fluid",
-      chain: "Ethereum",
-      symbol: "PAXG / XAUT",
-      poolType: "fluid-dex",
-      tvlUsd: 2_000_000,
-      volumeUsd1d: 50_000,
-      source: "direct_api",
-      extra: { feeTier: 5 },
-    }]));
-
-    expect(result[0]).toMatchObject({
-      project: "fluid",
-      poolType: "fluid-dex",
-      tvlUsd: 2_000_000,
-    });
-    const extra = result[0]?.extra as Record<string, unknown>;
-    expect(extra.feeTier).toBe(5);
-    expect(extra).not.toHaveProperty("measuredExecution");
-    expect(extra).not.toHaveProperty("executionCapabilityGate");
   });
 
   it("returns an empty array for non-array JSON payloads", () => {

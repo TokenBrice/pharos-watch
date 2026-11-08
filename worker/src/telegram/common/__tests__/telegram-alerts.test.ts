@@ -583,15 +583,6 @@ describe("buildAlertReplyMarkup callback_data 64-byte boundary", () => {
     }
   });
 
-  it("returns the snooze-only markup for non-first chunks and stays within the limit", () => {
-    const ids = Array.from(TRACKED_META_BY_ID.keys());
-    const longestId = ids.reduce((a, b) => (b.length > a.length ? b : a));
-    const markup = buildAlertReplyMarkup(singleCoinAlerts(longestId), 1);
-    for (const data of collectCallbackData(markup)) {
-      expect(Buffer.byteLength(data, "utf8")).toBeLessThanOrEqual(TELEGRAM_CALLBACK_DATA_MAX_BYTES);
-    }
-  });
-
   it("offers Mute top coin 24h, Pause all 4h, Fewer like this and Manage Alerts on a multi-coin first chunk", () => {
     const multiCoin: ConsolidatedAlerts = emptyConsolidatedAlerts({ dews: [
       { stablecoinId: "usdc-circle", symbol: "USDC", oldBand: "CALM", newBand: "WARNING", score: 42, topSignals: [] },

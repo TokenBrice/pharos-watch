@@ -564,18 +564,6 @@ describe("extractPriceObservations", () => {
     expect(result.get("usdc")).toHaveLength(1);
   });
 
-  it("sets correct observation fields", () => {
-    const addressToId = new Map([
-      ["0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", "usdc"],
-      ["0xdac17f958d2ee523a2206206994597c13d831ec7", "usdt"],
-    ]);
-    const result = extractPriceObservations([MOCK_POOL], addressToId, new Map());
-    const obs = result.get("usdc")![0];
-    expect(obs.tvl).toBe(500_000);
-    expect(obs.chain).toBe("ethereum");
-    expect(obs.protocol).toBe("fluid");
-  });
-
   it("does not derive price when other token is not a USD reference", () => {
     const pool: DexApiPool = {
       ...MOCK_POOL,

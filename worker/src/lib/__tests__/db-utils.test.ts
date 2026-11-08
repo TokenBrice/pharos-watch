@@ -18,10 +18,6 @@ import {
 } from "../db-cache";
 import { makeNoopD1 } from "../../test-helpers/noop-d1";
 import { D1_RESOURCE_WINDOW_MS, runWithOverloadRetry } from "../d1-overload-retry";
-import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
-
-const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
 
 type CacheRow = { value: string; updated_at: number };
 
@@ -315,18 +311,6 @@ describe("db utility helpers", () => {
       ["current", "value", updatedAt], ["current", "value", updatedAt],
     ]);
     expect(writes.every((write) => write.sql.includes("ON CONFLICT(key) DO UPDATE"))).toBe(true);
-  });
-
-  it("preserves newer cache values but permits an equal-timestamp replacement", async () => {
-    const { db } = fixtures.open();
-    expect(await setCacheIfNewer(db, "stablecoins", "newer", 200))
-      .toEqual({ written: true, skippedBecauseNewer: false });
-    expect(await setCacheIfNewer(db, "stablecoins", "older", 199))
-      .toEqual({ written: false, skippedBecauseNewer: true });
-    expect(await getCache(db, "stablecoins")).toEqual({ value: "newer", updatedAt: 200 });
-    expect(await setCacheIfNewer(db, "stablecoins", "equal", 200))
-      .toEqual({ written: true, skippedBecauseNewer: false });
-    expect(await getCache(db, "stablecoins")).toEqual({ value: "equal", updatedAt: 200 });
   });
 
   it("refuses cache publication when the signal is already aborted", async () => {

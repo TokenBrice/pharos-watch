@@ -39,6 +39,7 @@ import { tronBase58ToHex, tronHexAddressToBase58 } from "../../../lib/tron-addre
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import type * as TronReplayProvider from "../../../lib/blacklist/tron-replay-provider";
+import { makePendingBlacklistRow } from "./blacklist.test-support";
 
 const TRON_USDT_CONFIG_ID = "tron-tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t";
 const FREEZE_ADDRESS = "0x6f566c6d608550fb50c9365bdb6665e1c8e53caa";
@@ -60,6 +61,7 @@ type Flow = { timestampMs: number; value: bigint; direction: "in" | "out" };
 
 async function makeRow(overrides: Partial<TronReplayRow> = {}): Promise<TronReplayRow> {
   return {
+    ...makePendingBlacklistRow({ chain_id: "tron", chain_name: "Tron" }),
     id: `tron-${FREEZE_TX}-1`,
     stablecoin: "USDT",
     event_type: "blacklist",
@@ -69,6 +71,8 @@ async function makeRow(overrides: Partial<TronReplayRow> = {}): Promise<TronRepl
     timestamp: FREEZE_SECONDS,
     config_key: TRON_USDT_CONFIG_ID,
     contract_address: config.contractAddress,
+    provenance_source: null,
+    provenance_observed_at: null,
     queue_attempt_count: 0,
     ...overrides,
   };
@@ -501,12 +505,18 @@ describe("recoverTronFreezeAmountForRow", () => {
 
 describe("backfillTronBlacklistAmounts", () => {
   it.each([
-    ["ledger", "full"],
-    ["settle", "full"],
-    ["ledger", "wrong-account"],
-    ["settle", "wrong-account"],
-    ["ledger", "short"],
-  ] as const)("admits only complete same-account %s evidence (%s)", async (window, shape) => {
+    ["ledger", "full", null],
+    ["settle", "full", null],
+    ["ledger", "wrong-account", null],
+    ["settle", "wrong-account", null],
+    ["ledger", "short", null],
+    ["ledger", "full", "resolved"],
+    ["ledger", "short", "resolved"],
+    ["ledger", "full", "suppressed"],
+    ["ledger", "short", "suppressed"],
+    ["ledger", "full", "permanently_unavailable"],
+    ["ledger", "short", "permanently_unavailable"],
+  ] as const)("admits only complete same-account %s evidence (%s, race=%s)", async (window, shape, race) => {
     const actual = await vi.importActual<typeof TronReplayProvider>(
       "../../../lib/blacklist/tron-replay-provider",
     );
@@ -546,17 +556,33 @@ describe("backfillTronBlacklistAmounts", () => {
       .toMatchObject({ amount: admitted ? 2 : null, lastErrorClass: admitted ? null : "provider_null" });
 
     await prepareEvidence();
-    const { sqlite, db } = createLatestSchemaSqlite();
+    const row = await makeRow();
+    let eventBefore: unknown;
+    let queueBefore: unknown;
+    const { sqlite, db } = createLatestSchemaSqlite({ onAll: (sql) => {
+      if (!race || !sql.includes("blacklist-tron-replay-candidates")) return;
+      sqlite.prepare(`UPDATE blacklist_events SET amount_native = ?, amount_status = ?, suppression_reason = ? WHERE id = ?`)
+        .run(race === "resolved" ? 7 : null, race === "suppressed" ? "recoverable_pending" : race,
+          race === "suppressed" ? "operator-reviewed" : null, row.id);
+      eventBefore = sqlite.prepare("SELECT * FROM blacklist_events WHERE id = ?").get(row.id);
+      queueBefore = sqlite.prepare("SELECT * FROM blacklist_amount_repair_queue WHERE event_id = ?").get(row.id);
+    } });
     try {
-      const row = await makeRow();
       sqlite.prepare(`INSERT INTO blacklist_events
         (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
          timestamp, explorer_tx_url, explorer_address_url, contract_address, config_key)
         VALUES (?, 'USDT', 'tron', 'Tron', 'blacklist', ?, ?, ?, ?, '', '', ?, ?)`)
         .run(row.id, row.address, row.tx_hash, row.block_number, row.timestamp, config.contractAddress, TRON_USDT_CONFIG_ID);
-      expect(await backfillTronBlacklistAmounts(db, {
+      const result = await backfillTronBlacklistAmounts(db, {
         trongridApiKey: "tron-key", limiter: provider().limiter, runBudget: makeRunBudget(),
-      })).toMatchObject({ attempted: 1, resolved: admitted ? 1 : 0, retried: admitted ? 0 : 1, parked: 0 });
+      });
+      if (race) {
+        expect(sqlite.prepare("SELECT * FROM blacklist_events WHERE id = ?").get(row.id)).toEqual(eventBefore);
+        expect(sqlite.prepare("SELECT * FROM blacklist_amount_repair_queue WHERE event_id = ?").get(row.id)).toEqual(queueBefore);
+        expect(result).toMatchObject({ attempted: 0, resolved: 0, retried: 0, parked: 0 });
+        return;
+      }
+      expect(result).toMatchObject({ attempted: 1, resolved: admitted ? 1 : 0, retried: admitted ? 0 : 1, parked: 0 });
       expect(sqlite.prepare(`SELECT amount_native, amount_status, amount_last_error_class
         FROM blacklist_events WHERE id = ?`).get(row.id)).toEqual({
         amount_native: admitted ? 2 : null,

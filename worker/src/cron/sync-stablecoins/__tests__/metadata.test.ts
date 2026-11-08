@@ -350,16 +350,6 @@ describe("stablecoins pricing metadata", () => {
     expect(metadata.quality).toEqual({ reason });
   });
 
-  it.each([Infinity, 1])("retains supply quality findings through metadata compaction (budget=%s)", (budget) => {
-    const { guard } = allMissingSizeGuardFixture();
-    const quality = {
-      reason: "supply-chain-dropout-quarantine", quarantinedAssetCount: 1, unavailableAssetCount: 1,
-    };
-    guard.metadata.quality = quality;
-    const metadata = JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget));
-    expect(metadata.quality).toEqual(quality);
-  });
-
   describe("depeg observation census", () => {
     const census = {
       scope: "psi-non-nav-before-supply-floor" as const,

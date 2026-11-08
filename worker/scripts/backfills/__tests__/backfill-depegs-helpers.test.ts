@@ -14,6 +14,7 @@ import { mockD1 } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createDeferredPromise } from "../../../src/lib/__tests__/deferred.test-support";
 
 const fxFixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -205,6 +206,46 @@ describe("buildFxLookup", () => {
 });
 
 describe("fetchHistoricalSecondaryFxRates", () => {
+  it.each([[false, false], [true, false], [false, true], [true, true]])(
+    "merges overlapping year writes (retained=%s, unavailable=%s)", async (retained, unavailable) => {
+      const { db, sqlite } = fxFixtures.open();
+      vi.spyOn(Date, "now").mockReturnValue(Date.parse("2025-06-16T00:00:00Z"));
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      const seed = retained ? { "2025-06-13": {}, "2025-06-14": { ars: 1_180 } } : {};
+      if (retained) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("fx-history-secondary:2025", JSON.stringify(seed), Date.now() / 1000);
+      const started = createDeferredPromise();
+      const release = createDeferredPromise();
+      let calls = 0;
+      const fetchSpy = mockFetch([
+        { match: "@2025-06-14/", respond: async () => {
+          if (++calls === 1) {
+            started.resolve();
+            await release.promise;
+            return unavailable ? { body: {}, status: 404 } : { body: { usd: { cnh: 7.2 } } };
+          }
+          return { body: { usd: { kes: 129 } } };
+        } },
+        { match: "@2025-06-15/", body: {}, status: 404 },
+        { match: ".currency-api.pages.dev", body: {}, status: 404 },
+      ], { requireMatch: true });
+      const late = fetchHistoricalSecondaryFxRates(db, ["CNH", "KES"], "2025-06-14", "2025-06-15");
+      await started.promise;
+      await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-14");
+      release.resolve();
+      const series = await late;
+      const cache = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("fx-history-secondary:2025") as { value: string };
+      expect(JSON.parse(cache.value)).toEqual({
+        ...seed, "2025-06-14": { ...(seed["2025-06-14"] ?? {}), ...(!unavailable ? { cnh: 7.2 } : {}), kes: 129 },
+        "2025-06-15": {},
+      });
+      expect(series.KES).toEqual([{ timestamp: Date.parse("2025-06-14T00:00:00Z") / 1000, rate: 1 / 129 }]);
+      const fetchCount = fetchSpy.mock.calls.length;
+      await fetchHistoricalSecondaryFxRates(db, ["KES"], "2025-06-14", "2025-06-15");
+      expect(fetchSpy).toHaveBeenCalledTimes(fetchCount);
+    },
+  );
+
   it("refetches and merges missing requested currencies in a partial dated cache, then replays the dated quote", async () => {
     const { db, sqlite } = fxFixtures.open();
     const fetchSpy = mockFetch([{

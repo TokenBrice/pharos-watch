@@ -675,6 +675,43 @@ describe("handleStablecoinDetail", () => {
       .toEqual({ count: 0 });
   });
 
+  it.each([[600, false], [600, true], [18_000, false], [18_000, true]] as const)(
+    "keeps the failed-refresh cooldown for a %ss cache with supply fallback=%s",
+    async (age, supplyFallback) => {
+      const now = Math.floor(Date.now() / 1000);
+      const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+      try {
+        const { db, sqlite } = fixtures.open();
+        const cachedValue = makeDLDetailBody();
+        sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+          .run("detail:usdt-tether", cachedValue, now - age);
+        if (supplyFallback) {
+          sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)")
+            .run("usdt-tether", now - 86_400, 80_000_000, 1);
+        }
+        respondToFetch(() => new Response("Not found", { status: 404 }));
+
+        for (const [offset, refresh] of [[0, true], [0, false], [59, false], [60, true]] as const) {
+          clock.mockReturnValue((now + offset) * 1000);
+          resetStablecoinDetailStateForTests();
+          const { ctx, waits } = makeCtx();
+          const response = await handleStablecoinDetail(db, "usdt-tether", ctx);
+          await Promise.all(waits);
+          expect(response.status).toBe(200);
+          expect(response.headers.get("Cache-Control")).toBe("no-store");
+          expect(fetchSpy).toHaveBeenCalledTimes(offset === 60 ? 2 : 1);
+          const usedSupply = supplyFallback && age === 18_000 && refresh;
+          expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - (usedSupply ? 86_400 : age)));
+        }
+        expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = 'detail:usdt-tether'").get())
+          .toEqual({ value: cachedValue, updated_at: now - age });
+        expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(DETAIL_CIRCUIT_KEY)).toBeUndefined();
+      } finally {
+        clock.mockRestore();
+      }
+    },
+  );
+
   it("lets synchronous callers read a refresh also awaited by stale background refresh", async () => {
     const staleCachedValue = makeDLDetailBody({ tokens: [
       { date: 1690000000, totalCirculatingUSD: { peggedUSD: 80_000_000 }, totalCirculating: { peggedUSD: 80_000_000 } },

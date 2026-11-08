@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { makeExecutionContext } from "../../test-helpers/__shared/auth";
 import { makePublicHealth } from "../../lib/__tests__/public-health.test-support";
@@ -971,6 +972,26 @@ describe("runStatusSelfCheck", () => {
       hasDivergence: true,
       reason: "external-worse",
     });
+  });
+
+  it.each([200, 503])("remembers producer observations on HTTP %i after history pruning", async (status) => {
+    const onRun = vi.fn();
+    const { sqlite, db } = createLatestSchemaSqlite({ onRun });
+    try {
+      await expect(isBootstrapCacheMiss(db, "/api/usds-status", status)).resolves.toBe(status === 503);
+      sqlite.exec("INSERT INTO cron_runs (job, started_at, duration_ms, status) VALUES ('sync-usds-status', 1, 1, 'ok')");
+      await expect(isBootstrapCacheMiss(db, "/api/usds-status", status)).resolves.toBe(false);
+      sqlite.exec("DELETE FROM cron_runs");
+      await expect(isBootstrapCacheMiss(db, "/api/usds-status", 503)).resolves.toBe(false);
+      expect(onRun).toHaveBeenCalledTimes(1);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it.each(["cache", "cron_runs"])("does not suppress 503s when %s cannot be read", async (table) => {
+    const db = mockD1([], { failOn: { match: `FROM ${table}`, error: new Error("read failed") } });
+    await expect(isBootstrapCacheMiss(db, "/api/usds-status", 503)).resolves.toBe(false);
   });
 
   it("treats missing cache 503s as bootstrap misses only before the producer cron has ever run", async () => {

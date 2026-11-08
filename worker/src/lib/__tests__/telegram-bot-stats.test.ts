@@ -11,6 +11,7 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import type { D1Database, D1PreparedStatement } from "@shared/types/cloudflare-runtime";
 import { loadTelegramPendingCapacity } from "../../telegram/outbox/pending-capacity";
+import { presetFailureCountCache } from "../../cron/telegram/sources/__tests__/dispatch-telegram-events.test-support";
 
 function unavailableDeliverySli(): TelegramDeliverySliStatus {
   return {
@@ -470,8 +471,9 @@ describe("getTelegramBotStats lifecycle availability", () => {
     } as D1Database;
   }
 
-  function makeTelegramStatusDb(): D1Database {
+  function makeTelegramStatusDb(presetCount: string | null | Error = null): D1Database {
     const inner = mockD1([
+      presetFailureCountCache(presetCount),
       { match: "FROM telegram_subscribers s", rows: [SUBSCRIBER_AGGREGATE_ROW] },
       { match: PENDING_COUNT_SQL, rows: [{ pending_count: 9 }] },
       { match: "WITH p(now_sec, near_ttl_at, stale_before)", rows: [], first: PENDING_CAPACITY_ROW },
@@ -494,6 +496,17 @@ describe("getTelegramBotStats lifecycle availability", () => {
     ]);
     return failSecondPendingCountRead(inner);
   }
+
+  it.each([
+    [null, 0], ["0", 0], ["7", 7], ["bad", null], [new Error("preset-count-read-failed"), null],
+  ] as const)("reports preset failure count availability for %s", async (value, expected) => {
+    const stats = await getTelegramBotStats(makeTelegramStatusDb(value), NOW_SEC);
+    expect(stats.presetQueryFailures).toBe(expected === null || expected === 0 ? undefined : expected);
+    expect(stats.quality?.unavailableFields.includes("presetQueryFailures")).toBe(expected === null);
+    expect(stats.quality?.errors?.presetQueryFailures).toBe(expected === null
+      ? value instanceof Error ? value.message : "telegram_preset_query_failure_count_invalid"
+      : undefined);
+  });
 
   it("marks a failed lifecycle pending-delivery read unavailable instead of publishing a measured zero", async () => {
     const stats = await getTelegramBotStats(makeTelegramStatusDb(), NOW_SEC);

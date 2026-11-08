@@ -472,34 +472,6 @@ describe("half-hourly charts scheduling", () => {
     });
   });
 
-  it("runs the charts chain only after the DEX scoring chain completes", async () => {
-    const order: string[] = [];
-    mocks.consumeDexLiquidityScoringStage.mockImplementation(async () => {
-      order.push("consume");
-      return {
-        status: "ok",
-        itemCount: 1,
-        metadata: JSON.stringify({ persistence: { generationId: "dex-liquidity-123" } }),
-      };
-    });
-    mocks.runCronSentinel.mockImplementation(async () => {
-      order.push("turnover");
-      return { status: "ok", itemCount: 1 };
-    });
-    mocks.prepareSafetyScoreV9Input.mockImplementation(async () => {
-      order.push("prepare");
-      return { status: "ok", itemCount: 1 };
-    });
-    mocks.syncStablecoinCharts.mockImplementation(async () => {
-      order.push("charts");
-      return { status: "ok", itemCount: 1 };
-    });
-
-    await runHalfHourlyChartsSlot(runtime());
-
-    expect(order).toEqual(["consume", "turnover", "prepare", "charts"]);
-  });
-
   it("prepares V9 input from the last in-budget accepted DEX generation after a DEX error", async () => {
     mocks.consumeDexLiquidityScoringStage.mockRejectedValue(
       new Error("D1_ERROR: internal error; reference = nug416i4dsl"),

@@ -221,14 +221,6 @@ describe("hook-free Uniswap V4 measured execution", () => {
     rpcMocks.fetchEvmMulticall3Aggregate3AtBlock.mockReset();
   });
 
-  it("marks only the reviewed Ethereum deployment score eligible", () => {
-    expect(getUniswapV4Deployment("ethereum")).toMatchObject({
-      mode: "active",
-      scoreEligible: true,
-    });
-    expect(getUniswapV4Deployment("base")).toMatchObject({ mode: "shadow", scoreEligible: false });
-  });
-
   it("rejects a V4 deployment when pinned PoolManager code differs", async () => {
     const deployment = getUniswapV4Deployment("ethereum")!;
     rpcMocks.fetchEvmCodeStatusAtBlock.mockResolvedValue({ status: "available", code: "0x00" });

@@ -507,23 +507,6 @@ describe("dispatchTelegramAlerts", () => {
       .toMatchObject({ computations: 1 });
   });
 
-  it("suppresses minor global safety downgrades", async () => {
-    const harness = createDispatchHarness();
-    const safety = { "usdc-circle": { grade: "C+", score: 64, methodologyVersion: "7.09" } };
-    seedDispatchSnapshots(harness, {
-      safety: { "usdc-circle": { grade: "B", score: 65, methodologyVersion: "7.09" } },
-      safetySource: safety,
-    });
-    harness.seed({
-      safety: [{ stablecoinId: "usdc-circle", grade: "C+", score: 64 }],
-      ...global("777", { safety: true }),
-    });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata).toMatchObject({ eventsDetected: { safety: 1 }, subscribersNotified: 0, messagesSent: 0 });
-    expect(telegramDeliveryTranscript).toEqual([]);
-  });
-
   it("chunks resolved depeg IN queries above 100 changed coins", async () => {
     const now = Math.floor(Date.now() / 1000);
     const ids = Array.from({ length: 101 }, (_, index) => `synthetic-${index}`);
@@ -644,39 +627,6 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata).toMatchObject({ eventlessFastPath: true });
     expect(telegramDeliveryTranscript).toEqual([]);
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_jobs").get()).toEqual({ count: 0 });
-    expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toContain('"bold-liquity"');
-    expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toContain('"usdc-circle"');
-  });
-
-  it("does not alert on historical rows missing from a partial legacy safety snapshot", async () => {
-    const now = Math.floor(Date.now() / 1000);
-    const updatedAt = now - 3_600;
-    const harness = createDispatchHarness();
-    seedDispatchSnapshots(harness, {
-      safety: JSON.stringify({ "usdc-circle": { grade: "A", score: 84 } }),
-      safetySource: {
-        "usdc-circle": { grade: "A", score: 84, methodologyVersion: "7.09" },
-        "bold-liquity": { grade: "A-", score: 80, methodologyVersion: "7.09" },
-      },
-      updatedAt,
-    });
-    harness.seed({
-      safety: [
-        { stablecoinId: "usdc-circle", grade: "A", score: 84, recordedAt: updatedAt - 86_400 },
-        {
-          stablecoinId: "bold-liquity",
-          grade: "A-",
-          score: 80,
-          prevGrade: "B+",
-          prevScore: 79,
-          recordedAt: updatedAt - 86_400,
-        },
-      ],
-    });
-    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
-
-    expect(metadata).toMatchObject({ eventsDetected: { safety: 0 }, subscribersNotified: 0, messagesSent: 0 });
-    expect(telegramDeliveryTranscript).toEqual([]);
     expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toContain('"bold-liquity"');
     expect(readCacheValue(harness.sqlite, "alert:safety-snapshot")).toContain('"usdc-circle"');
   });

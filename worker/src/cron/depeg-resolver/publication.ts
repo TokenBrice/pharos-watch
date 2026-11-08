@@ -21,6 +21,12 @@ import {
   type DdrV2StoreContracts,
 } from "../depeg-resolver-v2-contracts";
 import type { DdrDiagnosticResponse, DdrEventDbRow } from "./types";
+import {
+  DDR_LOCK_ACCOUNTING_START_AT,
+  DDR_LOCK_RECONCILIATION_LIMIT,
+  loadUnfinishedSealedLocks,
+  type RecordLockDeferralInput,
+} from "../../lib/depeg-resolver-lock-opportunity-store";
 import { computeLockTiming } from "./incident-state";
 import { buildSealPayload, buildV2PublicationBasePayload } from "./public-projection";
 import {
@@ -236,9 +242,43 @@ export async function writePublicationBeforeCache(input: {
       publicPredictionIds,
       publicPredictionRowHashes,
     });
-    // The manifest (and its first-publication membership) is committed; advance
-    // the pre-seal lock state so it cannot keep asserting a pending retry.
-    for (const sealed of retryPendingSealed) {
+    // Retry accounting even when an earlier manifest committed before its lock update failed.
+    const lockStateByIncident = new Map([...input.incidentsByEventId.values()]
+      .map((incident) => [incident.incidentKey, incident.lockState?.lastState]));
+    const publicationLocks = new Map<string, Omit<RecordLockDeferralInput, "runAt"> & { publishedAt: number }>();
+    for (const sealed of input.sealed) {
+      const publishedAt = existingFirstPublication.get(sealed.id)?.publishedAt ?? input.nowSec;
+      if (existingFirstPublication.has(sealed.id) && publishedAt < DDR_LOCK_ACCOUNTING_START_AT) continue;
+      const lastState = lockStateByIncident.get(sealed.incidentKey);
+      if (lastState === "publication_failed" || lastState === "published") continue;
+      if (
+        existingFirstPublication.has(sealed.id)
+        && lastState !== "frozen"
+        && lastState !== "no_call"
+        && lastState !== "publication_retry_pending"
+      ) continue;
+      publicationLocks.set(sealed.incidentKey, { ...sealed, publishedAt });
+    }
+    try {
+      const unfinished = await loadUnfinishedSealedLocks(input.db);
+      if (unfinished.length > 0) {
+        const published = firstPublicationByPredictionId(await input.stores.loadFirstPublicationMembership(input.db, {
+          publicPredictionIds: unfinished.map((lock) => lock.publicPredictionId),
+        }));
+        for (const lock of unfinished) {
+          const publication = published.get(lock.publicPredictionId);
+          if (publication?.incidentKey === lock.incidentKey && publication.publishedAt >= DDR_LOCK_ACCOUNTING_START_AT) {
+            publicationLocks.set(lock.incidentKey, { ...lock, publishedAt: publication.publishedAt });
+          }
+        }
+      }
+    } catch (error) {
+      console.warn(`[ddr] publication-lock-state-unrecorded:${formatDdrrFailure(error)}`);
+    }
+    const accountingLocks = [...publicationLocks.values()]
+      .sort((a, b) => a.publishedAt - b.publishedAt || a.incidentKey.localeCompare(b.incidentKey))
+      .slice(0, DDR_LOCK_RECONCILIATION_LIMIT);
+    for (const sealed of accountingLocks) {
       try {
         await input.stores.recordLockDeferral(input.db, {
           incidentKey: sealed.incidentKey,
@@ -246,7 +286,7 @@ export async function writePublicationBeforeCache(input: {
           runId: input.ddrRunId,
           runAt: input.nowSec,
           eligibleAt: sealed.eligibleAt,
-          predictionPolicyVersion: DDR_PREDICTION_POLICY_VERSION,
+          predictionPolicyVersion: sealed.predictionPolicyVersion,
           healthStatus: "healthy",
           action: "published",
           reason: null,

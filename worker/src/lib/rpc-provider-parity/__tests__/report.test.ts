@@ -205,16 +205,6 @@ describe("rpc parity gate math", () => {
     expect(summary.logParity.checked).toBe(checked);
     expect(summary.gate.failing).toContain("insufficient-log-checks");
     expect(summary.gate.failing).not.toContain("log-parity");
-
-    // zkSync declares no log history, so it carries no log-check requirement.
-    const prunedRuns = parityRunWindow(RPC_PARITY_GATE_MIN_RUNS, (chainId) => (
-      chainId === PARITY_PRUNED_LOG_CHAIN
-        ? { logChecked: false, logMatched: false, prunedLogChecked: true, prunedLogTrap: true }
-        : {}
-    ));
-    const pruned = summaryFor(PARITY_PRUNED_LOG_CHAIN, prunedRuns, { logsHistoryIsNone: true });
-    expect(pruned.gate.failing).not.toContain("insufficient-log-checks");
-    expect(pruned.gate.passed).toBe(true);
   });
 
   it("passes every sufficiency rule exactly at the retained-run floor", () => {

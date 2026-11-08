@@ -11,6 +11,7 @@ import { getRpcRequestObserver } from "./rpc-request-observer";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
+import type { BodyReadObserver } from "./response-body";
 import { parseQuantityHex } from "./bigint";
 import { FetchRequestNotStartedError, rethrowIfAborted } from "./abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -510,6 +511,7 @@ export async function requestJsonRpcAtUrl(
   options: Pick<EvmRpcOptions, "signal" | "timeoutMs" | "deadlineMs" | "maxResponseBytes" | "maxRetries"> & {
     beforeRequest?: () => boolean;
     responseMode?: "text";
+    onBodyRead?: BodyReadObserver;
   },
 ): Promise<JsonRpcTransportOutcome> {
   const observer = getRpcRequestObserver();
@@ -537,6 +539,7 @@ export async function requestJsonRpcAtUrl(
         },
         retryMode: "network-only",
         returnFinalResponse: true,
+        ...(options.onBodyRead === undefined ? {} : { onBodyRead: options.onBodyRead }),
         ...(options.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }),
       },
     );
@@ -805,12 +808,17 @@ async function runEvmRpcBatch<Value>(
         const payload = noBatch
           ? { jsonrpc: "2.0", id: requestIndex + 1, method: calls[requestIndex]!.method, params: calls[requestIndex]!.params }
           : calls.map((call, index) => ({ jsonrpc: "2.0", id: index + 1, method: call.method, params: call.params }));
+        let bodyTooLarge = false;
         const result = await requestJsonRpcAtUrl(rpcUrl, payload, {
           signal: options?.signal,
           maxRetries,
           timeoutMs: Math.min(configuredTimeoutMs, remainingMs),
           deadlineMs: options?.deadlineMs,
           maxResponseBytes: options?.maxResponseBytes,
+          onBodyRead: ({ outcome, intakeBytes, declaredBytes, limitBytes }) => {
+            bodyTooLarge = outcome === "rejected" &&
+              ((intakeBytes !== null && intakeBytes > limitBytes) || (declaredBytes !== null && declaredBytes > limitBytes));
+          },
           beforeRequest: () => {
             if (requirements.some(requirement => requirement.kind === "recent-pinned-state" &&
               !validRecentPin(requirement.pin, chainId))) return false;
@@ -824,7 +832,7 @@ async function runEvmRpcBatch<Value>(
         });
         if (result.status === "control-error" || result.status === "transport-error") {
           if (result.error != null) throw result.error;
-          demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
+          if (!bodyTooLarge) demoteFailedDwellirAttempt(options?.chainRpcs, rpcUrl);
           continue endpoints;
         }
         if (result.status === "parse-error") throw result.error;

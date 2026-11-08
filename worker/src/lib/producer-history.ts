@@ -2,6 +2,7 @@ import type { PublicationSurfaceId } from "@shared/types/status";
 import type { ProducerOutcome } from "@shared/types/status/cron";
 import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { executeAtomicBatch } from "./db";
 import { type CappedDeleteResult, runRetentionPolicies } from "../cron/shared/capped-delete";
 import { producerHistoryRetentionPolicy } from "@shared/lib/retention-policy";
 import { RETENTION_DELETE_BATCH_LIMIT, RETENTION_DELETE_RUN_LIMIT } from "./bounded-prune";
@@ -384,9 +385,7 @@ export function prepareProducerOutcomeStatements(
 }
 
 export async function recordProducerOutcome(db: D1Database, input: RecordProducerOutcomeInput): Promise<void> {
-  for (const statement of prepareProducerOutcomeStatements(db, input)) {
-    await runWithOverloadRetry(() => statement.run());
-  }
+  await executeAtomicBatch(db, prepareProducerOutcomeStatements(db, input));
 }
 
 export async function loadProducerHeads(

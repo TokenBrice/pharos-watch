@@ -159,7 +159,9 @@ export async function runCallbackMutation<TValid>(context: CallbackContext, para
   write: (
     validated: TValid,
     options: { operationStatements?: D1PreparedStatement[] },
-  ) => Promise<void>;
+  ) => Promise<void | "stale">;
+  /** Refusal when a read-derived mutation loses its preference fence. */
+  staleText?: string;
   /** Toast text on success. */
   successText: string | ((validated: TValid) => string);
   /** Toast text when validation fails (defaults to "Action not recognized."). */
@@ -187,8 +189,9 @@ export async function runCallbackMutation<TValid>(context: CallbackContext, para
   ) {
     return;
   }
+  let outcome: void | "stale";
   try {
-    await params.write(validated, {});
+    outcome = await params.write(validated, {});
   } catch {
     logTelegramEvent({
       message: params.logMessage,
@@ -201,6 +204,13 @@ export async function runCallbackMutation<TValid>(context: CallbackContext, para
       failureClass: "d1_write_failed",
     });
     await context.answerCallback({ text: params.failureText });
+    return;
+  }
+  if (outcome === "stale") {
+    await recordTelegramUsageEvent(context.db, {
+      eventType: params.eventType, actionDetail: params.actionDetail, outcome: "stale",
+    });
+    await context.answerCallback({ text: params.staleText ?? params.failureText });
     return;
   }
   await recordTelegramUsageEvent(context.db, {

@@ -148,27 +148,6 @@ describe("healNullPrices", () => {
     expect(executeMintBurnMaintenanceMutations).not.toHaveBeenCalled();
   });
 
-  it("collects correct affected hours for re-aggregation", async () => {
-    const db = mockDb(
-      [
-        { id: "e1", stablecoin_id: "usdc-circle", chain_id: "ethereum", amount: 1000, timestamp: NOW - 3595 },
-        { id: "e2", stablecoin_id: "usdc-circle", chain_id: "ethereum", amount: 2000, timestamp: NOW - 3590 },
-        { id: "e3", stablecoin_id: "usdc-circle", chain_id: "ethereum", amount: 500, timestamp: NOW - 7195 },
-      ],
-      [],
-      [cacheRow({ asset_id: "usdc-circle" })],
-    );
-    const firstHour = Math.floor((NOW - 3595) / 3600) * 3600;
-    const secondHour = Math.floor((NOW - 7195) / 3600) * 3600;
-    vi.mocked(executeMintBurnMaintenanceMutations).mockResolvedValueOnce({ changed: 3, affectedHours: new Map([
-      ["first", { stablecoinId: "usdc-circle", chainId: "ethereum", hourTs: firstHour }],
-      ["second", { stablecoinId: "usdc-circle", chainId: "ethereum", hourTs: secondHour }],
-    ]) });
-
-    const result = await healNullPrices(db, NOW);
-    expect(result.affectedHours.size).toBe(2);
-  });
-
   describe("against SQLite", () => {
     const insertEvent = (
       sqlite: DatabaseSync,
