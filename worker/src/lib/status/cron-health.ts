@@ -239,7 +239,9 @@ function hasLiveLeaseBlocker(job: string, run: CronRunDetail, now: number, inter
     && typeof observedAt === "number" && Number.isFinite(observedAt)
     && observedAt >= run.startedAt && observedAt <= run.startedAt + Math.ceil(run.durationMs / 1000) && observedAt <= now
     && typeof heartbeatAt === "number" && Number.isFinite(heartbeatAt) && heartbeatAt > 0 && heartbeatAt <= observedAt
-    && now - heartbeatAt <= Math.max(CRON_IN_FLIGHT_STALE_FLOOR_SEC, interval)
+    // The holder renews on its own cadence: judge the heartbeat when the skip saw it;
+    // current liveness comes from the unexpired lease and the fresh skip itself.
+    && observedAt - heartbeatAt <= Math.max(CRON_IN_FLIGHT_STALE_FLOOR_SEC, interval)
     && typeof leaseUntil === "number" && Number.isFinite(leaseUntil) && leaseUntil >= now;
 }
 
