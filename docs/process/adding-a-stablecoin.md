@@ -409,7 +409,7 @@ value; do not weaken the assertion.
 
 | File | What moves | Applies to |
 | --- | --- | --- |
-| `shared/lib/__tests__/stablecoins.test.ts` | `EXPECTED_TRACKED_STABLECOIN_COUNT`, lifecycle ID snapshots, and the implementation-scope variant ID list | Count on every addition; pre-launch snapshot on additions/promotions; variant list for `variantOf` children |
+| `shared/lib/__tests__/stablecoins.test.ts` | The implementation-scope variant ID list. Tracked counts and the pre-launch roster are catalog-derived invariants, so there is no count or lifecycle snapshot to bump. | Variant list for `variantOf` children only |
 | `scripts/__tests__/bridge-route-coverage-audit.test.ts` | Registry-derived equality of reviewed profiles and applicable multi-deployment coins | Supply reviewed route rows; no hardcoded count to bump |
 | `src/lib/__tests__/reserve-coinid-validation.test.ts` | A `REVIEWED_WARNING_IDS` entry with the reason | Only when a new `reserves[].name` contains a tracked ticker and the slice intentionally carries no `coinId`. Link the slice with `coinId` instead whenever that is honest. |
 
