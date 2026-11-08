@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DepegEventStoredSnapshotSchema, type DepegEvent, type DepegEventEntry } from "@shared/types/market";
 import {
@@ -136,6 +136,36 @@ describe("sync-depeg-events", () => {
     await expect(runDepegSync([...args, "--allow-existing-on-fetch-failure"]))
       .rejects.toThrow(SnapshotIntegrityError);
     expect(paths.map((path) => readFileSync(path, "utf8"))).toEqual(before);
+  });
+
+  it.each(["fetch", "index.json", "metadata/capture.json"])("limits retained-data fallback to before publication: %s", async (failure) => {
+    const dataDir = makeRoot();
+    const indexPath = join(dataDir, "index.json");
+    const args = ["--api-url", "https://api.example.test", "--output", indexPath];
+    let apiEvents = [event({ peakDeviationBps: 800 })];
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ events: apiEvents })));
+    await runDepegSync(args);
+    const shardPath = join(dataDir, "2026.json");
+    const before = readFileSync(shardPath, "utf8");
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    apiEvents = [event({ peakDeviationBps: 900 })];
+    if (failure === "fetch") {
+      vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 404 })));
+    } else {
+      const path = join(dataDir, failure);
+      rmSync(path);
+      mkdirSync(path);
+    }
+
+    const attempt = runDepegSync([...args, "--allow-existing-on-fetch-failure"]);
+    if (failure === "fetch") {
+      await expect(attempt).resolves.toBeUndefined();
+      expect(warning).toHaveBeenCalledWith(expect.stringContaining("preserving existing"));
+    } else {
+      await expect(attempt).rejects.toMatchObject({ code: "EISDIR" });
+      expect(warning).not.toHaveBeenCalled();
+    }
+    expect(readFileSync(shardPath, "utf8") !== before).toBe(failure !== "fetch");
   });
 
   it("round-trips legacy event fields through the shared stored schema", async () => {

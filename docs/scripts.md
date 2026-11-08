@@ -63,6 +63,8 @@ For these scripts, `--dry-run` means no mutation: a command may read local state
 
 Archive sync commands admit incoming API payloads and their final stored projections through the shared schemas before archive checks or writes. Supported legacy optional fields retain their existing defaults/absence, and digest `pre-policy` provenance stays unstored. Malformed JSON, schema/chronology failures and invalid pagination are `SnapshotIntegrityError` failures, not fetch outages: `--allow-existing-on-fetch-failure` cannot suppress them or update capture metadata.
 
+`sync-depeg-events.ts` permits retained-data fallback only before publication starts. Shard, index, capture and cleanup failures are fatal once publication starts. Direct runs can leave partial output on failure; the release refresh wrapper stages the ledger and promotes it only after a successful producer exit.
+
 New scripts parse arguments with `scripts/lib/cli-args.mjs`, or with `node:util.parseArgs` directly when the strict wrapper is not required. Do not hand-roll a `process.argv` loop. Worker operator evidence tools (`night-watch-worker.mjs`, `watch-worker-cron.mjs` and `capture-d1-insights.mjs`) use the shared strict parser and are enrolled as strict entrypoints; read-only/local-output classification is not a reason to retain a second option parser. Unrelated build/test-only parsers retain their explicitly categorized policy exemptions.
 
 The sealed-event input-corruption operator (`worker/scripts/record-depeg-input-corruption.ts`) is enrolled as a strict mutating entrypoint. Duplicate singleton options are usage errors before evidence reads or D1 access; `-h` / `--help` requires no evidence file. Its offline preview and explicit `--apply --remote` authorization remain unchanged.
@@ -215,6 +217,8 @@ The `public-datasets` registry entry has separate strict and integrity check com
 The compact catalog generator loads shared TypeScript classifiers through `tsx`: write with `node --import tsx scripts/build-data/build-client-registry.mjs` and check with `node --import tsx scripts/build-data/build-client-registry.mjs --check`. Both modes cover every output of the `stablecoin-client-registry` artifact, including per-coin details, not just the browser list; its registered output paths are the authoritative inventory. Projection, catalog and freshness-stamp writes go through [`atomic-artifact-write.mts`](../scripts/lib/atomic-artifact-write.mts) (exclusive sibling temporary, then rename), so a reader sees complete old or new files, never a truncated one; this guarantees complete individual files, not a transactional multi-file generation.
 
 The editorial policy generator uses the runtime-neutral facade's readonly `EditorialPolicy` contract; raw JSON still passes its existing validation before hashing/rendering. See [Machine-readable policy](./editorial-style.md#machine-readable-policy).
+
+The [incident review key migration](../scripts/build-data/generate-safety-score-v9-incident-review-key-migration.ts) applies only control/deployment review mappings. Provider and issuer-surface reviews pass through unchanged without mapping rows; a missing subject mapping still fails. Retirement preserves the original scope, and repeated application retains existing retirement provenance and review IDs.
 
 | Artifact family | Read its owner |
 | --- | --- |

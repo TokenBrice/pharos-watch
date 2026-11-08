@@ -323,6 +323,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
 
   console.log(`[sync-depeg-events] Source: ${apiUrl}`);
 
+  let publicationStarted = false;
   try {
     const observationStartedAtISO = new Date().toISOString();
     const { entries, apiTotal } = await (async () => {
@@ -479,6 +480,7 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
       entries.map((entry) => String(new Date(entry.startedAt * 1000).getUTCFullYear())),
     ).size;
     if (!options.dryRun) {
+      publicationStarted = true;
       writeDepegEventLedger(entries, outputPaths);
       const capture: DepegLedgerCapture = {
         schemaVersion: 1,
@@ -501,8 +503,8 @@ export async function runDepegSync(argv = process.argv.slice(2)) {
         : `[sync-depeg-events] Wrote ${entries.length} confirmed events to ${outputPaths.indexFile} and ${shardCount} yearly shards`,
     );
   } catch (err) {
-    // Integrity guards are deterministic, so the fetch-failure fallback must not relabel them.
-    if (err instanceof SnapshotIntegrityError) throw err;
+    // Integrity failures and partial publication must never be relabeled as fetch outages.
+    if (publicationStarted || err instanceof SnapshotIntegrityError) throw err;
     const allowExisting =
       options.allowExistingOnFetchFailure ||
       shouldAllowExistingDataOnFetchFailure(["DEPEG_EVENTS_SYNC_ALLOW_EXISTING_ON_FETCH_FAILURE"]);
