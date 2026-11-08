@@ -88,6 +88,16 @@
       "chain": "solana",
       "address": "JTRu97Z4oduVwfVBWdf1fSAz8h7CBBPqEo4Jco9fZPj",
       "decimals": 6
+    },
+    {
+      "chain": "xlayer",
+      "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+      "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0xc18e6f730896971a79d748e8dea61067a9bc6040",
+      "decimals": 6
     }
   ],
   "collateralQuality": "rwa",

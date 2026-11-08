@@ -460,17 +460,12 @@ describe("buildChainRpcs", () => {
     ["mantle", "Mantle", "https://rpc.mantle.xyz", "https://mantlescan.xyz"],
     ["morph-l2", "Morph", "https://rpc.morphl2.io", "https://explorer.morphl2.io"],
     ["abcore", "AB Core", "https://rpc.core.ab.org", "https://explorer.core.ab.org"],
-    ["xlayer", "X Layer", "https://rpc.xlayer.tech", "https://www.oklink.com/xlayer"],
-  ])("includes public-only %s RPC resolution for usd1 supply aggregation", (chainId, chainName, rpcUrl, explorerUrl) => {
+    ["xlayer", "X Layer", "https://rpc.xlayer.tech", "https://www.oklink.com/xlayer", "https://xlayer.drpc.org"],
+  ])("includes public-only %s RPC resolution for usd1 supply aggregation", (chainId, chainName, rpcUrl, explorerUrl, ...fallbackUrls) => {
     const config = buildChainRpcs().get(chainId);
 
-    expect(config).toMatchObject({
-      chainId,
-      chainName,
-      type: "evm",
-      explorerUrl,
-    });
-    expect(registryRpcUrls(config)).toEqual([rpcUrl]);
+    expect(config).toMatchObject({ chainId, chainName, type: "evm", explorerUrl });
+    expect(registryRpcUrls(config)).toEqual([rpcUrl, ...fallbackUrls]);
     expect(primaryRpcUrl(config)).toBe(rpcUrl);
     expect(registryRpcEndpoints(config).every((endpoint) => endpoint.operator === "public")).toBe(true);
   });
